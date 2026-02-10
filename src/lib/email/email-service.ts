@@ -392,7 +392,8 @@ function addTrackingPixel(
   
   // Use messageId as trackingId if provided, otherwise generate one
   const trackingId =(messageId !== '' && messageId != null) ? messageId : `track_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-  const trackingUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/api/email/track/${trackingId}`;
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://salesvelocity.ai';
+  const trackingUrl = `${baseUrl}/api/email/track/${trackingId}`;
 
   // Store tracking mapping in Firestore
   if (messageId) {

@@ -32,6 +32,25 @@ export async function POST(
       return NextResponse.json({ error: 'Invalid workflowId' }, { status: 400 });
     }
 
+    // Verify webhook secret via query param or header
+    const webhookSecret = process.env.WORKFLOW_WEBHOOK_SECRET;
+    if (webhookSecret) {
+      const url = new URL(request.url);
+      const providedSecret = url.searchParams.get('secret') ?? request.headers.get('x-webhook-secret');
+      if (providedSecret !== webhookSecret) {
+        logger.warn('Unauthorized workflow webhook attempt', {
+          route: '/api/workflows/webhooks',
+          workflowId: resolvedParams.workflowId,
+        });
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+    } else if (process.env.NODE_ENV !== 'development') {
+      logger.error('WORKFLOW_WEBHOOK_SECRET not configured - rejecting request', new Error('Missing WORKFLOW_WEBHOOK_SECRET'), {
+        route: '/api/workflows/webhooks',
+      });
+      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+    }
+
     const method = request.method;
     const headers = Object.fromEntries(request.headers.entries());
     const body: Record<string, unknown> = await request.json().catch(() => ({})) as Record<string, unknown>;

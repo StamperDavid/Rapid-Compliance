@@ -8,6 +8,7 @@
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
+import { requireAuth } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { createPostingAgent } from '@/lib/social/autonomous-posting-agent';
@@ -43,6 +44,11 @@ export async function POST(request: NextRequest) {
     const rateLimitResponse = await rateLimitMiddleware(request, '/api/social/schedule');
     if (rateLimitResponse) {
       return rateLimitResponse;
+    }
+
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
     }
 
     // Parse request body
@@ -156,6 +162,11 @@ export async function GET(request: NextRequest) {
       return rateLimitResponse;
     }
 
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
     const { searchParams } = new URL(request.url);
     const platform = searchParams.get('platform') as SocialPlatform | null;
 
@@ -220,6 +231,11 @@ export async function DELETE(request: NextRequest) {
     const rateLimitResponse = await rateLimitMiddleware(request, '/api/social/schedule');
     if (rateLimitResponse) {
       return rateLimitResponse;
+    }
+
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
     }
 
     // Parse request body

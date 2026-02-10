@@ -18,8 +18,23 @@ export async function POST(request: NextRequest) {
       return rateLimitResponse;
     }
 
-    // Verify this is called by Cloud Scheduler (check headers/auth)
-    // In production, verify Cloud Scheduler authentication
+    // Verify cron secret (same pattern as cron routes)
+    const authHeader = request.headers.get('authorization');
+    const cronSecret = process.env.CRON_SECRET;
+
+    if (!cronSecret) {
+      if (process.env.NODE_ENV !== 'development') {
+        logger.error('CRON_SECRET not configured - rejecting schedule trigger', new Error('Missing CRON_SECRET'), {
+          route: '/api/workflows/triggers/schedule',
+        });
+        return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+      }
+    } else if (!authHeader || authHeader !== `Bearer ${cronSecret}`) {
+      logger.error('Unauthorized schedule trigger attempt', new Error('Invalid cron secret'), {
+        route: '/api/workflows/triggers/schedule',
+      });
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
     await executeScheduledWorkflows();
 

@@ -6,6 +6,7 @@
  * Note: This route redirects to OAuth provider, so auth is checked but no rate limiting
  */
 
+import { randomBytes } from 'crypto';
 import { type NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
@@ -19,16 +20,37 @@ export async function GET(
   try {
     const { provider } = await params;
 
-    // Authentication (but allow redirect even if not fully authenticated for OAuth flow)
+    // Always require authentication for OAuth initiation
     const authResult = await requireAuth(request);
-    if (authResult instanceof NextResponse && process.env.NODE_ENV === 'production') {
-      // In production, require auth
+    if (authResult instanceof NextResponse) {
       return authResult;
     }
 
     const searchParams = request.nextUrl.searchParams;
     const redirectUriParam = searchParams.get('redirectUri');
-    const redirectUri = (redirectUriParam !== '' && redirectUriParam != null) ? redirectUriParam : `${request.nextUrl.origin}/api/integrations/oauth/${provider}/callback`;
+
+    // Validate redirect URI to prevent open redirect
+    const allowedOrigins = [
+      process.env.NEXT_PUBLIC_APP_URL,
+      request.nextUrl.origin,
+    ].filter(Boolean);
+
+    let redirectUri: string;
+    if (redirectUriParam != null && redirectUriParam !== '') {
+      const isAllowed = allowedOrigins.some(origin => origin && redirectUriParam.startsWith(origin));
+      if (!isAllowed) {
+        return NextResponse.json(
+          { success: false, error: 'Invalid redirect URI' },
+          { status: 400 }
+        );
+      }
+      redirectUri = redirectUriParam;
+    } else {
+      redirectUri = `${request.nextUrl.origin}/api/integrations/oauth/${provider}/callback`;
+    }
+
+    // Generate cryptographically random CSRF token for state parameter
+    const csrfToken = randomBytes(32).toString('hex');
 
     // Generate OAuth URLs for different providers
     let authUrl = '';
@@ -36,14 +58,14 @@ export async function GET(
     switch (provider) {
       case 'gmail':
       case 'google-calendar':
-        authUrl = generateGoogleAuthUrl(provider, redirectUri);
+        authUrl = generateGoogleAuthUrl(provider, redirectUri, csrfToken);
         break;
       case 'outlook':
       case 'outlook-calendar':
-        authUrl = generateMicrosoftAuthUrl(provider, redirectUri);
+        authUrl = generateMicrosoftAuthUrl(provider, redirectUri, csrfToken);
         break;
       case 'slack':
-        authUrl = generateSlackAuthUrl(redirectUri);
+        authUrl = generateSlackAuthUrl(redirectUri, csrfToken);
         break;
       default:
         return NextResponse.json(
@@ -64,7 +86,7 @@ export async function GET(
   }
 }
 
-function generateGoogleAuthUrl(provider: string, redirectUri: string): string {
+function generateGoogleAuthUrl(provider: string, redirectUri: string, csrfToken: string): string {
   const googleClientIdEnv = process.env.GOOGLE_CLIENT_ID;
   const clientId = (googleClientIdEnv !== '' && googleClientIdEnv != null) ? googleClientIdEnv : '';
   const scopes = provider === 'google-calendar'
@@ -78,13 +100,13 @@ function generateGoogleAuthUrl(provider: string, redirectUri: string): string {
     scope: scopes,
     access_type: 'offline',
     prompt: 'consent',
-    state: JSON.stringify({ provider }),
+    state: JSON.stringify({ provider, csrf: csrfToken }),
   });
 
   return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
 }
 
-function generateMicrosoftAuthUrl(provider: string, redirectUri: string): string {
+function generateMicrosoftAuthUrl(provider: string, redirectUri: string, csrfToken: string): string {
   const msClientIdEnv = process.env.MICROSOFT_CLIENT_ID;
   const clientId = (msClientIdEnv !== '' && msClientIdEnv != null) ? msClientIdEnv : '';
   const msTenantIdEnv = process.env.MICROSOFT_TENANT_ID;
@@ -99,13 +121,13 @@ function generateMicrosoftAuthUrl(provider: string, redirectUri: string): string
     response_type: 'code',
     scope: scopes,
     response_mode: 'query',
-    state: JSON.stringify({ provider }),
+    state: JSON.stringify({ provider, csrf: csrfToken }),
   });
 
   return `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/authorize?${params.toString()}`;
 }
 
-function generateSlackAuthUrl(redirectUri: string): string {
+function generateSlackAuthUrl(redirectUri: string, csrfToken: string): string {
   const slackClientIdEnv = process.env.SLACK_CLIENT_ID;
   const clientId = (slackClientIdEnv !== '' && slackClientIdEnv != null) ? slackClientIdEnv : '';
   const scopes = 'chat:write,channels:read,users:read';
@@ -114,7 +136,7 @@ function generateSlackAuthUrl(redirectUri: string): string {
     client_id: clientId,
     redirect_uri: redirectUri,
     scope: scopes,
-    state: JSON.stringify({ provider: 'slack' }),
+    state: JSON.stringify({ provider: 'slack', csrf: csrfToken }),
   });
 
   return `https://slack.com/oauth/v2/authorize?${params.toString()}`;

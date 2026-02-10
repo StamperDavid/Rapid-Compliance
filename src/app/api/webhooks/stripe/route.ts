@@ -60,8 +60,22 @@ export async function POST(request: NextRequest) {
     const signatureHeader = request.headers.get('stripe-signature');
     const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
-    // Verify signature if webhook secret is configured
-    if (webhookSecret) {
+    // Fail closed: require webhook secret in production
+    if (!webhookSecret) {
+      if (process.env.NODE_ENV === 'development') {
+        logger.warn('Stripe webhook secret not configured - skipping verification in development', {
+          route: '/api/webhooks/stripe',
+        });
+      } else {
+        logger.error('Stripe webhook secret not configured - rejecting request', new Error('Missing STRIPE_WEBHOOK_SECRET'), {
+          route: '/api/webhooks/stripe',
+        });
+        return NextResponse.json(
+          { success: false, error: 'Webhook not configured' },
+          { status: 500 }
+        );
+      }
+    } else {
       if (!signatureHeader) {
         logger.warn('Stripe webhook signature header missing', {
           route: '/api/webhooks/stripe',
@@ -84,11 +98,6 @@ export async function POST(request: NextRequest) {
 
       logger.debug('Stripe webhook signature verified', {
         route: '/api/webhooks/stripe',
-      });
-    } else {
-      logger.warn('Stripe webhook secret not configured - skipping signature verification', {
-        route: '/api/webhooks/stripe',
-        env: process.env.NODE_ENV,
       });
     }
 

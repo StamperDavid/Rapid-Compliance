@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from 'next/server';
+import { requireAuth } from '@/lib/auth/api-auth';
 import { listForms, createForm, deleteForm } from '@/lib/forms/form-service';
 import type { FormDefinition } from '@/lib/forms/types';
 import { z } from 'zod';
@@ -25,6 +26,11 @@ export async function GET(
   request: NextRequest
 ) {
   try {
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
     const { searchParams } = new URL(request.url);
     const workspaceIdParam = searchParams.get('workspaceId');
     const workspaceId = workspaceIdParam ?? 'default';
@@ -55,6 +61,11 @@ export async function POST(
   request: NextRequest
 ) {
   try {
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
     const rawBody: unknown = await request.json();
     const parseResult = CreateFormBodySchema.safeParse(rawBody);
 
@@ -133,6 +144,11 @@ export async function DELETE(
   request: NextRequest
 ) {
   try {
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
     const body: unknown = await request.json();
     const bodyResult = deleteBodySchema.safeParse(body);
 

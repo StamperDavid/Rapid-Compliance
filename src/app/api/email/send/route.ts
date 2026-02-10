@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { sendEmail } from '@/lib/email/email-service';
 import { requireAuth } from '@/lib/auth/api-auth';
+import { validateEmailCompliance } from '@/lib/compliance/can-spam-service';
 import { emailSendSchema, validateInput } from '@/lib/validation/schemas';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { logApiRequest, logApiError } from '@/lib/logging/api-logger';
@@ -66,6 +67,25 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     if (!emailData.to || !emailData.subject) {
       return NextResponse.json(
         { success: false, error: 'to and subject are required fields' },
+        { status: 400 }
+      );
+    }
+
+    // CAN-SPAM compliance check
+    const emailMetadata = emailData.metadata as Record<string, unknown> | undefined;
+    const compliance = validateEmailCompliance({
+      unsubscribeUrl: typeof emailMetadata?.unsubscribeUrl === 'string' ? emailMetadata.unsubscribeUrl : undefined,
+      physicalAddress: typeof emailMetadata?.physicalAddress === 'string' ? emailMetadata.physicalAddress : undefined,
+      fromAddress: typeof emailData.from === 'string' ? emailData.from : undefined,
+    });
+
+    if (!compliance.compliant) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'CAN-SPAM compliance violation',
+          violations: compliance.violations,
+        },
         { status: 400 }
       );
     }

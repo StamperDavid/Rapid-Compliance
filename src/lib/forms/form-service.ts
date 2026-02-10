@@ -600,7 +600,7 @@ function generateResumeToken(): string {
  * Get public form URL
  */
 export function getPublicFormUrl(formId: string, baseUrl?: string): string {
-  const base = baseUrl ?? (typeof window !== 'undefined' ? window.location.origin : '');
+  const base = baseUrl ?? (typeof window !== 'undefined' ? window.location.origin : (process.env.NEXT_PUBLIC_APP_URL ?? 'https://salesvelocity.ai'));
   return `${base}/forms/${formId}`;
 }
 

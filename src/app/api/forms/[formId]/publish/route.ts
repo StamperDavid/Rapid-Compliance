@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from 'next/server';
+import { requireAuth } from '@/lib/auth/api-auth';
 import { publishForm, getForm } from '@/lib/forms/form-service';
 import { z } from 'zod';
 import { logger } from '@/lib/logger/logger';
@@ -22,6 +23,11 @@ export async function POST(
   context: RouteContext
 ) {
   try {
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
     const { formId } = await context.params;
     const rawBody: unknown = await request.json();
     const parseResult = PublishBodySchema.safeParse(rawBody);

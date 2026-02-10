@@ -28,7 +28,15 @@ export async function GET(request: NextRequest) {
     const authHeader = request.headers.get('authorization');
     const cronSecret = process.env.CRON_SECRET;
 
-    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+    // Fail closed: require CRON_SECRET
+    if (!cronSecret) {
+      logger.error('CRON_SECRET not configured - rejecting request', new Error('Missing CRON_SECRET'), {
+        route: '/api/cron/process-sequences',
+      });
+      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+    }
+
+    if (authHeader !== `Bearer ${cronSecret}`) {
       return errors.unauthorized();
     }
 

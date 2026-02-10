@@ -89,19 +89,47 @@ export async function POST(request: NextRequest) {
       return errors.badRequest('Cart is empty');
     }
 
+    // Create a pending order so the webhook can update it after payment
+    const orderId = `order_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+    await FirestoreService.set(
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/orders`,
+      orderId,
+      {
+        id: orderId,
+        userId: authResult.user.uid,
+        items: cart.items,
+        customerInfo,
+        shippingAddress: shippingAddress ?? null,
+        billingAddress: billingAddress ?? null,
+        shippingMethodId: shippingMethodId ?? null,
+        status: 'pending',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }
+    );
+
     // Create line items
-    const lineItems = cart.items.map((item: CartItem) => ({
-      price_data: {
-        currency: 'usd',
-        product_data: {
-          name: item.name,
-          description: item.description,
-          images: item.image ? [item.image] : [],
+    // Prices are stored in cents in Firestore. Stripe expects cents.
+    // Guard: if a price looks like dollars (< 100 for any real product), convert to cents.
+    const lineItems = cart.items.map((item: CartItem) => {
+      // Ensure price is in cents - if it looks like dollars (has decimals), convert
+      const priceInCents = item.price < 1 ? Math.round(item.price * 100)
+        : Number.isInteger(item.price) ? item.price
+        : Math.round(item.price * 100);
+
+      return {
+        price_data: {
+          currency: 'usd',
+          product_data: {
+            name: item.name,
+            description: item.description,
+            images: item.image ? [item.image] : [],
+          },
+          unit_amount: priceInCents,
         },
-        unit_amount: item.price,
-      },
-      quantity: item.quantity,
-    }));
+        quantity: item.quantity,
+      };
+    });
 
     // Create checkout session with complete metadata for webhook processing
     const session = await stripe.checkout.sessions.create({
@@ -112,6 +140,7 @@ export async function POST(request: NextRequest) {
       cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/store/cart`,
       customer_email: customerInfo.email,
       metadata: {
+        orderId,
         workspaceId: workspaceId,
         userId: authResult.user.uid,
         cartId: authResult.user.uid, // Cart ID is the user ID

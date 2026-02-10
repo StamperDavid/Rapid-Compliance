@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from 'next/server';
+import { requireAuth } from '@/lib/auth/api-auth';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
@@ -51,6 +52,11 @@ export async function GET(request: NextRequest) {
   try {
     const rateLimitResponse = await rateLimitMiddleware(request, '/api/analytics/ecommerce');
     if (rateLimitResponse) {return rateLimitResponse;}
+
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
 
     const { searchParams } = new URL(request.url);
     const period =(searchParams.get('period') !== '' && searchParams.get('period') != null) ? searchParams.get('period') : '30d';

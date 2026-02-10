@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { sendSMS, type SMSOptions } from '@/lib/sms/sms-service';
 import { requireAuth } from '@/lib/auth/api-auth';
+import { checkTCPAConsent } from '@/lib/compliance/tcpa-service';
 import { smsSendSchema, validateInput } from '@/lib/validation/schemas';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { logger } from '@/lib/logger/logger';
@@ -46,6 +47,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { success: false, error: 'to and message are required fields' },
         { status: 400 }
+      );
+    }
+
+    // TCPA compliance check before sending
+    const tcpaCheck = await checkTCPAConsent(smsData.to, 'sms');
+    if (!tcpaCheck.allowed) {
+      logger.warn('SMS blocked by TCPA compliance', {
+        route: '/api/sms/send',
+        to: smsData.to,
+        reason: tcpaCheck.reason,
+      });
+      return NextResponse.json(
+        { success: false, error: `TCPA compliance: ${tcpaCheck.reason}` },
+        { status: 403 }
       );
     }
 

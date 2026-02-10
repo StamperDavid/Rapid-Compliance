@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/api-auth';
+import { checkTCPAConsent, checkCallTimeRestrictions } from '@/lib/compliance/tcpa-service';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
@@ -39,6 +40,34 @@ export async function POST(request: NextRequest) {
 
     if (!to) {
       return errors.badRequest('Phone number is required');
+    }
+
+    // TCPA compliance checks before making outbound call
+    const tcpaCheck = await checkTCPAConsent(to, 'call');
+    if (!tcpaCheck.allowed) {
+      logger.warn('Outbound call blocked by TCPA compliance', {
+        route: '/api/voice/call',
+        to,
+        reason: tcpaCheck.reason,
+      });
+      return NextResponse.json(
+        { success: false, error: `TCPA compliance: ${tcpaCheck.reason}` },
+        { status: 403 }
+      );
+    }
+
+    // Check time-of-day restrictions
+    const timeCheck = checkCallTimeRestrictions(to);
+    if (!timeCheck.allowed) {
+      logger.warn('Outbound call blocked by time restriction', {
+        route: '/api/voice/call',
+        to,
+        reason: timeCheck.reason,
+      });
+      return NextResponse.json(
+        { success: false, error: timeCheck.reason },
+        { status: 403 }
+      );
     }
 
     // Initialize Twilio client

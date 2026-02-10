@@ -9,6 +9,7 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { apiKeyService } from '@/lib/api-keys/api-key-service';
+import { encryptToken } from '@/lib/security/token-encryption';
 import { logger } from '@/lib/logger/logger';
 
 export const dynamic = 'force-dynamic';
@@ -117,13 +118,29 @@ export async function GET(
           throw new Error(`Unsupported provider: ${provider}`);
       }
 
-      // Store credentials in API keys
+      // Encrypt tokens before storage
+      const encryptedCredentials: Record<string, unknown> = {};
+      for (const [key, value] of Object.entries(credentials)) {
+        if ((key === 'accessToken' || key === 'refreshToken' || key === 'botToken') && typeof value === 'string') {
+          try {
+            encryptedCredentials[key] = encryptToken(value);
+          } catch {
+            // If encryption fails (e.g., no secret configured), store as-is with warning
+            logger.warn('Token encryption unavailable - storing token without encryption', { provider });
+            encryptedCredentials[key] = value;
+          }
+        } else {
+          encryptedCredentials[key] = value;
+        }
+      }
+
+      // Store encrypted credentials in API keys
       const existingKeys = await apiKeyService.getKeys();
       const updatedKeys = {
         ...existingKeys,
         integrations: {
           ...existingKeys?.integrations,
-          [provider]: credentials,
+          [provider]: encryptedCredentials,
         },
       };
 

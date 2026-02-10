@@ -7,6 +7,7 @@
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
+import { requireAuth } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { createTwitterService } from '@/lib/integrations/twitter-service';
@@ -34,6 +35,11 @@ export async function POST(request: NextRequest) {
     const rateLimitResponse = await rateLimitMiddleware(request, '/api/social/twitter/post');
     if (rateLimitResponse) {
       return rateLimitResponse;
+    }
+
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
     }
 
     // Parse request body

@@ -381,14 +381,20 @@ export async function GET(request: NextRequest) {
     const authHeader = request.headers.get('authorization');
     const cronSecret = process.env.CRON_SECRET;
 
-    if (cronSecret) {
-      if (!authHeader || authHeader !== `Bearer ${cronSecret}`) {
-        logger.error('Unauthorized cron access attempt', new Error('Invalid cron secret'), {
-          route: '/api/cron/operations-cycle',
-          method: 'GET',
-        });
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-      }
+    // Fail closed: require CRON_SECRET
+    if (!cronSecret) {
+      logger.error('CRON_SECRET not configured - rejecting request', new Error('Missing CRON_SECRET'), {
+        route: '/api/cron/operations-cycle',
+      });
+      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+    }
+
+    if (!authHeader || authHeader !== `Bearer ${cronSecret}`) {
+      logger.error('Unauthorized cron access attempt', new Error('Invalid cron secret'), {
+        route: '/api/cron/operations-cycle',
+        method: 'GET',
+      });
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // Get cycle type from query params (default to operational)

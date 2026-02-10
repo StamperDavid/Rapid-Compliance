@@ -11,6 +11,8 @@
 export const dynamic = 'force-dynamic';
 
 import { type NextRequest, NextResponse } from 'next/server';
+import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
+import { logger } from '@/lib/logger/logger';
 import { db } from '@/lib/firebase/config';
 import {
   collection,
@@ -173,11 +175,33 @@ export async function POST(
   { params }: { params: Promise<{ formId: string }> }
 ) {
   try {
+    // Rate limiting for spam prevention
+    const rateLimitResponse = await rateLimitMiddleware(request, '/api/public/forms/submit');
+    if (rateLimitResponse) {
+      return rateLimitResponse;
+    }
+
     const { formId } = await params;
     const body = await request.json() as {
       responses: Record<string, unknown>;
       metadata?: Record<string, unknown>;
+      _honeypot?: string;
+      _loadedAt?: number;
     };
+
+    // Spam prevention: honeypot field check
+    if (body._honeypot) {
+      logger.warn('Form submission blocked: honeypot triggered', { formId });
+      // Return success to not alert the bot
+      return NextResponse.json({ success: true, submissionId: 'ok' });
+    }
+
+    // Spam prevention: timing check (form loaded < 2s ago = likely bot)
+    if (body._loadedAt && (Date.now() - body._loadedAt) < 2000) {
+      logger.warn('Form submission blocked: too fast', { formId });
+      return NextResponse.json({ success: true, submissionId: 'ok' });
+    }
+
     const { responses, metadata } = body;
 
     if (!db) {

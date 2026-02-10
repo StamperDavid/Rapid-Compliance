@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from 'next/server';
+import { requireAuth } from '@/lib/auth/api-auth';
 import { getForm, updateForm, deleteForm } from '@/lib/forms/form-service';
 import {
   collection,
@@ -48,6 +49,11 @@ export async function GET(
   context: RouteContext
 ) {
   try {
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
     const { formId } = await context.params;
     const { searchParams } = new URL(request.url);
     const workspaceIdParam = searchParams.get('workspaceId');
@@ -85,6 +91,11 @@ export async function PUT(
   context: RouteContext
 ) {
   try {
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
     const { formId } = await context.params;
     const rawBody: unknown = await request.json();
     const parseResult = UpdateFormBodySchema.safeParse(rawBody);
@@ -153,6 +164,11 @@ export async function DELETE(
   context: RouteContext
 ) {
   try {
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
     const { formId } = await context.params;
     const { searchParams } = new URL(request.url);
     const workspaceIdParam = searchParams.get('workspaceId');

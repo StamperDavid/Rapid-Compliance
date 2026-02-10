@@ -41,6 +41,12 @@ export async function GET(request: NextRequest) {
 
     const constraints: QueryConstraint[] = [orderBy('createdAt', 'desc')];
 
+    // Filter by authenticated user's orders only (non-admin users)
+    const isAdmin = authResult.user.role === 'owner' || authResult.user.role === 'admin';
+    if (!isAdmin) {
+      constraints.push(where('userId', '==', authResult.user.uid));
+    }
+
     // Filter by customer email if provided
     if (customerEmail) {
       constraints.push(where('customerEmail', '==', customerEmail));
