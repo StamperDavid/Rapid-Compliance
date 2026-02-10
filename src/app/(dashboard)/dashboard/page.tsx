@@ -293,7 +293,7 @@ export default function WorkspaceDashboardPage() {
 
   return (
     <div style={{ padding: '2rem' }}>
-      <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
+      <div>
         {/* Header */}
         <div style={{ marginBottom: '2rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

@@ -153,7 +153,7 @@ export default function ExecutiveBriefingPage() {
   if (loading) {
     return (
       <div style={{ padding: '2rem' }}>
-        <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
+        <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '2rem' }}>
             <div style={{ width: '48px', height: '48px', borderRadius: '50%', backgroundColor: 'var(--color-bg-paper)', animation: 'pulse 2s infinite' }} />
             <div>
@@ -173,7 +173,7 @@ export default function ExecutiveBriefingPage() {
 
   return (
     <div style={{ padding: '2rem' }}>
-      <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
+      <div>
         {/* Header */}
         <div style={{ marginBottom: '2rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

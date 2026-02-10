@@ -485,7 +485,7 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
         borderBottom: '1px solid var(--color-border-light)',
         backgroundColor: 'var(--color-bg-main)',
       }}>
-        <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
+        <div>
           <h1 style={{
             fontSize: '2rem',
             fontWeight: 'bold',
@@ -506,8 +506,6 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
         backgroundColor: 'var(--color-bg-main)',
       }}>
         <div style={{
-          maxWidth: '1400px',
-          margin: '0 auto',
           padding: '0 2rem',
           display: 'flex',
           gap: '2rem',
@@ -538,7 +536,7 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
 
       {/* Main Content */}
       <div style={{ padding: '2rem' }}>
-        <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
+        <div>
 
           {/* Settings Tab */}
           {activeTab === 'settings' && (

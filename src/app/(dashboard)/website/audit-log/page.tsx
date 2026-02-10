@@ -128,7 +128,7 @@ export default function AuditLogPage() {
   if (loading) {
     return (
       <div style={{ fontFamily: 'system-ui', padding: '2rem' }}>
-        <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+        <div>
           <h1 style={{ fontSize: '1.875rem', fontWeight: 'bold', marginBottom: '2rem' }}>
             Website Audit Log
           </h1>
@@ -141,7 +141,7 @@ export default function AuditLogPage() {
   if (error) {
     return (
       <div style={{ fontFamily: 'system-ui', padding: '2rem' }}>
-        <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+        <div>
           <h1 style={{ fontSize: '1.875rem', fontWeight: 'bold', marginBottom: '2rem' }}>
             Website Audit Log
           </h1>
@@ -161,8 +161,8 @@ export default function AuditLogPage() {
 
   return (
     <div style={{ fontFamily: 'system-ui', padding: '2rem', background: 'var(--color-bg-elevated)', minHeight: '100vh' }}>
-      
-      <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+
+      <div>
         {/* Header */}
         <div style={{ marginBottom: '2rem' }}>
           <h1 style={{ fontSize: '1.875rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>
@@ -175,7 +175,7 @@ export default function AuditLogPage() {
 
         {/* Filter Bar */}
         <div style={{
-          background: 'white',
+          background: 'var(--color-bg-paper)',
           padding: '1rem',
           borderRadius: '8px',
           border: '1px solid var(--color-border-light)',
@@ -184,7 +184,7 @@ export default function AuditLogPage() {
           alignItems: 'center',
           gap: '1rem',
         }}>
-          <label style={{ fontWeight: '500', color: 'var(--color-border-strong)' }}>
+          <label style={{ fontWeight: '500', color: 'var(--color-text-secondary)' }}>
             Filter:
           </label>
           <select
@@ -195,7 +195,7 @@ export default function AuditLogPage() {
               border: '1px solid var(--color-border-light)',
               borderRadius: '6px',
               fontSize: '0.875rem',
-              background: 'white',
+              background: 'var(--color-bg-paper)',
               cursor: 'pointer',
             }}
           >
@@ -214,7 +214,7 @@ export default function AuditLogPage() {
         {/* Audit Log Entries */}
         {filteredEntries.length === 0 ? (
           <div style={{
-            background: 'white',
+            background: 'var(--color-bg-paper)',
             padding: '3rem',
             borderRadius: '8px',
             border: '1px solid var(--color-border-light)',
@@ -233,7 +233,7 @@ export default function AuditLogPage() {
               <div
                 key={entry.id}
                 style={{
-                  background: 'white',
+                  background: 'var(--color-bg-paper)',
                   padding: '1.25rem',
                   borderRadius: '8px',
                   border: '1px solid var(--color-border-light)',

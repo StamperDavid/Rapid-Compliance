@@ -862,7 +862,7 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
     <div style={{ backgroundColor: 'var(--color-bg-main)', minHeight: '100vh', color: 'var(--color-text-primary)' }}>
       {/* Header */}
       <div style={{ padding: '2rem', borderBottom: '1px solid var(--color-border-light)' }}>
-        <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
+        <div>
           <h1 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>
             Voice AI Training Lab
           </h1>
@@ -874,7 +874,7 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
 
       {/* Tabs */}
       <div style={{ borderBottom: '1px solid var(--color-border-light)', backgroundColor: 'var(--color-bg-main)' }}>
-        <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '0 2rem', display: 'flex', gap: '2rem' }}>
+        <div style={{ padding: '0 2rem', display: 'flex', gap: '2rem' }}>
           {([
             { id: 'settings' as const, label: 'Settings' },
             { id: 'test-calls' as const, label: 'Test Calls' },
@@ -903,7 +903,7 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
 
       {/* Content */}
       <div style={{ padding: '2rem' }}>
-        <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
+        <div>
 
           {/* Settings Tab */}
           {activeTab === 'settings' && (

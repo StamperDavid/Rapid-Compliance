@@ -72,7 +72,7 @@ export default function ComplianceReportsPage() {
   if (loading) {
     return (
       <div style={{ padding: '2rem' }}>
-        <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
+        <div>
           <div style={{ marginBottom: '2rem' }}>
             <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
               Compliance Reports
@@ -86,7 +86,7 @@ export default function ComplianceReportsPage() {
 
   return (
     <div style={{ padding: '2rem' }}>
-      <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
+      <div>
         {/* Header */}
         <div style={{ marginBottom: '2rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>

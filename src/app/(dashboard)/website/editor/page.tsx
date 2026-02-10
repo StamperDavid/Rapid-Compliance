@@ -725,7 +725,7 @@ export default function PageEditorPage() {
       {/* Confirmation Dialog */}
       {confirmDialog && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
-          <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '1.5rem', maxWidth: '400px', margin: '1rem', boxShadow: '0 10px 25px rgba(0, 0, 0, 0.2)' }}>
+          <div style={{ backgroundColor: 'var(--color-bg-paper)', borderRadius: '12px', padding: '1.5rem', maxWidth: '400px', margin: '1rem', boxShadow: '0 10px 25px rgba(0, 0, 0, 0.2)' }}>
             <p style={{ color: 'var(--color-text-primary)', marginBottom: '1rem', fontSize: '1rem' }}>{confirmDialog.message}</p>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
               <button onClick={() => setConfirmDialog(null)} style={{ padding: '0.5rem 1rem', borderRadius: '8px', color: 'var(--color-text-disabled)', background: 'var(--color-bg-elevated)', border: 'none', cursor: 'pointer' }}>Cancel</button>
@@ -738,7 +738,7 @@ export default function PageEditorPage() {
       {/* Prompt Dialog */}
       {promptDialog && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
-          <div style={{ backgroundColor: 'white', borderRadius: '12px', padding: '1.5rem', maxWidth: '400px', width: '100%', margin: '1rem', boxShadow: '0 10px 25px rgba(0, 0, 0, 0.2)' }}>
+          <div style={{ backgroundColor: 'var(--color-bg-paper)', borderRadius: '12px', padding: '1.5rem', maxWidth: '400px', width: '100%', margin: '1rem', boxShadow: '0 10px 25px rgba(0, 0, 0, 0.2)' }}>
             <p style={{ color: 'var(--color-text-primary)', marginBottom: '1rem', fontSize: '1rem' }}>{promptDialog.message}</p>
             <input
               type="text"

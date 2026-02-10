@@ -36,7 +36,7 @@ export default function PropertiesPanel({
     return (
       <div style={{
         width: '320px',
-        background: 'var(--color-surface-elevated)',
+        background: 'var(--color-bg-elevated)',
         borderLeft: '1px solid var(--color-border-light)',
         padding: '2rem 1rem',
         textAlign: 'center',
@@ -69,7 +69,7 @@ export default function PropertiesPanel({
   return (
     <div style={{
       width: '320px',
-      background: 'var(--color-surface-elevated)',
+      background: 'var(--color-bg-elevated)',
       borderLeft: '1px solid var(--color-border-light)',
       display: 'flex',
       flexDirection: 'column',
@@ -79,7 +79,7 @@ export default function PropertiesPanel({
       <div style={{
         padding: '1rem',
         borderBottom: '1px solid var(--color-border-light)',
-        background: 'var(--color-surface-paper)',
+        background: 'var(--color-bg-paper)',
       }}>
         <h3 style={{
           margin: '0 0 0.5rem',
@@ -100,7 +100,7 @@ export default function PropertiesPanel({
       {/* Tabs */}
       <div style={{
         display: 'flex',
-        background: 'var(--color-surface-paper)',
+        background: 'var(--color-bg-paper)',
         borderBottom: '1px solid var(--color-border-light)',
       }}>
         <button

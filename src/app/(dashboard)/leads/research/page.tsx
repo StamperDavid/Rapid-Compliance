@@ -187,15 +187,15 @@ export default function LeadResearchPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-black flex flex-col">
-      <div className="flex-1 flex flex-col max-w-5xl w-full mx-auto p-6">
+    <div className="min-h-screen bg-[var(--color-bg-main)] flex flex-col">
+      <div className="flex-1 flex flex-col w-full p-6">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           className="flex items-center gap-3 mb-6"
         >
-          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center shadow-lg shadow-violet-500/25">
+          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center shadow-lg" style={{ boxShadow: '0 10px 25px -5px rgba(var(--color-primary-rgb), 0.25)' }}>
             <Search className="w-6 h-6 text-white" />
           </div>
           <div>
@@ -211,7 +211,8 @@ export default function LeadResearchPage() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="flex-1 overflow-y-auto rounded-2xl bg-black/40 backdrop-blur-xl border border-white/10 p-6 mb-6"
+          className="flex-1 overflow-y-auto rounded-2xl backdrop-blur-xl border border-white/10 p-6 mb-6"
+          style={{ backgroundColor: 'rgba(0, 0, 0, 0.4)' }}
         >
           <AnimatePresence>
             {messages.map((message, idx) => (
@@ -226,13 +227,13 @@ export default function LeadResearchPage() {
                 <div
                   className={`max-w-[80%] rounded-2xl p-4 ${
                     message.role === 'user'
-                      ? 'bg-gradient-to-r from-violet-600 to-purple-600'
+                      ? 'bg-gradient-to-r from-primary to-secondary'
                       : 'bg-white/5 border border-white/10'
                   }`}
                 >
                   {/* Sender Label */}
                   <div className={`flex items-center gap-2 text-xs mb-2 ${
-                    message.role === 'user' ? 'text-violet-200' : 'text-[var(--color-text-disabled)]'
+                    message.role === 'user' ? 'text-primary-light' : 'text-[var(--color-text-disabled)]'
                   }`}>
                     {message.role === 'user' ? (
                       <>
@@ -280,20 +281,23 @@ export default function LeadResearchPage() {
                               href={lead.website}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1.5 text-sm text-violet-400 hover:text-violet-300 transition-colors"
+                              className="inline-flex items-center gap-1.5 text-sm text-primary hover:text-primary-light transition-colors"
                             >
                               <Globe className="w-3 h-3" />
                               {lead.domain}
                               <ExternalLink className="w-3 h-3" />
                             </a>
                           </div>
-                          <span className={`px-2.5 py-1 rounded-lg text-xs font-medium ${
-                            lead.confidence >= 80
-                              ? 'bg-emerald-500/20 border border-emerald-500/30 text-emerald-300'
-                              : lead.confidence >= 60
-                              ? 'bg-yellow-500/20 border border-yellow-500/30 text-yellow-300'
-                              : 'bg-surface-elevated border border-[var(--color-border-strong)] text-[var(--color-text-secondary)]'
-                          }`}>
+                          <span
+                            className="px-2.5 py-1 rounded-lg text-xs font-medium border"
+                            style={
+                              lead.confidence >= 80
+                                ? { backgroundColor: 'rgba(var(--color-success-rgb), 0.2)', borderColor: 'rgba(var(--color-success-rgb), 0.3)', color: 'var(--color-success)' }
+                                : lead.confidence >= 60
+                                ? { backgroundColor: 'rgba(var(--color-warning-rgb), 0.2)', borderColor: 'rgba(var(--color-warning-rgb), 0.3)', color: 'var(--color-warning)' }
+                                : { backgroundColor: 'var(--color-surface-elevated)', borderColor: 'var(--color-border-strong)', color: 'var(--color-text-secondary)' }
+                            }
+                          >
                             {lead.confidence}% confidence
                           </span>
                         </div>
@@ -319,28 +323,58 @@ export default function LeadResearchPage() {
                         <div className="flex gap-3 pt-3 border-t border-white/10">
                           <button
                             onClick={() => void handleLeadFeedback(message.id, lead.domain, true)}
-                            className={`flex-1 inline-flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium transition-all ${
+                            className="flex-1 inline-flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium transition-all border"
+                            style={
                               lead.isGoodLead === true
-                                ? 'bg-emerald-500 text-white'
-                                : 'bg-white/5 border border-white/10 text-[var(--color-text-secondary)] hover:bg-emerald-500/20 hover:border-emerald-500/30 hover:text-emerald-300'
-                            }`}
+                                ? { backgroundColor: 'var(--color-success)', color: 'white', borderColor: 'transparent' }
+                                : { backgroundColor: 'rgba(255, 255, 255, 0.05)', borderColor: 'rgba(255, 255, 255, 0.1)', color: 'var(--color-text-secondary)' }
+                            }
+                            onMouseEnter={(e) => {
+                              if (lead.isGoodLead !== true) {
+                                e.currentTarget.style.backgroundColor = 'rgba(var(--color-success-rgb), 0.2)';
+                                e.currentTarget.style.borderColor = 'rgba(var(--color-success-rgb), 0.3)';
+                                e.currentTarget.style.color = 'var(--color-success)';
+                              }
+                            }}
+                            onMouseLeave={(e) => {
+                              if (lead.isGoodLead !== true) {
+                                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.05)';
+                                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+                                e.currentTarget.style.color = 'var(--color-text-secondary)';
+                              }
+                            }}
                           >
                             <ThumbsUp className="w-4 h-4" />
                             Good Lead
                           </button>
                           <button
                             onClick={() => void handleLeadFeedback(message.id, lead.domain, false)}
-                            className={`flex-1 inline-flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium transition-all ${
+                            className="flex-1 inline-flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium transition-all border"
+                            style={
                               lead.isGoodLead === false
-                                ? 'bg-red-500 text-white'
-                                : 'bg-white/5 border border-white/10 text-[var(--color-text-secondary)] hover:bg-red-500/20 hover:border-red-500/30 hover:text-red-300'
-                            }`}
+                                ? { backgroundColor: 'var(--color-error)', color: 'white', borderColor: 'transparent' }
+                                : { backgroundColor: 'rgba(255, 255, 255, 0.05)', borderColor: 'rgba(255, 255, 255, 0.1)', color: 'var(--color-text-secondary)' }
+                            }
+                            onMouseEnter={(e) => {
+                              if (lead.isGoodLead !== false) {
+                                e.currentTarget.style.backgroundColor = 'rgba(var(--color-error-rgb), 0.2)';
+                                e.currentTarget.style.borderColor = 'rgba(var(--color-error-rgb), 0.3)';
+                                e.currentTarget.style.color = 'var(--color-error)';
+                              }
+                            }}
+                            onMouseLeave={(e) => {
+                              if (lead.isGoodLead !== false) {
+                                e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.05)';
+                                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+                                e.currentTarget.style.color = 'var(--color-text-secondary)';
+                              }
+                            }}
                           >
                             <ThumbsDown className="w-4 h-4" />
                             Not Relevant
                           </button>
                           <button
-                            className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 text-white rounded-lg text-sm font-medium transition-all"
+                            className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-primary to-secondary hover:from-primary-light hover:to-secondary-light text-white rounded-lg text-sm font-medium transition-all"
                           >
                             <Plus className="w-4 h-4" />
                             Add to CRM
@@ -357,7 +391,7 @@ export default function LeadResearchPage() {
           {/* Loading Indicator */}
           {isLoading && (
             <div className="flex items-center gap-3 text-[var(--color-text-secondary)]">
-              <Loader2 className="w-5 h-5 animate-spin text-violet-400" />
+              <Loader2 className="w-5 h-5 animate-spin text-primary" />
               <span>Researching leads...</span>
             </div>
           )}
@@ -384,7 +418,8 @@ export default function LeadResearchPage() {
           <button
             type="submit"
             disabled={isLoading || !input.trim()}
-            className="inline-flex items-center gap-2 px-6 py-3.5 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-500 hover:to-purple-500 disabled:from-gray-600 disabled:to-gray-600 text-white font-semibold rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-violet-500/25"
+            className="inline-flex items-center gap-2 px-6 py-3.5 bg-gradient-to-r from-primary to-secondary hover:from-primary-light hover:to-secondary-light disabled:from-gray-600 disabled:to-gray-600 text-white font-semibold rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+            style={{ boxShadow: '0 10px 25px -5px rgba(var(--color-primary-rgb), 0.25)' }}
           >
             {isLoading ? (
               <>
@@ -411,7 +446,14 @@ export default function LeadResearchPage() {
             <button
               key={idx}
               onClick={() => setInput(example)}
-              className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-[var(--color-text-secondary)] hover:bg-white/10 hover:text-white hover:border-violet-500/30 transition-all"
+              className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-[var(--color-text-secondary)] hover:bg-white/10 hover:text-white transition-all"
+              style={{ borderColor: 'rgba(255, 255, 255, 0.1)' }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = 'rgba(var(--color-primary-rgb), 0.3)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+              }}
             >
               {example}
             </button>

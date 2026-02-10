@@ -23,13 +23,43 @@ import {
 
 const DEAL_STAGES = ['prospecting', 'qualification', 'proposal', 'negotiation', 'closed_won', 'closed_lost'];
 
-const STAGE_COLORS: Record<string, { bg: string; border: string; text: string; icon: string }> = {
-  prospecting: { bg: 'from-blue-500/20 to-cyan-500/20', border: 'border-blue-500/30', text: 'text-blue-300', icon: '🎯' },
-  qualification: { bg: 'from-purple-500/20 to-pink-500/20', border: 'border-purple-500/30', text: 'text-purple-300', icon: '📋' },
-  proposal: { bg: 'from-orange-500/20 to-amber-500/20', border: 'border-orange-500/30', text: 'text-orange-300', icon: '📝' },
-  negotiation: { bg: 'from-yellow-500/20 to-lime-500/20', border: 'border-yellow-500/30', text: 'text-yellow-300', icon: '🤝' },
-  closed_won: { bg: 'from-emerald-500/20 to-green-500/20', border: 'border-emerald-500/30', text: 'text-emerald-300', icon: '🎉' },
-  closed_lost: { bg: 'from-red-500/20 to-rose-500/20', border: 'border-red-500/30', text: 'text-red-300', icon: '❌' },
+const STAGE_COLORS: Record<string, { bgStyle: React.CSSProperties; borderStyle: React.CSSProperties; textStyle: React.CSSProperties; icon: string }> = {
+  prospecting: {
+    bgStyle: { background: 'linear-gradient(to right, rgba(var(--color-info-rgb), 0.2), rgba(var(--color-info-rgb), 0.15))' },
+    borderStyle: { borderColor: 'rgba(var(--color-info-rgb), 0.3)' },
+    textStyle: { color: 'var(--color-info)' },
+    icon: '🎯'
+  },
+  qualification: {
+    bgStyle: { background: 'linear-gradient(to right, rgba(var(--color-secondary-rgb), 0.2), rgba(var(--color-secondary-rgb), 0.15))' },
+    borderStyle: { borderColor: 'rgba(var(--color-secondary-rgb), 0.3)' },
+    textStyle: { color: 'var(--color-secondary)' },
+    icon: '📋'
+  },
+  proposal: {
+    bgStyle: { background: 'linear-gradient(to right, rgba(var(--color-warning-rgb), 0.2), rgba(var(--color-warning-rgb), 0.15))' },
+    borderStyle: { borderColor: 'rgba(var(--color-warning-rgb), 0.3)' },
+    textStyle: { color: 'var(--color-warning)' },
+    icon: '📝'
+  },
+  negotiation: {
+    bgStyle: { background: 'linear-gradient(to right, rgba(var(--color-warning-rgb), 0.2), rgba(var(--color-warning-rgb), 0.15))' },
+    borderStyle: { borderColor: 'rgba(var(--color-warning-rgb), 0.3)' },
+    textStyle: { color: 'var(--color-warning)' },
+    icon: '🤝'
+  },
+  closed_won: {
+    bgStyle: { background: 'linear-gradient(to right, rgba(var(--color-success-rgb), 0.2), rgba(var(--color-success-rgb), 0.15))' },
+    borderStyle: { borderColor: 'rgba(var(--color-success-rgb), 0.3)' },
+    textStyle: { color: 'var(--color-success)' },
+    icon: '🎉'
+  },
+  closed_lost: {
+    bgStyle: { background: 'linear-gradient(to right, rgba(var(--color-error-rgb), 0.2), rgba(var(--color-error-rgb), 0.15))' },
+    borderStyle: { borderColor: 'rgba(var(--color-error-rgb), 0.3)' },
+    textStyle: { color: 'var(--color-error)' },
+    icon: '❌'
+  },
 };
 
 interface Deal {
@@ -49,7 +79,7 @@ const getCompanyName = (deal: Deal) => {
 const getStageBadge = (stage: string) => {
   const colors = STAGE_COLORS[stage] || STAGE_COLORS.prospecting;
   return (
-    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium bg-gradient-to-r ${colors.bg} border ${colors.border} ${colors.text} capitalize`}>
+    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium border capitalize" style={{ ...colors.bgStyle, ...colors.borderStyle, ...colors.textStyle }}>
       {stage.replace('_', ' ')}
     </span>
   );
@@ -284,7 +314,7 @@ export default function DealsPage() {
                   className="rounded-2xl bg-surface-paper backdrop-blur-xl border border-border-light overflow-hidden"
                 >
                   {/* Stage Header */}
-                  <div className={`p-4 bg-gradient-to-r ${colors.bg} border-b border-border-light`}>
+                  <div className="p-4 border-b border-border-light" style={colors.bgStyle}>
                     <div className="flex items-center gap-2 mb-1">
                       <span className="text-lg">{colors.icon}</span>
                       <h3 className="font-semibold text-[var(--color-text-primary)] text-sm capitalize">{stage.replace('_', ' ')}</h3>

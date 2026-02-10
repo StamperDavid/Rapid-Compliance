@@ -576,7 +576,7 @@ export default function WorkforceCommandCenterPage() {
         }
       `}</style>
 
-      <div style={{ maxWidth: '1600px', margin: '0 auto' }}>
+      <div>
         {/* Header */}
         <div style={{
           display: 'flex',

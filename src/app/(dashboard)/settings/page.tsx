@@ -86,7 +86,7 @@ export default function SettingsPage() {
 
   return (
     <div style={{ padding: '2rem', overflowY: 'auto' }}>
-      <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+      <div>
         {/* Header */}
         <div style={{ marginBottom: '2rem' }}>
           <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>Settings</h1>

@@ -152,7 +152,7 @@ export default function EmailSequencesPage() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: 'var(--color-bg-main)' }}>
       <div style={{ flex: 1, padding: '2rem', overflowY: 'auto' }}>
-        <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
+        <div>
           {/* Header */}
           <div style={{ marginBottom: '2rem' }}>
             <Link href={`/outbound`} style={{ color: 'var(--color-primary)', fontSize: '0.875rem', fontWeight: '500', textDecoration: 'none' }}>

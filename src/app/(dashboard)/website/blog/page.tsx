@@ -150,7 +150,7 @@ export default function BlogManagementPage() {
 
   return (
     <div style={{ fontFamily: 'system-ui', minHeight: '100vh', background: 'var(--color-bg-elevated)' }}>
-      <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '2rem' }}>
+      <div style={{ padding: '2rem' }}>
         {/* Header */}
         <div style={{
           display: 'flex',
@@ -159,7 +159,7 @@ export default function BlogManagementPage() {
           marginBottom: '2rem',
         }}>
           <div>
-            <h1 style={{ fontSize: '2rem', margin: '0 0 0.5rem', color: 'var(--color-bg-main)' }}>
+            <h1 style={{ fontSize: '2rem', margin: '0 0 0.5rem', color: 'var(--color-text-primary)' }}>
               Blog Posts
             </h1>
             <p style={{ margin: 0, color: 'var(--color-text-disabled)' }}>
@@ -214,7 +214,7 @@ export default function BlogManagementPage() {
               onClick={() => setFilter('all')}
               style={{
                 padding: '0.5rem 1rem',
-                background: filter === 'all' ? 'var(--color-info)' : 'white',
+                background: filter === 'all' ? 'var(--color-info)' : 'var(--color-bg-paper)',
                 color: filter === 'all' ? 'white' : 'var(--color-text-disabled)',
                 border: '1px solid var(--color-border-light)',
                 borderRadius: '4px',
@@ -228,7 +228,7 @@ export default function BlogManagementPage() {
               onClick={() => setFilter('draft')}
               style={{
                 padding: '0.5rem 1rem',
-                background: filter === 'draft' ? 'var(--color-info)' : 'white',
+                background: filter === 'draft' ? 'var(--color-info)' : 'var(--color-bg-paper)',
                 color: filter === 'draft' ? 'white' : 'var(--color-text-disabled)',
                 border: '1px solid var(--color-border-light)',
                 borderRadius: '4px',
@@ -242,7 +242,7 @@ export default function BlogManagementPage() {
               onClick={() => setFilter('published')}
               style={{
                 padding: '0.5rem 1rem',
-                background: filter === 'published' ? 'var(--color-info)' : 'white',
+                background: filter === 'published' ? 'var(--color-info)' : 'var(--color-bg-paper)',
                 color: filter === 'published' ? 'white' : 'var(--color-text-disabled)',
                 border: '1px solid var(--color-border-light)',
                 borderRadius: '4px',
@@ -280,7 +280,7 @@ export default function BlogManagementPage() {
         {/* Posts List */}
         {posts.length === 0 ? (
           <div style={{
-            background: 'white',
+            background: 'var(--color-bg-paper)',
             borderRadius: '8px',
             padding: '4rem 2rem',
             textAlign: 'center',
@@ -317,7 +317,7 @@ export default function BlogManagementPage() {
               <div
                 key={post.id}
                 style={{
-                  background: 'white',
+                  background: 'var(--color-bg-paper)',
                   borderRadius: '8px',
                   padding: '1.5rem',
                   display: 'flex',
@@ -473,7 +473,7 @@ export default function BlogManagementPage() {
           zIndex: 1000,
         }}>
           <div style={{
-            background: 'white',
+            background: 'var(--color-bg-paper)',
             borderRadius: '8px',
             padding: '2rem',
             maxWidth: '400px',

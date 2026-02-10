@@ -577,7 +577,7 @@ export default function SEOTrainingPage() {
     <div style={{ minHeight: '100vh', backgroundColor: COLORS.bg, color: COLORS.text }}>
       {/* Header Section */}
       <div style={{ padding: '2rem', borderBottom: `1px solid ${COLORS.border}` }}>
-        <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
+        <div>
           <h1 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>
             SEO Content AI Training Lab
           </h1>
@@ -604,7 +604,7 @@ export default function SEOTrainingPage() {
 
       {/* Tab Navigation */}
       <div style={{ borderBottom: `1px solid ${COLORS.border}`, backgroundColor: COLORS.card }}>
-        <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '0 2rem', display: 'flex', gap: '2rem' }}>
+        <div style={{ padding: '0 2rem', display: 'flex', gap: '2rem' }}>
           {(['settings', 'generate', 'history', 'knowledge'] as const).map(tab => (
             <button
               key={tab}
@@ -628,7 +628,7 @@ export default function SEOTrainingPage() {
 
       {/* Main Content */}
       <div style={{ padding: '2rem' }}>
-        <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
+        <div>
 
           {/* Settings Tab */}
           {activeTab === 'settings' && (

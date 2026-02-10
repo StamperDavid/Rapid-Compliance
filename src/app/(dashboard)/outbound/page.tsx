@@ -36,7 +36,7 @@ export default function OutboundHomePage() {
 
   return (
       <div style={{ padding: '2rem', overflowY: 'auto' }}>
-        <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+        <div>
           {/* Header */}
           <div style={{ marginBottom: '3rem' }}>
             <Link href="/crm" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', color: primaryColor, fontSize: '0.875rem', fontWeight: '500', textDecoration: 'none', marginBottom: '1.5rem' }}>

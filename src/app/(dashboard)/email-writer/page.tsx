@@ -72,7 +72,7 @@ export default function EmailWriterPage() {
   
   return (
     <div className="min-h-screen bg-surface-main p-8">
-      <div className="max-w-7xl mx-auto space-y-8">
+      <div className="space-y-8">
         {/* Page Header */}
         <div className="space-y-2">
           <div className="flex items-center gap-3">

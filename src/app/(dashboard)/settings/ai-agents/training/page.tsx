@@ -993,7 +993,7 @@ export default function AgentTrainingPage() {
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: 0, height: '100%' }}>
       {/* Header */}
       <div style={{ padding: '2rem', borderBottom: '1px solid var(--color-border-light)' }}>
-        <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
+        <div>
           <h1 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '0.5rem', color: 'var(--color-text-primary)' }}>
             🎓 AI Agent Training Center
           </h1>
@@ -1041,7 +1041,7 @@ export default function AgentTrainingPage() {
 
       {/* Tabs */}
       <div style={{ borderBottom: '1px solid var(--color-border-light)', backgroundColor: 'var(--color-bg-main)' }}>
-        <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '0 2rem', display: 'flex', gap: '2rem' }}>
+        <div style={{ padding: '0 2rem', display: 'flex', gap: '2rem' }}>
           {(['chat', 'materials', 'history', 'golden'] as const).map(tab => (
             <button
               key={tab}
@@ -1066,7 +1066,7 @@ export default function AgentTrainingPage() {
 
       {/* Content */}
       <div style={{ flex: 1, padding: '2rem', overflowY: 'auto' }}>
-        <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
+        <div>
           
           {activeTab === 'chat' && (
             <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr 320px', gap: '2rem' }}>

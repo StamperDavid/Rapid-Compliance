@@ -121,7 +121,7 @@ export default function PagesManagementPage() {
   return (
     <div style={{ fontFamily: 'system-ui', minHeight: '100vh', background: 'var(--color-bg-elevated)' }}>
 
-      <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '2rem' }}>
+      <div style={{ padding: '2rem' }}>
         {/* Header */}
         <div style={{
           display: 'flex',
@@ -130,7 +130,7 @@ export default function PagesManagementPage() {
           marginBottom: '2rem',
         }}>
           <div>
-            <h1 style={{ fontSize: '2rem', margin: '0 0 0.5rem', color: 'var(--color-bg-main)' }}>
+            <h1 style={{ fontSize: '2rem', margin: '0 0 0.5rem', color: 'var(--color-text-primary)' }}>
               Pages
             </h1>
             <p style={{ margin: 0, color: 'var(--color-text-disabled)' }}>
@@ -165,7 +165,7 @@ export default function PagesManagementPage() {
             onClick={() => setFilter('all')}
             style={{
               padding: '0.5rem 1rem',
-              background: filter === 'all' ? 'var(--color-info)' : 'white',
+              background: filter === 'all' ? 'var(--color-info)' : 'var(--color-bg-paper)',
               color: filter === 'all' ? 'white' : 'var(--color-text-disabled)',
               border: '1px solid var(--color-border-light)',
               borderRadius: '4px',
@@ -179,7 +179,7 @@ export default function PagesManagementPage() {
             onClick={() => setFilter('draft')}
             style={{
               padding: '0.5rem 1rem',
-              background: filter === 'draft' ? 'var(--color-info)' : 'white',
+              background: filter === 'draft' ? 'var(--color-info)' : 'var(--color-bg-paper)',
               color: filter === 'draft' ? 'white' : 'var(--color-text-disabled)',
               border: '1px solid var(--color-border-light)',
               borderRadius: '4px',
@@ -193,7 +193,7 @@ export default function PagesManagementPage() {
             onClick={() => setFilter('published')}
             style={{
               padding: '0.5rem 1rem',
-              background: filter === 'published' ? 'var(--color-info)' : 'white',
+              background: filter === 'published' ? 'var(--color-info)' : 'var(--color-bg-paper)',
               color: filter === 'published' ? 'white' : 'var(--color-text-disabled)',
               border: '1px solid var(--color-border-light)',
               borderRadius: '4px',
@@ -208,7 +208,7 @@ export default function PagesManagementPage() {
         {/* Pages List */}
         {pages.length === 0 ? (
           <div style={{
-            background: 'white',
+            background: 'var(--color-bg-paper)',
             borderRadius: '8px',
             padding: '4rem 2rem',
             textAlign: 'center',
@@ -245,7 +245,7 @@ export default function PagesManagementPage() {
               <div
                 key={page.id}
                 style={{
-                  background: 'white',
+                  background: 'var(--color-bg-paper)',
                   borderRadius: '8px',
                   padding: '1.5rem',
                   display: 'flex',
@@ -262,7 +262,7 @@ export default function PagesManagementPage() {
                     <span style={{
                       padding: '0.25rem 0.5rem',
                       background: page.status === 'published' ? 'var(--color-success)' : 'var(--color-warning)',
-                      color: page.status === 'published' ? 'white' : 'var(--color-bg-main)',
+                      color: page.status === 'published' ? 'white' : 'var(--color-text-primary)',
                       borderRadius: '4px',
                       fontSize: '0.75rem',
                       fontWeight: '600',

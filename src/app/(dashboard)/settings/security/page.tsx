@@ -102,7 +102,7 @@ export default function SecuritySettingsPage() {
 
         {/* Main Content */}
         <div style={{ flex: 1, padding: '2rem', overflowY: 'auto' }}>
-          <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
+          <div>
             {/* Header */}
             <div style={{ marginBottom: '2rem' }}>
               <Link href={`/settings`} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', color: primaryColor, fontSize: '0.875rem', fontWeight: '500', textDecoration: 'none', marginBottom: '1.5rem' }}>

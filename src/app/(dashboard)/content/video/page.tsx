@@ -216,7 +216,7 @@ export default function VideoStudioPage() {
       padding: '2rem',
       background: 'linear-gradient(135deg, var(--color-bg-main) 0%, var(--color-bg-paper) 50%, var(--color-bg-main) 100%)',
     }}>
-      <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
+      <div>
         {/* Header */}
         <div style={{
           display: 'flex',

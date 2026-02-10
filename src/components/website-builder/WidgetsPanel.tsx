@@ -56,7 +56,7 @@ export default function WidgetsPanel({ onAddWidget }: WidgetsPanelProps) {
   return (
     <div style={{
       width: '280px',
-      background: 'var(--color-surface-elevated)',
+      background: 'var(--color-bg-elevated)',
       borderRight: '1px solid var(--color-border-light)',
       display: 'flex',
       flexDirection: 'column',
@@ -99,7 +99,7 @@ export default function WidgetsPanel({ onAddWidget }: WidgetsPanelProps) {
         gap: '0.25rem',
         padding: '0.75rem',
         borderBottom: '1px solid var(--color-border-light)',
-        background: 'var(--color-surface-paper)',
+        background: 'var(--color-bg-paper)',
         overflowX: 'auto',
       }}>
         {categories.map(cat => (
@@ -109,7 +109,7 @@ export default function WidgetsPanel({ onAddWidget }: WidgetsPanelProps) {
             title={cat.label}
             style={{
               padding: '0.5rem 0.75rem',
-              background: activeCategory === cat.id ? 'var(--color-primary)' : 'var(--color-surface-main)',
+              background: activeCategory === cat.id ? 'var(--color-primary)' : 'var(--color-bg-main)',
               color: activeCategory === cat.id ? 'white' : 'var(--color-text-primary)',
               border: 'none',
               borderRadius: '4px',
@@ -149,7 +149,7 @@ export default function WidgetsPanel({ onAddWidget }: WidgetsPanelProps) {
                 onDragStart={(e) => handleDragStart(e, type as WidgetType)}
                 style={{
                   padding: '0.75rem',
-                  background: 'var(--color-surface-paper)',
+                  background: 'var(--color-bg-paper)',
                   border: '1px solid var(--color-border-light)',
                   borderRadius: '4px',
                   cursor: 'grab',
@@ -157,7 +157,7 @@ export default function WidgetsPanel({ onAddWidget }: WidgetsPanelProps) {
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.borderColor = 'var(--color-primary)';
-                  e.currentTarget.style.boxShadow = '0 2px 4px var(--color-primary-shadow)';
+                  e.currentTarget.style.boxShadow = '0 2px 4px rgba(99, 102, 241, 0.3)';
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.borderColor = 'var(--color-border-light)';

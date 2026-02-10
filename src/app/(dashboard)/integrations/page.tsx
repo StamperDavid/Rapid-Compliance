@@ -181,7 +181,7 @@ export default function IntegrationsPage() {
 
   return (
     <div className="min-h-screen bg-[var(--color-bg-main)] p-8">
-      <div className="max-w-7xl mx-auto">
+      <div>
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}

@@ -128,9 +128,9 @@ export default function WebsiteSettingsPage() {
   return (
     <div style={{ fontFamily: 'system-ui', minHeight: '100vh', background: 'transparent' }}>
 
-      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '2rem' }}>
+      <div style={{ padding: '2rem' }}>
         <div style={{ marginBottom: '2rem' }}>
-          <h1 style={{ fontSize: '2rem', margin: '0 0 0.5rem', color: 'var(--color-bg-main)' }}>
+          <h1 style={{ fontSize: '2rem', margin: '0 0 0.5rem', color: 'var(--color-text-primary)' }}>
             Website Settings
           </h1>
           <p style={{ margin: 0, color: 'var(--color-text-disabled)' }}>
@@ -151,13 +151,13 @@ export default function WebsiteSettingsPage() {
           </div>
         )}
 
-        <div style={{ background: 'white', borderRadius: '8px', padding: '2rem', marginBottom: '1.5rem' }}>
-          <h2 style={{ fontSize: '1.25rem', margin: '0 0 1.5rem', color: 'var(--color-bg-main)' }}>
+        <div style={{ background: 'var(--color-bg-paper)', borderRadius: '8px', padding: '2rem', marginBottom: '1.5rem' }}>
+          <h2 style={{ fontSize: '1.25rem', margin: '0 0 1.5rem', color: 'var(--color-text-primary)' }}>
             Domain Configuration
           </h2>
 
           <div style={{ marginBottom: '1.5rem' }}>
-            <label style={{ display: 'block', fontWeight: '500', marginBottom: '0.5rem', color: 'var(--color-border-strong)' }}>
+            <label style={{ display: 'block', fontWeight: '500', marginBottom: '0.5rem', color: 'var(--color-text-secondary)' }}>
               Subdomain
             </label>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -182,7 +182,7 @@ export default function WebsiteSettingsPage() {
           </div>
 
           <div style={{ marginBottom: '1.5rem' }}>
-            <label style={{ display: 'block', fontWeight: '500', marginBottom: '0.5rem', color: 'var(--color-border-strong)' }}>
+            <label style={{ display: 'block', fontWeight: '500', marginBottom: '0.5rem', color: 'var(--color-text-secondary)' }}>
               Custom Domain
             </label>
             <input
@@ -219,7 +219,7 @@ export default function WebsiteSettingsPage() {
                 onChange={(e) => setSettings({ ...settings, sslEnabled: e.target.checked })}
                 style={{ width: '18px', height: '18px' }}
               />
-              <span style={{ fontWeight: '500', color: 'var(--color-border-strong)' }}>Enable SSL (HTTPS)</span>
+              <span style={{ fontWeight: '500', color: 'var(--color-text-secondary)' }}>Enable SSL (HTTPS)</span>
             </label>
             <small style={{ color: 'var(--color-text-disabled)', marginLeft: '1.75rem', display: 'block' }}>
               Automatically provision SSL certificates for secure connections
@@ -227,13 +227,13 @@ export default function WebsiteSettingsPage() {
           </div>
         </div>
 
-        <div style={{ background: 'white', borderRadius: '8px', padding: '2rem', marginBottom: '1.5rem' }}>
-          <h2 style={{ fontSize: '1.25rem', margin: '0 0 1.5rem', color: 'var(--color-bg-main)' }}>
+        <div style={{ background: 'var(--color-bg-paper)', borderRadius: '8px', padding: '2rem', marginBottom: '1.5rem' }}>
+          <h2 style={{ fontSize: '1.25rem', margin: '0 0 1.5rem', color: 'var(--color-text-primary)' }}>
             SEO Settings
           </h2>
 
           <div style={{ marginBottom: '1.5rem' }}>
-            <label style={{ display: 'block', fontWeight: '500', marginBottom: '0.5rem', color: 'var(--color-border-strong)' }}>
+            <label style={{ display: 'block', fontWeight: '500', marginBottom: '0.5rem', color: 'var(--color-text-secondary)' }}>
               Site Title
             </label>
             <input
@@ -257,7 +257,7 @@ export default function WebsiteSettingsPage() {
           </div>
 
           <div style={{ marginBottom: '1.5rem' }}>
-            <label style={{ display: 'block', fontWeight: '500', marginBottom: '0.5rem', color: 'var(--color-border-strong)' }}>
+            <label style={{ display: 'block', fontWeight: '500', marginBottom: '0.5rem', color: 'var(--color-text-secondary)' }}>
               Site Description
             </label>
             <textarea
@@ -291,7 +291,7 @@ export default function WebsiteSettingsPage() {
                 })}
                 style={{ width: '18px', height: '18px' }}
               />
-              <span style={{ color: 'var(--color-border-strong)' }}>Allow search indexing</span>
+              <span style={{ color: 'var(--color-text-secondary)' }}>Allow search indexing</span>
             </label>
 
             <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
@@ -304,18 +304,18 @@ export default function WebsiteSettingsPage() {
                 })}
                 style={{ width: '18px', height: '18px' }}
               />
-              <span style={{ color: 'var(--color-border-strong)' }}>Allow link following</span>
+              <span style={{ color: 'var(--color-text-secondary)' }}>Allow link following</span>
             </label>
           </div>
         </div>
 
-        <div style={{ background: 'white', borderRadius: '8px', padding: '2rem', marginBottom: '1.5rem' }}>
-          <h2 style={{ fontSize: '1.25rem', margin: '0 0 1.5rem', color: 'var(--color-bg-main)' }}>
+        <div style={{ background: 'var(--color-bg-paper)', borderRadius: '8px', padding: '2rem', marginBottom: '1.5rem' }}>
+          <h2 style={{ fontSize: '1.25rem', margin: '0 0 1.5rem', color: 'var(--color-text-primary)' }}>
             Analytics
           </h2>
 
           <div style={{ marginBottom: '1.5rem' }}>
-            <label style={{ display: 'block', fontWeight: '500', marginBottom: '0.5rem', color: 'var(--color-border-strong)' }}>
+            <label style={{ display: 'block', fontWeight: '500', marginBottom: '0.5rem', color: 'var(--color-text-secondary)' }}>
               Google Analytics ID
             </label>
             <input
@@ -339,7 +339,7 @@ export default function WebsiteSettingsPage() {
           </div>
 
           <div style={{ marginBottom: '1.5rem' }}>
-            <label style={{ display: 'block', fontWeight: '500', marginBottom: '0.5rem', color: 'var(--color-border-strong)' }}>
+            <label style={{ display: 'block', fontWeight: '500', marginBottom: '0.5rem', color: 'var(--color-text-secondary)' }}>
               Google Tag Manager ID
             </label>
             <input
@@ -363,7 +363,7 @@ export default function WebsiteSettingsPage() {
           </div>
 
           <div style={{ marginBottom: '1.5rem' }}>
-            <label style={{ display: 'block', fontWeight: '500', marginBottom: '0.5rem', color: 'var(--color-border-strong)' }}>
+            <label style={{ display: 'block', fontWeight: '500', marginBottom: '0.5rem', color: 'var(--color-text-secondary)' }}>
               Facebook Pixel ID
             </label>
             <input
@@ -393,7 +393,7 @@ export default function WebsiteSettingsPage() {
             disabled={saving}
             style={{
               padding: '0.75rem 1.5rem',
-              background: 'white',
+              background: 'var(--color-bg-paper)',
               border: '1px solid var(--color-border-light)',
               borderRadius: '4px',
               fontSize: '1rem',

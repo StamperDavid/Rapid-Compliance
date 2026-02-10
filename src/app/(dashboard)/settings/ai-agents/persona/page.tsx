@@ -188,7 +188,7 @@ export default function AgentPersonaPage() {
 
   return (
     <div style={{ padding: '2rem', overflowY: 'auto', backgroundColor: 'var(--color-bg-main)', minHeight: '100vh' }}>
-      <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+      <div>
         {/* Header */}
         <div style={{ marginBottom: '2rem' }}>
           <Link 

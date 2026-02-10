@@ -205,7 +205,6 @@ export default function ProposalBuilderPage() {
           overflowY: 'auto',
         }}>
           <div style={{
-            maxWidth: '56rem',
             margin: '0 auto',
             backgroundColor: '#ffffff',
             borderRadius: '0.5rem',

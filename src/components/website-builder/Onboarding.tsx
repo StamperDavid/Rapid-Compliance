@@ -324,7 +324,7 @@ function FeatureCard({ icon, title, description }: { icon: string; title: string
   return (
     <div style={{
       padding: '24px',
-      backgroundColor: 'var(--color-surface-elevated)',
+      backgroundColor: 'var(--color-bg-elevated)',
       borderRadius: '12px',
       textAlign: 'center',
     }}>
@@ -351,7 +351,7 @@ function TemplateCard({ name, selected, onClick }: { name: string; selected: boo
       <div style={{
         width: '100%',
         height: '120px',
-        backgroundColor: 'var(--color-surface-elevated)',
+        backgroundColor: 'var(--color-bg-elevated)',
         borderRadius: '8px',
         marginBottom: '16px',
         display: 'flex',
@@ -376,7 +376,7 @@ function NextStepCard({ icon, title, description }: { icon: string; title: strin
   return (
     <div style={{
       padding: '20px',
-      backgroundColor: 'var(--color-surface-elevated)',
+      backgroundColor: 'var(--color-bg-elevated)',
       borderRadius: '12px',
       textAlign: 'left',
     }}>

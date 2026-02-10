@@ -215,7 +215,7 @@ export default function VersionHistory({
                 key={version.id}
                 style={{
                   padding: '1rem',
-                  background: 'var(--color-surface-elevated)',
+                  background: 'var(--color-bg-elevated)',
                   border: '1px solid var(--color-border-light)',
                   borderRadius: '8px',
                 }}
@@ -324,7 +324,7 @@ export default function VersionHistory({
                   padding: '0.5rem 1rem',
                   borderRadius: '8px',
                   color: 'var(--color-text-disabled)',
-                  background: 'var(--color-surface-elevated)',
+                  background: 'var(--color-bg-elevated)',
                   border: 'none',
                   cursor: 'pointer',
                 }}

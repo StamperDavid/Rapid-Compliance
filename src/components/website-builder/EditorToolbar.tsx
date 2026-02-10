@@ -51,7 +51,7 @@ export default function EditorToolbar({
   return (
     <div style={{
       height: '60px',
-      background: 'var(--color-surface-paper)',
+      background: 'var(--color-bg-paper)',
       color: 'var(--color-text-primary)',
       display: 'flex',
       alignItems: 'center',
@@ -93,7 +93,7 @@ export default function EditorToolbar({
             title="Undo (Ctrl+Z)"
             style={{
               padding: '0.5rem 0.75rem',
-              background: canUndo ? 'var(--color-surface-elevated)' : 'var(--color-surface-paper)',
+              background: canUndo ? 'var(--color-bg-elevated)' : 'var(--color-bg-paper)',
               color: canUndo ? 'var(--color-text-primary)' : 'var(--color-text-disabled)',
               border: 'none',
               borderRadius: '4px',
@@ -110,7 +110,7 @@ export default function EditorToolbar({
             title="Redo (Ctrl+Shift+Z)"
             style={{
               padding: '0.5rem 0.75rem',
-              background: canRedo ? 'var(--color-surface-elevated)' : 'var(--color-surface-paper)',
+              background: canRedo ? 'var(--color-bg-elevated)' : 'var(--color-bg-paper)',
               color: canRedo ? 'var(--color-text-primary)' : 'var(--color-text-disabled)',
               border: 'none',
               borderRadius: '4px',
@@ -125,7 +125,7 @@ export default function EditorToolbar({
         {/* Breakpoint Switcher */}
         <div style={{
           display: 'flex',
-          background: 'var(--color-surface-elevated)',
+          background: 'var(--color-bg-elevated)',
           borderRadius: '4px',
           padding: '0.25rem',
           gap: '0.25rem',
@@ -220,7 +220,7 @@ export default function EditorToolbar({
             onClick={onViewVersions}
             style={{
               padding: '0.5rem 1rem',
-              background: 'var(--color-surface-elevated)',
+              background: 'var(--color-bg-elevated)',
               color: 'var(--color-text-primary)',
               border: 'none',
               borderRadius: '4px',
@@ -238,7 +238,7 @@ export default function EditorToolbar({
             onClick={onSaveAsTemplate}
             style={{
               padding: '0.5rem 1rem',
-              background: 'var(--color-surface-elevated)',
+              background: 'var(--color-bg-elevated)',
               color: 'var(--color-text-primary)',
               border: 'none',
               borderRadius: '4px',

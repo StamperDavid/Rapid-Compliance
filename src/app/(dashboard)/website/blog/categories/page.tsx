@@ -140,7 +140,7 @@ export default function CategoriesManagementPage() {
 
         {/* Add Category */}
         <div style={{
-          background: 'white',
+          background: 'var(--color-bg-paper)',
           borderRadius: '8px',
           padding: '2rem',
           marginBottom: '2rem',
@@ -185,7 +185,7 @@ export default function CategoriesManagementPage() {
 
         {/* Categories List */}
         <div style={{
-          background: 'white',
+          background: 'var(--color-bg-paper)',
           borderRadius: '8px',
           padding: '2rem',
           marginBottom: '2rem',
@@ -282,7 +282,7 @@ export default function CategoriesManagementPage() {
           zIndex: 1000,
         }}>
           <div style={{
-            background: 'white',
+            background: 'var(--color-bg-paper)',
             borderRadius: '8px',
             padding: '2rem',
             maxWidth: '400px',

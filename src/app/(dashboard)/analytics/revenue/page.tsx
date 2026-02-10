@@ -95,7 +95,7 @@ export default function RevenueAnalyticsPage() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: 'var(--color-bg-main)' }}>
       <div style={{ flex: 1, padding: '2rem', overflowY: 'auto' }}>
-        <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
+        <div>
           {/* Header */}
           <div style={{ marginBottom: '2rem' }}>
             <Link href={`/analytics`} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', color: primaryColor, fontSize: '0.875rem', fontWeight: '500', textDecoration: 'none', marginBottom: '1.5rem' }}>

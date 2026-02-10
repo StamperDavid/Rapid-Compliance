@@ -265,7 +265,7 @@ export default function IntegrationsPage() {
 
         {/* Main Content */}
         <div style={{ flex: 1, padding: '2rem', overflowY: 'auto' }}>
-          <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
+          <div>
             {/* Header */}
             <div style={{ marginBottom: '2rem' }}>
               <Link 

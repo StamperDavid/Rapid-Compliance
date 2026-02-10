@@ -498,7 +498,7 @@ export default function WidgetRenderer({ widget, isEditable: _isEditable = false
               <div
                 style={{
                   padding: '16px',
-                  background: 'var(--color-surface-elevated)',
+                  background: 'var(--color-bg-elevated)',
                   fontSize: '16px',
                   fontWeight: '500',
                   cursor: 'pointer',
@@ -524,7 +524,7 @@ export default function WidgetRenderer({ widget, isEditable: _isEditable = false
         <div style={{
           ...style,
           padding: '1rem',
-          background: 'var(--color-surface-elevated)',
+          background: 'var(--color-bg-elevated)',
           border: '1px dashed var(--color-border-light)',
           borderRadius: '4px',
           textAlign: 'center',

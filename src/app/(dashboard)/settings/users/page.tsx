@@ -310,7 +310,7 @@ export default function TeamMembersPage() {
 
         {/* Main Content */}
         <div style={{ flex: 1, padding: '2rem', overflowY: 'auto' }}>
-          <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+          <div>
             {/* Header */}
             <div style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
               <div>

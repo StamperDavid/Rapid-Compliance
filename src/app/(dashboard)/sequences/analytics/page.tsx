@@ -249,7 +249,7 @@ export default function SequenceAnalyticsPage() {
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: 'var(--color-bg-main)', padding: '2rem' }}>
-      <div style={{ maxWidth: '1600px', margin: '0 auto' }}>
+      <div>
         {/* Header */}
         <div style={{ marginBottom: '2rem' }}>
           <Link href={`/outbound/sequences`} style={{ color: 'var(--color-primary)', fontSize: '0.875rem', fontWeight: '500', textDecoration: 'none' }}>

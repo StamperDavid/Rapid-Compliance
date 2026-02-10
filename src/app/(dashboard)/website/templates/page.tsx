@@ -187,7 +187,7 @@ export default function TemplateBrowserPage() {
               onClick={() => setSelectedCategory(category.id)}
               style={{
                 padding: '0.5rem 1rem',
-                background: selectedCategory === category.id ? 'var(--color-info)' : 'white',
+                background: selectedCategory === category.id ? 'var(--color-info)' : 'var(--color-bg-paper)',
                 color: selectedCategory === category.id ? 'white' : 'var(--color-text-disabled)',
                 border: '1px solid var(--color-border-light)',
                 borderRadius: '4px',
@@ -211,7 +211,7 @@ export default function TemplateBrowserPage() {
             <div
               key={template.id}
               style={{
-                background: 'white',
+                background: 'var(--color-bg-paper)',
                 borderRadius: '8px',
                 overflow: 'hidden',
                 boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
@@ -339,7 +339,7 @@ export default function TemplateBrowserPage() {
 
         {getFilteredTemplates().length === 0 && (
           <div style={{
-            background: 'white',
+            background: 'var(--color-bg-paper)',
             borderRadius: '8px',
             padding: '4rem 2rem',
             textAlign: 'center',
@@ -371,7 +371,7 @@ export default function TemplateBrowserPage() {
           padding: '2rem',
         }}>
           <div style={{
-            background: 'white',
+            background: 'var(--color-bg-paper)',
             borderRadius: '8px',
             maxWidth: '1200px',
             width: '100%',
@@ -418,7 +418,7 @@ export default function TemplateBrowserPage() {
               background: 'var(--color-bg-elevated)',
             }}>
               <div style={{
-                background: 'white',
+                background: 'var(--color-bg-paper)',
                 borderRadius: '4px',
                 boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
               }}>

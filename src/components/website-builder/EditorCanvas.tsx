@@ -58,7 +58,7 @@ export default function EditorCanvas({
   return (
     <div style={{
       flex: 1,
-      background: 'var(--color-surface-main)',
+      background: 'var(--color-bg-main)',
       overflowY: 'auto',
       overflowX: 'hidden',
       padding: '2rem',
@@ -123,7 +123,7 @@ export default function EditorCanvas({
                 onClick={() => onAddSection()}
                 style={{
                   padding: '0.5rem 1rem',
-                  background: 'var(--color-surface-elevated)',
+                  background: 'var(--color-bg-elevated)',
                   color: 'var(--color-text-primary)',
                   border: '1px solid var(--color-border-light)',
                   borderRadius: '4px',
@@ -244,7 +244,7 @@ function SectionRenderer({
             onDragOver={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              e.currentTarget.style.backgroundColor = 'var(--color-surface-elevated)';
+              e.currentTarget.style.backgroundColor = 'var(--color-bg-elevated)';
             }}
             onDragLeave={(e) => {
               e.currentTarget.style.backgroundColor = 'transparent';

@@ -161,7 +161,7 @@ Sitemap: https://yoursite.com/sitemap.xml`;
 
   return (
     <div className="min-h-screen bg-[var(--color-bg-main)] p-8">
-      <div className="max-w-4xl mx-auto">
+      <div>
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}

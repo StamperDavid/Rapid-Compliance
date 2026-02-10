@@ -92,28 +92,31 @@ export default function SalesAnalyticsPage() {
           <h2 className="text-xl font-semibold mb-4">Pipeline Insights</h2>
           <div className="space-y-3">
             {insights.map((insight, idx) => {
-              const bgColor = 
-                insight.type === 'warning' ? 'bg-yellow-900/20 border-yellow-600' :
-                insight.type === 'success' ? 'bg-green-900/20 border-green-600' :
-                'bg-[rgba(var(--color-info-rgb),0.2)] border-[var(--color-info)]';
-              
-              const icon = 
+              const bgStyle =
+                insight.type === 'warning' ? { backgroundColor: 'rgba(var(--color-warning-rgb), 0.2)', borderColor: 'var(--color-warning)' } :
+                insight.type === 'success' ? { backgroundColor: 'rgba(var(--color-success-rgb), 0.2)', borderColor: 'var(--color-success)' } :
+                { backgroundColor: 'rgba(var(--color-info-rgb), 0.2)', borderColor: 'var(--color-info)' };
+
+              const icon =
                 insight.type === 'warning' ? '⚠️' :
                 insight.type === 'success' ? '✅' :
                 '💡';
 
               return (
-                <div key={idx} className={`border-2 rounded-lg p-4 ${bgColor}`}>
+                <div key={idx} className="border-2 rounded-lg p-4" style={bgStyle}>
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
                         <span className="text-xl">{icon}</span>
                         <span className="font-bold">{insight.message}</span>
-                        <span className={`px-2 py-1 rounded text-xs font-medium ${
-                          insight.priority === 'high' ? 'bg-red-900 text-red-300' :
-                          insight.priority === 'medium' ? 'bg-yellow-900 text-yellow-300' :
-                          'bg-[rgba(var(--color-info-rgb),0.2)] text-[var(--color-info)]'
-                        }`}>
+                        <span
+                          className="px-2 py-1 rounded text-xs font-medium"
+                          style={
+                            insight.priority === 'high' ? { backgroundColor: 'rgba(var(--color-error-rgb), 0.2)', color: 'var(--color-error)' } :
+                            insight.priority === 'medium' ? { backgroundColor: 'rgba(var(--color-warning-rgb), 0.2)', color: 'var(--color-warning)' } :
+                            { backgroundColor: 'rgba(var(--color-info-rgb), 0.2)', color: 'var(--color-info)' }
+                          }
+                        >
                           {insight.priority.toUpperCase()}
                         </span>
                       </div>

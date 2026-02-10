@@ -214,7 +214,7 @@ export default function NavigationManagementPage() {
       <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '2rem' }}>
         {/* Header */}
         <div style={{ marginBottom: '2rem' }}>
-          <h1 style={{ fontSize: '2rem', margin: '0 0 0.5rem', color: 'var(--color-bg-main)' }}>
+          <h1 style={{ fontSize: '2rem', margin: '0 0 0.5rem', color: 'var(--color-text-primary)' }}>
             Navigation Management
           </h1>
           <p style={{ margin: 0, color: 'var(--color-text-disabled)' }}>
@@ -224,7 +224,7 @@ export default function NavigationManagementPage() {
 
         {/* Homepage Settings */}
         <div style={{
-          background: 'white',
+          background: 'var(--color-bg-paper)',
           borderRadius: '8px',
           padding: '2rem',
           marginBottom: '2rem',
@@ -283,7 +283,7 @@ export default function NavigationManagementPage() {
 
         {/* Header Navigation */}
         <div style={{
-          background: 'white',
+          background: 'var(--color-bg-paper)',
           borderRadius: '8px',
           padding: '2rem',
           marginBottom: '2rem',
@@ -402,7 +402,7 @@ export default function NavigationManagementPage() {
 
         {/* Footer Settings */}
         <div style={{
-          background: 'white',
+          background: 'var(--color-bg-paper)',
           borderRadius: '8px',
           padding: '2rem',
           marginBottom: '2rem',

@@ -133,7 +133,7 @@ export default function BattlecardsPage() {
     <div className="min-h-screen bg-[var(--color-bg-main)]">
       {/* Header */}
       <div className="bg-gradient-to-r from-primary to-secondary border-b border-border-light">
-        <div className="max-w-7xl mx-auto px-6 py-8">
+        <div className="px-6 py-8">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold text-[var(--color-text-primary)] mb-2">
@@ -172,7 +172,7 @@ export default function BattlecardsPage() {
       </div>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="px-6 py-8">
         {/* Error Message */}
         {error && (
           <div className="mb-6 border border-error/30 rounded-lg p-4" style={{ backgroundColor: 'rgba(var(--color-error-rgb), 0.1)' }}>

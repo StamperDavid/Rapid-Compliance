@@ -84,7 +84,7 @@ export default function SchedulePublishModal({
     >
       <div
         style={{
-          background: 'var(--color-surface-paper)',
+          background: 'var(--color-bg-paper)',
           borderRadius: '12px',
           padding: '2rem',
           maxWidth: '500px',
@@ -166,7 +166,7 @@ export default function SchedulePublishModal({
           <div
             style={{
               padding: '0.75rem',
-              background: 'var(--color-surface-elevated)',
+              background: 'var(--color-bg-elevated)',
               border: '1px solid var(--color-border-light)',
               borderRadius: '8px',
               marginBottom: '1.5rem',
@@ -182,7 +182,7 @@ export default function SchedulePublishModal({
             <div
               style={{
                 padding: '1rem',
-                background: 'var(--color-surface-elevated)',
+                background: 'var(--color-bg-elevated)',
                 border: '1px solid var(--color-border-light)',
                 borderRadius: '8px',
                 marginBottom: '1.5rem',
@@ -229,7 +229,7 @@ export default function SchedulePublishModal({
               style={{
                 flex: 1,
                 padding: '0.75rem',
-                background: 'var(--color-surface-elevated)',
+                background: 'var(--color-bg-elevated)',
                 color: 'var(--color-text-primary)',
                 border: 'none',
                 borderRadius: '8px',
