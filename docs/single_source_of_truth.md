@@ -1,7 +1,7 @@
 # SalesVelocity.ai - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** February 8, 2026 (ConversationMemory service complete — agents recall customer history)
+**Last Updated:** February 10, 2026 (Verified metrics: 159 pages, 226 API routes. Documentation cleanup — README rewritten, stale docs archived)
 **Branches:** `dev` (latest)
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Architecture:** Single-Tenant (Penthouse Model) - NOT a SaaS platform
@@ -35,8 +35,8 @@
 
 | Metric | Count | Status |
 |--------|-------|--------|
-| Physical Routes (page.tsx) | 157 | Verified (single-tenant flat routes) |
-| API Endpoints (route.ts) | 216 | Functional |
+| Physical Routes (page.tsx) | 159 | Verified February 10, 2026 (single-tenant flat routes) |
+| API Endpoints (route.ts) | 226 | Verified February 10, 2026 |
 | AI Agents | 52 | **52 FUNCTIONAL (48 swarm + 4 standalone)** |
 | RBAC Roles | 4 | `owner` (level 3), `admin` (level 2), `manager` (level 1), `member` (level 0) — 4-role RBAC |
 | Firestore Collections | 60+ | Active |

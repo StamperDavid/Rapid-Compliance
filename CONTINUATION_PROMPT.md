@@ -5,13 +5,13 @@ Repository: https://github.com/StamperDavid/Rapid-Compliance
 Branch: dev
 Last Commit: (see git log for latest)
 
-## Current State (February 9, 2026)
+## Current State (February 10, 2026)
 
 ### Architecture
 - **Single-tenant penthouse model** — org ID `rapid-compliance-root`, Firebase `rapid-compliance-65f87`
 - **52 AI agents** (48 swarm + 4 standalone) with hierarchical orchestration
 - **4-role RBAC** (owner/admin/manager/member) with 47 permissions
-- **158 physical routes**, **219 API endpoints**, **430K+ lines of TypeScript**
+- **159 physical routes**, **226 API endpoints**, **330K+ lines of TypeScript**
 - **NOT yet deployed to production** — everything is dev branch only
 
 ### Code Health
@@ -193,106 +193,12 @@ A full read-only audit was performed covering ESLint config, TypeScript config, 
 | **9** | Fix what breaks | Variable | Something will break in production. Budget time for env var issues, cold start timing, external API rate limits. |
 | **10** | Wire up outbound webhook dispatch | 3-4 hrs | Settings page exists, event list is there, UI is built — backend just doesn't send webhooks. |
 
-### Step 3 — ConversationMemory Service (Detailed Spec)
+### ConversationMemory Service (COMPLETED — Feb 8, 2026)
 
-**Problem:** Agents have amnesia about customer interactions. Chat sessions, SMS messages, and orchestrator conversations are stored in Firestore but no agent can query them. Voice call transcripts (the richest data) are lost entirely when calls end — stored in-memory only. When an agent prepares to contact a lead, it has zero context about prior conversations across any channel.
-
-**Solution:** A dedicated ConversationMemory service (Option B architecture) — one service owns all conversation data, agents query it when they need customer context. MemoryVault stays focused on agent-to-agent coordination.
-
-**Architecture Decision:** Option B was chosen over a hybrid approach (Option C) because:
-- No data duplication — conversation data lives in one place, not mirrored in MemoryVault
-- No sync issues — no risk of MemoryVault copies going stale
-- Clean separation — MemoryVault = agent coordination, ConversationMemory = customer interaction history
-- Agents simply query ConversationMemory as part of their lead preparation workflow
-
-**Data Flow:**
-```
-Call/Chat/SMS ends
-       │
-       ▼
-┌─────────────────────┐
-│  Persist full record │  ← Transcript + metadata → Firestore
-│  to Firestore        │     (voice is the gap — chat/SMS/orchestrator already stored)
-└────────┬────────────┘
-         │
-         ▼
-┌─────────────────────────────┐
-│  Conversation Analysis runs  │  ← Engine already exists at src/lib/conversation/
-│  automatically after each    │     Sentiment, objections, buying signals, coaching
-│  interaction completes       │     Currently manual-only via POST /api/conversation/analyze
-└────────┬────────────────────┘
-         │
-         ▼
-┌─────────────────────────────┐
-│  Analysis stored alongside   │  ← Summary, key moments, objections, next steps
-│  conversation record         │     Persisted for agent retrieval
-└─────────────────────────────┘
-
-Agent preparing to contact Lead X:
-       │
-       ▼
-┌──────────────────────────────┐
-│  ConversationMemory.brief()  │  ← Query all interactions by leadId
-│                              │     across chat, voice, SMS, email
-│  Returns structured Lead     │     Last N interactions summarized
-│  Briefing (not raw           │     Sentiment trend, open objections,
-│  transcripts)                │     recommended approach
-└──────────────────────────────┘
-```
-
-**Lead Briefing Output (what agents receive):**
-```
-Lead: John Smith, Acme Corp
-Last contact: 2 days ago (voice call, 12 min)
-Total interactions: 4 (2 calls, 1 chat, 1 email reply)
-Sentiment trend: neutral → positive (improving)
-
-Key context:
-- Budget review in March, decision after that
-- Pain point: manual compliance reporting 20hrs/week
-- Compared us to CompetitorX, said pricing was lower
-- Asked about Salesforce API integration
-
-Open objections:
-- Price concern (medium severity, unresolved)
-- Integration timeline worry
-
-Recommended approach:
-- Lead with ROI calculation (20hrs/week saved)
-- Address Salesforce integration early
-- Don't push for close before March budget review
-```
-
-**5 Implementation Sub-Tasks:**
-
-| # | Task | Details |
-|---|------|---------|
-| 3a | **Voice transcript persistence** | Save call data (transcript, turns, sentiment, qualification score, buying signals) to Firestore `conversations` collection when voice calls end. Currently in-memory only in `src/lib/voice/ai-conversation-service.ts`. |
-| 3b | **Auto-analysis trigger** | Hook the conversation analysis engine (`src/lib/conversation/conversation-engine.ts`) to fire automatically after every call/chat completion. Currently only runs on manual API call to `POST /api/conversation/analyze`. |
-| 3c | **ConversationMemory service** | New service at `src/lib/conversation/conversation-memory.ts`. Unified retrieval layer that queries across `chatSessions`, `conversations`, `smsMessages`, `orchestratorConversations` by leadId/customerId. Returns structured data, not raw transcripts. |
-| 3d | **Lead Briefing generator** | Method on ConversationMemory that synthesizes all recent interactions into a concise context block. Uses the analysis data (sentiment, objections, buying signals, next steps) to build the briefing. May use LLM for final synthesis. |
-| 3e | **Agent integration** | Update agent work cycles (Revenue Manager, Outreach Manager, Voice AI) to call `ConversationMemory.brief(leadId)` before acting on a lead. Add to the standard lead preparation workflow. |
-
-**Retention Policy:**
-| Data | Retention | Rationale |
-|------|-----------|-----------|
-| Full transcripts | 90 days | Compliance and dispute resolution |
-| Conversation summaries | 1 year | Agents need history without storage cost |
-| Lead briefings | Generated on demand | Always fresh, built from summaries |
-| Analysis results | 1 year (alongside summaries) | Sentiment trends, objection history |
-
-**Existing Infrastructure to Leverage:**
-- `src/lib/conversation/conversation-engine.ts` — Full analysis engine (sentiment, talk ratio, objections, coaching, competitor mentions). Already built, just needs auto-triggering.
-- `src/lib/conversation/types.ts` — Comprehensive types for Conversation, ConversationAnalysis, SentimentAnalysis, ObjectionAnalysis, etc.
-- `src/lib/agent/chat-session-service.ts` — Chat message storage and retrieval already working.
-- `src/lib/firebase/collections.ts` — All Firestore collection paths already defined.
-- `src/app/api/conversation/analyze/route.ts` — Analysis API with rate limiting and caching.
-
-**What This Does NOT Include:**
-- Semantic/vector search (embedding-based retrieval) — future enhancement, not needed for v1
-- Email body archival (only metadata stored today) — separate effort
-- Video conversation transcripts — not yet implemented
-- Long-term learning/agent improvement from conversations — future episodic memory layer
+Implemented as Option B architecture. Key files:
+- `src/lib/conversation/conversation-memory.ts` — Unified retrieval + Lead Briefing generator
+- `src/lib/voice/ai-conversation-service.ts` — Voice transcripts now persist to Firestore
+- Agents (Outreach Manager, Revenue Director, Voice AI) call `ConversationMemory.brief(leadId)` before acting
 
 ---
 
@@ -389,8 +295,9 @@ Recommended approach:
 
 ## Documentation Inventory
 
-**Root docs** (5 files): CLAUDE.md, README.md, ENGINEERING_STANDARDS.md, COMPETITIVE_ANALYSIS_BRIEFING.md, SOCIAL-MEDIA-AI-SPEC.md
+**Root docs** (3 active): CLAUDE.md, README.md, ENGINEERING_STANDARDS.md
+**Root context** (2 files): CONTINUATION_PROMPT.md, AGENT_REGISTRY.json
 **docs/** (3 files): single_source_of_truth.md, playwright-audit-2026-01-30.md, test-results-summary.md
 **docs/master_library/** (16 files): Per-feature audit summaries from Feb 5, 2026
-**docs/archive/** (16 files): Historical records — do not reference for architectural decisions
+**docs/archive/** (19 files): Historical records + archived specs — do not reference for architectural decisions
 **.claude/agents/** (6 files): QA and architecture agent prompts
