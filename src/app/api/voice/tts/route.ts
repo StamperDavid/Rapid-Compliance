@@ -7,6 +7,8 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { VoiceEngineFactory, type TTSEngineType, type TTSSynthesizeRequest } from '@/lib/voice/tts';
 
+export const dynamic = 'force-dynamic';
+
 interface TTSPostBody {
   text?: string;
   PLATFORM_ID?: string;

@@ -14,6 +14,8 @@ import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { emitBusinessEvent } from '@/lib/orchestration/event-router';
 
+export const dynamic = 'force-dynamic';
+
 // Type definitions for Gmail webhook payload
 interface GmailPushMessage {
   data: string;

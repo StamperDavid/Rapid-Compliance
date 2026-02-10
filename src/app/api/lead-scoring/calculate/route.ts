@@ -14,6 +14,8 @@ import { logger } from '@/lib/logger/logger';
 import { calculateLeadScore, calculateLeadScoresBatch } from '@/lib/services/lead-scoring-engine';
 import type { LeadScoreRequest, BatchLeadScoreRequest, LeadScore } from '@/types/lead-scoring';
 
+export const dynamic = 'force-dynamic';
+
 // Zod schema for lead scoring request body
 const leadScoringRequestSchema = z.object({
   leadId: z.string().optional(),

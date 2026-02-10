@@ -7,6 +7,8 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
+export const dynamic = 'force-dynamic';
+
 // Type-safe interfaces for test results
 interface EnvironmentChecks {
   sendgrid: boolean;

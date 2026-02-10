@@ -11,6 +11,8 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { getUserIdentifier } from '@/lib/server-auth';
 import { logger } from '@/lib/logger/logger';
 
+export const dynamic = 'force-dynamic';
+
 interface PageData {
   version?: number;
   lastPublishedVersion?: number;

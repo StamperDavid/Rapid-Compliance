@@ -10,6 +10,8 @@ import { getSubCollection } from '@/lib/firebase/collections';
 import { getUserIdentifier } from '@/lib/server-auth';
 import { logger } from '@/lib/logger/logger';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * DELETE /api/website/domains/[domainId]
  * Remove a custom domain

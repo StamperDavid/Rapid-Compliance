@@ -5,6 +5,8 @@ import { apiKeyService } from '@/lib/api-keys/api-key-service';
 import { logger } from '@/lib/logger/logger';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 
+export const dynamic = 'force-dynamic';
+
 // ============================================================================
 // Type Definitions
 // ============================================================================

@@ -3,6 +3,8 @@ import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { requireRole } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * Pricing tier interface matching the subscription plan structure
  */

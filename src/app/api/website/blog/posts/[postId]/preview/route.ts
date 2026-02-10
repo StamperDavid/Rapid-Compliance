@@ -13,6 +13,8 @@ import { getUserIdentifier } from '@/lib/server-auth';
 import { logger } from '@/lib/logger/logger';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 
+export const dynamic = 'force-dynamic';
+
 const paramsSchema = z.object({
   postId: z.string().min(1, 'postId is required'),
 });

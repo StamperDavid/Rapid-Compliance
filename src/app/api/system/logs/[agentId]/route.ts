@@ -28,6 +28,8 @@ import { z } from 'zod';
 import { getSignalBus, type SignalHistoryEntry, type SignalHistoryOptions } from '@/lib/orchestrator/signal-bus';
 import { isValidAgentId } from '@/lib/agents/agent-factory';
 
+export const dynamic = 'force-dynamic';
+
 // ============================================================================
 // RESPONSE TYPES
 // ============================================================================

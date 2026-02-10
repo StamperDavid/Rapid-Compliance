@@ -10,6 +10,8 @@ import { scheduleMeeting, type MeetingRequest } from '@/lib/outbound/meeting-sch
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 
+export const dynamic = 'force-dynamic';
+
 type MeetingType = 'demo' | 'discovery' | 'intro' | 'follow-up' | 'custom';
 type MeetingUrgency = 'asap' | 'this_week' | 'next_week' | 'flexible';
 

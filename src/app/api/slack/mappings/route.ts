@@ -18,6 +18,8 @@ import { db } from '@/lib/firebase-admin';
 import { Timestamp } from 'firebase-admin/firestore';
 import type { SlackChannelMapping, SlackWorkspace } from '@/lib/slack/types';
 
+export const dynamic = 'force-dynamic';
+
 // Type-safe interfaces for request bodies
 interface CreateMappingRequestBody {
   workspaceId: string;

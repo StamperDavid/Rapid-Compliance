@@ -10,6 +10,8 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { discoverCompetitor, generateBattlecard, type BattlecardOptions } from '@/lib/battlecard';
 import { logger } from '@/lib/logger/logger';
 
+export const dynamic = 'force-dynamic';
+
 /** Request body interface for battlecard generation */
 interface GenerateBattlecardRequestBody {
   competitorDomain: string;

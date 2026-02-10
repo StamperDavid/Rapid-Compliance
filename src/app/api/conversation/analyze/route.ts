@@ -26,6 +26,8 @@ import { logger } from '@/lib/logger/logger';
 import { ZodError } from 'zod';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 
+export const dynamic = 'force-dynamic';
+
 // ============================================================================
 // RATE LIMITING
 // ============================================================================

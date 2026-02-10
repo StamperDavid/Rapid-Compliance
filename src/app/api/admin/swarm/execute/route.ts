@@ -17,6 +17,8 @@ import { logger } from '@/lib/logger/logger';
 import { z } from 'zod';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 
+export const dynamic = 'force-dynamic';
+
 // Agent Factory and Registry
 import {
   getAgentInstance,

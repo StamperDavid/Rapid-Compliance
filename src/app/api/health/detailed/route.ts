@@ -3,6 +3,8 @@ import { db, isFirebaseConfigured } from '@/lib/firebase/config';
 import { requireRole } from '@/lib/auth/api-auth';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * Detailed Health Check Endpoint
  * Requires authentication - shows detailed system status

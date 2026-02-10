@@ -6,6 +6,8 @@ import { logger } from '@/lib/logger/logger';
 import type { MerchantCoupon } from '@/types/pricing';
 import { z } from 'zod';
 
+export const dynamic = 'force-dynamic';
+
 const CouponInputSchema = z.object({
   id: z.string().optional(),
   code: z.string().min(1, 'Coupon code is required'),

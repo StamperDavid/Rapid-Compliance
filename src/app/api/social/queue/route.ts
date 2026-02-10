@@ -15,6 +15,8 @@ import { createPostingAgent } from '@/lib/social/autonomous-posting-agent';
 import type { SocialPlatform } from '@/types/social';
 import { z } from 'zod';
 
+export const dynamic = 'force-dynamic';
+
 // Request validation schemas
 const addToQueueSchema = z.object({
   content: z.string().min(1, 'Content is required'),

@@ -40,6 +40,8 @@ import { createLeadRoutedSignal, createRoutingFailedSignal } from '@/lib/routing
 import { getServerSignalCoordinator } from '@/lib/orchestration/coordinator-factory-server';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 
+export const dynamic = 'force-dynamic';
+
 // ============================================================================
 // RATE LIMITING
 // ============================================================================

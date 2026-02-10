@@ -10,6 +10,7 @@ import { logger } from '@/lib/logger/logger';
 import { getAuthToken } from '@/lib/auth/server-auth';
 import type { RelatedEntityType, ActivityType, ActivityDirection, CreateActivityInput } from '@/types/activity';
 
+export const dynamic = 'force-dynamic';
 
 /** Request body interface for creating an activity */
 interface CreateActivityRequestBody extends CreateActivityInput {

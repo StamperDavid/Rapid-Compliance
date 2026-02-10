@@ -10,6 +10,8 @@ import { createTask, getUserTasks } from '@/lib/team/collaboration';
 import { logger } from '@/lib/logger/logger';
 import { getAuthToken } from '@/lib/auth/server-auth';
 
+export const dynamic = 'force-dynamic';
+
 // Task status type with type guard
 type TaskStatus = 'todo' | 'in_progress' | 'blocked' | 'completed';
 const VALID_STATUSES: readonly TaskStatus[] = ['todo', 'in_progress', 'blocked', 'completed'] as const;

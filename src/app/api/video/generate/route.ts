@@ -8,6 +8,8 @@ import { z } from 'zod';
 import { logger } from '@/lib/logger/logger';
 import { executeRenderPipeline } from '@/lib/video/engine/render-pipeline';
 
+export const dynamic = 'force-dynamic';
+
 const VideoGenerateSchema = z.object({
   storyboardId: z.string().min(1, 'Storyboard ID required'),
 });

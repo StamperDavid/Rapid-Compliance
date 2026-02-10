@@ -15,6 +15,8 @@ import {
 } from '@/lib/api-error-handler';
 import { getUserIdentifier } from '@/lib/server-auth';
 
+export const dynamic = 'force-dynamic';
+
 interface PageData {
   content?: unknown[];
   seo?: Record<string, unknown>;

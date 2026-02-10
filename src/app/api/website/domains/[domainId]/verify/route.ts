@@ -10,6 +10,8 @@ import { getSubCollection } from '@/lib/firebase/collections';
 import { promises as dns } from 'dns';
 import { logger } from '@/lib/logger/logger';
 
+export const dynamic = 'force-dynamic';
+
 interface DNSRecord {
   type: string;
   name: string;

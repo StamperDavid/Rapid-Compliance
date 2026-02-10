@@ -18,6 +18,8 @@ import { validateTemplate, getValidationErrors } from '@/lib/templates/template-
 import type { IndustryTemplate } from '@/lib/persona/templates/types';
 import { logger } from '@/lib/logger/logger';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/admin/templates
  * List all templates with override status

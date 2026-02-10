@@ -11,6 +11,8 @@ import { randomBytes } from 'crypto';
 import { getUserIdentifier } from '@/lib/server-auth';
 import { logger } from '@/lib/logger/logger';
 
+export const dynamic = 'force-dynamic';
+
 type PageData = Record<string, never>;
 
 interface TokenData {

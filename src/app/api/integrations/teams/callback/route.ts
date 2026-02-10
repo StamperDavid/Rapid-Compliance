@@ -10,6 +10,8 @@ import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 
+export const dynamic = 'force-dynamic';
+
 // Zod schema for Teams OAuth callback
 const teamsCallbackSchema = z.object({
   code: z.string().min(1),

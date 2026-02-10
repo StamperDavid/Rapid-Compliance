@@ -13,6 +13,8 @@ import { verifyAdminRequest, isAuthError } from '@/lib/api/admin-auth';
 import { createVideoJobService } from '@/lib/video/video-job-service';
 import { logger } from '@/lib/logger/logger';
 
+export const dynamic = 'force-dynamic';
+
 // =============================================================================
 // REQUEST VALIDATION SCHEMAS
 // =============================================================================

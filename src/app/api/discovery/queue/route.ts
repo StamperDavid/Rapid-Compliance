@@ -10,6 +10,8 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { queueDiscoveryTask } from '@/lib/services/discovery-dispatcher';
 import { logger } from '@/lib/logger/logger';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * Discovery task request body schema
  */

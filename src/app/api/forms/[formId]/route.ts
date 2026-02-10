@@ -14,6 +14,8 @@ import { z } from 'zod';
 import { logger } from '@/lib/logger/logger';
 import { getSubCollection } from '@/lib/firebase/collections';
 
+export const dynamic = 'force-dynamic';
+
 interface RouteContext {
   params: Promise<{ formId: string }>;
 }

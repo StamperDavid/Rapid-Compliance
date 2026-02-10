@@ -15,6 +15,8 @@ import { logger } from '@/lib/logger/logger';
 import { z } from 'zod';
 import { SocialPostService } from '@/lib/social/social-post-service';
 
+export const dynamic = 'force-dynamic';
+
 interface TwitterResponse {
   data?: {
     id?: string;

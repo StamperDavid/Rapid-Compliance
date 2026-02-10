@@ -3,6 +3,8 @@ import { z } from 'zod';
 import { getDeals, deleteDeal } from '@/lib/crm/deal-service';
 import { logger } from '@/lib/logger/logger';
 
+export const dynamic = 'force-dynamic';
+
 const querySchema = z.object({
   workspaceId: z.string().optional().default('default'),
   stage: z.string().optional(),

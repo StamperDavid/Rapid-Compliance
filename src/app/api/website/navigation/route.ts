@@ -10,6 +10,8 @@ import { getSubCollection } from '@/lib/firebase/collections';
 import type { Navigation } from '@/types/website';
 import { logger } from '@/lib/logger/logger';
 
+export const dynamic = 'force-dynamic';
+
 interface RequestBody {
   navigation?: Partial<Navigation>;
 }

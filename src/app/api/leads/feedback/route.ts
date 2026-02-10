@@ -11,6 +11,8 @@ import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 
+export const dynamic = 'force-dynamic';
+
 // Zod schema for lead feedback request
 const leadFeedbackSchema = z.object({
   leadDomain: z.string().min(1),

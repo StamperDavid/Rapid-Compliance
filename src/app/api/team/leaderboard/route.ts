@@ -8,6 +8,8 @@ import { calculateLeaderboard } from '@/lib/team/collaboration';
 import { logger } from '@/lib/logger/logger';
 import { getAuthToken } from '@/lib/auth/server-auth';
 
+export const dynamic = 'force-dynamic';
+
 // Valid period type with type guard
 type LeaderboardPeriod = 'week' | 'month' | 'quarter' | 'year';
 const VALID_PERIODS: readonly LeaderboardPeriod[] = ['week', 'month', 'quarter', 'year'] as const;

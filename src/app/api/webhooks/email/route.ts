@@ -15,6 +15,8 @@ import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { verifySendGridSignature } from '@/lib/security/webhook-verification';
 
+export const dynamic = 'force-dynamic';
+
 // Raw SendGrid event interface matching the library's expected type
 interface RawSendGridEvent {
   email: string;

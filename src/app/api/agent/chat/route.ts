@@ -8,6 +8,8 @@ import { handleAPIError, errors } from '@/lib/api/error-handler';
 import { logger } from '@/lib/logger/logger';
 import type { ModelName } from '@/types/ai-models';
 
+export const dynamic = 'force-dynamic';
+
 // ===== TYPE DEFINITIONS =====
 
 /**

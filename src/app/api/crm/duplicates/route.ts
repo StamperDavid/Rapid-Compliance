@@ -12,6 +12,8 @@ import {
 import { logger } from '@/lib/logger/logger';
 import { getAuthToken } from '@/lib/auth/server-auth';
 
+export const dynamic = 'force-dynamic';
+
 interface RequestPayload {
   entityType: 'lead' | 'contact' | 'company';
   record: Record<string, unknown>;

@@ -8,6 +8,8 @@ import { scheduleMeeting } from '@/lib/meetings/scheduler-engine';
 import { logger } from '@/lib/logger/logger';
 import { getAuthToken } from '@/lib/auth/server-auth';
 
+export const dynamic = 'force-dynamic';
+
 type RelatedEntityType = 'lead' | 'contact' | 'deal';
 
 interface MeetingAttendee {

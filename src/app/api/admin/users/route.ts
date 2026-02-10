@@ -10,6 +10,8 @@ import {
 import { logger } from '@/lib/logger/logger';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
+export const dynamic = 'force-dynamic';
+
 // ============================================================================
 // TYPE DEFINITIONS
 // ============================================================================

@@ -23,6 +23,8 @@ import type { AgentStatus } from '@/lib/agents/types';
 import { logger } from '@/lib/logger/logger';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 
+export const dynamic = 'force-dynamic';
+
 // ============================================================================
 // RESPONSE TYPES - Frontend-optimized shapes
 // ============================================================================

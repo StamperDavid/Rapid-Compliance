@@ -9,6 +9,8 @@ import { adminDal } from '@/lib/firebase/admin-dal';
 import { getSubCollection } from '@/lib/firebase/collections';
 import { logger } from '@/lib/logger/logger';
 
+export const dynamic = 'force-dynamic';
+
 interface GlobalDomainData {
   domain?: string;
 }

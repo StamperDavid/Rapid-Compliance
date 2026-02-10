@@ -6,6 +6,8 @@ import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { getSubCollection } from '@/lib/firebase/collections';
 import twilio from 'twilio';
 
+export const dynamic = 'force-dynamic';
+
 interface CallRequestBody {
   to: string;
   contactId?: string;

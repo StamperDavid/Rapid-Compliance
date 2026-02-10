@@ -11,6 +11,8 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { voiceAgentHandler } from '@/lib/voice/voice-agent-handler';
 import { logger } from '@/lib/logger/logger';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * POST /api/voice/ai-agent/whisper
  * Generate whisper message for human agent

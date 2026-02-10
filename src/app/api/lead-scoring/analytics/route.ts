@@ -15,6 +15,8 @@ import { logger } from '@/lib/logger/logger';
 import type { LeadScoreAnalytics, StoredLeadScore, IntentSignalType } from '@/types/lead-scoring';
 import { getSubCollection } from '@/lib/firebase/collections';
 
+export const dynamic = 'force-dynamic';
+
 // Interface for Firestore timestamp conversion
 interface FirestoreLeadScore extends Omit<StoredLeadScore, 'metadata'> {
   metadata: {

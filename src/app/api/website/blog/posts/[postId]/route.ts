@@ -11,6 +11,8 @@ import { getSubCollection } from '@/lib/firebase/collections';
 import type { BlogPost } from '@/types/website';
 import { logger } from '@/lib/logger/logger';
 
+export const dynamic = 'force-dynamic';
+
 const paramsSchema = z.object({
   postId: z.string().min(1, 'postId is required'),
 });

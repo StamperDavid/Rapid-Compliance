@@ -13,6 +13,8 @@ import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { getSubCollection } from '@/lib/firebase/collections';
 import type { ViewFilter } from '@/types/filters';
 
+export const dynamic = 'force-dynamic';
+
 /** Request body interface for counting contacts */
 interface CountContactsRequestBody {
   workspaceId?: string;

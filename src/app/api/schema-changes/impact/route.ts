@@ -8,6 +8,8 @@ import { logger } from '@/lib/logger/logger';
 import { getSchemaChangeImpactSummary } from '@/lib/schema/schema-change-handler';
 import { getWorkflowValidationSummary } from '@/lib/schema/workflow-validator';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/schema-changes/impact
  * Get schema change impact summary

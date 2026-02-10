@@ -6,6 +6,8 @@ import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 
+export const dynamic = 'force-dynamic';
+
 interface ZodIssue {
   path: (string | number)[];
   message: string;

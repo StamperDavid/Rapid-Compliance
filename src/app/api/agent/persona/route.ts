@@ -6,6 +6,8 @@ import { logger } from '@/lib/logger/logger';
 import { z } from 'zod';
 import { getSubCollection } from '@/lib/firebase/collections';
 
+export const dynamic = 'force-dynamic';
+
 const PersonaDataSchema = z.object({
   name: z.string().optional(),
   tagline: z.string().optional(),

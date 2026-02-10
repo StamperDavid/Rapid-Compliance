@@ -5,6 +5,8 @@ import { logger } from '@/lib/logger/logger';
 import { verifyTwilioSignature, parseFormBody } from '@/lib/security/webhook-verification';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
+export const dynamic = 'force-dynamic';
+
 // Type definitions
 interface CallRecord {
   id: string;

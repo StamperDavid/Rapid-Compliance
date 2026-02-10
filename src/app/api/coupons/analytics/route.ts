@@ -5,6 +5,8 @@ import { requireAuth } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
 import type { CouponRedemption, MerchantCoupon } from '@/types/pricing';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * GET: Get coupon analytics for SalesVelocity.ai
  */

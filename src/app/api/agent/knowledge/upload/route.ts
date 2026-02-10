@@ -9,6 +9,8 @@ import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { successResponse } from '@/lib/api/error-handler';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * Request payload structure for knowledge upload
  */

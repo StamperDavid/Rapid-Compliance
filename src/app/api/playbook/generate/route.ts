@@ -24,6 +24,8 @@ import { logger } from '@/lib/logger/logger';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import { ZodError } from 'zod';
 
+export const dynamic = 'force-dynamic';
+
 // Use the actual response type for caching
 type PlaybookGenerationResult = GeneratePlaybookResponse;
 

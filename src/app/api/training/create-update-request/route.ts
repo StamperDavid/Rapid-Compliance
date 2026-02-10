@@ -14,6 +14,8 @@ import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 
+export const dynamic = 'force-dynamic';
+
 const CreateUpdateRequestSchema = z.object({
   sessionIds: z.array(z.string().min(1)).min(1, 'At least one session ID is required'),
   goldenMasterId: z.string().min(1, 'Golden Master ID is required'),

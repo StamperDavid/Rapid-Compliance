@@ -6,6 +6,8 @@ import { logger } from '@/lib/logger/logger';
 import { z } from 'zod';
 import type { MerchantCoupon } from '@/types/pricing';
 
+export const dynamic = 'force-dynamic';
+
 interface RouteContext {
   params: Promise<{ couponId: string }>;
 }

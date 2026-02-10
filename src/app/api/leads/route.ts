@@ -3,6 +3,8 @@ import { z } from 'zod';
 import { getLeads, createLead, deleteLead, type Lead } from '@/lib/crm/lead-service';
 import { logger } from '@/lib/logger/logger';
 
+export const dynamic = 'force-dynamic';
+
 const getQuerySchema = z.object({
   workspaceId: z.string().optional().default('default'),
   status: z.string().optional(),

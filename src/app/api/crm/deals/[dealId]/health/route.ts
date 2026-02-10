@@ -8,6 +8,8 @@ import { calculateDealHealth } from '@/lib/crm/deal-health';
 import { logger } from '@/lib/logger/logger';
 import { getAuthToken } from '@/lib/auth/server-auth';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(
   request: NextRequest,
   { params }: { params: { dealId: string } }

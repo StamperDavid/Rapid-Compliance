@@ -7,6 +7,8 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { verifyAdminRequest, isAuthError } from '@/lib/api/admin-auth';
 import { logger } from '@/lib/logger/logger';
 
+export const dynamic = 'force-dynamic';
+
 interface ContentGenerationRequest {
   type: 'blog' | 'social';
   topic: string;

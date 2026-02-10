@@ -9,6 +9,8 @@ import { generateStoryboard } from '@/lib/video/engine/director-service';
 import { logger } from '@/lib/logger/logger';
 import type { DirectorRequest } from '@/lib/video/engine/types';
 
+export const dynamic = 'force-dynamic';
+
 const ObjectiveValues = ['awareness', 'consideration', 'conversion', 'retention'] as const;
 const PlatformValues = ['youtube', 'tiktok', 'instagram', 'linkedin', 'website'] as const;
 const AspectRatioValues = ['16:9', '9:16', '1:1', '4:3'] as const;

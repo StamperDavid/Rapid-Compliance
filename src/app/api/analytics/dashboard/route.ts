@@ -28,6 +28,8 @@ import { emitDashboardViewed, emitAnalyticsError } from '@/lib/analytics/dashboa
 import { ZodError } from 'zod';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 
+export const dynamic = 'force-dynamic';
+
 // Rate limiting configuration
 const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
 const RATE_LIMIT_MAX_REQUESTS = 20;

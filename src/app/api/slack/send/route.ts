@@ -17,6 +17,8 @@ import { db } from '@/lib/firebase-admin';
 import { Timestamp } from 'firebase-admin/firestore';
 import type { SlackWorkspace, SlackMessage } from '@/lib/slack/types';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * POST /api/slack/send
  * 

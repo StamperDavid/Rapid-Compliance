@@ -11,6 +11,8 @@ import { adminDb } from '@/lib/firebase/admin';
 import type { DocumentData, Timestamp } from 'firebase-admin/firestore';
 import { z } from 'zod';
 
+export const dynamic = 'force-dynamic';
+
 // Default agent settings schema
 const defaultSettingsSchema = z.object({
   greeting: z.string().min(1, 'Greeting is required').max(500),

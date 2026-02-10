@@ -11,6 +11,8 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { SystemHealthService } from '@/lib/orchestrator/system-health-service';
 
+export const dynamic = 'force-dynamic';
+
 interface SpecialistStatusRequestBody {
   PLATFORM_ID?: string;
 }

@@ -3,6 +3,8 @@ import { publishForm, getForm } from '@/lib/forms/form-service';
 import { z } from 'zod';
 import { logger } from '@/lib/logger/logger';
 
+export const dynamic = 'force-dynamic';
+
 interface RouteContext {
   params: Promise<{ formId: string }>;
 }

@@ -11,6 +11,8 @@ import { SchemaChangeEventPublisherServer } from '@/lib/schema/server/schema-cha
 import { logger } from '@/lib/logger/logger';
 import type { Schema } from '@/types/schema';
 
+export const dynamic = 'force-dynamic';
+
 interface SchemaUpdateRequestBody {
   updates: Partial<Schema>;
   userId: string;

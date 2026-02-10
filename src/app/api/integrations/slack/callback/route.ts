@@ -4,6 +4,8 @@ import { getTokensFromCode } from '@/lib/integrations/slack-service';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
+export const dynamic = 'force-dynamic';
+
 // Zod schema for OAuth callback validation
 const oauthCallbackSchema = z.object({
   code: z.string().min(1),

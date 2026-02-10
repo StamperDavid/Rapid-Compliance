@@ -12,6 +12,8 @@ import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { createTwitterService } from '@/lib/integrations/twitter-service';
 import { z } from 'zod';
 
+export const dynamic = 'force-dynamic';
+
 // Request validation schema
 const postTweetSchema = z.object({
   text: z.string().min(1, 'Tweet text is required').max(280, 'Tweet exceeds 280 character limit'),

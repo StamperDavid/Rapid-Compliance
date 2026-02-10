@@ -6,6 +6,8 @@ import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { logApiRequest, logApiError } from '@/lib/logging/api-logger';
 import { errors } from '@/lib/middleware/error-handler';
 
+export const dynamic = 'force-dynamic';
+
 interface ValidationError {
   path?: string[];
   message?: string;

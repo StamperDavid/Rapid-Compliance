@@ -17,6 +17,8 @@ import { logger } from '@/lib/logger/logger';
 import { type ScoringRules, DEFAULT_SCORING_RULES } from '@/types/lead-scoring';
 import { getSubCollection } from '@/lib/firebase/collections';
 
+export const dynamic = 'force-dynamic';
+
 // Interface for Firestore scoring rules data
 interface FirestoreScoringRulesData {
   id: string;

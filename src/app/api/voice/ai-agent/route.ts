@@ -13,6 +13,8 @@ import type { VoiceCall } from '@/lib/voice/types';
 import { logger } from '@/lib/logger/logger';
 import { getSubCollection } from '@/lib/firebase/collections';
 
+export const dynamic = 'force-dynamic';
+
 /** Telnyx webhook data structure */
 interface TelnyxWebhookData {
   call_control_id?: string;

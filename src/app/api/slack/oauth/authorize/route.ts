@@ -16,6 +16,8 @@ import crypto from 'crypto';
 import type { SlackOAuthState } from '@/lib/slack/types';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/slack/oauth/authorize
  * 

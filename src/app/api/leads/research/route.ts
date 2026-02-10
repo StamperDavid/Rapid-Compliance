@@ -10,6 +10,8 @@ import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
+export const dynamic = 'force-dynamic';
+
 // Zod schema for research request
 const leadResearchSchema = z.object({
   query: z.string().min(1),

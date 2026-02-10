@@ -16,6 +16,8 @@ import {
   processUnprocessedEvents,
 } from '@/lib/schema/schema-change-handler';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/schema-changes
  * Get schema change events

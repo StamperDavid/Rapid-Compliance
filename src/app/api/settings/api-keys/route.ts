@@ -11,6 +11,8 @@ import { logger } from '@/lib/logger/logger';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 
+export const dynamic = 'force-dynamic';
+
 interface ApiKeysDocument {
   [service: string]: string | undefined;
   updatedAt?: string;

@@ -14,6 +14,8 @@ import { logger } from '@/lib/logger/logger';
 import { z } from 'zod';
 import { PromotionService } from '@/lib/promotions/promotion-service';
 
+export const dynamic = 'force-dynamic';
+
 // =============================================================================
 // REQUEST VALIDATION SCHEMAS
 // =============================================================================

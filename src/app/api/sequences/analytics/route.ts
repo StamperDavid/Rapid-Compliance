@@ -14,6 +14,8 @@ import { adminDal } from '@/lib/firebase/admin-dal';
 import { logger } from '@/lib/logger/logger';
 import { getSubCollection } from '@/lib/firebase/collections';
 
+export const dynamic = 'force-dynamic';
+
 // ============================================================================
 // TYPES
 // ============================================================================

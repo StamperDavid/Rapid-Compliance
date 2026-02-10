@@ -11,6 +11,8 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { FeatureToggleService, type FeatureCategory } from '@/lib/orchestrator/feature-toggle-service';
 
+export const dynamic = 'force-dynamic';
+
 interface ToggleFeatureRequest {
   userId?: string;
   action?: string;

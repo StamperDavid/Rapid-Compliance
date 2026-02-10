@@ -5,6 +5,8 @@ import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * Safely converts polymorphic date values (Firestore Timestamp, Date, string, number) to Date.
  * Falls back to current date if conversion fails.

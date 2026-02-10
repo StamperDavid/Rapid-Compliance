@@ -10,6 +10,8 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { getCompetitiveMonitor, type CompetitorMonitorConfig } from '@/lib/battlecard';
 import { logger } from '@/lib/logger/logger';
 
+export const dynamic = 'force-dynamic';
+
 /** Request body interface for starting competitive monitoring */
 interface StartMonitorRequestBody {
   competitors: CompetitorMonitorConfig[];

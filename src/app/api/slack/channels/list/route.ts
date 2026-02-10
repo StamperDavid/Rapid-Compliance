@@ -16,6 +16,8 @@ import { db } from '@/lib/firebase-admin';
 import { Timestamp } from 'firebase-admin/firestore';
 import type { SlackWorkspace, SlackChannel } from '@/lib/slack/types';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/slack/channels/list
  * 

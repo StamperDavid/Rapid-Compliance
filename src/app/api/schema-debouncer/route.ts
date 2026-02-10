@@ -7,6 +7,8 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger/logger';
 import { SchemaChangeDebouncer } from '@/lib/schema/schema-change-debouncer';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/schema-debouncer
  * Get debouncer status

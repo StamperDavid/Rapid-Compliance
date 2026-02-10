@@ -25,6 +25,8 @@ import {
   type TeamPerformanceAnalytics,
 } from '@/lib/performance';
 
+export const dynamic = 'force-dynamic';
+
 // ============================================================================
 // CONFIGURATION
 // ============================================================================

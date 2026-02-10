@@ -4,6 +4,8 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { requireRole } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
 
+export const dynamic = 'force-dynamic';
+
 interface PersonaData {
   name?: string;
   description?: string;

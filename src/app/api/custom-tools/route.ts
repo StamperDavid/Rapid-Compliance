@@ -5,6 +5,8 @@ import { validateToolUrl, type CustomTool } from '@/types/custom-tools';
 import { getSubCollection } from '@/lib/firebase/collections';
 import { requireAuth } from '@/lib/auth/api-auth';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * Custom Tools API Route
  *

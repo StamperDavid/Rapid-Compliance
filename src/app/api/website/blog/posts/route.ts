@@ -11,6 +11,8 @@ import { getSubCollection } from '@/lib/firebase/collections';
 import type { BlogPost, PageSection, PageSEO } from '@/types/website';
 import { logger } from '@/lib/logger/logger';
 
+export const dynamic = 'force-dynamic';
+
 const getQuerySchema = z.object({
   status: z.enum(['draft', 'published', 'scheduled']).optional(),
   category: z.string().optional(),

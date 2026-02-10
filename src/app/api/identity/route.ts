@@ -7,6 +7,8 @@ import { z } from 'zod';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import { requireAuth } from '@/lib/auth/api-auth';
 
+export const dynamic = 'force-dynamic';
+
 interface OrgData {
   brandDNA?: BrandDNA;
   [key: string]: unknown;

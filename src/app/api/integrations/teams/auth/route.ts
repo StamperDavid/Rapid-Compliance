@@ -10,6 +10,8 @@ import { errors } from '@/lib/middleware/error-handler';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 
+export const dynamic = 'force-dynamic';
+
 // Interface for Microsoft 365 API keys
 interface Microsoft365Keys {
   clientId: string;

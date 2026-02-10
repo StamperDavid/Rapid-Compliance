@@ -7,6 +7,8 @@ import { withCache } from '@/lib/cache/analytics-cache';
 import { getAuthToken } from '@/lib/auth/server-auth';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * Helper to convert Firestore timestamps, Date objects, strings, or numbers to Date
  */

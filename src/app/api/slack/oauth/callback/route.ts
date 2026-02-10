@@ -17,6 +17,8 @@ import { db } from '@/lib/firebase-admin';
 import type { SlackWorkspace, SlackOAuthState } from '@/lib/slack/types';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/slack/oauth/callback
  * 

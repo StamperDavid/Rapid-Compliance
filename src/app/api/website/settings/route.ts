@@ -10,6 +10,8 @@ import { getSubCollection } from '@/lib/firebase/collections';
 import { FieldValue } from 'firebase-admin/firestore';
 import { logger } from '@/lib/logger/logger';
 
+export const dynamic = 'force-dynamic';
+
 const postBodySchema = z.object({
   settings: z.record(z.unknown()).refine((val) => Object.keys(val).length > 0, {
     message: 'settings object is required',

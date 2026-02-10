@@ -12,6 +12,8 @@ import { getUserIdentifier } from '@/lib/server-auth';
 import type { PageTemplate } from '@/types/website';
 import { logger } from '@/lib/logger/logger';
 
+export const dynamic = 'force-dynamic';
+
 const templateCategoryValues = ['business', 'saas', 'ecommerce', 'portfolio', 'agency', 'blog', 'other'] as const;
 
 const postBodySchema = z.object({

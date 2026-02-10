@@ -38,6 +38,8 @@ import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { getSubCollection } from '@/lib/firebase/collections';
 
+export const dynamic = 'force-dynamic';
+
 // ============================================================================
 // RATE LIMITING
 // ============================================================================

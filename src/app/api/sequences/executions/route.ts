@@ -12,6 +12,8 @@ import { logger } from '@/lib/logger/logger';
 import type { Timestamp } from 'firebase-admin/firestore';
 import { getSubCollection } from '@/lib/firebase/collections';
 
+export const dynamic = 'force-dynamic';
+
 // ============================================================================
 // TYPES
 // ============================================================================

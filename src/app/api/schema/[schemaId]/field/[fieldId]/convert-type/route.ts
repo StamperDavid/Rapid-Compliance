@@ -8,6 +8,8 @@ import { adminDal } from '@/lib/firebase/admin-dal';
 import { FieldTypeConverterServer } from '@/lib/schema/server/field-type-converter-server';
 import type { FieldType, SchemaField } from '@/types/schema';
 
+export const dynamic = 'force-dynamic';
+
 interface ConversionRequestBody {
   fieldKey: string;
   oldType: FieldType;

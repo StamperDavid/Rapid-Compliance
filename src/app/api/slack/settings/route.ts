@@ -15,6 +15,8 @@ import { Timestamp } from 'firebase-admin/firestore';
 import type { SlackWorkspace } from '@/lib/slack/types';
 import { z } from 'zod';
 
+export const dynamic = 'force-dynamic';
+
 // Schema for PUT request body
 const putRequestSchema = z.object({
   workspaceId: z.string().min(1, 'Workspace ID is required'),

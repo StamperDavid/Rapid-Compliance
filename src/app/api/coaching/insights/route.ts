@@ -27,16 +27,18 @@ import { adminDal } from '@/lib/firebase/admin-dal';
 import { getServerSignalCoordinator } from '@/lib/orchestration/coordinator-factory-server';
 import { CoachingAnalyticsEngine } from '@/lib/coaching/coaching-analytics-engine';
 import { CoachingGenerator } from '@/lib/coaching/coaching-generator';
-import { 
-  safeValidateGenerateCoachingRequest 
+import {
+  safeValidateGenerateCoachingRequest
 } from '@/lib/coaching/validation';
 import { createCoachingInsightsGeneratedEvent } from '@/lib/coaching/events';
-import type { 
+import type {
   GenerateCoachingRequest,
-  GenerateCoachingResponse 
+  GenerateCoachingResponse
 } from '@/lib/coaching/types';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
+
+export const dynamic = 'force-dynamic';
 
 // ============================================================================
 // RATE LIMITING

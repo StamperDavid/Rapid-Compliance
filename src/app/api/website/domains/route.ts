@@ -10,6 +10,8 @@ import { getSubCollection } from '@/lib/firebase/collections';
 import { FieldValue } from 'firebase-admin/firestore';
 import { logger } from '@/lib/logger/logger';
 
+export const dynamic = 'force-dynamic';
+
 interface DomainData {
   verified: boolean;
   verificationMethod: 'cname' | 'a-record';

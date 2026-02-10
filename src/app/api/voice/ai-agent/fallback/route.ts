@@ -13,6 +13,8 @@ import { callTransferService } from '@/lib/voice/call-transfer-service';
 import { aiConversationService } from '@/lib/voice/ai-conversation-service';
 import { logger } from '@/lib/logger/logger';
 
+export const dynamic = 'force-dynamic';
+
 /** Conversation context from the voice agent handler */
 interface ConversationContext {
   sentiment: string;

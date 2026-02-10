@@ -2,6 +2,8 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/firebase/config';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * Health Check Endpoint
  * Public endpoint to check system health

@@ -10,6 +10,8 @@ import { requireUserRole } from '@/lib/auth/server-auth';
 import { getTemplateWithSource } from '@/lib/templates/template-resolver';
 import { logger } from '@/lib/logger/logger';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/admin/templates/[id]
  * Get a specific template with source information

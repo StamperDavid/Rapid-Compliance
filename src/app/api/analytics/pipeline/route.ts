@@ -7,6 +7,8 @@ import { withCache } from '@/lib/cache/analytics-cache';
 import { getAuthToken } from '@/lib/auth/server-auth';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * Safe parseFloat that handles NaN correctly.
  * parseFloat(undefined) returns NaN, and NaN ?? fallback returns NaN (not the fallback).

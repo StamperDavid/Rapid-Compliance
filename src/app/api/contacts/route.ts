@@ -3,6 +3,8 @@ import { z } from 'zod';
 import { getContacts, deleteContact } from '@/lib/crm/contact-service';
 import { logger } from '@/lib/logger/logger';
 
+export const dynamic = 'force-dynamic';
+
 const querySchema = z.object({
   workspaceId: z.string().optional().default('default'),
   company: z.string().optional(),

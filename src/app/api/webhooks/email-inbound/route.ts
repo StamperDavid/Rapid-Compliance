@@ -15,6 +15,8 @@ import { classifyReply, type ReplyClassification } from '@/lib/outbound/reply-ha
 import { v4 as uuidv4 } from 'uuid';
 import { emitBusinessEvent } from '@/lib/orchestration/event-router';
 
+export const dynamic = 'force-dynamic';
+
 // Type definitions for SendGrid Inbound Parse payload
 interface InboundEmailData {
   from: string;

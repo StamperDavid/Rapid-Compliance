@@ -6,6 +6,8 @@ import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { getAuthToken } from '@/lib/auth/server-auth';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * Safely converts polymorphic date values (Firestore Timestamp, Date, string, number) to Date.
  * Falls back to current date if conversion fails.

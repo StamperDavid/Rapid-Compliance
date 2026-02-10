@@ -8,6 +8,8 @@ import { generateProposal } from '@/lib/documents/proposal-generator';
 import { logger } from '@/lib/logger/logger';
 import { getAuthToken } from '@/lib/auth/server-auth';
 
+export const dynamic = 'force-dynamic';
+
 interface LineItem {
   description: string;
   quantity: number;

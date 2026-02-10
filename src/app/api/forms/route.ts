@@ -4,6 +4,8 @@ import type { FormDefinition } from '@/lib/forms/types';
 import { z } from 'zod';
 import { logger } from '@/lib/logger/logger';
 
+export const dynamic = 'force-dynamic';
+
 const deleteBodySchema = z.object({
   ids: z.array(z.string().min(1)).min(1, 'At least one ID is required'),
   workspaceId: z.string().optional().default('default'),

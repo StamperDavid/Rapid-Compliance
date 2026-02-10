@@ -13,6 +13,8 @@ import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 
+export const dynamic = 'force-dynamic';
+
 const ApplyUpdateSchema = z.object({
   updateRequestId: z.string().min(1, 'Update request ID is required'),
   approved: z.boolean(),
