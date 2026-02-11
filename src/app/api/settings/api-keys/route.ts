@@ -20,10 +20,14 @@ import { z } from 'zod';
 
 export const dynamic = 'force-dynamic';
 
-// Zod schema for POST body
+// Zod schemas
 const SaveKeySchema = z.object({
   service: z.string().min(1, 'service is required'),
   key: z.string().min(1, 'key is required'),
+});
+
+const DeleteKeySchema = z.object({
+  service: z.string().min(1, 'service is required'),
 });
 
 interface FirestoreError {
@@ -134,6 +138,58 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     if (isFirestoreError(error) && error.code === 'not-found') {
       return handleAPIError(errors.notFound('Organization'));
+    }
+
+    return handleAPIError(error instanceof Error ? error : new Error('Unknown error'));
+  }
+}
+
+/**
+ * DELETE - Remove a single API key
+ */
+export async function DELETE(request: NextRequest): Promise<NextResponse> {
+  try {
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
+    const body: unknown = await request.json();
+
+    const parsed = DeleteKeySchema.safeParse(body);
+    if (!parsed.success) {
+      return handleAPIError(
+        errors.badRequest('Missing or invalid fields', { errors: parsed.error.issues })
+      );
+    }
+
+    const { service } = parsed.data;
+
+    if (!UI_TO_CONFIG_MAP[service]) {
+      return handleAPIError(errors.badRequest(`Unknown service: ${service}`));
+    }
+
+    // Load existing config, set the key to empty string to clear it
+    const existing = await apiKeyService.getKeys();
+    const configObj: Record<string, unknown> = existing
+      ? structuredClone(existing) as unknown as Record<string, unknown>
+      : {};
+
+    applyUIKeyToConfig(configObj, service, '');
+
+    await apiKeyService.saveKeys(configObj as Partial<APIKeysConfig>);
+
+    logger.info('API key deleted', { route: '/api/settings/api-keys', service });
+
+    return NextResponse.json({
+      success: true,
+      message: `${service} API key removed`,
+    });
+  } catch (error: unknown) {
+    logger.error('API keys deletion error', error instanceof Error ? error : new Error(String(error)), { route: '/api/settings/api-keys' });
+
+    if (isFirestoreError(error) && error.code === 'permission-denied') {
+      return handleAPIError(errors.forbidden('You do not have permission to delete API keys'));
     }
 
     return handleAPIError(error instanceof Error ? error : new Error('Unknown error'));

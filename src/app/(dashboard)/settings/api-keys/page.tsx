@@ -91,6 +91,31 @@ export default function APIKeysPage() {
     }
   };
 
+  const deleteKey = async (service: string) => {
+    setSaving(service);
+    try {
+      const authHeaders = await getAuthHeaders();
+      const response = await fetch('/api/settings/api-keys', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json', ...authHeaders },
+        body: JSON.stringify({ PLATFORM_ID, service }),
+      });
+
+      const data = await response.json() as APIKeySaveResponse;
+      if (data.success) {
+        setKeys(prev => { const next = { ...prev }; delete next[service]; return next; });
+        setSaveResults(prev => { const next = { ...prev }; delete next[service]; return next; });
+        toast.success(`${service} key removed`);
+      } else {
+        toast.error(`Failed to delete: ${data.error ?? 'Unknown error'}`);
+      }
+    } catch (_error) {
+      toast.error('Error deleting API key');
+    } finally {
+      setSaving(null);
+    }
+  };
+
   const testKey = async (service: string) => {
     setTesting(service);
     try {
@@ -727,6 +752,24 @@ export default function APIKeysPage() {
                         }}
                       >
                         {testing === service.id ? 'Testing...' : 'Test'}
+                      </button>
+                      <button
+                        onClick={() => void deleteKey(service.id)}
+                        disabled={!keys[service.id] || saving === service.id}
+                        style={{
+                          padding: '0.75rem 1rem',
+                          backgroundColor: !keys[service.id] ? 'var(--color-border-strong)' : 'var(--color-error, #ef4444)',
+                          color: 'var(--color-text-primary)',
+                          border: 'none',
+                          borderRadius: '0.5rem',
+                          cursor: keys[service.id] && saving !== service.id ? 'pointer' : 'not-allowed',
+                          fontSize: '0.875rem',
+                          fontWeight: '600',
+                          opacity: keys[service.id] ? 1 : 0.5,
+                        }}
+                        title="Remove this API key"
+                      >
+                        ✕
                       </button>
                     </div>
 
