@@ -2,11 +2,22 @@
 
 import { PLATFORM_ID } from '@/lib/constants/platform';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
 import { logger } from '@/lib/logger/logger';
 import { useToast } from '@/hooks/useToast';
+
+/** Get Authorization header with Firebase ID token */
+async function getAuthHeaders(): Promise<Record<string, string>> {
+  const { getCurrentUser } = await import('@/lib/auth/auth-service');
+  const user = getCurrentUser();
+  if (!user) {
+    throw new Error('Not authenticated');
+  }
+  const token = await user.getIdToken();
+  return { Authorization: `Bearer ${token}` };
+}
 
 interface APIKeyLoadResponse {
   success: boolean;
@@ -32,13 +43,12 @@ export default function APIKeysPage() {
   const [testResults, setTestResults] = useState<Record<string, APIKeyTestResponse>>({});
   const toast = useToast();
 
-  useEffect(() => {
-    void loadKeys();
-  }, []);
-
-  const loadKeys = async () => {
+  const loadKeys = useCallback(async () => {
     try {
-      const response = await fetch(`/api/settings/api-keys?PLATFORM_ID=${PLATFORM_ID}`);
+      const authHeaders = await getAuthHeaders();
+      const response = await fetch(`/api/settings/api-keys?PLATFORM_ID=${PLATFORM_ID}`, {
+        headers: authHeaders,
+      });
       const data = await response.json() as APIKeyLoadResponse;
       if (data.success) {
         setKeys(data.keys ?? {});
@@ -46,13 +56,18 @@ export default function APIKeysPage() {
     } catch (_error) {
       logger.error('Failed to load API keys:', _error instanceof Error ? _error : new Error(String(_error)), { file: 'page.tsx' });
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    void loadKeys();
+  }, [loadKeys]);
 
   const saveKey = async (service: string, value: string) => {
     try {
+      const authHeaders = await getAuthHeaders();
       const response = await fetch('/api/settings/api-keys', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders },
         body: JSON.stringify({ PLATFORM_ID, service, key: value }),
       });
 
@@ -71,7 +86,10 @@ export default function APIKeysPage() {
   const testKey = async (service: string) => {
     setTesting(service);
     try {
-      const response = await fetch(`/api/settings/api-keys/test?PLATFORM_ID=${PLATFORM_ID}&service=${service}`);
+      const authHeaders = await getAuthHeaders();
+      const response = await fetch(`/api/settings/api-keys/test?PLATFORM_ID=${PLATFORM_ID}&service=${service}`, {
+        headers: authHeaders,
+      });
       const data = await response.json() as APIKeyTestResponse;
 
       setTestResults({ ...testResults, [service]: data });
