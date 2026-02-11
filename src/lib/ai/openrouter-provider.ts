@@ -370,20 +370,32 @@ export class OpenRouterProvider {
       return this.apiKey;
     }
     logger.debug(`[OpenRouter] Fetching API key for org: ${PLATFORM_ID}`, { file: 'openrouter-provider.ts' });
+
+    // Strategy 1: Firestore (API Keys settings page)
     const keys = await apiKeyService.getKeys();
-    const key = keys?.ai?.openrouterApiKey;
-    if (!key) {
-      logger.error('[OpenRouter] No openrouterApiKey found in keys', new Error('No API key'), {
-        file: 'openrouter-provider.ts',
-        hasKeys: !!keys,
-        hasAiSection: !!keys?.ai,
-        aiKeys: keys?.ai ? Object.keys(keys.ai) : [],
-      });
-      throw new Error(`OpenRouter API key not configured for organization ${PLATFORM_ID}. Please add it in the API Keys settings.`);
+    const firestoreKey = keys?.ai?.openrouterApiKey;
+    if (firestoreKey) {
+      logger.debug(`[OpenRouter] API key loaded from Firestore: ${firestoreKey.slice(0, 8)}...`, { file: 'openrouter-provider.ts' });
+      this.apiKey = firestoreKey;
+      return firestoreKey;
     }
-    logger.debug(`[OpenRouter] API key loaded: ${key.slice(0, 8)}...`, { file: 'openrouter-provider.ts' });
-    this.apiKey = key;
-    return key;
+
+    // Strategy 2: Environment variable fallback
+    const envKey = process.env.OPENROUTER_API_KEY;
+    if (envKey) {
+      logger.debug(`[OpenRouter] API key loaded from env var: ${envKey.slice(0, 8)}...`, { file: 'openrouter-provider.ts' });
+      this.apiKey = envKey;
+      return envKey;
+    }
+
+    logger.error('[OpenRouter] No openrouterApiKey found in Firestore or env', new Error('No API key'), {
+      file: 'openrouter-provider.ts',
+      hasKeys: !!keys,
+      hasAiSection: !!keys?.ai,
+      aiKeys: keys?.ai ? Object.keys(keys.ai) : [],
+      hasEnvVar: !!process.env.OPENROUTER_API_KEY,
+    });
+    throw new Error(`OpenRouter API key not configured. Set OPENROUTER_API_KEY in Vercel env vars or add it in the API Keys settings.`);
   }
 }
 
