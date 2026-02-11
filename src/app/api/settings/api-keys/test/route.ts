@@ -150,6 +150,9 @@ export async function GET(request: NextRequest) {
       case 'slack_token':
         return await testSlack(apiKey);
 
+      case 'slack_webhook':
+        return testSlackWebhook(apiKey);
+
       case 'teams_webhook_url':
         return await testTeams(apiKey);
 
@@ -157,10 +160,25 @@ export async function GET(request: NextRequest) {
       case 'zoom_api_secret':
         return testZoom(apiKeys);
 
+      case 'serper':
+        return await testSerper(apiKey);
+
+      case 'elevenlabs':
+        return await testElevenLabs(apiKey);
+
+      case 'unreal_speech':
+        return await testUnrealSpeech(apiKey);
+
+      case 'heygen':
+        return await testHeyGen(apiKey);
+
+      case 'clearbit_api_key':
+        return await testClearbit(apiKey);
+
       default:
         return NextResponse.json({
-          success: true,
-          message: 'API key saved (test not implemented for this service)',
+          success: false,
+          error: 'Test not available for this service. Key is saved but could not be verified.',
         });
     }
   } catch (error: unknown) {
@@ -686,6 +704,184 @@ async function testTeams(webhookUrl: string): Promise<NextResponse> {
       error: error instanceof Error ? error.message : 'Unknown error',
     }, { status: 400 });
   }
+}
+
+/**
+ * Test Serper (Google Search API) key
+ */
+async function testSerper(apiKey: string): Promise<NextResponse> {
+  try {
+    const response = await fetch('https://google.serper.dev/search', {
+      method: 'POST',
+      headers: {
+        'X-API-KEY': apiKey,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ q: 'test', num: 1 }),
+    });
+
+    if (response.ok) {
+      return NextResponse.json({
+        success: true,
+        message: 'Serper API key is valid and working!',
+      });
+    } else {
+      return NextResponse.json({
+        success: false,
+        error: response.status === 401 || response.status === 403
+          ? 'Invalid Serper API key'
+          : `Serper API error: ${response.status}`,
+      });
+    }
+  } catch (error: unknown) {
+    return NextResponse.json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+}
+
+/**
+ * Test ElevenLabs API key
+ */
+async function testElevenLabs(apiKey: string): Promise<NextResponse> {
+  try {
+    const response = await fetch('https://api.elevenlabs.io/v1/user', {
+      headers: { 'xi-api-key': apiKey },
+    });
+
+    if (response.ok) {
+      return NextResponse.json({
+        success: true,
+        message: 'ElevenLabs API key is valid and working!',
+      });
+    } else {
+      return NextResponse.json({
+        success: false,
+        error: 'Invalid ElevenLabs API key',
+      });
+    }
+  } catch (error: unknown) {
+    return NextResponse.json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+}
+
+/**
+ * Test Unreal Speech API key
+ */
+async function testUnrealSpeech(apiKey: string): Promise<NextResponse> {
+  try {
+    // Unreal Speech uses Bearer auth — a minimal TTS request validates the key
+    const response = await fetch('https://api.v7.unrealspeech.com/speech', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        Text: 'test',
+        VoiceId: 'Scarlett',
+        OutputFormat: 'uri',
+      }),
+    });
+
+    if (response.ok) {
+      return NextResponse.json({
+        success: true,
+        message: 'Unreal Speech API key is valid and working!',
+      });
+    } else {
+      return NextResponse.json({
+        success: false,
+        error: response.status === 401 || response.status === 403
+          ? 'Invalid Unreal Speech API key'
+          : `Unreal Speech API error: ${response.status}`,
+      });
+    }
+  } catch (error: unknown) {
+    return NextResponse.json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+}
+
+/**
+ * Test HeyGen API key
+ */
+async function testHeyGen(apiKey: string): Promise<NextResponse> {
+  try {
+    const response = await fetch('https://api.heygen.com/v2/user/remaining_quota', {
+      headers: { 'X-Api-Key': apiKey },
+    });
+
+    if (response.ok) {
+      return NextResponse.json({
+        success: true,
+        message: 'HeyGen API key is valid and working!',
+      });
+    } else {
+      return NextResponse.json({
+        success: false,
+        error: 'Invalid HeyGen API key',
+      });
+    }
+  } catch (error: unknown) {
+    return NextResponse.json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+}
+
+/**
+ * Test Clearbit API key
+ */
+async function testClearbit(apiKey: string): Promise<NextResponse> {
+  try {
+    const response = await fetch('https://company.clearbit.com/v2/companies/find?domain=clearbit.com', {
+      headers: { 'Authorization': `Bearer ${apiKey}` },
+    });
+
+    if (response.ok) {
+      return NextResponse.json({
+        success: true,
+        message: 'Clearbit API key is valid and working!',
+      });
+    } else {
+      return NextResponse.json({
+        success: false,
+        error: response.status === 401 || response.status === 403
+          ? 'Invalid Clearbit API key'
+          : `Clearbit API error: ${response.status}`,
+      });
+    }
+  } catch (error: unknown) {
+    return NextResponse.json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+}
+
+/**
+ * Test Slack webhook URL
+ */
+function testSlackWebhook(webhookUrl: string): NextResponse {
+  if (!webhookUrl.startsWith('https://hooks.slack.com/')) {
+    return NextResponse.json({
+      success: false,
+      error: 'Invalid Slack webhook URL — should start with https://hooks.slack.com/',
+    });
+  }
+
+  return NextResponse.json({
+    success: true,
+    message: 'Slack webhook URL format is valid!',
+  });
 }
 
 /**
