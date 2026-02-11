@@ -175,7 +175,33 @@ return keys.ai?.anthropicApiKey ?? keys.ai?.openrouterApiKey ?? null;
         return keys.integrations?.slack ?? null;
       case 'zapier':
         return keys.integrations?.zapier ?? null;
-      
+
+      // Video Services
+      case 'heygen':
+        return keys.video?.heygen?.apiKey ?? null;
+      case 'runway':
+        return keys.video?.runway?.apiKey ?? null;
+
+      // Voice Services
+      case 'elevenlabs':
+        return keys.voice?.elevenlabs?.apiKey ?? null;
+      case 'unrealSpeech':
+        return keys.voice?.unrealSpeech?.apiKey ?? null;
+
+      // Enrichment Services
+      case 'serper':
+        return keys.enrichment?.serperApiKey ?? null;
+      case 'clearbit':
+        return keys.enrichment?.clearbitApiKey ?? null;
+      case 'crunchbase':
+        return keys.enrichment?.crunchbaseApiKey ?? null;
+      case 'newsapi':
+        return keys.enrichment?.newsApiKey ?? null;
+      case 'rapidapi':
+        return keys.enrichment?.rapidApiKey ?? null;
+      case 'builtwith':
+        return keys.enrichment?.builtWithApiKey ?? null;
+
       default:
         return null;
     }

@@ -1,22 +1,30 @@
 /**
- * API Keys Management
- * Saves keys to Firestore (encrypted) instead of .env files
+ * API Keys Management Route
+ * Reads/writes keys via apiKeyService (correct Firestore path)
+ * and uses key-mapping to translate between flat UI IDs and nested config paths.
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { requireRole } from '@/lib/auth/api-auth';
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
-import { handleAPIError, errors, validateRequired } from '@/lib/api/error-handler';
+import { handleAPIError, errors } from '@/lib/api/error-handler';
 import { logger } from '@/lib/logger/logger';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { apiKeyService } from '@/lib/api-keys/api-key-service';
+import {
+  flattenConfigToUI,
+  applyUIKeyToConfig,
+  UI_TO_CONFIG_MAP,
+} from '@/lib/api-keys/key-mapping';
+import type { APIKeysConfig } from '@/types/api-keys';
+import { z } from 'zod';
 
 export const dynamic = 'force-dynamic';
 
-interface ApiKeysDocument {
-  [service: string]: string | undefined;
-  updatedAt?: string;
-}
+// Zod schema for POST body
+const SaveKeySchema = z.object({
+  service: z.string().min(1, 'service is required'),
+  key: z.string().min(1, 'key is required'),
+});
 
 interface FirestoreError {
   code?: string;
@@ -28,7 +36,7 @@ function isFirestoreError(error: unknown): error is FirestoreError {
 }
 
 /**
- * GET - Load API keys for organization
+ * GET - Load API keys for organization (masked)
  */
 export async function GET(request: NextRequest): Promise<NextResponse> {
   try {
@@ -40,23 +48,19 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       return authResult;
     }
 
-    // Load keys from Firestore
-    const apiKeys = await FirestoreService.get<ApiKeysDocument>(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}`,
-      'apiKeys'
-    );
+    // Load keys via apiKeyService (correct 4-segment Firestore path)
+    const config = await apiKeyService.getKeys();
 
-    // Return masked keys (show only last 4 characters)
+    // Flatten nested config → flat UI IDs, then mask values
+    const flatKeys = config ? flattenConfigToUI(config) : {};
     const maskedKeys: Record<string, string> = {};
-    if (apiKeys) {
-      Object.keys(apiKeys).forEach((service) => {
-        const key = apiKeys[service];
-        if (typeof key === 'string' && key.length > 8) {
-          maskedKeys[service] = '•'.repeat(key.length - 4) + key.slice(-4);
-        } else if (typeof key === 'string' && key.length > 0) {
-          maskedKeys[service] = '•'.repeat(key.length);
-        }
-      });
+
+    for (const [service, value] of Object.entries(flatKeys)) {
+      if (value.length > 8) {
+        maskedKeys[service] = '\u2022'.repeat(value.length - 4) + value.slice(-4);
+      } else if (value.length > 0) {
+        maskedKeys[service] = '\u2022'.repeat(value.length);
+      }
     }
 
     return NextResponse.json({
@@ -75,13 +79,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 }
 
 /**
- * POST - Save API key
+ * POST - Save a single API key
  */
-interface SaveApiKeyBody {
-  service: string;
-  key: string;
-}
-
 export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
     const authResult = await requireRole(request, ['owner', 'admin']);
@@ -91,33 +90,32 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     const body: unknown = await request.json();
 
-    // Validate required fields - PLATFORM_ID no longer required (penthouse)
-    const validation = validateRequired(body as Record<string, unknown>, ['service', 'key']);
-    if (!validation.valid) {
+    // Validate with Zod
+    const parsed = SaveKeySchema.safeParse(body);
+    if (!parsed.success) {
       return handleAPIError(
-        errors.badRequest('Missing required fields', { missing: validation.missing })
+        errors.badRequest('Missing or invalid fields', { errors: parsed.error.issues })
       );
     }
 
-    const { service, key } = body as SaveApiKeyBody;
+    const { service, key } = parsed.data;
 
-    // Load existing keys
-    const existingKeys: ApiKeysDocument = await FirestoreService.get<ApiKeysDocument>(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}`,
-      'apiKeys'
-    ) ?? {};
+    // Reject unknown service IDs
+    if (!UI_TO_CONFIG_MAP[service]) {
+      return handleAPIError(errors.badRequest(`Unknown service: ${service}`));
+    }
 
-    // Update with new key
-    existingKeys[service] = key;
-    existingKeys.updatedAt = new Date().toISOString();
+    // Load existing config, deep-clone to avoid mutating the cache
+    const existing = await apiKeyService.getKeys();
+    const configObj: Record<string, unknown> = existing
+      ? structuredClone(existing) as unknown as Record<string, unknown>
+      : {};
 
-    // Save to Firestore
-    await FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}`,
-      'apiKeys',
-      existingKeys,
-      false
-    );
+    // Apply the new key at the correct nested path
+    applyUIKeyToConfig(configObj, service, key);
+
+    // Save via apiKeyService (correct path + auto cache invalidation)
+    await apiKeyService.saveKeys(configObj as Partial<APIKeysConfig>);
 
     logger.info('API key saved', { route: '/api/settings/api-keys', service });
 
@@ -139,8 +137,3 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     return handleAPIError(error instanceof Error ? error : new Error('Unknown error'));
   }
 }
-
-
-
-
-

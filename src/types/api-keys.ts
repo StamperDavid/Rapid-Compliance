@@ -131,6 +131,16 @@ export interface APIKeysConfig {
     };
   };
   
+  // Voice Generation Services
+  voice?: {
+    elevenlabs?: {
+      apiKey: string;
+    };
+    unrealSpeech?: {
+      apiKey: string;
+    };
+  };
+
   // Prospect Research & Enrichment
   enrichment?: {
     /** @deprecated Use native discovery-engine.ts instead. Will be removed in future release. */
@@ -139,6 +149,7 @@ export interface APIKeysConfig {
     builtWithApiKey?: string;
     newsApiKey?: string;
     rapidApiKey?: string; // For LinkedIn and other APIs
+    serperApiKey?: string; // Serper.dev Google Search API
   };
   
   // Social Media Integrations
@@ -268,6 +279,9 @@ export type APIServiceName =
   | 'linkedin'     // LinkedIn API
   | 'heygen'       // HeyGen AI Avatar Video
   | 'sora'         // OpenAI Sora Text-to-Video
-  | 'runway';      // Runway Gen-3 Video Generation
+  | 'runway'       // Runway Gen-3 Video Generation
+  | 'elevenlabs'   // ElevenLabs Voice AI
+  | 'unrealSpeech' // Unreal Speech TTS
+  | 'serper';      // Serper.dev Google Search API
 
 
