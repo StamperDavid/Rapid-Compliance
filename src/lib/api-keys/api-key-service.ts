@@ -211,8 +211,7 @@ return keys.ai?.anthropicApiKey ?? keys.ai?.openrouterApiKey ?? null;
    * Save API keys (encrypted)
    */
   async saveKeys(keys: Partial<APIKeysConfig>, userId: string = 'system'): Promise<void> {
-      // Save to Firestore
-    const existingKeys =await this.fetchKeysFromFirestore(PLATFORM_ID) ?? this.getDefaultKeys();
+    const existingKeys = await this.fetchKeysFromFirestore(PLATFORM_ID) ?? this.getDefaultKeys();
 
     const updatedKeys: APIKeysConfig = {
       ...existingKeys,
@@ -221,19 +220,29 @@ return keys.ai?.anthropicApiKey ?? keys.ai?.openrouterApiKey ?? null;
       updatedBy: userId,
     };
 
-    // Save to Firestore
-    const { FirestoreService, COLLECTIONS } = await import('../db/firestore-service');
-    await FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.API_KEYS}`,
-      PLATFORM_ID,
-      {
-        ...updatedKeys,
-        createdAt: updatedKeys.createdAt.toISOString(),
-        updatedAt: updatedKeys.updatedAt.toISOString(),
-      },
-      false
-    );
-    
+    const dataToSave = {
+      ...updatedKeys,
+      createdAt: updatedKeys.createdAt.toISOString(),
+      updatedAt: updatedKeys.updatedAt.toISOString(),
+    };
+
+    // Prefer Admin SDK (bypasses Firestore security rules) — same as fetchKeys
+    const { adminDb } = await import('../firebase/admin');
+    if (adminDb) {
+      const { getOrgSubCollection } = await import('../firebase/collections');
+      const apiKeysPath = getOrgSubCollection('apiKeys');
+      await adminDb.collection(apiKeysPath).doc(PLATFORM_ID).set(dataToSave, { merge: true });
+    } else {
+      // Fallback to client SDK
+      const { FirestoreService, COLLECTIONS } = await import('../db/firestore-service');
+      await FirestoreService.set(
+        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.API_KEYS}`,
+        PLATFORM_ID,
+        dataToSave,
+        false
+      );
+    }
+
     // Clear cache to force reload
     this.keysCache = null;
   }
