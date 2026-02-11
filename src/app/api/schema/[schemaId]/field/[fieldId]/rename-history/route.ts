@@ -4,6 +4,7 @@
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
+import { requireAuth } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
 import { FieldRenameManager } from '@/lib/schema/field-rename-manager';
 import { adminDal } from '@/lib/firebase/admin-dal';
@@ -31,6 +32,11 @@ export async function GET(
   context: { params: Promise<{ schemaId: string; fieldId: string }> }
 ) {
   try {
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
     if (!adminDal) {
       return NextResponse.json(
         { error: 'Server configuration error' },
@@ -105,6 +111,11 @@ export async function POST(
   context: { params: Promise<{ schemaId: string; fieldId: string }> }
 ) {
   try {
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
     const params = await context.params;
     const body = (await request.json()) as RollbackRequestBody;
     const { toVersion, userId } = body;

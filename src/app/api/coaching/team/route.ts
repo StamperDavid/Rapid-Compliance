@@ -37,6 +37,7 @@ import type {
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { getSubCollection } from '@/lib/firebase/collections';
+import { requireAuth } from '@/lib/auth/api-auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -135,8 +136,13 @@ function getCacheKey(request: GenerateTeamCoachingRequest): string {
  */
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
-  
+
   try {
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
     // Parse request body
     const body: unknown = await request.json();
     

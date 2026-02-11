@@ -25,6 +25,7 @@ import {
 import { logger } from '@/lib/logger/logger';
 import { ZodError } from 'zod';
 import { PLATFORM_ID } from '@/lib/constants/platform';
+import { requireAuth } from '@/lib/auth/api-auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -183,8 +184,13 @@ function getCacheKey(request: CacheKeyRequest): string {
  */
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
-  
+
   try {
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
     // Parse request body
     const body = await request.json() as Record<string, unknown>;
 

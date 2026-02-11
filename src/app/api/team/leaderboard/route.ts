@@ -6,7 +6,7 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { calculateLeaderboard } from '@/lib/team/collaboration';
 import { logger } from '@/lib/logger/logger';
-import { getAuthToken } from '@/lib/auth/server-auth';
+import { requireAuth } from '@/lib/auth/api-auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,9 +20,9 @@ function isValidPeriod(value: string): value is LeaderboardPeriod {
 
 export async function GET(request: NextRequest) {
   try {
-    const token = await getAuthToken(request);
-    if (!token) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
     }
 
     const { searchParams } = new URL(request.url);

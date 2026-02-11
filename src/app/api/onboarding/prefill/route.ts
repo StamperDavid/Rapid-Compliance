@@ -7,6 +7,7 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger/logger';
 import { prefillOnboardingData } from '@/lib/onboarding/prefill-engine';
+import { requireAuth } from '@/lib/auth/api-auth';
 
 interface PrefillRequestBody {
   websiteUrl?: string;
@@ -21,6 +22,11 @@ export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
   try {
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
     const body: unknown = await request.json();
     if (!isPrefillRequestBody(body)) {
       return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });

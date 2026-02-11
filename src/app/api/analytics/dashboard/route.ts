@@ -27,6 +27,7 @@ import type { AnalyticsResponse, AnalyticsErrorResponse, TimePeriod } from '@/li
 import { emitDashboardViewed, emitAnalyticsError } from '@/lib/analytics/dashboard/events';
 import { ZodError } from 'zod';
 import { PLATFORM_ID } from '@/lib/constants/platform';
+import { requireAuth } from '@/lib/auth/api-auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -69,8 +70,13 @@ function checkRateLimit(userId: string): { allowed: boolean; remaining: number; 
  */
 export async function GET(request: NextRequest) {
   const startTime = Date.now();
-  
+
   try {
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
     // Extract query parameters
     const { searchParams } = new URL(request.url);
     const period = searchParams.get('period') as TimePeriod;

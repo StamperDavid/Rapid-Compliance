@@ -33,6 +33,7 @@ import {
   type SequenceAnalysisInput,
 } from '@/lib/sequence';
 import { getServerSignalCoordinator } from '@/lib/orchestration/coordinator-factory-server';
+import { requireAuth } from '@/lib/auth/api-auth';
 
 // ============================================================================
 // RATE LIMITING & CACHING
@@ -139,8 +140,13 @@ function cacheAnalysis(key: string, data: SequenceAnalysis): void {
  */
 export async function POST(request: NextRequest): Promise<NextResponse<SequenceAnalysisResponse>> {
   const startTime = Date.now();
-  
+
   try {
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult as NextResponse<SequenceAnalysisResponse>;
+    }
+
     // Extract user ID from request (in production, use actual auth)
     const userIdHeader = request.headers.get('x-user-id');
     const userId = (userIdHeader !== '' && userIdHeader != null) ? userIdHeader : 'default-user';

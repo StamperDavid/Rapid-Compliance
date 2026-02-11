@@ -12,6 +12,7 @@ export const dynamic = 'force-dynamic';
 import { type NextRequest, NextResponse } from 'next/server';
 import { processDiscoveryQueue } from '@/lib/services/discovery-dispatcher';
 import { logger } from '@/lib/logger/logger';
+import { requireAuth } from '@/lib/auth/api-auth';
 
 interface RequestPayload {
   batchSize?: number;
@@ -22,6 +23,12 @@ interface RequestPayload {
 
 export async function POST(request: NextRequest) {
   try {
+    // Authentication
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
     logger.info('[API] Discovery queue processing started');
 
     // Parse request body for config options

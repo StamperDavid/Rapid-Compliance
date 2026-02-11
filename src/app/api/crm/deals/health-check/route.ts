@@ -11,11 +11,17 @@
 export const dynamic = 'force-dynamic';
 
 import { type NextRequest, NextResponse } from 'next/server';
+import { requireAuth } from '@/lib/auth/api-auth';
 import { runDealHealthCheck } from '@/lib/crm/deal-monitor';
 import { logger } from '@/lib/logger/logger';
 
-export async function POST(_request: NextRequest) {
+export async function POST(request: NextRequest) {
   try {
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
     const workspaceId = 'default';
 
     logger.info('Running deal health check', { workspaceId });

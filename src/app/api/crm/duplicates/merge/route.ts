@@ -7,6 +7,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { mergeRecords } from '@/lib/crm/duplicate-detection';
 import { logger } from '@/lib/logger/logger';
+import { requireAuth } from '@/lib/auth/api-auth';
 import { getAuthToken } from '@/lib/auth/server-auth';
 import type { RelatedEntityType } from '@/types/activity';
 
@@ -22,6 +23,11 @@ const MergeRequestSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
     const token = await getAuthToken(request);
     if (!token) {
       return NextResponse.json(

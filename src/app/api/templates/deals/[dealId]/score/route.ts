@@ -8,6 +8,7 @@ import { calculateDealScore } from '@/lib/templates';
 import { ScoreDealSchema, validateRequestBody } from '@/lib/templates/validation';
 import { logger } from '@/lib/logger/logger';
 import { rateLimitMiddleware, RateLimitPresets } from '@/lib/middleware/rate-limiter';
+import { requireAuth } from '@/lib/auth/api-auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -25,13 +26,18 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ dealId: string }> }
 ) {
-  // Rate limiting: 20 requests per minute (AI operation)
-  const rateLimitResponse = await rateLimitMiddleware(request, RateLimitPresets.AI_OPERATIONS);
-  if (rateLimitResponse) {
-    return rateLimitResponse;
-  }
-
   try {
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
+    // Rate limiting: 20 requests per minute (AI operation)
+    const rateLimitResponse = await rateLimitMiddleware(request, RateLimitPresets.AI_OPERATIONS);
+    if (rateLimitResponse) {
+      return rateLimitResponse;
+    }
+
     const { dealId } = await params;
     const body: unknown = await request.json();
 

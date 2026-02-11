@@ -10,6 +10,7 @@ import {
   detectCompanyDuplicates,
 } from '@/lib/crm/duplicate-detection';
 import { logger } from '@/lib/logger/logger';
+import { requireAuth } from '@/lib/auth/api-auth';
 import { getAuthToken } from '@/lib/auth/server-auth';
 
 export const dynamic = 'force-dynamic';
@@ -22,6 +23,11 @@ interface RequestPayload {
 
 export async function POST(request: NextRequest) {
   try {
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
     const token = await getAuthToken(request);
     if (!token) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

@@ -5,6 +5,7 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { type QueryConstraint, where } from 'firebase/firestore';
+import { requireAuth } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import {
@@ -24,6 +25,11 @@ export const dynamic = 'force-dynamic';
  */
 export async function GET(request: NextRequest) {
   try {
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
     const searchParams = request.nextUrl.searchParams;
     const schemaId = searchParams.get('schemaId');
     const workspaceId = 'default';
@@ -77,6 +83,11 @@ interface ProcessRequestBody {
 
 export async function POST(request: NextRequest) {
   try {
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
     const body = (await request.json()) as ProcessRequestBody;
     const { eventId } = body;
 

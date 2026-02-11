@@ -6,12 +6,18 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { calculateSalesVelocity, getPipelineInsights } from '@/lib/crm/sales-velocity';
 import { logger } from '@/lib/logger/logger';
+import { requireAuth } from '@/lib/auth/api-auth';
 import { getAuthToken } from '@/lib/auth/server-auth';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   try {
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
     const token = await getAuthToken(request);
     if (!token) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

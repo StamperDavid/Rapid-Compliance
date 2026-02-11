@@ -4,6 +4,7 @@ import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { PLATFORM_ID } from '@/lib/constants/platform';
+import { requireAuth } from '@/lib/auth/api-auth';
 
 /**
  * Helper function to safely convert various date formats to Date object
@@ -51,6 +52,11 @@ interface WorkflowExecutionRecord {
  */
 export async function GET(request: NextRequest) {
   try {
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
     const rateLimitResponse = await rateLimitMiddleware(request, '/api/analytics/workflows');
     if (rateLimitResponse) {return rateLimitResponse;}
 

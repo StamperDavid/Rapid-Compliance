@@ -23,6 +23,7 @@ import { validateGeneratePlaybookRequest } from '@/lib/playbook/validation';
 import { logger } from '@/lib/logger/logger';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import { ZodError } from 'zod';
+import { requireAuth } from '@/lib/auth/api-auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -206,6 +207,11 @@ export async function POST(request: NextRequest) {
   const startTime = Date.now();
 
   try {
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
     // 1. Parse request body
     const body: unknown = await request.json();
 

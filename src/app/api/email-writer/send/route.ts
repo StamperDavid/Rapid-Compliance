@@ -9,6 +9,7 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { logger } from '@/lib/logger/logger';
+import { requireAuth } from '@/lib/auth/api-auth';
 import { rateLimitMiddleware, RateLimitPresets } from '@/lib/middleware/rate-limiter';
 import { sendEmail } from '@/lib/email-writer/email-delivery-service';
 import { wrapEmailBody, stripHTML } from '@/lib/email-writer/email-html-templates';
@@ -68,13 +69,19 @@ export async function POST(request: NextRequest) {
   const startTime = Date.now();
 
   try {
-    // 1. Rate limiting (AI operations: 20 req/min)
+    // 1. Authentication
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
+    // 2. Rate limiting (AI operations: 20 req/min)
     const rateLimitResponse = await rateLimitMiddleware(request, RateLimitPresets.AI_OPERATIONS);
     if (rateLimitResponse) {
       return rateLimitResponse;
     }
 
-    // 2. Parse and validate request body
+    // 3. Parse and validate request body
     const body: unknown = await request.json();
     const validation = SendEmailSchema.safeParse(body);
 

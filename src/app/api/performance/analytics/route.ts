@@ -24,6 +24,7 @@ import {
   type PerformanceAnalyticsRequest,
   type TeamPerformanceAnalytics,
 } from '@/lib/performance';
+import { requireAuth } from '@/lib/auth/api-auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -138,6 +139,11 @@ export async function POST(request: NextRequest) {
   const startTime = Date.now();
 
   try {
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
     // 1. Parse and validate request
     const body: unknown = await request.json();
     

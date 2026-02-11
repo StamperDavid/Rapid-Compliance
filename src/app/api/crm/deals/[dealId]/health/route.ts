@@ -4,6 +4,7 @@
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
+import { requireAuth } from '@/lib/auth/api-auth';
 import { calculateDealHealth } from '@/lib/crm/deal-health';
 import { logger } from '@/lib/logger/logger';
 import { getAuthToken } from '@/lib/auth/server-auth';
@@ -15,6 +16,11 @@ export async function GET(
   { params }: { params: Promise<{ dealId: string }> }
 ) {
   try {
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
     const { dealId } = await params;
 
     const token = await getAuthToken(request);

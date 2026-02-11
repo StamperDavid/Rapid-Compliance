@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getLeads, createLead, deleteLead, type Lead } from '@/lib/crm/lead-service';
 import { logger } from '@/lib/logger/logger';
+import { requireAuth } from '@/lib/auth/api-auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -42,6 +43,11 @@ export async function GET(
   request: NextRequest
 ) {
   try {
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
     const { searchParams } = new URL(request.url);
     const queryResult = getQuerySchema.safeParse({
       workspaceId: searchParams.get('workspaceId') ?? undefined,
@@ -77,6 +83,11 @@ export async function POST(
   request: NextRequest
 ) {
   try {
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
     const body: unknown = await request.json();
     const bodyResult = postBodySchema.safeParse(body);
     if (!bodyResult.success) {
@@ -106,6 +117,11 @@ export async function DELETE(
   request: NextRequest
 ) {
   try {
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
     const body: unknown = await request.json();
     const bodyResult = deleteBodySchema.safeParse(body);
 

@@ -8,6 +8,7 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger/logger';
+import { requireAuth } from '@/lib/auth/api-auth';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import {
@@ -64,12 +65,18 @@ function getErrorMessage(error: unknown): string {
  */
 export async function GET(request: NextRequest) {
   try {
+    // Authentication
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
     // Rate limiting
     const rateLimitResponse = await rateLimitMiddleware(request, '/api/slack/mappings');
     if (rateLimitResponse) {
       return rateLimitResponse;
     }
-    
+
     // Get parameters
     const searchParams = request.nextUrl.searchParams;
     const workspaceId = searchParams.get('workspaceId');
@@ -134,12 +141,18 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
+    // Authentication
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
     // Rate limiting
     const rateLimitResponse = await rateLimitMiddleware(request, '/api/slack/mappings');
     if (rateLimitResponse) {
       return rateLimitResponse;
     }
-    
+
     // Parse request body
     const body = (await request.json()) as CreateMappingRequestBody;
 
@@ -241,12 +254,18 @@ export async function POST(request: NextRequest) {
  */
 export async function PUT(request: NextRequest) {
   try {
+    // Authentication
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
     // Rate limiting
     const rateLimitResponse = await rateLimitMiddleware(request, '/api/slack/mappings');
     if (rateLimitResponse) {
       return rateLimitResponse;
     }
-    
+
     // Parse request body
     const body = (await request.json()) as UpdateMappingRequestBody;
     const mappingId = body.mappingId;
@@ -334,12 +353,18 @@ export async function PUT(request: NextRequest) {
  */
 export async function DELETE(request: NextRequest) {
   try {
+    // Authentication
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
     // Rate limiting
     const rateLimitResponse = await rateLimitMiddleware(request, '/api/slack/mappings');
     if (rateLimitResponse) {
       return rateLimitResponse;
     }
-    
+
     // Get parameters
     const searchParams = request.nextUrl.searchParams;
     const mappingId = searchParams.get('mappingId');

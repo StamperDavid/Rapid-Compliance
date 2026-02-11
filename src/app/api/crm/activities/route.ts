@@ -7,6 +7,7 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { getActivities, createActivity } from '@/lib/crm/activity-service';
 import { logger } from '@/lib/logger/logger';
+import { requireAuth } from '@/lib/auth/api-auth';
 import { getAuthToken } from '@/lib/auth/server-auth';
 import type { RelatedEntityType, ActivityType, ActivityDirection, CreateActivityInput } from '@/types/activity';
 
@@ -28,6 +29,11 @@ function isValidCreateActivityBody(body: unknown): body is CreateActivityRequest
 
 export async function GET(request: NextRequest) {
   try {
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
     const token = await getAuthToken(request);
     if (!token) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -104,6 +110,11 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
     const token = await getAuthToken(request);
     if (!token) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });

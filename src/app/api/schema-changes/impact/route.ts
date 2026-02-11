@@ -4,6 +4,7 @@
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
+import { requireAuth } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
 import { getSchemaChangeImpactSummary } from '@/lib/schema/schema-change-handler';
 import { getWorkflowValidationSummary } from '@/lib/schema/workflow-validator';
@@ -16,6 +17,11 @@ export const dynamic = 'force-dynamic';
  */
 export async function GET(request: NextRequest) {
   try {
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
     const searchParams = request.nextUrl.searchParams;
     const schemaId = searchParams.get('schemaId');
     const workspaceId = 'default';

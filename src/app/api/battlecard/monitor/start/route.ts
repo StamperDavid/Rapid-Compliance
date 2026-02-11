@@ -9,6 +9,7 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { getCompetitiveMonitor, type CompetitorMonitorConfig } from '@/lib/battlecard';
 import { logger } from '@/lib/logger/logger';
+import { requireAuth } from '@/lib/auth/api-auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,6 +29,11 @@ function isValidRequestBody(body: unknown): body is StartMonitorRequestBody {
 
 export async function POST(request: NextRequest) {
   try {
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
     const body: unknown = await request.json();
 
     if (!isValidRequestBody(body)) {

@@ -38,6 +38,7 @@ import type {
 } from '@/lib/risk/types';
 import { logger } from '@/lib/logger/logger';
 import { PLATFORM_ID } from '@/lib/constants/platform';
+import { requireAuth } from '@/lib/auth/api-auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -140,6 +141,11 @@ export async function POST(request: NextRequest) {
   const startTime = Date.now();
 
   try {
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
     // Parse request body
     const body = (await request.json()) as RawRequestBody;
 
@@ -404,6 +410,11 @@ async function handleBatchRequest(
  */
 export async function GET(request: NextRequest) {
   try {
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
     const { searchParams } = new URL(request.url);
 
     const dealId = searchParams.get('dealId');

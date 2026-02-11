@@ -4,6 +4,7 @@
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
+import { requireAuth } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
 import { SchemaChangeDebouncer } from '@/lib/schema/schema-change-debouncer';
 
@@ -13,8 +14,13 @@ export const dynamic = 'force-dynamic';
  * GET /api/schema-debouncer
  * Get debouncer status
  */
-export function GET(_request: NextRequest) {
+export async function GET(request: NextRequest) {
   try {
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
     const debouncer = SchemaChangeDebouncer.getInstance();
     
     return NextResponse.json({
@@ -46,6 +52,11 @@ interface DebouncerRequestBody {
 
 export async function POST(request: NextRequest) {
   try {
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
     const body = (await request.json()) as DebouncerRequestBody;
     const { action, debounceMs } = body;
     

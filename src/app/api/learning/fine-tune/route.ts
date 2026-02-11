@@ -15,6 +15,7 @@ import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { PLATFORM_ID } from '@/lib/constants/platform';
+import { requireAuth } from '@/lib/auth/api-auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -72,6 +73,11 @@ function isValidTrainingExampleStatus(value: string | null): value is TrainingEx
  */
 export async function GET(request: NextRequest) {
   try {
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
     const rateLimitResponse = await rateLimitMiddleware(request, '/api/learning/fine-tune');
     if (rateLimitResponse) { return rateLimitResponse; }
 
@@ -144,6 +150,11 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
     const body: unknown = await request.json();
     if (!isFineTunePostRequestBody(body)) {
       return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
@@ -274,6 +285,11 @@ export async function POST(request: NextRequest) {
  */
 export async function PUT(request: NextRequest) {
   try {
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
     const body: unknown = await request.json();
     if (!isFineTunePutRequestBody(body)) {
       return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });

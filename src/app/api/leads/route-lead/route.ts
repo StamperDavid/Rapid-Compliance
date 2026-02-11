@@ -7,7 +7,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { routeLead } from '@/lib/crm/lead-routing';
 import { updateLead, getLead } from '@/lib/crm/lead-service';
 import { logger } from '@/lib/logger/logger';
-import { getAuthToken } from '@/lib/auth/server-auth';
+import { requireAuth } from '@/lib/auth/api-auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -22,9 +22,9 @@ function isRouteLeadRequestBody(value: unknown): value is RouteLeadRequestBody {
 
 export async function POST(request: NextRequest) {
   try {
-    const token = await getAuthToken(request);
-    if (!token) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
     }
 
     const body: unknown = await request.json();

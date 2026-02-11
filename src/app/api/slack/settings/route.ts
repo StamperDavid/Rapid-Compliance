@@ -8,6 +8,7 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger/logger';
+import { requireAuth } from '@/lib/auth/api-auth';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { updateWorkspaceSettingsSchema } from '@/lib/slack/validation';
 import { db } from '@/lib/firebase-admin';
@@ -30,12 +31,18 @@ const putRequestSchema = z.object({
  */
 export async function GET(request: NextRequest) {
   try {
+    // Authentication
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
     // Rate limiting
     const rateLimitResponse = await rateLimitMiddleware(request, '/api/slack/settings');
     if (rateLimitResponse) {
       return rateLimitResponse;
     }
-    
+
     // Get parameters
     const searchParams = request.nextUrl.searchParams;
     const workspaceId = searchParams.get('workspaceId');
@@ -98,12 +105,18 @@ export async function GET(request: NextRequest) {
  */
 export async function PUT(request: NextRequest) {
   try {
+    // Authentication
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
     // Rate limiting
     const rateLimitResponse = await rateLimitMiddleware(request, '/api/slack/settings');
     if (rateLimitResponse) {
       return rateLimitResponse;
     }
-    
+
     // Parse request body
     const body: unknown = await request.json();
 

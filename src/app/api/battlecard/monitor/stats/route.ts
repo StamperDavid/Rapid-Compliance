@@ -9,11 +9,17 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { getCompetitiveMonitor } from '@/lib/battlecard';
 import { logger } from '@/lib/logger/logger';
+import { requireAuth } from '@/lib/auth/api-auth';
 
 export const dynamic = 'force-dynamic';
 
-export function GET(_request: NextRequest) {
+export async function GET(request: NextRequest) {
   try {
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
     logger.info('API: Get monitoring stats');
 
     const monitor = getCompetitiveMonitor();

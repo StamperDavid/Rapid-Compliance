@@ -4,6 +4,7 @@
  * Triggers multi-channel recovery siege when a lead abandons.
  */
 import { type NextRequest, NextResponse } from 'next/server';
+import { requireAuth } from '@/lib/auth/api-auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,6 +18,11 @@ function isRecoveryCampaignRequestBody(value: unknown): value is RecoveryCampaig
 
 export async function POST(request: NextRequest) {
   try {
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
     const body: unknown = await request.json();
     if (!isRecoveryCampaignRequestBody(body)) {
       return NextResponse.json(

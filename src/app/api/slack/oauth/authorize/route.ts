@@ -8,6 +8,7 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger/logger';
+import { requireAuth } from '@/lib/auth/api-auth';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { createSlackService } from '@/lib/slack/slack-service';
 import { Timestamp } from 'firebase-admin/firestore';
@@ -25,12 +26,18 @@ export const dynamic = 'force-dynamic';
  */
 export async function GET(request: NextRequest) {
   try {
+    // Authentication
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
     // Rate limiting
     const rateLimitResponse = await rateLimitMiddleware(request, '/api/slack/oauth/authorize');
     if (rateLimitResponse) {
       return rateLimitResponse;
     }
-    
+
     // Get parameters
     const searchParams = request.nextUrl.searchParams;
     const userId = searchParams.get('userId');

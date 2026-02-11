@@ -6,6 +6,7 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { getEntityTimeline } from '@/lib/crm/activity-service';
 import { logger } from '@/lib/logger/logger';
+import { requireAuth } from '@/lib/auth/api-auth';
 import { getAuthToken } from '@/lib/auth/server-auth';
 import type { RelatedEntityType } from '@/types/activity';
 
@@ -13,6 +14,11 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   try {
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
     const token = await getAuthToken(request);
     if (!token) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

@@ -3,6 +3,7 @@
  */
 
 import { NextResponse, type NextRequest } from 'next/server';
+import { requireAuth } from '@/lib/auth/api-auth';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import { FieldValue } from 'firebase-admin/firestore';
 import { logger } from '@/lib/logger/logger';
@@ -119,8 +120,13 @@ function buildFieldId(key: string) {
   return slug ? `field_${slug}` : `field_${Date.now()}`;
 }
 
-export async function GET(_request: NextRequest) {
+export async function GET(request: NextRequest) {
   try {
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
     if (!adminDal) {
       return NextResponse.json(
         { error: 'Server configuration error' },
@@ -148,6 +154,11 @@ export async function GET(_request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
     if (!adminDal) {
       return NextResponse.json(
         { error: 'Server configuration error' },

@@ -4,7 +4,7 @@
  * Single-tenant: Uses PLATFORM_ID
  */
 
-import type { NextRequest } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import { getSubCollection } from '@/lib/firebase/collections';
 import { FieldValue } from 'firebase-admin/firestore';
@@ -14,6 +14,7 @@ import {
   errorResponse,
 } from '@/lib/api-error-handler';
 import { getUserIdentifier } from '@/lib/server-auth';
+import { requireAuth } from '@/lib/auth/api-auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -49,6 +50,11 @@ export async function POST(
   context: { params: Promise<{ pageId: string }> }
 ) {
   try {
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
     if (!adminDal) {
       return errorResponse('Server configuration error', 500, 'SERVER_ERROR');
     }
@@ -165,6 +171,11 @@ export async function DELETE(
   context: { params: Promise<{ pageId: string }> }
 ) {
   try {
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
     if (!adminDal) {
       return errorResponse('Server configuration error', 500, 'SERVER_ERROR');
     }

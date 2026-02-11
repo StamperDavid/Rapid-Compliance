@@ -14,6 +14,7 @@ import { checkAndDeployWinner } from '@/lib/ai/learning/continuous-learning-engi
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
+import { requireAuth } from '@/lib/auth/api-auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -41,6 +42,11 @@ function isUpdateABTestRequestBody(value: unknown): value is UpdateABTestRequest
 
 export async function GET(request: NextRequest) {
   try {
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
     const rateLimitResponse = await rateLimitMiddleware(request, '/api/learning/ab-test');
     if (rateLimitResponse) {return rateLimitResponse;}
 
@@ -70,6 +76,11 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
     const body: unknown = await request.json();
     if (!isCreateABTestRequestBody(body)) {
       return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
@@ -125,6 +136,11 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
     const body: unknown = await request.json();
     if (!isUpdateABTestRequestBody(body)) {
       return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });

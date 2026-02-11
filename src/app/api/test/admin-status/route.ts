@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from 'next/server';
+import { requireAuth } from '@/lib/auth/api-auth';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
 // Force Node.js runtime
@@ -61,6 +62,12 @@ interface Diagnostics {
  * Diagnostic endpoint to check Firebase Admin SDK status
  */
 export async function GET(request: NextRequest) {
+  // Authentication
+  const authResult = await requireAuth(request);
+  if (authResult instanceof NextResponse) {
+    return authResult;
+  }
+
   // Rate limiting (strict - test endpoint should be disabled in production)
   const rateLimitResponse = await rateLimitMiddleware(request, '/api/test/admin-status');
   if (rateLimitResponse) {

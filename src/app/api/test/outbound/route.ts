@@ -5,6 +5,7 @@
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
+import { requireAuth } from '@/lib/auth/api-auth';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
 export const dynamic = 'force-dynamic';
@@ -40,6 +41,12 @@ interface TestResults {
 }
 
 export async function GET(request: NextRequest) {
+  // Authentication
+  const authResult = await requireAuth(request);
+  if (authResult instanceof NextResponse) {
+    return authResult;
+  }
+
   // Rate limiting (strict - test endpoint should be disabled in production)
   const rateLimitResponse = await rateLimitMiddleware(request, '/api/test/outbound');
   if (rateLimitResponse) {

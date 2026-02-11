@@ -3,6 +3,7 @@
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
+import { requireAuth } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import { FieldTypeConverterServer } from '@/lib/schema/server/field-type-converter-server';
@@ -31,6 +32,11 @@ export async function GET(
   context: { params: Promise<{ schemaId: string; fieldId: string }> }
 ) {
   try {
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
     const params = await context.params;
     const searchParams = request.nextUrl.searchParams;
     const oldType = searchParams.get('oldType') as FieldType;
@@ -89,6 +95,11 @@ export async function POST(
   context: { params: Promise<{ schemaId: string; fieldId: string }> }
 ) {
   try {
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
     const params = await context.params;
     const body = (await request.json()) as ConversionRequestBody;
     const { fieldKey, oldType, newType } = body;

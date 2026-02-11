@@ -8,7 +8,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { createTask, getUserTasks } from '@/lib/team/collaboration';
 import { logger } from '@/lib/logger/logger';
-import { getAuthToken } from '@/lib/auth/server-auth';
+import { requireAuth } from '@/lib/auth/api-auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -36,9 +36,9 @@ const CreateTaskSchema = z.object({
 
 export async function GET(request: NextRequest) {
   try {
-    const token = await getAuthToken(request);
-    if (!token) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
     }
 
     const { searchParams } = new URL(request.url);
@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
     const workspaceIdParam = searchParams.get('workspaceId');
     const workspaceId = (workspaceIdParam !== '' && workspaceIdParam != null) ? workspaceIdParam : 'default';
     const userIdParam = searchParams.get('userId');
-    const userId = (userIdParam !== '' && userIdParam != null) ? userIdParam : token.uid;
+    const userId = (userIdParam !== '' && userIdParam != null) ? userIdParam : authResult.user.uid;
     const statusParam = searchParams.get('status');
     const status: TaskStatus | undefined = statusParam && isValidStatus(statusParam) ? statusParam : undefined;
 
@@ -69,9 +69,9 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const token = await getAuthToken(request);
-    if (!token) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
     }
 
     const body: unknown = await request.json();
@@ -85,14 +85,14 @@ export async function POST(request: NextRequest) {
     const validatedData = parseResult.data;
 
     const workspaceId = validatedData.workspaceId ?? 'default';
-    const assignedByName = token.email ?? undefined;
+    const assignedByName = authResult.user.email ?? undefined;
 
     const task = await createTask(workspaceId, {
       title: validatedData.title,
       description: validatedData.description,
       assignedTo: validatedData.assignedTo,
       assignedToName: validatedData.assignedToName,
-      assignedBy: token.uid,
+      assignedBy: authResult.user.uid,
       assignedByName,
       dueDate: validatedData.dueDate ? new Date(validatedData.dueDate) : undefined,
       priority: validatedData.priority,

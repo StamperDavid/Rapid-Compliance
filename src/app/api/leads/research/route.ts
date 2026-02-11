@@ -9,6 +9,7 @@ import { enrichCompany } from '@/lib/enrichment/enrichment-service';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
+import { requireAuth } from '@/lib/auth/api-auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -29,6 +30,11 @@ interface ResearchLead {
 
 export async function POST(request: NextRequest) {
   try {
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
     const rateLimitResponse = await rateLimitMiddleware(request, '/api/leads/research');
     if (rateLimitResponse) {
       return rateLimitResponse;
