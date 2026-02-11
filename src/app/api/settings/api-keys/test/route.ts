@@ -4,12 +4,12 @@
  */
 
 import { NextResponse, type NextRequest } from 'next/server';
-import { requireRole } from '@/lib/auth/api-auth';
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { requireAuth } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { apiKeyService } from '@/lib/api-keys/api-key-service';
+import { flattenConfigToUI } from '@/lib/api-keys/key-mapping';
 
 export const dynamic = 'force-dynamic';
 
@@ -71,7 +71,8 @@ export async function GET(request: NextRequest) {
     const rateLimitResponse = await rateLimitMiddleware(request, '/api/settings/api-keys/test');
     if (rateLimitResponse) {return rateLimitResponse;}
 
-    const authResult = await requireRole(request, ['owner', 'admin']);
+    // Penthouse model: any authenticated user can test API keys
+    const authResult = await requireAuth(request);
     if (authResult instanceof NextResponse) {
       return authResult;
     }
@@ -83,13 +84,13 @@ export async function GET(request: NextRequest) {
       return errors.badRequest('Missing required parameter: service');
     }
 
-    // Load API keys
-    const apiKeys = await FirestoreService.get<ApiKeysCollection>(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}`,
-      'apiKeys'
-    );
+    // Load API keys via apiKeyService (correct Firestore path)
+    const config = await apiKeyService.getKeys();
+    const apiKeys: ApiKeysCollection = config
+      ? flattenConfigToUI(config) as ApiKeysCollection
+      : {};
 
-    if (!apiKeys?.[service]) {
+    if (!apiKeys[service]) {
       return errors.notFound('API key not found');
     }
 

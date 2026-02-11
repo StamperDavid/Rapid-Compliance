@@ -5,7 +5,7 @@
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
-import { requireRole } from '@/lib/auth/api-auth';
+import { requireAuth } from '@/lib/auth/api-auth';
 import { handleAPIError, errors } from '@/lib/api/error-handler';
 import { logger } from '@/lib/logger/logger';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
@@ -43,7 +43,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const rateLimitResponse = await rateLimitMiddleware(request, '/api/settings/api-keys');
     if (rateLimitResponse) {return rateLimitResponse;}
 
-    const authResult = await requireRole(request, ['owner', 'admin']);
+    // Penthouse model: any authenticated user can manage API keys
+    const authResult = await requireAuth(request);
     if (authResult instanceof NextResponse) {
       return authResult;
     }
@@ -83,7 +84,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
  */
 export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
-    const authResult = await requireRole(request, ['owner', 'admin']);
+    // Penthouse model: any authenticated user can manage API keys
+    const authResult = await requireAuth(request);
     if (authResult instanceof NextResponse) {
       return authResult;
     }
