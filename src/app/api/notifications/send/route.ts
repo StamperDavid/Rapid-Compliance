@@ -14,6 +14,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { sendNotificationRequestSchema } from '@/lib/notifications/validation';
 import { NotificationService } from '@/lib/notifications/notification-service';
+import { requireAuth } from '@/lib/auth/api-auth';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 
 /**
@@ -58,6 +59,10 @@ function checkRateLimit(key: string, limit: number, windowMs: number): {
  */
 export async function POST(request: NextRequest) {
   try {
+    // Authenticate user
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {return authResult;}
+
     // Parse request body
     const body: unknown = await request.json();
 

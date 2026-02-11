@@ -35,8 +35,8 @@ export async function executeStripeFunction(
   switch (functionName) {
     case 'createStripeCheckout':
       // Validate required parameters
-      if (typeof params.amount !== 'number') {
-        throw new Error('amount (number) is required for createStripeCheckout');
+      if (typeof params.amount !== 'number' || !Number.isInteger(params.amount) || params.amount <= 0) {
+        throw new Error('amount must be a positive integer in cents');
       }
       if (!params.description || typeof params.description !== 'string') {
         throw new Error('description (string) is required for createStripeCheckout');

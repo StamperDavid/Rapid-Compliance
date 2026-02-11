@@ -5,6 +5,8 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { verifyAdminRequest, isAuthError } from '@/lib/api/admin-auth';
+import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 import { logger } from '@/lib/logger/logger';
 
 export const dynamic = 'force-dynamic';
@@ -28,8 +30,12 @@ export async function POST(request: NextRequest) {
     const body = (await request.json()) as SEOSettingsRequest;
     const { title } = body;
 
-    // In production, save to Firestore
-    // await FirestoreService.set('platform', 'seo', body);
+    // Save SEO settings to Firestore
+    await FirestoreService.set(
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/platform_settings`,
+      'seo',
+      body
+    );
 
     logger.info('[AdminSEO] Settings saved', { title, file: 'seo/route.ts' });
 

@@ -18,13 +18,15 @@ export const dynamic = 'force-dynamic';
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
+
     // Require admin role
     await requireUserRole(request, ['admin']);
 
-    const templateId = params.id;
+    const templateId = id;
 
     if (!templateId) {
       return NextResponse.json(
@@ -49,7 +51,8 @@ export async function GET(
       hasOverride: result.hasOverride,
     });
   } catch (error) {
-    logger.error('Error getting template', error instanceof Error ? error : new Error(String(error)), { templateId: params.id });
+    const { id: errorTemplateId } = await params;
+    logger.error('Error getting template', error instanceof Error ? error : new Error(String(error)), { templateId: errorTemplateId });
 
     if (error instanceof Error && error.message === 'Insufficient permissions') {
       return NextResponse.json(

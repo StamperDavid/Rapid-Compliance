@@ -9,6 +9,7 @@
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
+import { requireAuth } from '@/lib/auth/api-auth';
 import { SystemHealthService } from '@/lib/orchestrator/system-health-service';
 
 export const dynamic = 'force-dynamic';
@@ -23,6 +24,9 @@ function isSpecialistStatusRequestBody(value: unknown): value is SpecialistStatu
 
 export async function GET(request: NextRequest) {
   try {
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {return authResult;}
+
     const { searchParams } = new URL(request.url);
     const quickOnly = searchParams.get('quick') === 'true';
 
@@ -52,6 +56,9 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
+    const postAuthResult = await requireAuth(request);
+    if (postAuthResult instanceof NextResponse) {return postAuthResult;}
+
     const body: unknown = await request.json();
     if (!isSpecialistStatusRequestBody(body)) {
       return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });

@@ -120,6 +120,20 @@ export async function POST(request: NextRequest) {
       eventType: event.type,
     });
 
+    // Idempotency: check if this event was already processed
+    const existingEvent = await FirestoreService.get(
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/stripe_events`,
+      event.id
+    );
+    if (existingEvent) {
+      logger.info('Stripe webhook duplicate event - skipping', {
+        route: '/api/webhooks/stripe',
+        eventId: event.id,
+        eventType: event.type,
+      });
+      return NextResponse.json({ success: true, duplicate: true });
+    }
+
     // Process the event (wrapped in try-catch to always return 200)
     try {
       await processStripeEvent(event);

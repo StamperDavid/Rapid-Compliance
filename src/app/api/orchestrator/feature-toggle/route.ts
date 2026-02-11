@@ -9,6 +9,7 @@
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
+import { requireAuth } from '@/lib/auth/api-auth';
 import { FeatureToggleService, type FeatureCategory } from '@/lib/orchestrator/feature-toggle-service';
 
 export const dynamic = 'force-dynamic';
@@ -27,6 +28,9 @@ function isToggleFeatureRequest(value: unknown): value is ToggleFeatureRequest {
 
 export async function POST(request: NextRequest) {
   try {
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {return authResult;}
+
     const body: unknown = await request.json();
     if (!isToggleFeatureRequest(body)) {
       return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });

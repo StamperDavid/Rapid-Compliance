@@ -334,8 +334,8 @@ function recalculateCartTotals(cart: Cart): void {
   // Calculate shipping (will be calculated during checkout with address)
   // For now, keep existing shipping or 0
   
-  // Calculate total
-  cart.total = cart.subtotal - cart.discount + cart.tax + cart.shipping;
+  // Calculate total (floor at zero to prevent negative totals from stacked discounts)
+  cart.total = Math.max(0, cart.subtotal - cart.discount + cart.tax + cart.shipping);
   
   // Update timestamp
   cart.updatedAt = Timestamp.now();

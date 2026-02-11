@@ -12,11 +12,15 @@ export const dynamic = 'force-dynamic';
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: { integrationId: string } }
+  { params }: { params: Promise<{ integrationId: string }> }
 ) {
   try {
+    const { integrationId } = await params;
+
     const rateLimitResponse = await rateLimitMiddleware(request, '/api/integrations/test');
-    if (rateLimitResponse) {return rateLimitResponse;}
+    if (rateLimitResponse) {
+      return rateLimitResponse;
+    }
 
     const authResult = await requireAuth(request);
     if (authResult instanceof NextResponse) {
@@ -25,7 +29,7 @@ export async function POST(
 
     const { user: _user } = authResult;
 
-    const result = await testIntegration(params.integrationId);
+    const result = await testIntegration(integrationId);
 
     return NextResponse.json({
       success: result.success,
@@ -36,10 +40,6 @@ export async function POST(
     return errors.externalService('Integration', error instanceof Error ? error : undefined);
   }
 }
-
-
-
-
 
 
 

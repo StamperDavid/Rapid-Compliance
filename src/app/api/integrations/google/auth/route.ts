@@ -7,6 +7,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
+import { requireAuth } from '@/lib/auth/api-auth';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 
 export const dynamic = 'force-dynamic';
@@ -18,12 +19,9 @@ export async function GET(request: NextRequest) {
       return rateLimitResponse;
     }
 
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
-
-    if (!userId) {
-      return errors.badRequest('Missing userId');
-    }
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {return authResult;}
+    const userId = authResult.user.uid;
 
     // Store state for callback
     const state = Buffer.from(JSON.stringify({ userId, PLATFORM_ID })).toString('base64');

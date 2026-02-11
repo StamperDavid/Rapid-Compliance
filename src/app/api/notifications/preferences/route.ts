@@ -14,6 +14,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
 import { updatePreferencesRequestSchema } from '@/lib/notifications/validation';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { requireAuth } from '@/lib/auth/api-auth';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import { Timestamp } from 'firebase/firestore';
 import type { NotificationPreferences } from '@/lib/notifications/types';
@@ -73,9 +74,10 @@ function checkRateLimit(key: string, limit: number, windowMs: number): {
  */
 export async function GET(request: NextRequest) {
   try {
-    // Get user ID (from session/auth)
-    const userIdHeader = request.headers.get('x-user-id');
-    const userId = (userIdHeader && userIdHeader !== '') ? userIdHeader : 'default_user';
+    // Authenticate user
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {return authResult;}
+    const userId = authResult.user.uid;
 
     // Check rate limit
     const rateLimit = checkRateLimit(`prefs:${userId}`, 30, 60000);
@@ -156,10 +158,10 @@ export async function PUT(request: NextRequest) {
 
     const body = rawBody as UpdatePreferencesRequestBody;
 
-    // Get user ID
-    const userIdHeader = request.headers.get('x-user-id');
-    const bodyUserId = typeof body.userId === 'string' ? body.userId : undefined;
-    const userId: string = userIdHeader ?? bodyUserId ?? 'default_user';
+    // Authenticate user
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {return authResult;}
+    const userId = authResult.user.uid;
 
     // Add userId and PLATFORM_ID to body for validation
     body.userId = userId;

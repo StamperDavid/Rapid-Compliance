@@ -7,6 +7,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { generateStoryboard } from '@/lib/video/engine/director-service';
 import { logger } from '@/lib/logger/logger';
+import { requireAuth } from '@/lib/auth/api-auth';
 import type { DirectorRequest } from '@/lib/video/engine/types';
 
 export const dynamic = 'force-dynamic';
@@ -46,6 +47,9 @@ const StoryboardRequestSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {return authResult;}
+
     const body: unknown = await request.json();
 
     const parseResult = StoryboardRequestSchema.safeParse(body);

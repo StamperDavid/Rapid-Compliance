@@ -6,6 +6,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import Stripe from 'stripe';
+import { z } from 'zod';
 import { getAPIKey } from '@/lib/config/api-keys';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
@@ -13,29 +14,27 @@ import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
 export const dynamic = 'force-dynamic';
 
-interface CustomerInfo {
-  email: string;
-  firstName?: string;
-  lastName?: string;
-  phone?: string;
-}
+const addressSchema = z.object({
+  line1: z.string().optional(),
+  line2: z.string().optional(),
+  city: z.string().optional(),
+  state: z.string().optional(),
+  postalCode: z.string().optional(),
+  country: z.string().optional(),
+});
 
-interface Address {
-  line1?: string;
-  line2?: string;
-  city?: string;
-  state?: string;
-  postalCode?: string;
-  country?: string;
-}
-
-interface RequestPayload {
-  workspaceId?: string;
-  customerInfo: CustomerInfo;
-  shippingAddress?: Address;
-  billingAddress?: Address;
-  shippingMethodId?: string;
-}
+const checkoutSessionSchema = z.object({
+  workspaceId: z.string().optional().default('default'),
+  customerInfo: z.object({
+    email: z.string().email('Valid email required'),
+    firstName: z.string().optional(),
+    lastName: z.string().optional(),
+    phone: z.string().optional(),
+  }),
+  shippingAddress: addressSchema.optional(),
+  billingAddress: addressSchema.optional(),
+  shippingMethodId: z.string().optional(),
+});
 
 interface CartItem {
   name: string;
@@ -49,6 +48,7 @@ interface Cart {
   items?: CartItem[];
 }
 
+
 export async function POST(request: NextRequest) {
   try {
     const rateLimitResponse = await rateLimitMiddleware(request, '/api/ecommerce/checkout/create-session');
@@ -61,15 +61,15 @@ export async function POST(request: NextRequest) {
       return authResult;
     }
 
-    const body = await request.json() as RequestPayload;
-    const { workspaceId = 'default', customerInfo, shippingAddress, billingAddress, shippingMethodId } = body;
+    const rawBody: unknown = await request.json();
+    const parseResult = checkoutSessionSchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return errors.badRequest(parseResult.error.errors[0]?.message ?? 'Invalid checkout data');
+    }
+    const { workspaceId, customerInfo, shippingAddress, billingAddress, shippingMethodId } = parseResult.data;
 
     // Penthouse model: use PLATFORM_ID
     const { PLATFORM_ID } = await import('@/lib/constants/platform');
-
-    if (!customerInfo?.email) {
-      return errors.badRequest('Customer information required');
-    }
 
     // Get Stripe API key
     const stripeKey = await getAPIKey('stripe_secret');

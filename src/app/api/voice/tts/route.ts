@@ -6,6 +6,7 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { VoiceEngineFactory, type TTSEngineType, type TTSSynthesizeRequest } from '@/lib/voice/tts';
+import { requireAuth } from '@/lib/auth/api-auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,6 +28,9 @@ interface TTSPostBody {
  */
 export async function GET(request: NextRequest) {
   try {
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {return authResult;}
+
     const searchParams = request.nextUrl.searchParams;
     const engine = searchParams.get('engine') as TTSEngineType | null;
     const action = searchParams.get('action');
@@ -68,6 +72,9 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {return authResult;}
+
     const body = await request.json() as TTSPostBody;
     const { text, engine, voiceId, settings, action, apiKey, config, userId } = body;
 

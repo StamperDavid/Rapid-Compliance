@@ -14,6 +14,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { logger } from '@/lib/logger/logger';
 import { db } from '@/lib/firebase/config';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 import {
   collection,
   doc,
@@ -57,6 +58,7 @@ export async function GET(
     const formRef = doc(
       db,
       'organizations',
+      PLATFORM_ID,
       'workspaces',
       'default',
       'forms',
@@ -71,6 +73,7 @@ export async function GET(
       const fieldsRef = collection(
         db,
         'organizations',
+        PLATFORM_ID,
         'workspaces',
         'default',
         'forms',
@@ -108,6 +111,7 @@ export async function GET(
     const formRefForUpdate = doc(
       db,
       'organizations',
+      PLATFORM_ID,
       'workspaces',
       'default',
       'forms',
@@ -217,6 +221,7 @@ export async function POST(
     const formRef = doc(
       db,
       'organizations',
+      PLATFORM_ID,
       'workspaces',
       'default',
       'forms',
@@ -231,6 +236,7 @@ export async function POST(
       const fieldsRef = collection(
         db,
         'organizations',
+        PLATFORM_ID,
         'workspaces',
         'default',
         'forms',
@@ -313,6 +319,7 @@ export async function POST(
     const submissionsRef = collection(
       db,
       'organizations',
+      PLATFORM_ID,
       'workspaces',
       'default',
       'forms',
@@ -325,6 +332,7 @@ export async function POST(
     const formRefForSubmissionCount = doc(
       db,
       'organizations',
+      PLATFORM_ID,
       'workspaces',
       'default',
       'forms',

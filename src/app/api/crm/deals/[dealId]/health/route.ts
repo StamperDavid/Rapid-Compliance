@@ -12,9 +12,11 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { dealId: string } }
+  { params }: { params: Promise<{ dealId: string }> }
 ) {
   try {
+    const { dealId } = await params;
+
     const token = await getAuthToken(request);
     if (!token) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -24,7 +26,6 @@ export async function GET(
 
     const workspaceIdParam = searchParams.get('workspaceId');
     const workspaceId = (workspaceIdParam !== '' && workspaceIdParam != null) ? workspaceIdParam : 'default';
-    const { dealId } = params;
 
     const health = await calculateDealHealth(workspaceId, dealId);
 

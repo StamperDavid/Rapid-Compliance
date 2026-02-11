@@ -13,7 +13,7 @@ import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { trackingId: string } }
+  { params }: { params: Promise<{ trackingId: string }> }
 ) {
   // Rate limiting (very high limit for tracking pixels)
   const rateLimitResponse = await rateLimitMiddleware(request, '/api/email/track');
@@ -22,7 +22,7 @@ export async function GET(
   }
 
   try {
-    const trackingId = params.trackingId;
+    const { trackingId } = await params;
 
     // Basic validation - trackingId should be alphanumeric with dashes
     if (!trackingId || !/^[a-zA-Z0-9\-_]+$/.test(trackingId)) {

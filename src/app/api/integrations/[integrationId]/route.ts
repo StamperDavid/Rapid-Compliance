@@ -17,11 +17,15 @@ export const dynamic = 'force-dynamic';
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { integrationId: string } }
+  { params }: { params: Promise<{ integrationId: string }> }
 ) {
   try {
+    const { integrationId } = await params;
+
     const rateLimitResponse = await rateLimitMiddleware(request, '/api/integrations');
-    if (rateLimitResponse) {return rateLimitResponse;}
+    if (rateLimitResponse) {
+      return rateLimitResponse;
+    }
 
     const authResult = await requireAuth(request);
     if (authResult instanceof NextResponse) {
@@ -30,7 +34,7 @@ export async function GET(
 
     const { user: _user } = authResult;
 
-    const integration = await getIntegration(params.integrationId);
+    const integration = await getIntegration(integrationId);
 
     if (!integration) {
       return errors.notFound('Integration not found');
@@ -58,9 +62,11 @@ const patchBodySchema = z.object({
  */
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { integrationId: string } }
+  { params }: { params: Promise<{ integrationId: string }> }
 ) {
   try {
+    const { integrationId } = await params;
+
     const authResult = await requireAuth(request);
     if (authResult instanceof NextResponse) {
       return authResult;
@@ -80,7 +86,7 @@ export async function PATCH(
       ...(bodyResult.data.expiresAt && { expiresAt: new Date(bodyResult.data.expiresAt) }),
       ...(bodyResult.data.metadata && { metadata: bodyResult.data.metadata }),
     };
-    await updateIntegration(params.integrationId, updateData);
+    await updateIntegration(integrationId, updateData);
 
     return NextResponse.json({
       success: true,
@@ -97,9 +103,11 @@ export async function PATCH(
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { integrationId: string } }
+  { params }: { params: Promise<{ integrationId: string }> }
 ) {
   try {
+    const { integrationId } = await params;
+
     const authResult = await requireAuth(request);
     if (authResult instanceof NextResponse) {
       return authResult;
@@ -107,7 +115,7 @@ export async function DELETE(
 
     const { user: _user } = authResult;
 
-    await deleteIntegration(params.integrationId);
+    await deleteIntegration(integrationId);
 
     return NextResponse.json({
       success: true,
@@ -118,10 +126,6 @@ export async function DELETE(
     return errors.database('Failed to delete integration', error instanceof Error ? error : undefined);
   }
 }
-
-
-
-
 
 
 

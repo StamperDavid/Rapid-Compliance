@@ -22,6 +22,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getNotificationsRequestSchema } from '@/lib/notifications/validation';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { requireAuth } from '@/lib/auth/api-auth';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import type { Notification } from '@/lib/notifications/types';
 
@@ -60,9 +61,10 @@ function checkRateLimit(key: string, limit: number, windowMs: number): {
  */
 export async function GET(request: NextRequest) {
   try {
-    // Get user ID (from session/auth)
-    const userIdHeader = request.headers.get('x-user-id');
-    const userId = (userIdHeader !== '' && userIdHeader != null) ? userIdHeader : 'default_user';
+    // Authenticate user
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {return authResult;}
+    const userId = authResult.user.uid;
 
     // Check rate limit
     const rateLimit = checkRateLimit(`list:${userId}`, 60, 60000);
@@ -230,9 +232,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Invalid request body' }, { status: 400 });
     }
 
-    // Get user ID
-    const userIdHeader = request.headers.get('x-user-id');
-    const userId = (userIdHeader !== '' && userIdHeader != null) ? userIdHeader : 'default_user';
+    // Authenticate user
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {return authResult;}
+    const userId = authResult.user.uid;
 
     // Validate notification IDs
     const notificationIds = body.notificationIds;

@@ -14,9 +14,11 @@ export const dynamic = 'force-dynamic';
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { orderId: string } }
+  { params }: { params: Promise<{ orderId: string }> }
 ) {
   try {
+    const { orderId } = await params;
+
     const rateLimitResponse = await rateLimitMiddleware(request, '/api/ecommerce/orders');
     if (rateLimitResponse) {
       return rateLimitResponse;
@@ -29,7 +31,7 @@ export async function GET(
 
     const order = await FirestoreService.get<Order>(
       `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/default/orders`,
-      params.orderId
+      orderId
     );
 
     if (!order) {

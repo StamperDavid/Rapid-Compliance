@@ -21,6 +21,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import type { Firestore } from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
 import { rateLimitMiddleware, RateLimitPresets } from '@/lib/middleware/rate-limiter';
+import { requireAuth } from '@/lib/auth/api-auth';
 import { getWorkflowService } from '@/lib/workflow/workflow-service';
 import { validateWorkflowExecution } from '@/lib/workflow/validation';
 import { BaseAgentDAL } from '@/lib/dal/BaseAgentDAL';
@@ -32,7 +33,11 @@ export async function POST(request: NextRequest) {
   const startTime = Date.now();
 
   try {
-    // 1. Rate limiting
+    // 1. Authentication
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {return authResult;}
+
+    // 2. Rate limiting
     const rateLimitResponse = await rateLimitMiddleware(request, RateLimitPresets.STANDARD);
     if (rateLimitResponse) {
       return rateLimitResponse;

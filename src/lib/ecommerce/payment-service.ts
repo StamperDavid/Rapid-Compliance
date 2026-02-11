@@ -541,7 +541,7 @@ export async function refundPayment(
   // Route to appropriate provider
   switch (provider) {
     case 'stripe':
-      return refundStripePayment(transactionId, amount);
+      return refundStripePayment(transactionId, amount, workspaceId);
     
     default:
       return {

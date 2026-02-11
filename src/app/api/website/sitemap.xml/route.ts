@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic';
 import { type NextRequest, NextResponse } from 'next/server';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import { getSubCollection } from '@/lib/firebase/collections';
-import type { Page } from '@/types/website';
+import type { Page, BlogPost } from '@/types/website';
 import { logger } from '@/lib/logger/logger';
 
 interface WebsiteData {
@@ -86,8 +86,22 @@ export async function GET(request: NextRequest) {
       } as Page);
     });
 
+    // Get all published blog posts for this org
+    const postsRef = adminDal.getNestedCollection(
+      `${getSubCollection('website')}/config/blog-posts`
+    );
+    const postsSnapshot = await postsRef.where('status', '==', 'published').get();
+
+    const posts: BlogPost[] = [];
+    postsSnapshot.forEach((doc) => {
+      posts.push({
+        id: doc.id,
+        ...doc.data(),
+      } as BlogPost);
+    });
+
     // Generate sitemap XML
-    const sitemap = generateSitemapXML(pages, baseUrl);
+    const sitemap = generateSitemapXML(pages, posts, baseUrl);
 
     return new NextResponse(sitemap, {
       status: 200,
@@ -105,22 +119,38 @@ export async function GET(request: NextRequest) {
   }
 }
 
-function generateSitemapXML(pages: Page[], baseUrl: string): string {
-  const urls = pages.map((page) => {
+function generateSitemapXML(pages: Page[], posts: BlogPost[], baseUrl: string): string {
+  // Generate page URLs
+  const pageUrls = pages.map((page) => {
     const lastmod = (page.publishedAt ?? page.updatedAt) || new Date().toISOString();
     const priority = page.slug === 'home' || page.slug === '' ? '1.0' : '0.8';
-    
+
     return `  <url>
     <loc>${baseUrl}/${page.slug}</loc>
     <lastmod>${lastmod}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>${priority}</priority>
   </url>`;
-  }).join('\n');
+  });
+
+  // Generate blog post URLs
+  const postUrls = posts.map((post) => {
+    const lastmod = (post.publishedAt ?? post.updatedAt) || new Date().toISOString();
+
+    return `  <url>
+    <loc>${baseUrl}/blog/${post.slug}</loc>
+    <lastmod>${lastmod}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>`;
+  });
+
+  // Combine all URLs
+  const allUrls = [...pageUrls, ...postUrls].join('\n');
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${urls}
+${allUrls}
 </urlset>`;
 }
 
