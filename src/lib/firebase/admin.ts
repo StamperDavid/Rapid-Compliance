@@ -29,7 +29,7 @@ function initializeAdmin() {
   try {
     let serviceAccount: admin.ServiceAccount | undefined;
 
-    // Production: Service account from env var (supports base64 or raw JSON)
+    // Strategy 1: Full JSON blob from FIREBASE_SERVICE_ACCOUNT_KEY (supports base64 or raw JSON)
     if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
       const raw = process.env.FIREBASE_SERVICE_ACCOUNT_KEY.trim();
       if (raw.startsWith('{')) {
@@ -44,20 +44,34 @@ function initializeAdmin() {
       }
     }
 
-    // Local development: Load from serviceAccountKey.json file
+    // Strategy 2: Individual env vars (FIREBASE_ADMIN_CLIENT_EMAIL + FIREBASE_ADMIN_PRIVATE_KEY)
+    // These are the vars listed in the Vercel env checklist
+    if (!serviceAccount && process.env.FIREBASE_ADMIN_CLIENT_EMAIL && process.env.FIREBASE_ADMIN_PRIVATE_KEY) {
+      serviceAccount = {
+        projectId: process.env.FIREBASE_ADMIN_PROJECT_ID
+          ?? process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID
+          ?? process.env.FIREBASE_PROJECT_ID,
+        clientEmail: process.env.FIREBASE_ADMIN_CLIENT_EMAIL,
+        // Vercel env vars encode literal \n — convert to real newlines
+        privateKey: process.env.FIREBASE_ADMIN_PRIVATE_KEY.replace(/\\n/g, '\n'),
+      } as admin.ServiceAccount;
+      logger.info('Using individual FIREBASE_ADMIN_* env vars', { file: 'admin.ts' });
+    }
+
+    // Strategy 3: Local development — load from serviceAccountKey.json file
     if (!serviceAccount) {
       try {
         const keyPath = path.join(process.cwd(), 'serviceAccountKey.json');
-        logger.info('🔍 Looking for serviceAccountKey.json', { path: keyPath, file: 'admin.ts' });
+        logger.info('Looking for serviceAccountKey.json', { path: keyPath, file: 'admin.ts' });
         if (fs.existsSync(keyPath)) {
           serviceAccount = JSON.parse(fs.readFileSync(keyPath, 'utf8')) as admin.ServiceAccount;
-          logger.info('🔑 Loaded serviceAccountKey.json successfully', { file: 'admin.ts' });
+          logger.info('Loaded serviceAccountKey.json successfully', { file: 'admin.ts' });
         } else {
-          logger.warn('⚠️ serviceAccountKey.json not found', { path: keyPath, file: 'admin.ts' });
+          logger.warn('serviceAccountKey.json not found', { path: keyPath, file: 'admin.ts' });
         }
       } catch (e: unknown) {
         const errorMessage = e instanceof Error ? e.message : String(e);
-        logger.warn('⚠️ Could not load serviceAccountKey.json', { error: errorMessage, file: 'admin.ts' });
+        logger.warn('Could not load serviceAccountKey.json', { error: errorMessage, file: 'admin.ts' });
       }
     }
 
@@ -65,7 +79,7 @@ function initializeAdmin() {
     const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID
       ?? process.env.FIREBASE_PROJECT_ID
       ?? process.env.FIREBASE_ADMIN_PROJECT_ID
-      ?? 'ai-sales-platform-dev';
+      ?? 'rapid-compliance-65f87';
 
     if (serviceAccount) {
       adminApp = admin.initializeApp({

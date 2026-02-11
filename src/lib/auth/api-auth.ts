@@ -52,13 +52,31 @@ async function initializeAdminAuth(): Promise<Auth | null> {
       // Get project ID from env
       const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID
         ?? process.env.FIREBASE_PROJECT_ID
-        ?? 'ai-sales-platform-dev';
+        ?? process.env.FIREBASE_ADMIN_PROJECT_ID
+        ?? 'rapid-compliance-65f87';
 
       // Initialize with service account or project ID
+      // Strategy 1: Full JSON blob
+      let serviceAccount: Record<string, unknown> | undefined;
       const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
-      const serviceAccount = serviceAccountKey
-        ? (JSON.parse(serviceAccountKey) as Record<string, unknown>)
-        : undefined;
+      if (serviceAccountKey) {
+        const raw = serviceAccountKey.trim();
+        if (raw.startsWith('{')) {
+          serviceAccount = JSON.parse(raw) as Record<string, unknown>;
+        } else {
+          const decoded = Buffer.from(raw, 'base64').toString('utf-8');
+          serviceAccount = JSON.parse(decoded) as Record<string, unknown>;
+        }
+      }
+
+      // Strategy 2: Individual FIREBASE_ADMIN_* env vars
+      if (!serviceAccount && process.env.FIREBASE_ADMIN_CLIENT_EMAIL && process.env.FIREBASE_ADMIN_PRIVATE_KEY) {
+        serviceAccount = {
+          projectId,
+          clientEmail: process.env.FIREBASE_ADMIN_CLIENT_EMAIL,
+          privateKey: process.env.FIREBASE_ADMIN_PRIVATE_KEY.replace(/\\n/g, '\n'),
+        };
+      }
 
       let app;
       if (serviceAccount) {
