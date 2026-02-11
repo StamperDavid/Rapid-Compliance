@@ -1,7 +1,7 @@
 # SalesVelocity.ai - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** February 10, 2026 (Verified metrics: 159 pages, 226 API routes. Documentation cleanup — README rewritten, stale docs archived)
+**Last Updated:** February 11, 2026 (Day 4 security hardening: added requireAuth to 82 API routes, 228 total routes verified, all dashboard endpoints now protected)
 **Branches:** `dev` (latest)
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Architecture:** Single-Tenant (Penthouse Model) - NOT a SaaS platform
@@ -36,7 +36,7 @@
 | Metric | Count | Status |
 |--------|-------|--------|
 | Physical Routes (page.tsx) | 159 | Verified February 10, 2026 (single-tenant flat routes) |
-| API Endpoints (route.ts) | 226 | Verified February 10, 2026 |
+| API Endpoints (route.ts) | 228 | Verified February 11, 2026 |
 | AI Agents | 52 | **52 FUNCTIONAL (48 swarm + 4 standalone)** |
 | RBAC Roles | 4 | `owner` (level 3), `admin` (level 2), `manager` (level 1), `member` (level 0) — 4-role RBAC |
 | Firestore Collections | 60+ | Active |
@@ -1400,11 +1400,35 @@ src/lib/agent/instance-manager.ts       # Agent Instance Manager
 
 | Severity | Issue | Location | Status |
 |----------|-------|----------|--------|
+| ~~CRITICAL~~ | ~~82 API routes missing authentication~~ | `src/app/api/**` | ✅ **RESOLVED 2026-02-11** — Day 4 security hardening sprint added `requireAuth` to all 82 unprotected dashboard routes. See [API Route Protection Summary](#api-route-protection-summary) below. |
 | ~~MEDIUM~~ | ~~Demo mode fallback in useAuth.ts~~ | `src/hooks/useAuth.ts` | ✅ RESOLVED - Wrapped in `NODE_ENV === 'development'` check |
 | ~~LOW~~ | ~~Inconsistent role naming~~ | Multiple files | ✅ RESOLVED - 4-role RBAC (owner|admin|manager|member) deployed. claims-validator maps legacy strings. |
 | LOW | Token claim extraction lacks strict validation | `api-auth.ts` | Add runtime type guards |
 | LOW | Manual organization check in agent routes | `/api/agent/chat` | Create decorator pattern for auto org validation |
 | ~~CRITICAL~~ | ~~Auth Handshake Failure: `useSystemStatus` hook missing Authorization header~~ | `src/hooks/useSystemStatus.ts` | ✅ **RESOLVED 2026-01-29** - Implemented reactive auth handshake with fresh Firebase ID Token per request. Features: (1) `onAuthStateChanged` listener for reactive auth state, (2) `getIdToken()` called inside fetch for token freshness, (3) Auth-ready polling kill-switch, (4) Graceful 401/403 error handling via `connectionError` state, (5) Proper cleanup on unmount. `/api/system/status` is now **AUTHENTICATED-LIVE**. |
+
+### API Route Protection Summary
+
+**Audit Date:** February 11, 2026
+**Total Routes:** 228
+
+| Protection Type | Count | Details |
+|----------------|-------|---------|
+| `requireAuth` middleware | ~167 | Standard dashboard route protection (82 added Feb 11) |
+| `verifyAdminRequest` | ~15 | Admin routes via `@/lib/api/admin-auth` |
+| `requireUserRole` | 2 | Admin template routes via `@/lib/auth/server-auth` |
+| Manual `verifyIdToken` | ~8 | Workflows, lead-scoring (Firebase Admin SDK direct) |
+| `CRON_SECRET` verification | 5 | Cron jobs: intelligence-sweep, operations-cycle, social-metrics, process-sequences, scheduled-publisher |
+| Legitimately public | 31 | Webhooks (6), OAuth callbacks (7), tracking pixels (3), TwiML/voice (5), public website (5), health/chat/forms (3), workflow webhooks (1), RSS/robots/sitemap (1) |
+
+**Auth systems in use:**
+- `requireAuth` from `@/lib/auth/api-auth` — primary dashboard auth (verifies Firebase token, returns `{ user }` or 401)
+- `requireRole` from `@/lib/auth/api-auth` — role-gated access (extends requireAuth with role check)
+- `verifyAdminRequest` from `@/lib/api/admin-auth` — admin routes (token + admin role verification)
+- `requireUserRole` from `@/lib/auth/server-auth` — server-side role enforcement
+- Manual `getAuth(adminApp).verifyIdToken(token)` — used in workflows and lead-scoring routes
+
+**Utility:** `scripts/find-unprotected.ps1` — PowerShell script to scan for routes missing auth patterns
 
 ### Admin Account Bootstrap
 
@@ -1473,7 +1497,7 @@ This script:
 
 ## Tooling Inventory
 
-### API Routes (227 Total)
+### API Routes (228 Total)
 
 | Category | Count | Path Pattern | Status |
 |----------|-------|--------------|--------|
