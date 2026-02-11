@@ -7,6 +7,7 @@ import { useOrgTheme } from '@/hooks/useOrgTheme';
 import { MerchantOrchestrator } from '@/components/orchestrator';
 import AdminSidebar from '@/components/admin/AdminSidebar';
 import ImpersonationBanner from '@/components/admin/ImpersonationBanner';
+import { ToastProvider } from '@/hooks/useToast';
 
 /**
  * Penthouse Dashboard Layout
@@ -67,26 +68,28 @@ export default function PenthouseDashboardLayout({
   }
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: 'var(--color-bg-main)' }}>
-      <ImpersonationBanner />
-      <AdminSidebar />
+    <ToastProvider>
+      <div style={{ minHeight: '100vh', backgroundColor: 'var(--color-bg-main)' }}>
+        <ImpersonationBanner />
+        <AdminSidebar />
 
-      {/* Main content area offset by sidebar width */}
-      <main
-        id="main-content"
-        tabIndex={-1}
-        className="md:ml-[280px]"
-        style={{
-          minHeight: '100vh',
-          transition: 'margin-left 0.3s ease',
-          outline: 'none',
-        }}
-      >
-        {children}
-      </main>
+        {/* Main content area offset by sidebar width */}
+        <main
+          id="main-content"
+          tabIndex={-1}
+          className="md:ml-[280px]"
+          style={{
+            minHeight: '100vh',
+            transition: 'margin-left 0.3s ease',
+            outline: 'none',
+          }}
+        >
+          {children}
+        </main>
 
-      {/* Merchant AI Orchestrator - Floating Assistant */}
-      <MerchantOrchestrator />
-    </div>
+        {/* Merchant AI Orchestrator - Floating Assistant */}
+        <MerchantOrchestrator />
+      </div>
+    </ToastProvider>
   );
 }
