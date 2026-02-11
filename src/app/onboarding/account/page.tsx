@@ -132,10 +132,10 @@ export default function AccountCreationPage() {
         updatedAt: serverTimestamp(),
       });
 
-      // Store account info and redirect
+      // Store account info and redirect to dashboard
       setAccountInfo(formData.email, formData.companyName);
-      setStep('business');
-      router.push('/onboarding/business');
+      setStep('complete');
+      router.push('/dashboard');
     } catch (error: unknown) {
       console.error('Account creation error:', error);
 

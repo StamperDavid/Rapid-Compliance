@@ -11,6 +11,7 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { verifyAdminRequest, isAuthError } from '@/lib/api/admin-auth';
+import { rateLimitMiddleware } from '@/lib/middleware/rate-limiter';
 import { logger } from '@/lib/logger/logger';
 import { z } from 'zod';
 import { SocialPostService } from '@/lib/social/social-post-service';
@@ -45,6 +46,16 @@ export async function POST(request: NextRequest) {
     const authResult = await verifyAdminRequest(request);
     if (isAuthError(authResult)) {
       return NextResponse.json({ error: authResult.error }, { status: authResult.status });
+    }
+
+    // Rate limiting (10 posts per hour)
+    const rateLimitResponse = await rateLimitMiddleware(request, {
+      limit: 10,
+      windowMs: 60 * 60 * 1000,
+      strategy: 'ip' as const,
+    });
+    if (rateLimitResponse) {
+      return rateLimitResponse;
     }
 
     // Parse and validate request body

@@ -5,15 +5,17 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { verifyAdminRequest, isAuthError } from '@/lib/api/admin-auth';
+import { rateLimitMiddleware, RateLimitPresets } from '@/lib/middleware/rate-limiter';
 import { logger } from '@/lib/logger/logger';
+import { z } from 'zod';
 
 export const dynamic = 'force-dynamic';
 
-interface ContentGenerationRequest {
-  type: 'blog' | 'social';
-  topic: string;
-  brandVoice?: string;
-}
+const contentGenerationSchema = z.object({
+  type: z.enum(['blog', 'social']),
+  topic: z.string().min(1, 'Topic is required').max(500, 'Topic too long'),
+  brandVoice: z.string().max(100).optional(),
+});
 
 interface GeneratedContent {
   title: string;
@@ -30,8 +32,27 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: authResult.error }, { status: authResult.status });
     }
 
-    const body = (await request.json()) as ContentGenerationRequest;
-    const { type, topic, brandVoice } = body;
+    // Rate limiting (AI operations: 20 req/min)
+    const rateLimitResponse = await rateLimitMiddleware(request, RateLimitPresets.AI_OPERATIONS);
+    if (rateLimitResponse) {
+      return rateLimitResponse;
+    }
+
+    const body: unknown = await request.json();
+    const validation = contentGenerationSchema.safeParse(body);
+
+    if (!validation.success) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Validation failed',
+          details: validation.error.errors,
+        },
+        { status: 400 }
+      );
+    }
+
+    const { type, topic, brandVoice } = validation.data;
 
     // Generate content using AI
     const { generateText } = await import('@/lib/ai/gemini-service');
