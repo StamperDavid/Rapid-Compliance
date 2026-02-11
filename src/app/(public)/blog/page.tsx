@@ -10,9 +10,9 @@ function FallbackContent() {
   const { theme } = useWebsiteTheme();
 
   const posts = [
-    { id: '1', title: 'How AI is Transforming Sales in 2024', category: 'AI & Technology', date: 'Dec 1, 2024' },
-    { id: '2', title: '10 Best Practices for Training Your AI Agent', category: 'Best Practices', date: 'Nov 28, 2024' },
-    { id: '3', title: 'Case Study: 300% Conversion Increase', category: 'Case Studies', date: 'Nov 25, 2024' },
+    { id: '1', title: 'How AI is Transforming Sales in 2026', category: 'AI & Technology', date: 'Feb 10, 2026' },
+    { id: '2', title: '10 Best Practices for Training Your AI Agent', category: 'Best Practices', date: 'Feb 5, 2026' },
+    { id: '3', title: 'Case Study: 300% Conversion Increase', category: 'Case Studies', date: 'Jan 28, 2026' },
   ];
 
   return (
@@ -36,8 +36,8 @@ function FallbackContent() {
         </div>
 
         <div className="mt-16 text-center p-8 bg-white/5 border border-white/10 rounded-xl">
-          <h3 className="text-2xl font-bold text-white mb-2">More Posts Coming Soon</h3>
-          <p className="text-gray-300">Subscribe to our newsletter to get notified.</p>
+          <h3 className="text-2xl font-bold text-white mb-2">Stay Tuned for More Insights</h3>
+          <p className="text-gray-300">New articles published weekly. Subscribe to our newsletter to get notified.</p>
         </div>
       </div>
     </div>

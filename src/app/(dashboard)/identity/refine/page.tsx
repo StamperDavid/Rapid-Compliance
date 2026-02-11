@@ -842,7 +842,7 @@ export default function IdentityRefinementPage() {
                   type="text"
                   value={newKeyPhrase}
                   onChange={(e) => setNewKeyPhrase(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleAddKeyPhrase()}
+                  onKeyDown={(e) => e.key === 'Enter' && handleAddKeyPhrase()}
                   placeholder="Add a key phrase..."
                   style={{
                     flex: 1,
@@ -906,7 +906,7 @@ export default function IdentityRefinementPage() {
                   type="text"
                   value={newAvoidPhrase}
                   onChange={(e) => setNewAvoidPhrase(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleAddAvoidPhrase()}
+                  onKeyDown={(e) => e.key === 'Enter' && handleAddAvoidPhrase()}
                   placeholder="Add a phrase to avoid..."
                   style={{
                     flex: 1,

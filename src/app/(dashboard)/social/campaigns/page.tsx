@@ -493,7 +493,7 @@ export default function SocialMediaCampaignsPage() {
               Social Analytics Dashboard
             </h3>
             <p style={{ color: 'var(--color-text-disabled)', marginBottom: '1.5rem' }}>
-              Detailed engagement metrics and AI-powered insights coming soon
+              Engagement metrics update as your campaigns generate impressions and interactions
             </p>
             <div style={{
               display: 'grid',

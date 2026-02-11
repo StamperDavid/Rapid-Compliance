@@ -7,7 +7,7 @@ import { Construction, ArrowRight } from "lucide-react";
 /**
  * Status types for the Under Construction badge
  */
-export type ConstructionStatus = "coming-soon" | "in-development" | "planned";
+export type ConstructionStatus = "beta" | "in-development" | "planned";
 
 /**
  * Props for the UnderConstruction component
@@ -36,8 +36,8 @@ export interface UnderConstructionProps {
  * Status badge configuration
  */
 const statusConfig: Record<ConstructionStatus, { label: string; className: string }> = {
-  "coming-soon": {
-    label: "Coming Soon",
+  "beta": {
+    label: "Beta",
     className: "bg-[var(--color-accent-primary)] text-white",
   },
   "in-development": {
@@ -74,7 +74,7 @@ const statusConfig: Record<ConstructionStatus, { label: string; className: strin
 export function UnderConstruction({
   title,
   description,
-  status = "coming-soon",
+  status = "beta",
   plannedFeatures,
   redirectTo,
   icon,

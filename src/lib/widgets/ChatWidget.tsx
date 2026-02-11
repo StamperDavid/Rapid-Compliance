@@ -390,7 +390,7 @@ export function ChatWidget({
               type="text"
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
-              onKeyPress={handleKeyPress}
+              onKeyDown={handleKeyPress}
               placeholder={placeholder}
               disabled={isTyping}
               style={{

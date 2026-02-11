@@ -345,7 +345,7 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
                   type="text"
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
-                  onKeyPress={(e) => { if (e.key === 'Enter') { void sendMessage(); } }}
+                  onKeyDown={(e) => { if (e.key === 'Enter') { void sendMessage(); } }}
                   placeholder="Type a message..."
                   className="flex-1 px-3 py-2 bg-slate-800 border border-slate-600 rounded-xl text-white text-sm placeholder-gray-400 focus:outline-none focus:border-indigo-500"
                   disabled={isTyping}

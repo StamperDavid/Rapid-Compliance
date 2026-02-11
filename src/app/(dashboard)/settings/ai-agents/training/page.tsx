@@ -1220,7 +1220,7 @@ export default function AgentTrainingPage() {
                       type="text"
                       value={userInput}
                       onChange={(e) => setUserInput(e.target.value)}
-                      onKeyPress={(e) => {
+                      onKeyDown={(e) => {
                         if (e.key === 'Enter') {
                           void handleSendMessage();
                         }

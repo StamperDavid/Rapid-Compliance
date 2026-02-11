@@ -155,7 +155,7 @@ export default function CategoriesManagementPage() {
               type="text"
               value={newCategory}
               onChange={(e) => setNewCategory(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && addCategory()}
+              onKeyDown={(e) => e.key === 'Enter' && addCategory()}
               placeholder="Category name"
               style={{
                 flex: 1,

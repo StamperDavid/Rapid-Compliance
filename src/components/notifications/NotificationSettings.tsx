@@ -201,7 +201,7 @@ export function NotificationSettings({ userId, className = '' }: NotificationSet
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-medium text-gray-900">Email</span>
                   <span className="px-2 py-0.5 text-xs font-medium text-gray-700 bg-gray-100 rounded">
-                    Coming Soon
+                    Beta
                   </span>
                 </div>
                 <p className="text-sm text-gray-600">Receive notifications via email</p>

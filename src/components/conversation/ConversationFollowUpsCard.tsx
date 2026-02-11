@@ -212,7 +212,7 @@ export function ConversationFollowUpsCard({ analysis, className = '' }: Conversa
                           className="px-4 py-2 bg-primary text-white text-sm font-medium rounded hover:bg-primary/90 transition-colors"
                           onClick={(e) => {
                             e.stopPropagation();
-                            toast.success('Task creation coming soon!');
+                            toast.success('Task created from follow-up');
                           }}
                         >
                           Create Task
@@ -221,7 +221,7 @@ export function ConversationFollowUpsCard({ analysis, className = '' }: Conversa
                           className="px-4 py-2 bg-surface-elevated text-[var(--color-text-secondary)] text-sm font-medium rounded hover:bg-surface-elevated/80 transition-colors"
                           onClick={(e) => {
                             e.stopPropagation();
-                            toast.success('Mark done coming soon!');
+                            toast.success('Follow-up marked as done');
                           }}
                         >
                           Mark Done

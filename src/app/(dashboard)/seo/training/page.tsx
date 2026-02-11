@@ -677,7 +677,7 @@ export default function SEOTrainingPage() {
                       type="text"
                       value={keywordInput}
                       onChange={e => setKeywordInput(e.target.value)}
-                      onKeyPress={handleKeywordKeyPress}
+                      onKeyDown={handleKeywordKeyPress}
                       placeholder="Enter keyword and press Enter"
                       style={{ ...inputStyle, flex: 1 }}
                     />
@@ -1029,7 +1029,7 @@ export default function SEOTrainingPage() {
                   <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>SEO Knowledge Base</h2>
                   <p style={{ color: COLORS.muted, fontSize: '0.875rem' }}>Upload documents, templates, and examples to improve content generation</p>
                 </div>
-                <button style={buttonStyle} onClick={() => toast.info('Knowledge upload coming soon!')}>
+                <button style={buttonStyle} onClick={() => toast.info('Knowledge upload is in development. Use the content fields below to provide SEO context.')}>
                   Upload Knowledge
                 </button>
               </div>

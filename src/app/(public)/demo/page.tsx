@@ -186,7 +186,7 @@ function LiveChatDemo({ primaryColor }: { primaryColor: string }) {
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            onKeyPress={(e) => { if (e.key === 'Enter') { void sendMessage(); } }}
+            onKeyDown={(e) => { if (e.key === 'Enter') { void sendMessage(); } }}
             placeholder="Type your message..."
             className="flex-1 px-4 py-3 bg-slate-800 border border-slate-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-indigo-500"
             disabled={isTyping}

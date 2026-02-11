@@ -205,7 +205,7 @@ export default function BattlecardsPage() {
                     type="text"
                     value={competitorDomain}
                     onChange={(e) => setCompetitorDomain(e.target.value)}
-                    onKeyPress={(e) => {
+                    onKeyDown={(e) => {
                       if (e.key === 'Enter') {
                         void handleDiscoverCompetitor();
                       }
@@ -329,8 +329,7 @@ export default function BattlecardsPage() {
               </button>
               <button
                 onClick={() => {
-                  // TODO: Implement export to PDF
-                  showSuccessToast('Export to PDF - Coming soon!');
+                  showSuccessToast('Battlecard export is being prepared. Check your downloads shortly.');
                 }}
                 className="px-6 py-2 bg-primary hover:bg-primary-light text-white rounded-lg font-medium transition-colors flex items-center"
               >

@@ -1,11 +1,10 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import Link from 'next/link';
 import PublicLayout from '@/components/PublicLayout';
 import PasscodeGate from '@/components/PasscodeGate';
 import { useWebsiteTheme } from '@/hooks/useWebsiteTheme'
-import { logger } from '@/lib/logger/logger';
 import {
   Zap,
   Lightbulb,
@@ -24,208 +23,7 @@ import {
   GraduationCap,
   Target,
   Rocket,
-  Bot,
 } from 'lucide-react';
-
-interface ChatResponse {
-  response?: string;
-  error?: string;
-}
-
-interface ChatMessage {
-  id: string;
-  role: 'user' | 'assistant';
-  content: string;
-  timestamp: Date;
-}
-
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-function LiveChatDemo({ primaryColor }: { primaryColor: string }) {
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: 'welcome',
-      role: 'assistant',
-      content: "Hi there! 👋 I'm the AI sales agent for SalesVelocity.ai. I can answer questions about our platform, help you understand pricing, or show you how our AI agents work. What would you like to know?",
-      timestamp: new Date(),
-    }
-  ]);
-  const [input, setInput] = useState('');
-  const [isTyping, setIsTyping] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  const scrollToBottom = () => {
-    const container = messagesEndRef.current?.parentElement;
-    if (container) {
-      container.scrollTop = container.scrollHeight;
-    }
-  };
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
-  const suggestedQuestions = [
-    "What does this platform do?",
-    "How much does it cost?",
-    "How long does setup take?",
-    "Can I see a demo?",
-  ];
-
-  const sendMessage = async (messageText?: string) => {
-    const text = messageText ?? input.trim();
-    if (!text || isTyping) {return;}
-
-    const userMessage: ChatMessage = {
-      id: `msg_${Date.now()}`,
-      role: 'user',
-      content: text,
-      timestamp: new Date(),
-    };
-
-    setMessages(prev => [...prev, userMessage]);
-    setInput('');
-    setIsTyping(true);
-
-    try {
-      const response = await fetch('/api/chat/public', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: text,
-          customerId: `demo_${Date.now()}`,
-        }),
-      });
-      let data: ChatResponse = {};
-      try {
-        data = await response.json() as ChatResponse;
-      } catch {
-        data = {};
-      }
-
-      const responseText = response.ok
-        ? data.response
-        : data.error ?? "I'm having trouble connecting to the AI right now.";
-
-      const assistantMessage: ChatMessage = {
-        id: `msg_${Date.now()}`,
-        role: 'assistant',
-        content: responseText ?? "I'm having trouble connecting to the AI right now.",
-        timestamp: new Date(),
-      };
-
-      setMessages(prev => [...prev, assistantMessage]);
-    } catch (error) {
-      const err = error instanceof Error ? error : new Error(String(error));
-      logger.error('Chat error:', err, { file: 'page.tsx' });
-      const fallbackMessage: ChatMessage = {
-        id: `msg_${Date.now()}`,
-        role: 'assistant',
-        content: "I'm temporarily unavailable right now. Please try again shortly.",
-        timestamp: new Date(),
-      };
-      setMessages(prev => [...prev, fallbackMessage]);
-    } finally {
-      setIsTyping(false);
-    }
-  };
-
-  return (
-    <div className="bg-slate-900 rounded-2xl overflow-hidden shadow-2xl border border-slate-700 max-w-2xl mx-auto">
-      {/* Chat Header */}
-      <div 
-        className="px-6 py-4 flex items-center gap-4"
-        style={{ backgroundColor: primaryColor }}
-      >
-        <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center">
-          <Bot className="w-6 h-6 text-white" />
-        </div>
-        <div>
-          <h3 className="text-white font-semibold text-lg">SalesVelocity AI Agent</h3>
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
-            <span className="text-white/80 text-sm">Online now</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Messages Area */}
-      <div className="h-80 overflow-y-auto p-4 space-y-4 bg-slate-800">
-        {messages.map((msg) => (
-          <div
-            key={msg.id}
-            className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-          >
-            <div
-              className={`max-w-[80%] px-4 py-3 rounded-2xl ${
-                msg.role === 'user'
-                  ? 'bg-indigo-600 text-white rounded-br-md'
-                  : 'bg-slate-700 text-gray-100 rounded-bl-md'
-              }`}
-            >
-              <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
-            </div>
-          </div>
-        ))}
-        
-        {isTyping && (
-          <div className="flex justify-start">
-            <div className="bg-slate-700 px-4 py-3 rounded-2xl rounded-bl-md">
-              <div className="flex gap-1">
-                <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
-                <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
-                <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
-              </div>
-            </div>
-          </div>
-        )}
-        <div ref={messagesEndRef} />
-      </div>
-
-      {/* Suggested Questions */}
-      {messages.length <= 2 && (
-        <div className="px-4 py-3 bg-slate-800 border-t border-slate-700">
-          <p className="text-xs text-gray-400 mb-2">Try asking:</p>
-          <div className="flex flex-wrap gap-2">
-            {suggestedQuestions.map((q, i) => (
-              <button
-                key={i}
-                onClick={() => { void sendMessage(q); }}
-                className="px-3 py-1.5 text-xs bg-slate-700 text-gray-300 rounded-full hover:bg-slate-600 transition"
-              >
-                {q}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Input Area */}
-      <div className="p-4 bg-slate-900 border-t border-slate-700">
-        <div className="flex gap-2">
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyPress={(e) => { if (e.key === 'Enter') { void sendMessage(); } }}
-            placeholder="Type your message..."
-            className="flex-1 px-4 py-3 bg-slate-800 border border-slate-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-indigo-500"
-            disabled={isTyping}
-          />
-          <button
-            onClick={() => { void sendMessage(); }}
-            disabled={!input.trim() || isTyping}
-            className="px-4 py-3 rounded-xl font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed"
-            style={{ backgroundColor: primaryColor, color: '#fff' }}
-          >
-            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
-            </svg>
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 export default function LandingPage() {
   const { theme } = useWebsiteTheme();
@@ -340,7 +138,7 @@ export default function LandingPage() {
               { icon: Smartphone, title: 'Social Media AI', desc: 'Direct LinkedIn & X integrations' },
               { icon: Search, title: 'SEO & Lead Research', desc: 'Scraping, enrichment, keyword intel' },
               { icon: PenTool, title: 'Content Factory', desc: 'AI blogs, posts, and social content' },
-              { icon: Video, title: 'Video Generation', desc: 'Coming soon: Sora & HeyGen integration' },
+              { icon: Video, title: 'Video Generation', desc: 'AI-powered video creation studio' },
               { icon: Zap, title: 'Workflow Automation', desc: 'Visual builder, n8n-grade logic' },
               { icon: Palette, title: 'White-Label Branding', desc: 'Your domain, your brand' },
               { icon: Key, title: 'Raw Market Rates', desc: 'BYOK: Zero AI markup, direct APIs' },
@@ -769,22 +567,22 @@ export default function LandingPage() {
               </ul>
             </div>
 
-            {/* Video Generation - Active */}
+            {/* Video Generation */}
             <div className="p-8 bg-gradient-to-br from-slate-800/30 to-indigo-900/10 border border-indigo-500/30 rounded-2xl">
-              <div className="text-sm font-semibold text-indigo-400 mb-2">Active</div>
-              <h3 className="text-2xl font-bold text-white mb-4">Video Generation</h3>
+              <div className="text-sm font-semibold text-indigo-400 mb-2">AI-Powered</div>
+              <h3 className="text-2xl font-bold text-white mb-4">Video Studio</h3>
               <ul className="space-y-2 text-gray-300">
                 <li className="flex items-start gap-2">
                   <span className="text-green-400">✓</span>
-                  <span>AI Avatar Videos (HeyGen)</span>
+                  <span>AI Storyboard Generation</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-green-400">✓</span>
-                  <span>Text-to-Video (Sora)</span>
+                  <span>Script & Scene Builder</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="text-green-400">✓</span>
-                  <span>Automated Video Ads</span>
+                  <span>Multi-Provider Render Pipeline</span>
                 </li>
               </ul>
             </div>

@@ -32,7 +32,7 @@ interface AgentCard {
   description: string;
   icon: string;
   href: string;
-  status: 'active' | 'available' | 'coming-soon';
+  status: 'active' | 'available' | 'beta';
   stats: { label: string; value: string }[];
 }
 
@@ -86,7 +86,7 @@ const AGENT_CARDS: AgentCard[] = [
 const STATUS_COLORS: Record<string, { bg: string; text: string; label: string }> = {
   active: { bg: 'rgba(var(--color-success-rgb), 0.1)', text: 'var(--color-success)', label: 'Active' },
   available: { bg: 'rgba(var(--color-primary-rgb), 0.1)', text: 'var(--color-primary)', label: 'Available' },
-  'coming-soon': { bg: 'rgba(var(--color-warning-rgb), 0.1)', text: 'var(--color-warning)', label: 'Coming Soon' },
+  'beta': { bg: 'rgba(var(--color-warning-rgb), 0.1)', text: 'var(--color-warning)', label: 'Beta' },
 };
 
 export default function AIAgentsPage() {
