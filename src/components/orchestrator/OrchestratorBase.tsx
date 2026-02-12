@@ -43,6 +43,7 @@ import {
   Radio,
 } from 'lucide-react';
 import { auth } from '@/lib/firebase/config';
+import { ASSISTANT_NAME } from '@/lib/constants/platform';
 
 // ============================================================================
 // TYPES
@@ -139,7 +140,6 @@ export interface OrchestratorConfig {
     industry?: string;
     niche?: string;
     companyName?: string;
-    assistantName?: string;
     ownerName?: string;
   };
   adminStats?: {
@@ -614,7 +614,7 @@ export function OrchestratorBase({ config }: { config: OrchestratorConfig }) {
                 </div>
                 <div>
                   <h3 className="text-[var(--color-text-primary)] font-semibold text-sm">
-                    {config.assistantName ?? (config.context === 'admin' ? 'Jasper' : config.merchantInfo?.assistantName ?? 'AI Assistant')}
+                    {config.assistantName ?? ASSISTANT_NAME}
                   </h3>
                   <p className="text-[var(--color-text-secondary)] text-xs">
                     {voiceSettings.liveMode ? (

@@ -3,9 +3,8 @@
 /**
  * Merchant Orchestrator - The Client Manager
  *
- * AI Assistant for merchants that serves as their primary interface.
- * Features dynamic assistant naming and industry-tailored personas.
- * Fetches industry, niche, and assistant config from Firestore profile.
+ * AI Assistant (Jasper) for the platform owner in merchant context.
+ * Features industry-tailored personas fetched from Firestore profile.
  */
 
 import { useEffect, useState } from 'react';
@@ -24,15 +23,14 @@ import {
 } from '@/lib/ai/persona-mapper';
 import { ImplementationGuide, type ImplementationContext } from '@/lib/orchestrator/implementation-guide';
 import { SystemHealthService, type SystemHealthReport } from '@/lib/orchestrator/system-health-service';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { PLATFORM_ID, ASSISTANT_NAME } from '@/lib/constants/platform';
 
 interface MerchantProfile {
   industry?: string;
   industryName?: string;
   nicheDescription?: string;
   name?: string;
-  assistantName?: string; // Custom AI assistant name
-  ownerName?: string; // Business owner's name
+  ownerName?: string;
   hasSeenWelcome?: boolean;
 }
 
@@ -70,7 +68,7 @@ export function MerchantOrchestrator() {
       }
       try {
         const context = await ImplementationGuide.buildContext(
-          profile.assistantName ?? 'Assistant',
+          ASSISTANT_NAME,
           profile.ownerName,
           profile.industry
         );
@@ -98,8 +96,7 @@ export function MerchantOrchestrator() {
             industryName: data.industryName,
             nicheDescription: data.nicheDescription,
             name: data.name,
-            assistantName: data.assistantName, // Custom AI assistant name
-            ownerName: data.ownerName, // Business owner's name
+            ownerName: data.ownerName,
             hasSeenWelcome: data.hasSeenWelcome,
           });
         }
@@ -115,7 +112,6 @@ export function MerchantOrchestrator() {
 
   // Get industry persona for this merchant
   const industryPersona: IndustryPersona = getIndustryPersona((profile?.industry as IndustryType) ?? 'custom');
-  const assistantName = profile?.assistantName ?? 'Assistant';
   const ownerName = profile?.ownerName;
 
   // Generate personalized welcome message - natural dialogue, no menus
@@ -151,7 +147,7 @@ export function MerchantOrchestrator() {
       ? `Since you're getting started, I'd recommend we set up lead generation first - that's usually the highest impact.`
       : `I'm ready to manage leads, content, and outreach for ${industryContext.toLowerCase()} businesses like yours.`;
 
-    return `Hey ${displayName}, I'm ${assistantName}. I'll be managing the sales and marketing operations for ${businessName}.
+    return `Hey ${displayName}, I'm ${ASSISTANT_NAME}. I'll be managing the sales and marketing operations for ${businessName}.
 
 ${systemContext}
 
@@ -190,7 +186,7 @@ Based on your setup, ${recommendation.toLowerCase()} looks like the next high-im
     let prompt = MERCHANT_ORCHESTRATOR_PROMPT;
 
     // Add industry persona
-    prompt += `\n\n${buildPersonaSystemPrompt(assistantName, ownerName, (profile?.industry as IndustryType) ?? 'custom', 'client')}`;
+    prompt += `\n\n${buildPersonaSystemPrompt(ASSISTANT_NAME, ownerName, (profile?.industry as IndustryType) ?? 'custom', 'client')}`;
 
     // Add Implementation Guide context if available
     if (implContext) {
@@ -214,8 +210,8 @@ When appropriate, mention unconfigured features proactively:
 
     // Add agent invocation rules
     prompt += `\n\nAGENT INVOCATION:
-When the user says "${assistantName}, [action]", invoke the appropriate specialist from the feature manifest.
-Always respond in character as ${assistantName}, never as a generic assistant.
+When the user says "${ASSISTANT_NAME}, [action]", invoke the appropriate specialist from the feature manifest.
+Always respond in character as ${ASSISTANT_NAME}, never as a generic assistant.
 
 FEATURE TOGGLE CAPABILITY:
 When the user says "I don't need [Feature]" or "Hide [Feature]":
@@ -236,13 +232,12 @@ When hiding features, use this exact response format:
     systemPrompt: enhancedSystemPrompt,
     welcomeMessage: getWelcomeMessage(),
     briefingGenerator: generateBriefing,
-    assistantName: assistantName,
+    assistantName: ASSISTANT_NAME,
     ownerName: ownerName,
     merchantInfo: {
       industry: profile?.industry,
       niche: profile?.nicheDescription,
       companyName: profile?.name,
-      assistantName: assistantName,
       ownerName: ownerName,
     },
   };

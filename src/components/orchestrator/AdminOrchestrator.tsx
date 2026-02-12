@@ -24,9 +24,7 @@ import {
   buildPersonaSystemPrompt,
 } from '@/lib/ai/persona-mapper';
 import { auth } from '@/lib/firebase/config';
-
-// Jasper - The Admin AI Assistant Name
-const ADMIN_ASSISTANT_NAME = 'Jasper';
+import { ASSISTANT_NAME } from '@/lib/constants/platform';
 
 // Debounce delay to prevent 429 rate limit errors
 const STATS_FETCH_DEBOUNCE_MS = 500;
@@ -363,7 +361,7 @@ Would you like me to drill into any of these areas?`);
   //
   const enhancedSystemPrompt = `${ADMIN_ORCHESTRATOR_PROMPT}
 
-${buildPersonaSystemPrompt(ADMIN_ASSISTANT_NAME, adminUser?.email?.split('@')[0], 'admin', 'admin')}
+${buildPersonaSystemPrompt(ASSISTANT_NAME, adminUser?.email?.split('@')[0], 'admin', 'admin')}
 
 ═══════════════════════════════════════════════════════════════════════════════
 SYSTEM ARCHITECTURE MANIFEST: JASPER SOVEREIGNTY
@@ -480,7 +478,7 @@ Don't wait for permission on routine operations. Execute and report.
     systemPrompt: enhancedSystemPrompt,
     welcomeMessage: getWelcomeMessage(),
     briefingGenerator: generateBriefing,
-    assistantName: ADMIN_ASSISTANT_NAME,
+    assistantName: ASSISTANT_NAME,
     adminStats: {
       totalOrgs: stats.totalOrgs,
       activeAgents: stats.activeAgents,

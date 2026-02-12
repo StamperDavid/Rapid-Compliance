@@ -9,6 +9,8 @@
  * @module persona-mapper
  */
 
+import { ASSISTANT_NAME } from '@/lib/constants/platform';
+
 // ============================================================================
 // TYPES
 // ============================================================================
@@ -638,7 +640,7 @@ export function generateIntroduction(
   context: PersonaContext = 'client'
 ): string {
   const persona = context === 'admin' ? ADMIN_PERSONA : getIndustryPersona(industry);
-  const displayName = assistantName || 'Assistant';
+  const displayName = assistantName || ASSISTANT_NAME;
   const ownerGreeting = ownerName ? `${ownerName}` : 'there';
 
   return `Hello ${ownerGreeting}, I am ${displayName}, your ${persona.partnerTitle}.`;
@@ -653,7 +655,7 @@ export function generateStatusOpener(
   context: PersonaContext = 'client'
 ): string {
   const persona = context === 'admin' ? ADMIN_PERSONA : getIndustryPersona(industry);
-  const displayName = assistantName || 'Your AI Partner';
+  const displayName = assistantName || ASSISTANT_NAME;
   const greeting = persona.greetingVariants[Math.floor(Math.random() * persona.greetingVariants.length)];
 
   return `${displayName} here. ${greeting}.`;
@@ -669,7 +671,7 @@ export function buildPersonaSystemPrompt(
   context: PersonaContext = 'client'
 ): string {
   const persona = context === 'admin' ? ADMIN_PERSONA : getIndustryPersona(industry);
-  const displayName = assistantName || 'AI Assistant';
+  const displayName = assistantName || ASSISTANT_NAME;
 
   const promptParts = [
     `Your name is ${displayName}. You are a ${persona.partnerTitle} for ${persona.industryDisplayName}.`,

@@ -16,6 +16,12 @@ export const PLATFORM_ID = 'rapid-compliance-root' as const;
 export const DEFAULT_ORG_ID = PLATFORM_ID;
 
 /**
+ * Platform AI assistant name.
+ * Single-tenant — the assistant is always Jasper. No per-org customization.
+ */
+export const ASSISTANT_NAME = 'Jasper' as const;
+
+/**
  * Platform company configuration
  */
 export const COMPANY_CONFIG = {

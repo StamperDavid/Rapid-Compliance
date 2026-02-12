@@ -148,15 +148,6 @@ export async function POST(request: NextRequest) {
       industryName: industry, // Industry display name
     };
 
-    // Save assistant name if provided
-    if (
-      'agentName' in typedOnboardingData &&
-      typeof typedOnboardingData.agentName === 'string' &&
-      typedOnboardingData.agentName !== ''
-    ) {
-      orgUpdate.assistantName = typedOnboardingData.agentName;
-    }
-
     // Save owner name if provided
     if (
       'ownerName' in typedOnboardingData &&
