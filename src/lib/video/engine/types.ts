@@ -312,7 +312,7 @@ export interface AudioConfiguration {
   // Voiceover settings
   voiceover: {
     enabled: boolean;
-    ttsEngine: 'native' | 'unreal' | 'elevenlabs';
+    ttsEngine: 'elevenlabs' | 'unreal';
     voiceId: string;
     speed: number;
     pitch: number;

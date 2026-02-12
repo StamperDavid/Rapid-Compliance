@@ -18,7 +18,6 @@ import {
   type TTSVoice,
   type TTSProviderInfo
 } from './types';
-import { NativeProvider } from './providers/native-provider';
 import { UnrealProvider } from './providers/unreal-provider';
 import { ElevenLabsProvider } from './providers/elevenlabs-provider';
 
@@ -90,8 +89,6 @@ export class VoiceEngineFactory {
    */
   private static createProvider(engine: TTSEngineType, apiKey?: string): TTSProvider {
     switch (engine) {
-      case 'native':
-        return new NativeProvider(apiKey);
       case 'unreal':
         return new UnrealProvider(apiKey);
       case 'elevenlabs':
@@ -115,8 +112,6 @@ export class VoiceEngineFactory {
 
     // Platform keys from environment
     switch (engine) {
-      case 'native':
-        return process.env.NATIVE_VOICE_API_KEY;
       case 'unreal':
         return process.env.UNREAL_SPEECH_API_KEY;
       case 'elevenlabs':
@@ -139,7 +134,7 @@ export class VoiceEngineFactory {
     try {
       if (!db) {
         console.warn('Firestore not initialized, using default TTS config');
-        return DEFAULT_TTS_CONFIGS.native as TTSEngineConfig;
+        return DEFAULT_TTS_CONFIGS.elevenlabs as TTSEngineConfig;
       }
       const docRef = doc(db, COLLECTIONS.ORGANIZATIONS, PLATFORM_ID, 'settings', 'ttsEngine');
       const docSnap = await getDoc(docRef);
@@ -153,16 +148,16 @@ export class VoiceEngineFactory {
       console.error('Error fetching TTS config:', error);
     }
 
-    // Return default config (Native provider with platform keys)
-    const nativeSettings = DEFAULT_TTS_CONFIGS.native.settings;
-    if (!nativeSettings) {
-      throw new Error('Default Native TTS settings are not configured');
+    // Return default config (ElevenLabs provider with platform keys)
+    const defaultSettings = DEFAULT_TTS_CONFIGS.elevenlabs.settings;
+    if (!defaultSettings) {
+      throw new Error('Default ElevenLabs TTS settings are not configured');
     }
 
     const defaultConfig: TTSEngineConfig = {
-      engine: 'native',
+      engine: 'elevenlabs',
       keyMode: 'platform',
-      settings: nativeSettings,
+      settings: defaultSettings,
     };
 
     return defaultConfig;
@@ -204,14 +199,12 @@ export class VoiceEngineFactory {
    */
   private static getDefaultVoiceId(engine: TTSEngineType): string {
     switch (engine) {
-      case 'native':
-        return 'native-aria';
       case 'unreal':
         return 'Scarlett';
       case 'elevenlabs':
         return '21m00Tcm4TlvDq8ikWAM'; // Rachel
       default:
-        return 'native-aria';
+        return '21m00Tcm4TlvDq8ikWAM'; // Rachel (ElevenLabs)
     }
   }
 
@@ -277,6 +270,5 @@ export class VoiceEngineFactory {
 
 // Export types and providers for direct use
 export * from './types';
-export { NativeProvider } from './providers/native-provider';
 export { UnrealProvider } from './providers/unreal-provider';
 export { ElevenLabsProvider } from './providers/elevenlabs-provider';

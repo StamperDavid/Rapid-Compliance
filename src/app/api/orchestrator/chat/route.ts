@@ -201,7 +201,7 @@ interface OrchestratorChatRequest {
   // Voice settings
   voiceEnabled?: boolean;
   voiceId?: string;
-  ttsEngine?: 'native' | 'unreal' | 'elevenlabs';
+  ttsEngine?: 'elevenlabs' | 'unreal';
 }
 
 interface OrchestratorChatResponse {

@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
 
     // Get voices for an engine
     const voices = await VoiceEngineFactory.listVoices(engine ?? undefined);
-    return NextResponse.json({ success: true, voices, engine: engine ?? 'native' });
+    return NextResponse.json({ success: true, voices, engine: engine ?? 'elevenlabs' });
   } catch (error) {
     console.error('TTS GET error:', error);
     return NextResponse.json(

@@ -156,7 +156,7 @@ export default function IdentityRefinementPage() {
       industry: '',
       competitors: [],
     },
-    voiceEngine: 'native',
+    voiceEngine: 'elevenlabs',
     voiceId: '',
     voiceName: '',
     avatarStyle: 'abstract',

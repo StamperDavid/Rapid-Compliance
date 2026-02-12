@@ -4,7 +4,7 @@
  */
 
 // Available TTS engine providers
-export type TTSEngineType = 'native' | 'unreal' | 'elevenlabs';
+export type TTSEngineType = 'elevenlabs' | 'unreal';
 
 // Key mode: platform (we pay) or user (they pay)
 export type APIKeyMode = 'platform' | 'user';
@@ -210,15 +210,6 @@ export interface TTSProvider {
  * Default configurations for each provider
  */
 export const DEFAULT_TTS_CONFIGS: Record<TTSEngineType, Partial<TTSEngineConfig>> = {
-  native: {
-    engine: 'native',
-    keyMode: 'platform',
-    settings: {
-      speed: 1.0,
-      format: 'mp3',
-      sampleRate: 22050,
-    },
-  },
   unreal: {
     engine: 'unreal',
     keyMode: 'platform',
@@ -245,25 +236,6 @@ export const DEFAULT_TTS_CONFIGS: Record<TTSEngineType, Partial<TTSEngineConfig>
  * Provider information for marketplace display
  */
 export const TTS_PROVIDER_INFO: Record<TTSEngineType, TTSProviderInfo> = {
-  native: {
-    type: 'native',
-    name: 'Native Voice',
-    description: 'Our proprietary high-quality hosted voice synthesis. Best balance of quality and cost.',
-    quality: 'premium',
-    latency: 'low',
-    pricing: {
-      costPer1kChars: 0.5, // $0.005 per 1k chars
-      freeCharsPerMonth: 50000,
-    },
-    features: [
-      'Ultra-low latency',
-      'Custom voice cloning',
-      'Multi-language support',
-      'SSML support',
-      'Emotional tones',
-    ],
-    supportsUserKeys: false,
-  },
   unreal: {
     type: 'unreal',
     name: 'Unreal Speech',

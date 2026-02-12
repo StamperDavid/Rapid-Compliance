@@ -122,7 +122,7 @@ interface ChatApiErrorResponse {
 export interface VoiceSettings {
   enabled: boolean;
   voiceId?: string;
-  ttsEngine?: 'native' | 'unreal' | 'elevenlabs';
+  ttsEngine?: 'elevenlabs' | 'unreal';
   liveMode: boolean; // Continuous mic mode with VAD
 }
 
@@ -695,12 +695,11 @@ export function OrchestratorBase({ config }: { config: OrchestratorConfig }) {
                       <label className="text-xs text-[var(--color-text-secondary)] block mb-1">Voice Engine</label>
                       <select
                         value={voiceSettings.ttsEngine}
-                        onChange={(e) => setVoiceSettings(prev => ({ ...prev, ttsEngine: e.target.value as 'native' | 'unreal' | 'elevenlabs' }))}
+                        onChange={(e) => setVoiceSettings(prev => ({ ...prev, ttsEngine: e.target.value as 'elevenlabs' | 'unreal' }))}
                         className="w-full bg-white/5 border border-border-light rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
                       >
                         <option value="elevenlabs" className="bg-surface-elevated">ElevenLabs (Ultra Quality)</option>
                         <option value="unreal" className="bg-surface-elevated">Unreal Speech (Fast)</option>
-                        <option value="native" className="bg-surface-elevated">Native Voice (Balanced)</option>
                       </select>
                     </div>
 

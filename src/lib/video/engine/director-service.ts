@@ -891,8 +891,8 @@ export class DirectorService {
     return {
       voiceover: {
         enabled: true,
-        ttsEngine: 'native',
-        voiceId: 'aria', // Default to Aria
+        ttsEngine: 'elevenlabs',
+        voiceId: '21m00Tcm4TlvDq8ikWAM', // Default to Rachel (ElevenLabs)
         speed: analysis.pacing === 'fast' ? 1.1 : analysis.pacing === 'slow' ? 0.9 : 1.0,
         pitch: 0,
         script: voiceover,

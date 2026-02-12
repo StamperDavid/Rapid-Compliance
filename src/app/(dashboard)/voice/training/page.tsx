@@ -228,7 +228,7 @@ export default function VoiceAITrainingLabPage() {
   const [newKnowledgeType, setNewKnowledgeType] = useState<'script' | 'faq' | 'product' | 'policy'>('faq');
 
   // TTS Voice Engine state
-  const [ttsEngine, setTtsEngine] = useState<TTSEngineType>('native');
+  const [ttsEngine, setTtsEngine] = useState<TTSEngineType>('elevenlabs');
   const [ttsKeyMode, setTtsKeyMode] = useState<APIKeyMode>('platform');
   const [ttsUserApiKey, setTtsUserApiKey] = useState('');
   const [ttsVoices, setTtsVoices] = useState<TTSVoice[]>([]);
@@ -397,7 +397,7 @@ export default function VoiceAITrainingLabPage() {
       const response = await fetch(`/api/voice/tts?action=config`);
       const data = await response.json() as TTSConfigResponse;
       if (data.success && data.config) {
-        setTtsEngine(data.config.engine ?? 'native');
+        setTtsEngine(data.config.engine ?? 'elevenlabs');
         setTtsKeyMode(data.config.keyMode ?? 'platform');
         setSelectedVoiceId(data.config.voiceId ?? '');
       }
@@ -439,8 +439,8 @@ export default function VoiceAITrainingLabPage() {
     setSelectedVoiceId('');
     setApiKeyValid(null);
     setTtsUserApiKey('');
-    // Reset to platform keys for native
-    if (engine === 'native') {
+    // Reset to platform keys for elevenlabs default
+    if (engine === 'elevenlabs') {
       setTtsKeyMode('platform');
     }
   };

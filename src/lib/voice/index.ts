@@ -64,7 +64,6 @@ export { crmVoiceActivity } from './crm-voice-activity';
 // TTS Voice Engine (Text-to-Speech marketplace)
 export { VoiceEngineFactory } from './tts/voice-engine-factory';
 export * from './tts/types';
-export { NativeProvider as NativeTTSProvider } from './tts/providers/native-provider';
 export { UnrealProvider as UnrealTTSProvider } from './tts/providers/unreal-provider';
 export { ElevenLabsProvider as ElevenLabsTTSProvider } from './tts/providers/elevenlabs-provider';
 

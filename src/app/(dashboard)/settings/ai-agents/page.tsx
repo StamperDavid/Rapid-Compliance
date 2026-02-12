@@ -32,6 +32,16 @@ export default function AIAgentsPage() {
         { label: 'Training Sessions', value: '34' },
         { label: 'Current Version', value: 'v3' }
       ]
+    },
+    {
+      title: 'Voice & Speech',
+      description: 'Configure Jasper\'s voice provider, select voices, and manage TTS settings',
+      icon: '🎙️',
+      href: `/settings/ai-agents/voice`,
+      stats: [
+        { label: 'Provider', value: 'ElevenLabs' },
+        { label: 'Voices Available', value: '13' }
+      ]
     }
   ];
 
