@@ -1,7 +1,7 @@
 # SalesVelocity.ai - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** February 12, 2026 (Feature completion sprint: 5 missing UI features built with full CRUD + Firestore integration, 3 new API routes, 1 new dashboard page, 231 total API endpoints)
+**Last Updated:** February 12, 2026 (Jasper Voice: removed native TTS stub, wired ElevenLabs + Unreal Speech as only providers, added Voice & Speech settings page at /settings/ai-agents/voice)
 **Branches:** `dev` (latest)
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Architecture:** Single-Tenant (Penthouse Model) - NOT a SaaS platform
@@ -35,7 +35,7 @@
 
 | Metric | Count | Status |
 |--------|-------|--------|
-| Physical Routes (page.tsx) | 159 | Verified February 10, 2026 (single-tenant flat routes) |
+| Physical Routes (page.tsx) | 160 | Verified February 12, 2026 (added /settings/ai-agents/voice) |
 | API Endpoints (route.ts) | 231 | Verified February 12, 2026 |
 | AI Agents | 52 | **52 FUNCTIONAL (48 swarm + 4 standalone)** |
 | RBAC Roles | 4 | `owner` (level 3), `admin` (level 2), `manager` (level 1), `member` (level 0) — 4-role RBAC |
@@ -50,7 +50,7 @@
 - **Database:** Firebase Firestore (single-tenant: `rapid-compliance-65f87`)
 - **Authentication:** Firebase Auth with custom claims
 - **AI Gateway:** OpenRouter (100+ models)
-- **Voice:** VoiceEngineFactory (Native, ElevenLabs, Unreal)
+- **Voice:** VoiceEngineFactory (ElevenLabs, Unreal Speech)
 - **Payments:** Stripe
 
 ### Codebase Scale (February 6, 2026)
@@ -198,7 +198,7 @@ TenantMemoryVault refactored to enforce single-tenant model (Rule 1 compliance):
 
 | Endpoint/Feature | Issue |
 |------------------|-------|
-| ~~Voice AI audio generation~~ | ✅ RESOLVED — TTS wired to agent handler via VoiceEngineFactory; 3 providers (Native, ElevenLabs, Unreal) with Polly fallback |
+| ~~Voice AI audio generation~~ | ✅ RESOLVED — TTS wired to agent handler via VoiceEngineFactory; 2 providers (ElevenLabs, Unreal Speech). Native stub removed Feb 12, 2026. |
 | ~~Video content generation~~ | ✅ RESOLVED — RenderPipeline class orchestrates storyboard→provider→stitcher→storage; wired to /api/video/generate |
 | ~~Email reply processing~~ | ✅ RESOLVED — SendGrid Inbound Parse webhook at /api/webhooks/email-inbound; AI classification with auto-response |
 | ~~PDF proposal generation~~ | ✅ RESOLVED — Playwright PDF conversion with Firebase Storage upload; GET /api/proposals/[id]/pdf endpoint |
@@ -457,7 +457,7 @@ border-color: #1a1a1a;
 | 3 | **Lead Gen** | Forms, Lead Research, Lead Scoring |
 | 4 | **Outbound** | Outbound, Sequences, Campaigns, Email Writer, Nurture, Calls |
 | 5 | **Content Factory** | Video Studio, Social Media, Proposals, Battlecards |
-| 6 | **AI Workforce** | Agent Registry, Training Center, Agent Persona, Voice AI Lab, Social AI Lab, SEO AI Lab, Datasets, Fine-Tuning |
+| 6 | **AI Workforce** | Agent Registry, Training Center, Agent Persona, Voice & Speech, Voice AI Lab, Social AI Lab, SEO AI Lab, Datasets, Fine-Tuning |
 | 7 | **Automation** | Workflows, A/B Testing, Lead Routing |
 | 8 | **E-Commerce** | Products, Orders, Storefront |
 | 9 | **Compliance** | Compliance Reports, Audit Log |
@@ -678,7 +678,7 @@ Legacy workspace URLs are automatically redirected:
 - `email-templates`, `sms-messages`, `theme`, `users`
 - `security`, `integrations`, `webhooks`, `custom-tools`, `workflows`
 - `lead-routing`, `meeting-scheduler`
-- `ai-agents/*` (5 routes: hub, business-setup, configuration, persona, training)
+- `ai-agents/*` (6 routes: hub, business-setup, configuration, persona, training, voice)
 
 > **Removed:** `/settings/billing`, `/settings/subscription`, `/settings/organization` (subscription system deleted)
 
@@ -1952,9 +1952,10 @@ console.info(`Cleaned ${totalCleaned} stale E2E documents`);
 
 | Engine | Provider | Status |
 |--------|----------|--------|
-| Native | Browser TTS | Default |
-| ElevenLabs | ElevenLabs API | Premium |
-| Unreal | Unreal Speech | Alternative |
+| ElevenLabs | ElevenLabs API | Default (Ultra quality) |
+| Unreal Speech | Unreal Speech API | Alternative (Cost-effective) |
+
+> **Removed:** Native Voice provider (placeholder stub with no real backend) — deleted February 12, 2026. Settings page: `/settings/ai-agents/voice`.
 
 ### Planned Integrations (INCOMPLETE)
 
@@ -2156,7 +2157,7 @@ Clients see ONLY these 11 sections (NO System tools):
 4. **Outbound** - Sequences, Campaigns, Email Writer, Nurture, Calls
 5. **Automation** - Workflows, A/B Tests
 6. **Content Factory** - Video Studio, Social Media, Proposals, Battlecards
-7. **AI Workforce** - Agent Training, Voice AI Lab, Social AI Lab, SEO AI Lab, Datasets, Fine-Tuning
+7. **AI Workforce** - Agent Training, Voice & Speech, Voice AI Lab, Social AI Lab, SEO AI Lab, Datasets, Fine-Tuning
 8. **E-Commerce** - Products, Orders, Storefront
 9. **Analytics** - Overview, Revenue, Pipeline, Sequences
 10. **Website** - Pages, Blog, Domains, SEO, Site Settings
