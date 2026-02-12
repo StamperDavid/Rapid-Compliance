@@ -11,7 +11,9 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/useToast';
 import EditorCanvas from '@/components/website-builder/EditorCanvas';
-import type { BlogPost, PageSection } from '@/types/website';
+import WidgetsPanel from '@/components/website-builder/WidgetsPanel';
+import PropertiesPanel from '@/components/website-builder/PropertiesPanel';
+import type { BlogPost, Page, PageSection, Widget } from '@/types/website';
 
 interface SelectedElement {
   type: 'section' | 'widget';
@@ -32,6 +34,7 @@ export default function BlogPostEditorPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [selectedElement, setSelectedElement] = useState<SelectedElement | null>(null);
+  const [leftPanelTab, setLeftPanelTab] = useState<'widgets' | 'settings'>('widgets');
 
   const loadCategories = useCallback(async () => {
     try {
@@ -184,6 +187,87 @@ export default function BlogPostEditorPage() {
     });
   }
 
+  function addWidget(sectionId: string, widget: Widget, columnIndex: number = 0): void {
+    if (!post) {return;}
+
+    const updatedContent = post.content.map(section => {
+      if (section.id === sectionId) {
+        const updatedColumns = [...section.columns];
+        const targetColumn = updatedColumns[columnIndex];
+        if (targetColumn) {
+          updatedColumns[columnIndex] = {
+            ...targetColumn,
+            widgets: [...targetColumn.widgets, widget],
+          };
+        }
+        return { ...section, columns: updatedColumns };
+      }
+      return section;
+    });
+
+    updatePost({ content: updatedContent });
+  }
+
+  function updateWidget(sectionId: string, widgetId: string, updates: Partial<Widget>): void {
+    if (!post) {return;}
+
+    const updatedContent = post.content.map(section => {
+      if (section.id === sectionId) {
+        const updatedColumns = section.columns.map(col => ({
+          ...col,
+          widgets: col.widgets.map(widget =>
+            widget.id === widgetId ? { ...widget, ...updates } : widget
+          ),
+        }));
+        return { ...section, columns: updatedColumns };
+      }
+      return section;
+    });
+
+    updatePost({ content: updatedContent });
+  }
+
+  function deleteWidget(sectionId: string, widgetId: string): void {
+    if (!post) {return;}
+
+    const updatedContent = post.content.map(section => {
+      if (section.id === sectionId) {
+        const updatedColumns = section.columns.map(col => ({
+          ...col,
+          widgets: col.widgets.filter(w => w.id !== widgetId),
+        }));
+        return { ...section, columns: updatedColumns };
+      }
+      return section;
+    });
+
+    updatePost({ content: updatedContent });
+
+    if (selectedElement?.widgetId === widgetId) {
+      setSelectedElement(null);
+    }
+  }
+
+  // Create a Page-compatible proxy for the shared editor components
+  function getPageProxy(): Page {
+    if (!post) {
+      return { id: '', title: '', slug: '', content: [], seo: { metaTitle: '', metaDescription: '' }, createdAt: '', updatedAt: '', createdBy: '', lastEditedBy: '' };
+    }
+    return {
+      id: post.id,
+      title: post.title,
+      slug: post.slug,
+      content: post.content,
+      seo: post.seo,
+      customCSS: '',
+      createdAt: post.createdAt,
+      updatedAt: post.updatedAt,
+      createdBy: post.createdBy,
+      lastEditedBy: post.lastEditedBy,
+      isPublished: post.status === 'published',
+    };
+  }
+
   if (loading) {
     return (
       <div style={{ padding: '2rem', fontFamily: 'system-ui' }}>
@@ -262,262 +346,317 @@ export default function BlogPostEditorPage() {
         </div>
       </div>
 
-      {/* Main Layout */}
-      <div style={{ 
-        display: 'flex', 
+      {/* Three-Panel Layout */}
+      <div style={{
+        display: 'flex',
         flex: 1,
         overflow: 'hidden',
       }}>
-        {/* Left Panel: Post Metadata */}
+        {/* Left Panel: Tabbed (Widgets / Post Settings) */}
         <div style={{
           width: '300px',
           background: 'var(--color-bg-elevated)',
           borderRight: '1px solid var(--color-border-light)',
-          overflowY: 'auto',
-          padding: '1.5rem',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
         }}>
-          <h3 style={{ fontSize: '1.125rem', margin: '0 0 1.5rem', color: 'var(--color-text-primary)' }}>
-            Post Settings
-          </h3>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-            <div>
-              <label style={{
-                display: 'block',
-                marginBottom: '0.5rem',
-                fontSize: '0.875rem',
-                fontWeight: '600',
-                color: 'var(--color-text-disabled)',
-              }}>
-                Title:
-              </label>
-              <input
-                type="text"
-                value={post.title}
-                onChange={(e) => updatePost({ title: e.target.value })}
-                style={{
-                  width: '100%',
-                  padding: '0.5rem',
-                  border: '1px solid var(--color-border-light)',
-                  borderRadius: '4px',
-                  fontSize: '0.875rem',
-                }}
-              />
-            </div>
-
-            <div>
-              <label style={{
-                display: 'block',
-                marginBottom: '0.5rem',
-                fontSize: '0.875rem',
-                fontWeight: '600',
-                color: 'var(--color-text-disabled)',
-              }}>
-                Slug:
-              </label>
-              <input
-                type="text"
-                value={post.slug}
-                onChange={(e) => updatePost({ slug: e.target.value })}
-                style={{
-                  width: '100%',
-                  padding: '0.5rem',
-                  border: '1px solid var(--color-border-light)',
-                  borderRadius: '4px',
-                  fontSize: '0.875rem',
-                }}
-              />
-            </div>
-
-            <div>
-              <label style={{
-                display: 'block',
-                marginBottom: '0.5rem',
-                fontSize: '0.875rem',
-                fontWeight: '600',
-                color: 'var(--color-text-disabled)',
-              }}>
-                Excerpt:
-              </label>
-              <textarea
-                value={post.excerpt}
-                onChange={(e) => updatePost({ excerpt: e.target.value })}
-                rows={3}
-                style={{
-                  width: '100%',
-                  padding: '0.5rem',
-                  border: '1px solid var(--color-border-light)',
-                  borderRadius: '4px',
-                  fontSize: '0.875rem',
-                  fontFamily: 'inherit',
-                  resize: 'vertical',
-                }}
-              />
-            </div>
-
-            <div>
-              <label style={{
-                display: 'block',
-                marginBottom: '0.5rem',
-                fontSize: '0.875rem',
-                fontWeight: '600',
-                color: 'var(--color-text-disabled)',
-              }}>
-                Featured Image URL:
-              </label>
-              <input
-                type="text"
-                value={post.featuredImage ?? ''}
-                onChange={(e) => updatePost({ featuredImage: e.target.value })}
-                placeholder="https://..."
-                style={{
-                  width: '100%',
-                  padding: '0.5rem',
-                  border: '1px solid var(--color-border-light)',
-                  borderRadius: '4px',
-                  fontSize: '0.875rem',
-                }}
-              />
-            </div>
-
-            <div>
-              <label style={{
-                display: 'block',
-                marginBottom: '0.5rem',
-                fontSize: '0.875rem',
-                fontWeight: '600',
-                color: 'var(--color-text-disabled)',
-              }}>
-                Categories:
-              </label>
-              <select
-                multiple
-                value={post.categories}
-                onChange={(e) => {
-                  const selected = Array.from(e.target.selectedOptions, option => option.value);
-                  updatePost({ categories: selected });
-                }}
-                style={{
-                  width: '100%',
-                  padding: '0.5rem',
-                  border: '1px solid var(--color-border-light)',
-                  borderRadius: '4px',
-                  fontSize: '0.875rem',
-                  minHeight: '100px',
-                }}
-              >
-                {categories.map((cat) => (
-                  <option key={cat} value={cat}>
-                    {cat}
-                  </option>
-                ))}
-              </select>
-              <small style={{ display: 'block', marginTop: '0.25rem', color: 'var(--color-text-secondary)' }}>
-                Hold Ctrl/Cmd to select multiple
-              </small>
-            </div>
-
-            <div>
-              <label style={{
-                display: 'block',
-                marginBottom: '0.5rem',
-                fontSize: '0.875rem',
-                fontWeight: '600',
-                color: 'var(--color-text-disabled)',
-              }}>
-                Tags (comma-separated):
-              </label>
-              <input
-                type="text"
-                value={tags.join(', ')}
-                onChange={(e) => setTags(e.target.value.split(',').map(t => t.trim()).filter(Boolean))}
-                placeholder="tag1, tag2, tag3"
-                style={{
-                  width: '100%',
-                  padding: '0.5rem',
-                  border: '1px solid var(--color-border-light)',
-                  borderRadius: '4px',
-                  fontSize: '0.875rem',
-                }}
-              />
-            </div>
-
-            <div>
-              <label style={{
-                display: 'block',
-                marginBottom: '0.5rem',
-                fontSize: '0.875rem',
-                fontWeight: '600',
-                color: 'var(--color-text-disabled)',
-              }}>
-                Status:
-              </label>
-              <select
-                value={post.status}
-                onChange={(e) => updatePost({ status: e.target.value as 'draft' | 'published' | 'scheduled' })}
-                style={{
-                  width: '100%',
-                  padding: '0.5rem',
-                  border: '1px solid var(--color-border-light)',
-                  borderRadius: '4px',
-                  fontSize: '0.875rem',
-                }}
-              >
-                <option value="draft">Draft</option>
-                <option value="published">Published</option>
-                <option value="scheduled">Scheduled</option>
-              </select>
-            </div>
-
-            <div>
-              <label style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                fontSize: '0.875rem',
-                fontWeight: '600',
-                color: 'var(--color-text-disabled)',
+          {/* Tab Buttons */}
+          <div style={{
+            display: 'flex',
+            borderBottom: '1px solid var(--color-border-light)',
+          }}>
+            <button
+              onClick={() => setLeftPanelTab('widgets')}
+              style={{
+                flex: 1,
+                padding: '0.75rem',
+                border: 'none',
+                background: leftPanelTab === 'widgets' ? 'var(--color-bg-paper)' : 'transparent',
+                borderBottom: leftPanelTab === 'widgets' ? '2px solid var(--color-info)' : '2px solid transparent',
                 cursor: 'pointer',
-              }}>
-                <input
-                  type="checkbox"
-                  checked={post.featured}
-                  onChange={(e) => updatePost({ featured: e.target.checked })}
-                  style={{ width: '16px', height: '16px' }}
-                />
-                Featured Post
-              </label>
-            </div>
+                fontSize: '0.8125rem',
+                fontWeight: '600',
+                color: leftPanelTab === 'widgets' ? 'var(--color-text-primary)' : 'var(--color-text-disabled)',
+              }}
+            >
+              Widgets
+            </button>
+            <button
+              onClick={() => setLeftPanelTab('settings')}
+              style={{
+                flex: 1,
+                padding: '0.75rem',
+                border: 'none',
+                background: leftPanelTab === 'settings' ? 'var(--color-bg-paper)' : 'transparent',
+                borderBottom: leftPanelTab === 'settings' ? '2px solid var(--color-info)' : '2px solid transparent',
+                cursor: 'pointer',
+                fontSize: '0.8125rem',
+                fontWeight: '600',
+                color: leftPanelTab === 'settings' ? 'var(--color-text-primary)' : 'var(--color-text-disabled)',
+              }}
+            >
+              Post Settings
+            </button>
+          </div>
+
+          {/* Tab Content */}
+          <div style={{ flex: 1, overflow: 'hidden' }}>
+            {leftPanelTab === 'widgets' ? (
+              <WidgetsPanel
+                onAddWidget={(widget) => {
+                  if (post.content.length === 0) {
+                    addSection({
+                      columns: [{
+                        id: `col_${Date.now()}`,
+                        width: 100,
+                        widgets: [widget],
+                      }],
+                    });
+                  } else {
+                    addWidget(post.content[0].id, widget, 0);
+                  }
+                }}
+              />
+            ) : (
+              <div style={{ overflowY: 'auto', padding: '1.5rem', height: '100%' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                  <div>
+                    <label style={{
+                      display: 'block',
+                      marginBottom: '0.5rem',
+                      fontSize: '0.875rem',
+                      fontWeight: '600',
+                      color: 'var(--color-text-disabled)',
+                    }}>
+                      Title:
+                    </label>
+                    <input
+                      type="text"
+                      value={post.title}
+                      onChange={(e) => updatePost({ title: e.target.value })}
+                      style={{
+                        width: '100%',
+                        padding: '0.5rem',
+                        border: '1px solid var(--color-border-light)',
+                        borderRadius: '4px',
+                        fontSize: '0.875rem',
+                      }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{
+                      display: 'block',
+                      marginBottom: '0.5rem',
+                      fontSize: '0.875rem',
+                      fontWeight: '600',
+                      color: 'var(--color-text-disabled)',
+                    }}>
+                      Slug:
+                    </label>
+                    <input
+                      type="text"
+                      value={post.slug}
+                      onChange={(e) => updatePost({ slug: e.target.value })}
+                      style={{
+                        width: '100%',
+                        padding: '0.5rem',
+                        border: '1px solid var(--color-border-light)',
+                        borderRadius: '4px',
+                        fontSize: '0.875rem',
+                      }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{
+                      display: 'block',
+                      marginBottom: '0.5rem',
+                      fontSize: '0.875rem',
+                      fontWeight: '600',
+                      color: 'var(--color-text-disabled)',
+                    }}>
+                      Excerpt:
+                    </label>
+                    <textarea
+                      value={post.excerpt}
+                      onChange={(e) => updatePost({ excerpt: e.target.value })}
+                      rows={3}
+                      style={{
+                        width: '100%',
+                        padding: '0.5rem',
+                        border: '1px solid var(--color-border-light)',
+                        borderRadius: '4px',
+                        fontSize: '0.875rem',
+                        fontFamily: 'inherit',
+                        resize: 'vertical',
+                      }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{
+                      display: 'block',
+                      marginBottom: '0.5rem',
+                      fontSize: '0.875rem',
+                      fontWeight: '600',
+                      color: 'var(--color-text-disabled)',
+                    }}>
+                      Featured Image URL:
+                    </label>
+                    <input
+                      type="text"
+                      value={post.featuredImage ?? ''}
+                      onChange={(e) => updatePost({ featuredImage: e.target.value })}
+                      placeholder="https://..."
+                      style={{
+                        width: '100%',
+                        padding: '0.5rem',
+                        border: '1px solid var(--color-border-light)',
+                        borderRadius: '4px',
+                        fontSize: '0.875rem',
+                      }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{
+                      display: 'block',
+                      marginBottom: '0.5rem',
+                      fontSize: '0.875rem',
+                      fontWeight: '600',
+                      color: 'var(--color-text-disabled)',
+                    }}>
+                      Categories:
+                    </label>
+                    <select
+                      multiple
+                      value={post.categories}
+                      onChange={(e) => {
+                        const selected = Array.from(e.target.selectedOptions, option => option.value);
+                        updatePost({ categories: selected });
+                      }}
+                      style={{
+                        width: '100%',
+                        padding: '0.5rem',
+                        border: '1px solid var(--color-border-light)',
+                        borderRadius: '4px',
+                        fontSize: '0.875rem',
+                        minHeight: '100px',
+                      }}
+                    >
+                      {categories.map((cat) => (
+                        <option key={cat} value={cat}>
+                          {cat}
+                        </option>
+                      ))}
+                    </select>
+                    <small style={{ display: 'block', marginTop: '0.25rem', color: 'var(--color-text-secondary)' }}>
+                      Hold Ctrl/Cmd to select multiple
+                    </small>
+                  </div>
+
+                  <div>
+                    <label style={{
+                      display: 'block',
+                      marginBottom: '0.5rem',
+                      fontSize: '0.875rem',
+                      fontWeight: '600',
+                      color: 'var(--color-text-disabled)',
+                    }}>
+                      Tags (comma-separated):
+                    </label>
+                    <input
+                      type="text"
+                      value={tags.join(', ')}
+                      onChange={(e) => setTags(e.target.value.split(',').map(t => t.trim()).filter(Boolean))}
+                      placeholder="tag1, tag2, tag3"
+                      style={{
+                        width: '100%',
+                        padding: '0.5rem',
+                        border: '1px solid var(--color-border-light)',
+                        borderRadius: '4px',
+                        fontSize: '0.875rem',
+                      }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{
+                      display: 'block',
+                      marginBottom: '0.5rem',
+                      fontSize: '0.875rem',
+                      fontWeight: '600',
+                      color: 'var(--color-text-disabled)',
+                    }}>
+                      Status:
+                    </label>
+                    <select
+                      value={post.status}
+                      onChange={(e) => updatePost({ status: e.target.value as 'draft' | 'published' | 'scheduled' })}
+                      style={{
+                        width: '100%',
+                        padding: '0.5rem',
+                        border: '1px solid var(--color-border-light)',
+                        borderRadius: '4px',
+                        fontSize: '0.875rem',
+                      }}
+                    >
+                      <option value="draft">Draft</option>
+                      <option value="published">Published</option>
+                      <option value="scheduled">Scheduled</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      fontSize: '0.875rem',
+                      fontWeight: '600',
+                      color: 'var(--color-text-disabled)',
+                      cursor: 'pointer',
+                    }}>
+                      <input
+                        type="checkbox"
+                        checked={post.featured}
+                        onChange={(e) => updatePost({ featured: e.target.checked })}
+                        style={{ width: '16px', height: '16px' }}
+                      />
+                      Featured Post
+                    </label>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
         {/* Center Panel: Content Editor */}
-        <div style={{ flex: 1, overflow: 'hidden' }}>
-          <EditorCanvas
-            page={{
-              id: post.id,
-              title: post.title,
-              slug: post.slug,
-              content: post.content,
-              seo: post.seo,
-              customCSS: '',
-              createdAt: post.createdAt,
-              updatedAt: post.updatedAt,
-              createdBy: post.createdBy,
-              lastEditedBy: post.lastEditedBy,
-              isPublished: post.status === 'published',
-            }}
-            breakpoint="desktop"
-            selectedElement={selectedElement}
-            onSelectElement={setSelectedElement}
-            onAddSection={addSection}
-            onUpdateSection={updateSection}
-            onDeleteSection={deleteSection}
-            onAddWidget={() => {}}
-            onUpdateWidget={() => {}}
-            onDeleteWidget={() => {}}
-          />
-        </div>
+        <EditorCanvas
+          page={getPageProxy()}
+          breakpoint="desktop"
+          selectedElement={selectedElement}
+          onSelectElement={setSelectedElement}
+          onAddSection={addSection}
+          onUpdateSection={updateSection}
+          onDeleteSection={deleteSection}
+          onAddWidget={addWidget}
+          onUpdateWidget={updateWidget}
+          onDeleteWidget={deleteWidget}
+        />
+
+        {/* Right Panel: Properties */}
+        <PropertiesPanel
+          selectedElement={selectedElement}
+          page={getPageProxy()}
+          breakpoint="desktop"
+          onUpdatePage={(updates) => updatePost(updates as Partial<BlogPost>)}
+          onUpdateSection={updateSection}
+          onUpdateWidget={updateWidget}
+        />
       </div>
     </div>
   );

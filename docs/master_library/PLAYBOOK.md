@@ -27,9 +27,9 @@ The Sales Playbook Dashboard provides sales representatives with proven scripts,
 ### Steps to Execute Manually
 
 1. **Access the Playbook**
-   - Navigate to `/dashboard` (Main Dashboard)
+   - Navigate to `/(dashboard)` (Main Dashboard)
    - Click "Playbook" in the sidebar navigation
-   - Alternatively, navigate directly to `/playbook`
+   - Alternatively, navigate directly to `/(dashboard)/playbook`
 
 2. **Browse Available Playbooks**
    - View list of playbooks organized by category:
@@ -120,14 +120,60 @@ The Sales Playbook Dashboard provides sales representatives with proven scripts,
 
 | Data Point | Firestore Path | Current Status |
 |------------|----------------|----------------|
-| Playbook List | `organizations/rapid-compliance-root/playbooks` | ✅ **LIVE** - Fetched via `/api/playbook/list` |
-| Adoption Metrics | `/api/playbook/{id}/metrics` | ✅ **LIVE** - Per-playbook API call |
-| Success Metrics | Calculated from live data | ✅ **LIVE** - Returned by metrics API |
-| Conversation Count | Count from `conversations` collection | ✅ **LIVE** - Returned by metrics API |
+| Playbook List | `organizations/rapid-compliance-root/playbooks` | 🔴 **PENDING** - API not implemented |
+| Adoption Metrics | API endpoint required | 🔴 **PENDING** - API not implemented |
+| Success Metrics | Calculated from live data | 🔴 **PENDING** - Requires metrics API |
+| Conversation Count | Count from `conversations` collection | 🔴 **PENDING** - Requires metrics API |
 
 ### Implementation
-Playbooks are fetched from the playbook API which queries Firestore. Empty state is displayed when no playbooks exist, allowing users to add their own playbook data or generate playbooks from conversation intelligence.
+The playbook UI exists at `/(dashboard)/playbook` and displays a list of playbooks with patterns, talk tracks, objection responses, and adoption metrics. However, the backend API endpoints that the UI calls do NOT exist yet.
+
+**What Works:**
+- Playbook UI page renders correctly
+- Component structure for playbook cards, patterns, talk tracks, and metrics
+- Client-side playbook selection and display logic
+- `/api/playbook/generate` endpoint for AI-powered playbook generation
+
+**What Does NOT Work:**
+- `/api/playbook/list` - Does not exist (UI calls this to fetch playbooks)
+- `/api/playbook/{id}/metrics` - Does not exist (UI calls this to fetch adoption metrics per playbook)
+- Data fetching from Firestore (no API to connect UI to database)
 
 ---
 
-*Last Audited: February 5, 2026*
+## Known Issues
+
+**Missing API Endpoints:**
+The playbook dashboard page (`/(dashboard)/playbook`) attempts to fetch data from the following API endpoints, which do NOT currently exist:
+
+1. **`GET /api/playbook/list`** - Should return all playbooks from Firestore
+   - Called by: `src/app/(dashboard)/playbook/page.tsx` (line 88)
+   - Expected response: `{ data: Playbook[] }` or `{ playbooks: Playbook[] }`
+
+2. **`GET /api/playbook/{id}/metrics`** - Should return adoption metrics for a specific playbook
+   - Called by: `src/app/(dashboard)/playbook/page.tsx` (line 173)
+   - Expected response: `{ data: PlaybookAdoptionMetrics }` or `{ metrics: PlaybookAdoptionMetrics }`
+
+**Impact:**
+- The playbook page loads but displays an empty state
+- Users cannot view, browse, or track playbook performance
+- Generated playbooks (via `/api/playbook/generate`) cannot be displayed in the UI
+
+**Resolution Required:**
+Create the missing API route handlers:
+- `src/app/api/playbook/list/route.ts` - Fetch all playbooks from Firestore
+- `src/app/api/playbook/[id]/metrics/route.ts` - Calculate and return per-playbook metrics
+
+---
+
+## Planned Features (Not Yet Implemented)
+
+- **Playbook List API**: Backend endpoint to fetch all playbooks
+- **Playbook Metrics API**: Backend endpoint to calculate adoption and effectiveness metrics
+- **Playbook Editing**: UI to edit existing playbooks
+- **Playbook Publishing**: Workflow to activate/deactivate playbooks
+- **Rep Assignment**: Assign specific playbooks to specific sales reps
+
+---
+
+*Last Updated: February 12, 2026*

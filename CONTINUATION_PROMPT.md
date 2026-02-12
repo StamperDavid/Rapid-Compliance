@@ -1,173 +1,273 @@
-# SalesVelocity.ai — Launch Readiness
+# SalesVelocity.ai Platform - Continuation Prompt
 
-**Repository:** https://github.com/StamperDavid/Rapid-Compliance
-**Branch:** dev
-**Last Updated:** February 12, 2026
-**Status:** All dashboard features complete. Demo data seeded (158 docs). TypeScript 0 errors, ESLint 0 warnings, Build passes clean.
+** Always ** review claude.md rules before starting a task
 
----
+## Context
+Repository: https://github.com/StamperDavid/Rapid-Compliance
+Branch: dev
+Last Commit: b1c50e8f — "feat: implement ConversationMemory service — agents recall customer history"
 
-## Session Protocol
+## Current State (February 8, 2026)
 
-**Every new Claude Code session MUST:**
-1. Read `CLAUDE.md` first — it contains binding project governance, constraints, and worktree rules
-2. Read this file (`CONTINUATION_PROMPT.md`) for current status and next steps
-3. Pick up where the last session left off
-4. Update this file at end of session with what was accomplished and what's next
-5. Do NOT create new planning/status documents — this is the single tracking file
+### Architecture
+- **Single-tenant penthouse model** — org ID `rapid-compliance-root`, Firebase `rapid-compliance-65f87`
+- **52 AI agents** (48 swarm + 4 standalone) with hierarchical orchestration
+- **4-role RBAC** (owner/admin/manager/member) with 47 permissions
+- **158 physical routes**, **219 API endpoints**, **430K+ lines of TypeScript**
+- **NOT yet deployed to production** — everything is dev branch only
 
----
+### Code Health
+- `tsc --noEmit` — **PASSES (zero errors)**
+- `npm run lint` — **PASSES (zero errors)**
+- `npm run build` — **PASSES (production build succeeds)**
+- **510 `tests/lib/` tests** — ALL PASS (19/19 suites)
+- **126 safe unit tests** — ALL PASS (event-router 49, jasper-command-authority 21, mutation-engine 9, analytics-helpers 47)
+- **92 root-level tests** — ALL PASS
+- **27 MemoryVault tests** — ALL PASS (hydration, serialization, TTL cleanup)
+- **3 service tests failing** — infrastructure issue only (missing Firestore composite indexes, not code bugs)
 
-## Platform Summary
+### What's Complete
+- **organizationId purge — FULLY COMPLETE** (zero references in src/ and tests/, all cascade type errors fixed, 564 files changed)
+- Single-tenant conversion (-80K+ lines total across all purge phases)
+- SalesVelocity.ai rebrand + CSS variable theme system
+- Agent hierarchy with full manager orchestration
+- 4-role RBAC with API gating and sidebar filtering
+- Stabilization Roadmap (all 15 tasks across 3 tiers)
+- Social Media Growth Engine (Phases 1-6)
+- **Autonomous Business Operations (ALL 8 PHASES)** — Event Router, Operations Cycle Cron, Event Emitters, Manager Authority, Revenue Pipeline Automation, Outreach Autonomy, Content Production Hub, Intelligence Always-On, Builder/Commerce Reactive Loops, Contextual Artifact Generation, Jasper Command Authority
+- Post-Phase 8 Stabilization — integration tests, production cron scheduling, executive briefing dashboard
+- Pre-existing type errors fixed (brand-dna-service duplicate properties, claims-validator shorthand, director-service missing field, orchestrator LogContext type)
+- **Unused import cleanup — COMPLETE** (135 lint errors removed: 126 PLATFORM_ID imports, 3 empty interfaces, 6 unused vars)
+- Restored onboarding page.tsx (was accidentally emptied during orgId purge)
+- **MemoryVault Firestore persistence — COMPLETE** (commit e388c151). Agents survive Vercel cold starts. `read()` and `query()` now await Firestore hydration before returning results. TTL cleanup wired to operations-cycle cron (every 4 hours). 35+ callers across 9 agent/orchestrator files updated to async.
+- **ConversationMemory service — COMPLETE** (commit b1c50e8f). All 5 sub-tasks done:
+  - 3a: Voice transcript persistence — `handleEndCall()` persists to Firestore before clearing memory. Also persists on transfer/close.
+  - 3b: Auto-analysis trigger — voice calls auto-trigger `analyzeTranscript()` after completion. Chat sessions trigger analysis via API on `completeSession()`.
+  - 3c: ConversationMemory service — `src/lib/conversation/conversation-memory.ts`. Unified retrieval across voice, chat, SMS by phone/email/customerId/leadId.
+  - 3d: Lead Briefing generator — `conversationMemory.brief()` synthesizes interactions into structured briefing (sentiment trends, objections, buying signals, recommendations).
+  - 3e: Agent integration — Outreach Manager enriches lead profiles, Revenue Director includes brief context in delegations, Voice AI loads caller history.
 
-- **Architecture:** Single-tenant penthouse model
-- **Org ID:** `rapid-compliance-root` | **Firebase:** `rapid-compliance-65f87`
-- **Scale:** 163 pages, 231 API endpoints, 52 AI agents, 330K+ LOC
-- **Code Health:** TypeScript 0 errors, ESLint 0 warnings, Build passes clean
+### Immediate Next Task
+**Deploy Firestore indexes** — `firebase deploy --only firestore:indexes` (requires `firebase login --reauth` first — credentials expired). Fixes 3 failing service tests. Then proceed to production deploy.
 
----
-
-## What Was Completed (Feb 12, 2026)
-
-### Feature Completion Sprint — ALL 5 FEATURES DONE
-
-All 5 incomplete dashboard features have been built out with full CRUD, Firestore integration, and proper API routes:
-
-#### 1. Orders Page — COMPLETE
-- **Created:** `src/app/(dashboard)/orders/page.tsx`
-- **Fixed:** Orders API Firestore path mismatch in `src/app/api/ecommerce/orders/route.ts` and `[orderId]/route.ts`
-- **Added:** PUT endpoint for order status updates in `[orderId]/route.ts`
-- **Fixed:** Sidebar orders link changed from `/analytics/ecommerce` to `/orders`
-- **Features:** Table view, status/search filters, detail drawer, status management buttons
-
-#### 2. Social Media — COMPLETE
-- **Rewrote:** `src/app/(dashboard)/social/campaigns/page.tsx` (removed all hardcoded mock data)
-- **Created:** `src/app/api/social/posts/route.ts` (GET, POST, PUT, DELETE)
-- **Features:** Firestore-backed post loading with platform/status filters, create/edit/delete modals, real analytics from post data
-
-#### 3. Lead Scoring Rules — COMPLETE
-- **Modified:** `src/app/(dashboard)/lead-scoring/page.tsx`
-- **Wired:** "Manage Rules" button to existing `/api/lead-scoring/rules` API
-- **Features:** Rules management modal with create, toggle active, delete with confirmation
-
-#### 4. Webhooks — COMPLETE
-- **Rewrote:** `src/app/(dashboard)/settings/webhooks/page.tsx` (removed hardcoded data)
-- **Created:** `src/app/api/settings/webhooks/route.ts` (GET, POST, PUT, DELETE)
-- **Features:** Firestore-backed CRUD, create/edit modal, toggle active, test webhook, delete confirmation
-
-#### 5. Team Tasks — COMPLETE
-- **Rewrote:** `src/app/(dashboard)/team/tasks/page.tsx` (added full CRUD)
-- **Created:** `src/app/api/team/tasks/[taskId]/route.ts` (PUT, DELETE)
-- **Features:** Create/edit modal, status transitions (Start, Block, Unblock, Complete), inline delete confirmation
-
-### Demo Data Seeded — 158 Documents Total
-
-Two seed scripts were created and successfully executed:
-
-1. **`scripts/seed-demo-account.ts`** (Part 1 — CRM, 96 docs)
-   - 10 Contacts, 12 Leads, 8 Deals ($478K pipeline), 25 Activities
-   - 6 Products, 3 Email Campaigns + 2 Nurture Sequences, 30 days Analytics
-
-2. **`scripts/seed-demo-account-part2.ts`** (Part 2 — Full Platform, 62 docs)
-   - Onboarding, AI Agent Persona, 3 Workflows, 2 Forms + 3 submissions
-   - 3 Website Pages + 3 Blog Posts + Site Config/Theme/Navigation
-   - 8 Social Media Posts, 4 Orders, 5 Templates, Lead Scoring Rules
-   - 2 Webhooks, 5 Team Tasks, 2 AI Conversations, 3 Integrations, 2 Custom Tools
-
-All data tagged "(Demo)" with `demo-` prefixed IDs. Firestore paths use `test_` prefix for dev environment.
+### Known Issues
+| Issue | Details |
+|-------|---------|
+| 3 service tests failing | Missing Firestore composite indexes (status+createdAt, stage+createdAt on `records` and `workflows`). Fix: `firebase login --reauth` then `firebase deploy --only firestore:indexes` |
+| Firebase CLI credentials expired | Run `firebase login --reauth` to re-authenticate before deploying indexes |
+| Outbound webhooks are scaffolding | Settings UI exists with event list but backend dispatch system is not implemented |
 
 ---
 
-## All Features VERIFIED Working
+## Launch Sequence (Priority Order)
 
-### Features That Are COMPLETE:
-- Orders — full table view, filters, detail drawer, status management
-- Social Media — Firestore-backed CRUD, analytics from real data
-- Lead Scoring Rules — rules management modal with create/toggle/delete
-- Webhooks — Firestore-backed CRUD, test webhook, toggle active
-- Team Tasks — full CRUD with Kanban board and status transitions
-- Workflows — full CRUD, builder, pagination, filtering
-- Forms — full CRUD, template selection, bulk delete, CSV export
-- Website Pages — list, create, delete, editor, duplicate
-- Blog — full CRUD, featured toggle, category management
-- Conversations — real-time monitoring, history, training flags
-- Integrations — browse, connect OAuth/API key, disconnect
-- Custom Tools — full CRUD, enable/disable, emoji icons
-- AI Persona — 6-section editor, auto-generation, save
-- Business Setup — 7-section tabbed form, save
-- CRM (Contacts, Leads, Deals) — full CRUD
-- Products — full CRUD
-- Email Campaigns — full CRUD
-- Analytics — dashboard with daily metrics
+| Step | Task | Time Est. | Why |
+|------|------|-----------|-----|
+| ~~**0**~~ | ~~Remove unused imports~~ | ~~30 min~~ | **DONE** — 135 errors removed, lint passes clean. |
+| **1** | Deploy Firestore indexes | 15 min | `firebase deploy --only firestore:indexes`. Fixes 3 failing service tests. |
+| ~~**2**~~ | ~~MemoryVault Firestore persistence~~ | ~~3-4 hrs~~ | **DONE** — commit e388c151. Agents survive cold starts. read()/query() await hydration. TTL cleanup on 4h cron. |
+| ~~**3**~~ | ~~ConversationMemory service~~ | ~~6-8 hrs~~ | **DONE** — commit b1c50e8f. All 5 sub-tasks complete. Agents recall customer history across voice/chat/SMS. Auto-analysis triggers on call/chat completion. Lead Briefing generator synthesizes interactions. |
+| **4** | **Production deploy to Vercel** | 2-3 hrs | 7 cron jobs already defined in `vercel.json`. OAuth flows, webhooks, Stripe — none work until deployed with real env vars. |
+| **5** | Smoke test the OODA loop | 2-3 hrs | Feed a real lead through the system. Verify event router fires, Revenue Director picks it up, sequence engine enrolls. |
+| **6** | Fix what breaks | Variable | Something will break in production. Budget time for env var issues, cold start timing, external API rate limits. |
+| **7** | Wire up outbound webhook dispatch | 3-4 hrs | Settings page exists, event list is there, UI is built — backend just doesn't send webhooks. |
 
----
+### Step 3 — ConversationMemory Service (Detailed Spec)
 
-## API Routes Created/Modified in This Sprint
+**Problem:** Agents have amnesia about customer interactions. Chat sessions, SMS messages, and orchestrator conversations are stored in Firestore but no agent can query them. Voice call transcripts (the richest data) are lost entirely when calls end — stored in-memory only. When an agent prepares to contact a lead, it has zero context about prior conversations across any channel.
 
-| Route | Methods | Purpose |
-|-------|---------|---------|
-| `/api/social/posts` | GET, POST, PUT, DELETE | Social media posts CRUD |
-| `/api/settings/webhooks` | GET, POST, PUT, DELETE | Webhook configuration CRUD |
-| `/api/team/tasks/[taskId]` | PUT, DELETE | Individual team task operations |
-| `/api/ecommerce/orders/[orderId]` | GET, PUT | Order detail + status updates (PUT added) |
-| `/api/ecommerce/orders` | GET | Fixed Firestore path to match seed data |
+**Solution:** A dedicated ConversationMemory service (Option B architecture) — one service owns all conversation data, agents query it when they need customer context. MemoryVault stays focused on agent-to-agent coordination.
 
----
+**Architecture Decision:** Option B was chosen over a hybrid approach (Option C) because:
+- No data duplication — conversation data lives in one place, not mirrored in MemoryVault
+- No sync issues — no risk of MemoryVault copies going stale
+- Clean separation — MemoryVault = agent coordination, ConversationMemory = customer interaction history
+- Agents simply query ConversationMemory as part of their lead preparation workflow
 
-## Firestore Path Reference
-
-All dev paths use `test_` prefix. The pattern is:
+**Data Flow:**
 ```
-test_organizations/rapid-compliance-root/test_workspaces/default/...
+Call/Chat/SMS ends
+       │
+       ▼
+┌─────────────────────┐
+│  Persist full record │  ← Transcript + metadata → Firestore
+│  to Firestore        │     (voice is the gap — chat/SMS/orchestrator already stored)
+└────────┬────────────┘
+         │
+         ▼
+┌─────────────────────────────┐
+│  Conversation Analysis runs  │  ← Engine already exists at src/lib/conversation/
+│  automatically after each    │     Sentiment, objections, buying signals, coaching
+│  interaction completes       │     Currently manual-only via POST /api/conversation/analyze
+└────────┬────────────────────┘
+         │
+         ▼
+┌─────────────────────────────┐
+│  Analysis stored alongside   │  ← Summary, key moments, objections, next steps
+│  conversation record         │     Persisted for agent retrieval
+└─────────────────────────────┘
+
+Agent preparing to contact Lead X:
+       │
+       ▼
+┌──────────────────────────────┐
+│  ConversationMemory.brief()  │  ← Query all interactions by leadId
+│                              │     across chat, voice, SMS, email
+│  Returns structured Lead     │     Last N interactions summarized
+│  Briefing (not raw           │     Sentiment trend, open objections,
+│  transcripts)                │     recommended approach
+└──────────────────────────────┘
 ```
 
-| Collection | Path under workspace root |
-|------------|--------------------------|
-| Contacts | `entities/contacts/records` |
-| Leads | `entities/leads/records` |
-| Deals | `entities/deals/records` |
-| Products | `entities/products/records` |
-| Orders | `entities/orders/records` |
-| Activities | `activities` |
-| Workflows | `test_workflows` |
-| Forms | `test_forms` |
-| Social Posts | `test_socialPosts` |
-| Templates | `test_globalTemplates` |
-| Scoring Rules | `test_scoringRules` |
-| Webhooks | `test_webhooks` |
-| Team Tasks | `test_teamTasks` |
-| Conversations | `test_conversations` |
-| Integrations | `test_integrations` |
-| Custom Tools | `test_customTools` |
-| Email Campaigns | `test_emailCampaigns` |
-| Nurture Sequences | `test_nurtureSequences` |
-| Analytics | `analytics` |
-| Pages | `test_pages` |
-| Blog Posts | `test_blogPosts` |
+**Lead Briefing Output (what agents receive):**
+```
+Lead: John Smith, Acme Corp
+Last contact: 2 days ago (voice call, 12 min)
+Total interactions: 4 (2 calls, 1 chat, 1 email reply)
+Sentiment trend: neutral → positive (improving)
 
-Org-level (not workspace-scoped):
+Key context:
+- Budget review in March, decision after that
+- Pain point: manual compliance reporting 20hrs/week
+- Compared us to CompetitorX, said pricing was lower
+- Asked about Salesforce API integration
+
+Open objections:
+- Price concern (medium severity, unresolved)
+- Integration timeline worry
+
+Recommended approach:
+- Lead with ROI calculation (20hrs/week saved)
+- Address Salesforce integration early
+- Don't push for close before March budget review
 ```
-test_organizations/rapid-compliance-root/test_onboarding/current
-test_organizations/rapid-compliance-root/agent/persona
-test_organizations/rapid-compliance-root/test_siteConfig/demo-site-config
-test_organizations/rapid-compliance-root/test_themes/demo-theme
-test_organizations/rapid-compliance-root/test_navigation/demo-navigation
-```
+
+**5 Implementation Sub-Tasks:**
+
+| # | Task | Details |
+|---|------|---------|
+| 3a | **Voice transcript persistence** | Save call data (transcript, turns, sentiment, qualification score, buying signals) to Firestore `conversations` collection when voice calls end. Currently in-memory only in `src/lib/voice/ai-conversation-service.ts`. |
+| 3b | **Auto-analysis trigger** | Hook the conversation analysis engine (`src/lib/conversation/conversation-engine.ts`) to fire automatically after every call/chat completion. Currently only runs on manual API call to `POST /api/conversation/analyze`. |
+| 3c | **ConversationMemory service** | New service at `src/lib/conversation/conversation-memory.ts`. Unified retrieval layer that queries across `chatSessions`, `conversations`, `smsMessages`, `orchestratorConversations` by leadId/customerId. Returns structured data, not raw transcripts. |
+| 3d | **Lead Briefing generator** | Method on ConversationMemory that synthesizes all recent interactions into a concise context block. Uses the analysis data (sentiment, objections, buying signals, next steps) to build the briefing. May use LLM for final synthesis. |
+| 3e | **Agent integration** | Update agent work cycles (Revenue Manager, Outreach Manager, Voice AI) to call `ConversationMemory.brief(leadId)` before acting on a lead. Add to the standard lead preparation workflow. |
+
+**Retention Policy:**
+| Data | Retention | Rationale |
+|------|-----------|-----------|
+| Full transcripts | 90 days | Compliance and dispute resolution |
+| Conversation summaries | 1 year | Agents need history without storage cost |
+| Lead briefings | Generated on demand | Always fresh, built from summaries |
+| Analysis results | 1 year (alongside summaries) | Sentiment trends, objection history |
+
+**Existing Infrastructure to Leverage:**
+- `src/lib/conversation/conversation-engine.ts` — Full analysis engine (sentiment, talk ratio, objections, coaching, competitor mentions). Already built, just needs auto-triggering.
+- `src/lib/conversation/types.ts` — Comprehensive types for Conversation, ConversationAnalysis, SentimentAnalysis, ObjectionAnalysis, etc.
+- `src/lib/agent/chat-session-service.ts` — Chat message storage and retrieval already working.
+- `src/lib/firebase/collections.ts` — All Firestore collection paths already defined.
+- `src/app/api/conversation/analyze/route.ts` — Analysis API with rate limiting and caching.
+
+**What This Does NOT Include:**
+- Semantic/vector search (embedding-based retrieval) — future enhancement, not needed for v1
+- Email body archival (only metadata stored today) — separate effort
+- Video conversation transcripts — not yet implemented
+- Long-term learning/agent improvement from conversations — future episodic memory layer
 
 ---
 
-## Key Files Reference
+### What We Are NOT Building Right Now
+- **No plugin/hook registry** — the internal infrastructure (EventRouter, SignalBus, MemoryVault, PluginManager) is powerful but intentionally closed. No external API surface for third-party tools.
+- **No external agent registration API** — the 52-agent swarm is a closed system
+- **No public REST API / OpenAPI spec** — all 219 endpoints are internal dashboard routes
+- **No "WordPress extensibility"** — deferred until post-launch
+
+### External Integration Capabilities (What Works Today)
+
+**Outbound (SalesVelocity calls external APIs) — WORKS:**
+- OAuth integrations: Gmail, Outlook, Slack, Teams, QuickBooks, Xero, Stripe, PayPal
+- API key storage for: SendGrid, Twilio, Clearbit, HubSpot, OpenRouter
+- Workflow HTTP action: full HTTP requests (GET/POST/PUT/PATCH/DELETE) with auth, headers, response parsing
+
+**Inbound (External systems call SalesVelocity) — LIMITED:**
+- `POST /api/workflows/webhooks/{workflowId}` — generic webhook trigger with optional HMAC verification (the ONE viable two-way integration path)
+- `GET/POST /api/public/forms/{formId}` — public form fetch + submission (no auth required)
+- 6 service-specific webhooks: Stripe, SendGrid, SendGrid Inbound, Twilio SMS, Twilio Voice, Gmail
+
+**Not Exposed Externally:**
+- EventRouter (no HTTP endpoint for emit/subscribe)
+- SignalBus (purely in-memory, no HTTP wrapper)
+- MemoryVault (no REST API)
+- PluginManager (code exists at `src/lib/plugins/plugin-manager.ts` with full registration, tool schemas, rate limiting, OpenAI function format — but zero API routes wrap it)
+- Agent swarm (closed, no external agent registration)
+- Outbound webhook dispatch (UI scaffolding only, no backend)
+
+---
+
+## Key Files
 
 | File | Purpose |
 |------|---------|
-| `CLAUDE.md` | Binding governance — READ FIRST every session |
+| `CLAUDE.md` | Binding governance for all Claude Code sessions |
+| `docs/single_source_of_truth.md` | Authoritative architecture doc |
 | `ENGINEERING_STANDARDS.md` | Code quality requirements |
+| `AGENT_REGISTRY.json` | AI agent configurations (52 agents) |
 | `src/lib/constants/platform.ts` | DEFAULT_ORG_ID and platform identity |
-| `src/lib/firebase/collections.ts` | Collection names and path helpers |
-| `src/lib/db/firestore-service.ts` | Generic Firestore CRUD layer |
-| `src/types/lead-scoring.ts` | Lead scoring interfaces + DEFAULT_SCORING_RULES |
-| `src/types/social.ts` | Social media post interfaces |
-| `src/types/ecommerce.ts` | Order/cart interfaces |
-| `src/types/workflow.ts` | Workflow interfaces |
-| `scripts/seed-demo-account.ts` | Part 1 seed script (CRM data) |
-| `scripts/seed-demo-account-part2.ts` | Part 2 seed script (platform data) |
+| `src/lib/orchestration/event-router.ts` | Declarative rules engine — 25+ event rules → Manager actions via SignalBus |
+| `src/lib/orchestrator/signal-bus.ts` | Agent-to-agent communication (BROADCAST, DIRECT, BUBBLE_UP, BUBBLE_DOWN) |
+| `src/lib/agents/shared/memory-vault.ts` | Shared agent knowledge store (Firestore-backed, cold-start safe) |
+| `src/lib/conversation/conversation-engine.ts` | Conversation analysis engine (sentiment, objections, coaching) |
+| `src/lib/conversation/types.ts` | Comprehensive conversation/analysis type definitions |
+| `src/lib/agent/chat-session-service.ts` | Chat session + message storage/retrieval |
+| `src/lib/conversation/conversation-memory.ts` | ConversationMemory service — unified retrieval + Lead Briefing generator |
+| `src/lib/voice/ai-conversation-service.ts` | Voice AI conversation handling (transcripts now persisted to Firestore) |
+| `src/lib/plugins/plugin-manager.ts` | Plugin registration system (built but not exposed via API) |
+| `src/lib/orchestrator/jasper-command-authority.ts` | Executive briefings, approval gateway, command issuance |
+| `src/lib/agents/base-manager.ts` | BaseManager with reviewOutput(), applyPendingMutations(), requestFromManager() |
+| `src/lib/workflows/actions/http-action.ts` | Workflow HTTP action — calls external APIs with full auth support |
+| `vercel.json` | 7 cron entries for autonomous operations |
+| `firestore.indexes.json` | Composite indexes (defined but NOT deployed) |
+
+### Autonomous Operations — Key Files
+
+| File | Phase | What It Does |
+|------|-------|-------------|
+| `src/lib/orchestrator/event-router.ts` | 1a | Rules engine — 25+ event rules mapping business events → Manager actions |
+| `src/app/api/cron/operations-cycle/route.ts` | 1b | 3-tier cron: 4h operational, 24h strategic, weekly executive |
+| `src/lib/agents/revenue/manager.ts` | 3 | Auto-progression, intelligence-to-outreach bridge, win/loss feedback |
+| `src/lib/agents/outreach/manager.ts` | 4 | Reply → action chains, adaptive timing, ghosting recovery |
+| `src/lib/outbound/sequence-engine.ts` | 4b | Engagement-based adaptive timing |
+| `src/lib/agents/content/manager.ts` | 5a, 7 | Production hub with priority queue + contextual artifact generation |
+| `src/lib/agents/intelligence/manager.ts` | 5b | Daily parallel sweeps |
+| `src/lib/agents/builder/manager.ts` | 6a | Analytics-driven page optimization |
+| `src/lib/agents/commerce/manager.ts` | 6b | Cart abandonment recovery, loyalty tiers |
+| `src/lib/orchestrator/jasper-command-authority.ts` | 8 | Jasper command authority |
+
+### Post-Phase 8 — Key Files
+
+| File | What It Does |
+|------|-------------|
+| `vercel.json` | 7 cron entries for all autonomous crons |
+| `src/app/api/orchestrator/executive-briefing/route.ts` | GET — generates executive briefing |
+| `src/app/api/orchestrator/approvals/route.ts` | GET/POST — pending approvals + decisions |
+| `src/app/api/orchestrator/command/route.ts` | GET/POST — issue commands, overrides, objectives |
+| `src/app/(dashboard)/executive-briefing/page.tsx` | Executive briefing dashboard |
+
+---
+
+## Test Infrastructure
+
+| File | Purpose |
+|------|---------|
+| `jest.setup.js` | Connects to REAL Firebase DEV database via Admin SDK (by design) |
+| `jest.globalTeardown.js` | Post-test cleanup — calls db-manager.js, throws on failure |
+| `scripts/db-manager.js` | Test data cleanup — hybrid detection (flags + patterns + known IDs) |
+| `tests/helpers/test-cleanup.ts` | TestCleanupTracker class for integration tests |
+| `tests/helpers/e2e-cleanup-utility.ts` | E2ECleanupTracker for E2E tests (E2E_TEMP_ prefix) |
+
+## Documentation Inventory
+
+**Root docs** (5 files): CLAUDE.md, README.md, ENGINEERING_STANDARDS.md, COMPETITIVE_ANALYSIS_BRIEFING.md, SOCIAL-MEDIA-AI-SPEC.md
+**docs/** (3 files): single_source_of_truth.md, playwright-audit-2026-01-30.md, test-results-summary.md
+**docs/master_library/** (16 files): Per-feature audit summaries from Feb 5, 2026
+**docs/archive/** (16 files): Historical records — do not reference for architectural decisions
+**.claude/agents/** (6 files): QA and architecture agent prompts

@@ -12,15 +12,15 @@ All data is fetched from Firestore. No hard-coded mocks detected. Theme complian
 ## MANUAL SOP
 
 ### Purpose
-Lead Nurture Campaigns enable automated, multi-step email sequences designed to warm up leads over time. Campaigns can be triggered by lead status changes, form submissions, or manual enrollment, and include sophisticated timing and personalization.
+Lead Nurture Campaigns enable automated, multi-step email sequences designed to warm up leads over time. The current implementation supports email-only workflows with timing delays and manual enrollment.
 
 ### Steps to Execute Manually
 
 1. **Access Nurture Campaigns**
-   - Navigate to `/dashboard` (Main Dashboard)
+   - Navigate to `/(dashboard)` (Main Dashboard)
    - Click "Outbound" in the sidebar
    - Select "Nurture"
-   - Alternatively, navigate to `/nurture`
+   - Alternatively, navigate to `/(dashboard)/nurture`
 
 2. **View Campaign List**
    - Campaigns display as cards
@@ -41,23 +41,15 @@ Lead Nurture Campaigns enable automated, multi-step email sequences designed to 
      - Product education
      - Custom
 
-4. **Configure Trigger**
-   - Set enrollment trigger:
-     - Lead status change
-     - Form submission
-     - Tag added
+4. **Configure Enrollment**
+   - Current implementation supports:
      - Manual enrollment
-     - Segment membership
 
 5. **Add Campaign Steps**
    - Click "Add Step"
-   - Step types:
+   - Step types available:
      - Send Email
      - Wait (delay)
-     - Send SMS
-     - Update Lead
-     - Add Tag
-     - Remove from campaign
 
 6. **Configure Email Steps**
    - Select email template
@@ -75,25 +67,18 @@ Lead Nurture Campaigns enable automated, multi-step email sequences designed to 
      - Business days only
    - Set specific time of day
 
-8. **Set Exit Conditions**
-   - Define when to remove leads:
-     - Lead converts to deal
-     - Lead unsubscribes
-     - Lead replies
-     - Manual removal
-
-9. **Preview Campaign**
+8. **Preview Campaign**
    - Click "Preview"
    - See visual flow of steps
    - Review timing calculations
    - Test with sample data
 
-10. **Activate Campaign**
+9. **Activate Campaign**
     - Click "Save & Activate"
     - Campaign begins processing
-    - New triggers enroll leads
+    - Manually enroll leads to start sequences
 
-11. **Monitor Performance**
+10. **Monitor Performance**
     - View campaign stats:
       - Enrolled count
       - Active count
@@ -103,11 +88,6 @@ Lead Nurture Campaigns enable automated, multi-step email sequences designed to 
       - Sent count
       - Open rate
       - Click rate
-
-12. **A/B Test Emails**
-    - Create variant for any email step
-    - Split traffic percentage
-    - Track winning variant
 
 ---
 
@@ -147,12 +127,6 @@ Lead Nurture Campaigns enable automated, multi-step email sequences designed to 
 
 ---
 
-**[Visual]:** Set exit condition panel. Check "Lead converts to deal".
-
-**[Audio]:** "Smart exit conditions stop the sequence at the right moment. Lead converts? They exit automatically. No awkward 'still interested?' emails after they've bought."
-
----
-
 **[Visual]:** Campaign stats dashboard. Funnel showing enrolled → opened → clicked → converted.
 
 **[Audio]:** "Track the entire journey. See how many leads enter, engage, and convert. Identify which steps work and which need optimization."
@@ -177,4 +151,15 @@ Lead Nurture Campaigns enable automated, multi-step email sequences designed to 
 
 ---
 
-*Last Audited: February 5, 2026*
+## Planned Features (Not Yet Implemented)
+
+- **SMS Steps** - Send SMS messages as part of nurture sequences
+- **Task Steps** - Create tasks for sales team as part of automation
+- **Exit Conditions** - Smart removal of leads when they convert, unsubscribe, or reply
+- **A/B Testing** - Create email variants and track winning performance
+- **Trigger-Based Enrollment** - Auto-enroll leads based on status changes, form submissions, tags, or segment membership
+- **Additional Step Actions** - Update lead fields, add/remove tags, and custom actions within sequences
+
+---
+
+*Last Audited: February 12, 2026*

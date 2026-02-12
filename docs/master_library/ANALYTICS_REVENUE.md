@@ -23,13 +23,12 @@ The Revenue Analytics Dashboard provides comprehensive visibility into revenue p
    - Alternatively, navigate to `/analytics/revenue`
 
 2. **Select Time Period**
-   - Use date picker at top
+   - Use period selector at top
    - Quick selections:
-     - This Week
-     - This Month
-     - This Quarter
-     - This Year
-     - Custom Range
+     - Last 7 Days (7d)
+     - Last 30 Days (30d)
+     - Last 90 Days (90d)
+     - All Time (all)
 
 3. **Review Key Metrics**
    - Top KPI cards show:
@@ -72,22 +71,29 @@ The Revenue Analytics Dashboard provides comprehensive visibility into revenue p
      - Risk factors
      - Upside opportunities
 
-9. **Compare Periods**
-   - Enable comparison mode
-   - Select comparison period
-   - Charts show overlay comparison
+9. **View Forecast**
+    - AI-generated forecast shows predicted revenue
+    - Confidence intervals displayed
+    - Based on pipeline and historical trends
 
-10. **Export Reports**
-    - Click "Export"
-    - Select format (PDF, CSV, Excel)
-    - Choose metrics to include
-    - Download report
+---
 
-11. **Set Up Alerts**
-    - Click "Configure Alerts"
-    - Set thresholds (e.g., daily revenue < $X)
-    - Choose notification method
-    - Receive alerts when triggered
+## Planned Features (Not Yet Implemented)
+
+### Period Comparison
+- **Comparison Mode**: Overlay previous period or year-over-year comparison
+- **Growth Indicators**: Automated trend detection and anomaly alerts
+- **Benchmark Comparison**: Compare against industry standards
+
+### Data Export
+- **Export to PDF**: Professional revenue reports for stakeholders
+- **Export to CSV/Excel**: Raw data export for further analysis
+- **Scheduled Reports**: Automated report delivery via email
+
+### Alerts & Notifications
+- **Revenue Alerts**: Get notified when revenue drops below threshold
+- **Goal Tracking**: Set revenue targets and track progress
+- **Anomaly Detection**: AI-powered alerts for unusual revenue patterns
 
 ---
 
@@ -164,4 +170,4 @@ The Revenue Analytics Dashboard provides comprehensive visibility into revenue p
 
 ---
 
-*Last Audited: February 5, 2026*
+*Last Audited: February 12, 2026*

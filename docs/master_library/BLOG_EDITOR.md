@@ -17,10 +17,10 @@ The Blog Editor is a visual WYSIWYG editor for creating and managing blog conten
 ### Steps to Execute Manually
 
 1. **Access Blog Editor**
-   - Navigate to `/dashboard` (Main Dashboard)
+   - Navigate to `/(dashboard)` (Main Dashboard)
    - Click "Website" in the sidebar
    - Select "Blog" → "New Post"
-   - Alternatively, navigate to `/website/blog/editor`
+   - Alternatively, navigate to `/(dashboard)/website/blog/editor`
 
 2. **Start New Post**
    - Editor opens with blank post
@@ -44,9 +44,8 @@ The Blog Editor is a visual WYSIWYG editor for creating and managing blog conten
 
 5. **Add Featured Image**
    - Click "Featured Image" in right panel
-   - Upload from computer or select from library
+   - Paste image URL or external image link
    - Add alt text for SEO
-   - Crop if needed
 
 6. **Configure SEO**
    - Scroll to SEO section in right panel
@@ -113,9 +112,9 @@ The Blog Editor is a visual WYSIWYG editor for creating and managing blog conten
 
 ---
 
-**[Visual]:** Click image button. Upload modal appears. Image inserts into content.
+**[Visual]:** Click image button. URL input modal appears. Paste image URL. Image inserts into content.
 
-**[Audio]:** "Add images with drag and drop. They're automatically optimized for web performance and accessibility."
+**[Audio]:** "Add images by URL. Simply paste the link and your image appears, ready for the web."
 
 ---
 
@@ -153,12 +152,19 @@ The Blog Editor is a visual WYSIWYG editor for creating and managing blog conten
 
 | Data Point | Firestore Path | Status |
 |------------|----------------|--------|
-| Blog Posts | `organizations/rapid-compliance-root/blogPosts/{postId}` | LIVE |
+| Blog Posts | `organizations/rapid-compliance-root/website/config/blog-posts/{postId}` | LIVE |
 | Categories | `organizations/rapid-compliance-root/blogCategories` | LIVE |
 | Tags | Stored as array in post document | LIVE |
-| Media Library | `organizations/rapid-compliance-root/media` | LIVE |
 | Post Analytics | `organizations/rapid-compliance-root/blogAnalytics/{postId}` | LIVE |
 
 ---
 
-*Last Audited: February 5, 2026*
+## Planned Features (Not Yet Implemented)
+
+- **Media Library**: Upload and manage images directly in the platform with file browser and organization
+- **Image Upload**: Direct file upload from computer instead of URL-only input
+- **Image Editing**: Built-in crop, resize, and basic editing tools
+
+---
+
+*Last Updated: February 12, 2026*

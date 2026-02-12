@@ -1,7 +1,7 @@
 # SalesVelocity.ai - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** February 12, 2026 (Jasper Voice: removed native TTS stub, wired ElevenLabs + Unreal Speech as only providers, added Voice & Speech settings page at /settings/ai-agents/voice)
+**Last Updated:** February 12, 2026 (Documentation & Website Editor fix: auto-load homepage in editor, 3-panel blog editor, fixed 16 master library docs, created WEBSITE_BUILDER.md)
 **Branches:** `dev` (latest)
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Architecture:** Single-Tenant (Penthouse Model) - NOT a SaaS platform

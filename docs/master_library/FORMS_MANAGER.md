@@ -17,10 +17,10 @@ The Forms Manager is a comprehensive tool for creating, managing, and analyzing 
 ### Steps to Execute Manually
 
 1. **Access Forms Manager**
-   - Navigate to `/dashboard` (Main Dashboard)
+   - Navigate to `/(dashboard)` (Main Dashboard)
    - Click "Lead Gen" in the sidebar
    - Select "Forms"
-   - Alternatively, navigate to `/forms`
+   - Alternatively, navigate to `/(dashboard)/forms`
 
 2. **View Existing Forms**
    - Forms display in card or list view
@@ -63,12 +63,9 @@ The Forms Manager is a comprehensive tool for creating, managing, and analyzing 
      - Validation rules
      - Help text
 
-6. **Set Form Logic (Optional)**
-   - Add conditional logic:
-     - Show field if...
-     - Hide field if...
-     - Skip to section if...
-   - Create branching paths
+6. **Configure Field Display**
+   - Set field visibility and ordering
+   - Organize fields into sections
 
 7. **Configure Submission Actions**
    - What happens after submit:
@@ -130,11 +127,6 @@ The Forms Manager is a comprehensive tool for creating, managing, and analyzing 
 
 ---
 
-**[Visual]:** Add conditional logic. "If Industry = Healthcare, show HIPAA Compliance checkbox"
-
-**[Audio]:** "Add smart logic that adapts to responses. Show different fields based on answers. Create forms that feel personal."
-
----
 
 **[Visual]:** Click "Submission Actions". Check "Create Lead" and "Send Notification".
 
@@ -170,13 +162,30 @@ The Forms Manager is a comprehensive tool for creating, managing, and analyzing 
 
 | Data Point | Firestore Path | Status |
 |------------|----------------|--------|
-| Form Definitions | `organizations/rapid-compliance-root/forms/{formId}` | LIVE |
-| Form Fields | `organizations/rapid-compliance-root/forms/{formId}/fields` | LIVE |
-| Submissions | `organizations/rapid-compliance-root/forms/{formId}/submissions` | LIVE |
-| Form Templates | `organizations/rapid-compliance-root/formTemplates` | LIVE |
-| Analytics | `organizations/rapid-compliance-root/forms/{formId}/analytics` | LIVE |
-| View Events | `organizations/rapid-compliance-root/forms/{formId}/views` | LIVE |
+| Form Definitions | `organizations/rapid-compliance-root/workspaces/{workspaceId}/forms/{formId}` | LIVE |
+| Form Fields | `organizations/rapid-compliance-root/workspaces/{workspaceId}/forms/{formId}/fields/{fieldId}` | LIVE |
+| Submissions | `organizations/rapid-compliance-root/workspaces/{workspaceId}/forms/{formId}/submissions/{submissionId}` | LIVE |
+| Form Templates | `organizations/rapid-compliance-root/workspaces/{workspaceId}/formTemplates/{templateId}` | LIVE |
+| Analytics | `organizations/rapid-compliance-root/workspaces/{workspaceId}/forms/{formId}/analytics/{date}` | LIVE |
+| View Events | `organizations/rapid-compliance-root/workspaces/{workspaceId}/forms/{formId}/views/{viewId}` | LIVE |
 
 ---
 
-*Last Audited: February 5, 2026*
+## Implementation Notes
+
+**Field Storage**: Form fields are stored as documents in a subcollection (`forms/{formId}/fields/{fieldId}`), not as nested arrays within the form document. Each field has its own document with configuration, validation rules, and ordering information.
+
+**Workspace Isolation**: All forms are workspace-scoped. Forms in one workspace cannot be accessed by another workspace.
+
+---
+
+## Planned Features (Not Yet Implemented)
+
+- **Conditional Logic**: Show/hide fields based on user responses
+- **Branching Paths**: Skip to different sections based on answers
+- **Field Dependencies**: Dynamic field validation based on other field values
+- **Multi-page Conditional Flow**: Page visibility controlled by previous answers
+
+---
+
+*Last Updated: February 12, 2026*

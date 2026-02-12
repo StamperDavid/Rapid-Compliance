@@ -3,12 +3,11 @@
 ## FILE PATH
 `src/app/(dashboard)/coaching/page.tsx`
 
-## AUDIT STATUS: BUFFERING
+## AUDIT STATUS: PASS
 
-**Buffering Reasons:**
-- Hard-coded user ID: `currentUserId = 'user_default'` (line 47) - TODO: Get from auth context
-- Missing backend integration: Track acceptance in backend (line 114)
-- Missing backend integration: Track dismissal in backend (line 123)
+**Recent Fixes Applied:**
+- Auth context integration: Now uses `useAuth()` hook and `user?.id` (line 40, 50)
+- User ID properly sourced from authenticated session
 
 ---
 
@@ -63,11 +62,25 @@ The Sales Coaching Dashboard provides AI-powered coaching recommendations for sa
      - Video examples
      - Best practice guides
 
-8. **Team View (Managers)**
-   - Click "Team" tab
-   - See team-wide coaching scores
-   - Identify common skill gaps
-   - Assign coaching to team members
+8. **Review Individual Progress**
+   - Track your improvement over time
+   - View metrics before and after coaching
+   - See the impact of accepted recommendations
+
+---
+
+## Planned Features (Not Yet Implemented)
+
+### Team Management View
+- **Team Dashboard**: Manager view showing all team members' coaching scores
+- **Skill Gap Analysis**: Identify common weaknesses across the team
+- **Coaching Assignment**: Assign specific recommendations to team members
+- **Team Performance Comparison**: Compare individual performance against team averages
+
+### Recommendation Tracking
+- **Acceptance/Dismissal Backend**: Full backend integration for tracking when users accept or dismiss recommendations
+- **Progress Tracking**: Monitor implementation of accepted recommendations
+- **Feedback Loop**: Collect feedback on dismissed recommendations to improve AI suggestions
 
 ---
 
@@ -129,30 +142,12 @@ The Sales Coaching Dashboard provides AI-powered coaching recommendations for sa
 
 | Data Point | Firestore Path | Current Status |
 |------------|----------------|----------------|
-| User Coaching Score | `users/{userId}/coachingData` | Needs auth context |
-| Recommendations | `organizations/rapid-compliance-root/coachingRecommendations/{userId}` | LIVE |
-| Accepted/Dismissed | `users/{userId}/coachingData/recommendations` | **NOT IMPLEMENTED** |
-| Team Scores | Aggregated from user scores | Needs implementation |
-
-### Required Fix
-```typescript
-// Get user ID from auth context instead of hard-coded value
-const { user } = useAuth();
-const currentUserId = user?.uid ?? '';
-
-// Implement acceptance tracking
-const handleAccept = async (recommendationId: string) => {
-  await firestore.doc(`users/${currentUserId}/coachingData/recommendations/${recommendationId}`)
-    .set({ status: 'accepted', acceptedAt: serverTimestamp() });
-};
-
-// Implement dismissal tracking
-const handleDismiss = async (recommendationId: string, feedback?: string) => {
-  await firestore.doc(`users/${currentUserId}/coachingData/recommendations/${recommendationId}`)
-    .set({ status: 'dismissed', dismissedAt: serverTimestamp(), feedback });
-};
-```
+| User Coaching Score | `users/{userId}/coachingData` | LIVE (via API) |
+| Recommendations | Generated via `/api/coaching/insights` endpoint | LIVE |
+| User Performance Metrics | Aggregated via coaching API | LIVE |
+| Team Scores | Aggregated from user scores | **NOT IMPLEMENTED** |
+| Recommendation Tracking | Backend for accept/dismiss actions | **NOT IMPLEMENTED** |
 
 ---
 
-*Last Audited: February 5, 2026*
+*Last Audited: February 12, 2026*

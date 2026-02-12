@@ -12,7 +12,11 @@ All data is fetched from Firestore. No hard-coded mocks detected. Theme complian
 ## MANUAL SOP
 
 ### Purpose
-The AI Email Writer is a smart email composition tool that generates personalized sales emails using AI. It integrates with deal data, battlecards, and contact information to create contextually relevant messages that drive responses.
+The AI Email Writer has TWO implementations:
+1. **Standalone Email Writer** (`/email-writer`): A dedicated page for composing individual sales emails using AI
+2. **Nurture Campaign Email Steps** (`/outbound/nurture`): Email generation as part of multi-step nurture sequences
+
+Both implementations use the same AI engine to generate personalized sales emails using deal data, battlecards, and contact information to create contextually relevant messages that drive responses.
 
 ### Steps to Execute Manually
 
@@ -24,11 +28,11 @@ The AI Email Writer is a smart email composition tool that generates personalize
 
 2. **Select Email Type**
    - Choose from 5 template types:
-     - **Intro Email**: First touch for new prospects
-     - **Follow-up**: Continue conversation
-     - **Proposal**: Send pricing/offer
-     - **Close**: Final push for decision
-     - **Re-engagement**: Win back cold leads
+     - **Intro**: First contact with prospect
+     - **Follow-up**: After initial contact or meeting
+     - **Proposal**: Sending proposal/pricing
+     - **Close**: Final push before decision
+     - **Re-engagement**: Revive cold/stalled deals
 
 3. **Select Recipient**
    - Search for contact by name or email
@@ -42,7 +46,6 @@ The AI Email Writer is a smart email composition tool that generates personalize
    - Select associated deal if applicable
    - Email Writer loads:
      - Deal value and stage
-     - Competitive battlecards
      - Previous emails in thread
 
 5. **Generate AI Draft**
@@ -50,7 +53,6 @@ The AI Email Writer is a smart email composition tool that generates personalize
    - AI analyzes context:
      - Contact's role and industry
      - Deal stage and history
-     - Competitor positioning
      - Your brand voice
    - Draft appears in editor
 
@@ -61,30 +63,24 @@ The AI Email Writer is a smart email composition tool that generates personalize
    - Add or remove sections
    - Check tone alignment
 
-7. **A/B Test (Optional)**
-   - Click "Create Variant"
-   - Generate alternative version
-   - Choose winning subject/body
-   - Track which performs better
-
-8. **Preview Email**
+7. **Preview Email**
    - Click "Preview"
    - See exactly how recipient sees it
    - Check formatting on mobile
    - Verify personalization tokens
 
-9. **Send Email**
+8. **Send Email**
    - Click "Send Now" or "Schedule"
    - If scheduling, select date/time
    - Email queues for delivery
 
-10. **Track Performance**
-    - View email in history
-    - Monitor:
-      - Open rate
-      - Click rate
-      - Reply received
-      - Meeting booked
+9. **Track Performance**
+   - View email in history
+   - Monitor:
+     - Open rate
+     - Click rate
+     - Reply received
+     - Meeting booked
 
 ---
 
@@ -118,17 +114,6 @@ The AI Email Writer is a smart email composition tool that generates personalize
 
 ---
 
-**[Visual]:** Battlecard panel slides in showing competitor comparison. AI highlights differentiators.
-
-**[Audio]:** "Dealing with a competitor? AI pulls in your battlecard data automatically. Your email now addresses their concerns before they even ask."
-
----
-
-**[Visual]:** "Create Variant" button clicked. Two email versions appear side by side.
-
-**[Audio]:** "Not sure which approach works better? Create A/B variants and let data decide. Track opens, clicks, and replies for each."
-
----
 
 **[Visual]:** Click "Send". Email whooshes away. Analytics dashboard shows email tracked.
 
@@ -155,4 +140,12 @@ The AI Email Writer is a smart email composition tool that generates personalize
 
 ---
 
-*Last Audited: February 5, 2026*
+## Planned Features (Not Yet Implemented)
+
+- **Battlecard Integration**: Automatic competitor positioning data from battlecards
+- **A/B Testing**: Create email variants and track performance comparison
+- **Multi-variant Generation**: Generate multiple versions in one click
+
+---
+
+*Last Updated: February 12, 2026*

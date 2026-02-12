@@ -1,7 +1,7 @@
 # FEATURE NAME: Living Ledger - Deal Intelligence Dashboard
 
 ## FILE PATH
-`src/app/admin/living-ledger/page.tsx`
+`src/app/(dashboard)/living-ledger/page.tsx`
 
 ## AUDIT STATUS: ✅ PASS
 
@@ -25,10 +25,10 @@ The Living Ledger is a real-time deal intelligence dashboard that provides a uni
 ### Steps to Execute Manually
 
 1. **Access the Living Ledger**
-   - Navigate to `/admin` (Admin Command Center)
+   - Navigate to `/(dashboard)/dashboard` (Admin Command Center)
    - Click "CRM" in the sidebar navigation
    - Select "Living Ledger" from submenu
-   - Alternatively, navigate directly to `/admin/living-ledger`
+   - Alternatively, navigate directly to `/(dashboard)/living-ledger`
 
 2. **Review Pipeline Overview**
    - Locate the pipeline summary at the top
@@ -136,6 +136,13 @@ The Living Ledger is a real-time deal intelligence dashboard that provides a uni
 ### Implementation
 Deals are fetched from the CRM API which queries Firestore. Empty state is displayed when no deals exist, allowing users to add their own data.
 
+### Note on Firestore Path Structure
+The current Firestore path includes the workspace layer (`workspaces/default/`), which aligns with the proper data hierarchy:
+```
+organizations/{orgId}/workspaces/{workspaceId}/entities/deals/records
+```
+This structure correctly implements workspace-level data isolation for multi-workspace support.
+
 ---
 
-*Last Audited: February 5, 2026*
+*Last Audited: February 12, 2026*

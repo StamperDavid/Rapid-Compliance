@@ -17,9 +17,9 @@ The Leads Management module is the central hub for tracking and nurturing potent
 ### Steps to Execute Manually
 
 1. **Access Leads**
-   - Navigate to `/dashboard` (Main Dashboard)
+   - Navigate to `/(dashboard)` (Main Dashboard)
    - Click "Leads" in the CRM section of the sidebar
-   - Alternatively, navigate directly to `/leads`
+   - Alternatively, navigate directly to `/(dashboard)/leads`
 
 2. **View Lead List**
    - Leads display in a searchable table
@@ -67,9 +67,8 @@ The Leads Management module is the central hub for tracking and nurturing potent
    - Status change logs automatically
 
 8. **Assign Lead**
-   - From lead details, click "Owner" field
-   - Select team member from dropdown
-   - Assignment notification sent automatically
+   - Owner assignment is stored in the lead record
+   - Owner field can be updated when editing a lead
 
 9. **Add Notes**
    - In lead details, scroll to Notes section
@@ -79,9 +78,9 @@ The Leads Management module is the central hub for tracking and nurturing potent
 
 10. **Convert Lead to Deal**
     - From qualified lead, click "Convert to Deal"
-    - Enter deal value and stage
+    - Conversion uses hardcoded default values (amount: $10,000, probability: 25%, stage: "Qualification")
     - Lead status changes to "Converted"
-    - New deal created in pipeline
+    - New deal created in pipeline with default values
 
 ---
 
@@ -140,8 +139,15 @@ The Leads Management module is the central hub for tracking and nurturing potent
 | Lead Records | `organizations/rapid-compliance-root/workspaces/{wsId}/entities/leads/records` | LIVE |
 | Lead Schema | `organizations/rapid-compliance-root/workspaces/{wsId}/schemas/leads` | LIVE |
 | Lead Scores | Calculated by `LEAD_QUALIFIER` specialist agent | LIVE |
-| Activity Log | `organizations/rapid-compliance-root/conversations` filtered by leadId | LIVE |
+| Activity Log | `organizations/rapid-compliance-root/workspaces/{wsId}/entities/leads/records/{leadId}/activities` | LIVE |
 
 ---
 
-*Last Audited: February 5, 2026*
+## Planned Features (Not Yet Implemented)
+
+- **Owner Assignment Dropdown** - Interactive UI for assigning leads to team members with real-time notifications
+- **Custom Deal Conversion Values** - Allow users to input deal amount, probability, and stage when converting leads instead of using hardcoded defaults
+
+---
+
+*Last Audited: February 12, 2026*

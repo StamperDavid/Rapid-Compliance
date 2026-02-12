@@ -17,9 +17,9 @@ The Contacts Directory is the central repository for all contact records in your
 ### Steps to Execute Manually
 
 1. **Access Contacts**
-   - Navigate to `/dashboard` (Main Dashboard)
+   - Navigate to `/(dashboard)` (Main Dashboard)
    - Click "Contacts" in the CRM section
-   - Alternatively, navigate to `/contacts`
+   - Alternatively, navigate to `/(dashboard)/contacts`
 
 2. **Browse Contact Cards**
    - Contacts display in a card-based grid
@@ -40,11 +40,8 @@ The Contacts Directory is the central repository for all contact records in your
      - Phone
 
 4. **Filter Contacts**
-   - Filter by:
-     - Company
-     - Tags
-     - VIP status
-     - Last contact date
+   - Basic filtering available by search
+   - VIP status badge visible on cards
 
 5. **View Contact Details**
    - Click any contact card
@@ -52,7 +49,6 @@ The Contacts Directory is the central repository for all contact records in your
      - Complete contact information
      - Company details
      - Associated deals
-     - Communication timeline
      - Notes and tags
      - Files/documents
 
@@ -83,22 +79,9 @@ The Contacts Directory is the central repository for all contact records in your
    - In contact profile
    - Click "Add Tag"
    - Select existing or create new
-   - Tags enable filtering
+   - Tags stored in contact document
 
-10. **Log Activity**
-    - In contact profile
-    - Click "Log Activity"
-    - Select type (Call, Email, Meeting, Note)
-    - Add description
-    - Save to timeline
-
-11. **Link to Deals**
-    - In contact profile
-    - Click "Link Deal"
-    - Select from open deals
-    - Assign contact role
-
-12. **Export Contacts**
+10. **Export Contacts**
     - Click "Export" button
     - Select fields to export
     - Choose format (CSV)
@@ -172,10 +155,19 @@ The Contacts Directory is the central repository for all contact records in your
 |------------|----------------|--------|
 | Contact Records | `organizations/rapid-compliance-root/workspaces/{wsId}/entities/contacts/records` | LIVE |
 | Contact Schema | `organizations/rapid-compliance-root/workspaces/{wsId}/schemas/contacts` | LIVE |
-| Activity Timeline | `organizations/rapid-compliance-root/conversations` filtered by contactId | LIVE |
+| Activity Timeline | `organizations/rapid-compliance-root/workspaces/{wsId}/entities/contacts/records/{contactId}/activities` | LIVE |
 | Deal Links | Referenced in deal documents | LIVE |
 | Tags | Stored as array in contact document | LIVE |
 
 ---
 
-*Last Audited: February 5, 2026*
+## Planned Features (Not Yet Implemented)
+
+- **Advanced Filters** - Filtering by company, tags, VIP status, and last contact date in the UI
+- **Activity Timeline UI** - Logging activities (calls, emails, meetings, notes) directly from the contact profile
+- **Deal Linking UI** - Linking contacts to deals with role assignment from the contact profile
+- **Tag Management UI** - Visual tag selection and management interface
+
+---
+
+*Last Audited: February 12, 2026*

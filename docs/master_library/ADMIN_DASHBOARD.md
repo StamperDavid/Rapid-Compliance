@@ -1,7 +1,7 @@
 # FEATURE NAME: Admin Command Center Dashboard
 
 ## FILE PATH
-`src/app/admin/page.tsx`
+`src/app/(dashboard)/dashboard/page.tsx`
 
 ## AUDIT STATUS: ✅ PASS
 
@@ -23,32 +23,22 @@ The Admin Command Center is the CEO-level dashboard for SalesVelocity.ai platfor
 ### Steps to Execute Manually
 
 1. **Access the Dashboard**
-   - Navigate to `https://salesvelocity.ai/admin`
+   - Navigate to `https://salesvelocity.ai/(dashboard)/dashboard`
    - Authenticate with superadmin credentials
    - Dashboard loads automatically after authentication
 
-2. **Review Platform Health**
-   - Locate the "Platform Health" section at the top
-   - Verify system status indicators (green = healthy, yellow = degraded, red = critical)
-   - Note any warning banners or alerts
-
-3. **Check AI Agent Status**
+2. **Check AI Agent Status**
    - Find the "AI Agents" KPI card
-   - Verify the count shows live agent count from system
+   - Verify the count shows live agent count from system (52 total agents, 38 specialists)
    - Click the card to navigate to Agent Registry
 
-4. **Review Platform Statistics**
+3. **Review Platform Statistics**
    - Scroll to "Platform Overview" section
    - Verify route count matches actual routes
    - Verify API endpoint count matches actual endpoints
    - Verify Firestore collection count is accurate
 
-5. **Monitor Active Sessions**
-   - Check "Active Users" widget
-   - Review current logged-in user count
-   - Note any unusual activity patterns
-
-6. **Access Quick Actions**
+4. **Access Quick Actions**
    - Use sidebar navigation for:
      - User Management
      - System Flags
@@ -77,7 +67,7 @@ The Admin Command Center is the CEO-level dashboard for SalesVelocity.ai platfor
 
 **[Visual]:** Highlight the Platform Overview section. Numbers animate in.
 
-**[Audio]:** "The Platform Overview gives you instant visibility into your infrastructure - one hundred forty-eight routes, two hundred fifteen API endpoints, and fifty-one AI agents working around the clock."
+**[Audio]:** "The Platform Overview gives you instant visibility into your infrastructure - one hundred forty-eight routes, two hundred fifteen API endpoints, and fifty-two AI agents working around the clock."
 
 ---
 
@@ -115,4 +105,18 @@ Stats are fetched from `/api/admin/stats` which uses Firestore Admin SDK's `.cou
 
 ---
 
-*Last Audited: February 5, 2026*
+## Planned Features (Not Yet Implemented)
+
+### Platform Health Monitoring
+- Real-time system status indicators (green = healthy, yellow = degraded, red = critical)
+- Warning banners and alert notifications
+- Status: Planned for future release
+
+### Active Users Real-Time Count
+- "Active Users" widget showing current logged-in user count
+- Real-time session tracking and activity patterns
+- Status: Planned for future release
+
+---
+
+*Last Audited: February 12, 2026*

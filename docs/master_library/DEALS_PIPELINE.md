@@ -1,4 +1,4 @@
-# FEATURE NAME: Deals Pipeline (Kanban View)
+# FEATURE NAME: Deals Pipeline
 
 ## FILE PATH
 `src/app/(dashboard)/deals/page.tsx`
@@ -12,54 +12,50 @@ All data is fetched from Firestore. No hard-coded mocks detected. Theme complian
 ## MANUAL SOP
 
 ### Purpose
-The Deals Pipeline provides a visual Kanban-style view of all sales opportunities organized by stage. It enables sales teams to track deal progress, forecast revenue, and identify bottlenecks in the sales process.
+The Deals Pipeline provides a table/list view of all sales opportunities organized by stage. It enables sales teams to track deal progress, forecast revenue, and identify bottlenecks in the sales process.
 
 ### Steps to Execute Manually
 
 1. **Access Deals Pipeline**
-   - Navigate to `/dashboard` (Main Dashboard)
+   - Navigate to `/(dashboard)` (Main Dashboard)
    - Click "Deals" in the CRM section of the sidebar
-   - Alternatively, navigate directly to `/deals`
+   - Alternatively, navigate directly to `/(dashboard)/deals`
 
-2. **View Pipeline (Kanban Mode)**
-   - Default view shows Kanban board with 6 columns:
+2. **View Pipeline (List Mode)**
+   - Default view displays deals in a sortable table
+   - Columns: Name, Company, Value, Stage, Probability, Close Date, Owner
+   - Deals organized by stage:
      - Prospecting
      - Qualification
      - Proposal
      - Negotiation
      - Closed Won
      - Closed Lost
-   - Each deal appears as a card in its current stage
 
-3. **View Pipeline (List Mode)**
-   - Click "List View" toggle (top right)
-   - Deals display in sortable table
-   - Columns: Name, Company, Value, Stage, Probability, Close Date, Owner
+3. **Review Stage Metrics**
+   - Summary metrics display:
+     - Deal count per stage
+     - Total value per stage
+     - Pipeline health indicators
 
-4. **Review Stage Metrics**
-   - Top of each column shows:
-     - Deal count in stage
-     - Total value in stage
-     - Average time in stage
-
-5. **Move Deal Between Stages**
-   - Kanban: Drag deal card to new column
-   - List: Click stage dropdown, select new stage
+4. **Move Deal Between Stages**
+   - Click stage dropdown in list view
+   - Select new stage
    - Movement logged automatically
 
-6. **Create New Deal**
+5. **Create New Deal**
    - Click "New Deal" button
    - Fill required fields:
      - Deal name (required)
      - Company (required)
      - Value (required)
      - Stage (default: Prospecting)
-     - Probability (auto-set based on stage)
+     - Probability (manually set)
      - Expected close date
    - Click "Create" to save
 
-7. **View Deal Details**
-   - Click any deal card/row
+6. **View Deal Details**
+   - Click any deal row
    - Full details panel shows:
      - Deal information
      - Associated contacts
@@ -67,27 +63,27 @@ The Deals Pipeline provides a visual Kanban-style view of all sales opportunitie
      - Documents (proposals, contracts)
      - Notes
 
-8. **Update Deal Value**
+7. **Update Deal Value**
    - In deal details, click value field
    - Enter new amount
    - Save changes
 
-9. **Set Close Probability**
-   - Auto-calculated based on stage:
+8. **Set Close Probability**
+   - Probability is manually set per deal
+   - Common values by stage:
      - Prospecting: 10%
      - Qualification: 25%
      - Proposal: 50%
      - Negotiation: 75%
      - Closed Won: 100%
      - Closed Lost: 0%
-   - Can override manually per deal
 
-10. **Link Contacts to Deal**
+9. **Link Contacts to Deal**
     - In deal details, click "Add Contact"
     - Search and select from existing contacts
-    - Assign role (Decision Maker, Influencer, Champion)
+    - Contacts linked to deal (roles not currently implemented)
 
-11. **Generate Forecast**
+10. **Generate Forecast**
     - Pipeline value shows at top
     - Weighted forecast = Sum(Value × Probability)
     - View by time period (This Month, This Quarter)
@@ -100,27 +96,27 @@ The Deals Pipeline provides a visual Kanban-style view of all sales opportunitie
 
 ---
 
-**[Visual]:** Bird's eye view of Kanban board. Deals animate flowing left to right through stages.
+**[Visual]:** Bird's eye view of deals table. Deals populate with values and stages.
 
 **[Audio]:** "Your sales pipeline is the heartbeat of your business. With SalesVelocity.ai, you see every deal, every stage, every opportunity - all in one powerful view."
 
 ---
 
-**[Visual]:** Zoom in on Kanban board. Six columns visible with deal cards.
+**[Visual]:** Zoom in on deals table. Six stages visible with deal rows organized.
 
-**[Audio]:** "The Kanban view makes pipeline management visual. Prospecting, Qualification, Proposal, Negotiation - watch your deals progress from first touch to closed won."
-
----
-
-**[Visual]:** Mouse drags deal card from Qualification to Proposal. Card animates into new column.
-
-**[Audio]:** "Moving deals is as simple as drag and drop. Stage changes log automatically, probabilities update, and your forecast recalculates in real time."
+**[Audio]:** "The pipeline view makes deal management clear. Prospecting, Qualification, Proposal, Negotiation - track your deals from first touch to closed won."
 
 ---
 
-**[Visual]:** Stage metrics highlight - showing deal count and total value per stage.
+**[Visual]:** Mouse clicks stage dropdown on a deal. Changes from Qualification to Proposal.
 
-**[Audio]:** "Each stage shows its health: total value, number of deals, and average time. Instantly see where deals are flowing smoothly and where they're getting stuck."
+**[Audio]:** "Moving deals is as simple as selecting a new stage. Changes log automatically, and your forecast recalculates in real time."
+
+---
+
+**[Visual]:** Summary metrics highlight - showing deal count and total value per stage.
+
+**[Audio]:** "Pipeline metrics show health at a glance: total value, number of deals per stage. Instantly see where deals are concentrated and what's moving forward."
 
 ---
 
@@ -136,11 +132,6 @@ The Deals Pipeline provides a visual Kanban-style view of all sales opportunitie
 
 ---
 
-**[Visual]:** Toggle to List View. Table appears with sortable columns.
-
-**[Audio]:** "Prefer a traditional view? Switch to list mode for a detailed table. Sort by value, close date, or owner. The data adapts to how you work."
-
----
 
 **[Visual]:** Logo with revenue chart trending upward.
 
@@ -155,9 +146,18 @@ The Deals Pipeline provides a visual Kanban-style view of all sales opportunitie
 | Deal Records | `organizations/rapid-compliance-root/workspaces/{wsId}/entities/deals/records` | LIVE |
 | Deal Schema | `organizations/rapid-compliance-root/workspaces/{wsId}/schemas/deals` | LIVE |
 | Associated Contacts | Linked via contactIds array in deal document | LIVE |
-| Activity Timeline | `organizations/rapid-compliance-root/conversations` filtered by dealId | LIVE |
+| Activity Timeline | `organizations/rapid-compliance-root/workspaces/{wsId}/entities/deals/records/{dealId}/activities` | LIVE |
 | Documents | `organizations/rapid-compliance-root/documents` linked by dealId | LIVE |
 
 ---
 
-*Last Audited: February 5, 2026*
+## Planned Features (Not Yet Implemented)
+
+- **Drag-and-Drop Kanban Board** - Visual Kanban interface with drag-and-drop deal movement between stage columns
+- **Automatic Probability Calculation** - Auto-set probability percentages based on stage changes
+- **Contact Roles on Deals** - Ability to assign specific roles (Decision Maker, Influencer, Champion) to contacts linked to deals
+- **Average Time in Stage Metrics** - Analytics showing how long deals typically spend in each stage
+
+---
+
+*Last Audited: February 12, 2026*

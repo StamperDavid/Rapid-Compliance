@@ -1,7 +1,7 @@
 # FEATURE NAME: AI Agents Administration Panel
 
 ## FILE PATH
-`src/app/admin/ai-agents/page.tsx`
+`src/app/(dashboard)/ai-agents/page.tsx`
 
 ## AUDIT STATUS: ✅ PASS
 
@@ -26,42 +26,26 @@ The AI Agents Administration Panel allows platform administrators to monitor, co
 ### Steps to Execute Manually
 
 1. **Access the AI Agents Panel**
-   - Navigate to `/admin` (Admin Command Center)
+   - Navigate to `/(dashboard)/dashboard` (Admin Command Center)
    - Click "AI Workforce" in the sidebar navigation
    - Select "Agent Registry" from submenu
-   - Alternatively, navigate directly to `/admin/ai-agents`
+   - Alternatively, navigate directly to `/(dashboard)/ai-agents`
 
 2. **Review Agent Overview Statistics**
    - Locate the statistics cards at the top of the page
    - **Active Agents**: Should show count of agents with `status: 'active'`
-   - **Training Sessions**: Should show total training sessions from `trainingData` collection
-   - **Conversations Today**: Should query `conversations` collection for today's date
-   - **Success Rate**: Should calculate from conversation outcomes
+   - **Total Agents**: Shows 52 total agents
+   - **Specialists**: Shows 38 specialist agents
+   - **Conversations**: Shows total conversation count from Firestore
 
 3. **Browse Agent Registry**
    - Scroll down to the agent list
    - Agents are organized by hierarchy:
      - L1: Master Orchestrator (1)
      - L2: Managers (9)
-     - L3: Specialists (37)
+     - L3: Specialists (38)
      - Standalone (4)
-   - Click any agent row to view details
-
-4. **View Individual Agent Details**
-   - Click an agent name
-   - Review configuration: model, temperature, system prompt
-   - Check training status and last training date
-   - View recent conversation logs
-
-5. **Configure Agent Settings**
-   - Click "Edit" on any agent
-   - Modify persona, training data, or model parameters
-   - Save changes to update Firestore config
-
-6. **Monitor Agent Performance**
-   - Check success rate per agent
-   - Review conversation sentiment scores
-   - Identify underperforming agents for retraining
+   - Total: 52 agents
 
 ---
 
@@ -85,7 +69,7 @@ The AI Agents Administration Panel allows platform administrators to monitor, co
 
 **[Visual]:** Zoom in on the agent hierarchy diagram showing L1, L2, L3 structure.
 
-**[Audio]:** "Your AI workforce operates in a hierarchy. At the top, the Master Orchestrator coordinates everything. Nine managers handle different domains - marketing, sales, commerce, content. And thirty-seven specialists do the detailed work."
+**[Audio]:** "Your AI workforce operates in a hierarchy. At the top, the Master Orchestrator coordinates everything. Nine managers handle different domains - marketing, sales, commerce, content. And thirty-eight specialists do the detailed work."
 
 ---
 
@@ -109,7 +93,7 @@ The AI Agents Administration Panel allows platform administrators to monitor, co
 
 **[Visual]:** Pull back to show full dashboard. Logo watermark fades in.
 
-**[Audio]:** "Fifty-one agents. One dashboard. Zero complexity. That's the power of SalesVelocity.ai."
+**[Audio]:** "Fifty-two agents. One dashboard. Zero complexity. That's the power of SalesVelocity.ai."
 
 ---
 
@@ -135,4 +119,27 @@ border-color: var(--color-border-main);
 
 ---
 
-*Last Audited: February 5, 2026*
+## Planned Features (Not Yet Implemented)
+
+### Agent Detail View
+- Individual agent configuration page showing full details
+- Model parameters, temperature, system prompt configuration
+- Training status and last training date display
+- Recent conversation logs per agent
+- Status: Planned for future release
+
+### Agent Configuration Editor
+- "Edit" functionality to modify agent personas
+- Training data upload and management
+- Model parameter tuning interface
+- Status: Planned for future release
+
+### Agent Performance Monitoring
+- Per-agent success rate tracking
+- Conversation sentiment score analysis
+- Underperforming agent identification and retraining recommendations
+- Status: Planned for future release
+
+---
+
+*Last Audited: February 12, 2026*

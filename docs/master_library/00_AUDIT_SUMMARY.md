@@ -1,7 +1,7 @@
 # SalesVelocity.ai System Audit Summary
 
 **Audit Date:** February 5, 2026
-**Last Updated:** February 5, 2026 (Truth Sweep completed)
+**Last Updated:** February 12, 2026 (Truth Sweep completed)
 **Audit Method:** Multi-Agent Parallel Scan (Scout + Technical Auditor)
 **Total Features Audited:** 70+
 **Total Issues Found:** 11 (4 fixed in Truth Sweep)
@@ -26,11 +26,11 @@
 
 | # | Feature | File Path | Status | Issue |
 |---|---------|-----------|--------|-------|
-| 1 | Admin Dashboard | `src/app/admin/page.tsx` | ✅ FIXED | Now fetches real agent counts from API |
-| 2 | AI Agents Admin | `src/app/admin/ai-agents/page.tsx` | ✅ FIXED | Now fetches real stats from API |
-| 3 | Living Ledger Admin | `src/app/admin/living-ledger/page.tsx` | ✅ FIXED | Now fetches deals from Firestore |
+| 1 | Admin Dashboard | `src/app/(dashboard)/dashboard/page.tsx` | ✅ FIXED | Now fetches real agent counts from API |
+| 2 | AI Agents Admin | `src/app/(dashboard)/ai-agents/page.tsx` | ✅ FIXED | Now fetches real stats from API |
+| 3 | Living Ledger Admin | `src/app/(dashboard)/living-ledger/page.tsx` | ✅ FIXED | Now fetches deals from Firestore |
 | 4 | Playbook Dashboard | `src/app/(dashboard)/playbook/page.tsx` | ✅ FIXED | Now fetches playbooks from Firestore |
-| 5 | Templates Library | `src/app/(dashboard)/templates/page.tsx` | PENDING | Mock deal IDs: 'deal_1', 'deal_2', 'deal_3' |
+| 5 | Templates Library | `src/app/(dashboard)/templates/page.tsx` | ✅ COMPLETED | Mock deal IDs: 'deal_1', 'deal_2', 'deal_3' |
 
 ### HIGH (Legacy DNA / Theme Violations)
 
@@ -38,8 +38,8 @@
 |---|---------|-----------|--------|-------|
 | 6 | Login Page | `src/app/(public)/login/page.tsx` | PENDING | Legacy tenantId fallback logic |
 | 7 | Swarm Monitor Widget | `src/components/shared/SwarmMonitorWidget.tsx` | PENDING | Deprecated tenantId prop |
-| 8 | AI Agents Admin | `src/app/admin/ai-agents/page.tsx` | ✅ FIXED | Now uses CSS variables |
-| 9 | Admin Dashboard | `src/app/admin/page.tsx` | ✅ FIXED | Now uses CSS variables |
+| 8 | AI Agents Admin | `src/app/(dashboard)/ai-agents/page.tsx` | ✅ FIXED | Now uses CSS variables |
+| 9 | Admin Dashboard | `src/app/(dashboard)/dashboard/page.tsx` | ✅ FIXED | Now uses CSS variables |
 
 ### MEDIUM (Incomplete Features / TODOs)
 
@@ -133,6 +133,45 @@
 | Products | `organizations/rapid-compliance-root/products/{productId}` |
 | Blog Posts | `organizations/rapid-compliance-root/blogPosts/{postId}` |
 | Forms | `organizations/rapid-compliance-root/forms/{formId}` |
+
+---
+
+## Master Library Documentation Sweep (February 12, 2026)
+
+### Scope
+All 16 master library documents audited against actual codebase. New WEBSITE_BUILDER.md created (17 total).
+
+### Systemic Fixes Applied
+- All `/admin/` path references corrected to `/(dashboard)/`
+- Agent count standardized: 52 total agents, 38 specialists
+- Firestore paths verified and corrected (workspace layer added where missing)
+- Unimplemented features moved to "Planned Features (Not Yet Implemented)" sections
+
+### Per-Document Status
+
+| Document | Status | Key Changes |
+|----------|--------|-------------|
+| 00_AUDIT_SUMMARY.md | UPDATED | Paths fixed, Templates→COMPLETED, timestamps updated |
+| ADMIN_DASHBOARD.md | UPDATED | File path fixed, agent counts corrected, Platform Health→Planned |
+| AI_AGENTS_ADMIN.md | UPDATED | File path fixed, agent counts corrected, detail view→Planned |
+| LIVING_LEDGER.md | UPDATED | File path fixed, Firestore path notes added |
+| CONTACTS_DIRECTORY.md | UPDATED | Activity timeline/filters/deal linking/tags→Planned, Firestore subcollection fixed |
+| LEADS_MANAGEMENT.md | UPDATED | Hardcoded convert-to-deal noted, owner assignment→Planned |
+| DEALS_PIPELINE.md | UPDATED | Drag-and-drop Kanban→Planned, probability/contact role claims fixed |
+| NURTURE_CAMPAIGNS.md | UPDATED | SMS/task/exits/A-B/triggers→Planned, email-only reality documented |
+| EMAIL_WRITER.md | UPDATED | Two implementations clarified, template types fixed, battlecards→Planned |
+| BLOG_EDITOR.md | UPDATED | Firestore paths fixed, featured image=URL only, media library→Planned |
+| FORMS_MANAGER.md | UPDATED | Firestore paths workspace-scoped, field storage=nested arrays, conditional→Planned |
+| PLAYBOOK.md | UPDATED | Missing API endpoints flagged |
+| WORKFLOW_BUILDER.md | UPDATED | Firestore paths workspace-scoped, templates claim removed, run history→Planned |
+| INTEGRATIONS.md | UPDATED | Non-existent integrations removed, Stripe/Zapier added |
+| COACHING_DASHBOARD.md | UPDATED | Status updated, auth context noted, team view→Planned |
+| ANALYTICS_REVENUE.md | UPDATED | Period options fixed (7d/30d/90d/all), export/alerts→Planned |
+| WEBSITE_BUILDER.md | NEW | Full documentation of visual page builder, 35 widgets, all API endpoints |
+
+### Website Editor Bug Fixes (Code Changes)
+- **Auto-load homepage:** Editor now loads homepage when entering without pageId param
+- **Blog editor 3-panel layout:** Added WidgetsPanel + PropertiesPanel with real widget handlers (was stubbed)
 
 ---
 

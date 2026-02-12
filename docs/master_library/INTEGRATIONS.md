@@ -1,7 +1,7 @@
 # FEATURE NAME: Integrations Hub
 
 ## FILE PATH
-`src/app/(dashboard)/settings/integrations/page.tsx`
+`src/app/(dashboard)/integrations/page.tsx`
 
 ## AUDIT STATUS: PASS
 
@@ -17,19 +17,17 @@ The Integrations Hub allows connecting SalesVelocity.ai with third-party service
 ### Steps to Execute Manually
 
 1. **Access Integrations**
-   - Navigate to `/settings` (Settings)
+   - Navigate to `/dashboard` (Main Dashboard)
    - Click "Integrations" in the sidebar
-   - Alternatively, navigate to `/settings/integrations`
+   - Alternatively, navigate to `/integrations`
 
 2. **Browse Available Integrations**
    - Integrations grouped by category:
-     - **Email**: Gmail, Outlook, SendGrid
-     - **Calendar**: Google Calendar, Outlook Calendar
+     - **Email & Calendar**: Gmail, Outlook (Google and Microsoft OAuth)
      - **Communication**: Slack, Microsoft Teams
-     - **Accounting**: Xero, QuickBooks
-     - **CRM**: Salesforce, HubSpot (import)
-     - **Marketing**: Mailchimp, ActiveCampaign
-     - **Voice**: Twilio, Vonage
+     - **Accounting**: QuickBooks
+     - **Payment Processing**: Stripe (webhook-based)
+     - **Webhooks**: Zapier and custom webhook endpoints
 
 3. **Connect an Integration**
    - Click "Connect" on desired integration
@@ -67,28 +65,33 @@ The Integrations Hub allows connecting SalesVelocity.ai with third-party service
    - Configure notification types
 
 8. **Accounting Integration Setup**
-   - Connect Xero or QuickBooks
+   - Connect QuickBooks via OAuth
    - Map revenue to accounts
    - Enable invoice sync
    - Configure payment tracking
 
-9. **Test Integration**
-   - Click "Test Connection"
-   - Verify data flows correctly
-   - Check for errors
+9. **Payment Integration Setup (Stripe)**
+   - Stripe integration is webhook-based
+   - Webhook endpoint: `/api/webhooks/stripe`
+   - Handles payment events, subscription updates
+   - Automatically syncs transaction data
 
-10. **Disconnect Integration**
+10. **Test Integration**
+    - Click "Test Connection"
+    - Verify data flows correctly
+    - Check for errors
+
+11. **Disconnect Integration**
     - Click "Settings" on connected integration
     - Click "Disconnect"
     - Confirm disconnection
     - Data sync stops immediately
 
-11. **View Sync Status**
+12. **View Sync Status**
     - Each integration shows:
       - Last sync time
-      - Records synced
-      - Error count
-      - Health status
+      - Connection status
+      - Health indicator
 
 ---
 
@@ -151,11 +154,28 @@ The Integrations Hub allows connecting SalesVelocity.ai with third-party service
 | Data Point | Firestore Path | Status |
 |------------|----------------|--------|
 | Integration Configs | `organizations/rapid-compliance-root/integrations/{integrationId}` | LIVE |
-| OAuth Tokens | `organizations/rapid-compliance-root/integrations/{integrationId}/tokens` (encrypted) | LIVE |
-| Sync Logs | `organizations/rapid-compliance-root/integrations/{integrationId}/logs` | LIVE |
-| Slack Workspaces | `slack_workspaces/{workspaceId}` | LIVE |
-| Slack Channels | `slack_channels/{channelId}` | LIVE |
+| OAuth Tokens | Encrypted storage within integration config | LIVE |
+| Connection Status | Updated in integration document | LIVE |
+
+**Note:** Subcollections for logs, tokens, or sync history may not be fully implemented yet. Current implementation stores connection metadata in the main integration document.
 
 ---
 
-*Last Audited: February 5, 2026*
+## Planned Features (Not Yet Implemented)
+
+### Additional Integrations
+- **CRM Import**: Salesforce, HubSpot data import wizards
+- **Marketing**: Mailchimp, ActiveCampaign native integrations
+- **Accounting**: Xero integration (currently only QuickBooks is available)
+- **Voice**: Twilio, Vonage (basic SMS/voice capabilities may exist via API)
+- **Payment**: PayPal integration (currently only Stripe)
+
+### Enhanced Sync Features
+- Detailed sync logs subcollection per integration
+- Granular error tracking and retry mechanisms
+- Advanced field mapping UI
+- Two-way sync configuration for supported integrations
+
+---
+
+*Last Audited: February 12, 2026*

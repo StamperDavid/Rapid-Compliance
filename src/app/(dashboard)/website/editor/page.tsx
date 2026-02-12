@@ -79,6 +79,22 @@ function isVersionData(data: unknown): data is VersionData {
   );
 }
 
+interface PagesListItem {
+  id: string;
+  slug: string;
+  status: string;
+}
+
+interface PagesListResponse {
+  pages: PagesListItem[];
+}
+
+function isPagesListResponse(data: unknown): data is PagesListResponse {
+  if (typeof data !== 'object' || data === null) {return false;}
+  const response = data as Record<string, unknown>;
+  return Array.isArray(response.pages);
+}
+
 // These helper functions are now replaced with state-based dialogs in the component
 
 export default function PageEditorPage() {
@@ -162,13 +178,47 @@ export default function PageEditorPage() {
     setLoading(false);
   }, [user, pushState]);
 
+  // Auto-load homepage when entering editor without a pageId
+  const loadHomepageStable = React.useCallback(async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('/api/website/pages');
+
+      if (!response.ok) {
+        createBlankPageStable();
+        return;
+      }
+
+      const data: unknown = await response.json();
+
+      if (!isPagesListResponse(data) || data.pages.length === 0) {
+        createBlankPageStable();
+        return;
+      }
+
+      // Find homepage by slug, then first published page, then first page
+      const homepage = data.pages.find(p => p.slug === '/' || p.slug === 'home' || p.slug === 'index')
+        ?? data.pages.find(p => p.status === 'published')
+        ?? data.pages[0];
+
+      if (homepage) {
+        await loadPageStable(homepage.id);
+      } else {
+        createBlankPageStable();
+      }
+    } catch (error: unknown) {
+      console.error('[Editor] Failed to load homepage:', error);
+      createBlankPageStable();
+    }
+  }, [createBlankPageStable, loadPageStable]);
+
   useEffect(() => {
     if (pageId) {
       void loadPageStable(pageId);
     } else {
-      createBlankPageStable();
+      void loadHomepageStable();
     }
-  }, [pageId, loadPageStable, createBlankPageStable]);
+  }, [pageId, loadPageStable, loadHomepageStable]);
 
   // Auto-save every 30 seconds
   const savePageStable = React.useCallback(async (isAutoSave: boolean = false): Promise<void> => {

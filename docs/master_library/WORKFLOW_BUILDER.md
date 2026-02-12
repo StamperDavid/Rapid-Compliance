@@ -89,9 +89,18 @@ The Visual Workflow Builder is a no-code automation tool that allows users to cr
     - Monitor in Workflow Analytics
 
 11. **Monitor Execution**
-    - View run history
-    - Check success/failure rates
-    - Debug failed runs
+    - View analytics in Workflow Analytics page
+    - Track workflow performance
+    - Monitor overall success rates
+
+---
+
+## Planned Features (Not Yet Implemented)
+
+### Execution History UI
+- Detailed run history per workflow (UI exists at `/workflows/{id}/runs` but may need enhancement)
+- Per-execution action-by-action drill-down
+- Advanced filtering and search of execution logs
 
 ---
 
@@ -159,11 +168,10 @@ The Visual Workflow Builder is a no-code automation tool that allows users to cr
 
 | Data Point | Firestore Path | Status |
 |------------|----------------|--------|
-| Workflow Definitions | `organizations/rapid-compliance-root/workflows/{workflowId}` | LIVE |
-| Workflow Runs | `organizations/rapid-compliance-root/workflows/{workflowId}/runs` | LIVE |
+| Workflow Definitions | `organizations/rapid-compliance-root/workspaces/{workspaceId}/workflows/{workflowId}` | LIVE |
+| Workflow Runs | Subcollection within workflow execution tracking | LIVE |
 | Trigger Configs | Embedded in workflow document | LIVE |
-| Action Templates | `organizations/rapid-compliance-root/workflowTemplates` | LIVE |
 
 ---
 
-*Last Audited: February 5, 2026*
+*Last Audited: February 12, 2026*
