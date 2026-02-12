@@ -10,6 +10,7 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { voiceAgentHandler } from '@/lib/voice/voice-agent-handler';
 import { logger } from '@/lib/logger/logger';
+import { verifyTwilioSignature, parseFormBody } from '@/lib/security/webhook-verification';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,8 +18,28 @@ export const dynamic = 'force-dynamic';
  * POST /api/voice/ai-agent/whisper
  * Generate whisper message for human agent
  */
-export function POST(request: NextRequest): NextResponse {
+export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
+    // Verify Twilio webhook signature
+    const authToken = process.env.TWILIO_AUTH_TOKEN;
+    if (authToken) {
+      const signature = request.headers.get('x-twilio-signature');
+      if (!signature) {
+        logger.warn('[AI-Whisper] Missing Twilio signature header', { file: 'ai-agent/whisper/route.ts' });
+        return NextResponse.json({ error: 'Invalid webhook signature' }, { status: 401 });
+      }
+      const rawBody = await request.text();
+      const url = process.env.WEBHOOK_BASE_URL
+        ? `${process.env.WEBHOOK_BASE_URL}/api/voice/ai-agent/whisper`
+        : request.url;
+      const params = parseFormBody(rawBody);
+      const isValid = verifyTwilioSignature(authToken, signature, url, params);
+      if (!isValid) {
+        logger.warn('[AI-Whisper] Invalid Twilio signature', { file: 'ai-agent/whisper/route.ts' });
+        return NextResponse.json({ error: 'Invalid webhook signature' }, { status: 401 });
+      }
+    }
+
     const { searchParams } = new URL(request.url);
     const callId = searchParams.get('callId');
 

@@ -10,6 +10,7 @@ import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import { encryptToken } from '@/lib/security/token-encryption';
+import { validateOAuthState } from '@/lib/security/oauth-state';
 
 export const dynamic = 'force-dynamic';
 
@@ -63,6 +64,14 @@ export async function GET(request: NextRequest) {
     }
 
     const validatedCode = validation.data.code;
+
+    // Validate CSRF-safe state token
+    const userId = await validateOAuthState(validation.data.state, 'teams');
+    if (!userId) {
+      return NextResponse.redirect(
+        `${process.env.NEXT_PUBLIC_APP_URL}/settings/integrations?error=invalid_state`
+      );
+    }
 
     // Get Microsoft 365 (Teams) config
     const microsoft365Keys = await apiKeyService.getServiceKey(PLATFORM_ID, 'microsoft365') as Microsoft365Keys | null;

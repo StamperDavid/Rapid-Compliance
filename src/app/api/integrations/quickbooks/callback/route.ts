@@ -4,19 +4,14 @@
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
-import { z } from 'zod';
 import { getTokensFromCode } from '@/lib/integrations/quickbooks-service';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { logger } from '@/lib/logger/logger';
 import { encryptToken } from '@/lib/security/token-encryption';
+import { validateOAuthState } from '@/lib/security/oauth-state';
 
 export const dynamic = 'force-dynamic';
-
-// Zod schema for OAuth state validation
-const OAuthStateSchema = z.object({
-  userId: z.string().min(1),
-});
 
 export async function GET(request: NextRequest) {
   // Rate limiting
@@ -35,19 +30,11 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // Decode and validate state
-    let userId = 'default';
-
-    if (state) {
-      const decodedState: unknown = JSON.parse(Buffer.from(state, 'base64').toString('utf-8'));
-      const stateValidation = OAuthStateSchema.safeParse(decodedState);
-
-      if (stateValidation.success) {
-        userId = stateValidation.data.userId;
-        // PLATFORM_ID is now always PLATFORM_ID, ignore state.PLATFORM_ID
-      } else {
-        logger.warn('Invalid QuickBooks OAuth state', { errors: JSON.stringify(stateValidation.error.errors) });
-      }
+    // Validate CSRF-safe state token against Firestore
+    const userId = state ? await validateOAuthState(state, 'quickbooks') : null;
+    if (!userId) {
+      logger.warn('Invalid or expired QuickBooks OAuth state', { route: '/api/integrations/quickbooks/callback' });
+      return NextResponse.redirect('/integrations?error=invalid_state');
     }
 
     const tokens = await getTokensFromCode(code);

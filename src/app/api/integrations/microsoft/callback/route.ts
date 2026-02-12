@@ -4,20 +4,15 @@
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
-import { z } from 'zod';
 import { getTokensFromCode } from '@/lib/integrations/outlook-service';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { logger } from '@/lib/logger/logger';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import { encryptToken } from '@/lib/security/token-encryption';
+import { validateOAuthState } from '@/lib/security/oauth-state';
 
 export const dynamic = 'force-dynamic';
-
-// Zod schema for OAuth state validation
-const OAuthStateSchema = z.object({
-  userId: z.string().min(1),
-});
 
 export async function GET(request: NextRequest) {
   // Rate limiting
@@ -35,16 +30,13 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // Decode and validate state
-    const decodedState: unknown = JSON.parse(Buffer.from(state, 'base64').toString('utf-8'));
-
-    const stateValidation = OAuthStateSchema.safeParse(decodedState);
-    if (!stateValidation.success) {
-      logger.warn('Invalid OAuth state', { errors: JSON.stringify(stateValidation.error.errors) });
+    // Validate CSRF-safe state token against Firestore
+    const userId = await validateOAuthState(state, 'microsoft');
+    if (!userId) {
+      logger.warn('Invalid or expired OAuth state', { route: '/api/integrations/microsoft/callback' });
       return NextResponse.redirect('/integrations?error=invalid_state');
     }
 
-    const { userId } = stateValidation.data;
     const tokens = await getTokensFromCode(code);
 
     await FirestoreService.set(

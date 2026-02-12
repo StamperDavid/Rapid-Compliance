@@ -219,6 +219,28 @@ export async function deleteContact(
   workspaceId: string = 'default'
 ): Promise<void> {
   try {
+    // Check for linked deals before deleting (referential integrity)
+    const linkedDeals = await FirestoreService.getAll(
+      `${getSubCollection('workspaces')}/${workspaceId}/entities/deals/records`,
+      [where('contactId', '==', contactId)]
+    );
+    if (linkedDeals.length > 0) {
+      throw new Error(
+        `Cannot delete contact: ${linkedDeals.length} deal(s) are linked to this contact. Remove or reassign them first.`
+      );
+    }
+
+    // Check for linked activities
+    const linkedActivities = await FirestoreService.getAll(
+      `${getSubCollection('workspaces')}/${workspaceId}/entities/activities/records`,
+      [where('contactId', '==', contactId)]
+    );
+    if (linkedActivities.length > 0) {
+      throw new Error(
+        `Cannot delete contact: ${linkedActivities.length} activity record(s) are linked to this contact. Remove them first.`
+      );
+    }
+
     await FirestoreService.delete(
       `${getSubCollection('workspaces')}/${workspaceId}/entities/contacts/records`,
       contactId

@@ -9,6 +9,7 @@ import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { PLATFORM_ID } from '@/lib/constants/platform';
+import { generateOAuthState } from '@/lib/security/oauth-state';
 
 export const dynamic = 'force-dynamic';
 
@@ -47,13 +48,16 @@ export async function POST(request: NextRequest) {
     const { clientId, redirectUri } = microsoft365Keys;
     const baseRedirectUri = (redirectUri && redirectUri !== '') ? redirectUri : `${process.env.NEXT_PUBLIC_APP_URL}/api/integrations/teams/callback`;
 
+    // Generate CSRF-safe state token
+    const state = await generateOAuthState(userId, 'teams');
+
     // Microsoft Teams uses Azure AD OAuth
     const authUrl = `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?` +
       `client_id=${clientId}` +
       `&response_type=code` +
       `&redirect_uri=${encodeURIComponent(baseRedirectUri)}` +
       `&scope=${encodeURIComponent('https://graph.microsoft.com/ChannelMessage.Send offline_access')}` +
-      `&state=${PLATFORM_ID}`;
+      `&state=${state}`;
 
     logger.info('Teams OAuth flow started', { userId });
 

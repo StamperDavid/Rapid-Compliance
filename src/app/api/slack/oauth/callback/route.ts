@@ -16,6 +16,7 @@ import { Timestamp } from 'firebase-admin/firestore';
 import { db } from '@/lib/firebase-admin';
 import type { SlackWorkspace, SlackOAuthState } from '@/lib/slack/types';
 import { PLATFORM_ID } from '@/lib/constants/platform';
+import { encryptToken } from '@/lib/security/token-encryption';
 
 export const dynamic = 'force-dynamic';
 
@@ -100,7 +101,7 @@ export async function GET(request: NextRequest) {
       teamId: tokenResponse.team.id,
       teamName: tokenResponse.team.name,
       teamDomain: tokenResponse.team.id, // Slack v2 doesn't always include domain
-      botToken: tokenResponse.access_token,
+      botToken: encryptToken(tokenResponse.access_token),
       botUserId: tokenResponse.bot_user_id ?? '',
       scopes: tokenResponse.scope.split(','),
       installedBy: {

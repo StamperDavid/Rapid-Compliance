@@ -12,6 +12,7 @@ import { voiceAgentHandler } from '@/lib/voice/voice-agent-handler';
 import { callTransferService } from '@/lib/voice/call-transfer-service';
 import { aiConversationService } from '@/lib/voice/ai-conversation-service';
 import { logger } from '@/lib/logger/logger';
+import { verifyTwilioSignature, parseFormBody } from '@/lib/security/webhook-verification';
 
 export const dynamic = 'force-dynamic';
 
@@ -139,6 +140,25 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 }
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
+  // Verify Twilio webhook signature
+  const authToken = process.env.TWILIO_AUTH_TOKEN;
+  if (authToken) {
+    const signature = request.headers.get('x-twilio-signature');
+    if (!signature) {
+      logger.warn('[AI-Fallback] Missing Twilio signature header', { file: 'ai-agent/fallback/route.ts' });
+      return NextResponse.json({ error: 'Invalid webhook signature' }, { status: 401 });
+    }
+    const rawBody = await request.text();
+    const url = process.env.WEBHOOK_BASE_URL
+      ? `${process.env.WEBHOOK_BASE_URL}/api/voice/ai-agent/fallback`
+      : request.url;
+    const params = parseFormBody(rawBody);
+    const isValid = verifyTwilioSignature(authToken, signature, url, params);
+    if (!isValid) {
+      logger.warn('[AI-Fallback] Invalid Twilio signature', { file: 'ai-agent/fallback/route.ts' });
+      return NextResponse.json({ error: 'Invalid webhook signature' }, { status: 401 });
+    }
+  }
   return handleFallback(request);
 }
 

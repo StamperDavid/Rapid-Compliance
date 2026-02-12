@@ -17,6 +17,7 @@ import { voiceAgentHandler, type VoiceAgentConfig } from '@/lib/voice/voice-agen
 import type { VoiceCall } from '@/lib/voice/types';
 import { logger } from '@/lib/logger/logger';
 import { getSubCollection } from '@/lib/firebase/collections';
+import { verifyTwilioSignature, parseFormBody } from '@/lib/security/webhook-verification';
 
 // Twilio webhook payload interface
 interface TwilioWebhookPayload {
@@ -75,6 +76,26 @@ export function GET(request: NextRequest): NextResponse {
  */
 export async function POST(request: NextRequest) {
   try {
+    // Verify Twilio webhook signature
+    const authToken = process.env.TWILIO_AUTH_TOKEN;
+    if (authToken) {
+      const signature = request.headers.get('x-twilio-signature');
+      if (!signature) {
+        logger.warn('[TwiML] Missing Twilio signature header', { file: 'twiml/route.ts' });
+        return NextResponse.json({ error: 'Invalid webhook signature' }, { status: 401 });
+      }
+      const rawBody = await request.clone().text();
+      const url = process.env.WEBHOOK_BASE_URL
+        ? `${process.env.WEBHOOK_BASE_URL}/api/voice/twiml`
+        : request.url;
+      const params = parseFormBody(rawBody);
+      const isValid = verifyTwilioSignature(authToken, signature, url, params);
+      if (!isValid) {
+        logger.warn('[TwiML] Invalid Twilio signature', { file: 'twiml/route.ts' });
+        return NextResponse.json({ error: 'Invalid webhook signature' }, { status: 401 });
+      }
+    }
+
     // Parse webhook payload
     const contentType = request.headers.get('content-type') ?? '';
     let payload: TwilioWebhookPayload;

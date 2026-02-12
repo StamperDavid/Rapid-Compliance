@@ -318,6 +318,17 @@ export async function deleteLead(
   workspaceId: string = 'default'
 ): Promise<void> {
   try {
+    // Check for linked deals before deleting (referential integrity)
+    const linkedDeals = await FirestoreService.getAll(
+      `${getSubCollection('workspaces')}/${workspaceId}/entities/deals/records`,
+      [where('leadId', '==', leadId)]
+    );
+    if (linkedDeals.length > 0) {
+      throw new Error(
+        `Cannot delete lead: ${linkedDeals.length} deal(s) are linked to this lead. Remove or reassign them first.`
+      );
+    }
+
     await FirestoreService.delete(
       `${getSubCollection('workspaces')}/${workspaceId}/entities/leads/records`,
       leadId

@@ -45,43 +45,51 @@ export async function registerFirestoreTrigger(
  * Re-entry guard to prevent infinite workflow recursion.
  * Tracks active entity change processing to block cycles like:
  * Entity update → Workflow → Entity update → Workflow → ...
+ *
+ * Key design decisions:
+ * - Entity key excludes changeType so create→update→create on the same record is caught
+ * - Depth is passed as a parameter (not module-level) to avoid corruption by concurrent requests
+ * - Set tracks all entities touched in a chain to catch indirect recursion (A→B→A)
  */
 const activeEntityChanges = new Set<string>();
 const MAX_RECURSION_DEPTH = 3;
-let currentDepth = 0;
 
 /**
  * Handle entity change (called by Cloud Function or manual trigger)
+ * @param depth - Current recursion depth (0 for top-level calls)
  */
 export async function handleEntityChange(
   workspaceId: string,
   schemaId: string,
   changeType: 'created' | 'updated' | 'deleted',
   recordId: string,
-  recordData: Record<string, unknown>
+  recordData: Record<string, unknown>,
+  depth: number = 0
 ): Promise<void> {
-  // Re-entry guard: prevent infinite recursion
-  const changeKey = `${workspaceId}:${schemaId}:${recordId}:${changeType}`;
-  if (activeEntityChanges.has(changeKey)) {
-    logger.warn('[Firestore Trigger] Blocked recursive workflow execution', {
+  // Re-entry guard: track by entity identity (without changeType)
+  // so that create→update→delete on the same record is blocked
+  const entityKey = `${workspaceId}:${schemaId}:${recordId}`;
+  if (activeEntityChanges.has(entityKey)) {
+    logger.warn('[Firestore Trigger] Blocked recursive workflow execution on same entity', {
       file: 'firestore-trigger.ts',
-      changeKey,
-      depth: currentDepth,
+      entityKey,
+      changeType,
+      depth,
     });
     return;
   }
 
-  if (currentDepth >= MAX_RECURSION_DEPTH) {
+  if (depth >= MAX_RECURSION_DEPTH) {
     logger.warn('[Firestore Trigger] Max workflow recursion depth reached', {
       file: 'firestore-trigger.ts',
-      changeKey,
-      depth: currentDepth,
+      entityKey,
+      changeType,
+      depth,
     });
     return;
   }
 
-  activeEntityChanges.add(changeKey);
-  currentDepth++;
+  activeEntityChanges.add(entityKey);
 
   try {
     // Find workflows with matching triggers
@@ -129,8 +137,7 @@ export async function handleEntityChange(
       }
     }
   } finally {
-    activeEntityChanges.delete(changeKey);
-    currentDepth--;
+    activeEntityChanges.delete(entityKey);
   }
 }
 

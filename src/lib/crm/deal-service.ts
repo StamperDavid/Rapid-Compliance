@@ -295,6 +295,17 @@ export async function deleteDeal(
   workspaceId: string = 'default'
 ): Promise<void> {
   try {
+    // Check for linked activities before deleting (referential integrity)
+    const linkedActivities = await FirestoreService.getAll(
+      `${getSubCollection('workspaces')}/${workspaceId}/entities/activities/records`,
+      [where('dealId', '==', dealId)]
+    );
+    if (linkedActivities.length > 0) {
+      throw new Error(
+        `Cannot delete deal: ${linkedActivities.length} activity record(s) are linked to this deal. Remove them first.`
+      );
+    }
+
     await FirestoreService.delete(
       `${getSubCollection('workspaces')}/${workspaceId}/entities/deals/records`,
       dealId

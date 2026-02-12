@@ -7,7 +7,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { getMicrosoftAuthUrl } from '@/lib/integrations/outlook-service';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { requireAuth } from '@/lib/auth/api-auth';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { generateOAuthState } from '@/lib/security/oauth-state';
 
 export const dynamic = 'force-dynamic';
 
@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
   if (authResult instanceof NextResponse) {return authResult;}
   const userId = authResult.user.uid;
 
-  const state = Buffer.from(JSON.stringify({ userId, PLATFORM_ID })).toString('base64');
+  const state = await generateOAuthState(userId, 'microsoft');
   const authUrl = `${getMicrosoftAuthUrl()}&state=${state}`;
 
   return NextResponse.redirect(authUrl);

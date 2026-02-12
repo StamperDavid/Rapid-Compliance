@@ -8,7 +8,7 @@ import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { requireAuth } from '@/lib/auth/api-auth';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { generateOAuthState } from '@/lib/security/oauth-state';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,8 +23,8 @@ export async function GET(request: NextRequest) {
     if (authResult instanceof NextResponse) {return authResult;}
     const userId = authResult.user.uid;
 
-    // Store state for callback
-    const state = Buffer.from(JSON.stringify({ userId, PLATFORM_ID })).toString('base64');
+    // Generate CSRF-safe state token stored in Firestore
+    const state = await generateOAuthState(userId, 'google');
 
     // Get Google OAuth URL with Gmail AND Calendar scopes
     const { OAuth2Client } = await import('google-auth-library');

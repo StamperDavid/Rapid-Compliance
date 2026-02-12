@@ -4,19 +4,15 @@ import { getTokensFromCode } from '@/lib/integrations/slack-service';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { encryptToken } from '@/lib/security/token-encryption';
+import { validateOAuthState } from '@/lib/security/oauth-state';
 
 export const dynamic = 'force-dynamic';
 
 // Zod schema for OAuth callback validation
 const oauthCallbackSchema = z.object({
   code: z.string().min(1),
-  state: z.string().optional(),
+  state: z.string().min(1),
 });
-
-// Interface for decoded state
-interface SlackOAuthState {
-  userId: string;
-}
 
 export async function GET(request: NextRequest) {
   // Rate limiting
@@ -36,13 +32,11 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // Parse and type the state properly
-    let parsedState: SlackOAuthState = { userId: 'default' };
-    if (state) {
-      const decoded = JSON.parse(Buffer.from(state, 'base64').toString('utf-8')) as SlackOAuthState;
-      parsedState = decoded;
+    // Validate CSRF-safe state token against Firestore
+    const userId = await validateOAuthState(validation.data.state, 'slack');
+    if (!userId) {
+      return NextResponse.redirect('/integrations?error=invalid_state');
     }
-    const { userId } = parsedState;
     const tokens = await getTokensFromCode(validation.data.code);
 
     await FirestoreService.set(

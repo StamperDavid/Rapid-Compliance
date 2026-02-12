@@ -74,7 +74,7 @@ interface OrderRecord {
 
 export interface PaymentRequest {
   workspaceId: string;
-  amount: number; // In cents
+  amount: number; // In dollars (converted to provider-specific units internally)
   currency: string;
   paymentMethod: string;
   paymentToken?: string; // Stripe payment intent token, etc.

@@ -36,9 +36,9 @@ export function getQuickBooksAuthUrl(): string {
   }
 
   const scopes = ['com.intuit.quickbooks.accounting'].join(' ');
-  const state = Math.random().toString(36).substring(7);
 
-  return `https://appcenter.intuit.com/connect/oauth2?client_id=${QB_CLIENT_ID}&scope=${encodeURIComponent(scopes)}&redirect_uri=${encodeURIComponent(QB_REDIRECT_URI)}&response_type=code&state=${state}`;
+  // State parameter is appended by the auth route with a CSRF-safe nonce
+  return `https://appcenter.intuit.com/connect/oauth2?client_id=${QB_CLIENT_ID}&scope=${encodeURIComponent(scopes)}&redirect_uri=${encodeURIComponent(QB_REDIRECT_URI)}&response_type=code`;
 }
 
 interface QuickBooksTokenResponse {

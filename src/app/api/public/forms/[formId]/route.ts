@@ -27,12 +27,50 @@ import {
   orderBy,
   serverTimestamp,
 } from 'firebase/firestore';
+import { z } from 'zod';
 import type {
   FormDefinition,
   FormFieldConfig,
   FormSubmission,
   FieldResponse,
 } from '@/lib/forms/types';
+
+/**
+ * Sanitize a string value to prevent stored XSS.
+ * Encodes HTML special characters so they render as text, not markup.
+ */
+function sanitizeString(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;');
+}
+
+/**
+ * Recursively sanitize a form field value.
+ */
+function sanitizeFormValue(value: unknown): unknown {
+  if (typeof value === 'string') {
+    return sanitizeString(value);
+  }
+  if (Array.isArray(value)) {
+    return value.map(sanitizeFormValue);
+  }
+  if (typeof value === 'number' || typeof value === 'boolean' || value === null) {
+    return value;
+  }
+  // Reject objects/complex types — form fields should be primitives or arrays
+  return String(value);
+}
+
+const formSubmissionSchema = z.object({
+  responses: z.record(z.string(), z.unknown()),
+  metadata: z.record(z.string(), z.unknown()).optional(),
+  _honeypot: z.string().optional(),
+  _loadedAt: z.number().optional(),
+});
 
 // ============================================================================
 // GET - Fetch Published Form
@@ -186,12 +224,15 @@ export async function POST(
     }
 
     const { formId } = await params;
-    const body = await request.json() as {
-      responses: Record<string, unknown>;
-      metadata?: Record<string, unknown>;
-      _honeypot?: string;
-      _loadedAt?: number;
-    };
+    const rawBody: unknown = await request.json();
+    const parseResult = formSubmissionSchema.safeParse(rawBody);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { error: 'Invalid submission data', details: parseResult.error.errors },
+        { status: 400 }
+      );
+    }
+    const body = parseResult.data;
 
     // Spam prevention: honeypot field check
     if (body._honeypot) {
@@ -276,19 +317,23 @@ export async function POST(
       );
     }
 
-    // Build field responses
-    const fieldResponses: FieldResponse[] = Object.entries(responses).map(
-      ([fieldName, value]) => {
+    // Build field responses with XSS sanitization
+    const fieldResponses: FieldResponse[] = Object.entries(responses)
+      .filter(([fieldName]) => {
+        // Only accept responses for known fields to prevent injection of arbitrary data
+        return fields.some((f) => f.name === fieldName);
+      })
+      .map(([fieldName, value]) => {
         const field = fields.find((f) => f.name === fieldName);
+        const sanitizedValue = sanitizeFormValue(value);
         return {
           fieldId: field?.id ?? fieldName,
           fieldName,
           fieldType: field?.type ?? 'text',
-          value,
-          displayValue: String(value),
+          value: sanitizedValue,
+          displayValue: String(sanitizedValue),
         };
-      }
-    );
+      });
 
     // Generate confirmation number
     const confirmationNumber = `SUB-${Date.now().toString(36).toUpperCase()}`;
