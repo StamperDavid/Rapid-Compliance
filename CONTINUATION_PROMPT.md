@@ -5,15 +5,15 @@
 ## Context
 Repository: https://github.com/StamperDavid/Rapid-Compliance
 Branch: dev
-Last Commit: b1c50e8f — "feat: implement ConversationMemory service — agents recall customer history"
+Last Commit: 06344279 — "feat: fix website/blog editors, correct 16 master library docs, create WEBSITE_BUILDER.md"
 
-## Current State (February 8, 2026)
+## Current State (February 12, 2026)
 
 ### Architecture
 - **Single-tenant penthouse model** — org ID `rapid-compliance-root`, Firebase `rapid-compliance-65f87`
 - **52 AI agents** (48 swarm + 4 standalone) with hierarchical orchestration
 - **4-role RBAC** (owner/admin/manager/member) with 47 permissions
-- **158 physical routes**, **219 API endpoints**, **430K+ lines of TypeScript**
+- **160 physical routes**, **231 API endpoints**, **430K+ lines of TypeScript**
 - **NOT yet deployed to production** — everything is dev branch only
 
 ### Code Health
@@ -46,6 +46,13 @@ Last Commit: b1c50e8f — "feat: implement ConversationMemory service — agents
   - 3c: ConversationMemory service — `src/lib/conversation/conversation-memory.ts`. Unified retrieval across voice, chat, SMS by phone/email/customerId/leadId.
   - 3d: Lead Briefing generator — `conversationMemory.brief()` synthesizes interactions into structured briefing (sentiment trends, objections, buying signals, recommendations).
   - 3e: Agent integration — Outreach Manager enriches lead profiles, Revenue Director includes brief context in delegations, Voice AI loads caller history.
+- **Jasper Voice overhaul — COMPLETE** (commits 0bc1ab1f, 47738fac). Removed native TTS stub, wired ElevenLabs + Unreal Speech as only providers via VoiceEngineFactory. Added Voice & Speech settings page at `/settings/ai-agents/voice`.
+- **Documentation & Website Editor fix — COMPLETE** (commit 06344279):
+  - Website editor auto-loads homepage when entering without `?pageId=` (was always creating blank "Untitled Page")
+  - Blog editor upgraded from stubbed callbacks to full 3-panel layout (WidgetsPanel + EditorCanvas + PropertiesPanel with tabbed left panel)
+  - All 16 master library docs corrected against actual codebase: `/admin/` paths → `/(dashboard)/`, agent counts → 52/38, Firestore paths fixed, unimplemented features moved to "Planned Features" sections
+  - New `docs/master_library/WEBSITE_BUILDER.md` created (35 widgets, 23+ API endpoints, data structures, manual SOP, video script)
+  - SSOT and audit summary updated
 
 ### Immediate Next Task
 **Deploy Firestore indexes** — `firebase deploy --only firestore:indexes` (requires `firebase login --reauth` first — credentials expired). Fixes 3 failing service tests. Then proceed to production deploy.
@@ -56,6 +63,7 @@ Last Commit: b1c50e8f — "feat: implement ConversationMemory service — agents
 | 3 service tests failing | Missing Firestore composite indexes (status+createdAt, stage+createdAt on `records` and `workflows`). Fix: `firebase login --reauth` then `firebase deploy --only firestore:indexes` |
 | Firebase CLI credentials expired | Run `firebase login --reauth` to re-authenticate before deploying indexes |
 | Outbound webhooks are scaffolding | Settings UI exists with event list but backend dispatch system is not implemented |
+| Playbook missing API endpoints | `/api/playbook/list` and `/api/playbook/{id}/metrics` do not exist — UI calls them but gets 404s. Only `/api/playbook/generate` exists. |
 
 ---
 
@@ -268,6 +276,6 @@ Recommended approach:
 
 **Root docs** (5 files): CLAUDE.md, README.md, ENGINEERING_STANDARDS.md, COMPETITIVE_ANALYSIS_BRIEFING.md, SOCIAL-MEDIA-AI-SPEC.md
 **docs/** (3 files): single_source_of_truth.md, playwright-audit-2026-01-30.md, test-results-summary.md
-**docs/master_library/** (16 files): Per-feature audit summaries from Feb 5, 2026
+**docs/master_library/** (17 files): Per-feature audit summaries (corrected Feb 12, 2026) + WEBSITE_BUILDER.md
 **docs/archive/** (16 files): Historical records — do not reference for architectural decisions
 **.claude/agents/** (6 files): QA and architecture agent prompts
