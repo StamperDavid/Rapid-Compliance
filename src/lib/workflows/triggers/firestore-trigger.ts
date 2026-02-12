@@ -42,6 +42,15 @@ export async function registerFirestoreTrigger(
 }
 
 /**
+ * Re-entry guard to prevent infinite workflow recursion.
+ * Tracks active entity change processing to block cycles like:
+ * Entity update → Workflow → Entity update → Workflow → ...
+ */
+const activeEntityChanges = new Set<string>();
+const MAX_RECURSION_DEPTH = 3;
+let currentDepth = 0;
+
+/**
  * Handle entity change (called by Cloud Function or manual trigger)
  */
 export async function handleEntityChange(
@@ -51,49 +60,77 @@ export async function handleEntityChange(
   recordId: string,
   recordData: Record<string, unknown>
 ): Promise<void> {
-  // Find workflows with matching triggers
-  const { where } = await import('firebase/firestore');
-  const triggers = await FirestoreService.getAll(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.WORKSPACES}/${workspaceId}/workflowTriggers`,
-    [
-      where('triggerType', '==', `entity.${changeType}`),
-      where('schemaId', '==', schemaId),
-    ]
-  );
-
-  if (triggers.length === 0) {
-    return; // No workflows to trigger
+  // Re-entry guard: prevent infinite recursion
+  const changeKey = `${workspaceId}:${schemaId}:${recordId}:${changeType}`;
+  if (activeEntityChanges.has(changeKey)) {
+    logger.warn('[Firestore Trigger] Blocked recursive workflow execution', {
+      file: 'firestore-trigger.ts',
+      changeKey,
+      depth: currentDepth,
+    });
+    return;
   }
 
-  // Load workflows
-  const workflows = await FirestoreService.getAll(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.WORKSPACES}/${workspaceId}/${COLLECTIONS.WORKFLOWS}`,
-    [where('status', '==', 'active')]
-  );
+  if (currentDepth >= MAX_RECURSION_DEPTH) {
+    logger.warn('[Firestore Trigger] Max workflow recursion depth reached', {
+      file: 'firestore-trigger.ts',
+      changeKey,
+      depth: currentDepth,
+    });
+    return;
+  }
 
-  // Filter workflows that match this trigger
-  const matchingWorkflows = workflows.filter((w: Record<string, unknown>) => {
-    const trigger = w.trigger as EntityTrigger;
-    return trigger?.type === `entity.${changeType}` && trigger?.schemaId === schemaId;
-  });
+  activeEntityChanges.add(changeKey);
+  currentDepth++;
 
-  // Execute matching workflows
-  for (const workflow of matchingWorkflows) {
-    try {
-      const triggerData = {
-        workspaceId,
-        schemaId,
-        recordId,
-        record: recordData,
-        changeType,
-        ...recordData, // Flatten record data for easy access
-      };
+  try {
+    // Find workflows with matching triggers
+    const { where } = await import('firebase/firestore');
+    const triggers = await FirestoreService.getAll(
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.WORKSPACES}/${workspaceId}/workflowTriggers`,
+      [
+        where('triggerType', '==', `entity.${changeType}`),
+        where('schemaId', '==', schemaId),
+      ]
+    );
 
-      await executeWorkflow(workflow as Workflow, triggerData);
-    } catch (error) {
-      logger.error(`[Firestore Trigger] Error executing workflow ${workflow.id}`, error instanceof Error ? error : new Error(String(error)), { file: 'firestore-trigger.ts' });
-      // Continue with other workflows
+    if (triggers.length === 0) {
+      return; // No workflows to trigger
     }
+
+    // Load workflows
+    const workflows = await FirestoreService.getAll(
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.WORKSPACES}/${workspaceId}/${COLLECTIONS.WORKFLOWS}`,
+      [where('status', '==', 'active')]
+    );
+
+    // Filter workflows that match this trigger
+    const matchingWorkflows = workflows.filter((w: Record<string, unknown>) => {
+      const trigger = w.trigger as EntityTrigger;
+      return trigger?.type === `entity.${changeType}` && trigger?.schemaId === schemaId;
+    });
+
+    // Execute matching workflows
+    for (const workflow of matchingWorkflows) {
+      try {
+        const triggerData = {
+          workspaceId,
+          schemaId,
+          recordId,
+          record: recordData,
+          changeType,
+          ...recordData, // Flatten record data for easy access
+        };
+
+        await executeWorkflow(workflow as Workflow, triggerData);
+      } catch (error) {
+        logger.error(`[Firestore Trigger] Error executing workflow ${workflow.id}`, error instanceof Error ? error : new Error(String(error)), { file: 'firestore-trigger.ts' });
+        // Continue with other workflows
+      }
+    }
+  } finally {
+    activeEntityChanges.delete(changeKey);
+    currentDepth--;
   }
 }
 

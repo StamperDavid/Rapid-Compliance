@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { AgentInstanceManager } from '@/lib/agent/instance-manager';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
@@ -7,6 +8,11 @@ import { errors } from '@/lib/middleware/error-handler';
 import { addCORSHeaders } from '@/lib/middleware/security-headers';
 import type { ChatMessage, ModelName } from '@/types/ai-models';
 import type { ConversationMessage } from '@/types/agent-memory';
+
+const publicChatSchema = z.object({
+  customerId: z.string().min(1, 'Customer ID is required').max(200),
+  message: z.string().min(1, 'Message is required').max(2000, 'Message too long. Maximum 2000 characters.'),
+});
 
 // Minimal Organization type for this route
 interface Organization {
@@ -40,17 +46,14 @@ async function handlePublicChat(request: NextRequest) {
     }
 
     const body: unknown = await request.json();
-    const { customerId, message } = body as { customerId?: string; message?: string };
+    const parseResult = publicChatSchema.safeParse(body);
 
-    // Validate required fields
-    if (!customerId || !message) {
-      return errors.badRequest('Missing required fields: customerId, message');
+    if (!parseResult.success) {
+      const errorMsg = parseResult.error.errors[0]?.message ?? 'Invalid request';
+      return errors.badRequest(errorMsg);
     }
 
-    // Validate message length
-    if (typeof message === 'string' && message.length > 2000) {
-      return errors.badRequest('Message too long. Maximum 2000 characters.');
-    }
+    const { customerId, message } = parseResult.data;
 
     // Penthouse model: use PLATFORM_ID
     const { PLATFORM_ID } = await import('@/lib/constants/platform');

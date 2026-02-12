@@ -9,6 +9,7 @@ import { getTokensFromCode } from '@/lib/integrations/quickbooks-service';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { logger } from '@/lib/logger/logger';
+import { encryptToken } from '@/lib/security/token-encryption';
 
 export const dynamic = 'force-dynamic';
 
@@ -61,8 +62,10 @@ export async function GET(request: NextRequest) {
         type: 'accounting',
         status: 'active',
         credentials: {
-          ...tokens,
+          access_token: encryptToken(tokens.access_token),
+          refresh_token: encryptToken(tokens.refresh_token),
           realmId,
+          encrypted: true,
         },
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),

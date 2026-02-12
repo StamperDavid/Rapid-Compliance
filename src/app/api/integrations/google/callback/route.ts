@@ -11,6 +11,7 @@ import { getTokensFromCode } from '@/lib/integrations/google-calendar-service';
 import { logger } from '@/lib/logger/logger';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { PLATFORM_ID } from '@/lib/constants/platform';
+import { encryptToken } from '@/lib/security/token-encryption';
 
 // Zod schema for OAuth state validation
 const OAuthStateSchema = z.object({
@@ -76,9 +77,10 @@ export async function GET(request: NextRequest) {
         service: 'gmail',
         providerId: 'google',
         status: 'connected',
-        accessToken: tokens.access_token,
-        refreshToken: tokens.refresh_token,
+        accessToken: encryptToken(tokens.access_token),
+        refreshToken: tokens.refresh_token ? encryptToken(tokens.refresh_token) : null,
         expiryDate: tokens.expiry_date,
+        encrypted: true,
         connectedAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       });

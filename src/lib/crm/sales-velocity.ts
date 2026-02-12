@@ -55,7 +55,8 @@ export interface PipelineInsight {
  */
 export async function calculateSalesVelocity(
   workspaceId: string,
-  dateRange?: { start: Date; end: Date }
+  dateRange?: { start: Date; end: Date },
+  options?: { skipTrends?: boolean }
 ): Promise<SalesVelocityMetrics> {
   try {
     // Get all deals
@@ -138,8 +139,10 @@ export async function calculateSalesVelocity(
     // Forecast revenue
     const { forecastedRevenue, confidenceLevel } = calculateForecast(activeDeals, avgDealSize, winRate);
 
-    // Calculate trends
-    const trends = await calculateTrends(workspaceId);
+    // Calculate trends (skip if already in a sub-calculation to prevent infinite recursion)
+    const trends = options?.skipTrends
+      ? { velocity30Days: 0, velocity90Days: 0, winRate30Days: 0, winRate90Days: 0 }
+      : await calculateTrends(workspaceId);
 
     const metrics: SalesVelocityMetrics = {
       velocity,
@@ -303,7 +306,7 @@ async function calculateTrends(
   const metrics30 = await calculateSalesVelocity(workspaceId, {
     start: thirtyDaysAgo,
     end: now,
-  });
+  }, { skipTrends: true });
 
   // 90 days
   const ninetyDaysAgo = new Date(now);
@@ -311,7 +314,7 @@ async function calculateTrends(
   const metrics90 = await calculateSalesVelocity(workspaceId, {
     start: ninetyDaysAgo,
     end: now,
-  });
+  }, { skipTrends: true });
 
   return {
     velocity30Days: metrics30.velocity,

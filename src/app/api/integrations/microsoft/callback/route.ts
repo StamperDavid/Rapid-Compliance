@@ -10,6 +10,7 @@ import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { logger } from '@/lib/logger/logger';
 import { PLATFORM_ID } from '@/lib/constants/platform';
+import { encryptToken } from '@/lib/security/token-encryption';
 
 export const dynamic = 'force-dynamic';
 
@@ -55,7 +56,13 @@ export async function GET(request: NextRequest) {
         provider: 'microsoft',
         type: 'outlook',
         status: 'active',
-        credentials: tokens,
+        credentials: {
+          access_token: encryptToken(String(tokens.access_token)),
+          refresh_token: tokens.refresh_token ? encryptToken(String(tokens.refresh_token)) : undefined,
+          expires_in: tokens.expires_in,
+          token_type: tokens.token_type,
+          encrypted: true,
+        },
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       },

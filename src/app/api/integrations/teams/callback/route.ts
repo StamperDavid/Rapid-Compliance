@@ -9,6 +9,7 @@ import { apiKeyService } from '@/lib/api-keys/api-key-service';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { PLATFORM_ID } from '@/lib/constants/platform';
+import { encryptToken } from '@/lib/security/token-encryption';
 
 export const dynamic = 'force-dynamic';
 
@@ -103,9 +104,10 @@ export async function GET(request: NextRequest) {
         id: 'teams',
         name: 'Microsoft Teams',
         status: 'active',
-        accessToken: tokens.access_token,
-        refreshToken: tokens.refresh_token,
+        accessToken: encryptToken(tokens.access_token),
+        refreshToken: encryptToken(tokens.refresh_token),
         expiresAt: new Date(Date.now() + tokens.expires_in * 1000).toISOString(),
+        encrypted: true,
         connectedAt: new Date().toISOString(),
         settings: {
           notifications: {

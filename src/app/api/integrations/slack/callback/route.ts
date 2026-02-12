@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { getTokensFromCode } from '@/lib/integrations/slack-service';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
+import { encryptToken } from '@/lib/security/token-encryption';
 
 export const dynamic = 'force-dynamic';
 
@@ -54,9 +55,10 @@ export async function GET(request: NextRequest) {
         type: 'messaging',
         status: 'active',
         credentials: {
-          access_token: tokens.access_token,
+          access_token: encryptToken(tokens.access_token),
           team_id: tokens.team_id,
           team_name: tokens.team_name,
+          encrypted: true,
         },
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),

@@ -14,6 +14,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { voiceAgentHandler } from '@/lib/voice/voice-agent-handler';
 import { logger } from '@/lib/logger/logger';
 import { getSubCollection } from '@/lib/firebase/collections';
+import { verifyTwilioSignature, parseFormBody } from '@/lib/security/webhook-verification';
 
 /** Telnyx speech recognition data structure */
 interface TelnyxSpeechPayload {
@@ -39,6 +40,24 @@ export async function POST(request: NextRequest) {
   const startTime = Date.now();
 
   try {
+    // Verify Twilio signature for defense-in-depth
+    const authToken = process.env.TWILIO_AUTH_TOKEN;
+    if (authToken) {
+      const signature = request.headers.get('x-twilio-signature');
+      if (signature) {
+        const rawBody = await request.clone().text();
+        const url = process.env.WEBHOOK_BASE_URL
+          ? `${process.env.WEBHOOK_BASE_URL}/api/voice/ai-agent/speech`
+          : request.url;
+        const params = parseFormBody(rawBody);
+        const isValid = verifyTwilioSignature(authToken, signature, url, params);
+        if (!isValid) {
+          logger.warn('[AI-Speech] Invalid Twilio signature', { file: 'ai-agent/speech/route.ts' });
+          return NextResponse.json({ error: 'Invalid webhook signature' }, { status: 401 });
+        }
+      }
+    }
+
     // Get callId from query params
     const { searchParams } = new URL(request.url);
     const callId = searchParams.get('callId');
