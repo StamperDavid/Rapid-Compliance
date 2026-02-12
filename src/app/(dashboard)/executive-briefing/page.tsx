@@ -4,6 +4,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
 import { useUnifiedAuth } from '@/hooks/useUnifiedAuth';
+import { auth } from '@/lib/firebase/config';
 import { logger } from '@/lib/logger/logger';
 
 // ============================================================================
@@ -96,9 +97,18 @@ export default function ExecutiveBriefingPage() {
       setLoading(true);
       setError(null);
 
+      const token = await auth?.currentUser?.getIdToken();
+      if (!token) {
+        setError('Not authenticated');
+        setLoading(false);
+        return;
+      }
+
+      const headers = { Authorization: `Bearer ${token}` };
+
       const [briefingRes, commandsRes] = await Promise.all([
-        fetch('/api/orchestrator/executive-briefing'),
-        fetch('/api/orchestrator/command?limit=20'),
+        fetch('/api/orchestrator/executive-briefing', { headers }),
+        fetch('/api/orchestrator/command?limit=20', { headers }),
       ]);
 
       if (briefingRes.ok) {
@@ -133,9 +143,17 @@ export default function ExecutiveBriefingPage() {
   async function handleApproval(approvalId: string, decision: 'APPROVED' | 'REJECTED') {
     setProcessingApproval(approvalId);
     try {
+      const token = await auth?.currentUser?.getIdToken();
+      if (!token) {
+        return;
+      }
+
       const res = await fetch('/api/orchestrator/approvals', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({ approvalId, decision }),
       });
 
