@@ -123,8 +123,25 @@ export async function POST(request: NextRequest) {
 
     const { workspaceId, workflow } = bodyResult.data;
 
-    // Cast to the expected type - the service layer will perform full validation
-    const workflowData = workflow as unknown as Omit<Workflow, 'id' | 'workspaceId' | 'createdAt' | 'updatedAt' | 'createdBy' | 'version' | 'stats'>;
+    // Build type-safe workflow input from validated Zod data
+    // Zod validates the structure but types are loose, so we cast through Partial for type safety
+    const workflowData: Omit<Workflow, 'id' | 'workspaceId' | 'createdAt' | 'updatedAt' | 'createdBy' | 'version' | 'stats'> = {
+      name: workflow.name,
+      description: workflow.description,
+      icon: workflow.icon,
+      folder: workflow.folder,
+      status: workflow.status,
+      trigger: workflow.trigger as unknown as Workflow['trigger'],
+      conditions: workflow.conditions as unknown as Workflow['conditions'],
+      conditionOperator: workflow.conditionOperator,
+      actions: workflow.actions as unknown as Workflow['actions'],
+      settings: (workflow.settings ?? {}) as unknown as Workflow['settings'],
+      permissions: workflow.permissions ?? {
+        canView: [],
+        canEdit: [],
+        canExecute: [],
+      },
+    };
 
     const newWorkflow = await createWorkflow(
       workflowData,

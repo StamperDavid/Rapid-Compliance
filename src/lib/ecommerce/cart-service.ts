@@ -7,6 +7,7 @@ import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import type { Cart, CartItem, AppliedDiscount } from '@/types/ecommerce';
 import { Timestamp } from 'firebase/firestore';
 import { PLATFORM_ID } from '@/lib/constants/platform';
+import { logger } from '@/lib/logger/logger';
 import { getEcommerceConfig } from './types';
 
 interface ProductData {
@@ -20,6 +21,7 @@ interface ProductData {
 }
 
 interface DiscountData {
+  docId: string;
   code: string;
   type: string;
   value: number;
@@ -287,13 +289,26 @@ export async function applyDiscountCode(
   };
   
   cart.discountCodes.push(appliedDiscount);
-  
+
   // Recalculate totals
   recalculateCartTotals(cart);
-  
+
   // Save cart
   await saveCart(cart);
-  
+
+  // Increment discount usage count to prevent infinite redemptions
+  if (discount.usageLimit) {
+    try {
+      const discountPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/${workspaceId}/discountCodes`;
+      await FirestoreService.update(discountPath, discount.docId, {
+        usageCount: (discount.usageCount ?? 0) + 1,
+      });
+    } catch {
+      // Log but don't fail the cart operation — the discount is already applied
+      logger.error('Failed to increment discount usage count', undefined, { code: discount.code, docId: discount.docId });
+    }
+  }
+
   return cart;
 }
 
@@ -306,15 +321,28 @@ export async function removeDiscountCode(
   code: string
 ): Promise<Cart> {
   const cart = await getOrCreateCart(sessionId, workspaceId);
-  
+
   cart.discountCodes = cart.discountCodes.filter(dc => dc.code !== code);
-  
+
   // Recalculate totals
   recalculateCartTotals(cart);
-  
+
   // Save cart
   await saveCart(cart);
-  
+
+  // Decrement discount usage count when removed from cart
+  try {
+    const discount = await getDiscountCode(workspaceId, code);
+    if (discount?.usageLimit && (discount.usageCount ?? 0) > 0) {
+      const discountPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/${workspaceId}/discountCodes`;
+      await FirestoreService.update(discountPath, discount.docId, {
+        usageCount: (discount.usageCount ?? 1) - 1,
+      });
+    }
+  } catch {
+    logger.error('Failed to decrement discount usage count', undefined, { code });
+  }
+
   return cart;
 }
 
@@ -425,6 +453,7 @@ async function getDiscountCode(workspaceId: string, code: string): Promise<Disco
   if (discounts.length === 0) {return null;}
   const d = discounts[0] as Record<string, unknown>;
   return {
+    docId: d.id as string,
     code: d.code as string,
     type: d.type as string,
     value: d.value as number,

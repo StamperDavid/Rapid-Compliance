@@ -104,6 +104,7 @@ export async function POST(request: NextRequest) {
         phoneNumber: to,
         status: 'initiated',
         direction: 'outbound',
+        recordingConsentDisclosed: true,
         createdAt: new Date().toISOString(),
         createdBy: authResult.user.uid,
       },

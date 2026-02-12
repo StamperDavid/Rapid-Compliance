@@ -46,6 +46,7 @@ export function GET(request: NextRequest): NextResponse {
     // Return simple static TwiML for testing
     const twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
+  <Say voice="Polly.Joanna">This call may be recorded for quality assurance and training purposes.</Say>
   <Say voice="Polly.Joanna">Hello! This is a call from your CRM system. Please hold while we connect you.</Say>
   <Pause length="1"/>
   <Say voice="Polly.Joanna">If you'd like to be removed from our calling list, please press 1.</Say>
@@ -204,11 +205,27 @@ function handleVoicemailDrop(callId: string): NextResponse {
  * Generate basic TwiML (non-AI)
  */
 function generateBasicTwiML(): NextResponse {
+  const transferNumber = process.env.HUMAN_AGENT_QUEUE_NUMBER;
+
+  if (!transferNumber) {
+    logger.error('[TwiML] HUMAN_AGENT_QUEUE_NUMBER not configured — cannot transfer call', undefined, { file: 'twiml/route.ts' });
+    const twiml = `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Say voice="Polly.Joanna">This call may be recorded for quality assurance and training purposes.</Say>
+  <Say voice="Polly.Joanna">Hello! Thank you for taking our call. We are unable to transfer your call at this time. Please try again later. Goodbye.</Say>
+  <Hangup/>
+</Response>`;
+    return new NextResponse(twiml, {
+      headers: { 'Content-Type': 'text/xml' },
+    });
+  }
+
   const twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
+  <Say voice="Polly.Joanna">This call may be recorded for quality assurance and training purposes.</Say>
   <Say voice="Polly.Joanna">Hello! Thank you for taking our call. Please hold while we connect you with a representative.</Say>
   <Dial timeout="30">
-    <Number>${process.env.HUMAN_AGENT_QUEUE_NUMBER ?? '+15551234567'}</Number>
+    <Number>${transferNumber}</Number>
   </Dial>
   <Say voice="Polly.Joanna">We're sorry, all representatives are busy. Please try again later. Goodbye.</Say>
   <Hangup/>
@@ -223,11 +240,27 @@ function generateBasicTwiML(): NextResponse {
  * Generate fallback TwiML
  */
 function generateFallbackTwiML(): NextResponse {
+  const transferNumber = process.env.HUMAN_AGENT_QUEUE_NUMBER;
+
+  if (!transferNumber) {
+    logger.error('[TwiML] HUMAN_AGENT_QUEUE_NUMBER not configured — cannot transfer call', undefined, { file: 'twiml/route.ts' });
+    const twiml = `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Say voice="Polly.Joanna">This call may be recorded for quality assurance and training purposes.</Say>
+  <Say voice="Polly.Joanna">We're experiencing technical difficulties and are unable to transfer your call at this time. Please try again later. Goodbye.</Say>
+  <Hangup/>
+</Response>`;
+    return new NextResponse(twiml, {
+      headers: { 'Content-Type': 'text/xml' },
+    });
+  }
+
   const twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
+  <Say voice="Polly.Joanna">This call may be recorded for quality assurance and training purposes.</Say>
   <Say voice="Polly.Joanna">Hello! We're experiencing technical difficulties. Let me connect you with a team member.</Say>
   <Dial timeout="30">
-    <Number>${process.env.HUMAN_AGENT_QUEUE_NUMBER ?? '+15551234567'}</Number>
+    <Number>${transferNumber}</Number>
   </Dial>
   <Say voice="Polly.Joanna">We apologize, no one is available right now. Please call back later. Goodbye.</Say>
   <Hangup/>

@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { getContacts, deleteContact } from '@/lib/crm/contact-service';
+import { getContacts, createContact, deleteContact } from '@/lib/crm/contact-service';
 import { logger } from '@/lib/logger/logger';
 import { requireAuth } from '@/lib/auth/api-auth';
 
@@ -10,6 +10,32 @@ const querySchema = z.object({
   workspaceId: z.string().optional().default('default'),
   company: z.string().optional(),
   pageSize: z.coerce.number().int().positive().optional().default(50),
+});
+
+const createContactSchema = z.object({
+  firstName: z.string().min(1).optional(),
+  lastName: z.string().min(1).optional(),
+  name: z.string().min(1).optional(),
+  email: z.string().email().optional(),
+  phone: z.string().optional(),
+  company: z.string().optional(),
+  title: z.string().optional(),
+  department: z.string().optional(),
+  linkedInUrl: z.string().url().optional(),
+  twitterHandle: z.string().optional(),
+  website: z.string().url().optional(),
+  address: z.object({
+    street: z.string().optional(),
+    city: z.string().optional(),
+    state: z.string().optional(),
+    zip: z.string().optional(),
+    country: z.string().optional(),
+  }).optional(),
+  isVIP: z.boolean().optional(),
+  tags: z.array(z.string()).optional(),
+  notes: z.string().optional(),
+  ownerId: z.string().optional(),
+  workspaceId: z.string().optional().default('default'),
 });
 
 const deleteBodySchema = z.object({
@@ -50,6 +76,39 @@ export async function GET(
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Failed to fetch contacts';
     logger.error('Failed to fetch contacts', error instanceof Error ? error : new Error(String(error)));
+    return NextResponse.json(
+      { error: message },
+      { status: 500 }
+    );
+  }
+}
+
+export async function POST(
+  request: NextRequest
+) {
+  try {
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
+    const body: unknown = await request.json();
+    const bodyResult = createContactSchema.safeParse(body);
+
+    if (!bodyResult.success) {
+      return NextResponse.json(
+        { error: 'Invalid request body', details: bodyResult.error.errors },
+        { status: 400 }
+      );
+    }
+
+    const { workspaceId, ...contactData } = bodyResult.data;
+    const contact = await createContact(contactData, workspaceId);
+
+    return NextResponse.json({ success: true, contact }, { status: 201 });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Failed to create contact';
+    logger.error('Failed to create contact', error instanceof Error ? error : new Error(String(error)));
     return NextResponse.json(
       { error: message },
       { status: 500 }

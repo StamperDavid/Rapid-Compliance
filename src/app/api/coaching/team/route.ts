@@ -296,15 +296,16 @@ export async function POST(request: NextRequest) {
     // Emit error signal
     try {
       const coordinator = getServerSignalCoordinator();
-      // Using type assertion for signal bus compatibility with custom event types
       await coordinator.emitSignal({
-        type: 'coaching.team.error',
-        timestamp: new Date(),
-        data: {
+        type: 'system.error',
+        confidence: 1.0,
+        priority: 'High',
+        metadata: {
+          module: 'coaching.team',
           error: error instanceof Error ? error.message : 'Unknown error',
-          timestamp: new Date()
-        }
-      } as unknown as Parameters<typeof coordinator.emitSignal>[0]);
+          timestamp: new Date().toISOString(),
+        },
+      });
     } catch (signalError) {
       logger.error('Failed to emit error signal', signalError instanceof Error ? signalError : new Error(String(signalError)));
     }

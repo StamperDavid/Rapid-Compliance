@@ -101,6 +101,12 @@ const querySchema = z.object({
  * Transform SignalHistoryEntry to API-friendly LogEntry
  */
 function transformLogEntry(entry: SignalHistoryEntry, includePayload: boolean): LogEntry {
+  // Extract payload safely - cast through unknown for type compatibility
+  let payload: Record<string, unknown> | null = null;
+  if (includePayload && entry.signal.payload && typeof entry.signal.payload === 'object') {
+    payload = entry.signal.payload as unknown as Record<string, unknown>;
+  }
+
   return {
     signalId: entry.signal.id,
     signalType: entry.signal.type,
@@ -110,7 +116,7 @@ function transformLogEntry(entry: SignalHistoryEntry, includePayload: boolean): 
     processedAt: entry.processedAt.toISOString(),
     durationMs: entry.durationMs ?? null,
     errorMessage: entry.errorMessage ?? null,
-    payload: includePayload ? (entry.signal.payload as unknown as Record<string, unknown>) : null,
+    payload,
   };
 }
 

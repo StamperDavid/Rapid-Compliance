@@ -71,7 +71,8 @@ export async function POST(request: NextRequest) {
       dealId: validData.dealId,
     });
 
-    // Cast admin Firestore to client Firestore type - they share same API at runtime
+    // Admin Firestore and Client Firestore share the same API at runtime
+    // but have different TypeScript type signatures. Cast through unknown for type compatibility.
     const dal = new BaseAgentDAL(db as unknown as Firestore);
     const service = getWorkflowService(dal);
 

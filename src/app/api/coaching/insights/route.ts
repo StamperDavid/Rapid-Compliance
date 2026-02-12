@@ -253,8 +253,27 @@ export async function POST(request: NextRequest) {
         'gpt-4o',
         Date.now() - startTime
       );
-      // Signal coordinator expects the full event object - using type assertion for signal bus compatibility
-      await coordinator.emitSignal(event as unknown as Parameters<typeof coordinator.emitSignal>[0]);
+      // Transform coaching event to SalesSignal format
+      await coordinator.emitSignal({
+        type: 'coaching.insights.generated',
+        confidence: insights.confidenceScore,
+        priority: 'Medium',
+        metadata: {
+          repId: event.data.repId,
+          repName: event.data.repName,
+          repEmail: event.data.repEmail,
+          tier: event.data.tier,
+          overallScore: event.data.overallScore,
+          recommendationCount: event.data.recommendationCount,
+          actionItemCount: event.data.actionItemCount,
+          trainingSuggestionCount: event.data.trainingSuggestionCount,
+          riskCount: event.data.riskCount,
+          criticalAreas: event.data.criticalAreas,
+          period: event.data.period,
+          modelUsed: event.data.modelUsed,
+          processingTimeMs: event.data.processingTimeMs,
+        },
+      });
     } catch (signalError) {
       logger.error('Failed to emit coaching insights signal', signalError instanceof Error ? signalError : new Error(String(signalError)));
       // Don't fail the request if signal emission fails
@@ -298,15 +317,16 @@ export async function POST(request: NextRequest) {
     // Emit error signal
     try {
       const coordinator = getServerSignalCoordinator();
-      // Using type assertion for signal bus compatibility with custom event types
       await coordinator.emitSignal({
-        type: 'coaching.error',
-        timestamp: new Date(),
-        data: {
+        type: 'system.error',
+        confidence: 1.0,
+        priority: 'High',
+        metadata: {
+          module: 'coaching',
           error: error instanceof Error ? error.message : 'Unknown error',
-          timestamp: new Date()
-        }
-      } as unknown as Parameters<typeof coordinator.emitSignal>[0]);
+          timestamp: new Date().toISOString(),
+        },
+      });
     } catch (signalError) {
       logger.error('Failed to emit error signal', signalError instanceof Error ? signalError : new Error(String(signalError)));
     }

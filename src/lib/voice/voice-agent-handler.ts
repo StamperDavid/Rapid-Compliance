@@ -247,8 +247,12 @@ class VoiceAgentHandler {
       file: 'voice-agent-handler.ts',
     });
 
+    // Prepend recording consent disclosure (two-party consent compliance)
+    const RECORDING_DISCLOSURE = 'This call may be recorded for quality assurance and training purposes. By continuing, you consent to recording.';
+    const greetingWithDisclosure = `${RECORDING_DISCLOSURE} ${greeting}`;
+
     // Generate TwiML with speech gathering
-    const twiml = await this.generateConversationTwiML(greeting, call.callId);
+    const twiml = await this.generateConversationTwiML(greetingWithDisclosure, call.callId);
 
     return {
       text: greeting,
@@ -591,7 +595,15 @@ class VoiceAgentHandler {
   private async generateTransferTwiML(message: string): Promise<string> {
     const voice = this.config?.voiceSettings?.voice ?? 'Polly.Joanna';
     const language = this.config?.voiceSettings?.language ?? 'en-US';
-    const transferToNumber = process.env.HUMAN_AGENT_QUEUE_NUMBER ?? '+15551234567';
+    const transferToNumber = process.env.HUMAN_AGENT_QUEUE_NUMBER;
+    if (!transferToNumber) {
+      logger.error('[VoiceAgent] HUMAN_AGENT_QUEUE_NUMBER not configured — cannot transfer call', undefined, { file: 'voice-agent-handler.ts' });
+      return `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Say voice="${voice}">We are unable to transfer your call at this time. Please try again later. Goodbye.</Say>
+  <Hangup/>
+</Response>`;
+    }
 
     // Try TTS synthesis first
     const audioUrl = await this.synthesizeAndStore(message);

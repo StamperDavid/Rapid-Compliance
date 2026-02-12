@@ -35,13 +35,6 @@ interface OrganizationRecord {
   [key: string]: unknown;
 }
 
-interface OrganizationUpdateData {
-  updatedAt: string;
-  industry: string;
-  industryName: string;
-  assistantName?: string;
-  ownerName?: string;
-}
 
 // Result type for API responses
 interface ApiSuccessResponse {
@@ -149,7 +142,7 @@ export async function POST(request: NextRequest) {
     const industry = typeof typedOnboardingData.industry === 'string' ? typedOnboardingData.industry : 'unknown';
 
     // Update organization with assistant name and owner name
-    const orgUpdate: OrganizationUpdateData = {
+    const orgUpdate: Record<string, unknown> = {
       updatedAt: new Date().toISOString(),
       industry: industry,
       industryName: industry, // Industry display name
@@ -173,11 +166,11 @@ export async function POST(request: NextRequest) {
       orgUpdate.ownerName = typedOnboardingData.ownerName;
     }
 
-    await AdminFirestoreService.update(COLLECTIONS.ORGANIZATIONS, PLATFORM_ID, orgUpdate as unknown as Record<string, unknown>);
+    await AdminFirestoreService.update(COLLECTIONS.ORGANIZATIONS, PLATFORM_ID, orgUpdate);
 
-    // Process onboarding
+    // Process onboarding - processOnboarding will validate the shape internally
     const result = await processOnboarding({
-      onboardingData: onboardingData as unknown as OnboardingData,
+      onboardingData: onboardingData as Partial<OnboardingData> as OnboardingData,
       userId: user.uid,
     });
 

@@ -120,13 +120,22 @@ export async function POST(request: NextRequest) {
     logger.error('[AI-Agent] Error starting conversation:', error instanceof Error ? error : new Error(String(error)), { file: 'ai-agent/route.ts' });
 
     // Return fallback TwiML that transfers to human
-    const fallbackTwiml = `<?xml version="1.0" encoding="UTF-8"?>
+    const transferNumber = process.env.HUMAN_AGENT_QUEUE_NUMBER;
+    const fallbackTwiml = transferNumber
+      ? `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
+  <Say voice="Polly.Joanna">This call may be recorded for quality assurance and training purposes.</Say>
   <Say voice="Polly.Joanna">I apologize, but I'm having technical difficulties. Let me connect you with a team member.</Say>
   <Dial timeout="30">
-    <Number>${process.env.HUMAN_AGENT_QUEUE_NUMBER ?? '+15551234567'}</Number>
+    <Number>${transferNumber}</Number>
   </Dial>
   <Say voice="Polly.Joanna">I'm sorry, all agents are busy. Please try again later. Goodbye.</Say>
+  <Hangup/>
+</Response>`
+      : `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Say voice="Polly.Joanna">This call may be recorded for quality assurance and training purposes.</Say>
+  <Say voice="Polly.Joanna">I apologize, but I'm having technical difficulties and we are unable to transfer your call at this time. Please try again later. Goodbye.</Say>
   <Hangup/>
 </Response>`;
 

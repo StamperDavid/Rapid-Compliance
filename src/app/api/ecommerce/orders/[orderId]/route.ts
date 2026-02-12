@@ -38,10 +38,10 @@ export async function GET(
       return errors.notFound('Order not found');
     }
 
-    // Verify user has access (customer email or organization member)
+    // Verify user has access (admin or order owner)
     const user = authResult.user;
-    // In penthouse model, authenticated users belong to PLATFORM_ID
-    if (order.customerEmail !== user?.email) {
+    const isAdmin = user.role === 'owner' || user.role === 'admin';
+    if (!isAdmin && order.customerEmail !== user?.email) {
       return NextResponse.json(
         { success: false, error: 'Access denied' },
         { status: 403 }

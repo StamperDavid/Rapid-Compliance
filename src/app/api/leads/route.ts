@@ -98,8 +98,22 @@ export async function POST(
     }
 
     const { workspaceId, leadData } = bodyResult.data;
-    // Cast to the expected type - service layer handles full validation
-    const leadInput = leadData as unknown as Omit<Lead, 'id' | 'workspaceId' | 'createdAt'>;
+    // Build type-safe lead input from validated Zod data
+    const leadInput: Omit<Lead, 'id' | 'workspaceId' | 'createdAt'> = {
+      firstName: leadData.firstName,
+      lastName: leadData.lastName,
+      email: leadData.email,
+      phone: leadData.phone,
+      company: leadData.company,
+      companyName: leadData.companyName,
+      title: leadData.title,
+      status: (leadData.status as Lead['status']) ?? 'new',
+      score: leadData.score,
+      source: leadData.source,
+      ownerId: leadData.ownerId,
+      tags: leadData.tags,
+      customFields: leadData.customFields,
+    };
     const result = await createLead(leadInput, workspaceId);
 
     return NextResponse.json(result);
