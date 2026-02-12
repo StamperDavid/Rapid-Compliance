@@ -462,8 +462,9 @@ export default function AdminSidebar() {
           }}
         >
           {filteredSections.map((section) => {
-            const isSectionCollapsed = collapsedSections[section.id] ?? false;
-            const hasActiveItem = section.items.some((item: NavigationItem) => isActive(item.href));
+            const activeItem = section.items.find((item: NavigationItem) => isActive(item.href));
+            const hasActiveItem = !!activeItem;
+            const isSectionCollapsed = collapsedSections[section.id] ?? !hasActiveItem;
 
             return (
               <div key={section.id} style={{ marginBottom: '0.25rem' }}>
@@ -488,12 +489,16 @@ export default function AdminSidebar() {
                   >
                     <span
                       style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
                         fontSize: '0.6875rem',
                         fontWeight: 700,
                         textTransform: 'uppercase',
                         letterSpacing: '0.08em',
                       }}
                     >
+                      <section.icon className="w-3.5 h-3.5" />
                       {section.label}
                     </span>
                     {isSectionCollapsed ? (
@@ -511,6 +516,40 @@ export default function AdminSidebar() {
                     }}
                   />
                 )}
+
+                {/* Active page indicator when section is collapsed */}
+                {isSectionCollapsed && hasActiveItem && activeItem && !isCollapsed && (() => {
+                  const ActiveIcon = activeItem.icon;
+                  return (
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.75rem',
+                        padding: '0.5rem 1.25rem',
+                        backgroundColor: 'rgba(var(--color-primary-rgb), 0.08)',
+                        borderLeft: '3px solid var(--color-primary)',
+                      }}
+                    >
+                      <ActiveIcon
+                        className="w-4 h-4 flex-shrink-0"
+                        style={{ color: activeItem.iconColor }}
+                      />
+                      <span
+                        style={{
+                          fontSize: '0.8125rem',
+                          fontWeight: 600,
+                          color: 'var(--color-text-primary)',
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                        }}
+                      >
+                        {activeItem.label}
+                      </span>
+                    </div>
+                  );
+                })()}
 
                 {/* Section Items */}
                 {!isSectionCollapsed &&
