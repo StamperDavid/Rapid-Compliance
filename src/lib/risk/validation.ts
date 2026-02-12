@@ -155,8 +155,8 @@ export const RiskMetadataSchema = z.object({
   aiModel: AIModelSchema,
   tokensUsed: z.number().int().min(0),
   calculationDuration: z.number().min(0),
-  dealScore: z.any().optional(),
-  dealHealth: z.any().optional(),
+  dealScore: z.number().optional(),
+  dealHealth: z.string().optional(),
 });
 
 /**

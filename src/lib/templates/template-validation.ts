@@ -98,7 +98,7 @@ const CustomFieldSchema = z.object({
   description: z.string().min(1),
   extractionHints: z.array(z.string()),
   required: z.boolean(),
-  defaultValue: z.any(),
+  defaultValue: z.union([z.string(), z.number(), z.boolean(), z.null()]).optional(),
 });
 
 const ResearchIntelligenceMetadataSchema = z.object({

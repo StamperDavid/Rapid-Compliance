@@ -7,6 +7,7 @@
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { backupService, type BackupConfig } from '@/lib/backup/backup-service';
 import { requireRole } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
@@ -39,12 +40,21 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       return authResult;
     }
 
-    // Parse request body
-    const body = await request.json() as {
-      collections?: string[];
-      incremental?: boolean;
-      storageType?: 'local' | 'gcs';
-    };
+    // Parse and validate request body
+    const rawBody: unknown = await request.json();
+    const backupSchema = z.object({
+      collections: z.array(z.string()).optional(),
+      incremental: z.boolean().optional(),
+      storageType: z.enum(['local', 'gcs']).optional(),
+    });
+    const parsed = backupSchema.safeParse(rawBody);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Invalid request body', details: parsed.error.flatten().fieldErrors },
+        { status: 400 },
+      );
+    }
+    const body = parsed.data;
 
     // Get encryption key from environment
     const encryptionKey = process.env.BACKUP_ENCRYPTION_KEY;
@@ -106,7 +116,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
     // Get query parameters
     const searchParams = request.nextUrl.searchParams;
-    const storageType = searchParams.get('storageType') as 'local' | 'gcs' | null;
+    const storageTypeParam = searchParams.get('storageType');
+    const storageType = (storageTypeParam === 'local' || storageTypeParam === 'gcs') ? storageTypeParam : null;
 
     // Get encryption key from environment
     const encryptionKey = process.env.BACKUP_ENCRYPTION_KEY;

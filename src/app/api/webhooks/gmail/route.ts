@@ -82,6 +82,20 @@ export async function POST(request: NextRequest) {
       return rateLimitResponse;
     }
 
+    // Verify Google Pub/Sub push authentication
+    // Google sends a Bearer token that matches the configured audience/secret
+    const webhookSecret = process.env.GMAIL_WEBHOOK_SECRET;
+    if (webhookSecret) {
+      const authHeader = request.headers.get('authorization');
+      const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
+      if (!token || token !== webhookSecret) {
+        logger.warn('Gmail webhook: invalid or missing auth token', { route: '/api/webhooks/gmail' });
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+    } else {
+      logger.warn('Gmail webhook: GMAIL_WEBHOOK_SECRET not configured, skipping auth', { route: '/api/webhooks/gmail' });
+    }
+
     // Gmail sends push notifications as JSON
     const body: unknown = await request.json();
 

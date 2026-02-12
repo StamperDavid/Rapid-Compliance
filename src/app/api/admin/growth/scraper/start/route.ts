@@ -4,15 +4,16 @@
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { verifyAdminRequest, isAuthError } from '@/lib/api/admin-auth';
 import { logger } from '@/lib/logger/logger';
 
 export const dynamic = 'force-dynamic';
 
-interface ScraperRequest {
-  url: string;
-  type: string;
-}
+const scraperRequestSchema = z.object({
+  url: z.string().url('A valid URL is required'),
+  type: z.string().min(1, 'Scraper type is required'),
+});
 
 export async function POST(request: NextRequest) {
   try {
@@ -21,12 +22,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: authResult.error }, { status: authResult.status });
     }
 
-    const body = (await request.json()) as ScraperRequest;
-    const { url, type } = body;
-
-    if (!url) {
-      return NextResponse.json({ error: 'URL is required' }, { status: 400 });
+    const rawBody: unknown = await request.json();
+    const parsed = scraperRequestSchema.safeParse(rawBody);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Invalid request body', details: parsed.error.flatten().fieldErrors },
+        { status: 400 },
+      );
     }
+    const { url, type } = parsed.data;
 
     // Create scraper job
     const job = {

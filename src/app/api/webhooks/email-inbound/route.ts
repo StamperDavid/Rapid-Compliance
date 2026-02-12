@@ -72,6 +72,26 @@ export async function POST(request: NextRequest) {
       return rateLimitResponse;
     }
 
+    // Verify SendGrid Inbound Parse webhook using Basic Auth
+    // Configure the SendGrid parse webhook URL as:
+    // https://user:SENDGRID_INBOUND_SECRET@yourdomain.com/api/webhooks/email-inbound
+    const inboundSecret = process.env.SENDGRID_INBOUND_SECRET;
+    if (inboundSecret) {
+      const authHeader = request.headers.get('authorization');
+      if (!authHeader?.startsWith('Basic ')) {
+        logger.warn('Inbound Email Webhook: Missing Basic auth', { route: '/api/webhooks/email-inbound' });
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+      const decoded = Buffer.from(authHeader.slice(6), 'base64').toString();
+      const password = decoded.split(':').slice(1).join(':');
+      if (password !== inboundSecret) {
+        logger.warn('Inbound Email Webhook: Invalid auth credentials', { route: '/api/webhooks/email-inbound' });
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+    } else {
+      logger.warn('Inbound Email Webhook: SENDGRID_INBOUND_SECRET not configured, skipping auth', { route: '/api/webhooks/email-inbound' });
+    }
+
     logger.info('Inbound Email Webhook: Received request', { route: '/api/webhooks/email-inbound' });
 
     // Parse multipart form data

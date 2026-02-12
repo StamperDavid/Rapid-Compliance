@@ -49,7 +49,7 @@ export const emailSendSchema = z.object({
     opens: z.boolean().optional(),
     clicks: z.boolean().optional(),
   }).optional(),
-  metadata: z.record(z.any()).optional(),
+  metadata: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])).optional(),
 }).refine((data) => !!data.html || !!data.text, {
   message: 'Either html or text is required',
   path: ['html'],
@@ -62,7 +62,7 @@ export const smsSendSchema = z.object({
   to: phoneSchema,
   message: z.string().min(1).max(1600), // SMS character limit
   from: phoneSchema.optional(),
-  metadata: z.record(z.any()).optional(),
+  metadata: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])).optional(),
 });
 
 /**
@@ -92,7 +92,7 @@ export const leadScoringSchema = z.union([
         recencyScore: z.number().min(0).max(100).optional(),
         fitScore: z.number().min(0).max(100).optional(),
       }).optional(),
-      leads: z.array(z.any()).optional(),
+      leads: z.array(z.record(z.string(), z.unknown())).optional(),
     }),
     }),
   // Lightweight payload used in tests and simple flows
@@ -109,15 +109,15 @@ export const workflowExecuteSchema = z.union([
     workflow: z.object({
       id: z.string(),
       name: z.string(),
-      trigger: z.any(),
-      actions: z.array(z.any()),
+      trigger: z.record(z.string(), z.unknown()),
+      actions: z.array(z.record(z.string(), z.unknown())),
     }),
-    triggerData: z.record(z.any()),
+    triggerData: z.record(z.string(), z.unknown()),
     }),
   // Simpler form used by tests
   z.object({
     workflowId: z.string(),
-    triggerData: z.record(z.any()),
+    triggerData: z.record(z.string(), z.unknown()),
     }),
 ]);
 
@@ -142,7 +142,7 @@ export const campaignCreateSchema = z.object({
  */
 export const checkoutCompleteSchema = z.object({
   paymentIntentId: z.string().min(1),
-  orderData: z.record(z.any()).optional(),
+  orderData: z.record(z.string(), z.unknown()).optional(),
 });
 
 /**
@@ -167,7 +167,7 @@ export const campaignActionSchema = z.object({
 export const leadNurtureSchema = z.object({
   action: z.enum(['create-sequence', 'enroll-lead', 'analyze-lifecycle', 'get-attribution']),
   data: z.object({
-    sequence: z.any().optional(),
+    sequence: z.record(z.string(), z.unknown()).optional(),
     leadId: z.string().optional(),
     sequenceId: z.string().optional(),
     model: z.string().optional(),
@@ -179,7 +179,7 @@ export const leadNurtureSchema = z.object({
  */
 export const leadEnrichSchema = z.object({
   leadId: z.string().min(1),
-  sources: z.record(z.any()).optional(),
+  sources: z.record(z.string(), z.unknown()).optional(),
 });
 
 /**

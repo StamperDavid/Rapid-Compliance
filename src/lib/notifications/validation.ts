@@ -85,14 +85,14 @@ export const notificationVariablesSchema = z.object({
   leadName: z.string().optional(),
   leadEmail: z.string().email().optional(),
   leadCompany: z.string().optional(),
-}).catchall(z.any()); // Allow additional custom variables
+}).catchall(z.unknown()); // Allow additional custom variables
 
 /**
  * Slack Block Schema
  */
 export const slackBlockSchema = z.object({
   type: z.string(),
-}).catchall(z.any()); // Flexible to support all Slack block types
+}).catchall(z.unknown()); // Flexible to support all Slack block types
 
 /**
  * Slack Attachment Schema
@@ -141,10 +141,10 @@ export const notificationTemplateSchema = z.object({
   
   webhook: z.object({
     method: z.enum(['POST', 'PUT', 'PATCH']),
-    body: z.record(z.any()),
+    body: z.record(z.string(), z.unknown()),
     headers: z.record(z.string()).optional(),
   }).optional(),
-  
+
   inApp: z.object({
     title: z.string().min(1).max(200),
     body: z.string().min(1).max(1000),
@@ -156,14 +156,14 @@ export const notificationTemplateSchema = z.object({
       style: z.enum(['primary', 'default', 'danger']).optional(),
     })).optional(),
   }).optional(),
-  
+
   metadata: z.object({
     description: z.string().min(1).max(500),
     requiredVariables: z.array(z.string()),
     optionalVariables: z.array(z.string()).optional(),
     version: z.string(),
-    createdAt: z.any(), // Firestore Timestamp
-    updatedAt: z.any(), // Firestore Timestamp
+    createdAt: z.unknown(), // Firestore Timestamp
+    updatedAt: z.unknown(), // Firestore Timestamp
   }),
 });
 
@@ -229,8 +229,8 @@ export const notificationPreferencesSchema = z.object({
   }),
   
   metadata: z.object({
-    createdAt: z.any(), // Firestore Timestamp
-    updatedAt: z.any(), // Firestore Timestamp
+    createdAt: z.unknown(), // Firestore Timestamp
+    updatedAt: z.unknown(), // Firestore Timestamp
   }),
 });
 
@@ -256,10 +256,10 @@ export const notificationContentSchema = z.object({
   webhook: z.object({
     url: z.string().url(),
     method: z.string(),
-    body: z.record(z.any()),
+    body: z.record(z.string(), z.unknown()),
     headers: z.record(z.string()).optional(),
   }).optional(),
-  
+
   inApp: z.object({
     title: z.string().min(1).max(200),
     body: z.string().min(1).max(1000),
@@ -284,28 +284,28 @@ export const notificationSchema = z.object({
   
   delivery: z.object({
     attempts: z.record(notificationChannelSchema, z.number().int().min(0)),
-    lastAttempt: z.record(notificationChannelSchema, z.any().nullable()),
-    deliveredAt: z.record(notificationChannelSchema, z.any().nullable()),
+    lastAttempt: z.record(notificationChannelSchema, z.unknown().nullable()),
+    deliveredAt: z.record(notificationChannelSchema, z.unknown().nullable()),
     errors: z.record(notificationChannelSchema, z.string().nullable()),
-    responses: z.record(notificationChannelSchema, z.any()),
+    responses: z.record(notificationChannelSchema, z.unknown()),
   }),
-  
+
   retry: z.object({
     maxAttempts: z.number().int().min(1).max(10),
     backoffMultiplier: z.number().min(1).max(10),
-    nextRetryAt: z.any().nullable(), // Firestore Timestamp
+    nextRetryAt: z.unknown().nullable(), // Firestore Timestamp
   }),
   
   signalId: z.string().optional(),
   signalType: z.string().optional(),
   
   metadata: z.object({
-    createdAt: z.any(), // Firestore Timestamp
-    updatedAt: z.any(), // Firestore Timestamp
-    scheduledFor: z.any().optional(), // Firestore Timestamp
+    createdAt: z.unknown(), // Firestore Timestamp
+    updatedAt: z.unknown(), // Firestore Timestamp
+    scheduledFor: z.unknown().optional(), // Firestore Timestamp
     batchId: z.string().optional(),
     read: z.boolean().optional(),
-    readAt: z.any().nullable().optional(), // Firestore Timestamp
+    readAt: z.unknown().nullable().optional(), // Firestore Timestamp
   }),
 });
 
@@ -318,13 +318,13 @@ export const notificationBatchSchema = z.object({
   channel: notificationChannelSchema,
   notificationIds: z.array(z.string()).min(1),
   status: z.enum(['pending', 'processing', 'sent', 'failed']),
-  scheduledFor: z.any(), // Firestore Timestamp
-  deliveredAt: z.any().nullable(), // Firestore Timestamp
+  scheduledFor: z.unknown(), // Firestore Timestamp
+  deliveredAt: z.unknown().nullable(), // Firestore Timestamp
   error: z.string().optional(),
-  
+
   metadata: z.object({
-    createdAt: z.any(), // Firestore Timestamp
-    updatedAt: z.any(), // Firestore Timestamp
+    createdAt: z.unknown(), // Firestore Timestamp
+    updatedAt: z.unknown(), // Firestore Timestamp
   }),
 });
 

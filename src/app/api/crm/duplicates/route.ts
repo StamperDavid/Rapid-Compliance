@@ -4,6 +4,7 @@
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import {
   detectLeadDuplicates,
   detectContactDuplicates,
@@ -15,11 +16,14 @@ import { getAuthToken } from '@/lib/auth/server-auth';
 
 export const dynamic = 'force-dynamic';
 
-interface RequestPayload {
-  entityType: 'lead' | 'contact' | 'company';
-  record: Record<string, unknown>;
-  workspaceId?: string;
-}
+const duplicateRequestSchema = z.object({
+  entityType: z.enum(['lead', 'contact', 'company']),
+  record: z.record(z.string(), z.union([z.string(), z.number(), z.boolean(), z.null()])).refine(
+    (r) => Object.keys(r).length > 0,
+    { message: 'record must contain at least one field' },
+  ),
+  workspaceId: z.string().optional(),
+});
 
 export async function POST(request: NextRequest) {
   try {
@@ -33,16 +37,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const body = await request.json() as RequestPayload;
-
-    const { entityType, record, workspaceId = 'default' } = body;
-
-    if (!entityType || !record) {
+    const rawBody: unknown = await request.json();
+    const parsed = duplicateRequestSchema.safeParse(rawBody);
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: 'entityType and record are required' },
-        { status: 400 }
+        { error: 'Invalid request body', details: parsed.error.flatten().fieldErrors },
+        { status: 400 },
       );
     }
+
+    const { entityType, record, workspaceId = 'default' } = parsed.data;
 
     let result;
 

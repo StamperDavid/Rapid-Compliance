@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import { FieldValue } from 'firebase-admin/firestore';
 import { requireRole } from '@/lib/auth/api-auth';
@@ -6,12 +7,15 @@ import { logger } from '@/lib/logger/logger';
 
 export const dynamic = 'force-dynamic';
 
-interface PersonaData {
-  name?: string;
-  description?: string;
-  traits?: string[];
-  [key: string]: unknown;
-}
+const personaSchema = z.object({
+  name: z.string().optional(),
+  description: z.string().optional(),
+  traits: z.array(z.string()).optional(),
+  tone: z.string().optional(),
+  instructions: z.string().optional(),
+  greeting: z.string().optional(),
+  fallbackResponse: z.string().optional(),
+}).passthrough();
 
 export async function GET(req: NextRequest) {
   try {
@@ -56,13 +60,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Database not initialized' }, { status: 500 });
     }
 
-    const personaData = (await req.json()) as PersonaData;
+    const rawBody: unknown = await req.json();
+    const parsed = personaSchema.safeParse(rawBody);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Invalid persona data', details: parsed.error.flatten().fieldErrors },
+        { status: 400 },
+      );
+    }
 
     // Save the persona to Firestore using nested doc reference
     const personaDocRef = adminDal.getNestedDocRef('admin/platform-sales-agent/config/persona');
 
     await personaDocRef.set({
-      ...personaData,
+      ...parsed.data,
       updatedAt: FieldValue.serverTimestamp(),
       updatedBy: authResult.user.uid,
     }, { merge: true });
