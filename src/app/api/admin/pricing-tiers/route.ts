@@ -1,22 +1,29 @@
 import { type NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { FirestoreService } from '@/lib/db/firestore-service';
 import { requireRole } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
 
 export const dynamic = 'force-dynamic';
 
-interface PricingTier {
-  id: string;
-  name: string;
-  price: number;
-}
+/**
+ * Zod schema for pricing tier validation.
+ * Rejects negative prices, NaN, and Infinity.
+ */
+const pricingTierSchema = z.object({
+  id: z.string().min(1, 'Tier ID is required'),
+  name: z.string().min(1, 'Tier name is required'),
+  price: z.number()
+    .nonnegative('Price must be non-negative')
+    .finite('Price must be a finite number'),
+});
+
+const tiersRequestSchema = z.object({
+  tiers: z.array(pricingTierSchema).min(1, 'At least one tier is required'),
+});
 
 interface PricingDoc {
-  tiers?: PricingTier[];
-}
-
-interface TiersRequestBody {
-  tiers: PricingTier[];
+  tiers?: z.infer<typeof pricingTierSchema>[];
 }
 
 /**
@@ -59,25 +66,26 @@ export async function POST(request: NextRequest) {
 
     const { user } = authResult;
 
-    const body = (await request.json()) as TiersRequestBody;
-    const { tiers } = body;
+    const body: unknown = await request.json();
+    const validationResult = tiersRequestSchema.safeParse(body);
 
-    if (!tiers || !Array.isArray(tiers)) {
+    if (!validationResult.success) {
+      const errorMessage = validationResult.error.errors
+        .map((err) => `${err.path.join('.')}: ${err.message}`)
+        .join('; ');
+
+      logger.warn('[Admin] Invalid pricing tiers data', {
+        userId: user.uid,
+        errors: errorMessage,
+      });
+
       return NextResponse.json(
-        { success: false, error: 'Invalid tiers data' },
+        { success: false, error: `Validation failed: ${errorMessage}` },
         { status: 400 }
       );
     }
 
-    // Validate tiers
-    for (const tier of tiers) {
-      if (!tier.id || !tier.name || typeof tier.price !== 'number') {
-        return NextResponse.json(
-          { success: false, error: 'Invalid tier configuration' },
-          { status: 400 }
-        );
-      }
-    }
+    const { tiers } = validationResult.data;
 
     // Save to Firestore
     await FirestoreService.set('platform_config', 'pricing_tiers', {

@@ -11,6 +11,7 @@ import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { verifyTwilioSignature, parseFormBody } from '@/lib/security/webhook-verification';
+import { isStopKeyword, addToSuppressionList } from '@/lib/compliance/tcpa-service';
 
 export const dynamic = 'force-dynamic';
 
@@ -126,6 +127,7 @@ export async function POST(request: NextRequest) {
     const messageStatus = params['MessageStatus'];
     const _to = params['To'];
     const _from = params['From'];
+    const messageBody = params['Body'];
     const errorCode = params['ErrorCode'] ?? null;
     const errorMessage = params['ErrorMessage'] ?? null;
 
@@ -135,6 +137,26 @@ export async function POST(request: NextRequest) {
       status: messageStatus,
       to: _to
     });
+
+    // TCPA: Handle inbound STOP/opt-out keywords
+    if (messageBody && _from) {
+      if (isStopKeyword(messageBody)) {
+        logger.info('TCPA STOP keyword received — processing opt-out', {
+          route: '/api/webhooks/sms',
+          from: _from,
+          keyword: messageBody.trim(),
+        });
+
+        await addToSuppressionList(_from, 'sms', `STOP keyword received: "${messageBody.trim()}"`);
+
+        // Return TwiML response confirming unsubscribe
+        const twimlResponse = `<?xml version="1.0" encoding="UTF-8"?><Response><Message>You have been unsubscribed from SMS messages. You will no longer receive texts from us.</Message></Response>`;
+        return new NextResponse(twimlResponse, {
+          status: 200,
+          headers: { 'Content-Type': 'text/xml' },
+        });
+      }
+    }
 
     if (!messageSid || !messageStatus) {
       return errors.badRequest('Missing required webhook data');

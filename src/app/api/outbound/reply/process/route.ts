@@ -16,6 +16,7 @@ import {
 import { sendEmail } from '@/lib/email/email-service';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
+import { ensureCompliance } from '@/lib/compliance/can-spam-service';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
 export const dynamic = 'force-dynamic';
@@ -83,10 +84,13 @@ export async function POST(request: NextRequest) {
           inReplyTo: replyMessageId,
           references: replyMessageId,
         };
+        // CAN-SPAM: Ensure compliance footer on auto-sent replies
+        const compliantHtml = ensureCompliance(suggestedResponse.body, validatedReply.from);
+
         await sendEmail({
           to: validatedReply.from,
           subject: `Re: ${(validatedReply.subject !== '' && validatedReply.subject != null) ? validatedReply.subject : 'Your inquiry'}`,
-          html: suggestedResponse.body,
+          html: compliantHtml,
           text: suggestedResponse.body,
           from: validatedReply.to,
           metadata: emailMetadata,

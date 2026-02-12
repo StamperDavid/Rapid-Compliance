@@ -7,6 +7,7 @@ import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { PLATFORM_ID } from '@/lib/constants/platform';
+import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 
 export const dynamic = 'force-dynamic';
 
@@ -76,17 +77,46 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Here you would:
-    // 1. Create order record in database
-    // 2. Update inventory
-    // 3. Send confirmation emails
-    // 4. Trigger workflows
-    // 5. Create customer entity if needed
+    // Create order record from payment intent
+    const orderId = `order_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const now = new Date().toISOString();
+    const piMetadata = paymentIntent.metadata ?? {};
+    const workspaceId = piMetadata.workspaceId ?? 'default';
+
+    const orderRecord = {
+      id: orderId,
+      paymentIntentId,
+      stripePaymentStatus: paymentIntent.status,
+      amount: paymentIntent.amount,
+      currency: paymentIntent.currency,
+      customerEmail: piMetadata.customerEmail ?? _user.email ?? '',
+      customerId: _user.uid,
+      workspaceId,
+      status: 'processing',
+      paymentStatus: 'captured',
+      source: 'checkout-complete',
+      metadata: piMetadata,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    await FirestoreService.set(
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/${workspaceId}/orders`,
+      orderId,
+      orderRecord
+    );
+
+    logger.info('Order created from checkout completion', {
+      route: '/api/checkout/complete',
+      orderId,
+      paymentIntentId,
+      amount: paymentIntent.amount,
+    });
 
     return NextResponse.json({
       success: true,
       paymentIntentId,
-      orderId: `order_${Date.now()}`,
+      orderId,
       status: 'completed',
     });
   } catch (error) {

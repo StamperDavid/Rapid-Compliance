@@ -91,6 +91,12 @@ export async function sendSMS(options: SMSOptions): Promise<SMSResult> {
     };
   }
 
+  // TCPA: Append opt-out instructions if not already present
+  const hasOptOut = options.message.toLowerCase().includes('stop');
+  if (!hasOptOut) {
+    options = { ...options, message: `${options.message}\n\nReply STOP to opt out` };
+  }
+
   // Validate phone number format
   const phoneRegex = /^\+?[1-9]\d{1,14}$/;
   const recipients = Array.isArray(options.to) ? options.to : [options.to];

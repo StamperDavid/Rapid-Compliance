@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { FirestoreService } from '@/lib/db/firestore-service';
 import { getMerchantCouponsCollection } from '@/lib/firebase/collections';
-import { requireAuth } from '@/lib/auth/api-auth';
+import { requireAuth, requireRole } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
 import type { MerchantCoupon } from '@/types/pricing';
 import { z } from 'zod';
@@ -68,7 +68,7 @@ export async function POST(
   request: NextRequest
 ) {
   try {
-    const authResult = await requireAuth(request);
+    const authResult = await requireRole(request, ['owner', 'admin']);
     if (authResult instanceof NextResponse) {
       return authResult;
     }

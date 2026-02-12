@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { FirestoreService } from '@/lib/db/firestore-service';
 import { getMerchantCouponsCollection } from '@/lib/firebase/collections';
-import { requireAuth } from '@/lib/auth/api-auth';
+import { requireRole } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
 import { z } from 'zod';
 import type { MerchantCoupon } from '@/types/pricing';
@@ -26,7 +26,7 @@ export async function PATCH(
   try {
     const { couponId } = await context.params;
 
-    const authResult = await requireAuth(request);
+    const authResult = await requireRole(request, ['owner', 'admin']);
     if (authResult instanceof NextResponse) {
       return authResult;
     }

@@ -5,6 +5,7 @@
 
 import { sendBulkEmails } from './email-service';
 import { PLATFORM_ID } from '@/lib/constants/platform';
+import { ensureCompliance } from '@/lib/compliance/can-spam-service';
 
 export interface EmailCampaign {
   id: string;
@@ -180,6 +181,12 @@ export async function sendCampaign(campaignId: string): Promise<{ success: boole
 
   if (campaign.status !== 'draft' && campaign.status !== 'scheduled') {
     return { success: false, error: `Campaign cannot be sent. Current status: ${campaign.status}` };
+  }
+
+  // CAN-SPAM: Ensure all campaign HTML content has compliance footer
+  campaign.htmlContent = ensureCompliance(campaign.htmlContent, campaignId);
+  if (campaign.htmlContentB) {
+    campaign.htmlContentB = ensureCompliance(campaign.htmlContentB, campaignId);
   }
 
   // Update status

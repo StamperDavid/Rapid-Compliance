@@ -13,6 +13,7 @@ import { requireAuth } from '@/lib/auth/api-auth';
 import { rateLimitMiddleware, RateLimitPresets } from '@/lib/middleware/rate-limiter';
 import { sendEmail } from '@/lib/email-writer/email-delivery-service';
 import { wrapEmailBody, stripHTML } from '@/lib/email-writer/email-html-templates';
+import { ensureCompliance } from '@/lib/compliance/can-spam-service';
 
 export const dynamic = 'force-dynamic';
 
@@ -106,11 +107,15 @@ export async function POST(request: NextRequest) {
     const validData: SendEmailRequest = validation.data;
 
     // 3. Wrap email body with HTML template
-    const htmlBody = wrapEmailBody(validData.body, {
+    let htmlBody = wrapEmailBody(validData.body, {
       subject: validData.subject,
       footer: validData.footer,
       branding: validData.branding,
     });
+
+    // CAN-SPAM: Ensure compliance footer (unsubscribe link + physical address)
+    const contactId = validData.emailId ?? validData.to;
+    htmlBody = ensureCompliance(htmlBody, contactId, validData.emailId);
 
     // 4. Generate plain text version if not provided
     const plainTextBody = validData.bodyPlain ?? stripHTML(htmlBody);
