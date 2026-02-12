@@ -10,7 +10,7 @@ import { motion } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
 import { logger } from '@/lib/logger/logger';
 import { LeadScoreCard } from '@/components/lead-scoring/LeadScoreCard';
-import type { StoredLeadScore, LeadScoreAnalytics } from '@/types/lead-scoring';
+import type { StoredLeadScore, LeadScoreAnalytics, ScoringRules } from '@/types/lead-scoring';
 import {
   Target,
   Flame,
@@ -23,8 +23,34 @@ import {
   Loader2,
   Zap,
   Award,
-  Activity
+  Activity,
+  Plus,
+  Trash2,
+  X,
+  ToggleLeft,
+  ToggleRight
 } from 'lucide-react';
+
+interface RulesApiResponse {
+  success: boolean;
+  rules?: ScoringRules[];
+  error?: string;
+}
+
+interface CreateRuleResponse {
+  success: boolean;
+  rules?: ScoringRules;
+  error?: string;
+}
+
+async function getAuthToken(): Promise<string | null> {
+  const { getCurrentUser } = await import('@/lib/auth/auth-service');
+  const currentUser = getCurrentUser();
+  if (!currentUser) {
+    return null;
+  }
+  return currentUser.getIdToken();
+}
 
 export default function LeadScoringDashboard() {
   const { user } = useAuth();
@@ -36,20 +62,129 @@ export default function LeadScoringDashboard() {
   const [filterGrade, setFilterGrade] = useState<'all' | 'A' | 'B' | 'C' | 'D' | 'F'>('all');
   const [sortBy, setSortBy] = useState<'score' | 'date'>('score');
 
+  // Rules management state
+  const [showRulesPanel, setShowRulesPanel] = useState(false);
+  const [rules, setRules] = useState<ScoringRules[]>([]);
+  const [rulesLoading, setRulesLoading] = useState(false);
+  const [showCreateRule, setShowCreateRule] = useState(false);
+  const [newRuleName, setNewRuleName] = useState('');
+  const [newRuleDescription, setNewRuleDescription] = useState('');
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+
+  const loadRules = useCallback(async () => {
+    try {
+      setRulesLoading(true);
+      const token = await getAuthToken();
+      if (!token) {
+        return;
+      }
+
+      const res = await fetch('/api/lead-scoring/rules', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (res.ok) {
+        const data = (await res.json()) as RulesApiResponse;
+        if (data.success && data.rules) {
+          setRules(data.rules);
+        }
+      }
+    } catch (error: unknown) {
+      logger.error('Failed to load scoring rules', error instanceof Error ? error : new Error(String(error)));
+    } finally {
+      setRulesLoading(false);
+    }
+  }, []);
+
+  const handleCreateRule = async () => {
+    if (!newRuleName.trim()) {
+      return;
+    }
+    try {
+      const token = await getAuthToken();
+      if (!token) {
+        return;
+      }
+
+      const res = await fetch('/api/lead-scoring/rules', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: newRuleName,
+          description: newRuleDescription || undefined,
+          isActive: rules.length === 0,
+        }),
+      });
+
+      if (res.ok) {
+        const data = (await res.json()) as CreateRuleResponse;
+        if (data.success) {
+          setNewRuleName('');
+          setNewRuleDescription('');
+          setShowCreateRule(false);
+          await loadRules();
+        }
+      }
+    } catch (error: unknown) {
+      logger.error('Failed to create scoring rule', error instanceof Error ? error : new Error(String(error)));
+    }
+  };
+
+  const handleToggleActive = async (rulesId: string, currentActive: boolean) => {
+    try {
+      const token = await getAuthToken();
+      if (!token) {
+        return;
+      }
+
+      await fetch('/api/lead-scoring/rules', {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ rulesId, isActive: !currentActive }),
+      });
+
+      await loadRules();
+    } catch (error: unknown) {
+      logger.error('Failed to toggle rule', error instanceof Error ? error : new Error(String(error)));
+    }
+  };
+
+  const handleDeleteRule = async (rulesId: string) => {
+    try {
+      const token = await getAuthToken();
+      if (!token) {
+        return;
+      }
+
+      await fetch(`/api/lead-scoring/rules?rulesId=${rulesId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      setDeleteConfirm(null);
+      await loadRules();
+    } catch (error: unknown) {
+      logger.error('Failed to delete rule', error instanceof Error ? error : new Error(String(error)));
+    }
+  };
+
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
 
-      const { getCurrentUser } = await import('@/lib/auth/auth-service');
-      const currentUser = getCurrentUser();
+      const token = await getAuthToken();
 
-      if (!currentUser) {
+      if (!token) {
         logger.info('No authenticated user, skipping API calls');
         setLoading(false);
         return;
       }
-
-      const token = await currentUser.getIdToken();
 
       const analyticsRes = await fetch(
         '/api/lead-scoring/analytics',
@@ -130,6 +265,7 @@ export default function LeadScoringDashboard() {
             Refresh
           </button>
           <button
+            onClick={() => { setShowRulesPanel(true); void loadRules(); }}
             className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-primary to-secondary hover:from-primary-light hover:to-secondary-light text-white font-semibold rounded-xl transition-all shadow-lg shadow-primary/25"
           >
             <Settings className="w-5 h-5" />
@@ -352,6 +488,167 @@ export default function LeadScoringDashboard() {
             </motion.div>
           ))}
         </motion.div>
+      )}
+
+      {/* Rules Management Panel */}
+      {showRulesPanel && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-surface-paper border border-border-light rounded-2xl w-full max-w-2xl max-h-[85vh] overflow-hidden flex flex-col"
+          >
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-6 border-b border-border-light">
+              <div className="flex items-center gap-3">
+                <Settings className="w-5 h-5 text-primary" />
+                <h2 className="text-xl font-bold text-[var(--color-text-primary)]">Scoring Rules</h2>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => { setShowCreateRule(true); setNewRuleName(''); setNewRuleDescription(''); }}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary text-white text-sm font-semibold rounded-lg hover:bg-primary-light transition-all"
+                >
+                  <Plus className="w-4 h-4" />
+                  New Rule Set
+                </button>
+                <button
+                  onClick={() => setShowRulesPanel(false)}
+                  className="p-2 hover:bg-surface-elevated rounded-lg transition-all"
+                >
+                  <X className="w-5 h-5 text-[var(--color-text-secondary)]" />
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Body */}
+            <div className="flex-1 overflow-y-auto p-6">
+              {/* Create Rule Form */}
+              {showCreateRule && (
+                <div className="mb-6 p-4 rounded-xl bg-surface-elevated border border-border-light">
+                  <h3 className="text-sm font-semibold text-[var(--color-text-primary)] mb-3">Create New Rule Set</h3>
+                  <div className="space-y-3">
+                    <input
+                      type="text"
+                      placeholder="Rule set name (e.g., Enterprise Scoring)"
+                      value={newRuleName}
+                      onChange={(e) => setNewRuleName(e.target.value)}
+                      className="w-full px-3 py-2 bg-surface-main border border-border-light rounded-lg text-[var(--color-text-primary)] text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                    <input
+                      type="text"
+                      placeholder="Description (optional)"
+                      value={newRuleDescription}
+                      onChange={(e) => setNewRuleDescription(e.target.value)}
+                      className="w-full px-3 py-2 bg-surface-main border border-border-light rounded-lg text-[var(--color-text-primary)] text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                    <div className="flex gap-2 justify-end">
+                      <button
+                        onClick={() => setShowCreateRule(false)}
+                        className="px-3 py-1.5 text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-all"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={() => void handleCreateRule()}
+                        disabled={!newRuleName.trim()}
+                        className="px-4 py-1.5 bg-primary text-white text-sm font-semibold rounded-lg hover:bg-primary-light transition-all disabled:opacity-50"
+                      >
+                        Create
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {rulesLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                </div>
+              ) : rules.length === 0 ? (
+                <div className="text-center py-12">
+                  <Target className="w-10 h-10 text-[var(--color-text-disabled)] mx-auto mb-3" />
+                  <p className="text-[var(--color-text-secondary)] text-sm mb-1">No scoring rules configured yet.</p>
+                  <p className="text-[var(--color-text-disabled)] text-xs">Create your first rule set to start scoring leads.</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {rules.map((rule) => (
+                    <div
+                      key={rule.id}
+                      className="p-4 rounded-xl bg-surface-elevated border border-border-light"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <h3 className="text-sm font-semibold text-[var(--color-text-primary)] truncate">{rule.name}</h3>
+                            {rule.isActive && (
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-success/20 text-success border border-success/30 uppercase tracking-wider">
+                                Active
+                              </span>
+                            )}
+                          </div>
+                          {rule.description && (
+                            <p className="text-xs text-[var(--color-text-secondary)] mb-2">{rule.description}</p>
+                          )}
+                          <div className="flex flex-wrap gap-3 text-[10px] text-[var(--color-text-disabled)]">
+                            <span>Industries: {rule.companyRules.industries.preferred.join(', ') || 'Any'}</span>
+                            <span>Titles: {rule.personRules.titles.preferred.join(', ') || 'Any'}</span>
+                            <span>Size: {rule.companyRules.size.preferred.join(', ') || 'Any'}</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button
+                            onClick={() => void handleToggleActive(rule.id, rule.isActive)}
+                            className="p-1.5 hover:bg-surface-main rounded-lg transition-all"
+                            title={rule.isActive ? 'Deactivate' : 'Activate'}
+                          >
+                            {rule.isActive ? (
+                              <ToggleRight className="w-5 h-5 text-success" />
+                            ) : (
+                              <ToggleLeft className="w-5 h-5 text-[var(--color-text-disabled)]" />
+                            )}
+                          </button>
+                          {deleteConfirm === rule.id ? (
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={() => void handleDeleteRule(rule.id)}
+                                className="px-2 py-1 text-[10px] font-semibold bg-error text-white rounded"
+                              >
+                                Confirm
+                              </button>
+                              <button
+                                onClick={() => setDeleteConfirm(null)}
+                                className="px-2 py-1 text-[10px] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => setDeleteConfirm(rule.id)}
+                              className="p-1.5 hover:bg-error/10 rounded-lg transition-all"
+                              title="Delete"
+                            >
+                              <Trash2 className="w-4 h-4 text-[var(--color-text-disabled)] hover:text-error" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 border-t border-border-light bg-surface-elevated/50">
+              <p className="text-[10px] text-[var(--color-text-disabled)] text-center">
+                Only one rule set can be active at a time. New rule sets use default scoring weights.
+              </p>
+            </div>
+          </motion.div>
+        </div>
       )}
     </div>
   );

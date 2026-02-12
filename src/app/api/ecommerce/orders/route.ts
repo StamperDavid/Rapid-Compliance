@@ -1,12 +1,11 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/api-auth';
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { FirestoreService } from '@/lib/db/firestore-service';
 import { where, orderBy } from 'firebase/firestore';
 import type { Order } from '@/types/ecommerce';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
-import { PLATFORM_ID } from '@/lib/constants/platform';
 
 export const dynamic = 'force-dynamic';
 
@@ -63,9 +62,10 @@ export async function GET(request: NextRequest) {
       filters: JSON.stringify({ customerEmail, status }),
     });
 
-    // Use paginated query
+    // Use paginated query - path matches seed data structure
+    const { getSubCollection } = await import('@/lib/firebase/collections');
     const result = await FirestoreService.getAllPaginated<Order>(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/default/orders`,
+      `${getSubCollection('workspaces')}/default/entities/orders/records`,
       constraints,
       Math.min(pageSize, 100) // Max 100 per page
     );
