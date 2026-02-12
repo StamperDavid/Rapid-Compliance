@@ -1,7 +1,7 @@
 # SalesVelocity.ai - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** February 11, 2026 (Day 4 security hardening: added requireAuth to 82 API routes, 228 total routes verified, all dashboard endpoints now protected)
+**Last Updated:** February 12, 2026 (Feature completion sprint: 5 missing UI features built with full CRUD + Firestore integration, 3 new API routes, 1 new dashboard page, 231 total API endpoints)
 **Branches:** `dev` (latest)
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Architecture:** Single-Tenant (Penthouse Model) - NOT a SaaS platform
@@ -36,7 +36,7 @@
 | Metric | Count | Status |
 |--------|-------|--------|
 | Physical Routes (page.tsx) | 159 | Verified February 10, 2026 (single-tenant flat routes) |
-| API Endpoints (route.ts) | 228 | Verified February 11, 2026 |
+| API Endpoints (route.ts) | 231 | Verified February 12, 2026 |
 | AI Agents | 52 | **52 FUNCTIONAL (48 swarm + 4 standalone)** |
 | RBAC Roles | 4 | `owner` (level 3), `admin` (level 2), `manager` (level 1), `member` (level 0) — 4-role RBAC |
 | Firestore Collections | 60+ | Active |
@@ -120,6 +120,23 @@ The Claude Code Governance Layer defines binding operational constraints for AI-
 
 ### Recent Major Milestones (February 2026)
 
+#### Feature Completion Sprint — All Dashboard UIs Functional
+**Status:** ✅ **COMPLETE** (February 12, 2026)
+
+All 5 remaining incomplete dashboard features have been built out with full CRUD operations and Firestore integration:
+- **Orders Page** — New page at `/orders` with table view, status/search filters, detail drawer, status management
+- **Social Media** — Replaced hardcoded mock data with Firestore-backed posts CRUD (new API: `/api/social/posts`)
+- **Lead Scoring Rules** — Wired "Manage Rules" button to existing API with rules modal (create/toggle/delete)
+- **Webhooks** — Replaced hardcoded data with Firestore CRUD (new API: `/api/settings/webhooks`)
+- **Team Tasks** — Added full CRUD with create/edit modals, status transitions (new API: `/api/team/tasks/[taskId]`)
+
+Bug fixes included: orders API Firestore path mismatch corrected, sidebar link updated, broken team tasks "Complete" button fixed.
+
+#### Demo Data Seeding Complete
+**Status:** ✅ **COMPLETE** (February 12, 2026)
+
+158 demo documents seeded across all platform features via two seed scripts (`scripts/seed-demo-account.ts` and `scripts/seed-demo-account-part2.ts`). Covers CRM (contacts, leads, deals, activities, products), marketing (campaigns, sequences), platform (workflows, forms, pages, blog, social posts, orders, templates, scoring rules, webhooks, team tasks, conversations, integrations, custom tools), and 30 days of analytics data.
+
 #### SalesVelocity.ai Rebrand Complete
 **Status:** ✅ **COMPLETE** (February 3, 2026)
 
@@ -171,6 +188,7 @@ TenantMemoryVault refactored to enforce single-tenant model (Rule 1 compliance):
 | **~40 TODO comments** | Auth context TODOs reduced; 27 alert/confirm/prompt calls replaced with proper UI components | MEDIUM (down from HIGH) |
 | ~~**No error boundaries**~~ | ✅ RESOLVED — Tier 1.2 added 30 error.tsx + 30 loading.tsx files across all route groups (dashboard, auth, store, onboarding) | ✅ RESOLVED |
 | ~~**Mock data isolation**~~ | ✅ RESOLVED — OpenAI embeddings replace mock provider; workflow triggers write to Firestore; demo data properly gated | ✅ RESOLVED |
+| ~~**Dashboard mock data pages**~~ | ✅ RESOLVED (Feb 12) — Social Media, Webhooks pages replaced with Firestore-backed CRUD; Orders page built from scratch; Lead Scoring rules wired; Team Tasks CRUD added | ✅ RESOLVED |
 | ~~**Accessibility**~~ | ~~1 `aria-label` across 115+ pages, no semantic HTML, no keyboard navigation~~ | ✅ RESOLVED — Tier 2.3 skip-to-main, dialog focus trapping, ARIA on loading/error/nav/DataTable, semantic headings, reduced motion |
 | ~~**Data tables**~~ | ~~No column sorting, no bulk actions, no CSV export on any table~~ | ✅ RESOLVED — Tier 2.1 DataTable system with sorting, bulk select/delete, CSV export |
 | **Agent end-to-end testing** | No test validates full chain: user → orchestrator → manager → specialist → UI | MEDIUM |
@@ -219,7 +237,7 @@ These tasks bring the UI to the level expected by users coming from HubSpot, Sal
 
 | # | Task | Description | Status |
 |---|------|-------------|--------|
-| 2.1 | **Data table upgrades** | Add column sorting, filtering, bulk select/delete, and CSV export to: Leads, Deals, Contacts, Forms tables. Custom DataTable component at `src/components/ui/data-table/`. Orders entity N/A (does not exist). | ✅ DONE — Reusable DataTable with sorting, selection, CSV export. Checkbox + ConfirmDialog primitives. DELETE endpoints for leads/deals/contacts/forms. View toggles on Contacts + Forms. |
+| 2.1 | **Data table upgrades** | Add column sorting, filtering, bulk select/delete, and CSV export to: Leads, Deals, Contacts, Forms tables. Custom DataTable component at `src/components/ui/data-table/`. Orders page now exists at `/orders`. | ✅ DONE — Reusable DataTable with sorting, selection, CSV export. Checkbox + ConfirmDialog primitives. DELETE endpoints for leads/deals/contacts/forms. View toggles on Contacts + Forms. |
 | 2.2 | **Form validation standardization** | Standardize all dashboard forms on react-hook-form + zod (already used on API side). Add field-level error messages, loading states on submit buttons. | ✅ DONE — Created `src/components/ui/form.tsx` (Form/FormField/FormItem/FormLabel/FormControl/FormMessage). 9 Zod form schemas in `src/lib/validation/`. All 9 creation forms converted: leads, contacts, deals, products, workflows, campaigns, ab-tests, nurture, fine-tuning. Field-level errors via `<FormMessage />`. Loading states via `formState.isSubmitting`. useFieldArray for dynamic arrays (workflows, nurture). watch() for leads duplicate detection + data quality. |
 | 2.3 | **Accessibility pass** | Add semantic HTML (`nav`, `main`, `section`), aria labels, keyboard navigation, focus management for modals. Target WCAG 2.1 AA. | ✅ DONE — Skip-to-main link, MotionConfig reduced motion, dialog/confirm-dialog focus trapping + ARIA roles, 30 loading.tsx with role="status" + aria-busy + sr-only, 30 error.tsx with role="alert", AdminSidebar aria-label/aria-expanded/aria-current, DataTable scope/aria-sort/tableLabel/button labels, dashboard heading hierarchy h1→h2 with sections, view toggle aria-pressed. 73 files changed. |
 | 2.4 | **Page transition polish** | Add loading states between page navigations, skeleton screens for data-heavy pages, optimistic UI for mutations. | ✅ DONE — Content-aware skeleton screens for 7 loading.tsx files (dashboard, leads, deals, contacts, forms, analytics, parent group). NavigationProgress bar via framer-motion in ClientProviders. Optimistic delete with rollback via `useOptimisticDelete` hook on leads/deals/contacts/forms. `usePagination` exposes `setData` for optimistic mutations. `<Toaster>` mounted in ClientProviders for toast feedback. |
@@ -645,6 +663,7 @@ Legacy workspace URLs are automatically redirected:
 - `/deals`, `/deals/new`, `/deals/[id]`, `/deals/[id]/edit`
 - `/contacts`, `/contacts/new`, `/contacts/[id]`, `/contacts/[id]/edit`
 - `/products`, `/products/new`, `/products/[id]/edit`
+- `/orders` (NEW Feb 12 — full order management with table, filters, detail drawer)
 - `/entities/[entityName]`
 
 **Marketing & Outbound:**
@@ -1509,7 +1528,7 @@ This script:
 | Coaching | 2 | `/api/coaching/*` | Functional |
 | CRM | 9 | `/api/crm/*` | Functional |
 | Discovery | 1 | `/api/discovery/*` | Functional |
-| E-commerce | 5 | `/api/ecommerce/*` | Functional |
+| E-commerce | 5 | `/api/ecommerce/*` | Functional (orders path fixed Feb 12) |
 | Email | 4 | `/api/email-writer/*`, `/api/email/*` | Functional |
 | Health | 2 | `/api/health/*` | Functional |
 | Integrations | 18 | `/api/integrations/*` | Functional |
@@ -1527,6 +1546,9 @@ This script:
 | Reports | 1 | `/api/reports/*` | Partial |
 | Risk | 1 | `/api/risk/*` | Functional |
 | Schemas | 6 | `/api/schema*/*` | Functional |
+| Settings | 1 | `/api/settings/webhooks` | Functional (NEW Feb 12) |
+| Social | 1 | `/api/social/posts` | Functional (NEW Feb 12) |
+| Team | 1 | `/api/team/tasks/[taskId]` | Functional (NEW Feb 12) |
 | Other | ~125 | Various | Mixed |
 
 ### Key API Endpoints
