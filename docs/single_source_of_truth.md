@@ -1,7 +1,7 @@
 # SalesVelocity.ai - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** February 12, 2026 (Documentation & Website Editor fix: auto-load homepage in editor, 3-panel blog editor, fixed 16 master library docs, created WEBSITE_BUILDER.md)
+**Last Updated:** February 12, 2026 (6-phase social media platform enhancement: multi-account management, approval workflow, media uploads, calendar, social listening, agent config tuning)
 **Branches:** `dev` (latest)
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Architecture:** Single-Tenant (Penthouse Model) - NOT a SaaS platform
@@ -35,11 +35,11 @@
 
 | Metric | Count | Status |
 |--------|-------|--------|
-| Physical Routes (page.tsx) | 160 | Verified February 12, 2026 (added /settings/ai-agents/voice) |
-| API Endpoints (route.ts) | 231 | Verified February 12, 2026 |
+| Physical Routes (page.tsx) | 163 | Verified February 12, 2026 (added /social/approvals, /social/calendar, /social/listening) |
+| API Endpoints (route.ts) | 240 | Verified February 12, 2026 (added 9 social media API routes) |
 | AI Agents | 52 | **52 FUNCTIONAL (48 swarm + 4 standalone)** |
 | RBAC Roles | 4 | `owner` (level 3), `admin` (level 2), `manager` (level 1), `member` (level 0) — 4-role RBAC |
-| Firestore Collections | 60+ | Active |
+| Firestore Collections | 65+ | Active (expanded social media collections) |
 
 **Architecture:** Single-company deployment for SalesVelocity.ai. Clients purchase services/products - they do NOT get SaaS tenants.
 
@@ -629,18 +629,18 @@ Legacy workspace URLs are automatically redirected:
 
 ## Verified Live Route Map
 
-### Route Distribution (February 6, 2026)
+### Route Distribution (February 12, 2026)
 
 | Area | Routes | Dynamic Params | Status |
 |------|--------|----------------|--------|
-| Dashboard (`/(dashboard)/*`) | 114 | 8 | **Flattened** single-tenant (incl. former admin routes) |
+| Dashboard (`/(dashboard)/*`) | 117 | 8 | **Flattened** single-tenant (incl. former admin routes) |
 | Public (`/(public)/*`) | 16 | 0 | All pages exist |
 | Dashboard sub-routes (`/dashboard/*`) | 16 | 0 | Analytics, coaching, marketing, performance |
 | Store (`/store/*`) | 5 | 1 (`[productId]`) | E-commerce storefront |
 | Onboarding (`/onboarding/*`) | 2 | 0 | Account + industry setup |
 | Auth (`/(auth)/*`) | 1 | 0 | Admin login |
 | Other (`/preview`, `/profile`, `/sites`) | 3 | 2 | Preview tokens, user profile, site builder |
-| **TOTAL** | **157** | **11** | **Verified** |
+| **TOTAL** | **160** | **11** | **Verified** |
 
 **DELETED:** `src/app/workspace/[orgId]/*` (95 pages) and `src/app/admin/*` (92 pages) - multi-tenant and standalone admin routes removed/consolidated into `(dashboard)`
 
@@ -671,7 +671,7 @@ Legacy workspace URLs are automatically redirected:
 - `/nurture`, `/nurture/new`, `/nurture/[id]`, `/nurture/[id]/stats`
 - `/ab-tests`, `/ab-tests/new`, `/ab-tests/[id]`
 - `/outbound`, `/outbound/email-writer`, `/outbound/sequences`
-- `/social/campaigns`, `/social/training`
+- `/social/campaigns`, `/social/training`, `/social/approvals`, `/social/calendar`, `/social/listening`
 
 **Settings (19 sub-routes):**
 - `api-keys`, `accounting`, `storefront`, `promotions`
@@ -1516,7 +1516,7 @@ This script:
 
 ## Tooling Inventory
 
-### API Routes (228 Total)
+### API Routes (240 Total)
 
 | Category | Count | Path Pattern | Status |
 |----------|-------|--------------|--------|
@@ -1527,6 +1527,7 @@ This script:
 | Billing | 3 | `/api/billing/*` | Functional |
 | Coaching | 2 | `/api/coaching/*` | Functional |
 | CRM | 9 | `/api/crm/*` | Functional |
+| Cron | 1 | `/api/cron/social-listening-collector` | Functional (NEW Feb 12) |
 | Discovery | 1 | `/api/discovery/*` | Functional |
 | E-commerce | 5 | `/api/ecommerce/*` | Functional (orders path fixed Feb 12) |
 | Email | 4 | `/api/email-writer/*`, `/api/email/*` | Functional |
@@ -1547,7 +1548,7 @@ This script:
 | Risk | 1 | `/api/risk/*` | Functional |
 | Schemas | 6 | `/api/schema*/*` | Functional |
 | Settings | 1 | `/api/settings/webhooks` | Functional (NEW Feb 12) |
-| Social | 1 | `/api/social/posts` | Functional (NEW Feb 12) |
+| Social | 10 | `/api/social/*` | Functional (EXPANDED Feb 12) |
 | Team | 1 | `/api/team/tasks/[taskId]` | Functional (NEW Feb 12) |
 | Other | ~125 | Various | Mixed |
 
@@ -1579,6 +1580,21 @@ This script:
 | `/api/agent/config` | GET/PUT | Agent configuration | FUNCTIONAL |
 | `/api/agent/knowledge/upload` | POST | Knowledge base upload | FUNCTIONAL |
 
+#### Social Media Platform (NEW Feb 12)
+
+| Endpoint | Method | Purpose | Status |
+|----------|--------|---------|--------|
+| `/api/social/accounts` | GET/POST/PUT/DELETE | Multi-account management | FUNCTIONAL |
+| `/api/social/settings` | GET/PUT | Agent config tuning | FUNCTIONAL |
+| `/api/social/media/upload` | POST | Media upload to Firebase Storage | FUNCTIONAL |
+| `/api/social/media/[mediaId]` | GET/DELETE | Media retrieval and deletion | FUNCTIONAL |
+| `/api/social/approvals` | GET/POST/PUT | Approval workflow management | FUNCTIONAL |
+| `/api/social/calendar` | GET | Content calendar aggregation | FUNCTIONAL |
+| `/api/social/listening` | GET/PUT | Social listening mentions | FUNCTIONAL |
+| `/api/social/listening/config` | GET/PUT | Listening configuration | FUNCTIONAL |
+| `/api/cron/social-listening-collector` | GET | Social listening cron job | FUNCTIONAL |
+| `/api/social/posts` | GET/POST/PUT/DELETE | Social post CRUD | FUNCTIONAL (existing) |
+
 ### API Implementation Notes
 
 The following endpoints have working infrastructure (rate limiting, caching, auth) but use **mock data** for core business logic:
@@ -1599,6 +1615,15 @@ The following endpoints have working infrastructure (rate limiting, caching, aut
   - GET: Fetch all promotions with analytics aggregation
   - DELETE: Remove promotion by ID
   - Service: `src/lib/promotions/promotion-service.ts`
+
+**RESOLVED (February 12, 2026) - Social Media Platform Enhancement:**
+- `/api/social/*` - 6-phase expansion with enterprise-grade features
+  - Multi-account management (`src/lib/social/social-account-service.ts`)
+  - Dynamic agent configuration (`src/lib/social/agent-config-service.ts`)
+  - Media uploads via Firebase Storage (`src/lib/social/media-service.ts`)
+  - Approval workflow with status tracking (`src/lib/social/approval-service.ts`)
+  - Social listening with AI sentiment analysis (`src/lib/social/listening-service.ts`, `src/lib/social/sentiment-analyzer.ts`)
+  - Content calendar aggregation across all platforms
 
 ### Testing Infrastructure (Audit: January 30, 2026)
 
@@ -2049,6 +2074,11 @@ organizations/{orgId}/
 ├── agentConfig/              # Agent configurations
 ├── goldenMasters/            # Golden master agents
 ├── signals/                  # Agent signals
+├── socialAccounts/           # Social media accounts (NEW Feb 12)
+├── socialMedia/              # Social media uploads (NEW Feb 12)
+├── socialApprovals/          # Social approval workflow (NEW Feb 12)
+├── socialListening/          # Social listening mentions (NEW Feb 12)
+├── socialSettings/           # Social agent config (NEW Feb 12)
 ├── forms/                    # Form builder forms
 │   ├── fields/               # Form fields
 │   ├── submissions/          # Form submissions
@@ -2064,7 +2094,7 @@ organizations/{orgId}/
 └── provisionerLogs/          # Provisioning logs
 ```
 
-### Total: 60+ Collections
+### Total: 65+ Collections
 
 ---
 
