@@ -25,248 +25,313 @@ Last Session: February 12, 2026
 - Jasper video routing fixed — `create_video` and `get_video_status` tools working, HeyGen default provider
 - Video service rewired to pull API keys from Firestore (not `process.env`)
 - Academy section added (`/academy` page, sidebar nav)
-- **Multi-engine video selector implemented** — per-scene engine dropdown in Approval step (HeyGen/Runway/Sora selectable, Kling/Luma coming-soon)
+- Multi-engine video selector implemented — per-scene engine dropdown in Approval step
 - Engine registry with cost metadata, provider-status API, scene-generator multi-engine routing
 - `heygenVideoId` → `providerVideoId` refactor across all types and components
+- **Social media system audit completed** — full assessment of UI, APIs, services, and agent layer
 
 ---
 
-## PRIMARY TASK: Video Production Pipeline
+## PRIMARY TASK: AI-Automated Social Media Platform
+
+### Vision: Supervised Autonomy with Manual Override
+
+The social media system follows the **"Tesla Autopilot" model** — AI drives by default, but the user can grab the wheel at any moment. The transition between autopilot and manual must be seamless (one click, not a navigation change).
+
+**Design Principles:**
+- **AI is the default driver, not the only option** — every automated action has a visible manual equivalent
+- **The user is a "passenger" by default** — screens show "here's what the AI is doing" not "here's a blank canvas"
+- **Manual controls are present but visually recessive** when AI is driving, promoted when user takes over
+- **Three-layer hierarchy**: Rules (human-set, absolute) → AI Autonomy (operates within rules) → Manual Override (always available)
+- **The coaching loop is the differentiator** — corrections make the AI smarter over time
+
+### Target Page Structure
+
+| Page | Purpose | Priority |
+|------|---------|----------|
+| **Command Center** | Live agent status, recent activity, health gauges, kill switch | P0 |
+| **Content Studio** | Create/edit with platform variants, AI suggestions, specialist feedback | P0 |
+| **Approval Queue** | Batch review table (desktop), with bulk approve and risk scoring | P0 |
+| **Activity Feed** | What the AI did, what it skipped, why, with early performance signals | P1 |
+| **Analytics** | Unified metrics with platform/campaign/persona filters | P1 |
+| **Agent Rules** | Guardrails, velocity limits, topic restrictions, approval triggers | P1 |
+| **Brand Voice** | Example-based training, knowledge base, test sandbox (Training Lab = mostly done) | P2 |
+
+### Key UI Requirements
+
+**Command Center (Missing — Build From Scratch):**
+- Agent status panel: "AI is active, 3 posts queued, next post in 47 min"
+- Activity log: "Posted to Twitter at 2:14 PM, engagement score: high"
+- Decision transparency: "Skipped posting at 11 AM — velocity limit reached"
+- Health gauges: "12/50 Twitter actions today" (circular meters for velocity limits)
+- Global kill switch: prominent, persistent button to pause all automated posting
+- Platform connection status with real OAuth state (not mock data)
+
+**Content Studio (Partial — Needs Dual-Mode):**
+- **Autopilot mode** (default): Queue of AI-generated drafts with agent reasoning, scheduled times
+- **Manual mode** (one toggle): Full composer — pick platform, write copy, attach media, choose time, post
+- Same screen, different emphasis — not separate pages
+- Platform variants as tabs (not multi-column canvas — avoids decision paralysis)
+- Inline specialist feedback when editing platform-specific drafts
+
+**Approval Queue (Exists — Needs Upgrade):**
+- Batch review table (Gmail-style list view) for desktop — scan 15+ posts at a glance
+- Bulk approve for posts that look fine
+- Click into individual posts only when they need attention
+- Sort/filter by platform, risk score, campaign
+- "Why" badge: highlight the exact phrase that triggered a flag
+- Correction capture: when user edits a draft, store the diff for training
+
+**Activity Feed (Missing — Build From Scratch):**
+- What was posted, when, and why the AI chose that timing
+- What the AI decided NOT to post and why
+- Early performance signals (engagement in first hour)
+- Actions taken (replies, retweets, etc.)
+- Curated narrative, not raw logs
+
+**Agent Rules UI (Missing — Backend Ready):**
+- Visual editor for guardrails that currently live in `/api/social/settings`
+- Topic restrictions, velocity limits, approval triggers
+- Per-platform rules
+- "Never post about X", "Always require approval for pricing mentions"
+- Policy editor that feels as important as content
+
+**Manual Posting Capabilities (Must Be Present Everywhere):**
+- Manual compose with rich text, media upload, link preview
+- Per-platform customization (not just "post everywhere identical")
+- Schedule to specific date/time with timezone
+- Draft saving
+- Post now / schedule / add to queue — three distinct actions
+- Queue reorder by drag-and-drop
+- Pause/resume individual posts or entire queue
+
+---
+
+### Current State Audit (February 12, 2026)
+
+#### What's Working (Backend — 60-70% Complete)
+
+| Component | Status | Key Files |
+|-----------|--------|-----------|
+| **Autonomous Posting Agent** | REAL — posts, queues, schedules to Twitter | `src/lib/social/autonomous-posting-agent.ts` |
+| **Twitter Integration** | PRODUCTION — full API v2, OAuth 2.0, media upload | `src/lib/integrations/twitter-service.ts` |
+| **Compliance Guardrails** | ENFORCED — velocity limits, sentiment blocking, escalation | `autonomous-posting-agent.ts` (lines 148-262) |
+| **Sentiment Analysis** | REAL — Gemini AI + keyword fallback, batch processing | `src/lib/social/sentiment-analyzer.ts` |
+| **Approval Workflow** | REAL — full status tracking, comments, approve/reject/revise | `src/lib/social/approval-service.ts` |
+| **Social Listening** | REAL (Twitter) — cron-based collection, sentiment analysis | `src/lib/social/listening-service.ts` |
+| **Media Upload** | REAL — Firebase Storage, platform-specific validation | `src/lib/social/media-service.ts` |
+| **Account Management** | REAL — multi-account CRUD, default selection | `src/lib/social/social-account-service.ts` |
+| **Agent Config** | REAL — runtime configurable, Firestore-backed, cached | `src/lib/social/agent-config-service.ts` |
+| **Queue Management** | REAL — add, process, reorder, post immediately | `/api/social/queue` |
+| **Scheduling** | REAL — future publish, cron pickup | `/api/social/schedule` |
+| **Calendar Aggregation** | REAL — merges posts from 3 sources | `/api/social/calendar` |
+| **Metrics Collection** | REAL — cron job collects Twitter engagement | `/api/cron/social-metrics-collector` |
+| **Content Generation** | REAL — Gemini AI via `generateContent()` | `autonomous-posting-agent.ts` (lines 1465-1516) |
+
+#### What's Stubbed (Backend)
+
+| Component | Status | Details |
+|-----------|--------|---------|
+| REPLY action | Compliance checks REAL, execution STUBBED | Sentiment/escalation works, actual reply posting TODO |
+| LIKE action | STUBBED | Returns success, no API call |
+| FOLLOW action | STUBBED | Returns success, no API call |
+| REPOST action | STUBBED | Returns success, no API call |
+| LinkedIn posting | FALLBACK | Tries RapidAPI, falls back to manual task creation |
+| Facebook/Instagram | TYPE DEFS ONLY | No implementation |
+| DM compliance | STUBBED | "Account has engaged with us first" check TODO |
+
+#### What's Working (Frontend — 30-40% Complete)
+
+| Page | Status | What Works | What's Missing |
+|------|--------|------------|----------------|
+| **Campaigns** (`/social/campaigns`) | FUNCTIONAL | Post CRUD, scheduling modal, platform/status filters, basic analytics tab | No dual-mode (AI vs manual), no agent visibility, mock account data |
+| **Training Lab** (`/social/training`) | FUNCTIONAL (strongest page) | Multi-tab settings, AI test generation, history, knowledge upload, brand DNA | Already covers Brand Voice needs well |
+| **Approvals** (`/social/approvals`) | FUNCTIONAL | Status tabs, expandable items, approve/reject/revision, comments, flag reasons | No batch review, no correction capture, no "Why" badge highlighting |
+| **Calendar** (`/social/calendar`) | FUNCTIONAL | react-big-calendar, filtering, modal details, drag-drop infrastructure | No agent markers, no new post creation from calendar |
+| **Listening** (`/social/listening`) | FUNCTIONAL | Mention feed, sentiment badges, keyword config, status management | No competitive analysis view |
+
+#### What's Missing (Frontend)
+
+| Component | Gap Size | Notes |
+|-----------|----------|-------|
+| **Command Center page** | CRITICAL | No UI for agent status, activity log, health gauges, kill switch |
+| **Activity Feed page** | CRITICAL | No "what the AI did and why" view |
+| **Agent Rules UI** | LARGE | Backend API exists (`/api/social/settings`), no frontend |
+| **Connected Accounts (real OAuth)** | LARGE | UI shows hardcoded mock data, no real OAuth flow |
+| **Media Manager in posts** | MEDIUM | Upload API exists, no UI to browse/attach media |
+| **Coaching/Feedback Loop** | CRITICAL | See Golden Playbook section below |
+| **Analytics Dashboard** | LARGE | Only basic counts, no time-series or per-post insights |
+| **Kill Switch** | LARGE | No global pause button anywhere |
+
+---
+
+### Golden Playbook Architecture (Anti-Drift System for Social Agents)
+
+#### Problem
+
+The existing **Golden Master + Ephemeral Spawn** pattern works for the customer chat agent (reactive, conversational). But the social media agent is **generative** (creates content proactively) and **long-running** (not session-based). Direct pattern copy doesn't fit.
+
+The social agent currently uses `AgentConfigService` with mutable config and no versioning — drift risk is high.
+
+#### Solution: Golden Playbook
+
+A versioned, immutable configuration system for the social agent, parallel to Golden Master but designed for generative agents.
+
+```
+organizations/
+  rapid-compliance-root/
+    goldenPlaybooks/
+      gp_timestamp_random/
+        id, version (v1, v2, v3...), isActive
+        brandVoiceDNA        ← from Training Lab
+        platformRules        ← per-platform behavior
+        correctionHistory    ← learned from user edits
+        performancePatterns  ← what content works
+        explicitRules        ← user-defined guardrails
+        compiledPrompt       ← assembled from all above
+        trainedScenarios, trainingScore
+        createdAt, deployedAt
+```
+
+**Key Difference from Golden Master:** The social agent doesn't spawn ephemeral instances. It's a long-running agent that **references** the active playbook on every content generation cycle. The playbook is versioned and immutable — every config change creates a new version with rollback capability.
+
+#### Four Training Signals
+
+```
+1. CORRECTION CAPTURE (Inline — Zero Extra Effort)
+   ├─ AI generates draft
+   ├─ User edits it in approval queue
+   ├─ System diffs original vs. user's edit
+   ├─ Stores: { original, corrected, platform, context }
+   └─ Implicit training — corrections accumulate automatically
+
+2. PERFORMANCE FEEDBACK (Automated)
+   ├─ Post goes live → metrics cron collects engagement
+   ├─ System tags high/low performers
+   ├─ Correlates content patterns with performance
+   └─ "Posts with questions in the hook get 2.3x engagement"
+
+3. CONVERSATIONAL COACHING (Extends Existing Training Infrastructure)
+   ├─ User opens coaching session with social agent
+   ├─ "Write me a LinkedIn post about our email feature"
+   ├─ Agent generates → user critiques → agent revises
+   ├─ Session analyzed by existing feedback-processor.ts
+   └─ Suggestions fed into playbook update pipeline
+
+4. EXPLICIT RULES (Direct Input via Agent Rules UI)
+   ├─ User sets rules in guardrails editor
+   ├─ "Never use emojis on LinkedIn"
+   ├─ Hard constraints, not learned behavior
+   └─ Stored in playbook, enforced at generation time
+```
+
+#### Implementation Phases
+
+**Phase 1 — Make Training Agent-Agnostic:**
+- Add `agentType: 'chat' | 'social' | 'email' | 'voice'` to `TrainingSession` type in `src/types/training.ts`
+- Add `agentType` to `GoldenMasterUpdateRequest`
+- Create `GoldenPlaybook` type in `src/types/agent-memory.ts` (parallel to `GoldenMaster`)
+- Create `golden-playbook-builder.ts` following pattern of `golden-master-builder.ts`
+- Make `feedback-processor.ts` aware of agent domains (different analysis prompts per type)
+
+**Phase 2 — Correction Capture:**
+- On approval queue edit: store diff `{ original, corrected, platform, postType, context }`
+- Firestore path: `organizations/{PLATFORM_ID}/socialCorrections/{id}`
+- After N corrections, batch-analyze using existing feedback pipeline
+- Generate improvement suggestions → human reviews → deploys to new playbook version
+
+**Phase 3 — Conversational Coaching for Social:**
+- Extend Training Lab with "Social Agent" tab alongside existing BaseModel training
+- Reuse chat interface but talk to social agent ("Generate a Twitter thread about X")
+- Sessions flow through same `feedback-processor.ts` → `golden-playbook-updater.ts`
+
+**Phase 4 — Performance-Based Learning:**
+- Metrics cron already collects engagement data
+- Add weekly analysis job: identify top/bottom performers
+- Correlate content patterns (hook style, CTA type, post length, timing) with performance
+- Suggest playbook updates based on what's working
+
+#### Existing Infrastructure to Reuse
+
+| Component | Location | Reuse For |
+|-----------|----------|-----------|
+| Training types | `src/types/training.ts` | Add `agentType` field |
+| Feedback processor | `src/lib/training/feedback-processor.ts` | Analyze social training sessions |
+| Golden master builder | `src/lib/agent/golden-master-builder.ts` | Pattern for playbook builder |
+| Golden master updater | `src/lib/training/golden-master-updater.ts` | Pattern for playbook updater |
+| Instance manager | `src/lib/agent/instance-manager.ts` | Pattern for prompt compilation |
+| Training UI | `src/app/(dashboard)/settings/ai-agents/training/page.tsx` | Extend with social agent tab |
+| Agent memory types | `src/types/agent-memory.ts` | Add GoldenPlaybook type |
+
+---
+
+### Social Media Key Files
+
+| File | Purpose |
+|------|---------|
+| `src/lib/social/autonomous-posting-agent.ts` | Core agent — posting, queue, schedule, compliance |
+| `src/lib/integrations/twitter-service.ts` | Twitter API v2 — OAuth 2.0, posting, media, search |
+| `src/lib/social/sentiment-analyzer.ts` | Gemini AI + keyword fallback sentiment analysis |
+| `src/lib/social/approval-service.ts` | Approval workflow — flag, review, approve/reject |
+| `src/lib/social/listening-service.ts` | Twitter mention collection + sentiment analysis |
+| `src/lib/social/media-service.ts` | Firebase Storage media upload + validation |
+| `src/lib/social/social-account-service.ts` | Multi-account CRUD + default selection |
+| `src/lib/social/agent-config-service.ts` | Runtime config — velocity limits, keywords, settings |
+| `src/types/social.ts` | All social media type definitions |
+| `src/app/(dashboard)/social/campaigns/page.tsx` | Post CRUD + scheduling UI |
+| `src/app/(dashboard)/social/training/page.tsx` | AI Training Lab (1,926 lines, strongest UI page) |
+| `src/app/(dashboard)/social/approvals/page.tsx` | Approval queue UI |
+| `src/app/(dashboard)/social/calendar/page.tsx` | Visual post calendar |
+| `src/app/(dashboard)/social/listening/page.tsx` | Social listening dashboard |
+| `src/components/social/SocialCalendar.tsx` | react-big-calendar wrapper with dark theme |
+| `src/components/social/CalendarToolbar.tsx` | Calendar navigation + filters |
+| `src/components/social/CalendarEventCard.tsx` | Calendar event rendering |
+| `src/styles/social-calendar.css` | 278 lines dark theme calendar CSS |
+| `src/app/api/social/queue/route.ts` | Queue API — add, process, post immediately |
+| `src/app/api/social/schedule/route.ts` | Schedule API — create, list, cancel |
+| `src/app/api/social/approvals/route.ts` | Approvals API — list, create, update status |
+| `src/app/api/social/calendar/route.ts` | Calendar API — aggregated events |
+| `src/app/api/social/accounts/route.ts` | Account management API |
+| `src/app/api/social/media/upload/route.ts` | Media upload API |
+| `src/app/api/social/settings/route.ts` | Agent config API |
+| `src/app/api/social/listening/route.ts` | Listening API — mentions + sentiment |
+| `src/app/api/social/listening/config/route.ts` | Listening config API |
+| `src/app/api/cron/social-listening-collector/route.ts` | Cron — collect Twitter mentions |
+
+---
+
+## SECONDARY TASK: Video Production Pipeline
+
+(Moved from primary — still needs completion but social media is current focus)
 
 ### Goal
 Tell Jasper "create a video on how to set up an email campaign" and receive a polished, professional video in the video library — with full review and approval at every step.
 
-### Architecture: Scene-Based HeyGen with Approval Flow
+### What's Built
+- Video Specialist, Director Service, HeyGen/Sora/Runway API integrations
+- Multi-engine selector (per-scene), engine registry, scene generator
+- Video Studio UI (7-step pipeline), storyboard preview
+- Jasper `create_video` and `get_video_status` tools
+- TTS voice generation, video library storage, Academy page
 
-**Default Provider:** HeyGen via API for avatar-based content. HeyGen is the rendering engine for talking-head and presenter videos — generated through their API, downloaded, and stored in our Firebase Storage. We own the files.
+### What Still Needs Building
+- Screenshot capture tool (Puppeteer/Playwright)
+- Scene-level editing in Video Studio
+- Avatar picker and Voice picker (APIs exist)
+- Storyboard → HeyGen bridge (currently calls mock pipeline)
+- Scene stitching (ffmpeg)
+- AI auto-selection logic (Phase 2)
+- Luma Dream Machine and Kling integrations
 
-**Why HeyGen for avatars:** Avatar IV model produces photorealistic presenters with natural lip sync, gestures, and micro-expressions. 1080p/4K output. Ideal for tutorials, explainers, and product demos. Cost: ~$0.01/second.
-
-### Multi-Engine Orchestrator (Phase 1 Complete)
-
-The system supports multiple video generation engines. Users can select a video engine per scene during the Approval step. Phase 1 (manual selection with availability status) is complete. Phase 2 (AI-powered auto-selection) is planned.
-
-#### Supported Engines
-
-| Engine | Strengths | Best For |
-|--------|-----------|----------|
-| **HeyGen** | Photorealistic avatars, lip sync, gestures | Talking heads, presenters, tutorials with a host |
-| **Runway (Gen-3/Gen-4 Turbo)** | Style consistency, mature API, camera control | Stylized content, consistent multi-scene videos, transitions |
-| **Luma Dream Machine (Ray2)** | Realistic motion, precise physics, camera control | Tutorials, product demos, UI walkthroughs |
-| **Kling (v2/v2.1)** | Natural human motion/expression, competitive pricing | People-centric scenes, gestures, talking heads (non-avatar) |
-| **OpenAI Sora 2** | Best prompt comprehension, handles complex descriptions | Conceptual scenes, nuanced/abstract prompts |
-
-#### Auto-Selection Logic
-
-The AI agent analyzes each scene and selects the recommended engine based on weighted factors:
-
-| Factor | Influence |
-|--------|-----------|
-| Scene type (talking head, b-roll, demo, etc.) | Primary driver |
-| Desired style (realistic vs. stylized) | Narrows options |
-| Human presence & motion complexity | Favors Kling |
-| Physics/product interaction | Favors Luma |
-| Prompt complexity / abstraction | Favors Sora |
-| Style consistency across scenes | Favors Runway |
-| Avatar requirement (lip-synced presenter) | Favors HeyGen |
-| Cost sensitivity (user preference) | Compares pricing |
-| Speed priority | Compares generation times |
-
-User can configure a **cost mode** that influences auto-selection:
-- **Quality First** — best engine per scene regardless of cost
-- **Balanced** — best engine unless a cheaper one is within ~90% quality match
-- **Budget** — cheapest engine that meets a minimum quality threshold
-
-#### User Override + Cost Preview
-
-1. AI presents storyboard with recommended engine per scene + cost estimate in **actual USD**
-2. User can swap the engine on any scene via dropdown
-3. On swap, the **cost preview updates in real-time** showing the delta ("this change adds $0.20" / "this saves $0.15")
-4. User confirms and generation begins
-
-**Pricing model:** Actual currency (USD) displayed — no credits abstraction, no markup on usage costs. Pass-through pricing with full transparency.
-
-#### Live Cost Dashboard (Session Tracker)
-
-Every action that costs money shows the price **before** the user confirms it. A running session cost meter is always visible during generation:
-
-```
-Session: Product Tutorial Video
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Original Estimate:    $0.85
-Current Spent:        $1.15  ██████████████░░░░
-  ├─ Scene 1 (Kling)     $0.42  ✓
-  ├─ Scene 2 (Luma)      $0.30  ✓
-  ├─ Scene 2 regen       $0.30  ✓  ← regeneration
-  └─ Scene 3 (Runway)    $0.13  ⏳ generating...
-Projected Total:      $1.28
-                      ──────
-Over estimate by:     +$0.43 (1 regeneration)
-```
-
-Key behaviors:
-- **Pre-generation:** Show per-scene cost for every available engine
-- **During generation:** Running total of actual spend
-- **On regeneration:** Cost added to session total, meter ticks up, user sees progression
-- **On engine swap:** Immediate cost delta preview before confirming
-- **Session summary:** Final cost breakdown by engine, scene, and regeneration count
-
-#### Cost Calculation
-
-All engines price on deterministic inputs known at storyboard time: duration (seconds), resolution (720p/1080p/4K), quality tier (standard/pro), and model version. No variable complexity surcharge — cost is fully calculable before generation.
-
-Approximate pricing (store as config, not hardcoded — rates change):
-
-| Engine | ~Cost per 5s clip | Notes |
-|--------|-------------------|-------|
-| HeyGen | ~$0.05 | Avatar-based, cheapest for talking head |
-| Runway Gen-3 Turbo | ~$0.25 | Fast, cheapest Runway tier |
-| Runway Gen-3 Alpha | ~$0.50 | Higher quality |
-| Luma Dream Machine | ~$0.30 | Per generation |
-| Kling Standard | ~$0.10-0.20 | Very competitive |
-| Kling Pro | ~$0.30-0.50 | Better quality |
-| Sora | ~$0.50+ | Pricing varies |
-
-#### Regeneration Intelligence
-
-Track historical success rates per engine over time. An engine that is cheaper per-clip but needs multiple regeneration attempts may cost more than a pricier engine that nails it first try. Over time, auto-selection factors in **average attempts per engine per scene type** for more accurate cost projections.
-
-#### Architecture Notes
-
-- All engines take the same basic inputs (text prompt, optional reference image, duration, aspect ratio) and produce the same output (MP4)
-- Orchestration layer normalizes prompt format per engine (each has different prompt best practices)
-- API auth managed per provider via existing `api-key-service.ts`
-- Async generation + polling is standard across all engines
-- Output funnels into the existing assembly pipeline regardless of source engine
-- Existing scene-based pipeline already decomposes videos — engine selection is a per-scene property, not per-video
-
-### The Flow
-
-```
-1. USER → JASPER (natural language request)
-   "Create a video on how to set up an email campaign"
-        ↓
-2. JASPER decomposes the request:
-   - Identifies video type (platform tutorial)
-   - Determines which pages/routes are involved
-   - Identifies asset requirements (screenshots for tutorials)
-   - Delegates to planning agents
-        ↓
-3. PRE-PRODUCTION (planning agents):
-   a. Screenshot Service captures actual UI pages via Puppeteer/Playwright
-      - /outbound/campaigns (list view)
-      - /outbound/campaigns/new (editor)
-      - etc.
-   b. Video Specialist writes scene-by-scene script
-   c. Avatar + voice recommendations selected
-   d. Draft storyboard assembled with real screenshots attached to each scene
-        ↓
-4. APPROVAL (Video Studio UI at /content/video):
-   - User reviews every scene: script text, screenshot, avatar, voice
-   - User can EDIT individual scenes (change script, swap screenshot, adjust timing)
-   - User can reorder or delete scenes
-   - User selects avatar and voice from HeyGen library
-   - Nothing goes to HeyGen until user clicks "Approve & Generate"
-        ↓
-5. GENERATION (HeyGen API, scene-by-scene):
-   - Each approved scene → separate HeyGen API call
-   - Avatar presents script with screenshot as background per scene
-   - Progress tracking in Video Studio
-   - Individual scene re-generation if quality is off (not entire video)
-        ↓
-6. ASSEMBLY + REVIEW:
-   - Scenes stitched together (ffmpeg.wasm or server-side ffmpeg)
-   - Clean cuts or fade transitions between scenes
-   - Final video stored in video library (Firebase Storage)
-   - User previews the complete video
-        ↓
-7. POST-PRODUCTION (in-house editor):
-   - If a scene needs fixing: edit script → re-generate just that scene → re-stitch
-   - Basic editing: trim, reorder scenes, adjust transitions
-   - Scene-level granularity — surgical control over quality
-```
-
-### What's Built vs What's Needed
-
-#### Already Working
-| Component | Status | Location |
-|-----------|--------|----------|
-| Video Specialist (script/storyboard generation) | FUNCTIONAL | `src/lib/agents/content/video/specialist.ts` |
-| Director Service (storyboard from brief) | FUNCTIONAL | `src/lib/video/engine/director-service.ts` |
-| HeyGen API integration (generate video) | FUNCTIONAL (needs API key) | `src/lib/video/video-service.ts` |
-| Sora API integration | FUNCTIONAL (needs API key) | `src/lib/video/video-service.ts` |
-| Runway API integration | FUNCTIONAL (needs API key) | `src/lib/video/video-service.ts` |
-| Luma Dream Machine integration | NOT STARTED | Marked coming-soon in engine registry |
-| Kling integration | NOT STARTED | Marked coming-soon in engine registry |
-| Multi-engine selector (per-scene) | FUNCTIONAL | `EngineSelector.tsx`, `engine-registry.ts`, `scene-generator.ts` |
-| Provider status API (API key check) | FUNCTIONAL | `src/app/api/video/provider-status/route.ts` |
-| Engine registry (cost/metadata) | FUNCTIONAL | `src/lib/video/engine-registry.ts` |
-| Scene generator (multi-engine routing) | FUNCTIONAL | `src/lib/video/scene-generator.ts` |
-| Jasper `create_video` tool | FUNCTIONAL | `src/lib/orchestrator/jasper-tools.ts` |
-| Jasper `get_video_status` tool | FUNCTIONAL | `src/lib/orchestrator/jasper-tools.ts` |
-| Video Studio UI (7-step pipeline) | FUNCTIONAL | `src/app/(dashboard)/content/video/` components |
-| Storyboard preview panel | FUNCTIONAL | `src/app/(dashboard)/content/video/page.tsx` |
-| API Keys page (HeyGen, Runway, Sora entries) | FUNCTIONAL | `src/app/(dashboard)/settings/api-keys/page.tsx` |
-| TTS voice generation (ElevenLabs/Unreal Speech) | FUNCTIONAL | `src/lib/voice/tts/` |
-| Video library Firestore storage | FUNCTIONAL | `video-service.ts` (projects, templates) |
-| Academy page (tutorial video library) | FUNCTIONAL | `src/app/(dashboard)/academy/page.tsx` |
-
-#### Needs to Be Built
-
-| Component | Priority | Description |
-|-----------|----------|-------------|
-| **Screenshot capture tool** | HIGH | Puppeteer/Playwright service that captures UI pages at specified routes. Jasper needs a `capture_screenshot` tool. For platform tutorials, the video must show real UI — not AI approximations. |
-| **Scene-level editing in Video Studio** | HIGH | Edit script per scene, reorder scenes, delete scenes in the storyboard preview. Currently can only regenerate from scratch. |
-| **Avatar picker** | HIGH | Fetch HeyGen avatars via `listHeyGenAvatars()` (API exists) and display in Video Studio for user selection. |
-| **Voice picker** | HIGH | Fetch HeyGen voices via `listHeyGenVoices()` (API exists) and display in Video Studio for user selection. |
-| **Storyboard → HeyGen bridge** | HIGH | Convert approved storyboard into scene-by-scene HeyGen API calls. Currently the "Start Generation" button calls the mock render pipeline instead of `video-service.ts`. |
-| **UI action highlighting in screenshots** | HIGH | During tutorial scene descriptions, highlight/annotate the relevant buttons and UI elements in screenshots so viewers can follow along. |
-| **Scene-by-scene generation** | MEDIUM | Generate each scene as a separate HeyGen API call (avatar + script + screenshot background). Track progress per scene. Allow re-generation of individual scenes. |
-| **Scene stitching** | MEDIUM | Assemble individual scene videos into final video. ffmpeg.wasm (client-side) or server-side ffmpeg. Handle transitions (cuts, fades). |
-| **Video editor (scene manager)** | MEDIUM | Timeline view of scenes. Preview each scene. Reorder, trim, re-generate individual scenes. Not a full NLE — a scene manager with surgical re-generation. |
-| **Jasper video producer logic** | MEDIUM | Jasper's reasoning layer for decomposing video requests: identify type (tutorial vs promo vs explainer), determine required assets, delegate to correct agents, assemble the draft. |
-| **AI auto-selection logic** | MEDIUM | AI agent that analyzes scene characteristics and recommends optimal engine per scene. Phase 2 of multi-engine orchestrator. |
-| **Luma Dream Machine API integration** | MEDIUM | Add Luma Ray2 to `video-service.ts` following existing HeyGen/Sora/Runway pattern. Unwire coming-soon status in engine registry. |
-| **Kling API integration** | MEDIUM | Add Kling v2 to `video-service.ts` following existing pattern. Unwire coming-soon status in engine registry. |
-| **Engine pricing config (Firestore)** | LOW | Move pricing from `engine-registry.ts` constants to Firestore config so rates can be updated without deploys. |
-| **Live cost dashboard** | MEDIUM | Session-level cost tracker showing per-scene spend, regeneration costs, running total — all in actual USD. Phase 2 feature. |
-| **Engine swap cost delta preview** | LOW | On engine change, show "+$0.20" / "-$0.15" delta before confirming. Currently shows absolute cost per engine. |
-
-### Video Production Pipeline — Key Files
-
+### Video Key Files
 | File | Purpose |
 |------|---------|
-| `src/lib/video/video-service.ts` | HeyGen/Sora/Runway API integrations (API keys from Firestore) |
-| `src/lib/video/engine/director-service.ts` | Storyboard generation from video briefs |
-| `src/lib/video/engine/render-pipeline.ts` | Render orchestration (currently ALL MOCKED — needs to be rewired to video-service.ts) |
-| `src/lib/video/engine/stitcher-service.ts` | Post-production assembly (TTS works, video stitching stubbed) |
-| `src/lib/video/engine/multi-model-picker.ts` | Provider routing logic (real logic, routes to mocked endpoints) |
-| `src/lib/video/engine/style-guide-integrator.ts` | Brand style analysis (real CSS/color analysis, text-only output) |
-| `src/lib/video/video-job-service.ts` | Video job tracking in Firestore |
-| `src/lib/agents/content/video/specialist.ts` | Video Specialist agent (scripts, storyboards, SEO — all functional, text-only) |
-| `src/lib/agents/builder/assets/specialist.ts` | Asset Generator (SHELL — generates prompts, no actual image generation) |
-| `src/lib/orchestrator/jasper-tools.ts` | Jasper's tools including create_video, get_video_status |
-| `src/lib/orchestrator/feature-manifest.ts` | 11 specialists + trigger phrases |
+| `src/lib/video/video-service.ts` | HeyGen/Sora/Runway API integrations |
+| `src/lib/video/engine/director-service.ts` | Storyboard generation |
+| `src/lib/video/engine/render-pipeline.ts` | Render orchestration (ALL MOCKED) |
+| `src/lib/video/engine-registry.ts` | Engine metadata, costs, status |
+| `src/lib/video/scene-generator.ts` | Multi-engine scene router |
 | `src/app/(dashboard)/content/video/page.tsx` | Video Studio UI |
-| `src/app/(dashboard)/content/video/components/EngineSelector.tsx` | Per-scene engine dropdown with availability states |
-| `src/app/(dashboard)/content/video/components/StepApproval.tsx` | Storyboard review with engine selection and dynamic cost |
-| `src/app/(dashboard)/content/video/components/StepGeneration.tsx` | Multi-engine scene generation with progress tracking |
-| `src/lib/video/engine-registry.ts` | Engine metadata, costs, integration status, helper functions |
-| `src/lib/video/scene-generator.ts` | Multi-engine scene router (HeyGen/Runway/Sora dispatch) |
-| `src/hooks/useVideoProviderStatus.ts` | Client hook for provider API key status |
-| `src/app/api/video/provider-status/route.ts` | GET — check which engines have configured API keys |
-| `src/app/api/video/storyboard/route.ts` | POST — generate storyboard from brief |
-| `src/app/api/video/generate/route.ts` | POST — start video generation from storyboard |
-| `src/app/api/video/generate-scenes/route.ts` | POST — generate scenes with per-scene engine selection |
-| `src/app/api/video/regenerate-scene/route.ts` | POST — regenerate single scene with engine |
-
-### Important Architecture Notes
-
-**Render Pipeline is fully mocked.** Every provider call in `render-pipeline.ts` returns `Promise.resolve({ jobId: 'mock_123' })`. The real HeyGen/Sora/Runway integrations are in `video-service.ts`. The "Start Generation" button in Video Studio calls the mock pipeline, not the real service. This needs to be rewired.
-
-**Asset Generator is a shell.** `src/lib/agents/builder/assets/specialist.ts` claims to generate logos, banners, and graphics but returns placeholder URLs. No image generation API is integrated. For video thumbnails and marketing graphics, we need a real image generation integration (DALL-E, Flux, etc.) — but this is separate from the video pipeline.
-
-**No ffmpeg installed.** Video stitching requires ffmpeg. Options: `ffmpeg.wasm` (runs in browser, ~30MB), server-side ffmpeg on a Cloud Run worker, or using HeyGen's multi-scene API to avoid stitching entirely.
 
 ---
 
@@ -280,6 +345,10 @@ Track historical success rates per engine over time. An engine that is cheaper p
 | No screenshot capture service | Needed for platform tutorial videos |
 | Outbound webhooks are scaffolding | Settings UI exists but backend dispatch not implemented |
 | Playbook missing API endpoints | `/api/playbook/list` and `/api/playbook/{id}/metrics` return 404 |
+| Social accounts UI is mock | Hardcoded connected/disconnected status, no real OAuth |
+| Social REPLY/LIKE/FOLLOW/REPOST stubbed | Compliance checks work but actual execution returns fake success |
+| LinkedIn posting limited | Falls back to manual task creation (RapidAPI unreliable) |
+| No social coaching/feedback loop | System doesn't learn from corrections or performance |
 
 ---
 
@@ -298,4 +367,10 @@ Track historical success rates per engine over time. An engine that is cheaper p
 | `src/lib/api-keys/api-key-service.ts` | Centralized API key retrieval from Firestore |
 | `src/lib/orchestrator/jasper-tools.ts` | Jasper's 36+ function-calling tools |
 | `src/lib/orchestrator/feature-manifest.ts` | 11 specialists + capabilities + trigger phrases |
+| `src/lib/agent/golden-master-builder.ts` | Golden Master versioning + deployment |
+| `src/lib/training/golden-master-updater.ts` | Training → Golden Master update pipeline |
+| `src/lib/training/feedback-processor.ts` | AI-powered training session analysis |
+| `src/lib/agent/instance-manager.ts` | Ephemeral agent spawn + customer memory |
+| `src/types/agent-memory.ts` | Golden Master, CustomerMemory, AgentInstance types |
+| `src/types/training.ts` | Training session, analysis, improvement suggestion types |
 | `vercel.json` | 7 cron entries for autonomous operations |
