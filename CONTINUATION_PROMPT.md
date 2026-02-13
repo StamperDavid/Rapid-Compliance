@@ -21,35 +21,13 @@ Last Session: February 12, 2026
 - `npm run lint` — **PASSES (zero errors, zero warnings)**
 - `npm run build` — **PASSES (production build succeeds)**
 
-### What Was Done This Session
-
-**Fixed Jasper video routing:**
-- Removed generic `'video'` and `'tutorial'` from YouTube specialist's `triggerPhrases` in `feature-manifest.ts` — YouTube no longer hijacks all video requests
-- Added `create_video` tool to Jasper (`jasper-tools.ts`) — accepts description, provider, type, duration, aspect ratio; creates a project in the video library and calls the video generation service
-- Added `get_video_status` tool to Jasper — checks generation progress and returns video URL when ready
-- HeyGen is the default video provider (auto-select order: HeyGen > Sora > Runway)
-
-**Rewired video service to use API Key Service:**
-- Replaced all 17 `process.env` API key reads in `video-service.ts` with `getVideoProviderKey()` calls
-- Video provider keys now come from Firestore via `apiKeyService.getServiceKey()` (Settings > API Keys page), matching the pattern used by ElevenLabs/Unreal Speech voice providers
-- Added missing `case 'sora'` to `api-key-service.ts` (falls back to OpenAI key)
-- Updated `VIDEO_SERVICE_STATUS.isAvailable` to `true`
-
-**Added Academy section:**
-- New "Academy" navigation section in sidebar (`AdminSidebar.tsx`) with Tutorials, Courses, Certifications
-- Added `'academy'` to `NavigationCategory` type in `unified-rbac.ts`
-- Created Academy page at `/academy` with category filtering, video player, and tutorial grid (reads from Firestore `academy_tutorials` collection)
-
-### Files Changed (Uncommitted)
-```
-M  src/components/admin/AdminSidebar.tsx        (Academy nav section)
-M  src/lib/api-keys/api-key-service.ts          (Added sora case)
-M  src/lib/orchestrator/feature-manifest.ts     (YouTube trigger phrases)
-M  src/lib/orchestrator/jasper-tools.ts         (create_video + get_video_status tools)
-M  src/lib/video/video-service.ts               (API keys from Firestore, not process.env)
-M  src/types/unified-rbac.ts                    (academy NavigationCategory)
-A  src/app/(dashboard)/academy/page.tsx          (Academy page)
-```
+### Recently Completed
+- Jasper video routing fixed — `create_video` and `get_video_status` tools working, HeyGen default provider
+- Video service rewired to pull API keys from Firestore (not `process.env`)
+- Academy section added (`/academy` page, sidebar nav)
+- **Multi-engine video selector implemented** — per-scene engine dropdown in Approval step (HeyGen/Runway/Sora selectable, Kling/Luma coming-soon)
+- Engine registry with cost metadata, provider-status API, scene-generator multi-engine routing
+- `heygenVideoId` → `providerVideoId` refactor across all types and components
 
 ---
 
@@ -60,9 +38,107 @@ Tell Jasper "create a video on how to set up an email campaign" and receive a po
 
 ### Architecture: Scene-Based HeyGen with Approval Flow
 
-**Provider:** HeyGen (default) via API. HeyGen is the rendering engine — videos are generated through their API, downloaded, and stored in our Firebase Storage. We own the files.
+**Default Provider:** HeyGen via API for avatar-based content. HeyGen is the rendering engine for talking-head and presenter videos — generated through their API, downloaded, and stored in our Firebase Storage. We own the files.
 
-**Why HeyGen:** Avatar IV model produces photorealistic presenters with natural lip sync, gestures, and micro-expressions. 1080p/4K output. Ideal for tutorials, explainers, and product demos. Cost: ~$0.01/second.
+**Why HeyGen for avatars:** Avatar IV model produces photorealistic presenters with natural lip sync, gestures, and micro-expressions. 1080p/4K output. Ideal for tutorials, explainers, and product demos. Cost: ~$0.01/second.
+
+### Multi-Engine Orchestrator (Phase 1 Complete)
+
+The system supports multiple video generation engines. Users can select a video engine per scene during the Approval step. Phase 1 (manual selection with availability status) is complete. Phase 2 (AI-powered auto-selection) is planned.
+
+#### Supported Engines
+
+| Engine | Strengths | Best For |
+|--------|-----------|----------|
+| **HeyGen** | Photorealistic avatars, lip sync, gestures | Talking heads, presenters, tutorials with a host |
+| **Runway (Gen-3/Gen-4 Turbo)** | Style consistency, mature API, camera control | Stylized content, consistent multi-scene videos, transitions |
+| **Luma Dream Machine (Ray2)** | Realistic motion, precise physics, camera control | Tutorials, product demos, UI walkthroughs |
+| **Kling (v2/v2.1)** | Natural human motion/expression, competitive pricing | People-centric scenes, gestures, talking heads (non-avatar) |
+| **OpenAI Sora 2** | Best prompt comprehension, handles complex descriptions | Conceptual scenes, nuanced/abstract prompts |
+
+#### Auto-Selection Logic
+
+The AI agent analyzes each scene and selects the recommended engine based on weighted factors:
+
+| Factor | Influence |
+|--------|-----------|
+| Scene type (talking head, b-roll, demo, etc.) | Primary driver |
+| Desired style (realistic vs. stylized) | Narrows options |
+| Human presence & motion complexity | Favors Kling |
+| Physics/product interaction | Favors Luma |
+| Prompt complexity / abstraction | Favors Sora |
+| Style consistency across scenes | Favors Runway |
+| Avatar requirement (lip-synced presenter) | Favors HeyGen |
+| Cost sensitivity (user preference) | Compares pricing |
+| Speed priority | Compares generation times |
+
+User can configure a **cost mode** that influences auto-selection:
+- **Quality First** — best engine per scene regardless of cost
+- **Balanced** — best engine unless a cheaper one is within ~90% quality match
+- **Budget** — cheapest engine that meets a minimum quality threshold
+
+#### User Override + Cost Preview
+
+1. AI presents storyboard with recommended engine per scene + cost estimate in **actual USD**
+2. User can swap the engine on any scene via dropdown
+3. On swap, the **cost preview updates in real-time** showing the delta ("this change adds $0.20" / "this saves $0.15")
+4. User confirms and generation begins
+
+**Pricing model:** Actual currency (USD) displayed — no credits abstraction, no markup on usage costs. Pass-through pricing with full transparency.
+
+#### Live Cost Dashboard (Session Tracker)
+
+Every action that costs money shows the price **before** the user confirms it. A running session cost meter is always visible during generation:
+
+```
+Session: Product Tutorial Video
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Original Estimate:    $0.85
+Current Spent:        $1.15  ██████████████░░░░
+  ├─ Scene 1 (Kling)     $0.42  ✓
+  ├─ Scene 2 (Luma)      $0.30  ✓
+  ├─ Scene 2 regen       $0.30  ✓  ← regeneration
+  └─ Scene 3 (Runway)    $0.13  ⏳ generating...
+Projected Total:      $1.28
+                      ──────
+Over estimate by:     +$0.43 (1 regeneration)
+```
+
+Key behaviors:
+- **Pre-generation:** Show per-scene cost for every available engine
+- **During generation:** Running total of actual spend
+- **On regeneration:** Cost added to session total, meter ticks up, user sees progression
+- **On engine swap:** Immediate cost delta preview before confirming
+- **Session summary:** Final cost breakdown by engine, scene, and regeneration count
+
+#### Cost Calculation
+
+All engines price on deterministic inputs known at storyboard time: duration (seconds), resolution (720p/1080p/4K), quality tier (standard/pro), and model version. No variable complexity surcharge — cost is fully calculable before generation.
+
+Approximate pricing (store as config, not hardcoded — rates change):
+
+| Engine | ~Cost per 5s clip | Notes |
+|--------|-------------------|-------|
+| HeyGen | ~$0.05 | Avatar-based, cheapest for talking head |
+| Runway Gen-3 Turbo | ~$0.25 | Fast, cheapest Runway tier |
+| Runway Gen-3 Alpha | ~$0.50 | Higher quality |
+| Luma Dream Machine | ~$0.30 | Per generation |
+| Kling Standard | ~$0.10-0.20 | Very competitive |
+| Kling Pro | ~$0.30-0.50 | Better quality |
+| Sora | ~$0.50+ | Pricing varies |
+
+#### Regeneration Intelligence
+
+Track historical success rates per engine over time. An engine that is cheaper per-clip but needs multiple regeneration attempts may cost more than a pricier engine that nails it first try. Over time, auto-selection factors in **average attempts per engine per scene type** for more accurate cost projections.
+
+#### Architecture Notes
+
+- All engines take the same basic inputs (text prompt, optional reference image, duration, aspect ratio) and produce the same output (MP4)
+- Orchestration layer normalizes prompt format per engine (each has different prompt best practices)
+- API auth managed per provider via existing `api-key-service.ts`
+- Async generation + polling is standard across all engines
+- Output funnels into the existing assembly pipeline regardless of source engine
+- Existing scene-based pipeline already decomposes videos — engine selection is a per-scene property, not per-video
 
 ### The Flow
 
@@ -120,9 +196,15 @@ Tell Jasper "create a video on how to set up an email campaign" and receive a po
 | HeyGen API integration (generate video) | FUNCTIONAL (needs API key) | `src/lib/video/video-service.ts` |
 | Sora API integration | FUNCTIONAL (needs API key) | `src/lib/video/video-service.ts` |
 | Runway API integration | FUNCTIONAL (needs API key) | `src/lib/video/video-service.ts` |
+| Luma Dream Machine integration | NOT STARTED | Marked coming-soon in engine registry |
+| Kling integration | NOT STARTED | Marked coming-soon in engine registry |
+| Multi-engine selector (per-scene) | FUNCTIONAL | `EngineSelector.tsx`, `engine-registry.ts`, `scene-generator.ts` |
+| Provider status API (API key check) | FUNCTIONAL | `src/app/api/video/provider-status/route.ts` |
+| Engine registry (cost/metadata) | FUNCTIONAL | `src/lib/video/engine-registry.ts` |
+| Scene generator (multi-engine routing) | FUNCTIONAL | `src/lib/video/scene-generator.ts` |
 | Jasper `create_video` tool | FUNCTIONAL | `src/lib/orchestrator/jasper-tools.ts` |
 | Jasper `get_video_status` tool | FUNCTIONAL | `src/lib/orchestrator/jasper-tools.ts` |
-| Video Studio UI (brief form) | FUNCTIONAL | `src/app/(dashboard)/content/video/page.tsx` |
+| Video Studio UI (7-step pipeline) | FUNCTIONAL | `src/app/(dashboard)/content/video/` components |
 | Storyboard preview panel | FUNCTIONAL | `src/app/(dashboard)/content/video/page.tsx` |
 | API Keys page (HeyGen, Runway, Sora entries) | FUNCTIONAL | `src/app/(dashboard)/settings/api-keys/page.tsx` |
 | TTS voice generation (ElevenLabs/Unreal Speech) | FUNCTIONAL | `src/lib/voice/tts/` |
@@ -143,6 +225,12 @@ Tell Jasper "create a video on how to set up an email campaign" and receive a po
 | **Scene stitching** | MEDIUM | Assemble individual scene videos into final video. ffmpeg.wasm (client-side) or server-side ffmpeg. Handle transitions (cuts, fades). |
 | **Video editor (scene manager)** | MEDIUM | Timeline view of scenes. Preview each scene. Reorder, trim, re-generate individual scenes. Not a full NLE — a scene manager with surgical re-generation. |
 | **Jasper video producer logic** | MEDIUM | Jasper's reasoning layer for decomposing video requests: identify type (tutorial vs promo vs explainer), determine required assets, delegate to correct agents, assemble the draft. |
+| **AI auto-selection logic** | MEDIUM | AI agent that analyzes scene characteristics and recommends optimal engine per scene. Phase 2 of multi-engine orchestrator. |
+| **Luma Dream Machine API integration** | MEDIUM | Add Luma Ray2 to `video-service.ts` following existing HeyGen/Sora/Runway pattern. Unwire coming-soon status in engine registry. |
+| **Kling API integration** | MEDIUM | Add Kling v2 to `video-service.ts` following existing pattern. Unwire coming-soon status in engine registry. |
+| **Engine pricing config (Firestore)** | LOW | Move pricing from `engine-registry.ts` constants to Firestore config so rates can be updated without deploys. |
+| **Live cost dashboard** | MEDIUM | Session-level cost tracker showing per-scene spend, regeneration costs, running total — all in actual USD. Phase 2 feature. |
+| **Engine swap cost delta preview** | LOW | On engine change, show "+$0.20" / "-$0.15" delta before confirming. Currently shows absolute cost per engine. |
 
 ### Video Production Pipeline — Key Files
 
@@ -160,8 +248,17 @@ Tell Jasper "create a video on how to set up an email campaign" and receive a po
 | `src/lib/orchestrator/jasper-tools.ts` | Jasper's tools including create_video, get_video_status |
 | `src/lib/orchestrator/feature-manifest.ts` | 11 specialists + trigger phrases |
 | `src/app/(dashboard)/content/video/page.tsx` | Video Studio UI |
+| `src/app/(dashboard)/content/video/components/EngineSelector.tsx` | Per-scene engine dropdown with availability states |
+| `src/app/(dashboard)/content/video/components/StepApproval.tsx` | Storyboard review with engine selection and dynamic cost |
+| `src/app/(dashboard)/content/video/components/StepGeneration.tsx` | Multi-engine scene generation with progress tracking |
+| `src/lib/video/engine-registry.ts` | Engine metadata, costs, integration status, helper functions |
+| `src/lib/video/scene-generator.ts` | Multi-engine scene router (HeyGen/Runway/Sora dispatch) |
+| `src/hooks/useVideoProviderStatus.ts` | Client hook for provider API key status |
+| `src/app/api/video/provider-status/route.ts` | GET — check which engines have configured API keys |
 | `src/app/api/video/storyboard/route.ts` | POST — generate storyboard from brief |
 | `src/app/api/video/generate/route.ts` | POST — start video generation from storyboard |
+| `src/app/api/video/generate-scenes/route.ts` | POST — generate scenes with per-scene engine selection |
+| `src/app/api/video/regenerate-scene/route.ts` | POST — regenerate single scene with engine |
 
 ### Important Architecture Notes
 
