@@ -1,7 +1,7 @@
 # SalesVelocity.ai - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** February 13, 2026 (AI social media command center, content studio dual-mode, approval queue upgrade, activity feed, analytics dashboard, agent rules UI — 4 new pages, 2 new API routes)
+**Last Updated:** February 13, 2026 (Production readiness audit — saga persistence gap, global kill switch gap, revenue attribution gap identified; integration status verified; deployment pipeline confirmed)
 **Branches:** `dev` (latest)
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Architecture:** Single-Tenant (Penthouse Model) - NOT a SaaS platform
@@ -46,7 +46,7 @@
 ### Technology Stack
 
 - **Framework:** Next.js 15 (App Router)
-- **Hosting:** Vercel (Status: **Pending Import** from GitHub)
+- **Hosting:** Vercel (Status: **DEPLOYED** — dev → main → Vercel auto-deploy)
 - **Database:** Firebase Firestore (single-tenant: `rapid-compliance-65f87`)
 - **Authentication:** Firebase Auth with custom claims
 - **AI Gateway:** OpenRouter (100+ models)
@@ -199,26 +199,28 @@ TenantMemoryVault refactored to enforce single-tenant model (Rule 1 compliance):
 
 | Area | Issue | Severity |
 |------|-------|----------|
-| **~40 TODO comments** | Auth context TODOs reduced; 27 alert/confirm/prompt calls replaced with proper UI components | MEDIUM (down from HIGH) |
-| ~~**No error boundaries**~~ | ✅ RESOLVED — Tier 1.2 added 30 error.tsx + 30 loading.tsx files across all route groups (dashboard, auth, store, onboarding) | ✅ RESOLVED |
-| ~~**Mock data isolation**~~ | ✅ RESOLVED — OpenAI embeddings replace mock provider; workflow triggers write to Firestore; demo data properly gated | ✅ RESOLVED |
-| ~~**Dashboard mock data pages**~~ | ✅ RESOLVED (Feb 12) — Social Media, Webhooks pages replaced with Firestore-backed CRUD; Orders page built from scratch; Lead Scoring rules wired; Team Tasks CRUD added | ✅ RESOLVED |
-| ~~**Accessibility**~~ | ~~1 `aria-label` across 115+ pages, no semantic HTML, no keyboard navigation~~ | ✅ RESOLVED — Tier 2.3 skip-to-main, dialog focus trapping, ARIA on loading/error/nav/DataTable, semantic headings, reduced motion |
-| ~~**Data tables**~~ | ~~No column sorting, no bulk actions, no CSV export on any table~~ | ✅ RESOLVED — Tier 2.1 DataTable system with sorting, bulk select/delete, CSV export |
-| **Agent end-to-end testing** | No test validates full chain: user → orchestrator → manager → specialist → UI | MEDIUM |
-| ~~**Mixed styling**~~ | ✅ RESOLVED — Top 6 inline style offenders (236+ styles) migrated to Tailwind; Tailwind config maps CSS variables to utility classes | ✅ RESOLVED |
+| **Saga state persistence** | Orchestrator saga state stored in-memory only (`Map<string, Saga>`). Process crash loses all active sagas. No checkpoint/resume logic. Event Router processes events ephemerally. | **CRITICAL** |
+| **Global kill switch** | Kill switch only gates `AutonomousPostingAgent.executeAction()`. Event Router, Master Orchestrator, Signal Bus, and all 9 managers have zero awareness. No global pause, no per-agent control. | **CRITICAL** |
+| **Revenue attribution pipeline** | UTM→Lead→Deal→Order→Stripe chain broken at every junction. Forms capture UTM but don't pass to leads. Deals don't link to leads. Orders have no attribution fields. Stripe metadata empty. ~40% wired. | **HIGH** |
+| **Agent end-to-end testing** | No test validates full chain: user → orchestrator → manager → specialist → UI | **HIGH** |
+| **Social engagement stubs** | REPLY/LIKE/FOLLOW/REPOST actions return fake success with placeholder IDs. POST/RECYCLE are real. | MEDIUM |
+| **Facebook/Instagram** | No implementation exists. Type definitions only. Requires Meta Developer sandbox + app review. | MEDIUM |
+| **LinkedIn unofficial** | Uses RapidAPI (unofficial, ToS violation risk). Falls back to manual task creation. Needs official API. | MEDIUM |
+| **~40 TODO comments** | Auth context TODOs reduced; 27 alert/confirm/prompt calls replaced with proper UI components | MEDIUM |
+| **Node version mismatch** | CI workflows use Node 18, package.json requires Node 20 | LOW |
 
 ### What's Stubbed (Not Yet Functional)
 
 | Endpoint/Feature | Issue |
 |------------------|-------|
-| ~~Voice AI audio generation~~ | ✅ RESOLVED — TTS wired to agent handler via VoiceEngineFactory; 2 providers (ElevenLabs, Unreal Speech). Native stub removed Feb 12, 2026. |
-| ~~Video content generation~~ | ✅ RESOLVED — RenderPipeline class orchestrates storyboard→provider→stitcher→storage; wired to /api/video/generate |
-| ~~Email reply processing~~ | ✅ RESOLVED — SendGrid Inbound Parse webhook at /api/webhooks/email-inbound; AI classification with auto-response |
-| ~~PDF proposal generation~~ | ✅ RESOLVED — Playwright PDF conversion with Firebase Storage upload; GET /api/proposals/[id]/pdf endpoint |
-| ~~ML predictive lead scoring~~ | ✅ RESOLVED — Firestore-configurable weights with `trainFromHistoricalData()` using logistic regression approximation |
-| ~~`/api/coaching/team`~~ | ✅ RESOLVED — Queries Firestore for team membership with fallback to org-wide sales reps |
 | `/api/crm/deals/[dealId]/recommendations` | Auth implementation incomplete |
+| Social REPLY/LIKE/FOLLOW/REPOST | TODO stubs return fake success (see Production Readiness Plan Tier 3.1) |
+| Facebook/Instagram posting | No implementation (see Production Readiness Plan Tier 3.2) |
+| Revenue attribution chain | UTM→Lead→Deal→Order→Stripe not connected (see Production Readiness Plan Tier 2.1) |
+| Video render pipeline | `render-pipeline.ts` returns fake responses; real integrations gated by API keys |
+| Asset Generator | Returns placeholder URLs, no actual image generation |
+
+Previously stubbed items now resolved: Voice AI (ElevenLabs/Unreal), Video generation (HeyGen/Sora/Runway conditional), Email reply processing (SendGrid Inbound Parse), PDF proposal generation (Playwright), ML lead scoring (logistic regression), `/api/coaching/team` (Firestore query).
 
 ---
 
@@ -268,6 +270,35 @@ Only after Tiers 1 and 2 are verified complete.
 | 3.3 | **End-to-end agent testing** | Write integration tests that validate the full chain: user action → API → orchestrator → manager → specialist → result. | COMPLETE |
 | 3.4 | **Webhook signature verification** | Add HMAC validation to email, SMS, and voice webhook endpoints. | COMPLETE |
 | 3.5 | **Stub implementations** | Implement the stubbed features from the "What's Stubbed" table above, prioritized by user impact. | COMPLETE |
+
+---
+
+## Production Readiness Roadmap
+
+> **Status:** IN PROGRESS — Identified February 13, 2026 via forensic audit. Full plan in `CONTINUATION_PROMPT.md`.
+
+### Tier 1 — Trust & Safety (CRITICAL)
+
+| # | Task | Description | Status |
+|---|------|-------------|--------|
+| 1.1 | **Saga state persistence** | Persist saga state to Firestore with checkpoint markers. Add `resumeSaga()` to MasterOrchestrator. Add event persistence to Event Router with dedup. Wire cron to check for incomplete sagas. | PENDING |
+| 1.2 | **Global kill switch** | Create `swarm-control.ts` service. Add pause guards to EventRouter, MasterOrchestrator, SignalBus, BaseManager. Per-agent and global controls. UI in Command Center. | PENDING |
+| 1.3 | **E2E agent integration testing** | Playwright + Jest tests for full agent chain, saga workflows, signal propagation, kill switch verification. | PENDING |
+
+### Tier 2 — Revenue & Attribution (HIGH)
+
+| # | Task | Description | Status |
+|---|------|-------------|--------|
+| 2.1 | **Revenue attribution pipeline** | Wire UTM→Lead→Deal→Order→Stripe chain. Add attribution fields to types. Auto-populate source on creation. Add attribution analytics endpoint and dashboard page. | PENDING |
+
+### Tier 3 — Platform Integrations (MEDIUM)
+
+| # | Task | Description | Status |
+|---|------|-------------|--------|
+| 3.1 | **Twitter engagement actions** | Wire REPLY/LIKE/FOLLOW/REPOST to actual Twitter API calls. Replace TODO stubs. | PENDING |
+| 3.2 | **Facebook/Instagram (Meta Graph API)** | Create `meta-service.ts`. OAuth flow, posting, insights. **Blocked by:** Meta sandbox access + app review. | BLOCKED (external) |
+| 3.3 | **LinkedIn official API** | Replace RapidAPI with official LinkedIn Marketing API. **Blocked by:** LinkedIn developer approval. | BLOCKED (external) |
+| 3.4 | **CI/CD cleanup** | Update Node 18→20 in workflows. Implement Vercel deploy job. | PENDING |
 
 ---
 
@@ -542,7 +573,7 @@ All three functions are hardcoded to `DEFAULT_ORG_ID`. There is no dynamic org p
 **Repository:** https://github.com/StamperDavid/Rapid-Compliance
 **Branch:** `dev` at commit `e8a707c0`
 **Model:** Penthouse Single-Tenant (hardened)
-**Hosting:** Vercel (Pending Import) | **Backend:** Firebase `rapid-compliance-65f87`
+**Hosting:** Vercel (DEPLOYED — dev → main → auto-deploy) | **Backend:** Firebase `rapid-compliance-65f87`
 
 ### Overview
 
@@ -643,18 +674,18 @@ Legacy workspace URLs are automatically redirected:
 
 ## Verified Live Route Map
 
-### Route Distribution (February 12, 2026)
+### Route Distribution (February 13, 2026)
 
 | Area | Routes | Dynamic Params | Status |
 |------|--------|----------------|--------|
-| Dashboard (`/(dashboard)/*`) | 117 | 8 | **Flattened** single-tenant (incl. former admin routes) |
+| Dashboard (`/(dashboard)/*`) | 124 | 8 | **Flattened** single-tenant (incl. former admin routes + social pages) |
 | Public (`/(public)/*`) | 16 | 0 | All pages exist |
 | Dashboard sub-routes (`/dashboard/*`) | 16 | 0 | Analytics, coaching, marketing, performance |
 | Store (`/store/*`) | 5 | 1 (`[productId]`) | E-commerce storefront |
 | Onboarding (`/onboarding/*`) | 2 | 0 | Account + industry setup |
 | Auth (`/(auth)/*`) | 1 | 0 | Admin login |
 | Other (`/preview`, `/profile`, `/sites`) | 3 | 2 | Preview tokens, user profile, site builder |
-| **TOTAL** | **160** | **11** | **Verified** |
+| **TOTAL** | **167** | **11** | **Verified February 13, 2026** |
 
 **DELETED:** `src/app/workspace/[orgId]/*` (95 pages) and `src/app/admin/*` (92 pages) - multi-tenant and standalone admin routes removed/consolidated into `(dashboard)`
 
@@ -1977,36 +2008,32 @@ console.info(`Cleaned ${totalCleaned} stale E2E documents`);
 
 ## Integration Status
 
-### Native Integrations (FUNCTIONAL)
+### Integration Audit (Verified February 13, 2026)
 
-| Integration | Type | Features |
-|-------------|------|----------|
-| **Stripe** | Payments | Subscriptions, invoices, webhooks |
-| **Firebase** | Auth + DB | Authentication, Firestore (`rapid-compliance-65f87`) |
-| **OpenRouter** | AI Gateway | 100+ model access |
-| **Calendly** | Scheduling | Meeting booking |
-| **Shopify** | E-commerce | Product sync |
+| Integration | Status | Details |
+|-------------|--------|---------|
+| **Twitter/X** | **REAL** | Direct API v2, OAuth2 PKCE, posting, media upload, timeline, search, mentions. Rate limit tracking with exponential backoff. |
+| **LinkedIn** | **PARTIAL** | Unofficial RapidAPI wrapper (ToS risk) + manual task fallback. Needs official Marketing Developer Platform API. |
+| **Facebook** | **NOT BUILT** | No code exists. Requires Meta Developer sandbox + app review. |
+| **Instagram** | **NOT BUILT** | No code exists. Requires Meta Developer sandbox + app review. |
+| **Stripe** | **REAL** | Full API — `checkout.sessions.create()`, `products.create()`, `prices.create()`, `paymentLinks.create()`. Production-ready. |
+| **Email (SendGrid)** | **REAL** | Primary provider. `@sendgrid/mail` SDK, tracking pixels, click tracking. |
+| **Email (Resend)** | **REAL** | Alternative provider. Direct API at `api.resend.com`. |
+| **Email (SMTP)** | **REAL** | Server-side via `/api/email/send-smtp`. |
+| **Voice (Twilio)** | **REAL** | Twilio SDK — call initiation, control, conferencing. |
+| **Voice (Telnyx)** | **REAL** | Direct API — 60-70% cheaper than Twilio. |
+| **TTS (ElevenLabs)** | **REAL** | `api.elevenlabs.io/v1`, 20+ premium voices. |
+| **TTS (Unreal Speech)** | **REAL** | Alternative cost-effective TTS. |
+| **Video (HeyGen/Sora/Runway)** | **CONDITIONAL** | Real API calls if provider keys configured; returns "Coming Soon" otherwise. |
+| **Firebase** | **REAL** | Auth + Firestore, single-tenant `rapid-compliance-65f87`. |
+| **OpenRouter** | **REAL** | AI gateway, 100+ models. |
+| **Google OAuth** | **REAL** | Calendar, Gmail integration. |
+| **Microsoft OAuth** | **REAL** | Outlook, Teams integration. |
+| **Slack OAuth** | **REAL** | Channel notifications. |
+| **Social Engagement (POST)** | **REAL** | Twitter works, LinkedIn partial. |
+| **Social Engagement (REPLY/LIKE/FOLLOW/REPOST)** | **MOCKED** | TODO stubs return fake success. |
 
-### OAuth Integrations (FUNCTIONAL)
-
-| Provider | Scope | Features |
-|----------|-------|----------|
-| **Google** | Calendar, Gmail | Read/send emails, calendar events |
-| **Microsoft** | Outlook, Teams | Email, channel messaging |
-| **Slack** | Messaging | Channel notifications |
-| **QuickBooks** | Accounting | Invoice sync |
-| **Twitter/X** | Social | Post/schedule |
-
-### Voice Engines (FUNCTIONAL)
-
-| Engine | Provider | Status |
-|--------|----------|--------|
-| ElevenLabs | ElevenLabs API | Default (Ultra quality) |
-| Unreal Speech | Unreal Speech API | Alternative (Cost-effective) |
-
-> **Removed:** Native Voice provider (placeholder stub with no real backend) — deleted February 12, 2026. Settings page: `/settings/ai-agents/voice`.
-
-### Planned Integrations (INCOMPLETE)
+### Planned Integrations (NOT STARTED)
 
 - Salesforce CRM
 - HubSpot
@@ -2153,7 +2180,7 @@ The build pipeline now enforces **mandatory TypeScript type-checking** as a non-
 - **One organization:** `rapid-compliance-root` is the only org in the system (Rule 1)
 - All Firestore data scoped to `organizations/rapid-compliance-root/` or flat root collections (Rule 5)
 - Feature visibility configurable at the platform level, not per-tenant
-- All 51 AI agents operate under the single org identity (Rule 2)
+- All 52 AI agents operate under the single org identity (Rule 2)
 - `DEFAULT_ORG_ID` constant used by all service classes — no dynamic org resolution
 - Legacy `organizationId` parameters in service classes are deprecated and ignored
 
