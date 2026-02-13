@@ -152,6 +152,7 @@ const NAV_SECTIONS: NavigationSection[] = [
     allowedRoles: ['owner', 'admin', 'manager'],
     items: [
       { id: 'video-studio', label: 'Video Studio', href: '/content/video', icon: Video, iconColor: 'var(--color-primary)', requiredPermission: 'canManageSocialMedia' },
+      { id: 'social-command-center', label: 'Social Command Center', href: '/social/command-center', icon: Activity, iconColor: 'var(--color-success)', requiredPermission: 'canManageSocialMedia' },
       { id: 'social-media', label: 'Social Media', href: '/social/campaigns', icon: Share2, iconColor: 'var(--color-secondary)', requiredPermission: 'canManageSocialMedia' },
       { id: 'content-calendar', label: 'Content Calendar', href: '/social/calendar', icon: CalendarDays, iconColor: 'var(--color-teal)', requiredPermission: 'canManageSocialMedia' },
       { id: 'approval-queue', label: 'Approval Queue', href: '/social/approvals', icon: ClipboardList, iconColor: 'var(--color-warning)', requiredPermission: 'canManageSocialMedia' },

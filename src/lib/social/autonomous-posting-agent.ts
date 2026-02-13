@@ -271,6 +271,23 @@ export class AutonomousPostingAgent {
   async executeAction(action: EngagementAction): Promise<EngagementActionResult> {
     const actionId = `action-${action.type.toLowerCase()}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
 
+    // Kill switch: bail out if agent is disabled
+    if (!this.agentSettings.agentEnabled) {
+      logger.info('AutonomousPostingAgent: Agent is disabled (kill switch active)', {
+        actionType: action.type,
+        platform: action.platform,
+      });
+      return {
+        success: false,
+        actionType: action.type,
+        platform: action.platform,
+        actionId,
+        error: 'Agent is paused — kill switch is active',
+        complianceBlocked: true,
+        complianceReason: 'Agent disabled by kill switch',
+      };
+    }
+
     // Compliance check: velocity limits
     const velocityCheck = this.checkVelocityLimit(action.type, action.platform);
     if (!velocityCheck.allowed) {

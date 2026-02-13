@@ -15,6 +15,7 @@ import { AgentConfigService } from '@/lib/social/agent-config-service';
 export const dynamic = 'force-dynamic';
 
 const updateSettingsSchema = z.object({
+  agentEnabled: z.boolean().optional(),
   velocityLimits: z.record(z.string(), z.number().min(0).max(100)).optional(),
   sentimentBlockKeywords: z.array(z.string()).optional(),
   escalationTriggerKeywords: z.array(z.string()).optional(),

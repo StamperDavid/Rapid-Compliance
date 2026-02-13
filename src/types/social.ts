@@ -457,6 +457,7 @@ export interface SocialAccount {
 export type EngagementActionType = 'POST' | 'REPLY' | 'LIKE' | 'FOLLOW' | 'REPOST' | 'RECYCLE';
 
 export interface AutonomousAgentSettings {
+  agentEnabled: boolean;
   velocityLimits: Record<EngagementActionType, number>;
   sentimentBlockKeywords: string[];
   escalationTriggerKeywords: string[];

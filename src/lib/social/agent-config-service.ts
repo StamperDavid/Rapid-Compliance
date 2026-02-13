@@ -20,6 +20,7 @@ function settingsPath(): string {
 
 /** Sensible defaults matching the original hardcoded values */
 export const DEFAULT_AGENT_SETTINGS: AutonomousAgentSettings = {
+  agentEnabled: true,
   velocityLimits: {
     POST: 10,
     REPLY: 10,
