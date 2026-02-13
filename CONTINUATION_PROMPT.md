@@ -5,7 +5,7 @@
 ## Context
 Repository: https://github.com/StamperDavid/Rapid-Compliance
 Branch: dev
-Last Session: February 13, 2026 (Session 4 complete — CI/CD Cleanup (3.4) + deals recommendations auth fix + SSOT updates)
+Last Session: February 13, 2026 (Session 5 — Quick wins + ESLint OOM fix)
 
 ## Current State
 
@@ -18,14 +18,19 @@ Last Session: February 13, 2026 (Session 4 complete — CI/CD Cleanup (3.4) + de
 
 ### Code Health
 - `tsc --noEmit` — **PASSES (zero errors)**
-- `npm run lint` — **PASSES (zero errors, zero warnings)**
+- `npm run lint` — **PASSES (zero errors, zero warnings)** — runs reliably in ~1m42s after OOM fix
 - `npm run build` — **PASSES (production build succeeds)**
 
 ### Deployment Pipeline
 - **Vercel:** Configured with `vercel.json` (7 cron jobs, CORS headers, security headers, US East region)
-- **CI/CD:** GitHub Actions on `main`/`dev` — lint, type-check, test, build
+- **CI/CD:** GitHub Actions on `main`/`dev` — lint, type-check, test, build (Node 20, actions v4)
 - **Deploy scripts:** `verify-env-vars.js` (P0/P1/P2 env validation), `deploy-firebase-rules.js`, `test-production-health.js`
-- **Node version:** package.json requires 20.x (CI workflows need update from 18 → 20)
+- **Node version:** 20.x (CI + package.json aligned)
+
+### Build Tooling
+- **ESLint:** Uses `tsconfig.eslint.json` (scoped to `src/` only — excludes `.next`, build artifacts)
+- **Memory:** All lint scripts use `cross-env NODE_OPTIONS=--max-old-space-size=8192`
+- **Pre-commit:** `.husky/pre-commit` — lint-staged + tsc + bypass ratchet (8GB heap)
 
 ### What's Complete
 - All 8 social media pages (Command Center, Content Studio, Approval Queue, Activity Feed, Analytics, Agent Rules, Training, Golden Playbook)
@@ -42,10 +47,16 @@ Last Session: February 13, 2026 (Session 4 complete — CI/CD Cleanup (3.4) + de
 - **Revenue Attribution P1 (Tier 2.1b)** — Attribution analytics endpoint (`/api/analytics/attribution`) with revenue by source/campaign/medium, funnel metrics. Dashboard page (`/analytics/attribution`) with overview cards, conversion funnel visualization, breakdowns. "Source" column added to Leads, Deals, and Orders tables.
 - **E2E Agent Integration Testing (Tier 1.3)** — Playwright tests (`tests/e2e/agent-chain.spec.ts`) for swarm control API, attribution API, kill switch verification, CRM page loads. Jest integration tests: `tests/integration/saga-workflow.test.ts` (checkpoint/resume, crash simulation, event dedup, replay), `tests/integration/signal-propagation.test.ts` (SignalBus communication, swarm control state, pause/queue/resume/dequeue, guard functions).
 - **CI/CD Cleanup (Tier 3.4)** — Node 18→20 in both workflows (`ci.yml`, `api-integrity.yml`). Actions `checkout@v3`→`v4`, `setup-node@v3`→`v4`. Branch trigger `develop`→`dev`. Vercel CLI deploy step (pull → build → deploy --prebuilt --prod). Deals recommendations route auth fix (user extraction + workspaceId query param).
+- **Quick Wins (Session 5):**
+  - Playbook engine: threaded authenticated `userId` through `generatePlaybook()` (replaces hardcoded `'system'`)
+  - Signal bus: wired all 18 notification signal handlers to `SignalCoordinator.observeSignals()` with single subscription dispatch
+  - Email writer: added `showSuccessToast('Email copied to clipboard!')` on copy action
+  - Firestore: added 4 composite indexes for `activities` collection (`type`, `createdBy`, `direction` + `occurredAt`)
+- **ESLint OOM Fix (Session 5):** Created `tsconfig.eslint.json` scoped to `src/` (excludes `.next` 5.3GB build cache + root artifacts). Added `cross-env NODE_OPTIONS=--max-old-space-size=8192` to all lint scripts. Updated `.husky/pre-commit` with 8GB heap. `npm run lint` now completes reliably (~1m42s, zero OOM).
 
 ---
 
-## PRIMARY TASK: Production Readiness Plan
+## PRIMARY TASK: Production Readiness Plan (COMPLETE)
 
 ### Overview
 
@@ -262,11 +273,11 @@ SESSION 1: ✅ COMPLETE — Saga Persistence (1.1) + Global Kill Switch (1.2)
 SESSION 2: ✅ COMPLETE — Revenue Attribution P0 (2.1) + Twitter Engagement (3.1)
 SESSION 3: ✅ COMPLETE — Revenue Attribution P1 (2.1b analytics/dashboard) + E2E Testing (1.3)
 SESSION 4: ✅ COMPLETE — CI/CD Cleanup (3.4) + deals recommendations auth fix + SSOT updates
+SESSION 5: ✅ COMPLETE — Quick wins (4 TODOs) + ESLint OOM fix (tsconfig.eslint.json + cross-env + 8GB heap)
 
-EXTERNAL (start immediately, no code dependency):
+BLOCKED (external — no code work possible):
   - Meta Developer Portal sandbox application (3.2)
   - LinkedIn Marketing Developer Platform application (3.3)
-  - Build when approvals arrive
 ```
 
 ---
@@ -305,25 +316,44 @@ EXTERNAL (start immediately, no code dependency):
 | LinkedIn unofficial | Uses RapidAPI, not official API (Tier 3.3) |
 | ~~Node version mismatch~~ | **FIXED** — CI updated to Node 20, actions v4, Vercel deploy step implemented |
 | ~~`/api/crm/deals/[dealId]/recommendations`~~ | **FIXED** — Auth user extraction added, workspaceId from query param |
+| ~~ESLint OOM on full lint~~ | **FIXED** — `tsconfig.eslint.json` scoped to `src/`, `cross-env` 8GB heap, `.husky/pre-commit` updated |
+| ~~Playbook createdBy hardcoded~~ | **FIXED** — `generatePlaybook()` now receives authenticated `userId` from API route |
+| ~~Notification signal handlers disconnected~~ | **FIXED** — All 18 handlers wired to `SignalCoordinator.observeSignals()` |
+| ~~Email writer missing toast feedback~~ | **FIXED** — Copy-to-clipboard shows success toast |
+| ~~Activities missing Firestore indexes~~ | **FIXED** — 4 composite indexes added to `firestore.indexes.json` |
 | Render pipeline mocked | `render-pipeline.ts` returns fake responses for video |
 | Asset Generator is a shell | Returns placeholder URLs, no actual image generation |
 | Social accounts UI is mock | Hardcoded connected/disconnected status, no real OAuth |
-| ~40 TODO comments remaining | Auth context TODOs reduced but some remain |
+| ~35 TODO comments remaining | Reduced from ~65; quick-win TODOs addressed, larger feature TODOs remain |
 
 ---
 
-## Secondary Tasks (Lower Priority)
+## Next Up: Secondary Tasks
 
-### Video Production Pipeline
+These are the remaining buildable items, ordered by impact:
+
+### High Priority
+| Task | What Needs Building |
+|------|---------------------|
+| **E-commerce** | Stripe checkout flow completion — checkout exists but is incomplete |
+| **Social Accounts UI** | Real OAuth flows replacing hardcoded mock connected/disconnected status |
+
+### Medium Priority
+| Task | What Needs Building |
+|------|---------------------|
+| **Website Builder** | AI-powered page generation, template system |
+| **Asset Generator** | Real image generation — currently returns placeholder URLs |
+| **Video Pipeline** | Screenshot capture (Puppeteer/Playwright), scene editing, avatar/voice picker UI, storyboard → HeyGen bridge, scene stitching (ffmpeg), AI auto-selection, Luma/Kling integrations |
+
+### Low Priority
+| Task | What Needs Building |
+|------|---------------------|
+| **~35 TODO comments** | Mix of quick wins and larger features across the codebase |
+
+### Video Production Pipeline (Details)
 **Goal:** Tell Jasper "create a video" and receive a polished video in the library.
 
 **What's Built:** Video Specialist, Director Service, HeyGen/Sora/Runway API integrations, multi-engine selector, Video Studio UI (7-step pipeline), storyboard preview, Jasper tools, TTS generation, video library, Academy page.
-
-**What Still Needs Building:** Screenshot capture (Puppeteer/Playwright), scene-level editing, avatar/voice picker UI, storyboard → HeyGen bridge, scene stitching (ffmpeg), AI auto-selection, Luma/Kling integrations.
-
-### Other Platform Work
-- E-commerce: Stripe checkout flow completion
-- Website Builder: AI-powered page generation, template system
 
 ---
 
@@ -358,4 +388,7 @@ EXTERNAL (start immediately, no code dependency):
 | `tests/e2e/agent-chain.spec.ts` | **NEW** — Playwright E2E: swarm control, attribution API, kill switch, CRM pages |
 | `tests/integration/saga-workflow.test.ts` | **NEW** — Jest: saga checkpoint/resume, crash simulation, event dedup/replay |
 | `tests/integration/signal-propagation.test.ts` | **NEW** — Jest: SignalBus, swarm control, pause/queue/dequeue, guard functions |
+| `tsconfig.eslint.json` | ESLint-specific tsconfig scoped to `src/` (excludes `.next`, build artifacts) |
+| `src/lib/notifications/signal-handlers.ts` | Notification signal dispatch — 18 handlers wired to SignalCoordinator |
+| `firestore.indexes.json` | Firestore composite indexes (25 indexes including activities) |
 | `vercel.json` | 7 cron entries for autonomous operations |

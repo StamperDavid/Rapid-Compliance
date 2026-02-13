@@ -1,7 +1,7 @@
 # SalesVelocity.ai - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** February 13, 2026 (Session 4: CI/CD cleanup — Node 18→20, actions v3→v4, branch trigger fix, Vercel deploy step, deals recommendations auth fix)
+**Last Updated:** February 13, 2026 (Session 5: Quick wins — signal bus wiring, playbook user context, email toast, Firestore indexes + ESLint OOM fix)
 **Branches:** `dev` (latest)
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Architecture:** Single-Tenant (Penthouse Model) - NOT a SaaS platform
@@ -39,7 +39,7 @@
 | API Endpoints (route.ts) | 244 | Verified February 13, 2026 (added /api/analytics/attribution) |
 | AI Agents | 52 | **52 FUNCTIONAL (48 swarm + 4 standalone)** |
 | RBAC Roles | 4 | `owner` (level 3), `admin` (level 2), `manager` (level 1), `member` (level 0) — 4-role RBAC |
-| Firestore Collections | 67+ | Active (added sagaState, eventLog collections) |
+| Firestore Collections | 67+ | Active (sagaState, eventLog collections; 25 composite indexes) |
 
 **Architecture:** Single-company deployment for SalesVelocity.ai. Clients purchase services/products - they do NOT get SaaS tenants.
 
@@ -109,16 +109,28 @@ The Claude Code Governance Layer defines binding operational constraints for AI-
 | `ENGINEERING_STANDARDS.md` | Code quality requirements | Reference |
 | `eslint.config.mjs` | Linting rules | 🔒 **LOCKED** |
 | `tsconfig.json` | TypeScript config | 🔒 **LOCKED** |
+| `tsconfig.eslint.json` | ESLint-scoped tsconfig (src/ only, excludes .next) | Operational |
 | `.husky/*` | Pre-commit hooks | 🔒 **LOCKED** |
 
 **Pre-Commit Gate Requirements:**
-- `npm run lint` must pass
+- `npm run lint` must pass (uses `cross-env NODE_OPTIONS=--max-old-space-size=8192`)
 - `npx tsc --noEmit` must pass (W2 Build Gate)
 - `npm run build` must succeed
 - No new `any` types introduced
 - No new eslint-disable comments added
 
+**ESLint Memory Configuration:**
+- ESLint uses `tsconfig.eslint.json` (scoped to `src/` only) to avoid loading `.next` build cache (~5.3GB)
+- All lint scripts in `package.json` use `cross-env NODE_OPTIONS=--max-old-space-size=8192`
+- Pre-commit hook (`.husky/pre-commit`) exports `NODE_OPTIONS` with 8GB heap
+- Full lint completes in ~1m42s with zero OOM
+
 ### Recent Major Milestones (February 2026)
+
+#### Quick Wins + ESLint OOM Fix (Session 5)
+**Status:** ✅ **COMPLETE** (February 13, 2026)
+
+Quick wins resolved 4 TODOs: playbook `createdBy` user context threading, signal bus notification handler wiring (18 handlers → `SignalCoordinator.observeSignals()`), email writer toast notification, Firestore activity indexes (4 composites). ESLint heap OOM fix: created `tsconfig.eslint.json` scoped to `src/` (excludes `.next` 5.3GB cache), added `cross-env NODE_OPTIONS=--max-old-space-size=8192` to all lint scripts, updated `.husky/pre-commit`.
 
 #### AI Social Media Command Center & Full Page Buildout
 **Status:** ✅ **COMPLETE** (February 13, 2026)
