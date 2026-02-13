@@ -1,7 +1,7 @@
 # SalesVelocity.ai - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** February 13, 2026 (Production readiness audit — saga persistence gap, global kill switch gap, revenue attribution gap identified; integration status verified; deployment pipeline confirmed)
+**Last Updated:** February 13, 2026 (Tier 1 Trust & Safety: saga state persistence with Firestore checkpoints + global kill switch with per-manager controls + swarm control API endpoint + Command Center UI upgrade)
 **Branches:** `dev` (latest)
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Architecture:** Single-Tenant (Penthouse Model) - NOT a SaaS platform
@@ -36,10 +36,10 @@
 | Metric | Count | Status |
 |--------|-------|--------|
 | Physical Routes (page.tsx) | 167 | Verified February 13, 2026 (added /social/command-center, /social/activity, /social/analytics, /social/agent-rules) |
-| API Endpoints (route.ts) | 242 | Verified February 13, 2026 (added /api/social/agent-status, /api/social/activity) |
+| API Endpoints (route.ts) | 243 | Verified February 13, 2026 (added /api/orchestrator/swarm-control) |
 | AI Agents | 52 | **52 FUNCTIONAL (48 swarm + 4 standalone)** |
 | RBAC Roles | 4 | `owner` (level 3), `admin` (level 2), `manager` (level 1), `member` (level 0) — 4-role RBAC |
-| Firestore Collections | 65+ | Active (expanded social media collections) |
+| Firestore Collections | 67+ | Active (added sagaState, eventLog collections) |
 
 **Architecture:** Single-company deployment for SalesVelocity.ai. Clients purchase services/products - they do NOT get SaaS tenants.
 

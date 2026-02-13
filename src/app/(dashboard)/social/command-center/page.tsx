@@ -61,6 +61,32 @@ interface ActivityEvent {
   metadata?: Record<string, unknown>;
 }
 
+interface SwarmControlState {
+  globalPause: boolean;
+  globalPauseAt?: string;
+  globalPauseBy?: string;
+  pausedManagers: string[];
+  pausedAgents: string[];
+  updatedAt: string;
+  updatedBy: string;
+}
+
+// ─── Manager display names ───────────────────────────────────────────────────
+
+const MANAGER_DISPLAY_NAMES: Record<string, string> = {
+  MARKETING_MANAGER: 'Marketing',
+  REVENUE_DIRECTOR: 'Revenue',
+  ARCHITECT_MANAGER: 'Architect',
+  BUILDER_MANAGER: 'Builder',
+  CONTENT_MANAGER: 'Content',
+  OUTREACH_MANAGER: 'Outreach',
+  COMMERCE_MANAGER: 'Commerce',
+  REPUTATION_MANAGER: 'Reputation',
+  INTELLIGENCE_MANAGER: 'Intelligence',
+};
+
+const ALL_MANAGER_IDS = Object.keys(MANAGER_DISPLAY_NAMES);
+
 // ─── Constants ───────────────────────────────────────────────────────────────
 
 const PLATFORM_COLORS: Record<string, string> = {
@@ -135,25 +161,33 @@ export default function CommandCenterPage() {
   const { user: _user } = useUnifiedAuth();
   const [status, setStatus] = useState<AgentStatus | null>(null);
   const [activity, setActivity] = useState<ActivityEvent[]>([]);
+  const [swarmControl, setSwarmControl] = useState<SwarmControlState | null>(null);
   const [loading, setLoading] = useState(true);
   const [toggling, setToggling] = useState(false);
+  const [swarmToggling, setSwarmToggling] = useState(false);
+  const [managerToggling, setManagerToggling] = useState<string | null>(null);
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
 
   const fetchData = useCallback(async () => {
     try {
-      const [statusRes, activityRes] = await Promise.all([
+      const [statusRes, activityRes, swarmRes] = await Promise.all([
         fetch('/api/social/agent-status'),
         fetch('/api/social/activity?limit=20'),
+        fetch('/api/orchestrator/swarm-control'),
       ]);
 
       const statusData = await statusRes.json() as { success: boolean; status?: AgentStatus };
       const activityData = await activityRes.json() as { success: boolean; events?: ActivityEvent[] };
+      const swarmData = await swarmRes.json() as { success: boolean; state?: SwarmControlState };
 
       if (statusData.success && statusData.status) {
         setStatus(statusData.status);
       }
       if (activityData.success && activityData.events) {
         setActivity(activityData.events);
+      }
+      if (swarmData.success && swarmData.state) {
+        setSwarmControl(swarmData.state);
       }
       setLastRefresh(new Date());
     } catch (error) {
@@ -187,6 +221,49 @@ export default function CommandCenterPage() {
       console.error('Failed to toggle agent:', error);
     } finally {
       setToggling(false);
+    }
+  };
+
+  const handleToggleSwarm = async () => {
+    if (!swarmControl) { return; }
+    setSwarmToggling(true);
+    try {
+      const action = swarmControl.globalPause ? 'resume_swarm' : 'pause_swarm';
+      const response = await fetch('/api/orchestrator/swarm-control', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action }),
+      });
+      const data = await response.json() as { success: boolean; state?: SwarmControlState };
+      if (data.success && data.state) {
+        setSwarmControl(data.state);
+      }
+    } catch (error) {
+      console.error('Failed to toggle swarm:', error);
+    } finally {
+      setSwarmToggling(false);
+    }
+  };
+
+  const handleToggleManager = async (managerId: string) => {
+    if (!swarmControl) { return; }
+    setManagerToggling(managerId);
+    try {
+      const isPaused = swarmControl.pausedManagers.includes(managerId);
+      const action = isPaused ? 'resume_manager' : 'pause_manager';
+      const response = await fetch('/api/orchestrator/swarm-control', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, managerId }),
+      });
+      const data = await response.json() as { success: boolean; state?: SwarmControlState };
+      if (data.success && data.state) {
+        setSwarmControl(data.state);
+      }
+    } catch (error) {
+      console.error('Failed to toggle manager:', error);
+    } finally {
+      setManagerToggling(null);
     }
   };
 
@@ -324,6 +401,105 @@ export default function CommandCenterPage() {
             : (status.agentEnabled ? 'Pause Agent' : 'Activate Agent')}
         </button>
       </div>
+
+      {/* ── Swarm Control — Global Kill Switch + Manager Toggles ──────── */}
+      {swarmControl && (
+        <div
+          style={{
+            padding: '1.25rem 1.5rem',
+            backgroundColor: swarmControl.globalPause ? 'rgba(244,67,54,0.05)' : 'var(--color-bg-paper)',
+            border: `1px solid ${swarmControl.globalPause ? 'rgba(244,67,54,0.3)' : 'var(--color-border-light)'}`,
+            borderRadius: '0.75rem',
+            marginBottom: '1.5rem',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+            <div>
+              <h2 style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: '0.25rem' }}>
+                Swarm Control
+              </h2>
+              <p style={{ fontSize: '0.6875rem', color: 'var(--color-text-secondary)' }}>
+                {swarmControl.globalPause
+                  ? 'ALL agent activity is frozen. Events and signals are queued.'
+                  : 'All systems operational. Toggle individual managers below.'}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => { void handleToggleSwarm(); }}
+              disabled={swarmToggling}
+              style={{
+                padding: '0.5rem 1.25rem',
+                borderRadius: '0.5rem',
+                border: 'none',
+                cursor: swarmToggling ? 'wait' : 'pointer',
+                fontSize: '0.75rem',
+                fontWeight: 700,
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+                backgroundColor: swarmControl.globalPause ? '#4CAF50' : '#F44336',
+                color: '#fff',
+                opacity: swarmToggling ? 0.6 : 1,
+                transition: 'opacity 0.2s',
+              }}
+            >
+              {swarmToggling
+                ? (swarmControl.globalPause ? 'Resuming...' : 'Pausing...')
+                : (swarmControl.globalPause ? 'Resume All Agents' : 'Pause All Agents')}
+            </button>
+          </div>
+
+          {/* Manager Toggles Grid */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem' }}>
+            {ALL_MANAGER_IDS.map((managerId) => {
+              const isPaused = swarmControl.globalPause || swarmControl.pausedManagers.includes(managerId);
+              const isThisToggling = managerToggling === managerId;
+              const displayName = MANAGER_DISPLAY_NAMES[managerId] ?? managerId;
+
+              return (
+                <button
+                  key={managerId}
+                  type="button"
+                  onClick={() => { void handleToggleManager(managerId); }}
+                  disabled={swarmControl.globalPause || isThisToggling}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '0.5rem 0.75rem',
+                    borderRadius: '0.375rem',
+                    border: `1px solid ${isPaused ? 'rgba(244,67,54,0.3)' : 'rgba(76,175,80,0.3)'}`,
+                    backgroundColor: isPaused ? 'rgba(244,67,54,0.06)' : 'rgba(76,175,80,0.06)',
+                    cursor: swarmControl.globalPause || isThisToggling ? 'not-allowed' : 'pointer',
+                    opacity: swarmControl.globalPause ? 0.5 : (isThisToggling ? 0.6 : 1),
+                    transition: 'opacity 0.2s, background-color 0.2s',
+                    fontSize: '0.75rem',
+                    fontWeight: 500,
+                    color: 'var(--color-text-primary)',
+                  }}
+                >
+                  <span>{displayName}</span>
+                  <span
+                    style={{
+                      width: 8,
+                      height: 8,
+                      borderRadius: '50%',
+                      backgroundColor: isPaused ? '#F44336' : '#4CAF50',
+                      flexShrink: 0,
+                    }}
+                  />
+                </button>
+              );
+            })}
+          </div>
+
+          {swarmControl.pausedManagers.length > 0 && !swarmControl.globalPause && (
+            <div style={{ marginTop: '0.75rem', fontSize: '0.6875rem', color: '#FF9800' }}>
+              {swarmControl.pausedManagers.length} manager{swarmControl.pausedManagers.length > 1 ? 's' : ''} individually paused
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ── Stats Row ──────────────────────────────────────────────────── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '1rem', marginBottom: '1.5rem' }}>

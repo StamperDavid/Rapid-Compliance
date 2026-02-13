@@ -13,6 +13,7 @@ import type {
 import { BaseSpecialist } from './base-specialist';
 import { getMemoryVault, type MemoryEntry } from './shared/memory-vault';
 import { getSignalBus } from '@/lib/orchestrator/signal-bus';
+import { isManagerPaused } from '@/lib/orchestration/swarm-control';
 
 // ============================================================================
 // TYPES FOR MANAGER AUTHORITY
@@ -82,6 +83,38 @@ export abstract class BaseManager extends BaseSpecialist {
     super(config);
     this.managerConfig = config;
     this.delegationRules = config.delegationRules;
+  }
+
+  // ==========================================================================
+  // SWARM CONTROL — Per-Manager Pause Check
+  // ==========================================================================
+
+  /**
+   * Check if this manager is paused (either globally or individually).
+   * Returns a BLOCKED report if paused, or null if execution should proceed.
+   *
+   * Concrete managers should call this at the start of their execute() method:
+   * ```
+   * const pauseReport = await this.checkManagerPaused(message.id);
+   * if (pauseReport) { return pauseReport; }
+   * ```
+   */
+  protected async checkManagerPaused(taskId: string): Promise<AgentReport | null> {
+    const paused = await isManagerPaused(this.identity.id);
+    if (paused) {
+      this.log('WARN', `Execution blocked — manager ${this.identity.id} is paused`);
+      return this.createReport(
+        taskId,
+        'BLOCKED',
+        {
+          reason: 'MANAGER_PAUSED',
+          managerId: this.identity.id,
+          message: `Manager ${this.identity.name} is paused via swarm control`,
+        },
+        [`Manager ${this.identity.id} is paused — execution blocked`]
+      );
+    }
+    return null;
   }
 
   /**

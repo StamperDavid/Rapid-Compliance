@@ -23,6 +23,13 @@ import { logger } from '@/lib/logger/logger';
 import { getSignalBus } from '@/lib/orchestrator/signal-bus';
 import { AGENT_IDS, type ManagerId } from '@/lib/agents';
 import type { AgentMessage } from '@/lib/agents/types';
+import { isSwarmPaused } from '@/lib/orchestration/swarm-control';
+import {
+  isEventProcessed,
+  persistEventLog,
+  confirmEvent,
+  type PersistedEventLog,
+} from '@/lib/orchestration/saga-persistence';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -160,10 +167,32 @@ export class EventRouter {
   // ==========================================================================
 
   /**
-   * Process a business event through the rules engine
+   * Process a business event through the rules engine.
+   * Now includes:
+   * - Swarm control guard (respects global pause)
+   * - Event deduplication via Firestore
+   * - Event persistence for replay
    */
   async processEvent(event: BusinessEvent): Promise<EventProcessingResult> {
     const startTime = Date.now();
+
+    // Swarm control guard — check global pause before dispatching
+    const paused = await isSwarmPaused();
+    if (paused) {
+      logger.warn('[EventRouter] Swarm is globally paused — event queued for later', {
+        eventType: event.type,
+        eventId: event.id,
+      });
+      // Persist the event so it can be replayed when swarm resumes
+      await this.persistEventEntry(event, [], [], 0, false);
+      return {
+        eventId: event.id,
+        eventType: event.type,
+        matchedRules: [],
+        dispatchedActions: [],
+        processingTimeMs: Date.now() - startTime,
+      };
+    }
 
     // Circuit breaker check
     if (this.circuitBreaker.isOpen) {
@@ -185,6 +214,24 @@ export class EventRouter {
       this.circuitBreaker.isOpen = false;
       this.circuitBreaker.failureCount = 0;
       logger.info('[EventRouter] Circuit breaker RESET');
+    }
+
+    // Event deduplication — check if this event was already processed
+    const deduplicationKey = `${event.type}_${event.id}`;
+    const alreadyProcessed = await isEventProcessed(deduplicationKey);
+    if (alreadyProcessed) {
+      logger.info('[EventRouter] Duplicate event skipped', {
+        eventType: event.type,
+        eventId: event.id,
+        deduplicationKey,
+      });
+      return {
+        eventId: event.id,
+        eventType: event.type,
+        matchedRules: [],
+        dispatchedActions: [],
+        processingTimeMs: Date.now() - startTime,
+      };
     }
 
     // Update metrics
@@ -245,13 +292,63 @@ export class EventRouter {
 
     this.metrics.totalRulesMatched += matchingRules.length;
 
+    const processingTimeMs = Date.now() - startTime;
+
+    // Persist event log with results and mark as confirmed
+    const allActionsSucceeded = dispatchedActions.every(a => a.success);
+    await this.persistEventEntry(
+      event,
+      matchedRuleIds,
+      dispatchedActions,
+      processingTimeMs,
+      allActionsSucceeded
+    );
+
     return {
       eventId: event.id,
       eventType: event.type,
       matchedRules: matchedRuleIds,
       dispatchedActions,
-      processingTimeMs: Date.now() - startTime,
+      processingTimeMs,
     };
+  }
+
+  /**
+   * Persist an event to Firestore for deduplication and replay
+   */
+  private async persistEventEntry(
+    event: BusinessEvent,
+    matchedRules: string[],
+    dispatchedActions: EventProcessingResult['dispatchedActions'],
+    processingTimeMs: number,
+    confirmed: boolean
+  ): Promise<void> {
+    const entry: PersistedEventLog = {
+      id: event.id,
+      type: event.type,
+      timestamp: event.timestamp.toISOString(),
+      source: event.source,
+      payload: event.payload,
+      processedAt: new Date().toISOString(),
+      deduplicationKey: `${event.type}_${event.id}`,
+      matchedRules,
+      dispatchedActions: dispatchedActions.map(a => ({
+        ruleId: a.ruleId,
+        targetManager: a.targetManager,
+        command: a.command,
+        success: a.success,
+        error: a.error,
+      })),
+      processingTimeMs,
+      confirmed,
+    };
+
+    await persistEventLog(entry);
+
+    // If all actions succeeded, confirm the event
+    if (confirmed && dispatchedActions.length > 0) {
+      await confirmEvent(event.id);
+    }
   }
 
   // ==========================================================================

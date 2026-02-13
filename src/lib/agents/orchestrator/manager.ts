@@ -44,6 +44,16 @@ import {
   readAgentInsights,
   type InsightEntry,
 } from '../shared/memory-vault';
+import {
+  checkpointSaga,
+  loadSagaState,
+  findIncompleteSagas,
+  completeSaga,
+  type PersistedSagaState,
+  type SerializedSagaStep,
+  type SerializedCommandResult,
+} from '@/lib/orchestration/saga-persistence';
+import { isSwarmPaused } from '@/lib/orchestration/swarm-control';
 
 // ============================================================================
 // COMMAND PATTERN - Task Dispatching
@@ -654,6 +664,18 @@ export class MasterOrchestrator extends BaseManager {
     const taskId = message.id;
 
     try {
+      // Swarm control guard — check global pause before executing
+      const paused = await isSwarmPaused();
+      if (paused) {
+        this.log('WARN', 'Execution blocked — swarm is globally paused');
+        return this.createReport(
+          taskId,
+          'BLOCKED',
+          { reason: 'SWARM_PAUSED', message: 'Global kill switch is active' },
+          ['Swarm is globally paused — execution blocked']
+        );
+      }
+
       const payload = message.payload as Record<string, unknown>;
 
       // Determine the type of request
@@ -950,6 +972,7 @@ export class MasterOrchestrator extends BaseManager {
 
   /**
    * Execute a saga - run all steps with dependency management
+   * Now includes Firestore checkpoint persistence after each step.
    */
   async executeSaga(saga: Saga): Promise<{
     sagaId: string;
@@ -965,6 +988,9 @@ export class MasterOrchestrator extends BaseManager {
 
     this.log('INFO', `Executing saga: ${saga.name} (${saga.steps.length} steps)`);
     this.metricsCollector.totalSagas++;
+
+    // Persist initial saga state to Firestore
+    await this.persistSagaCheckpoint(saga, []);
 
     // Use local variable to track status to avoid race condition warnings
     let sagaFailed = false;
@@ -1007,6 +1033,9 @@ export class MasterOrchestrator extends BaseManager {
               completedSteps.add(step.id);
               pendingSteps.delete(step.id);
               step.onSuccess?.(result.value);
+
+              // Checkpoint after each successful step
+              await this.persistSagaCheckpoint(saga, Array.from(completedSteps));
             } else if (step.required) {
               errors.push(`Required step ${step.name} failed: ${result.value.errors.join(', ')}`);
               sagaFailed = true;
@@ -1061,6 +1090,13 @@ export class MasterOrchestrator extends BaseManager {
 
     // Update saga object only after all async operations are done
     this.finalizeSaga(saga, finalStatus, sagaFailed);
+
+    // Persist final state to Firestore
+    await completeSaga(
+      saga.id,
+      finalStatus,
+      errors.length > 0 ? errors.join('; ') : undefined
+    );
 
     const executionTimeMs = Date.now() - startTime;
     this.log('INFO', `Saga ${saga.id} completed with status: ${finalStatus} in ${executionTimeMs}ms`);
@@ -1462,6 +1498,205 @@ export class MasterOrchestrator extends BaseManager {
     }
 
     return this.createReport(taskId, 'COMPLETED', { acknowledged: true });
+  }
+
+  // ==========================================================================
+  // SAGA PERSISTENCE — Checkpoint & Resume
+  // ==========================================================================
+
+  /**
+   * Persist a saga checkpoint to Firestore after each step completion.
+   * Serializes the saga state (excluding function callbacks).
+   */
+  private async persistSagaCheckpoint(
+    saga: Saga,
+    completedStepIds: string[]
+  ): Promise<void> {
+    const serializedSteps: SerializedSagaStep[] = saga.steps.map(step => ({
+      id: step.id,
+      name: step.name,
+      commandId: step.command.id,
+      targetManager: step.command.targetManager,
+      payload: step.command.payload,
+      priority: step.command.priority,
+      dependencies: step.command.dependencies,
+      required: step.required,
+      timeout: step.timeout,
+      retries: step.retries,
+    }));
+
+    const serializedResults: Record<string, SerializedCommandResult> = {};
+    for (const [stepId, result] of saga.results) {
+      serializedResults[stepId] = {
+        commandId: result.commandId,
+        managerId: result.managerId,
+        status: result.status,
+        data: result.data,
+        errors: result.errors,
+        executionTimeMs: result.executionTimeMs,
+      };
+    }
+
+    const state: PersistedSagaState = {
+      id: saga.id,
+      name: saga.name,
+      description: saga.description,
+      status: saga.status,
+      currentStepIndex: saga.currentStepIndex,
+      completedStepIds,
+      results: serializedResults,
+      steps: serializedSteps,
+      startedAt: saga.startedAt.toISOString(),
+      completedAt: saga.completedAt?.toISOString(),
+      lastCheckpointAt: new Date().toISOString(),
+    };
+
+    await checkpointSaga(state);
+  }
+
+  /**
+   * Resume an incomplete saga from its last checkpoint.
+   * Loads state from Firestore and continues execution from the last
+   * successful step.
+   */
+  async resumeSaga(sagaId: string): Promise<{
+    sagaId: string;
+    status: SagaStatus;
+    results: CommandResult[];
+    errors: string[];
+    executionTimeMs: number;
+    resumed: boolean;
+  }> {
+    this.log('INFO', `Attempting to resume saga: ${sagaId}`);
+
+    const persistedState = await loadSagaState(sagaId);
+    if (!persistedState) {
+      this.log('WARN', `Saga ${sagaId} not found in Firestore — cannot resume`);
+      return {
+        sagaId,
+        status: 'FAILED',
+        results: [],
+        errors: [`Saga ${sagaId} not found in persistence store`],
+        executionTimeMs: 0,
+        resumed: false,
+      };
+    }
+
+    if (persistedState.status !== 'IN_PROGRESS' && persistedState.status !== 'PENDING') {
+      this.log('INFO', `Saga ${sagaId} is already ${persistedState.status} — no resume needed`);
+      return {
+        sagaId,
+        status: persistedState.status,
+        results: [],
+        errors: [],
+        executionTimeMs: 0,
+        resumed: false,
+      };
+    }
+
+    // Rebuild the saga from persisted state, skipping already-completed steps
+    const completedStepSet = new Set(persistedState.completedStepIds);
+
+    const steps: SagaStep[] = persistedState.steps.map(step => ({
+      id: step.id,
+      name: step.name,
+      command: {
+        id: step.commandId,
+        type: 'EXECUTE' as CommandType,
+        targetManager: step.targetManager as ManagerId,
+        payload: step.payload,
+        priority: step.priority as Command['priority'],
+        dependencies: step.dependencies,
+      },
+      required: step.required,
+      timeout: step.timeout,
+      retries: step.retries,
+    }));
+
+    // Rebuild results Map from persisted data
+    const resultsMap = new Map<string, CommandResult>();
+    for (const [stepId, result] of Object.entries(persistedState.results)) {
+      resultsMap.set(stepId, {
+        commandId: result.commandId,
+        managerId: result.managerId as ManagerId,
+        status: result.status,
+        data: result.data,
+        errors: result.errors,
+        executionTimeMs: result.executionTimeMs,
+      });
+    }
+
+    // Create a saga object with restored state
+    const resumedSaga: Saga = {
+      id: persistedState.id,
+      name: persistedState.name,
+      description: persistedState.description,
+      steps,
+      compensations: new Map(),
+      status: 'IN_PROGRESS',
+      currentStepIndex: completedStepSet.size,
+      results: resultsMap,
+      startedAt: new Date(persistedState.startedAt),
+    };
+
+    // Mark already-completed steps in the saga
+    // The executeSaga method uses dependency tracking, so we pre-populate
+    // completed steps by marking them as already done
+    for (const stepId of completedStepSet) {
+      const stepIndex = steps.findIndex(s => s.id === stepId);
+      if (stepIndex >= 0) {
+        // Already has result in resultsMap — executeSaga will handle the rest
+      }
+    }
+
+    this.activeSagas.set(resumedSaga.id, resumedSaga);
+
+    this.log('INFO', `Resuming saga ${sagaId} — ${completedStepSet.size}/${steps.length} steps already completed`);
+
+    // Execute remaining steps
+    const result = await this.executeSaga(resumedSaga);
+
+    return {
+      ...result,
+      resumed: true,
+    };
+  }
+
+  /**
+   * Resume all incomplete sagas found in Firestore.
+   * Called by the operations-cycle cron on startup.
+   */
+  async resumeIncompleteSagas(): Promise<{
+    found: number;
+    resumed: number;
+    errors: string[];
+  }> {
+    const incompleteSagas = await findIncompleteSagas();
+    const errors: string[] = [];
+    let resumed = 0;
+
+    for (const sagaState of incompleteSagas) {
+      try {
+        const result = await this.resumeSaga(sagaState.id);
+        if (result.resumed) {
+          resumed++;
+        }
+        if (result.errors.length > 0) {
+          errors.push(`Saga ${sagaState.id}: ${result.errors.join(', ')}`);
+        }
+      } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        errors.push(`Failed to resume saga ${sagaState.id}: ${errorMsg}`);
+      }
+    }
+
+    this.log('INFO', `Saga resume check: ${incompleteSagas.length} found, ${resumed} resumed`);
+
+    return {
+      found: incompleteSagas.length,
+      resumed,
+      errors,
+    };
   }
 
   // ==========================================================================

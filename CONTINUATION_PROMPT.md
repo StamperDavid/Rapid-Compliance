@@ -5,7 +5,7 @@
 ## Context
 Repository: https://github.com/StamperDavid/Rapid-Compliance
 Branch: dev
-Last Session: February 13, 2026
+Last Session: February 13, 2026 (Session 1 complete — Tier 1.1 + 1.2 implemented)
 
 ## Current State
 
@@ -13,7 +13,7 @@ Last Session: February 13, 2026
 - **Single-tenant penthouse model** — org ID `rapid-compliance-root`, Firebase `rapid-compliance-65f87`
 - **52 AI agents** (48 swarm + 4 standalone) with hierarchical orchestration
 - **4-role RBAC** (owner/admin/manager/member) with 47 permissions
-- **167 physical routes**, **242 API endpoints**, **430K+ lines of TypeScript**
+- **167 physical routes**, **243 API endpoints**, **430K+ lines of TypeScript**
 - **Deployed via Vercel** — dev branch → main branch → Vercel auto-deploy
 
 ### Code Health
@@ -35,6 +35,8 @@ Last Session: February 13, 2026
 - Autonomous Business Operations (8 phases — Event Router, manager authority, revenue pipeline, outreach autonomy, content production, builder/commerce loops, artifact generation, Jasper command authority)
 - Social Media Growth Engine (6 phases — metrics collector, Growth Analyst, LISTEN/ENGAGE, GROWTH_LOOP, content recycling)
 - CSS variable theme system, SalesVelocity.ai rebrand, single-tenant conversion
+- **Saga State Persistence (Tier 1.1)** — Firestore-backed checkpoint/resume for all sagas, event deduplication, event replay, cron-triggered saga resume
+- **Global Kill Switch (Tier 1.2)** — Swarm-wide pause/resume, per-manager toggles, guards on EventRouter + MasterOrchestrator + SignalBus + BaseManager, Command Center UI controls, `/api/orchestrator/swarm-control` API
 
 ---
 
@@ -48,8 +50,8 @@ A forensic audit (February 13, 2026) identified 6 critical gaps that must be res
 
 These gaps make the platform unreliable for autonomous operation. Fix before anything else.
 
-#### 1.1 Saga State Persistence & Checkpoint/Resume
-**Severity:** CRITICAL
+#### 1.1 Saga State Persistence & Checkpoint/Resume — COMPLETE
+**Severity:** CRITICAL (RESOLVED)
 **Problem:** The orchestrator's Saga Pattern (`src/lib/agents/orchestrator/manager.ts`) stores all saga state in an **in-memory Map** (`private activeSagas: Map<string, Saga>`). If the process crashes or Vercel cold-starts, all active sagas are lost. There is no checkpoint persistence, no replay mechanism, and no resumption logic. The Event Router (`src/lib/orchestration/event-router.ts`) also processes events ephemerally with no persistence.
 
 **Impact:** A 4-hour operational cycle failing at hour 3 restarts from scratch. Multi-manager workflows (FULL_BUSINESS_LAUNCH, MARKETING_CAMPAIGN, SALES_ACCELERATION) lose all context on failure.
@@ -73,8 +75,8 @@ These gaps make the platform unreliable for autonomous operation. Fix before any
 
 ---
 
-#### 1.2 Global Kill Switch & Per-Agent Controls
-**Severity:** CRITICAL
+#### 1.2 Global Kill Switch & Per-Agent Controls — COMPLETE
+**Severity:** CRITICAL (RESOLVED)
 **Problem:** The current kill switch (`agentEnabled` boolean) only gates the `AutonomousPostingAgent.executeAction()`. The Event Router, Master Orchestrator, Signal Bus, and all 9 managers have **zero awareness** of it. If the Revenue Director starts spamming outbound emails, the social kill switch does nothing.
 
 **Impact:** No way to stop all agents with one button. No way to stop individual agents independently. In-flight Event Router signals continue processing even when kill switch is active.
@@ -251,7 +253,7 @@ These close the gap between "demo" and "production" for external platform connec
 ## Execution Order & Parallelization
 
 ```
-SESSION 1: Saga Persistence (1.1) + Global Kill Switch (1.2) in parallel across worktrees
+SESSION 1: ✅ COMPLETE — Saga Persistence (1.1) + Global Kill Switch (1.2)
 SESSION 2: Revenue Attribution P0 (2.1) + Twitter Engagement (3.1) in parallel
 SESSION 3: Revenue Attribution P1 (2.1 continued) + E2E Testing (1.3)
 SESSION 4: CI/CD Cleanup (3.4) + any remaining items
@@ -288,8 +290,8 @@ EXTERNAL (start immediately, no code dependency):
 
 | Issue | Details |
 |-------|---------|
-| Saga state is in-memory only | Process crash loses all active sagas (Tier 1.1) |
-| Kill switch is social-only | Event Router, Orchestrator, Signal Bus have no pause (Tier 1.2) |
+| ~~Saga state is in-memory only~~ | **FIXED** — Firestore-backed checkpoint/resume with dedup |
+| ~~Kill switch is social-only~~ | **FIXED** — Global swarm control with per-manager toggles |
 | Revenue attribution chain broken | UTM → Lead → Deal → Order → Stripe not connected (Tier 2.1) |
 | Social engagement stubs | REPLY/LIKE/FOLLOW/REPOST return fake success (Tier 3.1) |
 | Facebook/Instagram missing | No implementation (Tier 3.2) |
@@ -327,8 +329,10 @@ EXTERNAL (start immediately, no code dependency):
 | `ENGINEERING_STANDARDS.md` | Code quality requirements |
 | `AGENT_REGISTRY.json` | AI agent configurations (52 agents) |
 | `src/lib/constants/platform.ts` | PLATFORM_ID and platform identity |
-| `src/lib/orchestration/event-router.ts` | Declarative rules engine — 25+ event rules |
-| `src/lib/orchestrator/signal-bus.ts` | Agent-to-agent communication |
+| `src/lib/orchestration/event-router.ts` | Declarative rules engine — 25+ event rules, event persistence |
+| `src/lib/orchestration/saga-persistence.ts` | **NEW** — Firestore-backed saga checkpoint/resume + event dedup |
+| `src/lib/orchestration/swarm-control.ts` | **NEW** — Global kill switch + per-manager pause controls |
+| `src/lib/orchestrator/signal-bus.ts` | Agent-to-agent communication, signal queuing on pause |
 | `src/lib/agents/orchestrator/manager.ts` | Master Orchestrator — Saga Pattern, command dispatch |
 | `src/lib/agents/base-manager.ts` | Base manager class — delegation, authority |
 | `src/lib/agents/shared/memory-vault.ts` | Shared agent knowledge store (Firestore-backed) |

@@ -8,6 +8,7 @@ import type {
   AgentReport,
 } from '../agents/types';
 import { logger } from '@/lib/logger/logger';
+import { isSwarmPaused } from '@/lib/orchestration/swarm-control';
 
 type SignalListener = (signal: Signal) => void;
 
@@ -178,7 +179,10 @@ export class SignalBus {
   // ==========================================================================
 
   /**
-   * Send a signal through the bus
+   * Send a signal through the bus.
+   * Now includes swarm control guard — when paused, signals are queued
+   * rather than dropped, and will be processed when the swarm resumes.
+   *
    * @param signal - The signal to send
    * @returns Reports from handlers
    */
@@ -189,6 +193,25 @@ export class SignalBus {
         requestId: signal.id,
       });
       return [];
+    }
+
+    // Swarm control guard — queue signals when paused (don't drop them)
+    const paused = await isSwarmPaused();
+    if (paused) {
+      logger.warn('[SignalBus] Swarm paused — signal queued for later', {
+        signalId: signal.id,
+        type: signal.type,
+        target: signal.target,
+      });
+      this.registry.pendingSignals.push(signal);
+      return [{
+        agentId: 'SIGNAL_BUS',
+        timestamp: new Date(),
+        taskId: signal.id,
+        status: 'BLOCKED',
+        data: { reason: 'SWARM_PAUSED', queued: true },
+        errors: ['Swarm is globally paused — signal queued'],
+      }];
     }
 
     // Max hops check
@@ -228,6 +251,49 @@ export class SignalBus {
           errors: [`Unknown signal type: ${signal.type}`],
         }];
     }
+  }
+
+  /**
+   * Drain queued signals that were held during a pause.
+   * Called when the swarm resumes to process pending work.
+   */
+  async drainPausedSignals(): Promise<{
+    processed: number;
+    failed: number;
+    reports: AgentReport[];
+  }> {
+    const pending = [...this.registry.pendingSignals];
+    this.registry.pendingSignals = [];
+
+    if (pending.length === 0) { return { processed: 0, failed: 0, reports: [] }; }
+
+    logger.info('[SignalBus] Draining queued signals after resume', {
+      count: pending.length,
+    });
+
+    const allReports: AgentReport[] = [];
+    let processed = 0;
+    let failed = 0;
+
+    for (const signal of pending) {
+      try {
+        const reports = await this.send(signal);
+        allReports.push(...reports);
+        const hasFailure = reports.some(r => r.status === 'FAILED');
+        if (hasFailure) { failed++; } else { processed++; }
+      } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        logger.error('[SignalBus] Failed to drain signal', error instanceof Error ? error : undefined, {
+          signalId: signal.id,
+          error: errorMsg,
+        });
+        failed++;
+      }
+    }
+
+    logger.info('[SignalBus] Signal drain complete', { processed, failed });
+
+    return { processed, failed, reports: allReports };
   }
 
   /**

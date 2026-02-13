@@ -20,6 +20,12 @@ import { getSignalBus } from '@/lib/orchestrator/signal-bus';
 import { AGENT_IDS } from '@/lib/agents';
 import { getMemoryVault } from '@/lib/agents/shared/memory-vault';
 import type { AgentMessage } from '@/lib/agents/types';
+import { isSwarmPaused } from '@/lib/orchestration/swarm-control';
+import { getMasterOrchestrator } from '@/lib/agents/orchestrator/manager';
+import {
+  cleanupOldSagas,
+  cleanupOldEventLogs,
+} from '@/lib/orchestration/saga-persistence';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 300; // 5 minutes max for full cycle execution
@@ -58,6 +64,12 @@ interface CycleResponse {
     failed: number;
   };
   crossDepartmentSignals?: number;
+  sagaResume?: {
+    found: number;
+    resumed: number;
+    errors: string[];
+  };
+  swarmPaused?: boolean;
 }
 
 type CycleType = 'operational' | 'strategic' | 'executive';
@@ -291,6 +303,7 @@ async function executeStep(step: CycleStep): Promise<StepResult> {
 async function executeCycle(cycleType: CycleType): Promise<{
   steps: StepResult[];
   crossDepartmentSignals?: number;
+  sagaResume?: { found: number; resumed: number; errors: string[] };
 }> {
   let cycleSteps: CycleStep[] = [];
 
@@ -307,6 +320,7 @@ async function executeCycle(cycleType: CycleType): Promise<{
   }
 
   const results: StepResult[] = [];
+  let sagaResumeResult: { found: number; resumed: number; errors: string[] } | undefined;
 
   // Run MemoryVault TTL cleanup during operational cycles (every 4h)
   if (cycleType === 'operational') {
@@ -318,6 +332,54 @@ async function executeCycle(cycleType: CycleType): Promise<{
       }
     } catch (error) {
       logger.error('[MemoryVault] TTL cleanup failed',
+        error instanceof Error ? error : new Error(String(error)));
+    }
+
+    // Check for incomplete sagas and attempt to resume them
+    try {
+      const orchestrator = getMasterOrchestrator();
+      await orchestrator.initialize();
+      sagaResumeResult = await orchestrator.resumeIncompleteSagas();
+
+      if (sagaResumeResult.found > 0) {
+        logger.info('[SagaResume] Incomplete saga check', {
+          found: sagaResumeResult.found,
+          resumed: sagaResumeResult.resumed,
+          errors: sagaResumeResult.errors.length,
+          cycleType,
+        });
+      }
+    } catch (error) {
+      logger.error('[SagaResume] Failed to resume incomplete sagas',
+        error instanceof Error ? error : new Error(String(error)));
+    }
+
+    // Drain queued signals from any previous pause period
+    try {
+      const signalBus = getSignalBus();
+      const drainResult = await signalBus.drainPausedSignals();
+      if (drainResult.processed > 0 || drainResult.failed > 0) {
+        logger.info('[SignalDrain] Drained paused signals', {
+          processed: drainResult.processed,
+          failed: drainResult.failed,
+        });
+      }
+    } catch (error) {
+      logger.error('[SignalDrain] Failed to drain paused signals',
+        error instanceof Error ? error : new Error(String(error)));
+    }
+
+    // Cleanup old saga states and event logs (retention policy)
+    try {
+      const [cleanedSagas, cleanedEvents] = await Promise.all([
+        cleanupOldSagas(30),
+        cleanupOldEventLogs(7),
+      ]);
+      if (cleanedSagas > 0 || cleanedEvents > 0) {
+        logger.info('[Cleanup] Persistence cleanup', { cleanedSagas, cleanedEvents });
+      }
+    } catch (error) {
+      logger.error('[Cleanup] Persistence cleanup failed',
         error instanceof Error ? error : new Error(String(error)));
     }
   }
@@ -364,6 +426,7 @@ async function executeCycle(cycleType: CycleType): Promise<{
   return {
     steps: results,
     crossDepartmentSignals,
+    sagaResume: sagaResumeResult,
   };
 }
 
@@ -413,8 +476,26 @@ export async function GET(request: NextRequest) {
     const startedAt = new Date();
     const startTime = Date.now();
 
+    // Check if swarm is paused before running cycle
+    const swarmPaused = await isSwarmPaused();
+    if (swarmPaused) {
+      logger.warn('Operations cycle skipped — swarm is globally paused', {
+        cycleType,
+      });
+      return NextResponse.json({
+        success: true,
+        cycle: cycleType,
+        startedAt: startedAt.toISOString(),
+        completedAt: new Date().toISOString(),
+        durationMs: Date.now() - startTime,
+        steps: [],
+        summary: { total: 0, succeeded: 0, failed: 0 },
+        swarmPaused: true,
+      } satisfies CycleResponse);
+    }
+
     // Execute the cycle
-    const { steps, crossDepartmentSignals } = await executeCycle(cycleType);
+    const { steps, crossDepartmentSignals, sagaResume } = await executeCycle(cycleType);
 
     const completedAt = new Date();
     const durationMs = Date.now() - startTime;
@@ -440,6 +521,8 @@ export async function GET(request: NextRequest) {
       steps,
       summary,
       crossDepartmentSignals,
+      sagaResume,
+      swarmPaused: false,
     };
 
     return NextResponse.json(response);
