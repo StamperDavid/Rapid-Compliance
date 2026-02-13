@@ -5,9 +5,10 @@
 
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/useToast';
+import { auth } from '@/lib/firebase/config';
 import type { Page } from '@/types/website';
 
 interface PagesResponse {
@@ -22,6 +23,10 @@ export default function PagesManagementPage() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'draft' | 'published'>('all');
 
+  // Use a ref for toast to avoid re-render loops in useCallback deps
+  const toastRef = useRef(toast);
+  toastRef.current = toast;
+
   const loadPages = useCallback(async () => {
     try {
       setLoading(true);
@@ -29,7 +34,12 @@ export default function PagesManagementPage() {
         ? '/api/website/pages'
         : `/api/website/pages?status=${filter}`;
 
-      const response = await fetch(url);
+      const token = await auth?.currentUser?.getIdToken();
+      const response = await fetch(url, {
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      });
 
       if (!response.ok) {
         throw new Error('Failed to load pages');
@@ -39,11 +49,11 @@ export default function PagesManagementPage() {
       setPages(data.pages ?? []);
     } catch (error: unknown) {
       console.error('[Pages] Load error:', error);
-      toast.error('Failed to load pages');
+      toastRef.current.error('Failed to load pages');
     } finally {
       setLoading(false);
     }
-  }, [filter, toast]);
+  }, [filter]);
 
   useEffect(() => {
     void loadPages();
@@ -54,9 +64,15 @@ export default function PagesManagementPage() {
 
     void (async () => {
       try {
+        const token = await auth?.currentUser?.getIdToken();
         const response = await fetch(
           `/api/website/pages/${pageId}`,
-          { method: 'DELETE' }
+          {
+            method: 'DELETE',
+            headers: {
+              ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            },
+          }
         );
 
         if (!response.ok) {
@@ -82,9 +98,13 @@ export default function PagesManagementPage() {
         status: 'draft' as const,
       };
 
+      const token = await auth?.currentUser?.getIdToken();
       const response = await fetch('/api/website/pages', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({
           page: duplicatedPage,
         }),

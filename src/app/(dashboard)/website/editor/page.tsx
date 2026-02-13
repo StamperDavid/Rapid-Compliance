@@ -9,6 +9,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
+import { auth } from '@/lib/firebase/config';
 import WidgetsPanel from '@/components/website-builder/WidgetsPanel';
 import EditorCanvas from '@/components/website-builder/EditorCanvas';
 import PropertiesPanel from '@/components/website-builder/PropertiesPanel';
@@ -97,6 +98,14 @@ function isPagesListResponse(data: unknown): data is PagesListResponse {
 
 // These helper functions are now replaced with state-based dialogs in the component
 
+async function getAuthHeaders(): Promise<Record<string, string>> {
+  const token = await auth?.currentUser?.getIdToken();
+  if (token) {
+    return { Authorization: `Bearer ${token}` };
+  }
+  return {};
+}
+
 export default function PageEditorPage() {
   const searchParams = useSearchParams();
   const { user } = useAuth();
@@ -134,7 +143,10 @@ export default function PageEditorPage() {
   const loadPageStable = React.useCallback(async (id: string) => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/website/pages/${id}`);
+      const authHeaders = await getAuthHeaders();
+      const response = await fetch(`/api/website/pages/${id}`, {
+        headers: { ...authHeaders },
+      });
 
       if (!response.ok) {throw new Error('Failed to load page');}
 
@@ -182,7 +194,10 @@ export default function PageEditorPage() {
   const loadHomepageStable = React.useCallback(async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/website/pages');
+      const authHeaders = await getAuthHeaders();
+      const response = await fetch('/api/website/pages', {
+        headers: { ...authHeaders },
+      });
 
       if (!response.ok) {
         createBlankPageStable();
@@ -233,9 +248,10 @@ export default function PageEditorPage() {
 
       const method = pageId ? 'PUT' : 'POST';
 
+      const authHeaders = await getAuthHeaders();
       const response = await fetch(endpoint, {
         method,
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders },
         body: JSON.stringify({
           page: {
             ...page,
@@ -321,9 +337,10 @@ export default function PageEditorPage() {
             setPromptDialog(null);
             void (async () => {
               try {
+                const authHeaders = await getAuthHeaders();
                 const response = await fetch('/api/website/templates', {
                   method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
+                  headers: { 'Content-Type': 'application/json', ...authHeaders },
                   body: JSON.stringify({
                     template: {
                       name: templateName,
@@ -362,9 +379,10 @@ export default function PageEditorPage() {
     try {
       setPublishing(true);
 
+      const authHeaders = await getAuthHeaders();
       const response = await fetch(`/api/website/pages/${pageId}/publish`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders },
         body: JSON.stringify({ scheduledFor }),
       });
 
@@ -441,8 +459,10 @@ export default function PageEditorPage() {
           try {
             setPublishing(true);
 
+            const authHeaders = await getAuthHeaders();
             const response = await fetch(`/api/website/pages/${pageId}/publish`, {
               method: 'DELETE',
+              headers: { ...authHeaders },
             });
 
             if (!response.ok) {
@@ -475,9 +495,10 @@ export default function PageEditorPage() {
     }
 
     try {
+      const authHeaders = await getAuthHeaders();
       const response = await fetch(`/api/website/pages/${pageId}/preview`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders },
         body: JSON.stringify({}),
       });
 
