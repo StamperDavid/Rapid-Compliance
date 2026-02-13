@@ -1,7 +1,7 @@
 # SalesVelocity.ai - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** February 13, 2026 (Session 3: Revenue Attribution P1 — attribution analytics endpoint + dashboard page + Source columns in CRM tables + E2E agent integration tests — Playwright agent-chain.spec.ts + Jest saga-workflow + signal-propagation tests)
+**Last Updated:** February 13, 2026 (Session 4: CI/CD cleanup — Node 18→20, actions v3→v4, branch trigger fix, Vercel deploy step, deals recommendations auth fix)
 **Branches:** `dev` (latest)
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Architecture:** Single-Tenant (Penthouse Model) - NOT a SaaS platform
@@ -202,18 +202,18 @@ TenantMemoryVault refactored to enforce single-tenant model (Rule 1 compliance):
 | ~~**Saga state persistence**~~ | ~~Orchestrator saga state stored in-memory only.~~ **RESOLVED** — Firestore-backed checkpoint/resume with event dedup | ~~CRITICAL~~ |
 | ~~**Global kill switch**~~ | ~~Kill switch only gates AutonomousPostingAgent.~~ **RESOLVED** — Global swarm control with per-manager toggles | ~~CRITICAL~~ |
 | ~~**Revenue attribution pipeline**~~ | ~~UTM→Lead→Deal→Order→Stripe chain broken.~~ **RESOLVED** — Full attribution chain wired: form→lead (auto-create with UTM), lead→deal (source inheritance), checkout→order (attribution from Stripe metadata), social posts (auto UTM on links) | ~~HIGH~~ |
-| **Agent end-to-end testing** | No test validates full chain: user → orchestrator → manager → specialist → UI | **HIGH** |
+| ~~**Agent end-to-end testing**~~ | ~~No test validates full chain.~~ **RESOLVED** — Playwright E2E agent-chain tests + Jest saga-workflow + signal-propagation integration tests | ~~HIGH~~ |
 | ~~**Social engagement stubs**~~ | ~~REPLY/LIKE/FOLLOW/REPOST actions return fake success.~~ **RESOLVED** — Wired to real Twitter API v2 (likeTweet, retweet, followUser, postTweet with replyToTweetId). Non-Twitter platforms pending. | ~~MEDIUM~~ |
 | **Facebook/Instagram** | No implementation exists. Type definitions only. Requires Meta Developer sandbox + app review. | MEDIUM |
 | **LinkedIn unofficial** | Uses RapidAPI (unofficial, ToS violation risk). Falls back to manual task creation. Needs official API. | MEDIUM |
 | **~40 TODO comments** | Auth context TODOs reduced; 27 alert/confirm/prompt calls replaced with proper UI components | MEDIUM |
-| **Node version mismatch** | CI workflows use Node 18, package.json requires Node 20 | LOW |
+| ~~**Node version mismatch**~~ | ~~CI workflows use Node 18.~~ **RESOLVED** — Updated to Node 20, actions v4, Vercel deploy step implemented | ~~LOW~~ |
 
 ### What's Stubbed (Not Yet Functional)
 
 | Endpoint/Feature | Issue |
 |------------------|-------|
-| `/api/crm/deals/[dealId]/recommendations` | Auth implementation incomplete |
+| ~~`/api/crm/deals/[dealId]/recommendations`~~ | **RESOLVED** — Auth user extraction added, workspaceId from query param, user context in logs |
 | ~~Social REPLY/LIKE/FOLLOW/REPOST~~ | **RESOLVED** — Twitter engagement wired to real API v2. Non-Twitter platforms pending. |
 | Facebook/Instagram posting | No implementation (see Production Readiness Plan Tier 3.2) |
 | ~~Revenue attribution chain~~ | **RESOLVED** — Full UTM→Lead→Deal→Order→Stripe chain wired |
@@ -299,7 +299,7 @@ Only after Tiers 1 and 2 are verified complete.
 | 3.1 | **Twitter engagement actions** | Wire REPLY/LIKE/FOLLOW/REPOST to real Twitter API v2 calls (likeTweet, retweet, followUser, postTweet with replyToTweetId). 7 new methods added to TwitterService. | **DONE** |
 | 3.2 | **Facebook/Instagram (Meta Graph API)** | Create `meta-service.ts`. OAuth flow, posting, insights. **Blocked by:** Meta sandbox access + app review. | BLOCKED (external) |
 | 3.3 | **LinkedIn official API** | Replace RapidAPI with official LinkedIn Marketing API. **Blocked by:** LinkedIn developer approval. | BLOCKED (external) |
-| 3.4 | **CI/CD cleanup** | Update Node 18→20 in workflows. Implement Vercel deploy job. | PENDING |
+| 3.4 | **CI/CD cleanup** | Updated Node 18→20 in both workflows. Actions v3→v4. Branch trigger `develop`→`dev`. Vercel CLI deploy step (pull → build → deploy --prebuilt --prod). Deals recommendations auth fix. | **DONE** |
 
 ---
 
@@ -1651,7 +1651,7 @@ The following endpoints have working infrastructure (rate limiting, caching, aut
 | Endpoint | Issue | Priority |
 |----------|-------|----------|
 | `/api/coaching/team` | Team member query returns hardcoded IDs | HIGH |
-| `/api/crm/deals/[dealId]/recommendations` | Auth implementation incomplete | MEDIUM |
+| ~~`/api/crm/deals/[dealId]/recommendations`~~ | **RESOLVED** — Auth user extraction + workspaceId from query param | ~~MEDIUM~~ |
 | `/api/crm/deals/monitor/start` | Monitor lifecycle not fully implemented | LOW |
 | `/api/webhooks/gmail` | Auto-meeting booking has TODO | LOW |
 | `/api/voice/twiml` | Audio fallback uses placeholder URL | LOW |

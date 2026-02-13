@@ -5,7 +5,7 @@
 ## Context
 Repository: https://github.com/StamperDavid/Rapid-Compliance
 Branch: dev
-Last Session: February 13, 2026 (Session 3 complete — Revenue Attribution P1 (2.1b) + E2E Agent Integration Testing (1.3))
+Last Session: February 13, 2026 (Session 4 complete — CI/CD Cleanup (3.4) + deals recommendations auth fix + SSOT updates)
 
 ## Current State
 
@@ -41,6 +41,7 @@ Last Session: February 13, 2026 (Session 3 complete — Revenue Attribution P1 (
 - **Twitter Engagement (Tier 3.1)** — REPLY/LIKE/FOLLOW/REPOST wired to real Twitter API v2. 7 new methods in TwitterService (likeTweet, unlikeTweet, retweet, unretweet, followUser, unfollowUser + reply via postTweet). Autonomous agent stubs replaced with real API calls.
 - **Revenue Attribution P1 (Tier 2.1b)** — Attribution analytics endpoint (`/api/analytics/attribution`) with revenue by source/campaign/medium, funnel metrics. Dashboard page (`/analytics/attribution`) with overview cards, conversion funnel visualization, breakdowns. "Source" column added to Leads, Deals, and Orders tables.
 - **E2E Agent Integration Testing (Tier 1.3)** — Playwright tests (`tests/e2e/agent-chain.spec.ts`) for swarm control API, attribution API, kill switch verification, CRM page loads. Jest integration tests: `tests/integration/saga-workflow.test.ts` (checkpoint/resume, crash simulation, event dedup, replay), `tests/integration/signal-propagation.test.ts` (SignalBus communication, swarm control state, pause/queue/resume/dequeue, guard functions).
+- **CI/CD Cleanup (Tier 3.4)** — Node 18→20 in both workflows (`ci.yml`, `api-integrity.yml`). Actions `checkout@v3`→`v4`, `setup-node@v3`→`v4`. Branch trigger `develop`→`dev`. Vercel CLI deploy step (pull → build → deploy --prebuilt --prod). Deals recommendations route auth fix (user extraction + workspaceId query param).
 
 ---
 
@@ -260,7 +261,7 @@ These close the gap between "demo" and "production" for external platform connec
 SESSION 1: ✅ COMPLETE — Saga Persistence (1.1) + Global Kill Switch (1.2)
 SESSION 2: ✅ COMPLETE — Revenue Attribution P0 (2.1) + Twitter Engagement (3.1)
 SESSION 3: ✅ COMPLETE — Revenue Attribution P1 (2.1b analytics/dashboard) + E2E Testing (1.3)
-SESSION 4: CI/CD Cleanup (3.4) + any remaining items
+SESSION 4: ✅ COMPLETE — CI/CD Cleanup (3.4) + deals recommendations auth fix + SSOT updates
 
 EXTERNAL (start immediately, no code dependency):
   - Meta Developer Portal sandbox application (3.2)
@@ -302,8 +303,8 @@ EXTERNAL (start immediately, no code dependency):
 | ~~No agent integration tests~~ | **FIXED** — Playwright E2E agent-chain tests + Jest saga-workflow + signal-propagation integration tests |
 | Facebook/Instagram missing | No implementation (Tier 3.2) |
 | LinkedIn unofficial | Uses RapidAPI, not official API (Tier 3.3) |
-| Node version mismatch | CI uses 18, package.json requires 20 (Tier 3.4) |
-| `/api/crm/deals/[dealId]/recommendations` | Auth implementation incomplete |
+| ~~Node version mismatch~~ | **FIXED** — CI updated to Node 20, actions v4, Vercel deploy step implemented |
+| ~~`/api/crm/deals/[dealId]/recommendations`~~ | **FIXED** — Auth user extraction added, workspaceId from query param |
 | Render pipeline mocked | `render-pipeline.ts` returns fake responses for video |
 | Asset Generator is a shell | Returns placeholder URLs, no actual image generation |
 | Social accounts UI is mock | Hardcoded connected/disconnected status, no real OAuth |
