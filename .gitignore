@@ -82,6 +82,7 @@ eslint-*.txt
 audit_*.json
 *lint*.json
 !.eslint-bypass-budget.json
+!tsconfig.eslint.json
 CLUSTER_REPORT.txt
 error-cluster-report.json
 

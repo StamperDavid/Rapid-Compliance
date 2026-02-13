@@ -44,6 +44,7 @@ export default tseslint.config(
       'next.config.js',
       'postcss.config.js',
       'tailwind.config.ts',
+      'tsconfig.eslint.json',
       // Temporary fix scripts
       'comprehensive-ecommerce-fix.js',
       'final-ecommerce-fix.js',
@@ -84,7 +85,7 @@ export default tseslint.config(
       sourceType: 'module',
       parser: tseslint.parser,
       parserOptions: {
-        project: './tsconfig.json',
+        project: './tsconfig.eslint.json',
         tsconfigRootDir: __dirname,
         ecmaFeatures: {
           jsx: true,

@@ -1,6 +1,8 @@
 # Atomic Quality Control: Only check staged files for ESLint
 # TypeScript check runs on full project (required for type resolution)
 
+export NODE_OPTIONS="--max-old-space-size=8192"
+
 echo "🔍 Running Atomic Quality Control..."
 
 # Step 1: Lint only staged .ts/.tsx files (zero-tolerance)
