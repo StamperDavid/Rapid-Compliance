@@ -30,6 +30,8 @@ const updateApprovalSchema = z.object({
   approvalId: z.string().min(1),
   status: z.enum(['pending_review', 'approved', 'rejected', 'revision_requested']),
   comment: z.string().optional(),
+  correctedContent: z.string().optional(),
+  originalContent: z.string().optional(),
 });
 
 export async function GET(request: NextRequest) {
@@ -113,7 +115,7 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    const { approvalId, status, comment } = validation.data;
+    const { approvalId, status, comment, correctedContent, originalContent } = validation.data;
 
     const updated = await ApprovalService.updateStatus(
       approvalId,
@@ -127,6 +129,26 @@ export async function PUT(request: NextRequest) {
         { success: false, error: 'Approval not found' },
         { status: 404 }
       );
+    }
+
+    // Capture correction for Golden Playbook training when user approves with edits
+    if (status === 'approved' && correctedContent && originalContent && correctedContent !== originalContent) {
+      try {
+        const { CorrectionCaptureService } = await import('@/lib/social/correction-capture-service');
+        await CorrectionCaptureService.captureCorrection({
+          approvalId,
+          postId: updated.postId,
+          original: originalContent,
+          corrected: correctedContent,
+          platform: updated.platform,
+          flagReason: updated.flagReason,
+          capturedBy: authResult.user.uid,
+        });
+        logger.info('Approvals API: Correction captured for playbook training', { approvalId });
+      } catch (captureError) {
+        // Non-blocking — don't fail the approval if capture fails
+        logger.error('Approvals API: Failed to capture correction', captureError instanceof Error ? captureError : new Error(String(captureError)));
+      }
     }
 
     return NextResponse.json({ success: true, approval: updated });

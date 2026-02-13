@@ -706,6 +706,95 @@ export interface BehaviorConfig {
   idleTimeoutMinutes: number;
 }
 
+// =============================================================================
+// Golden Playbook — Versioned config for generative agents (social, email, etc.)
+// Parallel to GoldenMaster but designed for long-running, proactive agents.
+// =============================================================================
+
+export interface PlaybookPlatformRules {
+  platform: string;
+  maxLength?: number;
+  tone?: string;
+  hashtagPolicy?: 'always' | 'sparingly' | 'never';
+  emojiPolicy?: 'liberal' | 'minimal' | 'none';
+  ctaStyle?: string;
+  postingWindows?: Array<{ dayOfWeek: number; startHour: number; endHour: number }>;
+  customInstructions?: string[];
+}
+
+export interface PlaybookCorrection {
+  id: string;
+  original: string;
+  corrected: string;
+  platform: string;
+  postType?: string;
+  context?: string;
+  capturedAt: string;
+  capturedBy: string;
+}
+
+export interface PlaybookPerformancePattern {
+  id: string;
+  pattern: string;
+  metric: string;
+  value: number;
+  sampleSize: number;
+  confidence: number;
+  discoveredAt: string;
+}
+
+export interface GoldenPlaybook {
+  id: string;
+  version: string; // "v1", "v2", etc.
+  agentType: 'social' | 'email' | 'voice';
+
+  // Brand voice DNA — extracted from Training Lab + corrections
+  brandVoiceDNA: {
+    tone: string;
+    keyMessages: string[];
+    commonPhrases: string[];
+    vocabulary: string[];
+    avoidWords: string[];
+  };
+
+  // Per-platform generation rules
+  platformRules: PlaybookPlatformRules[];
+
+  // Learned corrections from user edits in approval queue
+  correctionHistory: PlaybookCorrection[];
+
+  // Content performance patterns (what works)
+  performancePatterns: PlaybookPerformancePattern[];
+
+  // Explicit user-defined rules (from Agent Rules UI)
+  explicitRules: {
+    neverPostAbout: string[];
+    alwaysRequireApproval: string[];
+    topicRestrictions: string[];
+    customConstraints: string[];
+  };
+
+  // Compiled prompt — assembled from all above, used at generation time
+  compiledPrompt: string;
+
+  // Training score from coaching sessions
+  trainedScenarios: string[];
+  trainingScore: number;
+
+  // Deployment
+  isActive: boolean;
+  deployedAt?: string;
+
+  // Versioning
+  previousVersion?: string;
+  changesSummary?: string;
+
+  // Metadata
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 /**
  * Instance Lifecycle Service
  */

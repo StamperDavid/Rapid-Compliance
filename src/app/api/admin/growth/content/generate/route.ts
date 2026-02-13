@@ -57,6 +57,21 @@ export async function POST(request: NextRequest) {
     // Generate content using AI
     const { generateText } = await import('@/lib/ai/gemini-service');
 
+    // Load Golden Playbook for social content generation
+    let systemInstruction: string | undefined;
+    if (type === 'social') {
+      try {
+        const { getActivePlaybook } = await import('@/lib/social/golden-playbook-builder');
+        const activePlaybook = await getActivePlaybook();
+        if (activePlaybook?.compiledPrompt) {
+          systemInstruction = activePlaybook.compiledPrompt;
+        }
+      } catch {
+        // Non-blocking — generate without playbook if unavailable
+        logger.warn('[AdminContent] Could not load Golden Playbook for social generation', { file: 'content/generate/route.ts' });
+      }
+    }
+
     let prompt = '';
     if (type === 'blog') {
       prompt = `Write a professional blog post about the following topic.
@@ -83,7 +98,7 @@ Return a JSON object with:
 - hashtags: Array of relevant hashtags`;
     }
 
-    const response = await generateText(prompt);
+    const response = await generateText(prompt, systemInstruction);
     const jsonMatch = response.text.match(/\{[\s\S]*\}/);
 
     if (jsonMatch) {

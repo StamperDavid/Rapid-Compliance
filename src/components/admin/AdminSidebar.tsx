@@ -160,6 +160,7 @@ const NAV_SECTIONS: NavigationSection[] = [
       { id: 'social-activity', label: 'Activity Feed', href: '/social/activity', icon: ScrollText, iconColor: 'var(--color-purple)', requiredPermission: 'canManageSocialMedia' },
       { id: 'social-analytics', label: 'Social Analytics', href: '/social/analytics', icon: BarChart3, iconColor: 'var(--color-cyan)', requiredPermission: 'canManageSocialMedia' },
       { id: 'agent-rules', label: 'Agent Rules', href: '/social/agent-rules', icon: Sliders, iconColor: 'var(--color-error)', requiredPermission: 'canManageSocialMedia' },
+      { id: 'golden-playbook', label: 'Golden Playbook', href: '/social/playbook', icon: BookOpenText, iconColor: 'var(--color-warning)', requiredPermission: 'canTrainAIAgents' },
       { id: 'proposals', label: 'Proposals', href: '/proposals/builder', icon: FileText, iconColor: 'var(--color-cyan)' },
       { id: 'battlecards', label: 'Battlecards', href: '/battlecards', icon: Swords, iconColor: 'var(--color-warning)' },
     ],

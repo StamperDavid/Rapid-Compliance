@@ -9,6 +9,7 @@ import type {
   TrainingSession,
   TrainingAnalysis,
   ImprovementSuggestion,
+  AgentDomain,
 } from '@/types/training';
 
 interface ParsedSuggestion {
@@ -57,17 +58,69 @@ export async function analyzeTrainingSession(
 }
 
 /**
+ * Get the domain-specific preamble for analysis prompts
+ */
+function getDomainPreamble(agentType: AgentDomain): string {
+  switch (agentType) {
+    case 'social': {
+      return `You are an expert social media strategist analyzing a training session for an AI social media agent.
+Focus on: brand voice consistency, platform-appropriate tone, content quality, engagement potential, hashtag usage, CTA effectiveness, and compliance with posting guidelines.
+Areas to evaluate: hook quality, platform fit, tone/voice, content structure, audience targeting, timing intuition.`;
+    }
+    case 'email': {
+      return `You are an expert email marketing analyst analyzing a training session for an AI email agent.
+Focus on: subject line effectiveness, personalization, CTA clarity, compliance (CAN-SPAM), tone appropriateness, and conversion potential.
+Areas to evaluate: subject lines, preview text, body structure, personalization, CTAs, unsubscribe compliance.`;
+    }
+    case 'voice': {
+      return `You are an expert conversational AI analyst analyzing a training session for an AI voice agent.
+Focus on: natural speech patterns, pacing, empathy, clarity, escalation handling, and customer satisfaction signals.
+Areas to evaluate: greeting warmth, listening signals, response timing, escalation judgment, closing effectiveness.`;
+    }
+    case 'chat':
+    default: {
+      return `You are an expert AI trainer analyzing a training session for a sales/support AI agent.
+Focus on: sales methodology, objection handling, product knowledge, closing technique, and customer rapport.
+Areas to evaluate: greeting, discovery, objection handling, product knowledge, closing, escalation.`;
+    }
+  }
+}
+
+/**
+ * Get domain-specific suggestion areas
+ */
+function getDomainAreas(agentType: AgentDomain): string {
+  switch (agentType) {
+    case 'social': {
+      return 'e.g., "hook_quality", "platform_tone", "hashtag_strategy", "cta_style", "content_structure", "brand_voice"';
+    }
+    case 'email': {
+      return 'e.g., "subject_line", "personalization", "body_structure", "cta_clarity", "compliance"';
+    }
+    case 'voice': {
+      return 'e.g., "greeting", "active_listening", "pacing", "empathy", "escalation_judgment"';
+    }
+    case 'chat':
+    default: {
+      return 'e.g., "greeting", "objection_handling", "product_knowledge", "closing", "discovery"';
+    }
+  }
+}
+
+/**
  * Build the analysis prompt for the AI
  */
 function buildAnalysisPrompt(session: TrainingSession): string {
+  const agentType: AgentDomain = session.agentType ?? 'chat';
   const conversationText = session.messages
     .map(msg => `${msg.role.toUpperCase()}: ${msg.message}`)
     .join('\n\n');
 
-  return `You are an expert AI trainer analyzing a training session for a sales/support AI agent.
+  return `${getDomainPreamble(agentType)}
 
 # Training Session Details
 Topic: ${session.topic}
+Agent Domain: ${agentType}
 ${session.scenario ? `Scenario: ${session.scenario}` : ''}
 ${session.customerPersona ? `Customer Persona: ${session.customerPersona}` : ''}
 Score: ${session.score}/100
@@ -87,7 +140,7 @@ Analyze this training session and provide:
 
 For each improvement suggestion, provide:
 - Type: prompt_update, behavior_change, knowledge_gap, tone_adjustment, or process_improvement
-- Area: specific area to improve (e.g., "greeting", "objection_handling", "product_knowledge")
+- Area: specific area to improve (${getDomainAreas(agentType)})
 - Current behavior: what the agent is doing now
 - Suggested behavior: what the agent should do instead
 - Priority: 1-10 (10 being most important)
@@ -199,6 +252,91 @@ function generateFallbackAnalysis(session: TrainingSession): TrainingAnalysis {
     confidence: 0.6,
     generatedAt: new Date().toISOString(),
   };
+}
+
+/**
+ * Analyze social media corrections and generate improvement suggestions.
+ * This is the feedback loop for the Golden Playbook system.
+ */
+export async function analyzeSocialCorrections(
+  corrections: Array<{ original: string; corrected: string; platform: string; context?: string }>
+): Promise<ImprovementSuggestion[]> {
+  if (corrections.length === 0) {
+    return [];
+  }
+
+  logger.info(`[Feedback Processor] Analyzing ${corrections.length} social corrections`, { file: 'feedback-processor.ts' });
+
+  const correctionText = corrections
+    .map((c, i) => `Correction ${i + 1} (${c.platform}):\n  ORIGINAL: ${c.original}\n  CORRECTED: ${c.corrected}${c.context ? `\n  CONTEXT: ${c.context}` : ''}`)
+    .join('\n\n');
+
+  const prompt = `You are an expert social media strategist analyzing user corrections to AI-generated social media content.
+The user edited AI-generated drafts before approving them. Analyze the patterns in these corrections.
+
+# Corrections
+${correctionText}
+
+# Your Task
+Identify patterns in how the user corrects the AI's output. For each pattern, provide an improvement suggestion.
+
+Look for:
+- **Tone shifts** (more casual, more professional, more punchy)
+- **Word replacements** (specific words the user consistently changes)
+- **Structural changes** (shorter/longer, question hooks, CTA placement)
+- **Platform-specific preferences** (different style per platform)
+- **Content focus** (what topics/angles the user emphasizes)
+
+# Output Format (JSON)
+{
+  "suggestions": [
+    {
+      "type": "tone_adjustment",
+      "area": "brand_voice",
+      "currentBehavior": "Uses formal corporate language",
+      "suggestedBehavior": "Use conversational, punchy tone with short sentences",
+      "priority": 8,
+      "estimatedImpact": 9
+    }
+  ],
+  "confidence": 0.85
+}
+
+Provide ONLY the JSON, no other text.`;
+
+  try {
+    const response = await generateText(prompt);
+    const jsonMatch = response.text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      throw new Error('No JSON found in correction analysis response');
+    }
+
+    const parsed = JSON.parse(jsonMatch[0]) as ParsedAnalysisResponse;
+    const suggestions: ImprovementSuggestion[] = (parsed.suggestions ?? []).map(
+      (s: ParsedSuggestion, index: number): ImprovementSuggestion => ({
+        id: `correction_suggestion_${Date.now()}_${index}`,
+        type: s.type as ImprovementSuggestion['type'],
+        area: s.area,
+        currentBehavior: s.currentBehavior,
+        suggestedBehavior: s.suggestedBehavior,
+        implementation: s.implementation ? {
+          section: s.implementation.section as 'greeting' | 'objectives' | 'tone' | 'behavior' | 'knowledge' | 'escalation' | 'closing' | 'custom',
+          additions: s.implementation.additions,
+          removals: s.implementation.removals,
+          modifications: s.implementation.modifications,
+        } : undefined,
+        priority: s.priority,
+        estimatedImpact: s.estimatedImpact,
+        confidence: parsed.confidence ?? 0.75,
+      })
+    );
+
+    logger.info(`[Feedback Processor] Generated ${suggestions.length} suggestions from corrections`, { file: 'feedback-processor.ts' });
+    return suggestions;
+  } catch (error) {
+    logger.error('[Feedback Processor] Failed to analyze corrections:', error instanceof Error ? error : new Error(String(error)), { file: 'feedback-processor.ts' });
+    return [];
+  }
 }
 
 /**

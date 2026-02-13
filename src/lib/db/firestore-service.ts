@@ -74,6 +74,8 @@ export const COLLECTIONS = {
   INTEGRATIONS: 'integrations',
   SUBSCRIPTION_PLANS: 'subscriptionPlans',
   CUSTOMER_SUBSCRIPTIONS: 'customerSubscriptions',
+  GOLDEN_PLAYBOOKS: 'goldenPlaybooks',
+  SOCIAL_CORRECTIONS: 'socialCorrections',
 } as const;
 
 /**

@@ -21,17 +21,45 @@ Last Session: February 13, 2026
 - `npm run lint` — **PASSES (zero errors, zero warnings)**
 - `npm run build` — **PASSES (production build succeeds)**
 
-### Recently Completed
-- Jasper video routing fixed — `create_video` and `get_video_status` tools working, HeyGen default provider
-- Video service rewired to pull API keys from Firestore (not `process.env`)
-- Academy section added (`/academy` page, sidebar nav)
-- Multi-engine video selector implemented — per-scene engine dropdown in Approval step
-- Engine registry with cost metadata, provider-status API, scene-generator multi-engine routing
-- `heygenVideoId` → `providerVideoId` refactor across all types and components
-- **Social media system audit completed** — full assessment of UI, APIs, services, and agent layer
-- **All 7 social media pages built** — Command Center (kill switch, velocity gauges), Content Studio (dual-mode), Approval Queue (batch, correction capture, Why badge), Activity Feed, Analytics, Agent Rules, Training Lab
-- **2 new API endpoints** — `/api/social/agent-status` (GET/POST), `/api/social/activity` (GET)
-- **Kill switch implemented** — `agentEnabled` boolean in AutonomousAgentSettings, enforced in `executeAction()`
+### Recently Completed (February 13, 2026 — Golden Playbook Session)
+
+**All 4 Golden Playbook phases are COMPLETE:**
+
+**Phase 1 — Training Agent-Agnostic + Playbook Integration:**
+- `GoldenPlaybook` type added to `src/types/agent-memory.ts` (brand voice DNA, platform rules, correction history, performance patterns, explicit rules, compiled prompt)
+- `AgentDomain` type (`'chat' | 'social' | 'email' | 'voice'`) added to `src/types/training.ts`
+- `SocialCorrection` type added to `src/types/social.ts`
+- `golden-playbook-builder.ts` — create, save, deploy, compile playbook versions
+- `golden-playbook-updater.ts` — correction analysis, improvement suggestions, playbook update pipeline
+- `correction-capture-service.ts` — capture/query/analyze user edits from approval queue
+- `feedback-processor.ts` enhanced with domain-aware analysis (social/email/voice/chat preambles)
+- **Content generation now uses active playbook** — `autonomous-posting-agent.ts:generateContent()` loads `getActivePlaybook()` and passes `compiledPrompt` as `systemInstruction` to Gemini
+- **Admin content generation** also uses playbook for social content (`/api/admin/growth/content/generate`)
+- API routes: `/api/social/playbook` (GET/POST/PUT), `/api/social/corrections` (GET/POST)
+- Firestore collections: `goldenPlaybooks`, `socialCorrections`, `playbookUpdates`
+
+**Phase 2 — Correction Capture Pipeline UI:**
+- Golden Playbook dashboard page at `/social/playbook` with 5 tabs
+- **Playbook Versions tab** — create new versions, view details (brand voice, platform rules, explicit rules, compiled prompt preview), deploy specific versions
+- **Corrections Pipeline tab** — stats cards (total/unanalyzed/analyzed/patterns), heuristic pattern detection, expandable correction diff view, batch analysis trigger
+- **Update Requests tab** — impact analysis (score improvement, risks, test duration), individual improvement cards with current vs suggested behavior
+- Sidebar nav entry added (`BookOpenText` icon, `canTrainAIAgents` permission)
+
+**Phase 3 — Conversational Coaching for Social:**
+- `playbook-coaching-service.ts` — heuristic + AI-powered coaching insight generation
+  - Analyzes: length patterns, tone shifts, vocabulary replacements, structure changes, platform imbalances, playbook gaps
+  - Generates `CoachingInsight[]` with severity, category, evidence, and suggestions
+  - AI deep analysis via Gemini for brand voice and messaging alignment patterns
+- API endpoint: `/api/social/playbook/coach` (POST)
+- **AI Coach tab** in Golden Playbook page — start coaching session, review insights with accept/dismiss buttons, evidence display, session summary
+
+**Phase 4 — Performance-Based Learning:**
+- `performance-pattern-service.ts` — analyzes published posts with engagement metrics
+  - Detects patterns in: content length, hashtag usage, time of day, platform, structure (questions/lists/CTAs), emojis
+  - Correlates content attributes with engagement rates
+  - Can apply detected patterns to active playbook
+- API endpoint: `/api/social/playbook/performance` (POST analyze, PUT apply)
+- **Performance tab** in Golden Playbook page — analyze button, pattern cards with confidence scores, apply-to-playbook action
 
 ---
 
@@ -52,270 +80,95 @@ The social media system follows the **"Tesla Autopilot" model** — AI drives by
 
 | Page | Purpose | Priority | Status |
 |------|---------|----------|--------|
-| **Command Center** | Live agent status, recent activity, health gauges, kill switch | P0 | ✅ COMPLETE (Feb 13) |
-| **Content Studio** | Create/edit with platform variants, AI suggestions, specialist feedback | P0 | ✅ COMPLETE (Feb 13) — Dual-mode autopilot/manual |
-| **Approval Queue** | Batch review table (desktop), with bulk approve and risk scoring | P0 | ✅ COMPLETE (Feb 13) — Batch, Why badge, correction capture |
-| **Activity Feed** | What the AI did, what it skipped, why, with early performance signals | P1 | ✅ COMPLETE (Feb 13) |
-| **Analytics** | Unified metrics with platform/campaign/persona filters | P1 | ✅ COMPLETE (Feb 13) |
-| **Agent Rules** | Guardrails, velocity limits, topic restrictions, approval triggers | P1 | ✅ COMPLETE (Feb 13) |
-| **Brand Voice** | Example-based training, knowledge base, test sandbox (Training Lab = mostly done) | P2 | ✅ COMPLETE (pre-existing Training Lab) |
+| **Command Center** | Live agent status, recent activity, health gauges, kill switch | P0 | COMPLETE |
+| **Content Studio** | Create/edit with platform variants, AI suggestions, specialist feedback | P0 | COMPLETE — Dual-mode autopilot/manual |
+| **Approval Queue** | Batch review table (desktop), with bulk approve and risk scoring | P0 | COMPLETE — Batch, Why badge, correction capture |
+| **Activity Feed** | What the AI did, what it skipped, why, with early performance signals | P1 | COMPLETE |
+| **Analytics** | Unified metrics with platform/campaign/persona filters | P1 | COMPLETE |
+| **Agent Rules** | Guardrails, velocity limits, topic restrictions, approval triggers | P1 | COMPLETE |
+| **Brand Voice** | Example-based training, knowledge base, test sandbox | P2 | COMPLETE (Training Lab) |
+| **Golden Playbook** | Playbook versions, corrections, coaching, performance patterns | P2 | COMPLETE (All 4 phases) |
 
-### Key UI Requirements
+### Golden Playbook Architecture (COMPLETE)
 
-**Command Center (Missing — Build From Scratch):**
-- Agent status panel: "AI is active, 3 posts queued, next post in 47 min"
-- Activity log: "Posted to Twitter at 2:14 PM, engagement score: high"
-- Decision transparency: "Skipped posting at 11 AM — velocity limit reached"
-- Health gauges: "12/50 Twitter actions today" (circular meters for velocity limits)
-- Global kill switch: prominent, persistent button to pause all automated posting
-- Platform connection status with real OAuth state (not mock data)
-
-**Content Studio (Partial — Needs Dual-Mode):**
-- **Autopilot mode** (default): Queue of AI-generated drafts with agent reasoning, scheduled times
-- **Manual mode** (one toggle): Full composer — pick platform, write copy, attach media, choose time, post
-- Same screen, different emphasis — not separate pages
-- Platform variants as tabs (not multi-column canvas — avoids decision paralysis)
-- Inline specialist feedback when editing platform-specific drafts
-
-**Approval Queue (Exists — Needs Upgrade):**
-- Batch review table (Gmail-style list view) for desktop — scan 15+ posts at a glance
-- Bulk approve for posts that look fine
-- Click into individual posts only when they need attention
-- Sort/filter by platform, risk score, campaign
-- "Why" badge: highlight the exact phrase that triggered a flag
-- Correction capture: when user edits a draft, store the diff for training
-
-**Activity Feed (Missing — Build From Scratch):**
-- What was posted, when, and why the AI chose that timing
-- What the AI decided NOT to post and why
-- Early performance signals (engagement in first hour)
-- Actions taken (replies, retweets, etc.)
-- Curated narrative, not raw logs
-
-**Agent Rules UI (Missing — Backend Ready):**
-- Visual editor for guardrails that currently live in `/api/social/settings`
-- Topic restrictions, velocity limits, approval triggers
-- Per-platform rules
-- "Never post about X", "Always require approval for pricing mentions"
-- Policy editor that feels as important as content
-
-**Manual Posting Capabilities (Must Be Present Everywhere):**
-- Manual compose with rich text, media upload, link preview
-- Per-platform customization (not just "post everywhere identical")
-- Schedule to specific date/time with timezone
-- Draft saving
-- Post now / schedule / add to queue — three distinct actions
-- Queue reorder by drag-and-drop
-- Pause/resume individual posts or entire queue
-
----
-
-### Current State Audit (February 12, 2026)
-
-#### What's Working (Backend — 60-70% Complete)
-
-| Component | Status | Key Files |
-|-----------|--------|-----------|
-| **Autonomous Posting Agent** | REAL — posts, queues, schedules to Twitter | `src/lib/social/autonomous-posting-agent.ts` |
-| **Twitter Integration** | PRODUCTION — full API v2, OAuth 2.0, media upload | `src/lib/integrations/twitter-service.ts` |
-| **Compliance Guardrails** | ENFORCED — velocity limits, sentiment blocking, escalation | `autonomous-posting-agent.ts` (lines 148-262) |
-| **Sentiment Analysis** | REAL — Gemini AI + keyword fallback, batch processing | `src/lib/social/sentiment-analyzer.ts` |
-| **Approval Workflow** | REAL — full status tracking, comments, approve/reject/revise | `src/lib/social/approval-service.ts` |
-| **Social Listening** | REAL (Twitter) — cron-based collection, sentiment analysis | `src/lib/social/listening-service.ts` |
-| **Media Upload** | REAL — Firebase Storage, platform-specific validation | `src/lib/social/media-service.ts` |
-| **Account Management** | REAL — multi-account CRUD, default selection | `src/lib/social/social-account-service.ts` |
-| **Agent Config** | REAL — runtime configurable, Firestore-backed, cached | `src/lib/social/agent-config-service.ts` |
-| **Queue Management** | REAL — add, process, reorder, post immediately | `/api/social/queue` |
-| **Scheduling** | REAL — future publish, cron pickup | `/api/social/schedule` |
-| **Calendar Aggregation** | REAL — merges posts from 3 sources | `/api/social/calendar` |
-| **Metrics Collection** | REAL — cron job collects Twitter engagement | `/api/cron/social-metrics-collector` |
-| **Content Generation** | REAL — Gemini AI via `generateContent()` | `autonomous-posting-agent.ts` (lines 1465-1516) |
-
-#### What's Stubbed (Backend)
-
-| Component | Status | Details |
-|-----------|--------|---------|
-| REPLY action | Compliance checks REAL, execution STUBBED | Sentiment/escalation works, actual reply posting TODO |
-| LIKE action | STUBBED | Returns success, no API call |
-| FOLLOW action | STUBBED | Returns success, no API call |
-| REPOST action | STUBBED | Returns success, no API call |
-| LinkedIn posting | FALLBACK | Tries RapidAPI, falls back to manual task creation |
-| Facebook/Instagram | TYPE DEFS ONLY | No implementation |
-| DM compliance | STUBBED | "Account has engaged with us first" check TODO |
-
-#### What's Working (Frontend — 30-40% Complete)
-
-| Page | Status | What Works | What's Missing |
-|------|--------|------------|----------------|
-| **Command Center** (`/social/command-center`) | ✅ FUNCTIONAL (Feb 13) | Kill switch banner, velocity gauges (SVG circular meters), agent status, platform connections, activity feed, auto-refresh 30s | Real-time WebSocket (uses polling) |
-| **Content Studio** (`/social/campaigns`) | ✅ UPGRADED (Feb 13) | Dual-mode autopilot/manual toggle, AI queue visibility, scheduled posts, recently published, post CRUD, scheduling modal | Mock account data in manual mode |
-| **Approvals** (`/social/approvals`) | ✅ UPGRADED (Feb 13) | Batch selection, bulk approve/reject, "Why" badge with flagged phrase highlighting, correction capture (stores original + corrected content), editable drafts | No sort/filter by risk score |
-| **Activity Feed** (`/social/activity`) | ✅ FUNCTIONAL (Feb 13) | Filter tabs (All/Published/Scheduled/Flagged/Failed), event cards with type icons, platform badges, timestamps | No early performance signals yet |
-| **Analytics** (`/social/analytics`) | ✅ FUNCTIONAL (Feb 13) | Summary stats, 7-day SVG bar chart, platform breakdown, post performance table | No time-series drill-down |
-| **Agent Rules** (`/social/agent-rules`) | ✅ FUNCTIONAL (Feb 13) | General toggles, velocity limits, daily limits, sentiment block keywords (chip input), escalation triggers, save to API | No per-platform rule overrides |
-| **Training Lab** (`/social/training`) | FUNCTIONAL (strongest page) | Multi-tab settings, AI test generation, history, knowledge upload, brand DNA | Already covers Brand Voice needs well |
-| **Calendar** (`/social/calendar`) | FUNCTIONAL | react-big-calendar, filtering, modal details, drag-drop infrastructure | No agent markers, no new post creation from calendar |
-| **Listening** (`/social/listening`) | FUNCTIONAL | Mention feed, sentiment badges, keyword config, status management | No competitive analysis view |
-
-#### What's Missing (Frontend)
-
-| Component | Gap Size | Notes |
-|-----------|----------|-------|
-| ~~**Command Center page**~~ | ~~CRITICAL~~ | ✅ RESOLVED (Feb 13) — Kill switch, velocity gauges, agent status, platform connections, activity feed |
-| ~~**Activity Feed page**~~ | ~~CRITICAL~~ | ✅ RESOLVED (Feb 13) — Chronological feed with filter tabs |
-| ~~**Agent Rules UI**~~ | ~~CRITICAL~~ | ✅ RESOLVED (Feb 13) — Visual guardrails editor with velocity limits, keywords, toggles |
-| **Connected Accounts (real OAuth)** | LARGE | UI shows hardcoded mock data, no real OAuth flow |
-| **Media Manager in posts** | MEDIUM | Upload API exists, no UI to browse/attach media |
-| **Coaching/Feedback Loop** | CRITICAL | See Golden Playbook section below |
-| ~~**Analytics Dashboard**~~ | ~~LARGE~~ | ✅ RESOLVED (Feb 13) — Summary stats, 7-day chart, platform breakdown, post performance |
-| ~~**Kill Switch**~~ | ~~LARGE~~ | ✅ RESOLVED (Feb 13) — `agentEnabled` toggle on Command Center + agent-status API |
-
----
-
-### Golden Playbook Architecture (Anti-Drift System for Social Agents)
-
-#### Problem
-
-The existing **Golden Master + Ephemeral Spawn** pattern works for the customer chat agent (reactive, conversational). But the social media agent is **generative** (creates content proactively) and **long-running** (not session-based). Direct pattern copy doesn't fit.
-
-The social agent currently uses `AgentConfigService` with mutable config and no versioning — drift risk is high.
-
-#### Solution: Golden Playbook
-
-A versioned, immutable configuration system for the social agent, parallel to Golden Master but designed for generative agents.
+The Golden Playbook is a versioned, immutable configuration system for the social agent. Key flow:
 
 ```
-organizations/
-  rapid-compliance-root/
-    goldenPlaybooks/
-      gp_timestamp_random/
-        id, version (v1, v2, v3...), isActive
-        brandVoiceDNA        ← from Training Lab
-        platformRules        ← per-platform behavior
-        correctionHistory    ← learned from user edits
-        performancePatterns  ← what content works
-        explicitRules        ← user-defined guardrails
-        compiledPrompt       ← assembled from all above
-        trainedScenarios, trainingScore
-        createdAt, deployedAt
+User edits AI draft in Approval Queue
+  → CorrectionCaptureService stores diff
+  → User triggers "Analyze Corrections"
+  → AI identifies patterns (feedback-processor.ts)
+  → Generates PlaybookUpdateRequest with improvements
+  → User reviews and approves
+  → New playbook version created and deployed
+  → Content generation uses updated compiledPrompt
 ```
 
-**Key Difference from Golden Master:** The social agent doesn't spawn ephemeral instances. It's a long-running agent that **references** the active playbook on every content generation cycle. The playbook is versioned and immutable — every config change creates a new version with rollback capability.
-
-#### Four Training Signals
-
-```
-1. CORRECTION CAPTURE (Inline — Zero Extra Effort)
-   ├─ AI generates draft
-   ├─ User edits it in approval queue
-   ├─ System diffs original vs. user's edit
-   ├─ Stores: { original, corrected, platform, context }
-   └─ Implicit training — corrections accumulate automatically
-
-2. PERFORMANCE FEEDBACK (Automated)
-   ├─ Post goes live → metrics cron collects engagement
-   ├─ System tags high/low performers
-   ├─ Correlates content patterns with performance
-   └─ "Posts with questions in the hook get 2.3x engagement"
-
-3. CONVERSATIONAL COACHING (Extends Existing Training Infrastructure)
-   ├─ User opens coaching session with social agent
-   ├─ "Write me a LinkedIn post about our email feature"
-   ├─ Agent generates → user critiques → agent revises
-   ├─ Session analyzed by existing feedback-processor.ts
-   └─ Suggestions fed into playbook update pipeline
-
-4. EXPLICIT RULES (Direct Input via Agent Rules UI)
-   ├─ User sets rules in guardrails editor
-   ├─ "Never use emojis on LinkedIn"
-   ├─ Hard constraints, not learned behavior
-   └─ Stored in playbook, enforced at generation time
-```
-
-#### Implementation Phases
-
-**Phase 1 — Make Training Agent-Agnostic:**
-- Add `agentType: 'chat' | 'social' | 'email' | 'voice'` to `TrainingSession` type in `src/types/training.ts`
-- Add `agentType` to `GoldenMasterUpdateRequest`
-- Create `GoldenPlaybook` type in `src/types/agent-memory.ts` (parallel to `GoldenMaster`)
-- Create `golden-playbook-builder.ts` following pattern of `golden-master-builder.ts`
-- Make `feedback-processor.ts` aware of agent domains (different analysis prompts per type)
-
-**Phase 2 — Correction Capture:**
-- On approval queue edit: store diff `{ original, corrected, platform, postType, context }`
-- Firestore path: `organizations/{PLATFORM_ID}/socialCorrections/{id}`
-- After N corrections, batch-analyze using existing feedback pipeline
-- Generate improvement suggestions → human reviews → deploys to new playbook version
-
-**Phase 3 — Conversational Coaching for Social:**
-- Extend Training Lab with "Social Agent" tab alongside existing BaseModel training
-- Reuse chat interface but talk to social agent ("Generate a Twitter thread about X")
-- Sessions flow through same `feedback-processor.ts` → `golden-playbook-updater.ts`
-
-**Phase 4 — Performance-Based Learning:**
-- Metrics cron already collects engagement data
-- Add weekly analysis job: identify top/bottom performers
-- Correlate content patterns (hook style, CTA type, post length, timing) with performance
-- Suggest playbook updates based on what's working
-
-#### Existing Infrastructure to Reuse
-
-| Component | Location | Reuse For |
-|-----------|----------|-----------|
-| Training types | `src/types/training.ts` | Add `agentType` field |
-| Feedback processor | `src/lib/training/feedback-processor.ts` | Analyze social training sessions |
-| Golden master builder | `src/lib/agent/golden-master-builder.ts` | Pattern for playbook builder |
-| Golden master updater | `src/lib/training/golden-master-updater.ts` | Pattern for playbook updater |
-| Instance manager | `src/lib/agent/instance-manager.ts` | Pattern for prompt compilation |
-| Training UI | `src/app/(dashboard)/settings/ai-agents/training/page.tsx` | Extend with social agent tab |
-| Agent memory types | `src/types/agent-memory.ts` | Add GoldenPlaybook type |
-
----
+**Four Training Signals — ALL IMPLEMENTED:**
+1. **Correction Capture** — automatic diff storage from approval queue edits
+2. **Performance Feedback** — engagement metrics → pattern detection → playbook update
+3. **Conversational Coaching** — AI coach analyzes patterns, generates coaching insights
+4. **Explicit Rules** — Agent Rules UI → playbook explicit rules
 
 ### Social Media Key Files
 
 | File | Purpose |
 |------|---------|
-| `src/lib/social/autonomous-posting-agent.ts` | Core agent — posting, queue, schedule, compliance |
-| `src/lib/integrations/twitter-service.ts` | Twitter API v2 — OAuth 2.0, posting, media, search |
+| `src/lib/social/autonomous-posting-agent.ts` | Core agent — posting, queue, schedule, compliance, **playbook-aware generation** |
+| `src/lib/social/golden-playbook-builder.ts` | Create, save, deploy, compile playbook versions |
+| `src/lib/social/golden-playbook-updater.ts` | Correction analysis → improvement suggestions → playbook updates |
+| `src/lib/social/correction-capture-service.ts` | Capture/query/analyze user edits from approval queue |
+| `src/lib/social/playbook-coaching-service.ts` | Heuristic + AI coaching insight generation |
+| `src/lib/social/performance-pattern-service.ts` | Engagement metrics → content pattern detection |
+| `src/lib/social/agent-config-service.ts` | Runtime config — velocity limits, keywords, settings |
 | `src/lib/social/sentiment-analyzer.ts` | Gemini AI + keyword fallback sentiment analysis |
 | `src/lib/social/approval-service.ts` | Approval workflow — flag, review, approve/reject |
-| `src/lib/social/listening-service.ts` | Twitter mention collection + sentiment analysis |
-| `src/lib/social/media-service.ts` | Firebase Storage media upload + validation |
-| `src/lib/social/social-account-service.ts` | Multi-account CRUD + default selection |
-| `src/lib/social/agent-config-service.ts` | Runtime config — velocity limits, keywords, settings |
-| `src/types/social.ts` | All social media type definitions |
-| `src/app/(dashboard)/social/command-center/page.tsx` | Command Center — kill switch, velocity gauges, agent status (612 lines) |
+| `src/lib/social/engagement-metrics-collector.ts` | Twitter engagement metrics collection |
+| `src/lib/integrations/twitter-service.ts` | Twitter API v2 — OAuth 2.0, posting, media, search |
+| `src/lib/training/feedback-processor.ts` | Domain-aware AI training analysis (social/email/voice/chat) |
+| `src/types/social.ts` | SocialCorrection, PostMetrics, all social types |
+| `src/types/agent-memory.ts` | GoldenPlaybook, PlaybookPerformancePattern, PlaybookCorrection types |
+| `src/types/training.ts` | AgentDomain, ImprovementSuggestion, ImpactAnalysis types |
+| `src/app/(dashboard)/social/playbook/page.tsx` | Golden Playbook UI — 5 tabs (Versions, Corrections, Updates, Coach, Performance) |
+| `src/app/api/social/playbook/route.ts` | Playbook CRUD — GET list/active, POST create, PUT deploy |
+| `src/app/api/social/corrections/route.ts` | Corrections — GET list/counts/patterns, POST analyze |
+| `src/app/api/social/playbook/coach/route.ts` | Coaching — POST generate session |
+| `src/app/api/social/playbook/performance/route.ts` | Performance — POST analyze, PUT apply patterns |
+| `src/app/api/social/approvals/route.ts` | Approvals — **captures corrections on edit** |
+| `src/app/(dashboard)/social/command-center/page.tsx` | Command Center — kill switch, velocity gauges |
 | `src/app/(dashboard)/social/campaigns/page.tsx` | Content Studio — dual-mode autopilot/manual |
-| `src/app/(dashboard)/social/approvals/page.tsx` | Approval Queue — batch, Why badge, correction capture (656 lines) |
-| `src/app/(dashboard)/social/activity/page.tsx` | Activity Feed — chronological AI activity (354 lines) |
-| `src/app/(dashboard)/social/analytics/page.tsx` | Analytics Dashboard — stats, charts, performance (568 lines) |
-| `src/app/(dashboard)/social/agent-rules/page.tsx` | Agent Rules — visual guardrails editor (611 lines) |
-| `src/app/(dashboard)/social/training/page.tsx` | AI Training Lab (1,926 lines, strongest UI page) |
-| `src/app/(dashboard)/social/calendar/page.tsx` | Visual post calendar |
-| `src/app/(dashboard)/social/listening/page.tsx` | Social listening dashboard |
-| `src/components/social/SocialCalendar.tsx` | react-big-calendar wrapper with dark theme |
-| `src/components/social/CalendarToolbar.tsx` | Calendar navigation + filters |
-| `src/components/social/CalendarEventCard.tsx` | Calendar event rendering |
-| `src/styles/social-calendar.css` | 278 lines dark theme calendar CSS |
-| `src/app/api/social/queue/route.ts` | Queue API — add, process, post immediately |
-| `src/app/api/social/schedule/route.ts` | Schedule API — create, list, cancel |
-| `src/app/api/social/approvals/route.ts` | Approvals API — list, create, update status |
-| `src/app/api/social/calendar/route.ts` | Calendar API — aggregated events |
-| `src/app/api/social/accounts/route.ts` | Account management API |
-| `src/app/api/social/media/upload/route.ts` | Media upload API |
-| `src/app/api/social/settings/route.ts` | Agent config API |
-| `src/app/api/social/agent-status/route.ts` | Agent status dashboard + kill switch toggle |
-| `src/app/api/social/activity/route.ts` | Chronological activity feed |
-| `src/app/api/social/listening/route.ts` | Listening API — mentions + sentiment |
-| `src/app/api/social/listening/config/route.ts` | Listening config API |
-| `src/app/api/cron/social-listening-collector/route.ts` | Cron — collect Twitter mentions |
+| `src/app/(dashboard)/social/approvals/page.tsx` | Approval Queue — batch, Why badge, correction capture |
+| `src/app/(dashboard)/social/activity/page.tsx` | Activity Feed |
+| `src/app/(dashboard)/social/analytics/page.tsx` | Analytics Dashboard |
+| `src/app/(dashboard)/social/agent-rules/page.tsx` | Agent Rules editor |
+| `src/app/(dashboard)/social/training/page.tsx` | Social AI Training Lab |
+
+---
+
+## WHAT'S NEXT (Recommended Priorities)
+
+### Remaining Social Media Gaps
+
+| Component | Gap Size | Notes |
+|-----------|----------|-------|
+| **Connected Accounts (real OAuth)** | LARGE | UI shows hardcoded mock data, no real OAuth flow |
+| **Media Manager in posts** | MEDIUM | Upload API exists, no UI to browse/attach media |
+| **Social REPLY/LIKE/FOLLOW/REPOST** | MEDIUM | Compliance checks work but actual execution returns fake success |
+| **LinkedIn posting** | MEDIUM | Falls back to manual task creation (RapidAPI unreliable) |
+| **Facebook/Instagram** | LARGE | Type defs only, no implementation |
+
+### Other Platform Work
+
+| Area | Description |
+|------|-------------|
+| **Video Pipeline** | Storyboard → HeyGen bridge, scene stitching, screenshot capture |
+| **Production Deployment** | Vercel production, Firebase rules, domain setup |
+| **E-commerce** | Stripe integration completion, checkout flows |
+| **Website Builder** | AI-powered page generation, template system |
 
 ---
 
 ## SECONDARY TASK: Video Production Pipeline
-
-(Moved from primary — still needs completion but social media is current focus)
 
 ### Goal
 Tell Jasper "create a video on how to set up an email campaign" and receive a polished, professional video in the video library — with full review and approval at every step.
@@ -333,18 +186,8 @@ Tell Jasper "create a video on how to set up an email campaign" and receive a po
 - Avatar picker and Voice picker (APIs exist)
 - Storyboard → HeyGen bridge (currently calls mock pipeline)
 - Scene stitching (ffmpeg)
-- AI auto-selection logic (Phase 2)
+- AI auto-selection logic
 - Luma Dream Machine and Kling integrations
-
-### Video Key Files
-| File | Purpose |
-|------|---------|
-| `src/lib/video/video-service.ts` | HeyGen/Sora/Runway API integrations |
-| `src/lib/video/engine/director-service.ts` | Storyboard generation |
-| `src/lib/video/engine/render-pipeline.ts` | Render orchestration (ALL MOCKED) |
-| `src/lib/video/engine-registry.ts` | Engine metadata, costs, status |
-| `src/lib/video/scene-generator.ts` | Multi-engine scene router |
-| `src/app/(dashboard)/content/video/page.tsx` | Video Studio UI |
 
 ---
 
@@ -357,11 +200,9 @@ Tell Jasper "create a video on how to set up an email campaign" and receive a po
 | Asset Generator is a shell | Returns placeholder URLs, no actual image generation |
 | No screenshot capture service | Needed for platform tutorial videos |
 | Outbound webhooks are scaffolding | Settings UI exists but backend dispatch not implemented |
-| Playbook missing API endpoints | `/api/playbook/list` and `/api/playbook/{id}/metrics` return 404 |
 | Social accounts UI is mock | Hardcoded connected/disconnected status, no real OAuth |
 | Social REPLY/LIKE/FOLLOW/REPOST stubbed | Compliance checks work but actual execution returns fake success |
 | LinkedIn posting limited | Falls back to manual task creation (RapidAPI unreliable) |
-| No social coaching/feedback loop | Correction capture now stores diffs (Feb 13), but Golden Playbook pipeline not yet built |
 
 ---
 
@@ -382,8 +223,8 @@ Tell Jasper "create a video on how to set up an email campaign" and receive a po
 | `src/lib/orchestrator/feature-manifest.ts` | 11 specialists + capabilities + trigger phrases |
 | `src/lib/agent/golden-master-builder.ts` | Golden Master versioning + deployment |
 | `src/lib/training/golden-master-updater.ts` | Training → Golden Master update pipeline |
-| `src/lib/training/feedback-processor.ts` | AI-powered training session analysis |
+| `src/lib/training/feedback-processor.ts` | AI-powered training session analysis (domain-aware) |
 | `src/lib/agent/instance-manager.ts` | Ephemeral agent spawn + customer memory |
-| `src/types/agent-memory.ts` | Golden Master, CustomerMemory, AgentInstance types |
-| `src/types/training.ts` | Training session, analysis, improvement suggestion types |
+| `src/types/agent-memory.ts` | Golden Master, GoldenPlaybook, CustomerMemory, AgentInstance types |
+| `src/types/training.ts` | Training session, analysis, improvement suggestion, AgentDomain types |
 | `vercel.json` | 7 cron entries for autonomous operations |

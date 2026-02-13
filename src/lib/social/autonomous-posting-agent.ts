@@ -1488,6 +1488,27 @@ export class AutonomousPostingAgent {
     try {
       const { generateText } = await import('@/lib/ai/gemini-service');
 
+      // Load active Golden Playbook for brand voice + learned corrections
+      let systemInstruction: string | undefined;
+      try {
+        const { getActivePlaybook } = await import('@/lib/social/golden-playbook-builder');
+        const activePlaybook = await getActivePlaybook();
+        if (activePlaybook?.compiledPrompt) {
+          systemInstruction = activePlaybook.compiledPrompt;
+          logger.info('AutonomousPostingAgent: Using Golden Playbook for generation', {
+            version: activePlaybook.version,
+            isActive: activePlaybook.isActive,
+            file: 'autonomous-posting-agent.ts',
+          });
+        }
+      } catch (playbookError) {
+        // Non-blocking — generate without playbook if unavailable
+        logger.warn('AutonomousPostingAgent: Could not load Golden Playbook, generating without it', {
+          error: playbookError instanceof Error ? playbookError.message : String(playbookError),
+          file: 'autonomous-posting-agent.ts',
+        });
+      }
+
       const platformGuide = options.platform === 'twitter'
         ? 'Keep it under 280 characters. Be concise and engaging.'
         : 'Can be longer form. Be professional and insightful.';
@@ -1502,7 +1523,7 @@ Return ONLY a JSON object with:
 - content: The post text
 - hashtags: Array of hashtags (without # prefix)`;
 
-      const response = await generateText(prompt, undefined);
+      const response = await generateText(prompt, systemInstruction);
       const jsonMatch = response.text.match(/\{[\s\S]*\}/);
 
       if (jsonMatch) {

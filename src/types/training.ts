@@ -9,11 +9,16 @@ import type { Timestamp } from 'firebase/firestore';
  * Training Session
  * A single training conversation with feedback
  */
+export type AgentDomain = 'chat' | 'social' | 'email' | 'voice';
+
 export interface TrainingSession {
   id: string;
   workspaceId?: string;
   goldenMasterId: string;
-  
+
+  // Agent domain — which agent type this session trains
+  agentType?: AgentDomain;
+
   // Session metadata
   topic: string;
   description?: string;
@@ -129,7 +134,10 @@ export interface PromptUpdate {
 export interface GoldenMasterUpdateRequest {
   id: string;
   goldenMasterId: string;
-  
+
+  // Agent domain — which agent type this update targets
+  agentType?: AgentDomain;
+
   // Source training sessions
   sourceSessionIds: string[];
   

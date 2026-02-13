@@ -519,6 +519,27 @@ export interface ApprovalItem {
 }
 
 // =============================================================================
+// Correction Capture (Golden Playbook training signal)
+// =============================================================================
+
+export interface SocialCorrection {
+  id: string;
+  approvalId: string;
+  postId: string;
+  original: string;
+  corrected: string;
+  platform: SocialPlatform;
+  postType?: string;
+  context?: string;
+  flagReason?: string;
+  capturedAt: string;
+  capturedBy: string;
+  analyzed: boolean;
+  analyzedAt?: string;
+  playbackVersion?: string;
+}
+
+// =============================================================================
 // Social Listening (Phase 6)
 // =============================================================================
 
