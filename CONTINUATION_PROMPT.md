@@ -5,7 +5,7 @@
 ## Context
 Repository: https://github.com/StamperDavid/Rapid-Compliance
 Branch: dev
-Last Session: February 13, 2026 (Session 5 — Quick wins + ESLint OOM fix)
+Last Session: February 13, 2026 (Session 6 — Stripe checkout + Social OAuth + website auth fix)
 
 ## Current State
 
@@ -13,7 +13,7 @@ Last Session: February 13, 2026 (Session 5 — Quick wins + ESLint OOM fix)
 - **Single-tenant penthouse model** — org ID `rapid-compliance-root`, Firebase `rapid-compliance-65f87`
 - **52 AI agents** (48 swarm + 4 standalone) with hierarchical orchestration
 - **4-role RBAC** (owner/admin/manager/member) with 47 permissions
-- **168 physical routes**, **244 API endpoints**, **430K+ lines of TypeScript**
+- **173 physical routes**, **265 API endpoints**, **430K+ lines of TypeScript**
 - **Deployed via Vercel** — dev branch → main branch → Vercel auto-deploy
 
 ### Code Health
@@ -53,6 +53,9 @@ Last Session: February 13, 2026 (Session 5 — Quick wins + ESLint OOM fix)
   - Email writer: added `showSuccessToast('Email copied to clipboard!')` on copy action
   - Firestore: added 4 composite indexes for `activities` collection (`type`, `createdBy`, `direction` + `occurredAt`)
 - **ESLint OOM Fix (Session 5):** Created `tsconfig.eslint.json` scoped to `src/` (excludes `.next` 5.3GB build cache + root artifacts). Added `cross-env NODE_OPTIONS=--max-old-space-size=8192` to all lint scripts. Updated `.husky/pre-commit` with 8GB heap. `npm run lint` now completes reliably (~1m42s, zero OOM).
+- **Stripe Checkout Flow Completion (Session 6):** Created `StripeProvider.tsx` with Elements wrapper + dark theme. Rewrote checkout page: 2-step flow (info → Stripe PaymentElement), removes raw card inputs (PCI vulnerability), uses `create-payment-intent` API, `stripe.confirmPayment()`, `/api/checkout/complete`. Enriched success page with real order data + 3DS redirect handling. Created `/store/checkout/cancelled` cart recovery page. Enhanced `payment_intent.succeeded` webhook as order status safety net.
+- **Social Accounts OAuth UI (Session 6):** Added `SocialOAuthState`/`SocialOAuthTokenResult` types. Created `social-oauth-service.ts`: Twitter PKCE flow (code challenge, auth URL, code exchange, profile fetch), LinkedIn OAuth 2.0, AES-256-GCM token encryption. New API routes: `/api/social/oauth/auth/[provider]` (GET), `/api/social/oauth/callback/[provider]` (GET), `/api/social/accounts/verify` (POST). Created `TwitterIntegration.tsx` and `LinkedInIntegration.tsx` components. Added "Social Media" category to integrations settings with deep-link support.
+- **Website Editor & Pages Auth Fix (Session 6):** Fixed 401 Unauthorized on `/website/pages` and `/website/editor` — all fetch calls were missing Firebase auth headers. Added `Authorization: Bearer ${token}` to all 10 fetch calls. Fixed infinite console error loop caused by `toast` in `useCallback` dependency array (replaced with `toastRef` pattern).
 
 ---
 
@@ -274,6 +277,7 @@ SESSION 2: ✅ COMPLETE — Revenue Attribution P0 (2.1) + Twitter Engagement (3
 SESSION 3: ✅ COMPLETE — Revenue Attribution P1 (2.1b analytics/dashboard) + E2E Testing (1.3)
 SESSION 4: ✅ COMPLETE — CI/CD Cleanup (3.4) + deals recommendations auth fix + SSOT updates
 SESSION 5: ✅ COMPLETE — Quick wins (4 TODOs) + ESLint OOM fix (tsconfig.eslint.json + cross-env + 8GB heap)
+SESSION 6: ✅ COMPLETE — Stripe checkout flow completion + Social OAuth UI (Twitter PKCE, LinkedIn) + Website editor/pages 401 auth fix
 
 BLOCKED (external — no code work possible):
   - Meta Developer Portal sandbox application (3.2)
@@ -290,13 +294,15 @@ BLOCKED (external — no code work possible):
 | **LinkedIn** | PARTIAL | Unofficial RapidAPI wrapper + manual task fallback. Needs official API. |
 | **Facebook** | NOT BUILT | No code exists |
 | **Instagram** | NOT BUILT | No code exists |
-| **Stripe** | REAL | Full API — checkout sessions, products, prices, payment links |
+| **Stripe** | REAL | Full API — checkout sessions, PaymentElement (3DS), payment intents, products, prices, payment links, webhooks |
 | **Email (SendGrid/Resend/SMTP)** | REAL | Multiple providers, open/click tracking |
 | **Voice (Twilio/Telnyx)** | REAL | Call initiation, control, conferencing |
 | **TTS (ElevenLabs/Unreal)** | REAL | 20+ premium voices via ElevenLabs |
 | **Video (HeyGen/Sora/Runway)** | CONDITIONAL | Real API calls if keys configured; returns "Coming Soon" otherwise |
 | **Social Engagement (POST)** | REAL | Twitter works, LinkedIn partial |
 | **Social Engagement (REPLY/LIKE/FOLLOW/REPOST)** | REAL (Twitter) | Wired to Twitter API v2: likeTweet, retweet, followUser, reply via postTweet |
+| **Social OAuth (Twitter)** | REAL | PKCE flow — code challenge, auth URL, code exchange, profile fetch, AES-256-GCM token encryption |
+| **Social OAuth (LinkedIn)** | REAL | OAuth 2.0 authorization code flow, token exchange, profile fetch, AES-256-GCM token encryption |
 | **Firebase** | REAL | Auth + Firestore, single-tenant `rapid-compliance-65f87` |
 | **OpenRouter** | REAL | AI gateway, 100+ models |
 
@@ -323,7 +329,9 @@ BLOCKED (external — no code work possible):
 | ~~Activities missing Firestore indexes~~ | **FIXED** — 4 composite indexes added to `firestore.indexes.json` |
 | Render pipeline mocked | `render-pipeline.ts` returns fake responses for video |
 | Asset Generator is a shell | Returns placeholder URLs, no actual image generation |
-| Social accounts UI is mock | Hardcoded connected/disconnected status, no real OAuth |
+| ~~Social accounts UI is mock~~ | **FIXED** — Real OAuth flows for Twitter (PKCE) and LinkedIn, AES-256-GCM token encryption, verify endpoint, manual credential fallback |
+| ~~Website editor/pages 401~~ | **FIXED** — All fetch calls now include Firebase auth headers. Infinite error loop resolved (toastRef pattern) |
+| ~~Stripe checkout incomplete~~ | **FIXED** — Full PaymentElement flow with 3DS, cart recovery page, enriched success page |
 | ~35 TODO comments remaining | Reduced from ~65; quick-win TODOs addressed, larger feature TODOs remain |
 
 ---
@@ -332,11 +340,11 @@ BLOCKED (external — no code work possible):
 
 These are the remaining buildable items, ordered by impact:
 
-### High Priority
-| Task | What Needs Building |
-|------|---------------------|
-| **E-commerce** | Stripe checkout flow completion — checkout exists but is incomplete |
-| **Social Accounts UI** | Real OAuth flows replacing hardcoded mock connected/disconnected status |
+### Completed (Session 6)
+| Task | Status |
+|------|--------|
+| ~~**E-commerce**~~ | **DONE** — Full Stripe PaymentElement checkout with 3DS, cart recovery, enriched success page |
+| ~~**Social Accounts UI**~~ | **DONE** — Real OAuth for Twitter (PKCE) + LinkedIn, token encryption, verify, manual credential fallback |
 
 ### Medium Priority
 | Task | What Needs Building |
@@ -392,3 +400,12 @@ These are the remaining buildable items, ordered by impact:
 | `src/lib/notifications/signal-handlers.ts` | Notification signal dispatch — 18 handlers wired to SignalCoordinator |
 | `firestore.indexes.json` | Firestore composite indexes (25 indexes including activities) |
 | `vercel.json` | 7 cron entries for autonomous operations |
+| `src/components/StripeProvider.tsx` | **NEW** — Stripe Elements wrapper with loadStripe + dark theme |
+| `src/lib/social/social-oauth-service.ts` | **NEW** — Twitter PKCE + LinkedIn OAuth 2.0 flows, AES-256-GCM token encryption |
+| `src/lib/social/social-oauth-schemas.ts` | **NEW** — Zod schemas for OAuth providers, callbacks, manual credentials |
+| `src/app/api/social/oauth/auth/[provider]/route.ts` | **NEW** — OAuth initiation (Twitter PKCE, LinkedIn) |
+| `src/app/api/social/oauth/callback/[provider]/route.ts` | **NEW** — OAuth callback handler with token exchange |
+| `src/app/api/social/accounts/verify/route.ts` | **NEW** — Social account connection verification |
+| `src/components/integrations/TwitterIntegration.tsx` | **NEW** — Twitter OAuth + manual credential UI |
+| `src/components/integrations/LinkedInIntegration.tsx` | **NEW** — LinkedIn OAuth + manual credential UI |
+| `src/app/store/checkout/cancelled/page.tsx` | **NEW** — Cart recovery page for cancelled checkouts |

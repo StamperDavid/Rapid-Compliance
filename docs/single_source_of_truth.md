@@ -1,7 +1,7 @@
 # SalesVelocity.ai - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** February 13, 2026 (Session 5: Quick wins — signal bus wiring, playbook user context, email toast, Firestore indexes + ESLint OOM fix)
+**Last Updated:** February 13, 2026 (Session 6: Stripe checkout completion, social OAuth UI, website editor/pages 401 auth fix)
 **Branches:** `dev` (latest)
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Architecture:** Single-Tenant (Penthouse Model) - NOT a SaaS platform
@@ -35,8 +35,8 @@
 
 | Metric | Count | Status |
 |--------|-------|--------|
-| Physical Routes (page.tsx) | 168 | Verified February 13, 2026 (added /analytics/attribution) |
-| API Endpoints (route.ts) | 244 | Verified February 13, 2026 (added /api/analytics/attribution) |
+| Physical Routes (page.tsx) | 173 | Verified February 13, 2026 (added /store/checkout/cancelled, social OAuth routes) |
+| API Endpoints (route.ts) | 265 | Verified February 13, 2026 (added social OAuth auth/callback, accounts verify) |
 | AI Agents | 52 | **52 FUNCTIONAL (48 swarm + 4 standalone)** |
 | RBAC Roles | 4 | `owner` (level 3), `admin` (level 2), `manager` (level 1), `member` (level 0) — 4-role RBAC |
 | Firestore Collections | 67+ | Active (sagaState, eventLog collections; 25 composite indexes) |
@@ -126,6 +126,15 @@ The Claude Code Governance Layer defines binding operational constraints for AI-
 - Full lint completes in ~1m42s with zero OOM
 
 ### Recent Major Milestones (February 2026)
+
+#### Stripe Checkout + Social OAuth + Website Auth Fix (Session 6)
+**Status:** ✅ **COMPLETE** (February 13, 2026)
+
+**Part 1 — Stripe Checkout Flow Completion:** Created `StripeProvider.tsx` with Elements wrapper and dark theme. Rewrote checkout page with 2-step flow (info → Stripe PaymentElement), removing raw card inputs (PCI vulnerability). Uses `create-payment-intent` API, confirms via `stripe.confirmPayment()`, calls `/api/checkout/complete`. Enriched success page with real order data and Stripe 3DS redirect handling. Created `/store/checkout/cancelled` cart recovery page. Enhanced `payment_intent.succeeded` webhook as order status safety net.
+
+**Part 2 — Social Accounts OAuth UI:** Added `SocialOAuthState` and `SocialOAuthTokenResult` types. Created `social-oauth-service.ts` with Twitter PKCE flow (code challenge, auth URL, code exchange, profile fetch), LinkedIn OAuth 2.0 flow, and AES-256-GCM token encryption. New API routes: `/api/social/oauth/auth/[provider]` (GET), `/api/social/oauth/callback/[provider]` (GET), `/api/social/accounts/verify` (POST). Created `TwitterIntegration.tsx` and `LinkedInIntegration.tsx` components with OAuth + manual credential entry. Added "Social Media" category to integrations settings page with deep-link support.
+
+**Part 3 — Website Editor & Pages Auth Fix:** Fixed 401 Unauthorized on `/website/pages` and `/website/editor` — all fetch calls were missing Firebase auth token headers. Added `Authorization: Bearer ${token}` to all 10 fetch calls across both pages. Fixed infinite console error loop caused by `toast` in `useCallback` dependency array (replaced with `toastRef` pattern).
 
 #### Quick Wins + ESLint OOM Fix (Session 5)
 **Status:** ✅ **COMPLETE** (February 13, 2026)
@@ -218,6 +227,7 @@ TenantMemoryVault refactored to enforce single-tenant model (Rule 1 compliance):
 | ~~**Social engagement stubs**~~ | ~~REPLY/LIKE/FOLLOW/REPOST actions return fake success.~~ **RESOLVED** — Wired to real Twitter API v2 (likeTweet, retweet, followUser, postTweet with replyToTweetId). Non-Twitter platforms pending. | ~~MEDIUM~~ |
 | **Facebook/Instagram** | No implementation exists. Type definitions only. Requires Meta Developer sandbox + app review. | MEDIUM |
 | **LinkedIn unofficial** | Uses RapidAPI (unofficial, ToS violation risk). Falls back to manual task creation. Needs official API. | MEDIUM |
+| ~~**Social accounts mock UI**~~ | ~~Hardcoded connected/disconnected status, no real OAuth.~~ **RESOLVED** — Real OAuth flows for Twitter (PKCE) and LinkedIn, token encryption, verify endpoint, manual credential fallback | ~~MEDIUM~~ |
 | **~40 TODO comments** | Auth context TODOs reduced; 27 alert/confirm/prompt calls replaced with proper UI components | MEDIUM |
 | ~~**Node version mismatch**~~ | ~~CI workflows use Node 18.~~ **RESOLVED** — Updated to Node 20, actions v4, Vercel deploy step implemented | ~~LOW~~ |
 
@@ -232,7 +242,7 @@ TenantMemoryVault refactored to enforce single-tenant model (Rule 1 compliance):
 | Video render pipeline | `render-pipeline.ts` returns fake responses; real integrations gated by API keys |
 | Asset Generator | Returns placeholder URLs, no actual image generation |
 
-Previously stubbed items now resolved: Voice AI (ElevenLabs/Unreal), Video generation (HeyGen/Sora/Runway conditional), Email reply processing (SendGrid Inbound Parse), PDF proposal generation (Playwright), ML lead scoring (logistic regression), `/api/coaching/team` (Firestore query).
+Previously stubbed items now resolved: Voice AI (ElevenLabs/Unreal), Video generation (HeyGen/Sora/Runway conditional), Email reply processing (SendGrid Inbound Parse), PDF proposal generation (Playwright), ML lead scoring (logistic regression), `/api/coaching/team` (Firestore query), Social accounts OAuth (Twitter PKCE + LinkedIn OAuth 2.0), Stripe checkout (PaymentElement + 3DS).
 
 ---
 
@@ -694,11 +704,11 @@ Legacy workspace URLs are automatically redirected:
 | Dashboard (`/(dashboard)/*`) | 124 | 8 | **Flattened** single-tenant (incl. former admin routes + social pages) |
 | Public (`/(public)/*`) | 16 | 0 | All pages exist |
 | Dashboard sub-routes (`/dashboard/*`) | 16 | 0 | Analytics, coaching, marketing, performance |
-| Store (`/store/*`) | 5 | 1 (`[productId]`) | E-commerce storefront |
+| Store (`/store/*`) | 6 | 1 (`[productId]`) | E-commerce storefront (added `/store/checkout/cancelled`) |
 | Onboarding (`/onboarding/*`) | 2 | 0 | Account + industry setup |
 | Auth (`/(auth)/*`) | 1 | 0 | Admin login |
 | Other (`/preview`, `/profile`, `/sites`) | 3 | 2 | Preview tokens, user profile, site builder |
-| **TOTAL** | **167** | **11** | **Verified February 13, 2026** |
+| **TOTAL** | **173** | **11** | **Verified February 13, 2026** |
 
 **DELETED:** `src/app/workspace/[orgId]/*` (95 pages) and `src/app/admin/*` (92 pages) - multi-tenant and standalone admin routes removed/consolidated into `(dashboard)`
 
@@ -1607,7 +1617,7 @@ This script:
 | Risk | 1 | `/api/risk/*` | Functional |
 | Schemas | 6 | `/api/schema*/*` | Functional |
 | Settings | 1 | `/api/settings/webhooks` | Functional (NEW Feb 12) |
-| Social | 12 | `/api/social/*` | Functional (EXPANDED Feb 13 — added agent-status, activity) |
+| Social | 15 | `/api/social/*` | Functional (EXPANDED Feb 13 — added agent-status, activity, OAuth auth/callback, accounts verify) |
 | Team | 1 | `/api/team/tasks/[taskId]` | Functional (NEW Feb 12) |
 | Other | ~125 | Various | Mixed |
 
@@ -1655,6 +1665,9 @@ This script:
 | `/api/social/agent-status` | GET/POST | Agent status dashboard + kill switch toggle | FUNCTIONAL (NEW Feb 13) |
 | `/api/social/activity` | GET | Chronological activity feed from posts/approvals/queue | FUNCTIONAL (NEW Feb 13) |
 | `/api/social/posts` | GET/POST/PUT/DELETE | Social post CRUD | FUNCTIONAL (existing) |
+| `/api/social/oauth/auth/[provider]` | GET | Initiate OAuth flow (Twitter PKCE, LinkedIn OAuth 2.0) | FUNCTIONAL (NEW Session 6) |
+| `/api/social/oauth/callback/[provider]` | GET | OAuth callback handler with token exchange + encryption | FUNCTIONAL (NEW Session 6) |
+| `/api/social/accounts/verify` | POST | Verify social account connection status | FUNCTIONAL (NEW Session 6) |
 
 ### API Implementation Notes
 
@@ -2029,7 +2042,7 @@ console.info(`Cleaned ${totalCleaned} stale E2E documents`);
 | **LinkedIn** | **PARTIAL** | Unofficial RapidAPI wrapper (ToS risk) + manual task fallback. Needs official Marketing Developer Platform API. |
 | **Facebook** | **NOT BUILT** | No code exists. Requires Meta Developer sandbox + app review. |
 | **Instagram** | **NOT BUILT** | No code exists. Requires Meta Developer sandbox + app review. |
-| **Stripe** | **REAL** | Full API — `checkout.sessions.create()`, `products.create()`, `prices.create()`, `paymentLinks.create()`. Production-ready. |
+| **Stripe** | **REAL** | Full API — `checkout.sessions.create()`, `products.create()`, `prices.create()`, `paymentLinks.create()`, PaymentElement checkout (3DS), payment intents, webhook `payment_intent.succeeded`. Production-ready. |
 | **Email (SendGrid)** | **REAL** | Primary provider. `@sendgrid/mail` SDK, tracking pixels, click tracking. |
 | **Email (Resend)** | **REAL** | Alternative provider. Direct API at `api.resend.com`. |
 | **Email (SMTP)** | **REAL** | Server-side via `/api/email/send-smtp`. |
@@ -2045,6 +2058,8 @@ console.info(`Cleaned ${totalCleaned} stale E2E documents`);
 | **Slack OAuth** | **REAL** | Channel notifications. |
 | **Social Engagement (POST)** | **REAL** | Twitter works, LinkedIn partial. |
 | **Social Engagement (REPLY/LIKE/FOLLOW/REPOST)** | **REAL (Twitter)** | Wired to Twitter API v2: likeTweet, retweet, followUser, postTweet w/ replyToTweetId. Non-Twitter platforms pending. |
+| **Social OAuth (Twitter)** | **REAL** | PKCE flow with code challenge, auth URL generation, code exchange, profile fetch. AES-256-GCM token encryption. |
+| **Social OAuth (LinkedIn)** | **REAL** | OAuth 2.0 authorization code flow, token exchange, profile fetch. AES-256-GCM token encryption. |
 
 ### Planned Integrations (NOT STARTED)
 
