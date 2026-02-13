@@ -222,12 +222,48 @@ async function processStripeEvent(event: StripeWebhookEvent): Promise<void> {
 
     case 'payment_intent.succeeded': {
       const paymentIntent = event.data.object;
+      const piId = String(paymentIntent.id ?? '');
       logger.info('Payment intent succeeded', {
         route: '/api/webhooks/stripe',
-        paymentIntentId: String(paymentIntent.id ?? ''),
+        paymentIntentId: piId,
         amount: typeof paymentIntent.amount === 'number' ? paymentIntent.amount : 0,
         currency: String(paymentIntent.currency ?? ''),
       });
+
+      // Safety net: update order status if client-side completion failed
+      if (piId) {
+        try {
+          const { where, limit } = await import('firebase/firestore');
+          const workspacePath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/default/orders`;
+          const matchingOrders = await FirestoreService.getAll<Record<string, unknown>>(
+            workspacePath,
+            [where('paymentIntentId', '==', piId), limit(1)]
+          );
+
+          if (matchingOrders.length > 0) {
+            const existingOrder = matchingOrders[0];
+            const existingOrderId = String(existingOrder?.id ?? '');
+            const existingStatus = String(existingOrder?.status ?? '');
+            if (existingOrderId && existingStatus !== 'processing' && existingStatus !== 'completed') {
+              await FirestoreService.update(workspacePath, existingOrderId, {
+                status: 'processing',
+                paymentStatus: 'captured',
+                webhookUpdatedAt: new Date().toISOString(),
+              });
+              logger.info('Order status updated via webhook safety net', {
+                route: '/api/webhooks/stripe',
+                orderId: existingOrderId,
+                paymentIntentId: piId,
+              });
+            }
+          }
+        } catch (orderError) {
+          logger.warn('Webhook: failed to update order status (non-fatal)', {
+            error: orderError instanceof Error ? orderError.message : 'Unknown',
+            paymentIntentId: piId,
+          });
+        }
+      }
       break;
     }
 

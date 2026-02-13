@@ -137,7 +137,7 @@ export async function POST(request: NextRequest) {
       line_items: lineItems,
       mode: 'payment',
       success_url: `${process.env.NEXT_PUBLIC_APP_URL}/store/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/store/cart`,
+      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/store/checkout/cancelled`,
       customer_email: customerInfo.email,
       metadata: {
         orderId,

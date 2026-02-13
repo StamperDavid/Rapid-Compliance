@@ -17,16 +17,43 @@ import OutlookCalendarIntegration from '@/components/integrations/OutlookCalenda
 import SlackIntegration from '@/components/integrations/SlackIntegration';
 import TeamsIntegration from '@/components/integrations/TeamsIntegration';
 import ZapierIntegration from '@/components/integrations/ZapierIntegration';
+import TwitterIntegration from '@/components/integrations/TwitterIntegration';
+import LinkedInIntegration from '@/components/integrations/LinkedInIntegration';
 import type { ConnectedIntegration } from '@/types/integrations';
 import { STANDARD_SCHEMAS } from '@/lib/schema/standard-schemas'
-import { logger } from '@/lib/logger/logger';;
+import { logger } from '@/lib/logger/logger';
+import toast from 'react-hot-toast';
+import { useSearchParams } from 'next/navigation';
 
 export default function IntegrationsPage() {
   const { user } = useAuth();
   const { theme } = useOrgTheme();
-  const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const searchParams = useSearchParams();
+  const [activeCategory, setActiveCategory] = useState<string | null>(
+    searchParams.get('category') ?? null
+  );
   const [integrations, setIntegrations] = useState<Record<string, ConnectedIntegration | null>>({});
   const [sidebarOpen, setSidebarOpen] = useState(true);
+
+  // Handle success/error URL params from OAuth callbacks
+  React.useEffect(() => {
+    const success = searchParams.get('success');
+    const error = searchParams.get('error');
+
+    if (success) {
+      const providerName = success.charAt(0).toUpperCase() + success.slice(1);
+      toast.success(`${providerName} connected successfully!`);
+    }
+    if (error) {
+      const messages: Record<string, string> = {
+        state_expired: 'OAuth session expired. Please try again.',
+        callback_failed: 'Failed to complete connection. Please try again.',
+        invalid_provider: 'Invalid provider specified.',
+        invalid_callback: 'Invalid callback parameters.',
+      };
+      toast.error(messages[error] ?? 'Connection failed. Please try again.');
+    }
+  }, [searchParams]);
 
   React.useEffect(() => {
 
@@ -173,6 +200,15 @@ export default function IntegrationsPage() {
       integrations: [
         { id: 'slack', component: SlackIntegration },
         { id: 'teams', component: TeamsIntegration },
+      ],
+    },
+    {
+      id: 'social',
+      name: 'Social Media',
+      icon: '📱',
+      integrations: [
+        { id: 'twitter', component: TwitterIntegration },
+        { id: 'linkedin', component: LinkedInIntegration },
       ],
     },
     {

@@ -9,6 +9,7 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
 import { useUnifiedAuth } from '@/hooks/useUnifiedAuth';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -324,6 +325,20 @@ export default function CommandCenterPage() {
           </p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <Link
+            href="/settings/integrations?category=social"
+            style={{
+              padding: '0.375rem 0.75rem',
+              borderRadius: '0.375rem',
+              border: '1px solid var(--color-border-light)',
+              backgroundColor: 'var(--color-bg-paper)',
+              color: 'var(--color-text-secondary)',
+              fontSize: '0.75rem',
+              textDecoration: 'none',
+            }}
+          >
+            Manage Accounts
+          </Link>
           <span style={{ fontSize: '0.6875rem', color: 'var(--color-text-disabled)' }}>
             Updated {formatTime(lastRefresh.toISOString())}
           </span>
@@ -581,7 +596,13 @@ export default function CommandCenterPage() {
           </h2>
           {status.platformStatus.length === 0 ? (
             <div style={{ padding: '1.5rem', textAlign: 'center', color: 'var(--color-text-disabled)', fontSize: '0.8125rem' }}>
-              No accounts connected. Add accounts in Settings.
+              No accounts connected.{' '}
+              <Link
+                href="/settings/integrations?category=social"
+                style={{ color: 'var(--color-primary)', textDecoration: 'underline' }}
+              >
+                Add accounts in Settings
+              </Link>
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>

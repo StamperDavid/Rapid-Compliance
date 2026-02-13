@@ -577,3 +577,22 @@ export interface ListeningConfig {
   enabledPlatforms: SocialPlatform[];
   updatedAt?: string;
 }
+
+// =============================================================================
+// OAuth Flow Types
+// =============================================================================
+
+export interface SocialOAuthState {
+  userId: string;
+  provider: SocialPlatform;
+  codeVerifier?: string;
+  createdAt: string;
+  expiresAt: string;
+}
+
+export interface SocialOAuthTokenResult {
+  accessToken: string;
+  refreshToken?: string;
+  tokenExpiresAt?: string;
+  scope?: string;
+}
