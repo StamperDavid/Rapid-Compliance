@@ -320,13 +320,13 @@ export class AutonomousPostingAgent {
         result = await this.executeReplyAction(actionId, action);
         break;
       case 'LIKE':
-        result = this.executeLikeAction(actionId, action);
+        result = await this.executeLikeAction(actionId, action);
         break;
       case 'FOLLOW':
-        result = this.executeFollowAction(actionId, action);
+        result = await this.executeFollowAction(actionId, action);
         break;
       case 'REPOST':
-        result = this.executeRepostAction(actionId, action);
+        result = await this.executeRepostAction(actionId, action);
         break;
       case 'RECYCLE':
         result = await this.executeRecycleAction(actionId, action);
@@ -379,6 +379,14 @@ export class AutonomousPostingAgent {
       rateLimited: result.rateLimited,
       nextRetryAt: result.nextRetryAt,
     };
+  }
+
+  /**
+   * Get or create Twitter service instance
+   */
+  private async getTwitterService(): Promise<TwitterService | null> {
+    this.twitterService ??= await createTwitterService();
+    return this.twitterService;
   }
 
   /**
@@ -457,25 +465,54 @@ export class AutonomousPostingAgent {
       targetPostId: action.targetPostId,
     });
 
-    // TODO: Implement actual reply API call when platform reply service is ready
-    // For now, log the intended action
+    // Wire real platform API calls
+    if (action.platform === 'twitter') {
+      const service = await this.getTwitterService();
+      if (!service) {
+        return {
+          success: false,
+          actionType: 'REPLY',
+          platform: action.platform,
+          actionId,
+          error: 'Twitter service not configured',
+        };
+      }
+
+      const result = await service.postTweet({
+        text: action.content,
+        replyToTweetId: action.targetPostId,
+      });
+
+      return {
+        success: result.success,
+        actionType: 'REPLY',
+        platform: action.platform,
+        actionId,
+        platformActionId: result.tweetId,
+        executedAt: result.success ? new Date() : undefined,
+        error: result.error,
+        rateLimited: result.rateLimitRemaining === 0,
+        nextRetryAt: result.rateLimitReset,
+      };
+    }
+
+    // Non-Twitter platforms: still pending implementation
     return {
-      success: true,
+      success: false,
       actionType: 'REPLY',
       platform: action.platform,
       actionId,
-      platformActionId: `${action.platform}-reply-${Date.now()}`,
-      executedAt: new Date(),
+      error: `Reply not yet supported for platform: ${action.platform}`,
     };
   }
 
   /**
    * Execute LIKE action
    */
-  private executeLikeAction(
+  private async executeLikeAction(
     actionId: string,
     action: EngagementAction
-  ): EngagementActionResult {
+  ): Promise<EngagementActionResult> {
     if (!action.targetPostId) {
       return {
         success: false,
@@ -492,24 +529,46 @@ export class AutonomousPostingAgent {
       targetPostId: action.targetPostId,
     });
 
-    // TODO: Implement actual like API call when platform like service is ready
+    if (action.platform === 'twitter') {
+      const service = await this.getTwitterService();
+      if (!service) {
+        return {
+          success: false,
+          actionType: 'LIKE',
+          platform: action.platform,
+          actionId,
+          error: 'Twitter service not configured',
+        };
+      }
+
+      const result = await service.likeTweet(action.targetPostId);
+      return {
+        success: result.success,
+        actionType: 'LIKE',
+        platform: action.platform,
+        actionId,
+        platformActionId: result.success ? `twitter-like-${action.targetPostId}` : undefined,
+        executedAt: result.success ? new Date() : undefined,
+        error: result.error,
+      };
+    }
+
     return {
-      success: true,
+      success: false,
       actionType: 'LIKE',
       platform: action.platform,
       actionId,
-      platformActionId: `${action.platform}-like-${Date.now()}`,
-      executedAt: new Date(),
+      error: `Like not yet supported for platform: ${action.platform}`,
     };
   }
 
   /**
    * Execute FOLLOW action
    */
-  private executeFollowAction(
+  private async executeFollowAction(
     actionId: string,
     action: EngagementAction
-  ): EngagementActionResult {
+  ): Promise<EngagementActionResult> {
     if (!action.targetAccountId) {
       return {
         success: false,
@@ -526,24 +585,46 @@ export class AutonomousPostingAgent {
       targetAccountId: action.targetAccountId,
     });
 
-    // TODO: Implement actual follow API call when platform follow service is ready
+    if (action.platform === 'twitter') {
+      const service = await this.getTwitterService();
+      if (!service) {
+        return {
+          success: false,
+          actionType: 'FOLLOW',
+          platform: action.platform,
+          actionId,
+          error: 'Twitter service not configured',
+        };
+      }
+
+      const result = await service.followUser(action.targetAccountId);
+      return {
+        success: result.success,
+        actionType: 'FOLLOW',
+        platform: action.platform,
+        actionId,
+        platformActionId: result.success ? `twitter-follow-${action.targetAccountId}` : undefined,
+        executedAt: result.success ? new Date() : undefined,
+        error: result.error,
+      };
+    }
+
     return {
-      success: true,
+      success: false,
       actionType: 'FOLLOW',
       platform: action.platform,
       actionId,
-      platformActionId: `${action.platform}-follow-${Date.now()}`,
-      executedAt: new Date(),
+      error: `Follow not yet supported for platform: ${action.platform}`,
     };
   }
 
   /**
    * Execute REPOST action (retweet / LinkedIn share)
    */
-  private executeRepostAction(
+  private async executeRepostAction(
     actionId: string,
     action: EngagementAction
-  ): EngagementActionResult {
+  ): Promise<EngagementActionResult> {
     if (!action.targetPostId) {
       return {
         success: false,
@@ -560,14 +641,36 @@ export class AutonomousPostingAgent {
       targetPostId: action.targetPostId,
     });
 
-    // TODO: Implement actual repost API call when platform repost service is ready
+    if (action.platform === 'twitter') {
+      const service = await this.getTwitterService();
+      if (!service) {
+        return {
+          success: false,
+          actionType: 'REPOST',
+          platform: action.platform,
+          actionId,
+          error: 'Twitter service not configured',
+        };
+      }
+
+      const result = await service.retweet(action.targetPostId);
+      return {
+        success: result.success,
+        actionType: 'REPOST',
+        platform: action.platform,
+        actionId,
+        platformActionId: result.success ? `twitter-retweet-${action.targetPostId}` : undefined,
+        executedAt: result.success ? new Date() : undefined,
+        error: result.error,
+      };
+    }
+
     return {
-      success: true,
+      success: false,
       actionType: 'REPOST',
       platform: action.platform,
       actionId,
-      platformActionId: `${action.platform}-repost-${Date.now()}`,
-      executedAt: new Date(),
+      error: `Repost not yet supported for platform: ${action.platform}`,
     };
   }
 
@@ -803,10 +906,12 @@ export class AutonomousPostingAgent {
       };
     }
 
+    // Attribution: Auto-append UTM parameters to URLs in content
+    let tweetContent = this.appendUtmToLinks(content, 'twitter', postId);
+
     // Truncate content for Twitter's 280 character limit
-    let tweetContent = content;
     if (tweetContent.length > 280) {
-      tweetContent = `${tweetContent.substring(0, 277)  }...`;
+      tweetContent = `${tweetContent.substring(0, 277)}...`;
     }
 
     const result = await service.postTweet({
@@ -836,6 +941,34 @@ export class AutonomousPostingAgent {
   }
 
   /**
+   * Append UTM tracking parameters to all URLs in content
+   */
+  private appendUtmToLinks(content: string, platform: string, postId: string): string {
+    // Match URLs in content (http:// or https://)
+    const urlRegex = /(https?:\/\/[^\s)]+)/g;
+    return content.replace(urlRegex, (url) => {
+      try {
+        const parsed = new URL(url);
+        // Don't add UTM to social media platform URLs
+        const socialDomains = ['twitter.com', 'x.com', 'linkedin.com', 'facebook.com', 'instagram.com'];
+        if (socialDomains.some((d) => parsed.hostname.includes(d))) {
+          return url;
+        }
+        // Only add UTM if not already present
+        if (!parsed.searchParams.has('utm_source')) {
+          parsed.searchParams.set('utm_source', 'social');
+          parsed.searchParams.set('utm_medium', platform);
+          parsed.searchParams.set('utm_campaign', `post_${postId}`);
+        }
+        return parsed.toString();
+      } catch {
+        // If URL parsing fails, return as-is
+        return url;
+      }
+    });
+  }
+
+  /**
    * Post to LinkedIn
    * Note: LinkedIn's official API is restricted; using RapidAPI or manual fallback
    */
@@ -847,6 +980,9 @@ export class AutonomousPostingAgent {
     // LinkedIn posting typically requires posting as a status update
     // Since we're using RapidAPI for messaging, we'll adapt for posting
     // For now, create a manual task or use RapidAPI if available
+
+    // Attribution: Auto-append UTM parameters to URLs
+    const linkedInContent = this.appendUtmToLinks(content, 'linkedin', postId);
 
     try {
       // Get organization's API keys to check for RapidAPI and LinkedIn config
@@ -869,7 +1005,7 @@ export class AutonomousPostingAgent {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            text: content,
+            text: linkedInContent,
             visibility: 'PUBLIC',
           }),
         });
@@ -898,7 +1034,7 @@ export class AutonomousPostingAgent {
       }
 
       // Fallback: Create manual task for LinkedIn posting
-      await this.createManualPostTask('linkedin', content);
+      await this.createManualPostTask('linkedin', linkedInContent);
 
       return {
         success: true, // Task created successfully

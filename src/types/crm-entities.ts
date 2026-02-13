@@ -304,6 +304,7 @@ export interface Deal {
   // Ownership & attribution
   ownerId?: string;
   source?: string;
+  leadId?: string;
 
   // Closure details
   lostReason?: string;
@@ -389,6 +390,13 @@ export interface Lead {
   score?: number; // 0-100 lead score
   source?: string;
   ownerId?: string;
+
+  // Attribution tracking
+  formId?: string;
+  formSubmissionId?: string;
+  utmSource?: string;
+  utmMedium?: string;
+  utmCampaign?: string;
 
   // Categorization
   tags?: string[];

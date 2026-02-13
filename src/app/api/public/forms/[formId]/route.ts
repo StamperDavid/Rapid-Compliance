@@ -387,6 +387,65 @@ export async function POST(
       submissionCount: increment(1),
     });
 
+    // Attribution: Auto-create lead from form submission if email is present
+    const emailField = fieldResponses.find(
+      (r) => r.fieldType === 'email' || r.fieldName === 'email'
+    );
+    if (emailField?.value && typeof emailField.value === 'string') {
+      try {
+        const { createLead } = await import('@/lib/crm/lead-service');
+        const firstNameField = fieldResponses.find(
+          (r) => r.fieldName === 'firstName' || r.fieldName === 'first_name' || r.fieldName === 'name'
+        );
+        const lastNameField = fieldResponses.find(
+          (r) => r.fieldName === 'lastName' || r.fieldName === 'last_name'
+        );
+        const companyField = fieldResponses.find(
+          (r) => r.fieldName === 'company' || r.fieldName === 'companyName'
+        );
+        const phoneField = fieldResponses.find(
+          (r) => r.fieldType === 'phone' || r.fieldName === 'phone'
+        );
+
+        const utmSource = (metadata?.utmSource as string | undefined) ?? undefined;
+        const utmMedium = (metadata?.utmMedium as string | undefined) ?? undefined;
+        const utmCampaign = (metadata?.utmCampaign as string | undefined) ?? undefined;
+        const sourceValue = utmSource
+          ? `${utmSource}${utmMedium ? `/${utmMedium}` : ''}`
+          : (metadata?.source as string | undefined) ?? 'form';
+
+        await createLead(
+          {
+            firstName: (firstNameField?.value as string) ?? 'Unknown',
+            lastName: (lastNameField?.value as string) ?? '',
+            email: emailField.value,
+            phone: (phoneField?.value as string) ?? undefined,
+            company: (companyField?.value as string) ?? undefined,
+            status: 'new',
+            source: sourceValue,
+            formId,
+            formSubmissionId: submissionDoc.id,
+            utmSource,
+            utmMedium,
+            utmCampaign,
+          },
+          'default',
+          { autoEnrich: true }
+        );
+        logger.info('Lead auto-created from form submission', {
+          formId,
+          submissionId: submissionDoc.id,
+          source: sourceValue,
+        });
+      } catch (leadError) {
+        // Don't fail form submission if lead creation fails
+        logger.warn('Failed to auto-create lead from form submission', {
+          formId,
+          error: leadError instanceof Error ? leadError.message : String(leadError),
+        });
+      }
+    }
+
     return NextResponse.json({
       success: true,
       submissionId: submissionDoc.id,

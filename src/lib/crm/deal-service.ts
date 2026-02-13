@@ -17,6 +17,7 @@ export interface Deal {
   company?: string;
   companyName?: string;
   contactId?: string;
+  leadId?: string;
   value: number;
   currency?: string;
   stage: 'prospecting' | 'qualification' | 'proposal' | 'negotiation' | 'closed_won' | 'closed_lost';
@@ -211,6 +212,54 @@ export async function updateDeal(
 }
 
 /**
+ * Create a deal from lead data (inherits attribution).
+ * Accepts lead fields directly to avoid importing lead-service (which
+ * pulls in firebase-admin and breaks client-side webpack builds).
+ */
+export async function createDealFromLead(
+  leadId: string,
+  leadAttribution: {
+    firstName?: string;
+    lastName?: string;
+    company?: string;
+    source?: string;
+    ownerId?: string;
+  },
+  dealData: Partial<Omit<Deal, 'id' | 'workspaceId' | 'createdAt'>>,
+  workspaceId: string = 'default'
+): Promise<Deal> {
+  try {
+    const deal = await createDeal(
+      {
+        name: dealData.name ?? `${leadAttribution.firstName ?? ''} ${leadAttribution.lastName ?? ''} - Deal`.trim(),
+        company: dealData.company ?? leadAttribution.company,
+        contactId: dealData.contactId,
+        leadId,
+        value: dealData.value ?? 0,
+        stage: dealData.stage ?? 'prospecting',
+        probability: dealData.probability ?? 10,
+        source: dealData.source ?? leadAttribution.source,
+        ownerId: dealData.ownerId ?? leadAttribution.ownerId,
+        ...dealData,
+      },
+      workspaceId
+    );
+
+    logger.info('Deal created from lead', {
+      dealId: deal.id,
+      leadId,
+      source: deal.source,
+    });
+
+    return deal;
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    logger.error('Failed to create deal from lead', error instanceof Error ? error : new Error(String(error)), { leadId });
+    throw new Error(`Failed to create deal from lead: ${errorMessage}`);
+  }
+}
+
+/**
  * Move deal to next stage
  */
 export async function moveDealToStage(
@@ -380,7 +429,7 @@ async function emitDealSignal(params: {
 
     await coordinator.emitSignal({
       type,
-      leadId: deal.contactId, // Link to contact if available
+      leadId: deal.leadId ?? deal.contactId, // Link to lead or contact
       workspaceId,
       confidence: 1.0, // CRM events are always certain
       priority,

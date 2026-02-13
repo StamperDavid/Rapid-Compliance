@@ -824,7 +824,16 @@ export interface Order {
   
   // Source
   source: 'web' | 'mobile' | 'pos' | 'api' | 'admin';
-  
+
+  // Attribution tracking
+  dealId?: string;
+  leadId?: string;
+  formId?: string;
+  attributionSource?: string;
+  utmSource?: string;
+  utmMedium?: string;
+  utmCampaign?: string;
+
   // Tags
   tags?: string[];
 }

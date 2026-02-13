@@ -5,7 +5,7 @@
 ## Context
 Repository: https://github.com/StamperDavid/Rapid-Compliance
 Branch: dev
-Last Session: February 13, 2026 (Session 1 complete — Tier 1.1 + 1.2 implemented)
+Last Session: February 13, 2026 (Session 2 complete — Revenue Attribution P0 (2.1) + Twitter Engagement (3.1))
 
 ## Current State
 
@@ -37,6 +37,8 @@ Last Session: February 13, 2026 (Session 1 complete — Tier 1.1 + 1.2 implement
 - CSS variable theme system, SalesVelocity.ai rebrand, single-tenant conversion
 - **Saga State Persistence (Tier 1.1)** — Firestore-backed checkpoint/resume for all sagas, event deduplication, event replay, cron-triggered saga resume
 - **Global Kill Switch (Tier 1.2)** — Swarm-wide pause/resume, per-manager toggles, guards on EventRouter + MasterOrchestrator + SignalBus + BaseManager, Command Center UI controls, `/api/orchestrator/swarm-control` API
+- **Revenue Attribution P0 (Tier 2.1)** — Full UTM→Lead→Deal→Order→Stripe chain wired. Attribution fields added to Lead (formId, formSubmissionId, utmSource/Medium/Campaign), Deal (leadId), Order (dealId, leadId, formId, attributionSource, utmSource/Medium/Campaign). Auto-lead creation from form submissions. Deal source inheritance from lead. Stripe metadata attribution. Auto UTM on social post links.
+- **Twitter Engagement (Tier 3.1)** — REPLY/LIKE/FOLLOW/REPOST wired to real Twitter API v2. 7 new methods in TwitterService (likeTweet, unlikeTweet, retweet, unretweet, followUser, unfollowUser + reply via postTweet). Autonomous agent stubs replaced with real API calls.
 
 ---
 
@@ -254,8 +256,8 @@ These close the gap between "demo" and "production" for external platform connec
 
 ```
 SESSION 1: ✅ COMPLETE — Saga Persistence (1.1) + Global Kill Switch (1.2)
-SESSION 2: Revenue Attribution P0 (2.1) + Twitter Engagement (3.1) in parallel
-SESSION 3: Revenue Attribution P1 (2.1 continued) + E2E Testing (1.3)
+SESSION 2: ✅ COMPLETE — Revenue Attribution P0 (2.1) + Twitter Engagement (3.1)
+SESSION 3: Revenue Attribution P1 (2.1b analytics/dashboard) + E2E Testing (1.3)
 SESSION 4: CI/CD Cleanup (3.4) + any remaining items
 
 EXTERNAL (start immediately, no code dependency):
@@ -280,7 +282,7 @@ EXTERNAL (start immediately, no code dependency):
 | **TTS (ElevenLabs/Unreal)** | REAL | 20+ premium voices via ElevenLabs |
 | **Video (HeyGen/Sora/Runway)** | CONDITIONAL | Real API calls if keys configured; returns "Coming Soon" otherwise |
 | **Social Engagement (POST)** | REAL | Twitter works, LinkedIn partial |
-| **Social Engagement (REPLY/LIKE/FOLLOW/REPOST)** | MOCKED | TODO stubs, returns fake success |
+| **Social Engagement (REPLY/LIKE/FOLLOW/REPOST)** | REAL (Twitter) | Wired to Twitter API v2: likeTweet, retweet, followUser, reply via postTweet |
 | **Firebase** | REAL | Auth + Firestore, single-tenant `rapid-compliance-65f87` |
 | **OpenRouter** | REAL | AI gateway, 100+ models |
 
@@ -292,8 +294,8 @@ EXTERNAL (start immediately, no code dependency):
 |-------|---------|
 | ~~Saga state is in-memory only~~ | **FIXED** — Firestore-backed checkpoint/resume with dedup |
 | ~~Kill switch is social-only~~ | **FIXED** — Global swarm control with per-manager toggles |
-| Revenue attribution chain broken | UTM → Lead → Deal → Order → Stripe not connected (Tier 2.1) |
-| Social engagement stubs | REPLY/LIKE/FOLLOW/REPOST return fake success (Tier 3.1) |
+| ~~Revenue attribution chain broken~~ | **FIXED** — Full UTM→Lead→Deal→Order→Stripe chain wired with auto-lead creation from forms |
+| ~~Social engagement stubs~~ | **FIXED** — Twitter REPLY/LIKE/FOLLOW/REPOST wired to real API v2 |
 | Facebook/Instagram missing | No implementation (Tier 3.2) |
 | LinkedIn unofficial | Uses RapidAPI, not official API (Tier 3.3) |
 | Node version mismatch | CI uses 18, package.json requires 20 (Tier 3.4) |
@@ -336,12 +338,14 @@ EXTERNAL (start immediately, no code dependency):
 | `src/lib/agents/orchestrator/manager.ts` | Master Orchestrator — Saga Pattern, command dispatch |
 | `src/lib/agents/base-manager.ts` | Base manager class — delegation, authority |
 | `src/lib/agents/shared/memory-vault.ts` | Shared agent knowledge store (Firestore-backed) |
-| `src/lib/social/autonomous-posting-agent.ts` | Core social agent — posting, queue, compliance, playbook |
-| `src/lib/integrations/twitter-service.ts` | Twitter API v2 — OAuth 2.0, posting, media, search |
+| `src/lib/social/autonomous-posting-agent.ts` | Core social agent — posting, queue, compliance, playbook, engagement actions, UTM auto-append |
+| `src/lib/integrations/twitter-service.ts` | Twitter API v2 — OAuth 2.0, posting, media, search, like, retweet, follow |
 | `src/lib/orchestrator/jasper-tools.ts` | Jasper's 36+ function-calling tools |
 | `src/lib/orchestrator/feature-manifest.ts` | 11 specialists + capabilities + trigger phrases |
 | `src/lib/agent/golden-master-builder.ts` | Golden Master versioning + deployment |
 | `src/types/agent-memory.ts` | Golden Master, GoldenPlaybook, CustomerMemory types |
-| `src/types/crm-entities.ts` | Lead, Deal, Contact types (attribution fields needed) |
-| `src/types/ecommerce.ts` | Order type (attribution fields needed) |
+| `src/types/crm-entities.ts` | Lead, Deal, Contact types (attribution fields wired) |
+| `src/types/ecommerce.ts` | Order type (attribution fields wired) |
+| `src/lib/crm/lead-service.ts` | Lead creation with attribution (formId, UTM, source) |
+| `src/lib/crm/deal-service.ts` | Deal creation with lead attribution inheritance |
 | `vercel.json` | 7 cron entries for autonomous operations |

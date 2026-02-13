@@ -83,6 +83,9 @@ export async function POST(request: NextRequest) {
     const piMetadata = paymentIntent.metadata ?? {};
     const workspaceId = piMetadata.workspaceId ?? 'default';
 
+    // Extract attribution fields from payment intent metadata
+    const attributionSource = piMetadata.attributionSource ?? piMetadata.utm_source ?? undefined;
+
     const orderRecord = {
       id: orderId,
       paymentIntentId,
@@ -94,7 +97,15 @@ export async function POST(request: NextRequest) {
       workspaceId,
       status: 'processing',
       paymentStatus: 'captured',
-      source: 'checkout-complete',
+      source: attributionSource ?? 'web',
+      // Attribution chain
+      dealId: piMetadata.dealId ?? undefined,
+      leadId: piMetadata.leadId ?? undefined,
+      formId: piMetadata.formId ?? undefined,
+      attributionSource: attributionSource ?? undefined,
+      utmSource: piMetadata.utm_source ?? undefined,
+      utmMedium: piMetadata.utm_medium ?? undefined,
+      utmCampaign: piMetadata.utm_campaign ?? undefined,
       metadata: piMetadata,
       createdAt: now,
       updatedAt: now,

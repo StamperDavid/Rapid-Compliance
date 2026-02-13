@@ -33,6 +33,11 @@ export interface Lead {
   status: 'new' | 'contacted' | 'qualified' | 'converted' | 'lost';
   score?: number;
   ownerId?: string;
+  formId?: string;
+  formSubmissionId?: string;
+  utmSource?: string;
+  utmMedium?: string;
+  utmCampaign?: string;
   tags?: string[];
   customFields?: Record<string, unknown>;
   enrichmentData?: EnrichmentData;

@@ -73,14 +73,32 @@ export async function POST(request: NextRequest) {
       apiVersion: '2023-10-16',
     });
 
+    // Build attribution metadata for Stripe payment intent
+    const attributionMetadata: Record<string, string> = {
+      userId: user.uid,
+    };
+
+    // Preserve attribution fields explicitly in Stripe metadata
+    if (metadata) {
+      const attrFields = ['leadId', 'dealId', 'formId', 'utm_source', 'utm_medium', 'utm_campaign', 'attributionSource', 'customerEmail', 'workspaceId'];
+      for (const [key, value] of Object.entries(metadata)) {
+        if (typeof value === 'string' && value.length > 0) {
+          attributionMetadata[key] = value;
+        }
+      }
+      // Ensure attribution fields are always present even with short keys
+      for (const field of attrFields) {
+        if (metadata[field] && typeof metadata[field] === 'string') {
+          attributionMetadata[field] = metadata[field];
+        }
+      }
+    }
+
     // Create payment intent
     const paymentIntent = await stripe.paymentIntents.create({
       amount: Math.round(amount * 100), // Convert to cents
       currency: currency.toLowerCase(),
-      metadata: {
-        userId: user.uid,
-        ...metadata,
-      },
+      metadata: attributionMetadata,
       automatic_payment_methods: {
         enabled: true,
       },

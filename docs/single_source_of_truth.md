@@ -1,7 +1,7 @@
 # SalesVelocity.ai - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** February 13, 2026 (Tier 1 Trust & Safety: saga state persistence with Firestore checkpoints + global kill switch with per-manager controls + swarm control API endpoint + Command Center UI upgrade)
+**Last Updated:** February 13, 2026 (Session 2: Revenue Attribution P0 — full UTM→Lead→Deal→Order→Stripe chain wired + Twitter engagement actions — REPLY/LIKE/FOLLOW/REPOST wired to real Twitter API v2)
 **Branches:** `dev` (latest)
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Architecture:** Single-Tenant (Penthouse Model) - NOT a SaaS platform
@@ -199,11 +199,11 @@ TenantMemoryVault refactored to enforce single-tenant model (Rule 1 compliance):
 
 | Area | Issue | Severity |
 |------|-------|----------|
-| **Saga state persistence** | Orchestrator saga state stored in-memory only (`Map<string, Saga>`). Process crash loses all active sagas. No checkpoint/resume logic. Event Router processes events ephemerally. | **CRITICAL** |
-| **Global kill switch** | Kill switch only gates `AutonomousPostingAgent.executeAction()`. Event Router, Master Orchestrator, Signal Bus, and all 9 managers have zero awareness. No global pause, no per-agent control. | **CRITICAL** |
-| **Revenue attribution pipeline** | UTM→Lead→Deal→Order→Stripe chain broken at every junction. Forms capture UTM but don't pass to leads. Deals don't link to leads. Orders have no attribution fields. Stripe metadata empty. ~40% wired. | **HIGH** |
+| ~~**Saga state persistence**~~ | ~~Orchestrator saga state stored in-memory only.~~ **RESOLVED** — Firestore-backed checkpoint/resume with event dedup | ~~CRITICAL~~ |
+| ~~**Global kill switch**~~ | ~~Kill switch only gates AutonomousPostingAgent.~~ **RESOLVED** — Global swarm control with per-manager toggles | ~~CRITICAL~~ |
+| ~~**Revenue attribution pipeline**~~ | ~~UTM→Lead→Deal→Order→Stripe chain broken.~~ **RESOLVED** — Full attribution chain wired: form→lead (auto-create with UTM), lead→deal (source inheritance), checkout→order (attribution from Stripe metadata), social posts (auto UTM on links) | ~~HIGH~~ |
 | **Agent end-to-end testing** | No test validates full chain: user → orchestrator → manager → specialist → UI | **HIGH** |
-| **Social engagement stubs** | REPLY/LIKE/FOLLOW/REPOST actions return fake success with placeholder IDs. POST/RECYCLE are real. | MEDIUM |
+| ~~**Social engagement stubs**~~ | ~~REPLY/LIKE/FOLLOW/REPOST actions return fake success.~~ **RESOLVED** — Wired to real Twitter API v2 (likeTweet, retweet, followUser, postTweet with replyToTweetId). Non-Twitter platforms pending. | ~~MEDIUM~~ |
 | **Facebook/Instagram** | No implementation exists. Type definitions only. Requires Meta Developer sandbox + app review. | MEDIUM |
 | **LinkedIn unofficial** | Uses RapidAPI (unofficial, ToS violation risk). Falls back to manual task creation. Needs official API. | MEDIUM |
 | **~40 TODO comments** | Auth context TODOs reduced; 27 alert/confirm/prompt calls replaced with proper UI components | MEDIUM |
@@ -214,9 +214,9 @@ TenantMemoryVault refactored to enforce single-tenant model (Rule 1 compliance):
 | Endpoint/Feature | Issue |
 |------------------|-------|
 | `/api/crm/deals/[dealId]/recommendations` | Auth implementation incomplete |
-| Social REPLY/LIKE/FOLLOW/REPOST | TODO stubs return fake success (see Production Readiness Plan Tier 3.1) |
+| ~~Social REPLY/LIKE/FOLLOW/REPOST~~ | **RESOLVED** — Twitter engagement wired to real API v2. Non-Twitter platforms pending. |
 | Facebook/Instagram posting | No implementation (see Production Readiness Plan Tier 3.2) |
-| Revenue attribution chain | UTM→Lead→Deal→Order→Stripe not connected (see Production Readiness Plan Tier 2.1) |
+| ~~Revenue attribution chain~~ | **RESOLVED** — Full UTM→Lead→Deal→Order→Stripe chain wired |
 | Video render pipeline | `render-pipeline.ts` returns fake responses; real integrations gated by API keys |
 | Asset Generator | Returns placeholder URLs, no actual image generation |
 
@@ -281,21 +281,22 @@ Only after Tiers 1 and 2 are verified complete.
 
 | # | Task | Description | Status |
 |---|------|-------------|--------|
-| 1.1 | **Saga state persistence** | Persist saga state to Firestore with checkpoint markers. Add `resumeSaga()` to MasterOrchestrator. Add event persistence to Event Router with dedup. Wire cron to check for incomplete sagas. | PENDING |
-| 1.2 | **Global kill switch** | Create `swarm-control.ts` service. Add pause guards to EventRouter, MasterOrchestrator, SignalBus, BaseManager. Per-agent and global controls. UI in Command Center. | PENDING |
+| 1.1 | **Saga state persistence** | Persist saga state to Firestore with checkpoint markers. Add `resumeSaga()` to MasterOrchestrator. Add event persistence to Event Router with dedup. Wire cron to check for incomplete sagas. | **DONE** |
+| 1.2 | **Global kill switch** | Create `swarm-control.ts` service. Add pause guards to EventRouter, MasterOrchestrator, SignalBus, BaseManager. Per-agent and global controls. UI in Command Center. | **DONE** |
 | 1.3 | **E2E agent integration testing** | Playwright + Jest tests for full agent chain, saga workflows, signal propagation, kill switch verification. | PENDING |
 
 ### Tier 2 — Revenue & Attribution (HIGH)
 
 | # | Task | Description | Status |
 |---|------|-------------|--------|
-| 2.1 | **Revenue attribution pipeline** | Wire UTM→Lead→Deal→Order→Stripe chain. Add attribution fields to types. Auto-populate source on creation. Add attribution analytics endpoint and dashboard page. | PENDING |
+| 2.1 | **Revenue attribution pipeline P0** | Wire UTM→Lead→Deal→Order→Stripe chain. Add attribution fields to types. Auto-create leads from form submissions. Inherit source on deal creation. Pass attribution to Stripe metadata. Auto-append UTM to social post links. | **DONE** |
+| 2.1b | **Revenue attribution pipeline P1** | Attribution analytics endpoint (`/api/analytics/attribution`), attribution dashboard page (`/analytics/attribution`), "Source" column in Orders/Leads/Deals tables. | PENDING |
 
 ### Tier 3 — Platform Integrations (MEDIUM)
 
 | # | Task | Description | Status |
 |---|------|-------------|--------|
-| 3.1 | **Twitter engagement actions** | Wire REPLY/LIKE/FOLLOW/REPOST to actual Twitter API calls. Replace TODO stubs. | PENDING |
+| 3.1 | **Twitter engagement actions** | Wire REPLY/LIKE/FOLLOW/REPOST to real Twitter API v2 calls (likeTweet, retweet, followUser, postTweet with replyToTweetId). 7 new methods added to TwitterService. | **DONE** |
 | 3.2 | **Facebook/Instagram (Meta Graph API)** | Create `meta-service.ts`. OAuth flow, posting, insights. **Blocked by:** Meta sandbox access + app review. | BLOCKED (external) |
 | 3.3 | **LinkedIn official API** | Replace RapidAPI with official LinkedIn Marketing API. **Blocked by:** LinkedIn developer approval. | BLOCKED (external) |
 | 3.4 | **CI/CD cleanup** | Update Node 18→20 in workflows. Implement Vercel deploy job. | PENDING |
@@ -2031,7 +2032,7 @@ console.info(`Cleaned ${totalCleaned} stale E2E documents`);
 | **Microsoft OAuth** | **REAL** | Outlook, Teams integration. |
 | **Slack OAuth** | **REAL** | Channel notifications. |
 | **Social Engagement (POST)** | **REAL** | Twitter works, LinkedIn partial. |
-| **Social Engagement (REPLY/LIKE/FOLLOW/REPOST)** | **MOCKED** | TODO stubs return fake success. |
+| **Social Engagement (REPLY/LIKE/FOLLOW/REPOST)** | **REAL (Twitter)** | Wired to Twitter API v2: likeTweet, retweet, followUser, postTweet w/ replyToTweetId. Non-Twitter platforms pending. |
 
 ### Planned Integrations (NOT STARTED)
 

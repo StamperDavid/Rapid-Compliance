@@ -727,6 +727,188 @@ export class TwitterService {
   }
 
   /**
+   * Like a tweet
+   * Requires OAuth 2.0 User Context (like.write scope)
+   * POST /2/users/:id/likes
+   */
+  async likeTweet(tweetId: string): Promise<{ success: boolean; error?: string }> {
+    if (!this.config.accessToken) {
+      return { success: false, error: 'OAuth 2.0 access token required for liking tweets.' };
+    }
+
+    // First get our user ID
+    const meResult = await this.getMe();
+    if (!meResult.user) {
+      return { success: false, error: meResult.error ?? 'Failed to get authenticated user' };
+    }
+
+    const result = await this.makeRequest<{ data: { liked: boolean } }>(
+      `/users/${meResult.user.id}/likes`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ tweet_id: tweetId }),
+      },
+      true
+    );
+
+    if (result.error ?? !result.data) {
+      return { success: false, error: result.error ?? 'Failed to like tweet' };
+    }
+
+    logger.info('Twitter: Tweet liked', { tweetId });
+    return { success: result.data.data.liked };
+  }
+
+  /**
+   * Unlike a tweet
+   * DELETE /2/users/:id/likes/:tweet_id
+   */
+  async unlikeTweet(tweetId: string): Promise<{ success: boolean; error?: string }> {
+    if (!this.config.accessToken) {
+      return { success: false, error: 'OAuth 2.0 access token required.' };
+    }
+
+    const meResult = await this.getMe();
+    if (!meResult.user) {
+      return { success: false, error: meResult.error ?? 'Failed to get authenticated user' };
+    }
+
+    const result = await this.makeRequest<{ data: { liked: boolean } }>(
+      `/users/${meResult.user.id}/likes/${tweetId}`,
+      { method: 'DELETE' },
+      true
+    );
+
+    if (result.error ?? !result.data) {
+      return { success: false, error: result.error ?? 'Failed to unlike tweet' };
+    }
+
+    logger.info('Twitter: Tweet unliked', { tweetId });
+    return { success: !result.data.data.liked };
+  }
+
+  /**
+   * Retweet a tweet
+   * POST /2/users/:id/retweets
+   */
+  async retweet(tweetId: string): Promise<{ success: boolean; error?: string }> {
+    if (!this.config.accessToken) {
+      return { success: false, error: 'OAuth 2.0 access token required for retweeting.' };
+    }
+
+    const meResult = await this.getMe();
+    if (!meResult.user) {
+      return { success: false, error: meResult.error ?? 'Failed to get authenticated user' };
+    }
+
+    const result = await this.makeRequest<{ data: { retweeted: boolean } }>(
+      `/users/${meResult.user.id}/retweets`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ tweet_id: tweetId }),
+      },
+      true
+    );
+
+    if (result.error ?? !result.data) {
+      return { success: false, error: result.error ?? 'Failed to retweet' };
+    }
+
+    logger.info('Twitter: Tweet retweeted', { tweetId });
+    return { success: result.data.data.retweeted };
+  }
+
+  /**
+   * Undo a retweet
+   * DELETE /2/users/:id/retweets/:tweet_id
+   */
+  async unretweet(tweetId: string): Promise<{ success: boolean; error?: string }> {
+    if (!this.config.accessToken) {
+      return { success: false, error: 'OAuth 2.0 access token required.' };
+    }
+
+    const meResult = await this.getMe();
+    if (!meResult.user) {
+      return { success: false, error: meResult.error ?? 'Failed to get authenticated user' };
+    }
+
+    const result = await this.makeRequest<{ data: { retweeted: boolean } }>(
+      `/users/${meResult.user.id}/retweets/${tweetId}`,
+      { method: 'DELETE' },
+      true
+    );
+
+    if (result.error ?? !result.data) {
+      return { success: false, error: result.error ?? 'Failed to unretweet' };
+    }
+
+    logger.info('Twitter: Retweet removed', { tweetId });
+    return { success: !result.data.data.retweeted };
+  }
+
+  /**
+   * Follow a user
+   * POST /2/users/:id/following
+   */
+  async followUser(targetUserId: string): Promise<{ success: boolean; error?: string }> {
+    if (!this.config.accessToken) {
+      return { success: false, error: 'OAuth 2.0 access token required for following users.' };
+    }
+
+    const meResult = await this.getMe();
+    if (!meResult.user) {
+      return { success: false, error: meResult.error ?? 'Failed to get authenticated user' };
+    }
+
+    const result = await this.makeRequest<{ data: { following: boolean; pending_follow: boolean } }>(
+      `/users/${meResult.user.id}/following`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ target_user_id: targetUserId }),
+      },
+      true
+    );
+
+    if (result.error ?? !result.data) {
+      return { success: false, error: result.error ?? 'Failed to follow user' };
+    }
+
+    logger.info('Twitter: User followed', {
+      targetUserId,
+      pending: result.data.data.pending_follow,
+    });
+    return { success: result.data.data.following || result.data.data.pending_follow };
+  }
+
+  /**
+   * Unfollow a user
+   * DELETE /2/users/:id/following/:target_user_id
+   */
+  async unfollowUser(targetUserId: string): Promise<{ success: boolean; error?: string }> {
+    if (!this.config.accessToken) {
+      return { success: false, error: 'OAuth 2.0 access token required.' };
+    }
+
+    const meResult = await this.getMe();
+    if (!meResult.user) {
+      return { success: false, error: meResult.error ?? 'Failed to get authenticated user' };
+    }
+
+    const result = await this.makeRequest<{ data: { following: boolean } }>(
+      `/users/${meResult.user.id}/following/${targetUserId}`,
+      { method: 'DELETE' },
+      true
+    );
+
+    if (result.error ?? !result.data) {
+      return { success: false, error: result.error ?? 'Failed to unfollow user' };
+    }
+
+    logger.info('Twitter: User unfollowed', { targetUserId });
+    return { success: !result.data.data.following };
+  }
+
+  /**
    * Get rate limit status for an endpoint
    */
   getRateLimitStatus(endpoint: string): TwitterRateLimitInfo | null {
