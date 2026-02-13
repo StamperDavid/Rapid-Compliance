@@ -1,7 +1,7 @@
 # SalesVelocity.ai - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** February 12, 2026 (6-phase social media platform enhancement: multi-account management, approval workflow, media uploads, calendar, social listening, agent config tuning)
+**Last Updated:** February 13, 2026 (AI social media command center, content studio dual-mode, approval queue upgrade, activity feed, analytics dashboard, agent rules UI — 4 new pages, 2 new API routes)
 **Branches:** `dev` (latest)
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Architecture:** Single-Tenant (Penthouse Model) - NOT a SaaS platform
@@ -35,8 +35,8 @@
 
 | Metric | Count | Status |
 |--------|-------|--------|
-| Physical Routes (page.tsx) | 163 | Verified February 12, 2026 (added /social/approvals, /social/calendar, /social/listening) |
-| API Endpoints (route.ts) | 240 | Verified February 12, 2026 (added 9 social media API routes) |
+| Physical Routes (page.tsx) | 167 | Verified February 13, 2026 (added /social/command-center, /social/activity, /social/analytics, /social/agent-rules) |
+| API Endpoints (route.ts) | 242 | Verified February 13, 2026 (added /api/social/agent-status, /api/social/activity) |
 | AI Agents | 52 | **52 FUNCTIONAL (48 swarm + 4 standalone)** |
 | RBAC Roles | 4 | `owner` (level 3), `admin` (level 2), `manager` (level 1), `member` (level 0) — 4-role RBAC |
 | Firestore Collections | 65+ | Active (expanded social media collections) |
@@ -119,6 +119,20 @@ The Claude Code Governance Layer defines binding operational constraints for AI-
 - No new eslint-disable comments added
 
 ### Recent Major Milestones (February 2026)
+
+#### AI Social Media Command Center & Full Page Buildout
+**Status:** ✅ **COMPLETE** (February 13, 2026)
+
+All 7 target social media pages from the "Tesla Autopilot" supervised autonomy plan are now built:
+- **Command Center** (`/social/command-center`) — Kill switch, velocity gauges (SVG circular meters), agent status, platform connections, activity feed, auto-refresh every 30s
+- **Content Studio** (`/social/campaigns`) — Dual-mode (Autopilot/Manual toggle), AI queue visibility, scheduled posts, recently published
+- **Approval Queue** (`/social/approvals`) — Batch selection, bulk approve/reject, "Why" badge with flagged phrase highlighting, correction capture for AI training
+- **Activity Feed** (`/social/activity`) — Chronological AI activity with filter tabs (All/Published/Scheduled/Flagged/Failed)
+- **Analytics Dashboard** (`/social/analytics`) — Summary stats, 7-day SVG bar chart, platform breakdown, post performance table
+- **Agent Rules** (`/social/agent-rules`) — Visual guardrails editor: velocity limits, sentiment keywords, escalation triggers, per-platform toggles
+- **Brand Voice/Training** (`/social/training`) — Already complete from prior session
+
+New API endpoints: `/api/social/agent-status` (GET/POST), `/api/social/activity` (GET). Kill switch (`agentEnabled` boolean) added to `AutonomousAgentSettings` type, agent config defaults, settings API Zod schema, and `executeAction()` guard.
 
 #### Feature Completion Sprint — All Dashboard UIs Functional
 **Status:** ✅ **COMPLETE** (February 12, 2026)
@@ -456,7 +470,7 @@ border-color: #1a1a1a;
 | 2 | **CRM** | Leads, Deals/Pipeline, Contacts, Conversations, Living Ledger |
 | 3 | **Lead Gen** | Forms, Lead Research, Lead Scoring |
 | 4 | **Outbound** | Outbound, Sequences, Campaigns, Email Writer, Nurture, Calls |
-| 5 | **Content Factory** | Video Studio, Social Media, Proposals, Battlecards |
+| 5 | **Content Factory** | Video Studio, Social Media (9 pages: Command Center, Content Studio, Approvals, Calendar, Listening, Training, Activity Feed, Analytics, Agent Rules), Proposals, Battlecards |
 | 6 | **AI Workforce** | Agent Registry, Training Center, Agent Persona, Voice & Speech, Voice AI Lab, Social AI Lab, SEO AI Lab, Datasets, Fine-Tuning |
 | 7 | **Automation** | Workflows, A/B Testing, Lead Routing |
 | 8 | **E-Commerce** | Products, Orders, Storefront |
@@ -671,7 +685,8 @@ Legacy workspace URLs are automatically redirected:
 - `/nurture`, `/nurture/new`, `/nurture/[id]`, `/nurture/[id]/stats`
 - `/ab-tests`, `/ab-tests/new`, `/ab-tests/[id]`
 - `/outbound`, `/outbound/email-writer`, `/outbound/sequences`
-- `/social/campaigns`, `/social/training`, `/social/approvals`, `/social/calendar`, `/social/listening`
+- `/social/campaigns` (Content Studio — dual-mode autopilot/manual), `/social/training`, `/social/approvals` (batch review, correction capture, "Why" badge), `/social/calendar`, `/social/listening`
+- `/social/command-center` (kill switch, velocity gauges, agent status), `/social/activity` (activity feed), `/social/analytics` (dashboard), `/social/agent-rules` (guardrails editor)
 
 **Settings (19 sub-routes):**
 - `api-keys`, `accounting`, `storefront`, `promotions`
@@ -1548,7 +1563,7 @@ This script:
 | Risk | 1 | `/api/risk/*` | Functional |
 | Schemas | 6 | `/api/schema*/*` | Functional |
 | Settings | 1 | `/api/settings/webhooks` | Functional (NEW Feb 12) |
-| Social | 10 | `/api/social/*` | Functional (EXPANDED Feb 12) |
+| Social | 12 | `/api/social/*` | Functional (EXPANDED Feb 13 — added agent-status, activity) |
 | Team | 1 | `/api/team/tasks/[taskId]` | Functional (NEW Feb 12) |
 | Other | ~125 | Various | Mixed |
 
@@ -1593,6 +1608,8 @@ This script:
 | `/api/social/listening` | GET/PUT | Social listening mentions | FUNCTIONAL |
 | `/api/social/listening/config` | GET/PUT | Listening configuration | FUNCTIONAL |
 | `/api/cron/social-listening-collector` | GET | Social listening cron job | FUNCTIONAL |
+| `/api/social/agent-status` | GET/POST | Agent status dashboard + kill switch toggle | FUNCTIONAL (NEW Feb 13) |
+| `/api/social/activity` | GET | Chronological activity feed from posts/approvals/queue | FUNCTIONAL (NEW Feb 13) |
 | `/api/social/posts` | GET/POST/PUT/DELETE | Social post CRUD | FUNCTIONAL (existing) |
 
 ### API Implementation Notes
@@ -1624,6 +1641,13 @@ The following endpoints have working infrastructure (rate limiting, caching, aut
   - Approval workflow with status tracking (`src/lib/social/approval-service.ts`)
   - Social listening with AI sentiment analysis (`src/lib/social/listening-service.ts`, `src/lib/social/sentiment-analyzer.ts`)
   - Content calendar aggregation across all platforms
+
+**RESOLVED (February 13, 2026) - AI Social Media Command Center & Page Buildout:**
+- `/api/social/agent-status` (GET/POST) — Agent status dashboard with kill switch toggle, velocity usage, queue depth, platform connections
+- `/api/social/activity` (GET) — Chronological activity feed from posts/approvals/queue with event type mapping
+- Kill switch (`agentEnabled` boolean) added to `AutonomousAgentSettings` type, config defaults, Zod schema, and `executeAction()` guard
+- 4 new frontend pages: Command Center, Activity Feed, Analytics Dashboard, Agent Rules
+- 2 upgraded pages: Content Studio (dual-mode autopilot/manual), Approval Queue (batch, correction capture, Why badge)
 
 ### Testing Infrastructure (Audit: January 30, 2026)
 
