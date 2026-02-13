@@ -223,6 +223,8 @@ export interface SocialMediaPost {
   platform: SocialPlatform;
   content: string;
   mediaUrls?: string[];
+  mediaAssets?: SocialMediaAsset[];
+  accountId?: string;
   status: PostStatus;
   scheduledAt?: Date;
   publishedAt?: Date;
@@ -411,4 +413,145 @@ export interface CancelPostRequest {
 export interface CancelPostResponse {
   success: boolean;
   error?: string;
+}
+
+// =============================================================================
+// Multi-Account Support (Phase 1)
+// =============================================================================
+
+export type SocialAccountStatus = 'active' | 'disconnected' | 'expired';
+
+export interface TwitterCredentials {
+  clientId: string;
+  clientSecret: string;
+  accessToken: string;
+  refreshToken?: string;
+  bearerToken?: string;
+  tokenExpiresAt?: string;
+}
+
+export interface LinkedInCredentials {
+  accessToken: string;
+  refreshToken?: string;
+  orgId?: string;
+  tokenExpiresAt?: string;
+}
+
+export interface SocialAccount {
+  id: string;
+  platform: SocialPlatform;
+  accountName: string;
+  handle: string;
+  profileImageUrl?: string;
+  isDefault: boolean;
+  status: SocialAccountStatus;
+  credentials: TwitterCredentials | LinkedInCredentials;
+  addedAt: string;
+  lastUsedAt?: string;
+}
+
+// =============================================================================
+// Autonomous Agent Settings (Phase 2)
+// =============================================================================
+
+export type EngagementActionType = 'POST' | 'REPLY' | 'LIKE' | 'FOLLOW' | 'REPOST' | 'RECYCLE';
+
+export interface AutonomousAgentSettings {
+  velocityLimits: Record<EngagementActionType, number>;
+  sentimentBlockKeywords: string[];
+  escalationTriggerKeywords: string[];
+  recycleCooldownDays: number;
+  maxDailyPosts: number;
+  preferredPostingTimes: TimeSlot[];
+  pauseOnWeekends: boolean;
+  autoApprovalEnabled: boolean;
+  updatedAt?: string;
+  updatedBy?: string;
+}
+
+// =============================================================================
+// Media Pipeline (Phase 3)
+// =============================================================================
+
+export interface SocialMediaAsset {
+  id: string;
+  url: string;
+  thumbnailUrl?: string;
+  fileName: string;
+  mimeType: string;
+  sizeBytes: number;
+  platform?: SocialPlatform;
+  dimensions?: { width: number; height: number };
+  uploadedAt: string;
+  postId?: string;
+}
+
+// =============================================================================
+// Approval Workflow (Phase 4)
+// =============================================================================
+
+export type ApprovalStatus = 'pending_review' | 'approved' | 'rejected' | 'revision_requested';
+
+export interface ApprovalComment {
+  id: string;
+  authorId: string;
+  authorName: string;
+  text: string;
+  createdAt: string;
+}
+
+export interface ApprovalItem {
+  id: string;
+  postId: string;
+  content: string;
+  platform: SocialPlatform;
+  accountId?: string;
+  mediaAssets?: SocialMediaAsset[];
+  status: ApprovalStatus;
+  flagReason: string;
+  flaggedAt: string;
+  flaggedBy: 'autonomous-agent' | 'manual';
+  reviewedBy?: string;
+  reviewedAt?: string;
+  comments: ApprovalComment[];
+  scheduledFor?: string;
+}
+
+// =============================================================================
+// Social Listening (Phase 6)
+// =============================================================================
+
+export type MentionSentiment = 'positive' | 'neutral' | 'negative' | 'unknown';
+export type MentionType = 'direct_mention' | 'keyword_match' | 'hashtag_match';
+export type MentionStatus = 'new' | 'seen' | 'replied' | 'escalated' | 'dismissed';
+
+export interface SocialMention {
+  id: string;
+  platform: SocialPlatform;
+  externalId: string;
+  authorName: string;
+  authorHandle: string;
+  authorProfileUrl?: string;
+  content: string;
+  sentiment: MentionSentiment;
+  sentimentConfidence?: number;
+  keyPhrases?: string[];
+  matchedKeywords: string[];
+  engagementMetrics?: PostMetrics;
+  mentionType: MentionType;
+  sourceUrl: string;
+  detectedAt: string;
+  status: MentionStatus;
+  assignedTo?: string;
+  repliedWithPostId?: string;
+}
+
+export interface ListeningConfig {
+  trackedKeywords: string[];
+  trackedHashtags: string[];
+  trackedCompetitors: string[];
+  sentimentAlertThreshold: number;
+  pollingIntervalMinutes: number;
+  enabledPlatforms: SocialPlatform[];
+  updatedAt?: string;
 }

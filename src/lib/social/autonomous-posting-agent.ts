@@ -12,7 +12,7 @@
 
 import { logger } from '@/lib/logger/logger';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
-import { createTwitterService, type TwitterService } from '@/lib/integrations/twitter-service';
+import { createTwitterService, createTwitterServiceForAccount, type TwitterService } from '@/lib/integrations/twitter-service';
 import type { QueryConstraint } from 'firebase/firestore';
 import type {
   SocialPlatform,
@@ -24,14 +24,18 @@ import type {
   BatchPostingResult,
   QueuedPost,
   ScheduledPost,
+  EngagementActionType,
+  AutonomousAgentSettings,
 } from '@/types/social';
 import { PLATFORM_ID } from '@/lib/constants/platform';
+import { AgentConfigService, DEFAULT_AGENT_SETTINGS } from '@/lib/social/agent-config-service';
+import { ApprovalService } from '@/lib/social/approval-service';
 
 // =============================================================================
 // Social Media Growth Engine Phase 4: New Action Types
 // =============================================================================
 
-export type EngagementActionType = 'POST' | 'REPLY' | 'LIKE' | 'FOLLOW' | 'REPOST' | 'RECYCLE';
+export type { EngagementActionType } from '@/types/social';
 
 export interface EngagementAction {
   type: EngagementActionType;
@@ -82,19 +86,10 @@ const SOCIAL_ANALYTICS_COLLECTION = 'social_analytics';
 export class AutonomousPostingAgent {
   private config: PostingAgentConfig;
   private twitterService: TwitterService | null = null;
+  private agentSettings: AutonomousAgentSettings = DEFAULT_AGENT_SETTINGS;
 
   // Social Media Growth Engine Phase 4: Velocity tracking
   private actionCounts: Map<string, ActionCount> = new Map();
-
-  // Velocity limits per hour per platform (compliance guardrails)
-  private readonly VELOCITY_LIMITS: Record<EngagementActionType, number> = {
-    POST: 10,
-    REPLY: 10,
-    LIKE: 30,
-    FOLLOW: 5,
-    REPOST: 15,
-    RECYCLE: 3,
-  };
 
   constructor(config?: Partial<PostingAgentConfig>) {
     this.config = {
@@ -128,6 +123,12 @@ export class AutonomousPostingAgent {
       platforms: this.config.platforms,
     });
 
+    // Load agent settings from Firestore (falls back to defaults)
+    this.agentSettings = await AgentConfigService.getConfig();
+
+    // Apply maxDailyPosts from settings
+    this.config.maxDailyPosts = this.agentSettings.maxDailyPosts;
+
     // Initialize Twitter service if configured
     if (this.config.platforms.includes('twitter')) {
       this.twitterService = await createTwitterService();
@@ -160,7 +161,7 @@ export class AutonomousPostingAgent {
     }
 
     const current = this.actionCounts.get(key);
-    const maxAllowed = this.VELOCITY_LIMITS[actionType];
+    const maxAllowed = this.agentSettings.velocityLimits[actionType] ?? DEFAULT_AGENT_SETTINGS.velocityLimits[actionType];
 
     if (current && current.count >= maxAllowed) {
       const windowEnd = current.windowStart + oneHourMs;
@@ -220,11 +221,9 @@ export class AutonomousPostingAgent {
    * Check content sentiment before auto-replying (compliance: don't reply to hostile content)
    */
   private checkSentiment(content: string): { safe: boolean; reason?: string } {
-    const hostileKeywords = [
-      'scam', 'fraud', 'fake', 'terrible', 'awful', 'hate', 'worst', 'garbage',
-      'lawsuit', 'legal action', 'sue', 'report', 'complaint', 'angry',
-      'disappointed', 'furious', 'disgust', 'unethical', 'liar', 'lying'
-    ];
+    const hostileKeywords = this.agentSettings.sentimentBlockKeywords.length > 0
+      ? this.agentSettings.sentimentBlockKeywords
+      : DEFAULT_AGENT_SETTINGS.sentimentBlockKeywords;
 
     const contentLower = content.toLowerCase();
 
@@ -244,12 +243,9 @@ export class AutonomousPostingAgent {
    * Check if content requires human escalation (compliance: legal/threat language)
    */
   private requiresHumanEscalation(content: string): { escalate: boolean; reason?: string } {
-    const escalationKeywords = [
-      'lawsuit', 'legal action', 'attorney', 'lawyer', 'sue', 'court',
-      'threat', 'threaten', 'report you', 'authorities', 'fbi', 'ftc',
-      'complaint', 'class action', 'violation', 'breach of contract',
-      'cease and desist', 'defamation', 'liable', 'damages'
-    ];
+    const escalationKeywords = this.agentSettings.escalationTriggerKeywords.length > 0
+      ? this.agentSettings.escalationTriggerKeywords
+      : DEFAULT_AGENT_SETTINGS.escalationTriggerKeywords;
 
     const contentLower = content.toLowerCase();
 
@@ -418,6 +414,15 @@ export class AutonomousPostingAgent {
         reason: escalationCheck.reason,
       });
 
+      // Create approval item for the UI queue
+      await ApprovalService.createApproval({
+        postId: action.targetPostId,
+        content: action.content,
+        platform: action.platform,
+        flagReason: escalationCheck.reason ?? 'Escalation trigger detected',
+        flaggedBy: 'autonomous-agent',
+      });
+
       return {
         success: false,
         actionType: 'REPLY',
@@ -573,16 +578,17 @@ export class AutonomousPostingAgent {
     );
 
     if (originalPost?.publishedAt) {
+      const cooldownDays = this.agentSettings.recycleCooldownDays;
       const daysSincePublish = (Date.now() - originalPost.publishedAt.getTime()) / (1000 * 60 * 60 * 24);
-      if (daysSincePublish < 30) {
+      if (daysSincePublish < cooldownDays) {
         return {
           success: false,
           actionType: 'RECYCLE',
           platform: action.platform,
           actionId,
-          error: `RECYCLE cooldown not met. Original post published ${Math.floor(daysSincePublish)} days ago (requires 30 days)`,
+          error: `RECYCLE cooldown not met. Original post published ${Math.floor(daysSincePublish)} days ago (requires ${cooldownDays} days)`,
           complianceBlocked: true,
-          complianceReason: 'RECYCLE action requires 30-day cooldown',
+          complianceReason: `RECYCLE action requires ${cooldownDays}-day cooldown`,
         };
       }
     }
@@ -659,6 +665,7 @@ export class AutonomousPostingAgent {
       mediaUrls?: string[];
       hashtags?: string[];
       createdBy?: string;
+      accountId?: string;
     } = {}
   ): Promise<BatchPostingResult> {
     const results: PostingResult[] = [];
@@ -677,7 +684,7 @@ export class AutonomousPostingAgent {
     });
 
     for (const platform of platforms) {
-      const result = await this.postToPlatform(platform, finalContent, options.mediaUrls);
+      const result = await this.postToPlatform(platform, finalContent, options.mediaUrls, options.accountId);
       results.push(result);
 
       // Log post to Firestore
@@ -690,6 +697,7 @@ export class AutonomousPostingAgent {
         publishedAt: result.publishedAt,
         error: result.error,
         createdBy: options.createdBy ?? 'autonomous-agent',
+        accountId: options.accountId,
       });
     }
 
@@ -716,14 +724,15 @@ export class AutonomousPostingAgent {
   private async postToPlatform(
     platform: SocialPlatform,
     content: string,
-    mediaUrls?: string[]
+    mediaUrls?: string[],
+    accountId?: string
   ): Promise<PostingResult> {
     const postId = `post-${platform}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
 
     try {
       switch (platform) {
         case 'twitter':
-          return await this.postToTwitter(postId, content, mediaUrls);
+          return await this.postToTwitter(postId, content, mediaUrls, accountId);
 
         case 'linkedin':
           return await this.postToLinkedIn(postId, content, mediaUrls);
@@ -755,12 +764,20 @@ export class AutonomousPostingAgent {
   private async postToTwitter(
     postId: string,
     content: string,
-    _mediaUrls?: string[]
+    _mediaUrls?: string[],
+    accountId?: string
   ): Promise<PostingResult> {
-    // Try to initialize if not already initialized
-    this.twitterService ??= await createTwitterService();
+    // Use account-specific service if accountId provided, otherwise default
+    let service: TwitterService | null = null;
+    if (accountId) {
+      service = await createTwitterServiceForAccount(accountId);
+    }
+    if (!service) {
+      this.twitterService ??= await createTwitterService();
+      service = this.twitterService;
+    }
 
-    if (!this.twitterService) {
+    if (!service) {
       return {
         success: false,
         platform: 'twitter',
@@ -775,7 +792,7 @@ export class AutonomousPostingAgent {
       tweetContent = `${tweetContent.substring(0, 277)  }...`;
     }
 
-    const result = await this.twitterService.postTweet({
+    const result = await service.postTweet({
       text: tweetContent,
       // Note: Media upload requires separate media upload API
       // mediaIds would need to be obtained by uploading media first
@@ -930,6 +947,7 @@ export class AutonomousPostingAgent {
       mediaUrls?: string[];
       hashtags?: string[];
       createdBy?: string;
+      accountId?: string;
     } = {}
   ): Promise<{ success: boolean; postId?: string; error?: string }> {
     // Validate scheduled time
@@ -1001,6 +1019,7 @@ export class AutonomousPostingAgent {
       hashtags?: string[];
       preferredTimeSlot?: string;
       createdBy?: string;
+      accountId?: string;
     } = {}
   ): Promise<{ success: boolean; postId?: string; error?: string }> {
     const postId = `queued-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
@@ -1241,6 +1260,7 @@ export class AutonomousPostingAgent {
     publishedAt?: Date;
     error?: string;
     createdBy: string;
+    accountId?: string;
   }): Promise<void> {
     const postId = `post-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
 

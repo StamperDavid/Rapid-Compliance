@@ -24,6 +24,7 @@ const schedulePostSchema = z.object({
   scheduledAt: z.string().datetime('Invalid datetime format'),
   mediaUrls: z.array(z.string().url()).optional(),
   hashtags: z.array(z.string()).optional(),
+  accountId: z.string().optional(),
 });
 
 const getScheduledSchema = z.object({
@@ -111,6 +112,7 @@ export async function POST(request: NextRequest) {
         mediaUrls: data.mediaUrls,
         hashtags: data.hashtags,
         createdBy: 'api',
+        accountId: data.accountId,
       }
     );
 

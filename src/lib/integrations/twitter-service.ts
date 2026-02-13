@@ -559,6 +559,174 @@ export class TwitterService {
   }
 
   /**
+   * Upload media to Twitter (v1.1 media upload endpoint)
+   * Returns media_id string for use in tweet creation
+   */
+  async uploadMedia(
+    buffer: Buffer,
+    mimeType: string
+  ): Promise<{ mediaId: string | null; error?: string }> {
+    if (!this.config.accessToken) {
+      return { mediaId: null, error: 'OAuth 2.0 access token required for media upload' };
+    }
+
+    try {
+      // Twitter media upload uses v1.1 endpoint
+      const formData = new FormData();
+      const blob = new Blob([new Uint8Array(buffer)], { type: mimeType });
+      formData.append('media', blob);
+      formData.append('media_category', mimeType.startsWith('video/') ? 'tweet_video' : 'tweet_image');
+
+      const response = await fetch('https://upload.twitter.com/1.1/media/upload.json', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this.config.accessToken}`,
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        logger.error('Twitter: Media upload failed', new Error(errorText), { status: response.status });
+        return { mediaId: null, error: `Media upload failed: ${response.status}` };
+      }
+
+      const data = await response.json() as { media_id_string: string };
+      logger.info('Twitter: Media uploaded', { mediaId: data.media_id_string, mimeType });
+
+      return { mediaId: data.media_id_string };
+    } catch (error) {
+      logger.error('Twitter: Media upload error', error as Error);
+      return { mediaId: null, error: error instanceof Error ? error.message : 'Media upload failed' };
+    }
+  }
+
+  /**
+   * Search recent tweets (Twitter API v2)
+   * Uses GET /2/tweets/search/recent (Basic tier)
+   */
+  async searchRecentTweets(
+    queryStr: string,
+    options: { maxResults?: number; startTime?: Date; endTime?: Date } = {}
+  ): Promise<{ tweets: TwitterTweet[]; error?: string }> {
+    const params = new URLSearchParams();
+    params.set('query', queryStr);
+    params.set('max_results', String(Math.min(options.maxResults ?? 10, 100)));
+    params.set('tweet.fields', 'created_at,public_metrics,author_id,entities');
+
+    if (options.startTime) {
+      params.set('start_time', options.startTime.toISOString());
+    }
+    if (options.endTime) {
+      params.set('end_time', options.endTime.toISOString());
+    }
+
+    const result = await this.makeRequest<{
+      data?: Array<{
+        id: string;
+        text: string;
+        author_id: string;
+        created_at: string;
+        public_metrics?: {
+          retweet_count: number;
+          reply_count: number;
+          like_count: number;
+          quote_count: number;
+          impression_count?: number;
+        };
+        entities?: TwitterTweet['entities'];
+      }>;
+    }>(
+      `/tweets/search/recent?${params.toString()}`,
+      { method: 'GET' }
+    );
+
+    if (result.error || !result.data) {
+      return { tweets: [], error: result.error ?? 'Failed to search tweets' };
+    }
+
+    const tweets: TwitterTweet[] = (result.data.data ?? []).map((tweet) => ({
+      id: tweet.id,
+      text: tweet.text,
+      authorId: tweet.author_id,
+      createdAt: tweet.created_at,
+      publicMetrics: tweet.public_metrics ? {
+        retweetCount: tweet.public_metrics.retweet_count,
+        replyCount: tweet.public_metrics.reply_count,
+        likeCount: tweet.public_metrics.like_count,
+        quoteCount: tweet.public_metrics.quote_count,
+        impressionCount: tweet.public_metrics.impression_count,
+      } : undefined,
+      entities: tweet.entities,
+    }));
+
+    return { tweets };
+  }
+
+  /**
+   * Get mentions for a user (Twitter API v2)
+   * Uses GET /2/users/:id/mentions
+   */
+  async getMentions(
+    userId: string,
+    options: { maxResults?: number; sinceId?: string } = {}
+  ): Promise<{ tweets: TwitterTweet[]; error?: string }> {
+    if (!this.config.accessToken) {
+      return { tweets: [], error: 'OAuth 2.0 access token required for mentions' };
+    }
+
+    const params = new URLSearchParams();
+    params.set('max_results', String(Math.min(options.maxResults ?? 10, 100)));
+    params.set('tweet.fields', 'created_at,public_metrics,author_id,entities');
+
+    if (options.sinceId) {
+      params.set('since_id', options.sinceId);
+    }
+
+    const result = await this.makeRequest<{
+      data?: Array<{
+        id: string;
+        text: string;
+        author_id: string;
+        created_at: string;
+        public_metrics?: {
+          retweet_count: number;
+          reply_count: number;
+          like_count: number;
+          quote_count: number;
+          impression_count?: number;
+        };
+        entities?: TwitterTweet['entities'];
+      }>;
+    }>(
+      `/users/${userId}/mentions?${params.toString()}`,
+      { method: 'GET' },
+      true
+    );
+
+    if (result.error || !result.data) {
+      return { tweets: [], error: result.error ?? 'Failed to get mentions' };
+    }
+
+    const tweets: TwitterTweet[] = (result.data.data ?? []).map((tweet) => ({
+      id: tweet.id,
+      text: tweet.text,
+      authorId: tweet.author_id,
+      createdAt: tweet.created_at,
+      publicMetrics: tweet.public_metrics ? {
+        retweetCount: tweet.public_metrics.retweet_count,
+        replyCount: tweet.public_metrics.reply_count,
+        likeCount: tweet.public_metrics.like_count,
+        quoteCount: tweet.public_metrics.quote_count,
+        impressionCount: tweet.public_metrics.impression_count,
+      } : undefined,
+      entities: tweet.entities,
+    }));
+
+    return { tweets };
+  }
+
+  /**
    * Get rate limit status for an endpoint
    */
   getRateLimitStatus(endpoint: string): TwitterRateLimitInfo | null {
@@ -641,6 +809,48 @@ export class TwitterService {
         error: error instanceof Error ? error.message : 'Unknown error during token refresh',
       };
     }
+  }
+}
+
+/**
+ * Create a Twitter service for a specific social account (multi-account support)
+ */
+export async function createTwitterServiceForAccount(accountId: string): Promise<TwitterService | null> {
+  try {
+    const { SocialAccountService } = await import('@/lib/social/social-account-service');
+    const account = await SocialAccountService.getAccount(accountId);
+
+    if (account?.platform !== 'twitter') {
+      logger.debug('Twitter: Account not found or not a Twitter account', { accountId });
+      return null;
+    }
+
+    const creds = account.credentials as {
+      clientId?: string;
+      clientSecret?: string;
+      accessToken?: string;
+      refreshToken?: string;
+      bearerToken?: string;
+    };
+
+    const config: TwitterConfig = {
+      clientId: creds.clientId ?? '',
+      clientSecret: creds.clientSecret ?? '',
+      accessToken: creds.accessToken,
+      refreshToken: creds.refreshToken,
+      bearerToken: creds.bearerToken,
+    };
+
+    if (!config.bearerToken && !config.accessToken && !config.clientId) {
+      logger.debug('Twitter: No valid credentials for account', { accountId });
+      return null;
+    }
+
+    logger.info('Twitter: Service created for account', { accountId, handle: account.handle });
+    return new TwitterService(config);
+  } catch (error) {
+    logger.error('Twitter: Failed to create service for account', error as Error, { accountId });
+    return null;
   }
 }
 

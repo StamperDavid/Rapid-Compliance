@@ -82,6 +82,7 @@ import {
   Eye,
   PlayCircle,
   Award,
+  CalendarDays,
 } from 'lucide-react';
 
 // ============================================================================
@@ -152,6 +153,9 @@ const NAV_SECTIONS: NavigationSection[] = [
     items: [
       { id: 'video-studio', label: 'Video Studio', href: '/content/video', icon: Video, iconColor: 'var(--color-primary)', requiredPermission: 'canManageSocialMedia' },
       { id: 'social-media', label: 'Social Media', href: '/social/campaigns', icon: Share2, iconColor: 'var(--color-secondary)', requiredPermission: 'canManageSocialMedia' },
+      { id: 'content-calendar', label: 'Content Calendar', href: '/social/calendar', icon: CalendarDays, iconColor: 'var(--color-teal)', requiredPermission: 'canManageSocialMedia' },
+      { id: 'approval-queue', label: 'Approval Queue', href: '/social/approvals', icon: ClipboardList, iconColor: 'var(--color-warning)', requiredPermission: 'canManageSocialMedia' },
+      { id: 'social-listening', label: 'Social Listening', href: '/social/listening', icon: Eye, iconColor: 'var(--color-accent)', requiredPermission: 'canManageSocialMedia' },
       { id: 'proposals', label: 'Proposals', href: '/proposals/builder', icon: FileText, iconColor: 'var(--color-cyan)' },
       { id: 'battlecards', label: 'Battlecards', href: '/battlecards', icon: Swords, iconColor: 'var(--color-warning)' },
     ],

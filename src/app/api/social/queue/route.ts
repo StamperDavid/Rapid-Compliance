@@ -25,6 +25,7 @@ const addToQueueSchema = z.object({
   mediaUrls: z.array(z.string().url()).optional(),
   hashtags: z.array(z.string()).optional(),
   preferredTimeSlot: z.enum(['morning', 'afternoon', 'evening']).optional(),
+  accountId: z.string().optional(),
 });
 
 const getQueueSchema = z.object({
@@ -109,6 +110,7 @@ export async function POST(request: NextRequest) {
         hashtags: data.hashtags,
         preferredTimeSlot: data.preferredTimeSlot,
         createdBy: 'api',
+        accountId: data.accountId,
       }
     );
 
