@@ -58,6 +58,7 @@ export { NotificationService } from './notification-service';
 // Signal Handlers
 export {
   initializeNotificationHandlers,
+  destroyNotificationHandlers,
   signalHandlers,
   handleDealRiskCritical,
   handleDealRiskHigh,

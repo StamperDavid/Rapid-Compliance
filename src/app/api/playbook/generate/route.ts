@@ -274,7 +274,7 @@ export async function POST(request: NextRequest) {
       category: validatedRequest.category,
     });
 
-    const result = await generatePlaybook(validatedRequest);
+    const result = await generatePlaybook(validatedRequest, {}, authResult.user.uid);
 
     // 6. Cache successful response
     if (result.success && !validatedRequest.autoActivate) {

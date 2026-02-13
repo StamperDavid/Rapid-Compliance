@@ -97,9 +97,9 @@ export async function getActivities(
 
     // Filter by entity
     if (filters?.entityId && filters?.entityType) {
-      // Note: This requires a composite index in Firestore
-      // For now, we'll fetch all and filter client-side (not ideal for production)
-      // TODO: Add Firestore composite index for relatedTo queries
+      // relatedTo is an array of objects — Firestore cannot index nested array
+      // fields for composite queries. Client-side filtering is applied below.
+      // To optimize: denormalize into a flat relatedEntityIds string[] field.
     }
 
     // Filter by activity types

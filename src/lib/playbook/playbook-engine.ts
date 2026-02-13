@@ -628,7 +628,8 @@ async function analyzeBestPracticesWithAI(
  */
 export async function generatePlaybook(
   request: GeneratePlaybookRequest,
-  config: Partial<PlaybookEngineConfig> = {}
+  config: Partial<PlaybookEngineConfig> = {},
+  userId: string = 'system'
 ): Promise<GeneratePlaybookResponse> {
   const startTime = Date.now();
   
@@ -680,7 +681,7 @@ export async function generatePlaybook(
       usageCount: 0,
       status: request.autoActivate ? 'active' : 'draft',
       confidence: extractionResult.summary.highConfidencePatterns / Math.max(1, extractionResult.summary.totalPatternsFound) * 100,
-      createdBy: 'system', // TODO: Get actual user ID
+      createdBy: userId,
       createdAt: new Date(),
       version: 1,
     };

@@ -18,8 +18,9 @@
 
 import React, { useState, useCallback } from 'react';
 import { ErrorBoundary } from '@/components/common/ErrorBoundary';
-import { 
-  type EmailType, 
+import { showSuccessToast } from '@/components/ErrorToast';
+import {
+  type EmailType,
   type GeneratedEmail,
   getAllEmailTypes,
   getEmailTemplate,
@@ -186,7 +187,7 @@ function EmailWriterCardInner({
   const handleCopyEmail = useCallback(() => {
     const emailText = `Subject: ${editedSubject}\n\n${editedBody}`;
     void navigator.clipboard.writeText(emailText);
-    // TODO: Show toast notification
+    showSuccessToast('Email copied to clipboard!');
   }, [editedSubject, editedBody]);
   
   /**

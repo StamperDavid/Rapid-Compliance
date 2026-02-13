@@ -18,59 +18,83 @@
  * 11. Revenue Forecasting
  */
 
-import type { SalesSignal } from '@/lib/orchestration/types';
+import type { SalesSignal, SignalType } from '@/lib/orchestration/types';
+import { getServerSignalCoordinator } from '@/lib/orchestration/coordinator-factory-server';
 import { NotificationService } from './notification-service';
 import type { NotificationVariables } from './types';
+import { logger } from '@/lib/logger/logger';
+
+/** Track unsubscribe function for cleanup */
+let unsubscribeAll: (() => void) | null = null;
 
 /**
  * Initialize notification signal handlers
  *
- * Call this on server startup to begin listening for signals
+ * Call this on server startup to begin listening for signals.
+ * Subscribes to the SignalCoordinator for all notification-relevant
+ * signal types and dispatches to the appropriate handler.
  */
 export function initializeNotificationHandlers(): void {
-  const service = new NotificationService();
+  // Prevent duplicate subscriptions
+  if (unsubscribeAll) {
+    logger.warn('Notification handlers already initialized, skipping', {
+      file: 'signal-handlers.ts',
+    });
+    return;
+  }
 
-  // Deal Risk Predictor signals
-  registerDealRiskHandlers(service);
+  try {
+    const coordinator = getServerSignalCoordinator();
+    const notificationSignalTypes = Object.keys(signalHandlers) as SignalType[];
 
-  // Conversation Intelligence signals
-  registerConversationHandlers(service);
+    unsubscribeAll = coordinator.observeSignals(
+      {
+        types: notificationSignalTypes,
+        unprocessedOnly: true,
+      },
+      async (signal: SalesSignal) => {
+        const handler = signalHandlers[signal.type as keyof typeof signalHandlers];
+        if (handler) {
+          logger.info('Dispatching notification for signal', {
+            signalType: signal.type,
+            signalId: signal.id,
+            file: 'signal-handlers.ts',
+          });
+          await handler(signal);
+        }
+      }
+    );
 
-  // Coaching signals
-  registerCoachingHandlers(service);
-
-  // Performance Analytics signals
-  registerPerformanceHandlers(service);
-
-  // Playbook Builder signals
-  registerPlaybookHandlers(service);
-
-  // Sequence Intelligence signals
-  registerSequenceHandlers(service);
-
-  // Lead Routing signals
-  registerRoutingHandlers(service);
-
-  // Email Writer signals
-  registerEmailWriterHandlers(service);
-
-  // Workflow Automation signals
-  registerWorkflowHandlers(service);
-
-  // Analytics signals
-  registerAnalyticsHandlers(service);
-
-  // Forecasting signals
-  registerForecastingHandlers(service);
+    logger.info('Notification signal handlers initialized', {
+      subscribedTypes: notificationSignalTypes.length,
+      file: 'signal-handlers.ts',
+    });
+  } catch (error) {
+    logger.error(
+      'Failed to initialize notification signal handlers',
+      error instanceof Error ? error : new Error(String(error)),
+      { file: 'signal-handlers.ts' }
+    );
+  }
 }
 
 /**
- * Deal Risk Predictor Signal Handlers
+ * Tear down notification signal handlers
+ * Call this on server shutdown to clean up Firestore listeners
  */
-function registerDealRiskHandlers(_service: NotificationService): void {
-  // TODO: Subscribe to Signal Bus
-  // For now, export handler functions to be called by Signal Bus
+export function destroyNotificationHandlers(): void {
+  if (unsubscribeAll) {
+    unsubscribeAll();
+    unsubscribeAll = null;
+    logger.info('Notification signal handlers destroyed', {
+      file: 'signal-handlers.ts',
+    });
+  }
 }
+
+// ============================================================================
+// DEAL RISK HANDLERS
+// ============================================================================
 
 /**
  * Handle critical deal risk signal
@@ -125,12 +149,9 @@ export async function handleDealRiskHigh(signal: SalesSignal): Promise<void> {
   }
 }
 
-/**
- * Conversation Intelligence Signal Handlers
- */
-function registerConversationHandlers(_service: NotificationService): void {
-  // Handlers registered via Signal Bus
-}
+// ============================================================================
+// CONVERSATION INTELLIGENCE HANDLERS
+// ============================================================================
 
 /**
  * Handle low conversation quality
@@ -234,12 +255,9 @@ export async function handlePositiveSignal(signal: SalesSignal): Promise<void> {
   }
 }
 
-/**
- * Coaching Signal Handlers
- */
-function registerCoachingHandlers(_service: NotificationService): void {
-  // Handlers registered via Signal Bus
-}
+// ============================================================================
+// COACHING HANDLERS
+// ============================================================================
 
 /**
  * Handle coaching insights generated
@@ -267,12 +285,9 @@ export async function handleCoachingInsightsGenerated(signal: SalesSignal): Prom
   }
 }
 
-/**
- * Performance Analytics Signal Handlers
- */
-function registerPerformanceHandlers(_service: NotificationService): void {
-  // Handlers registered via Signal Bus
-}
+// ============================================================================
+// PERFORMANCE ANALYTICS HANDLERS
+// ============================================================================
 
 /**
  * Handle top performer identified
@@ -324,12 +339,9 @@ export async function handleImprovementOpportunity(signal: SalesSignal): Promise
   }
 }
 
-/**
- * Playbook Builder Signal Handlers
- */
-function registerPlaybookHandlers(_service: NotificationService): void {
-  // Handlers registered via Signal Bus
-}
+// ============================================================================
+// PLAYBOOK BUILDER HANDLERS
+// ============================================================================
 
 /**
  * Handle playbook generated
@@ -379,12 +391,9 @@ export async function handlePatternIdentified(signal: SalesSignal): Promise<void
   }
 }
 
-/**
- * Sequence Intelligence Signal Handlers
- */
-function registerSequenceHandlers(_service: NotificationService): void {
-  // Handlers registered via Signal Bus
-}
+// ============================================================================
+// SEQUENCE INTELLIGENCE HANDLERS
+// ============================================================================
 
 /**
  * Handle sequence underperforming
@@ -436,12 +445,9 @@ export async function handleOptimizationNeeded(signal: SalesSignal): Promise<voi
   }
 }
 
-/**
- * Lead Routing Signal Handlers
- */
-function registerRoutingHandlers(_service: NotificationService): void {
-  // Handlers registered via Signal Bus
-}
+// ============================================================================
+// LEAD ROUTING HANDLERS
+// ============================================================================
 
 /**
  * Handle lead routed
@@ -468,12 +474,9 @@ export async function handleLeadRouted(signal: SalesSignal): Promise<void> {
   }
 }
 
-/**
- * Email Writer Signal Handlers
- */
-function registerEmailWriterHandlers(_service: NotificationService): void {
-  // Handlers registered via Signal Bus
-}
+// ============================================================================
+// EMAIL WRITER HANDLERS
+// ============================================================================
 
 /**
  * Handle email generated
@@ -498,12 +501,9 @@ export async function handleEmailGenerated(signal: SalesSignal): Promise<void> {
   }
 }
 
-/**
- * Workflow Automation Signal Handlers
- */
-function registerWorkflowHandlers(_service: NotificationService): void {
-  // Handlers registered via Signal Bus
-}
+// ============================================================================
+// WORKFLOW AUTOMATION HANDLERS
+// ============================================================================
 
 /**
  * Handle workflow executed
@@ -529,19 +529,9 @@ export async function handleWorkflowExecuted(signal: SalesSignal): Promise<void>
   }
 }
 
-/**
- * Analytics Signal Handlers
- */
-function registerAnalyticsHandlers(_service: NotificationService): void {
-  // Handlers registered via Signal Bus
-}
-
-/**
- * Forecasting Signal Handlers
- */
-function registerForecastingHandlers(_service: NotificationService): void {
-  // Handlers registered via Signal Bus
-}
+// ============================================================================
+// FORECASTING HANDLERS
+// ============================================================================
 
 /**
  * Handle quota at risk
