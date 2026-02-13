@@ -1,12 +1,18 @@
 /**
- * Scene-by-scene HeyGen Bridge Service
- * Handles scene generation, polling, and batch processing for video pipeline
+ * Multi-Engine Scene Generator
+ * Routes scene generation to the selected video engine (HeyGen, Runway, Sora)
+ * and handles polling and batch processing for the video pipeline
  */
 
 import { logger } from '@/lib/logger/logger';
-import { generateHeyGenSceneVideo, getVideoStatus } from '@/lib/video/video-service';
-import type { PipelineScene, SceneGenerationResult } from '@/types/video-pipeline';
-import type { VideoAspectRatio, VideoGenerationResponse } from '@/types/video';
+import {
+  generateHeyGenSceneVideo,
+  generateRunwayVideo,
+  generateSoraVideo,
+  getVideoStatus,
+} from '@/lib/video/video-service';
+import type { PipelineScene, SceneGenerationResult, VideoEngineId } from '@/types/video-pipeline';
+import type { VideoAspectRatio, VideoGenerationResponse, VideoProvider } from '@/types/video';
 
 // ============================================================================
 // Type Guards
@@ -22,12 +28,140 @@ function isVideoGenerationResponse(
 }
 
 // ============================================================================
-// Scene Generation
+// Engine-Specific Generators
+// ============================================================================
+
+async function generateWithHeyGen(
+  scene: PipelineScene,
+  avatarId: string,
+  voiceId: string,
+  aspectRatio: VideoAspectRatio
+): Promise<SceneGenerationResult> {
+  // Convert 4:3 to 16:9 for HeyGen (HeyGen only supports 16:9, 9:16, 1:1)
+  const heygenAspectRatio: '16:9' | '9:16' | '1:1' =
+    aspectRatio === '4:3' ? '16:9' : aspectRatio;
+
+  const response = await generateHeyGenSceneVideo(
+    scene.scriptText,
+    avatarId,
+    voiceId,
+    scene.screenshotUrl,
+    heygenAspectRatio
+  );
+
+  logger.info('HeyGen scene generation started', {
+    sceneId: scene.id,
+    providerVideoId: response.id,
+    file: 'scene-generator.ts',
+  });
+
+  return {
+    sceneId: scene.id,
+    providerVideoId: response.id,
+    provider: 'heygen',
+    status: 'generating',
+    videoUrl: null,
+    thumbnailUrl: null,
+    progress: 0,
+    error: null,
+  };
+}
+
+async function generateWithRunway(
+  scene: PipelineScene,
+  aspectRatio: VideoAspectRatio
+): Promise<SceneGenerationResult> {
+  const runwayAspectRatio = aspectRatio === '4:3' ? '16:9' : aspectRatio;
+  const prompt = `${scene.scriptText} [${runwayAspectRatio}]`;
+
+  const response = await generateRunwayVideo('text', prompt, {
+    duration: Math.min(scene.duration, 10), // Runway max 10s
+  });
+
+  if (!isVideoGenerationResponse(response)) {
+    return {
+      sceneId: scene.id,
+      providerVideoId: '',
+      provider: 'runway',
+      status: 'failed',
+      videoUrl: null,
+      thumbnailUrl: null,
+      progress: 0,
+      error: response.message,
+    };
+  }
+
+  logger.info('Runway scene generation started', {
+    sceneId: scene.id,
+    providerVideoId: response.id,
+    file: 'scene-generator.ts',
+  });
+
+  return {
+    sceneId: scene.id,
+    providerVideoId: response.id,
+    provider: 'runway',
+    status: 'generating',
+    videoUrl: null,
+    thumbnailUrl: null,
+    progress: 0,
+    error: null,
+  };
+}
+
+async function generateWithSora(
+  scene: PipelineScene,
+  aspectRatio: VideoAspectRatio
+): Promise<SceneGenerationResult> {
+  const soraAspectRatio: '16:9' | '9:16' | '1:1' =
+    aspectRatio === '4:3' ? '16:9' : aspectRatio;
+
+  const response = await generateSoraVideo(scene.scriptText, {
+    duration: Math.min(scene.duration, 60), // Sora max 60s
+    aspectRatio: soraAspectRatio,
+  });
+
+  if (!isVideoGenerationResponse(response)) {
+    return {
+      sceneId: scene.id,
+      providerVideoId: '',
+      provider: 'sora',
+      status: 'failed',
+      videoUrl: null,
+      thumbnailUrl: null,
+      progress: 0,
+      error: response.message,
+    };
+  }
+
+  logger.info('Sora scene generation started', {
+    sceneId: scene.id,
+    providerVideoId: response.id,
+    file: 'scene-generator.ts',
+  });
+
+  return {
+    sceneId: scene.id,
+    providerVideoId: response.id,
+    provider: 'sora',
+    status: 'generating',
+    videoUrl: null,
+    thumbnailUrl: null,
+    progress: 0,
+    error: null,
+  };
+}
+
+// ============================================================================
+// Scene Generation (Multi-Engine Router)
 // ============================================================================
 
 /**
- * Generate a single scene with HeyGen
- * Converts aspect ratio and calls HeyGen API
+ * Generate a single scene, dispatching to the selected engine.
+ * null or 'heygen' → HeyGen path (default)
+ * 'runway' → Runway path
+ * 'sora' → Sora path
+ * 'kling' / 'luma' → returns failed result (not yet available)
  */
 export async function generateScene(
   scene: PipelineScene,
@@ -35,44 +169,44 @@ export async function generateScene(
   voiceId: string,
   aspectRatio: VideoAspectRatio
 ): Promise<SceneGenerationResult> {
+  const engine: VideoEngineId = scene.engine ?? 'heygen';
+
   try {
-    // Convert 4:3 to 16:9 for HeyGen (HeyGen only supports 16:9, 9:16, 1:1)
-    const heygenAspectRatio: '16:9' | '9:16' | '1:1' =
-      aspectRatio === '4:3' ? '16:9' : aspectRatio;
+    switch (engine) {
+      case 'heygen':
+        return await generateWithHeyGen(scene, avatarId, voiceId, aspectRatio);
 
-    const response = await generateHeyGenSceneVideo(
-      scene.scriptText,
-      avatarId,
-      voiceId,
-      scene.screenshotUrl,
-      heygenAspectRatio
-    );
+      case 'runway':
+        return await generateWithRunway(scene, aspectRatio);
 
-    logger.info('Scene generation started', {
-      sceneId: scene.id,
-      heygenVideoId: response.id,
-      file: 'scene-generator.ts',
-    });
+      case 'sora':
+        return await generateWithSora(scene, aspectRatio);
 
-    return {
-      sceneId: scene.id,
-      heygenVideoId: response.id,
-      status: 'generating',
-      videoUrl: null,
-      thumbnailUrl: null,
-      progress: 0,
-      error: null,
-    };
+      case 'kling':
+      case 'luma':
+        return {
+          sceneId: scene.id,
+          providerVideoId: '',
+          provider: engine,
+          status: 'failed',
+          videoUrl: null,
+          thumbnailUrl: null,
+          progress: 0,
+          error: `${engine === 'kling' ? 'Kling' : 'Luma'} is not yet available. Please select another engine.`,
+        };
+    }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     logger.error('Scene generation failed', error as Error, {
       sceneId: scene.id,
+      engine,
       file: 'scene-generator.ts',
     });
 
     return {
       sceneId: scene.id,
-      heygenVideoId: '',
+      providerVideoId: '',
+      provider: engine,
       status: 'failed',
       videoUrl: null,
       thumbnailUrl: null,
@@ -87,25 +221,39 @@ export async function generateScene(
 // ============================================================================
 
 /**
- * Poll HeyGen for scene status
- * Maps HeyGen response to our scene status format
+ * Poll provider for scene status
+ * Maps provider response to our scene status format
  */
 export async function pollSceneStatus(
-  heygenVideoId: string
+  providerVideoId: string,
+  provider: VideoEngineId | null = 'heygen'
 ): Promise<{
   status: 'generating' | 'completed' | 'failed';
   videoUrl: string | null;
   thumbnailUrl: string | null;
   error: string | null;
 }> {
+  const resolvedProvider = provider ?? 'heygen';
+
+  // Only heygen, sora, runway are valid VideoProvider values for status polling
+  const validProviders: VideoProvider[] = ['heygen', 'sora', 'runway'];
+  if (!validProviders.includes(resolvedProvider as VideoProvider)) {
+    return {
+      status: 'failed',
+      videoUrl: null,
+      thumbnailUrl: null,
+      error: `Status polling not supported for ${resolvedProvider}`,
+    };
+  }
+
   try {
-    const response = await getVideoStatus(heygenVideoId, 'heygen');
+    const response = await getVideoStatus(providerVideoId, resolvedProvider as VideoProvider);
 
     // Type guard: Check if this is a VideoGenerationResponse
     if (!isVideoGenerationResponse(response)) {
-      // Coming soon response
-      logger.warn('HeyGen video status returned coming_soon', {
-        heygenVideoId,
+      logger.warn('Video status returned coming_soon', {
+        providerVideoId,
+        provider: resolvedProvider,
         file: 'scene-generator.ts',
       });
       return {
@@ -116,7 +264,7 @@ export async function pollSceneStatus(
       };
     }
 
-    // Map HeyGen status to our scene status
+    // Map provider status to our scene status
     if (response.status === 'completed') {
       return {
         status: 'completed',
@@ -143,7 +291,8 @@ export async function pollSceneStatus(
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     logger.error('Failed to poll scene status', error as Error, {
-      heygenVideoId,
+      providerVideoId,
+      provider: resolvedProvider,
       file: 'scene-generator.ts',
     });
 
@@ -178,6 +327,7 @@ export async function generateAllScenes(
     logger.info('Starting batch scene generation', {
       totalScenes: scenes.length,
       concurrency: CONCURRENCY,
+      engines: scenes.map((s) => s.engine ?? 'heygen'),
       file: 'scene-generator.ts',
     });
 

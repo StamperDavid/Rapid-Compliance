@@ -3,6 +3,7 @@
 import { Loader2, CheckCircle2, XCircle, RefreshCw, Play } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { VIDEO_ENGINE_REGISTRY } from '@/lib/video/engine-registry';
 import type { SceneGenerationResult } from '@/types/video-pipeline';
 
 interface SceneProgressCardProps {
@@ -38,7 +39,9 @@ export function SceneProgressCard({ sceneNumber, result, onRetry }: SceneProgres
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           <span className={cn('text-sm font-medium', config.color)}>{config.label}</span>
-          <span className="text-xs text-zinc-600">HeyGen</span>
+          <span className="text-xs text-zinc-600">
+            {VIDEO_ENGINE_REGISTRY[result.provider ?? 'heygen'].label}
+          </span>
         </div>
 
         {/* Progress Bar */}

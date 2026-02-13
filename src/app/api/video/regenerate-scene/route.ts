@@ -16,6 +16,7 @@ const RegenerateSchema = z.object({
   voiceId: z.string().min(1),
   aspectRatio: z.enum(['16:9', '9:16', '1:1', '4:3']).default('16:9'),
   duration: z.number().default(15),
+  engine: z.enum(['heygen', 'runway', 'sora', 'kling', 'luma']).nullable().default(null),
 });
 
 export async function POST(request: NextRequest) {
@@ -40,7 +41,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { projectId, sceneId, scriptText, screenshotUrl, avatarId, voiceId, aspectRatio, duration } = parseResult.data;
+    const { projectId, sceneId, scriptText, screenshotUrl, avatarId, voiceId, aspectRatio, duration, engine } = parseResult.data;
 
     logger.info('Regenerating scene', {
       projectId,
@@ -60,6 +61,7 @@ export async function POST(request: NextRequest) {
       avatarId: null,
       voiceId: null,
       duration,
+      engine: engine ?? null,
       status: 'approved' as const,
     };
 

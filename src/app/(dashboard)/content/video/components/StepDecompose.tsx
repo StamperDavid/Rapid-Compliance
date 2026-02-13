@@ -59,6 +59,7 @@ export function StepDecompose() {
         avatarId: null,
         voiceId: null,
         duration: scene.suggestedDuration,
+        engine: null,
         status: 'draft' as const,
       }));
       setScenes(pipelineScenes);

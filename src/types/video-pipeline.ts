@@ -70,6 +70,12 @@ export const TARGET_PLATFORM_LABELS: Record<TargetPlatform, string> = {
 } as const;
 
 // ============================================================================
+// Engine Types
+// ============================================================================
+
+export type VideoEngineId = 'heygen' | 'runway' | 'sora' | 'kling' | 'luma';
+
+// ============================================================================
 // Scene Types
 // ============================================================================
 
@@ -88,12 +94,14 @@ export interface PipelineScene {
   avatarId: string | null;
   voiceId: string | null;
   duration: number; // seconds
+  engine: VideoEngineId | null; // null = default (heygen)
   status: SceneStatus;
 }
 
 export interface SceneGenerationResult {
   sceneId: string;
-  heygenVideoId: string;
+  providerVideoId: string;
+  provider: VideoEngineId | null;
   status: SceneStatus;
   videoUrl: string | null;
   thumbnailUrl: string | null;

@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { SceneProgressCard } from './SceneProgressCard';
 import { useVideoPipelineStore } from '@/lib/stores/video-pipeline-store';
+import { VIDEO_ENGINE_REGISTRY } from '@/lib/video/engine-registry';
 import type { SceneGenerationResult } from '@/types/video-pipeline';
 
 export function StepGeneration() {
@@ -34,6 +35,15 @@ export function StepGeneration() {
     ? Math.round((completedCount / generatedScenes.length) * 100)
     : 0;
 
+  // Build engine summary for the generating description
+  const engineCounts = scenes.reduce<Record<string, number>>((acc, s) => {
+    const engine = s.engine ?? 'heygen';
+    const label = VIDEO_ENGINE_REGISTRY[engine].label;
+    acc[label] = (acc[label] ?? 0) + 1;
+    return acc;
+  }, {});
+  const engineList = Object.keys(engineCounts).join(', ');
+
   const startGeneration = useCallback(async () => {
     if (isGenerating || hasStarted.current) {
       return;
@@ -45,7 +55,8 @@ export function StepGeneration() {
     // Initialize scene results
     const initialResults: SceneGenerationResult[] = scenes.map((s) => ({
       sceneId: s.id,
-      heygenVideoId: '',
+      providerVideoId: '',
+      provider: s.engine,
       status: 'generating' as const,
       videoUrl: null,
       thumbnailUrl: null,
@@ -66,6 +77,7 @@ export function StepGeneration() {
             scriptText: s.scriptText,
             screenshotUrl: s.screenshotUrl,
             duration: s.duration,
+            engine: s.engine,
           })),
           avatarId,
           voiceId,
@@ -121,6 +133,7 @@ export function StepGeneration() {
           voiceId,
           aspectRatio: brief.aspectRatio,
           duration: scene.duration,
+          engine: scene.engine,
         }),
       });
 
@@ -153,7 +166,7 @@ export function StepGeneration() {
           <CardDescription>
             {allComplete
               ? `All scenes processed. ${completedCount} completed, ${failedCount} failed.`
-              : `Generating ${scenes.length} scenes with HeyGen...`}
+              : `Generating ${scenes.length} scenes with ${engineList}...`}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">

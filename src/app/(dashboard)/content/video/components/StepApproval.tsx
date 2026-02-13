@@ -7,6 +7,9 @@ import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useVideoPipelineStore } from '@/lib/stores/video-pipeline-store';
+import { useVideoProviderStatus } from '@/hooks/useVideoProviderStatus';
+import { EngineSelector } from './EngineSelector';
+import { estimateSceneCost, formatCostUSD, VIDEO_ENGINE_REGISTRY } from '@/lib/video/engine-registry';
 
 export function StepApproval() {
   const {
@@ -20,10 +23,28 @@ export function StepApproval() {
     updateScene,
   } = useVideoPipelineStore();
 
+  const { providerStatus, isLoading: isLoadingProviders } = useVideoProviderStatus();
   const [editingSceneId, setEditingSceneId] = useState<string | null>(null);
 
   const totalDuration = scenes.reduce((sum, s) => sum + s.duration, 0);
-  const estimatedCost = (totalDuration * 0.01).toFixed(2);
+
+  // Dynamic per-engine cost calculation
+  const totalCostCents = scenes.reduce(
+    (sum, s) => sum + estimateSceneCost(s.engine, s.duration),
+    0
+  );
+  const estimatedCost = formatCostUSD(totalCostCents);
+
+  // Build engine summary for the warning text
+  const engineCounts = scenes.reduce<Record<string, number>>((acc, s) => {
+    const engine = s.engine ?? 'heygen';
+    const label = VIDEO_ENGINE_REGISTRY[engine].label;
+    acc[label] = (acc[label] ?? 0) + 1;
+    return acc;
+  }, {});
+  const engineSummary = Object.entries(engineCounts)
+    .map(([label, count]) => `${count} via ${label}`)
+    .join(', ');
 
   const handleApproveAndGenerate = () => {
     advanceStep();
@@ -51,8 +72,8 @@ export function StepApproval() {
         </div>
         <div className="p-4 bg-amber-500/10 rounded-lg border border-amber-500/30">
           <p className="text-xs text-amber-400 flex items-center gap-1"><DollarSign className="w-3 h-3" />Estimated Cost</p>
-          <p className="text-xl font-bold text-amber-400">${estimatedCost}</p>
-          <p className="text-[10px] text-amber-400/70">HeyGen @ $0.01/sec</p>
+          <p className="text-xl font-bold text-amber-400">{estimatedCost}</p>
+          <p className="text-[10px] text-amber-400/70">{engineSummary}</p>
         </div>
       </div>
 
@@ -64,7 +85,7 @@ export function StepApproval() {
             Storyboard Review
           </CardTitle>
           <CardDescription>
-            Review every scene before generation. Click any script to edit inline. Nothing renders until you approve.
+            Review every scene before generation. Choose a video engine per scene and click any script to edit inline.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -106,6 +127,15 @@ export function StepApproval() {
                   {scene.screenshotUrl && <span>Has screenshot</span>}
                   <span>Voice: {voiceName ?? 'Default'}</span>
                 </div>
+
+                {/* Engine Selector */}
+                <EngineSelector
+                  value={scene.engine}
+                  onChange={(engine) => updateScene(scene.id, { engine })}
+                  durationSeconds={scene.duration}
+                  providerStatus={providerStatus}
+                  isLoadingStatus={isLoadingProviders}
+                />
               </div>
 
               {/* Screenshot Thumbnail */}
@@ -125,8 +155,9 @@ export function StepApproval() {
         <div>
           <p className="text-sm font-medium text-amber-400">Ready to generate?</p>
           <p className="text-xs text-zinc-400 mt-1">
-            Each scene will be sent to HeyGen for video generation. This will use your HeyGen API credits.
-            Estimated cost: ${estimatedCost} for {totalDuration} seconds of video.
+            {scenes.length} scene{scenes.length !== 1 ? 's' : ''} will be generated ({engineSummary}).
+            This will use your video API credits.
+            Estimated cost: {estimatedCost} for {totalDuration} seconds of video.
           </p>
         </div>
       </div>

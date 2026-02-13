@@ -39,6 +39,7 @@ export function StepPreProduction() {
       avatarId: null,
       voiceId: null,
       duration: 15,
+      engine: null,
       status: 'draft',
     };
     addScene(newScene);
