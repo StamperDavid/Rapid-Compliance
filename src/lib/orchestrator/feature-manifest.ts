@@ -63,7 +63,7 @@ export const SPECIALISTS: Specialist[] = [
       { id: 'yt_optimize', name: 'Optimize Metadata', description: 'Optimize titles, descriptions, and tags', action: 'optimize_youtube_metadata' },
       { id: 'yt_schedule', name: 'Schedule Content', description: 'Plan and schedule video releases', action: 'schedule_youtube_content' },
     ],
-    triggerPhrases: ['youtube', 'video', 'broadcast', 'long-form content', 'tutorial'],
+    triggerPhrases: ['youtube', 'youtube channel', 'broadcast', 'long-form content'],
     requiresConnection: true,
     connectionLabel: 'YouTube Channel',
   },

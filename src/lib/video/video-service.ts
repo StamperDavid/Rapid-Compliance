@@ -1,15 +1,16 @@
 /**
  * Video Generation Service
- * Stub service for AI Video Factory - HeyGen, Sora, Runway integrations
+ * AI Video Factory - HeyGen, Sora, Runway integrations
  *
- * Status: Coming Soon
- * This service provides placeholder functions that will be implemented
- * when the Video Factory module launches.
+ * API keys are read from Firestore via the API Key Service
+ * (Settings > API Keys), NOT from process.env.
  */
 
 import { collection, addDoc, serverTimestamp, getDocs, query, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import { logger } from '@/lib/logger/logger';
+import { apiKeyService } from '@/lib/api-keys/api-key-service';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 import type {
   VideoGenerationRequest,
   VideoGenerationResponse,
@@ -24,13 +25,27 @@ import type {
 } from '@/types/video';
 
 // ============================================================================
+// API Key Retrieval (from Firestore, not process.env)
+// ============================================================================
+
+/**
+ * Get API key for a video provider from the API Keys settings.
+ * Keys are configured at Settings > API Keys in the dashboard.
+ */
+async function getVideoProviderKey(provider: VideoProvider): Promise<string | null> {
+  const key = await apiKeyService.getServiceKey(PLATFORM_ID, provider);
+  if (typeof key === 'string' && key.length > 0) { return key; }
+  return null;
+}
+
+// ============================================================================
 // Service Status
 // ============================================================================
 
 export const VIDEO_SERVICE_STATUS = {
-  isAvailable: false,
-  message: 'AI Video Generation is coming soon. Join the waitlist to be notified when it launches.',
-  expectedLaunch: 'Q2 2026',
+  isAvailable: true,
+  message: 'AI Video Generation is available. Configure provider API keys in Settings > API Keys.',
+  expectedLaunch: 'Q1 2026',
 } as const;
 
 // ============================================================================
@@ -172,7 +187,7 @@ export async function generateVideo(
   );
 
   // Check if provider is configured
-  if (isProviderConfigured(request.provider)) {
+  if (await isProviderConfigured(request.provider)) {
     try {
       switch (request.provider) {
         case 'heygen':
@@ -243,25 +258,25 @@ export async function getVideoStatus(
   // Try each provider if not specified
   if (!detectedProvider) {
     // Try HeyGen first
-    if (process.env.HEYGEN_API_KEY) {
+    if (await getVideoProviderKey('heygen')) {
       detectedProvider = 'heygen';
-    } else if (process.env.OPENAI_API_KEY) {
+    } else if (await getVideoProviderKey('sora')) {
       detectedProvider = 'sora';
-    } else if (process.env.RUNWAY_API_KEY) {
+    } else if (await getVideoProviderKey('runway')) {
       detectedProvider = 'runway';
     }
   }
 
-  if (!detectedProvider || !isProviderConfigured(detectedProvider)) {
+  if (!detectedProvider || !(await isProviderConfigured(detectedProvider))) {
     return createComingSoonResponse('Video status tracking');
   }
 
   try {
     switch (detectedProvider) {
       case 'heygen': {
-        const apiKey = process.env.HEYGEN_API_KEY;
+        const apiKey = await getVideoProviderKey('heygen');
         if (!apiKey) {
-          throw new Error('HeyGen API key not configured');
+          throw new Error('HeyGen API key not configured. Add it in Settings > API Keys.');
         }
 
         const response = await fetch(`https://api.heygen.com/v1/video_status.get?video_id=${videoId}`, {
@@ -304,9 +319,9 @@ export async function getVideoStatus(
       }
 
       case 'sora': {
-        const apiKey = process.env.OPENAI_API_KEY;
+        const apiKey = await getVideoProviderKey('sora');
         if (!apiKey) {
-          throw new Error('OpenAI API key not configured');
+          throw new Error('OpenAI API key not configured. Add it in Settings > API Keys.');
         }
 
         const response = await fetch(`https://api.openai.com/v1/videos/${videoId}`, {
@@ -346,9 +361,9 @@ export async function getVideoStatus(
       }
 
       case 'runway': {
-        const apiKey = process.env.RUNWAY_API_KEY;
+        const apiKey = await getVideoProviderKey('runway');
         if (!apiKey) {
-          throw new Error('Runway API key not configured');
+          throw new Error('Runway API key not configured. Add it in Settings > API Keys.');
         }
 
         const response = await fetch(`https://api.runwayml.com/v1/generations/${videoId}`, {
@@ -421,7 +436,7 @@ export async function cancelVideoGeneration(
 export async function listHeyGenAvatars(): Promise<(ComingSoonResponse & { avatars?: HeyGenAvatar[] }) | { avatars: HeyGenAvatar[] }> {
   await logVideoInterest('list_heygen_avatars');
 
-  const apiKey = process.env.HEYGEN_API_KEY;
+  const apiKey = await getVideoProviderKey('heygen');
   if (!apiKey) {
     return {
       ...createComingSoonResponse('HeyGen avatar library'),
@@ -481,7 +496,7 @@ export async function listHeyGenVoices(
 ): Promise<(ComingSoonResponse & { voices?: HeyGenVoice[] }) | { voices: HeyGenVoice[] }> {
   await logVideoInterest('list_heygen_voices');
 
-  const apiKey = process.env.HEYGEN_API_KEY;
+  const apiKey = await getVideoProviderKey('heygen');
   if (!apiKey) {
     return {
       ...createComingSoonResponse('HeyGen voice library'),
@@ -551,9 +566,9 @@ async function generateHeyGenVideoInternal(
     aspectRatio?: '16:9' | '9:16' | '1:1';
   }
 ): Promise<VideoGenerationResponse> {
-  const apiKey = process.env.HEYGEN_API_KEY;
+  const apiKey = await getVideoProviderKey('heygen');
   if (!apiKey) {
-    throw new Error('HeyGen API key not configured');
+    throw new Error('HeyGen API key not configured. Add it in Settings > API Keys.');
   }
 
   try {
@@ -631,7 +646,7 @@ export async function generateHeyGenVideo(
 ): Promise<VideoGenerationResponse | ComingSoonResponse> {
   await logVideoInterest('generate_heygen_video');
 
-  const apiKey = process.env.HEYGEN_API_KEY;
+  const apiKey = await getVideoProviderKey('heygen');
   if (!apiKey) {
     return createComingSoonResponse('HeyGen video generation');
   }
@@ -661,9 +676,9 @@ async function generateSoraVideoInternal(
     style?: string;
   }
 ): Promise<VideoGenerationResponse> {
-  const apiKey = process.env.OPENAI_API_KEY;
+  const apiKey = await getVideoProviderKey('sora');
   if (!apiKey) {
-    throw new Error('OpenAI API key not configured');
+    throw new Error('OpenAI API key not configured. Add it in Settings > API Keys.');
   }
 
   try {
@@ -725,7 +740,7 @@ export async function generateSoraVideo(
 ): Promise<VideoGenerationResponse | ComingSoonResponse> {
   await logVideoInterest('generate_sora_video');
 
-  const apiKey = process.env.OPENAI_API_KEY;
+  const apiKey = await getVideoProviderKey('sora');
   if (!apiKey) {
     return createComingSoonResponse('Sora text-to-video generation');
   }
@@ -755,9 +770,9 @@ async function generateRunwayVideoInternal(
     motion?: 'auto' | 'slow' | 'fast';
   }
 ): Promise<VideoGenerationResponse> {
-  const apiKey = process.env.RUNWAY_API_KEY;
+  const apiKey = await getVideoProviderKey('runway');
   if (!apiKey) {
-    throw new Error('Runway API key not configured');
+    throw new Error('Runway API key not configured. Add it in Settings > API Keys.');
   }
 
   try {
@@ -826,7 +841,7 @@ export async function generateRunwayVideo(
 ): Promise<VideoGenerationResponse | ComingSoonResponse> {
   await logVideoInterest('generate_runway_video');
 
-  const apiKey = process.env.RUNWAY_API_KEY;
+  const apiKey = await getVideoProviderKey('runway');
   if (!apiKey) {
     return createComingSoonResponse('Runway video generation');
   }
@@ -1043,19 +1058,11 @@ export function getVideoServiceStatus(): typeof VIDEO_SERVICE_STATUS {
 /**
  * Validate video provider API key is configured
  */
-export function isProviderConfigured(
+export async function isProviderConfigured(
   provider: VideoProvider
-): boolean {
-  switch (provider) {
-    case 'heygen':
-      return !!process.env.HEYGEN_API_KEY;
-    case 'sora':
-      return !!process.env.OPENAI_API_KEY;
-    case 'runway':
-      return !!process.env.RUNWAY_API_KEY;
-    default:
-      return false;
-  }
+): Promise<boolean> {
+  const key = await getVideoProviderKey(provider);
+  return key !== null;
 }
 
 /**

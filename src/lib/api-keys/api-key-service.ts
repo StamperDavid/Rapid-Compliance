@@ -179,6 +179,8 @@ return keys.ai?.anthropicApiKey ?? keys.ai?.openrouterApiKey ?? null;
       // Video Services
       case 'heygen':
         return keys.video?.heygen?.apiKey ?? null;
+      case 'sora':
+        return keys.video?.sora?.apiKey ?? keys.ai?.openaiApiKey ?? null;
       case 'runway':
         return keys.video?.runway?.apiKey ?? null;
 

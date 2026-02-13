@@ -80,6 +80,8 @@ import {
   Cog,
   Monitor,
   Eye,
+  PlayCircle,
+  Award,
 } from 'lucide-react';
 
 // ============================================================================
@@ -235,6 +237,18 @@ const NAV_SECTIONS: NavigationSection[] = [
       { id: 'seo', label: 'SEO', href: '/website/seo', icon: Search, iconColor: 'var(--color-success)', requiredPermission: 'canManageWebsite' },
       { id: 'domains', label: 'Domains', href: '/website/domains', icon: Link2, iconColor: 'var(--color-teal)', requiredPermission: 'canManageWebsite' },
       { id: 'site-settings', label: 'Site Settings', href: '/website/settings', icon: Cog, iconColor: 'var(--color-warning)', requiredPermission: 'canManageWebsite' },
+    ],
+  },
+  // ── Academy ─────────────────────────────────────────────────────────
+  {
+    id: 'academy',
+    label: 'Academy',
+    icon: GraduationCap,
+    allowedRoles: ['owner', 'admin', 'manager', 'member'],
+    items: [
+      { id: 'tutorials', label: 'Tutorials', href: '/academy', icon: PlayCircle, iconColor: 'var(--color-primary)' },
+      { id: 'courses', label: 'Courses', href: '/academy/courses', icon: BookOpen, iconColor: 'var(--color-secondary)' },
+      { id: 'certifications', label: 'Certifications', href: '/academy/certifications', icon: Award, iconColor: 'var(--color-success)' },
     ],
   },
   // ── Settings ────────────────────────────────────────────────────────

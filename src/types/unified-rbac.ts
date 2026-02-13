@@ -485,6 +485,7 @@ export type NavigationCategory =
   | 'ecommerce'
   | 'analytics'
   | 'website'
+  | 'academy'
   | 'settings'
   | 'system';
 

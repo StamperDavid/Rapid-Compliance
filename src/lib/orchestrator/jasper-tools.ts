@@ -868,6 +868,74 @@ export const JASPER_TOOLS: ToolDefinition[] = [
   },
 
   // ═══════════════════════════════════════════════════════════════════════════
+  // VIDEO CREATION TOOLS
+  // ═══════════════════════════════════════════════════════════════════════════
+  {
+    type: 'function',
+    function: {
+      name: 'create_video',
+      description:
+        'Create a video using AI video generation. Default provider is HeyGen (avatar videos). Also supports Sora (text-to-video) and Runway (text/image-to-video). Videos are stored in the video library — no external platform connection required. Use this when the user asks to create, generate, or make a video of any kind. ENABLED: TRUE.',
+      parameters: {
+        type: 'object',
+        properties: {
+          description: {
+            type: 'string',
+            description: 'Detailed description of the video to create. Include the topic, style, tone, and any specific requirements.',
+          },
+          provider: {
+            type: 'string',
+            description: 'AI video provider to use. Auto-selects best available if not specified.',
+            enum: ['heygen', 'sora', 'runway', 'auto'],
+          },
+          type: {
+            type: 'string',
+            description: 'Type of video generation',
+            enum: ['text-to-video', 'avatar', 'image-to-video'],
+          },
+          duration: {
+            type: 'number',
+            description: 'Target video duration in seconds (default: 30)',
+          },
+          aspectRatio: {
+            type: 'string',
+            description: 'Video aspect ratio',
+            enum: ['16:9', '9:16', '1:1'],
+          },
+          title: {
+            type: 'string',
+            description: 'Title for the video project in the library',
+          },
+        },
+        required: ['description'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'get_video_status',
+      description:
+        'Check the status of a video being generated. Returns progress, completion status, and the video URL when ready. ENABLED: TRUE.',
+      parameters: {
+        type: 'object',
+        properties: {
+          videoId: {
+            type: 'string',
+            description: 'The video ID returned from create_video',
+          },
+          provider: {
+            type: 'string',
+            description: 'The provider used for generation',
+            enum: ['heygen', 'sora', 'runway'],
+          },
+        },
+        required: ['videoId'],
+      },
+    },
+  },
+
+  // ═══════════════════════════════════════════════════════════════════════════
   // ANALYTICS & REPORTING TOOLS
   // ═══════════════════════════════════════════════════════════════════════════
   {
@@ -1953,6 +2021,106 @@ export async function executeToolCall(toolCall: ToolCall): Promise<ToolResult> {
           parsedArgs.PLATFORM_ID
         );
         content = JSON.stringify(logs);
+        break;
+      }
+
+      // ═══════════════════════════════════════════════════════════════════════
+      // VIDEO CREATION TOOLS
+      // ═══════════════════════════════════════════════════════════════════════
+      case 'create_video': {
+        const { generateVideo, createVideoProject, isProviderConfigured } = await import('@/lib/video/video-service');
+        const description = args.description as string;
+        const title = (args.title as string) ?? `Video: ${description.slice(0, 50)}`;
+        const duration = args.duration ? Number(args.duration) : 30;
+        const aspectRatio = (args.aspectRatio as '16:9' | '9:16' | '1:1') ?? '16:9';
+        const videoType = (args.type as 'text-to-video' | 'avatar' | 'image-to-video') ?? 'text-to-video';
+
+        // Auto-select provider if not specified (HeyGen is the default)
+        let provider = args.provider as string | undefined;
+        if (!provider || provider === 'auto') {
+          if (await isProviderConfigured('heygen')) {
+            provider = 'heygen';
+          } else if (await isProviderConfigured('sora')) {
+            provider = 'sora';
+          } else if (await isProviderConfigured('runway')) {
+            provider = 'runway';
+          } else {
+            provider = 'heygen';
+          }
+        }
+
+        // Create a project in the video library
+        const projectResult = await createVideoProject({
+          name: title,
+          description,
+          status: 'in-progress',
+          userId: 'admin',
+          createdBy: 'jasper',
+        });
+
+        // Trigger video generation
+        const videoResult = await generateVideo({
+          prompt: description,
+          provider: provider as 'heygen' | 'sora' | 'runway',
+          type: videoType,
+          duration,
+          aspectRatio,
+          userId: 'admin',
+        });
+
+        if ('status' in videoResult && videoResult.status === 'coming_soon') {
+          content = JSON.stringify({
+            status: 'queued',
+            message: `Video generation queued. The ${provider} provider API key needs to be configured for live generation. Your project "${title}" has been created in the video library.`,
+            projectId: projectResult.projectId ?? null,
+            provider,
+            videoLibraryPath: '/content/video',
+          });
+        } else {
+          const response = videoResult as { id: string; requestId: string; status: string; provider: string };
+          content = JSON.stringify({
+            status: 'generating',
+            videoId: response.id,
+            requestId: response.requestId,
+            provider: response.provider,
+            projectId: projectResult.projectId ?? null,
+            message: `Video generation started with ${provider}. Estimated completion: 2-10 minutes. The video will be available in your video library.`,
+            videoLibraryPath: '/content/video',
+          });
+        }
+        break;
+      }
+
+      case 'get_video_status': {
+        const { getVideoStatus: checkVideoStatus } = await import('@/lib/video/video-service');
+        const videoId = args.videoId as string;
+        const videoProvider = args.provider as 'heygen' | 'sora' | 'runway' | undefined;
+
+        const statusResult = await checkVideoStatus(videoId, videoProvider);
+
+        if ('status' in statusResult && statusResult.status === 'coming_soon') {
+          content = JSON.stringify({
+            status: 'pending',
+            videoId,
+            message: 'Video provider API is not yet configured. The video will be generated once the provider is connected.',
+          });
+        } else {
+          const response = statusResult as { id: string; status: string; videoUrl?: string; thumbnailUrl?: string; provider: string; errorMessage?: string };
+          content = JSON.stringify({
+            status: response.status,
+            videoId: response.id,
+            videoUrl: response.videoUrl ?? null,
+            thumbnailUrl: response.thumbnailUrl ?? null,
+            provider: response.provider,
+            errorMessage: response.errorMessage ?? null,
+            message: response.status === 'completed'
+              ? `Video is ready! You can view it in the video library.`
+              : response.status === 'failed'
+                ? `Video generation failed: ${response.errorMessage ?? 'Unknown error'}`
+                : 'Video is still being generated. Check back in a few minutes.',
+            videoLibraryPath: '/content/video',
+          });
+        }
         break;
       }
 

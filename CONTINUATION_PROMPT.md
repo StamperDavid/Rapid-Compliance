@@ -1,13 +1,13 @@
 # SalesVelocity.ai Platform - Continuation Prompt
 
-** Always ** review claude.md rules before starting a task
+**Always** review CLAUDE.md rules before starting a task
 
 ## Context
 Repository: https://github.com/StamperDavid/Rapid-Compliance
 Branch: dev
-Last Commit: 06344279 — "feat: fix website/blog editors, correct 16 master library docs, create WEBSITE_BUILDER.md"
+Last Session: February 12, 2026
 
-## Current State (February 12, 2026)
+## Current State
 
 ### Architecture
 - **Single-tenant penthouse model** — org ID `rapid-compliance-root`, Firebase `rapid-compliance-65f87`
@@ -18,200 +18,175 @@ Last Commit: 06344279 — "feat: fix website/blog editors, correct 16 master lib
 
 ### Code Health
 - `tsc --noEmit` — **PASSES (zero errors)**
-- `npm run lint` — **PASSES (zero errors)**
+- `npm run lint` — **PASSES (zero errors, zero warnings)**
 - `npm run build` — **PASSES (production build succeeds)**
-- **510 `tests/lib/` tests** — ALL PASS (19/19 suites)
-- **126 safe unit tests** — ALL PASS (event-router 49, jasper-command-authority 21, mutation-engine 9, analytics-helpers 47)
-- **92 root-level tests** — ALL PASS
-- **27 MemoryVault tests** — ALL PASS (hydration, serialization, TTL cleanup)
-- **3 service tests failing** — infrastructure issue only (missing Firestore composite indexes, not code bugs)
 
-### What's Complete
-- **organizationId purge — FULLY COMPLETE** (zero references in src/ and tests/, all cascade type errors fixed, 564 files changed)
-- Single-tenant conversion (-80K+ lines total across all purge phases)
-- SalesVelocity.ai rebrand + CSS variable theme system
-- Agent hierarchy with full manager orchestration
-- 4-role RBAC with API gating and sidebar filtering
-- Stabilization Roadmap (all 15 tasks across 3 tiers)
-- Social Media Growth Engine (Phases 1-6)
-- **Autonomous Business Operations (ALL 8 PHASES)** — Event Router, Operations Cycle Cron, Event Emitters, Manager Authority, Revenue Pipeline Automation, Outreach Autonomy, Content Production Hub, Intelligence Always-On, Builder/Commerce Reactive Loops, Contextual Artifact Generation, Jasper Command Authority
-- Post-Phase 8 Stabilization — integration tests, production cron scheduling, executive briefing dashboard
-- Pre-existing type errors fixed (brand-dna-service duplicate properties, claims-validator shorthand, director-service missing field, orchestrator LogContext type)
-- **Unused import cleanup — COMPLETE** (135 lint errors removed: 126 PLATFORM_ID imports, 3 empty interfaces, 6 unused vars)
-- Restored onboarding page.tsx (was accidentally emptied during orgId purge)
-- **MemoryVault Firestore persistence — COMPLETE** (commit e388c151). Agents survive Vercel cold starts. `read()` and `query()` now await Firestore hydration before returning results. TTL cleanup wired to operations-cycle cron (every 4 hours). 35+ callers across 9 agent/orchestrator files updated to async.
-- **ConversationMemory service — COMPLETE** (commit b1c50e8f). All 5 sub-tasks done:
-  - 3a: Voice transcript persistence — `handleEndCall()` persists to Firestore before clearing memory. Also persists on transfer/close.
-  - 3b: Auto-analysis trigger — voice calls auto-trigger `analyzeTranscript()` after completion. Chat sessions trigger analysis via API on `completeSession()`.
-  - 3c: ConversationMemory service — `src/lib/conversation/conversation-memory.ts`. Unified retrieval across voice, chat, SMS by phone/email/customerId/leadId.
-  - 3d: Lead Briefing generator — `conversationMemory.brief()` synthesizes interactions into structured briefing (sentiment trends, objections, buying signals, recommendations).
-  - 3e: Agent integration — Outreach Manager enriches lead profiles, Revenue Director includes brief context in delegations, Voice AI loads caller history.
-- **Jasper Voice overhaul — COMPLETE** (commits 0bc1ab1f, 47738fac). Removed native TTS stub, wired ElevenLabs + Unreal Speech as only providers via VoiceEngineFactory. Added Voice & Speech settings page at `/settings/ai-agents/voice`.
-- **Documentation & Website Editor fix — COMPLETE** (commit 06344279):
-  - Website editor auto-loads homepage when entering without `?pageId=` (was always creating blank "Untitled Page")
-  - Blog editor upgraded from stubbed callbacks to full 3-panel layout (WidgetsPanel + EditorCanvas + PropertiesPanel with tabbed left panel)
-  - All 16 master library docs corrected against actual codebase: `/admin/` paths → `/(dashboard)/`, agent counts → 52/38, Firestore paths fixed, unimplemented features moved to "Planned Features" sections
-  - New `docs/master_library/WEBSITE_BUILDER.md` created (35 widgets, 23+ API endpoints, data structures, manual SOP, video script)
-  - SSOT and audit summary updated
+### What Was Done This Session
 
-### Immediate Next Task
-**Deploy Firestore indexes** — `firebase deploy --only firestore:indexes` (requires `firebase login --reauth` first — credentials expired). Fixes 3 failing service tests. Then proceed to production deploy.
+**Fixed Jasper video routing:**
+- Removed generic `'video'` and `'tutorial'` from YouTube specialist's `triggerPhrases` in `feature-manifest.ts` — YouTube no longer hijacks all video requests
+- Added `create_video` tool to Jasper (`jasper-tools.ts`) — accepts description, provider, type, duration, aspect ratio; creates a project in the video library and calls the video generation service
+- Added `get_video_status` tool to Jasper — checks generation progress and returns video URL when ready
+- HeyGen is the default video provider (auto-select order: HeyGen > Sora > Runway)
 
-### Known Issues
+**Rewired video service to use API Key Service:**
+- Replaced all 17 `process.env` API key reads in `video-service.ts` with `getVideoProviderKey()` calls
+- Video provider keys now come from Firestore via `apiKeyService.getServiceKey()` (Settings > API Keys page), matching the pattern used by ElevenLabs/Unreal Speech voice providers
+- Added missing `case 'sora'` to `api-key-service.ts` (falls back to OpenAI key)
+- Updated `VIDEO_SERVICE_STATUS.isAvailable` to `true`
+
+**Added Academy section:**
+- New "Academy" navigation section in sidebar (`AdminSidebar.tsx`) with Tutorials, Courses, Certifications
+- Added `'academy'` to `NavigationCategory` type in `unified-rbac.ts`
+- Created Academy page at `/academy` with category filtering, video player, and tutorial grid (reads from Firestore `academy_tutorials` collection)
+
+### Files Changed (Uncommitted)
+```
+M  src/components/admin/AdminSidebar.tsx        (Academy nav section)
+M  src/lib/api-keys/api-key-service.ts          (Added sora case)
+M  src/lib/orchestrator/feature-manifest.ts     (YouTube trigger phrases)
+M  src/lib/orchestrator/jasper-tools.ts         (create_video + get_video_status tools)
+M  src/lib/video/video-service.ts               (API keys from Firestore, not process.env)
+M  src/types/unified-rbac.ts                    (academy NavigationCategory)
+A  src/app/(dashboard)/academy/page.tsx          (Academy page)
+```
+
+---
+
+## PRIMARY TASK: Video Production Pipeline
+
+### Goal
+Tell Jasper "create a video on how to set up an email campaign" and receive a polished, professional video in the video library — with full review and approval at every step.
+
+### Architecture: Scene-Based HeyGen with Approval Flow
+
+**Provider:** HeyGen (default) via API. HeyGen is the rendering engine — videos are generated through their API, downloaded, and stored in our Firebase Storage. We own the files.
+
+**Why HeyGen:** Avatar IV model produces photorealistic presenters with natural lip sync, gestures, and micro-expressions. 1080p/4K output. Ideal for tutorials, explainers, and product demos. Cost: ~$0.01/second.
+
+### The Flow
+
+```
+1. USER → JASPER (natural language request)
+   "Create a video on how to set up an email campaign"
+        ↓
+2. JASPER decomposes the request:
+   - Identifies video type (platform tutorial)
+   - Determines which pages/routes are involved
+   - Identifies asset requirements (screenshots for tutorials)
+   - Delegates to planning agents
+        ↓
+3. PRE-PRODUCTION (planning agents):
+   a. Screenshot Service captures actual UI pages via Puppeteer/Playwright
+      - /outbound/campaigns (list view)
+      - /outbound/campaigns/new (editor)
+      - etc.
+   b. Video Specialist writes scene-by-scene script
+   c. Avatar + voice recommendations selected
+   d. Draft storyboard assembled with real screenshots attached to each scene
+        ↓
+4. APPROVAL (Video Studio UI at /content/video):
+   - User reviews every scene: script text, screenshot, avatar, voice
+   - User can EDIT individual scenes (change script, swap screenshot, adjust timing)
+   - User can reorder or delete scenes
+   - User selects avatar and voice from HeyGen library
+   - Nothing goes to HeyGen until user clicks "Approve & Generate"
+        ↓
+5. GENERATION (HeyGen API, scene-by-scene):
+   - Each approved scene → separate HeyGen API call
+   - Avatar presents script with screenshot as background per scene
+   - Progress tracking in Video Studio
+   - Individual scene re-generation if quality is off (not entire video)
+        ↓
+6. ASSEMBLY + REVIEW:
+   - Scenes stitched together (ffmpeg.wasm or server-side ffmpeg)
+   - Clean cuts or fade transitions between scenes
+   - Final video stored in video library (Firebase Storage)
+   - User previews the complete video
+        ↓
+7. POST-PRODUCTION (in-house editor):
+   - If a scene needs fixing: edit script → re-generate just that scene → re-stitch
+   - Basic editing: trim, reorder scenes, adjust transitions
+   - Scene-level granularity — surgical control over quality
+```
+
+### What's Built vs What's Needed
+
+#### Already Working
+| Component | Status | Location |
+|-----------|--------|----------|
+| Video Specialist (script/storyboard generation) | FUNCTIONAL | `src/lib/agents/content/video/specialist.ts` |
+| Director Service (storyboard from brief) | FUNCTIONAL | `src/lib/video/engine/director-service.ts` |
+| HeyGen API integration (generate video) | FUNCTIONAL (needs API key) | `src/lib/video/video-service.ts` |
+| Sora API integration | FUNCTIONAL (needs API key) | `src/lib/video/video-service.ts` |
+| Runway API integration | FUNCTIONAL (needs API key) | `src/lib/video/video-service.ts` |
+| Jasper `create_video` tool | FUNCTIONAL | `src/lib/orchestrator/jasper-tools.ts` |
+| Jasper `get_video_status` tool | FUNCTIONAL | `src/lib/orchestrator/jasper-tools.ts` |
+| Video Studio UI (brief form) | FUNCTIONAL | `src/app/(dashboard)/content/video/page.tsx` |
+| Storyboard preview panel | FUNCTIONAL | `src/app/(dashboard)/content/video/page.tsx` |
+| API Keys page (HeyGen, Runway, Sora entries) | FUNCTIONAL | `src/app/(dashboard)/settings/api-keys/page.tsx` |
+| TTS voice generation (ElevenLabs/Unreal Speech) | FUNCTIONAL | `src/lib/voice/tts/` |
+| Video library Firestore storage | FUNCTIONAL | `video-service.ts` (projects, templates) |
+| Academy page (tutorial video library) | FUNCTIONAL | `src/app/(dashboard)/academy/page.tsx` |
+
+#### Needs to Be Built
+
+| Component | Priority | Description |
+|-----------|----------|-------------|
+| **Screenshot capture tool** | HIGH | Puppeteer/Playwright service that captures UI pages at specified routes. Jasper needs a `capture_screenshot` tool. For platform tutorials, the video must show real UI — not AI approximations. |
+| **Scene-level editing in Video Studio** | HIGH | Edit script per scene, reorder scenes, delete scenes in the storyboard preview. Currently can only regenerate from scratch. |
+| **Avatar picker** | HIGH | Fetch HeyGen avatars via `listHeyGenAvatars()` (API exists) and display in Video Studio for user selection. |
+| **Voice picker** | HIGH | Fetch HeyGen voices via `listHeyGenVoices()` (API exists) and display in Video Studio for user selection. |
+| **Storyboard → HeyGen bridge** | HIGH | Convert approved storyboard into scene-by-scene HeyGen API calls. Currently the "Start Generation" button calls the mock render pipeline instead of `video-service.ts`. |
+| **UI action highlighting in screenshots** | HIGH | During tutorial scene descriptions, highlight/annotate the relevant buttons and UI elements in screenshots so viewers can follow along. |
+| **Scene-by-scene generation** | MEDIUM | Generate each scene as a separate HeyGen API call (avatar + script + screenshot background). Track progress per scene. Allow re-generation of individual scenes. |
+| **Scene stitching** | MEDIUM | Assemble individual scene videos into final video. ffmpeg.wasm (client-side) or server-side ffmpeg. Handle transitions (cuts, fades). |
+| **Video editor (scene manager)** | MEDIUM | Timeline view of scenes. Preview each scene. Reorder, trim, re-generate individual scenes. Not a full NLE — a scene manager with surgical re-generation. |
+| **Jasper video producer logic** | MEDIUM | Jasper's reasoning layer for decomposing video requests: identify type (tutorial vs promo vs explainer), determine required assets, delegate to correct agents, assemble the draft. |
+
+### Video Production Pipeline — Key Files
+
+| File | Purpose |
+|------|---------|
+| `src/lib/video/video-service.ts` | HeyGen/Sora/Runway API integrations (API keys from Firestore) |
+| `src/lib/video/engine/director-service.ts` | Storyboard generation from video briefs |
+| `src/lib/video/engine/render-pipeline.ts` | Render orchestration (currently ALL MOCKED — needs to be rewired to video-service.ts) |
+| `src/lib/video/engine/stitcher-service.ts` | Post-production assembly (TTS works, video stitching stubbed) |
+| `src/lib/video/engine/multi-model-picker.ts` | Provider routing logic (real logic, routes to mocked endpoints) |
+| `src/lib/video/engine/style-guide-integrator.ts` | Brand style analysis (real CSS/color analysis, text-only output) |
+| `src/lib/video/video-job-service.ts` | Video job tracking in Firestore |
+| `src/lib/agents/content/video/specialist.ts` | Video Specialist agent (scripts, storyboards, SEO — all functional, text-only) |
+| `src/lib/agents/builder/assets/specialist.ts` | Asset Generator (SHELL — generates prompts, no actual image generation) |
+| `src/lib/orchestrator/jasper-tools.ts` | Jasper's tools including create_video, get_video_status |
+| `src/lib/orchestrator/feature-manifest.ts` | 11 specialists + trigger phrases |
+| `src/app/(dashboard)/content/video/page.tsx` | Video Studio UI |
+| `src/app/api/video/storyboard/route.ts` | POST — generate storyboard from brief |
+| `src/app/api/video/generate/route.ts` | POST — start video generation from storyboard |
+
+### Important Architecture Notes
+
+**Render Pipeline is fully mocked.** Every provider call in `render-pipeline.ts` returns `Promise.resolve({ jobId: 'mock_123' })`. The real HeyGen/Sora/Runway integrations are in `video-service.ts`. The "Start Generation" button in Video Studio calls the mock pipeline, not the real service. This needs to be rewired.
+
+**Asset Generator is a shell.** `src/lib/agents/builder/assets/specialist.ts` claims to generate logos, banners, and graphics but returns placeholder URLs. No image generation API is integrated. For video thumbnails and marketing graphics, we need a real image generation integration (DALL-E, Flux, etc.) — but this is separate from the video pipeline.
+
+**No ffmpeg installed.** Video stitching requires ffmpeg. Options: `ffmpeg.wasm` (runs in browser, ~30MB), server-side ffmpeg on a Cloud Run worker, or using HeyGen's multi-scene API to avoid stitching entirely.
+
+---
+
+## Known Issues
+
 | Issue | Details |
 |-------|---------|
-| 3 service tests failing | Missing Firestore composite indexes (status+createdAt, stage+createdAt on `records` and `workflows`). Fix: `firebase login --reauth` then `firebase deploy --only firestore:indexes` |
-| Firebase CLI credentials expired | Run `firebase login --reauth` to re-authenticate before deploying indexes |
-| Outbound webhooks are scaffolding | Settings UI exists with event list but backend dispatch system is not implemented |
-| Playbook missing API endpoints | `/api/playbook/list` and `/api/playbook/{id}/metrics` do not exist — UI calls them but gets 404s. Only `/api/playbook/generate` exists. |
+| 3 service tests failing | Missing Firestore composite indexes. Fix: `firebase login --reauth` then `firebase deploy --only firestore:indexes` |
+| Render pipeline fully mocked | `render-pipeline.ts` returns fake responses. Real integrations are in `video-service.ts` |
+| Asset Generator is a shell | Returns placeholder URLs, no actual image generation |
+| No screenshot capture service | Needed for platform tutorial videos |
+| Outbound webhooks are scaffolding | Settings UI exists but backend dispatch not implemented |
+| Playbook missing API endpoints | `/api/playbook/list` and `/api/playbook/{id}/metrics` return 404 |
 
 ---
 
-## Launch Sequence (Priority Order)
-
-| Step | Task | Time Est. | Why |
-|------|------|-----------|-----|
-| ~~**0**~~ | ~~Remove unused imports~~ | ~~30 min~~ | **DONE** — 135 errors removed, lint passes clean. |
-| **1** | Deploy Firestore indexes | 15 min | `firebase deploy --only firestore:indexes`. Fixes 3 failing service tests. |
-| ~~**2**~~ | ~~MemoryVault Firestore persistence~~ | ~~3-4 hrs~~ | **DONE** — commit e388c151. Agents survive cold starts. read()/query() await hydration. TTL cleanup on 4h cron. |
-| ~~**3**~~ | ~~ConversationMemory service~~ | ~~6-8 hrs~~ | **DONE** — commit b1c50e8f. All 5 sub-tasks complete. Agents recall customer history across voice/chat/SMS. Auto-analysis triggers on call/chat completion. Lead Briefing generator synthesizes interactions. |
-| **4** | **Production deploy to Vercel** | 2-3 hrs | 7 cron jobs already defined in `vercel.json`. OAuth flows, webhooks, Stripe — none work until deployed with real env vars. |
-| **5** | Smoke test the OODA loop | 2-3 hrs | Feed a real lead through the system. Verify event router fires, Revenue Director picks it up, sequence engine enrolls. |
-| **6** | Fix what breaks | Variable | Something will break in production. Budget time for env var issues, cold start timing, external API rate limits. |
-| **7** | Wire up outbound webhook dispatch | 3-4 hrs | Settings page exists, event list is there, UI is built — backend just doesn't send webhooks. |
-
-### Step 3 — ConversationMemory Service (Detailed Spec)
-
-**Problem:** Agents have amnesia about customer interactions. Chat sessions, SMS messages, and orchestrator conversations are stored in Firestore but no agent can query them. Voice call transcripts (the richest data) are lost entirely when calls end — stored in-memory only. When an agent prepares to contact a lead, it has zero context about prior conversations across any channel.
-
-**Solution:** A dedicated ConversationMemory service (Option B architecture) — one service owns all conversation data, agents query it when they need customer context. MemoryVault stays focused on agent-to-agent coordination.
-
-**Architecture Decision:** Option B was chosen over a hybrid approach (Option C) because:
-- No data duplication — conversation data lives in one place, not mirrored in MemoryVault
-- No sync issues — no risk of MemoryVault copies going stale
-- Clean separation — MemoryVault = agent coordination, ConversationMemory = customer interaction history
-- Agents simply query ConversationMemory as part of their lead preparation workflow
-
-**Data Flow:**
-```
-Call/Chat/SMS ends
-       │
-       ▼
-┌─────────────────────┐
-│  Persist full record │  ← Transcript + metadata → Firestore
-│  to Firestore        │     (voice is the gap — chat/SMS/orchestrator already stored)
-└────────┬────────────┘
-         │
-         ▼
-┌─────────────────────────────┐
-│  Conversation Analysis runs  │  ← Engine already exists at src/lib/conversation/
-│  automatically after each    │     Sentiment, objections, buying signals, coaching
-│  interaction completes       │     Currently manual-only via POST /api/conversation/analyze
-└────────┬────────────────────┘
-         │
-         ▼
-┌─────────────────────────────┐
-│  Analysis stored alongside   │  ← Summary, key moments, objections, next steps
-│  conversation record         │     Persisted for agent retrieval
-└─────────────────────────────┘
-
-Agent preparing to contact Lead X:
-       │
-       ▼
-┌──────────────────────────────┐
-│  ConversationMemory.brief()  │  ← Query all interactions by leadId
-│                              │     across chat, voice, SMS, email
-│  Returns structured Lead     │     Last N interactions summarized
-│  Briefing (not raw           │     Sentiment trend, open objections,
-│  transcripts)                │     recommended approach
-└──────────────────────────────┘
-```
-
-**Lead Briefing Output (what agents receive):**
-```
-Lead: John Smith, Acme Corp
-Last contact: 2 days ago (voice call, 12 min)
-Total interactions: 4 (2 calls, 1 chat, 1 email reply)
-Sentiment trend: neutral → positive (improving)
-
-Key context:
-- Budget review in March, decision after that
-- Pain point: manual compliance reporting 20hrs/week
-- Compared us to CompetitorX, said pricing was lower
-- Asked about Salesforce API integration
-
-Open objections:
-- Price concern (medium severity, unresolved)
-- Integration timeline worry
-
-Recommended approach:
-- Lead with ROI calculation (20hrs/week saved)
-- Address Salesforce integration early
-- Don't push for close before March budget review
-```
-
-**5 Implementation Sub-Tasks:**
-
-| # | Task | Details |
-|---|------|---------|
-| 3a | **Voice transcript persistence** | Save call data (transcript, turns, sentiment, qualification score, buying signals) to Firestore `conversations` collection when voice calls end. Currently in-memory only in `src/lib/voice/ai-conversation-service.ts`. |
-| 3b | **Auto-analysis trigger** | Hook the conversation analysis engine (`src/lib/conversation/conversation-engine.ts`) to fire automatically after every call/chat completion. Currently only runs on manual API call to `POST /api/conversation/analyze`. |
-| 3c | **ConversationMemory service** | New service at `src/lib/conversation/conversation-memory.ts`. Unified retrieval layer that queries across `chatSessions`, `conversations`, `smsMessages`, `orchestratorConversations` by leadId/customerId. Returns structured data, not raw transcripts. |
-| 3d | **Lead Briefing generator** | Method on ConversationMemory that synthesizes all recent interactions into a concise context block. Uses the analysis data (sentiment, objections, buying signals, next steps) to build the briefing. May use LLM for final synthesis. |
-| 3e | **Agent integration** | Update agent work cycles (Revenue Manager, Outreach Manager, Voice AI) to call `ConversationMemory.brief(leadId)` before acting on a lead. Add to the standard lead preparation workflow. |
-
-**Retention Policy:**
-| Data | Retention | Rationale |
-|------|-----------|-----------|
-| Full transcripts | 90 days | Compliance and dispute resolution |
-| Conversation summaries | 1 year | Agents need history without storage cost |
-| Lead briefings | Generated on demand | Always fresh, built from summaries |
-| Analysis results | 1 year (alongside summaries) | Sentiment trends, objection history |
-
-**Existing Infrastructure to Leverage:**
-- `src/lib/conversation/conversation-engine.ts` — Full analysis engine (sentiment, talk ratio, objections, coaching, competitor mentions). Already built, just needs auto-triggering.
-- `src/lib/conversation/types.ts` — Comprehensive types for Conversation, ConversationAnalysis, SentimentAnalysis, ObjectionAnalysis, etc.
-- `src/lib/agent/chat-session-service.ts` — Chat message storage and retrieval already working.
-- `src/lib/firebase/collections.ts` — All Firestore collection paths already defined.
-- `src/app/api/conversation/analyze/route.ts` — Analysis API with rate limiting and caching.
-
-**What This Does NOT Include:**
-- Semantic/vector search (embedding-based retrieval) — future enhancement, not needed for v1
-- Email body archival (only metadata stored today) — separate effort
-- Video conversation transcripts — not yet implemented
-- Long-term learning/agent improvement from conversations — future episodic memory layer
-
----
-
-### What We Are NOT Building Right Now
-- **No plugin/hook registry** — the internal infrastructure (EventRouter, SignalBus, MemoryVault, PluginManager) is powerful but intentionally closed. No external API surface for third-party tools.
-- **No external agent registration API** — the 52-agent swarm is a closed system
-- **No public REST API / OpenAPI spec** — all 219 endpoints are internal dashboard routes
-- **No "WordPress extensibility"** — deferred until post-launch
-
-### External Integration Capabilities (What Works Today)
-
-**Outbound (SalesVelocity calls external APIs) — WORKS:**
-- OAuth integrations: Gmail, Outlook, Slack, Teams, QuickBooks, Xero, Stripe, PayPal
-- API key storage for: SendGrid, Twilio, Clearbit, HubSpot, OpenRouter
-- Workflow HTTP action: full HTTP requests (GET/POST/PUT/PATCH/DELETE) with auth, headers, response parsing
-
-**Inbound (External systems call SalesVelocity) — LIMITED:**
-- `POST /api/workflows/webhooks/{workflowId}` — generic webhook trigger with optional HMAC verification (the ONE viable two-way integration path)
-- `GET/POST /api/public/forms/{formId}` — public form fetch + submission (no auth required)
-- 6 service-specific webhooks: Stripe, SendGrid, SendGrid Inbound, Twilio SMS, Twilio Voice, Gmail
-
-**Not Exposed Externally:**
-- EventRouter (no HTTP endpoint for emit/subscribe)
-- SignalBus (purely in-memory, no HTTP wrapper)
-- MemoryVault (no REST API)
-- PluginManager (code exists at `src/lib/plugins/plugin-manager.ts` with full registration, tool schemas, rate limiting, OpenAI function format — but zero API routes wrap it)
-- Agent swarm (closed, no external agent registration)
-- Outbound webhook dispatch (UI scaffolding only, no backend)
-
----
-
-## Key Files
+## Key Files (General)
 
 | File | Purpose |
 |------|---------|
@@ -219,63 +194,11 @@ Recommended approach:
 | `docs/single_source_of_truth.md` | Authoritative architecture doc |
 | `ENGINEERING_STANDARDS.md` | Code quality requirements |
 | `AGENT_REGISTRY.json` | AI agent configurations (52 agents) |
-| `src/lib/constants/platform.ts` | DEFAULT_ORG_ID and platform identity |
-| `src/lib/orchestration/event-router.ts` | Declarative rules engine — 25+ event rules → Manager actions via SignalBus |
-| `src/lib/orchestrator/signal-bus.ts` | Agent-to-agent communication (BROADCAST, DIRECT, BUBBLE_UP, BUBBLE_DOWN) |
-| `src/lib/agents/shared/memory-vault.ts` | Shared agent knowledge store (Firestore-backed, cold-start safe) |
-| `src/lib/conversation/conversation-engine.ts` | Conversation analysis engine (sentiment, objections, coaching) |
-| `src/lib/conversation/types.ts` | Comprehensive conversation/analysis type definitions |
-| `src/lib/agent/chat-session-service.ts` | Chat session + message storage/retrieval |
-| `src/lib/conversation/conversation-memory.ts` | ConversationMemory service — unified retrieval + Lead Briefing generator |
-| `src/lib/voice/ai-conversation-service.ts` | Voice AI conversation handling (transcripts now persisted to Firestore) |
-| `src/lib/plugins/plugin-manager.ts` | Plugin registration system (built but not exposed via API) |
-| `src/lib/orchestrator/jasper-command-authority.ts` | Executive briefings, approval gateway, command issuance |
-| `src/lib/agents/base-manager.ts` | BaseManager with reviewOutput(), applyPendingMutations(), requestFromManager() |
-| `src/lib/workflows/actions/http-action.ts` | Workflow HTTP action — calls external APIs with full auth support |
+| `src/lib/constants/platform.ts` | PLATFORM_ID and platform identity |
+| `src/lib/orchestration/event-router.ts` | Declarative rules engine — 25+ event rules |
+| `src/lib/orchestrator/signal-bus.ts` | Agent-to-agent communication |
+| `src/lib/agents/shared/memory-vault.ts` | Shared agent knowledge store (Firestore-backed) |
+| `src/lib/api-keys/api-key-service.ts` | Centralized API key retrieval from Firestore |
+| `src/lib/orchestrator/jasper-tools.ts` | Jasper's 36+ function-calling tools |
+| `src/lib/orchestrator/feature-manifest.ts` | 11 specialists + capabilities + trigger phrases |
 | `vercel.json` | 7 cron entries for autonomous operations |
-| `firestore.indexes.json` | Composite indexes (defined but NOT deployed) |
-
-### Autonomous Operations — Key Files
-
-| File | Phase | What It Does |
-|------|-------|-------------|
-| `src/lib/orchestrator/event-router.ts` | 1a | Rules engine — 25+ event rules mapping business events → Manager actions |
-| `src/app/api/cron/operations-cycle/route.ts` | 1b | 3-tier cron: 4h operational, 24h strategic, weekly executive |
-| `src/lib/agents/revenue/manager.ts` | 3 | Auto-progression, intelligence-to-outreach bridge, win/loss feedback |
-| `src/lib/agents/outreach/manager.ts` | 4 | Reply → action chains, adaptive timing, ghosting recovery |
-| `src/lib/outbound/sequence-engine.ts` | 4b | Engagement-based adaptive timing |
-| `src/lib/agents/content/manager.ts` | 5a, 7 | Production hub with priority queue + contextual artifact generation |
-| `src/lib/agents/intelligence/manager.ts` | 5b | Daily parallel sweeps |
-| `src/lib/agents/builder/manager.ts` | 6a | Analytics-driven page optimization |
-| `src/lib/agents/commerce/manager.ts` | 6b | Cart abandonment recovery, loyalty tiers |
-| `src/lib/orchestrator/jasper-command-authority.ts` | 8 | Jasper command authority |
-
-### Post-Phase 8 — Key Files
-
-| File | What It Does |
-|------|-------------|
-| `vercel.json` | 7 cron entries for all autonomous crons |
-| `src/app/api/orchestrator/executive-briefing/route.ts` | GET — generates executive briefing |
-| `src/app/api/orchestrator/approvals/route.ts` | GET/POST — pending approvals + decisions |
-| `src/app/api/orchestrator/command/route.ts` | GET/POST — issue commands, overrides, objectives |
-| `src/app/(dashboard)/executive-briefing/page.tsx` | Executive briefing dashboard |
-
----
-
-## Test Infrastructure
-
-| File | Purpose |
-|------|---------|
-| `jest.setup.js` | Connects to REAL Firebase DEV database via Admin SDK (by design) |
-| `jest.globalTeardown.js` | Post-test cleanup — calls db-manager.js, throws on failure |
-| `scripts/db-manager.js` | Test data cleanup — hybrid detection (flags + patterns + known IDs) |
-| `tests/helpers/test-cleanup.ts` | TestCleanupTracker class for integration tests |
-| `tests/helpers/e2e-cleanup-utility.ts` | E2ECleanupTracker for E2E tests (E2E_TEMP_ prefix) |
-
-## Documentation Inventory
-
-**Root docs** (5 files): CLAUDE.md, README.md, ENGINEERING_STANDARDS.md, COMPETITIVE_ANALYSIS_BRIEFING.md, SOCIAL-MEDIA-AI-SPEC.md
-**docs/** (3 files): single_source_of_truth.md, playwright-audit-2026-01-30.md, test-results-summary.md
-**docs/master_library/** (17 files): Per-feature audit summaries (corrected Feb 12, 2026) + WEBSITE_BUILDER.md
-**docs/archive/** (16 files): Historical records — do not reference for architectural decisions
-**.claude/agents/** (6 files): QA and architecture agent prompts
