@@ -4,6 +4,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/useToast';
 
+// ─── Types ───────────────────────────────────────────────────────────────────
+
 interface SocialPostEngagement {
   likes: number;
   comments: number;
@@ -34,13 +36,103 @@ interface MutationResponse {
   error?: string;
 }
 
+interface QueuedItem {
+  id: string;
+  platform: string;
+  content: string;
+  status: string;
+  queuePosition: number;
+  createdAt: string;
+}
+
+interface ScheduledItem {
+  id: string;
+  platform: string;
+  content: string;
+  status: string;
+  scheduledAt: string;
+}
+
+interface AgentStatusResponse {
+  success: boolean;
+  status?: {
+    agentEnabled: boolean;
+    queueDepth: number;
+    scheduledCount: number;
+    todayPublished: number;
+    nextPostTime: string | null;
+    recentPublished: Array<{
+      id: string;
+      platform: string;
+      content: string;
+      publishedAt: string;
+      status: string;
+    }>;
+  };
+}
+
+interface QueueResponse {
+  success: boolean;
+  queue?: QueuedItem[];
+}
+
+interface ScheduleResponse {
+  success: boolean;
+  scheduled?: ScheduledItem[];
+}
+
+type StudioMode = 'autopilot' | 'manual';
+
 type Platform = 'twitter' | 'linkedin' | 'facebook' | 'instagram';
 
 const PLATFORMS: Platform[] = ['twitter', 'linkedin', 'facebook', 'instagram'];
 
+const PLATFORM_BADGE_COLORS: Record<string, string> = {
+  twitter: '#000000',
+  linkedin: '#0A66C2',
+  facebook: '#1877F2',
+  instagram: '#E4405F',
+};
+
 export default function SocialMediaCampaignsPage() {
   const { user } = useAuth();
   const toast = useToast();
+
+  // ─── Dual-mode state ─────────────────────────────────────────────
+  const [studioMode, setStudioMode] = useState<StudioMode>('autopilot');
+  const [agentStatus, setAgentStatus] = useState<AgentStatusResponse['status'] | null>(null);
+  const [queuedPosts, setQueuedPosts] = useState<QueuedItem[]>([]);
+  const [scheduledPosts2, setScheduledPosts2] = useState<ScheduledItem[]>([]);
+  const [autopilotLoading, setAutopilotLoading] = useState(true);
+
+  const loadAutopilotData = useCallback(async () => {
+    try {
+      setAutopilotLoading(true);
+      const [statusRes, queueRes, scheduleRes] = await Promise.all([
+        fetch('/api/social/agent-status'),
+        fetch('/api/social/queue'),
+        fetch('/api/social/schedule'),
+      ]);
+
+      const statusData = (await statusRes.json()) as AgentStatusResponse;
+      const queueData = (await queueRes.json()) as QueueResponse;
+      const scheduleData = (await scheduleRes.json()) as ScheduleResponse;
+
+      if (statusData.success && statusData.status) {
+        setAgentStatus(statusData.status);
+      }
+      if (queueData.success && queueData.queue) {
+        setQueuedPosts(queueData.queue);
+      }
+      if (scheduleData.success && scheduleData.scheduled) {
+        setScheduledPosts2(scheduleData.scheduled);
+      }
+    } catch {
+      toast.error('Failed to load autopilot data');
+    } finally {
+      setAutopilotLoading(false);
+    }
+  }, [toast]);
 
   const [activeTab, setActiveTab] = useState<'posts' | 'analytics' | 'settings'>('posts');
   const [posts, setPosts] = useState<SocialPost[]>([]);
@@ -88,8 +180,9 @@ export default function SocialMediaCampaignsPage() {
   useEffect(() => {
     if (user) {
       void loadPosts();
+      void loadAutopilotData();
     }
-  }, [user, loadPosts]);
+  }, [user, loadPosts, loadAutopilotData]);
 
   const resetForm = () => {
     setFormPlatform('linkedin');
@@ -216,23 +309,223 @@ export default function SocialMediaCampaignsPage() {
     <div className="min-h-screen bg-surface-main p-8">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
-        <div className="flex justify-between items-start mb-8">
+        <div className="flex justify-between items-start mb-6">
           <div>
             <h1 className="text-3xl font-bold text-[var(--color-text-primary)] flex items-center gap-3">
-              <span>📱</span> Social Media Hub
+              Content Studio
             </h1>
             <p className="text-[var(--color-text-secondary)] text-sm mt-1">
-              Manage and schedule social media content
+              AI-powered content creation with manual override
             </p>
           </div>
+          <div className="flex items-center gap-3">
+            {studioMode === 'manual' && (
+              <button
+                onClick={openCreateModal}
+                className="px-4 py-2 bg-primary text-white font-semibold rounded-xl hover:bg-primary-light transition-all text-sm"
+              >
+                + New Post
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* ── Mode Toggle ─────────────────────────────────────────── */}
+        <div className="flex items-center gap-1 mb-6 p-1 bg-surface-elevated border border-border-light rounded-xl w-fit">
           <button
-            onClick={openCreateModal}
-            className="px-4 py-2 bg-primary text-white font-semibold rounded-xl hover:bg-primary-light transition-all text-sm"
+            type="button"
+            onClick={() => setStudioMode('autopilot')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+              studioMode === 'autopilot'
+                ? 'bg-primary text-white shadow-sm'
+                : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'
+            }`}
           >
-            + New Post
+            Autopilot
+          </button>
+          <button
+            type="button"
+            onClick={() => setStudioMode('manual')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+              studioMode === 'manual'
+                ? 'bg-primary text-white shadow-sm'
+                : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'
+            }`}
+          >
+            Manual
           </button>
         </div>
 
+        {/* ── Autopilot Mode ─────────────────────────────────────── */}
+        {studioMode === 'autopilot' && (
+          <div>
+            {/* Agent Status Banner */}
+            {agentStatus && (
+              <div
+                className={`flex items-center justify-between p-4 rounded-2xl mb-6 border ${
+                  agentStatus.agentEnabled
+                    ? 'bg-success/5 border-success/20'
+                    : 'bg-error/5 border-error/20'
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`w-3 h-3 rounded-full ${agentStatus.agentEnabled ? 'bg-success' : 'bg-error'}`}
+                    style={{ boxShadow: agentStatus.agentEnabled ? '0 0 8px rgba(76,175,80,0.4)' : '0 0 8px rgba(244,67,54,0.4)' }}
+                  />
+                  <div>
+                    <div className="text-sm font-semibold text-[var(--color-text-primary)]">
+                      {agentStatus.agentEnabled ? 'AI Agent is driving' : 'AI Agent is paused'}
+                    </div>
+                    <div className="text-xs text-[var(--color-text-secondary)]">
+                      {agentStatus.todayPublished} posted today &middot; {agentStatus.queueDepth} in queue &middot; {agentStatus.scheduledCount} scheduled
+                      {agentStatus.nextPostTime && (
+                        <> &middot; Next post {new Date(agentStatus.nextPostTime) > new Date() ? `in ${Math.round((new Date(agentStatus.nextPostTime).getTime() - Date.now()) / 60000)} min` : 'overdue'}</>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {autopilotLoading ? (
+              <div className="text-center py-12 text-[var(--color-text-secondary)]">Loading AI drafts...</div>
+            ) : (
+              <>
+                {/* Queued Posts */}
+                {queuedPosts.length > 0 && (
+                  <div className="mb-6">
+                    <h2 className="text-sm font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider mb-3">
+                      Queue ({queuedPosts.length} posts)
+                    </h2>
+                    <div className="space-y-2">
+                      {queuedPosts.map((item) => (
+                        <div key={item.id} className="bg-surface-paper border border-border-light rounded-xl p-4">
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-start gap-3 flex-1 min-w-0">
+                              <span
+                                className="text-[10px] font-bold uppercase px-2 py-0.5 rounded text-white shrink-0 mt-0.5"
+                                style={{ backgroundColor: PLATFORM_BADGE_COLORS[item.platform] ?? '#666' }}
+                              >
+                                {item.platform}
+                              </span>
+                              <div className="min-w-0">
+                                <p className="text-sm text-[var(--color-text-primary)] leading-relaxed">
+                                  {item.content}
+                                </p>
+                                <div className="text-xs text-[var(--color-text-disabled)] mt-1">
+                                  Queue position: #{item.queuePosition}
+                                </div>
+                              </div>
+                            </div>
+                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-400 font-semibold shrink-0 ml-2">
+                              QUEUED
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Scheduled Posts */}
+                {scheduledPosts2.length > 0 && (
+                  <div className="mb-6">
+                    <h2 className="text-sm font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider mb-3">
+                      Scheduled ({scheduledPosts2.length} posts)
+                    </h2>
+                    <div className="space-y-2">
+                      {scheduledPosts2.map((item) => (
+                        <div key={item.id} className="bg-surface-paper border border-border-light rounded-xl p-4">
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-start gap-3 flex-1 min-w-0">
+                              <span
+                                className="text-[10px] font-bold uppercase px-2 py-0.5 rounded text-white shrink-0 mt-0.5"
+                                style={{ backgroundColor: PLATFORM_BADGE_COLORS[item.platform] ?? '#666' }}
+                              >
+                                {item.platform}
+                              </span>
+                              <div className="min-w-0">
+                                <p className="text-sm text-[var(--color-text-primary)] leading-relaxed">
+                                  {item.content}
+                                </p>
+                                <div className="text-xs text-[var(--color-text-disabled)] mt-1">
+                                  Scheduled for {new Date(item.scheduledAt).toLocaleString()}
+                                </div>
+                              </div>
+                            </div>
+                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-primary/10 text-primary font-semibold shrink-0 ml-2">
+                              SCHEDULED
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Recently Published */}
+                {agentStatus?.recentPublished && agentStatus.recentPublished.length > 0 && (
+                  <div className="mb-6">
+                    <h2 className="text-sm font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider mb-3">
+                      Recently Published
+                    </h2>
+                    <div className="space-y-2">
+                      {agentStatus.recentPublished.map((item) => (
+                        <div key={item.id} className="bg-surface-paper border border-border-light rounded-xl p-4 opacity-80">
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-start gap-3 flex-1 min-w-0">
+                              <span
+                                className="text-[10px] font-bold uppercase px-2 py-0.5 rounded text-white shrink-0 mt-0.5"
+                                style={{ backgroundColor: PLATFORM_BADGE_COLORS[item.platform] ?? '#666' }}
+                              >
+                                {item.platform}
+                              </span>
+                              <div className="min-w-0">
+                                <p className="text-sm text-[var(--color-text-primary)] leading-relaxed">
+                                  {item.content}
+                                </p>
+                                <div className="text-xs text-[var(--color-text-disabled)] mt-1">
+                                  Published {new Date(item.publishedAt).toLocaleString()}
+                                </div>
+                              </div>
+                            </div>
+                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-success/10 text-success font-semibold shrink-0 ml-2">
+                              LIVE
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Empty state */}
+                {queuedPosts.length === 0 && scheduledPosts2.length === 0 && (
+                  <div className="rounded-2xl bg-surface-paper border border-border-light p-12 text-center">
+                    <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-2">
+                      No AI Drafts Yet
+                    </h3>
+                    <p className="text-[var(--color-text-secondary)] text-sm mb-4">
+                      The AI agent will generate content and queue it here. You can review, edit, and approve before it goes live.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setStudioMode('manual')}
+                      className="px-4 py-2 bg-primary text-white font-semibold rounded-xl hover:bg-primary-light transition-all text-sm"
+                    >
+                      Switch to Manual Mode
+                    </button>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        )}
+
+        {/* ── Manual Mode (existing UI below) ─────────────────────── */}
+        {studioMode === 'manual' && (
+          <>
         {/* Stats Row */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           {[
@@ -438,7 +731,7 @@ export default function SocialMediaCampaignsPage() {
           </div>
         )}
 
-        {/* Settings Tab */}
+        {/* Settings Tab (Manual Mode) */}
         {activeTab === 'settings' && (
           <div className="rounded-2xl bg-surface-paper border border-border-light p-6">
             <h3 className="text-base font-semibold text-[var(--color-text-primary)] mb-4">Connected Accounts</h3>
@@ -472,6 +765,8 @@ export default function SocialMediaCampaignsPage() {
               ))}
             </div>
           </div>
+        )}
+          </>
         )}
       </div>
 
