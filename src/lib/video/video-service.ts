@@ -557,7 +557,7 @@ export async function listHeyGenVoices(
 /**
  * Internal HeyGen video generation
  */
-async function generateHeyGenVideoInternal(
+export async function generateHeyGenVideoInternal(
   script: string,
   avatarId: string,
   options?: {
@@ -626,6 +626,84 @@ async function generateHeyGenVideoInternal(
     };
   } catch (error) {
     logger.error('Failed to generate HeyGen video', error as Error, {
+      file: 'video-service.ts',
+    });
+    throw error;
+  }
+}
+
+/**
+ * Generate a HeyGen scene video with screenshot background
+ * Specialized for pipeline scene-based generation
+ */
+export async function generateHeyGenSceneVideo(
+  script: string,
+  avatarId: string,
+  voiceId: string,
+  backgroundImageUrl: string | null,
+  aspectRatio: '16:9' | '9:16' | '1:1'
+): Promise<VideoGenerationResponse> {
+  const apiKey = await getVideoProviderKey('heygen');
+  if (!apiKey) {
+    throw new Error('HeyGen API key not configured. Add it in Settings > API Keys.');
+  }
+
+  try {
+    const background = backgroundImageUrl
+      ? { type: 'image' as const, url: backgroundImageUrl }
+      : { type: 'color' as const, value: '#1a1a2e' };
+
+    const response = await fetch('https://api.heygen.com/v2/video/generate', {
+      method: 'POST',
+      headers: {
+        'X-Api-Key': apiKey,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        video_inputs: [{
+          character: {
+            type: 'avatar',
+            avatar_id: avatarId,
+          },
+          voice: {
+            type: 'text',
+            input_text: script,
+            voice_id: voiceId,
+          },
+          background,
+        }],
+        dimension: aspectRatio === '9:16'
+          ? { width: 1080, height: 1920 }
+          : aspectRatio === '1:1'
+            ? { width: 1080, height: 1080 }
+            : { width: 1920, height: 1080 },
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`HeyGen API error: ${response.status} - ${errorText}`);
+    }
+
+    const data = await response.json() as {
+      video_id: string;
+      status?: string;
+    };
+
+    logger.info('HeyGen scene video generation started', {
+      videoId: data.video_id,
+      file: 'video-service.ts',
+    });
+
+    return {
+      id: data.video_id,
+      requestId: data.video_id,
+      status: 'processing',
+      provider: 'heygen',
+      createdAt: new Date(),
+    };
+  } catch (error) {
+    logger.error('Failed to generate HeyGen scene video', error as Error, {
       file: 'video-service.ts',
     });
     throw error;
