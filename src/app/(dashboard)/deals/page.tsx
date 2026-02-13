@@ -70,6 +70,8 @@ interface Deal {
   value?: number;
   stage?: string;
   probability?: number;
+  source?: string;
+  leadId?: string;
 }
 
 const getCompanyName = (deal: Deal) => {
@@ -184,6 +186,19 @@ export default function DealsPage() {
           <span className="text-[var(--color-text-secondary)] text-sm">{deal.probability ?? 0}%</span>
         </div>
       ),
+    },
+    {
+      key: 'source',
+      header: 'Source',
+      accessor: (deal) => deal.source ?? '',
+      render: (deal) => {
+        const src = deal.source ?? '';
+        return src ? (
+          <span className="px-2 py-0.5 rounded-lg text-xs font-medium bg-primary/10 border border-primary/20 text-primary capitalize">
+            {src}
+          </span>
+        ) : <span className="text-[var(--color-text-disabled)] text-xs">-</span>;
+      },
     },
     {
       key: 'actions',

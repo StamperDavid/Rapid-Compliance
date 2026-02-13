@@ -5,7 +5,7 @@
 ## Context
 Repository: https://github.com/StamperDavid/Rapid-Compliance
 Branch: dev
-Last Session: February 13, 2026 (Session 2 complete — Revenue Attribution P0 (2.1) + Twitter Engagement (3.1))
+Last Session: February 13, 2026 (Session 3 complete — Revenue Attribution P1 (2.1b) + E2E Agent Integration Testing (1.3))
 
 ## Current State
 
@@ -13,7 +13,7 @@ Last Session: February 13, 2026 (Session 2 complete — Revenue Attribution P0 (
 - **Single-tenant penthouse model** — org ID `rapid-compliance-root`, Firebase `rapid-compliance-65f87`
 - **52 AI agents** (48 swarm + 4 standalone) with hierarchical orchestration
 - **4-role RBAC** (owner/admin/manager/member) with 47 permissions
-- **167 physical routes**, **243 API endpoints**, **430K+ lines of TypeScript**
+- **168 physical routes**, **244 API endpoints**, **430K+ lines of TypeScript**
 - **Deployed via Vercel** — dev branch → main branch → Vercel auto-deploy
 
 ### Code Health
@@ -39,6 +39,8 @@ Last Session: February 13, 2026 (Session 2 complete — Revenue Attribution P0 (
 - **Global Kill Switch (Tier 1.2)** — Swarm-wide pause/resume, per-manager toggles, guards on EventRouter + MasterOrchestrator + SignalBus + BaseManager, Command Center UI controls, `/api/orchestrator/swarm-control` API
 - **Revenue Attribution P0 (Tier 2.1)** — Full UTM→Lead→Deal→Order→Stripe chain wired. Attribution fields added to Lead (formId, formSubmissionId, utmSource/Medium/Campaign), Deal (leadId), Order (dealId, leadId, formId, attributionSource, utmSource/Medium/Campaign). Auto-lead creation from form submissions. Deal source inheritance from lead. Stripe metadata attribution. Auto UTM on social post links.
 - **Twitter Engagement (Tier 3.1)** — REPLY/LIKE/FOLLOW/REPOST wired to real Twitter API v2. 7 new methods in TwitterService (likeTweet, unlikeTweet, retweet, unretweet, followUser, unfollowUser + reply via postTweet). Autonomous agent stubs replaced with real API calls.
+- **Revenue Attribution P1 (Tier 2.1b)** — Attribution analytics endpoint (`/api/analytics/attribution`) with revenue by source/campaign/medium, funnel metrics. Dashboard page (`/analytics/attribution`) with overview cards, conversion funnel visualization, breakdowns. "Source" column added to Leads, Deals, and Orders tables.
+- **E2E Agent Integration Testing (Tier 1.3)** — Playwright tests (`tests/e2e/agent-chain.spec.ts`) for swarm control API, attribution API, kill switch verification, CRM page loads. Jest integration tests: `tests/integration/saga-workflow.test.ts` (checkpoint/resume, crash simulation, event dedup, replay), `tests/integration/signal-propagation.test.ts` (SignalBus communication, swarm control state, pause/queue/resume/dequeue, guard functions).
 
 ---
 
@@ -257,7 +259,7 @@ These close the gap between "demo" and "production" for external platform connec
 ```
 SESSION 1: ✅ COMPLETE — Saga Persistence (1.1) + Global Kill Switch (1.2)
 SESSION 2: ✅ COMPLETE — Revenue Attribution P0 (2.1) + Twitter Engagement (3.1)
-SESSION 3: Revenue Attribution P1 (2.1b analytics/dashboard) + E2E Testing (1.3)
+SESSION 3: ✅ COMPLETE — Revenue Attribution P1 (2.1b analytics/dashboard) + E2E Testing (1.3)
 SESSION 4: CI/CD Cleanup (3.4) + any remaining items
 
 EXTERNAL (start immediately, no code dependency):
@@ -296,6 +298,8 @@ EXTERNAL (start immediately, no code dependency):
 | ~~Kill switch is social-only~~ | **FIXED** — Global swarm control with per-manager toggles |
 | ~~Revenue attribution chain broken~~ | **FIXED** — Full UTM→Lead→Deal→Order→Stripe chain wired with auto-lead creation from forms |
 | ~~Social engagement stubs~~ | **FIXED** — Twitter REPLY/LIKE/FOLLOW/REPOST wired to real API v2 |
+| ~~No attribution analytics~~ | **FIXED** — `/api/analytics/attribution` endpoint + `/analytics/attribution` dashboard + Source columns in CRM tables |
+| ~~No agent integration tests~~ | **FIXED** — Playwright E2E agent-chain tests + Jest saga-workflow + signal-propagation integration tests |
 | Facebook/Instagram missing | No implementation (Tier 3.2) |
 | LinkedIn unofficial | Uses RapidAPI, not official API (Tier 3.3) |
 | Node version mismatch | CI uses 18, package.json requires 20 (Tier 3.4) |
@@ -348,4 +352,9 @@ EXTERNAL (start immediately, no code dependency):
 | `src/types/ecommerce.ts` | Order type (attribution fields wired) |
 | `src/lib/crm/lead-service.ts` | Lead creation with attribution (formId, UTM, source) |
 | `src/lib/crm/deal-service.ts` | Deal creation with lead attribution inheritance |
+| `src/app/api/analytics/attribution/route.ts` | **NEW** — Attribution analytics (revenue by source/campaign/medium, funnel metrics) |
+| `src/app/(dashboard)/analytics/attribution/page.tsx` | **NEW** — Attribution dashboard (funnel viz, breakdown tables) |
+| `tests/e2e/agent-chain.spec.ts` | **NEW** — Playwright E2E: swarm control, attribution API, kill switch, CRM pages |
+| `tests/integration/saga-workflow.test.ts` | **NEW** — Jest: saga checkpoint/resume, crash simulation, event dedup/replay |
+| `tests/integration/signal-propagation.test.ts` | **NEW** — Jest: SignalBus, swarm control, pause/queue/dequeue, guard functions |
 | `vercel.json` | 7 cron entries for autonomous operations |

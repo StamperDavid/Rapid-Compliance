@@ -31,6 +31,10 @@ interface Lead {
   phone?: string;
   score?: number;
   status?: string;
+  source?: string;
+  utmSource?: string;
+  utmMedium?: string;
+  utmCampaign?: string;
 }
 
 const STATUS_FILTERS = [
@@ -205,6 +209,19 @@ export default function LeadsPage() {
       header: 'Status',
       accessor: (lead) => lead.status ?? 'new',
       render: (lead) => getStatusBadge(lead.status ?? 'new'),
+    },
+    {
+      key: 'source',
+      header: 'Source',
+      accessor: (lead) => lead.utmSource ?? lead.source ?? '',
+      render: (lead) => {
+        const src = lead.utmSource ?? lead.source ?? '';
+        return src ? (
+          <span className="px-2 py-0.5 rounded-lg text-xs font-medium bg-primary/10 border border-primary/20 text-primary capitalize">
+            {src}
+          </span>
+        ) : <span className="text-[var(--color-text-disabled)] text-xs">-</span>;
+      },
     },
     {
       key: 'actions',

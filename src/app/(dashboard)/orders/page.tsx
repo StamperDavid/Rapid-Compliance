@@ -51,6 +51,10 @@ interface Order {
   customerNotes?: string;
   internalNotes?: string;
   source: string;
+  attributionSource?: string;
+  utmSource?: string;
+  utmMedium?: string;
+  utmCampaign?: string;
   tags?: string[];
   createdAt: string;
   updatedAt: string;
@@ -238,6 +242,7 @@ export default function OrdersPage() {
                     <th className="text-left px-5 py-3 text-xs font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider">Status</th>
                     <th className="text-left px-5 py-3 text-xs font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider">Fulfillment</th>
                     <th className="text-right px-5 py-3 text-xs font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider">Total</th>
+                    <th className="text-left px-5 py-3 text-xs font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider">Source</th>
                     <th className="text-left px-5 py-3 text-xs font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider">Date</th>
                     <th className="text-right px-5 py-3 text-xs font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider">Actions</th>
                   </tr>
@@ -270,6 +275,18 @@ export default function OrdersPage() {
                       </td>
                       <td className="px-5 py-4 text-right">
                         <span className="text-sm font-bold text-[var(--color-text-primary)]">{formatCurrency(order.total)}</span>
+                      </td>
+                      <td className="px-5 py-4">
+                        {(() => {
+                          const src = order.utmSource ?? order.attributionSource ?? '';
+                          return src ? (
+                            <span className="inline-block px-2 py-0.5 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-primary/10 border border-primary/20 text-primary">
+                              {src}
+                            </span>
+                          ) : (
+                            <span className="text-xs text-[var(--color-text-disabled)]">-</span>
+                          );
+                        })()}
                       </td>
                       <td className="px-5 py-4">
                         <span className="text-xs text-[var(--color-text-secondary)]">{formatDate(order.createdAt)}</span>

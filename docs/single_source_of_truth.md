@@ -1,7 +1,7 @@
 # SalesVelocity.ai - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** February 13, 2026 (Session 2: Revenue Attribution P0 — full UTM→Lead→Deal→Order→Stripe chain wired + Twitter engagement actions — REPLY/LIKE/FOLLOW/REPOST wired to real Twitter API v2)
+**Last Updated:** February 13, 2026 (Session 3: Revenue Attribution P1 — attribution analytics endpoint + dashboard page + Source columns in CRM tables + E2E agent integration tests — Playwright agent-chain.spec.ts + Jest saga-workflow + signal-propagation tests)
 **Branches:** `dev` (latest)
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Architecture:** Single-Tenant (Penthouse Model) - NOT a SaaS platform
@@ -35,8 +35,8 @@
 
 | Metric | Count | Status |
 |--------|-------|--------|
-| Physical Routes (page.tsx) | 167 | Verified February 13, 2026 (added /social/command-center, /social/activity, /social/analytics, /social/agent-rules) |
-| API Endpoints (route.ts) | 243 | Verified February 13, 2026 (added /api/orchestrator/swarm-control) |
+| Physical Routes (page.tsx) | 168 | Verified February 13, 2026 (added /analytics/attribution) |
+| API Endpoints (route.ts) | 244 | Verified February 13, 2026 (added /api/analytics/attribution) |
 | AI Agents | 52 | **52 FUNCTIONAL (48 swarm + 4 standalone)** |
 | RBAC Roles | 4 | `owner` (level 3), `admin` (level 2), `manager` (level 1), `member` (level 0) — 4-role RBAC |
 | Firestore Collections | 67+ | Active (added sagaState, eventLog collections) |
@@ -283,14 +283,14 @@ Only after Tiers 1 and 2 are verified complete.
 |---|------|-------------|--------|
 | 1.1 | **Saga state persistence** | Persist saga state to Firestore with checkpoint markers. Add `resumeSaga()` to MasterOrchestrator. Add event persistence to Event Router with dedup. Wire cron to check for incomplete sagas. | **DONE** |
 | 1.2 | **Global kill switch** | Create `swarm-control.ts` service. Add pause guards to EventRouter, MasterOrchestrator, SignalBus, BaseManager. Per-agent and global controls. UI in Command Center. | **DONE** |
-| 1.3 | **E2E agent integration testing** | Playwright + Jest tests for full agent chain, saga workflows, signal propagation, kill switch verification. | PENDING |
+| 1.3 | **E2E agent integration testing** | Playwright + Jest tests for full agent chain, saga workflows, signal propagation, kill switch verification. `tests/e2e/agent-chain.spec.ts` (swarm control API, attribution API, kill switch pause/resume, CRM page loads), `tests/integration/saga-workflow.test.ts` (checkpoint/resume, crash simulation, event dedup, replay), `tests/integration/signal-propagation.test.ts` (SignalBus, swarm control state, pause/queue/resume/dequeue, guard functions). | **DONE** |
 
 ### Tier 2 — Revenue & Attribution (HIGH)
 
 | # | Task | Description | Status |
 |---|------|-------------|--------|
 | 2.1 | **Revenue attribution pipeline P0** | Wire UTM→Lead→Deal→Order→Stripe chain. Add attribution fields to types. Auto-create leads from form submissions. Inherit source on deal creation. Pass attribution to Stripe metadata. Auto-append UTM to social post links. | **DONE** |
-| 2.1b | **Revenue attribution pipeline P1** | Attribution analytics endpoint (`/api/analytics/attribution`), attribution dashboard page (`/analytics/attribution`), "Source" column in Orders/Leads/Deals tables. | PENDING |
+| 2.1b | **Revenue attribution pipeline P1** | Attribution analytics endpoint (`/api/analytics/attribution`) — revenue by source/campaign/medium, funnel metrics (form→lead→deal→order conversion rates). Dashboard page (`/analytics/attribution`) — overview cards, conversion funnel visualization, breakdowns by source/campaign/medium. "Source" column added to Leads, Deals, and Orders tables. | **DONE** |
 
 ### Tier 3 — Platform Integrations (MEDIUM)
 
