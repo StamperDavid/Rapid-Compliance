@@ -35,6 +35,7 @@ import {
   generateJobId,
   ScrapeError,
 } from './scraper-runner-types';
+import { scrapeWebsite } from '@/lib/enrichment/web-scraper';
 import { createScrapeCache, getScrapeCacheKey, calculateCacheTTL } from './scraper-cache';
 import { createDomainRateLimiter } from './domain-rate-limiter';
 import { createScrapeQueue, validateJobConfig } from './scraper-queue';
@@ -568,22 +569,29 @@ export class ProductionScraperRunner implements ScraperRunner {
       );
     }
 
-    // TODO: Replace with actual web scraping implementation
-    // For now, this is a placeholder that calls the existing service
-    // In production, you would:
-    // 1. Fetch the webpage (using puppeteer, playwright, or axios)
-    // 2. Extract content (convert HTML to markdown or text)
-    // 3. Call processAndStoreScrape with the raw content
-
-    // Placeholder scraping logic
-    const rawHtml = `<!DOCTYPE html><html><body>Sample content for ${url}</body></html>`;
-    const cleanedContent = `Sample content for ${url}`;
-    const metadata = {
-      title: 'Sample Page',
-      description: 'Sample description',
-      author: undefined,
-      keywords: [],
-    };
+    // Scrape the website using the enrichment web scraper
+    let rawHtml: string;
+    let cleanedContent: string;
+    let metadata: { title: string; description: string; author: string | undefined; keywords: string[] };
+    try {
+      const scraped = await scrapeWebsite(url);
+      rawHtml = scraped.rawHtml ?? '';
+      cleanedContent = scraped.cleanedText;
+      metadata = {
+        title: scraped.title,
+        description: scraped.description,
+        author: scraped.metadata?.author,
+        keywords: scraped.metadata?.keywords ?? [],
+      };
+    } catch (scrapeErr) {
+      throw new ScrapeError(
+        `Failed to scrape ${url}: ${scrapeErr instanceof Error ? scrapeErr.message : String(scrapeErr)}`,
+        'network_error',
+        502,
+        true,
+        { url }
+      );
+    }
 
     // Process and store the scrape
     const result = await processAndStoreScrape({

@@ -93,6 +93,7 @@ export interface AgentResponse {
     amount: number;
     description: string;
     customerId: string;
+    clientSecret?: string;
   };
   twiml?: string;
 }
@@ -405,16 +406,39 @@ class VoiceAgentHandler {
       };
     }
 
-    // TODO: Integrate with payment API
-    // For now, return payment intent
+    // Create Stripe payment intent if amount > 0 and Stripe is configured
+    const amount = context?.customerInfo.budget ?? 0;
+    let clientSecret: string | undefined;
+    if (amount > 0 && process.env.STRIPE_SECRET_KEY) {
+      try {
+        const Stripe = (await import('stripe')).default;
+        const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+          apiVersion: '2023-10-16',
+        });
+        const paymentIntent = await stripe.paymentIntents.create({
+          amount: Math.round(amount), // already in cents
+          currency: 'usd',
+          description: 'Product/Service Purchase — Voice AI',
+          metadata: {
+            callId,
+            customerId: context?.customerInfo.phone ?? callId,
+          },
+        });
+        clientSecret = paymentIntent.client_secret ?? undefined;
+      } catch (stripeErr) {
+        logger.error('Stripe payment intent creation failed during voice call', stripeErr instanceof Error ? stripeErr : new Error(String(stripeErr)), { callId });
+      }
+    }
+
     return {
       text: aiResponse.text,
       action: 'process_payment',
       state: 'CLOSING',
       paymentContext: {
-        amount: context?.customerInfo.budget ?? 0,
-        description: 'Product/Service Purchase',
+        amount,
+        description: 'Product/Service Purchase — Voice AI',
         customerId: context?.customerInfo.phone ?? callId,
+        clientSecret,
       },
       twiml: await this.generateConversationTwiML(aiResponse.text, callId),
     };

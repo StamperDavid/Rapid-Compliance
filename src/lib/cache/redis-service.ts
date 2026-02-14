@@ -228,6 +228,40 @@ export class RedisService {
       return 0;
     }
   }
+
+  /**
+   * Atomically increment a key and set TTL on first increment.
+   * For Redis: INCR then EXPIRE when count === 1.
+   * For in-memory: increment and set expiry only on first increment.
+   * Returns the new count after incrementing.
+   */
+  async incrementWithTTL(key: string, ttlSeconds: number, options?: CacheOptions): Promise<number> {
+    const fullKey = this.buildKey(key, options?.prefix);
+
+    try {
+      if (this.isConnected && this.client) {
+        const count = await this.client.incr(fullKey);
+        if (count === 1) {
+          await this.client.expire(fullKey, ttlSeconds);
+        }
+        return count;
+      } else {
+        const cached = this.memoryCache.get(fullKey);
+        const isExpired = !cached || cached.expiry <= Date.now();
+        const current = isExpired ? 0 : (typeof cached?.value === 'number' ? cached.value : 0);
+        const newValue = current + 1;
+        const expiry = newValue === 1 || isExpired
+          ? Date.now() + (ttlSeconds * 1000)
+          : (cached?.expiry ?? Date.now() + (ttlSeconds * 1000));
+        this.memoryCache.set(fullKey, { value: newValue, expiry });
+        return newValue;
+      }
+    } catch (error) {
+      const errorObj = error instanceof Error ? error : new Error(String(error));
+      logger.error('[Cache] IncrementWithTTL error:', errorObj, { file: 'redis-service.ts' });
+      return 0;
+    }
+  }
   
   /**
    * Build full cache key with prefix
@@ -320,6 +354,9 @@ export const CacheKeys = {
 
   // Integration caching
   integration: (provider: string) => `integration:${provider}`,
+
+  // Rate limiting
+  rateLimit: (clientId: string, path: string) => `ratelimit:${clientId}:${path}`,
 };
 
 // Cache TTLs (in seconds)
@@ -331,6 +368,7 @@ export const CacheTTL = {
   WEEK: 604800,
   
   // Specific use cases
+  RATE_LIMIT: 60,          // 1 minute (default window)
   AGENT_CONFIG: 3600,      // 1 hour
   AGENT_RESPONSE: 300,     // 5 minutes
   CUSTOMER: 600,           // 10 minutes

@@ -126,8 +126,8 @@ export async function getDashboardAnalytics(
     getTeamMetrics(dateRange.start, dateRange.end),
   ]);
 
-  // Get email metrics synchronously (no async DB calls)
-  const emails = getEmailMetrics(dateRange.start, dateRange.end, previousDateRange);
+  // Get email metrics from Firestore
+  const emails = await getEmailMetrics(dateRange.start, dateRange.end, previousDateRange);
 
   const dashboard: DashboardOverview = {
     period,
@@ -389,11 +389,11 @@ function calculateActionBreakdown(
 /**
  * Get email analytics metrics
  */
-function getEmailMetrics(
+async function getEmailMetrics(
   startDate: Date,
   endDate: Date,
   previousDateRange: { start: Date; end: Date }
-): EmailOverviewMetrics {
+): Promise<EmailOverviewMetrics> {
   if (!adminDal) {
     return {
       totalGenerated: 0,
@@ -408,12 +408,12 @@ function getEmailMetrics(
   }
 
   // Get email generation events from Signal Bus or email writer logs
-  const emails = adminDal.getEmailGenerations(
+  const emails = await adminDal.getEmailGenerations(
     startDate,
     endDate
   );
 
-  const previousEmails = adminDal.getEmailGenerations(
+  const previousEmails = await adminDal.getEmailGenerations(
     previousDateRange.start,
     previousDateRange.end
   );
@@ -778,10 +778,9 @@ async function getRevenueMetrics(
   const totalRevenue = wonDeals.reduce((sum: number, d: DealAnalyticsRecord) => sum + (d.value ?? 0), 0);
   const previousRevenue = previousWonDeals.reduce((sum: number, d: DealAnalyticsRecord) => sum + (d.value ?? 0), 0);
 
-  // Get quota from platform settings or default
-  // TODO: Add getOrgSettings method to adminDal to fetch revenueQuota from Firestore
-  // For now, use default quota
-  const quota = 100000; // Default quota - make configurable via platform settings
+  // Get quota from platform settings (configurable via Firestore)
+  const orgSettings = await adminDal.getOrgSettings();
+  const quota = typeof orgSettings.revenueQuota === 'number' ? orgSettings.revenueQuota : 100000;
   const quotaAttainment = quota > 0 ? (totalRevenue / quota) * 100 : 0;
   
   // Get revenue forecast from forecasting engine

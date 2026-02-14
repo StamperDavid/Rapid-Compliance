@@ -326,12 +326,11 @@ export async function processEmailReply(
         occurredAt: Timestamp.fromDate(reply.receivedAt),
       });
 
-      // Trigger reply handler for AI processing
-      // TODO: Implement full reply processing logic
+      // Classify the reply using AI for intent and sentiment analysis
       const { classifyReply } = await import('@/lib/outbound/reply-handler');
       const replyTo = reply.to[0];
       const replyToAddress = (replyTo !== '' && replyTo != null) ? replyTo : '';
-      await classifyReply({
+      const classification = await classifyReply({
         from: reply.from,
         to: replyToAddress,
         subject: reply.subject,
@@ -341,7 +340,59 @@ export async function processEmailReply(
         receivedAt: reply.receivedAt.toISOString(),
       });
 
-      logger.info('Email reply processed', { replyId: reply.id });
+      // Store classification metadata on the activity
+      await FirestoreService.update(
+        `workspaces/${workspaceId}/emailActivities`,
+        reply.id,
+        {
+          classification: {
+            intent: classification.intent,
+            sentiment: classification.sentiment,
+            sentimentScore: classification.sentimentScore,
+            confidence: classification.confidence,
+            suggestedAction: classification.suggestedAction,
+            requiresHumanReview: classification.requiresHumanReview,
+          },
+          classifiedAt: new Date().toISOString(),
+        }
+      );
+
+      // Act on actionable intents
+      if (classification.intent === 'unsubscribe') {
+        logger.info('Unsubscribe intent detected, triggering opt-out', { replyId: reply.id, from: reply.from });
+        const { createActivity: createUnsubActivity } = await import('@/lib/crm/activity-service');
+        await createUnsubActivity(workspaceId, {
+          type: 'note_added',
+          direction: 'inbound',
+          subject: 'Unsubscribe Request',
+          body: `Contact ${reply.from} requested to unsubscribe.`,
+          summary: `Unsubscribe request from ${reply.from}`,
+          relatedTo: originalEmail.relatedTo,
+          metadata: { intent: 'unsubscribe', fromEmail: reply.from },
+          occurredAt: Timestamp.fromDate(new Date()),
+        });
+      } else if (classification.intent === 'out_of_office') {
+        logger.info('Out-of-office reply detected, skipping', { replyId: reply.id });
+      } else if (classification.intent === 'interested' || classification.intent === 'meeting_request') {
+        logger.info('Hot lead detected from reply classification', {
+          replyId: reply.id,
+          intent: classification.intent,
+          from: reply.from,
+        });
+        const { createActivity: createHotLeadActivity } = await import('@/lib/crm/activity-service');
+        await createHotLeadActivity(workspaceId, {
+          type: 'note_added',
+          direction: 'inbound',
+          subject: `Hot Lead: ${classification.intent === 'meeting_request' ? 'Meeting Requested' : 'Interest Expressed'}`,
+          body: `Contact ${reply.from} expressed interest: ${classification.reasoning}`,
+          summary: `Hot lead signal from ${reply.from}`,
+          relatedTo: originalEmail.relatedTo,
+          metadata: { intent: classification.intent, fromEmail: reply.from, sentiment: classification.sentiment },
+          occurredAt: Timestamp.fromDate(new Date()),
+        });
+      }
+
+      logger.info('Email reply processed', { replyId: reply.id, intent: classification.intent });
 
     } else {
       // No match - might be a new inbound email

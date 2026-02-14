@@ -29,6 +29,7 @@
 
 import { logger } from '@/lib/logger/logger';
 import { Timestamp } from 'firebase-admin/firestore';
+import { adminDb } from '@/lib/firebase/admin';
 import type { SalesSignal, SignalType } from '@/lib/orchestration/types';
 import { WorkflowEngine, type WorkflowExecutionContext } from './workflow-engine';
 import { PLATFORM_ID } from '@/lib/constants/platform';
@@ -442,7 +443,7 @@ export class WorkflowCoordinator {
       }
       
       // Check workflow settings
-      if (!this.shouldExecuteWorkflow(workflow, context)) {
+      if (!(await this.shouldExecuteWorkflow(workflow, context))) {
         logger.debug('Workflow execution skipped due to settings', {
           workflowId: workflow.id,
           workflowName: workflow.name,
@@ -508,12 +509,12 @@ export class WorkflowCoordinator {
   /**
    * Check if workflow should execute based on settings
    */
-  private shouldExecuteWorkflow(
+  private async shouldExecuteWorkflow(
     workflow: Workflow,
     _context: WorkflowExecutionContext
-  ): boolean {
+  ): Promise<boolean> {
     const { settings } = workflow;
-    
+
     // Check if execution on weekends is disabled
     if (settings.executeOnWeekends === false) {
       const day = new Date().getDay();
@@ -524,13 +525,13 @@ export class WorkflowCoordinator {
         return false;
       }
     }
-    
+
     // Check cooldown period
     if (settings.cooldownMinutes && workflow.stats.lastExecutedAt) {
       const lastExecuted = workflow.stats.lastExecutedAt.toMillis();
       const cooldownMs = settings.cooldownMinutes * 60 * 1000;
       const elapsed = Date.now() - lastExecuted;
-      
+
       if (elapsed < cooldownMs) {
         logger.debug('Workflow skipped - in cooldown period', {
           workflowId: workflow.id,
@@ -540,16 +541,29 @@ export class WorkflowCoordinator {
         return false;
       }
     }
-    
-    // Check daily execution limit
-    if (settings.maxExecutionsPerDay) {
-      // In production, this would check today's execution count from Firestore
-      // For now, we'll allow it
-      logger.debug('Daily execution limit check skipped (TODO: implement)', {
-        workflowId: workflow.id,
-      });
+
+    // Check daily execution limit via Firestore count query
+    if (settings.maxExecutionsPerDay && adminDb) {
+      const startOfDay = new Date();
+      startOfDay.setHours(0, 0, 0, 0);
+
+      const executionsRef = adminDb
+        .collection(`organizations/${PLATFORM_ID}/workflowExecutions`)
+        .where('workflowId', '==', workflow.id)
+        .where('startedAt', '>=', Timestamp.fromDate(startOfDay));
+      const snapshot = await executionsRef.count().get();
+      const todayCount = snapshot.data().count;
+
+      if (todayCount >= settings.maxExecutionsPerDay) {
+        logger.info('Workflow daily limit reached', {
+          workflowId: workflow.id,
+          todayCount,
+          limit: settings.maxExecutionsPerDay,
+        });
+        return false;
+      }
     }
-    
+
     return true;
   }
   

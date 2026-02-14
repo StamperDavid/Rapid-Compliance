@@ -5,7 +5,7 @@
  */
 
 import { syncGmailMessages, setupGmailPushNotifications, stopGmailPushNotifications } from '@/lib/integrations/gmail-sync-service';
-import { syncOutlookMessages } from '@/lib/integrations/outlook-sync-service';
+import { syncOutlookMessages, setupOutlookPushNotifications, stopOutlookPushNotifications } from '@/lib/integrations/outlook-sync-service';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { PLATFORM_ID } from '@/lib/constants/platform';
@@ -224,14 +224,19 @@ export async function startEmailSync(config: EmailSyncConfig): Promise<void> {
         route: '/email/sync/start',
       });
     } else if (config.provider === 'outlook') {
-      // Outlook uses Microsoft Graph webhooks (subscriptions)
-      // This would be implemented in outlook-sync-service.ts
-      logger.info('Outlook webhooks would be set up here', {
-        route: '/email/sync/start'
-      });
+      const webhookUrl = `${process.env.NEXT_PUBLIC_APP_URL}/api/webhooks/outlook`;
+      const subscriptionId = await setupOutlookPushNotifications(config.accessToken, webhookUrl);
 
-      // TODO: Implement Outlook webhook subscription
-      // await setupOutlookWebhook(config.accessToken);
+      await FirestoreService.update(
+        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/integrationStatus`,
+        'outlook-sync-config',
+        { outlookSubscriptionId: subscriptionId }
+      );
+
+      logger.info('Outlook push notifications enabled', {
+        route: '/email/sync/start',
+        subscriptionId,
+      });
     }
 
   } catch (error) {
@@ -277,9 +282,11 @@ export async function stopEmailSync(provider: 'gmail' | 'outlook'): Promise<void
       await stopGmailPushNotifications(typedSyncConfig.accessToken);
       logger.info('Gmail push notifications stopped');
     } else if (provider === 'outlook') {
-      // TODO: Implement Outlook webhook removal
-      // await stopOutlookWebhook(typedSyncConfig.accessToken);
-      logger.info('Outlook webhooks would be stopped here');
+      const outlookSubId = (syncConfig as Record<string, unknown>).outlookSubscriptionId;
+      if (typeof outlookSubId === 'string' && outlookSubId) {
+        await stopOutlookPushNotifications(typedSyncConfig.accessToken, outlookSubId);
+      }
+      logger.info('Outlook push notifications stopped');
     }
 
     // Update sync configuration

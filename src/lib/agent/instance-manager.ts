@@ -817,14 +817,29 @@ ${this.summarizeRecentConversations(customerMemory)}
     }
   }
   
-  private notifyHumanAgents(instance: AgentInstance, reason: string): Promise<void> {
-    // TODO: Implement - send real-time notification to human agents
-    logger.info('[Instance Manager] Notifying human agents for escalation', { 
-      reason, 
+  private async notifyHumanAgents(instance: AgentInstance, reason: string): Promise<void> {
+    logger.info('[Instance Manager] Notifying human agents for escalation', {
+      reason,
       instanceId: instance.instanceId,
-      file: 'instance-manager.ts' 
+      file: 'instance-manager.ts'
     });
-    return Promise.resolve();
+    try {
+      const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+      await FirestoreService.set(
+        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/notifications`,
+        `escalation_${instance.instanceId}_${Date.now()}`,
+        {
+          type: 'agent_escalation',
+          instanceId: instance.instanceId,
+          goldenMasterId: instance.goldenMasterId,
+          reason,
+          status: 'pending',
+          createdAt: new Date().toISOString(),
+        }
+      );
+    } catch (error) {
+      logger.error('Error sending escalation notification:', error instanceof Error ? error : new Error(String(error)), { file: 'instance-manager.ts' });
+    }
   }
   
   // ===== ID Generators =====

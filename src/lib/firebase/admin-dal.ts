@@ -514,13 +514,28 @@ export class FirestoreAdminDAL {
   /**
    * Get email generations in a date range
    */
-  getEmailGenerations(
-    _startDate: Date,
-    _endDate: Date
-  ): Array<Record<string, unknown>> {
-    // TODO: Query from email generation logs or Signal Bus events
-    // For now, return empty array
-    return [];
+  async getEmailGenerations(
+    startDate: Date,
+    endDate: Date
+  ): Promise<Array<Record<string, unknown>>> {
+    const colRef = this.getOrgCollection('emailActivities');
+    const snapshot = await colRef
+      .where('type', '==', 'generation')
+      .where('createdAt', '>=', startDate)
+      .where('createdAt', '<=', endDate)
+      .orderBy('createdAt', 'desc')
+      .limit(10000)
+      .get();
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  }
+
+  /**
+   * Get platform settings from Firestore
+   */
+  async getOrgSettings(): Promise<Record<string, unknown>> {
+    const colRef = this.getOrgCollection('settings');
+    const snapshot = await colRef.doc('platform').get();
+    return snapshot.exists ? (snapshot.data() as Record<string, unknown>) : {};
   }
 
   /**
