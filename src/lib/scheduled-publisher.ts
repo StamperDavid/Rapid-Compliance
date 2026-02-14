@@ -9,6 +9,7 @@
 import { admin } from '@/lib/firebase-admin';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import { PLATFORM_ID } from '@/lib/constants/platform';
+import { logger } from '@/lib/logger/logger';
 
 interface ScheduledItem {
   id: string;
@@ -86,7 +87,7 @@ export async function processScheduledPages(): Promise<{
         }
       });
     } catch (orgError) {
-      console.error(`[Scheduled Publisher] Error processing platform org:`, orgError);
+      logger.error('[Scheduled Publisher] Error processing platform org', orgError instanceof Error ? orgError : new Error(String(orgError)), { file: 'scheduled-publisher.ts' });
       errors++;
     }
 
@@ -96,13 +97,13 @@ export async function processScheduledPages(): Promise<{
         await publishScheduledItem(item);
         processed++;
       } catch (publishError) {
-        console.error(`[Scheduled Publisher] Error publishing ${item.type} ${item.id}:`, publishError);
+        logger.error(`[Scheduled Publisher] Error publishing ${item.type} ${item.id}`, publishError instanceof Error ? publishError : new Error(String(publishError)), { file: 'scheduled-publisher.ts' });
         errors++;
       }
     }
 
   } catch (error) {
-    console.error('[Scheduled Publisher] Fatal error:', error);
+    logger.error('[Scheduled Publisher] Fatal error', error instanceof Error ? error : new Error(String(error)), { file: 'scheduled-publisher.ts' });
     errors++;
   }
 

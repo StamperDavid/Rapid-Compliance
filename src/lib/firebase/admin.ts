@@ -94,8 +94,7 @@ function initializeAdmin() {
       });
     }
 
-    // eslint-disable-next-line no-console -- Required for startup handshake confirmation
-    console.log('[Auth] Firebase Admin Handshake Successful - Jasper is Online.');
+    logger.info('[Auth] Firebase Admin Handshake Successful - Jasper is Online.', { file: 'admin.ts' });
     logger.info('🔥 Firebase Admin initialized', { file: 'admin.ts' });
     return adminApp;
   } catch (error: unknown) {

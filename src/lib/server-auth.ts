@@ -5,6 +5,7 @@
 
 import { cookies } from 'next/headers';
 import { auth } from '@/lib/firebase-admin';
+import { logger } from '@/lib/logger/logger';
 
 export interface AuthenticatedUser {
   uid: string;
@@ -34,7 +35,7 @@ export async function getAuthenticatedUser(): Promise<AuthenticatedUser | null> 
       displayName: (decodedClaims.name as string | undefined) ?? decodedClaims.email ?? null,
     };
   } catch (error) {
-    console.error('[Server Auth] Error verifying user:', error);
+    logger.error('[Server Auth] Error verifying user', error instanceof Error ? error : new Error(String(error)), { file: 'server-auth.ts' });
     return null;
   }
 }

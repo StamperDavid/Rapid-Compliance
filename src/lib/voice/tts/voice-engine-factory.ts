@@ -7,6 +7,7 @@ import { doc, getDoc, setDoc, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import { COLLECTIONS } from '@/lib/firebase/collections';
 import { PLATFORM_ID } from '@/lib/constants/platform';
+import { logger } from '@/lib/logger/logger';
 import {
   TTS_PROVIDER_INFO,
   DEFAULT_TTS_CONFIGS,
@@ -133,7 +134,7 @@ export class VoiceEngineFactory {
 
     try {
       if (!db) {
-        console.warn('Firestore not initialized, using default TTS config');
+        logger.warn('Firestore not initialized, using default TTS config', { file: 'voice-engine-factory.ts' });
         return DEFAULT_TTS_CONFIGS.elevenlabs as TTSEngineConfig;
       }
       const docRef = doc(db, COLLECTIONS.ORGANIZATIONS, PLATFORM_ID, 'settings', 'ttsEngine');
@@ -145,7 +146,7 @@ export class VoiceEngineFactory {
         return config;
       }
     } catch (error) {
-      console.error('Error fetching TTS config:', error);
+      logger.error('Error fetching TTS config', error instanceof Error ? error : new Error(String(error)), { file: 'voice-engine-factory.ts' });
     }
 
     // Return default config (ElevenLabs provider with platform keys)

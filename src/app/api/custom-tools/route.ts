@@ -5,6 +5,7 @@ import { FirestoreService } from '@/lib/db/firestore-service';
 import { validateToolUrl, type CustomTool } from '@/types/custom-tools';
 import { getSubCollection } from '@/lib/firebase/collections';
 import { requireAuth } from '@/lib/auth/api-auth';
+import { logger } from '@/lib/logger/logger';
 
 export const dynamic = 'force-dynamic';
 
@@ -92,7 +93,7 @@ export async function GET(
 
     return NextResponse.json({ tools });
   } catch (error: unknown) {
-    console.error('Failed to fetch custom tools:', error);
+    logger.error('Failed to fetch custom tools', error instanceof Error ? error : new Error(String(error)), { file: 'custom-tools/route.ts' });
     const errorMessage = error instanceof Error ? error.message : 'Failed to fetch custom tools';
     return NextResponse.json(
       { error: errorMessage },
@@ -164,7 +165,7 @@ export async function POST(
 
     return NextResponse.json({ tool }, { status: 201 });
   } catch (error: unknown) {
-    console.error('Failed to create custom tool:', error);
+    logger.error('Failed to create custom tool', error instanceof Error ? error : new Error(String(error)), { file: 'custom-tools/route.ts' });
     const errorMessage = error instanceof Error ? error.message : 'Failed to create custom tool';
     return NextResponse.json(
       { error: errorMessage },
@@ -261,7 +262,7 @@ export async function PUT(
 
     return NextResponse.json({ tool: updatedTool });
   } catch (error: unknown) {
-    console.error('Failed to update custom tool:', error);
+    logger.error('Failed to update custom tool', error instanceof Error ? error : new Error(String(error)), { file: 'custom-tools/route.ts' });
     const errorMessage = error instanceof Error ? error.message : 'Failed to update custom tool';
     return NextResponse.json(
       { error: errorMessage },
@@ -313,7 +314,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true, deleted: id });
   } catch (error: unknown) {
-    console.error('Failed to delete custom tool:', error);
+    logger.error('Failed to delete custom tool', error instanceof Error ? error : new Error(String(error)), { file: 'custom-tools/route.ts' });
     const errorMessage = error instanceof Error ? error.message : 'Failed to delete custom tool';
     return NextResponse.json(
       { error: errorMessage },

@@ -23,6 +23,7 @@ import type {
   ConditionalCondition,
   FormPage,
 } from './types';
+import { logger } from '@/lib/logger/logger';
 
 // ============================================================================
 // TYPES
@@ -115,7 +116,7 @@ export function evaluateCondition(
       return valueEndsWith(fieldValue, condition.value);
 
     default:
-      console.warn(`Unknown condition operator: ${condition.operator}`);
+      logger.warn(`Unknown condition operator: ${condition.operator}`, { file: 'conditional-logic.ts' });
       return false;
   }
 }

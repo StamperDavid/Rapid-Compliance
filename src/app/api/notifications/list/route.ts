@@ -25,6 +25,7 @@ import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import type { Notification } from '@/lib/notifications/types';
+import { logger } from '@/lib/logger/logger';
 
 /**
  * Rate limiting map
@@ -202,8 +203,8 @@ export async function GET(request: NextRequest) {
 
     // Other errors
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    
-    console.error('List notifications error:', error);
+
+    logger.error('List notifications error', error instanceof Error ? error : new Error(String(error)), { file: 'notifications/list/route.ts' });
 
     return NextResponse.json(
       { success: false, error: errorMessage },
@@ -294,8 +295,8 @@ export async function POST(request: NextRequest) {
     );
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    
-    console.error('Mark as read error:', error);
+
+    logger.error('Mark as read error', error instanceof Error ? error : new Error(String(error)), { file: 'notifications/list/route.ts' });
 
     return NextResponse.json(
       { success: false, error: errorMessage },

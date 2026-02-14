@@ -8,6 +8,7 @@ import { getFirestore } from 'firebase-admin/firestore';
 import { getAuth } from 'firebase-admin/auth';
 import path from 'path';
 import fs from 'fs';
+import { logger } from './logger/logger';
 
 // Initialize Firebase Admin SDK once
 if (!admin.apps.length) {
@@ -72,13 +73,11 @@ if (!admin.apps.length) {
       ? process.env.FIREBASE_ADMIN_PROJECT_ID
       : 'NOT SET';
     if (process.env.NODE_ENV === 'development') {
-      // eslint-disable-next-line no-console
-      console.log('[Firebase Admin] Initialized successfully');
-      // eslint-disable-next-line no-console
-      console.log(`[Firebase Admin] 🎯 PROJECT ID: ${projectId}`);
+      logger.info('[Firebase Admin] Initialized successfully', { file: 'firebase-admin.ts' });
+      logger.info(`[Firebase Admin] 🎯 PROJECT ID: ${projectId}`, { file: 'firebase-admin.ts' });
     }
   } catch (error) {
-    console.error('[Firebase Admin] Initialization failed:', error);
+    logger.error('[Firebase Admin] Initialization failed', error instanceof Error ? error : new Error(String(error)), { file: 'firebase-admin.ts' });
     throw error;
   }
 }
@@ -109,7 +108,7 @@ export async function getCurrentUser(request: Request): Promise<{
       email: decodedToken.email,
     };
   } catch (error) {
-    console.error('[Auth] Failed to verify user:', error);
+    logger.error('[Auth] Failed to verify user', error instanceof Error ? error : new Error(String(error)), { file: 'firebase-admin.ts' });
     return null;
   }
 }
@@ -129,7 +128,7 @@ export async function verifyOrgAccess(
     const doc = await userOrgRef.get();
     return doc.exists;
   } catch (error) {
-    console.error('[Auth] Failed to verify org access:', error);
+    logger.error('[Auth] Failed to verify org access', error instanceof Error ? error : new Error(String(error)), { file: 'firebase-admin.ts' });
     return false;
   }
 }

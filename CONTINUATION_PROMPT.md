@@ -5,7 +5,7 @@
 ## Context
 Repository: https://github.com/StamperDavid/Rapid-Compliance
 Branch: dev
-Last Session: February 13, 2026 (Session 10)
+Last Session: February 13, 2026 (Session 12)
 
 ## Current State
 
@@ -59,6 +59,8 @@ Last Session: February 13, 2026 (Session 10)
 **Session 10 (February 13, 2026):** Resolved all 45 Major issues across 35 files (659 insertions, 190 deletions). Stripe webhook idempotency, OAuth CSRF fixes, webhook fail-closed pattern, referential integrity guards, analytics accuracy, social media validation, CRM merge safety. Committed (`a3667b8c`). Merged to main.
 
 **Session 11 (February 13, 2026):** Phase 2-4 production readiness audits. Ran 4 parallel QA agents (security, user flows, infrastructure, minors). Found 6 Critical + 8 Major + 12 Minor issues. Fixed: cart path mismatch (Stripe checkout/webhook aligned to workspace-scoped path), cron fail-open auth, voice AI signature bypass, voice fallback zero auth, wildcard CORS on 3 authenticated routes, HSTS/Permissions-Policy global headers, CORS placeholder domain. Deferred: Redis rate limiting (infrastructure), env var documentation, missing Firestore indexes.
+
+**Session 12 (February 13, 2026):** Infrastructure hardening session. Added 9 missing Firestore composite indexes (deals, activities, workflowExecutions, emailActivities, sequenceEnrollments, pages). Documented all ~103 env vars in `.env.example` (was 18). Wired `performHealthCheck()` to `/api/health` endpoint. Converted ~45 console.* calls to structured logger across 24 files. Merged all Session 11-12 commits to main.
 
 ---
 
@@ -168,12 +170,11 @@ All 14 Critical issues resolved (commit `3b1f5ea3`):
 | MAJ-44 | Workflow routes missing `success` field in response | `src/app/api/workflows/route.ts` |
 | MAJ-45 | Workflow routes use different auth pattern | `src/app/api/workflows/route.ts` |
 
-### Phases 2-4: Still Pending
+### Phases 2-4: COMPLETE ✅
 
-After Major issues, continue with:
-- **Phase 2:** Critical User Flow Verification (10 E2E flows)
-- **Phase 3:** Security Audit (auth gating, rate limits, Firestore rules, CORS, secrets)
-- **Phase 4:** Infrastructure Verification (env vars, indexes, cron, Stripe webhooks, health check)
+- **Phase 2:** Critical User Flow Verification — cart path fix, checkout discount fix (Session 11)
+- **Phase 3:** Security Audit — voice auth, CORS, HSTS, cron auth (Session 11)
+- **Phase 4:** Infrastructure — Firestore indexes, env var docs, health check wiring, structured logging (Session 12)
 
 ### Definition of Done
 
@@ -182,7 +183,8 @@ The platform is production ready when:
 - [x] All 45 Major issues resolved (Session 10, commit `a3667b8c`) ✅
 - [x] 9/10 critical user flows pass (cart path fixed Session 11) ✅
 - [x] Security audit Critical findings resolved (Session 11) ✅
-- [ ] Infrastructure: 8 missing Firestore indexes, env var docs, Redis rate limiter
+- [x] Infrastructure: Firestore indexes added (34 total), env var docs (103 vars), health check wired ✅
+- [ ] Redis rate limiting (Upstash) — deferred, requires infrastructure provisioning
 - [ ] A real user can sign up, use core features, and pay — without hitting a single error
 
 ---
@@ -216,5 +218,5 @@ The platform is production ready when:
 | `src/lib/orchestrator/jasper-tools.ts` | Jasper's 36+ function-calling tools |
 | `src/app/api/public/unsubscribe/route.ts` | CAN-SPAM email unsubscribe (Session 9) |
 | `vercel.json` | Cron jobs, CORS, security headers |
-| `firestore.indexes.json` | 25 composite indexes |
+| `firestore.indexes.json` | 34 composite indexes |
 | `tsconfig.eslint.json` | ESLint tsconfig scoped to `src/` |

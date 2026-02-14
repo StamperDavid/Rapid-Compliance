@@ -207,7 +207,7 @@ export async function GET(
       })),
     });
   } catch (error) {
-    console.error('Error fetching public form:', error);
+    logger.error('Error fetching public form', error instanceof Error ? error : new Error(String(error)), { file: 'public/forms/[formId]/route.ts' });
     return NextResponse.json(
       { error: 'Failed to fetch form' },
       { status: 500 }
@@ -499,7 +499,7 @@ export async function POST(
       redirectUrl: form.settings.redirectUrl,
     });
   } catch (error) {
-    console.error('Error submitting form:', error);
+    logger.error('Error submitting form', error instanceof Error ? error : new Error(String(error)), { file: 'public/forms/[formId]/route.ts' });
     return NextResponse.json(
       { error: 'Failed to submit form' },
       { status: 500 }

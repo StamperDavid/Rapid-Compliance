@@ -7,6 +7,7 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { VoiceEngineFactory, type TTSEngineType, type TTSSynthesizeRequest } from '@/lib/voice/tts';
 import { requireAuth } from '@/lib/auth/api-auth';
+import { logger } from '@/lib/logger/logger';
 
 export const dynamic = 'force-dynamic';
 
@@ -58,7 +59,7 @@ export async function GET(request: NextRequest) {
     const voices = await VoiceEngineFactory.listVoices(engine ?? undefined);
     return NextResponse.json({ success: true, voices, engine: engine ?? 'elevenlabs' });
   } catch (error) {
-    console.error('TTS GET error:', error);
+    logger.error('TTS GET error', error instanceof Error ? error : new Error(String(error)), { file: 'voice/tts/route.ts' });
     return NextResponse.json(
       { success: false, error: 'Failed to fetch TTS data' },
       { status: 500 }
@@ -132,7 +133,7 @@ export async function POST(request: NextRequest) {
       ...result,
     });
   } catch (error) {
-    console.error('TTS POST error:', error);
+    logger.error('TTS POST error', error instanceof Error ? error : new Error(String(error)), { file: 'voice/tts/route.ts' });
     return NextResponse.json(
       {
         success: false,

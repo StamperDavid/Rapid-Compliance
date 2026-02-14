@@ -5,6 +5,7 @@
  */
 import { type NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/api-auth';
+import { logger } from '@/lib/logger/logger';
 
 export const dynamic = 'force-dynamic';
 
@@ -64,7 +65,7 @@ export async function POST(request: NextRequest) {
       email: merchant.email,
     });
   } catch (error) {
-    console.error('[RecoveryAPI] Error starting campaign:', error);
+    logger.error('[RecoveryAPI] Error starting campaign', error instanceof Error ? error : new Error(String(error)), { file: 'recovery/start-campaign/route.ts' });
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

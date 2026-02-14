@@ -13,6 +13,7 @@ import {
   type TTSProviderInfo,
   type AudioFormat,
 } from '../types';
+import { logger } from '@/lib/logger/logger';
 
 const ELEVENLABS_API_URL = 'https://api.elevenlabs.io/v1';
 
@@ -175,7 +176,7 @@ export class ElevenLabsProvider implements TTSProvider {
         estimatedCostCents: Math.round(estimatedCostCents * 100) / 100,
       };
     } catch (error) {
-      console.error('ElevenLabs synthesis error:', error);
+      logger.error('ElevenLabs synthesis error', error instanceof Error ? error : new Error(String(error)), { file: 'elevenlabs-provider.ts' });
       throw error;
     }
   }
@@ -205,7 +206,7 @@ export class ElevenLabsProvider implements TTSProvider {
       });
 
       if (!response.ok) {
-        console.warn('Failed to fetch ElevenLabs voices, using defaults');
+        logger.warn('Failed to fetch ElevenLabs voices, using defaults', { file: 'elevenlabs-provider.ts' });
         return ELEVENLABS_DEFAULT_VOICES;
       }
 
@@ -221,7 +222,7 @@ export class ElevenLabsProvider implements TTSProvider {
         previewUrl: voice.preview_url,
       }));
     } catch (error) {
-      console.error('Error fetching ElevenLabs voices:', error);
+      logger.error('Error fetching ElevenLabs voices', error instanceof Error ? error : new Error(String(error)), { file: 'elevenlabs-provider.ts' });
       return ELEVENLABS_DEFAULT_VOICES;
     }
   }

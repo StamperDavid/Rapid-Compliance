@@ -53,7 +53,7 @@ export async function addVercelDomain(domain: string): Promise<{
   error?: string;
 }> {
   if (!VERCEL_TOKEN || !VERCEL_PROJECT_ID) {
-    console.warn('[Vercel Domains] Missing API credentials');
+    logger.warn('[Vercel Domains] Missing API credentials', { file: 'vercel-domains.ts' });
     return {
       success: false,
       error: 'Vercel API not configured. Please set VERCEL_TOKEN and VERCEL_PROJECT_ID environment variables.',
@@ -78,8 +78,8 @@ export async function addVercelDomain(domain: string): Promise<{
 
     if (!response.ok) {
       const errorData = (await response.json()) as VercelErrorResponse;
-       
-      console.error('[Vercel Domains] Add domain error:', errorData);
+
+      logger.error('[Vercel Domains] Add domain error', new Error(JSON.stringify(errorData)), { file: 'vercel-domains.ts' });
       const errorMessage = errorData.error?.message ?? '';
       return {
         success: false,
@@ -95,8 +95,8 @@ export async function addVercelDomain(domain: string): Promise<{
       domain: data,
     };
   } catch (error) {
-     
-    console.error('[Vercel Domains] Add domain exception:', error);
+
+    logger.error('[Vercel Domains] Add domain exception', error instanceof Error ? error : new Error(String(error)), { file: 'vercel-domains.ts' });
     const errorMessage = error instanceof Error ? error.message : '';
     return {
       success: false,
@@ -134,8 +134,8 @@ export async function verifyVercelDomain(domain: string): Promise<{
 
     if (!response.ok) {
       const errorData = (await response.json()) as VercelErrorResponse;
-       
-      console.error('[Vercel Domains] Verify domain error:', errorData);
+
+      logger.error('[Vercel Domains] Verify domain error', new Error(JSON.stringify(errorData)), { file: 'vercel-domains.ts' });
       const errorMessage = errorData.error?.message ?? '';
       return {
         success: false,
@@ -151,8 +151,8 @@ export async function verifyVercelDomain(domain: string): Promise<{
       verified: data.verified ?? false,
     };
   } catch (error) {
-     
-    console.error('[Vercel Domains] Verify domain exception:', error);
+
+    logger.error('[Vercel Domains] Verify domain exception', error instanceof Error ? error : new Error(String(error)), { file: 'vercel-domains.ts' });
     const errorMessage = error instanceof Error ? error.message : '';
     return {
       success: false,
@@ -204,8 +204,8 @@ export async function getVercelDomain(domain: string): Promise<{
       domain: data,
     };
   } catch (error) {
-     
-    console.error('[Vercel Domains] Get domain exception:', error);
+
+    logger.error('[Vercel Domains] Get domain exception', error instanceof Error ? error : new Error(String(error)), { file: 'vercel-domains.ts' });
     const errorMessage = error instanceof Error ? error.message : '';
     return {
       success: false,
@@ -242,8 +242,8 @@ export async function removeVercelDomain(domain: string): Promise<{
 
     if (!response.ok) {
       const errorData = (await response.json()) as VercelErrorResponse;
-       
-      console.error('[Vercel Domains] Remove domain error:', errorData);
+
+      logger.error('[Vercel Domains] Remove domain error', new Error(JSON.stringify(errorData)), { file: 'vercel-domains.ts' });
       const errorMessage = errorData.error?.message ?? '';
       return {
         success: false,
@@ -257,8 +257,8 @@ export async function removeVercelDomain(domain: string): Promise<{
       success: true,
     };
   } catch (error) {
-     
-    console.error('[Vercel Domains] Remove domain exception:', error);
+
+    logger.error('[Vercel Domains] Remove domain exception', error instanceof Error ? error : new Error(String(error)), { file: 'vercel-domains.ts' });
     const errorMessage = error instanceof Error ? error.message : '';
     return {
       success: false,
@@ -363,8 +363,8 @@ export async function provisionSSL(domain: string): Promise<{
       status: 'pending',
     };
   } catch (error) {
-     
-    console.error('[Vercel Domains] SSL provisioning error:', error);
+
+    logger.error('[Vercel Domains] SSL provisioning error', error instanceof Error ? error : new Error(String(error)), { file: 'vercel-domains.ts' });
     const errorMessage = error instanceof Error ? error.message : '';
     return {
       success: false,

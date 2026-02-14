@@ -18,6 +18,7 @@ import {
   type Timestamp
 } from 'firebase/firestore';
 import type { Schema, SchemaField, SchemaRelation, FieldType } from '@/types/schema';
+import { logger } from '@/lib/logger/logger';
 
 export class SchemaManager {
   private db: Firestore;
@@ -246,7 +247,7 @@ export class SchemaManager {
       }
     } catch (error) {
       // Log error but don't fail the update
-      console.error('[Schema Manager] Failed to detect/publish changes:', error);
+      logger.error('[Schema Manager] Failed to detect/publish changes', error instanceof Error ? error : new Error(String(error)), { file: 'schema-manager.ts' });
     }
   }
 

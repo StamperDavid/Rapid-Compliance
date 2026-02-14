@@ -238,7 +238,7 @@ export async function POST(request: NextRequest) {
     const authResult = await requireAuth(request);
 
     if (authResult instanceof NextResponse) {
-      console.error('[Jasper] Auth failed - no valid token');
+      logger.error('[Jasper] Auth failed - no valid token', new Error('Auth failed - no valid token'), { file: 'orchestrator/chat/route.ts' });
       return authResult;
     }
 

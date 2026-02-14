@@ -18,6 +18,7 @@ import { requireAuth } from '@/lib/auth/api-auth';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import { Timestamp } from 'firebase/firestore';
 import type { NotificationPreferences } from '@/lib/notifications/types';
+import { logger } from '@/lib/logger/logger';
 
 /**
  * Request body interface for PUT /api/notifications/preferences
@@ -129,8 +130,8 @@ export async function GET(request: NextRequest) {
     );
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    
-    console.error('Get preferences error:', error);
+
+    logger.error('Get preferences error', error instanceof Error ? error : new Error(String(error)), { file: 'notifications/preferences/route.ts' });
 
     return NextResponse.json(
       { success: false, error: errorMessage },
@@ -302,8 +303,8 @@ export async function PUT(request: NextRequest) {
 
     // Other errors
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    
-    console.error('Update preferences error:', error);
+
+    logger.error('Update preferences error', error instanceof Error ? error : new Error(String(error)), { file: 'notifications/preferences/route.ts' });
 
     return NextResponse.json(
       { success: false, error: errorMessage },

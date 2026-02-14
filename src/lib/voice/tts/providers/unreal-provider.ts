@@ -12,6 +12,7 @@ import {
   type TTSVoiceSettings,
   type TTSProviderInfo
 } from '../types';
+import { logger } from '@/lib/logger/logger';
 
 const UNREAL_API_URL = 'https://api.v7.unrealspeech.com';
 
@@ -125,7 +126,7 @@ export class UnrealProvider implements TTSProvider {
         estimatedCostCents: Math.round(estimatedCostCents * 100) / 100,
       };
     } catch (error) {
-      console.error('Unreal Speech synthesis error:', error);
+      logger.error('Unreal Speech synthesis error', error instanceof Error ? error : new Error(String(error)), { file: 'unreal-provider.ts' });
       throw error;
     }
   }

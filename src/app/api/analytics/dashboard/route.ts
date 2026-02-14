@@ -28,6 +28,7 @@ import { emitDashboardViewed, emitAnalyticsError } from '@/lib/analytics/dashboa
 import { ZodError } from 'zod';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import { requireAuth } from '@/lib/auth/api-auth';
+import { logger } from '@/lib/logger/logger';
 
 export const dynamic = 'force-dynamic';
 
@@ -187,10 +188,11 @@ export async function GET(request: NextRequest) {
         'Cache-Control': 'private, max-age=300', // 5 minutes
       },
     });
-    
+
+
   } catch (error) {
     // Log error
-    console.error('Analytics dashboard error:', error);
+    logger.error('Analytics dashboard error', error instanceof Error ? error : new Error(String(error)), { file: 'analytics/dashboard/route.ts' });
 
     const errorMessage = error instanceof Error ? error.message : 'Internal server error';
     const errorStack = error instanceof Error ? error.stack : undefined;

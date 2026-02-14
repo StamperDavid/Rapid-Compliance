@@ -16,6 +16,7 @@ import { sendNotificationRequestSchema } from '@/lib/notifications/validation';
 import { NotificationService } from '@/lib/notifications/notification-service';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { PLATFORM_ID } from '@/lib/constants/platform';
+import { logger } from '@/lib/logger/logger';
 
 /**
  * Rate limiting map (in-memory for simplicity)
@@ -151,8 +152,8 @@ export async function POST(request: NextRequest) {
 
     // Other errors
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    
-    console.error('Notification send error:', error);
+
+    logger.error('Notification send error', error instanceof Error ? error : new Error(String(error)), { file: 'notifications/send/route.ts' });
 
     return NextResponse.json(
       {

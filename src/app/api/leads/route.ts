@@ -70,7 +70,7 @@ export async function GET(
 
     return NextResponse.json(result);
   } catch (error: unknown) {
-    console.error('Failed to fetch leads:', error);
+    logger.error('Failed to fetch leads', error instanceof Error ? error : new Error(String(error)), { file: 'leads/route.ts' });
     const message = error instanceof Error ? error.message : 'Failed to fetch leads';
     return NextResponse.json(
       { error: message },
@@ -118,7 +118,7 @@ export async function POST(
 
     return NextResponse.json(result);
   } catch (error: unknown) {
-    console.error('Failed to create lead:', error);
+    logger.error('Failed to create lead', error instanceof Error ? error : new Error(String(error)), { file: 'leads/route.ts' });
     const message = error instanceof Error ? error.message : 'Failed to create lead';
     return NextResponse.json(
       { error: message },

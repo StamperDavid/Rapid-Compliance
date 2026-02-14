@@ -5,6 +5,7 @@
 
 import { NextResponse } from 'next/server';
 import { PLATFORM_ID } from '@/lib/constants/platform';
+import { logger } from '@/lib/logger/logger';
 
 export class APIError extends Error {
   constructor(
@@ -22,7 +23,7 @@ export class APIError extends Error {
  * Handle API errors and return appropriate NextResponse
  */
 export function handleAPIError(error: unknown, context?: string): NextResponse {
-  console.error(`[API Error${context ? ` - ${context}` : ''}]:`, error);
+  logger.error(`[API Error${context ? ` - ${context}` : ''}]`, error instanceof Error ? error : new Error(String(error)), { file: 'api-error-handler.ts', context });
 
   // Handle known API errors
   if (error instanceof APIError) {

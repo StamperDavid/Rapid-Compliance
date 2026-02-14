@@ -16,6 +16,7 @@
 
 import { CouponService } from '@/lib/pricing/coupon-service';
 import type { AIAuthorizedDiscounts, MerchantCoupon, CouponValidationResult, CouponCategory } from '@/types/pricing';
+import { logger } from '@/lib/logger/logger';
 
 /**
  * Agent permissions for discount tool
@@ -200,7 +201,7 @@ export class DiscountToolHandler {
         message: this.formatDiscountsForAgent(discounts),
       };
     } catch (error) {
-      console.error('Error fetching authorized discounts:', error);
+      logger.error('Error fetching authorized discounts', error instanceof Error ? error : new Error(String(error)), { file: 'discount-tool.ts' });
       return {
         success: false,
         message: 'Unable to fetch authorized discounts. You may proceed without offering discounts.',
@@ -260,7 +261,7 @@ export class DiscountToolHandler {
         };
       }
     } catch (error) {
-      console.error('Error validating coupon:', error);
+      logger.error('Error validating coupon', error instanceof Error ? error : new Error(String(error)), { file: 'discount-tool.ts' });
       return {
         success: false,
         message: 'Unable to validate the coupon at this time. Please try again.',
@@ -396,7 +397,7 @@ export class DiscountToolHandler {
         }. This is within your authorization limit.`,
       };
     } catch (error) {
-      console.error('Error applying discount:', error);
+      logger.error('Error applying discount', error instanceof Error ? error : new Error(String(error)), { file: 'discount-tool.ts' });
       return {
         success: false,
         message: 'Unable to apply the discount. Please try again or escalate to a human agent.',

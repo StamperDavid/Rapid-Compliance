@@ -21,6 +21,7 @@ export const dynamic = 'force-dynamic';
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
+import { logger } from '@/lib/logger/logger';
 import {
   sequenceEngine,
   sequenceAnalysisInputSchema,
@@ -267,7 +268,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<SequenceA
         }
       }
     } catch (signalError) {
-      console.error('Error emitting signals:', signalError);
+      logger.error('Error emitting signals', signalError instanceof Error ? signalError : new Error(String(signalError)), { file: 'sequence/analyze/route.ts' });
       // Don't fail the request if signal emission fails
     }
     
@@ -289,10 +290,10 @@ export async function POST(request: NextRequest): Promise<NextResponse<SequenceA
         'X-Cache': 'MISS',
       },
     });
-    
+
   } catch (error) {
-    console.error('Error analyzing sequences:', error);
-    
+    logger.error('Error analyzing sequences', error instanceof Error ? error : new Error(String(error)), { file: 'sequence/analyze/route.ts' });
+
     return NextResponse.json({
       success: false,
       error: {

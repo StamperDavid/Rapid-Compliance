@@ -55,7 +55,6 @@ vercel-key.txt
 .env.local.backup
 .env.development
 .env.production
-.env.example
 firebase-debug.log
 
 # Prevent AI from overwriting configs
