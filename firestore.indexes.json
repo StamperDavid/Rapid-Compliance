@@ -297,6 +297,30 @@
         { "fieldPath": "status", "order": "ASCENDING" },
         { "fieldPath": "updatedAt", "order": "DESCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "sequenceEnrollments",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "nextExecutionAt", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "saga_event_logs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "startedAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "saga_event_logs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "confirmed", "order": "ASCENDING" },
+        { "fieldPath": "processedAt", "order": "DESCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []
