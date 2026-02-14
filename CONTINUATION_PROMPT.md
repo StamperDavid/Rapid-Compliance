@@ -5,7 +5,7 @@
 ## Context
 Repository: https://github.com/StamperDavid/Rapid-Compliance
 Branch: dev
-Last Session: February 13, 2026 (Session 7 — DALL-E 3 image generation, AI page builder, video pipeline wiring)
+Last Session: February 13, 2026 (Session 8 — Systematic TODO resolution: 25+ stubs replaced with real logic across 13 files)
 
 ## Current State
 
@@ -59,6 +59,17 @@ Last Session: February 13, 2026 (Session 7 — DALL-E 3 image generation, AI pag
 - **Asset Generator — Real DALL-E 3 (Session 7):** New `image-generation-service.ts` wrapping DALL-E 3 API. New `/api/ai/generate-image` endpoint with Zod validation and rate limiting (20/min). AssetGenerator specialist's 5 generate methods now async, calling real DALL-E 3 with graceful placeholder fallback. Smart size mapping (logos→1024x1024, banners→1792x1024, stories→1024x1792).
 - **Website Builder — AI Page Generation (Session 7):** New `ai-page-generator.ts` with structured prompts for page generation. New `/api/website/ai/generate` endpoint (10/min rate limit). "Generate with AI" button + modal added to Pages management UI. AI generates title, slug, sections with widgets, and SEO metadata. Retry logic (up to 3 attempts) for JSON parse failures.
 - **Video Pipeline — Real Provider Wiring (Session 7):** Wired render-pipeline.ts to real video-service.ts implementations. callRunwayAPI/callSoraAPI/callHeyGenAPI now delegate to real API calls. checkProviderStatus uses getVideoStatus. isProviderConfigured switched from process.env to Firestore apiKeyService. Updated Runway endpoints to api.dev.runwayml.com/v1 with gen3a_turbo model. Veo/Kling/Pika/StableVideo throw clear "not yet available" errors.
+- **Systematic TODO Resolution (Session 8):** Resolved 25+ TODO stubs across 13 files with real implementations:
+  - **Firestore queries:** workflow-service (getWorkflows, getWorkflowExecutions), workflow-coordinator (findMatchingWorkflows), conversation-engine (getConversation), playbook-engine (savePlaybook)
+  - **Competitive monitor:** Daily tracking counters (checks, changes, alerts), Firestore profile loading, change detection + Signal Bus alerting, midnight counter reset
+  - **Notification service:** Timezone-aware quiet hours check (IANA TZ, overnight wrap), Firestore-backed batch queue, quiet hours rescheduling
+  - **Risk engine:** Historical pattern matching by deal archetype, risk trend analysis with in-memory assessment cache
+  - **Smart sequencer:** Score-based lead-to-sequence matching (hot→aggressive, warm→standard, cold→nurture)
+  - **Email writer:** Wired to real `/api/email-writer/send` endpoint with loading state and error handling
+  - **FormBuilder:** QR code SVG-to-PNG download via canvas
+  - **Coaching analytics:** Real team metrics from Firestore deal queries within date range
+  - **Deal monitor:** Session lifecycle management with Maps tracking + DELETE handler for stopping monitors
+  - **Playbook engine:** extractKeyPhrasesFromTranscript() extracting from objections, key moments, coaching insights
 
 ---
 
@@ -283,6 +294,7 @@ SESSION 5: ✅ COMPLETE — Quick wins (4 TODOs) + ESLint OOM fix (tsconfig.esli
 SESSION 6: ✅ COMPLETE — Stripe checkout flow completion + Social OAuth UI (Twitter PKCE, LinkedIn) + Website editor/pages 401 auth fix
 SESSION 7: ✅ COMPLETE — DALL-E 3 image generation (Asset Generator), AI page builder (Website Builder), video pipeline wired to real HeyGen/Sora/Runway providers
 SESSION 7b: ✅ COMPLETE — 8 TODO quick-wins resolved, video "Save to Library" wired to Firestore, save route schema extended (generatedScenes, finalVideoUrl)
+SESSION 8: ✅ COMPLETE — 25+ TODO stubs resolved across 13 files (Firestore queries, notification service, competitive monitor, risk engine, smart sequencer, email writer, QR code, coaching analytics, deal monitor lifecycle)
 
 BLOCKED (external — no code work possible):
   - Meta Developer Portal sandbox application (3.2)
@@ -337,7 +349,7 @@ BLOCKED (external — no code work possible):
 | ~~Social accounts UI is mock~~ | **FIXED** — Real OAuth flows for Twitter (PKCE) and LinkedIn, AES-256-GCM token encryption, verify endpoint, manual credential fallback |
 | ~~Website editor/pages 401~~ | **FIXED** — All fetch calls now include Firebase auth headers. Infinite error loop resolved (toastRef pattern) |
 | ~~Stripe checkout incomplete~~ | **FIXED** — Full PaymentElement flow with 3DS, cart recovery page, enriched success page |
-| ~27 TODO comments remaining | Reduced from ~43; 8 quick-win TODOs resolved in Session 7b (recency factor, pagination, rep name, org-scoped, audit log, coaching tracking, JasperTrainingLab, baseline conversion) |
+| ~~~27 TODO comments remaining~~ | **REDUCED to ~15** — Session 8 resolved 25+ stubs (Firestore queries, notifications, competitive monitor, risk engine, sequencer, email writer, QR code, coaching analytics, deal monitor). Remaining 15 are external deps (i18n translations, Outlook webhooks, vector embeddings, DM feature, web scraping) |
 | ~~Video "Save to Library" stub~~ | **FIXED** — Wired to `/api/video/project/save` with full Firestore persistence |
 
 ---
@@ -367,7 +379,7 @@ These are the remaining buildable items, ordered by impact:
 ### Low Priority
 | Task | What Needs Building |
 |------|---------------------|
-| **~27 TODO comments** | Mostly larger features (Firestore persistence, advanced analytics, API integrations) |
+| **~15 TODO comments** | External deps only: i18n translations (6 languages), Outlook webhooks, vector embeddings, web scraping, DM feature, real-time notifications |
 
 ### Video Production Pipeline (Details)
 **Goal:** Tell Jasper "create a video" and receive a polished video in the library.
