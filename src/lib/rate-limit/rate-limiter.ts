@@ -39,6 +39,8 @@ const endpointLimits: Record<string, RateLimitConfig> = {
   
   // AI/Heavy compute
   '/api/agent/chat': { maxRequests: 100, windowMs: 60 * 1000 },
+  '/api/ai/generate-image': { maxRequests: 20, windowMs: 60 * 1000 }, // DALL-E 3 — expensive
+  '/api/website/ai/generate': { maxRequests: 10, windowMs: 60 * 1000 }, // AI page generation — expensive
   '/api/leads/research': { maxRequests: 30, windowMs: 60 * 1000 },
   '/api/leads/enrich': { maxRequests: 50, windowMs: 60 * 1000 },
   

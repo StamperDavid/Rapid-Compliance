@@ -16,6 +16,8 @@
 
 import { BaseSpecialist } from '../../base-specialist';
 import type { AgentMessage, AgentReport, SpecialistConfig, Signal } from '../../types';
+import { generateImage, mapDimensionsToSize, type ImageQuality, type ImageStyle } from '@/lib/ai/image-generation-service';
+import { logger } from '@/lib/logger/logger';
 
 // ============================================================================
 // SYSTEM PROMPT - The brain of this specialist
@@ -404,19 +406,19 @@ export class AssetGenerator extends BaseSpecialist {
 
       switch (payload.method) {
         case 'generate_logo':
-          result = this.generateLogo(payload);
+          result = await this.generateLogo(payload);
           break;
         case 'generate_banner':
-          result = this.generateBanner(payload);
+          result = await this.generateBanner(payload);
           break;
         case 'generate_social_graphic':
-          result = this.generateSocialGraphic(payload);
+          result = await this.generateSocialGraphic(payload);
           break;
         case 'generate_favicon':
-          result = this.generateFavicon(payload);
+          result = await this.generateFavicon(payload);
           break;
         case 'generate_asset_package':
-          result = this.generateAssetPackage(payload);
+          result = await this.generateAssetPackage(payload);
           break;
         default:
           return this.createReport(taskId, 'FAILED', null, ['Unknown method']);
@@ -471,7 +473,7 @@ export class AssetGenerator extends BaseSpecialist {
   /**
    * Generate logo variations
    */
-  generateLogo(request: AssetGenerationRequest): LogoGenerationResult {
+  async generateLogo(request: AssetGenerationRequest): Promise<LogoGenerationResult> {
     const {
       brandName,
       brandColors,
@@ -497,7 +499,7 @@ export class AssetGenerator extends BaseSpecialist {
       name: 'primary',
       style: 'full-color horizontal',
       prompt: primaryPrompt,
-      url: this.generatePlaceholderUrl('logo-primary', brandName, 'png'),
+      url: await this.generateImageUrl(primaryPrompt, 'logo-primary', brandName, 'png', { width: 1200, height: 400 }),
       dimensions: { width: 1200, height: 400 },
       format: 'png',
       useCase: 'Website header, presentations, email signatures',
@@ -516,7 +518,7 @@ export class AssetGenerator extends BaseSpecialist {
       name: 'icon',
       style: 'symbol only, square format',
       prompt: iconPrompt,
-      url: this.generatePlaceholderUrl('logo-icon', brandName, 'png'),
+      url: await this.generateImageUrl(iconPrompt, 'logo-icon', brandName, 'png', { width: 512, height: 512 }),
       dimensions: { width: 512, height: 512 },
       format: 'png',
       useCase: 'Social media profile, app icon, favicon base',
@@ -535,7 +537,7 @@ export class AssetGenerator extends BaseSpecialist {
       name: 'monochrome',
       style: 'black and white',
       prompt: monoPrompt,
-      url: this.generatePlaceholderUrl('logo-mono', brandName, 'png'),
+      url: await this.generateImageUrl(monoPrompt, 'logo-mono', brandName, 'png', { width: 1200, height: 400 }),
       dimensions: { width: 1200, height: 400 },
       format: 'png',
       useCase: 'Print, fax, single-color applications',
@@ -554,7 +556,7 @@ export class AssetGenerator extends BaseSpecialist {
       name: 'vertical',
       style: 'stacked vertical layout',
       prompt: verticalPrompt,
-      url: this.generatePlaceholderUrl('logo-vertical', brandName, 'png'),
+      url: await this.generateImageUrl(verticalPrompt, 'logo-vertical', brandName, 'png', { width: 400, height: 800 }),
       dimensions: { width: 400, height: 800 },
       format: 'png',
       useCase: 'Narrow spaces, mobile apps, vertical banners',
@@ -587,7 +589,7 @@ export class AssetGenerator extends BaseSpecialist {
   /**
    * Generate banner/header graphics
    */
-  generateBanner(request: AssetGenerationRequest): BannerGenerationResult {
+  async generateBanner(request: AssetGenerationRequest): Promise<BannerGenerationResult> {
     const {
       brandName,
       brandColors,
@@ -618,7 +620,7 @@ export class AssetGenerator extends BaseSpecialist {
     return {
       assetType: 'banner',
       purpose,
-      url: this.generatePlaceholderUrl('banner', brandName, format),
+      url: await this.generateImageUrl(prompt, 'banner', brandName, format, dimensions),
       prompt,
       dimensions,
       format,
@@ -630,7 +632,7 @@ export class AssetGenerator extends BaseSpecialist {
   /**
    * Generate social media graphics
    */
-  generateSocialGraphic(request: AssetGenerationRequest): SocialGraphicResult {
+  async generateSocialGraphic(request: AssetGenerationRequest): Promise<SocialGraphicResult> {
     const {
       brandName,
       brandColors,
@@ -659,7 +661,7 @@ export class AssetGenerator extends BaseSpecialist {
 
       variations.push({
         type: 'post',
-        url: this.generatePlaceholderUrl(`${platform}-post`, brandName, format),
+        url: await this.generateImageUrl(postPrompt, `${platform}-post`, brandName, format, platformSpecs.post),
         prompt: postPrompt,
         dimensions: platformSpecs.post,
         format,
@@ -681,7 +683,7 @@ export class AssetGenerator extends BaseSpecialist {
 
       variations.push({
         type: headerKey,
-        url: this.generatePlaceholderUrl(`${platform}-${headerKey}`, brandName, format),
+        url: await this.generateImageUrl(headerPrompt, `${platform}-${headerKey}`, brandName, format, platformSpecs[headerKey]),
         prompt: headerPrompt,
         dimensions: platformSpecs[headerKey],
         format,
@@ -702,7 +704,7 @@ export class AssetGenerator extends BaseSpecialist {
 
       variations.push({
         type: 'story',
-        url: this.generatePlaceholderUrl(`${platform}-story`, brandName, format),
+        url: await this.generateImageUrl(storyPrompt, `${platform}-story`, brandName, format, platformSpecs.story),
         prompt: storyPrompt,
         dimensions: platformSpecs.story,
         format,
@@ -720,7 +722,7 @@ export class AssetGenerator extends BaseSpecialist {
   /**
    * Generate favicon sets
    */
-  generateFavicon(request: AssetGenerationRequest): FaviconResult {
+  async generateFavicon(request: AssetGenerationRequest): Promise<FaviconResult> {
     const {
       brandName,
       brandColors,
@@ -730,7 +732,7 @@ export class AssetGenerator extends BaseSpecialist {
 
     this.log('INFO', `Generating favicon set for ${brandName}`);
 
-    const _basePrompt = this.buildLogoPrompt(
+    const basePrompt = this.buildLogoPrompt(
       brandName,
       brandStyle,
       industry,
@@ -739,19 +741,20 @@ export class AssetGenerator extends BaseSpecialist {
       undefined
     );
 
+    // Generate one base icon image — all favicon sizes derive from it
+    const baseUrl = await this.generateImageUrl(basePrompt, 'favicon-base', brandName, 'png', { width: 512, height: 512 });
+
     const variations: FaviconVariation[] = FAVICON_SIZES.map(size => ({
       size: `${size}x${size}`,
-      url: this.generatePlaceholderUrl(`favicon-${size}`, brandName, 'png'),
+      url: baseUrl,
       dimensions: { width: size, height: size },
       format: 'png' as OutputFormat,
     }));
 
-    const icopUrl = this.generatePlaceholderUrl('favicon', brandName, 'ico');
-
     return {
       assetType: 'favicon',
       variations,
-      icopUrl,
+      icopUrl: baseUrl,
       confidence: 0.93,
     };
   }
@@ -759,24 +762,24 @@ export class AssetGenerator extends BaseSpecialist {
   /**
    * Generate complete asset package
    */
-  generateAssetPackage(request: AssetGenerationRequest): AssetPackageResult {
+  async generateAssetPackage(request: AssetGenerationRequest): Promise<AssetPackageResult> {
     this.log('INFO', `Generating complete asset package for ${request.brandName}`);
 
-    const logo = this.generateLogo(request);
-    const favicons = this.generateFavicon(request);
+    const logo = await this.generateLogo(request);
+    const favicons = await this.generateFavicon(request);
 
     // Generate social graphics for all platforms
     const socialGraphics: Record<SocialPlatform, SocialGraphicResult> = {
-      twitter: this.generateSocialGraphic({ ...request, platform: 'twitter' }),
-      linkedin: this.generateSocialGraphic({ ...request, platform: 'linkedin' }),
-      instagram: this.generateSocialGraphic({ ...request, platform: 'instagram' }),
-      facebook: this.generateSocialGraphic({ ...request, platform: 'facebook' }),
+      twitter: await this.generateSocialGraphic({ ...request, platform: 'twitter' }),
+      linkedin: await this.generateSocialGraphic({ ...request, platform: 'linkedin' }),
+      instagram: await this.generateSocialGraphic({ ...request, platform: 'instagram' }),
+      facebook: await this.generateSocialGraphic({ ...request, platform: 'facebook' }),
     };
 
     // Generate banners
     const banners: BannerGenerationResult[] = [
-      this.generateBanner({ ...request, dimensions: { width: 1920, height: 400 } }),
-      this.generateBanner({ ...request, dimensions: { width: 1200, height: 300 } }),
+      await this.generateBanner({ ...request, dimensions: { width: 1920, height: 400 } }),
+      await this.generateBanner({ ...request, dimensions: { width: 1200, height: 300 } }),
     ];
 
     return {
@@ -918,26 +921,38 @@ export class AssetGenerator extends BaseSpecialist {
   }
 
   /**
-   * Generate placeholder asset URLs
-   * In production, these would be actual generated image URLs from Replicate/DALL-E/Midjourney
+   * Generate an image using DALL-E 3, with graceful fallback to placeholder URL
    */
-  private generatePlaceholderUrl(
+  private async generateImageUrl(
+    prompt: string,
     assetName: string,
     brandName: string,
-    format: string
-  ): string {
-    // In production, this would return URLs from the AI image generation service
-    // For now, generate a predictable placeholder URL structure
-    const sanitizedBrand = brandName.toLowerCase().replace(/\s+/g, '-');
-    const timestamp = Date.now();
+    _format: string,
+    dimensions?: AssetDimensions
+  ): Promise<string> {
+    try {
+      const size = dimensions
+        ? mapDimensionsToSize(dimensions.width, dimensions.height)
+        : '1024x1024';
 
-    // This is where you'd integrate with:
-    // - Replicate API: https://replicate.com/docs/get-started/nodejs
-    // - OpenAI DALL-E: https://platform.openai.com/docs/guides/images
-    // - Midjourney API (unofficial): https://docs.midjourney.com/
-    // - Stable Diffusion API: https://stablediffusionapi.com/
+      // Use HD quality for logos, standard for others
+      const quality: ImageQuality = assetName.startsWith('logo') ? 'hd' : 'standard';
+      const style: ImageStyle = assetName.startsWith('logo') ? 'natural' : 'vivid';
 
-    return `https://assets.generated.example.com/${sanitizedBrand}/${assetName}-${timestamp}.${format}`;
+      const result = await generateImage(prompt, { size, quality, style });
+      return result.url;
+    } catch (error) {
+      // Graceful fallback — return a placeholder URL with brand name
+      const sanitizedBrand = brandName.toLowerCase().replace(/\s+/g, '-');
+      const w = dimensions?.width ?? 1024;
+      const h = dimensions?.height ?? 1024;
+      logger.warn('Image generation failed, using placeholder', {
+        assetName,
+        error: error instanceof Error ? error.message : String(error),
+        file: 'specialist.ts',
+      });
+      return `https://placehold.co/${w}x${h}/2563eb/white?text=${encodeURIComponent(sanitizedBrand)}`;
+    }
   }
 }
 

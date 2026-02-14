@@ -20,6 +20,14 @@ import { getSignalBus } from '@/lib/orchestrator/signal-bus';
 import { VideoJobService } from '@/lib/video/video-job-service';
 import { multiModelPicker } from '@/lib/video/engine/multi-model-picker';
 import { stitcherService } from '@/lib/video/engine/stitcher-service';
+import {
+  generateHeyGenVideoInternal,
+  generateSoraVideoInternal,
+  generateRunwayVideoInternal,
+  getVideoStatus,
+  getVideoProviderKey,
+} from '@/lib/video/video-service';
+import type { VideoProvider } from '@/types/video';
 import type {
   MasterStoryboard,
   GeneratedClip,
@@ -299,7 +307,7 @@ export class RenderPipeline {
     });
 
     // Check if provider has API key configured
-    if (!this.isProviderConfigured(provider)) {
+    if (!(await this.isProviderConfigured(provider))) {
       logger.warn('RenderPipeline: Provider not configured, skipping', {
         provider,
         shotId: item.shotId,
@@ -327,39 +335,33 @@ export class RenderPipeline {
   }
 
   /**
-   * Check if provider is configured with API key
+   * Check if provider is configured with API key (reads from Firestore via apiKeyService)
    */
-  private isProviderConfigured(provider: VideoGenerationProvider): boolean {
-    switch (provider) {
-      case 'runway':
-        return !!process.env.RUNWAY_API_KEY;
-      case 'veo':
-        return !!process.env.GOOGLE_VERTEX_AI_PROJECT_ID;
-      case 'sora':
-        return !!process.env.OPENAI_API_KEY;
-      case 'kling':
-        return !!process.env.KLING_API_KEY;
-      case 'pika':
-        return !!process.env.PIKA_API_KEY;
-      case 'heygen':
-        return !!process.env.HEYGEN_API_KEY;
-      case 'stable-video':
-        return !!process.env.STABILITY_API_KEY;
-      default:
-        return false;
+  private async isProviderConfigured(provider: VideoGenerationProvider): Promise<boolean> {
+    // Map render pipeline provider names to video-service provider names
+    const providerMap: Record<string, VideoProvider> = {
+      'runway': 'runway',
+      'sora': 'sora',
+      'heygen': 'heygen',
+    };
+
+    const videoProvider = providerMap[provider];
+    if (!videoProvider) {
+      // Veo, Kling, Pika, Stable Video — not yet available
+      return false;
     }
+
+    const key = await getVideoProviderKey(videoProvider);
+    return key !== null;
   }
 
   /**
-   * Call provider API to start generation
+   * Call provider API to start generation — delegates to real implementations in video-service.ts
    */
   private async callProviderAPI(
     provider: VideoGenerationProvider,
     item: GenerationQueueItem
   ): Promise<ProviderGenerationResponse> {
-    // In production, this would make actual API calls to each provider
-    // For now, we return mock responses
-
     logger.info('RenderPipeline: Calling provider API', {
       provider,
       shotId: item.shotId,
@@ -368,118 +370,87 @@ export class RenderPipeline {
     switch (provider) {
       case 'runway':
         return this.callRunwayAPI(item);
-      case 'veo':
-        return this.callVeoAPI(item);
       case 'sora':
         return this.callSoraAPI(item);
-      case 'kling':
-        return this.callKlingAPI(item);
-      case 'pika':
-        return this.callPikaAPI(item);
       case 'heygen':
         return this.callHeyGenAPI(item);
+      case 'veo':
+      case 'kling':
+      case 'pika':
       case 'stable-video':
-        return this.callStableVideoAPI(item);
+        throw new Error(`Provider ${provider} is not yet available. Configure Runway, Sora, or HeyGen instead.`);
       default:
         throw new Error(`Unknown provider: ${provider}`);
     }
   }
 
   /**
-   * Call Runway ML API
+   * Call Runway ML API via video-service.ts
    */
-  private callRunwayAPI(item: GenerationQueueItem): Promise<ProviderGenerationResponse> {
-    // Runway ML Gen-3 API endpoint
-    // https://api.runwayml.com/v1/generations
-
+  private async callRunwayAPI(item: GenerationQueueItem): Promise<ProviderGenerationResponse> {
     logger.info('RenderPipeline: Calling Runway ML API', { shotId: item.shotId });
 
-    // Mock response for now
-    return Promise.resolve({
-      jobId: `runway_${Date.now()}`,
+    const prompt = item.visualPrompt.compiledPrompt;
+    const referenceImages = item.visualPrompt.referenceImageUrls;
+    const firstRefImage = referenceImages && referenceImages.length > 0 ? referenceImages[0] : null;
+
+    const result = firstRefImage
+      ? await generateRunwayVideoInternal('image', firstRefImage, {
+          duration: Math.ceil(item.duration / 1000),
+          ratio: item.aspectRatio as '16:9' | '9:16' | '1:1',
+        })
+      : await generateRunwayVideoInternal('text', prompt, {
+          duration: Math.ceil(item.duration / 1000),
+          ratio: item.aspectRatio as '16:9' | '9:16' | '1:1',
+        });
+
+    return {
+      jobId: result.id,
       status: 'queued',
-    });
+    };
   }
 
   /**
-   * Call Google Veo API (via Vertex AI)
+   * Call OpenAI Sora API via video-service.ts
    */
-  private callVeoAPI(item: GenerationQueueItem): Promise<ProviderGenerationResponse> {
-    // Google Veo via Vertex AI
-    // https://cloud.google.com/vertex-ai/docs/generative-ai/video/overview
-
-    logger.info('RenderPipeline: Calling Google Veo API', { shotId: item.shotId });
-
-    // Mock response for now
-    return Promise.resolve({
-      jobId: `veo_${Date.now()}`,
-      status: 'queued',
-    });
-  }
-
-  /**
-   * Call OpenAI Sora API
-   */
-  private callSoraAPI(item: GenerationQueueItem): Promise<ProviderGenerationResponse> {
+  private async callSoraAPI(item: GenerationQueueItem): Promise<ProviderGenerationResponse> {
     logger.info('RenderPipeline: Calling Sora API', { shotId: item.shotId });
 
-    // Mock response for now
-    return Promise.resolve({
-      jobId: `sora_${Date.now()}`,
+    const result = await generateSoraVideoInternal(
+      item.visualPrompt.compiledPrompt,
+      {
+        duration: Math.ceil(item.duration / 1000),
+        aspectRatio: item.aspectRatio as '16:9' | '9:16' | '1:1',
+        style: item.visualPrompt.mood,
+      }
+    );
+
+    return {
+      jobId: result.id,
       status: 'queued',
-    });
+    };
   }
 
   /**
-   * Call Kling AI API
+   * Call HeyGen API via video-service.ts
    */
-  private callKlingAPI(item: GenerationQueueItem): Promise<ProviderGenerationResponse> {
-    logger.info('RenderPipeline: Calling Kling AI API', { shotId: item.shotId });
-
-    // Mock response for now
-    return Promise.resolve({
-      jobId: `kling_${Date.now()}`,
-      status: 'queued',
-    });
-  }
-
-  /**
-   * Call Pika Labs API
-   */
-  private callPikaAPI(item: GenerationQueueItem): Promise<ProviderGenerationResponse> {
-    logger.info('RenderPipeline: Calling Pika API', { shotId: item.shotId });
-
-    // Mock response for now
-    return Promise.resolve({
-      jobId: `pika_${Date.now()}`,
-      status: 'queued',
-    });
-  }
-
-  /**
-   * Call HeyGen API
-   */
-  private callHeyGenAPI(item: GenerationQueueItem): Promise<ProviderGenerationResponse> {
+  private async callHeyGenAPI(item: GenerationQueueItem): Promise<ProviderGenerationResponse> {
     logger.info('RenderPipeline: Calling HeyGen API', { shotId: item.shotId });
 
-    // Mock response for now
-    return Promise.resolve({
-      jobId: `heygen_${Date.now()}`,
-      status: 'queued',
-    });
-  }
+    // HeyGen requires an avatar ID — use a default if not specified in the visual prompt
+    const promptWithExtras = item.visualPrompt as unknown as Record<string, unknown>;
+    const avatarId = (typeof promptWithExtras.avatarId === 'string' ? promptWithExtras.avatarId : null)
+      ?? 'default';
+    const script = item.visualPrompt.compiledPrompt;
 
-  /**
-   * Call Stable Video Diffusion API
-   */
-  private callStableVideoAPI(item: GenerationQueueItem): Promise<ProviderGenerationResponse> {
-    logger.info('RenderPipeline: Calling Stable Video API', { shotId: item.shotId });
-
-    // Mock response for now
-    return Promise.resolve({
-      jobId: `stable_${Date.now()}`,
-      status: 'queued',
+    const result = await generateHeyGenVideoInternal(script, avatarId, {
+      aspectRatio: item.aspectRatio as '16:9' | '9:16' | '1:1',
     });
+
+    return {
+      jobId: result.id,
+      status: 'queued',
+    };
   }
 
   /**
@@ -527,27 +498,50 @@ export class RenderPipeline {
   }
 
   /**
-   * Check provider generation status
+   * Check provider generation status via video-service.ts
    */
-  private checkProviderStatus(
+  private async checkProviderStatus(
     provider: VideoGenerationProvider,
     providerJobId: string
   ): Promise<ProviderGenerationResponse> {
-    // In production, this would make actual API calls
-    // For now, simulate completion after a delay
-
     logger.debug('RenderPipeline: Checking provider status', {
       provider,
       providerJobId,
     });
 
-    // Mock: return completed status with placeholder URL
-    return Promise.resolve({
+    // Map render-pipeline provider names to video-service provider names
+    const providerMap: Record<string, VideoProvider> = {
+      'runway': 'runway',
+      'sora': 'sora',
+      'heygen': 'heygen',
+    };
+
+    const videoProvider = providerMap[provider];
+    if (!videoProvider) {
+      throw new Error(`Cannot check status for unsupported provider: ${provider}`);
+    }
+
+    const statusResult = await getVideoStatus(providerJobId, videoProvider);
+
+    // Check if we got a "coming soon" response (provider not configured)
+    if (!('id' in statusResult)) {
+      throw new Error(`Provider ${provider} is not configured`);
+    }
+
+    // Map video-service response to ProviderGenerationResponse
+    const statusMap: Record<string, 'queued' | 'processing' | 'completed' | 'failed'> = {
+      'pending': 'queued',
+      'processing': 'processing',
+      'completed': 'completed',
+      'failed': 'failed',
+    };
+
+    return {
       jobId: providerJobId,
-      status: 'completed',
-      videoUrl: `https://storage.example.com/videos/${provider}/${providerJobId}.mp4`,
-      progress: 100,
-    });
+      status: statusMap[statusResult.status] ?? 'processing',
+      videoUrl: statusResult.videoUrl,
+      errorMessage: statusResult.errorMessage,
+    };
   }
 
   /**
@@ -561,7 +555,7 @@ export class RenderPipeline {
       });
 
       try {
-        if (!this.isProviderConfigured(fallbackProvider)) {
+        if (!(await this.isProviderConfigured(fallbackProvider))) {
           logger.warn('RenderPipeline: Fallback provider not configured', {
             fallbackProvider,
           });

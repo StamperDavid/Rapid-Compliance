@@ -32,7 +32,7 @@ import type {
  * Get API key for a video provider from the API Keys settings.
  * Keys are configured at Settings > API Keys in the dashboard.
  */
-async function getVideoProviderKey(provider: VideoProvider): Promise<string | null> {
+export async function getVideoProviderKey(provider: VideoProvider): Promise<string | null> {
   const key = await apiKeyService.getServiceKey(PLATFORM_ID, provider);
   if (typeof key === 'string' && key.length > 0) { return key; }
   return null;
@@ -366,10 +366,11 @@ export async function getVideoStatus(
           throw new Error('Runway API key not configured. Add it in Settings > API Keys.');
         }
 
-        const response = await fetch(`https://api.runwayml.com/v1/generations/${videoId}`, {
+        const response = await fetch(`https://api.dev.runwayml.com/v1/tasks/${videoId}`, {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${apiKey}`,
+            'X-Runway-Version': '2024-11-06',
           },
         });
 
@@ -380,15 +381,17 @@ export async function getVideoStatus(
         const data = await response.json() as {
           id: string;
           status: string;
-          output_url?: string;
-          error?: string;
+          output?: string[];
+          failure?: string;
         };
 
+        // Map Runway task status values to our VideoStatus
         const statusMap: Record<string, VideoStatus> = {
-          'pending': 'pending',
-          'processing': 'processing',
-          'completed': 'completed',
-          'failed': 'failed',
+          'PENDING': 'pending',
+          'THROTTLED': 'pending',
+          'RUNNING': 'processing',
+          'SUCCEEDED': 'completed',
+          'FAILED': 'failed',
         };
 
         return {
@@ -396,8 +399,8 @@ export async function getVideoStatus(
           requestId: videoId,
           status: statusMap[data.status] ?? 'processing',
           provider: 'runway',
-          videoUrl: data.output_url,
-          errorMessage: data.error,
+          videoUrl: data.output?.[0],
+          errorMessage: data.failure,
           createdAt: new Date(),
         };
       }
@@ -746,7 +749,7 @@ export async function generateHeyGenVideo(
 /**
  * Internal Sora video generation
  */
-async function generateSoraVideoInternal(
+export async function generateSoraVideoInternal(
   prompt: string,
   options?: {
     duration?: number;
@@ -840,12 +843,13 @@ export async function generateSoraVideo(
 /**
  * Internal Runway video generation
  */
-async function generateRunwayVideoInternal(
+export async function generateRunwayVideoInternal(
   inputType: 'text' | 'image',
   input: string,
   options?: {
     duration?: number;
     motion?: 'auto' | 'slow' | 'fast';
+    ratio?: '16:9' | '9:16' | '1:1';
   }
 ): Promise<VideoGenerationResponse> {
   const apiKey = await getVideoProviderKey('runway');
@@ -854,24 +858,30 @@ async function generateRunwayVideoInternal(
   }
 
   try {
+    const endpoint = inputType === 'text'
+      ? 'https://api.dev.runwayml.com/v1/text_to_video'
+      : 'https://api.dev.runwayml.com/v1/image_to_video';
+
     const requestBody = inputType === 'text'
       ? {
-          model: 'gen3',
-          prompt: input,
+          model: 'gen3a_turbo',
+          text_prompt: input,
           duration: options?.duration ?? 5,
+          ratio: options?.ratio ?? '16:9',
         }
       : {
-          model: 'gen3',
-          image_url: input,
+          model: 'gen3a_turbo',
+          image: input,
           duration: options?.duration ?? 5,
-          motion: options?.motion ?? 'auto',
+          ratio: options?.ratio ?? '16:9',
         };
 
-    const response = await fetch('https://api.runwayml.com/v1/generations', {
+    const response = await fetch(endpoint, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
+        'X-Runway-Version': '2024-11-06',
       },
       body: JSON.stringify(requestBody),
     });
