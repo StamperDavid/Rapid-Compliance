@@ -107,13 +107,13 @@ export async function POST(request: NextRequest) {
     }
 
     // MAJ-4: Calculate discount if cart has one applied
-    let _discountCents = 0;
+    let discountCents = 0;
     if (cart.discountAmount && cart.discountAmount > 0) {
       const subtotal = cart.items.reduce((sum, i) => sum + i.price * i.quantity, 0);
       if (cart.discountType === 'percentage') {
-        _discountCents = Math.round(subtotal * cart.discountAmount / 100);
+        discountCents = Math.round(subtotal * cart.discountAmount / 100);
       } else {
-        _discountCents = Math.round(cart.discountAmount);
+        discountCents = Math.round(cart.discountAmount);
       }
     }
 
@@ -134,10 +134,23 @@ export async function POST(request: NextRequest) {
       quantity: item.quantity,
     }));
 
+    // Create ad-hoc Stripe coupon if discount is applied
+    const discounts: Array<{ coupon: string }> = [];
+    if (discountCents > 0) {
+      const coupon = await stripe.coupons.create({
+        amount_off: discountCents,
+        currency: 'usd',
+        duration: 'once',
+        name: cart.discountCode ?? 'Discount',
+      });
+      discounts.push({ coupon: coupon.id });
+    }
+
     // Create Stripe checkout session FIRST — only create order if this succeeds
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       line_items: lineItems,
+      ...(discounts.length > 0 ? { discounts } : {}),
       mode: 'payment',
       success_url: `${process.env.NEXT_PUBLIC_APP_URL}/store/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/store/checkout/cancelled`,

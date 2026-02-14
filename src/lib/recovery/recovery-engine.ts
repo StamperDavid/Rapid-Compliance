@@ -5,6 +5,7 @@
  */
 import type { PendingMerchant } from '@/lib/stores/pending-merchants-store';
 import { getRecoverySequence, type RecoveryStep } from './recovery-sequences';
+import { logger } from '@/lib/logger/logger';
 
 export class RecoveryEngine {
   private scheduledJobs: Map<string, NodeJS.Timeout[]> = new Map();
@@ -65,8 +66,11 @@ export class RecoveryEngine {
           await this.initiateRecoveryCall(merchant, step.template);
           break;
       }
-    } catch (_error) {
-      // console.error(`[RecoveryEngine] ${step.channel} step failed:`, error);
+    } catch (error) {
+      logger.error(`[RecoveryEngine] ${step.channel} step failed`, error instanceof Error ? error : new Error(String(error)), {
+        merchantId: merchant.id,
+        channel: step.channel,
+      });
     }
   }
 
@@ -163,8 +167,11 @@ export class RecoveryEngine {
       );
 
       // console.log(`[RecoveryEngine] Initiated ${template} call to ${merchant.phoneNumber}`);
-    } catch (_error) {
-      // console.error(`[RecoveryEngine] Voice call failed:`, error);
+    } catch (error) {
+      logger.error('[RecoveryEngine] Voice call failed', error instanceof Error ? error : new Error(String(error)), {
+        merchantId: merchant.id,
+        phone: merchant.phoneNumber,
+      });
     }
   }
 
