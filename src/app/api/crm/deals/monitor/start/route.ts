@@ -15,6 +15,29 @@ import { requireAuth } from '@/lib/auth/api-auth';
 import { startDealMonitor } from '@/lib/crm/deal-monitor';
 import { logger } from '@/lib/logger/logger';
 
+// Active monitor lifecycle tracking
+const activeMonitors = new Map<string, string>(); // workspaceId → sessionId
+const monitorUnsubscribers = new Map<string, () => void>(); // sessionId → unsubscribe fn
+
+/** Stop a running monitor by session ID */
+function stopMonitor(sessionId: string): boolean {
+  const unsubscribe = monitorUnsubscribers.get(sessionId);
+  if (unsubscribe) {
+    unsubscribe();
+    monitorUnsubscribers.delete(sessionId);
+    // Remove from active monitors
+    for (const [wsId, sId] of activeMonitors.entries()) {
+      if (sId === sessionId) {
+        activeMonitors.delete(wsId);
+        break;
+      }
+    }
+    logger.info('Deal monitor stopped', { sessionId });
+    return true;
+  }
+  return false;
+}
+
 /** Request body interface for starting deal monitor */
 interface StartDealMonitorRequestBody {
   autoGenerateRecommendations?: boolean;
@@ -61,19 +84,38 @@ export async function POST(request: NextRequest) {
       signalPriority,
     };
 
+    // Check if a monitor is already running for this workspace
+    const existingSessionId = activeMonitors.get(workspaceId);
+    if (existingSessionId) {
+      logger.info('Deal monitor already running, returning existing session', {
+        workspaceId,
+        sessionId: existingSessionId,
+      });
+      return NextResponse.json({
+        success: true,
+        data: {
+          message: 'Deal monitor already running',
+          sessionId: existingSessionId,
+          config,
+        },
+      });
+    }
+
     logger.info('Starting deal monitor', config);
 
-    // Start monitoring
-    startDealMonitor(config);
+    // Start monitoring and store unsubscribe function
+    const unsubscribe = startDealMonitor(config);
+    const sessionId = `monitor_${workspaceId}_${Date.now()}`;
+    activeMonitors.set(workspaceId, sessionId);
+    monitorUnsubscribers.set(sessionId, unsubscribe);
 
-    // Store unsubscribe function (in production, this would be managed server-side)
-    // For now, just return success
-    // TODO: Add proper monitor lifecycle management
+    logger.info('Deal monitor started', { sessionId, workspaceId });
 
     return NextResponse.json({
       success: true,
       data: {
         message: 'Deal monitor started successfully',
+        sessionId,
         config,
       },
     });
@@ -86,6 +128,50 @@ export async function POST(request: NextRequest) {
         success: false,
         error: errorMessage,
       },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * DELETE /api/crm/deals/monitor/start
+ *
+ * Stop a running deal monitor by session ID
+ */
+export async function DELETE(request: NextRequest) {
+  try {
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
+    const { searchParams } = new URL(request.url);
+    const sessionId = searchParams.get('sessionId');
+
+    if (!sessionId) {
+      return NextResponse.json(
+        { success: false, error: 'sessionId query parameter is required' },
+        { status: 400 }
+      );
+    }
+
+    const stopped = stopMonitor(sessionId);
+
+    if (stopped) {
+      return NextResponse.json({
+        success: true,
+        data: { message: 'Deal monitor stopped', sessionId },
+      });
+    }
+
+    return NextResponse.json(
+      { success: false, error: 'No active monitor found with that session ID' },
+      { status: 404 }
+    );
+  } catch (error) {
+    logger.error('Failed to stop deal monitor', error instanceof Error ? error : new Error(String(error)));
+    return NextResponse.json(
+      { success: false, error: 'Failed to stop deal monitor' },
       { status: 500 }
     );
   }

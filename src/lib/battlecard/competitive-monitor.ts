@@ -24,6 +24,7 @@ import { logger } from '@/lib/logger/logger';
 import { discoverCompetitor, type CompetitorProfile } from './battlecard-engine';
 import { getServerSignalCoordinator } from '@/lib/orchestration/coordinator-factory-server';
 import { PLATFORM_ID } from '@/lib/constants/platform';
+import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 
 // ============================================================================
 // TYPES
@@ -107,6 +108,13 @@ export class CompetitiveMonitor {
   private monitoringConfigs: Map<string, CompetitorMonitorConfig>;
   private isRunning: boolean = false;
   private checkInterval?: NodeJS.Timeout;
+
+  // Daily tracking counters
+  private checksToday: number = 0;
+  private changesDetectedToday: number = 0;
+  private alertsSentToday: number = 0;
+  private lastCheckTime?: Date;
+  private lastResetDate: string = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
 
   constructor() {
     this.monitoringConfigs = new Map();
@@ -196,16 +204,32 @@ export class CompetitiveMonitor {
   getStats(): MonitoringStats {
     const now = new Date();
 
+    // Reset daily counters if the date has changed
+    this.resetDailyCountersIfNeeded();
+
     return {
       totalCompetitors: this.monitoringConfigs.size,
       activeMonitors: Array.from(this.monitoringConfigs.values()).filter(
         c => c.nextCheck && c.nextCheck <= now
       ).length,
-      checksPerformedToday: 0, // TODO: Track this
-      changesDetectedToday: 0, // TODO: Track this
-      alertsSentToday: 0, // TODO: Track this
-      lastCheckTime: undefined, // TODO: Track this
+      checksPerformedToday: this.checksToday,
+      changesDetectedToday: this.changesDetectedToday,
+      alertsSentToday: this.alertsSentToday,
+      lastCheckTime: this.lastCheckTime,
     };
+  }
+
+  /**
+   * Reset daily counters at midnight boundary
+   */
+  private resetDailyCountersIfNeeded(): void {
+    const today = new Date().toISOString().slice(0, 10);
+    if (today !== this.lastResetDate) {
+      this.checksToday = 0;
+      this.changesDetectedToday = 0;
+      this.alertsSentToday = 0;
+      this.lastResetDate = today;
+    }
   }
 
   /**
@@ -250,18 +274,64 @@ export class CompetitiveMonitor {
       domain: config.domain,
     });
 
+    this.resetDailyCountersIfNeeded();
+
     try {
       // Re-scrape competitor (will use cache if < 30 days)
       const newProfile = await discoverCompetitor(config.domain);
 
-      // TODO: Load previous profile from database for comparison
-      // For now, just log that we checked
+      // Load previous profile from Firestore for comparison
+      const profilePath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/competitor_profiles`;
+      const previousProfile = await FirestoreService.get<CompetitorProfile>(
+        profilePath,
+        config.competitorId
+      );
+
+      // Detect changes if we have a previous profile
+      let changes: CompetitorChange[] = [];
+      if (previousProfile) {
+        changes = this.detectChanges(previousProfile, newProfile, config);
+        this.changesDetectedToday += changes.length;
+
+        // Send alerts for each detected change
+        for (const change of changes) {
+          await this.sendAlert(change);
+          change.alertSent = true;
+          this.alertsSentToday++;
+        }
+
+        if (changes.length > 0) {
+          logger.info('Competitor changes detected', {
+            competitorId: config.competitorId,
+            changesCount: changes.length,
+            types: changes.map(c => c.changeType),
+          });
+        }
+      } else {
+        logger.info('First check for competitor — no previous profile for comparison', {
+          competitorId: config.competitorId,
+        });
+      }
+
+      // Store updated profile in Firestore for next comparison
+      await FirestoreService.set(
+        profilePath,
+        config.competitorId,
+        { ...newProfile, lastUpdated: new Date().toISOString() },
+        true // merge
+      );
+
+      // Track counters
+      this.checksToday++;
+      this.lastCheckTime = new Date();
+
       logger.info('Competitor check complete', {
-                competitorId: config.competitorId,
+        competitorId: config.competitorId,
         domain: config.domain,
         featuresFound: newProfile.productOffering.keyFeatures.length,
         strengthsFound: newProfile.analysis.strengths.length,
         weaknessesFound: newProfile.analysis.weaknesses.length,
+        changesDetected: changes.length,
       });
 
       // Update last checked time and calculate next check
@@ -273,15 +343,10 @@ export class CompetitiveMonitor {
 
       this.monitoringConfigs.set(config.competitorId, updatedConfig);
 
-      // TODO: Implement change detection and alerting
-      // - Compare newProfile with stored profile
-      // - Detect meaningful changes
-      // - Emit alerts via Signal Bus
-
     } catch (error) {
       const err = error instanceof Error ? error : new Error(String(error));
       logger.error('Competitor check failed', err, {
-                competitorId: config.competitorId,
+        competitorId: config.competitorId,
         domain: config.domain,
       });
 

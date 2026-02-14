@@ -365,34 +365,60 @@ export class WorkflowCoordinator {
   /**
    * Find workflows that match the trigger types
    */
-  private findMatchingWorkflows(
+  private async findMatchingWorkflows(
     _workspaceId: string,
     triggerTypes: WorkflowTriggerType[]
   ): Promise<Workflow[]> {
     try {
-      // In production, this would query Firestore with proper filters
-      // For now, return empty array (workflows will be stored/retrieved in API layer)
       logger.debug('Querying workflows', {
         triggerTypes,
       });
 
-      // TODO: Implement Firestore query when workflows are stored
-      // const q = query(
-      //   workflowsCollection,
-      //   where('status', '==', 'active'),
-      //   where('trigger.type', 'in', triggerTypes)
-      // );
-      // const snapshot = await getDocs(q);
-      // return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Workflow));
+      const workflowsPath = `${this.dal.getColPath('organizations')}/${PLATFORM_ID}/${this.dal.getSubColPath('workflows')}`;
 
-      return Promise.resolve([]);
+      // Import Firestore query functions
+      const { where, orderBy, limit } = await import('firebase/firestore');
+
+      // Build query constraints
+      const constraints = [];
+
+      // Filter by active status
+      constraints.push(where('status', '==', 'active'));
+
+      // Filter by trigger type (using 'in' operator for multiple types)
+      if (triggerTypes.length > 0) {
+        // Firestore 'in' operator supports up to 30 values
+        const limitedTriggerTypes = triggerTypes.slice(0, 30);
+        constraints.push(where('trigger.type', 'in', limitedTriggerTypes));
+      }
+
+      // Order by priority (implicit - could add explicit priority field later)
+      constraints.push(orderBy('createdAt', 'desc'));
+
+      // Limit results to prevent excessive workflow executions
+      constraints.push(limit(100));
+
+      // Execute query
+      const querySnapshot = await this.dal.safeGetDocs(workflowsPath, ...constraints);
+
+      const workflows: Workflow[] = [];
+      querySnapshot.forEach((doc) => {
+        workflows.push({ ...doc.data(), id: doc.id } as Workflow);
+      });
+
+      logger.info('Found matching workflows', {
+        count: workflows.length,
+        triggerTypes,
+      });
+
+      return workflows;
 
     } catch (error) {
       logger.error(
         'Failed to find matching workflows',
         error instanceof Error ? error : new Error(String(error))
       );
-      return Promise.resolve([]);
+      return [];
     }
   }
   

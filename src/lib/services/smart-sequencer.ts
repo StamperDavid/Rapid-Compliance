@@ -552,15 +552,68 @@ export async function getRecommendedSequence(params: {
         .get()
         .then((snap) => snap.docs.map((doc) => doc.data() as Sequence)));
 
-    // Simple recommendation logic:
-    // Hot leads → aggressive sequences
-    // Warm leads → standard sequences
-    // Cold leads → nurture sequences
+    // Smart matching: score priority determines sequence selection strategy
+    // Hot leads (score 75+) → aggressive sequences (high response rate, short steps)
+    // Warm leads (score 40-74) → standard sequences (balanced approach)
+    // Cold leads (score <40) → nurture sequences (longer delays, more steps)
+    if (!sequences || sequences.length === 0) {
+      return null;
+    }
 
-    // For now, return the first active sequence
-    // TODO: Implement sequence tagging and smart matching based on _score
+    // If only one sequence, return it
+    if (sequences.length === 1) {
+      return sequences[0];
+    }
 
-    return sequences?.[0] ?? null;
+    const priority = _score.priority; // 'hot' | 'warm' | 'cold'
+
+    // Score sequences based on match to lead priority
+    const scored = sequences.map(seq => {
+      let matchScore = 0;
+      const nameLC = (seq.name ?? '').toLowerCase();
+      const descLC = (seq.description ?? '').toLowerCase();
+
+      // Match by naming convention (sequences often named "Aggressive", "Nurture", etc.)
+      if (priority === 'hot') {
+        if (nameLC.includes('aggressive') || nameLC.includes('fast') || nameLC.includes('hot')) {
+          matchScore += 30;
+        }
+        if (seq.steps.length <= 4) {
+          matchScore += 20;
+        }
+        matchScore += (seq.stats?.responseRate ?? 0) * 40;
+      } else if (priority === 'warm') {
+        if (nameLC.includes('standard') || nameLC.includes('general') || nameLC.includes('warm')) {
+          matchScore += 30;
+        }
+        if (seq.steps.length >= 3 && seq.steps.length <= 6) {
+          matchScore += 20;
+        }
+        matchScore += (seq.stats?.responseRate ?? 0) * 30;
+      } else {
+        if (nameLC.includes('nurture') || nameLC.includes('drip') || nameLC.includes('cold')) {
+          matchScore += 30;
+        }
+        if (descLC.includes('nurture') || descLC.includes('long-term')) {
+          matchScore += 15;
+        }
+        if (seq.steps.length >= 5) {
+          matchScore += 20;
+        }
+        matchScore += (seq.stats?.totalEnrolled ?? 0) > 0 ? 10 : 0;
+      }
+
+      // Bonus for sequences with more enrollments (proven track record)
+      if ((seq.stats?.completedEnrollments ?? 0) > 10) {
+        matchScore += 10;
+      }
+
+      return { sequence: seq, matchScore };
+    });
+
+    // Sort by match score descending, return best match
+    scored.sort((a, b) => b.matchScore - a.matchScore);
+    return scored[0].sequence;
   } catch (error) {
     const errorInstance = error instanceof Error ? error : undefined;
     const message = error instanceof Error ? error.message : 'Unknown error';

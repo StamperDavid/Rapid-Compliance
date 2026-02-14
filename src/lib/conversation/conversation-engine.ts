@@ -1289,13 +1289,32 @@ async function emitAnalysisSignal(
 // ============================================================================
 
 /**
- * Get conversation data (placeholder - would query Firestore)
+ * Get conversation data from Firestore
  */
-function getConversation(
-  _conversationId: string,
-  _workspaceId: string
+async function getConversation(
+  conversationId: string,
+  workspaceId: string
 ): Promise<Conversation | null> {
-  // TODO: Implement Firestore query
-  // For now, return null to indicate not found
-  return Promise.resolve(null);
+  try {
+    // Import Firestore service
+    const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+    const { PLATFORM_ID } = await import('@/lib/constants/platform');
+
+    // Build collection path: organizations/{PLATFORM_ID}/workspaces/{workspaceId}/conversations
+    const conversationsPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.WORKSPACES}/${workspaceId}/conversations`;
+
+    // Fetch conversation document
+    const conversation = await FirestoreService.get<Conversation>(
+      conversationsPath,
+      conversationId
+    );
+
+    return conversation;
+  } catch (error) {
+    logger.error('Failed to get conversation', error instanceof Error ? error : new Error(String(error)), {
+      conversationId,
+      workspaceId,
+    });
+    return null;
+  }
 }

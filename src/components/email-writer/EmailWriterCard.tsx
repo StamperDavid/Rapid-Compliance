@@ -18,7 +18,8 @@
 
 import React, { useState, useCallback } from 'react';
 import { ErrorBoundary } from '@/components/common/ErrorBoundary';
-import { showSuccessToast } from '@/components/ErrorToast';
+import { showSuccessToast, showErrorToast } from '@/components/ErrorToast';
+import { getAuth } from 'firebase/auth';
 import {
   type EmailType,
   type GeneratedEmail,
@@ -193,13 +194,61 @@ function EmailWriterCardInner({
   /**
    * Mark as sent (future: actually send email)
    */
-  const handleSendEmail = useCallback(() => {
-    if (generationState.generatedEmail) {
-      onEmailSent?.(generationState.generatedEmail);
-      // TODO: Implement actual email sending
-      // TODO: Emit email.sent signal
+  const [isSending, setIsSending] = useState(false);
+
+  const handleSendEmail = useCallback(async () => {
+    if (!generationState.generatedEmail) {
+      return;
     }
-  }, [generationState.generatedEmail, onEmailSent]);
+
+    const email = generationState.generatedEmail;
+
+    // Require a recipient email to send
+    if (!recipientEmail) {
+      showErrorToast('Please enter a recipient email address');
+      return;
+    }
+
+    setIsSending(true);
+    try {
+      const auth = getAuth();
+      const token = await auth.currentUser?.getIdToken();
+
+      const response = await fetch('/api/email-writer/send', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          workspaceId,
+          userId,
+          to: recipientEmail,
+          toName: recipientName ?? undefined,
+          subject: editedSubject,
+          body: editedBody,
+          bodyPlain: email.bodyPlain,
+          trackOpens: true,
+          trackClicks: true,
+          dealId: dealId || undefined,
+          emailId: email.id,
+        }),
+      });
+
+      const result = await response.json() as { success: boolean; error?: string };
+
+      if (result.success) {
+        showSuccessToast('Email sent successfully!');
+        onEmailSent?.(email);
+      } else {
+        showErrorToast(result.error ?? 'Failed to send email');
+      }
+    } catch (error) {
+      showErrorToast(error, 'Failed to send email');
+    } finally {
+      setIsSending(false);
+    }
+  }, [generationState.generatedEmail, recipientEmail, recipientName, editedSubject, editedBody, workspaceId, userId, dealId, onEmailSent]);
   
   // ============================================================================
   // RENDER
@@ -444,10 +493,11 @@ function EmailWriterCardInner({
                 📋 Copy
               </button>
               <button
-                onClick={handleSendEmail}
-                className="px-3 py-1 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors"
+                onClick={() => void handleSendEmail()}
+                disabled={isSending}
+                className="px-3 py-1 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                📧 Send
+                {isSending ? 'Sending...' : 'Send'}
               </button>
             </div>
           </div>

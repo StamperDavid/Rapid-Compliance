@@ -762,21 +762,26 @@ export async function generatePlaybook(
  * Get conversation analyses based on request criteria
  */
 function getConversationAnalyses(
-  _request: ExtractPatternsRequest,
-  _config: PlaybookEngineConfig
+  request: ExtractPatternsRequest,
+  config: PlaybookEngineConfig
 ): ConversationAnalysisWithConversation[] {
-  // TODO: Implement actual Firestore queries
-  // For now, return mock data structure
-
-  // This would query:
-  // 1. Conversations collection filtered by:
-  //    - conversationIds (if specified)
-  //    - conversationType (if specified)
-  //    - dateRange (if specified)
+  // This is a synchronous function that returns empty array.
+  // In a production implementation, this would need to be async to query Firestore.
+  // The function would query:
+  // 1. Conversations collection filtered by request criteria
   // 2. ConversationAnalyses collection for those conversations
   // 3. Filter by minPerformanceScore
-  // 4. If repIds specified, filter by those reps
-  // 5. Otherwise, get top performers based on topPerformerPercentile
+  // 4. Filter by repIds or get top performers based on topPerformerPercentile
+  //
+  // For now, returning empty array maintains the current behavior while signaling
+  // that real Firestore implementation requires async refactoring of the call chain.
+
+  logger.info('getConversationAnalyses called with request criteria', {
+    conversationIds: request.conversationIds?.length ?? 0,
+    conversationType: request.conversationType ?? 'all',
+    repIds: request.repIds?.length ?? 0,
+    minPerformanceScore: request.minPerformanceScore ?? config.minPerformanceScore,
+  });
 
   return [];
 }
@@ -789,15 +794,53 @@ function generatePatternKey(moment: KeyMoment): string {
 }
 
 /**
- * Extract key phrases from transcript
+ * Extract key phrases from transcript based on conversation analysis
  */
 function extractKeyPhrasesFromTranscript(
-  _transcript: string,
-  _analysis: ConversationAnalysis
+  transcript: string,
+  analysis: ConversationAnalysis
 ): KeyPhrase[] {
-  // TODO: Implement NLP-based key phrase extraction
-  // For now, return empty array
-  return [];
+  const phrases: KeyPhrase[] = [];
+
+  // Extract phrases from objection handling
+  for (const objection of analysis.objections) {
+    if (objection.wasAddressed && objection.responseQuality === 'excellent') {
+      phrases.push({
+        text: objection.objection.slice(0, 100), // Limit length
+        purpose: `objection_handling_${objection.type}`,
+        context: `Handled ${objection.severity} ${objection.type} objection successfully`,
+      });
+    }
+  }
+
+  // Extract phrases from key moments
+  for (const moment of analysis.keyMoments) {
+    if (moment.significance === 'high') {
+      phrases.push({
+        text: moment.quote.slice(0, 100),
+        purpose: moment.type,
+        context: `${moment.impact} impact - ${moment.description}`,
+      });
+    }
+  }
+
+  // Extract phrases from successful techniques
+  for (const insight of analysis.coachingInsights) {
+    if (insight.whatWentWell) {
+      const wellText = insight.whatWentWell;
+      // Extract a phrase from the "what went well" text
+      const sentenceMatch = wellText.match(/[^.!?]+[.!?]/);
+      if (sentenceMatch) {
+        phrases.push({
+          text: sentenceMatch[0].trim().slice(0, 100),
+          purpose: `best_practice_${insight.category}`,
+          context: `Successful ${insight.skillArea} technique`,
+        });
+      }
+    }
+  }
+
+  return phrases;
 }
 
 /**
@@ -904,9 +947,17 @@ function calculateSuccessMetrics(extraction: PatternExtractionResult): SuccessMe
  * Save playbook to Firestore
  */
 async function savePlaybook(playbook: Playbook): Promise<void> {
-  // TODO: Implement Firestore save
-  await Promise.resolve();
-  logger.info('Saving playbook to Firestore', { playbookId: playbook.id });
+  const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+  const { PLATFORM_ID } = await import('@/lib/constants/platform');
+
+  const playbooksPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/playbooks`;
+
+  await FirestoreService.set(playbooksPath, playbook.id, playbook);
+
+  logger.info('Playbook saved to Firestore', {
+    playbookId: playbook.id,
+    path: `${playbooksPath}/${playbook.id}`,
+  });
 }
 
 /**

@@ -18,7 +18,7 @@
 
 import { logger } from '@/lib/logger/logger';
 import { Timestamp } from 'firebase-admin/firestore';
-import type { Firestore, UpdateData, DocumentData } from 'firebase/firestore';
+import type { Firestore, UpdateData, DocumentData, QueryConstraint } from 'firebase/firestore';
 import { BaseAgentDAL } from '@/lib/dal/BaseAgentDAL';
 import { db } from '@/lib/firebase-admin';
 import { type WorkflowExecutionContext, type WorkflowExecutionResult } from './workflow-engine';
@@ -128,25 +128,74 @@ export class WorkflowService {
   
   /**
    * Query workflows with filters
-   * Note: Returns Promise for API consistency - will use await when Firestore queries are implemented
    */
-  getWorkflows(
+  async getWorkflows(
     filters: WorkflowFilterInput
   ): Promise<{ workflows: Workflow[]; total: number }> {
     logger.debug('Querying workflows', filters);
 
-    const _workflowsCollection = this.dal.getOrgSubCollection(
-      'workflows'
-    );
+    const workflowsPath = `${this.dal.getColPath('organizations')}/${PLATFORM_ID}/${this.dal.getSubColPath('workflows')}`;
 
-    // In production, implement proper Firestore querying with filters
-    // For now, return empty array
-    // TODO: Implement with Firestore queries
+    try {
+      // Build query constraints
+      const constraints: QueryConstraint[] = [];
 
-    return Promise.resolve({
-      workflows: [],
-      total: 0,
-    });
+      // Apply status filter
+      if (filters.status) {
+        const { where } = await import('firebase/firestore');
+        constraints.push(where('status', '==', filters.status));
+      }
+
+      // Apply trigger type filter
+      if (filters.triggerType) {
+        const { where } = await import('firebase/firestore');
+        constraints.push(where('trigger.type', '==', filters.triggerType));
+      }
+
+      // Apply workspaceId filter
+      if (filters.workspaceId) {
+        const { where } = await import('firebase/firestore');
+        constraints.push(where('workspaceId', '==', filters.workspaceId));
+      }
+
+      // Apply tags filter (array-contains for single tag)
+      if (filters.tags && filters.tags.length > 0) {
+        const { where } = await import('firebase/firestore');
+        constraints.push(where('tags', 'array-contains', filters.tags[0]));
+      }
+
+      // Add ordering
+      const { orderBy } = await import('firebase/firestore');
+      constraints.push(orderBy('updatedAt', 'desc'));
+
+      // Add limit
+      const { limit } = await import('firebase/firestore');
+      const limitValue = filters.limit ?? 20;
+      constraints.push(limit(limitValue));
+
+      // Execute query
+      const querySnapshot = await this.dal.safeGetDocs(workflowsPath, ...constraints);
+
+      const workflows: Workflow[] = [];
+      querySnapshot.forEach((doc) => {
+        workflows.push({ ...doc.data(), id: doc.id } as Workflow);
+      });
+
+      logger.info('Workflows queried successfully', {
+        count: workflows.length,
+      });
+
+      return {
+        workflows,
+        total: workflows.length,
+      };
+    } catch (error) {
+      logger.error('Failed to query workflows', error instanceof Error ? error : new Error(String(error)));
+      return {
+        workflows: [],
+        total: 0,
+      };
+    }
   }
   
   /**
@@ -247,26 +296,54 @@ export class WorkflowService {
   
   /**
    * Get workflow executions
-   * Note: Returns Promise for API consistency - will use await when Firestore queries are implemented
    */
-  getWorkflowExecutions(
+  async getWorkflowExecutions(
     workflowId?: string,
-    limit = 50
+    limitCount = 50
   ): Promise<WorkflowExecution[]> {
     logger.debug('Getting workflow executions', {
       workflowId,
-      limit,
+      limit: limitCount,
     });
 
-    const _executionsCollection = this.dal.getOrgSubCollection(
-      'workflow_executions'
-    );
+    const executionsPath = `${this.dal.getColPath('organizations')}/${PLATFORM_ID}/${this.dal.getSubColPath('workflow_executions')}`;
 
-    // In production, implement proper Firestore querying with filters
-    // For now, return empty array
-    // TODO: Implement with Firestore queries
+    try {
+      // Build query constraints
+      const constraints: QueryConstraint[] = [];
 
-    return Promise.resolve([]);
+      // Filter by workflow ID if provided
+      if (workflowId) {
+        const { where } = await import('firebase/firestore');
+        constraints.push(where('workflowId', '==', workflowId));
+      }
+
+      // Order by start time (most recent first)
+      const { orderBy } = await import('firebase/firestore');
+      constraints.push(orderBy('startedAt', 'desc'));
+
+      // Apply limit
+      const { limit } = await import('firebase/firestore');
+      constraints.push(limit(limitCount));
+
+      // Execute query
+      const querySnapshot = await this.dal.safeGetDocs(executionsPath, ...constraints);
+
+      const executions: WorkflowExecution[] = [];
+      querySnapshot.forEach((doc) => {
+        executions.push({ ...doc.data(), id: doc.id } as WorkflowExecution);
+      });
+
+      logger.info('Workflow executions retrieved successfully', {
+        count: executions.length,
+        workflowId,
+      });
+
+      return executions;
+    } catch (error) {
+      logger.error('Failed to get workflow executions', error instanceof Error ? error : new Error(String(error)));
+      return [];
+    }
   }
   
   /**

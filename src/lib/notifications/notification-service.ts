@@ -19,6 +19,7 @@ import { Timestamp } from 'firebase/firestore';
 import { sendMessage } from '@/lib/integrations/slack-service';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { PLATFORM_ID } from '@/lib/constants/platform';
+import { logger } from '@/lib/logger/logger';
 import type {
   Notification,
   NotificationTemplate,
@@ -646,9 +647,42 @@ export class NotificationService {
     const quietHours = preferences.channels.slack?.quietHours;
     if (!quietHours?.enabled) {return false;}
 
-    // TODO: Implement proper timezone-aware quiet hours check
-    // For now, return false
-    return false;
+    // Convert current UTC time to user's timezone and check against quiet hours window
+    const now = new Date();
+    const userTime = this.getTimeInTimezone(now, quietHours.timezone);
+    const currentMinutes = userTime.hours * 60 + userTime.minutes;
+
+    const [startH, startM] = quietHours.start.split(':').map(Number);
+    const [endH, endM] = quietHours.end.split(':').map(Number);
+    const startMinutes = startH * 60 + startM;
+    const endMinutes = endH * 60 + endM;
+
+    // Handle overnight quiet hours (e.g., 22:00 to 08:00)
+    if (startMinutes > endMinutes) {
+      return currentMinutes >= startMinutes || currentMinutes < endMinutes;
+    }
+
+    // Same-day quiet hours (e.g., 13:00 to 14:00)
+    return currentMinutes >= startMinutes && currentMinutes < endMinutes;
+  }
+
+  /**
+   * Get hours and minutes in a given IANA timezone
+   */
+  private getTimeInTimezone(date: Date, timezone: string): { hours: number; minutes: number } {
+    try {
+      const formatted = date.toLocaleString('en-US', {
+        timeZone: timezone,
+        hour: 'numeric',
+        minute: 'numeric',
+        hour12: false,
+      });
+      const [hours, minutes] = formatted.split(':').map(Number);
+      return { hours, minutes };
+    } catch {
+      // Fallback to UTC if timezone is invalid
+      return { hours: date.getUTCHours(), minutes: date.getUTCMinutes() };
+    }
   }
 
   /**
@@ -954,10 +988,57 @@ export class NotificationService {
    * Add notification to batch
    */
   private async addToBatch(notification: Notification): Promise<void> {
-    // TODO: Implement batching logic
-    // For now, just deliver immediately
     const preferences = await this.getPreferences(notification.userId);
-    await this.deliverNotification(notification, preferences);
+    const batchPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/notification_batches`;
+    const batchKey = `batch_${notification.userId}`;
+
+    try {
+      // Fetch or create batch for this user
+      const existingBatch = await FirestoreService.get<{
+        notificationIds: string[];
+        scheduledDelivery: string;
+        userId: string;
+      }>(batchPath, batchKey);
+
+      const notificationIds = existingBatch?.notificationIds ?? [];
+      if (notification.id) {
+        notificationIds.push(notification.id);
+      }
+
+      const maxPerBatch = preferences.batching.maxPerBatch ?? 10;
+
+      if (notificationIds.length >= maxPerBatch) {
+        // Batch is full — deliver all batched notifications immediately
+        await this.deliverNotification(notification, preferences);
+
+        // Clear the batch
+        await FirestoreService.set(batchPath, batchKey, {
+          notificationIds: [],
+          userId: notification.userId,
+          scheduledDelivery: null,
+          clearedAt: Timestamp.now(),
+        }, false);
+      } else {
+        // Add to batch and schedule future delivery
+        const windowMinutes = preferences.batching.windowMinutes ?? 30;
+        const scheduledDelivery = new Date(Date.now() + windowMinutes * 60 * 1000);
+
+        await FirestoreService.set(batchPath, batchKey, {
+          notificationIds,
+          userId: notification.userId,
+          scheduledDelivery: Timestamp.fromDate(scheduledDelivery),
+          updatedAt: Timestamp.now(),
+        }, true);
+      }
+    } catch (error) {
+      const err = error instanceof Error ? error : new Error(String(error));
+      logger.error('Batch operation failed, delivering immediately', err, {
+        notificationId: notification.id,
+        userId: notification.userId,
+      });
+      // Fallback: deliver immediately if batching fails
+      await this.deliverNotification(notification, preferences);
+    }
   }
 
   /**
@@ -968,8 +1049,62 @@ export class NotificationService {
     channel: NotificationChannel,
     preferences: NotificationPreferences
   ): Promise<void> {
-    // TODO: Implement quiet hours rescheduling
-    // For now, just deliver immediately
-    await this.deliverToChannel(notification, channel, preferences);
+    const quietHours = preferences.channels.slack?.quietHours;
+    if (!quietHours) {
+      // No quiet hours configured — deliver now
+      await this.deliverToChannel(notification, channel, preferences);
+      return;
+    }
+
+    try {
+      // Calculate when quiet hours end (next occurrence of end time in user's timezone)
+      const [endH, endM] = quietHours.end.split(':').map(Number);
+      const now = new Date();
+      const userTime = this.getTimeInTimezone(now, quietHours.timezone);
+      const currentMinutes = userTime.hours * 60 + userTime.minutes;
+      const endMinutes = endH * 60 + endM;
+
+      // Calculate minutes until quiet hours end
+      let minutesUntilEnd: number;
+      if (currentMinutes < endMinutes) {
+        minutesUntilEnd = endMinutes - currentMinutes;
+      } else {
+        // Quiet hours end is tomorrow
+        minutesUntilEnd = (24 * 60 - currentMinutes) + endMinutes;
+      }
+
+      const scheduledFor = new Date(now.getTime() + minutesUntilEnd * 60 * 1000);
+
+      // Update notification with scheduled delivery time
+      if (!notification.id) {
+        await this.deliverToChannel(notification, channel, preferences);
+        return;
+      }
+      await FirestoreService.update(
+        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/notifications`,
+        notification.id,
+        {
+          status: 'pending',
+          'metadata.scheduledFor': Timestamp.fromDate(scheduledFor),
+          'metadata.scheduledChannel': channel,
+          'metadata.quietHoursDeferred': true,
+          'metadata.updatedAt': Timestamp.now(),
+        }
+      );
+
+      logger.info('Notification rescheduled after quiet hours', {
+        notificationId: notification.id,
+        channel,
+        scheduledFor: scheduledFor.toISOString(),
+        minutesUntilDelivery: minutesUntilEnd,
+      });
+    } catch (error) {
+      const err = error instanceof Error ? error : new Error(String(error));
+      logger.error('Failed to reschedule notification, delivering now', err, {
+        notificationId: notification.id,
+      });
+      // Fallback: deliver immediately if rescheduling fails
+      await this.deliverToChannel(notification, channel, preferences);
+    }
   }
 }
