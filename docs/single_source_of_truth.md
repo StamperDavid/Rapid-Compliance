@@ -1,7 +1,7 @@
 # SalesVelocity.ai - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** February 13, 2026 (Session 6: Stripe checkout completion, social OAuth UI, website editor/pages 401 auth fix)
+**Last Updated:** February 13, 2026 (Session 7: Real DALL-E 3 image generation, AI page generator, video pipeline wired to real providers)
 **Branches:** `dev` (latest)
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Architecture:** Single-Tenant (Penthouse Model) - NOT a SaaS platform
@@ -36,7 +36,7 @@
 | Metric | Count | Status |
 |--------|-------|--------|
 | Physical Routes (page.tsx) | 173 | Verified February 13, 2026 (added /store/checkout/cancelled, social OAuth routes) |
-| API Endpoints (route.ts) | 265 | Verified February 13, 2026 (added social OAuth auth/callback, accounts verify) |
+| API Endpoints (route.ts) | 267 | Verified February 13, 2026 (added /api/ai/generate-image, /api/website/ai/generate) |
 | AI Agents | 52 | **52 FUNCTIONAL (48 swarm + 4 standalone)** |
 | RBAC Roles | 4 | `owner` (level 3), `admin` (level 2), `manager` (level 1), `member` (level 0) — 4-role RBAC |
 | Firestore Collections | 67+ | Active (sagaState, eventLog collections; 25 composite indexes) |
@@ -1689,6 +1689,15 @@ The following endpoints have working infrastructure (rate limiting, caching, aut
   - GET: Fetch all promotions with analytics aggregation
   - DELETE: Remove promotion by ID
   - Service: `src/lib/promotions/promotion-service.ts`
+
+**RESOLVED (February 13, 2026) - Session 7: AI Provider Wiring:**
+- `/api/ai/generate-image` - **NEW** DALL-E 3 image generation with Zod validation, rate limiting (20/min)
+- `/api/website/ai/generate` - **NEW** AI page generation from natural language prompts (10/min rate limit)
+- Asset Generator specialist now uses real DALL-E 3 instead of placeholder URLs (graceful fallback)
+- Video render pipeline wired to real HeyGen, Sora, Runway APIs via `video-service.ts`
+- Runway endpoints updated to `api.dev.runwayml.com/v1` with `gen3a_turbo` model
+- `isProviderConfigured()` switched from `process.env` to Firestore `apiKeyService`
+- Veo/Kling/Pika/StableVideo throw clear "not yet available" errors (triggers fallback chain)
 
 **RESOLVED (February 12, 2026) - Social Media Platform Enhancement:**
 - `/api/social/*` - 6-phase expansion with enterprise-grade features
