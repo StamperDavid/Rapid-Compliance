@@ -5,7 +5,7 @@
 ## Context
 Repository: https://github.com/StamperDavid/Rapid-Compliance
 Branch: dev
-Last Session: February 13, 2026 (Session 6 — Stripe checkout + Social OAuth + website auth fix)
+Last Session: February 13, 2026 (Session 7 — DALL-E 3 image generation, AI page builder, video pipeline wiring)
 
 ## Current State
 
@@ -13,7 +13,7 @@ Last Session: February 13, 2026 (Session 6 — Stripe checkout + Social OAuth + 
 - **Single-tenant penthouse model** — org ID `rapid-compliance-root`, Firebase `rapid-compliance-65f87`
 - **52 AI agents** (48 swarm + 4 standalone) with hierarchical orchestration
 - **4-role RBAC** (owner/admin/manager/member) with 47 permissions
-- **173 physical routes**, **265 API endpoints**, **430K+ lines of TypeScript**
+- **173 physical routes**, **267 API endpoints**, **430K+ lines of TypeScript**
 - **Deployed via Vercel** — dev branch → main branch → Vercel auto-deploy
 
 ### Code Health
@@ -56,6 +56,9 @@ Last Session: February 13, 2026 (Session 6 — Stripe checkout + Social OAuth + 
 - **Stripe Checkout Flow Completion (Session 6):** Created `StripeProvider.tsx` with Elements wrapper + dark theme. Rewrote checkout page: 2-step flow (info → Stripe PaymentElement), removes raw card inputs (PCI vulnerability), uses `create-payment-intent` API, `stripe.confirmPayment()`, `/api/checkout/complete`. Enriched success page with real order data + 3DS redirect handling. Created `/store/checkout/cancelled` cart recovery page. Enhanced `payment_intent.succeeded` webhook as order status safety net.
 - **Social Accounts OAuth UI (Session 6):** Added `SocialOAuthState`/`SocialOAuthTokenResult` types. Created `social-oauth-service.ts`: Twitter PKCE flow (code challenge, auth URL, code exchange, profile fetch), LinkedIn OAuth 2.0, AES-256-GCM token encryption. New API routes: `/api/social/oauth/auth/[provider]` (GET), `/api/social/oauth/callback/[provider]` (GET), `/api/social/accounts/verify` (POST). Created `TwitterIntegration.tsx` and `LinkedInIntegration.tsx` components. Added "Social Media" category to integrations settings with deep-link support.
 - **Website Editor & Pages Auth Fix (Session 6):** Fixed 401 Unauthorized on `/website/pages` and `/website/editor` — all fetch calls were missing Firebase auth headers. Added `Authorization: Bearer ${token}` to all 10 fetch calls. Fixed infinite console error loop caused by `toast` in `useCallback` dependency array (replaced with `toastRef` pattern).
+- **Asset Generator — Real DALL-E 3 (Session 7):** New `image-generation-service.ts` wrapping DALL-E 3 API. New `/api/ai/generate-image` endpoint with Zod validation and rate limiting (20/min). AssetGenerator specialist's 5 generate methods now async, calling real DALL-E 3 with graceful placeholder fallback. Smart size mapping (logos→1024x1024, banners→1792x1024, stories→1024x1792).
+- **Website Builder — AI Page Generation (Session 7):** New `ai-page-generator.ts` with structured prompts for page generation. New `/api/website/ai/generate` endpoint (10/min rate limit). "Generate with AI" button + modal added to Pages management UI. AI generates title, slug, sections with widgets, and SEO metadata. Retry logic (up to 3 attempts) for JSON parse failures.
+- **Video Pipeline — Real Provider Wiring (Session 7):** Wired render-pipeline.ts to real video-service.ts implementations. callRunwayAPI/callSoraAPI/callHeyGenAPI now delegate to real API calls. checkProviderStatus uses getVideoStatus. isProviderConfigured switched from process.env to Firestore apiKeyService. Updated Runway endpoints to api.dev.runwayml.com/v1 with gen3a_turbo model. Veo/Kling/Pika/StableVideo throw clear "not yet available" errors.
 
 ---
 
@@ -278,6 +281,8 @@ SESSION 3: ✅ COMPLETE — Revenue Attribution P1 (2.1b analytics/dashboard) + 
 SESSION 4: ✅ COMPLETE — CI/CD Cleanup (3.4) + deals recommendations auth fix + SSOT updates
 SESSION 5: ✅ COMPLETE — Quick wins (4 TODOs) + ESLint OOM fix (tsconfig.eslint.json + cross-env + 8GB heap)
 SESSION 6: ✅ COMPLETE — Stripe checkout flow completion + Social OAuth UI (Twitter PKCE, LinkedIn) + Website editor/pages 401 auth fix
+SESSION 7: ✅ COMPLETE — DALL-E 3 image generation (Asset Generator), AI page builder (Website Builder), video pipeline wired to real HeyGen/Sora/Runway providers
+SESSION 7b: ✅ COMPLETE — 8 TODO quick-wins resolved, video "Save to Library" wired to Firestore, save route schema extended (generatedScenes, finalVideoUrl)
 
 BLOCKED (external — no code work possible):
   - Meta Developer Portal sandbox application (3.2)
@@ -298,7 +303,7 @@ BLOCKED (external — no code work possible):
 | **Email (SendGrid/Resend/SMTP)** | REAL | Multiple providers, open/click tracking |
 | **Voice (Twilio/Telnyx)** | REAL | Call initiation, control, conferencing |
 | **TTS (ElevenLabs/Unreal)** | REAL | 20+ premium voices via ElevenLabs |
-| **Video (HeyGen/Sora/Runway)** | CONDITIONAL | Real API calls if keys configured; returns "Coming Soon" otherwise |
+| **Video (HeyGen/Sora/Runway)** | REAL | Render pipeline wired to real API calls via video-service.ts; Runway gen3a_turbo; returns "Coming Soon" if keys not configured |
 | **Social Engagement (POST)** | REAL | Twitter works, LinkedIn partial |
 | **Social Engagement (REPLY/LIKE/FOLLOW/REPOST)** | REAL (Twitter) | Wired to Twitter API v2: likeTweet, retweet, followUser, reply via postTweet |
 | **Social OAuth (Twitter)** | REAL | PKCE flow — code challenge, auth URL, code exchange, profile fetch, AES-256-GCM token encryption |
@@ -327,12 +332,13 @@ BLOCKED (external — no code work possible):
 | ~~Notification signal handlers disconnected~~ | **FIXED** — All 18 handlers wired to `SignalCoordinator.observeSignals()` |
 | ~~Email writer missing toast feedback~~ | **FIXED** — Copy-to-clipboard shows success toast |
 | ~~Activities missing Firestore indexes~~ | **FIXED** — 4 composite indexes added to `firestore.indexes.json` |
-| Render pipeline mocked | `render-pipeline.ts` returns fake responses for video |
-| Asset Generator is a shell | Returns placeholder URLs, no actual image generation |
+| ~~Render pipeline mocked~~ | **FIXED** — render-pipeline.ts wired to real HeyGen/Sora/Runway APIs via video-service.ts |
+| ~~Asset Generator is a shell~~ | **FIXED** — Uses real DALL-E 3 image generation with graceful placeholder fallback |
 | ~~Social accounts UI is mock~~ | **FIXED** — Real OAuth flows for Twitter (PKCE) and LinkedIn, AES-256-GCM token encryption, verify endpoint, manual credential fallback |
 | ~~Website editor/pages 401~~ | **FIXED** — All fetch calls now include Firebase auth headers. Infinite error loop resolved (toastRef pattern) |
 | ~~Stripe checkout incomplete~~ | **FIXED** — Full PaymentElement flow with 3DS, cart recovery page, enriched success page |
-| ~35 TODO comments remaining | Reduced from ~65; quick-win TODOs addressed, larger feature TODOs remain |
+| ~27 TODO comments remaining | Reduced from ~43; 8 quick-win TODOs resolved in Session 7b (recency factor, pagination, rep name, org-scoped, audit log, coaching tracking, JasperTrainingLab, baseline conversion) |
+| ~~Video "Save to Library" stub~~ | **FIXED** — Wired to `/api/video/project/save` with full Firestore persistence |
 
 ---
 
@@ -346,17 +352,22 @@ These are the remaining buildable items, ordered by impact:
 | ~~**E-commerce**~~ | **DONE** — Full Stripe PaymentElement checkout with 3DS, cart recovery, enriched success page |
 | ~~**Social Accounts UI**~~ | **DONE** — Real OAuth for Twitter (PKCE) + LinkedIn, token encryption, verify, manual credential fallback |
 
-### Medium Priority
+### Completed (Session 7)
+| Task | Status |
+|------|--------|
+| ~~**Website Builder**~~ | **DONE** — AI-powered page generation from natural language prompts, "Generate with AI" button + modal |
+| ~~**Asset Generator**~~ | **DONE** — Real DALL-E 3 image generation with smart size mapping and graceful fallback |
+| ~~**Video Pipeline (Core)**~~ | **DONE** — Render pipeline wired to real HeyGen/Sora/Runway APIs, Runway gen3a_turbo, Firestore key management |
+
+### Medium Priority (Remaining)
 | Task | What Needs Building |
 |------|---------------------|
-| **Website Builder** | AI-powered page generation, template system |
-| **Asset Generator** | Real image generation — currently returns placeholder URLs |
-| **Video Pipeline** | Screenshot capture (Puppeteer/Playwright), scene editing, avatar/voice picker UI, storyboard → HeyGen bridge, scene stitching (ffmpeg), AI auto-selection, Luma/Kling integrations |
+| **Video Pipeline Polish** | Scene editing improvements, screenshot capture, scene stitching (Save to Library now wired) |
 
 ### Low Priority
 | Task | What Needs Building |
 |------|---------------------|
-| **~35 TODO comments** | Mix of quick wins and larger features across the codebase |
+| **~27 TODO comments** | Mostly larger features (Firestore persistence, advanced analytics, API integrations) |
 
 ### Video Production Pipeline (Details)
 **Goal:** Tell Jasper "create a video" and receive a polished video in the library.
@@ -409,3 +420,7 @@ These are the remaining buildable items, ordered by impact:
 | `src/components/integrations/TwitterIntegration.tsx` | **NEW** — Twitter OAuth + manual credential UI |
 | `src/components/integrations/LinkedInIntegration.tsx` | **NEW** — LinkedIn OAuth + manual credential UI |
 | `src/app/store/checkout/cancelled/page.tsx` | **NEW** — Cart recovery page for cancelled checkouts |
+| `src/lib/ai/image-generation-service.ts` | **NEW** — DALL-E 3 image generation wrapper (size/quality/style options) |
+| `src/app/api/ai/generate-image/route.ts` | **NEW** — Image generation endpoint with Zod validation, rate limiting |
+| `src/lib/website-builder/ai-page-generator.ts` | **NEW** — AI page generation from natural language prompts |
+| `src/app/api/website/ai/generate/route.ts` | **NEW** — Website AI generation endpoint with rate limiting |

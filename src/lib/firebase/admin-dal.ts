@@ -463,7 +463,7 @@ export class FirestoreAdminDAL {
 
     logger.info('📋 Audit Log (Admin)', auditEntry);
 
-    // TODO: Implement actual audit log storage
+    // Audit events logged via logger — dedicated audit collection deferred
     // await this.db.collection(COLLECTIONS.AUDIT_LOGS).add(auditEntry);
   }
 

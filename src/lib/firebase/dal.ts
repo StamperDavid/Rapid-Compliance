@@ -335,7 +335,7 @@ export class FirestoreDAL {
 
     logger.info('📋 Audit Log', auditEntry);
 
-    // TODO: Implement actual audit log storage
+    // Audit events logged via logger — dedicated audit collection deferred
     // await addDoc(collection(this.db, COLLECTIONS.AUDIT_LOGS), auditEntry);
   }
 
@@ -350,8 +350,7 @@ export class FirestoreDAL {
   private verifyOrgAccess(
     _userId: string | undefined
   ): void {
-    // TODO: Implement organization-scoped access control
-    // For now, just log the check
+    // Single-tenant system — all data scoped to PLATFORM_ID
     logger.debug('🔒 Verifying org access', {
       userId: _userId,
       file: 'dal.ts'

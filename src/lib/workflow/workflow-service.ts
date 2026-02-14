@@ -404,7 +404,7 @@ export async function getWorkflows(
 
   return {
     data: result.workflows,
-    hasMore: false, // TODO: Implement pagination
+    hasMore: result.workflows.length >= ((filters?.limit as number | undefined) ?? 20),
   };
 }
 

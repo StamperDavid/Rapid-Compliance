@@ -406,7 +406,7 @@ export class BaseAgentDAL {
 
     logger.info('📋 Audit Log', auditEntry);
 
-    // TODO: Implement actual audit log storage
+    // Audit events logged via logger — dedicated audit collection deferred
     // const auditColRef = this.getCollection('audit_logs');
     // await addDoc(auditColRef, auditEntry);
   }

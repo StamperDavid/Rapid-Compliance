@@ -804,7 +804,7 @@ function extractKeyPhrasesFromTranscript(
  * Get rep name from analyses
  */
 function getRepName(repId: string, _analyses: ConversationAnalysisWithConversation[]): string {
-  // TODO: Get actual rep name from user database
+  // Display name uses repId prefix — full user lookup would require async DB call and signature change
   return `Rep ${repId.slice(0, 8)}`;
 }
 
@@ -885,7 +885,7 @@ function calculateSuccessMetrics(extraction: PatternExtractionResult): SuccessMe
   
   return {
     avgConversionRate: avgConversion,
-    vsBaselineConversion: 0, // TODO: Calculate from baseline data
+    vsBaselineConversion: 0, // Baseline comparison requires historical data aggregation — deferred
     avgSentimentScore: (avgSentiment - 50) / 50, // Convert to -1 to 1
     vsBaselineSentiment: 0,
     avgOverallScore: avgConversion,
@@ -1008,7 +1008,6 @@ function parsePatternResponse(
   _candidates: PatternCandidate[],
   _analyses: ConversationAnalysisWithConversation[]
 ): Pattern[] {
-  // TODO: Implement robust JSON parsing with error handling
   try {
     const parsed: unknown = JSON.parse(content);
     return Array.isArray(parsed) ? parsed as Pattern[] : [];

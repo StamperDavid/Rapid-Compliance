@@ -59,6 +59,19 @@ const SaveProjectSchema = z.object({
   avatarName: z.string().nullable(),
   voiceId: z.string().nullable(),
   voiceName: z.string().nullable(),
+  generatedScenes: z.array(
+    z.object({
+      sceneId: z.string(),
+      providerVideoId: z.string(),
+      provider: z.enum(['heygen', 'runway', 'sora', 'kling', 'luma']).nullable(),
+      status: z.enum(['draft', 'approved', 'generating', 'completed', 'failed']),
+      videoUrl: z.string().nullable(),
+      thumbnailUrl: z.string().nullable(),
+      progress: z.number(),
+      error: z.string().nullable(),
+    })
+  ).default([]),
+  finalVideoUrl: z.string().nullable().default(null),
   transitionType: z.enum(['cut', 'fade', 'dissolve']).default('fade'),
   status: z.enum(['draft', 'approved', 'generating', 'assembled', 'completed']).default('draft'),
 });
@@ -113,6 +126,8 @@ export async function POST(request: NextRequest) {
         avatarName: data.avatarName,
         voiceId: data.voiceId,
         voiceName: data.voiceName,
+        generatedScenes: data.generatedScenes,
+        finalVideoUrl: data.finalVideoUrl,
         transitionType: data.transitionType,
         status: data.status,
       });
@@ -162,6 +177,8 @@ export async function POST(request: NextRequest) {
       avatarName: data.avatarName,
       voiceId: data.voiceId,
       voiceName: data.voiceName,
+      generatedScenes: data.generatedScenes,
+      finalVideoUrl: data.finalVideoUrl,
       transitionType: data.transitionType,
       status: data.status,
     });

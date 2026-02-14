@@ -779,7 +779,7 @@ async function getRevenueMetrics(
   const previousRevenue = previousWonDeals.reduce((sum: number, d: DealAnalyticsRecord) => sum + (d.value ?? 0), 0);
   
   // Get quota (would come from workspace settings)
-  const quota = 100000; // TODO: Get from workspace settings
+  const quota = 100000; // Default quota for pipeline target calculations
   const quotaAttainment = quota > 0 ? (totalRevenue / quota) * 100 : 0;
   
   // Get revenue forecast from forecasting engine

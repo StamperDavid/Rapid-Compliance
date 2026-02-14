@@ -764,8 +764,24 @@ function calculateForecastConfidence(deals: DealRecord[]): number {
   
   const avgProbability = deals.reduce((sum, d) => sum + safeParseFloat(d.probability, 50), 0) / deals.length;
   const dealCountFactor = Math.min(deals.length / 20, 1); // Max confidence at 20+ deals
-  const recencyFactor = 1; // TODO: Factor in how recently deals were updated
-  
+
+  // Calculate average recency factor across all deals
+  const recencyFactors = deals.map(deal => {
+    if (!deal.updatedAt) {return 1;}
+
+    const updatedAtDate = typeof deal.updatedAt === 'string'
+      ? new Date(deal.updatedAt)
+      : typeof deal.updatedAt === 'object' && 'toDate' in deal.updatedAt && typeof deal.updatedAt.toDate === 'function'
+      ? deal.updatedAt.toDate()
+      : deal.updatedAt instanceof Date
+      ? deal.updatedAt
+      : new Date();
+
+    const daysSinceUpdate = Math.floor((Date.now() - updatedAtDate.getTime()) / (1000 * 60 * 60 * 24));
+    return Math.max(0.5, 1 - (daysSinceUpdate * 0.02)); // Decay 2% per day, min 50%
+  });
+  const recencyFactor = recencyFactors.reduce((sum, f) => sum + f, 0) / recencyFactors.length;
+
   return Math.round((avgProbability * 0.6 + dealCountFactor * 100 * 0.4) * recencyFactor);
 }
 

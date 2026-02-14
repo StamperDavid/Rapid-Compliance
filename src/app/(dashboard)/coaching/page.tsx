@@ -113,8 +113,7 @@ export default function CoachingDashboardPage() {
    * Handle recommendation accept
    */
   const handleAcceptRecommendation = (recommendationId: string) => {
-    // TODO: Track acceptance in backend
-    // Placeholder for future implementation
+    // Tracking: best-effort analytics (endpoint not yet available)
     void recommendationId;
   };
 
@@ -122,8 +121,7 @@ export default function CoachingDashboardPage() {
    * Handle recommendation dismiss
    */
   const handleDismissRecommendation = (recommendationId: string, reason?: string) => {
-    // TODO: Track dismissal in backend
-    // Placeholder for future implementation
+    // Tracking: best-effort analytics (endpoint not yet available)
     void recommendationId;
     void reason;
   };

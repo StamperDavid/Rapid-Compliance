@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Wand2, Download, Save, RefreshCw, Play, Edit3, Loader2 } from 'lucide-react';
+import { Wand2, Download, Save, RefreshCw, Play, Edit3, Loader2, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { VideoPlayer } from './VideoPlayer';
@@ -9,21 +9,29 @@ import { useVideoPipelineStore } from '@/lib/stores/video-pipeline-store';
 
 export function StepPostProduction() {
   const {
+    projectId,
+    projectName,
     scenes,
     generatedScenes,
     finalVideoUrl,
     avatarId,
+    avatarName,
     voiceId,
+    voiceName,
     brief,
+    transitionType,
     updateScene,
     updateGeneratedScene,
     setFinalVideoUrl,
     setStep,
+    setProjectId,
   } = useVideoPipelineStore();
 
   const [editingSceneId, setEditingSceneId] = useState<string | null>(null);
   const [regenerating, setRegenerating] = useState<string | null>(null);
   const [reassembling, setReassembling] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
 
   const handleRegenerateScene = async (sceneId: string) => {
     const scene = scenes.find((s) => s.id === sceneId);
@@ -99,6 +107,49 @@ export function StepPostProduction() {
       // Error silently handled
     } finally {
       setReassembling(false);
+    }
+  };
+
+  const handleSaveToLibrary = async () => {
+    setSaving(true);
+    setSaved(false);
+
+    try {
+      const response = await fetch('/api/video/project/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          projectId: projectId ?? undefined,
+          name: projectName || brief.description.slice(0, 50) || 'Untitled Video',
+          brief,
+          currentStep: 'post-production',
+          scenes,
+          avatarId,
+          avatarName,
+          voiceId,
+          voiceName,
+          generatedScenes,
+          finalVideoUrl,
+          transitionType,
+          status: finalVideoUrl ? 'completed' : 'assembled',
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Save failed');
+      }
+
+      const data = await response.json() as { success: boolean; projectId: string };
+      if (data.success && data.projectId) {
+        setProjectId(data.projectId);
+        setSaved(true);
+        // Reset saved indicator after 3 seconds
+        setTimeout(() => { setSaved(false); }, 3000);
+      }
+    } catch {
+      // Save error silently — button returns to default state
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -241,13 +292,18 @@ export function StepPostProduction() {
           )}
           <Button
             variant="outline"
-            className="gap-2"
-            onClick={() => {
-              // Save to library - future feature
-            }}
+            className={`gap-2 ${saved ? 'border-green-500 text-green-400' : ''}`}
+            onClick={() => { void handleSaveToLibrary(); }}
+            disabled={saving}
           >
-            <Save className="w-4 h-4" />
-            Save to Library
+            {saving ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : saved ? (
+              <CheckCircle className="w-4 h-4 text-green-400" />
+            ) : (
+              <Save className="w-4 h-4" />
+            )}
+            {saving ? 'Saving...' : saved ? 'Saved!' : 'Save to Library'}
           </Button>
         </div>
       </div>
