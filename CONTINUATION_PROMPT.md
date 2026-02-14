@@ -5,7 +5,7 @@
 ## Context
 Repository: https://github.com/StamperDavid/Rapid-Compliance
 Branch: dev
-Last Session: February 13, 2026 (Session 13)
+Last Session: February 13, 2026 (Session 14)
 
 ## Current State
 
@@ -69,6 +69,36 @@ Last Session: February 13, 2026 (Session 13)
 - **Security: Demo-user production guard** — `AuthProvider.tsx` demo admin fallback gated to `NODE_ENV === 'development'` only.
 - **Firebase cleanup** — Built `scripts/cleanup-all-test-data.js` (5-phase recursive cleaner). Removed 26 phantom orgs, 11 orphaned documents. Verification scan confirmed zero remnants.
 Committed (`bf706c8a`).
+
+**Session 14 (February 13, 2026):** Website editor 401 fix + remaining TODO resolution + launch readiness assessment.
+- **Website editor auth race condition** — Editor and Pages list fired API calls (`GET /api/website/pages`) before Firebase restored the user session, causing `auth.currentUser` to be `null` → no Bearer token → 401 → blank "Untitled Page" editor. Fixed by waiting for `useAuth().loading` to become `false` before making API calls in both `editor/page.tsx` and `pages/page.tsx`. Committed (`30857e1b`).
+- **Resolved all remaining TODOs** — Redis rate limiting implemented, async getEmailGenerations, analytics test mocks updated. Commits (`75b638ba`, `e45bc474`).
+- **CRITICAL: Website editor still shows blank page on Vercel** — Even after auth fix, the editor shows "Untitled Page" / "Empty Page" instead of loading existing website pages. Suspected root cause: **Firestore collection path mismatch**. The `getSubCollection('website')` resolves to different paths based on `NEXT_PUBLIC_APP_ENV`:
+  - Production (`NEXT_PUBLIC_APP_ENV=production`): `organizations/rapid-compliance-root/website/pages/items`
+  - Dev/default: `test_organizations/rapid-compliance-root/test_website/pages/items`
+  - If pages were created under one prefix but the production build queries the other, they'll be invisible.
+  - **Also possible:** Legacy multi-tenant org ID remnants — pages may exist under a different org path from before the penthouse migration.
+  - **Action needed:** Verify `NEXT_PUBLIC_APP_ENV` on Vercel, inspect actual Firestore data paths, and reconcile.
+
+---
+
+## PRIORITY 1: Website Editor — Pages Not Loading
+
+**Status:** BROKEN on production (Vercel). Auth race condition fixed but pages still not appearing.
+
+**Investigation plan for next session:**
+1. Check `NEXT_PUBLIC_APP_ENV` value in Vercel environment variables — if not `production`, all collection paths will have `test_` prefix
+2. Open Firebase Console → Firestore → verify where website pages actually live (which collection path)
+3. Compare actual Firestore path vs what `getSubCollection('website')` resolves to on Vercel
+4. If pages exist under a legacy/different path, either migrate the data or update the collection resolver
+5. Check if there are any pages at all in Firestore (may need to create seed data)
+6. Verify the auth fix deployed (check Vercel deployment hash vs `30857e1b`)
+
+**Key files:**
+- `src/lib/firebase/collections.ts` — `getSubCollection()` builds the Firestore path with environment-aware prefix
+- `src/app/api/website/pages/route.ts` — GET handler queries `getSubCollection('website')/pages/items`
+- `src/app/(dashboard)/website/editor/page.tsx` — Client that calls the API and falls back to blank page on failure
+- `src/lib/constants/platform.ts` — `PLATFORM_ID = 'rapid-compliance-root'`
 
 ---
 
@@ -192,8 +222,23 @@ The platform is production ready when:
 - [x] 9/10 critical user flows pass (cart path fixed Session 11) ✅
 - [x] Security audit Critical findings resolved (Session 11) ✅
 - [x] Infrastructure: Firestore indexes added (34 total), env var docs (103 vars), health check wired ✅
-- [ ] Redis rate limiting (Upstash) — deferred, requires infrastructure provisioning
+- [x] Redis rate limiting implemented (Session 14, commit `75b638ba`) ✅
 - [x] E2E flow audit: signup → onboarding → cart → checkout → payment — 3 Critical blockers found and fixed (Session 13) ✅
+- [ ] **Website editor loads existing pages** — Currently broken, see Priority 1 above
+- [ ] **Pre-deploy env var verification** — Run `npm run deploy:verify-env` on Vercel, confirm Stripe live keys, CRON_SECRET, NEXT_PUBLIC_APP_URL
+- [ ] **Fix hardcoded test IP** — `src/lib/ecommerce/payment-providers.ts:225` has `CustomerIP: '127.0.0.1'`
+
+### Pre-Launch Checklist (Target: February 15, 2026)
+
+- [ ] Fix website editor page loading (Priority 1 — investigate Firestore collection path)
+- [ ] Verify `NEXT_PUBLIC_APP_ENV=production` on Vercel
+- [ ] Confirm Stripe keys are `sk_live_*` / `pk_live_*` (not test mode)
+- [ ] Set `NEXT_PUBLIC_APP_URL=https://salesvelocity.ai`
+- [ ] Generate strong `CRON_SECRET` (32+ chars) and set in Vercel
+- [ ] Verify Firebase Admin private key newlines (`\n` not `\\n`)
+- [ ] Fix `payment-providers.ts:225` hardcoded `127.0.0.1` IP
+- [ ] Run `npm run deploy:verify-env` — all green
+- [ ] Smoke test: login → website editor → checkout flow on production
 
 ---
 
