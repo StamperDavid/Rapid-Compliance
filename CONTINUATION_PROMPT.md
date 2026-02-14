@@ -5,7 +5,7 @@
 ## Context
 Repository: https://github.com/StamperDavid/Rapid-Compliance
 Branch: dev
-Last Session: February 13, 2026 (Session 8)
+Last Session: February 13, 2026 (Session 9)
 
 ## Current State
 
@@ -13,7 +13,7 @@ Last Session: February 13, 2026 (Session 8)
 - **Single-tenant penthouse model** — org ID `rapid-compliance-root`, Firebase `rapid-compliance-65f87`
 - **52 AI agents** (48 swarm + 4 standalone) with hierarchical orchestration
 - **4-role RBAC** (owner/admin/manager/member) with 47 permissions
-- **173 physical routes**, **267 API endpoints**, **430K+ lines of TypeScript**
+- **173 physical routes**, **268 API endpoints**, **430K+ lines of TypeScript**
 - **Deployed via Vercel** — dev → main → Vercel auto-deploy
 
 ### Build Health
@@ -32,10 +32,10 @@ Last Session: February 13, 2026 (Session 8)
 | Integration | Status | Notes |
 |---|---|---|
 | **Twitter/X** | REAL | API v2, OAuth2 PKCE, posting, media, engagement (like/retweet/follow/reply) |
-| **LinkedIn** | PARTIAL | RapidAPI wrapper. Needs official API (blocked: app approval) |
+| **LinkedIn** | PARTIAL | RapidAPI wrapper. Needs official API (blocked: app approval). Fallback now correctly returns `success: false`. |
 | **Facebook/Instagram** | NOT BUILT | Blocked: Meta Developer Portal approval |
-| **Stripe** | REAL | PaymentElement (3DS), intents, products, prices, webhooks |
-| **Email** | REAL | SendGrid/Resend/SMTP, open/click tracking |
+| **Stripe** | REAL | PaymentElement (3DS), intents, products, prices, webhooks. Cart clearing on payment. Canonical order path. |
+| **Email** | REAL | SendGrid/Resend/SMTP, open/click tracking. CAN-SPAM unsubscribe route live. |
 | **Voice** | REAL | Twilio/Telnyx — call initiation, control, conferencing |
 | **TTS** | REAL | ElevenLabs — 20+ premium voices |
 | **Video** | REAL | HeyGen/Sora/Runway APIs via render pipeline |
@@ -51,83 +51,131 @@ Last Session: February 13, 2026 (Session 8)
 | LinkedIn unofficial | Uses RapidAPI, blocked: Marketing Developer Platform (Tier 3.3) |
 | ~15 TODO comments | All external deps: i18n (6 langs), Outlook webhooks, vector embeddings, web scraping, DM feature |
 
-### Session History (1-8)
-All prior stabilization work is complete: saga persistence, kill switch, revenue attribution pipeline, Twitter engagement, E2E tests, CI/CD cleanup, Stripe checkout, social OAuth, website auth fixes, DALL-E 3, AI page builder, video pipeline wiring, and 33+ TODO resolutions. Details in git history.
+### Session History (1-9)
+**Sessions 1-8:** All prior stabilization work is complete: saga persistence, kill switch, revenue attribution pipeline, Twitter engagement, E2E tests, CI/CD cleanup, Stripe checkout, social OAuth, website auth fixes, DALL-E 3, AI page builder, video pipeline wiring, and 33+ TODO resolutions. Details in git history.
+
+**Session 9 (February 13, 2026):** Full production readiness QA audit. Ran 4 QA agents (Revenue, Data Integrity, Growth, Platform) in parallel — discovered 14 Critical / 45 Major / 40 Minor / 23 Info issues. All 14 Critical issues resolved and committed (`3b1f5ea3`).
 
 ---
 
-## PRIMARY TASK: Production Readiness
+## Production Readiness Progress
 
-**The code compiles. That doesn't mean it works.** Production ready means a real user can sign up, use every critical feature, pay money, and not hit errors. This plan verifies that.
+### Phase 1: QA Audit — COMPLETE ✅
 
-### Phase 1: QA Audit — Discover What's Broken
+All 4 QA agents ran. Results:
 
-Run all 4 QA agents in parallel to generate a comprehensive defect list.
+| Agent | Critical | Major | Minor | Info |
+|-------|----------|-------|-------|------|
+| QA Revenue | 4 | 10 | 8 | 5 |
+| QA Data Integrity | 4 | 16 | 10 | 5 |
+| QA Growth | 4 | 9 | 12 | 6 |
+| QA Platform | 2 | 10 | 10 | 7 |
+| **TOTAL** | **14** | **45** | **40** | **23** |
 
-| Agent | Scope | What It Checks |
-|-------|-------|----------------|
-| **QA Revenue** | Stripe, checkout, pricing | Can a user browse → cart → checkout → pay → receive order confirmation? Do webhooks fire and process? Are prices enforced? |
-| **QA Data Integrity** | Zod, Firestore, schemas | Does every API endpoint validate input with Zod? Are Firestore collections structured correctly? Any orphaned data patterns? |
-| **QA Growth** | Social, email, SEO, forms, website | Can a user create a post and publish it? Send an email? Submit a form that creates a lead? Build a page? |
-| **QA Platform** | OAuth, integrations, webhooks, cron, APIs | Do OAuth flows complete? Do cron jobs actually run? Are all API contracts honored? Do webhook endpoints respond? |
+### Phase 5 (Critical Fixes) — COMPLETE ✅
 
-**Output:** A prioritized defect list with severity ratings. Fix all Critical/High before anything else.
+All 14 Critical issues resolved (commit `3b1f5ea3`):
 
-### Phase 2: Critical User Flow Verification
+| # | Domain | Issue | Fix |
+|---|--------|-------|-----|
+| CRIT-1 | Revenue | Dollar/cent conversion heuristic | Removed — prices treated as cents |
+| CRIT-2 | Revenue | Cart not cleared after payment | Webhook clears cart via cartId metadata |
+| CRIT-3 | Revenue | Order created before payment | Order now created after Stripe session |
+| CRIT-4 | Revenue | Orders in 3 Firestore paths | Consolidated to `organizations/{id}/orders` |
+| CRIT-5 | Data | No Zod on sequences POST | Full Zod schema with step validation |
+| CRIT-6 | Data | No Zod on custom-tools POST/PUT | Zod schemas replace manual type guards |
+| CRIT-7 | Data | No schema concurrency control | Optimistic locking via `expectedVersion` |
+| CRIT-8 | Data | Analytics fetch ALL documents | 10K limits + date-range constraints on 5 routes |
+| CRIT-9 | Growth | LinkedIn false `success: true` | Returns `success: false` with message |
+| CRIT-10 | Growth | Public form GET no rate limit | `rateLimitMiddleware` added |
+| CRIT-11 | Growth | CAPTCHA enabled but not enforced | reCAPTCHA v3 verification when enabled |
+| CRIT-12 | Growth | No `/unsubscribe` route | Created `/api/public/unsubscribe` (GET+POST) |
+| CRIT-13 | Platform | OAuth CSRF state not validated | Firestore-backed tokens with TTL |
+| CRIT-14 | Platform | OAuth encryption fails open | Fails closed — throws on failure |
 
-Test these end-to-end flows. Each must work without errors:
+---
 
-| # | Flow | Steps to Verify |
-|---|------|-----------------|
-| 1 | **Signup → Dashboard** | Firebase Auth signup → onboarding → dashboard loads with real data |
-| 2 | **CRM Pipeline** | Create lead → convert to deal → move through stages → close won |
-| 3 | **E-commerce** | Browse store → add to cart → Stripe checkout → payment succeeds → order confirmation |
-| 4 | **Social Publishing** | Connect Twitter → compose post → schedule → verify it publishes |
-| 5 | **Email Outreach** | Compose email → send via API → verify delivery → track open/click |
-| 6 | **Form → Lead** | Create form → share URL → submit form → verify lead created with UTM attribution |
-| 7 | **Website Builder** | Create page → edit content → publish → verify public access |
-| 8 | **AI Features** | Generate image (DALL-E 3) → Generate page (AI builder) → Jasper chat response |
-| 9 | **Agent Orchestration** | Trigger saga → verify checkpoint → pause swarm → verify halt → resume |
-| 10 | **Video Pipeline** | Create project → generate script → render → save to library |
+## PRIMARY TASK: Fix Remaining Major Issues (45)
 
-### Phase 3: Security Audit
+### Highest Priority Majors
 
-| Check | What to Verify |
-|-------|----------------|
-| **Auth gating** | Every `/api/*` route (except `/api/public/*`) requires valid Firebase auth token |
-| **Rate limiting** | All public and AI endpoints have rate limits configured |
-| **Input validation** | Every POST/PUT/PATCH endpoint validates body with Zod schema |
-| **Firestore rules** | Rules deployed and restrict read/write to authenticated users within org |
-| **CORS** | Only allowed origins can make requests |
-| **Security headers** | CSP, X-Frame-Options, X-Content-Type-Options set in `vercel.json` |
-| **Secrets** | No API keys in client-side code. All secrets in env vars only |
-| **OAuth redirects** | Production redirect URLs configured for Twitter, LinkedIn |
+**Revenue & E-Commerce:**
 
-### Phase 4: Infrastructure Verification
+| # | Issue | File(s) |
+|---|-------|---------|
+| MAJ-1 | Subscription webhooks only logged, not processed | `src/app/api/webhooks/stripe/route.ts` |
+| MAJ-2 | Webhook returns 200 on processing errors (silent loss) | `src/app/api/webhooks/stripe/route.ts` |
+| MAJ-3 | Three different Stripe key retrieval mechanisms | Multiple checkout/payment files |
+| MAJ-4 | Cart discounts not applied during Stripe checkout | `src/app/api/ecommerce/checkout/create-session/route.ts` |
+| MAJ-5 | Cart ID mismatch between cart ops and checkout | `src/app/api/ecommerce/checkout/create-session/route.ts` |
+| MAJ-6 | No stock validation in Stripe checkout path | `src/app/api/ecommerce/checkout/create-session/route.ts` |
+| MAJ-7 | No feature gating enforcement in API | No middleware exists |
+| MAJ-8 | Subscription cancel/downgrade doesn't call Stripe API | `src/app/api/subscriptions/route.ts` |
+| MAJ-9 | Revenue analytics reads incomplete order set | `src/app/api/analytics/revenue/route.ts` |
+| MAJ-10 | Refunds not subtracted from revenue | `src/app/api/analytics/revenue/route.ts` |
 
-| Check | What to Verify |
-|-------|----------------|
-| **Env vars** | Run `verify-env-vars.js` against Vercel production — all P0/P1 vars present |
-| **Firestore indexes** | All 25 composite indexes from `firestore.indexes.json` deployed |
-| **Cron jobs** | All 7 cron entries in `vercel.json` are firing on schedule |
-| **Stripe webhooks** | Webhook endpoint registered in Stripe dashboard, receiving events, processing correctly |
-| **Firebase rules** | Run `deploy-firebase-rules.js` — rules deployed and enforced |
-| **Health check** | Run `test-production-health.js` — all critical endpoints responding |
-| **Error monitoring** | Logger output visible in Vercel logs, errors surfaced |
+**Data Integrity:**
 
-### Phase 5: Fix & Harden
+| # | Issue | File(s) |
+|---|-------|---------|
+| MAJ-11 | Contact delete checks wrong field for activities | `src/lib/crm/contact-service.ts` |
+| MAJ-12 | Deal delete checks wrong field for activities | `src/lib/crm/deal-service.ts` |
+| MAJ-13 | Workflow delete has no referential integrity checks | `src/app/api/workflows/[workflowId]/route.ts` |
+| MAJ-14 | Form delete has no referential check for submissions | `src/app/api/forms/[formId]/route.ts` |
+| MAJ-15 | `.passthrough()` on e-commerce types (13 nested objects) | `src/lib/ecommerce/types.ts` |
+| MAJ-16 | `.passthrough()` on agent persona and identity routes | `src/app/api/agent/persona/route.ts`, identity |
+| MAJ-17 | FirestoreService.set() conditional timestamp may skip createdAt | `src/lib/db/firestore-service.ts` |
+| MAJ-18 | Client-side timestamps in form fields | `src/app/api/forms/[formId]/route.ts` |
+| MAJ-19 | Sequence docs store steps as unbounded array | `src/app/api/outbound/sequences/route.ts` |
+| MAJ-20 | Schema batch updater uses wrong change type | `src/lib/schema/schema-change-debouncer.ts` |
+| MAJ-21 | Conversion rate uses wrong denominator | `src/lib/analytics/analytics-service.ts` |
+| MAJ-22 | E-commerce customer metrics assume all new customers | `src/lib/analytics/ecommerce-analytics.ts` |
+| MAJ-23 | Revenue quota hardcoded at $100,000 | `src/lib/analytics/dashboard/analytics-engine.ts` |
+| MAJ-24 | Duplicate detection fetches ALL records | `src/lib/crm/duplicate-detection.ts` |
+| MAJ-25 | Merge operation lacks transaction safety | `src/app/api/crm/duplicates/merge/route.ts` |
+| MAJ-26 | Field type changes have no data migration | `src/lib/schema/schema-change-tracker.ts` |
 
-Based on findings from Phases 1-4:
-1. Fix all Critical severity issues
-2. Fix all High severity issues
-3. Add error boundaries to any pages missing them
-4. Add graceful fallbacks for any feature that fails silently
-5. Verify all toast/error messages are user-friendly (no raw stack traces)
+**Growth & Outreach:**
+
+| # | Issue | File(s) |
+|---|-------|---------|
+| MAJ-27 | No LinkedIn char limit on queue/schedule routes | `src/app/api/social/queue/route.ts`, schedule |
+| MAJ-28 | UTM appending can truncate tweets with broken links | `src/lib/social/autonomous-posting-agent.ts` |
+| MAJ-29 | CAN-SPAM ensureCompliance not used at send endpoint | `src/app/api/email/send/route.ts` |
+| MAJ-30 | Sequence enrollment race condition (no transaction) | `src/lib/outbound/sequence-engine.ts` |
+| MAJ-31 | No Zod validation on SEO settings input | `src/app/api/admin/growth/seo/route.ts` |
+| MAJ-32 | No meta title/description length validation | `src/app/api/admin/growth/seo/route.ts` |
+
+**Platform Infrastructure:**
+
+| # | Issue | File(s) |
+|---|-------|---------|
+| MAJ-33 | SendGrid webhook fails open when key missing | `src/app/api/webhooks/email/route.ts` |
+| MAJ-34 | Gmail webhook fails open when secret missing | `src/app/api/webhooks/gmail/route.ts` |
+| MAJ-35 | Twilio SMS webhook fails open when token missing | `src/app/api/webhooks/sms/route.ts` |
+| MAJ-36 | Twilio Voice webhook fails open when token missing | `src/app/api/webhooks/voice/route.ts` |
+| MAJ-37 | Microsoft OAuth callback uses relative redirects | `src/app/api/integrations/microsoft/callback/route.ts` |
+| MAJ-38 | QuickBooks OAuth callback uses relative redirects | `src/app/api/integrations/quickbooks/callback/route.ts` |
+| MAJ-39 | Slack OAuth callback uses relative redirects | `src/app/api/integrations/slack/callback/route.ts` |
+| MAJ-40 | Workflow engine has no execution timeout | `src/lib/workflows/workflow-engine.ts` |
+| MAJ-41 | No recursion prevention in workflow triggers | `src/lib/workflows/triggers/firestore-trigger.ts` |
+| MAJ-42 | Feature toggle GET endpoint has no authentication | `src/app/api/orchestrator/feature-toggle/route.ts` |
+| MAJ-43 | System health uses console.error instead of logger | `src/app/api/orchestrator/system-health/route.ts` |
+| MAJ-44 | Workflow routes missing `success` field in response | `src/app/api/workflows/route.ts` |
+| MAJ-45 | Workflow routes use different auth pattern | `src/app/api/workflows/route.ts` |
+
+### Phases 2-4: Still Pending
+
+After Major issues, continue with:
+- **Phase 2:** Critical User Flow Verification (10 E2E flows)
+- **Phase 3:** Security Audit (auth gating, rate limits, Firestore rules, CORS, secrets)
+- **Phase 4:** Infrastructure Verification (env vars, indexes, cron, Stripe webhooks, health check)
 
 ### Definition of Done
 
 The platform is production ready when:
-- [ ] All 4 QA agents report zero Critical issues
+- [x] All 4 QA agents report zero Critical issues ✅
+- [ ] All Major issues resolved (0/45 complete)
 - [ ] All 10 critical user flows pass end-to-end
 - [ ] Security audit passes with zero Critical findings
 - [ ] All infrastructure checks pass
@@ -162,6 +210,7 @@ The platform is production ready when:
 | `src/lib/social/autonomous-posting-agent.ts` | Social agent — posting, engagement, UTM |
 | `src/lib/integrations/twitter-service.ts` | Twitter API v2 — full CRUD |
 | `src/lib/orchestrator/jasper-tools.ts` | Jasper's 36+ function-calling tools |
+| `src/app/api/public/unsubscribe/route.ts` | CAN-SPAM email unsubscribe (Session 9) |
 | `vercel.json` | Cron jobs, CORS, security headers |
 | `firestore.indexes.json` | 25 composite indexes |
 | `tsconfig.eslint.json` | ESLint tsconfig scoped to `src/` |

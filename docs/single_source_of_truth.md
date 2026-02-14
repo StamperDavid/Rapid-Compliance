@@ -1,7 +1,7 @@
 # SalesVelocity.ai - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** February 13, 2026 (Session 7b: TODO quick-wins resolved, video Save to Library wired to Firestore)
+**Last Updated:** February 13, 2026 (Session 9: Production Readiness QA — 14 critical issues resolved across revenue, data integrity, growth, and platform security)
 **Branches:** `dev` (latest)
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Architecture:** Single-Tenant (Penthouse Model) - NOT a SaaS platform
@@ -36,7 +36,7 @@
 | Metric | Count | Status |
 |--------|-------|--------|
 | Physical Routes (page.tsx) | 173 | Verified February 13, 2026 (added /store/checkout/cancelled, social OAuth routes) |
-| API Endpoints (route.ts) | 267 | Verified February 13, 2026 (added /api/ai/generate-image, /api/website/ai/generate) |
+| API Endpoints (route.ts) | 268 | Verified February 13, 2026 (Session 9: added /api/public/unsubscribe) |
 | AI Agents | 52 | **52 FUNCTIONAL (48 swarm + 4 standalone)** |
 | RBAC Roles | 4 | `owner` (level 3), `admin` (level 2), `manager` (level 1), `member` (level 0) — 4-role RBAC |
 | Firestore Collections | 67+ | Active (sagaState, eventLog collections; 25 composite indexes) |
@@ -1489,8 +1489,16 @@ src/lib/agent/instance-manager.ts       # Agent Instance Manager
 | Severity | Issue | Location | Status |
 |----------|-------|----------|--------|
 | ~~CRITICAL~~ | ~~82 API routes missing authentication~~ | `src/app/api/**` | ✅ **RESOLVED 2026-02-11** — Day 4 security hardening sprint added `requireAuth` to all 82 unprotected dashboard routes. See [API Route Protection Summary](#api-route-protection-summary) below. |
+| ~~CRITICAL~~ | ~~Generic OAuth callback has no CSRF state validation~~ | `src/app/api/integrations/oauth/callback/[provider]/route.ts` | ✅ **RESOLVED 2026-02-13 (Session 9)** — OAuth state now validated via Firestore-backed tokens with TTL and one-time-use semantics. |
+| ~~CRITICAL~~ | ~~OAuth token encryption fails open (stores plaintext on failure)~~ | `src/app/api/integrations/oauth/[provider]/callback/route.ts` | ✅ **RESOLVED 2026-02-13 (Session 9)** — Encryption failure now throws instead of falling back to plaintext storage. |
+| ~~CRITICAL~~ | ~~Public form GET endpoint has no rate limiting~~ | `src/app/api/public/forms/[formId]/route.ts` | ✅ **RESOLVED 2026-02-13 (Session 9)** — `rateLimitMiddleware` added to GET handler. |
+| ~~CRITICAL~~ | ~~CAPTCHA enabled on forms but never enforced~~ | `src/app/api/public/forms/[formId]/route.ts` | ✅ **RESOLVED 2026-02-13 (Session 9)** — reCAPTCHA v3 verification enforced when `enableCaptcha` is true. |
+| ~~CRITICAL~~ | ~~No /unsubscribe route (CAN-SPAM violation)~~ | N/A | ✅ **RESOLVED 2026-02-13 (Session 9)** — Created `/api/public/unsubscribe` with GET (confirmation page) + POST (processing), suppression records, sequence unenrollment. |
 | ~~MEDIUM~~ | ~~Demo mode fallback in useAuth.ts~~ | `src/hooks/useAuth.ts` | ✅ RESOLVED - Wrapped in `NODE_ENV === 'development'` check |
 | ~~LOW~~ | ~~Inconsistent role naming~~ | Multiple files | ✅ RESOLVED - 4-role RBAC (owner|admin|manager|member) deployed. claims-validator maps legacy strings. |
+| MAJOR | 4 webhook endpoints fail open when verification keys missing | `src/app/api/webhooks/{email,gmail,sms,voice}` | Open — SendGrid, Gmail, Twilio SMS/Voice skip signature verification if env var is missing. Should fail closed in production. |
+| MAJOR | Feature toggle GET endpoint is unauthenticated | `src/app/api/orchestrator/feature-toggle/route.ts` | Open — exposes hidden feature list without auth. |
+| MAJOR | Workflow engine has no execution timeout or recursion prevention | `src/lib/workflows/workflow-engine.ts` | Open — workflows can hang indefinitely or trigger infinite loops. |
 | LOW | Token claim extraction lacks strict validation | `api-auth.ts` | Add runtime type guards |
 | LOW | Manual organization check in agent routes | `/api/agent/chat` | Create decorator pattern for auto org validation |
 | ~~CRITICAL~~ | ~~Auth Handshake Failure: `useSystemStatus` hook missing Authorization header~~ | `src/hooks/useSystemStatus.ts` | ✅ **RESOLVED 2026-01-29** - Implemented reactive auth handshake with fresh Firebase ID Token per request. Features: (1) `onAuthStateChanged` listener for reactive auth state, (2) `getIdToken()` called inside fetch for token freshness, (3) Auth-ready polling kill-switch, (4) Graceful 401/403 error handling via `connectionError` state, (5) Proper cleanup on unmount. `/api/system/status` is now **AUTHENTICATED-LIVE**. |
@@ -1714,6 +1722,36 @@ The following endpoints have working infrastructure (rate limiting, caching, aut
 - Kill switch (`agentEnabled` boolean) added to `AutonomousAgentSettings` type, config defaults, Zod schema, and `executeAction()` guard
 - 4 new frontend pages: Command Center, Activity Feed, Analytics Dashboard, Agent Rules
 - 2 upgraded pages: Content Studio (dual-mode autopilot/manual), Approval Queue (batch, correction capture, Why badge)
+
+**RESOLVED (February 13, 2026) - Session 9: Production Readiness QA — 14 Critical Issues Fixed:**
+
+Full 4-domain QA audit (Revenue, Data Integrity, Growth, Platform) identified 14 Critical / 45 Major / 40 Minor / 23 Info findings. All 14 Critical issues resolved:
+
+*Revenue & E-Commerce (CRIT 1-4):*
+- Dollar/cent conversion heuristic removed in `create-session/route.ts` — prices treated as cents
+- Stripe webhook now clears cart via `cartId` metadata after `checkout.session.completed`
+- Order creation moved to AFTER Stripe session succeeds (prevents ghost orders)
+- Order Firestore paths consolidated to `organizations/{PLATFORM_ID}/orders` (was split across 3 paths)
+
+*Data Integrity (CRIT 5-8):*
+- Zod schema added to `POST /api/outbound/sequences` (replaced manual type guard that accepted any object)
+- Zod schemas added to `POST/PUT /api/custom-tools` (replaced unsafe `as` cast)
+- Optimistic concurrency control via `expectedVersion` parameter on `SchemaManager.updateSchema()`
+- 5 analytics routes capped at 10K docs + date-range constraints (contacts/count, pipeline, forecast, win-loss, lead-scoring)
+
+*Growth & Outreach (CRIT 9-12):*
+- LinkedIn posting fallback returns `success: false` instead of faking `success: true`
+- `rateLimitMiddleware` added to public form GET endpoint
+- reCAPTCHA v3 verification enforced when `enableCaptcha` is true on form settings
+- `/api/public/unsubscribe` route created (GET: confirmation page, POST: processing with suppression records)
+
+*Platform Security (CRIT 13-14):*
+- Generic OAuth callback now validates CSRF state via `validateOAuthState` from `oauth-state.ts`
+- OAuth token encryption fails closed (throws on failure instead of storing plaintext)
+
+*Files modified:* 18 files across `src/app/api/` and `src/lib/`
+*Build verification:* `tsc --noEmit` PASS | `lint` PASS | `build` PASS
+*Commit:* `3b1f5ea3` on `dev`
 
 ### Testing Infrastructure (Audit: January 30, 2026)
 
