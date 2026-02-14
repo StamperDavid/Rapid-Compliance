@@ -187,34 +187,27 @@ interface CustomerMetricsResult {
 /**
  * Calculate customer metrics
  */
-function calculateCustomerMetrics(orders: OrderRecord[], startDate: Date): CustomerMetricsResult {
+function calculateCustomerMetrics(orders: OrderRecord[], _startDate: Date): CustomerMetricsResult {
   const customerSet = new Set<string>();
-  const newCustomerSet = new Set<string>();
-  
+  const customerOrderCounts = new Map<string, number>();
+
+  // Count orders per customer
   orders.forEach((order: OrderRecord) => {
     const email = order.customerEmail;
     if (email) {
       customerSet.add(email);
-
-      // Check if this is their first order
-      const createdAtValue = order.createdAt;
-      const orderDate = createdAtValue && typeof createdAtValue === 'object' && 'toDate' in createdAtValue && typeof createdAtValue.toDate === 'function'
-        ? createdAtValue.toDate()
-        : new Date(createdAtValue as string | Date);
-      if (orderDate >= startDate) {
-        // Check if they had orders before this period
-        // For simplicity, assume all orders in period are from new customers
-        // In production, check historical orders
-        newCustomerSet.add(email);
-      }
+      customerOrderCounts.set(email, (customerOrderCounts.get(email) ?? 0) + 1);
     }
   });
-  
+
+  // Customers with only 1 order in this period are likely new
+  // (This is still an approximation without full history)
+  const newCustomers = Array.from(customerOrderCounts.entries()).filter(([_email, count]) => count === 1).length;
+
   const totalCustomers = customerSet.size;
-  const newCustomers = newCustomerSet.size;
   const returningCustomers = totalCustomers - newCustomers;
   const averageOrdersPerCustomer = totalCustomers > 0 ? orders.length / totalCustomers : 0;
-  
+
   return {
     totalCustomers,
     newCustomers,

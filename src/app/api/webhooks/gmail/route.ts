@@ -92,8 +92,11 @@ export async function POST(request: NextRequest) {
         logger.warn('Gmail webhook: invalid or missing auth token', { route: '/api/webhooks/gmail' });
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
       }
+    } else if (process.env.NODE_ENV === 'production') {
+      logger.error('Gmail webhook: GMAIL_WEBHOOK_SECRET not configured — rejecting in production', new Error('Missing GMAIL_WEBHOOK_SECRET'), { route: '/api/webhooks/gmail' });
+      return NextResponse.json({ error: 'Webhook not configured' }, { status: 500 });
     } else {
-      logger.warn('Gmail webhook: GMAIL_WEBHOOK_SECRET not configured, skipping auth', { route: '/api/webhooks/gmail' });
+      logger.warn('Gmail webhook: GMAIL_WEBHOOK_SECRET not configured — skipping in development', { route: '/api/webhooks/gmail' });
     }
 
     // Gmail sends push notifications as JSON

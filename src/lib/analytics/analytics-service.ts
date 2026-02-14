@@ -688,10 +688,13 @@ async function calculateConversionRates(workspaceId: string): Promise<Conversion
   // Calculate rates
   const rates: ConversionRateItem[] = [];
   transitions.forEach((transition) => {
-    // Count deals in "from" stage
-    const fromStageCount = deals.filter(d => d.stage === transition.from).length;
+    // Count deals that have ever entered the "from" stage (from history)
+    const fromStageCount = deals.filter(d => {
+      const history = d.stageHistory ?? [];
+      return history.some(h => h.stage === transition.from);
+    }).length;
     const rate = fromStageCount > 0 ? (transition.count / fromStageCount) * 100 : 0;
-    
+
     rates.push({
       fromStage: transition.from,
       toStage: transition.to,
@@ -699,7 +702,7 @@ async function calculateConversionRates(workspaceId: string): Promise<Conversion
       deals: transition.count,
     });
   });
-  
+
   return rates;
 }
 

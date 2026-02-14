@@ -83,10 +83,20 @@ export async function executeWorkflowImpl(
       }
     }
 
-    // Execute actions sequentially
+    // Execute actions sequentially with timeout protection
     for (const action of workflow.actions) {
       try {
-        const result = await executeAction(action, triggerData, workflow);
+        // MAJ-40: Timeout wrapper to prevent runaway executions (30 seconds)
+        const EXECUTION_TIMEOUT_MS = 30000;
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          setTimeout(() => reject(new Error('Action execution timeout (30s)')), EXECUTION_TIMEOUT_MS);
+        });
+
+        const result = await Promise.race([
+          executeAction(action, triggerData, workflow),
+          timeoutPromise,
+        ]);
+
         execution.actionResults.push({
           actionId: action.id,
           status: 'success',
@@ -99,7 +109,7 @@ export async function executeWorkflowImpl(
           status: 'failed',
           error: errorMessage,
         });
-        
+
         // Stop execution if action fails and workflow is set to stop on error
         if (workflow.settings.onError === 'stop') {
           execution.status = 'failed';

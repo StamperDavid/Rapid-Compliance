@@ -291,6 +291,32 @@ export async function PUT(request: NextRequest) {
     };
 
     if (action === 'cancel') {
+      // MAJ-8: Call Stripe API to cancel subscription at period end
+      const existingSubId = existing.stripeSubscriptionId;
+      if (typeof existingSubId === 'string' && existingSubId) {
+        try {
+          const stripeKeys = await apiKeyService.getServiceKey(PLATFORM_ID, 'stripe');
+          const keys = stripeKeys as { secretKey?: string } | null;
+          if (keys?.secretKey) {
+            const Stripe = (await import('stripe')).default;
+            const stripe = new Stripe(keys.secretKey, { apiVersion: '2023-10-16' });
+            await stripe.subscriptions.update(existingSubId, {
+              cancel_at_period_end: true,
+            });
+            updates.cancelAtPeriodEnd = true;
+            logger.info('Stripe subscription set to cancel at period end', {
+              route: '/api/subscriptions',
+              stripeSubscriptionId: existingSubId,
+            });
+          }
+        } catch (stripeError) {
+          logger.error('Failed to cancel Stripe subscription — local cancel will proceed',
+            stripeError instanceof Error ? stripeError : new Error(String(stripeError)), {
+              route: '/api/subscriptions',
+              stripeSubscriptionId: typeof existingSubId === 'string' ? existingSubId : 'unknown',
+            });
+        }
+      }
       updates.status = 'cancelled';
       updates.cancelledAt = new Date().toISOString();
     } else if (action === 'reactivate') {

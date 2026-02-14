@@ -203,13 +203,15 @@ export class FirestoreService {
     merge: boolean = true
   ): Promise<void> {
     const firestoreDb = ensureFirestore();
-    
+
     try {
       const docRef = doc(firestoreDb, collectionPath, docId);
+      const docSnap = merge ? await getDoc(docRef) : null;
+      const isNewDoc = !docSnap?.exists();
       const dataWithTimestamps = {
         ...data,
         updatedAt: serverTimestamp(),
-        ...(merge ? {} : { createdAt: serverTimestamp() }),
+        ...(isNewDoc ? { createdAt: serverTimestamp() } : {}),
       };
       await setDoc(docRef, dataWithTimestamps, { merge });
     } catch (error) {

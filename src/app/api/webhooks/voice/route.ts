@@ -59,8 +59,13 @@ export async function POST(request: NextRequest) {
         logger.warn('Invalid Twilio signature', { route: '/api/webhooks/voice' });
         return NextResponse.json({ error: 'Invalid webhook signature' }, { status: 401 });
       }
+    } else if (process.env.NODE_ENV === 'production') {
+      logger.error('TWILIO_AUTH_TOKEN not configured — rejecting in production', new Error('Missing TWILIO_AUTH_TOKEN'), {
+        route: '/api/webhooks/voice',
+      });
+      return NextResponse.json({ error: 'Webhook not configured' }, { status: 500 });
     } else {
-      logger.warn('TWILIO_AUTH_TOKEN not configured - skipping signature verification', {
+      logger.warn('TWILIO_AUTH_TOKEN not configured — skipping in development', {
         route: '/api/webhooks/voice',
       });
     }

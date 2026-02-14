@@ -7,7 +7,8 @@ import { requireAuth } from '@/lib/auth/api-auth';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import Stripe from 'stripe';
 import { z } from 'zod';
-import { getAPIKey } from '@/lib/config/api-keys';
+import { apiKeyService } from '@/lib/api-keys/api-key-service';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
@@ -37,6 +38,7 @@ const checkoutSessionSchema = z.object({
 });
 
 interface CartItem {
+  productId?: string;
   name: string;
   description?: string;
   image?: string;
@@ -46,6 +48,9 @@ interface CartItem {
 
 interface Cart {
   items?: CartItem[];
+  discountCode?: string;
+  discountAmount?: number;
+  discountType?: 'percentage' | 'fixed';
 }
 
 
@@ -68,16 +73,13 @@ export async function POST(request: NextRequest) {
     }
     const { workspaceId, customerInfo, shippingAddress, billingAddress, shippingMethodId } = parseResult.data;
 
-    // Penthouse model: use PLATFORM_ID
-    const { PLATFORM_ID } = await import('@/lib/constants/platform');
-
-    // Get Stripe API key
-    const stripeKey = await getAPIKey('stripe_secret');
-    if (!stripeKey) {
-      return errors.badRequest('Stripe not configured');
+    // MAJ-3: Standardized Stripe key retrieval via apiKeyService
+    const stripeKeys = await apiKeyService.getServiceKey(PLATFORM_ID, 'stripe') as { secretKey?: string } | null;
+    if (!stripeKeys?.secretKey) {
+      return errors.badRequest('Stripe not configured. Please add Stripe API keys in settings.');
     }
 
-    const stripe = new Stripe(stripeKey, { apiVersion: '2023-10-16' });
+    const stripe = new Stripe(stripeKeys.secretKey, { apiVersion: '2023-10-16' });
 
     // Get cart
     const cart = await FirestoreService.get<Cart>(
@@ -87,6 +89,32 @@ export async function POST(request: NextRequest) {
 
     if (!cart?.items || cart.items.length === 0) {
       return errors.badRequest('Cart is empty');
+    }
+
+    // MAJ-6: Validate stock for items with product IDs
+    for (const item of cart.items) {
+      if (item.productId) {
+        const product = await FirestoreService.get<{ stockLevel?: number }>(
+          `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/${workspaceId}/entities/products/records`,
+          item.productId
+        );
+        if (product && typeof product.stockLevel === 'number' && product.stockLevel < item.quantity) {
+          return errors.badRequest(
+            `Insufficient stock for "${item.name}". Available: ${product.stockLevel}, Requested: ${item.quantity}`
+          );
+        }
+      }
+    }
+
+    // MAJ-4: Calculate discount if cart has one applied
+    let _discountCents = 0;
+    if (cart.discountAmount && cart.discountAmount > 0) {
+      const subtotal = cart.items.reduce((sum, i) => sum + i.price * i.quantity, 0);
+      if (cart.discountType === 'percentage') {
+        _discountCents = Math.round(subtotal * cart.discountAmount / 100);
+      } else {
+        _discountCents = Math.round(cart.discountAmount);
+      }
     }
 
     // Generate order ID upfront so it can be embedded in Stripe session metadata

@@ -230,7 +230,7 @@ const paymentProviderSchema = z.object({
   enabled: z.boolean(),
   isDefault: z.boolean(),
   mode: z.string().optional(),
-}).passthrough();
+});
 
 const shippingMethodSchema = z.object({
   id: z.string(),
@@ -241,7 +241,7 @@ const shippingMethodSchema = z.object({
   carrier: z.string().optional(),
   service: z.string().optional(),
   estimatedDays: z.object({ min: z.number(), max: z.number() }).optional(),
-}).passthrough();
+});
 
 const taxRateSchema = z.object({
   name: z.string(),
@@ -254,7 +254,7 @@ const taxRateSchema = z.object({
   priority: z.number(),
   compound: z.boolean().optional(),
   applyToShipping: z.boolean().optional(),
-}).passthrough();
+});
 
 export const ecommerceConfigSchema = z.object({
   productSchema: z.string(),
@@ -263,14 +263,14 @@ export const ecommerceConfigSchema = z.object({
   ),
   payments: z.object({
     providers: z.array(paymentProviderSchema),
-  }).passthrough().optional(),
+  }).optional(),
   shipping: z.object({
     freeShipping: z.object({
       enabled: z.boolean(),
       minOrderAmount: z.number().optional(),
     }).optional(),
     methods: z.array(shippingMethodSchema).optional(),
-  }).passthrough().optional(),
+  }).optional(),
   tax: z.object({
     enabled: z.boolean(),
     calculationType: z.enum(['manual', 'automated']).optional(),
@@ -278,7 +278,7 @@ export const ecommerceConfigSchema = z.object({
     settings: z.object({
       pricesIncludeTax: z.boolean().optional(),
     }).optional(),
-  }).passthrough().optional(),
+  }).optional(),
   notifications: z.object({
     customer: z.object({
       orderConfirmation: z.object({
@@ -287,21 +287,21 @@ export const ecommerceConfigSchema = z.object({
         body: z.string(),
         fromEmail: z.string(),
         fromName: z.string(),
-      }).passthrough().optional(),
-    }).passthrough().optional(),
-  }).passthrough().optional(),
+      }).optional(),
+    }).optional(),
+  }).optional(),
   inventory: z.object({
     trackInventory: z.boolean(),
     inventoryField: z.string().optional(),
-  }).passthrough().optional(),
+  }).optional(),
   integration: z.object({
     createCustomerEntity: z.boolean().optional(),
     customerSchema: z.string().optional(),
     createOrderEntity: z.boolean().optional(),
     orderSchema: z.string().optional(),
     triggerWorkflows: z.boolean().optional(),
-  }).passthrough().optional(),
-}).passthrough();
+  }).optional(),
+});
 
 /**
  * Fetch and validate e-commerce config from Firestore.

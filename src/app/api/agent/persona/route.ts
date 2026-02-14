@@ -17,7 +17,7 @@ const PersonaDataSchema = z.object({
   proactivityLevel: z.string().optional(),
   empathyLevel: z.string().optional(),
   version: z.number().optional(),
-}).passthrough();
+});
 
 export async function GET(
   req: NextRequest

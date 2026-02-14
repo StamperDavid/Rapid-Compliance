@@ -48,7 +48,21 @@ export class SequenceEngine {
     prospectId: string,
     sequenceId: string
   ): Promise<ProspectEnrollment> {
+    // MAJ-30: Race condition prevention - check-then-create pattern
+    // Use Firestore query to check for existing enrollment before creating
+    const { where } = await import('firebase/firestore');
+    const existingEnrollments = await FirestoreService.getAll<ProspectEnrollment>(
+      getSubCollection('enrollments'),
+      [
+        where('prospectId', '==', prospectId),
+        where('sequenceId', '==', sequenceId),
+        where('status', '==', 'active'),
+      ]
+    );
 
+    if (existingEnrollments.length > 0) {
+      throw new Error('Prospect already enrolled in this sequence');
+    }
 
     // Load sequence
     const sequence = await this.getSequence(sequenceId);
@@ -58,12 +72,6 @@ export class SequenceEngine {
 
     if (sequence.status !== 'active') {
       throw new Error('Cannot enroll in inactive sequence');
-    }
-
-    // Check if already enrolled
-    const existing = await this.getEnrollment(prospectId, sequenceId);
-    if (existing?.status === 'active') {
-      throw new Error('Prospect already enrolled in this sequence');
     }
 
     // Create enrollment

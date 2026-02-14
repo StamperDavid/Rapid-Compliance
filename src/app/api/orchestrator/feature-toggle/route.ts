@@ -11,6 +11,7 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { FeatureToggleService, type FeatureCategory } from '@/lib/orchestrator/feature-toggle-service';
+import { logger } from '@/lib/logger/logger';
 
 export const dynamic = 'force-dynamic';
 
@@ -127,7 +128,7 @@ export async function POST(request: NextRequest) {
         );
     }
   } catch (error) {
-    console.error('Feature toggle error:', error);
+    logger.error('Feature toggle error:', error instanceof Error ? error : new Error(String(error)));
     return NextResponse.json(
       { error: 'Failed to toggle feature', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
@@ -135,8 +136,12 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function GET(_request: NextRequest) {
+export async function GET(request: NextRequest) {
   try {
+    // MAJ-42: Feature toggle GET requires authentication
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {return authResult;}
+
     const settings = await FeatureToggleService.getVisibilitySettings();
     const navigation = await FeatureToggleService.getFilteredNavigation();
     const hiddenCount = await FeatureToggleService.getHiddenCount();
@@ -147,7 +152,7 @@ export async function GET(_request: NextRequest) {
       hiddenCount,
     });
   } catch (error) {
-    console.error('Feature toggle fetch error:', error);
+    logger.error('Feature toggle fetch error:', error instanceof Error ? error : new Error(String(error)));
     return NextResponse.json(
       { error: 'Failed to fetch feature settings' },
       { status: 500 }

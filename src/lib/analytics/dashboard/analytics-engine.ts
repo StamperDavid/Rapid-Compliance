@@ -777,9 +777,11 @@ async function getRevenueMetrics(
   
   const totalRevenue = wonDeals.reduce((sum: number, d: DealAnalyticsRecord) => sum + (d.value ?? 0), 0);
   const previousRevenue = previousWonDeals.reduce((sum: number, d: DealAnalyticsRecord) => sum + (d.value ?? 0), 0);
-  
-  // Get quota (would come from workspace settings)
-  const quota = 100000; // Default quota for pipeline target calculations
+
+  // Get quota from platform settings or default
+  // TODO: Add getOrgSettings method to adminDal to fetch revenueQuota from Firestore
+  // For now, use default quota
+  const quota = 100000; // Default quota - make configurable via platform settings
   const quotaAttainment = quota > 0 ? (totalRevenue / quota) * 100 : 0;
   
   // Get revenue forecast from forecasting engine

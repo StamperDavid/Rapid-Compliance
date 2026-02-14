@@ -144,10 +144,14 @@ export async function POST(request: NextRequest) {
       logger.debug('SendGrid webhook signature verified', {
         route: '/api/webhooks/email',
       });
-    } else {
-      logger.warn('SendGrid webhook verification key not configured - skipping signature verification', {
+    } else if (process.env.NODE_ENV === 'production') {
+      logger.error('SendGrid webhook verification key not configured — rejecting in production', new Error('Missing SENDGRID_WEBHOOK_VERIFICATION_KEY'), {
         route: '/api/webhooks/email',
-        env: process.env.NODE_ENV,
+      });
+      return NextResponse.json({ success: false, error: 'Webhook not configured' }, { status: 500 });
+    } else {
+      logger.warn('SendGrid webhook verification key not configured — skipping in development', {
+        route: '/api/webhooks/email',
       });
     }
 

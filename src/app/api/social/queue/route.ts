@@ -20,7 +20,7 @@ export const dynamic = 'force-dynamic';
 
 // Request validation schemas
 const addToQueueSchema = z.object({
-  content: z.string().min(1, 'Content is required'),
+  content: z.string().min(1, 'Content is required').max(3000, 'Content exceeds maximum length (3000 characters)'),
   platforms: z.array(z.enum(['twitter', 'linkedin'])).min(1, 'At least one platform is required'),
   mediaUrls: z.array(z.string().url()).optional(),
   hashtags: z.array(z.string()).optional(),
@@ -87,6 +87,18 @@ export async function POST(request: NextRequest) {
         {
           success: false,
           error: 'Content exceeds Twitter character limit (280)',
+          currentLength: data.content.length,
+        },
+        { status: 400 }
+      );
+    }
+
+    // Validate content length for LinkedIn
+    if (data.platforms.includes('linkedin') && data.content.length > 3000) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Content exceeds LinkedIn character limit (3000)',
           currentLength: data.content.length,
         },
         { status: 400 }
@@ -311,6 +323,18 @@ export async function PUT(request: NextRequest) {
         {
           success: false,
           error: 'Content exceeds Twitter character limit (280)',
+          currentLength: data.content.length,
+        },
+        { status: 400 }
+      );
+    }
+
+    // Validate content length for LinkedIn
+    if (data.platforms.includes('linkedin') && data.content.length > 3000) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Content exceeds LinkedIn character limit (3000)',
           currentLength: data.content.length,
         },
         { status: 400 }

@@ -128,10 +128,28 @@ export async function detectLeadDuplicates(
   lead: Partial<Lead>
 ): Promise<DuplicateDetectionResult> {
   try {
-    // Get all leads in organization
-    const existingLeads = await FirestoreService.getAll<Lead>(
-      `${getSubCollection('workspaces')}/${workspaceId}/entities/leads/records`
-    );
+    // Get leads with pagination to avoid fetching all records
+    const { where } = await import('firebase/firestore');
+    const constraints = [];
+
+    // Add query filters to narrow scope
+    if (lead.email) {
+      constraints.push(where('email', '==', lead.email));
+    } else if (lead.phone) {
+      constraints.push(where('phone', '==', lead.phone));
+    }
+
+    const existingLeads = constraints.length > 0
+      ? await FirestoreService.getAll<Lead>(
+          `${getSubCollection('workspaces')}/${workspaceId}/entities/leads/records`,
+          constraints
+        )
+      : await FirestoreService.getAllPaginated<Lead>(
+          `${getSubCollection('workspaces')}/${workspaceId}/entities/leads/records`,
+          [],
+          100 // Limit to 100 records for fuzzy matching
+        ).then(result => result.data);
+
     const matches: DuplicateMatch[] = [];
 
     // Check each existing lead for similarity
@@ -266,9 +284,28 @@ export async function detectContactDuplicates(
   contact: Partial<Contact>
 ): Promise<DuplicateDetectionResult> {
   try {
-    const existingContacts = await FirestoreService.getAll<Contact>(
-      `${getSubCollection('workspaces')}/${workspaceId}/entities/contacts/records`
-    );
+    // Get contacts with pagination to avoid fetching all records
+    const { where } = await import('firebase/firestore');
+    const constraints = [];
+
+    // Add query filters to narrow scope
+    if (contact.email) {
+      constraints.push(where('email', '==', contact.email));
+    } else if (contact.phone) {
+      constraints.push(where('phone', '==', contact.phone));
+    }
+
+    const existingContacts = constraints.length > 0
+      ? await FirestoreService.getAll<Contact>(
+          `${getSubCollection('workspaces')}/${workspaceId}/entities/contacts/records`,
+          constraints
+        )
+      : await FirestoreService.getAllPaginated<Contact>(
+          `${getSubCollection('workspaces')}/${workspaceId}/entities/contacts/records`,
+          [],
+          100 // Limit to 100 records for fuzzy matching
+        ).then(result => result.data);
+
     const matches: DuplicateMatch[] = [];
 
     for (const existingContact of existingContacts) {
@@ -351,9 +388,28 @@ export async function detectCompanyDuplicates(
   company: Partial<Company>
 ): Promise<DuplicateDetectionResult> {
   try {
-    const existingCompanies = await FirestoreService.getAll<Company>(
-      `${getSubCollection('workspaces')}/${workspaceId}/entities/companies/records`
-    );
+    // Get companies with pagination to avoid fetching all records
+    const { where } = await import('firebase/firestore');
+    const constraints = [];
+
+    // Add query filters to narrow scope
+    if (company.website) {
+      constraints.push(where('website', '==', company.website));
+    } else if (company.phone) {
+      constraints.push(where('phone', '==', company.phone));
+    }
+
+    const existingCompanies = constraints.length > 0
+      ? await FirestoreService.getAll<Company>(
+          `${getSubCollection('workspaces')}/${workspaceId}/entities/companies/records`,
+          constraints
+        )
+      : await FirestoreService.getAllPaginated<Company>(
+          `${getSubCollection('workspaces')}/${workspaceId}/entities/companies/records`,
+          [],
+          100 // Limit to 100 records for fuzzy matching
+        ).then(result => result.data);
+
     const matches: DuplicateMatch[] = [];
 
     for (const existingCompany of existingCompanies) {

@@ -77,6 +77,7 @@ export async function GET(request: NextRequest) {
     const result = await getWorkflows(workspaceId, filters);
 
     return NextResponse.json({
+      success: true,
       workflows: result.data,
       hasMore: result.hasMore,
     });
@@ -149,7 +150,7 @@ export async function POST(request: NextRequest) {
       workspaceId
     );
 
-    return NextResponse.json({ workflow: newWorkflow }, { status: 201 });
+    return NextResponse.json({ success: true, workflow: newWorkflow }, { status: 201 });
   } catch (error: unknown) {
     logger.error('Failed to create workflow', error instanceof Error ? error : new Error(String(error)));
     const message = error instanceof Error ? error.message : 'Failed to create workflow';

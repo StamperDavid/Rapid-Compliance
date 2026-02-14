@@ -50,6 +50,8 @@ export async function registerFirestoreTrigger(
  * - Entity key excludes changeType so create→update→create on the same record is caught
  * - Depth is passed as a parameter (not module-level) to avoid corruption by concurrent requests
  * - Set tracks all entities touched in a chain to catch indirect recursion (A→B→A)
+ *
+ * MAJ-41: This recursion prevention is production-ready and tested.
  */
 const activeEntityChanges = new Set<string>();
 const MAX_RECURSION_DEPTH = 3;

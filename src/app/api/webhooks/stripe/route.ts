@@ -1,6 +1,10 @@
 /**
  * Stripe Webhook Handler
  * Processes payment events from Stripe and stores them in Firestore
+ *
+ * MAJ-1: Subscription webhooks now fully processed (create/update/cancel)
+ * MAJ-2: Processing errors return 500 for Stripe retry; permanent failures return 200
+ * MAJ-10: charge.refunded tracked for revenue analytics accuracy
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
@@ -10,8 +14,13 @@ import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { verifyStripeSignature } from '@/lib/security/webhook-verification';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { PLATFORM_ID } from '@/lib/constants/platform';
+import { where, limit } from 'firebase/firestore';
 
 export const dynamic = 'force-dynamic';
+
+const EVENTS_PATH = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/stripe_events`;
+const SUBSCRIPTIONS_PATH = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/subscriptions`;
+const ORDERS_PATH = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/orders`;
 
 /**
  * Stripe webhook event interface
@@ -43,6 +52,23 @@ function isStripeEvent(value: unknown): value is StripeWebhookEvent {
     event.data !== null &&
     typeof (event.data as Record<string, unknown>).object === 'object'
   );
+}
+
+/**
+ * Find user subscription by Stripe subscription ID
+ */
+async function findUserSubscription(
+  stripeSubscriptionId: string
+): Promise<Record<string, unknown> | null> {
+  try {
+    const results = await FirestoreService.getAll<Record<string, unknown>>(
+      SUBSCRIPTIONS_PATH,
+      [where('stripeSubscriptionId', '==', stripeSubscriptionId), limit(1)]
+    );
+    return results.length > 0 ? results[0] ?? null : null;
+  } catch {
+    return null;
+  }
 }
 
 export async function POST(request: NextRequest) {
@@ -121,11 +147,11 @@ export async function POST(request: NextRequest) {
     });
 
     // Idempotency: check if this event was already processed
-    const existingEvent = await FirestoreService.get(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/stripe_events`,
+    const existingEvent = await FirestoreService.get<{ processed?: boolean }>(
+      EVENTS_PATH,
       event.id
     );
-    if (existingEvent) {
+    if (existingEvent?.processed) {
       logger.info('Stripe webhook duplicate event - skipping', {
         route: '/api/webhooks/stripe',
         eventId: event.id,
@@ -134,13 +160,28 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true, duplicate: true });
     }
 
-    // Process the event (wrapped in try-catch to always return 200)
+    // Store event as received before processing
+    await FirestoreService.set(EVENTS_PATH, event.id, {
+      id: event.id,
+      type: event.type,
+      data: event.data,
+      created: event.created,
+      receivedAt: new Date().toISOString(),
+      processed: false,
+    });
+
+    // Process the event — return 500 on failure so Stripe retries
     try {
       await processStripeEvent(event);
+
+      // Mark event as successfully processed
+      await FirestoreService.update(EVENTS_PATH, event.id, {
+        processed: true,
+        processedAt: new Date().toISOString(),
+      });
     } catch (error) {
-      // Log the error but return 200 to prevent Stripe retries
       logger.error(
-        'Stripe event processing error',
+        'Stripe event processing error — will be retried',
         error instanceof Error ? error : new Error(String(error)),
         {
           route: '/api/webhooks/stripe',
@@ -148,7 +189,11 @@ export async function POST(request: NextRequest) {
           eventType: event.type,
         }
       );
-      // Still return success to acknowledge receipt
+      // Return 500 so Stripe retries; idempotency check prevents double-processing
+      return NextResponse.json(
+        { success: false, error: 'Event processing failed' },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json({
@@ -161,10 +206,10 @@ export async function POST(request: NextRequest) {
       error instanceof Error ? error : new Error(String(error)),
       { route: '/api/webhooks/stripe' }
     );
-    // Return 200 even on parsing errors to prevent Stripe retries
+    // Return 200 for permanent failures (bad payload) to prevent futile retries
     return NextResponse.json({
-      success: true,
-      note: 'Error logged, acknowledged to prevent retries',
+      success: false,
+      error: 'Webhook handler error — acknowledged',
     });
   }
 }
@@ -173,20 +218,6 @@ export async function POST(request: NextRequest) {
  * Process a Stripe webhook event
  */
 async function processStripeEvent(event: StripeWebhookEvent): Promise<void> {
-  // Store event in Firestore for audit trail
-  await FirestoreService.set(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/stripe_events`,
-    event.id,
-    {
-      id: event.id,
-      type: event.type,
-      data: event.data,
-      created: event.created,
-      processedAt: new Date().toISOString(),
-    }
-  );
-
-  // Handle different event types
   switch (event.type) {
     case 'checkout.session.completed': {
       const session = event.data.object;
@@ -202,15 +233,11 @@ async function processStripeEvent(event: StripeWebhookEvent): Promise<void> {
         const metadata = session.metadata as Record<string, unknown>;
         const orderId = metadata.orderId;
         if (typeof orderId === 'string') {
-          await FirestoreService.update(
-            `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/orders`,
-            orderId,
-            {
-              status: 'completed',
-              stripeSessionId: String(session.id ?? ''),
-              completedAt: new Date().toISOString(),
-            }
-          );
+          await FirestoreService.update(ORDERS_PATH, orderId, {
+            status: 'completed',
+            stripeSessionId: String(session.id ?? ''),
+            completedAt: new Date().toISOString(),
+          });
           logger.info('Order updated to completed', {
             route: '/api/webhooks/stripe',
             orderId,
@@ -253,10 +280,8 @@ async function processStripeEvent(event: StripeWebhookEvent): Promise<void> {
       // Safety net: update order status if client-side completion failed
       if (piId) {
         try {
-          const { where, limit } = await import('firebase/firestore');
-          const ordersPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/orders`;
           const matchingOrders = await FirestoreService.getAll<Record<string, unknown>>(
-            ordersPath,
+            ORDERS_PATH,
             [where('paymentIntentId', '==', piId), limit(1)]
           );
 
@@ -265,7 +290,7 @@ async function processStripeEvent(event: StripeWebhookEvent): Promise<void> {
             const existingOrderId = String(existingOrder?.id ?? '');
             const existingStatus = String(existingOrder?.status ?? '');
             if (existingOrderId && existingStatus !== 'processing' && existingStatus !== 'completed') {
-              await FirestoreService.update(ordersPath, existingOrderId, {
+              await FirestoreService.update(ORDERS_PATH, existingOrderId, {
                 status: 'processing',
                 paymentStatus: 'captured',
                 webhookUpdatedAt: new Date().toISOString(),
@@ -299,45 +324,113 @@ async function processStripeEvent(event: StripeWebhookEvent): Promise<void> {
       break;
     }
 
-    case 'customer.subscription.created': {
-      const subscription = event.data.object;
-      logger.info('Subscription created', {
-        route: '/api/webhooks/stripe',
-        subscriptionId: String(subscription.id ?? ''),
-        customerId: String(subscription.customer ?? ''),
-        status: String(subscription.status ?? ''),
-      });
-      break;
-    }
-
+    case 'customer.subscription.created':
     case 'customer.subscription.updated': {
       const subscription = event.data.object;
-      logger.info('Subscription updated', {
+      const subscriptionId = String(subscription.id ?? '');
+      const customerId = String(subscription.customer ?? '');
+      const status = String(subscription.status ?? '');
+      const currentPeriodEnd = typeof subscription.current_period_end === 'number'
+        ? subscription.current_period_end
+        : null;
+      const cancelAtPeriodEnd = subscription.cancel_at_period_end === true;
+
+      // Store in stripe_subscriptions for audit/lookup
+      await FirestoreService.set(
+        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/stripe_subscriptions`,
+        subscriptionId,
+        {
+          id: subscriptionId,
+          customerId,
+          status,
+          currentPeriodEnd,
+          cancelAtPeriodEnd,
+          updatedAt: new Date().toISOString(),
+          eventType: event.type,
+        }
+      );
+
+      // Sync to user's subscription record
+      const userSub = await findUserSubscription(subscriptionId);
+      if (userSub?.id) {
+        await FirestoreService.update(SUBSCRIPTIONS_PATH, String(userSub.id), {
+          stripeStatus: status,
+          currentPeriodEnd,
+          cancelAtPeriodEnd,
+          updatedAt: new Date().toISOString(),
+        });
+      }
+
+      logger.info(`Subscription ${event.type === 'customer.subscription.created' ? 'created' : 'updated'}`, {
         route: '/api/webhooks/stripe',
-        subscriptionId: String(subscription.id ?? ''),
-        customerId: String(subscription.customer ?? ''),
-        status: String(subscription.status ?? ''),
+        subscriptionId,
+        customerId,
+        status,
       });
       break;
     }
 
     case 'customer.subscription.deleted': {
       const subscription = event.data.object;
-      logger.warn('Subscription cancelled', {
+      const subscriptionId = String(subscription.id ?? '');
+      const customerId = String(subscription.customer ?? '');
+
+      // Update stripe_subscriptions
+      await FirestoreService.set(
+        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/stripe_subscriptions`,
+        subscriptionId,
+        {
+          id: subscriptionId,
+          customerId,
+          status: 'canceled',
+          canceledAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          eventType: event.type,
+        }
+      );
+
+      // Sync cancellation to user's subscription record
+      const userSub = await findUserSubscription(subscriptionId);
+      if (userSub?.id) {
+        await FirestoreService.update(SUBSCRIPTIONS_PATH, String(userSub.id), {
+          status: 'cancelled',
+          stripeStatus: 'canceled',
+          cancelledAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        });
+      }
+
+      logger.warn('Subscription cancelled via Stripe', {
         route: '/api/webhooks/stripe',
-        subscriptionId: String(subscription.id ?? ''),
-        customerId: String(subscription.customer ?? ''),
-        canceledAt: typeof subscription.canceled_at === 'number' ? subscription.canceled_at : 0,
+        subscriptionId,
+        customerId,
       });
       break;
     }
 
     case 'invoice.payment_succeeded': {
       const invoice = event.data.object;
+      const subscriptionId = typeof invoice.subscription === 'string'
+        ? invoice.subscription
+        : null;
+
+      // Update subscription payment status if subscription-related
+      if (subscriptionId) {
+        const userSub = await findUserSubscription(subscriptionId);
+        if (userSub?.id) {
+          await FirestoreService.update(SUBSCRIPTIONS_PATH, String(userSub.id), {
+            lastPaymentAt: new Date().toISOString(),
+            lastPaymentAmount: typeof invoice.amount_paid === 'number' ? invoice.amount_paid : 0,
+            paymentStatus: 'current',
+            updatedAt: new Date().toISOString(),
+          });
+        }
+      }
+
       logger.info('Invoice payment succeeded', {
         route: '/api/webhooks/stripe',
         invoiceId: String(invoice.id ?? ''),
-        customerId: String(invoice.customer ?? ''),
+        subscriptionId,
         amount: typeof invoice.amount_paid === 'number' ? invoice.amount_paid : 0,
       });
       break;
@@ -345,12 +438,70 @@ async function processStripeEvent(event: StripeWebhookEvent): Promise<void> {
 
     case 'invoice.payment_failed': {
       const invoice = event.data.object;
+      const subscriptionId = typeof invoice.subscription === 'string'
+        ? invoice.subscription
+        : null;
+
+      // Flag subscription payment failure
+      if (subscriptionId) {
+        const userSub = await findUserSubscription(subscriptionId);
+        if (userSub?.id) {
+          await FirestoreService.update(SUBSCRIPTIONS_PATH, String(userSub.id), {
+            paymentStatus: 'past_due',
+            lastPaymentFailedAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          });
+        }
+      }
+
       logger.warn('Invoice payment failed', {
         route: '/api/webhooks/stripe',
         invoiceId: String(invoice.id ?? ''),
-        customerId: String(invoice.customer ?? ''),
+        subscriptionId,
         amount: typeof invoice.amount_due === 'number' ? invoice.amount_due : 0,
         attemptCount: typeof invoice.attempt_count === 'number' ? invoice.attempt_count : 0,
+      });
+      break;
+    }
+
+    case 'charge.refunded': {
+      const charge = event.data.object;
+      const paymentIntentId = typeof charge.payment_intent === 'string'
+        ? charge.payment_intent
+        : null;
+      const amountRefunded = typeof charge.amount_refunded === 'number'
+        ? charge.amount_refunded
+        : 0;
+
+      // Update order with refund info
+      if (paymentIntentId) {
+        try {
+          const matchingOrders = await FirestoreService.getAll<Record<string, unknown>>(
+            ORDERS_PATH,
+            [where('paymentIntentId', '==', paymentIntentId), limit(1)]
+          );
+          if (matchingOrders.length > 0 && matchingOrders[0]?.id) {
+            const chargeAmount = typeof charge.amount === 'number' ? charge.amount : 0;
+            await FirestoreService.update(ORDERS_PATH, String(matchingOrders[0].id), {
+              refundedAmount: amountRefunded,
+              refundedAt: new Date().toISOString(),
+              status: amountRefunded >= chargeAmount ? 'refunded' : 'partially_refunded',
+              updatedAt: new Date().toISOString(),
+            });
+          }
+        } catch (refundError) {
+          logger.warn('Failed to update order refund status (non-fatal)', {
+            paymentIntentId,
+            error: refundError instanceof Error ? refundError.message : 'Unknown',
+          });
+        }
+      }
+
+      logger.info('Charge refunded', {
+        route: '/api/webhooks/stripe',
+        chargeId: String(charge.id ?? ''),
+        paymentIntentId,
+        amountRefunded,
       });
       break;
     }

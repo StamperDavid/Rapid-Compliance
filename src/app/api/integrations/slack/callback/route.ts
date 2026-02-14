@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
   // Zod validation for OAuth callback params
   const validation = oauthCallbackSchema.safeParse({ code, state });
   if (!validation.success) {
-    return NextResponse.redirect('/integrations?error=oauth_failed');
+    return NextResponse.redirect(new URL('/integrations?error=oauth_failed', process.env.NEXT_PUBLIC_APP_URL ?? request.url));
   }
 
   try {
@@ -60,9 +60,9 @@ export async function GET(request: NextRequest) {
       false
     );
 
-    return NextResponse.redirect(`/integrations?success=slack`);
+    return NextResponse.redirect(new URL('/integrations?success=slack', process.env.NEXT_PUBLIC_APP_URL ?? request.url));
   } catch (_error) {
-    return NextResponse.redirect('/integrations?error=oauth_failed');
+    return NextResponse.redirect(new URL('/integrations?error=oauth_failed', process.env.NEXT_PUBLIC_APP_URL ?? request.url));
   }
 }
 

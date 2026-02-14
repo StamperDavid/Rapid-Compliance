@@ -37,7 +37,12 @@ const UpdateFormBodySchema = z.object({
     type: z.string(),
     label: z.string(),
     order: z.number(),
-  }).passthrough()).optional(),
+    required: z.boolean().optional(),
+    placeholder: z.string().optional(),
+    defaultValue: z.unknown().optional(),
+    validation: z.record(z.unknown()).optional(),
+    options: z.array(z.unknown()).optional(),
+  })).optional(),
 });
 
 /**
@@ -132,7 +137,7 @@ export async function PUT(
           ...field,
           formId,
           workspaceId,
-          updatedAt: new Date(),
+          updatedAt: new Date().toISOString(),
         });
       });
 
@@ -173,6 +178,18 @@ export async function DELETE(
     const { searchParams } = new URL(request.url);
     const workspaceIdParam = searchParams.get('workspaceId');
     const workspaceId = workspaceIdParam ?? 'default';
+
+    // MAJ-14: Check for existing submissions before delete
+    const firestore = getDb();
+    const submissionsPath = `${getSubCollection('workspaces')}/${workspaceId}/forms/${formId}/submissions`;
+    const submissionsRef = collection(firestore, submissionsPath);
+    const submissionsSnapshot = await getDocs(submissionsRef);
+    if (!submissionsSnapshot.empty) {
+      return NextResponse.json(
+        { error: `Cannot delete form: ${submissionsSnapshot.size} submission(s) exist. Archive or delete them first.` },
+        { status: 409 }
+      );
+    }
 
     await deleteForm(workspaceId, formId);
 

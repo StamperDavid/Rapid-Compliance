@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
   const realmId = searchParams.get('realmId');
 
   if (!code || !realmId) {
-    return NextResponse.redirect('/integrations?error=oauth_failed');
+    return NextResponse.redirect(new URL('/integrations?error=oauth_failed', process.env.NEXT_PUBLIC_APP_URL ?? request.url));
   }
 
   try {
@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
     const userId = state ? await validateOAuthState(state, 'quickbooks') : null;
     if (!userId) {
       logger.warn('Invalid or expired QuickBooks OAuth state', { route: '/api/integrations/quickbooks/callback' });
-      return NextResponse.redirect('/integrations?error=invalid_state');
+      return NextResponse.redirect(new URL('/integrations?error=invalid_state', process.env.NEXT_PUBLIC_APP_URL ?? request.url));
     }
 
     const tokens = await getTokensFromCode(code);
@@ -62,10 +62,10 @@ export async function GET(request: NextRequest) {
 
     logger.info('QuickBooks integration saved', { route: '/api/integrations/quickbooks/callback', realmId });
 
-    return NextResponse.redirect('/settings/integrations?success=quickbooks');
+    return NextResponse.redirect(new URL('/settings/integrations?success=quickbooks', process.env.NEXT_PUBLIC_APP_URL ?? request.url));
   } catch (error) {
     const _errorMessage = error instanceof Error ? error.message : 'Unknown error';
     logger.error('QuickBooks OAuth callback error', error instanceof Error ? error : new Error(String(error)), { route: '/api/integrations/quickbooks/callback' });
-    return NextResponse.redirect('/integrations?error=oauth_failed');
+    return NextResponse.redirect(new URL('/integrations?error=oauth_failed', process.env.NEXT_PUBLIC_APP_URL ?? request.url));
   }
 }

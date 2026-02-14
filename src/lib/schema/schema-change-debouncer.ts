@@ -361,12 +361,20 @@ export class SchemaBatchUpdater {
       // Publish single batch event
       const { SchemaChangeEventPublisher } = await import('./schema-change-tracker');
       const { Timestamp } = await import('firebase/firestore');
+
+      // Determine the most appropriate change type based on changes
+      const changeTypes = this.changes.map(c => c.type);
+      const changeType = changeTypes.includes('field_delete') ? 'field_deleted' :
+                         changeTypes.includes('field_add') ? 'field_added' :
+                         changeTypes.includes('field_update') ? 'field_renamed' :
+                         'field_renamed'; // Generic batch change type
+
       await SchemaChangeEventPublisher.publishEvent({
         id: `sce_batch_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         workspaceId: this.workspaceId,
         schemaId: this.schemaId,
         timestamp: Timestamp.now(),
-        changeType: 'field_renamed', // Generic type for batch
+        changeType,
         affectedSystems: [],
         processed: false,
         createdAt: Timestamp.now(),

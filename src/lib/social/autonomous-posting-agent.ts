@@ -907,11 +907,13 @@ export class AutonomousPostingAgent {
     }
 
     // Attribution: Auto-append UTM parameters to URLs in content
-    let tweetContent = this.appendUtmToLinks(content, 'twitter', postId);
+    // MAJ-28: Check if UTM params would cause truncation before appending
+    const contentWithUtm = this.appendUtmToLinks(content, 'twitter', postId);
+    let tweetContent = contentWithUtm;
 
-    // Truncate content for Twitter's 280 character limit
-    if (tweetContent.length > 280) {
-      tweetContent = `${tweetContent.substring(0, 277)}...`;
+    // If UTM params cause truncation, use original content without UTM to avoid broken links
+    if (contentWithUtm.length > 280) {
+      tweetContent = content.length <= 280 ? content : `${content.substring(0, 277)}...`;
     }
 
     const result = await service.postTweet({

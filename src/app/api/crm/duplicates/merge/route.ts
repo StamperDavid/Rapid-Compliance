@@ -5,11 +5,9 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { mergeRecords } from '@/lib/crm/duplicate-detection';
 import { logger } from '@/lib/logger/logger';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { getAuthToken } from '@/lib/auth/server-auth';
-import type { RelatedEntityType } from '@/types/activity';
 
 export const dynamic = 'force-dynamic';
 
@@ -56,12 +54,52 @@ export async function POST(request: NextRequest) {
 
     const { entityType, keepId, mergeId, workspaceId } = validation.data;
 
-    const merged: unknown = await mergeRecords(
-      workspaceId,
-      entityType as RelatedEntityType,
-      keepId,
-      mergeId
-    );
+    // Use batch write for transaction safety
+    const collectionPath = `${await import('@/lib/firebase/collections').then(m => m.getSubCollection('workspaces'))}/${workspaceId}/entities/${entityType}s/records`;
+    const { FirestoreService } = await import('@/lib/db/firestore-service');
+
+    // Get both records
+    const keepRecord = await FirestoreService.get<Record<string, unknown>>(collectionPath, keepId);
+    const mergeRecord = await FirestoreService.get<Record<string, unknown>>(collectionPath, mergeId);
+
+    if (!keepRecord || !mergeRecord) {
+      return NextResponse.json(
+        { success: false, error: 'One or both records not found' },
+        { status: 404 }
+      );
+    }
+
+    // Merge data (keep newer/non-empty values)
+    const merged: Record<string, unknown> = { ...keepRecord };
+    for (const key in mergeRecord) {
+      if (['id', 'createdAt', 'updatedAt', 'workspaceId'].includes(key)) {
+        continue;
+      }
+      const mergedValue = merged[key];
+      const mergeValue = mergeRecord[key];
+      if (!mergedValue && mergeValue) {
+        merged[key] = mergeValue;
+      }
+      if (Array.isArray(mergedValue) && Array.isArray(mergeValue)) {
+        merged[key] = Array.from(new Set([...(mergedValue as unknown[]), ...(mergeValue as unknown[])]));
+      }
+    }
+    merged.updatedAt = new Date().toISOString();
+
+    // Batch write for atomicity
+    await FirestoreService.batchWrite([
+      {
+        type: 'update',
+        collectionPath,
+        docId: keepId,
+        data: merged,
+      },
+      {
+        type: 'delete',
+        collectionPath,
+        docId: mergeId,
+      },
+    ]);
 
     return NextResponse.json({
       success: true,

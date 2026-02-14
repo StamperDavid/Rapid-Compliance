@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { sendEmail } from '@/lib/email/email-service';
 import { requireAuth } from '@/lib/auth/api-auth';
-import { validateEmailCompliance } from '@/lib/compliance/can-spam-service';
+import { validateEmailCompliance, ensureCompliance } from '@/lib/compliance/can-spam-service';
 import { emailSendSchema, validateInput } from '@/lib/validation/schemas';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { logApiRequest, logApiError } from '@/lib/logging/api-logger';
@@ -90,9 +90,17 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       );
     }
 
+    // MAJ-29: Ensure HTML content includes required CAN-SPAM footer
+    const contactId = typeof emailMetadata?.contactId === 'string' ? emailMetadata.contactId : 'unknown';
+    const emailId = typeof emailMetadata?.emailId === 'string' ? emailMetadata.emailId : undefined;
+    const compliantHtml = typeof emailData.html === 'string'
+      ? ensureCompliance(emailData.html, contactId, emailId)
+      : emailData.html;
+
     // Send email with type assertion after validation
     const result = await sendEmail({
       ...emailData,
+      html: compliantHtml,
       metadata: { ...emailData.metadata, userId: user.uid },
     } as Parameters<typeof sendEmail>[0]);
 

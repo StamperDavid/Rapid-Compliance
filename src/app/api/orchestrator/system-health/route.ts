@@ -11,6 +11,7 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { SystemHealthService } from '@/lib/orchestrator/system-health-service';
+import { logger } from '@/lib/logger/logger';
 
 export const dynamic = 'force-dynamic';
 
@@ -41,7 +42,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(report);
   } catch (error) {
-    console.error('System health fetch error:', error);
+    logger.error('System health fetch error:', error instanceof Error ? error : new Error(String(error)));
     return NextResponse.json(
       { error: 'Failed to fetch system health', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
@@ -82,7 +83,7 @@ export async function POST(request: NextRequest) {
       totalCount: specialistStatus.length,
     });
   } catch (error) {
-    console.error('Specialist status fetch error:', error);
+    logger.error('Specialist status fetch error:', error instanceof Error ? error : new Error(String(error)));
     return NextResponse.json(
       { error: 'Failed to fetch specialist status' },
       { status: 500 }

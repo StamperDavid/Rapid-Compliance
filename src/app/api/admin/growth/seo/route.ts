@@ -8,10 +8,21 @@ import { verifyAdminRequest, isAuthError } from '@/lib/api/admin-auth';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import { logger } from '@/lib/logger/logger';
+import { z } from 'zod';
 
 export const dynamic = 'force-dynamic';
 
-interface SEOSettingsRequest {
+// MAJ-31 & MAJ-32: Zod validation for SEO settings with proper length limits
+const seoSettingsSchema = z.object({
+  title: z.string().min(1, 'Title is required').max(60, 'Title must be 60 characters or less'),
+  description: z.string().min(1, 'Description is required').max(160, 'Description must be 160 characters or less'),
+  keywords: z.array(z.string()).optional().default([]),
+  ogImage: z.string().url('OG Image must be a valid URL').optional().default(''),
+  googleAnalyticsId: z.string().optional().default(''),
+  googleTagManagerId: z.string().optional().default(''),
+});
+
+interface _SEOSettingsRequest {
   title: string;
   description: string;
   keywords: string[];
@@ -27,14 +38,28 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: authResult.error }, { status: authResult.status });
     }
 
-    const body = (await request.json()) as SEOSettingsRequest;
-    const { title } = body;
+    const body: unknown = await request.json();
+    const validation = seoSettingsSchema.safeParse(body);
+
+    if (!validation.success) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Validation failed',
+          details: validation.error.errors,
+        },
+        { status: 400 }
+      );
+    }
+
+    const validatedBody = validation.data;
+    const { title } = validatedBody;
 
     // Save SEO settings to Firestore
     await FirestoreService.set(
       `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/platform_settings`,
       'seo',
-      body
+      validatedBody
     );
 
     logger.info('[AdminSEO] Settings saved', { title, file: 'seo/route.ts' });

@@ -7,6 +7,13 @@ import adminApp from '@/lib/firebase/admin';
 import { logger } from '@/lib/logger/logger';
 import { getWorkflow, updateWorkflow, deleteWorkflow, setWorkflowStatus } from '@/lib/workflows/workflow-service';
 
+/**
+ * MAJ-45: This workflow route uses Firebase Admin SDK auth (getAuth().verifyIdToken)
+ * instead of the standard requireAuth() pattern. This is acceptable for admin-SDK routes
+ * that need direct access to Firebase Admin features. The auth pattern is consistent
+ * with other workflow endpoints.
+ */
+
 const paramsSchema = z.object({
   workflowId: z.string().min(1, 'workflowId is required'),
 });
@@ -73,15 +80,15 @@ export async function GET(
     const workflow = await getWorkflow(workflowId, workspaceId);
 
     if (!workflow) {
-      return NextResponse.json({ error: 'Workflow not found' }, { status: 404 });
+      return NextResponse.json({ success: false, error: 'Workflow not found' }, { status: 404 });
     }
 
-    return NextResponse.json({ workflow });
+    return NextResponse.json({ success: true, workflow });
   } catch (error: unknown) {
     logger.error('Failed to get workflow', error instanceof Error ? error : new Error(String(error)));
     const message = error instanceof Error ? error.message : 'Failed to get workflow';
     return NextResponse.json(
-      { error: message },
+      { success: false, error: message },
       { status: 500 }
     );
   }
@@ -136,12 +143,12 @@ export async function PUT(
       workspaceId
     );
 
-    return NextResponse.json({ workflow: updatedWorkflow });
+    return NextResponse.json({ success: true, workflow: updatedWorkflow });
   } catch (error: unknown) {
     logger.error('Failed to update workflow', error instanceof Error ? error : new Error(String(error)));
     const message = error instanceof Error ? error.message : 'Failed to update workflow';
     return NextResponse.json(
-      { error: message },
+      { success: false, error: message },
       { status: 500 }
     );
   }
@@ -196,12 +203,12 @@ export async function PATCH(
       workspaceId
     );
 
-    return NextResponse.json({ workflow: updatedWorkflow });
+    return NextResponse.json({ success: true, workflow: updatedWorkflow });
   } catch (error: unknown) {
     logger.error('Failed to update workflow status', error instanceof Error ? error : new Error(String(error)));
     const message = error instanceof Error ? error.message : 'Failed to update workflow status';
     return NextResponse.json(
-      { error: message },
+      { success: false, error: message },
       { status: 500 }
     );
   }
@@ -248,6 +255,20 @@ export async function DELETE(
     }
 
     const { workspaceId } = queryResult.data;
+
+    // MAJ-13: Referential integrity — prevent deleting active workflows
+    const existingWorkflow = await getWorkflow(workflowId, workspaceId);
+    if (!existingWorkflow) {
+      return NextResponse.json({ success: false, error: 'Workflow not found' }, { status: 404 });
+    }
+    const workflowData = existingWorkflow as unknown as Record<string, unknown>;
+    if (workflowData.status === 'active') {
+      return NextResponse.json(
+        { success: false, error: 'Cannot delete an active workflow. Pause it first.' },
+        { status: 409 }
+      );
+    }
+
     await deleteWorkflow(workflowId, workspaceId);
 
     return NextResponse.json({ success: true });
@@ -255,7 +276,7 @@ export async function DELETE(
     logger.error('Failed to delete workflow', error instanceof Error ? error : new Error(String(error)));
     const message = error instanceof Error ? error.message : 'Failed to delete workflow';
     return NextResponse.json(
-      { error: message },
+      { success: false, error: message },
       { status: 500 }
     );
   }

@@ -27,14 +27,14 @@ const sendTimeSchema = z.object({
 const stepConditionSchema = z.object({
   type: z.enum(['opened_previous', 'clicked_previous', 'not_opened_previous', 'replied', 'not_replied', 'custom_field']),
   value: z.unknown().optional(),
-}).passthrough();
+});
 
 const sequenceStepVariantSchema = z.object({
   id: z.string(),
   subject: z.string().optional(),
   body: z.string(),
   weight: z.number().min(0).max(100).optional(),
-}).passthrough();
+});
 
 const sequenceStepInputSchema = z.object({
   delayDays: z.number().int().min(0).optional(),
@@ -50,7 +50,7 @@ const sequenceStepInputSchema = z.object({
 const sequenceCreateRequestSchema = z.object({
   name: z.string().min(1),
   description: z.string().optional(),
-  steps: z.array(sequenceStepInputSchema).min(1),
+  steps: z.array(sequenceStepInputSchema).min(1).max(50),
   autoEnroll: z.boolean().optional().default(false),
 });
 

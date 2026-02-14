@@ -118,6 +118,7 @@ async function calculateRevenueAnalytics(period: string) {
       createdAt?: { toDate?: () => Date } | Date | string;
       total?: string | number;
       amount?: string | number;
+      refundedAmount?: string | number;
       source?: string;
       items?: Array<{ name?: string; productName?: string; price?: string | number; quantity?: number }>;
     }
@@ -154,17 +155,24 @@ async function calculateRevenueAnalytics(period: string) {
       logger.debug('No orders collection yet');
     }
 
-    const completedOrders = allOrders.filter(order => {
-      if (order.status !== 'completed' && order.status !== 'paid') {return false;}
+    // MAJ-9: Include all revenue-generating statuses
+    const revenueOrders = allOrders.filter(order => {
+      const validStatuses = ['completed', 'paid', 'processing', 'partially_refunded'];
+      if (!validStatuses.includes(order.status ?? '')) {return false;}
       const orderDate = toDate(order.createdAt);
       return orderDate >= startDate && orderDate <= now;
     });
 
     // Calculate totals
     const dealRevenue = closedDeals.reduce((sum, deal) => sum + (Number(deal.value) || Number(deal.amount) || 0), 0);
-    const orderRevenue = completedOrders.reduce((sum, order) => sum + (Number(order.total) || Number(order.amount) || 0), 0);
+    // MAJ-10: Subtract refunded amounts from order revenue
+    const orderRevenue = revenueOrders.reduce((sum, order) => {
+      const gross = Number(order.total) || Number(order.amount) || 0;
+      const refunded = Number(order.refundedAmount) || 0;
+      return sum + (gross - refunded);
+    }, 0);
     const totalRevenue = dealRevenue + orderRevenue;
-    const dealsCount = closedDeals.length + completedOrders.length;
+    const dealsCount = closedDeals.length + revenueOrders.length;
     const avgDealSize = dealsCount > 0 ? totalRevenue / dealsCount : 0;
 
     // Calculate growth (compare to previous period)
@@ -182,7 +190,8 @@ async function calculateRevenueAnalytics(period: string) {
       });
 
       const prevOrders = allOrders.filter(order => {
-        if (order.status !== 'completed' && order.status !== 'paid') {return false;}
+        const validStatuses = ['completed', 'paid', 'processing', 'partially_refunded'];
+        if (!validStatuses.includes(order.status ?? '')) {return false;}
         const orderDate = toDate(order.createdAt);
         return orderDate >= prevStart && orderDate < prevEnd;
       });
@@ -208,7 +217,7 @@ async function calculateRevenueAnalytics(period: string) {
       const value = Number(deal.value) || Number(deal.amount) || 0;
       sourceMap.set(source, (sourceMap.get(source) ?? 0) + value);
     });
-    completedOrders.forEach(order => {
+    revenueOrders.forEach(order => {
       const source = (order.source !== '' && order.source != null) ? order.source : 'ecommerce';
       const value = Number(order.total) || Number(order.amount) || 0;
       sourceMap.set(source, (sourceMap.get(source) ?? 0) + value);
@@ -239,7 +248,7 @@ async function calculateRevenueAnalytics(period: string) {
         productMap.set(name, (productMap.get(name) ?? 0) + value);
       }
     });
-    completedOrders.forEach(order => {
+    revenueOrders.forEach(order => {
       if (order.items && Array.isArray(order.items)) {
         (order.items as ProductItem[]).forEach((item) => {
           const name = (item.productName !== '' && item.productName != null) ? item.productName : ((item.name !== '' && item.name != null) ? item.name : 'Unknown Product');
