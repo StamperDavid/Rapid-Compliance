@@ -19,10 +19,19 @@ export async function GET(request: NextRequest) {
     const rateLimitResponse = await rateLimitMiddleware(request, '/api/cron/social-listening-collector');
     if (rateLimitResponse) {return rateLimitResponse;}
 
-    // Optional: verify cron secret for production security
-    const cronSecret = request.headers.get('x-cron-secret');
-    const expectedSecret = process.env.CRON_SECRET;
-    if (expectedSecret && cronSecret !== expectedSecret) {
+    // Fail-closed cron auth — matches all other cron routes
+    const authHeader = request.headers.get('authorization');
+    const cronSecret = process.env.CRON_SECRET;
+    if (!cronSecret) {
+      logger.error('CRON_SECRET not configured — rejecting request', undefined, {
+        route: '/api/cron/social-listening-collector',
+      });
+      return NextResponse.json(
+        { success: false, error: 'Server configuration error' },
+        { status: 500 }
+      );
+    }
+    if (authHeader !== `Bearer ${cronSecret}`) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }

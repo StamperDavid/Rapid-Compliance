@@ -81,9 +81,9 @@ export async function POST(request: NextRequest) {
 
     const stripe = new Stripe(stripeKeys.secretKey, { apiVersion: '2023-10-16' });
 
-    // Get cart
+    // Get cart (workspace-scoped path matching cart-service)
     const cart = await FirestoreService.get<Cart>(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/carts`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/${workspaceId}/carts`,
       authResult.user.uid
     );
 

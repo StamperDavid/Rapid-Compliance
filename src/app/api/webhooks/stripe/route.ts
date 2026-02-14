@@ -244,12 +244,13 @@ async function processStripeEvent(event: StripeWebhookEvent): Promise<void> {
           });
         }
 
-        // Clear the user's cart after successful payment
+        // Clear the user's cart after successful payment (workspace-scoped path)
         const cartId = metadata.cartId;
+        const wsId = typeof metadata.workspaceId === 'string' ? metadata.workspaceId : 'default';
         if (typeof cartId === 'string') {
           try {
             await FirestoreService.delete(
-              `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/carts`,
+              `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/${wsId}/carts`,
               cartId
             );
             logger.info('Cart cleared after successful checkout', {

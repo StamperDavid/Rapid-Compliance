@@ -355,7 +355,7 @@ export function OPTIONS(_request: NextRequest) {
     {},
     {
       headers: {
-        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Origin': process.env.NEXT_PUBLIC_APP_URL ?? 'https://salesvelocity.ai',
         'Access-Control-Allow-Methods': 'POST, OPTIONS',
         'Access-Control-Allow-Headers': 'Content-Type, Authorization',
       }

@@ -67,7 +67,7 @@ export function addCORSHeaders(
   // Whitelist of allowed origins
   const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') ?? [
     'http://localhost:3000',
-    'https://yourdomain.com',
+    'https://salesvelocity.ai',
   ];
   
   // Check if origin is allowed

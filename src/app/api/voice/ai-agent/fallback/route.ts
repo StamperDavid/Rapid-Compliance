@@ -36,6 +36,29 @@ interface ConversationContext {
  */
 async function handleFallback(request: NextRequest): Promise<NextResponse> {
   try {
+    // Verify Twilio signature — fail-closed
+    const authToken = process.env.TWILIO_AUTH_TOKEN;
+    if (authToken) {
+      const signature = request.headers.get('x-twilio-signature');
+      if (!signature) {
+        logger.warn('[AI-Fallback] Missing Twilio signature', { file: 'ai-agent/fallback/route.ts' });
+        return NextResponse.json({ error: 'Missing webhook signature' }, { status: 401 });
+      }
+      const rawBody = await request.clone().text();
+      const url = process.env.WEBHOOK_BASE_URL
+        ? `${process.env.WEBHOOK_BASE_URL}/api/voice/ai-agent/fallback`
+        : request.url;
+      const params = parseFormBody(rawBody);
+      const isValid = verifyTwilioSignature(authToken, signature, url, params);
+      if (!isValid) {
+        logger.warn('[AI-Fallback] Invalid Twilio signature', { file: 'ai-agent/fallback/route.ts' });
+        return NextResponse.json({ error: 'Invalid webhook signature' }, { status: 401 });
+      }
+    } else if (process.env.NODE_ENV === 'production') {
+      logger.error('[AI-Fallback] TWILIO_AUTH_TOKEN not configured in production', undefined, { file: 'ai-agent/fallback/route.ts' });
+      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+    }
+
     const { searchParams } = new URL(request.url);
     const callId = searchParams.get('callId');
     const reason = searchParams.get('reason') ?? 'speech_timeout';
