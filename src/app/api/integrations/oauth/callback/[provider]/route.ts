@@ -5,6 +5,7 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { exchangeCodeForTokens } from '@/lib/integrations/oauth-service';
+import { validateOAuthState } from '@/lib/security/oauth-state';
 import { logger } from '@/lib/logger/logger';
 
 export const dynamic = 'force-dynamic';
@@ -16,9 +17,10 @@ function getAppUrl(): string {
 
 export async function GET(
   request: NextRequest,
-  { params: _params }: { params: Promise<{ provider: string }> }
+  { params }: { params: Promise<{ provider: string }> }
 ) {
   try {
+    const { provider } = await params;
     const { searchParams } = new URL(request.url);
     const code = searchParams.get('code');
     const state = searchParams.get('state');
@@ -34,6 +36,18 @@ export async function GET(
     if (!code || !state) {
       return NextResponse.redirect(
         `${getAppUrl()}/settings/integrations?error=missing_code_or_state`
+      );
+    }
+
+    // Validate CSRF state token
+    const userId = await validateOAuthState(state, provider);
+    if (!userId) {
+      logger.error('OAuth state validation failed', new Error('Invalid or expired state token'), {
+        route: '/api/integrations/oauth/callback',
+        provider,
+      });
+      return NextResponse.redirect(
+        `${getAppUrl()}/settings/integrations?error=invalid_state`
       );
     }
 

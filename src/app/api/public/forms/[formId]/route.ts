@@ -68,6 +68,7 @@ function sanitizeFormValue(value: unknown): unknown {
 const formSubmissionSchema = z.object({
   responses: z.record(z.string(), z.unknown()),
   metadata: z.record(z.string(), z.unknown()).optional(),
+  captchaToken: z.string().optional(),
   _honeypot: z.string().optional(),
   _loadedAt: z.number().optional(),
 });
@@ -81,6 +82,12 @@ export async function GET(
   { params }: { params: Promise<{ formId: string }> }
 ) {
   try {
+    // Rate limiting to prevent scraping and DoS
+    const rateLimitResponse = await rateLimitMiddleware(request, '/api/public/forms/get');
+    if (rateLimitResponse) {
+      return rateLimitResponse;
+    }
+
     const { formId } = await params;
 
     if (!db) {
@@ -300,6 +307,43 @@ export async function POST(
         { error: 'Form is not accepting submissions' },
         { status: 403 }
       );
+    }
+
+    // CAPTCHA verification when enabled
+    if (form.settings.enableCaptcha) {
+      const captchaToken = body.captchaToken;
+      if (!captchaToken) {
+        return NextResponse.json(
+          { error: 'CAPTCHA verification required' },
+          { status: 400 }
+        );
+      }
+
+      const captchaSecret = process.env.RECAPTCHA_SECRET_KEY;
+      if (captchaSecret) {
+        try {
+          const captchaResponse = await fetch('https://www.google.com/recaptcha/api/siteverify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: `secret=${captchaSecret}&response=${captchaToken}`,
+          });
+          const captchaResult = await captchaResponse.json() as { success: boolean; score?: number };
+          if (!captchaResult.success || (captchaResult.score !== undefined && captchaResult.score < 0.5)) {
+            return NextResponse.json(
+              { error: 'CAPTCHA verification failed' },
+              { status: 400 }
+            );
+          }
+        } catch (captchaError) {
+          logger.warn('CAPTCHA verification request failed', {
+            formId,
+            error: captchaError instanceof Error ? captchaError.message : String(captchaError),
+          });
+          // Fail open only if the verification service itself is down
+        }
+      } else {
+        logger.warn('CAPTCHA enabled but RECAPTCHA_SECRET_KEY not configured', { formId });
+      }
     }
 
     // Validate required fields

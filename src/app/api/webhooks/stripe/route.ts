@@ -216,6 +216,26 @@ async function processStripeEvent(event: StripeWebhookEvent): Promise<void> {
             orderId,
           });
         }
+
+        // Clear the user's cart after successful payment
+        const cartId = metadata.cartId;
+        if (typeof cartId === 'string') {
+          try {
+            await FirestoreService.delete(
+              `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/carts`,
+              cartId
+            );
+            logger.info('Cart cleared after successful checkout', {
+              route: '/api/webhooks/stripe',
+              cartId,
+            });
+          } catch (cartError) {
+            logger.warn('Failed to clear cart after checkout (non-fatal)', {
+              cartId,
+              error: cartError instanceof Error ? cartError.message : 'Unknown',
+            });
+          }
+        }
       }
       break;
     }
@@ -234,9 +254,9 @@ async function processStripeEvent(event: StripeWebhookEvent): Promise<void> {
       if (piId) {
         try {
           const { where, limit } = await import('firebase/firestore');
-          const workspacePath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/default/orders`;
+          const ordersPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/orders`;
           const matchingOrders = await FirestoreService.getAll<Record<string, unknown>>(
-            workspacePath,
+            ordersPath,
             [where('paymentIntentId', '==', piId), limit(1)]
           );
 
@@ -245,7 +265,7 @@ async function processStripeEvent(event: StripeWebhookEvent): Promise<void> {
             const existingOrderId = String(existingOrder?.id ?? '');
             const existingStatus = String(existingOrder?.status ?? '');
             if (existingOrderId && existingStatus !== 'processing' && existingStatus !== 'completed') {
-              await FirestoreService.update(workspacePath, existingOrderId, {
+              await FirestoreService.update(ordersPath, existingOrderId, {
                 status: 'processing',
                 paymentStatus: 'captured',
                 webhookUpdatedAt: new Date().toISOString(),

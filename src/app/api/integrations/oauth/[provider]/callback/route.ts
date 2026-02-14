@@ -10,16 +10,12 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { apiKeyService } from '@/lib/api-keys/api-key-service';
 import { encryptToken } from '@/lib/security/token-encryption';
+import { validateOAuthState } from '@/lib/security/oauth-state';
 import { logger } from '@/lib/logger/logger';
 
 export const dynamic = 'force-dynamic';
 
 // Zod schemas for OAuth responses
-const OAuthStateSchema = z.object({
-  provider: z.string().optional(),
-  userId: z.string().optional(),
-});
-
 const GoogleTokenResponseSchema = z.object({
   access_token: z.string(),
   refresh_token: z.string().optional(),
@@ -89,15 +85,19 @@ export async function GET(
       );
     }
 
+    // Validate CSRF state token
+    const userId = await validateOAuthState(state, provider);
+    if (!userId) {
+      logger.error('OAuth state validation failed', new Error('Invalid or expired state token'), {
+        route: '/api/integrations/oauth/callback',
+        provider,
+      });
+      return NextResponse.redirect(
+        `${request.nextUrl.origin}/settings/integrations?error=invalid_state`
+      );
+    }
+
     try {
-      const stateData: unknown = JSON.parse(state);
-      const stateValidation = OAuthStateSchema.safeParse(stateData);
-
-      if (!stateValidation.success) {
-        throw new Error('Invalid state');
-      }
-
-      const { userId } = stateValidation.data;
 
       // Exchange code for access token
       let credentials: ProviderCredentials;
@@ -118,17 +118,12 @@ export async function GET(
           throw new Error(`Unsupported provider: ${provider}`);
       }
 
-      // Encrypt tokens before storage
+      // Encrypt tokens before storage (fail closed - never store plaintext)
       const encryptedCredentials: Record<string, unknown> = {};
       for (const [key, value] of Object.entries(credentials)) {
         if ((key === 'accessToken' || key === 'refreshToken' || key === 'botToken') && typeof value === 'string') {
-          try {
-            encryptedCredentials[key] = encryptToken(value);
-          } catch {
-            // If encryption fails (e.g., no secret configured), store as-is with warning
-            logger.warn('Token encryption unavailable - storing token without encryption', { provider });
-            encryptedCredentials[key] = value;
-          }
+          // Encryption failure must stop the process - never store plaintext tokens
+          encryptedCredentials[key] = encryptToken(value);
         } else {
           encryptedCredentials[key] = value;
         }
@@ -144,7 +139,7 @@ export async function GET(
         },
       };
 
-      await apiKeyService.saveKeys(updatedKeys, userId ?? 'system');
+      await apiKeyService.saveKeys(updatedKeys, userId);
 
       // Redirect back to integrations page with success
       return NextResponse.redirect(

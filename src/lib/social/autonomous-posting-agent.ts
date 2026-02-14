@@ -1037,11 +1037,10 @@ export class AutonomousPostingAgent {
       await this.createManualPostTask('linkedin', linkedInContent);
 
       return {
-        success: true, // Task created successfully
+        success: false,
         platform: 'linkedin',
         postId,
-        platformPostId: `linkedin-manual-${Date.now()}`,
-        publishedAt: new Date(),
+        error: 'LinkedIn API not configured. Post queued as manual task.',
       };
     } catch (error) {
       logger.error('AutonomousPostingAgent: LinkedIn posting error', error as Error);

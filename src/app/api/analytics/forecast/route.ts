@@ -5,6 +5,7 @@ import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import { requireAuth } from '@/lib/auth/api-auth';
+import { limit } from 'firebase/firestore';
 
 export const dynamic = 'force-dynamic';
 
@@ -93,12 +94,16 @@ export async function GET(request: NextRequest) {
       ? periodParam
       : 'month';
 
-    // Get open deals from Firestore
+    // Get open deals from Firestore (with safety limit)
     const dealsPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/default/entities/deals`;
     let allDeals: DealRecord[] = [];
-    
+    const QUERY_LIMIT = 10000;
+
     try {
-      allDeals = await FirestoreService.getAll(dealsPath, []);
+      allDeals = await FirestoreService.getAll(dealsPath, [limit(QUERY_LIMIT)]);
+      if (allDeals.length === QUERY_LIMIT) {
+        logger.warn('Forecast analytics hit query limit', { limit: QUERY_LIMIT });
+      }
     } catch (_e) {
       logger.debug('No deals collection yet');
     }

@@ -6,7 +6,7 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { FirestoreService } from '@/lib/db/firestore-service';
-import { where, type QueryConstraint } from 'firebase/firestore';
+import { where, limit, type QueryConstraint } from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
@@ -150,17 +150,24 @@ export async function POST(request: NextRequest) {
 
     // Query contacts collection
     const collectionPath = `${getSubCollection('workspaces')}/${workspaceId}/entities/contacts/records`;
-    
+
     let count = 0;
-    
+    const QUERY_LIMIT = 10000;
+
     if (constraints.length === 0) {
-      // No filters - count all contacts
-      const allContacts = await FirestoreService.getAll(collectionPath, []);
+      // No filters - count all contacts (with safety limit)
+      const allContacts = await FirestoreService.getAll(collectionPath, [limit(QUERY_LIMIT)]);
       count = allContacts.length;
+      if (count === QUERY_LIMIT) {
+        logger.warn('Contact count hit query limit', { workspaceId, limit: QUERY_LIMIT });
+      }
     } else {
-      // With filters - query and count
-      const filteredContacts = await FirestoreService.getAll(collectionPath, constraints);
+      // With filters - query and count (with safety limit)
+      const filteredContacts = await FirestoreService.getAll(collectionPath, [...constraints, limit(QUERY_LIMIT)]);
       count = filteredContacts.length;
+      if (count === QUERY_LIMIT) {
+        logger.warn('Contact count hit query limit with filters', { workspaceId, limit: QUERY_LIMIT, filterCount: filters.length });
+      }
     }
 
     logger.info('Counted contacts with filters', {

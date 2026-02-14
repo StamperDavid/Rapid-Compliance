@@ -112,7 +112,7 @@ export async function POST(request: NextRequest) {
     };
 
     await FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/${workspaceId}/orders`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/orders`,
       orderId,
       orderRecord
     );

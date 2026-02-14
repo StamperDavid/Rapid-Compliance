@@ -5,9 +5,10 @@
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
-import type { OutboundSequence, SequenceStep, SendTime, StepCondition, SequenceStepVariant } from '@/types/outbound-sequence';
+import type { OutboundSequence, SequenceStep, SequenceStepVariant } from '@/types/outbound-sequence';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
@@ -17,31 +18,44 @@ export const dynamic = 'force-dynamic';
 
 type StepType = 'email' | 'linkedin_message' | 'sms' | 'call_task' | 'manual_task';
 
-interface SequenceStepInput {
-  delayDays?: number;
-  delayHours?: number;
-  sendTime?: SendTime;
-  type?: string;
-  subject?: string;
-  body?: string;
-  conditions?: StepCondition[];
-  variants?: SequenceStepVariant[];
-}
+const sendTimeSchema = z.object({
+  hour: z.number().int().min(0).max(23),
+  minute: z.number().int().min(0).max(59),
+  timezone: z.string(),
+}).optional();
+
+const stepConditionSchema = z.object({
+  type: z.enum(['opened_previous', 'clicked_previous', 'not_opened_previous', 'replied', 'not_replied', 'custom_field']),
+  value: z.unknown().optional(),
+}).passthrough();
+
+const sequenceStepVariantSchema = z.object({
+  id: z.string(),
+  subject: z.string().optional(),
+  body: z.string(),
+  weight: z.number().min(0).max(100).optional(),
+}).passthrough();
+
+const sequenceStepInputSchema = z.object({
+  delayDays: z.number().int().min(0).optional(),
+  delayHours: z.number().int().min(0).optional(),
+  sendTime: sendTimeSchema,
+  type: z.enum(['email', 'linkedin_message', 'sms', 'call_task', 'manual_task']).optional(),
+  subject: z.string().optional(),
+  body: z.string().optional(),
+  conditions: z.array(stepConditionSchema).optional(),
+  variants: z.array(sequenceStepVariantSchema).optional(),
+});
+
+const sequenceCreateRequestSchema = z.object({
+  name: z.string().min(1),
+  description: z.string().optional(),
+  steps: z.array(sequenceStepInputSchema).min(1),
+  autoEnroll: z.boolean().optional().default(false),
+});
 
 function isValidStepType(value: string): value is StepType {
   return ['email', 'linkedin_message', 'sms', 'call_task', 'manual_task'].includes(value);
-}
-
-interface SequenceCreateRequestBody {
-  PLATFORM_ID?: string;
-  name?: string;
-  description?: string;
-  steps?: SequenceStepInput[];
-  autoEnroll?: boolean;
-}
-
-function isSequenceCreateRequestBody(value: unknown): value is SequenceCreateRequestBody {
-  return typeof value === 'object' && value !== null;
 }
 
 /**
@@ -104,19 +118,14 @@ export async function POST(request: NextRequest) {
     }
 
     const body: unknown = await request.json();
-    if (!isSequenceCreateRequestBody(body)) {
-      return errors.badRequest('Invalid request body');
+    const parseResult = sequenceCreateRequestSchema.safeParse(body);
+
+    if (!parseResult.success) {
+      const errorMessage = parseResult.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ');
+      return errors.badRequest(`Invalid request body: ${errorMessage}`);
     }
 
-    const { name, description, steps, autoEnroll = false } = body;
-
-    if (!name) {
-      return errors.badRequest('Sequence name is required');
-    }
-
-    if (!steps || !Array.isArray(steps) || steps.length === 0) {
-      return errors.badRequest('At least one step is required');
-    }
+    const { name, description, steps, autoEnroll } = parseResult.data;
 
     // NEW PRICING MODEL: All features available to all active subscriptions
     // Feature check no longer needed - everyone gets email sequences!
@@ -127,8 +136,21 @@ export async function POST(request: NextRequest) {
     const sequenceId = `seq_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const now = new Date().toISOString();
 
-    const mappedSteps: SequenceStep[] = steps.map((step: SequenceStepInput, index: number) => {
+    const mappedSteps: SequenceStep[] = steps.map((step, index: number) => {
       const stepType: StepType = step.type && isValidStepType(step.type) ? step.type : 'email';
+
+      // Map variants to include analytics fields
+      const mappedVariants: SequenceStepVariant[] = (step.variants ?? []).map(variant => ({
+        id: variant.id,
+        subject: variant.subject,
+        body: variant.body,
+        weight: variant.weight ?? 0,
+        sent: 0,
+        opened: 0,
+        clicked: 0,
+        replied: 0,
+      }));
+
       return {
         id: `step_${sequenceId}_${index}`,
         sequenceId,
@@ -140,7 +162,7 @@ export async function POST(request: NextRequest) {
         subject: step.subject,
         body: step.body ?? '',
         conditions: step.conditions ?? [],
-        variants: step.variants ?? [],
+        variants: mappedVariants,
         sent: 0,
         delivered: 0,
         opened: 0,

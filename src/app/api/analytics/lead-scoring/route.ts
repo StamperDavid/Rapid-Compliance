@@ -6,6 +6,7 @@ import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { withCache } from '@/lib/cache/analytics-cache';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import { requireAuth } from '@/lib/auth/api-auth';
+import { limit } from 'firebase/firestore';
 
 export const dynamic = 'force-dynamic';
 
@@ -121,12 +122,16 @@ async function calculateLeadScoringAnalytics(period: string) {
       startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
   }
 
-  // Get leads from Firestore
+  // Get leads from Firestore (with safety limit)
   const leadsPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/default/entities/leads`;
   let allLeads: LeadRecord[] = [];
-  
+  const QUERY_LIMIT = 10000;
+
   try {
-    allLeads = await FirestoreService.getAll(leadsPath, []);
+    allLeads = await FirestoreService.getAll(leadsPath, [limit(QUERY_LIMIT)]);
+    if (allLeads.length === QUERY_LIMIT) {
+      logger.warn('Lead scoring analytics hit query limit', { period, limit: QUERY_LIMIT });
+    }
   } catch (_e) {
     logger.debug('No leads collection yet');
   }

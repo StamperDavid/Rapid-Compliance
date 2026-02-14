@@ -62,10 +62,11 @@ export async function GET(request: NextRequest) {
       filters: JSON.stringify({ customerEmail, status }),
     });
 
-    // Use paginated query - path matches seed data structure
-    const { getSubCollection } = await import('@/lib/firebase/collections');
+    // Use paginated query - canonical orders path
+    const { PLATFORM_ID } = await import('@/lib/constants/platform');
+    const { COLLECTIONS: COLS } = await import('@/lib/db/firestore-service');
     const result = await FirestoreService.getAllPaginated<Order>(
-      `${getSubCollection('workspaces')}/default/entities/orders/records`,
+      `${COLS.ORGANIZATIONS}/${PLATFORM_ID}/orders`,
       constraints,
       Math.min(pageSize, 100) // Max 100 per page
     );

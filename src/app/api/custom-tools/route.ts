@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
+import { z } from 'zod';
 import { orderBy } from 'firebase/firestore';
 import { FirestoreService } from '@/lib/db/firestore-service';
 import { validateToolUrl, type CustomTool } from '@/types/custom-tools';
@@ -15,66 +16,38 @@ export const dynamic = 'force-dynamic';
  */
 
 /**
- * Request body for POST endpoint
+ * Zod schema for POST endpoint
  */
-interface CreateToolRequestBody {
-  name: unknown;
-  icon?: unknown;
-  url: unknown;
-  enabled?: unknown;
-  order?: unknown;
-  description?: unknown;
-  allowedRoles?: unknown;
-}
+const createToolRequestSchema = z.object({
+  name: z.string().min(1).max(100),
+  icon: z.string().optional(),
+  url: z.string(),
+  enabled: z.boolean().optional(),
+  order: z.number().optional(),
+  description: z.string().max(500).optional(),
+  allowedRoles: z.array(z.string()).optional(),
+});
 
 /**
- * Request body for PUT endpoint
+ * Zod schema for PUT endpoint
  */
-interface UpdateToolRequestBody {
-  id: unknown;
-  name?: unknown;
-  icon?: unknown;
-  url?: unknown;
-  enabled?: unknown;
-  order?: unknown;
-  description?: unknown;
-  allowedRoles?: unknown;
-}
+const updateToolRequestSchema = z.object({
+  id: z.string(),
+  name: z.string().min(1).max(100).optional(),
+  icon: z.string().optional(),
+  url: z.string().optional(),
+  enabled: z.boolean().optional(),
+  order: z.number().optional(),
+  description: z.string().max(500).optional(),
+  allowedRoles: z.array(z.string()).optional(),
+});
 
 /**
- * Request body for DELETE endpoint
+ * Zod schema for DELETE endpoint
  */
-interface DeleteToolRequestBody {
-  id: unknown;
-}
-
-/**
- * Type guard to check if value is a string
- */
-function isString(value: unknown): value is string {
-  return typeof value === 'string';
-}
-
-/**
- * Type guard to check if value is a boolean
- */
-function isBoolean(value: unknown): value is boolean {
-  return typeof value === 'boolean';
-}
-
-/**
- * Type guard to check if value is a number
- */
-function isNumber(value: unknown): value is number {
-  return typeof value === 'number';
-}
-
-/**
- * Type guard to check if value is a string array
- */
-function isStringArray(value: unknown): value is string[] {
-  return Array.isArray(value) && value.every((item) => typeof item === 'string');
-}
+const deleteToolRequestSchema = z.object({
+  id: z.string(),
+});
 
 // Collection path helper
 function getCollectionPath(): string {
@@ -143,23 +116,18 @@ export async function POST(
       return authResult;
     }
 
-    const body = (await request.json()) as CreateToolRequestBody;
-    const { name, icon, url, enabled, order, description, allowedRoles } = body;
+    const body: unknown = await request.json();
+    const parseResult = createToolRequestSchema.safeParse(body);
 
-    // Validate required fields
-    if (!isString(name) || name.trim() === '') {
+    if (!parseResult.success) {
+      const errorMessage = parseResult.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ');
       return NextResponse.json(
-        { error: 'Name is required' },
+        { error: `Invalid request body: ${errorMessage}` },
         { status: 400 }
       );
     }
 
-    if (!isString(url) || url.trim() === '') {
-      return NextResponse.json(
-        { error: 'URL is required' },
-        { status: 400 }
-      );
-    }
+    const { name, icon, url, enabled, order, description, allowedRoles } = parseResult.data;
 
     // Validate URL
     const validation = validateToolUrl(url);
@@ -176,12 +144,12 @@ export async function POST(
     const now = new Date();
     const toolData: Omit<CustomTool, 'id'> = {
       name: name.trim(),
-      icon: isString(icon) ? icon : '🔧',
+      icon: icon ?? '🔧',
       url: url.trim(),
-      enabled: enabled !== false,
-      order: isNumber(order) ? order : 0,
-      description: isString(description) ? (description.trim() || undefined) : undefined,
-      allowedRoles: isStringArray(allowedRoles) ? allowedRoles : undefined,
+      enabled: enabled ?? true,
+      order: order ?? 0,
+      description: description?.trim() ?? undefined,
+      allowedRoles: allowedRoles ?? undefined,
       createdAt: now,
       updatedAt: now,
     };
@@ -220,15 +188,18 @@ export async function PUT(
       return authResult;
     }
 
-    const body = (await request.json()) as UpdateToolRequestBody;
-    const { id, name, icon, url, enabled, order, description, allowedRoles } = body;
+    const body: unknown = await request.json();
+    const parseResult = updateToolRequestSchema.safeParse(body);
 
-    if (!isString(id)) {
+    if (!parseResult.success) {
+      const errorMessage = parseResult.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ');
       return NextResponse.json(
-        { error: 'Tool ID is required' },
+        { error: `Invalid request body: ${errorMessage}` },
         { status: 400 }
       );
     }
+
+    const { id, name, icon, url, enabled, order, description, allowedRoles } = parseResult.data;
 
     const collectionPath = getCollectionPath();
 
@@ -242,7 +213,7 @@ export async function PUT(
     }
 
     // Validate URL if provided
-    if (isString(url)) {
+    if (url !== undefined) {
       const validation = validateToolUrl(url);
       if (!validation.valid) {
         return NextResponse.json(
@@ -257,26 +228,26 @@ export async function PUT(
       updatedAt: new Date(),
     };
 
-    if (isString(name)) {
+    if (name !== undefined) {
       updateData.name = name.trim();
     }
     if (icon !== undefined) {
-      updateData.icon = isString(icon) ? icon : '🔧';
+      updateData.icon = icon;
     }
-    if (isString(url)) {
+    if (url !== undefined) {
       updateData.url = url.trim();
     }
-    if (isBoolean(enabled)) {
+    if (enabled !== undefined) {
       updateData.enabled = enabled;
     }
-    if (isNumber(order)) {
+    if (order !== undefined) {
       updateData.order = order;
     }
     if (description !== undefined) {
-      updateData.description = isString(description) ? (description.trim() || undefined) : undefined;
+      updateData.description = description.trim() ? description.trim() : undefined;
     }
     if (allowedRoles !== undefined) {
-      updateData.allowedRoles = isStringArray(allowedRoles) ? allowedRoles : undefined;
+      updateData.allowedRoles = allowedRoles;
     }
 
     await FirestoreService.update(collectionPath, id, updateData);
@@ -314,15 +285,18 @@ export async function DELETE(
       return authResult;
     }
 
-    const body = (await request.json()) as DeleteToolRequestBody;
-    const { id } = body;
+    const body: unknown = await request.json();
+    const parseResult = deleteToolRequestSchema.safeParse(body);
 
-    if (!isString(id)) {
+    if (!parseResult.success) {
+      const errorMessage = parseResult.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ');
       return NextResponse.json(
-        { error: 'Tool ID is required' },
+        { error: `Invalid request body: ${errorMessage}` },
         { status: 400 }
       );
     }
+
+    const { id } = parseResult.data;
 
     const collectionPath = getCollectionPath();
 

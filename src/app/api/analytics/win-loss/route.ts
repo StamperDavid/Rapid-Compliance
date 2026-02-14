@@ -6,6 +6,7 @@ import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { withCache } from '@/lib/cache/analytics-cache';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import { requireAuth } from '@/lib/auth/api-auth';
+import { where, limit } from 'firebase/firestore';
 
 export const dynamic = 'force-dynamic';
 
@@ -119,12 +120,21 @@ async function calculateWinLossAnalytics(period: string) {
       startDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
   }
 
-  // Get deals from Firestore
+  // Get deals from Firestore (with date range constraint for the requested period)
   const dealsPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/default/entities/deals`;
   let allDeals: DealRecord[] = [];
-  
+  const QUERY_LIMIT = 10000;
+
   try {
-    allDeals = await FirestoreService.getAll(dealsPath, []);
+    // Only query deals that were updated/closed within the period
+    const constraints = [
+      where('updatedAt', '>=', startDate),
+      limit(QUERY_LIMIT)
+    ];
+    allDeals = await FirestoreService.getAll(dealsPath, constraints);
+    if (allDeals.length === QUERY_LIMIT) {
+      logger.warn('Win-loss analytics hit query limit', { period, limit: QUERY_LIMIT });
+    }
   } catch (_e) {
     logger.debug('No deals collection yet');
   }

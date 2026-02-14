@@ -89,49 +89,24 @@ export async function POST(request: NextRequest) {
       return errors.badRequest('Cart is empty');
     }
 
-    // Create a pending order so the webhook can update it after payment
+    // Generate order ID upfront so it can be embedded in Stripe session metadata
     const orderId = `order_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-    await FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/orders`,
-      orderId,
-      {
-        id: orderId,
-        userId: authResult.user.uid,
-        items: cart.items,
-        customerInfo,
-        shippingAddress: shippingAddress ?? null,
-        billingAddress: billingAddress ?? null,
-        shippingMethodId: shippingMethodId ?? null,
-        status: 'pending',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      }
-    );
 
-    // Create line items
-    // Prices are stored in cents in Firestore. Stripe expects cents.
-    // Guard: if a price looks like dollars (< 100 for any real product), convert to cents.
-    const lineItems = cart.items.map((item: CartItem) => {
-      // Ensure price is in cents - if it looks like dollars (has decimals), convert
-      const priceInCents = item.price < 1 ? Math.round(item.price * 100)
-        : Number.isInteger(item.price) ? item.price
-        : Math.round(item.price * 100);
-
-      return {
-        price_data: {
-          currency: 'usd',
-          product_data: {
-            name: item.name,
-            description: item.description,
-            images: item.image ? [item.image] : [],
-          },
-          unit_amount: priceInCents,
+    // Build Stripe line items — cart prices are stored in cents (integer)
+    const lineItems = cart.items.map((item: CartItem) => ({
+      price_data: {
+        currency: 'usd',
+        product_data: {
+          name: item.name,
+          description: item.description,
+          images: item.image ? [item.image] : [],
         },
-        quantity: item.quantity,
-      };
-    });
+        unit_amount: Math.round(item.price), // cents — no dollar conversion
+      },
+      quantity: item.quantity,
+    }));
 
-    // Create checkout session with complete metadata for webhook processing
+    // Create Stripe checkout session FIRST — only create order if this succeeds
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       line_items: lineItems,
@@ -155,6 +130,25 @@ export async function POST(request: NextRequest) {
         shippingMethodId: shippingMethodId ?? '',
       },
     });
+
+    // Create pending order AFTER Stripe session succeeds (no ghost orders on Stripe failure)
+    await FirestoreService.set(
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/orders`,
+      orderId,
+      {
+        id: orderId,
+        userId: authResult.user.uid,
+        items: cart.items,
+        customerInfo,
+        shippingAddress: shippingAddress ?? null,
+        billingAddress: billingAddress ?? null,
+        shippingMethodId: shippingMethodId ?? null,
+        stripeSessionId: session.id,
+        status: 'pending',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }
+    );
 
     return NextResponse.json({
       success: true,

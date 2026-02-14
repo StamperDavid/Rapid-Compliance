@@ -187,12 +187,20 @@ export class SchemaManager {
   async updateSchema(
     schemaId: string,
     updates: Partial<Schema>,
-    userId: string
+    userId: string,
+    expectedVersion?: number
   ): Promise<void> {
     const schema = await this.getSchema(schemaId);
-    
+
     if (!schema) {
       throw new Error(`Schema ${schemaId} not found`);
+    }
+
+    // Optimistic concurrency: reject if version has changed since caller's read
+    if (expectedVersion !== undefined && schema.version !== expectedVersion) {
+      throw new Error(
+        `Schema ${schemaId} was modified by another user (expected version ${expectedVersion}, current ${schema.version}). Please refresh and try again.`
+      );
     }
 
     // Detect schema changes before updating
