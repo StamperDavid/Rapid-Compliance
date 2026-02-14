@@ -14,9 +14,9 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { useOnboardingStore } from '@/lib/stores/onboarding-store';
 import { useAuth } from '@/hooks/useAuth';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { createUserWithEmailAndPassword, deleteUser } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase/config';
-import { doc, setDoc, updateDoc, arrayUnion, serverTimestamp } from 'firebase/firestore';
+import { doc, writeBatch, arrayUnion, serverTimestamp } from 'firebase/firestore';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import { COLLECTIONS } from '@/lib/firebase/collections';
 import { Building2, Lock, Eye, EyeOff } from 'lucide-react';
@@ -101,7 +101,7 @@ export default function AccountCreationPage() {
         throw new Error('Firebase is not initialized');
       }
 
-      // Create Firebase Auth user
+      // Step 1: Create Firebase Auth user
       const userCredential = await createUserWithEmailAndPassword(
         auth,
         formData.email,
@@ -110,34 +110,49 @@ export default function AccountCreationPage() {
 
       const userId = userCredential.user.uid;
 
-      // Add user to existing platform organization
-      const orgRef = doc(db, COLLECTIONS.ORGANIZATIONS, PLATFORM_ID);
-      await updateDoc(orgRef, {
-        members: arrayUnion(userId),
-        updatedAt: serverTimestamp(),
-      });
+      // Step 2: Atomic batch write — org membership + user profile
+      // If this fails, we roll back the Firebase Auth user to prevent orphans
+      try {
+        const batch = writeBatch(db);
 
-      // Create user profile linked to platform org
-      await setDoc(doc(db, COLLECTIONS.USERS, userId), {
-        email: formData.email,
-        displayName: fullName ?? formData.companyName,
-        fullName: fullName ?? null,
-        phoneNumber: phoneNumber ?? null,
-        organizations: [PLATFORM_ID],
-        defaultOrganization: PLATFORM_ID,
-        companyName: formData.companyName,
-        industry: selectedIndustry?.id ?? 'other',
-        industryName: selectedIndustry?.name ?? customIndustry ?? 'Other',
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      });
+        // Add user to platform organization members
+        const orgRef = doc(db, COLLECTIONS.ORGANIZATIONS, PLATFORM_ID);
+        batch.update(orgRef, {
+          members: arrayUnion(userId),
+          updatedAt: serverTimestamp(),
+        });
+
+        // Create user profile with explicit role assignment
+        const userRef = doc(db, COLLECTIONS.USERS, userId);
+        batch.set(userRef, {
+          email: formData.email,
+          displayName: fullName ?? formData.companyName,
+          fullName: fullName ?? null,
+          phoneNumber: phoneNumber ?? null,
+          organizations: [PLATFORM_ID],
+          defaultOrganization: PLATFORM_ID,
+          companyName: formData.companyName,
+          industry: selectedIndustry?.id ?? 'other',
+          industryName: selectedIndustry?.name ?? customIndustry ?? 'Other',
+          role: 'member',
+          status: 'active',
+          emailVerified: false,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        });
+
+        await batch.commit();
+      } catch (batchError: unknown) {
+        // Rollback: delete the orphaned Firebase Auth user
+        await deleteUser(userCredential.user);
+        throw batchError;
+      }
 
       // Store account info and redirect to dashboard
       setAccountInfo(formData.email, formData.companyName);
       setStep('complete');
       router.push('/dashboard');
     } catch (error: unknown) {
-      console.error('Account creation error:', error);
 
       if (error instanceof Error && 'code' in error) {
         const firebaseError = error as { code: string };

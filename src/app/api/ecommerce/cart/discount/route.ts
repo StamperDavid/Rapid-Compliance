@@ -10,7 +10,7 @@ import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
 const discountSchema = z.object({
-  sessionId: z.string(),
+  sessionId: z.string().optional(), // Deprecated: cart key is now the authenticated user's UID
   code: z.string(),
 });
 
@@ -57,9 +57,11 @@ export async function POST(request: NextRequest) {
       return errors.validation('Validation failed', { errors: errorDetails });
     }
 
-    const { sessionId, code } = validation.data;
+    const { code } = validation.data;
 
-    const cart = await applyDiscountCode(sessionId, 'default', code);
+    // Use authenticated user's UID as cart key — aligns with checkout and webhook
+    const cartId = authResult.user.uid;
+    const cart = await applyDiscountCode(cartId, 'default', code);
 
     return NextResponse.json({
       success: true,
@@ -86,17 +88,18 @@ export async function DELETE(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const sessionId = searchParams.get('sessionId') ?? request.headers.get('x-session-id');
     const code = searchParams.get('code');
 
-    if (!sessionId || !code) {
+    if (!code) {
       return NextResponse.json(
-        { success: false, error: 'sessionId and code required' },
+        { success: false, error: 'code query parameter required' },
         { status: 400 }
       );
     }
 
-    const cart = await removeDiscountCode(sessionId, 'default', code);
+    // Use authenticated user's UID as cart key — aligns with checkout and webhook
+    const cartId = authResult.user.uid;
+    const cart = await removeDiscountCode(cartId, 'default', code);
 
     return NextResponse.json({
       success: true,

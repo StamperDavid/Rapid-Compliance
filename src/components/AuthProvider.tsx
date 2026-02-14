@@ -52,14 +52,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     if (!isFirebaseConfigured) {
-      // Firebase not configured - use demo mode
-      logger.warn('Firebase not configured. Running in demo mode.', { file: 'AuthProvider.tsx' });
-      setUser({
-        id: 'demo-user',
-        email: 'admin@demo.com',
-        displayName: 'Demo User',
-        role: 'admin',
-      });
+      if (process.env.NODE_ENV === 'development') {
+        // Firebase not configured - use demo mode (development only)
+        logger.warn('Firebase not configured. Running in demo mode.', { file: 'AuthProvider.tsx' });
+        setUser({
+          id: 'demo-user',
+          email: 'admin@demo.com',
+          displayName: 'Demo User',
+          role: 'admin',
+        });
+      } else {
+        // In production, Firebase must be configured — no demo fallback
+        logger.error('Firebase not configured in production. Authentication unavailable.', undefined, { file: 'AuthProvider.tsx' });
+        setUser(null);
+      }
       setLoading(false);
       return;
     }
@@ -103,13 +109,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       unsubscribeRef.current = unsubscribe;
     } catch (error) {
       logger.error('Error setting up auth listener:', error instanceof Error ? error : new Error(String(error)), { file: 'AuthProvider.tsx' });
-      // Fall back to demo mode on error
-      setUser({
-        id: 'demo-user',
-        email: 'admin@demo.com',
-        displayName: 'Demo User',
-        role: 'admin',
-      });
+      if (process.env.NODE_ENV === 'development') {
+        // Fall back to demo mode on error (development only)
+        setUser({
+          id: 'demo-user',
+          email: 'admin@demo.com',
+          displayName: 'Demo User',
+          role: 'admin',
+        });
+      } else {
+        // In production, auth failure means no access
+        setUser(null);
+      }
       setLoading(false);
     }
 

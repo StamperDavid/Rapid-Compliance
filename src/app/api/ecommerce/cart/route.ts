@@ -26,7 +26,7 @@ interface ValidationErrorDetails {
 }
 
 const addToCartSchema = z.object({
-  sessionId: z.string(),
+  sessionId: z.string().optional(), // Deprecated: cart key is now the authenticated user's UID
   productId: z.string(),
   quantity: z.number().min(1).default(1),
   variantId: z.string().optional(),
@@ -34,7 +34,7 @@ const addToCartSchema = z.object({
 });
 
 const updateCartSchema = z.object({
-  sessionId: z.string(),
+  sessionId: z.string().optional(), // Deprecated: cart key is now the authenticated user's UID
   itemId: z.string(),
   quantity: z.number().min(0),
 });
@@ -52,13 +52,9 @@ export async function GET(request: NextRequest) {
       return authResult;
     }
 
-    const { searchParams } = new URL(request.url);
-    const sessionIdParam = searchParams.get('sessionId');
-    const sessionIdHeader = request.headers.get('x-session-id');
-    const sessionId = (sessionIdParam !== '' && sessionIdParam != null) ? sessionIdParam :
-      ((sessionIdHeader !== '' && sessionIdHeader != null) ? sessionIdHeader : 'anonymous');
-
-    const cart = await getOrCreateCart(sessionId, 'default', authResult.user?.uid);
+    // Use authenticated user's UID as cart key — aligns with checkout and webhook
+    const cartId = authResult.user.uid;
+    const cart = await getOrCreateCart(cartId, 'default', authResult.user.uid);
 
     return NextResponse.json({
       success: true,
@@ -106,9 +102,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { sessionId, productId, quantity, variantId, variantOptions } = validation.data;
+    const { productId, quantity, variantId, variantOptions } = validation.data;
 
-    const cart = await addToCart(sessionId, 'default', productId, quantity, variantId, variantOptions);
+    // Use authenticated user's UID as cart key — aligns with checkout and webhook
+    const cartId = authResult.user.uid;
+    const cart = await addToCart(cartId, 'default', productId, quantity, variantId, variantOptions);
 
     return NextResponse.json({
       success: true,
@@ -152,9 +150,11 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    const { sessionId, itemId, quantity } = validation.data;
+    const { itemId, quantity } = validation.data;
 
-    const cart = await updateCartItemQuantity(sessionId, 'default', itemId, quantity);
+    // Use authenticated user's UID as cart key — aligns with checkout and webhook
+    const cartId = authResult.user.uid;
+    const cart = await updateCartItemQuantity(cartId, 'default', itemId, quantity);
 
     return NextResponse.json({
       success: true,
@@ -177,19 +177,18 @@ export async function DELETE(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const sessionIdParam = searchParams.get('sessionId');
-    const sessionIdHeader = request.headers.get('x-session-id');
-    const sessionId = (sessionIdParam !== '' && sessionIdParam != null) ? sessionIdParam : sessionIdHeader;
     const itemId = searchParams.get('itemId');
 
-    if (!sessionId || !itemId) {
+    if (!itemId) {
       return NextResponse.json(
-        { success: false, error: 'sessionId and itemId required' },
+        { success: false, error: 'itemId query parameter required' },
         { status: 400 }
       );
     }
 
-    const cart = await removeFromCart(sessionId, 'default', itemId);
+    // Use authenticated user's UID as cart key — aligns with checkout and webhook
+    const cartId = authResult.user.uid;
+    const cart = await removeFromCart(cartId, 'default', itemId);
 
     return NextResponse.json({
       success: true,

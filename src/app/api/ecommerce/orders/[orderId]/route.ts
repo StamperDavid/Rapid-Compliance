@@ -1,11 +1,15 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireAuth } from '@/lib/auth/api-auth';
-import { FirestoreService } from '@/lib/db/firestore-service';
+import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 import type { Order, OrderStatus, FulfillmentStatus } from '@/types/ecommerce';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
+
+/** Canonical orders path — must match checkout create-session and webhook handler */
+const ORDERS_PATH = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/orders`;
 
 export const dynamic = 'force-dynamic';
 
@@ -29,11 +33,7 @@ export async function GET(
       return authResult;
     }
 
-    const { getSubCollection } = await import('@/lib/firebase/collections');
-    const order = await FirestoreService.get<Order>(
-      `${getSubCollection('workspaces')}/default/entities/orders/records`,
-      orderId
-    );
+    const order = await FirestoreService.get<Order>(ORDERS_PATH, orderId);
 
     if (!order) {
       return errors.notFound('Order not found');
@@ -95,9 +95,6 @@ export async function PUT(
       );
     }
 
-    const { getSubCollection } = await import('@/lib/firebase/collections');
-    const ordersPath = `${getSubCollection('workspaces')}/default/entities/orders/records`;
-
     const updates: Record<string, unknown> = { updatedAt: new Date() };
     if (validation.data.status) {
       updates.status = validation.data.status as OrderStatus;
@@ -115,7 +112,7 @@ export async function PUT(
       updates.internalNotes = validation.data.internalNotes;
     }
 
-    await FirestoreService.update(ordersPath, orderId, updates);
+    await FirestoreService.update(ORDERS_PATH, orderId, updates);
 
     logger.info('Order updated', { orderId, fields: Object.keys(validation.data) });
 
