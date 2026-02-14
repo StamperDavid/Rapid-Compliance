@@ -108,7 +108,7 @@ async function getAuthHeaders(): Promise<Record<string, string>> {
 
 export default function PageEditorPage() {
   const searchParams = useSearchParams();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const pageId = searchParams.get('pageId'); // If editing existing page
 
   // Editor state
@@ -228,12 +228,15 @@ export default function PageEditorPage() {
   }, [createBlankPageStable, loadPageStable]);
 
   useEffect(() => {
+    // Wait for Firebase auth to restore session before making API calls
+    if (authLoading) {return;}
+
     if (pageId) {
       void loadPageStable(pageId);
     } else {
       void loadHomepageStable();
     }
-  }, [pageId, loadPageStable, loadHomepageStable]);
+  }, [pageId, authLoading, loadPageStable, loadHomepageStable]);
 
   // Auto-save every 30 seconds
   const savePageStable = React.useCallback(async (isAutoSave: boolean = false): Promise<void> => {

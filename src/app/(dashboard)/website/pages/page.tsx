@@ -8,6 +8,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/useToast';
+import { useAuth } from '@/hooks/useAuth';
 import { auth } from '@/lib/firebase/config';
 import type { Page, PageSection, PageSEO } from '@/types/website';
 
@@ -32,6 +33,7 @@ interface CreatePageResponse {
 export default function PagesManagementPage() {
   const router = useRouter();
   const toast = useToast();
+  const { loading: authLoading } = useAuth();
 
   const [pages, setPages] = useState<Page[]>([]);
   const [loading, setLoading] = useState(true);
@@ -74,8 +76,10 @@ export default function PagesManagementPage() {
   }, [filter]);
 
   useEffect(() => {
+    // Wait for Firebase auth to restore session before making API calls
+    if (authLoading) {return;}
     void loadPages();
-  }, [loadPages]);
+  }, [loadPages, authLoading]);
 
   function deletePage(pageId: string) {
     toast.warning('Are you sure you want to delete this page?');
