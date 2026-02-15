@@ -222,7 +222,7 @@ export async function process2CheckoutPayment(
     const orderData = {
       Country: 'US',
       Currency: request.currency.toUpperCase(),
-      CustomerIP: '127.0.0.1', // Should be actual customer IP
+      CustomerIP: request.customerIp ?? '0.0.0.0',
       ExternalReference: request.metadata?.orderId,
       Language: 'en',
       Source: 'api',

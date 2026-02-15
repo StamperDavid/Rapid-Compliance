@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
+import { useAuth } from '@/hooks/useAuth';
 import { usePagination } from '@/hooks/usePagination';
 import { useOptimisticDelete } from '@/hooks/useOptimisticDelete';
 import { DataTable, type ColumnDef, type BulkAction } from '@/components/ui/data-table';
@@ -89,6 +90,7 @@ const getStageBadge = (stage: string) => {
 
 export default function DealsPage() {
   const router = useRouter();
+  const { loading: authLoading } = useAuth();
   const [view, setView] = useState<'pipeline' | 'list'>('pipeline');
 
   const fetchDeals = useCallback(async (lastDoc?: unknown) => {
@@ -135,8 +137,10 @@ export default function DealsPage() {
   });
 
   useEffect(() => {
+    // Wait for Firebase auth to restore session before making API calls
+    if (authLoading) { return; }
     void refresh();
-  }, [refresh]);
+  }, [refresh, authLoading]);
 
   const getDealsByStage = (stage: string) => deals.filter(d => d.stage === stage);
   const totalPipelineValue = deals.reduce((sum, d) => sum + (d.value ?? 0), 0);

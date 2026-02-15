@@ -111,8 +111,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Enrich checkout data with authenticated user ID for order ownership
+    const enrichedCheckoutData = {
+      ...checkoutData,
+      userId: authResult.user.uid,
+    };
+
     // Process checkout
-    const order = await processCheckout(checkoutData);
+    const order = await processCheckout(enrichedCheckoutData);
 
     return NextResponse.json({
       success: true,

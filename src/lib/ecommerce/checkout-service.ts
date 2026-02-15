@@ -47,6 +47,8 @@ function serializeTimestamp(value: unknown): string {
 export interface CheckoutData {
   cartId: string;
   workspaceId: string;
+  userId?: string; // Firebase UID of the authenticated user
+  customerIp?: string; // Client IP for fraud detection
   customer: {
     email: string;
     firstName: string;
@@ -104,6 +106,7 @@ export async function processCheckout(checkoutData: CheckoutData): Promise<Order
     currency: 'USD', // Default currency - clients can configure per-org in settings
     paymentMethod: checkoutData.paymentMethod,
     paymentToken: checkoutData.paymentToken,
+    customerIp: checkoutData.customerIp,
     customer: checkoutData.customer,
   });
 
@@ -224,6 +227,7 @@ async function createOrder(
     id: orderId,
     orderNumber,
     workspaceId: checkoutData.workspaceId,
+    ...(checkoutData.userId && { userId: checkoutData.userId }),
     customerEmail: checkoutData.customer.email,
     customer: {
       firstName: checkoutData.customer.firstName,
@@ -240,6 +244,7 @@ async function createOrder(
     discount: cart.discount,
     total: cart.total,
     payment,
+    ...(paymentResult.transactionId && { paymentIntentId: paymentResult.transactionId }),
     shippingInfo: orderShipping,
     status: 'processing',
     fulfillmentStatus: 'unfulfilled',
@@ -250,9 +255,9 @@ async function createOrder(
     source: 'web',
   };
 
-  // Save order
+  // Save order to canonical path (matches webhook handler + order listing API)
   await FirestoreService.set(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/${checkoutData.workspaceId}/orders`,
+    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/orders`,
     orderId,
     {
       ...order,

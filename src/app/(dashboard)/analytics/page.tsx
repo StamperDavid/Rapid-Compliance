@@ -5,6 +5,7 @@ import { PLATFORM_ID } from '@/lib/constants/platform';
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
+import { useAuth } from '@/hooks/useAuth';
 import {
   DollarSign,
   TrendingUp,
@@ -69,11 +70,15 @@ const item = {
 };
 
 export default function AnalyticsDashboard() {
+  const { loading: authLoading } = useAuth();
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedPeriod, setSelectedPeriod] = useState<'7d' | '30d' | '90d' | 'all'>('30d');
 
   useEffect(() => {
+    // Wait for Firebase auth to restore session before making API calls
+    if (authLoading) { return; }
+
     const loadAnalytics = async () => {
       setLoading(true);
       try {
@@ -99,7 +104,7 @@ export default function AnalyticsDashboard() {
     };
 
     void loadAnalytics();
-  }, [selectedPeriod]);
+  }, [selectedPeriod, authLoading]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {

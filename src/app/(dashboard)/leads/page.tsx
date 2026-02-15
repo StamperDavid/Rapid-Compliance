@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
+import { useAuth } from '@/hooks/useAuth';
 import { usePagination } from '@/hooks/usePagination';
 import { useOptimisticDelete } from '@/hooks/useOptimisticDelete';
 import { DataTable, type ColumnDef, type BulkAction } from '@/components/ui/data-table';
@@ -59,6 +60,7 @@ const getLeadCompany = (lead: Lead) => {
 
 export default function LeadsPage() {
   const router = useRouter();
+  const { loading: authLoading } = useAuth();
   const [filter, setFilter] = useState('all');
 
   const fetchLeads = useCallback(async (lastDoc?: unknown) => {
@@ -109,8 +111,10 @@ export default function LeadsPage() {
   });
 
   useEffect(() => {
+    // Wait for Firebase auth to restore session before making API calls
+    if (authLoading) { return; }
     void refresh();
-  }, [filter, refresh]);
+  }, [filter, refresh, authLoading]);
 
   const getTierBadge = (score: number) => {
     if (score >= 75) {

@@ -780,7 +780,8 @@ export interface Order {
   id: string;
   orderNumber: string; // Human-readable order number
   workspaceId: string;
-  
+  userId?: string; // Firebase UID — used for order listing filter
+
   // Customer
   customerId?: string; // CRM entity ID
   customerEmail: string;
@@ -803,6 +804,7 @@ export interface Order {
   
   // Payment
   payment: OrderPayment;
+  paymentIntentId?: string; // Stripe payment intent ID — used for webhook correlation
   
   // Shipping Info
   shippingInfo: OrderShipping;

@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
+import { useAuth } from '@/hooks/useAuth';
 import { usePagination } from '@/hooks/usePagination';
 import { useOptimisticDelete } from '@/hooks/useOptimisticDelete';
 import { DataTable, type ColumnDef, type BulkAction } from '@/components/ui/data-table';
@@ -57,6 +58,7 @@ const getContactCompany = (contact: Contact) => {
 
 export default function ContactsPage() {
   const router = useRouter();
+  const { loading: authLoading } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [view, setView] = useState<'cards' | 'table'>('cards');
 
@@ -104,8 +106,10 @@ export default function ContactsPage() {
   });
 
   useEffect(() => {
+    // Wait for Firebase auth to restore session before making API calls
+    if (authLoading) { return; }
     void refresh();
-  }, [refresh]);
+  }, [refresh, authLoading]);
 
   const filteredContacts = contacts.filter(c =>
     !searchQuery ||

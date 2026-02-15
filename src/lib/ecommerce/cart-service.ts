@@ -5,7 +5,8 @@
 
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import type { Cart, CartItem, AppliedDiscount } from '@/types/ecommerce';
-import { Timestamp } from 'firebase/firestore';
+import { Timestamp, runTransaction, doc } from 'firebase/firestore';
+import { db } from '@/lib/firebase/config';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import { logger } from '@/lib/logger/logger';
 import { getEcommerceConfig } from './types';
@@ -296,15 +297,36 @@ export async function applyDiscountCode(
   // Save cart
   await saveCart(cart);
 
-  // Increment discount usage count to prevent infinite redemptions
-  if (discount.usageLimit) {
+  // Atomically check limit and increment usage count to prevent race conditions
+  if (discount.usageLimit && db) {
     try {
       const discountPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/${workspaceId}/discountCodes`;
-      await FirestoreService.update(discountPath, discount.docId, {
-        usageCount: (discount.usageCount ?? 0) + 1,
+      const discountRef = doc(db, discountPath, discount.docId);
+
+      await runTransaction(db, async (transaction) => {
+        const snapshot = await transaction.get(discountRef);
+        if (!snapshot.exists()) {
+          throw new Error('Discount code no longer exists');
+        }
+        const data = snapshot.data();
+        const currentCount = (data?.usageCount as number) ?? 0;
+        const usageLimit = (data?.usageLimit as number) ?? 0;
+
+        if (currentCount >= usageLimit) {
+          throw new Error('Discount code usage limit reached');
+        }
+
+        transaction.update(discountRef, { usageCount: currentCount + 1 });
       });
-    } catch {
-      // Log but don't fail the cart operation — the discount is already applied
+    } catch (error) {
+      // If the transaction fails due to limit, remove the discount from the cart
+      if (error instanceof Error && error.message.includes('usage limit')) {
+        cart.discountCodes = cart.discountCodes.filter(dc => dc.code !== code);
+        recalculateCartTotals(cart);
+        await saveCart(cart);
+        throw error;
+      }
+      // Log but don't fail for other errors — the discount is already applied
       logger.error('Failed to increment discount usage count', undefined, { code: discount.code, docId: discount.docId });
     }
   }

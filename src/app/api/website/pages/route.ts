@@ -82,6 +82,17 @@ export async function GET(request: NextRequest) {
       ...doc.data(),
     }));
 
+    if (pages.length === 0) {
+      const collectionPath = `${getSubCollection('website')}/pages/items`;
+      logger.warn('Website pages query returned empty', {
+        route: '/api/website/pages',
+        collectionPath,
+        statusFilter: status ?? 'none',
+        appEnv: process.env.NEXT_PUBLIC_APP_ENV ?? 'unset',
+        hint: 'If pages exist in Firebase Console under a different path, check NEXT_PUBLIC_APP_ENV setting',
+      });
+    }
+
     return NextResponse.json({
       success: true,
       pages,

@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
+import { useAuth } from '@/hooks/useAuth';
 import { logger } from '@/lib/logger/logger';;
 
 interface TopProduct {
@@ -36,6 +37,7 @@ function isEcommerceAnalytics(data: unknown): data is EcommerceAnalytics {
 
 export default function EcommerceAnalyticsPage() {
   const { theme } = useOrgTheme();
+  const { loading: authLoading } = useAuth();
   const [analytics, setAnalytics] = useState<EcommerceAnalytics | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -55,8 +57,10 @@ export default function EcommerceAnalyticsPage() {
   }, []);
 
   useEffect(() => {
+    // Wait for Firebase auth to restore session before making API calls
+    if (authLoading) { return; }
     void loadAnalytics();
-  }, [loadAnalytics]);
+  }, [loadAnalytics, authLoading]);
 
   const primaryColor = (theme?.colors?.primary?.main !== '' && theme?.colors?.primary?.main != null) ? theme.colors.primary.main : 'var(--color-primary)';
 

@@ -52,9 +52,9 @@ export async function getEcommerceAnalytics(
   startDate: Date,
   endDate: Date
 ): Promise<EcommerceAnalytics> {
-  // Get orders in period
+  // Get orders in period (canonical orders path)
   const orders = await FirestoreService.getAll(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/${workspaceId}/orders`,
+    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/orders`,
     [
       where('createdAt', '>=', Timestamp.fromDate(startDate)),
       where('createdAt', '<=', Timestamp.fromDate(endDate)),

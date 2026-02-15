@@ -5,10 +5,34 @@
  */
 
 import { FirestoreService } from '@/lib/db/firestore-service';
+import type { QueryDocumentSnapshot, DocumentData } from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
 import { getSubCollection } from '@/lib/firebase/collections';
 import type { Lead } from './lead-service';
 import type { RelatedEntityType } from '@/types/activity';
+
+/**
+ * Fetch all records using cursor-based pagination to avoid capping at an arbitrary limit.
+ * Processes in batches of 500 to keep memory usage reasonable.
+ */
+async function fetchAllPaginated<T extends { id: string }>(
+  collectionPath: string,
+  batchSize: number = 500
+): Promise<T[]> {
+  const allRecords: T[] = [];
+  let cursor: QueryDocumentSnapshot<DocumentData, DocumentData> | undefined = undefined;
+  let hasMore = true;
+
+  while (hasMore) {
+    const page: { data: T[]; lastDoc: QueryDocumentSnapshot<DocumentData, DocumentData> | null; hasMore: boolean } =
+      await FirestoreService.getAllPaginated<T>(collectionPath, [], batchSize, cursor);
+    allRecords.push(...page.data);
+    hasMore = page.hasMore;
+    cursor = page.lastDoc ?? undefined;
+  }
+
+  return allRecords;
+}
 
 /**
  * Base interface for CRM records with common fields
@@ -139,16 +163,10 @@ export async function detectLeadDuplicates(
       constraints.push(where('phone', '==', lead.phone));
     }
 
-    const existingLeads = constraints.length > 0
-      ? await FirestoreService.getAll<Lead>(
-          `${getSubCollection('workspaces')}/${workspaceId}/entities/leads/records`,
-          constraints
-        )
-      : await FirestoreService.getAllPaginated<Lead>(
-          `${getSubCollection('workspaces')}/${workspaceId}/entities/leads/records`,
-          [],
-          100 // Limit to 100 records for fuzzy matching
-        ).then(result => result.data);
+    const leadsPath = `${getSubCollection('workspaces')}/${workspaceId}/entities/leads/records`;
+    const existingLeads: Lead[] = constraints.length > 0
+      ? await FirestoreService.getAll<Lead>(leadsPath, constraints)
+      : await fetchAllPaginated<Lead>(leadsPath);
 
     const matches: DuplicateMatch[] = [];
 
@@ -295,16 +313,10 @@ export async function detectContactDuplicates(
       constraints.push(where('phone', '==', contact.phone));
     }
 
-    const existingContacts = constraints.length > 0
-      ? await FirestoreService.getAll<Contact>(
-          `${getSubCollection('workspaces')}/${workspaceId}/entities/contacts/records`,
-          constraints
-        )
-      : await FirestoreService.getAllPaginated<Contact>(
-          `${getSubCollection('workspaces')}/${workspaceId}/entities/contacts/records`,
-          [],
-          100 // Limit to 100 records for fuzzy matching
-        ).then(result => result.data);
+    const contactsPath = `${getSubCollection('workspaces')}/${workspaceId}/entities/contacts/records`;
+    const existingContacts: Contact[] = constraints.length > 0
+      ? await FirestoreService.getAll<Contact>(contactsPath, constraints)
+      : await fetchAllPaginated<Contact>(contactsPath);
 
     const matches: DuplicateMatch[] = [];
 
@@ -399,16 +411,10 @@ export async function detectCompanyDuplicates(
       constraints.push(where('phone', '==', company.phone));
     }
 
-    const existingCompanies = constraints.length > 0
-      ? await FirestoreService.getAll<Company>(
-          `${getSubCollection('workspaces')}/${workspaceId}/entities/companies/records`,
-          constraints
-        )
-      : await FirestoreService.getAllPaginated<Company>(
-          `${getSubCollection('workspaces')}/${workspaceId}/entities/companies/records`,
-          [],
-          100 // Limit to 100 records for fuzzy matching
-        ).then(result => result.data);
+    const companiesPath = `${getSubCollection('workspaces')}/${workspaceId}/entities/companies/records`;
+    const existingCompanies: Company[] = constraints.length > 0
+      ? await FirestoreService.getAll<Company>(companiesPath, constraints)
+      : await fetchAllPaginated<Company>(companiesPath);
 
     const matches: DuplicateMatch[] = [];
 

@@ -78,6 +78,7 @@ export interface PaymentRequest {
   currency: string;
   paymentMethod: string;
   paymentToken?: string; // Stripe payment intent token, etc.
+  customerIp?: string; // Client IP for fraud detection (e.g., 2Checkout)
   customer: {
     email: string;
     firstName: string;
@@ -521,10 +522,10 @@ export async function refundPayment(
   // Get provider from transaction
   const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
 
-  // Find order with this transaction ID
+  // Find order with this transaction ID (canonical orders path)
   const { where } = await import('firebase/firestore');
   const orders = await FirestoreService.getAll(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/${workspaceId}/orders`,
+    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/orders`,
     [where('payment.transactionId', '==', transactionId)]
   );
   

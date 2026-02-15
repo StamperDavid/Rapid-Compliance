@@ -91,7 +91,7 @@ const FULFILLMENT_COLORS: Record<FulfillmentStatus, string> = {
 const ORDER_STATUSES: OrderStatus[] = ['pending', 'processing', 'on_hold', 'completed', 'cancelled', 'refunded'];
 
 export default function OrdersPage() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const toast = useToast();
 
   const [orders, setOrders] = useState<Order[]>([]);
@@ -123,10 +123,12 @@ export default function OrdersPage() {
   }, [filterStatus, toast]);
 
   useEffect(() => {
+    // Wait for Firebase auth to restore session before making API calls
+    if (authLoading) { return; }
     if (user) {
       void loadOrders();
     }
-  }, [user, loadOrders]);
+  }, [user, authLoading, loadOrders]);
 
   const handleStatusUpdate = async (orderId: string, newStatus: OrderStatus) => {
     try {
