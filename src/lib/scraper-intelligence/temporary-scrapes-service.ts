@@ -87,7 +87,6 @@ export function calculateExpirationDate(): Date {
  * ```
  */
 export async function saveTemporaryScrape(params: {
-  workspaceId?: string;
   url: string;
   rawHtml: string;
   cleanedContent: string;
@@ -95,7 +94,7 @@ export async function saveTemporaryScrape(params: {
   relatedRecordId?: string;
 }): Promise<{ scrape: TemporaryScrape; isNew: boolean }> {
   try {
-    const { workspaceId, url, rawHtml, cleanedContent, metadata, relatedRecordId } = params;
+    const { url, rawHtml, cleanedContent, metadata, relatedRecordId } = params;
 
     // Calculate content hash for duplicate detection
     const contentHash = calculateContentHash(rawHtml);
@@ -135,7 +134,6 @@ export async function saveTemporaryScrape(params: {
     const now = new Date();
     const newScrape: TemporaryScrape = {
       id: db.collection(TEMPORARY_SCRAPES_COLLECTION).doc().id,
-      workspaceId,
       url,
       rawHtml,
       cleanedContent,

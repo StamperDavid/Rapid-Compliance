@@ -18,7 +18,6 @@ interface LineItem {
 }
 
 interface ProposalGenerateRequestBody {
-  workspaceId?: string;
   templateId?: string;
   dealId?: string;
   contactId?: string;
@@ -48,9 +47,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Template ID required' }, { status: 400 });
     }
 
-    const workspaceId = (body.workspaceId !== '' && body.workspaceId != null) ? body.workspaceId : 'default';
-
-    const proposal = await generateProposal(workspaceId, {
+    const proposal = await generateProposal({
       templateId: body.templateId,
       dealId: body.dealId,
       contactId: body.contactId,

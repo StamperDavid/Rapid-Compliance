@@ -25,25 +25,10 @@ import {
 import { db } from '../firebase/config'
 import { logger } from '../logger/logger';
 import { PLATFORM_ID } from '../constants/platform';
+import { getSubCollection, COLLECTIONS } from '../firebase/collections';
 
-// ============================================================================
-// Path Builders — single-tenant platform paths
-// ============================================================================
-
-/** Platform root path for sub-collections */
-function platformPath(subPath: string): string {
-  return `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${subPath}`;
-}
-
-/** Workspace-scoped collection path */
-function workspacePath(workspaceId: string, subPath: string): string {
-  return `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.WORKSPACES}/${workspaceId}/${subPath}`;
-}
-
-/** Entity records collection path */
-function entityRecordsPath(workspaceId: string, entityName: string): string {
-  return `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.WORKSPACES}/${workspaceId}/entities/${entityName}/${COLLECTIONS.RECORDS}`;
-}
+// Re-export for backward compatibility — all collection names come from firebase/collections.ts
+export { COLLECTIONS };
 
 // Helper to check if Firestore is available
 function ensureFirestore() {
@@ -52,31 +37,6 @@ function ensureFirestore() {
   }
   return db;
 }
-
-// Collection names following penthouse structure
-export const COLLECTIONS = {
-  ORGANIZATIONS: 'organizations',
-  WORKSPACES: 'workspaces',
-  USERS: 'users',
-  SCHEMAS: 'schemas',
-  RECORDS: 'records',
-  BASE_MODELS: 'baseModels', // AI agent base configuration (editable, before Golden Master)
-  GOLDEN_MASTERS: 'goldenMasters', // Versioned snapshots of trained Base Models
-  CUSTOMER_MEMORIES: 'customerMemories',
-  WORKFLOWS: 'workflows',
-  EMAIL_CAMPAIGNS: 'emailCampaigns',
-  NURTURE_SEQUENCES: 'nurtureSequences',
-  LEAD_ENRICHMENTS: 'leadEnrichments',
-  LEAD_ACTIVITIES: 'leadActivities',
-  LEAD_SEGMENTS: 'leadSegments',
-  API_KEYS: 'apiKeys',
-  THEMES: 'themes',
-  INTEGRATIONS: 'integrations',
-  SUBSCRIPTION_PLANS: 'subscriptionPlans',
-  CUSTOMER_SUBSCRIPTIONS: 'customerSubscriptions',
-  GOLDEN_PLAYBOOKS: 'goldenPlaybooks',
-  SOCIAL_CORRECTIONS: 'socialCorrections',
-} as const;
 
 /**
  * Generic CRUD operations
@@ -387,69 +347,34 @@ export class PlatformService {
 }
 
 /**
- * Workspace-specific operations
+ * Schema-specific operations
  */
-export class WorkspaceService {
-  static async get(workspaceId: string) {
+export class SchemaService {
+  static async get(schemaId: string) {
     return FirestoreService.get(
-      platformPath(COLLECTIONS.WORKSPACES),
-      workspaceId
+      getSubCollection('schemas'),
+      schemaId
     );
   }
 
   static async getAll() {
     return FirestoreService.getAll(
-      platformPath(COLLECTIONS.WORKSPACES)
+      getSubCollection('schemas')
     );
   }
 
-  static async set(workspaceId: string, data: Record<string, unknown>) {
+  static async set(schemaId: string, data: Record<string, unknown>) {
     return FirestoreService.set(
-      platformPath(COLLECTIONS.WORKSPACES),
-      workspaceId,
-      data,
-      false
-    );
-  }
-
-  static subscribe(workspaceId: string, callback: (data: Record<string, unknown> | null) => void) {
-    return FirestoreService.subscribe(
-      platformPath(COLLECTIONS.WORKSPACES),
-      workspaceId,
-      callback
-    );
-  }
-}
-
-/**
- * Schema-specific operations
- */
-export class SchemaService {
-  static async get(workspaceId: string, schemaId: string) {
-    return FirestoreService.get(
-      workspacePath(workspaceId, COLLECTIONS.SCHEMAS),
-      schemaId
-    );
-  }
-
-  static async getAll(workspaceId: string) {
-    return FirestoreService.getAll(
-      workspacePath(workspaceId, COLLECTIONS.SCHEMAS)
-    );
-  }
-
-  static async set(workspaceId: string, schemaId: string, data: Record<string, unknown>) {
-    return FirestoreService.set(
-      workspacePath(workspaceId, COLLECTIONS.SCHEMAS),
+      getSubCollection('schemas'),
       schemaId,
       data,
       false
     );
   }
 
-  static subscribe(workspaceId: string, schemaId: string, callback: (data: Record<string, unknown> | null) => void) {
+  static subscribe(schemaId: string, callback: (data: Record<string, unknown> | null) => void) {
     return FirestoreService.subscribe(
-      workspacePath(workspaceId, COLLECTIONS.SCHEMAS),
+      getSubCollection('schemas'),
       schemaId,
       callback
     );
@@ -458,23 +383,19 @@ export class SchemaService {
 
 /**
  * Record-specific operations (dynamic entities)
- * Path: organizations/{PLATFORM_ID}/workspaces/{workspaceId}/entities/{entityName}/records
+ * Path: organizations/{PLATFORM_ID}/{entityName}
  */
 export class RecordService {
-  private static getCollectionPath(workspaceId: string, entityName: string): string {
-    return entityRecordsPath(workspaceId, entityName);
-  }
-
-  static async get(workspaceId: string, entityName: string, recordId: string) {
+  static async get(entityName: string, recordId: string) {
     return FirestoreService.get(
-      entityRecordsPath(workspaceId, entityName),
+      getSubCollection(entityName),
       recordId
     );
   }
 
-  static async getAll(workspaceId: string, entityName: string, filters: QueryConstraint[] = []) {
+  static async getAll(entityName: string, filters: QueryConstraint[] = []) {
     return FirestoreService.getAll(
-      entityRecordsPath(workspaceId, entityName),
+      getSubCollection(entityName),
       filters
     );
   }
@@ -485,47 +406,46 @@ export class RecordService {
    * @param lastDoc - Document snapshot to start after (for cursor pagination)
    */
   static async getAllPaginated(
-    workspaceId: string,
     entityName: string,
     filters: QueryConstraint[] = [],
     pageSize: number = 50,
     lastDoc?: QueryDocumentSnapshot
   ) {
     return FirestoreService.getAllPaginated(
-      entityRecordsPath(workspaceId, entityName),
+      getSubCollection(entityName),
       filters,
-      Math.min(pageSize, 100), // Enforce max page size
+      Math.min(pageSize, 100),
       lastDoc
     );
   }
 
-  static async set(workspaceId: string, entityName: string, recordId: string, data: Record<string, unknown>) {
+  static async set(entityName: string, recordId: string, data: Record<string, unknown>) {
     return FirestoreService.set(
-      entityRecordsPath(workspaceId, entityName),
+      getSubCollection(entityName),
       recordId,
       data,
       false
     );
   }
 
-  static async update(workspaceId: string, entityName: string, recordId: string, data: Record<string, unknown>) {
+  static async update(entityName: string, recordId: string, data: Record<string, unknown>) {
     return FirestoreService.update(
-      entityRecordsPath(workspaceId, entityName),
+      getSubCollection(entityName),
       recordId,
       data
     );
   }
 
-  static async delete(workspaceId: string, entityName: string, recordId: string) {
+  static async delete(entityName: string, recordId: string) {
     return FirestoreService.delete(
-      entityRecordsPath(workspaceId, entityName),
+      getSubCollection(entityName),
       recordId
     );
   }
 
-  static subscribe(workspaceId: string, entityName: string, filters: QueryConstraint[], callback: (data: Record<string, unknown>[]) => void) {
+  static subscribe(entityName: string, filters: QueryConstraint[], callback: (data: Record<string, unknown>[]) => void) {
     return FirestoreService.subscribeToCollection(
-      entityRecordsPath(workspaceId, entityName),
+      getSubCollection(entityName),
       filters,
       callback
     );
@@ -536,16 +456,16 @@ export class RecordService {
  * Workflow-specific operations
  */
 export class WorkflowService {
-  static async get(workspaceId: string, workflowId: string) {
+  static async get(workflowId: string) {
     return FirestoreService.get(
-      workspacePath(workspaceId, COLLECTIONS.WORKFLOWS),
+      getSubCollection('workflows'),
       workflowId
     );
   }
 
-  static async getAll(workspaceId: string) {
+  static async getAll() {
     return FirestoreService.getAll(
-      workspacePath(workspaceId, COLLECTIONS.WORKFLOWS)
+      getSubCollection('workflows')
     );
   }
 
@@ -553,22 +473,21 @@ export class WorkflowService {
    * Get workflows with pagination
    */
   static async getAllPaginated(
-    workspaceId: string,
     constraints: QueryConstraint[] = [],
     pageSize: number = 50,
     lastDoc?: QueryDocumentSnapshot
   ) {
     return FirestoreService.getAllPaginated(
-      workspacePath(workspaceId, COLLECTIONS.WORKFLOWS),
+      getSubCollection('workflows'),
       constraints,
       Math.min(pageSize, 100),
       lastDoc
     );
   }
 
-  static async set(workspaceId: string, workflowId: string, data: Record<string, unknown>) {
+  static async set(workflowId: string, data: Record<string, unknown>) {
     return FirestoreService.set(
-      workspacePath(workspaceId, COLLECTIONS.WORKFLOWS),
+      getSubCollection('workflows'),
       workflowId,
       data,
       false
@@ -582,14 +501,14 @@ export class WorkflowService {
 export class EmailCampaignService {
   static async get(campaignId: string) {
     return FirestoreService.get(
-      platformPath(COLLECTIONS.EMAIL_CAMPAIGNS),
+      getSubCollection('emailCampaigns'),
       campaignId
     );
   }
 
   static async getAll() {
     return FirestoreService.getAll(
-      platformPath(COLLECTIONS.EMAIL_CAMPAIGNS)
+      getSubCollection('emailCampaigns')
     );
   }
 
@@ -602,7 +521,7 @@ export class EmailCampaignService {
     lastDoc?: QueryDocumentSnapshot
   ) {
     return FirestoreService.getAllPaginated(
-      platformPath(COLLECTIONS.EMAIL_CAMPAIGNS),
+      getSubCollection('emailCampaigns'),
       constraints,
       Math.min(pageSize, 100),
       lastDoc
@@ -611,7 +530,7 @@ export class EmailCampaignService {
 
   static async set(campaignId: string, data: Record<string, unknown>) {
     return FirestoreService.set(
-      platformPath(COLLECTIONS.EMAIL_CAMPAIGNS),
+      getSubCollection('emailCampaigns'),
       campaignId,
       data,
       false
@@ -625,20 +544,20 @@ export class EmailCampaignService {
 export class LeadNurturingService {
   static async getSequence(sequenceId: string) {
     return FirestoreService.get(
-      platformPath(COLLECTIONS.NURTURE_SEQUENCES),
+      getSubCollection('nurtureSequences'),
       sequenceId
     );
   }
 
   static async getAllSequences() {
     return FirestoreService.getAll(
-      platformPath(COLLECTIONS.NURTURE_SEQUENCES)
+      getSubCollection('nurtureSequences')
     );
   }
 
   static async setSequence(sequenceId: string, data: Record<string, unknown>) {
     return FirestoreService.set(
-      platformPath(COLLECTIONS.NURTURE_SEQUENCES),
+      getSubCollection('nurtureSequences'),
       sequenceId,
       data,
       false
@@ -647,14 +566,14 @@ export class LeadNurturingService {
 
   static async getEnrichment(leadId: string) {
     return FirestoreService.get(
-      platformPath(COLLECTIONS.LEAD_ENRICHMENTS),
+      getSubCollection('leadEnrichments'),
       leadId
     );
   }
 
   static async setEnrichment(leadId: string, data: Record<string, unknown>) {
     return FirestoreService.set(
-      platformPath(COLLECTIONS.LEAD_ENRICHMENTS),
+      getSubCollection('leadEnrichments'),
       leadId,
       data,
       false

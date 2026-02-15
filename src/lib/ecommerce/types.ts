@@ -307,9 +307,9 @@ export const ecommerceConfigSchema = z.object({
  * Fetch and validate e-commerce config from Firestore.
  * Parse-at-the-boundary: validates once when reading, returns typed data.
  */
-export async function getEcommerceConfig(workspaceId: string): Promise<EcommerceConfigData | null> {
+export async function getEcommerceConfig(): Promise<EcommerceConfigData | null> {
   const raw = await FirestoreService.get(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/${workspaceId}/ecommerce`,
+    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/ecommerce`,
     'config'
   );
   if (!raw) {
@@ -319,7 +319,6 @@ export async function getEcommerceConfig(workspaceId: string): Promise<Ecommerce
   if (!result.success) {
     logger.warn('Invalid ecommerce config', {
       file: 'ecommerce/types.ts',
-      workspaceId,
       errors: result.error.issues.map(i => i.message).join(', '),
     });
     return null;

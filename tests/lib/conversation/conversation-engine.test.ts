@@ -241,7 +241,6 @@ describe('Conversation Analysis Engine', () => {
     it('should analyze transcript successfully', async () => {
       // Arrange
       const request: AnalyzeTranscriptRequest = {
-        workspaceId: 'workspace-1',
         transcript: createMockTranscript(),
         conversationType: 'discovery_call' as ConversationType,
         participants: createMockParticipants(),
@@ -255,10 +254,10 @@ describe('Conversation Analysis Engine', () => {
       
       // Act
       const result = await analyzeTranscript(request);
-      
+
+
       // Assert
       expect(result).toBeDefined();
-      expect(result.workspaceId).toBe('workspace-1');
       expect(result.sentiment).toBeDefined();
       expect(result.sentiment.overall.polarity).toBe('positive');
       expect(result.talkRatio).toBeDefined();

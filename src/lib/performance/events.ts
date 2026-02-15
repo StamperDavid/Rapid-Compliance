@@ -174,7 +174,6 @@ export interface PerformanceAlertTriggeredEvent extends SalesSignal {
  * Create performance analyzed event
  */
 export function createPerformanceAnalyzedEvent(
-  workspaceId: string,
   repsAnalyzed: number,
   conversationsAnalyzed: number,
   avgTeamScore: number,
@@ -186,7 +185,6 @@ export function createPerformanceAnalyzedEvent(
 ): Omit<PerformanceAnalyzedEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'> {
   return {
     type: 'performance.analyzed' as const,
-    workspaceId,
     confidence: 0.95,
     priority: 'Medium',
     payload: {
@@ -210,7 +208,6 @@ export function createPerformanceAnalyzedEvent(
  * Create top performer identified event
  */
 export function createTopPerformerIdentifiedEvent(
-  workspaceId: string,
   repId: string,
   rank: number,
   overallScore: number,
@@ -220,7 +217,6 @@ export function createTopPerformerIdentifiedEvent(
 ): Omit<TopPerformerIdentifiedEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'> {
   return {
     type: 'performance.top_performer_identified' as const,
-    workspaceId,
     confidence: 0.9,
     priority: 'High',
     payload: {
@@ -243,7 +239,6 @@ export function createTopPerformerIdentifiedEvent(
  * Create improvement opportunity detected event
  */
 export function createImprovementOpportunityDetectedEvent(
-  workspaceId: string,
   repId: string,
   currentScore: number,
   currentTier: PerformanceTier,
@@ -255,7 +250,6 @@ export function createImprovementOpportunityDetectedEvent(
 
   return {
     type: 'performance.improvement_opportunity' as const,
-    workspaceId,
     confidence: 0.85,
     priority: hasCriticalGap ? 'High' : 'Medium',
     payload: {
@@ -278,7 +272,6 @@ export function createImprovementOpportunityDetectedEvent(
  * Create coaching priority created event
  */
 export function createCoachingPriorityCreatedEvent(
-  workspaceId: string,
   category: CoachingCategory,
   priority: 'critical' | 'high' | 'medium' | 'low',
   repsAffected: number,
@@ -287,7 +280,6 @@ export function createCoachingPriorityCreatedEvent(
 ): Omit<CoachingPriorityCreatedEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'> {
   return {
     type: 'performance.coaching_priority_created' as const,
-    workspaceId,
     confidence: 0.9,
     priority: priority === 'critical' ? 'High' : 'Medium',
     payload: {
@@ -308,7 +300,6 @@ export function createCoachingPriorityCreatedEvent(
  * Create best practice extracted event
  */
 export function createBestPracticeExtractedEvent(
-  workspaceId: string,
   practiceId: string,
   title: string,
   sourceRepId: string,
@@ -319,7 +310,6 @@ export function createBestPracticeExtractedEvent(
 ): Omit<BestPracticeExtractedEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'> {
   return {
     type: 'performance.best_practice_extracted' as const,
-    workspaceId,
     confidence: 0.85,
     priority: 'Medium',
     payload: {
@@ -343,7 +333,6 @@ export function createBestPracticeExtractedEvent(
  * Create trend detected event
  */
 export function createTrendDetectedEvent(
-  workspaceId: string,
   trendType: 'overall_score' | 'sentiment' | 'quality',
   direction: 'improving' | 'declining' | 'stable',
   changePercentage: number,
@@ -354,7 +343,6 @@ export function createTrendDetectedEvent(
 
   return {
     type: 'performance.trend_detected' as const,
-    workspaceId,
     confidence: 0.8,
     priority: isNegative ? 'High' : 'Medium',
     payload: {
@@ -375,7 +363,6 @@ export function createTrendDetectedEvent(
  * Create leaderboard updated event
  */
 export function createLeaderboardUpdatedEvent(
-  workspaceId: string,
   category: string,
   topReps: Array<{ repId: string; rank: number; score: number }>,
   moversCount: number,
@@ -383,7 +370,6 @@ export function createLeaderboardUpdatedEvent(
 ): Omit<LeaderboardUpdatedEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'> {
   return {
     type: 'performance.leaderboard_updated' as const,
-    workspaceId,
     confidence: 1.0,
     priority: 'Low',
     payload: {
@@ -403,7 +389,6 @@ export function createLeaderboardUpdatedEvent(
  * Create benchmark changed event
  */
 export function createBenchmarkChangedEvent(
-  workspaceId: string,
   benchmarkType: string,
   previousValue: number,
   newValue: number
@@ -413,7 +398,6 @@ export function createBenchmarkChangedEvent(
 
   return {
     type: 'performance.benchmark_changed' as const,
-    workspaceId,
     confidence: 1.0,
     priority: 'Low',
     payload: {
@@ -434,7 +418,6 @@ export function createBenchmarkChangedEvent(
  * Create performance alert triggered event
  */
 export function createPerformanceAlertTriggeredEvent(
-  workspaceId: string,
   alertType: 'critical_gap' | 'declining_trend' | 'low_performance' | 'high_achievement',
   severity: 'critical' | 'high' | 'medium' | 'low',
   message: string,
@@ -443,7 +426,6 @@ export function createPerformanceAlertTriggeredEvent(
 ): Omit<PerformanceAlertTriggeredEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'> {
   return {
     type: 'performance.alert_triggered' as const,
-    workspaceId,
     confidence: 0.9,
     priority: severity === 'critical' || severity === 'high' ? 'High' : 'Medium',
     payload: {

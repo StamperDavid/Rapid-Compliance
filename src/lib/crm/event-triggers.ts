@@ -4,7 +4,6 @@
  */
 
 import { logger } from '@/lib/logger/logger';
-import { PLATFORM_ID } from '@/lib/constants/platform';
 import type { RelatedEntityType } from '@/types/activity';
 
 export type CRMEventType = 
@@ -30,7 +29,6 @@ export interface CRMEvent {
   eventType: CRMEventType;
   entityType: RelatedEntityType;
   entityId: string;
-  workspaceId: string;
   changes?: EntityChange[];
   entityData?: Record<string, unknown>;
   triggeredAt: Date;
@@ -90,7 +88,6 @@ export async function fireCRMEvent(event: CRMEvent): Promise<void> {
       eventType: event.eventType,
       entityType: event.entityType,
       entityId: event.entityId,
-      workspaceId: event.workspaceId,
     });
   }
 }
@@ -104,7 +101,7 @@ function getApplicableWorkflows(_event: CRMEvent): Promise<WorkflowTriggerRule[]
 
   // Example query structure:
   // const rules = await FirestoreService.getAll<WorkflowTriggerRule>(
-  //   `workspaces/${_event.workspaceId}/workflowTriggers`
+  //   getSubCollection('workflowTriggers')
   // );
 
   // return rules.data.filter(rule => {
@@ -179,7 +176,7 @@ async function executeTriggeredWorkflow(
     const { getWorkflow } = await import('@/lib/workflows/workflow-service');
 
     // Load the workflow
-    const workflow = await getWorkflow(PLATFORM_ID, rule.workflowId);
+    const workflow = await getWorkflow(rule.workflowId);
 
     if (!workflow) {
       logger.error('Workflow not found for trigger', undefined, { workflowId: rule.workflowId });
@@ -215,7 +212,6 @@ async function executeTriggeredWorkflow(
  */
 
 export async function fireLeadCreated(
-  workspaceId: string,
   leadId: string,
   leadData: Record<string, unknown>
 ): Promise<void> {
@@ -223,14 +219,12 @@ export async function fireLeadCreated(
     eventType: 'lead_created',
     entityType: 'lead',
     entityId: leadId,
-    workspaceId,
     entityData: leadData,
     triggeredAt: new Date(),
   });
 }
 
 export async function fireLeadStatusChanged(
-  workspaceId: string,
   leadId: string,
   oldStatus: string,
   newStatus: string,
@@ -240,7 +234,6 @@ export async function fireLeadStatusChanged(
     eventType: 'lead_status_changed',
     entityType: 'lead',
     entityId: leadId,
-    workspaceId,
     changes: [{
       field: 'status',
       oldValue: oldStatus,
@@ -252,7 +245,6 @@ export async function fireLeadStatusChanged(
 }
 
 export async function fireDealStageChanged(
-  workspaceId: string,
   dealId: string,
   oldStage: string,
   newStage: string,
@@ -270,7 +262,6 @@ export async function fireDealStageChanged(
     eventType,
     entityType: 'deal',
     entityId: dealId,
-    workspaceId,
     changes: [{
       field: 'stage',
       oldValue: oldStage,
@@ -282,7 +273,6 @@ export async function fireDealStageChanged(
 }
 
 export async function fireDealValueChanged(
-  workspaceId: string,
   dealId: string,
   oldValue: number,
   newValue: number,
@@ -295,7 +285,6 @@ export async function fireDealValueChanged(
       eventType: 'deal_value_changed',
       entityType: 'deal',
       entityId: dealId,
-      workspaceId,
       changes: [{
         field: 'value',
         oldValue,
@@ -308,7 +297,6 @@ export async function fireDealValueChanged(
 }
 
 export async function fireLeadScoreChanged(
-  workspaceId: string,
   leadId: string,
   oldScore: number,
   newScore: number,
@@ -320,7 +308,6 @@ export async function fireLeadScoreChanged(
       eventType: 'lead_score_changed',
       entityType: 'lead',
       entityId: leadId,
-      workspaceId,
       changes: [{
         field: 'score',
         oldValue: oldScore,

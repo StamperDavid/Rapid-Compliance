@@ -88,7 +88,6 @@ function checkRateLimit(identifier: string): { limited: boolean; remaining: numb
  */
 const productionRouteLeadSchema = z.object({
   leadId: z.string().min(1, 'leadId is required'),
-  workspaceId: z.string().default('default'),
   forceRepId: z.string().optional(),
 });
 
@@ -109,7 +108,6 @@ const productionRouteLeadSchema = z.object({
 export async function POST(request: NextRequest) {
   const startTime = Date.now();
   let leadId: string | undefined;
-  let workspaceId: string = 'default';
 
   try {
     // =========================================================================
@@ -145,7 +143,6 @@ export async function POST(request: NextRequest) {
     const validatedRequest = productionRouteLeadSchema.parse(body);
 
     leadId = validatedRequest.leadId;
-    workspaceId = validatedRequest.workspaceId;
     const { forceRepId } = validatedRequest;
 
     // Rate limiting (use leadId as identifier)
@@ -177,10 +174,10 @@ export async function POST(request: NextRequest) {
     // =========================================================================
     // 3. FETCH LEAD FROM FIRESTORE
     // =========================================================================
-    const crmLead = await getLead(leadId, workspaceId);
+    const crmLead = await getLead(leadId);
 
     if (!crmLead) {
-      logger.warn('Lead not found for routing', { leadId, PLATFORM_ID, workspaceId });
+      logger.warn('Lead not found for routing', { leadId, PLATFORM_ID });
       return NextResponse.json(
         {
           success: false,
@@ -225,7 +222,7 @@ export async function POST(request: NextRequest) {
     } else {
       // Execute automatic routing using the CRM lead-routing engine
       // This evaluates: round-robin, territory, skill-based, load-balance rules
-      routingResult = await executeRouting(workspaceId, crmLead);
+      routingResult = await executeRouting(crmLead);
 
       logger.info('Lead automatically routed', {
         leadId,
@@ -242,8 +239,7 @@ export async function POST(request: NextRequest) {
 
     await updateLead(
       leadId,
-      { ownerId: routingResult.assignedTo },
-      workspaceId
+      { ownerId: routingResult.assignedTo }
     );
 
     logger.info('Lead owner updated', {
@@ -257,7 +253,6 @@ export async function POST(request: NextRequest) {
     // =========================================================================
     try {
       await logStatusChange({
-        workspaceId,
         relatedEntityType: 'lead',
         relatedEntityId: leadId,
         relatedEntityName: `${crmLead.firstName} ${crmLead.lastName}`,

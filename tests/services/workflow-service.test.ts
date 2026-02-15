@@ -14,7 +14,6 @@ import { FirestoreService } from '@/lib/db/firestore-service';
 
 describe('WorkflowService', () => {
   const testOrgId = `test-org-${Date.now()}`;
-  const testWorkspaceId = 'default';
   let testWorkflowId: string;
 
   beforeEach(async () => {
@@ -27,7 +26,7 @@ describe('WorkflowService', () => {
   afterEach(async () => {
     if (testWorkflowId) {
       try {
-        await deleteWorkflow(testWorkflowId, testWorkspaceId);
+        await deleteWorkflow(testWorkflowId);
       } catch {
         // Ignore - workflow may already be deleted
       }
@@ -78,8 +77,7 @@ describe('WorkflowService', () => {
             canExecute: ['owner', 'admin', 'member'],
           },
         },
-        'test-user',
-        testWorkspaceId
+        'test-user'
       );
       testWorkflowId = workflow.id;
 
@@ -103,12 +101,11 @@ describe('WorkflowService', () => {
           settings: { stopOnError: false },
           permissions: { canView: ['owner'], canEdit: ['owner'], canExecute: ['owner'] },
         },
-        'test-user',
-        testWorkspaceId
+        'test-user'
       );
       testWorkflowId = workflow.id;
 
-      const activated = await setWorkflowStatus(workflow.id, 'active', testWorkspaceId);
+      const activated = await setWorkflowStatus(workflow.id, 'active');
 
       expect(activated.status).toBe('active');
     });
@@ -124,12 +121,11 @@ describe('WorkflowService', () => {
           settings: { stopOnError: false },
           permissions: { canView: ['owner'], canEdit: ['owner'], canExecute: ['owner'] },
         },
-        'test-user',
-        testWorkspaceId
+        'test-user'
       );
       testWorkflowId = workflow.id;
 
-      const paused = await setWorkflowStatus(workflow.id, 'paused', testWorkspaceId);
+      const paused = await setWorkflowStatus(workflow.id, 'paused');
 
       expect(paused.status).toBe('paused');
     });
@@ -147,8 +143,7 @@ describe('WorkflowService', () => {
           settings: { stopOnError: false },
           permissions: { canView: ['owner'], canEdit: ['owner'], canExecute: ['owner'] },
         },
-        'test-user',
-        testWorkspaceId
+        'test-user'
       );
 
       const draft = await createWorkflow(
@@ -161,17 +156,16 @@ describe('WorkflowService', () => {
           settings: { stopOnError: false },
           permissions: { canView: ['owner'], canEdit: ['owner'], canExecute: ['owner'] },
         },
-        'test-user',
-        testWorkspaceId
+        'test-user'
       );
 
-      const result = await getWorkflows(testWorkspaceId, { status: 'active' });
+      const result = await getWorkflows({ status: 'active' });
 
       expect(result.data.some(w => w.id === active.id)).toBe(true);
       expect(result.data.every(w => w.status === 'active')).toBe(true);
 
-      await deleteWorkflow(active.id, testWorkspaceId);
-      await deleteWorkflow(draft.id, testWorkspaceId);
+      await deleteWorkflow(active.id);
+      await deleteWorkflow(draft.id);
     });
   });
 });

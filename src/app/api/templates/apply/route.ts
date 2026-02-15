@@ -18,7 +18,6 @@ export const dynamic = 'force-dynamic';
  *
  * Body:
  * {
- *   workspaceId?: string;
  *   templateId: string;
  *   merge?: boolean;
  *   applyWorkflows?: boolean;
@@ -54,20 +53,18 @@ export async function POST(request: NextRequest) {
     }
     
     const {
-      workspaceId,
       templateId,
       merge,
       applyWorkflows,
       applyBestPractices
     } = validation.data;
-    
+
     logger.info('Applying industry template', {
       templateId,
       merge
     });
-    
+
     const result = await applyTemplate({
-      workspaceId,
       templateId,
       merge: merge ?? false,
       applyWorkflows: applyWorkflows ?? true,

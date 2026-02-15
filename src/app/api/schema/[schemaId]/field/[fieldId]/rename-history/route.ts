@@ -45,12 +45,11 @@ export async function GET(
     }
 
     const params = await context.params;
-    const workspaceId = 'default';
 
     // Get schema
     const schemaRef = adminDal.getNestedDocRef(
-      `${getSubCollection('workspaces')}/{workspaceId}/schemas/{schemaId}`,
-      { workspaceId, schemaId: params.schemaId }
+      `${getSubCollection('workspaces')}/default/schemas/{schemaId}`,
+      { schemaId: params.schemaId }
     );
     const schemaDoc = await schemaRef.get();
     
@@ -119,7 +118,6 @@ export async function POST(
     const params = await context.params;
     const body = (await request.json()) as RollbackRequestBody;
     const { toVersion, userId } = body;
-    const workspaceId = 'default';
 
     if (toVersion === undefined || !userId) {
       return NextResponse.json(
@@ -130,7 +128,6 @@ export async function POST(
 
     // Rollback field
     await FieldRenameManager.rollbackField(
-      workspaceId,
       params.schemaId,
       params.fieldId,
       toVersion,

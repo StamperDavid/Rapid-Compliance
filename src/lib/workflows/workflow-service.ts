@@ -49,7 +49,6 @@ export interface WorkflowExecution {
  * Get workflows with pagination and filtering
  */
 export async function getWorkflows(
-  workspaceId: string = 'default',
   filters?: WorkflowFilters,
   options?: PaginationOptions
 ): Promise<PaginatedResult<Workflow>> {
@@ -69,7 +68,7 @@ export async function getWorkflows(
     constraints.push(orderBy('createdAt', 'desc'));
 
     const result = await FirestoreService.getAllPaginated<Workflow>(
-      `${getSubCollection('workspaces')}/${workspaceId}/workflows`,
+      getSubCollection('workflows'),
       constraints,
       options?.pageSize ?? 50,
       options?.lastDoc
@@ -95,12 +94,11 @@ export async function getWorkflows(
  * Get a single workflow
  */
 export async function getWorkflow(
-  workflowId: string,
-  workspaceId: string = 'default'
+  workflowId: string
 ): Promise<Workflow | null> {
   try {
     const workflow = await FirestoreService.get<Workflow>(
-      `${getSubCollection('workspaces')}/${workspaceId}/workflows`,
+      getSubCollection('workflows'),
       workflowId
     );
 
@@ -121,9 +119,8 @@ export async function getWorkflow(
  * Create a new workflow
  */
 export async function createWorkflow(
-  data: Omit<Workflow, 'id' | 'workspaceId' | 'createdAt' | 'updatedAt' | 'createdBy' | 'version' | 'stats'>,
-  createdBy: string,
-  workspaceId: string = 'default'
+  data: Omit<Workflow, 'id' | 'createdAt' | 'updatedAt' | 'createdBy' | 'version' | 'stats'>,
+  createdBy: string
 ): Promise<Workflow> {
   try {
     const workflowId = `workflow-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -132,7 +129,6 @@ export async function createWorkflow(
     const workflow: Workflow = {
       ...data,
       id: workflowId,
-      workspaceId,
       status: data.status ?? 'draft',
       stats: {
         totalRuns: 0,
@@ -146,7 +142,7 @@ export async function createWorkflow(
     };
 
     await FirestoreService.set(
-      `${getSubCollection('workspaces')}/${workspaceId}/workflows`,
+      getSubCollection('workflows'),
       workflowId,
       workflow,
       false
@@ -173,8 +169,7 @@ export async function createWorkflow(
  */
 export async function updateWorkflow(
   workflowId: string,
-  updates: Partial<Omit<Workflow, 'id' | 'workspaceId' | 'createdAt' | 'stats'>>,
-  workspaceId: string = 'default'
+  updates: Partial<Omit<Workflow, 'id' | 'createdAt' | 'stats'>>
 ): Promise<Workflow> {
   try {
     const updatedData = {
@@ -183,7 +178,7 @@ export async function updateWorkflow(
     };
 
     await FirestoreService.update(
-      `${getSubCollection('workspaces')}/${workspaceId}/workflows`,
+      getSubCollection('workflows'),
       workflowId,
       updatedData
     );
@@ -193,7 +188,7 @@ export async function updateWorkflow(
       updatedFields: Object.keys(updates),
     });
 
-    const workflow = await getWorkflow(workflowId, workspaceId);
+    const workflow = await getWorkflow(workflowId);
     if (!workflow) {
       throw new Error('Workflow not found after update');
     }
@@ -209,12 +204,11 @@ export async function updateWorkflow(
  * Delete workflow
  */
 export async function deleteWorkflow(
-  workflowId: string,
-  workspaceId: string = 'default'
+  workflowId: string
 ): Promise<void> {
   try {
     await FirestoreService.delete(
-      `${getSubCollection('workspaces')}/${workspaceId}/workflows`,
+      getSubCollection('workflows'),
       workflowId
     );
 
@@ -230,11 +224,10 @@ export async function deleteWorkflow(
  */
 export async function setWorkflowStatus(
   workflowId: string,
-  status: 'active' | 'paused',
-  workspaceId: string = 'default'
+  status: 'active' | 'paused'
 ): Promise<Workflow> {
   try {
-    const workflow = await updateWorkflow(workflowId, { status }, workspaceId);
+    const workflow = await updateWorkflow(workflowId, { status });
 
     logger.info('Workflow status changed', {
       workflowId,
@@ -253,11 +246,10 @@ export async function setWorkflowStatus(
  */
 export async function executeWorkflow(
   workflowId: string,
-  context: Record<string, unknown>,
-  workspaceId: string = 'default'
+  context: Record<string, unknown>
 ): Promise<{ success: boolean; executionId: string; error?: string }> {
   try {
-    const workflow = await getWorkflow(workflowId, workspaceId);
+    const workflow = await getWorkflow(workflowId);
     if (!workflow) {
       throw new Error('Workflow not found');
     }
@@ -292,7 +284,6 @@ export async function executeWorkflow(
  */
 export async function getWorkflowRuns(
   workflowId: string,
-  workspaceId: string = 'default',
   options?: PaginationOptions
 ): Promise<PaginatedResult<WorkflowExecution>> {
   try {
@@ -302,7 +293,7 @@ export async function getWorkflowRuns(
     ];
 
     const result = await FirestoreService.getAllPaginated<WorkflowExecution>(
-      `${getSubCollection('workspaces')}/${workspaceId}/workflowExecutions`,
+      getSubCollection('workflowExecutions'),
       constraints,
       options?.pageSize ?? 50,
       options?.lastDoc

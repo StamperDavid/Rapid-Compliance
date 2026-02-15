@@ -33,7 +33,6 @@ function createMockWorkflow(overrides: Partial<Workflow> = {}): Workflow {
   const now = new Date();
   return {
     id: 'wf1',
-    workspaceId: 'ws1',
     name: 'Test Workflow',
     description: 'Test workflow description',
     status: 'active',
@@ -66,7 +65,6 @@ function createMockWorkflowExecution(overrides: Partial<WorkflowExecution> = {})
   return {
     id: 'ex1',
     workflowId: 'wf1',
-    workspaceId: 'ws1',
     triggeredBy: 'event',
     triggerData: {},
     status: 'completed',

@@ -168,7 +168,6 @@ export interface MemoryItem {
  */
 export interface AgentState {
   readonly id: string;
-  readonly workspaceId: string;
 
   // Identity
   readonly role: AgentRole;
@@ -270,7 +269,6 @@ export type TaskType =
  */
 export interface KnowledgeDocument {
   readonly id: string;
-  readonly workspaceId: string;
 
   // Content
   readonly title: string;
@@ -395,7 +393,6 @@ export interface ChunkMetadata {
  */
 export interface KnowledgeBase {
   readonly id: string;
-  readonly workspaceId?: string;
 
   // Configuration
   readonly name: string;
@@ -448,7 +445,6 @@ export interface KnowledgeBaseStats {
  * Request for knowledge retrieval
  */
 export interface RetrievalRequest {
-  readonly workspaceId?: string;
   readonly query: string;
   readonly filters?: RetrievalFilters;
   readonly options?: RetrievalOptions;
@@ -587,7 +583,6 @@ export interface LLMToolCall {
  * Orchestration request
  */
 export interface OrchestrationRequest {
-  readonly workspaceId: string;
   readonly userId: string;
 
   // Task

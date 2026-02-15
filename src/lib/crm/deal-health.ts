@@ -62,11 +62,10 @@ export interface DealHealthFactor {
  * Calculate comprehensive deal health score
  */
 export async function calculateDealHealth(
-  workspaceId: string,
   dealId: string
 ): Promise<DealHealthScore> {
   try {
-    const deal = await getDeal(dealId, workspaceId);
+    const deal = await getDeal(dealId);
     if (!deal) {
       throw new Error('Deal not found');
     }
@@ -76,7 +75,7 @@ export async function calculateDealHealth(
     const recommendations: string[] = [];
 
     // Factor 1: Activity Recency (20% weight)
-    const activityStats = await getActivityStats(workspaceId, 'deal', dealId);
+    const activityStats = await getActivityStats('deal', dealId);
     const activityRecencyFactor = calculateActivityRecencyFactor(activityStats);
     factors.push(activityRecencyFactor);
     
@@ -142,7 +141,7 @@ export async function calculateDealHealth(
     };
 
     logger.info('Deal health calculated', {
-            dealId,
+      dealId,
       overall,
       status,
       factorCount: factors.length,
@@ -375,14 +374,13 @@ function getDaysSinceLastActivity(activityStats: ActivityStats): number | null {
  * Get health scores for all deals in a pipeline
  */
 export async function getPipelineHealth(
-  workspaceId: string,
   dealIds: string[]
 ): Promise<Map<string, DealHealthScore>> {
   const healthScores = new Map<string, DealHealthScore>();
 
   for (const dealId of dealIds) {
     try {
-      const health = await calculateDealHealth(workspaceId, dealId);
+      const health = await calculateDealHealth(dealId);
       healthScores.set(dealId, health);
     } catch (error) {
       logger.warn('Failed to calculate health for deal', { dealId, error: error instanceof Error ? error.message : String(error) });

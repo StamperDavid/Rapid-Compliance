@@ -64,7 +64,6 @@ export default function ContactsPage() {
 
   const fetchContacts = useCallback(async (lastDoc?: unknown) => {
     const searchParams = new URLSearchParams({
-      workspaceId: 'default',
       pageSize: '50'
     });
 

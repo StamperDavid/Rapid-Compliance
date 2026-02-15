@@ -59,10 +59,7 @@ export interface UserSession {
     browser: string;
     ipAddress: string;
   };
-  
-  // Context
-  workspaceId?: string;
-  
+
   // Metadata
   createdAt: Timestamp;
   lastActiveAt: Timestamp;
@@ -77,8 +74,7 @@ export interface UserSession {
  */
 export interface Invitation {
   id: string;
-  workspaceId?: string;
-  
+
   // Invitee
   email: string;
   role: string;

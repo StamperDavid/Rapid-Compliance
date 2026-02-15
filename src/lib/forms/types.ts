@@ -4,13 +4,13 @@
  * Optimized for Firestore structure
  *
  * COLLECTION STRUCTURE (via getSubCollection helper):
- * {platform}/workspaces/{workspaceId}/forms/{formId}
- * {platform}/workspaces/{workspaceId}/forms/{formId}/fields/{fieldId}
- * {platform}/workspaces/{workspaceId}/forms/{formId}/submissions/{submissionId}
- * {platform}/workspaces/{workspaceId}/forms/{formId}/analytics/{date}
- * {platform}/workspaces/{workspaceId}/forms/{formId}/fieldAnalytics/{fieldId_date}
- * {platform}/workspaces/{workspaceId}/forms/{formId}/views/{viewId}
- * {platform}/workspaces/{workspaceId}/formTemplates/{templateId}
+ * {platform}/forms/{formId}
+ * {platform}/forms/{formId}/fields/{fieldId}
+ * {platform}/forms/{formId}/submissions/{submissionId}
+ * {platform}/forms/{formId}/analytics/{date}
+ * {platform}/forms/{formId}/fieldAnalytics/{fieldId_date}
+ * {platform}/forms/{formId}/views/{viewId}
+ * {platform}/formTemplates/{templateId}
  *
  * @module forms/types
  * @version 2.0.0
@@ -121,7 +121,6 @@ export interface FieldMappingRule {
 export interface FormFieldConfig {
   id: string;
   formId: string;
-  workspaceId: string;
 
   // Field definition
   type: FormFieldType;
@@ -236,7 +235,7 @@ export interface FormBehavior {
 
 /**
  * Form definition document
- * Path: {platform}/workspaces/{workspaceId}/forms/{formId}
+ * Path: {platform}/forms/{formId}
  *
  * INDEX STRATEGY:
  * - Composite: (status, createdAt DESC) - List published forms
@@ -246,7 +245,6 @@ export interface FormBehavior {
  */
 export interface FormDefinition {
   id: string;
-  workspaceId: string;
 
   // Basic info
   name: string;                 // Indexed for search
@@ -376,7 +374,7 @@ export interface SubmissionMetadata {
 
 /**
  * Form submission document
- * Path: {platform}/workspaces/{workspaceId}/forms/{formId}/submissions/{submissionId}
+ * Path: {platform}/forms/{formId}/submissions/{submissionId}
  *
  * INDEX STRATEGY:
  * - Composite: (status, submittedAt DESC) - Filter by status
@@ -391,7 +389,6 @@ export interface FormSubmission {
   id: string;
   formId: string;
   formVersion: number;          // Indexed
-  workspaceId: string;
 
   // Status
   status: SubmissionStatus;     // Indexed
@@ -465,7 +462,7 @@ export interface OrchestratorAction {
 
 /**
  * Form view event - short-lived for analytics aggregation
- * Path: {platform}/workspaces/{workspaceId}/forms/{formId}/views/{viewId}
+ * Path: {platform}/forms/{formId}/views/{viewId}
  *
  * These documents should have TTL cleanup (7-30 days)
  * Analytics are aggregated into FormAnalyticsSummary documents
@@ -503,7 +500,7 @@ export interface FormView {
 
 /**
  * Daily analytics aggregation
- * Path: {platform}/workspaces/{workspaceId}/forms/{formId}/analytics/{date}
+ * Path: {platform}/forms/{formId}/analytics/{date}
  *
  * Document ID format: YYYY-MM-DD for easy range queries
  *
@@ -513,7 +510,6 @@ export interface FormView {
 export interface FormAnalyticsSummary {
   id: string;                   // Format: YYYY-MM-DD
   formId: string;
-  workspaceId: string;
   date: string;                 // Indexed - YYYY-MM-DD format
 
   // View metrics
@@ -563,7 +559,7 @@ export interface FormAnalyticsSummary {
 
 /**
  * Field-level analytics
- * Path: {platform}/workspaces/{workspaceId}/forms/{formId}/fieldAnalytics/{fieldId_date}
+ * Path: {platform}/forms/{formId}/fieldAnalytics/{fieldId_date}
  *
  * Document ID format: {fieldId}_{YYYY-MM-DD}
  */
@@ -572,7 +568,6 @@ export interface FormFieldAnalytics {
   formId: string;
   fieldId: string;
   fieldName: string;
-  workspaceId: string;
   date: string;                 // YYYY-MM-DD
 
   // Completion metrics
@@ -601,11 +596,10 @@ export interface FormFieldAnalytics {
 
 /**
  * Form template for reusable form structures
- * Path: {platform}/workspaces/{workspaceId}/formTemplates/{templateId}
+ * Path: {platform}/formTemplates/{templateId}
  */
 export interface FormTemplate {
   id: string;
-  workspaceId: string;
 
   name: string;
   description?: string;
@@ -621,7 +615,7 @@ export interface FormTemplate {
   };
 
   // Fields stored as array in template (not subcollection)
-  fields: Omit<FormFieldConfig, 'formId' | 'workspaceId' | 'createdAt' | 'updatedAt'>[];
+  fields: Omit<FormFieldConfig, 'formId' | 'createdAt' | 'updatedAt'>[];
 
   // Template metadata
   isSystem: boolean;

@@ -19,14 +19,13 @@ import {
 } from 'firebase/firestore';
 import type { Schema, SchemaField, SchemaRelation, FieldType } from '@/types/schema';
 import { logger } from '@/lib/logger/logger';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 export class SchemaManager {
   private db: Firestore;
-  private workspaceId: string;
 
-  constructor(db: Firestore, workspaceId: string) {
+  constructor(db: Firestore) {
     this.db = db;
-    this.workspaceId = workspaceId;
   }
 
   /**
@@ -36,9 +35,7 @@ export class SchemaManager {
     return collection(
       this.db,
       'organizations',
-      'rapid-compliance-root',
-      'workspaces',
-      this.workspaceId,
+      PLATFORM_ID,
       'schemas'
     );
   }
@@ -50,9 +47,7 @@ export class SchemaManager {
     return doc(
       this.db,
       'organizations',
-      'rapid-compliance-root',
-      'workspaces',
-      this.workspaceId,
+      PLATFORM_ID,
       'schemas',
       schemaId
     );
@@ -70,20 +65,19 @@ export class SchemaManager {
 
     const newSchema: Schema = {
       id: schemaId,
-      workspaceId: this.workspaceId,
       name: schema.name,
       pluralName: schema.pluralName ?? schema.name,
       singularName: schema.singularName ?? schema.name,
       description: schema.description,
       icon:(schema.icon ?? '📋'),
       color:(schema.color ?? '#3B82F6'),
-      
+
       // Start with empty fields, user will add them
       fields: schema.fields ?? this.getDefaultFields(),
 
       // Set first field as primary
       primaryFieldId: schema.fields?.[0]?.id ?? 'field_name',
-      
+
       relations: [],
       permissions: {
         create: ['admin', 'editor'],
@@ -97,7 +91,7 @@ export class SchemaManager {
         allowActivityLog: true,
         enableVersioning: false
       },
-      
+
       createdAt: serverTimestamp() as Timestamp,
       updatedAt: serverTimestamp() as Timestamp,
       createdBy: userId,
@@ -144,14 +138,14 @@ export class SchemaManager {
   private async initializeEntityCollection(schemaId: string) {
     const metadataRef = doc(
       this.db,
-      'workspaces',
-      this.workspaceId,
+      'organizations',
+      PLATFORM_ID,
       'entities',
       schemaId,
       '_metadata',
       'info'
     );
-    
+
     await setDoc(metadataRef, {
       schemaId,
       createdAt: serverTimestamp(),
@@ -560,27 +554,27 @@ export class SchemaManager {
     // This is a heavy operation - in production, use Cloud Functions or batch operations
     const entitiesRef = collection(
       this.db,
-      'workspaces',
-      this.workspaceId,
+      'organizations',
+      PLATFORM_ID,
       'entities',
       schemaId,
       'records'
     );
-    
+
     const snapshot = await getDocs(entitiesRef);
-    
+
     // Delete in batches
     const batch = [];
     for (const doc of snapshot.docs) {
       batch.push(deleteDoc(doc.ref));
-      
+
       // Execute in batches of 500
       if (batch.length >= 500) {
         await Promise.all(batch);
         batch.length = 0;
       }
     }
-    
+
     if (batch.length > 0) {
       await Promise.all(batch);
     }

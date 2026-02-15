@@ -89,7 +89,7 @@ describe('E-Commerce Checkout E2E', () => {
       stockQuantity: 100,
       trackInventory: true,
       category: 'Test',
-    }, testWorkspaceId);
+    });
     testProductId = product.id;
 
     // Track org for cleanup
@@ -102,7 +102,7 @@ describe('E-Commerce Checkout E2E', () => {
     // Cleanup: Delete test data
     try {
       if (testCartId) {
-        await clearCart(testCartId, testWorkspaceId);
+        await clearCart(testCartId);
       }
 
       // Clean up test org and all subcollections (products, orders, ecommerce config, etc.)
@@ -117,7 +117,7 @@ describe('E-Commerce Checkout E2E', () => {
   describe('Cart Management', () => {
     it('should create a cart', async () => {
       const sessionId = `test-session-${Date.now()}`;
-      const cart = await getOrCreateCart(sessionId, testWorkspaceId, testOrgId);
+      const cart = await getOrCreateCart(sessionId, testOrgId);
       
       expect(cart).toBeDefined();
       expect(cart.sessionId).toBe(sessionId);
@@ -132,7 +132,7 @@ describe('E-Commerce Checkout E2E', () => {
       expect(testCartId).toBeDefined();
       expect(testProductId).toBeDefined();
       
-      const cart = await addToCart(testCartId, testWorkspaceId, testProductId, 2);
+      const cart = await addToCart(testCartId, testProductId, 2);
 
       expect(cart.items.length).toBe(1);
       expect(cart.items[0].productId).toBe(testProductId);
@@ -222,7 +222,6 @@ describe('E-Commerce Checkout E2E', () => {
       await expect(async () => {
         await processCheckout({
           cartId: emptyCartId,
-          workspaceId: testWorkspaceId,
           customer: {
             email: 'test@example.com',
             firstName: 'Test',

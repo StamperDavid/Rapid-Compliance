@@ -24,14 +24,13 @@ afterAll(async () => {
 describe('E-Commerce UI Integration', () => {
   const testOrgId = `test-org-${Date.now()}`;
   const testSessionId = `test-session-${Date.now()}`;
-  const testWorkspaceId = 'default';
 
   // Track organization for cleanup
   cleanup.trackOrganization(testOrgId);
 
   it('should create cart (products page → cart service)', async () => {
-    const cart = await getOrCreateCart(testSessionId, testWorkspaceId, testOrgId);
-    
+    const cart = await getOrCreateCart(testSessionId, testOrgId);
+
     expect(cart).toBeDefined();
     expect(cart.sessionId).toBe(testSessionId);
     expect(cart.items).toHaveLength(0);
@@ -39,19 +38,18 @@ describe('E-Commerce UI Integration', () => {
   }, 10000);
 
   it('should add product to cart (product detail → cart service)', async () => {
-    const cart = await addToCart(testSessionId, testWorkspaceId, 'test-product-1', 2);
-    
+    const cart = await addToCart(testSessionId, 'test-product-1', 2);
+
     expect(cart.items).toHaveLength(1);
     expect(cart.items[0].quantity).toBe(2);
   }, 10000);
 
   it('should process checkout (checkout page → checkout service)', async () => {
     // First add item to cart
-    await addToCart(testSessionId, testWorkspaceId, 'test-product-1', 1);
+    await addToCart(testSessionId, 'test-product-1', 1);
 
     const order = await processCheckout({
       cartId: testSessionId,
-      workspaceId: testWorkspaceId,
       customer: {
         email: 'test@example.com',
         firstName: 'Test',
@@ -86,14 +84,13 @@ describe('E-Commerce UI Integration', () => {
 
 describe('Workflow UI Integration', () => {
   const testOrgId = `test-org-${Date.now()}`;
-  const testWorkspaceId = 'default';
 
   // Track organization for cleanup
   cleanup.trackOrganization(testOrgId);
 
   it('should list workflows (workflows page → firestore)', async () => {
     const workflows = await FirestoreService.getAll(
-      `organizations/${testOrgId}/workspaces/${testWorkspaceId}/workflows`,
+      `organizations/${testOrgId}/workspaces/default/workflows`,
       []
     );
     
@@ -102,9 +99,9 @@ describe('Workflow UI Integration', () => {
 
   it('should create workflow (workflow builder → firestore)', async () => {
     const workflowId = `test-workflow-${Date.now()}`;
-    
+
     await FirestoreService.set(
-      `organizations/${testOrgId}/workspaces/${testWorkspaceId}/workflows`,
+      `organizations/${testOrgId}/workspaces/default/workflows`,
       workflowId,
       {
         id: workflowId,
@@ -113,13 +110,12 @@ describe('Workflow UI Integration', () => {
         trigger: { type: 'manual', id: 'trigger-1', name: 'Manual', requireConfirmation: false },
         actions: [],
         status: 'draft',
-        workspaceId: testWorkspaceId,
       },
       false
     );
-    
+
     const saved = await FirestoreService.get(
-      `organizations/${testOrgId}/workspaces/${testWorkspaceId}/workflows`,
+      `organizations/${testOrgId}/workspaces/default/workflows`,
       workflowId
     );
     
@@ -132,7 +128,6 @@ describe('Workflow UI Integration', () => {
   it('should execute workflow (workflow page → workflow engine)', async () => {
     const workflow: Workflow = {
       id: 'test-workflow',
-      workspaceId: testWorkspaceId,
       name: 'Test',
       trigger: { type: 'manual', id: 'trigger-1', name: 'Manual', requireConfirmation: false },
       actions: [
@@ -179,7 +174,6 @@ describe('Email Campaign UI Integration', () => {
       htmlContent: 'Test email body',
       fromEmail: 'test@example.com',
       fromName: 'Test Sender',
-      workspaceId: 'default',
     });
     
     expect(campaign).toBeDefined();
@@ -197,14 +191,13 @@ describe('Email Campaign UI Integration', () => {
 
 describe('CRM UI Integration', () => {
   const testOrgId = `test-org-${Date.now()}`;
-  const testWorkspaceId = 'default';
 
   // Track organization for cleanup
   cleanup.trackOrganization(testOrgId);
 
   it('should list leads (leads page → firestore)', async () => {
     const leads = await FirestoreService.getAll(
-      `organizations/${testOrgId}/workspaces/${testWorkspaceId}/entities/leads/records`,
+      `organizations/${testOrgId}/workspaces/default/entities/leads/records`,
       []
     );
     
@@ -213,7 +206,7 @@ describe('CRM UI Integration', () => {
 
   it('should list deals (deals page → firestore)', async () => {
     const deals = await FirestoreService.getAll(
-      `organizations/${testOrgId}/workspaces/${testWorkspaceId}/entities/deals/records`,
+      `organizations/${testOrgId}/workspaces/default/entities/deals/records`,
       []
     );
     
@@ -222,7 +215,7 @@ describe('CRM UI Integration', () => {
 
   it('should list contacts (contacts page → firestore)', async () => {
     const contacts = await FirestoreService.getAll(
-      `organizations/${testOrgId}/workspaces/${testWorkspaceId}/entities/contacts/records`,
+      `organizations/${testOrgId}/workspaces/default/entities/contacts/records`,
       []
     );
     
@@ -231,9 +224,9 @@ describe('CRM UI Integration', () => {
 
   it('should create lead (leads page → firestore)', async () => {
     const leadId = `test-lead-${Date.now()}`;
-    
+
     await FirestoreService.set(
-      `organizations/${testOrgId}/workspaces/${testWorkspaceId}/entities/leads/records`,
+      `organizations/${testOrgId}/workspaces/default/entities/leads/records`,
       leadId,
       {
         id: leadId,
@@ -244,9 +237,9 @@ describe('CRM UI Integration', () => {
       },
       false
     );
-    
+
     const saved = await FirestoreService.get(
-      `organizations/${testOrgId}/workspaces/${testWorkspaceId}/entities/leads/records`,
+      `organizations/${testOrgId}/workspaces/default/entities/leads/records`,
       leadId
     );
     
@@ -259,16 +252,15 @@ describe('CRM UI Integration', () => {
 
 describe('Product Management UI Integration', () => {
   const testOrgId = `test-org-${Date.now()}`;
-  const testWorkspaceId = 'default';
 
   // Track organization for cleanup
   cleanup.trackOrganization(testOrgId);
 
   it('should create product (product form → firestore)', async () => {
     const productId = `test-product-${Date.now()}`;
-    
+
     await FirestoreService.set(
-      `organizations/${testOrgId}/workspaces/${testWorkspaceId}/entities/products/records`,
+      `organizations/${testOrgId}/workspaces/default/entities/products/records`,
       productId,
       {
         id: productId,
@@ -280,9 +272,9 @@ describe('Product Management UI Integration', () => {
       },
       false
     );
-    
+
     const saved = await FirestoreService.get(
-      `organizations/${testOrgId}/workspaces/${testWorkspaceId}/entities/products/records`,
+      `organizations/${testOrgId}/workspaces/default/entities/products/records`,
       productId
     );
     
@@ -295,7 +287,7 @@ describe('Product Management UI Integration', () => {
 
   it('should list products for admin (products page → firestore)', async () => {
     const products = await FirestoreService.getAll(
-      `organizations/${testOrgId}/workspaces/${testWorkspaceId}/entities/products/records`,
+      `organizations/${testOrgId}/workspaces/default/entities/products/records`,
       []
     );
     
@@ -304,7 +296,7 @@ describe('Product Management UI Integration', () => {
 
   it('should list products for customers (store page → firestore)', async () => {
     const products = await FirestoreService.getAll(
-      `organizations/${testOrgId}/workspaces/${testWorkspaceId}/entities/products/records`,
+      `organizations/${testOrgId}/workspaces/default/entities/products/records`,
       []
     );
     

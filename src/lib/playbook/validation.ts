@@ -480,7 +480,6 @@ export const successMetricsSchema = z.object({
  */
 export const playbookSchema = z.object({
   id: z.string().min(1),
-  workspaceId: z.string().min(1),
   name: z.string().min(1).max(200),
   description: z.string().min(1).max(2000),
   category: playbookCategorySchema,
@@ -521,7 +520,6 @@ export const dateRangeSchema = z.object({
  * Extract patterns request schema
  */
 export const extractPatternsRequestSchema = z.object({
-  workspaceId: z.string().min(1).optional(),
   conversationIds: z.array(z.string()).max(500).optional(),
   repIds: z.array(z.string()).max(100).optional(),
   conversationType: conversationTypeSchema.optional(),
@@ -543,7 +541,6 @@ export const extractPatternsRequestSchema = z.object({
  * Generate playbook request schema
  */
 export const generatePlaybookRequestSchema = z.object({
-  workspaceId: z.string().min(1).optional(),
   name: z.string().min(1).max(200),
   description: z.string().max(2000).optional(),
   category: playbookCategorySchema,
@@ -564,7 +561,6 @@ export const generatePlaybookRequestSchema = z.object({
  */
 export const getAdoptionMetricsRequestSchema = z.object({
   playbookId: z.string().min(1),
-  workspaceId: z.string().min(1).optional(),
   startDate: z.union([z.date(), z.string().datetime()]).optional(),
   endDate: z.union([z.date(), z.string().datetime()]).optional(),
 });
@@ -600,7 +596,6 @@ export const trackPlaybookUsageRequestSchema = z.object({
  * Search playbooks request schema
  */
 export const searchPlaybooksRequestSchema = z.object({
-  workspaceId: z.string().min(1).optional(),
   query: z.string().max(200).optional(),
   category: playbookCategorySchema.optional(),
   conversationType: conversationTypeSchema.optional(),

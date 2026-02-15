@@ -18,22 +18,12 @@ const paramsSchema = z.object({
   workflowId: z.string().min(1, 'workflowId is required'),
 });
 
-const getQuerySchema = z.object({
-  workspaceId: z.string().optional().default('default'),
-});
-
 const putBodySchema = z.object({
-  workspaceId: z.string().optional().default('default'),
   workflow: z.record(z.unknown()),
 });
 
 const patchBodySchema = z.object({
-  workspaceId: z.string().optional().default('default'),
   status: z.enum(['active', 'paused']),
-});
-
-const deleteQuerySchema = z.object({
-  workspaceId: z.string().optional().default('default'),
 });
 
 /**
@@ -67,17 +57,7 @@ export async function GET(
     }
     const { workflowId } = paramsResult.data;
 
-    const { searchParams } = new URL(request.url);
-    const queryResult = getQuerySchema.safeParse({
-      workspaceId: searchParams.get('workspaceId') ?? undefined,
-    });
-
-    if (!queryResult.success) {
-      return NextResponse.json({ error: 'Invalid query parameters' }, { status: 400 });
-    }
-
-    const { workspaceId } = queryResult.data;
-    const workflow = await getWorkflow(workflowId, workspaceId);
+    const workflow = await getWorkflow(workflowId);
 
     if (!workflow) {
       return NextResponse.json({ success: false, error: 'Workflow not found' }, { status: 404 });
@@ -135,12 +115,11 @@ export async function PUT(
       );
     }
 
-    const { workspaceId, workflow } = bodyResult.data;
+    const { workflow } = bodyResult.data;
 
     const updatedWorkflow = await updateWorkflow(
       workflowId,
-      workflow,
-      workspaceId
+      workflow
     );
 
     return NextResponse.json({ success: true, workflow: updatedWorkflow });
@@ -195,12 +174,11 @@ export async function PATCH(
       );
     }
 
-    const { workspaceId, status } = bodyResult.data;
+    const { status } = bodyResult.data;
 
     const updatedWorkflow = await setWorkflowStatus(
       workflowId,
-      status,
-      workspaceId
+      status
     );
 
     return NextResponse.json({ success: true, workflow: updatedWorkflow });
@@ -245,19 +223,8 @@ export async function DELETE(
     }
     const { workflowId } = paramsResult.data;
 
-    const { searchParams } = new URL(request.url);
-    const queryResult = deleteQuerySchema.safeParse({
-      workspaceId: searchParams.get('workspaceId') ?? undefined,
-    });
-
-    if (!queryResult.success) {
-      return NextResponse.json({ error: 'Invalid query parameters' }, { status: 400 });
-    }
-
-    const { workspaceId } = queryResult.data;
-
     // MAJ-13: Referential integrity — prevent deleting active workflows
-    const existingWorkflow = await getWorkflow(workflowId, workspaceId);
+    const existingWorkflow = await getWorkflow(workflowId);
     if (!existingWorkflow) {
       return NextResponse.json({ success: false, error: 'Workflow not found' }, { status: 404 });
     }
@@ -269,7 +236,7 @@ export async function DELETE(
       );
     }
 
-    await deleteWorkflow(workflowId, workspaceId);
+    await deleteWorkflow(workflowId);
 
     return NextResponse.json({ success: true });
   } catch (error: unknown) {

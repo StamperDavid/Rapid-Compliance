@@ -232,12 +232,7 @@ export interface SalesSignal {
    * Lead ID this signal relates to (optional - some signals are org-level)
    */
   leadId?: string;
-  
-  /**
-   * Workspace ID (optional) - for workspace-scoped signals
-   */
-  workspaceId?: string;
-  
+
   /**
    * Confidence score (0.0 to 1.0)
    * 
@@ -332,12 +327,7 @@ export interface SignalSubscription {
    * Only signals with confidence >= this value are delivered
    */
   minConfidence?: number;
-  
-  /**
-   * Optional workspace ID for workspace-scoped subscriptions
-   */
-  workspaceId?: string;
-  
+
   /**
    * Only observe unprocessed signals
    * Default: true

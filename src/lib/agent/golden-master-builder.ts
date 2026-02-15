@@ -21,7 +21,6 @@ export interface GoldenMasterBuilderOptions {
   onboardingData: OnboardingData;
   knowledgeBase: KnowledgeBase;
   userId: string;
-  workspaceId?: string;
 }
 
 export interface CreateGoldenMasterFromBaseOptions {

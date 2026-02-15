@@ -39,7 +39,6 @@ interface FirestoreTimestamp {
  */
 interface FirestoreTemporaryScrapeData {
   id?: string;
-  workspaceId?: string;
   url: string;
   rawHtml: string;
   cleanedContent: string;
@@ -127,7 +126,6 @@ export function calculateExpirationDate(): Date {
  * ```
  */
 export async function saveToDiscoveryArchive(params: {
-  workspaceId?: string;
   url: string;
   rawHtml: string;
   cleanedContent: string;
@@ -135,7 +133,7 @@ export async function saveToDiscoveryArchive(params: {
   relatedRecordId?: string;
 }): Promise<{ scrape: TemporaryScrape; isNew: boolean }> {
   try {
-    const { workspaceId, url, rawHtml, cleanedContent, metadata, relatedRecordId } = params;
+    const { url, rawHtml, cleanedContent, metadata, relatedRecordId } = params;
 
     // Calculate content hash for duplicate detection
     const contentHash = calculateContentHash(rawHtml);
@@ -176,7 +174,6 @@ export async function saveToDiscoveryArchive(params: {
     const now = new Date();
     const newScrape: TemporaryScrape = {
       id: db.collection(DISCOVERY_ARCHIVE_COLLECTION).doc().id,
-      workspaceId,
       url,
       rawHtml,
       cleanedContent,

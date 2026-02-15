@@ -38,7 +38,6 @@ interface EmailHistory {
 
 export default function EmailWriterPage() {
   const { user } = useAuth();
-  const workspaceId = 'default';
   const userId = user?.id ?? 'anonymous';
 
   // State
@@ -141,7 +140,6 @@ export default function EmailWriterPage() {
         
         {/* Email Writer Card */}
         <EmailWriterCard
-          workspaceId={workspaceId}
           userId={userId}
           onEmailSent={handleEmailSent}
         />

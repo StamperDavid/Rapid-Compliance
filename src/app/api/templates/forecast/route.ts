@@ -18,7 +18,6 @@ export const dynamic = 'force-dynamic';
  *
  * Body:
  * {
- *   workspaceId: string;
  *   period: '30-day' | '60-day' | '90-day' | 'quarter' | 'annual';
  *   quota?: number;
  *   templateId?: string;
@@ -39,10 +38,10 @@ export async function POST(request: NextRequest) {
     }
 
     const body: unknown = await request.json();
-    
+
     // Validate request body with Zod schema
     const validation = validateRequestBody(RevenueForecastSchema, body);
-    
+
     if (validation.success === false) {
       const { error, details } = validation;
       return NextResponse.json({
@@ -52,15 +51,14 @@ export async function POST(request: NextRequest) {
         details: details?.errors
       }, { status: 400 });
     }
-    
+
     const {
-      workspaceId,
       period,
       quota,
       templateId,
       includeQuotaPerformance
     } = validation.data;
-    
+
     logger.info('Generating revenue forecast', {
       period,
       quota,
@@ -68,7 +66,6 @@ export async function POST(request: NextRequest) {
     });
 
     const forecast = generateRevenueForecast({
-      workspaceId,
       period: period as ForecastPeriod,
       quota,
       templateId
@@ -78,7 +75,6 @@ export async function POST(request: NextRequest) {
     let quotaPerformance = null;
     if (includeQuotaPerformance && quota) {
       quotaPerformance = calculateQuotaPerformance(
-        workspaceId,
         period as ForecastPeriod,
         quota,
         templateId

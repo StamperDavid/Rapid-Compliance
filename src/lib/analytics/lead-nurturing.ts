@@ -13,8 +13,6 @@ import { PLATFORM_ID } from '@/lib/constants/platform';
 export interface LeadNurtureSequence {
   id: string;
   name: string;
-  workspaceId?: string;
-  
   // Sequence configuration
   trigger: 'new_lead' | 'cold_lead' | 'nurture_score' | 'manual' | 'workflow';
   triggerConditions?: {
@@ -164,7 +162,6 @@ export async function createNurtureSequence(sequence: Partial<LeadNurtureSequenc
   const fullSequence: LeadNurtureSequence = {
     id: sequenceId,
     name: (sequence.name !== '' && sequence.name != null) ? sequence.name : 'Untitled Sequence',
-    workspaceId: sequence.workspaceId,
     trigger: sequence.trigger ?? 'new_lead',
     triggerConditions: sequence.triggerConditions,
     emails: sequence.emails ?? [],

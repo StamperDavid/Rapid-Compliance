@@ -51,7 +51,6 @@ export default function RiskDashboardPage() {
         },
         body: JSON.stringify({
           dealId,
-          workspaceId: 'default',
           includeInterventions: true,
           forceRefresh: false,
         }),

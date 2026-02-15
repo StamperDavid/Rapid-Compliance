@@ -20,7 +20,6 @@ export interface TaxCalculation {
  * Calculate tax
  */
 export async function calculateTax(
-  workspaceId: string,
   cart: Cart,
   billingAddress: Address,
   shippingAddress: Address
@@ -30,14 +29,14 @@ export async function calculateTax(
 
   // Get e-commerce config
   const ecommerceConfig = await FirestoreService.get(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/${workspaceId}/ecommerce`,
+    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/ecommerce`,
     'config'
   );
-  
+
   if (!ecommerceConfig) {
     throw new Error('E-commerce not configured');
   }
-  
+
   const taxConfig = (ecommerceConfig as Record<string, unknown>).tax as Record<string, unknown> | undefined;
   
   // If no tax config or tax not enabled, return zero tax

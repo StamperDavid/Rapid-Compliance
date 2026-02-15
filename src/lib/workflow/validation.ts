@@ -309,7 +309,6 @@ export const WorkflowSettingsSchema = z.object({
  * Create workflow request schema
  */
 export const CreateWorkflowSchema = z.object({
-  workspaceId: z.string().min(1, 'Workspace ID is required'),
   name: z.string().min(1, 'Name is required').max(100, 'Name must be 100 characters or less'),
   description: z.string().max(500, 'Description must be 500 characters or less'),
   status: WorkflowStatusSchema.optional().default('draft'),
@@ -339,7 +338,6 @@ export const UpdateWorkflowSchema = z.object({
  */
 export const ExecuteWorkflowSchema = z.object({
   workflowId: z.string().min(1, 'Workflow ID is required'),
-  workspaceId: z.string().min(1, 'Workspace ID is required'),
   dealId: z.string().optional(),
   triggerData: z.record(z.unknown()).optional(),
   userId: z.string().optional(),
@@ -349,7 +347,6 @@ export const ExecuteWorkflowSchema = z.object({
  * Workflow filter schema
  */
 export const WorkflowFilterSchema = z.object({
-  workspaceId: z.string().optional(),
   status: WorkflowStatusSchema.optional(),
   triggerType: WorkflowTriggerTypeSchema.optional(),
   tags: z.array(z.string()).optional(),

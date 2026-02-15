@@ -20,7 +20,6 @@ import { PLATFORM_ID } from '@/lib/constants/platform';
 export interface OnboardingProcessorOptions {
   onboardingData: OnboardingData;
   userId: string;
-  workspaceId?: string;
 }
 
 export interface OnboardingProcessResult {
@@ -40,11 +39,11 @@ export async function processOnboarding(
   options: OnboardingProcessorOptions
 ): Promise<OnboardingProcessResult> {
   try {
-    const { onboardingData, userId, workspaceId } = options;
+    const { onboardingData, userId } = options;
 
     // Step 1: Build persona from onboarding data
     const persona = buildPersonaFromOnboarding(onboardingData);
-    
+
     // Step 2: Process knowledge base
     // Type assertion for optional extended fields that may exist on OnboardingData
     interface ExtendedOnboardingFields {
@@ -70,7 +69,6 @@ export async function processOnboarding(
       onboardingData,
       knowledgeBase,
       userId,
-      workspaceId,
       industryTemplateId: onboardingData.industryTemplateId, // Now properly wired!
     });
     

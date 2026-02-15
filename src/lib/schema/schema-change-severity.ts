@@ -304,7 +304,6 @@ export class SchemaChangeUXHandler {
         notificationId,
         {
           id: notificationId,
-          workspaceId: event.workspaceId,
           title: `Schema Change: ${options.level.toUpperCase()}`,
           message: options.userMessage,
           type: options.type || 'info',
@@ -351,7 +350,6 @@ export class SchemaChangeUXHandler {
         {
           id: issueId,
           eventId: event.id,
-          workspaceId: event.workspaceId,
           schemaId: event.schemaId,
           
           severity: assessment.level,

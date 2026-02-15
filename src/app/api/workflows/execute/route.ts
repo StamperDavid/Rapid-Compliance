@@ -9,7 +9,6 @@
  * ```json
  * {
  *   "workflowId": "workflow_123",
- *   "workspaceId": "workspace_123",
  *   "dealId": "deal_456",
  *   "triggerData": {},
  *   "userId": "user_789"
@@ -79,7 +78,6 @@ export async function POST(request: NextRequest) {
     const result = await service.executeWorkflow(
       validData.workflowId,
       {
-        workspaceId: validData.workspaceId,
         dealId: validData.dealId,
         triggeredBy: 'manual',
         triggerData: validData.triggerData ?? {},

@@ -22,7 +22,6 @@ export default function ProductManagementPage() {
   // Fetch function with pagination using service layer
   const fetchProducts = useCallback(async (lastDoc?: QueryDocumentSnapshot) => {
     return getProducts(
-      'default',
       undefined,
       { pageSize: 50, lastDoc }
     );
@@ -53,7 +52,7 @@ export default function ProductManagementPage() {
 
     void (async () => {
       try {
-        await deleteProduct(deletingId, 'default');
+        await deleteProduct(deletingId);
         toast.success('Product deleted successfully');
         await refresh(); // Refresh pagination after delete
       } catch (error) {

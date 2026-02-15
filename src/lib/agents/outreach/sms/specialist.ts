@@ -67,7 +67,6 @@ interface SendSMSPayload {
   to: string | string[];
   message: string;
   from?: string;
-  workspaceId?: string;
   metadata?: Record<string, unknown>;
 }
 
@@ -256,7 +255,6 @@ export class SmsSpecialist extends BaseSpecialist {
       to: payload.to,
       message: payload.message,
       from: payload.from,
-      workspaceId: payload.workspaceId,
       metadata: payload.metadata,
     };
 

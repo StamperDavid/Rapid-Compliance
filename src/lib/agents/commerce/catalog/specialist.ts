@@ -83,7 +83,6 @@ export interface ProductVariant {
 
 export interface Product {
   id: string;
-  workspaceId: string;
   name: string;
   description?: string;
   shortDescription?: string;
@@ -127,7 +126,6 @@ export interface CatalogSummary {
 
 interface FetchProductsPayload {
   action: 'fetch_products';
-  workspaceId: string;
   filters?: {
     status?: Product['status'];
     category?: string;
@@ -146,44 +144,37 @@ interface FetchProductsPayload {
 
 interface GetProductPayload {
   action: 'get_product';
-  workspaceId: string;
   productId: string;
 }
 
 interface CreateProductPayload {
   action: 'create_product';
-  workspaceId: string;
-  product: Omit<Product, 'id' | 'workspaceId' | 'createdAt' | 'updatedAt'>;
+  product: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>;
 }
 
 interface UpdateProductPayload {
   action: 'update_product';
-  workspaceId: string;
   productId: string;
-  updates: Partial<Omit<Product, 'id' | 'workspaceId' | 'createdAt'>>;
+  updates: Partial<Omit<Product, 'id' | 'createdAt'>>;
 }
 
 interface ArchiveProductPayload {
   action: 'archive_product';
-  workspaceId: string;
   productId: string;
 }
 
 interface SearchCatalogPayload {
   action: 'search_catalog';
-  workspaceId: string;
   query: string;
   limit?: number;
 }
 
 interface GetCatalogSummaryPayload {
   action: 'get_catalog_summary';
-  workspaceId: string;
 }
 
 interface SyncCatalogPayload {
   action: 'sync_catalog';
-  workspaceId: string;
   source: 'stripe' | 'shopify' | 'woocommerce' | 'manual';
 }
 
@@ -323,7 +314,7 @@ export class CatalogManagerSpecialist extends BaseSpecialist {
 
       // Get e-commerce config for product schema
       const ecommerceConfig = await FirestoreService.get(
-        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/${payload.workspaceId}/ecommerce`,
+        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/ecommerce`,
         'config'
       );
 
@@ -332,16 +323,16 @@ export class CatalogManagerSpecialist extends BaseSpecialist {
       if (ecommerceConfig?.productSchema) {
         // Fetch from configured entity schema
         const records = await FirestoreService.getAll(
-          `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/${payload.workspaceId}/entities/${ecommerceConfig.productSchema}/records`,
+          `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/entities/${ecommerceConfig.productSchema}/records`,
           constraints
         );
 
         // Map records to Product format using mappings
         const mappings: Record<string, string> = this.extractMappings(ecommerceConfig);
-        products = records.map(record => this.mapRecordToProduct(record, mappings, payload));
+        products = records.map(record => this.mapRecordToProduct(record, mappings));
       } else {
         // Fallback to direct products collection
-        const productsPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/${payload.workspaceId}/products`;
+        const productsPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/products`;
         products = await FirestoreService.getAll(productsPath, constraints);
       }
 
@@ -413,7 +404,7 @@ export class CatalogManagerSpecialist extends BaseSpecialist {
 
       // Get e-commerce config
       const ecommerceConfig = await FirestoreService.get(
-        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/${payload.workspaceId}/ecommerce`,
+        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/ecommerce`,
         'config'
       );
 
@@ -421,17 +412,17 @@ export class CatalogManagerSpecialist extends BaseSpecialist {
 
       if (ecommerceConfig?.productSchema) {
         const record = await FirestoreService.get(
-          `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/${payload.workspaceId}/entities/${ecommerceConfig.productSchema}/records`,
+          `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/entities/${ecommerceConfig.productSchema}/records`,
           payload.productId
         );
 
         if (record) {
           const mappings: Record<string, string> = this.extractMappings(ecommerceConfig);
-          product = this.mapRecordToProduct(record, mappings, payload);
+          product = this.mapRecordToProduct(record, mappings);
         }
       } else {
         product = await FirestoreService.get(
-          `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/${payload.workspaceId}/products`,
+          `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/products`,
           payload.productId
         );
       }
@@ -471,7 +462,6 @@ export class CatalogManagerSpecialist extends BaseSpecialist {
 
       const product: Product = {
         id: productId,
-        workspaceId: payload.workspaceId,
         ...payload.product,
         currency: payload.product.currency ?? 'USD',
         status: payload.product.status ?? 'draft',
@@ -481,7 +471,7 @@ export class CatalogManagerSpecialist extends BaseSpecialist {
       };
 
       await FirestoreService.set(
-        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/${payload.workspaceId}/products`,
+        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/products`,
         productId,
         product,
         false
@@ -512,7 +502,7 @@ export class CatalogManagerSpecialist extends BaseSpecialist {
       const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
 
       const existingProduct = await FirestoreService.get(
-        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/${payload.workspaceId}/products`,
+        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/products`,
         payload.productId
       );
 
@@ -530,7 +520,7 @@ export class CatalogManagerSpecialist extends BaseSpecialist {
       };
 
       await FirestoreService.set(
-        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/${payload.workspaceId}/products`,
+        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/products`,
         payload.productId,
         updates,
         true
@@ -575,7 +565,6 @@ export class CatalogManagerSpecialist extends BaseSpecialist {
   private async handleSearchCatalog(payload: SearchCatalogPayload): Promise<CatalogResult> {
     return this.handleFetchProducts({
       action: 'fetch_products',
-      workspaceId: payload.workspaceId,
       filters: {
         searchQuery: payload.query,
         status: 'active',
@@ -590,12 +579,12 @@ export class CatalogManagerSpecialist extends BaseSpecialist {
   /**
    * Get catalog summary statistics
    */
-  private async handleGetCatalogSummary(payload: GetCatalogSummaryPayload): Promise<CatalogResult> {
+  private async handleGetCatalogSummary(_payload: GetCatalogSummaryPayload): Promise<CatalogResult> {
     try {
       const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
 
       const rawProducts = await FirestoreService.getAll(
-        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/${payload.workspaceId}/products`,
+        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/products`,
         []
       );
       const products = rawProducts as Product[];
@@ -700,15 +689,13 @@ export class CatalogManagerSpecialist extends BaseSpecialist {
    */
   private mapRecordToProduct(
     record: Record<string, unknown>,
-    mappings: Record<string, string>,
-    payload: { workspaceId: string }
+    mappings: Record<string, string>
   ): Product {
     const getValue = (field: string, fallback: string): unknown =>
       this.getMappedValue(record, mappings, field, fallback);
 
     return {
       id: String(record.id ?? record._id ?? ''),
-      workspaceId: payload.workspaceId,
       name: String(getValue('name', 'name') ?? 'Unnamed Product'),
       description: getValue('description', 'description') as string | undefined,
       sku: getValue('sku', 'sku') as string | undefined,

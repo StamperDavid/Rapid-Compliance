@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
+import { auth } from '@/lib/firebase/config';
 import { usePagination } from '@/hooks/usePagination';
 import { useOptimisticDelete } from '@/hooks/useOptimisticDelete';
 import { DataTable, type ColumnDef, type BulkAction } from '@/components/ui/data-table';
@@ -65,7 +66,6 @@ export default function LeadsPage() {
 
   const fetchLeads = useCallback(async (lastDoc?: unknown) => {
     const searchParams = new URLSearchParams({
-      workspaceId: 'default',
       pageSize: '50',
     });
 
@@ -77,7 +77,12 @@ export default function LeadsPage() {
       searchParams.set('lastDoc', String(lastDoc));
     }
 
-    const response = await fetch(`/api/leads?${searchParams}`);
+    const token = await auth?.currentUser?.getIdToken();
+    const response = await fetch(`/api/leads?${searchParams}`, {
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    });
 
     if (!response.ok) {
       throw new Error('Failed to fetch leads');

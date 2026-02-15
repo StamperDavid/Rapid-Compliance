@@ -217,13 +217,11 @@ export interface PatternIdentifiedEvent extends Omit<SalesSignal, 'ttl' | 'creat
  * Create playbook generated event
  */
 export function createPlaybookGeneratedEvent(
-  workspaceId: string,
   metadata: PlaybookGeneratedEvent['metadata']
 ): Omit<PlaybookGeneratedEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'> {
   return {
     type: 'playbook.generated',
     timestamp: new Date(),
-    workspaceId,
     priority: 'Medium',
     confidence: metadata.confidence / 100, // Convert 0-100 to 0-1
     metadata,
@@ -234,13 +232,11 @@ export function createPlaybookGeneratedEvent(
  * Create patterns extracted event
  */
 export function createPatternsExtractedEvent(
-  workspaceId: string,
   metadata: PatternsExtractedEvent['metadata']
 ): Omit<PatternsExtractedEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'> {
   return {
     type: 'playbook.patterns_extracted',
     timestamp: new Date(),
-    workspaceId,
     priority: 'Low',
     confidence: metadata.highConfidencePatterns > 0 ? 0.8 : 0.6,
     metadata,
@@ -251,13 +247,11 @@ export function createPatternsExtractedEvent(
  * Create playbook activated event
  */
 export function createPlaybookActivatedEvent(
-  workspaceId: string,
   metadata: PlaybookActivatedEvent['metadata']
 ): Omit<PlaybookActivatedEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'> {
   return {
     type: 'playbook.activated',
     timestamp: new Date(),
-    workspaceId,
     priority: 'High',
     confidence: metadata.confidence / 100,
     metadata,
@@ -268,13 +262,11 @@ export function createPlaybookActivatedEvent(
  * Create playbook used event
  */
 export function createPlaybookUsedEvent(
-  workspaceId: string,
   metadata: PlaybookUsedEvent['metadata']
 ): Omit<PlaybookUsedEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'> {
   return {
     type: 'playbook.used',
     timestamp: new Date(),
-    workspaceId,
     priority: 'Low',
     confidence: metadata.adherenceScore / 100,
     metadata,
@@ -285,13 +277,11 @@ export function createPlaybookUsedEvent(
  * Create playbook updated event
  */
 export function createPlaybookUpdatedEvent(
-  workspaceId: string,
   metadata: PlaybookUpdatedEvent['metadata']
 ): Omit<PlaybookUpdatedEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'> {
   return {
     type: 'playbook.updated',
     timestamp: new Date(),
-    workspaceId,
     priority: 'Medium',
     confidence: Math.abs(metadata.confidenceChange) > 10 ? 0.7 : 0.8,
     metadata,
@@ -302,13 +292,11 @@ export function createPlaybookUpdatedEvent(
  * Create adoption tracked event
  */
 export function createAdoptionTrackedEvent(
-  workspaceId: string,
   metadata: AdoptionTrackedEvent['metadata']
 ): Omit<AdoptionTrackedEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'> {
   return {
     type: 'playbook.adoption_tracked',
     timestamp: new Date(),
-    workspaceId,
     priority: 'Low',
     confidence: metadata.adoptionRate / 100,
     metadata,
@@ -319,13 +307,11 @@ export function createAdoptionTrackedEvent(
  * Create effectiveness measured event
  */
 export function createEffectivenessMeasuredEvent(
-  workspaceId: string,
   metadata: EffectivenessMeasuredEvent['metadata']
 ): Omit<EffectivenessMeasuredEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'> {
   return {
     type: 'playbook.effectiveness_measured',
     timestamp: new Date(),
-    workspaceId,
     priority: metadata.recommendation === 'retire' ? 'High' : 'Medium',
     confidence: metadata.confidence / 100,
     metadata,
@@ -336,13 +322,11 @@ export function createEffectivenessMeasuredEvent(
  * Create playbook archived event
  */
 export function createPlaybookArchivedEvent(
-  workspaceId: string,
   metadata: PlaybookArchivedEvent['metadata']
 ): Omit<PlaybookArchivedEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'> {
   return {
     type: 'playbook.archived',
     timestamp: new Date(),
-    workspaceId,
     priority: 'Medium',
     confidence: metadata.finalEffectiveness / 100,
     metadata,
@@ -353,13 +337,11 @@ export function createPlaybookArchivedEvent(
  * Create pattern identified event
  */
 export function createPatternIdentifiedEvent(
-  workspaceId: string,
   metadata: PatternIdentifiedEvent['metadata']
 ): Omit<PatternIdentifiedEvent, 'ttl' | 'createdAt' | 'processed' | 'processedAt'> {
   return {
     type: 'playbook.pattern_identified',
     timestamp: new Date(),
-    workspaceId,
     priority: metadata.shouldAddToPlaybook ? 'High' : 'Low',
     confidence: metadata.confidence / 100,
     metadata,

@@ -18,7 +18,6 @@
 import { BaseSpecialist } from '../../base-specialist';
 import type { AgentMessage, AgentReport, SpecialistConfig, Signal } from '../../types';
 import { logger } from '@/lib/logger/logger';
-import { PLATFORM_ID } from '@/lib/constants/platform';
 
 // ============================================================================
 // CONFIGURATION
@@ -80,7 +79,6 @@ export interface CheckoutItem {
 
 export interface CheckoutInitPayload {
   action: 'initialize_checkout';
-  workspaceId: string;
   items: CheckoutItem[];
   customer: {
     email: string;
@@ -112,7 +110,6 @@ export interface CheckoutInitPayload {
 
 export interface PaymentIntentPayload {
   action: 'create_payment_intent';
-  workspaceId: string;
   amount: number;
   currency: string;
   customerId?: string;
@@ -127,7 +124,6 @@ export interface ValidatePaymentPayload {
 
 export interface RefundPayload {
   action: 'process_refund';
-  workspaceId: string;
   paymentIntentId: string;
   amount?: number;
   reason?: string;
@@ -271,11 +267,12 @@ export class PaymentSpecialist extends BaseSpecialist {
     }
 
     try {
-      const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+      const { FirestoreService } = await import('@/lib/db/firestore-service');
+      const { getSubCollection } = await import('@/lib/firebase/collections');
 
       // Fetch organization's Stripe config
       const ecommerceConfig = await FirestoreService.get(
-        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/${payload.workspaceId}/ecommerce`,
+        getSubCollection('ecommerce'),
         'config'
       );
 
@@ -314,7 +311,6 @@ export class PaymentSpecialist extends BaseSpecialist {
 
       const sessionData = {
         id: sessionId,
-        workspaceId: payload.workspaceId,
         customer: payload.customer,
         lineItems,
         total,
@@ -330,7 +326,7 @@ export class PaymentSpecialist extends BaseSpecialist {
       };
 
       await FirestoreService.set(
-        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/checkout_sessions`,
+        getSubCollection('checkout_sessions'),
         sessionId,
         sessionData,
         false
@@ -371,13 +367,13 @@ export class PaymentSpecialist extends BaseSpecialist {
     }
 
     try {
-      const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+      const { FirestoreService } = await import('@/lib/db/firestore-service');
+      const { getSubCollection } = await import('@/lib/firebase/collections');
 
       const paymentIntentId = `pi_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
 
       const intentData = {
         id: paymentIntentId,
-        workspaceId: payload.workspaceId,
         amount: payload.amount,
         currency: payload.currency,
         customerId: payload.customerId,
@@ -387,7 +383,7 @@ export class PaymentSpecialist extends BaseSpecialist {
       };
 
       await FirestoreService.set(
-        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/payment_intents`,
+        getSubCollection('payment_intents'),
         paymentIntentId,
         intentData,
         false
@@ -489,7 +485,6 @@ export class PaymentSpecialist extends BaseSpecialist {
       const { refundPayment } = await import('@/lib/ecommerce/payment-service');
 
       const refundResult = await refundPayment(
-        payload.workspaceId,
         payload.paymentIntentId,
         payload.amount
       );

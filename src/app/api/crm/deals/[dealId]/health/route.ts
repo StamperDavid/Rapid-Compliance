@@ -28,12 +28,7 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { searchParams } = new URL(request.url);
-
-    const workspaceIdParam = searchParams.get('workspaceId');
-    const workspaceId = (workspaceIdParam !== '' && workspaceIdParam != null) ? workspaceIdParam : 'default';
-
-    const health = await calculateDealHealth(workspaceId, dealId);
+    const health = await calculateDealHealth(dealId);
 
     return NextResponse.json({
       success: true,

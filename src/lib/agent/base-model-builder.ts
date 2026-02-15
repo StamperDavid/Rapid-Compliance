@@ -27,7 +27,6 @@ export async function buildBaseModel(params: {
   onboardingData: OnboardingData;
   knowledgeBase: KnowledgeBase;
   userId: string;
-  workspaceId?: string;
   industryTemplateId?: string; // NEW: Optional industry template for intelligent defaults
 }): Promise<BaseModel> {
   const { onboardingData, knowledgeBase, userId, industryTemplateId } = params;

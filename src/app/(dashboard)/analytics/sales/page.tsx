@@ -18,7 +18,7 @@ export default function SalesAnalyticsPage() {
 
   const loadAnalytics = useCallback(async () => {
     try {
-      const response = await fetch(`/api/crm/analytics/velocity?workspaceId=default`);
+      const response = await fetch(`/api/crm/analytics/velocity`);
       const data = await response.json() as SalesAnalyticsApiResponse;
       if (data.success) {
         setMetrics(data.data.metrics);

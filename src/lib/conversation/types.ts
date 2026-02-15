@@ -28,7 +28,6 @@ import type { Timestamp } from 'firebase/firestore';
  */
 export interface Conversation {
   id: string;
-  workspaceId: string;
 
   // Metadata
   type: ConversationType;
@@ -123,7 +122,6 @@ export type ParticipantRole =
  */
 export interface ConversationAnalysis {
   conversationId: string;
-  workspaceId: string;
 
   // Core Analysis
   sentiment: SentimentAnalysis;
@@ -539,8 +537,7 @@ export type PositiveSignalType =
  */
 export interface AnalyzeConversationRequest {
   conversationId: string;
-  workspaceId?: string;
-  
+
   // Optional context
   dealId?: string;
   leadId?: string;
@@ -558,8 +555,6 @@ export interface AnalyzeConversationRequest {
  * Request to analyze raw transcript
  */
 export interface AnalyzeTranscriptRequest {
-  workspaceId?: string;
-
   // Conversation data
   transcript: string;
   conversationType: ConversationType;
@@ -583,7 +578,6 @@ export interface AnalyzeTranscriptRequest {
  */
 export interface BatchAnalysisRequest {
   conversationIds: string[];
-  workspaceId?: string;
   includeCoaching?: boolean;
   includeFollowUps?: boolean;
 }
@@ -716,7 +710,6 @@ export const DEFAULT_CONVERSATION_CONFIG: ConversationEngineConfig = {
  */
 export interface ConversationDocument {
   id: string;
-  workspaceId: string;
   type: ConversationType;
   title: string;
   description?: string;
@@ -742,7 +735,6 @@ export interface ConversationDocument {
  */
 export interface ConversationAnalysisDocument {
   conversationId: string;
-  workspaceId: string;
   sentiment: SentimentAnalysis;
   talkRatio: TalkRatioAnalysis;
   topics: TopicAnalysis;

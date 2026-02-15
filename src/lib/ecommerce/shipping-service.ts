@@ -30,7 +30,6 @@ interface FreeShippingConfig {
  * Calculate shipping cost
  */
 export async function calculateShipping(
-  workspaceId: string,
   cart: Cart,
   address: Address,
   methodId?: string
@@ -40,7 +39,7 @@ export async function calculateShipping(
 
   // Get e-commerce config
   const rawConfig = await FirestoreService.get(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/${workspaceId}/ecommerce`,
+    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/ecommerce`,
     'config'
   );
 

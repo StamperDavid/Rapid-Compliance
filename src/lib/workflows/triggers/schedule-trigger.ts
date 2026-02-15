@@ -3,20 +3,18 @@
  * Handles scheduled workflow execution (cron jobs)
  */
 
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { FirestoreService } from '@/lib/db/firestore-service';
 import type { Workflow, ScheduleTrigger, WorkflowTriggerData } from '@/types/workflow';
 import { executeWorkflow } from '../workflow-executor';
 import { logger } from '@/lib/logger/logger';
 import { CronExpressionParser } from 'cron-parser';
-import { PLATFORM_ID } from '@/lib/constants/platform';
 
 /**
  * Register schedule trigger
  * In production, this would set up Cloud Scheduler
  */
 export async function registerScheduleTrigger(
-  workflow: Workflow,
-  workspaceId: string
+  workflow: Workflow
 ): Promise<void> {
   const trigger = workflow.trigger as ScheduleTrigger;
 
@@ -25,13 +23,13 @@ export async function registerScheduleTrigger(
   }
 
   // Store schedule configuration
+  const { getSubCollection } = await import('@/lib/firebase/collections');
   await FirestoreService.set(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.WORKSPACES}/${workspaceId}/scheduleTriggers`,
+    getSubCollection('scheduleTriggers'),
     workflow.id,
     {
       workflowId: workflow.id,
       schedule: trigger.schedule,
-      workspaceId,
       registeredAt: new Date().toISOString(),
       nextRun: calculateNextRun(trigger.schedule),
     },
@@ -113,104 +111,92 @@ function calculateNextRun(schedule: ScheduleTrigger['schedule']): string {
  */
 export async function executeScheduledWorkflows(): Promise<void> {
   const now = new Date().toISOString();
-  
+
   // Find all schedule triggers that are due
   const { where, orderBy, limit } = await import('firebase/firestore');
-  
-  // Get all organizations
-  const orgs = await FirestoreService.getAll(COLLECTIONS.ORGANIZATIONS, []);
-  
-  for (const org of orgs) {
-    const workspaces = await FirestoreService.getAll(
-      `${COLLECTIONS.ORGANIZATIONS}/${org.id}/${COLLECTIONS.WORKSPACES}`,
-      []
-    );
-    
-    for (const workspace of workspaces) {
-      const triggers = await FirestoreService.getAll(
-        `${COLLECTIONS.ORGANIZATIONS}/${org.id}/${COLLECTIONS.WORKSPACES}/${workspace.id}/scheduleTriggers`,
-        [
-          where('nextRun', '<=', now),
-          orderBy('nextRun', 'asc'),
-          limit(100), // Process in batches
-        ]
-      );
-      
-      for (const trigger of triggers) {
-        try {
-          // Type guard for trigger data
-          if (!trigger || typeof trigger !== 'object') {
-            continue;
-          }
+  const { getSubCollection } = await import('@/lib/firebase/collections');
 
-          // Ensure workflowId exists
-          const workflowId = 'workflowId' in trigger && typeof trigger.workflowId === 'string'
-            ? trigger.workflowId
-            : null;
+  const triggers = await FirestoreService.getAll(
+    getSubCollection('scheduleTriggers'),
+    [
+      where('nextRun', '<=', now),
+      orderBy('nextRun', 'asc'),
+      limit(100), // Process in batches
+    ]
+  );
 
-          if (!workflowId) {
-            continue;
-          }
-
-          // Load workflow
-          const workflowDoc = await FirestoreService.get(
-            `${COLLECTIONS.ORGANIZATIONS}/${org.id}/${COLLECTIONS.WORKSPACES}/${workspace.id}/${COLLECTIONS.WORKFLOWS}`,
-            workflowId
-          );
-
-          // Type guard for workflow document
-          if (!workflowDoc || typeof workflowDoc !== 'object') {
-            continue;
-          }
-
-          const workflow = workflowDoc as Workflow;
-          if (workflow.status !== 'active') {
-            continue; // Skip inactive workflows
-          }
-
-          const scheduleData = 'schedule' in trigger && trigger.schedule as Record<string, unknown>;
-          const scheduleTypeRaw = scheduleData && typeof scheduleData === 'object' && 'type' in scheduleData
-            ? scheduleData.type as string
-            : 'unknown';
-
-          // Map schedule type to valid WorkflowTriggerData scheduleType
-          const validScheduleTypes = ['daily', 'weekly', 'monthly', 'hourly'] as const;
-          const scheduleType: 'daily' | 'weekly' | 'monthly' | 'hourly' | undefined =
-            validScheduleTypes.includes(scheduleTypeRaw as typeof validScheduleTypes[number])
-              ? (scheduleTypeRaw as typeof validScheduleTypes[number])
-              : undefined;
-
-          // Execute workflow with proper typing
-          const triggerData: WorkflowTriggerData = {
-            workspaceId: workspace.id as string,
-            scheduledAt: now,
-            scheduleType,
-          };
-
-          await executeWorkflow(workflow, triggerData);
-
-          // Update next run time
-          const scheduleTrigger = workflow.trigger as ScheduleTrigger;
-          const nextRun = calculateNextRun(scheduleTrigger.schedule);
-
-          await FirestoreService.set(
-            `${COLLECTIONS.ORGANIZATIONS}/${org.id}/${COLLECTIONS.WORKSPACES}/${workspace.id}/scheduleTriggers`,
-            workflowId,
-            {
-              ...trigger,
-              nextRun,
-              lastRun: now,
-            },
-            false
-          );
-        } catch (error) {
-          const workflowId = trigger && typeof trigger === 'object' && 'workflowId' in trigger && typeof trigger.workflowId === 'string'
-            ? trigger.workflowId
-            : 'unknown';
-          logger.error(`[Schedule Trigger] Error executing workflow ${workflowId}`, error instanceof Error ? error : new Error(String(error)), { file: 'schedule-trigger.ts' });
-          // Continue with other workflows
-        }
+  for (const trigger of triggers) {
+    try {
+      // Type guard for trigger data
+      if (!trigger || typeof trigger !== 'object') {
+        continue;
       }
+
+      // Ensure workflowId exists
+      const workflowId = 'workflowId' in trigger && typeof trigger.workflowId === 'string'
+        ? trigger.workflowId
+        : null;
+
+      if (!workflowId) {
+        continue;
+      }
+
+      // Load workflow
+      const workflowDoc = await FirestoreService.get(
+        getSubCollection('workflows'),
+        workflowId
+      );
+
+      // Type guard for workflow document
+      if (!workflowDoc || typeof workflowDoc !== 'object') {
+        continue;
+      }
+
+      const workflow = workflowDoc as Workflow;
+      if (workflow.status !== 'active') {
+        continue; // Skip inactive workflows
+      }
+
+      const scheduleData = 'schedule' in trigger && trigger.schedule as Record<string, unknown>;
+      const scheduleTypeRaw = scheduleData && typeof scheduleData === 'object' && 'type' in scheduleData
+        ? scheduleData.type as string
+        : 'unknown';
+
+      // Map schedule type to valid WorkflowTriggerData scheduleType
+      const validScheduleTypes = ['daily', 'weekly', 'monthly', 'hourly'] as const;
+      const scheduleType: 'daily' | 'weekly' | 'monthly' | 'hourly' | undefined =
+        validScheduleTypes.includes(scheduleTypeRaw as typeof validScheduleTypes[number])
+          ? (scheduleTypeRaw as typeof validScheduleTypes[number])
+          : undefined;
+
+      // Execute workflow with proper typing
+      const triggerData: WorkflowTriggerData = {
+        scheduledAt: now,
+        scheduleType,
+      };
+
+      await executeWorkflow(workflow, triggerData);
+
+      // Update next run time
+      const scheduleTrigger = workflow.trigger as ScheduleTrigger;
+      const nextRun = calculateNextRun(scheduleTrigger.schedule);
+
+      await FirestoreService.set(
+        getSubCollection('scheduleTriggers'),
+        workflowId,
+        {
+          ...trigger,
+          nextRun,
+          lastRun: now,
+        },
+        false
+      );
+    } catch (error) {
+      const workflowId = trigger && typeof trigger === 'object' && 'workflowId' in trigger && typeof trigger.workflowId === 'string'
+        ? trigger.workflowId
+        : 'unknown';
+      logger.error(`[Schedule Trigger] Error executing workflow ${workflowId}`, error instanceof Error ? error : new Error(String(error)), { file: 'schedule-trigger.ts' });
+      // Continue with other workflows
     }
   }
 }
@@ -219,11 +205,11 @@ export async function executeScheduledWorkflows(): Promise<void> {
  * Unregister schedule trigger
  */
 export async function unregisterScheduleTrigger(
-  workflowId: string,
-  workspaceId: string
+  workflowId: string
 ): Promise<void> {
+  const { getSubCollection } = await import('@/lib/firebase/collections');
   await FirestoreService.delete(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.WORKSPACES}/${workspaceId}/scheduleTriggers`,
+    getSubCollection('scheduleTriggers'),
     workflowId
   );
 

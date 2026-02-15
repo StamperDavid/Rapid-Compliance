@@ -47,8 +47,6 @@ export interface ScrapeJobConfig {
   /** Unique job identifier */
   jobId: string;
 
-  /** Workspace ID (optional) */
-  workspaceId?: string;
 
   /** Industry template to use */
   industryId: string;

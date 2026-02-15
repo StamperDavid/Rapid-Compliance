@@ -13,11 +13,8 @@ import {
   searchLeads,
   bulkUpdateLeads,
 } from '@/lib/crm/lead-service';
-import { PLATFORM_ID } from '@/lib/constants/platform';
 
 describe('LeadService', () => {
-  const testOrgId = PLATFORM_ID;
-  const testWorkspaceId = 'default';
   let testLeadId: string;
 
   beforeEach(async () => {
@@ -28,7 +25,7 @@ describe('LeadService', () => {
     // Cleanup: Delete test lead if exists
     if (testLeadId) {
       try {
-        await deleteLead(testLeadId, testWorkspaceId);
+        await deleteLead(testLeadId);
       } catch {
         // Ignore - lead may already be deleted by test
       }
@@ -51,7 +48,7 @@ describe('LeadService', () => {
       };
 
       // Disable auto-enrichment to test default score behavior
-      const lead = await createLead(leadData, testWorkspaceId, { autoEnrich: false });
+      const lead = await createLead(leadData, { autoEnrich: false });
       testLeadId = lead.id;
 
       expect(lead).toBeDefined();
@@ -59,7 +56,6 @@ describe('LeadService', () => {
       expect(lead.firstName).toBe('John');
       expect(lead.lastName).toBe('Doe');
       expect(lead.email).toBe('john.doe@example.com');
-      expect(lead.workspaceId).toBe(testWorkspaceId);
       expect(lead.score).toBe(50); // Default score (without enrichment)
       expect(lead.createdAt).toBeDefined();
     });
@@ -71,7 +67,7 @@ describe('LeadService', () => {
         email: 'jane@example.com',
         status: 'new' as const,
         score: 85,
-      }, testWorkspaceId);
+      });
       testLeadId = lead.id;
 
       expect(lead.score).toBe(85);
@@ -86,11 +82,11 @@ describe('LeadService', () => {
         lastName: 'User',
         email: 'test@example.com',
         status: 'new' as const,
-      }, testWorkspaceId);
+      });
       testLeadId = created.id;
 
       // Retrieve it
-      const lead = await getLead(testLeadId, testWorkspaceId);
+      const lead = await getLead(testLeadId);
 
       expect(lead).toBeDefined();
       expect(lead?.id).toBe(testLeadId);
@@ -98,7 +94,7 @@ describe('LeadService', () => {
     });
 
     it('should return null for non-existent lead', async () => {
-      const lead = await getLead('non-existent-id', testWorkspaceId);
+      const lead = await getLead('non-existent-id');
       expect(lead).toBeNull();
     });
   });
@@ -111,7 +107,7 @@ describe('LeadService', () => {
         lastName: 'Name',
         email: 'original@example.com',
         status: 'new' as const,
-      }, testWorkspaceId);
+      });
       testLeadId = created.id;
 
       // Update it
@@ -119,7 +115,7 @@ describe('LeadService', () => {
         firstName: 'Updated',
         status: 'qualified',
         score: 90,
-      }, testWorkspaceId);
+      });
 
       expect(updated.firstName).toBe('Updated');
       expect(updated.lastName).toBe('Name'); // Unchanged
@@ -139,19 +135,19 @@ describe('LeadService', () => {
           lastName: `${i}`,
           email: `lead${i}@example.com`,
           status: 'new' as const,
-        }, testWorkspaceId);
+        });
         leadIds.push(lead.id);
       }
 
       // Get first page
-      const result = await getLeads(testWorkspaceId, undefined, { pageSize: 5 });
+      const result = await getLeads(undefined, { pageSize: 5 });
 
       expect(result.data).toHaveLength(5);
       expect(result.hasMore).toBe(true);
       expect(result.lastDoc).toBeDefined();
 
       // Get second page
-      const page2 = await getLeads(testWorkspaceId, undefined, {
+      const page2 = await getLeads(undefined, {
         pageSize: 5,
         lastDoc: result.lastDoc!,
       });
@@ -161,7 +157,7 @@ describe('LeadService', () => {
 
       // Cleanup
       for (const id of leadIds) {
-        await deleteLead(id, testWorkspaceId);
+        await deleteLead(id);
       }
     });
 
@@ -172,24 +168,24 @@ describe('LeadService', () => {
         lastName: 'Lead',
         email: 'new@example.com',
         status: 'new' as const,
-      }, testWorkspaceId);
+      });
 
       const qualifiedLead = await createLead({
         firstName: 'Qualified',
         lastName: 'Lead',
         email: 'qualified@example.com',
         status: 'qualified' as const,
-      }, testWorkspaceId);
+      });
 
       // Filter by status
-      const result = await getLeads(testWorkspaceId, { status: 'qualified' });
+      const result = await getLeads({ status: 'qualified' });
 
       expect(result.data.length).toBeGreaterThanOrEqual(1);
       expect(result.data.every(l => l.status === 'qualified')).toBe(true);
 
       // Cleanup
-      await deleteLead(newLead.id, testWorkspaceId);
-      await deleteLead(qualifiedLead.id, testWorkspaceId);
+      await deleteLead(newLead.id);
+      await deleteLead(qualifiedLead.id);
     });
   });
 
@@ -200,10 +196,10 @@ describe('LeadService', () => {
         lastName: 'Lead',
         email: 'searchable@example.com',
         status: 'new' as const,
-      }, testWorkspaceId);
+      });
       testLeadId = lead.id;
 
-      const result = await searchLeads('Searchable', testWorkspaceId);
+      const result = await searchLeads('Searchable');
 
       expect(result.data.length).toBeGreaterThanOrEqual(1);
       expect(result.data.some(l => l.id === testLeadId)).toBe(true);
@@ -215,10 +211,10 @@ describe('LeadService', () => {
         lastName: 'User',
         email: 'unique-email@example.com',
         status: 'new' as const,
-      }, testWorkspaceId);
+      });
       testLeadId = lead.id;
 
-      const result = await searchLeads('unique-email', testWorkspaceId);
+      const result = await searchLeads('unique-email');
 
       expect(result.data.some(l => l.id === testLeadId)).toBe(true);
     });
@@ -232,55 +228,39 @@ describe('LeadService', () => {
         lastName: 'Test',
         email: 'bulk1@example.com',
         status: 'new' as const,
-      }, testWorkspaceId);
+      });
 
       const lead2 = await createLead({
         firstName: 'Bulk2',
         lastName: 'Test',
         email: 'bulk2@example.com',
         status: 'new' as const,
-      }, testWorkspaceId);
+      });
 
       const lead3 = await createLead({
         firstName: 'Bulk3',
         lastName: 'Test',
         email: 'bulk3@example.com',
         status: 'new' as const,
-      }, testWorkspaceId);
+      });
 
       // Bulk update
       const successCount = await bulkUpdateLeads(
         [lead1.id, lead2.id, lead3.id],
-        { status: 'contacted' },
-        testWorkspaceId
+        { status: 'qualified', score: 75 }
       );
 
       expect(successCount).toBe(3);
 
       // Verify updates
-      const updated1 = await getLead(lead1.id, testWorkspaceId);
-      expect(updated1?.status).toBe('contacted');
+      const updated1 = await getLead(lead1.id);
+      expect(updated1?.status).toBe('qualified');
+      expect(updated1?.score).toBe(75);
 
       // Cleanup
-      await deleteLead(lead1.id, testWorkspaceId);
-      await deleteLead(lead2.id, testWorkspaceId);
-      await deleteLead(lead3.id, testWorkspaceId);
-    });
-  });
-
-  describe('deleteLead', () => {
-    it('should delete a lead', async () => {
-      const lead = await createLead({
-        firstName: 'Delete',
-        lastName: 'Me',
-        email: 'deleteme@example.com',
-        status: 'new' as const,
-      }, testWorkspaceId);
-
-      await deleteLead(lead.id, testWorkspaceId);
-
-      const deleted = await getLead(lead.id, testWorkspaceId);
-      expect(deleted).toBeNull();
+      await deleteLead(lead1.id);
+      await deleteLead(lead2.id);
+      await deleteLead(lead3.id);
     });
   });
 });

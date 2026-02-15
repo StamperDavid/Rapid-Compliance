@@ -23,7 +23,6 @@ type FirestoreTimestamp = Date | string | { toDate: () => Date } | null | undefi
 interface ActivityTimelineProps {
   entityType: 'lead' | 'contact' | 'company' | 'deal';
   entityId: string;
-  workspaceId?: string;
   showInsights?: boolean;
   showNextAction?: boolean;
   maxHeight?: string;
@@ -32,7 +31,6 @@ interface ActivityTimelineProps {
 export default function ActivityTimeline({
   entityType,
   entityId,
-  workspaceId = 'default',
   showInsights = true,
   showNextAction = true,
   maxHeight = '600px',
@@ -51,7 +49,7 @@ export default function ActivityTimeline({
 
       // Load timeline
       const timelineRes = await fetch(
-        `/api/crm/activities/timeline?entityType=${entityType}&entityId=${entityId}&workspaceId=${workspaceId}`
+        `/api/crm/activities/timeline?entityType=${entityType}&entityId=${entityId}`
       );
       const timelineData = await timelineRes.json() as ApiResponse<TimelineGroup[]>;
 
@@ -61,7 +59,7 @@ export default function ActivityTimeline({
 
       // Load stats
       const statsRes = await fetch(
-        `/api/crm/activities/stats?entityType=${entityType}&entityId=${entityId}&workspaceId=${workspaceId}`
+        `/api/crm/activities/stats?entityType=${entityType}&entityId=${entityId}`
       );
       const statsData = await statsRes.json() as ApiResponse<ActivityStats>;
 
@@ -72,7 +70,7 @@ export default function ActivityTimeline({
       // Load insights
       if (showInsights || showNextAction) {
         const insightsRes = await fetch(
-          `/api/crm/activities/insights?entityType=${entityType}&entityId=${entityId}&workspaceId=${workspaceId}`
+          `/api/crm/activities/insights?entityType=${entityType}&entityId=${entityId}`
         );
         const insightsData = await insightsRes.json() as ApiResponse<InsightsData>;
 
@@ -88,7 +86,7 @@ export default function ActivityTimeline({
     } finally {
       setLoading(false);
     }
-  }, [entityType, entityId, workspaceId, showInsights, showNextAction]);
+  }, [entityType, entityId, showInsights, showNextAction]);
 
   useEffect(() => {
     void loadData();

@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
 
     // Use authenticated user's UID as cart key — aligns with checkout and webhook
     const cartId = authResult.user.uid;
-    const cart = await applyDiscountCode(cartId, 'default', code);
+    const cart = await applyDiscountCode(cartId, code);
 
     return NextResponse.json({
       success: true,
@@ -99,7 +99,7 @@ export async function DELETE(request: NextRequest) {
 
     // Use authenticated user's UID as cart key — aligns with checkout and webhook
     const cartId = authResult.user.uid;
-    const cart = await removeDiscountCode(cartId, 'default', code);
+    const cart = await removeDiscountCode(cartId, code);
 
     return NextResponse.json({
       success: true,

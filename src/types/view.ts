@@ -7,9 +7,8 @@ import type { EntityFilter, EntitySort, EntityGroup } from './entity';
  */
 export interface View {
   id: string;
-  workspaceId: string;
   schemaId: string;
-  
+
   // Basic info
   name: string;
   description?: string;

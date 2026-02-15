@@ -27,12 +27,10 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
 
-    const workspaceIdParam = searchParams.get('workspaceId');
-    const workspaceId = (workspaceIdParam !== '' && workspaceIdParam != null) ? workspaceIdParam : 'default';
     const periodParam = searchParams.get('period') ?? 'month';
     const period: LeaderboardPeriod = isValidPeriod(periodParam) ? periodParam : 'month';
 
-    const leaderboard = await calculateLeaderboard(workspaceId, period);
+    const leaderboard = await calculateLeaderboard(period);
 
     return NextResponse.json({
       success: true,

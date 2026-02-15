@@ -19,7 +19,6 @@ export const dynamic = 'force-dynamic';
 
 // Validation Schema
 const SendEmailSchema = z.object({
-  workspaceId: z.string().min(1, 'Workspace ID is required'),
   userId: z.string().min(1, 'User ID is required'),
 
   // Recipients
@@ -128,7 +127,6 @@ export async function POST(request: NextRequest) {
     });
 
     const result = await sendEmail({
-      workspaceId: validData.workspaceId,
       userId: validData.userId,
       to: validData.to,
       toName: validData.toName,

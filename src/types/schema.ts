@@ -6,8 +6,7 @@ import type { Timestamp } from 'firebase/firestore';
  */
 export interface Schema {
   id: string;
-  workspaceId: string;
-  
+
   // Basic info
   name: string; // e.g., "Leads", "Products", "Orders"
   pluralName: string; // e.g., "Leads", "Products", "Orders"

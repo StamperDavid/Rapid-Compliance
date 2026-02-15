@@ -19,8 +19,7 @@ export interface SequenceSettings {
 
 export interface OutboundSequence {
   id: string;
-  workspaceId?: string;
-  
+
   // Metadata
   name: string;
   description?: string;

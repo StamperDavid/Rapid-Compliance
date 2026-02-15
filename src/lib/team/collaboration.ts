@@ -41,7 +41,6 @@ interface HasOccurredAt {
 
 export interface TeamComment {
   id: string;
-  workspaceId: string;
   entityType: 'lead' | 'contact' | 'deal' | 'company';
   entityId: string;
   content: string;
@@ -54,7 +53,6 @@ export interface TeamComment {
 
 export interface TeamTask {
   id: string;
-  workspaceId: string;
   title: string;
   description?: string;
   assignedTo: string;
@@ -108,8 +106,7 @@ export interface ActivityGoal {
  * Create a comment with @mentions
  */
 export async function createComment(
-  workspaceId: string,
-  data: Omit<TeamComment, 'id' | 'createdAt' | 'mentions' | 'workspaceId'>
+  data: Omit<TeamComment, 'id' | 'createdAt' | 'mentions'>
 ): Promise<TeamComment> {
   try {
     // Extract @mentions from content
@@ -121,13 +118,12 @@ export async function createComment(
     const comment: TeamComment = {
       ...data,
       id: commentId,
-      workspaceId,
       mentions,
       createdAt: now,
     };
 
     await FirestoreService.set(
-      `${getSubCollection('workspaces')}/${workspaceId}/comments`,
+      getSubCollection('comments'),
       commentId,
       comment,
       false
@@ -212,8 +208,7 @@ async function notifyMentionedUsers(
  * Create and assign task
  */
 export async function createTask(
-  workspaceId: string,
-  task: Omit<TeamTask, 'id' | 'createdAt' | 'workspaceId'>
+  task: Omit<TeamTask, 'id' | 'createdAt'>
 ): Promise<TeamTask> {
   try {
     const taskId = `task-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -222,12 +217,11 @@ export async function createTask(
     const newTask: TeamTask = {
       ...task,
       id: taskId,
-      workspaceId,
       createdAt: now,
     };
 
     await FirestoreService.set(
-      `${getSubCollection('workspaces')}/${workspaceId}/tasks`,
+      getSubCollection('tasks'),
       taskId,
       newTask,
       false
@@ -281,7 +275,6 @@ async function notifyTaskAssignment(
  * Calculate team leaderboard
  */
 export async function calculateLeaderboard(
-  workspaceId: string,
   period: 'week' | 'month' | 'quarter' | 'year' = 'month'
 ): Promise<LeaderboardEntry[]> {
   try {
@@ -304,7 +297,6 @@ export async function calculateLeaderboard(
     // Calculate metrics for each member
     for (const member of members) {
       const metrics = await calculateUserMetrics(
-        workspaceId,
         member.userId,
         startDate,
         now
@@ -351,7 +343,6 @@ export async function calculateLeaderboard(
  * Calculate metrics for a user
  */
 async function calculateUserMetrics(
-  workspaceId: string,
   userId: string,
   startDate: Date,
   endDate: Date
@@ -362,14 +353,14 @@ async function calculateUserMetrics(
     const { getActivities } = await import('@/lib/crm/activity-service');
 
     // Get leads created by user
-    const leadsResult = await getLeads(workspaceId, { ownerId: userId }, { pageSize: 1000 });
+    const leadsResult = await getLeads({ ownerId: userId }, { pageSize: 1000 });
     const leadsInPeriod = leadsResult.data.filter((l: HasCreatedAt) => {
       const createdAt = toDate(l.createdAt);
       return createdAt >= startDate && createdAt <= endDate;
     });
 
     // Get deals closed by user
-    const dealsResult = await getDeals(workspaceId, { ownerId: userId }, { pageSize: 1000 });
+    const dealsResult = await getDeals({ ownerId: userId }, { pageSize: 1000 });
     const dealsClosedWon = dealsResult.data.filter((d: HasActualCloseDate) => {
       if (d.stage !== 'closed_won') {return false;}
       const closedAt = toDate(d.actualCloseDate ?? d.updatedAt);
@@ -387,7 +378,6 @@ async function calculateUserMetrics(
 
     // Activities
     const activitiesResult = await getActivities(
-      workspaceId,
       { createdBy: userId },
       { pageSize: 1000 }
     );
@@ -398,7 +388,7 @@ async function calculateUserMetrics(
 
     // Tasks completed
     const tasksResult = await FirestoreService.getAll<TeamTask>(
-      `${getSubCollection('workspaces')}/${workspaceId}/tasks`
+      getSubCollection('tasks')
     );
     const tasksCompleted = tasksResult.filter(t =>
       t.assignedTo === userId &&
@@ -434,13 +424,12 @@ async function calculateUserMetrics(
  * Get tasks for a user
  */
 export async function getUserTasks(
-  workspaceId: string,
   userId: string,
   status?: TeamTask['status']
 ): Promise<TeamTask[]> {
   try {
     const result = await FirestoreService.getAll<TeamTask>(
-      `${getSubCollection('workspaces')}/${workspaceId}/tasks`
+      getSubCollection('tasks')
     );
 
     let tasks = result.filter(t => t.assignedTo === userId);
@@ -476,12 +465,11 @@ export async function getUserTasks(
  * Complete a task
  */
 export async function completeTask(
-  workspaceId: string,
   taskId: string
 ): Promise<void> {
   try {
     await FirestoreService.update(
-      `${getSubCollection('workspaces')}/${workspaceId}/tasks`,
+      getSubCollection('tasks'),
       taskId,
       {
         status: 'completed',

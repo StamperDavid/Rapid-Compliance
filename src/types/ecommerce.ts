@@ -7,8 +7,7 @@ import type { EntityFilter } from './entity';
  */
 export interface EcommerceConfig {
   id: string;
-  workspaceId: string;
-  
+
   // Status
   enabled: boolean;
   
@@ -618,9 +617,8 @@ export interface EmailTemplate {
  */
 export interface EcommerceWidget {
   id: string;
-  workspaceId: string;
   ecommerceConfigId: string;
-  
+
   // Widget info
   name: string;
   description?: string;
@@ -710,8 +708,7 @@ export interface Cart {
   id: string;
   sessionId: string;
   userId?: string; // If logged in
-  workspaceId: string;
-  
+
   // Items
   items: CartItem[];
   
@@ -779,7 +776,6 @@ export interface AppliedDiscount {
 export interface Order {
   id: string;
   orderNumber: string; // Human-readable order number
-  workspaceId: string;
   userId?: string; // Firebase UID — used for order listing filter
 
   // Customer
@@ -963,8 +959,7 @@ export type PaymentStatus =
  */
 export interface DiscountCode {
   id: string;
-  workspaceId: string;
-  
+
   // Code
   code: string; // e.g., "SUMMER20"
   
@@ -1004,8 +999,7 @@ export interface DiscountCode {
 export interface ProductReview {
   id: string;
   productId: string;
-  workspaceId: string;
-  
+
   // Reviewer
   customerId?: string;
   customerName: string;

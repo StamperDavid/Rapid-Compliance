@@ -7,7 +7,6 @@ import type { SchemaChangeEvent } from './schema-change-tracker';
 import type { Schema, SchemaField } from '@/types/schema';
 import { processSchemaChangeEvent } from './schema-change-handler';
 import { logger } from '@/lib/logger/logger';
-import { PLATFORM_ID } from '@/lib/constants/platform';
 
 /**
  * Schema Change Debouncer
@@ -157,7 +156,7 @@ export class SchemaChangeDebouncer {
    * Get event key for grouping
    */
   private getEventKey(event: SchemaChangeEvent): string {
-    return `${PLATFORM_ID}:${event.schemaId}`;
+    return `${event.schemaId}`;
   }
   
   /**
@@ -245,10 +244,8 @@ export interface SchemaChange {
 export class SchemaBatchUpdater {
   private changes: SchemaChange[] = [];
   private schemaId: string;
-  private workspaceId: string;
 
-  constructor(workspaceId: string, schemaId: string) {
-    this.workspaceId = workspaceId;
+  constructor(schemaId: string) {
     this.schemaId = schemaId;
   }
   
@@ -322,12 +319,12 @@ export class SchemaBatchUpdater {
     });
     
     try {
-      const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
-      const { PLATFORM_ID } = await import('@/lib/constants/platform');
+      const { FirestoreService } = await import('@/lib/db/firestore-service');
+      const { getSubCollection } = await import('@/lib/firebase/collections');
 
       // Get current schema
       const schemaData = await FirestoreService.get(
-        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.WORKSPACES}/${this.workspaceId}/${COLLECTIONS.SCHEMAS}`,
+        getSubCollection('schemas'),
         this.schemaId
       );
 
@@ -352,7 +349,7 @@ export class SchemaBatchUpdater {
       };
 
       await FirestoreService.set(
-        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.WORKSPACES}/${this.workspaceId}/${COLLECTIONS.SCHEMAS}`,
+        getSubCollection('schemas'),
         this.schemaId,
         updatedSchema,
         false
@@ -371,7 +368,6 @@ export class SchemaBatchUpdater {
 
       await SchemaChangeEventPublisher.publishEvent({
         id: `sce_batch_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        workspaceId: this.workspaceId,
         schemaId: this.schemaId,
         timestamp: Timestamp.now(),
         changeType,

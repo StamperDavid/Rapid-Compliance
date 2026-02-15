@@ -3,11 +3,10 @@
  * Handles incoming webhooks and triggers workflows
  */
 
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { FirestoreService } from '@/lib/db/firestore-service';
 import type { Workflow, WebhookTrigger } from '@/types/workflow';
 import { executeWorkflow } from '../workflow-executor';
 import crypto from 'crypto';
-import { PLATFORM_ID } from '@/lib/constants/platform';
 
 /**
  * Verify webhook signature
@@ -39,67 +38,52 @@ export async function handleWebhook(
   // Format: /api/workflows/webhooks/{workflowId}
   const urlParts = webhookUrl.split('/');
   const workflowId = urlParts[urlParts.length - 1];
-  
+
   if (!workflowId) {
     throw new Error('Invalid webhook URL');
   }
-  
-  // Find workflow (need to search across all organizations/workspaces)
-  // In production, store webhook URL -> workflow mapping
-  const { where } = await import('firebase/firestore');
-  
-  // Search for workflow with this webhook URL
-  // This is inefficient - in production, use a webhook registry
-  const allOrgs = await FirestoreService.getAll(COLLECTIONS.ORGANIZATIONS, []);
-  
-  for (const org of allOrgs) {
-    const workspaces = await FirestoreService.getAll(
-      `${COLLECTIONS.ORGANIZATIONS}/${org.id}/${COLLECTIONS.WORKSPACES}`,
-      []
-    );
-    
-    for (const workspace of workspaces) {
-      const workflows = await FirestoreService.getAll(
-        `${COLLECTIONS.ORGANIZATIONS}/${org.id}/${COLLECTIONS.WORKSPACES}/${workspace.id}/${COLLECTIONS.WORKFLOWS}`,
-        [where('status', '==', 'active')]
-      );
-      
-      const workflow = workflows.find((w: Record<string, unknown>) => {
-        const trigger = w.trigger as WebhookTrigger;
-        return trigger?.type === 'webhook' && trigger?.webhookUrl === webhookUrl;
-      });
-      
-      if (workflow) {
-        // Verify signature if required
-        const trigger = workflow.trigger as WebhookTrigger;
-        if (trigger.secret && headers['x-webhook-signature']) {
-          const isValid = verifyWebhookSignature(
-            JSON.stringify(body),
-            headers['x-webhook-signature'],
-            trigger.secret
-          );
-          
-          if (!isValid) {
-            throw new Error('Invalid webhook signature');
-          }
-        }
-        
-        // Execute workflow
-        const triggerData: Record<string, unknown> = {
-          workspaceId: workspace.id,
-          method,
-          headers,
-          body,
-          query: queryParams ?? {},
-        };
 
-        await executeWorkflow(workflow as Workflow, triggerData);
-        return;
-      }
+  // Find workflow using single-tenant flat path
+  const { where } = await import('firebase/firestore');
+  const { getSubCollection } = await import('@/lib/firebase/collections');
+
+  const workflows = await FirestoreService.getAll(
+    getSubCollection('workflows'),
+    [where('status', '==', 'active')]
+  );
+
+  const workflow = workflows.find((w: Record<string, unknown>) => {
+    const trigger = w.trigger as WebhookTrigger;
+    return trigger?.type === 'webhook' && trigger?.webhookUrl === webhookUrl;
+  });
+
+  if (!workflow) {
+    throw new Error(`Workflow not found for webhook URL: ${webhookUrl}`);
+  }
+
+  // Verify signature if required
+  const trigger = workflow.trigger as WebhookTrigger;
+  if (trigger.secret && headers['x-webhook-signature']) {
+    const isValid = verifyWebhookSignature(
+      JSON.stringify(body),
+      headers['x-webhook-signature'],
+      trigger.secret
+    );
+
+    if (!isValid) {
+      throw new Error('Invalid webhook signature');
     }
   }
-  
-  throw new Error(`Workflow not found for webhook URL: ${webhookUrl}`);
+
+  // Execute workflow
+  const triggerData: Record<string, unknown> = {
+    method,
+    headers,
+    body,
+    query: queryParams ?? {},
+  };
+
+  await executeWorkflow(workflow as Workflow, triggerData);
 }
 
 /**
@@ -114,8 +98,7 @@ export function generateWebhookUrl(workflowId: string, baseUrl?: string): string
  * Register webhook trigger
  */
 export async function registerWebhookTrigger(
-  workflow: Workflow,
-  workspaceId: string
+  workflow: Workflow
 ): Promise<string> {
   const trigger = workflow.trigger as WebhookTrigger;
 
@@ -129,14 +112,14 @@ export async function registerWebhookTrigger(
   }
 
   // Store webhook configuration
+  const { getSubCollection } = await import('@/lib/firebase/collections');
   await FirestoreService.set(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.WORKSPACES}/${workspaceId}/webhookTriggers`,
+    getSubCollection('webhookTriggers'),
     workflow.id,
     {
       workflowId: workflow.id,
       webhookUrl: trigger.webhookUrl,
       secret: trigger.secret,
-      workspaceId,
       registeredAt: new Date().toISOString(),
     },
     false

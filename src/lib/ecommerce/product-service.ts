@@ -10,7 +10,6 @@ import { getSubCollection } from '@/lib/firebase/collections';
 
 export interface Product {
   id: string;
-  workspaceId: string;
   name: string;
   description?: string;
   sku?: string;
@@ -66,7 +65,6 @@ export interface PaginatedResult<T> {
  * Get products with pagination and filtering
  */
 export async function getProducts(
-  workspaceId: string = 'default',
   filters?: ProductFilters,
   options?: PaginationOptions
 ): Promise<PaginatedResult<Product>> {
@@ -86,7 +84,7 @@ export async function getProducts(
     constraints.push(orderBy('createdAt', 'desc'));
 
     const result = await FirestoreService.getAllPaginated<Product>(
-      `${getSubCollection('workspaces')}/${workspaceId}/entities/products/records`,
+      getSubCollection('products'),
       constraints,
       options?.pageSize ?? 50,
       options?.lastDoc
@@ -129,12 +127,11 @@ export async function getProducts(
  * Get a single product
  */
 export async function getProduct(
-  productId: string,
-  workspaceId: string = 'default'
+  productId: string
 ): Promise<Product | null> {
   try {
     const product = await FirestoreService.get<Product>(
-      `${getSubCollection('workspaces')}/${workspaceId}/entities/products/records`,
+      getSubCollection('products'),
       productId
     );
 
@@ -156,8 +153,7 @@ export async function getProduct(
  * Create a new product
  */
 export async function createProduct(
-  data: Omit<Product, 'id' | 'workspaceId' | 'createdAt'>,
-  workspaceId: string = 'default'
+  data: Omit<Product, 'id' | 'createdAt'>
 ): Promise<Product> {
   try {
     const productId = `product-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -166,7 +162,6 @@ export async function createProduct(
     const product: Product = {
       ...data,
       id: productId,
-      workspaceId,
       currency:(data.currency !== '' && data.currency != null) ? data.currency : 'USD',
       inStock: data.inStock ?? true,
       trackInventory: data.trackInventory ?? false,
@@ -178,7 +173,7 @@ export async function createProduct(
     };
 
     await FirestoreService.set(
-      `${getSubCollection('workspaces')}/${workspaceId}/entities/products/records`,
+      getSubCollection('products'),
       productId,
       product,
       false
@@ -206,8 +201,7 @@ export async function createProduct(
  */
 export async function updateProduct(
   productId: string,
-  updates: Partial<Omit<Product, 'id' | 'workspaceId' | 'createdAt'>>,
-  workspaceId: string = 'default'
+  updates: Partial<Omit<Product, 'id' | 'createdAt'>>
 ): Promise<Product> {
   try {
     const updatedData = {
@@ -216,7 +210,7 @@ export async function updateProduct(
     };
 
     await FirestoreService.update(
-      `${getSubCollection('workspaces')}/${workspaceId}/entities/products/records`,
+      getSubCollection('products'),
       productId,
       updatedData
     );
@@ -226,7 +220,7 @@ export async function updateProduct(
       updatedFields: Object.keys(updates),
     });
 
-    const product = await getProduct(productId, workspaceId);
+    const product = await getProduct(productId);
     if (!product) {
       throw new Error('Product not found after update');
     }
@@ -243,12 +237,11 @@ export async function updateProduct(
  * Delete product
  */
 export async function deleteProduct(
-  productId: string,
-  workspaceId: string = 'default'
+  productId: string
 ): Promise<void> {
   try {
     await FirestoreService.delete(
-      `${getSubCollection('workspaces')}/${workspaceId}/entities/products/records`,
+      getSubCollection('products'),
       productId
     );
 
@@ -265,11 +258,10 @@ export async function deleteProduct(
  */
 export async function updateInventory(
   productId: string,
-  quantityChange: number,
-  workspaceId: string = 'default'
+  quantityChange: number
 ): Promise<Product> {
   try {
-    const product = await getProduct(productId, workspaceId);
+    const product = await getProduct(productId);
     if (!product) {
       throw new Error('Product not found');
     }
@@ -285,7 +277,7 @@ export async function updateInventory(
     const updated = await updateProduct(productId, {
       stockQuantity: newQuantity,
       inStock: newQuantity > 0,
-    }, workspaceId);
+    });
 
     logger.info('Inventory updated', {
       productId,
@@ -307,10 +299,9 @@ export async function updateInventory(
  */
 export async function getProductsByCategory(
   category: string,
-  workspaceId: string = 'default',
   options?: PaginationOptions
 ): Promise<PaginatedResult<Product>> {
-  return getProducts(workspaceId, { category }, options);
+  return getProducts({ category }, options);
 }
 
 /**
@@ -318,11 +309,10 @@ export async function getProductsByCategory(
  */
 export async function searchProducts(
   searchTerm: string,
-  workspaceId: string = 'default',
   options?: PaginationOptions
 ): Promise<PaginatedResult<Product>> {
   try {
-    const result = await getProducts(workspaceId, undefined, options);
+    const result = await getProducts(undefined, options);
 
     const searchLower = searchTerm.toLowerCase();
     const filtered = result.data.filter(product =>
@@ -354,15 +344,14 @@ export async function searchProducts(
  */
 export async function bulkUpdateProducts(
   productIds: string[],
-  updates: Partial<Product>,
-  workspaceId: string = 'default'
+  updates: Partial<Product>
 ): Promise<number> {
   try {
     let successCount = 0;
 
     for (const productId of productIds) {
       try {
-        await updateProduct(productId, updates, workspaceId);
+        await updateProduct(productId, updates);
         successCount++;
       } catch (error) {
         logger.warn('Failed to update product in bulk operation', {

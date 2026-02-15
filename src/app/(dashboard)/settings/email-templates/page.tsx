@@ -227,7 +227,6 @@ Best regards,
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            workspaceId: 'default',
             filters: campaignFilters
           })
         });

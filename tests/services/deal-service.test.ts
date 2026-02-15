@@ -15,7 +15,6 @@ import { FirestoreService } from '@/lib/db/firestore-service';
 
 describe('DealService', () => {
   const testOrgId = `test-org-${Date.now()}`;
-  const testWorkspaceId = 'default';
   let testDealId: string;
 
   beforeEach(async () => {
@@ -28,7 +27,7 @@ describe('DealService', () => {
   afterEach(async () => {
     if (testDealId) {
       try {
-        await deleteDeal(testDealId, testWorkspaceId);
+        await deleteDeal(testDealId);
       } catch {
         // Ignore - deal may already be deleted by test
       }
@@ -50,7 +49,7 @@ describe('DealService', () => {
         value: 10000,
         stage: 'prospecting',
         probability: 10,
-      }, testWorkspaceId);
+      });
       testDealId = deal.id;
 
       expect(deal.id).toBeDefined();
@@ -69,10 +68,10 @@ describe('DealService', () => {
         value: 50000,
         stage: 'prospecting',
         probability: 10,
-      }, testWorkspaceId);
+      });
       testDealId = deal.id;
 
-      const moved = await moveDealToStage(deal.id, 'qualification', testWorkspaceId);
+      const moved = await moveDealToStage(deal.id, 'qualification');
 
       expect(moved.stage).toBe('qualification');
     });
@@ -83,10 +82,10 @@ describe('DealService', () => {
         value: 100000,
         stage: 'negotiation',
         probability: 75,
-      }, testWorkspaceId);
+      });
       testDealId = deal.id;
 
-      const won = await moveDealToStage(deal.id, 'closed_won', testWorkspaceId);
+      const won = await moveDealToStage(deal.id, 'closed_won');
 
       expect(won.stage).toBe('closed_won');
       expect(won.probability).toBe(100);
@@ -99,10 +98,10 @@ describe('DealService', () => {
         value: 25000,
         stage: 'proposal',
         probability: 50,
-      }, testWorkspaceId);
+      });
       testDealId = deal.id;
 
-      const lost = await moveDealToStage(deal.id, 'closed_lost', testWorkspaceId);
+      const lost = await moveDealToStage(deal.id, 'closed_lost');
 
       expect(lost.stage).toBe('closed_lost');
       expect(lost.probability).toBe(0);
@@ -121,19 +120,19 @@ describe('DealService', () => {
           value: i * 1000,
           stage: 'prospecting',
           probability: 10,
-        }, testWorkspaceId);
+        });
         dealIds.push(deal.id);
       }
 
       // Get first page
-      const result = await getDeals(testWorkspaceId, undefined, { pageSize: 5 });
+      const result = await getDeals(undefined, { pageSize: 5 });
 
       expect(result.data).toHaveLength(5);
       expect(result.hasMore).toBe(true);
 
       // Cleanup
       for (const id of dealIds) {
-        await deleteDeal(id, testWorkspaceId);
+        await deleteDeal(id);
       }
     });
 
@@ -143,22 +142,22 @@ describe('DealService', () => {
         value: 10000,
         stage: 'prospecting',
         probability: 10,
-      }, testWorkspaceId);
+      });
 
       const deal2 = await createDeal({
         name: 'Proposal Deal',
         value: 20000,
         stage: 'proposal',
         probability: 50,
-      }, testWorkspaceId);
+      });
 
-      const result = await getDeals(testWorkspaceId, { stage: 'proposal' });
+      const result = await getDeals({ stage: 'proposal' });
 
       expect(result.data.some(d => d.id === deal2.id)).toBe(true);
       expect(result.data.every(d => d.stage === 'proposal')).toBe(true);
 
-      await deleteDeal(deal1.id, testWorkspaceId);
-      await deleteDeal(deal2.id, testWorkspaceId);
+      await deleteDeal(deal1.id);
+      await deleteDeal(deal2.id);
     });
   });
 
@@ -169,32 +168,32 @@ describe('DealService', () => {
         value: 10000,
         stage: 'prospecting',
         probability: 10,
-      }, testWorkspaceId);
+      });
 
       const deal2 = await createDeal({
         name: 'Deal 2',
         value: 20000,
         stage: 'prospecting',
         probability: 10,
-      }, testWorkspaceId);
+      });
 
       const deal3 = await createDeal({
         name: 'Deal 3',
         value: 50000,
         stage: 'proposal',
         probability: 50,
-      }, testWorkspaceId);
+      });
 
-      const summary = await getPipelineSummary(testWorkspaceId);
+      const summary = await getPipelineSummary();
 
       expect(summary.prospecting.count).toBeGreaterThanOrEqual(2);
       expect(summary.prospecting.totalValue).toBeGreaterThanOrEqual(30000);
       expect(summary.proposal.count).toBeGreaterThanOrEqual(1);
       expect(summary.proposal.totalValue).toBeGreaterThanOrEqual(50000);
 
-      await deleteDeal(deal1.id, testWorkspaceId);
-      await deleteDeal(deal2.id, testWorkspaceId);
-      await deleteDeal(deal3.id, testWorkspaceId);
+      await deleteDeal(deal1.id);
+      await deleteDeal(deal2.id);
+      await deleteDeal(deal3.id);
     });
   });
 });

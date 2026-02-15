@@ -53,7 +53,6 @@ export default function WorkflowBuilderPage() {
         {
           ...data,
           id: workflowId,
-          workspaceId: 'default',
           trigger: { ...data.trigger, id: `trigger-${Date.now()}`, name: 'Main Trigger' },
           settings: { stopOnError: false, parallel: false },
           permissions: { canView: ['owner', 'admin'], canEdit: ['owner', 'admin'], canExecute: ['owner', 'admin', 'member'] },

@@ -13,7 +13,6 @@ export interface EnrollInSequenceParams {
   sequenceId: string;
   leadId: string;
   email: string;
-  workspaceId: string;
   source: string;
   sourceId: string;
 }
@@ -41,7 +40,6 @@ export async function enrollInSequence(params: EnrollInSequenceParams): Promise<
       leadId: params.leadId,
       metadata: {
         email: params.email,
-        workspaceId: params.workspaceId,
         source: params.source,
         sourceId: params.sourceId,
       },

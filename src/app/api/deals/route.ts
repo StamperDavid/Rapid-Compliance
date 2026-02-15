@@ -9,7 +9,6 @@ export const dynamic = 'force-dynamic';
 const DEAL_STAGES = ['prospecting', 'qualification', 'proposal', 'negotiation', 'closed_won', 'closed_lost'] as const;
 
 const querySchema = z.object({
-  workspaceId: z.string().optional().default('default'),
   stage: z.string().optional(),
   pageSize: z.coerce.number().int().positive().optional().default(100),
 });
@@ -27,12 +26,10 @@ const createDealSchema = z.object({
   ownerId: z.string().optional(),
   source: z.string().optional(),
   notes: z.string().optional(),
-  workspaceId: z.string().optional().default('default'),
 });
 
 const deleteBodySchema = z.object({
   ids: z.array(z.string().min(1)).min(1, 'At least one ID is required'),
-  workspaceId: z.string().optional().default('default'),
 });
 
 export async function GET(
@@ -46,7 +43,6 @@ export async function GET(
 
     const { searchParams } = new URL(request.url);
     const queryResult = querySchema.safeParse({
-      workspaceId: searchParams.get('workspaceId') ?? undefined,
       stage: searchParams.get('stage') ?? undefined,
       pageSize: searchParams.get('pageSize') ?? undefined,
     });
@@ -58,11 +54,11 @@ export async function GET(
       );
     }
 
-    const { workspaceId, stage, pageSize } = queryResult.data;
+    const { stage, pageSize } = queryResult.data;
     const filters = stage && stage !== 'all' ? { stage } : undefined;
     const pagination = { pageSize };
 
-    const result = await getDeals(workspaceId, filters, pagination);
+    const result = await getDeals(filters, pagination);
 
     return NextResponse.json(result);
   } catch (error: unknown) {
@@ -94,11 +90,11 @@ export async function POST(
       );
     }
 
-    const { workspaceId, expectedCloseDate, ...dealData } = bodyResult.data;
+    const { expectedCloseDate, ...dealData } = bodyResult.data;
     const deal = await createDeal({
       ...dealData,
       expectedCloseDate: expectedCloseDate ? new Date(expectedCloseDate) : undefined,
-    }, workspaceId);
+    });
 
     return NextResponse.json({ success: true, deal }, { status: 201 });
   } catch (error: unknown) {
@@ -130,9 +126,9 @@ export async function DELETE(
       );
     }
 
-    const { ids, workspaceId } = bodyResult.data;
+    const { ids } = bodyResult.data;
     const results = await Promise.allSettled(
-      ids.map(id => deleteDeal(id, workspaceId))
+      ids.map(id => deleteDeal(id))
     );
 
     const failed = results.filter(r => r.status === 'rejected');

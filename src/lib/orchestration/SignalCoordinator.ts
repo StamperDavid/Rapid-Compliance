@@ -356,11 +356,6 @@ export class SignalCoordinator {
       constraints.push(where('processed', '==', false));
     }
     
-    // Filter by workspace (if specified)
-    if (subscription.workspaceId) {
-      constraints.push(where('workspaceId', '==', subscription.workspaceId));
-    }
-    
     // Order by creation time (newest first)
     constraints.push(orderBy('createdAt', 'desc'));
     
@@ -378,7 +373,6 @@ export class SignalCoordinator {
       types: subscription.types,
       minPriority: subscription.minPriority,
       minConfidence: subscription.minConfidence,
-      workspaceId: subscription.workspaceId,
       file: 'SignalCoordinator.ts'
     });
     
@@ -662,7 +656,6 @@ export class SignalCoordinator {
         signalId,
         type: signal.type,
         leadId: signal.leadId,
-        workspaceId: signal.workspaceId,
         confidence: signal.confidence,
         priority: signal.priority,
         metadata: signal.metadata,

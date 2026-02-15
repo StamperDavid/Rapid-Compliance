@@ -601,7 +601,6 @@ export async function deleteExtractedSignals(
  * @returns Distillation result with storage info
  */
 export async function processAndStoreScrape(params: {
-  workspaceId?: string;
   industryId: string;
   recordId: string;
   url: string;
@@ -622,7 +621,7 @@ export async function processAndStoreScrape(params: {
   const startTime = Date.now();
 
   try {
-    const { industryId, recordId, workspaceId, url, rawHtml, cleanedContent, metadata, platform } = params;
+    const { industryId, recordId, url, rawHtml, cleanedContent, metadata, platform } = params;
 
     // Step 1: Get research intelligence
     const research = await getResearchIntelligence(industryId);
@@ -637,7 +636,6 @@ export async function processAndStoreScrape(params: {
 
     // Step 2: Distill scrape
     const distillResult = await distillScrape({
-      workspaceId,
       url,
       rawHtml,
       cleanedContent,
@@ -773,7 +771,6 @@ export async function getSignalAnalytics(
  */
 export async function batchProcessScrapes(
   scrapes: Array<{
-    workspaceId?: string;
     industryId: string;
     recordId: string;
     url: string;

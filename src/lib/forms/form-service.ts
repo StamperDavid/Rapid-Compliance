@@ -51,17 +51,17 @@ import type {
 // COLLECTION PATHS
 // ============================================================================
 
-const getFormsCollectionPath = (workspaceId: string) =>
-  `${getSubCollection('workspaces')}/${workspaceId}/forms`;
+const getFormsCollectionPath = () =>
+  getSubCollection('forms');
 
-const getSubmissionsCollectionPath = (workspaceId: string, formId: string) =>
-  `${getSubCollection('workspaces')}/${workspaceId}/forms/${formId}/submissions`;
+const getSubmissionsCollectionPath = (formId: string) =>
+  `${getSubCollection('forms')}/${formId}/submissions`;
 
-const getViewsCollectionPath = (workspaceId: string, formId: string) =>
-  `${getSubCollection('workspaces')}/${workspaceId}/forms/${formId}/views`;
+const getViewsCollectionPath = (formId: string) =>
+  `${getSubCollection('forms')}/${formId}/views`;
 
-const _getAnalyticsCollectionPath = (workspaceId: string, formId: string) =>
-  `${getSubCollection('workspaces')}/${workspaceId}/forms/${formId}/analytics`;
+const _getAnalyticsCollectionPath = (formId: string) =>
+  `${getSubCollection('forms')}/${formId}/analytics`;
 
 // ============================================================================
 // FORM CRUD OPERATIONS
@@ -71,17 +71,15 @@ const _getAnalyticsCollectionPath = (workspaceId: string, formId: string) =>
  * Create a new form definition
  */
 export async function createForm(
-  workspaceId: string,
   formData: Omit<FormDefinition, 'id' | 'createdAt' | 'updatedAt' | 'submissionCount' | 'viewCount'>
 ): Promise<FormDefinition> {
-  const formsRef = collection(getDb(), getFormsCollectionPath(workspaceId));
+  const formsRef = collection(getDb(), getFormsCollectionPath());
   const formDoc = doc(formsRef);
   const formId = formDoc.id;
 
   const form: FormDefinition = {
     ...formData,
     id: formId,
-    workspaceId,
     // Cast required: serverTimestamp() returns FieldValue, resolved to Timestamp on write
     createdAt: serverTimestamp() as Timestamp,
     updatedAt: serverTimestamp() as Timestamp,
@@ -91,7 +89,7 @@ export async function createForm(
 
   await setDoc(formDoc, form);
 
-  logger.info('Form created', { workspaceId, formId, name: form.name });
+  logger.info('Form created', { formId, name: form.name });
 
   return { ...form, createdAt: Timestamp.now(), updatedAt: Timestamp.now() };
 }
@@ -100,10 +98,9 @@ export async function createForm(
  * Get a form by ID
  */
 export async function getForm(
-  workspaceId: string,
   formId: string
 ): Promise<FormDefinition | null> {
-  const formRef = doc(getDb(), getFormsCollectionPath(workspaceId), formId);
+  const formRef = doc(getDb(), getFormsCollectionPath(), formId);
   const formSnap = await getDoc(formRef);
 
   if (!formSnap.exists()) {
@@ -117,11 +114,10 @@ export async function getForm(
  * Update a form definition
  */
 export async function updateForm(
-  workspaceId: string,
   formId: string,
   updates: Partial<FormDefinition>
 ): Promise<void> {
-  const formRef = doc(getDb(), getFormsCollectionPath(workspaceId), formId);
+  const formRef = doc(getDb(), getFormsCollectionPath(), formId);
 
   await updateDoc(formRef, {
     ...updates,
@@ -129,27 +125,25 @@ export async function updateForm(
     version: increment(1),
   });
 
-  logger.info('Form updated', { workspaceId, formId });
+  logger.info('Form updated', { formId });
 }
 
 /**
  * Delete a form
  */
 export async function deleteForm(
-  workspaceId: string,
   formId: string
 ): Promise<void> {
-  const formRef = doc(getDb(), getFormsCollectionPath(workspaceId), formId);
+  const formRef = doc(getDb(), getFormsCollectionPath(), formId);
   await deleteDoc(formRef);
 
-  logger.info('Form deleted', { workspaceId, formId });
+  logger.info('Form deleted', { formId });
 }
 
 /**
  * List forms with pagination
  */
 export async function listForms(
-  workspaceId: string,
   options: {
     status?: FormStatus;
     category?: string;
@@ -172,7 +166,7 @@ export async function listForms(
     orderDirection = 'desc',
   } = options;
 
-  const formsRef = collection(getDb(), getFormsCollectionPath(workspaceId));
+  const formsRef = collection(getDb(), getFormsCollectionPath());
 
   const constraints: ReturnType<typeof where | typeof orderBy | typeof limit | typeof startAfter>[] = [];
 
@@ -205,10 +199,9 @@ export async function listForms(
  * Publish a form
  */
 export async function publishForm(
-  workspaceId: string,
   formId: string
 ): Promise<void> {
-  const formRef = doc(getDb(), getFormsCollectionPath(workspaceId), formId);
+  const formRef = doc(getDb(), getFormsCollectionPath(), formId);
 
   await updateDoc(formRef, {
     status: 'published',
@@ -216,24 +209,23 @@ export async function publishForm(
     updatedAt: serverTimestamp(),
   });
 
-  logger.info('Form published', { workspaceId, formId });
+  logger.info('Form published', { formId });
 }
 
 /**
  * Duplicate a form
  */
 export async function duplicateForm(
-  workspaceId: string,
   formId: string,
   newName?: string
 ): Promise<FormDefinition> {
-  const originalForm = await getForm(workspaceId, formId);
+  const originalForm = await getForm(formId);
 
   if (!originalForm) {
     throw new Error(`Form not found: ${formId}`);
   }
 
-  const duplicatedForm = await createForm(workspaceId, {
+  const duplicatedForm = await createForm({
     ...originalForm,
     name: newName ?? `${originalForm.name} (Copy)`,
     status: 'draft',
@@ -243,7 +235,7 @@ export async function duplicateForm(
     publishedAt: undefined,
   });
 
-  logger.info('Form duplicated', { workspaceId, originalFormId: formId, newFormId: duplicatedForm.id });
+  logger.info('Form duplicated', { originalFormId: formId, newFormId: duplicatedForm.id });
 
   return duplicatedForm;
 }
@@ -256,7 +248,6 @@ export async function duplicateForm(
  * Create a form submission
  */
 export async function createSubmission(
-  workspaceId: string,
   formId: string,
   submissionData: {
     responses: FieldResponse[];
@@ -268,7 +259,7 @@ export async function createSubmission(
   const { responses, metadata, isPartial = false, resumeToken } = submissionData;
 
   // Get form to validate and get version
-  const form = await getForm(workspaceId, formId);
+  const form = await getForm(formId);
   if (!form) {
     throw new Error(`Form not found: ${formId}`);
   }
@@ -286,7 +277,7 @@ export async function createSubmission(
     throw new Error('Form has expired');
   }
 
-  const submissionsRef = collection(getDb(), getSubmissionsCollectionPath(workspaceId, formId));
+  const submissionsRef = collection(getDb(), getSubmissionsCollectionPath(formId));
   const submissionDoc = doc(submissionsRef);
   const submissionId = submissionDoc.id;
 
@@ -297,7 +288,6 @@ export async function createSubmission(
     id: submissionId,
     formId,
     formVersion: form.version,
-    workspaceId,
     status: isPartial ? 'partial' : 'pending',
     responses,
     metadata,
@@ -313,7 +303,7 @@ export async function createSubmission(
   batch.set(submissionDoc, submission);
 
   if (!isPartial) {
-    const formRef = doc(getDb(), getFormsCollectionPath(workspaceId), formId);
+    const formRef = doc(getDb(), getFormsCollectionPath(), formId);
     batch.update(formRef, {
       submissionCount: increment(1),
       updatedAt: serverTimestamp(),
@@ -323,7 +313,6 @@ export async function createSubmission(
   await batch.commit();
 
   logger.info('Submission created', {
-    workspaceId,
     formId,
     submissionId,
     isPartial,
@@ -337,13 +326,12 @@ export async function createSubmission(
  * Get a submission by ID
  */
 export async function getSubmission(
-  workspaceId: string,
   formId: string,
   submissionId: string
 ): Promise<FormSubmission | null> {
   const submissionRef = doc(
     getDb(),
-    getSubmissionsCollectionPath(workspaceId, formId),
+    getSubmissionsCollectionPath(formId),
     submissionId
   );
   const submissionSnap = await getDoc(submissionRef);
@@ -359,11 +347,10 @@ export async function getSubmission(
  * Get submission by resume token (for save and continue)
  */
 export async function getSubmissionByResumeToken(
-  workspaceId: string,
   formId: string,
   resumeToken: string
 ): Promise<FormSubmission | null> {
-  const submissionsRef = collection(getDb(), getSubmissionsCollectionPath(workspaceId, formId));
+  const submissionsRef = collection(getDb(), getSubmissionsCollectionPath(formId));
   const q = query(
     submissionsRef,
     where('resumeToken', '==', resumeToken),
@@ -384,7 +371,6 @@ export async function getSubmissionByResumeToken(
  * Update a partial submission
  */
 export async function updatePartialSubmission(
-  workspaceId: string,
   formId: string,
   submissionId: string,
   updates: {
@@ -395,7 +381,7 @@ export async function updatePartialSubmission(
 ): Promise<void> {
   const submissionRef = doc(
     getDb(),
-    getSubmissionsCollectionPath(workspaceId, formId),
+    getSubmissionsCollectionPath(formId),
     submissionId
   );
 
@@ -416,7 +402,7 @@ export async function updatePartialSubmission(
     updateData.submittedAt = serverTimestamp() as Timestamp;
 
     // Update form submission count
-    const formRef = doc(getDb(), getFormsCollectionPath(workspaceId), formId);
+    const formRef = doc(getDb(), getFormsCollectionPath(), formId);
     await updateDoc(formRef, {
       submissionCount: increment(1),
       updatedAt: serverTimestamp(),
@@ -426,7 +412,6 @@ export async function updatePartialSubmission(
   await updateDoc(submissionRef, updateData);
 
   logger.info('Submission updated', {
-    workspaceId,
     formId,
     submissionId,
     completed: !updates.isPartial,
@@ -437,7 +422,6 @@ export async function updatePartialSubmission(
  * List submissions with pagination
  */
 export async function listSubmissions(
-  workspaceId: string,
   formId: string,
   options: {
     status?: FormSubmission['status'];
@@ -453,7 +437,7 @@ export async function listSubmissions(
 }> {
   const { status, startDate, endDate, pageSize = 50, lastDoc } = options;
 
-  const submissionsRef = collection(getDb(), getSubmissionsCollectionPath(workspaceId, formId));
+  const submissionsRef = collection(getDb(), getSubmissionsCollectionPath(formId));
 
   const constraints: ReturnType<typeof where | typeof orderBy | typeof limit | typeof startAfter>[] = [];
 
@@ -490,26 +474,25 @@ export async function listSubmissions(
  * Delete a submission
  */
 export async function deleteSubmission(
-  workspaceId: string,
   formId: string,
   submissionId: string
 ): Promise<void> {
   const submissionRef = doc(
     getDb(),
-    getSubmissionsCollectionPath(workspaceId, formId),
+    getSubmissionsCollectionPath(formId),
     submissionId
   );
 
   await deleteDoc(submissionRef);
 
   // Update form submission count
-  const formRef = doc(getDb(), getFormsCollectionPath(workspaceId), formId);
+  const formRef = doc(getDb(), getFormsCollectionPath(), formId);
   await updateDoc(formRef, {
     submissionCount: increment(-1),
     updatedAt: serverTimestamp(),
   });
 
-  logger.info('Submission deleted', { workspaceId, formId, submissionId });
+  logger.info('Submission deleted', { formId, submissionId });
 }
 
 // ============================================================================
@@ -520,12 +503,11 @@ export async function deleteSubmission(
  * Track a form view
  */
 export async function trackFormView(
-  workspaceId: string,
   formId: string,
   metadata: Partial<SubmissionMetadata>,
   sessionId: string
 ): Promise<string> {
-  const viewsRef = collection(getDb(), getViewsCollectionPath(workspaceId, formId));
+  const viewsRef = collection(getDb(), getViewsCollectionPath(formId));
   const viewDoc = doc(viewsRef);
   const viewId = viewDoc.id;
 
@@ -543,7 +525,7 @@ export async function trackFormView(
   const batch = writeBatch(getDb());
   batch.set(viewDoc, view);
 
-  const formRef = doc(getDb(), getFormsCollectionPath(workspaceId), formId);
+  const formRef = doc(getDb(), getFormsCollectionPath(), formId);
   batch.update(formRef, {
     viewCount: increment(1),
     updatedAt: serverTimestamp(),
@@ -558,12 +540,11 @@ export async function trackFormView(
  * Mark a form view as converted
  */
 export async function markViewAsConverted(
-  workspaceId: string,
   formId: string,
   viewId: string,
   submissionId: string
 ): Promise<void> {
-  const viewRef = doc(getDb(), getViewsCollectionPath(workspaceId, formId), viewId);
+  const viewRef = doc(getDb(), getViewsCollectionPath(formId), viewId);
 
   await updateDoc(viewRef, {
     converted: true,

@@ -81,7 +81,6 @@ function failure(
  * Create initial agent state
  */
 function createInitialAgentState(
-  workspaceId: string,
   role: AgentRole,
   task: TaskContext,
   config: AgentConfig = DEFAULT_AGENT_CONFIG
@@ -91,7 +90,6 @@ function createInitialAgentState(
 
   return {
     id: `agent_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`,
-    workspaceId,
     role,
     name: `${role}_agent`,
     description: `Agent handling ${task.type}`,
@@ -587,7 +585,6 @@ OUTPUT FORMAT (JSON):
 
 Current context:
 - Organization: ${PLATFORM_ID}
-- Workspace: ${state.workspaceId}
 - Previous steps: ${state.reasoningSteps.length}
 - Available knowledge chunks: ${state.memory.relevantKnowledge.length}`;
 }
@@ -654,7 +651,6 @@ export class IntelligenceOrchestrator {
 
     // Create orchestrator agent
     let agentState = createInitialAgentState(
-      validatedRequest.workspaceId,
       'orchestrator',
       validatedRequest.task,
       {

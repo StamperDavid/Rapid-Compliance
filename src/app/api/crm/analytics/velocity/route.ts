@@ -25,19 +25,16 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
 
-    const workspaceIdParam = searchParams.get('workspaceId');
-    const workspaceId = (workspaceIdParam !== '' && workspaceIdParam != null) ? workspaceIdParam : 'default';
-
     // Parse date range
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
-    const dateRange = startDate && endDate 
+    const dateRange = startDate && endDate
       ? { start: new Date(startDate), end: new Date(endDate) }
       : undefined;
 
     const [metrics, insights] = await Promise.all([
-      calculateSalesVelocity(workspaceId, dateRange),
-      getPipelineInsights(workspaceId),
+      calculateSalesVelocity(dateRange),
+      getPipelineInsights(),
     ]);
 
     return NextResponse.json({

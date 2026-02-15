@@ -345,8 +345,8 @@ export const CacheKeys = {
   objectSchema: (objectId: string) => `schema:${objectId}`,
 
   // E-commerce caching
-  product: (workspaceId: string, productId: string) => `product:${workspaceId}:${productId}`,
-  productList: (workspaceId: string, page: number) => `product:list:${workspaceId}:${page}`,
+  product: (productId: string) => `product:${productId}`,
+  productList: (page: number) => `product:list:${page}`,
   cart: (customerId: string) => `cart:${customerId}`,
 
   // Analytics caching

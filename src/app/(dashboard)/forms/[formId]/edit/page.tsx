@@ -193,11 +193,9 @@ const styles = {
 
 const createDefaultForm = (
   formId: string,
-  workspaceId: string,
   name: string
 ): FormDefinition => ({
   id: formId,
-  workspaceId,
   name: name || 'Untitled Form',
   status: 'draft',
   version: 1,
@@ -277,7 +275,6 @@ export default function FormEditorPage() {
       if (formId === 'new') {
         const newForm = createDefaultForm(
           `form_${Date.now()}`,
-          'default',
           'Untitled Form'
         );
         setForm(newForm);
@@ -287,7 +284,7 @@ export default function FormEditorPage() {
       }
 
       const response = await fetch(
-        `/api/forms/${formId}?workspaceId=default`
+        `/api/forms/${formId}`
       );
 
       if (!response.ok) {
@@ -350,7 +347,6 @@ export default function FormEditorPage() {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          workspaceId: 'default',
           form,
           fields,
         }),
@@ -386,7 +382,6 @@ export default function FormEditorPage() {
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ workspaceId: 'default' }),
         }
       );
 

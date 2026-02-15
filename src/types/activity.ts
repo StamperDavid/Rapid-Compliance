@@ -38,8 +38,7 @@ export type RelatedEntityType = 'lead' | 'contact' | 'company' | 'deal' | 'oppor
 
 export interface Activity {
   id: string;
-  workspaceId: string;
-  
+
   // Activity details
   type: ActivityType;
   direction?: ActivityDirection;
@@ -161,7 +160,7 @@ export interface ActivityInsight {
 }
 
 // Helper type for creating activities without ID/timestamps
-export type CreateActivityInput = Omit<Activity, 'id' | 'createdAt' | 'workspaceId'>;
+export type CreateActivityInput = Omit<Activity, 'id' | 'createdAt'>;
 
 // Activity grouping for timeline display
 export interface TimelineGroup {

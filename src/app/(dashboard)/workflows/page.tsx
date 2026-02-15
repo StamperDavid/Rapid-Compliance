@@ -57,7 +57,6 @@ export default function WorkflowsPage() {
   // Fetch function with pagination using service layer
   const fetchWorkflows = useCallback(async (lastDoc?: QueryDocumentSnapshot) => {
     return getWorkflows(
-      'default',
       undefined,
       { pageSize: 50, lastDoc }
     );
@@ -83,7 +82,7 @@ export default function WorkflowsPage() {
       onConfirm: () => {
         void (async () => {
           try {
-            await deleteWorkflow(workflowId, 'default');
+            await deleteWorkflow(workflowId);
             await refresh();
             setConfirmDialog(null);
             setNotification({ message: 'Workflow deleted successfully', type: 'success' });
@@ -101,7 +100,7 @@ export default function WorkflowsPage() {
     const newStatus: 'active' | 'paused' = currentStatus === 'active' ? 'paused' : 'active';
 
     try {
-      await setWorkflowStatus(workflowId, newStatus, 'default');
+      await setWorkflowStatus(workflowId, newStatus);
       await refresh();
       setNotification({ message: `Workflow ${newStatus === 'active' ? 'activated' : 'paused'} successfully`, type: 'success' });
     } catch (err) {

@@ -217,9 +217,7 @@ export async function fetchShopifyOrders(
 /**
  * Sync Shopify orders to CRM as deals
  */
-export async function syncShopifyOrdersToCRM(
-  workspaceId: string = 'default'
-): Promise<number> {
+export async function syncShopifyOrdersToCRM(): Promise<number> {
   try {
     // Get orders from last 30 days
     const since = new Date();
@@ -245,7 +243,6 @@ export async function syncShopifyOrdersToCRM(
               source: 'Shopify',
               status: 'converted',
             },
-            workspaceId,
             { skipDuplicateCheck: true }
           );
         }
@@ -258,7 +255,7 @@ export async function syncShopifyOrdersToCRM(
           probability: order.financialStatus === 'paid' ? 100 : 80,
           source: 'Shopify',
           companyName: 'Shopify Customer',
-        }, workspaceId);
+        });
 
         synced++;
       } catch (error) {

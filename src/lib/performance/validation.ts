@@ -88,8 +88,6 @@ export const LeaderboardBadgeSchema = z.enum([
  * Performance analytics request schema
  */
 export const PerformanceAnalyticsRequestSchema = z.object({
-  workspaceId: z.string().optional(),
-  
   // Time period
   startDate: z.union([z.string(), z.date()]).optional(),
   endDate: z.union([z.string(), z.date()]).optional(),
@@ -112,7 +110,6 @@ export const PerformanceAnalyticsRequestSchema = z.object({
  * Rep comparison request schema
  */
 export const RepComparisonRequestSchema = z.object({
-  workspaceId: z.string().optional(),
   rep1Id: z.string().min(1, 'Rep 1 ID is required'),
   rep2Id: z.string().min(1, 'Rep 2 ID is required'),
   startDate: z.union([z.string(), z.date()]).optional(),
@@ -126,7 +123,6 @@ export const RepComparisonRequestSchema = z.object({
  * Leaderboard request schema
  */
 export const LeaderboardRequestSchema = z.object({
-  workspaceId: z.string().optional(),
   startDate: z.union([z.string(), z.date()]).optional(),
   endDate: z.union([z.string(), z.date()]).optional(),
   periodType: PeriodTypeSchema.optional(),
@@ -138,7 +134,6 @@ export const LeaderboardRequestSchema = z.object({
  * Metric breakdown request schema
  */
 export const MetricBreakdownRequestSchema = z.object({
-  workspaceId: z.string().optional(),
   metric: z.string().min(1, 'Metric name is required'),
   startDate: z.union([z.string(), z.date()]).optional(),
   endDate: z.union([z.string(), z.date()]).optional(),
@@ -409,7 +404,6 @@ export const BestPracticeSchema = z.object({
  * Team performance analytics schema
  */
 export const TeamPerformanceAnalyticsSchema = z.object({
-  workspaceId: z.string(),
   startDate: z.date(),
   endDate: z.date(),
   periodType: PeriodTypeSchema,
@@ -458,7 +452,6 @@ export const LeaderboardMoverSchema = z.object({
  * Performance leaderboard schema
  */
 export const PerformanceLeaderboardSchema = z.object({
-  workspaceId: z.string(),
   startDate: z.date(),
   endDate: z.date(),
   periodType: PeriodTypeSchema,

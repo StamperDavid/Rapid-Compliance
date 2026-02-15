@@ -16,7 +16,6 @@ const MergeRequestSchema = z.object({
   entityType: z.enum(['lead', 'contact', 'company', 'deal', 'opportunity']),
   keepId: z.string().min(1, 'keepId is required'),
   mergeId: z.string().min(1, 'mergeId is required'),
-  workspaceId: z.string().optional().default('default'),
 });
 
 export async function POST(request: NextRequest) {
@@ -52,10 +51,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { entityType, keepId, mergeId, workspaceId } = validation.data;
+    const { entityType, keepId, mergeId } = validation.data;
 
     // Use batch write for transaction safety
-    const collectionPath = `${await import('@/lib/firebase/collections').then(m => m.getSubCollection('workspaces'))}/${workspaceId}/entities/${entityType}s/records`;
+    const collectionPath = `${await import('@/lib/firebase/collections').then(m => m.getSubCollection('workspaces'))}/default/entities/${entityType}s/records`;
     const { FirestoreService } = await import('@/lib/db/firestore-service');
 
     // Get both records
@@ -72,7 +71,7 @@ export async function POST(request: NextRequest) {
     // Merge data (keep newer/non-empty values)
     const merged: Record<string, unknown> = { ...keepRecord };
     for (const key in mergeRecord) {
-      if (['id', 'createdAt', 'updatedAt', 'workspaceId'].includes(key)) {
+      if (['id', 'createdAt', 'updatedAt'].includes(key)) {
         continue;
       }
       const mergedValue = merged[key];

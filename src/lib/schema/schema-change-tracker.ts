@@ -14,7 +14,6 @@ import { PLATFORM_ID } from '@/lib/constants/platform';
  */
 export interface SchemaChangeEvent {
   id: string;
-  workspaceId: string;
   schemaId: string;
   timestamp: Timestamp;
   
@@ -90,7 +89,6 @@ export class SchemaChangeDetector {
     const fieldChanges = this.detectFieldChanges(
       oldSchema.fields,
       newSchema.fields,
-      newSchema.workspaceId,
       newSchema.id
     );
     
@@ -105,7 +103,6 @@ export class SchemaChangeDetector {
   private static detectFieldChanges(
     oldFields: SchemaField[],
     newFields: SchemaField[],
-    workspaceId: string,
     schemaId: string
   ): SchemaChangeEvent[] {
     const events: SchemaChangeEvent[] = [];
@@ -120,7 +117,6 @@ export class SchemaChangeDetector {
         events.push(
           this.createFieldDeletedEvent(
             oldField,
-            workspaceId,
             schemaId
           )
         );
@@ -136,7 +132,6 @@ export class SchemaChangeDetector {
         events.push(
           this.createFieldAddedEvent(
             newField,
-            workspaceId,
             schemaId
           )
         );
@@ -149,7 +144,6 @@ export class SchemaChangeDetector {
             this.createFieldRenamedEvent(
               oldField,
               newField,
-              workspaceId,
               schemaId
             )
           );
@@ -161,7 +155,6 @@ export class SchemaChangeDetector {
             this.createFieldKeyChangedEvent(
               oldField,
               newField,
-              workspaceId,
               schemaId
             )
           );
@@ -173,7 +166,6 @@ export class SchemaChangeDetector {
             this.createFieldTypeChangedEvent(
               oldField,
               newField,
-              workspaceId,
               schemaId
             )
           );
@@ -196,7 +188,6 @@ export class SchemaChangeDetector {
     return {
       id: eventId,
 
-      workspaceId: newSchema.workspaceId,
       schemaId: newSchema.id,
       timestamp: Timestamp.now(),
       changeType: 'schema_renamed',
@@ -213,7 +204,6 @@ export class SchemaChangeDetector {
    */
   private static createFieldAddedEvent(
     field: SchemaField,
-    workspaceId: string,
     schemaId: string
   ): SchemaChangeEvent {
     const eventId = `sce_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -221,7 +211,6 @@ export class SchemaChangeDetector {
     return {
       id: eventId,
 
-      workspaceId,
       schemaId,
       timestamp: Timestamp.now(),
       changeType: 'field_added',
@@ -241,7 +230,6 @@ export class SchemaChangeDetector {
   private static createFieldRenamedEvent(
     oldField: SchemaField,
     newField: SchemaField,
-    workspaceId: string,
     schemaId: string
   ): SchemaChangeEvent {
     const eventId = `sce_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -249,7 +237,6 @@ export class SchemaChangeDetector {
     return {
       id: eventId,
 
-      workspaceId,
       schemaId,
       timestamp: Timestamp.now(),
       changeType: 'field_renamed',
@@ -270,7 +257,6 @@ export class SchemaChangeDetector {
   private static createFieldKeyChangedEvent(
     oldField: SchemaField,
     newField: SchemaField,
-    workspaceId: string,
     schemaId: string
   ): SchemaChangeEvent {
     const eventId = `sce_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -278,7 +264,6 @@ export class SchemaChangeDetector {
     return {
       id: eventId,
 
-      workspaceId,
       schemaId,
       timestamp: Timestamp.now(),
       changeType: 'field_key_changed',
@@ -298,7 +283,6 @@ export class SchemaChangeDetector {
    */
   private static createFieldDeletedEvent(
     field: SchemaField,
-    workspaceId: string,
     schemaId: string
   ): SchemaChangeEvent {
     const eventId = `sce_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -306,7 +290,6 @@ export class SchemaChangeDetector {
     return {
       id: eventId,
 
-      workspaceId,
       schemaId,
       timestamp: Timestamp.now(),
       changeType: 'field_deleted',
@@ -326,7 +309,6 @@ export class SchemaChangeDetector {
   private static createFieldTypeChangedEvent(
     oldField: SchemaField,
     newField: SchemaField,
-    workspaceId: string,
     schemaId: string
   ): SchemaChangeEvent {
     const eventId = `sce_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -334,7 +316,6 @@ export class SchemaChangeDetector {
     return {
       id: eventId,
 
-      workspaceId,
       schemaId,
       timestamp: Timestamp.now(),
       changeType: 'field_type_changed',

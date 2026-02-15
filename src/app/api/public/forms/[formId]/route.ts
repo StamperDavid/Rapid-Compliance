@@ -386,7 +386,6 @@ export async function POST(
     const submission: Omit<FormSubmission, 'id'> = {
       formId,
       formVersion: form.version,
-      workspaceId: 'default',
       status: 'completed',
       responses: fieldResponses,
       confirmationNumber,
@@ -458,24 +457,20 @@ export async function POST(
           ? `${utmSource}${utmMedium ? `/${utmMedium}` : ''}`
           : (metadata?.source as string | undefined) ?? 'form';
 
-        await createLead(
-          {
-            firstName: (firstNameField?.value as string) ?? 'Unknown',
-            lastName: (lastNameField?.value as string) ?? '',
-            email: emailField.value,
-            phone: (phoneField?.value as string) ?? undefined,
-            company: (companyField?.value as string) ?? undefined,
-            status: 'new',
-            source: sourceValue,
-            formId,
-            formSubmissionId: submissionDoc.id,
-            utmSource,
-            utmMedium,
-            utmCampaign,
-          },
-          'default',
-          { autoEnrich: true }
-        );
+        await createLead({
+          firstName: (firstNameField?.value as string) ?? 'Unknown',
+          lastName: (lastNameField?.value as string) ?? '',
+          email: emailField.value,
+          phone: (phoneField?.value as string) ?? undefined,
+          company: (companyField?.value as string) ?? undefined,
+          status: 'new',
+          source: sourceValue,
+          formId,
+          formSubmissionId: submissionDoc.id,
+          utmSource,
+          utmMedium,
+          utmCampaign,
+        }, { autoEnrich: true });
         logger.info('Lead auto-created from form submission', {
           formId,
           submissionId: submissionDoc.id,

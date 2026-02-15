@@ -67,7 +67,6 @@ export interface RiskFactor {
 }
 
 export interface DealScoringOptions {
-  workspaceId: string;
   dealId: string;
   deal?: Deal; // Optional if you already have the deal
   templateId?: string; // Industry template for custom scoring weights
@@ -100,7 +99,6 @@ export interface BatchScoringResult {
  * @example
  * ```typescript
  * const score = await calculateDealScore({
- *   workspaceId: 'default',
  *   dealId: 'deal_456',
  *   templateId: 'saas'
  * });
@@ -170,7 +168,7 @@ export function calculateDealScore(
     });
     
     // Factor 3: Engagement
-    const engagementFactor = calculateEngagementFactor(deal, options.workspaceId);
+    const engagementFactor = calculateEngagementFactor(deal);
     factors.push({
       id: 'engagement',
       name: 'Engagement Level',
@@ -226,7 +224,7 @@ export function calculateDealScore(
     });
     
     // Factor 7: Historical Win Rate
-    const historicalFactor = calculateHistoricalWinRateFactor(deal, options.workspaceId, template);
+    const historicalFactor = calculateHistoricalWinRateFactor(deal, template);
     factors.push({
       id: 'historical_win_rate',
       name: 'Historical Win Rate',
@@ -287,7 +285,6 @@ export function calculateDealScore(
       const coordinator = getServerSignalCoordinator();
       void coordinator.emitSignal({
         type: 'deal.scored',
-        workspaceId: options.workspaceId,
         confidence: confidence / 100,
         priority: tier === 'at-risk' || tier === 'hot' ? 'High' : 'Medium',
         metadata: {
@@ -444,7 +441,7 @@ function calculateStageVelocityFactor(deal: Deal, template: SalesIndustryTemplat
  * Calculate engagement factor
  * Activity level and recency
  */
-function calculateEngagementFactor(_deal: Deal, __workspaceId: string): {
+function calculateEngagementFactor(_deal: Deal): {
   score: number;
   impact: 'positive' | 'negative' | 'neutral';
   description: string;
@@ -635,7 +632,7 @@ function calculateCompetitionFactor(_deal: Deal): {
 /**
  * Calculate historical win rate factor
  */
-function calculateHistoricalWinRateFactor(_deal: Deal, _workspaceId: string, template: SalesIndustryTemplate | null): {
+function calculateHistoricalWinRateFactor(_deal: Deal, template: SalesIndustryTemplate | null): {
   score: number;
   impact: 'positive' | 'negative' | 'neutral';
   description: string;
@@ -843,7 +840,6 @@ function fetchDeal(dealId: string): Deal {
  * Batch score multiple deals
  */
 export function batchScoreDeals(
-  workspaceId: string,
   dealIds: string[],
   templateId?: string
 ): BatchScoringResult {
@@ -852,7 +848,6 @@ export function batchScoreDeals(
   for (const dealId of dealIds) {
     try {
       const score = calculateDealScore({
-        workspaceId,
         dealId,
         templateId
       });

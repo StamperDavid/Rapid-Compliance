@@ -10,7 +10,6 @@ import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 export const dynamic = 'force-dynamic';
 
 const entityChangeSchema = z.object({
-  workspaceId: z.string(),
   schemaId: z.string(),
   changeType: z.enum(['created', 'updated', 'deleted']),
   recordId: z.string(),
@@ -48,11 +47,10 @@ export async function POST(request: NextRequest) {
       return errors.validation('Validation failed', { errors: errorDetails });
     }
 
-    const { workspaceId, schemaId, changeType, recordId, recordData } = validation.data;
+    const { schemaId, changeType, recordId, recordData } = validation.data;
 
     // Handle entity change (triggers workflows)
     await handleEntityChange(
-      workspaceId,
       schemaId,
       changeType,
       recordId,

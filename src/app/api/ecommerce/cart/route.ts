@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
 
     // Use authenticated user's UID as cart key — aligns with checkout and webhook
     const cartId = authResult.user.uid;
-    const cart = await getOrCreateCart(cartId, 'default', authResult.user.uid);
+    const cart = await getOrCreateCart(cartId, authResult.user.uid);
 
     return NextResponse.json({
       success: true,
@@ -106,7 +106,7 @@ export async function POST(request: NextRequest) {
 
     // Use authenticated user's UID as cart key — aligns with checkout and webhook
     const cartId = authResult.user.uid;
-    const cart = await addToCart(cartId, 'default', productId, quantity, variantId, variantOptions);
+    const cart = await addToCart(cartId, productId, quantity, variantId, variantOptions);
 
     return NextResponse.json({
       success: true,
@@ -154,7 +154,7 @@ export async function PATCH(request: NextRequest) {
 
     // Use authenticated user's UID as cart key — aligns with checkout and webhook
     const cartId = authResult.user.uid;
-    const cart = await updateCartItemQuantity(cartId, 'default', itemId, quantity);
+    const cart = await updateCartItemQuantity(cartId, itemId, quantity);
 
     return NextResponse.json({
       success: true,
@@ -188,7 +188,7 @@ export async function DELETE(request: NextRequest) {
 
     // Use authenticated user's UID as cart key — aligns with checkout and webhook
     const cartId = authResult.user.uid;
-    const cart = await removeFromCart(cartId, 'default', itemId);
+    const cart = await removeFromCart(cartId, itemId);
 
     return NextResponse.json({
       success: true,

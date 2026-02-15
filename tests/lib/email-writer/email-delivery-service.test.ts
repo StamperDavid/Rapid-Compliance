@@ -101,7 +101,6 @@ describe('Email Delivery Service', () => {
     it('should send email successfully', async () => {
       // Arrange
       const options: EmailDeliveryOptions = {
-        workspaceId: 'workspace_123',
         userId: 'user_123',
         to: 'recipient@example.com',
         toName: 'John Doe',
@@ -148,7 +147,6 @@ describe('Email Delivery Service', () => {
     it('should handle SendGrid errors', async () => {
       // Arrange
       const options: EmailDeliveryOptions = {
-        workspaceId: 'workspace_123',
         userId: 'user_123',
         to: 'recipient@example.com',
         subject: 'Test Email',
@@ -170,7 +168,6 @@ describe('Email Delivery Service', () => {
     it('should include tracking settings', async () => {
       // Arrange
       const options: EmailDeliveryOptions = {
-        workspaceId: 'workspace_123',
         userId: 'user_123',
         to: 'recipient@example.com',
         subject: 'Test Email',
@@ -207,7 +204,6 @@ describe('Email Delivery Service', () => {
     it('should include custom args for tracking', async () => {
       // Arrange
       const options: EmailDeliveryOptions = {
-        workspaceId: 'workspace_123',
         userId: 'user_123',
         to: 'recipient@example.com',
         subject: 'Test Email',
@@ -230,7 +226,6 @@ describe('Email Delivery Service', () => {
       expect(mockSgMail.send).toHaveBeenCalledWith(
         expect.objectContaining({
           customArgs: expect.objectContaining({
-            workspaceId: 'workspace_123',
             userId: 'user_123',
             dealId: 'deal_123',
             emailId: 'email_abc',
@@ -243,7 +238,6 @@ describe('Email Delivery Service', () => {
     it('should emit email.sent signal on success', async () => {
       // Arrange
       const options: EmailDeliveryOptions = {
-        workspaceId: 'workspace_123',
         userId: 'user_123',
         to: 'recipient@example.com',
         subject: 'Test Email',
@@ -277,7 +271,6 @@ describe('Email Delivery Service', () => {
     it('should emit email.delivery.failed signal on error', async () => {
       // Arrange
       const options: EmailDeliveryOptions = {
-        workspaceId: 'workspace_123',
         userId: 'user_123',
         to: 'recipient@example.com',
         subject: 'Test Email',
@@ -395,7 +388,6 @@ describe('Email Delivery Service', () => {
       process.env.SENDGRID_API_KEY = '';
 
       const options: EmailDeliveryOptions = {
-        workspaceId: 'workspace_123',
         userId: 'user_123',
         to: 'recipient@example.com',
         subject: 'Test',
@@ -416,7 +408,6 @@ describe('Email Delivery Service', () => {
       process.env.FROM_EMAIL = '';
 
       const options: EmailDeliveryOptions = {
-        workspaceId: 'workspace_123',
         userId: 'user_123',
         to: 'recipient@example.com',
         subject: 'Test',

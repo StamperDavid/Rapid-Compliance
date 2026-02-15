@@ -12,7 +12,6 @@ export interface SMSOptions {
   to: string | string[];
   message: string;
   from?: string; // Phone number or sender ID
-  workspaceId?: string;
   metadata?: Record<string, unknown>;
 }
 

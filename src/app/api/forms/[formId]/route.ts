@@ -30,7 +30,6 @@ function getDb() {
 }
 
 const UpdateFormBodySchema = z.object({
-  workspaceId: z.string().optional(),
   form: z.record(z.unknown()).optional(),
   fields: z.array(z.object({
     id: z.string(),
@@ -60,12 +59,9 @@ export async function GET(
     }
 
     const { formId } = await context.params;
-    const { searchParams } = new URL(request.url);
-    const workspaceIdParam = searchParams.get('workspaceId');
-    const workspaceId = workspaceIdParam ?? 'default';
 
     // Get form
-    const form = await getForm(workspaceId, formId);
+    const form = await getForm(formId);
 
     if (!form) {
       return NextResponse.json({ error: 'Form not found' }, { status: 404 });
@@ -73,7 +69,7 @@ export async function GET(
 
     // Get fields
     const firestore = getDb();
-    const fieldsPath = `${getSubCollection('workspaces')}/${workspaceId}/forms/${formId}/fields`;
+    const fieldsPath = `${getSubCollection('workspaces')}/default/forms/${formId}/fields`;
     const fieldsRef = collection(firestore, fieldsPath);
     const fieldsQuery = query(fieldsRef, orderBy('order', 'asc'));
     const fieldsSnapshot = await getDocs(fieldsQuery);
@@ -109,18 +105,17 @@ export async function PUT(
       return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
     }
 
-    const { workspaceId: workspaceIdInput, form: formUpdates, fields } = parseResult.data;
-    const workspaceId = workspaceIdInput ?? 'default';
+    const { form: formUpdates, fields } = parseResult.data;
 
     // Update form
     if (formUpdates) {
-      await updateForm(workspaceId, formId, formUpdates as Partial<FormDefinition>);
+      await updateForm(formId, formUpdates as Partial<FormDefinition>);
     }
 
     // Update fields if provided
     if (fields && Array.isArray(fields)) {
       const firestore = getDb();
-      const fieldsPath = `${getSubCollection('workspaces')}/${workspaceId}/forms/${formId}/fields`;
+      const fieldsPath = `${getSubCollection('workspaces')}/default/forms/${formId}/fields`;
       const batch = writeBatch(firestore);
 
       // Delete existing fields
@@ -136,7 +131,6 @@ export async function PUT(
         batch.set(fieldRef, {
           ...field,
           formId,
-          workspaceId,
           updatedAt: new Date().toISOString(),
         });
       });
@@ -144,13 +138,13 @@ export async function PUT(
       await batch.commit();
 
       // Update field count on form
-      await updateForm(workspaceId, formId, {
+      await updateForm(formId, {
         fieldCount: fields.length,
       });
     }
 
     // Get updated form
-    const updatedForm = await getForm(workspaceId, formId);
+    const updatedForm = await getForm(formId);
 
     return NextResponse.json({ form: updatedForm, success: true });
   } catch (error: unknown) {
@@ -175,13 +169,10 @@ export async function DELETE(
     }
 
     const { formId } = await context.params;
-    const { searchParams } = new URL(request.url);
-    const workspaceIdParam = searchParams.get('workspaceId');
-    const workspaceId = workspaceIdParam ?? 'default';
 
     // MAJ-14: Check for existing submissions before delete
     const firestore = getDb();
-    const submissionsPath = `${getSubCollection('workspaces')}/${workspaceId}/forms/${formId}/submissions`;
+    const submissionsPath = `${getSubCollection('workspaces')}/default/forms/${formId}/submissions`;
     const submissionsRef = collection(firestore, submissionsPath);
     const submissionsSnapshot = await getDocs(submissionsRef);
     if (!submissionsSnapshot.empty) {
@@ -191,7 +182,7 @@ export async function DELETE(
       );
     }
 
-    await deleteForm(workspaceId, formId);
+    await deleteForm(formId);
 
     return NextResponse.json({ success: true });
   } catch (error: unknown) {

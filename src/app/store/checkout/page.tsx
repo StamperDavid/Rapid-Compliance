@@ -240,7 +240,7 @@ export default function CheckoutPage() {
         return;
       }
 
-      const cartData = await getOrCreateCart(sessionId, 'default', PLATFORM_ID);
+      const cartData = await getOrCreateCart(sessionId, PLATFORM_ID);
       if (!cartData.items || cartData.items.length === 0) {
         router.push('/store/cart');
         return;

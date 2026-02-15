@@ -9,8 +9,7 @@ import type { WorkflowState } from './workflow-state';
 export interface EntityRecord {
   id: string;
   schemaId: string;
-  workspaceId: string;
-  
+
   // System fields (always present)
   _meta: EntityMetadata;
   
@@ -53,8 +52,7 @@ export interface EntityActivity {
   id: string;
   entityId: string;
   schemaId: string;
-  workspaceId: string;
-  
+
   // Activity details
   type: ActivityType;
   action: string; // Human-readable description
@@ -100,8 +98,7 @@ export interface EntityComment {
   id: string;
   entityId: string;
   schemaId: string;
-  workspaceId: string;
-  
+
   // Comment
   content: string;
   richContent?: unknown; // For rich text editor
@@ -168,9 +165,8 @@ export interface EntityRelationship {
  */
 export interface EntityExport {
   id: string;
-  workspaceId: string;
   schemaId: string;
-  
+
   // Export config
   format: 'csv' | 'xlsx' | 'json' | 'pdf';
   filters?: EntityFilter[]; // View filters to apply
@@ -199,9 +195,8 @@ export interface EntityExport {
  */
 export interface EntityImport {
   id: string;
-  workspaceId: string;
   schemaId: string;
-  
+
   // Import config
   sourceFileUrl: string;
   format: 'csv' | 'xlsx' | 'json';

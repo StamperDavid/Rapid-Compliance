@@ -57,7 +57,6 @@ export interface TriggerResult {
 export interface OrchestratorSignal {
   type: string;
   priority: 'High' | 'Medium' | 'Low';
-  workspaceId: string;
   leadId?: string;
   formId: string;
   submissionId: string;
@@ -99,7 +98,6 @@ async function emitSignal(
   const result = await coordinator.emitSignal({
     type: signal.type as Parameters<typeof coordinator.emitSignal>[0]['type'],
     priority: signal.priority,
-    workspaceId: signal.workspaceId,
     leadId: signal.leadId,
     confidence: signal.confidence,
     metadata: signal.metadata,
@@ -122,7 +120,6 @@ function createSubmissionSignal(
   return {
     type: 'lead.discovered',
     priority: 'Medium',
-    workspaceId: submission.workspaceId,
     formId: submission.formId,
     submissionId: submission.id,
     confidence: 0.8,
@@ -170,7 +167,6 @@ async function _executeEmitSignal(
     const signalId = await emitSignal({
       type: signalType as string,
       priority: signalPriority as 'High' | 'Medium' | 'Low',
-      workspaceId: submission.workspaceId,
       formId: submission.formId,
       submissionId: submission.id,
       confidence: 0.85,
@@ -232,7 +228,6 @@ async function executeTriggerSequence(
       sequenceId,
       leadId: submission.linkedLeadId ?? submission.id,
       email,
-      workspaceId: submission.workspaceId,
       source: 'form_submission',
       sourceId: submission.id,
     }));
@@ -266,7 +261,6 @@ async function _executeRouteLead(
     await emitSignal({
       type: 'lead.routed',
       priority: 'High',
-      workspaceId: submission.workspaceId,
       leadId: submission.linkedLeadId,
       formId: submission.formId,
       submissionId: submission.id,
@@ -460,7 +454,6 @@ async function executeWorkflow(
     await emitSignal({
       type: 'workflow.executed',
       priority: 'Medium',
-      workspaceId: submission.workspaceId,
       formId: submission.formId,
       submissionId: submission.id,
       confidence: 0.9,
@@ -699,11 +692,9 @@ export async function onFormSubmit(
 /**
  * Register form submission handler with signal coordinator
  */
-export async function registerFormSubmissionHandler(
-  workspaceId: string
-): Promise<void> {
+export async function registerFormSubmissionHandler(): Promise<void> {
   // This can be called during workspace initialization
   // to set up signal handlers for form-related events
-  logger.info('Form submission handler registered', { workspaceId });
+  logger.info('Form submission handler registered');
   return Promise.resolve();
 }

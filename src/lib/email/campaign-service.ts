@@ -11,7 +11,6 @@ import { PLATFORM_ID } from '@/lib/constants/platform';
 
 export interface EmailCampaign {
   id: string;
-  workspaceId?: string;
   name: string;
   subject: string;
   fromName?: string;

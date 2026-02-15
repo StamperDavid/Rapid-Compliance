@@ -34,7 +34,6 @@ import {
 // ============================================================================
 
 export interface TemplateApplicationOptions {
-  workspaceId?: string;
   templateId: string;
   customizations?: TemplateCustomizations;
   merge: boolean; // If true, merge with existing config; if false, replace
@@ -174,7 +173,6 @@ export async function applyTemplate(
       const coordinator = getServerSignalCoordinator();
       await coordinator.emitSignal({
         type: 'template.applied',
-        workspaceId: options.workspaceId,
         confidence: 1.0,
         priority: 'Medium',
         metadata: {

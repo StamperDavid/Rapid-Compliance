@@ -1,10 +1,10 @@
 /**
  * Deal Risk Prediction API Endpoint
- * 
+ *
  * POST /api/risk/predict
- * 
+ *
  * Predicts deal slippage risk and generates AI-powered intervention recommendations
- * 
+ *
  * FEATURES:
  * - Rate limiting (5 requests/minute per user - AI calls are expensive)
  * - Request validation (Zod schemas)
@@ -12,11 +12,10 @@
  * - Error handling
  * - Performance tracking
  * - Signal Bus integration
- * 
+ *
  * REQUEST BODY:
  * - dealId (required): Deal ID to analyze
  * - PLATFORM_ID (required): Organization ID
- * - workspaceId (optional): Workspace ID (default: 'default')
  * - includeInterventions (optional): Include AI interventions (default: true)
  * - forceRefresh (optional): Skip cache (default: false)
  * - customContext (optional): Additional context for AI analysis
@@ -124,8 +123,8 @@ function cacheResponse(cacheKey: string, data: DealRiskPrediction): void {
  * Generate cache key from request
  */
 function getCacheKey(request: RiskPredictionRequest): string {
-  const { dealId, workspaceId, includeInterventions } = request;
-  return `risk:${PLATFORM_ID}:${workspaceId}:${dealId}:${includeInterventions}`;
+  const { dealId, includeInterventions } = request;
+  return `risk:${PLATFORM_ID}:default:${dealId}:${includeInterventions}`;
 }
 
 // ============================================================================
@@ -245,10 +244,7 @@ export async function POST(request: NextRequest) {
     cacheResponse(cacheKey, prediction);
     
     // Get deal for signal emission
-    const deal = await getDeal(
-      validatedRequest.dealId,
-      validatedRequest.workspaceId
-    );
+    const deal = await getDeal(validatedRequest.dealId);
     
     // Emit signals (non-blocking)
     if (deal) {
@@ -418,7 +414,6 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
 
     const dealId = searchParams.get('dealId');
-    const workspaceId = 'default';
     const includeInterventions = searchParams.get('includeInterventions') !== 'false';
 
     if (!dealId) {
@@ -431,11 +426,10 @@ export async function GET(request: NextRequest) {
         { status: 400 }
       );
     }
-    
+
     // Convert to POST request format and call prediction directly
     const riskRequest: RiskPredictionRequest = {
       dealId,
-      workspaceId,
       includeInterventions,
       forceRefresh: false,
     };

@@ -21,8 +21,6 @@ import type {
 import { db } from '@/lib/firebase-admin';
 
 describe('Distillation Engine Integration Tests', () => {
-  const TEST_ORG_ID = 'test-org-distillation';
-  const TEST_WORKSPACE_ID = 'test-workspace';
   const TEMPORARY_SCRAPES_COLLECTION = 'temporary_scrapes';
 
   // Cleanup after each test
@@ -137,7 +135,6 @@ describe('Distillation Engine Integration Tests', () => {
       `;
 
       const result = await distillScrape({
-        workspaceId: TEST_WORKSPACE_ID,
         url: 'https://abchvac.example.com',
         rawHtml,
         cleanedContent,

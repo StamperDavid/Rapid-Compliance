@@ -75,7 +75,6 @@ interface Organization {
  * Route a lead to the appropriate user
  */
 export async function routeLead(
-  workspaceId: string,
   lead: Lead
 ): Promise<RoutingResult> {
   try {
@@ -108,7 +107,7 @@ export async function routeLead(
           break;
 
         case 'load-balance':
-          assignedUserId = await getLoadBalancedUser(workspaceId, rule);
+          assignedUserId = await getLoadBalancedUser(rule);
           break;
 
         case 'skill-based':
@@ -248,7 +247,6 @@ function getTerritoryUser(lead: Lead, rule: RoutingRule): string | null {
  * Get load-balanced assignment
  */
 async function getLoadBalancedUser(
-  workspaceId: string,
   rule: RoutingRule
 ): Promise<string> {
   try {
@@ -260,7 +258,7 @@ async function getLoadBalancedUser(
     const userCounts = new Map<string, number>();
 
     for (const userId of rule.assignedUsers) {
-      const count = await getUserLeadCount(workspaceId, userId, period);
+      const count = await getUserLeadCount(userId, period);
       userCounts.set(userId, count);
     }
 
@@ -287,7 +285,6 @@ async function getLoadBalancedUser(
  * Get user's lead count in period
  */
 async function getUserLeadCount(
-  workspaceId: string,
   userId: string,
   period: 'day' | 'week' | 'month'
 ): Promise<number> {
@@ -300,7 +297,6 @@ async function getUserLeadCount(
     else {since.setDate(since.getDate() - 30);}
 
     const result = await getLeads(
-      workspaceId,
       { ownerId: userId },
       { pageSize: 1000 }
     );

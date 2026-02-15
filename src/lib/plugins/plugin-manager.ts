@@ -23,7 +23,6 @@ export interface JSONSchema {
 }
 
 export interface ToolContext {
-  workspaceId?: string;
   userId?: string;
   permissions: string[];
   metadata?: Record<string, unknown>;

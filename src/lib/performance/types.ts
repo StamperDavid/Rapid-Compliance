@@ -33,8 +33,6 @@ import type {
  * Team performance analytics
  */
 export interface TeamPerformanceAnalytics {
-  workspaceId: string;
-
   // Time period
   startDate: Date;
   endDate: Date;
@@ -506,8 +504,6 @@ export interface MetricCorrelation {
  * Performance leaderboard
  */
 export interface PerformanceLeaderboard {
-  workspaceId: string;
-
   // Period
   startDate: Date;
   endDate: Date;
@@ -569,8 +565,6 @@ export interface LeaderboardMover {
  * Request for team performance analytics
  */
 export interface PerformanceAnalyticsRequest {
-  workspaceId?: string;
-  
   // Time period
   startDate?: Date | string;
   endDate?: Date | string;
@@ -593,7 +587,6 @@ export interface PerformanceAnalyticsRequest {
  * Request for rep comparison
  */
 export interface RepComparisonRequest {
-  workspaceId?: string;
   rep1Id: string;
   rep2Id: string;
   startDate?: Date | string;
@@ -604,7 +597,6 @@ export interface RepComparisonRequest {
  * Request for leaderboard
  */
 export interface LeaderboardRequest {
-  workspaceId?: string;
   startDate?: Date | string;
   endDate?: Date | string;
   periodType?: PeriodType;
@@ -616,7 +608,6 @@ export interface LeaderboardRequest {
  * Request for metric breakdown
  */
 export interface MetricBreakdownRequest {
-  workspaceId?: string;
   metric: string;
   startDate?: Date | string;
   endDate?: Date | string;
@@ -681,7 +672,6 @@ export const DEFAULT_PERFORMANCE_CONFIG: PerformanceAnalyticsConfig = {
  * Firestore performance analytics document
  */
 export interface PerformanceAnalyticsDocument {
-  workspaceId: string;
   startDate: Timestamp;
   endDate: Timestamp;
   periodType: PeriodType;
@@ -702,7 +692,6 @@ export interface PerformanceAnalyticsDocument {
  * Firestore leaderboard document
  */
 export interface LeaderboardDocument {
-  workspaceId: string;
   startDate: Timestamp;
   endDate: Timestamp;
   periodType: PeriodType;

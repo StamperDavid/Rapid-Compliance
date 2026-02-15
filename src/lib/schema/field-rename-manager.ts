@@ -75,19 +75,18 @@ export class FieldRenameManager {
    * Rollback field to previous name
    */
   static async rollbackField(
-    workspaceId: string,
     schemaId: string,
     fieldId: string,
     toVersion: number,
     userId: string
   ): Promise<void> {
     try {
-      const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
-      const { PLATFORM_ID } = await import('@/lib/constants/platform');
+      const { FirestoreService } = await import('@/lib/db/firestore-service');
+      const { getSubCollection } = await import('@/lib/firebase/collections');
 
       // Get schema
       const schema = await FirestoreService.get(
-        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.WORKSPACES}/${workspaceId}/${COLLECTIONS.SCHEMAS}`,
+        getSubCollection('schemas'),
         schemaId
       ) as Schema;
       
@@ -148,7 +147,7 @@ export class FieldRenameManager {
       updatedFields[fieldIndex] = updatedField;
       
       await FirestoreService.set(
-        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.WORKSPACES}/${workspaceId}/${COLLECTIONS.SCHEMAS}`,
+        getSubCollection('schemas'),
         schemaId,
         {
           ...schema,
@@ -259,7 +258,6 @@ export class FieldRenameManager {
    * Create notification for field rollback
    */
   static async notifyFieldRollback(
-    workspaceId: string,
     schemaId: string,
     schemaName: string,
     field: SchemaField,
@@ -267,18 +265,16 @@ export class FieldRenameManager {
     newKey: string
   ): Promise<void> {
     try {
-      const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
-      const { PLATFORM_ID } = await import('@/lib/constants/platform');
+      const { FirestoreService } = await import('@/lib/db/firestore-service');
+      const { getSubCollection } = await import('@/lib/firebase/collections');
 
-      const notificationPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/notifications`;
       const notificationId = `notif_rollback_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
       await FirestoreService.set(
-        notificationPath,
+        getSubCollection('notifications'),
         notificationId,
         {
           id: notificationId,
-          workspaceId,
           title: 'Field Rolled Back',
           message: `Field "${field.label}" in schema "${schemaName}" was rolled back from "${oldKey}" to "${newKey}"`,
           type: 'info',

@@ -9,11 +9,9 @@ export const dynamic = 'force-dynamic';
 
 const deleteBodySchema = z.object({
   ids: z.array(z.string().min(1)).min(1, 'At least one ID is required'),
-  workspaceId: z.string().optional().default('default'),
 });
 
 const CreateFormBodySchema = z.object({
-  workspaceId: z.string().optional(),
   name: z.string().min(1, 'Form name is required'),
   description: z.string().optional(),
 });
@@ -32,14 +30,12 @@ export async function GET(
     }
 
     const { searchParams } = new URL(request.url);
-    const workspaceIdParam = searchParams.get('workspaceId');
-    const workspaceId = workspaceIdParam ?? 'default';
     const status = searchParams.get('status') as FormDefinition['status'] | null;
     const category = searchParams.get('category');
     const pageSizeParam = searchParams.get('pageSize');
     const pageSize = parseInt(pageSizeParam ?? '50');
 
-    const result = await listForms(workspaceId, {
+    const result = await listForms({
       status: status ?? undefined,
       category: category ?? undefined,
       pageSize,
@@ -76,8 +72,7 @@ export async function POST(
       );
     }
 
-    const { workspaceId: workspaceIdInput, name, description } = parseResult.data;
-    const workspaceId = workspaceIdInput ?? 'default';
+    const { name, description } = parseResult.data;
 
     // Create form with default settings
     const formData: Omit<FormDefinition, 'id' | 'createdAt' | 'updatedAt' | 'submissionCount' | 'viewCount'> = {
@@ -123,10 +118,9 @@ export async function POST(
       publicAccess: true,
       createdBy: 'system',
       lastModifiedBy: 'system',
-      workspaceId,
     };
 
-    const form = await createForm(workspaceId, formData);
+    const form = await createForm(formData);
 
     return NextResponse.json(form, { status: 201 });
   } catch (error: unknown) {
@@ -159,9 +153,9 @@ export async function DELETE(
       );
     }
 
-    const { ids, workspaceId } = bodyResult.data;
+    const { ids } = bodyResult.data;
     const results = await Promise.allSettled(
-      ids.map(id => deleteForm(workspaceId, id))
+      ids.map(id => deleteForm(id))
     );
 
     const failed = results.filter(r => r.status === 'rejected');

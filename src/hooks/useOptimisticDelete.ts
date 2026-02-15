@@ -3,6 +3,7 @@
 import { useState, useCallback, useRef } from 'react';
 import toast from 'react-hot-toast';
 import { logger } from '@/lib/logger/logger';
+import { auth } from '@/lib/firebase/config';
 
 interface UseOptimisticDeleteOptions<T extends { id: string }> {
   /** Current data array */
@@ -75,9 +76,13 @@ export function useOptimisticDelete<T extends { id: string }>({
 
     try {
       // 3. Call the API
+      const token = await auth?.currentUser?.getIdToken();
       const response = await fetch(endpoint, {
         method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({ ids: idsToDelete }),
       });
 

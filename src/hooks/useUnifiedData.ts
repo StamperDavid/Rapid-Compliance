@@ -11,7 +11,6 @@ import { useState, useEffect, useCallback } from 'react';
 import { type QueryConstraint } from 'firebase/firestore';
 import {
   FirestoreService,
-  WorkspaceService,
   RecordService,
   COLLECTIONS,
 } from '@/lib/db/firestore-service';
@@ -96,9 +95,6 @@ export function useCollectionData<T>(
       } else if (collectionName === COLLECTIONS.ORGANIZATIONS) {
         const org = await FirestoreService.get<T>(COLLECTIONS.ORGANIZATIONS, PLATFORM_ID);
         setData(org ? [org] : []);
-      } else if (collectionName === COLLECTIONS.WORKSPACES) {
-        const workspaces = await WorkspaceService.getAll();
-        setData(workspaces as T[]);
       } else {
         // Default: fetch from collection directly
         const result = await FirestoreService.getAll<T>(collectionName, constraints);
@@ -200,9 +196,6 @@ export function useDocData<T>(
       if (collectionName === COLLECTIONS.ORGANIZATIONS) {
         const org = await FirestoreService.get<T>(COLLECTIONS.ORGANIZATIONS, docId);
         setData(org);
-      } else if (collectionName === COLLECTIONS.WORKSPACES) {
-        const workspace = await WorkspaceService.get(docId);
-        setData(workspace as T | null);
       } else {
         const result = await FirestoreService.get<T>(collectionName, docId);
         setData(result);
@@ -238,13 +231,6 @@ export function useDocData<T>(
           setData(org);
         }
       );
-      return unsubscribe;
-    }
-
-    if (collectionName === COLLECTIONS.WORKSPACES) {
-      const unsubscribe = WorkspaceService.subscribe(docId, (workspace) => {
-        setData(workspace as T | null);
-      });
       return unsubscribe;
     }
 
@@ -295,14 +281,11 @@ export function useRecords<T>(
       return;
     }
 
-    const workspaceId = 'default';
-
     try {
       setLoading(true);
       setError(null);
 
       const records = await RecordService.getAll(
-        workspaceId,
         entityName,
         constraints
       );
@@ -332,10 +315,7 @@ export function useRecords<T>(
       return;
     }
 
-    const workspaceId = 'default';
-
     const unsubscribe = RecordService.subscribe(
-      workspaceId,
       entityName,
       constraints,
       (newData) => {
@@ -355,38 +335,25 @@ export function useRecords<T>(
 }
 
 /**
- * Fetch workspaces
+ * Fetch workspaces (deprecated in single-tenant architecture)
  *
- * @returns Workspaces with loading and error states
+ * @returns Empty array - workspaces do not exist in single-tenant mode
  */
 export function useWorkspaces(): UseDataReturn<Record<string, unknown>> {
   const { user } = useUnifiedAuth();
-  const [data, setData] = useState<Record<string, unknown>[]>([]);
+  const [data] = useState<Record<string, unknown>[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
+  const [error] = useState<Error | null>(null);
 
   const fetchData = useCallback(async () => {
     if (!user) {
-      setData([]);
       setLoading(false);
       return;
     }
 
-    try {
-      setLoading(true);
-      setError(null);
-
-      const workspaces = await WorkspaceService.getAll();
-      setData(workspaces);
-      setLoading(false);
-    } catch (err) {
-      const errorObj = err instanceof Error ? err : new Error(String(err));
-      logger.error('Error fetching workspaces:', errorObj, {
-        file: 'useUnifiedData.ts',
-      });
-      setError(errorObj);
-      setLoading(false);
-    }
+    // In single-tenant mode, there are no workspaces
+    await Promise.resolve();
+    setLoading(false);
   }, [user]);
 
   useEffect(() => {

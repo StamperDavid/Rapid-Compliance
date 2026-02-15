@@ -13,7 +13,6 @@ export type AgentDomain = 'chat' | 'social' | 'email' | 'voice';
 
 export interface TrainingSession {
   id: string;
-  workspaceId?: string;
   goldenMasterId: string;
 
   // Agent domain — which agent type this session trains

@@ -8,7 +8,6 @@ import { where, orderBy, Timestamp } from 'firebase/firestore';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 
 export interface EcommerceAnalytics {
-  workspaceId: string;
   period: string;
   
   // Sales metrics
@@ -48,7 +47,6 @@ export interface EcommerceAnalytics {
  * Get e-commerce analytics
  */
 export async function getEcommerceAnalytics(
-  workspaceId: string,
   startDate: Date,
   endDate: Date
 ): Promise<EcommerceAnalytics> {
@@ -62,10 +60,11 @@ export async function getEcommerceAnalytics(
       orderBy('createdAt', 'desc'),
     ]
   );
-  
-  // Get carts (for abandonment rate)
+
+  // Get carts (for abandonment rate) using getSubCollection helper
+  const { getSubCollection } = await import('@/lib/firebase/collections');
   const carts = await FirestoreService.getAll(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/${workspaceId}/carts`,
+    getSubCollection('carts'),
     [
       where('createdAt', '>=', Timestamp.fromDate(startDate)),
       where('createdAt', '<=', Timestamp.fromDate(endDate)),
@@ -94,7 +93,6 @@ export async function getEcommerceAnalytics(
   const revenueByDay = calculateRevenueByDay(orders, startDate, endDate);
   
   return {
-    workspaceId,
     period: `${startDate.toISOString().split('T')[0]} to ${endDate.toISOString().split('T')[0]}`,
     totalRevenue,
     totalOrders,

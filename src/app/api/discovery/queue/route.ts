@@ -88,7 +88,6 @@ export async function POST(request: NextRequest) {
     const taskId = await queueDiscoveryTask(
       body.type,
       body.target,
-      'default',
       body.priority ?? 0
     );
 
@@ -144,7 +143,6 @@ export async function PUT(request: NextRequest) {
         queueDiscoveryTask(
           task.type,
           task.target,
-          'default',
           task.priority ?? 0
         )
       )

@@ -12,8 +12,6 @@
  */
 export const PLATFORM_ID = 'rapid-compliance-root' as const;
 
-/** @deprecated Use PLATFORM_ID instead. Will be removed in next cleanup pass. */
-export const DEFAULT_ORG_ID = PLATFORM_ID;
 
 /**
  * Platform AI assistant name.

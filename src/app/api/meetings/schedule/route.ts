@@ -19,7 +19,6 @@ interface MeetingAttendee {
 }
 
 interface ScheduleMeetingRequestBody {
-  workspaceId?: string;
   schedulerConfigId?: string;
   title?: string;
   startTime?: string;
@@ -67,9 +66,7 @@ export async function POST(request: NextRequest) {
       ? body.relatedEntityType
       : undefined;
 
-    const workspaceId = (body.workspaceId !== '' && body.workspaceId != null) ? body.workspaceId : 'default';
-
-    const meeting = await scheduleMeeting(workspaceId, {
+    const meeting = await scheduleMeeting({
       schedulerConfigId: body.schedulerConfigId,
       title: body.title,
       startTime: body.startTime ? new Date(body.startTime) : new Date(),

@@ -7,7 +7,6 @@ import { requireAuth } from '@/lib/auth/api-auth';
 export const dynamic = 'force-dynamic';
 
 const querySchema = z.object({
-  workspaceId: z.string().optional().default('default'),
   company: z.string().optional(),
   pageSize: z.coerce.number().int().positive().optional().default(50),
 });
@@ -35,12 +34,10 @@ const createContactSchema = z.object({
   tags: z.array(z.string()).optional(),
   notes: z.string().optional(),
   ownerId: z.string().optional(),
-  workspaceId: z.string().optional().default('default'),
 });
 
 const deleteBodySchema = z.object({
   ids: z.array(z.string().min(1)).min(1, 'At least one ID is required'),
-  workspaceId: z.string().optional().default('default'),
 });
 
 export async function GET(
@@ -54,7 +51,6 @@ export async function GET(
 
     const { searchParams } = new URL(request.url);
     const queryResult = querySchema.safeParse({
-      workspaceId: searchParams.get('workspaceId') ?? undefined,
       company: searchParams.get('company') ?? undefined,
       pageSize: searchParams.get('pageSize') ?? undefined,
     });
@@ -66,11 +62,11 @@ export async function GET(
       );
     }
 
-    const { workspaceId, company, pageSize } = queryResult.data;
+    const { company, pageSize } = queryResult.data;
     const filters = company ? { company } : undefined;
     const pagination = { pageSize };
 
-    const result = await getContacts(workspaceId, filters, pagination);
+    const result = await getContacts(filters, pagination);
 
     return NextResponse.json(result);
   } catch (error: unknown) {
@@ -102,8 +98,8 @@ export async function POST(
       );
     }
 
-    const { workspaceId, ...contactData } = bodyResult.data;
-    const contact = await createContact(contactData, workspaceId);
+    const contactData = bodyResult.data;
+    const contact = await createContact(contactData);
 
     return NextResponse.json({ success: true, contact }, { status: 201 });
   } catch (error: unknown) {
@@ -135,9 +131,9 @@ export async function DELETE(
       );
     }
 
-    const { ids, workspaceId } = bodyResult.data;
+    const { ids } = bodyResult.data;
     const results = await Promise.allSettled(
-      ids.map(id => deleteContact(id, workspaceId))
+      ids.map(id => deleteContact(id))
     );
 
     const failed = results.filter(r => r.status === 'rejected');

@@ -77,8 +77,7 @@ export type NotificationCategory =
 export interface NotificationVariables {
   // Organization context
   orgName?: string;
-  workspaceId?: string;
-  
+
   // User context
   userId?: string;
   userName?: string;

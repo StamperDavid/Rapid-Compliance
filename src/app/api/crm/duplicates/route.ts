@@ -22,7 +22,6 @@ const duplicateRequestSchema = z.object({
     (r) => Object.keys(r).length > 0,
     { message: 'record must contain at least one field' },
   ),
-  workspaceId: z.string().optional(),
 });
 
 export async function POST(request: NextRequest) {
@@ -46,19 +45,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { entityType, record, workspaceId = 'default' } = parsed.data;
+    const { entityType, record } = parsed.data;
 
     let result;
 
     switch (entityType) {
       case 'lead':
-        result = await detectLeadDuplicates(workspaceId, record);
+        result = await detectLeadDuplicates(record);
         break;
       case 'contact':
-        result = await detectContactDuplicates(workspaceId, record);
+        result = await detectContactDuplicates(record);
         break;
       case 'company':
-        result = await detectCompanyDuplicates(workspaceId, record);
+        result = await detectCompanyDuplicates(record);
         break;
       default:
         return NextResponse.json(

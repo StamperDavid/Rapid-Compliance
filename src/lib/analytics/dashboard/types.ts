@@ -514,18 +514,15 @@ export interface ErrorMetrics {
  * Request parameters for analytics API
  */
 export interface AnalyticsRequest {
-  /** Workspace ID */
-  workspaceId: string;
-  
   /** Time period */
   period: TimePeriod;
-  
+
   /** Custom start date (for custom period) */
   startDate?: Date;
-  
+
   /** Custom end date (for custom period) */
   endDate?: Date;
-  
+
   /** Specific metrics to include (optional, all by default) */
   metrics?: ('workflows' | 'emails' | 'deals' | 'revenue' | 'team')[];
 }

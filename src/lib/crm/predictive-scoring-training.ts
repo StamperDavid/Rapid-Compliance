@@ -102,17 +102,17 @@ function scoreBehavioralSignals(lead: Lead, activityStats: BehavioralActivitySta
  * Train scoring model from historical conversion data
  * Uses logistic regression approximation to adjust weights based on predictive power
  */
-export async function trainFromHistoricalData(workspaceId: string): Promise<ScoringModel | null> {
+export async function trainFromHistoricalData(): Promise<ScoringModel | null> {
   try {
     if (!adminDal) {
       throw new Error('Admin DAL not initialized');
     }
 
-    logger.info('Starting lead scoring model training', { workspaceId });
+    logger.info('Starting lead scoring model training');
 
     const leadsRef = adminDal.getNestedCollection(
-      `${getSubCollection('workspaces')}/{wsId}/entities/leads/records`,
-      { wsId: workspaceId }
+      getSubCollection('leads'),
+      {}
     );
 
     const [convertedSnapshot, lostSnapshot] = await Promise.all([
@@ -139,7 +139,7 @@ export async function trainFromHistoricalData(workspaceId: string): Promise<Scor
     for (const lead of convertedLeads) {
       convertedFeatures.demographics += scoreDemographics(lead);
       convertedFeatures.firmographics += scoreFirmographics(lead);
-      const stats = await getActivityStats(workspaceId, 'lead', lead.id);
+      const stats = await getActivityStats('lead', lead.id);
       convertedFeatures.engagement += stats.engagementScore ?? 0;
       convertedFeatures.behavioral += scoreBehavioralSignals(lead, stats);
     }
@@ -147,7 +147,7 @@ export async function trainFromHistoricalData(workspaceId: string): Promise<Scor
     for (const lead of lostLeads) {
       lostFeatures.demographics += scoreDemographics(lead);
       lostFeatures.firmographics += scoreFirmographics(lead);
-      const stats = await getActivityStats(workspaceId, 'lead', lead.id);
+      const stats = await getActivityStats('lead', lead.id);
       lostFeatures.engagement += stats.engagementScore ?? 0;
       lostFeatures.behavioral += scoreBehavioralSignals(lead, stats);
     }

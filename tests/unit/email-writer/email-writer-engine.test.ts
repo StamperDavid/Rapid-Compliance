@@ -253,7 +253,6 @@ IMPROVEMENTS:
         .mockResolvedValue(mockLLMResponse as never);
       
       const result = await generateSalesEmail({
-        workspaceId: 'workspace_123',
         userId: 'user_123',
         emailType: 'intro',
         dealId: 'deal_123',
@@ -278,7 +277,6 @@ IMPROVEMENTS:
         } as never);
       
       const result = await generateSalesEmail({
-        workspaceId: 'workspace_123',
         userId: 'user_123',
         emailType: 'follow-up',
         dealId: 'deal_123',
@@ -298,7 +296,6 @@ IMPROVEMENTS:
         } as never);
       
       const result = await generateSalesEmail({
-        workspaceId: 'workspace_123',
         userId: 'user_123',
         emailType: 'proposal',
         dealId: 'deal_123',
@@ -318,7 +315,6 @@ IMPROVEMENTS:
         } as never);
       
       const result = await generateSalesEmail({
-        workspaceId: 'workspace_123',
         userId: 'user_123',
         emailType: 'close',
         dealId: 'deal_123',
@@ -338,7 +334,6 @@ IMPROVEMENTS:
         } as never);
       
       const result = await generateSalesEmail({
-        workspaceId: 'workspace_123',
         userId: 'user_123',
         emailType: 're-engagement',
         dealId: 'deal_123',
@@ -361,7 +356,6 @@ IMPROVEMENTS:
         .mockResolvedValue(mockLLMResponse as never);
       
       const result = await generateSalesEmail({
-        workspaceId: 'workspace_123',
         userId: 'user_123',
         emailType: 'intro',
         dealId: 'deal_123',
@@ -381,7 +375,6 @@ IMPROVEMENTS:
         .mockResolvedValue(mockLLMResponse as never);
       
       const result = await generateSalesEmail({
-        workspaceId: 'workspace_123',
         userId: 'user_123',
         emailType: 'intro',
         dealId: 'deal_123',
@@ -408,7 +401,6 @@ IMPROVEMENTS:
         .mockResolvedValue(mockLLMResponse as never);
       
       const result = await generateSalesEmail({
-        workspaceId: 'workspace_123',
         userId: 'user_123',
         emailType: 'close',
         dealId: 'deal_123',
@@ -431,7 +423,6 @@ IMPROVEMENTS:
         .mockResolvedValue(mockLLMResponse as never);
       
       const result = await generateSalesEmail({
-        workspaceId: 'workspace_123',
         userId: 'user_123',
         emailType: 're-engagement',
         dealId: 'deal_123',
@@ -458,7 +449,6 @@ IMPROVEMENTS:
         .mockResolvedValue(mockLLMResponse as never);
       
       const result = await generateSalesEmail({
-        workspaceId: 'workspace_123',
         userId: 'user_123',
         emailType: 'intro',
         dealId: 'deal_123',
@@ -482,7 +472,6 @@ IMPROVEMENTS:
         .mockResolvedValue(mockLLMResponse as never);
       
       const result = await generateSalesEmail({
-        workspaceId: 'workspace_123',
         userId: 'user_123',
         emailType: 'intro',
         dealId: 'deal_123',
@@ -506,7 +495,6 @@ IMPROVEMENTS:
         .mockResolvedValue(mockLLMResponse as never);
       
       const result = await generateSalesEmail({
-        workspaceId: 'workspace_123',
         userId: 'user_123',
         emailType: 'intro',
         dealId: 'deal_123',
@@ -523,7 +511,6 @@ IMPROVEMENTS:
         .mockResolvedValue(mockLLMResponse as never);
       
       const result = await generateSalesEmail({
-        workspaceId: 'workspace_123',
         userId: 'user_123',
         emailType: 'intro',
         dealId: 'deal_123',
@@ -540,7 +527,6 @@ IMPROVEMENTS:
         .mockResolvedValue(mockLLMResponse as never);
       
       await generateSalesEmail({
-        workspaceId: 'workspace_123',
         userId: 'user_123',
         emailType: 'intro',
         dealId: 'deal_123',
@@ -564,7 +550,6 @@ IMPROVEMENTS:
         .mockResolvedValue(mockLLMResponse as never);
       
       const result = await generateSalesEmail({
-        workspaceId: 'workspace_123',
         userId: 'user_123',
         emailType: 'intro',
         dealId: 'deal_123',
@@ -579,7 +564,6 @@ IMPROVEMENTS:
         .mockResolvedValue(mockLLMResponse as never);
       
       const result = await generateSalesEmail({
-        workspaceId: 'workspace_123',
         userId: 'user_123',
         emailType: 'intro',
         dealId: 'deal_123',
@@ -595,7 +579,6 @@ IMPROVEMENTS:
         .mockResolvedValue(mockLLMResponse as never);
       
       const result = await generateSalesEmail({
-        workspaceId: 'workspace_123',
         userId: 'user_123',
         emailType: 'intro',
         dealId: 'deal_123',
@@ -617,7 +600,6 @@ IMPROVEMENTS:
         .mockResolvedValue(mockLLMResponse as never);
       
       const result = await generateEmailVariants({
-        workspaceId: 'workspace_123',
         userId: 'user_123',
         emailType: 'intro',
         dealId: 'deal_123',
@@ -635,7 +617,6 @@ IMPROVEMENTS:
         .mockResolvedValue(mockLLMResponse as never);
 
       const _result = await generateEmailVariants({
-        workspaceId: 'workspace_123',
         userId: 'user_123',
         emailType: 'intro',
         dealId: 'deal_123',
@@ -660,7 +641,6 @@ IMPROVEMENTS:
         } as never);
       
       const result = await generateSalesEmail({
-        workspaceId: 'workspace_123',
         userId: 'user_123',
         emailType: 'intro',
         dealId: 'deal_123',
@@ -673,7 +653,6 @@ IMPROVEMENTS:
     
     it('should handle missing email template', async () => {
       const result = await generateSalesEmail({
-        workspaceId: 'workspace_123',
         userId: 'user_123',
         emailType: 'invalid-type' as never,
         dealId: 'deal_123',
@@ -700,7 +679,6 @@ IMPROVEMENTS:
         .mockResolvedValue(mockLLMResponse as never);
       
       await generateSalesEmail({
-        workspaceId: 'workspace_123',
         userId: 'user_123',
         emailType: 'intro',
         dealId: 'deal_123',

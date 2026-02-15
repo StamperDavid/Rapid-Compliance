@@ -112,7 +112,6 @@ export const FinishReasonSchema = z.enum([
 // ============================================================================
 
 export const OrganizationIdSchema = z.string().min(1).max(100);
-export const WorkspaceIdSchema = z.string().min(1).max(100);
 export const UserIdSchema = z.string().min(1).max(100);
 export const DocumentIdSchema = z.string().min(1).max(200);
 
@@ -381,7 +380,6 @@ export const RetrievalOptionsSchema = z.object({
  * Retrieval request schema
  */
 export const RetrievalRequestSchema = z.object({
-  workspaceId: WorkspaceIdSchema.optional(),
   query: z.string().min(1).max(10000),
   filters: RetrievalFiltersSchema.optional(),
   options: RetrievalOptionsSchema.optional(),
@@ -403,7 +401,6 @@ export const OrchestrationOptionsSchema = z.object({
  * Orchestration request schema
  */
 export const OrchestrationRequestSchema = z.object({
-  workspaceId: WorkspaceIdSchema,
   userId: UserIdSchema,
   task: TaskContextSchema,
   conversationHistory: z.array(LLMMessageSchema).optional(),

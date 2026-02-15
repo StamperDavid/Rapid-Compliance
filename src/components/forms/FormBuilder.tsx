@@ -432,7 +432,6 @@ export function FormBuilder({
       const newField: FormFieldConfig = {
         id: newFieldId,
         formId: form.id,
-        workspaceId: form.workspaceId,
         type: defaultConfig.type ?? type,
         label: defaultConfig.label ?? '',
         name: defaultConfig.name ?? `field_${Date.now()}`,

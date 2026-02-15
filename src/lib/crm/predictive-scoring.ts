@@ -101,7 +101,6 @@ async function loadScoringWeights(): Promise<ScoringWeights> {
  * Uses trained weights from Firestore when available, falls back to rule-based defaults.
  */
 export async function calculatePredictiveLeadScore(
-  workspaceId: string,
   lead: Lead
 ): Promise<PredictiveScore> {
   try {
@@ -131,7 +130,7 @@ export async function calculatePredictiveLeadScore(
     });
 
     // Factor 3: Engagement
-    const activityStats = await getActivityStats(workspaceId, 'lead', lead.id);
+    const activityStats = await getActivityStats('lead', lead.id);
     const engagementScore = activityStats.engagementScore ?? 0;
     factors.push({
       name: 'Engagement',
@@ -398,14 +397,13 @@ function calculateConfidence(lead: Lead, activityStats: ConfidenceActivityStats)
  * Batch score leads (for leaderboards, prioritization)
  */
 export async function batchScoreLeads(
-  workspaceId: string,
   leads: Lead[]
 ): Promise<Map<string, PredictiveScore>> {
   const scores = new Map<string, PredictiveScore>();
 
   for (const lead of leads) {
     try {
-      const score = await calculatePredictiveLeadScore(workspaceId, lead);
+      const score = await calculatePredictiveLeadScore(lead);
       scores.set(lead.id, score);
     } catch (error) {
       logger.warn('Failed to score lead in batch', { leadId: lead.id, error: error instanceof Error ? error.message : String(error) });

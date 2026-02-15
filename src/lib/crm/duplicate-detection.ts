@@ -39,7 +39,6 @@ async function fetchAllPaginated<T extends { id: string }>(
  */
 interface BaseRecord {
   id: string;
-  workspaceId?: string;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -148,7 +147,6 @@ function levenshteinDistance(str1: string, str2: string): number {
  * Detect duplicates for a lead
  */
 export async function detectLeadDuplicates(
-  workspaceId: string,
   lead: Partial<Lead>
 ): Promise<DuplicateDetectionResult> {
   try {
@@ -163,7 +161,7 @@ export async function detectLeadDuplicates(
       constraints.push(where('phone', '==', lead.phone));
     }
 
-    const leadsPath = `${getSubCollection('workspaces')}/${workspaceId}/entities/leads/records`;
+    const leadsPath = getSubCollection('leads');
     const existingLeads: Lead[] = constraints.length > 0
       ? await FirestoreService.getAll<Lead>(leadsPath, constraints)
       : await fetchAllPaginated<Lead>(leadsPath);
@@ -298,7 +296,6 @@ export async function detectLeadDuplicates(
  * Detect duplicates for a contact
  */
 export async function detectContactDuplicates(
-  workspaceId: string,
   contact: Partial<Contact>
 ): Promise<DuplicateDetectionResult> {
   try {
@@ -313,7 +310,7 @@ export async function detectContactDuplicates(
       constraints.push(where('phone', '==', contact.phone));
     }
 
-    const contactsPath = `${getSubCollection('workspaces')}/${workspaceId}/entities/contacts/records`;
+    const contactsPath = getSubCollection('contacts');
     const existingContacts: Contact[] = constraints.length > 0
       ? await FirestoreService.getAll<Contact>(contactsPath, constraints)
       : await fetchAllPaginated<Contact>(contactsPath);
@@ -396,7 +393,6 @@ export async function detectContactDuplicates(
  * Detect duplicates for a company
  */
 export async function detectCompanyDuplicates(
-  workspaceId: string,
   company: Partial<Company>
 ): Promise<DuplicateDetectionResult> {
   try {
@@ -411,7 +407,7 @@ export async function detectCompanyDuplicates(
       constraints.push(where('phone', '==', company.phone));
     }
 
-    const companiesPath = `${getSubCollection('workspaces')}/${workspaceId}/entities/companies/records`;
+    const companiesPath = getSubCollection('companies');
     const existingCompanies: Company[] = constraints.length > 0
       ? await FirestoreService.getAll<Company>(companiesPath, constraints)
       : await fetchAllPaginated<Company>(companiesPath);
@@ -505,13 +501,12 @@ function isUnknownArray(value: unknown): value is unknown[] {
  * Merge two records (keeps newer data, combines arrays)
  */
 export async function mergeRecords(
-  workspaceId: string,
   entityType: RelatedEntityType,
   keepId: string,
   mergeId: string
 ): Promise<CRMRecord> {
   try {
-    const collectionPath = `${getSubCollection('workspaces')}/${workspaceId}/entities/${entityType}s/records`;
+    const collectionPath = getSubCollection(`${entityType}s` as 'leads' | 'contacts' | 'deals' | 'companies');
 
     // Get both records - use Record<string, unknown> as base type
     const keepRecord = await FirestoreService.get<Record<string, unknown>>(collectionPath, keepId);
@@ -526,7 +521,7 @@ export async function mergeRecords(
 
     for (const key in mergeRecord) {
       // Skip metadata fields
-      if (['id', 'createdAt', 'updatedAt', 'workspaceId'].includes(key)) {
+      if (['id', 'createdAt', 'updatedAt'].includes(key)) {
         continue;
       }
 

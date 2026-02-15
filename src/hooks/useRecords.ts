@@ -88,8 +88,6 @@ export function useRecords<T = Record<string, unknown>>(
 
   // Load records from Firestore
   const loadRecords = useCallback(async () => {
-    const workspaceId = 'default';
-
     if (!entityName) {
       setLoading(false);
       return;
@@ -103,7 +101,6 @@ export function useRecords<T = Record<string, unknown>>(
       setError(null);
 
       const data = await RecordService.getAll(
-        workspaceId,
         entityName,
         currentFilters
       );
@@ -125,8 +122,6 @@ export function useRecords<T = Record<string, unknown>>(
 
   // Real-time subscription (optional)
   useEffect(() => {
-    const workspaceId = 'default';
-
     if (!realTime || !entityName) {
       return;
     }
@@ -135,7 +130,6 @@ export function useRecords<T = Record<string, unknown>>(
     const currentFilters: QueryConstraint[] = filtersKey ? filtersRef.current : [];
 
     const unsubscribe = RecordService.subscribe(
-      workspaceId,
       entityName,
       currentFilters,
       (data) => {
@@ -153,13 +147,10 @@ export function useRecords<T = Record<string, unknown>>(
   // Create new record
   const create = useCallback(
     async (data: Partial<T>) => {
-        const workspaceId = 'default';
-
       try {
         const id = `${entityName}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
         await RecordService.set(
-          workspaceId,
           entityName,
           id,
           {
@@ -182,11 +173,8 @@ export function useRecords<T = Record<string, unknown>>(
   // Update existing record
   const update = useCallback(
     async (id: string, data: Partial<T>) => {
-        const workspaceId = 'default';
-
       try {
         await RecordService.update(
-          workspaceId,
           entityName,
           id,
           data
@@ -205,11 +193,8 @@ export function useRecords<T = Record<string, unknown>>(
   // Delete record
   const remove = useCallback(
     async (id: string) => {
-        const workspaceId = 'default';
-
       try {
         await RecordService.delete(
-          workspaceId,
           entityName,
           id
         );

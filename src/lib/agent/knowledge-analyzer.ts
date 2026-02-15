@@ -6,7 +6,6 @@
  */
 
 import { logger } from '@/lib/logger/logger';
-import { PLATFORM_ID } from '@/lib/constants/platform';
 
 export interface KnowledgeAnalysisResult {
   companyInfo: {
@@ -79,7 +78,6 @@ export async function analyzeCompanyKnowledge(
   faqPageUrl?: string,
   socialMediaUrls?: string[]
 ): Promise<KnowledgeAnalysisResult> {
-  const workspaceId = 'default';
   // REAL: Perform actual analysis
   logger.info('Starting knowledge analysis...', { file: 'knowledge-analyzer.ts' });
 
@@ -160,9 +158,10 @@ export async function analyzeCompanyKnowledge(
   };
 
   // Store analysis result in Firestore
-  const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+  const { FirestoreService } = await import('@/lib/db/firestore-service');
+  const { getSubCollection } = await import('@/lib/firebase/collections');
   const analysisId = `analysis_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-  
+
   // Save analysis result
   const analysisResult = {
     websiteUrl,
@@ -170,11 +169,10 @@ export async function analyzeCompanyKnowledge(
     socialMediaUrls,
     result: mockResult,
     analyzedAt: new Date().toISOString(),
-    workspaceId,
   };
-  
+
   await FirestoreService.set(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/knowledgeAnalyses`,
+    getSubCollection('knowledgeAnalyses'),
     analysisId,
     analysisResult,
     false
@@ -433,18 +431,18 @@ interface CRMProductRecord {
  * Queries the CRM that's already part of the platform
  */
 async function scanCRMForProducts(): Promise<KnowledgeAnalysisResult['crmProducts']> {
-  const workspaceId = 'default';
   // Query CRM products:
-  // 1. Query built-in CRM using workspaceId
+  // 1. Query built-in CRM
   // 2. Look for entities in the "products" schema (from STANDARD_SCHEMAS)
   // 3. Extract: name, description, price, sku, category, etc.
   // 4. Return structured product data
 
   // Query Firestore for products
   try {
-    const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+    const { FirestoreService } = await import('@/lib/db/firestore-service');
+    const { getSubCollection } = await import('@/lib/firebase/collections');
     const products = await FirestoreService.getAll<CRMProductRecord>(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.WORKSPACES}/${workspaceId}/${COLLECTIONS.RECORDS}/products`,
+      `${getSubCollection('records')}/products`,
       []
     );
 
@@ -487,18 +485,18 @@ interface CRMServiceRecord {
  * Queries the CRM that's already part of the platform
  */
 async function scanCRMForServices(): Promise<KnowledgeAnalysisResult['crmServices']> {
-  const workspaceId = 'default';
   // Query CRM services:
-  // 1. Query built-in CRM using workspaceId
+  // 1. Query built-in CRM
   // 2. Look for entities in a "services" schema or custom schema
   // 3. Extract: name, description, pricing, duration, etc.
   // 4. Return structured service data
 
   // Query Firestore for services
   try {
-    const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+    const { FirestoreService } = await import('@/lib/db/firestore-service');
+    const { getSubCollection } = await import('@/lib/firebase/collections');
     const services = await FirestoreService.getAll<CRMServiceRecord>(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.WORKSPACES}/${workspaceId}/${COLLECTIONS.RECORDS}/services`,
+      `${getSubCollection('records')}/services`,
       []
     );
 
@@ -616,9 +614,10 @@ export async function buildKnowledgeBase(
   
   // Store knowledge base in Firestore
   try {
-    const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+    const { FirestoreService } = await import('@/lib/db/firestore-service');
+    const { getSubCollection } = await import('@/lib/firebase/collections');
     await FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/knowledgeBases`,
+      getSubCollection('knowledgeBases'),
       knowledgeBaseId,
       {
         id: knowledgeBaseId,

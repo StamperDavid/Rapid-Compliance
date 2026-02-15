@@ -35,7 +35,6 @@ interface PlaybooksApiResponse {
 
 interface PlaybookRecord {
   id: string;
-  workspaceId?: string;
   name?: string;
   description?: string;
   category?: string;
@@ -92,7 +91,6 @@ export default function PlaybookDashboardPage() {
         const rawPlaybooks = data.data ?? data.playbooks ?? [];
         const fetchedPlaybooks: Playbook[] = rawPlaybooks.map((pb) => ({
           id: pb.id,
-          workspaceId: pb.workspaceId ?? 'default',
           name: pb.name ?? '',
           description: pb.description ?? '',
           category: (pb.category ?? 'general') as Playbook['category'],

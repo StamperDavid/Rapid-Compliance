@@ -16,7 +16,6 @@ import type {
 } from '@/types/workflow';
 import { where, orderBy, limit as firestoreLimit } from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
-import { PLATFORM_ID } from '@/lib/constants/platform';
 
 export interface WorkflowEngineExecution {
   id: string;
@@ -124,20 +123,17 @@ export async function executeWorkflowImpl(
     execution.completedAt = new Date();
 
     // Store execution in Firestore
-    const workspaceId = triggerData?.workspaceId ?? workflow.workspaceId;
-
-    if (workspaceId) {
-      const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
-      await FirestoreService.set(
-        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.WORKSPACES}/${workspaceId}/workflowExecutions`,
-        execution.id,
-        {
-          ...execution,
-          startedAt: execution.startedAt.toISOString(),
-          completedAt: execution.completedAt?.toISOString(),
-        }
-      );
-    }
+    const { getSubCollection } = await import('@/lib/firebase/collections');
+    const { FirestoreService } = await import('@/lib/db/firestore-service');
+    await FirestoreService.set(
+      getSubCollection('workflowExecutions'),
+      execution.id,
+      {
+        ...execution,
+        startedAt: execution.startedAt.toISOString(),
+        completedAt: execution.completedAt?.toISOString(),
+      }
+    );
 
     return execution;
   } catch (error) {
@@ -429,8 +425,7 @@ function convertToAIAgentConfig(action: AIAgentAction): {
  * REAL: Sets up trigger listeners based on trigger type
  */
 export async function registerWorkflowTrigger(
-  workflow: Workflow,
-  workspaceId: string
+  workflow: Workflow
 ): Promise<void> {
   const { registerFirestoreTrigger } = await import('./triggers/firestore-trigger');
   const { registerWebhookTrigger } = await import('./triggers/webhook-trigger');
@@ -440,24 +435,24 @@ export async function registerWorkflowTrigger(
     case 'entity.created':
     case 'entity.updated':
     case 'entity.deleted':
-      await registerFirestoreTrigger(workflow, workspaceId);
+      await registerFirestoreTrigger(workflow);
       break;
 
     case 'webhook':
-      await registerWebhookTrigger(workflow, workspaceId);
+      await registerWebhookTrigger(workflow);
       break;
 
     case 'schedule':
-      await registerScheduleTrigger(workflow, workspaceId);
+      await registerScheduleTrigger(workflow);
       break;
-    
+
     case 'manual':
     case 'ai_agent':
     case 'form.submitted':
     case 'email.received':
       // These don't need registration
       break;
-    
+
     default: {
       const unknownTrigger = workflow.trigger as { type: string };
       logger.warn(`Unknown trigger type: ${unknownTrigger.type}`, { file: 'workflow-engine.ts' });
@@ -471,16 +466,15 @@ export async function registerWorkflowTrigger(
  * Unregister workflow trigger listener
  */
 export async function unregisterWorkflowTrigger(
-  workflowId: string,
-  workspaceId: string
+  workflowId: string
 ): Promise<void> {
   const { unregisterFirestoreTrigger } = await import('./triggers/firestore-trigger');
   const { unregisterScheduleTrigger } = await import('./triggers/schedule-trigger');
 
   // Unregister all trigger types (safe to call even if not registered)
   await Promise.all([
-    unregisterFirestoreTrigger(workflowId, workspaceId).catch(() => {}),
-    unregisterScheduleTrigger(workflowId, workspaceId).catch(() => {}),
+    unregisterFirestoreTrigger(workflowId).catch(() => {}),
+    unregisterScheduleTrigger(workflowId).catch(() => {}),
   ]);
 
   logger.info(`Workflow Engine: Unregistered trigger for workflow ${workflowId}`, { file: 'workflow-engine.ts' });
@@ -492,13 +486,13 @@ export async function unregisterWorkflowTrigger(
  */
 export async function getWorkflowExecutions(
   workflowId: string,
-  workspaceId: string,
   limit: number = 50
 ): Promise<WorkflowEngineExecution[]> {
   // Load executions from Firestore
-  const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+  const { getSubCollection } = await import('@/lib/firebase/collections');
+  const { FirestoreService } = await import('@/lib/db/firestore-service');
   const executions = await FirestoreService.getAll(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.WORKSPACES}/${workspaceId}/workflowExecutions`,
+    getSubCollection('workflowExecutions'),
     [
       where('workflowId', '==', workflowId),
       orderBy('startedAt', 'desc'),

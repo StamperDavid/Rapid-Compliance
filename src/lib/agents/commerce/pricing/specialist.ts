@@ -54,7 +54,6 @@ Always validate payment amounts, apply appropriate discounts, and ensure PCI com
 
 interface ProcessPaymentPayload {
   action: 'process_payment';
-  workspaceId: string;
   amount: number;
   currency: string;
   paymentMethod: string;
@@ -80,14 +79,12 @@ interface ValidatePricingPayload {
 
 interface ApplyDiscountPayload {
   action: 'apply_discount';
-  workspaceId: string;
   subtotal: number;
   discountCode: string;
 }
 
 interface CalculateTotalPayload {
   action: 'calculate_total';
-  workspaceId: string;
   items: Array<{
     productId: string;
     quantity: number;
@@ -100,7 +97,6 @@ interface CalculateTotalPayload {
 
 interface RefundPayload {
   action: 'refund';
-  workspaceId: string;
   transactionId: string;
   amount?: number;
   reason?: string;
@@ -108,7 +104,6 @@ interface RefundPayload {
 
 interface GetStatusPayload {
   action: 'get_status';
-  workspaceId: string;
   transactionId: string;
 }
 
@@ -225,11 +220,11 @@ export class PricingStrategist extends BaseSpecialist {
    * Handle process_payment action
    */
   private async handleProcessPayment(payload: ProcessPaymentPayload): Promise<PricingExecutionResult> {
-    if (!payload.workspaceId || !payload.amount || !payload.customer) {
+    if (!payload.amount || !payload.customer) {
       return {
         success: false,
         action: 'process_payment',
-        error: 'Missing required fields: workspaceId, amount, customer',
+        error: 'Missing required fields: amount, customer',
       };
     }
 
@@ -242,7 +237,6 @@ export class PricingStrategist extends BaseSpecialist {
     }
 
     const request: PaymentRequest = {
-      workspaceId: payload.workspaceId,
       amount: Math.round(payload.amount * 100), // Convert to cents
       currency: payload.currency ?? 'usd',
       paymentMethod: payload.paymentMethod ?? 'card',
@@ -472,7 +466,6 @@ export class PricingStrategist extends BaseSpecialist {
     }
 
     const refundResult = await refundPayment(
-      payload.workspaceId,
       payload.transactionId,
       payload.amount
     );
@@ -505,7 +498,6 @@ export class PricingStrategist extends BaseSpecialist {
 
     // Find order with this transaction ID
     const orders = await RecordService.getAll(
-      payload.workspaceId,
       'orders',
       [where('payment.transactionId', '==', payload.transactionId)]
     ) as Array<{

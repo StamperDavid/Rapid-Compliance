@@ -745,7 +745,6 @@ class VoiceAgentHandler {
         `voice-${callId}`,
         {
           id: `voice-${callId}`,
-          workspaceId: 'default',
           type: 'discovery_call',
           channel: 'voice',
           title: `Voice call with ${context.customerInfo.name ?? context.customerInfo.phone}`,
@@ -851,7 +850,6 @@ class VoiceAgentHandler {
       // Emit events to Signal Bus for downstream processing
       await emitConversationEvents(analysis, {
         id: `voice-${callId}`,
-        workspaceId: 'default',
         type: 'discovery_call',
         title: `Voice call with ${context.customerInfo.name ?? context.customerInfo.phone}`,
         participants: [],

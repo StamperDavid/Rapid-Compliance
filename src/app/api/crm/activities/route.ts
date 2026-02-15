@@ -46,7 +46,6 @@ const createActivitySchema = z.object({
   isPinned: z.boolean().optional(),
   isImportant: z.boolean().optional(),
   tags: z.array(z.string()).optional(),
-  workspaceId: z.string().optional(),
 });
 
 export async function GET(request: NextRequest) {
@@ -62,8 +61,6 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const workspaceIdParam = searchParams.get('workspaceId');
-    const workspaceId = (workspaceIdParam !== '' && workspaceIdParam != null) ? workspaceIdParam : 'default';
 
     // Parse filters with proper type guards
     const entityTypeParam = searchParams.get('entityType');
@@ -108,7 +105,6 @@ export async function GET(request: NextRequest) {
     };
 
     const result = await getActivities(
-      workspaceId,
       filters,
       { pageSize }
     );
@@ -151,17 +147,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { workspaceId: wsId, ...activityFields } = parsed.data;
-    const workspaceId = (wsId !== '' && wsId != null) ? wsId : 'default';
-
     // Add user attribution if not provided
     const activityInput = {
-      ...activityFields,
-      createdBy: activityFields.createdBy ?? token.uid,
-      createdByName: activityFields.createdByName ?? token.email ?? undefined,
+      ...parsed.data,
+      createdBy: parsed.data.createdBy ?? token.uid,
+      createdByName: parsed.data.createdByName ?? token.email ?? undefined,
     } as unknown as CreateActivityInput;
 
-    const activity = await createActivity(workspaceId, activityInput);
+    const activity = await createActivity(activityInput);
 
     return NextResponse.json({
       success: true,

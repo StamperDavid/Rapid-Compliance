@@ -76,14 +76,12 @@ export interface ActionRecommendations {
  *
  * This is the main entry point for getting AI-powered recommendations.
  *
- * @param workspaceId - Workspace ID
  * @param dealId - Deal ID
  * @returns Prioritized action recommendations
  *
  * @example
  * ```typescript
  * const recommendations = await generateNextBestActions(
- *   'default',
  *   'deal_456'
  * );
  *
@@ -92,25 +90,21 @@ export interface ActionRecommendations {
  * ```
  */
 export async function generateNextBestActions(
-  workspaceId: string,
   dealId: string,
   deal?: Deal
 ): Promise<ActionRecommendations> {
   try {
     logger.info('Generating next best actions', {
-            dealId,
+      dealId,
     });
 
     // Step 1: Get or calculate deal health
-    const healthScore = await calculateDealHealth(
-      workspaceId,
-      dealId
-    );
+    const healthScore = await calculateDealHealth(dealId);
 
     // Step 2: Get deal data if not provided
     if (!deal) {
       const { getDeal } = await import('./deal-service');
-      const fetchedDeal = await getDeal(dealId, workspaceId);
+      const fetchedDeal = await getDeal(dealId);
       if (!fetchedDeal) {
         throw new Error('Deal not found');
       }
@@ -118,11 +112,7 @@ export async function generateNextBestActions(
     }
 
     // Step 3: Get activity stats
-    const activityStats = await getActivityStats(
-      workspaceId,
-      'deal',
-      dealId
-    );
+    const activityStats = await getActivityStats('deal', dealId);
 
     // Step 4: Generate actions based on health and context
     const actions: NextBestAction[] = [];
@@ -184,7 +174,7 @@ export async function generateNextBestActions(
   } catch (error) {
     const errorInstance = error instanceof Error ? error : new Error(String(error));
     logger.error('Failed to generate next best actions', errorInstance, {
-            dealId,
+      dealId,
     });
     throw errorInstance;
   }

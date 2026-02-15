@@ -61,34 +61,27 @@ export async function predictDealRisk(
 ): Promise<DealRiskPrediction> {
   const startTime = Date.now();
   const fullConfig: RiskEngineConfig = { ...DEFAULT_RISK_CONFIG, ...config };
-  
+
   try {
     logger.info('Predicting deal risk', {
       dealId: request.dealId,
       includeInterventions: request.includeInterventions,
     });
-    
+
     // 1. Get deal data
-    const deal = await getDeal(
-      request.dealId,
-      (request.workspaceId !== '' && request.workspaceId != null) ? request.workspaceId : 'default'
-    );
-    
+    const deal = await getDeal(request.dealId);
+
     if (!deal) {
       throw new Error(`Deal not found: ${request.dealId}`);
     }
-    
+
     // 2. Get deal score and health
     const dealScore = calculateDealScore({
-      workspaceId:(request.workspaceId !== '' && request.workspaceId != null) ? request.workspaceId : 'default',
       dealId: request.dealId,
       deal,
     });
 
-    const dealHealth = await calculateDealHealth(
-      (request.workspaceId !== '' && request.workspaceId != null) ? request.workspaceId : 'default',
-      request.dealId
-    );
+    const dealHealth = await calculateDealHealth(request.dealId);
     
     // 3. Analyze risk factors
     const riskFactors = analyzeRiskFactors(deal, dealScore, dealHealth);
@@ -148,17 +141,15 @@ export async function predictDealRisk(
     if (fullConfig.includeHistoricalPatterns) {
       historicalPattern = findHistoricalPattern(
         deal,
-        riskFactors,
-        (request.workspaceId !== '' && request.workspaceId != null) ? request.workspaceId : 'default'
+        riskFactors
       );
     }
-    
+
     // 12. Build prediction result
     const calculationDuration = Date.now() - startTime;
-    
+
     const prediction: DealRiskPrediction = {
       dealId: request.dealId,
-      workspaceId:(request.workspaceId !== '' && request.workspaceId != null) ? request.workspaceId : 'default',
       riskLevel,
       slippageProbability,
       lossProbability,
@@ -214,13 +205,13 @@ export async function predictBatchDealRisk(
   config: Partial<RiskEngineConfig> = {}
 ): Promise<BatchRiskPredictionResponse> {
   const startTime = Date.now();
-  
+
   try {
     logger.info('Batch risk prediction started', {
       dealCount: request.dealIds.length,
       highRiskOnly: request.highRiskOnly,
     });
-    
+
     const predictions = new Map<string, DealRiskPrediction>();
 
     // Predict risk for each deal
@@ -229,7 +220,6 @@ export async function predictBatchDealRisk(
         const prediction = await predictDealRisk(
           {
             dealId,
-            workspaceId: request.workspaceId,
             includeInterventions: request.includeInterventions,
             forceRefresh: false,
           },
@@ -974,8 +964,7 @@ function generateFallbackInterventions(riskFactors: RiskFactor[]): Intervention[
  */
 function findHistoricalPattern(
   deal: Deal,
-  riskFactors: RiskFactor[],
-  _workspaceId: string
+  riskFactors: RiskFactor[]
 ): HistoricalPattern | null {
   // Derive historical patterns from deal characteristics and risk factors
   // This uses heuristic-based pattern matching against known deal archetypes
@@ -1200,7 +1189,6 @@ async function emitRiskSignal(
     await coordinator.emitSignal({
       type: 'deal.risk.detected',
       leadId: deal.contactId,
-      workspaceId: prediction.workspaceId,
       confidence: prediction.confidence / 100,
       priority: prediction.riskLevel === 'critical' ? 'High' : 'Medium',
       metadata: {
@@ -1215,12 +1203,12 @@ async function emitRiskSignal(
         topRiskCategory: prediction.riskFactors[0]?.category,
       },
     });
-    
+
     logger.info('Risk signal emitted', {
       dealId: prediction.dealId,
       riskLevel: prediction.riskLevel,
     });
-    
+
   } catch (error: unknown) {
     logger.error('Failed to emit risk signal', error instanceof Error ? error : new Error(String(error)), {
       dealId: prediction.dealId,

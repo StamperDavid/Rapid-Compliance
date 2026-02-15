@@ -28,7 +28,6 @@ export const OAuthConfigDefaults: Record<string, Partial<OAuthConfig>> = {
 
 export interface OAuthState {
   state: string;
-  workspaceId?: string;
   integrationId: string;
   provider: string;
   createdAt: Date;
@@ -64,7 +63,6 @@ export interface MicrosoftUserInfo {
 
 export interface IntegrationData {
   id: string;
-  workspaceId?: string;
   provider: string;
   accessToken: string;
   refreshToken?: string;
@@ -122,7 +120,6 @@ export interface ApiKeysResponse {
  * Generate OAuth authorization URL
  */
 export async function generateAuthUrl(
-  workspaceId: string | undefined,
   integrationId: string,
   provider: 'google' | 'microsoft' | 'slack' | 'quickbooks' | 'xero'
 ): Promise<string> {
@@ -133,12 +130,12 @@ export async function generateAuthUrl(
   const state = crypto.randomBytes(32).toString('hex');
 
   // Save state to Firestore
+  const { getSubCollection } = await import('@/lib/firebase/collections');
   await FirestoreService.set(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/oauthStates`,
+    getSubCollection('oauthStates'),
     state,
     {
       state,
-      workspaceId,
       integrationId,
       provider,
       createdAt: new Date().toISOString(),
@@ -219,15 +216,15 @@ export async function exchangeCodeForTokens(
 
   // Save tokens to integration
   await saveIntegrationTokens(
-    stateData.workspaceId,
     stateData.integrationId,
     stateData.provider,
     tokens
   );
 
   // Delete state token
+  const { getSubCollection } = await import('@/lib/firebase/collections');
   await FirestoreService.delete(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/oauthStates`,
+    getSubCollection('oauthStates'),
     state
   );
 
@@ -446,20 +443,19 @@ async function getOAuthConfig(
  * Save integration tokens
  */
 async function saveIntegrationTokens(
-  workspaceId: string | undefined,
   integrationId: string,
   provider: string,
   tokens: OAuthTokenResponse
 ): Promise<void> {
   // Get or create integration
+  const { getSubCollection } = await import('@/lib/firebase/collections');
   const integration = await FirestoreService.get<Record<string, unknown>>(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/integrations`,
+    getSubCollection('integrations'),
     integrationId
   );
 
   const integrationData: IntegrationData = {
     id: integrationId,
-    workspaceId,
     provider,
     accessToken: tokens.access_token,
     refreshToken: tokens.refresh_token,
@@ -500,7 +496,7 @@ async function saveIntegrationTokens(
   }
 
   await FirestoreService.set(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/integrations`,
+    getSubCollection('integrations'),
     integrationId,
     integration ? { ...integration, ...integrationData } : integrationData,
     false

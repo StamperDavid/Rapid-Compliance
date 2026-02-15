@@ -34,7 +34,6 @@ export interface MeetingSchedulerConfig {
 
 export interface ScheduledMeeting {
   id: string;
-  workspaceId: string;
   schedulerConfigId: string;
   title: string;
   startTime: Date;
@@ -67,7 +66,6 @@ export interface ScheduledMeeting {
  * Schedule a meeting with automatic assignment
  */
 export async function scheduleMeeting(
-  workspaceId: string,
   config: {
     schedulerConfigId: string;
     title: string;
@@ -125,7 +123,6 @@ export async function scheduleMeeting(
 
     const meeting: ScheduledMeeting = {
       id: meetingId,
-      workspaceId,
       schedulerConfigId: config.schedulerConfigId,
       title: config.title,
       startTime: config.startTime,
@@ -143,7 +140,7 @@ export async function scheduleMeeting(
     };
 
     await FirestoreService.set(
-      `${getSubCollection('workspaces')}/${workspaceId}/meetings`,
+      getSubCollection('meetings'),
       meetingId,
       meeting,
       false
@@ -158,7 +155,6 @@ export async function scheduleMeeting(
     const { logMeeting } = await import('@/lib/crm/activity-logger');
     if (config.relatedEntityType && config.relatedEntityId) {
       await logMeeting({
-        workspaceId,
         relatedEntityType: config.relatedEntityType,
         relatedEntityId: config.relatedEntityId,
         meetingType: 'scheduled',
@@ -251,7 +247,7 @@ async function scheduleReminders(
       // In production, this would use a job queue (Bull, Agenda, etc.)
       // For now, we'll store reminder schedules and process via cron
       await FirestoreService.set(
-        `${getSubCollection('workspaces')}/${meeting.workspaceId}/scheduledReminders`,
+        getSubCollection('scheduledReminders'),
         `${meeting.id}-${hours}h`,
         {
           meetingId: meeting.id,
@@ -283,7 +279,7 @@ export async function sendMeetingReminder(
 ): Promise<void> {
   try {
     const meeting = await FirestoreService.get<ScheduledMeeting>(
-      `${getSubCollection('workspaces')}/default/meetings`,
+      getSubCollection('meetings'),
       meetingId
     );
 
@@ -328,7 +324,7 @@ Looking forward to speaking with you!
 
     // Update meeting with reminder sent
     await FirestoreService.update(
-      `${getSubCollection('workspaces')}/default/meetings`,
+      getSubCollection('meetings'),
       meetingId,
       {
         reminders: [

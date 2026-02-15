@@ -25,7 +25,6 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const workspaceId = searchParams.get('workspaceId');
     const integrationId = searchParams.get('integrationId');
     const provider = searchParams.get('provider') as 'google' | 'microsoft' | 'slack';
 
@@ -35,8 +34,7 @@ export async function GET(request: NextRequest) {
 
     const { user: _user } = authResult;
 
-    const workspaceIdForAuth = (workspaceId !== '' && workspaceId != null) ? workspaceId : undefined;
-    const authUrl = await generateAuthUrl(workspaceIdForAuth, integrationId, provider);
+    const authUrl = await generateAuthUrl(integrationId, provider);
 
     return NextResponse.json({
       success: true,

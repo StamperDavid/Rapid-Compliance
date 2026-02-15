@@ -11,6 +11,7 @@ import DuplicateWarning from '@/components/DuplicateWarning';
 import { useToast } from '@/hooks/useToast';
 import type { DuplicateDetectionResult } from '@/lib/crm/duplicate-detection';
 import type { DataQualityScore } from '@/lib/crm/data-quality';
+import { auth } from '@/lib/firebase/config';
 
 export default function NewLeadPage() {
   const router = useRouter();
@@ -51,7 +52,6 @@ export default function NewLeadPage() {
         body: JSON.stringify({
           entityType: 'lead',
           record: { firstName: watchedFirstName, lastName: watchedLastName, email: watchedEmail, phone: watchedPhone, company: watchedCompany },
-          workspaceId: 'default',
         }),
       });
       const rawData: unknown = await response.json();
@@ -95,11 +95,14 @@ export default function NewLeadPage() {
 
   const proceedWithSubmit = useCallback(async (data: LeadFormValues) => {
     try {
+      const token = await auth?.currentUser?.getIdToken();
       const response = await fetch('/api/leads', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({
-          workspaceId: 'default',
           leadData: { ...data, autoEnrich: true },
         }),
       });

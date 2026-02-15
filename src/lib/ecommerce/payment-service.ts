@@ -73,7 +73,6 @@ interface OrderRecord {
 }
 
 export interface PaymentRequest {
-  workspaceId: string;
   amount: number; // In dollars (converted to provider-specific units internally)
   currency: string;
   paymentMethod: string;
@@ -103,12 +102,13 @@ export interface PaymentResult {
  */
 export async function processPayment(request: PaymentRequest): Promise<PaymentResult> {
   // Get e-commerce config to determine payment provider
-  const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+  const { getSubCollection } = await import('@/lib/firebase/collections');
+  const { FirestoreService } = await import('@/lib/db/firestore-service');
   const ecommerceConfig = await FirestoreService.get(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/${request.workspaceId}/ecommerce`,
+    getSubCollection('ecommerce'),
     'config'
   );
-  
+
   if (!ecommerceConfig) {
     return {
       success: false,
@@ -131,28 +131,28 @@ export async function processPayment(request: PaymentRequest): Promise<PaymentRe
   switch (defaultProvider.provider) {
     case 'stripe':
       return processStripePayment(request, defaultProvider);
-    
+
     case 'square':
       return processSquarePayment(request, defaultProvider);
-    
+
     case 'paypal':
       return processPayPalPayment(request, defaultProvider);
-    
+
     case 'authorizenet': {
       const { processAuthorizeNetPayment } = await import('./payment-providers');
       return processAuthorizeNetPayment(request, defaultProvider);
     }
-    
+
     case '2checkout': {
       const { process2CheckoutPayment } = await import('./payment-providers');
       return process2CheckoutPayment(request, defaultProvider);
     }
-    
+
     case 'mollie': {
       const { processMolliePayment } = await import('./payment-providers');
       return processMolliePayment(request, defaultProvider);
     }
-    
+
     default:
       return {
         success: false,
@@ -202,7 +202,6 @@ async function processStripePayment(
       confirm: true,
       return_url: `${process.env.NEXT_PUBLIC_APP_URL}/checkout/complete`,
       metadata: {
-        workspaceId: request.workspaceId,
         customerEmail: request.customer.email,
         ...request.metadata,
       },
@@ -298,7 +297,7 @@ async function processSquarePayment(
     const referenceId = request.metadata?.orderId;
     const response = await client.payments.create({
       sourceId: request.paymentToken ?? '', // Square payment token from frontend
-      idempotencyKey: `${request.workspaceId}-${Date.now()}`, // Unique key
+      idempotencyKey: `${Date.now()}`, // Unique key
       amountMoney: {
         amount: BigInt(Math.round(request.amount * 100)), // Convert to cents
         currency: request.currency.toUpperCase() as 'USD' | 'EUR' | 'GBP' | 'AUD' | 'CAD' | 'JPY',
@@ -515,20 +514,20 @@ export function calculateRazorpayFee(amount: number): number {
  * Refund payment
  */
 export async function refundPayment(
-  workspaceId: string,
   transactionId: string,
   amount?: number
 ): Promise<PaymentResult> {
   // Get provider from transaction
-  const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+  const { getSubCollection } = await import('@/lib/firebase/collections');
+  const { FirestoreService } = await import('@/lib/db/firestore-service');
 
   // Find order with this transaction ID (canonical orders path)
   const { where } = await import('firebase/firestore');
   const orders = await FirestoreService.getAll(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/orders`,
+    getSubCollection('orders'),
     [where('payment.transactionId', '==', transactionId)]
   );
-  
+
   if (orders.length === 0) {
     return {
       success: false,
@@ -542,8 +541,8 @@ export async function refundPayment(
   // Route to appropriate provider
   switch (provider) {
     case 'stripe':
-      return refundStripePayment(transactionId, amount, workspaceId);
-    
+      return refundStripePayment(transactionId, amount);
+
     default:
       return {
         success: false,
@@ -557,33 +556,26 @@ export async function refundPayment(
  */
 async function refundStripePayment(
   transactionId: string,
-  amount?: number,
-  workspaceId?: string
+  amount?: number
 ): Promise<PaymentResult> {
   try {
-    // Get Stripe API key from workspace settings
-    // Note: workspaceId should be passed from the refund() caller
-    if (!workspaceId) {
-      throw new Error('Workspace ID required for Stripe refunds');
-    }
-    
     const { apiKeyService } = await import('@/lib/api-keys/api-key-service');
     const apiKeys = await apiKeyService.getKeys();
-    
+
     if (!apiKeys?.payments?.stripe?.secretKey) {
       throw new Error('Stripe not configured. Please add your Stripe API key in Settings > API Keys');
     }
-    
+
     const stripe = await import('stripe');
     const stripeClient = new stripe.Stripe(apiKeys.payments.stripe.secretKey, {
       apiVersion: '2023-10-16',
     });
-    
+
     const refund = await stripeClient.refunds.create({
       payment_intent: transactionId,
       amount: amount ? Math.round(amount * 100) : undefined, // Partial refund if amount specified
     });
-    
+
     return {
       success: true,
       transactionId: refund.id,

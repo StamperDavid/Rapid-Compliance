@@ -65,7 +65,6 @@ export async function POST(request: NextRequest) {
     });
 
     const result = await generateSalesEmail({
-      workspaceId: validData.workspaceId,
       userId: validData.userId,
       emailType: validData.emailType,
       dealId: validData.dealId,

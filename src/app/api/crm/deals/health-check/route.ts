@@ -22,12 +22,10 @@ export async function POST(request: NextRequest) {
       return authResult;
     }
 
-    const workspaceId = 'default';
-
-    logger.info('Running deal health check', { workspaceId });
+    logger.info('Running deal health check');
 
     // Run health check
-    const summary = await runDealHealthCheck(workspaceId);
+    const summary = await runDealHealthCheck();
 
     return NextResponse.json({
       success: true,

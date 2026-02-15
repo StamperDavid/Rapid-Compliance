@@ -67,8 +67,7 @@ export const notificationCategorySchema = z.enum([
 export const notificationVariablesSchema = z.object({
   // Organization context
   orgName: z.string().optional(),
-  workspaceId: z.string().optional(),
-  
+
   // User context
   userId: z.string().optional(),
   userName: z.string().optional(),

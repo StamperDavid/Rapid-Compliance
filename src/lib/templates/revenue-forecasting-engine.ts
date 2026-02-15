@@ -30,9 +30,8 @@ import { getTemplateById, type SalesIndustryTemplate } from './industry-template
 // ============================================================================
 
 export interface RevenueForecast {
-  workspaceId: string;
   period: ForecastPeriod;
-  
+
   // Primary forecast
   forecast: number; // Most likely revenue
   bestCase: number; // Optimistic scenario (90th percentile)
@@ -75,7 +74,6 @@ export interface StageRevenue {
 export type ForecastPeriod = '30-day' | '60-day' | '90-day' | 'quarter' | 'annual';
 
 export interface ForecastOptions {
-  workspaceId: string;
   period: ForecastPeriod;
   templateId?: string;
   quota?: number;
@@ -118,7 +116,6 @@ export interface ForecastTrend {
  * @example
  * ```typescript
  * const forecast = await generateRevenueForecast({
- *   workspaceId: 'default',
  *   period: '90-day',
  *   templateId: 'saas',
  *   quota: 500000
@@ -144,10 +141,10 @@ export function generateRevenueForecast(
     if (options.templateId) {
       template = getTemplateById(options.templateId);
     }
-    
+
     // 2. Fetch deals in pipeline (mock for now)
-    const deals = fetchPipelineDeals(options.workspaceId, options.period);
-    
+    const deals = fetchPipelineDeals(options.period);
+
     // 3. Calculate stage-weighted revenue
     const byStage = calculateRevenueByStage(deals, template);
     
@@ -165,10 +162,10 @@ export function generateRevenueForecast(
     
     // 7. Calculate confidence
     const confidence = calculateForecastConfidence(deals, template);
-    
+
     // 8. Analyze trends
-    const trend = analyzeTrend(options.workspaceId, mostLikely);
-    
+    const trend = analyzeTrend(mostLikely);
+
     // 9. Calculate quota metrics
     let quotaAttainment = 0;
     let quotaGap = 0;
@@ -182,9 +179,8 @@ export function generateRevenueForecast(
     
     // 10. Calculate forecast date (end of period)
     const forecastDate = calculateForecastDate(options.period);
-    
+
     const forecast: RevenueForecast = {
-      workspaceId: options.workspaceId,
       period: options.period,
       forecast: Math.round(mostLikely),
       bestCase: Math.round(bestCase),
@@ -203,13 +199,12 @@ export function generateRevenueForecast(
       calculatedAt: new Date(),
       forecastDate
     };
-    
+
     // 11. Emit Signal Bus event
     try {
       const coordinator = getServerSignalCoordinator();
       void coordinator.emitSignal({
         type: 'forecast.updated',
-        workspaceId: options.workspaceId,
         confidence: confidence / 100,
         priority: quotaAttainment < 70 ? 'High' : 'Medium',
         metadata: {
@@ -372,7 +367,6 @@ function calculateForecastConfidence(
  * Analyze trend compared to previous period
  */
 function analyzeTrend(
-  _workspaceId: string,
   currentForecast: number
 ): ForecastTrend {
   // Mock: simulate previous period forecast
@@ -430,7 +424,6 @@ function calculateForecastDate(period: ForecastPeriod): Date {
  * Mock function to fetch pipeline deals
  */
 function fetchPipelineDeals(
-  _workspaceId: string,
   _period: ForecastPeriod
 ): Deal[] {
   // Mock: generate sample deals
@@ -463,7 +456,6 @@ function fetchPipelineDeals(
  * Calculate quota performance
  */
 export function calculateQuotaPerformance(
-  workspaceId: string,
   period: ForecastPeriod,
   quota: number,
   templateId?: string
@@ -471,7 +463,6 @@ export function calculateQuotaPerformance(
   try {
     // Generate forecast
     const forecast = generateRevenueForecast({
-      workspaceId,
       period,
       quota,
       templateId
@@ -523,7 +514,6 @@ export function calculateQuotaPerformance(
  * Compare forecasts across multiple periods
  */
 export function compareForecastPeriods(
-  workspaceId: string,
   periods: ForecastPeriod[],
   templateId?: string
 ): Map<ForecastPeriod, RevenueForecast> {
@@ -532,7 +522,6 @@ export function compareForecastPeriods(
   for (const period of periods) {
     try {
       const forecast = generateRevenueForecast({
-        workspaceId,
         period,
         templateId
       });
@@ -549,7 +538,6 @@ export function compareForecastPeriods(
  * Get forecast history for trend analysis
  */
 export function getForecastHistory(
-  _workspaceId: string,
   _period: ForecastPeriod,
   months: number = 6
 ): Array<{

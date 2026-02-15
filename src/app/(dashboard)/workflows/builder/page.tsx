@@ -232,7 +232,6 @@ export default function WorkflowBuilderPage() {
 
       const workflowData = {
         id,
-        workspaceId: 'default',
         name: workflow.name,
         description: workflow.description,
         trigger: triggerStep ? {

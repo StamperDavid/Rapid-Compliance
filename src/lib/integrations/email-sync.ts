@@ -299,7 +299,6 @@ export async function fetchOutlookInbox(
  * Match email reply to sent email and log activity
  */
 export async function processEmailReply(
-  workspaceId: string,
   reply: EmailMessage
 ): Promise<void> {
   try {
@@ -310,7 +309,7 @@ export async function processEmailReply(
       // Found match - log as reply activity
       const { createActivity } = await import('@/lib/crm/activity-service');
 
-      await createActivity(workspaceId, {
+      await createActivity({
         type: 'email_received',
         direction: 'inbound',
         subject: reply.subject,
@@ -342,7 +341,7 @@ export async function processEmailReply(
 
       // Store classification metadata on the activity
       await FirestoreService.update(
-        `workspaces/${workspaceId}/emailActivities`,
+        getSubCollection('emailActivities'),
         reply.id,
         {
           classification: {
@@ -361,7 +360,7 @@ export async function processEmailReply(
       if (classification.intent === 'unsubscribe') {
         logger.info('Unsubscribe intent detected, triggering opt-out', { replyId: reply.id, from: reply.from });
         const { createActivity: createUnsubActivity } = await import('@/lib/crm/activity-service');
-        await createUnsubActivity(workspaceId, {
+        await createUnsubActivity({
           type: 'note_added',
           direction: 'inbound',
           subject: 'Unsubscribe Request',
@@ -380,7 +379,7 @@ export async function processEmailReply(
           from: reply.from,
         });
         const { createActivity: createHotLeadActivity } = await import('@/lib/crm/activity-service');
-        await createHotLeadActivity(workspaceId, {
+        await createHotLeadActivity({
           type: 'note_added',
           direction: 'inbound',
           subject: `Hot Lead: ${classification.intent === 'meeting_request' ? 'Meeting Requested' : 'Interest Expressed'}`,
@@ -417,7 +416,6 @@ async function findOriginalEmail(
     const { getActivities } = await import('@/lib/crm/activity-service');
 
     const activities = await getActivities(
-      'default',
       { types: ['email_sent'] },
       { pageSize: 100 }
     );
@@ -447,7 +445,6 @@ async function findOriginalEmail(
  * Sync inbox (run periodically via cron)
  */
 export async function syncInbox(
-  workspaceId: string,
   provider: 'gmail' | 'outlook'
 ): Promise<number> {
   try {
@@ -462,7 +459,7 @@ export async function syncInbox(
 
     // Process each message
     for (const message of messages) {
-      await processEmailReply(workspaceId, message);
+      await processEmailReply(message);
     }
 
     // Update last sync time

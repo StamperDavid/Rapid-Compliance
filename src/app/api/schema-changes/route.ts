@@ -32,7 +32,6 @@ export async function GET(request: NextRequest) {
 
     const searchParams = request.nextUrl.searchParams;
     const schemaId = searchParams.get('schemaId');
-    const workspaceId = 'default';
     const unprocessedOnly = searchParams.get('unprocessedOnly') === 'true';
 
     // Get events
@@ -50,7 +49,6 @@ export async function GET(request: NextRequest) {
       if (schemaId) {
         filters.push(where('schemaId', '==', schemaId));
       }
-      filters.push(where('workspaceId', '==', workspaceId));
 
       events = await FirestoreService.getAll<SchemaChangeEvent>(eventsPath, filters);
     }

@@ -25,8 +25,6 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const workspaceIdParam = searchParams.get('workspaceId');
-    const workspaceId = (workspaceIdParam !== '' && workspaceIdParam != null) ? workspaceIdParam : 'default';
 
     const entityTypeParam = searchParams.get('entityType');
     const entityType: RelatedEntityType | undefined =
@@ -43,7 +41,6 @@ export async function GET(request: NextRequest) {
     }
 
     const timeline = await getEntityTimeline(
-      workspaceId,
       entityType,
       entityId
     );

@@ -67,21 +67,20 @@ interface QueryEntitiesParams {
  */
 export async function executeCreateEntityAction(
   action: CreateEntityAction,
-  triggerData: WorkflowTriggerData,
-  workspaceId: string
+  triggerData: WorkflowTriggerData
 ): Promise<unknown> {
-  const { PLATFORM_ID } = await import('@/lib/constants/platform');
   // Get schema for field resolution
-  const { FirestoreService: FS, COLLECTIONS: COL } = await import('@/lib/db/firestore-service');
+  const { getSubCollection } = await import('@/lib/firebase/collections');
+  const { FirestoreService: FS } = await import('@/lib/db/firestore-service');
   const schemaData = await FS.get(
-    `${COL.ORGANIZATIONS}/${PLATFORM_ID}/${COL.WORKSPACES}/${workspaceId}/${COL.SCHEMAS}`,
+    getSubCollection('schemas'),
     action.schemaId
   );
-  
+
   if (!schemaData) {
     throw new Error(`Schema ${action.schemaId} not found`);
   }
-  
+
   const schema = schemaData as Schema;
 
   // Build entity data from field mappings with dynamic field resolution
@@ -89,14 +88,14 @@ export async function executeCreateEntityAction(
 
   for (const mapping of action.fieldMappings) {
     let value: unknown;
-    
+
     // Resolve target field using field resolver
     const { FieldResolver } = await import('@/lib/schema/field-resolver');
     const resolvedTarget = FieldResolver.resolveFieldWithCommonAliases(
       schema,
       mapping.targetField
     );
-    
+
     if (!resolvedTarget) {
       logger.warn('[Entity Action] Target field not found in schema', {
         file: 'entity-action.ts',
@@ -105,7 +104,7 @@ export async function executeCreateEntityAction(
       });
       continue; // Skip this mapping
     }
-    
+
     switch (mapping.source) {
       case 'static': {
         value = mapping.staticValue;
@@ -139,18 +138,18 @@ export async function executeCreateEntityAction(
         value = null;
       }
     }
-    
+
     // Apply transform if specified
     if (mapping.transform && value !== null && value !== undefined) {
       value = applyTransform(value, mapping.transform);
     }
-    
+
     // Use resolved field key instead of original reference
     entityData[resolvedTarget.fieldKey] = value;
   }
-  
+
   const entityName = (schema as Schema & { name?: string }).name ?? action.schemaId;
-  const entityPath = `${COL.ORGANIZATIONS}/${PLATFORM_ID}/${COL.WORKSPACES}/${workspaceId}/entities/${entityName}`;
+  const entityPath = `${getSubCollection('entities')}/${entityName}`;
 
   const recordId = `rec_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   await FS.set(entityPath, recordId, {
@@ -167,24 +166,23 @@ export async function executeCreateEntityAction(
  */
 export async function executeUpdateEntityAction(
   action: UpdateEntityAction,
-  triggerData: WorkflowTriggerData,
-  workspaceId: string
+  triggerData: WorkflowTriggerData
 ): Promise<unknown> {
-  const { PLATFORM_ID } = await import('@/lib/constants/platform');
   // Get schema
-  const { FirestoreService: FS, COLLECTIONS: COL } = await import('@/lib/db/firestore-service');
+  const { getSubCollection } = await import('@/lib/firebase/collections');
+  const { FirestoreService: FS } = await import('@/lib/db/firestore-service');
   const schemaData = await FS.get(
-    `${COL.ORGANIZATIONS}/${PLATFORM_ID}/${COL.WORKSPACES}/${workspaceId}/${COL.SCHEMAS}`,
+    getSubCollection('schemas'),
     action.schemaId
   );
-  
+
   if (!schemaData) {
     throw new Error(`Schema ${action.schemaId} not found`);
   }
-  
+
   const schema = schemaData as Schema;
   const entityName = (schema as Schema & { name?: string }).name ?? action.schemaId;
-  const entityPath = `${COL.ORGANIZATIONS}/${PLATFORM_ID}/${COL.WORKSPACES}/${workspaceId}/entities/${entityName}`;
+  const entityPath = `${getSubCollection('entities')}/${entityName}`;
 
   // Determine which record(s) to update
   let recordIds: string[] = [];
@@ -216,13 +214,13 @@ export async function executeUpdateEntityAction(
 
   for (const mapping of action.fieldMappings) {
     let value: unknown;
-    
+
     // Resolve target field
     const resolvedTarget = FieldResolver.resolveFieldWithCommonAliases(
       schema,
       mapping.targetField
     );
-    
+
     if (!resolvedTarget) {
       logger.warn('[Entity Action] Target field not found in schema for update', {
         file: 'entity-action.ts',
@@ -231,7 +229,7 @@ export async function executeUpdateEntityAction(
       });
       continue;
     }
-    
+
     switch (mapping.source) {
       case 'static': {
         value = mapping.staticValue;
@@ -245,28 +243,28 @@ export async function executeUpdateEntityAction(
         value = null;
       }
     }
-    
+
     if (mapping.transform && value !== null && value !== undefined) {
       value = applyTransform(value, mapping.transform);
     }
-    
+
     updateData[resolvedTarget.fieldKey] = value;
   }
-  
+
   // Update records
   for (const recordId of recordIds) {
     const existing = await FS.get(entityPath, recordId);
     if (!existing) {
       throw new Error(`Record ${recordId} not found`);
     }
-    
+
     await FS.set(entityPath, recordId, {
       ...existing,
       ...updateData,
       updatedAt: new Date().toISOString(),
     }, false);
   }
-  
+
   return { recordIds, success: true };
 }
 
@@ -275,24 +273,23 @@ export async function executeUpdateEntityAction(
  */
 export async function executeDeleteEntityAction(
   action: DeleteEntityAction,
-  triggerData: WorkflowTriggerData,
-  workspaceId: string
+  triggerData: WorkflowTriggerData
 ): Promise<unknown> {
-  const { PLATFORM_ID } = await import('@/lib/constants/platform');
   // Get schema
-  const { FirestoreService: FS, COLLECTIONS: COL } = await import('@/lib/db/firestore-service');
+  const { getSubCollection } = await import('@/lib/firebase/collections');
+  const { FirestoreService: FS } = await import('@/lib/db/firestore-service');
   const schemaData = await FS.get(
-    `${COL.ORGANIZATIONS}/${PLATFORM_ID}/${COL.WORKSPACES}/${workspaceId}/${COL.SCHEMAS}`,
+    getSubCollection('schemas'),
     action.schemaId
   );
-  
+
   if (!schemaData) {
     throw new Error(`Schema ${action.schemaId} not found`);
   }
-  
+
   const schema = schemaData as Schema;
   const entityName = (schema as Schema & { name?: string }).name ?? action.schemaId;
-  const entityPath = `${COL.ORGANIZATIONS}/${PLATFORM_ID}/${COL.WORKSPACES}/${workspaceId}/entities/${entityName}`;
+  const entityPath = `${getSubCollection('entities')}/${entityName}`;
 
   // Determine which record(s) to delete
   let recordIds: string[] = [];
@@ -318,7 +315,7 @@ export async function executeDeleteEntityAction(
       return { recordIds: [], success: true, message: 'No records matched query' };
     }
   }
-  
+
   // Delete records
   for (const recordId of recordIds) {
     if (action.softDelete) {
@@ -337,7 +334,7 @@ export async function executeDeleteEntityAction(
       await FS.delete(entityPath, recordId);
     }
   }
-  
+
   return { recordIds, success: true };
 }
 
@@ -348,17 +345,12 @@ export async function executeEntityAction(
   action: CreateEntityAction | UpdateEntityAction | DeleteEntityAction,
   triggerData: WorkflowTriggerData
 ): Promise<unknown> {
-  const workspaceId = triggerData?.workspaceId ?? (action as { workspaceId?: string }).workspaceId;
-  if (!workspaceId || typeof workspaceId !== 'string') {
-    throw new Error('Workspace ID required for entity actions');
-  }
-
   if (action.type === 'create_entity') {
-    return executeCreateEntityAction(action, triggerData, workspaceId);
+    return executeCreateEntityAction(action, triggerData);
   } else if (action.type === 'update_entity') {
-    return executeUpdateEntityAction(action, triggerData, workspaceId);
+    return executeUpdateEntityAction(action, triggerData);
   } else if (action.type === 'delete_entity') {
-    return executeDeleteEntityAction(action, triggerData, workspaceId);
+    return executeDeleteEntityAction(action, triggerData);
   } else {
     const exhaustiveCheck: never = action;
     throw new Error(`Unknown entity action type: ${(exhaustiveCheck as { type: string }).type}`);

@@ -88,7 +88,6 @@ async function handleFieldTypeChange(event: SchemaChangeEvent): Promise<void> {
       });
 
       await FieldTypeConverter.convertFieldType(
-        event.workspaceId,
         event.schemaId,
         event.oldFieldKey ?? event.oldFieldName ?? '',
         event.oldFieldType as FieldType,
@@ -104,7 +103,6 @@ async function handleFieldTypeChange(event: SchemaChangeEvent): Promise<void> {
       });
 
       const preview = await FieldTypeConverter.generateConversionPreview(
-        event.workspaceId,
         event.schemaId,
         event.oldFieldKey ?? event.oldFieldName ?? '',
         event.oldFieldType as FieldType,
@@ -113,7 +111,6 @@ async function handleFieldTypeChange(event: SchemaChangeEvent): Promise<void> {
       );
 
       await FieldTypeConverter.createConversionApprovalRequest(
-        event.workspaceId,
         event.schemaId,
         event.oldFieldKey ?? event.oldFieldName ?? '',
         event.newFieldName ?? event.oldFieldName ?? '',
@@ -240,7 +237,6 @@ export async function processUnprocessedEvents(): Promise<{
  * Get schema change impact summary
  */
 export async function getSchemaChangeImpactSummary(
-  workspaceId: string,
   schemaId: string
 ): Promise<{
   totalChanges: number;

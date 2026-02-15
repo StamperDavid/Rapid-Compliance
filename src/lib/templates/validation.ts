@@ -9,7 +9,6 @@ import { z } from 'zod';
  * Schema for applying a template to an organization
  */
 export const ApplyTemplateSchema = z.object({
-  workspaceId: z.string().min(1).optional(),
   templateId: z.string().min(1, 'Template ID is required'),
   merge: z.boolean().optional().default(false),
   applyWorkflows: z.boolean().optional().default(true),
@@ -22,7 +21,6 @@ export type ApplyTemplateInput = z.infer<typeof ApplyTemplateSchema>;
  * Schema for deal scoring request
  */
 export const ScoreDealSchema = z.object({
-  workspaceId: z.string().min(1, 'Workspace ID is required'),
   dealId: z.string().min(1, 'Deal ID is required'),
   templateId: z.string().min(1).optional()
 });
@@ -44,7 +42,6 @@ export const ForecastPeriodSchema = z.enum([
  * Schema for revenue forecasting request
  */
 export const RevenueForecastSchema = z.object({
-  workspaceId: z.string().min(1, 'Workspace ID is required'),
   period: ForecastPeriodSchema.default('90-day'),
   quota: z.number().positive('Quota must be positive').optional(),
   templateId: z.string().min(1).optional(),

@@ -3,9 +3,8 @@
  * Aggregates and calculates analytics from all platform data
  */
 
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { FirestoreService } from '@/lib/db/firestore-service';
 import { where, Timestamp } from 'firebase/firestore';
-import { PLATFORM_ID } from '@/lib/constants/platform';
 import type {
   RevenueReport,
   PipelineReport,
@@ -34,14 +33,13 @@ function safeParseFloat(value: unknown, fallback: number): number {
  * Get revenue report
  */
 export async function getRevenueReport(
-  workspaceId: string,
   period: 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'yearly',
   startDate: Date,
   endDate: Date
 ): Promise<RevenueReport> {
   // Get all deals/orders in period
-  const deals = await getDealsInPeriod(workspaceId, startDate, endDate);
-  const orders = await getOrdersInPeriod(workspaceId, startDate, endDate);
+  const deals = await getDealsInPeriod(startDate, endDate);
+  const orders = await getOrdersInPeriod(startDate, endDate);
   
   // Calculate totals
   const totalRevenue = calculateTotalRevenue(deals, orders);
@@ -50,7 +48,7 @@ export async function getRevenueReport(
   
   // Calculate breakdowns
   const revenueBySource = calculateRevenueBySource(deals, orders);
-  const revenueByProduct = calculateRevenueByProduct(workspaceId, deals, orders);
+  const revenueByProduct = calculateRevenueByProduct(deals, orders);
   const revenueBySalesRep = calculateRevenueBySalesRep(deals);
   const trends = calculateRevenueTrends(deals, orders, period, startDate, endDate);
   
@@ -72,11 +70,10 @@ export async function getRevenueReport(
  * Get pipeline report
  */
 export async function getPipelineReport(
-  workspaceId: string,
   period: string
 ): Promise<PipelineReport> {
   // Get all open deals
-  const openDeals = await getOpenDeals(workspaceId);
+  const openDeals = await getOpenDeals();
 
   // Calculate pipeline metrics
   const totalValue = openDeals.reduce((sum, deal) => sum + (typeof deal.value === 'number' ? deal.value : parseFloat(String(deal.value)) || 0), 0);
@@ -87,17 +84,17 @@ export async function getPipelineReport(
   const byStage = calculatePipelineByStage(openDeals);
 
   // Calculate velocity
-  const velocityResult = await calculatePipelineVelocity(workspaceId);
+  const velocityResult = await calculatePipelineVelocity();
 
   // Calculate conversion rates
-  const conversionRatesArray = await calculateConversionRates(workspaceId);
+  const conversionRatesArray = await calculateConversionRates();
   const conversionRates: Record<string, number> = {};
   conversionRatesArray.forEach(rate => {
     conversionRates[`${rate.fromStage}->${rate.toStage}`] = rate.rate;
   });
 
   // Calculate trends
-  const trends = await calculatePipelineTrends(workspaceId, period);
+  const trends = await calculatePipelineTrends(period);
 
   return {
     period,
@@ -115,11 +112,10 @@ export async function getPipelineReport(
  * Get sales forecast
  */
 export async function getSalesForecast(
-  workspaceId: string,
   period: 'month' | 'quarter' | 'year'
 ): Promise<SalesForecast> {
   // Get open deals
-  const openDeals = await getOpenDeals(workspaceId);
+  const openDeals = await getOpenDeals();
   
   // Calculate weighted forecast
   const forecastedRevenue = calculateWeightedForecast(openDeals);
@@ -135,7 +131,7 @@ export async function getSalesForecast(
     byRep[item.repId] = item.forecastedRevenue;
   });
 
-  const byProductArray = calculateForecastByProduct(workspaceId, openDeals);
+  const byProductArray = calculateForecastByProduct(openDeals);
   const byProduct: Record<string, number> = {};
   byProductArray.forEach(item => {
     byProduct[item.productId] = item.forecastedRevenue;
@@ -161,13 +157,12 @@ export async function getSalesForecast(
  * Get win/loss analysis
  */
 export async function getWinLossAnalysis(
-  workspaceId: string,
   period: string,
   startDate: Date,
   endDate: Date
 ): Promise<WinLossAnalysis> {
   // Get won and lost deals
-  const deals = await getDealsInPeriod(workspaceId, startDate, endDate);
+  const deals = await getDealsInPeriod(startDate, endDate);
   const won = deals.filter(d => d.status === 'won' || d.stage === 'closed_won');
   const lost = deals.filter(d => d.status === 'lost' || d.stage === 'closed_lost');
   
@@ -212,7 +207,7 @@ export async function getWinLossAnalysis(
   });
 
   // Trends
-  const trendsArray = await calculateWinLossTrends(workspaceId, startDate, endDate);
+  const trendsArray = await calculateWinLossTrends(startDate, endDate);
   const trends = trendsArray.map(item => ({
     date: item.date.toISOString().split('T')[0],
     winRate: item.winRate,
@@ -297,29 +292,33 @@ interface OrderItem {
 
 // Helper functions
 
-async function getDealsInPeriod(workspaceId: string, startDate: Date, endDate: Date): Promise<DealRecord[]> {
+async function getDealsInPeriod(startDate: Date, endDate: Date): Promise<DealRecord[]> {
   // Get deals from CRM
+  const { getSubCollection } = await import('@/lib/firebase/collections');
+  const dealsPath = getSubCollection('deals');
   const deals = await FirestoreService.getAll<DealRecord>(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/${workspaceId}/entities/deals/records`,
+    dealsPath,
     [
       where('closedDate', '>=', Timestamp.fromDate(startDate)),
       where('closedDate', '<=', Timestamp.fromDate(endDate)),
     ]
   );
-  
+
   return deals;
 }
 
-async function getOrdersInPeriod(workspaceId: string, startDate: Date, endDate: Date): Promise<OrderRecord[]> {
+async function getOrdersInPeriod(startDate: Date, endDate: Date): Promise<OrderRecord[]> {
+  const { getSubCollection } = await import('@/lib/firebase/collections');
+  const ordersPath = getSubCollection('orders');
   const orders = await FirestoreService.getAll<OrderRecord>(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/${workspaceId}/orders`,
+    ordersPath,
     [
       where('createdAt', '>=', Timestamp.fromDate(startDate)),
       where('createdAt', '<=', Timestamp.fromDate(endDate)),
       where('status', '==', 'completed'),
     ]
   );
-  
+
   return orders;
 }
 
@@ -368,7 +367,7 @@ function calculateRevenueBySource(deals: DealRecord[], orders: OrderRecord[]): R
   }));
 }
 
-function calculateRevenueByProduct(_workspaceId: string, deals: DealRecord[], orders: OrderRecord[]): RevenueByProductItem[] {
+function calculateRevenueByProduct(deals: DealRecord[], orders: OrderRecord[]): RevenueByProductItem[] {
   const productMap = new Map<string, { revenue: number; units: number; name: string }>();
   
   // From deals (line items)
@@ -505,14 +504,16 @@ function getIntervalForPeriod(period: string): number {
   }
 }
 
-async function getOpenDeals(workspaceId: string): Promise<DealRecord[]> {
+async function getOpenDeals(): Promise<DealRecord[]> {
+  const { getSubCollection } = await import('@/lib/firebase/collections');
+  const dealsPath = getSubCollection('deals');
   const deals = await FirestoreService.getAll<DealRecord>(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/${workspaceId}/entities/deals/records`,
+    dealsPath,
     [
       where('status', 'in', ['open', 'qualified', 'proposal', 'negotiation']),
     ]
   );
-  
+
   return deals;
 }
 
@@ -564,13 +565,15 @@ interface PipelineVelocityResult {
   averageTimePerStage: Record<string, number>;
 }
 
-async function calculatePipelineVelocity(workspaceId: string): Promise<PipelineVelocityResult> {
+async function calculatePipelineVelocity(): Promise<PipelineVelocityResult> {
   // Get closed deals from last 90 days
   const ninetyDaysAgo = new Date();
   ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
 
+  const { getSubCollection } = await import('@/lib/firebase/collections');
+  const dealsPath = getSubCollection('deals');
   const closedDeals = await FirestoreService.getAll<DealRecord>(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/${workspaceId}/entities/deals/records`,
+    dealsPath,
     [
       where('status', 'in', ['won', 'lost']),
       where('closedDate', '>=', Timestamp.fromDate(ninetyDaysAgo)),
@@ -663,10 +666,12 @@ interface ConversionRateItem {
   deals: number;
 }
 
-async function calculateConversionRates(workspaceId: string): Promise<ConversionRateItem[]> {
+async function calculateConversionRates(): Promise<ConversionRateItem[]> {
   // Get all deals with stage history
+  const { getSubCollection } = await import('@/lib/firebase/collections');
+  const dealsPath = getSubCollection('deals');
   const deals = await FirestoreService.getAll<DealRecord>(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/${workspaceId}/entities/deals/records`,
+    dealsPath,
     []
   );
   
@@ -706,13 +711,15 @@ async function calculateConversionRates(workspaceId: string): Promise<Conversion
   return rates;
 }
 
-async function calculatePipelineTrends(workspaceId: string, _period: string): Promise<PipelineTrend[]> {
+async function calculatePipelineTrends(_period: string): Promise<PipelineTrend[]> {
   // Get deals over time
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
+  const { getSubCollection } = await import('@/lib/firebase/collections');
+  const dealsPath = getSubCollection('deals');
   const deals = await FirestoreService.getAll<DealRecord>(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/${workspaceId}/entities/deals/records`,
+    dealsPath,
     [
       where('createdAt', '>=', Timestamp.fromDate(thirtyDaysAgo)),
     ]
@@ -853,7 +860,7 @@ interface ForecastByProductItem {
   forecastedUnits: number;
 }
 
-function calculateForecastByProduct(_workspaceId: string, deals: DealRecord[]): ForecastByProductItem[] {
+function calculateForecastByProduct(deals: DealRecord[]): ForecastByProductItem[] {
   const productMap = new Map<string, { forecast: number; units: number; name: string }>();
   
   deals.forEach(deal => {
@@ -1121,8 +1128,8 @@ interface WinLossTrendItem {
   winRate: number;
 }
 
-async function calculateWinLossTrends(workspaceId: string, startDate: Date, endDate: Date): Promise<WinLossTrendItem[]> {
-  const deals = await getDealsInPeriod(workspaceId, startDate, endDate);
+async function calculateWinLossTrends(startDate: Date, endDate: Date): Promise<WinLossTrendItem[]> {
+  const deals = await getDealsInPeriod(startDate, endDate);
   
   // Group by week
   const trends: WinLossTrendItem[] = [];

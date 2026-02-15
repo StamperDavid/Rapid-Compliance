@@ -400,7 +400,6 @@ export default function EntityTablePage() {
         // Lookup field with record picker
         return (
           <LookupFieldPicker
-            workspaceId="default"
             targetEntity={(field.lookupEntity !== '' && field.lookupEntity != null) ? field.lookupEntity : 'contacts'}
             value={typeof value === 'string' ? value : value != null ? String(value) : null}
             onChange={(recordId: string | null) => {

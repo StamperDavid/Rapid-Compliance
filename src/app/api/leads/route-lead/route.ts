@@ -13,7 +13,6 @@ export const dynamic = 'force-dynamic';
 
 interface RouteLeadRequestBody {
   leadId?: string;
-  workspaceId?: string;
 }
 
 function isRouteLeadRequestBody(value: unknown): value is RouteLeadRequestBody {
@@ -33,7 +32,6 @@ export async function POST(request: NextRequest) {
     }
 
     const leadId = body.leadId;
-    const workspaceId = body.workspaceId ?? 'default';
 
     if (!leadId) {
       return NextResponse.json(
@@ -43,7 +41,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get lead
-    const lead = await getLead(leadId, workspaceId);
+    const lead = await getLead(leadId);
     if (!lead) {
       return NextResponse.json(
         { error: 'Lead not found' },
@@ -52,12 +50,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Route the lead
-    const routingResult = await routeLead(workspaceId, lead);
+    const routingResult = await routeLead(lead);
 
     // Update lead with assignment
     await updateLead(leadId, {
       ownerId: routingResult.assignedTo,
-    }, workspaceId);
+    });
 
     return NextResponse.json({
       success: true,

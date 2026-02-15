@@ -19,7 +19,6 @@ export interface IntegrationFieldMapping {
   id: string;
   integrationId: string;
   integrationName: string; // 'salesforce', 'hubspot', 'shopify', etc.
-  workspaceId: string;
   
   // Schema this mapping applies to
   schemaId: string;

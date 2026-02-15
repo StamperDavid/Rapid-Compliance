@@ -142,7 +142,6 @@ export async function extractPatterns(
     const coordinator = getServerSignalCoordinator();
     void coordinator.emitSignal({
       type: 'playbook.patterns_extracted',
-      workspaceId:(request.workspaceId !== '' && request.workspaceId != null) ? request.workspaceId : 'default',
       priority: 'Medium',
       confidence: summary.highConfidencePatterns > 0 ? 0.8 : 0.6,
       metadata: {
@@ -165,7 +164,6 @@ export async function extractPatterns(
     });
     
     return {
-      workspaceId:(request.workspaceId !== '' && request.workspaceId != null) ? request.workspaceId : 'default',
       patterns,
       talkTracks,
       objectionResponses,
@@ -180,7 +178,6 @@ export async function extractPatterns(
     
   } catch (error) {
     logger.error('Pattern extraction failed', error instanceof Error ? error : new Error(String(error)), {
-      workspaceId: request.workspaceId,
       conversationCount: request.conversationIds?.length ?? 0,
     });
     throw error;
@@ -641,7 +638,6 @@ export async function generatePlaybook(
     
     // 1. Extract patterns from conversations
     const extractionRequest: ExtractPatternsRequest = {
-      workspaceId: request.workspaceId,
       conversationIds: request.sourceConversationIds,
       repIds: request.topPerformerIds,
       conversationType: request.conversationType,
@@ -663,7 +659,6 @@ export async function generatePlaybook(
     // 3. Build playbook
     const playbook: Playbook = {
       id: generatePlaybookId(),
-      workspaceId:(request.workspaceId !== '' && request.workspaceId != null) ? request.workspaceId : 'default',
       name: request.name,
       description:(request.description !== '' && request.description != null) ? request.description : `Playbook for ${request.conversationType} conversations`,
       category: request.category,
@@ -695,7 +690,6 @@ export async function generatePlaybook(
     const coordinator = getServerSignalCoordinator();
     await coordinator.emitSignal({
       type: 'playbook.generated' as const,
-      workspaceId:(request.workspaceId !== '' && request.workspaceId != null) ? request.workspaceId : 'default',
       priority: 'Medium',
       confidence: playbook.confidence / 100,
       metadata: {
@@ -735,7 +729,6 @@ export async function generatePlaybook(
     
   } catch (error) {
     logger.error('Playbook generation failed', error instanceof Error ? error : new Error(String(error)), {
-      workspaceId: request.workspaceId,
       conversationCount: request.sourceConversationIds?.length ?? 0,
     });
 

@@ -212,7 +212,6 @@ export async function emitRiskAssessed(
     await coordinator.emitSignal({
       type: 'risk.assessed' as SignalType,
       leadId: deal.contactId,
-      workspaceId: prediction.workspaceId,
       confidence: prediction.confidence / 100,
       priority: prediction.riskLevel === 'critical' ? 'High' : 'Medium',
       metadata: metadata as unknown as Record<string, unknown>,
@@ -254,7 +253,6 @@ export async function emitRiskDetected(
     await coordinator.emitSignal({
       type: 'risk.detected' as SignalType,
       leadId: deal.contactId,
-      workspaceId: prediction.workspaceId,
       confidence: prediction.confidence / 100,
       priority: prediction.riskLevel === 'critical' ? 'High' : 'Medium',
       metadata: metadata as unknown as Record<string, unknown>,
@@ -284,17 +282,16 @@ export async function emitRiskLevelChanged(
   newLevel: RiskLevel,
   slippageProbability: number,
   daysSinceLastAssessment: number,
-  workspaceId: string,
   contactId?: string
 ): Promise<void> {
   try {
     const coordinator = getServerSignalCoordinator();
-    
-    const changeDirection: 'increased' | 'decreased' = 
-      getRiskLevelScore(newLevel) > getRiskLevelScore(previousLevel) 
-        ? 'increased' 
+
+    const changeDirection: 'increased' | 'decreased' =
+      getRiskLevelScore(newLevel) > getRiskLevelScore(previousLevel)
+        ? 'increased'
         : 'decreased';
-    
+
     const metadata: RiskLevelChangedMetadata = {
       source: 'risk-engine',
       dealId,
@@ -306,11 +303,10 @@ export async function emitRiskLevelChanged(
       changeDirection,
       daysSinceLastAssessment,
     };
-    
+
     await coordinator.emitSignal({
       type: 'risk.level.changed' as SignalType,
       leadId: contactId,
-      workspaceId,
       confidence: 0.9,
       priority: newLevel === 'critical' ? 'High' : 'Medium',
       metadata: metadata as unknown as Record<string, unknown>,
@@ -370,7 +366,6 @@ export async function emitCriticalRisk(
     await coordinator.emitSignal({
       type: 'risk.critical' as SignalType,
       leadId: deal.contactId,
-      workspaceId: prediction.workspaceId,
       confidence: prediction.confidence / 100,
       priority: 'High',
       metadata: metadata as unknown as Record<string, unknown>,
@@ -396,7 +391,6 @@ export async function emitInterventionRecommended(
   intervention: Intervention,
   dealId: string,
   dealName: string,
-  workspaceId: string,
   contactId?: string
 ): Promise<void> {
   try {
@@ -416,11 +410,10 @@ export async function emitInterventionRecommended(
       deadlineDays: intervention.deadlineDays,
       suggestedOwner: intervention.suggestedOwner,
     };
-    
+
     await coordinator.emitSignal({
       type: 'risk.intervention.recommended' as SignalType,
       leadId: contactId,
-      workspaceId,
       confidence: 0.85,
       priority: intervention.priority === 'critical' ? 'High' : 'Medium',
       metadata: metadata as unknown as Record<string, unknown>,
@@ -448,7 +441,6 @@ export async function emitInterventionStarted(
   interventionType: string,
   dealId: string,
   startedBy: string,
-  workspaceId: string,
   contactId?: string
 ): Promise<void> {
   try {
@@ -462,11 +454,10 @@ export async function emitInterventionStarted(
       startedBy,
       startedAt: new Date().toISOString(),
     };
-    
+
     await coordinator.emitSignal({
       type: 'risk.intervention.started' as SignalType,
       leadId: contactId,
-      workspaceId,
       confidence: 1.0,
       priority: 'Medium',
       metadata: metadata as unknown as Record<string, unknown>,
@@ -496,7 +487,6 @@ export async function emitInterventionCompleted(
   completedBy: string,
   outcome: 'successful' | 'partial' | 'unsuccessful',
   impactRealized: number,
-  workspaceId: string,
   contactId?: string,
   notes?: string
 ): Promise<void> {
@@ -514,11 +504,10 @@ export async function emitInterventionCompleted(
       impactRealized,
       notes,
     };
-    
+
     await coordinator.emitSignal({
       type: 'risk.intervention.completed' as SignalType,
       leadId: contactId,
-      workspaceId,
       confidence: 1.0,
       priority: 'Low',
       metadata: metadata as unknown as Record<string, unknown>,
@@ -572,7 +561,6 @@ export async function emitSlippagePredicted(
     await coordinator.emitSignal({
       type: 'risk.slippage.predicted' as SignalType,
       leadId: deal.contactId,
-      workspaceId: prediction.workspaceId,
       confidence: prediction.confidence / 100,
       priority: 'High',
       metadata: metadata as unknown as Record<string, unknown>,
@@ -602,14 +590,13 @@ export async function emitRiskMitigated(
   previousSlippageProbability: number,
   newSlippageProbability: number,
   interventionsApplied: number,
-  workspaceId: string,
   contactId?: string
 ): Promise<void> {
   try {
     const coordinator = getServerSignalCoordinator();
 
     const riskReduction = previousSlippageProbability - newSlippageProbability;
-    
+
     const metadata: RiskMitigatedMetadata = {
       source: 'risk-engine',
       dealId,
@@ -621,11 +608,10 @@ export async function emitRiskMitigated(
       riskReduction,
       interventionsApplied,
     };
-    
+
     await coordinator.emitSignal({
       type: 'risk.mitigated' as SignalType,
       leadId: contactId,
-      workspaceId,
       confidence: 0.9,
       priority: 'Low',
       metadata: metadata as unknown as Record<string, unknown>,
@@ -693,7 +679,6 @@ export async function emitRiskPredictionSignals(
         intervention,
         prediction.dealId,
         deal.name,
-        prediction.workspaceId,
         deal.contactId
       );
     }

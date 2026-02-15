@@ -16,7 +16,6 @@ interface LookupRecord {
 }
 
 interface LookupFieldPickerProps {
-  workspaceId: string;
   targetEntity: string; // Which entity to look up (e.g., 'contacts', 'deals')
   value: string | null; // Currently selected record ID
   onChange: (recordId: string | null, record: LookupRecord | null) => void;
@@ -27,7 +26,6 @@ interface LookupFieldPickerProps {
 }
 
 export default function LookupFieldPicker({
-  workspaceId,
   targetEntity,
   value,
   onChange,
@@ -45,7 +43,7 @@ export default function LookupFieldPicker({
   const loadSelectedRecord = useCallback(async (recordId: string) => {
     try {
       const { getSubCollection } = await import('@/lib/firebase/collections');
-      const path = `${getSubCollection('workspaces')}/${workspaceId}/entities/${targetEntity}/records`;
+      const path = `${getSubCollection('entities')}/${targetEntity}/records`;
       const record = await FirestoreService.get<LookupRecord>(path, recordId);
       if (record) {
         setSelectedRecord(record);
@@ -53,13 +51,13 @@ export default function LookupFieldPicker({
     } catch (error) {
       logger.error('Failed to load selected record', error instanceof Error ? error : new Error(String(error)), { recordId, targetEntity });
     }
-  }, [workspaceId, targetEntity]);
+  }, [targetEntity]);
 
   const loadRecords = useCallback(async () => {
     try {
       setLoading(true);
       const { getSubCollection } = await import('@/lib/firebase/collections');
-      const path = `${getSubCollection('workspaces')}/${workspaceId}/entities/${targetEntity}/records`;
+      const path = `${getSubCollection('entities')}/${targetEntity}/records`;
 
       // Get all records (in production, this should use pagination with a reasonable limit)
       const allRecords = await FirestoreService.getAll<LookupRecord>(path, []);
@@ -88,7 +86,7 @@ export default function LookupFieldPicker({
     } finally {
       setLoading(false);
     }
-  }, [workspaceId, targetEntity, searchTerm]);
+  }, [targetEntity, searchTerm]);
 
   // Load initial selected record
   useEffect(() => {

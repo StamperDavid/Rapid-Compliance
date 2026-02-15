@@ -32,7 +32,6 @@ import {
 // ============================================================================
 
 interface EmailWriterCardProps {
-  workspaceId: string;
   userId: string;
   dealId?: string;
   onEmailSent?: (email: GeneratedEmail) => void;
@@ -50,7 +49,6 @@ interface EmailGenerationState {
 // ============================================================================
 
 function EmailWriterCardInner({
-  workspaceId,
   userId,
   dealId: initialDealId,
   onEmailSent,
@@ -115,7 +113,6 @@ function EmailWriterCardInner({
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          workspaceId,
           userId,
           emailType,
           dealId,
@@ -167,7 +164,6 @@ function EmailWriterCardInner({
       });
     }
   }, [
-    workspaceId,
     userId,
     emailType,
     dealId,
@@ -221,7 +217,6 @@ function EmailWriterCardInner({
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({
-          workspaceId,
           userId,
           to: recipientEmail,
           toName: recipientName ?? undefined,
@@ -248,7 +243,7 @@ function EmailWriterCardInner({
     } finally {
       setIsSending(false);
     }
-  }, [generationState.generatedEmail, recipientEmail, recipientName, editedSubject, editedBody, workspaceId, userId, dealId, onEmailSent]);
+  }, [generationState.generatedEmail, recipientEmail, recipientName, editedSubject, editedBody, userId, dealId, onEmailSent]);
   
   // ============================================================================
   // RENDER

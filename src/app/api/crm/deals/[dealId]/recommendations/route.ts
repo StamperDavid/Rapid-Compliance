@@ -27,19 +27,13 @@ export async function GET(
     const { user } = authResult;
     const { dealId } = await params;
 
-    const { searchParams } = new URL(request.url);
-    const workspaceIdParam = searchParams.get('workspaceId');
-    const workspaceId = (workspaceIdParam !== '' && workspaceIdParam != null) ? workspaceIdParam : 'default';
-
     logger.info('Generating deal recommendations', {
       dealId,
-      workspaceId,
       userId: user.uid,
     });
 
     // Generate recommendations
     const recommendations = await generateNextBestActions(
-      workspaceId,
       dealId
     );
 

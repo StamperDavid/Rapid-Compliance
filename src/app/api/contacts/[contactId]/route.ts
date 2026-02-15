@@ -29,7 +29,6 @@ const updateContactSchema = z.object({
   tags: z.array(z.string()).optional(),
   notes: z.string().optional(),
   ownerId: z.string().optional(),
-  workspaceId: z.string().optional().default('default'),
 });
 
 /**
@@ -47,10 +46,7 @@ export async function GET(
       return authResult;
     }
 
-    const { searchParams } = new URL(request.url);
-    const workspaceId = searchParams.get('workspaceId') ?? 'default';
-
-    const contact = await getContact(contactId, workspaceId);
+    const contact = await getContact(contactId);
     if (!contact) {
       return NextResponse.json(
         { error: 'Contact not found' },
@@ -94,8 +90,8 @@ export async function PATCH(
       );
     }
 
-    const { workspaceId, ...updates } = bodyResult.data;
-    const contact = await updateContact(contactId, updates, workspaceId);
+    const updates = bodyResult.data;
+    const contact = await updateContact(contactId, updates);
 
     return NextResponse.json({ success: true, contact });
   } catch (error: unknown) {
@@ -123,10 +119,7 @@ export async function DELETE(
       return authResult;
     }
 
-    const { searchParams } = new URL(request.url);
-    const workspaceId = searchParams.get('workspaceId') ?? 'default';
-
-    await deleteContact(contactId, workspaceId);
+    await deleteContact(contactId);
 
     return NextResponse.json({ success: true, deleted: contactId });
   } catch (error: unknown) {

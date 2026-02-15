@@ -60,7 +60,6 @@ interface SendEmailPayload {
   from?: string;
   fromName?: string;
   replyTo?: string;
-  workspaceId?: string;
   trackOpens?: boolean;
   trackClicks?: boolean;
   metadata?: Record<string, unknown>;
@@ -461,7 +460,6 @@ export class EmailSpecialist extends BaseSpecialist {
       },
       metadata: {
         ...payload.metadata,
-        workspaceId: payload.workspaceId,
       },
     };
 

@@ -498,7 +498,6 @@ export class CommerceManager extends BaseManager {
     const errors: string[] = [];
 
     try {
-      const workspaceId = (payload?.workspaceId as string) ?? 'default';
       const items = payload?.items as CheckoutItem[] | undefined;
       const customer = payload?.customer as Record<string, unknown> | undefined;
 
@@ -519,7 +518,6 @@ export class CommerceManager extends BaseManager {
         taskId,
         {
           action: 'fetch_products',
-          workspaceId,
           filters: { status: 'active' },
         },
         specialistResults
@@ -535,7 +533,6 @@ export class CommerceManager extends BaseManager {
         taskId,
         {
           action: 'calculate_total',
-          workspaceId,
           items: items.map(item => ({
             productId: item.productId,
             quantity: item.quantity,
@@ -562,7 +559,6 @@ export class CommerceManager extends BaseManager {
         taskId,
         {
           action: 'initialize_checkout',
-          workspaceId,
           items,
           customer,
           currency: settings.currency,
@@ -639,7 +635,6 @@ export class CommerceManager extends BaseManager {
 
     try {
       const sessionId = payload?.sessionId as string;
-      const workspaceId = (payload?.workspaceId as string) ?? 'default';
 
       // Validate payment completion
       const validationResult = await this.executeSpecialist(
@@ -668,7 +663,6 @@ export class CommerceManager extends BaseManager {
         'HIGH',
         {
           sessionId,
-          workspaceId,
           completedAt: new Date().toISOString(),
         },
         ['BUILDER_MANAGER', 'OUTREACH_MANAGER']
@@ -706,7 +700,6 @@ export class CommerceManager extends BaseManager {
         taskId,
         {
           action: 'fetch_products',
-          workspaceId: (payload?.workspaceId as string) ?? 'default',
           filters: payload?.filters,
           pagination: payload?.pagination,
           sortBy: payload?.sortBy,
@@ -744,7 +737,6 @@ export class CommerceManager extends BaseManager {
         taskId,
         {
           action,
-          workspaceId: (payload?.workspaceId as string) ?? 'default',
           product: payload?.product,
           productId: payload?.productId,
           updates: payload?.updates,
@@ -780,8 +772,6 @@ export class CommerceManager extends BaseManager {
     const recommendations: string[] = [];
 
     try {
-      const workspaceId = (payload?.workspaceId as string) ?? 'default';
-
       // Parallel execution for efficiency
       const [catalogResult, inventoryResult] = await Promise.allSettled([
         this.executeSpecialist(
@@ -789,7 +779,6 @@ export class CommerceManager extends BaseManager {
           taskId,
           {
             action: 'get_catalog_summary',
-              workspaceId,
           },
           specialistResults
         ),

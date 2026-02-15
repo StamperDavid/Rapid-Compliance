@@ -152,7 +152,6 @@ function getCacheKey(request: CacheKeyRequest): string {
  * Option 1 - Analyze existing conversation:
  * {
  *   conversationId: string,
- *   workspaceId?: string,
  *   includeCoaching?: boolean,
  *   includeFollowUps?: boolean,
  *   customContext?: string,

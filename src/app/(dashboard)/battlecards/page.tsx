@@ -17,6 +17,7 @@ import { CompetitorProfileCard } from '@/components/battlecard/CompetitorProfile
 import { BattlecardView } from '@/components/battlecard/BattlecardView';
 import type { CompetitorProfile, Battlecard, BattlecardOptions } from '@/lib/battlecard';
 import { showSuccessToast } from '@/components/ErrorToast';
+import { auth } from '@/lib/firebase/config';
 interface ApiErrorResponse {
   error?: string;
 }
@@ -52,9 +53,13 @@ export default function BattlecardsPage() {
     setError(null);
 
     try {
+      const token = await auth?.currentUser?.getIdToken();
       const response = await fetch('/api/battlecard/competitor/discover', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({
           domain: competitorDomain,
         }),
@@ -100,9 +105,13 @@ export default function BattlecardsPage() {
         focusAreas: ['features', 'pricing', 'positioning', 'objections'],
       };
 
+      const token = await auth?.currentUser?.getIdToken();
       const response = await fetch('/api/battlecard/generate', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({
           competitorDomain: competitorProfile.domain,
           options,

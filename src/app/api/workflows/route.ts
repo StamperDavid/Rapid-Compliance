@@ -11,12 +11,10 @@ import type { Workflow } from '@/types/workflow';
 const statusValues = ['draft', 'active', 'paused', 'archived'] as const;
 
 const getQuerySchema = z.object({
-  workspaceId: z.string().optional().default('default'),
   status: z.enum(statusValues).optional(),
 });
 
 const postBodySchema = z.object({
-  workspaceId: z.string().optional().default('default'),
   workflow: z.object({
     name: z.string(),
     description: z.string().optional(),
@@ -59,7 +57,6 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const queryResult = getQuerySchema.safeParse({
-      workspaceId: searchParams.get('workspaceId') ?? undefined,
       status: searchParams.get('status') ?? undefined,
     });
 
@@ -67,14 +64,14 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid query parameters' }, { status: 400 });
     }
 
-    const { workspaceId, status } = queryResult.data;
+    const { status } = queryResult.data;
 
     const filters: WorkflowFilters = {};
     if (status) {
       filters.status = status;
     }
 
-    const result = await getWorkflows(workspaceId, filters);
+    const result = await getWorkflows(filters);
 
     return NextResponse.json({
       success: true,
@@ -122,11 +119,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { workspaceId, workflow } = bodyResult.data;
+    const { workflow } = bodyResult.data;
 
     // Build type-safe workflow input from validated Zod data
     // Zod validates the structure but types are loose, so we cast through Partial for type safety
-    const workflowData: Omit<Workflow, 'id' | 'workspaceId' | 'createdAt' | 'updatedAt' | 'createdBy' | 'version' | 'stats'> = {
+    const workflowData: Omit<Workflow, 'id' | 'createdAt' | 'updatedAt' | 'createdBy' | 'version' | 'stats'> = {
       name: workflow.name,
       description: workflow.description,
       icon: workflow.icon,
@@ -146,8 +143,7 @@ export async function POST(request: NextRequest) {
 
     const newWorkflow = await createWorkflow(
       workflowData,
-      decodedToken.uid,
-      workspaceId
+      decodedToken.uid
     );
 
     return NextResponse.json({ success: true, workflow: newWorkflow }, { status: 201 });

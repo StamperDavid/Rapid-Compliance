@@ -24,7 +24,6 @@ export async function GET(request: NextRequest) {
 
     const searchParams = request.nextUrl.searchParams;
     const schemaId = searchParams.get('schemaId');
-    const workspaceId = 'default';
 
     if (!schemaId) {
       return NextResponse.json(
@@ -35,14 +34,11 @@ export async function GET(request: NextRequest) {
 
     // Get impact summary
     const impactSummary = await getSchemaChangeImpactSummary(
-      workspaceId,
       schemaId
     );
 
     // Get workflow validation summary
-    const workflowSummary = await getWorkflowValidationSummary(
-      workspaceId
-    );
+    const workflowSummary = await getWorkflowValidationSummary();
     
     return NextResponse.json({
       success: true,

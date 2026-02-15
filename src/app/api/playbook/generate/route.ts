@@ -170,7 +170,6 @@ function isNextResponse(value: GeneratePlaybookRequest | NextResponse): value is
  * 
  * REQUEST BODY:
  * {
- *   workspaceId?: string,
  *   name: string,
  *   description?: string,
  *   category: PlaybookCategory,
@@ -341,7 +340,6 @@ export function GET() {
       ttl: '1 hour',
     },
     requestBody: {
-      workspaceId: 'string (optional)',
       name: 'string (required)',
       description: 'string (optional)',
       category: 'PlaybookCategory (required)',

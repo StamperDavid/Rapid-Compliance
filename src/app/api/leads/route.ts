@@ -7,7 +7,6 @@ import { requireAuth } from '@/lib/auth/api-auth';
 export const dynamic = 'force-dynamic';
 
 const getQuerySchema = z.object({
-  workspaceId: z.string().optional().default('default'),
   status: z.string().optional(),
   pageSize: z.coerce.number().int().positive().optional().default(50),
 });
@@ -30,13 +29,11 @@ const leadDataSchema = z.object({
 });
 
 const postBodySchema = z.object({
-  workspaceId: z.string().optional().default('default'),
   leadData: leadDataSchema,
 });
 
 const deleteBodySchema = z.object({
   ids: z.array(z.string().min(1)).min(1, 'At least one ID is required'),
-  workspaceId: z.string().optional().default('default'),
 });
 
 export async function GET(
@@ -50,7 +47,6 @@ export async function GET(
 
     const { searchParams } = new URL(request.url);
     const queryResult = getQuerySchema.safeParse({
-      workspaceId: searchParams.get('workspaceId') ?? undefined,
       status: searchParams.get('status') ?? undefined,
       pageSize: searchParams.get('pageSize') ?? undefined,
     });
@@ -62,11 +58,11 @@ export async function GET(
       );
     }
 
-    const { workspaceId, status, pageSize } = queryResult.data;
+    const { status, pageSize } = queryResult.data;
     const filters = status && status !== 'all' ? { status } : undefined;
     const pagination = { pageSize };
 
-    const result = await getLeads(workspaceId, filters, pagination);
+    const result = await getLeads(filters, pagination);
 
     return NextResponse.json(result);
   } catch (error: unknown) {
@@ -97,9 +93,9 @@ export async function POST(
       );
     }
 
-    const { workspaceId, leadData } = bodyResult.data;
+    const { leadData } = bodyResult.data;
     // Build type-safe lead input from validated Zod data
-    const leadInput: Omit<Lead, 'id' | 'workspaceId' | 'createdAt'> = {
+    const leadInput: Omit<Lead, 'id' | 'createdAt'> = {
       firstName: leadData.firstName,
       lastName: leadData.lastName,
       email: leadData.email,
@@ -114,7 +110,7 @@ export async function POST(
       tags: leadData.tags,
       customFields: leadData.customFields,
     };
-    const result = await createLead(leadInput, workspaceId);
+    const result = await createLead(leadInput);
 
     return NextResponse.json(result);
   } catch (error: unknown) {
@@ -146,9 +142,9 @@ export async function DELETE(
       );
     }
 
-    const { ids, workspaceId } = bodyResult.data;
+    const { ids } = bodyResult.data;
     const results = await Promise.allSettled(
-      ids.map(id => deleteLead(id, workspaceId))
+      ids.map(id => deleteLead(id))
     );
 
     const failed = results.filter(r => r.status === 'rejected');

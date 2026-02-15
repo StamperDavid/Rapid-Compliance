@@ -14,7 +14,6 @@ type QueryConstraint = ReturnType<typeof where> | ReturnType<typeof orderBy>;
 /**
  * GET /api/ecommerce/orders - List orders with pagination
  * Query params:
- * - workspaceId: required
  * - customerEmail: optional filter
  * - status: optional filter
  * - limit: page size (default 50, max 100)

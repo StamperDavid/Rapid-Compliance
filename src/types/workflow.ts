@@ -7,8 +7,7 @@ import type { EntityFilter } from './entity';
  */
 export interface Workflow {
   id: string;
-  workspaceId: string;
-  
+
   // Basic info
   name: string;
   description?: string;
@@ -170,10 +169,9 @@ export interface WorkflowParameter {
  */
 export interface WorkflowTriggerData {
   // Core identifiers
-  workspaceId?: string;
   recordId?: string;
   id?: string;
-  
+
   // Entity-related triggers
   entity?: Record<string, unknown>;
   previousEntity?: Record<string, unknown>;
@@ -547,8 +545,7 @@ export interface WorkflowSettings {
 export interface WorkflowExecution {
   id: string;
   workflowId: string;
-  workspaceId: string;
-  
+
   // Trigger info
   triggeredBy: string; // 'system', 'user:userId', 'webhook', etc.
   triggerData: Record<string, unknown>; // Data that triggered the workflow

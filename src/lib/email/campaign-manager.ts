@@ -10,8 +10,7 @@ import { ensureCompliance } from '@/lib/compliance/can-spam-service';
 export interface EmailCampaign {
   id: string;
   name: string;
-  workspaceId?: string;
-  
+
   // Campaign type
   type: 'broadcast' | 'automated' | 'drip' | 'ab-test';
   
@@ -91,7 +90,6 @@ export async function createCampaign(campaign: Partial<EmailCampaign>): Promise<
   const fullCampaign: EmailCampaign = {
     id: campaignId,
     name:(campaign.name !== '' && campaign.name != null) ? campaign.name : 'Untitled Campaign',
-    workspaceId:(campaign.workspaceId !== '' && campaign.workspaceId != null) ? campaign.workspaceId : 'default',
     type: campaign.type ?? 'broadcast',
     subject: campaign.subject ?? '',
     ...(campaign.subjectB !== undefined && { subjectB: campaign.subjectB }),

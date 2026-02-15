@@ -542,7 +542,6 @@ export class VectorStore {
 
       // Get candidate chunks for the organization
       const candidateChunks = this.getCandidateChunks(
-        validatedRequest.workspaceId,
         validatedRequest.filters
       );
 
@@ -593,7 +592,6 @@ export class VectorStore {
    * Get candidate chunks based on filters
    */
   private getCandidateChunks(
-    _workspaceId?: string,
     filters?: RetrievalFilters
   ): ReadonlyArray<KnowledgeChunk> {
     const orgChunkIds = this.storage.organizationIndex.get(PLATFORM_ID);
@@ -776,7 +774,6 @@ export class VectorStore {
   createKnowledgeBase(
     name: string,
     description: string,
-    _workspaceId?: string,
     config?: Partial<KnowledgeBaseConfig>
   ): Result<KnowledgeBase, IntelligenceError> {
     const id = `kb_${PLATFORM_ID}_${Date.now()}`;
@@ -793,7 +790,6 @@ export class VectorStore {
     const now = new Date();
     const knowledgeBase: KnowledgeBase = {
       id,
-      workspaceId: _workspaceId,
       name,
       description,
       config: { ...this.config.knowledgeBaseConfig, ...config },

@@ -17,7 +17,6 @@ describe('Schema Adaptability System', () => {
     it('should detect field rename', () => {
       const oldSchema: Schema = {
         id: 'schema_1',
-        workspaceId: 'ws_1',
         name: 'Products',
         pluralName: 'Products',
         singularName: 'Product',
@@ -76,7 +75,6 @@ describe('Schema Adaptability System', () => {
     it('should detect field deletion', () => {
       const oldSchema: Schema = {
         id: 'schema_1',
-        workspaceId: 'ws_1',
         name: 'Products',
         pluralName: 'Products',
         singularName: 'Product',
@@ -140,7 +138,6 @@ describe('Schema Adaptability System', () => {
     it('should detect schema rename', () => {
       const oldSchema: Schema = {
         id: 'schema_1',
-        workspaceId: 'ws_1',
         name: 'Products',
         pluralName: 'Products',
         singularName: 'Product',
@@ -179,7 +176,6 @@ describe('Schema Adaptability System', () => {
   describe('Field Resolver', () => {
     const testSchema: Schema = {
       id: 'schema_1',
-      workspaceId: 'ws_1',
       name: 'Products',
       pluralName: 'Products',
       singularName: 'Product',
@@ -374,7 +370,6 @@ describe('Schema Adaptability System', () => {
       // 1. Create old schema
       const oldSchema: Schema = {
         id: 'schema_products',
-        workspaceId: 'ws_1',
         name: 'Products',
         pluralName: 'Products',
         singularName: 'Product',

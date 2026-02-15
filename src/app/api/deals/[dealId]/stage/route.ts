@@ -10,7 +10,6 @@ const DEAL_STAGES = ['prospecting', 'qualification', 'proposal', 'negotiation', 
 
 const moveStageSchema = z.object({
   stage: z.enum(DEAL_STAGES),
-  workspaceId: z.string().optional().default('default'),
 });
 
 /**
@@ -38,8 +37,8 @@ export async function POST(
       );
     }
 
-    const { stage, workspaceId } = bodyResult.data;
-    const deal = await moveDealToStage(dealId, stage, workspaceId);
+    const { stage } = bodyResult.data;
+    const deal = await moveDealToStage(dealId, stage);
 
     return NextResponse.json({ success: true, deal });
   } catch (error: unknown) {

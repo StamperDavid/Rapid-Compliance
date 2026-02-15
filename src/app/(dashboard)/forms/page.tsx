@@ -194,7 +194,7 @@ export default function FormsPage() {
       setLoading(true);
       setError(null);
 
-      const response = await fetch(`/api/forms?workspaceId=default`);
+      const response = await fetch(`/api/forms`);
 
       if (!response.ok) {
         throw new Error('Failed to fetch forms');
@@ -245,7 +245,6 @@ export default function FormsPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          workspaceId: 'default',
           name: newFormName,
           templateId: selectedTemplate,
         }),

@@ -25,8 +25,6 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
-    const workspaceIdParam = searchParams.get('workspaceId');
-    const workspaceId: string = (workspaceIdParam !== '' && workspaceIdParam != null) ? workspaceIdParam : 'default';
     const entityTypeParam = searchParams.get('entityType');
     const validEntityTypes = ['lead', 'contact', 'company', 'deal', 'opportunity'];
     const entityType: RelatedEntityType | undefined = entityTypeParam && validEntityTypes.includes(entityTypeParam)
@@ -42,8 +40,8 @@ export async function GET(request: NextRequest) {
     }
 
     const [insights, nextAction] = await Promise.all([
-      getActivityInsights(workspaceId, entityType, entityId),
-      getNextBestAction(workspaceId, entityType, entityId),
+      getActivityInsights(entityType, entityId),
+      getNextBestAction(entityType, entityId),
     ]);
 
     return NextResponse.json({

@@ -3,28 +3,23 @@
  * Integration tests for product service layer
  */
 
-import { describe, it, expect, beforeEach, afterEach } from '@jest/globals';
+import { describe, it, expect, afterEach } from '@jest/globals';
 import {
   getProducts,
-  getProduct,
   createProduct,
-  updateProduct,
   deleteProduct,
   updateInventory,
   searchProducts,
-  type Product,
 } from '@/lib/ecommerce/product-service';
-import { FirestoreService } from '@/lib/db/firestore-service';
 
 describe('ProductService', () => {
-  const testWorkspaceId = 'default';
   let testProductId: string;
 
   afterEach(async () => {
     if (testProductId) {
       try {
-        await deleteProduct(testProductId, testWorkspaceId);
-      } catch (error) {
+        await deleteProduct(testProductId);
+      } catch {
         // Ignore
       }
     }
@@ -39,7 +34,7 @@ describe('ProductService', () => {
         price: 99.99,
         inStock: true,
         category: 'Electronics',
-      }, testWorkspaceId);
+      });
       testProductId = product.id;
 
       expect(product.id).toBeDefined();
@@ -56,7 +51,7 @@ describe('ProductService', () => {
         inStock: true,
         isDigital: true,
         downloadUrl: 'https://example.com/ebook.pdf',
-      }, testWorkspaceId);
+      });
       testProductId = product.id;
 
       expect(product.isDigital).toBe(true);
@@ -72,11 +67,11 @@ describe('ProductService', () => {
         inStock: true,
         trackInventory: true,
         stockQuantity: 100,
-      }, testWorkspaceId);
+      });
       testProductId = product.id;
 
       // Decrease inventory by 5
-      const updated = await updateInventory(product.id, -5, testWorkspaceId);
+      const updated = await updateInventory(product.id, -5);
 
       expect(updated.stockQuantity).toBe(95);
       expect(updated.inStock).toBe(true);
@@ -89,11 +84,11 @@ describe('ProductService', () => {
         inStock: true,
         trackInventory: true,
         stockQuantity: 1,
-      }, testWorkspaceId);
+      });
       testProductId = product.id;
 
       // Sell the last item
-      const updated = await updateInventory(product.id, -1, testWorkspaceId);
+      const updated = await updateInventory(product.id, -1);
 
       expect(updated.stockQuantity).toBe(0);
       expect(updated.inStock).toBe(false);
@@ -105,10 +100,10 @@ describe('ProductService', () => {
         price: 10.00,
         inStock: true,
         trackInventory: false,
-      }, testWorkspaceId);
+      });
       testProductId = product.id;
 
-      const updated = await updateInventory(product.id, -5, testWorkspaceId);
+      const updated = await updateInventory(product.id, -5);
 
       // Should not change since tracking is disabled
       expect(updated.stockQuantity).toBeUndefined();
@@ -121,10 +116,10 @@ describe('ProductService', () => {
         name: 'Searchable Widget',
         price: 29.99,
         inStock: true,
-      }, testWorkspaceId);
+      });
       testProductId = product.id;
 
-      const result = await searchProducts('Searchable', testWorkspaceId);
+      const result = await searchProducts('Searchable');
 
       expect(result.data.some(p => p.id === testProductId)).toBe(true);
     });
@@ -136,23 +131,23 @@ describe('ProductService', () => {
         name: 'Cheap Product',
         price: 10.00,
         inStock: true,
-      }, testWorkspaceId);
+      });
 
       const expensive = await createProduct({
         name: 'Expensive Product',
         price: 500.00,
         inStock: true,
-      }, testWorkspaceId);
+      });
 
-      const result = await getProducts(testWorkspaceId, {
+      const result = await getProducts({
         minPrice: 100,
       });
 
       expect(result.data.some(p => p.id === expensive.id)).toBe(true);
       expect(result.data.every(p => p.price >= 100)).toBe(true);
 
-      await deleteProduct(cheap.id, testWorkspaceId);
-      await deleteProduct(expensive.id, testWorkspaceId);
+      await deleteProduct(cheap.id);
+      await deleteProduct(expensive.id);
     });
   });
 });

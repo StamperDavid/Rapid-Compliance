@@ -20,7 +20,6 @@ export interface EnrichmentData {
 
 export interface Lead {
   id: string;
-  workspaceId: string;
   firstName: string;
   lastName: string;
   name?: string;
@@ -69,7 +68,6 @@ export interface PaginatedResult<T> {
  * Get leads with pagination and filtering
  */
 export async function getLeads(
-  workspaceId: string = 'default',
   filters?: LeadFilters,
   options?: PaginationOptions
 ): Promise<PaginatedResult<Lead>> {
@@ -93,14 +91,13 @@ export async function getLeads(
     constraints.push(orderBy('createdAt', 'desc'));
 
     const result = await FirestoreService.getAllPaginated<Lead>(
-      `${getSubCollection('workspaces')}/${workspaceId}/entities/leads/records`,
+      getSubCollection('leads'),
       constraints,
       options?.pageSize ?? 50,
       options?.lastDoc
     );
 
     logger.info('Leads retrieved', {
-      workspaceId,
       count: result.data.length,
       hasMore: result.hasMore,
       filters: filters ? JSON.stringify(filters) : undefined,
@@ -109,7 +106,7 @@ export async function getLeads(
     return result;
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    logger.error('Failed to get leads', error instanceof Error ? error : undefined, { workspaceId, filters: filters ? JSON.stringify(filters) : undefined });
+    logger.error('Failed to get leads', error instanceof Error ? error : undefined, { filters: filters ? JSON.stringify(filters) : undefined });
     throw new Error(`Failed to retrieve leads: ${errorMessage}`);
   }
 }
@@ -118,17 +115,16 @@ export async function getLeads(
  * Get a single lead by ID
  */
 export async function getLead(
-  leadId: string,
-  workspaceId: string = 'default'
+  leadId: string
 ): Promise<Lead | null> {
   try {
     const lead = await FirestoreService.get<Lead>(
-      `${getSubCollection('workspaces')}/${workspaceId}/entities/leads/records`,
+      getSubCollection('leads'),
       leadId
     );
 
     if (!lead) {
-      logger.warn('Lead not found', { leadId, workspaceId });
+      logger.warn('Lead not found', { leadId });
       return null;
     }
 
@@ -145,8 +141,7 @@ export async function getLead(
  * Create a new lead with auto-enrichment
  */
 export async function createLead(
-  data: Omit<Lead, 'id' | 'workspaceId' | 'createdAt'>,
-  workspaceId: string = 'default',
+  data: Omit<Lead, 'id' | 'createdAt'>,
   options: { autoEnrich?: boolean; skipDuplicateCheck?: boolean } = {}
 ): Promise<Lead> {
   try {
@@ -188,7 +183,6 @@ export async function createLead(
     const lead: Lead = {
       ...data,
       id: leadId,
-      workspaceId,
       status: data.status ?? 'new',
       score: enrichedScore,
       ...(cleanEnrichmentData && { enrichmentData: cleanEnrichmentData }),
@@ -197,7 +191,7 @@ export async function createLead(
     };
 
     await FirestoreService.set(
-      `${getSubCollection('workspaces')}/${workspaceId}/entities/leads/records`,
+      getSubCollection('leads'),
       leadId,
       lead,
       false
@@ -207,7 +201,6 @@ export async function createLead(
     try {
       const { logStatusChange } = await import('./activity-logger');
       await logStatusChange({
-        workspaceId,
         relatedEntityType: 'lead',
         relatedEntityId: leadId,
         relatedEntityName: `${data.firstName} ${data.lastName}`,
@@ -223,7 +216,7 @@ export async function createLead(
     // Fire CRM event for workflow triggers
     try {
       const { fireLeadCreated } = await import('./event-triggers');
-      await fireLeadCreated(workspaceId, leadId, { ...lead } as Record<string, unknown>);
+      await fireLeadCreated(leadId, { ...lead } as Record<string, unknown>);
     } catch (triggerError) {
       logger.warn('Failed to fire lead created event', { error: triggerError instanceof Error ? triggerError.message : String(triggerError) });
     }
@@ -248,12 +241,11 @@ export async function createLead(
  */
 export async function updateLead(
   leadId: string,
-  updates: Partial<Omit<Lead, 'id' | 'workspaceId' | 'createdAt'>>,
-  workspaceId: string = 'default'
+  updates: Partial<Omit<Lead, 'id' | 'createdAt'>>
 ): Promise<Lead> {
   try {
     // Get current lead for comparison
-    const currentLead = await getLead(leadId, workspaceId);
+    const currentLead = await getLead(leadId);
     if (!currentLead) {
       throw new Error('Lead not found');
     }
@@ -264,7 +256,7 @@ export async function updateLead(
     };
 
     await FirestoreService.update(
-      `${getSubCollection('workspaces')}/${workspaceId}/entities/leads/records`,
+      getSubCollection('leads'),
       leadId,
       updatedData
     );
@@ -275,7 +267,7 @@ export async function updateLead(
     });
 
     // Return updated lead
-    const lead = await getLead(leadId, workspaceId);
+    const lead = await getLead(leadId);
     if (!lead) {
       throw new Error('Lead not found after update');
     }
@@ -286,7 +278,6 @@ export async function updateLead(
 
       if (updates.status && updates.status !== currentLead.status) {
         await fireLeadStatusChanged(
-          workspaceId,
           leadId,
           currentLead.status,
           updates.status,
@@ -296,7 +287,6 @@ export async function updateLead(
 
       if (updates.score && updates.score !== currentLead.score) {
         await fireLeadScoreChanged(
-          workspaceId,
           leadId,
           currentLead.score ?? 0,
           updates.score,
@@ -319,13 +309,12 @@ export async function updateLead(
  * Delete a lead
  */
 export async function deleteLead(
-  leadId: string,
-  workspaceId: string = 'default'
+  leadId: string
 ): Promise<void> {
   try {
     // Check for linked deals before deleting (referential integrity)
     const linkedDeals = await FirestoreService.getAll(
-      `${getSubCollection('workspaces')}/${workspaceId}/entities/deals/records`,
+      getSubCollection('deals'),
       [where('leadId', '==', leadId)]
     );
     if (linkedDeals.length > 0) {
@@ -335,7 +324,7 @@ export async function deleteLead(
     }
 
     await FirestoreService.delete(
-      `${getSubCollection('workspaces')}/${workspaceId}/entities/leads/records`,
+      getSubCollection('leads'),
       leadId
     );
 
@@ -351,11 +340,10 @@ export async function deleteLead(
  * Enrich a lead with external data
  */
 export async function enrichLead(
-  leadId: string,
-  workspaceId: string = 'default'
+  leadId: string
 ): Promise<Lead> {
   try {
-    const lead = await getLead(leadId, workspaceId);
+    const lead = await getLead(leadId);
     if (!lead) {
       throw new Error('Lead not found');
     }
@@ -381,7 +369,7 @@ export async function enrichLead(
       enrichmentData: enrichmentData ?? undefined,
       score: calculateEnrichedScore(lead, enrichmentData),
       updatedAt: new Date(),
-    }, workspaceId);
+    });
 
     logger.info('Lead enriched', {
       leadId,
@@ -434,15 +422,14 @@ function calculateEnrichedScore(lead: Lead, enrichmentData: EnrichmentData | nul
  */
 export async function bulkUpdateLeads(
   leadIds: string[],
-  updates: Partial<Lead>,
-  workspaceId: string = 'default'
+  updates: Partial<Lead>
 ): Promise<number> {
   try {
     let successCount = 0;
 
     for (const leadId of leadIds) {
       try {
-        await updateLead(leadId, updates, workspaceId);
+        await updateLead(leadId, updates);
         successCount++;
       } catch (error) {
         logger.warn('Failed to update lead in bulk operation', { leadId, error: error instanceof Error ? error.message : String(error) });
@@ -468,13 +455,12 @@ export async function bulkUpdateLeads(
  */
 export async function searchLeads(
   searchTerm: string,
-  workspaceId: string = 'default',
   options?: PaginationOptions
 ): Promise<PaginatedResult<Lead>> {
   try {
     // For now, get all and filter (Firestore doesn't have full-text search)
     // In production, use Algolia or Elasticsearch
-    const result = await getLeads(workspaceId, undefined, options);
+    const result = await getLeads(undefined, options);
 
     const searchLower = searchTerm.toLowerCase();
     const filtered = result.data.filter(lead =>

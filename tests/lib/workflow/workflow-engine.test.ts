@@ -37,7 +37,6 @@ jest.mock('@/lib/logger/logger');
 
 const mockWorkflow: Workflow = {
   id: 'workflow_test_001',
-  workspaceId: 'default',
   name: 'Test Workflow',
   description: 'Test workflow for unit tests',
   status: 'active',
@@ -90,7 +89,6 @@ const mockWorkflow: Workflow = {
 };
 
 const mockContext: WorkflowExecutionContext = {
-  workspaceId: 'default',
   dealId: 'deal_test_001',
   dealScore: {
     dealId: 'deal_test_001',

@@ -54,13 +54,12 @@ export interface PipelineInsight {
  * Calculate comprehensive sales velocity metrics
  */
 export async function calculateSalesVelocity(
-  workspaceId: string,
   dateRange?: { start: Date; end: Date },
   options?: { skipTrends?: boolean }
 ): Promise<SalesVelocityMetrics> {
   try {
     // Get all deals
-    const { data: allDeals } = await getDeals(workspaceId);
+    const { data: allDeals } = await getDeals({});
     
     // Define Firestore timestamp interface
     interface FirestoreTimestamp {
@@ -142,7 +141,7 @@ export async function calculateSalesVelocity(
     // Calculate trends (skip if already in a sub-calculation to prevent infinite recursion)
     const trends = options?.skipTrends
       ? { velocity30Days: 0, velocity90Days: 0, winRate30Days: 0, winRate90Days: 0 }
-      : await calculateTrends(workspaceId);
+      : await calculateTrends();
 
     const metrics: SalesVelocityMetrics = {
       velocity,
@@ -157,7 +156,7 @@ export async function calculateSalesVelocity(
     };
 
     logger.info('Sales velocity calculated', {
-            velocity,
+      velocity,
       avgSalesCycle,
       winRate,
     });
@@ -295,15 +294,13 @@ function calculateForecast(
 /**
  * Calculate trends over time
  */
-async function calculateTrends(
-  workspaceId: string
-): Promise<SalesVelocityMetrics['trends']> {
+async function calculateTrends(): Promise<SalesVelocityMetrics['trends']> {
   const now = new Date();
 
   // 30 days
   const thirtyDaysAgo = new Date(now);
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-  const metrics30 = await calculateSalesVelocity(workspaceId, {
+  const metrics30 = await calculateSalesVelocity({
     start: thirtyDaysAgo,
     end: now,
   }, { skipTrends: true });
@@ -311,7 +308,7 @@ async function calculateTrends(
   // 90 days
   const ninetyDaysAgo = new Date(now);
   ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
-  const metrics90 = await calculateSalesVelocity(workspaceId, {
+  const metrics90 = await calculateSalesVelocity({
     start: ninetyDaysAgo,
     end: now,
   }, { skipTrends: true });
@@ -327,11 +324,9 @@ async function calculateTrends(
 /**
  * Get pipeline insights and warnings
  */
-export async function getPipelineInsights(
-  workspaceId: string
-): Promise<PipelineInsight[]> {
+export async function getPipelineInsights(): Promise<PipelineInsight[]> {
   try {
-    const metrics = await calculateSalesVelocity(workspaceId);
+    const metrics = await calculateSalesVelocity();
     const insights: PipelineInsight[] = [];
 
     // Check for bottlenecks
@@ -384,7 +379,7 @@ export async function getPipelineInsights(
     }
 
     logger.info('Pipeline insights generated', {
-            insightCount: insights.length,
+      insightCount: insights.length,
     });
 
     return insights;

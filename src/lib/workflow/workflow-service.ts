@@ -70,12 +70,11 @@ export class WorkflowService {
       workflowName: input.name,
       userId,
     });
-    
+
     const now = Timestamp.now();
-    
+
     const workflow: Workflow = {
       id: '', // Will be set by Firestore
-      workspaceId: input.workspaceId,
       name: input.name,
       description: input.description,
       status: input.status || 'draft',
@@ -150,12 +149,6 @@ export class WorkflowService {
       if (filters.triggerType) {
         const { where } = await import('firebase/firestore');
         constraints.push(where('trigger.type', '==', filters.triggerType));
-      }
-
-      // Apply workspaceId filter
-      if (filters.workspaceId) {
-        const { where } = await import('firebase/firestore');
-        constraints.push(where('workspaceId', '==', filters.workspaceId));
       }
 
       // Apply tags filter (array-contains for single tag)
@@ -448,36 +441,26 @@ export function getWorkflowService(dal?: BaseAgentDAL): WorkflowService {
  */
 export async function createWorkflow(
   workflowData: CreateWorkflowInput,
-  userId: string,
-  workspaceId?: string
+  userId: string
 ): Promise<Workflow> {
   // Cast admin Firestore to client Firestore type - they share same API at runtime
   const dal = new BaseAgentDAL(db as unknown as Firestore);
   const service = getWorkflowService(dal);
 
-  const input: CreateWorkflowInput = {
-    ...workflowData,
-    workspaceId:workspaceId ?? workflowData.workspaceId,
-  };
-
-  return service.createWorkflow(input, userId);
+  return service.createWorkflow(workflowData, userId);
 }
 
 /**
  * Get workflows
  */
 export async function getWorkflows(
-  workspaceId: string,
   filters?: Record<string, unknown>
 ): Promise<{ data: Workflow[]; hasMore: boolean }> {
   // Cast admin Firestore to client Firestore type - they share same API at runtime
   const dal = new BaseAgentDAL(db as unknown as Firestore);
   const service = getWorkflowService(dal);
 
-  const result = await service.getWorkflows({
-    workspaceId,
-    ...filters,
-  } as WorkflowFilterInput);
+  const result = await service.getWorkflows(filters as WorkflowFilterInput);
 
   return {
     data: result.workflows,
@@ -489,8 +472,7 @@ export async function getWorkflows(
  * Get workflow
  */
 export async function getWorkflow(
-  workflowId: string,
-  _workspaceId?: string
+  workflowId: string
 ): Promise<Workflow | null> {
   // Cast admin Firestore to client Firestore type - they share same API at runtime
   const dal = new BaseAgentDAL(db as unknown as Firestore);
@@ -504,8 +486,7 @@ export async function getWorkflow(
  */
 export async function updateWorkflow(
   workflowId: string,
-  updates: UpdateWorkflowInput,
-  _workspaceId?: string
+  updates: UpdateWorkflowInput
 ): Promise<Workflow> {
   // Cast admin Firestore to client Firestore type - they share same API at runtime
   const dal = new BaseAgentDAL(db as unknown as Firestore);
@@ -519,8 +500,7 @@ export async function updateWorkflow(
  */
 export async function setWorkflowStatus(
   workflowId: string,
-  status: WorkflowStatus,
-  _workspaceId?: string
+  status: WorkflowStatus
 ): Promise<Workflow> {
   // Cast admin Firestore to client Firestore type - they share same API at runtime
   const dal = new BaseAgentDAL(db as unknown as Firestore);
@@ -533,8 +513,7 @@ export async function setWorkflowStatus(
  * Delete workflow
  */
 export async function deleteWorkflow(
-  workflowId: string,
-  _workspaceId?: string
+  workflowId: string
 ): Promise<void> {
   // Cast admin Firestore to client Firestore type - they share same API at runtime
   const dal = new BaseAgentDAL(db as unknown as Firestore);

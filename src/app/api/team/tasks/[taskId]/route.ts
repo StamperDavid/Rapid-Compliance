@@ -25,8 +25,8 @@ const updateTaskSchema = z.object({
   tags: z.array(z.string()).optional(),
 });
 
-function getTasksPath(workspaceId: string = 'default'): string {
-  return `${getSubCollection('workspaces')}/${workspaceId}/tasks`;
+function getTasksPath(): string {
+  return `${getSubCollection('workspaces')}/default/tasks`;
 }
 
 export async function PUT(

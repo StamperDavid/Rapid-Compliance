@@ -95,7 +95,6 @@ export default function DealsPage() {
 
   const fetchDeals = useCallback(async (lastDoc?: unknown) => {
     const searchParams = new URLSearchParams({
-      workspaceId: 'default',
       pageSize: '100'
     });
 

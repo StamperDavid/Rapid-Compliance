@@ -13,6 +13,7 @@ import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { verifyStripeSignature } from '@/lib/security/webhook-verification';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { getSubCollection } from '@/lib/firebase/collections';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import { where, limit } from 'firebase/firestore';
 
@@ -244,13 +245,12 @@ async function processStripeEvent(event: StripeWebhookEvent): Promise<void> {
           });
         }
 
-        // Clear the user's cart after successful payment (workspace-scoped path)
+        // Clear the user's cart after successful payment
         const cartId = metadata.cartId;
-        const wsId = typeof metadata.workspaceId === 'string' ? metadata.workspaceId : 'default';
         if (typeof cartId === 'string') {
           try {
             await FirestoreService.delete(
-              `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/${wsId}/carts`,
+              getSubCollection('carts'),
               cartId
             );
             logger.info('Cart cleared after successful checkout', {

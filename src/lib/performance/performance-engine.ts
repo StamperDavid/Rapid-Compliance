@@ -88,7 +88,6 @@ export async function generatePerformanceAnalytics(
     
     // 2. Get all conversation analyses for the period
     const analyses = await getConversationAnalyses(
-(request.workspaceId !== '' && request.workspaceId != null) ? request.workspaceId : 'default',
       startDate,
       endDate
     );
@@ -141,7 +140,6 @@ export async function generatePerformanceAnalytics(
     let trendAnalysis: TrendAnalysis;
     if (request.includeTrends !== false && fullConfig.includeTrendAnalysis) {
       trendAnalysis = generateTrendAnalysis(
-(request.workspaceId !== '' && request.workspaceId != null) ? request.workspaceId : 'default',
         rankedMetrics,
         startDate,
         endDate,
@@ -167,7 +165,6 @@ export async function generatePerformanceAnalytics(
     
     // 12. Build final analytics
     const analytics: TeamPerformanceAnalytics = {
-      workspaceId:(request.workspaceId !== '' && request.workspaceId != null) ? request.workspaceId : 'default',
       startDate,
       endDate,
       periodType,
@@ -839,7 +836,6 @@ function findImprovementOpportunities(
  * Generate trend analysis
  */
 function generateTrendAnalysis(
-  _workspaceId: string,
   currentMetrics: RepPerformanceMetrics[],
   _startDate: Date,
   endDate: Date,
@@ -1325,7 +1321,6 @@ function determinePeriod(request: PerformanceAnalyticsRequest): {
  * Get conversation analyses for a period
  */
 function getConversationAnalyses(
-  _workspaceId: string,
   _startDate: Date,
   _endDate: Date
 ): Promise<ConversationAnalysis[]> {
@@ -1363,7 +1358,6 @@ async function emitAnalyticsEvents(
 
     // Emit performance analyzed event
     const analyzedEvent = createPerformanceAnalyzedEvent(
-      analytics.workspaceId,
       analytics.repsIncluded,
       analytics.conversationsAnalyzed,
       analytics.teamMetrics.avgOverallScore,
@@ -1375,7 +1369,6 @@ async function emitAnalyticsEvents(
     // Emit top performer events
     for (const performer of analytics.topPerformers.slice(0, 3)) {
       const topPerformerEvent = createTopPerformerIdentifiedEvent(
-        analytics.workspaceId,
         performer.repId,
         performer.rank,
         performer.overallScore,
@@ -1387,7 +1380,6 @@ async function emitAnalyticsEvents(
     // Emit coaching priority events
     for (const priority of analytics.coachingPriorities.filter(p => p.priority === 'critical' || p.priority === 'high')) {
       const priorityEvent = createCoachingPriorityCreatedEvent(
-        analytics.workspaceId,
         priority.category,
         priority.priority,
         priority.repsAffected,
@@ -1412,15 +1404,13 @@ export async function generateLeaderboard(
   request: LeaderboardRequest
 ): Promise<PerformanceLeaderboard> {
   const { startDate, endDate, periodType } = determinePeriod({
-    workspaceId: request.workspaceId,
     startDate: request.startDate,
     endDate: request.endDate,
     periodType: request.periodType,
   });
-  
+
   // Get performance analytics
   const analytics = await generatePerformanceAnalytics({
-    workspaceId: request.workspaceId,
     startDate,
     endDate,
     periodType,
@@ -1479,7 +1469,6 @@ export async function generateLeaderboard(
   }
   
   return {
-    workspaceId:(request.workspaceId !== '' && request.workspaceId != null) ? request.workspaceId : 'default',
     startDate,
     endDate,
     periodType,
@@ -1498,14 +1487,12 @@ export async function compareReps(
   request: RepComparisonRequest
 ): Promise<RepComparison> {
   const { startDate, endDate } = determinePeriod({
-    workspaceId: request.workspaceId,
     startDate: request.startDate,
     endDate: request.endDate,
   });
-  
+
   // Get performance analytics
   const analytics = await generatePerformanceAnalytics({
-    workspaceId: request.workspaceId,
     startDate,
     endDate,
   });
@@ -1599,14 +1586,12 @@ export async function getMetricBreakdown(
   request: MetricBreakdownRequest
 ): Promise<MetricBreakdown> {
   const { startDate, endDate } = determinePeriod({
-    workspaceId: request.workspaceId,
     startDate: request.startDate,
     endDate: request.endDate,
   });
-  
+
   // Get performance analytics
   const analytics = await generatePerformanceAnalytics({
-    workspaceId: request.workspaceId,
     startDate,
     endDate,
   });

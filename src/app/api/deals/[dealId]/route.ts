@@ -22,7 +22,6 @@ const updateDealSchema = z.object({
   source: z.string().optional(),
   lostReason: z.string().optional(),
   notes: z.string().optional(),
-  workspaceId: z.string().optional().default('default'),
 });
 
 /**
@@ -40,10 +39,7 @@ export async function GET(
       return authResult;
     }
 
-    const { searchParams } = new URL(request.url);
-    const workspaceId = searchParams.get('workspaceId') ?? 'default';
-
-    const deal = await getDeal(dealId, workspaceId);
+    const deal = await getDeal(dealId);
     if (!deal) {
       return NextResponse.json(
         { error: 'Deal not found' },
@@ -87,11 +83,11 @@ export async function PATCH(
       );
     }
 
-    const { workspaceId, expectedCloseDate, ...updates } = bodyResult.data;
+    const { expectedCloseDate, ...updates } = bodyResult.data;
     const deal = await updateDeal(dealId, {
       ...updates,
       expectedCloseDate: expectedCloseDate ? new Date(expectedCloseDate) : undefined,
-    }, workspaceId);
+    });
 
     return NextResponse.json({ success: true, deal });
   } catch (error: unknown) {
@@ -119,10 +115,7 @@ export async function DELETE(
       return authResult;
     }
 
-    const { searchParams } = new URL(request.url);
-    const workspaceId = searchParams.get('workspaceId') ?? 'default';
-
-    await deleteDeal(dealId, workspaceId);
+    await deleteDeal(dealId);
 
     return NextResponse.json({ success: true, deleted: dealId });
   } catch (error: unknown) {

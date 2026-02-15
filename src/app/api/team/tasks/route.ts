@@ -22,7 +22,6 @@ function isValidStatus(value: string): value is TaskStatus {
 
 // Zod schema for task creation
 const CreateTaskSchema = z.object({
-  workspaceId: z.string().optional(),
   title: z.string().min(1, 'Title is required'),
   description: z.string().optional(),
   assignedTo: z.string().min(1, 'Assigned to is required'),
@@ -43,14 +42,12 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
 
-    const workspaceIdParam = searchParams.get('workspaceId');
-    const workspaceId = (workspaceIdParam !== '' && workspaceIdParam != null) ? workspaceIdParam : 'default';
     const userIdParam = searchParams.get('userId');
     const userId = (userIdParam !== '' && userIdParam != null) ? userIdParam : authResult.user.uid;
     const statusParam = searchParams.get('status');
     const status: TaskStatus | undefined = statusParam && isValidStatus(statusParam) ? statusParam : undefined;
 
-    const tasks = await getUserTasks(workspaceId, userId, status);
+    const tasks = await getUserTasks(userId, status);
 
     return NextResponse.json({
       success: true,
@@ -84,10 +81,9 @@ export async function POST(request: NextRequest) {
 
     const validatedData = parseResult.data;
 
-    const workspaceId = validatedData.workspaceId ?? 'default';
     const assignedByName = authResult.user.email ?? undefined;
 
-    const task = await createTask(workspaceId, {
+    const task = await createTask({
       title: validatedData.title,
       description: validatedData.description,
       assignedTo: validatedData.assignedTo,

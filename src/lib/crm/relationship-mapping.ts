@@ -9,7 +9,6 @@ import { getSubCollection } from '@/lib/firebase/collections';
 
 export interface Relationship {
   id: string;
-  workspaceId: string;
   fromEntityType: 'contact' | 'company' | 'lead';
   fromEntityId: string;
   fromEntityName?: string;
@@ -74,8 +73,7 @@ export interface BuyingCommitteeAnalysis {
  * Create a relationship
  */
 export async function createRelationship(
-  workspaceId: string,
-  data: Omit<Relationship, 'id' | 'workspaceId' | 'createdAt'>
+  data: Omit<Relationship, 'id' | 'createdAt'>
 ): Promise<Relationship> {
   try {
     const relationshipId = `rel-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -84,13 +82,12 @@ export async function createRelationship(
     const relationship: Relationship = {
       ...data,
       id: relationshipId,
-      workspaceId,
       createdAt: now,
       updatedAt: now,
     };
 
     await FirestoreService.set(
-      `${getSubCollection('workspaces')}/${workspaceId}/relationships`,
+      getSubCollection('relationships'),
       relationshipId,
       relationship,
       false
@@ -112,13 +109,12 @@ export async function createRelationship(
  * Get relationships for an entity
  */
 export async function getEntityRelationships(
-  workspaceId: string,
   entityType: string,
   entityId: string
 ): Promise<Relationship[]> {
   try {
     const allRels = await FirestoreService.getAll<Relationship>(
-      `${getSubCollection('workspaces')}/${workspaceId}/relationships`
+      getSubCollection('relationships')
     );
 
     const filtered = allRels.filter(
@@ -138,12 +134,11 @@ export async function getEntityRelationships(
  * Get stakeholder map for a deal
  */
 export async function getDealStakeholderMap(
-  workspaceId: string,
   dealId: string
 ): Promise<StakeholderMap> {
   try {
     // Get all stakeholder relationships for this deal
-    const allRels = await getEntityRelationships(workspaceId, 'deal', dealId);
+    const allRels = await getEntityRelationships('deal', dealId);
     const stakeholderRels = allRels.filter(r => r.relationshipType === 'stakeholder');
 
     // Get activity stats for each stakeholder
@@ -153,7 +148,7 @@ export async function getDealStakeholderMap(
 
     for (const rel of stakeholderRels) {
       const contactId = rel.fromEntityId;
-      const activityStats = await getActivityStats(workspaceId, 'contact', contactId);
+      const activityStats = await getActivityStats('contact', contactId);
       
       stakeholders.push({
         contactId,
@@ -169,7 +164,7 @@ export async function getDealStakeholderMap(
     }
 
     // Build org chart
-    const orgChart = await buildOrgChart(workspaceId, stakeholders);
+    const orgChart = await buildOrgChart(stakeholders);
 
     // Analyze buying committee
     const buyingCommittee = analyzeBuyingCommittee(stakeholders);
@@ -190,7 +185,6 @@ export async function getDealStakeholderMap(
  * Build org chart from stakeholders
  */
 async function buildOrgChart(
-  workspaceId: string,
   stakeholders: Stakeholder[]
 ): Promise<OrgChartNode[]> {
   // Get reporting relationships
@@ -198,7 +192,6 @@ async function buildOrgChart(
 
   for (const stakeholder of stakeholders) {
     const relationships = await getEntityRelationships(
-      workspaceId,
       'contact',
       stakeholder.contactId
     );

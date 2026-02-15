@@ -11,7 +11,6 @@ export const dynamic = 'force-dynamic';
 
 const checkoutSchema = z.object({
   cartId: z.string(),
-  workspaceId: z.string(),
   customer: z.object({
     email: z.string().email(),
     firstName: z.string(),
@@ -104,9 +103,9 @@ export async function POST(request: NextRequest) {
     const checkoutData: CheckoutData = validation.data;
 
     // Verify required fields
-    if (!checkoutData.cartId || !checkoutData.workspaceId) {
+    if (!checkoutData.cartId) {
       return NextResponse.json(
-        { success: false, error: 'cartId and workspaceId are required' },
+        { success: false, error: 'cartId is required' },
         { status: 400 }
       );
     }

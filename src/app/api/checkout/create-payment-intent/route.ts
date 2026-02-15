@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
 
     // Preserve attribution fields explicitly in Stripe metadata
     if (metadata) {
-      const attrFields = ['leadId', 'dealId', 'formId', 'utm_source', 'utm_medium', 'utm_campaign', 'attributionSource', 'customerEmail', 'workspaceId'];
+      const attrFields = ['leadId', 'dealId', 'formId', 'utm_source', 'utm_medium', 'utm_campaign', 'attributionSource', 'customerEmail'];
       for (const [key, value] of Object.entries(metadata)) {
         if (typeof value === 'string' && value.length > 0) {
           attributionMetadata[key] = value;

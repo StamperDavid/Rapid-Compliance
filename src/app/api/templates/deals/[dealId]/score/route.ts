@@ -18,7 +18,6 @@ export const dynamic = 'force-dynamic';
  *
  * Body:
  * {
- *   workspaceId: string;
  *   templateId?: string;
  * }
  */
@@ -57,15 +56,14 @@ export async function POST(
       }, { status: 400 });
     }
     
-    const { workspaceId, templateId } = validation.data;
-    
+    const { templateId } = validation.data;
+
     logger.info('Calculating deal score', {
       dealId,
       templateId
     });
 
     const score = calculateDealScore({
-      workspaceId,
       dealId,
       templateId
     });

@@ -61,7 +61,6 @@ export default function LeadDetailPage() {
       const { calculatePredictiveLeadScore } = await import('@/lib/crm/predictive-scoring');
       const leadForScoring: Lead = {
         id: leadData.id,
-        workspaceId: leadData.workspaceId,
         firstName: leadData.firstName,
         lastName: leadData.lastName,
         email: leadData.email,
@@ -80,7 +79,7 @@ export default function LeadDetailPage() {
         updatedAt: leadData.updatedAt,
         name: leadData.name
       };
-      const score = await calculatePredictiveLeadScore('default', leadForScoring);
+      const score = await calculatePredictiveLeadScore(leadForScoring);
       setPredictiveScore(score);
 
       // Calculate data quality
@@ -246,7 +245,6 @@ export default function LeadDetailPage() {
             <ActivityTimeline
               entityType="lead"
               entityId={leadId}
-              workspaceId="default"
               showInsights={true}
               showNextAction={true}
               maxHeight="500px"

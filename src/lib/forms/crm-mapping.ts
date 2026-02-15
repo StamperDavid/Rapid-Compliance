@@ -71,7 +71,6 @@ export interface CRMFieldDefinition {
 export interface CRMRecord {
   id: string;
   entityType: CRMEntityType;
-  workspaceId: string;
   data: Record<string, unknown>;
   source: 'form' | 'import' | 'manual' | 'api';
   sourceFormId?: string;
@@ -323,24 +322,22 @@ export function mapResponsesToCRM(
  * Get collection path for CRM entity
  */
 function getCRMCollectionPath(
-  workspaceId: string,
   entityType: CRMEntityType
 ): string {
-  return `${getSubCollection('workspaces')}/${workspaceId}/${entityType}s`;
+  return `${getSubCollection(entityType === 'lead' ? 'leads' : entityType === 'contact' ? 'contacts' : entityType === 'deal' ? 'deals' : entityType === 'company' ? 'companies' : `${entityType}s`)}`;
 }
 
 /**
  * Find existing CRM record by matching field
  */
 export async function findExistingRecord(
-  workspaceId: string,
   entityType: CRMEntityType,
   matchingField: string,
   matchingValue: unknown
 ): Promise<CRMRecord | null> {
   if (!matchingValue) {return null;}
 
-  const collectionPath = getCRMCollectionPath(workspaceId, entityType);
+  const collectionPath = getCRMCollectionPath(entityType);
   const collectionRef = collection(getDb(), collectionPath);
 
   const q = query(
@@ -359,20 +356,18 @@ export async function findExistingRecord(
  * Create a new CRM record
  */
 export async function createCRMRecord(
-  workspaceId: string,
   entityType: CRMEntityType,
   data: Record<string, unknown>,
   sourceFormId?: string,
   sourceSubmissionId?: string
 ): Promise<CRMRecord> {
-  const collectionPath = getCRMCollectionPath(workspaceId, entityType);
+  const collectionPath = getCRMCollectionPath(entityType);
   const recordRef = doc(collection(getDb(), collectionPath));
   const recordId = recordRef.id;
 
   const record: CRMRecord = {
     id: recordId,
     entityType,
-    workspaceId,
     data,
     source: 'form',
     sourceFormId,
@@ -385,7 +380,6 @@ export async function createCRMRecord(
   await setDoc(recordRef, record);
 
   logger.info('CRM record created', {
-    workspaceId,
     entityType,
     recordId,
     sourceFormId,
@@ -398,12 +392,11 @@ export async function createCRMRecord(
  * Update an existing CRM record
  */
 export async function updateCRMRecord(
-  workspaceId: string,
   entityType: CRMEntityType,
   recordId: string,
   data: Record<string, unknown>
 ): Promise<void> {
-  const collectionPath = getCRMCollectionPath(workspaceId, entityType);
+  const collectionPath = getCRMCollectionPath(entityType);
   const recordRef = doc(getDb(), collectionPath, recordId);
 
   await updateDoc(recordRef, {
@@ -414,7 +407,6 @@ export async function updateCRMRecord(
   });
 
   logger.info('CRM record updated', {
-    workspaceId,
     entityType,
     recordId,
   });
@@ -467,7 +459,6 @@ export async function syncSubmissionToCRM(
     let existingRecord: CRMRecord | null = null;
     if (mapping.matchingField && crmData[mapping.matchingField]) {
       existingRecord = await findExistingRecord(
-        submission.workspaceId,
         entityType,
         mapping.matchingField,
         crmData[mapping.matchingField]
@@ -477,7 +468,6 @@ export async function syncSubmissionToCRM(
     if (existingRecord && mapping.updateExisting) {
       // Update existing record
       await updateCRMRecord(
-        submission.workspaceId,
         entityType,
         existingRecord.id,
         { ...existingRecord.data, ...crmData }
@@ -502,7 +492,6 @@ export async function syncSubmissionToCRM(
     } else if (mapping.createNew) {
       // Create new record
       const newRecord = await createCRMRecord(
-        submission.workspaceId,
         entityType,
         crmData,
         submission.formId,

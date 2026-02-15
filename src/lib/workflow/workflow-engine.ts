@@ -44,11 +44,10 @@ import type { DealScore } from '@/lib/templates/deal-scoring-engine';
 
 /**
  * Workflow execution context
- * 
+ *
  * Provides all data needed for trigger evaluation and action execution
  */
 export interface WorkflowExecutionContext {
-  workspaceId: string;
   dealId?: string;
   deal?: Record<string, unknown>;
   dealScore?: DealScore;
@@ -566,7 +565,6 @@ export class WorkflowEngine {
     
     // Generate email
     const result = await generateSalesEmail({
-      workspaceId: context.workspaceId,
       userId:(context.userId !== '' && context.userId != null) ? context.userId : 'workflow-engine',
       emailType: config.emailType,
       dealId: context.dealId ?? '',

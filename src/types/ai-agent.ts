@@ -8,8 +8,7 @@ import type { KnowledgeBase, KnowledgeDocument } from './agent-memory';
  */
 export interface AIAgent {
   id: string;
-  workspaceId: string;
-  
+
   // Basic info
   name: string;
   description?: string;

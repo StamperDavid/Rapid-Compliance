@@ -29,7 +29,7 @@ export default function WorkflowRunsPage() {
 
   const loadExecutions = useCallback(async () => {
     try {
-      const data = await getWorkflowExecutions(workflowId, 'default');
+      const data = await getWorkflowExecutions(workflowId);
       // Map WorkflowEngineExecution to WorkflowExecution format
       const mappedExecutions: WorkflowExecution[] = data.map((exec) => ({
         id: exec.id,

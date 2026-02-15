@@ -551,11 +551,6 @@ export interface TemporaryScrape {
   id: string;
 
   /**
-   * Workspace context (if applicable)
-   */
-  workspaceId?: string;
-
-  /**
    * URL that was scraped
    */
   url: string;
@@ -639,7 +634,6 @@ export interface TemporaryScrape {
 // Zod schema for TemporaryScrape
 export const TemporaryScrapeSchema = z.object({
   id: z.string().min(1),
-  workspaceId: z.string().optional(),
   url: z.string().url(),
   rawHtml: z.string(),
   cleanedContent: z.string(),

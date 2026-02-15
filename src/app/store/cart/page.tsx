@@ -30,7 +30,7 @@ export default function ShoppingCartPage() {
       const sessionId = localStorage.getItem('cartSessionId') ?? `session-${Date.now()}`;
       localStorage.setItem('cartSessionId', sessionId);
 
-      const cartData = await getOrCreateCart(sessionId, 'default', PLATFORM_ID);
+      const cartData = await getOrCreateCart(sessionId, PLATFORM_ID);
       setCart(cartData);
     } catch (error) {
       logger.error('Error loading cart:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
@@ -53,7 +53,7 @@ export default function ShoppingCartPage() {
         toast.error('Session not found');
         return;
       }
-      await updateCartItemQuantity(sessionId, 'default', itemId, newQuantity);
+      await updateCartItemQuantity(sessionId, itemId, newQuantity);
       await loadCart();
     } catch (error) {
       logger.error('Error updating quantity:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
@@ -73,7 +73,7 @@ export default function ShoppingCartPage() {
         toast.error('Session not found');
         return;
       }
-      await removeFromCart(sessionId, 'default', itemId);
+      await removeFromCart(sessionId, itemId);
       await loadCart();
     } catch (error) {
       logger.error('Error removing item:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });

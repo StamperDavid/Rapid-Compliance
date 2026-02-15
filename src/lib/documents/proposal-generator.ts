@@ -78,7 +78,6 @@ export interface GeneratedProposal {
  * Generate proposal from template
  */
 export async function generateProposal(
-  workspaceId: string,
   data: ProposalData
 ): Promise<GeneratedProposal> {
   try {
@@ -133,7 +132,7 @@ export async function generateProposal(
     };
 
     await FirestoreService.set(
-      `${getSubCollection('workspaces')}/${workspaceId}/proposals`,
+      getSubCollection('proposals'),
       proposalId,
       proposal,
       false
@@ -390,7 +389,7 @@ export async function sendProposal(
   try {
     const { FirestoreService } = await import('@/lib/db/firestore-service');
     const proposal = await FirestoreService.get<GeneratedProposal>(
-      `${getSubCollection('workspaces')}/default/proposals`,
+      getSubCollection('proposals'),
       proposalId
     );
 
@@ -422,7 +421,7 @@ Best regards
 
     // Update proposal status
     await FirestoreService.update(
-      `${getSubCollection('workspaces')}/default/proposals`,
+      getSubCollection('proposals'),
       proposalId,
       {
         status: 'sent',

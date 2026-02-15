@@ -196,7 +196,6 @@ export const agentChatSchema = z.object({
  */
 export const searchQuerySchema = z.object({
   q: z.string().min(1).max(500),
-  workspaceId: z.string().min(1),
   limit: z.number().int().min(1).max(100).optional().default(50),
 });
 

@@ -112,18 +112,15 @@ export async function analyzeConversation(
 ): Promise<ConversationAnalysis> {
   const startTime = Date.now();
   const fullConfig: ConversationEngineConfig = { ...DEFAULT_CONVERSATION_CONFIG, ...config };
-  
+
   try {
     logger.info('Analyzing conversation', {
       conversationId: request.conversationId,
       includeCoaching: request.includeCoaching,
     });
-    
+
     // 1. Get conversation data
-    const conversation = await getConversation(
-      request.conversationId,
-      (request.workspaceId !== '' && request.workspaceId != null) ? request.workspaceId : 'default'
-    );
+    const conversation = await getConversation(request.conversationId);
     
     if (!conversation) {
       throw new Error(`Conversation not found: ${request.conversationId}`);
@@ -135,7 +132,6 @@ export async function analyzeConversation(
     
     // 2. Perform AI-powered analysis
     const analysis = await analyzeTranscript({
-      workspaceId: request.workspaceId,
       transcript: conversation.transcript,
       conversationType: conversation.type,
       participants: conversation.participants,
@@ -246,8 +242,7 @@ export async function analyzeTranscript(
     // 10. Build complete analysis
     const analysis: ConversationAnalysis = {
       conversationId: `analysis_${Date.now()}`, // Will be updated if saving
-      workspaceId:(request.workspaceId !== '' && request.workspaceId != null) ? request.workspaceId : 'default',
-      
+
       sentiment: aiAnalysis.sentiment,
       talkRatio,
       topics: aiAnalysis.topics,
@@ -305,7 +300,6 @@ export async function analyzeBatchConversations(
         const analysis = await analyzeConversation(
           {
             conversationId,
-            workspaceId: request.workspaceId,
             includeCoaching: request.includeCoaching,
             includeFollowUps: request.includeFollowUps,
           },
@@ -1257,7 +1251,6 @@ async function emitAnalysisSignal(
     await coordinator.emitSignal({
       type: 'conversation.analyzed',
       leadId:(conversation.leadId !== '' && conversation.leadId != null) ? conversation.leadId : 'unknown',
-      workspaceId: analysis.workspaceId,
       confidence: analysis.confidence / 100,
       priority: analysis.scores.overall >= 70 ? 'Low' : analysis.scores.overall >= 50 ? 'Medium' : 'High',
       metadata: {
@@ -1292,28 +1285,33 @@ async function emitAnalysisSignal(
  * Get conversation data from Firestore
  */
 async function getConversation(
-  conversationId: string,
-  workspaceId: string
+  conversationId: string
 ): Promise<Conversation | null> {
   try {
     // Import Firestore service
-    const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
-    const { PLATFORM_ID } = await import('@/lib/constants/platform');
+    const { getSubCollection } = await import('@/lib/firebase/collections');
+    const { db } = await import('@/lib/firebase/config');
+    const { doc, getDoc } = await import('firebase/firestore');
 
-    // Build collection path: organizations/{PLATFORM_ID}/workspaces/{workspaceId}/conversations
-    const conversationsPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.WORKSPACES}/${workspaceId}/conversations`;
+    if (!db) {
+      throw new Error('Firestore is not initialized');
+    }
+
+    // Get conversations subcollection path
+    const conversationsPath = getSubCollection('conversations');
 
     // Fetch conversation document
-    const conversation = await FirestoreService.get<Conversation>(
-      conversationsPath,
-      conversationId
-    );
+    const conversationDocRef = doc(db, conversationsPath, conversationId);
+    const conversationSnap = await getDoc(conversationDocRef);
 
-    return conversation;
+    if (!conversationSnap.exists()) {
+      return null;
+    }
+
+    return conversationSnap.data() as Conversation;
   } catch (error) {
     logger.error('Failed to get conversation', error instanceof Error ? error : new Error(String(error)), {
       conversationId,
-      workspaceId,
     });
     return null;
   }

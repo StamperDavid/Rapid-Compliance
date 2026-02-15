@@ -15,7 +15,6 @@ export interface EmailSyncConfig {
   syncDirection: 'inbound' | 'outbound' | 'bidirectional';
   syncFolders: string[];
   autoCreateContacts: boolean;
-  workspaceId?: string;
   accessToken: string;
   refreshToken?: string;
 }

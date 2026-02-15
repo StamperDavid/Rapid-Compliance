@@ -48,7 +48,6 @@ function toDate(value: Date | { toDate?: () => Date } | string | number): Date {
  * Create a new activity
  */
 export async function createActivity(
-  workspaceId: string,
   data: CreateActivityInput
 ): Promise<Activity> {
   try {
@@ -58,20 +57,19 @@ export async function createActivity(
     const activity: Activity = {
       ...data,
       id: activityId,
-      workspaceId,
       occurredAt: data.occurredAt ?? Timestamp.fromDate(now),
       createdAt: Timestamp.fromDate(now),
     };
 
     await FirestoreService.set(
-      `${getSubCollection('workspaces')}/${workspaceId}/activities`,
+      getSubCollection('activities'),
       activityId,
       activity,
       false
     );
 
     logger.info('Activity created', {
-            activityId,
+      activityId,
       type: activity.type,
       relatedEntities: activity.relatedTo.length,
     });
@@ -88,7 +86,6 @@ export async function createActivity(
  * Get activities with filtering and pagination
  */
 export async function getActivities(
-  workspaceId: string,
   filters?: ActivityFilters,
   options?: PaginationOptions
 ): Promise<PaginatedResult<Activity>> {
@@ -124,7 +121,7 @@ export async function getActivities(
     constraints.push(orderBy('occurredAt', 'desc'));
 
     const result = await FirestoreService.getAllPaginated<Activity>(
-      `${getSubCollection('workspaces')}/${workspaceId}/activities`,
+      getSubCollection('activities'),
       constraints,
       options?.pageSize ?? 50,
       options?.lastDoc
@@ -151,7 +148,7 @@ export async function getActivities(
     }
 
     logger.info('Activities retrieved', {
-            count: filteredData.length,
+      count: filteredData.length,
       filters: filters ? JSON.stringify(filters) : undefined,
     });
 
@@ -171,14 +168,12 @@ export async function getActivities(
  * Get activity timeline for an entity (grouped by date)
  */
 export async function getEntityTimeline(
-  workspaceId: string,
   entityType: RelatedEntityType,
   entityId: string,
   options?: PaginationOptions
 ): Promise<TimelineGroup[]> {
   try {
     const result = await getActivities(
-      workspaceId,
       { entityType, entityId },
       options
     );
@@ -212,7 +207,7 @@ export async function getEntityTimeline(
       .sort((a, b) => b.date.localeCompare(a.date));
 
     logger.info('Timeline generated', {
-            entityType,
+      entityType,
       entityId,
       days: timeline.length,
       totalActivities: result.data.length,
@@ -230,13 +225,11 @@ export async function getEntityTimeline(
  * Get activity statistics for an entity
  */
 export async function getActivityStats(
-  workspaceId: string,
   entityType: RelatedEntityType,
   entityId: string
 ): Promise<ActivityStats> {
   try {
     const result = await getActivities(
-      workspaceId,
       { entityType, entityId },
       { pageSize: 1000 } // Get all recent activities
     );
@@ -287,7 +280,7 @@ export async function getActivityStats(
     };
 
     logger.info('Activity stats calculated', {
-            entityType,
+      entityType,
       entityId,
       totalActivities: stats.totalActivities,
       engagementScore: stats.engagementScore,
@@ -343,12 +336,11 @@ function calculateEngagementScore(activities: Activity[]): number {
  * Get insights based on activity patterns
  */
 export async function getActivityInsights(
-  workspaceId: string,
   entityType: RelatedEntityType,
   entityId: string
 ): Promise<ActivityInsight[]> {
   try {
-    const stats = await getActivityStats(workspaceId, entityType, entityId);
+    const stats = await getActivityStats(entityType, entityId);
     const insights: ActivityInsight[] = [];
 
     // No recent activity warning
@@ -407,7 +399,7 @@ export async function getActivityInsights(
     }
 
     logger.info('Activity insights generated', {
-            entityType,
+      entityType,
       entityId,
       insightCount: insights.length,
     });
@@ -424,14 +416,12 @@ export async function getActivityInsights(
  * Get next best action recommendation
  */
 export async function getNextBestAction(
-  workspaceId: string,
   entityType: RelatedEntityType,
   entityId: string
 ): Promise<NextBestAction | null> {
   try {
-    const stats = await getActivityStats(workspaceId, entityType, entityId);
+    const stats = await getActivityStats(entityType, entityId);
     const recentActivities = await getActivities(
-      workspaceId,
       { entityType, entityId },
       { pageSize: 20 }
     );
@@ -535,7 +525,6 @@ export async function getNextBestAction(
  * Bulk create activities (for imports, integrations)
  */
 export async function bulkCreateActivities(
-  workspaceId: string,
   activities: CreateActivityInput[]
 ): Promise<number> {
   try {
@@ -543,7 +532,7 @@ export async function bulkCreateActivities(
 
     for (const activityData of activities) {
       try {
-        await createActivity(workspaceId, activityData);
+        await createActivity(activityData);
         successCount++;
       } catch (error) {
         logger.warn('Failed to create activity in bulk operation', { error: error instanceof Error ? error.message : String(error) });
@@ -551,7 +540,7 @@ export async function bulkCreateActivities(
     }
 
     logger.info('Bulk activity creation completed', {
-            total: activities.length,
+      total: activities.length,
       successful: successCount,
       failed: activities.length - successCount,
     });
@@ -568,12 +557,11 @@ export async function bulkCreateActivities(
  * Delete activity
  */
 export async function deleteActivity(
-  workspaceId: string,
   activityId: string
 ): Promise<void> {
   try {
     await FirestoreService.delete(
-      `${getSubCollection('workspaces')}/${workspaceId}/activities`,
+      getSubCollection('activities'),
       activityId
     );
 

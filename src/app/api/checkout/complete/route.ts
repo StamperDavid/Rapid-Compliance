@@ -81,7 +81,6 @@ export async function POST(request: NextRequest) {
     const orderId = `order_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     const now = new Date().toISOString();
     const piMetadata = paymentIntent.metadata ?? {};
-    const workspaceId = piMetadata.workspaceId ?? 'default';
 
     // Extract attribution fields from payment intent metadata
     const attributionSource = piMetadata.attributionSource ?? piMetadata.utm_source ?? undefined;
@@ -94,7 +93,6 @@ export async function POST(request: NextRequest) {
       currency: paymentIntent.currency,
       customerEmail: piMetadata.customerEmail ?? _user.email ?? '',
       customerId: _user.uid,
-      workspaceId,
       status: 'processing',
       paymentStatus: 'captured',
       source: attributionSource ?? 'web',

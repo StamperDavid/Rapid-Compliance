@@ -58,7 +58,6 @@ export class FieldTypeConverter {
    * Generate conversion preview
    */
   static async generateConversionPreview(
-    workspaceId: string,
     schemaId: string,
     fieldKey: string,
     oldType: FieldType,
@@ -71,12 +70,12 @@ export class FieldTypeConverter {
     estimatedFailures: number;
   }> {
     try {
-      const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
-      const { PLATFORM_ID } = await import('@/lib/constants/platform');
+      const { FirestoreService } = await import('@/lib/db/firestore-service');
+      const { getSubCollection } = await import('@/lib/firebase/collections');
 
       // Get schema
       const schema = await FirestoreService.get(
-        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.WORKSPACES}/${workspaceId}/${COLLECTIONS.SCHEMAS}`,
+        getSubCollection('schemas'),
         schemaId
       );
 
@@ -86,7 +85,7 @@ export class FieldTypeConverter {
 
       const schemaData = schema as Record<string, unknown>;
       const schemaName = typeof schemaData.name === 'string' ? schemaData.name : 'unknown';
-      const entityPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.WORKSPACES}/${workspaceId}/entities/${schemaName}/${COLLECTIONS.RECORDS}`;
+      const entityPath = `${getSubCollection('entities')}/${schemaName}/records`;
 
       // Get sample records
       const records = await FirestoreService.getAll(entityPath);
@@ -140,7 +139,6 @@ export class FieldTypeConverter {
    * Convert field type for all records
    */
   static async convertFieldType(
-    workspaceId: string,
     schemaId: string,
     fieldKey: string,
     oldType: FieldType,
@@ -154,12 +152,12 @@ export class FieldTypeConverter {
     };
 
     try {
-      const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
-      const { PLATFORM_ID } = await import('@/lib/constants/platform');
+      const { FirestoreService } = await import('@/lib/db/firestore-service');
+      const { getSubCollection } = await import('@/lib/firebase/collections');
 
       // Get schema
       const schema = await FirestoreService.get(
-        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.WORKSPACES}/${workspaceId}/${COLLECTIONS.SCHEMAS}`,
+        getSubCollection('schemas'),
         schemaId
       );
 
@@ -169,7 +167,7 @@ export class FieldTypeConverter {
 
       const schemaData = schema as Record<string, unknown>;
       const schemaName = typeof schemaData.name === 'string' ? schemaData.name : 'unknown';
-      const entityPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.WORKSPACES}/${workspaceId}/entities/${schemaName}/${COLLECTIONS.RECORDS}`;
+      const entityPath = `${getSubCollection('entities')}/${schemaName}/records`;
 
       // Get all records
       const records = await FirestoreService.getAll(entityPath);
@@ -323,7 +321,6 @@ export class FieldTypeConverter {
    * Create type conversion notification for user approval
    */
   static async createConversionApprovalRequest(
-    workspaceId: string,
     schemaId: string,
     fieldKey: string,
     fieldLabel: string,
@@ -337,10 +334,10 @@ export class FieldTypeConverter {
     }
   ): Promise<string> {
     try {
-      const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
-      const { PLATFORM_ID } = await import('@/lib/constants/platform');
+      const { FirestoreService } = await import('@/lib/db/firestore-service');
+      const { getSubCollection } = await import('@/lib/firebase/collections');
 
-      const notificationPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/notifications`;
+      const notificationPath = getSubCollection('notifications');
       const notificationId = `notif_typeconv_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
       const successRate = preview.totalRecords > 0
@@ -352,7 +349,6 @@ export class FieldTypeConverter {
         notificationId,
         {
           id: notificationId,
-          workspaceId,
           title: 'Field Type Change Requires Approval',
           message: `Changing field "${fieldLabel}" from ${oldType} to ${newType} will affect ${preview.totalRecords} records. Estimated success rate: ${successRate}%`,
           type: 'warning',

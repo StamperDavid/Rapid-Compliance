@@ -17,7 +17,6 @@ export const dynamic = 'force-dynamic';
 
 /** Request body interface for counting contacts */
 interface CountContactsRequestBody {
-  workspaceId?: string;
   filters?: ViewFilter[];
 }
 
@@ -143,13 +142,13 @@ export async function POST(request: NextRequest) {
       return errors.badRequest('Invalid request body');
     }
 
-    const { workspaceId = 'default', filters = [] } = body;
+    const { filters = [] } = body;
 
     // Build Firestore query constraints from filters
     const constraints = buildQueryConstraints(filters);
 
     // Query contacts collection
-    const collectionPath = `${getSubCollection('workspaces')}/${workspaceId}/entities/contacts/records`;
+    const collectionPath = `${getSubCollection('workspaces')}/default/entities/contacts/records`;
 
     let count = 0;
     const QUERY_LIMIT = 10000;
@@ -159,20 +158,19 @@ export async function POST(request: NextRequest) {
       const allContacts = await FirestoreService.getAll(collectionPath, [limit(QUERY_LIMIT)]);
       count = allContacts.length;
       if (count === QUERY_LIMIT) {
-        logger.warn('Contact count hit query limit', { workspaceId, limit: QUERY_LIMIT });
+        logger.warn('Contact count hit query limit', { limit: QUERY_LIMIT });
       }
     } else {
       // With filters - query and count (with safety limit)
       const filteredContacts = await FirestoreService.getAll(collectionPath, [...constraints, limit(QUERY_LIMIT)]);
       count = filteredContacts.length;
       if (count === QUERY_LIMIT) {
-        logger.warn('Contact count hit query limit with filters', { workspaceId, limit: QUERY_LIMIT, filterCount: filters.length });
+        logger.warn('Contact count hit query limit with filters', { limit: QUERY_LIMIT, filterCount: filters.length });
       }
     }
 
     logger.info('Counted contacts with filters', {
       route: '/api/contacts/count',
-      workspaceId,
       filterCount: filters.length,
       count,
     });
@@ -180,7 +178,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       count,
-      workspaceId,
     });
 
   } catch (error) {

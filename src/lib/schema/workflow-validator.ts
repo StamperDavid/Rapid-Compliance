@@ -11,7 +11,7 @@ import type {
 } from '@/types/workflow';
 import { FieldResolver } from './field-resolver';
 import type { Schema } from '@/types/schema';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 
 /**
  * Validate workflows affected by schema change
@@ -20,22 +20,22 @@ export async function validateWorkflowsForSchema(
   event: SchemaChangeEvent
 ): Promise<void> {
   try {
-    const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+    const { FirestoreService } = await import('@/lib/db/firestore-service');
     const { where } = await import('firebase/firestore');
-    
-    // Get all workflows for this workspace
-    const workflowsPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.WORKSPACES}/${event.workspaceId}/workflows`;
+
+    // Get all workflows
+    const workflowsPath = getSubCollection('workflows');
     const workflows = await FirestoreService.getAll(workflowsPath, [
       where('status', '==', 'active'),
     ]);
-    
+
     if (workflows.length === 0) {
       return;
     }
-    
+
     // Get schema for field resolution
     const schemaData = await FirestoreService.get(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.WORKSPACES}/${event.workspaceId}/${COLLECTIONS.SCHEMAS}`,
+      getSubCollection('schemas'),
       event.schemaId
     );
 
@@ -50,7 +50,7 @@ export async function validateWorkflowsForSchema(
       const workflow = workflowData as Workflow;
 
       const validation = validateWorkflow(workflow, schema, event);
-      
+
       if (!validation.valid) {
         logger.warn('[Workflow Validator] Workflow affected by schema change', {
           file: 'workflow-validator.ts',
@@ -58,10 +58,9 @@ export async function validateWorkflowsForSchema(
           workflowName: workflow.name,
           warnings: validation.warnings,
         });
-        
+
         // Create notification for user
         await createWorkflowWarningNotification(
-          event.workspaceId,
           workflow,
           validation.warnings
         );
@@ -175,14 +174,13 @@ function workflowUsesSchema(workflow: Workflow, schemaId: string): boolean {
  * Create notification for workflow warnings
  */
 async function createWorkflowWarningNotification(
-  workspaceId: string,
   workflow: Workflow,
   warnings: string[]
 ): Promise<void> {
   try {
-    const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+    const { FirestoreService } = await import('@/lib/db/firestore-service');
 
-    const notificationPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/notifications`;
+    const notificationPath = getSubCollection('notifications');
     const notificationId = `notif_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
     await FirestoreService.set(
@@ -190,7 +188,6 @@ async function createWorkflowWarningNotification(
       notificationId,
       {
         id: notificationId,
-        workspaceId,
         title: 'Workflow May Be Affected by Schema Changes',
         message: `Workflow "${workflow.name}" references fields that have changed. Please review: ${warnings.join(', ')}`,
         type: 'warning',
@@ -205,7 +202,7 @@ async function createWorkflowWarningNotification(
       },
       false
     );
-    
+
   } catch (error) {
     logger.error('[Workflow Validator] Failed to create notification', error instanceof Error ? error : new Error(String(error)), {
       file: 'workflow-validator.ts',
@@ -225,9 +222,7 @@ interface WorkflowValidationDetail {
 /**
  * Get validation summary for all workflows
  */
-export async function getWorkflowValidationSummary(
-  workspaceId: string
-): Promise<{
+export async function getWorkflowValidationSummary(): Promise<{
   total: number;
   valid: number;
   withWarnings: number;
@@ -249,12 +244,12 @@ export async function getWorkflowValidationSummary(
   };
 
   try {
-    const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+    const { FirestoreService } = await import('@/lib/db/firestore-service');
 
-    const workflowsPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.WORKSPACES}/${workspaceId}/workflows`;
+    const workflowsPath = getSubCollection('workflows');
     const workflows = await FirestoreService.getAll(workflowsPath);
 
-    const schemasPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.WORKSPACES}/${workspaceId}/${COLLECTIONS.SCHEMAS}`;
+    const schemasPath = getSubCollection('schemas');
     const schemas = await FirestoreService.getAll(schemasPath);
 
     summary.total = workflows.length;

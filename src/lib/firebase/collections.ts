@@ -99,6 +99,24 @@ export const COLLECTIONS = {
   PLATFORM_COUPONS: `${PREFIX}platform_coupons`,
   COUPON_REDEMPTIONS: `${PREFIX}coupon_redemptions`,
   AI_DISCOUNT_REQUESTS: `${PREFIX}ai_discount_requests`,
+
+  // ========================================
+  // ADDITIONAL SUBCOLLECTION KEYS
+  // (previously in firestore-service.ts COLLECTIONS)
+  // ========================================
+  GOLDEN_MASTERS: `${PREFIX}goldenMasters`,
+  CUSTOMER_MEMORIES: `${PREFIX}customerMemories`,
+  EMAIL_CAMPAIGNS: `${PREFIX}emailCampaigns`,
+  NURTURE_SEQUENCES: `${PREFIX}nurtureSequences`,
+  LEAD_ENRICHMENTS: `${PREFIX}leadEnrichments`,
+  LEAD_ACTIVITIES: `${PREFIX}leadActivities`,
+  LEAD_SEGMENTS: `${PREFIX}leadSegments`,
+  THEMES: `${PREFIX}themes`,
+  SUBSCRIPTION_PLANS: `${PREFIX}subscriptionPlans`,
+  CUSTOMER_SUBSCRIPTIONS: `${PREFIX}customerSubscriptions`,
+  GOLDEN_PLAYBOOKS: `${PREFIX}goldenPlaybooks`,
+  SOCIAL_CORRECTIONS: `${PREFIX}socialCorrections`,
+  RECORDS: `${PREFIX}records`,
 } as const;
 
 /**
@@ -121,6 +139,27 @@ export const getSubCollection = (
 
 /** @deprecated Use getSubCollection instead */
 export const getOrgSubCollection = getSubCollection;
+
+// ============================================================================
+// Convenience Collection Getters — single source of truth for every path
+// ============================================================================
+
+export const getLeadsCollection = (): string => getSubCollection('leads');
+export const getDealsCollection = (): string => getSubCollection('deals');
+export const getContactsCollection = (): string => getSubCollection('contacts');
+export const getActivitiesCollection = (): string => getSubCollection('activities');
+export const getWorkflowsCollection = (): string => getSubCollection('workflows');
+export const getWorkflowExecutionsCollection = (): string => getSubCollection('workflowExecutions');
+export const getProductsCollection = (): string => getSubCollection('products');
+export const getSchemasCollection = (): string => getSubCollection('schemas');
+export const getFormsCollection = (): string => getSubCollection('forms');
+export const getOrdersCollection = (): string => getSubCollection('orders');
+export const getCartsCollection = (): string => getSubCollection('carts');
+export const getEmailCampaignsCollection = (): string => getSubCollection('emailCampaigns');
+export const getNurtureSequencesCollection = (): string => getSubCollection('nurtureSequences');
+export const getLeadEnrichmentsCollection = (): string => getSubCollection('leadEnrichments');
+export const getThemesCollection = (): string => getSubCollection('themes');
+export const getIntegrationsCollection = (): string => getSubCollection('integrations');
 
 /**
  * Helper for schema sub-collections

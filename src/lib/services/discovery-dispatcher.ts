@@ -36,7 +36,6 @@ export interface DiscoveryTask {
   id: string;
   type: 'company' | 'person';
   target: string; // domain for company, email for person
-  workspaceId: string;
   workflow: WorkflowState;
   priority?: number; // Optional: higher = process first
   createdAt: Date;
@@ -297,7 +296,6 @@ async function findIdleTasks(
         id: doc.id,
         type: data.type as 'company' | 'person',
         target: data.target as string,
-        workspaceId: data.workspaceId as string,
         workflow: {
           ...workflowData,
           updatedAt: updatedAtValue instanceof Timestamp
@@ -482,22 +480,19 @@ function isRetryableError(error: unknown): boolean {
  *
  * @param type - Type of discovery (company or person)
  * @param target - Domain or email to discover
- * @param workspaceId - Workspace ID
  * @param priority - Optional priority (higher = process first)
  */
 export async function queueDiscoveryTask(
   type: 'company' | 'person',
   target: string,
-  workspaceId: string,
   priority: number = 0
 ): Promise<string> {
   try {
     const taskRef = db.collection('discoveryQueue').doc();
-    
+
     const task: Omit<DiscoveryTask, 'id'> = {
       type,
       target,
-      workspaceId,
       workflow: {
         stage: 'discovery',
         status: 'idle',

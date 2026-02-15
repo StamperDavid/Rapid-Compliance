@@ -205,7 +205,6 @@ describe('Deal Risk Predictor', () => {
     it('should predict risk for a deal', async () => {
       const request: RiskPredictionRequest = {
         dealId: 'deal_test_123',
-        workspaceId: 'default',
         includeInterventions: true,
         forceRefresh: false,
       };
@@ -420,7 +419,6 @@ describe('Deal Risk Predictor', () => {
     it('should predict risk for multiple deals', async () => {
       const request: BatchRiskPredictionRequest = {
         dealIds: ['deal_1', 'deal_2', 'deal_3'],
-        workspaceId: 'default',
         includeInterventions: false,
       };
 

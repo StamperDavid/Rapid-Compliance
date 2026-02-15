@@ -273,7 +273,6 @@ export function removeFluffPatterns(
  * ```
  */
 export async function distillScrape(params: {
-  workspaceId?: string;
   url: string;
   rawHtml: string;
   cleanedContent: string;
@@ -295,7 +294,6 @@ export async function distillScrape(params: {
 
   try {
     const {
-      workspaceId,
       url,
       rawHtml,
       cleanedContent,
@@ -317,7 +315,6 @@ export async function distillScrape(params: {
 
     // Step 3: Save raw scrape to temporary storage (with TTL)
     const { scrape, isNew } = await saveTemporaryScrape({
-      workspaceId,
       url,
       rawHtml,
       cleanedContent: filteredContent,
@@ -491,7 +488,6 @@ function evaluateCondition(
  */
 export async function distillBatch(
   scrapes: Array<{
-    workspaceId?: string;
     url: string;
     rawHtml: string;
     cleanedContent: string;

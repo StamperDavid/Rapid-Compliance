@@ -16,7 +16,7 @@ import { startDealMonitor } from '@/lib/crm/deal-monitor';
 import { logger } from '@/lib/logger/logger';
 
 // Active monitor lifecycle tracking
-const activeMonitors = new Map<string, string>(); // workspaceId → sessionId
+const activeMonitors = new Map<string, string>(); // org → sessionId
 const monitorUnsubscribers = new Map<string, () => void>(); // sessionId → unsubscribe fn
 
 /** Stop a running monitor by session ID */
@@ -26,9 +26,9 @@ function stopMonitor(sessionId: string): boolean {
     unsubscribe();
     monitorUnsubscribers.delete(sessionId);
     // Remove from active monitors
-    for (const [wsId, sId] of activeMonitors.entries()) {
+    for (const [orgId, sId] of activeMonitors.entries()) {
       if (sId === sessionId) {
-        activeMonitors.delete(wsId);
+        activeMonitors.delete(orgId);
         break;
       }
     }
@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
       return authResult;
     }
 
-    const workspaceId = 'default';
+    const orgId = 'default';
 
     // Get config from request body
     const rawBody = await request.json().catch(() => ({})) as unknown;
@@ -78,17 +78,15 @@ export async function POST(request: NextRequest) {
       : 'Medium';
 
     const config = {
-      workspaceId,
       autoGenerateRecommendations: body.autoGenerateRecommendations ?? true,
       autoRecalculateHealth: body.autoRecalculateHealth ?? true,
       signalPriority,
     };
 
-    // Check if a monitor is already running for this workspace
-    const existingSessionId = activeMonitors.get(workspaceId);
+    // Check if a monitor is already running for this org
+    const existingSessionId = activeMonitors.get(orgId);
     if (existingSessionId) {
       logger.info('Deal monitor already running, returning existing session', {
-        workspaceId,
         sessionId: existingSessionId,
       });
       return NextResponse.json({
@@ -105,11 +103,11 @@ export async function POST(request: NextRequest) {
 
     // Start monitoring and store unsubscribe function
     const unsubscribe = startDealMonitor(config);
-    const sessionId = `monitor_${workspaceId}_${Date.now()}`;
-    activeMonitors.set(workspaceId, sessionId);
+    const sessionId = `monitor_${orgId}_${Date.now()}`;
+    activeMonitors.set(orgId, sessionId);
     monitorUnsubscribers.set(sessionId, unsubscribe);
 
-    logger.info('Deal monitor started', { sessionId, workspaceId });
+    logger.info('Deal monitor started', { sessionId });
 
     return NextResponse.json({
       success: true,

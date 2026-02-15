@@ -41,7 +41,6 @@ import { EMAIL_TEMPLATES, type EmailTemplate, type EmailType } from './email-tem
  * Email Generation Options
  */
 export interface EmailGenerationOptions {
-  workspaceId: string;
   userId: string; // Sales rep generating the email
 
   // Email configuration
@@ -79,7 +78,6 @@ export interface EmailGenerationOptions {
  */
 export interface GeneratedEmail {
   id: string; // Unique email ID
-  workspaceId: string;
   userId: string;
 
   // Email content
@@ -164,7 +162,6 @@ export async function generateSalesEmail(
     let dealScore: DealScore | undefined = options.dealScore;
     if (!dealScore && options.deal) {
       dealScore = calculateDealScore({
-        workspaceId: options.workspaceId,
         dealId: options.dealId,
         deal: options.deal,
         templateId: options.templateId,
@@ -235,7 +232,6 @@ export async function generateSalesEmail(
     // 8. Create generated email object
     const generatedEmail: GeneratedEmail = {
       id: `email_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
-      workspaceId: options.workspaceId,
       userId: options.userId,
 
       subject,
@@ -266,7 +262,6 @@ export async function generateSalesEmail(
 
     // 9. Emit signal to Signal Bus
     await emitEmailGeneratedSignal({
-      workspaceId: options.workspaceId,
       email: generatedEmail,
       dealScore,
     });
@@ -602,7 +597,6 @@ function extractImprovementSuggestions(response: string): string[] {
  * Emit email.generated signal to Signal Bus
  */
 async function emitEmailGeneratedSignal(params: {
-  workspaceId: string;
   email: GeneratedEmail;
   dealScore?: DealScore;
 }): Promise<void> {

@@ -19,18 +19,17 @@ export async function adaptEcommerceMappings(
   try {
     const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
 
-    // Get e-commerce config for this workspace
-    const configPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.WORKSPACES}/${event.workspaceId}/ecommerceConfig`;
+    // Get e-commerce config
+    const configPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/ecommerceConfig`;
     const configs = await FirestoreService.getAll(configPath);
-    
+
     if (configs.length === 0) {
       logger.info('[E-Commerce Adapter] No e-commerce config found', {
         file: 'mapping-adapter.ts',
-        workspaceId: event.workspaceId,
       });
       return;
     }
-    
+
     const config = configs[0] as EcommerceConfig;
     
     // Check if this schema change affects the product schema
@@ -61,7 +60,6 @@ event.newFieldKey ?? event.newFieldName ?? ''
         updated = await handleFieldDeletion(
           mappings,
 event.oldFieldKey ?? event.oldFieldName ?? '',
-          event.workspaceId,
           event.schemaId
         );
         break;
@@ -161,7 +159,6 @@ function handleFieldRename(
 async function handleFieldDeletion(
   mappings: ProductFieldMappings,
   deletedFieldKey: string,
-  workspaceId: string,
   schemaId: string
 ): Promise<boolean> {
   let updated = false;
@@ -169,10 +166,10 @@ async function handleFieldDeletion(
   // Get schema for field resolution
   const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
   const schemaData = await FirestoreService.get(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.WORKSPACES}/${workspaceId}/${COLLECTIONS.SCHEMAS}`,
+    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.SCHEMAS}`,
     schemaId
   );
-  
+
   if (!schemaData) {
     logger.error('[E-Commerce Adapter] Schema not found', new Error('Schema not found'), {
       file: 'mapping-adapter.ts',
@@ -180,7 +177,7 @@ async function handleFieldDeletion(
     });
     return false;
   }
-  
+
   const schema: Schema = schemaData as Schema;
   
   // Try to find replacement fields for critical mappings
@@ -229,8 +226,7 @@ async function handleFieldDeletion(
  * Validate e-commerce mappings against current schema
  */
 export async function validateEcommerceMappings(
-  config: EcommerceConfig,
-  workspaceId: string
+  config: EcommerceConfig
 ): Promise<{
   valid: boolean;
   errors: string[];
@@ -243,15 +239,15 @@ export async function validateEcommerceMappings(
     // Get product schema
     const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
     const schemaData = await FirestoreService.get(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.WORKSPACES}/${workspaceId}/${COLLECTIONS.SCHEMAS}`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.SCHEMAS}`,
       config.productSchema
     );
-    
+
     if (!schemaData) {
       errors.push(`Product schema '${config.productSchema}' not found`);
       return { valid: false, errors, warnings };
     }
-    
+
     const schema: Schema = schemaData as Schema;
     
     // Validate required mappings
@@ -316,7 +312,6 @@ export async function validateEcommerceMappings(
  * Auto-configure e-commerce mappings based on schema
  */
 export async function autoConfigureEcommerceMappings(
-  workspaceId: string,
   schemaId: string
 ): Promise<Partial<ProductFieldMappings>> {
   const mappings: Partial<ProductFieldMappings> = {};
@@ -325,14 +320,14 @@ export async function autoConfigureEcommerceMappings(
     // Get schema
     const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
     const schemaData = await FirestoreService.get(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.WORKSPACES}/${workspaceId}/${COLLECTIONS.SCHEMAS}`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.SCHEMAS}`,
       schemaId
     );
-    
+
     if (!schemaData) {
       throw new Error(`Schema ${schemaId} not found`);
     }
-    
+
     const schema: Schema = schemaData as Schema;
     
     // Try to auto-detect common fields

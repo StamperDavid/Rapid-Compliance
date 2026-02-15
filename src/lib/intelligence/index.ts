@@ -116,7 +116,6 @@ export {
 
   // Common schemas
   OrganizationIdSchema,
-  WorkspaceIdSchema,
   UserIdSchema,
   DocumentIdSchema,
   DateRangeSchema,

@@ -71,12 +71,11 @@ function serializeTimestamp(value: unknown): string {
  */
 export async function getOrCreateCart(
   sessionId: string,
-  workspaceId: string,
   userId?: string
 ): Promise<Cart> {
   // Try to get existing cart
   const existingCart = await FirestoreService.get<Cart>(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/${workspaceId}/carts`,
+    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/carts`,
     sessionId
   );
 
@@ -86,13 +85,13 @@ export async function getOrCreateCart(
     const expiresDate = toDateOrString(expiresAt);
     if (expiresAt && expiresDate < new Date()) {
       // Cart expired, create new one
-      return createCart(sessionId, workspaceId, userId);
+      return createCart(sessionId, userId);
     }
     return existingCart;
   }
 
   // Create new cart
-  return createCart(sessionId, workspaceId, userId);
+  return createCart(sessionId, userId);
 }
 
 /**
@@ -100,18 +99,16 @@ export async function getOrCreateCart(
  */
 async function createCart(
   sessionId: string,
-  workspaceId: string,
   userId?: string
 ): Promise<Cart> {
   const now = Timestamp.now();
   const expiresAt = new Date();
   expiresAt.setDate(expiresAt.getDate() + 7); // Expire after 7 days
-  
+
   const cart: Cart = {
     id: sessionId,
     sessionId,
     ...(userId && { userId }), // Only include userId if defined
-    workspaceId,
     items: [],
     subtotal: 0,
     tax: 0,
@@ -124,9 +121,9 @@ async function createCart(
     expiresAt: Timestamp.fromDate(expiresAt),
     status: 'active',
   };
-  
+
   await FirestoreService.set(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/${workspaceId}/carts`,
+    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/carts`,
     sessionId,
     {
       ...cart,
@@ -136,7 +133,7 @@ async function createCart(
     },
     false
   );
-  
+
   return cart;
 }
 
@@ -145,16 +142,15 @@ async function createCart(
  */
 export async function addToCart(
   sessionId: string,
-  workspaceId: string,
   productId: string,
   quantity: number = 1,
   variantId?: string,
   variantOptions?: Record<string, string>
 ): Promise<Cart> {
-  const cart = await getOrCreateCart(sessionId, workspaceId);
+  const cart = await getOrCreateCart(sessionId);
 
   // Get product details (from CRM entity)
-  const product = await getProduct(workspaceId, productId);
+  const product = await getProduct(productId);
   if (!product) {
     throw new Error('Product not found');
   }
@@ -205,19 +201,18 @@ export async function addToCart(
  */
 export async function removeFromCart(
   sessionId: string,
-  workspaceId: string,
   itemId: string
 ): Promise<Cart> {
-  const cart = await getOrCreateCart(sessionId, workspaceId);
-  
+  const cart = await getOrCreateCart(sessionId);
+
   cart.items = cart.items.filter(item => item.id !== itemId);
-  
+
   // Recalculate totals
   recalculateCartTotals(cart);
-  
+
   // Save cart
   await saveCart(cart);
-  
+
   return cart;
 }
 
@@ -226,30 +221,29 @@ export async function removeFromCart(
  */
 export async function updateCartItemQuantity(
   sessionId: string,
-  workspaceId: string,
   itemId: string,
   quantity: number
 ): Promise<Cart> {
   if (quantity <= 0) {
-    return removeFromCart(sessionId, workspaceId, itemId);
+    return removeFromCart(sessionId, itemId);
   }
 
-  const cart = await getOrCreateCart(sessionId, workspaceId);
-  
+  const cart = await getOrCreateCart(sessionId);
+
   const item = cart.items.find(i => i.id === itemId);
   if (!item) {
     throw new Error('Item not found in cart');
   }
-  
+
   item.quantity = quantity;
   item.subtotal = item.price * quantity;
-  
+
   // Recalculate totals
   recalculateCartTotals(cart);
-  
+
   // Save cart
   await saveCart(cart);
-  
+
   return cart;
 }
 
@@ -258,28 +252,27 @@ export async function updateCartItemQuantity(
  */
 export async function applyDiscountCode(
   sessionId: string,
-  workspaceId: string,
   code: string
 ): Promise<Cart> {
-  const cart = await getOrCreateCart(sessionId, workspaceId);
+  const cart = await getOrCreateCart(sessionId);
 
   // Get discount code
-  const discount = await getDiscountCode(workspaceId, code);
+  const discount = await getDiscountCode(code);
   if (!discount) {
     throw new Error('Invalid discount code');
   }
-  
+
   // Check if already applied
   if (cart.discountCodes.some(dc => dc.code === code)) {
     throw new Error('Discount code already applied');
   }
-  
+
   // Validate discount
   validateDiscount(discount, cart);
-  
+
   // Calculate discount amount
   const discountAmount = calculateDiscountAmount(discount, cart);
-  
+
   // Add to applied discounts
   const discountType = discount.type as 'percentage' | 'fixed' | 'free_shipping';
   const appliedDiscount: AppliedDiscount = {
@@ -288,7 +281,7 @@ export async function applyDiscountCode(
     value: discount.value,
     amount: discountAmount,
   };
-  
+
   cart.discountCodes.push(appliedDiscount);
 
   // Recalculate totals
@@ -300,7 +293,7 @@ export async function applyDiscountCode(
   // Atomically check limit and increment usage count to prevent race conditions
   if (discount.usageLimit && db) {
     try {
-      const discountPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/${workspaceId}/discountCodes`;
+      const discountPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/discountCodes`;
       const discountRef = doc(db, discountPath, discount.docId);
 
       await runTransaction(db, async (transaction) => {
@@ -339,10 +332,9 @@ export async function applyDiscountCode(
  */
 export async function removeDiscountCode(
   sessionId: string,
-  workspaceId: string,
   code: string
 ): Promise<Cart> {
-  const cart = await getOrCreateCart(sessionId, workspaceId);
+  const cart = await getOrCreateCart(sessionId);
 
   cart.discountCodes = cart.discountCodes.filter(dc => dc.code !== code);
 
@@ -354,9 +346,9 @@ export async function removeDiscountCode(
 
   // Decrement discount usage count when removed from cart
   try {
-    const discount = await getDiscountCode(workspaceId, code);
+    const discount = await getDiscountCode(code);
     if (discount?.usageLimit && (discount.usageCount ?? 0) > 0) {
-      const discountPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/${workspaceId}/discountCodes`;
+      const discountPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/discountCodes`;
       await FirestoreService.update(discountPath, discount.docId, {
         usageCount: (discount.usageCount ?? 1) - 1,
       });
@@ -396,7 +388,7 @@ function recalculateCartTotals(cart: Cart): void {
  */
 async function saveCart(cart: Cart): Promise<void> {
   await FirestoreService.set(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/${cart.workspaceId}/carts`,
+    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/carts`,
     cart.id,
     {
       ...cart,
@@ -430,24 +422,24 @@ async function saveCart(cart: Cart): Promise<void> {
 /**
  * Get product from CRM
  */
-async function getProduct(workspaceId: string, productId: string): Promise<ProductData | null> {
-  const config = await getEcommerceConfig(workspaceId);
+async function getProduct(productId: string): Promise<ProductData | null> {
+  const config = await getEcommerceConfig();
   if (!config) {
-    throw new Error('E-commerce not configured for this workspace');
+    throw new Error('E-commerce not configured');
   }
 
   const productSchema = config.productSchema;
-  
+
   // Get product entity from records collection
   const product = await FirestoreService.get(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/${workspaceId}/entities/${productSchema}/records`,
+    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/entities/${productSchema}/records`,
     productId
   );
-  
+
   if (!product) {
     return null;
   }
-  
+
   // Map product fields using productMappings
   const mappings = config.productMappings;
   const productRecord = product as Record<string, unknown>;
@@ -465,13 +457,13 @@ async function getProduct(workspaceId: string, productId: string): Promise<Produ
 /**
  * Get discount code
  */
-async function getDiscountCode(workspaceId: string, code: string): Promise<DiscountData | null> {
+async function getDiscountCode(code: string): Promise<DiscountData | null> {
   const { where } = await import('firebase/firestore');
   const discounts = await FirestoreService.getAll(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/${workspaceId}/discountCodes`,
+    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/discountCodes`,
     [where('code', '==', code.toUpperCase())]
   );
-  
+
   if (discounts.length === 0) {return null;}
   const d = discounts[0] as Record<string, unknown>;
   return {
@@ -551,11 +543,10 @@ function calculateDiscountAmount(discount: DiscountData, cart: Cart): number {
  * Clear cart
  */
 export async function clearCart(
-  sessionId: string,
-  workspaceId: string
+  sessionId: string
 ): Promise<void> {
   await FirestoreService.delete(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/${workspaceId}/carts`,
+    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/carts`,
     sessionId
   );
 }

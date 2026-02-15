@@ -25,7 +25,6 @@ const addressSchema = z.object({
 });
 
 const checkoutSessionSchema = z.object({
-  workspaceId: z.string().optional().default('default'),
   customerInfo: z.object({
     email: z.string().email('Valid email required'),
     firstName: z.string().optional(),
@@ -71,7 +70,7 @@ export async function POST(request: NextRequest) {
     if (!parseResult.success) {
       return errors.badRequest(parseResult.error.errors[0]?.message ?? 'Invalid checkout data');
     }
-    const { workspaceId, customerInfo, shippingAddress, billingAddress, shippingMethodId } = parseResult.data;
+    const { customerInfo, shippingAddress, billingAddress, shippingMethodId } = parseResult.data;
 
     // MAJ-3: Standardized Stripe key retrieval via apiKeyService
     const stripeKeys = await apiKeyService.getServiceKey(PLATFORM_ID, 'stripe') as { secretKey?: string } | null;
@@ -83,7 +82,7 @@ export async function POST(request: NextRequest) {
 
     // Get cart (workspace-scoped path matching cart-service)
     const cart = await FirestoreService.get<Cart>(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/${workspaceId}/carts`,
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/default/carts`,
       authResult.user.uid
     );
 
@@ -95,7 +94,7 @@ export async function POST(request: NextRequest) {
     for (const item of cart.items) {
       if (item.productId) {
         const product = await FirestoreService.get<{ stockLevel?: number }>(
-          `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/${workspaceId}/entities/products/records`,
+          `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/default/entities/products/records`,
           item.productId
         );
         if (product && typeof product.stockLevel === 'number' && product.stockLevel < item.quantity) {
@@ -157,7 +156,6 @@ export async function POST(request: NextRequest) {
       customer_email: customerInfo.email,
       metadata: {
         orderId,
-        workspaceId: workspaceId,
         userId: authResult.user.uid,
         cartId: authResult.user.uid, // Cart ID is the user ID
         customer: JSON.stringify({

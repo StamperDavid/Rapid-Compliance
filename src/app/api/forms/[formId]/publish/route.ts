@@ -10,9 +10,7 @@ interface RouteContext {
   params: Promise<{ formId: string }>;
 }
 
-const PublishBodySchema = z.object({
-  workspaceId: z.string().optional(),
-});
+const PublishBodySchema = z.object({});
 
 /**
  * POST /api/forms/[formId]/publish
@@ -36,20 +34,18 @@ export async function POST(
       return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
     }
 
-    const workspaceId = parseResult.data.workspaceId ?? 'default';
-
     // Check if form exists
-    const form = await getForm(workspaceId, formId);
+    const form = await getForm(formId);
 
     if (!form) {
       return NextResponse.json({ error: 'Form not found' }, { status: 404 });
     }
 
     // Publish the form
-    await publishForm(workspaceId, formId);
+    await publishForm(formId);
 
     // Get updated form
-    const updatedForm = await getForm(workspaceId, formId);
+    const updatedForm = await getForm(formId);
 
     return NextResponse.json({
       success: true,

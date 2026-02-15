@@ -57,9 +57,7 @@ jest.mock('@/lib/templates/deal-scoring-engine', () => ({
   })
 }));
 
-// Test organization and workspace
-const TEST_ORG_ID = 'test-org-forecast';
-const TEST_WORKSPACE_ID = 'default';
+// Test workspace (removed - single-tenant)
 
 /**
  * Create a mock deal for forecasting
@@ -70,7 +68,6 @@ function _createMockDeal(overrides: Partial<Deal> = {}): Deal {
   
   return {
     id: `deal-${Math.random().toString(36).substring(2, 9)}`,
-    workspaceId: TEST_WORKSPACE_ID,
     name: 'Test Deal',
     value: 50000,
     currency: 'USD',
@@ -89,12 +86,10 @@ describe('Revenue Forecasting Engine', () => {
     
     it('should generate forecast for 90-day period', () => {
       const forecast = generateRevenueForecast({
-        workspaceId: TEST_WORKSPACE_ID,
         period: '90-day'
       });
 
       // Basic validation
-      expect(forecast.workspaceId).toBe(TEST_WORKSPACE_ID);
       expect(forecast.period).toBe('90-day');
       
       // Forecast values
@@ -121,7 +116,6 @@ describe('Revenue Forecasting Engine', () => {
     
     it('should generate three scenarios (best/likely/worst case)', () => {
       const forecast = generateRevenueForecast({
-        workspaceId: TEST_WORKSPACE_ID,
         period: '90-day',
         quota: 500000
       });
@@ -142,7 +136,6 @@ describe('Revenue Forecasting Engine', () => {
     
     it('should calculate stage-weighted pipeline', () => {
       const forecast = generateRevenueForecast({
-        workspaceId: TEST_WORKSPACE_ID,
         period: '90-day',
         templateId: 'saas'
       });
@@ -175,7 +168,6 @@ describe('Revenue Forecasting Engine', () => {
       const quota = 500000;
       
       const forecast = generateRevenueForecast({
-        workspaceId: TEST_WORKSPACE_ID,
         period: '90-day',
         quota
       });
@@ -204,8 +196,7 @@ describe('Revenue Forecasting Engine', () => {
       
       for (const period of periods) {
         const forecast = generateRevenueForecast({
-          workspaceId: TEST_WORKSPACE_ID,
-          period
+            period
         });
         
         expect(forecast.period).toBe(period);
@@ -220,7 +211,6 @@ describe('Revenue Forecasting Engine', () => {
       // This would typically compare to historical data
       // For testing, we'll just verify the trend field is set
       const forecast = generateRevenueForecast({
-        workspaceId: TEST_WORKSPACE_ID,
         period: '90-day'
       });
       
@@ -230,7 +220,6 @@ describe('Revenue Forecasting Engine', () => {
     
     it('should calculate commit revenue from high-probability deals', () => {
       const forecast = generateRevenueForecast({
-        workspaceId: TEST_WORKSPACE_ID,
         period: '90-day'
       });
       
@@ -244,14 +233,12 @@ describe('Revenue Forecasting Engine', () => {
     it('should apply industry template probabilities', () => {
       // SaaS template
       const saasForecas = generateRevenueForecast({
-        workspaceId: TEST_WORKSPACE_ID,
         period: '90-day',
         templateId: 'saas'
       });
 
       // Manufacturing template
       const mfgForecast = generateRevenueForecast({
-        workspaceId: TEST_WORKSPACE_ID,
         period: '90-day',
         templateId: 'manufacturing'
       });
@@ -268,7 +255,6 @@ describe('Revenue Forecasting Engine', () => {
     it('should handle zero deals gracefully', () => {
       // This will return whatever the mocked data provides
       const forecast = generateRevenueForecast({
-        workspaceId: TEST_WORKSPACE_ID,
         period: '30-day'
       });
       
@@ -285,7 +271,6 @@ describe('Revenue Forecasting Engine', () => {
       const quota = 500000;
       
       const performance = calculateQuotaPerformance(
-        TEST_WORKSPACE_ID,
         '90-day',
         quota
       );
@@ -313,7 +298,6 @@ describe('Revenue Forecasting Engine', () => {
       const quota = 100000; // Low quota for testing
       
       const performance = calculateQuotaPerformance(
-        TEST_WORKSPACE_ID,
         '30-day',
         quota
       );
@@ -328,7 +312,6 @@ describe('Revenue Forecasting Engine', () => {
       const quota = 500000;
       
       const performance = calculateQuotaPerformance(
-        TEST_WORKSPACE_ID,
         '90-day',
         quota
       );
@@ -343,7 +326,6 @@ describe('Revenue Forecasting Engine', () => {
     
     it('should compare multiple forecast periods', () => {
       const comparison = compareForecastPeriods(
-        TEST_WORKSPACE_ID,
         ['30-day', '60-day', '90-day']
       );
       
@@ -358,7 +340,6 @@ describe('Revenue Forecasting Engine', () => {
     
     it('should show increasing forecasts for longer periods', () => {
       const comparison = compareForecastPeriods(
-        TEST_WORKSPACE_ID,
         ['30-day', '90-day']
       );
       
@@ -379,7 +360,6 @@ describe('Revenue Forecasting Engine', () => {
     
     it('should retrieve historical forecasts', () => {
       const history = getForecastHistory(
-        TEST_WORKSPACE_ID,
         '90-day',
         30 // Last 30 days
       );
@@ -401,7 +381,6 @@ describe('Revenue Forecasting Engine', () => {
     
     it('should return empty array when no historical data', () => {
       const history = getForecastHistory(
-        'default',
         '90-day',
         30
       );
@@ -414,12 +393,10 @@ describe('Revenue Forecasting Engine', () => {
     
     it('should have higher confidence for near-term forecasts', () => {
       const thirtyDay = generateRevenueForecast({
-        workspaceId: TEST_WORKSPACE_ID,
         period: '30-day'
       });
 
       const annual = generateRevenueForecast({
-        workspaceId: TEST_WORKSPACE_ID,
         period: 'annual'
       });
       
@@ -431,7 +408,6 @@ describe('Revenue Forecasting Engine', () => {
     
     it('should have higher confidence with more data', () => {
       const forecast = generateRevenueForecast({
-        workspaceId: TEST_WORKSPACE_ID,
         period: '90-day'
       });
       
@@ -446,7 +422,6 @@ describe('Revenue Forecasting Engine', () => {
     
     it('should break down revenue by sales stage', () => {
       const forecast = generateRevenueForecast({
-        workspaceId: TEST_WORKSPACE_ID,
         period: '90-day',
         templateId: 'saas'
       });
@@ -467,7 +442,6 @@ describe('Revenue Forecasting Engine', () => {
     
     it('should apply correct probabilities by stage', () => {
       const forecast = generateRevenueForecast({
-        workspaceId: TEST_WORKSPACE_ID,
         period: '90-day',
         templateId: 'saas'
       });
@@ -491,7 +465,6 @@ describe('Revenue Forecasting Engine', () => {
       const quota = 500000;
       
       const forecast = generateRevenueForecast({
-        workspaceId: TEST_WORKSPACE_ID,
         period: '90-day',
         quota
       });
@@ -505,7 +478,6 @@ describe('Revenue Forecasting Engine', () => {
       const quota = 100000; // Low quota for testing
       
       const forecast = generateRevenueForecast({
-        workspaceId: TEST_WORKSPACE_ID,
         period: '90-day',
         quota
       });

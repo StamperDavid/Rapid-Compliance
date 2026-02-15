@@ -3,19 +3,17 @@
  * Listens for entity changes and triggers workflows
  */
 
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { FirestoreService } from '@/lib/db/firestore-service';
 import type { Workflow, EntityTrigger } from '@/types/workflow';
 import { executeWorkflow } from '../workflow-executor';
 import { logger } from '@/lib/logger/logger';
-import { PLATFORM_ID } from '@/lib/constants/platform';
 
 /**
  * Register Firestore trigger for workflow
  * In production, this would set up Cloud Functions triggers
  */
 export async function registerFirestoreTrigger(
-  workflow: Workflow,
-  workspaceId: string
+  workflow: Workflow
 ): Promise<void> {
   const trigger = workflow.trigger as EntityTrigger;
 
@@ -25,14 +23,14 @@ export async function registerFirestoreTrigger(
 
   // Store trigger configuration in Firestore
   // In production, this would deploy a Cloud Function
+  const { getSubCollection } = await import('@/lib/firebase/collections');
   await FirestoreService.set(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.WORKSPACES}/${workspaceId}/workflowTriggers`,
+    getSubCollection('workflowTriggers'),
     workflow.id,
     {
       workflowId: workflow.id,
       triggerType: trigger.type,
       schemaId: trigger.schemaId,
-      workspaceId,
       registeredAt: new Date().toISOString(),
     },
     false
@@ -61,7 +59,6 @@ const MAX_RECURSION_DEPTH = 3;
  * @param depth - Current recursion depth (0 for top-level calls)
  */
 export async function handleEntityChange(
-  workspaceId: string,
   schemaId: string,
   changeType: 'created' | 'updated' | 'deleted',
   recordId: string,
@@ -70,7 +67,7 @@ export async function handleEntityChange(
 ): Promise<void> {
   // Re-entry guard: track by entity identity (without changeType)
   // so that create→update→delete on the same record is blocked
-  const entityKey = `${workspaceId}:${schemaId}:${recordId}`;
+  const entityKey = `${schemaId}:${recordId}`;
   if (activeEntityChanges.has(entityKey)) {
     logger.warn('[Firestore Trigger] Blocked recursive workflow execution on same entity', {
       file: 'firestore-trigger.ts',
@@ -96,8 +93,10 @@ export async function handleEntityChange(
   try {
     // Find workflows with matching triggers
     const { where } = await import('firebase/firestore');
+    const { getSubCollection } = await import('@/lib/firebase/collections');
+
     const triggers = await FirestoreService.getAll(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.WORKSPACES}/${workspaceId}/workflowTriggers`,
+      getSubCollection('workflowTriggers'),
       [
         where('triggerType', '==', `entity.${changeType}`),
         where('schemaId', '==', schemaId),
@@ -110,7 +109,7 @@ export async function handleEntityChange(
 
     // Load workflows
     const workflows = await FirestoreService.getAll(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.WORKSPACES}/${workspaceId}/${COLLECTIONS.WORKFLOWS}`,
+      getSubCollection('workflows'),
       [where('status', '==', 'active')]
     );
 
@@ -124,7 +123,6 @@ export async function handleEntityChange(
     for (const workflow of matchingWorkflows) {
       try {
         const triggerData = {
-          workspaceId,
           schemaId,
           recordId,
           record: recordData,
@@ -147,11 +145,11 @@ export async function handleEntityChange(
  * Unregister Firestore trigger
  */
 export async function unregisterFirestoreTrigger(
-  workflowId: string,
-  workspaceId: string
+  workflowId: string
 ): Promise<void> {
+  const { getSubCollection } = await import('@/lib/firebase/collections');
   await FirestoreService.delete(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.WORKSPACES}/${workspaceId}/workflowTriggers`,
+    getSubCollection('workflowTriggers'),
     workflowId
   );
 

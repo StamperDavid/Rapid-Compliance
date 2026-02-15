@@ -134,39 +134,37 @@ export {
 /**
  * Firestore collection paths for the Form Builder module
  *
- * Structure:
- * - {platform}/workspaces/{workspaceId}/forms/{formId}
- * - {platform}/workspaces/{workspaceId}/forms/{formId}/fields/{fieldId}
- * - {platform}/workspaces/{workspaceId}/forms/{formId}/submissions/{submissionId}
- * - {platform}/workspaces/{workspaceId}/forms/{formId}/analytics/{date}
- * - {platform}/workspaces/{workspaceId}/forms/{formId}/fieldAnalytics/{fieldId_date}
- * - {platform}/workspaces/{workspaceId}/forms/{formId}/views/{viewId}
- * - {platform}/workspaces/{workspaceId}/formTemplates/{templateId}
+ * Structure (Single-Tenant):
+ * - {platform}/forms/{formId}
+ * - {platform}/forms/{formId}/fields/{fieldId}
+ * - {platform}/forms/{formId}/submissions/{submissionId}
+ * - {platform}/forms/{formId}/analytics/{date}
+ * - {platform}/forms/{formId}/fieldAnalytics/{fieldId_date}
+ * - {platform}/forms/{formId}/views/{viewId}
+ * - {platform}/formTemplates/{templateId}
  */
 export const FORM_COLLECTION_PATHS = {
-  forms: (workspaceId: string) =>
-    `${getSubCollection('workspaces')}/${workspaceId}/forms`,
+  forms: () => getSubCollection('forms'),
 
-  form: (workspaceId: string, formId: string) =>
-    `${getSubCollection('workspaces')}/${workspaceId}/forms/${formId}`,
+  form: (formId: string) =>
+    `${getSubCollection('forms')}/${formId}`,
 
-  fields: (workspaceId: string, formId: string) =>
-    `${getSubCollection('workspaces')}/${workspaceId}/forms/${formId}/fields`,
+  fields: (formId: string) =>
+    `${getSubCollection('forms')}/${formId}/fields`,
 
-  submissions: (workspaceId: string, formId: string) =>
-    `${getSubCollection('workspaces')}/${workspaceId}/forms/${formId}/submissions`,
+  submissions: (formId: string) =>
+    `${getSubCollection('forms')}/${formId}/submissions`,
 
-  analytics: (workspaceId: string, formId: string) =>
-    `${getSubCollection('workspaces')}/${workspaceId}/forms/${formId}/analytics`,
+  analytics: (formId: string) =>
+    `${getSubCollection('forms')}/${formId}/analytics`,
 
-  fieldAnalytics: (workspaceId: string, formId: string) =>
-    `${getSubCollection('workspaces')}/${workspaceId}/forms/${formId}/fieldAnalytics`,
+  fieldAnalytics: (formId: string) =>
+    `${getSubCollection('forms')}/${formId}/fieldAnalytics`,
 
-  views: (workspaceId: string, formId: string) =>
-    `${getSubCollection('workspaces')}/${workspaceId}/forms/${formId}/views`,
+  views: (formId: string) =>
+    `${getSubCollection('forms')}/${formId}/views`,
 
-  templates: (workspaceId: string) =>
-    `${getSubCollection('workspaces')}/${workspaceId}/formTemplates`,
+  templates: () => getSubCollection('formTemplates'),
 } as const;
 
 // ============================================================================

@@ -26,8 +26,6 @@ import { getSubCollection } from '@/lib/firebase/collections';
 type Tab = 'templates' | 'scoring' | 'forecasting';
 
 export default function TemplatesDashboard() {
-  const workspaceId = 'default';
-
   const [activeTab, setActiveTab] = useState<Tab>('templates');
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>('saas');
   const [applyingTemplate, setApplyingTemplate] = useState(false);
@@ -53,7 +51,6 @@ export default function TemplatesDashboard() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          workspaceId,
           templateId: selectedTemplateId,
           merge: false,
           applyWorkflows: true,
@@ -81,7 +78,7 @@ export default function TemplatesDashboard() {
 
       // Fetch real deal IDs from Firestore
       const { FirestoreService } = await import('@/lib/db/firestore-service');
-      const collectionPath = `${getSubCollection('workspaces')}/${workspaceId}/entities/deals/records`;
+      const collectionPath = `${getSubCollection('workspaces')}/default/entities/deals/records`;
       const dealRecords = await FirestoreService.getAll<{ id: string }>(collectionPath);
       const dealIds = dealRecords.map(d => d.id);
       const scores = new Map<string, DealScore>();
@@ -91,7 +88,6 @@ export default function TemplatesDashboard() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            workspaceId,
             templateId: selectedTemplateId
           })
         });
@@ -108,7 +104,7 @@ export default function TemplatesDashboard() {
     } finally {
       setLoadingScores(false);
     }
-  }, [workspaceId, selectedTemplateId]);
+  }, [selectedTemplateId]);
 
   // Generate Forecast
   const generateForecast = useCallback(async () => {
@@ -119,7 +115,6 @@ export default function TemplatesDashboard() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          workspaceId,
           period: forecastPeriod,
           quota,
           templateId: selectedTemplateId,
@@ -136,7 +131,7 @@ export default function TemplatesDashboard() {
     } finally {
       setLoadingForecast(false);
     }
-  }, [workspaceId, forecastPeriod, quota, selectedTemplateId]);
+  }, [forecastPeriod, quota, selectedTemplateId]);
 
   // Auto-load when switching tabs
   useEffect(() => {

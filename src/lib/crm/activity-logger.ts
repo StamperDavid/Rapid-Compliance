@@ -32,8 +32,7 @@ function toMetadataString(value: unknown): string {
  * Log AI chat conversation
  */
 export async function logAIChat(params: {
-  workspaceId?: string;
-  conversationId: string;
+    conversationId: string;
   relatedEntityType: RelatedEntityType;
   relatedEntityId: string;
   relatedEntityName?: string;
@@ -68,10 +67,7 @@ export async function logAIChat(params: {
       },
     };
 
-    await createActivity(
-      params.workspaceId ?? 'default',
-      activityData
-    );
+    await createActivity(activityData);
 
     logger.info('AI chat activity logged', { conversationId: params.conversationId });
   } catch (error) {
@@ -84,8 +80,7 @@ export async function logAIChat(params: {
  * Log email sent
  */
 export async function logEmailSent(params: {
-  workspaceId?: string;
-  emailId: string;
+    emailId: string;
   relatedEntityType: RelatedEntityType;
   relatedEntityId: string;
   relatedEntityName?: string;
@@ -128,10 +123,7 @@ export async function logEmailSent(params: {
       },
     };
 
-    await createActivity(
-      params.workspaceId ?? 'default',
-      activityData
-    );
+    await createActivity(activityData);
 
     logger.info('Email sent activity logged', { emailId: params.emailId });
   } catch (error) {
@@ -144,8 +136,7 @@ export async function logEmailSent(params: {
  * Log email opened
  */
 export async function logEmailOpened(params: {
-  workspaceId?: string;
-  emailId: string;
+    emailId: string;
   relatedEntityType: RelatedEntityType;
   relatedEntityId: string;
   subject: string;
@@ -166,10 +157,7 @@ export async function logEmailOpened(params: {
       },
     };
 
-    await createActivity(
-      params.workspaceId ?? 'default',
-      activityData
-    );
+    await createActivity(activityData);
 
     logger.info('Email opened activity logged', { emailId: params.emailId });
   } catch (error) {
@@ -182,8 +170,7 @@ export async function logEmailOpened(params: {
  * Log call made/received
  */
 export async function logCall(params: {
-  workspaceId?: string;
-  relatedEntityType: RelatedEntityType;
+    relatedEntityType: RelatedEntityType;
   relatedEntityId: string;
   relatedEntityName?: string;
   direction: 'inbound' | 'outbound';
@@ -216,10 +203,7 @@ export async function logCall(params: {
       },
     };
 
-    await createActivity(
-      params.workspaceId ?? 'default',
-      activityData
-    );
+    await createActivity(activityData);
 
     logger.info('Call activity logged', { outcome: params.outcome, duration: params.duration });
   } catch (error) {
@@ -232,8 +216,7 @@ export async function logCall(params: {
  * Log meeting
  */
 export async function logMeeting(params: {
-  workspaceId?: string;
-  relatedEntityType: RelatedEntityType;
+    relatedEntityType: RelatedEntityType;
   relatedEntityId: string;
   relatedEntityName?: string;
   meetingType: 'scheduled' | 'completed' | 'no_show';
@@ -272,10 +255,7 @@ export async function logMeeting(params: {
       },
     };
 
-    await createActivity(
-      params.workspaceId ?? 'default',
-      activityData
-    );
+    await createActivity(activityData);
 
     logger.info('Meeting activity logged', { type: params.meetingType });
   } catch (error) {
@@ -288,8 +268,7 @@ export async function logMeeting(params: {
  * Log status/stage change
  */
 export async function logStatusChange(params: {
-  workspaceId?: string;
-  relatedEntityType: RelatedEntityType;
+    relatedEntityType: RelatedEntityType;
   relatedEntityId: string;
   relatedEntityName?: string;
   fieldChanged: string;
@@ -327,10 +306,7 @@ export async function logStatusChange(params: {
       },
     };
 
-    await createActivity(
-      params.workspaceId ?? 'default',
-      activityData
-    );
+    await createActivity(activityData);
 
     logger.info('Status change activity logged', { field: params.fieldChanged });
   } catch (error) {
@@ -343,8 +319,7 @@ export async function logStatusChange(params: {
  * Log workflow execution
  */
 export async function logWorkflow(params: {
-  workspaceId?: string;
-  relatedEntityType: RelatedEntityType;
+    relatedEntityType: RelatedEntityType;
   relatedEntityId: string;
   relatedEntityName?: string;
   workflowId: string;
@@ -370,10 +345,7 @@ export async function logWorkflow(params: {
       },
     };
 
-    await createActivity(
-      params.workspaceId ?? 'default',
-      activityData
-    );
+    await createActivity(activityData);
 
     logger.info('Workflow activity logged', { workflowId: params.workflowId });
   } catch (error) {
@@ -386,8 +358,7 @@ export async function logWorkflow(params: {
  * Log sequence enrollment/unenrollment
  */
 export async function logSequenceChange(params: {
-  workspaceId?: string;
-  relatedEntityType: RelatedEntityType;
+    relatedEntityType: RelatedEntityType;
   relatedEntityId: string;
   relatedEntityName?: string;
   action: 'enrolled' | 'unenrolled';
@@ -415,10 +386,7 @@ export async function logSequenceChange(params: {
       },
     };
 
-    await createActivity(
-      params.workspaceId ?? 'default',
-      activityData
-    );
+    await createActivity(activityData);
 
     logger.info('Sequence change activity logged', { action: params.action, sequenceId: params.sequenceId });
   } catch (error) {
@@ -431,8 +399,7 @@ export async function logSequenceChange(params: {
  * Log note added
  */
 export async function logNote(params: {
-  workspaceId?: string;
-  relatedEntityType: RelatedEntityType;
+    relatedEntityType: RelatedEntityType;
   relatedEntityId: string;
   relatedEntityName?: string;
   subject?: string;
@@ -457,10 +424,7 @@ export async function logNote(params: {
       occurredAt: Timestamp.fromDate(new Date()),
     };
 
-    await createActivity(
-      params.workspaceId ?? 'default',
-      activityData
-    );
+    await createActivity(activityData);
 
     logger.info('Note activity logged');
   } catch (error) {
@@ -473,8 +437,7 @@ export async function logNote(params: {
  * Log enrichment completed
  */
 export async function logEnrichment(params: {
-  workspaceId?: string;
-  relatedEntityType: RelatedEntityType;
+    relatedEntityType: RelatedEntityType;
   relatedEntityId: string;
   relatedEntityName?: string;
   dataPointsFound: number;
@@ -494,10 +457,7 @@ export async function logEnrichment(params: {
       occurredAt: Timestamp.fromDate(new Date()),
     };
 
-    await createActivity(
-      params.workspaceId ?? 'default',
-      activityData
-    );
+    await createActivity(activityData);
 
     logger.info('Enrichment activity logged', { dataPoints: params.dataPointsFound });
   } catch (error) {

@@ -118,12 +118,10 @@ export class WorkflowCoordinator {
         });
         return;
       }
-      
+
+
       // Find workflows that match this trigger type
-      const workflows = await this.findMatchingWorkflows(
-        (signal.workspaceId !== '' && signal.workspaceId != null) ? signal.workspaceId : 'default',
-        triggerTypes
-      );
+      const workflows = await this.findMatchingWorkflows(triggerTypes);
       
       if (workflows.length === 0) {
         logger.debug('No workflows found for trigger types', {
@@ -140,7 +138,7 @@ export class WorkflowCoordinator {
       
       // Build execution context from signal
       const context = this.buildExecutionContext(signal);
-      
+
       // Execute each matching workflow
       for (const workflow of workflows) {
         await this.executeWorkflowFromSignal(workflow, context, signal);
@@ -348,7 +346,6 @@ export class WorkflowCoordinator {
     }
     
     return {
-      workspaceId: (signal.workspaceId !== '' && signal.workspaceId != null) ? signal.workspaceId : 'default',
       dealId: (metadata.dealId as string) || undefined,
       deal: (metadata.deal as Record<string, unknown>) || undefined,
       dealScore,
@@ -367,7 +364,6 @@ export class WorkflowCoordinator {
    * Find workflows that match the trigger types
    */
   private async findMatchingWorkflows(
-    _workspaceId: string,
     triggerTypes: WorkflowTriggerType[]
   ): Promise<Workflow[]> {
     try {
@@ -467,7 +463,6 @@ export class WorkflowCoordinator {
         if (this.config.dryRun) {
           logger.info('[DRY RUN] Would execute workflow', {
             workflowId: workflow.id,
-            workspaceId: context.workspaceId,
             dealId: context.dealId,
             triggeredBy: context.triggeredBy,
           });
@@ -580,7 +575,6 @@ export class WorkflowCoordinator {
       const execution: WorkflowExecution = {
         id: executionId,
         workflowId: workflow.id,
-        workspaceId: context.workspaceId,
         dealId: context.dealId,
         triggeredBy: context.triggeredBy,
         triggerData: context.triggerData,

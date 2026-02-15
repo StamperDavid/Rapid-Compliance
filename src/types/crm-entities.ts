@@ -279,7 +279,6 @@ export function isValidDealStage(stage: unknown): stage is DealStage {
 export interface Deal {
   // Core identifiers
   id: string;
-  workspaceId: string;
 
   // Deal details
   name: string;
@@ -371,7 +370,6 @@ export function isValidLeadStatus(status: unknown): status is LeadStatus {
 export interface Lead {
   // Core identifiers
   id: string;
-  workspaceId: string;
 
   // Personal info
   firstName: string;
@@ -450,7 +448,6 @@ export interface ContactAddress {
 export interface Contact {
   // Core identifiers
   id: string;
-  workspaceId: string;
 
   // Personal info
   firstName?: string;
@@ -597,7 +594,6 @@ export function isDeal(entity: unknown): entity is Deal {
 
   return (
     typeof deal.id === 'string' &&
-    typeof deal.workspaceId === 'string' &&
     typeof deal.name === 'string' &&
     typeof deal.value === 'number' &&
     isValidDealStage(deal.stage) &&
@@ -615,7 +611,6 @@ export function isLead(entity: unknown): entity is Lead {
 
   return (
     typeof lead.id === 'string' &&
-    typeof lead.workspaceId === 'string' &&
     typeof lead.firstName === 'string' &&
     typeof lead.lastName === 'string' &&
     typeof lead.email === 'string' &&
@@ -633,7 +628,6 @@ export function isContact(entity: unknown): entity is Contact {
 
   return (
     typeof contact.id === 'string' &&
-    typeof contact.workspaceId === 'string' &&
     (typeof contact.firstName === 'string' ||
      typeof contact.lastName === 'string' ||
      typeof contact.name === 'string')
@@ -668,13 +662,13 @@ export function getEntityType(entity: CRMEntity): CRMEntityType {
 /**
  * Omit system fields for creation
  */
-export type CreateDealInput = Omit<Deal, 'id' | 'workspaceId' | 'createdAt'>;
-export type CreateLeadInput = Omit<Lead, 'id' | 'workspaceId' | 'createdAt'>;
-export type CreateContactInput = Omit<Contact, 'id' | 'workspaceId' | 'createdAt'>;
+export type CreateDealInput = Omit<Deal, 'id' | 'createdAt'>;
+export type CreateLeadInput = Omit<Lead, 'id' | 'createdAt'>;
+export type CreateContactInput = Omit<Contact, 'id' | 'createdAt'>;
 
 /**
  * Partial updates without system fields
  */
-export type UpdateDealInput = Partial<Omit<Deal, 'id' | 'workspaceId' | 'createdAt'>>;
-export type UpdateLeadInput = Partial<Omit<Lead, 'id' | 'workspaceId' | 'createdAt'>>;
-export type UpdateContactInput = Partial<Omit<Contact, 'id' | 'workspaceId' | 'createdAt'>>;
+export type UpdateDealInput = Partial<Omit<Deal, 'id' | 'createdAt'>>;
+export type UpdateLeadInput = Partial<Omit<Lead, 'id' | 'createdAt'>>;
+export type UpdateContactInput = Partial<Omit<Contact, 'id' | 'createdAt'>>;

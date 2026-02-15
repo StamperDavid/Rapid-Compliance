@@ -45,7 +45,6 @@ function ensureAdminDb() {
  * Email delivery options
  */
 export interface EmailDeliveryOptions {
-  workspaceId: string;
   userId: string;
 
   // Email content
@@ -102,7 +101,6 @@ export type EmailDeliveryStatus =
  */
 export interface EmailDeliveryRecord {
   id: string;
-  workspaceId: string;
   userId: string;
 
   // Recipients
@@ -197,7 +195,6 @@ export async function sendEmail(
 
     // Prepare custom args for tracking
     const customArgs = {
-      workspaceId: options.workspaceId,
       userId: options.userId,
       deliveryId,
       ...(options.dealId && { dealId: options.dealId }),
@@ -255,7 +252,6 @@ export async function sendEmail(
     // Save delivery record
     await saveDeliveryRecord({
       id: deliveryId,
-      workspaceId: options.workspaceId,
       userId: options.userId,
       to: options.to,
       toName: options.toName,
@@ -314,7 +310,6 @@ export async function sendEmail(
     const deliveryId = `delivery_${platformIdFail}_${Date.now()}_${Math.random().toString(36).substring(7)}`;
     await saveDeliveryRecord({
       id: deliveryId,
-      workspaceId: options.workspaceId,
       userId: options.userId,
       to: options.to,
       toName: options.toName,

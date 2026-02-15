@@ -29,7 +29,6 @@ import type { Deal } from './deal-service';
 // ============================================================================
 
 export interface DealMonitorConfig {
-  workspaceId: string;
   autoGenerateRecommendations?: boolean; // Default: true
   autoRecalculateHealth?: boolean; // Default: true
   signalPriority?: 'High' | 'Medium' | 'Low'; // Default: Medium
@@ -50,7 +49,6 @@ export interface DealMonitorConfig {
  * @example
  * ```typescript
  * const unsubscribe = await startDealMonitor({
- *   workspaceId: 'default',
  *   autoGenerateRecommendations: true,
  * });
  *
@@ -62,14 +60,12 @@ export function startDealMonitor(
   config: DealMonitorConfig
 ): () => void {
   const {
-    workspaceId,
     autoGenerateRecommendations = true,
     autoRecalculateHealth = true,
     signalPriority = 'Medium',
   } = config;
 
   logger.info('Starting deal monitor', {
-    workspaceId,
     autoGenerateRecommendations,
     autoRecalculateHealth,
   });
@@ -86,12 +82,10 @@ export function startDealMonitor(
           'deal.won',
           'deal.lost',
         ],
-        workspaceId,
       },
       async (signal: SalesSignal) => {
         await handleDealSignal(
           signal,
-          workspaceId,
           autoGenerateRecommendations,
           autoRecalculateHealth,
           signalPriority
@@ -99,15 +93,11 @@ export function startDealMonitor(
       }
     );
 
-    logger.info('Deal monitor started successfully', {
-      workspaceId,
-    });
+    logger.info('Deal monitor started successfully');
 
     return unsubscribe;
   } catch (error) {
-    logger.error('Failed to start deal monitor', error instanceof Error ? error : new Error(String(error)), {
-      workspaceId,
-    });
+    logger.error('Failed to start deal monitor', error instanceof Error ? error : new Error(String(error)));
     throw error;
   }
 }
@@ -117,7 +107,6 @@ export function startDealMonitor(
  */
 async function handleDealSignal(
   signal: SalesSignal,
-  workspaceId: string,
   autoGenerateRecommendations: boolean,
   autoRecalculateHealth: boolean,
   signalPriority: 'High' | 'Medium' | 'Low'
@@ -132,16 +121,13 @@ async function handleDealSignal(
     logger.info('Processing deal signal', {
       signalType: signal.type,
       dealId,
-          });
+    });
 
     // Step 1: Recalculate health score
     let healthScore;
     if (autoRecalculateHealth && signal.type !== 'deal.created') {
       try {
-        healthScore = await calculateDealHealth(
-          workspaceId,
-          dealId
-        );
+        healthScore = await calculateDealHealth(dealId);
 
         logger.info('Deal health recalculated', {
           dealId,
@@ -151,7 +137,6 @@ async function handleDealSignal(
 
         // Emit health score update signal
         await emitHealthScoreSignal(
-          workspaceId,
           dealId,
           healthScore,
           signalPriority
@@ -164,10 +149,7 @@ async function handleDealSignal(
     // Step 2: Generate next best action recommendations
     if (autoGenerateRecommendations) {
       try {
-        const recommendations = await generateNextBestActions(
-          workspaceId,
-          dealId
-        );
+        const recommendations = await generateNextBestActions(dealId);
 
         logger.info('Recommendations generated', {
           dealId,
@@ -178,7 +160,6 @@ async function handleDealSignal(
 
         // Emit recommendations signal
         await emitRecommendationsSignal(
-          workspaceId,
           dealId,
           recommendations,
           signalPriority
@@ -191,7 +172,6 @@ async function handleDealSignal(
     // Step 3: Handle specific signal types
     await handleSpecificSignalType(
       signal,
-      workspaceId,
       dealId,
       signalPriority
     );
@@ -207,7 +187,6 @@ async function handleDealSignal(
  */
 async function handleSpecificSignalType(
   signal: SalesSignal,
-  workspaceId: string,
   dealId: string,
   signalPriority: 'High' | 'Medium' | 'Low'
 ): Promise<void> {
@@ -219,7 +198,6 @@ async function handleSpecificSignalType(
       await coordinator.emitSignal({
         type: 'deal.action.recommended',
         leadId: signal.metadata?.contactId as string,
-                workspaceId,
         confidence: 0.9,
         priority: signalPriority,
         metadata: {
@@ -247,7 +225,6 @@ async function handleSpecificSignalType(
       if (newStage === 'negotiation') {
         await coordinator.emitSignal({
           type: 'deal.action.recommended',
-                    workspaceId,
           confidence: 0.95,
           priority: 'High',
           metadata: {
@@ -266,7 +243,6 @@ async function handleSpecificSignalType(
       // Deal won - emit onboarding signal
       await coordinator.emitSignal({
         type: 'deal.action.recommended',
-                workspaceId,
         confidence: 1.0,
         priority: 'High',
         metadata: {
@@ -283,7 +259,6 @@ async function handleSpecificSignalType(
       // Deal lost - emit post-mortem signal
       await coordinator.emitSignal({
         type: 'deal.action.recommended',
-                workspaceId,
         confidence: 0.7,
         priority: 'Low',
         metadata: {
@@ -303,7 +278,6 @@ async function handleSpecificSignalType(
  * Emit health score update signal
  */
 async function emitHealthScoreSignal(
-  workspaceId: string,
   dealId: string,
   healthScore: DealHealthScore,
   priority: 'High' | 'Medium' | 'Low'
@@ -313,7 +287,6 @@ async function emitHealthScoreSignal(
 
     await coordinator.emitSignal({
       type: 'deal.health.updated',
-            workspaceId,
       confidence: 0.8, // Health score is deterministic
       priority:
         healthScore.status === 'critical'
@@ -350,7 +323,6 @@ async function emitHealthScoreSignal(
  * Emit recommendations signal
  */
 async function emitRecommendationsSignal(
-  workspaceId: string,
   dealId: string,
   recommendations: ActionRecommendations,
   priority: 'High' | 'Medium' | 'Low'
@@ -360,7 +332,6 @@ async function emitRecommendationsSignal(
 
     await coordinator.emitSignal({
       type: 'deal.recommendations.generated',
-            workspaceId,
       confidence: recommendations.confidence,
       priority:
         recommendations.urgency === 'critical'
@@ -413,12 +384,9 @@ async function emitRecommendationsSignal(
  *
  * This is useful for periodic batch processing (e.g., daily health check).
  *
- * @param workspaceId - Workspace ID
  * @returns Summary of monitored deals
  */
-export async function runDealHealthCheck(
-  workspaceId: string = 'default'
-): Promise<{
+export async function runDealHealthCheck(): Promise<{
   total: number;
   healthy: number;
   atRisk: number;
@@ -426,15 +394,11 @@ export async function runDealHealthCheck(
   recommendationsGenerated: number;
 }> {
   try {
-    logger.info('Running deal health check', {
-            workspaceId,
-    });
+    logger.info('Running deal health check');
 
     // Get all active deals
     const { getDeals } = await import('./deal-service');
-    const { data: deals } = await getDeals(workspaceId, {
-      // Filter out closed deals
-    });
+    const { data: deals } = await getDeals({});
 
     const activeDeals = deals.filter(
       (d: Deal) => d.stage !== 'closed_won' && d.stage !== 'closed_lost'
@@ -449,10 +413,7 @@ export async function runDealHealthCheck(
     for (const deal of activeDeals) {
       try {
         // Calculate health
-        const healthScore = await calculateDealHealth(
-          workspaceId,
-          deal.id
-        );
+        const healthScore = await calculateDealHealth(deal.id);
 
         // Count by status
         if (healthScore.status === 'healthy') {healthy++;}
@@ -464,11 +425,7 @@ export async function runDealHealthCheck(
           healthScore.status === 'at-risk' ||
           healthScore.status === 'critical'
         ) {
-          await generateNextBestActions(
-            workspaceId,
-            deal.id,
-            deal
-          );
+          await generateNextBestActions(deal.id, deal);
           recommendationsGenerated++;
         }
       } catch (error) {
@@ -490,9 +447,7 @@ export async function runDealHealthCheck(
 
     return summary;
   } catch (error) {
-    logger.error('Failed to run deal health check', error instanceof Error ? error : new Error(String(error)), {
-            workspaceId,
-    });
+    logger.error('Failed to run deal health check', error instanceof Error ? error : new Error(String(error)));
     throw error;
   }
 }

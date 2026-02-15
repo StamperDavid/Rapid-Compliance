@@ -27,9 +27,6 @@ export interface DealRiskPrediction {
   /** Deal ID */
   dealId: string;
 
-  /** Workspace ID */
-  workspaceId: string;
-  
   /** Overall risk level */
   riskLevel: RiskLevel;
   
@@ -309,9 +306,6 @@ export interface RiskPredictionRequest {
   /** Deal ID */
   dealId: string;
 
-  /** Workspace ID */
-  workspaceId?: string;
-  
   /** Include AI-generated interventions */
   includeInterventions?: boolean;
   
@@ -329,9 +323,6 @@ export interface BatchRiskPredictionRequest {
   /** Deal IDs */
   dealIds: string[];
 
-  /** Workspace ID */
-  workspaceId?: string;
-  
   /** Include interventions */
   includeInterventions?: boolean;
   
