@@ -5,7 +5,7 @@
 ## Context
 Repository: https://github.com/StamperDavid/Rapid-Compliance
 Branch: dev
-Last Session: February 13, 2026 (Session 14)
+Last Session: February 14, 2026 (Session 16)
 
 ## Current State
 
@@ -34,7 +34,7 @@ Last Session: February 13, 2026 (Session 14)
 | **Twitter/X** | REAL | API v2, OAuth2 PKCE, posting, media, engagement (like/retweet/follow/reply) |
 | **LinkedIn** | PARTIAL | RapidAPI wrapper. Needs official API (blocked: app approval). Fallback now correctly returns `success: false`. |
 | **Facebook/Instagram** | NOT BUILT | Blocked: Meta Developer Portal approval |
-| **Stripe** | REAL | PaymentElement (3DS), intents, products, prices, webhooks. Cart clearing on payment. Canonical order path. |
+| **Stripe** | REAL | PaymentElement (3DS), intents, products, prices, webhooks. Cart clearing on payment. **ORDER PATH ISSUES — see Session 15 findings.** |
 | **Email** | REAL | SendGrid/Resend/SMTP, open/click tracking. CAN-SPAM unsubscribe route live. |
 | **Voice** | REAL | Twilio/Telnyx — call initiation, control, conferencing |
 | **TTS** | REAL | ElevenLabs — 20+ premium voices |
@@ -43,202 +43,332 @@ Last Session: February 13, 2026 (Session 14)
 | **Firebase** | REAL | Auth + Firestore, single-tenant |
 | **OpenRouter** | REAL | AI gateway, 100+ models |
 
-### Known Open Issues
+---
+
+## Session History
+
+**Sessions 1-8:** All prior stabilization work is complete: saga persistence, kill switch, revenue attribution pipeline, Twitter engagement, E2E tests, CI/CD cleanup, Stripe checkout, social OAuth, website auth fixes, DALL-E 3, AI page builder, video pipeline wiring, and 33+ TODO resolutions. Details in git history.
+
+**Session 9:** Full production readiness QA audit. 14 Critical / 45 Major / 40 Minor / 23 Info. All 14 Critical resolved (`3b1f5ea3`).
+
+**Session 10:** Resolved all 45 Major issues across 35 files. Committed (`a3667b8c`). Merged to main.
+
+**Session 11:** Phase 2-4 audits. 6 Critical + 8 Major + 12 Minor. Fixed cart path, cron auth, voice auth, CORS, HSTS.
+
+**Session 12:** Infrastructure hardening. 9 Firestore indexes, 103 env vars documented, health check wired, structured logging.
+
+**Session 13:** E2E user flow audit + Firebase cleanup. 3 Critical: signup race condition, order path mismatch, cart ID mismatch. All fixed (`bf706c8a`).
+
+**Session 14:** Website editor 401 fix + TODO resolution. Auth race condition fixed (`30857e1b`). Redis rate limiting (`75b638ba`). Website editor still shows blank — suspected Firestore path mismatch.
+
+**Session 15 (February 14, 2026):** Full system-wide code audit via 5 parallel sub-agents. Comprehensive findings below. This session established the master testing plan.
+
+**Session 16 (February 14, 2026):** Phase 1 — Fixed all 7 critical/high bugs (`a831c43c`). Details:
+- 1.1: Website editor path — added diagnostic logging for empty page queries
+- 1.2: Order path split — consolidated all order CRUD to canonical `organizations/{PLATFORM_ID}/orders` (checkout-service, payment-service, ecommerce-analytics)
+- 1.3: Auth race condition — added `authLoading` guard to 6 dashboard pages (analytics, analytics/ecommerce, orders, leads, deals, contacts)
+- 1.4: Missing order fields — added `userId` and `paymentIntentId` to Order type + checkout flow
+- 1.5: Hardcoded IP — replaced `127.0.0.1` with `customerIp` field in PaymentRequest
+- 1.6: Discount race condition — replaced non-atomic increment with Firestore `runTransaction`
+- 1.7: Duplicate detection cap — replaced 100-record limit with cursor-based full pagination
+
+---
+
+## SESSION 15: SYSTEM-WIDE AUDIT FINDINGS
+
+### Audit Methodology
+Ran 5 specialized sub-agents in parallel:
+1. **Website Editor Deep Dive** — Root cause analysis of blank editor
+2. **Revenue & E-Commerce Audit** — Stripe, orders, cart, checkout, analytics
+3. **CRM & Outbound Audit** — Contacts, deals, sequences, forms, social, analytics
+4. **Auth, Workflows & Integrations Audit** — Firebase auth, RBAC, OAuth, webhooks, cron, voice, AI agents
+5. **Test Infrastructure Audit** — Playwright, Jest, CI/CD, test coverage gaps
+
+---
+
+### CRITICAL FINDING 1: Website Editor — Firestore Collection Path Mismatch
+
+**Status:** ROOT CAUSE CONFIRMED
+
+**The Problem:**
+`src/lib/firebase/collections.ts` (lines 17-25) resolves collection paths based on `NEXT_PUBLIC_APP_ENV`:
+
+| Scenario | NEXT_PUBLIC_APP_ENV | PREFIX | Pages Collection |
+|----------|-------------------|--------|------------------|
+| Production | `production` | (none) | `organizations/rapid-compliance-root/website/pages/items` |
+| Development | unset/`development` | `test_` | `test_organizations/rapid-compliance-root/test_website/pages/items` |
+
+Pages were created in dev mode (with `test_` prefix) but the production build queries without the prefix. Result: **empty page list, silent failure, "No pages yet" shown**.
+
+**Key Files:**
+- `src/lib/firebase/collections.ts:17-25` — PREFIX logic
+- `src/lib/firebase/collections.ts:116-120` — `getSubCollection()` builds path
+- `src/app/api/website/pages/route.ts:64` — Queries `getSubCollection('website')/pages/items`
+- `src/app/(dashboard)/website/editor/page.tsx:194-228` — Falls back to blank page on empty result
+- `src/app/(dashboard)/website/pages/page.tsx:50-76` — Shows "No pages yet" on empty array
+
+**Fix Required:**
+1. Verify `NEXT_PUBLIC_APP_ENV` on Vercel (must be `production`)
+2. Check Firebase Console for where pages actually exist
+3. If pages in `test_` path, migrate them OR ensure consistent env var
+4. Add logging when pages query returns empty (currently silent)
+
+---
+
+### CRITICAL FINDING 2: E-Commerce Order Path Split (PRODUCTION-BREAKING)
+
+**Status:** Orders written to TWO different Firestore paths — checkout succeeds but orders are invisible.
+
+**The Split:**
+| Operation | Path Used | File |
+|-----------|-----------|------|
+| Checkout session creation | `organizations/{PLATFORM_ID}/orders` | `checkout/create-session/route.ts:177` |
+| Checkout service order write | `organizations/{PLATFORM_ID}/workspaces/{workspaceId}/orders` | `checkout-service.ts:255` |
+| Stripe webhook order update | `organizations/{PLATFORM_ID}/orders` | `webhooks/stripe/route.ts:236` |
+| Order listing API | `organizations/{PLATFORM_ID}/orders` | `ecommerce/orders/route.ts:69` |
+| Payment service refunds | `organizations/{PLATFORM_ID}/workspaces/{workspaceId}/orders` | `payment-service.ts:527` |
+| E-commerce analytics | `organizations/{PLATFORM_ID}/workspaces/{workspaceId}/orders` | `ecommerce-analytics.ts:57` |
+
+**Impact:**
+- User pays → checkout-service writes order to workspace path → webhook tries to update at root path → order never marked "completed"
+- Order list API queries root path → user sees "no orders"
+- Analytics queries workspace path → revenue shows $0
+- Refund service can't find orders → refunds fail
+
+**Fix Required:** Consolidate ALL order operations to canonical path `organizations/{PLATFORM_ID}/orders`. Update: `checkout-service.ts`, `payment-service.ts`, `ecommerce-analytics.ts`.
+
+---
+
+### CRITICAL FINDING 3: Dashboard Auth Race Condition (Beyond Website Editor)
+
+**Status:** Analytics dashboard page makes API calls BEFORE Firebase auth resolves.
+
+**File:** `src/app/(dashboard)/analytics/page.tsx:76-102`
+- `useEffect` fires `Promise.all([fetch(...), fetch(...), ...])` without checking auth state first
+- Same bug pattern that was fixed in the website editor in Session 14
+- Likely affects other dashboard pages too
+
+**Fix Required:** Add `if (authLoading) return;` guard to analytics and audit ALL dashboard pages for this pattern.
+
+---
+
+### HIGH FINDING 4: Additional E-Commerce Issues
+
+| Issue | Severity | File | Details |
+|-------|----------|------|---------|
+| Hardcoded 127.0.0.1 IP | HIGH | `payment-providers.ts:225` | 2Checkout fraud detection broken |
+| Missing `paymentIntentId` on orders | HIGH | `checkout-service.ts:164-283` | Webhook can't correlate payment → order |
+| Missing `userId` on orders | HIGH | `checkout-service.ts` | Order listing filter by userId returns nothing |
+| Discount race condition | MEDIUM | `cart-service.ts:300-309` | Concurrent discount usage can exceed limit |
+| Order access control field mismatch | MEDIUM | `orders/[orderId]/route.ts:45` | Checks `customerEmail` vs `customer.email` |
+
+---
+
+### HIGH FINDING 5: CRM & Data Integrity Issues
+
+| Issue | Severity | File | Details |
+|-------|----------|------|---------|
+| Duplicate detection capped at 100 records | HIGH | `duplicate-detection.ts:147-151` | Fuzzy match misses records beyond first 100 |
+| Pipeline summary fetches ALL deals | MEDIUM | `deal-service.ts:378` | No pagination, memory risk |
+| Sequence enrollment race condition | LOW | `sequence-engine.ts:51-92` | Check-then-create without transaction |
+| Inconsistent Firestore paths across services | HIGH | Multiple | Some use `entities/{type}/records`, others direct |
+| Gmail email sends lack metadata tracking | MEDIUM | `sequence-engine.ts:321-331` | Enrollments not tracked for Gmail path |
+
+---
+
+### POSITIVE FINDINGS (Working Correctly)
+
+| Area | Status | Notes |
+|------|--------|-------|
+| All cron jobs | EXCELLENT | Fail-closed with CRON_SECRET |
+| Admin impersonation | EXCELLENT | Owner-only, audit trail, prevents self/owner impersonation |
+| OAuth state management | EXCELLENT | Crypto-secure, one-time tokens, 10min TTL |
+| Workflow engine | GOOD | 30s timeout per action, recursion-safe loop limits |
+| RBAC system | GOOD | 4-role model with 47 permissions |
+| CAN-SPAM compliance | GOOD | `ensureCompliance()` injected before send |
+| Social media agent | GOOD | Velocity limits, sentiment check, human escalation |
+| Form security | GOOD | Honeypot, timing check, CAPTCHA, XSS sanitization |
+| Dashboard layout auth guard | GOOD | Redirects unauthenticated users |
+
+---
+
+## MASTER TESTING PLAN
+
+### Existing Test Infrastructure
+
+| Component | Status | Details |
+|-----------|--------|---------|
+| **Playwright** | Configured | `playwright.config.ts` — Chromium, Firefox, WebKit, Mobile Chrome, Mobile Safari |
+| **Jest** | Configured | `jest.config.js` — Node env, Admin SDK, path aliases |
+| **E2E Tests** | 9 specs | `tests/e2e/` — admin routes, agent chain, checkout, email, voice, website, CRM pages |
+| **Integration Tests** | 12+ files | `tests/integration/` — signals, sagas, enrichment, email, payment, sequencer |
+| **Unit Tests** | 4 files | `src/lib/**/__tests__/` — event router, jasper, mutation engine, analytics |
+| **Test Helpers** | 3 files | `tests/helpers/` — cleanup tracker, utils, e2e cleanup |
+| **CI/CD** | Active | `.github/workflows/ci.yml` — lint, type-check, Jest, build |
+| **Playwright UI** | Available | `npm run test:playwright:ui` — visual mode for watching tests |
+
+### Test Commands
+```bash
+npm test                    # Jest unit/integration tests
+npm run test:watch          # Jest watch mode
+npm run test:coverage       # Jest with coverage
+npm run test:e2e:full       # Full E2E pipeline (emulators + seed + tests)
+npm run test:playwright     # Playwright headless
+npm run test:playwright:ui  # Playwright visual UI mode (WATCH AGENTS TEST)
+npx playwright test --headed  # Playwright with visible browser
+```
+
+---
+
+### Phase 1: Fix Critical Bugs (Before Testing)
+
+These must be fixed first — testing broken features wastes time.
+
+| # | Task | Files | Priority |
+|---|------|-------|----------|
+| 1.1 | **Fix website editor Firestore path** — Verify env vars, check actual data location in Firebase Console, migrate data or fix path | `collections.ts`, `website/pages/route.ts` | P0 |
+| 1.2 | **Consolidate order paths** — All order CRUD to `organizations/{PLATFORM_ID}/orders` | `checkout-service.ts`, `payment-service.ts`, `ecommerce-analytics.ts` | P0 |
+| 1.3 | **Fix analytics dashboard auth race** — Add `authLoading` guard | `analytics/page.tsx` + audit all dashboard pages | P0 |
+| 1.4 | **Add `paymentIntentId` and `userId` to orders** — Webhook + listing depend on these | `checkout-service.ts` | P0 |
+| 1.5 | **Fix hardcoded 127.0.0.1 IP** | `payment-providers.ts:225` | P1 |
+| 1.6 | **Fix discount race condition** — Use Firestore transaction | `cart-service.ts:300-309` | P1 |
+| 1.7 | **Remove duplicate detection 100-record cap** | `duplicate-detection.ts` | P1 |
+
+---
+
+### Phase 2: Playwright E2E Test Suite — Feature-by-Feature Walkthrough
+
+These are the Playwright tests you can **watch in real-time** via `npm run test:playwright:ui` or `npx playwright test --headed`. Each test walks through the feature as a real user would.
+
+#### Test Group A: Authentication & Onboarding
+| Test | What It Validates |
+|------|-------------------|
+| `auth-signup.spec.ts` | Create account → verify email → land on dashboard |
+| `auth-login.spec.ts` | Login with email/password → dashboard loads → correct role displayed |
+| `auth-rbac.spec.ts` | Admin sees admin routes, member cannot access admin pages |
+| `auth-session.spec.ts` | Refresh page → session persists → no re-login required |
+
+#### Test Group B: Website Builder
+| Test | What It Validates |
+|------|-------------------|
+| `website-pages-list.spec.ts` | Navigate to Website → pages list loads → shows created pages |
+| `website-create-page.spec.ts` | Create new page → title/slug → save → appears in list |
+| `website-editor-visual.spec.ts` | Open editor → drag section → edit text → preview → save |
+| `website-publish.spec.ts` | Publish page → public URL accessible → content renders |
+
+#### Test Group C: E-Commerce & Checkout
+| Test | What It Validates |
+|------|-------------------|
+| `ecommerce-products.spec.ts` | Create product → set price → add to catalog → visible in store |
+| `ecommerce-cart.spec.ts` | Add to cart → adjust quantity → apply discount → cart total correct |
+| `ecommerce-checkout.spec.ts` | Cart → Stripe checkout → payment completes → order created → order visible |
+| `ecommerce-orders.spec.ts` | Order history loads → order details accessible → status correct |
+
+#### Test Group D: CRM
+| Test | What It Validates |
+|------|-------------------|
+| `crm-contacts.spec.ts` | Create contact → edit fields → search → delete (with referential check) |
+| `crm-deals.spec.ts` | Create deal → move through pipeline stages → deal value updates |
+| `crm-leads.spec.ts` | Create lead → qualify → convert to contact → verify conversion |
+| `crm-duplicates.spec.ts` | Import duplicate contacts → detection fires → merge → verify merged record |
+
+#### Test Group E: Email & Outbound
+| Test | What It Validates |
+|------|-------------------|
+| `email-compose.spec.ts` | Compose email → add recipient → send → verify in sent list |
+| `email-sequence.spec.ts` | Create sequence → add steps → enroll prospect → verify step execution |
+| `email-unsubscribe.spec.ts` | Click unsubscribe link → confirm → verify contact opted out |
+| `email-compliance.spec.ts` | Send email → verify CAN-SPAM footer present → physical address shown |
+
+#### Test Group F: Social Media
+| Test | What It Validates |
+|------|-------------------|
+| `social-compose.spec.ts` | Compose post → platform selector → character count → schedule |
+| `social-queue.spec.ts` | View queue → reorder posts → delete post → queue updates |
+| `social-analytics.spec.ts` | Social analytics dashboard loads → metrics displayed → date range works |
+
+#### Test Group G: Voice & AI
+| Test | What It Validates |
+|------|-------------------|
+| `voice-call.spec.ts` | Initiate call → TCPA check → call record created |
+| `ai-agents.spec.ts` | View agent list → agent status → trigger agent task → verify execution |
+| `ai-jasper.spec.ts` | Open Jasper chat → send command → verify tool execution |
+
+#### Test Group H: Workflows & Automation
+| Test | What It Validates |
+|------|-------------------|
+| `workflow-create.spec.ts` | Create workflow → add trigger → add actions → save → activate |
+| `workflow-execute.spec.ts` | Trigger workflow → verify each action executed → check execution log |
+| `workflow-webhook.spec.ts` | Send webhook → workflow fires → action completes |
+
+#### Test Group I: Admin & Settings
+| Test | What It Validates |
+|------|-------------------|
+| `admin-users.spec.ts` | View users list → change role → verify permission change |
+| `admin-integrations.spec.ts` | View integrations → connect/disconnect → status updates |
+| `admin-analytics.spec.ts` | Analytics dashboard loads → revenue chart → pipeline metrics → date filters |
+| `admin-settings.spec.ts` | Update company settings → save → verify persistence |
+
+#### Test Group J: Forms
+| Test | What It Validates |
+|------|-------------------|
+| `forms-create.spec.ts` | Create form → add fields → set validation → save |
+| `forms-publish.spec.ts` | Publish form → access public URL → submit as visitor |
+| `forms-submissions.spec.ts` | View submissions list → submission details → lead auto-created |
+
+---
+
+### Phase 3: Automated Regression Suite
+
+After all Phase 2 tests pass, configure continuous regression:
+
+1. **Pre-commit hook integration** — Run critical path tests before push
+2. **CI/CD Playwright integration** — Add Playwright to GitHub Actions workflow
+3. **Nightly full suite** — All 35+ tests across 5 browsers
+4. **Visual regression** — Screenshot baselines for key pages
+5. **Performance benchmarks** — Page load times, API response times
+
+---
+
+### Phase 4: Manual Verification Checklist
+
+Items that require human eyes or external service validation:
+
+- [ ] Verify `NEXT_PUBLIC_APP_ENV=production` on Vercel dashboard
+- [ ] Confirm Stripe keys are live mode (`sk_live_*` / `pk_live_*`)
+- [ ] Set `NEXT_PUBLIC_APP_URL=https://salesvelocity.ai`
+- [ ] Generate strong `CRON_SECRET` (32+ chars)
+- [ ] Verify Firebase Admin private key newlines (`\n` not `\\n`)
+- [ ] Open Firebase Console → check where website pages actually live
+- [ ] Test Stripe webhook delivery in Stripe dashboard
+- [ ] Verify email delivery (SendGrid/Resend) with real inbox
+- [ ] Test Twitter OAuth flow end-to-end
+- [ ] Verify voice call initiation with real Twilio credentials
+
+---
+
+## EXECUTION ORDER
+
+```
+Session 15:            Audit complete, plan written
+Session 16 (Done):     Phase 1 — Fix critical bugs (1.1-1.7) ✓
+Session 17:            Phase 2A-B — Auth + Website Builder tests
+Session 18:            Phase 2C-D — E-Commerce + CRM tests
+Session 19:            Phase 2E-G — Email + Social + Voice/AI tests
+Session 20:            Phase 2H-J — Workflows + Admin + Forms tests
+Session 21:            Phase 3 — CI/CD integration + regression suite
+Session 22:            Phase 4 — Manual verification + production deploy
+```
+
+---
+
+## Known Open Issues
 
 | Issue | Details |
 |-------|---------|
 | Facebook/Instagram missing | Blocked: Meta Developer Portal (Tier 3.2) |
 | LinkedIn unofficial | Uses RapidAPI, blocked: Marketing Developer Platform (Tier 3.3) |
 | ~15 TODO comments | All external deps: i18n (6 langs), Outlook webhooks, vector embeddings, web scraping, DM feature |
-
-### Session History (1-9)
-**Sessions 1-8:** All prior stabilization work is complete: saga persistence, kill switch, revenue attribution pipeline, Twitter engagement, E2E tests, CI/CD cleanup, Stripe checkout, social OAuth, website auth fixes, DALL-E 3, AI page builder, video pipeline wiring, and 33+ TODO resolutions. Details in git history.
-
-**Session 9 (February 13, 2026):** Full production readiness QA audit. Ran 4 QA agents (Revenue, Data Integrity, Growth, Platform) in parallel — discovered 14 Critical / 45 Major / 40 Minor / 23 Info issues. All 14 Critical issues resolved and committed (`3b1f5ea3`).
-
-**Session 10 (February 13, 2026):** Resolved all 45 Major issues across 35 files (659 insertions, 190 deletions). Stripe webhook idempotency, OAuth CSRF fixes, webhook fail-closed pattern, referential integrity guards, analytics accuracy, social media validation, CRM merge safety. Committed (`a3667b8c`). Merged to main.
-
-**Session 11 (February 13, 2026):** Phase 2-4 production readiness audits. Ran 4 parallel QA agents (security, user flows, infrastructure, minors). Found 6 Critical + 8 Major + 12 Minor issues. Fixed: cart path mismatch (Stripe checkout/webhook aligned to workspace-scoped path), cron fail-open auth, voice AI signature bypass, voice fallback zero auth, wildcard CORS on 3 authenticated routes, HSTS/Permissions-Policy global headers, CORS placeholder domain. Deferred: Redis rate limiting (infrastructure), env var documentation, missing Firestore indexes.
-
-**Session 12 (February 13, 2026):** Infrastructure hardening session. Added 9 missing Firestore composite indexes (deals, activities, workflowExecutions, emailActivities, sequenceEnrollments, pages). Documented all ~103 env vars in `.env.example` (was 18). Wired `performHealthCheck()` to `/api/health` endpoint. Converted ~45 console.* calls to structured logger across 24 files. Merged all Session 11-12 commits to main.
-
-**Session 13 (February 13, 2026):** End-to-end user flow audit + Firebase cleanup. Ran 5 parallel audit agents (signup/auth, onboarding/dashboard, checkout/payment, test data, CRM). Found 3 Critical + 4 High issues. Fixed all 3 Critical issues:
-- **C1: Signup race condition** — Converted 3 sequential Firestore writes to atomic `writeBatch()` with `deleteUser()` rollback on failure. Added explicit `role: 'member'`, `status: 'active'`.
-- **C2: Order path mismatch** — GET/PUT in `orders/[orderId]/route.ts` read from wrong path; aligned to canonical `organizations/{PLATFORM_ID}/orders/` used by checkout and webhook.
-- **C3: Cart ID mismatch** — Cart operations used frontend `sessionId` but checkout used `user.uid`; all cart routes now use authenticated user's UID. `sessionId` deprecated.
-- **Security: Demo-user production guard** — `AuthProvider.tsx` demo admin fallback gated to `NODE_ENV === 'development'` only.
-- **Firebase cleanup** — Built `scripts/cleanup-all-test-data.js` (5-phase recursive cleaner). Removed 26 phantom orgs, 11 orphaned documents. Verification scan confirmed zero remnants.
-Committed (`bf706c8a`).
-
-**Session 14 (February 13, 2026):** Website editor 401 fix + remaining TODO resolution + launch readiness assessment.
-- **Website editor auth race condition** — Editor and Pages list fired API calls (`GET /api/website/pages`) before Firebase restored the user session, causing `auth.currentUser` to be `null` → no Bearer token → 401 → blank "Untitled Page" editor. Fixed by waiting for `useAuth().loading` to become `false` before making API calls in both `editor/page.tsx` and `pages/page.tsx`. Committed (`30857e1b`).
-- **Resolved all remaining TODOs** — Redis rate limiting implemented, async getEmailGenerations, analytics test mocks updated. Commits (`75b638ba`, `e45bc474`).
-- **CRITICAL: Website editor still shows blank page on Vercel** — Even after auth fix, the editor shows "Untitled Page" / "Empty Page" instead of loading existing website pages. Suspected root cause: **Firestore collection path mismatch**. The `getSubCollection('website')` resolves to different paths based on `NEXT_PUBLIC_APP_ENV`:
-  - Production (`NEXT_PUBLIC_APP_ENV=production`): `organizations/rapid-compliance-root/website/pages/items`
-  - Dev/default: `test_organizations/rapid-compliance-root/test_website/pages/items`
-  - If pages were created under one prefix but the production build queries the other, they'll be invisible.
-  - **Also possible:** Legacy multi-tenant org ID remnants — pages may exist under a different org path from before the penthouse migration.
-  - **Action needed:** Verify `NEXT_PUBLIC_APP_ENV` on Vercel, inspect actual Firestore data paths, and reconcile.
-
----
-
-## PRIORITY 1: Website Editor — Pages Not Loading
-
-**Status:** BROKEN on production (Vercel). Auth race condition fixed but pages still not appearing.
-
-**Investigation plan for next session:**
-1. Check `NEXT_PUBLIC_APP_ENV` value in Vercel environment variables — if not `production`, all collection paths will have `test_` prefix
-2. Open Firebase Console → Firestore → verify where website pages actually live (which collection path)
-3. Compare actual Firestore path vs what `getSubCollection('website')` resolves to on Vercel
-4. If pages exist under a legacy/different path, either migrate the data or update the collection resolver
-5. Check if there are any pages at all in Firestore (may need to create seed data)
-6. Verify the auth fix deployed (check Vercel deployment hash vs `30857e1b`)
-
-**Key files:**
-- `src/lib/firebase/collections.ts` — `getSubCollection()` builds the Firestore path with environment-aware prefix
-- `src/app/api/website/pages/route.ts` — GET handler queries `getSubCollection('website')/pages/items`
-- `src/app/(dashboard)/website/editor/page.tsx` — Client that calls the API and falls back to blank page on failure
-- `src/lib/constants/platform.ts` — `PLATFORM_ID = 'rapid-compliance-root'`
-
----
-
-## Production Readiness Progress
-
-### Phase 1: QA Audit — COMPLETE ✅
-
-All 4 QA agents ran. Results:
-
-| Agent | Critical | Major | Minor | Info |
-|-------|----------|-------|-------|------|
-| QA Revenue | 4 | 10 | 8 | 5 |
-| QA Data Integrity | 4 | 16 | 10 | 5 |
-| QA Growth | 4 | 9 | 12 | 6 |
-| QA Platform | 2 | 10 | 10 | 7 |
-| **TOTAL** | **14** | **45** | **40** | **23** |
-
-### Phase 5 (Critical Fixes) — COMPLETE ✅
-
-All 14 Critical issues resolved (commit `3b1f5ea3`):
-
-| # | Domain | Issue | Fix |
-|---|--------|-------|-----|
-| CRIT-1 | Revenue | Dollar/cent conversion heuristic | Removed — prices treated as cents |
-| CRIT-2 | Revenue | Cart not cleared after payment | Webhook clears cart via cartId metadata |
-| CRIT-3 | Revenue | Order created before payment | Order now created after Stripe session |
-| CRIT-4 | Revenue | Orders in 3 Firestore paths | Consolidated to `organizations/{id}/orders` |
-| CRIT-5 | Data | No Zod on sequences POST | Full Zod schema with step validation |
-| CRIT-6 | Data | No Zod on custom-tools POST/PUT | Zod schemas replace manual type guards |
-| CRIT-7 | Data | No schema concurrency control | Optimistic locking via `expectedVersion` |
-| CRIT-8 | Data | Analytics fetch ALL documents | 10K limits + date-range constraints on 5 routes |
-| CRIT-9 | Growth | LinkedIn false `success: true` | Returns `success: false` with message |
-| CRIT-10 | Growth | Public form GET no rate limit | `rateLimitMiddleware` added |
-| CRIT-11 | Growth | CAPTCHA enabled but not enforced | reCAPTCHA v3 verification when enabled |
-| CRIT-12 | Growth | No `/unsubscribe` route | Created `/api/public/unsubscribe` (GET+POST) |
-| CRIT-13 | Platform | OAuth CSRF state not validated | Firestore-backed tokens with TTL |
-| CRIT-14 | Platform | OAuth encryption fails open | Fails closed — throws on failure |
-
----
-
-## PRIMARY TASK: Fix Remaining Major Issues (45)
-
-### Highest Priority Majors
-
-**Revenue & E-Commerce:**
-
-| # | Issue | File(s) |
-|---|-------|---------|
-| MAJ-1 | Subscription webhooks only logged, not processed | `src/app/api/webhooks/stripe/route.ts` |
-| MAJ-2 | Webhook returns 200 on processing errors (silent loss) | `src/app/api/webhooks/stripe/route.ts` |
-| MAJ-3 | Three different Stripe key retrieval mechanisms | Multiple checkout/payment files |
-| MAJ-4 | Cart discounts not applied during Stripe checkout | `src/app/api/ecommerce/checkout/create-session/route.ts` |
-| MAJ-5 | Cart ID mismatch between cart ops and checkout | `src/app/api/ecommerce/checkout/create-session/route.ts` |
-| MAJ-6 | No stock validation in Stripe checkout path | `src/app/api/ecommerce/checkout/create-session/route.ts` |
-| MAJ-7 | No feature gating enforcement in API | No middleware exists |
-| MAJ-8 | Subscription cancel/downgrade doesn't call Stripe API | `src/app/api/subscriptions/route.ts` |
-| MAJ-9 | Revenue analytics reads incomplete order set | `src/app/api/analytics/revenue/route.ts` |
-| MAJ-10 | Refunds not subtracted from revenue | `src/app/api/analytics/revenue/route.ts` |
-
-**Data Integrity:**
-
-| # | Issue | File(s) |
-|---|-------|---------|
-| MAJ-11 | Contact delete checks wrong field for activities | `src/lib/crm/contact-service.ts` |
-| MAJ-12 | Deal delete checks wrong field for activities | `src/lib/crm/deal-service.ts` |
-| MAJ-13 | Workflow delete has no referential integrity checks | `src/app/api/workflows/[workflowId]/route.ts` |
-| MAJ-14 | Form delete has no referential check for submissions | `src/app/api/forms/[formId]/route.ts` |
-| MAJ-15 | `.passthrough()` on e-commerce types (13 nested objects) | `src/lib/ecommerce/types.ts` |
-| MAJ-16 | `.passthrough()` on agent persona and identity routes | `src/app/api/agent/persona/route.ts`, identity |
-| MAJ-17 | FirestoreService.set() conditional timestamp may skip createdAt | `src/lib/db/firestore-service.ts` |
-| MAJ-18 | Client-side timestamps in form fields | `src/app/api/forms/[formId]/route.ts` |
-| MAJ-19 | Sequence docs store steps as unbounded array | `src/app/api/outbound/sequences/route.ts` |
-| MAJ-20 | Schema batch updater uses wrong change type | `src/lib/schema/schema-change-debouncer.ts` |
-| MAJ-21 | Conversion rate uses wrong denominator | `src/lib/analytics/analytics-service.ts` |
-| MAJ-22 | E-commerce customer metrics assume all new customers | `src/lib/analytics/ecommerce-analytics.ts` |
-| MAJ-23 | Revenue quota hardcoded at $100,000 | `src/lib/analytics/dashboard/analytics-engine.ts` |
-| MAJ-24 | Duplicate detection fetches ALL records | `src/lib/crm/duplicate-detection.ts` |
-| MAJ-25 | Merge operation lacks transaction safety | `src/app/api/crm/duplicates/merge/route.ts` |
-| MAJ-26 | Field type changes have no data migration | `src/lib/schema/schema-change-tracker.ts` |
-
-**Growth & Outreach:**
-
-| # | Issue | File(s) |
-|---|-------|---------|
-| MAJ-27 | No LinkedIn char limit on queue/schedule routes | `src/app/api/social/queue/route.ts`, schedule |
-| MAJ-28 | UTM appending can truncate tweets with broken links | `src/lib/social/autonomous-posting-agent.ts` |
-| MAJ-29 | CAN-SPAM ensureCompliance not used at send endpoint | `src/app/api/email/send/route.ts` |
-| MAJ-30 | Sequence enrollment race condition (no transaction) | `src/lib/outbound/sequence-engine.ts` |
-| MAJ-31 | No Zod validation on SEO settings input | `src/app/api/admin/growth/seo/route.ts` |
-| MAJ-32 | No meta title/description length validation | `src/app/api/admin/growth/seo/route.ts` |
-
-**Platform Infrastructure:**
-
-| # | Issue | File(s) |
-|---|-------|---------|
-| MAJ-33 | SendGrid webhook fails open when key missing | `src/app/api/webhooks/email/route.ts` |
-| MAJ-34 | Gmail webhook fails open when secret missing | `src/app/api/webhooks/gmail/route.ts` |
-| MAJ-35 | Twilio SMS webhook fails open when token missing | `src/app/api/webhooks/sms/route.ts` |
-| MAJ-36 | Twilio Voice webhook fails open when token missing | `src/app/api/webhooks/voice/route.ts` |
-| MAJ-37 | Microsoft OAuth callback uses relative redirects | `src/app/api/integrations/microsoft/callback/route.ts` |
-| MAJ-38 | QuickBooks OAuth callback uses relative redirects | `src/app/api/integrations/quickbooks/callback/route.ts` |
-| MAJ-39 | Slack OAuth callback uses relative redirects | `src/app/api/integrations/slack/callback/route.ts` |
-| MAJ-40 | Workflow engine has no execution timeout | `src/lib/workflows/workflow-engine.ts` |
-| MAJ-41 | No recursion prevention in workflow triggers | `src/lib/workflows/triggers/firestore-trigger.ts` |
-| MAJ-42 | Feature toggle GET endpoint has no authentication | `src/app/api/orchestrator/feature-toggle/route.ts` |
-| MAJ-43 | System health uses console.error instead of logger | `src/app/api/orchestrator/system-health/route.ts` |
-| MAJ-44 | Workflow routes missing `success` field in response | `src/app/api/workflows/route.ts` |
-| MAJ-45 | Workflow routes use different auth pattern | `src/app/api/workflows/route.ts` |
-
-### Phases 2-4: COMPLETE ✅
-
-- **Phase 2:** Critical User Flow Verification — cart path fix, checkout discount fix (Session 11)
-- **Phase 3:** Security Audit — voice auth, CORS, HSTS, cron auth (Session 11)
-- **Phase 4:** Infrastructure — Firestore indexes, env var docs, health check wiring, structured logging (Session 12)
-
-### Definition of Done
-
-The platform is production ready when:
-- [x] All 4 QA agents report zero Critical issues ✅
-- [x] All 45 Major issues resolved (Session 10, commit `a3667b8c`) ✅
-- [x] 9/10 critical user flows pass (cart path fixed Session 11) ✅
-- [x] Security audit Critical findings resolved (Session 11) ✅
-- [x] Infrastructure: Firestore indexes added (34 total), env var docs (103 vars), health check wired ✅
-- [x] Redis rate limiting implemented (Session 14, commit `75b638ba`) ✅
-- [x] E2E flow audit: signup → onboarding → cart → checkout → payment — 3 Critical blockers found and fixed (Session 13) ✅
-- [ ] **Website editor loads existing pages** — Currently broken, see Priority 1 above
-- [ ] **Pre-deploy env var verification** — Run `npm run deploy:verify-env` on Vercel, confirm Stripe live keys, CRON_SECRET, NEXT_PUBLIC_APP_URL
-- [ ] **Fix hardcoded test IP** — `src/lib/ecommerce/payment-providers.ts:225` has `CustomerIP: '127.0.0.1'`
-
-### Pre-Launch Checklist (Target: February 15, 2026)
-
-- [ ] Fix website editor page loading (Priority 1 — investigate Firestore collection path)
-- [ ] Verify `NEXT_PUBLIC_APP_ENV=production` on Vercel
-- [ ] Confirm Stripe keys are `sk_live_*` / `pk_live_*` (not test mode)
-- [ ] Set `NEXT_PUBLIC_APP_URL=https://salesvelocity.ai`
-- [ ] Generate strong `CRON_SECRET` (32+ chars) and set in Vercel
-- [ ] Verify Firebase Admin private key newlines (`\n` not `\\n`)
-- [ ] Fix `payment-providers.ts:225` hardcoded `127.0.0.1` IP
-- [ ] Run `npm run deploy:verify-env` — all green
-- [ ] Smoke test: login → website editor → checkout flow on production
 
 ---
 
@@ -261,6 +391,7 @@ The platform is production ready when:
 | `ENGINEERING_STANDARDS.md` | Code quality requirements |
 | `AGENT_REGISTRY.json` | AI agent configurations (52 agents) |
 | `src/lib/constants/platform.ts` | PLATFORM_ID and platform identity |
+| `src/lib/firebase/collections.ts` | Firestore collection paths with env-aware prefix |
 | `src/lib/orchestration/event-router.ts` | Event rules engine with persistence |
 | `src/lib/orchestration/saga-persistence.ts` | Saga checkpoint/resume + event dedup |
 | `src/lib/orchestration/swarm-control.ts` | Global kill switch + per-manager pause |
@@ -272,4 +403,7 @@ The platform is production ready when:
 | `src/app/api/public/unsubscribe/route.ts` | CAN-SPAM email unsubscribe (Session 9) |
 | `vercel.json` | Cron jobs, CORS, security headers |
 | `firestore.indexes.json` | 34 composite indexes |
-| `tsconfig.eslint.json` | ESLint tsconfig scoped to `src/` |
+| `playwright.config.ts` | Playwright test configuration (5 browsers) |
+| `jest.config.js` | Jest test configuration |
+| `tests/e2e/` | 9 existing Playwright E2E specs |
+| `tests/integration/` | 12+ Jest integration tests |
