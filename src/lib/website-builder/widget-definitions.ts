@@ -1,6 +1,6 @@
 /**
  * Widget Definitions
- * Defines all 35-40 widgets with default data and styles
+ * Defines all 35+ widgets with default data and dark theme styles
  */
 
 import type { WidgetType, WidgetData, WidgetStyle } from '@/types/website';
@@ -19,7 +19,7 @@ export const widgetDefinitions: Record<WidgetType, WidgetDefinition> = {
   'container': {
     label: 'Container',
     description: 'Wrapper for content',
-    icon: '📦',
+    icon: '[]',
     category: 'layout',
     defaultData: {},
     defaultStyle: {
@@ -31,7 +31,7 @@ export const widgetDefinitions: Record<WidgetType, WidgetDefinition> = {
   'row': {
     label: 'Row',
     description: 'Horizontal layout',
-    icon: '⬌',
+    icon: '||',
     category: 'layout',
     defaultData: {},
     defaultStyle: {
@@ -45,7 +45,7 @@ export const widgetDefinitions: Record<WidgetType, WidgetDefinition> = {
   'column': {
     label: 'Column',
     description: 'Vertical layout',
-    icon: '⬍',
+    icon: '=',
     category: 'layout',
     defaultData: {},
     defaultStyle: {
@@ -59,7 +59,7 @@ export const widgetDefinitions: Record<WidgetType, WidgetDefinition> = {
   'spacer': {
     label: 'Spacer',
     description: 'Add vertical spacing',
-    icon: '↕️',
+    icon: '[]',
     category: 'layout',
     defaultData: {
       height: '2rem',
@@ -72,16 +72,16 @@ export const widgetDefinitions: Record<WidgetType, WidgetDefinition> = {
   'divider': {
     label: 'Divider',
     description: 'Horizontal line',
-    icon: '—',
+    icon: '--',
     category: 'layout',
     defaultData: {
       thickness: '1px',
-      color: '#dee2e6',
+      color: 'rgba(255,255,255,0.1)',
     },
     defaultStyle: {
       width: '100%',
       height: '1px',
-      backgroundColor: '#dee2e6',
+      backgroundColor: 'rgba(255,255,255,0.1)',
       margin: { top: '1rem', bottom: '1rem' },
     },
   },
@@ -100,7 +100,8 @@ export const widgetDefinitions: Record<WidgetType, WidgetDefinition> = {
     defaultStyle: {
       fontSize: '2rem',
       fontWeight: '700',
-      color: '#212529',
+      color: '#ffffff',
+      fontFamily: 'Inter, system-ui, sans-serif',
       margin: { bottom: '1rem' },
     },
   },
@@ -108,7 +109,7 @@ export const widgetDefinitions: Record<WidgetType, WidgetDefinition> = {
   'text': {
     label: 'Text',
     description: 'Paragraph text',
-    icon: '📄',
+    icon: 'T',
     category: 'content',
     defaultData: {
       content: 'This is a paragraph of text. Edit this to add your own content.',
@@ -116,7 +117,8 @@ export const widgetDefinitions: Record<WidgetType, WidgetDefinition> = {
     defaultStyle: {
       fontSize: '1rem',
       lineHeight: '1.6',
-      color: '#495057',
+      color: 'rgba(255,255,255,0.7)',
+      fontFamily: 'Inter, system-ui, sans-serif',
       margin: { bottom: '1rem' },
     },
   },
@@ -124,7 +126,7 @@ export const widgetDefinitions: Record<WidgetType, WidgetDefinition> = {
   'button': {
     label: 'Button',
     description: 'Call to action button',
-    icon: '🔘',
+    icon: 'BTN',
     category: 'content',
     defaultData: {
       text: 'Click Me',
@@ -133,20 +135,21 @@ export const widgetDefinitions: Record<WidgetType, WidgetDefinition> = {
     },
     defaultStyle: {
       padding: { top: '0.75rem', right: '1.5rem', bottom: '0.75rem', left: '1.5rem' },
-      backgroundColor: '#007bff',
+      backgroundColor: '#6366f1',
       color: '#ffffff',
       border: 'none',
-      borderRadius: '4px',
+      borderRadius: '6px',
       fontSize: '1rem',
       fontWeight: '500',
       textAlign: 'center',
+      fontFamily: 'Inter, system-ui, sans-serif',
     },
   },
 
   'link': {
     label: 'Link',
     description: 'Text link',
-    icon: '🔗',
+    icon: 'LNK',
     category: 'content',
     defaultData: {
       text: 'Link Text',
@@ -154,7 +157,7 @@ export const widgetDefinitions: Record<WidgetType, WidgetDefinition> = {
       openInNewTab: false,
     },
     defaultStyle: {
-      color: '#007bff',
+      color: '#6366f1',
       textAlign: 'left',
     },
   },
@@ -162,7 +165,7 @@ export const widgetDefinitions: Record<WidgetType, WidgetDefinition> = {
   'image': {
     label: 'Image',
     description: 'Single image',
-    icon: '🖼️',
+    icon: 'IMG',
     category: 'content',
     defaultData: {
       src: 'https://via.placeholder.com/800x400',
@@ -172,14 +175,14 @@ export const widgetDefinitions: Record<WidgetType, WidgetDefinition> = {
     defaultStyle: {
       width: '100%',
       height: 'auto',
-      borderRadius: '4px',
+      borderRadius: '8px',
     },
   },
 
   'video': {
     label: 'Video',
     description: 'YouTube/Vimeo embed',
-    icon: '🎥',
+    icon: 'VID',
     category: 'content',
     defaultData: {
       url: '',
@@ -188,41 +191,42 @@ export const widgetDefinitions: Record<WidgetType, WidgetDefinition> = {
     },
     defaultStyle: {
       width: '100%',
-      borderRadius: '4px',
+      borderRadius: '8px',
     },
   },
 
   'hero': {
     label: 'Hero Section',
     description: 'Large hero banner',
-    icon: '🎯',
+    icon: 'HERO',
     category: 'content',
     defaultData: {
       heading: 'Welcome to Our Site',
       subheading: 'Build amazing things',
       buttonText: 'Get Started',
       buttonUrl: '#',
-      backgroundImage: 'https://via.placeholder.com/1920x600',
+      backgroundImage: '',
     },
     defaultStyle: {
-      padding: { top: '4rem', right: '2rem', bottom: '4rem', left: '2rem' },
+      padding: { top: '5rem', right: '2rem', bottom: '5rem', left: '2rem' },
       textAlign: 'center',
       backgroundSize: 'cover',
       backgroundPosition: 'center',
       color: '#ffffff',
+      backgroundColor: '#0a0a0a',
     },
   },
 
   'features': {
     label: 'Feature Grid',
     description: '3-column features',
-    icon: '⭐',
+    icon: 'FT',
     category: 'content',
     defaultData: {
       features: [
-        { icon: '🚀', title: 'Fast', description: 'Lightning fast performance' },
-        { icon: '🔒', title: 'Secure', description: 'Enterprise-grade security' },
-        { icon: '💪', title: 'Powerful', description: 'All the features you need' },
+        { icon: 'Zap', title: 'Fast', description: 'Lightning fast performance' },
+        { icon: 'Shield', title: 'Secure', description: 'Enterprise-grade security' },
+        { icon: 'Rocket', title: 'Powerful', description: 'All the features you need' },
       ],
     },
     defaultStyle: {
@@ -234,22 +238,22 @@ export const widgetDefinitions: Record<WidgetType, WidgetDefinition> = {
   'pricing': {
     label: 'Pricing Table',
     description: 'Pricing plans',
-    icon: '💰',
+    icon: '$',
     category: 'content',
     defaultData: {
       plans: [
-        { 
-          name: 'Basic', 
-          price: '$9', 
-          period: 'month', 
+        {
+          name: 'Basic',
+          price: '$9',
+          period: 'month',
           features: ['Feature 1', 'Feature 2', 'Feature 3'],
           buttonText: 'Choose Plan',
           buttonUrl: '#',
         },
-        { 
-          name: 'Pro', 
-          price: '$29', 
-          period: 'month', 
+        {
+          name: 'Pro',
+          price: '$29',
+          period: 'month',
           features: ['All Basic features', 'Feature 4', 'Feature 5'],
           buttonText: 'Choose Plan',
           buttonUrl: '#',
@@ -266,7 +270,7 @@ export const widgetDefinitions: Record<WidgetType, WidgetDefinition> = {
   'testimonial': {
     label: 'Testimonial',
     description: 'Customer review',
-    icon: '💬',
+    icon: 'Q',
     category: 'content',
     defaultData: {
       quote: 'This product changed my life!',
@@ -276,16 +280,17 @@ export const widgetDefinitions: Record<WidgetType, WidgetDefinition> = {
     },
     defaultStyle: {
       padding: { top: '2rem', right: '2rem', bottom: '2rem', left: '2rem' },
-      backgroundColor: '#f8f9fa',
-      borderRadius: '8px',
+      backgroundColor: 'rgba(255,255,255,0.03)',
+      borderRadius: '12px',
       textAlign: 'center',
+      color: '#ffffff',
     },
   },
 
   'cta': {
     label: 'CTA Block',
     description: 'Call to action section',
-    icon: '📢',
+    icon: 'CTA',
     category: 'content',
     defaultData: {
       heading: 'Ready to get started?',
@@ -295,17 +300,17 @@ export const widgetDefinitions: Record<WidgetType, WidgetDefinition> = {
     },
     defaultStyle: {
       padding: { top: '3rem', right: '2rem', bottom: '3rem', left: '2rem' },
-      backgroundColor: '#007bff',
+      backgroundColor: '#6366f1',
       color: '#ffffff',
       textAlign: 'center',
-      borderRadius: '8px',
+      borderRadius: '12px',
     },
   },
 
   'stats': {
     label: 'Stats',
     description: 'Key statistics',
-    icon: '📊',
+    icon: '#',
     category: 'content',
     defaultData: {
       stats: [
@@ -324,7 +329,7 @@ export const widgetDefinitions: Record<WidgetType, WidgetDefinition> = {
   'counter': {
     label: 'Counter',
     description: 'Animated number',
-    icon: '🔢',
+    icon: '123',
     category: 'content',
     defaultData: {
       number: 1000,
@@ -335,28 +340,30 @@ export const widgetDefinitions: Record<WidgetType, WidgetDefinition> = {
     defaultStyle: {
       textAlign: 'center',
       padding: { top: '1rem', bottom: '1rem' },
+      color: '#ffffff',
     },
   },
 
   'progress': {
     label: 'Progress Bar',
     description: 'Skill/progress bar',
-    icon: '▬',
+    icon: '>>',
     category: 'content',
     defaultData: {
       label: 'JavaScript',
       percentage: 90,
-      color: '#007bff',
+      color: '#6366f1',
     },
     defaultStyle: {
       margin: { bottom: '1rem' },
+      color: '#ffffff',
     },
   },
 
   'accordion': {
     label: 'Accordion',
     description: 'Collapsible content',
-    icon: '▼',
+    icon: 'ACC',
     category: 'content',
     defaultData: {
       items: [
@@ -373,7 +380,7 @@ export const widgetDefinitions: Record<WidgetType, WidgetDefinition> = {
   'modal': {
     label: 'Modal',
     description: 'Popup modal dialog',
-    icon: '🗖',
+    icon: 'MOD',
     category: 'content',
     defaultData: {
       title: 'Modal Title',
@@ -382,15 +389,16 @@ export const widgetDefinitions: Record<WidgetType, WidgetDefinition> = {
     },
     defaultStyle: {
       padding: { top: '2rem', right: '2rem', bottom: '2rem', left: '2rem' },
-      backgroundColor: '#ffffff',
-      borderRadius: '8px',
+      backgroundColor: '#1a1a2e',
+      borderRadius: '12px',
+      color: '#ffffff',
     },
   },
 
   'tabs': {
     label: 'Tabs',
     description: 'Tabbed content',
-    icon: '📑',
+    icon: 'TAB',
     category: 'content',
     defaultData: {
       tabs: [
@@ -407,7 +415,7 @@ export const widgetDefinitions: Record<WidgetType, WidgetDefinition> = {
   'faq': {
     label: 'FAQ',
     description: 'Frequently asked questions',
-    icon: '❓',
+    icon: '?',
     category: 'content',
     defaultData: {
       faqs: [
@@ -424,7 +432,7 @@ export const widgetDefinitions: Record<WidgetType, WidgetDefinition> = {
   'contact-form': {
     label: 'Contact Form',
     description: 'Basic contact form',
-    icon: '✉️',
+    icon: 'CF',
     category: 'forms',
     defaultData: {
       fields: ['name', 'email', 'message'],
@@ -440,7 +448,7 @@ export const widgetDefinitions: Record<WidgetType, WidgetDefinition> = {
   'newsletter': {
     label: 'Newsletter',
     description: 'Email signup',
-    icon: '📮',
+    icon: 'NL',
     category: 'forms',
     defaultData: {
       heading: 'Subscribe to our newsletter',
@@ -450,15 +458,16 @@ export const widgetDefinitions: Record<WidgetType, WidgetDefinition> = {
     },
     defaultStyle: {
       padding: { top: '2rem', right: '2rem', bottom: '2rem', left: '2rem' },
-      backgroundColor: '#f8f9fa',
-      borderRadius: '8px',
+      backgroundColor: 'rgba(255,255,255,0.03)',
+      borderRadius: '12px',
+      color: '#ffffff',
     },
   },
 
   'custom-form': {
     label: 'Custom Form',
     description: 'Build your own form',
-    icon: '📝',
+    icon: 'FM',
     category: 'forms',
     defaultData: {
       fields: [],
@@ -475,7 +484,7 @@ export const widgetDefinitions: Record<WidgetType, WidgetDefinition> = {
   'gallery': {
     label: 'Gallery',
     description: 'Image grid',
-    icon: '🖼️',
+    icon: 'GAL',
     category: 'media',
     defaultData: {
       images: [
@@ -494,7 +503,7 @@ export const widgetDefinitions: Record<WidgetType, WidgetDefinition> = {
   'slider': {
     label: 'Slider',
     description: 'Image carousel',
-    icon: '🎠',
+    icon: 'SLD',
     category: 'media',
     defaultData: {
       slides: [
@@ -512,23 +521,24 @@ export const widgetDefinitions: Record<WidgetType, WidgetDefinition> = {
   'icon-box': {
     label: 'Icon Box',
     description: 'Icon with text',
-    icon: '💡',
+    icon: 'ICO',
     category: 'media',
     defaultData: {
-      icon: '⭐',
+      icon: 'Star',
       title: 'Feature Title',
       description: 'Feature description goes here',
     },
     defaultStyle: {
       padding: { top: '1.5rem', right: '1.5rem', bottom: '1.5rem', left: '1.5rem' },
       textAlign: 'center',
+      color: '#ffffff',
     },
   },
 
   'logo-grid': {
     label: 'Logo Grid',
     description: 'Client/partner logos',
-    icon: '🏢',
+    icon: 'LOG',
     category: 'media',
     defaultData: {
       logos: [
@@ -548,10 +558,10 @@ export const widgetDefinitions: Record<WidgetType, WidgetDefinition> = {
   'html': {
     label: 'HTML Block',
     description: 'Custom HTML',
-    icon: '</>', 
+    icon: '</>',
     category: 'advanced',
     defaultData: {
-      html: '<div>Custom HTML content</div>',
+      html: '<div style="color: #fff;">Custom HTML content</div>',
     },
     defaultStyle: {},
   },
@@ -567,16 +577,17 @@ export const widgetDefinitions: Record<WidgetType, WidgetDefinition> = {
     },
     defaultStyle: {
       padding: { top: '1rem', right: '1rem', bottom: '1rem', left: '1rem' },
-      backgroundColor: '#f8f9fa',
-      borderRadius: '4px',
+      backgroundColor: 'rgba(255,255,255,0.05)',
+      borderRadius: '8px',
       fontFamily: 'monospace',
+      color: '#e2e8f0',
     },
   },
 
   'map': {
     label: 'Map',
     description: 'Google Maps embed',
-    icon: '🗺️',
+    icon: 'MAP',
     category: 'advanced',
     defaultData: {
       address: '',
@@ -594,7 +605,7 @@ export const widgetDefinitions: Record<WidgetType, WidgetDefinition> = {
   'countdown': {
     label: 'Countdown',
     description: 'Event countdown timer',
-    icon: '⏱️',
+    icon: 'CDN',
     category: 'advanced',
     defaultData: {
       targetDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
@@ -609,13 +620,14 @@ export const widgetDefinitions: Record<WidgetType, WidgetDefinition> = {
       display: 'flex',
       justifyContent: 'center',
       padding: { top: '2rem', bottom: '2rem' },
+      color: '#ffffff',
     },
   },
 
   'social-icons': {
     label: 'Social Icons',
     description: 'Social media links',
-    icon: '👥',
+    icon: 'SOC',
     category: 'advanced',
     defaultData: {
       icons: [
@@ -635,7 +647,7 @@ export const widgetDefinitions: Record<WidgetType, WidgetDefinition> = {
   'blog-list': {
     label: 'Blog List',
     description: 'List of blog posts',
-    icon: '📰',
+    icon: 'BLG',
     category: 'advanced',
     defaultData: {
       postsPerPage: 6,
@@ -652,18 +664,20 @@ export const widgetDefinitions: Record<WidgetType, WidgetDefinition> = {
   'blog-post': {
     label: 'Blog Post',
     description: 'Single blog post',
-    icon: '📝',
+    icon: 'PST',
     category: 'advanced',
     defaultData: {
       postId: '',
     },
-    defaultStyle: {},
+    defaultStyle: {
+      color: '#ffffff',
+    },
   },
 
   'ecommerce': {
     label: 'E-commerce',
     description: 'Product showcase',
-    icon: '🛒',
+    icon: 'EC',
     category: 'advanced',
     defaultData: {
       productIds: [],
@@ -674,4 +688,3 @@ export const widgetDefinitions: Record<WidgetType, WidgetDefinition> = {
     },
   },
 };
-

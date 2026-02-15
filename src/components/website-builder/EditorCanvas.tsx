@@ -1,6 +1,6 @@
 /**
  * Editor Canvas
- * Center panel showing page preview with drag-drop
+ * Center panel showing page preview with drag-drop (dark theme)
  */
 
 'use client';
@@ -51,17 +51,21 @@ export default function EditorCanvas({
     width: canvasWidth,
     margin: '0 auto',
     minHeight: '600px',
-    background: 'white',
-    boxShadow: breakpoint !== 'desktop' ? '0 0 20px rgba(0,0,0,0.1)' : 'none',
+    background: '#000000',
+    color: '#ffffff',
+    fontFamily: 'Inter, system-ui, sans-serif',
+    boxShadow: breakpoint !== 'desktop' ? '0 0 30px rgba(99, 102, 241, 0.15)' : 'none',
+    border: breakpoint !== 'desktop' ? '1px solid rgba(255,255,255,0.1)' : 'none',
+    borderRadius: breakpoint !== 'desktop' ? '8px' : '0',
   };
 
   return (
     <div style={{
       flex: 1,
-      background: 'var(--color-bg-main)',
+      background: '#111111',
       overflowY: 'auto',
       overflowX: 'hidden',
-      padding: '2rem',
+      padding: breakpoint !== 'desktop' ? '2rem' : '0',
     }}>
       {/* Canvas */}
       <div style={canvasStyles}>
@@ -70,23 +74,23 @@ export default function EditorCanvas({
           <div style={{
             padding: '4rem 2rem',
             textAlign: 'center',
-            color: 'var(--color-text-secondary)',
+            color: 'rgba(255,255,255,0.5)',
           }}>
-            <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📄</div>
-            <h3 style={{ fontSize: '1.25rem', margin: '0 0 0.5rem', color: 'var(--color-text-primary)' }}>
+            <div style={{ fontSize: '3rem', marginBottom: '1rem', opacity: 0.5 }}>+</div>
+            <h3 style={{ fontSize: '1.25rem', margin: '0 0 0.5rem', color: 'rgba(255,255,255,0.7)' }}>
               Empty Page
             </h3>
             <p style={{ margin: '0 0 1.5rem', fontSize: '0.875rem' }}>
-              Add a section to get started
+              Add a section to get started, or drag widgets from the left panel
             </p>
             <button
               onClick={() => onAddSection()}
               style={{
                 padding: '0.75rem 1.5rem',
-                background: 'var(--color-primary)',
+                background: '#6366f1',
                 color: 'white',
                 border: 'none',
-                borderRadius: '4px',
+                borderRadius: '6px',
                 cursor: 'pointer',
                 fontSize: '0.875rem',
                 fontWeight: '500',
@@ -98,7 +102,7 @@ export default function EditorCanvas({
         ) : (
           // Render sections
           <>
-            {page.content.map((section, _sectionIndex) => (
+            {page.content.map((section) => (
               <SectionRenderer
                 key={section.id}
                 section={section}
@@ -117,15 +121,15 @@ export default function EditorCanvas({
             <div style={{
               padding: '1rem',
               textAlign: 'center',
-              borderTop: '2px dashed var(--color-border-light)',
+              borderTop: '2px dashed rgba(255,255,255,0.1)',
             }}>
               <button
                 onClick={() => onAddSection()}
                 style={{
                   padding: '0.5rem 1rem',
-                  background: 'var(--color-bg-elevated)',
-                  color: 'var(--color-text-primary)',
-                  border: '1px solid var(--color-border-light)',
+                  background: 'rgba(255,255,255,0.05)',
+                  color: 'rgba(255,255,255,0.6)',
+                  border: '1px solid rgba(255,255,255,0.1)',
                   borderRadius: '4px',
                   cursor: 'pointer',
                   fontSize: '0.875rem',
@@ -181,7 +185,7 @@ function SectionRenderer({
     maxWidth: section.fullWidth ? '100%' : (section.maxWidth ? `${section.maxWidth}px` : '1200px'),
     marginLeft: section.fullWidth ? '0' : 'auto',
     marginRight: section.fullWidth ? '0' : 'auto',
-    outline: isSelected ? '2px solid var(--color-primary)' : 'none',
+    outline: isSelected ? '2px solid #6366f1' : 'none',
     cursor: 'pointer',
   };
 
@@ -194,7 +198,7 @@ function SectionRenderer({
       }}
       onMouseEnter={(e) => {
         if (!isSelected) {
-          e.currentTarget.style.outline = '2px dashed var(--color-primary)';
+          e.currentTarget.style.outline = '2px dashed #6366f1';
         }
       }}
       onMouseLeave={(e) => {
@@ -220,7 +224,7 @@ function SectionRenderer({
             }}
             style={{
               padding: '0.25rem 0.5rem',
-              background: 'var(--color-error)',
+              background: '#ef4444',
               color: 'white',
               border: 'none',
               borderRadius: '4px',
@@ -244,7 +248,7 @@ function SectionRenderer({
             onDragOver={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              e.currentTarget.style.backgroundColor = 'var(--color-bg-elevated)';
+              e.currentTarget.style.backgroundColor = 'rgba(99, 102, 241, 0.1)';
             }}
             onDragLeave={(e) => {
               e.currentTarget.style.backgroundColor = 'transparent';
@@ -262,7 +266,7 @@ function SectionRenderer({
                     id: `widget_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
                     type: widgetType as keyof typeof widgetDefinitions,
                     data: definition.defaultData || {},
-                    style:definition.defaultStyle ?? {},
+                    style: definition.defaultStyle ?? {},
                   };
                   onAddWidget(newWidget, colIndex);
                 }
@@ -271,7 +275,7 @@ function SectionRenderer({
             style={{
               flex: column.width || 1,
               minHeight: column.widgets.length === 0 ? '100px' : 'auto',
-              border: column.widgets.length === 0 ? '2px dashed var(--color-border-light)' : 'none',
+              border: column.widgets.length === 0 ? '2px dashed rgba(255,255,255,0.15)' : 'none',
               borderRadius: '4px',
               display: 'flex',
               flexDirection: 'column',
@@ -285,7 +289,7 @@ function SectionRenderer({
                 alignItems: 'center',
                 justifyContent: 'center',
                 height: '100%',
-                color: 'var(--color-text-disabled)',
+                color: 'rgba(255,255,255,0.3)',
                 fontSize: '0.875rem',
               }}>
                 Drop widgets here
@@ -300,12 +304,12 @@ function SectionRenderer({
                   }}
                   style={{
                     position: 'relative',
-                    outline: selectedWidgetId === widget.id ? '2px solid var(--color-success)' : 'none',
+                    outline: selectedWidgetId === widget.id ? '2px solid #10b981' : 'none',
                     cursor: 'pointer',
                   }}
                   onMouseEnter={(e) => {
                     if (selectedWidgetId !== widget.id) {
-                      e.currentTarget.style.outline = '2px dashed var(--color-success)';
+                      e.currentTarget.style.outline = '2px dashed #10b981';
                     }
                   }}
                   onMouseLeave={(e) => {
@@ -329,7 +333,7 @@ function SectionRenderer({
                         }}
                         style={{
                           padding: '0.25rem 0.5rem',
-                          background: 'var(--color-error)',
+                          background: '#ef4444',
                           color: 'white',
                           border: 'none',
                           borderRadius: '4px',
@@ -337,7 +341,7 @@ function SectionRenderer({
                           fontSize: '0.75rem',
                         }}
                       >
-                        ×
+                        &times;
                       </button>
                     </div>
                   )}
@@ -352,4 +356,3 @@ function SectionRenderer({
     </div>
   );
 }
-

@@ -42,7 +42,10 @@ const EXPECTED_SCOPED_CSS_VARS = {
  * Helper: Wait for network idle with extended timeout for auth operations
  */
 async function waitForAuthComplete(page: Page): Promise<void> {
-  await page.waitForLoadState('networkidle', { timeout: 30000 });
+  // Use domcontentloaded instead of networkidle — Firebase/analytics maintain
+  // persistent connections that prevent networkidle from ever resolving.
+  await page.waitForLoadState('domcontentloaded', { timeout: 30000 });
+  await page.waitForTimeout(1_000);
 }
 
 /**

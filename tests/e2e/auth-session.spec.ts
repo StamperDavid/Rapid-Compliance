@@ -10,15 +10,26 @@
  */
 
 import { test, expect } from '@playwright/test';
-import { BASE_URL } from './fixtures/test-accounts';
-import { expectDashboard, waitForPageReady } from './fixtures/helpers';
+import { TEST_USER, BASE_URL } from './fixtures/test-accounts';
+import { loginViaUI, expectDashboard, waitForPageReady } from './fixtures/helpers';
 
 test.describe('Session Persistence', () => {
-  // These tests use stored auth state from auth.setup.ts
+  // Log in via UI first, then test persistence within the session.
+  // Storage state from auth.setup may not include IndexedDB (Firebase tokens),
+  // so we log in explicitly to establish a real Firebase session.
+  test.beforeEach(async ({ page }) => {
+    // Check if stored auth state works by navigating to dashboard
+    await page.goto(`${BASE_URL}/dashboard`);
+    try {
+      await expect(page.locator('h1')).toContainText('Dashboard', { timeout: 8_000 });
+    } catch {
+      // Storage state didn't restore Firebase auth — log in via UI
+      await loginViaUI(page, TEST_USER.email, TEST_USER.password);
+    }
+  });
 
   test('should remain authenticated after page refresh', async ({ page }) => {
-    // Navigate to dashboard (authenticated via storage state)
-    await page.goto(`${BASE_URL}/dashboard`);
+    // Should already be on dashboard from beforeEach
     await expectDashboard(page);
 
     // Refresh the page
@@ -137,9 +148,11 @@ test.describe('Auth Loading States', () => {
 
     // During auth resolution, either a loading indicator or the dashboard itself should appear
     // The dashboard layout shows a loading spinner while useUnifiedAuth resolves
-    const dashboardOrLoader = page.locator(
-      'h1:has-text("Dashboard"), [role="progressbar"], .animate-spin, text=Loading'
-    );
+    // Use Playwright's .or() to combine CSS and text selectors cleanly
+    const dashboardOrLoader = page.locator('h1:has-text("Dashboard")')
+      .or(page.locator('[role="progressbar"]'))
+      .or(page.locator('.animate-spin'))
+      .or(page.locator('text=Loading'));
 
     // One of these should be visible within timeout
     await expect(dashboardOrLoader.first()).toBeVisible({ timeout: 15_000 });

@@ -6,7 +6,7 @@
  */
 
 import { initializeApp, getApps, type FirebaseApp } from 'firebase/app';
-import { getAuth, type Auth } from 'firebase/auth';
+import { getAuth, setPersistence, browserLocalPersistence, type Auth } from 'firebase/auth';
 import { getFirestore, type Firestore } from 'firebase/firestore';
 import { getStorage, type FirebaseStorage } from 'firebase/storage';
 import { logger } from '../logger/logger';
@@ -101,6 +101,15 @@ function initializeFirebase() {
     }
 
     auth = getAuth(app);
+
+    // In development, prefer localStorage persistence so Playwright storageState
+    // can capture and restore Firebase auth tokens across test sessions.
+    // In production, the default IndexedDB persistence is used (more robust).
+    if (typeof window !== 'undefined' && process.env.NODE_ENV !== 'production') {
+      setPersistence(auth, browserLocalPersistence).catch(() => {
+        // Persistence already set or not supported — safe to ignore
+      });
+    }
     db = getFirestore(app);
     storage = getStorage(app);
   } catch (error) {

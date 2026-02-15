@@ -13,13 +13,25 @@
 
 import { test, expect } from '@playwright/test';
 import { BASE_URL } from './fixtures/test-accounts';
-import { waitForPageReady } from './fixtures/helpers';
+import { waitForPageReady, ensureAuthenticated } from './fixtures/helpers';
+
+/**
+ * Helper: wait for the website editor to finish loading.
+ * Waits for a positive indicator (Widgets panel) instead of
+ * checking for "Loading editor..." disappearance.
+ */
+async function waitForEditorReady(page: import('@playwright/test').Page): Promise<void> {
+  await expect(
+    page.locator('text=Widgets').first()
+      .or(page.locator('text=Failed to load page'))
+  ).toBeVisible({ timeout: 30_000 });
+}
 
 test.describe('Publish Page', () => {
   test.beforeEach(async ({ page }) => {
-    // Navigate to editor (create or open a page)
+    await ensureAuthenticated(page);
     await page.goto(`${BASE_URL}/website/editor`);
-    await waitForPageReady(page);
+    await waitForEditorReady(page);
   });
 
   test('should show Publish button for draft pages', async ({ page }) => {
@@ -74,8 +86,9 @@ test.describe('Publish Page', () => {
 
 test.describe('Schedule Publish', () => {
   test.beforeEach(async ({ page }) => {
+    await ensureAuthenticated(page);
     await page.goto(`${BASE_URL}/website/editor`);
-    await waitForPageReady(page);
+    await waitForEditorReady(page);
   });
 
   test('should open schedule publish modal', async ({ page }) => {
@@ -177,14 +190,14 @@ test.describe('Schedule Publish', () => {
 
 test.describe('Unpublish Page', () => {
   test('should show Unpublish button for published pages', async ({ page }) => {
-    // Navigate to pages list and find a published page
+    await ensureAuthenticated(page);
     await page.goto(`${BASE_URL}/website/pages`);
     await waitForPageReady(page);
 
     // Click Published filter to find published pages
     const publishedFilter = page.locator('button:has-text("Published")');
     await publishedFilter.click();
-    await waitForPageReady(page);
+    await page.waitForTimeout(1_000);
 
     // If published pages exist, click Edit on first one
     const editBtn = page.locator('button:has-text("Edit"), a:has-text("Edit")').first();
@@ -204,6 +217,7 @@ test.describe('Unpublish Page', () => {
 
 test.describe('Page Status Transitions', () => {
   test('should reflect status in pages list after publish', async ({ page }) => {
+    await ensureAuthenticated(page);
     await page.goto(`${BASE_URL}/website/pages`);
     await waitForPageReady(page);
 
@@ -223,6 +237,7 @@ test.describe('Page Status Transitions', () => {
   });
 
   test('should show correct status badge colors', async ({ page }) => {
+    await ensureAuthenticated(page);
     await page.goto(`${BASE_URL}/website/pages`);
     await waitForPageReady(page);
 
@@ -250,8 +265,9 @@ test.describe('Page Status Transitions', () => {
 
 test.describe('Preview Functionality', () => {
   test('should open preview when Preview button is clicked', async ({ page, context }) => {
+    await ensureAuthenticated(page);
     await page.goto(`${BASE_URL}/website/editor`);
-    await waitForPageReady(page);
+    await waitForEditorReady(page);
 
     const previewBtn = page.locator('button:has-text("Preview")');
     await expect(previewBtn).toBeVisible({ timeout: 10_000 });

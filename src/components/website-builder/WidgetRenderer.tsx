@@ -1,6 +1,6 @@
 /**
  * Widget Renderer
- * Renders each widget type based on its data and style
+ * Renders each widget type with dark theme styling
  */
 
 'use client';
@@ -41,8 +41,8 @@ export default function WidgetRenderer({ widget, isEditable: _isEditable = false
     case 'button': {
       const buttonTextVal = widget.data.text as string | null | undefined;
       return (
-        <a 
-          href={(widget.data.url as string) ?? '#'} 
+        <a
+          href={(widget.data.url as string) ?? '#'}
           target={widget.data.openInNewTab ? '_blank' : undefined}
           rel={widget.data.openInNewTab ? 'noopener noreferrer' : undefined}
           style={{ ...style, display: 'inline-block', textDecoration: 'none' }}
@@ -55,7 +55,7 @@ export default function WidgetRenderer({ widget, isEditable: _isEditable = false
     case 'link': {
       const linkTextVal = widget.data.text as string | null | undefined;
       return (
-        <a 
+        <a
           href={(widget.data.url as string) ?? '#'}
           target={widget.data.openInNewTab ? '_blank' : undefined}
           rel={widget.data.openInNewTab ? 'noopener noreferrer' : undefined}
@@ -80,7 +80,7 @@ export default function WidgetRenderer({ widget, isEditable: _isEditable = false
           {(widget.data.caption as string) && (
             <p style={{
               fontSize: '0.875rem',
-              color: 'var(--color-text-disabled)',
+              color: 'rgba(255,255,255,0.5)',
               marginTop: '0.5rem',
               textAlign: 'center',
             }}>
@@ -93,9 +93,9 @@ export default function WidgetRenderer({ widget, isEditable: _isEditable = false
     case 'video':
       return (
         <div style={style}>
-          <div style={{ 
-            position: 'relative', 
-            paddingBottom: '56.25%', 
+          <div style={{
+            position: 'relative',
+            paddingBottom: '56.25%',
             height: 0,
             overflow: 'hidden',
           }}>
@@ -124,7 +124,7 @@ export default function WidgetRenderer({ widget, isEditable: _isEditable = false
         <hr style={{
           border: 'none',
           height: (widget.data.thickness as string) ?? '1px',
-          backgroundColor: (widget.data.color as string) ?? 'var(--color-text-primary)',
+          backgroundColor: (widget.data.color as string) ?? 'rgba(255,255,255,0.1)',
           ...style,
         }} />
       );
@@ -137,11 +137,11 @@ export default function WidgetRenderer({ widget, isEditable: _isEditable = false
           backgroundSize: 'cover',
           backgroundPosition: 'center',
         }}>
-          <h1 style={{ fontSize: '3rem', fontWeight: '700', marginBottom: '1rem' }}>
+          <h1 style={{ fontSize: '3rem', fontWeight: '700', marginBottom: '1rem', color: '#ffffff' }}>
             {String((widget.data.heading as string | null | undefined) !== '' && widget.data.heading != null ? widget.data.heading : 'Welcome')}
           </h1>
           {(widget.data.subheading as string) && (
-            <p style={{ fontSize: '1.25rem', marginBottom: '2rem' }}>
+            <p style={{ fontSize: '1.25rem', marginBottom: '2rem', color: 'rgba(255,255,255,0.7)' }}>
               {String(widget.data.subheading)}
             </p>
           )}
@@ -151,10 +151,10 @@ export default function WidgetRenderer({ widget, isEditable: _isEditable = false
               style={{
                 display: 'inline-block',
                 padding: '1rem 2rem',
-                background: 'var(--color-info)',
-                color: 'var(--color-text-primary)',
+                background: '#6366f1',
+                color: '#ffffff',
                 textDecoration: 'none',
-                borderRadius: '4px',
+                borderRadius: '6px',
                 fontSize: '1.125rem',
                 fontWeight: '600',
               }}
@@ -176,8 +176,8 @@ export default function WidgetRenderer({ widget, isEditable: _isEditable = false
           {((widget.data.features as FeatureItem[]) || []).map((feature, i: number) => (
             <div key={i} style={{ textAlign: 'center' }}>
               <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>{feature.icon}</div>
-              <h3 style={{ fontSize: '1.25rem', marginBottom: '0.5rem' }}>{feature.title}</h3>
-              <p style={{ color: 'var(--color-text-disabled)' }}>{feature.description}</p>
+              <h3 style={{ fontSize: '1.25rem', marginBottom: '0.5rem', color: '#ffffff' }}>{feature.title}</h3>
+              <p style={{ color: 'rgba(255,255,255,0.5)' }}>{feature.description}</p>
             </div>
           ))}
         </div>
@@ -196,26 +196,26 @@ export default function WidgetRenderer({ widget, isEditable: _isEditable = false
               key={i}
               style={{
                 padding: '2rem',
-                background: plan.featured ? 'var(--color-info)' : 'var(--color-text-primary)',
-                color: plan.featured ? 'var(--color-text-primary)' : 'var(--color-bg-main)',
-                border: plan.featured ? 'none' : '1px solid var(--color-text-primary)',
-                borderRadius: '8px',
+                background: plan.featured ? '#6366f1' : 'rgba(255,255,255,0.03)',
+                color: '#ffffff',
+                border: plan.featured ? 'none' : '1px solid rgba(255,255,255,0.1)',
+                borderRadius: '12px',
                 textAlign: 'center',
               }}
             >
               <h3 style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>{plan.name}</h3>
               <div style={{ fontSize: '3rem', fontWeight: '700', marginBottom: '1rem' }}>
                 {plan.price}
-                <span style={{ fontSize: '1rem', fontWeight: '400' }}>/{plan.period}</span>
+                <span style={{ fontSize: '1rem', fontWeight: '400', color: 'rgba(255,255,255,0.6)' }}>/{plan.period}</span>
               </div>
-              <ul style={{ 
-                listStyle: 'none', 
-                padding: 0, 
+              <ul style={{
+                listStyle: 'none',
+                padding: 0,
                 marginBottom: '2rem',
                 textAlign: 'left',
               }}>
                 {plan.features.map((feature: string, j: number) => (
-                  <li key={j} style={{ padding: '0.5rem 0' }}>✓ {feature}</li>
+                  <li key={j} style={{ padding: '0.5rem 0', color: 'rgba(255,255,255,0.7)' }}>&#x2713; {feature}</li>
                 ))}
               </ul>
               <a
@@ -223,10 +223,10 @@ export default function WidgetRenderer({ widget, isEditable: _isEditable = false
                 style={{
                   display: 'inline-block',
                   padding: '0.75rem 1.5rem',
-                  background: plan.featured ? 'var(--color-text-primary)' : 'var(--color-info)',
-                  color: plan.featured ? 'var(--color-info)' : 'var(--color-text-primary)',
+                  background: plan.featured ? '#ffffff' : '#6366f1',
+                  color: plan.featured ? '#6366f1' : '#ffffff',
                   textDecoration: 'none',
-                  borderRadius: '4px',
+                  borderRadius: '6px',
                   fontWeight: '600',
                 }}
               >
@@ -245,6 +245,7 @@ export default function WidgetRenderer({ widget, isEditable: _isEditable = false
             fontStyle: 'italic',
             marginBottom: '1.5rem',
             lineHeight: '1.6',
+            color: 'rgba(255,255,255,0.8)',
           }}>
             &quot;{String(widget.data.quote)}&quot;
           </p>
@@ -265,8 +266,8 @@ export default function WidgetRenderer({ widget, isEditable: _isEditable = false
               />
             )}
             <div>
-              <div style={{ fontWeight: '600' }}>{String(widget.data.author)}</div>
-              <div style={{ fontSize: '0.875rem', color: 'var(--color-text-disabled)' }}>{String(widget.data.role)}</div>
+              <div style={{ fontWeight: '600', color: '#ffffff' }}>{String(widget.data.author)}</div>
+              <div style={{ fontSize: '0.875rem', color: 'rgba(255,255,255,0.5)' }}>{String(widget.data.role)}</div>
             </div>
           </div>
         </div>
@@ -275,19 +276,19 @@ export default function WidgetRenderer({ widget, isEditable: _isEditable = false
     case 'cta':
       return (
         <div style={style}>
-          <h2 style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>{String(widget.data.heading)}</h2>
+          <h2 style={{ fontSize: '2rem', marginBottom: '0.5rem', color: '#ffffff' }}>{String(widget.data.heading)}</h2>
           {(widget.data.subheading as string) && (
-            <p style={{ fontSize: '1.125rem', marginBottom: '1.5rem' }}>{String(widget.data.subheading)}</p>
+            <p style={{ fontSize: '1.125rem', marginBottom: '1.5rem', color: 'rgba(255,255,255,0.8)' }}>{String(widget.data.subheading)}</p>
           )}
           <a
             href={(widget.data.buttonUrl as string) ?? '#'}
             style={{
               display: 'inline-block',
               padding: '1rem 2rem',
-              background: 'var(--color-text-primary)',
-              color: 'var(--color-info)',
+              background: '#ffffff',
+              color: '#6366f1',
               textDecoration: 'none',
-              borderRadius: '4px',
+              borderRadius: '6px',
               fontSize: '1.125rem',
               fontWeight: '600',
             }}
@@ -307,10 +308,10 @@ export default function WidgetRenderer({ widget, isEditable: _isEditable = false
         }}>
           {((widget.data.stats as StatItem[]) || []).map((stat, i: number) => (
             <div key={i} style={{ textAlign: 'center' }}>
-              <div style={{ fontSize: '3rem', fontWeight: '700', color: 'var(--color-info)', marginBottom: '0.5rem' }}>
+              <div style={{ fontSize: '3rem', fontWeight: '700', color: '#6366f1', marginBottom: '0.5rem' }}>
                 {stat.number}
               </div>
-              <div style={{ fontSize: '1.125rem', color: 'var(--color-text-disabled)' }}>{stat.label}</div>
+              <div style={{ fontSize: '1.125rem', color: 'rgba(255,255,255,0.5)' }}>{stat.label}</div>
             </div>
           ))}
         </div>
@@ -336,7 +337,7 @@ export default function WidgetRenderer({ widget, isEditable: _isEditable = false
                 width: '100%',
                 height: '250px',
                 objectFit: 'cover',
-                borderRadius: '4px',
+                borderRadius: '8px',
               }}
             />
           ))}
@@ -347,18 +348,18 @@ export default function WidgetRenderer({ widget, isEditable: _isEditable = false
       return (
         <form style={style} onSubmit={(e) => e.preventDefault()}>
           <div style={{ marginBottom: '1rem' }}>
-            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>Name</label>
-            <input type="text" style={inputStyle} placeholder="Your name" />
+            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#ffffff' }}>Name</label>
+            <input type="text" style={formInputStyle} placeholder="Your name" />
           </div>
           <div style={{ marginBottom: '1rem' }}>
-            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>Email</label>
-            <input type="email" style={inputStyle} placeholder="your@email.com" />
+            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#ffffff' }}>Email</label>
+            <input type="email" style={formInputStyle} placeholder="your@email.com" />
           </div>
           <div style={{ marginBottom: '1rem' }}>
-            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>Message</label>
-            <textarea rows={4} style={{ ...inputStyle, resize: 'vertical' }} placeholder="Your message" />
+            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#ffffff' }}>Message</label>
+            <textarea rows={4} style={{ ...formInputStyle, resize: 'vertical' }} placeholder="Your message" />
           </div>
-          <button type="submit" style={buttonStyle}>
+          <button type="submit" style={formButtonStyle}>
             {String((widget.data.submitText as string | null | undefined) !== '' && widget.data.submitText != null ? widget.data.submitText : 'Send Message')}
           </button>
         </form>
@@ -367,14 +368,14 @@ export default function WidgetRenderer({ widget, isEditable: _isEditable = false
     case 'newsletter':
       return (
         <div style={style}>
-          <h3 style={{ marginBottom: '1rem' }}>{String(widget.data.heading)}</h3>
+          <h3 style={{ marginBottom: '1rem', color: '#ffffff' }}>{String(widget.data.heading)}</h3>
           <form style={{ display: 'flex', gap: '0.5rem' }} onSubmit={(e) => e.preventDefault()}>
-            <input 
-              type="email" 
+            <input
+              type="email"
               placeholder={(widget.data.placeholder as string | null | undefined) !== '' && widget.data.placeholder != null ? (widget.data.placeholder as string) : 'Enter your email'}
-              style={{ ...inputStyle, flex: 1 }}
+              style={{ ...formInputStyle, flex: 1 }}
             />
-            <button type="submit" style={buttonStyle}>
+            <button type="submit" style={formButtonStyle}>
               {String((widget.data.buttonText as string | null | undefined) !== '' && widget.data.buttonText != null ? widget.data.buttonText : 'Subscribe')}
             </button>
           </form>
@@ -385,7 +386,7 @@ export default function WidgetRenderer({ widget, isEditable: _isEditable = false
       return (
         <div style={{ ...style, display: 'flex', gap: '1rem' }}>
           {((widget.data.icons as SocialIcon[]) ?? []).map((icon, i: number) => (
-            <a 
+            <a
               key={i}
               href={icon.url}
               target="_blank"
@@ -396,8 +397,8 @@ export default function WidgetRenderer({ widget, isEditable: _isEditable = false
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                background: 'var(--color-info)',
-                color: 'var(--color-text-primary)',
+                background: '#6366f1',
+                color: '#ffffff',
                 borderRadius: '50%',
                 textDecoration: 'none',
                 fontSize: '1.25rem',
@@ -413,8 +414,8 @@ export default function WidgetRenderer({ widget, isEditable: _isEditable = false
       return (
         <div style={style}>
           <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>{String(widget.data.icon)}</div>
-          <h3 style={{ fontSize: '1.25rem', marginBottom: '0.5rem' }}>{String(widget.data.title)}</h3>
-          <p style={{ color: 'var(--color-text-disabled)' }}>{String(widget.data.description)}</p>
+          <h3 style={{ fontSize: '1.25rem', marginBottom: '0.5rem', color: '#ffffff' }}>{String(widget.data.title)}</h3>
+          <p style={{ color: 'rgba(255,255,255,0.5)' }}>{String(widget.data.description)}</p>
         </div>
       );
 
@@ -435,8 +436,8 @@ export default function WidgetRenderer({ widget, isEditable: _isEditable = false
           <button
             style={{
               padding: '12px 24px',
-              background: (widget.data.buttonColor as string) ?? 'var(--color-info)',
-              color: 'var(--color-text-primary)',
+              background: (widget.data.buttonColor as string) ?? '#6366f1',
+              color: '#ffffff',
               border: 'none',
               borderRadius: '6px',
               cursor: 'pointer',
@@ -455,26 +456,26 @@ export default function WidgetRenderer({ widget, isEditable: _isEditable = false
       const tabContentVal = tabs[0]?.content as string | null | undefined;
       return (
         <div style={style}>
-          <div style={{ borderBottom: '2px solid var(--color-text-primary)', display: 'flex' }}>
+          <div style={{ borderBottom: '1px solid rgba(255,255,255,0.1)', display: 'flex' }}>
             {tabs.map((tab, index: number) => (
               <button
                 key={index}
                 style={{
                   padding: '12px 24px',
-                  background: index === 0 ? 'var(--color-info)' : 'transparent',
-                  color: index === 0 ? 'var(--color-text-primary)' : 'var(--color-border-strong)',
+                  background: index === 0 ? '#6366f1' : 'transparent',
+                  color: index === 0 ? '#ffffff' : 'rgba(255,255,255,0.5)',
                   border: 'none',
                   cursor: 'pointer',
                   fontSize: '14px',
                   fontWeight: '500',
-                  borderBottom: index === 0 ? '2px solid var(--color-info)' : 'none',
+                  borderBottom: index === 0 ? '2px solid #6366f1' : 'none',
                 }}
               >
                 {tab.title}
               </button>
             ))}
           </div>
-          <div style={{ padding: '20px', background: 'var(--color-text-primary)' }}>
+          <div style={{ padding: '20px', background: 'rgba(255,255,255,0.03)', color: 'rgba(255,255,255,0.7)' }}>
             {tabContentVal !== '' && tabContentVal != null ? tabContentVal : 'Tab content'}
           </div>
         </div>
@@ -489,8 +490,8 @@ export default function WidgetRenderer({ widget, isEditable: _isEditable = false
             <div
               key={index}
               style={{
-                border: '1px solid var(--color-text-primary)',
-                borderRadius: '6px',
+                border: '1px solid rgba(255,255,255,0.1)',
+                borderRadius: '8px',
                 marginBottom: '8px',
                 overflow: 'hidden',
               }}
@@ -498,20 +499,91 @@ export default function WidgetRenderer({ widget, isEditable: _isEditable = false
               <div
                 style={{
                   padding: '16px',
-                  background: 'var(--color-bg-elevated)',
+                  background: 'rgba(255,255,255,0.03)',
                   fontSize: '16px',
                   fontWeight: '500',
                   cursor: 'pointer',
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'center',
+                  color: '#ffffff',
                 }}
               >
                 {item.title}
-                <span style={{ fontSize: '12px' }}>▼</span>
+                <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)' }}>&#x25BC;</span>
               </div>
-              <div style={{ padding: '16px', background: 'var(--color-text-primary)', borderTop: '1px solid var(--color-text-primary)' }}>
+              <div style={{ padding: '16px', background: 'rgba(255,255,255,0.02)', borderTop: '1px solid rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.7)' }}>
                 {item.content}
+              </div>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    case 'counter': {
+      const numberVal = widget.data.number as number ?? 0;
+      const suffixVal = widget.data.suffix as string ?? '';
+      const labelVal = widget.data.label as string ?? '';
+      return (
+        <div style={style}>
+          <div style={{ fontSize: '3rem', fontWeight: '700', color: '#6366f1' }}>
+            {numberVal}{suffixVal}
+          </div>
+          <div style={{ fontSize: '1rem', color: 'rgba(255,255,255,0.5)', marginTop: '0.5rem' }}>
+            {labelVal}
+          </div>
+        </div>
+      );
+    }
+
+    case 'progress': {
+      const percentage = (widget.data.percentage as number) ?? 0;
+      const barColor = (widget.data.color as string) ?? '#6366f1';
+      const barLabel = (widget.data.label as string) ?? '';
+      return (
+        <div style={style}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+            <span style={{ color: '#ffffff', fontSize: '0.875rem' }}>{barLabel}</span>
+            <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.875rem' }}>{percentage}%</span>
+          </div>
+          <div style={{ width: '100%', height: '8px', backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: '4px', overflow: 'hidden' }}>
+            <div style={{ width: `${percentage}%`, height: '100%', backgroundColor: barColor, borderRadius: '4px', transition: 'width 0.5s ease' }} />
+          </div>
+        </div>
+      );
+    }
+
+    case 'faq': {
+      const faqs = (widget.data.faqs as Array<{ question: string; answer: string }>) ?? [];
+      return (
+        <div style={style}>
+          {faqs.map((faq, index: number) => (
+            <div
+              key={index}
+              style={{
+                border: '1px solid rgba(255,255,255,0.1)',
+                borderRadius: '8px',
+                marginBottom: '8px',
+                overflow: 'hidden',
+              }}
+            >
+              <div style={{
+                padding: '16px',
+                background: 'rgba(255,255,255,0.03)',
+                fontWeight: '600',
+                color: '#ffffff',
+                cursor: 'pointer',
+              }}>
+                {faq.question}
+              </div>
+              <div style={{
+                padding: '16px',
+                borderTop: '1px solid rgba(255,255,255,0.05)',
+                color: 'rgba(255,255,255,0.7)',
+                lineHeight: '1.6',
+              }}>
+                {faq.answer}
               </div>
             </div>
           ))}
@@ -524,11 +596,11 @@ export default function WidgetRenderer({ widget, isEditable: _isEditable = false
         <div style={{
           ...style,
           padding: '1rem',
-          background: 'var(--color-bg-elevated)',
-          border: '1px dashed var(--color-border-light)',
-          borderRadius: '4px',
+          background: 'rgba(255,255,255,0.03)',
+          border: '1px dashed rgba(255,255,255,0.15)',
+          borderRadius: '8px',
           textAlign: 'center',
-          color: 'var(--color-text-secondary)',
+          color: 'rgba(255,255,255,0.4)',
         }}>
           {widget.type} widget
         </div>
@@ -584,7 +656,7 @@ function convertSpacingToCSS(spacing: Spacing): string {
 
 function getVideoEmbedUrl(url: string, provider: string): string {
   if (!url) {return '';}
-  
+
   if (provider === 'youtube') {
     const videoId = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&]+)/)?.[1];
     return videoId ? `https://www.youtube.com/embed/${videoId}` : '';
@@ -592,39 +664,40 @@ function getVideoEmbedUrl(url: string, provider: string): string {
     const videoId = url.match(/vimeo\.com\/(\d+)/)?.[1];
     return videoId ? `https://player.vimeo.com/video/${videoId}` : '';
   }
-  
+
   return url;
 }
 
 function getSocialIcon(platform: string): string {
   const icons: Record<string, string> = {
     facebook: 'f',
-    twitter: '𝕏',
-    instagram: '📷',
+    twitter: 'X',
+    instagram: 'IG',
     linkedin: 'in',
-    youtube: '▶️',
-    github: '🐙',
+    youtube: 'YT',
+    github: 'GH',
   };
-  return icons[platform] || '•';
+  return icons[platform] || platform[0]?.toUpperCase() || '?';
 }
 
-// Common styles
-const inputStyle: React.CSSProperties = {
+// Dark theme form styles
+const formInputStyle: React.CSSProperties = {
   width: '100%',
   padding: '0.75rem',
-  border: '1px solid var(--color-border-main)',
-  borderRadius: '4px',
+  border: '1px solid rgba(255,255,255,0.15)',
+  borderRadius: '6px',
   fontSize: '1rem',
+  background: 'rgba(255,255,255,0.05)',
+  color: '#ffffff',
 };
 
-const buttonStyle: React.CSSProperties = {
+const formButtonStyle: React.CSSProperties = {
   padding: '0.75rem 1.5rem',
-  background: 'var(--color-info)',
-  color: 'var(--color-text-primary)',
+  background: '#6366f1',
+  color: '#ffffff',
   border: 'none',
-  borderRadius: '4px',
+  borderRadius: '6px',
   cursor: 'pointer',
   fontSize: '1rem',
   fontWeight: '500',
 };
-

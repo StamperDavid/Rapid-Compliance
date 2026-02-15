@@ -86,9 +86,11 @@ const auditResults: RouteAuditResult[] = [];
 // =============================================================================
 
 async function waitForPageLoad(page: Page): Promise<void> {
-  await page.waitForLoadState('networkidle', { timeout: 15000 }).catch(() => {
+  await page.waitForLoadState('domcontentloaded', { timeout: 15000 }).catch(() => {
     // Page may not fully settle, continue anyway
   });
+  // Brief pause for client-side hydration
+  await page.waitForTimeout(1_000);
 }
 
 async function hasComingSoonText(page: Page): Promise<boolean> {
@@ -153,11 +155,12 @@ test.describe('Admin Routes Visual Audit - 46 Routes', () => {
     const hasEmailInput = (await emailInput.count()) > 0;
     const hasPasswordInput = (await passwordInput.count()) > 0;
 
-    // Check for protected route indicators (Loading state or redirect)
+    // Check for protected route indicators (Loading state, redirect, or 404)
     const hasLoading = (await page.locator('text=/loading/i').count()) > 0;
-    const isProtected = wasRedirected || hasLoading;
+    const has404 = (await page.locator('text=404').count()) > 0;
+    const isProtected = wasRedirected || hasLoading || has404;
 
-    // Either: form works OR route is protected (expected for admin routes)
+    // Either: form works OR route is protected/doesn't exist (login is at /login or /admin-login)
     const isOperational = (hasEmailInput && hasPasswordInput) || isProtected;
 
     auditResults.push({

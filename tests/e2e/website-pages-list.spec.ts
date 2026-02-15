@@ -12,12 +12,28 @@
 
 import { test, expect } from '@playwright/test';
 import { BASE_URL } from './fixtures/test-accounts';
-import { waitForPageReady } from './fixtures/helpers';
+import { waitForPageReady, ensureAuthenticated } from './fixtures/helpers';
+
+/**
+ * Helper: wait for the pages list to finish loading.
+ * Waits for a positive indicator (page heading visible) rather than
+ * just checking for "Loading pages..." disappearance.
+ */
+async function waitForPagesReady(page: import('@playwright/test').Page): Promise<void> {
+  await waitForPageReady(page);
+  // Wait for either the page heading to appear or the loading to finish
+  await expect(
+    page.locator('h1, h2').filter({ hasText: /pages/i }).first()
+      .or(page.locator('text=No pages yet'))
+      .or(page.locator('button:has-text("New Page")'))
+  ).toBeVisible({ timeout: 20_000 });
+}
 
 test.describe('Website Pages List', () => {
   test.beforeEach(async ({ page }) => {
+    await ensureAuthenticated(page);
     await page.goto(`${BASE_URL}/website/pages`);
-    await waitForPageReady(page);
+    await waitForPagesReady(page);
   });
 
   test('should load pages list with header and action buttons', async ({ page }) => {
@@ -157,9 +173,10 @@ test.describe('Website Pages List', () => {
 
 test.describe('Website Pages List — Responsive', () => {
   test('should render correctly on mobile viewport', async ({ page }) => {
+    await ensureAuthenticated(page);
     await page.setViewportSize({ width: 375, height: 812 });
     await page.goto(`${BASE_URL}/website/pages`);
-    await waitForPageReady(page);
+    await waitForPagesReady(page);
 
     // Page should still show header and action buttons
     const heading = page.locator('h1, h2').filter({ hasText: /pages/i }).first();

@@ -15,12 +15,28 @@
 
 import { test, expect } from '@playwright/test';
 import { BASE_URL } from './fixtures/test-accounts';
-import { waitForPageReady } from './fixtures/helpers';
+import { ensureAuthenticated } from './fixtures/helpers';
+
+/**
+ * Helper: wait for the website editor to finish loading.
+ * Waits for a positive indicator (Widgets panel) instead of
+ * checking for "Loading editor..." disappearance, which can
+ * pass prematurely if the dashboard layout hasn't rendered yet.
+ */
+async function waitForEditorReady(page: import('@playwright/test').Page): Promise<void> {
+  // Wait for the editor to fully render — Widgets panel indicates success
+  await expect(
+    page.locator('text=Widgets').first()
+      .or(page.locator('text=Failed to load page'))
+  ).toBeVisible({ timeout: 30_000 });
+}
 
 test.describe('Editor Layout', () => {
   test.beforeEach(async ({ page }) => {
+    // Ensure Firebase auth session is active
+    await ensureAuthenticated(page);
     await page.goto(`${BASE_URL}/website/editor`);
-    await waitForPageReady(page);
+    await waitForEditorReady(page);
   });
 
   test('should display three-panel editor layout', async ({ page }) => {
@@ -54,8 +70,9 @@ test.describe('Editor Layout', () => {
 
 test.describe('Widget Library', () => {
   test.beforeEach(async ({ page }) => {
+    await ensureAuthenticated(page);
     await page.goto(`${BASE_URL}/website/editor`);
-    await waitForPageReady(page);
+    await waitForEditorReady(page);
   });
 
   test('should display widget category tabs', async ({ page }) => {
@@ -107,8 +124,9 @@ test.describe('Widget Library', () => {
 
 test.describe('Canvas Interaction', () => {
   test.beforeEach(async ({ page }) => {
+    await ensureAuthenticated(page);
     await page.goto(`${BASE_URL}/website/editor`);
-    await waitForPageReady(page);
+    await waitForEditorReady(page);
   });
 
   test('should show empty state with Add Section button', async ({ page }) => {
@@ -179,8 +197,9 @@ test.describe('Canvas Interaction', () => {
 
 test.describe('Breakpoint Switching', () => {
   test.beforeEach(async ({ page }) => {
+    await ensureAuthenticated(page);
     await page.goto(`${BASE_URL}/website/editor`);
-    await waitForPageReady(page);
+    await waitForEditorReady(page);
   });
 
   test('should switch to tablet breakpoint', async ({ page }) => {
@@ -217,8 +236,9 @@ test.describe('Breakpoint Switching', () => {
 
 test.describe('Toolbar Actions', () => {
   test.beforeEach(async ({ page }) => {
+    await ensureAuthenticated(page);
     await page.goto(`${BASE_URL}/website/editor`);
-    await waitForPageReady(page);
+    await waitForEditorReady(page);
   });
 
   test('should have Undo and Redo buttons', async ({ page }) => {
@@ -277,8 +297,9 @@ test.describe('Toolbar Actions', () => {
 
 test.describe('Properties Panel', () => {
   test('should show instruction message when nothing is selected', async ({ page }) => {
+    await ensureAuthenticated(page);
     await page.goto(`${BASE_URL}/website/editor`);
-    await waitForPageReady(page);
+    await waitForEditorReady(page);
 
     const instruction = page.locator(
       'text=Select a section, text=select, text=Properties'
@@ -287,8 +308,9 @@ test.describe('Properties Panel', () => {
   });
 
   test('should show Content and Style tabs when element is selected', async ({ page }) => {
+    await ensureAuthenticated(page);
     await page.goto(`${BASE_URL}/website/editor`);
-    await waitForPageReady(page);
+    await waitForEditorReady(page);
 
     // Add a section and select it
     const addSectionBtn = page.locator('button:has-text("Add Section")').first();

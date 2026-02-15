@@ -67,10 +67,14 @@ export async function expectSidebarLink(
 }
 
 /**
- * Wait for the page to finish loading (no pending network requests).
+ * Wait for the page to finish loading.
+ * Uses domcontentloaded instead of networkidle since Firebase/analytics
+ * connections may prevent networkidle from resolving.
  */
 export async function waitForPageReady(page: Page): Promise<void> {
-  await page.waitForLoadState('networkidle');
+  await page.waitForLoadState('domcontentloaded');
+  // Give the client-side framework a moment to hydrate and resolve auth
+  await page.waitForTimeout(1_000);
 }
 
 /**
@@ -78,6 +82,31 @@ export async function waitForPageReady(page: Page): Promise<void> {
  */
 export function uniqueSlug(prefix: string): string {
   return `${prefix}-e2e-${Date.now()}`;
+}
+
+/**
+ * Ensure the browser has an active Firebase auth session.
+ * Playwright's storageState may not reliably restore Firebase auth
+ * (tokens stored in IndexedDB or localStorage may not survive).
+ * This checks the dashboard and falls back to UI login if needed.
+ */
+export async function ensureAuthenticated(
+  page: Page,
+  email?: string,
+  password?: string
+): Promise<void> {
+  const { TEST_USER } = await import('./test-accounts');
+  await page.goto(`${BASE_URL}/dashboard`);
+  try {
+    await expect(page.locator('h1')).toContainText('Dashboard', { timeout: 8_000 });
+  } catch {
+    // Storage state didn't restore Firebase auth — log in via UI
+    await loginViaUI(
+      page,
+      email ?? TEST_USER.email,
+      password ?? TEST_USER.password
+    );
+  }
 }
 
 /**

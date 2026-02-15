@@ -12,9 +12,25 @@
 
 import { test, expect } from '@playwright/test';
 import { BASE_URL } from './fixtures/test-accounts';
-import { waitForPageReady } from './fixtures/helpers';
+import { waitForPageReady, ensureAuthenticated } from './fixtures/helpers';
+
+/**
+ * Helper: wait for the website editor to finish loading.
+ * Waits for a positive indicator (Widgets panel) instead of
+ * checking for "Loading editor..." disappearance.
+ */
+async function waitForEditorReady(page: import('@playwright/test').Page): Promise<void> {
+  await expect(
+    page.locator('text=Widgets').first()
+      .or(page.locator('text=Failed to load page'))
+  ).toBeVisible({ timeout: 30_000 });
+}
 
 test.describe('Create Blank Page', () => {
+  test.beforeEach(async ({ page }) => {
+    await ensureAuthenticated(page);
+  });
+
   test('should navigate to editor for new page', async ({ page }) => {
     await page.goto(`${BASE_URL}/website/pages`);
     await waitForPageReady(page);
@@ -32,7 +48,7 @@ test.describe('Create Blank Page', () => {
 
   test('should load editor with empty canvas for new page', async ({ page }) => {
     await page.goto(`${BASE_URL}/website/editor`);
-    await waitForPageReady(page);
+    await waitForEditorReady(page);
 
     // Editor should show the three-panel layout
     // Left panel: Widgets
@@ -50,7 +66,7 @@ test.describe('Create Blank Page', () => {
 
   test('should show toolbar with page title "Untitled Page"', async ({ page }) => {
     await page.goto(`${BASE_URL}/website/editor`);
-    await waitForPageReady(page);
+    await waitForEditorReady(page);
 
     // New pages default to "Untitled Page"
     const titleElement = page.locator('text=Untitled Page').first();
@@ -64,7 +80,7 @@ test.describe('Create Blank Page', () => {
 
   test('should show Save button in editor toolbar', async ({ page }) => {
     await page.goto(`${BASE_URL}/website/editor`);
-    await waitForPageReady(page);
+    await waitForEditorReady(page);
 
     // Save button should be present
     const saveBtn = page.locator('button:has-text("Save")').first();
@@ -73,7 +89,7 @@ test.describe('Create Blank Page', () => {
 
   test('should save new blank page', async ({ page }) => {
     await page.goto(`${BASE_URL}/website/editor`);
-    await waitForPageReady(page);
+    await waitForEditorReady(page);
 
     // Click Save
     const saveBtn = page.locator('button:has-text("Save")').first();
@@ -88,6 +104,10 @@ test.describe('Create Blank Page', () => {
 });
 
 test.describe('Create Page with AI', () => {
+  test.beforeEach(async ({ page }) => {
+    await ensureAuthenticated(page);
+  });
+
   test('should open AI generation modal from pages list', async ({ page }) => {
     await page.goto(`${BASE_URL}/website/pages`);
     await waitForPageReady(page);
@@ -170,6 +190,10 @@ test.describe('Create Page with AI', () => {
 });
 
 test.describe('Duplicate Page', () => {
+  test.beforeEach(async ({ page }) => {
+    await ensureAuthenticated(page);
+  });
+
   test('should show Duplicate button on existing page cards', async ({ page }) => {
     await page.goto(`${BASE_URL}/website/pages`);
     await waitForPageReady(page);
@@ -214,6 +238,10 @@ test.describe('Duplicate Page', () => {
 });
 
 test.describe('Delete Page', () => {
+  test.beforeEach(async ({ page }) => {
+    await ensureAuthenticated(page);
+  });
+
   test('should show Delete button on page cards', async ({ page }) => {
     await page.goto(`${BASE_URL}/website/pages`);
     await waitForPageReady(page);

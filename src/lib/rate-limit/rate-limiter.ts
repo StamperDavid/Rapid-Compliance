@@ -34,7 +34,11 @@ const endpointLimits: Record<string, RateLimitConfig> = {
   // Admin endpoints (strict - privilege escalation risk)
   '/api/admin/users': { maxRequests: 30, windowMs: 60 * 1000 },
   '/api/admin/organizations': { maxRequests: 30, windowMs: 60 * 1000 },
-  '/api/admin/verify': { maxRequests: 10, windowMs: 60 * 1000 }, // Brute force protection
+  // 10/min in production (brute force protection), relaxed in dev for E2E test runs
+  '/api/admin/verify': {
+    maxRequests: process.env.NODE_ENV === 'production' ? 10 : 100,
+    windowMs: 60 * 1000,
+  },
 
   // AI/Heavy compute
   '/api/agent/chat': { maxRequests: 100, windowMs: 60 * 1000 },
@@ -96,8 +100,11 @@ const endpointLimits: Record<string, RateLimitConfig> = {
   // Cron jobs (very strict - internal only)
   '/api/cron/process-sequences': { maxRequests: 10, windowMs: 60 * 1000 },
 
-  // Auth endpoints (brute force prevention)
-  '/api/auth/login': { maxRequests: 5, windowMs: 60 * 1000 }, // 5 login attempts per minute
+  // Auth endpoints (brute force prevention) — relaxed in dev for E2E test runs
+  '/api/auth/login': {
+    maxRequests: process.env.NODE_ENV === 'production' ? 5 : 100,
+    windowMs: 60 * 1000,
+  },
   '/api/auth/register': { maxRequests: 3, windowMs: 60 * 1000 },
 };
 
