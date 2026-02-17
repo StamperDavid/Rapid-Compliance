@@ -207,6 +207,44 @@ export async function calculateLeadScore(
 }
 
 /**
+ * Auto-score a lead and write the score back to the lead document.
+ * Designed to be called fire-and-forget after lead creation or update.
+ * Uses admin SDK to write scores directly to the canonical leads collection.
+ */
+export async function autoScoreLead(leadId: string): Promise<void> {
+  try {
+    if (!adminDal) {
+      throw new Error('Admin DAL not initialized');
+    }
+
+    const score = await calculateLeadScore({ leadId, forceRescore: true });
+
+    // Write score back to the lead document in canonical leads path
+    const leadsRef = adminDal.getNestedCollection(getSubCollection('leads'));
+    await leadsRef.doc(leadId).update({
+      score: score.totalScore,
+      scoreGrade: score.grade,
+      scorePriority: score.priority,
+      scoreBreakdown: score.breakdown,
+      scoredAt: Timestamp.fromDate(score.metadata.scoredAt),
+    });
+
+    logger.info('Lead auto-scored successfully', {
+      leadId,
+      score: score.totalScore,
+      grade: score.grade,
+      priority: score.priority,
+    });
+  } catch (error) {
+    // Don't throw — auto-scoring failures should not break lead creation
+    logger.warn('Auto-scoring failed for lead', {
+      leadId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
+/**
  * Calculate scores for multiple leads in batch
  */
 export async function calculateLeadScoresBatch(
@@ -1079,6 +1117,7 @@ interface LeadData {
 
 /**
  * Get lead data from database
+ * Checks canonical leads path first, then falls back to workspace paths
  */
 async function getLeadData(leadId: string): Promise<LeadData | null> {
   try {
@@ -1086,7 +1125,23 @@ async function getLeadData(leadId: string): Promise<LeadData | null> {
       throw new Error('Admin DAL not initialized');
     }
 
-    // Get all workspaces for this organization
+    // Check canonical leads path first (where lead-service.ts creates leads)
+    const canonicalLeadsRef = adminDal.getNestedCollection(
+      getSubCollection('leads')
+    );
+    const canonicalDoc = await canonicalLeadsRef.doc(leadId).get();
+    if (canonicalDoc.exists) {
+      const data = canonicalDoc.data();
+      return {
+        id: canonicalDoc.id,
+        company: typeof data?.company === 'string' ? data.company : null,
+        companyDomain: typeof data?.companyDomain === 'string' ? data.companyDomain : null,
+        email: typeof data?.email === 'string' ? data.email : null,
+        ...data,
+      };
+    }
+
+    // Fallback: check workspace paths (legacy)
     const workspacesRef = adminDal.getNestedCollection(
       getSubCollection('workspaces')
     );

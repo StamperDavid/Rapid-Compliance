@@ -1,6 +1,7 @@
 import type { NextRequest } from 'next/server';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import { FieldValue, type Timestamp } from 'firebase-admin/firestore';
+import { getAuth } from 'firebase-admin/auth';
 import {
   verifyAdminRequest,
   createErrorResponse,
@@ -334,6 +335,101 @@ export async function PATCH(request: NextRequest) {
       process.env.NODE_ENV === 'development'
         ? `Failed to update user: ${errorMessage}`
         : 'Failed to update user',
+      500
+    );
+  }
+}
+
+/**
+ * DELETE /api/admin/users
+ * Removes a user (admin/owner only)
+ * Deletes the Firestore profile and disables the Firebase Auth account
+ */
+export async function DELETE(request: NextRequest) {
+  const authResult = await verifyAdminRequest(request);
+
+  if (isAuthError(authResult)) {
+    return createErrorResponse(authResult.error, authResult.status);
+  }
+
+  try {
+    if (!adminDal) {
+      return createErrorResponse('Server configuration error', 500);
+    }
+
+    const { searchParams } = new URL(request.url);
+    const userId = searchParams.get('userId');
+
+    if (!userId || userId.length === 0) {
+      return createErrorResponse('userId query parameter is required', 400);
+    }
+
+    // Prevent self-deletion
+    if (userId === authResult.user.uid) {
+      return createErrorResponse('Cannot remove yourself', 400);
+    }
+
+    // Prevent deleting owners (only another owner can remove an owner)
+    const targetUserDoc = await adminDal.safeGetDoc('USERS', userId);
+    if (!targetUserDoc.exists) {
+      return createErrorResponse('User not found', 404);
+    }
+
+    const targetUserData = targetUserDoc.data();
+    const targetRole = typeof targetUserData?.role === 'string' ? targetUserData.role : 'member';
+
+    // Check if the requesting admin is an owner (look up their Firestore profile)
+    if (targetRole === 'owner') {
+      const adminDoc = await adminDal.safeGetDoc('USERS', authResult.user.uid);
+      const adminData = adminDoc.exists ? adminDoc.data() : null;
+      const adminRole = typeof adminData?.role === 'string' ? adminData.role : 'admin';
+      if (adminRole !== 'owner') {
+        return createErrorResponse('Only an owner can remove another owner', 403);
+      }
+    }
+
+    // Disable the Firebase Auth account (don't delete — preserves audit trail)
+    try {
+      const adminAuth = getAuth();
+      await adminAuth.updateUser(userId, { disabled: true });
+    } catch (authError) {
+      logger.warn('Failed to disable Firebase Auth user (may not exist)', {
+        userId,
+        error: authError instanceof Error ? authError.message : String(authError),
+      });
+    }
+
+    // Mark user as removed in Firestore (soft delete with audit trail)
+    await adminDal.safeUpdateDoc('USERS', userId, {
+      status: 'removed',
+      removedAt: FieldValue.serverTimestamp(),
+      removedBy: authResult.user.uid,
+      updatedAt: FieldValue.serverTimestamp(),
+    }, {
+      audit: true,
+      userId: authResult.user.uid,
+    });
+
+    logger.info('Admin removed user', {
+      route: '/api/admin/users',
+      admin: authResult.user.email,
+      removedUserId: userId,
+      removedUserRole: targetRole,
+    });
+
+    return createSuccessResponse({
+      success: true,
+      userId,
+      message: 'User removed successfully',
+    });
+
+  } catch (error: unknown) {
+    logger.error('Admin user delete error', error instanceof Error ? error : new Error(String(error)), { route: '/api/admin/users' });
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    return createErrorResponse(
+      process.env.NODE_ENV === 'development'
+        ? `Failed to remove user: ${errorMessage}`
+        : 'Failed to remove user',
       500
     );
   }

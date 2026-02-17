@@ -37,10 +37,18 @@ export async function GET(request: NextRequest) {
       getPipelineInsights(),
     ]);
 
+    // Convert Map objects to plain objects for JSON serialization
+    // (Map serializes to {} in JSON.stringify)
+    const serializedMetrics = {
+      ...metrics,
+      stageMetrics: Object.fromEntries(metrics.stageMetrics),
+      conversionRates: Object.fromEntries(metrics.conversionRates),
+    };
+
     return NextResponse.json({
       success: true,
       data: {
-        metrics,
+        metrics: serializedMetrics,
         insights,
       },
     });

@@ -1,44 +1,92 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import type { SalesVelocityMetrics, PipelineInsight } from '@/lib/crm/sales-velocity';
+import { useAuth } from '@/hooks/useAuth';
+import type { StageMetrics, PipelineInsight } from '@/lib/crm/sales-velocity';
+
+/**
+ * Serialized version of SalesVelocityMetrics (Maps become plain objects over JSON)
+ */
+interface SerializedSalesMetrics {
+  velocity: number;
+  avgDealSize: number;
+  avgSalesCycle: number;
+  winRate: number;
+  stageMetrics: Record<string, StageMetrics>;
+  conversionRates: Record<string, number>;
+  forecastedRevenue: number;
+  confidenceLevel: number;
+  trends: {
+    velocity30Days: number;
+    velocity90Days: number;
+    winRate30Days: number;
+    winRate90Days: number;
+  };
+}
 
 interface SalesAnalyticsApiResponse {
   success: boolean;
   data: {
-    metrics: SalesVelocityMetrics;
+    metrics: SerializedSalesMetrics;
     insights: PipelineInsight[];
   };
 }
 
 export default function SalesAnalyticsPage() {
-  const [metrics, setMetrics] = useState<SalesVelocityMetrics | null>(null);
+  const { loading: authLoading } = useAuth();
+  const [metrics, setMetrics] = useState<SerializedSalesMetrics | null>(null);
   const [insights, setInsights] = useState<PipelineInsight[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const loadAnalytics = useCallback(async () => {
     try {
-      const response = await fetch(`/api/crm/analytics/velocity`);
+      setError(null);
+      const response = await fetch('/api/crm/analytics/velocity');
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`);
+      }
       const data = await response.json() as SalesAnalyticsApiResponse;
       if (data.success) {
         setMetrics(data.data.metrics);
         setInsights(data.data.insights ?? []);
+      } else {
+        setError('Failed to load analytics data');
       }
-    } catch (error) {
-      console.error('Error loading analytics:', error);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load analytics');
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
+    if (authLoading) {
+      return;
+    }
     void loadAnalytics();
-  }, [loadAnalytics]);
+  }, [loadAnalytics, authLoading]);
 
-  if (loading) {
+  if (loading || authLoading) {
     return (
       <div className="p-8 flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-8">
+        <div className="bg-surface-paper rounded-lg p-6 text-center">
+          <p className="text-error mb-4">{error}</p>
+          <button
+            onClick={() => { setLoading(true); void loadAnalytics(); }}
+            className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark"
+          >
+            Retry
+          </button>
+        </div>
       </div>
     );
   }
@@ -51,7 +99,7 @@ export default function SalesAnalyticsPage() {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 }).format(value);
   };
 
-  const stagesArray = Array.from(metrics.stageMetrics.entries());
+  const stagesArray = Object.entries(metrics.stageMetrics);
 
   return (
     <div className="p-8">
@@ -168,7 +216,7 @@ export default function SalesAnalyticsPage() {
               <div className="w-full bg-surface-elevated rounded-full h-2">
                 <div
                   className="bg-primary h-2 rounded-full"
-                  style={{ width: `${(metrics.trends.velocity30Days / metrics.trends.velocity90Days) * 100}%` }}
+                  style={{ width: `${metrics.trends.velocity90Days > 0 ? (metrics.trends.velocity30Days / metrics.trends.velocity90Days) * 100 : 0}%` }}
                 />
               </div>
             </div>
@@ -182,7 +230,7 @@ export default function SalesAnalyticsPage() {
               </div>
             </div>
           </div>
-          {metrics.trends.velocity30Days < metrics.trends.velocity90Days * 0.8 && (
+          {metrics.trends.velocity90Days > 0 && metrics.trends.velocity30Days < metrics.trends.velocity90Days * 0.8 && (
             <div className="mt-4 text-sm" style={{ color: 'var(--color-warning)' }}>
               ⚠️ Velocity declining - 30-day avg is {((1 - metrics.trends.velocity30Days / metrics.trends.velocity90Days) * 100).toFixed(0)}% below 90-day avg
             </div>
@@ -240,7 +288,7 @@ export default function SalesAnalyticsPage() {
       <div className="bg-surface-paper rounded-lg p-6">
         <h2 className="text-xl font-semibold mb-6">Stage Conversion Rates</h2>
         <div className="space-y-4">
-          {Array.from(metrics.conversionRates.entries()).map(([transition, rate]) => (
+          {Object.entries(metrics.conversionRates).map(([transition, rate]) => (
             <div key={transition}>
               <div className="flex justify-between text-sm mb-2">
                 <span className="text-[var(--color-text-secondary)] capitalize">{transition.replace('->', ' → ').replace(/_/g, ' ')}</span>
@@ -263,4 +311,3 @@ export default function SalesAnalyticsPage() {
     </div>
   );
 }
-

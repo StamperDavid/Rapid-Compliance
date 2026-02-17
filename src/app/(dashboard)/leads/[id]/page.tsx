@@ -17,6 +17,14 @@ import type { Lead } from '@/lib/crm/lead-service';
 interface ExtendedLead extends Lead {
   phoneNumber?: string; // Legacy field - use `phone` instead
   notes?: string;
+  scoreGrade?: string;
+  scorePriority?: string;
+  scoreBreakdown?: {
+    companyFit: number;
+    personFit: number;
+    intentSignals: number;
+    engagement: number;
+  };
 }
 
 export default function LeadDetailPage() {
@@ -152,7 +160,26 @@ export default function LeadDetailPage() {
             <p className="text-[var(--color-text-secondary)]">{getCompanyName() || '-'}</p>
           </div>
           <div className="flex items-center gap-3">
-            {predictiveScore && (
+            {/* Lead Score (from auto-scoring engine) */}
+            {lead.score != null && (
+              <div className="flex items-center gap-2">
+                <span style={{
+                  backgroundColor: (lead.score ?? 0) >= 75 ? 'var(--color-error)' :
+                    (lead.score ?? 0) >= 50 ? 'var(--color-warning)' :
+                    'var(--color-primary)',
+                  color: 'var(--color-text-primary)'
+                }} className="px-3 py-1 rounded-lg text-sm font-bold">
+                  {(lead.score ?? 0) >= 75 ? 'HOT' : (lead.score ?? 0) >= 50 ? 'WARM' : 'COLD'}
+                </span>
+                <span className="text-[var(--color-text-secondary)] text-sm">{lead.score}/100</span>
+                {lead.scoreGrade && (
+                  <span className="px-2 py-0.5 rounded text-xs font-mono bg-[var(--color-bg-elevated)] text-[var(--color-text-secondary)]">
+                    Grade {lead.scoreGrade}
+                  </span>
+                )}
+              </div>
+            )}
+            {predictiveScore && !lead.score && (
               <div className="flex items-center gap-2">
                 <span style={{
                   backgroundColor: predictiveScore.tier === 'hot' ? 'var(--color-error)' :
@@ -304,6 +331,39 @@ export default function LeadDetailPage() {
 
         {/* Right Sidebar */}
         <div className="space-y-6">
+          {/* BANT Score Breakdown (from auto-scoring engine) */}
+          {lead.scoreBreakdown && (
+            <div className="bg-[var(--color-bg-paper)] rounded-lg p-6">
+              <h2 className="text-xl font-semibold mb-4">Score Breakdown</h2>
+              <div className="space-y-3">
+                {[
+                  { name: 'Company Fit', value: lead.scoreBreakdown.companyFit ?? 0, max: 40 },
+                  { name: 'Person Fit', value: lead.scoreBreakdown.personFit ?? 0, max: 30 },
+                  { name: 'Intent Signals', value: lead.scoreBreakdown.intentSignals ?? 0, max: 20 },
+                  { name: 'Engagement', value: lead.scoreBreakdown.engagement ?? 0, max: 10 },
+                ].map((factor) => (
+                  <div key={factor.name}>
+                    <div className="flex justify-between text-sm mb-1">
+                      <span className="text-[var(--color-text-secondary)]">{factor.name}</span>
+                      <span className={factor.value > factor.max * 0.5 ? 'text-[var(--color-success)]' : 'text-[var(--color-text-secondary)]'}>
+                        {factor.value}/{factor.max}
+                      </span>
+                    </div>
+                    <div className="w-full bg-[var(--color-bg-elevated)] rounded-full h-2">
+                      <div
+                        style={{
+                          width: `${(factor.value / factor.max) * 100}%`,
+                          backgroundColor: factor.value > factor.max * 0.5 ? 'var(--color-success)' : 'var(--color-border-light)',
+                        }}
+                        className="h-2 rounded-full"
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Predictive Score Breakdown */}
           {predictiveScore && (
             <div className="bg-[var(--color-bg-paper)] rounded-lg p-6">

@@ -112,10 +112,96 @@ export async function POST(
     };
     const result = await createLead(leadInput);
 
+    // Auto-score the new lead (fire-and-forget — don't block the response)
+    void (async () => {
+      try {
+        const { autoScoreLead } = await import('@/lib/services/lead-scoring-engine');
+        await autoScoreLead(result.id);
+      } catch (scoreError) {
+        logger.warn('Auto-scoring trigger failed', {
+          leadId: result.id,
+          error: scoreError instanceof Error ? scoreError.message : String(scoreError),
+        });
+      }
+    })();
+
     return NextResponse.json(result);
   } catch (error: unknown) {
     logger.error('Failed to create lead', error instanceof Error ? error : new Error(String(error)), { file: 'leads/route.ts' });
     const message = error instanceof Error ? error.message : 'Failed to create lead';
+    return NextResponse.json(
+      { error: message },
+      { status: 500 }
+    );
+  }
+}
+
+const updateLeadSchema = z.object({
+  leadId: z.string().min(1),
+  updates: z.object({
+    firstName: z.string().optional(),
+    lastName: z.string().optional(),
+    email: z.string().email().optional(),
+    phone: z.string().optional(),
+    company: z.string().optional(),
+    companyName: z.string().optional(),
+    title: z.string().optional(),
+    status: z.string().optional(),
+    score: z.number().optional(),
+    source: z.string().optional(),
+    ownerId: z.string().optional(),
+    tags: z.array(z.string()).optional(),
+    notes: z.string().optional(),
+    customFields: z.record(z.unknown()).optional(),
+    enrichmentData: z.record(z.unknown()).optional(),
+  }),
+});
+
+export async function PATCH(
+  request: NextRequest
+) {
+  try {
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
+    const body: unknown = await request.json();
+    const bodyResult = updateLeadSchema.safeParse(body);
+    if (!bodyResult.success) {
+      return NextResponse.json(
+        { error: 'Invalid request body', details: bodyResult.error.errors },
+        { status: 400 }
+      );
+    }
+
+    const { leadId, updates } = bodyResult.data;
+    const { updateLead } = await import('@/lib/crm/lead-service');
+    const result = await updateLead(leadId, updates as Partial<Omit<Lead, 'id' | 'createdAt'>>);
+
+    // Re-score if data fields that affect scoring were changed
+    const scoringFields = ['company', 'companyName', 'title', 'email', 'enrichmentData', 'status'];
+    const changedFields = Object.keys(updates);
+    const needsRescore = changedFields.some(field => scoringFields.includes(field));
+
+    if (needsRescore) {
+      void (async () => {
+        try {
+          const { autoScoreLead } = await import('@/lib/services/lead-scoring-engine');
+          await autoScoreLead(leadId);
+        } catch (scoreError) {
+          logger.warn('Re-scoring trigger failed', {
+            leadId,
+            error: scoreError instanceof Error ? scoreError.message : String(scoreError),
+          });
+        }
+      })();
+    }
+
+    return NextResponse.json(result);
+  } catch (error: unknown) {
+    logger.error('Failed to update lead', error instanceof Error ? error : new Error(String(error)), { file: 'leads/route.ts' });
+    const message = error instanceof Error ? error.message : 'Failed to update lead';
     return NextResponse.json(
       { error: message },
       { status: 500 }
