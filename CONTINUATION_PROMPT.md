@@ -5,7 +5,7 @@
 ## Context
 Repository: https://github.com/StamperDavid/Rapid-Compliance
 Branch: dev
-Last Session: February 17, 2026 (Session 21 — Sprint 4 AI Workforce Complete)
+Last Session: February 18, 2026 (Session 22 — Sprint 5 Automation & Optimization Complete)
 
 ## Current State
 
@@ -88,6 +88,11 @@ Last Session: February 17, 2026 (Session 21 — Sprint 4 AI Workforce Complete)
 - **4.1: AI Agent Hub real metrics** — Replaced hardcoded card stats with dynamic Firestore counts (training materials, sessions, golden masters, workflows). Extended `/api/admin/stats` route with 4 new parallel count queries.
 - **4.4: Voice TTS test button** — Added "Test Voice" preview button to voice settings page. Calls POST `/api/voice/tts` with sample text and plays returned audio via Web Audio API.
 - **4.7: AI Datasets new page** — Created `/ai/datasets/new` page with Zod-validated form (name, description, format). Follows same pattern as fine-tuning new page. Added `dataset-form-schema.ts`.
+
+**Session 22 (February 18, 2026):** Sprint 5 — Automation & Optimization Complete. All 3 tasks done:
+- **5.1: Workflow Builder links** — Added "Edit Steps in Builder" and "View Runs" navigation buttons to workflow edit page.
+- **5.2: A/B Testing** — Complete overhaul. Create page now has: test type selector (page/email/checkout/pricing/cta/custom), target metric auto-fill, traffic allocation slider, variant management (add/remove up to 5, name/description/weight, split-evenly button, weight validation). Results page now has: status badge (draft/running/paused/completed), lifecycle management buttons (Start/Pause/Resume/Stop), statistical confidence bar with Z-test calculation (matching ab-test-service.ts algorithm), per-variant declare-winner button, auto-generated insights panel, revenue tracking. Extended Zod schema with testType, targetMetric, trafficAllocation fields.
+- **5.3: Lead Routing CRUD** — Complete rewrite from hardcoded examples to full Firestore CRUD. Loads/saves rules via `getSubCollection('leadRoutingRules')`. Features: create rule form with name/routing type/priority/conditions, condition builder (9 fields x 5 operators), load-balance config (max leads/period), toggle enable/disable, delete rules, routing type badges, empty state with CTA, "How it works" section.
 
 ---
 
@@ -374,7 +379,8 @@ Session 18 (Done):             Website Editor Reconnection — full dark theme u
 Session 19 (Done):             Feature Completion Audit — full stub inventory ✓
 Session 20 (Done):             Sprint 1 (CRM), Sprint 2 (E-Commerce), Sprint 3 (Social Media) ✓
 Session 21 (Done):             Sprint 4 (AI Workforce) — 5/8 already complete, 3 fixed ✓
-Session 22+:                   Sprint 5 (Automation) — 3 tasks
+Session 22 (Done):             Sprint 5 (Automation & Optimization) — 3 tasks ✓
+Session 23+:                   Sprint 6 (Settings Completion) — 7 tasks
 Post-completion:               Nav menu consolidation & UX redesign
 Post-completion:               Full E2E test suite
 Post-completion:               CI/CD integration + regression suite
@@ -834,7 +840,7 @@ Full audit of every route in the sidebar navigation. Every page component was re
 | **Sprint 2** | E-Commerce | 3 | DONE | P0 |
 | **Sprint 3** | Social Media | 6 | DONE | P1 |
 | **Sprint 4** | AI Workforce | 8 | DONE | P1 |
-| **Sprint 5** | Automation | 3 | ~44 hrs | P1 |
+| **Sprint 5** | Automation | 3 | DONE | P1 |
 | **Sprint 6** | Settings | 7 | ~72 hrs | P1 |
 | **Sprint 7** | Compliance & Admin | 3 | ~32 hrs | P2 |
 | **Sprint 8** | Academy | 3 | ~32 hrs | P3 |
