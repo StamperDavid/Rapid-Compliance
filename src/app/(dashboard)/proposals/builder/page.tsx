@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import type { ProposalTemplate, ProposalSection } from '@/lib/documents/proposal-generator';
 import { useToast } from '@/hooks/useToast';
 import SafeHtml from '@/components/SafeHtml';
+import { getSubCollection } from '@/lib/firebase/collections';
+import { FirestoreService } from '@/lib/db/firestore-service';
 
 type TemplateType = 'proposal' | 'quote' | 'contract' | 'invoice';
 
@@ -69,11 +71,29 @@ export default function ProposalBuilderPage() {
     setSelectedSection(null);
   };
 
-  const saveTemplate = () => {
+  const saveTemplate = async () => {
     try {
-      toast.info('Proposal template would be saved to database');
-      router.push(`/proposals`);
-    } catch (_error) {
+      const templateId = `proposal-${Date.now()}`;
+      const now = new Date();
+      const toSave: ProposalTemplate = {
+        id: templateId,
+        name: template.name ?? 'Untitled Proposal',
+        type: (template.type as ProposalTemplate['type']) ?? 'proposal',
+        sections: template.sections ?? [],
+        variables: template.variables ?? [],
+        styling: template.styling ?? {},
+        createdAt: now,
+        updatedAt: now,
+      };
+      await FirestoreService.set(
+        getSubCollection('proposalTemplates'),
+        templateId,
+        toSave,
+        false
+      );
+      toast.success('Proposal template saved!');
+      router.push('/proposals');
+    } catch {
       toast.error('Failed to save template');
     }
   };
@@ -135,7 +155,7 @@ export default function ProposalBuilderPage() {
           </select>
         </div>
         <button
-          onClick={saveTemplate}
+          onClick={() => void saveTemplate()}
           style={{
             padding: '0.5rem 1rem',
             backgroundColor: 'var(--color-primary)',
