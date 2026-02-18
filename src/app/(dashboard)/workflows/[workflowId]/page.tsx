@@ -92,6 +92,12 @@ export default function WorkflowEditPage() {
 
         <div className="flex gap-3">
           <button onClick={() => router.back()} className="px-6 py-3 bg-surface-elevated rounded-lg hover:bg-surface-elevated text-[var(--color-text-primary)]">Cancel</button>
+          <button onClick={() => router.push(`/workflows/builder?id=${workflowId}`)} className="px-6 py-3 bg-surface-elevated rounded-lg text-[var(--color-text-primary)] border border-border-light">
+            Edit Steps in Builder
+          </button>
+          <button onClick={() => router.push(`/workflows/${workflowId}/runs`)} className="px-6 py-3 bg-surface-elevated rounded-lg text-[var(--color-text-primary)] border border-border-light">
+            View Runs
+          </button>
           <button onClick={() => void handleSave()} disabled={saving} className="flex-1 px-6 py-3 bg-primary text-white rounded-lg hover:from-primary-light hover:to-secondary-light">
             {saving ? 'Saving...' : 'Save Changes'}
           </button>
