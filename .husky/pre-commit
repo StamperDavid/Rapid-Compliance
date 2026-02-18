@@ -11,8 +11,9 @@ echo "ESLint: Checking staged files..."
 npx lint-staged || exit 1
 
 # Step 2: TypeScript check (full project, but fast since it's incremental)
+# Uses Node.js directly to avoid npx exit-code bug on Windows
 echo "TypeScript: Checking for build blockers..."
-npx tsc --noEmit || exit 1
+node scripts/run-tsc-check.js || exit 1
 
 # Step 3: Bypass budget ratchet (eslint-disable count can only go DOWN)
 echo "Bypass Ratchet: Checking eslint-disable budget..."
