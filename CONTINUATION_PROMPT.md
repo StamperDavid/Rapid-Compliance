@@ -5,7 +5,7 @@
 ## Context
 Repository: https://github.com/StamperDavid/Rapid-Compliance
 Branch: dev
-Last Session: February 18, 2026 (Session 22 — Sprint 5 Automation & Optimization Complete)
+Last Session: February 18, 2026 (Session 23 — Sprint 6 Settings Completion)
 
 ## Current State
 
@@ -93,6 +93,16 @@ Last Session: February 18, 2026 (Session 22 — Sprint 5 Automation & Optimizati
 - **5.1: Workflow Builder links** — Added "Edit Steps in Builder" and "View Runs" navigation buttons to workflow edit page.
 - **5.2: A/B Testing** — Complete overhaul. Create page now has: test type selector (page/email/checkout/pricing/cta/custom), target metric auto-fill, traffic allocation slider, variant management (add/remove up to 5, name/description/weight, split-evenly button, weight validation). Results page now has: status badge (draft/running/paused/completed), lifecycle management buttons (Start/Pause/Resume/Stop), statistical confidence bar with Z-test calculation (matching ab-test-service.ts algorithm), per-variant declare-winner button, auto-generated insights panel, revenue tracking. Extended Zod schema with testType, targetMetric, trafficAllocation fields.
 - **5.3: Lead Routing CRUD** — Complete rewrite from hardcoded examples to full Firestore CRUD. Loads/saves rules via `getSubCollection('leadRoutingRules')`. Features: create rule form with name/routing type/priority/conditions, condition builder (9 fields x 5 operators), load-balance config (max leads/period), toggle enable/disable, delete rules, routing type badges, empty state with CTA, "How it works" section.
+
+**Session 23 (February 18, 2026):** Sprint 6 — Settings Completion. All 7 tasks done:
+- **6.1: Webhooks fix** — Fixed collection path from legacy multi-tenant path to `getSubCollection('webhooks')`. Page was already 85% complete with full CRUD.
+- **6.2: Promotions verified** — Already fully functional with CRUD, analytics, and AI auth. No changes needed.
+- **6.3: Billing & Plans page** — Created `/settings/billing` from scratch. Shows current plan with tier badge, billing period, price, savings. Displays subscription status (active/cancelled), provisioned-by info, tier change history. Cancel/reactivate actions via PUT `/api/subscriptions`. Usage metrics with tier-based limits. Links to subscription comparison page.
+- **6.4: Subscription & Features page** — Created `/settings/subscription` from scratch. Plan comparison grid (Free/Starter/Professional/Enterprise) with pricing, features, and upgrade/downgrade buttons. Billing period toggle (monthly/annual with 17% savings badge). Feature comparison table (12 features across 4 tiers). Uses admin override for self-service upgrades.
+- **6.5: Security Settings** — Rewrote from scratch. Removed legacy sidebar. Added Firestore persistence for all settings (2FA toggle, IP whitelist, session timeout, audit log retention) via `getSubCollection('securitySettings')`. Audit logs loaded from `getSubCollection('auditLogs')` with real timestamps and status badges. Save button with dirty-check.
+- **6.6: Email Templates persistence** — Added Firestore load/save/delete for custom email templates via `getSubCollection('emailTemplates')`. Templates now survive page refresh. Surgical edits to existing 2457-line page.
+- **6.7: SMS Messages persistence** — Added Firestore load/save/create for SMS templates via `getSubCollection('smsTemplates')`. Custom triggers and template content now survive page refresh.
+- **6.8: Accounting Settings** — Modernized: replaced dynamic imports with static `getSubCollection('accountingConfig')`, added `useToast` feedback, cleaned up error handling. Config was already persisted but used legacy path.
 
 ---
 
@@ -380,7 +390,8 @@ Session 19 (Done):             Feature Completion Audit — full stub inventory 
 Session 20 (Done):             Sprint 1 (CRM), Sprint 2 (E-Commerce), Sprint 3 (Social Media) ✓
 Session 21 (Done):             Sprint 4 (AI Workforce) — 5/8 already complete, 3 fixed ✓
 Session 22 (Done):             Sprint 5 (Automation & Optimization) — 3 tasks ✓
-Session 23+:                   Sprint 6 (Settings Completion) — 7 tasks
+Session 23 (Done):             Sprint 6 (Settings Completion) — 7 tasks ✓
+Session 24+:                   Sprint 7 (Compliance & Admin) — 3 tasks
 Post-completion:               Nav menu consolidation & UX redesign
 Post-completion:               Full E2E test suite
 Post-completion:               CI/CD integration + regression suite
@@ -841,7 +852,7 @@ Full audit of every route in the sidebar navigation. Every page component was re
 | **Sprint 3** | Social Media | 6 | DONE | P1 |
 | **Sprint 4** | AI Workforce | 8 | DONE | P1 |
 | **Sprint 5** | Automation | 3 | DONE | P1 |
-| **Sprint 6** | Settings | 7 | ~72 hrs | P1 |
+| **Sprint 6** | Settings | 7 | DONE | P1 |
 | **Sprint 7** | Compliance & Admin | 3 | ~32 hrs | P2 |
 | **Sprint 8** | Academy | 3 | ~32 hrs | P3 |
 | **TOTAL** | | **36 features** | **~350 hrs** | |
