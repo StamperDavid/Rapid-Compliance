@@ -5,7 +5,7 @@
 ## Context
 Repository: https://github.com/StamperDavid/Rapid-Compliance
 Branch: dev
-Last Session: February 18, 2026 (Session 23 — Sprint 6 Settings Completion)
+Last Session: February 18, 2026 (Session 24 — Sprint 7 & 8 Completion)
 
 ## Current State
 
@@ -103,6 +103,14 @@ Last Session: February 18, 2026 (Session 23 — Sprint 6 Settings Completion)
 - **6.6: Email Templates persistence** — Added Firestore load/save/delete for custom email templates via `getSubCollection('emailTemplates')`. Templates now survive page refresh. Surgical edits to existing 2457-line page.
 - **6.7: SMS Messages persistence** — Added Firestore load/save/create for SMS templates via `getSubCollection('smsTemplates')`. Custom triggers and template content now survive page refresh.
 - **6.8: Accounting Settings** — Modernized: replaced dynamic imports with static `getSubCollection('accountingConfig')`, added `useToast` feedback, cleaned up error handling. Config was already persisted but used legacy path.
+
+**Session 24 (February 18, 2026):** Sprint 7 — Compliance & Admin + Sprint 8 — Academy & Knowledge Base. All tasks done:
+- **Sprint 7:** Assessed all 3 tasks. Compliance Reports already 100% complete (full Firestore CRUD + PDF export). System Impersonate already 100% complete (page + API with RBAC gating). Only Proposals needed work: wired builder save to Firestore via `getSubCollection('proposalTemplates')`, created proposals list page with type badges and delete. Committed (`b1e3b491`).
+- **Sprint 8:** Academy Hub already existed with Firestore tutorial loading. Created 3 new pages:
+  - **Academy Courses catalog** (`/academy/courses`) — Course grid with category filtering (getting-started, ai-agents, crm, marketing, advanced), difficulty badges (beginner/intermediate/advanced), lesson count, duration. Loads from `getSubCollection('academyCourses')`, filtered to published only.
+  - **Academy Course Detail** (`/academy/courses/[id]`) — Lesson sidebar with numbered list sorted by order, lesson type icons (video/text/quiz), video player with fallback, text content display, breadcrumb navigation. Uses `use(params)` for Next.js 15 async params.
+  - **Academy Certifications** (`/academy/certifications`) — Certification catalog with category filtering, badge display, quiz interface (multi-choice with progress bar), scoring with pass/fail, attempt history tracking via `getSubCollection('certificationAttempts')`, best-score display, retry flow. Full quiz engine: question rendering, answer selection, score calculation, result screen with certificate earned state.
+- **All 8 feature completion sprints now complete.** Next: Nav consolidation, E2E tests, CI/CD integration.
 
 ---
 
@@ -391,7 +399,7 @@ Session 20 (Done):             Sprint 1 (CRM), Sprint 2 (E-Commerce), Sprint 3 (
 Session 21 (Done):             Sprint 4 (AI Workforce) — 5/8 already complete, 3 fixed ✓
 Session 22 (Done):             Sprint 5 (Automation & Optimization) — 3 tasks ✓
 Session 23 (Done):             Sprint 6 (Settings Completion) — 7 tasks ✓
-Session 24+:                   Sprint 7 (Compliance & Admin) — 3 tasks
+Session 24 (Done):             Sprint 7 (Compliance & Admin) + Sprint 8 (Academy) ✓
 Post-completion:               Nav menu consolidation & UX redesign
 Post-completion:               Full E2E test suite
 Post-completion:               CI/CD integration + regression suite
