@@ -1,11 +1,13 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
 import { useAuth } from '@/hooks/useAuth';
 import { sendSMS } from '@/lib/sms/sms-service';
 import { useToast } from '@/hooks/useToast';
+import { getSubCollection } from '@/lib/firebase/collections';
+import { FirestoreService } from '@/lib/db/firestore-service';
 
 interface SmsTemplate {
   id: string;
@@ -15,8 +17,10 @@ interface SmsTemplate {
   isCustom?: boolean;
 }
 
+const smsTemplatesPath = getSubCollection('smsTemplates');
+
 export default function SmsMessagesPage() {
-  const { user: _user } = useAuth();
+  const { user } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const { theme } = useOrgTheme();
   const [smsTemplates, setSmsTemplates] = useState<SmsTemplate[]>([]);
@@ -28,6 +32,23 @@ export default function SmsMessagesPage() {
   const [testSMSResult, setTestSMSResult] = useState<{ success: boolean; message?: string } | null>(null);
   const toast = useToast();
 
+  // Load SMS templates from Firestore on mount
+  const loadSmsTemplates = useCallback(async () => {
+    try {
+      const saved = await FirestoreService.getAll<SmsTemplate>(smsTemplatesPath);
+      if (saved.length > 0) {
+        setSmsTemplates(saved);
+      }
+    } catch {
+      // Silent fail — templates just won't be pre-loaded
+    }
+  }, []);
+
+  useEffect(() => {
+    if (user) {
+      void loadSmsTemplates();
+    }
+  }, [user, loadSmsTemplates]);
 
   const primaryColor = theme?.colors?.primary?.main || 'var(--color-primary)';
 
@@ -359,6 +380,13 @@ export default function SmsMessagesPage() {
                             updated.push({ id: selectedSmsTemplate, message: smsContent });
                           }
                           setSmsTemplates(updated);
+                          // Persist to Firestore
+                          const templateToSave = updated.find(t => t.id === selectedSmsTemplate);
+                          if (templateToSave) {
+                            void FirestoreService.set(smsTemplatesPath, templateToSave.id, templateToSave, true).catch(() => {
+                              toast.error('Failed to persist SMS template');
+                            });
+                          }
                           toast.success('SMS template saved! Now available in workflows and automations.');
                         }}
                         style={{ padding: '0.75rem 1.5rem', backgroundColor: primaryColor, color: 'var(--color-text-primary)', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600' }}
@@ -492,6 +520,10 @@ export default function SmsMessagesPage() {
                       message: ''
                     };
                     setSmsTemplates([...smsTemplates, newTrigger]);
+                    // Persist to Firestore
+                    void FirestoreService.set(smsTemplatesPath, newTrigger.id, newTrigger, false).catch(() => {
+                      toast.error('Failed to persist custom trigger');
+                    });
                     setSelectedSmsTemplate(newTrigger.id);
                     setShowCustomTrigger(false);
                     toast.success('Custom trigger created! Now set up your message.');

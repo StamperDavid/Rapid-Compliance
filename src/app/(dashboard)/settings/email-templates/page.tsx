@@ -2,7 +2,7 @@
 
 /* eslint-disable @next/next/no-img-element -- Email template images use blob URLs from FileReader which don't work with next/image. */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
 import FilterBuilder from '@/components/FilterBuilder';
@@ -14,6 +14,8 @@ import { sendSMS as _sendSMS } from '@/lib/sms/sms-service';
 import SafeHtml from '@/components/SafeHtml';
 import { useToast } from '@/hooks/useToast';
 import { useConfirm, usePrompt } from '@/hooks/useConfirm';
+import { getSubCollection } from '@/lib/firebase/collections';
+import { FirestoreService } from '@/lib/db/firestore-service';
 
 // Type definitions for email template designer
 // Using a flat interface since the code accesses properties after type checking block.type
@@ -88,8 +90,10 @@ interface SmsTemplate {
   isCustom: boolean;
 }
 
+const emailTemplatesPath = getSubCollection('emailTemplates');
+
 export default function EmailTemplatesPage() {
-  const { user: _user } = useAuth();
+  const { user } = useAuth();
     const { theme } = useOrgTheme();
   const toast = useToast();
   const confirmDialog = useConfirm();
@@ -114,6 +118,23 @@ export default function EmailTemplatesPage() {
   const [showSmsCustomTrigger, setShowSmsCustomTrigger] = useState(false);
   const [showFilterBuilder, setShowFilterBuilder] = useState(false);
 
+  // Load custom templates from Firestore on mount
+  const loadCustomTemplates = useCallback(async () => {
+    try {
+      const saved = await FirestoreService.getAll<CustomTemplate>(emailTemplatesPath);
+      if (saved.length > 0) {
+        setCustomTemplates(saved);
+      }
+    } catch {
+      // Silent fail — templates just won't be pre-loaded
+    }
+  }, []);
+
+  useEffect(() => {
+    if (user) {
+      void loadCustomTemplates();
+    }
+  }, [user, loadCustomTemplates]);
 
   const primaryColor = theme?.colors?.primary?.main || 'var(--color-primary)';
 
@@ -597,6 +618,9 @@ Best regards,
                                       });
                                       if (confirmed) {
                                         setCustomTemplates(customTemplates.filter(t => t.id !== template.id));
+                                        void FirestoreService.delete(emailTemplatesPath, template.id).catch(() => {
+                                          toast.error('Failed to delete template from database');
+                                        });
                                       }
                                     })();
                                   }}
@@ -726,6 +750,10 @@ Best regards,
                               : [...customTemplates, savedTemplate];
 
                             setCustomTemplates(updated);
+                            // Persist to Firestore
+                            void FirestoreService.set(emailTemplatesPath, savedTemplate.id, savedTemplate, true).catch(() => {
+                              toast.error('Failed to persist template to database');
+                            });
                             setShowDesigner(false);
                             setSelectedBlock(null);
                             toast.success('Template saved successfully! You can now use it in automated workflows and campaigns.');

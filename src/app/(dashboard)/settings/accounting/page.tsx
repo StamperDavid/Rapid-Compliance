@@ -1,11 +1,11 @@
 'use client';
 
-import { PLATFORM_ID } from '@/lib/constants/platform';
-
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
-import { logger } from '@/lib/logger/logger';
+import { useToast } from '@/hooks/useToast';
+import { getSubCollection } from '@/lib/firebase/collections';
+import { FirestoreService } from '@/lib/db/firestore-service';
 
 interface AccountingConfig {
   platform: 'quickbooks' | 'xero' | 'freshbooks' | 'wave' | 'sage' | 'none';
@@ -80,53 +80,54 @@ const PLATFORMS = [
   },
 ];
 
+const accountingConfigPath = getSubCollection('accountingConfig');
+
 export default function AccountingPage() {
   const { user } = useAuth();
+  const toast = useToast();
   const [config, setConfig] = useState<AccountingConfig>(DEFAULT_CONFIG);
   const [isSaving, setIsSaving] = useState(false);
   const [_showConnectionModal, setShowConnectionModal] = useState(false);
 
-  useEffect(() => {
-    if (!user) {return;}
-
-    const loadConfig = async () => {
-      try {
-        const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
-        const configData = await FirestoreService.get(
-          `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/accountingConfig`,
-          'default'
-        );
-
-        if (configData) {
-          setConfig(configData as AccountingConfig);
-        }
-      } catch (error) {
-        logger.error('Failed to load accounting config:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
+  const loadConfig = useCallback(async () => {
+    try {
+      const configData = await FirestoreService.get<AccountingConfig>(
+        accountingConfigPath,
+        'default'
+      );
+      if (configData) {
+        setConfig(configData);
       }
-    };
+    } catch {
+      toast.error('Failed to load accounting config');
+    }
+  }, [toast]);
 
-    void loadConfig();
-  }, [user]);
+  useEffect(() => {
+    if (user) {
+      void loadConfig();
+    }
+  }, [user, loadConfig]);
 
   const handleSave = async () => {
-    if (!user) {return;}
+    if (!user) { return; }
 
     setIsSaving(true);
     try {
-      const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
       await FirestoreService.set(
-        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/accountingConfig`,
+        accountingConfigPath,
         'default',
         {
           ...config,
           updatedAt: new Date().toISOString(),
         },
-        false
+        true
       );
-    } catch (error) {
-      logger.error('Failed to save accounting config:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
+      toast.success('Accounting settings saved');
+    } catch {
+      toast.error('Failed to save accounting config');
     } finally {
-      setTimeout(() => setIsSaving(false), 1000);
+      setIsSaving(false);
     }
   };
 

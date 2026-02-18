@@ -31,7 +31,7 @@ interface WebhookDoc {
   createdBy: string;
 }
 
-const webhookPath = `${getSubCollection('workspaces')}/default/test_webhooks`;
+const webhookPath = getSubCollection('webhooks');
 
 const createWebhookSchema = z.object({
   name: z.string().min(1, 'Name is required'),
