@@ -16,6 +16,10 @@ interface AgentStats {
   swarmAgentCount: number;
   standaloneAgentCount: number;
   totalConversations: number;
+  trainingMaterialsCount: number;
+  trainingSessionsCount: number;
+  goldenMastersCount: number;
+  workflowsCount: number;
 }
 
 interface StatsApiResponse {
@@ -24,6 +28,10 @@ interface StatsApiResponse {
     swarmAgentCount?: number;
     standaloneAgentCount?: number;
     totalConversations?: number;
+    trainingMaterialsCount?: number;
+    trainingSessionsCount?: number;
+    goldenMastersCount?: number;
+    workflowsCount?: number;
   };
 }
 
@@ -36,52 +44,54 @@ interface AgentCard {
   stats: { label: string; value: string }[];
 }
 
-const AGENT_CARDS: AgentCard[] = [
-  {
-    title: 'Agent Persona',
-    description: 'Configure your AI agent\'s knowledge base, personality, and capabilities for sales and customer service.',
-    icon: 'P',
-    href: '/settings/ai-agents/persona',
-    status: 'active',
-    stats: [
-      { label: 'Knowledge Sources', value: '12' },
-      { label: 'Last Updated', value: '2 days ago' },
-    ],
-  },
-  {
-    title: 'Training Center',
-    description: 'Train your agent, review conversations, and deploy Golden Master versions for production use.',
-    icon: 'T',
-    href: '/settings/ai-agents/training',
-    status: 'active',
-    stats: [
-      { label: 'Training Sessions', value: '34' },
-      { label: 'Current Version', value: 'v3' },
-    ],
-  },
-  {
-    title: 'Business Setup',
-    description: 'Define business rules, pricing logic, and operational parameters for agent-driven workflows.',
-    icon: 'B',
-    href: '/settings/ai-agents/business-setup',
-    status: 'active',
-    stats: [
-      { label: 'Rules Configured', value: '8' },
-      { label: 'Workflows', value: '3' },
-    ],
-  },
-  {
-    title: 'Agent Configuration',
-    description: 'Advanced model parameters, API keys, and integration settings for agent infrastructure.',
-    icon: 'C',
-    href: '/settings/ai-agents/configuration',
-    status: 'active',
-    stats: [
-      { label: 'Active Models', value: '2' },
-      { label: 'API Integrations', value: '5' },
-    ],
-  },
-];
+function getAgentCards(agentStats: AgentStats | null): AgentCard[] {
+  return [
+    {
+      title: 'Agent Persona',
+      description: 'Configure your AI agent\'s knowledge base, personality, and capabilities for sales and customer service.',
+      icon: 'P',
+      href: '/settings/ai-agents/persona',
+      status: 'active',
+      stats: [
+        { label: 'Knowledge Sources', value: (agentStats?.trainingMaterialsCount ?? 0).toString() },
+        { label: 'Golden Masters', value: (agentStats?.goldenMastersCount ?? 0).toString() },
+      ],
+    },
+    {
+      title: 'Training Center',
+      description: 'Train your agent, review conversations, and deploy Golden Master versions for production use.',
+      icon: 'T',
+      href: '/settings/ai-agents/training',
+      status: 'active',
+      stats: [
+        { label: 'Training Sessions', value: (agentStats?.trainingSessionsCount ?? 0).toString() },
+        { label: 'Golden Masters', value: (agentStats?.goldenMastersCount ?? 0).toString() },
+      ],
+    },
+    {
+      title: 'Business Setup',
+      description: 'Define business rules, pricing logic, and operational parameters for agent-driven workflows.',
+      icon: 'B',
+      href: '/settings/ai-agents/business-setup',
+      status: 'active',
+      stats: [
+        { label: 'Workflows', value: (agentStats?.workflowsCount ?? 0).toString() },
+        { label: 'Active Agents', value: (agentStats?.standaloneAgentCount ?? 0).toString() },
+      ],
+    },
+    {
+      title: 'Agent Configuration',
+      description: 'Advanced model parameters, API keys, and integration settings for agent infrastructure.',
+      icon: 'C',
+      href: '/settings/ai-agents/configuration',
+      status: 'active',
+      stats: [
+        { label: 'Total Agents', value: (agentStats?.totalAgentCount ?? 0).toString() },
+        { label: 'Conversations', value: (agentStats?.totalConversations ?? 0).toLocaleString() },
+      ],
+    },
+  ];
+}
 
 const STATUS_COLORS: Record<string, { bg: string; text: string; label: string }> = {
   active: { bg: 'rgba(var(--color-success-rgb), 0.1)', text: 'var(--color-success)', label: 'Active' },
@@ -113,6 +123,10 @@ export default function AIAgentsPage() {
           swarmAgentCount: data.stats.swarmAgentCount ?? 47,
           standaloneAgentCount: data.stats.standaloneAgentCount ?? 4,
           totalConversations: data.stats.totalConversations ?? 0,
+          trainingMaterialsCount: data.stats.trainingMaterialsCount ?? 0,
+          trainingSessionsCount: data.stats.trainingSessionsCount ?? 0,
+          goldenMastersCount: data.stats.goldenMastersCount ?? 0,
+          workflowsCount: data.stats.workflowsCount ?? 0,
         });
       }
     } catch {
@@ -189,7 +203,7 @@ export default function AIAgentsPage() {
             gap: '1.5rem',
           }}
         >
-          {AGENT_CARDS.map((card) => {
+          {getAgentCards(stats).map((card) => {
             const statusStyle = STATUS_COLORS[card.status];
             return (
               <Link

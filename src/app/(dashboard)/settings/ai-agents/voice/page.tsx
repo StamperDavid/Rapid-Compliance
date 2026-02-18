@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
@@ -70,6 +70,12 @@ interface SaveApiResponse {
   error?: string;
 }
 
+interface SynthesizeApiResponse {
+  success: boolean;
+  audio?: string;
+  error?: string;
+}
+
 // ============================================================================
 // Component
 // ============================================================================
@@ -92,6 +98,8 @@ export default function VoiceSettingsPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isTesting, setIsTesting] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   // Fetch auth token
   const getAuthHeaders = useCallback(async (): Promise<Record<string, string>> => {
@@ -224,6 +232,43 @@ export default function VoiceSettingsPage() {
     } finally {
       setIsSaving(false);
       setTimeout(() => setSaveMessage(null), 4000);
+    }
+  };
+
+  // Test voice preview
+  const handleTestVoice = async () => {
+    if (!selectedVoiceId) { return; }
+    setIsTesting(true);
+
+    try {
+      const headers = await getAuthHeaders();
+      const res = await fetch('/api/voice/tts', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          text: 'Hello! This is a preview of your selected voice. The quality sounds great and is ready for production use.',
+          engine: selectedEngine,
+          voiceId: selectedVoiceId,
+        }),
+      });
+      const data = await res.json() as SynthesizeApiResponse;
+
+      if (data.success && data.audio) {
+        if (audioRef.current) {
+          audioRef.current.pause();
+        }
+        const audio = new Audio(data.audio);
+        audioRef.current = audio;
+        await audio.play();
+      } else {
+        setSaveMessage({ type: 'error', text: data.error ?? 'Failed to generate voice preview' });
+        setTimeout(() => setSaveMessage(null), 4000);
+      }
+    } catch {
+      setSaveMessage({ type: 'error', text: 'Failed to test voice — check your API key and try again' });
+      setTimeout(() => setSaveMessage(null), 4000);
+    } finally {
+      setIsTesting(false);
     }
   };
 
@@ -439,6 +484,33 @@ export default function VoiceSettingsPage() {
                     </button>
                   );
                 })}
+              </div>
+            )}
+
+            {/* Test Voice Button */}
+            {selectedVoiceId && (
+              <div style={{ marginTop: '1rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <button
+                  type="button"
+                  onClick={() => void handleTestVoice()}
+                  disabled={isTesting || !selectedVoiceId}
+                  style={{
+                    padding: '0.625rem 1.25rem',
+                    borderRadius: '0.5rem',
+                    border: 'none',
+                    backgroundColor: isTesting ? 'var(--color-bg-elevated)' : primaryColor,
+                    color: isTesting ? 'var(--color-text-disabled)' : '#fff',
+                    fontSize: '0.8125rem',
+                    fontWeight: '600',
+                    cursor: isTesting ? 'not-allowed' : 'pointer',
+                    transition: 'all 0.2s',
+                  }}
+                >
+                  {isTesting ? 'Playing...' : 'Test Voice'}
+                </button>
+                <span style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)' }}>
+                  Hear a preview of the selected voice
+                </span>
               </div>
             )}
           </div>

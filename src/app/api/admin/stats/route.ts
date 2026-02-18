@@ -52,6 +52,14 @@ interface PlatformStats {
   totalConversations: number;
   /** Total playbooks count */
   totalPlaybooks: number;
+  /** Training materials count */
+  trainingMaterialsCount: number;
+  /** Training sessions count */
+  trainingSessionsCount: number;
+  /** Golden masters count */
+  goldenMastersCount: number;
+  /** Workflows count */
+  workflowsCount: number;
   /** Timestamp when stats were fetched */
   fetchedAt: string;
   /** Whether these are global or org-scoped stats */
@@ -224,15 +232,23 @@ export async function GET(request: NextRequest) {
       const agentConfigPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/agentConfig`;
       const conversationsPath = getOrgSubCollection('conversations');
       const playbooksPath = getOrgSubCollection('playbooks');
+      const trainingMaterialsPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/trainingMaterials`;
+      const trainingSessionsPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/trainingSessions`;
+      const goldenMastersPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/goldenMasters`;
+      const workflowsPath = getOrgSubCollection('workflows');
 
       // Parallel count queries for efficiency
-      const [totalOrgs, totalUsers, trialOrgs, totalAgentCount, totalConversations, totalPlaybooks] = await Promise.all([
+      const [totalOrgs, totalUsers, trialOrgs, totalAgentCount, totalConversations, totalPlaybooks, trainingMaterialsCount, trainingSessionsCount, goldenMastersCount, workflowsCount] = await Promise.all([
         getCollectionCount(COLLECTIONS.ORGANIZATIONS),
         getCollectionCount(COLLECTIONS.USERS),
         getCollectionCountWhere(COLLECTIONS.ORGANIZATIONS, 'plan', '==', 'trial'),
         getCollectionCount(agentConfigPath),
         getCollectionCount(conversationsPath),
         getCollectionCount(playbooksPath),
+        getCollectionCount(trainingMaterialsPath),
+        getCollectionCount(trainingSessionsPath),
+        getCollectionCount(goldenMastersPath),
+        getCollectionCount(workflowsPath),
       ]);
 
       // DEBUG: Log the raw counts
@@ -260,6 +276,10 @@ export async function GET(request: NextRequest) {
         standaloneAgentCount,
         totalConversations,
         totalPlaybooks,
+        trainingMaterialsCount,
+        trainingSessionsCount,
+        goldenMastersCount,
+        workflowsCount,
         monthlyRevenue: 0, // Would come from billing system
         fetchedAt: new Date().toISOString(),
         scope: 'global',
