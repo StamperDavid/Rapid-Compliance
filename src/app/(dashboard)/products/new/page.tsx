@@ -5,9 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { productFormSchema, type ProductFormValues } from '@/lib/validation/product-form-schema';
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
-import { FirestoreService } from '@/lib/db/firestore-service';
-import { getSubCollection } from '@/lib/firebase/collections';
-import { Timestamp } from 'firebase/firestore';
+import { createProduct } from '@/lib/ecommerce/product-service';
 import { logger } from '@/lib/logger/logger';
 import { useToast } from '@/hooks/useToast';
 
@@ -30,18 +28,16 @@ export default function NewProductPage() {
 
   const onSubmit = async (data: ProductFormValues) => {
     try {
-      const productId = `prod-${Date.now()}`;
-      await FirestoreService.set(
-        `${getSubCollection('workspaces')}/default/entities/products/records`,
-        productId,
-        {
-          ...data,
-          id: productId,
-          createdAt: Timestamp.now(),
-          updatedAt: Timestamp.now(),
-        },
-        false
-      );
+      await createProduct({
+        name: data.name,
+        description: data.description,
+        price: data.price,
+        category: data.category,
+        sku: data.sku,
+        inStock: data.inStock,
+        images: data.images,
+      });
+      toast.success('Product created successfully');
       router.push('/products');
     } catch (error: unknown) {
       logger.error('Error creating product:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });

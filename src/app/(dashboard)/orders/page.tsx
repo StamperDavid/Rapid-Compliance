@@ -89,6 +89,7 @@ const FULFILLMENT_COLORS: Record<FulfillmentStatus, string> = {
 };
 
 const ORDER_STATUSES: OrderStatus[] = ['pending', 'processing', 'on_hold', 'completed', 'cancelled', 'refunded'];
+const FULFILLMENT_STATUSES: FulfillmentStatus[] = ['unfulfilled', 'partially_fulfilled', 'fulfilled', 'on_hold', 'cancelled'];
 
 export default function OrdersPage() {
   const { user, loading: authLoading } = useAuth();
@@ -152,6 +153,64 @@ export default function OrdersPage() {
     }
   };
 
+  const handleFulfillmentUpdate = async (orderId: string, newStatus: FulfillmentStatus) => {
+    try {
+      const res = await fetch(`/api/ecommerce/orders/${orderId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fulfillmentStatus: newStatus }),
+      });
+      const data = (await res.json()) as MutationResponse;
+      if (data.success) {
+        toast.success(`Fulfillment updated to ${newStatus.replace('_', ' ')}`);
+        await loadOrders();
+        if (selectedOrder?.id === orderId) {
+          setSelectedOrder((prev) => prev ? { ...prev, fulfillmentStatus: newStatus } : null);
+        }
+      } else {
+        toast.error(data.error ?? 'Failed to update');
+      }
+    } catch {
+      toast.error('Failed to update fulfillment status');
+    }
+  };
+
+  const exportToCSV = () => {
+    if (filteredOrders.length === 0) {
+      toast.error('No orders to export');
+      return;
+    }
+
+    const headers = ['Order #', 'Customer', 'Email', 'Status', 'Fulfillment', 'Subtotal', 'Tax', 'Shipping', 'Discount', 'Total', 'Source', 'Date'];
+    const rows = filteredOrders.map((o) => [
+      o.orderNumber,
+      `${o.customer.firstName} ${o.customer.lastName}`,
+      o.customerEmail,
+      o.status,
+      o.fulfillmentStatus,
+      o.subtotal.toFixed(2),
+      o.tax.toFixed(2),
+      o.shipping.toFixed(2),
+      o.discount.toFixed(2),
+      o.total.toFixed(2),
+      o.utmSource ?? o.attributionSource ?? '',
+      o.createdAt,
+    ]);
+
+    const csvContent = [headers, ...rows]
+      .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+      .join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `orders-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+    toast.success(`Exported ${filteredOrders.length} orders`);
+  };
+
   const filteredOrders = orders.filter((order) => {
     if (!searchQuery) {
       return true;
@@ -194,8 +253,17 @@ export default function OrdersPage() {
               Manage and track customer orders
             </p>
           </div>
-          <div className="text-sm text-[var(--color-text-secondary)]">
-            {orders.length} total order{orders.length !== 1 ? 's' : ''}
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-[var(--color-text-secondary)]">
+              {orders.length} total order{orders.length !== 1 ? 's' : ''}
+            </span>
+            <button
+              onClick={exportToCSV}
+              disabled={orders.length === 0}
+              className="px-3 py-1.5 text-xs font-medium bg-surface-paper border border-border-light rounded-lg hover:bg-surface-elevated disabled:opacity-50 disabled:cursor-not-allowed text-[var(--color-text-primary)]"
+            >
+              Export CSV
+            </button>
           </div>
         </div>
 
@@ -344,6 +412,26 @@ export default function OrdersPage() {
                       className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider border transition-all ${
                         selectedOrder.status === s
                           ? STATUS_COLORS[s]
+                          : 'bg-surface-elevated text-[var(--color-text-disabled)] border-border-light hover:bg-surface-main'
+                      }`}
+                    >
+                      {getStatusLabel(s)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Fulfillment Status */}
+              <div>
+                <h3 className="text-sm font-semibold text-[var(--color-text-primary)] mb-2">Fulfillment Status</h3>
+                <div className="flex flex-wrap gap-1.5">
+                  {FULFILLMENT_STATUSES.map((s) => (
+                    <button
+                      key={s}
+                      onClick={() => void handleFulfillmentUpdate(selectedOrder.id, s)}
+                      className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider border transition-all ${
+                        selectedOrder.fulfillmentStatus === s
+                          ? `${FULFILLMENT_COLORS[s]} border-current`
                           : 'bg-surface-elevated text-[var(--color-text-disabled)] border-border-light hover:bg-surface-main'
                       }`}
                     >

@@ -1,20 +1,21 @@
 # Atomic Quality Control: Only check staged files for ESLint
 # TypeScript check runs on full project (required for type resolution)
+# Note: husky runs this with `sh -e`, so every command must exit 0 or the hook aborts.
 
 export NODE_OPTIONS="--max-old-space-size=8192"
 
-echo "🔍 Running Atomic Quality Control..."
+echo "Running Atomic Quality Control..."
 
 # Step 1: Lint only staged .ts/.tsx files (zero-tolerance)
-echo "📝 ESLint: Checking staged files..."
-npx lint-staged
+echo "ESLint: Checking staged files..."
+npx lint-staged || exit 1
 
 # Step 2: TypeScript check (full project, but fast since it's incremental)
-echo "🔷 TypeScript: Checking for build blockers..."
-npx tsc --noEmit
+echo "TypeScript: Checking for build blockers..."
+npx tsc --noEmit || exit 1
 
 # Step 3: Bypass budget ratchet (eslint-disable count can only go DOWN)
-echo "📊 Bypass Ratchet: Checking eslint-disable budget..."
-bash scripts/check-bypass-budget.sh
+echo "Bypass Ratchet: Checking eslint-disable budget..."
+node scripts/check-bypass-budget.js || exit 1
 
-echo "✅ Quality check passed!"
+echo "Quality check passed!"
