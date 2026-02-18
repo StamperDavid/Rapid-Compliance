@@ -78,7 +78,7 @@ interface QueueResponse {
 
 interface ScheduleResponse {
   success: boolean;
-  scheduled?: ScheduledItem[];
+  posts?: ScheduledItem[];
 }
 
 type StudioMode = 'autopilot' | 'manual';
@@ -124,8 +124,8 @@ export default function SocialMediaCampaignsPage() {
       if (queueData.success && queueData.queue) {
         setQueuedPosts(queueData.queue);
       }
-      if (scheduleData.success && scheduleData.scheduled) {
-        setScheduledPosts2(scheduleData.scheduled);
+      if (scheduleData.success && scheduleData.posts) {
+        setScheduledPosts2(scheduleData.posts);
       }
     } catch {
       toast.error('Failed to load autopilot data');
@@ -144,6 +144,12 @@ export default function SocialMediaCampaignsPage() {
   const [showModal, setShowModal] = useState(false);
   const [editingPost, setEditingPost] = useState<SocialPost | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+
+  // Connected accounts state
+  const [connectedAccounts, setConnectedAccounts] = useState<
+    { id: string; platform: string; accountName: string; handle: string; status: string; isDefault: boolean }[]
+  >([]);
+  const [accountsLoading, setAccountsLoading] = useState(false);
 
   // Form state
   const [formPlatform, setFormPlatform] = useState<Platform>('linkedin');
@@ -177,12 +183,28 @@ export default function SocialMediaCampaignsPage() {
     }
   }, [filterPlatform, filterStatus, toast]);
 
+  const loadConnectedAccounts = useCallback(async () => {
+    try {
+      setAccountsLoading(true);
+      const res = await fetch('/api/social/accounts');
+      const data = await res.json() as { success: boolean; accounts?: typeof connectedAccounts };
+      if (data.success && data.accounts) {
+        setConnectedAccounts(data.accounts);
+      }
+    } catch {
+      // Accounts will show empty state
+    } finally {
+      setAccountsLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (user) {
       void loadPosts();
       void loadAutopilotData();
+      void loadConnectedAccounts();
     }
-  }, [user, loadPosts, loadAutopilotData]);
+  }, [user, loadPosts, loadAutopilotData, loadConnectedAccounts]);
 
   const resetForm = () => {
     setFormPlatform('linkedin');
@@ -735,35 +757,61 @@ export default function SocialMediaCampaignsPage() {
         {activeTab === 'settings' && (
           <div className="rounded-2xl bg-surface-paper border border-border-light p-6">
             <h3 className="text-base font-semibold text-[var(--color-text-primary)] mb-4">Connected Accounts</h3>
-            <div className="space-y-3">
-              {[
-                { platform: 'LinkedIn', icon: '💼', connected: true, account: '@yourcompany' },
-                { platform: 'Twitter / X', icon: '🐦', connected: true, account: '@yourcompany' },
-                { platform: 'Facebook', icon: '👤', connected: false },
-                { platform: 'Instagram', icon: '📷', connected: false },
-              ].map((account, i) => (
-                <div key={i} className="flex justify-between items-center p-3 bg-surface-elevated rounded-xl">
-                  <div className="flex items-center gap-3">
-                    <span className="text-xl">{account.icon}</span>
-                    <div>
-                      <div className="text-sm font-medium text-[var(--color-text-primary)]">{account.platform}</div>
-                      {account.connected && (
-                        <div className="text-xs text-[var(--color-text-secondary)]">{account.account}</div>
-                      )}
+            {accountsLoading ? (
+              <div className="text-center py-6 text-[var(--color-text-secondary)] text-sm">Loading accounts...</div>
+            ) : connectedAccounts.length === 0 ? (
+              <div className="text-center py-6">
+                <p className="text-[var(--color-text-secondary)] text-sm mb-3">No social accounts connected yet.</p>
+                <a
+                  href="/settings/integrations?category=social"
+                  className="px-4 py-2 bg-primary/10 text-primary border border-primary/20 rounded-lg text-xs font-medium hover:bg-primary/20 transition-all inline-block"
+                >
+                  Connect Accounts in Settings
+                </a>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {connectedAccounts.map((account) => {
+                  const icon = account.platform === 'linkedin' ? '💼'
+                    : account.platform === 'twitter' ? '🐦'
+                    : account.platform === 'facebook' ? '👤'
+                    : account.platform === 'instagram' ? '📷' : '🌐';
+                  const isActive = account.status === 'active';
+
+                  return (
+                    <div key={account.id} className="flex justify-between items-center p-3 bg-surface-elevated rounded-xl">
+                      <div className="flex items-center gap-3">
+                        <span className="text-xl">{icon}</span>
+                        <div>
+                          <div className="text-sm font-medium text-[var(--color-text-primary)]">
+                            {account.accountName}
+                            {account.isDefault && (
+                              <span className="ml-2 text-[10px] text-[var(--color-text-disabled)] font-normal uppercase">Default</span>
+                            )}
+                          </div>
+                          <div className="text-xs text-[var(--color-text-secondary)]">@{account.handle}</div>
+                        </div>
+                      </div>
+                      <span className={`px-2 py-1 rounded-full text-[10px] font-semibold ${
+                        isActive
+                          ? 'bg-success/10 text-success'
+                          : account.status === 'expired'
+                            ? 'bg-warning/10 text-warning'
+                            : 'bg-error/10 text-error'
+                      }`}>
+                        {account.status}
+                      </span>
                     </div>
-                  </div>
-                  <button
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                      account.connected
-                        ? 'bg-error/10 text-error border border-error/20 hover:bg-error/20'
-                        : 'bg-primary/10 text-primary border border-primary/20 hover:bg-primary/20'
-                    }`}
-                  >
-                    {account.connected ? 'Disconnect' : 'Connect'}
-                  </button>
-                </div>
-              ))}
-            </div>
+                  );
+                })}
+                <a
+                  href="/settings/integrations?category=social"
+                  className="block text-center text-xs text-primary mt-2 hover:underline"
+                >
+                  Manage accounts in Settings
+                </a>
+              </div>
+            )}
           </div>
         )}
           </>

@@ -49,6 +49,35 @@ interface ActivityEvent {
   metadata?: Record<string, unknown>;
 }
 
+interface EngagementMetrics {
+  impressions?: number;
+  engagements?: number;
+  likes?: number;
+  comments?: number;
+  shares?: number;
+  clicks?: number;
+  reach?: number;
+}
+
+interface PostWithEngagement {
+  id: string;
+  platform: string;
+  content: string;
+  publishedAt: string | null;
+  metrics: EngagementMetrics;
+}
+
+interface AggregateEngagement {
+  totalPublished: number;
+  postsWithMetrics: number;
+  totalImpressions: number;
+  totalEngagements: number;
+  totalLikes: number;
+  totalComments: number;
+  totalShares: number;
+  engagementRate: number;
+}
+
 interface DayCount {
   date: string;
   count: number;
@@ -74,25 +103,37 @@ export default function AnalyticsPage() {
   const { user: _user } = useUnifiedAuth();
   const [status, setStatus] = useState<AgentStatus | null>(null);
   const [activity, setActivity] = useState<ActivityEvent[]>([]);
+  const [engagementData, setEngagementData] = useState<PostWithEngagement[]>([]);
+  const [aggregateEngagement, setAggregateEngagement] = useState<AggregateEngagement | null>(null);
   const [loading, setLoading] = useState(true);
   const [platformFilter, setPlatformFilter] = useState<'all' | 'twitter' | 'linkedin'>('all');
   const [sortBy, setSortBy] = useState<'date' | 'platform'>('date');
 
   const fetchData = useCallback(async () => {
     try {
-      const [statusRes, activityRes] = await Promise.all([
+      const [statusRes, activityRes, engagementRes] = await Promise.all([
         fetch('/api/social/agent-status'),
         fetch('/api/social/activity?limit=100'),
+        fetch('/api/social/engagement'),
       ]);
 
       const statusData = await statusRes.json() as { success: boolean; status?: AgentStatus };
       const activityData = await activityRes.json() as { success: boolean; events?: ActivityEvent[] };
+      const engData = await engagementRes.json() as {
+        success: boolean;
+        aggregate?: AggregateEngagement;
+        posts?: PostWithEngagement[];
+      };
 
       if (statusData.success && statusData.status) {
         setStatus(statusData.status);
       }
       if (activityData.success && activityData.events) {
         setActivity(activityData.events);
+      }
+      if (engData.success) {
+        setAggregateEngagement(engData.aggregate ?? null);
+        setEngagementData(engData.posts ?? []);
       }
     } catch (error) {
       console.error('Failed to fetch analytics data:', error);
@@ -236,9 +277,16 @@ export default function AnalyticsPage() {
           <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginBottom: '0.25rem' }}>
             Engagement Rate
           </div>
-          <div style={{ fontSize: '0.8125rem', fontWeight: 500, color: 'var(--color-text-disabled)', marginTop: '0.5rem' }}>
-            Coming Soon
+          <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#FF9800' }}>
+            {aggregateEngagement && aggregateEngagement.postsWithMetrics > 0
+              ? `${aggregateEngagement.engagementRate}%`
+              : '--'}
           </div>
+          {aggregateEngagement && aggregateEngagement.postsWithMetrics > 0 && (
+            <div style={{ fontSize: '0.625rem', color: 'var(--color-text-disabled)', marginTop: '0.125rem' }}>
+              {aggregateEngagement.postsWithMetrics} posts tracked
+            </div>
+          )}
         </div>
 
         <div
@@ -442,6 +490,33 @@ export default function AnalyticsPage() {
                   </th>
                   <th style={{
                     padding: '0.75rem',
+                    textAlign: 'right',
+                    fontSize: '0.75rem',
+                    fontWeight: 600,
+                    color: 'var(--color-text-secondary)',
+                  }}>
+                    Likes
+                  </th>
+                  <th style={{
+                    padding: '0.75rem',
+                    textAlign: 'right',
+                    fontSize: '0.75rem',
+                    fontWeight: 600,
+                    color: 'var(--color-text-secondary)',
+                  }}>
+                    Comments
+                  </th>
+                  <th style={{
+                    padding: '0.75rem',
+                    textAlign: 'right',
+                    fontSize: '0.75rem',
+                    fontWeight: 600,
+                    color: 'var(--color-text-secondary)',
+                  }}>
+                    Shares
+                  </th>
+                  <th style={{
+                    padding: '0.75rem',
                     textAlign: 'left',
                     fontSize: '0.75rem',
                     fontWeight: 600,
@@ -452,57 +527,87 @@ export default function AnalyticsPage() {
                 </tr>
               </thead>
               <tbody>
-                {sortedPublished.map((post) => (
-                  <tr key={post.id} style={{ borderBottom: '1px solid var(--color-border-light)' }}>
-                    <td style={{ padding: '0.75rem' }}>
-                      <span
-                        style={{
-                          padding: '0.2rem 0.5rem',
-                          borderRadius: '0.25rem',
-                          fontSize: '0.625rem',
-                          fontWeight: 600,
-                          color: '#fff',
-                          backgroundColor: PLATFORM_COLORS[post.platform] ?? '#666',
-                          textTransform: 'uppercase',
-                        }}
-                      >
-                        {post.platform}
-                      </span>
-                    </td>
-                    <td style={{
-                      padding: '0.75rem',
-                      fontSize: '0.8125rem',
-                      color: 'var(--color-text-primary)',
-                      maxWidth: '400px',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                    }}>
-                      {post.content}
-                    </td>
-                    <td style={{
-                      padding: '0.75rem',
-                      fontSize: '0.75rem',
-                      color: 'var(--color-text-secondary)',
-                    }}>
-                      {formatDateTime(post.timestamp)}
-                    </td>
-                    <td style={{ padding: '0.75rem' }}>
-                      <span
-                        style={{
-                          padding: '0.25rem 0.5rem',
-                          borderRadius: '1rem',
-                          fontSize: '0.625rem',
-                          fontWeight: 600,
-                          backgroundColor: 'rgba(76,175,80,0.15)',
-                          color: '#4CAF50',
-                        }}
-                      >
-                        Published
-                      </span>
-                    </td>
-                  </tr>
-                ))}
+                {sortedPublished.map((post) => {
+                  const eng = engagementData.find((e) => e.id === post.id);
+                  return (
+                    <tr key={post.id} style={{ borderBottom: '1px solid var(--color-border-light)' }}>
+                      <td style={{ padding: '0.75rem' }}>
+                        <span
+                          style={{
+                            padding: '0.2rem 0.5rem',
+                            borderRadius: '0.25rem',
+                            fontSize: '0.625rem',
+                            fontWeight: 600,
+                            color: '#fff',
+                            backgroundColor: PLATFORM_COLORS[post.platform] ?? '#666',
+                            textTransform: 'uppercase',
+                          }}
+                        >
+                          {post.platform}
+                        </span>
+                      </td>
+                      <td style={{
+                        padding: '0.75rem',
+                        fontSize: '0.8125rem',
+                        color: 'var(--color-text-primary)',
+                        maxWidth: '300px',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}>
+                        {post.content}
+                      </td>
+                      <td style={{
+                        padding: '0.75rem',
+                        fontSize: '0.75rem',
+                        color: 'var(--color-text-secondary)',
+                      }}>
+                        {formatDateTime(post.timestamp)}
+                      </td>
+                      <td style={{
+                        padding: '0.75rem',
+                        fontSize: '0.8125rem',
+                        fontWeight: 600,
+                        color: '#E91E63',
+                        textAlign: 'right',
+                      }}>
+                        {eng?.metrics.likes ?? '--'}
+                      </td>
+                      <td style={{
+                        padding: '0.75rem',
+                        fontSize: '0.8125rem',
+                        fontWeight: 600,
+                        color: '#2196F3',
+                        textAlign: 'right',
+                      }}>
+                        {eng?.metrics.comments ?? '--'}
+                      </td>
+                      <td style={{
+                        padding: '0.75rem',
+                        fontSize: '0.8125rem',
+                        fontWeight: 600,
+                        color: '#4CAF50',
+                        textAlign: 'right',
+                      }}>
+                        {eng?.metrics.shares ?? '--'}
+                      </td>
+                      <td style={{ padding: '0.75rem' }}>
+                        <span
+                          style={{
+                            padding: '0.25rem 0.5rem',
+                            borderRadius: '1rem',
+                            fontSize: '0.625rem',
+                            fontWeight: 600,
+                            backgroundColor: 'rgba(76,175,80,0.15)',
+                            color: '#4CAF50',
+                          }}
+                        >
+                          Published
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

@@ -1,13 +1,9 @@
 'use client';
 
-import { PLATFORM_ID } from '@/lib/constants/platform';
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
-import { logger } from '@/lib/logger/logger';
 import { useToast } from '@/hooks/useToast';
-import type { ModelName } from '@/types/ai-models';
 
 // Minimal type definitions for this component
 interface SocialTrainingSettings {
@@ -86,7 +82,7 @@ const CONTENT_THEME_OPTIONS = [
 ];
 
 export default function SocialMediaTrainingPage() {
-  const { user } = useAuth();
+  const { user: _user } = useAuth();
   const { theme } = useOrgTheme();
   const toast = useToast();
 
@@ -127,74 +123,61 @@ export default function SocialMediaTrainingPage() {
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [knowledgeItems, setKnowledgeItems] = useState<KnowledgeItem[]>([]);
 
+  // Knowledge Upload Modal State
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [uploadTitle, setUploadTitle] = useState('');
+  const [uploadContent, setUploadContent] = useState('');
+  const [uploadType, setUploadType] = useState<'document' | 'example' | 'template'>('document');
+  const [uploading, setUploading] = useState(false);
+
   const primaryColor = theme?.colors?.primary?.main || 'var(--color-primary)';
 
-  // Load settings from Firestore
+  // Load settings via API
   const loadSettings = useCallback(async () => {
     try {
       setLoading(true);
-      const { isFirebaseConfigured } = await import('@/lib/firebase/config');
+      const res = await fetch('/api/social/training');
+      const data = await res.json() as {
+        success: boolean;
+        settings?: SocialTrainingSettings;
+        brandDNA?: BrandDNA;
+        history?: HistoryItem[];
+        knowledge?: KnowledgeItem[];
+      };
 
-      if (!isFirebaseConfigured) {
-        logger.warn('Firebase not configured, using demo data', { file: 'social/training/page.tsx' });
+      if (!data.success) {
+        // Fallback to demo data if API fails
         loadDemoData();
-        setLoading(false);
         return;
       }
 
-      const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+      if (data.settings) {
+        setEmojiUsage(data.settings.emojiUsage || 'light');
+        setCtaStyle(data.settings.ctaStyle || 'soft');
+        setContentThemes(data.settings.contentThemes || []);
+        setHashtagStrategy(data.settings.hashtagStrategy || '');
+        setPostingPersonality(data.settings.postingPersonality || '');
 
-      // Load social training settings
-      const socialSettingsData = await FirestoreService.get(
-        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/toolTraining`,
-        'social'
-      );
-      const socialSettings = socialSettingsData as SocialTrainingSettings | null | undefined;
-
-      if (socialSettings) {
-        setEmojiUsage(socialSettings.emojiUsage || 'light');
-        setCtaStyle(socialSettings.ctaStyle || 'soft');
-        setContentThemes(socialSettings.contentThemes || []);
-        setHashtagStrategy(socialSettings.hashtagStrategy || '');
-        setPostingPersonality(socialSettings.postingPersonality || '');
-
-        if (socialSettings.platformPreferences?.twitter) {
-          setTwitterSettings(socialSettings.platformPreferences.twitter);
+        if (data.settings.platformPreferences?.twitter) {
+          setTwitterSettings(data.settings.platformPreferences.twitter);
         }
-        if (socialSettings.platformPreferences?.linkedin) {
-          setLinkedinSettings(socialSettings.platformPreferences.linkedin);
+        if (data.settings.platformPreferences?.linkedin) {
+          setLinkedinSettings(data.settings.platformPreferences.linkedin);
         }
-        if (socialSettings.platformPreferences?.instagram) {
-          setInstagramSettings(socialSettings.platformPreferences.instagram);
+        if (data.settings.platformPreferences?.instagram) {
+          setInstagramSettings(data.settings.platformPreferences.instagram);
         }
       }
 
-      // Load Brand DNA
-      const orgDataRaw = await FirestoreService.get(COLLECTIONS.ORGANIZATIONS, PLATFORM_ID);
-      const orgData = orgDataRaw as { brandDNA?: BrandDNA } | null | undefined;
-      if (orgData?.brandDNA) {
-        setBrandDNA(orgData.brandDNA);
+      if (data.brandDNA) {
+        setBrandDNA(data.brandDNA);
       }
 
-      // Load generation history
-      const { orderBy } = await import('firebase/firestore');
-      const historyResult = await FirestoreService.getAllPaginated(
-        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/socialGenerationHistory`,
-        [orderBy('generatedAt', 'desc')],
-        50
-      );
-      setHistory((historyResult.data as HistoryItem[] | undefined) ?? []);
-
-      // Load knowledge items
-      const knowledgeResult = await FirestoreService.getAllPaginated(
-        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/socialKnowledge`,
-        [orderBy('uploadedAt', 'desc')],
-        50
-      );
-      setKnowledgeItems((knowledgeResult.data as KnowledgeItem[] | undefined) ?? []);
-
-    } catch (error) {
-      logger.error('Error loading social training settings:', error instanceof Error ? error : new Error(String(error)), { file: 'social/training/page.tsx' });
+      setHistory(data.history ?? []);
+      setKnowledgeItems(data.knowledge ?? []);
+    } catch {
+      // Fallback to demo data
+      loadDemoData();
     } finally {
       setLoading(false);
     }
@@ -254,56 +237,42 @@ export default function SocialMediaTrainingPage() {
     ]);
   };
 
-  // Save settings to Firestore
+  // Save settings via API
   const saveSettings = async () => {
     try {
       setSaving(true);
 
-      const { isFirebaseConfigured } = await import('@/lib/firebase/config');
-      if (!isFirebaseConfigured) {
-        toast.success('Settings saved (demo mode)');
-        setSaving(false);
-        return;
+      const res = await fetch('/api/social/training', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          emojiUsage,
+          ctaStyle,
+          contentThemes,
+          hashtagStrategy,
+          postingPersonality,
+          platformPreferences: {
+            twitter: twitterSettings,
+            linkedin: linkedinSettings,
+            instagram: instagramSettings,
+          },
+        }),
+      });
+      const data = await res.json() as { success: boolean; error?: string };
+
+      if (data.success) {
+        toast.success('Settings saved successfully!');
+      } else {
+        toast.error(data.error ?? 'Failed to save settings.');
       }
-
-      const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
-
-      const settings: SocialTrainingSettings = {
-        emojiUsage,
-        ctaStyle,
-        contentThemes,
-        hashtagStrategy,
-        postingPersonality,
-        platformPreferences: {
-          twitter: twitterSettings,
-          linkedin: linkedinSettings,
-          instagram: instagramSettings,
-        },
-      };
-
-      await FirestoreService.set(
-        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/toolTraining`,
-        'social',
-        {
-          ...settings,
-          updatedAt: new Date().toISOString(),
-          updatedBy: user?.id ?? 'unknown',
-        },
-        true
-      );
-
-      logger.info('Social training settings saved', { file: 'social/training/page.tsx', PLATFORM_ID });
-      toast.success('Settings saved successfully!');
-
-    } catch (error) {
-      logger.error('Error saving social training settings:', error instanceof Error ? error : new Error(String(error)), { file: 'social/training/page.tsx' });
+    } catch {
       toast.error('Failed to save settings. Please try again.');
     } finally {
       setSaving(false);
     }
   };
 
-  // Generate sample post
+  // Generate sample post via API
   const generateSamplePost = async () => {
     if (!generateTopic.trim()) {
       toast.warning('Please enter a topic or prompt for the post.');
@@ -314,93 +283,22 @@ export default function SocialMediaTrainingPage() {
     setGeneratedPost(null);
 
     try {
-      // Build the prompt based on settings
-      const platformLimit = PLATFORM_LIMITS[generatePlatform];
-      const emojiInstruction = emojiUsage === 'none'
-        ? 'Do not use any emojis.'
-        : emojiUsage === 'light'
-          ? 'Use 1-2 relevant emojis sparingly.'
-          : 'Use emojis liberally to add personality.';
+      const res = await fetch('/api/social/training/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          platform: generatePlatform,
+          topic: generateTopic,
+        }),
+      });
+      const data = await res.json() as { success: boolean; post?: GeneratedPost; error?: string };
 
-      const ctaInstruction = ctaStyle === 'soft'
-        ? 'Include a subtle, non-pushy call to action.'
-        : ctaStyle === 'direct'
-          ? 'Include a clear, direct call to action.'
-          : 'End with an engaging question to drive discussion.';
-
-      const brandContext = brandDNA
-        ? `Brand context: ${brandDNA.companyDescription}. Tone: ${brandDNA.toneOfVoice}. Key phrases to consider: ${brandDNA.keyPhrases?.join(', ')}.`
-        : '';
-
-      const prompt = `Generate a ${generatePlatform} post about: ${generateTopic}
-
-Platform: ${generatePlatform}
-Character limit: ${platformLimit}
-${brandContext}
-Personality: ${postingPersonality || 'Professional and engaging'}
-${emojiInstruction}
-${ctaInstruction}
-Hashtag strategy: ${hashtagStrategy || 'Include 3-5 relevant hashtags'}
-Content themes to align with: ${contentThemes.join(', ')}
-
-Generate ONLY the post content, keeping it under ${platformLimit} characters. Include relevant hashtags at the end.`;
-
-      // Try to call AI provider
-      const { isFirebaseConfigured } = await import('@/lib/firebase/config');
-      let responseText = '';
-
-      if (isFirebaseConfigured) {
-        try {
-          const { FirestoreService } = await import('@/lib/db/firestore-service');
-          const adminKeysRaw = await FirestoreService.get('admin', 'platform-api-keys');
-          const adminKeys = adminKeysRaw as { openrouter?: { apiKey?: string } } | null | undefined;
-
-          if (adminKeys?.openrouter?.apiKey) {
-            const { OpenRouterProvider } = await import('@/lib/ai/openrouter-provider');
-            const provider = new OpenRouterProvider({ apiKey: adminKeys.openrouter.apiKey });
-
-            const modelName: ModelName = 'openrouter/anthropic/claude-3.5-sonnet' as const;
-            const response = await provider.chat({
-              model: modelName,
-              messages: [{ role: 'user', content: prompt }],
-              temperature: 0.7,
-            });
-
-            responseText = response.content;
-          }
-        } catch (_aiError) {
-          logger.warn('AI provider failed, using demo response', { file: 'social/training/page.tsx' });
-        }
+      if (data.success && data.post) {
+        setGeneratedPost(data.post);
+      } else {
+        toast.error(data.error ?? 'Failed to generate post.');
       }
-
-      // Fallback demo response if AI not available
-      if (!responseText) {
-        const demoResponses: Record<PlatformType, string> = {
-          twitter: `${emojiUsage !== 'none' ? '🚀 ' : ''}${generateTopic} is transforming how we approach sales. The future is AI-powered, and the results speak for themselves.${emojiUsage === 'heavy' ? ' 💪📈' : ''}\n\n${ctaStyle === 'question' ? 'What trends are you seeing?' : ctaStyle === 'direct' ? 'Learn more: link.co/demo' : 'Thoughts?'}\n\n#SalesTech #AI #Innovation`,
-          linkedin: `${emojiUsage !== 'none' ? '💡 ' : ''}I've been thinking about ${generateTopic} lately.\n\nIn today's rapidly evolving landscape, staying ahead means embracing new approaches. Here's what I've learned:\n\n1. Innovation drives results\n2. Data-informed decisions matter\n3. Customer success is the ultimate metric\n\n${ctaStyle === 'question' ? 'What strategies are working for your team?' : ctaStyle === 'direct' ? 'DM me to discuss how we can help.' : 'Would love to hear your thoughts in the comments.'}\n\n#Leadership #Innovation #Sales #AI #B2B`,
-          instagram: `${emojiUsage !== 'none' ? '✨ ' : ''}${generateTopic}\n\nWe're on a mission to transform how teams work. Every day brings new opportunities to innovate and grow.${emojiUsage === 'heavy' ? ' 🙌💫🔥' : ''}\n\n${ctaStyle === 'question' ? 'What inspires you?' : ctaStyle === 'direct' ? 'Link in bio!' : 'Double tap if you agree!'}\n\n.\n.\n.\n#innovation #tech #business #growth #sales #ai #startup #entrepreneur #motivation #success #teamwork #goals #future #digital #transform`,
-        };
-        responseText = demoResponses[generatePlatform];
-      }
-
-      // Extract hashtags from response
-      const hashtagMatches = responseText.match(/#\w+/g) ?? [];
-      const hashtags = hashtagMatches.map(tag => tag.substring(1));
-
-      const newPost: GeneratedPost = {
-        id: `post_${Date.now()}`,
-        platform: generatePlatform,
-        content: responseText,
-        hashtags,
-        characterCount: responseText.length,
-        generatedAt: new Date().toISOString(),
-        topic: generateTopic,
-      };
-
-      setGeneratedPost(newPost);
-
-    } catch (error) {
-      logger.error('Error generating sample post:', error instanceof Error ? error : new Error(String(error)), { file: 'social/training/page.tsx' });
+    } catch {
       toast.error('Failed to generate post. Please try again.');
     } finally {
       setIsGenerating(false);
@@ -412,41 +310,44 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
     try {
       await navigator.clipboard.writeText(text);
       toast.success('Copied to clipboard!');
-    } catch (error) {
-      logger.error('Failed to copy to clipboard:', error instanceof Error ? error : undefined, { file: 'social/training/page.tsx' });
+    } catch {
+      toast.error('Failed to copy to clipboard.');
     }
   };
 
-  // Save generated post to history
+  // Save generated post to history via API (PUT)
   const saveToHistory = async (post: GeneratedPost) => {
     try {
-      const { isFirebaseConfigured } = await import('@/lib/firebase/config');
+      const res = await fetch('/api/social/training', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: post.id,
+          platform: post.platform,
+          content: post.content,
+          topic: post.topic,
+          hashtags: post.hashtags,
+          characterCount: post.characterCount,
+          generatedAt: post.generatedAt,
+        }),
+      });
+      const data = await res.json() as { success: boolean };
 
-      if (isFirebaseConfigured) {
-        const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
-        await FirestoreService.set(
-          `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/socialGenerationHistory`,
-          post.id,
-          {
-            ...post,
-            saved: true,
-          },
-          false
-        );
+      if (data.success) {
+        setHistory(prev => [{
+          id: post.id,
+          platform: post.platform,
+          content: post.content,
+          topic: post.topic,
+          generatedAt: post.generatedAt,
+          saved: true,
+        }, ...prev]);
+        toast.success('Saved to history!');
+      } else {
+        toast.error('Failed to save to history.');
       }
-
-      setHistory(prev => [{
-        id: post.id,
-        platform: post.platform,
-        content: post.content,
-        topic: post.topic,
-        generatedAt: post.generatedAt,
-        saved: true,
-      }, ...prev]);
-
-      toast.success('Saved to history!');
-    } catch (error) {
-      logger.error('Error saving to history:', error instanceof Error ? error : new Error(String(error)), { file: 'social/training/page.tsx' });
+    } catch {
+      toast.error('Failed to save to history.');
     }
   };
 
@@ -457,6 +358,63 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
         ? prev.filter(t => t !== theme)
         : [...prev, theme]
     );
+  };
+
+  // Upload knowledge item via API
+  const uploadKnowledgeItem = async () => {
+    if (!uploadTitle.trim() || !uploadContent.trim()) {
+      toast.warning('Please fill in both title and content.');
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const res = await fetch('/api/social/training/knowledge', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: uploadTitle.trim(),
+          content: uploadContent.trim(),
+          type: uploadType,
+        }),
+      });
+      const data = await res.json() as { success: boolean; item?: KnowledgeItem; error?: string };
+
+      if (data.success && data.item) {
+        const newItem = data.item;
+        setKnowledgeItems(prev => [newItem, ...prev]);
+        setShowUploadModal(false);
+        setUploadTitle('');
+        setUploadContent('');
+        setUploadType('document');
+        toast.success('Knowledge item uploaded!');
+      } else {
+        toast.error(data.error ?? 'Failed to upload knowledge item.');
+      }
+    } catch {
+      toast.error('Failed to upload knowledge item.');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  // Delete knowledge item via API
+  const deleteKnowledgeItem = async (itemId: string) => {
+    try {
+      const res = await fetch(`/api/social/training/knowledge?id=${encodeURIComponent(itemId)}`, {
+        method: 'DELETE',
+      });
+      const data = await res.json() as { success: boolean };
+
+      if (data.success) {
+        setKnowledgeItems(prev => prev.filter(k => k.id !== itemId));
+        toast.success('Knowledge item deleted.');
+      } else {
+        toast.error('Failed to delete knowledge item.');
+      }
+    } catch {
+      toast.error('Failed to delete knowledge item.');
+    }
   };
 
   if (loading) {
@@ -1829,6 +1787,7 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                   </p>
                 </div>
                 <button
+                  onClick={() => setShowUploadModal(true)}
                   style={{
                     padding: '0.75rem 1.5rem',
                     backgroundColor: primaryColor,
@@ -1910,12 +1869,187 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
                     }}>
                       {item.content.substring(0, 100)}...
                     </p>
-                    <p style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)' }}>
-                      Uploaded: {new Date(item.uploadedAt).toLocaleDateString()}
-                    </p>
+                    <div style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      marginTop: '0.5rem',
+                    }}>
+                      <p style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)' }}>
+                        Uploaded: {new Date(item.uploadedAt).toLocaleDateString()}
+                      </p>
+                      <button
+                        onClick={() => void deleteKnowledgeItem(item.id)}
+                        style={{
+                          padding: '0.25rem 0.5rem',
+                          backgroundColor: 'transparent',
+                          border: '1px solid var(--color-border-strong)',
+                          borderRadius: '0.25rem',
+                          color: 'var(--color-text-secondary)',
+                          fontSize: '0.625rem',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        Delete
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
+
+              {/* Upload Knowledge Modal */}
+              {showUploadModal && (
+                <div style={{
+                  position: 'fixed',
+                  inset: 0,
+                  backgroundColor: 'rgba(0,0,0,0.5)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  zIndex: 50,
+                }}>
+                  <div style={{
+                    backgroundColor: 'var(--color-bg-main)',
+                    border: '1px solid var(--color-border-light)',
+                    borderRadius: '0.75rem',
+                    padding: '2rem',
+                    width: '100%',
+                    maxWidth: '500px',
+                  }}>
+                    <h3 style={{
+                      fontSize: '1.25rem',
+                      fontWeight: 'bold',
+                      color: 'var(--color-text-primary)',
+                      marginBottom: '1.5rem',
+                    }}>
+                      Upload Knowledge Document
+                    </h3>
+
+                    <div style={{ marginBottom: '1rem' }}>
+                      <label style={{
+                        display: 'block',
+                        fontSize: '0.875rem',
+                        color: 'var(--color-text-secondary)',
+                        marginBottom: '0.5rem',
+                      }}>
+                        Title
+                      </label>
+                      <input
+                        type="text"
+                        value={uploadTitle}
+                        onChange={(e) => setUploadTitle(e.target.value)}
+                        placeholder="e.g., Brand Voice Guidelines"
+                        style={{
+                          width: '100%',
+                          padding: '0.75rem',
+                          backgroundColor: 'var(--color-bg-paper)',
+                          border: '1px solid var(--color-border-strong)',
+                          borderRadius: '0.5rem',
+                          color: 'var(--color-text-primary)',
+                          fontSize: '0.875rem',
+                        }}
+                      />
+                    </div>
+
+                    <div style={{ marginBottom: '1rem' }}>
+                      <label style={{
+                        display: 'block',
+                        fontSize: '0.875rem',
+                        color: 'var(--color-text-secondary)',
+                        marginBottom: '0.5rem',
+                      }}>
+                        Type
+                      </label>
+                      <select
+                        value={uploadType}
+                        onChange={(e) => setUploadType(e.target.value as 'document' | 'example' | 'template')}
+                        style={{
+                          width: '100%',
+                          padding: '0.75rem',
+                          backgroundColor: 'var(--color-bg-paper)',
+                          border: '1px solid var(--color-border-strong)',
+                          borderRadius: '0.5rem',
+                          color: 'var(--color-text-primary)',
+                          fontSize: '0.875rem',
+                        }}
+                      >
+                        <option value="document">Document - Brand guidelines, policies</option>
+                        <option value="example">Example - Sample posts to learn from</option>
+                        <option value="template">Template - Reusable post structures</option>
+                      </select>
+                    </div>
+
+                    <div style={{ marginBottom: '1.5rem' }}>
+                      <label style={{
+                        display: 'block',
+                        fontSize: '0.875rem',
+                        color: 'var(--color-text-secondary)',
+                        marginBottom: '0.5rem',
+                      }}>
+                        Content
+                      </label>
+                      <textarea
+                        value={uploadContent}
+                        onChange={(e) => setUploadContent(e.target.value)}
+                        placeholder="Paste the content of the document, example post, or template..."
+                        rows={8}
+                        style={{
+                          width: '100%',
+                          padding: '0.75rem',
+                          backgroundColor: 'var(--color-bg-paper)',
+                          border: '1px solid var(--color-border-strong)',
+                          borderRadius: '0.5rem',
+                          color: 'var(--color-text-primary)',
+                          fontSize: '0.875rem',
+                          resize: 'vertical',
+                        }}
+                      />
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+                      <button
+                        onClick={() => {
+                          setShowUploadModal(false);
+                          setUploadTitle('');
+                          setUploadContent('');
+                          setUploadType('document');
+                        }}
+                        style={{
+                          padding: '0.75rem 1.5rem',
+                          backgroundColor: 'transparent',
+                          border: '1px solid var(--color-border-strong)',
+                          borderRadius: '0.5rem',
+                          color: 'var(--color-text-secondary)',
+                          fontSize: '0.875rem',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={() => void uploadKnowledgeItem()}
+                        disabled={uploading || !uploadTitle.trim() || !uploadContent.trim()}
+                        style={{
+                          padding: '0.75rem 1.5rem',
+                          backgroundColor: (uploading || !uploadTitle.trim() || !uploadContent.trim())
+                            ? 'var(--color-border-strong)'
+                            : primaryColor,
+                          color: 'var(--color-text-primary)',
+                          border: 'none',
+                          borderRadius: '0.5rem',
+                          fontSize: '0.875rem',
+                          fontWeight: '600',
+                          cursor: (uploading || !uploadTitle.trim() || !uploadContent.trim())
+                            ? 'not-allowed'
+                            : 'pointer',
+                        }}
+                      >
+                        {uploading ? 'Uploading...' : 'Upload'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
