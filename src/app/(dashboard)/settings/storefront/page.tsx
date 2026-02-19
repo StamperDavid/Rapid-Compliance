@@ -161,19 +161,21 @@ export default function StorefrontSettingsPage() {
 
   const widgetId = 'demo_store_widget';
 
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? (typeof window !== 'undefined' ? window.location.origin : 'https://salesvelocity.ai');
+
   const embedCodes = {
     wordpress: `[crm-store id="${widgetId}" type="full"]`,
     html: `<!-- Add to your website -->
-<script src="https://yourplatform.com/embed.js" async></script>
+<script src="${appUrl}/embed.js" async></script>
 <div data-crm-widget="${widgetId}" data-type="full_store"></div>`,
-    react: `import { CRMStoreWidget } from '@your-platform/react-widgets'
+    react: `import { CRMStoreWidget } from '@salesvelocity/react-widgets'
 
-<CRMStoreWidget 
+<CRMStoreWidget
   widgetId="${widgetId}"
   type="full_store"
 />`,
-    iframe: `<iframe 
-  src="https://store.yourplatform.com/${widgetId}"
+    iframe: `<iframe
+  src="${appUrl}/store/embed/${widgetId}"
   width="100%"
   height="800px"
   frameborder="0">

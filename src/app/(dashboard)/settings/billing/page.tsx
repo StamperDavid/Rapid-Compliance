@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/useToast';
+import { getTierConfig } from '@/lib/pricing/subscription-tiers';
 
 interface Subscription {
   userId: string;
@@ -27,37 +28,6 @@ interface SubscriptionResponse {
   error?: string;
 }
 
-const TIER_CONFIG: Record<string, { label: string; color: string; badge: string; monthlyPrice: number; annualPrice: number }> = {
-  free: {
-    label: 'Free',
-    color: 'var(--color-text-secondary)',
-    badge: '#374151',
-    monthlyPrice: 0,
-    annualPrice: 0,
-  },
-  starter: {
-    label: 'Starter',
-    color: 'var(--color-info)',
-    badge: '#2563eb',
-    monthlyPrice: 29,
-    annualPrice: 290,
-  },
-  professional: {
-    label: 'Professional',
-    color: 'var(--color-success)',
-    badge: '#059669',
-    monthlyPrice: 79,
-    annualPrice: 790,
-  },
-  enterprise: {
-    label: 'Enterprise',
-    color: 'var(--color-warning)',
-    badge: '#d97706',
-    monthlyPrice: 199,
-    annualPrice: 1990,
-  },
-};
-
 export default function BillingPage() {
   const { user } = useAuth();
   const toast = useToast();
@@ -65,6 +35,9 @@ export default function BillingPage() {
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
+  const [usage, setUsage] = useState<{ contacts: string; emails: string; aiCredits: string }>({
+    contacts: '—', emails: '—', aiCredits: '—',
+  });
 
   const loadSubscription = useCallback(async () => {
     try {
@@ -86,6 +59,25 @@ export default function BillingPage() {
   useEffect(() => {
     if (user) {
       void loadSubscription();
+      // Fetch usage metrics
+      const fetchUsage = async () => {
+        try {
+          const res = await fetch('/api/admin/usage');
+          if (res.ok) {
+            const data = (await res.json()) as { success: boolean; contacts?: number; emailsSent?: number; aiCredits?: number };
+            if (data.success) {
+              setUsage({
+                contacts: typeof data.contacts === 'number' ? data.contacts.toLocaleString() : '0',
+                emails: typeof data.emailsSent === 'number' ? data.emailsSent.toLocaleString() : '0',
+                aiCredits: typeof data.aiCredits === 'number' ? data.aiCredits.toLocaleString() : '0',
+              });
+            }
+          }
+        } catch {
+          // Leave as defaults — non-critical
+        }
+      };
+      void fetchUsage();
     }
   }, [user, loadSubscription]);
 
@@ -136,7 +128,7 @@ export default function BillingPage() {
   };
 
   const tier = subscription?.tier ?? 'free';
-  const tierConfig = TIER_CONFIG[tier] ?? TIER_CONFIG.free;
+  const tierConfig = getTierConfig(tier);
   const billingPeriod = subscription?.billingPeriod ?? 'monthly';
   const price = billingPeriod === 'annual' ? tierConfig.annualPrice : tierConfig.monthlyPrice;
   const isActive = subscription?.status !== 'cancelled';
@@ -272,7 +264,7 @@ export default function BillingPage() {
                   fontSize: '0.875rem',
                   color: 'var(--color-info)',
                 }}>
-                  Changed from {TIER_CONFIG[subscription.previousTier]?.label ?? subscription.previousTier} on{' '}
+                  Changed from {getTierConfig(subscription.previousTier).label} on{' '}
                   {new Date(subscription.tierChangedAt).toLocaleDateString()}
                 </div>
               )}
@@ -404,9 +396,9 @@ export default function BillingPage() {
               </h3>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
                 {[
-                  { label: 'Contacts', value: '—', limit: tier === 'free' ? '100' : 'Unlimited' },
-                  { label: 'Emails Sent', value: '—', limit: tier === 'free' ? '500/mo' : tier === 'starter' ? '5,000/mo' : 'Unlimited' },
-                  { label: 'AI Credits', value: '—', limit: tier === 'free' ? '50/mo' : tier === 'starter' ? '500/mo' : tier === 'professional' ? '5,000/mo' : 'Unlimited' },
+                  { label: 'Contacts', value: usage.contacts, limit: tier === 'free' ? '100' : 'Unlimited' },
+                  { label: 'Emails Sent', value: usage.emails, limit: tier === 'free' ? '500/mo' : tier === 'starter' ? '5,000/mo' : 'Unlimited' },
+                  { label: 'AI Credits', value: usage.aiCredits, limit: tier === 'free' ? '50/mo' : tier === 'starter' ? '500/mo' : tier === 'professional' ? '5,000/mo' : 'Unlimited' },
                 ].map((metric) => (
                   <div key={metric.label} style={{
                     padding: '1rem',

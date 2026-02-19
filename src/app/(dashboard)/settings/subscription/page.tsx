@@ -2,8 +2,11 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/useToast';
+import { auth } from '@/lib/firebase/config';
+import { SUBSCRIPTION_TIERS, TIER_RANK, type SubscriptionTierKey } from '@/lib/pricing/subscription-tiers';
 
 interface Subscription {
   userId: string;
@@ -19,102 +22,9 @@ interface SubscriptionResponse {
   error?: string;
 }
 
-type TierKey = 'free' | 'starter' | 'professional' | 'enterprise';
+type TierKey = SubscriptionTierKey;
 
-interface PlanTier {
-  key: TierKey;
-  label: string;
-  monthlyPrice: number;
-  annualPrice: number;
-  icon: string;
-  color: string;
-  highlight: boolean;
-  features: string[];
-}
-
-const PLANS: PlanTier[] = [
-  {
-    key: 'free',
-    label: 'Free',
-    monthlyPrice: 0,
-    annualPrice: 0,
-    icon: '🆓',
-    color: '#374151',
-    highlight: false,
-    features: [
-      '100 contacts',
-      '500 emails/month',
-      '50 AI credits/month',
-      'Basic CRM features',
-      'Email support',
-    ],
-  },
-  {
-    key: 'starter',
-    label: 'Starter',
-    monthlyPrice: 29,
-    annualPrice: 290,
-    icon: '🚀',
-    color: '#2563eb',
-    highlight: false,
-    features: [
-      '1,000 contacts',
-      '5,000 emails/month',
-      '500 AI credits/month',
-      'Lead scoring & routing',
-      'A/B testing',
-      'Email templates',
-      'Priority support',
-    ],
-  },
-  {
-    key: 'professional',
-    label: 'Professional',
-    monthlyPrice: 79,
-    annualPrice: 790,
-    icon: '⭐',
-    color: '#059669',
-    highlight: true,
-    features: [
-      '10,000 contacts',
-      'Unlimited emails',
-      '5,000 AI credits/month',
-      'Everything in Starter',
-      'Workflows & automation',
-      'Advanced analytics',
-      'Webhooks & integrations',
-      'Custom branding',
-      'Phone support',
-    ],
-  },
-  {
-    key: 'enterprise',
-    label: 'Enterprise',
-    monthlyPrice: 199,
-    annualPrice: 1990,
-    icon: '👑',
-    color: '#d97706',
-    highlight: false,
-    features: [
-      'Unlimited contacts',
-      'Unlimited emails',
-      'Unlimited AI credits',
-      'Everything in Professional',
-      'AI agent swarm',
-      'Voice AI (inbound/outbound)',
-      'Video generation',
-      'Dedicated account manager',
-      'SLA guarantee',
-    ],
-  },
-];
-
-const TIER_RANK: Record<string, number> = {
-  free: 0,
-  starter: 1,
-  professional: 2,
-  enterprise: 3,
-};
+const PLANS = SUBSCRIPTION_TIERS;
 
 export default function SubscriptionPage() {
   const { user } = useAuth();
@@ -151,8 +61,56 @@ export default function SubscriptionPage() {
     }
   }, [user, loadSubscription]);
 
+  const searchParams = useSearchParams();
   const currentTier = subscription?.tier ?? 'free';
   const currentRank = TIER_RANK[currentTier] ?? 0;
+
+  // Handle return from Stripe Checkout
+  useEffect(() => {
+    const checkout = searchParams.get('checkout');
+    const sessionId = searchParams.get('session_id');
+    const tier = searchParams.get('tier') as TierKey | null;
+
+    if (checkout === 'success' && sessionId && tier) {
+      const activateSubscription = async () => {
+        setChangingTier(tier);
+        try {
+          const token = await auth?.currentUser?.getIdToken();
+          const res = await fetch('/api/subscriptions', {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            },
+            body: JSON.stringify({
+              tier,
+              action: 'upgrade',
+              stripeSessionId: sessionId,
+            }),
+          });
+          const data = (await res.json()) as SubscriptionResponse;
+          if (data.success) {
+            setSubscription(data.subscription ?? null);
+            toast.success(`Upgraded to ${tier}!`);
+          } else {
+            throw new Error(data.error ?? 'Activation failed');
+          }
+        } catch (err) {
+          toast.error(err instanceof Error ? err.message : 'Failed to activate subscription');
+        } finally {
+          setChangingTier(null);
+          // Clean up URL params
+          window.history.replaceState({}, '', '/settings/subscription');
+        }
+      };
+      void activateSubscription();
+    } else if (checkout === 'cancelled') {
+      toast.error('Checkout was cancelled');
+      window.history.replaceState({}, '', '/settings/subscription');
+    }
+  // Run once on mount
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleChangePlan = async (targetTier: TierKey) => {
     if (targetTier === currentTier) { return; }
@@ -163,40 +121,28 @@ export default function SubscriptionPage() {
     setChangingTier(targetTier);
     try {
       if (isPaidUpgrade) {
-        // For paid upgrades, use admin override for now (Stripe checkout would redirect)
-        const res = await fetch('/api/subscriptions', {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+        // Redirect to Stripe Checkout for paid upgrades
+        const token = await auth?.currentUser?.getIdToken();
+        const res = await fetch('/api/subscriptions/checkout', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
           body: JSON.stringify({
             tier: targetTier,
-            action: 'upgrade',
-            adminOverride: true,
-            adminReason: `Self-service upgrade from ${currentTier} to ${targetTier}`,
+            billingPeriod: billingToggle,
           }),
         });
-        const data = (await res.json()) as SubscriptionResponse;
-        if (data.success) {
-          setSubscription(data.subscription ?? null);
-          toast.success(`Upgraded to ${targetTier}!`);
+        const data = (await res.json()) as { success: boolean; url?: string; error?: string };
+        if (data.success && data.url) {
+          window.location.href = data.url;
+          return; // Don't clear changingTier — page is navigating away
         } else {
-          throw new Error(data.error ?? 'Upgrade failed');
-        }
-      } else if (targetTier === 'free') {
-        // Downgrading to free
-        const res = await fetch('/api/subscriptions', {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ tier: targetTier, action: 'downgrade' }),
-        });
-        const data = (await res.json()) as SubscriptionResponse;
-        if (data.success) {
-          setSubscription(data.subscription ?? null);
-          toast.success('Downgraded to Free plan');
-        } else {
-          throw new Error(data.error ?? 'Downgrade failed');
+          throw new Error(data.error ?? 'Failed to create checkout session');
         }
       } else {
-        // Downgrade to a paid tier or other transition
+        // Downgrade (free or lower paid tier)
         const res = await fetch('/api/subscriptions', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -205,7 +151,7 @@ export default function SubscriptionPage() {
         const data = (await res.json()) as SubscriptionResponse;
         if (data.success) {
           setSubscription(data.subscription ?? null);
-          toast.success(`Changed to ${targetTier} plan`);
+          toast.success(targetTier === 'free' ? 'Downgraded to Free plan' : `Changed to ${targetTier} plan`);
         } else {
           throw new Error(data.error ?? 'Plan change failed');
         }
