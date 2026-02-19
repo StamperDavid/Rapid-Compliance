@@ -10,6 +10,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/useToast';
 import type { Navigation, NavItem, Page } from '@/types/website';
+import { logger } from '@/lib/logger/logger';
 
 interface NavigationResponse {
   navigation: Navigation;
@@ -74,7 +75,7 @@ export default function NavigationManagementPage() {
         setHomepage(settingsData.settings?.homepage ?? '');
       }
     } catch (error: unknown) {
-      console.error('[Navigation] Load error:', error);
+      logger.error('[Navigation] Load error', error instanceof Error ? error : new Error(String(error)));
     } finally {
       setLoading(false);
     }
@@ -110,7 +111,7 @@ export default function NavigationManagementPage() {
 
       toast.success('Navigation saved successfully!');
     } catch (error: unknown) {
-      console.error('[Navigation] Save error:', error);
+      logger.error('[Navigation] Save error', error instanceof Error ? error : new Error(String(error)));
       toast.error('Failed to save navigation');
     } finally {
       setSaving(false);
@@ -135,7 +136,7 @@ export default function NavigationManagementPage() {
 
       toast.success('Homepage updated successfully!');
     } catch (error: unknown) {
-      console.error('[Navigation] Save homepage error:', error);
+      logger.error('[Navigation] Save homepage error', error instanceof Error ? error : new Error(String(error)));
       toast.error('Failed to save homepage');
     }
   }

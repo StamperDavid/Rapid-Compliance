@@ -5,6 +5,7 @@ import Link from 'next/link';
 import SubpageNav from '@/components/ui/SubpageNav';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
 import { useAuth } from '@/hooks/useAuth';
+import { logger } from '@/lib/logger/logger';
 
 interface AgentPersona {
   // Core Identity & Expert Role
@@ -146,7 +147,7 @@ export default function AgentPersonaPage() {
           }
         }
       } catch (error) {
-        console.error('Error loading persona:', error);
+        logger.error('Error loading persona', error instanceof Error ? error : new Error(String(error)));
       } finally {
         setLoading(false);
       }
@@ -169,7 +170,7 @@ export default function AgentPersonaPage() {
         setTimeout(() => setSaveSuccess(false), 3000);
       }
     } catch (error) {
-      console.error('Error saving persona:', error);
+      logger.error('Error saving persona', error instanceof Error ? error : new Error(String(error)));
     } finally {
       setSaving(false);
     }

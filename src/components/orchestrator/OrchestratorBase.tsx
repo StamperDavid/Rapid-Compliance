@@ -44,6 +44,7 @@ import {
 } from 'lucide-react';
 import { auth } from '@/lib/firebase/config';
 import { ASSISTANT_NAME } from '@/lib/constants/platform';
+import { logger } from '@/lib/logger/logger';
 
 // ============================================================================
 // TYPES
@@ -201,7 +202,7 @@ function useVoiceActivityDetection(
     const windowWithSpeech = window as WindowWithSpeechRecognition;
     const SpeechRecognition = windowWithSpeech.SpeechRecognition ?? windowWithSpeech.webkitSpeechRecognition;
     if (!SpeechRecognition) {
-      console.warn('[VAD] Speech recognition not supported');
+      logger.warn('[VAD] Speech recognition not supported');
       return;
     }
 
@@ -246,7 +247,7 @@ function useVoiceActivityDetection(
     };
 
     recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
-      console.error('[VAD] Recognition error:', event.error);
+      logger.error('[VAD] Recognition error', new Error(String(event.error)));
       if (event.error !== 'no-speech' && event.error !== 'aborted') {
         // Restart on errors except no-speech
         setTimeout(() => {
@@ -278,7 +279,7 @@ function useVoiceActivityDetection(
     try {
       recognition.start();
     } catch (error: unknown) {
-      console.error('[VAD] Failed to start recognition:', error);
+      logger.error('[VAD] Failed to start recognition', error instanceof Error ? error : new Error(String(error)));
     }
 
     return () => {
@@ -321,7 +322,7 @@ function useAudioPlayback() {
     audio.onerror = () => setIsPlaying(false);
 
     audio.play().catch((e) => {
-      console.error('[Audio] Playback error:', e);
+      logger.error('[Audio] Playback error', e instanceof Error ? e : new Error(String(e)));
       setIsPlaying(false);
     });
   }, []);
@@ -503,7 +504,7 @@ export function OrchestratorBase({ config }: { config: OrchestratorConfig }) {
         throw new Error('Invalid response from API');
       }
     } catch (error: unknown) {
-      console.error('[Jasper] Chat error:', error);
+      logger.error('[Jasper] Chat error', error instanceof Error ? error : new Error(String(error)));
 
       // Show raw error message for debugging - NO fallback masking
       const errorMessage = error instanceof Error ? error.message : String(error);

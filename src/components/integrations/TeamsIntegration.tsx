@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import type { TeamsIntegration as TeamsType } from '@/types/integrations';
+import { logger } from '@/lib/logger/logger';
 
 interface TeamsIntegrationProps {
   integration: TeamsType | null;
@@ -49,22 +50,13 @@ export default function TeamsIntegration({
         window.location.href = data.authUrl;
       } else if (data.error) {
         // Teams not configured - show instructions
-        console.error(
-          'Microsoft Teams integration requires configuration.\n\n' +
-          'Steps:\n' +
-          '1. Create a Teams app in Microsoft Azure Portal\n' +
-          '2. Get your Client ID and Client Secret\n' +
-          '3. Add them to Settings > API Keys > Teams\n' +
-          '4. Try connecting again\n\n' +
-          'For now, you can use Slack or webhooks as alternatives.'
-        );
+        logger.warn('Microsoft Teams integration requires configuration. Create a Teams app in Microsoft Azure Portal, get your Client ID and Client Secret, add them to Settings > API Keys > Teams, and try connecting again.');
         setIsConnecting(false);
       } else {
         throw new Error('Unexpected response from auth endpoint');
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      console.error(`Connection error: ${errorMessage}`);
+      logger.error('Connection error', error instanceof Error ? error : new Error(String(error)));
       setIsConnecting(false);
     }
   };

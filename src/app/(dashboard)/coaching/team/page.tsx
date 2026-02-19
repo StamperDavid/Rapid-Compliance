@@ -19,6 +19,7 @@ import type {
   TeamCoachingInsights,
 } from '@/lib/coaching/types';
 import { useAuth } from '@/hooks/useAuth';
+import { logger } from '@/lib/logger/logger';
 
 /**
  * Time period options
@@ -81,7 +82,7 @@ export default function TeamCoachingDashboardPage() {
 
       setTeamInsights(json.teamInsights);
     } catch (err: unknown) {
-      console.error('Failed to fetch team coaching insights:', err);
+      logger.error('Failed to fetch team coaching insights', err instanceof Error ? err : new Error(String(err)));
       const errorMessage = err instanceof Error && err.message ? err.message : 'Failed to load team coaching insights';
       setError(errorMessage);
     } finally {

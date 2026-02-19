@@ -10,6 +10,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
 import SubpageNav from '@/components/ui/SubpageNav';
+import { logger } from '@/lib/logger/logger';
 
 interface SettingsResponse {
   settings?: {
@@ -76,7 +77,7 @@ export default function WebsiteSettingsPage() {
         setSettings(prev => ({ ...prev, ...data.settings }));
       }
     } catch (error: unknown) {
-      console.error('[Website Settings] Load error:', error);
+      logger.error('[Website Settings] Load error', error instanceof Error ? error : new Error(String(error)));
       const errorMessage = error instanceof Error ? error.message : 'Failed to load settings';
       setMessage({ type: 'error', text: errorMessage });
     } finally {
@@ -107,7 +108,7 @@ export default function WebsiteSettingsPage() {
 
       setMessage({ type: 'success', text: 'Settings saved successfully!' });
     } catch (error: unknown) {
-      console.error('[Website Settings] Save error:', error);
+      logger.error('[Website Settings] Save error', error instanceof Error ? error : new Error(String(error)));
       const errorMessage = error instanceof Error ? error.message : 'Failed to save settings';
       setMessage({ type: 'error', text: errorMessage });
     } finally {

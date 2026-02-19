@@ -9,6 +9,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/useToast';
+import { logger } from '@/lib/logger/logger';
 
 export default function CategoriesManagementPage() {
   const router = useRouter();
@@ -30,7 +31,7 @@ export default function CategoriesManagementPage() {
         setCategories(data.categories ?? []);
       }
     } catch (error) {
-      console.error('[Categories] Load error:', error);
+      logger.error('[Categories] Load error', error instanceof Error ? error : new Error(String(error)));
     } finally {
       setLoading(false);
     }
@@ -56,7 +57,7 @@ export default function CategoriesManagementPage() {
 
       toast.success('Categories saved successfully!');
     } catch (error) {
-      console.error('[Categories] Save error:', error);
+      logger.error('[Categories] Save error', error instanceof Error ? error : new Error(String(error)));
       toast.error('Failed to save categories');
     } finally {
       setSaving(false);

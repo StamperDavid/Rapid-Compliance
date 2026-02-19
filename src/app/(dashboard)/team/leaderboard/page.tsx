@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import type { LeaderboardEntry } from '@/lib/team/collaboration';
+import { logger } from '@/lib/logger/logger';
 
 export default function TeamLeaderboardPage() {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
@@ -17,7 +18,7 @@ export default function TeamLeaderboardPage() {
         setLeaderboard(data.data);
       }
     } catch (error) {
-      console.error('Error loading leaderboard:', error);
+      logger.error('Error loading leaderboard', error instanceof Error ? error : new Error(String(error)));
     } finally {
       setLoading(false);
     }

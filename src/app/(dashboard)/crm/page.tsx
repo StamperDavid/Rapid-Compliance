@@ -416,7 +416,7 @@ function CRMContent() {
           }
         }
       } catch (error: unknown) {
-        console.error('Error checking capacity:', error instanceof Error ? error.message : String(error));
+        logger.error('Error checking capacity', error instanceof Error ? error : new Error(String(error)));
         // Continue anyway - don't block import on capacity check failure
       }
 

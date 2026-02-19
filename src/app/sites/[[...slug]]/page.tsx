@@ -10,6 +10,7 @@
 import { useParams } from 'next/navigation';
 import { useState, useEffect, useCallback } from 'react';
 import { ResponsiveRenderer } from '@/components/website-builder/ResponsiveRenderer';
+import { logger } from '@/lib/logger/logger';
 
 // Type definitions for SEO metadata
 interface SeoMetadata {
@@ -92,7 +93,7 @@ export default function PublicSitePage() {
 
       setPage(data.pages[0]);
     } catch (err: unknown) {
-      console.error('[Public Site] Error loading page:', err);
+      logger.error('[Public Site] Error loading page', err instanceof Error ? err : new Error(String(err)));
       const errorMessage =
         err instanceof Error && err.message ? err.message : 'Failed to load page';
       setError(errorMessage);

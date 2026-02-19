@@ -11,6 +11,7 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { useToast } from '@/hooks/useToast';
 import type { BlogPost } from '@/types/website';
+import { logger } from '@/lib/logger/logger';
 
 export default function BlogManagementPage() {
   const router = useRouter();
@@ -48,7 +49,7 @@ export default function BlogManagementPage() {
       const data = await response.json() as { posts?: BlogPost[] };
       setPosts(data.posts ?? []);
     } catch (error) {
-      console.error('[Blog] Load error:', error);
+      logger.error('[Blog] Load error', error instanceof Error ? error : new Error(String(error)));
       toast.error('Failed to load blog posts');
     } finally {
       setLoading(false);
@@ -64,7 +65,7 @@ export default function BlogManagementPage() {
         setCategories(data.categories ?? []);
       }
     } catch (error) {
-      console.error('[Blog] Load categories error:', error);
+      logger.error('[Blog] Load categories error', error instanceof Error ? error : new Error(String(error)));
     }
   }, []);
 
@@ -85,7 +86,7 @@ export default function BlogManagementPage() {
       toast.success('Post deleted successfully');
       await loadPosts();
     } catch (error) {
-      console.error('[Blog] Delete error:', error);
+      logger.error('[Blog] Delete error', error instanceof Error ? error : new Error(String(error)));
       toast.error('Failed to delete post');
     } finally {
       setDeleteConfirm(null);
@@ -109,7 +110,7 @@ export default function BlogManagementPage() {
 
       await loadPosts();
     } catch (error) {
-      console.error('[Blog] Toggle featured error:', error);
+      logger.error('[Blog] Toggle featured error', error instanceof Error ? error : new Error(String(error)));
       toast.error('Failed to update post');
     }
   }

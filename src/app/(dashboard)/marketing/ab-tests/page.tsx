@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import type { ABTest, ABTestResults } from '@/lib/email/email-builder';
+import { logger } from '@/lib/logger/logger';
 
 interface ABTestResponse {
   success: boolean;
@@ -24,7 +25,7 @@ export default function ABTestsPage() {
         setTests(data.data);
       }
     } catch (error) {
-      console.error('Error loading A/B tests:', error);
+      logger.error('Error loading A/B tests', error instanceof Error ? error : new Error(String(error)));
     } finally {
       setLoading(false);
     }

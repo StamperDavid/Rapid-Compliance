@@ -11,6 +11,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useUnifiedAuth } from '@/hooks/useUnifiedAuth';
 import SubpageNav from '@/components/ui/SubpageNav';
+import { logger } from '@/lib/logger/logger';
 
 const SOCIAL_NAV_ITEMS = [
   { label: 'Command Center', href: '/social/command-center' },
@@ -87,7 +88,7 @@ export default function ActivityFeedPage() {
         setTotal(data.total);
       }
     } catch (error) {
-      console.error('Failed to fetch activity:', error);
+      logger.error('Failed to fetch activity', error instanceof Error ? error : new Error(String(error)));
     } finally {
       setLoading(false);
     }

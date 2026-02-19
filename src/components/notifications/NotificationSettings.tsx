@@ -8,6 +8,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import type { NotificationPreferences } from '@/lib/notifications/types';
+import { logger } from '@/lib/logger/logger';
 
 interface NotificationSettingsProps {
   userId: string;
@@ -35,7 +36,7 @@ export function NotificationSettings({ userId, className = '' }: NotificationSet
         setPreferences(data.preferences);
       }
     } catch (error) {
-      console.error('Failed to load preferences:', error);
+      logger.error('Failed to load preferences', error instanceof Error ? error : new Error(String(error)));
     } finally {
       setLoading(false);
     }
@@ -64,12 +65,12 @@ export function NotificationSettings({ userId, className = '' }: NotificationSet
 
       if (data.success) {
         setPreferences(data.preferences);
-        console.error('Preferences saved successfully');
+        logger.info('Preferences saved successfully');
       } else {
-        console.error('Failed to save preferences');
+        logger.warn('Failed to save preferences');
       }
     } catch (error) {
-      console.error('Failed to save preferences:', error);
+      logger.error('Failed to save preferences', error instanceof Error ? error : new Error(String(error)));
     } finally {
       setSaving(false);
     }

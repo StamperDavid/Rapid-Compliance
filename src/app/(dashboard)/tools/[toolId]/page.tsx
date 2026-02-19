@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import AppWrapper from '@/components/custom-tools/AppWrapper';
 import type { CustomTool } from '@/types/custom-tools';
+import { logger } from '@/lib/logger/logger';
 
 /**
  * Dynamic Tool Page
@@ -51,7 +52,7 @@ export default function CustomToolPage() {
 
         setTool(fetchedTool ?? null);
       } catch (err) {
-        console.error('Error fetching tool:', err);
+        logger.error('Error fetching tool', err instanceof Error ? err : new Error(String(err)));
         setError('Failed to load tool');
       } finally {
         setLoading(false);
@@ -173,7 +174,7 @@ export default function CustomToolPage() {
         <AppWrapper
           url={tool.url}
           name={tool.name}
-          onError={(error) => console.error('AppWrapper error:', error)}
+          onError={(error) => logger.error('AppWrapper error', new Error(error))}
         />
       </div>
     </div>

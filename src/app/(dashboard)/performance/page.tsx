@@ -15,6 +15,7 @@ import { BenchmarksCard } from '@/components/performance/BenchmarksCard';
 import { TopPerformersCard } from '@/components/performance/TopPerformersCard';
 import { TrendsCard } from '@/components/performance/TrendsCard';
 import type { TeamPerformanceAnalytics } from '@/lib/performance';
+import { logger } from '@/lib/logger/logger';
 
 export default function PerformanceDashboardPage() {
   const [analytics, setAnalytics] = useState<TeamPerformanceAnalytics | null>(null);
@@ -47,7 +48,7 @@ export default function PerformanceDashboardPage() {
       const data = await response.json() as { data: TeamPerformanceAnalytics };
       setAnalytics(data.data);
     } catch (err) {
-      console.error('Failed to load performance analytics:', err);
+      logger.error('Failed to load performance analytics', err instanceof Error ? err : new Error(String(err)));
       setError(err instanceof Error ? err.message : 'Failed to load analytics');
     } finally {
       setLoading(false);

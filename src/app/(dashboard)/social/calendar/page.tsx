@@ -10,6 +10,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import type { CalendarEvent } from '@/components/social/CalendarEventCard';
 import SubpageNav from '@/components/ui/SubpageNav';
+import { logger } from '@/lib/logger/logger';
 
 const SOCIAL_NAV_ITEMS = [
   { label: 'Command Center', href: '/social/command-center' },
@@ -67,7 +68,7 @@ export default function ContentCalendarPage() {
         setEvents(parsed);
       }
     } catch (error) {
-      console.error('Failed to fetch calendar events:', error);
+      logger.error('Failed to fetch calendar events', error instanceof Error ? error : new Error(String(error)));
     } finally {
       setLoading(false);
     }
@@ -106,7 +107,7 @@ export default function ContentCalendarPage() {
           )
         );
       } catch (error) {
-        console.error('Failed to reschedule:', error);
+        logger.error('Failed to reschedule', error instanceof Error ? error : new Error(String(error)));
       }
     })();
   }, []);

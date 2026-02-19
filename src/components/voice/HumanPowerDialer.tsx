@@ -219,7 +219,7 @@ export default function HumanPowerDialer({
 
   const startDialer = useCallback(async () => {
     if (contacts.length === 0) {
-      console.error('No contacts to dial. Please load a contact list first.');
+      logger.warn('No contacts to dial. Please load a contact list first.');
       return;
     }
 
@@ -342,7 +342,7 @@ export default function HumanPowerDialer({
 
   const transferCall = async (callId: string) => {
     if (!transferTarget) {
-      console.error('Please enter a transfer target');
+      logger.warn('Please enter a transfer target');
       return;
     }
 
@@ -370,7 +370,7 @@ export default function HumanPowerDialer({
 
   const dropVoicemail = async (callId: string) => {
     if (!selectedVoicemail) {
-      console.error('Please select a voicemail to drop');
+      logger.warn('Please select a voicemail to drop');
       return;
     }
 
@@ -392,7 +392,7 @@ export default function HumanPowerDialer({
 
   const saveDisposition = async () => {
     if (!selectedCall || !selectedOutcome) {
-      console.error('Please select a call outcome');
+      logger.warn('Please select a call outcome');
       return;
     }
 

@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth, usePermission } from '@/hooks/useAuth';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
 import type { MerchantCoupon, DiscountType, CouponStatus } from '@/types/pricing';
+import { logger } from '@/lib/logger/logger';
 
 interface CouponsResponse {
   coupons?: MerchantCoupon[];
@@ -68,7 +69,7 @@ export default function PromotionsPage() {
         setAnalytics(data.analytics ?? null);
       }
     } catch (error) {
-      console.error('Error loading data:', error);
+      logger.error('Error loading data', error instanceof Error ? error : new Error(String(error)));
     } finally {
       setLoading(false);
     }
@@ -144,7 +145,7 @@ export default function PromotionsPage() {
         ));
       }
     } catch (error) {
-      console.error('Error toggling status:', error);
+      logger.error('Error toggling status', error instanceof Error ? error : new Error(String(error)));
     }
   };
 

@@ -7,6 +7,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import type { PageSection } from '@/types/website';
+import { logger } from '@/lib/logger/logger';
 
 interface PageSEO {
   title?: string;
@@ -68,7 +69,7 @@ export default function VersionHistory({
       const data = (await response.json()) as VersionsResponse;
       setVersions(data.versions ?? []);
     } catch (err) {
-      console.error('[Version History] Error:', err);
+      logger.error('[Version History] Error', err instanceof Error ? err : new Error(String(err)));
       setError(err instanceof Error ? err.message : 'Failed to load versions');
     } finally {
       setLoading(false);
@@ -95,7 +96,7 @@ export default function VersionHistory({
           }, 500);
           setConfirmDialog(null);
         } catch (err) {
-          console.error('[Version History] Restore error:', err);
+          logger.error('[Version History] Restore error', err instanceof Error ? err : new Error(String(err)));
           setConfirmDialog(null);
         } finally {
           setRestoring(null);

@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import type { OutlookCalendarIntegration as OutlookCalendarType } from '@/types/integrations';
 import { useAuth } from '@/hooks/useAuth';
+import { logger } from '@/lib/logger/logger';
 
 interface OutlookCalendarIntegrationProps {
   integration: OutlookCalendarType | null;
@@ -41,9 +42,9 @@ export default function OutlookCalendarIntegration({
       // Redirect to real Microsoft OAuth flow (same as Outlook, includes calendar scopes)
       window.location.href = `/api/integrations/microsoft/auth?userId=${userId}`;
     } catch (error) {
-      console.error('Failed to start Outlook Calendar OAuth:', error);
+      logger.error('Failed to start Outlook Calendar OAuth', error instanceof Error ? error : new Error(String(error)));
       setIsConnecting(false);
-      console.error('Failed to connect to Outlook Calendar. Please try again.');
+      logger.warn('Failed to connect to Outlook Calendar. Please try again.');
     }
   };
 

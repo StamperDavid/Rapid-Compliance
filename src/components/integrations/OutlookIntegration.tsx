@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import type { OutlookIntegration as OutlookType } from '@/types/integrations';
 import { useAuth } from '@/hooks/useAuth';
+import { logger } from '@/lib/logger/logger';
 
 interface OutlookIntegrationProps {
   integration: OutlookType | null;
@@ -41,9 +42,9 @@ export default function OutlookIntegration({
       // Redirect to real Microsoft OAuth flow
       window.location.href = `/api/integrations/microsoft/auth?userId=${userId}`;
     } catch (error) {
-      console.error('Failed to start Outlook OAuth:', error);
+      logger.error('Failed to start Outlook OAuth', error instanceof Error ? error : new Error(String(error)));
       setIsConnecting(false);
-      console.error('Failed to connect to Outlook. Please try again.');
+      logger.warn('Failed to connect to Outlook. Please try again.');
     }
   };
 

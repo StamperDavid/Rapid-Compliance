@@ -8,6 +8,7 @@
 import type { Widget } from '@/types/website';
 import { meetsWCAGAA } from '@/lib/accessibility/aria-utils';
 import { useEffect, useRef } from 'react';
+import { logger } from '@/lib/logger/logger';
 
 interface AccessibleWidgetProps {
   widget: Widget;
@@ -26,10 +27,7 @@ export function AccessibleWidget({ widget, children }: AccessibleWidgetProps) {
       );
 
       if (!meetsContrast) {
-        console.warn(
-          `[Accessibility] Low contrast detected in widget ${widget.id}. ` +
-            `Foreground: ${widget.style.color}, Background: ${widget.style.backgroundColor}`
-        );
+        logger.warn(`[Accessibility] Low contrast detected in widget ${widget.id}. Foreground: ${widget.style.color}, Background: ${widget.style.backgroundColor}`);
       }
     }
   }, [widget]);
@@ -61,7 +59,7 @@ export function AccessibleWidget({ widget, children }: AccessibleWidgetProps) {
 
       case 'image':
         if (!widget.data.alt) {
-          console.warn(`[Accessibility] Image widget ${widget.id} is missing alt text`);
+          logger.warn(`[Accessibility] Image widget ${widget.id} is missing alt text`);
         }
         break;
 

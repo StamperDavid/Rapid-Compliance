@@ -6,6 +6,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { logger } from '@/lib/logger/logger';
 
 interface AuditLogEntry {
   id: string;
@@ -42,7 +43,7 @@ export default function AuditLogPage() {
       setEntries(data.entries ?? []);
     } catch (err) {
       const error = err as Error;
-      console.error('[Audit Log] Error:', error);
+      logger.error('[Audit Log] Error', err instanceof Error ? err : new Error(String(err)));
       setError(error.message ?? 'Failed to load audit log');
     } finally {
       setLoading(false);

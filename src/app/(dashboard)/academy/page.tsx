@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { collection, getDocs, query, orderBy, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import { PLATFORM_ID } from '@/lib/constants/platform';
+import { logger } from '@/lib/logger/logger';
 
 interface Tutorial {
   id: string;
@@ -67,7 +68,7 @@ export default function AcademyPage() {
       });
       setTutorials(items.filter((t) => t.status === 'published'));
     } catch (err) {
-      console.error('Failed to fetch tutorials:', err);
+      logger.error('Failed to fetch tutorials', err instanceof Error ? err : new Error(String(err)));
     } finally {
       setLoading(false);
     }

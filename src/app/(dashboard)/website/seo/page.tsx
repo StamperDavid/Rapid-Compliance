@@ -23,6 +23,7 @@ import {
   Info
 } from 'lucide-react';
 import type { SiteConfig } from '@/types/website';
+import { logger } from '@/lib/logger/logger';
 
 interface SettingsResponse {
   settings?: Partial<SiteConfig> & {
@@ -64,7 +65,7 @@ export default function SEOManagementPage() {
         setRobotsTxt(getDefaultRobotsTxt());
       }
     } catch (error: unknown) {
-      console.error('[SEO] Load error:', error);
+      logger.error('[SEO] Load error', error instanceof Error ? error : new Error(String(error)));
     } finally {
       setLoading(false);
     }
@@ -107,7 +108,7 @@ Sitemap: https://yoursite.com/sitemap.xml`;
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch (error: unknown) {
-      console.error('[SEO] Save error:', error);
+      logger.error('[SEO] Save error', error instanceof Error ? error : new Error(String(error)));
     } finally {
       setSaving(false);
     }

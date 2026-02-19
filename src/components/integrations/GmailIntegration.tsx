@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import type { ConnectedIntegration } from '@/types/integrations';
 import { useAuth } from '@/hooks/useAuth';
+import { logger } from '@/lib/logger/logger';
 
 interface GmailSettings {
   trackOpens?: boolean;
@@ -70,9 +71,9 @@ export default function GmailIntegration({
       // Redirect to real Google OAuth flow
       window.location.href = `/api/integrations/google/auth?userId=${userId}`;
     } catch (error) {
-      console.error('Failed to start Gmail OAuth:', error);
+      logger.error('Failed to start Gmail OAuth', error instanceof Error ? error : new Error(String(error)));
       setIsConnecting(false);
-      console.error('Failed to connect to Gmail. Please try again.');
+      logger.warn('Failed to connect to Gmail. Please try again.');
     }
   };
 

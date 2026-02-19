@@ -6,6 +6,7 @@ import SubpageNav from '@/components/ui/SubpageNav';
 import { useAuth } from '@/hooks/useAuth';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
 import { auth } from '@/lib/firebase/config';
+import { logger } from '@/lib/logger/logger';
 
 // ============================================================================
 // Types
@@ -141,7 +142,7 @@ export default function VoiceSettingsPage() {
           }
         }
       } catch (error) {
-        console.error('Failed to load voice settings:', error);
+        logger.error('Failed to load voice settings', error instanceof Error ? error : new Error(String(error)));
       } finally {
         setIsLoading(false);
       }
@@ -167,7 +168,7 @@ export default function VoiceSettingsPage() {
           }
         }
       } catch (error) {
-        console.error('Failed to load voices:', error);
+        logger.error('Failed to load voices', error instanceof Error ? error : new Error(String(error)));
       }
     }
     void loadVoices();

@@ -10,6 +10,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
 import SubpageNav from '@/components/ui/SubpageNav';
 import { useToast } from '@/hooks/useToast';
+import { logger } from '@/lib/logger/logger';
 
 interface CustomDomain {
   id: string;
@@ -77,7 +78,7 @@ export default function CustomDomainsPage() {
       const data = await response.json() as DomainsResponse;
       setDomains(data.domains ?? []);
     } catch (err: unknown) {
-      console.error('[Domains] Error loading:', err);
+      logger.error('[Domains] Error loading', err instanceof Error ? err : new Error(String(err)));
       const errorMessage = err instanceof Error ? err.message : 'Failed to load domains';
       setError(errorMessage);
     } finally {
@@ -128,7 +129,7 @@ export default function CustomDomainsPage() {
       setShowAddDomain(false);
       setSuccess('Domain added successfully! Please configure DNS records.');
     } catch (err: unknown) {
-      console.error('[Domains] Error adding:', err);
+      logger.error('[Domains] Error adding', err instanceof Error ? err : new Error(String(err)));
       const errorMessage = err instanceof Error ? err.message : 'Failed to add domain';
       setError(errorMessage);
     } finally {
@@ -161,7 +162,7 @@ export default function CustomDomainsPage() {
         setError('Domain not yet verified. Please check DNS records and try again.');
       }
     } catch (err: unknown) {
-      console.error('[Domains] Error verifying:', err);
+      logger.error('[Domains] Error verifying', err instanceof Error ? err : new Error(String(err)));
       const errorMessage = err instanceof Error ? err.message : 'Failed to verify domain';
       setError(errorMessage);
     }
@@ -186,7 +187,7 @@ export default function CustomDomainsPage() {
         setDomains(domains.filter(d => d.id !== domainId));
         setSuccess('Domain removed successfully');
       } catch (err: unknown) {
-        console.error('[Domains] Error removing:', err);
+        logger.error('[Domains] Error removing', err instanceof Error ? err : new Error(String(err)));
         const errorMessage = err instanceof Error ? err.message : 'Failed to remove domain';
         setError(errorMessage);
       }

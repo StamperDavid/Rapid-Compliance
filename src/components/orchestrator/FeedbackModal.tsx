@@ -18,6 +18,7 @@ import {
 } from '@/lib/stores/orchestrator-store';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
+import { logger } from '@/lib/logger/logger';
 import {
   X,
   HelpCircle,
@@ -88,7 +89,7 @@ export function FeedbackModal({ userId, userEmail }: FeedbackModalProps) {
         setSubmitSuccess(false);
       }, 2000);
     } catch (err) {
-      console.error('Error submitting support ticket:', err);
+      logger.error('Error submitting support ticket', err instanceof Error ? err : new Error(String(err)));
       setError('Failed to submit. Please try again.');
     } finally {
       setIsSubmitting(false);
@@ -126,7 +127,7 @@ export function FeedbackModal({ userId, userEmail }: FeedbackModalProps) {
         setSubmitSuccess(false);
       }, 2000);
     } catch (err) {
-      console.error('Error submitting feature request:', err);
+      logger.error('Error submitting feature request', err instanceof Error ? err : new Error(String(err)));
       setError('Failed to submit. Please try again.');
     } finally {
       setIsSubmitting(false);

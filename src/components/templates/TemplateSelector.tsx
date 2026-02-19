@@ -12,6 +12,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { ErrorBoundary, InlineErrorFallback } from '@/components/common/ErrorBoundary';
+import { logger } from '@/lib/logger/logger';
 
 interface TemplateSelectorProps {
   onTemplateSelect?: (templateId: string) => void;
@@ -61,7 +62,7 @@ function TemplateSelectorInner({
         setTemplates(data.templates);
       }
     } catch (error) {
-      console.error('Failed to fetch templates:', error);
+      logger.error('Failed to fetch templates', error instanceof Error ? error : new Error(String(error)));
     } finally {
       setLoading(false);
     }

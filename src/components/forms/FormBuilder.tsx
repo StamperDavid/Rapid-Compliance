@@ -21,6 +21,7 @@ import type {
   FormDefinition,
   FormPage,
 } from '@/lib/forms/types';
+import { logger } from '@/lib/logger/logger';
 
 // ============================================================================
 // TYPES
@@ -1036,7 +1037,7 @@ function ShareModal({ form, onClose }: ShareModalProps) {
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
       } catch (err) {
-        console.error('Failed to copy:', err);
+        logger.error('Failed to copy', err instanceof Error ? err : new Error(String(err)));
       }
     })();
   }, []);

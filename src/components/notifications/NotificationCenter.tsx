@@ -8,6 +8,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import type { Notification, NotificationCategory } from '@/lib/notifications/types';
+import { logger } from '@/lib/logger/logger';
 
 interface NotificationCenterProps {
   userId: string;
@@ -45,7 +46,7 @@ export function NotificationCenter({ userId, className = '' }: NotificationCente
         setNotifications(data.notifications);
       }
     } catch (error) {
-      console.error('Failed to load notifications:', error);
+      logger.error('Failed to load notifications', error instanceof Error ? error : new Error(String(error)));
     } finally {
       setLoading(false);
     }
@@ -71,7 +72,7 @@ export function NotificationCenter({ userId, className = '' }: NotificationCente
         void loadNotifications();
       }
     } catch (error) {
-      console.error('Failed to mark as read:', error);
+      logger.error('Failed to mark as read', error instanceof Error ? error : new Error(String(error)));
     }
   }
 

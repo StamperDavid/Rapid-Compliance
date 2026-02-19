@@ -11,6 +11,7 @@ import { useToast } from '@/hooks/useToast';
 import { useAuth } from '@/hooks/useAuth';
 import { auth } from '@/lib/firebase/config';
 import type { Page, PageSection, PageSEO } from '@/types/website';
+import { logger } from '@/lib/logger/logger';
 
 interface PagesResponse {
   pages: Page[];
@@ -68,7 +69,7 @@ export default function PagesManagementPage() {
       const data = await response.json() as PagesResponse;
       setPages(data.pages ?? []);
     } catch (error: unknown) {
-      console.error('[Pages] Load error:', error);
+      logger.error('[Pages] Load error', error instanceof Error ? error : new Error(String(error)));
       toastRef.current.error('Failed to load pages');
     } finally {
       setLoading(false);
@@ -104,7 +105,7 @@ export default function PagesManagementPage() {
         toast.success('Page deleted successfully');
         void loadPages();
       } catch (error: unknown) {
-        console.error('[Pages] Delete error:', error);
+        logger.error('[Pages] Delete error', error instanceof Error ? error : new Error(String(error)));
         toast.error('Failed to delete page');
       }
     })();
@@ -139,7 +140,7 @@ export default function PagesManagementPage() {
       toast.success('Page duplicated successfully');
       void loadPages();
     } catch (error: unknown) {
-      console.error('[Pages] Duplicate error:', error);
+      logger.error('[Pages] Duplicate error', error instanceof Error ? error : new Error(String(error)));
       toast.error('Failed to duplicate page');
     }
   }
@@ -212,7 +213,7 @@ export default function PagesManagementPage() {
       // Redirect to editor with the new page
       router.push(`/website/editor?pageId=${createData.page.id}`);
     } catch (error: unknown) {
-      console.error('[Pages] AI generate error:', error);
+      logger.error('[Pages] AI generate error', error instanceof Error ? error : new Error(String(error)));
       toast.error('Failed to generate page with AI');
     } finally {
       setAiGenerating(false);

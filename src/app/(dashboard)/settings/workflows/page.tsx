@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
 import WorkflowBuilder from '@/components/workflows/WorkflowBuilder';
 import type { Workflow } from '@/types/workflow';
+import { logger } from '@/lib/logger/logger';
 import { useToast } from '@/hooks/useToast';
 
 interface WorkflowItem {
@@ -65,7 +66,7 @@ export default function WorkflowsPage() {
       const data = await response.json() as WorkflowsResponse;
       setWorkflowsList(data.workflows ?? []);
     } catch (error: unknown) {
-      console.error('Error loading workflows:', error);
+      logger.error('Error loading workflows', error instanceof Error ? error : new Error(String(error)));
       setError(error instanceof Error ? error.message : 'Failed to load workflows');
       setWorkflowsList([]);
     } finally {
@@ -104,7 +105,7 @@ export default function WorkflowsPage() {
         throw new Error('Failed to update workflow status');
       }
     } catch (error: unknown) {
-      console.error('Error toggling workflow status:', error);
+      logger.error('Error toggling workflow status', error instanceof Error ? error : new Error(String(error)));
       toast.error(`Failed to update workflow status: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
@@ -266,7 +267,7 @@ export default function WorkflowsPage() {
               setShowBuilder(false);
               setEditingWorkflow(null);
             } catch (error: unknown) {
-              console.error('Error saving workflow:', error);
+              logger.error('Error saving workflow', error instanceof Error ? error : new Error(String(error)));
               toast.error(`Failed to save workflow: ${error instanceof Error ? error.message : 'Unknown error'}`);
             }
           })()}

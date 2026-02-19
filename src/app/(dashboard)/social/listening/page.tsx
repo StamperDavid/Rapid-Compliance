@@ -9,6 +9,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import type { SocialMention, MentionSentiment, MentionStatus, ListeningConfig } from '@/types/social';
 import SubpageNav from '@/components/ui/SubpageNav';
+import { logger } from '@/lib/logger/logger';
 
 const SOCIAL_NAV_ITEMS = [
   { label: 'Command Center', href: '/social/command-center' },
@@ -87,7 +88,7 @@ export default function SocialListeningPage() {
         setCompetitors(configData.config.trackedCompetitors.join(', '));
       }
     } catch (error) {
-      console.error('Failed to fetch listening data:', error);
+      logger.error('Failed to fetch listening data', error instanceof Error ? error : new Error(String(error)));
     } finally {
       setLoading(false);
     }
@@ -106,7 +107,7 @@ export default function SocialListeningPage() {
       });
       await fetchData();
     } catch (error) {
-      console.error('Failed to update mention:', error);
+      logger.error('Failed to update mention', error instanceof Error ? error : new Error(String(error)));
     }
   };
 
@@ -124,7 +125,7 @@ export default function SocialListeningPage() {
       setShowConfig(false);
       await fetchData();
     } catch (error) {
-      console.error('Failed to save config:', error);
+      logger.error('Failed to save config', error instanceof Error ? error : new Error(String(error)));
     }
   };
 

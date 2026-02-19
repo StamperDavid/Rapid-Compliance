@@ -12,6 +12,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useUnifiedAuth } from '@/hooks/useUnifiedAuth';
 import SubpageNav from '@/components/ui/SubpageNav';
+import { logger } from '@/lib/logger/logger';
 
 const SOCIAL_NAV_ITEMS = [
   { label: 'Command Center', href: '/social/command-center' },
@@ -204,7 +205,7 @@ export default function CommandCenterPage() {
       }
       setLastRefresh(new Date());
     } catch (error) {
-      console.error('Failed to fetch command center data:', error);
+      logger.error('Failed to fetch command center data', error instanceof Error ? error : new Error(String(error)));
     } finally {
       setLoading(false);
     }
@@ -231,7 +232,7 @@ export default function CommandCenterPage() {
         setStatus((prev) => prev ? { ...prev, agentEnabled: data.agentEnabled ?? !prev.agentEnabled } : prev);
       }
     } catch (error) {
-      console.error('Failed to toggle agent:', error);
+      logger.error('Failed to toggle agent', error instanceof Error ? error : new Error(String(error)));
     } finally {
       setToggling(false);
     }
@@ -252,7 +253,7 @@ export default function CommandCenterPage() {
         setSwarmControl(data.state);
       }
     } catch (error) {
-      console.error('Failed to toggle swarm:', error);
+      logger.error('Failed to toggle swarm', error instanceof Error ? error : new Error(String(error)));
     } finally {
       setSwarmToggling(false);
     }
@@ -274,7 +275,7 @@ export default function CommandCenterPage() {
         setSwarmControl(data.state);
       }
     } catch (error) {
-      console.error('Failed to toggle manager:', error);
+      logger.error('Failed to toggle manager', error instanceof Error ? error : new Error(String(error)));
     } finally {
       setManagerToggling(null);
     }

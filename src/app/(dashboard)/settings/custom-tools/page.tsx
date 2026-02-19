@@ -9,6 +9,7 @@ import {
   type CustomTool,
   type CustomToolFormData,
 } from '@/types/custom-tools';
+import { logger } from '@/lib/logger/logger';
 
 interface ToolResponse {
   tool: CustomTool;
@@ -75,7 +76,7 @@ function ToolModal({ tool, isOpen, onClose, onSave, primaryColor }: ToolModalPro
       await onSave(formData);
       onClose();
     } catch (error) {
-      console.error('Error saving tool:', error);
+      logger.error('Error saving tool', error instanceof Error ? error : new Error(String(error)));
     } finally {
       setSaving(false);
     }
@@ -286,7 +287,7 @@ export default function CustomToolsSettingsPage() {
           setTools(data.tools ?? []);
         }
       } catch (error) {
-        console.error('Error fetching tools:', error);
+        logger.error('Error fetching tools', error instanceof Error ? error : new Error(String(error)));
       } finally {
         setLoading(false);
       }
@@ -342,7 +343,7 @@ export default function CustomToolsSettingsPage() {
         setTools(tools.filter(t => t.id !== toolId));
       }
     } catch (error) {
-      console.error('Error deleting tool:', error);
+      logger.error('Error deleting tool', error instanceof Error ? error : new Error(String(error)));
     }
     setDeleteConfirm(null);
   };
@@ -366,7 +367,7 @@ export default function CustomToolsSettingsPage() {
         setTools(tools.map(t => t.id === tool.id ? data.tool : t));
       }
     } catch (error) {
-      console.error('Error toggling tool:', error);
+      logger.error('Error toggling tool', error instanceof Error ? error : new Error(String(error)));
     }
   };
 

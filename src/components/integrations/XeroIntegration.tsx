@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import type { XeroIntegration as XeroType } from '@/types/integrations';
+import { logger } from '@/lib/logger/logger';
 
 interface XeroIntegrationProps {
   integration: XeroType | null;
@@ -36,12 +37,12 @@ export default function XeroIntegration({
     try {
       // Note: Xero OAuth implementation needs to be completed in backend
       // For now, show configuration needed message
-      console.error('Xero integration requires additional backend configuration. Please contact support.');
+      logger.warn('Xero integration requires additional backend configuration. Please contact support.');
       setIsConnecting(false);
     } catch (error) {
-      console.error('Failed to start Xero OAuth:', error);
+      logger.error('Failed to start Xero OAuth', error instanceof Error ? error : new Error(String(error)));
       setIsConnecting(false);
-      console.error('Failed to connect to Xero. Please try again.');
+      logger.warn('Failed to connect to Xero. Please try again.');
     }
   };
 

@@ -14,6 +14,7 @@ import EditorCanvas from '@/components/website-builder/EditorCanvas';
 import WidgetsPanel from '@/components/website-builder/WidgetsPanel';
 import PropertiesPanel from '@/components/website-builder/PropertiesPanel';
 import type { BlogPost, Page, PageSection, Widget } from '@/types/website';
+import { logger } from '@/lib/logger/logger';
 
 interface SelectedElement {
   type: 'section' | 'widget';
@@ -44,7 +45,7 @@ export default function BlogPostEditorPage() {
         setCategories(data.categories ?? []);
       }
     } catch (error) {
-      console.error('[Blog Editor] Load categories error:', error);
+      logger.error('[Blog Editor] Load categories error', error instanceof Error ? error : new Error(String(error)));
     }
   }, []);
 
@@ -59,7 +60,7 @@ export default function BlogPostEditorPage() {
       setPost(data.post);
       setTags(data.post.tags ?? []);
     } catch (error) {
-      console.error('[Blog Editor] Load error:', error);
+      logger.error('[Blog Editor] Load error', error instanceof Error ? error : new Error(String(error)));
       toast.error('Failed to load post');
     } finally {
       setLoading(false);
@@ -136,7 +137,7 @@ export default function BlogPostEditorPage() {
       // Redirect to posts list
       router.push(`/website/blog`);
     } catch (error) {
-      console.error('[Blog Editor] Save error:', error);
+      logger.error('[Blog Editor] Save error', error instanceof Error ? error : new Error(String(error)));
       toast.error('Failed to save post');
     } finally {
       setSaving(false);

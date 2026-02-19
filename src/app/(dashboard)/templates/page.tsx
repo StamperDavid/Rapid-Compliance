@@ -22,6 +22,7 @@ import DealScoreCard from '@/components/templates/DealScoreCard';
 import RevenueForecastChart from '@/components/templates/RevenueForecastChart';
 import type { DealScore, RevenueForecast } from '@/lib/templates';
 import { getSubCollection } from '@/lib/firebase/collections';
+import { logger } from '@/lib/logger/logger';
 
 type Tab = 'templates' | 'scoring' | 'forecasting';
 
@@ -65,7 +66,7 @@ export default function TemplatesDashboard() {
         setTimeout(() => setTemplateApplied(false), 3000);
       }
     } catch (error) {
-      console.error('Failed to apply template:', error);
+      logger.error('Failed to apply template', error instanceof Error ? error : new Error(String(error)));
     } finally {
       setApplyingTemplate(false);
     }
@@ -100,7 +101,7 @@ export default function TemplatesDashboard() {
 
       setDealScores(scores);
     } catch (error) {
-      console.error('Failed to load deal scores:', error);
+      logger.error('Failed to load deal scores', error instanceof Error ? error : new Error(String(error)));
     } finally {
       setLoadingScores(false);
     }
@@ -127,7 +128,7 @@ export default function TemplatesDashboard() {
         setForecast(data.forecast);
       }
     } catch (error) {
-      console.error('Failed to generate forecast:', error);
+      logger.error('Failed to generate forecast', error instanceof Error ? error : new Error(String(error)));
     } finally {
       setLoadingForecast(false);
     }

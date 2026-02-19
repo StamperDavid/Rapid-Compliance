@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import type { PayPalIntegration as PayPalType } from '@/types/integrations';
+import { logger } from '@/lib/logger/logger';
 
 interface PayPalIntegrationProps {
   integration: PayPalType | null;
@@ -36,7 +37,7 @@ export default function PayPalIntegration({
 
   const handleConnect = async () => {
     if (!clientId || !clientSecret) {
-      console.error('Please enter your PayPal credentials');
+      logger.warn('Please enter your PayPal credentials');
       return;
     }
     setIsConnecting(true);
@@ -74,8 +75,8 @@ export default function PayPalIntegration({
       setClientId('');
       setClientSecret('');
     } catch (error) {
-      console.error('Failed to configure PayPal:', error);
-      console.error('Failed to save PayPal credentials. Please try again.');
+      logger.error('Failed to configure PayPal', error instanceof Error ? error : new Error(String(error)));
+      logger.warn('Failed to save PayPal credentials. Please try again.');
     } finally {
       setIsConnecting(false);
     }

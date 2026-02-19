@@ -6,6 +6,7 @@
 'use client';
 
 import { useState } from 'react';
+import { logger } from '@/lib/logger/logger';
 
 interface OnboardingProps {
   onComplete: () => void;
@@ -197,7 +198,7 @@ export function WebsiteBuilderOnboarding({ onComplete }: OnboardingProps) {
         });
       }
     } catch (error) {
-      console.error('[Onboarding] Failed to save:', error);
+      logger.error('[Onboarding] Failed to save', error instanceof Error ? error : new Error(String(error)));
     }
   };
 

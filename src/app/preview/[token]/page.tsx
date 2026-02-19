@@ -9,6 +9,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
+import { logger } from '@/lib/logger/logger';
 
 // Type definitions for page content structure
 interface WidgetData {
@@ -158,7 +159,7 @@ export default function PreviewPage() {
 
       setPage(pageData.page);
     } catch (err: unknown) {
-      console.error('[Preview] Error:', err);
+      logger.error('[Preview] Error', err instanceof Error ? err : new Error(String(err)));
       const errorMessage =
         err instanceof Error
           ? err.message

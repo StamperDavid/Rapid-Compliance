@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import type { SlackIntegration as SlackType } from '@/types/integrations';
 import { useAuth } from '@/hooks/useAuth';
+import { logger } from '@/lib/logger/logger';
 
 interface SlackIntegrationProps {
   integration: SlackType | null;
@@ -41,9 +42,9 @@ export default function SlackIntegration({
       // Redirect to real OAuth flow
       window.location.href = `/api/integrations/slack/auth?userId=${userId}`;
     } catch (error) {
-      console.error('Failed to start Slack OAuth:', error);
+      logger.error('Failed to start Slack OAuth', error instanceof Error ? error : new Error(String(error)));
       setIsConnecting(false);
-      console.error('Failed to connect to Slack. Please try again.');
+      logger.warn('Failed to connect to Slack. Please try again.');
     }
   };
 

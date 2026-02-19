@@ -12,6 +12,7 @@ import Image from 'next/image';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/useToast';
 import type { PageTemplate } from '@/types/website';
+import { logger } from '@/lib/logger/logger';
 
 interface TemplatesResponse {
   templates: PageTemplate[];
@@ -61,7 +62,7 @@ export default function TemplateBrowserPage() {
         setCustomTemplates(data.templates ?? []);
       }
     } catch (error: unknown) {
-      console.error('[Templates] Load error:', error);
+      logger.error('[Templates] Load error', error instanceof Error ? error : new Error(String(error)));
     } finally {
       setLoading(false);
     }
@@ -119,7 +120,7 @@ export default function TemplateBrowserPage() {
       // Redirect to editor
       router.push(`/website/editor?pageId=${data.page.id}`);
     } catch (error: unknown) {
-      console.error('[Templates] Apply error:', error);
+      logger.error('[Templates] Apply error', error instanceof Error ? error : new Error(String(error)));
       toast.error('Failed to create page from template');
     }
   }

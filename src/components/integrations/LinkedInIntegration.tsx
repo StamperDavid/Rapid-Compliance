@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { logger } from '@/lib/logger/logger';
 
 interface LinkedInAccount {
   id?: string;
@@ -84,7 +85,7 @@ export default function LinkedInIntegration({
         setShowManual(false);
       }
     } catch (error) {
-      console.error('Failed to connect LinkedIn manually:', error);
+      logger.error('Failed to connect LinkedIn manually', error instanceof Error ? error : new Error(String(error)));
     } finally {
       setIsConnecting(false);
     }

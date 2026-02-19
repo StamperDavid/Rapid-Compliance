@@ -7,6 +7,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useUnifiedAuth } from '@/hooks/useUnifiedAuth';
+import { logger } from '@/lib/logger/logger';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -136,7 +137,7 @@ export default function AnalyticsPage() {
         setEngagementData(engData.posts ?? []);
       }
     } catch (error) {
-      console.error('Failed to fetch analytics data:', error);
+      logger.error('Failed to fetch analytics data', error instanceof Error ? error : new Error(String(error)));
     } finally {
       setLoading(false);
     }

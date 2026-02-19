@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import type { StripeIntegration as StripeType } from '@/types/integrations';
+import { logger } from '@/lib/logger/logger';
 
 interface StripeIntegrationProps {
   integration: StripeType | null;
@@ -34,7 +35,7 @@ export default function StripeIntegration({
 
   const handleConnect = async () => {
     if (!apiKey) {
-      console.error('Please enter your Stripe API key');
+      logger.warn('Please enter your Stripe API key');
       return;
     }
     setIsConnecting(true);
@@ -67,8 +68,8 @@ export default function StripeIntegration({
       });
       setApiKey('');
     } catch (error) {
-      console.error('Failed to configure Stripe:', error);
-      console.error('Failed to save Stripe API key. Please try again.');
+      logger.error('Failed to configure Stripe', error instanceof Error ? error : new Error(String(error)));
+      logger.warn('Failed to save Stripe API key. Please try again.');
     } finally {
       setIsConnecting(false);
     }

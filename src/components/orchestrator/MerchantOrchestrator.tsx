@@ -24,6 +24,7 @@ import {
 import { ImplementationGuide, type ImplementationContext } from '@/lib/orchestrator/implementation-guide';
 import { SystemHealthService, type SystemHealthReport } from '@/lib/orchestrator/system-health-service';
 import { PLATFORM_ID, ASSISTANT_NAME } from '@/lib/constants/platform';
+import { logger } from '@/lib/logger/logger';
 
 interface MerchantProfile {
   industry?: string;
@@ -54,7 +55,7 @@ export function MerchantOrchestrator() {
         const report = await SystemHealthService.generateHealthReport();
         setHealthReport(report);
       } catch (error) {
-        console.error('Error fetching system health:', error);
+        logger.error('Error fetching system health', error instanceof Error ? error : new Error(String(error)));
       }
     }
     void fetchSystemHealth();
@@ -74,7 +75,7 @@ export function MerchantOrchestrator() {
         );
         setImplContext(context);
       } catch (error) {
-        console.error('Error building implementation context:', error);
+        logger.error('Error building implementation context', error instanceof Error ? error : new Error(String(error)));
       }
     }
     void buildImplContext();
@@ -101,7 +102,7 @@ export function MerchantOrchestrator() {
           });
         }
       } catch (error) {
-        console.error('Error fetching merchant profile:', error);
+        logger.error('Error fetching merchant profile', error instanceof Error ? error : new Error(String(error)));
       } finally {
         setIsLoading(false);
       }
@@ -162,7 +163,7 @@ ${recommendation} What would you like to focus on?`;
       try {
         currentHealth = await SystemHealthService.generateHealthReport();
       } catch (e) {
-        console.error('Failed to fetch health report for briefing:', e);
+        logger.error('Failed to fetch health report for briefing', e instanceof Error ? e : new Error(String(e)));
       }
     }
 

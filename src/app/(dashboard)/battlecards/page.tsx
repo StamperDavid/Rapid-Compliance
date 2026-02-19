@@ -18,6 +18,7 @@ import { BattlecardView } from '@/components/battlecard/BattlecardView';
 import type { CompetitorProfile, Battlecard, BattlecardOptions } from '@/lib/battlecard';
 import { showSuccessToast } from '@/components/ErrorToast';
 import { auth } from '@/lib/firebase/config';
+import { logger } from '@/lib/logger/logger';
 interface ApiErrorResponse {
   error?: string;
 }
@@ -78,7 +79,7 @@ export default function BattlecardsPage() {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';
       setError(errorMessage);
-      console.error('Failed to discover competitor:', err);
+      logger.error('Failed to discover competitor', err instanceof Error ? err : new Error(String(err)));
     } finally {
       setIsLoading(false);
     }
@@ -132,7 +133,7 @@ export default function BattlecardsPage() {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Unknown error';
       setError(errorMessage);
-      console.error('Failed to generate battlecard:', err);
+      logger.error('Failed to generate battlecard', err instanceof Error ? err : new Error(String(err)));
     } finally {
       setIsLoading(false);
     }

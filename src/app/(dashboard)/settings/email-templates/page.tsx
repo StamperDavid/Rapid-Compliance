@@ -12,6 +12,7 @@ import type { ViewFilter } from '@/types/filters';
 import { sendEmail } from '@/lib/email/email-service';
 import { sendSMS as _sendSMS } from '@/lib/sms/sms-service';
 import SafeHtml from '@/components/SafeHtml';
+import { logger } from '@/lib/logger/logger';
 import { useToast } from '@/hooks/useToast';
 import { useConfirm, usePrompt } from '@/hooks/useConfirm';
 import { getSubCollection } from '@/lib/firebase/collections';
@@ -259,7 +260,7 @@ Best regards,
           setEstimatedRecipients(0);
         }
       } catch (error) {
-        console.error('Error estimating recipients:', error);
+        logger.error('Error estimating recipients', error instanceof Error ? error : new Error(String(error)));
         setEstimatedRecipients(0);
       }
     }

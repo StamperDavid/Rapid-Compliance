@@ -25,6 +25,7 @@ import {
 } from '@/lib/ai/persona-mapper';
 import { auth } from '@/lib/firebase/config';
 import { ASSISTANT_NAME } from '@/lib/constants/platform';
+import { logger } from '@/lib/logger/logger';
 
 // Debounce delay to prevent 429 rate limit errors
 const STATS_FETCH_DEBOUNCE_MS = 500;
@@ -127,11 +128,11 @@ export function AdminOrchestrator() {
           }
         } else {
            
-          console.error('[Provisioner] API call failed:', response.status);
+          logger.error('[Provisioner] API call failed', undefined, { statusCode: response.status });
         }
       } catch (error) {
          
-        console.error('[Provisioner] Error during provisioning:', error);
+        logger.error('[Provisioner] Error during provisioning', error instanceof Error ? error : new Error(String(error)));
       }
     }
 
@@ -147,7 +148,7 @@ export function AdminOrchestrator() {
       // Get the current Firebase user and their ID token for authentication
       const currentUser = auth?.currentUser;
       if (!currentUser) {
-        console.warn('[Jasper] No authenticated user, cannot fetch stats');
+        logger.warn('[Jasper] No authenticated user, cannot fetch stats');
         setIsLoading(false);
         return;
       }
@@ -170,7 +171,7 @@ export function AdminOrchestrator() {
       }
 
       if (response.status === 429) {
-        console.warn('Rate limited on stats fetch, will retry');
+        logger.warn('Rate limited on stats fetch, will retry');
         // Don't update stats, keep current values
         return;
       }
@@ -202,10 +203,10 @@ export function AdminOrchestrator() {
         setStats(newStats);
         setStatsVerified(true);
       } else {
-        console.warn('[Jasper] API returned no stats object:', data);
+        logger.warn('[Jasper] API returned no stats object');
       }
     } catch (error) {
-      console.error('Error fetching admin stats:', error);
+      logger.error('Error fetching admin stats', error instanceof Error ? error : new Error(String(error)));
 
       // Check if this is still the latest fetch attempt
       if (currentAttempt !== fetchAttemptRef.current) {
@@ -240,7 +241,7 @@ export function AdminOrchestrator() {
           }
         } catch {
           // Keep existing stats
-          console.warn('[Jasper] Fallback fetch also failed');
+          logger.warn('[Jasper] Fallback fetch also failed');
         }
       }
     } finally {

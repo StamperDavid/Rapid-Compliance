@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import type { ZapierIntegration as ZapierType } from '@/types/integrations';
+import { logger } from '@/lib/logger/logger';
 
 interface ZapierIntegrationProps {
   integration: ZapierType | null;
@@ -34,7 +35,7 @@ export default function ZapierIntegration({
 
   const handleConnect = async () => {
     if (!webhookUrl) {
-      console.error('Please enter your Zapier webhook URL');
+      logger.warn('Please enter your Zapier webhook URL');
       return;
     }
 
@@ -45,7 +46,7 @@ export default function ZapierIntegration({
         throw new Error('Invalid Zapier webhook URL');
       }
     } catch (_error) {
-      console.error('Please enter a valid Zapier webhook URL (e.g., https://hooks.zapier.com/hooks/catch/...)');
+      logger.warn('Please enter a valid Zapier webhook URL (e.g., https://hooks.zapier.com/hooks/catch/...)');
       return;
     }
 
@@ -88,8 +89,7 @@ export default function ZapierIntegration({
       });
       setWebhookUrl('');
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      console.error(`Connection failed: ${errorMessage}`);
+      logger.error('Connection failed', error instanceof Error ? error : new Error(String(error)));
     } finally {
       setIsConnecting(false);
     }

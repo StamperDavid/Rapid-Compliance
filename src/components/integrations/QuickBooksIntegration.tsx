@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import type { QuickBooksIntegration as QuickBooksType } from '@/types/integrations';
 import { useAuth } from '@/hooks/useAuth';
+import { logger } from '@/lib/logger/logger';
 
 interface QuickBooksIntegrationProps {
   integration: QuickBooksType | null;
@@ -41,9 +42,9 @@ export default function QuickBooksIntegration({
       // Redirect to real QuickBooks OAuth flow
       window.location.href = `/api/integrations/quickbooks/auth?userId=${userId}`;
     } catch (error) {
-      console.error('Failed to start QuickBooks OAuth:', error);
+      logger.error('Failed to start QuickBooks OAuth', error instanceof Error ? error : new Error(String(error)));
       setIsConnecting(false);
-      console.error('Failed to connect to QuickBooks. Please try again.');
+      logger.warn('Failed to connect to QuickBooks. Please try again.');
     }
   };
 

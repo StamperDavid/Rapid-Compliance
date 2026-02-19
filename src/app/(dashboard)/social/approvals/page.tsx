@@ -10,6 +10,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useUnifiedAuth } from '@/hooks/useUnifiedAuth';
 import type { ApprovalItem, ApprovalStatus } from '@/types/social';
 import SubpageNav from '@/components/ui/SubpageNav';
+import { logger } from '@/lib/logger/logger';
 
 const SOCIAL_NAV_ITEMS = [
   { label: 'Command Center', href: '/social/command-center' },
@@ -126,7 +127,7 @@ export default function ApprovalQueuePage() {
         setCounts(countsData.counts);
       }
     } catch (error) {
-      console.error('Failed to fetch approvals:', error);
+      logger.error('Failed to fetch approvals', error instanceof Error ? error : new Error(String(error)));
     } finally {
       setLoading(false);
     }
@@ -169,7 +170,7 @@ export default function ApprovalQueuePage() {
         await fetchApprovals();
       }
     } catch (error) {
-      console.error('Failed to update approval:', error);
+      logger.error('Failed to update approval', error instanceof Error ? error : new Error(String(error)));
     } finally {
       setActionLoading(null);
     }
@@ -213,7 +214,7 @@ export default function ApprovalQueuePage() {
       setSelectedIds(new Set());
       await fetchApprovals();
     } catch (error) {
-      console.error('Failed to bulk approve:', error);
+      logger.error('Failed to bulk approve', error instanceof Error ? error : new Error(String(error)));
     } finally {
       setBulkLoading(false);
     }
@@ -234,7 +235,7 @@ export default function ApprovalQueuePage() {
       setSelectedIds(new Set());
       await fetchApprovals();
     } catch (error) {
-      console.error('Failed to bulk reject:', error);
+      logger.error('Failed to bulk reject', error instanceof Error ? error : new Error(String(error)));
     } finally {
       setBulkLoading(false);
     }
