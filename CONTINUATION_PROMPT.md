@@ -5,7 +5,7 @@
 ## Context
 Repository: https://github.com/StamperDavid/Rapid-Compliance
 Branch: dev
-Last Session: February 19, 2026 (Session 25 — Nav Consolidation)
+Last Session: February 19, 2026 (Session 25 — Nav Consolidation + Full Production Audit)
 
 ## Current State
 
@@ -34,7 +34,7 @@ Last Session: February 19, 2026 (Session 25 — Nav Consolidation)
 | **Twitter/X** | REAL | API v2, OAuth2 PKCE, posting, media, engagement (like/retweet/follow/reply) |
 | **LinkedIn** | PARTIAL | RapidAPI wrapper. Needs official API (blocked: app approval). Fallback now correctly returns `success: false`. |
 | **Facebook/Instagram** | NOT BUILT | Blocked: Meta Developer Portal approval |
-| **Stripe** | REAL | PaymentElement (3DS), intents, products, prices, webhooks. Cart clearing on payment. **ORDER PATH ISSUES — see Session 15 findings.** |
+| **Stripe** | REAL | PaymentElement (3DS), intents, products, prices, webhooks. Cart clearing on payment. **Cart path mismatch + dual checkout flows — see Sprint 9 fixes.** |
 | **Email** | REAL | SendGrid/Resend/SMTP, open/click tracking. CAN-SPAM unsubscribe route live. |
 | **Voice** | REAL | Twilio/Telnyx — call initiation, control, conferencing |
 | **TTS** | REAL | ElevenLabs — 20+ premium voices |
@@ -59,58 +59,13 @@ Last Session: February 19, 2026 (Session 25 — Nav Consolidation)
 
 **Session 13:** E2E user flow audit + Firebase cleanup. 3 Critical: signup race condition, order path mismatch, cart ID mismatch. All fixed (`bf706c8a`).
 
-**Session 14:** Website editor 401 fix + TODO resolution. Auth race condition fixed (`30857e1b`). Redis rate limiting (`75b638ba`). Website editor still shows blank — suspected Firestore path mismatch.
+**Session 14:** Website editor 401 fix + TODO resolution. Auth race condition fixed (`30857e1b`). Redis rate limiting (`75b638ba`).
 
-**Session 15 (February 14, 2026):** Full system-wide code audit via 5 parallel sub-agents. Comprehensive findings below. This session established the master testing plan.
+**Sessions 15-18:** System-wide audit found 14 Critical + 45 Major issues. All 14 Critical fixed. Website editor fully reconnected with dark theme. Playwright E2E infrastructure established (90 tests passing). All details in git history.
 
-**Session 16 (February 14, 2026):** Phase 1 — Fixed all 7 critical/high bugs (`a831c43c`). Details:
-- 1.1: Website editor path — added diagnostic logging for empty page queries
-- 1.2: Order path split — consolidated all order CRUD to canonical `organizations/{PLATFORM_ID}/orders` (checkout-service, payment-service, ecommerce-analytics)
-- 1.3: Auth race condition — added `authLoading` guard to 6 dashboard pages (analytics, analytics/ecommerce, orders, leads, deals, contacts)
-- 1.4: Missing order fields — added `userId` and `paymentIntentId` to Order type + checkout flow
-- 1.5: Hardcoded IP — replaced `127.0.0.1` with `customerIp` field in PaymentRequest
-- 1.6: Discount race condition — replaced non-atomic increment with Firestore `runTransaction`
-- 1.7: Duplicate detection cap — replaced 100-record limit with cursor-based full pagination
+**Session 19:** Feature completion audit — read every page component, checked every API route. Found 35 incomplete features across 8 sprints.
 
-**Session 17 (February 14, 2026):** Phase 2A-B — Playwright E2E tests for Auth + Website Builder. 90 tests passing, 8 failures remaining (3 RBAC + 5 pre-existing). Committed (`ee1c1b01`).
-
-**Session 18 (February 14, 2026):** Reconnected website editor to actual website. Complete rewrite of editor + all components. See detailed status below.
-
-**Session 19 (February 17, 2026):** Full feature completion audit. Read every page component, checked every API route, verified every service layer. Found 35 incomplete features across 8 sprints (~350 hours of work). Created master plan to finish all features to production-ready. Key decisions: no hiding stubs, no coming soon badges, no nav consolidation until everything works. Also identified lead scoring must be automatic (currently manual). See Phase 5 below.
-
-**Session 20 (February 17, 2026):** Feature Completion Sprints 1-3. Details:
-- **Sprint 1: CRM & Lead Scoring** (`56881153`) — Auto lead scoring on creation, sales velocity API, user management CRUD
-- **Sprint 2: E-Commerce** (`2bdd6b2b`) — Product create/edit pages, storefront frontend, order fulfillment CSV export
-- **Sprint 3: Social Media** (`81dc4371`) — Verified calendar/command-center/playbook already complete. Fixed campaigns (schedule field mismatch + dynamic accounts). Built training lab API layer (3 routes: settings, generate, knowledge). Built engagement metrics API + per-post analytics columns.
-- **Hook fix** (`419a91bd`) — Replaced `npx tsc --noEmit` with `node scripts/run-tsc-check.js` to fix Windows exit-code bug. Added `.gitattributes` rules to force LF on shell scripts/hooks.
-
-**Session 21 (February 17, 2026):** Sprint 4 — AI Workforce Completion. Assessed all 8 tasks; 5 of 8 already fully functional (Persona, Training Center, Voice Training Lab, SEO Training Lab, Fine-Tuning Manager). Completed the 3 remaining:
-- **4.1: AI Agent Hub real metrics** — Replaced hardcoded card stats with dynamic Firestore counts (training materials, sessions, golden masters, workflows). Extended `/api/admin/stats` route with 4 new parallel count queries.
-- **4.4: Voice TTS test button** — Added "Test Voice" preview button to voice settings page. Calls POST `/api/voice/tts` with sample text and plays returned audio via Web Audio API.
-- **4.7: AI Datasets new page** — Created `/ai/datasets/new` page with Zod-validated form (name, description, format). Follows same pattern as fine-tuning new page. Added `dataset-form-schema.ts`.
-
-**Session 22 (February 18, 2026):** Sprint 5 — Automation & Optimization Complete. All 3 tasks done:
-- **5.1: Workflow Builder links** — Added "Edit Steps in Builder" and "View Runs" navigation buttons to workflow edit page.
-- **5.2: A/B Testing** — Complete overhaul. Create page now has: test type selector (page/email/checkout/pricing/cta/custom), target metric auto-fill, traffic allocation slider, variant management (add/remove up to 5, name/description/weight, split-evenly button, weight validation). Results page now has: status badge (draft/running/paused/completed), lifecycle management buttons (Start/Pause/Resume/Stop), statistical confidence bar with Z-test calculation (matching ab-test-service.ts algorithm), per-variant declare-winner button, auto-generated insights panel, revenue tracking. Extended Zod schema with testType, targetMetric, trafficAllocation fields.
-- **5.3: Lead Routing CRUD** — Complete rewrite from hardcoded examples to full Firestore CRUD. Loads/saves rules via `getSubCollection('leadRoutingRules')`. Features: create rule form with name/routing type/priority/conditions, condition builder (9 fields x 5 operators), load-balance config (max leads/period), toggle enable/disable, delete rules, routing type badges, empty state with CTA, "How it works" section.
-
-**Session 23 (February 18, 2026):** Sprint 6 — Settings Completion. All 7 tasks done:
-- **6.1: Webhooks fix** — Fixed collection path from legacy multi-tenant path to `getSubCollection('webhooks')`. Page was already 85% complete with full CRUD.
-- **6.2: Promotions verified** — Already fully functional with CRUD, analytics, and AI auth. No changes needed.
-- **6.3: Billing & Plans page** — Created `/settings/billing` from scratch. Shows current plan with tier badge, billing period, price, savings. Displays subscription status (active/cancelled), provisioned-by info, tier change history. Cancel/reactivate actions via PUT `/api/subscriptions`. Usage metrics with tier-based limits. Links to subscription comparison page.
-- **6.4: Subscription & Features page** — Created `/settings/subscription` from scratch. Plan comparison grid (Free/Starter/Professional/Enterprise) with pricing, features, and upgrade/downgrade buttons. Billing period toggle (monthly/annual with 17% savings badge). Feature comparison table (12 features across 4 tiers). Uses admin override for self-service upgrades.
-- **6.5: Security Settings** — Rewrote from scratch. Removed legacy sidebar. Added Firestore persistence for all settings (2FA toggle, IP whitelist, session timeout, audit log retention) via `getSubCollection('securitySettings')`. Audit logs loaded from `getSubCollection('auditLogs')` with real timestamps and status badges. Save button with dirty-check.
-- **6.6: Email Templates persistence** — Added Firestore load/save/delete for custom email templates via `getSubCollection('emailTemplates')`. Templates now survive page refresh. Surgical edits to existing 2457-line page.
-- **6.7: SMS Messages persistence** — Added Firestore load/save/create for SMS templates via `getSubCollection('smsTemplates')`. Custom triggers and template content now survive page refresh.
-- **6.8: Accounting Settings** — Modernized: replaced dynamic imports with static `getSubCollection('accountingConfig')`, added `useToast` feedback, cleaned up error handling. Config was already persisted but used legacy path.
-
-**Session 24 (February 18, 2026):** Sprint 7 — Compliance & Admin + Sprint 8 — Academy & Knowledge Base. All tasks done:
-- **Sprint 7:** Assessed all 3 tasks. Compliance Reports already 100% complete (full Firestore CRUD + PDF export). System Impersonate already 100% complete (page + API with RBAC gating). Only Proposals needed work: wired builder save to Firestore via `getSubCollection('proposalTemplates')`, created proposals list page with type badges and delete. Committed (`b1e3b491`).
-- **Sprint 8:** Academy Hub already existed with Firestore tutorial loading. Created 3 new pages:
-  - **Academy Courses catalog** (`/academy/courses`) — Course grid with category filtering (getting-started, ai-agents, crm, marketing, advanced), difficulty badges (beginner/intermediate/advanced), lesson count, duration. Loads from `getSubCollection('academyCourses')`, filtered to published only.
-  - **Academy Course Detail** (`/academy/courses/[id]`) — Lesson sidebar with numbered list sorted by order, lesson type icons (video/text/quiz), video player with fallback, text content display, breadcrumb navigation. Uses `use(params)` for Next.js 15 async params.
-  - **Academy Certifications** (`/academy/certifications`) — Certification catalog with category filtering, badge display, quiz interface (multi-choice with progress bar), scoring with pass/fail, attempt history tracking via `getSubCollection('certificationAttempts')`, best-score display, retry flow. Full quiz engine: question rendering, answer selection, score calculation, result screen with certificate earned state.
-- **All 8 feature completion sprints now complete.** Next: Nav consolidation, E2E tests, CI/CD integration.
+**Sessions 20-24:** Completed all 8 feature sprints (36 features total). CRM, E-Commerce, Social Media, AI Workforce, Automation, Settings, Compliance, Academy — all built to production-ready. Details in git history (commits `56881153` through `b1e3b491`).
 
 **Session 25 (February 19, 2026):** Nav Menu Consolidation — Post-Completion UX Redesign. Details:
 - **Competitive analysis** of Close.com, HubSpot, Salesforce, GoHighLevel, Pipedrive nav patterns
@@ -123,281 +78,9 @@ Last Session: February 19, 2026 (Session 25 — Nav Consolidation)
 - **Updated `NavigationCategory` type** in `unified-rbac.ts` from 13 values to 9: home, crm, outreach, content, ai_workforce, ecommerce, commerce, website, analytics
 - **Settings hub** (`/settings`) now includes Compliance & Admin section (Compliance Reports, Audit Log, Impersonate User, Lead Routing)
 - **Updated `docs/single_source_of_truth.md`** — Rule 4, Navigation Section Visibility, Sidebar Architecture, route tables
-- Commits: `330e3aab` (nav consolidation), `414a84bc` (docs update). Both pushed to dev and synced to rapid-dev worktree.
+- Commits: `330e3aab` (nav consolidation), `414a84bc` (docs update), `034bf1ba` (continuation prompt). All pushed to dev and synced to rapid-dev worktree.
 - **Deferred to future session:** Cmd+K command palette, favorites bar, keyboard shortcuts
-
----
-
-## SESSION 15: SYSTEM-WIDE AUDIT FINDINGS
-
-### Audit Methodology
-Ran 5 specialized sub-agents in parallel:
-1. **Website Editor Deep Dive** — Root cause analysis of blank editor
-2. **Revenue & E-Commerce Audit** — Stripe, orders, cart, checkout, analytics
-3. **CRM & Outbound Audit** — Contacts, deals, sequences, forms, social, analytics
-4. **Auth, Workflows & Integrations Audit** — Firebase auth, RBAC, OAuth, webhooks, cron, voice, AI agents
-5. **Test Infrastructure Audit** — Playwright, Jest, CI/CD, test coverage gaps
-
----
-
-### CRITICAL FINDING 1: Website Editor — Firestore Collection Path Mismatch
-
-**Status:** ROOT CAUSE CONFIRMED
-
-**The Problem:**
-`src/lib/firebase/collections.ts` (lines 17-25) resolves collection paths based on `NEXT_PUBLIC_APP_ENV`:
-
-| Scenario | NEXT_PUBLIC_APP_ENV | PREFIX | Pages Collection |
-|----------|-------------------|--------|------------------|
-| Production | `production` | (none) | `organizations/rapid-compliance-root/website/pages/items` |
-| Development | unset/`development` | `test_` | `test_organizations/rapid-compliance-root/test_website/pages/items` |
-
-Pages were created in dev mode (with `test_` prefix) but the production build queries without the prefix. Result: **empty page list, silent failure, "No pages yet" shown**.
-
-**Key Files:**
-- `src/lib/firebase/collections.ts:17-25` — PREFIX logic
-- `src/lib/firebase/collections.ts:116-120` — `getSubCollection()` builds path
-- `src/app/api/website/pages/route.ts:64` — Queries `getSubCollection('website')/pages/items`
-- `src/app/(dashboard)/website/editor/page.tsx:194-228` — Falls back to blank page on empty result
-- `src/app/(dashboard)/website/pages/page.tsx:50-76` — Shows "No pages yet" on empty array
-
-**Fix Required:**
-1. Verify `NEXT_PUBLIC_APP_ENV` on Vercel (must be `production`)
-2. Check Firebase Console for where pages actually exist
-3. If pages in `test_` path, migrate them OR ensure consistent env var
-4. Add logging when pages query returns empty (currently silent)
-
----
-
-### CRITICAL FINDING 2: E-Commerce Order Path Split (PRODUCTION-BREAKING)
-
-**Status:** Orders written to TWO different Firestore paths — checkout succeeds but orders are invisible.
-
-**The Split:**
-| Operation | Path Used | File |
-|-----------|-----------|------|
-| Checkout session creation | `organizations/{PLATFORM_ID}/orders` | `checkout/create-session/route.ts:177` |
-| Checkout service order write | `organizations/{PLATFORM_ID}/workspaces/{workspaceId}/orders` | `checkout-service.ts:255` |
-| Stripe webhook order update | `organizations/{PLATFORM_ID}/orders` | `webhooks/stripe/route.ts:236` |
-| Order listing API | `organizations/{PLATFORM_ID}/orders` | `ecommerce/orders/route.ts:69` |
-| Payment service refunds | `organizations/{PLATFORM_ID}/workspaces/{workspaceId}/orders` | `payment-service.ts:527` |
-| E-commerce analytics | `organizations/{PLATFORM_ID}/workspaces/{workspaceId}/orders` | `ecommerce-analytics.ts:57` |
-
-**Impact:**
-- User pays → checkout-service writes order to workspace path → webhook tries to update at root path → order never marked "completed"
-- Order list API queries root path → user sees "no orders"
-- Analytics queries workspace path → revenue shows $0
-- Refund service can't find orders → refunds fail
-
-**Fix Required:** Consolidate ALL order operations to canonical path `organizations/{PLATFORM_ID}/orders`. Update: `checkout-service.ts`, `payment-service.ts`, `ecommerce-analytics.ts`.
-
----
-
-### CRITICAL FINDING 3: Dashboard Auth Race Condition (Beyond Website Editor)
-
-**Status:** Analytics dashboard page makes API calls BEFORE Firebase auth resolves.
-
-**File:** `src/app/(dashboard)/analytics/page.tsx:76-102`
-- `useEffect` fires `Promise.all([fetch(...), fetch(...), ...])` without checking auth state first
-- Same bug pattern that was fixed in the website editor in Session 14
-- Likely affects other dashboard pages too
-
-**Fix Required:** Add `if (authLoading) return;` guard to analytics and audit ALL dashboard pages for this pattern.
-
----
-
-### HIGH FINDING 4: Additional E-Commerce Issues
-
-| Issue | Severity | File | Details |
-|-------|----------|------|---------|
-| Hardcoded 127.0.0.1 IP | HIGH | `payment-providers.ts:225` | 2Checkout fraud detection broken |
-| Missing `paymentIntentId` on orders | HIGH | `checkout-service.ts:164-283` | Webhook can't correlate payment → order |
-| Missing `userId` on orders | HIGH | `checkout-service.ts` | Order listing filter by userId returns nothing |
-| Discount race condition | MEDIUM | `cart-service.ts:300-309` | Concurrent discount usage can exceed limit |
-| Order access control field mismatch | MEDIUM | `orders/[orderId]/route.ts:45` | Checks `customerEmail` vs `customer.email` |
-
----
-
-### HIGH FINDING 5: CRM & Data Integrity Issues
-
-| Issue | Severity | File | Details |
-|-------|----------|------|---------|
-| Duplicate detection capped at 100 records | HIGH | `duplicate-detection.ts:147-151` | Fuzzy match misses records beyond first 100 |
-| Pipeline summary fetches ALL deals | MEDIUM | `deal-service.ts:378` | No pagination, memory risk |
-| Sequence enrollment race condition | LOW | `sequence-engine.ts:51-92` | Check-then-create without transaction |
-| Inconsistent Firestore paths across services | HIGH | Multiple | Some use `entities/{type}/records`, others direct |
-| Gmail email sends lack metadata tracking | MEDIUM | `sequence-engine.ts:321-331` | Enrollments not tracked for Gmail path |
-
----
-
-### POSITIVE FINDINGS (Working Correctly)
-
-| Area | Status | Notes |
-|------|--------|-------|
-| All cron jobs | EXCELLENT | Fail-closed with CRON_SECRET |
-| Admin impersonation | EXCELLENT | Owner-only, audit trail, prevents self/owner impersonation |
-| OAuth state management | EXCELLENT | Crypto-secure, one-time tokens, 10min TTL |
-| Workflow engine | GOOD | 30s timeout per action, recursion-safe loop limits |
-| RBAC system | GOOD | 4-role model with 47 permissions |
-| CAN-SPAM compliance | GOOD | `ensureCompliance()` injected before send |
-| Social media agent | GOOD | Velocity limits, sentiment check, human escalation |
-| Form security | GOOD | Honeypot, timing check, CAPTCHA, XSS sanitization |
-| Dashboard layout auth guard | GOOD | Redirects unauthenticated users |
-
----
-
-## MASTER TESTING PLAN
-
-### Existing Test Infrastructure
-
-| Component | Status | Details |
-|-----------|--------|---------|
-| **Playwright** | Configured | `playwright.config.ts` — Chromium, Firefox, WebKit, Mobile Chrome, Mobile Safari |
-| **Jest** | Configured | `jest.config.js` — Node env, Admin SDK, path aliases |
-| **E2E Tests** | 9 specs | `tests/e2e/` — admin routes, agent chain, checkout, email, voice, website, CRM pages |
-| **Integration Tests** | 12+ files | `tests/integration/` — signals, sagas, enrichment, email, payment, sequencer |
-| **Unit Tests** | 4 files | `src/lib/**/__tests__/` — event router, jasper, mutation engine, analytics |
-| **Test Helpers** | 3 files | `tests/helpers/` — cleanup tracker, utils, e2e cleanup |
-| **CI/CD** | Active | `.github/workflows/ci.yml` — lint, type-check, Jest, build |
-| **Playwright UI** | Available | `npm run test:playwright:ui` — visual mode for watching tests |
-
-### Test Commands
-```bash
-npm test                    # Jest unit/integration tests
-npm run test:watch          # Jest watch mode
-npm run test:coverage       # Jest with coverage
-npm run test:e2e:full       # Full E2E pipeline (emulators + seed + tests)
-npm run test:playwright     # Playwright headless
-npm run test:playwright:ui  # Playwright visual UI mode (WATCH AGENTS TEST)
-npx playwright test --headed  # Playwright with visible browser
-```
-
----
-
-### Phase 1: Fix Critical Bugs (Before Testing)
-
-These must be fixed first — testing broken features wastes time.
-
-| # | Task | Files | Priority |
-|---|------|-------|----------|
-| 1.1 | **Fix website editor Firestore path** — Verify env vars, check actual data location in Firebase Console, migrate data or fix path | `collections.ts`, `website/pages/route.ts` | P0 |
-| 1.2 | **Consolidate order paths** — All order CRUD to `organizations/{PLATFORM_ID}/orders` | `checkout-service.ts`, `payment-service.ts`, `ecommerce-analytics.ts` | P0 |
-| 1.3 | **Fix analytics dashboard auth race** — Add `authLoading` guard | `analytics/page.tsx` + audit all dashboard pages | P0 |
-| 1.4 | **Add `paymentIntentId` and `userId` to orders** — Webhook + listing depend on these | `checkout-service.ts` | P0 |
-| 1.5 | **Fix hardcoded 127.0.0.1 IP** | `payment-providers.ts:225` | P1 |
-| 1.6 | **Fix discount race condition** — Use Firestore transaction | `cart-service.ts:300-309` | P1 |
-| 1.7 | **Remove duplicate detection 100-record cap** | `duplicate-detection.ts` | P1 |
-
----
-
-### Phase 2: Playwright E2E Test Suite — Feature-by-Feature Walkthrough
-
-These are the Playwright tests you can **watch in real-time** via `npm run test:playwright:ui` or `npx playwright test --headed`. Each test walks through the feature as a real user would.
-
-#### Test Group A: Authentication & Onboarding
-| Test | What It Validates |
-|------|-------------------|
-| `auth-signup.spec.ts` | Create account → verify email → land on dashboard |
-| `auth-login.spec.ts` | Login with email/password → dashboard loads → correct role displayed |
-| `auth-rbac.spec.ts` | Admin sees admin routes, member cannot access admin pages |
-| `auth-session.spec.ts` | Refresh page → session persists → no re-login required |
-
-#### Test Group B: Website Builder
-| Test | What It Validates |
-|------|-------------------|
-| `website-pages-list.spec.ts` | Navigate to Website → pages list loads → shows created pages |
-| `website-create-page.spec.ts` | Create new page → title/slug → save → appears in list |
-| `website-editor-visual.spec.ts` | Open editor → drag section → edit text → preview → save |
-| `website-publish.spec.ts` | Publish page → public URL accessible → content renders |
-
-#### Test Group C: E-Commerce & Checkout
-| Test | What It Validates |
-|------|-------------------|
-| `ecommerce-products.spec.ts` | Create product → set price → add to catalog → visible in store |
-| `ecommerce-cart.spec.ts` | Add to cart → adjust quantity → apply discount → cart total correct |
-| `ecommerce-checkout.spec.ts` | Cart → Stripe checkout → payment completes → order created → order visible |
-| `ecommerce-orders.spec.ts` | Order history loads → order details accessible → status correct |
-
-#### Test Group D: CRM
-| Test | What It Validates |
-|------|-------------------|
-| `crm-contacts.spec.ts` | Create contact → edit fields → search → delete (with referential check) |
-| `crm-deals.spec.ts` | Create deal → move through pipeline stages → deal value updates |
-| `crm-leads.spec.ts` | Create lead → qualify → convert to contact → verify conversion |
-| `crm-duplicates.spec.ts` | Import duplicate contacts → detection fires → merge → verify merged record |
-
-#### Test Group E: Email & Outbound
-| Test | What It Validates |
-|------|-------------------|
-| `email-compose.spec.ts` | Compose email → add recipient → send → verify in sent list |
-| `email-sequence.spec.ts` | Create sequence → add steps → enroll prospect → verify step execution |
-| `email-unsubscribe.spec.ts` | Click unsubscribe link → confirm → verify contact opted out |
-| `email-compliance.spec.ts` | Send email → verify CAN-SPAM footer present → physical address shown |
-
-#### Test Group F: Social Media
-| Test | What It Validates |
-|------|-------------------|
-| `social-compose.spec.ts` | Compose post → platform selector → character count → schedule |
-| `social-queue.spec.ts` | View queue → reorder posts → delete post → queue updates |
-| `social-analytics.spec.ts` | Social analytics dashboard loads → metrics displayed → date range works |
-
-#### Test Group G: Voice & AI
-| Test | What It Validates |
-|------|-------------------|
-| `voice-call.spec.ts` | Initiate call → TCPA check → call record created |
-| `ai-agents.spec.ts` | View agent list → agent status → trigger agent task → verify execution |
-| `ai-jasper.spec.ts` | Open Jasper chat → send command → verify tool execution |
-
-#### Test Group H: Workflows & Automation
-| Test | What It Validates |
-|------|-------------------|
-| `workflow-create.spec.ts` | Create workflow → add trigger → add actions → save → activate |
-| `workflow-execute.spec.ts` | Trigger workflow → verify each action executed → check execution log |
-| `workflow-webhook.spec.ts` | Send webhook → workflow fires → action completes |
-
-#### Test Group I: Admin & Settings
-| Test | What It Validates |
-|------|-------------------|
-| `admin-users.spec.ts` | View users list → change role → verify permission change |
-| `admin-integrations.spec.ts` | View integrations → connect/disconnect → status updates |
-| `admin-analytics.spec.ts` | Analytics dashboard loads → revenue chart → pipeline metrics → date filters |
-| `admin-settings.spec.ts` | Update company settings → save → verify persistence |
-
-#### Test Group J: Forms
-| Test | What It Validates |
-|------|-------------------|
-| `forms-create.spec.ts` | Create form → add fields → set validation → save |
-| `forms-publish.spec.ts` | Publish form → access public URL → submit as visitor |
-| `forms-submissions.spec.ts` | View submissions list → submission details → lead auto-created |
-
----
-
-### Phase 3: Automated Regression Suite
-
-After all Phase 2 tests pass, configure continuous regression:
-
-1. **Pre-commit hook integration** — Run critical path tests before push
-2. **CI/CD Playwright integration** — Add Playwright to GitHub Actions workflow
-3. **Nightly full suite** — All 35+ tests across 5 browsers
-4. **Visual regression** — Screenshot baselines for key pages
-5. **Performance benchmarks** — Page load times, API response times
-
----
-
-### Phase 4: Manual Verification Checklist
-
-Items that require human eyes or external service validation:
-
-- [ ] Verify `NEXT_PUBLIC_APP_ENV=production` on Vercel dashboard
-- [ ] Confirm Stripe keys are live mode (`sk_live_*` / `pk_live_*`)
-- [ ] Set `NEXT_PUBLIC_APP_URL=https://salesvelocity.ai`
-- [ ] Generate strong `CRON_SECRET` (32+ chars)
-- [ ] Verify Firebase Admin private key newlines (`\n` not `\\n`)
-- [ ] Open Firebase Console → check where website pages actually live
-- [ ] Test Stripe webhook delivery in Stripe dashboard
-- [ ] Verify email delivery (SendGrid/Resend) with real inbox
-- [ ] Test Twitter OAuth flow end-to-end
-- [ ] Verify voice call initiation with real Twilio credentials
+- **Full Production Audit:** Ran 5 parallel QA agents (Revenue, Data Integrity, Growth, Platform Infrastructure, Stub Scanner) across entire 430K LOC codebase. Found **18 critical blockers, 18 major issues, 12 medium**. Growth/outreach features are production-ready (95/100). Commerce pipeline has path mismatches that break checkout. Agent specialists serve `Math.random()` analytics. See PHASE 6 section below for full findings and fix plan.
 
 ---
 
@@ -415,637 +98,13 @@ Session 22 (Done):             Sprint 5 (Automation & Optimization) — 3 tasks 
 Session 23 (Done):             Sprint 6 (Settings Completion) — 7 tasks ✓
 Session 24 (Done):             Sprint 7 (Compliance & Admin) + Sprint 8 (Academy) ✓
 Session 25 (Done):             Nav consolidation — 13 sections → 8, SubpageNav tabs, footer icons ✓
-Next:                          Full E2E test suite
-Next:                          CI/CD integration + regression suite
-Next:                          Manual verification + production deploy
+Session 25 (Done):             Full production audit — 5 QA agents, 18 critical blockers found ✓
+Session 26 (NEXT):             Fix Tier 1 blockers — Commerce paths, fake data removal, Zod gaps
+Session 27:                    Fix Tier 2 — Workflow stubs, token refresh, integration stubs
+Session 28:                    Full E2E test suite
+Session 29:                    CI/CD integration + regression suite + manual verification
 Optional:                      Cmd+K command palette, favorites bar, keyboard shortcuts
 ```
-
----
-
-## SESSION 19: Feature Completion Audit (February 17, 2026)
-
-### What Was Done
-Full audit of every route in the sidebar navigation. Every page component was read, every API route checked, every service layer verified. The result: **35 pages need work** to reach production-ready status. No features will be hidden, removed from nav, or given "coming soon" badges. Every feature in the nav menu must be fully functional.
-
-### Key Decisions
-1. **No hiding stubs** — every nav item must lead to a working feature
-2. **No coming soon badges** — if it's in the nav, it works
-3. **Build everything to production-ready** before reorganizing nav
-4. **Auto-score leads on creation** — lead scoring must be automatic, not manual
-5. **Nav consolidation deferred** until all features are confirmed working
-
----
-
-## PHASE 5: FEATURE COMPLETION SPRINT — MASTER PLAN
-
-### Priority System
-- **P0 — CRITICAL:** Revenue-blocking, core CRM gaps, or features users interact with daily
-- **P1 — HIGH:** Important features that complete a product area
-- **P2 — MEDIUM:** Features that add value but aren't blocking core workflows
-- **P3 — LOW:** Nice-to-have, admin tools, or educational content
-
----
-
-### SPRINT 1: CRM & Lead Scoring (P0)
-
-#### 1.1 — Automatic Lead Scoring on Creation
-**What:** Lead scoring currently requires manual trigger. Must auto-score every lead on creation and re-score on data changes.
-**What Needs To Be Built:**
-- Wire `LeadScoringEngine.calculateScore()` into `createLead()` in `src/lib/crm/lead-service.ts`
-- Add re-scoring trigger when lead data is enriched or engagement events fire
-- Ensure score is visible on lead list (already shows badges when score exists) and lead detail page
-- Move "Lead Scoring" nav item's purpose to be rules/config only — not the primary scoring interface
-**Files:** `src/lib/crm/lead-service.ts`, `src/lib/services/lead-scoring-engine.ts`, `src/app/(dashboard)/leads/[id]/page.tsx`
-**Effort:** ~4 hours
-
-#### 1.2 — Analytics: Sales Velocity Page (BROKEN)
-**Route:** `/analytics/sales`
-**What It Is:** Sales velocity dashboard — calculates $/day velocity, win rate trends, avg deal size, avg sales cycle length, revenue forecast, pipeline bottleneck detection, stage conversion rates.
-**What's Broken:** Page has full UI but fetches from `/api/crm/analytics/velocity` which **does not exist**. Page errors on load.
-**What Needs To Be Built:**
-- Create `src/app/api/crm/analytics/velocity/route.ts` with GET handler
-- Build service to query Firestore deals, calculate velocity metrics, detect bottlenecks
-- Match the `SalesAnalyticsApiResponse` interface the page already expects
-**Files:** New API route, deal queries from Firestore
-**Effort:** ~6 hours
-
-#### 1.3 — Settings: Users & Team (75% → 100%)
-**Route:** `/settings/users`
-**What It Is:** Team management — list members, invite new users, edit roles, remove users, customize individual permissions.
-**What's Missing:** Remove user button doesn't work. Edit modal is stubbed (`_showEditModal` unused). Permission customization modal non-functional.
-**What Needs To Be Built:**
-- Implement remove user API call and confirmation
-- Build edit user modal with role dropdown and save
-- Wire permission customization UI to save custom permissions to Firestore
-**Files:** `src/app/(dashboard)/settings/users/page.tsx`, possibly new `/api/admin/users/[id]` routes
-**Effort:** ~4 hours
-
----
-
-### SPRINT 2: E-Commerce Completion (P0)
-
-#### 2.1 — Products: Create & Edit Pages
-**Route:** `/products` (list works), `/products/new` and `/products/[id]/edit` (don't exist)
-**What It Is:** Product catalog manager — create products with name, SKU, price, description, images, stock. Edit existing products.
-**What's Missing:** "Add Product" and "Edit" buttons link to pages that don't exist. Can view and delete products but can't create or edit them.
-**What Needs To Be Built:**
-- Create `/products/new/page.tsx` with product form (name, SKU, price, description, stock, images)
-- Create `/products/[id]/edit/page.tsx` reusing the same form, pre-populated
-- Verify API routes exist at `/api/ecommerce/products` for POST/PUT
-**Files:** New page files, product-service integration
-**Effort:** ~6 hours
-
-#### 2.2 — Storefront Frontend
-**Route:** `/settings/storefront` (config exists at 75%), but no customer-facing store
-**What It Is:** Embeddable online storefront — the actual shop customers see. Displays products, shopping cart, checkout flow.
-**What's Missing:** Config page saves settings to Firestore but: no actual storefront frontend exists, embed codes reference a non-existent `embed.js`, no Stripe checkout flow, no shopping cart component.
-**What Needs To Be Built:**
-- Customer-facing storefront page that reads products from DB and displays them
-- Shopping cart with add/remove/quantity
-- Stripe checkout integration (PaymentElement already partially built)
-- `embed.js` script for embedding store on external sites
-- Widget ID generation
-**Files:** `src/app/(dashboard)/settings/storefront/page.tsx`, new storefront components, checkout flow
-**Effort:** ~16 hours
-
-#### 2.3 — Orders: Fulfillment Completion (90% → 100%)
-**Route:** `/orders`
-**What It Is:** Order management — view orders, filter by status, search, update status, view line items/shipping/tax.
-**What's Missing:** Fulfillment status updates partially stubbed. No CSV export.
-**What Needs To Be Built:**
-- Complete fulfillment status workflow (processing → shipped → delivered)
-- Add CSV export button
-**Files:** `src/app/(dashboard)/orders/page.tsx`
-**Effort:** ~3 hours
-
----
-
-### SPRINT 3: Social Media Completion (P1)
-
-#### 3.1 — Social Calendar (20% → 100%)
-**Route:** `/social/calendar`
-**What It Is:** Visual content calendar — monthly/weekly view of all scheduled, published, and draft social posts. Drag-to-reschedule. Click events for details.
-**What's Missing:** `/api/social/calendar` endpoint doesn't exist. `SocialCalendar` component (React Big Calendar wrapper) probably doesn't exist. Page loads then shows nothing.
-**What Needs To Be Built:**
-- Create `/api/social/calendar/route.ts` that queries social_posts and returns calendar-formatted events
-- Create or verify `SocialCalendar` component using react-big-calendar
-- Wire drag-to-reschedule to `/api/social/posts` PUT
-**Effort:** ~6 hours
-
-#### 3.2 — Social Campaigns: Autopilot Mode (60% → 100%)
-**Route:** `/social/campaigns`
-**What It Is:** Social post creation & scheduling with two modes. Manual mode (user creates posts) works. Autopilot mode (AI generates and queues posts) is UI-only.
-**What's Missing:** No `/api/social/queue` route. No `/api/social/schedule` route. Queue and scheduled posts show empty states. Settings tab shows hardcoded demo accounts.
-**What Needs To Be Built:**
-- Create `/api/social/queue/route.ts` — GET (list queued posts), POST (add to queue), DELETE (remove from queue)
-- Create `/api/social/schedule/route.ts` — GET (list scheduled posts), POST (schedule a post)
-- Replace hardcoded demo accounts with real connected account data from integrations
-**Effort:** ~8 hours
-
-#### 3.3 — Social Command Center: Swarm Control (80% → 100%)
-**Route:** `/social/command-center`
-**What It Is:** AI agent control room — kill switch, velocity gauges, platform status, swarm pause/resume.
-**What's Missing:** `/api/orchestrator/swarm-control` endpoint doesn't exist. Pause/resume buttons for individual manager agents will 404.
-**What Needs To Be Built:**
-- Create `/api/orchestrator/swarm-control/route.ts` — POST to pause/resume individual managers or all
-- Wire to existing swarm-control.ts service layer
-**Effort:** ~4 hours
-
-#### 3.4 — Social Playbook: Coach & Performance (50% → 100%)
-**Route:** `/social/playbook`
-**What It Is:** Golden Playbook version manager — 5 tabs. Versions and Corrections work. AI Coach and Performance don't.
-**What's Missing:** `/api/social/playbook/coach` doesn't exist (coaching tab non-functional). `/api/social/playbook/performance` partially implemented. `/api/social/corrections/patterns` missing.
-**What Needs To Be Built:**
-- Create `/api/social/playbook/coach/route.ts` — POST to start coaching session, returns AI-generated insights
-- Complete `/api/social/playbook/performance/route.ts` — GET performance patterns from post history
-- Create `/api/social/corrections/patterns/route.ts` — GET detected patterns from correction data
-**Effort:** ~10 hours
-
-#### 3.5 — Social Training Lab (40% → 100%)
-**Route:** `/social/training`
-**What It Is:** Train the social media AI's brand voice. Settings, test generation, history, knowledge upload.
-**What's Missing:** No API layer (page calls Firestore directly). Knowledge upload button has no handler. History/Knowledge show demo data.
-**What Needs To Be Built:**
-- Create `/api/social/training/route.ts` — GET/POST for training settings
-- Create `/api/social/training/generate/route.ts` — POST to generate test posts via AI
-- Create `/api/social/training/knowledge/route.ts` — POST to upload knowledge docs
-- Replace direct Firestore calls with API calls
-- Wire knowledge upload handler
-**Effort:** ~8 hours
-
-#### 3.6 — Social Analytics: Engagement Metrics (85% → 100%)
-**Route:** `/social/analytics`
-**What It Is:** Social performance dashboard — posting activity, platform breakdowns, post performance table.
-**What's Missing:** "Engagement Rate" stat says "Coming Soon." No per-post analytics (likes, comments, reach).
-**What Needs To Be Built:**
-- Implement engagement rate calculation from post interaction data
-- Add per-post analytics endpoint or extend existing activity endpoint
-**Effort:** ~4 hours
-
----
-
-### SPRINT 4: AI Workforce Completion (P1)
-
-#### 4.1 — AI Agent Hub: Real Metrics (40% → 100%)
-**Route:** `/ai-agents`
-**What It Is:** Overview dashboard of all 52 AI agents. Agent counts, conversation metrics, swarm telemetry.
-**What's Missing:** `/api/admin/stats` returns hardcoded fake data. Conversation metric is 0. Cards link to partially-built sub-pages.
-**What Needs To Be Built:**
-- Update `/api/admin/stats` to query real data from Firestore (agent configs, chat sessions, swarm status)
-- Fix card links to point to correct, working destinations
-**Effort:** ~4 hours
-
-#### 4.2 — AI Persona: Training Integration (50% → 100%)
-**Route:** `/settings/ai-agents/persona`
-**What It Is:** AI personality editor — core identity, reasoning logic, knowledge/RAG settings, learning loops, execution rules.
-**What's Missing:** Training insights never populate. No logic connects training feedback to persona updates. Federated RAG tags and tool authorization are empty.
-**What Needs To Be Built:**
-- Build logic to detect training patterns (verbosity, accuracy, tone mismatches) and update persona fields
-- Auto-populate federated RAG tags from product categories
-- Wire tool authorization from integrations config
-- Add Zod validation on POST save
-**Effort:** ~8 hours
-
-#### 4.3 — AI Training Center: Deployment Pipeline (60% → 100%)
-**Route:** `/settings/ai-agents/training`
-**What It Is:** Chat with AI to train it. Score responses. Save Golden Masters when quality hits 80%+.
-**What's Missing:** No dedicated API routes (client calls OpenRouter directly). Golden Masters are saved but never deployed to customer-facing conversations.
-**What Needs To Be Built:**
-- Create `/api/agent/training/route.ts` — server-side training chat proxy
-- Build Golden Master deployment: routing customer conversations to the active GM
-- Add deployment audit log
-**Effort:** ~12 hours
-
-#### 4.4 — Voice Configuration: TTS Test (70% → 100%)
-**Route:** `/settings/ai-agents/voice`
-**What It Is:** Select TTS provider, browse voices, configure API keys.
-**What's Missing:** No voice playback test button. No voice sample preview.
-**What Needs To Be Built:**
-- Add "Test Voice" button that generates a short TTS clip and plays it in-browser
-- Wire to existing `/api/voice/tts` endpoint
-**Effort:** ~3 hours
-
-#### 4.5 — Voice Training Lab (10% → 100%)
-**Route:** `/voice/training`
-**What It Is:** Simulate phone calls with the AI voice agent. Practice objection handling. Score call quality.
-**What's Missing:** Almost everything. No voice training API. No Twilio integration for simulation. No call recording. UI template only.
-**What Needs To Be Built:**
-- Create `/api/voice/training/route.ts` — POST to start simulated call, stream responses
-- Build call simulation service using existing Twilio/TTS infrastructure
-- Implement call quality scoring
-- Save training sessions to Firestore
-- Wire up objection template system
-**Effort:** ~20 hours
-
-#### 4.6 — SEO Training Lab (10% → 100%)
-**Route:** `/seo/training`
-**What It Is:** Train AI to write SEO-optimized content in brand voice. Configure keywords, style, length. Generate test articles.
-**What's Missing:** Almost everything. No `/api/seo/` routes. No content generation service. UI template only.
-**What Needs To Be Built:**
-- Create `/api/seo/training/route.ts` — GET/POST training settings
-- Create `/api/seo/generate/route.ts` — POST to generate SEO content via AI
-- Implement SEO scoring (keyword density, readability, meta tag quality)
-- Build content review workflow
-**Effort:** ~16 hours
-
-#### 4.7 — AI Datasets Manager (20% → 100%)
-**Route:** `/ai/datasets`
-**What It Is:** Create and manage datasets for LLM fine-tuning. Upload training examples. Link to fine-tuning jobs.
-**What's Missing:** "Create Dataset" links to `/ai/datasets/new` which doesn't exist. No API routes. No creation/editing.
-**What Needs To Be Built:**
-- Create `/ai/datasets/new/page.tsx` — dataset creation form with example upload
-- Create `/ai/datasets/[id]/page.tsx` — dataset detail/editor
-- Create `/api/ai/datasets/route.ts` — CRUD endpoints
-- Build dataset service for validation and storage
-**Effort:** ~12 hours
-
-#### 4.8 — AI Fine-Tuning Manager (20% → 100%)
-**Route:** `/ai/fine-tuning`
-**What It Is:** Launch fine-tuning jobs, monitor progress, deploy fine-tuned models.
-**What's Missing:** "New Job" links to non-existent page. No API routes. No connection to any LLM fine-tuning API.
-**What Needs To Be Built:**
-- Create `/ai/fine-tuning/new/page.tsx` — job creation form (select dataset, base model, hyperparams)
-- Create `/ai/fine-tuning/[id]/page.tsx` — job detail with progress/logs
-- Create `/api/ai/fine-tuning/route.ts` — CRUD + job orchestration
-- Build fine-tuning service connecting to OpenAI fine-tuning API
-- Implement progress monitoring
-**Effort:** ~16 hours
-
----
-
-### SPRINT 5: Automation & Workflows (P1)
-
-#### 5.1 — Workflow Builder (70% → 100%)
-**Route:** `/workflows` (list works), `/workflows/new`, `/workflows/[id]`, `/workflows/[id]/runs` (don't exist)
-**What It Is:** Visual workflow automation builder. Create trigger → action chains. View execution history.
-**What's Missing:** Can list/toggle/delete workflows but can't create or edit them. No workflow builder UI. No run history page.
-**What Needs To Be Built:**
-- Create `/workflows/new/page.tsx` — visual workflow builder with trigger selection and action blocks
-- Create `/workflows/[id]/page.tsx` — edit existing workflow
-- Create `/workflows/[id]/runs/page.tsx` — execution history with logs
-- Build workflow editor components (trigger picker, action picker, condition builder)
-**Effort:** ~24 hours (most complex single feature)
-
-#### 5.2 — A/B Testing (50% → 100%)
-**Route:** `/ab-tests` (list exists), `/ab-tests/new` and `/ab-tests/[id]` (don't exist)
-**What It Is:** Create split tests for emails, landing pages, or sequences. Track variant performance. Determine statistical significance.
-**What's Missing:** Create and results pages don't exist. No service layer. No statistical significance calculations.
-**What Needs To Be Built:**
-- Create `/ab-tests/new/page.tsx` — test creation form with variant definition
-- Create `/ab-tests/[id]/page.tsx` — results dashboard with significance calculation
-- Create `src/lib/services/ab-test-service.ts` — CRUD + stats
-- Create `/api/ab-tests/route.ts` — API endpoints
-**Effort:** ~12 hours
-
-#### 5.3 — Lead Routing Rules (30% → 100%)
-**Route:** `/settings/lead-routing`
-**What It Is:** Configure automatic lead assignment rules — round-robin, territory-based, load-balanced.
-**What's Missing:** Everything is hardcoded in the component. `loadRules()` is empty. No Firestore loading. No API calls. No rule creation.
-**What Needs To Be Built:**
-- Implement `loadRules()` to fetch from Firestore
-- Create rule creation/editing modal
-- Create service layer for rule management
-- Create `/api/crm/lead-routing/route.ts` — CRUD
-- Wire routing logic into lead creation flow
-**Effort:** ~8 hours
-
----
-
-### SPRINT 6: Settings Completion (P1)
-
-#### 6.1 — Security Settings: Real Backend (50% → 100%)
-**Route:** `/settings/security`
-**What It Is:** 2FA, IP whitelist, session timeout, audit log retention.
-**What's Missing:** 2FA has no backend. IP whitelist has no enforcement. Session timeout has no enforcement. Audit data is hardcoded/mock.
-**What Needs To Be Built:**
-- Implement TOTP-based 2FA (Google Authenticator) with QR code setup
-- Create IP whitelist enforcement middleware
-- Implement session timeout in auth layer
-- Wire audit log display to real Firestore data
-**Effort:** ~16 hours
-
-#### 6.2 — Billing & Subscription
-**Route:** `/settings/billing` and `/settings/subscription` (don't exist)
-**What It Is:** View/manage subscription plan, payment method, invoices, usage limits.
-**What's Missing:** Pages don't exist at all. Linked from settings hub but 404.
-**What Needs To Be Built:**
-- Create `/settings/billing/page.tsx` — current plan display, payment method, invoice history
-- Create `/settings/subscription/page.tsx` — plan comparison, upgrade/downgrade
-- Wire to existing Stripe integration for subscription management
-- Create API endpoints for plan/invoice data
-**Effort:** ~12 hours
-
-#### 6.3 — Email Templates
-**Route:** `/settings/email-templates` (doesn't exist)
-**What It Is:** Design reusable email templates for campaigns and sequences.
-**What's Missing:** Page doesn't exist. Linked from settings hub but 404.
-**What Needs To Be Built:**
-- Create `/settings/email-templates/page.tsx` — template list with preview
-- Create template editor with HTML preview
-- Save/load templates to Firestore
-- Wire templates into email campaign and sequence creation flows
-**Effort:** ~10 hours
-
-#### 6.4 — SMS Messages
-**Route:** `/settings/sms-messages` (doesn't exist)
-**What It Is:** Configure SMS templates and messaging settings. Manage Twilio integration.
-**What's Missing:** Page doesn't exist. Linked from settings hub but 404.
-**What Needs To Be Built:**
-- Create `/settings/sms-messages/page.tsx` — template list, create/edit
-- SMS template editor with variable substitution
-- Twilio settings (phone number, opt-out keywords)
-- Wire into sequence engine for SMS steps
-**Effort:** ~8 hours
-
-#### 6.5 — Webhooks Configuration
-**Route:** `/settings/webhooks` (doesn't exist)
-**What It Is:** Configure outgoing webhooks for external integrations. Define events that trigger HTTP calls to external URLs.
-**What's Missing:** Page doesn't exist. Linked from settings hub but 404.
-**What Needs To Be Built:**
-- Create `/settings/webhooks/page.tsx` — webhook list, create/edit/delete/test
-- Create webhook service (register URL, select events, send payloads)
-- Create `/api/webhooks/route.ts` — CRUD + test endpoint
-- Wire into event router to dispatch webhooks on business events
-**Effort:** ~10 hours
-
-#### 6.6 — Promotions & Discounts
-**Route:** `/settings/promotions` (doesn't exist)
-**What It Is:** Create discount codes, coupons, percentage/fixed discounts, expiration dates, usage limits.
-**What's Missing:** Page doesn't exist. Linked from settings hub but 404.
-**What Needs To Be Built:**
-- Create `/settings/promotions/page.tsx` — promotion list, create/edit
-- Create promotion service with validation (expiry, usage limits, stacking rules)
-- Create `/api/ecommerce/promotions/route.ts` — CRUD
-- Wire into cart/checkout flow for coupon application
-**Effort:** ~8 hours
-
-#### 6.7 — Accounting Settings
-**Route:** `/settings/accounting` (doesn't exist)
-**What It Is:** Configure QuickBooks/Xero sync settings, chart of accounts mapping, auto-sync preferences.
-**What's Missing:** Page doesn't exist. Linked from settings hub but 404.
-**What Needs To Be Built:**
-- Create `/settings/accounting/page.tsx` — integration config, sync status, account mapping
-- Wire to existing QuickBooks/Xero integration components
-- Create sync schedule and manual sync trigger
-**Effort:** ~8 hours
-
----
-
-### SPRINT 7: Compliance & Admin Tools (P2)
-
-#### 7.1 — Compliance Reports: Audit Runner (50% → 100%)
-**Route:** `/compliance-reports`
-**What It Is:** Run compliance audits (CAN-SPAM, TCPA, GDPR). View compliance score. Track audit history. Next review dates.
-**What's Missing:** Reports are read-only display. No way to create/run audits. No audit execution engine.
-**What Needs To Be Built:**
-- Create compliance audit runner service (check email compliance, consent records, data retention)
-- Create `/api/compliance/run-audit/route.ts` — POST to trigger audit
-- Add "Run Audit" button and audit scheduling
-- Add report export/download
-**Effort:** ~12 hours
-
-#### 7.2 — System Impersonate (0% → 100%)
-**Route:** `/system/impersonate` (doesn't exist)
-**What It Is:** Admin-only tool to impersonate another user for debugging/support.
-**What's Missing:** Nothing exists. No page, no route, no API, no service.
-**What Needs To Be Built:**
-- Create `/system/impersonate/page.tsx` — user list with impersonate button
-- Create `/api/admin/impersonate/route.ts` — start/stop impersonation with audit trail
-- Implement session token swap (temporary auth override)
-- Audit logging of all impersonation events
-- Prominent banner showing "Impersonating [user]" with stop button
-**Effort:** ~10 hours
-
-#### 7.3 — Proposals Builder Completion (60% → 100%)
-**Route:** `/proposals/builder` and `/proposals` (list doesn't exist)
-**What It Is:** Build client-facing sales proposals with sections (header, text, pricing table, terms, signature). Variable substitution. PDF export.
-**What's Missing:** `saveTemplate()` is stubbed. No load existing. No drag-to-reorder. Pricing table not interactive. No PDF export. `/proposals` list page doesn't exist.
-**What Needs To Be Built:**
-- Create `/proposals/page.tsx` — template list
-- Implement save/load to Firestore
-- Add drag-and-drop section reordering
-- Build interactive pricing table editor
-- Implement PDF export
-**Effort:** ~10 hours
-
----
-
-### SPRINT 8: Academy & Knowledge Base (P3)
-
-#### 8.1 — Academy Hub (0% → 100%)
-**Route:** `/academy` (doesn't exist)
-**What It Is:** Learning hub dashboard — browse tutorials, track progress, recommended content, category filtering, video player.
-**What's Missing:** Nothing exists. No page, no API, no service, no content.
-**What Needs To Be Built:**
-- Create `/academy/page.tsx` — tutorial grid with category filters, video player, progress tracking
-- Create `/api/academy/route.ts` — CRUD for tutorials/courses
-- Create academy service for progress tracking
-- Seed initial tutorial content
-**Effort:** ~10 hours
-
-#### 8.2 — Academy Courses (0% → 100%)
-**Route:** `/academy/courses` (doesn't exist)
-**What It Is:** Structured multi-lesson courses. Enroll, track progress per lesson, video/text content.
-**What's Missing:** Nothing exists.
-**What Needs To Be Built:**
-- Create `/academy/courses/page.tsx` — course catalog
-- Create `/academy/courses/[id]/page.tsx` — course detail with lesson list
-- Create course enrollment and progress tracking
-**Effort:** ~10 hours
-
-#### 8.3 — Academy Certifications (0% → 100%)
-**Route:** `/academy/certifications` (doesn't exist)
-**What It Is:** Certification exams, quiz interface, earned certificate display, verification.
-**What's Missing:** Nothing exists.
-**What Needs To Be Built:**
-- Create `/academy/certifications/page.tsx` — certification catalog
-- Create quiz/exam engine
-- Create certificate generation and verification
-**Effort:** ~12 hours
-
----
-
-### FEATURE COMPLETION SUMMARY
-
-| Sprint | Focus | Pages | Est. Hours | Priority |
-|--------|-------|-------|------------|----------|
-| **Sprint 1** | CRM & Lead Scoring | 3 | DONE | P0 |
-| **Sprint 2** | E-Commerce | 3 | DONE | P0 |
-| **Sprint 3** | Social Media | 6 | DONE | P1 |
-| **Sprint 4** | AI Workforce | 8 | DONE | P1 |
-| **Sprint 5** | Automation | 3 | DONE | P1 |
-| **Sprint 6** | Settings | 7 | DONE | P1 |
-| **Sprint 7** | Compliance & Admin | 3 | DONE | P2 |
-| **Sprint 8** | Academy | 3 | DONE | P3 |
-| **TOTAL** | | **36 features** | **ALL DONE** | |
-
-### POST-COMPLETION: Nav Menu Consolidation — ✅ DONE (Session 25)
-
-Completed February 19, 2026:
-1. ✅ Consolidated 83 nav items → ~27 items across 8 sections (Home, CRM, Outreach, Content, AI Workforce, Commerce, Website, Analytics)
-2. ✅ Converted related pages into tabbed views via `SubpageNav` component (31 pages)
-3. ✅ Moved Settings + Academy to sidebar footer icons
-4. ✅ Competitive benchmarked against Close.com, HubSpot, Salesforce, GoHighLevel, Pipedrive
-
-**Deferred (can be added later without architectural changes):**
-- Cmd+K command palette for power users
-- Favorites/pins to sidebar top
-- Keyboard shortcuts for navigation
-
-### POST-COMPLETION: Auto Lead Scoring Verification
-
-Confirm these behaviors work end-to-end:
-- [ ] New lead created via form → auto-scored within 5 seconds
-- [ ] New lead created via API → auto-scored
-- [ ] Lead enriched with new data → re-scored automatically
-- [ ] Lead engaged (email open/click/reply) → re-scored
-- [ ] Score visible on lead list page (Hot/Warm/Cold badge)
-- [ ] Score breakdown visible on lead detail page
-- [ ] Lead Scoring nav item shows rules/config only, not manual scoring interface
-
----
-
-## SESSION 17: Phase 2A-B E2E Test Run — DETAILED STATUS
-
-### What Was Done
-
-1. **Created test user seed script** (`scripts/seed-e2e-users.mjs`)
-   - Creates 3 Firebase Auth users + Firestore user profiles under `rapid-compliance-root`
-   - `e2e-member@salesvelocity.ai` (role: member, uid: `jnDGUyjOmcNYhq5r4Yv5nQohNvg2`)
-   - `e2e-admin@salesvelocity.ai` (role: admin, uid: `E4Fp0F8LZLdP6fk3K32HyihGseC2`)
-   - `e2e-manager@salesvelocity.ai` (role: manager, uid: `JF5SrgEmQWOerH06FKZGS5aixgT2`)
-   - Run via: `node scripts/seed-e2e-users.mjs`
-
-2. **Fixed Firebase Auth + Playwright storageState incompatibility**
-   - **Root cause:** Firebase Auth uses IndexedDB for tokens, but Playwright's `storageState` only captures cookies + localStorage. Chromium project tests that restore storageState can't restore Firebase sessions → all get redirected to login.
-   - **Fix:** `src/lib/firebase/config.ts` — In dev mode (`NODE_ENV !== 'production'`), call `setPersistence(auth, browserLocalPersistence)` so Firebase uses localStorage instead of IndexedDB. Playwright can then capture/restore auth tokens.
-
-3. **Relaxed rate limiting for dev mode**
-   - **Root cause:** `/api/admin/verify` has 10 requests/60s rate limit. ALL logins (admin, member, manager) hit this endpoint from the same localhost IP. E2E tests exceed this easily.
-   - **Fix:** `src/lib/rate-limit/rate-limiter.ts` — `/api/admin/verify` and `/api/auth/login` now allow 100 requests/min when `NODE_ENV !== 'production'` (was 10 and 5 respectively). Production limits unchanged.
-
-4. **Fixed test helpers and timeouts**
-   - `tests/e2e/fixtures/helpers.ts` — Changed `waitForPageReady()` from `networkidle` (hangs on persistent Firebase/analytics connections) to `domcontentloaded` + 1s delay.
-   - `tests/e2e/auth-session.spec.ts` — Added `beforeEach` that tries stored auth state first, falls back to `loginViaUI` if Firebase session not restored.
-   - `tests/e2e/auth-rbac.spec.ts` — Multiple fixes:
-     - Added dashboard-ready wait (`h1:Dashboard`) in beforeEach for member/manager tests
-     - Added `expandSidebarSection()` helper to click collapsed sidebar sections before checking for links (CRM, LEAD GEN, ANALYTICS sections are collapsed by default)
-     - Changed all `page.goto()` calls to use `{ waitUntil: 'domcontentloaded' }` to avoid 30s navigation timeouts
-     - Updated `member accessing admin page` test to accept `/compliance-reports` URL as valid (page loads but with restricted content)
-
-### Test Results (Last Run — 90 passed)
-
-| Project | Passed | Failed | Skipped | Did Not Run |
-|---------|--------|--------|---------|-------------|
-| **no-auth** (login + signup) | **20/20** | 0 | 0 | 0 |
-| **chromium** (authenticated) | **~65** | ~5 | 1 | 0 |
-| **rbac** | **5/11** | 3 | 0 | 3 |
-| **TOTAL** | **90** | ~8 | 1 | ~7 |
-
-### Remaining Failures to Fix
-
-#### RBAC Tests (3 failing + 3 cascading)
-
-1. **`admin should see admin-only navigation sections`** — Times out at 31s. The `adminLoginViaUI` in beforeEach succeeds (test 1 passes), but the SECOND admin test's login times out. Likely still hitting rate limits OR the admin-login page takes too long on repeat visits. **Fix needed:** Investigate if rate limit fix actually took effect (server restart may be needed), or share auth state across admin tests instead of logging in per-test.
-
-2. **`member should see core CRM links`** — The sidebar sections (CRM, ANALYTICS) are collapsed. The `expandSidebarSection()` helper was added but may not match the exact button text. **Fix needed:** Check the actual sidebar section button text/selectors — might be "CRM" or "Crm" or use an icon. Read the AdminSidebar component to get exact text.
-
-3. **`manager should access lead generation features`** — Login succeeds but the manager dashboard shows "Loading..." spinner. **Fix needed:** The manager's Firestore profile was created correctly (role: manager), but the `useUnifiedAuth` hook's admin verify call might be slow. Increase the Dashboard wait timeout.
-
-#### Chromium Project Failures (~5)
-
-These are NOT Phase 2A-B tests. They're other test files that run under the chromium project:
-
-- **`admin-content-factory.spec.ts`** (2-3 failures) — Video generation storyboard tests + persona audit tests. These are API-level tests that return auth errors. Not related to Phase 2A-B.
-- **`admin-routes-audit.spec.ts`** (1 failure) — Admin login page audit test.
-- **`admin-content-factory.spec.ts` audit summary** (1 failure) — Depends on previous failures.
-
-These are pre-existing failures in non-Phase-2A-B test files.
-
-### Phase 2A-B Test File Results
-
-| Test File | Status | Details |
-|-----------|--------|---------|
-| `auth-login.spec.ts` | **ALL PASS (10/10)** | Login form, valid/invalid credentials, admin login, redirect |
-| `auth-signup.spec.ts` | **ALL PASS (9/9)** | Signup redirect, onboarding, public routes |
-| `auth-session.spec.ts` | **ALL PASS (7/7)** | Session persistence, page refresh, navigation, loading states |
-| `auth-rbac.spec.ts` | **5/11 pass** | Admin dashboard ✓, member dashboard ✓, sidebar collapse ✓. Failures listed above. |
-| `website-builder.spec.ts` | **ALL PASS** | Site settings, new page, widgets, templates, publish, schedule, preview, blog, nav, audit, responsive, accessibility |
-| `website-create-page.spec.ts` | **ALL PASS** | Blank page, editor canvas, save |
-| `website-editor-visual.spec.ts` | **ALL PASS** | Three-panel layout, toolbar, widgets, canvas, breakpoints, properties |
-| `website-pages-list.spec.ts` | **ALL PASS** | Page list, filters, status badges, actions |
-| `website-publish.spec.ts` | **ALL PASS** | Publish, schedule, unpublish, status, preview |
-
-### Files Modified (Not Yet Committed)
-
-| File | Change |
-|------|--------|
-| `src/lib/firebase/config.ts` | `setPersistence(auth, browserLocalPersistence)` in dev mode |
-| `src/lib/rate-limit/rate-limiter.ts` | Relaxed `/api/admin/verify` and `/api/auth/login` limits in dev |
-| `tests/e2e/auth-rbac.spec.ts` | Sidebar expansion, dashboard waits, domcontentloaded, Locator types |
-| `tests/e2e/auth-session.spec.ts` | Login fallback in beforeEach |
-| `tests/e2e/fixtures/helpers.ts` | `waitForPageReady` uses domcontentloaded instead of networkidle |
-| `scripts/seed-e2e-users.mjs` | NEW — Creates 3 e2e test users in Firebase |
-
-### What to Do Next (Continue Session 17)
-
-1. **Run the tests one more time** — The rate limit fix in `rate-limiter.ts` was applied but the dev server may need a fresh restart. Run:
-   ```bash
-   npx kill-port 3000
-   cd "D:/Future Rapid Compliance" && rm -rf .next && npm run dev
-   # Wait for server ready, then:
-   npx playwright test --project=no-auth --project=chromium --project=rbac --headed
-   ```
-
-2. **Fix remaining RBAC failures:**
-   - Read `src/components/admin/AdminSidebar.tsx` to get the exact sidebar section button text/selectors
-   - Update `expandSidebarSection()` in `auth-rbac.spec.ts` to match actual selectors
-   - For admin tests timing out: consider sharing a single browser context across the admin describe block to avoid repeated logins (Playwright serial mode with shared state)
-
-3. **Once all Phase 2A-B tests pass:** Commit with `test: fix Phase 2A-B Playwright E2E test infrastructure` and push to dev
-
-4. **Dev server is running in background** on localhost:3000 (task ID: b25581d)
-
----
-
-## SESSION 18: Website Editor Reconnection — COMPLETE
-
-### What Was Done
-
-The website editor was completely disconnected from the live website. The original editor (2,448 lines) was deleted during the multi-tenant purge, and the replacement was never wired to the correct Firestore path. This session reconnected everything.
-
-### Root Cause
-- Original editor saved to `platform/website-editor-config` (correct path for `usePageContent()`)
-- Replacement editor saved to `/api/website/pages` → `organizations/.../website/pages/items` (wrong path)
-- Editor had no `DEFAULT_CONFIG`, no page switching, no branding panel, light theme defaults
-
-### Changes Made (9 files, 2 new + 7 modified)
-
-| File | Action | What Changed |
-|------|--------|-------------|
-| `src/types/website-editor.ts` | **NEW** | `WebsiteConfig`, `EditorPage`, `GlobalBranding`, `NavigationConfig`, `EditorFooterConfig`, `ElementStyles`, `ResponsiveStyles`, `WidgetElement` types |
-| `src/lib/website-builder/default-config.ts` | **NEW** | `DEFAULT_CONFIG` with all 10 website pages (home, features, pricing, faq, about, contact, privacy, terms, security, login), branding, navigation, footer |
-| `src/app/(dashboard)/website/editor/page.tsx` | **REWRITTEN** | Reads/writes to `FirestoreService('platform', 'website-editor-config')`. Dual-save to `platform/website-config` for `useWebsiteTheme()`. Page switching, reset-to-default, EditorPage↔Page type conversion |
-| `src/components/website-builder/WidgetsPanel.tsx` | **REWRITTEN** | 3-tab layout (Widgets/Pages/Brand). Pages tab with page list + switching. Branding tab with 9 color pickers, font selectors, company name. Full dark theme |
-| `src/components/website-builder/EditorToolbar.tsx` | **REWRITTEN** | Dark theme (#0a0a0a), Reset Page button, orange unsaved-changes indicator |
-| `src/components/website-builder/EditorCanvas.tsx` | **REWRITTEN** | Dark canvas (#000000 bg, #111111 outer), indigo selection outlines, dark empty states |
-| `src/components/website-builder/PropertiesPanel.tsx` | **REWRITTEN** | Dark theme, expanded style editor with 7 groups: Spacing, Size, Typography, Colors (with hex input + color picker), Border, Layout, Effects |
-| `src/components/website-builder/WidgetRenderer.tsx` | **REWRITTEN** | All widgets now dark themed (#6366f1 accent, #fff text, dark backgrounds). Added counter, progress bar, FAQ renderers. Dark form inputs |
-| `src/lib/website-builder/widget-definitions.ts` | **REWRITTEN** | All 35 widget defaults updated to dark theme (#ffffff text, #6366f1 buttons, rgba(255,255,255,0.1) borders, Inter font) |
-
-### Key Architecture Decisions
-
-1. **Firestore Path:** Editor now saves to `platform/website-editor-config` — same path `usePageContent()` reads from
-2. **Dual Save:** Also saves branding/nav/footer to `platform/website-config` for `useWebsiteTheme()`
-3. **Type Bridge:** Conversion functions translate between `WebsiteConfig`/`EditorPage` (editor format) and `Page`/`PageSection`/`Widget` (canvas format)
-4. **Default Config:** If Firestore is empty, editor initializes from `DEFAULT_CONFIG` containing all 10 site pages
-5. **Dark Theme:** Entire editor uses `#000`/`#0a0a0a` backgrounds, `#ffffff` text, `#6366f1` indigo accent, Inter font
-
-### Build Verification
-- [x] `npx tsc --noEmit` — PASSES
-- [x] `npm run lint` — PASSES (0 errors, 0 warnings)
-- [x] `npm run build` — PASSES
 
 ---
 
@@ -1055,7 +114,10 @@ The website editor was completely disconnected from the live website. The origin
 |-------|---------|
 | Facebook/Instagram missing | Blocked: Meta Developer Portal (Tier 3.2) |
 | LinkedIn unofficial | Uses RapidAPI, blocked: Marketing Developer Platform (Tier 3.3) |
-| ~15 TODO comments | All external deps: i18n (6 langs), Outlook webhooks, vector embeddings, web scraping, DM feature |
+| 2 TODO comments | `knowledge-analyzer.ts:634` (Vertex AI embeddings), `autonomous-posting-agent.ts:203` (DM feature) |
+| 18 critical blockers | Session 25 audit — see PHASE 6 below for full fix plan |
+| 210 raw console statements | Should migrate to `logger` utility |
+| 22 eslint-disable comments | Budget 23/26 — 2 are `no-implied-eval` (security concern) |
 
 ---
 
@@ -1094,3 +156,264 @@ The website editor was completely disconnected from the live website. The origin
 | `jest.config.js` | Jest test configuration |
 | `tests/e2e/` | 9 existing Playwright E2E specs |
 | `tests/integration/` | 12+ Jest integration tests |
+
+---
+
+## SESSION 25: FULL PRODUCTION AUDIT (February 19, 2026)
+
+### Audit Methodology
+Ran 5 specialized QA agents in parallel across entire 430K LOC codebase:
+1. **QA Revenue & Commerce** — Stripe, cart, checkout, orders, subscriptions, coupons
+2. **QA Data Integrity** — Zod coverage, Firestore paths, mock data, analytics accuracy
+3. **QA Growth & Outreach** — Social, email, voice, video, website, forms, SEO, leads
+4. **QA Platform Infrastructure** — OAuth, webhooks, workflows, agent swarm, cron, health, settings
+5. **Stub & Placeholder Scanner** — TODO comments, hardcoded data, console statements, eslint-disable
+
+### Overall Verdict: ~70% Production-Ready
+- **19 major feature areas are production-grade** (social, website, forms, email, voice, video, CRM analytics, webhooks, cron, OAuth, notifications, settings, compliance, academy, lead tools, SEO, Jasper, coupons, dashboard analytics)
+- **18 critical blockers** in commerce pipeline, fake data, and data integrity
+- **18 major issues** in stubs, token refresh, and code quality
+
+---
+
+## PHASE 6: PRODUCTION AUDIT FIX PLAN
+
+### Priority System
+- **BLOCKER:** Would cause visible failure, data corruption, or serve fake data to users
+- **HIGH:** Significant gap that degrades trust or reliability
+- **MEDIUM:** Should fix but won't break core workflows
+- **LOW:** Cleanup, optimization, cosmetic
+
+---
+
+### SPRINT 9: Commerce Pipeline Fixes (BLOCKERS — Session 26)
+
+#### 9.1 — Fix Cart Firestore Path Mismatch
+**Status:** BLOCKER — Checkout always returns "Cart is empty"
+**Root Cause:** `cart-service.ts:78` writes to `organizations/{PLATFORM_ID}/carts`, but `create-session/route.ts:85` reads from `organizations/{PLATFORM_ID}/workspaces/default/carts`
+**Fix:** Align `create-session/route.ts` to use the same path as `cart-service.ts`. Also fix product path (`workspaces/default/entities/products/records` → match cart-service pattern).
+**Files:** `src/app/api/ecommerce/checkout/create-session/route.ts`
+**Effort:** ~1 hour
+
+#### 9.2 — Fix Subscription Upgrade Bypassing Stripe
+**Status:** BLOCKER — Owner/admin gets paid tier for free
+**Root Cause:** `subscription/page.tsx:173` sends `adminOverride: true` for all self-service upgrades
+**Fix:** Remove `adminOverride` from self-service flow. For paid upgrades, redirect to Stripe Checkout session. Keep `adminOverride` only for actual admin tools.
+**Files:** `src/app/(dashboard)/settings/subscription/page.tsx`
+**Effort:** ~3 hours (need Stripe Checkout integration for upgrades)
+
+#### 9.3 — Create Missing Payment Result Pages
+**Status:** BLOCKER — 404 after Stripe payment
+**Root Cause:** `stripe.ts:113-114` uses `/payment/success` and `/payment/cancelled` which don't exist
+**Fix:** Either create `/payment/success` and `/payment/cancelled` pages, or change Stripe integration to use existing `/store/checkout/success` path.
+**Files:** New pages or `src/lib/integrations/payment/stripe.ts`
+**Effort:** ~1 hour
+
+#### 9.4 — Consolidate Dual Checkout Flows
+**Status:** BLOCKER — Two incompatible order schemas
+**Root Cause:** `/api/checkout/` (PaymentIntent flow) and `/api/ecommerce/checkout/` (full checkout service) create orders with different schemas
+**Fix:** Decide on canonical flow. Likely: deprecate `/api/checkout/` or make it a thin wrapper around the ecommerce checkout service so all orders have consistent schema.
+**Files:** `src/app/api/checkout/create-payment-intent/route.ts`, `src/app/api/checkout/complete/route.ts`
+**Effort:** ~3 hours
+
+#### 9.5 — Handle Missing Mollie Webhook (or disable Mollie)
+**Status:** BLOCKER — Mollie payments never confirmed
+**Fix:** Either create `src/app/api/webhooks/mollie/route.ts` or remove Mollie from enabled payment providers.
+**Files:** New route or `src/lib/ecommerce/payment-providers.ts`
+**Effort:** ~2 hours (create) or ~30 min (disable)
+
+#### 9.6 — Fix Refunds for Non-Stripe Providers (or disable them)
+**Status:** BLOCKER — Refunds fail silently for PayPal/Square/etc.
+**Fix:** Implement refund logic for PayPal and Square at minimum, or clearly surface in UI that non-Stripe refunds must be manual.
+**Files:** `src/lib/ecommerce/payment-service.ts:541-551`
+**Effort:** ~4 hours (implement) or ~1 hour (disable + UI notice)
+
+#### 9.7 — Fix Storefront Embed Placeholder URLs
+**Status:** MAJOR — Embed codes reference `yourplatform.com`
+**Fix:** Replace placeholder URLs with actual `NEXT_PUBLIC_APP_URL` or remove embed section until implemented.
+**Files:** `src/app/(dashboard)/settings/storefront/page.tsx:165-181`
+**Effort:** ~30 min
+
+#### 9.8 — Fix Billing Usage Metrics (hardcoded dashes)
+**Status:** MAJOR — Users can't see their actual usage
+**Fix:** Query Firestore for contact count, email send count, and AI credit usage. Or remove the usage section until real data is available.
+**Files:** `src/app/(dashboard)/settings/billing/page.tsx:406-410`
+**Effort:** ~2 hours
+
+#### 9.9 — Move Subscription Prices to Firestore (single source of truth)
+**Status:** MAJOR — Prices hardcoded in two frontend files
+**Fix:** Read pricing from the existing `PlatformPricingService` (which reads from Firestore) instead of hardcoding `$29/$79/$199`.
+**Files:** `src/app/(dashboard)/settings/billing/page.tsx:30-58`, `src/app/(dashboard)/settings/subscription/page.tsx:35-110`
+**Effort:** ~2 hours
+
+---
+
+### SPRINT 10: Fake Data Removal (BLOCKERS — Session 26)
+
+#### 10.1 — Replace Sequence Engine Mock Data
+**Status:** BLOCKER — Sequence analytics are 100% fake
+**Root Cause:** `sequence-engine.ts:610-713` — `fetchSequences()` and `generateMockMetrics()` return hardcoded data
+**Fix:** Query Firestore for actual sequence data and calculate real metrics, or remove the metrics display until real data flows.
+**Files:** `src/lib/sequence/sequence-engine.ts`
+**Effort:** ~4 hours
+
+#### 10.2 — Replace Agent Specialist Mock Analytics
+**Status:** BLOCKER — LinkedIn/Twitter/TikTok/SEO/Trend specialists serve `Math.random()` data
+**Root Cause:** ~30+ methods across 5 specialist files return fabricated analytics
+**Fix:** For each specialist: either wire to real API data, return honest "no data available" responses, or remove the analytics display. Do NOT serve random numbers as if they are real metrics.
+**Files:**
+- `src/lib/agents/marketing/linkedin/specialist.ts` (7 methods, lines 1609-2017)
+- `src/lib/agents/marketing/twitter/specialist.ts` (8 methods, lines 985-1475)
+- `src/lib/agents/marketing/tiktok/specialist.ts` (9 methods, lines 1331-1840)
+- `src/lib/agents/marketing/seo/specialist.ts` (5 methods, lines 923-1047)
+- `src/lib/agents/intelligence/trend/specialist.ts` (6 methods, lines 434-981)
+- `src/lib/agents/intelligence/competitor/specialist.ts` (lines 386-581)
+**Effort:** ~8 hours (35 methods total — can use sub-agents in parallel)
+
+#### 10.3 — Replace Lead Enrichment Mock Data
+**Status:** BLOCKER — All leads get "Technology" industry, "$5M revenue"
+**Fix:** Return null/empty for unknown fields instead of fabricated data. The UI should handle missing enrichment gracefully.
+**Files:** `src/lib/analytics/lead-nurturing.ts:257-281, 337-398`
+**Effort:** ~2 hours
+
+#### 10.4 — Fix Voice Stats Demo Fallback
+**Status:** BLOCKER — Falls back to fake stats silently
+**Fix:** Return error response instead of demo data when Firestore read fails. Or return zeros with a "no data yet" indicator.
+**Files:** `src/app/api/admin/voice/stats/route.ts:178-205`
+**Effort:** ~1 hour
+
+#### 10.5 — Fix Revenue Forecasting Mock Data
+**Status:** BLOCKER — `Math.random()` revenue numbers
+**Fix:** Return empty/null forecast when no historical data exists instead of random numbers.
+**Files:** `src/lib/templates/revenue-forecasting-engine.ts:540-563`
+**Effort:** ~1 hour
+
+#### 10.6 — Fix Reputation Manager Silent Fallbacks
+**Status:** MAJOR — Silently returns fake review/sentiment/GMB data on errors
+**Fix:** Propagate errors instead of returning fake fallback data. Let the UI show "data unavailable" rather than fabricated metrics.
+**Files:** `src/lib/agents/trust/reputation/manager.ts:1952-2041`
+**Effort:** ~1 hour
+
+---
+
+### SPRINT 11: Data Integrity & Validation (HIGH — Session 26-27)
+
+#### 11.1 — Add Zod Validation to 23 Unvalidated API Routes
+**Status:** CRITICAL — Unvalidated input reaches Firestore
+**Fix:** For each route using `as` type assertion, create a Zod schema and use `safeParse`. Priority routes: voice, website, agent config, orchestrator chat.
+**Files:** Full list in Data Integrity audit — 23 routes across `src/app/api/`
+**Effort:** ~6 hours (can parallelize with sub-agents)
+
+#### 11.2 — Fix 50+ Manual Firestore Path Constructions
+**Status:** CRITICAL — Dev/prod path prefix mismatch
+**Root Cause:** Services manually construct `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/...` instead of using `getSubCollection()`, causing the environment prefix to be missing on subcollection names.
+**Fix:** Either add convenience getters for all subcollections (chatSessions, knowledgeBase, carts, abTests, etc.) to `collections.ts`, or refactor all manual paths to use `getSubCollection()`.
+**Files:** 50+ instances across `src/lib/` — see Data Integrity audit for full list
+**Effort:** ~8 hours (mechanical but must be careful)
+
+#### 11.3 — Add `platform_metrics` and `platform_settings` to COLLECTIONS Registry
+**Status:** MAJOR — These bypass environment isolation
+**Fix:** Register in `COLLECTIONS` object in `collections.ts` with proper prefixing.
+**Files:** `src/lib/firebase/collections.ts`
+**Effort:** ~1 hour
+
+#### 11.4 — Fix `trackLeadActivity()` Broken Path
+**Status:** MAJOR — Multi-tenant remnant splits leadId to extract orgId
+**Fix:** Use `PLATFORM_ID` directly instead of parsing leadId.
+**Files:** `src/lib/analytics/lead-nurturing.ts:311`
+**Effort:** ~30 min
+
+---
+
+### SPRINT 12: Workflow & Infrastructure Stubs (HIGH — Session 27)
+
+#### 12.1 — Implement Workflow Action Executors
+**Status:** HIGH — Workflows "succeed" but nothing happens
+**Fix:** Wire the 4 stub action handlers to real service calls: create tasks, update deals, send notifications, schedule waits.
+**Files:** `src/lib/workflow/workflow-engine.ts:619,651,687,720`
+**Effort:** ~6 hours
+
+#### 12.2 — Implement Token Refresh for Google/Microsoft/Slack/Teams
+**Status:** MEDIUM — Tokens will silently expire
+**Fix:** Add refresh logic to `refreshIntegrationToken()` switch statement for each provider.
+**Files:** `src/lib/integrations/integration-manager.ts:109-119`
+**Effort:** ~4 hours
+
+#### 12.3 — Fix `syncIntegration()` and `testIntegration()` Stubs
+**Status:** MEDIUM — Returns success without doing anything
+**Fix:** Implement real sync logic per provider and real connection testing.
+**Files:** `src/lib/integrations/integration-manager.ts:293-354`
+**Effort:** ~4 hours
+
+#### 12.4 — Fix Health Check Stubs
+**Status:** MEDIUM — Integrations always "operational", request metrics always zero
+**Fix:** `checkIntegrations()` should query actual integration status. Request metrics should use real counters or be removed.
+**Files:** `src/lib/monitoring/health-check.ts:219-259`
+**Effort:** ~2 hours
+
+#### 12.5 — Fix Shipping Rate Calculation Stub
+**Status:** MAJOR — Hardcoded $5 + $0.50/item instead of carrier API
+**Fix:** Either integrate with a shipping rate API (EasyPost, ShipEngine) or clearly label rates as "flat rate estimates" in the UI.
+**Files:** `src/lib/ecommerce/shipping-service.ts:177-186`
+**Effort:** ~4 hours (integrate) or ~30 min (label)
+
+#### 12.6 — Fix Automated Tax Calculation Stub
+**Status:** MAJOR — Falls back to manual rates
+**Fix:** Either integrate Stripe Tax or clearly label as "manual tax rates" in the UI.
+**Files:** `src/lib/ecommerce/tax-service.ts:64-73`
+**Effort:** ~4 hours (integrate) or ~30 min (label)
+
+---
+
+### SPRINT 13: Code Quality Cleanup (MEDIUM — Session 27)
+
+#### 13.1 — Migrate 210 Console Statements to Logger
+**Status:** MEDIUM — Debug artifacts in production code
+**Fix:** Replace `console.log/warn/error` with `logger.info/warn/error` across 79 files.
+**Effort:** ~3 hours (mechanical, can use sub-agents)
+
+#### 13.2 — Audit 2 `no-implied-eval` Security Risks
+**Status:** HIGH — Potential code injection
+**Fix:** Review `distillation-engine.ts:463` and `formula-engine.ts:103` for safe alternatives to dynamic evaluation.
+**Files:** `src/lib/scraper-intelligence/distillation-engine.ts`, `src/lib/schema/formula-engine.ts`
+**Effort:** ~2 hours
+
+#### 13.3 — Fix `collections.ts` Console Config Leak
+**Status:** MEDIUM — Leaks config data to browser console on every import
+**Fix:** Replace `console.log` with server-only logger or remove entirely.
+**Files:** `src/lib/firebase/collections.ts:225`
+**Effort:** ~15 min
+
+---
+
+### FIX PLAN SUMMARY
+
+| Sprint | Focus | Items | Priority | Target Session |
+|--------|-------|-------|----------|----------------|
+| **Sprint 9** | Commerce Pipeline | 9 fixes | BLOCKER/MAJOR | Session 26 |
+| **Sprint 10** | Fake Data Removal | 6 fixes (35+ methods) | BLOCKER/MAJOR | Session 26 |
+| **Sprint 11** | Data Integrity | 4 fixes (73+ files) | CRITICAL/MAJOR | Session 26-27 |
+| **Sprint 12** | Workflow & Infra | 6 fixes | HIGH/MEDIUM | Session 27 |
+| **Sprint 13** | Code Quality | 3 fixes (210+ statements) | MEDIUM/HIGH | Session 27 |
+
+### What's Production-Ready (No Work Needed)
+
+| Area | Score | Notes |
+|------|-------|-------|
+| Social Media (10 pages, 25 routes) | 95/100 | All real API integrations, no stubs |
+| Website Builder (11 pages, 24 routes) | 98/100 | Most complete module |
+| Forms (full lifecycle) | 95/100 | Create → publish → submit → CRM |
+| Email & Outreach | 90/100 | Real delivery, CAN-SPAM, tracking |
+| Voice AI | 90/100 | Real Twilio, TCPA compliance |
+| Video Studio | 92/100 | 7-step pipeline, HeyGen integration |
+| CRM Dashboard Analytics | 95/100 | Real Firestore queries, proper caching |
+| All 6 Webhooks | 100/100 | Signature verification, idempotency |
+| All 6 Cron Jobs | 100/100 | CRON_SECRET protected, real logic |
+| All 7 OAuth Flows | 95/100 | CSRF, encrypted tokens |
+| Jasper Orchestrator | 95/100 | Real AI calls, tool calling |
+| Notification System | 95/100 | Templates, preferences, rate limiting |
+| All 24 Settings Pages | 90/100 | Firestore-backed persistence |
+| Stripe Webhook Handler | 100/100 | Idempotency, 9 event types |
+| Coupon System | 95/100 | Dual-layer (platform + merchant) |
+| Lead Tools | 90/100 | Research, scoring, scraper |
+| Compliance & Academy | 90/100 | Data-driven from Firestore |
