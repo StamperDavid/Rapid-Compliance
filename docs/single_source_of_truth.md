@@ -1,7 +1,7 @@
 # SalesVelocity.ai - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** February 13, 2026 (Session 12: Infrastructure hardening — 9 Firestore indexes, 103 env vars documented, health check wired, 45 console→logger conversions)
+**Last Updated:** February 19, 2026 (Session 25: Nav consolidation — 13 sidebar sections → 8, SubpageNav tab component, Settings/Academy moved to footer icons)
 **Branches:** `dev` (latest)
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Architecture:** Single-Tenant (Penthouse Model) - NOT a SaaS platform
@@ -189,7 +189,7 @@ Hard-coded hex colors converted to CSS variables across 100+ components (Rule 3 
 - Admin dashboard isolated with `.admin-theme-scope` class
 - Client workspace uses document-level CSS variables via `useOrgTheme()`
 - Theme changes reflect instantly without page reloads
-- Known exception: `AdminSidebar.tsx` navigation config uses static hex for icon colors
+- `AdminSidebar.tsx` navigation config uses CSS variable references for icon colors (migrated from hex in Session 25)
 
 #### Agent Coordination Layer Refactor
 **Status:** ✅ **FULLY IMPLEMENTED** (February 3, 2026)
@@ -498,7 +498,7 @@ border-color: #1a1a1a;
 - Admin UI is wrapped in `.admin-theme-scope` which overrides all `--color-*` with `--admin-color-*`
 - CSS cascading ensures admin variables always win within the admin container
 
-**Known Exception:** `AdminSidebar.tsx` uses `iconColor` hex strings in its navigation config for Lucide icon coloring. These are static navigation constants in the config array — not dynamic component styling. Future work should migrate these to CSS variable references.
+**Known Exception:** `AdminSidebar.tsx` uses `iconColor` CSS variable strings (e.g., `var(--color-primary)`, `var(--color-success)`) in its navigation config for Lucide icon coloring. These are static navigation constants in the config array — migrated from hex strings to CSS variables as of Session 25.
 
 **Bug Definition:** Any component that uses literal hex codes, `rgb()` values, or hard-coded color strings for theming instead of CSS variables is a **bug**.
 
@@ -511,36 +511,41 @@ border-color: #1a1a1a;
 | Aspect | Detail |
 |--------|--------|
 | **Source** | `src/components/admin/AdminSidebar.tsx` |
-| **Sections** | 12 navigation sections, 70+ menu items |
+| **Sections** | 8 navigation sections, ~27 sidebar items |
 | **Width** | 280px expanded / 64px collapsed |
 | **Theming** | 100% CSS variable-driven via `var(--color-*)` |
 | **Routing** | All static routes — no `[orgId]` parameters in sidebar links |
+| **Footer** | Settings (gear icon → `/settings`) and Help/Academy (help icon → `/academy`) |
+| **Tab Navigation** | `SubpageNav` component provides route-based tabs on hub/parent pages |
 
-**Consolidated Navigation Structure:**
+**Consolidated Navigation Structure (February 19, 2026 — Session 25):**
 
-| # | Section | Items |
-|---|---------|-------|
-| 1 | **Command Center** | Dashboard, Workforce HQ |
-| 2 | **CRM** | Leads, Deals/Pipeline, Contacts, Conversations, Living Ledger |
-| 3 | **Lead Gen** | Forms, Lead Research, Lead Scoring |
-| 4 | **Outbound** | Outbound, Sequences, Campaigns, Email Writer, Nurture, Calls |
-| 5 | **Content Factory** | Video Studio, Social Media (9 pages: Command Center, Content Studio, Approvals, Calendar, Listening, Training, Activity Feed, Analytics, Agent Rules), Proposals, Battlecards |
-| 6 | **AI Workforce** | Agent Registry, Training Center, Agent Persona, Voice & Speech, Voice AI Lab, Social AI Lab, SEO AI Lab, Datasets, Fine-Tuning |
-| 7 | **Automation** | Workflows, A/B Testing, Lead Routing |
-| 8 | **E-Commerce** | Products, Orders, Storefront |
-| 9 | **Compliance** | Compliance Reports, Audit Log |
-| 10 | **Analytics** | Overview, Revenue, Pipeline, Sales Performance, Sequences |
-| 11 | **Website** | Site Editor, Pages, Blog, SEO, Domains, Site Settings |
-| 12 | **Settings** | General, Users & Team, Integrations, API Keys, Theme & Branding, Security |
+| # | Section | Sidebar Items | Sub-pages (via SubpageNav tabs) |
+|---|---------|---------------|----------------------------------|
+| 1 | **Home** | Dashboard, Conversations | Dashboard tabs: Dashboard, Executive Briefing, Workforce HQ |
+| 2 | **CRM** | Leads, Deals/Pipeline, Contacts, Living Ledger | — |
+| 3 | **Outreach** | Outbound, Sequences, Campaigns, Email Writer, Nurture, Calls | Lead tools tabs: Lead Research, Lead Scoring, Marketing Scraper; Outbound tabs: Email Writer, Nurture |
+| 4 | **Content** | Social Hub, Video Studio, Proposals, Battlecards | Social Hub tabs: Command Center, Campaigns, Calendar, Approvals, Listening, Activity, Agent Rules, Playbook |
+| 5 | **AI Workforce** | Agent Registry, Training Hub, Models & Data | Training Hub tabs: Training Center, Persona, Voice & Speech, Voice AI Lab, Social AI Lab, SEO AI Lab; Models tabs: Datasets, Fine-Tuning |
+| 6 | **Commerce** | Products, Orders, Storefront | — |
+| 7 | **Website** | Site Editor, Pages, Blog | Website tabs: SEO, Domains, Site Settings |
+| 8 | **Analytics** | Overview | Analytics tabs: Overview, Revenue, Pipeline, Sales Performance, Sequences |
+
+**Footer Navigation (outside main sections):**
+- **Settings** (gear icon) → `/settings` hub page with sections: General, Users & Team, Integrations, API Keys, Theme & Branding, Security, Compliance & Admin (Compliance Reports, Audit Log, Impersonate User, Lead Routing)
+- **Academy** (help icon) → `/academy`
+
+**SubpageNav Component:** `src/components/ui/SubpageNav.tsx`
+- Route-based tab bar using `usePathname()` from Next.js
+- Applied to 31 page files across all hub routes
+- Provides discoverability for sub-pages that were removed from the sidebar
 
 **Deleted Components (Forensic Record):**
 - `CommandCenterSidebar.tsx` — Deleted January 26, 2026 (commit `f2d2497b`)
 - God Mode sidebar logic — Absorbed into unified `AdminSidebar.tsx`
 - `UnifiedSidebar.tsx` in admin context — Superseded by `AdminSidebar.tsx` for admin routes
 
-**Dashboard vs. Admin Navigation:**
-- **Dashboard routes** (`/(dashboard)/*`) use `buildNavigationStructure()` from `feature-toggle-service.ts` — 11 client sections, no System tools
-- **Admin routes** (`/admin/*`) use `AdminSidebar.tsx` — 12 sections including all operational tools
+**Previous Structure (Pre-Session 25):** 13 sections with 83 items — consolidated to 8 sections with ~27 items via competitive analysis (Close.com, HubSpot, Salesforce, GoHighLevel, Pipedrive).
 
 **Bug Definition:** Any code that creates parallel navigation structures, reintroduces God Mode sidebars, builds shadow navigation components, or splits sidebar logic into disconnected files is a **bug**.
 
@@ -1395,24 +1400,22 @@ src/lib/agent/instance-manager.ts       # Agent Instance Manager
 | canProcessOrders | YES | YES | YES | YES |
 | canManageProducts | YES | YES | YES | - |
 
-### Navigation Section Visibility (12 Sections — 4-Role RBAC)
+### Navigation Section Visibility (8 Sections — 4-Role RBAC)
 
-**12 Unified Sections** in `AdminSidebar.tsx` (permission-gated per role via `filterNavigationByRole()`):
+**8 Consolidated Sections** in `AdminSidebar.tsx` (permission-gated per role via `filterNavigationByRole()`):
 
 | Section | owner | admin | manager | member | Key Permission |
 |---------|-------|-------|---------|--------|----------------|
-| 1. Command Center | YES | YES | YES | YES | - |
+| 1. Home | YES | YES | YES | YES | - |
 | 2. CRM | YES | YES | YES | YES* | canViewLeads, canViewDeals |
-| 3. Lead Gen | YES | YES | YES | - | canManageLeads |
-| 4. Outbound | YES | YES | YES | - | canManageLeads, canManageEmailCampaigns |
-| 5. Content Factory | YES | YES | YES | - | canManageSocialMedia |
-| 6. AI Workforce | YES | YES | YES | - | canDeployAIAgents, canTrainAIAgents |
-| 7. Automation | YES | YES | YES | - | canCreateWorkflows |
-| 8. E-Commerce | YES | YES | YES | YES* | canProcessOrders |
-| 9. Compliance | YES | YES | - | - | canViewAuditLogs |
-| 10. Analytics | YES | YES | YES | YES* | canViewReports |
-| 11. Website | YES | YES | YES | - | canManageWebsite |
-| 12. Settings | YES | YES | YES | - | canAccessSettings |
+| 3. Outreach | YES | YES | YES | - | canManageLeads, canManageEmailCampaigns |
+| 4. Content | YES | YES | YES | - | canManageSocialMedia |
+| 5. AI Workforce | YES | YES | YES | - | canDeployAIAgents, canTrainAIAgents |
+| 6. Commerce | YES | YES | YES | YES* | canProcessOrders |
+| 7. Website | YES | YES | YES | - | canManageWebsite |
+| 8. Analytics | YES | YES | YES | YES* | canViewReports |
+
+**Footer items** (Settings, Academy) visible to all roles. Settings hub page internally gates Compliance & Admin items to owner/admin via `canManageOrganization`.
 
 *Member sees limited items based on specific permissions
 
@@ -2273,18 +2276,19 @@ The middleware (`src/middleware.ts`) uses **Role-Based Segment Routing**:
 **Forensic Investigation Completed:** January 26, 2026
 **Legacy Client UI Restored:** January 27, 2026 (1/25/2026 Baseline)
 **Dynamic Theming Enabled:** January 27, 2026 - Hardcoded hex colors replaced with CSS variables
+**Nav Consolidation:** February 19, 2026 - 13 sections → 8, SubpageNav tabs, footer icons for Settings/Academy
 
-> **IMPORTANT:** The "Unified Dashboard" logic has been SCRAPPED for the client view.
-> The legacy client navigation with 11 operational sections has been restored.
-> System tools are now HARD-GATED and isolated from the standard client navigation array.
+> **IMPORTANT:** The sidebar was consolidated from 13 sections (~83 items) to 8 sections (~27 items) in Session 25.
+> Settings and Academy moved to sidebar footer icons. Sub-pages are accessed via `SubpageNav` tab bars on hub pages.
+> System tools remain HARD-GATED in the `/admin/*` route tree.
 
 #### Current Implementation (SINGLE-TENANT ARCHITECTURE)
 
 | Component | Location | Used By | Status |
 |-----------|----------|---------|--------|
 | **Dashboard Layout** | `src/app/(dashboard)/layout.tsx` | Dashboard Routes | ACTIVE - Flattened single-tenant |
-| **useFeatureVisibility** | `src/hooks/useFeatureVisibility.ts` | Dashboard Layout | ACTIVE - Feature navigation |
-| **buildNavigationStructure** | `src/lib/orchestrator/feature-toggle-service.ts` | useFeatureVisibility | ACTIVE - 11 sections |
+| **AdminSidebar** | `src/components/admin/AdminSidebar.tsx` | Dashboard Layout | ACTIVE - 8 sections + footer |
+| **SubpageNav** | `src/components/ui/SubpageNav.tsx` | 31 hub/sub-pages | ACTIVE - Route-based tab navigation |
 | **UnifiedSidebar** | `src/components/dashboard/UnifiedSidebar.tsx` | Admin Layout | ACTIVE - Uses `getNavigationForRole()` |
 | **Navigation Config** | `src/components/dashboard/navigation-config.ts` | UnifiedSidebar | ACTIVE - Hard-gated System section |
 
@@ -2293,40 +2297,40 @@ The middleware (`src/middleware.ts`) uses **Role-Based Segment Routing**:
 #### Navigation Architecture
 
 **Dashboard Routes (`/(dashboard)/*`):**
-- Uses flattened layout with DEFAULT_ORG_ID
-- Navigation from `buildNavigationStructure()` in feature-toggle-service.ts
-- 11 sections, NO System tools
-- Dark theme with emoji icons
+- Uses `AdminSidebar.tsx` with 8 consolidated sections
+- Hub pages use `SubpageNav` component for tab navigation to sub-pages
+- Settings and Academy accessible via footer icons
+- Dark theme with Lucide icons and CSS variable theming
 
 **Admin Routes (`/admin/*`):**
 - Uses UnifiedSidebar component
 - Navigation from `getNavigationForRole()` in navigation-config.ts
 - Hard-gated System section for superadmin only
 
-#### Client Navigation Structure (11 Sections)
+#### Dashboard Navigation Structure (8 Sections + Footer)
 
-Clients see ONLY these 11 sections (NO System tools):
+Users see 8 sidebar sections with sub-pages accessible via tab bars:
 
-1. **Command Center** - Workforce HQ, Dashboard, Conversations
-2. **CRM** - Leads, Deals, Contacts, Living Ledger
-3. **Lead Gen** - Forms, Lead Research, Lead Scoring
-4. **Outbound** - Sequences, Campaigns, Email Writer, Nurture, Calls
-5. **Automation** - Workflows, A/B Tests
-6. **Content Factory** - Video Studio, Social Media, Proposals, Battlecards
-7. **AI Workforce** - Agent Training, Voice & Speech, Voice AI Lab, Social AI Lab, SEO AI Lab, Datasets, Fine-Tuning
-8. **E-Commerce** - Products, Orders, Storefront
-9. **Analytics** - Overview, Revenue, Pipeline, Sequences
-10. **Website** - Pages, Blog, Domains, SEO, Site Settings
-11. **Settings** - Organization, Team, Integrations, API Keys, Billing
+1. **Home** - Dashboard (tabs: Executive Briefing, Workforce HQ), Conversations
+2. **CRM** - Leads, Deals/Pipeline, Contacts, Living Ledger
+3. **Outreach** - Outbound, Sequences, Campaigns, Email Writer (tabs: Nurture), Calls, Lead Research (tabs: Lead Scoring, Marketing Scraper)
+4. **Content** - Social Hub (tabs: Command Center, Campaigns, Calendar, Approvals, Listening, Activity, Agent Rules, Playbook), Video Studio, Proposals, Battlecards
+5. **AI Workforce** - Agent Registry, Training Hub (tabs: Training Center, Persona, Voice & Speech, Voice AI Lab, Social AI Lab, SEO AI Lab), Models & Data (tabs: Datasets, Fine-Tuning)
+6. **Commerce** - Products, Orders, Storefront
+7. **Website** - Site Editor, Pages, Blog (tabs: SEO, Domains, Site Settings)
+8. **Analytics** - Overview (tabs: Revenue, Pipeline, Sales Performance, Sequences)
+
+**Footer:**
+- ⚙️ Settings → `/settings` hub (General, Users & Team, Integrations, API Keys, Theme & Branding, Security, Compliance & Admin)
+- ❓ Academy → `/academy`
 
 #### Platform Admin Tools (HARD-GATED)
 
-Admin users see all 11 client sections PLUS the System section (12 total):
+Admin users access the `/admin/*` route tree with the System section:
 
-12. **System** (admin ONLY) - System Overview, Organizations, All Users, Feature Flags, Audit Logs, System Settings
+- **System** (admin ONLY) - System Overview, Organizations, All Users, Feature Flags, Audit Logs, System Settings
 
-**CRITICAL:** The System section is NOT part of `CLIENT_SECTIONS`. It is a separate `SYSTEM_SECTION` export
-that is conditionally appended ONLY when `user.role === 'admin'` via `getNavigationForRole()`.
+**CRITICAL:** The System section is NOT part of the dashboard sidebar. It is only accessible in the `/admin/*` route tree via `getNavigationForRole()`.
 
 #### Route Pattern (Single-Tenant)
 
@@ -2451,39 +2455,41 @@ The `/admin/organizations/[id]/*` route tree now has **45 functional pages** (Ja
 
 #### Key Finding: Dual-Layout Navigation System
 
-**Investigation Result (January 27, 2026 Restoration):** The codebase uses **separate navigation systems** for client vs admin:
+**Investigation Result (January 27, 2026 Restoration):** The codebase uses **separate navigation systems** for dashboard vs admin:
 
-1. **Client Routes** (`/workspace/[orgId]/*`) use a **built-in sidebar** in the workspace layout
-   - Navigation from `buildNavigationStructure()` with 11 sections
-   - `useFeatureVisibility` hook for adaptive per-org feature toggling
+1. **Dashboard Routes** (`/(dashboard)/*`) use `AdminSidebar.tsx`
+   - 8 consolidated sections with ~27 sidebar items (February 19, 2026)
+   - `SubpageNav` tab bars on hub pages for sub-page discovery
+   - Settings and Academy in sidebar footer icons
    - **Dynamic theming via CSS variables** (replaces hardcoded hex colors as of 1/27/2026):
      - `var(--color-bg-main)` - Main background (was #000000)
      - `var(--color-bg-paper)` - Sidebar/header background (was #0a0a0a)
      - `var(--color-bg-elevated)` - Elevated surfaces like active nav items (was #1a1a1a)
      - `var(--color-border-main)` - Border colors (was #1a1a1a)
-   - Emoji icons, section dividers
+   - Lucide icons with CSS variable coloring
    - NO System tools (Audit Logs, Feature Flags, etc.) - completely absent
 
 2. **Admin Routes** (`/admin/*`) use `UnifiedSidebar` component
    - Navigation from `getNavigationForRole()` with hard-gated System section
-   - Admin users see all 12 sections including System tools
+   - Admin users see System tools
 
 #### Navigation Item Locations (Key Routes)
 
 | Feature | Section | Permission Required | Route Pattern |
 |---------|---------|---------------------|---------------|
-| Leads | CRM | `canViewLeads` | `/workspace/:orgId/leads` |
-| Deals | CRM | `canViewDeals` | `/workspace/:orgId/deals` |
-| Forms | Lead Gen | `canManageLeads` | `/workspace/:orgId/forms` |
-| Sequences | Outbound | `canManageEmailCampaigns` | `/workspace/:orgId/outbound/sequences` |
-| Workflows | Automation | `canCreateWorkflows` | `/workspace/:orgId/workflows` |
-| Video Studio | Content Factory | `canManageSocialMedia` | `/workspace/:orgId/content/video` |
-| Agent Training | AI Workforce | `canTrainAIAgents` | `/workspace/:orgId/settings/ai-agents/training` |
-| Products | E-Commerce | `canManageProducts` | `/workspace/:orgId/products` |
-| Analytics | Analytics | `canViewReports` | `/workspace/:orgId/analytics` |
-| Pages | Website | `canManageWebsite` | `/workspace/:orgId/website/pages` |
-| Organization | Settings | `canManageOrganization` | `/workspace/:orgId/settings` |
-| System Overview | System | `canViewSystemHealth` | `/admin/system/health` |
+| Dashboard | Home | — | `/dashboard` |
+| Leads | CRM | `canViewLeads` | `/leads` |
+| Deals | CRM | `canViewDeals` | `/deals` |
+| Social Hub | Content | `canManageSocialMedia` | `/social/command-center` |
+| Sequences | Outreach | `canManageEmailCampaigns` | `/sequences` |
+| Video Studio | Content | `canManageSocialMedia` | `/video-studio` |
+| Training Hub | AI Workforce | `canTrainAIAgents` | `/settings/ai-agents/training` |
+| Models & Data | AI Workforce | `canTrainAIAgents` | `/ai/datasets` |
+| Products | Commerce | `canManageProducts` | `/products` |
+| Analytics | Analytics | `canViewReports` | `/analytics` |
+| Site Editor | Website | `canManageWebsite` | `/website/editor` |
+| Settings | Footer | `canAccessSettings` | `/settings` |
+| System Overview | Admin only | `canViewSystemHealth` | `/admin/system/health` |
 
 #### Deleted Components (Forensic Record)
 
@@ -2493,37 +2499,41 @@ The `/admin/organizations/[id]/*` route tree now has **45 functional pages** (Ja
 
 **CommandCenterSidebar Contents (437 lines):** 10 navigation categories (Dashboard, Clients, Leads & Sales, Social Media, Email Marketing, AI Voice, Analytics, System, Jasper Lab), collapsible sections, badge support, role display. All functionality migrated to unified system.
 
-#### Section Visibility by Role (12 Sections — 4-Role RBAC)
+#### Section Visibility by Role (8 Sections — 4-Role RBAC)
 
 | # | Section | owner | admin | manager | member |
 |---|---------|-------|-------|---------|--------|
-| 1 | Command Center | ✅ | ✅ | ✅ | ✅ |
+| 1 | Home | ✅ | ✅ | ✅ | ✅ |
 | 2 | CRM | ✅ | ✅ | ✅ | ✅* |
-| 3 | Lead Gen | ✅ | ✅ | ✅ | - |
-| 4 | Outbound | ✅ | ✅ | ✅ | - |
-| 5 | Content Factory | ✅ | ✅ | ✅ | - |
-| 6 | AI Workforce | ✅ | ✅ | ✅ | - |
-| 7 | Automation | ✅ | ✅ | ✅ | - |
-| 8 | E-Commerce | ✅ | ✅ | ✅ | ✅* |
-| 9 | Compliance | ✅ | ✅ | - | - |
-| 10 | Analytics | ✅ | ✅ | ✅ | ✅* |
-| 11 | Website | ✅ | ✅ | ✅ | - |
-| 12 | Settings | ✅ | ✅ | ✅ | - |
+| 3 | Outreach | ✅ | ✅ | ✅ | - |
+| 4 | Content | ✅ | ✅ | ✅ | - |
+| 5 | AI Workforce | ✅ | ✅ | ✅ | - |
+| 6 | Commerce | ✅ | ✅ | ✅ | ✅* |
+| 7 | Website | ✅ | ✅ | ✅ | - |
+| 8 | Analytics | ✅ | ✅ | ✅ | ✅* |
+
+Footer (Settings, Academy) visible to all roles. Settings hub internally gates Compliance & Admin to owner/admin.
 
 *Member sees limited items based on specific permissions
 
 #### Files for Navigation Debugging
 
 ```
+src/components/admin/
+└── AdminSidebar.tsx             # Dashboard sidebar (8 sections + footer)
+
+src/components/ui/
+└── SubpageNav.tsx               # Route-based tab navigation component
+
 src/components/dashboard/
-├── UnifiedSidebar.tsx          # Sidebar component (use for ALL layouts)
-├── navigation-config.ts        # UNIFIED_NAVIGATION constant
-├── README.md                   # Migration documentation
-├── MIGRATION.md                # Migration guide
-└── IMPLEMENTATION_SUMMARY.md   # Implementation details
+├── UnifiedSidebar.tsx           # Admin sidebar (uses getNavigationForRole())
+├── navigation-config.ts         # UNIFIED_NAVIGATION constant (admin routes)
+├── README.md                    # Migration documentation
+├── MIGRATION.md                 # Migration guide
+└── IMPLEMENTATION_SUMMARY.md    # Implementation details
 
 src/types/
-└── unified-rbac.ts             # filterNavigationByRole() + UNIFIED_ROLE_PERMISSIONS
+└── unified-rbac.ts              # NavigationCategory type, filterNavigationByRole(), UNIFIED_ROLE_PERMISSIONS
 ```
 
 #### Orphaned Code Status: ✅ CLEAN
@@ -2594,7 +2604,7 @@ document.documentElement.style.setProperty('--color-primary', orgTheme.primary);
 
 #### Admin Sidebar Dynamic Styling (January 27, 2026)
 
-The `UnifiedSidebar.tsx` component now features **100% reactive theming** via CSS variables:
+The `AdminSidebar.tsx` and `UnifiedSidebar.tsx` components feature **100% reactive theming** via CSS variables:
 
 **Active State Highlights:**
 - 3px solid left border using `var(--color-primary)` on active navigation items
@@ -2651,11 +2661,12 @@ The platform uses a **layered state management** approach:
 
 #### Sidebar Reactivity Pattern
 
-UnifiedSidebar achieves reactivity through:
-1. **Memoized navigation filtering:** `useMemo(() => getNavigationForRole(user.role), [user.role])`
-2. **Path-based active state:** `usePathname()` from Next.js
+AdminSidebar and UnifiedSidebar achieve reactivity through:
+1. **Role-based filtering:** `filterNavigationByRole()` gates sections and items by role/permission
+2. **Path-based active state:** `usePathname()` from Next.js with special hub route matching (Social Hub, Training Hub, Models, Analytics)
 3. **CSS variable injection:** Theme changes via `container.style.setProperty()` update instantly
 4. **React.memo sub-components:** Prevents unnecessary re-renders
+5. **SubpageNav tabs:** `usePathname()` drives active tab state on hub pages
 
 ### Agent Communication
 
