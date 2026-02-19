@@ -6,7 +6,7 @@ import { BaseSpecialist } from '../../base-specialist';
 import type { AgentMessage, AgentReport, SpecialistConfig, Signal } from '../../types';
 import { processPayment, refundPayment, type PaymentRequest, type PaymentResult } from '@/lib/ecommerce/payment-service';
 import { logger } from '@/lib/logger/logger';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 
 // ============== Configuration ==============
 
@@ -271,14 +271,14 @@ export class PricingStrategist extends BaseSpecialist {
       };
     }
 
-    const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+    const { FirestoreService } = await import('@/lib/db/firestore-service');
 
     const validItems: Array<{ productId: string; valid: boolean; reason?: string }> = [];
 
     for (const item of payload.items) {
       // Fetch product to validate price
       const product: { price?: number; status?: string } | null = await FirestoreService.get(
-        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/products`,
+        getSubCollection('products'),
         item.productId
       );
 
@@ -329,7 +329,7 @@ export class PricingStrategist extends BaseSpecialist {
       };
     }
 
-    const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+    const { FirestoreService } = await import('@/lib/db/firestore-service');
 
     // Fetch discount code
     const discount: {
@@ -342,7 +342,7 @@ export class PricingStrategist extends BaseSpecialist {
       usageLimit?: number;
       active?: boolean;
     } | null = await FirestoreService.get(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/discounts`,
+      getSubCollection('discounts'),
       payload.discountCode.toUpperCase()
     );
 

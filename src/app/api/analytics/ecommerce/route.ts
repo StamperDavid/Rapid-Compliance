@@ -1,10 +1,10 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/api-auth';
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { FirestoreService } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getOrdersCollection, getCartsCollection } from '@/lib/firebase/collections';
 
 export const dynamic = 'force-dynamic';
 
@@ -100,7 +100,7 @@ export async function GET(request: NextRequest) {
     }
     
     // Get orders from Firestore
-    const ordersPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/orders`;
+    const ordersPath = getOrdersCollection();
     let allOrders: OrderRecord[] = [];
     
     try {
@@ -126,7 +126,7 @@ export async function GET(request: NextRequest) {
     );
 
     // Cart data (abandoned carts)
-    const cartsPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/carts`;
+    const cartsPath = getCartsCollection();
     let allCarts: CartRecord[] = [];
     
     try {

@@ -12,16 +12,15 @@ import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { verifyStripeSignature } from '@/lib/security/webhook-verification';
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
-import { getSubCollection } from '@/lib/firebase/collections';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { FirestoreService } from '@/lib/db/firestore-service';
+import { getSubCollection, getOrdersCollection } from '@/lib/firebase/collections';
 import { where, limit } from 'firebase/firestore';
 
 export const dynamic = 'force-dynamic';
 
-const EVENTS_PATH = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/stripe_events`;
-const SUBSCRIPTIONS_PATH = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/subscriptions`;
-const ORDERS_PATH = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/orders`;
+const EVENTS_PATH = getSubCollection('stripe_events');
+const SUBSCRIPTIONS_PATH = getSubCollection('subscriptions');
+const ORDERS_PATH = getOrdersCollection();
 
 /**
  * Stripe webhook event interface
@@ -338,7 +337,7 @@ async function processStripeEvent(event: StripeWebhookEvent): Promise<void> {
 
       // Store in stripe_subscriptions for audit/lookup
       await FirestoreService.set(
-        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/stripe_subscriptions`,
+        getSubCollection('stripe_subscriptions'),
         subscriptionId,
         {
           id: subscriptionId,
@@ -378,7 +377,7 @@ async function processStripeEvent(event: StripeWebhookEvent): Promise<void> {
 
       // Update stripe_subscriptions
       await FirestoreService.set(
-        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/stripe_subscriptions`,
+        getSubCollection('stripe_subscriptions'),
         subscriptionId,
         {
           id: subscriptionId,

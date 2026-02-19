@@ -248,11 +248,11 @@ async function getConnectedIntegration(
   integrationId: string
 ): Promise<ConnectedIntegration | null> {
   try {
-    const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
-    const { PLATFORM_ID } = await import('@/lib/constants/platform');
+    const { FirestoreService } = await import('@/lib/db/firestore-service');
+    const { getIntegrationsCollection } = await import('@/lib/firebase/collections');
 
     const integration = await FirestoreService.get(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/integrations`,
+      getIntegrationsCollection(),
       integrationId
     );
 
@@ -268,11 +268,11 @@ async function getConnectedIntegration(
  */
 async function logIntegrationAction(log: IntegrationLog): Promise<void> {
   try {
-    const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
-    const { PLATFORM_ID } = await import('@/lib/constants/platform');
+    const { FirestoreService } = await import('@/lib/db/firestore-service');
+    const { getSubCollection } = await import('@/lib/firebase/collections');
 
     await FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/integrationLogs`,
+      getSubCollection('integrationLogs'),
       `log_${Date.now()}`,
       {
         ...log,

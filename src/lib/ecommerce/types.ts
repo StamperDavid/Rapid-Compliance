@@ -6,8 +6,8 @@
 
 import type { Timestamp } from 'firebase/firestore';
 import { z } from 'zod';
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { FirestoreService } from '@/lib/db/firestore-service';
+import { getSubCollection } from '@/lib/firebase/collections';
 import { logger } from '@/lib/logger/logger';
 
 /**
@@ -309,7 +309,7 @@ export const ecommerceConfigSchema = z.object({
  */
 export async function getEcommerceConfig(): Promise<EcommerceConfigData | null> {
   const raw = await FirestoreService.get(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/ecommerce`,
+    getSubCollection('ecommerce'),
     'config'
   );
   if (!raw) {

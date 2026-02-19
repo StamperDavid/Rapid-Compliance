@@ -7,9 +7,9 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { getEmail, parseEmailHeaders, getEmailBody, type GmailMessage } from '@/lib/integrations/gmail-service';
 import { classifyReply, sendReplyEmail, type ReplyClassification } from '@/lib/outbound/reply-handler';
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { FirestoreService } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
+import { COLLECTIONS, getSubCollection } from '@/lib/firebase/collections';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { emitBusinessEvent } from '@/lib/orchestration/event-router';
@@ -420,7 +420,7 @@ async function unenrollProspectFromSequences(
   try {
     const { where } = await import('firebase/firestore');
     const prospects = await FirestoreService.getAll(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/prospects`,
+      getSubCollection('prospects'),
       [where('email', '==', prospectEmail)]
     );
 
@@ -438,7 +438,7 @@ async function unenrollProspectFromSequences(
     const prospectId = firstProspect.id;
 
     const enrollments = await FirestoreService.getAll(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/enrollments`,
+      getSubCollection('enrollments'),
       [
         where('prospectId', '==', prospectId),
         where('status', '==', 'active'),
@@ -477,7 +477,7 @@ async function pauseProspectSequences(
   try {
     const { where } = await import('firebase/firestore');
     const prospects = await FirestoreService.getAll(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/prospects`,
+      getSubCollection('prospects'),
       [where('email', '==', prospectEmail)]
     );
 
@@ -491,7 +491,7 @@ async function pauseProspectSequences(
     const prospectId = firstProspect.id;
 
     const enrollments = await FirestoreService.getAll(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/enrollments`,
+      getSubCollection('enrollments'),
       [
         where('prospectId', '==', prospectId),
         where('status', '==', 'active'),
@@ -504,7 +504,7 @@ async function pauseProspectSequences(
       }
 
       await FirestoreService.set(
-        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/enrollments`,
+        getSubCollection('enrollments'),
         enrollment.id,
         {
           ...enrollment,
@@ -536,7 +536,7 @@ async function saveForReview(
 
   const emailId = email.id ?? `unknown_${Date.now()}`;
   await FirestoreService.set(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/inbox`,
+    getSubCollection('inbox'),
     emailId,
     {
       id: emailId,

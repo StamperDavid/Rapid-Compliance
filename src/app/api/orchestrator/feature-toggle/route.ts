@@ -9,43 +9,50 @@
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { requireAuth } from '@/lib/auth/api-auth';
-import { FeatureToggleService, type FeatureCategory } from '@/lib/orchestrator/feature-toggle-service';
+import { FeatureToggleService } from '@/lib/orchestrator/feature-toggle-service';
 import { logger } from '@/lib/logger/logger';
 
 export const dynamic = 'force-dynamic';
 
-interface ToggleFeatureRequest {
-  userId?: string;
-  action?: string;
-  featureId?: string;
-  category?: FeatureCategory;
-  reason?: string;
-}
+const FEATURE_CATEGORIES = [
+  'command_center',
+  'crm',
+  'lead_gen',
+  'outbound',
+  'automation',
+  'content_factory',
+  'ai_workforce',
+  'ecommerce',
+  'analytics',
+  'website',
+  'settings',
+] as const;
 
-function isToggleFeatureRequest(value: unknown): value is ToggleFeatureRequest {
-  return typeof value === 'object' && value !== null;
-}
+const toggleFeatureSchema = z.object({
+  userId: z.string().min(1, 'userId is required'),
+  action: z.enum(['hide_feature', 'show_feature', 'hide_category', 'show_category', 'reset']),
+  featureId: z.string().optional(),
+  category: z.enum(FEATURE_CATEGORIES).optional(),
+  reason: z.string().optional(),
+});
 
 export async function POST(request: NextRequest) {
   try {
     const authResult = await requireAuth(request);
     if (authResult instanceof NextResponse) {return authResult;}
 
-    const body: unknown = await request.json();
-    if (!isToggleFeatureRequest(body)) {
-      return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
-    }
-
-    const { userId, action, featureId, category, reason } = body;
-
-    // Validate required fields
-    if (!userId || !action) {
+    const rawBody: unknown = await request.json();
+    const parsed = toggleFeatureSchema.safeParse(rawBody);
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: 'Missing required fields: userId, action' },
+        { error: parsed.error.errors[0]?.message ?? 'Invalid request body' },
         { status: 400 }
       );
     }
+
+    const { userId, action, featureId, category, reason } = parsed.data;
 
     switch (action) {
       case 'hide_feature': {

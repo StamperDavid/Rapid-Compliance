@@ -16,18 +16,20 @@
  */
 
 import { NextResponse, type NextRequest } from 'next/server';
+import { z } from 'zod';
 import { OpenRouterProvider, type ChatMessage, type ToolCall, type ChatCompletionResponse } from '@/lib/ai/openrouter-provider';
 import { requireAuth } from '@/lib/auth/api-auth';
 
 // Force dynamic rendering - required for Firebase Auth token verification
 export const dynamic = 'force-dynamic';
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { FirestoreService } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { VoiceEngineFactory } from '@/lib/voice/tts/voice-engine-factory';
 import { JASPER_TOOLS, executeToolCalls } from '@/lib/orchestrator/jasper-tools';
 import { SystemStateService } from '@/lib/orchestrator/system-state-service';
 import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 
 // ============================================================================
 // Type Definitions
@@ -180,29 +182,34 @@ async function chatWithFallback<T>(
   throw lastError ?? new Error('All models failed');
 }
 
-interface OrchestratorChatRequest {
-  message: string;
-  context: 'admin' | 'merchant';
-  systemPrompt: string;
-  conversationHistory: Array<{ role: 'user' | 'assistant' | 'system'; content: string }>;
-  adminStats?: {
-    totalOrgs: number;
-    activeAgents: number;
-    pendingTickets: number;
-    trialOrgs?: number;
-  };
-  merchantInfo?: {
-    industry?: string;
-    companyName?: string;
-    ownerName?: string;
-  };
-  // Model selection
-  modelId?: string;
-  // Voice settings
-  voiceEnabled?: boolean;
-  voiceId?: string;
-  ttsEngine?: 'elevenlabs' | 'unreal';
-}
+const orchestratorChatSchema = z.object({
+  message: z.string().min(1, 'message is required'),
+  context: z.enum(['admin', 'merchant']),
+  systemPrompt: z.string().min(1, 'systemPrompt is required'),
+  conversationHistory: z.array(
+    z.object({
+      role: z.enum(['user', 'assistant', 'system']),
+      content: z.string(),
+    })
+  ),
+  adminStats: z.object({
+    totalOrgs: z.number(),
+    activeAgents: z.number(),
+    pendingTickets: z.number(),
+    trialOrgs: z.number().optional(),
+  }).optional(),
+  merchantInfo: z.object({
+    industry: z.string().optional(),
+    companyName: z.string().optional(),
+    ownerName: z.string().optional(),
+  }).optional(),
+  modelId: z.string().optional(),
+  voiceEnabled: z.boolean().optional(),
+  voiceId: z.string().optional(),
+  ttsEngine: z.enum(['elevenlabs', 'unreal']).optional(),
+});
+
+type OrchestratorChatRequest = z.infer<typeof orchestratorChatSchema>;
 
 interface OrchestratorChatResponse {
   success: boolean;
@@ -256,8 +263,19 @@ export async function POST(request: NextRequest) {
       isAdmin: isAdminContext,
     });
 
-    // Parse request body
-    const body = await request.json() as OrchestratorChatRequest;
+    // Parse and validate request body
+    const rawBody: unknown = await request.json();
+    const parsedBody = orchestratorChatSchema.safeParse(rawBody);
+    if (!parsedBody.success) {
+      logger.warn('[Jasper] Invalid request body', {
+        errors: parsedBody.error.errors[0]?.message,
+        file: 'orchestrator/chat/route.ts',
+      });
+      return NextResponse.json(
+        { success: false, error: parsedBody.error.errors[0]?.message ?? 'Invalid request body' },
+        { status: 400 }
+      );
+    }
     const {
       message,
       context,
@@ -269,14 +287,7 @@ export async function POST(request: NextRequest) {
       voiceEnabled,
       voiceId,
       ttsEngine,
-    } = body;
-
-    if (!message || !systemPrompt) {
-      return NextResponse.json(
-        { success: false, error: 'Missing required fields: message, systemPrompt' },
-        { status: 400 }
-      );
-    }
+    } = parsedBody.data;
 
     // Determine model to use
     const selectedModel = modelId ?? DEFAULT_MODEL;
@@ -657,7 +668,7 @@ async function persistConversation(
   const conversationId = `jasper_${context}`;
   const messageId = `msg_${Date.now()}`;
 
-  const conversationsPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/orchestratorConversations`;
+  const conversationsPath = getSubCollection('orchestratorConversations');
 
   await FirestoreService.set(
     `${conversationsPath}/${conversationId}/messages`,

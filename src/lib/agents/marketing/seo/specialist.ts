@@ -944,139 +944,46 @@ export class SEOExpert extends BaseSpecialist {
   }
 
   private analyzeSpeed(_siteUrl: string): CrawlHealthReport['speed'] {
-    // Simulated speed metrics
-    const loadTime = 2.3 + Math.random() * 2; // 2.3-4.3 seconds
-    const ttfb = 0.3 + Math.random() * 0.5; // 0.3-0.8 seconds
-
-    const issues: string[] = [];
-    const recommendations: string[] = [];
-    let score = 100;
-
-    if (loadTime > 3) {
-      issues.push(`Page load time (${loadTime.toFixed(1)}s) exceeds recommended 3s`);
-      recommendations.push('Optimize images and enable lazy loading');
-      recommendations.push('Minify CSS and JavaScript files');
-      score -= 20;
-    }
-
-    if (ttfb > 0.5) {
-      issues.push(`Time to First Byte (${(ttfb * 1000).toFixed(0)}ms) is slow`);
-      recommendations.push('Consider using a CDN');
-      recommendations.push('Optimize server response time');
-      score -= 15;
-    }
-
-    recommendations.push('Enable browser caching for static assets');
-    recommendations.push('Consider implementing HTTP/2');
-
+    // Real data requires performance monitoring API integration (e.g., PageSpeed Insights, WebPageTest)
     return {
-      score: Math.max(0, score),
-      loadTime: parseFloat(loadTime.toFixed(2)),
-      ttfb: parseFloat(ttfb.toFixed(3)),
-      issues,
-      recommendations,
+      score: 0, // Real data requires performance monitoring API integration
+      loadTime: 0, // Real data requires performance monitoring API integration
+      ttfb: 0, // Real data requires performance monitoring API integration
+      issues: [],
+      recommendations: ['Real speed analysis requires PageSpeed Insights or WebPageTest API integration'],
     };
   }
 
   private analyzeSiteMeta(_siteUrl: string): CrawlHealthReport['meta'] {
-    // Simulated meta analysis for a typical site
-    const pagesAnalyzed = 25;
-    const missingTitles = Math.floor(Math.random() * 3);
-    const missingDescriptions = Math.floor(Math.random() * 5);
-    const duplicateTitles = missingTitles > 0 ? ['/page1', '/page2'] : [];
-
-    const issues: string[] = [];
-    let score = 100;
-
-    if (missingTitles > 0) {
-      issues.push(`${missingTitles} pages missing title tags`);
-      score -= missingTitles * 10;
-    }
-
-    if (missingDescriptions > 0) {
-      issues.push(`${missingDescriptions} pages missing meta descriptions`);
-      score -= missingDescriptions * 5;
-    }
-
-    if (duplicateTitles.length > 0) {
-      issues.push(`${duplicateTitles.length} duplicate title tags found`);
-      score -= duplicateTitles.length * 8;
-    }
-
+    // Real data requires site crawling API integration (e.g., Screaming Frog, Sitebulb, custom crawler)
     return {
-      score: Math.max(0, score),
-      pagesAnalyzed,
-      missingTitles,
-      missingDescriptions,
-      duplicateTitles,
-      issues,
+      score: 0, // Real data requires site crawling API integration
+      pagesAnalyzed: 0, // Real data requires site crawling API integration
+      missingTitles: 0, // Real data requires site crawling API integration
+      missingDescriptions: 0, // Real data requires site crawling API integration
+      duplicateTitles: [],
+      issues: ['Real meta analysis requires site crawling API integration'],
     };
   }
 
   private analyzeIndexing(_siteUrl: string): CrawlHealthReport['indexing'] {
-    // Simulated indexing analysis
-    const indexedPages = 20 + Math.floor(Math.random() * 10);
-    const blockedPages = Math.random() > 0.7 ? ['/admin', '/login'] : [];
-    const orphanPages = Math.random() > 0.5 ? ['/old-page', '/unused'] : [];
-    const canonicalIssues = Math.random() > 0.8 ? ['Missing canonical on /blog'] : [];
-
-    let score = 100;
-
-    if (blockedPages.length > 2) {
-      score -= 10;
-    }
-
-    if (orphanPages.length > 0) {
-      score -= orphanPages.length * 5;
-    }
-
-    if (canonicalIssues.length > 0) {
-      score -= canonicalIssues.length * 8;
-    }
-
+    // Real data requires Google Search Console API or site crawling integration
     return {
-      score: Math.max(0, score),
-      indexedPages,
-      blockedPages,
-      orphanPages,
-      canonicalIssues,
+      score: 0, // Real data requires Google Search Console API integration
+      indexedPages: 0, // Real data requires Google Search Console API integration
+      blockedPages: [],
+      orphanPages: [],
+      canonicalIssues: [],
     };
   }
 
   private analyzeMobileReadiness(_siteUrl: string): CrawlHealthReport['mobileReadiness'] {
-    // Simulated mobile analysis
-    const isResponsive = Math.random() > 0.2;
-    const viewportConfigured = Math.random() > 0.1;
-
-    const issues: string[] = [];
-    let score = 100;
-
-    if (!isResponsive) {
-      issues.push('Site does not appear to be mobile-responsive');
-      score -= 40;
-    }
-
-    if (!viewportConfigured) {
-      issues.push('Viewport meta tag not properly configured');
-      score -= 20;
-    }
-
-    // Common mobile issues
-    if (Math.random() > 0.6) {
-      issues.push('Touch targets too small (< 48px)');
-      score -= 10;
-    }
-
-    if (Math.random() > 0.7) {
-      issues.push('Text too small to read without zooming');
-      score -= 15;
-    }
-
+    // Real data requires mobile testing API integration (e.g., Google Mobile-Friendly Test API)
     return {
-      score: Math.max(0, score),
-      isResponsive,
-      viewportConfigured,
-      issues,
+      score: 0, // Real data requires Google Mobile-Friendly Test API integration
+      isResponsive: false, // Real data requires mobile testing API integration
+      viewportConfigured: false, // Real data requires mobile testing API integration
+      issues: ['Real mobile analysis requires Google Mobile-Friendly Test API integration'],
     };
   }
 
@@ -1220,12 +1127,9 @@ export class SEOExpert extends BaseSpecialist {
     };
   }
 
-  private estimateKeywordPosition(keyword: string): number {
-    // Simulate position based on keyword length (longer = likely lower position)
-    const wordCount = keyword.split(/\s+/).length;
-    if (wordCount >= 4) {return Math.floor(Math.random() * 20) + 1;}
-    if (wordCount >= 2) {return Math.floor(Math.random() * 50) + 10;}
-    return Math.floor(Math.random() * 100) + 30;
+  private estimateKeywordPosition(_keyword: string): number {
+    // Real data requires Google Search Console API or rank tracking integration (e.g., SEMrush, Ahrefs)
+    return 0; // Real data requires rank tracking API integration
   }
 
   private estimateSearchVolume(keyword: string): string {
@@ -1287,7 +1191,7 @@ export class SEOExpert extends BaseSpecialist {
           opportunity,
           searchVolume: volume,
           difficulty,
-          competitorRanking: `Top ${Math.floor(Math.random() * 5) + 1} competitors ranking`,
+          competitorRanking: 'Unknown - real data requires rank tracking API integration',
           recommendation: this.getKeywordRecommendation(opportunity, difficulty),
         };
       });
@@ -1322,14 +1226,8 @@ export class SEOExpert extends BaseSpecialist {
   }
 
   private generateContentTitle(keyword: string, industry: string): string {
-    const templates = [
-      `The Complete Guide to ${keyword} for ${industry}`,
-      `How to Master ${keyword}: A ${industry} Perspective`,
-      `${keyword}: Everything You Need to Know in ${new Date().getFullYear()}`,
-      `Top 10 ${keyword} Strategies for ${industry} Success`,
-    ];
-
-    return templates[Math.floor(Math.random() * templates.length)];
+    // Use a deterministic title format rather than random selection
+    return `The Complete Guide to ${keyword} for ${industry}`;
   }
 
   // ==========================================================================

@@ -5,8 +5,9 @@
 
 import type { TrainingExample, FineTuningJob } from '@/types/fine-tuning';
 import { formatForVertexAI, validateTrainingData } from './data-formatter';
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service'
+import { FirestoreService } from '@/lib/db/firestore-service'
 import { logger } from '@/lib/logger/logger';
+import { getSubCollection } from '@/lib/firebase/collections';
 
 /**
  * Create fine-tuning job with Vertex AI
@@ -85,9 +86,8 @@ export async function createVertexAIFineTuningJob(params: {
     startedAt: new Date().toISOString(),
   };
   
-  const { PLATFORM_ID } = await import('@/lib/constants/platform');
   await FirestoreService.set(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/fineTuningJobs`,
+    getSubCollection('fineTuningJobs'),
     job.id,
     job,
     false
@@ -139,9 +139,8 @@ function estimateVertexAICost(exampleCount: number): number {
 export async function getVertexAIJobStatus(
   jobId: string
 ): Promise<FineTuningJob> {
-  const { PLATFORM_ID } = await import('@/lib/constants/platform');
   const job = await FirestoreService.get(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/fineTuningJobs`,
+    getSubCollection('fineTuningJobs'),
     jobId
   ) as FineTuningJob;
 

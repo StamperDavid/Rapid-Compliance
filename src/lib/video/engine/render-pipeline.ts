@@ -14,8 +14,8 @@
  */
 
 import { logger } from '@/lib/logger/logger';
-import { PLATFORM_ID } from '@/lib/constants/platform';
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { FirestoreService } from '@/lib/db/firestore-service';
+import { getSubCollection } from '@/lib/firebase/collections';
 import { getSignalBus } from '@/lib/orchestrator/signal-bus';
 import { VideoJobService } from '@/lib/video/video-job-service';
 import { multiModelPicker } from '@/lib/video/engine/multi-model-picker';
@@ -114,7 +114,7 @@ export class RenderPipeline {
   private async loadStoryboard(storyboardId: string): Promise<MasterStoryboard | null> {
     try {
       const storyboard = await FirestoreService.get<MasterStoryboard>(
-        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/storyboards`,
+        getSubCollection('storyboards'),
         storyboardId
       );
       return storyboard;

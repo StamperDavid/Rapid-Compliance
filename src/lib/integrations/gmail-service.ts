@@ -6,7 +6,7 @@
 import { google, type gmail_v1 } from 'googleapis';
 import type { OAuth2Client } from 'google-auth-library';
 import { logger } from '@/lib/logger/logger';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection, getIntegrationsCollection } from '@/lib/firebase/collections';
 
 // Type definitions for Gmail API
 interface GmailMessagePartHeader {
@@ -305,10 +305,10 @@ export async function sendEmailViaGmail(options: {
   metadata?: Record<string, string>;
 }): Promise<void> {
   // Get Gmail tokens from organization's integrations
-  const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+  const { FirestoreService } = await import('@/lib/db/firestore-service');
 
   const integrations = await FirestoreService.getAll<GmailIntegration>(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/integrations`,
+    getIntegrationsCollection(),
     []
   );
 
@@ -364,10 +364,9 @@ export async function syncEmailsToCRM(
         const body = getEmailBody(email);
 
         // Save to CRM
-        const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
-        const { PLATFORM_ID } = await import('@/lib/constants/platform');
+        const { FirestoreService } = await import('@/lib/db/firestore-service');
         await FirestoreService.set(
-          `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/emails`,
+          getSubCollection('emails'),
           emailId,
           {
             id: emailId,

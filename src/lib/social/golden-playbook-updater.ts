@@ -4,11 +4,11 @@
  * for social media content generation agents
  */
 
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { FirestoreService } from '@/lib/db/firestore-service';
 import type { GoldenPlaybook, PlaybookCorrection } from '@/types/agent-memory';
 import type { SocialCorrection } from '@/types/social';
 import { logger } from '@/lib/logger/logger';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 import type {
   ImprovementSuggestion,
   ImpactAnalysis,
@@ -88,7 +88,7 @@ export async function createUpdateFromCorrections(
 
   // Save to Firestore
   await FirestoreService.set(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/playbookUpdates`,
+    getSubCollection('playbookUpdates'),
     updateRequest.id,
     updateRequest,
     false
@@ -140,7 +140,7 @@ export async function createUpdateFromTraining(
 
   // Save to Firestore
   await FirestoreService.set(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/playbookUpdates`,
+    getSubCollection('playbookUpdates'),
     updateRequest.id,
     updateRequest,
     false
@@ -199,7 +199,7 @@ export async function applyUpdate(
 
   // Save new version to Firestore
   await FirestoreService.set(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.GOLDEN_PLAYBOOKS}`,
+    getSubCollection('goldenPlaybooks'),
     updatedPlaybook.id,
     updatedPlaybook,
     false
@@ -207,7 +207,7 @@ export async function applyUpdate(
 
   // Update the update request status
   await FirestoreService.set(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/playbookUpdates`,
+    getSubCollection('playbookUpdates'),
     updateRequest.id,
     {
       ...updateRequest,
@@ -234,7 +234,7 @@ export async function getPlaybook(
 ): Promise<GoldenPlaybook | null> {
   try {
     const playbook = await FirestoreService.get(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.GOLDEN_PLAYBOOKS}`,
+      getSubCollection('goldenPlaybooks'),
       playbookId
     );
     return playbook as GoldenPlaybook;
@@ -258,7 +258,7 @@ export async function getUnanalyzedCorrections(
     const { where, orderBy } = await import('firebase/firestore');
 
     const corrections = await FirestoreService.getAll<SocialCorrection>(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.SOCIAL_CORRECTIONS}`,
+      getSubCollection('socialCorrections'),
       [
         where('analyzed', '==', false),
         orderBy('capturedAt', 'desc'),
@@ -288,7 +288,7 @@ export async function markCorrectionsAnalyzed(
   try {
     const updatePromises = correctionIds.map(id =>
       FirestoreService.update(
-        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.SOCIAL_CORRECTIONS}`,
+        getSubCollection('socialCorrections'),
         id,
         {
           analyzed: true,

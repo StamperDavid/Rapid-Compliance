@@ -15,10 +15,10 @@
  */
 
 import { logger } from '@/lib/logger/logger';
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { FirestoreService } from '@/lib/db/firestore-service';
 import { createTwitterService } from '@/lib/integrations/twitter-service';
 import { getMemoryVault } from '@/lib/agents/shared/memory-vault';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 import type { SocialMediaPost, PostMetrics } from '@/types/social';
 
 // ============================================================================
@@ -268,7 +268,7 @@ async function getPublishedPostsWithPlatformIds(): Promise<SocialMediaPost[]> {
   try {
     const { where } = await import('firebase/firestore');
     const posts = await FirestoreService.getAll<SocialMediaPost>(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${SOCIAL_POSTS_COLLECTION}`,
+      getSubCollection(SOCIAL_POSTS_COLLECTION),
       [where('status', '==', 'published')]
     );
 
@@ -284,7 +284,7 @@ async function getPublishedPostsWithPlatformIds(): Promise<SocialMediaPost[]> {
 /** Update a post's metrics in Firestore */
 async function updatePostMetrics(postId: string, metrics: PostMetrics): Promise<void> {
   await FirestoreService.update(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${SOCIAL_POSTS_COLLECTION}`,
+    getSubCollection(SOCIAL_POSTS_COLLECTION),
     postId,
     {
       metrics,
@@ -297,7 +297,7 @@ async function updatePostMetrics(postId: string, metrics: PostMetrics): Promise<
 async function storeMetricsSnapshot(snapshot: MetricsSnapshot): Promise<void> {
   const snapshotId = `snapshot_${snapshot.postId}_${Date.now()}`;
   await FirestoreService.set(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${METRICS_SNAPSHOTS_COLLECTION}`,
+    getSubCollection(METRICS_SNAPSHOTS_COLLECTION),
     snapshotId,
     {
       ...snapshot,

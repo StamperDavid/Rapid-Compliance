@@ -9,6 +9,8 @@ import Stripe from 'stripe';
 import { z } from 'zod';
 import { apiKeyService } from '@/lib/api-keys/api-key-service';
 import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getEcommerceConfig } from '@/lib/ecommerce/types';
+import { getCartsCollection, getOrdersCollection } from '@/lib/firebase/collections';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
@@ -80,9 +82,9 @@ export async function POST(request: NextRequest) {
 
     const stripe = new Stripe(stripeKeys.secretKey, { apiVersion: '2023-10-16' });
 
-    // Get cart (workspace-scoped path matching cart-service)
+    // Get cart (path must match cart-service.ts)
     const cart = await FirestoreService.get<Cart>(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/default/carts`,
+      getCartsCollection(),
       authResult.user.uid
     );
 
@@ -91,10 +93,12 @@ export async function POST(request: NextRequest) {
     }
 
     // MAJ-6: Validate stock for items with product IDs
+    const ecomConfig = await getEcommerceConfig();
+    const productSchema = ecomConfig?.productSchema ?? 'products';
     for (const item of cart.items) {
       if (item.productId) {
         const product = await FirestoreService.get<{ stockLevel?: number }>(
-          `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/default/entities/products/records`,
+          `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/entities/${productSchema}/records`,
           item.productId
         );
         if (product && typeof product.stockLevel === 'number' && product.stockLevel < item.quantity) {
@@ -172,7 +176,7 @@ export async function POST(request: NextRequest) {
 
     // Create pending order AFTER Stripe session succeeds (no ghost orders on Stripe failure)
     await FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/orders`,
+      getOrdersCollection(),
       orderId,
       {
         id: orderId,

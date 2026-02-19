@@ -9,8 +9,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { FirestoreService } from '@/lib/db/firestore-service';
 import { getSubCollection } from '@/lib/firebase/collections';
 
 export const dynamic = 'force-dynamic';
@@ -90,11 +89,11 @@ export async function GET(request: NextRequest) {
     const [agentPosts, queuedPosts, campaignPosts] = await Promise.all([
       // Source 1: Autonomous agent posts (scheduled + published)
       FirestoreService.getAll<PostDoc>(
-        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/social_posts`
+        getSubCollection('social_posts')
       ),
       // Source 2: Queued posts
       FirestoreService.getAll<PostDoc>(
-        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/social_queue`
+        getSubCollection('social_queue')
       ),
       // Source 3: Campaign posts (the campaigns page store)
       FirestoreService.getAll<PostDoc>(

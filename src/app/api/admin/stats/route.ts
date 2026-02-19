@@ -22,8 +22,7 @@ import {
 } from '@/lib/api/admin-auth';
 import { logger } from '@/lib/logger/logger';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
-import { COLLECTIONS, getOrgSubCollection } from '@/lib/firebase/collections';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { COLLECTIONS, getOrgSubCollection, getSubCollection } from '@/lib/firebase/collections';
 
 // ============================================================================
 // TYPES
@@ -229,12 +228,12 @@ export async function GET(request: NextRequest) {
       logger.debug('[STATS DEBUG] Querying collection:', { collection: COLLECTIONS.ORGANIZATIONS });
 
       // Agent config collection path (under the organization)
-      const agentConfigPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/agentConfig`;
+      const agentConfigPath = getSubCollection('agentConfig');
       const conversationsPath = getOrgSubCollection('conversations');
       const playbooksPath = getOrgSubCollection('playbooks');
-      const trainingMaterialsPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/trainingMaterials`;
-      const trainingSessionsPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/trainingSessions`;
-      const goldenMastersPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/goldenMasters`;
+      const trainingMaterialsPath = getSubCollection('trainingMaterials');
+      const trainingSessionsPath = getSubCollection('trainingSessions');
+      const goldenMastersPath = getSubCollection('goldenMasters');
       const workflowsPath = getOrgSubCollection('workflows');
 
       // Parallel count queries for efficiency

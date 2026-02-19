@@ -11,13 +11,13 @@ import { z } from 'zod';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { FirestoreService } from '@/lib/db/firestore-service';
+import { getSubCollection } from '@/lib/firebase/collections';
 import { orderBy } from 'firebase/firestore';
 
 export const dynamic = 'force-dynamic';
 
-const KNOWLEDGE_COLLECTION = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/socialKnowledge`;
+const KNOWLEDGE_COLLECTION = getSubCollection('socialKnowledge');
 
 const uploadSchema = z.object({
   title: z.string().min(1, 'Title is required').max(200),

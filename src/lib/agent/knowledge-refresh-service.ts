@@ -6,7 +6,6 @@
 import type { SchemaChangeEvent } from '@/lib/schema/schema-change-tracker';
 import { logger } from '@/lib/logger/logger';
 import { where } from 'firebase/firestore';
-import { PLATFORM_ID } from '@/lib/constants/platform';
 import { getSubCollection } from '@/lib/firebase/collections';
 
 /**
@@ -139,10 +138,10 @@ export async function recompileAgentKnowledge(): Promise<void> {
       file: 'knowledge-refresh-service.ts',
     });
 
-    const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+    const { FirestoreService } = await import('@/lib/db/firestore-service');
 
     // Get current Golden Master
-    const goldenMastersPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/goldenMasters`;
+    const goldenMastersPath = getSubCollection('goldenMasters');
     const goldenMasters = await FirestoreService.getAll<GoldenMasterData>(goldenMastersPath, [
       where('status', '==', 'active'),
     ]);
@@ -266,9 +265,9 @@ async function notifySchemaChange(
   }
 ): Promise<void> {
   try {
-    const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+    const { FirestoreService } = await import('@/lib/db/firestore-service');
 
-    const notificationPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/notifications`;
+    const notificationPath = getSubCollection('notifications');
     const notificationId = `notif_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
     await FirestoreService.set(

@@ -7,6 +7,7 @@
 import { apiKeyService } from '@/lib/api-keys/api-key-service'
 import { logger } from '@/lib/logger/logger';
 import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 
 export interface EmailOptions {
   to: string | string[];
@@ -219,9 +220,9 @@ async function sendViaSendGrid(options: EmailOptions, credentials: Record<string
 
   // Store tracking mapping if tracking is enabled
   if (options.tracking?.trackOpens) {
-    void import('@/lib/db/firestore-service').then(({ FirestoreService, COLLECTIONS }) => {
+    void import('@/lib/db/firestore-service').then(({ FirestoreService }) => {
       void FirestoreService.set(
-        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/emailTrackingMappings`,
+        getSubCollection('emailTrackingMappings'),
         messageIdValue,
         {
           messageId: messageIdValue,
@@ -321,9 +322,9 @@ async function sendViaResend(options: EmailOptions, credentials: Record<string, 
 
   // Store tracking mapping if tracking is enabled
   if (options.tracking?.trackOpens) {
-    void import('@/lib/db/firestore-service').then(({ FirestoreService, COLLECTIONS }) => {
+    void import('@/lib/db/firestore-service').then(({ FirestoreService }) => {
       void FirestoreService.set(
-        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/emailTrackingMappings`,
+        getSubCollection('emailTrackingMappings'),
         messageId,
         {
           messageId,
@@ -397,9 +398,9 @@ function addTrackingPixel(
 
   // Store tracking mapping in Firestore
   if (messageId) {
-    void import('@/lib/db/firestore-service').then(({ FirestoreService, COLLECTIONS }) => {
+    void import('@/lib/db/firestore-service').then(({ FirestoreService }) => {
       void FirestoreService.set(
-        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/emailTrackingMappings`,
+        getSubCollection('emailTrackingMappings'),
         trackingId,
         {
           messageId,
@@ -461,12 +462,10 @@ export async function sendBulkEmails(
  * REAL: Queries Firestore for tracking data
  */
 export async function getEmailTracking(messageId: string): Promise<EmailTracking | null> {
-  const { PLATFORM_ID } = await import('@/lib/constants/platform');
-
-  const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+  const { FirestoreService } = await import('@/lib/db/firestore-service');
 
   const trackingData = await FirestoreService.get(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/emailTracking`,
+    getSubCollection('emailTracking'),
     messageId
   );
 
@@ -508,12 +507,12 @@ export async function recordEmailOpen(
   ipAddress?: string,
   userAgent?: string
 ): Promise<void> {
-  const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+  const { FirestoreService } = await import('@/lib/db/firestore-service');
 
   // Get existing tracking or create new
-   
+
   const existing = await FirestoreService.get(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/emailTracking`,
+    getSubCollection('emailTracking'),
     messageId
   );
 
@@ -525,7 +524,7 @@ export async function recordEmailOpen(
   const existingData = (existing ?? {}) as ExistingTracking;
 
   await FirestoreService.set(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/emailTracking`,
+    getSubCollection('emailTracking'),
     messageId,
     {
       emailId: messageId,
@@ -550,12 +549,12 @@ export async function recordEmailClick(
   ipAddress?: string,
   userAgent?: string
 ): Promise<void> {
-  const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+  const { FirestoreService } = await import('@/lib/db/firestore-service');
 
   // Get existing tracking or create new
-   
+
   const existing = await FirestoreService.get(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/emailTracking`,
+    getSubCollection('emailTracking'),
     messageId
   );
 
@@ -575,7 +574,7 @@ export async function recordEmailClick(
   });
 
   await FirestoreService.set(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/emailTracking`,
+    getSubCollection('emailTracking'),
     messageId,
     {
       emailId: messageId,

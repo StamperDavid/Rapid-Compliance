@@ -4,15 +4,15 @@
  * Credentials stored in Firestore under organizations/{orgId}/social_accounts/{accountId}
  */
 
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { FirestoreService } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 import type { SocialAccount, SocialPlatform } from '@/types/social';
 
 const SOCIAL_ACCOUNTS_COLLECTION = 'social_accounts';
 
 function accountsPath(): string {
-  return `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${SOCIAL_ACCOUNTS_COLLECTION}`;
+  return getSubCollection(SOCIAL_ACCOUNTS_COLLECTION);
 }
 
 export class SocialAccountService {

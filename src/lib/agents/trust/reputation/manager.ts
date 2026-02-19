@@ -1949,21 +1949,8 @@ export class ReputationManager extends BaseManager {
       const report = await this.delegateToSpecialist('REVIEW_SPECIALIST', message);
       return { data: report.data, executionTimeMs: Date.now() - start };
     } catch {
-      // Return mock data on failure
-      return {
-        data: {
-          totalReviews: 50,
-          platforms: {
-            google: { count: 30, avgRating: 4.2 },
-            yelp: { count: 15, avgRating: 4.0 },
-            facebook: { count: 5, avgRating: 4.5 },
-            other: { count: 0, avgRating: 0 },
-          },
-          recentReviews: [],
-          unrepliedCount: 3,
-        },
-        executionTimeMs: Date.now() - start,
-      };
+      // Return null instead of fabricated review metrics
+      return { data: null, executionTimeMs: Date.now() - start };
     }
   }
 
@@ -1990,17 +1977,8 @@ export class ReputationManager extends BaseManager {
       const report = await this.delegateToSpecialist('SENTIMENT_ANALYST', message);
       return { data: report.data, executionTimeMs: Date.now() - start };
     } catch {
-      // Return mock data on failure
-      return {
-        data: {
-          positive: 60,
-          neutral: 25,
-          negative: 15,
-          trending: ['quality', 'service', 'value'],
-          alerts: [],
-        },
-        executionTimeMs: Date.now() - start,
-      };
+      // Return null instead of fabricated sentiment scores
+      return { data: null, executionTimeMs: Date.now() - start };
     }
   }
 
@@ -2027,17 +2005,8 @@ export class ReputationManager extends BaseManager {
       const report = await this.delegateToSpecialist('GMB_SPECIALIST', message);
       return { data: report.data, executionTimeMs: Date.now() - start };
     } catch {
-      // Return mock data on failure
-      return {
-        data: {
-          profileCompleteness: 75,
-          postingFrequency: '2 posts/week',
-          photoCount: 25,
-          lastPostDate: new Date().toISOString(),
-          mapPackPosition: 3,
-        },
-        executionTimeMs: Date.now() - start,
-      };
+      // Return null instead of fabricated GMB metrics
+      return { data: null, executionTimeMs: Date.now() - start };
     }
   }
 

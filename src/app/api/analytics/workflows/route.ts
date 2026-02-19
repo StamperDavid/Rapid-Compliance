@@ -1,9 +1,9 @@
 import { type NextRequest, NextResponse } from 'next/server';
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { FirestoreService } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getWorkflowsCollection, getWorkflowExecutionsCollection } from '@/lib/firebase/collections';
 import { requireAuth } from '@/lib/auth/api-auth';
 
 /**
@@ -87,9 +87,9 @@ export async function GET(request: NextRequest) {
     }
 
     // Get workflows from Firestore
-    const workflowsPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workflows`;
+    const workflowsPath = getWorkflowsCollection();
     let allWorkflows: WorkflowRecord[] = [];
-    
+
     try {
       allWorkflows = await FirestoreService.getAll(workflowsPath, []);
     } catch (_e) {
@@ -97,7 +97,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get workflow executions
-    const executionsPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workflowExecutions`;
+    const executionsPath = getWorkflowExecutionsCollection();
     let allExecutions: WorkflowExecutionRecord[] = [];
     
     try {

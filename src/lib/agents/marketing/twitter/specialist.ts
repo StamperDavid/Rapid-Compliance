@@ -982,23 +982,22 @@ export class TwitterExpert extends BaseSpecialist {
 
     this.log('INFO', `Fetching metrics for ${postIds.length} posts (timeframe: ${timeframe})`);
 
-    // In production, this would call Twitter API
-    // For now, generating realistic test data
+    // Real data requires Twitter API integration
     const metrics = postIds.map(postId => ({
       postId,
-      impressions: Math.floor(Math.random() * 10000) + 1000,
-      engagements: Math.floor(Math.random() * 500) + 50,
-      likes: Math.floor(Math.random() * 300) + 20,
-      retweets: Math.floor(Math.random() * 100) + 5,
-      replies: Math.floor(Math.random() * 50) + 2,
-      clicks: Math.floor(Math.random() * 200) + 10,
-      engagementRate: Math.random() * 5 + 0.5, // 0.5% - 5.5%
+      impressions: 0, // Real data requires Twitter API integration
+      engagements: 0, // Real data requires Twitter API integration
+      likes: 0, // Real data requires Twitter API integration
+      retweets: 0, // Real data requires Twitter API integration
+      replies: 0, // Real data requires Twitter API integration
+      clicks: 0, // Real data requires Twitter API integration
+      engagementRate: 0, // Real data requires Twitter API integration
     }));
 
     const summary = {
-      totalImpressions: metrics.reduce((sum, m) => sum + m.impressions, 0),
-      totalEngagements: metrics.reduce((sum, m) => sum + m.engagements, 0),
-      avgEngagementRate: metrics.reduce((sum, m) => sum + m.engagementRate, 0) / metrics.length,
+      totalImpressions: 0, // Real data requires Twitter API integration
+      totalEngagements: 0, // Real data requires Twitter API integration
+      avgEngagementRate: 0, // Real data requires Twitter API integration
     };
 
     // Write to MemoryVault
@@ -1006,15 +1005,15 @@ export class TwitterExpert extends BaseSpecialist {
       'TWITTER_X_EXPERT',
       'PERFORMANCE',
       'Twitter Post Metrics Analysis',
-      `Analyzed ${metrics.length} posts. Avg engagement rate: ${summary.avgEngagementRate.toFixed(2)}%. Total impressions: ${summary.totalImpressions.toLocaleString()}`,
+      'No data available - Twitter API integration required',
       {
-        confidence: 90,
+        confidence: 0,
         sources: ['Twitter API', 'TWITTER_X_EXPERT'],
         tags: ['twitter', 'metrics', 'performance'],
       }
     );
 
-    this.log('INFO', `Post metrics written to MemoryVault: ${metrics.length} posts analyzed`);
+    this.log('INFO', 'Post metrics not available - Twitter API integration required');
 
     return { metrics, summary };
   }
@@ -1178,50 +1177,29 @@ export class TwitterExpert extends BaseSpecialist {
 
     this.log('INFO', `Monitoring ${competitorHandles.length} competitors (last ${lookbackDays} days)`);
 
-    // In production, this would call Twitter API
-    // For now, generating realistic test data
+    // Real data requires Twitter API integration
     const competitors = competitorHandles.map(handle => ({
       handle,
-      recentPosts: [
-        {
-          text: `${handle}: Announcing new AI-powered features`,
-          engagement: Math.floor(Math.random() * 1000) + 100,
-          timestamp: new Date(),
-        },
-        {
-          text: `${handle}: Case study - how Company X increased sales 40%`,
-          engagement: Math.floor(Math.random() * 800) + 150,
-          timestamp: new Date(),
-        },
-      ],
-      insights: [
-        'Heavy focus on AI positioning',
-        'Using case studies for social proof',
-        'Posting primarily during business hours',
-      ],
+      recentPosts: [] as Array<{ text: string; engagement: number; timestamp: Date }>, // Real data requires Twitter API integration
+      insights: [] as string[], // Real data requires Twitter API integration
     }));
 
-    const opportunities = [
-      'Counter their AI narrative with our unique automation angle',
-      'Create our own case study thread with better metrics',
-      'Engage with their audience by providing additional value in replies',
-    ];
+    const opportunities: string[] = []; // Real data requires Twitter API integration
 
     // Write to MemoryVault
     await shareInsight(
       'TWITTER_X_EXPERT',
       'PERFORMANCE',
       'Competitor Twitter Activity',
-      `Analyzed ${competitorHandles.length} competitors. Key trends: AI positioning, case study content. ${opportunities.length} strategic opportunities identified.`,
+      'No data available - Twitter API integration required',
       {
-        confidence: 75,
+        confidence: 0,
         sources: ['Twitter API', 'TWITTER_X_EXPERT'],
         tags: ['twitter', 'competitors', 'market-intelligence'],
-        actions: opportunities,
       }
     );
 
-    this.log('INFO', `Competitor analysis written to MemoryVault: ${competitors.length} competitors monitored`);
+    this.log('INFO', 'Competitor analysis not available - Twitter API integration required');
 
     return { competitors, opportunities };
   }

@@ -5,23 +5,26 @@
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { VoiceEngineFactory, type TTSEngineType, type TTSSynthesizeRequest } from '@/lib/voice/tts';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
 
 export const dynamic = 'force-dynamic';
 
-interface TTSPostBody {
-  text?: string;
-  PLATFORM_ID?: string;
-  engine?: TTSEngineType;
-  voiceId?: string;
-  settings?: Record<string, unknown>;
-  action?: 'validate-key' | 'save-config';
-  apiKey?: string;
-  config?: Record<string, unknown>;
-  userId?: string;
-}
+const ttsEngineSchema = z.enum(['elevenlabs', 'unreal'] as const);
+
+const ttsPostBodySchema = z.object({
+  text: z.string().max(5000).optional(),
+  PLATFORM_ID: z.string().optional(),
+  engine: ttsEngineSchema.optional(),
+  voiceId: z.string().optional(),
+  settings: z.record(z.unknown()).optional(),
+  action: z.enum(['validate-key', 'save-config']).optional(),
+  apiKey: z.string().optional(),
+  config: z.record(z.unknown()).optional(),
+  userId: z.string().optional(),
+});
 
 /**
  * GET /api/voice/tts
@@ -76,8 +79,15 @@ export async function POST(request: NextRequest) {
     const authResult = await requireAuth(request);
     if (authResult instanceof NextResponse) {return authResult;}
 
-    const body = await request.json() as TTSPostBody;
-    const { text, engine, voiceId, settings, action, apiKey, config, userId } = body;
+    const rawBody: unknown = await request.json();
+    const parsedBody = ttsPostBodySchema.safeParse(rawBody);
+    if (!parsedBody.success) {
+      return NextResponse.json(
+        { success: false, error: parsedBody.error.errors[0]?.message ?? 'Invalid request body' },
+        { status: 400 }
+      );
+    }
+    const { text, engine, voiceId, settings, action, apiKey, config, userId } = parsedBody.data;
 
     // Validate API key
     if (action === 'validate-key') {

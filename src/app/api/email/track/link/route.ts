@@ -1,9 +1,9 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/api-auth';
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { FirestoreService } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 
 export const dynamic = 'force-dynamic';
 
@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
 
     // Store link mapping in Firestore
     await FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/trackedLinks`,
+      getSubCollection('trackedLinks'),
       linkId,
       {
         messageId,

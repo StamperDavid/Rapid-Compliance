@@ -50,8 +50,6 @@
  * ```
  */
 
-import { PLATFORM_ID } from '@/lib/constants/platform';
-
 // Core Service
 export { NotificationService } from './notification-service';
 
@@ -146,14 +144,15 @@ export type {
  * ```
  */
 export async function seedNotificationTemplates(): Promise<number> {
-  const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+  const { FirestoreService } = await import('@/lib/db/firestore-service');
+  const { getSubCollection } = await import('@/lib/firebase/collections');
   const { getAllTemplates } = await import('./templates');
-  
+
   const templates = getAllTemplates();
-  
+
   const createPromises = templates.map((template) =>
     FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/notification_templates`,
+      getSubCollection('notification_templates'),
       template.id,
       template
     )

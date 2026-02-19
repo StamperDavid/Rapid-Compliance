@@ -88,6 +88,12 @@ export const COLLECTIONS = {
   REPORTS: `${PREFIX}reports`,
 
   // ========================================
+  // PLATFORM SYSTEM COLLECTIONS
+  // ========================================
+  PLATFORM_METRICS: `${PREFIX}platform_metrics`,
+  PLATFORM_SETTINGS: `${PREFIX}platform_settings`,
+
+  // ========================================
   // TEMPLATE MANAGEMENT COLLECTIONS
   // ========================================
   GLOBAL_TEMPLATES: `${PREFIX}globalTemplates`,

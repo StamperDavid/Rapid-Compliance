@@ -8,9 +8,9 @@ import type {
   GoldenPlaybook,
   PlaybookPlatformRules,
 } from '@/types/agent-memory';
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { FirestoreService } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 import { AgentConfigService } from '@/lib/social/agent-config-service';
 
 export interface CreatePlaybookOptions {
@@ -44,7 +44,7 @@ export async function createPlaybook(
   // Get previous version for changelog
   const { orderBy, limit } = await import('firebase/firestore');
   const previousPlaybooks = await FirestoreService.getAll<GoldenPlaybook>(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.GOLDEN_PLAYBOOKS}`,
+    getSubCollection('goldenPlaybooks'),
     [orderBy('createdAt', 'desc'), limit(1)]
   );
   const previousVersion = previousPlaybooks.length > 0 ? previousPlaybooks[0].version : undefined;
@@ -297,7 +297,7 @@ export function compilePlaybookPrompt(playbook: GoldenPlaybook): string {
  */
 export async function savePlaybook(playbook: GoldenPlaybook): Promise<void> {
   await FirestoreService.set(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.GOLDEN_PLAYBOOKS}`,
+    getSubCollection('goldenPlaybooks'),
     playbook.id,
     {
       ...playbook,
@@ -317,7 +317,7 @@ export async function getActivePlaybook(): Promise<GoldenPlaybook | null> {
   // Query for active Golden Playbook
   const { where } = await import('firebase/firestore');
   const playbooks = await FirestoreService.getAll<GoldenPlaybook>(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.GOLDEN_PLAYBOOKS}`,
+    getSubCollection('goldenPlaybooks'),
     [where('isActive', '==', true)]
   );
 
@@ -328,7 +328,7 @@ export async function getActivePlaybook(): Promise<GoldenPlaybook | null> {
   // If no active, get the latest one
   const { orderBy, limit } = await import('firebase/firestore');
   const latest = await FirestoreService.getAll<GoldenPlaybook>(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.GOLDEN_PLAYBOOKS}`,
+    getSubCollection('goldenPlaybooks'),
     [orderBy('createdAt', 'desc'), limit(1)]
   );
 
@@ -342,7 +342,7 @@ export async function getAllPlaybooks(): Promise<GoldenPlaybook[]> {
   const { orderBy } = await import('firebase/firestore');
 
   const playbooks = await FirestoreService.getAll<GoldenPlaybook>(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.GOLDEN_PLAYBOOKS}`,
+    getSubCollection('goldenPlaybooks'),
     [orderBy('createdAt', 'desc')]
   );
 
@@ -375,12 +375,12 @@ export async function deployPlaybook(playbookId: string): Promise<void> {
 
   // Deactivate all Golden Playbooks
   for (const pb of allPlaybooks) {
-    const pbRef = doc(db, `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.GOLDEN_PLAYBOOKS}/${pb.id}`);
+    const pbRef = doc(db, `${getSubCollection('goldenPlaybooks')}/${pb.id}`);
     batch.update(pbRef, { isActive: false });
   }
 
   // Activate the selected one
-  const activePBRef = doc(db, `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.GOLDEN_PLAYBOOKS}/${playbookId}`);
+  const activePBRef = doc(db, `${getSubCollection('goldenPlaybooks')}/${playbookId}`);
   batch.update(activePBRef, {
     isActive: true,
     deployedAt: new Date().toISOString(),
@@ -402,7 +402,7 @@ async function getNextPlaybookVersion(): Promise<string> {
   const { orderBy, limit } = await import('firebase/firestore');
 
   const playbooks = await FirestoreService.getAll<GoldenPlaybook>(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.GOLDEN_PLAYBOOKS}`,
+    getSubCollection('goldenPlaybooks'),
     [orderBy('createdAt', 'desc'), limit(1)]
   );
 

@@ -3,8 +3,8 @@
  * Runtime enforcement of pricing tier limits
  */
 
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { FirestoreService } from '@/lib/db/firestore-service';
+import { getSubCollection } from '@/lib/firebase/collections';
 
 interface TierLimits {
   maxContacts: number;
@@ -61,7 +61,7 @@ const TIER_LIMITS: Record<string, TierLimits> = {
 export async function getUserTier(userId: string): Promise<string> {
   try {
     const subscription = await FirestoreService.get<SubscriptionRecord>(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/subscriptions`,
+      getSubCollection('subscriptions'),
       userId
     );
     if (subscription?.status === 'active') {

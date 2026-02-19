@@ -6,6 +6,7 @@
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { where, orderBy, type QueryConstraint, type QueryDocumentSnapshot } from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
+import { getNurtureSequencesCollection } from '@/lib/firebase/collections';
 
 interface Condition {
   type: string;
@@ -71,7 +72,6 @@ export async function getNurtureCampaigns(
   filters?: NurtureFilters,
   options?: PaginationOptions
 ): Promise<PaginatedResult<NurtureCampaign>> {
-  const { PLATFORM_ID } = await import('@/lib/constants/platform');
   try {
     const constraints: QueryConstraint[] = [];
 
@@ -86,7 +86,7 @@ export async function getNurtureCampaigns(
     constraints.push(orderBy('createdAt', 'desc'));
 
     const result = await FirestoreService.getAllPaginated<NurtureCampaign>(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/nurtureSequences`,
+      getNurtureSequencesCollection(),
       constraints,
       options?.pageSize ?? 50,
       options?.lastDoc
@@ -111,10 +111,9 @@ export async function getNurtureCampaigns(
 export async function getNurtureCampaign(
   campaignId: string
 ): Promise<NurtureCampaign | null> {
-  const { PLATFORM_ID } = await import('@/lib/constants/platform');
   try {
     const campaign = await FirestoreService.get<NurtureCampaign>(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/nurtureSequences`,
+      getNurtureSequencesCollection(),
       campaignId
     );
 
@@ -139,7 +138,6 @@ export async function createNurtureCampaign(
   data: Omit<NurtureCampaign, 'id' | 'createdAt' | 'stats'>,
   createdBy: string
 ): Promise<NurtureCampaign> {
-  const { PLATFORM_ID } = await import('@/lib/constants/platform');
   try {
     const campaignId = `nurture-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     const now = new Date();
@@ -161,7 +159,7 @@ export async function createNurtureCampaign(
     };
 
     await FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/nurtureSequences`,
+      getNurtureSequencesCollection(),
       campaignId,
       campaign,
       false
@@ -188,7 +186,6 @@ export async function updateNurtureCampaign(
   campaignId: string,
   updates: Partial<Omit<NurtureCampaign, 'id' | 'createdAt' | 'stats'>>
 ): Promise<NurtureCampaign> {
-  const { PLATFORM_ID } = await import('@/lib/constants/platform');
   try {
     const updatedData = {
       ...updates,
@@ -196,7 +193,7 @@ export async function updateNurtureCampaign(
     };
 
     await FirestoreService.update(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/nurtureSequences`,
+      getNurtureSequencesCollection(),
       campaignId,
       updatedData
     );
@@ -225,10 +222,9 @@ export async function updateNurtureCampaign(
 export async function deleteNurtureCampaign(
   campaignId: string
 ): Promise<void> {
-  const { PLATFORM_ID } = await import('@/lib/constants/platform');
   try {
     await FirestoreService.delete(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/nurtureSequences`,
+      getNurtureSequencesCollection(),
       campaignId
     );
 

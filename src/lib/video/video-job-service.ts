@@ -10,11 +10,11 @@
  * Collection: videoJobs (via getSubCollection)
  */
 
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { FirestoreService } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { v4 as uuidv4 } from 'uuid';
 import type { VideoStatus, VideoAspectRatio, VideoResolution, VideoProvider } from '@/types/video';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 
 // =============================================================================
 // TYPES
@@ -99,7 +99,7 @@ export class VideoJobService {
    * Get the collection path for video jobs
    */
   private getCollectionPath(): string {
-    return `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${VIDEO_JOBS_COLLECTION}`;
+    return getSubCollection(VIDEO_JOBS_COLLECTION);
   }
 
   /**

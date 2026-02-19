@@ -27,7 +27,8 @@ import { extractCompanyData } from './ai-extractor';
 import { getCachedEnrichment, cacheEnrichment } from './cache-service';
 import { validateEnrichmentData } from './validation-service';
 import { getAllBackupData, getTechStackFromDNS } from './backup-sources';
-import { FirestoreService, COLLECTIONS } from '../db/firestore-service';
+import { FirestoreService } from '../db/firestore-service';
+import { getSubCollection } from '../firebase/collections';
 import { logger } from '../logger/logger';
 
 // NEW: Import distillation engine and industry templates
@@ -665,10 +666,9 @@ function countDataPoints(data: CompanyEnrichmentData): number {
  */
 async function logEnrichmentCost(log: EnrichmentCostLog): Promise<void> {
   try {
-    const { PLATFORM_ID } = await import('@/lib/constants/platform');
     const logId = `cost_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     await FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/enrichment-costs`,
+      getSubCollection('enrichment-costs'),
       logId,
       log,
       false
@@ -695,18 +695,17 @@ export async function getEnrichmentAnalytics(
   cacheHitRate: number;
 }> {
   try {
-    const { PLATFORM_ID } = await import('@/lib/constants/platform');
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - days);
 
     const { where } = await import('firebase/firestore');
     const logs = await FirestoreService.getAll<EnrichmentCostLog>(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/enrichment-costs`,
+      getSubCollection('enrichment-costs'),
       [
         where('timestamp', '>=', cutoffDate)
       ]
     );
-    
+
     const totalEnrichments = logs.length;
     const successfulEnrichments = logs.filter(log => log.success).length;
     const cacheHits = logs.filter(log => log.totalCost === 0).length; // $0 = cache hit
@@ -765,13 +764,12 @@ export async function getStorageOptimizationAnalytics(
   duplicateRate: number; // percentage
 }> {
   try {
-    const { PLATFORM_ID } = await import('@/lib/constants/platform');
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - days);
 
     const { where } = await import('firebase/firestore');
     const logs = await FirestoreService.getAll<EnrichmentCostLog>(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/enrichment-costs`,
+      getSubCollection('enrichment-costs'),
       [
         where('timestamp', '>=', cutoffDate)
       ]

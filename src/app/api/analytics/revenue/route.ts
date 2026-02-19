@@ -6,6 +6,7 @@ import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { withCache } from '@/lib/cache/analytics-cache';
 import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getOrdersCollection } from '@/lib/firebase/collections';
 
 export const dynamic = 'force-dynamic';
 
@@ -146,7 +147,7 @@ async function calculateRevenueAnalytics(period: string) {
     });
 
     // Get orders (e-commerce)
-    const ordersPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/orders`;
+    const ordersPath = getOrdersCollection();
     let allOrders: OrderRecord[] = [];
     
     try {

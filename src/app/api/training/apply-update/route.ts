@@ -5,13 +5,13 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireAuth } from '@/lib/auth/api-auth';
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { FirestoreService } from '@/lib/db/firestore-service';
 import { applyUpdateRequest } from '@/lib/training/golden-master-updater';
 import type { GoldenMasterUpdateRequest } from '@/types/training';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 
 export const dynamic = 'force-dynamic';
 
@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
 
     // Get the update request
     const updateRequest = await FirestoreService.get(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/goldenMasterUpdates`,
+      getSubCollection('goldenMasterUpdates'),
       updateRequestId
     ) as GoldenMasterUpdateRequest;
 
@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
     if (!approved) {
       // Reject the update request
       await FirestoreService.set(
-        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/goldenMasterUpdates`,
+        getSubCollection('goldenMasterUpdates'),
         updateRequestId,
         {
           ...updateRequest,
@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
 
     // Approve and apply the update request
     await FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/goldenMasterUpdates`,
+      getSubCollection('goldenMasterUpdates'),
       updateRequestId,
       {
         ...updateRequest,

@@ -11,6 +11,7 @@ import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { where, type Timestamp } from 'firebase/firestore';
 import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 
 interface OrganizationPreferences {
   preferredModel?: string;
@@ -142,7 +143,7 @@ async function triggerFineTuning(
 
   // Get approved examples
   const examples = await FirestoreService.getAll<TrainingExample>(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/trainingExamples`,
+    getSubCollection('trainingExamples'),
     [where('status', '==', 'approved')]
   );
 
@@ -185,7 +186,7 @@ async function triggerFineTuning(
 async function getLearningConfig(): Promise<ContinuousLearningConfig | null> {
   try {
     const config = await FirestoreService.get(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/config`,
+      getSubCollection('config'),
       'continuousLearning'
     );
     return config as ContinuousLearningConfig;
@@ -214,7 +215,7 @@ async function getLearningConfig(): Promise<ContinuousLearningConfig | null> {
  */
 async function getLastFineTuningJob(): Promise<FineTuningJob | null> {
   const jobs = await FirestoreService.getAll<FineTuningJob>(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/fineTuningJobs`,
+    getSubCollection('fineTuningJobs'),
     []
   );
 
@@ -233,7 +234,7 @@ async function getLastFineTuningJob(): Promise<FineTuningJob | null> {
  */
 async function getMonthlyTrainingSpend(): Promise<number> {
   const jobs = await FirestoreService.getAll<FineTuningJob>(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/fineTuningJobs`,
+    getSubCollection('fineTuningJobs'),
     []
   );
 
@@ -332,7 +333,7 @@ export async function processCompletedFineTuningJob(
 }> {
   // Get the job
   const job = await FirestoreService.get<FineTuningJob>(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/fineTuningJobs`,
+    getSubCollection('fineTuningJobs'),
     jobId
   );
 
@@ -349,7 +350,7 @@ export async function processCompletedFineTuningJob(
   
   // Update job with test info
   await FirestoreService.update(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/fineTuningJobs`,
+    getSubCollection('fineTuningJobs'),
     jobId,
     {
       abTestId: result.testId,

@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { checkTCPAConsent, checkCallTimeRestrictions } from '@/lib/compliance/tcpa-service';
 import { logger } from '@/lib/logger/logger';
@@ -9,10 +10,10 @@ import twilio from 'twilio';
 
 export const dynamic = 'force-dynamic';
 
-interface CallRequestBody {
-  to: string;
-  contactId?: string;
-}
+const callRequestSchema = z.object({
+  to: z.string().min(1, 'Phone number is required'),
+  contactId: z.string().optional(),
+});
 
 interface TwilioCallInstance {
   sid: string;
@@ -35,12 +36,14 @@ export async function POST(request: NextRequest) {
       return authResult;
     }
 
-    const body = await request.json() as CallRequestBody;
-    const { to, contactId } = body;
-
-    if (!to) {
-      return errors.badRequest('Phone number is required');
+    const rawBody: unknown = await request.json();
+    const parsed = callRequestSchema.safeParse(rawBody);
+    if (!parsed.success) {
+      return errors.badRequest(
+        parsed.error.errors[0]?.message ?? 'Invalid request body'
+      );
     }
+    const { to, contactId } = parsed.data;
 
     // TCPA compliance checks before making outbound call
     const tcpaCheck = await checkTCPAConsent(to, 'call');

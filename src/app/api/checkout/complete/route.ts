@@ -7,7 +7,8 @@ import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { PLATFORM_ID } from '@/lib/constants/platform';
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { FirestoreService } from '@/lib/db/firestore-service';
+import { getOrdersCollection } from '@/lib/firebase/collections';
 
 export const dynamic = 'force-dynamic';
 
@@ -77,8 +78,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create order record from payment intent
-    const orderId = `order_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    // Create order record from payment intent (schema aligned with ecommerce checkout)
+    const orderId = `order_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
     const now = new Date().toISOString();
     const piMetadata = paymentIntent.metadata ?? {};
 
@@ -87,30 +88,45 @@ export async function POST(request: NextRequest) {
 
     const orderRecord = {
       id: orderId,
-      paymentIntentId,
-      stripePaymentStatus: paymentIntent.status,
-      amount: paymentIntent.amount,
-      currency: paymentIntent.currency,
-      customerEmail: piMetadata.customerEmail ?? _user.email ?? '',
-      customerId: _user.uid,
+      userId: _user.uid,
+      // Canonical order fields (shared with ecommerce checkout)
+      items: [{
+        name: piMetadata.description ?? 'Payment',
+        price: paymentIntent.amount,
+        quantity: 1,
+      }],
+      customerInfo: {
+        email: piMetadata.customerEmail ?? _user.email ?? '',
+      },
+      shippingAddress: null,
+      billingAddress: null,
+      shippingMethodId: null,
+      // Payment tracking
+      stripePaymentIntentId: paymentIntentId,
+      stripeSessionId: null,
       status: 'processing',
       paymentStatus: 'captured',
+      payment: {
+        provider: 'stripe',
+        transactionId: paymentIntentId,
+        amount: paymentIntent.amount,
+        currency: paymentIntent.currency,
+      },
+      // Attribution
       source: attributionSource ?? 'web',
-      // Attribution chain
-      dealId: piMetadata.dealId ?? undefined,
-      leadId: piMetadata.leadId ?? undefined,
-      formId: piMetadata.formId ?? undefined,
-      attributionSource: attributionSource ?? undefined,
-      utmSource: piMetadata.utm_source ?? undefined,
-      utmMedium: piMetadata.utm_medium ?? undefined,
-      utmCampaign: piMetadata.utm_campaign ?? undefined,
-      metadata: piMetadata,
+      dealId: piMetadata.dealId ?? null,
+      leadId: piMetadata.leadId ?? null,
+      formId: piMetadata.formId ?? null,
+      attributionSource: attributionSource ?? null,
+      utmSource: piMetadata.utm_source ?? null,
+      utmMedium: piMetadata.utm_medium ?? null,
+      utmCampaign: piMetadata.utm_campaign ?? null,
       createdAt: now,
       updatedAt: now,
     };
 
     await FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/orders`,
+      getOrdersCollection(),
       orderId,
       orderRecord
     );

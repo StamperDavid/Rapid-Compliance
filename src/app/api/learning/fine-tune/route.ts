@@ -10,11 +10,11 @@ import {
   checkAndDeployWinner
 } from '@/lib/ai/learning/continuous-learning-engine';
 import { getTrainingDataStats, getTrainingExamples, approveTrainingExample, rejectTrainingExample } from '@/lib/ai/fine-tuning/data-collector';
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { FirestoreService } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 import { requireAuth } from '@/lib/auth/api-auth';
 
 export const dynamic = 'force-dynamic';
@@ -91,13 +91,13 @@ export async function GET(request: NextRequest) {
 
         // Get fine-tuning jobs
         const jobs = await FirestoreService.getAll(
-          `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/fineTuningJobs`,
+          getSubCollection('fineTuningJobs'),
           []
         );
 
         // Get learning config
         const config = await FirestoreService.get<LearningConfig>(
-          `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/config`,
+          getSubCollection('config'),
           'continuousLearning'
         );
 
@@ -123,7 +123,7 @@ export async function GET(request: NextRequest) {
 
       case 'jobs': {
         const jobs = await FirestoreService.getAll(
-          `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/fineTuningJobs`,
+          getSubCollection('fineTuningJobs'),
           []
         );
         return NextResponse.json({ jobs });
@@ -312,7 +312,7 @@ export async function PUT(request: NextRequest) {
     };
 
     await FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/config`,
+      getSubCollection('config'),
       'continuousLearning',
       configData,
       false

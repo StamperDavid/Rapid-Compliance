@@ -4,10 +4,10 @@
  * Wraps campaign-manager.ts with service layer pattern
  */
 
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { FirestoreService } from '@/lib/db/firestore-service';
 import { where, orderBy, type QueryConstraint, type QueryDocumentSnapshot } from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getEmailCampaignsCollection } from '@/lib/firebase/collections';
 
 export interface EmailCampaign {
   id: string;
@@ -75,7 +75,7 @@ export async function getCampaigns(
     constraints.push(orderBy('createdAt', 'desc'));
 
     const result = await FirestoreService.getAllPaginated<EmailCampaign>(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/emailCampaigns`,
+      getEmailCampaignsCollection(),
       constraints,
       options?.pageSize ?? 50,
       options?.lastDoc
@@ -103,7 +103,7 @@ export async function getCampaign(
 ): Promise<EmailCampaign | null> {
   try {
     const campaign = await FirestoreService.get<EmailCampaign>(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/emailCampaigns`,
+      getEmailCampaignsCollection(),
       campaignId
     );
 
@@ -152,7 +152,7 @@ export async function createCampaign(
     };
 
     await FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/emailCampaigns`,
+      getEmailCampaignsCollection(),
       campaignId,
       campaign,
       false
@@ -185,7 +185,7 @@ export async function updateCampaign(
     };
 
     await FirestoreService.update(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/emailCampaigns`,
+      getEmailCampaignsCollection(),
       campaignId,
       updatedData
     );
@@ -216,7 +216,7 @@ export async function deleteCampaign(
 ): Promise<void> {
   try {
     await FirestoreService.delete(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/emailCampaigns`,
+      getEmailCampaignsCollection(),
       campaignId
     );
 

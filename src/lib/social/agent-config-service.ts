@@ -6,16 +6,16 @@
  * Firestore path: organizations/{orgId}/settings/social_agent_config
  */
 
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { FirestoreService } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 import type { AutonomousAgentSettings, EngagementActionType } from '@/types/social';
 
 const SETTINGS_COLLECTION = 'settings';
 const CONFIG_DOC_ID = 'social_agent_config';
 
 function settingsPath(): string {
-  return `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${SETTINGS_COLLECTION}`;
+  return getSubCollection(SETTINGS_COLLECTION);
 }
 
 /** Sensible defaults matching the original hardcoded values */

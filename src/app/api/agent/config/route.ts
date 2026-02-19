@@ -1,9 +1,10 @@
 import { type NextRequest, NextResponse } from 'next/server';
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { z } from 'zod';
+import { FirestoreService } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 import { requireAuth } from '@/lib/auth/api-auth';
 
 export const dynamic = 'force-dynamic';
@@ -39,10 +40,20 @@ interface _SaveConfigResponse {
   message: string;
 }
 
-interface SaveConfigRequestBody {
-  selectedModel?: string;
-  modelConfig?: ModelConfig;
-}
+const modelConfigSchema = z.object({
+  temperature: z.number().min(0).max(2),
+  maxTokens: z.number().int().positive(),
+  topP: z.number().min(0).max(1),
+  topK: z.number().int().optional(),
+  stopSequences: z.array(z.string()).optional(),
+  presencePenalty: z.number().optional(),
+  frequencyPenalty: z.number().optional(),
+});
+
+const saveConfigRequestSchema = z.object({
+  selectedModel: z.string().optional(),
+  modelConfig: modelConfigSchema.optional(),
+});
 
 /**
  * Default model configuration
@@ -89,7 +100,7 @@ export async function GET(request: NextRequest) {
 
     // Get agent configuration
     const agentConfigRaw = await FirestoreService.get(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/agentConfig`,
+      getSubCollection('agentConfig'),
       'default'
     );
 
@@ -105,7 +116,6 @@ export async function GET(request: NextRequest) {
     // Validate and type the configuration
     if (!isValidAgentConfig(agentConfigRaw)) {
       logger.warn('Invalid agent config structure, returning defaults', {
-        PLATFORM_ID,
         route: '/api/agent/config',
       });
 
@@ -148,8 +158,14 @@ export async function POST(request: NextRequest) {
       return rateLimitResponse;
     }
 
-    const body = await request.json() as SaveConfigRequestBody;
-    const { selectedModel, modelConfig } = body;
+    const rawBody: unknown = await request.json();
+    const parsed = saveConfigRequestSchema.safeParse(rawBody);
+    if (!parsed.success) {
+      return errors.badRequest(
+        parsed.error.errors[0]?.message ?? 'Invalid request body'
+      );
+    }
+    const { selectedModel, modelConfig } = parsed.data;
 
     // Prepare configuration data with defaults
     const configData: AgentConfigData = {
@@ -160,7 +176,7 @@ export async function POST(request: NextRequest) {
 
     // Save agent configuration (single model - ensemble removed for MVP)
     await FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/agentConfig`,
+      getSubCollection('agentConfig'),
       'default',
       configData,
       false

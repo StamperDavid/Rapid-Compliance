@@ -6,8 +6,8 @@
 import { logger } from '@/lib/logger/logger';
 import { processKnowledgeBase, type KnowledgeProcessorOptions } from './knowledge-processor';
 import { indexKnowledgeBase } from './vector-search';
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { FirestoreService } from '@/lib/db/firestore-service';
+import { getSubCollection } from '@/lib/firebase/collections';
 
 /**
  * Process and index knowledge base in one step
@@ -20,7 +20,7 @@ export async function processAndIndexKnowledgeBase(
   
   // Save to Firestore
   await FirestoreService.set(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/knowledgeBase`,
+    getSubCollection('knowledgeBase'),
     'current',
     {
       ...knowledgeBase,

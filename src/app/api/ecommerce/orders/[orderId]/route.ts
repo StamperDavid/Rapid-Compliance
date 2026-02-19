@@ -1,15 +1,15 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireAuth } from '@/lib/auth/api-auth';
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { FirestoreService } from '@/lib/db/firestore-service';
 import type { Order, OrderStatus, FulfillmentStatus } from '@/types/ecommerce';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
+import { getOrdersCollection } from '@/lib/firebase/collections';
 
 /** Canonical orders path — must match checkout create-session and webhook handler */
-const ORDERS_PATH = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/orders`;
+const ORDERS_PATH = getOrdersCollection();
 
 export const dynamic = 'force-dynamic';
 

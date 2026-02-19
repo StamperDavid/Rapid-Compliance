@@ -8,9 +8,9 @@
  */
 
 import type { SocialCorrection, SocialPlatform } from '@/types/social';
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { FirestoreService } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 
 /**
  * Input data for capturing a correction
@@ -47,7 +47,7 @@ export interface CorrectionPattern {
 }
 
 function correctionsPath(): string {
-  return `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.SOCIAL_CORRECTIONS}`;
+  return getSubCollection('socialCorrections');
 }
 
 export class CorrectionCaptureService {

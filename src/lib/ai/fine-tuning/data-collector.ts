@@ -4,10 +4,10 @@
  */
 
 import type { TrainingExample } from '@/types/fine-tuning';
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { FirestoreService } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { where } from 'firebase/firestore';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 
 /**
  * Collect training example from a conversation
@@ -61,7 +61,7 @@ export async function collectTrainingExample(params: {
   
   // Save to Firestore
   await FirestoreService.set(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/trainingExamples`,
+    getSubCollection('trainingExamples'),
     example.id,
     example,
     false
@@ -99,7 +99,7 @@ export async function collectFromTrainingScenario(params: {
   };
   
   await FirestoreService.set(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/trainingExamples`,
+    getSubCollection('trainingExamples'),
     example.id,
     example,
     false
@@ -143,7 +143,7 @@ export async function collectFromHumanCorrection(params: {
   };
   
   await FirestoreService.set(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/trainingExamples`,
+    getSubCollection('trainingExamples'),
     example.id,
     example,
     false
@@ -190,7 +190,7 @@ export async function getTrainingExamples(
     : [];
 
   const examples = await FirestoreService.getAll<TrainingExample>(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/trainingExamples`,
+    getSubCollection('trainingExamples'),
     filters
   );
 
@@ -205,7 +205,7 @@ export async function approveTrainingExample(
   approvedBy: string
 ): Promise<void> {
   await FirestoreService.update(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/trainingExamples`,
+    getSubCollection('trainingExamples'),
     exampleId,
     {
       status: 'approved',
@@ -224,7 +224,7 @@ export async function rejectTrainingExample(
   exampleId: string
 ): Promise<void> {
   await FirestoreService.update(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/trainingExamples`,
+    getSubCollection('trainingExamples'),
     exampleId,
     {
       status: 'rejected',

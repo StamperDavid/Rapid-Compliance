@@ -7,6 +7,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
+import { getSubCollection } from '@/lib/firebase/collections';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
@@ -187,12 +188,9 @@ export async function POST(request: NextRequest) {
       return errors.badRequest('reportId is required');
     }
 
-    // Penthouse model: use PLATFORM_ID
-    const { PLATFORM_ID } = await import('@/lib/constants/platform');
-
     // Get report configuration
     const reportDoc = await FirestoreService.get(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/reports`,
+      getSubCollection('reports'),
       reportId
     );
 

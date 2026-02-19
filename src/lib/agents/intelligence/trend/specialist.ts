@@ -636,11 +636,11 @@ export class TrendScout extends BaseSpecialist {
   private analyzeTrendingKeywords(
     keywords: string[]
   ): Array<{ keyword: string; trendDirection: 'up' | 'down'; strength: number }> {
-    // Simulated trend analysis - real implementation would use Google Trends, SEMrush, etc.
+    // Real data requires keyword trend API integration (e.g., Google Trends, SEMrush, Ahrefs)
     return keywords.map(keyword => ({
       keyword,
-      trendDirection: Math.random() > 0.3 ? 'up' as const : 'down' as const,
-      strength: 0.4 + Math.random() * 0.5,
+      trendDirection: 'up' as const, // Real direction requires keyword trend API integration
+      strength: 0, // Real strength requires keyword trend API integration
     }));
   }
 
@@ -698,47 +698,13 @@ export class TrendScout extends BaseSpecialist {
    * Analyze individual competitor
    */
   private async analyzeCompetitor(
-    competitorName: string
+    _competitorName: string
   ): Promise<CompetitorMovement[]> {
     await Promise.resolve(); // Placeholder for async competitor analysis
 
-    const competitorId = `comp-${competitorName.toLowerCase().replace(/\s+/g, '-')}`;
-
-    // Simulated competitor analysis - real implementation would use web scraping, news monitoring
-    const possibleMovements: Array<Omit<CompetitorMovement, 'competitorId' | 'competitorName' | 'detectedAt'>> = [
-      {
-        movementType: 'PRICING',
-        description: 'Announced new pricing tier targeting SMB market',
-        impactAssessment: 'MODERATE',
-        sourceUrls: [],
-        recommendedResponse: 'Review SMB pricing strategy and competitive positioning',
-      },
-      {
-        movementType: 'FEATURE',
-        description: 'Launched AI-powered automation features',
-        impactAssessment: 'SIGNIFICANT',
-        sourceUrls: [],
-        recommendedResponse: 'Accelerate AI feature roadmap and communicate current AI capabilities',
-      },
-      {
-        movementType: 'MARKETING',
-        description: 'Increased social media presence with new content strategy',
-        impactAssessment: 'MINIMAL',
-        sourceUrls: [],
-        recommendedResponse: 'Monitor engagement metrics and adjust content strategy if needed',
-      },
-    ];
-
-    // Randomly select 0-2 movements for simulation
-    const numMovements = Math.floor(Math.random() * 3);
-    const selectedMovements = possibleMovements.slice(0, numMovements);
-
-    return selectedMovements.map(movement => ({
-      ...movement,
-      competitorId,
-      competitorName,
-      detectedAt: new Date().toISOString(),
-    }));
+    // Real data requires web scraping and news monitoring API integration
+    // No movements returned until a competitor monitoring API is integrated
+    return [];
   }
 
   /**
@@ -816,32 +782,18 @@ export class TrendScout extends BaseSpecialist {
   ): TrendForecast {
     const trendId = `trend-${trendKeyword.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}`;
 
-    // Simulated trend analysis - real implementation would use ML models
-    const states: TrendForecast['currentState'][] = ['NASCENT', 'GROWING', 'PEAKING', 'DECLINING', 'STABLE'];
-    const trajectories: TrendForecast['projectedTrajectory'][] = ['ACCELERATING', 'STEADY', 'DECELERATING', 'REVERSING'];
-
+    // Real data requires ML model or trend analysis API integration (e.g., Google Trends, SEMrush)
     return {
       trendId,
       trendName: trendKeyword,
-      currentState: states[Math.floor(Math.random() * 3)], // Bias toward early/growth states
-      projectedTrajectory: trajectories[Math.floor(Math.random() * 2)], // Bias toward positive
+      currentState: 'STABLE' as const, // Real state requires trend analysis API integration
+      projectedTrajectory: 'STEADY' as const, // Real trajectory requires trend analysis API integration
       timeHorizon,
-      confidence: 0.65 + Math.random() * 0.25,
-      keyDrivers: [
-        'Increasing consumer demand',
-        'Technology maturation',
-        'Market competition intensifying',
-      ],
-      potentialDisruptors: [
-        'Regulatory changes',
-        'Economic downturn',
-        'Emerging alternative technologies',
-      ],
+      confidence: 0, // Real confidence requires trend analysis API integration
+      keyDrivers: [], // Real data requires trend analysis API integration
+      potentialDisruptors: [], // Real data requires trend analysis API integration
       recommendations: [
-        `Build expertise in ${trendKeyword}`,
-        'Monitor competitor adoption rates',
-        'Develop content strategy around the trend',
-        'Identify partnership opportunities',
+        `Real trend analysis for "${trendKeyword}" requires trend monitoring API integration`,
       ],
     };
   }
@@ -868,20 +820,16 @@ export class TrendScout extends BaseSpecialist {
    * Generate historical data points
    */
   private generateHistoricalData(days: number): Array<{ date: string; value: number }> {
+    // Real data requires trend monitoring API integration (e.g., Google Trends, SEMrush)
     const data: Array<{ date: string; value: number }> = [];
-    const baseValue = 50;
-    let currentValue = baseValue;
 
     for (let i = days; i >= 0; i--) {
       const date = new Date();
       date.setDate(date.getDate() - i);
 
-      // Random walk with slight upward bias
-      currentValue = Math.max(10, Math.min(100, currentValue + (Math.random() - 0.45) * 5));
-
       data.push({
         date: date.toISOString().split('T')[0],
-        value: Math.round(currentValue),
+        value: 0, // Real data requires trend monitoring API integration
       });
     }
 

@@ -4,12 +4,12 @@
  * for outbound calls and SMS messages.
  */
 
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { FirestoreService } from '@/lib/db/firestore-service';
+import { getSubCollection } from '@/lib/firebase/collections';
 import { logger } from '@/lib/logger/logger';
 
-const SUPPRESSION_COLLECTION = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/tcpa_suppression`;
-const CONSENT_COLLECTION = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/tcpa_consent`;
+const SUPPRESSION_COLLECTION = getSubCollection('tcpa_suppression');
+const CONSENT_COLLECTION = getSubCollection('tcpa_consent');
 
 interface ConsentRecord {
   phoneNumber: string;

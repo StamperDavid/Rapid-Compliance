@@ -7,6 +7,7 @@
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { limit as firestoreLimit, orderBy, where, type QueryConstraint } from 'firebase/firestore';
 import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 import { logger } from '@/lib/logger/logger';
 
 export interface ChatSession {
@@ -75,7 +76,7 @@ export class ChatSessionService {
     limitCount: number = 50
   ): Promise<ChatSession[]> {
     const sessions = await FirestoreService.getAll<ChatSession>(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/chatSessions`,
+      getSubCollection('chatSessions'),
       [
         where('status', 'in', ['active', 'needs_help']),
         orderBy('lastMessageAt', 'desc'),
@@ -101,7 +102,7 @@ export class ChatSessionService {
     ];
 
     const sessions = await FirestoreService.getAll<ChatSession>(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/chatSessions`,
+      getSubCollection('chatSessions'),
       constraints
     );
 
@@ -115,7 +116,7 @@ export class ChatSessionService {
     callback: (sessions: ChatSession[]) => void
   ): () => void {
     return FirestoreService.subscribeToCollection<ChatSession>(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/chatSessions`,
+      getSubCollection('chatSessions'),
       [
         where('status', 'in', ['active', 'needs_help']),
         orderBy('lastMessageAt', 'desc'),
@@ -162,7 +163,7 @@ export class ChatSessionService {
     reason?: string
   ): Promise<void> {
     await FirestoreService.update(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/chatSessions`,
+      getSubCollection('chatSessions'),
       sessionId,
       {
         status: 'needs_help',
@@ -193,7 +194,7 @@ export class ChatSessionService {
     outcome?: 'sale' | 'no_sale' | 'abandoned' | 'human_requested'
   ): Promise<void> {
     await FirestoreService.update(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/chatSessions`,
+      getSubCollection('chatSessions'),
       sessionId,
       {
         status: 'completed',
@@ -216,7 +217,7 @@ export class ChatSessionService {
   private static async triggerChatAnalysis(sessionId: string): Promise<void> {
     try {
       const sessionData = await FirestoreService.get(
-        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/chatSessions`,
+        getSubCollection('chatSessions'),
         sessionId
       );
 
@@ -304,7 +305,7 @@ export class ChatSessionService {
 
     // Update session's last message
     await FirestoreService.update(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/chatSessions`,
+      getSubCollection('chatSessions'),
       sessionId,
       {
         lastMessage: message.content.substring(0, 200),
@@ -322,7 +323,7 @@ export class ChatSessionService {
     sentiment: 'positive' | 'neutral' | 'frustrated'
   ): Promise<void> {
     await FirestoreService.update(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/chatSessions`,
+      getSubCollection('chatSessions'),
       sessionId,
       { sentiment }
     );
@@ -333,7 +334,7 @@ export class ChatSessionService {
    */
   static async getMetrics(): Promise<SessionMetrics> {
     const allSessions = await FirestoreService.getAll<ChatSession>(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/chatSessions`,
+      getSubCollection('chatSessions'),
       []
     );
 
@@ -385,7 +386,7 @@ export class ChatSessionService {
     issue: string
   ): Promise<void> {
     await FirestoreService.update(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/chatSessions`,
+      getSubCollection('chatSessions'),
       sessionId,
       {
         flaggedForTraining: true,
@@ -407,7 +408,7 @@ export class ChatSessionService {
     const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
     await FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/chatSessions`,
+      getSubCollection('chatSessions'),
       sessionId,
       {
         customerId,

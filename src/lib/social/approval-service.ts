@@ -7,9 +7,9 @@
  * Firestore path: organizations/{orgId}/social_approvals/{approvalId}
  */
 
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { FirestoreService } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 import type {
   ApprovalItem,
   ApprovalComment,
@@ -21,7 +21,7 @@ import type {
 const APPROVALS_COLLECTION = 'social_approvals';
 
 function approvalsPath(): string {
-  return `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${APPROVALS_COLLECTION}`;
+  return getSubCollection(APPROVALS_COLLECTION);
 }
 
 export class ApprovalService {

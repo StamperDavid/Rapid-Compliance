@@ -11,7 +11,7 @@
  */
 
 import { logger } from '@/lib/logger/logger';
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { FirestoreService } from '@/lib/db/firestore-service';
 import { createTwitterService, createTwitterServiceForAccount, type TwitterService } from '@/lib/integrations/twitter-service';
 import type { QueryConstraint } from 'firebase/firestore';
 import type {
@@ -27,7 +27,7 @@ import type {
   EngagementActionType,
   AutonomousAgentSettings,
 } from '@/types/social';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 import { AgentConfigService, DEFAULT_AGENT_SETTINGS } from '@/lib/social/agent-config-service';
 import { ApprovalService } from '@/lib/social/approval-service';
 
@@ -693,7 +693,7 @@ export class AutonomousPostingAgent {
 
     // Compliance check: 30-day cooldown
     const originalPost = await FirestoreService.get<SocialMediaPost>(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${SOCIAL_POSTS_COLLECTION}`,
+      getSubCollection(SOCIAL_POSTS_COLLECTION),
       action.originalPostId
     );
 
@@ -747,7 +747,7 @@ export class AutonomousPostingAgent {
     const taskId = `escalation-${actionType.toLowerCase()}-${Date.now()}`;
 
     await FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/tasks`,
+      getSubCollection('tasks'),
       taskId,
       {
         id: taskId,
@@ -1065,7 +1065,7 @@ export class AutonomousPostingAgent {
     const taskId = `social-manual-${platform}-${Date.now()}`;
 
     await FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/tasks`,
+      getSubCollection('tasks'),
       taskId,
       {
         id: taskId,
@@ -1137,7 +1137,7 @@ export class AutonomousPostingAgent {
         };
 
         await FirestoreService.set(
-          `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${SOCIAL_POSTS_COLLECTION}`,
+          getSubCollection(SOCIAL_POSTS_COLLECTION),
           scheduledPost.id,
           scheduledPost
         );
@@ -1188,7 +1188,7 @@ export class AutonomousPostingAgent {
     try {
       // Get current queue position
       const existingQueue = await FirestoreService.getAll<QueuedPost>(
-        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${SOCIAL_QUEUE_COLLECTION}`
+        getSubCollection(SOCIAL_QUEUE_COLLECTION)
       );
       const queuePosition = existingQueue.length + 1;
 
@@ -1208,7 +1208,7 @@ export class AutonomousPostingAgent {
         };
 
         await FirestoreService.set(
-          `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${SOCIAL_QUEUE_COLLECTION}`,
+          getSubCollection(SOCIAL_QUEUE_COLLECTION),
           queuedPost.id,
           queuedPost
         );
@@ -1244,7 +1244,7 @@ export class AutonomousPostingAgent {
       // Get all scheduled posts that are due
       const { where } = await import('firebase/firestore');
       const scheduledPosts = await FirestoreService.getAll<SocialMediaPost>(
-        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${SOCIAL_POSTS_COLLECTION}`,
+        getSubCollection(SOCIAL_POSTS_COLLECTION),
         [
           where('status', '==', 'scheduled'),
           where('scheduledAt', '<=', now),
@@ -1258,7 +1258,7 @@ export class AutonomousPostingAgent {
       for (const post of scheduledPosts) {
         // Update status to publishing
         await FirestoreService.update(
-          `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${SOCIAL_POSTS_COLLECTION}`,
+          getSubCollection(SOCIAL_POSTS_COLLECTION),
           post.id,
           { status: 'publishing', updatedAt: new Date() }
         );
@@ -1269,7 +1269,7 @@ export class AutonomousPostingAgent {
 
         // Update post record
         await FirestoreService.update(
-          `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${SOCIAL_POSTS_COLLECTION}`,
+          getSubCollection(SOCIAL_POSTS_COLLECTION),
           post.id,
           {
             status: result.success ? 'published' : 'failed',
@@ -1316,7 +1316,7 @@ export class AutonomousPostingAgent {
       // Get queued posts ordered by position
       const { orderBy, limit } = await import('firebase/firestore');
       const queuedPosts = await FirestoreService.getAll<QueuedPost>(
-        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${SOCIAL_QUEUE_COLLECTION}`,
+        getSubCollection(SOCIAL_QUEUE_COLLECTION),
         [
           orderBy('queuePosition', 'asc'),
           limit(maxPosts),
@@ -1335,7 +1335,7 @@ export class AutonomousPostingAgent {
 
         // Move from queue to posts collection
         await FirestoreService.delete(
-          `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${SOCIAL_QUEUE_COLLECTION}`,
+          getSubCollection(SOCIAL_QUEUE_COLLECTION),
           post.id
         );
 
@@ -1382,14 +1382,14 @@ export class AutonomousPostingAgent {
     try {
       const { orderBy } = await import('firebase/firestore');
       const queuedPosts = await FirestoreService.getAll<QueuedPost>(
-        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${SOCIAL_QUEUE_COLLECTION}`,
+        getSubCollection(SOCIAL_QUEUE_COLLECTION),
         [orderBy('queuePosition', 'asc')]
       );
 
       for (let i = 0; i < queuedPosts.length; i++) {
         if (queuedPosts[i].queuePosition !== i + 1) {
           await FirestoreService.update(
-            `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${SOCIAL_QUEUE_COLLECTION}`,
+            getSubCollection(SOCIAL_QUEUE_COLLECTION),
             queuedPosts[i].id,
             { queuePosition: i + 1, updatedAt: new Date() }
           );
@@ -1433,14 +1433,14 @@ export class AutonomousPostingAgent {
     };
 
     await FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${SOCIAL_POSTS_COLLECTION}`,
+      getSubCollection(SOCIAL_POSTS_COLLECTION),
       postId,
       post
     );
 
     // Also log to analytics collection for reporting
     await FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${SOCIAL_ANALYTICS_COLLECTION}`,
+      getSubCollection(SOCIAL_ANALYTICS_COLLECTION),
       postId,
       {
         postId,
@@ -1466,7 +1466,7 @@ export class AutonomousPostingAgent {
       }
 
       return await FirestoreService.getAll<QueuedPost>(
-        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${SOCIAL_QUEUE_COLLECTION}`,
+        getSubCollection(SOCIAL_QUEUE_COLLECTION),
         constraints
       );
     } catch (error) {
@@ -1491,7 +1491,7 @@ export class AutonomousPostingAgent {
       }
 
       return await FirestoreService.getAll<ScheduledPost>(
-        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${SOCIAL_POSTS_COLLECTION}`,
+        getSubCollection(SOCIAL_POSTS_COLLECTION),
         constraints
       );
     } catch (error) {
@@ -1507,13 +1507,13 @@ export class AutonomousPostingAgent {
     try {
       // Try to find in scheduled posts
       const post = await FirestoreService.get<SocialMediaPost>(
-        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${SOCIAL_POSTS_COLLECTION}`,
+        getSubCollection(SOCIAL_POSTS_COLLECTION),
         postId
       );
 
       if (post?.status === 'scheduled') {
         await FirestoreService.update(
-          `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${SOCIAL_POSTS_COLLECTION}`,
+          getSubCollection(SOCIAL_POSTS_COLLECTION),
           postId,
           { status: 'cancelled', updatedAt: new Date() }
         );
@@ -1522,13 +1522,13 @@ export class AutonomousPostingAgent {
 
       // Try to find in queue
       const queuedPost = await FirestoreService.get<QueuedPost>(
-        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${SOCIAL_QUEUE_COLLECTION}`,
+        getSubCollection(SOCIAL_QUEUE_COLLECTION),
         postId
       );
 
       if (queuedPost) {
         await FirestoreService.delete(
-          `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${SOCIAL_QUEUE_COLLECTION}`,
+          getSubCollection(SOCIAL_QUEUE_COLLECTION),
           postId
         );
         await this.reorderQueue();
@@ -1577,7 +1577,7 @@ export class AutonomousPostingAgent {
       constraints.push(orderBy('publishedAt', 'desc'));
 
       const posts = await FirestoreService.getAll<{ platform: SocialPlatform; success: boolean }>(
-        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${SOCIAL_ANALYTICS_COLLECTION}`,
+        getSubCollection(SOCIAL_ANALYTICS_COLLECTION),
         constraints
       );
 

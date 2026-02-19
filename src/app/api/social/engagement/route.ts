@@ -8,13 +8,13 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { FirestoreService } from '@/lib/db/firestore-service';
+import { getSubCollection } from '@/lib/firebase/collections';
 import type { SocialMediaPost, PostMetrics } from '@/types/social';
 
 export const dynamic = 'force-dynamic';
 
-const SOCIAL_POSTS_COLLECTION = 'social_posts';
+const SOCIAL_POSTS_COLLECTION = getSubCollection('social_posts');
 
 interface PostWithEngagement {
   id: string;
@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
 
     // Fetch published posts (up to 100, most recent first)
     const publishedPosts = await FirestoreService.getAll<SocialMediaPost>(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${SOCIAL_POSTS_COLLECTION}`,
+      SOCIAL_POSTS_COLLECTION,
       [where('status', '==', 'published'), orderBy('publishedAt', 'desc'), limit(100)]
     ).catch(() => [] as SocialMediaPost[]);
 

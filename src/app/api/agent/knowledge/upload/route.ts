@@ -2,12 +2,12 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { processKnowledgeBase } from '@/lib/agent/knowledge-processor';
 import { indexKnowledgeBase } from '@/lib/agent/vector-search';
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { FirestoreService } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { successResponse } from '@/lib/api/error-handler';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 
 export const dynamic = 'force-dynamic';
 
@@ -96,7 +96,7 @@ export async function POST(request: NextRequest) {
 
     // Save to Firestore
     await FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/knowledgeBase`,
+      getSubCollection('knowledgeBase'),
       'current',
       {
         ...knowledgeBase,

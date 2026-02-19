@@ -5,6 +5,7 @@ import { requireAuth } from '@/lib/auth/api-auth';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 
 export const dynamic = 'force-dynamic';
 
@@ -50,7 +51,7 @@ export async function POST(request: NextRequest) {
 
     // Enable chat widget
     await FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/settings`,
+      getSubCollection('settings'),
       'chatWidget',
       {
         enabled: true,
@@ -64,7 +65,7 @@ export async function POST(request: NextRequest) {
 
     // Set default agent config
     await FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/agentConfig`,
+      getSubCollection('agentConfig'),
       'default',
       {
         selectedModel: 'openrouter/anthropic/claude-3.5-sonnet',

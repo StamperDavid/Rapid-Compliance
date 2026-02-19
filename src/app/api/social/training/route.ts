@@ -11,15 +11,16 @@ import { z } from 'zod';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { FirestoreService } from '@/lib/db/firestore-service';
+import { COLLECTIONS, getSubCollection } from '@/lib/firebase/collections';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import { orderBy } from 'firebase/firestore';
 
 export const dynamic = 'force-dynamic';
 
-const TRAINING_COLLECTION = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/toolTraining`;
-const HISTORY_COLLECTION = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/socialGenerationHistory`;
-const KNOWLEDGE_COLLECTION = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/socialKnowledge`;
+const TRAINING_COLLECTION = getSubCollection('toolTraining');
+const HISTORY_COLLECTION = getSubCollection('socialGenerationHistory');
+const KNOWLEDGE_COLLECTION = getSubCollection('socialKnowledge');
 
 interface BrandDNA {
   companyDescription?: string;

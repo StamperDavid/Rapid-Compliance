@@ -6,9 +6,9 @@
 
 import { syncGmailMessages, setupGmailPushNotifications, stopGmailPushNotifications } from '@/lib/integrations/gmail-sync-service';
 import { syncOutlookMessages, setupOutlookPushNotifications, stopOutlookPushNotifications } from '@/lib/integrations/outlook-sync-service';
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { FirestoreService } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 
 export interface EmailSyncConfig {
   provider: 'gmail' | 'outlook';
@@ -135,7 +135,7 @@ export async function syncOutboundEmails(config: EmailSyncConfig): Promise<SyncR
     
     // Get unsent emails from CRM
     const unsentEmails = await FirestoreService.getAll(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/emails`,
+      getSubCollection('emails'),
       [
         where('source', '==', 'crm'),
         where('synced', '!=', true),
@@ -154,7 +154,7 @@ export async function syncOutboundEmails(config: EmailSyncConfig): Promise<SyncR
       try {
         // Mark as synced (emails are already sent via API)
         await FirestoreService.update(
-          `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/emails`,
+          getSubCollection('emails'),
           email.id,
           {
             synced: true,
@@ -199,7 +199,7 @@ export async function startEmailSync(config: EmailSyncConfig): Promise<void> {
   try {
     // Store sync configuration
     await FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/integrationStatus`,
+      getSubCollection('integrationStatus'),
       `${config.provider}-sync-config`,
       {
         ...config,
@@ -227,7 +227,7 @@ export async function startEmailSync(config: EmailSyncConfig): Promise<void> {
       const subscriptionId = await setupOutlookPushNotifications(config.accessToken, webhookUrl);
 
       await FirestoreService.update(
-        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/integrationStatus`,
+        getSubCollection('integrationStatus'),
         'outlook-sync-config',
         { outlookSubscriptionId: subscriptionId }
       );
@@ -260,7 +260,7 @@ export async function stopEmailSync(provider: 'gmail' | 'outlook'): Promise<void
   try {
     // Get sync configuration
     const syncConfig = await FirestoreService.get(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/integrationStatus`,
+      getSubCollection('integrationStatus'),
       `${provider}-sync-config`
     );
 
@@ -290,7 +290,7 @@ export async function stopEmailSync(provider: 'gmail' | 'outlook'): Promise<void
 
     // Update sync configuration
     await FirestoreService.update(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/integrationStatus`,
+      getSubCollection('integrationStatus'),
       `${provider}-sync-config`,
       {
         isActive: false,
@@ -325,13 +325,13 @@ export async function getSyncStatus(provider: 'gmail' | 'outlook'): Promise<Sync
   try {
     // Get sync configuration
     const syncConfig = await FirestoreService.get(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/integrationStatus`,
+      getSubCollection('integrationStatus'),
       `${provider}-sync-config`
     );
 
     // Get last sync result
     const lastSyncResult = await FirestoreService.get(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/integrationStatus`,
+      getSubCollection('integrationStatus'),
       `${provider}-sync`
     );
 

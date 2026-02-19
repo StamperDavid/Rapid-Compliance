@@ -5,9 +5,9 @@
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { FirestoreService } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
+import { getSubCollection } from '@/lib/firebase/collections';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { verifyTwilioSignature, parseFormBody } from '@/lib/security/webhook-verification';
@@ -215,7 +215,7 @@ async function updateSMSRecord(
 ): Promise<void> {
   try {
     const smsMessages = await FirestoreService.getAll(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/smsMessages`,
+      getSubCollection('smsMessages'),
       []
     );
 
@@ -228,7 +228,7 @@ async function updateSMSRecord(
 
     if (smsRecord && isSMSMessage(smsRecord)) {
       await FirestoreService.update(
-        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/smsMessages`,
+        getSubCollection('smsMessages'),
         smsRecord.id,
         {
           ...updates,
@@ -270,7 +270,7 @@ async function handleSMSFailure(
     });
 
     const smsMessages = await FirestoreService.getAll(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/smsMessages`,
+      getSubCollection('smsMessages'),
       []
     );
 
@@ -283,7 +283,7 @@ async function handleSMSFailure(
 
     if (smsRecord && isSMSMessage(smsRecord) && smsRecord.enrollmentId) {
       const enrollment = await FirestoreService.get(
-        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/enrollments`,
+        getSubCollection('enrollments'),
         smsRecord.enrollmentId
       );
 
@@ -296,7 +296,7 @@ async function handleSMSFailure(
           action.updatedAt = new Date().toISOString();
 
           await FirestoreService.update(
-            `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/enrollments`,
+            getSubCollection('enrollments'),
             smsRecord.enrollmentId,
             {
               stepActions,

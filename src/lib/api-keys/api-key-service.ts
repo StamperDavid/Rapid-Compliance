@@ -236,9 +236,10 @@ return keys.ai?.anthropicApiKey ?? keys.ai?.openrouterApiKey ?? null;
       await adminDb.collection(apiKeysPath).doc(PLATFORM_ID).set(dataToSave, { merge: true });
     } else {
       // Fallback to client SDK
-      const { FirestoreService, COLLECTIONS } = await import('../db/firestore-service');
+      const { FirestoreService } = await import('../db/firestore-service');
+      const { getSubCollection } = await import('../firebase/collections');
       await FirestoreService.set(
-        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.API_KEYS}`,
+        getSubCollection('apiKeys'),
         PLATFORM_ID,
         dataToSave,
         false
@@ -375,9 +376,10 @@ return keys.ai?.anthropicApiKey ?? keys.ai?.openrouterApiKey ?? null;
     }
 
     try {
-      const { FirestoreService, COLLECTIONS } = await import('../db/firestore-service');
+      const { FirestoreService } = await import('../db/firestore-service');
+      const { getSubCollection } = await import('../firebase/collections');
       const keysData = await FirestoreService.get(
-        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.API_KEYS}`,
+        getSubCollection('apiKeys'),
         PLATFORM_ID
       );
 

@@ -15,9 +15,9 @@
 
 import type { PlaybookPerformancePattern } from '@/types/agent-memory';
 import type { SocialMediaPost, PostMetrics, SocialPlatform } from '@/types/social';
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { FirestoreService } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 
 const SOCIAL_POSTS_COLLECTION = 'social_posts';
 
@@ -55,7 +55,7 @@ export async function analyzePerformancePatterns(): Promise<PerformanceAnalysisR
   // Fetch published posts with metrics
   const { where, orderBy, limit } = await import('firebase/firestore');
   const posts = await FirestoreService.getAll<SocialMediaPost>(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${SOCIAL_POSTS_COLLECTION}`,
+    getSubCollection(SOCIAL_POSTS_COLLECTION),
     [
       where('status', '==', 'published'),
       orderBy('publishedAt', 'desc'),

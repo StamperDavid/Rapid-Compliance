@@ -3,9 +3,9 @@
  * Analyzes e-commerce sales data
  */
 
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { FirestoreService } from '@/lib/db/firestore-service';
 import { where, orderBy, Timestamp } from 'firebase/firestore';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getOrdersCollection, getSubCollection } from '@/lib/firebase/collections';
 
 export interface EcommerceAnalytics {
   period: string;
@@ -50,9 +50,9 @@ export async function getEcommerceAnalytics(
   startDate: Date,
   endDate: Date
 ): Promise<EcommerceAnalytics> {
-  // Get orders in period (canonical orders path)
+  // Get orders in period
   const orders = await FirestoreService.getAll(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/orders`,
+    getOrdersCollection(),
     [
       where('createdAt', '>=', Timestamp.fromDate(startDate)),
       where('createdAt', '<=', Timestamp.fromDate(endDate)),
@@ -61,8 +61,7 @@ export async function getEcommerceAnalytics(
     ]
   );
 
-  // Get carts (for abandonment rate) using getSubCollection helper
-  const { getSubCollection } = await import('@/lib/firebase/collections');
+  // Get carts (for abandonment rate)
   const carts = await FirestoreService.getAll(
     getSubCollection('carts'),
     [

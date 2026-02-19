@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { AgentInstanceManager } from '@/lib/agent/instance-manager';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { getSubCollection } from '@/lib/firebase/collections';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
@@ -91,7 +92,7 @@ async function handlePublicChat(request: NextRequest) {
     }
 
     chatConfig ??= await FirestoreService.get<{ enabled?: boolean }>(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/settings`,
+      getSubCollection('settings'),
       'chatWidget'
     );
 
@@ -150,7 +151,7 @@ async function handlePublicChat(request: NextRequest) {
       // Ignore and fallback
     }
     agentConfig ??= await FirestoreService.get<AgentConfigData>(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/agentConfig`,
+      getSubCollection('agentConfig'),
       'default'
     );
 

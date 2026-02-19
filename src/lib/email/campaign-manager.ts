@@ -4,8 +4,8 @@
  */
 
 import { sendBulkEmails } from './email-service';
-import { PLATFORM_ID } from '@/lib/constants/platform';
 import { ensureCompliance } from '@/lib/compliance/can-spam-service';
+import { getEmailCampaignsCollection } from '@/lib/firebase/collections';
 
 export interface EmailCampaign {
   id: string;
@@ -141,9 +141,8 @@ export async function createCampaign(campaign: Partial<EmailCampaign>): Promise<
 
   if (isTest) {
     const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
-    const { COLLECTIONS } = await import('@/lib/db/firestore-service');
     await AdminFirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.EMAIL_CAMPAIGNS}`,
+      getEmailCampaignsCollection(),
       campaignId,
       campaignData,
       false

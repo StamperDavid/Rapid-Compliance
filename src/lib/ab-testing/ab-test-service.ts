@@ -5,7 +5,7 @@
 
 import { cacheService, CacheTTL } from '../cache/redis-service'
 import { logger } from '@/lib/logger/logger';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 
 export interface ABTest {
   id: string;
@@ -54,20 +54,20 @@ export interface ABAssignment {
 export async function createABTest(
   test: Omit<ABTest, 'id' | 'createdAt' | 'updatedAt'>
 ): Promise<ABTest> {
-  const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
-  
+  const { FirestoreService } = await import('@/lib/db/firestore-service');
+
   const testId = crypto.randomUUID();
   const now = new Date().toISOString();
-  
+
   const fullTest: ABTest = {
     ...test,
     id: testId,
     createdAt: now,
     updatedAt: now,
   };
-  
+
   await FirestoreService.set(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/abTests`,
+    getSubCollection('abTests'),
     testId,
     fullTest,
     false

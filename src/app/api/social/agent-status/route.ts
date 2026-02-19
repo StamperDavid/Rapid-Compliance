@@ -12,15 +12,15 @@ import { logger } from '@/lib/logger/logger';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { AgentConfigService } from '@/lib/social/agent-config-service';
 import { SocialAccountService } from '@/lib/social/social-account-service';
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { FirestoreService } from '@/lib/db/firestore-service';
+import { getSubCollection } from '@/lib/firebase/collections';
 import type { SocialMediaPost, QueuedPost, ApprovalItem, SocialAccount } from '@/types/social';
 
 export const dynamic = 'force-dynamic';
 
-const SOCIAL_POSTS_COLLECTION = 'social_posts';
-const SOCIAL_QUEUE_COLLECTION = 'social_queue';
-const SOCIAL_APPROVALS_COLLECTION = 'social_approvals';
+const SOCIAL_POSTS_COLLECTION = getSubCollection('social_posts');
+const SOCIAL_QUEUE_COLLECTION = getSubCollection('social_queue');
+const SOCIAL_APPROVALS_COLLECTION = getSubCollection('social_approvals');
 
 const toggleSchema = z.object({
   agentEnabled: z.boolean(),
@@ -44,20 +44,20 @@ export async function GET(request: NextRequest) {
     const [config, queuedPosts, scheduledPosts, recentPublished, accounts, pendingApprovals] = await Promise.all([
       AgentConfigService.getConfig(),
       FirestoreService.getAll<QueuedPost>(
-        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${SOCIAL_QUEUE_COLLECTION}`,
+        SOCIAL_QUEUE_COLLECTION,
         [orderBy('queuePosition', 'asc')]
       ).catch(() => [] as QueuedPost[]),
       FirestoreService.getAll<SocialMediaPost>(
-        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${SOCIAL_POSTS_COLLECTION}`,
+        SOCIAL_POSTS_COLLECTION,
         [where('status', '==', 'scheduled'), orderBy('scheduledAt', 'asc'), limit(5)]
       ).catch(() => [] as SocialMediaPost[]),
       FirestoreService.getAll<SocialMediaPost>(
-        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${SOCIAL_POSTS_COLLECTION}`,
+        SOCIAL_POSTS_COLLECTION,
         [where('status', '==', 'published'), orderBy('publishedAt', 'desc'), limit(10)]
       ).catch(() => [] as SocialMediaPost[]),
       SocialAccountService.listAccounts().catch(() => [] as SocialAccount[]),
       FirestoreService.getAll<ApprovalItem>(
-        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${SOCIAL_APPROVALS_COLLECTION}`,
+        SOCIAL_APPROVALS_COLLECTION,
         [where('status', '==', 'pending_review')]
       ).catch(() => [] as ApprovalItem[]),
     ]);

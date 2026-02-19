@@ -543,10 +543,20 @@ export async function refundPayment(
     case 'stripe':
       return refundStripePayment(transactionId, amount);
 
+    case 'paypal':
+    case 'square':
+    case 'authorizenet':
+    case '2checkout':
+    case 'mollie':
+      return {
+        success: false,
+        error: `Automatic refunds are not available for ${provider}. Please process this refund manually through the ${provider} dashboard.`,
+      };
+
     default:
       return {
         success: false,
-        error: `Refund for provider ${provider} not yet implemented`,
+        error: `Refund for provider ${provider} is not supported`,
       };
   }
 }

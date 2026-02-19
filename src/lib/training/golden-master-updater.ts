@@ -3,11 +3,11 @@
  * Applies training improvements to the Golden Master
  */
 
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { FirestoreService } from '@/lib/db/firestore-service';
 import { compileSystemPrompt } from '@/lib/agent/prompt-compiler';
 import type { GoldenMaster } from '@/types/agent-memory'
 import { logger } from '@/lib/logger/logger';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 import type {
   GoldenMasterUpdateRequest,
   ImprovementSuggestion,
@@ -57,7 +57,7 @@ export async function createUpdateRequest(
 
   // Save to Firestore
   await FirestoreService.set(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/goldenMasterUpdates`,
+    getSubCollection('goldenMasterUpdates'),
     updateRequest.id,
     updateRequest,
     false
@@ -282,7 +282,7 @@ export async function applyUpdateRequest(
 
   // Save new version
   await FirestoreService.set(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.GOLDEN_MASTERS}`,
+    getSubCollection('goldenMasters'),
     updatedGM.id,
     updatedGM,
     false
@@ -290,7 +290,7 @@ export async function applyUpdateRequest(
 
   // Update the update request status
   await FirestoreService.set(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/goldenMasterUpdates`,
+    getSubCollection('goldenMasterUpdates'),
     updateRequest.id,
     {
       ...updateRequest,
@@ -330,7 +330,7 @@ async function getGoldenMaster(
 ): Promise<GoldenMaster | null> {
   try {
     const gm = await FirestoreService.get(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.GOLDEN_MASTERS}`,
+      getSubCollection('goldenMasters'),
       goldenMasterId
     );
     return gm as GoldenMaster;
@@ -356,7 +356,7 @@ export async function deployGoldenMaster(
 
   // Get all Golden Masters for this org
   const allGMs = await FirestoreService.getAll(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.GOLDEN_MASTERS}`,
+    getSubCollection('goldenMasters'),
     []
   );
 
@@ -365,7 +365,7 @@ export async function deployGoldenMaster(
     const gmDoc = gm as FirestoreDocument;
     if (gmDoc.id !== goldenMasterId && gmDoc.isActive) {
       await FirestoreService.set(
-        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.GOLDEN_MASTERS}`,
+        getSubCollection('goldenMasters'),
         gmDoc.id,
         {
           ...gm,
@@ -378,7 +378,7 @@ export async function deployGoldenMaster(
 
   // Activate the new version
   await FirestoreService.set(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.GOLDEN_MASTERS}`,
+    getSubCollection('goldenMasters'),
     goldenMasterId,
     {
       ...newGM,

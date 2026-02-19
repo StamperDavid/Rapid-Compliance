@@ -23,8 +23,9 @@
 import { logger } from '@/lib/logger/logger';
 import { discoverCompetitor, type CompetitorProfile } from './battlecard-engine';
 import { getServerSignalCoordinator } from '@/lib/orchestration/coordinator-factory-server';
+import { FirestoreService } from '@/lib/db/firestore-service';
+import { getSubCollection } from '@/lib/firebase/collections';
 import { PLATFORM_ID } from '@/lib/constants/platform';
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 
 // ============================================================================
 // TYPES
@@ -281,7 +282,7 @@ export class CompetitiveMonitor {
       const newProfile = await discoverCompetitor(config.domain);
 
       // Load previous profile from Firestore for comparison
-      const profilePath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/competitor_profiles`;
+      const profilePath = getSubCollection('competitor_profiles');
       const previousProfile = await FirestoreService.get<CompetitorProfile>(
         profilePath,
         config.competitorId

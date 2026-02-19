@@ -5,9 +5,9 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { verifyAdminRequest, isAuthError } from '@/lib/api/admin-auth';
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { FirestoreService } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
+import { getSubCollection } from '@/lib/firebase/collections';
 import { z } from 'zod';
 
 export const dynamic = 'force-dynamic';
@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
 
     // Save SEO settings to Firestore
     await FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/platform_settings`,
+      getSubCollection('platform_settings'),
       'seo',
       validatedBody
     );

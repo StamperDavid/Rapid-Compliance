@@ -7,7 +7,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { type QueryConstraint, where } from 'firebase/firestore';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 import {
   type SchemaChangeEvent,
   SchemaChangeEventPublisher
@@ -42,8 +42,8 @@ export async function GET(request: NextRequest) {
         schemaId ?? undefined
       );
     } else {
-      const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
-      const eventsPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/schemaChangeEvents`;
+      const { FirestoreService } = await import('@/lib/db/firestore-service');
+      const eventsPath = getSubCollection('schemaChangeEvents');
 
       const filters: QueryConstraint[] = [];
       if (schemaId) {
@@ -91,8 +91,8 @@ export async function POST(request: NextRequest) {
 
     if (eventId) {
       // Process single event
-      const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
-      const eventsPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/schemaChangeEvents`;
+      const { FirestoreService } = await import('@/lib/db/firestore-service');
+      const eventsPath = getSubCollection('schemaChangeEvents');
 
       const event = await FirestoreService.get(eventsPath, eventId);
 

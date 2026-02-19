@@ -5,7 +5,7 @@
 
 import type { SchemaChangeEvent } from './schema-change-tracker';
 import { logger } from '@/lib/logger/logger';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 
 export type SeverityLevel = 'critical' | 'high' | 'medium' | 'low';
 
@@ -294,9 +294,9 @@ export class SchemaChangeUXHandler {
     options: NotificationOptions
   ): Promise<void> {
     try {
-      const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
-      
-      const notificationPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/notifications`;
+      const { FirestoreService } = await import('@/lib/db/firestore-service');
+
+      const notificationPath = getSubCollection('notifications');
       const notificationId = `notif_severity_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       
       await FirestoreService.set(
@@ -339,9 +339,9 @@ export class SchemaChangeUXHandler {
     assessment: SeverityAssessment
   ): Promise<void> {
     try {
-      const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
-      
-      const issuesPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/schemaIssues`;
+      const { FirestoreService } = await import('@/lib/db/firestore-service');
+
+      const issuesPath = getSubCollection('schemaIssues');
       const issueId = `issue_${event.id}`;
       
       await FirestoreService.set(

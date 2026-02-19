@@ -175,32 +175,31 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Return mock/demo stats if no real data available
+    // No real data available — return zeros instead of fake numbers
     const now = new Date();
-    const totalCalls = 15847;
 
     stats = {
-      totalCalls,
-      callsToday: 234,
-      callsThisWeek: 1456,
-      callsThisMonth: 5823,
-      avgCallDuration: 187, // seconds
-      avgQualificationScore: 72,
-      transferRate: 23.4,
-      completionRate: 89.2,
-      totalMinutes: 49387,
-      estimatedCost: 4938.70, // Based on $0.10/min average
+      totalCalls: 0,
+      callsToday: 0,
+      callsThisWeek: 0,
+      callsThisMonth: 0,
+      avgCallDuration: 0,
+      avgQualificationScore: 0,
+      transferRate: 0,
+      completionRate: 0,
+      totalMinutes: 0,
+      estimatedCost: 0,
       byStatus: {
-        completed: 14128,
-        inProgress: 12,
-        failed: 423,
-        noAnswer: 1284,
+        completed: 0,
+        inProgress: 0,
+        failed: 0,
+        noAnswer: 0,
       },
       byOutcome: {
-        qualified: 3842,
-        notQualified: 8534,
-        callback: 1245,
-        transferred: 2226,
+        qualified: 0,
+        notQualified: 0,
+        callback: 0,
+        transferred: 0,
       },
     };
 
@@ -208,7 +207,8 @@ export async function GET(request: NextRequest) {
       success: true,
       stats,
       lastUpdated: now.toISOString(),
-      isDemo: true,
+      noData: true,
+      message: 'No voice call data yet. Stats will populate as calls are made.',
     });
   } catch (error) {
     logger.error('[AdminVoiceStats] GET failed', error instanceof Error ? error : new Error(String(error)), {

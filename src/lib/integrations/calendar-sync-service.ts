@@ -4,9 +4,9 @@
  */
 
 import { google, type calendar_v3 } from 'googleapis';
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service'
+import { FirestoreService } from '@/lib/db/firestore-service'
 import { logger } from '@/lib/logger/logger';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection, getContactsCollection } from '@/lib/firebase/collections';
 
 export interface CalendarEvent {
   id: string;
@@ -320,7 +320,7 @@ async function saveEventToCRM(event: CalendarEvent): Promise<void> {
     };
 
     await FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/calendarEvents`,
+      getSubCollection('calendarEvents'),
       event.id,
       eventData
     );
@@ -328,7 +328,7 @@ async function saveEventToCRM(event: CalendarEvent): Promise<void> {
     // Update contacts with last interaction
     for (const contactId of contactIds) {
       await FirestoreService.update(
-        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/contacts`,
+        getContactsCollection(),
         contactId,
         {
           lastContactDate: eventData.startTime,
@@ -349,7 +349,7 @@ async function saveEventToCRM(event: CalendarEvent): Promise<void> {
 async function deleteEventFromCRM(eventId: string): Promise<void> {
   try {
     await FirestoreService.delete(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/calendarEvents`,
+      getSubCollection('calendarEvents'),
       eventId
     );
   } catch (error) {
@@ -477,7 +477,7 @@ export async function deleteCalendarEvent(
 async function findContactByEmail(email: string): Promise<ContactWithId | null> {
   try {
     const contacts = await FirestoreService.getAll(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/contacts`
+      getContactsCollection()
     );
     const contactsFiltered = contacts.filter((c: unknown): c is ContactWithId => {
       if (typeof c !== 'object' || c === null) {return false;}
@@ -498,7 +498,7 @@ async function findContactByEmail(email: string): Promise<ContactWithId | null> 
 async function getLastSyncStatus(calendarId: string): Promise<CalendarSyncStatus | null> {
   try {
     const status = await FirestoreService.get(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/integrationStatus`,
+      getSubCollection('integrationStatus'),
       `calendar-sync-${calendarId}`
     );
     return status as CalendarSyncStatus | null;
@@ -513,7 +513,7 @@ async function getLastSyncStatus(calendarId: string): Promise<CalendarSyncStatus
 async function saveSyncStatus(calendarId: string, status: CalendarSyncStatus): Promise<void> {
   try {
     await FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/integrationStatus`,
+      getSubCollection('integrationStatus'),
       `calendar-sync-${calendarId}`,
       status
     );

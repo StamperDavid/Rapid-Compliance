@@ -5,6 +5,7 @@
 
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { getOrCreateCart, clearCart } from './cart-service';
+import { getOrdersCollection } from '@/lib/firebase/collections';
 import type { Cart, Order, Address, OrderPayment, OrderShipping } from '@/types/ecommerce';
 import { Timestamp } from 'firebase/firestore';
 import { processPayment } from './payment-service';
@@ -170,9 +171,6 @@ async function createOrder(
   const orderId = `order_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   const orderNumber = generateOrderNumber();
 
-  // Import PLATFORM_ID
-  const { PLATFORM_ID } = await import('@/lib/constants/platform');
-
   // Build order items
   const orderItems = cart.items.map(item => ({
     id: `oi_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -252,7 +250,7 @@ async function createOrder(
 
   // Save order to canonical path (matches webhook handler + order listing API)
   await FirestoreService.set(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/orders`,
+    getOrdersCollection(),
     orderId,
     {
       ...order,

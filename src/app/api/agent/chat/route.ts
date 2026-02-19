@@ -3,9 +3,10 @@ import { AgentInstanceManager } from '@/lib/agent/instance-manager';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { agentChatSchema, validateInput } from '@/lib/validation/schemas';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { FirestoreService } from '@/lib/db/firestore-service';
 import { handleAPIError, errors } from '@/lib/api/error-handler';
 import { logger } from '@/lib/logger/logger';
+import { getSubCollection } from '@/lib/firebase/collections';
 import type { ModelName } from '@/types/ai-models';
 
 export const dynamic = 'force-dynamic';
@@ -247,16 +248,13 @@ export async function POST(request: NextRequest) {
 
     const { customerId, message } = validation.data;
 
-    // Penthouse model: use PLATFORM_ID
-    const { PLATFORM_ID } = await import('@/lib/constants/platform');
-
     // Get or spawn agent instance
     const instanceManager = new AgentInstanceManager();
     const instance = await instanceManager.spawnInstance(customerId);
 
     // Get agent configuration
     const agentConfigRaw: unknown = await FirestoreService.get(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/agentConfig`,
+      getSubCollection('agentConfig'),
       'default'
     );
 

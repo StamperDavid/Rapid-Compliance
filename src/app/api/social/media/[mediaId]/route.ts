@@ -9,16 +9,14 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { FirestoreService } from '@/lib/db/firestore-service';
+import { getSubCollection } from '@/lib/firebase/collections';
 import type { SocialMediaAsset } from '@/types/social';
 
 export const dynamic = 'force-dynamic';
 
-const MEDIA_COLLECTION = 'social_media_assets';
-
 function mediaPath(): string {
-  return `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${MEDIA_COLLECTION}`;
+  return getSubCollection('social_media_assets');
 }
 
 export async function GET(

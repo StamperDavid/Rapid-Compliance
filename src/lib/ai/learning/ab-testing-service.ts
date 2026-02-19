@@ -3,8 +3,9 @@
  * Compares fine-tuned models against base models to measure improvement
  */
 
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service'
+import { FirestoreService } from '@/lib/db/firestore-service'
 import { logger } from '@/lib/logger/logger';
+import { COLLECTIONS, getSubCollection } from '@/lib/firebase/collections';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 
 export interface ABTest {
@@ -97,7 +98,7 @@ export async function createABTest(params: {
   };
   
   await FirestoreService.set(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/abTests`,
+    getSubCollection('abTests'),
     testId,
     test,
     false
@@ -149,7 +150,7 @@ export async function getModelForConversation(
 
   // Get the test
   const test = await FirestoreService.get<ABTest>(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/abTests`,
+    getSubCollection('abTests'),
     org.activeABTest
   );
 
@@ -188,7 +189,7 @@ export async function recordConversationResult(params: {
   const { testId, isTestGroup, converted, rating, confidence, tokensUsed } = params;
   
   const test = await FirestoreService.get(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/abTests`,
+    getSubCollection('abTests'),
     testId
   ) as ABTest;
   
@@ -234,7 +235,7 @@ export async function recordConversationResult(params: {
   }
   
   await FirestoreService.update(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/abTests`,
+    getSubCollection('abTests'),
     testId,
     {
       metrics,
@@ -258,7 +259,7 @@ export async function evaluateABTest(
   testId: string
 ): Promise<ABTest['results']> {
   const test = await FirestoreService.get(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/abTests`,
+    getSubCollection('abTests'),
     testId
   ) as ABTest;
   
@@ -315,7 +316,7 @@ export async function evaluateABTest(
   
   // Update test with results
   await FirestoreService.update(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/abTests`,
+    getSubCollection('abTests'),
     testId,
     {
       results,
@@ -347,7 +348,7 @@ export async function getActiveABTest(): Promise<ABTest | null> {
   }
 
   const test = await FirestoreService.get<ABTest>(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/abTests`,
+    getSubCollection('abTests'),
     org.activeABTest
   );
   return test ?? null;
@@ -365,7 +366,7 @@ export async function completeABTestAndDeploy(
   reason: string;
 }> {
   const test = await FirestoreService.get(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/abTests`,
+    getSubCollection('abTests'),
     testId
   ) as ABTest;
   
@@ -378,7 +379,7 @@ export async function completeABTestAndDeploy(
     await evaluateABTest(testId);
     // Re-fetch
     const updatedTest = await FirestoreService.get(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/abTests`,
+      getSubCollection('abTests'),
       testId
     ) as ABTest;
     Object.assign(test, updatedTest);

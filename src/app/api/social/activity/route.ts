@@ -15,15 +15,15 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { FirestoreService } from '@/lib/db/firestore-service';
+import { getSubCollection } from '@/lib/firebase/collections';
 import type { SocialMediaPost, ApprovalItem, QueuedPost } from '@/types/social';
 
 export const dynamic = 'force-dynamic';
 
-const SOCIAL_POSTS_COLLECTION = 'social_posts';
-const SOCIAL_QUEUE_COLLECTION = 'social_queue';
-const SOCIAL_APPROVALS_COLLECTION = 'social_approvals';
+const SOCIAL_POSTS_COLLECTION = getSubCollection('social_posts');
+const SOCIAL_QUEUE_COLLECTION = getSubCollection('social_queue');
+const SOCIAL_APPROVALS_COLLECTION = getSubCollection('social_approvals');
 
 interface ActivityEvent {
   id: string;
@@ -56,15 +56,15 @@ export async function GET(request: NextRequest) {
     // Fetch recent posts (published, failed, cancelled, scheduled), recent approvals, and recent queued
     const [allPosts, approvals, queuedPosts] = await Promise.all([
       FirestoreService.getAll<SocialMediaPost>(
-        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${SOCIAL_POSTS_COLLECTION}`,
+        SOCIAL_POSTS_COLLECTION,
         [orderBy('updatedAt', 'desc'), limit(safeLimit)]
       ).catch(() => [] as SocialMediaPost[]),
       FirestoreService.getAll<ApprovalItem>(
-        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${SOCIAL_APPROVALS_COLLECTION}`,
+        SOCIAL_APPROVALS_COLLECTION,
         [orderBy('flaggedAt', 'desc'), limit(safeLimit)]
       ).catch(() => [] as ApprovalItem[]),
       FirestoreService.getAll<QueuedPost>(
-        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${SOCIAL_QUEUE_COLLECTION}`,
+        SOCIAL_QUEUE_COLLECTION,
         [orderBy('createdAt', 'desc'), limit(10)]
       ).catch(() => [] as QueuedPost[]),
     ]);

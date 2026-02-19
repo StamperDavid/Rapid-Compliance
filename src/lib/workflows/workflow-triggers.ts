@@ -5,9 +5,9 @@
 
 import type { Workflow, WorkflowTriggerData } from '@/types/workflow';
 import { executeWorkflowImpl as executeWorkflow } from './workflow-engine';
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { FirestoreService } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 
 /**
  * Trigger workflow manually
@@ -46,7 +46,7 @@ async function logWorkflowEvent(
     };
 
     await FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workflowEvents`,
+      getSubCollection('workflowEvents'),
       eventId,
       eventRecord,
       false

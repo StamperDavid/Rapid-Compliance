@@ -5,8 +5,9 @@
 
 import type { TrainingExample, FineTuningJob } from '@/types/fine-tuning';
 import { formatForOpenAI, validateTrainingData } from './data-formatter';
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service'
+import { FirestoreService } from '@/lib/db/firestore-service'
 import { logger } from '@/lib/logger/logger';
+import { getSubCollection } from '@/lib/firebase/collections';
 
 interface OpenAIFineTuningJobResponse {
   id: string;
@@ -96,9 +97,8 @@ export async function createOpenAIFineTuningJob(params: {
     startedAt: new Date().toISOString(),
   };
 
-  const { PLATFORM_ID } = await import('@/lib/constants/platform');
   await FirestoreService.set(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/fineTuningJobs`,
+    getSubCollection('fineTuningJobs'),
     job.id,
     job,
     false
@@ -188,9 +188,8 @@ function monitorFineTuningJob(
           updates.error = JSON.stringify(jobData.error);
         }
 
-        const { PLATFORM_ID } = await import('@/lib/constants/platform');
         await FirestoreService.update(
-          `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/fineTuningJobs`,
+          getSubCollection('fineTuningJobs'),
           jobId,
           updates
         );
@@ -257,11 +256,9 @@ export async function cancelFineTuningJob(
     throw new Error('OpenAI API key not configured');
   }
 
-  const { PLATFORM_ID } = await import('@/lib/constants/platform');
-
   // Get job to get provider job ID
   const job = await FirestoreService.get(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/fineTuningJobs`,
+    getSubCollection('fineTuningJobs'),
     jobId
   ) as FineTuningJob;
 
@@ -282,7 +279,7 @@ export async function cancelFineTuningJob(
 
   // Update in Firestore
   await FirestoreService.update(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/fineTuningJobs`,
+    getSubCollection('fineTuningJobs'),
     jobId,
     {
       status: 'cancelled',

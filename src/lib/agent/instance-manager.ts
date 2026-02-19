@@ -17,6 +17,7 @@ import type {
 import { logger } from '@/lib/logger/logger';
 import { getPluginManager, type ToolContext, type ToolDefinition } from '@/lib/plugins/plugin-manager';
 import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 
 export class AgentInstanceManager implements InstanceLifecycleService {
   /**
@@ -624,9 +625,9 @@ ${this.summarizeRecentConversations(customerMemory)}
       }
 
       // Fallback to client SDK
-      const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+      const { FirestoreService } = await import('@/lib/db/firestore-service');
       const goldenMasters = await FirestoreService.getAll<GoldenMaster>(
-        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.GOLDEN_MASTERS}`,
+        getSubCollection('goldenMasters'),
         []
       );
       logger.info(`Instance Manager Found ${goldenMasters.length} Golden Masters (client SDK)`, { file: 'instance-manager.ts' });
@@ -662,9 +663,9 @@ ${this.summarizeRecentConversations(customerMemory)}
       }
 
       // Fallback to client SDK
-      const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+      const { FirestoreService } = await import('@/lib/db/firestore-service');
       return await FirestoreService.get(
-        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.CUSTOMER_MEMORIES}`,
+        getSubCollection('customerMemories'),
         customerId
       );
     } catch (error) {
@@ -743,9 +744,9 @@ ${this.summarizeRecentConversations(customerMemory)}
       }
 
       // Fallback to client SDK
-      const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+      const { FirestoreService } = await import('@/lib/db/firestore-service');
       await FirestoreService.set(
-        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.CUSTOMER_MEMORIES}`,
+        getSubCollection('customerMemories'),
         memory.customerId,
         memory,
         true
@@ -759,9 +760,9 @@ ${this.summarizeRecentConversations(customerMemory)}
   private async storeActiveInstance(instance: AgentInstance): Promise<void> {
     // Store in Firestore for persistence (in production, also use Redis for fast access)
     try {
-      const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+      const { FirestoreService } = await import('@/lib/db/firestore-service');
       await FirestoreService.set(
-        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/activeInstances`,
+        getSubCollection('activeInstances'),
         instance.instanceId,
         {
           ...instance,
@@ -802,9 +803,9 @@ ${this.summarizeRecentConversations(customerMemory)}
   
   private async archiveInstance(instance: AgentInstance): Promise<void> {
     try {
-      const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+      const { FirestoreService } = await import('@/lib/db/firestore-service');
       await FirestoreService.set(
-        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/archivedInstances`,
+        getSubCollection('archivedInstances'),
         instance.instanceId,
         {
           ...instance,
@@ -824,9 +825,9 @@ ${this.summarizeRecentConversations(customerMemory)}
       file: 'instance-manager.ts'
     });
     try {
-      const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+      const { FirestoreService } = await import('@/lib/db/firestore-service');
       await FirestoreService.set(
-        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/notifications`,
+        getSubCollection('notifications'),
         `escalation_${instance.instanceId}_${Date.now()}`,
         {
           type: 'agent_escalation',

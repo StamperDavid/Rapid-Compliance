@@ -8,7 +8,7 @@ import type { EcommerceConfig, ProductFieldMappings } from '@/types/ecommerce';
 import { logger } from '@/lib/logger/logger';
 import { FieldResolver } from '@/lib/schema/field-resolver';
 import type { Schema } from '@/types/schema';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection, getSchemasCollection } from '@/lib/firebase/collections';
 
 /**
  * Adapt e-commerce mappings to schema changes
@@ -17,10 +17,10 @@ export async function adaptEcommerceMappings(
   event: SchemaChangeEvent
 ): Promise<void> {
   try {
-    const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+    const { FirestoreService } = await import('@/lib/db/firestore-service');
 
     // Get e-commerce config
-    const configPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/ecommerceConfig`;
+    const configPath = getSubCollection('ecommerceConfig');
     const configs = await FirestoreService.getAll(configPath);
 
     if (configs.length === 0) {
@@ -164,9 +164,9 @@ async function handleFieldDeletion(
   let updated = false;
 
   // Get schema for field resolution
-  const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+  const { FirestoreService } = await import('@/lib/db/firestore-service');
   const schemaData = await FirestoreService.get(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.SCHEMAS}`,
+    getSchemasCollection(),
     schemaId
   );
 
@@ -237,9 +237,9 @@ export async function validateEcommerceMappings(
 
   try {
     // Get product schema
-    const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+    const { FirestoreService } = await import('@/lib/db/firestore-service');
     const schemaData = await FirestoreService.get(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.SCHEMAS}`,
+      getSchemasCollection(),
       config.productSchema
     );
 
@@ -318,9 +318,9 @@ export async function autoConfigureEcommerceMappings(
 
   try {
     // Get schema
-    const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+    const { FirestoreService } = await import('@/lib/db/firestore-service');
     const schemaData = await FirestoreService.get(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.SCHEMAS}`,
+      getSchemasCollection(),
       schemaId
     );
 

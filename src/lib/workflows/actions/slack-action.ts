@@ -4,7 +4,7 @@
  */
 
 import type { BaseAction, WorkflowTriggerData } from '@/types/workflow';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getIntegrationsCollection } from '@/lib/firebase/collections';
 
 // Slack API response types
 interface SlackIntegration {
@@ -76,14 +76,14 @@ export async function executeSlackAction(
   } = action.config;
 
   // Get Slack credentials
-  const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
-  
+  const { FirestoreService } = await import('@/lib/db/firestore-service');
+
   let slackToken: string | null = null;
-  
+
   try {
     // Check for organization-level Slack integration
     const integration = await FirestoreService.get(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/integrations`,
+      getIntegrationsCollection(),
       'slack'
     ) as unknown;
 

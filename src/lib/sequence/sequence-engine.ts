@@ -610,24 +610,17 @@ Return concise JSON:
   private fetchSequences(input: SequenceAnalysisInput): EmailSequence[] {
     const sequenceIds = input.sequenceIds ?? (input.sequenceId ? [input.sequenceId] : []);
 
-    // Mock structure maintained for current synchronous interface
-    return sequenceIds.map((id, index) => ({
+    // Returns placeholder structures for requested sequence IDs.
+    // Real data requires async Firestore query to organizations/{PLATFORM_ID}/sequences.
+    // These placeholders contain no fabricated metrics — only structural scaffolding.
+    return sequenceIds.map((id) => ({
       id,
-      name: `Email Sequence ${index + 1}`,
-      description: 'Sample sequence',
+      name: id, // Use the actual ID as name until real data is loaded
+      description: '',
       status: 'active' as const,
-      steps: [
-        {
-          stepNumber: 1,
-          stepType: 'initial_outreach' as const,
-          subject: 'Sample subject',
-          body: 'Sample body',
-          delayHours: 0,
-          timingStrategy: 'business_hours' as const,
-        },
-      ],
-      targetAudience: 'Enterprise prospects',
-      useCase: 'Cold outbound',
+      steps: [],
+      targetAudience: '',
+      useCase: '',
       createdAt: new Date(),
       updatedAt: new Date(),
       createdBy: 'system',
@@ -654,61 +647,42 @@ Return concise JSON:
   }
 
   /**
-   * Generate mock metrics (to be replaced with real data)
+   * Generate empty metrics structure for a sequence.
+   * Real metrics require async Firestore query to sequence_executions collection.
    */
   private generateMockMetrics(
     sequence: EmailSequence,
     startDate: Date,
     endDate: Date
   ): SequenceMetrics {
-    const totalRecipients = 150;
-    const totalSent = totalRecipients * sequence.steps.length;
-
     return {
       sequenceId: sequence.id,
       sequenceName: sequence.name,
-      totalRecipients,
-      activeExecutions: 45,
-      completedExecutions: 95,
-      stoppedExecutions: 10,
-      totalSent,
-      totalDelivered: Math.floor(totalSent * 0.97),
-      totalOpened: Math.floor(totalSent * 0.45),
-      totalClicked: Math.floor(totalSent * 0.15),
-      totalReplied: Math.floor(totalSent * 0.08),
-      totalUnsubscribed: Math.floor(totalSent * 0.02),
-      overallDeliveryRate: 97.0,
-      overallOpenRate: 45.0,
-      overallClickRate: 15.0,
-      overallReplyRate: 8.0,
-      overallUnsubscribeRate: 2.0,
-      conversationStarted: 12,
-      meetingBooked: 8,
-      opportunityCreated: 5,
-      conversationRate: 8.0,
-      meetingRate: 5.3,
-      opportunityRate: 3.3,
-      stepMetrics: sequence.steps.map((step, index) => ({
-        stepNumber: step.stepNumber,
-        stepType: step.stepType,
-        sent: totalRecipients,
-        delivered: Math.floor(totalRecipients * 0.97),
-        bounced: Math.floor(totalRecipients * 0.03),
-        opened: Math.floor(totalRecipients * (0.50 - index * 0.05)),
-        clicked: Math.floor(totalRecipients * (0.18 - index * 0.03)),
-        replied: Math.floor(totalRecipients * (0.10 - index * 0.02)),
-        unsubscribed: Math.floor(totalRecipients * 0.01),
-        deliveryRate: 97.0,
-        openRate: 50.0 - index * 5,
-        clickRate: 18.0 - index * 3,
-        replyRate: 10.0 - index * 2,
-        unsubscribeRate: 1.0,
-        avgOpenCount: 1.2,
-        avgClickCount: 0.3,
-      })),
+      totalRecipients: 0,
+      activeExecutions: 0,
+      completedExecutions: 0,
+      stoppedExecutions: 0,
+      totalSent: 0,
+      totalDelivered: 0,
+      totalOpened: 0,
+      totalClicked: 0,
+      totalReplied: 0,
+      totalUnsubscribed: 0,
+      overallDeliveryRate: 0,
+      overallOpenRate: 0,
+      overallClickRate: 0,
+      overallReplyRate: 0,
+      overallUnsubscribeRate: 0,
+      conversationStarted: 0,
+      meetingBooked: 0,
+      opportunityCreated: 0,
+      conversationRate: 0,
+      meetingRate: 0,
+      opportunityRate: 0,
+      stepMetrics: [],
       startDate,
       endDate,
-      dataPoints: totalRecipients,
+      dataPoints: 0,
     };
   }
 

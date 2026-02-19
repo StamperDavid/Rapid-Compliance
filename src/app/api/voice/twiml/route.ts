@@ -13,26 +13,30 @@
 export const dynamic = 'force-dynamic';
 
 import { type NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { voiceAgentHandler, type VoiceAgentConfig } from '@/lib/voice/voice-agent-handler';
 import type { VoiceCall } from '@/lib/voice/types';
 import { logger } from '@/lib/logger/logger';
 import { getSubCollection } from '@/lib/firebase/collections';
 import { verifyTwilioSignature, parseFormBody } from '@/lib/security/webhook-verification';
 
-// Twilio webhook payload interface
-interface TwilioWebhookPayload {
-  CallSid?: string;
-  From?: string;
-  To?: string;
-  CallStatus?: string;
-  AnsweredBy?: string;
-  data?: {
-    call_control_id?: string;
-    from?: { phone_number?: string };
-    to?: { phone_number?: string };
-    state?: string;
-  };
-}
+/**
+ * Permissive schema for Telnyx/Twilio JSON webhook payloads.
+ * Uses .passthrough() to allow unknown provider-specific fields.
+ */
+const twilioWebhookPayloadSchema = z.object({
+  CallSid: z.string().optional(),
+  From: z.string().optional(),
+  To: z.string().optional(),
+  CallStatus: z.string().optional(),
+  AnsweredBy: z.string().optional(),
+  data: z.object({
+    call_control_id: z.string().optional(),
+    from: z.object({ phone_number: z.string().optional() }).optional(),
+    to: z.object({ phone_number: z.string().optional() }).optional(),
+    state: z.string().optional(),
+  }).optional(),
+}).passthrough();
 
 /**
  * GET /api/voice/twiml
@@ -99,13 +103,21 @@ export async function POST(request: NextRequest) {
 
     // Parse webhook payload
     const contentType = request.headers.get('content-type') ?? '';
-    let payload: TwilioWebhookPayload;
+    let payload: z.infer<typeof twilioWebhookPayloadSchema>;
 
     if (contentType.includes('application/x-www-form-urlencoded')) {
       const formData = await request.formData();
-      payload = Object.fromEntries(formData.entries()) as TwilioWebhookPayload;
+      const rawPayload: Record<string, unknown> = Object.fromEntries(formData.entries());
+      const parsedPayload = twilioWebhookPayloadSchema.safeParse(rawPayload);
+      payload = parsedPayload.success ? parsedPayload.data : rawPayload;
     } else {
-      payload = await request.json() as TwilioWebhookPayload;
+      const rawJson: unknown = await request.json();
+      const parsedPayload = twilioWebhookPayloadSchema.safeParse(rawJson);
+      if (!parsedPayload.success) {
+        logger.warn('[TwiML] Invalid JSON payload structure', { file: 'twiml/route.ts' });
+        return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
+      }
+      payload = parsedPayload.data;
     }
 
     // Extract call information

@@ -13,9 +13,10 @@ export const dynamic = 'force-dynamic';
 import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
 import { updatePreferencesRequestSchema } from '@/lib/notifications/validation';
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { FirestoreService } from '@/lib/db/firestore-service';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 import { Timestamp } from 'firebase/firestore';
 import type { NotificationPreferences } from '@/lib/notifications/types';
 import { logger } from '@/lib/logger/logger';
@@ -92,7 +93,7 @@ export async function GET(request: NextRequest) {
 
     // Get preferences from Firestore
     const preferences = await FirestoreService.get(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/notification_preferences`,
+      getSubCollection('notification_preferences'),
       userId
     );
 
@@ -183,7 +184,7 @@ export async function PUT(request: NextRequest) {
 
     // Get existing preferences
     const existingPrefsDoc = await FirestoreService.get<FirestoreDocument>(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/notification_preferences`,
+      getSubCollection('notification_preferences'),
       userId
     );
 
@@ -271,7 +272,7 @@ export async function PUT(request: NextRequest) {
 
     // Save to Firestore
     await FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/notification_preferences`,
+      getSubCollection('notification_preferences'),
       userId,
       updatedPrefs
     );

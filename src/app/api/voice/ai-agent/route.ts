@@ -8,6 +8,7 @@
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { voiceAgentHandler, type VoiceAgentConfig } from '@/lib/voice/voice-agent-handler';
 import type { VoiceCall } from '@/lib/voice/types';
 import { logger } from '@/lib/logger/logger';
@@ -16,12 +17,20 @@ import { verifyTwilioSignature, parseFormBody } from '@/lib/security/webhook-ver
 
 export const dynamic = 'force-dynamic';
 
-/** Telnyx webhook data structure */
-interface TelnyxWebhookData {
-  call_control_id?: string;
-  from?: { phone_number?: string };
-  to?: { phone_number?: string };
-}
+/**
+ * Permissive schema for Twilio/Telnyx JSON webhook payloads.
+ * Uses .passthrough() to allow unknown provider-specific fields.
+ */
+const voiceAgentPayloadSchema = z.object({
+  CallSid: z.string().optional(),
+  From: z.string().optional(),
+  To: z.string().optional(),
+  data: z.object({
+    call_control_id: z.string().optional(),
+    from: z.object({ phone_number: z.string().optional() }).optional(),
+    to: z.object({ phone_number: z.string().optional() }).optional(),
+  }).optional(),
+}).passthrough();
 
 /**
  * POST /api/voice/ai-agent
@@ -54,19 +63,27 @@ export async function POST(request: NextRequest) {
 
     // Parse webhook payload (Twilio or Telnyx format)
     const contentType = request.headers.get('content-type') ?? '';
-    let payload: Record<string, unknown>;
+    let payload: z.infer<typeof voiceAgentPayloadSchema>;
 
     if (contentType.includes('application/x-www-form-urlencoded')) {
       // Twilio format
       const formData = await request.formData();
-      payload = Object.fromEntries(formData.entries()) as Record<string, unknown>;
+      const rawPayload: Record<string, unknown> = Object.fromEntries(formData.entries());
+      const parsedPayload = voiceAgentPayloadSchema.safeParse(rawPayload);
+      payload = parsedPayload.success ? parsedPayload.data : rawPayload;
     } else {
       // Telnyx or JSON format
-      payload = await request.json() as Record<string, unknown>;
+      const rawJson: unknown = await request.json();
+      const parsedPayload = voiceAgentPayloadSchema.safeParse(rawJson);
+      if (!parsedPayload.success) {
+        logger.warn('[AI-Agent] Invalid JSON payload structure', { file: 'ai-agent/route.ts' });
+        return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
+      }
+      payload = parsedPayload.data;
     }
 
     // Extract call information (Twilio or Telnyx format)
-    const telnyxData = payload.data as TelnyxWebhookData | undefined;
+    const telnyxData = payload.data;
     const callId = String(payload.CallSid ?? telnyxData?.call_control_id ?? '');
     const from = String(payload.From ?? telnyxData?.from?.phone_number ?? '');
     const to = String(payload.To ?? telnyxData?.to?.phone_number ?? '');

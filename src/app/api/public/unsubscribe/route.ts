@@ -14,9 +14,10 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { FirestoreService } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
+import { getSubCollection, getContactsCollection } from '@/lib/firebase/collections';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
 export const dynamic = 'force-dynamic';
@@ -165,7 +166,7 @@ async function processEmailTokenUnsubscribe(email: string, _token: string): Prom
   try {
     // Find contact by email
     const { where } = await import('firebase/firestore');
-    const contactPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/contacts`;
+    const contactPath = getContactsCollection();
     const contacts = await FirestoreService.getAll(contactPath, [
       where('email', '==', email.toLowerCase()),
     ]);
@@ -202,7 +203,7 @@ async function processContactIdUnsubscribe(contactId: string, emailId: string | 
     // Record the unsubscribe in the suppression list
     const suppressionId = `unsub_${contactId}_${Date.now()}`;
     await FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/suppressions`,
+      getSubCollection('suppressions'),
       suppressionId,
       {
         id: suppressionId,
@@ -218,7 +219,7 @@ async function processContactIdUnsubscribe(contactId: string, emailId: string | 
 
     // Update contact preferences if the contact exists
     try {
-      const contactPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/contacts`;
+      const contactPath = getContactsCollection();
       const existingContact: unknown = await FirestoreService.get(contactPath, contactId);
       if (existingContact && typeof existingContact === 'object') {
         await FirestoreService.set(
@@ -245,7 +246,7 @@ async function processContactIdUnsubscribe(contactId: string, emailId: string | 
 
       // Find prospects matching this contact
       const prospects = await FirestoreService.getAll(
-        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/prospects`,
+        getSubCollection('prospects'),
         [where('contactId', '==', contactId)],
       );
 
@@ -254,7 +255,7 @@ async function processContactIdUnsubscribe(contactId: string, emailId: string | 
           const prospectId = String((prospect as { id: string }).id);
 
           const enrollments = await FirestoreService.getAll(
-            `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/enrollments`,
+            getSubCollection('enrollments'),
             [
               where('prospectId', '==', prospectId),
               where('status', '==', 'active'),
@@ -265,7 +266,7 @@ async function processContactIdUnsubscribe(contactId: string, emailId: string | 
             if (typeof enrollment === 'object' && enrollment !== null && 'id' in enrollment) {
               const enrollmentId = String((enrollment as { id: string }).id);
               await FirestoreService.set(
-                `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/enrollments`,
+                getSubCollection('enrollments'),
                 enrollmentId,
                 {
                   ...(enrollment as Record<string, unknown>),

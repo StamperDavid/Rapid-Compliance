@@ -11,9 +11,8 @@ import type { OnboardingData, BaseModel, KnowledgeBase, AgentPersona } from '@/t
 import { buildPersonaFromOnboarding } from './persona-builder';
 import { processKnowledgeBase, type KnowledgeProcessorOptions } from './knowledge-processor';
 import { buildBaseModel, saveBaseModel } from './base-model-builder';
-import { COLLECTIONS } from '@/lib/db/firestore-service'
 import { logger } from '@/lib/logger/logger';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 
 // Dynamic import of AdminFirestoreService to prevent client-side bundling
 
@@ -77,7 +76,7 @@ export async function processOnboarding(
     
     // Save persona
     await AdminFirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/agentPersona`,
+      getSubCollection('agentPersona'),
       'current',
       {
         ...persona,
@@ -89,7 +88,7 @@ export async function processOnboarding(
     
     // Save knowledge base
     await AdminFirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/knowledgeBase`,
+      getSubCollection('knowledgeBase'),
       'current',
       {
         ...knowledgeBase,
@@ -157,18 +156,18 @@ export async function getProcessingStatus(): Promise<{
     const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
 
     const personaResult: unknown = await AdminFirestoreService.get(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/agentPersona`,
+      getSubCollection('agentPersona'),
       'current'
     );
 
     const knowledgeBaseResult: unknown = await AdminFirestoreService.get(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/knowledgeBase`,
+      getSubCollection('knowledgeBase'),
       'current'
     );
 
     // Check for Base Model
     const baseModelsResult: unknown = await AdminFirestoreService.getAll(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.BASE_MODELS}`
+      getSubCollection('baseModels')
     );
 
     // Type guard for base models array
@@ -183,7 +182,7 @@ export async function getProcessingStatus(): Promise<{
 
     // Check for Golden Master
     const goldenMastersResult: unknown = await AdminFirestoreService.getAll(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.GOLDEN_MASTERS}`
+      getSubCollection('goldenMasters')
     );
 
     // Type guard for golden masters array

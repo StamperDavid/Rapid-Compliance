@@ -1328,47 +1328,32 @@ export class TikTokExpert extends BaseSpecialist {
     const { videoIds, timeRange = '7d' } = request;
     this.log('INFO', `Fetching metrics for ${videoIds.length} videos (${timeRange})`);
 
-    // Simulated metrics collection (in production, this would call TikTok API)
-    const metrics: PostMetricsResult[] = videoIds.map((videoId) => {
-      const baseViews = Math.floor(Math.random() * 100000) + 5000;
-      const likes = Math.floor(baseViews * (Math.random() * 0.15 + 0.05));
-      const comments = Math.floor(baseViews * (Math.random() * 0.03 + 0.01));
-      const shares = Math.floor(baseViews * (Math.random() * 0.05 + 0.01));
-      const saves = Math.floor(baseViews * (Math.random() * 0.04 + 0.01));
-      const avgWatchTime = Math.random() * 50 + 10;
-      const completionRate = Math.random() * 0.4 + 0.3;
-      const engagementRate = ((likes + comments + shares + saves) / baseViews) * 100;
-      const viralScore = (engagementRate * 0.5 + completionRate * 100 * 0.5) / 100;
+    // Real data requires TikTok Analytics API integration
+    const metrics: PostMetricsResult[] = videoIds.map((videoId) => ({
+      videoId,
+      views: 0, // Real data requires TikTok Analytics API integration
+      likes: 0, // Real data requires TikTok Analytics API integration
+      comments: 0, // Real data requires TikTok Analytics API integration
+      shares: 0, // Real data requires TikTok Analytics API integration
+      saves: 0, // Real data requires TikTok Analytics API integration
+      avgWatchTime: 0, // Real data requires TikTok Analytics API integration
+      completionRate: 0, // Real data requires TikTok Analytics API integration
+      engagementRate: 0, // Real data requires TikTok Analytics API integration
+      viralScore: 0, // Real data requires TikTok Analytics API integration
+    }));
 
-      return {
-        videoId,
-        views: baseViews,
-        likes,
-        comments,
-        shares,
-        saves,
-        avgWatchTime,
-        completionRate,
-        engagementRate,
-        viralScore,
-      };
-    });
-
-    const totalViews = metrics.reduce((sum, m) => sum + m.views, 0);
-    const avgEngagementRate =
-      metrics.reduce((sum, m) => sum + m.engagementRate, 0) / metrics.length;
-    const topPerformer = metrics.length > 0
-      ? metrics.reduce((top, m) => (m.viralScore > top.viralScore ? m : top))
-      : null;
+    const totalViews = 0; // Real data requires TikTok Analytics API integration
+    const avgEngagementRate = 0; // Real data requires TikTok Analytics API integration
+    const topPerformer = null; // Real data requires TikTok Analytics API integration
 
     // Write to MemoryVault
     await shareInsight(
       'TIKTOK_EXPERT',
       'PERFORMANCE',
       'TikTok Post Performance Metrics',
-      `Analyzed ${videoIds.length} videos. Total views: ${totalViews.toLocaleString()}, Avg engagement: ${avgEngagementRate.toFixed(2)}%`,
+      'No data available - TikTok Analytics API integration required',
       {
-        confidence: 90,
+        confidence: 0,
         sources: ['TikTok Analytics API'],
         tags: ['tiktok', 'performance', timeRange],
       }
@@ -1379,7 +1364,7 @@ export class TikTokExpert extends BaseSpecialist {
       totalViews,
       avgEngagementRate,
       topPerformer,
-      confidence: 0.9,
+      confidence: 0,
     };
   }
 
@@ -1387,46 +1372,29 @@ export class TikTokExpert extends BaseSpecialist {
    * LISTEN: Fetch brand mentions
    */
   async fetchMentions(request: FetchMentionsRequest): Promise<FetchMentionsResult> {
-    const { brandName, keywords = [] } = request;
+    const { brandName, keywords: _keywords = [] } = request;
     this.log('INFO', `Fetching mentions for brand: ${brandName}`);
 
-    // Simulated mention discovery (in production, this would search TikTok)
-    const mentionCount = Math.floor(Math.random() * 50) + 10;
-    const mentions: BrandMention[] = Array.from({ length: mentionCount }, (_, i) => {
-      const sentiments: Array<'positive' | 'neutral' | 'negative'> = ['positive', 'neutral', 'negative'];
-      const sentiment = sentiments[Math.floor(Math.random() * 3)];
-      const views = Math.floor(Math.random() * 50000) + 1000;
-      const engagementRate = Math.random() * 10 + 2;
-
-      return {
-        id: `mention_${i}`,
-        videoId: `video_${i}`,
-        creator: `@creator_${i}`,
-        sentiment,
-        views,
-        engagementRate,
-        content: `Video mentioning ${brandName} ${keywords.length > 0 ? `with keywords: ${keywords.join(', ')}` : ''}`,
-      };
-    });
+    // Real data requires TikTok Search API integration
+    const mentions: BrandMention[] = []; // Real data requires TikTok Search API integration
+    const mentionCount = 0; // Real data requires TikTok Search API integration
 
     const sentimentBreakdown = {
-      positive: mentions.filter((m) => m.sentiment === 'positive').length,
-      neutral: mentions.filter((m) => m.sentiment === 'neutral').length,
-      negative: mentions.filter((m) => m.sentiment === 'negative').length,
+      positive: 0, // Real data requires TikTok Search API integration
+      neutral: 0, // Real data requires TikTok Search API integration
+      negative: 0, // Real data requires TikTok Search API integration
     };
 
-    const topMentions = mentions
-      .sort((a, b) => b.views - a.views)
-      .slice(0, 5);
+    const topMentions: BrandMention[] = []; // Real data requires TikTok Search API integration
 
     // Write to MemoryVault
     await shareInsight(
       'TIKTOK_EXPERT',
       'PERFORMANCE',
       `Brand Mentions: ${brandName}`,
-      `Found ${mentionCount} mentions. Sentiment: ${sentimentBreakdown.positive} positive, ${sentimentBreakdown.neutral} neutral, ${sentimentBreakdown.negative} negative`,
+      'No data available - TikTok Search API integration required',
       {
-        confidence: 85,
+        confidence: 0,
         sources: ['TikTok Search API'],
         tags: ['tiktok', 'mentions', 'brand-monitoring'],
       }
@@ -1437,7 +1405,7 @@ export class TikTokExpert extends BaseSpecialist {
       totalMentions: mentionCount,
       sentimentBreakdown,
       topMentions,
-      confidence: 0.85,
+      confidence: 0,
     };
   }
 
@@ -1448,45 +1416,18 @@ export class TikTokExpert extends BaseSpecialist {
     const { niche } = request;
     this.log('INFO', `Fetching trending topics${niche ? ` for niche: ${niche}` : ''}`);
 
-    // Simulated trending topics (in production, this would call TikTok Discover API)
-    const trendCount = Math.floor(Math.random() * 10) + 5;
-    const trends: TrendingTopic[] = Array.from({ length: trendCount }, (_, i) => {
-      const topics = [
-        'AI productivity hacks',
-        'Morning routine 2026',
-        'Budget travel tips',
-        'Side hustle ideas',
-        'Healthy meal prep',
-        'Tech gadgets review',
-        'Home organization',
-        'Fitness transformation',
-        'Digital nomad life',
-        'Small business growth',
-      ];
-      const topic = topics[i % topics.length];
-      const hashtag = `#${topic.replace(/\s+/g, '')}`;
-
-      return {
-        topic,
-        hashtag,
-        volume: Math.floor(Math.random() * 1000000) + 100000,
-        growthRate: Math.random() * 500 + 50,
-        relevanceScore: Math.random() * 0.4 + 0.6,
-        exampleVideos: [`video_${i}_1`, `video_${i}_2`, `video_${i}_3`],
-      };
-    });
-
-    trends.sort((a, b) => b.growthRate - a.growthRate);
-    const topTrend = trends[0] ?? null;
+    // Real data requires TikTok Discover API integration
+    const trends: TrendingTopic[] = []; // Real data requires TikTok Discover API integration
+    const topTrend = null; // Real data requires TikTok Discover API integration
 
     // Write to MemoryVault
     await shareInsight(
       'TIKTOK_EXPERT',
       'PERFORMANCE',
       'TikTok Trending Topics',
-      `Identified ${trendCount} trending topics. Top trend: ${topTrend?.topic ?? 'N/A'} with ${topTrend?.volume.toLocaleString() ?? 0} volume`,
+      'No data available - TikTok Discover API integration required',
       {
-        confidence: 88,
+        confidence: 0,
         sources: ['TikTok Discover API'],
         tags: ['tiktok', 'trending', niche ?? 'general'],
       }
@@ -1496,7 +1437,7 @@ export class TikTokExpert extends BaseSpecialist {
       trends,
       topTrend,
       niche,
-      confidence: 0.88,
+      confidence: 0,
     };
   }
 
@@ -1507,50 +1448,28 @@ export class TikTokExpert extends BaseSpecialist {
     const { accountId } = request;
     this.log('INFO', `Fetching audience metrics for account: ${accountId}`);
 
-    // Simulated audience data (in production, this would call TikTok Analytics API)
-    const followerCount = Math.floor(Math.random() * 50000) + 5000;
-    const growthRate = Math.random() * 15 + 2;
-    const avgViews = Math.floor(Math.random() * 20000) + 2000;
-    const avgEngagementRate = Math.random() * 8 + 3;
-
-    const demographics = ['18-24', '25-34', '35-44'];
-    const topDemographic = demographics[Math.floor(Math.random() * demographics.length)];
-
-    const geos = ['United States', 'United Kingdom', 'Canada', 'Australia'];
-    const topGeo = geos[Math.floor(Math.random() * geos.length)];
-
-    const peakHours = ['7-9am', '12-1pm', '7-10pm'];
-
+    // Real data requires TikTok Analytics API integration
     const metrics: AudienceMetrics = {
-      followerCount,
-      growthRate,
-      avgViews,
-      avgEngagementRate,
-      topDemographic,
-      topGeo,
-      peakHours,
+      followerCount: 0, // Real data requires TikTok Analytics API integration
+      growthRate: 0, // Real data requires TikTok Analytics API integration
+      avgViews: 0, // Real data requires TikTok Analytics API integration
+      avgEngagementRate: 0, // Real data requires TikTok Analytics API integration
+      topDemographic: '', // Real data requires TikTok Analytics API integration
+      topGeo: '', // Real data requires TikTok Analytics API integration
+      peakHours: [], // Real data requires TikTok Analytics API integration
     };
 
-    const insights = [
-      `Primary audience is ${topDemographic} from ${topGeo}`,
-      `Growth rate of ${growthRate.toFixed(1)}% indicates ${growthRate > 10 ? 'strong' : 'moderate'} momentum`,
-      `Average engagement rate of ${avgEngagementRate.toFixed(1)}% is ${avgEngagementRate > 5 ? 'above' : 'below'} platform average`,
-    ];
-
-    const recommendations = [
-      `Post during peak hours: ${peakHours.join(', ')}`,
-      `Tailor content to ${topDemographic} interests`,
-      `Consider collaborations with creators in ${topGeo}`,
-    ];
+    const insights: string[] = []; // Real data requires TikTok Analytics API integration
+    const recommendations: string[] = []; // Real data requires TikTok Analytics API integration
 
     // Write to MemoryVault
     await shareInsight(
       'TIKTOK_EXPERT',
       'PERFORMANCE',
       `Audience Metrics: ${accountId}`,
-      `${followerCount.toLocaleString()} followers, ${growthRate.toFixed(1)}% growth rate, ${avgEngagementRate.toFixed(1)}% engagement`,
+      'No data available - TikTok Analytics API integration required',
       {
-        confidence: 92,
+        confidence: 0,
         sources: ['TikTok Analytics API'],
         tags: ['tiktok', 'audience', 'metrics'],
       }
@@ -1560,7 +1479,7 @@ export class TikTokExpert extends BaseSpecialist {
       metrics,
       insights,
       recommendations,
-      confidence: 0.92,
+      confidence: 0,
     };
   }
 
@@ -1571,52 +1490,20 @@ export class TikTokExpert extends BaseSpecialist {
     const { niche, limit = 10 } = request;
     this.log('INFO', `Fetching trending sounds${niche ? ` for niche: ${niche}` : ''} (limit: ${limit})`);
 
-    // Simulated trending sounds (in production, this would call TikTok API)
-    const soundCount = Math.min(limit, Math.floor(Math.random() * 15) + 5);
-    const sounds: TrendingSound[] = Array.from({ length: soundCount }, (_, i) => {
-      const soundNames = [
-        'Viral Dance Beat 2026',
-        'Emotional Piano Loop',
-        'Upbeat Pop Remix',
-        'Chill Lo-Fi Vibes',
-        'Motivational Speech',
-        'Funny Sound Effect',
-        'Trending Voiceover',
-        'Epic Cinematic',
-        'Nostalgic 2000s Hit',
-        'AI Generated Beat',
-      ];
-      const soundName = soundNames[i % soundNames.length];
+    // Real data requires TikTok Audio Trends API integration
+    const sounds: TrendingSound[] = []; // Real data requires TikTok Audio Trends API integration
+    const topSound = null; // Real data requires TikTok Audio Trends API integration
 
-      return {
-        soundId: `sound_${i}`,
-        soundName,
-        artist: i % 3 === 0 ? `Artist ${i}` : undefined,
-        useCount: Math.floor(Math.random() * 500000) + 50000,
-        growthRate: Math.random() * 800 + 100,
-        viralPotential: Math.random() * 0.3 + 0.7,
-        niche: niche ?? (i % 2 === 0 ? 'general' : 'business'),
-        exampleVideos: [`video_${i}_1`, `video_${i}_2`],
-      };
-    });
-
-    sounds.sort((a, b) => b.growthRate - a.growthRate);
-    const topSound = sounds[0] ?? null;
-
-    const recommendations = [
-      `Use "${topSound?.soundName ?? 'trending sound'}" within the next 3-7 days for maximum reach`,
-      'Combine trending audio with strong hooks for best performance',
-      'Monitor use count growth - jump on sounds with 200%+ growth rate',
-    ];
+    const recommendations: string[] = []; // Real data requires TikTok Audio Trends API integration
 
     // Write to MemoryVault
     await shareInsight(
       'TIKTOK_EXPERT',
       'PERFORMANCE',
       'Trending TikTok Sounds',
-      `Identified ${soundCount} trending sounds. Top: ${topSound?.soundName ?? 'N/A'} with ${topSound?.growthRate.toFixed(0) ?? 0}% growth rate`,
+      'No data available - TikTok Audio Trends API integration required',
       {
-        confidence: 87,
+        confidence: 0,
         sources: ['TikTok Audio Trends API'],
         tags: ['tiktok', 'sounds', 'trending', niche ?? 'general'],
       }
@@ -1626,7 +1513,7 @@ export class TikTokExpert extends BaseSpecialist {
       sounds,
       topSound,
       recommendations,
-      confidence: 0.87,
+      confidence: 0,
     };
   }
 
@@ -1637,44 +1524,20 @@ export class TikTokExpert extends BaseSpecialist {
     const { niche, followerRange = { min: 10000, max: 100000 } } = request;
     this.log('INFO', `Monitoring creators in ${niche} with ${followerRange.min}-${followerRange.max} followers`);
 
-    // Simulated creator discovery (in production, this would search TikTok)
-    const creatorCount = Math.floor(Math.random() * 20) + 10;
-    const creators: Creator[] = Array.from({ length: creatorCount }, (_, i) => {
-      const followerCount =
-        Math.floor(Math.random() * (followerRange.max - followerRange.min)) + followerRange.min;
-      const avgEngagementRate = Math.random() * 8 + 4;
-      const recentViralVideos = Math.floor(Math.random() * 5);
-      const collaborationScore = Math.random() * 0.4 + 0.5;
+    // Real data requires TikTok Creator Search API integration
+    const creators: Creator[] = []; // Real data requires TikTok Creator Search API integration
+    const topCreators: Creator[] = []; // Real data requires TikTok Creator Search API integration
 
-      return {
-        username: `@creator_${niche.toLowerCase().replace(/\s+/g, '_')}_${i}`,
-        followerCount,
-        avgEngagementRate,
-        niche,
-        recentViralVideos,
-        collaborationScore,
-        contactInfo: i % 3 === 0 ? `creator${i}@email.com` : undefined,
-      };
-    });
-
-    creators.sort((a, b) => b.collaborationScore - a.collaborationScore);
-    const topCreators = creators.slice(0, 5);
-
-    const outreachRecommendations = [
-      'Prioritize creators with 5%+ engagement rate',
-      'Look for creators with recent viral content in your niche',
-      'Start with smaller asks (duet, comment reply) before pitching collaboration',
-      'Personalize outreach - reference specific videos',
-    ];
+    const outreachRecommendations: string[] = []; // Real data requires TikTok Creator Search API integration
 
     // Write to MemoryVault
     await shareInsight(
       'TIKTOK_EXPERT',
       'PERFORMANCE',
       `Creator Monitoring: ${niche}`,
-      `Found ${creatorCount} creators in target range. Top 5 identified for outreach.`,
+      'No data available - TikTok Creator Search API integration required',
       {
-        confidence: 83,
+        confidence: 0,
         sources: ['TikTok Creator Search'],
         tags: ['tiktok', 'creators', 'influencers', niche],
       }
@@ -1684,7 +1547,7 @@ export class TikTokExpert extends BaseSpecialist {
       creators,
       topCreators,
       outreachRecommendations,
-      confidence: 0.83,
+      confidence: 0,
     };
   }
 
@@ -1701,9 +1564,9 @@ export class TikTokExpert extends BaseSpecialist {
 
     await Promise.resolve(); // Async operation placeholder
 
-    // Simulated comment analysis (in production, this would fetch real comments)
-    const totalComments = Math.floor(Math.random() * 100) + 30;
-    const replyCount = Math.min(maxReplies, Math.floor(totalComments * 0.3));
+    // Real data requires TikTok API integration to fetch comments
+    const totalComments = 0; // Real data requires TikTok API integration
+    const replyCount = 0; // Real data requires TikTok API integration
 
     const sampleComments = [
       'This is so helpful! Can you make a part 2?',
@@ -1759,8 +1622,8 @@ export class TikTokExpert extends BaseSpecialist {
       replies,
       totalComments,
       repliedCount: replyCount,
-      skipReason: replyCount < totalComments ? [`Limiting to ${maxReplies} replies as requested`] : undefined,
-      confidence: 0.91,
+      skipReason: undefined,
+      confidence: 0, // Real data requires TikTok API integration
     };
   }
 
@@ -1773,58 +1636,17 @@ export class TikTokExpert extends BaseSpecialist {
 
     await Promise.resolve(); // Async operation placeholder
 
-    // Simulated duet opportunity discovery
-    const opportunityCount = Math.floor(Math.random() * 10) + 5;
-    const opportunities: DuetOpportunity[] = Array.from({ length: opportunityCount }, (_, i) => {
-      const topics = [
-        'Productivity myth debunking',
-        'Business advice reaction',
-        'Tech product review',
-        'Marketing strategy analysis',
-        'Entrepreneurship journey',
-      ];
-      const topic = topics[i % topics.length];
-      const views = targetViral
-        ? Math.floor(Math.random() * 500000) + 100000
-        : Math.floor(Math.random() * 50000) + 5000;
-      const viralPotential = Math.random() * 0.3 + 0.6;
+    // Real data requires TikTok API integration to discover duet opportunities
+    const opportunities: DuetOpportunity[] = []; // Real data requires TikTok API integration
+    const topOpportunity = null; // Real data requires TikTok API integration
 
-      const duetAngles = [
-        'Add expert perspective and expand on the original point',
-        'Respectfully disagree and provide counter-argument',
-        'Share personal experience that validates their point',
-        'Add humor or relatable reaction to their take',
-        'Provide step-by-step tutorial based on their concept',
-      ];
-      const duetAngle = duetAngles[i % duetAngles.length];
-
-      return {
-        videoId: `video_${i}`,
-        creator: `@${niche.toLowerCase()}_creator_${i}`,
-        views,
-        topic,
-        duetAngle,
-        viralPotential,
-        reasoning: `${views > 100000 ? 'High view count' : 'Engaged niche audience'} + ${duetAngle.split(' ').slice(0, 3).join(' ')} = strong duet potential`,
-      };
-    });
-
-    opportunities.sort((a, b) => b.viralPotential - a.viralPotential);
-    const topOpportunity = opportunities[0] || null;
-
-    const strategyNotes = [
-      'Duet within 24-48 hours of original video posting for maximum visibility',
-      'Add clear value - don\'t just react, educate or entertain',
-      'Use text overlays to make your point clear (85% watch without sound initially)',
-      'Tag the original creator in caption for discovery boost',
-      'Always be respectful - even when disagreeing',
-    ];
+    const strategyNotes: string[] = []; // Real data requires TikTok API integration
 
     return {
       opportunities,
       topOpportunity,
       strategyNotes,
-      confidence: 0.86,
+      confidence: 0, // Real data requires TikTok API integration
     };
   }
 
@@ -1832,51 +1654,22 @@ export class TikTokExpert extends BaseSpecialist {
    * ENGAGE: Identify micro-influencers for collaboration outreach
    */
   async creatorOutreach(request: CreatorOutreachRequest): Promise<CreatorOutreachResult> {
-    const { niche, followerRange = { min: 10000, max: 100000 }, maxCreators = 5 } = request;
+    const { niche, followerRange = { min: 10000, max: 100000 }, maxCreators: _maxCreators = 5 } = request;
     this.log('INFO', `Generating creator outreach for ${niche} (${followerRange.min}-${followerRange.max} followers)`);
 
     await Promise.resolve(); // Async operation placeholder
 
-    // Simulated creator analysis
-    const creatorCount = Math.min(maxCreators, Math.floor(Math.random() * 10) + 3);
-    const creators: CreatorOutreach[] = Array.from({ length: creatorCount }, (_, i) => {
-      const followerCount =
-        Math.floor(Math.random() * (followerRange.max - followerRange.min)) + followerRange.min;
-      const engagementRate = Math.random() * 6 + 4;
-      const collaborationFit = Math.random() * 0.3 + 0.65;
+    // Real data requires TikTok Creator Search API integration
+    const creators: CreatorOutreach[] = []; // Real data requires TikTok Creator Search API integration
+    const topCreator = null; // Real data requires TikTok Creator Search API integration
 
-      const username = `@${niche.toLowerCase().replace(/\s+/g, '_')}_creator_${i}`;
-
-      const outreachMessage = `Hey ${username}! Love your content on ${niche}. I think our audiences would really benefit from a collaboration. Would you be open to a duet/collab where we share complementary perspectives on [specific topic]? Happy to discuss ideas that work for both of us. Let me know! 🚀`;
-
-      const reasoning = `${followerCount.toLocaleString()} followers with ${engagementRate.toFixed(1)}% engagement suggests active, engaged audience. Content alignment: ${(collaborationFit * 100).toFixed(0)}%`;
-
-      return {
-        username,
-        followerCount,
-        engagementRate,
-        collaborationFit,
-        outreachMessage,
-        reasoning,
-      };
-    });
-
-    creators.sort((a, b) => b.collaborationFit - a.collaborationFit);
-    const topCreator = creators[0] || null;
-
-    const outreachStrategy = [
-      'Start by engaging with their content (likes, thoughtful comments) for 1-2 weeks',
-      'Reference specific videos in your outreach to show genuine interest',
-      'Propose clear value exchange - what\'s in it for them?',
-      'Start with low-commitment asks (duet, shoutout) before pitching full collaboration',
-      'Follow up once if no response, then move on',
-    ];
+    const outreachStrategy: string[] = []; // Real data requires TikTok Creator Search API integration
 
     return {
       creators,
       topCreator,
       outreachStrategy,
-      confidence: 0.84,
+      confidence: 0, // Real data requires TikTok Creator Search API integration
     };
   }
 }

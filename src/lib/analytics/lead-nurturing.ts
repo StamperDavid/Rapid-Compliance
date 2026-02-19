@@ -8,7 +8,7 @@
 // Reserved for future use: lead scoring integration
 // import { calculateLeadScore, LeadScoringFactors } from './lead-scoring'
 import { logger } from '@/lib/logger/logger';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 
 export interface LeadNurtureSequence {
   id: string;
@@ -254,30 +254,15 @@ export async function enrichLead(
   // 3. Aggregate data from multiple sources
   // 4. Store enriched data in database
 
+  // Return empty enrichment — real data requires external API integration
+  // (Clearbit, Apollo, ZoomInfo). Fields are undefined to avoid misleading users.
   const enrichment: LeadEnrichment = {
     leadId,
     sources,
-    enrichedData: {
-      // Mock enriched data - would come from APIs
-      companyInfo: {
-        industry: 'Technology',
-        companySize: 50,
-        revenue: 5000000,
-        website: 'https://example.com',
-      },
-      contactInfo: {
-        email: 'lead@example.com',
-        jobTitle: 'VP of Sales',
-      },
-      intentSignals: {
-        jobChanges: 0,
-        fundingRounds: 1,
-        hiring: true,
-      },
-    },
+    enrichedData: {},
     enrichedAt: new Date(),
-    enrichmentSource: 'clearbit',
-    confidence: 85,
+    enrichmentSource: 'none',
+    confidence: 0,
   };
 
   // Store enrichment in Firestore
@@ -306,9 +291,9 @@ export async function trackLeadActivity(activity: LeadActivity): Promise<void> {
 
   // Store activity in Firestore
   try {
-    const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+    const { FirestoreService } = await import('@/lib/db/firestore-service');
     await FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${activity.leadId.split('_')[0]}/${COLLECTIONS.LEAD_ACTIVITIES}`,
+      getSubCollection('leadActivities'),
       `${activity.leadId}_${Date.now()}`,
       {
         ...activity,
@@ -334,30 +319,11 @@ export interface LeadLifecycleAnalysis {
   riskFactors: string[];
 }
 
-export function analyzeLeadLifecycle(leadId: string): LeadLifecycleAnalysis | null {
-  // In production, would:
-  // 1. Load all lifecycle stages for lead
-  // 2. Calculate time in each stage
-  // 3. Compare to benchmarks
-  // 4. Identify bottlenecks
-  // 5. Recommend actions
-
-  // Mock analysis
-  return {
-    leadId,
-    currentStage: 'nurturing',
-    stages: [
-      { stage: 'new', enteredAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), duration: 5 },
-      { stage: 'nurturing', enteredAt: new Date(Date.now() - 25 * 24 * 60 * 60 * 1000) },
-    ],
-    averageTimeInStage: {
-      new: 5,
-      nurturing: 25,
-    },
-    conversionProbability: 0.65,
-    nextBestAction: 'Schedule discovery call',
-    riskFactors: ['No response to last 3 emails', 'Score decreasing'],
-  };
+export function analyzeLeadLifecycle(_leadId: string): LeadLifecycleAnalysis | null {
+  // Lifecycle analysis requires loading activity data from Firestore.
+  // Returns null until real data is available for this lead.
+  // Real implementation: query organizations/{PLATFORM_ID}/lead_activities for this leadId.
+  return null;
 }
 
 /**
@@ -377,24 +343,11 @@ export interface LeadAttribution {
 
 export function getLeadAttribution(
   leadId: string,
-  model: LeadAttribution['attributionModel'] = 'linear'
+  _model: LeadAttribution['attributionModel'] = 'linear'
 ): LeadAttribution | null {
-  // In production, would:
-  // 1. Load all touchpoints for lead
-  // 2. Apply attribution model
-  // 3. Calculate source weights
-  // 4. Return attribution data
-
-  return {
-    leadId,
-    primarySource: 'Website',
-    sources: [
-      { source: 'Website', touchpoint: 'Form Submission', timestamp: new Date(), weight: 0.4 },
-      { source: 'Email Campaign', touchpoint: 'Email Click', timestamp: new Date(), weight: 0.3 },
-      { source: 'Social Media', touchpoint: 'LinkedIn Click', timestamp: new Date(), weight: 0.3 },
-    ],
-    attributionModel: model,
-  };
+  // Attribution requires loading touchpoint data from Firestore.
+  // Returns null until real tracking data is available for this lead.
+  return null;
 }
 
 /**
@@ -429,9 +382,9 @@ export async function createLeadSegment(segment: Partial<LeadSegment>): Promise<
 
   // Store segment in Firestore
   try {
-    const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+    const { FirestoreService } = await import('@/lib/db/firestore-service');
     await FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${COLLECTIONS.LEAD_SEGMENTS}`,
+      getSubCollection('leadSegments'),
       segmentId,
       {
         ...fullSegment,

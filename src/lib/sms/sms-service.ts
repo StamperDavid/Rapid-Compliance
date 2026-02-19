@@ -6,6 +6,7 @@
 
 import { apiKeyService } from '@/lib/api-keys/api-key-service'
 import { logger } from '@/lib/logger/logger';
+import { getSubCollection } from '@/lib/firebase/collections';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 
 export interface SMSOptions {
@@ -282,9 +283,9 @@ async function sendViaVonage(options: SMSOptions, credentials: VonageCredentials
 
       // Store SMS record in Firestore
       try {
-        const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+        const { FirestoreService } = await import('@/lib/db/firestore-service');
         await FirestoreService.set(
-          `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/smsMessages`,
+          getSubCollection('smsMessages'),
           messageId,
           {
             messageId,
@@ -375,9 +376,9 @@ export async function sendSMSFromTemplate(
   // 3. Send SMS
 
   // Load template from Firestore
-  const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+  const { FirestoreService } = await import('@/lib/db/firestore-service');
   const templateData = await FirestoreService.get(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/smsTemplates`,
+    getSubCollection('smsTemplates'),
     templateId
   );
 
@@ -419,9 +420,9 @@ export async function getSMSDeliveryStatus(
   messageId: string
 ): Promise<SMSDeliveryStatus | null> {
   // Load from Firestore
-  const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+  const { FirestoreService } = await import('@/lib/db/firestore-service');
   const smsData = await FirestoreService.get(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/smsMessages`,
+    getSubCollection('smsMessages'),
     messageId
   );
 

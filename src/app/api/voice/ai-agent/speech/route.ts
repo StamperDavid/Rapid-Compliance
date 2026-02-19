@@ -11,26 +11,30 @@
 export const dynamic = 'force-dynamic';
 
 import { type NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { voiceAgentHandler } from '@/lib/voice/voice-agent-handler';
 import { logger } from '@/lib/logger/logger';
 import { getSubCollection } from '@/lib/firebase/collections';
 import { verifyTwilioSignature, parseFormBody } from '@/lib/security/webhook-verification';
 
-/** Telnyx speech recognition data structure */
-interface TelnyxSpeechPayload {
-  data?: {
-    payload?: {
-      speech?: {
-        transcript?: string;
-        confidence?: number;
-      };
-    };
-    speech?: {
-      transcript?: string;
-      confidence?: number;
-    };
-  };
-}
+/**
+ * Permissive schema for Telnyx speech recognition JSON payloads.
+ * Uses .passthrough() to allow unknown provider-specific fields.
+ */
+const telnyxSpeechPayloadSchema = z.object({
+  data: z.object({
+    payload: z.object({
+      speech: z.object({
+        transcript: z.string().optional(),
+        confidence: z.number().optional(),
+      }).optional(),
+    }).optional(),
+    speech: z.object({
+      transcript: z.string().optional(),
+      confidence: z.number().optional(),
+    }).optional(),
+  }).optional(),
+}).passthrough();
 
 /**
  * POST /api/voice/ai-agent/speech
@@ -94,8 +98,13 @@ export async function POST(request: NextRequest) {
       });
     } else {
       // Telnyx format
-      const payload = await request.json() as TelnyxSpeechPayload;
-      const data = payload.data;
+      const rawJson: unknown = await request.json();
+      const parsedPayload = telnyxSpeechPayloadSchema.safeParse(rawJson);
+      if (!parsedPayload.success) {
+        logger.warn('[AI-Speech] Invalid Telnyx JSON payload structure', { file: 'ai-agent/speech/route.ts' });
+        return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
+      }
+      const data = parsedPayload.data.data;
 
       // Telnyx provides speech in payload.data.payload.speech
       speechResult = data?.payload?.speech?.transcript ?? data?.speech?.transcript ?? '';

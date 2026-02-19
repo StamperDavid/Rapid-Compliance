@@ -5,7 +5,7 @@
  */
 
 import { logger } from '@/lib/logger/logger';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 
 export interface TrackingPixel {
   messageId: string;
@@ -178,9 +178,9 @@ interface TrackingData {
 export async function getEmailTrackingStats(
   messageId: string,
 ): Promise<EmailTrackingStats | null> {
-  const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+  const { FirestoreService } = await import('@/lib/db/firestore-service');
   const rawData = await FirestoreService.get(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/emailTracking`,
+    getSubCollection('emailTracking'),
     messageId
   );
 

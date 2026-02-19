@@ -6,7 +6,7 @@
 import { Timestamp, type QueryConstraint } from 'firebase/firestore';
 import type { Schema, SchemaField } from '@/types/schema';
 import { logger } from '@/lib/logger/logger';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 
 /**
  * Schema Change Event
@@ -499,9 +499,9 @@ export class SchemaChangeEventPublisher {
     _db?: unknown
   ): Promise<void> {
     try {
-      const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
-      
-      const eventPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/schemaChangeEvents`;
+      const { FirestoreService } = await import('@/lib/db/firestore-service');
+
+      const eventPath = getSubCollection('schemaChangeEvents');
       
       await FirestoreService.set(eventPath, event.id, event, false);
       
@@ -537,10 +537,10 @@ export class SchemaChangeEventPublisher {
     schemaId?: string
   ): Promise<SchemaChangeEvent[]> {
     try {
-      const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+      const { FirestoreService } = await import('@/lib/db/firestore-service');
       const { where } = await import('firebase/firestore');
 
-      const eventPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/schemaChangeEvents`;
+      const eventPath = getSubCollection('schemaChangeEvents');
 
       const filters: QueryConstraint[] = [
         where('processed', '==', false),
@@ -568,10 +568,9 @@ export class SchemaChangeEventPublisher {
     eventId: string
   ): Promise<void> {
     try {
-      const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
-      const { PLATFORM_ID } = await import('@/lib/constants/platform');
+      const { FirestoreService } = await import('@/lib/db/firestore-service');
 
-      const eventPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/schemaChangeEvents`;
+      const eventPath = getSubCollection('schemaChangeEvents');
       
       const existing = await FirestoreService.get(eventPath, eventId);
       

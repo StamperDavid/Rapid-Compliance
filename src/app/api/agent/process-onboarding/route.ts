@@ -8,6 +8,7 @@ import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 
 export const dynamic = 'force-dynamic';
 
@@ -128,7 +129,7 @@ export async function POST(request: NextRequest) {
 
     // Save onboarding data first (using Admin SDK)
     await AdminFirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/onboarding`,
+      getSubCollection('onboarding'),
       'current',
       {
         ...onboardingData,

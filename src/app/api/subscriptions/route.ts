@@ -7,17 +7,18 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/api-auth';
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { FirestoreService } from '@/lib/db/firestore-service';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { apiKeyService } from '@/lib/api-keys/api-key-service';
+import { getSubCollection } from '@/lib/firebase/collections';
 import { z } from 'zod';
 
 export const dynamic = 'force-dynamic';
 
-const SUBSCRIPTIONS_PATH = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/subscriptions`;
+const SUBSCRIPTIONS_PATH = getSubCollection('subscriptions');
 const PAID_TIERS = ['starter', 'professional', 'enterprise'] as const;
 const TIER_RANK: Record<string, number> = {
   free: 0,

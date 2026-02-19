@@ -17,8 +17,8 @@
 
 import { Timestamp } from 'firebase/firestore';
 import { sendMessage } from '@/lib/integrations/slack-service';
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { FirestoreService } from '@/lib/db/firestore-service';
+import { getSubCollection, getIntegrationsCollection } from '@/lib/firebase/collections';
 import { logger } from '@/lib/logger/logger';
 import type {
   Notification,
@@ -305,7 +305,7 @@ export class NotificationService {
 
     // Get Slack integration
     const integration = await FirestoreService.get(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/integrations`,
+      getIntegrationsCollection(),
       'slack'
     );
 
@@ -705,7 +705,7 @@ export class NotificationService {
   private async getTemplate(templateId: string): Promise<NotificationTemplate | null> {
     try {
       const template = await FirestoreService.get(
-        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/notification_templates`,
+        getSubCollection('notification_templates'),
         templateId
       );
       return template as NotificationTemplate;
@@ -720,7 +720,7 @@ export class NotificationService {
   private async getPreferences(userId: string): Promise<NotificationPreferences> {
     try {
       const prefs = await FirestoreService.get(
-        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/notification_preferences`,
+        getSubCollection('notification_preferences'),
         userId
       );
       
@@ -818,7 +818,7 @@ export class NotificationService {
     const notificationId = `notif_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     
     await FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/notifications`,
+      getSubCollection('notifications'),
       notificationId,
       notification
     );
@@ -881,7 +881,7 @@ export class NotificationService {
     const now = Timestamp.now();
     
     await FirestoreService.update(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/notifications`,
+      getSubCollection('notifications'),
       notificationId,
       {
         [`delivery.deliveredAt.${channel}`]: status === 'delivered' ? now : null,
@@ -901,7 +901,7 @@ export class NotificationService {
     error: string
   ): Promise<void> {
     await FirestoreService.update(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/notifications`,
+      getSubCollection('notifications'),
       notificationId,
       {
         [`delivery.errors.${channel}`]: error,
@@ -918,14 +918,14 @@ export class NotificationService {
     channel: NotificationChannel
   ): Promise<void> {
     const notification = await FirestoreService.get(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/notifications`,
+      getSubCollection('notifications'),
       notificationId
     ) as Notification;
 
     const currentAttempts = notification.delivery.attempts[channel] || 0;
 
     await FirestoreService.update(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/notifications`,
+      getSubCollection('notifications'),
       notificationId,
       {
         [`delivery.attempts.${channel}`]: currentAttempts + 1,
@@ -942,7 +942,7 @@ export class NotificationService {
     response: unknown
   ): Promise<void> {
     await FirestoreService.update(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/notifications`,
+      getSubCollection('notifications'),
       notificationId,
       {
         [`delivery.responses.${channel}`]: response,
@@ -974,7 +974,7 @@ export class NotificationService {
     }
 
     await FirestoreService.update(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/notifications`,
+      getSubCollection('notifications'),
       notification.id,
       {
         status: 'retrying',
@@ -989,7 +989,7 @@ export class NotificationService {
    */
   private async addToBatch(notification: Notification): Promise<void> {
     const preferences = await this.getPreferences(notification.userId);
-    const batchPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/notification_batches`;
+    const batchPath = getSubCollection('notification_batches');
     const batchKey = `batch_${notification.userId}`;
 
     try {
@@ -1081,7 +1081,7 @@ export class NotificationService {
         return;
       }
       await FirestoreService.update(
-        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/notifications`,
+        getSubCollection('notifications'),
         notification.id,
         {
           status: 'pending',

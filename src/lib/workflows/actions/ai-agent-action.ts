@@ -6,7 +6,7 @@
 import type { BaseAction, WorkflowTriggerData } from '@/types/workflow';
 import type { ModelName } from '@/types/ai-models';
 import { logger } from '@/lib/logger/logger';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 
 export interface AIAgentActionConfig extends BaseAction {
   type: 'ai_agent';
@@ -47,14 +47,14 @@ export async function executeAIAgentAction(
 
   // Get AI provider
   const { AIProviderFactory } = await import('@/lib/ai/provider-factory');
-  const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+  const { FirestoreService } = await import('@/lib/db/firestore-service');
 
   // Get org's AI config
   let selectedModel = model;
   if (!selectedModel) {
     try {
       const agentConfig = await FirestoreService.get(
-        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/agentConfig`,
+        getSubCollection('agentConfig'),
         'default'
       );
       const configSelectedModel = (agentConfig as { selectedModel?: string } | null | undefined)?.selectedModel;

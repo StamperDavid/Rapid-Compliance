@@ -273,12 +273,12 @@ export async function sendSlackMessage(params: {
   metadata?: Record<string, unknown>;
 }): Promise<void> {
   try {
-    const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
-    const { PLATFORM_ID } = await import('@/lib/constants/platform');
+    const { FirestoreService } = await import('@/lib/db/firestore-service');
+    const { getIntegrationsCollection } = await import('@/lib/firebase/collections');
 
     // Look up the org's Slack integration credentials
     const integration = await FirestoreService.get(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/integrations`,
+      getIntegrationsCollection(),
       'slack'
     );
 

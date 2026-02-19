@@ -9,19 +9,16 @@
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { SystemHealthService } from '@/lib/orchestrator/system-health-service';
 import { logger } from '@/lib/logger/logger';
 
 export const dynamic = 'force-dynamic';
 
-interface SpecialistStatusRequestBody {
-  PLATFORM_ID?: string;
-}
-
-function isSpecialistStatusRequestBody(value: unknown): value is SpecialistStatusRequestBody {
-  return typeof value === 'object' && value !== null;
-}
+const specialistStatusRequestSchema = z.object({
+  PLATFORM_ID: z.string().min(1, 'PLATFORM_ID is required'),
+});
 
 export async function GET(request: NextRequest) {
   try {
@@ -60,20 +57,16 @@ export async function POST(request: NextRequest) {
     const postAuthResult = await requireAuth(request);
     if (postAuthResult instanceof NextResponse) {return postAuthResult;}
 
-    const body: unknown = await request.json();
-    if (!isSpecialistStatusRequestBody(body)) {
-      return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
-    }
-
-    const { PLATFORM_ID } = body;
-
-    if (!PLATFORM_ID) {
+    const rawBody: unknown = await request.json();
+    const parsed = specialistStatusRequestSchema.safeParse(rawBody);
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: 'PLATFORM_ID is required' },
+        { error: parsed.error.errors[0]?.message ?? 'Invalid request body' },
         { status: 400 }
       );
     }
 
+    // parsed.data.PLATFORM_ID is validated by schema (non-empty string required)
     const specialistStatus = await SystemHealthService.getSpecialistStatus();
 
     return NextResponse.json({

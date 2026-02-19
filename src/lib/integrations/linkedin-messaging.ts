@@ -120,13 +120,13 @@ async function logMessageForManualSend(
   recipientIdentifier: string,
   message: string
 ): Promise<void> {
-  const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
-  const { PLATFORM_ID } = await import('@/lib/constants/platform');
+  const { FirestoreService } = await import('@/lib/db/firestore-service');
+  const { getSubCollection } = await import('@/lib/firebase/collections');
 
   const taskId = `linkedin-manual-${Date.now()}`;
 
   await FirestoreService.set(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/tasks`,
+    getSubCollection('tasks'),
     taskId,
     {
       id: taskId,

@@ -8,9 +8,9 @@
  *   organizations/{orgId}/settings/social_listening_config
  */
 
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { FirestoreService } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 import { createTwitterService } from '@/lib/integrations/twitter-service';
 import { analyzeSentimentBatch } from '@/lib/social/sentiment-analyzer';
 import type {
@@ -26,11 +26,11 @@ const SETTINGS_COLLECTION = 'settings';
 const LISTENING_CONFIG_DOC = 'social_listening_config';
 
 function mentionsPath(): string {
-  return `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${MENTIONS_COLLECTION}`;
+  return getSubCollection(MENTIONS_COLLECTION);
 }
 
 function settingsPath(): string {
-  return `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/${SETTINGS_COLLECTION}`;
+  return getSubCollection(SETTINGS_COLLECTION);
 }
 
 const DEFAULT_LISTENING_CONFIG: ListeningConfig = {

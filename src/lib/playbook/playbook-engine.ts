@@ -19,6 +19,7 @@
 import { logger } from '@/lib/logger/logger';
 import { sendUnifiedChatMessage } from '@/lib/ai/unified-ai-service';
 import { getServerSignalCoordinator } from '@/lib/orchestration/coordinator-factory-server';
+import { getSubCollection } from '@/lib/firebase/collections';
 import {
   DEFAULT_PLAYBOOK_CONFIG,
   type ExtractPatternsRequest,
@@ -940,10 +941,9 @@ function calculateSuccessMetrics(extraction: PatternExtractionResult): SuccessMe
  * Save playbook to Firestore
  */
 async function savePlaybook(playbook: Playbook): Promise<void> {
-  const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
-  const { PLATFORM_ID } = await import('@/lib/constants/platform');
+  const { FirestoreService } = await import('@/lib/db/firestore-service');
 
-  const playbooksPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/playbooks`;
+  const playbooksPath = getSubCollection('playbooks');
 
   await FirestoreService.set(playbooksPath, playbook.id, playbook);
 

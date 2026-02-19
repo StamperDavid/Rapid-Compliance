@@ -7,12 +7,12 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireAuth } from '@/lib/auth/api-auth';
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { FirestoreService } from '@/lib/db/firestore-service';
 import type { OutboundSequence, SequenceStep, SequenceStepVariant } from '@/types/outbound-sequence';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 
 export const dynamic = 'force-dynamic';
 
@@ -87,7 +87,7 @@ export async function GET(request: NextRequest) {
     // Get sequences with pagination
     const { orderBy } = await import('firebase/firestore');
     const result = await FirestoreService.getAllPaginated(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/sequences`,
+      getSubCollection('sequences'),
       [orderBy('createdAt', 'desc')],
       Math.min(pageSize, 100) // Max 100 per page
     );
@@ -211,7 +211,7 @@ export async function POST(request: NextRequest) {
 
     // Save sequence
     await FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/sequences`,
+      getSubCollection('sequences'),
       sequenceId,
       sequence,
       false

@@ -1,10 +1,10 @@
 export const dynamic = 'force-dynamic';
 
 import { type NextRequest, NextResponse } from 'next/server';
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { FirestoreService } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 
 interface TrackedLink {
   messageId: string;
@@ -38,7 +38,7 @@ export async function GET(
 
     // Look up the original URL from Firestore
     const linkData = await FirestoreService.get(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/trackedLinks`,
+      getSubCollection('trackedLinks'),
       linkId
     );
 
@@ -81,7 +81,7 @@ export async function GET(
 
     // Update the emailTracking document to mark as clicked
     FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/emailTracking`,
+      getSubCollection('emailTracking'),
       messageId,
       {
         clicked: true,

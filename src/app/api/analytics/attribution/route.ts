@@ -6,6 +6,7 @@ import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { withCache } from '@/lib/cache/analytics-cache';
 import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getOrdersCollection, getSubCollection } from '@/lib/firebase/collections';
 
 export const dynamic = 'force-dynamic';
 
@@ -195,8 +196,8 @@ async function calculateAttributionAnalytics(period: string): Promise<Attributio
   // Fetch all collections
   const leadsPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/default/entities/leads`;
   const dealsPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/default/entities/deals`;
-  const ordersPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/orders`;
-  const formSubmissionsPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/formSubmissions`;
+  const ordersPath = getOrdersCollection();
+  const formSubmissionsPath = getSubCollection('formSubmissions');
 
   let allLeads: LeadRecord[] = [];
   let allDeals: DealRecord[] = [];

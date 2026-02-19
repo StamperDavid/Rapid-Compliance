@@ -20,6 +20,7 @@ import { BaseSpecialist } from '../../base-specialist';
 import type { AgentMessage, AgentReport, SpecialistConfig, Signal } from '../../types';
 import { logger } from '@/lib/logger/logger';
 import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 
 // ============================================================================
 // CONFIGURATION
@@ -314,7 +315,7 @@ export class CatalogManagerSpecialist extends BaseSpecialist {
 
       // Get e-commerce config for product schema
       const ecommerceConfig = await FirestoreService.get(
-        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/ecommerce`,
+        getSubCollection('ecommerce'),
         'config'
       );
 
@@ -332,7 +333,7 @@ export class CatalogManagerSpecialist extends BaseSpecialist {
         products = records.map(record => this.mapRecordToProduct(record, mappings));
       } else {
         // Fallback to direct products collection
-        const productsPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/products`;
+        const productsPath = getSubCollection('products');
         products = await FirestoreService.getAll(productsPath, constraints);
       }
 
@@ -404,7 +405,7 @@ export class CatalogManagerSpecialist extends BaseSpecialist {
 
       // Get e-commerce config
       const ecommerceConfig = await FirestoreService.get(
-        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/ecommerce`,
+        getSubCollection('ecommerce'),
         'config'
       );
 
@@ -422,7 +423,7 @@ export class CatalogManagerSpecialist extends BaseSpecialist {
         }
       } else {
         product = await FirestoreService.get(
-          `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/products`,
+          getSubCollection('products'),
           payload.productId
         );
       }
@@ -455,7 +456,7 @@ export class CatalogManagerSpecialist extends BaseSpecialist {
    */
   private async handleCreateProduct(payload: CreateProductPayload): Promise<CatalogResult> {
     try {
-      const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+      const { FirestoreService } = await import('@/lib/db/firestore-service');
 
       const productId = `prod_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
       const now = new Date().toISOString();
@@ -471,7 +472,7 @@ export class CatalogManagerSpecialist extends BaseSpecialist {
       };
 
       await FirestoreService.set(
-        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/products`,
+        getSubCollection('products'),
         productId,
         product,
         false
@@ -499,10 +500,10 @@ export class CatalogManagerSpecialist extends BaseSpecialist {
    */
   private async handleUpdateProduct(payload: UpdateProductPayload): Promise<CatalogResult> {
     try {
-      const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+      const { FirestoreService } = await import('@/lib/db/firestore-service');
 
       const existingProduct = await FirestoreService.get(
-        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/products`,
+        getSubCollection('products'),
         payload.productId
       );
 
@@ -520,7 +521,7 @@ export class CatalogManagerSpecialist extends BaseSpecialist {
       };
 
       await FirestoreService.set(
-        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/products`,
+        getSubCollection('products'),
         payload.productId,
         updates,
         true
@@ -581,10 +582,10 @@ export class CatalogManagerSpecialist extends BaseSpecialist {
    */
   private async handleGetCatalogSummary(_payload: GetCatalogSummaryPayload): Promise<CatalogResult> {
     try {
-      const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+      const { FirestoreService } = await import('@/lib/db/firestore-service');
 
       const rawProducts = await FirestoreService.getAll(
-        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/products`,
+        getSubCollection('products'),
         []
       );
       const products = rawProducts as Product[];

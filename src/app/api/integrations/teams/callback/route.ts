@@ -6,9 +6,10 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { apiKeyService } from '@/lib/api-keys/api-key-service';
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { FirestoreService } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getIntegrationsCollection } from '@/lib/firebase/collections';
 import { encryptToken } from '@/lib/security/token-encryption';
 import { validateOAuthState } from '@/lib/security/oauth-state';
 
@@ -107,7 +108,7 @@ export async function GET(request: NextRequest) {
 
     // Store tokens
     await FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/integrations`,
+      getIntegrationsCollection(),
       'teams',
       {
         id: 'teams',

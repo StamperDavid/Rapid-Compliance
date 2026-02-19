@@ -9,7 +9,7 @@ import type { SchemaChangeEvent } from '@/lib/schema/schema-change-tracker';
 import { executeCustomTransform, type TransformParams } from './custom-transforms';
 import type { QueryConstraint } from 'firebase/firestore';
 import type { Schema } from '@/types/schema';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 
 /**
  * Integration Field Mapping
@@ -123,7 +123,7 @@ export class FieldMappingManager {
     mapping: Omit<IntegrationFieldMapping, 'id' | 'createdAt' | 'updatedAt'>
   ): Promise<IntegrationFieldMapping> {
     try {
-      const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+      const { FirestoreService } = await import('@/lib/db/firestore-service');
       
       const mappingId = `mapping_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       
@@ -134,7 +134,7 @@ export class FieldMappingManager {
         updatedAt: new Date().toISOString(),
       };
       
-      const mappingsPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/integrationFieldMappings`;
+      const mappingsPath = getSubCollection('integrationFieldMappings');
       
       await FirestoreService.set(mappingsPath, mappingId, fullMapping, false);
       
@@ -161,11 +161,10 @@ export class FieldMappingManager {
     schemaId?: string
   ): Promise<IntegrationFieldMapping | null> {
     try {
-      const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
-      const { PLATFORM_ID } = await import('@/lib/constants/platform');
+      const { FirestoreService } = await import('@/lib/db/firestore-service');
       const { where } = await import('firebase/firestore');
 
-      const mappingsPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/integrationFieldMappings`;
+      const mappingsPath = getSubCollection('integrationFieldMappings');
 
       const filters: QueryConstraint[] = [
         where('integrationId', '==', integrationId),
@@ -195,10 +194,9 @@ export class FieldMappingManager {
     updates: Partial<IntegrationFieldMapping>
   ): Promise<void> {
     try {
-      const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
-      const { PLATFORM_ID } = await import('@/lib/constants/platform');
+      const { FirestoreService } = await import('@/lib/db/firestore-service');
 
-      const mappingsPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/integrationFieldMappings`;
+      const mappingsPath = getSubCollection('integrationFieldMappings');
 
       const existing = await FirestoreService.get(mappingsPath, mappingId);
 
@@ -237,11 +235,11 @@ export class FieldMappingManager {
     event: SchemaChangeEvent
   ): Promise<void> {
     try {
-      const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+      const { FirestoreService } = await import('@/lib/db/firestore-service');
       const { where } = await import('firebase/firestore');
       
       // Get all field mappings for this schema
-      const mappingsPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/integrationFieldMappings`;
+      const mappingsPath = getSubCollection('integrationFieldMappings');
       const mappings = await FirestoreService.getAll(mappingsPath, [
         where('schemaId', '==', event.schemaId),
       ] as QueryConstraint[]);

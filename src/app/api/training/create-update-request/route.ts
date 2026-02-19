@@ -5,14 +5,14 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireAuth } from '@/lib/auth/api-auth';
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { FirestoreService } from '@/lib/db/firestore-service';
 import { aggregateSuggestions, filterByConfidence } from '@/lib/training/feedback-processor';
 import { createUpdateRequest } from '@/lib/training/golden-master-updater';
 import type { TrainingSession } from '@/types/training';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 
 export const dynamic = 'force-dynamic';
 
@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
     const sessions: TrainingSession[] = [];
     for (const sessionId of sessionIds) {
       const session = await FirestoreService.get(
-        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/trainingSessions`,
+        getSubCollection('trainingSessions'),
         sessionId
       ) as TrainingSession;
       

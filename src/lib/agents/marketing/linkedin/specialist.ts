@@ -1606,34 +1606,24 @@ Best regards`;
 
     this.log('INFO', `Fetching LinkedIn post metrics (${timeRange})`);
 
-    // In production, this would call LinkedIn Analytics API
-    // For now, return structured mock data
-    const mockPosts = (postIds ?? ['post_1', 'post_2', 'post_3']).map((postId) => {
-      const impressions = Math.floor(Math.random() * 5000) + 1000;
-      const engagements = Math.floor(impressions * (Math.random() * 0.1 + 0.02));
-
-      return {
-        postId,
-        impressions,
-        engagements,
-        clicks: Math.floor(engagements * 0.4),
-        shares: Math.floor(engagements * 0.1),
-        comments: Math.floor(engagements * 0.2),
-        reactions: Math.floor(engagements * 0.7),
-        engagementRate: Number(((engagements / impressions) * 100).toFixed(2)),
-      };
-    });
-
-    const totalImpressions = mockPosts.reduce((sum, p) => sum + p.impressions, 0);
-    const totalEngagements = mockPosts.reduce((sum, p) => sum + p.engagements, 0);
-    const avgEngagementRate = Number((totalEngagements / totalImpressions * 100).toFixed(2));
+    // Real data requires LinkedIn Analytics API integration
+    const posts = (postIds ?? []).map((postId) => ({
+      postId,
+      impressions: 0, // Real data requires LinkedIn Analytics API integration
+      engagements: 0, // Real data requires LinkedIn Analytics API integration
+      clicks: 0, // Real data requires LinkedIn Analytics API integration
+      shares: 0, // Real data requires LinkedIn Analytics API integration
+      comments: 0, // Real data requires LinkedIn Analytics API integration
+      reactions: 0, // Real data requires LinkedIn Analytics API integration
+      engagementRate: 0, // Real data requires LinkedIn Analytics API integration
+    }));
 
     const result = {
-      posts: mockPosts,
+      posts,
       summary: {
-        totalImpressions,
-        totalEngagements,
-        avgEngagementRate,
+        totalImpressions: 0, // Real data requires LinkedIn Analytics API integration
+        totalEngagements: 0, // Real data requires LinkedIn Analytics API integration
+        avgEngagementRate: 0, // Real data requires LinkedIn Analytics API integration
       },
     };
 
@@ -1642,9 +1632,9 @@ Best regards`;
       this.identity.id,
       'PERFORMANCE',
       'LinkedIn Post Performance',
-      `Analyzed ${mockPosts.length} posts with ${totalImpressions} impressions and ${avgEngagementRate}% engagement rate`,
+      'No data available - LinkedIn Analytics API integration required',
       {
-        confidence: 95,
+        confidence: 0,
         sources: ['LinkedIn Analytics API'],
         tags: ['linkedin', 'metrics', timeRange],
       }

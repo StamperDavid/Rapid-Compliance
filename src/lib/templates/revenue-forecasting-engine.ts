@@ -539,28 +539,17 @@ export function compareForecastPeriods(
  */
 export function getForecastHistory(
   _period: ForecastPeriod,
-  months: number = 6
+  _months: number = 6
 ): Array<{
   date: Date;
   forecast: number;
   actual?: number;
   accuracy?: number;
 }> {
-  // Mock implementation - would fetch from historical data
-  const history: Array<{ date: Date; forecast: number; actual?: number; accuracy?: number }> = [];
-  
-  for (let i = months; i >= 0; i--) {
-    const date = new Date();
-    date.setMonth(date.getMonth() - i);
-    
-    const forecast = Math.floor(Math.random() * 200000) + 100000; // $100K-$300K
-    const actual = i > 0 ? Math.floor(forecast * (0.8 + Math.random() * 0.4)) : undefined;
-    const accuracy = actual ? Math.round((1 - Math.abs(forecast - actual) / forecast) * 100) : undefined;
-    
-    history.push({ date, forecast, actual, accuracy });
-  }
-  
-  return history;
+  // Returns empty array — forecast history requires real revenue data in Firestore.
+  // Real implementation: query organizations/{PLATFORM_ID}/revenue_history and
+  // compare against stored forecasts.
+  return [];
 }
 
 logger.info('Revenue Forecasting Engine initialized');

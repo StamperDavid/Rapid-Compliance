@@ -3,8 +3,9 @@
  * Handles OAuth 2.0 authorization flows for integrations
  */
 
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { FirestoreService } from '@/lib/db/firestore-service';
 import { apiKeyService } from '@/lib/api-keys/api-key-service';
+import { COLLECTIONS, getIntegrationsCollection } from '@/lib/firebase/collections';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import crypto from 'crypto';
 
@@ -240,7 +241,7 @@ export async function refreshAccessToken(
 ): Promise<string> {
   // Get integration
   const integration = await FirestoreService.get<StoredIntegration>(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/integrations`,
+    getIntegrationsCollection(),
     integrationId
   );
 
@@ -286,7 +287,7 @@ export async function refreshAccessToken(
 
   // Update integration with new tokens
   await FirestoreService.set(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/integrations`,
+    getIntegrationsCollection(),
     integrationId,
     {
       ...integration,
@@ -510,7 +511,7 @@ export async function getValidAccessToken(
   integrationId: string
 ): Promise<string> {
   const integration = await FirestoreService.get<StoredIntegration>(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/integrations`,
+    getIntegrationsCollection(),
     integrationId
   );
 

@@ -21,9 +21,9 @@ export const dynamic = 'force-dynamic';
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getNotificationsRequestSchema } from '@/lib/notifications/validation';
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { FirestoreService } from '@/lib/db/firestore-service';
 import { requireAuth } from '@/lib/auth/api-auth';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 import type { Notification } from '@/lib/notifications/types';
 import { logger } from '@/lib/logger/logger';
 
@@ -113,7 +113,7 @@ export async function GET(request: NextRequest) {
     ];
 
     let notifications = await FirestoreService.getAll<Notification>(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/notifications`,
+      getSubCollection('notifications'),
       constraints
     );
 
@@ -270,7 +270,7 @@ export async function POST(request: NextRequest) {
     // Mark as read
     const updatePromises = validIds.map((id) =>
       FirestoreService.update(
-        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/notifications`,
+        getSubCollection('notifications'),
         id,
         {
           'metadata.read': true,
