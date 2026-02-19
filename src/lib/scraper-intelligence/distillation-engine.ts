@@ -449,19 +449,29 @@ function evaluateCondition(
 ): boolean {
   // Simple variable substitution and evaluation
   // Supports: &&, ||, >, <, >=, <=, ==, !=
-  
+
   try {
     // Replace variables with values from context
     let expression = condition;
-    
+
     for (const [key, value] of Object.entries(context)) {
       const regex = new RegExp(`\\b${key}\\b`, 'g');
       expression = expression.replace(regex, JSON.stringify(value));
     }
 
+    // Block dangerous patterns that could escape the formula sandbox
+    const dangerousPatterns = /\b(fetch|import|require|eval|Function|process|globalThis|window|document|__proto__|constructor)\b/;
+    if (dangerousPatterns.test(expression)) {
+      logger.warn('Blocked potentially dangerous condition expression', {
+        condition,
+        contextKeys: Object.keys(context),
+      });
+      return false;
+    }
+
     // Use Function constructor (safer than eval) for dynamic condition evaluation
     // eslint-disable-next-line @typescript-eslint/no-implied-eval -- Intentional for formula evaluation
-    const fn = new Function(`return ${expression}`) as () => unknown;
+    const fn = new Function(`"use strict"; return (${expression})`) as () => unknown;
     return Boolean(fn());
   } catch (error) {
     const err = error instanceof Error ? error : new Error(String(error));

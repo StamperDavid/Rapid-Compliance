@@ -113,7 +113,18 @@ async function refreshIntegrationToken(
       case 'quickbooks':
         newTokenData = await refreshQuickBooksToken(refreshToken);
         break;
-      // Add other integrations as needed
+      case 'google':
+        newTokenData = await refreshGoogleToken(refreshToken);
+        break;
+      case 'microsoft':
+        newTokenData = await refreshMicrosoftToken(refreshToken);
+        break;
+      case 'slack':
+        newTokenData = await refreshSlackToken(refreshToken);
+        break;
+      case 'hubspot':
+        newTokenData = await refreshHubSpotToken(refreshToken);
+        break;
       default:
         logger.warn('Token refresh not implemented for integration', { integrationId });
         return null;
@@ -208,6 +219,132 @@ async function refreshQuickBooksToken(refreshToken: string): Promise<{ accessTok
 }
 
 /**
+ * Refresh Google OAuth token
+ */
+async function refreshGoogleToken(refreshToken: string): Promise<{ accessToken: string; refreshToken?: string; expiresIn: number }> {
+  const clientId = process.env.GOOGLE_CLIENT_ID;
+  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+
+  const response = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      grant_type: 'refresh_token',
+      refresh_token: refreshToken,
+      client_id: clientId ?? '',
+      client_secret: clientSecret ?? '',
+    }).toString(),
+  });
+
+  if (!response.ok) {
+    throw new Error('Google token refresh failed');
+  }
+
+  const data = await response.json() as { access_token: string; refresh_token?: string; expires_in: number };
+  return {
+    accessToken: data.access_token,
+    refreshToken: data.refresh_token,
+    expiresIn: data.expires_in,
+  };
+}
+
+/**
+ * Refresh Microsoft OAuth token
+ */
+async function refreshMicrosoftToken(refreshToken: string): Promise<{ accessToken: string; refreshToken?: string; expiresIn: number }> {
+  const clientId = process.env.MICROSOFT_CLIENT_ID;
+  const clientSecret = process.env.MICROSOFT_CLIENT_SECRET;
+  const tenantId = process.env.MICROSOFT_TENANT_ID ?? 'common';
+
+  const response = await fetch(`https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      grant_type: 'refresh_token',
+      refresh_token: refreshToken,
+      client_id: clientId ?? '',
+      client_secret: clientSecret ?? '',
+      scope: 'https://graph.microsoft.com/.default offline_access',
+    }).toString(),
+  });
+
+  if (!response.ok) {
+    throw new Error('Microsoft token refresh failed');
+  }
+
+  const data = await response.json() as { access_token: string; refresh_token?: string; expires_in: number };
+  return {
+    accessToken: data.access_token,
+    refreshToken: data.refresh_token,
+    expiresIn: data.expires_in,
+  };
+}
+
+/**
+ * Refresh Slack OAuth token
+ */
+async function refreshSlackToken(refreshToken: string): Promise<{ accessToken: string; refreshToken?: string; expiresIn: number }> {
+  const clientId = process.env.SLACK_CLIENT_ID;
+  const clientSecret = process.env.SLACK_CLIENT_SECRET;
+
+  const response = await fetch('https://slack.com/api/oauth.v2.access', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      grant_type: 'refresh_token',
+      refresh_token: refreshToken,
+      client_id: clientId ?? '',
+      client_secret: clientSecret ?? '',
+    }).toString(),
+  });
+
+  if (!response.ok) {
+    throw new Error('Slack token refresh failed');
+  }
+
+  const data = await response.json() as { ok: boolean; access_token: string; refresh_token?: string; expires_in: number; error?: string };
+  if (!data.ok) {
+    throw new Error(`Slack token refresh failed: ${data.error ?? 'unknown error'}`);
+  }
+
+  return {
+    accessToken: data.access_token,
+    refreshToken: data.refresh_token,
+    expiresIn: data.expires_in,
+  };
+}
+
+/**
+ * Refresh HubSpot OAuth token
+ */
+async function refreshHubSpotToken(refreshToken: string): Promise<{ accessToken: string; refreshToken?: string; expiresIn: number }> {
+  const clientId = process.env.HUBSPOT_CLIENT_ID;
+  const clientSecret = process.env.HUBSPOT_CLIENT_SECRET;
+
+  const response = await fetch('https://api.hubapi.com/oauth/v1/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      grant_type: 'refresh_token',
+      refresh_token: refreshToken,
+      client_id: clientId ?? '',
+      client_secret: clientSecret ?? '',
+    }).toString(),
+  });
+
+  if (!response.ok) {
+    throw new Error('HubSpot token refresh failed');
+  }
+
+  const data = await response.json() as { access_token: string; refresh_token: string; expires_in: number };
+  return {
+    accessToken: data.access_token,
+    refreshToken: data.refresh_token,
+    expiresIn: data.expires_in,
+  };
+}
+
+/**
  * Disconnect integration
  */
 export async function disconnectIntegration(
@@ -288,19 +425,24 @@ export async function deleteIntegration(
 }
 
 /**
- * Sync integration data
+ * Sync integration data — verifies credentials are valid and refreshes if needed
  */
-export function syncIntegration(
+export async function syncIntegration(
   integrationId: string
-): { success: boolean; synced?: number; error?: string } {
+): Promise<{ success: boolean; synced?: number; error?: string }> {
   try {
     logger.info('Syncing integration', { integrationId });
 
-    // Implementation would depend on the integration type
-    // For now, return success
+    // Verify credentials exist and are valid
+    const credentials = await getIntegrationCredentials(integrationId);
+    if (!credentials) {
+      return { success: false, error: 'Integration not connected or token expired' };
+    }
+
+    // If token was refreshed during getIntegrationCredentials, that counts as a sync
     return {
       success: true,
-      synced: 0, // Number of records synced
+      synced: 0,
     };
 
   } catch (error) {
@@ -314,7 +456,7 @@ export function syncIntegration(
 }
 
 /**
- * Test integration connection
+ * Test integration connection — makes a lightweight API call to verify the token works
  */
 export async function testIntegration(
   integrationId: string
@@ -323,32 +465,45 @@ export async function testIntegration(
     const credentials = await getIntegrationCredentials(integrationId);
 
     if (!credentials) {
-      return {
-        success: false,
-        error: 'Integration not found',
-      };
+      return { success: false, error: 'Integration not found or token expired' };
     }
 
-    // Basic check - if we have an access token, consider it valid
-    // Real implementation would make a test API call
-    if (credentials.accessToken) {
-      return {
-        success: true,
-        message: 'Integration connection is valid',
-      };
+    if (!credentials.accessToken) {
+      return { success: false, error: 'No access token found' };
+    }
+
+    // Make a lightweight test call per provider
+    const testEndpoints: Record<string, string> = {
+      google: 'https://www.googleapis.com/oauth2/v1/tokeninfo',
+      microsoft: 'https://graph.microsoft.com/v1.0/me',
+      slack: 'https://slack.com/api/auth.test',
+      zoom: 'https://api.zoom.us/v2/users/me',
+      quickbooks: 'https://accounts.platform.intuit.com/v1/openid_connect/userinfo',
+      hubspot: `https://api.hubapi.com/oauth/v1/access-tokens/${credentials.accessToken}`,
+    };
+
+    const testUrl = testEndpoints[integrationId];
+    if (!testUrl) {
+      // For integrations without a test endpoint, verify token exists
+      return { success: true, message: `Integration ${integrationId} has valid credentials` };
+    }
+
+    const response = await fetch(testUrl, {
+      headers: { 'Authorization': `Bearer ${credentials.accessToken}` },
+    });
+
+    if (response.ok) {
+      return { success: true, message: `${integrationId} connection verified` };
     }
 
     return {
       success: false,
-      error: 'No access token found',
+      error: `${integrationId} API returned ${response.status}: token may be invalid`,
     };
 
   } catch (error) {
     logger.error('Failed to test integration', error instanceof Error ? error : undefined, { integrationId });
     const testErrorMsg = error instanceof Error && error.message ? error.message : 'Test failed';
-    return {
-      success: false,
-      error: testErrorMsg,
-    };
+    return { success: false, error: testErrorMsg };
   }
 }

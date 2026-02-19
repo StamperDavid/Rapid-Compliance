@@ -98,6 +98,12 @@ export class FormulaEngine {
     keys.push('Math');
     values.push(Math);
 
+    // Block dangerous patterns that could escape the formula sandbox
+    const dangerousPatterns = /\b(fetch|import|require|eval|Function|process|globalThis|window|document|__proto__|constructor)\b/;
+    if (dangerousPatterns.test(formula)) {
+      throw new Error('Formula contains disallowed keywords');
+    }
+
     try {
       // Create function from formula - using Function is intentional for formula evaluation
       // eslint-disable-next-line @typescript-eslint/no-implied-eval

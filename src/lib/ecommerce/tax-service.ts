@@ -57,16 +57,26 @@ export async function calculateTax(
 }
 
 /**
- * Calculate tax using automated provider (TaxJar, Avalara, etc.)
+ * Calculate tax using automated provider.
+ * Currently falls back to manual tax rates.
+ * To enable automated tax: configure Stripe Tax, TaxJar, or Avalara
+ * via the API keys page, then add provider-specific logic here.
  */
 async function calculateAutomatedTax(
   taxConfig: Record<string, unknown>,
   cart: Cart,
   address: Address
 ): Promise<TaxCalculation> {
-  // Use Stripe Tax if Stripe is configured, otherwise use basic calculation
-  // TaxJar and Avalara can be added later via API keys page
-  // For now, fall back to manual calculation
+  const provider = taxConfig.provider as string | undefined;
+
+  if (provider === 'stripe') {
+    // Stripe Tax is calculated automatically during Stripe Checkout session
+    // creation when Stripe Tax is enabled in the Dashboard.
+    // Return zero here — Stripe handles tax line items at payment time.
+    return { amount: 0, rate: 0, breakdown: [] };
+  }
+
+  // No automated provider configured — fall back to manual rates
   return calculateManualTax(taxConfig, cart, address);
 }
 

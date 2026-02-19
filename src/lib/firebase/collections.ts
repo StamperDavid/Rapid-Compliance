@@ -210,25 +210,24 @@ export const isDevMode = (): boolean => {
 };
 
 /**
- * Log current collection configuration (for debugging)
+ * Log current collection configuration (for debugging).
+ * Uses dynamic logger import to avoid circular deps and prevent config leaking to browser console.
  */
 export const logCollectionConfig = () => {
-  // Using logger for proper structured logging instead of console
-  // This is a diagnostic function, so we'll import logger if needed
   if (typeof window === 'undefined') {
-    // Server-side only logging
-    const logData = {
-      appEnvironment: APP_ENV,
-      productionMode: IS_PRODUCTION,
-      testMode: IS_TEST,
-      devMode: IS_DEV,
-      prefix: PREFIX,
-      isolated: PREFIX ? 'Isolated (test_ prefix)' : 'Production (no prefix)',
-      sample: `organizations → ${COLLECTIONS.ORGANIZATIONS}`,
-      file: 'collections.ts'
-    };
-    // eslint-disable-next-line no-console
-    console.log('📦 Collection Configuration:', logData);
+    import('@/lib/logger/logger').then(({ logger }) => {
+      logger.info('Collection configuration loaded', {
+        appEnvironment: APP_ENV,
+        productionMode: IS_PRODUCTION,
+        testMode: IS_TEST,
+        devMode: IS_DEV,
+        prefix: PREFIX,
+        isolated: PREFIX ? 'Isolated (test_ prefix)' : 'Production (no prefix)',
+        file: 'collections.ts',
+      });
+    }).catch(() => {
+      // Logger not available during early bootstrap — silently skip
+    });
   }
 };
 

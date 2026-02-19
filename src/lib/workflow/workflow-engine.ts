@@ -25,6 +25,9 @@
 
 import { logger } from '@/lib/logger/logger';
 import { Timestamp } from 'firebase/firestore';
+import { FirestoreService } from '@/lib/db/firestore-service';
+import { getSubCollection } from '@/lib/firebase/collections';
+import { NotificationService } from '@/lib/notifications/notification-service';
 import type {
   Workflow,
   WorkflowAction,
@@ -593,10 +596,9 @@ export class WorkflowEngine {
   }
   
   /**
-   * Execute task action
-   * Note: Returns Promise for API consistency - will be async when CRM integration is added
+   * Execute task action — creates a task in Firestore
    */
-  static executeTaskAction(
+  static async executeTaskAction(
     action: WorkflowAction,
     context: WorkflowExecutionContext
   ): Promise<Record<string, unknown>> {
@@ -607,7 +609,7 @@ export class WorkflowEngine {
       this.getFieldValue((config.assignToField ?? 'deal.ownerId'), context) as string;
 
     if (!assignToUserId) {
-      return Promise.reject(new Error('No assignee found for task'));
+      throw new Error('No assignee found for task');
     }
 
     // Calculate due date
@@ -615,61 +617,93 @@ export class WorkflowEngine {
       ? new Date(Date.now() + config.dueInDays * 24 * 60 * 60 * 1000)
       : undefined;
 
-    // In production, this would create a task in the CRM
-    // For now, we'll just return metadata
-    logger.info('Task would be created', {
+    const taskId = `task_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+    const taskRecord = {
+      id: taskId,
+      title: config.title,
+      assignedTo: assignToUserId,
+      dealId: context.dealId ?? null,
+      dueDate: dueDate?.toISOString() ?? null,
+      priority: config.priority ?? 'medium',
+      status: 'pending',
+      source: 'workflow',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    await FirestoreService.set(
+      getSubCollection('tasks'),
+      taskId,
+      taskRecord
+    );
+
+    logger.info('Workflow created task', {
+      taskId,
       title: config.title,
       assignToUserId,
-      dueDate: dueDate?.toISOString() ?? null,
       dealId: context.dealId,
     });
 
-    return Promise.resolve({
-      taskId: `task_${Date.now()}`,
-      title: config.title,
-      assignedTo: assignToUserId,
-      dueDate: dueDate?.toISOString() ?? null,
-      priority: config.priority ?? 'medium',
-    });
+    return taskRecord;
   }
   
   /**
-   * Execute deal action
-   * Note: Returns Promise for API consistency - will be async when Firestore integration is added
+   * Execute deal action — updates deal fields in Firestore
    */
-  static executeDealAction(
+  static async executeDealAction(
     action: WorkflowAction,
     context: WorkflowExecutionContext
   ): Promise<Record<string, unknown>> {
     const config = action.config as DealActionConfig;
 
     if (!context.dealId) {
-      return Promise.reject(new Error('No deal ID in context for deal action'));
+      throw new Error('No deal ID in context for deal action');
     }
 
-    // In production, this would update the deal in Firestore
-    // For now, we'll just return metadata
-    logger.info('Deal would be updated', {
+    const operation = config.operation ?? 'set';
+    const updateData: Record<string, unknown> = {
+      updatedAt: new Date().toISOString(),
+    };
+
+    if (operation === 'set') {
+      updateData[config.field] = config.value;
+    } else if (operation === 'increment' && typeof config.value === 'number') {
+      // Read current value and increment
+      const deal = await FirestoreService.get<Record<string, unknown>>(
+        getSubCollection('deals'),
+        context.dealId
+      );
+      const currentValue = typeof deal?.[config.field] === 'number' ? (deal[config.field] as number) : 0;
+      updateData[config.field] = currentValue + config.value;
+    } else {
+      updateData[config.field] = config.value;
+    }
+
+    await FirestoreService.update(
+      getSubCollection('deals'),
+      context.dealId,
+      updateData
+    );
+
+    logger.info('Workflow updated deal', {
       dealId: context.dealId,
       field: config.field,
-      value: config.value,
-      operation: config.operation ?? 'set',
+      operation,
     });
 
-    return Promise.resolve({
+    return {
       dealId: context.dealId,
       field: config.field,
       value: config.value,
-      operation: config.operation ?? 'set',
-      updatedAt: new Date().toISOString(),
-    });
+      operation,
+      updatedAt: updateData.updatedAt,
+    };
   }
   
   /**
-   * Execute notification action
-   * Note: Returns Promise for API consistency - will be async when notification integration is added
+   * Execute notification action — sends via NotificationService
    */
-  static executeNotificationAction(
+  static async executeNotificationAction(
     action: WorkflowAction,
     context: WorkflowExecutionContext
   ): Promise<Record<string, unknown>> {
@@ -680,69 +714,104 @@ export class WorkflowEngine {
       this.getFieldValue((config.recipientField ?? 'deal.ownerId'), context) as string;
 
     if (!recipientId) {
-      return Promise.reject(new Error('No recipient found for notification'));
+      throw new Error('No recipient found for notification');
     }
 
-    // In production, this would send the notification
-    // For now, we'll just return metadata
-    logger.info('Notification would be sent', {
+    const notificationService = new NotificationService();
+    const notification = await notificationService.sendNotification(
+      recipientId,
+      'workflow_notification',
+      {
+        title: config.title ?? 'Workflow Notification',
+        message: config.message,
+        dealId: context.dealId ?? '',
+        channel: config.channel,
+      },
+      {
+        channels: config.channel ? [config.channel as 'in_app' | 'email' | 'slack' | 'webhook' | 'sms'] : undefined,
+      }
+    );
+
+    logger.info('Workflow sent notification', {
+      notificationId: notification.id,
       channel: config.channel,
       recipientId,
-      message: config.message,
       dealId: context.dealId,
     });
 
-    return Promise.resolve({
-      notificationId: `notif_${Date.now()}`,
+    return {
+      notificationId: notification.id,
       channel: config.channel,
       recipientId,
       title: config.title,
       message: config.message,
       sentAt: new Date().toISOString(),
-    });
+    };
   }
   
   /**
-   * Execute wait action
-   * Note: Returns Promise for API consistency - will be async when scheduler integration is added
+   * Execute wait action — persists scheduled wait to Firestore for cron-based resumption
    */
-  static executeWaitAction(
+  static async executeWaitAction(
     action: WorkflowAction,
     _context: WorkflowExecutionContext
   ): Promise<Record<string, unknown>> {
     const config = action.config as WaitActionConfig;
 
+    const waitId = `wait_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+
     if (config.type === 'delay') {
       const delayMs = (config.delayHours ?? 0) * 60 * 60 * 1000 +
                      (config.delayDays ?? 0) * 24 * 60 * 60 * 1000;
+      const resumeAt = new Date(Date.now() + delayMs).toISOString();
 
-      // In production, this would schedule the next action
-      // For now, we'll just log it
-      logger.info('Wait action registered', {
-        delayMs,
-        resumeAt: new Date(Date.now() + delayMs).toISOString(),
-      });
+      // Persist scheduled wait so a cron job can resume it
+      await FirestoreService.set(
+        getSubCollection('workflowWaits'),
+        waitId,
+        {
+          id: waitId,
+          workflowId: action.id,
+          dealId: _context.dealId ?? null,
+          waitType: 'delay',
+          delayMs,
+          resumeAt,
+          status: 'waiting',
+          createdAt: new Date().toISOString(),
+        }
+      );
 
-      return Promise.resolve({
-        waitType: 'delay',
-        delayMs,
-        resumeAt: new Date(Date.now() + delayMs).toISOString(),
-      });
+      logger.info('Wait action scheduled', { waitId, delayMs, resumeAt });
+
+      return { waitType: 'delay', waitId, delayMs, resumeAt };
     } else {
-      // Wait until condition is met
       const conditionDescription = config.condition
         ? `${config.condition.field} ${config.condition.operator} ${String(config.condition.value)}`
         : undefined;
-      logger.info('Wait until action registered', {
-        condition: conditionDescription,
-        maxWaitDays: config.maxWaitDays,
-      });
 
-      return Promise.resolve({
-        waitType: 'until',
-        condition: conditionDescription,
-        maxWaitDays: config.maxWaitDays,
-      });
+      // Persist conditional wait
+      await FirestoreService.set(
+        getSubCollection('workflowWaits'),
+        waitId,
+        {
+          id: waitId,
+          workflowId: action.id,
+          dealId: _context.dealId ?? null,
+          waitType: 'until',
+          condition: config.condition ?? null,
+          conditionDescription: conditionDescription ?? null,
+          maxWaitDays: config.maxWaitDays ?? null,
+          expiresAt: config.maxWaitDays
+            ? new Date(Date.now() + config.maxWaitDays * 24 * 60 * 60 * 1000).toISOString()
+            : null,
+          status: 'waiting',
+          createdAt: new Date().toISOString(),
+        }
+      );
+
+      logger.info('Wait-until action registered', { waitId, condition: conditionDescription });
+
+      return { waitType: 'until', waitId, condition: conditionDescription, maxWaitDays: config.maxWaitDays };
     }
   }
 }

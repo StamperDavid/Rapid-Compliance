@@ -171,16 +171,18 @@ function calculateMethodCost(
 }
 
 /**
- * Estimate calculated shipping (placeholder for carrier API integration)
+ * Estimate calculated shipping using flat rate formula.
+ * For real-time carrier rates, integrate EasyPost or ShipEngine and replace this function.
+ * Merchants should configure flat rate methods for accurate pricing;
+ * this fallback is used only when rateType is 'calculated' without a carrier API.
  */
-function estimateCalculatedShipping(method: ShippingMethod, cart: Cart, _address: Address): number {
-  // Simple estimation based on cart total
-  // In production, use carrier APIs
-  const baseRate = 5.00;
-  const weightMultiplier = 0.5; // $0.50 per estimated pound
-  const estimatedWeight = cart.items.length * 1; // Assume 1 lb per item
+function estimateCalculatedShipping(_method: ShippingMethod, cart: Cart, _address: Address): number {
+  // Flat rate estimate: base cost + per-item surcharge
+  const baseRate = 5.99;
+  const perItemRate = 0.99;
+  const itemCount = cart.items.reduce((sum, item) => sum + item.quantity, 0);
 
-  return baseRate + (estimatedWeight * weightMultiplier);
+  return baseRate + (itemCount * perItemRate);
 }
 
 /**

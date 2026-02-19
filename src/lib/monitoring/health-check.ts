@@ -62,7 +62,7 @@ export async function performHealthCheck(): Promise<HealthCheckResult> {
 
   const aiHealth = checkAI();
   const paymentsHealth = checkPayments();
-  const integrationsHealth = checkIntegrations();
+  const integrationsHealth = await checkIntegrations();
   const metrics = gatherMetrics();
   
   // Determine overall status
@@ -214,14 +214,34 @@ function checkPayments(): HealthStatus {
 }
 
 /**
- * Check integrations
+ * Check integrations — queries Firestore for connected integrations
  */
-function checkIntegrations(): HealthStatus {
+async function checkIntegrations(): Promise<HealthStatus> {
   try {
+    const { listConnectedIntegrations } = await import('@/lib/integrations/integration-manager');
+    const integrations = await listConnectedIntegrations();
+    const count = integrations.length;
+
+    // Check for expired tokens
+    const now = new Date();
+    const expired = integrations.filter(i => {
+      if (!i.expiresAt) { return false; }
+      const expiresAt = i.expiresAt instanceof Date ? i.expiresAt : new Date(i.expiresAt as unknown as string);
+      return expiresAt < now;
+    });
+
+    if (expired.length > 0) {
+      return {
+        status: 'warn',
+        message: `${count} integrations connected, ${expired.length} have expired tokens`,
+        lastChecked: now.toISOString(),
+      };
+    }
+
     return {
-      status: 'pass',
-      message: 'Integrations operational',
-      lastChecked: new Date().toISOString(),
+      status: count > 0 ? 'pass' : 'warn',
+      message: count > 0 ? `${count} integrations connected` : 'No integrations connected',
+      lastChecked: now.toISOString(),
     };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -254,9 +274,9 @@ function gatherMetrics(): {
       loadAverage: process.platform === 'win32' ? [0, 0, 0] : os.loadavg(),
     },
     requests: {
-      total: 0, // Would be tracked by middleware
-      errorsLast24h: 0, // Would be tracked by error handler
-      avgResponseTime: 0, // Would be tracked by middleware
+      total: 0, // Tracked via Vercel Analytics — not available server-side
+      errorsLast24h: 0, // Tracked via Vercel Analytics
+      avgResponseTime: 0, // Tracked via Vercel Analytics
     },
   };
 }
