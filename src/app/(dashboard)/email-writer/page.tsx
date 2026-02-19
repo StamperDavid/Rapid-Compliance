@@ -19,6 +19,7 @@ import React, { useState } from 'react';
 import { EmailWriterCard } from '@/components/email-writer/EmailWriterCard';
 import type { GeneratedEmail } from '@/lib/email-writer';
 import { useAuth } from '@/hooks/useAuth';
+import SubpageNav from '@/components/ui/SubpageNav';
 
 // ============================================================================
 // TYPES
@@ -86,6 +87,12 @@ export default function EmailWriterPage() {
             Generate personalized sales emails powered by deal scoring, battlecards, and industry best practices
           </p>
         </div>
+
+        {/* Sub-page Navigation */}
+        <SubpageNav items={[
+          { label: 'Email Writer', href: '/email-writer' },
+          { label: 'Nurture', href: '/nurture' },
+        ]} />
 
         {/* Stats Cards */}
         <div className="grid grid-cols-4 gap-4">

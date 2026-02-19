@@ -2,6 +2,7 @@
 
 import { useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import SubpageNav from '@/components/ui/SubpageNav';
 import { FirestoreService } from '@/lib/db/firestore-service';
 import { getSubCollection } from '@/lib/firebase/collections';
 import { usePagination } from '@/hooks/usePagination';
@@ -57,9 +58,15 @@ export default function FineTuningPage() {
 
   return (
     <div className="p-8">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-[var(--color-text-primary)]">Fine-Tuning Jobs</h1>
-        <button onClick={() => router.push(`/ai/fine-tuning/new`)} className="px-4 py-2 bg-primary text-white rounded-lg hover:from-primary-light hover:to-secondary-light">+ Start Fine-Tuning</button>
+      <div className="mb-6">
+        <div className="flex justify-between items-center mb-4">
+          <h1 className="text-3xl font-bold text-[var(--color-text-primary)]">Fine-Tuning Jobs</h1>
+          <button onClick={() => router.push(`/ai/fine-tuning/new`)} className="px-4 py-2 bg-primary text-white rounded-lg hover:from-primary-light hover:to-secondary-light">+ Start Fine-Tuning</button>
+        </div>
+        <SubpageNav items={[
+          { label: 'Datasets', href: '/ai/datasets' },
+          { label: 'Fine-Tuning', href: '/ai/fine-tuning' },
+        ]} />
       </div>
 
       {error && (

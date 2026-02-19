@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/useToast';
 import { logger } from '@/lib/logger/logger';
 import { TTS_PROVIDER_INFO, DEFAULT_TTS_CONFIGS, type TTSEngineType, type TTSVoice, type APIKeyMode } from '@/lib/voice/tts/types';
 import type { ModelName } from '@/types/ai-models';
+import SubpageNav from '@/components/ui/SubpageNav';
 
 // Minimal type definitions for this component
 interface VoiceTrainingSettings {
@@ -869,6 +870,14 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
           <p style={{ color: 'var(--color-text-secondary)', marginBottom: '1.5rem' }}>
             Configure and train your Voice AI agent for phone conversations
           </p>
+          <SubpageNav items={[
+            { label: 'Training Center', href: '/settings/ai-agents/training' },
+            { label: 'Persona', href: '/settings/ai-agents/persona' },
+            { label: 'Voice & Speech', href: '/settings/ai-agents/voice' },
+            { label: 'Voice AI Lab', href: '/voice/training' },
+            { label: 'Social AI Lab', href: '/social/training' },
+            { label: 'SEO AI Lab', href: '/seo/training' },
+          ]} />
         </div>
       </div>
 

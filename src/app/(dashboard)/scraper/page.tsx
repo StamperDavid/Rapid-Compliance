@@ -10,6 +10,7 @@
 import React, { useState, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { auth } from '@/lib/firebase/config';
+import SubpageNav from '@/components/ui/SubpageNav';
 import type { ScrapingPlatform } from '@/types/scraper-intelligence';
 import DistillationPreviewDialog from '@/components/scraper/DistillationPreviewDialog';
 
@@ -165,6 +166,13 @@ export default function ScraperDashboardPage() {
             Extract business intelligence signals from websites, job boards, and social platforms.
           </p>
         </div>
+
+        {/* Sub-page Navigation */}
+        <SubpageNav items={[
+          { label: 'Lead Research', href: '/leads/research' },
+          { label: 'Lead Scoring', href: '/lead-scoring' },
+          { label: 'Marketing Scraper', href: '/scraper' },
+        ]} />
 
         {/* Stats Row */}
         <div

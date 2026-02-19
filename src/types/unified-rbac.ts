@@ -475,19 +475,15 @@ export const UNIFIED_ROLE_PERMISSIONS: Record<AccountRole, UnifiedPermissions> =
  * Navigation section categories
  */
 export type NavigationCategory =
-  | 'command_center'
+  | 'home'
   | 'crm'
-  | 'lead_gen'
-  | 'outbound'
-  | 'automation'
-  | 'content_factory'
+  | 'outreach'
+  | 'content'
   | 'ai_workforce'
   | 'ecommerce'
-  | 'analytics'
+  | 'commerce'
   | 'website'
-  | 'academy'
-  | 'settings'
-  | 'system';
+  | 'analytics';
 
 /**
  * Navigation item definition

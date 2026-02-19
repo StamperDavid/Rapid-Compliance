@@ -10,6 +10,18 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useUnifiedAuth } from '@/hooks/useUnifiedAuth';
+import SubpageNav from '@/components/ui/SubpageNav';
+
+const SOCIAL_NAV_ITEMS = [
+  { label: 'Command Center', href: '/social/command-center' },
+  { label: 'Campaigns', href: '/social/campaigns' },
+  { label: 'Calendar', href: '/social/calendar' },
+  { label: 'Approvals', href: '/social/approvals' },
+  { label: 'Listening', href: '/social/listening' },
+  { label: 'Activity', href: '/social/activity' },
+  { label: 'Agent Rules', href: '/social/agent-rules' },
+  { label: 'Playbook', href: '/social/playbook' },
+];
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -130,6 +142,8 @@ export default function ActivityFeedPage() {
           What the AI social media agent did and why — full decision transparency.
         </p>
       </div>
+
+      <SubpageNav items={SOCIAL_NAV_ITEMS} />
 
       {/* Filter Tabs */}
       <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', borderBottom: '1px solid var(--color-border-light)', paddingBottom: '0.5rem' }}>

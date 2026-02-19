@@ -4,9 +4,9 @@
  * Admin Sidebar Component
  * SalesVelocity.ai - Penthouse Admin Navigation
  *
- * Full command-center sidebar exposing all 51 AI agents, 130+ routes,
- * and 215+ API endpoints across CRM, Sales, Marketing, AI, and more.
- * Role-based filtering via unified-rbac NavigationSection/NavigationItem.
+ * Consolidated 8-section sidebar (down from 13). Sub-pages are accessed
+ * via tab navigation within parent pages. Settings and Academy are in
+ * the sidebar footer. Role-based filtering via unified-rbac types.
  */
 
 import React, { useState, useCallback, useMemo } from 'react';
@@ -28,34 +28,19 @@ import {
   Send,
   ListOrdered,
   FileText,
-  Swords,
   Mail,
   Share2,
   FlaskConical,
   Video,
   Bot,
   GraduationCap,
-  UserCog,
-  Phone,
   PhoneCall,
   Workflow,
-  Route,
-  ShieldCheck,
-  ScrollText,
-  TrendingUp,
   BarChart3,
   Activity,
-  Target,
   Globe,
   FileEdit,
-  Search,
-  Link2,
   Settings,
-  UsersRound,
-  Plug,
-  KeyRound,
-  Palette,
-  Lock,
   ChevronLeft,
   ChevronRight,
   ChevronDown,
@@ -63,26 +48,13 @@ import {
   Menu,
   X,
   ClipboardList,
-  Mic,
-  Microscope,
-  PenTool,
-  Sprout,
-  Megaphone,
-  SearchCode,
   Database,
-  Sliders,
   Package,
   ShoppingCart,
   Store,
   PieChart,
-  LineChart,
   BookOpenText,
-  Cog,
-  Monitor,
-  Eye,
-  PlayCircle,
-  Award,
-  CalendarDays,
+  HelpCircle,
 } from 'lucide-react';
 
 // ============================================================================
@@ -90,16 +62,14 @@ import {
 // ============================================================================
 
 const NAV_SECTIONS: NavigationSection[] = [
-  // ── Command Center ──────────────────────────────────────────────────
+  // ── Home ────────────────────────────────────────────────────────────
   {
-    id: 'command_center',
-    label: 'Command Center',
+    id: 'home',
+    label: 'Home',
     icon: LayoutDashboard,
     allowedRoles: ['owner', 'admin', 'manager', 'member'],
     items: [
       { id: 'dashboard', label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, iconColor: 'var(--color-primary)' },
-      { id: 'executive-briefing', label: 'Executive Briefing', href: '/executive-briefing', icon: Activity, iconColor: 'var(--color-success)', requiredPermission: 'canAccessPlatformAdmin' },
-      { id: 'workforce-hq', label: 'Workforce HQ', href: '/workforce', icon: Monitor, iconColor: 'var(--color-secondary)', requiredPermission: 'canAccessPlatformAdmin' },
     ],
   },
   // ── CRM ─────────────────────────────────────────────────────────────
@@ -116,56 +86,35 @@ const NAV_SECTIONS: NavigationSection[] = [
       { id: 'living-ledger', label: 'Living Ledger', href: '/living-ledger', icon: BookOpen, iconColor: 'var(--color-warning)', requiredPermission: 'canViewAllRecords' },
     ],
   },
-  // ── Lead Gen ────────────────────────────────────────────────────────
+  // ── Outreach (merged Lead Gen + Outbound + Workflows) ───────────────
   {
-    id: 'lead_gen',
-    label: 'Lead Gen',
-    icon: Target,
-    allowedRoles: ['owner', 'admin', 'manager'],
-    items: [
-      { id: 'forms', label: 'Forms', href: '/forms', icon: ClipboardList, iconColor: 'var(--color-primary)' },
-      { id: 'lead-research', label: 'Lead Research', href: '/leads/research', icon: Microscope, iconColor: 'var(--color-secondary)' },
-      { id: 'lead-scoring', label: 'Lead Scoring', href: '/lead-scoring', icon: Target, iconColor: 'var(--color-success)' },
-      { id: 'marketing-scraper', label: 'Marketing Scraper', href: '/scraper', icon: SearchCode, iconColor: 'var(--color-cyan)' },
-    ],
-  },
-  // ── Outbound / Sales ────────────────────────────────────────────────
-  {
-    id: 'outbound',
-    label: 'Outbound',
+    id: 'outreach',
+    label: 'Outreach',
     icon: Send,
     allowedRoles: ['owner', 'admin', 'manager'],
     items: [
       { id: 'outbound-hub', label: 'Outbound', href: '/outbound', icon: Send, iconColor: 'var(--color-primary)', requiredPermission: 'canManageLeads' },
       { id: 'sequences', label: 'Sequences', href: '/outbound/sequences', icon: ListOrdered, iconColor: 'var(--color-secondary)', requiredPermission: 'canManageLeads' },
       { id: 'email-campaigns', label: 'Campaigns', href: '/email/campaigns', icon: Mail, iconColor: 'var(--color-cyan)', requiredPermission: 'canManageEmailCampaigns' },
-      { id: 'email-writer', label: 'Email Writer', href: '/email-writer', icon: PenTool, iconColor: 'var(--color-success)', requiredPermission: 'canManageEmailCampaigns' },
-      { id: 'nurture', label: 'Nurture', href: '/nurture', icon: Sprout, iconColor: 'var(--color-warning)', requiredPermission: 'canManageLeads' },
       { id: 'calls', label: 'Calls', href: '/calls', icon: PhoneCall, iconColor: 'var(--color-error)', requiredPermission: 'canAccessVoiceAgents' },
+      { id: 'forms', label: 'Forms', href: '/forms', icon: ClipboardList, iconColor: 'var(--color-success)' },
+      { id: 'workflows', label: 'Workflows', href: '/workflows', icon: Workflow, iconColor: 'var(--color-warning)', requiredPermission: 'canCreateWorkflows' },
     ],
   },
-  // ── Content Factory ─────────────────────────────────────────────────
+  // ── Content (consolidated from Content Factory) ─────────────────────
   {
-    id: 'content_factory',
-    label: 'Content Factory',
-    icon: Video,
+    id: 'content',
+    label: 'Content',
+    icon: Share2,
     allowedRoles: ['owner', 'admin', 'manager'],
     items: [
-      { id: 'video-studio', label: 'Video Studio', href: '/content/video', icon: Video, iconColor: 'var(--color-primary)', requiredPermission: 'canManageSocialMedia' },
-      { id: 'social-command-center', label: 'Social Command Center', href: '/social/command-center', icon: Activity, iconColor: 'var(--color-success)', requiredPermission: 'canManageSocialMedia' },
-      { id: 'social-media', label: 'Social Media', href: '/social/campaigns', icon: Share2, iconColor: 'var(--color-secondary)', requiredPermission: 'canManageSocialMedia' },
-      { id: 'content-calendar', label: 'Content Calendar', href: '/social/calendar', icon: CalendarDays, iconColor: 'var(--color-teal)', requiredPermission: 'canManageSocialMedia' },
-      { id: 'approval-queue', label: 'Approval Queue', href: '/social/approvals', icon: ClipboardList, iconColor: 'var(--color-warning)', requiredPermission: 'canManageSocialMedia' },
-      { id: 'social-listening', label: 'Social Listening', href: '/social/listening', icon: Eye, iconColor: 'var(--color-accent)', requiredPermission: 'canManageSocialMedia' },
-      { id: 'social-activity', label: 'Activity Feed', href: '/social/activity', icon: ScrollText, iconColor: 'var(--color-purple)', requiredPermission: 'canManageSocialMedia' },
+      { id: 'social-hub', label: 'Social Hub', href: '/social/command-center', icon: Activity, iconColor: 'var(--color-success)', requiredPermission: 'canManageSocialMedia' },
       { id: 'social-analytics', label: 'Social Analytics', href: '/social/analytics', icon: BarChart3, iconColor: 'var(--color-cyan)', requiredPermission: 'canManageSocialMedia' },
-      { id: 'agent-rules', label: 'Agent Rules', href: '/social/agent-rules', icon: Sliders, iconColor: 'var(--color-error)', requiredPermission: 'canManageSocialMedia' },
-      { id: 'golden-playbook', label: 'Golden Playbook', href: '/social/playbook', icon: BookOpenText, iconColor: 'var(--color-warning)', requiredPermission: 'canTrainAIAgents' },
-      { id: 'proposals', label: 'Proposals', href: '/proposals/builder', icon: FileText, iconColor: 'var(--color-cyan)' },
-      { id: 'battlecards', label: 'Battlecards', href: '/battlecards', icon: Swords, iconColor: 'var(--color-warning)' },
+      { id: 'video-studio', label: 'Video Studio', href: '/content/video', icon: Video, iconColor: 'var(--color-primary)', requiredPermission: 'canManageSocialMedia' },
+      { id: 'proposals', label: 'Proposals', href: '/proposals/builder', icon: FileText, iconColor: 'var(--color-secondary)' },
     ],
   },
-  // ── AI Workforce ────────────────────────────────────────────────────
+  // ── AI Workforce (consolidated) ─────────────────────────────────────
   {
     id: 'ai_workforce',
     label: 'AI Workforce',
@@ -173,32 +122,14 @@ const NAV_SECTIONS: NavigationSection[] = [
     allowedRoles: ['owner', 'admin', 'manager'],
     items: [
       { id: 'agent-registry', label: 'Agent Registry', href: '/ai-agents', icon: Bot, iconColor: 'var(--color-cyan)', requiredPermission: 'canDeployAIAgents' },
-      { id: 'training-center', label: 'Training Center', href: '/settings/ai-agents/training', icon: GraduationCap, iconColor: 'var(--color-success)', requiredPermission: 'canTrainAIAgents' },
-      { id: 'agent-persona', label: 'Agent Persona', href: '/settings/ai-agents/persona', icon: UserCog, iconColor: 'var(--color-secondary)', requiredPermission: 'canManageAIAgents' },
-      { id: 'voice-speech', label: 'Voice & Speech', href: '/settings/ai-agents/voice', icon: Mic, iconColor: 'var(--color-purple)', requiredPermission: 'canManageAIAgents' },
-      { id: 'voice-ai', label: 'Voice AI Lab', href: '/voice/training', icon: Phone, iconColor: 'var(--color-warning)', requiredPermission: 'canTrainAIAgents' },
-      { id: 'social-ai', label: 'Social AI Lab', href: '/social/training', icon: Megaphone, iconColor: 'var(--color-accent)', requiredPermission: 'canTrainAIAgents' },
-      { id: 'seo-ai', label: 'SEO AI Lab', href: '/seo/training', icon: SearchCode, iconColor: 'var(--color-teal)', requiredPermission: 'canTrainAIAgents' },
-      { id: 'datasets', label: 'Datasets', href: '/ai/datasets', icon: Database, iconColor: 'var(--color-primary)', requiredPermission: 'canManageAIAgents' },
-      { id: 'fine-tuning', label: 'Fine-Tuning', href: '/ai/fine-tuning', icon: Sliders, iconColor: 'var(--color-orange)', requiredPermission: 'canManageAIAgents' },
+      { id: 'training-hub', label: 'Training Hub', href: '/settings/ai-agents/training', icon: GraduationCap, iconColor: 'var(--color-success)', requiredPermission: 'canTrainAIAgents' },
+      { id: 'models', label: 'Models & Data', href: '/ai/datasets', icon: Database, iconColor: 'var(--color-primary)', requiredPermission: 'canManageAIAgents' },
     ],
   },
-  // ── Automation ──────────────────────────────────────────────────────
+  // ── Commerce ────────────────────────────────────────────────────────
   {
-    id: 'automation',
-    label: 'Automation',
-    icon: Workflow,
-    allowedRoles: ['owner', 'admin', 'manager'],
-    items: [
-      { id: 'workflows', label: 'Workflows', href: '/workflows', icon: Workflow, iconColor: 'var(--color-primary)', requiredPermission: 'canCreateWorkflows' },
-      { id: 'ab-testing', label: 'A/B Testing', href: '/ab-tests', icon: FlaskConical, iconColor: 'var(--color-success)' },
-      { id: 'lead-routing', label: 'Lead Routing', href: '/settings/lead-routing', icon: Route, iconColor: 'var(--color-secondary)', requiredPermission: 'canAssignRecords' },
-    ],
-  },
-  // ── E-Commerce ──────────────────────────────────────────────────────
-  {
-    id: 'ecommerce',
-    label: 'E-Commerce',
+    id: 'commerce',
+    label: 'Commerce',
     icon: ShoppingCart,
     allowedRoles: ['owner', 'admin', 'manager', 'member'],
     items: [
@@ -207,33 +138,7 @@ const NAV_SECTIONS: NavigationSection[] = [
       { id: 'storefront', label: 'Storefront', href: '/settings/storefront', icon: Store, iconColor: 'var(--color-warning)', requiredPermission: 'canManageEcommerce' },
     ],
   },
-  // ── Compliance ──────────────────────────────────────────────────────
-  {
-    id: 'system',
-    label: 'Compliance',
-    icon: ShieldCheck,
-    allowedRoles: ['owner', 'admin'],
-    items: [
-      { id: 'compliance-reports', label: 'Compliance Reports', href: '/compliance-reports', icon: ShieldCheck, iconColor: 'var(--color-success)', requiredPermission: 'canViewAuditLogs' },
-      { id: 'audit-log', label: 'Audit Log', href: '/website/audit-log', icon: ScrollText, iconColor: 'var(--color-warning)', requiredPermission: 'canViewAuditLogs' },
-      { id: 'impersonate', label: 'Impersonate User', href: '/system/impersonate', icon: Eye, iconColor: 'var(--color-error)', requiredPermission: 'canImpersonateUsers' },
-    ],
-  },
-  // ── Analytics ───────────────────────────────────────────────────────
-  {
-    id: 'analytics',
-    label: 'Analytics',
-    icon: PieChart,
-    allowedRoles: ['owner', 'admin', 'manager', 'member'],
-    items: [
-      { id: 'analytics-overview', label: 'Overview', href: '/analytics', icon: PieChart, iconColor: 'var(--color-cyan)', requiredPermission: 'canViewReports' },
-      { id: 'revenue', label: 'Revenue', href: '/analytics/revenue', icon: TrendingUp, iconColor: 'var(--color-success)', requiredPermission: 'canViewReports' },
-      { id: 'pipeline', label: 'Pipeline', href: '/analytics/pipeline', icon: BarChart3, iconColor: 'var(--color-primary)', requiredPermission: 'canViewReports' },
-      { id: 'sales-perf', label: 'Sales Performance', href: '/analytics/sales', icon: Activity, iconColor: 'var(--color-secondary)', requiredPermission: 'canViewReports' },
-      { id: 'sequence-analytics', label: 'Sequences', href: '/sequences/analytics', icon: LineChart, iconColor: 'var(--color-warning)', requiredPermission: 'canViewPlatformAnalytics' },
-    ],
-  },
-  // ── Website ─────────────────────────────────────────────────────────
+  // ── Website (consolidated — SEO/Domains/Settings → tabs) ───────────
   {
     id: 'website',
     label: 'Website',
@@ -243,36 +148,17 @@ const NAV_SECTIONS: NavigationSection[] = [
       { id: 'site-editor', label: 'Site Editor', href: '/website/editor', icon: Globe, iconColor: 'var(--color-primary)', requiredPermission: 'canManageWebsite' },
       { id: 'pages', label: 'Pages', href: '/website/pages', icon: FileEdit, iconColor: 'var(--color-secondary)', requiredPermission: 'canManageWebsite' },
       { id: 'blog', label: 'Blog', href: '/website/blog', icon: BookOpenText, iconColor: 'var(--color-cyan)', requiredPermission: 'canManageWebsite' },
-      { id: 'seo', label: 'SEO', href: '/website/seo', icon: Search, iconColor: 'var(--color-success)', requiredPermission: 'canManageWebsite' },
-      { id: 'domains', label: 'Domains', href: '/website/domains', icon: Link2, iconColor: 'var(--color-teal)', requiredPermission: 'canManageWebsite' },
-      { id: 'site-settings', label: 'Site Settings', href: '/website/settings', icon: Cog, iconColor: 'var(--color-warning)', requiredPermission: 'canManageWebsite' },
     ],
   },
-  // ── Academy ─────────────────────────────────────────────────────────
+  // ── Analytics (consolidated — Revenue/Pipeline/Sales → tabs) ────────
   {
-    id: 'academy',
-    label: 'Academy',
-    icon: GraduationCap,
+    id: 'analytics',
+    label: 'Analytics',
+    icon: PieChart,
     allowedRoles: ['owner', 'admin', 'manager', 'member'],
     items: [
-      { id: 'tutorials', label: 'Tutorials', href: '/academy', icon: PlayCircle, iconColor: 'var(--color-primary)' },
-      { id: 'courses', label: 'Courses', href: '/academy/courses', icon: BookOpen, iconColor: 'var(--color-secondary)' },
-      { id: 'certifications', label: 'Certifications', href: '/academy/certifications', icon: Award, iconColor: 'var(--color-success)' },
-    ],
-  },
-  // ── Settings ────────────────────────────────────────────────────────
-  {
-    id: 'settings',
-    label: 'Settings',
-    icon: Settings,
-    allowedRoles: ['owner', 'admin', 'manager'],
-    items: [
-      { id: 'general', label: 'General', href: '/settings', icon: Settings, iconColor: 'var(--color-text-secondary)', requiredPermission: 'canAccessSettings' },
-      { id: 'users-team', label: 'Users & Team', href: '/settings/users', icon: UsersRound, iconColor: 'var(--color-primary)', requiredPermission: 'canViewAllUsers' },
-      { id: 'integrations', label: 'Integrations', href: '/settings/integrations', icon: Plug, iconColor: 'var(--color-secondary)', requiredPermission: 'canManageIntegrations' },
-      { id: 'api-keys', label: 'API Keys', href: '/settings/api-keys', icon: KeyRound, iconColor: 'var(--color-success)', requiredPermission: 'canManageAPIKeys' },
-      { id: 'theme', label: 'Theme & Branding', href: '/settings/theme', icon: Palette, iconColor: 'var(--color-warning)', requiredPermission: 'canManageTheme' },
-      { id: 'security', label: 'Security', href: '/settings/security', icon: Lock, iconColor: 'var(--color-error)', requiredPermission: 'canAccessPlatformAdmin' },
+      { id: 'analytics-overview', label: 'Overview', href: '/analytics', icon: PieChart, iconColor: 'var(--color-cyan)', requiredPermission: 'canViewReports' },
+      { id: 'ab-testing', label: 'A/B Testing', href: '/ab-tests', icon: FlaskConical, iconColor: 'var(--color-success)' },
     ],
   },
 ];
@@ -319,10 +205,32 @@ export default function AdminSidebar() {
   }, []);
 
   const isActive = (href: string): boolean => {
-    if (href === '/dashboard') {
-      return pathname === '/dashboard';
+    if (!pathname) { return false; }
+    if (href === '/dashboard') { return pathname === '/dashboard'; }
+    // Social Hub matches all /social/* except /social/analytics (separate item)
+    if (href === '/social/command-center') {
+      return pathname.startsWith('/social/') &&
+        !pathname.startsWith('/social/analytics') &&
+        !pathname.startsWith('/social/training');
     }
-    return pathname?.startsWith(href) ?? false;
+    // Training Hub matches all AI agent config + training labs
+    if (href === '/settings/ai-agents/training') {
+      return pathname.startsWith('/settings/ai-agents/') ||
+        pathname.startsWith('/voice/training') ||
+        pathname.startsWith('/social/training') ||
+        pathname.startsWith('/seo/training');
+    }
+    // Models & Data matches all /ai/* paths
+    if (href === '/ai/datasets') {
+      return pathname.startsWith('/ai/');
+    }
+    // Analytics overview matches all analytics sub-pages
+    if (href === '/analytics') {
+      return pathname === '/analytics' ||
+        pathname.startsWith('/analytics/') ||
+        pathname.startsWith('/sequences/analytics');
+    }
+    return pathname.startsWith(href);
   };
 
   const currentWidth = isCollapsed ? SIDEBAR_COLLAPSED_WIDTH : SIDEBAR_WIDTH;
@@ -639,43 +547,89 @@ export default function AdminSidebar() {
           })}
         </nav>
 
-        {/* Footer */}
+        {/* Footer — Settings & Academy quick access */}
         <div
           style={{
-            padding: '0.75rem 1.25rem',
+            padding: '0.5rem 1.25rem 0.75rem',
             borderTop: '1px solid var(--color-border-light)',
             backgroundColor: 'var(--color-bg-elevated)',
           }}
         >
-          {!isCollapsed ? (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div
-                style={{
-                  fontSize: '0.6875rem',
-                  color: 'var(--color-text-disabled)',
-                }}
-              >
-                SalesVelocity.ai
-              </div>
-              <div
-                style={{
-                  fontSize: '0.625rem',
-                  color: 'var(--color-text-disabled)',
-                  fontFamily: 'monospace',
-                }}
-              >
-                51 agents
-              </div>
-            </div>
-          ) : (
-            <div
+          <div style={{ display: 'flex', alignItems: 'center', gap: isCollapsed ? '0' : '0.25rem', justifyContent: isCollapsed ? 'center' : 'flex-start' }}>
+            <Link
+              href="/settings"
+              title="Settings"
+              onClick={handleMobileClose}
               style={{
-                fontSize: '0.6875rem',
-                color: 'var(--color-text-disabled)',
-                textAlign: 'center',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                padding: '0.5rem 0.5rem',
+                borderRadius: '0.375rem',
+                textDecoration: 'none',
+                color: pathname?.startsWith('/settings') ? 'var(--color-primary)' : 'var(--color-text-secondary)',
+                backgroundColor: pathname?.startsWith('/settings') ? 'rgba(var(--color-primary-rgb), 0.08)' : 'transparent',
+                transition: 'all 0.15s ease',
+                flex: isCollapsed ? 'none' : 1,
+              }}
+              onMouseEnter={(e) => {
+                if (!pathname?.startsWith('/settings')) {
+                  e.currentTarget.style.backgroundColor = 'rgba(var(--color-primary-rgb), 0.04)';
+                  e.currentTarget.style.color = 'var(--color-text-primary)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!pathname?.startsWith('/settings')) {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                  e.currentTarget.style.color = 'var(--color-text-secondary)';
+                }
               }}
             >
-              RC
+              <Settings className="w-4 h-4 flex-shrink-0" />
+              {!isCollapsed && <span style={{ fontSize: '0.8125rem', fontWeight: 500 }}>Settings</span>}
+            </Link>
+            <Link
+              href="/academy"
+              title="Academy & Help"
+              onClick={handleMobileClose}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                padding: '0.5rem 0.5rem',
+                borderRadius: '0.375rem',
+                textDecoration: 'none',
+                color: pathname?.startsWith('/academy') ? 'var(--color-primary)' : 'var(--color-text-secondary)',
+                backgroundColor: pathname?.startsWith('/academy') ? 'rgba(var(--color-primary-rgb), 0.08)' : 'transparent',
+                transition: 'all 0.15s ease',
+              }}
+              onMouseEnter={(e) => {
+                if (!pathname?.startsWith('/academy')) {
+                  e.currentTarget.style.backgroundColor = 'rgba(var(--color-primary-rgb), 0.04)';
+                  e.currentTarget.style.color = 'var(--color-text-primary)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!pathname?.startsWith('/academy')) {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                  e.currentTarget.style.color = 'var(--color-text-secondary)';
+                }
+              }}
+            >
+              <HelpCircle className="w-4 h-4 flex-shrink-0" />
+              {!isCollapsed && <span style={{ fontSize: '0.8125rem', fontWeight: 500 }}>Help</span>}
+            </Link>
+          </div>
+          {!isCollapsed && (
+            <div
+              style={{
+                fontSize: '0.625rem',
+                color: 'var(--color-text-disabled)',
+                marginTop: '0.375rem',
+                paddingLeft: '0.5rem',
+              }}
+            >
+              SalesVelocity.ai
             </div>
           )}
         </div>

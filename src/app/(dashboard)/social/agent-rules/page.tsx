@@ -2,6 +2,18 @@
 
 import { useState, useEffect } from 'react';
 import { useUnifiedAuth } from '@/hooks/useUnifiedAuth';
+import SubpageNav from '@/components/ui/SubpageNav';
+
+const SOCIAL_NAV_ITEMS = [
+  { label: 'Command Center', href: '/social/command-center' },
+  { label: 'Campaigns', href: '/social/campaigns' },
+  { label: 'Calendar', href: '/social/calendar' },
+  { label: 'Approvals', href: '/social/approvals' },
+  { label: 'Listening', href: '/social/listening' },
+  { label: 'Activity', href: '/social/activity' },
+  { label: 'Agent Rules', href: '/social/agent-rules' },
+  { label: 'Playbook', href: '/social/playbook' },
+];
 
 interface AutonomousAgentSettings {
   agentEnabled: boolean;
@@ -180,6 +192,8 @@ export default function AgentRulesPage() {
           Configure guardrails and limits for the autonomous posting agent
         </p>
       </div>
+
+      <SubpageNav items={SOCIAL_NAV_ITEMS} />
 
       {error && (
         <div

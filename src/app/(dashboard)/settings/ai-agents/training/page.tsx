@@ -3,6 +3,7 @@
 import { PLATFORM_ID } from '@/lib/constants/platform';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import SubpageNav from '@/components/ui/SubpageNav';
 import { useAuth } from '@/hooks/useAuth';
 import { useOrgTheme } from '@/hooks/useOrgTheme'
 import { logger } from '@/lib/logger/logger';
@@ -989,6 +990,15 @@ export default function AgentTrainingPage() {
     'Escalation scenarios',
   ];
 
+  const trainingHubItems = [
+    { label: 'Training Center', href: '/settings/ai-agents/training' },
+    { label: 'Persona', href: '/settings/ai-agents/persona' },
+    { label: 'Voice & Speech', href: '/settings/ai-agents/voice' },
+    { label: 'Voice AI Lab', href: '/voice/training' },
+    { label: 'Social AI Lab', href: '/social/training' },
+    { label: 'SEO AI Lab', href: '/seo/training' },
+  ];
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: 0, height: '100%' }}>
       {/* Header */}
@@ -1000,6 +1010,7 @@ export default function AgentTrainingPage() {
           <p style={{ color: 'var(--color-text-secondary)', marginBottom: '1.5rem' }}>
             Train your Base Model through conversations, upload training materials, and save Golden Masters when ready
           </p>
+          <SubpageNav items={trainingHubItems} />
           
           {/* Status Cards */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1rem' }}>

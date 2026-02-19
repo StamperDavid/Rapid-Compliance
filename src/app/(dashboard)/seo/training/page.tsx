@@ -8,6 +8,7 @@ import { useOrgTheme } from '@/hooks/useOrgTheme';
 import { useToast } from '@/hooks/useToast';
 import { logger } from '@/lib/logger/logger';
 import type { ModelName } from '@/types/ai-models';
+import SubpageNav from '@/components/ui/SubpageNav';
 
 // Minimal type definitions for this component
 interface SEOTrainingSettings {
@@ -584,6 +585,14 @@ export default function SEOTrainingPage() {
           <p style={{ color: COLORS.muted, marginBottom: '1.5rem' }}>
             Configure AI settings for SEO-optimized content generation, test your setup, and refine your content strategy
           </p>
+          <SubpageNav items={[
+            { label: 'Training Center', href: '/settings/ai-agents/training' },
+            { label: 'Persona', href: '/settings/ai-agents/persona' },
+            { label: 'Voice & Speech', href: '/settings/ai-agents/voice' },
+            { label: 'Voice AI Lab', href: '/voice/training' },
+            { label: 'Social AI Lab', href: '/social/training' },
+            { label: 'SEO AI Lab', href: '/seo/training' },
+          ]} />
 
           {/* Status Cards */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>

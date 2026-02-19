@@ -3,6 +3,7 @@
 import { useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
+import SubpageNav from '@/components/ui/SubpageNav';
 import {
   Heart,
   Plus,
@@ -70,6 +71,12 @@ export default function NurtureCampaignsPage() {
           Create Campaign
         </motion.button>
       </motion.div>
+
+      {/* Sub-page Navigation */}
+      <SubpageNav items={[
+        { label: 'Email Writer', href: '/email-writer' },
+        { label: 'Nurture', href: '/nurture' },
+      ]} />
 
       {/* Error Message */}
       {error && (

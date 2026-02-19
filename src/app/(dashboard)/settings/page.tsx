@@ -15,6 +15,7 @@ export default function SettingsPage() {
   const canViewAllUsers = usePermission('canViewAllUsers');
   const canManageBilling = usePermission('canManageBilling');
   const canManageIntegrations = usePermission('canManageIntegrations');
+  const canAssignRecords = usePermission('canAssignRecords');
 
   const primaryColor = theme?.colors?.primary?.main || 'var(--color-primary)';
 
@@ -51,6 +52,15 @@ export default function SettingsPage() {
       items: [
         { icon: '👥', label: 'Team Members', description: 'Invite users, manage roles and permissions', href: `/settings/users`, permission: canViewAllUsers },
         { icon: '🔐', label: 'Security', description: 'Two-factor auth, IP restrictions, audit logs', href: `/settings/security`, permission: canManageOrganization },
+      ]
+    },
+    {
+      title: 'Compliance & Admin',
+      items: [
+        { icon: '🛡️', label: 'Compliance Reports', description: 'Run audits, view compliance scores, and track regulatory adherence', href: `/compliance-reports`, permission: canManageOrganization },
+        { icon: '📜', label: 'Audit Log', description: 'View system-wide audit trail of all user and system actions', href: `/website/audit-log`, permission: canManageOrganization },
+        { icon: '👤', label: 'Impersonate User', description: 'Admin tool to impersonate users for debugging and support', href: `/system/impersonate`, permission: canManageOrganization },
+        { icon: '🔀', label: 'Lead Routing', description: 'Configure automatic lead assignment rules and round-robin routing', href: `/settings/lead-routing`, permission: canAssignRecords },
       ]
     },
     {

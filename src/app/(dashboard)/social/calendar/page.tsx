@@ -9,6 +9,18 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import type { CalendarEvent } from '@/components/social/CalendarEventCard';
+import SubpageNav from '@/components/ui/SubpageNav';
+
+const SOCIAL_NAV_ITEMS = [
+  { label: 'Command Center', href: '/social/command-center' },
+  { label: 'Campaigns', href: '/social/campaigns' },
+  { label: 'Calendar', href: '/social/calendar' },
+  { label: 'Approvals', href: '/social/approvals' },
+  { label: 'Listening', href: '/social/listening' },
+  { label: 'Activity', href: '/social/activity' },
+  { label: 'Agent Rules', href: '/social/agent-rules' },
+  { label: 'Playbook', href: '/social/playbook' },
+];
 
 // Dynamic import to avoid SSR issues with react-big-calendar
 const SocialCalendar = dynamic(() => import('@/components/social/SocialCalendar'), {
@@ -124,6 +136,8 @@ export default function ContentCalendarPage() {
       <p style={{ color: 'var(--color-text-secondary)', marginBottom: '1.5rem', fontSize: '0.875rem' }}>
         All scheduled, published, and draft posts across platforms
       </p>
+
+      <SubpageNav items={SOCIAL_NAV_ITEMS} />
 
       {loading ? (
         <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--color-text-secondary)' }}>

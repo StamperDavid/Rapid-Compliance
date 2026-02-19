@@ -8,6 +8,18 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import type { SocialMention, MentionSentiment, MentionStatus, ListeningConfig } from '@/types/social';
+import SubpageNav from '@/components/ui/SubpageNav';
+
+const SOCIAL_NAV_ITEMS = [
+  { label: 'Command Center', href: '/social/command-center' },
+  { label: 'Campaigns', href: '/social/campaigns' },
+  { label: 'Calendar', href: '/social/calendar' },
+  { label: 'Approvals', href: '/social/approvals' },
+  { label: 'Listening', href: '/social/listening' },
+  { label: 'Activity', href: '/social/activity' },
+  { label: 'Agent Rules', href: '/social/agent-rules' },
+  { label: 'Playbook', href: '/social/playbook' },
+];
 
 const SENTIMENT_COLORS: Record<MentionSentiment, { bg: string; text: string; label: string }> = {
   positive: { bg: 'rgba(76,175,80,0.15)', text: '#4CAF50', label: 'Positive' },
@@ -162,6 +174,8 @@ export default function SocialListeningPage() {
           {showConfig ? 'Hide Config' : 'Configure'}
         </button>
       </div>
+
+      <SubpageNav items={SOCIAL_NAV_ITEMS} />
 
       {/* Config Panel */}
       {showConfig && (

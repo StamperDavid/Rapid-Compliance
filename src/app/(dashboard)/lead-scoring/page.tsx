@@ -11,6 +11,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { logger } from '@/lib/logger/logger';
 import { LeadScoreCard } from '@/components/lead-scoring/LeadScoreCard';
 import type { StoredLeadScore, LeadScoreAnalytics, ScoringRules } from '@/types/lead-scoring';
+import SubpageNav from '@/components/ui/SubpageNav';
 import {
   Target,
   Flame,
@@ -273,6 +274,13 @@ export default function LeadScoringDashboard() {
           </button>
         </div>
       </motion.div>
+
+      {/* Sub-page Navigation */}
+      <SubpageNav items={[
+        { label: 'Lead Research', href: '/leads/research' },
+        { label: 'Lead Scoring', href: '/lead-scoring' },
+        { label: 'Marketing Scraper', href: '/scraper' },
+      ]} />
 
       {/* Analytics Cards */}
       {analytics && (

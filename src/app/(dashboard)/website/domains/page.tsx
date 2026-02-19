@@ -8,6 +8,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
+import SubpageNav from '@/components/ui/SubpageNav';
 import { useToast } from '@/hooks/useToast';
 
 interface CustomDomain {
@@ -210,6 +211,12 @@ export default function CustomDomainsPage() {
       padding: '40px 20px',
       fontFamily: 'system-ui, -apple-system, sans-serif',
     }}>
+      <SubpageNav items={[
+        { label: 'SEO', href: '/website/seo' },
+        { label: 'Domains', href: '/website/domains' },
+        { label: 'Site Settings', href: '/website/settings' },
+      ]} />
+
       {/* Header */}
       <div style={{
         display: 'flex',

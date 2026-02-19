@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import SubpageNav from '@/components/ui/SubpageNav';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -235,6 +236,15 @@ export default function AgentPersonaPage() {
             </button>
           </div>
         </div>
+
+        <SubpageNav items={[
+          { label: 'Training Center', href: '/settings/ai-agents/training' },
+          { label: 'Persona', href: '/settings/ai-agents/persona' },
+          { label: 'Voice & Speech', href: '/settings/ai-agents/voice' },
+          { label: 'Voice AI Lab', href: '/voice/training' },
+          { label: 'Social AI Lab', href: '/social/training' },
+          { label: 'SEO AI Lab', href: '/seo/training' },
+        ]} />
 
         {/* Persona Summary Card */}
         {persona.agentName && (

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
+import SubpageNav from '@/components/ui/SubpageNav';
 import { useAuth } from '@/hooks/useAuth';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
 import { auth } from '@/lib/firebase/config';
@@ -300,6 +301,14 @@ export default function VoiceSettingsPage() {
           <p style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>
             Configure Jasper&apos;s voice provider, select voices, and manage TTS settings
           </p>
+          <SubpageNav items={[
+            { label: 'Training Center', href: '/settings/ai-agents/training' },
+            { label: 'Persona', href: '/settings/ai-agents/persona' },
+            { label: 'Voice & Speech', href: '/settings/ai-agents/voice' },
+            { label: 'Voice AI Lab', href: '/voice/training' },
+            { label: 'Social AI Lab', href: '/social/training' },
+            { label: 'SEO AI Lab', href: '/seo/training' },
+          ]} />
         </div>
 
         {/* Section 1: Provider Selection */}

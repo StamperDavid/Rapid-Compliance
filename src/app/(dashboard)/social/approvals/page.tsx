@@ -9,6 +9,18 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useUnifiedAuth } from '@/hooks/useUnifiedAuth';
 import type { ApprovalItem, ApprovalStatus } from '@/types/social';
+import SubpageNav from '@/components/ui/SubpageNav';
+
+const SOCIAL_NAV_ITEMS = [
+  { label: 'Command Center', href: '/social/command-center' },
+  { label: 'Campaigns', href: '/social/campaigns' },
+  { label: 'Calendar', href: '/social/calendar' },
+  { label: 'Approvals', href: '/social/approvals' },
+  { label: 'Listening', href: '/social/listening' },
+  { label: 'Activity', href: '/social/activity' },
+  { label: 'Agent Rules', href: '/social/agent-rules' },
+  { label: 'Playbook', href: '/social/playbook' },
+];
 
 type FilterTab = 'all' | ApprovalStatus;
 
@@ -247,6 +259,8 @@ export default function ApprovalQueuePage() {
       <p style={{ color: 'var(--color-text-secondary)', marginBottom: '1.5rem', fontSize: '0.875rem' }}>
         Review flagged content before it goes live — edit drafts to train the AI
       </p>
+
+      <SubpageNav items={SOCIAL_NAV_ITEMS} />
 
       {/* Stats Bar */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', marginBottom: '1.5rem' }}>

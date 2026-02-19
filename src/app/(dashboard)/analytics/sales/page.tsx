@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import SubpageNav from '@/components/ui/SubpageNav';
 import type { StageMetrics, PipelineInsight } from '@/lib/crm/sales-velocity';
 
 /**
@@ -103,6 +104,13 @@ export default function SalesAnalyticsPage() {
 
   return (
     <div className="p-8">
+      <SubpageNav items={[
+        { label: 'Overview', href: '/analytics' },
+        { label: 'Revenue', href: '/analytics/revenue' },
+        { label: 'Pipeline', href: '/analytics/pipeline' },
+        { label: 'Sales Performance', href: '/analytics/sales' },
+        { label: 'Sequences', href: '/sequences/analytics' },
+      ]} />
       <h1 className="text-3xl font-bold mb-8">Sales Analytics</h1>
 
       {/* Key Metrics */}

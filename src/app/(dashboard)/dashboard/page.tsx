@@ -8,6 +8,7 @@ import { collection, query, where, getDocs, orderBy, limit } from 'firebase/fire
 import { db } from '@/lib/firebase/config';
 import { useOrgTheme } from '@/hooks/useOrgTheme'
 import { logger } from '@/lib/logger/logger';
+import SubpageNav from '@/components/ui/SubpageNav';
 
 interface DashboardStats {
   totalLeads: number;
@@ -319,6 +320,12 @@ export default function WorkspaceDashboardPage() {
             </Link>
           </div>
         </div>
+
+        <SubpageNav items={[
+          { label: 'Dashboard', href: '/dashboard' },
+          { label: 'Executive Briefing', href: '/executive-briefing' },
+          { label: 'Workforce HQ', href: '/workforce' },
+        ]} />
 
         {/* Stats Grid */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
