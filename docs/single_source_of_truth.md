@@ -1,7 +1,7 @@
 # SalesVelocity.ai - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** February 19, 2026 (Session 25: Nav consolidation — 13 sidebar sections → 8, SubpageNav tab component, Settings/Academy moved to footer icons)
+**Last Updated:** February 19, 2026 (Session 26: Commerce pipeline fixes, fake data removal, Firestore path isolation — 125+ files refactored)
 **Branches:** `dev` (latest)
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Architecture:** Single-Tenant (Penthouse Model) - NOT a SaaS platform
@@ -36,7 +36,7 @@
 | Metric | Count | Status |
 |--------|-------|--------|
 | Physical Routes (page.tsx) | 173 | Verified February 13, 2026 (added /store/checkout/cancelled, social OAuth routes) |
-| API Endpoints (route.ts) | 268 | Verified February 13, 2026 (Session 9: added /api/public/unsubscribe) |
+| API Endpoints (route.ts) | 271 | Verified February 19, 2026 (Session 26: +/api/admin/usage, +/api/subscriptions/checkout, +/api/webhooks/mollie) |
 | AI Agents | 52 | **52 FUNCTIONAL (48 swarm + 4 standalone)** |
 | RBAC Roles | 4 | `owner` (level 3), `admin` (level 2), `manager` (level 1), `member` (level 0) — 4-role RBAC |
 | Firestore Collections | 67+ | Active (sagaState, eventLog collections; 25 composite indexes) |
@@ -1755,6 +1755,36 @@ Full 4-domain QA audit (Revenue, Data Integrity, Growth, Platform) identified 14
 *Files modified:* 18 files across `src/app/api/` and `src/lib/`
 *Build verification:* `tsc --noEmit` PASS | `lint` PASS | `build` PASS
 *Commit:* `3b1f5ea3` on `dev`
+
+**RESOLVED (February 19, 2026) - Session 26: Commerce Pipeline + Fake Data Removal + Data Integrity:**
+
+*Sprint 9 — Commerce Pipeline (9 fixes):*
+- Cart Firestore path mismatch fixed — `create-session/route.ts` aligned with `cart-service.ts`
+- Subscription upgrade bypass removed — proper Stripe Checkout flow via `POST /api/subscriptions/checkout`
+- Payment result URLs fixed (`/payment/success` → `/store/checkout/success`)
+- Dual checkout schemas consolidated — `/api/checkout/complete` aligned with ecommerce order schema
+- `POST /api/webhooks/mollie` — **NEW** Mollie payment webhook (form-encoded, status mapping, order updates)
+- `GET /api/admin/usage` — **NEW** Real billing usage metrics (contacts count, emails sent, AI credits)
+- Centralized subscription pricing in `src/lib/pricing/subscription-tiers.ts`
+- Storefront embed URLs use dynamic `NEXT_PUBLIC_APP_URL`
+- Non-Stripe refund providers return clear manual processing messages
+
+*Sprint 10 — Fake Data Removal (6 fixes, 35+ methods):*
+- Sequence engine: mock data → zero-value placeholders
+- 6 agent specialists: `Math.random()` → zero-value metrics (LinkedIn, Twitter, TikTok, SEO, Trend, Competitor)
+- Lead enrichment: fabricated data → empty `{}`, confidence `0`
+- Voice stats: fake demo stats → zeros + `noData: true`
+- Revenue forecasting: random data → empty array
+- Reputation manager: fabricated fallbacks → `{ data: null }`
+
+*Sprint 11 — Data Integrity (4 fixes, 125+ files):*
+- Zod validation added to 9 more API routes (voice, agent config, orchestrator)
+- 125+ files refactored to use `getSubCollection()` for Firestore environment path isolation
+- `PLATFORM_METRICS` and `PLATFORM_SETTINGS` added to COLLECTIONS registry
+- `trackLeadActivity()` multi-tenant remnant fixed (uses `PLATFORM_ID`)
+
+*Commits:* `61907270` (Firestore path refactor), `6124fd70` (commerce pipeline)
+*Build:* `tsc --noEmit` PASS | `lint` PASS | bypass ratchet 24/26
 
 ### Testing Infrastructure (Audit: January 30, 2026)
 
