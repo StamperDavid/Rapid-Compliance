@@ -5,7 +5,7 @@
 ## Context
 Repository: https://github.com/StamperDavid/Rapid-Compliance
 Branch: dev
-Last Session: February 19, 2026 (Session 26 — Commerce Pipeline + Fake Data Removal + Data Integrity)
+Last Session: February 19, 2026 (Session 27 — Workflow & Infrastructure + Code Quality)
 
 ## Current State
 
@@ -20,7 +20,7 @@ Last Session: February 19, 2026 (Session 26 — Commerce Pipeline + Fake Data Re
 - `tsc --noEmit` — **PASSES**
 - `npm run lint` — **PASSES (zero errors, zero warnings)**
 - `npm run build` — **PASSES**
-- Pre-commit hooks — **PASSES** (bypass ratchet 24/26, Windows-safe tsc runner)
+- Pre-commit hooks — **PASSES** (bypass ratchet 23/26, Windows-safe tsc runner)
 
 ### Deployment Pipeline
 - **Vercel:** `vercel.json` (7 cron jobs, CORS headers, security headers, US East)
@@ -109,6 +109,21 @@ Last Session: February 19, 2026 (Session 26 — Commerce Pipeline + Fake Data Re
 - Commits: `61907270` (Firestore paths refactor), `6124fd70` (commerce pipeline + subscription checkout). All pushed to dev.
 - Build: `tsc --noEmit` PASS, `npm run lint` PASS (zero errors, zero warnings), bypass ratchet 24/26.
 
+**Session 27 (February 19, 2026):** Tier 2 Fixes — Sprints 12 + 13 (9 tasks). Details:
+- **Sprint 12 — Workflow & Infrastructure (6 items):**
+  - 12.1: Wired 4 workflow action executors to real Firestore/notification services (tasks, deals, notifications, wait scheduling with persistence)
+  - 12.2: Added token refresh for Google, Microsoft, Slack, HubSpot (OAuth2 standard refresh flow)
+  - 12.3: Made `syncIntegration()` verify credentials + refresh; `testIntegration()` makes real API health checks per provider
+  - 12.4: Wired health check `checkIntegrations()` to query Firestore for connected integrations and expired tokens
+  - 12.5: Labeled shipping rate calculation as flat rate estimate with configurable base/per-item rates
+  - 12.6: Added Stripe Tax pathway for automated tax; clear fallback to manual rates with documentation
+- **Sprint 13 — Code Quality (3 items):**
+  - 13.1: Audited all `src/lib/` console statements — all already migrated or exempt. Remaining ~210 are in TSX files (src/app/, src/components/) — deferred to future session
+  - 13.2: Added input sanitization to both `no-implied-eval` formula engines (blocks fetch/import/require/eval/process/globalThis/constructor)
+  - 13.3: Replaced `collections.ts` console.log config leak with dynamic logger import (eliminated 1 eslint-disable, ratchet 24→23)
+- Commit: `08246f7e`. Pushed to dev.
+- Build: `tsc --noEmit` PASS, `npm run lint` PASS (zero errors, zero warnings), bypass ratchet 23/26.
+
 ---
 
 ## EXECUTION ORDER
@@ -127,8 +142,8 @@ Session 24 (Done):             Sprint 7 (Compliance & Admin) + Sprint 8 (Academy
 Session 25 (Done):             Nav consolidation — 13 sections → 8, SubpageNav tabs, footer icons ✓
 Session 25 (Done):             Full production audit — 5 QA agents, 18 critical blockers found ✓
 Session 26 (Done):             Fix Tier 1 blockers — Commerce paths, fake data removal, Zod gaps ✓
-Session 27 (NEXT):             Fix Tier 2 — Workflow stubs, token refresh, integration stubs
-Session 28:                    Full E2E test suite
+Session 27 (Done):             Fix Tier 2 — Workflow stubs, token refresh, integration stubs ✓
+Session 28 (NEXT):             Full E2E test suite + remaining console migrations (TSX files)
 Session 29:                    CI/CD integration + regression suite + manual verification
 Optional:                      Cmd+K command palette, favorites bar, keyboard shortcuts
 ```
@@ -144,7 +159,7 @@ Optional:                      Cmd+K command palette, favorites bar, keyboard sh
 | 2 TODO comments | `knowledge-analyzer.ts:634` (Vertex AI embeddings), `autonomous-posting-agent.ts:203` (DM feature) |
 | 18 critical blockers | Session 25 audit — **Sprints 9-11 resolved (Session 26), Sprints 12-13 remain** |
 | 210 raw console statements | Should migrate to `logger` utility |
-| 22 eslint-disable comments | Budget 23/26 — 2 are `no-implied-eval` (security concern) |
+| 23 eslint-disable comments | Budget 23/26 — 2 are `no-implied-eval` (now sandboxed with input sanitization) |
 
 ---
 
@@ -352,7 +367,7 @@ Ran 5 specialized QA agents in parallel across entire 430K LOC codebase:
 
 ---
 
-### SPRINT 12: Workflow & Infrastructure Stubs (HIGH — Session 27)
+### SPRINT 12: Workflow & Infrastructure Stubs (RESOLVED — Session 27, commit `08246f7e`)
 
 #### 12.1 — Implement Workflow Action Executors
 **Status:** HIGH — Workflows "succeed" but nothing happens
@@ -392,7 +407,7 @@ Ran 5 specialized QA agents in parallel across entire 430K LOC codebase:
 
 ---
 
-### SPRINT 13: Code Quality Cleanup (MEDIUM — Session 27)
+### SPRINT 13: Code Quality Cleanup (RESOLVED — Session 27, commit `08246f7e`)
 
 #### 13.1 — Migrate 210 Console Statements to Logger
 **Status:** MEDIUM — Debug artifacts in production code

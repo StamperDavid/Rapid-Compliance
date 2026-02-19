@@ -1,7 +1,7 @@
 # SalesVelocity.ai - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** February 19, 2026 (Session 26: Commerce pipeline fixes, fake data removal, Firestore path isolation — 125+ files refactored)
+**Last Updated:** February 19, 2026 (Session 27: Workflow executors wired, token refresh for 4 providers, formula engine sandboxing)
 **Branches:** `dev` (latest)
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Architecture:** Single-Tenant (Penthouse Model) - NOT a SaaS platform
@@ -1785,6 +1785,24 @@ Full 4-domain QA audit (Revenue, Data Integrity, Growth, Platform) identified 14
 
 *Commits:* `61907270` (Firestore path refactor), `6124fd70` (commerce pipeline)
 *Build:* `tsc --noEmit` PASS | `lint` PASS | bypass ratchet 24/26
+
+**RESOLVED (February 19, 2026) - Session 27: Workflow & Infrastructure + Code Quality:**
+
+*Sprint 12 — Workflow & Infrastructure (6 fixes):*
+- 4 workflow action executors wired to real Firestore/NotificationService (tasks, deals, notifications, wait scheduling)
+- Token refresh added for Google, Microsoft, Slack, HubSpot integrations
+- `syncIntegration()` verifies credentials and refreshes expired tokens
+- `testIntegration()` makes real API health checks per provider (Google tokeninfo, MS Graph /me, Slack auth.test, etc.)
+- Health check `checkIntegrations()` queries Firestore for connected integrations and expired tokens
+- Shipping rate calculation labeled as flat rate estimate; tax calculation adds Stripe Tax pathway
+
+*Sprint 13 — Code Quality (3 fixes):*
+- Input sanitization added to both `no-implied-eval` formula engines (blocks dangerous keywords: fetch, import, require, eval, Function, process, globalThis, constructor)
+- `collections.ts` console.log config leak replaced with dynamic logger import (eliminated 1 eslint-disable comment)
+- Console statement audit: all `src/lib/` statements already migrated; remaining ~210 in TSX files deferred
+
+*Commit:* `08246f7e`
+*Build:* `tsc --noEmit` PASS | `lint` PASS | bypass ratchet 23/26
 
 ### Testing Infrastructure (Audit: January 30, 2026)
 
