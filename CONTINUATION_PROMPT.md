@@ -5,7 +5,7 @@
 ## Context
 Repository: https://github.com/StamperDavid/Rapid-Compliance
 Branch: dev
-Last Session: February 18, 2026 (Session 24 — Sprint 7 & 8 Completion)
+Last Session: February 19, 2026 (Session 25 — Nav Consolidation)
 
 ## Current State
 
@@ -111,6 +111,20 @@ Last Session: February 18, 2026 (Session 24 — Sprint 7 & 8 Completion)
   - **Academy Course Detail** (`/academy/courses/[id]`) — Lesson sidebar with numbered list sorted by order, lesson type icons (video/text/quiz), video player with fallback, text content display, breadcrumb navigation. Uses `use(params)` for Next.js 15 async params.
   - **Academy Certifications** (`/academy/certifications`) — Certification catalog with category filtering, badge display, quiz interface (multi-choice with progress bar), scoring with pass/fail, attempt history tracking via `getSubCollection('certificationAttempts')`, best-score display, retry flow. Full quiz engine: question rendering, answer selection, score calculation, result screen with certificate earned state.
 - **All 8 feature completion sprints now complete.** Next: Nav consolidation, E2E tests, CI/CD integration.
+
+**Session 25 (February 19, 2026):** Nav Menu Consolidation — Post-Completion UX Redesign. Details:
+- **Competitive analysis** of Close.com, HubSpot, Salesforce, GoHighLevel, Pipedrive nav patterns
+- **Sidebar inventory** found 83 items across 13 sections (not 68 as originally estimated)
+- **Consolidated from 13 sections → 8:** Home, CRM, Outreach, Content, AI Workforce, Commerce, Website, Analytics
+- **Moved Settings and Academy** to sidebar footer icons (gear + help circle)
+- **Created `SubpageNav` component** (`src/components/ui/SubpageNav.tsx`) — route-based tab navigation using `usePathname()`
+- **Applied SubpageNav to 31 page files** across all hub routes (Dashboard, Social Hub, Training Hub, Models, Analytics, Website, Lead Tools, Outbound Tools)
+- **Enhanced `isActive()` function** in AdminSidebar with special hub route matching for Social Hub, Training Hub, Models & Data, and Analytics Overview
+- **Updated `NavigationCategory` type** in `unified-rbac.ts` from 13 values to 9: home, crm, outreach, content, ai_workforce, ecommerce, commerce, website, analytics
+- **Settings hub** (`/settings`) now includes Compliance & Admin section (Compliance Reports, Audit Log, Impersonate User, Lead Routing)
+- **Updated `docs/single_source_of_truth.md`** — Rule 4, Navigation Section Visibility, Sidebar Architecture, route tables
+- Commits: `330e3aab` (nav consolidation), `414a84bc` (docs update). Both pushed to dev and synced to rapid-dev worktree.
+- **Deferred to future session:** Cmd+K command palette, favorites bar, keyboard shortcuts
 
 ---
 
@@ -400,10 +414,11 @@ Session 21 (Done):             Sprint 4 (AI Workforce) — 5/8 already complete,
 Session 22 (Done):             Sprint 5 (Automation & Optimization) — 3 tasks ✓
 Session 23 (Done):             Sprint 6 (Settings Completion) — 7 tasks ✓
 Session 24 (Done):             Sprint 7 (Compliance & Admin) + Sprint 8 (Academy) ✓
-Post-completion:               Nav menu consolidation & UX redesign
-Post-completion:               Full E2E test suite
-Post-completion:               CI/CD integration + regression suite
-Post-completion:               Manual verification + production deploy
+Session 25 (Done):             Nav consolidation — 13 sections → 8, SubpageNav tabs, footer icons ✓
+Next:                          Full E2E test suite
+Next:                          CI/CD integration + regression suite
+Next:                          Manual verification + production deploy
+Optional:                      Cmd+K command palette, favorites bar, keyboard shortcuts
 ```
 
 ---
@@ -861,19 +876,22 @@ Full audit of every route in the sidebar navigation. Every page component was re
 | **Sprint 4** | AI Workforce | 8 | DONE | P1 |
 | **Sprint 5** | Automation | 3 | DONE | P1 |
 | **Sprint 6** | Settings | 7 | DONE | P1 |
-| **Sprint 7** | Compliance & Admin | 3 | ~32 hrs | P2 |
-| **Sprint 8** | Academy | 3 | ~32 hrs | P3 |
-| **TOTAL** | | **36 features** | **~350 hrs** | |
+| **Sprint 7** | Compliance & Admin | 3 | DONE | P2 |
+| **Sprint 8** | Academy | 3 | DONE | P3 |
+| **TOTAL** | | **36 features** | **ALL DONE** | |
 
-### POST-COMPLETION: Nav Menu Consolidation
+### POST-COMPLETION: Nav Menu Consolidation — ✅ DONE (Session 25)
 
-Once ALL features above are confirmed working:
-1. Consolidate 68 nav items down to ~25 items across 8-10 sections
-2. Convert related pages into tabbed views within parent pages
-3. Add Cmd+K command palette for power users
-4. Add favorites/pins to sidebar top
-5. Add collapsible sidebar (icon-only mode)
-6. Competitive benchmark: target Close.com-level simplicity (7-10 top-level items)
+Completed February 19, 2026:
+1. ✅ Consolidated 83 nav items → ~27 items across 8 sections (Home, CRM, Outreach, Content, AI Workforce, Commerce, Website, Analytics)
+2. ✅ Converted related pages into tabbed views via `SubpageNav` component (31 pages)
+3. ✅ Moved Settings + Academy to sidebar footer icons
+4. ✅ Competitive benchmarked against Close.com, HubSpot, Salesforce, GoHighLevel, Pipedrive
+
+**Deferred (can be added later without architectural changes):**
+- Cmd+K command palette for power users
+- Favorites/pins to sidebar top
+- Keyboard shortcuts for navigation
 
 ### POST-COMPLETION: Auto Lead Scoring Verification
 
