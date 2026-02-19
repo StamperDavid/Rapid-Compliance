@@ -36,6 +36,7 @@ const customJestConfig = {
   testPathIgnorePatterns: [
     '/node_modules/',
     '/tests/e2e/',
+    '/\\.context_trash/',
   ],
 }
 

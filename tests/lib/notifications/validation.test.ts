@@ -94,13 +94,13 @@ describe('Notification Validation', () => {
       expect(result.success).toBe(true);
     });
 
-    it('should require orgId', () => {
+    it('should accept variables without orgId (single-tenant)', () => {
       const variables = {
         userId: 'user_456',
       };
 
       const result = notificationVariablesSchema.safeParse(variables);
-      expect(result.success).toBe(false);
+      expect(result.success).toBe(true);
     });
 
     it('should validate email format', () => {

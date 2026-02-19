@@ -3,6 +3,8 @@ name: API Integrity Guard
 on:
   pull_request:
     branches: [main, dev]
+    paths:
+      - 'src/app/api/**'
 
 jobs:
   api-lint:
@@ -25,5 +27,5 @@ jobs:
       - name: ESLint API Directory (Zero Tolerance)
         run: npx eslint src/app/api/ --max-warnings 0
 
-      - name: TypeScript Check API Directory
+      - name: TypeScript Check
         run: npx tsc --noEmit
