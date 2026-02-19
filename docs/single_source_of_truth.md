@@ -1,7 +1,7 @@
 # SalesVelocity.ai - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** February 19, 2026 (Session 28: E2E test suite — 18 specs/~165 tests, Jest unit tests — 65 tests, console migration complete — 57 TSX files)
+**Last Updated:** February 19, 2026 (Session 29: CI/CD pipeline overhaul — 4 parallel jobs, Playwright in CI, 3 test regressions fixed)
 **Branches:** `dev` (latest)
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Architecture:** Single-Tenant (Penthouse Model) - NOT a SaaS platform

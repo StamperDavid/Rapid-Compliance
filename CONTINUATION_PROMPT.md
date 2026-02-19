@@ -5,7 +5,7 @@
 ## Context
 Repository: https://github.com/StamperDavid/Rapid-Compliance
 Branch: dev
-Last Session: February 19, 2026 (Session 28 — E2E Test Suite + Console Migration)
+Last Session: February 19, 2026 (Session 29 — CI/CD Pipeline Overhaul + Regression Fixes)
 
 ## Current State
 
@@ -144,6 +144,25 @@ Last Session: February 19, 2026 (Session 28 — E2E Test Suite + Console Migrati
 - Build: `tsc --noEmit` PASS, `npm run lint` PASS (zero errors, zero warnings), bypass ratchet 23/26.
 - **Test totals:** 18 E2E Playwright specs (~165 tests), 65+ Jest unit tests, all passing.
 
+**Session 29 (February 19, 2026):** CI/CD Pipeline Overhaul + Regression Fixes (4 tasks). Details:
+- **CI/CD Pipeline Overhaul (`ci.yml`):**
+  - Split monolithic `test` job into 4 parallel jobs: `lint-and-typecheck`, `unit-tests`, `playwright`, `build`
+  - Added Playwright E2E job: Chromium browser install with caching, Firebase env vars, artifact upload (HTML report + failure screenshots/traces)
+  - Switched from `npm test` to `npm run test:ci` (coverage + maxWorkers=2)
+  - Added eslint-disable bypass budget check to lint job
+  - Deploy now gates on all 4 jobs (was only test + security)
+  - Set `NODE_OPTIONS=--max-old-space-size=8192` globally
+- **API Integrity workflow:** Added `paths: ['src/app/api/**']` filter to skip when no API files changed
+- **Jest Config:** Excluded `.context_trash/` from test discovery
+- **Regression Fixes (3 test suites fixed, 28→25 failing):**
+  - `workflow-engine.test.ts`: Mock static executors via `jest.spyOn` to bypass real Firestore/NotificationService; fix field extraction for single-tenant context
+  - `notifications/validation.test.ts`: Update orgId test for single-tenant model
+  - `sequence-engine.test.ts`: Update assertions after fake data removal (>=0 not >0)
+- **Remaining 25 failures:** All pre-existing infrastructure tests requiring live Firebase Admin SDK — categorized by QA agent, confirmed not regressions
+- Commit: `e8066539`. Pushed to dev.
+- Build: `tsc --noEmit` PASS, `npm run lint` PASS, `npm run build` PASS, bypass ratchet 23/26.
+- **Test totals:** 49 Jest suites passing (1289 tests), 18 Playwright specs (~165 tests).
+
 ---
 
 ## EXECUTION ORDER
@@ -164,7 +183,8 @@ Session 25 (Done):             Full production audit — 5 QA agents, 18 critica
 Session 26 (Done):             Fix Tier 1 blockers — Commerce paths, fake data removal, Zod gaps ✓
 Session 27 (Done):             Fix Tier 2 — Workflow stubs, token refresh, integration stubs ✓
 Session 28 (Done):             E2E test suite (4 specs, ~80 tests) + Jest (3 suites, 65 tests) + console migration (57 TSX files) ✓
-Session 29 (NEXT):             CI/CD integration + regression suite + manual verification
+Session 29 (Done):             CI/CD pipeline overhaul (4 parallel jobs + Playwright), 3 test regressions fixed ✓
+Session 30 (NEXT):             Manual verification + production deployment prep
 Optional:                      Cmd+K command palette, favorites bar, keyboard shortcuts
 ```
 
