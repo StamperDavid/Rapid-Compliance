@@ -1,7 +1,7 @@
 # SalesVelocity.ai - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** February 19, 2026 (Session 27: Workflow executors wired, token refresh for 4 providers, formula engine sandboxing)
+**Last Updated:** February 19, 2026 (Session 28: E2E test suite — 18 specs/~165 tests, Jest unit tests — 65 tests, console migration complete — 57 TSX files)
 **Branches:** `dev` (latest)
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Architecture:** Single-Tenant (Penthouse Model) - NOT a SaaS platform
@@ -1832,16 +1832,32 @@ Full 4-domain QA audit (Revenue, Data Integrity, Growth, Platform) identified 14
 
 | Pattern | Framework | Directory | Count |
 |---------|-----------|-----------|-------|
-| `*.spec.ts` | Playwright | `tests/e2e/` | 4 |
+| `*.spec.ts` | Playwright | `tests/e2e/` | 18 |
 | `*.e2e.test.ts` | Jest | `tests/e2e/` | 3 |
-| `*.test.ts` | Jest | `tests/` | Various |
+| `*.test.ts` | Jest | `tests/lib/` | 3+ |
 
-**Playwright E2E Tests (Valid):**
+**Playwright E2E Tests (18 specs, ~165 tests):**
 - `website-builder.spec.ts` (16 tests)
 - `voice-engine.spec.ts` (22 tests)
 - `admin-gateway.spec.ts` (Admin login/theme audit)
 - `admin-content-factory.spec.ts` (Content & AI management audit)
-- `admin-routes-audit.spec.ts` ✅ **NEW** (46-route visual audit with trace)
+- `admin-routes-audit.spec.ts` (46-route visual audit with trace)
+- `auth-login.spec.ts` (Auth flow tests)
+- `website-pages-list.spec.ts` (Website pages tests)
+- `website-editor-visual.spec.ts` (Editor visual tests)
+- `website-blog-system.spec.ts` (Blog system tests)
+- `website-domain-seo.spec.ts` (Domain & SEO tests)
+- `website-navigation-settings.spec.ts` (Nav settings tests)
+- `website-templates-audit-log.spec.ts` (Templates & audit tests)
+- `crm-dashboard.spec.ts` ✅ **Session 28** (24 tests: dashboard, CRM entities, navigation, empty state)
+- `ecommerce-store.spec.ts` ✅ **Session 28** (29 tests: catalog, cart, checkout, success/cancel flows)
+- `settings-pages.spec.ts` ✅ **Session 28** (7 suites: subscription, billing, integrations, storefront, workflows, AI agents)
+- `social-analytics.spec.ts` ✅ **Session 28** (5 suites: command center, calendar, analytics, pipeline, outbound)
+
+**Jest Unit Tests:**
+- `tests/lib/pricing/subscription-tiers.test.ts` ✅ **Session 28** (24 tests)
+- `tests/lib/workflow/workflow-actions.test.ts` ✅ **Session 28** (21 tests)
+- `tests/lib/schema/formula-sanitization.test.ts` ✅ **Session 28** (20 tests)
 
 **Jest E2E Tests (Separate Runner):**
 - `email-sequences.e2e.test.ts`
@@ -1863,7 +1879,7 @@ Full 4-domain QA audit (Revenue, Data Integrity, Growth, Platform) identified 14
 |-----------|--------|
 | Playwright installed | ✅ PASS |
 | Config file exists | ✅ PASS |
-| Test discovery | ✅ PASS (200 tests across 5 projects) |
+| Test discovery | ✅ PASS (~165 Playwright tests + 65 Jest unit tests across 5 browser projects) |
 | Autonomous testing | ✅ OPERATIONAL |
 
 **Full Audit Report:** `docs/playwright-audit-2026-01-30.md`
