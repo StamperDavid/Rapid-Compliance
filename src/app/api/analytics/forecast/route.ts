@@ -94,10 +94,12 @@ export async function GET(request: NextRequest) {
       ? periodParam
       : 'month';
 
-    // Get open deals from Firestore (with safety limit)
+    // Get open deals from Firestore — forecast operates on all currently open deals
+    // regardless of creation date, so no date constraint is added here. The limit
+    // prevents unbounded scans on large collections.
     const dealsPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/default/entities/deals`;
     let allDeals: DealRecord[] = [];
-    const QUERY_LIMIT = 10000;
+    const QUERY_LIMIT = 1000;
 
     try {
       allDeals = await FirestoreService.getAll(dealsPath, [limit(QUERY_LIMIT)]);

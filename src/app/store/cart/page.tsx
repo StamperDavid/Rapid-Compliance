@@ -24,12 +24,21 @@ export default function ShoppingCartPage() {
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
 
+  const getSessionId = useCallback((): string => {
+    let sessionId = localStorage.getItem('cartSessionId');
+    if (!sessionId) {
+      // Generate a stable, collision-resistant session ID
+      const random = Math.random().toString(36).substring(2, 10);
+      sessionId = `cart-${Date.now()}-${random}`;
+      localStorage.setItem('cartSessionId', sessionId);
+    }
+    return sessionId;
+  }, []);
+
   const loadCart = useCallback(async () => {
     try {
       setLoading(true);
-      const sessionId = localStorage.getItem('cartSessionId') ?? `session-${Date.now()}`;
-      localStorage.setItem('cartSessionId', sessionId);
-
+      const sessionId = getSessionId();
       const cartData = await getOrCreateCart(sessionId, PLATFORM_ID);
       setCart(cartData);
     } catch (error) {
@@ -37,7 +46,7 @@ export default function ShoppingCartPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [getSessionId]);
 
   useEffect(() => {
     void loadCart();
@@ -48,11 +57,7 @@ export default function ShoppingCartPage() {
 
     try {
       setUpdating(true);
-      const sessionId = localStorage.getItem('cartSessionId');
-      if (!sessionId) {
-        toast.error('Session not found');
-        return;
-      }
+      const sessionId = getSessionId();
       await updateCartItemQuantity(sessionId, itemId, newQuantity);
       await loadCart();
     } catch (error) {
@@ -68,11 +73,7 @@ export default function ShoppingCartPage() {
 
     try {
       setUpdating(true);
-      const sessionId = localStorage.getItem('cartSessionId');
-      if (!sessionId) {
-        toast.error('Session not found');
-        return;
-      }
+      const sessionId = getSessionId();
       await removeFromCart(sessionId, itemId);
       await loadCart();
     } catch (error) {
@@ -340,7 +341,3 @@ export default function ShoppingCartPage() {
     </div>
   );
 }
-
-
-
-

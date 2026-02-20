@@ -5,6 +5,7 @@ import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { getOrdersCollection, getCartsCollection } from '@/lib/firebase/collections';
+import { where, limit, orderBy } from 'firebase/firestore';
 
 export const dynamic = 'force-dynamic';
 
@@ -99,21 +100,27 @@ export async function GET(request: NextRequest) {
       convertedToOrder?: boolean;
     }
     
-    // Get orders from Firestore
+    // Get orders from Firestore — date filter pushed to the query layer
+    const QUERY_LIMIT = 1000;
     const ordersPath = getOrdersCollection();
     let allOrders: OrderRecord[] = [];
-    
+
     try {
-      allOrders = await FirestoreService.getAll<OrderRecord>(ordersPath, []);
+      const ordersConstraints = [
+        where('createdAt', '>=', startDate),
+        orderBy('createdAt', 'desc'),
+        limit(QUERY_LIMIT),
+      ];
+      allOrders = await FirestoreService.getAll<OrderRecord>(ordersPath, ordersConstraints);
+      if (allOrders.length === QUERY_LIMIT) {
+        logger.warn('Ecommerce analytics orders query hit limit', { limit: QUERY_LIMIT, period });
+      }
     } catch (_e) {
       logger.debug('No orders collection yet');
     }
 
-    // Filter by date
-    const ordersInPeriod = allOrders.filter(order => {
-      const orderDate = toDate(order.createdAt);
-      return orderDate >= startDate && orderDate <= now;
-    });
+    // All returned orders are already within the date window; assign directly
+    const ordersInPeriod = allOrders;
 
     // Completed orders
     const completedOrders = ordersInPeriod.filter(order => 
@@ -125,22 +132,29 @@ export async function GET(request: NextRequest) {
       order.status === 'cancelled' || order.status === 'refunded'
     );
 
-    // Cart data (abandoned carts)
+    // Cart data (abandoned carts) — date filter pushed to the query layer
     const cartsPath = getCartsCollection();
     let allCarts: CartRecord[] = [];
-    
+
     try {
-      allCarts = await FirestoreService.getAll<CartRecord>(cartsPath, []);
+      const cartsConstraints = [
+        where('createdAt', '>=', startDate),
+        orderBy('createdAt', 'desc'),
+        limit(QUERY_LIMIT),
+      ];
+      allCarts = await FirestoreService.getAll<CartRecord>(cartsPath, cartsConstraints);
+      if (allCarts.length === QUERY_LIMIT) {
+        logger.warn('Ecommerce analytics carts query hit limit', { limit: QUERY_LIMIT, period });
+      }
     } catch (_e) {
       logger.debug('No carts collection yet');
     }
 
     const abandonedCarts = allCarts.filter(cart => {
       const cartDate = toDate(cart.createdAt);
-      const isRecent = cartDate >= startDate;
       const isAbandoned = cart.status === 'abandoned' ||
         (!cart.convertedToOrder && (now.getTime() - cartDate.getTime()) > 24 * 60 * 60 * 1000);
-      return isRecent && isAbandoned;
+      return isAbandoned;
     });
 
     // Calculate metrics
@@ -149,11 +163,8 @@ export async function GET(request: NextRequest) {
       sum + (safeParseFloat(order.total, 0) || safeParseFloat(order.amount, 0)), 0);
     const avgOrderValue = completedOrders.length > 0 ? totalRevenue / completedOrders.length : 0;
 
-    // Conversion rate
-    const totalCarts = allCarts.filter(cart => {
-      const cartDate = toDate(cart.createdAt);
-      return cartDate >= startDate;
-    }).length;
+    // Conversion rate — allCarts is already scoped to startDate by the Firestore query
+    const totalCarts = allCarts.length;
     const conversionRate = totalCarts > 0 ? (completedOrders.length / totalCarts) * 100 : 0;
 
     // Cart abandonment rate

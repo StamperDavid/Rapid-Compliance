@@ -921,12 +921,13 @@ export class AssetGenerator extends BaseSpecialist {
   }
 
   /**
-   * Generate an image using DALL-E 3, with graceful fallback to placeholder URL
+   * Generate an image using DALL-E 3.
+   * Returns empty string if generation fails (no fake placeholder URLs).
    */
   private async generateImageUrl(
     prompt: string,
     assetName: string,
-    brandName: string,
+    _brandName: string,
     _format: string,
     dimensions?: AssetDimensions
   ): Promise<string> {
@@ -942,16 +943,12 @@ export class AssetGenerator extends BaseSpecialist {
       const result = await generateImage(prompt, { size, quality, style });
       return result.url;
     } catch (error) {
-      // Graceful fallback — return a placeholder URL with brand name
-      const sanitizedBrand = brandName.toLowerCase().replace(/\s+/g, '-');
-      const w = dimensions?.width ?? 1024;
-      const h = dimensions?.height ?? 1024;
-      logger.warn('Image generation failed, using placeholder', {
+      logger.warn('Image generation failed — OPENAI_API_KEY may not be configured', {
         assetName,
         error: error instanceof Error ? error.message : String(error),
         file: 'specialist.ts',
       });
-      return `https://placehold.co/${w}x${h}/2563eb/white?text=${encodeURIComponent(sanitizedBrand)}`;
+      return ''; // No fake URL — caller should check for empty string
     }
   }
 }

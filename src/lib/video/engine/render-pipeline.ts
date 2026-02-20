@@ -582,18 +582,19 @@ export class RenderPipeline {
   }
 
   /**
-   * Create a placeholder clip when all providers fail
+   * Create a placeholder clip when all providers fail.
+   * Returns a clearly-marked placeholder — no fake video URL.
    */
   private createPlaceholderClip(item: GenerationQueueItem): GeneratedClip {
-    logger.warn('RenderPipeline: Creating placeholder clip', {
+    logger.warn('RenderPipeline: All video providers failed — no API keys configured or quota exhausted. Returning placeholder.', {
       shotId: item.shotId,
     });
 
     return {
       shotId: item.shotId,
-      url: 'https://storage.example.com/placeholders/default.mp4',
+      url: '', // Empty — no real video was generated
       duration: item.duration * 1000,
-      provider: 'stable-video', // Use a default
+      provider: 'stable-video',
       resolution: item.resolution,
       fps: 30,
     };

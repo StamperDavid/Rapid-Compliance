@@ -108,10 +108,11 @@ export async function GET(request: NextRequest) {
  * Calculate pipeline analytics (extracted for caching)
  */
 async function calculatePipelineAnalytics(_period: string) {
-  // Get all deals from Firestore (with safety limit)
+  // Get all deals from Firestore (pipeline is a current snapshot — no date filter
+  // is applied because old-but-still-open deals must be included regardless of age)
   const dealsPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/default/entities/deals`;
   let allDeals: DealRecord[] = [];
-  const QUERY_LIMIT = 10000;
+  const QUERY_LIMIT = 1000;
 
   try {
     allDeals = await FirestoreService.getAll(dealsPath, [limit(QUERY_LIMIT)]);

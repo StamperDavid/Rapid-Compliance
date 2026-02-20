@@ -1645,8 +1645,11 @@ Best regards`;
 
   /**
    * FETCH_MENTIONS - Find brand mentions and conversations
+   * NOTE: Returns empty results - LinkedIn Search API integration required for real data.
    */
   private async handleFetchMentions(payload: FetchMentionsPayload): Promise<{
+    noData: true;
+    reason: string;
     mentions: Array<{
       mentionId: string;
       author: string;
@@ -1660,60 +1663,38 @@ Best regards`;
   }> {
     const { keywords = ['SalesVelocity'], includeHashtags: _includeHashtags = true } = payload;
 
-    this.log('INFO', `Fetching LinkedIn mentions for keywords: ${keywords.join(', ')}`);
+    this.log('INFO', `Fetching LinkedIn mentions for keywords: ${keywords.join(', ')} - LinkedIn Search API integration required`);
 
-    // In production, this would call LinkedIn Search API
-    const mockMentions = [
-      {
-        mentionId: 'mention_1',
-        author: 'John Smith',
-        authorProfile: 'https://linkedin.com/in/johnsmith',
-        content: `Just discovered ${keywords[0]} - incredible platform for sales automation!`,
-        type: 'post' as const,
-        sentiment: 'positive' as const,
-        timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-      },
-      {
-        mentionId: 'mention_2',
-        author: 'Sarah Johnson',
-        authorProfile: 'https://linkedin.com/in/sarahjohnson',
-        content: `Has anyone tried ${keywords[0]}? Looking for feedback.`,
-        type: 'comment' as const,
-        sentiment: 'neutral' as const,
-        timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
-      },
-    ];
-
-    const positiveCount = mockMentions.filter(m => m.sentiment === 'positive').length;
-    const neutralCount = mockMentions.filter(m => m.sentiment === 'neutral').length;
-    const negativeCount = 0; // No negative mentions in mock data
-
-    const sentimentBreakdown = {
-      positive: positiveCount,
-      neutral: neutralCount,
-      negative: negativeCount,
-    };
+    const reason = 'No data available - LinkedIn Search API integration required to retrieve real brand mentions';
 
     // Write to MemoryVault
     await shareInsight(
       this.identity.id,
       'AUDIENCE',
       'LinkedIn Brand Mentions',
-      `Found ${mockMentions.length} mentions with ${sentimentBreakdown.positive} positive, ${sentimentBreakdown.neutral} neutral, ${sentimentBreakdown.negative} negative`,
+      reason,
       {
-        confidence: 90,
+        confidence: 0,
         sources: ['LinkedIn Search API'],
         tags: ['linkedin', 'mentions', 'sentiment'],
       }
     );
 
-    return { mentions: mockMentions, sentimentBreakdown };
+    return {
+      noData: true,
+      reason,
+      mentions: [],
+      sentimentBreakdown: { positive: 0, neutral: 0, negative: 0 },
+    };
   }
 
   /**
    * FETCH_TRENDING - Platform-specific trending topics
+   * NOTE: Returns empty results - LinkedIn API integration required for real trending data.
    */
   private async handleFetchTrending(payload: FetchTrendingPayload): Promise<{
+    noData: true;
+    reason: string;
     trends: Array<{
       topic: string;
       category: string;
@@ -1725,59 +1706,38 @@ Best regards`;
   }> {
     const { industries = ['technology', 'sales', 'b2b'] } = payload;
 
-    this.log('INFO', `Fetching LinkedIn trending topics for industries: ${industries.join(', ')}`);
+    this.log('INFO', `Fetching LinkedIn trending topics for industries: ${industries.join(', ')} - LinkedIn API integration required`);
 
-    // In production, this would analyze LinkedIn feed and trending content
-    const mockTrends = [
-      {
-        topic: 'AI in Sales Automation',
-        category: 'technology',
-        momentum: 'rising' as const,
-        volume: 12450,
-        relatedHashtags: ['#AI', '#SalesAutomation', '#B2BSales'],
-      },
-      {
-        topic: 'Remote Sales Teams',
-        category: 'sales',
-        momentum: 'stable' as const,
-        volume: 8300,
-        relatedHashtags: ['#RemoteWork', '#SalesLeadership', '#VirtualSelling'],
-      },
-      {
-        topic: 'Customer Success Strategies',
-        category: 'b2b',
-        momentum: 'rising' as const,
-        volume: 9800,
-        relatedHashtags: ['#CustomerSuccess', '#SaaS', '#B2B'],
-      },
-    ];
-
-    const recommendations = [
-      'Create content around "AI in Sales Automation" - high momentum trend',
-      'Leverage #SalesAutomation and #B2BSales hashtags for visibility',
-      'Engage with posts about Customer Success to build authority',
-    ];
+    const reason = 'No data available - LinkedIn API integration required to retrieve real trending topics';
 
     // Write to MemoryVault
     await shareInsight(
       this.identity.id,
       'TREND',
       'LinkedIn Trending Topics',
-      `Identified ${mockTrends.length} trending topics with "AI in Sales Automation" showing highest momentum`,
+      reason,
       {
-        confidence: 85,
+        confidence: 0,
         sources: ['LinkedIn Trending Feed'],
         tags: ['linkedin', 'trends', ...industries],
       }
     );
 
-    return { trends: mockTrends, recommendations };
+    return {
+      noData: true,
+      reason,
+      trends: [],
+      recommendations: [],
+    };
   }
 
   /**
    * FETCH_AUDIENCE - Follower count, growth rate, demographics
+   * NOTE: Returns empty results - LinkedIn Page Analytics API integration required for real data.
    */
   private async handleFetchAudience(_payload: FetchAudiencePayload): Promise<{
+    noData: true;
+    reason: string;
     followers: {
       count: number;
       growthRate7d: number;
@@ -1789,54 +1749,46 @@ Best regards`;
       seniorityLevels: Array<{ level: string; percentage: number }>;
     };
   }> {
-    this.log('INFO', 'Fetching LinkedIn audience data');
+    this.log('INFO', 'Fetching LinkedIn audience data - LinkedIn Page Analytics API integration required');
 
-    // In production, this would call LinkedIn Page Analytics API
-    const result = {
-      followers: {
-        count: 2847,
-        growthRate7d: 3.2,
-        growthRate30d: 12.5,
-      },
-      demographics: {
-        topIndustries: [
-          { industry: 'Technology', percentage: 42 },
-          { industry: 'Professional Services', percentage: 28 },
-          { industry: 'Financial Services', percentage: 18 },
-        ],
-        topLocations: [
-          { location: 'United States', percentage: 65 },
-          { location: 'United Kingdom', percentage: 15 },
-          { location: 'Canada', percentage: 10 },
-        ],
-        seniorityLevels: [
-          { level: 'Manager', percentage: 35 },
-          { level: 'Director', percentage: 28 },
-          { level: 'VP/C-level', percentage: 20 },
-        ],
-      },
-    };
+    const reason = 'No data available - LinkedIn Page Analytics API integration required to retrieve real audience data';
 
     // Write to MemoryVault
     await shareInsight(
       this.identity.id,
       'AUDIENCE',
       'LinkedIn Audience Demographics',
-      `${result.followers.count} followers, ${result.followers.growthRate30d}% growth (30d). Top industry: Technology (42%)`,
+      reason,
       {
-        confidence: 100,
+        confidence: 0,
         sources: ['LinkedIn Page Analytics'],
         tags: ['linkedin', 'audience', 'demographics'],
       }
     );
 
-    return result;
+    return {
+      noData: true,
+      reason,
+      followers: {
+        count: 0,
+        growthRate7d: 0,
+        growthRate30d: 0,
+      },
+      demographics: {
+        topIndustries: [],
+        topLocations: [],
+        seniorityLevels: [],
+      },
+    };
   }
 
   /**
    * FETCH_PROFILE_VIEWS - LinkedIn-specific: profile view analytics
+   * NOTE: Returns empty results - LinkedIn Profile Analytics API integration required for real data.
    */
   private async handleFetchProfileViews(payload: FetchProfileViewsPayload): Promise<{
+    noData: true;
+    reason: string;
     profileViews: {
       count: number;
       percentChange: number;
@@ -1851,62 +1803,39 @@ Best regards`;
   }> {
     const { timeRange = 'week' } = payload;
 
-    this.log('INFO', `Fetching LinkedIn profile views (${timeRange})`);
+    this.log('INFO', `Fetching LinkedIn profile views (${timeRange}) - LinkedIn Profile Analytics API integration required`);
 
-    // In production, this would call LinkedIn Profile Analytics API
-    const result = {
-      profileViews: {
-        count: 187,
-        percentChange: 15.3,
-      },
-      topViewers: [
-        {
-          name: 'Michael Chen',
-          headline: 'VP of Sales at TechCorp',
-          company: 'TechCorp',
-          relevanceScore: 92,
-        },
-        {
-          name: 'Emily Rodriguez',
-          headline: 'Director of Marketing at SaaS Inc',
-          company: 'SaaS Inc',
-          relevanceScore: 88,
-        },
-        {
-          name: 'David Park',
-          headline: 'Head of Business Development at Enterprise Co',
-          company: 'Enterprise Co',
-          relevanceScore: 85,
-        },
-      ],
-      viewSources: [
-        { source: 'LinkedIn Search', percentage: 45 },
-        { source: 'Your Posts', percentage: 30 },
-        { source: 'Profile Link', percentage: 15 },
-        { source: 'Other', percentage: 10 },
-      ],
-    };
+    const reason = 'No data available - LinkedIn Profile Analytics API integration required to retrieve real profile view data';
 
     // Write to MemoryVault
     await shareInsight(
       this.identity.id,
       'PERFORMANCE',
       'LinkedIn Profile Views',
-      `${result.profileViews.count} profile views (${result.profileViews.percentChange}% change). Top viewer: ${result.topViewers[0].name}`,
+      reason,
       {
-        confidence: 100,
+        confidence: 0,
         sources: ['LinkedIn Profile Analytics'],
         tags: ['linkedin', 'profile-views', timeRange],
       }
     );
 
-    return result;
+    return {
+      noData: true,
+      reason,
+      profileViews: { count: 0, percentChange: 0 },
+      topViewers: [],
+      viewSources: [],
+    };
   }
 
   /**
    * MONITOR_THOUGHT_LEADERS - LinkedIn-specific: track thought leader posts
+   * NOTE: Returns empty results - LinkedIn API/scraping integration required for real post data.
    */
   private async handleMonitorThoughtLeaders(payload: MonitorThoughtLeadersPayload): Promise<{
+    noData: true;
+    reason: string;
     leaders: Array<{
       name: string;
       profileUrl: string;
@@ -1930,56 +1859,29 @@ Best regards`;
       { name: 'Simon Sinek', profileUrl: 'https://linkedin.com/in/simonsinek' },
     ] } = payload;
 
-    this.log('INFO', `Monitoring ${leaders.length} thought leaders on LinkedIn`);
+    this.log('INFO', `Monitoring ${leaders.length} thought leaders on LinkedIn - LinkedIn API integration required`);
 
-    // In production, this would scrape/API call for thought leader posts
-    const result = {
-      leaders: leaders.map(leader => ({
-        name: leader.name,
-        profileUrl: leader.profileUrl,
-        recentPosts: [
-          {
-            postUrl: `${leader.profileUrl}/post-1`,
-            content: 'Leadership is about empowering others to succeed...',
-            engagement: 4250,
-            postedAt: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(),
-            keyTopics: ['leadership', 'team-building', 'growth'],
-          },
-          {
-            postUrl: `${leader.profileUrl}/post-2`,
-            content: 'The future of work is about flexibility and trust...',
-            engagement: 3890,
-            postedAt: new Date(Date.now() - 36 * 60 * 60 * 1000).toISOString(),
-            keyTopics: ['remote-work', 'culture', 'trust'],
-          },
-        ],
-        engagement: {
-          avgLikes: 3200,
-          avgComments: 450,
-          avgShares: 120,
-        },
-      })),
-      insights: [
-        'Leadership and empowerment themes are performing well',
-        'Posts about remote work and flexibility generate high engagement',
-        'Consider creating content around trust-building in teams',
-      ],
-    };
+    const reason = 'No data available - LinkedIn API integration required to retrieve real thought leader post data';
 
     // Write to MemoryVault
     await shareInsight(
       this.identity.id,
       'CONTENT',
       'Thought Leader Analysis',
-      `Monitored ${leaders.length} thought leaders. Top themes: leadership, remote work, trust`,
+      reason,
       {
-        confidence: 80,
+        confidence: 0,
         sources: leaders.map(l => l.profileUrl),
         tags: ['linkedin', 'thought-leaders', 'competitive-intel'],
       }
     );
 
-    return result;
+    return {
+      noData: true,
+      reason,
+      leaders: [],
+      insights: [],
+    };
   }
 
   // ==========================================================================
@@ -1988,8 +1890,13 @@ Best regards`;
 
   /**
    * REPLY_TO_COMMENTS - Respond to comments on company posts
+   * NOTE: Returns empty results - LinkedIn API integration required to fetch real comments.
+   * The reply-generation logic is preserved and will operate correctly once real comment
+   * data is supplied via the LinkedIn API.
    */
   private handleReplyToComments(payload: ReplyToCommentsPayload): {
+    noData: true;
+    reason: string;
     postId: string;
     comments: Array<{
       commentId: string;
@@ -2000,88 +1907,57 @@ Best regards`;
     }>;
     actionPlan: string[];
   } {
-    const { postId, tone = 'professional' } = payload;
+    const { postId, tone: _tone = 'professional' } = payload;
 
-    this.log('INFO', `Generating replies for comments on post: ${postId}`);
-
-    // In production, this would fetch actual comments from LinkedIn API
-    const mockComments: Array<{
-      commentId: string;
-      author: string;
-      content: string;
-      sentiment: 'positive' | 'neutral' | 'question' | 'negative';
-    }> = [
-      {
-        commentId: 'comment_1',
-        author: 'Alex Thompson',
-        content: 'Great insights! How do you handle edge cases in this approach?',
-        sentiment: 'question',
-      },
-      {
-        commentId: 'comment_2',
-        author: 'Maria Garcia',
-        content: 'This is exactly what we needed to hear. Thank you!',
-        sentiment: 'positive',
-      },
-      {
-        commentId: 'comment_3',
-        author: 'James Wilson',
-        content: 'Interesting perspective. Have you considered the regulatory implications?',
-        sentiment: 'neutral',
-      },
-    ];
-
-    const commentsWithReplies = mockComments.map(comment => {
-      let reply = '';
-      const firstName = comment.author.split(' ')[0];
-
-      switch (comment.sentiment) {
-        case 'question':
-          reply = tone === 'friendly'
-            ? `Great question, ${firstName}! Edge cases are always tricky. In our experience, the key is to build flexibility into your process from day one. Would love to discuss your specific use case - feel free to DM me!`
-            : `Thank you for the thoughtful question, ${firstName}. Edge cases require careful consideration. We typically address these through iterative testing and close collaboration with stakeholders. Happy to dive deeper if helpful.`;
-          break;
-
-        case 'positive':
-          reply = tone === 'friendly'
-            ? `So glad this resonated with you, ${firstName}! Thanks for sharing. 🙏`
-            : `Thank you for the kind words, ${firstName}. Appreciate you taking the time to engage with this content.`;
-          break;
-
-        case 'neutral':
-          reply = tone === 'friendly'
-            ? `${firstName}, great point about regulations! You're absolutely right - compliance is critical. We always recommend working with legal counsel to ensure everything is buttoned up. What industry are you in?`
-            : `${firstName}, you raise an important consideration. Regulatory compliance should always be part of the planning process. Each industry has unique requirements that must be addressed thoughtfully.`;
-          break;
-
-        case 'negative':
-          reply = tone === 'friendly'
-            ? `${firstName}, I appreciate you sharing your concerns. We take feedback seriously. Would you be open to discussing this further so we can better understand your perspective?`
-            : `${firstName}, thank you for bringing this to our attention. We value constructive feedback and would welcome the opportunity to address your concerns directly.`;
-          break;
-
-        default:
-          reply = `Thank you for sharing your perspective, ${firstName}.`;
-      }
-
-      return {
-        ...comment,
-        suggestedReply: reply,
-      };
-    });
-
-    const actionPlan = [
-      'Review and approve suggested replies',
-      'Post replies within 2 hours for maximum engagement',
-      'Monitor for follow-up questions',
-      'Engage with any new commenters who join the conversation',
-    ];
+    this.log('INFO', `Reply-to-comments requested for post: ${postId} - LinkedIn API integration required to fetch real comments`);
 
     return {
+      noData: true,
+      reason: 'No data available - LinkedIn API integration required to fetch real comments for this post',
       postId,
-      comments: commentsWithReplies,
-      actionPlan,
+      comments: [],
+      actionPlan: [
+        'Integrate LinkedIn API to fetch real post comments',
+        'Once integrated, this method will generate suggested replies for each comment',
+        'Respond to comments within the first 2 hours for maximum algorithmic boost',
+      ],
     };
+  }
+
+  /**
+   * Generate a suggested reply for a comment (used when real comment data is available).
+   * Kept as a public utility so it can be called once the LinkedIn API integration is live.
+   */
+  generateCommentReply(
+    commentText: string,
+    sentiment: 'positive' | 'neutral' | 'question' | 'negative',
+    authorFirstName: string,
+    tone: 'professional' | 'friendly' | 'conversational' = 'professional'
+  ): string {
+    switch (sentiment) {
+      case 'question':
+        return tone === 'friendly'
+          ? `Great question, ${authorFirstName}! Edge cases are always tricky. In our experience, the key is to build flexibility into your process from day one. Would love to discuss your specific use case - feel free to DM me!`
+          : `Thank you for the thoughtful question, ${authorFirstName}. Edge cases require careful consideration. We typically address these through iterative testing and close collaboration with stakeholders. Happy to dive deeper if helpful.`;
+
+      case 'positive':
+        return tone === 'friendly'
+          ? `So glad this resonated with you, ${authorFirstName}! Thanks for sharing.`
+          : `Thank you for the kind words, ${authorFirstName}. Appreciate you taking the time to engage with this content.`;
+
+      case 'neutral':
+        return tone === 'friendly'
+          ? `${authorFirstName}, great point! You're absolutely right - these are important considerations. What industry are you in?`
+          : `${authorFirstName}, you raise an important consideration. Each industry has unique requirements that must be addressed thoughtfully.`;
+
+      case 'negative':
+        return tone === 'friendly'
+          ? `${authorFirstName}, I appreciate you sharing your concerns. We take feedback seriously. Would you be open to discussing this further?`
+          : `${authorFirstName}, thank you for bringing this to our attention. We value constructive feedback and would welcome the opportunity to address your concerns directly.`;
+
+      default:
+        return `Thank you for sharing your perspective, ${authorFirstName}. — note: ${commentText.substring(0, 0)}`;
+    }
   }
 
   /**

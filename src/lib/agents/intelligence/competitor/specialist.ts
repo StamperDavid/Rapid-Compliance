@@ -757,11 +757,11 @@ export class CompetitorResearcher extends BaseSpecialist {
   private generateMarketInsights(competitors: Competitor[], niche: string): MarketInsights {
     if (competitors.length === 0) {
       return {
-        saturation: 'unknown' as 'high' | 'medium' | 'low',
+        saturation: 'low' as const,
         dominantPlayers: [],
-        gaps: ['Unable to analyze market - no competitors found'],
+        gaps: ['Unable to analyze market - no competitors found. Integrate a search API for accurate discovery.'],
         avgDomainAuthority: 0,
-        recommendations: ['Integrate search API for accurate competitor discovery'],
+        recommendations: ['Integrate search API (e.g., SerpAPI, Google Custom Search) for accurate competitor discovery'],
       };
     }
 

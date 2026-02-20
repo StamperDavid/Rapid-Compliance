@@ -123,13 +123,13 @@ async function calculateWinLossAnalytics(period: string) {
   // Get deals from Firestore (with date range constraint for the requested period)
   const dealsPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/default/entities/deals`;
   let allDeals: DealRecord[] = [];
-  const QUERY_LIMIT = 10000;
+  const QUERY_LIMIT = 1000;
 
   try {
     // Only query deals that were updated/closed within the period
     const constraints = [
       where('updatedAt', '>=', startDate),
-      limit(QUERY_LIMIT)
+      limit(QUERY_LIMIT),
     ];
     allDeals = await FirestoreService.getAll(dealsPath, constraints);
     if (allDeals.length === QUERY_LIMIT) {

@@ -7,6 +7,7 @@ import { requireAuth } from '@/lib/auth/api-auth';
 import { withCache } from '@/lib/cache/analytics-cache';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import { getOrdersCollection } from '@/lib/firebase/collections';
+import { where, limit, orderBy } from 'firebase/firestore';
 
 export const dynamic = 'force-dynamic';
 
@@ -124,20 +125,35 @@ async function calculateRevenueAnalytics(period: string) {
       items?: Array<{ name?: string; productName?: string; price?: string | number; quantity?: number }>;
     }
     
-    // Get deals from Firestore with date filtering for better performance
+    // Determine the query window: must cover both the current period AND the previous
+    // period (needed for growth calculation). For 'all', there is no previous period.
+    const QUERY_LIMIT = 1000;
+    const periodMs = now.getTime() - startDate.getTime();
+    // queryStart reaches back one additional period so the growth comparison window
+    // is also covered by the same Firestore query.
+    const queryStart = period !== 'all'
+      ? new Date(startDate.getTime() - periodMs)
+      : startDate;
+
+    // Get deals from Firestore scoped to the extended query window
     const dealsPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/default/entities/deals`;
     let allDeals: DealRecord[] = [];
-    
+
     try {
-      // Fetch with reasonable constraints to prevent timeout
-      // Note: For analytics, we need all matching records to calculate totals
-      // If org has 10,000+ deals, consider implementing background jobs for analytics
-      allDeals = await FirestoreService.getAll<DealRecord>(dealsPath, []);
+      const dealsConstraints = [
+        where('createdAt', '>=', queryStart),
+        orderBy('createdAt', 'desc'),
+        limit(QUERY_LIMIT),
+      ];
+      allDeals = await FirestoreService.getAll<DealRecord>(dealsPath, dealsConstraints);
+      if (allDeals.length === QUERY_LIMIT) {
+        logger.warn('Revenue analytics deals query hit limit', { limit: QUERY_LIMIT, period });
+      }
     } catch (_e) {
       logger.debug('No deals collection yet');
     }
 
-    // Filter by date and status
+    // Filter by date and status (in-memory partitioning within the query window)
     const closedDeals = allDeals.filter(deal => {
       const isWon = deal.status === 'won' || deal.status === 'closed_won' || deal.stage === 'closed_won';
       if (!isWon) {return false;}
@@ -146,12 +162,20 @@ async function calculateRevenueAnalytics(period: string) {
       return closedDate >= startDate && closedDate <= now;
     });
 
-    // Get orders (e-commerce)
+    // Get orders (e-commerce) scoped to the extended query window
     const ordersPath = getOrdersCollection();
     let allOrders: OrderRecord[] = [];
-    
+
     try {
-      allOrders = await FirestoreService.getAll<OrderRecord>(ordersPath, []);
+      const ordersConstraints = [
+        where('createdAt', '>=', queryStart),
+        orderBy('createdAt', 'desc'),
+        limit(QUERY_LIMIT),
+      ];
+      allOrders = await FirestoreService.getAll<OrderRecord>(ordersPath, ordersConstraints);
+      if (allOrders.length === QUERY_LIMIT) {
+        logger.warn('Revenue analytics orders query hit limit', { limit: QUERY_LIMIT, period });
+      }
     } catch (_e) {
       logger.debug('No orders collection yet');
     }
@@ -179,7 +203,6 @@ async function calculateRevenueAnalytics(period: string) {
     // Calculate growth (compare to previous period)
     let growth = 0;
     if (period !== 'all') {
-      const periodMs = now.getTime() - startDate.getTime();
       const prevStart = new Date(startDate.getTime() - periodMs);
       const prevEnd = startDate;
 

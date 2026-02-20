@@ -1557,73 +1557,21 @@ export class TikTokExpert extends BaseSpecialist {
 
   /**
    * ENGAGE: Reply to comments (first hour is algorithm-critical)
+   * NOTE: Returns empty results - TikTok API integration required to fetch real comments.
    */
   async replyToComments(request: ReplyToCommentsRequest): Promise<ReplyToCommentsResult> {
-    const { videoId, maxReplies = 20, priorityKeywords = [] } = request;
-    this.log('INFO', `Generating comment replies for video: ${videoId} (max: ${maxReplies})`);
+    const { videoId, maxReplies: _maxReplies = 20, priorityKeywords: _priorityKeywords = [] } = request;
+    this.log('INFO', `Reply-to-comments requested for video: ${videoId} - TikTok API integration required`);
 
     await Promise.resolve(); // Async operation placeholder
 
     // Real data requires TikTok API integration to fetch comments
-    const totalComments = 0; // Real data requires TikTok API integration
-    const replyCount = 0; // Real data requires TikTok API integration
-
-    const sampleComments = [
-      'This is so helpful! Can you make a part 2?',
-      'Love this content, keep it up!',
-      'How do you do this? Please share more details',
-      'This changed my perspective completely',
-      'Not sure I agree with this take',
-      'What software do you use for this?',
-      'Can you collaborate with @othercreator?',
-      'Where can I learn more about this?',
-    ];
-
-    const replies: CommentReply[] = Array.from({ length: replyCount }, (_, i) => {
-      const commentText = sampleComments[i % sampleComments.length];
-      const hasKeyword = priorityKeywords.some((kw) => commentText.toLowerCase().includes(kw.toLowerCase()));
-      const priority: 'high' | 'medium' | 'low' = hasKeyword ? 'high' : i < 5 ? 'medium' : 'low';
-
-      let replyText = '';
-      let reasoning = '';
-
-      if (commentText.includes('part 2') || commentText.includes('more')) {
-        replyText = 'Part 2 coming soon! Follow so you don\'t miss it 🔥';
-        reasoning = 'Encourages follow while promising value';
-      } else if (commentText.includes('helpful') || commentText.includes('love')) {
-        replyText = 'Thank you! Really appreciate the support 🙌';
-        reasoning = 'Acknowledges positive feedback, builds community';
-      } else if (commentText.includes('How') || commentText.includes('What')) {
-        replyText = 'Great question! I\'ll cover this in detail in my next video. Any specific aspect you want to know?';
-        reasoning = 'Drives engagement with a question, teases future content';
-      } else if (commentText.includes('agree') || commentText.includes('disagree')) {
-        replyText = 'I appreciate your perspective! What\'s your take on this?';
-        reasoning = 'Opens dialogue, encourages debate (boosts algorithm)';
-      } else {
-        replyText = 'Thanks for watching! What other topics do you want to see?';
-        reasoning = 'Generic engagement driver, asks for input';
-      }
-
-      return {
-        commentId: `comment_${i}`,
-        commentText,
-        replyText,
-        priority,
-        reasoning,
-      };
-    });
-
-    replies.sort((a, b) => {
-      const priorityOrder = { high: 3, medium: 2, low: 1 };
-      return priorityOrder[b.priority] - priorityOrder[a.priority];
-    });
-
     return {
-      replies,
-      totalComments,
-      repliedCount: replyCount,
-      skipReason: undefined,
-      confidence: 0, // Real data requires TikTok API integration
+      replies: [],
+      totalComments: 0,
+      repliedCount: 0,
+      skipReason: ['No data available - TikTok API integration required to fetch comments for this video'],
+      confidence: 0,
     };
   }
 
