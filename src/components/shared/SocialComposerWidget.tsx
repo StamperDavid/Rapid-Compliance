@@ -16,7 +16,7 @@ export function SocialComposerWidget({ compact = false }: SocialComposerWidgetPr
       <div className="bg-[var(--color-bg-paper)] border border-[var(--color-border)] rounded-xl p-6">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-[var(--color-text-primary)]">Social Composer</h3>
-          <Link href="/dashboard/social" className="text-sm text-[var(--color-primary)] hover:underline">
+          <Link href="/social/campaigns" className="text-sm text-[var(--color-primary)] hover:underline">
             Full Editor
           </Link>
         </div>

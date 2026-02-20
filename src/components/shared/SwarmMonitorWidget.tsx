@@ -161,7 +161,7 @@ export function SwarmMonitorWidget({
             </span>
           )}
           <Link
-            href="/dashboard/swarm"
+            href="/workforce"
             className="text-sm text-[var(--color-primary)] hover:underline"
           >
             Control Center

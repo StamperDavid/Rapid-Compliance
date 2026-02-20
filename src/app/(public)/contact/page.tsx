@@ -11,12 +11,36 @@ function FallbackContent() {
   const { theme } = useWebsiteTheme();
   const [formData, setFormData] = useState({ name: '', email: '', company: '', message: '' });
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    logger.info('Contact form submitted', { email: formData.email, company: formData.company });
-    setSubmitted(true);
-    setTimeout(() => setSubmitted(false), 5000);
+    setSubmitting(true);
+    setError('');
+
+    try {
+      const res = await fetch('/api/public/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      });
+
+      if (!res.ok) {
+        const data = (await res.json()) as { error?: string };
+        throw new Error(data.error ?? 'Failed to send message');
+      }
+
+      setSubmitted(true);
+      setFormData({ name: '', email: '', company: '', message: '' });
+      setTimeout(() => setSubmitted(false), 5000);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to send message';
+      setError(msg);
+      logger.error('Contact form submission failed', err instanceof Error ? err : new Error(msg));
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -28,7 +52,7 @@ function FallbackContent() {
         </div>
 
         <div className="grid md:grid-cols-2 gap-12">
-          <form onSubmit={(e) => { handleSubmit(e); }} className="space-y-6">
+          <form onSubmit={(e) => { void handleSubmit(e); }} className="space-y-6">
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">Name *</label>
               <input
@@ -52,10 +76,20 @@ function FallbackContent() {
               />
             </div>
             <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">Company</label>
+              <input
+                type="text"
+                value={formData.company}
+                onChange={(e) => setFormData({ ...formData, company: e.target.value })}
+                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white"
+                placeholder="Acme Inc."
+              />
+            </div>
+            <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">Message *</label>
               <textarea
                 required
-                rows={6}
+                rows={5}
                 value={formData.message}
                 onChange={(e) => setFormData({ ...formData, message: e.target.value })}
                 className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white resize-none"
@@ -64,14 +98,20 @@ function FallbackContent() {
             </div>
             <button
               type="submit"
-              className="w-full px-8 py-4 rounded-lg text-lg font-semibold transition"
+              disabled={submitting}
+              className="w-full px-8 py-4 rounded-lg text-lg font-semibold transition disabled:opacity-50"
               style={{ backgroundColor: theme.primaryColor, color: '#ffffff' }}
             >
-              Send Message
+              {submitting ? 'Sending...' : 'Send Message'}
             </button>
             {submitted && (
               <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-lg text-green-400 text-center">
-                ✓ Message sent! We&apos;ll get back to you soon.
+                Message sent! We&apos;ll get back to you soon.
+              </div>
+            )}
+            {error && (
+              <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-center">
+                {error}
               </div>
             )}
           </form>
@@ -111,9 +151,5 @@ export default function ContactPage() {
     </PublicLayout>
   );
 }
-
-
-
-
 
 
