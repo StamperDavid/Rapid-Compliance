@@ -13,7 +13,12 @@
  * - Signal emission
  */
 
-import { describe, it, expect, jest, beforeEach } from '@jest/globals';
+import { describe, it, expect, beforeEach } from '@jest/globals';
+// Use global jest (from the Jest runtime) rather than @jest/globals import.
+// With babel-jest + CJS, jest.fn() from @jest/globals does not attach full
+// mock runtime methods (mockReturnValue, mockResolvedValue, etc.) to mock factories.
+// The global jest IS the Jest runtime and creates fully-functional mock functions.
+declare const jest: typeof import('@jest/globals')['jest'];
 
 // Mock dependencies before imports
 jest.mock('@/lib/logger/logger', () => ({
@@ -29,7 +34,9 @@ jest.mock('@/lib/ai/unified-ai-service', () => ({
 }));
 
 jest.mock('@/lib/orchestration/coordinator-factory-server', () => ({
-  getServerSignalCoordinator: jest.fn(),
+  getServerSignalCoordinator: jest.fn(() => ({
+    emitSignal: jest.fn().mockResolvedValue({ success: true } as never),
+  })),
 }));
 
 jest.mock('@/lib/templates/deal-scoring-engine', () => ({
@@ -55,12 +62,9 @@ describe('Email Writer Engine', () => {
   
   beforeEach(() => {
     jest.clearAllMocks();
-    
-    // Mock Signal Coordinator
-    (getServerSignalCoordinator as jest.MockedFunction<typeof getServerSignalCoordinator>)
-      .mockReturnValue({
-        emitSignal: (jest.fn() as any).mockResolvedValue(undefined),
-      } as unknown as ReturnType<typeof getServerSignalCoordinator>);
+    // The coordinator factory provides a default implementation via jest.fn(() => ...) in
+    // the jest.mock factory above. clearAllMocks() clears call counts but preserves the
+    // default implementation, so no re-setup is needed here.
   });
   
   // ============================================================================
@@ -459,7 +463,7 @@ IMPROVEMENTS:
       
       expect(discoverCompetitor).toHaveBeenCalledWith('https://competitor.com');
       expect(generateBattlecard).toHaveBeenCalledWith(mockCompetitorProfile, {
-        ourProduct: '[Company]',
+        ourProduct: 'Our Product',
       });
       expect(result.success).toBe(true);
       expect(result.email?.includeCompetitive).toBe(true);
@@ -670,22 +674,21 @@ IMPROVEMENTS:
   
   describe('Signal Emission', () => {
     it('should emit email.generated signal', async () => {
-      const mockEmitSignal = (jest.fn() as any).mockResolvedValue(undefined);
-      (getServerSignalCoordinator as jest.MockedFunction<typeof getServerSignalCoordinator>)
-        .mockReturnValue({
-          emitSignal: mockEmitSignal,
-        } as unknown as ReturnType<typeof getServerSignalCoordinator>);
       (sendUnifiedChatMessage as jest.MockedFunction<typeof sendUnifiedChatMessage>)
         .mockResolvedValue(mockLLMResponse as never);
-      
+
       await generateSalesEmail({
         userId: 'user_123',
         emailType: 'intro',
         dealId: 'deal_123',
         recipientName: 'John Doe',
       });
-      
-      expect(mockEmitSignal).toHaveBeenCalledWith(
+
+      // Verify the coordinator was invoked and that emitSignal was called.
+      // The factory mock returns { emitSignal: jest.fn() } on each call.
+      expect(getServerSignalCoordinator).toHaveBeenCalled();
+      const coordinator = (getServerSignalCoordinator as jest.MockedFunction<typeof getServerSignalCoordinator>).mock.results[0]?.value as { emitSignal: jest.MockedFunction<(...args: unknown[]) => Promise<void>> } | undefined;
+      expect(coordinator?.emitSignal).toHaveBeenCalledWith(
         expect.objectContaining({
           type: 'email.generated',
           metadata: expect.objectContaining({

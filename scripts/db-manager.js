@@ -505,6 +505,72 @@ async function cleanupTestData(dryRun = true) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
+// TOP-LEVEL TEST COLLECTION CLEANUP (safety net)
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Collections used by integration tests that need cleanup.
+ * These are top-level collections (not org subcollections).
+ */
+const TEST_COLLECTIONS = [
+  'temporary_scrapes',
+  'discoveryArchive',
+  'training_feedback',
+  'training_data',
+  'training_history',
+  'research_intelligence',
+  'extracted_signals',
+];
+
+/**
+ * Delete all documents from test-related top-level collections.
+ * Safety net for when per-test cleanup fails or is incomplete.
+ * Uses batch operations (max 500 per batch) for efficiency.
+ */
+async function cleanupTestCollections() {
+  console.log('\n🧹 CLEANING UP TEST COLLECTIONS (safety net)...\n');
+
+  let totalDeleted = 0;
+
+  for (const collectionName of TEST_COLLECTIONS) {
+    try {
+      const snapshot = await db.collection(collectionName).get();
+
+      if (snapshot.empty) {
+        continue;
+      }
+
+      // Batch delete in chunks of 400 (safe under 500 limit)
+      let batch = db.batch();
+      let batchCount = 0;
+
+      for (const doc of snapshot.docs) {
+        batch.delete(doc.ref);
+        batchCount++;
+
+        if (batchCount >= 400) {
+          await batch.commit();
+          totalDeleted += batchCount;
+          batch = db.batch();
+          batchCount = 0;
+        }
+      }
+
+      if (batchCount > 0) {
+        await batch.commit();
+        totalDeleted += batchCount;
+      }
+
+      console.log(`   ✅ ${collectionName}: deleted ${snapshot.size} documents`);
+    } catch (error) {
+      console.error(`   ❌ ${collectionName}: ${error.message}`);
+    }
+  }
+
+  console.log(`\n   Total test documents deleted: ${totalDeleted}\n`);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 // EXPORTED FUNCTIONS (for use in test teardown)
 // ═══════════════════════════════════════════════════════════════════════════
 
@@ -514,6 +580,7 @@ module.exports = {
   deleteOrganizationRecursive,
   deleteUser,
   cleanupTestData,
+  cleanupTestCollections,
   listOrganizations,
   // Re-export for test suite
   db,

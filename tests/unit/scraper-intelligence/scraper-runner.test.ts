@@ -4,30 +4,26 @@
  * Comprehensive tests for all Scraper Runner components.
  */
 
-import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
+import { describe, it, expect, beforeEach, afterEach } from '@jest/globals';
 import {
   createScrapeCache,
   createDomainRateLimiter,
   createScrapeQueue,
   createProgressTracker,
   createErrorHandler,
-  createScraperRunner,
-  InMemoryScrapeCache,
-  DomainBasedRateLimiter,
-  InMemoryScrapeQueue,
-  InMemoryProgressTracker,
-  ScraperErrorHandler,
-  ProductionScraperRunner,
+  type InMemoryScrapeCache,
+  type DomainBasedRateLimiter,
+  type InMemoryScrapeQueue,
+  type InMemoryProgressTracker,
+  type ScraperErrorHandler,
   ScrapeError,
   generateJobId,
   extractDomain,
   calculateRetryDelay,
   DEFAULT_RETRY_STRATEGY,
-} from '@/lib/scraper-intelligence';
-import type {
-  ScrapeJobConfig,
-  ScrapeJobResult,
-  ProgressEvent,
+  type ScrapeJobConfig,
+  type ScrapeJobResult,
+  type ProgressEvent,
 } from '@/lib/scraper-intelligence';
 
 // ============================================================================
@@ -96,7 +92,7 @@ describe('ScraperCache', () => {
     expect(cached).toBeDefined();
 
     // Wait for expiration
-    await new Promise(resolve => setTimeout(resolve, 150));
+    await new Promise<void>(resolve => { setTimeout(resolve, 150); });
 
     // Should be expired
     cached = await cache.get(url);
@@ -209,13 +205,16 @@ describe('DomainRateLimiter', () => {
   it('should allow requests within limit', async () => {
     const domain = 'example.com';
 
+    // checkLimit is read-only — it doesn't consume a slot
     const status1 = await rateLimiter.checkLimit(domain);
     expect(status1.allowed).toBe(true);
-    expect(status1.remaining).toBe(2);
+    expect(status1.remaining).toBe(3);
 
+    // Consume a slot, then verify remaining decreases
+    await rateLimiter.waitForSlot(domain);
     const status2 = await rateLimiter.checkLimit(domain);
     expect(status2.allowed).toBe(true);
-    expect(status2.remaining).toBe(1);
+    expect(status2.remaining).toBe(2);
   });
 
   it('should block requests exceeding limit', async () => {
@@ -245,7 +244,7 @@ describe('DomainRateLimiter', () => {
     expect(status.allowed).toBe(false);
 
     // Wait for window to reset
-    await new Promise(resolve => setTimeout(resolve, 1100));
+    await new Promise<void>(resolve => { setTimeout(resolve, 1100); });
 
     // Should be allowed again
     status = await rateLimiter.checkLimit(domain);
@@ -253,20 +252,32 @@ describe('DomainRateLimiter', () => {
   });
 
   it('should normalize domain names', async () => {
-    const variations = [
-      'https://www.example.com/page',
-      'http://example.com',
-      'Example.Com',
-      'www.example.com',
-    ];
+    // Use a dedicated limiter with a long window and no min delay
+    // so all 4 requests fit in the same window without expiring
+    const limiter = createDomainRateLimiter({
+      maxRequests: 10,
+      windowMs: 60000,
+      minDelayMs: 0,
+    }) as DomainBasedRateLimiter;
 
-    // All variations should count toward same limit
-    for (const url of variations) {
-      await rateLimiter.waitForSlot(url);
+    try {
+      const variations = [
+        'https://www.example.com/page',
+        'http://example.com',
+        'Example.Com',
+        'www.example.com',
+      ];
+
+      // All variations should count toward same domain
+      for (const url of variations) {
+        await limiter.waitForSlot(url);
+      }
+
+      const status = await limiter.checkLimit('example.com');
+      expect(status.currentCount).toBe(4);
+    } finally {
+      limiter.shutdown();
     }
-
-    const status = await rateLimiter.checkLimit('example.com');
-    expect(status.currentCount).toBeGreaterThanOrEqual(3);
   });
 
   it('should enforce minimum delay between requests', async () => {

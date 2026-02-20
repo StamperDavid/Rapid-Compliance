@@ -67,7 +67,7 @@ export class ScraperErrorHandler implements ErrorHandler {
    */
   shouldRetry(error: Error, attemptNumber: number): boolean {
     // Check if we've exceeded max attempts
-    if (attemptNumber >= this.retryStrategy.maxAttempts) {
+    if (attemptNumber > this.retryStrategy.maxAttempts) {
       logger.debug('Max retry attempts reached', {
         attemptNumber,
         maxAttempts: this.retryStrategy.maxAttempts,

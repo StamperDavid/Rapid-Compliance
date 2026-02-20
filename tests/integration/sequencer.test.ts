@@ -3,6 +3,189 @@
  * Tests native sequence management for multi-channel outreach
  */
 
+// ---------------------------------------------------------------------------
+// Shared in-memory Firestore store — all logic is self-contained inside
+// jest.mock factory functions (hoisted). The two factories share state via
+// the global object, which IS accessible inside hoisted factories.
+// ---------------------------------------------------------------------------
+
+// Helper builders used in the factory below — defined before jest.mock to be
+// available via closure, but referenced lazily (inside functions, not at
+// factory call time) so hoisting is not an issue.
+//
+// NOTE: jest.mock factories are hoisted before ANY variable declarations.
+// Variables must be accessed lazily (inside function bodies) to avoid TDZ.
+// The pattern below stores the shared db on `globalThis` inside each factory
+// so that both factories share the exact same in-memory object.
+
+// Each factory independently builds the full db so it doesn't depend on
+// factory execution order. Both share the same in-memory store via globalThis.
+
+function _buildSeqStore() {
+  const store: Map<string, Record<string, unknown>> = new Map();
+
+  function docRef(colPath: string, docId: string) {
+    const key = `${colPath}/${docId}`;
+    return {
+      id: docId,
+      get: jest.fn().mockImplementation(() => {
+        const data = store.get(key);
+        return { exists: !!data, id: docId, data: () => (data ? { ...data } : undefined) };
+      }),
+      set: jest.fn().mockImplementation((data: Record<string, unknown>, opts?: { merge?: boolean }) => {
+        const existing = opts?.merge ? (store.get(key) ?? {}) : {};
+        store.set(key, { ...existing, ...data });
+      }),
+      update: jest.fn().mockImplementation((data: Record<string, unknown>) => {
+        const existing = store.get(key) ?? {};
+
+        // Deep-set a value using dot-notation path into an object
+        function deepSet(obj: Record<string, unknown>, path: string, val: unknown): Record<string, unknown> {
+          const parts = path.split('.');
+          const result = { ...obj };
+          let cur: Record<string, unknown> = result;
+          for (let i = 0; i < parts.length - 1; i++) {
+            const p = parts[i];
+            cur[p] = cur[p] !== null && typeof cur[p] === 'object' ? { ...(cur[p] as Record<string, unknown>) } : {};
+            cur = cur[p] as Record<string, unknown>;
+          }
+          cur[parts[parts.length - 1]] = val;
+          return result;
+        }
+
+        let merged: Record<string, unknown> = { ...existing };
+        for (const [k, v] of Object.entries(data)) {
+          if (v !== undefined) {
+            // Wrap plain Date objects as Timestamp-like so sequencer can call .toDate()
+            const wrapped = v instanceof Date ? { toDate: () => v, toMillis: () => v.getTime() } : v;
+            if (k.includes('.')) {
+              merged = deepSet(merged, k, wrapped);
+            } else {
+              merged[k] = wrapped;
+            }
+          }
+        }
+        store.set(key, merged);
+      }),
+      delete: jest.fn().mockImplementation(() => { store.delete(key); }),
+      ref: { delete: jest.fn().mockImplementation(() => { store.delete(key); }) },
+    };
+  }
+
+  function colRef(colPath: string) {
+    const filters: Array<{ field: string; op: string; value: unknown }> = [];
+    const ref: Record<string, unknown> = {
+      doc: jest.fn((id?: string) => docRef(colPath, id ?? `auto_${Date.now()}_${Math.random().toString(36).slice(2)}`)),
+      add: jest.fn().mockImplementation((data: Record<string, unknown>) => {
+        const id = `auto_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+        store.set(`${colPath}/${id}`, { ...data, id });
+        return docRef(colPath, id);
+      }),
+      where: jest.fn((field: string, op: string, value: unknown) => { filters.push({ field, op, value }); return ref; }),
+      orderBy: jest.fn(() => ref),
+      limit: jest.fn(() => ref),
+      offset: jest.fn(() => ref),
+      select: jest.fn(() => ref),
+      startAfter: jest.fn(() => ref),
+      get: jest.fn().mockImplementation(() => {
+        const docs: Array<{ id: string; data: () => Record<string, unknown>; ref: { delete: () => void } }> = [];
+
+        // Convert Timestamp-like objects or Dates to millis for comparison
+        function toMs(v: unknown): unknown {
+          if (v instanceof Date) { return v.getTime(); }
+          if (v !== null && typeof v === 'object' && typeof (v as { toDate?: unknown }).toDate === 'function') {
+            return (v as { toDate: () => Date }).toDate().getTime();
+          }
+          return v;
+        }
+
+        for (const [key, value] of store.entries()) {
+          if (!key.startsWith(`${colPath}/`)) { continue; }
+          const id = key.slice(colPath.length + 1);
+          let match = true;
+          for (const f of filters) {
+            const raw = value[f.field];
+            const dv = toMs(raw);
+            const fv = toMs(f.value);
+            if (f.op === '==' && dv !== fv) { match = false; break; }
+            if (f.op === '!=' && dv === fv) { match = false; break; }
+            if (f.op === '>' && (dv as number) <= (fv as number)) { match = false; break; }
+            if (f.op === '<' && (dv as number) >= (fv as number)) { match = false; break; }
+            if (f.op === '<=' && (dv as number) > (fv as number)) { match = false; break; }
+            if (f.op === '>=' && (dv as number) < (fv as number)) { match = false; break; }
+            if (f.op === 'in' && Array.isArray(f.value) && !f.value.includes(raw)) { match = false; break; }
+          }
+          if (match) { docs.push({ id, data: () => ({ ...value }), ref: { delete: () => { store.delete(key); } } }); }
+        }
+        filters.length = 0;
+        return { docs, empty: docs.length === 0, size: docs.length, forEach: (fn: (d: unknown) => void) => docs.forEach(fn) };
+      }),
+      listDocuments: jest.fn().mockResolvedValue([]),
+    };
+    return ref;
+  }
+
+  return {
+    collection: jest.fn((path: string) => colRef(path)),
+    doc: jest.fn((path: string) => { const p = path.split('/'); const id = p.pop()!; return docRef(p.join('/'), id); }),
+    runTransaction: jest.fn((fn: (txn: { get: jest.Mock; set: jest.Mock; update: jest.Mock; delete: jest.Mock }) => unknown) => fn({ get: jest.fn().mockResolvedValue({ exists: false, data: () => undefined }), set: jest.fn(), update: jest.fn(), delete: jest.fn() })),
+    batch: jest.fn(() => ({ set: jest.fn(), update: jest.fn(), delete: jest.fn(), commit: jest.fn().mockResolvedValue(undefined) })),
+  };
+}
+
+// Extend globalThis so TypeScript recognises the shared-store property.
+declare global {
+   
+  var __seqMockDb: ReturnType<typeof _buildSeqStore> | undefined;
+}
+
+// Lazily initialize on globalThis so both factories share the SAME instance
+function _getSharedSeqDb() {
+  globalThis.__seqMockDb ??= _buildSeqStore();
+  return globalThis.__seqMockDb;
+}
+
+jest.mock('@/lib/firebase-admin', () => {
+  const db = _getSharedSeqDb();
+  const ts = { now: jest.fn(() => ({ toDate: () => new Date(), seconds: Math.floor(Date.now() / 1000), nanoseconds: 0 })), fromDate: jest.fn((d: Date) => ({ toDate: () => d, seconds: Math.floor(d.getTime() / 1000), nanoseconds: 0 })) };
+  const fv = { serverTimestamp: jest.fn(() => new Date()), increment: jest.fn((n: number) => n), arrayUnion: jest.fn((...e: unknown[]) => e), arrayRemove: jest.fn((...e: unknown[]) => e), delete: jest.fn() };
+  return {
+    db,
+    auth: { verifyIdToken: jest.fn(), getUser: jest.fn() },
+    admin: { firestore: { FieldValue: fv, Timestamp: ts } },
+    getCurrentUser: jest.fn().mockResolvedValue({ uid: 'test-user', email: 'test@test.com' }),
+    verifyOrgAccess: jest.fn().mockResolvedValue(true),
+  };
+});
+
+jest.mock('@/lib/firebase/admin', () => {
+  const adminDb = _getSharedSeqDb();
+  const ts = { now: jest.fn(() => ({ toDate: () => new Date(), seconds: Math.floor(Date.now() / 1000), nanoseconds: 0 })), fromDate: jest.fn((d: Date) => ({ toDate: () => d, seconds: Math.floor(d.getTime() / 1000), nanoseconds: 0 })) };
+  const fv = { serverTimestamp: jest.fn(() => new Date()), increment: jest.fn((n: number) => n), arrayUnion: jest.fn((...e: unknown[]) => e), arrayRemove: jest.fn((...e: unknown[]) => e), delete: jest.fn() };
+  return {
+    default: null,
+    adminAuth: { verifyIdToken: jest.fn(), getUser: jest.fn() },
+    adminDb,
+    adminStorage: null,
+    admin: { firestore: { FieldValue: fv, Timestamp: ts } },
+  };
+});
+
+// Mock Timestamp from firebase-admin/firestore used directly in sequencer.ts
+jest.mock('firebase-admin/firestore', () => ({
+  Timestamp: {
+    now: jest.fn(() => ({ toDate: () => new Date(), toMillis: () => Date.now(), seconds: Math.floor(Date.now() / 1000), nanoseconds: 0 })),
+    fromDate: jest.fn((d: Date) => ({ toDate: () => d, toMillis: () => d.getTime(), seconds: Math.floor(d.getTime() / 1000), nanoseconds: 0 })),
+  },
+  FieldValue: {
+    serverTimestamp: jest.fn(() => new Date()),
+    increment: jest.fn((n: number) => n),
+    arrayUnion: jest.fn((...e: unknown[]) => e),
+    arrayRemove: jest.fn((...e: unknown[]) => e),
+    delete: jest.fn(),
+  },
+}));
+
 import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import {
@@ -20,7 +203,7 @@ import {
 } from '@/lib/services/sequencer';
 import { db } from '@/lib/firebase-admin';
 
-const TEST_ORG_ID = PLATFORM_ID;
+const _TEST_ORG_ID = PLATFORM_ID;
 const TEST_USER_ID = 'test-user-sequencer';
 const TEST_LEAD_ID = 'test-lead-sequencer';
 

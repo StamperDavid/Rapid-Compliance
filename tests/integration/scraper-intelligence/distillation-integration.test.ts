@@ -20,25 +20,45 @@ import type {
 } from '@/types/scraper-intelligence';
 import { db } from '@/lib/firebase-admin';
 
-describe('Distillation Engine Integration Tests', () => {
-  const TEMPORARY_SCRAPES_COLLECTION = 'temporary_scrapes';
+// Set timeout for real Firestore operations
+jest.setTimeout(30000);
 
-  // Cleanup after each test
-  afterEach(async () => {
+describe('Distillation Engine Integration Tests', () => {
+  // Distillation engine saves to discoveryArchive via discovery-archive-service
+  const DISCOVERY_ARCHIVE_COLLECTION = 'discoveryArchive';
+
+  async function cleanupArchive() {
     try {
       const scrapes = await db
-        .collection(TEMPORARY_SCRAPES_COLLECTION)
+        .collection(DISCOVERY_ARCHIVE_COLLECTION)
         .get();
 
-      const batch = db.batch();
-      scrapes.docs.forEach((doc) => {
-        batch.delete(doc.ref);
-      });
-      await batch.commit();
+      if (scrapes.size > 0) {
+        const batch = db.batch();
+        scrapes.docs.forEach((doc) => {
+          batch.delete(doc.ref);
+        });
+        await batch.commit();
+      }
     } catch (error) {
       console.error('Cleanup failed:', error);
     }
-  });
+  }
+
+  // Cleanup before all tests to start clean
+  beforeAll(async () => {
+    await cleanupArchive();
+  }, 30000);
+
+  // Cleanup after each test
+  afterEach(async () => {
+    await cleanupArchive();
+  }, 30000);
+
+  // Safety cleanup after all tests
+  afterAll(async () => {
+    await cleanupArchive();
+  }, 30000);
 
   // Mock research intelligence for HVAC industry
   const mockResearch: ResearchIntelligence = {
@@ -340,7 +360,7 @@ describe('Distillation Engine Integration Tests', () => {
   });
 
   describe('TTL and Cleanup', () => {
-    it('should set expiration date 7 days in future', async () => {
+    it('should set expiration date 30 days in future', async () => {
       const result = await distillScrape({
         url: 'https://ttl-test.example.com',
         rawHtml: '<html><body>Test</body></html>',
@@ -359,7 +379,7 @@ describe('Distillation Engine Integration Tests', () => {
       const diffMs = expiresAt.getTime() - createdAt.getTime();
       const diffDays = diffMs / (1000 * 60 * 60 * 24);
 
-      expect(diffDays).toBeCloseTo(7, 1); // Allow small time difference
+      expect(diffDays).toBeCloseTo(30, 1); // Discovery archive uses 30-day TTL
     }, 30000);
 
     it('should delete flagged scrapes', async () => {
@@ -374,7 +394,7 @@ describe('Distillation Engine Integration Tests', () => {
 
       // Flag for deletion
       await db
-        .collection(TEMPORARY_SCRAPES_COLLECTION)
+        .collection(DISCOVERY_ARCHIVE_COLLECTION)
         .doc(result.tempScrapeId)
         .update({
           flaggedForDeletion: true,
@@ -404,7 +424,7 @@ describe('Distillation Engine Integration Tests', () => {
       pastDate.setDate(pastDate.getDate() - 10);
 
       await db
-        .collection(TEMPORARY_SCRAPES_COLLECTION)
+        .collection(DISCOVERY_ARCHIVE_COLLECTION)
         .doc(result.tempScrapeId)
         .update({
           expiresAt: pastDate,

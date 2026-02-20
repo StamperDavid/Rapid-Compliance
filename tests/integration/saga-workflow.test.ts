@@ -11,6 +11,174 @@
  * @test-scope Tier 1.3 — E2E Agent Integration Testing
  */
 
+// ---------------------------------------------------------------------------
+// In-memory Firestore mock — supports set/get/update/delete and where queries
+// ---------------------------------------------------------------------------
+const _inMemoryStore: Map<string, Record<string, unknown>> = new Map();
+
+function _makeDocRef(collectionPath: string, docId: string) {
+  const key = `${collectionPath}/${docId}`;
+  return {
+    id: docId,
+    get: jest.fn().mockImplementation(() => {
+      const data = _inMemoryStore.get(key);
+      return Promise.resolve({ exists: !!data, data: () => data, id: docId });
+    }),
+    set: jest.fn().mockImplementation((data: Record<string, unknown>, opts?: { merge?: boolean }) => {
+      if (opts?.merge) {
+        const existing = _inMemoryStore.get(key) ?? {};
+        _inMemoryStore.set(key, { ...existing, ...data });
+      } else {
+        _inMemoryStore.set(key, { ...data });
+      }
+      return Promise.resolve();
+    }),
+    update: jest.fn().mockImplementation((data: Record<string, unknown>) => {
+      const existing = _inMemoryStore.get(key) ?? {};
+      _inMemoryStore.set(key, { ...existing, ...data });
+      return Promise.resolve();
+    }),
+    delete: jest.fn().mockImplementation(() => {
+      _inMemoryStore.delete(key);
+      return Promise.resolve();
+    }),
+  };
+}
+
+function _makeCollection(collectionPath: string) {
+  return {
+    doc: jest.fn((docId: string) => _makeDocRef(collectionPath, docId)),
+    add: jest.fn().mockImplementation((data: Record<string, unknown>) => {
+      const id = `auto_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+      _inMemoryStore.set(`${collectionPath}/${id}`, { id, ...data });
+      return Promise.resolve({ id });
+    }),
+    where: jest.fn().mockReturnThis(),
+    orderBy: jest.fn().mockReturnThis(),
+    limit: jest.fn().mockReturnThis(),
+    get: jest.fn().mockImplementation(() => {
+      // Return all docs in this collection path (simple prefix match)
+      const docs: Array<{ id: string; data: () => Record<string, unknown>; ref: { delete: () => Promise<void> } }> = [];
+      for (const [key, value] of _inMemoryStore.entries()) {
+        if (key.startsWith(`${collectionPath}/`)) {
+          const docId = key.slice(collectionPath.length + 1);
+          docs.push({ id: docId, data: () => value, ref: { delete: () => { _inMemoryStore.delete(key); return Promise.resolve(); } } });
+        }
+      }
+      return Promise.resolve({ docs, empty: docs.length === 0, size: docs.length });
+    }),
+  };
+}
+
+// Build a chainable query that filters results on .get()
+interface _FilteredQuery {
+  where: jest.Mock<_FilteredQuery, [field: string, op: string, value: unknown]>;
+  orderBy: jest.Mock<_FilteredQuery, []>;
+  limit: jest.Mock<_FilteredQuery, []>;
+  get: jest.Mock<Promise<{ docs: Array<{ id: string; data: () => Record<string, unknown>; ref: { delete: () => Promise<void> } }>; empty: boolean; size: number }>, []>;
+}
+
+function _makeFilteredCollection(collectionPath: string) {
+  const filters: Array<{ field: string; op: string; value: unknown }> = [];
+  const queryObj: _FilteredQuery = {
+    where: jest.fn((field: string, op: string, value: unknown) => {
+      filters.push({ field, op, value });
+      return queryObj;
+    }),
+    orderBy: jest.fn(() => queryObj),
+    limit: jest.fn(() => queryObj),
+    get: jest.fn().mockImplementation(() => {
+      const docs: Array<{ id: string; data: () => Record<string, unknown>; ref: { delete: () => Promise<void> } }> = [];
+      for (const [key, value] of _inMemoryStore.entries()) {
+        if (!key.startsWith(`${collectionPath}/`)) { continue; }
+        const docId = key.slice(collectionPath.length + 1);
+        let match = true;
+        for (const f of filters) {
+          const docVal = value[f.field];
+          if (f.op === '==' && docVal !== f.value) { match = false; break; }
+          if (f.op === '>' && typeof docVal === 'string' && typeof f.value === 'string' && docVal <= f.value) { match = false; break; }
+          if (f.op === '<' && typeof docVal === 'string' && typeof f.value === 'string' && docVal >= f.value) { match = false; break; }
+          if (f.op === 'in' && Array.isArray(f.value) && !f.value.includes(docVal)) { match = false; break; }
+        }
+        if (match) {
+          docs.push({ id: docId, data: () => value, ref: { delete: () => { _inMemoryStore.delete(key); return Promise.resolve(); } } });
+        }
+      }
+      return Promise.resolve({ docs, empty: docs.length === 0, size: docs.length });
+    }),
+  };
+  return queryObj;
+}
+
+jest.mock('@/lib/firebase/admin', () => ({
+  default: null,
+  adminAuth: { verifyIdToken: jest.fn(), getUser: jest.fn() },
+  adminDb: {
+    collection: jest.fn((path: string) => {
+      const base = _makeCollection(path);
+      // Override where to use filtered query
+      return {
+        ...base,
+        where: (field: string, op: string, value: unknown) => {
+          const filtered = _makeFilteredCollection(path);
+          return filtered.where(field, op, value);
+        },
+      };
+    }),
+    doc: jest.fn((path: string) => {
+      const parts = path.split('/');
+      const docId = parts.pop()!;
+      const colPath = parts.join('/');
+      return _makeDocRef(colPath, docId);
+    }),
+  },
+  adminStorage: null,
+  admin: {
+    firestore: {
+      FieldValue: {
+        serverTimestamp: jest.fn(() => new Date()),
+        increment: jest.fn((n: number) => n),
+        arrayUnion: jest.fn((...e: unknown[]) => e),
+        arrayRemove: jest.fn((...e: unknown[]) => e),
+        delete: jest.fn(),
+      },
+      Timestamp: {
+        now: jest.fn(() => ({ toDate: () => new Date() })),
+        fromDate: jest.fn((d: Date) => ({ toDate: () => d })),
+      },
+    },
+  },
+}));
+
+jest.mock('@/lib/firebase-admin', () => ({
+  db: {
+    collection: jest.fn((path: string) => {
+      const base = _makeCollection(path);
+      return {
+        ...base,
+        where: (field: string, op: string, value: unknown) => {
+          const filtered = _makeFilteredCollection(path);
+          return filtered.where(field, op, value);
+        },
+      };
+    }),
+    doc: jest.fn((path: string) => {
+      const parts = path.split('/');
+      const docId = parts.pop()!;
+      const colPath = parts.join('/');
+      return _makeDocRef(colPath, docId);
+    }),
+    runTransaction: jest.fn((fn: (tx: { get: jest.Mock; set: jest.Mock; update: jest.Mock; delete: jest.Mock }) => unknown) =>
+      fn({ get: jest.fn().mockResolvedValue({ exists: false, data: () => undefined }), set: jest.fn(), update: jest.fn(), delete: jest.fn() })
+    ),
+    batch: jest.fn(() => ({ set: jest.fn(), update: jest.fn(), delete: jest.fn(), commit: jest.fn().mockResolvedValue(undefined) })),
+  },
+  auth: { verifyIdToken: jest.fn(), getUser: jest.fn() },
+  admin: { firestore: { FieldValue: { serverTimestamp: jest.fn(() => new Date()), increment: jest.fn((n: number) => n), arrayUnion: jest.fn((...e: unknown[]) => e), arrayRemove: jest.fn((...e: unknown[]) => e), delete: jest.fn() }, Timestamp: { now: jest.fn(() => ({ toDate: () => new Date() })), fromDate: jest.fn((d: Date) => ({ toDate: () => d })) } } },
+  getCurrentUser: jest.fn().mockResolvedValue({ uid: 'test-user', email: 'test@test.com' }),
+  verifyOrgAccess: jest.fn().mockResolvedValue(true),
+}));
+
 import { describe, it, expect, beforeEach, afterAll } from '@jest/globals';
 import {
   checkpointSaga,

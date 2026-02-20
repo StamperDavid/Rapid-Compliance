@@ -11,6 +11,26 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach } from '@jest/globals';
+
+// Mock firebase admin to prevent Firestore calls — swarm-control falls back to in-memory cache
+jest.mock('@/lib/firebase/admin', () => ({
+  adminDb: null,
+  adminAuth: null,
+  adminStorage: null,
+  admin: {},
+  default: null,
+}));
+
+// Mock logger to silence output
+jest.mock('@/lib/logger/logger', () => ({
+  logger: {
+    info: jest.fn(),
+    debug: jest.fn(),
+    warn: jest.fn(),
+    error: jest.fn(),
+  },
+}));
+
 import { SignalBus } from '@/lib/orchestrator/signal-bus';
 import {
   getSwarmControlState,
@@ -85,7 +105,9 @@ function createMockHandler(agentId: string, response: Partial<AgentReport> = {})
 describe('SignalBus — Agent-to-Agent Communication', () => {
   let bus: SignalBus;
 
-  beforeEach(() => {
+  beforeEach(async () => {
+    // Ensure swarm is not paused from a previous test
+    await resumeSwarm('test_setup');
     bus = new SignalBus();
   });
 

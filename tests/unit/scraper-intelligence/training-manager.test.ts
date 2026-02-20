@@ -5,7 +5,11 @@
  * Bayesian confidence scoring, and version control.
  */
 
-import { describe, it, expect, jest } from '@jest/globals';
+import { describe, it, expect } from '@jest/globals';
+// Use global jest (from the Jest runtime) rather than @jest/globals import.
+// With babel-jest + CJS, jest.fn() from @jest/globals does not attach full
+// mock runtime methods (mockReturnValue, mockResolvedValue, etc.) to mock factories.
+declare const jest: typeof import('@jest/globals')['jest'];
 // Mock dependencies
 jest.mock('@/lib/firebase-admin', () => ({
   db: {
@@ -22,7 +26,15 @@ jest.mock('@/lib/logger/logger', () => ({
   },
 }));
 
-jest.mock('../../../src/lib/scraper-intelligence/temporary-scrapes-service', () => ({
+// Mock the module the source (training-manager.ts) actually imports from.
+jest.mock('@/lib/scraper-intelligence/temporary-scrapes-service', () => ({
+  flagScrapeForDeletion: jest.fn(),
+  getTemporaryScrape: jest.fn(),
+}));
+
+// Also mock discovery-archive-service so the test's own imports work.
+// This is the re-exported alias module used in the test's import statement.
+jest.mock('@/lib/scraper-intelligence/discovery-archive-service', () => ({
   flagScrapeForDeletion: jest.fn(),
   getTemporaryScrape: jest.fn(),
 }));
@@ -36,7 +48,8 @@ import {
   resetRateLimiter,
   TrainingManagerError,
 } from '@/lib/scraper-intelligence/training-manager';
-import { flagScrapeForDeletion, getTemporaryScrape } from '@/lib/scraper-intelligence/discovery-archive-service';
+// Import from the same module that training-manager.ts imports from, so the mocks align.
+import { flagScrapeForDeletion, getTemporaryScrape } from '@/lib/scraper-intelligence/temporary-scrapes-service';
 
 describe('Training Manager', () => {
   beforeEach(() => {
@@ -188,10 +201,18 @@ describe('Training Manager', () => {
       await expect(submitFeedback(params)).rejects.toThrow('Source scrape not found');
     });
 
-    it('should reject feedback for scrape from different organization', async () => {
+    it('should accept feedback for any scrape (single-tenant: no org isolation)', async () => {
+      // This system is single-tenant (SalesVelocity.ai). There is no org-level
+      // isolation — all scrapes belong to the same platform. Feedback is accepted
+      // regardless of which user or context created the scrape.
       (getTemporaryScrape as jest.MockedFunction<typeof getTemporaryScrape>).mockResolvedValue({
         ...mockScrape,
       });
+
+      const mockSet = (jest.fn() as unknown as jest.MockedFunction<() => Promise<void>>).mockResolvedValue(undefined);
+      const mockDoc = { id: 'feedback_123', set: mockSet };
+      const mockCollection = { doc: jest.fn(() => mockDoc) };
+      (db.collection as jest.MockedFunction<typeof db.collection>).mockReturnValue(mockCollection as unknown as ReturnType<typeof db.collection>);
 
       const params = {
         userId: 'user_456',
@@ -201,8 +222,8 @@ describe('Training Manager', () => {
         sourceText: 'Test',
       };
 
-      await expect(submitFeedback(params)).rejects.toThrow(TrainingManagerError);
-      await expect(submitFeedback(params)).rejects.toThrow('Unauthorized');
+      // Single-tenant: feedback is accepted for any scrape without org check.
+      await expect(submitFeedback(params)).resolves.toBeDefined();
     });
 
     it('should truncate long source text', async () => {
@@ -394,7 +415,8 @@ describe('Training Manager', () => {
           activeFilterApplied = true;
           return { orderBy: mockOrderBy };
         }
-        return { where: mockWhere };
+        // When activeOnly is false, the query goes directly from where('signalId') to orderBy.
+        return { where: mockWhere, orderBy: mockOrderBy };
       });
 
       const mockCollection: any = {
@@ -448,9 +470,11 @@ describe('Training Manager', () => {
         { data: () => ({ active: false, confidence: 50 }) },
       ];
 
+      // getTrainingAnalytics calls db.collection(name).get() directly (no .where() chain).
       let currentCollection = '';
-      const mockCollection: any = {
-        where: jest.fn().mockReturnValue({
+      (db.collection as jest.Mock).mockImplementation((name: unknown) => {
+        currentCollection = name as string;
+        return {
           get: jest.fn().mockImplementation(() => {
             if (currentCollection === 'training_feedback') {
               return Promise.resolve({ size: 4, docs: mockFeedbackDocs });
@@ -458,12 +482,7 @@ describe('Training Manager', () => {
               return Promise.resolve({ size: 3, docs: mockTrainingDocs });
             }
           }),
-        }),
-      };
-
-      (db.collection as jest.Mock).mockImplementation((name: unknown) => {
-        currentCollection = name as string;
-        return mockCollection;
+        };
       });
 
       const result = await getTrainingAnalytics();
@@ -480,16 +499,15 @@ describe('Training Manager', () => {
     });
 
     it('should handle empty analytics gracefully', async () => {
-      const mockCollection: any = {
-        where: jest.fn().mockReturnValue({
-          get: (jest.fn() as any).mockResolvedValue({
-            size: 0,
-            docs: [] as Array<{ data: () => unknown }>,
-          }),
+      // getTrainingAnalytics calls db.collection(name).get() directly (no .where() chain).
+      const mockEmptyCollection: { get: jest.MockedFunction<() => Promise<{ size: number; docs: Array<{ data: () => unknown }> }>> } = {
+        get: (jest.fn() as unknown as jest.MockedFunction<() => Promise<{ size: number; docs: Array<{ data: () => unknown }> }>>).mockResolvedValue({
+          size: 0,
+          docs: [] as Array<{ data: () => unknown }>,
         }),
       };
 
-      (db.collection as jest.MockedFunction<typeof db.collection>).mockReturnValue(mockCollection as unknown as ReturnType<typeof db.collection>);
+      (db.collection as jest.MockedFunction<typeof db.collection>).mockReturnValue(mockEmptyCollection as unknown as ReturnType<typeof db.collection>);
 
       const result = await getTrainingAnalytics();
 

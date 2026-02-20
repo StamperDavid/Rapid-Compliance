@@ -6,7 +6,7 @@
  */
 
 const { config } = require('dotenv');
-const { cleanupTestData } = require('./scripts/db-manager');
+const { cleanupTestData, cleanupTestCollections } = require('./scripts/db-manager');
 
 // Load environment variables
 config({ path: '.env.local' });
@@ -21,15 +21,29 @@ module.exports = async () => {
     // Use the official cleanup logic from db-manager.js
     // Run in LIVE mode (not dry run) to actually clean up
     await cleanupTestData(false);
+
+    // Safety net: clean top-level test collections
+    // (temporary_scrapes, discoveryArchive, training_*, etc.)
+    await cleanupTestCollections();
     
   } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    const isQuotaError = errorMsg.includes('RESOURCE_EXHAUSTED') || errorMsg.includes('Quota exceeded');
+
     console.error('\n❌ ========================================');
     console.error('❌ CLEANUP FAILED — TEST DATA MAY PERSIST');
     console.error('❌ ========================================');
-    console.error('❌ Error:', error);
-    console.error('❌ Run manually: node scripts/db-manager.js --cleanup');
+    console.error('❌ Error:', errorMsg);
+    console.error('❌ Run manually: node scripts/db-manager.js --nuke');
     console.error('❌ ========================================\n');
-    // Throw so CI/CD pipelines catch cleanup failures
-    throw new Error(`Test cleanup failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+
+    // Don't fail the test run on quota errors — cleanup can be retried later
+    if (isQuotaError) {
+      console.warn('⚠️  Firestore quota exhausted. Cleanup skipped. Run db-manager.js --nuke when quota resets.');
+      return;
+    }
+
+    // Throw on non-quota errors so CI/CD catches real failures
+    throw new Error(`Test cleanup failed: ${errorMsg}`);
   }
 };

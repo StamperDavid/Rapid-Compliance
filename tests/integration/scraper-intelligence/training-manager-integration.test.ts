@@ -23,7 +23,10 @@ import {
 import {
   saveTemporaryScrape,
   getTemporaryScrape,
-} from '@/lib/scraper-intelligence/discovery-archive-service';
+} from '@/lib/scraper-intelligence/temporary-scrapes-service';
+
+// Set timeout for real Firestore operations
+jest.setTimeout(30000);
 
 describe('Training Manager Integration Tests', () => {
   const testUserId = `test_user_${Date.now()}`;
@@ -47,7 +50,7 @@ describe('Training Manager Integration Tests', () => {
       }
     }
     createdIds.length = 0;
-  });
+  }, 30000);
 
   describe('submitFeedback', () => {
     it('should submit feedback and create training data', async () => {

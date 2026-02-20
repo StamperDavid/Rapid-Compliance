@@ -477,7 +477,7 @@ describe('Manager Delegation', () => {
         expect(execution.totalSpecialists).toBeGreaterThan(1);
       }
     }
-  });
+  }, 30000);
 
   it('should provide capability report for managers', async () => {
     const managerIds = getAgentIdsByTier('L2');
@@ -551,7 +551,7 @@ describe('Orchestrator Routing', () => {
     const report = await orchestrator.execute(message);
     expectValidReport(report);
     expect(['COMPLETED', 'FAILED']).toContain(report.status);
-  });
+  }, 30000);
 
   it('should route sales intent to Revenue Director', async () => {
     const orchestrator = getAgentInstance(AGENT_IDS.MASTER_ORCHESTRATOR);
@@ -567,7 +567,7 @@ describe('Orchestrator Routing', () => {
     const report = await orchestrator.execute(message);
     expectValidReport(report);
     expect(['COMPLETED', 'FAILED']).toContain(report.status);
-  });
+  }, 30000);
 
   it('should route marketing intent to Marketing Manager', async () => {
     const orchestrator = getAgentInstance(AGENT_IDS.MASTER_ORCHESTRATOR);
@@ -583,7 +583,7 @@ describe('Orchestrator Routing', () => {
     const report = await orchestrator.execute(message);
     expectValidReport(report);
     expect(['COMPLETED', 'FAILED']).toContain(report.status);
-  });
+  }, 30000);
 
   it('should handle unknown intents gracefully', async () => {
     const orchestrator = getAgentInstance(AGENT_IDS.MASTER_ORCHESTRATOR);
@@ -599,7 +599,7 @@ describe('Orchestrator Routing', () => {
     // Should not throw, should return a report
     const report = await orchestrator.execute(message);
     expectValidReport(report);
-  });
+  }, 30000);
 });
 
 // ============================================================================
@@ -814,7 +814,7 @@ describe('Full Pipeline Simulation', () => {
       // Orchestrator typically returns structured data with execution results
       expect(data).toBeDefined();
     }
-  });
+  }, 30000);
 });
 
 // ============================================================================

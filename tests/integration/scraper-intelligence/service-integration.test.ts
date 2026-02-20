@@ -27,11 +27,13 @@ import {
 import type { ResearchIntelligence, ExtractedSignal } from '@/types/scraper-intelligence';
 import { db } from '@/lib/firebase-admin';
 
+// Set timeout for real Firestore operations
+jest.setTimeout(30000);
+
 // ============================================================================
 // TEST DATA
 // ============================================================================
 
-const TEST_ORG_ID = 'test-org-service-integration';
 const TEST_INDUSTRY_ID = 'hvac';
 const TEST_RECORD_ID = 'lead_123';
 
@@ -131,12 +133,12 @@ const mockSignals: ExtractedSignal[] = [
 beforeAll(async () => {
   // Clear any existing test data
   await cleanupTestData();
-});
+}, 30000);
 
 afterAll(async () => {
   // Clean up after tests
   await cleanupTestData();
-});
+}, 30000);
 
 beforeEach(() => {
   // Clear caches before each test
@@ -367,7 +369,7 @@ describe('Process and Store Scrape', () => {
   beforeEach(async () => {
     // Ensure research intelligence exists
     await saveResearchIntelligence(TEST_INDUSTRY_ID, mockResearch);
-  });
+  }, 30000);
 
   it('should process scrape and store signals', async () => {
     const rawHtml = `
@@ -442,7 +444,7 @@ describe('Signal Analytics', () => {
   beforeEach(async () => {
     // Save test signals
     await saveExtractedSignals(TEST_RECORD_ID, mockSignals);
-  });
+  }, 30000);
 
   it('should calculate analytics correctly', async () => {
     const analytics = await getSignalAnalytics(TEST_RECORD_ID);
@@ -473,7 +475,7 @@ describe('Signal Analytics', () => {
 describe('Batch Processing', () => {
   beforeEach(async () => {
     await saveResearchIntelligence(TEST_INDUSTRY_ID, mockResearch);
-  });
+  }, 30000);
 
   it('should process multiple scrapes in batch', async () => {
     const scrapes = [

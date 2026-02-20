@@ -3,6 +3,104 @@
  * Tests that all critical UI pages are properly wired to backend services
  */
 
+// In-memory admin Firestore for test mode — campaign-manager uses adminDb in test env
+const _uiPagesAdminStore = new Map<string, Record<string, unknown>>();
+
+function _uiPagesDocRef(colPath: string, docId: string) {
+  const key = `${colPath}/${docId}`;
+  return {
+    id: docId,
+    get: jest.fn().mockImplementation(() => {
+      const data = _uiPagesAdminStore.get(key);
+      return { exists: !!data, data: () => data, id: docId };
+    }),
+    set: jest.fn().mockImplementation((data: Record<string, unknown>, opts?: { merge?: boolean }) => {
+      if (opts?.merge) {
+        const existing = _uiPagesAdminStore.get(key) ?? {};
+        _uiPagesAdminStore.set(key, { ...existing, ...data });
+      } else {
+        _uiPagesAdminStore.set(key, { ...data });
+      }
+    }),
+    update: jest.fn().mockImplementation((data: Record<string, unknown>) => {
+      const existing = _uiPagesAdminStore.get(key) ?? {};
+      _uiPagesAdminStore.set(key, { ...existing, ...data });
+    }),
+    delete: jest.fn().mockImplementation(() => { _uiPagesAdminStore.delete(key); }),
+  };
+}
+
+function _uiPagesColRef(colPath: string) {
+  return {
+    doc: jest.fn((docId: string) => _uiPagesDocRef(colPath, docId)),
+    add: jest.fn().mockImplementation((data: Record<string, unknown>) => {
+      const id = `auto_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+      _uiPagesAdminStore.set(`${colPath}/${id}`, { ...data, id });
+      return { id };
+    }),
+    where: jest.fn().mockReturnThis(),
+    orderBy: jest.fn().mockReturnThis(),
+    limit: jest.fn().mockReturnThis(),
+    get: jest.fn().mockImplementation(() => {
+      const docs: Array<{ id: string; data: () => Record<string, unknown>; ref: { delete: () => void } }> = [];
+      for (const [key, value] of _uiPagesAdminStore.entries()) {
+        if (key.startsWith(`${colPath}/`)) {
+          const id = key.slice(colPath.length + 1);
+          docs.push({ id, data: () => value, ref: { delete: () => { _uiPagesAdminStore.delete(key); } } });
+        }
+      }
+      return { docs, empty: docs.length === 0, size: docs.length };
+    }),
+  };
+}
+
+jest.mock('@/lib/firebase/admin', () => ({
+  default: null,
+  adminAuth: { verifyIdToken: jest.fn(), getUser: jest.fn() },
+  adminDb: {
+    collection: jest.fn((path: string) => _uiPagesColRef(path)),
+    doc: jest.fn((path: string) => {
+      const parts = path.split('/');
+      const docId = parts.pop()!;
+      return _uiPagesDocRef(parts.join('/'), docId);
+    }),
+    runTransaction: jest.fn((fn: (txn: { get: jest.Mock; set: jest.Mock; update: jest.Mock; delete: jest.Mock }) => unknown) => fn({ get: jest.fn().mockResolvedValue({ exists: false, data: () => undefined }), set: jest.fn(), update: jest.fn(), delete: jest.fn() })),
+    batch: jest.fn(() => ({ set: jest.fn(), update: jest.fn(), delete: jest.fn(), commit: jest.fn().mockResolvedValue(undefined) })),
+  },
+  adminStorage: null,
+  admin: {
+    firestore: {
+      FieldValue: {
+        serverTimestamp: jest.fn(() => new Date()),
+        increment: jest.fn((n: number) => n),
+        arrayUnion: jest.fn((...e: unknown[]) => e),
+        arrayRemove: jest.fn((...e: unknown[]) => e),
+        delete: jest.fn(),
+      },
+      Timestamp: { now: jest.fn(() => ({ toDate: () => new Date() })), fromDate: jest.fn((d: Date) => ({ toDate: () => d })) },
+    },
+  },
+}));
+
+jest.mock('@/lib/firebase-admin', () => ({
+  db: {
+    collection: jest.fn(() => ({
+      where: jest.fn().mockReturnThis(),
+      orderBy: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockReturnThis(),
+      get: jest.fn().mockResolvedValue({ docs: [], empty: true, size: 0 }),
+      doc: jest.fn(() => ({
+        get: jest.fn().mockResolvedValue({ exists: false, data: () => undefined }),
+        set: jest.fn().mockResolvedValue(undefined),
+        update: jest.fn().mockResolvedValue(undefined),
+        delete: jest.fn().mockResolvedValue(undefined),
+      })),
+    })),
+  },
+  auth: { verifyIdToken: jest.fn(), getUser: jest.fn() },
+  admin: { firestore: { FieldValue: { serverTimestamp: jest.fn(() => new Date()), increment: jest.fn((n: number) => n) } } },
+}));
+
 import { describe, it, expect, beforeAll } from '@jest/globals';
 import { getOrCreateCart, addToCart } from '@/lib/ecommerce/cart-service';
 import { processCheckout } from '@/lib/ecommerce/checkout-service';
@@ -10,6 +108,8 @@ import { executeWorkflow } from '@/lib/workflows/workflow-executor';
 import type { Workflow } from '@/types/workflow';
 import { createCampaign, listCampaigns } from '@/lib/email/campaign-manager';
 import { FirestoreService } from '@/lib/db/firestore-service';
+import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection, COLLECTIONS } from '@/lib/firebase/collections';
 
 describe('E-Commerce UI Integration', () => {
   const testOrgId = `test-org-${Date.now()}`;
@@ -94,7 +194,7 @@ describe('E-Commerce UI Integration', () => {
     // Verify the keys were saved (for debugging if needed)
     // const savedKeys = await FirestoreService.get(`organizations/${testOrgId}/apiKeys`, testOrgId);
 
-    // Create a test product in the products entity
+    // Create a test product in the products entity (legacy testOrgId path)
     await FirestoreService.set(
       `organizations/${testOrgId}/workspaces/${testWorkspaceId}/entities/products/records`,
       'test-product-1',
@@ -108,6 +208,45 @@ describe('E-Commerce UI Integration', () => {
         inventory: 100,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
+      },
+      false
+    );
+
+    // Write ecommerce config at the platform path so cart-service can find it.
+    // cart-service reads from getSubCollection('ecommerce') = COLLECTIONS.ORGANIZATIONS/PLATFORM_ID/test_ecommerce
+    const ecommerceConfig = {
+      enabled: true,
+      currency: 'USD',
+      productSchema: 'products',
+      productMappings: {
+        name: 'name',
+        price: 'price',
+        description: 'description',
+        images: 'image',
+        sku: 'id',
+        inventory: 'inventory',
+      },
+      payments: { providers: [{ id: 'test-stripe', provider: 'stripe', isDefault: true, enabled: true }] },
+      shipping: { freeShipping: { enabled: false }, methods: [] },
+      tax: { enabled: false },
+    };
+    await FirestoreService.set(getSubCollection('ecommerce'), 'config', ecommerceConfig, false);
+
+    // Write product at the platform path so cart-service getProduct() can find it.
+    // getProduct reads from COLLECTIONS.ORGANIZATIONS/PLATFORM_ID/entities/productSchema/records
+    await FirestoreService.set(
+      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/entities/products/records`,
+      'test-product-1',
+      {
+        id: 'test-product-1',
+        name: 'Test Product',
+        description: 'A test product for integration tests',
+        price: 1000,
+        image: 'https://example.com/test-product.jpg',
+        status: 'active',
+        inventory: 100,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
       },
       false
     );

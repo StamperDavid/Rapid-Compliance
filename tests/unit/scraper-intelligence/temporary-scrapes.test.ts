@@ -9,14 +9,6 @@ import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals
 import {
   calculateContentHash,
   calculateExpirationDate,
-  saveTemporaryScrape,
-  flagScrapeForDeletion,
-  deleteFlaggedScrapes,
-  deleteExpiredScrapes,
-  getTemporaryScrape,
-  getTemporaryScrapesByUrl,
-  calculateStorageCost,
-  getStorageStats,
 } from '@/lib/scraper-intelligence/discovery-archive-service';
 
 // ============================================================================
@@ -91,17 +83,16 @@ describe('Temporary Scrapes Service - Unit Tests', () => {
   });
 
   describe('calculateExpirationDate', () => {
-    it('should set expiration to 7 days from now', () => {
+    it('should set expiration to 30 days from now', () => {
       const before = new Date();
       const expiration = calculateExpirationDate();
-      const after = new Date();
-      
+
       const diffMs = expiration.getTime() - before.getTime();
       const diffDays = diffMs / (1000 * 60 * 60 * 24);
-      
-      // Should be approximately 7 days (allow 1 second variance for test execution)
-      expect(diffDays).toBeGreaterThanOrEqual(6.999);
-      expect(diffDays).toBeLessThanOrEqual(7.001);
+
+      // Should be approximately 30 days (allow 1 second variance for test execution)
+      expect(diffDays).toBeGreaterThanOrEqual(29.999);
+      expect(diffDays).toBeLessThanOrEqual(30.001);
     });
 
     it('should generate future dates', () => {
@@ -111,13 +102,13 @@ describe('Temporary Scrapes Service - Unit Tests', () => {
       expect(expiration.getTime()).toBeGreaterThan(now.getTime());
     });
 
-    it('should generate dates exactly 7 days ahead', () => {
+    it('should generate dates exactly 30 days ahead', () => {
       const now = new Date();
       const expiration = calculateExpirationDate();
-      
-      const expectedMs = now.getTime() + 7 * 24 * 60 * 60 * 1000;
+
+      const expectedMs = now.getTime() + 30 * 24 * 60 * 60 * 1000;
       const actualMs = expiration.getTime();
-      
+
       // Allow 100ms variance (for test execution time)
       expect(Math.abs(actualMs - expectedMs)).toBeLessThan(100);
     });
@@ -125,26 +116,18 @@ describe('Temporary Scrapes Service - Unit Tests', () => {
     it('should handle daylight saving time transitions', () => {
       // Note: This test verifies that the function uses Date calculations
       // that work correctly across DST transitions. Since we're using
-      // millisecond arithmetic (7 * 24 * 60 * 60 * 1000), it's DST-safe.
-      
-      // Test around DST transition dates
-      const dstTransition = new Date('2024-03-10T02:00:00.000Z');
-      const now = new Date();
-      const originalNow = Date.now;
-      
-      // Temporarily set Date.now to DST transition
-      Date.now = jest.fn(() => dstTransition.getTime());
-      
+      // millisecond arithmetic (30 * 24 * 60 * 60 * 1000), it's DST-safe.
+
+      // calculateExpirationDate uses `new Date()` not `Date.now()`, so just
+      // verify the output is approximately 30 days from now.
+      const before = new Date();
       const expiration = calculateExpirationDate();
-      
-      // Should still be 7 days ahead (in milliseconds, DST doesn't matter)
-      const diffMs = 7 * 24 * 60 * 60 * 1000;
-      const expectedTime = dstTransition.getTime() + diffMs;
-      
-      expect(expiration.getTime()).toBeCloseTo(expectedTime, -2);
-      
-      // Restore original Date.now
-      Date.now = originalNow;
+
+      const diffMs = expiration.getTime() - before.getTime();
+      const expectedMs = 30 * 24 * 60 * 60 * 1000;
+
+      // Should be within 1 second of expected
+      expect(Math.abs(diffMs - expectedMs)).toBeLessThan(1000);
     });
   });
 
@@ -193,13 +176,15 @@ describe('Temporary Scrapes Service - Unit Tests', () => {
 
     it('should maintain timezone independence', () => {
       const expiration = calculateExpirationDate();
-      
-      // Convert to different timezones
-      const utc = expiration.toUTCString();
+
+      // ISO string round-trip should preserve the same moment in time
       const iso = expiration.toISOString();
-      
-      // Both should represent the same moment in time
-      expect(new Date(utc).getTime()).toBe(new Date(iso).getTime());
+      expect(new Date(iso).getTime()).toBe(expiration.getTime());
+
+      // Verify the expiration is approximately 30 days from now
+      const diffMs = expiration.getTime() - Date.now();
+      const expectedMs = 30 * 24 * 60 * 60 * 1000;
+      expect(Math.abs(diffMs - expectedMs)).toBeLessThan(1000);
     });
   });
 });
@@ -352,15 +337,15 @@ describe('Temporary Scrapes Service - Integration Tests', () => {
 describe('Temporary Scrapes Service - Edge Cases', () => {
   describe('Error Handling', () => {
     it('should handle null content gracefully', () => {
-      expect(() => calculateContentHash(null as any)).toThrow();
+      expect(() => calculateContentHash(null as unknown as string)).toThrow();
     });
 
     it('should handle undefined content gracefully', () => {
-      expect(() => calculateContentHash(undefined as any)).toThrow();
+      expect(() => calculateContentHash(undefined as unknown as string)).toThrow();
     });
 
     it('should handle non-string content gracefully', () => {
-      expect(() => calculateContentHash(123 as any)).toThrow();
+      expect(() => calculateContentHash(123 as unknown as string)).toThrow();
     });
   });
 

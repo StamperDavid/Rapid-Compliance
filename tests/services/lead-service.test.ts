@@ -3,6 +3,129 @@
  * Integration tests for lead service layer
  */
 
+// ---------------------------------------------------------------------------
+// In-memory FirestoreService mock — all state lives inside the factory closure
+// so it is available when jest.mock is hoisted.
+// ---------------------------------------------------------------------------
+jest.mock('@/lib/db/firestore-service', () => {
+  const store = new Map<string, Record<string, unknown>>();
+
+  function getCollectionDocs(collectionPath: string) {
+    const docs: Array<{ id: string; data: Record<string, unknown> }> = [];
+    for (const [key, value] of store.entries()) {
+      if (key.startsWith(`${collectionPath}/`)) {
+        const id = key.slice(collectionPath.length + 1);
+        docs.push({ id, data: value });
+      }
+    }
+    return docs;
+  }
+
+  const FirestoreService = {
+    get: jest.fn().mockImplementation((collectionPath: string, docId: string) => {
+      const data = store.get(`${collectionPath}/${docId}`);
+      return Promise.resolve(data ? { ...data } : null);
+    }),
+    getAll: jest.fn().mockImplementation((collectionPath: string) => {
+      return Promise.resolve(getCollectionDocs(collectionPath).map(d => ({ id: d.id, ...d.data })));
+    }),
+    getAllPaginated: jest.fn().mockImplementation((
+      collectionPath: string,
+      constraints: Array<{ _field?: string; _op?: string; _value?: unknown }> = [],
+      pageSize: number = 50,
+      lastDoc?: { id: string }
+    ) => {
+      // Extract where filters from firebase/firestore QueryConstraint objects
+      const filters = constraints.filter(c => c._field !== undefined);
+      let docs = getCollectionDocs(collectionPath);
+
+      for (const f of filters) {
+        docs = docs.filter(d => {
+          const v = d.data[f._field!];
+          const op = f._op;
+          const val = f._value;
+          if (op === '==') { return v === val; }
+          if (op === '!=') { return v !== val; }
+          if (op === '>') { return (v as string) > (val as string); }
+          if (op === '>=') { return (v as string) >= (val as string); }
+          if (op === '<') { return (v as string) < (val as string); }
+          if (op === '<=') { return (v as string) <= (val as string); }
+          if (op === 'in') { return Array.isArray(val) && val.includes(v); }
+          return true;
+        });
+      }
+
+      if (lastDoc) {
+        const idx = docs.findIndex(d => d.id === lastDoc.id);
+        if (idx >= 0) { docs = docs.slice(idx + 1); }
+      }
+
+      const hasMore = docs.length > pageSize;
+      const page = docs.slice(0, pageSize);
+      const newLastDoc = page.length > 0 ? { id: page[page.length - 1].id } : null;
+      return Promise.resolve({
+        data: page.map(d => ({ id: d.id, ...d.data })),
+        lastDoc: newLastDoc,
+        hasMore,
+      });
+    }),
+    set: jest.fn().mockImplementation((collectionPath: string, docId: string, data: Record<string, unknown>, merge: boolean = true) => {
+      const key = `${collectionPath}/${docId}`;
+      const existing = merge ? (store.get(key) ?? {}) : {};
+      store.set(key, { ...existing, ...data, id: docId });
+      return Promise.resolve();
+    }),
+    update: jest.fn().mockImplementation((collectionPath: string, docId: string, data: Record<string, unknown>) => {
+      const key = `${collectionPath}/${docId}`;
+      const existing = store.get(key) ?? {};
+      store.set(key, { ...existing, ...data });
+      return Promise.resolve();
+    }),
+    delete: jest.fn().mockImplementation((collectionPath: string, docId: string) => {
+      store.delete(`${collectionPath}/${docId}`);
+      return Promise.resolve();
+    }),
+    subscribe: jest.fn().mockReturnValue(() => {}),
+  };
+
+  return {
+    FirestoreService,
+    COLLECTIONS: {
+      ORGANIZATIONS: 'organizations',
+      USERS: 'users',
+      LEADS: 'leads',
+      DEALS: 'deals',
+    },
+  };
+});
+
+jest.mock('@/lib/firebase-admin', () => ({
+  db: {
+    collection: jest.fn(() => ({
+      where: jest.fn().mockReturnThis(),
+      orderBy: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockReturnThis(),
+      get: jest.fn().mockResolvedValue({ docs: [], empty: true, size: 0 }),
+      doc: jest.fn(() => ({
+        get: jest.fn().mockResolvedValue({ exists: false, data: () => undefined }),
+        set: jest.fn().mockResolvedValue(undefined),
+        update: jest.fn().mockResolvedValue(undefined),
+        delete: jest.fn().mockResolvedValue(undefined),
+      })),
+    })),
+  },
+  auth: { verifyIdToken: jest.fn(), getUser: jest.fn() },
+  admin: { firestore: { FieldValue: { serverTimestamp: jest.fn(() => new Date()), increment: jest.fn((n: number) => n) } } },
+}));
+
+jest.mock('@/lib/firebase/admin', () => ({
+  default: null,
+  adminAuth: { verifyIdToken: jest.fn(), getUser: jest.fn() },
+  adminDb: null,
+  adminStorage: null,
+  admin: { firestore: { FieldValue: { serverTimestamp: jest.fn(() => new Date()), increment: jest.fn((n: number) => n) } } },
+}));
+
 import { describe, it, expect, beforeEach, afterEach, afterAll } from '@jest/globals';
 import {
   getLeads,
@@ -264,7 +387,3 @@ describe('LeadService', () => {
     });
   });
 });
-
-
-
-

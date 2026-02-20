@@ -20,6 +20,26 @@ import {
   calculateConfidenceTrend,
   ConfidenceScorerError,
 } from '@/lib/scraper-intelligence/confidence-scorer';
+import type { TrainingData } from '@/types/scraper-intelligence';
+
+/** Builds a minimal valid TrainingData fixture for unit tests. */
+function makeTrainingData(overrides: Pick<TrainingData, 'positiveCount' | 'negativeCount'>): TrainingData {
+  const now = new Date();
+  return {
+    id: 'test-id',
+    signalId: 'test-signal',
+    pattern: 'test-pattern',
+    patternType: 'keyword',
+    confidence: 50,
+    seenCount: overrides.positiveCount + overrides.negativeCount,
+    createdAt: now,
+    lastUpdatedAt: now,
+    lastSeenAt: now,
+    version: 1,
+    active: true,
+    ...overrides,
+  };
+}
 
 describe('Confidence Scorer', () => {
   describe('calculateBayesianConfidence', () => {
@@ -333,10 +353,12 @@ describe('Confidence Scorer', () => {
 
   describe('detectOutliers', () => {
     it('should detect outliers in dataset', () => {
+      // Use threshold=1.5 so the algorithm can detect outliers in a small dataset.
+      // With [50,52,48,51,49,95]: mean≈57.5, stdDev≈16.82, Z(95)≈2.23 > 1.5
       const scores = [50, 52, 48, 51, 49, 95]; // 95 is outlier
-      
-      const outliers = detectOutliers(scores);
-      
+
+      const outliers = detectOutliers(scores, 1.5);
+
       expect(outliers[5]).toBe(true); // Last element is outlier
       expect(outliers.filter((o) => o).length).toBe(1);
     });
@@ -367,20 +389,24 @@ describe('Confidence Scorer', () => {
     });
 
     it('should detect multiple outliers', () => {
+      // Use threshold=1.5 so the algorithm can flag both extremes in this small dataset.
+      // With [50,52,48,10,90]: mean=50, stdDev≈25.33, Z(10)≈1.58 > 1.5, Z(90)≈1.58 > 1.5
       const scores = [50, 52, 48, 10, 90]; // 10 and 90 are outliers
-      
-      const outliers = detectOutliers(scores);
-      
+
+      const outliers = detectOutliers(scores, 1.5);
+
       expect(outliers.filter((o) => o).length).toBeGreaterThanOrEqual(2);
     });
   });
 
   describe('filterOutliers', () => {
     it('should remove outliers from dataset', () => {
+      // Use threshold=1.5 so the algorithm detects the outlier in this small dataset.
+      // With [50,52,48,51,49,95]: mean≈57.5, stdDev≈16.82, Z(95)≈2.23 > 1.5
       const scores = [50, 52, 48, 51, 49, 95];
-      
-      const filtered = filterOutliers(scores);
-      
+
+      const filtered = filterOutliers(scores, 1.5);
+
       expect(filtered.length).toBeLessThan(scores.length);
       expect(filtered).not.toContain(95);
     });
@@ -404,46 +430,34 @@ describe('Confidence Scorer', () => {
 
   describe('calculateSuccessRate', () => {
     it('should calculate correct success rate', () => {
-      const trainingData: any = {
-        positiveCount: 7,
-        negativeCount: 3,
-      };
-      
+      const trainingData: TrainingData = makeTrainingData({ positiveCount: 7, negativeCount: 3 });
+
       const rate = calculateSuccessRate(trainingData);
-      
+
       expect(rate).toBeCloseTo(0.7, 2);
     });
 
     it('should return 0 for no positive feedback', () => {
-      const trainingData: any = {
-        positiveCount: 0,
-        negativeCount: 5,
-      };
-      
+      const trainingData: TrainingData = makeTrainingData({ positiveCount: 0, negativeCount: 5 });
+
       const rate = calculateSuccessRate(trainingData);
-      
+
       expect(rate).toBe(0);
     });
 
     it('should return 1 for no negative feedback', () => {
-      const trainingData: any = {
-        positiveCount: 5,
-        negativeCount: 0,
-      };
-      
+      const trainingData: TrainingData = makeTrainingData({ positiveCount: 5, negativeCount: 0 });
+
       const rate = calculateSuccessRate(trainingData);
-      
+
       expect(rate).toBe(1);
     });
 
     it('should return 0 for no feedback', () => {
-      const trainingData: any = {
-        positiveCount: 0,
-        negativeCount: 0,
-      };
-      
+      const trainingData: TrainingData = makeTrainingData({ positiveCount: 0, negativeCount: 0 });
+
       const rate = calculateSuccessRate(trainingData);
-      
+
       expect(rate).toBe(0);
     });
   });

@@ -7,17 +7,20 @@ import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
 import { discoverPerson, discoverPeopleBatch } from '@/lib/services/discovery-engine';
 import { deleteFlaggedArchiveEntries, deleteExpiredArchiveEntries } from '@/lib/scraper-intelligence/discovery-archive-service';
 
+// Set timeout for real Firestore operations
+jest.setTimeout(30000);
+
 describe('Person Discovery Tests', () => {
   beforeAll(async () => {
     // Clean up any existing test data
     await deleteFlaggedArchiveEntries();
     await deleteExpiredArchiveEntries();
-  });
+  }, 30000);
 
   afterAll(async () => {
     // Clean up test data
     await deleteFlaggedArchiveEntries();
-  });
+  }, 30000);
 
   describe('Single Person Discovery', () => {
     it('should discover person from email address', async () => {

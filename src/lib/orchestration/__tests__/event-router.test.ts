@@ -56,6 +56,20 @@ jest.mock('@/lib/agents', () => ({
   },
 }));
 
+// Mock swarm-control to prevent Firestore calls
+jest.mock('@/lib/orchestration/swarm-control', () => ({
+  isSwarmPaused: jest.fn().mockResolvedValue(false),
+  isManagerPaused: jest.fn().mockResolvedValue(false),
+  isAgentPaused: jest.fn().mockResolvedValue(false),
+}));
+
+// Mock saga-persistence to prevent Firestore calls
+jest.mock('@/lib/orchestration/saga-persistence', () => ({
+  isEventProcessed: jest.fn().mockResolvedValue(false),
+  persistEventLog: jest.fn().mockResolvedValue(undefined),
+  confirmEvent: jest.fn().mockResolvedValue(undefined),
+}));
+
 // ============================================================================
 // TEST SETUP / TEARDOWN
 // ============================================================================

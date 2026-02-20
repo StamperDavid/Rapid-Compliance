@@ -4,7 +4,7 @@
  * Tests semantic pattern matching using embeddings.
  */
 
-import { describe, it, expect, beforeEach, jest } from '@jest/globals';
+import { describe, it, expect, beforeEach } from '@jest/globals';
 import {
   cosineSimilarity,
   calculateThreshold,
@@ -146,12 +146,13 @@ describe('Pattern Matcher', () => {
 
   describe('calculateThreshold', () => {
     it('should return higher threshold for higher precision', () => {
-      const threshold95 = calculateThreshold(0.95);
-      const threshold90 = calculateThreshold(0.90);
-      const threshold85 = calculateThreshold(0.85);
-      
-      expect(threshold95).toBeGreaterThan(threshold90);
-      expect(threshold90).toBeGreaterThan(threshold85);
+      // Use values below the 0.95 cap so all three are distinct
+      const threshold80 = calculateThreshold(0.80);
+      const threshold70 = calculateThreshold(0.70);
+      const threshold60 = calculateThreshold(0.60);
+
+      expect(threshold80).toBeGreaterThan(threshold70);
+      expect(threshold70).toBeGreaterThan(threshold60);
     });
 
     it('should return threshold in valid range', () => {
@@ -224,7 +225,7 @@ describe('Pattern Matcher', () => {
       ];
 
       for (const [a, b] of testCases) {
-        const similarity = cosineSimilarity(a as number[], b as number[]);
+        const similarity = cosineSimilarity(a, b);
         expect(similarity).toBeGreaterThanOrEqual(0);
         expect(similarity).toBeLessThanOrEqual(1);
       }

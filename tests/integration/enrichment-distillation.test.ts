@@ -5,52 +5,63 @@
  * Uses REAL Firestore operations (not mocks).
  */
 
-import { describe, it, expect, afterAll } from '@jest/globals';
+import { describe, it, expect, beforeAll, afterAll, afterEach } from '@jest/globals';
 import { enrichCompany } from '@/lib/enrichment/enrichment-service';
 import { PLATFORM_ID } from '@/lib/constants/platform';
+import { db } from '@/lib/firebase-admin';
 
-// Import Firestore admin instance
-import admin from 'firebase-admin';
-import { getFirestore } from 'firebase-admin/firestore';
-
-// Initialize Firebase Admin if not already initialized
-if (!admin.apps.length) {
-  admin.initializeApp({
-    projectId: process.env.FIREBASE_PROJECT_ID ?? 'test-project',
-  });
-}
-
-const db = getFirestore();
+// Set timeout for real Firestore operations
+jest.setTimeout(30000);
 
 describe('Enrichment + Distillation Integration', () => {
   const TEST_ORG_ID = PLATFORM_ID;
-  
-  // Cleanup after tests
+  // Enrichment saves scrapes to discoveryArchive via discovery-archive-service
+  const DISCOVERY_ARCHIVE_COLLECTION = 'discoveryArchive';
+
+  async function cleanupTestData() {
+    try {
+      // Clean up discoveryArchive (where distillation saves scrapes)
+      const archiveDocs = await db.collection(DISCOVERY_ARCHIVE_COLLECTION).get();
+      if (archiveDocs.size > 0) {
+        const batch1 = db.batch();
+        archiveDocs.docs.forEach((doc) => batch1.delete(doc.ref));
+        await batch1.commit();
+      }
+
+      // Clean up enrichment-costs subcollection
+      const costs = await db
+        .collection(`organizations/${TEST_ORG_ID}/enrichment-costs`)
+        .get();
+      if (costs.size > 0) {
+        const batch2 = db.batch();
+        costs.docs.forEach((doc) => batch2.delete(doc.ref));
+        await batch2.commit();
+      }
+
+      // Clean up the org document if it exists
+      const orgDoc = await db.collection('organizations').doc(TEST_ORG_ID).get();
+      if (orgDoc.exists) {
+        await db.collection('organizations').doc(TEST_ORG_ID).delete();
+      }
+    } catch (error) {
+      console.error('Cleanup failed:', error);
+    }
+  }
+
+  // Clean before all tests to start fresh
+  beforeAll(async () => {
+    await cleanupTestData();
+  }, 30000);
+
+  // Clean after each test for isolation
+  afterEach(async () => {
+    await cleanupTestData();
+  }, 30000);
+
+  // Safety cleanup after all tests
   afterAll(async () => {
-    // Clean up temporary_scrapes
-    const scrapes = await db
-      .collection('temporary_scrapes')
-      .get();
-
-    for (const doc of scrapes.docs) {
-      await doc.ref.delete();
-    }
-
-    // Clean up enrichment-costs subcollection
-    const costs = await db
-      .collection(`organizations/${TEST_ORG_ID}/enrichment-costs`)
-      .get();
-
-    for (const doc of costs.docs) {
-      await doc.ref.delete();
-    }
-
-    // Clean up the org document if it exists
-    const orgDoc = await db.collection('organizations').doc(TEST_ORG_ID).get();
-    if (orgDoc.exists) {
-      await db.collection('organizations').doc(TEST_ORG_ID).delete();
-    }
-  });
+    await cleanupTestData();
+  }, 30000);
 
   describe('HVAC Industry Template', () => {
     it('should enrich HVAC company with signal detection', async () => {
@@ -80,7 +91,7 @@ describe('Enrichment + Distillation Integration', () => {
       }
     }, 30000); // 30s timeout for enrichment
 
-    it('should save raw scrape to temporary_scrapes with TTL', async () => {
+    it('should save raw scrape to discovery archive with TTL', async () => {
       const result = await enrichCompany(
         {
           companyName: 'HVAC Company for TTL Test',
@@ -94,7 +105,7 @@ describe('Enrichment + Distillation Integration', () => {
 
       // Query for temporary scrape
       const scrapes = await db
-        .collection('temporary_scrapes')
+        .collection(DISCOVERY_ARCHIVE_COLLECTION)
         .where('url', '==', 'https://hvacttl.com')
         .limit(1)
         .get();
@@ -109,13 +120,13 @@ describe('Enrichment + Distillation Integration', () => {
         expect(scrape.createdAt).toBeDefined();
         expect(scrape.contentHash).toBeDefined();
         
-        // Verify expiration is ~7 days from now
+        // Verify expiration is ~30 days from now (discovery archive TTL)
         const expiresAt = scrape.expiresAt.toDate();
         const createdAt = scrape.createdAt.toDate();
         const diffDays = (expiresAt.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24);
-        
-        expect(diffDays).toBeGreaterThanOrEqual(6.9);
-        expect(diffDays).toBeLessThanOrEqual(7.1);
+
+        expect(diffDays).toBeGreaterThanOrEqual(29.9);
+        expect(diffDays).toBeLessThanOrEqual(30.1);
         
         console.log('\nTTL Verification:');
         console.log('- Created:', createdAt.toISOString());
@@ -168,7 +179,7 @@ describe('Enrichment + Distillation Integration', () => {
 
       // Get the temporary scrape to check sizes
       const scrapes = await db
-        .collection('temporary_scrapes')
+        .collection(DISCOVERY_ARCHIVE_COLLECTION)
         .where('url', '==', 'https://storagetest.com')
         .limit(1)
         .get();
@@ -256,7 +267,7 @@ describe('Enrichment + Distillation Integration', () => {
 
       // Get first scrape
       const scrapes1 = await db
-        .collection('temporary_scrapes')
+        .collection(DISCOVERY_ARCHIVE_COLLECTION)
         .where('url', '==', testUrl)
         .limit(1)
         .get();
@@ -284,7 +295,7 @@ describe('Enrichment + Distillation Integration', () => {
 
       // Get updated scrape
       const scrapes2 = await db
-        .collection('temporary_scrapes')
+        .collection(DISCOVERY_ARCHIVE_COLLECTION)
         .where('url', '==', testUrl)
         .limit(1)
         .get();

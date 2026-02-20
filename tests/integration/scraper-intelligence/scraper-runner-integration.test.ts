@@ -8,11 +8,12 @@ import { describe, it, expect, beforeEach, afterEach } from '@jest/globals';
 import {
   createScraperRunner,
   resetScraperRunner,
+  type ScraperRunner,
+  type ScrapeJobConfig,
 } from '@/lib/scraper-intelligence';
-import type {
-  ScraperRunner,
-  ScrapeJobConfig,
-} from '@/lib/scraper-intelligence';
+
+// Set timeout for real Firestore operations
+jest.setTimeout(30000);
 
 describe('Scraper Runner Integration', () => {
   let runner: ScraperRunner;
@@ -30,7 +31,7 @@ describe('Scraper Runner Integration', () => {
 
   afterEach(async () => {
     await runner.shutdown();
-  });
+  }, 30000);
 
   it('should submit and process a job', async () => {
     const config: ScrapeJobConfig = {
@@ -249,7 +250,7 @@ describe('Scraper Runner - Error Handling', () => {
 
   afterEach(async () => {
     await runner.shutdown();
-  });
+  }, 30000);
 
   it('should handle invalid job configuration', async () => {
     const invalidConfig = {

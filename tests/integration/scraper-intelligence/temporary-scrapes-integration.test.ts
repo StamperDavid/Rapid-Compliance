@@ -9,7 +9,6 @@
 
 import { describe, it, expect, afterEach, beforeAll, afterAll } from '@jest/globals';
 import { db } from '@/lib/firebase-admin';
-import { PLATFORM_ID } from '@/lib/constants/platform';
 import {
   saveTemporaryScrape,
   flagScrapeForDeletion,
@@ -19,14 +18,16 @@ import {
   getTemporaryScrapesByUrl,
   calculateStorageCost,
   getStorageStats,
-} from '@/lib/scraper-intelligence/discovery-archive-service';
+} from '@/lib/scraper-intelligence/temporary-scrapes-service';
 import type { TemporaryScrape } from '@/types/scraper-intelligence';
+
+// Set timeout for real Firestore operations
+jest.setTimeout(30000);
 
 // ============================================================================
 // TEST CONSTANTS
 // ============================================================================
 
-const TEST_ORG_ID = PLATFORM_ID;
 const TEST_WORKSPACE_ID = 'test-workspace-scraper';
 const TEMPORARY_SCRAPES_COLLECTION = 'temporary_scrapes';
 
@@ -78,16 +79,16 @@ describe('Temporary Scrapes Service - Integration Tests', () => {
   // Cleanup before and after all tests
   beforeAll(async () => {
     await cleanupTestScrapes();
-  });
+  }, 30000);
 
   afterAll(async () => {
     await cleanupTestScrapes();
-  });
+  }, 30000);
 
   // Cleanup after each test to ensure isolation
   afterEach(async () => {
     await cleanupTestScrapes();
-  });
+  }, 30000);
 
   // ============================================================================
   // SAVE TEMPORARY SCRAPE
@@ -202,20 +203,19 @@ describe('Temporary Scrapes Service - Integration Tests', () => {
       expect(scrape.expiresAt.getTime()).toBeLessThanOrEqual(afterCreate.getTime() + sevenDaysMs + 5000);
     });
 
-    it('should handle multiple organizations separately', async () => {
-      const org1Data = { ...createTestScrapeData(1), };
-      const org2Data = { ...createTestScrapeData(1), };
-      
-      const { scrape: scrape1 } = await saveTemporaryScrape(org1Data);
-      const { scrape: scrape2 } = await saveTemporaryScrape(org2Data);
-      
-      // Same content, different orgs → different documents
-      expect(scrape1.id).not.toBe(scrape2.id);
-      expect(scrape1.contentHash).toBe(scrape2.contentHash); // Same content
-      
-      // Cleanup org-1 and org-2 test data
-      await db.collection(TEMPORARY_SCRAPES_COLLECTION).doc(scrape1.id).delete();
-      await db.collection(TEMPORARY_SCRAPES_COLLECTION).doc(scrape2.id).delete();
+    it('should deduplicate same content correctly', async () => {
+      const data1 = { ...createTestScrapeData(1) };
+      const data2 = { ...createTestScrapeData(1) };
+
+      const { scrape: scrape1, isNew: isNew1 } = await saveTemporaryScrape(data1);
+      const { scrape: scrape2, isNew: isNew2 } = await saveTemporaryScrape(data2);
+
+      // Same content → same hash → duplicate detected → same document
+      expect(isNew1).toBe(true);
+      expect(isNew2).toBe(false);
+      expect(scrape2.id).toBe(scrape1.id);
+      expect(scrape2.contentHash).toBe(scrape1.contentHash);
+      expect(scrape2.scrapeCount).toBe(2);
     });
   });
 
@@ -311,26 +311,25 @@ describe('Temporary Scrapes Service - Integration Tests', () => {
       expect(deletedCount).toBe(5);
     });
 
-    it('should only delete scrapes for specified organization', async () => {
-      // Create scrapes for two orgs
-      const org1Scrape = await saveTemporaryScrape(createTestScrapeData(1));
-      const org2Scrape = await saveTemporaryScrape({
-        ...createTestScrapeData(2),
-      });
-      
-      await flagScrapeForDeletion(org1Scrape.scrape.id);
-      await flagScrapeForDeletion(org2Scrape.scrape.id);
-      
+    it('should delete all flagged scrapes across the collection', async () => {
+      // Create two scrapes with different content
+      const scrape1 = await saveTemporaryScrape(createTestScrapeData(1));
+      const scrape2 = await saveTemporaryScrape(createTestScrapeData(2));
+
+      // Flag both
+      await flagScrapeForDeletion(scrape1.scrape.id);
+      await flagScrapeForDeletion(scrape2.scrape.id);
+
       const deletedCount = await deleteFlaggedScrapes();
-      
-      expect(deletedCount).toBe(1);
-      
-      // Verify org2 scrape still exists
-      const org2Doc = await db.collection(TEMPORARY_SCRAPES_COLLECTION).doc(org2Scrape.scrape.id).get();
-      expect(org2Doc.exists).toBe(true);
-      
-      // Cleanup
-      await db.collection(TEMPORARY_SCRAPES_COLLECTION).doc(org2Scrape.scrape.id).delete();
+
+      // Both flagged scrapes should be deleted
+      expect(deletedCount).toBe(2);
+
+      // Verify both are gone
+      const doc1 = await db.collection(TEMPORARY_SCRAPES_COLLECTION).doc(scrape1.scrape.id).get();
+      const doc2 = await db.collection(TEMPORARY_SCRAPES_COLLECTION).doc(scrape2.scrape.id).get();
+      expect(doc1.exists).toBe(false);
+      expect(doc2.exists).toBe(false);
     });
 
     it('should return 0 if no flagged scrapes exist', async () => {
