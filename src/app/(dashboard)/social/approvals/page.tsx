@@ -7,7 +7,7 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { useUnifiedAuth } from '@/hooks/useUnifiedAuth';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 import type { ApprovalItem, ApprovalStatus } from '@/types/social';
 import SubpageNav from '@/components/ui/SubpageNav';
 import { logger } from '@/lib/logger/logger';
@@ -93,7 +93,7 @@ function highlightFlagReason(content: string, flagReason: string): React.ReactNo
 }
 
 export default function ApprovalQueuePage() {
-  const { user: _user } = useUnifiedAuth();
+  const authFetch = useAuthFetch();
   const [approvals, setApprovals] = useState<ApprovalItem[]>([]);
   const [counts, setCounts] = useState<ApprovalCounts>({ total: 0, pending_review: 0, approved: 0, rejected: 0, revision_requested: 0 });
   const [activeTab, setActiveTab] = useState<FilterTab>('all');
@@ -113,8 +113,8 @@ export default function ApprovalQueuePage() {
     try {
       const statusParam = activeTab !== 'all' ? `&status=${activeTab}` : '';
       const [approvalsRes, countsRes] = await Promise.all([
-        fetch(`/api/social/approvals?${statusParam}`),
-        fetch('/api/social/approvals?counts=true'),
+        authFetch(`/api/social/approvals?${statusParam}`),
+        authFetch('/api/social/approvals?counts=true'),
       ]);
 
       const approvalsData = await approvalsRes.json() as { success: boolean; approvals?: ApprovalItem[] };
@@ -131,7 +131,7 @@ export default function ApprovalQueuePage() {
     } finally {
       setLoading(false);
     }
-  }, [activeTab]);
+  }, [activeTab, authFetch]);
 
   useEffect(() => {
     void fetchApprovals();
@@ -145,7 +145,7 @@ export default function ApprovalQueuePage() {
       const originalItem = approvals.find((a) => a.id === approvalId);
       const hasCorrection = editedContent && originalItem && editedContent !== originalItem.content;
 
-      const response = await fetch('/api/social/approvals', {
+      const response = await authFetch('/api/social/approvals', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -204,7 +204,7 @@ export default function ApprovalQueuePage() {
     setBulkLoading(true);
     try {
       const promises = Array.from(selectedIds).map((id) =>
-        fetch('/api/social/approvals', {
+        authFetch('/api/social/approvals', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ approvalId: id, status: 'approved' }),
@@ -225,7 +225,7 @@ export default function ApprovalQueuePage() {
     setBulkLoading(true);
     try {
       const promises = Array.from(selectedIds).map((id) =>
-        fetch('/api/social/approvals', {
+        authFetch('/api/social/approvals', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ approvalId: id, status: 'rejected' }),
