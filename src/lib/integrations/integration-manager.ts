@@ -126,7 +126,9 @@ async function refreshIntegrationToken(
         newTokenData = await refreshHubSpotToken(refreshToken);
         break;
       default:
-        logger.warn('Token refresh not implemented for integration', { integrationId });
+        // Integrations not listed above (e.g. Twitter PKCE, future providers) do not
+        // use server-side refresh tokens — this is expected, not an error.
+        logger.info('No server-side token refresh for integration', { integrationId });
         return null;
     }
 

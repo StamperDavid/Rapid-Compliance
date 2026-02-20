@@ -200,8 +200,8 @@ export class AutonomousPostingAgent {
     platform: SocialPlatform,
     targetAccountId: string
   ): { allowed: boolean; reason?: string } {
-    // TODO: When DM feature is implemented, check if the target account has engaged with us
-    // For now, return true (permissive until engagement tracking is built)
+    // FUTURE: When DM feature is implemented, check if the target account has engaged with us.
+    // Currently permissive — engagement tracking from Firestore needed before enforcing.
 
     logger.info('AutonomousPostingAgent: DM compliance check', {
       platform,

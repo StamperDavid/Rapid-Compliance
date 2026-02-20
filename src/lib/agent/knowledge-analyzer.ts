@@ -631,8 +631,8 @@ export async function buildKnowledgeBase(
     logger.error('Error saving knowledge base:', error instanceof Error ? error : new Error(String(error)), { file: 'knowledge-analyzer.ts' });
   }
   
-  // TODO: In future, create vector embeddings using Vertex AI Embeddings API
-  // and store in Firestore with vector search or Pinecone
+  // FUTURE: Create vector embeddings using Vertex AI Embeddings API
+  // and store in Firestore with vector search or Pinecone for semantic retrieval
   
   return knowledgeBaseId;
 }
