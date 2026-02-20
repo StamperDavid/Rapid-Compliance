@@ -10,6 +10,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import type { SocialMention, MentionSentiment, MentionStatus, ListeningConfig } from '@/types/social';
 import SubpageNav from '@/components/ui/SubpageNav';
 import { logger } from '@/lib/logger/logger';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 
 const SOCIAL_NAV_ITEMS = [
   { label: 'Command Center', href: '/social/command-center' },
@@ -59,6 +60,8 @@ export default function SocialListeningPage() {
   const [hashtags, setHashtags] = useState('');
   const [competitors, setCompetitors] = useState('');
 
+  const authFetch = useAuthFetch();
+
   const fetchData = useCallback(async () => {
     try {
       const params = new URLSearchParams();
@@ -66,9 +69,9 @@ export default function SocialListeningPage() {
       if (statusFilter !== 'all') {params.set('status', statusFilter);}
 
       const [mentionsRes, breakdownRes, configRes] = await Promise.all([
-        fetch(`/api/social/listening?${params.toString()}`),
-        fetch('/api/social/listening?breakdown=true'),
-        fetch('/api/social/listening/config'),
+        authFetch(`/api/social/listening?${params.toString()}`),
+        authFetch('/api/social/listening?breakdown=true'),
+        authFetch('/api/social/listening/config'),
       ]);
 
       const mentionsData = await mentionsRes.json() as { success: boolean; mentions?: SocialMention[] };
@@ -92,7 +95,7 @@ export default function SocialListeningPage() {
     } finally {
       setLoading(false);
     }
-  }, [sentimentFilter, statusFilter]);
+  }, [sentimentFilter, statusFilter, authFetch]);
 
   useEffect(() => {
     void fetchData();
@@ -100,7 +103,7 @@ export default function SocialListeningPage() {
 
   const handleUpdateStatus = async (mentionId: string, status: MentionStatus) => {
     try {
-      await fetch('/api/social/listening', {
+      await authFetch('/api/social/listening', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ mentionId, status }),
@@ -113,7 +116,7 @@ export default function SocialListeningPage() {
 
   const handleSaveConfig = async () => {
     try {
-      await fetch('/api/social/listening/config', {
+      await authFetch('/api/social/listening/config', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

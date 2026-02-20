@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
 import { useToast } from '@/hooks/useToast';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 import SubpageNav from '@/components/ui/SubpageNav';
 
 // Minimal type definitions for this component
@@ -86,6 +87,7 @@ export default function SocialMediaTrainingPage() {
   const { user: _user } = useAuth();
   const { theme } = useOrgTheme();
   const toast = useToast();
+  const authFetch = useAuthFetch();
 
   // UI State
   const [loading, setLoading] = useState(true);
@@ -137,7 +139,7 @@ export default function SocialMediaTrainingPage() {
   const loadSettings = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/social/training');
+      const res = await authFetch('/api/social/training');
       const data = await res.json() as {
         success: boolean;
         settings?: SocialTrainingSettings;
@@ -182,7 +184,7 @@ export default function SocialMediaTrainingPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [authFetch]);
 
   useEffect(() => {
     void loadSettings();
@@ -243,7 +245,7 @@ export default function SocialMediaTrainingPage() {
     try {
       setSaving(true);
 
-      const res = await fetch('/api/social/training', {
+      const res = await authFetch('/api/social/training', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -284,7 +286,7 @@ export default function SocialMediaTrainingPage() {
     setGeneratedPost(null);
 
     try {
-      const res = await fetch('/api/social/training/generate', {
+      const res = await authFetch('/api/social/training/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -319,7 +321,7 @@ export default function SocialMediaTrainingPage() {
   // Save generated post to history via API (PUT)
   const saveToHistory = async (post: GeneratedPost) => {
     try {
-      const res = await fetch('/api/social/training', {
+      const res = await authFetch('/api/social/training', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -370,7 +372,7 @@ export default function SocialMediaTrainingPage() {
 
     setUploading(true);
     try {
-      const res = await fetch('/api/social/training/knowledge', {
+      const res = await authFetch('/api/social/training/knowledge', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -402,7 +404,7 @@ export default function SocialMediaTrainingPage() {
   // Delete knowledge item via API
   const deleteKnowledgeItem = async (itemId: string) => {
     try {
-      const res = await fetch(`/api/social/training/knowledge?id=${encodeURIComponent(itemId)}`, {
+      const res = await authFetch(`/api/social/training/knowledge?id=${encodeURIComponent(itemId)}`, {
         method: 'DELETE',
       });
       const data = await res.json() as { success: boolean };

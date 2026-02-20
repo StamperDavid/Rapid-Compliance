@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useUnifiedAuth } from '@/hooks/useUnifiedAuth';
+import { useState, useEffect, useCallback } from 'react';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 import SubpageNav from '@/components/ui/SubpageNav';
 
 const SOCIAL_NAV_ITEMS = [
@@ -36,7 +36,7 @@ const ACTION_TYPES = [
 ];
 
 export default function AgentRulesPage() {
-  const { user: _user } = useUnifiedAuth();
+  const authFetch = useAuthFetch();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -64,16 +64,12 @@ export default function AgentRulesPage() {
   const [newBlockKeyword, setNewBlockKeyword] = useState('');
   const [newEscalationKeyword, setNewEscalationKeyword] = useState('');
 
-  useEffect(() => {
-    void loadSettings();
-  }, []);
-
-  const loadSettings = async () => {
+  const loadSettings = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
 
-      const response = await fetch('/api/social/settings');
+      const response = await authFetch('/api/social/settings');
       const data = await response.json() as { success: boolean; config?: AutonomousAgentSettings; error?: string };
 
       if (!response.ok) {
@@ -88,7 +84,11 @@ export default function AgentRulesPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [authFetch]);
+
+  useEffect(() => {
+    void loadSettings();
+  }, [loadSettings]);
 
   const saveSettings = async () => {
     try {
@@ -96,7 +96,7 @@ export default function AgentRulesPage() {
       setError(null);
       setSuccessMessage(null);
 
-      const response = await fetch('/api/social/settings', {
+      const response = await authFetch('/api/social/settings', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(config),

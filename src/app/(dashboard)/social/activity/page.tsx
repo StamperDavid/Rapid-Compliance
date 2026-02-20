@@ -9,7 +9,7 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { useUnifiedAuth } from '@/hooks/useUnifiedAuth';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 import SubpageNav from '@/components/ui/SubpageNav';
 import { logger } from '@/lib/logger/logger';
 
@@ -71,7 +71,7 @@ const FILTER_TABS: { key: FilterType; label: string }[] = [
 // ─── Main Component ──────────────────────────────────────────────────────────
 
 export default function ActivityFeedPage() {
-  const { user: _user } = useUnifiedAuth();
+  const authFetch = useAuthFetch();
   const [events, setEvents] = useState<ActivityEvent[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -80,7 +80,7 @@ export default function ActivityFeedPage() {
   const fetchActivity = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/social/activity?limit=30');
+      const response = await authFetch('/api/social/activity?limit=30');
       const data = (await response.json()) as ActivityResponse;
 
       if (data.success) {
@@ -92,7 +92,7 @@ export default function ActivityFeedPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [authFetch]);
 
   useEffect(() => {
     void fetchActivity();

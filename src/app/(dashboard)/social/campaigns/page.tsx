@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { useToast } from '@/hooks/useToast';
 import SubpageNav from '@/components/ui/SubpageNav';
 
@@ -108,6 +109,7 @@ const PLATFORM_BADGE_COLORS: Record<string, string> = {
 
 export default function SocialMediaCampaignsPage() {
   const { user } = useAuth();
+  const authFetch = useAuthFetch();
   const toast = useToast();
 
   // ─── Dual-mode state ─────────────────────────────────────────────
@@ -121,9 +123,9 @@ export default function SocialMediaCampaignsPage() {
     try {
       setAutopilotLoading(true);
       const [statusRes, queueRes, scheduleRes] = await Promise.all([
-        fetch('/api/social/agent-status'),
-        fetch('/api/social/queue'),
-        fetch('/api/social/schedule'),
+        authFetch('/api/social/agent-status'),
+        authFetch('/api/social/queue'),
+        authFetch('/api/social/schedule'),
       ]);
 
       const statusData = (await statusRes.json()) as AgentStatusResponse;
@@ -144,7 +146,7 @@ export default function SocialMediaCampaignsPage() {
     } finally {
       setAutopilotLoading(false);
     }
-  }, [toast]);
+  }, [toast, authFetch]);
 
   const [activeTab, setActiveTab] = useState<'posts' | 'analytics' | 'settings'>('posts');
   const [posts, setPosts] = useState<SocialPost[]>([]);
@@ -181,7 +183,7 @@ export default function SocialMediaCampaignsPage() {
       }
 
       const url = `/api/social/posts${params.toString() ? `?${params}` : ''}`;
-      const res = await fetch(url);
+      const res = await authFetch(url);
       if (res.ok) {
         const data = (await res.json()) as PostsResponse;
         if (data.success && data.posts) {
@@ -193,12 +195,12 @@ export default function SocialMediaCampaignsPage() {
     } finally {
       setLoading(false);
     }
-  }, [filterPlatform, filterStatus, toast]);
+  }, [filterPlatform, filterStatus, toast, authFetch]);
 
   const loadConnectedAccounts = useCallback(async () => {
     try {
       setAccountsLoading(true);
-      const res = await fetch('/api/social/accounts');
+      const res = await authFetch('/api/social/accounts');
       const data = await res.json() as { success: boolean; accounts?: typeof connectedAccounts };
       if (data.success && data.accounts) {
         setConnectedAccounts(data.accounts);
@@ -208,7 +210,7 @@ export default function SocialMediaCampaignsPage() {
     } finally {
       setAccountsLoading(false);
     }
-  }, []);
+  }, [authFetch]);
 
   useEffect(() => {
     if (user) {
@@ -248,7 +250,7 @@ export default function SocialMediaCampaignsPage() {
 
     try {
       if (editingPost) {
-        const res = await fetch('/api/social/posts', {
+        const res = await authFetch('/api/social/posts', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -267,7 +269,7 @@ export default function SocialMediaCampaignsPage() {
           return;
         }
       } else {
-        const res = await fetch('/api/social/posts', {
+        const res = await authFetch('/api/social/posts', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -296,7 +298,7 @@ export default function SocialMediaCampaignsPage() {
 
   const handleDelete = async (postId: string) => {
     try {
-      const res = await fetch(`/api/social/posts?postId=${postId}`, { method: 'DELETE' });
+      const res = await authFetch(`/api/social/posts?postId=${postId}`, { method: 'DELETE' });
       const data = (await res.json()) as MutationResponse;
       if (data.success) {
         toast.success('Post deleted');

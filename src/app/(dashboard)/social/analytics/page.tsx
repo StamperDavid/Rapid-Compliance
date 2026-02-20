@@ -6,7 +6,7 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { useUnifiedAuth } from '@/hooks/useUnifiedAuth';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { logger } from '@/lib/logger/logger';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -101,7 +101,7 @@ const PLATFORM_COLORS: Record<string, string> = {
 // ─── Main Component ──────────────────────────────────────────────────────────
 
 export default function AnalyticsPage() {
-  const { user: _user } = useUnifiedAuth();
+  const authFetch = useAuthFetch();
   const [status, setStatus] = useState<AgentStatus | null>(null);
   const [activity, setActivity] = useState<ActivityEvent[]>([]);
   const [engagementData, setEngagementData] = useState<PostWithEngagement[]>([]);
@@ -113,9 +113,9 @@ export default function AnalyticsPage() {
   const fetchData = useCallback(async () => {
     try {
       const [statusRes, activityRes, engagementRes] = await Promise.all([
-        fetch('/api/social/agent-status'),
-        fetch('/api/social/activity?limit=100'),
-        fetch('/api/social/engagement'),
+        authFetch('/api/social/agent-status'),
+        authFetch('/api/social/activity?limit=100'),
+        authFetch('/api/social/engagement'),
       ]);
 
       const statusData = await statusRes.json() as { success: boolean; status?: AgentStatus };
@@ -141,7 +141,7 @@ export default function AnalyticsPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [authFetch]);
 
   useEffect(() => {
     void fetchData();

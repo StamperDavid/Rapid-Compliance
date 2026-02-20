@@ -12,7 +12,7 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { useUnifiedAuth } from '@/hooks/useUnifiedAuth';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 import SubpageNav from '@/components/ui/SubpageNav';
 
 const SOCIAL_NAV_ITEMS = [
@@ -216,7 +216,7 @@ const IMPROVEMENT_TYPE_LABELS: Record<string, string> = {
 // ---------------------------------------------------------------------------
 
 export default function GoldenPlaybookPage() {
-  const { user: _user } = useUnifiedAuth();
+  const authFetch = useAuthFetch();
 
   const [activeTab, setActiveTab] = useState<TabKey>('versions');
   const [loading, setLoading] = useState(true);
@@ -259,7 +259,7 @@ export default function GoldenPlaybookPage() {
 
   const fetchPlaybooks = useCallback(async () => {
     try {
-      const res = await fetch('/api/social/playbook?all=true');
+      const res = await authFetch('/api/social/playbook?all=true');
       const data = await res.json() as { success: boolean; playbooks?: PlaybookVersion[] };
       if (data.success && data.playbooks) {
         setPlaybooks(data.playbooks);
@@ -267,14 +267,14 @@ export default function GoldenPlaybookPage() {
     } catch {
       setError('Failed to load playbook versions');
     }
-  }, []);
+  }, [authFetch]);
 
   const fetchCorrections = useCallback(async () => {
     try {
       const [countsRes, correctionsRes, patternsRes] = await Promise.all([
-        fetch('/api/social/corrections?counts=true'),
-        fetch('/api/social/corrections?limit=50'),
-        fetch('/api/social/corrections?patterns=true'),
+        authFetch('/api/social/corrections?counts=true'),
+        authFetch('/api/social/corrections?limit=50'),
+        authFetch('/api/social/corrections?patterns=true'),
       ]);
       const [countsData, correctionsData, patternsData] = await Promise.all([
         countsRes.json() as Promise<{ success: boolean; counts?: CorrectionCounts }>,
@@ -288,7 +288,7 @@ export default function GoldenPlaybookPage() {
     } catch {
       setError('Failed to load corrections');
     }
-  }, []);
+  }, [authFetch]);
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
@@ -314,7 +314,7 @@ export default function GoldenPlaybookPage() {
     try {
       setCreating(true);
       setError(null);
-      const res = await fetch('/api/social/playbook', {
+      const res = await authFetch('/api/social/playbook', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ notes: createNotes || undefined }),
@@ -335,7 +335,7 @@ export default function GoldenPlaybookPage() {
     try {
       setDeploying(playbookId);
       setError(null);
-      const res = await fetch('/api/social/playbook', {
+      const res = await authFetch('/api/social/playbook', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'deploy', playbookId }),
@@ -360,7 +360,7 @@ export default function GoldenPlaybookPage() {
     try {
       setAnalyzing(true);
       setError(null);
-      const res = await fetch('/api/social/corrections', {
+      const res = await authFetch('/api/social/corrections', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'analyze', playbookId: activePlaybook.id, minCorrections: 1 }),
@@ -395,7 +395,7 @@ export default function GoldenPlaybookPage() {
     try {
       setLoadingPerformance(true);
       setError(null);
-      const res = await fetch('/api/social/playbook/performance', { method: 'POST' });
+      const res = await authFetch('/api/social/playbook/performance', { method: 'POST' });
       const data = await res.json() as {
         success: boolean;
         patterns?: PerformancePattern[];
@@ -422,7 +422,7 @@ export default function GoldenPlaybookPage() {
     try {
       setApplyingPatterns(true);
       setError(null);
-      const res = await fetch('/api/social/playbook/performance', {
+      const res = await authFetch('/api/social/playbook/performance', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
       });
@@ -455,7 +455,7 @@ export default function GoldenPlaybookPage() {
       setAcceptedInsights(new Set());
       setRejectedInsights(new Set());
 
-      const res = await fetch('/api/social/playbook/coach', {
+      const res = await authFetch('/api/social/playbook/coach', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       });

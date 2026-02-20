@@ -55,6 +55,7 @@ export interface UseUnifiedAuthReturn {
   hasPermission: (permission: keyof UnifiedPermissions) => boolean;
   isAdminUser: () => boolean;
   isAtLeastRole: (minimumRole: AccountRole) => boolean;
+  getIdToken: () => Promise<string | null>;
 }
 
 /**
@@ -322,6 +323,17 @@ export function useUnifiedAuth(): UseUnifiedAuthReturn {
     [user]
   );
 
+  const getIdToken = useCallback(async (): Promise<string | null> => {
+    if (!auth?.currentUser) {
+      return null;
+    }
+    try {
+      return await auth.currentUser.getIdToken();
+    } catch {
+      return null;
+    }
+  }, []);
+
   return {
     user,
     loading,
@@ -329,6 +341,7 @@ export function useUnifiedAuth(): UseUnifiedAuthReturn {
     hasPermission,
     isAdminUser,
     isAtLeastRole,
+    getIdToken,
   };
 }
 

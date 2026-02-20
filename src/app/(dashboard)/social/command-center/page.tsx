@@ -10,7 +10,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { useUnifiedAuth } from '@/hooks/useUnifiedAuth';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 import SubpageNav from '@/components/ui/SubpageNav';
 import { logger } from '@/lib/logger/logger';
 
@@ -172,7 +172,7 @@ function VelocityGauge({ label, current, max }: { label: string; current: number
 // ─── Main Component ──────────────────────────────────────────────────────────
 
 export default function CommandCenterPage() {
-  const { user: _user } = useUnifiedAuth();
+  const authFetch = useAuthFetch();
   const [status, setStatus] = useState<AgentStatus | null>(null);
   const [activity, setActivity] = useState<ActivityEvent[]>([]);
   const [swarmControl, setSwarmControl] = useState<SwarmControlState | null>(null);
@@ -185,9 +185,9 @@ export default function CommandCenterPage() {
   const fetchData = useCallback(async () => {
     try {
       const [statusRes, activityRes, swarmRes] = await Promise.all([
-        fetch('/api/social/agent-status'),
-        fetch('/api/social/activity?limit=20'),
-        fetch('/api/orchestrator/swarm-control'),
+        authFetch('/api/social/agent-status'),
+        authFetch('/api/social/activity?limit=20'),
+        authFetch('/api/orchestrator/swarm-control'),
       ]);
 
       const statusData = await statusRes.json() as { success: boolean; status?: AgentStatus };
@@ -209,7 +209,7 @@ export default function CommandCenterPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [authFetch]);
 
   useEffect(() => {
     void fetchData();
@@ -222,7 +222,7 @@ export default function CommandCenterPage() {
     if (!status) { return; }
     setToggling(true);
     try {
-      const response = await fetch('/api/social/agent-status', {
+      const response = await authFetch('/api/social/agent-status', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ agentEnabled: !status.agentEnabled }),
@@ -243,7 +243,7 @@ export default function CommandCenterPage() {
     setSwarmToggling(true);
     try {
       const action = swarmControl.globalPause ? 'resume_swarm' : 'pause_swarm';
-      const response = await fetch('/api/orchestrator/swarm-control', {
+      const response = await authFetch('/api/orchestrator/swarm-control', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action }),
@@ -265,7 +265,7 @@ export default function CommandCenterPage() {
     try {
       const isPaused = swarmControl.pausedManagers.includes(managerId);
       const action = isPaused ? 'resume_manager' : 'pause_manager';
-      const response = await fetch('/api/orchestrator/swarm-control', {
+      const response = await authFetch('/api/orchestrator/swarm-control', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action, managerId }),

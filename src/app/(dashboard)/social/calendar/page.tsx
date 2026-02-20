@@ -11,6 +11,7 @@ import dynamic from 'next/dynamic';
 import type { CalendarEvent } from '@/components/social/CalendarEventCard';
 import SubpageNav from '@/components/ui/SubpageNav';
 import { logger } from '@/lib/logger/logger';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 
 const SOCIAL_NAV_ITEMS = [
   { label: 'Command Center', href: '/social/command-center' },
@@ -53,10 +54,11 @@ export default function ContentCalendarPage() {
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [platformFilter, setPlatformFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
+  const authFetch = useAuthFetch();
 
   const fetchEvents = useCallback(async () => {
     try {
-      const response = await fetch('/api/social/calendar');
+      const response = await authFetch('/api/social/calendar');
       const data = await response.json() as { success: boolean; events?: CalendarEventFromAPI[] };
 
       if (data.success && data.events) {
@@ -72,7 +74,7 @@ export default function ContentCalendarPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [authFetch]);
 
   useEffect(() => {
     void fetchEvents();
@@ -91,7 +93,7 @@ export default function ContentCalendarPage() {
     // Reschedule the post via API
     void (async () => {
       try {
-        await fetch('/api/social/posts', {
+        await authFetch('/api/social/posts', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -110,7 +112,7 @@ export default function ContentCalendarPage() {
         logger.error('Failed to reschedule', error instanceof Error ? error : new Error(String(error)));
       }
     })();
-  }, []);
+  }, [authFetch]);
 
   const closeModal = useCallback(() => setSelectedEvent(null), []);
 
