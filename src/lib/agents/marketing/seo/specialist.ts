@@ -17,6 +17,10 @@
 
 import { BaseSpecialist } from '../../base-specialist';
 import type { AgentMessage, AgentReport, SpecialistConfig, Signal } from '../../types';
+import { getPageSpeedService } from '@/lib/integrations/seo/pagespeed-service';
+import { getSerperSEOService } from '@/lib/integrations/seo/serper-seo-service';
+import { getDataForSEOService } from '@/lib/integrations/seo/dataforseo-service';
+import { getGSCService } from '@/lib/integrations/seo/gsc-service';
 
 // ============================================================================
 // SYSTEM PROMPT
@@ -323,7 +327,7 @@ export class SEOExpert extends BaseSpecialist {
 
       switch (payload.action) {
         case 'keyword_research':
-          result = this.handleKeywordResearch(payload);
+          result = await this.handleKeywordResearch(payload);
           break;
 
         case 'page_audit':
@@ -339,11 +343,11 @@ export class SEOExpert extends BaseSpecialist {
           break;
 
         case 'crawl_analysis':
-          result = this.handleCrawlAnalysis(payload);
+          result = await this.handleCrawlAnalysis(payload);
           break;
 
         case 'keyword_gap':
-          result = this.handleKeywordGap(payload);
+          result = await this.handleKeywordGap(payload);
           break;
 
         case '30_day_strategy':
@@ -365,7 +369,7 @@ export class SEOExpert extends BaseSpecialist {
   /**
    * Handle keyword research
    */
-  private handleKeywordResearch(payload: KeywordResearchPayload): { keywords: KeywordResult[] } {
+  private async handleKeywordResearch(payload: KeywordResearchPayload): Promise<{ keywords: KeywordResult[] }> {
     const { seed, industry, targetCount = 10 } = payload;
 
     this.log('INFO', `Researching keywords for seed: ${seed}`);
@@ -376,7 +380,7 @@ export class SEOExpert extends BaseSpecialist {
     // Primary keyword
     keywords.push({
       keyword: seed,
-      difficulty: this.estimateDifficulty(seed),
+      difficulty: await this.estimateDifficulty(seed),
       searchIntent: this.detectSearchIntent(seed),
       suggestedUsage: 'Primary target keyword for main content',
       relatedTerms: this.generateRelatedTerms(seed),
@@ -387,7 +391,9 @@ export class SEOExpert extends BaseSpecialist {
     const longTailSuffixes = ['tips', 'guide', 'examples', 'tools', 'software', 'services'];
 
     for (const prefix of longTailPrefixes) {
-      if (keywords.length >= targetCount) {break;}
+      if (keywords.length >= targetCount) {
+        break;
+      }
       const keyword = `${prefix} ${seed}`;
       keywords.push({
         keyword,
@@ -399,7 +405,9 @@ export class SEOExpert extends BaseSpecialist {
     }
 
     for (const suffix of longTailSuffixes) {
-      if (keywords.length >= targetCount) {break;}
+      if (keywords.length >= targetCount) {
+        break;
+      }
       const keyword = `${seed} ${suffix}`;
       keywords.push({
         keyword,
@@ -711,18 +719,43 @@ export class SEOExpert extends BaseSpecialist {
   // HELPER METHODS
   // ==========================================================================
 
-  private estimateDifficulty(keyword: string): 'low' | 'medium' | 'high' {
+  private async estimateDifficulty(keyword: string): Promise<'low' | 'medium' | 'high'> {
+    try {
+      const result = await getDataForSEOService().getKeywordData([keyword]);
+      if (result.success && result.data && result.data.length > 0) {
+        const level = result.data[0].competitionLevel;
+        if (level === 'LOW') {
+          return 'low';
+        }
+        if (level === 'HIGH') {
+          return 'high';
+        }
+        return 'medium';
+      }
+    } catch { /* fall through to heuristic */ }
+
+    // Heuristic fallback
     const wordCount = keyword.split(/\s+/).length;
-    if (wordCount >= 4) {return 'low';}
-    if (wordCount >= 2) {return 'medium';}
+    if (wordCount >= 4) {
+      return 'low';
+    }
+    if (wordCount >= 2) {
+      return 'medium';
+    }
     return 'high';
   }
 
   private detectSearchIntent(keyword: string): 'informational' | 'navigational' | 'transactional' | 'commercial' {
     const lower = keyword.toLowerCase();
-    if (lower.match(/how|what|why|when|who|guide|tutorial|tips/)) {return 'informational';}
-    if (lower.match(/buy|price|cheap|deal|discount|order|purchase/)) {return 'transactional';}
-    if (lower.match(/best|top|review|compare|vs|alternative/)) {return 'commercial';}
+    if (lower.match(/how|what|why|when|who|guide|tutorial|tips/)) {
+      return 'informational';
+    }
+    if (lower.match(/buy|price|cheap|deal|discount|order|purchase/)) {
+      return 'transactional';
+    }
+    if (lower.match(/best|top|review|compare|vs|alternative/)) {
+      return 'commercial';
+    }
     return 'navigational';
   }
 
@@ -825,12 +858,16 @@ export class SEOExpert extends BaseSpecialist {
   }
 
   private calculateReadabilityScore(content: string): number {
-    if (!content) {return 0;}
+    if (!content) {
+      return 0;
+    }
 
     const sentences = content.split(/[.!?]+/).filter(s => s.trim().length > 0);
     const words = content.split(/\s+/).filter(w => w.length > 0);
 
-    if (sentences.length === 0 || words.length === 0) {return 0;}
+    if (sentences.length === 0 || words.length === 0) {
+      return 0;
+    }
 
     const avgWordsPerSentence = words.length / sentences.length;
     const avgSyllablesPerWord = words.reduce((sum, word) => sum + this.countSyllables(word), 0) / words.length;
@@ -842,7 +879,9 @@ export class SEOExpert extends BaseSpecialist {
 
   private countSyllables(word: string): number {
     word = word.toLowerCase();
-    if (word.length <= 3) {return 1;}
+    if (word.length <= 3) {
+      return 1;
+    }
     const matches = word.match(/[aeiouy]+/g);
     return matches ? matches.length : 1;
   }
@@ -876,27 +915,23 @@ export class SEOExpert extends BaseSpecialist {
   // ==========================================================================
 
   /**
-   * Simulated site crawl with technical health report
+   * Site crawl with technical health report.
+   * Calls real APIs (PageSpeed, DataForSEO, GSC) when configured,
+   * with graceful fallback to zero-data defaults.
    */
-  private handleCrawlAnalysis(payload: CrawlAnalysisPayload): CrawlHealthReport {
+  private async handleCrawlAnalysis(payload: CrawlAnalysisPayload): Promise<CrawlHealthReport> {
     const { siteUrl } = payload;
 
     this.log('INFO', `Running crawl analysis for ${siteUrl}`);
 
-    // Simulate SSL check
-    const ssl = this.analyzeSSL(siteUrl);
-
-    // Simulate speed analysis
-    const speed = this.analyzeSpeed(siteUrl);
-
-    // Simulate meta analysis
-    const meta = this.analyzeSiteMeta(siteUrl);
-
-    // Simulate indexing analysis
-    const indexing = this.analyzeIndexing(siteUrl);
-
-    // Mobile readiness check
-    const mobileReadiness = this.analyzeMobileReadiness(siteUrl);
+    // Run analyses concurrently — each one falls back internally
+    const [ssl, speed, meta, indexing, mobileReadiness] = await Promise.all([
+      Promise.resolve(this.analyzeSSL(siteUrl)),
+      this.analyzeSpeed(siteUrl),
+      this.analyzeSiteMeta(siteUrl),
+      this.analyzeIndexing(siteUrl),
+      this.analyzeMobileReadiness(siteUrl),
+    ]);
 
     // Calculate overall score
     const overallScore = Math.round(
@@ -943,47 +978,128 @@ export class SEOExpert extends BaseSpecialist {
     };
   }
 
-  private analyzeSpeed(_siteUrl: string): CrawlHealthReport['speed'] {
-    // Real data requires performance monitoring API integration (e.g., PageSpeed Insights, WebPageTest)
+  private async analyzeSpeed(siteUrl: string): Promise<CrawlHealthReport['speed']> {
+    try {
+      const result = await getPageSpeedService().analyze(siteUrl, 'desktop');
+      if (result.success && result.data) {
+        const d = result.data;
+        const issues: string[] = [];
+        if (d.performanceScore < 50) { issues.push('Performance score is critically low'); }
+        if (d.coreWebVitals.lcp > 4000) { issues.push(`LCP is slow (${(d.coreWebVitals.lcp / 1000).toFixed(1)}s)`); }
+        if (d.coreWebVitals.cls > 0.25) { issues.push(`CLS is high (${d.coreWebVitals.cls.toFixed(2)})`); }
+        if (d.coreWebVitals.tbt > 600) { issues.push('Total Blocking Time exceeds 600ms'); }
+        return {
+          score: d.performanceScore,
+          loadTime: d.loadTime,
+          ttfb: d.coreWebVitals.ttfb / 1000,
+          issues,
+          recommendations: d.recommendations.slice(0, 5),
+        };
+      }
+    } catch { /* fall through to default */ }
+
     return {
-      score: 0, // Real data requires performance monitoring API integration
-      loadTime: 0, // Real data requires performance monitoring API integration
-      ttfb: 0, // Real data requires performance monitoring API integration
+      score: 0,
+      loadTime: 0,
+      ttfb: 0,
       issues: [],
-      recommendations: ['Real speed analysis requires PageSpeed Insights or WebPageTest API integration'],
+      recommendations: ['Configure GOOGLE_PAGESPEED_API_KEY for real speed analysis'],
     };
   }
 
-  private analyzeSiteMeta(_siteUrl: string): CrawlHealthReport['meta'] {
-    // Real data requires site crawling API integration (e.g., Screaming Frog, Sitebulb, custom crawler)
+  private async analyzeSiteMeta(siteUrl: string): Promise<CrawlHealthReport['meta']> {
+    try {
+      const result = await getDataForSEOService().analyzeOnPage(siteUrl);
+      if (result.success && result.data) {
+        const d = result.data;
+        const issues: string[] = [];
+        let score = 100;
+        const missingTitles = d.title ? 0 : 1;
+        const missingDescriptions = d.description ? 0 : 1;
+        if (missingTitles > 0) { issues.push('Missing title tag'); score -= 30; }
+        if (missingDescriptions > 0) { issues.push('Missing meta description'); score -= 20; }
+        if (d.imagesWithoutAlt > 0) { issues.push(`${d.imagesWithoutAlt} images without alt text`); score -= 10; }
+        return {
+          score: Math.max(0, score),
+          pagesAnalyzed: 1,
+          missingTitles,
+          missingDescriptions,
+          duplicateTitles: [],
+          issues,
+        };
+      }
+    } catch { /* fall through to default */ }
+
     return {
-      score: 0, // Real data requires site crawling API integration
-      pagesAnalyzed: 0, // Real data requires site crawling API integration
-      missingTitles: 0, // Real data requires site crawling API integration
-      missingDescriptions: 0, // Real data requires site crawling API integration
+      score: 0,
+      pagesAnalyzed: 0,
+      missingTitles: 0,
+      missingDescriptions: 0,
       duplicateTitles: [],
-      issues: ['Real meta analysis requires site crawling API integration'],
+      issues: ['Configure DATAFORSEO_LOGIN/PASSWORD for real meta analysis'],
     };
   }
 
-  private analyzeIndexing(_siteUrl: string): CrawlHealthReport['indexing'] {
-    // Real data requires Google Search Console API or site crawling integration
+  private async analyzeIndexing(siteUrl: string): Promise<CrawlHealthReport['indexing']> {
+    try {
+      const result = await getGSCService().getIndexingStatus(siteUrl);
+      if (result.success && result.data) {
+        const d = result.data;
+        const issues: string[] = [];
+        let score = 100;
+        if (d.totalPages > 0 && d.indexedPages < d.totalPages * 0.8) {
+          issues.push(`Only ${d.indexedPages}/${d.totalPages} pages indexed`);
+          score -= 30;
+        }
+        if (d.crawlErrors > 0) {
+          issues.push(`${d.crawlErrors} crawl errors detected`);
+          score -= Math.min(40, d.crawlErrors * 5);
+        }
+        return {
+          score: Math.max(0, score),
+          indexedPages: d.indexedPages,
+          blockedPages: [],
+          orphanPages: [],
+          canonicalIssues: issues,
+        };
+      }
+    } catch { /* fall through to default */ }
+
     return {
-      score: 0, // Real data requires Google Search Console API integration
-      indexedPages: 0, // Real data requires Google Search Console API integration
+      score: 0,
+      indexedPages: 0,
       blockedPages: [],
       orphanPages: [],
       canonicalIssues: [],
     };
   }
 
-  private analyzeMobileReadiness(_siteUrl: string): CrawlHealthReport['mobileReadiness'] {
-    // Real data requires mobile testing API integration (e.g., Google Mobile-Friendly Test API)
+  private async analyzeMobileReadiness(siteUrl: string): Promise<CrawlHealthReport['mobileReadiness']> {
+    try {
+      const result = await getPageSpeedService().analyze(siteUrl, 'mobile');
+      if (result.success && result.data) {
+        const d = result.data;
+        const issues: string[] = [];
+        if (d.performanceScore < 50) { issues.push('Mobile performance score is low'); }
+        if (d.seoScore < 80) { issues.push('Mobile SEO score needs improvement'); }
+        if (d.coreWebVitals.lcp > 4000) { issues.push('Slow mobile LCP — optimize largest image or text block'); }
+        // Score 70+ on PageSpeed mobile typically indicates responsive + viewport configured
+        const isResponsive = d.seoScore >= 70;
+        const viewportConfigured = d.seoScore >= 50;
+        return {
+          score: d.performanceScore,
+          isResponsive,
+          viewportConfigured,
+          issues,
+        };
+      }
+    } catch { /* fall through to default */ }
+
     return {
-      score: 0, // Real data requires Google Mobile-Friendly Test API integration
-      isResponsive: false, // Real data requires mobile testing API integration
-      viewportConfigured: false, // Real data requires mobile testing API integration
-      issues: ['Real mobile analysis requires Google Mobile-Friendly Test API integration'],
+      score: 0,
+      isResponsive: false,
+      viewportConfigured: false,
+      issues: ['Configure GOOGLE_PAGESPEED_API_KEY for real mobile analysis'],
     };
   }
 
@@ -1083,23 +1199,27 @@ export class SEOExpert extends BaseSpecialist {
   // ==========================================================================
 
   /**
-   * Analyze keyword gaps compared to market trends
+   * Analyze keyword gaps compared to market trends.
+   * Uses Serper for position checks and DataForSEO for volume/difficulty
+   * when configured, with graceful fallback to heuristics.
    */
-  private handleKeywordGap(payload: KeywordGapPayload): KeywordGapResult {
-    const { industry, currentKeywords } = payload;
+  private async handleKeywordGap(payload: KeywordGapPayload): Promise<KeywordGapResult> {
+    const { industry, currentKeywords, competitorDomains } = payload;
 
     this.log('INFO', `Running keyword gap analysis for ${industry}`);
 
-    // Analyze current keywords
-    const currentAnalysis = currentKeywords.map(kw => ({
-      keyword: kw,
-      estimatedPosition: this.estimateKeywordPosition(kw),
-      searchVolume: this.estimateSearchVolume(kw),
-      difficulty: this.estimateDifficulty(kw),
-    }));
+    // Analyze current keywords — try real APIs first
+    const currentAnalysis = await Promise.all(
+      currentKeywords.map(async (kw) => ({
+        keyword: kw,
+        estimatedPosition: await this.estimateKeywordPosition(kw, competitorDomains?.[0]),
+        searchVolume: await this.estimateSearchVolume(kw),
+        difficulty: await this.estimateDifficulty(kw),
+      }))
+    );
 
     // Generate gap keywords based on industry
-    const gapKeywords = this.generateGapKeywords(industry, currentKeywords);
+    const gapKeywords = await this.generateGapKeywords(industry, currentKeywords);
 
     // Identify quick wins (low difficulty, good opportunity)
     const quickWins = gapKeywords
@@ -1127,22 +1247,50 @@ export class SEOExpert extends BaseSpecialist {
     };
   }
 
-  private estimateKeywordPosition(_keyword: string): number {
-    // Real data requires Google Search Console API or rank tracking integration (e.g., SEMrush, Ahrefs)
-    return 0; // Real data requires rank tracking API integration
+  private async estimateKeywordPosition(keyword: string, targetDomain?: string): Promise<number> {
+    if (targetDomain) {
+      try {
+        const result = await getSerperSEOService().checkKeywordPosition(keyword, targetDomain);
+        if (result.success && result.data !== null) {
+          return result.data;
+        }
+      } catch { /* fall through to default */ }
+    }
+    return 0;
   }
 
-  private estimateSearchVolume(keyword: string): string {
+  private async estimateSearchVolume(keyword: string): Promise<string> {
+    try {
+      const result = await getDataForSEOService().getKeywordData([keyword]);
+      if (result.success && result.data && result.data.length > 0) {
+        const vol = result.data[0].searchVolume;
+        if (vol >= 10000) {
+          return 'High';
+        }
+        if (vol >= 1000) {
+          return 'Medium';
+        }
+        if (vol > 0) {
+          return 'Low';
+        }
+      }
+    } catch { /* fall through to heuristic */ }
+
+    // Heuristic fallback
     const wordCount = keyword.split(/\s+/).length;
-    if (wordCount <= 1) {return 'High';}
-    if (wordCount <= 3) {return 'Medium';}
+    if (wordCount <= 1) {
+      return 'High';
+    }
+    if (wordCount <= 3) {
+      return 'Medium';
+    }
     return 'Low';
   }
 
-  private generateGapKeywords(
+  private async generateGapKeywords(
     industry: string,
     currentKeywords: string[]
-  ): KeywordGapResult['gapKeywords'] {
+  ): Promise<KeywordGapResult['gapKeywords']> {
     const industryKeywordMap: Record<string, string[]> = {
       technology: [
         'best software tools', 'automation solutions', 'digital transformation',
@@ -1175,26 +1323,42 @@ export class SEOExpert extends BaseSpecialist {
       industryKeywordMap.technology;
 
     const currentLower = currentKeywords.map(k => k.toLowerCase());
+    const gapCandidates = industryKeywords.filter(kw => !currentLower.includes(kw.toLowerCase()));
 
-    return industryKeywords
-      .filter(kw => !currentLower.includes(kw.toLowerCase()))
-      .map(keyword => {
-        const difficulty = this.estimateDifficulty(keyword);
-        const volume = this.estimateSearchVolume(keyword);
+    // Try to fetch real keyword data in a single batch call
+    const realDataMap = new Map<string, { volume: string; difficulty: 'low' | 'medium' | 'high' }>();
+    try {
+      const result = await getDataForSEOService().getKeywordData(gapCandidates);
+      if (result.success && result.data) {
+        for (const item of result.data) {
+          const vol = item.searchVolume >= 10000 ? 'High' : item.searchVolume >= 1000 ? 'Medium' : 'Low';
+          const diff = item.competitionLevel === 'LOW' ? 'low' as const
+            : item.competitionLevel === 'HIGH' ? 'high' as const
+            : 'medium' as const;
+          realDataMap.set(item.keyword.toLowerCase(), { volume: vol, difficulty: diff });
+        }
+      }
+    } catch { /* use heuristic fallback for all */ }
 
-        let opportunity: 'high' | 'medium' | 'low' = 'medium';
-        if (difficulty === 'low' && volume !== 'Low') {opportunity = 'high';}
-        if (difficulty === 'high' && volume === 'Low') {opportunity = 'low';}
+    return gapCandidates.map(keyword => {
+      const real = realDataMap.get(keyword.toLowerCase());
+      const wordCount = keyword.split(/\s+/).length;
+      const difficulty = real?.difficulty ?? (wordCount >= 4 ? 'low' : wordCount >= 2 ? 'medium' : 'high');
+      const volume = real?.volume ?? (wordCount <= 1 ? 'High' : wordCount <= 3 ? 'Medium' : 'Low');
 
-        return {
-          keyword,
-          opportunity,
-          searchVolume: volume,
-          difficulty,
-          competitorRanking: 'Unknown - real data requires rank tracking API integration',
-          recommendation: this.getKeywordRecommendation(opportunity, difficulty),
-        };
-      });
+      let opportunity: 'high' | 'medium' | 'low' = 'medium';
+      if (difficulty === 'low' && volume !== 'Low') { opportunity = 'high'; }
+      if (difficulty === 'high' && volume === 'Low') { opportunity = 'low'; }
+
+      return {
+        keyword,
+        opportunity,
+        searchVolume: volume,
+        difficulty,
+        competitorRanking: real ? 'Data from DataForSEO' : 'Unknown — configure DataForSEO for real data',
+        recommendation: this.getKeywordRecommendation(opportunity, difficulty),
+      };
+    });
   }
 
   private getKeywordRecommendation(opportunity: string, difficulty: string): string {
