@@ -17,6 +17,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 import TemplateSelector from '@/components/templates/TemplateSelector';
 import DealScoreCard from '@/components/templates/DealScoreCard';
 import RevenueForecastChart from '@/components/templates/RevenueForecastChart';
@@ -27,6 +28,7 @@ import { logger } from '@/lib/logger/logger';
 type Tab = 'templates' | 'scoring' | 'forecasting';
 
 export default function TemplatesDashboard() {
+  const authFetch = useAuthFetch();
   const [activeTab, setActiveTab] = useState<Tab>('templates');
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>('saas');
   const [applyingTemplate, setApplyingTemplate] = useState(false);
@@ -48,7 +50,7 @@ export default function TemplatesDashboard() {
 
     try {
       setApplyingTemplate(true);
-      const response = await fetch('/api/templates/apply', {
+      const response = await authFetch('/api/templates/apply', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -85,7 +87,7 @@ export default function TemplatesDashboard() {
       const scores = new Map<string, DealScore>();
 
       for (const dealId of dealIds) {
-        const response = await fetch(`/api/templates/deals/${dealId}/score`, {
+        const response = await authFetch(`/api/templates/deals/${dealId}/score`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -105,14 +107,14 @@ export default function TemplatesDashboard() {
     } finally {
       setLoadingScores(false);
     }
-  }, [selectedTemplateId]);
+  }, [selectedTemplateId, authFetch]);
 
   // Generate Forecast
   const generateForecast = useCallback(async () => {
     try {
       setLoadingForecast(true);
 
-      const response = await fetch('/api/templates/forecast', {
+      const response = await authFetch('/api/templates/forecast', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -132,7 +134,7 @@ export default function TemplatesDashboard() {
     } finally {
       setLoadingForecast(false);
     }
-  }, [forecastPeriod, quota, selectedTemplateId]);
+  }, [forecastPeriod, quota, selectedTemplateId, authFetch]);
 
   // Auto-load when switching tabs
   useEffect(() => {

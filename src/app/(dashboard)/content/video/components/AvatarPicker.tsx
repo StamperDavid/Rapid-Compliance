@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { motion } from 'framer-motion';
 import { User, Loader2, AlertCircle } from 'lucide-react';
 import Image from 'next/image';
@@ -13,27 +14,29 @@ interface AvatarPickerProps {
 }
 
 export function AvatarPicker({ selectedAvatarId, onSelect }: AvatarPickerProps) {
+  const authFetch = useAuthFetch();
   const [avatars, setAvatars] = useState<HeyGenAvatar[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchAvatars = async () => {
-      try {
-        const response = await fetch('/api/video/avatars');
-        if (!response.ok) {
-          throw new Error('Failed to fetch avatars');
-        }
-        const data = await response.json() as { success: boolean; avatars: HeyGenAvatar[] };
-        setAvatars(data.avatars ?? []);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load avatars');
-      } finally {
-        setIsLoading(false);
+  const fetchAvatars = useCallback(async () => {
+    try {
+      const response = await authFetch('/api/video/avatars');
+      if (!response.ok) {
+        throw new Error('Failed to fetch avatars');
       }
-    };
+      const data = await response.json() as { success: boolean; avatars: HeyGenAvatar[] };
+      setAvatars(data.avatars ?? []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load avatars');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [authFetch]);
+
+  useEffect(() => {
     void fetchAvatars();
-  }, []);
+  }, [fetchAvatars]);
 
   if (isLoading) {
     return (

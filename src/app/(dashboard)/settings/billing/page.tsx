@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/useToast';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { getTierConfig } from '@/lib/pricing/subscription-tiers';
 
 interface Subscription {
@@ -31,6 +32,7 @@ interface SubscriptionResponse {
 export default function BillingPage() {
   const { user } = useAuth();
   const toast = useToast();
+  const authFetch = useAuthFetch();
 
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [loading, setLoading] = useState(true);
@@ -42,7 +44,7 @@ export default function BillingPage() {
   const loadSubscription = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/subscriptions');
+      const res = await authFetch('/api/subscriptions');
       if (res.ok) {
         const data = (await res.json()) as SubscriptionResponse;
         if (data.success && data.subscription) {
@@ -54,7 +56,7 @@ export default function BillingPage() {
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, [toast, authFetch]);
 
   useEffect(() => {
     if (user) {
@@ -62,7 +64,7 @@ export default function BillingPage() {
       // Fetch usage metrics
       const fetchUsage = async () => {
         try {
-          const res = await fetch('/api/admin/usage');
+          const res = await authFetch('/api/admin/usage');
           if (res.ok) {
             const data = (await res.json()) as { success: boolean; contacts?: number; emailsSent?: number; aiCredits?: number };
             if (data.success) {
@@ -79,13 +81,13 @@ export default function BillingPage() {
       };
       void fetchUsage();
     }
-  }, [user, loadSubscription]);
+  }, [user, loadSubscription, authFetch]);
 
   const handleCancel = async () => {
     if (!subscription) { return; }
     setActionLoading(true);
     try {
-      const res = await fetch('/api/subscriptions', {
+      const res = await authFetch('/api/subscriptions', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'cancel' }),
@@ -108,7 +110,7 @@ export default function BillingPage() {
     if (!subscription) { return; }
     setActionLoading(true);
     try {
-      const res = await fetch('/api/subscriptions', {
+      const res = await authFetch('/api/subscriptions', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'reactivate' }),

@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import type { PayPalIntegration as PayPalType } from '@/types/integrations';
 import { logger } from '@/lib/logger/logger';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 
 interface PayPalIntegrationProps {
   integration: PayPalType | null;
@@ -11,12 +12,13 @@ interface PayPalIntegrationProps {
   onUpdate: (settings: Partial<PayPalType['settings']>) => void;
 }
 
-export default function PayPalIntegration({ 
-  integration, 
-  onConnect, 
-  onDisconnect, 
-  onUpdate 
+export default function PayPalIntegration({
+  integration,
+  onConnect,
+  onDisconnect,
+  onUpdate
 }: PayPalIntegrationProps) {
+  const authFetch = useAuthFetch();
   const [isConnecting, setIsConnecting] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [clientId, setClientId] = useState('');
@@ -43,7 +45,7 @@ export default function PayPalIntegration({
     setIsConnecting(true);
     try {
       // Save PayPal API keys to backend
-      const response = await fetch('/api/settings/api-keys', {
+      const response = await authFetch('/api/settings/api-keys', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

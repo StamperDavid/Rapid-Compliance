@@ -9,6 +9,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import type { Notification, NotificationCategory } from '@/lib/notifications/types';
 import { logger } from '@/lib/logger/logger';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 
 interface NotificationCenterProps {
   userId: string;
@@ -16,6 +17,7 @@ interface NotificationCenterProps {
 }
 
 export function NotificationCenter({ userId, className = '' }: NotificationCenterProps) {
+  const authFetch = useAuthFetch();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'unread'>('unread');
@@ -34,7 +36,7 @@ export function NotificationCenter({ userId, className = '' }: NotificationCente
         params.append('categories', _categoryFilter);
       }
 
-      const response = await fetch(`/api/notifications/list?${params}`, {
+      const response = await authFetch(`/api/notifications/list?${params}`, {
         headers: {
           'x-user-id': userId,
         },
@@ -50,7 +52,7 @@ export function NotificationCenter({ userId, className = '' }: NotificationCente
     } finally {
       setLoading(false);
     }
-  }, [userId, filter, _categoryFilter]);
+  }, [userId, filter, _categoryFilter, authFetch]);
 
   useEffect(() => {
     void loadNotifications();
@@ -58,7 +60,7 @@ export function NotificationCenter({ userId, className = '' }: NotificationCente
 
   async function markAsRead(notificationIds: string[]) {
     try {
-      const response = await fetch('/api/notifications/list', {
+      const response = await authFetch('/api/notifications/list', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

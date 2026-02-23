@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useMemo, useState } from 'react';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, FolderOpen, Loader2, Clock, Film, X, Video } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -29,6 +30,7 @@ interface ProjectSummary {
 }
 
 export default function VideoStudioPage() {
+  const authFetch = useAuthFetch();
   const {
     currentStep,
     projectId,
@@ -67,7 +69,7 @@ export default function VideoStudioPage() {
     setShowLoadModal(true);
     setLoadingProjects(true);
     try {
-      const response = await fetch('/api/video/project/list');
+      const response = await authFetch('/api/video/project/list');
       if (!response.ok) {
         throw new Error('Failed to fetch projects');
       }
@@ -80,12 +82,12 @@ export default function VideoStudioPage() {
     } finally {
       setLoadingProjects(false);
     }
-  }, []);
+  }, [authFetch]);
 
   const handleLoadProject = useCallback(async (id: string) => {
     setLoadingProjectId(id);
     try {
-      const response = await fetch(`/api/video/project/${id}`);
+      const response = await authFetch(`/api/video/project/${id}`);
       if (!response.ok) {
         throw new Error('Failed to load project');
       }
@@ -99,7 +101,7 @@ export default function VideoStudioPage() {
     } finally {
       setLoadingProjectId(null);
     }
-  }, [loadProject]);
+  }, [loadProject, authFetch]);
 
   const renderCurrentStep = () => {
     switch (currentStep) {

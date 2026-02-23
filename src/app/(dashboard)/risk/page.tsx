@@ -14,6 +14,7 @@
 
 import React, { useState } from 'react';
 import { useToast } from '@/hooks/useToast';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { RiskOverviewCard } from '@/components/risk/RiskOverviewCard';
 import { RiskFactorsCard } from '@/components/risk/RiskFactorsCard';
 import { InterventionsCard } from '@/components/risk/InterventionsCard';
@@ -25,6 +26,7 @@ import type { Deal } from '@/lib/crm/deal-service';
  */
 export default function RiskDashboardPage() {
   const toast = useToast();
+  const authFetch = useAuthFetch();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [prediction, setPrediction] = useState<DealRiskPrediction | null>(null);
@@ -44,7 +46,7 @@ export default function RiskDashboardPage() {
     setError(null);
 
     try {
-      const response = await fetch('/api/risk/predict', {
+      const response = await authFetch('/api/risk/predict', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

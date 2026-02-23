@@ -5,6 +5,7 @@ import { PLATFORM_ID } from '@/lib/constants/platform';
 import { getSubCollection } from '@/lib/firebase/collections';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
 import { logger } from '@/lib/logger/logger';
 import { useToast } from '@/hooks/useToast';
@@ -123,6 +124,7 @@ const AVATAR_STYLES = [
 export default function IdentityRefinementPage() {
   const router = useRouter();
   const { user } = useAuth();
+  const authFetch = useAuthFetch();
   const { theme } = useOrgTheme();
   const toast = useToast();
 
@@ -250,7 +252,7 @@ export default function IdentityRefinementPage() {
   const loadVoices = useCallback(async (engine: TTSEngineType) => {
     setLoadingVoices(true);
     try {
-      const response = await fetch(`/api/voice/tts?DEFAULT_ORG_ID=${PLATFORM_ID}&engine=${engine}`);
+      const response = await authFetch(`/api/voice/tts?DEFAULT_ORG_ID=${PLATFORM_ID}&engine=${engine}`);
       const data = await response.json() as VoicesApiResponse;
       if (data.success && data.voices && data.voices.length > 0) {
         setVoices(data.voices);
@@ -270,7 +272,7 @@ export default function IdentityRefinementPage() {
     } finally {
       setLoadingVoices(false);
     }
-  }, [identity.voiceId, toast]);
+  }, [identity.voiceId, toast, authFetch]);
 
   // Load existing data
   useEffect(() => {
@@ -287,7 +289,7 @@ export default function IdentityRefinementPage() {
     try {
       const testText = `Hi there! I'm ${identity.workforceName ?? 'your AI assistant'}. ${identity.tagline ?? 'How can I help you today?'}`;
 
-      const response = await fetch('/api/voice/tts', {
+      const response = await authFetch('/api/voice/tts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

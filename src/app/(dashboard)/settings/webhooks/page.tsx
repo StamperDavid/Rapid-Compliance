@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/useToast';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 
 interface Webhook {
   id: string;
@@ -39,6 +40,7 @@ const AVAILABLE_EVENTS = [
 export default function WebhooksPage() {
   const { user } = useAuth();
   const toast = useToast();
+  const authFetch = useAuthFetch();
 
   const [webhooks, setWebhooks] = useState<Webhook[]>([]);
   const [loading, setLoading] = useState(true);
@@ -56,7 +58,7 @@ export default function WebhooksPage() {
   const loadWebhooks = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/settings/webhooks');
+      const res = await authFetch('/api/settings/webhooks');
       if (res.ok) {
         const data = (await res.json()) as WebhooksResponse;
         if (data.success && data.webhooks) {
@@ -68,7 +70,7 @@ export default function WebhooksPage() {
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, [toast, authFetch]);
 
   useEffect(() => {
     if (user) {
@@ -112,7 +114,7 @@ export default function WebhooksPage() {
 
     try {
       if (editingWebhook) {
-        const res = await fetch('/api/settings/webhooks', {
+        const res = await authFetch('/api/settings/webhooks', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -131,7 +133,7 @@ export default function WebhooksPage() {
           return;
         }
       } else {
-        const res = await fetch('/api/settings/webhooks', {
+        const res = await authFetch('/api/settings/webhooks', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -160,7 +162,7 @@ export default function WebhooksPage() {
 
   const handleDelete = async (webhookId: string) => {
     try {
-      const res = await fetch(`/api/settings/webhooks?webhookId=${webhookId}`, {
+      const res = await authFetch(`/api/settings/webhooks?webhookId=${webhookId}`, {
         method: 'DELETE',
       });
       const data = (await res.json()) as WebhookMutationResponse;
@@ -178,7 +180,7 @@ export default function WebhooksPage() {
 
   const handleToggleActive = async (webhook: Webhook) => {
     try {
-      await fetch('/api/settings/webhooks', {
+      await authFetch('/api/settings/webhooks', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

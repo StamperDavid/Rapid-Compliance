@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { useToast } from '@/hooks/useToast';
 import type { TeamTask } from '@/lib/team/collaboration';
 
@@ -20,6 +21,7 @@ const STATUSES = ['todo', 'in_progress', 'blocked', 'completed'] as const;
 
 export default function TasksPage() {
   const { user } = useAuth();
+  const authFetch = useAuthFetch();
   const toast = useToast();
 
   const [tasks, setTasks] = useState<TeamTask[]>([]);
@@ -41,7 +43,7 @@ export default function TasksPage() {
     try {
       setLoading(true);
       const statusParam = filter !== 'all' ? `&status=${filter}` : '';
-      const response = await fetch(`/api/team/tasks?${statusParam}`);
+      const response = await authFetch(`/api/team/tasks?${statusParam}`);
       const data = (await response.json()) as TaskResponse;
       if (data.success) {
         setTasks(data.data);
@@ -51,7 +53,7 @@ export default function TasksPage() {
     } finally {
       setLoading(false);
     }
-  }, [filter, toast]);
+  }, [filter, toast, authFetch]);
 
   useEffect(() => {
     if (user) {
@@ -89,7 +91,7 @@ export default function TasksPage() {
 
     try {
       if (editingTask) {
-        const res = await fetch(`/api/team/tasks/${editingTask.id}`, {
+        const res = await authFetch(`/api/team/tasks/${editingTask.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -107,7 +109,7 @@ export default function TasksPage() {
           return;
         }
       } else {
-        const res = await fetch('/api/team/tasks', {
+        const res = await authFetch('/api/team/tasks', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -138,7 +140,7 @@ export default function TasksPage() {
 
   const handleStatusChange = async (taskId: string, newStatus: TeamTask['status']) => {
     try {
-      await fetch(`/api/team/tasks/${taskId}`, {
+      await authFetch(`/api/team/tasks/${taskId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus }),
@@ -151,7 +153,7 @@ export default function TasksPage() {
 
   const handleDelete = async (taskId: string) => {
     try {
-      const res = await fetch(`/api/team/tasks/${taskId}`, {
+      const res = await authFetch(`/api/team/tasks/${taskId}`, {
         method: 'DELETE',
       });
       const data = (await res.json()) as MutationResponse;

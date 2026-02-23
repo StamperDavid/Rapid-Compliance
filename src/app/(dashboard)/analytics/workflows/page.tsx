@@ -5,6 +5,7 @@ import { PLATFORM_ID } from '@/lib/constants/platform';
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { logger } from '@/lib/logger/logger';
 
 interface WorkflowAnalyticsData {
@@ -28,13 +29,14 @@ interface WorkflowAnalyticsApiResponse {
 
 export default function WorkflowAnalyticsPage() {
   const { theme } = useOrgTheme();
+  const authFetch = useAuthFetch();
   const [analytics, setAnalytics] = useState<WorkflowAnalytics | null>(null);
   const [loading, setLoading] = useState(true);
 
   const loadAnalytics = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await fetch(`/api/analytics/workflows?orgId=${PLATFORM_ID}`);
+      const response = await authFetch(`/api/analytics/workflows?orgId=${PLATFORM_ID}`);
       const data = await response.json() as WorkflowAnalyticsApiResponse;
       if (data.success) {
         setAnalytics(data.analytics);
@@ -44,7 +46,7 @@ export default function WorkflowAnalyticsPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [authFetch]);
 
   useEffect(() => {
     void loadAnalytics();

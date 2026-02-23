@@ -7,6 +7,7 @@ import SubpageNav from '@/components/ui/SubpageNav';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 import {
   DollarSign,
   TrendingUp,
@@ -72,6 +73,7 @@ const item = {
 
 export default function AnalyticsDashboard() {
   const { loading: authLoading } = useAuth();
+  const authFetch = useAuthFetch();
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedPeriod, setSelectedPeriod] = useState<'7d' | '30d' | '90d' | 'all'>('30d');
@@ -85,10 +87,10 @@ export default function AnalyticsDashboard() {
       try {
         // Load all analytics in parallel
         const [revenue, pipeline, ecommerce, workflows] = await Promise.all([
-          fetch(`/api/analytics/revenue?PLATFORM_ID=${PLATFORM_ID}&period=${selectedPeriod}`).then(r => r.json()) as Promise<ApiResponse<RevenueAnalytics>>,
-          fetch(`/api/analytics/pipeline?PLATFORM_ID=${PLATFORM_ID}&period=${selectedPeriod}`).then(r => r.json()) as Promise<ApiResponse<PipelineAnalytics>>,
-          fetch(`/api/analytics/ecommerce?PLATFORM_ID=${PLATFORM_ID}&period=${selectedPeriod}`).then(r => r.json()) as Promise<ApiResponse<EcommerceAnalytics>>,
-          fetch(`/api/analytics/workflows?PLATFORM_ID=${PLATFORM_ID}&period=${selectedPeriod}`).then(r => r.json()) as Promise<ApiResponse<WorkflowsAnalytics>>,
+          authFetch(`/api/analytics/revenue?PLATFORM_ID=${PLATFORM_ID}&period=${selectedPeriod}`).then(r => r.json()) as Promise<ApiResponse<RevenueAnalytics>>,
+          authFetch(`/api/analytics/pipeline?PLATFORM_ID=${PLATFORM_ID}&period=${selectedPeriod}`).then(r => r.json()) as Promise<ApiResponse<PipelineAnalytics>>,
+          authFetch(`/api/analytics/ecommerce?PLATFORM_ID=${PLATFORM_ID}&period=${selectedPeriod}`).then(r => r.json()) as Promise<ApiResponse<EcommerceAnalytics>>,
+          authFetch(`/api/analytics/workflows?PLATFORM_ID=${PLATFORM_ID}&period=${selectedPeriod}`).then(r => r.json()) as Promise<ApiResponse<WorkflowsAnalytics>>,
         ]);
 
         setAnalytics({
@@ -105,7 +107,7 @@ export default function AnalyticsDashboard() {
     };
 
     void loadAnalytics();
-  }, [selectedPeriod, authLoading]);
+  }, [selectedPeriod, authLoading, authFetch]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {

@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import type { StripeIntegration as StripeType } from '@/types/integrations';
 import { logger } from '@/lib/logger/logger';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 
 interface StripeIntegrationProps {
   integration: StripeType | null;
@@ -11,12 +12,13 @@ interface StripeIntegrationProps {
   onUpdate: (settings: Partial<StripeType['settings']>) => void;
 }
 
-export default function StripeIntegration({ 
-  integration, 
-  onConnect, 
-  onDisconnect, 
-  onUpdate 
+export default function StripeIntegration({
+  integration,
+  onConnect,
+  onDisconnect,
+  onUpdate
 }: StripeIntegrationProps) {
+  const authFetch = useAuthFetch();
   const [isConnecting, setIsConnecting] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [apiKey, setApiKey] = useState('');
@@ -41,7 +43,7 @@ export default function StripeIntegration({
     setIsConnecting(true);
     try {
       // Save Stripe API key to backend
-      const response = await fetch('/api/settings/api-keys', {
+      const response = await authFetch('/api/settings/api-keys', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

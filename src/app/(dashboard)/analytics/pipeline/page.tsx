@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import SubpageNav from '@/components/ui/SubpageNav';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { logger } from '@/lib/logger/logger';;
 
 interface PipelineStage {
@@ -37,13 +38,14 @@ function isPipelineAnalytics(data: unknown): data is PipelineAnalytics {
 
 export default function PipelineAnalyticsPage() {
   const { theme } = useOrgTheme();
+  const authFetch = useAuthFetch();
   const [analytics, setAnalytics] = useState<PipelineAnalytics | null>(null);
   const [loading, setLoading] = useState(true);
 
   const loadAnalytics = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/analytics/pipeline');
+      const response = await authFetch('/api/analytics/pipeline');
       const data = await response.json() as { success?: boolean; analytics?: unknown };
       if (data.success && isPipelineAnalytics(data.analytics)) {
         setAnalytics(data.analytics);
@@ -53,7 +55,7 @@ export default function PipelineAnalyticsPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [authFetch]);
 
   useEffect(() => {
     void loadAnalytics();

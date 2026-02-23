@@ -9,6 +9,7 @@ import FilterBuilder from '@/components/FilterBuilder';
 import { FilterEngine } from '@/lib/filters/filter-engine';
 import type { ViewFilter } from '@/types/filters';
 import { useAuth } from '@/hooks/useAuth';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
 import { logger } from '@/lib/logger/logger';
 type ViewType = 'leads' | 'companies' | 'contacts' | 'deals' | 'products' | 'quotes' | 'invoices' | 'payments' | 'orders' | 'tasks';
@@ -141,6 +142,7 @@ interface _CapacityCheckResponse {
 // Component that uses useSearchParams - wrapped in Suspense
 function CRMContent() {
   const { user } = useAuth();
+  const authFetch = useAuthFetch();
   const { theme } = useOrgTheme(); // Load organization-specific theme
   const searchParams = useSearchParams();
   const [config, setConfig] = useState<CRMConfig | null>(null);
@@ -381,7 +383,7 @@ function CRMContent() {
 
       // NEW: Check record capacity before importing
       try {
-        const capacityResponse = await fetch('/api/subscription/check-capacity', {
+        const capacityResponse = await authFetch('/api/subscription/check-capacity', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

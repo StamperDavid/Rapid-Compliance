@@ -9,6 +9,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import type { NotificationPreferences } from '@/lib/notifications/types';
 import { logger } from '@/lib/logger/logger';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 
 interface NotificationSettingsProps {
   userId: string;
@@ -16,6 +17,7 @@ interface NotificationSettingsProps {
 }
 
 export function NotificationSettings({ userId, className = '' }: NotificationSettingsProps) {
+  const authFetch = useAuthFetch();
   const [preferences, setPreferences] = useState<NotificationPreferences | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -24,7 +26,7 @@ export function NotificationSettings({ userId, className = '' }: NotificationSet
     try {
       setLoading(true);
       
-      const response = await fetch('/api/notifications/preferences', {
+      const response = await authFetch('/api/notifications/preferences', {
         headers: {
           'x-user-id': userId,
         },
@@ -40,7 +42,7 @@ export function NotificationSettings({ userId, className = '' }: NotificationSet
     } finally {
       setLoading(false);
     }
-  }, [userId]);
+  }, [userId, authFetch]);
 
   useEffect(() => {
     void loadPreferences();
@@ -52,7 +54,7 @@ export function NotificationSettings({ userId, className = '' }: NotificationSet
     try {
       setSaving(true);
       
-      const response = await fetch('/api/notifications/preferences', {
+      const response = await authFetch('/api/notifications/preferences', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

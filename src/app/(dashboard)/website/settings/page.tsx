@@ -10,6 +10,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
 import SubpageNav from '@/components/ui/SubpageNav';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { logger } from '@/lib/logger/logger';
 
 interface SettingsResponse {
@@ -37,6 +38,7 @@ interface SettingsResponse {
 
 export default function WebsiteSettingsPage() {
   const { theme } = useOrgTheme();
+  const authFetch = useAuthFetch();
 
   const [settings, setSettings] = useState({
     subdomain: '',
@@ -66,7 +68,7 @@ export default function WebsiteSettingsPage() {
   const loadSettings = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/website/settings');
+      const response = await authFetch('/api/website/settings');
 
       if (!response.ok) {
         throw new Error('Failed to load settings');
@@ -83,7 +85,7 @@ export default function WebsiteSettingsPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [authFetch]);
 
   useEffect(() => {
     void loadSettings();
@@ -94,7 +96,7 @@ export default function WebsiteSettingsPage() {
       setSaving(true);
       setMessage(null);
 
-      const response = await fetch('/api/website/settings', {
+      const response = await authFetch('/api/website/settings', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

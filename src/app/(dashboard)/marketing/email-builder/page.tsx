@@ -5,10 +5,12 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { buildEmailHTML, type EmailTemplate, type EmailBlock } from '@/lib/email/email-builder';
 import { useToast } from '@/hooks/useToast';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 import SafeHtml from '@/components/SafeHtml';
 
 export default function EmailBuilderPage() {
   const router = useRouter();
+  const authFetch = useAuthFetch();
   const toast = useToast();
   const [template, setTemplate] = useState<Partial<EmailTemplate>>({
     name: 'Untitled Email',
@@ -89,7 +91,7 @@ export default function EmailBuilderPage() {
 
   const saveTemplate = async () => {
     try {
-      const response = await fetch('/api/email/templates', {
+      const response = await authFetch('/api/email/templates', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(template),

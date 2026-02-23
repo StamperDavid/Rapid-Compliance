@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { usePagination } from '@/hooks/usePagination';
 import { useOptimisticDelete } from '@/hooks/useOptimisticDelete';
 import { DataTable, type ColumnDef, type BulkAction } from '@/components/ui/data-table';
@@ -59,6 +60,7 @@ const getContactCompany = (contact: Contact) => {
 export default function ContactsPage() {
   const router = useRouter();
   const { loading: authLoading } = useAuth();
+  const authFetch = useAuthFetch();
   const [searchQuery, setSearchQuery] = useState('');
   const [view, setView] = useState<'cards' | 'table'>('cards');
 
@@ -71,14 +73,14 @@ export default function ContactsPage() {
       searchParams.set('lastDoc', String(lastDoc));
     }
 
-    const response = await fetch(`/api/contacts?${searchParams}`);
+    const response = await authFetch(`/api/contacts?${searchParams}`);
 
     if (!response.ok) {
       throw new Error('Failed to fetch contacts');
     }
 
     return response.json() as Promise<{ data: Contact[]; lastDoc: unknown; hasMore: boolean }>;
-  }, []);
+  }, [authFetch]);
 
   const {
     data: contacts,

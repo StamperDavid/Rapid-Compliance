@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import type { TeamsIntegration as TeamsType } from '@/types/integrations';
 import { logger } from '@/lib/logger/logger';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 
 interface TeamsIntegrationProps {
   integration: TeamsType | null;
@@ -17,6 +18,7 @@ export default function TeamsIntegration({
   onDisconnect,
   onUpdate
 }: TeamsIntegrationProps) {
+  const authFetch = useAuthFetch();
   const [isConnecting, setIsConnecting] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
 
@@ -38,7 +40,7 @@ export default function TeamsIntegration({
     try {
       // Microsoft Teams OAuth flow
       // NOTE: Requires TEAMS_CLIENT_ID and TEAMS_CLIENT_SECRET configured in API keys
-      const response = await fetch('/api/integrations/teams/auth', {
+      const response = await authFetch('/api/integrations/teams/auth', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       });

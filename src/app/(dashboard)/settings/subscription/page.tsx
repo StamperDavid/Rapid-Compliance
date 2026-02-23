@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/useToast';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { auth } from '@/lib/firebase/config';
 import { SUBSCRIPTION_TIERS, TIER_RANK, type SubscriptionTierKey } from '@/lib/pricing/subscription-tiers';
 
@@ -29,6 +30,7 @@ const PLANS = SUBSCRIPTION_TIERS;
 export default function SubscriptionPage() {
   const { user } = useAuth();
   const toast = useToast();
+  const authFetch = useAuthFetch();
 
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [loading, setLoading] = useState(true);
@@ -38,7 +40,7 @@ export default function SubscriptionPage() {
   const loadSubscription = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/subscriptions');
+      const res = await authFetch('/api/subscriptions');
       if (res.ok) {
         const data = (await res.json()) as SubscriptionResponse;
         if (data.success && data.subscription) {
@@ -53,7 +55,7 @@ export default function SubscriptionPage() {
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, [toast, authFetch]);
 
   useEffect(() => {
     if (user) {
@@ -143,7 +145,7 @@ export default function SubscriptionPage() {
         }
       } else {
         // Downgrade (free or lower paid tier)
-        const res = await fetch('/api/subscriptions', {
+        const res = await authFetch('/api/subscriptions', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ tier: targetTier, action: 'downgrade' }),

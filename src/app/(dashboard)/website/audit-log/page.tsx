@@ -6,6 +6,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { logger } from '@/lib/logger/logger';
 
 interface AuditLogEntry {
@@ -22,6 +23,7 @@ interface AuditLogEntry {
 }
 
 export default function AuditLogPage() {
+  const authFetch = useAuthFetch();
 
   const [entries, setEntries] = useState<AuditLogEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -33,7 +35,7 @@ export default function AuditLogPage() {
       setLoading(true);
       setError(null);
 
-      const response = await fetch('/api/website/audit-log');
+      const response = await authFetch('/api/website/audit-log');
 
       if (!response.ok) {
         throw new Error('Failed to load audit log');
@@ -48,7 +50,7 @@ export default function AuditLogPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [authFetch]);
 
   React.useEffect(() => {
     void loadAuditLog();

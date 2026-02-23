@@ -10,6 +10,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { useAuth } from '@/hooks/useAuth';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { useToast } from '@/hooks/useToast';
 import type { PageTemplate } from '@/types/website';
 import { logger } from '@/lib/logger/logger';
@@ -27,6 +28,7 @@ interface CreatePageResponse {
 export default function TemplateBrowserPage() {
   const router = useRouter();
   const { user } = useAuth();
+  const authFetch = useAuthFetch();
   const toast = useToast();
 
   const [templates, setTemplates] = useState<PageTemplate[]>([]);
@@ -56,7 +58,7 @@ export default function TemplateBrowserPage() {
       setTemplates(allTemplates);
 
       // Load custom templates for this org
-      const response = await fetch('/api/website/templates');
+      const response = await authFetch('/api/website/templates');
       if (response.ok) {
         const data = await response.json() as TemplatesResponse;
         setCustomTemplates(data.templates ?? []);
@@ -66,7 +68,7 @@ export default function TemplateBrowserPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [authFetch]);
 
   useEffect(() => {
     void loadTemplates();
@@ -87,7 +89,7 @@ export default function TemplateBrowserPage() {
 
     try {
       // Create new page from template
-      const response = await fetch('/api/website/pages', {
+      const response = await authFetch('/api/website/pages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

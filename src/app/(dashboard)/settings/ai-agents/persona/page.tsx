@@ -5,6 +5,7 @@ import Link from 'next/link';
 import SubpageNav from '@/components/ui/SubpageNav';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
 import { useAuth } from '@/hooks/useAuth';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { logger } from '@/lib/logger/logger';
 
 interface AgentPersona {
@@ -81,6 +82,7 @@ interface PersonaApiResponse {
 
 export default function AgentPersonaPage() {
   const { user: _user } = useAuth();
+  const authFetch = useAuthFetch();
   const { theme } = useOrgTheme();
   const [activeSection, setActiveSection] = useState<'core' | 'cognitive' | 'knowledge' | 'learning' | 'execution' | 'training'>('core');
   const [loading, setLoading] = useState(true);
@@ -135,7 +137,7 @@ export default function AgentPersonaPage() {
     const loadPersona = async () => {
       try {
         // Load persona from Firestore (or auto-generate from onboarding if first time)
-        const response = await fetch(`/api/agent/persona`);
+        const response = await authFetch(`/api/agent/persona`);
         if (response.ok) {
           const data = (await response.json()) as PersonaApiResponse;
           if (data.persona) {
@@ -154,12 +156,12 @@ export default function AgentPersonaPage() {
     };
 
     void loadPersona();
-  }, []);
+  }, [authFetch]);
 
   const handleSave = async () => {
     setSaving(true);
     try {
-      const response = await fetch(`/api/agent/persona`, {
+      const response = await authFetch(`/api/agent/persona`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(persona)

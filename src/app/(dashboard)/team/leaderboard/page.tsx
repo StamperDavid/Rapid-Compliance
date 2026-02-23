@@ -3,8 +3,10 @@
 import { useEffect, useState, useCallback } from 'react';
 import type { LeaderboardEntry } from '@/lib/team/collaboration';
 import { logger } from '@/lib/logger/logger';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 
 export default function TeamLeaderboardPage() {
+  const authFetch = useAuthFetch();
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [period, setPeriod] = useState<'week' | 'month' | 'quarter'>('month');
   const [loading, setLoading] = useState(true);
@@ -12,7 +14,7 @@ export default function TeamLeaderboardPage() {
   const loadLeaderboard = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/team/leaderboard?period=${period}`);
+      const response = await authFetch(`/api/team/leaderboard?period=${period}`);
       const data = await response.json() as { success: boolean; data: LeaderboardEntry[] };
       if (data.success) {
         setLeaderboard(data.data);
@@ -22,7 +24,7 @@ export default function TeamLeaderboardPage() {
     } finally {
       setLoading(false);
     }
-  }, [period]);
+  }, [period, authFetch]);
 
   useEffect(() => {
     void loadLeaderboard();

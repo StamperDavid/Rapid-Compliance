@@ -9,6 +9,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { useToast } from '@/hooks/useToast';
 import EditorCanvas from '@/components/website-builder/EditorCanvas';
 import WidgetsPanel from '@/components/website-builder/WidgetsPanel';
@@ -26,6 +27,7 @@ export default function BlogPostEditorPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { user } = useAuth();
+  const authFetch = useAuthFetch();
   const toast = useToast();
   const postId = searchParams.get('postId');
 
@@ -39,7 +41,7 @@ export default function BlogPostEditorPage() {
 
   const loadCategories = useCallback(async () => {
     try {
-      const response = await fetch('/api/website/blog/categories');
+      const response = await authFetch('/api/website/blog/categories');
       if (response.ok) {
         const data = await response.json() as { categories?: string[] };
         setCategories(data.categories ?? []);
@@ -47,12 +49,12 @@ export default function BlogPostEditorPage() {
     } catch (error) {
       logger.error('[Blog Editor] Load categories error', error instanceof Error ? error : new Error(String(error)));
     }
-  }, []);
+  }, [authFetch]);
 
   const loadPost = useCallback(async (id: string) => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/website/blog/posts/${id}`);
+      const response = await authFetch(`/api/website/blog/posts/${id}`);
 
       if (!response.ok) {throw new Error('Failed to load post');}
 
@@ -65,7 +67,7 @@ export default function BlogPostEditorPage() {
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, [toast, authFetch]);
 
   const createBlankPost = useCallback(() => {
     const newPost: BlogPost = {
@@ -116,7 +118,7 @@ export default function BlogPostEditorPage() {
 
       const method = postId ? 'PUT' : 'POST';
 
-      const response = await fetch(endpoint, {
+      const response = await authFetch(endpoint, {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

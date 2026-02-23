@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { logger } from '@/lib/logger/logger';
 
 // ============================================================================
@@ -75,6 +76,7 @@ function isAttributionAnalytics(data: unknown): data is AttributionAnalytics {
 
 export default function AttributionDashboardPage() {
   const { theme } = useOrgTheme();
+  const authFetch = useAuthFetch();
   const [analytics, setAnalytics] = useState<AttributionAnalytics | null>(null);
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState<'7d' | '30d' | '90d' | 'all'>('30d');
@@ -82,7 +84,7 @@ export default function AttributionDashboardPage() {
   const loadAnalytics = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await fetch(`/api/analytics/attribution?period=${period}`);
+      const response = await authFetch(`/api/analytics/attribution?period=${period}`);
       const data = await response.json() as Record<string, unknown>;
       if (data.success && isAttributionAnalytics(data)) {
         setAnalytics(data);
@@ -92,7 +94,7 @@ export default function AttributionDashboardPage() {
     } finally {
       setLoading(false);
     }
-  }, [period]);
+  }, [period, authFetch]);
 
   useEffect(() => {
     void loadAnalytics();

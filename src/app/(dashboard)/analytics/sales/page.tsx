@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 import SubpageNav from '@/components/ui/SubpageNav';
 import type { StageMetrics, PipelineInsight } from '@/lib/crm/sales-velocity';
 
@@ -35,6 +36,7 @@ interface SalesAnalyticsApiResponse {
 
 export default function SalesAnalyticsPage() {
   const { loading: authLoading } = useAuth();
+  const authFetch = useAuthFetch();
   const [metrics, setMetrics] = useState<SerializedSalesMetrics | null>(null);
   const [insights, setInsights] = useState<PipelineInsight[]>([]);
   const [loading, setLoading] = useState(true);
@@ -43,7 +45,7 @@ export default function SalesAnalyticsPage() {
   const loadAnalytics = useCallback(async () => {
     try {
       setError(null);
-      const response = await fetch('/api/crm/analytics/velocity');
+      const response = await authFetch('/api/crm/analytics/velocity');
       if (!response.ok) {
         throw new Error(`API error: ${response.status}`);
       }
@@ -59,7 +61,7 @@ export default function SalesAnalyticsPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [authFetch]);
 
   useEffect(() => {
     if (authLoading) {

@@ -13,6 +13,7 @@
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useOptimisticDelete } from '@/hooks/useOptimisticDelete';
@@ -177,6 +178,7 @@ const formatDate = (timestamp: unknown) => {
 
 export default function FormsPage() {
   const router = useRouter();
+  const authFetch = useAuthFetch();
 
   const [forms, setForms] = useState<FormDefinition[]>([]);
   const [loading, setLoading] = useState(true);
@@ -194,7 +196,7 @@ export default function FormsPage() {
       setLoading(true);
       setError(null);
 
-      const response = await fetch(`/api/forms`);
+      const response = await authFetch(`/api/forms`);
 
       if (!response.ok) {
         throw new Error('Failed to fetch forms');
@@ -208,7 +210,7 @@ export default function FormsPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [authFetch]);
 
   useEffect(() => {
     void fetchForms();
@@ -241,7 +243,7 @@ export default function FormsPage() {
     try {
       setCreating(true);
 
-      const response = await fetch(`/api/forms`, {
+      const response = await authFetch(`/api/forms`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

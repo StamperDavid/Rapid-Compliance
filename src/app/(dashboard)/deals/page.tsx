@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { usePagination } from '@/hooks/usePagination';
 import { useOptimisticDelete } from '@/hooks/useOptimisticDelete';
 import { DataTable, type ColumnDef, type BulkAction } from '@/components/ui/data-table';
@@ -91,6 +92,7 @@ const getStageBadge = (stage: string) => {
 export default function DealsPage() {
   const router = useRouter();
   const { loading: authLoading } = useAuth();
+  const authFetch = useAuthFetch();
   const [view, setView] = useState<'pipeline' | 'list'>('pipeline');
 
   const fetchDeals = useCallback(async (lastDoc?: unknown) => {
@@ -102,14 +104,14 @@ export default function DealsPage() {
       searchParams.set('lastDoc', String(lastDoc));
     }
 
-    const response = await fetch(`/api/deals?${searchParams}`);
+    const response = await authFetch(`/api/deals?${searchParams}`);
 
     if (!response.ok) {
       throw new Error('Failed to fetch deals');
     }
 
     return response.json() as Promise<{ data: Deal[]; lastDoc: unknown; hasMore: boolean }>;
-  }, []);
+  }, [authFetch]);
 
   const {
     data: deals,

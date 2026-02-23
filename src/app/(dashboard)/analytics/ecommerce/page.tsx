@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
 import { useAuth } from '@/hooks/useAuth';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { logger } from '@/lib/logger/logger';;
 
 interface TopProduct {
@@ -38,13 +39,14 @@ function isEcommerceAnalytics(data: unknown): data is EcommerceAnalytics {
 export default function EcommerceAnalyticsPage() {
   const { theme } = useOrgTheme();
   const { loading: authLoading } = useAuth();
+  const authFetch = useAuthFetch();
   const [analytics, setAnalytics] = useState<EcommerceAnalytics | null>(null);
   const [loading, setLoading] = useState(true);
 
   const loadAnalytics = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await fetch('/api/analytics/ecommerce');
+      const response = await authFetch('/api/analytics/ecommerce');
       const data = await response.json() as { success?: boolean; analytics?: unknown };
       if (data.success && isEcommerceAnalytics(data.analytics)) {
         setAnalytics(data.analytics);
@@ -54,7 +56,7 @@ export default function EcommerceAnalyticsPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [authFetch]);
 
   useEffect(() => {
     // Wait for Firebase auth to restore session before making API calls

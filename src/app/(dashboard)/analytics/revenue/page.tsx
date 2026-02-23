@@ -6,6 +6,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import SubpageNav from '@/components/ui/SubpageNav';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { logger } from '@/lib/logger/logger';;
 
 interface RevenueBySource {
@@ -55,6 +56,7 @@ function isRevenueAnalytics(data: unknown): data is RevenueAnalytics {
 
 export default function RevenueAnalyticsPage() {
   const { theme } = useOrgTheme();
+  const authFetch = useAuthFetch();
   const [analytics, setAnalytics] = useState<RevenueAnalytics | null>(null);
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState<'7d' | '30d' | '90d' | 'all'>('30d');
@@ -62,7 +64,7 @@ export default function RevenueAnalyticsPage() {
   const loadAnalytics = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await fetch(`/api/analytics/revenue?PLATFORM_ID=${PLATFORM_ID}&period=${period}`);
+      const response = await authFetch(`/api/analytics/revenue?PLATFORM_ID=${PLATFORM_ID}&period=${period}`);
       const data = await response.json() as { success?: boolean; analytics?: unknown };
       if (data.success && isRevenueAnalytics(data.analytics)) {
         setAnalytics(data.analytics);
@@ -72,7 +74,7 @@ export default function RevenueAnalyticsPage() {
     } finally {
       setLoading(false);
     }
-  }, [period]);
+  }, [period, authFetch]);
 
   useEffect(() => {
     void loadAnalytics();

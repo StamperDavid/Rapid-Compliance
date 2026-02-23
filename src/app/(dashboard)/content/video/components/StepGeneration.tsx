@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { motion } from 'framer-motion';
 import { Zap, ArrowRight, Loader2, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -11,6 +12,7 @@ import { VIDEO_ENGINE_REGISTRY } from '@/lib/video/engine-registry';
 import type { SceneGenerationResult } from '@/types/video-pipeline';
 
 export function StepGeneration() {
+  const authFetch = useAuthFetch();
   const {
     scenes,
     avatarId,
@@ -66,7 +68,7 @@ export function StepGeneration() {
     setGeneratedScenes(initialResults);
 
     try {
-      const response = await fetch('/api/video/generate-scenes', {
+      const response = await authFetch('/api/video/generate-scenes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -103,7 +105,7 @@ export function StepGeneration() {
     } finally {
       setIsGenerating(false);
     }
-  }, [scenes, avatarId, voiceId, brief.aspectRatio, isGenerating, setGeneratedScenes, setIsGenerating]);
+  }, [scenes, avatarId, voiceId, brief.aspectRatio, isGenerating, setGeneratedScenes, setIsGenerating, authFetch]);
 
   // Auto-start generation on mount
   useEffect(() => {
@@ -121,7 +123,7 @@ export function StepGeneration() {
     updateGeneratedScene(sceneId, { status: 'generating', progress: 0, error: null });
 
     try {
-      const response = await fetch('/api/video/regenerate-scene', {
+      const response = await authFetch('/api/video/regenerate-scene', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

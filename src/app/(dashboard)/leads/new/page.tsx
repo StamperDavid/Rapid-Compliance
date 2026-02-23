@@ -7,6 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { leadFormSchema, type LeadFormValues } from '@/lib/validation/lead-form-schema';
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
 import { logger } from '@/lib/logger/logger';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 import DuplicateWarning from '@/components/DuplicateWarning';
 import { useToast } from '@/hooks/useToast';
 import type { DuplicateDetectionResult } from '@/lib/crm/duplicate-detection';
@@ -16,6 +17,7 @@ import { auth } from '@/lib/firebase/config';
 export default function NewLeadPage() {
   const router = useRouter();
   const toast = useToast();
+  const authFetch = useAuthFetch();
   const [duplicateResult, setDuplicateResult] = useState<DuplicateDetectionResult | null>(null);
   const [dataQuality, setDataQuality] = useState<DataQualityScore | null>(null);
   const [checkingDuplicates, setCheckingDuplicates] = useState(false);
@@ -46,7 +48,7 @@ export default function NewLeadPage() {
   const checkDuplicates = useCallback(async () => {
     setCheckingDuplicates(true);
     try {
-      const response = await fetch('/api/crm/duplicates', {
+      const response = await authFetch('/api/crm/duplicates', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -64,7 +66,7 @@ export default function NewLeadPage() {
     } finally {
       setCheckingDuplicates(false);
     }
-  }, [watchedEmail, watchedPhone, watchedFirstName, watchedLastName, watchedCompany]);
+  }, [watchedEmail, watchedPhone, watchedFirstName, watchedLastName, watchedCompany, authFetch]);
 
   const calculateQuality = useCallback(async () => {
     try {

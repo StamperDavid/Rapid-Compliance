@@ -8,6 +8,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 import SubpageNav from '@/components/ui/SubpageNav';
 import {
   Search,
@@ -32,6 +33,7 @@ interface SettingsResponse {
 }
 
 export default function SEOManagementPage() {
+  const authFetch = useAuthFetch();
 
   const [settings, setSettings] = useState<Partial<SiteConfig> | null>(null);
   const [robotsTxt, setRobotsTxt] = useState('');
@@ -43,7 +45,7 @@ export default function SEOManagementPage() {
     try {
       setLoading(true);
 
-      const response = await fetch('/api/website/settings');
+      const response = await authFetch('/api/website/settings');
       if (response.ok) {
         const data = await response.json() as SettingsResponse;
         setSettings(data.settings ?? {});
@@ -69,7 +71,7 @@ export default function SEOManagementPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [authFetch]);
 
   useEffect(() => {
     void loadSettings();
@@ -90,7 +92,7 @@ Sitemap: https://yoursite.com/sitemap.xml`;
     try {
       setSaving(true);
 
-      const response = await fetch('/api/website/settings', {
+      const response = await authFetch('/api/website/settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

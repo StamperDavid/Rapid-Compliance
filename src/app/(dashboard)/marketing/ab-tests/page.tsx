@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import type { ABTest, ABTestResults } from '@/lib/email/email-builder';
 import { logger } from '@/lib/logger/logger';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 
 interface ABTestResponse {
   success: boolean;
@@ -10,16 +11,13 @@ interface ABTestResponse {
 }
 
 export default function ABTestsPage() {
+  const authFetch = useAuthFetch();
   const [tests, setTests] = useState<(ABTest & { results?: ABTestResults })[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    void loadTests();
-  }, []);
-
-  const loadTests = async () => {
+  const loadTests = useCallback(async () => {
     try {
-      const response = await fetch('/api/email/ab-tests');
+      const response = await authFetch('/api/email/ab-tests');
       const data = await response.json() as ABTestResponse;
       if (data.success) {
         setTests(data.data);
@@ -29,7 +27,11 @@ export default function ABTestsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [authFetch]);
+
+  useEffect(() => {
+    void loadTests();
+  }, [loadTests]);
 
   const formatPercentage = (value: number) => `${value.toFixed(1)  }%`;
 

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { useToast } from '@/hooks/useToast';
 
 interface OrderCustomer {
@@ -93,6 +94,7 @@ const FULFILLMENT_STATUSES: FulfillmentStatus[] = ['unfulfilled', 'partially_ful
 
 export default function OrdersPage() {
   const { user, loading: authLoading } = useAuth();
+  const authFetch = useAuthFetch();
   const toast = useToast();
 
   const [orders, setOrders] = useState<Order[]>([]);
@@ -109,7 +111,7 @@ export default function OrdersPage() {
         params.set('status', filterStatus);
       }
       const url = `/api/ecommerce/orders${params.toString() ? `?${params}` : ''}`;
-      const res = await fetch(url);
+      const res = await authFetch(url);
       if (res.ok) {
         const data = (await res.json()) as OrdersResponse;
         if (data.success && data.orders) {
@@ -121,7 +123,7 @@ export default function OrdersPage() {
     } finally {
       setLoading(false);
     }
-  }, [filterStatus, toast]);
+  }, [filterStatus, toast, authFetch]);
 
   useEffect(() => {
     // Wait for Firebase auth to restore session before making API calls
@@ -133,7 +135,7 @@ export default function OrdersPage() {
 
   const handleStatusUpdate = async (orderId: string, newStatus: OrderStatus) => {
     try {
-      const res = await fetch(`/api/ecommerce/orders/${orderId}`, {
+      const res = await authFetch(`/api/ecommerce/orders/${orderId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus }),
@@ -155,7 +157,7 @@ export default function OrdersPage() {
 
   const handleFulfillmentUpdate = async (orderId: string, newStatus: FulfillmentStatus) => {
     try {
-      const res = await fetch(`/api/ecommerce/orders/${orderId}`, {
+      const res = await authFetch(`/api/ecommerce/orders/${orderId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ fulfillmentStatus: newStatus }),

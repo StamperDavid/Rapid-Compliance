@@ -20,6 +20,7 @@ import type {
   CoachingInsights,
 } from '@/lib/coaching/types';
 import { useAuth } from '@/hooks/useAuth';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { logger } from '@/lib/logger/logger';
 
 /**
@@ -39,6 +40,7 @@ const TIME_PERIODS: { value: TimePeriod; label: string }[] = [
  */
 export default function CoachingDashboardPage() {
   const { user } = useAuth();
+  const authFetch = useAuthFetch();
 
   // State
   const [period, setPeriod] = useState<TimePeriod>('last_30_days');
@@ -70,7 +72,7 @@ export default function CoachingDashboardPage() {
         includeActionItems: true,
       };
 
-      const response = await fetch('/api/coaching/insights', {
+      const response = await authFetch('/api/coaching/insights', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -94,7 +96,7 @@ export default function CoachingDashboardPage() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [currentUserId, period]);
+  }, [currentUserId, period, authFetch]);
 
   /**
    * Load insights on mount and when period changes

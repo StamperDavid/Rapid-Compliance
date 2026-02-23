@@ -12,6 +12,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { FormBuilder } from '@/components/forms';
 import type { FormDefinition, FormFieldConfig } from '@/lib/forms/types';
 
@@ -250,6 +251,7 @@ const createDefaultForm = (
 export default function FormEditorPage() {
   const params = useParams();
   const router = useRouter();
+  const authFetch = useAuthFetch();
   const formId = params.formId as string;
 
   const [form, setForm] = useState<FormDefinition | null>(null);
@@ -343,7 +345,7 @@ export default function FormEditorPage() {
       setLoadingState('saving');
       setSaveMessage(null);
 
-      const response = await fetch(`/api/forms/${form.id}`, {
+      const response = await authFetch(`/api/forms/${form.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -366,7 +368,7 @@ export default function FormEditorPage() {
       setError(err instanceof Error ? err.message : 'Failed to save form');
       setLoadingState('loaded');
     }
-  }, [form, fields]);
+  }, [form, fields, authFetch]);
 
   // Publish form
   const handlePublish = useCallback(async () => {

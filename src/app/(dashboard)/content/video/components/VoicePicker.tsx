@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { Loader2, AlertCircle, Play, Pause, Mic } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -12,6 +13,7 @@ interface VoicePickerProps {
 }
 
 export function VoicePicker({ selectedVoiceId, onSelect }: VoicePickerProps) {
+  const authFetch = useAuthFetch();
   const [voices, setVoices] = useState<HeyGenVoice[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -19,23 +21,24 @@ export function VoicePicker({ selectedVoiceId, onSelect }: VoicePickerProps) {
   const [filterGender, setFilterGender] = useState<string>('all');
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  useEffect(() => {
-    const fetchVoices = async () => {
-      try {
-        const response = await fetch('/api/video/voices');
-        if (!response.ok) {
-          throw new Error('Failed to fetch voices');
-        }
-        const data = await response.json() as { success: boolean; voices: HeyGenVoice[] };
-        setVoices(data.voices ?? []);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load voices');
-      } finally {
-        setIsLoading(false);
+  const fetchVoices = useCallback(async () => {
+    try {
+      const response = await authFetch('/api/video/voices');
+      if (!response.ok) {
+        throw new Error('Failed to fetch voices');
       }
-    };
+      const data = await response.json() as { success: boolean; voices: HeyGenVoice[] };
+      setVoices(data.voices ?? []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load voices');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [authFetch]);
+
+  useEffect(() => {
     void fetchVoices();
-  }, []);
+  }, [fetchVoices]);
 
   const handlePreview = (voice: HeyGenVoice) => {
     if (playingId === voice.id) {

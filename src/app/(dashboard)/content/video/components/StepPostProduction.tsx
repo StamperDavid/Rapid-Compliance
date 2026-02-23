@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { Wand2, Download, Save, RefreshCw, Play, Edit3, Loader2, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -8,6 +9,7 @@ import { VideoPlayer } from './VideoPlayer';
 import { useVideoPipelineStore } from '@/lib/stores/video-pipeline-store';
 
 export function StepPostProduction() {
+  const authFetch = useAuthFetch();
   const {
     projectId,
     projectName,
@@ -43,7 +45,7 @@ export function StepPostProduction() {
     updateGeneratedScene(sceneId, { status: 'generating', progress: 0 });
 
     try {
-      const response = await fetch('/api/video/regenerate-scene', {
+      const response = await authFetch('/api/video/regenerate-scene', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -85,7 +87,7 @@ export function StepPostProduction() {
         .map((s) => s.videoUrl)
         .filter((url): url is string => url !== null);
 
-      const response = await fetch('/api/video/assemble', {
+      const response = await authFetch('/api/video/assemble', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -115,7 +117,7 @@ export function StepPostProduction() {
     setSaved(false);
 
     try {
-      const response = await fetch('/api/video/project/save', {
+      const response = await authFetch('/api/video/project/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

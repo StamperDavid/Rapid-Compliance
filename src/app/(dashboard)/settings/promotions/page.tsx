@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth, usePermission } from '@/hooks/useAuth';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 import type { MerchantCoupon, DiscountType, CouponStatus } from '@/types/pricing';
 import { logger } from '@/lib/logger/logger';
 
@@ -34,6 +35,7 @@ export default function PromotionsPage() {
   const { user: _user } = useAuth();
   const { theme } = useOrgTheme();
   const canManageOrganization = usePermission('canManageOrganization');
+  const authFetch = useAuthFetch();
 
   const [activeTab, setActiveTab] = useState<TabType>('active');
   const [coupons, setCoupons] = useState<MerchantCoupon[]>([]);
@@ -56,14 +58,14 @@ export default function PromotionsPage() {
     setLoading(true);
     try {
       // Load coupons
-      const couponsRes = await fetch(`/api/coupons`);
+      const couponsRes = await authFetch(`/api/coupons`);
       if (couponsRes.ok) {
         const data = await couponsRes.json() as CouponsResponse;
         setCoupons(data.coupons ?? []);
       }
 
       // Load analytics
-      const analyticsRes = await fetch(`/api/coupons/analytics`);
+      const analyticsRes = await authFetch(`/api/coupons/analytics`);
       if (analyticsRes.ok) {
         const data = await analyticsRes.json() as AnalyticsResponse;
         setAnalytics(data.analytics ?? null);
@@ -73,7 +75,7 @@ export default function PromotionsPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [authFetch]);
 
   useEffect(() => {
     void loadData();
@@ -101,7 +103,7 @@ export default function PromotionsPage() {
     setSaving(true);
     setMessage({ type: '', text: '' });
     try {
-      const response = await fetch(`/api/coupons`, {
+      const response = await authFetch(`/api/coupons`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(editingCoupon),
@@ -133,7 +135,7 @@ export default function PromotionsPage() {
 
   const handleToggleStatus = async (couponId: string, newStatus: CouponStatus) => {
     try {
-      const response = await fetch(`/api/coupons/${couponId}/status`, {
+      const response = await authFetch(`/api/coupons/${couponId}/status`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus }),

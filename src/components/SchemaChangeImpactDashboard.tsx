@@ -7,6 +7,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import type { SchemaChangeEvent } from '@/lib/schema/schema-change-tracker';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 
 type FirestoreTimestamp = Date | string | { toDate: () => Date } | null | undefined;
 
@@ -49,6 +50,7 @@ interface ImpactApiResponse {
 export default function SchemaChangeImpactDashboard({
   schemaId,
 }: SchemaChangeImpactDashboardProps) {
+  const authFetch = useAuthFetch();
   const [loading, setLoading] = useState(true);
   const [impact, setImpact] = useState<ImpactSummary | null>(null);
   const [workflows, setWorkflows] = useState<WorkflowsSummary | null>(null);
@@ -57,7 +59,7 @@ export default function SchemaChangeImpactDashboard({
   const loadImpactData = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await fetch(
+      const response = await authFetch(
         `/api/schema-changes/impact?schemaId=${schemaId}`
       );
 
@@ -75,7 +77,7 @@ export default function SchemaChangeImpactDashboard({
     } finally {
       setLoading(false);
     }
-  }, [schemaId]);
+  }, [schemaId, authFetch]);
 
   useEffect(() => {
     void loadImpactData();
@@ -83,7 +85,7 @@ export default function SchemaChangeImpactDashboard({
 
   const processUnprocessedEvents = async () => {
     try {
-      const response = await fetch('/api/schema-changes/process', {
+      const response = await authFetch('/api/schema-changes/process', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({}),

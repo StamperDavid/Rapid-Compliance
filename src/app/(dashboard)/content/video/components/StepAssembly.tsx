@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { Puzzle, ArrowLeft, ArrowRight, Loader2, Play } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -15,6 +16,7 @@ const TRANSITIONS: { value: TransitionType; label: string }[] = [
 ];
 
 export function StepAssembly() {
+  const authFetch = useAuthFetch();
   const {
     generatedScenes,
     finalVideoUrl,
@@ -44,7 +46,7 @@ export function StepAssembly() {
         .map((s) => s.videoUrl)
         .filter((url): url is string => url !== null);
 
-      const response = await fetch('/api/video/assemble', {
+      const response = await authFetch('/api/video/assemble', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

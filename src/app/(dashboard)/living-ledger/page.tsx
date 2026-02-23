@@ -18,6 +18,7 @@ import React, { useState, useEffect } from 'react';
 import { DealHealthCard } from '@/components/crm/DealHealthCard';
 import { NextBestActionsCard } from '@/components/crm/NextBestActionsCard';
 import { useAuth } from '@/hooks/useAuth';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { useToast } from '@/hooks/useToast';
 import { logger } from '@/lib/logger/logger';
 import { PLATFORM_ID } from '@/lib/constants/platform';
@@ -48,6 +49,7 @@ interface HealthCheckResponse {
 
 export default function LivingLedgerPage() {
   const { user } = useAuth();
+  const authFetch = useAuthFetch();
   const toast = useToast();
   const [deals, setDeals] = useState<Deal[]>([]);
   const [selectedDealId, setSelectedDealId] = useState<string | null>(null);
@@ -140,7 +142,7 @@ export default function LivingLedgerPage() {
   // Start deal monitoring
   const handleStartMonitoring = async () => {
     try {
-      const response = await fetch('/api/crm/deals/monitor/start', {
+      const response = await authFetch('/api/crm/deals/monitor/start', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -166,7 +168,7 @@ export default function LivingLedgerPage() {
   // Run health check
   const handleHealthCheck = async () => {
     try {
-      const response = await fetch('/api/crm/deals/health-check', {
+      const response = await authFetch('/api/crm/deals/health-check', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -9,6 +9,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
 import SubpageNav from '@/components/ui/SubpageNav';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { useToast } from '@/hooks/useToast';
 import { logger } from '@/lib/logger/logger';
 
@@ -49,6 +50,7 @@ interface VerifyDomainResponse {
 
 export default function CustomDomainsPage() {
   const { theme } = useOrgTheme();
+  const authFetch = useAuthFetch();
 
   const [domains, setDomains] = useState<CustomDomain[]>([]);
   const [loading, setLoading] = useState(true);
@@ -69,7 +71,7 @@ export default function CustomDomainsPage() {
       setLoading(true);
       setError(null);
 
-      const response = await fetch('/api/website/domains');
+      const response = await authFetch('/api/website/domains');
 
       if (!response.ok) {
         throw new Error('Failed to load domains');
@@ -84,7 +86,7 @@ export default function CustomDomainsPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [authFetch]);
 
   useEffect(() => {
     void loadDomains();
@@ -110,7 +112,7 @@ export default function CustomDomainsPage() {
       setError(null);
       setSuccess(null);
 
-      const response = await fetch('/api/website/domains', {
+      const response = await authFetch('/api/website/domains', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -142,7 +144,7 @@ export default function CustomDomainsPage() {
       setError(null);
       setSuccess(null);
 
-      const response = await fetch(`/api/website/domains/${domainId}/verify`, {
+      const response = await authFetch(`/api/website/domains/${domainId}/verify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({}),
@@ -176,7 +178,7 @@ export default function CustomDomainsPage() {
         setError(null);
         setSuccess(null);
 
-        const response = await fetch(`/api/website/domains/${domainId}`, {
+        const response = await authFetch(`/api/website/domains/${domainId}`, {
           method: 'DELETE',
         });
 

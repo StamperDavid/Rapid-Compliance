@@ -8,6 +8,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { useToast } from '@/hooks/useToast';
 import type { Navigation, NavItem, Page } from '@/types/website';
 import { logger } from '@/lib/logger/logger';
@@ -28,6 +29,7 @@ interface SettingsResponse {
 
 export default function NavigationManagementPage() {
   const { user } = useAuth();
+  const authFetch = useAuthFetch();
   const toast = useToast();
 
   const [navigation, setNavigation] = useState<Navigation | null>(null);
@@ -41,7 +43,7 @@ export default function NavigationManagementPage() {
       setLoading(true);
 
       // Load navigation
-      const navResponse = await fetch('/api/website/navigation');
+      const navResponse = await authFetch('/api/website/navigation');
       if (navResponse.ok) {
         const navData = await navResponse.json() as NavigationResponse;
         setNavigation(navData.navigation);
@@ -62,14 +64,14 @@ export default function NavigationManagementPage() {
       }
 
       // Load pages
-      const pagesResponse = await fetch('/api/website/pages');
+      const pagesResponse = await authFetch('/api/website/pages');
       if (pagesResponse.ok) {
         const pagesData = await pagesResponse.json() as PagesResponse;
         setPages(pagesData.pages ?? []);
       }
 
       // Load site settings to get homepage
-      const settingsResponse = await fetch('/api/website/settings');
+      const settingsResponse = await authFetch('/api/website/settings');
       if (settingsResponse.ok) {
         const settingsData = await settingsResponse.json() as SettingsResponse;
         setHomepage(settingsData.settings?.homepage ?? '');
@@ -79,7 +81,7 @@ export default function NavigationManagementPage() {
     } finally {
       setLoading(false);
     }
-  }, [user?.id]);
+  }, [user?.id, authFetch]);
 
   useEffect(() => {
     void loadData();
@@ -93,7 +95,7 @@ export default function NavigationManagementPage() {
     try {
       setSaving(true);
 
-      const response = await fetch('/api/website/navigation', {
+      const response = await authFetch('/api/website/navigation', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -120,7 +122,7 @@ export default function NavigationManagementPage() {
 
   async function saveHomepage(): Promise<void> {
     try {
-      const response = await fetch('/api/website/settings', {
+      const response = await authFetch('/api/website/settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

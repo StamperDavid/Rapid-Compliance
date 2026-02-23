@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
 import FilterBuilder from '@/components/FilterBuilder';
 import { useAuth } from '@/hooks/useAuth';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { STANDARD_SCHEMAS } from '@/lib/schema/standard-schemas';
 import type { ViewFilter } from '@/types/filters';
 import { sendEmail } from '@/lib/email/email-service';
@@ -95,6 +96,7 @@ const emailTemplatesPath = getSubCollection('emailTemplates');
 
 export default function EmailTemplatesPage() {
   const { user } = useAuth();
+  const authFetch = useAuthFetch();
     const { theme } = useOrgTheme();
   const toast = useToast();
   const confirmDialog = useConfirm();
@@ -245,7 +247,7 @@ Best regards,
       }
 
       try {
-        const response = await fetch('/api/contacts/count', {
+        const response = await authFetch('/api/contacts/count', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -266,7 +268,7 @@ Best regards,
     }
 
     void updateEstimatedRecipients();
-  }, [campaignFilters]);
+  }, [campaignFilters, authFetch]);
 
   return (
     <>

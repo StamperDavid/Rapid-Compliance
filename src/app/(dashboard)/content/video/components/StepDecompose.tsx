@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { motion } from 'framer-motion';
 import { Layers, ArrowRight, ArrowLeft, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -9,6 +10,7 @@ import { useVideoPipelineStore } from '@/lib/stores/video-pipeline-store';
 import type { DecompositionPlan } from '@/types/video-pipeline';
 
 export function StepDecompose() {
+  const authFetch = useAuthFetch();
   const {
     brief,
     decompositionPlan,
@@ -27,7 +29,7 @@ export function StepDecompose() {
     setError(null);
 
     try {
-      const response = await fetch('/api/video/decompose', {
+      const response = await authFetch('/api/video/decompose', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -69,7 +71,7 @@ export function StepDecompose() {
     } finally {
       setIsLoading(false);
     }
-  }, [brief, setDecompositionPlan, setScenes]);
+  }, [brief, setDecompositionPlan, setScenes, authFetch]);
 
   // Auto-decompose on mount if no plan yet
   useEffect(() => {

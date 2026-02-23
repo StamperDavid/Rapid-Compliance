@@ -13,6 +13,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { ErrorBoundary, InlineErrorFallback } from '@/components/common/ErrorBoundary';
 import { logger } from '@/lib/logger/logger';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 
 interface TemplateSelectorProps {
   onTemplateSelect?: (templateId: string) => void;
@@ -38,6 +39,7 @@ function TemplateSelectorInner({
   onTemplateSelect,
   selectedTemplateId
 }: TemplateSelectorProps) {
+  const authFetch = useAuthFetch();
   const [templates, setTemplates] = useState<Array<{
     id: string;
     name: string;
@@ -55,7 +57,7 @@ function TemplateSelectorInner({
   const fetchTemplates = useCallback(async (): Promise<void> => {
     try {
       setLoading(true);
-      const response = await fetch('/api/templates');
+      const response = await authFetch('/api/templates');
       const data = await response.json() as TemplatesApiResponse;
 
       if (data.success) {
@@ -66,7 +68,7 @@ function TemplateSelectorInner({
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [authFetch]);
 
   useEffect(() => {
     void fetchTemplates();

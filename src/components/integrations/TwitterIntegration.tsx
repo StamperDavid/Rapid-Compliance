@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { logger } from '@/lib/logger/logger';
 
 interface TwitterAccount {
@@ -26,6 +27,7 @@ export default function TwitterIntegration({
   onUpdate: _onUpdate,
 }: TwitterIntegrationProps) {
   const { user } = useAuth();
+  const authFetch = useAuthFetch();
   const [isConnecting, setIsConnecting] = useState(false);
   const [showManual, setShowManual] = useState(false);
   const [testing, setTesting] = useState(false);
@@ -63,7 +65,7 @@ export default function TwitterIntegration({
     e.preventDefault();
     setIsConnecting(true);
     try {
-      const response = await fetch('/api/social/accounts', {
+      const response = await authFetch('/api/social/accounts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -98,7 +100,7 @@ export default function TwitterIntegration({
     setTesting(true);
     setTestResult(null);
     try {
-      const response = await fetch('/api/social/accounts/verify', {
+      const response = await authFetch('/api/social/accounts/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ accountId: integration.id }),

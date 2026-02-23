@@ -8,6 +8,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { logger } from '@/lib/logger/logger';
 import SubpageNav from '@/components/ui/SubpageNav';
 import {
@@ -56,6 +57,7 @@ interface ApiLeadResearchResponse {
 
 export default function LeadResearchPage() {
   const { user: _user } = useAuth();
+  const authFetch = useAuthFetch();
 
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -93,7 +95,7 @@ export default function LeadResearchPage() {
     setIsLoading(true);
 
     try {
-      const response = await fetch(`/api/leads/research`, {
+      const response = await authFetch(`/api/leads/research`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -167,7 +169,7 @@ export default function LeadResearchPage() {
     }));
 
     try {
-      await fetch(`/api/leads/feedback`, {
+      await authFetch(`/api/leads/feedback`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

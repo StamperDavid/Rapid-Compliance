@@ -9,6 +9,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { useToast } from '@/hooks/useToast';
 import type { BlogPost } from '@/types/website';
 import { logger } from '@/lib/logger/logger';
@@ -16,6 +17,7 @@ import { logger } from '@/lib/logger/logger';
 export default function BlogManagementPage() {
   const router = useRouter();
   const toast = useToast();
+  const authFetch = useAuthFetch();
 
   const [posts, setPosts] = useState<BlogPost[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,7 +44,7 @@ export default function BlogManagementPage() {
         url += `?${params.join('&')}`;
       }
 
-      const response = await fetch(url);
+      const response = await authFetch(url);
 
       if (!response.ok) {throw new Error('Failed to load posts');}
 
@@ -54,11 +56,11 @@ export default function BlogManagementPage() {
     } finally {
       setLoading(false);
     }
-  }, [filter, categoryFilter, toast]);
+  }, [filter, categoryFilter, toast, authFetch]);
 
   const loadCategories = useCallback(async () => {
     try {
-      const response = await fetch('/api/website/blog/categories');
+      const response = await authFetch('/api/website/blog/categories');
 
       if (response.ok) {
         const data = await response.json() as { categories?: string[] };
@@ -67,7 +69,7 @@ export default function BlogManagementPage() {
     } catch (error) {
       logger.error('[Blog] Load categories error', error instanceof Error ? error : new Error(String(error)));
     }
-  }, []);
+  }, [authFetch]);
 
   useEffect(() => {
     void loadPosts();
@@ -76,7 +78,7 @@ export default function BlogManagementPage() {
 
   async function handleDeletePost(postId: string) {
     try {
-      const response = await fetch(
+      const response = await authFetch(
         `/api/website/blog/posts/${postId}`,
         { method: 'DELETE' }
       );
@@ -95,7 +97,7 @@ export default function BlogManagementPage() {
 
   async function toggleFeatured(post: BlogPost) {
     try {
-      const response = await fetch(`/api/website/blog/posts/${post.id}`, {
+      const response = await authFetch(`/api/website/blog/posts/${post.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

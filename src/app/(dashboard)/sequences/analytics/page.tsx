@@ -19,6 +19,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import SubpageNav from '@/components/ui/SubpageNav';
 import { useAuth } from '@/hooks/useAuth';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { logger } from '@/lib/logger/logger';
 import { DateRangeFilter, type DateRange } from '@/components/analytics/DateRangeFilter';
 import {
@@ -135,6 +136,7 @@ interface ChannelStats {
 
 export default function SequenceAnalyticsPage() {
   const { user: _user } = useAuth();
+  const authFetch = useAuthFetch();
   
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
   const [sequences, setSequences] = useState<SequencePerformance[]>([]);
@@ -170,7 +172,7 @@ export default function SequenceAnalyticsPage() {
           params.set('endDate', dateRange.endDate.toISOString());
         }
         
-        const response = await fetch(`/api/sequences/analytics?${params.toString()}`, {
+        const response = await authFetch(`/api/sequences/analytics?${params.toString()}`, {
           headers: {
             'x-organization-id': PLATFORM_ID,
           },
@@ -185,7 +187,7 @@ export default function SequenceAnalyticsPage() {
         setSequences(data.sequences ?? []);
 
         // Load recent executions
-        const executionsResponse = await fetch(`/api/sequences/executions?limit=50`, {
+        const executionsResponse = await authFetch(`/api/sequences/executions?limit=50`, {
           headers: {
             'x-organization-id': PLATFORM_ID,
           },
@@ -208,7 +210,7 @@ export default function SequenceAnalyticsPage() {
     const interval = setInterval(() => {
       void (async () => {
         try {
-          const executionsResponse = await fetch(`/api/sequences/executions?limit=50`, {
+          const executionsResponse = await authFetch(`/api/sequences/executions?limit=50`, {
             headers: {
               'x-organization-id': PLATFORM_ID,
             },
@@ -225,7 +227,7 @@ export default function SequenceAnalyticsPage() {
     }, 30000);
 
     return () => clearInterval(interval);
-  }, [dateRange]);
+  }, [dateRange, authFetch]);
 
   if (loading) {
     return (

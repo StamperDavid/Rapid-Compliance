@@ -10,6 +10,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { PerformanceOverviewCard } from '@/components/performance/PerformanceOverviewCard';
 import { BenchmarksCard } from '@/components/performance/BenchmarksCard';
 import { TopPerformersCard } from '@/components/performance/TopPerformersCard';
@@ -18,6 +19,7 @@ import type { TeamPerformanceAnalytics } from '@/lib/performance';
 import { logger } from '@/lib/logger/logger';
 
 export default function PerformanceDashboardPage() {
+  const authFetch = useAuthFetch();
   const [analytics, setAnalytics] = useState<TeamPerformanceAnalytics | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -29,7 +31,7 @@ export default function PerformanceDashboardPage() {
       setLoading(true);
       setError(null);
 
-      const response = await fetch('/api/performance/analytics', {
+      const response = await authFetch('/api/performance/analytics', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -53,7 +55,7 @@ export default function PerformanceDashboardPage() {
     } finally {
       setLoading(false);
     }
-  }, [selectedPeriod]);
+  }, [selectedPeriod, authFetch]);
 
   useEffect(() => {
     void loadAnalytics();

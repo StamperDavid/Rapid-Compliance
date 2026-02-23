@@ -6,6 +6,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { logger } from '@/lib/logger/logger';
 
 interface OnboardingProps {
@@ -13,6 +14,7 @@ interface OnboardingProps {
 }
 
 export function WebsiteBuilderOnboarding({ onComplete }: OnboardingProps) {
+  const authFetch = useAuthFetch();
   const [currentStep, setCurrentStep] = useState(0);
   const [siteData, setSiteData] = useState({
     siteName: '',
@@ -176,7 +178,7 @@ export function WebsiteBuilderOnboarding({ onComplete }: OnboardingProps) {
   const saveOnboardingData = async () => {
     try {
       // Save site settings
-      await fetch('/api/website/settings', {
+      await authFetch('/api/website/settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -189,7 +191,7 @@ export function WebsiteBuilderOnboarding({ onComplete }: OnboardingProps) {
 
       // Apply template if selected
       if (siteData.template) {
-        await fetch('/api/website/templates/apply', {
+        await authFetch('/api/website/templates/apply', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

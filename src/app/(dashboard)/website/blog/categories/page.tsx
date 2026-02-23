@@ -8,12 +8,14 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { useToast } from '@/hooks/useToast';
 import { logger } from '@/lib/logger/logger';
 
 export default function CategoriesManagementPage() {
   const router = useRouter();
   const toast = useToast();
+  const authFetch = useAuthFetch();
 
   const [categories, setCategories] = useState<string[]>([]);
   const [newCategory, setNewCategory] = useState('');
@@ -24,7 +26,7 @@ export default function CategoriesManagementPage() {
   const loadCategories = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/website/blog/categories');
+      const response = await authFetch('/api/website/blog/categories');
 
       if (response.ok) {
         const data = await response.json() as { categories?: string[] };
@@ -35,7 +37,7 @@ export default function CategoriesManagementPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [authFetch]);
 
   useEffect(() => {
     void loadCategories();
@@ -45,7 +47,7 @@ export default function CategoriesManagementPage() {
     try {
       setSaving(true);
 
-      const response = await fetch('/api/website/blog/categories', {
+      const response = await authFetch('/api/website/blog/categories', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

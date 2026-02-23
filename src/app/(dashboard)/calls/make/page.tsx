@@ -4,9 +4,11 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { logger } from '@/lib/logger/logger';
 import { showErrorToast, showSuccessToast } from '@/components/ErrorToast';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 
 export default function MakeCallPage() {
   const router = useRouter();
+  const authFetch = useAuthFetch();
   const [phoneNumber, setPhoneNumber] = useState('');
   const [calling, setCalling] = useState(false);
 
@@ -17,7 +19,7 @@ export default function MakeCallPage() {
     try {
       setCalling(true);
       // Call Twilio voice API
-      const response = await fetch('/api/voice/call', {
+      const response = await authFetch('/api/voice/call', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ to: phoneNumber }),

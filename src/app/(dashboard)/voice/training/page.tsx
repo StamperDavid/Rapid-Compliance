@@ -4,6 +4,7 @@ import { PLATFORM_ID } from '@/lib/constants/platform';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
 import { useToast } from '@/hooks/useToast';
 import { logger } from '@/lib/logger/logger';
@@ -185,6 +186,7 @@ const defaultVoiceSettings: VoiceTrainingSettings = {
 
 export default function VoiceAITrainingLabPage() {
   const { user } = useAuth();
+  const authFetch = useAuthFetch();
   const { theme } = useOrgTheme();
   const toast = useToast();
 
@@ -393,9 +395,9 @@ export default function VoiceAITrainingLabPage() {
   };
 
   // Load TTS config and voices
-  const loadTTSConfig = async () => {
+  const loadTTSConfig = useCallback(async () => {
     try {
-      const response = await fetch(`/api/voice/tts?action=config`);
+      const response = await authFetch(`/api/voice/tts?action=config`);
       const data = await response.json() as TTSConfigResponse;
       if (data.success && data.config) {
         setTtsEngine(data.config.engine ?? 'elevenlabs');
@@ -405,12 +407,12 @@ export default function VoiceAITrainingLabPage() {
     } catch (error: unknown) {
       logger.error('Error loading TTS config:', error instanceof Error ? error : new Error(String(error)), { file: 'voice-training-page.tsx' });
     }
-  };
+  }, [authFetch]);
 
   const loadTTSVoices = useCallback(async (engine: TTSEngineType) => {
     setLoadingVoices(true);
     try {
-      const response = await fetch(`/api/voice/tts?engine=${engine}`);
+      const response = await authFetch(`/api/voice/tts?engine=${engine}`);
       const data = await response.json() as TTSVoicesResponse;
       if (data.success && data.voices) {
         const voices = data.voices;
@@ -423,12 +425,12 @@ export default function VoiceAITrainingLabPage() {
     } finally {
       setLoadingVoices(false);
     }
-  }, []);
+  }, [authFetch]);
 
   // Load TTS config on mount
   useEffect(() => {
     void loadTTSConfig();
-  }, []);
+  }, [loadTTSConfig]);
 
   // Load voices when engine changes
   useEffect(() => {
@@ -453,7 +455,7 @@ export default function VoiceAITrainingLabPage() {
     setValidatingKey(true);
     setApiKeyValid(null);
     try {
-      const response = await fetch('/api/voice/tts', {
+      const response = await authFetch('/api/voice/tts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -476,7 +478,7 @@ export default function VoiceAITrainingLabPage() {
     setTestingVoice(true);
     try {
       const testText = voiceSettings.greetingScript ?? 'Hello, this is a test of your selected voice engine. The quality sounds great!';
-      const response = await fetch('/api/voice/tts', {
+      const response = await authFetch('/api/voice/tts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -507,7 +509,7 @@ export default function VoiceAITrainingLabPage() {
 
   const handleSaveTTSConfig = async () => {
     try {
-      const response = await fetch('/api/voice/tts', {
+      const response = await authFetch('/api/voice/tts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

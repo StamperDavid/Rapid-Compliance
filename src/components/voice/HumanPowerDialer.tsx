@@ -8,6 +8,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { logger } from '@/lib/logger/logger';
 
 // Types
@@ -83,6 +84,7 @@ export default function HumanPowerDialer({
   className,
 }: PowerDialerProps) {
   const { user } = useAuth();
+  const authFetch = useAuthFetch();
 
   // State
   const [isActive, setIsActive] = useState(false);
@@ -113,7 +115,7 @@ export default function HumanPowerDialer({
 
   const loadVoicemailDrops = useCallback(async () => {
     try {
-      const response = await fetch('/api/voice/voicemail-drops');
+      const response = await authFetch('/api/voice/voicemail-drops');
       if (response.ok) {
         const data = await response.json() as { drops?: Array<{ id: string; name: string; url: string }> };
         setVoicemailDrops(data.drops ?? []);
@@ -121,7 +123,7 @@ export default function HumanPowerDialer({
     } catch (error) {
       logger.error('Failed to load voicemail drops:', error instanceof Error ? error : new Error(String(error)), { file: 'HumanPowerDialer.tsx' });
     }
-  }, []);
+  }, [authFetch]);
 
   const dialNext = useCallback(async () => {
     if (isPaused || currentIndex >= contacts.length) {
@@ -135,7 +137,7 @@ export default function HumanPowerDialer({
     setCurrentIndex(prev => prev + 1);
 
     try {
-      const response = await fetch('/api/voice/dial', {
+      const response = await authFetch('/api/voice/dial', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -181,7 +183,7 @@ export default function HumanPowerDialer({
     } catch (error) {
       logger.error('Dial error:', error instanceof Error ? error : new Error(String(error)), { file: 'HumanPowerDialer.tsx' });
     }
-  }, [isPaused, currentIndex, contacts, activeCalls.length, config.maxConcurrentCalls, config.localPresence, config.voicemailDetection, config.abandonTimeout, user?.id]);
+  }, [isPaused, currentIndex, contacts, activeCalls.length, config.maxConcurrentCalls, config.localPresence, config.voicemailDetection, config.abandonTimeout, user?.id, authFetch]);
 
   // Load voicemail drops
   useEffect(() => {
@@ -230,7 +232,7 @@ export default function HumanPowerDialer({
 
   const endCall = useCallback(async (callId: string) => {
     try {
-      await fetch(`/api/voice/calls/${callId}/end`, {
+      await authFetch(`/api/voice/calls/${callId}/end`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({}),
@@ -259,7 +261,7 @@ export default function HumanPowerDialer({
     } catch (error) {
       logger.error('End call error:', error instanceof Error ? error : new Error(String(error)), { file: 'HumanPowerDialer.tsx' });
     }
-  }, [activeCalls, selectedCall?.id, config.autoAdvance, config.dialDelay, isActive, isPaused, dialNext]);
+  }, [activeCalls, selectedCall?.id, config.autoAdvance, config.dialDelay, isActive, isPaused, dialNext, authFetch]);
 
   const stopDialer = useCallback(() => {
     setIsActive(false);
@@ -284,7 +286,7 @@ export default function HumanPowerDialer({
 
   const _answerCall = async (_callId: string) => {
     try {
-      await fetch(`/api/voice/calls/${_callId}/answer`, {
+      await authFetch(`/api/voice/calls/${_callId}/answer`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({}),
@@ -304,7 +306,7 @@ export default function HumanPowerDialer({
 
   const holdCall = async (callId: string, hold: boolean) => {
     try {
-      await fetch(`/api/voice/calls/${callId}/hold`, {
+      await authFetch(`/api/voice/calls/${callId}/hold`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ hold }),
@@ -324,7 +326,7 @@ export default function HumanPowerDialer({
 
   const muteCall = async (callId: string, muted: boolean) => {
     try {
-      await fetch(`/api/voice/calls/${callId}/mute`, {
+      await authFetch(`/api/voice/calls/${callId}/mute`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ muted }),
@@ -347,7 +349,7 @@ export default function HumanPowerDialer({
     }
 
     try {
-      await fetch(`/api/voice/calls/${callId}/transfer`, {
+      await authFetch(`/api/voice/calls/${callId}/transfer`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -375,7 +377,7 @@ export default function HumanPowerDialer({
     }
 
     try {
-      await fetch(`/api/voice/calls/${callId}/voicemail-drop`, {
+      await authFetch(`/api/voice/calls/${callId}/voicemail-drop`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -397,7 +399,7 @@ export default function HumanPowerDialer({
     }
 
     try {
-      await fetch('/api/voice/disposition', {
+      await authFetch('/api/voice/disposition', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

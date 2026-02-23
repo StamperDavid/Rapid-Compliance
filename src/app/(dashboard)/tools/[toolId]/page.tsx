@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import AppWrapper from '@/components/custom-tools/AppWrapper';
 import type { CustomTool } from '@/types/custom-tools';
 import { logger } from '@/lib/logger/logger';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 
 /**
  * Dynamic Tool Page
@@ -16,6 +17,7 @@ import { logger } from '@/lib/logger/logger';
 export default function CustomToolPage() {
   const params = useParams();
   const router = useRouter();
+  const authFetch = useAuthFetch();
   const toolId = params.toolId as string;
 
   const [tool, setTool] = useState<CustomTool | null>(null);
@@ -25,7 +27,7 @@ export default function CustomToolPage() {
   useEffect(() => {
     const fetchTool = async () => {
       try {
-        const response = await fetch(`/api/custom-tools?id=${toolId}`);
+        const response = await authFetch(`/api/custom-tools?id=${toolId}`);
 
         if (!response.ok) {
           if (response.status === 404) {
@@ -60,7 +62,7 @@ export default function CustomToolPage() {
     };
 
     void fetchTool();
-  }, [toolId]);
+  }, [toolId, authFetch]);
 
   // Loading State
   if (loading) {

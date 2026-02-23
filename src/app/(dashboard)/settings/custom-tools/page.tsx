@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth, usePermission } from '@/hooks/useAuth';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 import {
   validateToolUrl,
   COMMON_EMOJI_ICONS,
@@ -268,6 +269,7 @@ export default function CustomToolsSettingsPage() {
   const _user = useAuth().user;
   const { theme } = useOrgTheme();
   const canManageOrganization = usePermission('canManageOrganization');
+  const authFetch = useAuthFetch();
 
   const [tools, setTools] = useState<CustomTool[]>([]);
   const [loading, setLoading] = useState(true);
@@ -281,7 +283,7 @@ export default function CustomToolsSettingsPage() {
   useEffect(() => {
     const fetchTools = async () => {
       try {
-        const response = await fetch(`/api/custom-tools`);
+        const response = await authFetch(`/api/custom-tools`);
         if (response.ok) {
           const data = (await response.json()) as ToolsListResponse;
           setTools(data.tools ?? []);
@@ -294,7 +296,7 @@ export default function CustomToolsSettingsPage() {
     };
 
     void fetchTools();
-  }, []);
+  }, [authFetch]);
 
   const handleAddTool = () => {
     setEditingTool(null);
@@ -312,7 +314,7 @@ export default function CustomToolsSettingsPage() {
       ? { ...formData, id: editingTool.id }
       : { ...formData, order: tools.length };
 
-    const response = await fetch(`/api/custom-tools`, {
+    const response = await authFetch(`/api/custom-tools`, {
       method,
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
@@ -333,7 +335,7 @@ export default function CustomToolsSettingsPage() {
 
   const handleDeleteTool = async (toolId: string) => {
     try {
-      const response = await fetch(`/api/custom-tools`, {
+      const response = await authFetch(`/api/custom-tools`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: toolId }),
@@ -350,7 +352,7 @@ export default function CustomToolsSettingsPage() {
 
   const handleToggleEnabled = async (tool: CustomTool) => {
     try {
-      const response = await fetch(`/api/custom-tools`, {
+      const response = await authFetch(`/api/custom-tools`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

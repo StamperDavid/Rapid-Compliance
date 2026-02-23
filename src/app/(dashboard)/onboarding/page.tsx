@@ -3,6 +3,7 @@
 import React, { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth'
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { logger } from '@/lib/logger/logger';
 import type { PrefillResult, FieldConfidence } from '@/lib/onboarding/types';
 import {
@@ -113,6 +114,7 @@ function TextAreaField({ label, field, placeholder, rows = 4, helper, required, 
 export default function OnboardingWizard() {
   const router = useRouter();
   const { user: _user } = useAuth();
+  const authFetch = useAuthFetch();
   const toast = useToast();
   
   const [currentStep, setCurrentStep] = useState(1);
@@ -339,7 +341,7 @@ export default function OnboardingWizard() {
 
     setIsPrefilling(true);
     try {
-      const response = await fetch('/api/onboarding/prefill', {
+      const response = await authFetch('/api/onboarding/prefill', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
