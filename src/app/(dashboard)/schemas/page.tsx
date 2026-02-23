@@ -6,6 +6,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { STANDARD_SCHEMAS } from '@/lib/schema/standard-schemas';
 import { useConfirm } from '@/hooks/useConfirm';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 
 interface Field {
   id: string;
@@ -60,6 +61,7 @@ const FIELD_TYPES = [
 
 export default function SchemaBuilderPage() {
   const confirmDialog = useConfirm();
+  const authFetch = useAuthFetch();
 
   // Convert STANDARD_SCHEMAS to the format we need
   const standardSchemasArray: Schema[] = useMemo(() => Object.values(STANDARD_SCHEMAS).map(schema => ({
@@ -98,7 +100,7 @@ export default function SchemaBuilderPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch('/api/schemas');
+      const res = await authFetch('/api/schemas');
       if (!res.ok) {
         throw new Error(`Failed to load schemas (${res.status})`);
       }
@@ -116,7 +118,7 @@ export default function SchemaBuilderPage() {
     } finally {
       setLoading(false);
     }
-  }, [standardSchemasArray]);
+  }, [standardSchemasArray, authFetch]);
 
   useEffect(() => {
     void loadSchemas();
@@ -129,7 +131,7 @@ export default function SchemaBuilderPage() {
     setError(null);
 
     try {
-      const res = await fetch('/api/schemas', {
+      const res = await authFetch('/api/schemas', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -204,7 +206,7 @@ export default function SchemaBuilderPage() {
     setSaving(true);
     setError(null);
     try {
-      const res = await fetch(`/api/schemas/${id}`, {
+      const res = await authFetch(`/api/schemas/${id}`, {
         method: 'DELETE'
       });
       if (!res.ok) {
@@ -225,7 +227,7 @@ export default function SchemaBuilderPage() {
     setSaving(true);
     setError(null);
     try {
-      const res = await fetch(`/api/schemas/${editingSchema.id}/update`, {
+      const res = await authFetch(`/api/schemas/${editingSchema.id}/update`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

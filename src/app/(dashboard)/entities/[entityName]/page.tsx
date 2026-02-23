@@ -7,6 +7,7 @@ import { useRecords } from '@/hooks/useRecords';
 import { STANDARD_SCHEMAS, PICKLIST_VALUES } from '@/lib/schema/standard-schemas'
 import { logger } from '@/lib/logger/logger';
 import LookupFieldPicker from '@/components/LookupFieldPicker';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 
 // Proper type for dynamic record data
 type RecordValue = string | number | boolean | null;
@@ -43,6 +44,7 @@ interface SchemaResponse {
 export default function EntityTablePage() {
   const params = useParams();
   const entityName = params.entityName as string;
+  const authFetch = useAuthFetch();
 
   const {
     records,
@@ -63,7 +65,7 @@ export default function EntityTablePage() {
     let isMounted = true;
     void (async () => {
       try {
-        const res = await fetch('/api/schemas');
+        const res = await authFetch('/api/schemas');
         if (!res.ok) {throw new Error(`Failed to load schemas (${res.status})`);}
         const data = await res.json() as SchemaResponse;
         if (isMounted) {
@@ -76,7 +78,7 @@ export default function EntityTablePage() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [authFetch]);
 
   // Get schema dynamically based on entity name
   const schema = useMemo((): ApiSchema | null => {
