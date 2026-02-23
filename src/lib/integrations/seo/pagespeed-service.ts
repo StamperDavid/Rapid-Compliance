@@ -11,6 +11,8 @@ import type {
   CoreWebVitals,
   CacheEntry,
 } from './types';
+import { apiKeyService } from '@/lib/api-keys/api-key-service';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 // ============================================================================
 // TYPES — Raw Lighthouse JSON shapes (subset)
@@ -66,7 +68,8 @@ class PageSpeedService {
     }
 
     // 2 — build URL
-    const apiKey = process.env.GOOGLE_PAGESPEED_API_KEY;
+    const apiKeyRaw = await apiKeyService.getServiceKey(PLATFORM_ID, 'pagespeed');
+    const apiKey = typeof apiKeyRaw === 'string' ? apiKeyRaw : null;
     const base = 'https://www.googleapis.com/pagespeedonline/v5/runPagespeed';
     const params = new URLSearchParams({
       url,

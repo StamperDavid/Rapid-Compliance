@@ -151,6 +151,13 @@ export interface APIKeysConfig {
     rapidApiKey?: string; // For LinkedIn and other APIs
     serperApiKey?: string; // Serper.dev Google Search API
   };
+
+  // SEO Data APIs
+  seo?: {
+    pagespeedApiKey?: string; // Google PageSpeed Insights (optional, raises quota)
+    dataforseoLogin?: string; // DataForSEO API login email
+    dataforseoPassword?: string; // DataForSEO API password
+  };
   
   // Social Media Integrations
   social?: {
@@ -282,6 +289,8 @@ export type APIServiceName =
   | 'runway'       // Runway Gen-3 Video Generation
   | 'elevenlabs'   // ElevenLabs Voice AI
   | 'unrealSpeech' // Unreal Speech TTS
-  | 'serper';      // Serper.dev Google Search API
+  | 'serper'        // Serper.dev Google Search API
+  | 'pagespeed'     // Google PageSpeed Insights
+  | 'dataforseo';   // DataForSEO (keyword data, SERP, domain metrics)
 
 

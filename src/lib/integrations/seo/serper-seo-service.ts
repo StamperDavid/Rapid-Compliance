@@ -1,7 +1,8 @@
 /**
  * Serper SEO Service
  *
- * Uses the existing SERPER_API_KEY env var to provide:
+ * Reads the Serper API key from apiKeyService (enrichment.serperApiKey).
+ * Provides:
  * - Full SERP results (organic, PAA, related searches, knowledge graph)
  * - Keyword position checking for a target domain
  */
@@ -11,6 +12,8 @@ import type {
   SerperSEOResult,
   CacheEntry,
 } from './types';
+import { apiKeyService } from '@/lib/api-keys/api-key-service';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 // ============================================================================
 // RAW API RESPONSE SHAPES
@@ -58,12 +61,13 @@ class SerperSEOService {
     query: string,
     options: { num?: number; gl?: string; hl?: string } = {}
   ): Promise<SEOServiceResult<SerperSEOResult>> {
-    const apiKey = process.env.SERPER_API_KEY;
+    const apiKeyRaw = await apiKeyService.getServiceKey(PLATFORM_ID, 'serper');
+    const apiKey = typeof apiKeyRaw === 'string' ? apiKeyRaw : null;
     if (!apiKey) {
       return {
         success: false,
         data: null,
-        error: 'SERPER_API_KEY not configured',
+        error: 'Serper API key not configured — add it on the API Keys page',
         source: 'serper',
         cached: false,
       };

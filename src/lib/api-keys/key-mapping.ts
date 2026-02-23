@@ -53,6 +53,11 @@ export const UI_TO_CONFIG_MAP: Record<string, string> = {
   // Voice
   elevenlabs: 'voice.elevenlabs.apiKey',
   unreal_speech: 'voice.unrealSpeech.apiKey',
+
+  // SEO
+  pagespeed: 'seo.pagespeedApiKey',
+  dataforseo_login: 'seo.dataforseoLogin',
+  dataforseo_password: 'seo.dataforseoPassword',
 };
 
 /**

@@ -204,6 +204,12 @@ return keys.ai?.anthropicApiKey ?? keys.ai?.openrouterApiKey ?? null;
       case 'builtwith':
         return keys.enrichment?.builtWithApiKey ?? null;
 
+      // SEO Services
+      case 'pagespeed':
+        return keys.seo?.pagespeedApiKey ?? null;
+      case 'dataforseo':
+        return keys.seo ? { login: keys.seo.dataforseoLogin, password: keys.seo.dataforseoPassword } : null;
+
       default:
         return null;
     }

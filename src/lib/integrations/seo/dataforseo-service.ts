@@ -1,7 +1,7 @@
 /**
  * DataForSEO Service
  *
- * HTTP Basic Auth with DATAFORSEO_LOGIN + DATAFORSEO_PASSWORD.
+ * Reads credentials from apiKeyService (seo.dataforseoLogin / seo.dataforseoPassword).
  * Provides keyword data, SERP results, domain metrics, and on-page analysis.
  *
  * Cache TTLs:
@@ -19,6 +19,8 @@ import type {
   DataForSEOOnPageResult,
   CacheEntry,
 } from './types';
+import { apiKeyService } from '@/lib/api-keys/api-key-service';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 // ============================================================================
 // RAW API RESPONSE SHAPES (relevant subsets)
@@ -108,9 +110,13 @@ class DataForSEOService {
   // Auth header
   // -----------------------------------------------------------
 
-  private getAuthHeader(): string | null {
-    const login = process.env.DATAFORSEO_LOGIN;
-    const password = process.env.DATAFORSEO_PASSWORD;
+  private async getAuthHeader(): Promise<string | null> {
+    const raw = await apiKeyService.getServiceKey(PLATFORM_ID, 'dataforseo');
+    if (!raw || typeof raw !== 'object') {
+      return null;
+    }
+    const login = typeof raw.login === 'string' ? raw.login : null;
+    const password = typeof raw.password === 'string' ? raw.password : null;
     if (!login || !password) {
       return null;
     }
@@ -121,7 +127,7 @@ class DataForSEOService {
     return {
       success: false,
       data: null,
-      error: 'DATAFORSEO_LOGIN / DATAFORSEO_PASSWORD not configured',
+      error: 'DataForSEO not configured — add login/password on the API Keys page',
       source: 'dataforseo',
       cached: false,
     };
@@ -137,7 +143,7 @@ class DataForSEOService {
     ttl: number,
     cacheKey: string
   ): Promise<SEOServiceResult<T>> {
-    const auth = this.getAuthHeader();
+    const auth = await this.getAuthHeader();
     if (!auth) {
       return this.notConfigured<T>();
     }
