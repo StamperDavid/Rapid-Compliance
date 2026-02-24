@@ -84,6 +84,15 @@ export interface DataForSEODomainMetrics {
   domainRank: number;
 }
 
+export interface DataForSEORankedKeyword {
+  keyword: string;
+  position: number;
+  url: string;
+  searchVolume: number;
+  traffic: number;
+  cpc: number;
+}
+
 export interface DataForSEOOnPageResult {
   url: string;
   title: string | null;

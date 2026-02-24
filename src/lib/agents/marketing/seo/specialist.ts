@@ -13,6 +13,7 @@
  * - Internal linking recommendations
  * - Structured data validation
  * - Competitor SERP analysis
+ * - Domain traffic & authority analysis
  */
 
 import { BaseSpecialist } from '../../base-specialist';
@@ -67,10 +68,11 @@ const CONFIG: SpecialistConfig = {
       'serp_analysis',
       'structured_data',
       'internal_linking',
+      'domain_analysis',
     ],
   },
   systemPrompt: SYSTEM_PROMPT,
-  tools: ['analyze_page', 'research_keywords', 'audit_meta', 'suggest_improvements'],
+  tools: ['analyze_page', 'research_keywords', 'audit_meta', 'suggest_improvements', 'analyze_domain'],
   outputSchema: {
     type: 'object',
     properties: {
@@ -144,6 +146,13 @@ interface ThirtyDayStrategyPayload {
   businessGoals: string[];
 }
 
+interface DomainAnalysisPayload {
+  action: 'domain_analysis';
+  domain: string;
+  includeKeywords?: boolean;
+  keywordLimit?: number;
+}
+
 type SEOPayload =
   | KeywordResearchPayload
   | PageAuditPayload
@@ -151,7 +160,8 @@ type SEOPayload =
   | ContentOptimizationPayload
   | CrawlAnalysisPayload
   | KeywordGapPayload
-  | ThirtyDayStrategyPayload;
+  | ThirtyDayStrategyPayload
+  | DomainAnalysisPayload;
 
 interface KeywordResult {
   keyword: string;
@@ -294,6 +304,29 @@ interface ThirtyDayStrategy {
   };
 }
 
+interface DomainAnalysisResult {
+  domain: string;
+  analysisDate: string;
+  metrics: {
+    organicTraffic: number;
+    organicKeywords: number;
+    backlinks: number;
+    referringDomains: number;
+    domainRank: number;
+  };
+  topKeywords: Array<{
+    keyword: string;
+    position: number;
+    url: string;
+    searchVolume: number;
+    estimatedTraffic: number;
+  }>;
+  trafficSources: {
+    topPages: Array<{ url: string; keywords: number; traffic: number }>;
+    summary: string;
+  };
+}
+
 // ============================================================================
 // IMPLEMENTATION
 // ============================================================================
@@ -352,6 +385,10 @@ export class SEOExpert extends BaseSpecialist {
 
         case '30_day_strategy':
           result = this.handleThirtyDayStrategy(payload);
+          break;
+
+        case 'domain_analysis':
+          result = await this.handleDomainAnalysis(payload);
           break;
 
         default:
@@ -712,6 +749,100 @@ export class SEOExpert extends BaseSpecialist {
       keywordPlacements,
       structureRecommendations,
       score: Math.min(100, score),
+    };
+  }
+
+  // ==========================================================================
+  // DOMAIN ANALYSIS ENGINE
+  // ==========================================================================
+
+  /**
+   * Comprehensive domain analysis: traffic, authority, top keywords, and traffic sources.
+   * Calls DataForSEO domain_rank + ranked_keywords endpoints concurrently.
+   */
+  private async handleDomainAnalysis(payload: DomainAnalysisPayload): Promise<DomainAnalysisResult> {
+    const { domain, includeKeywords = true, keywordLimit = 20 } = payload;
+    const cleanDomain = domain.replace(/^https?:\/\//, '').replace(/\/+$/, '');
+
+    this.log('INFO', `Running domain analysis for ${cleanDomain}`);
+
+    const dataForSEO = getDataForSEOService();
+
+    // Run domain metrics + ranked keywords concurrently
+    const [metricsResult, keywordsResult] = await Promise.all([
+      dataForSEO.getDomainMetrics(cleanDomain),
+      includeKeywords
+        ? dataForSEO.getRankedKeywords(cleanDomain, keywordLimit)
+        : Promise.resolve(null),
+    ]);
+
+    // Build metrics (fallback to zeros if API not configured)
+    const metrics = metricsResult.success && metricsResult.data
+      ? {
+          organicTraffic: metricsResult.data.organicTraffic,
+          organicKeywords: metricsResult.data.organicKeywords,
+          backlinks: metricsResult.data.backlinks,
+          referringDomains: metricsResult.data.referringDomains,
+          domainRank: metricsResult.data.domainRank,
+        }
+      : {
+          organicTraffic: 0,
+          organicKeywords: 0,
+          backlinks: 0,
+          referringDomains: 0,
+          domainRank: 0,
+        };
+
+    // Build top keywords list
+    const topKeywords = keywordsResult && keywordsResult.success && keywordsResult.data
+      ? keywordsResult.data.map(kw => ({
+          keyword: kw.keyword,
+          position: kw.position,
+          url: kw.url,
+          searchVolume: kw.searchVolume,
+          estimatedTraffic: kw.traffic,
+        }))
+      : [];
+
+    // Aggregate keywords by page to determine top pages
+    const pageMap = new Map<string, { url: string; keywords: number; traffic: number }>();
+    for (const kw of topKeywords) {
+      const existing = pageMap.get(kw.url);
+      if (existing) {
+        existing.keywords += 1;
+        existing.traffic += kw.estimatedTraffic;
+      } else {
+        pageMap.set(kw.url, { url: kw.url, keywords: 1, traffic: kw.estimatedTraffic });
+      }
+    }
+    const topPages = Array.from(pageMap.values())
+      .sort((a, b) => b.traffic - a.traffic)
+      .slice(0, 10);
+
+    // Generate summary
+    const topKeywordStr = topKeywords.length > 0
+      ? topKeywords.slice(0, 3).map(k => `"${k.keyword}" (#${k.position})`).join(', ')
+      : 'No keyword data available';
+
+    const configWarning = !metricsResult.success
+      ? ' (Note: Configure DataForSEO API keys for real data)'
+      : '';
+
+    const summary = `${cleanDomain} receives an estimated ${metrics.organicTraffic.toLocaleString()} organic visits/month ` +
+      `from ${metrics.organicKeywords.toLocaleString()} ranking keywords. ` +
+      `Domain rank: ${metrics.domainRank}/100. ` +
+      `Top traffic drivers: ${topKeywordStr}. ` +
+      `The site has ${metrics.backlinks.toLocaleString()} backlinks from ${metrics.referringDomains.toLocaleString()} referring domains.${configWarning}`;
+
+    return {
+      domain: cleanDomain,
+      analysisDate: new Date().toISOString(),
+      metrics,
+      topKeywords,
+      trafficSources: {
+        topPages,
+        summary,
+      },
     };
   }
 

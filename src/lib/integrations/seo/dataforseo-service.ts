@@ -16,6 +16,7 @@ import type {
   DataForSEOKeywordData,
   DataForSEOSerpResult,
   DataForSEODomainMetrics,
+  DataForSEORankedKeyword,
   DataForSEOOnPageResult,
   CacheEntry,
 } from './types';
@@ -65,6 +66,21 @@ interface DFSDomainItem {
   backlinks: number;
   referring_domains: number;
   rank: number;
+}
+
+interface DFSRankedKeywordItem {
+  keyword_data: {
+    keyword: string;
+    search_volume: number;
+    cpc: number;
+  };
+  ranked_serp_element: {
+    serp_item: {
+      url: string;
+      rank_absolute: number;
+    };
+    etv: number;
+  };
 }
 
 interface DFSOnPageItem {
@@ -330,6 +346,41 @@ class DataForSEOService {
       referringDomains: first.referring_domains ?? 0,
       domainRank: first.rank ?? 0,
     };
+
+    return { success: true, data: mapped, error: null, source: result.source, cached: result.cached };
+  }
+
+  // -----------------------------------------------------------
+  // Public — ranked keywords (top traffic-driving keywords)
+  // -----------------------------------------------------------
+
+  async getRankedKeywords(
+    domain: string,
+    limit: number = 20
+  ): Promise<SEOServiceResult<DataForSEORankedKeyword[]>> {
+    const cacheKey = `ranked|${domain}|${limit}`;
+
+    const result = await this.post<DFSRankedKeywordItem[]>(
+      'dataforseo_labs/google/ranked_keywords/live',
+      [{ target: domain, limit, order_by: ['ranked_serp_element.etv,desc'] }],
+      TTL_DOMAIN,
+      cacheKey
+    );
+
+    if (!result.success || !result.data) {
+      return { success: false, data: null, error: result.error, source: result.source, cached: result.cached };
+    }
+
+    const items = result.data as unknown as DFSRankedKeywordItem[];
+
+    const mapped: DataForSEORankedKeyword[] = items.map(item => ({
+      keyword: item.keyword_data?.keyword ?? '',
+      position: item.ranked_serp_element?.serp_item?.rank_absolute ?? 0,
+      url: item.ranked_serp_element?.serp_item?.url ?? '',
+      searchVolume: item.keyword_data?.search_volume ?? 0,
+      traffic: item.ranked_serp_element?.etv ?? 0,
+      cpc: item.keyword_data?.cpc ?? 0,
+    }));
 
     return { success: true, data: mapped, error: null, source: result.source, cached: result.cached };
   }
