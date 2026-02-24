@@ -1333,6 +1333,333 @@ export const JASPER_TOOLS: ToolDefinition[] = [
       },
     },
   },
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // CONTENT DEPARTMENT TOOLS (Sprint 19)
+  // ═══════════════════════════════════════════════════════════════════════════
+  {
+    type: 'function',
+    function: {
+      name: 'delegate_to_content',
+      description:
+        'Delegate a content creation request to the Content Department. The Content Manager will coordinate Copywriter (Brand DNA + SEO-injected copy), Calendar Coordinator (scheduling + cross-platform sync), and Video Specialist (scripts, storyboards, thumbnails). ENABLED: TRUE.',
+      parameters: {
+        type: 'object',
+        properties: {
+          contentType: {
+            type: 'string',
+            description: 'Type of content to produce',
+            enum: ['blog_post', 'social_media', 'email_campaign', 'video_script', 'landing_page_copy', 'ad_creative', 'newsletter', 'case_study'],
+          },
+          topic: {
+            type: 'string',
+            description: 'The topic or subject matter for the content (e.g., "AI-powered sales automation trends 2026")',
+          },
+          brandDnaContext: {
+            type: 'string',
+            description: 'Optional: Brand DNA context to inject (tone, voice, values). If not provided, pulls from stored Brand DNA profile.',
+          },
+          seoKeywords: {
+            type: 'string',
+            description: 'Optional: Comma-separated SEO keywords to weave into the content (e.g., "AI sales, automation, lead generation")',
+          },
+          audience: {
+            type: 'string',
+            description: 'Target audience for the content (e.g., "B2B SaaS founders", "small business owners")',
+          },
+          format: {
+            type: 'string',
+            description: 'Optional: Desired output format or length',
+            enum: ['short', 'medium', 'long', 'series'],
+          },
+          includeVideo: {
+            type: 'boolean',
+            description: 'Whether to include video script/storyboard generation. Default: false',
+          },
+          scheduleDate: {
+            type: 'string',
+            description: 'Optional: ISO date string for when to schedule publication',
+          },
+        },
+        required: ['topic'],
+      },
+    },
+  },
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // ARCHITECT STRATEGY TOOLS (Sprint 19)
+  // ═══════════════════════════════════════════════════════════════════════════
+  {
+    type: 'function',
+    function: {
+      name: 'delegate_to_architect',
+      description:
+        'Delegate a site architecture or strategic design request to the Architect Department. The Architect Manager will coordinate UX/UI Specialist (design specs, wireframes), Funnel Pathologist (conversion funnel architecture), and Copy Specialist (headline/CTA frameworks). Returns SiteArchitecture + TechnicalBrief documents. ENABLED: TRUE.',
+      parameters: {
+        type: 'object',
+        properties: {
+          siteType: {
+            type: 'string',
+            description: 'Type of website/application to architect',
+            enum: ['landing_page', 'full_website', 'ecommerce_store', 'saas_app', 'portfolio', 'course_platform', 'membership_site'],
+          },
+          industry: {
+            type: 'string',
+            description: 'Business industry or niche (e.g., "fitness coaching", "real estate", "B2B SaaS")',
+          },
+          audience: {
+            type: 'string',
+            description: 'Target audience description (e.g., "busy professionals 30-50", "Gen Z fitness enthusiasts")',
+          },
+          funnelGoals: {
+            type: 'string',
+            description: 'Primary conversion goals (e.g., "lead capture → email nurture → demo booking → close")',
+          },
+          existingSiteUrl: {
+            type: 'string',
+            description: 'Optional: URL of an existing site to analyze and improve upon',
+          },
+          competitorUrls: {
+            type: 'string',
+            description: 'Optional: Comma-separated competitor URLs for competitive analysis',
+          },
+          brandGuidelines: {
+            type: 'string',
+            description: 'Optional: Brand guidelines or style preferences (colors, fonts, tone)',
+          },
+        },
+        required: ['industry'],
+      },
+    },
+  },
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // OUTREACH DEPARTMENT TOOLS (Sprint 19)
+  // ═══════════════════════════════════════════════════════════════════════════
+  {
+    type: 'function',
+    function: {
+      name: 'delegate_to_outreach',
+      description:
+        'Delegate a multi-channel outreach campaign to the Outreach Department. The Outreach Manager will coordinate Email Specialist and SMS Specialist with DNC compliance, frequency throttling, and sentiment-aware routing. Supports multi-step sequences with channel escalation (EMAIL → SMS → VOICE). ENABLED: TRUE.',
+      parameters: {
+        type: 'object',
+        properties: {
+          sequenceType: {
+            type: 'string',
+            description: 'Type of outreach sequence to run',
+            enum: ['cold_outreach', 'warm_followup', 'nurture_drip', 're_engagement', 'event_invitation', 'onboarding'],
+          },
+          channel: {
+            type: 'string',
+            description: 'Preferred communication channel (Outreach Manager may escalate if needed)',
+            enum: ['email', 'sms', 'multi_channel', 'auto'],
+          },
+          leadList: {
+            type: 'string',
+            description: 'JSON-encoded array of lead objects with at minimum name and email/phone, or a lead list ID from the CRM',
+          },
+          message: {
+            type: 'string',
+            description: 'The core message or value proposition to communicate',
+          },
+          steps: {
+            type: 'number',
+            description: 'Number of steps in the sequence (default: 3)',
+          },
+          delayBetweenSteps: {
+            type: 'string',
+            description: 'Delay between sequence steps (e.g., "2d", "1w", "3d")',
+          },
+          complianceNotes: {
+            type: 'string',
+            description: 'Optional: Specific compliance requirements (e.g., "GDPR", "CAN-SPAM", "TCPA")',
+          },
+        },
+        required: ['message'],
+      },
+    },
+  },
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // INTELLIGENCE DEPARTMENT TOOLS (Sprint 19)
+  // ═══════════════════════════════════════════════════════════════════════════
+  {
+    type: 'function',
+    function: {
+      name: 'delegate_to_intelligence',
+      description:
+        'Delegate a research or intelligence-gathering request to the Intelligence Department. The Intelligence Manager coordinates Scraper Specialist, Competitor Researcher, Technographic Scout, Sentiment Analyst, and Trend Scout for comprehensive intelligence briefs. ENABLED: TRUE.',
+      parameters: {
+        type: 'object',
+        properties: {
+          researchType: {
+            type: 'string',
+            description: 'Type of intelligence research to conduct',
+            enum: ['competitor_analysis', 'market_research', 'tech_landscape', 'sentiment_analysis', 'trend_discovery', 'comprehensive'],
+          },
+          targets: {
+            type: 'string',
+            description: 'Research targets — company names, URLs, keywords, or topics (comma-separated for multiple)',
+          },
+          industry: {
+            type: 'string',
+            description: 'Industry context for the research (e.g., "AI SaaS", "fitness", "real estate")',
+          },
+          depth: {
+            type: 'string',
+            description: 'Research depth — affects how many sources are analyzed',
+            enum: ['quick', 'standard', 'deep'],
+          },
+          focusAreas: {
+            type: 'string',
+            description: 'Optional: Specific areas to focus on (e.g., "pricing strategy, feature gaps, market positioning")',
+          },
+          timeframe: {
+            type: 'string',
+            description: 'Optional: Time window for trend/sentiment analysis (e.g., "last 30 days", "Q1 2026", "YTD")',
+          },
+        },
+        required: ['researchType', 'targets'],
+      },
+    },
+  },
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // COMMERCE DEPARTMENT TOOLS (Sprint 19)
+  // ═══════════════════════════════════════════════════════════════════════════
+  {
+    type: 'function',
+    function: {
+      name: 'delegate_to_commerce',
+      description:
+        'Delegate a commerce or e-commerce action to the Commerce Department. The Commerce Manager coordinates Payment Specialist, Catalog Manager, Pricing Strategist, and Inventory Manager for end-to-end transactional operations. ENABLED: TRUE.',
+      parameters: {
+        type: 'object',
+        properties: {
+          actionType: {
+            type: 'string',
+            description: 'Type of commerce action to perform',
+            enum: ['checkout_optimization', 'catalog_update', 'price_change', 'inventory_check', 'revenue_analysis', 'promotion_setup', 'product_launch'],
+          },
+          productData: {
+            type: 'string',
+            description: 'JSON-encoded product data (name, SKU, category, pricing, inventory levels)',
+          },
+          priceData: {
+            type: 'string',
+            description: 'JSON-encoded pricing data (amount, currency, discount, tiers)',
+          },
+          promotionData: {
+            type: 'string',
+            description: 'JSON-encoded promotion details (coupon code, discount %, start/end dates)',
+          },
+          analysisScope: {
+            type: 'string',
+            description: 'Scope for revenue analysis (e.g., "last 30 days", "by product category", "top performers")',
+          },
+        },
+        required: ['actionType'],
+      },
+    },
+  },
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // BLOG DRAFT BRIDGE (Sprint 19)
+  // ═══════════════════════════════════════════════════════════════════════════
+  {
+    type: 'function',
+    function: {
+      name: 'save_blog_draft',
+      description:
+        'Save generated content as a blog post draft in the website blog system. Returns the draft ID and a link to the blog editor for review. Use this after generating content to bridge the gap between AI-generated content and the blog publishing pipeline. ENABLED: TRUE.',
+      parameters: {
+        type: 'object',
+        properties: {
+          title: {
+            type: 'string',
+            description: 'Blog post title',
+          },
+          content: {
+            type: 'string',
+            description: 'Blog post content in markdown format. Will be converted to the internal PageSection format.',
+          },
+          excerpt: {
+            type: 'string',
+            description: 'Short excerpt/summary for the blog post (1-2 sentences)',
+          },
+          categories: {
+            type: 'string',
+            description: 'Comma-separated categories (e.g., "AI, Marketing, Trends")',
+          },
+          tags: {
+            type: 'string',
+            description: 'Comma-separated tags (e.g., "automation, sales, 2026-trends")',
+          },
+          seoTitle: {
+            type: 'string',
+            description: 'Optional: Custom SEO title (defaults to post title)',
+          },
+          seoDescription: {
+            type: 'string',
+            description: 'Optional: Meta description for SEO (defaults to excerpt)',
+          },
+          seoKeywords: {
+            type: 'string',
+            description: 'Optional: Comma-separated SEO keywords',
+          },
+          featuredImage: {
+            type: 'string',
+            description: 'Optional: URL of the featured image',
+          },
+          authorName: {
+            type: 'string',
+            description: 'Optional: Author name (defaults to "Jasper AI")',
+          },
+        },
+        required: ['title', 'content'],
+      },
+    },
+  },
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // TRENDING TOPICS RESEARCH (Sprint 19)
+  // ═══════════════════════════════════════════════════════════════════════════
+  {
+    type: 'function',
+    function: {
+      name: 'research_trending_topics',
+      description:
+        'Research trending topics in a given industry or keyword space using Serper and DataForSEO APIs. Returns top trending themes with search volume, growth rate, and relevance scoring. Use this to discover content opportunities and stay ahead of market trends. ENABLED: TRUE.',
+      parameters: {
+        type: 'object',
+        properties: {
+          industry: {
+            type: 'string',
+            description: 'Industry or niche to research trends for (e.g., "AI SaaS", "fitness", "real estate technology")',
+          },
+          keywords: {
+            type: 'string',
+            description: 'Seed keywords to research (comma-separated). Used to find related trending topics.',
+          },
+          maxResults: {
+            type: 'number',
+            description: 'Maximum number of trending topics to return (default: 10)',
+          },
+          timeframe: {
+            type: 'string',
+            description: 'Time window for trend analysis',
+            enum: ['last_7_days', 'last_30_days', 'last_90_days', 'last_year'],
+          },
+          includeSearchVolume: {
+            type: 'boolean',
+            description: 'Include search volume data from DataForSEO (may use API credits). Default: true',
+          },
+        },
+        required: ['keywords'],
+      },
+    },
+  },
 ];
 
 // ============================================================================
@@ -2556,6 +2883,487 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
           errors: trustResult.errors,
           manager: 'REPUTATION_MANAGER',
         });
+        break;
+      }
+
+      // ═══════════════════════════════════════════════════════════════════════
+      // CONTENT DEPARTMENT EXECUTION (Sprint 19)
+      // ═══════════════════════════════════════════════════════════════════════
+      case 'delegate_to_content': {
+        const contentStart = Date.now();
+        trackMissionStep(context, 'delegate_to_content', 'RUNNING');
+
+        const { ContentManager } = await import('@/lib/agents/content/manager');
+        const contentMgr = new ContentManager();
+        await contentMgr.initialize();
+
+        const contentPayload = {
+          contentType: args.contentType as string | undefined,
+          topic: args.topic as string,
+          brandDnaContext: args.brandDnaContext as string | undefined,
+          seoKeywords: args.seoKeywords
+            ? (args.seoKeywords as string).split(',').map((k: string) => k.trim())
+            : undefined,
+          audience: args.audience as string | undefined,
+          format: args.format as string | undefined,
+          includeVideo: args.includeVideo === true,
+          scheduleDate: args.scheduleDate as string | undefined,
+        };
+
+        const contentResult = await contentMgr.execute({
+          id: `content_${Date.now()}`,
+          timestamp: new Date(),
+          from: 'JASPER',
+          to: 'CONTENT_MANAGER',
+          type: 'COMMAND',
+          priority: 'NORMAL',
+          payload: contentPayload,
+          requiresResponse: true,
+          traceId: `trace_${Date.now()}`,
+        });
+
+        const contentDuration = Date.now() - contentStart;
+        trackMissionStep(context, 'delegate_to_content',
+          contentResult.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED',
+          { summary: `Content: ${contentResult.status}`, durationMs: contentDuration }
+        );
+
+        content = JSON.stringify({
+          status: contentResult.status,
+          data: contentResult.data,
+          errors: contentResult.errors,
+          manager: 'CONTENT_MANAGER',
+          delegatedTo: contentResult.data && typeof contentResult.data === 'object' && 'delegations' in contentResult.data
+            ? (contentResult.data as Record<string, unknown>).delegations
+            : 'See data for details',
+        });
+        break;
+      }
+
+      // ═══════════════════════════════════════════════════════════════════════
+      // ARCHITECT STRATEGY EXECUTION (Sprint 19)
+      // ═══════════════════════════════════════════════════════════════════════
+      case 'delegate_to_architect': {
+        const architectStart = Date.now();
+        trackMissionStep(context, 'delegate_to_architect', 'RUNNING');
+
+        const { ArchitectManager } = await import('@/lib/agents/architect/manager');
+        const architectMgr = new ArchitectManager();
+        await architectMgr.initialize();
+
+        const architectPayload = {
+          siteType: args.siteType as string | undefined,
+          industry: args.industry as string,
+          audience: args.audience as string | undefined,
+          funnelGoals: args.funnelGoals as string | undefined,
+          existingSiteUrl: args.existingSiteUrl as string | undefined,
+          competitorUrls: args.competitorUrls
+            ? (args.competitorUrls as string).split(',').map((u: string) => u.trim())
+            : undefined,
+          brandGuidelines: args.brandGuidelines as string | undefined,
+        };
+
+        const architectResult = await architectMgr.execute({
+          id: `architect_${Date.now()}`,
+          timestamp: new Date(),
+          from: 'JASPER',
+          to: 'ARCHITECT_MANAGER',
+          type: 'COMMAND',
+          priority: 'NORMAL',
+          payload: architectPayload,
+          requiresResponse: true,
+          traceId: `trace_${Date.now()}`,
+        });
+
+        const architectDuration = Date.now() - architectStart;
+        trackMissionStep(context, 'delegate_to_architect',
+          architectResult.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED',
+          { summary: `Architect: ${architectResult.status}`, durationMs: architectDuration }
+        );
+
+        content = JSON.stringify({
+          status: architectResult.status,
+          data: architectResult.data,
+          errors: architectResult.errors,
+          manager: 'ARCHITECT_MANAGER',
+          delegatedTo: architectResult.data && typeof architectResult.data === 'object' && 'delegations' in architectResult.data
+            ? (architectResult.data as Record<string, unknown>).delegations
+            : 'See data for details',
+        });
+        break;
+      }
+
+      // ═══════════════════════════════════════════════════════════════════════
+      // OUTREACH DEPARTMENT EXECUTION (Sprint 19)
+      // ═══════════════════════════════════════════════════════════════════════
+      case 'delegate_to_outreach': {
+        const outreachStart = Date.now();
+        trackMissionStep(context, 'delegate_to_outreach', 'RUNNING');
+
+        const { OutreachManager } = await import('@/lib/agents/outreach/manager');
+        const outreachMgr = new OutreachManager();
+        await outreachMgr.initialize();
+
+        let parsedLeadList: Record<string, unknown>[] | undefined;
+        if (args.leadList) {
+          try {
+            parsedLeadList = JSON.parse(args.leadList as string) as Record<string, unknown>[];
+          } catch {
+            parsedLeadList = undefined;
+          }
+        }
+
+        const outreachPayload = {
+          sequenceType: args.sequenceType as string | undefined,
+          channel: args.channel as string | undefined,
+          leadList: parsedLeadList,
+          message: args.message as string,
+          steps: args.steps as number | undefined,
+          delayBetweenSteps: args.delayBetweenSteps as string | undefined,
+          complianceNotes: args.complianceNotes as string | undefined,
+        };
+
+        const outreachResult = await outreachMgr.execute({
+          id: `outreach_${Date.now()}`,
+          timestamp: new Date(),
+          from: 'JASPER',
+          to: 'OUTREACH_MANAGER',
+          type: 'COMMAND',
+          priority: 'NORMAL',
+          payload: outreachPayload,
+          requiresResponse: true,
+          traceId: `trace_${Date.now()}`,
+        });
+
+        const outreachDuration = Date.now() - outreachStart;
+        trackMissionStep(context, 'delegate_to_outreach',
+          outreachResult.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED',
+          { summary: `Outreach: ${outreachResult.status}`, durationMs: outreachDuration }
+        );
+
+        content = JSON.stringify({
+          status: outreachResult.status,
+          data: outreachResult.data,
+          errors: outreachResult.errors,
+          manager: 'OUTREACH_MANAGER',
+          delegatedTo: outreachResult.data && typeof outreachResult.data === 'object' && 'delegations' in outreachResult.data
+            ? (outreachResult.data as Record<string, unknown>).delegations
+            : 'See data for details',
+        });
+        break;
+      }
+
+      // ═══════════════════════════════════════════════════════════════════════
+      // INTELLIGENCE DEPARTMENT EXECUTION (Sprint 19)
+      // ═══════════════════════════════════════════════════════════════════════
+      case 'delegate_to_intelligence': {
+        const intelStart = Date.now();
+        trackMissionStep(context, 'delegate_to_intelligence', 'RUNNING');
+
+        const { IntelligenceManager } = await import('@/lib/agents/intelligence/manager');
+        const intelMgr = new IntelligenceManager();
+        await intelMgr.initialize();
+
+        const intelPayload = {
+          researchType: args.researchType as string,
+          targets: args.targets
+            ? (args.targets as string).split(',').map((t: string) => t.trim())
+            : [],
+          industry: args.industry as string | undefined,
+          depth: args.depth as string | undefined,
+          focusAreas: args.focusAreas
+            ? (args.focusAreas as string).split(',').map((f: string) => f.trim())
+            : undefined,
+          timeframe: args.timeframe as string | undefined,
+        };
+
+        const intelResult = await intelMgr.execute({
+          id: `intelligence_${Date.now()}`,
+          timestamp: new Date(),
+          from: 'JASPER',
+          to: 'INTELLIGENCE_MANAGER',
+          type: 'COMMAND',
+          priority: 'NORMAL',
+          payload: intelPayload,
+          requiresResponse: true,
+          traceId: `trace_${Date.now()}`,
+        });
+
+        const intelDuration = Date.now() - intelStart;
+        trackMissionStep(context, 'delegate_to_intelligence',
+          intelResult.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED',
+          { summary: `Intelligence: ${intelResult.status}`, durationMs: intelDuration }
+        );
+
+        content = JSON.stringify({
+          status: intelResult.status,
+          data: intelResult.data,
+          errors: intelResult.errors,
+          manager: 'INTELLIGENCE_MANAGER',
+          delegatedTo: intelResult.data && typeof intelResult.data === 'object' && 'delegations' in intelResult.data
+            ? (intelResult.data as Record<string, unknown>).delegations
+            : 'See data for details',
+        });
+        break;
+      }
+
+      // ═══════════════════════════════════════════════════════════════════════
+      // COMMERCE DEPARTMENT EXECUTION (Sprint 19)
+      // ═══════════════════════════════════════════════════════════════════════
+      case 'delegate_to_commerce': {
+        const commerceStart = Date.now();
+        trackMissionStep(context, 'delegate_to_commerce', 'RUNNING');
+
+        const { CommerceManager } = await import('@/lib/agents/commerce/manager');
+        const commerceMgr = new CommerceManager();
+        await commerceMgr.initialize();
+
+        let parsedProductData: Record<string, unknown> | undefined;
+        let parsedPriceData: Record<string, unknown> | undefined;
+        let parsedPromotionData: Record<string, unknown> | undefined;
+
+        if (args.productData) {
+          try { parsedProductData = JSON.parse(args.productData as string) as Record<string, unknown>; }
+          catch { parsedProductData = undefined; }
+        }
+        if (args.priceData) {
+          try { parsedPriceData = JSON.parse(args.priceData as string) as Record<string, unknown>; }
+          catch { parsedPriceData = undefined; }
+        }
+        if (args.promotionData) {
+          try { parsedPromotionData = JSON.parse(args.promotionData as string) as Record<string, unknown>; }
+          catch { parsedPromotionData = undefined; }
+        }
+
+        const commercePayload = {
+          actionType: args.actionType as string,
+          productData: parsedProductData,
+          priceData: parsedPriceData,
+          promotionData: parsedPromotionData,
+          analysisScope: args.analysisScope as string | undefined,
+        };
+
+        const commerceResult = await commerceMgr.execute({
+          id: `commerce_${Date.now()}`,
+          timestamp: new Date(),
+          from: 'JASPER',
+          to: 'COMMERCE_MANAGER',
+          type: 'COMMAND',
+          priority: 'NORMAL',
+          payload: commercePayload,
+          requiresResponse: true,
+          traceId: `trace_${Date.now()}`,
+        });
+
+        const commerceDuration = Date.now() - commerceStart;
+        trackMissionStep(context, 'delegate_to_commerce',
+          commerceResult.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED',
+          { summary: `Commerce: ${commerceResult.status}`, durationMs: commerceDuration }
+        );
+
+        content = JSON.stringify({
+          status: commerceResult.status,
+          data: commerceResult.data,
+          errors: commerceResult.errors,
+          manager: 'COMMERCE_MANAGER',
+          delegatedTo: commerceResult.data && typeof commerceResult.data === 'object' && 'delegations' in commerceResult.data
+            ? (commerceResult.data as Record<string, unknown>).delegations
+            : 'See data for details',
+        });
+        break;
+      }
+
+      // ═══════════════════════════════════════════════════════════════════════
+      // BLOG DRAFT BRIDGE EXECUTION (Sprint 19)
+      // ═══════════════════════════════════════════════════════════════════════
+      case 'save_blog_draft': {
+        const blogStart = Date.now();
+        trackMissionStep(context, 'save_blog_draft', 'RUNNING');
+
+        try {
+          const { getSubCollection } = await import('@/lib/firebase/collections');
+          const { adminDal } = await import('@/lib/firebase/admin-dal');
+
+          if (!adminDal) {
+            throw new Error('Firestore admin DAL not available');
+          }
+
+          const postId = `post_${Date.now()}`;
+          const now = new Date().toISOString();
+          const slug = (args.title as string)
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-|-$/g, '');
+
+          // Convert markdown content to a single rich-text PageSection
+          const contentSections = [
+            {
+              id: `section_${Date.now()}`,
+              type: 'rich-text',
+              content: {
+                markdown: args.content as string,
+              },
+              order: 0,
+            },
+          ];
+
+          const categories = args.categories
+            ? (args.categories as string).split(',').map((c: string) => c.trim())
+            : [];
+          const tags = args.tags
+            ? (args.tags as string).split(',').map((t: string) => t.trim())
+            : [];
+          const seoKeywords = args.seoKeywords
+            ? (args.seoKeywords as string).split(',').map((k: string) => k.trim())
+            : [];
+
+          const blogPost = {
+            id: postId,
+            slug,
+            title: args.title as string,
+            excerpt: (args.excerpt as string) || '',
+            content: contentSections,
+            featuredImage: (args.featuredImage as string) || '',
+            categories,
+            tags,
+            author: 'jasper-ai',
+            authorName: (args.authorName as string) || 'Jasper AI',
+            authorAvatar: '',
+            seo: {
+              title: (args.seoTitle as string) || (args.title as string),
+              description: (args.seoDescription as string) || (args.excerpt as string) || '',
+              keywords: seoKeywords,
+            },
+            status: 'draft' as const,
+            featured: false,
+            readTime: Math.ceil(((args.content as string).split(/\s+/).length) / 200),
+            createdAt: now,
+            updatedAt: now,
+          };
+
+          const postsCollection = adminDal.getNestedCollection(
+            `${getSubCollection('website')}/config/blog-posts`
+          );
+          await postsCollection.doc(postId).set(blogPost);
+
+          const blogDuration = Date.now() - blogStart;
+          trackMissionStep(context, 'save_blog_draft', 'COMPLETED', {
+            summary: `Blog draft saved: ${postId}`,
+            durationMs: blogDuration,
+          });
+
+          content = JSON.stringify({
+            status: 'SAVED',
+            draftId: postId,
+            slug,
+            title: args.title,
+            readTime: blogPost.readTime,
+            editorLink: `/website/blog/posts/${postId}`,
+            message: `Blog draft "${args.title}" saved successfully. Edit it at /website/blog/posts/${postId}`,
+          });
+        } catch (blogError: unknown) {
+          const blogDuration = Date.now() - blogStart;
+          const blogErrorMsg = blogError instanceof Error ? blogError.message : 'Unknown error';
+          trackMissionStep(context, 'save_blog_draft', 'FAILED', {
+            error: blogErrorMsg,
+            durationMs: blogDuration,
+          });
+          content = JSON.stringify({ error: blogErrorMsg });
+        }
+        break;
+      }
+
+      // ═══════════════════════════════════════════════════════════════════════
+      // TRENDING TOPICS RESEARCH EXECUTION (Sprint 19)
+      // ═══════════════════════════════════════════════════════════════════════
+      case 'research_trending_topics': {
+        const trendStart = Date.now();
+        trackMissionStep(context, 'research_trending_topics', 'RUNNING');
+
+        try {
+          const { getSerperSEOService } = await import('@/lib/integrations/seo/serper-seo-service');
+          const { getDataForSEOService } = await import('@/lib/integrations/seo/dataforseo-service');
+
+          const keywords = (args.keywords as string).split(',').map((k: string) => k.trim());
+          const maxResults = (args.maxResults as number) || 10;
+          const includeVolume = args.includeSearchVolume !== false;
+
+          const serperService = getSerperSEOService();
+          const trendingTopics: Array<{
+            keyword: string;
+            relatedQueries: string[];
+            searchVolume?: number;
+            competition?: string;
+            topResults: Array<{ title: string; link: string; snippet: string }>;
+          }> = [];
+
+          // Query Serper for each seed keyword to find related trending topics
+          for (const keyword of keywords.slice(0, 5)) {
+            const serpResult = await serperService.searchSERP(keyword);
+            if (serpResult.success && serpResult.data) {
+              const topicEntry: {
+                keyword: string;
+                relatedQueries: string[];
+                searchVolume?: number;
+                competition?: string;
+                topResults: Array<{ title: string; link: string; snippet: string }>;
+              } = {
+                keyword,
+                relatedQueries: serpResult.data.relatedSearches || [],
+                topResults: (serpResult.data.organic || []).slice(0, 3).map((item) => ({
+                  title: item.title,
+                  link: item.link,
+                  snippet: item.snippet,
+                })),
+              };
+
+              // Enrich with search volume from DataForSEO if requested
+              if (includeVolume) {
+                try {
+                  const dfService = getDataForSEOService();
+                  const kwData = await dfService.getKeywordData([keyword]);
+                  if (kwData.success && kwData.data && kwData.data.length > 0) {
+                    topicEntry.searchVolume = kwData.data[0].searchVolume;
+                    topicEntry.competition = kwData.data[0].competitionLevel;
+                  }
+                } catch {
+                  // DataForSEO enrichment is optional — continue without it
+                }
+              }
+
+              trendingTopics.push(topicEntry);
+            }
+          }
+
+          // Collect all related queries as additional trending suggestions
+          const allRelated = trendingTopics
+            .flatMap((t) => t.relatedQueries)
+            .filter((q, i, arr) => arr.indexOf(q) === i)
+            .slice(0, maxResults);
+
+          const trendDuration = Date.now() - trendStart;
+          trackMissionStep(context, 'research_trending_topics', 'COMPLETED', {
+            summary: `Found ${trendingTopics.length} seed topics, ${allRelated.length} related trends`,
+            durationMs: trendDuration,
+          });
+
+          content = JSON.stringify({
+            status: 'COMPLETED',
+            seedTopics: trendingTopics,
+            relatedTrending: allRelated,
+            totalResultsFound: trendingTopics.length + allRelated.length,
+            timeframe: (args.timeframe as string | undefined) ?? 'current',
+            message: `Researched ${keywords.length} seed keyword(s). Found ${trendingTopics.length} topic clusters with ${allRelated.length} related trending queries.`,
+          });
+        } catch (trendError: unknown) {
+          const trendDuration = Date.now() - trendStart;
+          const trendErrorMsg = trendError instanceof Error ? trendError.message : 'Unknown error';
+          trackMissionStep(context, 'research_trending_topics', 'FAILED', {
+            error: trendErrorMsg,
+            durationMs: trendDuration,
+          });
+          content = JSON.stringify({ error: trendErrorMsg });
+        }
         break;
       }
 
