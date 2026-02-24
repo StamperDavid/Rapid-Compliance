@@ -132,8 +132,7 @@ export async function executeAIAgentAction(
 
   // Store result in trigger data for subsequent actions
   if (storeResult) {
-    // Mutating triggerData is intentional for workflow context sharing
-    // eslint-disable-next-line require-atomic-updates
+    // eslint-disable-next-line require-atomic-updates -- Sequential workflow execution, no concurrent access
     triggerData[resultField] = result;
   }
 

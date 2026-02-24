@@ -166,8 +166,7 @@ export async function enrichCompanyByDomain(
 
     if (!response.ok) {
       const errorText = await response.text();
-      // eslint-disable-next-line no-template-curly-in-string -- Template string placeholder in logger message
-      logger.error('[Clearbit] API error (${response.status}):', new Error(`[Clearbit] API error (${response.status}): ${errorText}`), { file: 'clearbit-service.ts' });
+      logger.error(`[Clearbit] API error (${response.status}):`, new Error(`[Clearbit] API error (${response.status}): ${errorText}`), { file: 'clearbit-service.ts' });
       return null;
     }
 

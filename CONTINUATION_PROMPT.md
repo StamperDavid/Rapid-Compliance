@@ -55,8 +55,7 @@ Last Session: February 24, 2026 (Session 38 — Sprint 23: Mission Control Live 
 |-------|----------|---------|
 | Facebook/Instagram missing | BLOCKED | Requires Meta Developer Portal approval |
 | LinkedIn unofficial | BLOCKED | Uses RapidAPI, requires Marketing Developer Platform approval |
-| 23 eslint-disable comments | LOW | Budget 23/26 — 2 are `no-implied-eval` (sandboxed with input sanitization) |
-| Token claim validation | LOW | `api-auth.ts` lacks strict runtime type guards on decoded claims |
+| 16 eslint-disable comments | LOW | Budget 16/26 — 2 are `no-implied-eval` (sandboxed), rest are legitimate suppressions |
 
 ---
 

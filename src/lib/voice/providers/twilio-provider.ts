@@ -171,17 +171,10 @@ export class TwilioProvider implements VoiceProvider {
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/require-await -- Method must be async for VoiceProvider interface compliance
-  async muteCall(_callId: string, _muted: boolean): Promise<void> {
-    try {
-      // Twilio requires conference for muting; for direct calls we'd need to update the media stream
-      // This is a simplified implementation
-      logger.warn('[Twilio] Mute requires conference context', { file: 'twilio-provider.ts' });
-    } catch (error: unknown) {
-      logger.error('[Twilio] Mute error:', this.toError(error), { file: 'twilio-provider.ts' });
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      throw new Error(`Failed to mute call: ${errorMessage}`);
-    }
+  muteCall(_callId: string, _muted: boolean): Promise<void> {
+    // Twilio requires conference for muting; for direct calls we'd need to update the media stream
+    logger.warn('[Twilio] Mute requires conference context', { file: 'twilio-provider.ts' });
+    return Promise.resolve();
   }
 
   async holdCall(callId: string, hold: boolean): Promise<void> {

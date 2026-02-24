@@ -41,13 +41,12 @@ export async function processSequences(): Promise<{
           }
         }
       } catch (error) {
-        // eslint-disable-next-line no-template-curly-in-string -- Template string placeholder in logger message
-        logger.error('[Sequence Scheduler] Error processing enrollment ${enrollment.id}:', error instanceof Error ? error : undefined, { file: 'sequence-scheduler.ts' });
+        logger.error(`[Sequence Scheduler] Error processing enrollment ${enrollment.id}:`, error instanceof Error ? error : undefined, { file: 'sequence-scheduler.ts' });
         errors++;
       }
     }
 
-    logger.info('Sequence Scheduler Completed. Processed: processed}, Errors: errors}', { file: 'sequence-scheduler.ts' });
+    logger.info(`[Sequence Scheduler] Completed. Processed: ${processed}, Errors: ${errors}`, { file: 'sequence-scheduler.ts' });
 
     return { processed, errors };
   } catch (error) {

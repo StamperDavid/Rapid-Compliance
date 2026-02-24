@@ -245,8 +245,8 @@ export async function sendEmail(
       }
     );
     
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-    const messageId = String(response.headers['x-message-id'] ?? '');
+    const headers = response.headers as Record<string, string>;
+    const messageId = String(headers['x-message-id'] ?? '');
     const sentAt = new Date();
     
     // Save delivery record

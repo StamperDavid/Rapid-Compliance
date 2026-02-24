@@ -1234,8 +1234,8 @@ const res = await authFetch('/api/some-endpoint');
 | MAJOR | 4 webhook endpoints fail open when verification keys missing | `src/app/api/webhooks/{email,gmail,sms,voice}` | **RESOLVED (Sprint 22)** — All 4 webhooks now fail closed with 503 |
 | MAJOR | Feature toggle GET endpoint is unauthenticated | `src/app/api/orchestrator/feature-toggle/route.ts` | **FALSE POSITIVE** — Already has requireAuth() on both GET and POST |
 | MAJOR | Workflow engine has no execution timeout or recursion prevention | `src/lib/workflows/workflow-engine.ts` | **RESOLVED (Sprint 22)** — 60s global timeout + depth limit of 15 |
-| LOW | Token claim extraction lacks strict validation | `api-auth.ts` | Add runtime type guards |
-| LOW | Manual organization check in agent routes | `/api/agent/chat` | Create decorator pattern |
+| LOW | Token claim extraction lacks strict validation | `api-auth.ts` | **RESOLVED** — `isValidRole()` type guard, strict claim extraction, no bare casts |
+| LOW | Manual organization check in agent routes | `/api/agent/chat` | **FALSE POSITIVE** — Already uses standard `requireAuth()` pattern |
 
 ### API Route Protection Summary
 

@@ -87,8 +87,7 @@ export async function searchOrganization(
     );
 
     if (!searchResponse.ok) {
-      // eslint-disable-next-line no-template-curly-in-string -- Template string placeholder in logger message
-      logger.error('[Crunchbase] Search failed: ${searchResponse.status}', new Error('[Crunchbase] Search failed: ${searchResponse.status}'), { file: 'crunchbase-service.ts' });
+      logger.error(`[Crunchbase] Search failed: ${searchResponse.status}`, new Error(`[Crunchbase] Search failed: ${searchResponse.status}`), { file: 'crunchbase-service.ts' });
       return null;
     }
 
@@ -142,8 +141,7 @@ export async function getOrganizationByPermalink(
     );
 
     if (!response.ok) {
-      // eslint-disable-next-line no-template-curly-in-string -- Template string placeholder in logger message
-      logger.error('[Crunchbase] Get organization failed: ${response.status}', new Error('[Crunchbase] Get organization failed: ${response.status}'), { file: 'crunchbase-service.ts' });
+      logger.error(`[Crunchbase] Get organization failed: ${response.status}`, new Error(`[Crunchbase] Get organization failed: ${response.status}`), { file: 'crunchbase-service.ts' });
       return null;
     }
 

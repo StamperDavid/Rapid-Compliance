@@ -19,6 +19,12 @@ interface UserProfileData {
   role?: string;
 }
 
+const VALID_ROLES: readonly string[] = ['owner', 'admin', 'manager', 'member'];
+
+function isValidRole(value: unknown): value is AccountRole {
+  return typeof value === 'string' && VALID_ROLES.includes(value);
+}
+
 async function initializeAdminAuth(): Promise<Auth | null> {
   // Return cached instance if already initialized
   if (adminAuth) {
@@ -145,9 +151,9 @@ async function verifyAuthToken(request: NextRequest): Promise<AuthenticatedUser 
     const decodedToken = await auth.verifyIdToken(token);
     logger.debug('[API Auth] Token verified', { file: 'api-auth.ts', email: decodedToken.email });
 
-    // Extract role from custom claims
-    const customClaims = decodedToken as Record<string, unknown>;
-    const roleFromClaims = typeof customClaims.role === 'string' ? customClaims.role : undefined;
+    // Extract role from custom claims with strict validation
+    const claims: Record<string, unknown> = { role: undefined, ...decodedToken };
+    const roleFromClaims = isValidRole(claims.role) ? claims.role : undefined;
 
     logger.debug('[API Auth] Token claims', {
       file: 'api-auth.ts',
@@ -155,7 +161,7 @@ async function verifyAuthToken(request: NextRequest): Promise<AuthenticatedUser 
     });
 
     // First try to get role from token claims (set via Firebase Auth custom claims)
-    let role = roleFromClaims;
+    let role: AccountRole | undefined = roleFromClaims;
 
     // If no role in claims, try to fetch from Firestore
     if (!role) {
@@ -166,7 +172,8 @@ async function verifyAuthToken(request: NextRequest): Promise<AuthenticatedUser 
           const userDoc = await adminDb.collection('users').doc(decodedToken.uid).get();
           if (userDoc.exists) {
             const userProfile = userDoc.data() as UserProfileData | undefined;
-            role = userProfile?.role;
+            const firestoreRole = userProfile?.role;
+            role = isValidRole(firestoreRole) ? firestoreRole : undefined;
             logger.debug('[API Auth] User profile loaded via Admin SDK', {
               file: 'api-auth.ts',
               uid: decodedToken.uid,
@@ -182,7 +189,8 @@ async function verifyAuthToken(request: NextRequest): Promise<AuthenticatedUser 
           const userProfile = await FirestoreService.get('users', decodedToken.uid);
           if (userProfile) {
             const profileData = userProfile as UserProfileData;
-            role = profileData.role;
+            const clientRole = profileData.role;
+            role = isValidRole(clientRole) ? clientRole : undefined;
             logger.debug('[API Auth] User profile loaded via client SDK', { file: 'api-auth.ts', role });
           }
         } catch (clientError: unknown) {
@@ -196,9 +204,9 @@ async function verifyAuthToken(request: NextRequest): Promise<AuthenticatedUser 
 
     return {
       uid: decodedToken.uid,
-      email: decodedToken.email ?? null,
-      emailVerified: decodedToken.email_verified ?? false,
-      role: role as AccountRole | undefined,
+      email: typeof decodedToken.email === 'string' ? decodedToken.email : null,
+      emailVerified: decodedToken.email_verified === true,
+      role,
     };
   } catch (error: unknown) {
     logger.error('Token verification failed:', error instanceof Error ? error : new Error(String(error)), { file: 'api-auth.ts' });

@@ -72,7 +72,7 @@ async function getApiKey(): Promise<string> {
       throw new Error('Gemini API key not configured. Please add it in organization settings or admin settings.');
     }
 
-    // Update cache - intentional race condition acceptable for caching
+    // Update cache — race condition is acceptable for idempotent caching
     /* eslint-disable require-atomic-updates */
     cachedGenAI = new GoogleGenerativeAI(apiKey);
     cachedOrgId = PLATFORM_ID;

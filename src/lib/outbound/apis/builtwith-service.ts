@@ -51,8 +51,7 @@ export async function getTechStack(
     );
 
     if (!response.ok) {
-      // eslint-disable-next-line no-template-curly-in-string -- Template string placeholder in logger message
-      logger.error('[BuiltWith] API error: ${response.status}', new Error('[BuiltWith] API error: ${response.status}'), { file: 'builtwith-service.ts' });
+      logger.error(`[BuiltWith] API error: ${response.status}`, new Error(`[BuiltWith] API error: ${response.status}`), { file: 'builtwith-service.ts' });
       return await getFallbackTechStack(domain);
     }
 
