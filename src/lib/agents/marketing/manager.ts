@@ -1321,6 +1321,12 @@ export class MarketingManager extends BaseManager {
         briefDescription = `Domain analysis for ${extractedDomain}`;
         this.log('INFO', `Routing to domain_analysis for ${extractedDomain}`);
       } else {
+        // Log why domain analysis was NOT triggered
+        if (isDomainAnalysis && !extractedDomain) {
+          this.log('WARN', `Domain analysis keywords detected but no domain could be extracted from: "${text.slice(0, 120)}"`);
+        } else if (!isDomainAnalysis && extractedDomain) {
+          this.log('INFO', `Domain "${extractedDomain}" found but no analysis keywords detected — using keyword research`);
+        }
         // Default keyword research mode
         seoPayload = {
           action: 'keyword_research',
@@ -1347,8 +1353,17 @@ export class MarketingManager extends BaseManager {
 
       const executionTimeMs = Date.now() - startTime;
 
+      this.log('INFO', `SEO_EXPERT returned status=${report.status} for ${briefDescription} (${executionTimeMs}ms)`);
+
       if (report.status === 'COMPLETED' && report.data) {
         if (isDomainAnalysis) {
+          const analysisData = report.data as { summary?: string };
+
+          // Surface configuration warnings so Jasper doesn't improvise
+          if (analysisData.summary?.includes('[ACTION REQUIRED]') || analysisData.summary?.includes('[ERROR]')) {
+            this.log('WARN', `Domain analysis returned with warning: ${analysisData.summary}`);
+          }
+
           // Domain analysis completed — return the full result directly
           delegations.push({
             specialist: 'SEO_EXPERT',
@@ -1360,13 +1375,18 @@ export class MarketingManager extends BaseManager {
 
           specialistOutputs.seo = report.data;
 
+          // Build content recommendation — include warning if present
+          const recommendation = analysisData.summary?.includes('[ACTION REQUIRED]')
+            ? analysisData.summary
+            : `Full domain analysis completed for ${extractedDomain}`;
+
           // Return minimal keyword guidance since the primary output is the domain report
           return {
             primaryKeywords: [],
             secondaryKeywords: [],
             longTailKeywords: [],
             searchIntent: 'informational',
-            contentRecommendations: [`Full domain analysis completed for ${extractedDomain}`],
+            contentRecommendations: [recommendation],
             keywordDensityTarget: 0,
           };
         }
@@ -1396,11 +1416,14 @@ export class MarketingManager extends BaseManager {
         return guidance;
       }
 
+      const failReason = report.errors?.join('; ') ?? 'Unknown error';
+      this.log('WARN', `SEO_EXPERT ${report.status} for "${briefDescription}": ${failReason}`);
+
       delegations.push({
         specialist: 'SEO_EXPERT',
         brief: briefDescription,
         status: report.status === 'BLOCKED' ? 'BLOCKED' : 'FAILED',
-        result: report.errors?.join('; ') ?? 'Unknown error',
+        result: failReason,
         executionTimeMs,
       });
 
@@ -1413,14 +1436,16 @@ export class MarketingManager extends BaseManager {
 
   /**
    * Extract a domain name from user message text.
-   * Looks for patterns like example.com, www.example.com, https://example.com
+   * Handles: example.com, www.example.com, https://example.com,
+   * blog.example.com, sub.domain.co.uk
    */
   private extractDomainFromMessage(text: string): string | null {
-    // Match URLs or bare domains: https://example.com, www.example.com, example.com
-    const domainRegex = /(?:https?:\/\/)?(?:www\.)?([a-z0-9][-a-z0-9]*(?:\.[a-z0-9][-a-z0-9]*)+)/i;
+    // Match URLs or bare domains, capturing the full domain after optional protocol/www
+    const domainRegex = /(?:https?:\/\/)?(?:www\.)?((?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,})/i;
     const match = text.match(domainRegex);
     if (match) {
-      return match[1] ?? match[0].replace(/^(?:https?:\/\/)?(?:www\.)?/, '');
+      // match[1] captures the full domain: "blog.example.com", "example.co.uk", etc.
+      return match[1] ?? null;
     }
     return null;
   }

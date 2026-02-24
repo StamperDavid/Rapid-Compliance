@@ -416,7 +416,14 @@ export class SEOExpert extends BaseSpecialist {
           break;
 
         case 'domain_analysis':
-          result = await this.handleDomainAnalysis(payload);
+          try {
+            result = await this.handleDomainAnalysis(payload);
+          } catch (domainError) {
+            const domainMsg = domainError instanceof Error ? domainError.message : String(domainError);
+            const failedDomain = 'domain' in payload ? String(payload.domain) : 'unknown';
+            this.log('ERROR', `Domain analysis failed for ${failedDomain}: ${domainMsg}`);
+            return this.createReport(taskId, 'FAILED', null, [`Domain analysis error: ${domainMsg}`]);
+          }
           break;
 
         default:
@@ -798,20 +805,57 @@ export class SEOExpert extends BaseSpecialist {
    */
   private async handleDomainAnalysis(payload: DomainAnalysisPayload): Promise<DomainAnalysisResult> {
     const { domain, keywordLimit = 20 } = payload;
+
+    // --- Validate domain parameter ---
+    if (!domain || domain.trim() === '') {
+      this.log('ERROR', 'domain_analysis called with empty or missing domain');
+      return {
+        domain: '',
+        analysisDate: new Date().toISOString(),
+        metrics: { organicTraffic: 0, organicKeywords: 0, domainRank: 0 },
+        backlinkProfile: { totalBacklinks: 0, totalReferringDomains: 0, dofollow: 0, nofollow: 0, anchorLinks: 0, imageLinks: 0, redirectLinks: 0, brokenBacklinks: 0, referringIPs: 0, referringSubnets: 0 },
+        referringDomains: [],
+        topKeywords: [],
+        topPages: [],
+        competitors: [],
+        summary: '[ERROR] No domain provided. Please include a domain name (e.g., "example.com") in your request.',
+      };
+    }
+
     const cleanDomain = domain.replace(/^https?:\/\//, '').replace(/\/+$/, '');
 
     this.log('INFO', `Running comprehensive domain analysis for ${cleanDomain}`);
 
     const seo = getDataForSEOService();
 
-    // Fire all 5 API calls concurrently
-    const [metricsRes, keywordsRes, backlinkSumRes, referringRes, competitorsRes] = await Promise.all([
-      seo.getDomainMetrics(cleanDomain),
+    // --- Pre-flight credential check ---
+    // Run one lightweight call to detect missing credentials early
+    const preflight = await seo.getDomainMetrics(cleanDomain);
+    if (!preflight.success && preflight.error?.includes('not configured')) {
+      this.log('WARN', `DataForSEO credentials not configured — domain analysis for ${cleanDomain} will return empty data`);
+      return {
+        domain: cleanDomain,
+        analysisDate: new Date().toISOString(),
+        metrics: { organicTraffic: 0, organicKeywords: 0, domainRank: 0 },
+        backlinkProfile: { totalBacklinks: 0, totalReferringDomains: 0, dofollow: 0, nofollow: 0, anchorLinks: 0, imageLinks: 0, redirectLinks: 0, brokenBacklinks: 0, referringIPs: 0, referringSubnets: 0 },
+        referringDomains: [],
+        topKeywords: [],
+        topPages: [],
+        competitors: [],
+        summary: `[ACTION REQUIRED] DataForSEO API keys are not configured. Go to Settings → API Keys and add your DataForSEO login and password to enable domain analysis for ${cleanDomain}.`,
+      };
+    }
+
+    // Fire remaining 4 API calls concurrently (metrics already fetched above)
+    const [keywordsRes, backlinkSumRes, referringRes, competitorsRes] = await Promise.all([
       seo.getRankedKeywords(cleanDomain, keywordLimit),
       seo.getBacklinksSummary(cleanDomain),
       seo.getReferringDomains(cleanDomain, 20),
       seo.getCompetitors(cleanDomain, 10),
     ]);
+
+    // Reuse the preflight result as metricsRes
+    const metricsRes = preflight;
 
     // --- Metrics ---
     const m = metricsRes.success && metricsRes.data ? metricsRes.data : null;
