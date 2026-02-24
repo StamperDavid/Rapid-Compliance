@@ -1,7 +1,7 @@
 # SalesVelocity.ai - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** February 23, 2026 (Session 37: Jasper delegation audit, Mission Control feature planning, CONTINUATION_PROMPT + SSOT cleanup)
+**Last Updated:** February 24, 2026 (Sprint 18: Jasper Mission Control — live delegation tracker, 3-panel UI, mission persistence, tool instrumentation, sidebar nav)
 **Branches:** `dev` (latest)
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Architecture:** Single-Tenant (Penthouse Model) - NOT a SaaS platform
@@ -36,11 +36,11 @@
 
 | Metric | Count | Status |
 |--------|-------|--------|
-| Physical Routes (page.tsx) | 174 | Verified February 23, 2026 (Session 36: +/website/seo/competitors) |
-| API Endpoints (route.ts) | 277 | Verified February 23, 2026 (Session 37: +/api/battlecard/export, +/api/commerce/brief, +/api/reputation/brief, +/api/risk/interventions) |
+| Physical Routes (page.tsx) | 176 | Verified February 24, 2026 (Sprint 18: +/mission-control, +/mission-control/history) |
+| API Endpoints (route.ts) | 279 | Verified February 24, 2026 (Sprint 18: +/api/orchestrator/missions, +/api/orchestrator/missions/[missionId]) |
 | AI Agents | 52 | **52 FUNCTIONAL (48 swarm + 4 standalone)** |
 | RBAC Roles | 4 | `owner` (level 3), `admin` (level 2), `manager` (level 1), `member` (level 0) — 4-role RBAC |
-| Firestore Collections | 67+ | Active (sagaState, eventLog collections; 25 composite indexes) |
+| Firestore Collections | 68+ | Active (sagaState, eventLog, missions collections; 25 composite indexes) |
 
 **Architecture:** Single-company deployment for SalesVelocity.ai. Clients purchase services/products - they do NOT get SaaS tenants.
 
@@ -151,7 +151,7 @@ The Claude Code Governance Layer defines binding operational constraints for AI-
 | Single-tenant architecture | **COMPLETE** — Firebase kill-switch, PLATFORM_ID constant, -80K+ lines purged |
 | 4-role RBAC | **ENFORCED** — `requireRole()` on API routes, sidebar filtering, 47 permissions |
 | Agent hierarchy | **STRUCTURALLY COMPLETE** — 52 agents, manager orchestration, saga persistence |
-| Jasper delegation | **PARTIAL** — 5 of 9 manager delegation tools wired (Marketing, Builder, Sales, Trust, Agent). Missing: Content, Architect, Outreach, Intelligence, Commerce |
+| Jasper delegation | **PARTIAL** — 5 of 9 manager delegation tools wired (Marketing, Builder, Sales, Trust, Agent). Missing: Content, Architect, Outreach, Intelligence, Commerce. **Mission Control live** — fire-and-forget step tracking on all 5 delegation tools |
 | Type safety | **CLEAN** — `tsc --noEmit` passes, zero `any` policy |
 | Build pipeline | **CLEAN** — `npm run build` passes, pre-commit hooks enforced |
 | Test coverage | **1,289 Jest tests** (49 suites) + **165 Playwright E2E tests** (18 specs) |
@@ -164,7 +164,7 @@ The Claude Code Governance Layer defines binding operational constraints for AI-
 | **Facebook/Instagram** | No implementation. Blocked: Meta Developer Portal approval | MEDIUM |
 | **LinkedIn** | Unofficial RapidAPI wrapper. Blocked: Marketing Developer Platform | MEDIUM |
 | **Jasper delegation gaps** | Missing 4 `delegate_to_*` tools (content, architect, outreach, intelligence, commerce), no blog draft bridge, no trend research tool | MEDIUM |
-| **Mission Control UI** | No live delegation tracker — users can't follow along as Jasper delegates across the swarm | MEDIUM |
+| ~~**Mission Control UI**~~ | ~~No live delegation tracker~~ | ~~MEDIUM~~ | **RESOLVED (Sprint 18)** — `/mission-control` with 3-panel layout, live polling, approval gates |
 | **Video render pipeline** | Returns empty responses; real integrations gated by API keys | LOW |
 | **Asset Generator** | Returns empty; no actual image generation | LOW |
 
@@ -172,7 +172,7 @@ The Claude Code Governance Layer defines binding operational constraints for AI-
 
 | Sprint | Focus | Status |
 |--------|-------|--------|
-| **Sprint 18** | Jasper Mission Control — live delegation tracker UI | **NEXT** |
+| **Sprint 18** | Jasper Mission Control — live delegation tracker UI | **COMPLETE** (Feb 24, 2026) |
 | **Sprint 19** | Complete Jasper delegation coverage (5 missing tools + blog bridge + trend research) | PLANNED |
 | **Sprint 20** | AI Search Optimization (robots.txt, llms.txt, schema markup, monitoring) | PLANNED |
 | **Sprint 21** | Website Migration Pipeline — "clone this site" via Jasper + web_migrator (deep scrape → blueprint → AI page gen → assemble) | PLANNED |
@@ -187,6 +187,7 @@ The following roadmaps are fully complete. Details in git history and `docs/arch
 - **Session 25 Production Audit** — All 28 blockers resolved (Sessions 26-27)
 - **Session 31 Code Readiness Audit** — All 13 items resolved
 - **Sprint 14-15** — SEO data API integration + Competitor SEO analysis page COMPLETE
+- **Sprint 18** — Jasper Mission Control — live delegation tracker, 3-panel UI, approval gates, history COMPLETE
 
 ---
 
@@ -415,14 +416,14 @@ SalesVelocity.ai is a **single-company sales and marketing super tool**. This is
 
 | Area | Routes | Dynamic Params | Status |
 |------|--------|----------------|--------|
-| Dashboard (`/(dashboard)/*`) | 124 | 8 | **Flattened** single-tenant (incl. former admin routes + social pages) |
+| Dashboard (`/(dashboard)/*`) | 126 | 8 | **Flattened** single-tenant (incl. former admin routes + social pages + mission-control) |
 | Public (`/(public)/*`) | 16 | 0 | All pages exist |
 | Dashboard sub-routes (`/dashboard/*`) | 16 | 0 | Analytics, coaching, marketing, performance |
 | Store (`/store/*`) | 6 | 1 (`[productId]`) | E-commerce storefront (added `/store/checkout/cancelled`) |
 | Onboarding (`/onboarding/*`) | 2 | 0 | Account + industry setup |
 | Auth (`/(auth)/*`) | 1 | 0 | Admin login |
 | Other (`/preview`, `/profile`, `/sites`) | 3 | 2 | Preview tokens, user profile, site builder |
-| **TOTAL** | **173** | **11** | **Verified February 13, 2026** |
+| **TOTAL** | **176** | **11** | **Verified February 24, 2026** |
 
 **DELETED:** `src/app/workspace/[orgId]/*` (95 pages) and `src/app/admin/*` (92 pages) - multi-tenant and standalone admin routes removed/consolidated into `(dashboard)`
 
@@ -455,6 +456,10 @@ SalesVelocity.ai is a **single-company sales and marketing super tool**. This is
 - `/outbound`, `/outbound/email-writer`, `/outbound/sequences`
 - `/social/campaigns` (Content Studio — dual-mode autopilot/manual), `/social/training`, `/social/approvals` (batch review, correction capture, "Why" badge), `/social/calendar`, `/social/listening`
 - `/social/command-center` (kill switch, velocity gauges, agent status), `/social/activity` (activity feed), `/social/analytics` (dashboard), `/social/agent-rules` (guardrails editor)
+
+**AI Workforce:**
+- `/mission-control` (NEW Sprint 18 — 3-panel live delegation tracker: sidebar, timeline, step detail)
+- `/mission-control/history` (NEW Sprint 18 — paginated completed mission table)
 
 **Settings (19 sub-routes):**
 - `api-keys`, `accounting`, `storefront`, `promotions`
@@ -1336,7 +1341,7 @@ This script:
 | Learning | 2 | `/api/learning/*` | Partial |
 | Meetings | 1 | `/api/meetings/*` | Functional |
 | Onboarding | 1 | `/api/onboarding/*` | Functional |
-| Orchestrator | 3 | `/api/orchestrator/*` | Functional |
+| Orchestrator | 5 | `/api/orchestrator/*` | Functional (Sprint 18: +missions, +missions/[missionId]) |
 | Outbound | 3 | `/api/outbound/*` | Functional |
 | Performance | 1 | `/api/performance/*` | Functional |
 | Playbook | 1 | `/api/playbook/*` | Functional |
@@ -1356,7 +1361,9 @@ This script:
 
 | Endpoint | Method | Purpose | Status |
 |----------|--------|---------|--------|
-| `/api/orchestrator/chat` | POST | Jasper conversation | FUNCTIONAL |
+| `/api/orchestrator/chat` | POST | Jasper conversation (now includes `missionId` in response metadata for delegation tracking) | FUNCTIONAL |
+| `/api/orchestrator/missions` | POST/GET | Create mission + list missions (paginated, status filter) | FUNCTIONAL (Sprint 18) |
+| `/api/orchestrator/missions/[missionId]` | GET | Get single mission for polling | FUNCTIONAL (Sprint 18) |
 | `/api/orchestrator/system-health` | GET | System health | FUNCTIONAL |
 | `/api/orchestrator/feature-toggle` | POST | Feature flags | FUNCTIONAL |
 
@@ -1661,33 +1668,41 @@ The following endpoints have working infrastructure (rate limiting, caching, aut
 
 **Routing:** Jasper detects domain analysis requests via traffic/visitor/backlink keywords + domain extraction regex → Marketing Manager → SEO Expert `domain_analysis` action → 5 concurrent DataForSEO calls.
 
-### Jasper Mission Control (PLANNED — Sprint 18)
+### Jasper Mission Control (LIVE — Sprint 18, February 24, 2026)
 
-**Route:** `/(dashboard)/mission-control`
-**Concept:** Live delegation tracker — "Air Traffic Control for your AI workforce"
+**Routes:** `/mission-control` (live view), `/mission-control/history` (completed missions)
+**Purpose:** Live "Air Traffic Control" for Jasper's multi-step delegations — users watch steps execute in real-time, approve/reject at intervention gates, and auto-navigate from chat.
 
-**Purpose:** When Jasper delegates a complex multi-step task across the swarm, users can watch in real-time as each step executes, approve/reject at intervention gates, and auto-navigate to completed outputs.
+**Architecture:**
+- **Polling, not SSE** — 5s polling for active missions, 30s for idle/history. Matches Social Command Center pattern. Avoids new infra on Vercel serverless.
+- **Separate `missions` Firestore collection** — User-facing documents, simpler than internal `sagaState`.
+- **Fire-and-forget instrumentation** — Mission tracking in `executeToolCall` never breaks Jasper's chat response. All writes are void-ed with internal error handling.
 
-**Backend Infrastructure (EXISTS):**
-- Saga Persistence (`src/lib/orchestration/saga-persistence.ts`) — checkpoints, steps, event logging to Firestore
-- Signal Bus (`src/lib/agents/shared/tenant-memory-vault.ts`) — cross-agent communication
-- Jasper Command Authority (`src/lib/orchestrator/jasper-command-authority.ts`) — approval gateway, command history
-- SSE pattern already used in codebase (15 files reference `text/event-stream`)
+**Files (12 new, 5 modified):**
 
-**UI Prototype (EXISTS):** Social Command Center (`/social/command-center`) — live agent status, activity stream, kill switch, velocity gauges. Mission Control extends this pattern to all 9 domain managers.
+| File | Purpose |
+|------|---------|
+| `src/lib/orchestrator/mission-persistence.ts` | Types (`Mission`, `MissionStep`, statuses) + Firestore CRUD |
+| `src/app/api/orchestrator/missions/route.ts` | POST create + GET list (paginated, status filter) |
+| `src/app/api/orchestrator/missions/[missionId]/route.ts` | GET single mission (polling endpoint) |
+| `src/app/(dashboard)/mission-control/page.tsx` | 3-panel layout: sidebar (260px) + timeline (flex) + detail (300px) |
+| `src/app/(dashboard)/mission-control/history/page.tsx` | Paginated history table with click-to-replay |
+| `src/app/(dashboard)/mission-control/_components/MissionTimeline.tsx` | Vertical step timeline with live elapsed timers, auto-scroll |
+| `src/app/(dashboard)/mission-control/_components/MissionSidebar.tsx` | Left panel mission list with status badges |
+| `src/app/(dashboard)/mission-control/_components/AgentAvatar.tsx` | Colored circle chips per delegation target |
+| `src/app/(dashboard)/mission-control/_components/ApprovalCard.tsx` | Inline approval gate (calls existing `/api/orchestrator/approvals`) |
+| `src/lib/orchestrator/jasper-tools.ts` | `ToolCallContext` + fire-and-forget tracking in 5 `delegate_to_*` cases + new `delegate_to_trust` |
+| `src/app/api/orchestrator/chat/route.ts` | Threads `missionId` context, creates mission on delegation, adds `missionId` to response |
+| `src/components/orchestrator/OrchestratorBase.tsx` | "Watch Live" pill button on delegation messages |
+| `src/components/admin/AdminSidebar.tsx` | Mission Control nav item under AI Workforce (Radar icon) |
+| `src/lib/stores/orchestrator-store.ts` | `missionId` added to `ChatMessage.metadata` |
 
-**Sprint 18 Tasks:**
-1. Mission event SSE API (`/api/orchestrator/missions/[missionId]`)
-2. Jasper tool instrumentation (emit step events from `delegate_to_*` handlers)
-3. Mission Control page with timeline view
-4. Auto-navigation from Jasper chat ("Watch Live →" button)
-5. Approval gates in timeline (from Command Authority approval gateway)
-6. Mission history & replay
-7. Sidebar integration
+**Delegation tools instrumented:** `delegate_to_builder`, `delegate_to_sales`, `delegate_to_marketing`, `delegate_to_trust`, `delegate_to_agent`
 
-**Event Types:** `mission.started`, `step.delegated`, `step.in_progress`, `step.completed`, `step.failed`, `step.awaiting_approval`, `mission.completed`
+**Firestore Path:** `organizations/{PLATFORM_ID}/missions/{missionId}` via `getSubCollection('missions')`
 
-**Firestore Path:** `organizations/{PLATFORM_ID}/missions/{missionId}` (extends saga pattern)
+**Mission Statuses:** `PENDING`, `IN_PROGRESS`, `AWAITING_APPROVAL`, `COMPLETED`, `FAILED`
+**Step Statuses:** `PENDING`, `RUNNING`, `COMPLETED`, `FAILED`, `AWAITING_APPROVAL`
 
 ### Planned Integrations (NOT STARTED)
 
@@ -1758,7 +1773,7 @@ The following endpoints have working infrastructure (rate limiting, caching, aut
 | `slack_channels` | Slack channel mappings |
 | `slack_messages` | Message history |
 
-### Organization Sub-Collections (35)
+### Organization Sub-Collections (36)
 
 ```
 organizations/{orgId}/
@@ -1798,6 +1813,7 @@ organizations/{orgId}/
 ├── blogPosts/                # Blog content
 ├── brandDNA/                 # Brand configuration
 ├── memoryVault/              # Agent shared memory (Firestore-backed, cold-start safe)
+├── missions/                 # Mission Control tracking (NEW Sprint 18 — user-facing delegation state)
 └── provisionerLogs/          # Provisioning logs
 ```
 
