@@ -2460,6 +2460,9 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
       // VIDEO CREATION TOOLS
       // ═══════════════════════════════════════════════════════════════════════
       case 'create_video': {
+        const videoStart = Date.now();
+        trackMissionStep(context, 'create_video', 'RUNNING', { toolArgs: args });
+
         const { generateVideo, createVideoProject, isProviderConfigured } = await import('@/lib/video/video-service');
         const description = args.description as string;
         const title = (args.title as string) ?? `Video: ${description.slice(0, 50)}`;
@@ -2520,10 +2523,19 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
             videoLibraryPath: '/content/video',
           });
         }
+
+        trackMissionStep(context, 'create_video', 'COMPLETED', {
+          summary: `Video creation: ${provider}`,
+          durationMs: Date.now() - videoStart,
+          toolResult: content.slice(0, 2000),
+        });
         break;
       }
 
       case 'get_video_status': {
+        const videoStatusStart = Date.now();
+        trackMissionStep(context, 'get_video_status', 'RUNNING', { toolArgs: args });
+
         const { getVideoStatus: checkVideoStatus } = await import('@/lib/video/video-service');
         const videoId = args.videoId as string;
         const videoProvider = args.provider as 'heygen' | 'sora' | 'runway' | undefined;
@@ -2553,6 +2565,12 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
             videoLibraryPath: '/content/video',
           });
         }
+
+        trackMissionStep(context, 'get_video_status', 'COMPLETED', {
+          summary: `Video status check: ${videoId}`,
+          durationMs: Date.now() - videoStatusStart,
+          toolResult: content.slice(0, 2000),
+        });
         break;
       }
 

@@ -350,7 +350,16 @@ export async function POST(request: NextRequest) {
     const missionId = `mission_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
     const conversationId = `jasper_${context}`;
     const missionContext: ToolCallContext = { conversationId, missionId, userPrompt: message };
-    let hasDelegation = false;
+    let missionCreated = false;
+
+    // Tools that trigger a live mission on Mission Control
+    const missionTriggerTools = [
+      'delegate_to_builder', 'delegate_to_sales', 'delegate_to_marketing',
+      'delegate_to_agent', 'delegate_to_trust', 'delegate_to_content',
+      'delegate_to_architect', 'delegate_to_outreach', 'delegate_to_intelligence',
+      'delegate_to_commerce', 'create_video', 'generate_content',
+      'scan_leads', 'enrich_lead', 'draft_outreach_email',
+    ];
 
     // Build model fallback chain: selected model + fallback models
     const modelsToTry = [selectedModel, ...FALLBACK_MODELS.filter(m => m !== selectedModel)];
@@ -390,14 +399,31 @@ export async function POST(request: NextRequest) {
           iteration: iterationCount,
         });
 
+        // Create mission BEFORE tools execute so steps can write to it
+        if (!missionCreated && response.toolCalls.some((tc: ToolCall) => missionTriggerTools.includes(tc.function.name))) {
+          const now = new Date().toISOString();
+          const titleSnippet = message.slice(0, 80) + (message.length > 80 ? '...' : '');
+          try {
+            await createMission({
+              missionId,
+              conversationId,
+              status: 'IN_PROGRESS',
+              title: titleSnippet,
+              userPrompt: message,
+              steps: [],
+              createdAt: now,
+              updatedAt: now,
+            });
+            missionCreated = true;
+          } catch (err: unknown) {
+            logger.warn('[Jasper] Mission creation failed (non-blocking)', {
+              error: err instanceof Error ? err.message : String(err),
+            });
+          }
+        }
+
         const toolResults = await executeToolCalls(response.toolCalls, missionContext);
         toolsExecuted.push(...response.toolCalls.map((tc: ToolCall) => tc.function.name));
-
-        // Track if any delegation tools fired
-        const delegationTools = ['delegate_to_builder', 'delegate_to_sales', 'delegate_to_marketing', 'delegate_to_agent', 'delegate_to_trust'];
-        if (response.toolCalls.some((tc: ToolCall) => delegationTools.includes(tc.function.name))) {
-          hasDelegation = true;
-        }
 
         // Add assistant message with tool calls
         currentMessages.push({
@@ -456,27 +482,15 @@ export async function POST(request: NextRequest) {
 
     const responseTime = Date.now() - startTime;
 
-    // Create mission record if delegation tools fired (fire-and-forget)
-    if (hasDelegation) {
-      const now = new Date().toISOString();
-      const titleSnippet = message.slice(0, 80) + (message.length > 80 ? '...' : '');
-      void createMission({
-        missionId,
-        conversationId,
-        status: 'IN_PROGRESS',
-        title: titleSnippet,
-        userPrompt: message,
-        steps: [],
-        createdAt: now,
-        updatedAt: now,
-      }).then(() => {
-        // Finalize after response is sent (steps are already tracked inline)
-        void finalizeMission(missionId, 'COMPLETED');
-      }).catch((err: unknown) => {
-        logger.warn('[Jasper] Mission creation failed (non-blocking)', {
+    // Finalize mission after all tools have executed
+    if (missionCreated) {
+      try {
+        await finalizeMission(missionId, 'COMPLETED');
+      } catch (err: unknown) {
+        logger.warn('[Jasper] Mission finalization failed (non-blocking)', {
           error: err instanceof Error ? err.message : String(err),
         });
-      });
+      }
     }
 
     // Log the interaction for analytics
@@ -535,7 +549,7 @@ export async function POST(request: NextRequest) {
         model: modelUsed,
         responseTime,
         toolExecuted: toolsExecuted.length > 0 ? toolsExecuted.join(', ') : undefined,
-        missionId: hasDelegation ? missionId : undefined,
+        missionId: missionCreated ? missionId : undefined,
       },
       audio: audioOutput,
     };
