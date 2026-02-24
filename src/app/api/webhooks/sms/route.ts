@@ -114,15 +114,14 @@ export async function POST(request: NextRequest) {
       logger.info('Twilio signature verified', {
         route: '/api/webhooks/sms'
       });
-    } else if (process.env.NODE_ENV === 'production') {
-      logger.error('TWILIO_AUTH_TOKEN not configured — rejecting in production', new Error('Missing TWILIO_AUTH_TOKEN'), {
-        route: '/api/webhooks/sms',
-      });
-      return NextResponse.json({ error: 'Webhook not configured' }, { status: 500 });
     } else {
-      logger.warn('TWILIO_AUTH_TOKEN not configured — skipping in development', {
+      logger.error('TWILIO_AUTH_TOKEN not configured — rejecting request', new Error('Missing TWILIO_AUTH_TOKEN'), {
         route: '/api/webhooks/sms',
       });
+      return NextResponse.json(
+        { error: 'Webhook verification not configured' },
+        { status: 503 }
+      );
     }
 
     // Parse form body into params

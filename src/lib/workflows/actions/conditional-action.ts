@@ -5,6 +5,9 @@
 
 import type { ConditionalBranchAction, WorkflowCondition, WorkflowAction, WorkflowTriggerData, Workflow } from '@/types/workflow';
 
+// MAJ-41: Maximum nesting depth for recursion prevention
+const MAX_NESTING_DEPTH = 15;
+
 /**
  * Execute conditional action
  */
@@ -12,7 +15,12 @@ export async function executeConditionalAction(
   action: ConditionalBranchAction,
   triggerData: WorkflowTriggerData,
   workflow: Workflow,
+  depth: number = 0,
 ): Promise<unknown> {
+  if (depth > MAX_NESTING_DEPTH) {
+    throw new Error(`Maximum nesting depth (${MAX_NESTING_DEPTH}) exceeded in conditional action`);
+  }
+
   // Evaluate all branches
   let matchedBranch: ConditionalBranchAction['branches'][0] | null = null;
 
@@ -41,7 +49,7 @@ export async function executeConditionalAction(
 
   for (const subAction of actionsToExecute) {
     try {
-      const result = await executeAction(subAction, triggerData, workflow);
+      const result = await executeAction(subAction, triggerData, workflow, depth + 1);
       results.push({
         actionId: subAction.id,
         success: true,
@@ -187,7 +195,12 @@ async function executeAction(
   action: WorkflowAction,
   triggerData: WorkflowTriggerData,
   _workflow: Workflow,
+  depth: number = 0,
 ): Promise<unknown> {
+  if (depth > MAX_NESTING_DEPTH) {
+    throw new Error(`Maximum nesting depth (${MAX_NESTING_DEPTH}) exceeded`);
+  }
+
   // Import action executors
   const { executeEmailAction } = await import('./email-action');
   const { executeSMSAction } = await import('./sms-action');

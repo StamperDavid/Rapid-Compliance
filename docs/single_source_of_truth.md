@@ -1,7 +1,7 @@
 # SalesVelocity.ai - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** February 24, 2026 (Sprint 21 — Website Migration Pipeline)
+**Last Updated:** February 24, 2026 (Sprint 22 — Security Hardening & Production Readiness)
 **Branches:** `dev` (latest)
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Architecture:** Single-Tenant (Penthouse Model) - NOT a SaaS platform
@@ -176,6 +176,7 @@ The Claude Code Governance Layer defines binding operational constraints for AI-
 | **Sprint 19** | Complete Jasper delegation coverage (5 new delegate_to_* tools + blog bridge + trend research) | **COMPLETE** (Feb 24, 2026) |
 | **Sprint 20** | AI Search Optimization (llms.txt, AI bot access, schema markup service, monitoring dashboard) | **COMPLETE** (Feb 24, 2026) |
 | **Sprint 21** | Website Migration Pipeline — "clone this site" via Jasper + web_migrator (deep scrape → blueprint → AI page gen → assemble) | **COMPLETE** (Feb 24, 2026) |
+| **Sprint 22** | Security Hardening — webhook fail-closed, workflow timeouts + depth limits, SMS orchestrator wiring | **COMPLETE** (Feb 24, 2026) |
 
 ### Completed Roadmaps (Archived)
 
@@ -1229,9 +1230,9 @@ const res = await authFetch('/api/some-endpoint');
 
 | Severity | Issue | Location | Status |
 |----------|-------|----------|--------|
-| MAJOR | 4 webhook endpoints fail open when verification keys missing | `src/app/api/webhooks/{email,gmail,sms,voice}` | Open — should fail closed in production |
-| MAJOR | Feature toggle GET endpoint is unauthenticated | `src/app/api/orchestrator/feature-toggle/route.ts` | Open — exposes feature list without auth |
-| MAJOR | Workflow engine has no execution timeout or recursion prevention | `src/lib/workflows/workflow-engine.ts` | Open — can hang indefinitely |
+| MAJOR | 4 webhook endpoints fail open when verification keys missing | `src/app/api/webhooks/{email,gmail,sms,voice}` | **RESOLVED (Sprint 22)** — All 4 webhooks now fail closed with 503 |
+| MAJOR | Feature toggle GET endpoint is unauthenticated | `src/app/api/orchestrator/feature-toggle/route.ts` | **FALSE POSITIVE** — Already has requireAuth() on both GET and POST |
+| MAJOR | Workflow engine has no execution timeout or recursion prevention | `src/lib/workflows/workflow-engine.ts` | **RESOLVED (Sprint 22)** — 60s global timeout + depth limit of 15 |
 | LOW | Token claim extraction lacks strict validation | `api-auth.ts` | Add runtime type guards |
 | LOW | Manual organization check in agent routes | `/api/agent/chat` | Create decorator pattern |
 
@@ -1423,7 +1424,7 @@ The following endpoints have working infrastructure (rate limiting, caching, aut
 
 | Endpoint | Issue | Priority |
 |----------|-------|----------|
-| `/api/coaching/team` | Team member query returns hardcoded IDs | HIGH |
+| `/api/coaching/team` | Team member query returns hardcoded IDs | **FALSE POSITIVE** — Queries Firestore teams collection with sales_rep fallback |
 | ~~`/api/crm/deals/[dealId]/recommendations`~~ | **RESOLVED** — Auth user extraction + workspaceId from query param | ~~MEDIUM~~ |
 | `/api/crm/deals/monitor/start` | Monitor lifecycle not fully implemented | LOW |
 | `/api/webhooks/gmail` | Auto-meeting booking has TODO | LOW |

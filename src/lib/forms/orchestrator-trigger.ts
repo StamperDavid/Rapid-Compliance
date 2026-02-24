@@ -512,6 +512,63 @@ async function executeCRMUpdate(
 }
 
 // ============================================================================
+// SMS ACTION
+// ============================================================================
+
+/**
+ * Execute send_sms action via SMS service
+ */
+async function executeSendSMS(
+  action: OrchestratorAction,
+  submission: FormSubmission
+): Promise<ActionExecutionResult> {
+  const result: ActionExecutionResult = {
+    actionId: action.type,
+    actionType: action.type,
+    success: false,
+    executedAt: Timestamp.now(),
+  };
+
+  try {
+    const phone = submission.indexedPhone;
+    if (!phone) {
+      throw new Error('No phone number found in submission');
+    }
+
+    const messageTemplate = typeof action.details?.message === 'string'
+      ? action.details.message
+      : `Thank you for your submission (${submission.confirmationNumber}). We will be in touch shortly.`;
+    const message = replacePlaceholders(messageTemplate, submission);
+
+    const { sendSMS } = await import('@/lib/sms/sms-service');
+
+    const smsResult = await sendSMS({
+      to: phone,
+      message,
+      metadata: {
+        formId: submission.formId,
+        submissionId: submission.id,
+      },
+    });
+
+    if (!smsResult.success) {
+      throw new Error(smsResult.error ?? 'SMS send failed');
+    }
+
+    result.success = true;
+    result.result = {
+      messageId: smsResult.messageId,
+      provider: smsResult.provider,
+    };
+  } catch (error) {
+    result.error = error instanceof Error ? error.message : String(error);
+    logger.error('Failed to send SMS', error instanceof Error ? error : new Error(String(error)));
+  }
+
+  return result;
+}
+
+// ============================================================================
 // PLACEHOLDER REPLACEMENT
 // ============================================================================
 
@@ -598,14 +655,7 @@ export async function triggerOrchestratorActions(
           break;
 
         case 'sms':
-          // SMS not implemented yet
-          actionResult = {
-            actionId: action.type,
-            actionType: action.type,
-            success: false,
-            executedAt: Timestamp.now(),
-            error: 'SMS action not implemented',
-          };
+          actionResult = await executeSendSMS(action, submission);
           break;
 
         case 'workflow':

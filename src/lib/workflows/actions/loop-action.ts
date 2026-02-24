@@ -39,11 +39,19 @@ export interface LoopResult {
   }>;
 }
 
+// MAJ-41: Maximum nesting depth for recursion prevention
+const MAX_NESTING_DEPTH = 15;
+
 export async function executeLoopAction(
   action: LoopActionConfig,
   triggerData: WorkflowTriggerData,
   workflow: Workflow,
+  depth: number = 0,
 ): Promise<LoopResult> {
+  if (depth > MAX_NESTING_DEPTH) {
+    throw new Error(`Maximum nesting depth (${MAX_NESTING_DEPTH}) exceeded in loop action`);
+  }
+
   const {
     arrayField,
     itemVariable = 'item',
@@ -101,7 +109,8 @@ export async function executeLoopAction(
         const actionResults = await executeWorkflowActions(
           actions,
           itemContext,
-          workflow
+          workflow,
+          depth + 1,
         );
 
         const itemSuccess = actionResults.every(r => r.status === 'success');
@@ -168,6 +177,7 @@ async function executeWorkflowActions(
   actions: WorkflowAction[],
   triggerData: WorkflowTriggerData,
   workflow: Workflow,
+  depth: number = 0,
 ): Promise<Array<{ actionId: string; status: string; result?: unknown; error?: string }>> {
   // Import action executors
   const { executeEmailAction } = await import('./email-action');
@@ -196,7 +206,7 @@ async function executeWorkflowActions(
       } else if (action.type === 'delay') {
         result = await executeDelayAction(action, triggerData);
       } else if (action.type === 'conditional_branch') {
-        result = await executeConditionalAction(action, triggerData, workflow);
+        result = await executeConditionalAction(action, triggerData, workflow, depth + 1);
       } else if (action.type === 'ai_agent') {
         result = await executeAIAgentAction(convertToAIAgentConfig(action), triggerData);
       } else if (action.type === 'send_slack') {

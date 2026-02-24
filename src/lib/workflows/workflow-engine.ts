@@ -71,53 +71,17 @@ export async function executeWorkflowImpl(
     actionResults: [],
   };
 
+  // MAJ-41: Global workflow timeout (60 seconds) to prevent indefinite execution
+  const GLOBAL_WORKFLOW_TIMEOUT_MS = 60_000;
+  const globalTimeout = new Promise<never>((_, reject) => {
+    setTimeout(() => reject(new Error('Workflow execution timeout (60s global limit)')), GLOBAL_WORKFLOW_TIMEOUT_MS);
+  });
+
   try {
-    // Check conditions before executing
-    if (workflow.conditions && workflow.conditions.length > 0) {
-      const conditionsMet = evaluateConditions(workflow.conditions, triggerData, workflow.conditionOperator ?? 'and');
-      if (!conditionsMet) {
-        execution.status = 'completed';
-        execution.completedAt = new Date();
-        return execution;
-      }
-    }
-
-    // Execute actions sequentially with timeout protection
-    for (const action of workflow.actions) {
-      try {
-        // MAJ-40: Timeout wrapper to prevent runaway executions (30 seconds)
-        const EXECUTION_TIMEOUT_MS = 30000;
-        const timeoutPromise = new Promise<never>((_, reject) => {
-          setTimeout(() => reject(new Error('Action execution timeout (30s)')), EXECUTION_TIMEOUT_MS);
-        });
-
-        const result = await Promise.race([
-          executeAction(action, triggerData, workflow),
-          timeoutPromise,
-        ]);
-
-        execution.actionResults.push({
-          actionId: action.id,
-          status: 'success',
-          result,
-        });
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        execution.actionResults.push({
-          actionId: action.id,
-          status: 'failed',
-          error: errorMessage,
-        });
-
-        // Stop execution if action fails and workflow is set to stop on error
-        if (workflow.settings.onError === 'stop') {
-          execution.status = 'failed';
-          execution.error = `Action ${action.name} failed: ${errorMessage}`;
-          execution.completedAt = new Date();
-          return execution;
-        }
-      }
-    }
+    await Promise.race([
+      executeWorkflowActions(workflow, triggerData, execution),
+      globalTimeout,
+    ]);
 
     execution.status = 'completed';
     execution.completedAt = new Date();
@@ -142,6 +106,61 @@ export async function executeWorkflowImpl(
     execution.error = errorMessage;
     execution.completedAt = new Date();
     return execution;
+  }
+}
+
+/**
+ * Execute all workflow actions sequentially.
+ * Extracted to enable global timeout wrapper via Promise.race.
+ */
+async function executeWorkflowActions(
+  workflow: Workflow,
+  triggerData: WorkflowTriggerData,
+  execution: WorkflowEngineExecution
+): Promise<void> {
+  // Check conditions before executing
+  if (workflow.conditions && workflow.conditions.length > 0) {
+    const conditionsMet = evaluateConditions(workflow.conditions, triggerData, workflow.conditionOperator ?? 'and');
+    if (!conditionsMet) {
+      return;
+    }
+  }
+
+  // Execute actions sequentially with timeout protection
+  for (const action of workflow.actions) {
+    try {
+      // MAJ-40: Timeout wrapper to prevent runaway executions (30 seconds)
+      const EXECUTION_TIMEOUT_MS = 30_000;
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('Action execution timeout (30s)')), EXECUTION_TIMEOUT_MS);
+      });
+
+      const result = await Promise.race([
+        executeAction(action, triggerData, workflow),
+        timeoutPromise,
+      ]);
+
+      execution.actionResults.push({
+        actionId: action.id,
+        status: 'success',
+        result,
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      execution.actionResults.push({
+        actionId: action.id,
+        status: 'failed',
+        error: errorMessage,
+      });
+
+      // Stop execution if action fails and workflow is set to stop on error
+      if (workflow.settings.onError === 'stop') {
+        execution.status = 'failed';
+        execution.error = `Action ${action.name} failed: ${errorMessage}`;
+        execution.completedAt = new Date();
+        return;
+      }
+    }
   }
 }
 
@@ -195,14 +214,21 @@ function evaluateCondition(condition: WorkflowCondition, triggerData: WorkflowTr
   }
 }
 
+// MAJ-41: Maximum nesting depth for conditional/loop recursion prevention
+const MAX_NESTING_DEPTH = 15;
+
 /**
  * Execute workflow action using real service implementations
  */
 async function executeAction(
   action: WorkflowAction,
   triggerData: WorkflowTriggerData,
-  workflow: Workflow
+  workflow: Workflow,
+  depth: number = 0,
 ): Promise<unknown> {
+  if (depth > MAX_NESTING_DEPTH) {
+    throw new Error(`Maximum nesting depth (${MAX_NESTING_DEPTH}) exceeded`);
+  }
 
   // Import action executors
   const { executeEmailAction } = await import('./actions/email-action');
@@ -237,13 +263,13 @@ async function executeAction(
       return executeDelayAction(action, triggerData);
 
     case 'conditional_branch':
-      return executeConditionalAction(action, triggerData, workflow);
+      return executeConditionalAction(action, triggerData, workflow, depth + 1);
 
     case 'send_slack':
       return executeSlackAction(convertToSlackConfig(action), triggerData);
 
     case 'loop':
-      return executeLoopAction(convertToLoopConfig(action), triggerData, workflow);
+      return executeLoopAction(convertToLoopConfig(action), triggerData, workflow, depth + 1);
 
     case 'ai_agent':
       return executeAIAgentAction(convertToAIAgentConfig(action), triggerData);
