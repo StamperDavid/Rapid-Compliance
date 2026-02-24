@@ -262,8 +262,9 @@ export class OpenRouterProvider {
       top_p: params.topP ?? 0.9,
     };
 
-    // Add tools if provided
-    if (params.tools && params.tools.length > 0) {
+    // Add tools if provided — but omit them entirely when toolChoice is 'none'
+    // (forces a text response without sending tool_choice:'none', which Bedrock rejects)
+    if (params.tools && params.tools.length > 0 && params.toolChoice !== 'none') {
       requestBody.tools = params.tools;
       requestBody.tool_choice = params.toolChoice ?? 'auto';
     }
