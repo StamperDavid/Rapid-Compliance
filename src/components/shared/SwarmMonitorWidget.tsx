@@ -1,7 +1,9 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useSystemStatus, type SystemAgentStatus } from '@/hooks/useSystemStatus';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 
 // ============================================================================
 // TYPES
@@ -55,6 +57,47 @@ export function SwarmMonitorWidget({
     pollingInterval,
     enabled: true,
   });
+
+  const authFetch = useAuthFetch();
+
+  // Brief data state
+  const [commerceMrr, setCommerceMrr] = useState<string>('--');
+  const [trustScore, setTrustScore] = useState<string>('--');
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function fetchBriefs() {
+      // Commerce brief
+      try {
+        const res = await authFetch('/api/commerce/brief');
+        if (res.ok) {
+          const json = await res.json() as { success?: boolean; data?: { revenue?: { mrr?: number } } };
+          if (!cancelled && json.success && json.data?.revenue?.mrr !== undefined) {
+            setCommerceMrr(`$${json.data.revenue.mrr.toLocaleString()}`);
+          }
+        }
+      } catch {
+        if (!cancelled) { setCommerceMrr('N/A'); }
+      }
+
+      // Reputation brief
+      try {
+        const res = await authFetch('/api/reputation/brief');
+        if (res.ok) {
+          const json = await res.json() as { success?: boolean; data?: { trustScore?: { overall?: number } } };
+          if (!cancelled && json.success && json.data?.trustScore?.overall !== undefined) {
+            setTrustScore(`${json.data.trustScore.overall}/100`);
+          }
+        }
+      } catch {
+        if (!cancelled) { setTrustScore('N/A'); }
+      }
+    }
+
+    void fetchBriefs();
+    return () => { cancelled = true; };
+  }, [authFetch]);
 
   // Calculate counts from live data
   const functionalCount = metrics?.functionalAgents ?? 0;
@@ -188,6 +231,22 @@ export function SwarmMonitorWidget({
             {managerCount || TOTAL_MANAGERS}
           </div>
           <div className="text-xs text-[var(--color-text-secondary)]">Managers</div>
+        </div>
+      </div>
+
+      {/* Business Metrics - Commerce & Trust */}
+      <div className="grid grid-cols-2 gap-3 mb-4">
+        <div className="bg-[var(--color-bg-primary)] rounded-lg p-3 text-center">
+          <div className="text-lg font-bold text-[var(--color-success)]">
+            {commerceMrr}
+          </div>
+          <div className="text-xs text-[var(--color-text-secondary)]">Commerce MRR</div>
+        </div>
+        <div className="bg-[var(--color-bg-primary)] rounded-lg p-3 text-center">
+          <div className="text-lg font-bold text-[var(--color-primary)]">
+            {trustScore}
+          </div>
+          <div className="text-xs text-[var(--color-text-secondary)]">Trust Score</div>
         </div>
       </div>
 

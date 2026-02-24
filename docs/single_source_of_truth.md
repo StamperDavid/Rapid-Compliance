@@ -1,7 +1,7 @@
 # SalesVelocity.ai - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** February 23, 2026 (Session 36: Sprint 14 completion + Sprint 15 Competitor SEO Analysis — wired Serper API, GSC integration UI, domain analysis API, competitor analysis page with keyword gap, cost-to-compete, and strategy generator)
+**Last Updated:** February 23, 2026 (Session 37: Sprint 16 Feature Completion & API Bridging — battlecard HTML export, commerce brief API, reputation brief API, risk intervention CRUD API, SwarmMonitorWidget business metrics, risk page intervention handler)
 **Branches:** `dev` (latest)
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Architecture:** Single-Tenant (Penthouse Model) - NOT a SaaS platform
@@ -37,7 +37,7 @@
 | Metric | Count | Status |
 |--------|-------|--------|
 | Physical Routes (page.tsx) | 174 | Verified February 23, 2026 (Session 36: +/website/seo/competitors) |
-| API Endpoints (route.ts) | 273 | Verified February 23, 2026 (Session 36: +/api/seo/domain-analysis, +/api/seo/strategy) |
+| API Endpoints (route.ts) | 277 | Verified February 23, 2026 (Session 37: +/api/battlecard/export, +/api/commerce/brief, +/api/reputation/brief, +/api/risk/interventions) |
 | AI Agents | 52 | **52 FUNCTIONAL (48 swarm + 4 standalone)** |
 | RBAC Roles | 4 | `owner` (level 3), `admin` (level 2), `manager` (level 1), `member` (level 0) — 4-role RBAC |
 | Firestore Collections | 67+ | Active (sagaState, eventLog collections; 25 composite indexes) |

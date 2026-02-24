@@ -12,14 +12,26 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useToast } from '@/hooks/useToast';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { RiskOverviewCard } from '@/components/risk/RiskOverviewCard';
 import { RiskFactorsCard } from '@/components/risk/RiskFactorsCard';
 import { InterventionsCard } from '@/components/risk/InterventionsCard';
-import type { DealRiskPrediction } from '@/lib/risk/types';
+import type { DealRiskPrediction, Intervention } from '@/lib/risk/types';
 import type { Deal } from '@/lib/crm/deal-service';
+
+interface ActiveIntervention {
+  interventionId: string;
+  dealId: string;
+  type: string;
+  title: string;
+  priority: string;
+  status: 'active' | 'completed' | 'dismissed';
+  startedAt: string;
+  completedAt?: string;
+  outcome?: string;
+}
 
 /**
  * Risk Dashboard Page
@@ -32,6 +44,8 @@ export default function RiskDashboardPage() {
   const [prediction, setPrediction] = useState<DealRiskPrediction | null>(null);
   const [deal, setDeal] = useState<Deal | null>(null);
   const [dealId, setDealId] = useState<string>('');
+  const [activeInterventions, setActiveInterventions] = useState<ActiveIntervention[]>([]);
+  const [interventionLoading, setInterventionLoading] = useState<string | null>(null);
 
   /**
    * Fetch risk prediction
@@ -91,6 +105,9 @@ export default function RiskDashboardPage() {
         }
       }
 
+      // Fetch active interventions for this deal
+      await fetchActiveInterventions(dealId);
+
     } catch (err: unknown) {
       const message = err instanceof Error && err.message ? err.message : 'An error occurred while fetching risk prediction';
       setError(message);
@@ -102,14 +119,91 @@ export default function RiskDashboardPage() {
   };
 
   /**
+   * Fetch active interventions for current deal
+   */
+  const fetchActiveInterventions = useCallback(async (id: string) => {
+    try {
+      const res = await authFetch(`/api/risk/interventions?dealId=${encodeURIComponent(id)}`);
+      if (res.ok) {
+        const json = await res.json() as { success?: boolean; data?: ActiveIntervention[] };
+        if (json.success && json.data) {
+          setActiveInterventions(json.data);
+        }
+      }
+    } catch {
+      // silently fail — interventions list is supplementary
+    }
+  }, [authFetch]);
+
+  /**
    * Handle intervention start
    */
-  const handleStartIntervention = (_interventionId: string) => {
-    try {
-      toast.success('Intervention started! Track progress in your CRM.');
-    } catch (err: unknown) {
-      toast.error(`Failed to start intervention: ${err instanceof Error ? err.message : 'Unknown error'}`);
+  const handleStartIntervention = (interventionId: string) => {
+    if (!dealId || interventionLoading) { return; }
+
+    // Find the intervention from prediction to get its type/title/priority
+    const intervention = prediction?.interventions.find((i: Intervention) => i.id === interventionId);
+    if (!intervention) {
+      toast.error('Intervention not found');
+      return;
     }
+
+    setInterventionLoading(interventionId);
+
+    void (async () => {
+      try {
+        const res = await authFetch('/api/risk/interventions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            dealId,
+            interventionId,
+            type: intervention.type,
+            title: intervention.title,
+            priority: intervention.priority,
+          }),
+        });
+
+        if (!res.ok) {
+          const errData = await res.json() as { error?: string };
+          throw new Error(errData.error ?? 'Failed to start intervention');
+        }
+
+        toast.success(`Intervention started: ${intervention.title}`);
+        await fetchActiveInterventions(dealId);
+      } catch (err: unknown) {
+        toast.error(`Failed to start intervention: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      } finally {
+        setInterventionLoading(null);
+      }
+    })();
+  };
+
+  /**
+   * Handle intervention completion or dismissal
+   */
+  const handleUpdateIntervention = (interventionId: string, status: 'completed' | 'dismissed') => {
+    if (!dealId) { return; }
+
+    void (async () => {
+      try {
+        const res = await authFetch(`/api/risk/interventions?dealId=${encodeURIComponent(dealId)}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ interventionId, status }),
+        });
+
+        if (!res.ok) {
+          const errData = await res.json() as { error?: string };
+          throw new Error(errData.error ?? 'Failed to update intervention');
+        }
+
+        toast.success(`Intervention ${status}`);
+        await fetchActiveInterventions(dealId);
+      } catch (err: unknown) {
+        toast.error(`Failed to update intervention: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      }
+    })();
   };
 
   /**
@@ -248,6 +342,59 @@ export default function RiskDashboardPage() {
                 loading={loading}
                 onStartIntervention={handleStartIntervention}
               />
+            </div>
+          </div>
+        )}
+
+        {/* Active Interventions */}
+        {activeInterventions.length > 0 && (
+          <div className="mt-6 bg-[var(--color-bg-paper)] rounded-lg shadow-sm p-6">
+            <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">
+              Active Interventions
+            </h3>
+            <div className="space-y-3">
+              {activeInterventions.map((ai) => (
+                <div
+                  key={ai.interventionId}
+                  className="flex items-center justify-between p-3 bg-[var(--color-bg-primary)] rounded-lg border border-[var(--color-border-main)]"
+                >
+                  <div className="flex items-center gap-3">
+                    <span
+                      className={`inline-block w-2 h-2 rounded-full ${
+                        ai.status === 'active'
+                          ? 'bg-[var(--color-primary)] animate-pulse'
+                          : ai.status === 'completed'
+                            ? 'bg-[var(--color-success)]'
+                            : 'bg-[var(--color-text-disabled)]'
+                      }`}
+                    />
+                    <div>
+                      <span className="text-sm font-medium text-[var(--color-text-primary)]">
+                        {ai.title}
+                      </span>
+                      <span className="ml-2 text-xs text-[var(--color-text-disabled)]">
+                        {ai.status.toUpperCase()}
+                      </span>
+                    </div>
+                  </div>
+                  {ai.status === 'active' && (
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleUpdateIntervention(ai.interventionId, 'completed')}
+                        className="px-3 py-1 text-xs font-medium bg-[var(--color-success)] text-white rounded hover:opacity-90 transition-opacity"
+                      >
+                        Complete
+                      </button>
+                      <button
+                        onClick={() => handleUpdateIntervention(ai.interventionId, 'dismissed')}
+                        className="px-3 py-1 text-xs font-medium bg-[var(--color-text-disabled)] text-white rounded hover:opacity-90 transition-opacity"
+                      >
+                        Dismiss
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
           </div>
         )}

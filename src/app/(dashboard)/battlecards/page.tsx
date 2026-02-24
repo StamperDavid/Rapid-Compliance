@@ -16,9 +16,13 @@ import React, { useState } from 'react';
 import { CompetitorProfileCard } from '@/components/battlecard/CompetitorProfileCard';
 import { BattlecardView } from '@/components/battlecard/BattlecardView';
 import type { CompetitorProfile, Battlecard, BattlecardOptions } from '@/lib/battlecard';
-import { showSuccessToast } from '@/components/ErrorToast';
+import { showSuccessToast, showErrorToast } from '@/components/ErrorToast';
 import { auth } from '@/lib/firebase/config';
 import { logger } from '@/lib/logger/logger';
+
+interface ExportErrorResponse {
+  error?: string;
+}
 interface ApiErrorResponse {
   error?: string;
 }
@@ -43,6 +47,7 @@ export default function BattlecardsPage() {
   // Battlecard state
   const [ourProduct, setOurProduct] = useState('');
   const [battlecard, setBattlecard] = useState<Battlecard | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
 
   const handleDiscoverCompetitor = async () => {
     if (!competitorDomain.trim()) {
@@ -339,14 +344,63 @@ export default function BattlecardsPage() {
               </button>
               <button
                 onClick={() => {
-                  showSuccessToast('Battlecard export is being prepared. Check your downloads shortly.');
+                  if (!battlecard || isExporting) { return; }
+                  setIsExporting(true);
+                  void (async () => {
+                    try {
+                      const token = await auth?.currentUser?.getIdToken();
+                      const response = await fetch('/api/battlecard/export', {
+                        method: 'POST',
+                        headers: {
+                          'Content-Type': 'application/json',
+                          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                        },
+                        body: JSON.stringify({ battlecard }),
+                      });
+
+                      if (!response.ok) {
+                        const errData = await response.json() as ExportErrorResponse;
+                        throw new Error(errData.error ?? 'Export failed');
+                      }
+
+                      const blob = await response.blob();
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `battlecard-${battlecard.competitorName.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase()}.html`;
+                      document.body.appendChild(a);
+                      a.click();
+                      document.body.removeChild(a);
+                      URL.revokeObjectURL(url);
+                      showSuccessToast('Battlecard exported! Open the HTML file and use Print → Save as PDF.');
+                    } catch (err) {
+                      const msg = err instanceof Error ? err.message : 'Export failed';
+                      showErrorToast(msg);
+                      logger.error('Battlecard export failed', err instanceof Error ? err : new Error(String(err)));
+                    } finally {
+                      setIsExporting(false);
+                    }
+                  })();
                 }}
-                className="px-6 py-2 bg-primary hover:bg-primary-light text-white rounded-lg font-medium transition-colors flex items-center"
+                disabled={isExporting}
+                className="px-6 py-2 bg-primary hover:bg-primary-light disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors flex items-center"
               >
-                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                Export Battlecard
+                {isExporting ? (
+                  <>
+                    <svg className="animate-spin w-5 h-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Exporting...
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    Export Battlecard
+                  </>
+                )}
               </button>
             </div>
           </div>
