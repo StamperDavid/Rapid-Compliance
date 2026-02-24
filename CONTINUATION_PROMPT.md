@@ -6,7 +6,7 @@
 
 Repository: https://github.com/StamperDavid/Rapid-Compliance
 Branch: dev
-Last Session: February 20, 2026 (Session 32 — SEO & AI Search Optimization Planning)
+Last Session: February 23, 2026 (Session 37 — Jasper Delegation Audit + Mission Control Planning)
 
 ## Current State
 
@@ -14,7 +14,7 @@ Last Session: February 20, 2026 (Session 32 — SEO & AI Search Optimization Pla
 - **Single-tenant penthouse model** — org ID `rapid-compliance-root`, Firebase `rapid-compliance-65f87`
 - **52 AI agents** (48 swarm + 4 standalone) with hierarchical orchestration
 - **4-role RBAC** (owner/admin/manager/member) with 47 permissions
-- **173 physical routes**, **271 API endpoints**, **330K+ lines of TypeScript**
+- **174 physical routes**, **277 API endpoints**, **330K+ lines of TypeScript**
 - **Deployed via Vercel** — dev → main → Vercel auto-deploy
 
 ### Build Health
@@ -24,7 +24,7 @@ Last Session: February 20, 2026 (Session 32 — SEO & AI Search Optimization Pla
 - Pre-commit hooks — **PASSES** (bypass ratchet 23/26, Windows-safe tsc runner)
 
 ### Production Readiness: ~95%
-- Sessions 1-31 completed all stabilization, feature buildout, audit fixes, and deployment
+- Sessions 1-37 completed all stabilization, feature buildout, audit fixes, and deployment
 - 49 Jest suites (1,289 tests), 18 Playwright E2E specs (~165 tests), all passing
 - Zero TODO comments, zero console statements in src/, zero `@ts-ignore`
 - CI/CD pipeline: 4 parallel jobs (lint+typecheck, unit tests, Playwright, build)
@@ -45,7 +45,7 @@ Last Session: February 20, 2026 (Session 32 — SEO & AI Search Optimization Pla
 | **AI Images** | REAL | DALL-E 3 with size mapping and graceful fallback |
 | **Firebase** | REAL | Auth + Firestore, single-tenant |
 | **OpenRouter** | REAL | AI gateway, 100+ models |
-| **Search** | PARTIAL | Serper.dev wired (needs API key), Google Custom Search (needs keys) |
+| **SEO Data** | REAL | DataForSEO, Serper, PageSpeed Insights, Google Search Console |
 
 ---
 
@@ -56,118 +56,120 @@ Last Session: February 20, 2026 (Session 32 — SEO & AI Search Optimization Pla
 | Facebook/Instagram missing | Blocked: Meta Developer Portal |
 | LinkedIn unofficial | Uses RapidAPI, blocked: Marketing Developer Platform |
 | 23 eslint-disable comments | Budget 23/26 — 2 are `no-implied-eval` (sandboxed with input sanitization) |
-| SEO agent data | SEO Expert agent has analysis engines but external data requires API integration |
-| Competitor Researcher data | Discovery/search returns empty without API keys (Serper, Google Custom Search) |
+| 4 webhook endpoints fail open | SendGrid, Gmail, Twilio SMS/Voice skip signature verification if env var missing |
+| Feature toggle GET unauthenticated | Exposes feature list without auth |
+| Workflow engine no timeout | Workflows can hang indefinitely or trigger infinite loops |
 
 ---
 
-## SESSION 32+: SEO Intelligence & AI Search Optimization
+## Jasper Delegation Status (Audited February 23, 2026)
+
+### What Jasper CAN Do Today
+- **Research companies/competitors** — `scrape_website`, `research_competitors`, `scan_tech_stack` (via Intelligence Manager)
+- **Generate content** — `generate_content` tool (blog articles, social posts, emails, ad copy, newsletters, landing pages)
+- **Delegate to Marketing** — `delegate_to_marketing` (campaigns, viral hooks, threads, ad creatives)
+- **Delegate to Builder** — `delegate_to_builder` (website/funnel blueprints, design systems, copy)
+- **Delegate to Sales** — `delegate_to_sales` (lead qualification, outreach, pipeline analysis, deal closing)
+- **Delegate to Trust** — `delegate_to_trust` (reputation, reviews, GMB, brand health, crisis handling)
+- **Delegate to specialist agents** — `delegate_to_agent` (YouTube, TikTok, Instagram, Twitter, LinkedIn, Pinterest, Facebook, Newsletter, Web Migrator, Lead Hunter, Truth Social)
+- **Video creation** — `create_video`, `get_video_status`
+- **Analytics & reporting** — `get_analytics`, `generate_report`
+- **Lead management** — `scan_leads`, `enrich_lead`, `score_leads`
+- **Platform management** — organizations, users, coupons, pricing tiers
+
+### What Jasper CANNOT Do Yet (Gaps)
+
+| Gap | Missing Tool | Impact |
+|-----|-------------|--------|
+| No broad trend research | No web search/trend scanning tool | Can't "research trending topics in agentic AI" |
+| No Content Manager delegation | No `delegate_to_content` tool | Can't invoke full Content Manager pipeline (Brand DNA, SEO injection, calendar) |
+| No Architect delegation | No `delegate_to_architect` tool | Can't trigger strategic blueprints, UX specs, funnel architecture |
+| No Outreach delegation | No `delegate_to_outreach` tool | Can't trigger email/SMS sequence orchestration |
+| No Intelligence delegation | No `delegate_to_intelligence` tool | Can't invoke full Intelligence Manager (only individual tools) |
+| No Commerce delegation | No `delegate_to_commerce` tool | Can't invoke Commerce Manager for checkout orchestration |
+| No blog save-as-draft bridge | `generate_content` generates text but doesn't save to Firestore blog system | Can't complete generate → draft → publish loop |
+| No live delegation tracking UI | No "follow along" / mission control view | User can't watch multi-step delegations in real-time |
+
+---
+
+## NEXT: Sprint 18 — Jasper Mission Control (Live Delegation Tracker)
 
 ### Overview
 
-Build a production-grade SEO competitive intelligence system with two entry points:
-1. **Jasper-initiated** — natural language command triggers delegation, user auto-navigated to SEO page
-2. **Manual mode** — user enters competitor domain, iterative analyze → enrich → re-run loop
+Build a general-purpose **Mission Control** UI that lets users watch Jasper's delegation chains in real-time. When Jasper breaks a complex request into sub-tasks and delegates to managers/specialists, the user sees a live timeline with status updates, the ability to intervene, and auto-navigation to relevant pages when work completes.
 
-Simultaneously implement AI Search Optimization (AIO/GEO) to prepare for AI-driven search replacing traditional browser search.
+**Why:** Transparency builds trust. Users won't rely on Jasper for complex multi-step workflows if they can't see what's happening. The Social Command Center already proves this pattern works — this extends it to ALL 9 domain managers.
 
-### Why This Matters
+### Feature Name: **Mission Control**
 
-| Metric | Value |
-|--------|-------|
-| Consumers starting searches with AI | 37% |
-| Google results showing AI Overviews | 47% |
-| AI referral conversion rate vs Google organic | 15.9% vs 1.76% (9x higher) |
-| AI traffic growth vs organic traffic growth | 165x faster |
-| B2B AI search adoption vs consumers | 3x higher |
-| Projected AI-Google conversion parity | Late 2027 - Early 2028 |
+**Route:** `/(dashboard)/mission-control`
+**Concept:** "Air Traffic Control for your AI workforce"
 
----
+### Architecture
 
-### Sprint 14: Wire Real SEO Data APIs
+The backend infrastructure already exists:
+- **Saga Persistence** (`src/lib/orchestration/saga-persistence.ts`) — checkpoints, steps, finalization, event logging
+- **Signal Bus** (`src/lib/agents/shared/tenant-memory-vault.ts`) — cross-agent signals (BROADCAST, DIRECT, BUBBLE_UP, BUBBLE_DOWN)
+- **Jasper Command Authority** (`src/lib/orchestrator/jasper-command-authority.ts`) — command dispatch, approval gateway, command history
+- **Social Command Center** (`/social/command-center`) — existing proof of concept for agent observation
 
-**Goal:** Replace simulated/placeholder data in SEO Expert and Competitor Researcher agents with real external data.
+### Sprint Plan
 
 | # | Task | Details | Effort |
 |---|------|---------|--------|
-| 14.1 | **Serper.dev integration** | Add `SERPER_API_KEY` to env, verify `search-service.ts` integration works end-to-end. Test SERP data retrieval (organic results, People Also Ask, related searches). | ~2h |
-| 14.2 | **DataForSEO integration** | Create `src/lib/integrations/dataforseo-service.ts`. Endpoints: keyword volume/difficulty, domain metrics, backlink summary, competitor keywords, SERP position tracking. Pay-per-task (~$0.01-0.05/task). | ~6h |
-| 14.3 | **Google PageSpeed Insights** | Wire free Google API into SEO Expert's `crawl_analysis` action for real Core Web Vitals, speed scores, and performance metrics. | ~2h |
-| 14.4 | **Google Search Console API** | Create `src/lib/integrations/gsc-service.ts`. OAuth2 flow to connect user's GSC property. Pull own rankings, impressions, clicks, indexing status. Add to Settings/Integrations page. | ~4h |
-| 14.5 | **Wire agents to real data** | Update `seo/specialist.ts` and `competitor/specialist.ts` to call real APIs instead of returning simulated data. Replace estimated domain authority with DataForSEO metrics. | ~4h |
+| 18.1 | **Mission event API** | Create `POST /api/orchestrator/missions` to create a mission (saga wrapper) when Jasper starts a complex delegation. Create `GET /api/orchestrator/missions/[missionId]` SSE endpoint streaming mission events in real-time. Event types: `mission.started`, `step.delegated`, `step.in_progress`, `step.completed`, `step.failed`, `step.awaiting_approval`, `mission.completed`. | ~4h |
+| 18.2 | **Jasper tool instrumentation** | Update each `delegate_to_*` tool handler in `jasper-tools.ts` to: (1) create a mission if one doesn't exist for this conversation, (2) emit `step.delegated` events with manager name, task description, and expected outputs, (3) emit `step.completed` or `step.failed` when the delegation returns. | ~3h |
+| 18.3 | **Mission Control page** | Build `/(dashboard)/mission-control/page.tsx`. Shows: active missions list (left panel), selected mission timeline (center), step detail panel (right). Timeline renders vertically with status icons (pending/running/done/failed), agent avatars, timestamps, and step descriptions. Auto-scrolls to latest event. | ~6h |
+| 18.4 | **Mission detail timeline component** | `MissionTimeline.tsx` — SSE-connected component subscribing to `/api/orchestrator/missions/[missionId]`. Renders saga steps as a vertical timeline. Each step shows: agent name + avatar, task description, status badge, duration, outputs summary. Animated transitions between states. | ~4h |
+| 18.5 | **Auto-navigation from Jasper chat** | When Jasper creates a mission, the chat response includes a "Watch Live →" action button that navigates to `/mission-control?mission={id}`. Jasper says something like: "I'm on it. I've kicked off a 3-step mission — research → content → publish. [Watch Live →]" | ~2h |
+| 18.6 | **Approval gates in timeline** | When a step reaches `awaiting_approval` (from Jasper Command Authority approval gateway), the timeline shows an interactive approval card with: action description, risk level, approve/reject buttons. Approval updates the mission and continues the saga. | ~3h |
+| 18.7 | **Mission history & replay** | `GET /api/orchestrator/missions` returns paginated list of past missions. Mission Control page has a "History" tab showing completed missions with outcome badges (success/partial/failed), total duration, and step count. Clicking opens the full timeline in read-only mode. | ~3h |
+| 18.8 | **Sidebar + SubpageNav integration** | Add "Mission Control" to the Home section in `AdminSidebar.tsx` (between Dashboard and Conversations). Add as a tab option on the Dashboard SubpageNav. | ~1h |
 
----
+### Post-Sprint: Complete Jasper's Delegation Coverage (Sprint 19)
 
-### Sprint 15: Competitor SEO Analysis Page
-
-**Goal:** Build the iterative competitor analysis UI at `/seo/competitors` (or `/website/seo/competitors`).
-
-| # | Task | Details | Effort |
-|---|------|---------|--------|
-| 15.1 | **Competitor input form** | Domain entry field + "Analyze" button. Support bulk entry (comma-separated domains). Store competitor list in Firestore. | ~2h |
-| 15.2 | **Analysis results dashboard** | Per-competitor cards showing: top keywords, domain metrics, backlink count, content strategy summary, technical SEO score, Core Web Vitals. | ~4h |
-| 15.3 | **Keyword gap analysis** | Side-by-side view: your keywords vs competitor keywords. Highlight gaps (keywords they rank for that you don't). Filter by difficulty, volume, intent. | ~4h |
-| 15.4 | **Enrich & re-run loop** | "Enrich" button triggers deeper analysis (backlink breakdown, content audit, tech stack detection). "Re-run" refreshes data. Results update in real-time via polling or SSE. | ~3h |
-| 15.5 | **Cost-to-compete estimate** | For each gap keyword, estimate: content needed, backlinks needed, time to rank, approximate cost. Aggregate into "beat this competitor" budget estimate. | ~3h |
-| 15.6 | **Strategy generator** | "Generate Plan" button triggers SEO Expert's `30_day_strategy` action with competitor data as context. Display phased action plan with daily tasks. | ~2h |
-| 15.7 | **SubpageNav integration** | Add "Competitors" tab to `/website/seo` SubpageNav. Update sidebar routing. | ~1h |
-
----
-
-### Sprint 16: Jasper → SEO Delegation Pipeline
-
-**Goal:** Enable natural language commands to Jasper that trigger SEO analysis and auto-navigate the user to results.
+After Mission Control is visible, close the remaining delegation gaps:
 
 | # | Task | Details | Effort |
 |---|------|---------|--------|
-| 16.1 | **Jasper SEO delegation tool** | Add `delegate_to_seo_analysis` tool to `jasper-tools.ts`. Input: competitor domain(s), analysis depth, focus areas. Output: analysis ID for tracking. | ~3h |
-| 16.2 | **Intelligence Manager → SEO Expert wiring** | Ensure Intelligence Manager correctly routes SEO research tasks to both Competitor Researcher and SEO Expert in parallel. Results merge via Memory Vault. | ~3h |
-| 16.3 | **Real-time result streaming** | Create `/api/seo/analysis/[analysisId]/status` SSE endpoint. Streams agent progress (started → scraping → analyzing → enriching → complete). UI subscribes and shows live progress. | ~4h |
-| 16.4 | **Auto-navigation from chat** | When Jasper completes delegation, response includes a link/action that navigates user to `/website/seo/competitors?analysis={id}`. Results pre-populated. | ~2h |
-| 16.5 | **Jasper context injection** | Jasper's response synthesizes key findings: "Your competitor ranks for 47 keywords you're missing. Top opportunity: [keyword] with 2,400 monthly searches and low difficulty. View full analysis →" | ~2h |
+| 19.1 | **`delegate_to_content` tool** | Wire Jasper → Content Manager. Input: content type, topic, Brand DNA context, SEO keywords. Triggers full Content Manager pipeline (Copywriter + Calendar + Video + Assets). | ~3h |
+| 19.2 | **`delegate_to_architect` tool** | Wire Jasper → Architect Manager. Input: site type, industry, audience, funnel goals. Triggers SiteArchitecture + TechnicalBrief generation. | ~3h |
+| 19.3 | **`delegate_to_outreach` tool** | Wire Jasper → Outreach Manager. Input: lead list, sequence type, channel preference. Triggers multi-step sequence orchestration with compliance checks. | ~3h |
+| 19.4 | **`delegate_to_intelligence` tool** | Wire Jasper → Intelligence Manager as a unified entry point. Input: research type (competitor, market, tech, sentiment, trend), targets. Returns aggregated intelligence brief. | ~3h |
+| 19.5 | **`delegate_to_commerce` tool** | Wire Jasper → Commerce Manager. Input: action type (checkout, catalog update, price change, inventory check). Triggers appropriate specialist. | ~2h |
+| 19.6 | **Blog draft bridge** | Create `save_blog_draft` tool in Jasper that takes generated content and saves it as a blog post draft in Firestore (`blog-posts/{id}` with status: 'draft'). Returns the draft ID and a link to the blog editor. | ~2h |
+| 19.7 | **Web trend research tool** | Add `research_trending_topics` tool that uses Serper/DataForSEO to find trending topics by industry/keyword, returns top trending themes with search volume and relevance scoring. | ~3h |
 
----
+### End State
 
-### Sprint 17: AI Search Optimization (AIO/GEO)
-
-**Goal:** Implement technical optimizations and monitoring for AI search visibility.
-
-| # | Task | Details | Effort |
-|---|------|---------|--------|
-| 17.1 | **robots.txt AI crawler allowlist** | Update `/api/website/robots.txt` to allow GPTBot, ChatGPT-User, ClaudeBot, PerplexityBot, Google-Extended, Applebot-Extended, cohere-ai. Add dashboard toggle per crawler. | ~2h |
-| 17.2 | **Create /llms.txt route** | New route at `/api/website/llms.txt` serving Markdown description of the site for LLM inference. Auto-generate from site pages/blog/products. Dashboard editor. | ~3h |
-| 17.3 | **JSON-LD schema markup** | Add structured data components: Organization (site-wide), SoftwareApplication (product pages), FAQPage (pricing/features), Article (blog posts), BreadcrumbList (all pages), AggregateRating (testimonials). | ~4h |
-| 17.4 | **SSR audit for marketing pages** | Verify all public-facing pages (pricing, features, blog, about, contact) use SSR/SSG, not client-only rendering. Fix any that AI crawlers can't parse. | ~2h |
-| 17.5 | **AI visibility monitoring** | Create `/seo/ai-visibility` dashboard page. Integration with Otterly AI or similar API ($29/mo) to track brand mentions across ChatGPT, Perplexity, Gemini, Google AI Overviews. Share-of-voice vs competitors. | ~6h |
-| 17.6 | **Content optimization scoring** | Add AIO score to blog post editor: checks for front-loaded answers (first 60 words), heading structure, entity density, semantic completeness, FAQ schema, author E-E-A-T signals. | ~4h |
-| 17.7 | **AI search referral tracking** | Add Google Analytics segment for AI referral traffic (chat.openai.com, perplexity.ai, etc.). Dashboard widget showing AI vs organic conversion rates. | ~2h |
-
----
-
-### Execution Order
+After Sprints 18-19, the full loop works:
 
 ```
-Sprint 14 (Next):    Wire real SEO data APIs (Serper, DataForSEO, PageSpeed, GSC)
-Sprint 15:           Build competitor SEO analysis page with iterative loop
-Sprint 16:           Jasper → SEO delegation pipeline with auto-navigation
-Sprint 17:           AI Search Optimization (robots.txt, llms.txt, schema, monitoring)
-```
+User: "Jasper, research a trending topic in agentic AI, find how it relates to our business, and create a blog post about it"
 
-Sprints 14-15 can partially overlap (API wiring feeds into UI).
-Sprint 17 tasks are independent and can be interleaved with Sprints 15-16.
+Jasper: "I'm on it. I've created a 4-step mission:
+1. Research trending agentic AI topics (→ Intelligence Manager)
+2. Analyze relevance to SalesVelocity.ai (→ Jasper internal)
+3. Generate blog article with SEO optimization (→ Content Manager)
+4. Save as draft for your review (→ Blog system)
+[Watch Live →]"
+
+Mission Control shows each step executing in real-time.
+User can watch, approve, or intervene at any point.
+Blog draft appears in /website/blog when complete.
+```
 
 ---
 
-### API Cost Estimates
+## Execution Order (Current Roadmap)
 
-| Service | Cost Model | Estimated Monthly |
-|---------|-----------|-------------------|
-| **Serper.dev** | $5 / 1,000 searches | ~$10-25 |
-| **DataForSEO** | Pay-per-task ($0.01-0.05) | ~$20-50 |
-| **Google PageSpeed Insights** | Free | $0 |
-| **Google Search Console** | Free | $0 |
-| **Otterly AI** (AI visibility monitoring) | $29/mo flat | $29 |
-| **Total** | | ~$60-100/mo |
+```
+Sprint 18 (NEXT):    Jasper Mission Control — live delegation tracker UI
+Sprint 19:           Complete Jasper delegation coverage (5 missing tools + blog bridge + trend research)
+Sprint 20:           AI Search Optimization (robots.txt, llms.txt, schema markup, monitoring)
+```
+
+Sprint 18 is the priority — without visibility into what Jasper is doing, users won't trust it with complex workflows.
 
 ---
 
@@ -180,23 +182,19 @@ Sprint 17 tasks are independent and can be interleaved with Sprints 15-16.
 | `ENGINEERING_STANDARDS.md` | Code quality requirements |
 | `AGENT_REGISTRY.json` | AI agent configurations (52 agents) |
 | `src/lib/constants/platform.ts` | PLATFORM_ID and platform identity |
-| `src/lib/agents/marketing/seo/specialist.ts` | SEO Expert agent (1,380 LOC) |
-| `src/lib/agents/intelligence/competitor/specialist.ts` | Competitor Researcher agent |
-| `src/lib/battlecard/battlecard-engine.ts` | Competitive intelligence engine |
-| `src/lib/enrichment/search-service.ts` | Multi-API search (Serper, Google, fallback) |
-| `src/lib/orchestrator/jasper-tools.ts` | Jasper's function-calling tools |
-| `src/lib/orchestrator/jasper-command-authority.ts` | Jasper delegation + briefings |
-| `src/lib/orchestrator/signal-bus.ts` | Agent-to-agent communication |
+| `src/lib/orchestrator/jasper-tools.ts` | Jasper's 32 function-calling tools |
+| `src/lib/orchestrator/jasper-command-authority.ts` | Jasper delegation + briefings + approval gateway |
+| `src/lib/orchestration/saga-persistence.ts` | Saga checkpoints, event logging (Mission Control backend) |
 | `src/lib/agents/orchestrator/manager.ts` | Master Orchestrator — Saga Pattern |
-| `src/app/(dashboard)/website/seo/page.tsx` | SEO management dashboard |
-| `src/app/(dashboard)/seo/training/page.tsx` | SEO training lab |
-| `vercel.json` | Cron jobs, CORS, security headers |
+| `src/lib/agents/shared/tenant-memory-vault.ts` | Signal Bus — cross-agent communication |
+| `src/app/(dashboard)/social/command-center/page.tsx` | Social Command Center (Mission Control prototype) |
+| `src/app/api/orchestrator/chat/route.ts` | Jasper chat API |
 
 ---
 
 ## Session History (Archived)
 
-Sessions 1-31 completed all platform stabilization, feature buildout, nav consolidation, production audits, and deployment. Details in git history and `docs/archive/`. Key milestones:
+Sessions 1-37 completed all platform stabilization, feature buildout, nav consolidation, production audits, deployment, SEO data integration, and Jasper delegation audit. Details in git history and `docs/archive/`. Key milestones:
 - Sessions 1-8: Core infrastructure (saga persistence, kill switch, revenue attribution, integrations)
 - Sessions 9-13: QA audits (14 Critical + 45 Major resolved)
 - Sessions 14-18: Auth fixes, website editor, Playwright E2E infrastructure
@@ -206,3 +204,5 @@ Sessions 1-31 completed all platform stabilization, feature buildout, nav consol
 - Sessions 28-29: Test suite (1,289 Jest + 165 Playwright tests), CI/CD pipeline overhaul
 - Session 30: Production deployment — merged to main, Vercel auto-deploy
 - Session 31: Final code readiness audit — all 13 items resolved, 123 new tests
+- Sessions 32-35: SEO Intelligence planning + domain analysis hardening
+- Sessions 36-37: Sprint 14/15 completion (competitor SEO analysis), Jasper delegation audit + Mission Control planning

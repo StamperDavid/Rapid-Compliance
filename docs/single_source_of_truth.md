@@ -1,7 +1,7 @@
 # SalesVelocity.ai - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** February 23, 2026 (Session 37: Sprint 16 Feature Completion & API Bridging — battlecard HTML export, commerce brief API, reputation brief API, risk intervention CRUD API, SwarmMonitorWidget business metrics, risk page intervention handler)
+**Last Updated:** February 23, 2026 (Session 37: Jasper delegation audit, Mission Control feature planning, CONTINUATION_PROMPT + SSOT cleanup)
 **Branches:** `dev` (latest)
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Architecture:** Single-Tenant (Penthouse Model) - NOT a SaaS platform
@@ -142,7 +142,7 @@ The Claude Code Governance Layer defines binding operational constraints for AI-
 
 ---
 
-## Current Status (February 20, 2026)
+## Current Status (February 23, 2026)
 
 ### Production Readiness: ~95%
 
@@ -151,6 +151,7 @@ The Claude Code Governance Layer defines binding operational constraints for AI-
 | Single-tenant architecture | **COMPLETE** — Firebase kill-switch, PLATFORM_ID constant, -80K+ lines purged |
 | 4-role RBAC | **ENFORCED** — `requireRole()` on API routes, sidebar filtering, 47 permissions |
 | Agent hierarchy | **STRUCTURALLY COMPLETE** — 52 agents, manager orchestration, saga persistence |
+| Jasper delegation | **PARTIAL** — 5 of 9 manager delegation tools wired (Marketing, Builder, Sales, Trust, Agent). Missing: Content, Architect, Outreach, Intelligence, Commerce |
 | Type safety | **CLEAN** — `tsc --noEmit` passes, zero `any` policy |
 | Build pipeline | **CLEAN** — `npm run build` passes, pre-commit hooks enforced |
 | Test coverage | **1,289 Jest tests** (49 suites) + **165 Playwright E2E tests** (18 specs) |
@@ -162,9 +163,18 @@ The Claude Code Governance Layer defines binding operational constraints for AI-
 |------|-------|----------|
 | **Facebook/Instagram** | No implementation. Blocked: Meta Developer Portal approval | MEDIUM |
 | **LinkedIn** | Unofficial RapidAPI wrapper. Blocked: Marketing Developer Platform | MEDIUM |
+| **Jasper delegation gaps** | Missing 4 `delegate_to_*` tools (content, architect, outreach, intelligence, commerce), no blog draft bridge, no trend research tool | MEDIUM |
+| **Mission Control UI** | No live delegation tracker — users can't follow along as Jasper delegates across the swarm | MEDIUM |
 | **Video render pipeline** | Returns empty responses; real integrations gated by API keys | LOW |
 | **Asset Generator** | Returns empty; no actual image generation | LOW |
-| **SEO data** | ~~SEO Expert needs external API integration~~ **RESOLVED** — DataForSEO (domain metrics, ranked keywords, backlinks, referring domains, competitors), Serper (SERP positions), PageSpeed Insights, Google Search Console all wired up | ~~MEDIUM~~ DONE |
+
+### Active Roadmap
+
+| Sprint | Focus | Status |
+|--------|-------|--------|
+| **Sprint 18** | Jasper Mission Control — live delegation tracker UI | **NEXT** |
+| **Sprint 19** | Complete Jasper delegation coverage (5 missing tools + blog bridge + trend research) | PLANNED |
+| **Sprint 20** | AI Search Optimization (robots.txt, llms.txt, schema markup, monitoring) | PLANNED |
 
 ### Completed Roadmaps (Archived)
 
@@ -175,6 +185,7 @@ The following roadmaps are fully complete. Details in git history and `docs/arch
 - **Autonomous Business Operations** — All 8 phases COMPLETE
 - **Session 25 Production Audit** — All 28 blockers resolved (Sessions 26-27)
 - **Session 31 Code Readiness Audit** — All 13 items resolved
+- **Sprint 14-15** — SEO data API integration + Competitor SEO analysis page COMPLETE
 
 ---
 
@@ -882,7 +893,7 @@ These agents operate independently of the L1/L2/L3 swarm hierarchy:
 
 | Agent | Type | Path | Status | Description |
 |-------|------|------|--------|-------------|
-| Jasper | Platform AI Assistant | Firestore `goldenMasters/` + `src/lib/orchestrator/jasper-tools.ts` | FUNCTIONAL | Jasper — the platform AI assistant and primary human interface to the agent swarm. Delegates to all 9 domain managers via tool functions. Provides strategic guidance across the platform. |
+| Jasper | Platform AI Assistant | Firestore `goldenMasters/` + `src/lib/orchestrator/jasper-tools.ts` | FUNCTIONAL | Jasper — the platform AI assistant and primary human interface to the agent swarm. **32 tools** across 8 categories. Delegates to 5 of 9 domain managers via tool functions (`delegate_to_marketing`, `delegate_to_builder`, `delegate_to_sales`, `delegate_to_trust`, `delegate_to_agent`). Missing delegation tools: content, architect, outreach, intelligence, commerce (Sprint 19). Anti-hallucination design: tools force data verification. |
 | Voice Agent Handler | Voice AI Agent | `src/lib/voice/voice-agent-handler.ts` | FUNCTIONAL | Hybrid AI/human voice agent with two modes: **Prospector** (lead qualification) and **Closer** (deal closing with warm transfer). API routes: `src/app/api/voice/ai-agent/` |
 | Autonomous Posting Agent | Social Media Automation | `src/lib/social/autonomous-posting-agent.ts` | FUNCTIONAL | Manages autonomous content posting across LinkedIn and Twitter/X with scheduling, queueing, and analytics tracking. |
 | Chat Session Service | Agent Infrastructure | `src/lib/agent/chat-session-service.ts` | FUNCTIONAL | Manages real-time AI chat sessions and agent instance lifecycle. `AgentInstanceManager` (`src/lib/agent/instance-manager.ts`) handles ephemeral agent instances spawned from Golden Masters. |
@@ -1200,23 +1211,17 @@ const res = await authFetch('/api/some-endpoint');
 
 ### Security Concerns
 
+**Resolved Issues (9 total):** All CRITICAL security findings have been resolved — 82 unprotected API routes hardened (Session 4), OAuth CSRF + encryption fixed (Session 9), rate limiting + CAPTCHA enforced (Session 9), CAN-SPAM unsubscribe route created (Session 9), 53 bare fetch calls migrated to `authFetch` (Session 33), system status auth handshake fixed (Jan 29). See git history for details.
+
+**Remaining Open Issues:**
+
 | Severity | Issue | Location | Status |
 |----------|-------|----------|--------|
-| ~~CRITICAL~~ | ~~82 API routes missing authentication~~ | `src/app/api/**` | ✅ **RESOLVED 2026-02-11** — Day 4 security hardening sprint added `requireAuth` to all 82 unprotected dashboard routes. See [API Route Protection Summary](#api-route-protection-summary) below. |
-| ~~CRITICAL~~ | ~~Generic OAuth callback has no CSRF state validation~~ | `src/app/api/integrations/oauth/callback/[provider]/route.ts` | ✅ **RESOLVED 2026-02-13 (Session 9)** — OAuth state now validated via Firestore-backed tokens with TTL and one-time-use semantics. |
-| ~~CRITICAL~~ | ~~OAuth token encryption fails open (stores plaintext on failure)~~ | `src/app/api/integrations/oauth/[provider]/callback/route.ts` | ✅ **RESOLVED 2026-02-13 (Session 9)** — Encryption failure now throws instead of falling back to plaintext storage. |
-| ~~CRITICAL~~ | ~~Public form GET endpoint has no rate limiting~~ | `src/app/api/public/forms/[formId]/route.ts` | ✅ **RESOLVED 2026-02-13 (Session 9)** — `rateLimitMiddleware` added to GET handler. |
-| ~~CRITICAL~~ | ~~CAPTCHA enabled on forms but never enforced~~ | `src/app/api/public/forms/[formId]/route.ts` | ✅ **RESOLVED 2026-02-13 (Session 9)** — reCAPTCHA v3 verification enforced when `enableCaptcha` is true. |
-| ~~CRITICAL~~ | ~~No /unsubscribe route (CAN-SPAM violation)~~ | N/A | ✅ **RESOLVED 2026-02-13 (Session 9)** — Created `/api/public/unsubscribe` with GET (confirmation page) + POST (processing), suppression records, sequence unenrollment. |
-| ~~MEDIUM~~ | ~~Demo mode fallback in useAuth.ts~~ | `src/hooks/useAuth.ts` | ✅ RESOLVED - Wrapped in `NODE_ENV === 'development'` check |
-| ~~LOW~~ | ~~Inconsistent role naming~~ | Multiple files | ✅ RESOLVED - 4-role RBAC (owner|admin|manager|member) deployed. claims-validator maps legacy strings. |
-| ~~CRITICAL~~ | ~~53 client-side fetch calls missing Authorization headers~~ | 65 dashboard pages and components | ✅ **RESOLVED 2026-02-23 (Session 33)** — All bare `fetch()` calls to `/api/` endpoints replaced with `authFetch()` from `useAuthFetch` hook. Affected: analytics (7), settings (7), website builder (10), CRM/voice/video/components (41). Only intentionally public endpoint excluded: `PublicLayout.tsx → /api/chat/public`. |
-| MAJOR | 4 webhook endpoints fail open when verification keys missing | `src/app/api/webhooks/{email,gmail,sms,voice}` | Open — SendGrid, Gmail, Twilio SMS/Voice skip signature verification if env var is missing. Should fail closed in production. |
-| MAJOR | Feature toggle GET endpoint is unauthenticated | `src/app/api/orchestrator/feature-toggle/route.ts` | Open — exposes hidden feature list without auth. |
-| MAJOR | Workflow engine has no execution timeout or recursion prevention | `src/lib/workflows/workflow-engine.ts` | Open — workflows can hang indefinitely or trigger infinite loops. |
+| MAJOR | 4 webhook endpoints fail open when verification keys missing | `src/app/api/webhooks/{email,gmail,sms,voice}` | Open — should fail closed in production |
+| MAJOR | Feature toggle GET endpoint is unauthenticated | `src/app/api/orchestrator/feature-toggle/route.ts` | Open — exposes feature list without auth |
+| MAJOR | Workflow engine has no execution timeout or recursion prevention | `src/lib/workflows/workflow-engine.ts` | Open — can hang indefinitely |
 | LOW | Token claim extraction lacks strict validation | `api-auth.ts` | Add runtime type guards |
-| LOW | Manual organization check in agent routes | `/api/agent/chat` | Create decorator pattern for auto org validation |
-| ~~CRITICAL~~ | ~~Auth Handshake Failure: `useSystemStatus` hook missing Authorization header~~ | `src/hooks/useSystemStatus.ts` | ✅ **RESOLVED 2026-01-29** - Implemented reactive auth handshake with fresh Firebase ID Token per request. Features: (1) `onAuthStateChanged` listener for reactive auth state, (2) `getIdToken()` called inside fetch for token freshness, (3) Auth-ready polling kill-switch, (4) Graceful 401/403 error handling via `connectionError` state, (5) Proper cleanup on unmount. `/api/system/status` is now **AUTHENTICATED-LIVE**. |
+| LOW | Manual organization check in agent routes | `/api/agent/chat` | Create decorator pattern |
 
 ### API Route Protection Summary
 
@@ -1404,127 +1409,15 @@ The following endpoints have working infrastructure (rate limiting, caching, aut
 | `/api/webhooks/gmail` | Auto-meeting booking has TODO | LOW |
 | `/api/voice/twiml` | Audio fallback uses placeholder URL | LOW |
 
-**RESOLVED (January 30, 2026):**
-- `/api/admin/social/post` - Now persists scheduled posts to Firestore via `SocialPostService`
-- `/api/admin/video/render` - New endpoint with real `jobId` persistence via `VideoJobService`
-- `/api/admin/promotions` - ✅ **NEW** Full CRUD for promotional campaigns via `PromotionService`
-  - POST: Create promotion with Zod validation, Firestore persistence
-  - GET: Fetch all promotions with analytics aggregation
-  - DELETE: Remove promotion by ID
-  - Service: `src/lib/promotions/promotion-service.ts`
+**Resolved API Issues (Archived):** All previous API implementation gaps have been resolved across Sessions 7-37. Key resolutions include: social post persistence, video render pipeline (HeyGen/Sora/Runway), DALL-E 3 image generation, competitor SEO analysis endpoints (`/api/seo/domain-analysis`, `/api/seo/strategy`), social media 6-phase expansion, AI Social Media Command Center, 14 Critical QA issues, commerce pipeline (9 fixes), fake data removal (35+ methods), data integrity (125+ files), workflow infrastructure (6 fixes), and code quality hardening. See git history for commit-level details.
 
-**RESOLVED (February 13, 2026) - Session 7: AI Provider Wiring:**
-- `/api/ai/generate-image` - **NEW** DALL-E 3 image generation with Zod validation, rate limiting (20/min)
-- `/api/website/ai/generate` - **NEW** AI page generation from natural language prompts (10/min rate limit)
-- Asset Generator specialist now uses real DALL-E 3 instead of placeholder URLs (graceful fallback)
-- Video render pipeline wired to real HeyGen, Sora, Runway APIs via `video-service.ts`
-- Runway endpoints updated to `api.dev.runwayml.com/v1` with `gen3a_turbo` model
-- `isProviderConfigured()` switched from `process.env` to Firestore `apiKeyService`
-- Veo/Kling/Pika/StableVideo throw clear "not yet available" errors (triggers fallback chain)
-
-**RESOLVED (February 23, 2026) - Session 36: Sprint 14/15 — Competitor SEO Analysis:**
-- `/api/seo/domain-analysis` - **NEW** POST endpoint, auth-gated, Zod validated. Invokes SEO Expert agent `domain_analysis` action, returns `DomainAnalysisResult`
-- `/api/seo/strategy` - **NEW** POST endpoint, auth-gated, Zod validated. Invokes SEO Expert `30_day_strategy` action, returns `ThirtyDayStrategy`
-- Competitor Researcher agent (`competitor/specialist.ts`) now uses real Serper API instead of stub `simulatedSearch()`
-- Competitor Researcher `estimateDomainAuthority()` tries DataForSEO `getDomainMetrics()` first, heuristic fallback
-- Google OAuth auth/callback routes support `?service=gsc` for Search Console scope (`webmasters.readonly`)
-- Google Search Console integration UI added to Settings > Integrations (SEO Tools category)
-- New page: `/website/seo/competitors` — domain input, bulk entry, analysis cards, keyword gap, cost-to-compete, 30-day strategy generator
-- Shared types extracted to `src/types/seo-analysis.ts` (DomainAnalysisResult, CompetitorEntry, ThirtyDayStrategy)
-
-**RESOLVED (February 12, 2026) - Social Media Platform Enhancement:**
-- `/api/social/*` - 6-phase expansion with enterprise-grade features
-  - Multi-account management (`src/lib/social/social-account-service.ts`)
-  - Dynamic agent configuration (`src/lib/social/agent-config-service.ts`)
-  - Media uploads via Firebase Storage (`src/lib/social/media-service.ts`)
-  - Approval workflow with status tracking (`src/lib/social/approval-service.ts`)
-  - Social listening with AI sentiment analysis (`src/lib/social/listening-service.ts`, `src/lib/social/sentiment-analyzer.ts`)
-  - Content calendar aggregation across all platforms
-
-**RESOLVED (February 13, 2026) - AI Social Media Command Center & Page Buildout:**
-- `/api/social/agent-status` (GET/POST) — Agent status dashboard with kill switch toggle, velocity usage, queue depth, platform connections
-- `/api/social/activity` (GET) — Chronological activity feed from posts/approvals/queue with event type mapping
-- Kill switch (`agentEnabled` boolean) added to `AutonomousAgentSettings` type, config defaults, Zod schema, and `executeAction()` guard
-- 4 new frontend pages: Command Center, Activity Feed, Analytics Dashboard, Agent Rules
-- 2 upgraded pages: Content Studio (dual-mode autopilot/manual), Approval Queue (batch, correction capture, Why badge)
-
-**RESOLVED (February 13, 2026) - Session 9: Production Readiness QA — 14 Critical Issues Fixed:**
-
-Full 4-domain QA audit (Revenue, Data Integrity, Growth, Platform) identified 14 Critical / 45 Major / 40 Minor / 23 Info findings. All 14 Critical issues resolved:
-
-*Revenue & E-Commerce (CRIT 1-4):*
-- Dollar/cent conversion heuristic removed in `create-session/route.ts` — prices treated as cents
-- Stripe webhook now clears cart via `cartId` metadata after `checkout.session.completed`
-- Order creation moved to AFTER Stripe session succeeds (prevents ghost orders)
-- Order Firestore paths consolidated to `organizations/{PLATFORM_ID}/orders` (was split across 3 paths)
-
-*Data Integrity (CRIT 5-8):*
-- Zod schema added to `POST /api/outbound/sequences` (replaced manual type guard that accepted any object)
-- Zod schemas added to `POST/PUT /api/custom-tools` (replaced unsafe `as` cast)
-- Optimistic concurrency control via `expectedVersion` parameter on `SchemaManager.updateSchema()`
-- 5 analytics routes capped at 10K docs + date-range constraints (contacts/count, pipeline, forecast, win-loss, lead-scoring)
-
-*Growth & Outreach (CRIT 9-12):*
-- LinkedIn posting fallback returns `success: false` instead of faking `success: true`
-- `rateLimitMiddleware` added to public form GET endpoint
-- reCAPTCHA v3 verification enforced when `enableCaptcha` is true on form settings
-- `/api/public/unsubscribe` route created (GET: confirmation page, POST: processing with suppression records)
-
-*Platform Security (CRIT 13-14):*
-- Generic OAuth callback now validates CSRF state via `validateOAuthState` from `oauth-state.ts`
-- OAuth token encryption fails closed (throws on failure instead of storing plaintext)
-
-*Files modified:* 18 files across `src/app/api/` and `src/lib/`
-*Build verification:* `tsc --noEmit` PASS | `lint` PASS | `build` PASS
-*Commit:* `3b1f5ea3` on `dev`
-
-**RESOLVED (February 19, 2026) - Session 26: Commerce Pipeline + Fake Data Removal + Data Integrity:**
-
-*Sprint 9 — Commerce Pipeline (9 fixes):*
-- Cart Firestore path mismatch fixed — `create-session/route.ts` aligned with `cart-service.ts`
-- Subscription upgrade bypass removed — proper Stripe Checkout flow via `POST /api/subscriptions/checkout`
-- Payment result URLs fixed (`/payment/success` → `/store/checkout/success`)
-- Dual checkout schemas consolidated — `/api/checkout/complete` aligned with ecommerce order schema
-- `POST /api/webhooks/mollie` — **NEW** Mollie payment webhook (form-encoded, status mapping, order updates)
-- `GET /api/admin/usage` — **NEW** Real billing usage metrics (contacts count, emails sent, AI credits)
-- Centralized subscription pricing in `src/lib/pricing/subscription-tiers.ts`
-- Storefront embed URLs use dynamic `NEXT_PUBLIC_APP_URL`
-- Non-Stripe refund providers return clear manual processing messages
-
-*Sprint 10 — Fake Data Removal (6 fixes, 35+ methods):*
-- Sequence engine: mock data → zero-value placeholders
-- 6 agent specialists: `Math.random()` → zero-value metrics (LinkedIn, Twitter, TikTok, SEO, Trend, Competitor)
-- Lead enrichment: fabricated data → empty `{}`, confidence `0`
-- Voice stats: fake demo stats → zeros + `noData: true`
-- Revenue forecasting: random data → empty array
-- Reputation manager: fabricated fallbacks → `{ data: null }`
-
-*Sprint 11 — Data Integrity (4 fixes, 125+ files):*
-- Zod validation added to 9 more API routes (voice, agent config, orchestrator)
-- 125+ files refactored to use `getSubCollection()` for Firestore environment path isolation
-- `PLATFORM_METRICS` and `PLATFORM_SETTINGS` added to COLLECTIONS registry
-- `trackLeadActivity()` multi-tenant remnant fixed (uses `PLATFORM_ID`)
-
-*Commits:* `61907270` (Firestore path refactor), `6124fd70` (commerce pipeline)
-*Build:* `tsc --noEmit` PASS | `lint` PASS | bypass ratchet 24/26
-
-**RESOLVED (February 19, 2026) - Session 27: Workflow & Infrastructure + Code Quality:**
-
-*Sprint 12 — Workflow & Infrastructure (6 fixes):*
-- 4 workflow action executors wired to real Firestore/NotificationService (tasks, deals, notifications, wait scheduling)
-- Token refresh added for Google, Microsoft, Slack, HubSpot integrations
-- `syncIntegration()` verifies credentials and refreshes expired tokens
-- `testIntegration()` makes real API health checks per provider (Google tokeninfo, MS Graph /me, Slack auth.test, etc.)
-- Health check `checkIntegrations()` queries Firestore for connected integrations and expired tokens
-- Shipping rate calculation labeled as flat rate estimate; tax calculation adds Stripe Tax pathway
-
-*Sprint 13 — Code Quality (3 fixes):*
-- Input sanitization added to both `no-implied-eval` formula engines (blocks dangerous keywords: fetch, import, require, eval, Function, process, globalThis, constructor)
-- `collections.ts` console.log config leak replaced with dynamic logger import (eliminated 1 eslint-disable comment)
-- Console statement audit: all `src/lib/` statements already migrated; remaining ~210 in TSX files deferred
-
-*Commit:* `08246f7e`
-*Build:* `tsc --noEmit` PASS | `lint` PASS | bypass ratchet 23/26
+**Latest API additions (Session 36-37):**
+- `/api/seo/domain-analysis` — POST, auth-gated, Zod validated. SEO Expert `domain_analysis` action with DataForSEO integration
+- `/api/seo/strategy` — POST, auth-gated, Zod validated. SEO Expert `30_day_strategy` action
+- `/api/battlecard/export` — Battlecard HTML export
+- `/api/commerce/brief` — CommerceBrief revenue metrics
+- `/api/reputation/brief` — ReputationBrief trust scores
+- `/api/risk/interventions` — Risk intervention CRUD
 
 ### Testing Infrastructure (Audit: January 30, 2026)
 
@@ -1606,152 +1499,11 @@ Full 4-domain QA audit (Revenue, Data Integrity, Growth, Platform) identified 14
 
 **Full Audit Report:** `docs/playwright-audit-2026-01-30.md`
 
----
+### E2E Test Infrastructure (Supplementary)
 
-### TESTING INFRASTRUCTURE: PLAYWRIGHT ACTIVATION
+**Playwright Activation:** ✅ OPERATIONAL (January 30, 2026). Config: `testMatch: '**/*.spec.ts'` isolates Playwright from Jest. 5 browser projects.
 
-**Status:** ✅ OPERATIONAL
-
-**Fix Applied:** January 30, 2026
-
-**Configuration Change:**
-```typescript
-// playwright.config.ts
-testMatch: '**/*.spec.ts',
-```
-
-**Test Discovery Results:**
-- **Total Tests:** 200
-- **Spec Files:** 2 (`voice-engine.spec.ts`, `website-builder.spec.ts`)
-- **Browser Projects:** 5 (chromium, firefox, webkit, Mobile Chrome, Mobile Safari)
-- **Jest Conflict:** RESOLVED (`.e2e.test.ts` files are now correctly ignored)
-
-**Naming Convention Standard:**
-| Pattern | Framework | Purpose |
-|---------|-----------|---------|
-| `*.spec.ts` | Playwright | Browser-based E2E tests |
-| `*.e2e.test.ts` | Jest | API/integration E2E tests |
-| `*.test.ts` | Jest | Unit tests |
-
-**Autonomous Test-Fix-Verify Cycles:** Enabled
-
----
-
-### INFRASTRUCTURE: AUTOMATED CLEANUP PROTOCOL
-
-**Status:** ✅ ACTIVE
-
-**Implemented:** January 30, 2026
-
-**Location:** `tests/helpers/e2e-cleanup-utility.ts`
-
-**Purpose:** Zero-residual E2E testing with guaranteed Firestore cleanup
-
-#### Core Components
-
-| Component | Description |
-|-----------|-------------|
-| `E2ECleanupTracker` | Class for tracking and cleaning E2E test artifacts |
-| `E2E_PREFIX` | `E2E_TEMP_` - mandatory prefix for all test data |
-| `deleteSubcollectionsRecursively()` | Recursive sub-collection deletion using Firebase Admin SDK |
-| `verifyDeleted()` | 404 verification to confirm complete deletion |
-| `cleanupAllWithVerification()` | Orchestrated cleanup with verification |
-
-#### Protected Organizations
-
-The following organization IDs are **hardcoded as protected** and will NEVER be deleted:
-- `platform`
-- `platform-internal-org`
-- `org_demo_auraflow`
-- `org_demo_greenthumb`
-- `org_demo_adventuregear`
-- `org_demo_summitwm`
-- `org_demo_pixelperfect`
-
-> **Safety:** Any attempt to track a protected org is blocked with console error.
-
-#### Cleanup Protocol
-
-```typescript
-// 1. Generate prefixed org ID
-const orgId = tracker.generateOrgId('content_audit');
-// Result: E2E_TEMP_org_content_audit_1738276800000
-
-// 2. Track for cleanup
-tracker.trackOrganization(orgId);
-
-// 3. Run tests...
-
-// 4. Cleanup with verification
-const report = await tracker.cleanupAllWithVerification();
-// Returns: { success: boolean, organizationsDeleted: number, ... }
-```
-
-#### Recursive Deletion Strategy
-
-The cleanup utility uses **dynamic sub-collection discovery** via Firebase Admin SDK's `listCollections()` method, ensuring ALL nested data is deleted regardless of schema evolution.
-
-**Known Organization Sub-Collections (24):**
-```
-workspaces          workflows           workflowExecutions
-deals               leads               contacts
-users               members             records
-signals             sequences           sequenceEnrollments
-campaigns           trainingSessions    goldenMasters
-goldenMasterUpdates baseModels          scheduledPosts
-socialPosts         videoJobs           storyboards
-analytics_events    merchant_coupons    schemas
-apiKeys             integrations        auditLogs
-```
-
-**Deletion Tree Example:**
-```
-Organization Document (E2E_TEMP_org_content_audit_1738276800000)
-├── [Dynamic Discovery via listCollections()]
-├── members/
-│   └── E2E_TEMP_user_abc123 (deleted)
-├── leads/
-│   └── E2E_TEMP_lead_xyz789 (deleted)
-│       └── activities/ (nested sub-collection deleted)
-├── campaigns/
-│   └── E2E_TEMP_campaign_001 (deleted)
-└── [All discovered sub-collections recursively deleted]
-```
-
-**Batch Size:** 400 operations per batch (Firestore limit: 500)
-
-**Depth-First Traversal:** Nested sub-collections are deleted BEFORE their parent documents to ensure complete cleanup.
-
-#### Integration with E2E Tests
-
-```typescript
-// admin-content-factory.spec.ts
-import { E2ECleanupTracker, E2E_PREFIX } from '../helpers/e2e-cleanup-utility';
-
-test.afterAll(async () => {
-  const report = await tracker.cleanupAllWithVerification();
-  expect(report.success).toBe(true);
-  console.info('[E2E Cleanup] Report:', report);
-});
-```
-
-#### Stale Data Detection
-
-Utility function to find and clean orphaned E2E data:
-```typescript
-import { cleanupAllE2ETempData } from '../helpers/e2e-cleanup-utility';
-
-// Scans organizations collection for E2E_TEMP_ prefixed IDs
-// Uses Firestore range query: __name__ >= 'E2E_TEMP_' AND < 'E2E_TEMP_\uf8ff'
-const totalCleaned = await cleanupAllE2ETempData();
-console.info(`Cleaned ${totalCleaned} stale E2E documents`);
-```
-
-**Safety Features:**
-- Prefix enforcement: Only deletes IDs starting with `E2E_TEMP_`
-- Protected org check: Skips all 7 protected organization IDs
-- Verification query: 404 check confirms complete deletion
-- Detailed logging: Console output for audit trail
+**E2E Cleanup Protocol:** ✅ ACTIVE. Location: `tests/helpers/e2e-cleanup-utility.ts`. All test data uses `E2E_TEMP_` prefix. `E2ECleanupTracker` handles recursive Firestore cleanup with `listCollections()` discovery. 7 protected org IDs hardcoded. Batch size: 400 ops.
 
 ---
 
@@ -1907,6 +1659,34 @@ console.info(`Cleaned ${totalCleaned} stale E2E documents`);
 | **Google Search Console** | **REAL** | Search Analytics API, URL Inspection | Top keywords by clicks/impressions, top pages, indexing status (requires OAuth connection) |
 
 **Routing:** Jasper detects domain analysis requests via traffic/visitor/backlink keywords + domain extraction regex → Marketing Manager → SEO Expert `domain_analysis` action → 5 concurrent DataForSEO calls.
+
+### Jasper Mission Control (PLANNED — Sprint 18)
+
+**Route:** `/(dashboard)/mission-control`
+**Concept:** Live delegation tracker — "Air Traffic Control for your AI workforce"
+
+**Purpose:** When Jasper delegates a complex multi-step task across the swarm, users can watch in real-time as each step executes, approve/reject at intervention gates, and auto-navigate to completed outputs.
+
+**Backend Infrastructure (EXISTS):**
+- Saga Persistence (`src/lib/orchestration/saga-persistence.ts`) — checkpoints, steps, event logging to Firestore
+- Signal Bus (`src/lib/agents/shared/tenant-memory-vault.ts`) — cross-agent communication
+- Jasper Command Authority (`src/lib/orchestrator/jasper-command-authority.ts`) — approval gateway, command history
+- SSE pattern already used in codebase (15 files reference `text/event-stream`)
+
+**UI Prototype (EXISTS):** Social Command Center (`/social/command-center`) — live agent status, activity stream, kill switch, velocity gauges. Mission Control extends this pattern to all 9 domain managers.
+
+**Sprint 18 Tasks:**
+1. Mission event SSE API (`/api/orchestrator/missions/[missionId]`)
+2. Jasper tool instrumentation (emit step events from `delegate_to_*` handlers)
+3. Mission Control page with timeline view
+4. Auto-navigation from Jasper chat ("Watch Live →" button)
+5. Approval gates in timeline (from Command Authority approval gateway)
+6. Mission history & replay
+7. Sidebar integration
+
+**Event Types:** `mission.started`, `step.delegated`, `step.in_progress`, `step.completed`, `step.failed`, `step.awaiting_approval`, `mission.completed`
+
+**Firestore Path:** `organizations/{PLATFORM_ID}/missions/{missionId}` (extends saga pattern)
 
 ### Planned Integrations (NOT STARTED)
 
