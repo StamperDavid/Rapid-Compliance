@@ -1,7 +1,7 @@
 # SalesVelocity.ai - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** February 23, 2026 (Session 33: Fixed 53 unauthenticated client-side fetch calls across 65 files — all dashboard API calls now use useAuthFetch with Bearer tokens)
+**Last Updated:** February 23, 2026 (Session 34: Expanded STANDARD_SCHEMAS from 10 to 35 — added 13 industry-vertical schemas + 12 platform core schemas)
 **Branches:** `dev` (latest)
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Architecture:** Single-Tenant (Penthouse Model) - NOT a SaaS platform
@@ -2772,6 +2772,25 @@ The orchestrator enforces execution order through dependency tracking:
 | `Schema` | `src/types/schema.ts` | Custom entity schema definition |
 | `AdminThemeConfig` | `src/hooks/useAdminTheme.ts` | Admin theme colors, branding |
 | `ThemeConfig` | `src/types/theme.ts` | Full theme with typography, layout |
+
+### Standard Entity Schemas (35 total)
+
+**Source:** `src/lib/schema/standard-schemas.ts`
+
+The Schema Editor and entity table pages dynamically render from `STANDARD_SCHEMAS`. Each schema defines id, name, icon, and typed fields (text, email, currency, singleSelect, lookup, etc.). Picklist values for all singleSelect fields are in `PICKLIST_VALUES`.
+
+| Category | Schemas | Count |
+|----------|---------|-------|
+| **CRM Core** | leads, companies, contacts, deals, products, quotes, invoices, payments, orders, tasks | 10 |
+| **Transportation & Compliance** | drivers, vehicles, compliance_documents | 3 |
+| **Service Business** | projects, time_entries | 2 |
+| **E-Commerce** | customers, inventory | 2 |
+| **Real Estate** | properties, showings | 2 |
+| **Legal Services** | cases, billing_entries | 2 |
+| **Healthcare / Wellness** | patients, appointments | 2 |
+| **Platform Core** | activities, campaigns, sequences, workflows, forms, pages, blog_posts, domains, coupons, proposals, subscriptions, email_templates | 12 |
+
+Cross-entity references use `lookup` fields with `config: { linkedSchema: '...' }` (e.g., showings → properties, compliance_documents → drivers/vehicles, billing_entries → cases, subscriptions → contacts).
 
 ### Zod Validation Schemas
 
