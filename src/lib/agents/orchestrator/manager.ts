@@ -207,7 +207,7 @@ const ROUTING_TABLE: RoutingRule[] = [
   },
   {
     intent: 'MARKETING_CAMPAIGN',
-    keywords: ['marketing', 'campaign', 'social media', 'ads', 'seo', 'content marketing', 'brand awareness', 'promotion', 'advertising'],
+    keywords: ['marketing', 'campaign', 'social media', 'ads', 'seo', 'content marketing', 'brand awareness', 'promotion', 'advertising', 'traffic', 'visitors', 'domain analysis', 'backlinks', 'referring domains'],
     primaryManager: 'MARKETING_MANAGER',
     supportingManagers: ['CONTENT_MANAGER', 'INTELLIGENCE_MANAGER'],
     sagaTemplate: 'MARKETING_CAMPAIGN',
@@ -255,7 +255,7 @@ const ROUTING_TABLE: RoutingRule[] = [
   },
   {
     intent: 'MARKET_RESEARCH',
-    keywords: ['research', 'competitor', 'market', 'analysis', 'trends', 'intelligence', 'industry'],
+    keywords: ['research', 'competitor', 'market', 'analysis', 'trends', 'intelligence', 'industry', 'traffic', 'visitors', 'backlinks', 'domain'],
     primaryManager: 'INTELLIGENCE_MANAGER',
     supportingManagers: [],
     priority: 70,

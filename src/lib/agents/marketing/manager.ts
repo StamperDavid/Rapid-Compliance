@@ -177,7 +177,9 @@ const INTENT_KEYWORDS: Record<CampaignIntent, string[]> = {
   ],
   ORGANIC_GROWTH: [
     'organic', 'seo', 'search', 'ranking', 'content marketing',
-    'inbound', 'natural growth', 'evergreen',
+    'inbound', 'natural growth', 'evergreen', 'traffic', 'visitors',
+    'unique visitors', 'domain analysis', 'backlinks', 'referring domains',
+    'domain rank', 'organic traffic', 'website traffic',
   ],
   SINGLE_PLATFORM: [], // Detected via explicit platform mention
 };
@@ -273,7 +275,7 @@ const MARKETING_MANAGER_CONFIG: ManagerConfig = {
     },
     // SEO - Search, keywords, organic
     {
-      triggerKeywords: ['seo', 'keyword', 'search engine', 'organic traffic', 'ranking', 'serp', 'google', 'content optimization'],
+      triggerKeywords: ['seo', 'keyword', 'search engine', 'organic traffic', 'ranking', 'serp', 'google', 'content optimization', 'traffic', 'visitors', 'unique visitors', 'domain analysis', 'backlinks', 'referring domains', 'domain rank', 'website traffic', 'competitor analysis', '.com', '.net', '.org', '.io'],
       delegateTo: 'SEO_EXPERT',
       priority: 10,
       requiresApproval: false,
@@ -1112,7 +1114,7 @@ export class MarketingManager extends BaseManager {
       twitter: text.includes('twitter') || text.includes('x.com'),
       facebook: text.includes('facebook') || text.includes('fb '),
       linkedin: text.includes('linkedin'),
-      seo: text.includes('seo') || text.includes('search engine'),
+      seo: text.includes('seo') || text.includes('search engine') || text.includes('traffic') || text.includes('visitors') || text.includes('backlinks') || text.includes('domain analysis'),
     };
 
     const platformCount = Object.values(platformMentions).filter(Boolean).length;
@@ -1301,18 +1303,40 @@ export class MarketingManager extends BaseManager {
     const startTime = Date.now();
 
     try {
-      // Create SEO request with brand context
-      const seoMessage: AgentMessage = {
-        id: `${taskId}_seo_keywords`,
-        type: 'COMMAND',
-        from: this.identity.id,
-        to: 'SEO_EXPERT',
-        payload: {
+      // Detect if this is a domain analysis request (traffic, visitors, backlinks, competitor domain)
+      const text = (goal.message ?? '').toLowerCase();
+      const isDomainAnalysis = /traffic|visitors|backlink|referring domain|domain.?analysis|domain.?rank/.test(text);
+      const extractedDomain = this.extractDomainFromMessage(text);
+
+      let seoPayload: Record<string, unknown>;
+      let briefDescription: string;
+
+      if (isDomainAnalysis && extractedDomain) {
+        // Domain analysis mode — traffic, backlinks, referring domains, competitors
+        seoPayload = {
+          action: 'domain_analysis',
+          domain: extractedDomain,
+          keywordLimit: 20,
+        };
+        briefDescription = `Domain analysis for ${extractedDomain}`;
+        this.log('INFO', `Routing to domain_analysis for ${extractedDomain}`);
+      } else {
+        // Default keyword research mode
+        seoPayload = {
           action: 'keyword_research',
           seed: this.extractKeywordSeed(goal, brandContext),
           industry: brandContext.industry,
           targetCount: 15,
-        },
+        };
+        briefDescription = 'Keyword research for campaign content optimization';
+      }
+
+      const seoMessage: AgentMessage = {
+        id: `${taskId}_seo_${isDomainAnalysis ? 'domain' : 'keywords'}`,
+        type: 'COMMAND',
+        from: this.identity.id,
+        to: 'SEO_EXPERT',
+        payload: seoPayload,
         timestamp: new Date(),
         priority: 'HIGH',
         requiresResponse: true,
@@ -1324,6 +1348,29 @@ export class MarketingManager extends BaseManager {
       const executionTimeMs = Date.now() - startTime;
 
       if (report.status === 'COMPLETED' && report.data) {
+        if (isDomainAnalysis) {
+          // Domain analysis completed — return the full result directly
+          delegations.push({
+            specialist: 'SEO_EXPERT',
+            brief: briefDescription,
+            status: 'COMPLETED',
+            result: report.data,
+            executionTimeMs,
+          });
+
+          specialistOutputs.seo = report.data;
+
+          // Return minimal keyword guidance since the primary output is the domain report
+          return {
+            primaryKeywords: [],
+            secondaryKeywords: [],
+            longTailKeywords: [],
+            searchIntent: 'informational',
+            contentRecommendations: [`Full domain analysis completed for ${extractedDomain}`],
+            keywordDensityTarget: 0,
+          };
+        }
+
         const seoData = report.data as { keywords?: Array<{ keyword: string; difficulty: string; searchIntent: string }> };
 
         // Transform SEO output into guidance format
@@ -1338,7 +1385,7 @@ export class MarketingManager extends BaseManager {
 
         delegations.push({
           specialist: 'SEO_EXPERT',
-          brief: 'Keyword research for campaign content optimization',
+          brief: briefDescription,
           status: 'COMPLETED',
           result: guidance,
           executionTimeMs,
@@ -1351,7 +1398,7 @@ export class MarketingManager extends BaseManager {
 
       delegations.push({
         specialist: 'SEO_EXPERT',
-        brief: 'Keyword research for campaign content optimization',
+        brief: briefDescription,
         status: report.status === 'BLOCKED' ? 'BLOCKED' : 'FAILED',
         result: report.errors?.join('; ') ?? 'Unknown error',
         executionTimeMs,
@@ -1362,6 +1409,20 @@ export class MarketingManager extends BaseManager {
       this.log('ERROR', `SEO keyword guidance failed: ${error instanceof Error ? error.message : String(error)}`);
       return null;
     }
+  }
+
+  /**
+   * Extract a domain name from user message text.
+   * Looks for patterns like example.com, www.example.com, https://example.com
+   */
+  private extractDomainFromMessage(text: string): string | null {
+    // Match URLs or bare domains: https://example.com, www.example.com, example.com
+    const domainRegex = /(?:https?:\/\/)?(?:www\.)?([a-z0-9][-a-z0-9]*(?:\.[a-z0-9][-a-z0-9]*)+)/i;
+    const match = text.match(domainRegex);
+    if (match) {
+      return match[1] ?? match[0].replace(/^(?:https?:\/\/)?(?:www\.)?/, '');
+    }
+    return null;
   }
 
   /**
