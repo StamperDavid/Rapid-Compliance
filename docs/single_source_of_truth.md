@@ -1,7 +1,7 @@
 # SalesVelocity.ai - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** February 23, 2026 (Session 34: Expanded STANDARD_SCHEMAS from 10 to 35 — added 13 industry-vertical schemas + 12 platform core schemas)
+**Last Updated:** February 23, 2026 (Session 34: Expanded STANDARD_SCHEMAS 10→35; comprehensive domain analysis via SEO Expert + Jasper routing)
 **Branches:** `dev` (latest)
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Architecture:** Single-Tenant (Penthouse Model) - NOT a SaaS platform
@@ -164,7 +164,7 @@ The Claude Code Governance Layer defines binding operational constraints for AI-
 | **LinkedIn** | Unofficial RapidAPI wrapper. Blocked: Marketing Developer Platform | MEDIUM |
 | **Video render pipeline** | Returns empty responses; real integrations gated by API keys | LOW |
 | **Asset Generator** | Returns empty; no actual image generation | LOW |
-| **SEO data** | SEO Expert agent has analysis engines but needs external API integration | MEDIUM |
+| **SEO data** | ~~SEO Expert needs external API integration~~ **RESOLVED** — DataForSEO (domain metrics, ranked keywords, backlinks, referring domains, competitors), Serper (SERP positions), PageSpeed Insights, Google Search Console all wired up | ~~MEDIUM~~ DONE |
 
 ### Completed Roadmaps (Archived)
 
@@ -565,7 +565,7 @@ SalesVelocity.ai is a **single-company sales and marketing super tool**. This is
 | TWITTER_EXPERT | TwitterExpert | Threads, engagement, LISTEN/ENGAGE | FUNCTIONAL |
 | FACEBOOK_EXPERT | FacebookAdsExpert | Ad copy, targeting, LISTEN/ENGAGE | FUNCTIONAL |
 | LINKEDIN_EXPERT | LinkedInExpert | B2B posts, outreach, LISTEN/ENGAGE | FUNCTIONAL |
-| SEO_EXPERT | SEOExpert | Keywords, optimization | FUNCTIONAL |
+| SEO_EXPERT | SEOExpert | Keywords, optimization, **domain analysis** (traffic, backlinks, referring domains, competitors), crawl analysis, keyword gap, 30-day strategy | FUNCTIONAL |
 | GROWTH_ANALYST | GrowthAnalyst | Performance analytics, KPIs, mutation directives, content library, weekly reports | FUNCTIONAL |
 
 #### Builder Domain (4)
@@ -1887,6 +1887,17 @@ console.info(`Cleaned ${totalCleaned} stale E2E documents`);
 | **Social OAuth (Twitter)** | **REAL** | PKCE flow with code challenge, auth URL generation, code exchange, profile fetch. AES-256-GCM token encryption. |
 | **Social OAuth (LinkedIn)** | **REAL** | OAuth 2.0 authorization code flow, token exchange, profile fetch. AES-256-GCM token encryption. |
 
+### SEO Data Integrations (NEW: February 23, 2026)
+
+| Service | Status | API Endpoints Used | Capabilities |
+|---------|--------|--------------------|--------------|
+| **DataForSEO** | **REAL** | `domain_rank/live`, `ranked_keywords/live`, `backlinks/summary/live`, `backlinks/referring_domains/live`, `competitors_domain/live`, `search_volume/live`, `serp/organic/live`, `on_page/instant_pages` | Domain traffic estimation, ranked keyword lists, backlink profiles, referring domain identification, organic competitor discovery, keyword volume/CPC, SERP analysis, on-page audit |
+| **Serper** | **REAL** | `search` (Google SERP), keyword position checking | SERP results, position tracking for specific domain+keyword pairs |
+| **Google PageSpeed** | **REAL** | PageSpeed Insights API v5 (mobile + desktop) | Core Web Vitals (LCP, FID, CLS, FCP, TTFB, TBT), performance/accessibility/SEO scores |
+| **Google Search Console** | **REAL** | Search Analytics API, URL Inspection | Top keywords by clicks/impressions, top pages, indexing status (requires OAuth connection) |
+
+**Routing:** Jasper detects domain analysis requests via traffic/visitor/backlink keywords + domain extraction regex → Marketing Manager → SEO Expert `domain_analysis` action → 5 concurrent DataForSEO calls.
+
 ### Planned Integrations (NOT STARTED)
 
 - Salesforce CRM
@@ -2590,7 +2601,11 @@ The Marketing Manager is an **industry-agnostic** orchestration engine for cross
    ↓
 2. Detect Campaign Intent → Keyword-based + objective mapping
    ↓
-3. SEO Keyword Research → SEO_EXPERT provides target keywords FIRST
+3. SEO Routing → Detects domain analysis vs keyword research from message
+   ↓
+3a. Domain Analysis → If traffic/visitors/backlinks detected + domain extracted →
+    SEO_EXPERT.domain_analysis (5 concurrent DataForSEO calls)
+3b. Keyword Research → Otherwise SEO_EXPERT provides target keywords FIRST
    ↓
 4. Inject Keywords → SEO terms flow into all social briefs
    ↓
@@ -2639,7 +2654,7 @@ The Marketing Manager is an **industry-agnostic** orchestration engine for cross
 | `TWITTER_X_EXPERT` | `getTwitterExpert()` | Threads, thought leadership |
 | `FACEBOOK_ADS_EXPERT` | `getFacebookAdsExpert()` | Paid ads, lead generation |
 | `LINKEDIN_EXPERT` | `getLinkedInExpert()` | B2B content, professional networking |
-| `SEO_EXPERT` | `getSEOExpert()` | Keyword research, content optimization |
+| `SEO_EXPERT` | `getSEOExpert()` | Keyword research, content optimization, **domain analysis** (traffic estimation, backlink profile, referring domains, organic competitors — 5 concurrent DataForSEO API calls) |
 
 #### Brand DNA Integration
 
