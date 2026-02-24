@@ -1660,6 +1660,36 @@ export const JASPER_TOOLS: ToolDefinition[] = [
       },
     },
   },
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // WEBSITE MIGRATION PIPELINE (Sprint 21)
+  // ═══════════════════════════════════════════════════════════════════════════
+  {
+    type: 'function',
+    function: {
+      name: 'migrate_website',
+      description:
+        'Clone an existing website and rebuild it in the SalesVelocity.ai website builder. Scrapes the source site, extracts structure/copy/branding, and generates editable pages. Returns a link to the website editor with all pages ready for customization. ENABLED: TRUE.',
+      parameters: {
+        type: 'object',
+        properties: {
+          sourceUrl: {
+            type: 'string',
+            description: 'The URL of the website to clone (e.g., "https://example.com")',
+          },
+          maxPages: {
+            type: 'number',
+            description: 'Maximum number of pages to crawl and migrate (default: 10, max: 20)',
+          },
+          includeImages: {
+            type: 'boolean',
+            description: 'Whether to preserve image references from the source site. Default: true',
+          },
+        },
+        required: ['sourceUrl'],
+      },
+    },
+  },
 ];
 
 // ============================================================================
@@ -3363,6 +3393,60 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
             durationMs: trendDuration,
           });
           content = JSON.stringify({ error: trendErrorMsg });
+        }
+        break;
+      }
+
+      // ═══════════════════════════════════════════════════════════════════════
+      // WEBSITE MIGRATION PIPELINE EXECUTION (Sprint 21)
+      // ═══════════════════════════════════════════════════════════════════════
+      case 'migrate_website': {
+        const migrateStart = Date.now();
+        trackMissionStep(context, 'migrate_website', 'RUNNING');
+
+        try {
+          const { migrateSite } = await import('@/lib/website-builder/site-migration-service');
+
+          const migrationResult = await migrateSite({
+            sourceUrl: args.sourceUrl as string,
+            maxPages: (args.maxPages as number | undefined) ?? 10,
+            includeImages: (args.includeImages as boolean | undefined) ?? true,
+            missionId: context?.missionId,
+          });
+
+          const migrateDuration = Date.now() - migrateStart;
+          trackMissionStep(context, 'migrate_website',
+            migrationResult.status === 'FAILED' ? 'FAILED' : 'COMPLETED',
+            {
+              summary: `Migration ${migrationResult.status}: ${migrationResult.successCount}/${migrationResult.totalPages} pages`,
+              durationMs: migrateDuration,
+            }
+          );
+
+          content = JSON.stringify({
+            status: migrationResult.status,
+            sourceUrl: migrationResult.sourceUrl,
+            totalPages: migrationResult.totalPages,
+            successCount: migrationResult.successCount,
+            failedCount: migrationResult.failedCount,
+            pages: migrationResult.pages,
+            brand: migrationResult.blueprint.brand,
+            editorLink: migrationResult.editorLink,
+            durationMs: migrateDuration,
+            message: migrationResult.status === 'COMPLETED'
+              ? `Successfully migrated ${migrationResult.successCount} pages from ${migrationResult.sourceUrl}. The site is ready for editing at ${migrationResult.editorLink}`
+              : migrationResult.status === 'PARTIAL'
+                ? `Migrated ${migrationResult.successCount}/${migrationResult.totalPages} pages. ${migrationResult.failedCount} pages had issues. Check ${migrationResult.editorLink} to review.`
+                : 'Migration failed. The source site may be unreachable or heavily JavaScript-dependent.',
+          });
+        } catch (migrateError: unknown) {
+          const migrateDuration = Date.now() - migrateStart;
+          const migrateErrorMsg = migrateError instanceof Error ? migrateError.message : 'Unknown error';
+          trackMissionStep(context, 'migrate_website', 'FAILED', {
+            error: migrateErrorMsg,
+            durationMs: migrateDuration,
+          });
+          content = JSON.stringify({ error: migrateErrorMsg });
         }
         break;
       }

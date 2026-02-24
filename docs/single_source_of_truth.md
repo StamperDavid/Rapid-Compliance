@@ -1,7 +1,7 @@
 # SalesVelocity.ai - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** February 24, 2026 (Sprint 20: AI Search Optimization — llms.txt endpoint, AI bot access controls, schema markup service, AI search monitoring dashboard)
+**Last Updated:** February 24, 2026 (Sprint 21 — Website Migration Pipeline)
 **Branches:** `dev` (latest)
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Architecture:** Single-Tenant (Penthouse Model) - NOT a SaaS platform
@@ -175,7 +175,7 @@ The Claude Code Governance Layer defines binding operational constraints for AI-
 | **Sprint 18** | Jasper Mission Control — live delegation tracker UI | **COMPLETE** (Feb 24, 2026) |
 | **Sprint 19** | Complete Jasper delegation coverage (5 new delegate_to_* tools + blog bridge + trend research) | **COMPLETE** (Feb 24, 2026) |
 | **Sprint 20** | AI Search Optimization (llms.txt, AI bot access, schema markup service, monitoring dashboard) | **COMPLETE** (Feb 24, 2026) |
-| **Sprint 21** | Website Migration Pipeline — "clone this site" via Jasper + web_migrator (deep scrape → blueprint → AI page gen → assemble) | PLANNED |
+| **Sprint 21** | Website Migration Pipeline — "clone this site" via Jasper + web_migrator (deep scrape → blueprint → AI page gen → assemble) | **COMPLETE** (Feb 24, 2026) |
 
 ### Completed Roadmaps (Archived)
 
@@ -474,6 +474,12 @@ SalesVelocity.ai is a **single-company sales and marketing super tool**. This is
 - `/website/editor`, `/website/pages`, `/website/domains`, `/website/seo`, `/website/seo/competitors`
 - `/website/settings`, `/website/templates`, `/website/navigation`, `/website/audit-log`
 - `/website/blog`, `/website/blog/categories`, `/website/blog/editor`
+
+**Website Migration Pipeline (Sprint 21):**
+- Deep scraper with section-level extraction (`src/lib/website/deep-scraper.ts`)
+- AI-powered Site Blueprint Extractor (`src/lib/website/site-blueprint-extractor.ts`)
+- Full migration orchestration service with mission events (`src/lib/website/site-migration-service.ts`)
+- Jasper tool: `migrate_website` — natural-language "clone this site" delegation
 
 ### Dashboard Sub-Routes (16 in /dashboard/*)
 
@@ -1404,6 +1410,12 @@ This script:
 | `/api/social/oauth/auth/[provider]` | GET | Initiate OAuth flow (Twitter PKCE, LinkedIn OAuth 2.0) | FUNCTIONAL (NEW Session 6) |
 | `/api/social/oauth/callback/[provider]` | GET | OAuth callback handler with token exchange + encryption | FUNCTIONAL (NEW Session 6) |
 | `/api/social/accounts/verify` | POST | Verify social account connection status | FUNCTIONAL (NEW Session 6) |
+
+#### Website Migration Pipeline (NEW Sprint 21)
+
+| Endpoint | Method | Purpose | Status |
+|----------|--------|---------|--------|
+| `/api/website/migrate` | POST | Website migration pipeline — clone external site via deep scrape, blueprint extraction, and AI page assembly | FUNCTIONAL (Sprint 21) |
 
 ### API Implementation Notes
 
