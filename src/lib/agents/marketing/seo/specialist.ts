@@ -149,7 +149,6 @@ interface ThirtyDayStrategyPayload {
 interface DomainAnalysisPayload {
   action: 'domain_analysis';
   domain: string;
-  includeKeywords?: boolean;
   keywordLimit?: number;
 }
 
@@ -310,21 +309,50 @@ interface DomainAnalysisResult {
   metrics: {
     organicTraffic: number;
     organicKeywords: number;
-    backlinks: number;
-    referringDomains: number;
     domainRank: number;
   };
+  backlinkProfile: {
+    totalBacklinks: number;
+    totalReferringDomains: number;
+    dofollow: number;
+    nofollow: number;
+    anchorLinks: number;
+    imageLinks: number;
+    redirectLinks: number;
+    brokenBacklinks: number;
+    referringIPs: number;
+    referringSubnets: number;
+  };
+  referringDomains: Array<{
+    domain: string;
+    rank: number;
+    backlinks: number;
+    dofollow: number;
+    nofollow: number;
+    firstSeen: string | null;
+  }>;
   topKeywords: Array<{
     keyword: string;
     position: number;
     url: string;
     searchVolume: number;
     estimatedTraffic: number;
+    cpc: number;
   }>;
-  trafficSources: {
-    topPages: Array<{ url: string; keywords: number; traffic: number }>;
-    summary: string;
-  };
+  topPages: Array<{
+    url: string;
+    keywords: number;
+    traffic: number;
+  }>;
+  competitors: Array<{
+    domain: string;
+    avgPosition: number;
+    intersections: number;
+    relevance: number;
+    organicTraffic: number;
+    organicKeywords: number;
+  }>;
+  summary: string;
 }
 
 // ============================================================================
@@ -757,54 +785,82 @@ export class SEOExpert extends BaseSpecialist {
   // ==========================================================================
 
   /**
-   * Comprehensive domain analysis: traffic, authority, top keywords, and traffic sources.
-   * Calls DataForSEO domain_rank + ranked_keywords endpoints concurrently.
+   * Comprehensive domain intelligence: traffic, backlink profile, referring
+   * domains, top keywords with traffic attribution, top pages, organic
+   * competitors, and a human-readable executive summary.
+   *
+   * Fires 5 DataForSEO API calls concurrently:
+   *   1. domain_rank          — traffic estimate, keyword count, domain rank
+   *   2. ranked_keywords      — which keywords drive traffic + to which pages
+   *   3. backlinks/summary    — full backlink profile breakdown
+   *   4. referring_domains    — the actual sites linking to them (sorted by rank)
+   *   5. competitors_domain   — who competes for the same keywords
    */
   private async handleDomainAnalysis(payload: DomainAnalysisPayload): Promise<DomainAnalysisResult> {
-    const { domain, includeKeywords = true, keywordLimit = 20 } = payload;
+    const { domain, keywordLimit = 20 } = payload;
     const cleanDomain = domain.replace(/^https?:\/\//, '').replace(/\/+$/, '');
 
-    this.log('INFO', `Running domain analysis for ${cleanDomain}`);
+    this.log('INFO', `Running comprehensive domain analysis for ${cleanDomain}`);
 
-    const dataForSEO = getDataForSEOService();
+    const seo = getDataForSEOService();
 
-    // Run domain metrics + ranked keywords concurrently
-    const [metricsResult, keywordsResult] = await Promise.all([
-      dataForSEO.getDomainMetrics(cleanDomain),
-      includeKeywords
-        ? dataForSEO.getRankedKeywords(cleanDomain, keywordLimit)
-        : Promise.resolve(null),
+    // Fire all 5 API calls concurrently
+    const [metricsRes, keywordsRes, backlinkSumRes, referringRes, competitorsRes] = await Promise.all([
+      seo.getDomainMetrics(cleanDomain),
+      seo.getRankedKeywords(cleanDomain, keywordLimit),
+      seo.getBacklinksSummary(cleanDomain),
+      seo.getReferringDomains(cleanDomain, 20),
+      seo.getCompetitors(cleanDomain, 10),
     ]);
 
-    // Build metrics (fallback to zeros if API not configured)
-    const metrics = metricsResult.success && metricsResult.data
-      ? {
-          organicTraffic: metricsResult.data.organicTraffic,
-          organicKeywords: metricsResult.data.organicKeywords,
-          backlinks: metricsResult.data.backlinks,
-          referringDomains: metricsResult.data.referringDomains,
-          domainRank: metricsResult.data.domainRank,
-        }
-      : {
-          organicTraffic: 0,
-          organicKeywords: 0,
-          backlinks: 0,
-          referringDomains: 0,
-          domainRank: 0,
-        };
+    // --- Metrics ---
+    const m = metricsRes.success && metricsRes.data ? metricsRes.data : null;
+    const metrics = {
+      organicTraffic: m?.organicTraffic ?? 0,
+      organicKeywords: m?.organicKeywords ?? 0,
+      domainRank: m?.domainRank ?? 0,
+    };
 
-    // Build top keywords list
-    const topKeywords = keywordsResult && keywordsResult.success && keywordsResult.data
-      ? keywordsResult.data.map(kw => ({
+    // --- Backlink Profile ---
+    const bl = backlinkSumRes.success && backlinkSumRes.data ? backlinkSumRes.data : null;
+    const backlinkProfile = {
+      totalBacklinks: bl?.totalBacklinks ?? m?.backlinks ?? 0,
+      totalReferringDomains: bl?.totalReferringDomains ?? m?.referringDomains ?? 0,
+      dofollow: bl?.dofollow ?? 0,
+      nofollow: bl?.nofollow ?? 0,
+      anchorLinks: bl?.anchorLinks ?? 0,
+      imageLinks: bl?.imageLinks ?? 0,
+      redirectLinks: bl?.redirectLinks ?? 0,
+      brokenBacklinks: bl?.brokenBacklinks ?? 0,
+      referringIPs: bl?.referringIPs ?? 0,
+      referringSubnets: bl?.referringSubnets ?? 0,
+    };
+
+    // --- Referring Domains (who links to them) ---
+    const referringDomains = referringRes.success && referringRes.data
+      ? referringRes.data.map(rd => ({
+          domain: rd.domain,
+          rank: rd.rank,
+          backlinks: rd.backlinks,
+          dofollow: rd.dofollow,
+          nofollow: rd.nofollow,
+          firstSeen: rd.firstSeen,
+        }))
+      : [];
+
+    // --- Top Keywords ---
+    const topKeywords = keywordsRes.success && keywordsRes.data
+      ? keywordsRes.data.map(kw => ({
           keyword: kw.keyword,
           position: kw.position,
           url: kw.url,
           searchVolume: kw.searchVolume,
           estimatedTraffic: kw.traffic,
+          cpc: kw.cpc,
         }))
       : [];
 
-    // Aggregate keywords by page to determine top pages
+    // --- Top Pages (aggregate keywords by URL) ---
     const pageMap = new Map<string, { url: string; keywords: number; traffic: number }>();
     for (const kw of topKeywords) {
       const existing = pageMap.get(kw.url);
@@ -819,30 +875,54 @@ export class SEOExpert extends BaseSpecialist {
       .sort((a, b) => b.traffic - a.traffic)
       .slice(0, 10);
 
-    // Generate summary
-    const topKeywordStr = topKeywords.length > 0
+    // --- Competitors ---
+    const competitors = competitorsRes.success && competitorsRes.data
+      ? competitorsRes.data.map(c => ({
+          domain: c.domain,
+          avgPosition: c.avgPosition,
+          intersections: c.intersections,
+          relevance: c.competitorRelevance,
+          organicTraffic: c.organicTraffic,
+          organicKeywords: c.organicKeywords,
+        }))
+      : [];
+
+    // --- Executive Summary ---
+    const kwStr = topKeywords.length > 0
       ? topKeywords.slice(0, 3).map(k => `"${k.keyword}" (#${k.position})`).join(', ')
-      : 'No keyword data available';
+      : 'no keyword data';
 
-    const configWarning = !metricsResult.success
-      ? ' (Note: Configure DataForSEO API keys for real data)'
-      : '';
+    const refStr = referringDomains.length > 0
+      ? referringDomains.slice(0, 3).map(r => `${r.domain} (rank ${r.rank}, ${r.backlinks} links)`).join(', ')
+      : 'no referring domain data';
 
-    const summary = `${cleanDomain} receives an estimated ${metrics.organicTraffic.toLocaleString()} organic visits/month ` +
-      `from ${metrics.organicKeywords.toLocaleString()} ranking keywords. ` +
-      `Domain rank: ${metrics.domainRank}/100. ` +
-      `Top traffic drivers: ${topKeywordStr}. ` +
-      `The site has ${metrics.backlinks.toLocaleString()} backlinks from ${metrics.referringDomains.toLocaleString()} referring domains.${configWarning}`;
+    const compStr = competitors.length > 0
+      ? competitors.slice(0, 3).map(c => `${c.domain} (${c.intersections} shared keywords)`).join(', ')
+      : 'no competitor data';
+
+    const warn = !metricsRes.success ? ' [Configure DataForSEO API keys for real data]' : '';
+
+    const summary =
+      `${cleanDomain} — Domain Rank ${metrics.domainRank}/100. ` +
+      `Estimated ${metrics.organicTraffic.toLocaleString()} organic visits/month from ${metrics.organicKeywords.toLocaleString()} keywords. ` +
+      `Backlink profile: ${backlinkProfile.totalBacklinks.toLocaleString()} total backlinks ` +
+      `(${backlinkProfile.dofollow.toLocaleString()} dofollow, ${backlinkProfile.nofollow.toLocaleString()} nofollow) ` +
+      `from ${backlinkProfile.totalReferringDomains.toLocaleString()} referring domains across ${backlinkProfile.referringIPs.toLocaleString()} IPs. ` +
+      `${backlinkProfile.brokenBacklinks > 0 ? `${backlinkProfile.brokenBacklinks.toLocaleString()} broken backlinks detected. ` : ''}` +
+      `Top traffic keywords: ${kwStr}. ` +
+      `Top referring sites: ${refStr}. ` +
+      `Top organic competitors: ${compStr}.${warn}`;
 
     return {
       domain: cleanDomain,
       analysisDate: new Date().toISOString(),
       metrics,
+      backlinkProfile,
+      referringDomains,
       topKeywords,
-      trafficSources: {
-        topPages,
-        summary,
-      },
+      topPages,
+      competitors,
+      summary,
     };
   }
 

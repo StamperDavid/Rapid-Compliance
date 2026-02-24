@@ -93,6 +93,41 @@ export interface DataForSEORankedKeyword {
   cpc: number;
 }
 
+export interface DataForSEOReferringDomain {
+  domain: string;
+  rank: number;
+  backlinks: number;
+  backlinkTypes: { anchor: number; redirect: number; image: number; form: number; alternate: number };
+  dofollow: number;
+  nofollow: number;
+  firstSeen: string | null;
+  lastSeen: string | null;
+}
+
+export interface DataForSEOBacklinksSummary {
+  totalBacklinks: number;
+  totalReferringDomains: number;
+  dofollow: number;
+  nofollow: number;
+  anchorLinks: number;
+  imageLinks: number;
+  redirectLinks: number;
+  domainRank: number;
+  brokenBacklinks: number;
+  referringIPs: number;
+  referringSubnets: number;
+}
+
+export interface DataForSEOCompetitor {
+  domain: string;
+  avgPosition: number;
+  sumPosition: number;
+  intersections: number;
+  competitorRelevance: number;
+  organicTraffic: number;
+  organicKeywords: number;
+}
+
 export interface DataForSEOOnPageResult {
   url: string;
   title: string | null;

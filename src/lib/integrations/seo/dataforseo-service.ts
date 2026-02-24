@@ -17,6 +17,9 @@ import type {
   DataForSEOSerpResult,
   DataForSEODomainMetrics,
   DataForSEORankedKeyword,
+  DataForSEOReferringDomain,
+  DataForSEOBacklinksSummary,
+  DataForSEOCompetitor,
   DataForSEOOnPageResult,
   CacheEntry,
 } from './types';
@@ -81,6 +84,55 @@ interface DFSRankedKeywordItem {
     };
     etv: number;
   };
+}
+
+interface DFSReferringDomainItem {
+  domain: string;
+  rank: number;
+  backlinks: number;
+  backlinks_spam_score: number;
+  broken_backlinks: number;
+  first_seen: string | null;
+  lost_date: string | null;
+  dofollow: number;
+  nofollow: number;
+  anchor: number;
+  redirect: number;
+  image: number;
+  form: number;
+  alternate: number;
+}
+
+interface DFSBacklinksSummaryItem {
+  target: string;
+  total_backlinks: number;
+  referring_domains: number;
+  dofollow: number;
+  nofollow: number;
+  anchor: number;
+  image: number;
+  redirect: number;
+  rank: number;
+  broken_backlinks: number;
+  referring_ips: number;
+  referring_subnets: number;
+}
+
+interface DFSCompetitorItem {
+  domain: string;
+  avg_position: number;
+  sum_position: number;
+  intersections: number;
+  full_domain_metrics: Record<string, {
+    organic: {
+      etv: number;
+      count: number;
+      pos_1: number;
+      pos_2_3: number;
+      pos_4_10: number;
+    };
+  }>;
+  competitor_relevance: number;
 }
 
 interface DFSOnPageItem {
@@ -381,6 +433,130 @@ class DataForSEOService {
       traffic: item.ranked_serp_element?.etv ?? 0,
       cpc: item.keyword_data?.cpc ?? 0,
     }));
+
+    return { success: true, data: mapped, error: null, source: result.source, cached: result.cached };
+  }
+
+  // -----------------------------------------------------------
+  // Public — referring domains (which sites link to a domain)
+  // -----------------------------------------------------------
+
+  async getReferringDomains(
+    domain: string,
+    limit: number = 20
+  ): Promise<SEOServiceResult<DataForSEOReferringDomain[]>> {
+    const cacheKey = `refdom|${domain}|${limit}`;
+
+    const result = await this.post<DFSReferringDomainItem[]>(
+      'backlinks/referring_domains/live',
+      [{ target: domain, limit, order_by: ['rank,desc'], backlinks_filters: ['dofollow', '=', true] }],
+      TTL_DOMAIN,
+      cacheKey
+    );
+
+    if (!result.success || !result.data) {
+      return { success: false, data: null, error: result.error, source: result.source, cached: result.cached };
+    }
+
+    const items = result.data as unknown as DFSReferringDomainItem[];
+
+    const mapped: DataForSEOReferringDomain[] = items.map(item => ({
+      domain: item.domain ?? '',
+      rank: item.rank ?? 0,
+      backlinks: item.backlinks ?? 0,
+      backlinkTypes: {
+        anchor: item.anchor ?? 0,
+        redirect: item.redirect ?? 0,
+        image: item.image ?? 0,
+        form: item.form ?? 0,
+        alternate: item.alternate ?? 0,
+      },
+      dofollow: item.dofollow ?? 0,
+      nofollow: item.nofollow ?? 0,
+      firstSeen: item.first_seen ?? null,
+      lastSeen: item.lost_date ?? null,
+    }));
+
+    return { success: true, data: mapped, error: null, source: result.source, cached: result.cached };
+  }
+
+  // -----------------------------------------------------------
+  // Public — backlinks summary (aggregate profile)
+  // -----------------------------------------------------------
+
+  async getBacklinksSummary(domain: string): Promise<SEOServiceResult<DataForSEOBacklinksSummary>> {
+    const cacheKey = `blsum|${domain}`;
+
+    const result = await this.post<DFSBacklinksSummaryItem[]>(
+      'backlinks/summary/live',
+      [{ target: domain }],
+      TTL_DOMAIN,
+      cacheKey
+    );
+
+    if (!result.success || !result.data) {
+      return { success: false, data: null, error: result.error, source: result.source, cached: result.cached };
+    }
+
+    const items = result.data as unknown as DFSBacklinksSummaryItem[];
+    const first = items[0];
+    if (!first) {
+      return { success: false, data: null, error: 'No backlinks summary returned', source: 'dataforseo', cached: false };
+    }
+
+    const mapped: DataForSEOBacklinksSummary = {
+      totalBacklinks: first.total_backlinks ?? 0,
+      totalReferringDomains: first.referring_domains ?? 0,
+      dofollow: first.dofollow ?? 0,
+      nofollow: first.nofollow ?? 0,
+      anchorLinks: first.anchor ?? 0,
+      imageLinks: first.image ?? 0,
+      redirectLinks: first.redirect ?? 0,
+      domainRank: first.rank ?? 0,
+      brokenBacklinks: first.broken_backlinks ?? 0,
+      referringIPs: first.referring_ips ?? 0,
+      referringSubnets: first.referring_subnets ?? 0,
+    };
+
+    return { success: true, data: mapped, error: null, source: result.source, cached: result.cached };
+  }
+
+  // -----------------------------------------------------------
+  // Public — competitors (domains competing for same keywords)
+  // -----------------------------------------------------------
+
+  async getCompetitors(
+    domain: string,
+    limit: number = 10
+  ): Promise<SEOServiceResult<DataForSEOCompetitor[]>> {
+    const cacheKey = `comp|${domain}|${limit}`;
+
+    const result = await this.post<DFSCompetitorItem[]>(
+      'dataforseo_labs/google/competitors_domain/live',
+      [{ target: domain, limit }],
+      TTL_DOMAIN,
+      cacheKey
+    );
+
+    if (!result.success || !result.data) {
+      return { success: false, data: null, error: result.error, source: result.source, cached: result.cached };
+    }
+
+    const items = result.data as unknown as DFSCompetitorItem[];
+
+    const mapped: DataForSEOCompetitor[] = items.map(item => {
+      const metricsMap = item.full_domain_metrics ?? {};
+      const firstMetric = Object.values(metricsMap)[0];
+      return {
+        domain: item.domain ?? '',
+        avgPosition: item.avg_position ?? 0,
+        sumPosition: item.sum_position ?? 0,
+        intersections: item.intersections ?? 0,
+        competitorRelevance: item.competitor_relevance ?? 0,
+        organicTraffic: firstMetric?.organic?.etv ?? 0,
+        organicKeywords: firstMetric?.organic?.count ?? 0,
+      };
+    });
 
     return { success: true, data: mapped, error: null, source: result.source, cached: result.cached };
   }
