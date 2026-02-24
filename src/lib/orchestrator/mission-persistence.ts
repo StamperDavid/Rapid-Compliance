@@ -43,6 +43,8 @@ export interface MissionStep {
   durationMs?: number;
   summary?: string;
   error?: string;
+  toolArgs?: Record<string, unknown>;
+  toolResult?: string;
 }
 
 export interface Mission {
@@ -151,7 +153,7 @@ export async function addMissionStep(missionId: string, step: MissionStep): Prom
 export async function updateMissionStep(
   missionId: string,
   stepId: string,
-  updates: Partial<Pick<MissionStep, 'status' | 'completedAt' | 'durationMs' | 'summary' | 'error'>>
+  updates: Partial<Pick<MissionStep, 'status' | 'completedAt' | 'durationMs' | 'summary' | 'error' | 'toolArgs' | 'toolResult'>>
 ): Promise<void> {
   if (!adminDb) {
     logger.warn('[MissionPersistence] Firestore not available — updateStep skipped');
@@ -307,5 +309,54 @@ export async function finalizeMission(
       missionId,
       error: errorMsg,
     });
+  }
+}
+
+/**
+ * Cancel a mission — sets status to FAILED with 'Cancelled by user'
+ * and marks any RUNNING steps as FAILED.
+ */
+export async function cancelMission(missionId: string): Promise<boolean> {
+  if (!adminDb) {
+    logger.warn('[MissionPersistence] Firestore not available — cancelMission skipped');
+    return false;
+  }
+
+  try {
+    const docRef = adminDb.collection(missionsCollectionPath()).doc(missionId);
+    const doc = await docRef.get();
+
+    if (!doc.exists) {
+      logger.warn('[MissionPersistence] Mission not found for cancel', { missionId });
+      return false;
+    }
+
+    const mission = doc.data() as Mission;
+    const now = new Date().toISOString();
+
+    // Mark any RUNNING steps as FAILED
+    const updatedSteps = mission.steps.map((step) =>
+      step.status === 'RUNNING'
+        ? { ...step, status: 'FAILED' as MissionStepStatus, completedAt: now, error: 'Mission cancelled' }
+        : step
+    );
+
+    await docRef.update({
+      status: 'FAILED',
+      error: 'Cancelled by user',
+      completedAt: now,
+      updatedAt: now,
+      steps: updatedSteps,
+    });
+
+    logger.info('[MissionPersistence] Mission cancelled', { missionId });
+    return true;
+  } catch (err) {
+    const errorMsg = err instanceof Error ? err.message : String(err);
+    logger.error('[MissionPersistence] Failed to cancel mission', err instanceof Error ? err : undefined, {
+      missionId,
+      error: errorMsg,
+    });
+    return false;
   }
 }

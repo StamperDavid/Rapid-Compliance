@@ -1,7 +1,7 @@
 # SalesVelocity.ai - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** February 24, 2026 (Sprint 22 — Security Hardening & Production Readiness)
+**Last Updated:** February 24, 2026 (Sprint 23 — Mission Control Live Stream)
 **Branches:** `dev` (latest)
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Architecture:** Single-Tenant (Penthouse Model) - NOT a SaaS platform
@@ -37,7 +37,7 @@
 | Metric | Count | Status |
 |--------|-------|--------|
 | Physical Routes (page.tsx) | 176 | Verified February 24, 2026 (Sprint 18: +/mission-control, +/mission-control/history) |
-| API Endpoints (route.ts) | 279 | Verified February 24, 2026 (Sprint 18: +/api/orchestrator/missions, +/api/orchestrator/missions/[missionId]) |
+| API Endpoints (route.ts) | 281 | Verified February 24, 2026 (Sprint 23: +/api/orchestrator/missions/[missionId]/stream, +/api/orchestrator/missions/[missionId]/cancel) |
 | AI Agents | 52 | **52 FUNCTIONAL (48 swarm + 4 standalone)** |
 | RBAC Roles | 4 | `owner` (level 3), `admin` (level 2), `manager` (level 1), `member` (level 0) — 4-role RBAC |
 | Firestore Collections | 68+ | Active (sagaState, eventLog, missions collections; 25 composite indexes) |
@@ -177,6 +177,7 @@ The Claude Code Governance Layer defines binding operational constraints for AI-
 | **Sprint 20** | AI Search Optimization (llms.txt, AI bot access, schema markup service, monitoring dashboard) | **COMPLETE** (Feb 24, 2026) |
 | **Sprint 21** | Website Migration Pipeline — "clone this site" via Jasper + web_migrator (deep scrape → blueprint → AI page gen → assemble) | **COMPLETE** (Feb 24, 2026) |
 | **Sprint 22** | Security Hardening — webhook fail-closed, workflow timeouts + depth limits, SMS orchestrator wiring | **COMPLETE** (Feb 24, 2026) |
+| **Sprint 23** | Mission Control Live Stream — SSE streaming replaces 5s polling, cancel button, tool args/results in step detail | **COMPLETE** (Feb 24, 2026) |
 
 ### Completed Roadmaps (Archived)
 
@@ -1348,7 +1349,7 @@ This script:
 | Learning | 2 | `/api/learning/*` | Partial |
 | Meetings | 1 | `/api/meetings/*` | Functional |
 | Onboarding | 1 | `/api/onboarding/*` | Functional |
-| Orchestrator | 5 | `/api/orchestrator/*` | Functional (Sprint 18: +missions, +missions/[missionId]) |
+| Orchestrator | 7 | `/api/orchestrator/*` | Functional (Sprint 18: +missions, +missions/[missionId]; Sprint 23: +stream, +cancel) |
 | Outbound | 3 | `/api/outbound/*` | Functional |
 | Performance | 1 | `/api/performance/*` | Functional |
 | Playbook | 1 | `/api/playbook/*` | Functional |
@@ -1371,6 +1372,8 @@ This script:
 | `/api/orchestrator/chat` | POST | Jasper conversation (now includes `missionId` in response metadata for delegation tracking) | FUNCTIONAL |
 | `/api/orchestrator/missions` | POST/GET | Create mission + list missions (paginated, status filter) | FUNCTIONAL (Sprint 18) |
 | `/api/orchestrator/missions/[missionId]` | GET | Get single mission for polling | FUNCTIONAL (Sprint 18) |
+| `/api/orchestrator/missions/[missionId]/stream` | GET | SSE real-time mission streaming (Firestore onSnapshot) | FUNCTIONAL (Sprint 23) |
+| `/api/orchestrator/missions/[missionId]/cancel` | POST | Cancel an active mission (sets FAILED + 'Cancelled by user') | FUNCTIONAL (Sprint 23) |
 | `/api/orchestrator/system-health` | GET | System health | FUNCTIONAL |
 | `/api/orchestrator/feature-toggle` | POST | Feature flags | FUNCTIONAL |
 
@@ -1687,30 +1690,35 @@ The following endpoints have working infrastructure (rate limiting, caching, aut
 **Purpose:** Live "Air Traffic Control" for Jasper's multi-step delegations — users watch steps execute in real-time, approve/reject at intervention gates, and auto-navigate from chat.
 
 **Architecture:**
-- **Polling, not SSE** — 5s polling for active missions, 30s for idle/history. Matches Social Command Center pattern. Avoids new infra on Vercel serverless.
+- **SSE streaming for selected mission** (Sprint 23) — Firestore `onSnapshot()` pushes sub-second updates via Server-Sent Events. Sidebar list still uses adaptive polling (5s active / 30s idle).
+- **Cancel capability** (Sprint 23) — `POST /api/orchestrator/missions/[missionId]/cancel` sets mission + RUNNING steps to FAILED. UI has confirmation dialog.
 - **Separate `missions` Firestore collection** — User-facing documents, simpler than internal `sagaState`.
 - **Fire-and-forget instrumentation** — Mission tracking in `executeToolCall` never breaks Jasper's chat response. All writes are void-ed with internal error handling.
+- **Tool args/results** (Sprint 23) — `MissionStep` carries `toolArgs` (input) and `toolResult` (truncated to 2000 chars). Visible in collapsible panels in step detail.
 
-**Files (12 new, 5 modified):**
+**Files (15 new, 5 modified):**
 
 | File | Purpose |
 |------|---------|
-| `src/lib/orchestrator/mission-persistence.ts` | Types (`Mission`, `MissionStep`, statuses) + Firestore CRUD |
+| `src/lib/orchestrator/mission-persistence.ts` | Types (`Mission`, `MissionStep`, statuses) + Firestore CRUD + `cancelMission()` |
 | `src/app/api/orchestrator/missions/route.ts` | POST create + GET list (paginated, status filter) |
 | `src/app/api/orchestrator/missions/[missionId]/route.ts` | GET single mission (polling endpoint) |
-| `src/app/(dashboard)/mission-control/page.tsx` | 3-panel layout: sidebar (260px) + timeline (flex) + detail (300px) |
+| `src/app/api/orchestrator/missions/[missionId]/stream/route.ts` | GET SSE streaming endpoint (Firestore onSnapshot, 15s heartbeat, 5min max) |
+| `src/app/api/orchestrator/missions/[missionId]/cancel/route.ts` | POST cancel mission (sets FAILED + marks RUNNING steps) |
+| `src/hooks/useMissionStream.ts` | Client hook: fetch-based SSE streaming with auth headers, auto-reconnect |
+| `src/app/(dashboard)/mission-control/page.tsx` | 3-panel layout with SSE streaming, cancel button, LIVE badge, tool detail panels |
 | `src/app/(dashboard)/mission-control/history/page.tsx` | Paginated history table with click-to-replay |
 | `src/app/(dashboard)/mission-control/_components/MissionTimeline.tsx` | Vertical step timeline with live elapsed timers, auto-scroll |
 | `src/app/(dashboard)/mission-control/_components/MissionSidebar.tsx` | Left panel mission list with status badges |
 | `src/app/(dashboard)/mission-control/_components/AgentAvatar.tsx` | Colored circle chips per delegation target |
 | `src/app/(dashboard)/mission-control/_components/ApprovalCard.tsx` | Inline approval gate (calls existing `/api/orchestrator/approvals`) |
-| `src/lib/orchestrator/jasper-tools.ts` | `ToolCallContext` + fire-and-forget tracking in 5 `delegate_to_*` cases + new `delegate_to_trust` |
+| `src/lib/orchestrator/jasper-tools.ts` | `ToolCallContext` + fire-and-forget tracking in all 13 delegation tools with `toolArgs`/`toolResult` |
 | `src/app/api/orchestrator/chat/route.ts` | Threads `missionId` context, creates mission on delegation, adds `missionId` to response |
 | `src/components/orchestrator/OrchestratorBase.tsx` | "Watch Live" pill button on delegation messages |
 | `src/components/admin/AdminSidebar.tsx` | Mission Control nav item under AI Workforce (Radar icon) |
 | `src/lib/stores/orchestrator-store.ts` | `missionId` added to `ChatMessage.metadata` |
 
-**Delegation tools instrumented:** `delegate_to_builder`, `delegate_to_sales`, `delegate_to_marketing`, `delegate_to_trust`, `delegate_to_agent`
+**Delegation tools instrumented (all 13):** `delegate_to_builder`, `delegate_to_sales`, `delegate_to_marketing`, `delegate_to_trust`, `delegate_to_agent`, `delegate_to_content`, `delegate_to_architect`, `delegate_to_outreach`, `delegate_to_intelligence`, `delegate_to_commerce`, `save_blog_draft`, `research_trending_topics`, `migrate_website`
 
 **Firestore Path:** `organizations/{PLATFORM_ID}/missions/{missionId}` via `getSubCollection('missions')`
 

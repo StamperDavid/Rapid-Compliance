@@ -4,16 +4,18 @@
  * Mission Control — Live "air traffic control" view of Jasper delegations
  *
  * 3-panel layout:
- * - Left (260px): Active/recent mission list
- * - Center (flex): MissionTimeline with live steps
- * - Right (300px): Step detail / ApprovalCard
+ * - Left (260px): Active/recent mission list (polled)
+ * - Center (flex): MissionTimeline with live SSE-streamed steps
+ * - Right (300px): Step detail with tool args/results + ApprovalCard
  *
- * Polling: 5s if any active missions, 30s otherwise.
+ * Sprint 23: Upgraded from 5s polling to SSE streaming for selected mission.
+ * Sidebar list still uses adaptive polling (5s active / 30s idle).
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
+import { useMissionStream } from '@/hooks/useMissionStream';
 import SubpageNav from '@/components/ui/SubpageNav';
 import MissionSidebar from './_components/MissionSidebar';
 import MissionTimeline from './_components/MissionTimeline';
@@ -29,9 +31,94 @@ interface MissionListResponse {
   data?: { missions: Mission[]; hasMore: boolean };
 }
 
-interface MissionDetailResponse {
-  success: boolean;
-  data?: Mission;
+// ============================================================================
+// COLLAPSIBLE JSON VIEWER
+// ============================================================================
+
+function CollapsibleSection({ title, children }: { title: string; children: React.ReactNode }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div style={{ marginTop: '0.75rem' }}>
+      <button
+        onClick={() => setOpen(!open)}
+        style={{
+          background: 'none',
+          border: 'none',
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.375rem',
+          fontSize: '0.75rem',
+          fontWeight: 600,
+          color: 'var(--color-text-secondary)',
+          padding: 0,
+          textTransform: 'uppercase',
+          letterSpacing: '0.03em',
+        }}
+      >
+        <span style={{
+          display: 'inline-block',
+          transition: 'transform 0.15s',
+          transform: open ? 'rotate(90deg)' : 'rotate(0deg)',
+        }}>
+          &#9654;
+        </span>
+        {title}
+      </button>
+      {open && (
+        <div style={{
+          marginTop: '0.375rem',
+          padding: '0.625rem',
+          backgroundColor: 'var(--color-bg-elevated)',
+          borderRadius: '0.375rem',
+          fontSize: '0.75rem',
+          fontFamily: 'monospace',
+          color: 'var(--color-text-primary)',
+          lineHeight: 1.5,
+          whiteSpace: 'pre-wrap',
+          wordBreak: 'break-word',
+          maxHeight: '240px',
+          overflowY: 'auto',
+        }}>
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================================================
+// LIVE BADGE
+// ============================================================================
+
+function LiveBadge() {
+  return (
+    <span style={{
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: '0.375rem',
+      fontSize: '0.6875rem',
+      fontWeight: 700,
+      color: '#ef4444',
+      textTransform: 'uppercase',
+      letterSpacing: '0.05em',
+    }}>
+      <span style={{
+        width: 8,
+        height: 8,
+        borderRadius: '50%',
+        backgroundColor: '#ef4444',
+        animation: 'pulse-dot 1.5s ease-in-out infinite',
+      }} />
+      LIVE
+      <style>{`
+        @keyframes pulse-dot {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.3; }
+        }
+      `}</style>
+    </span>
+  );
 }
 
 // ============================================================================
@@ -45,16 +132,22 @@ export default function MissionControlPage() {
 
   const [missions, setMissions] = useState<Mission[]>([]);
   const [selectedMissionId, setSelectedMissionId] = useState<string | null>(deepLinkedMission);
-  const [selectedMission, setSelectedMission] = useState<Mission | null>(null);
   const [selectedStep, setSelectedStep] = useState<MissionStep | null>(null);
+  const [cancelling, setCancelling] = useState(false);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Determine if any missions are active
+  // SSE stream for the selected mission
+  const { mission: streamedMission, isStreaming } = useMissionStream(selectedMissionId);
+
+  // Determine if any missions are active (for sidebar polling rate)
   const hasActiveMissions = missions.some(
     (m) => m.status === 'IN_PROGRESS' || m.status === 'AWAITING_APPROVAL' || m.status === 'PENDING'
   );
 
-  // ── Fetch mission list ──────────────────────────────────────────────
+  // The displayed mission: prefer streamed data, fall back to list data
+  const selectedMission = streamedMission ?? missions.find((m) => m.missionId === selectedMissionId) ?? null;
+
+  // ── Fetch mission list (sidebar) ────────────────────────────────────
   const fetchMissions = useCallback(async () => {
     try {
       const res = await authFetch('/api/orchestrator/missions?limit=30');
@@ -62,20 +155,6 @@ export default function MissionControlPage() {
       const data = (await res.json()) as MissionListResponse;
       if (data.success && data.data) {
         setMissions(data.data.missions);
-      }
-    } catch {
-      // Silent fail on polling
-    }
-  }, [authFetch]);
-
-  // ── Fetch selected mission detail ───────────────────────────────────
-  const fetchMissionDetail = useCallback(async (missionId: string) => {
-    try {
-      const res = await authFetch(`/api/orchestrator/missions/${missionId}`);
-      if (!res.ok) { return; }
-      const data = (await res.json()) as MissionDetailResponse;
-      if (data.success && data.data) {
-        setSelectedMission(data.data);
       }
     } catch {
       // Silent fail on polling
@@ -94,16 +173,7 @@ export default function MissionControlPage() {
     }
   }, [deepLinkedMission, selectedMissionId]);
 
-  // ── Poll selected mission detail ────────────────────────────────────
-  useEffect(() => {
-    if (!selectedMissionId) {
-      setSelectedMission(null);
-      return;
-    }
-    void fetchMissionDetail(selectedMissionId);
-  }, [selectedMissionId, fetchMissionDetail]);
-
-  // ── Adaptive polling ────────────────────────────────────────────────
+  // ── Adaptive polling for sidebar list only ──────────────────────────
   useEffect(() => {
     if (pollingRef.current) {
       clearInterval(pollingRef.current);
@@ -113,9 +183,6 @@ export default function MissionControlPage() {
 
     pollingRef.current = setInterval(() => {
       void fetchMissions();
-      if (selectedMissionId) {
-        void fetchMissionDetail(selectedMissionId);
-      }
     }, interval);
 
     return () => {
@@ -123,7 +190,7 @@ export default function MissionControlPage() {
         clearInterval(pollingRef.current);
       }
     };
-  }, [hasActiveMissions, selectedMissionId, fetchMissions, fetchMissionDetail]);
+  }, [hasActiveMissions, fetchMissions]);
 
   // ── Step selection handler ──────────────────────────────────────────
   const handleStepSelect = useCallback((stepId: string) => {
@@ -132,21 +199,62 @@ export default function MissionControlPage() {
     setSelectedStep(step ?? null);
   }, [selectedMission]);
 
+  // ── Cancel mission handler ──────────────────────────────────────────
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+
+  const handleCancelRequest = useCallback(() => {
+    if (!selectedMissionId || cancelling) { return; }
+    setShowCancelConfirm(true);
+  }, [selectedMissionId, cancelling]);
+
+  const handleCancelConfirm = useCallback(async () => {
+    setShowCancelConfirm(false);
+    if (!selectedMissionId || cancelling) { return; }
+
+    setCancelling(true);
+    try {
+      const res = await authFetch(`/api/orchestrator/missions/${selectedMissionId}/cancel`, {
+        method: 'POST',
+      });
+      if (res.ok) {
+        void fetchMissions();
+      }
+    } catch {
+      // Silent fail
+    } finally {
+      setCancelling(false);
+    }
+  }, [selectedMissionId, cancelling, authFetch, fetchMissions]);
+
   // ── Find approval step if any ──────────────────────────────────────
   const approvalStep = selectedMission?.steps.find(
     (s) => s.status === 'AWAITING_APPROVAL'
   );
 
+  // Is mission active (cancellable)?
+  const isMissionActive = selectedMission?.status === 'IN_PROGRESS'
+    || selectedMission?.status === 'AWAITING_APPROVAL'
+    || selectedMission?.status === 'PENDING';
+
   return (
     <div style={{ padding: '1.5rem' }}>
-      <h1 style={{
-        fontSize: '1.5rem',
-        fontWeight: 700,
-        color: 'var(--color-text-primary)',
+      {/* Header with title + streaming indicator */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.75rem',
         marginBottom: '1rem',
       }}>
-        Mission Control
-      </h1>
+        <h1 style={{
+          fontSize: '1.5rem',
+          fontWeight: 700,
+          color: 'var(--color-text-primary)',
+          margin: 0,
+        }}>
+          Mission Control
+        </h1>
+        {isStreaming && <LiveBadge />}
+      </div>
 
       <SubpageNav items={[
         { label: 'Live', href: '/mission-control' },
@@ -196,6 +304,81 @@ export default function MissionControlPage() {
           display: 'flex',
           flexDirection: 'column',
         }}>
+          {/* Cancel bar when mission is active */}
+          {selectedMission && isMissionActive && (
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '0.5rem 1rem',
+              borderBottom: '1px solid var(--color-border-light)',
+              backgroundColor: 'var(--color-bg-elevated)',
+            }}>
+              <span style={{
+                fontSize: '0.8125rem',
+                fontWeight: 600,
+                color: 'var(--color-text-primary)',
+              }}>
+                {selectedMission.title || 'Active Mission'}
+              </span>
+              {showCancelConfirm ? (
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>
+                    Cancel this mission?
+                  </span>
+                  <button
+                    onClick={() => void handleCancelConfirm()}
+                    style={{
+                      padding: '0.25rem 0.5rem',
+                      fontSize: '0.75rem',
+                      fontWeight: 600,
+                      color: '#fff',
+                      backgroundColor: '#ef4444',
+                      border: 'none',
+                      borderRadius: '0.375rem',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Yes, Cancel
+                  </button>
+                  <button
+                    onClick={() => setShowCancelConfirm(false)}
+                    style={{
+                      padding: '0.25rem 0.5rem',
+                      fontSize: '0.75rem',
+                      fontWeight: 600,
+                      color: 'var(--color-text-secondary)',
+                      backgroundColor: 'transparent',
+                      border: '1px solid var(--color-border-light)',
+                      borderRadius: '0.375rem',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    No
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={handleCancelRequest}
+                  disabled={cancelling}
+                  style={{
+                    padding: '0.25rem 0.75rem',
+                    fontSize: '0.75rem',
+                    fontWeight: 600,
+                    color: '#fff',
+                    backgroundColor: cancelling ? '#9ca3af' : '#ef4444',
+                    border: 'none',
+                    borderRadius: '0.375rem',
+                    cursor: cancelling ? 'not-allowed' : 'pointer',
+                    transition: 'background-color 0.15s',
+                  }}
+                >
+                  {cancelling ? 'Cancelling...' : 'Cancel Mission'}
+                </button>
+              )}
+            </div>
+          )}
+
           {selectedMission ? (
             <MissionTimeline
               mission={selectedMission}
@@ -234,10 +417,7 @@ export default function MissionControlPage() {
               urgency="medium"
               requestedBy={approvalStep.delegatedTo}
               onDecision={() => {
-                // Refresh after decision
-                if (selectedMissionId) {
-                  void fetchMissionDetail(selectedMissionId);
-                }
+                void fetchMissions();
               }}
             />
           ) : selectedStep ? (
@@ -309,6 +489,20 @@ export default function MissionControlPage() {
                 }}>
                   {selectedStep.error}
                 </div>
+              )}
+
+              {/* Tool Args (Input) */}
+              {selectedStep.toolArgs && Object.keys(selectedStep.toolArgs).length > 0 && (
+                <CollapsibleSection title="Input (Tool Args)">
+                  {JSON.stringify(selectedStep.toolArgs, null, 2)}
+                </CollapsibleSection>
+              )}
+
+              {/* Tool Result (Output) */}
+              {selectedStep.toolResult && (
+                <CollapsibleSection title="Output (Result)">
+                  {selectedStep.toolResult}
+                </CollapsibleSection>
               )}
             </div>
           ) : (

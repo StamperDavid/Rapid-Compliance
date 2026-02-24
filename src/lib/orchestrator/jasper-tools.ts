@@ -37,7 +37,13 @@ function trackMissionStep(
   context: ToolCallContext | undefined,
   toolName: string,
   status: MissionStepStatus,
-  extras?: { summary?: string; durationMs?: number; error?: string }
+  extras?: {
+    summary?: string;
+    durationMs?: number;
+    error?: string;
+    toolArgs?: Record<string, unknown>;
+    toolResult?: string;
+  }
 ): void {
   if (!context?.missionId) { return; }
 
@@ -50,6 +56,7 @@ function trackMissionStep(
       delegatedTo: toolName.replace('delegate_to_', '').toUpperCase(),
       status: 'RUNNING',
       startedAt: new Date().toISOString(),
+      ...(extras?.toolArgs ? { toolArgs: extras.toolArgs } : {}),
     }).catch((err: unknown) => {
       logger.warn('[MissionTrack] Failed to add step', {
         missionId: context.missionId,
@@ -2408,7 +2415,7 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
       // ═══════════════════════════════════════════════════════════════════════
       case 'delegate_to_agent': {
         const agentStart = Date.now();
-        trackMissionStep(context, 'delegate_to_agent', 'RUNNING');
+        trackMissionStep(context, 'delegate_to_agent', 'RUNNING', { toolArgs: args });
 
         const parsedArgs = parseDelegateToAgentArgs(args);
         if (!parsedArgs) {
@@ -2427,6 +2434,7 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
         trackMissionStep(context, 'delegate_to_agent', agentStatus as MissionStepStatus, {
           summary: `Agent ${parsedArgs.agentId}: ${agentStatus}`,
           durationMs: agentDuration,
+          toolResult: JSON.stringify(delegation).slice(0, 2000),
         });
 
         content = JSON.stringify(delegation);
@@ -2693,7 +2701,7 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
       // ═══════════════════════════════════════════════════════════════════════
       case 'delegate_to_builder': {
         const builderStart = Date.now();
-        trackMissionStep(context, 'delegate_to_builder', 'RUNNING');
+        trackMissionStep(context, 'delegate_to_builder', 'RUNNING', { toolArgs: args });
 
         const { ArchitectManager } = await import('@/lib/agents/architect/manager');
         const manager = new ArchitectManager();
@@ -2725,7 +2733,7 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
         const builderDuration = Date.now() - builderStart;
         trackMissionStep(context, 'delegate_to_builder',
           result.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED',
-          { summary: `Architect: ${result.status}`, durationMs: builderDuration }
+          { summary: `Architect: ${result.status}`, durationMs: builderDuration, toolResult: JSON.stringify(result.data).slice(0, 2000) }
         );
 
         content = JSON.stringify({
@@ -2745,7 +2753,7 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
       // ═══════════════════════════════════════════════════════════════════════
       case 'delegate_to_sales': {
         const salesStart = Date.now();
-        trackMissionStep(context, 'delegate_to_sales', 'RUNNING');
+        trackMissionStep(context, 'delegate_to_sales', 'RUNNING', { toolArgs: args });
 
         const { RevenueDirector } = await import('@/lib/agents/sales/revenue/manager');
         const director = new RevenueDirector();
@@ -2804,7 +2812,7 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
         const salesDuration = Date.now() - salesStart;
         trackMissionStep(context, 'delegate_to_sales',
           result.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED',
-          { summary: `Sales: ${result.status}`, durationMs: salesDuration }
+          { summary: `Sales: ${result.status}`, durationMs: salesDuration, toolResult: JSON.stringify(result.data).slice(0, 2000) }
         );
 
         content = JSON.stringify({
@@ -2824,7 +2832,7 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
       // ═══════════════════════════════════════════════════════════════════════
       case 'delegate_to_marketing': {
         const marketingStart = Date.now();
-        trackMissionStep(context, 'delegate_to_marketing', 'RUNNING');
+        trackMissionStep(context, 'delegate_to_marketing', 'RUNNING', { toolArgs: args });
 
         const { MarketingManager } = await import('@/lib/agents/marketing/manager');
         const manager = new MarketingManager();
@@ -2857,7 +2865,7 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
         const marketingDuration = Date.now() - marketingStart;
         trackMissionStep(context, 'delegate_to_marketing',
           result.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED',
-          { summary: `Marketing: ${result.status}`, durationMs: marketingDuration }
+          { summary: `Marketing: ${result.status}`, durationMs: marketingDuration, toolResult: JSON.stringify(result.data).slice(0, 2000) }
         );
 
         content = JSON.stringify({
@@ -2877,7 +2885,7 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
       // ═══════════════════════════════════════════════════════════════════════
       case 'delegate_to_trust': {
         const trustStart = Date.now();
-        trackMissionStep(context, 'delegate_to_trust', 'RUNNING');
+        trackMissionStep(context, 'delegate_to_trust', 'RUNNING', { toolArgs: args });
 
         const { ReputationManager } = await import('@/lib/agents/trust/reputation/manager');
         const trustManager = new ReputationManager();
@@ -2904,7 +2912,7 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
         const trustDuration = Date.now() - trustStart;
         trackMissionStep(context, 'delegate_to_trust',
           trustResult.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED',
-          { summary: `Trust: ${trustResult.status}`, durationMs: trustDuration }
+          { summary: `Trust: ${trustResult.status}`, durationMs: trustDuration, toolResult: JSON.stringify(trustResult.data).slice(0, 2000) }
         );
 
         content = JSON.stringify({
@@ -2921,7 +2929,7 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
       // ═══════════════════════════════════════════════════════════════════════
       case 'delegate_to_content': {
         const contentStart = Date.now();
-        trackMissionStep(context, 'delegate_to_content', 'RUNNING');
+        trackMissionStep(context, 'delegate_to_content', 'RUNNING', { toolArgs: args });
 
         const { ContentManager } = await import('@/lib/agents/content/manager');
         const contentMgr = new ContentManager();
@@ -2955,7 +2963,7 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
         const contentDuration = Date.now() - contentStart;
         trackMissionStep(context, 'delegate_to_content',
           contentResult.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED',
-          { summary: `Content: ${contentResult.status}`, durationMs: contentDuration }
+          { summary: `Content: ${contentResult.status}`, durationMs: contentDuration, toolResult: JSON.stringify(contentResult.data).slice(0, 2000) }
         );
 
         content = JSON.stringify({
@@ -2975,7 +2983,7 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
       // ═══════════════════════════════════════════════════════════════════════
       case 'delegate_to_architect': {
         const architectStart = Date.now();
-        trackMissionStep(context, 'delegate_to_architect', 'RUNNING');
+        trackMissionStep(context, 'delegate_to_architect', 'RUNNING', { toolArgs: args });
 
         const { ArchitectManager } = await import('@/lib/agents/architect/manager');
         const architectMgr = new ArchitectManager();
@@ -3008,7 +3016,7 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
         const architectDuration = Date.now() - architectStart;
         trackMissionStep(context, 'delegate_to_architect',
           architectResult.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED',
-          { summary: `Architect: ${architectResult.status}`, durationMs: architectDuration }
+          { summary: `Architect: ${architectResult.status}`, durationMs: architectDuration, toolResult: JSON.stringify(architectResult.data).slice(0, 2000) }
         );
 
         content = JSON.stringify({
@@ -3028,7 +3036,7 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
       // ═══════════════════════════════════════════════════════════════════════
       case 'delegate_to_outreach': {
         const outreachStart = Date.now();
-        trackMissionStep(context, 'delegate_to_outreach', 'RUNNING');
+        trackMissionStep(context, 'delegate_to_outreach', 'RUNNING', { toolArgs: args });
 
         const { OutreachManager } = await import('@/lib/agents/outreach/manager');
         const outreachMgr = new OutreachManager();
@@ -3068,7 +3076,7 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
         const outreachDuration = Date.now() - outreachStart;
         trackMissionStep(context, 'delegate_to_outreach',
           outreachResult.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED',
-          { summary: `Outreach: ${outreachResult.status}`, durationMs: outreachDuration }
+          { summary: `Outreach: ${outreachResult.status}`, durationMs: outreachDuration, toolResult: JSON.stringify(outreachResult.data).slice(0, 2000) }
         );
 
         content = JSON.stringify({
@@ -3088,7 +3096,7 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
       // ═══════════════════════════════════════════════════════════════════════
       case 'delegate_to_intelligence': {
         const intelStart = Date.now();
-        trackMissionStep(context, 'delegate_to_intelligence', 'RUNNING');
+        trackMissionStep(context, 'delegate_to_intelligence', 'RUNNING', { toolArgs: args });
 
         const { IntelligenceManager } = await import('@/lib/agents/intelligence/manager');
         const intelMgr = new IntelligenceManager();
@@ -3122,7 +3130,7 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
         const intelDuration = Date.now() - intelStart;
         trackMissionStep(context, 'delegate_to_intelligence',
           intelResult.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED',
-          { summary: `Intelligence: ${intelResult.status}`, durationMs: intelDuration }
+          { summary: `Intelligence: ${intelResult.status}`, durationMs: intelDuration, toolResult: JSON.stringify(intelResult.data).slice(0, 2000) }
         );
 
         content = JSON.stringify({
@@ -3142,7 +3150,7 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
       // ═══════════════════════════════════════════════════════════════════════
       case 'delegate_to_commerce': {
         const commerceStart = Date.now();
-        trackMissionStep(context, 'delegate_to_commerce', 'RUNNING');
+        trackMissionStep(context, 'delegate_to_commerce', 'RUNNING', { toolArgs: args });
 
         const { CommerceManager } = await import('@/lib/agents/commerce/manager');
         const commerceMgr = new CommerceManager();
@@ -3188,7 +3196,7 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
         const commerceDuration = Date.now() - commerceStart;
         trackMissionStep(context, 'delegate_to_commerce',
           commerceResult.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED',
-          { summary: `Commerce: ${commerceResult.status}`, durationMs: commerceDuration }
+          { summary: `Commerce: ${commerceResult.status}`, durationMs: commerceDuration, toolResult: JSON.stringify(commerceResult.data).slice(0, 2000) }
         );
 
         content = JSON.stringify({
@@ -3208,7 +3216,7 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
       // ═══════════════════════════════════════════════════════════════════════
       case 'save_blog_draft': {
         const blogStart = Date.now();
-        trackMissionStep(context, 'save_blog_draft', 'RUNNING');
+        trackMissionStep(context, 'save_blog_draft', 'RUNNING', { toolArgs: args });
 
         try {
           const { getSubCollection } = await import('@/lib/firebase/collections');
@@ -3280,6 +3288,7 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
           trackMissionStep(context, 'save_blog_draft', 'COMPLETED', {
             summary: `Blog draft saved: ${postId}`,
             durationMs: blogDuration,
+            toolResult: JSON.stringify({ draftId: postId, slug, title: args.title }).slice(0, 2000),
           });
 
           content = JSON.stringify({
@@ -3308,7 +3317,7 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
       // ═══════════════════════════════════════════════════════════════════════
       case 'research_trending_topics': {
         const trendStart = Date.now();
-        trackMissionStep(context, 'research_trending_topics', 'RUNNING');
+        trackMissionStep(context, 'research_trending_topics', 'RUNNING', { toolArgs: args });
 
         try {
           const { getSerperSEOService } = await import('@/lib/integrations/seo/serper-seo-service');
@@ -3375,6 +3384,7 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
           trackMissionStep(context, 'research_trending_topics', 'COMPLETED', {
             summary: `Found ${trendingTopics.length} seed topics, ${allRelated.length} related trends`,
             durationMs: trendDuration,
+            toolResult: JSON.stringify({ seedTopics: trendingTopics.length, relatedTrending: allRelated.length }).slice(0, 2000),
           });
 
           content = JSON.stringify({
@@ -3402,7 +3412,7 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
       // ═══════════════════════════════════════════════════════════════════════
       case 'migrate_website': {
         const migrateStart = Date.now();
-        trackMissionStep(context, 'migrate_website', 'RUNNING');
+        trackMissionStep(context, 'migrate_website', 'RUNNING', { toolArgs: args });
 
         try {
           const { migrateSite } = await import('@/lib/website-builder/site-migration-service');
@@ -3420,6 +3430,7 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
             {
               summary: `Migration ${migrationResult.status}: ${migrationResult.successCount}/${migrationResult.totalPages} pages`,
               durationMs: migrateDuration,
+              toolResult: JSON.stringify({ status: migrationResult.status, successCount: migrationResult.successCount, totalPages: migrationResult.totalPages }).slice(0, 2000),
             }
           );
 
