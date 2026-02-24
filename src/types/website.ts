@@ -38,6 +38,8 @@ export interface SitewideSEO {
   robotsIndex: boolean;
   robotsFollow: boolean;
   canonicalUrl?: string;
+  /** AI bot access control — keys are bot user-agent names, values are allow/block */
+  aiBotAccess?: Record<string, boolean>;
 }
 
 export interface AnalyticsConfig {

@@ -170,6 +170,7 @@ export default function CompetitorSEOPage() {
       <div>
         <SubpageNav items={[
           { label: 'SEO', href: '/website/seo' },
+          { label: 'AI Search', href: '/website/seo/ai-search' },
           { label: 'Competitors', href: '/website/seo/competitors' },
           { label: 'Domains', href: '/website/domains' },
           { label: 'Site Settings', href: '/website/settings' },

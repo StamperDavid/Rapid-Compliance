@@ -1,7 +1,8 @@
 /**
  * Robots.txt Generator
- * Serves custom robots.txt from site settings
- * CRITICAL: Serves content based on request domain/subdomain
+ * Serves custom robots.txt from site settings with AI bot directives.
+ * Includes user-agent rules for major AI crawlers (GPTBot, Claude-Web, etc.)
+ * and references llms.txt for AI model discovery.
  */
 
 export const dynamic = 'force-dynamic';
@@ -16,7 +17,28 @@ interface WebsiteData {
   customDomainVerified?: boolean;
   subdomain?: string;
   robotsTxt?: string;
+  seo?: {
+    robotsIndex?: boolean;
+    robotsFollow?: boolean;
+    aiBotAccess?: Record<string, boolean>;
+  };
 }
+
+/**
+ * Known AI crawler user-agents.
+ * These are the major LLM/AI bots that respect robots.txt directives.
+ */
+const AI_BOTS = [
+  { userAgent: 'GPTBot', label: 'OpenAI GPT crawler' },
+  { userAgent: 'ChatGPT-User', label: 'ChatGPT browsing' },
+  { userAgent: 'Google-Extended', label: 'Google Gemini training' },
+  { userAgent: 'Claude-Web', label: 'Anthropic Claude crawler' },
+  { userAgent: 'anthropic-ai', label: 'Anthropic AI crawler' },
+  { userAgent: 'CCBot', label: 'Common Crawl (AI training)' },
+  { userAgent: 'PerplexityBot', label: 'Perplexity AI crawler' },
+  { userAgent: 'Bytespider', label: 'ByteDance AI crawler' },
+  { userAgent: 'cohere-ai', label: 'Cohere AI crawler' },
+] as const;
 
 export async function GET(request: NextRequest) {
   try {
@@ -24,68 +46,28 @@ export async function GET(request: NextRequest) {
       return new NextResponse('Server configuration error', { status: 500 });
     }
 
-    // Extract domain or subdomain from request
     const host = request.headers.get('host') ?? '';
 
-    // Verify domain/subdomain exists
-    let domainFound = false;
-
-    // Check if custom domain (query across all orgs' website settings)
-    const domainsSnapshot = await adminDal.getCollectionGroup('website').get();
-    for (const doc of domainsSnapshot.docs) {
-      const data = doc.data() as WebsiteData;
-      if (data.customDomain === host && data.customDomainVerified) {
-        domainFound = true;
-        break;
-      }
-    }
-
-    // If not custom domain, check subdomain
-    if (!domainFound) {
-      const subdomain = host.split('.')[0];
-      const orgsSnapshot = await adminDal.getCollection('ORGANIZATIONS').get();
-      const { adminDb } = await import('@/lib/firebase/admin');
-
-      if (!adminDb) {
-        return new NextResponse('Server configuration error', { status: 500 });
-      }
-
-      for (const orgDoc of orgsSnapshot.docs) {
-        // Use environment-aware subcollection path
-        const websitePath = adminDal.getSubColPath('website');
-        const settingsDoc = await adminDb
-          .collection(orgDoc.ref.path)
-          .doc(orgDoc.id)
-          .collection(websitePath)
-          .doc('settings')
-          .get();
-
-        const settingsData = settingsDoc.data() as WebsiteData | undefined;
-        if (settingsData?.subdomain === subdomain) {
-          domainFound = true;
-          break;
-        }
-      }
-    }
-
-    if (!domainFound) {
-      return new NextResponse('Site not found', { status: 404 });
-    }
-
-    // Get robots.txt from settings
+    // Get site settings
     const settingsRef = adminDal.getNestedDocRef(
       `${getSubCollection('website')}/settings`
     );
     const settingsDoc = await settingsRef.get();
-
     const settingsData = settingsDoc.data() as WebsiteData | undefined;
-    let robotsTxt = settingsData?.robotsTxt;
 
-    // Default robots.txt if not configured
-    robotsTxt ??= `User-agent: *
-Allow: /
+    // If fully custom robots.txt is saved, serve it directly
+    if (settingsData?.robotsTxt) {
+      return new NextResponse(settingsData.robotsTxt, {
+        status: 200,
+        headers: {
+          'Content-Type': 'text/plain',
+          'Cache-Control': 'public, max-age=3600, s-maxage=3600',
+        },
+      });
+    }
 
-Sitemap: https://${host}/sitemap.xml`;
+    // Auto-generate robots.txt from settings
+    const robotsTxt = generateRobotsTxt(host, settingsData);
 
     return new NextResponse(robotsTxt, {
       status: 200,
@@ -97,9 +79,52 @@ Sitemap: https://${host}/sitemap.xml`;
   } catch (error) {
     logger.error('Robots.txt generation error', error instanceof Error ? error : new Error(String(error)), {
       route: '/api/website/robots.txt',
-      method: 'GET'
+      method: 'GET',
     });
     return new NextResponse('Failed to generate robots.txt', { status: 500 });
   }
 }
 
+function generateRobotsTxt(host: string, settings: WebsiteData | undefined): string {
+  const lines: string[] = [];
+
+  // General crawlers
+  lines.push('User-agent: *');
+  if (settings?.seo?.robotsIndex === false) {
+    lines.push('Disallow: /');
+  } else {
+    lines.push('Allow: /');
+    // Block internal/admin paths
+    lines.push('Disallow: /api/');
+    lines.push('Disallow: /admin/');
+    lines.push('Disallow: /_next/');
+  }
+  lines.push('');
+
+  // AI bot directives
+  const aiBotAccess = settings?.seo?.aiBotAccess ?? {};
+  const hasAnyAiBotRules = Object.keys(aiBotAccess).length > 0;
+
+  if (hasAnyAiBotRules) {
+    // Only output rules for bots that are explicitly blocked
+    for (const bot of AI_BOTS) {
+      const allowed = aiBotAccess[bot.userAgent];
+      if (allowed === false) {
+        lines.push(`# ${bot.label}`);
+        lines.push(`User-agent: ${bot.userAgent}`);
+        lines.push('Disallow: /');
+        lines.push('');
+      }
+    }
+  }
+
+  // Discovery files
+  lines.push(`Sitemap: https://${host}/sitemap.xml`);
+  lines.push('');
+
+  // llms.txt reference for AI model discovery
+  lines.push('# AI model discovery');
+  lines.push(`# llms.txt: https://${host}/llms.txt`);
+
+  return lines.join('\n');
+}

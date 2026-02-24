@@ -1,6 +1,6 @@
 /**
  * SEO Management
- * Site-wide SEO settings, robots.txt, analytics integration
+ * Site-wide SEO settings, robots.txt, AI bot access controls, llms.txt, analytics
  */
 
 'use client';
@@ -21,7 +21,9 @@ import {
   Save,
   Loader2,
   CheckCircle,
-  Info
+  Info,
+  Shield,
+  Sparkles,
 } from 'lucide-react';
 import type { SiteConfig } from '@/types/website';
 import { logger } from '@/lib/logger/logger';
@@ -29,14 +31,30 @@ import { logger } from '@/lib/logger/logger';
 interface SettingsResponse {
   settings?: Partial<SiteConfig> & {
     robotsTxt?: string;
+    llmsTxt?: string;
   };
 }
+
+/** Known AI crawler bots with their user-agent strings and labels */
+const AI_BOTS = [
+  { userAgent: 'GPTBot', label: 'GPTBot', description: 'OpenAI GPT crawler' },
+  { userAgent: 'ChatGPT-User', label: 'ChatGPT', description: 'ChatGPT browsing mode' },
+  { userAgent: 'Google-Extended', label: 'Gemini', description: 'Google Gemini training' },
+  { userAgent: 'Claude-Web', label: 'Claude', description: 'Anthropic Claude crawler' },
+  { userAgent: 'anthropic-ai', label: 'Anthropic', description: 'Anthropic AI crawler' },
+  { userAgent: 'CCBot', label: 'CCBot', description: 'Common Crawl (AI training)' },
+  { userAgent: 'PerplexityBot', label: 'Perplexity', description: 'Perplexity AI search' },
+  { userAgent: 'Bytespider', label: 'Bytespider', description: 'ByteDance AI crawler' },
+  { userAgent: 'cohere-ai', label: 'Cohere', description: 'Cohere AI crawler' },
+] as const;
 
 export default function SEOManagementPage() {
   const authFetch = useAuthFetch();
 
   const [settings, setSettings] = useState<Partial<SiteConfig> | null>(null);
   const [robotsTxt, setRobotsTxt] = useState('');
+  const [llmsTxt, setLlmsTxt] = useState('');
+  const [aiBotAccess, setAiBotAccess] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -51,6 +69,8 @@ export default function SEOManagementPage() {
         setSettings(data.settings ?? {});
         const robotsTxtValue = data.settings?.robotsTxt ?? '';
         setRobotsTxt(robotsTxtValue !== '' ? robotsTxtValue : getDefaultRobotsTxt());
+        setLlmsTxt(data.settings?.llmsTxt ?? '');
+        setAiBotAccess(data.settings?.seo?.aiBotAccess ?? {});
       } else {
         setSettings({
           seo: {
@@ -99,6 +119,11 @@ Sitemap: https://yoursite.com/sitemap.xml`;
           settings: {
             ...settings,
             robotsTxt,
+            llmsTxt: llmsTxt || undefined,
+            seo: {
+              ...settings.seo,
+              aiBotAccess,
+            },
           },
         }),
       });
@@ -144,6 +169,13 @@ Sitemap: https://yoursite.com/sitemap.xml`;
     });
   }
 
+  function toggleAiBot(userAgent: string) {
+    setAiBotAccess((prev) => ({
+      ...prev,
+      [userAgent]: prev[userAgent] === false ? true : prev[userAgent] === true ? false : false,
+    }));
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[var(--color-bg-main)] flex items-center justify-center">
@@ -168,6 +200,7 @@ Sitemap: https://yoursite.com/sitemap.xml`;
       <div>
         <SubpageNav items={[
           { label: 'SEO', href: '/website/seo' },
+          { label: 'AI Search', href: '/website/seo/ai-search' },
           { label: 'Competitors', href: '/website/seo/competitors' },
           { label: 'Domains', href: '/website/domains' },
           { label: 'Site Settings', href: '/website/settings' },
@@ -331,6 +364,57 @@ Sitemap: https://yoursite.com/sitemap.xml`;
           </div>
         </motion.div>
 
+        {/* AI Bot Access Control */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+          className="rounded-2xl bg-surface-paper backdrop-blur-xl border border-border-light p-6 mb-6"
+        >
+          <div className="flex items-center gap-3 mb-2">
+            <Shield className="w-5 h-5 text-amber-400" />
+            <h2 className="text-xl font-semibold text-[var(--color-text-primary)]">AI Bot Access Control</h2>
+          </div>
+          <p className="text-sm text-[var(--color-text-secondary)] mb-6">
+            Control which AI crawlers can access your site content for training and search indexing. Blocked bots will receive a Disallow directive in robots.txt.
+          </p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {AI_BOTS.map((bot) => {
+              const isAllowed = aiBotAccess[bot.userAgent] !== false;
+              return (
+                <button
+                  key={bot.userAgent}
+                  type="button"
+                  onClick={() => toggleAiBot(bot.userAgent)}
+                  className={`flex items-center gap-3 px-4 py-3 rounded-xl border transition-all text-left ${
+                    isAllowed
+                      ? 'bg-emerald-500/10 border-emerald-500/30 hover:border-emerald-500/50'
+                      : 'bg-red-500/10 border-red-500/30 hover:border-red-500/50'
+                  }`}
+                >
+                  <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${
+                    isAllowed ? 'bg-emerald-400' : 'bg-red-400'
+                  }`} />
+                  <div className="min-w-0">
+                    <div className="text-sm font-medium text-[var(--color-text-primary)] truncate">
+                      {bot.label}
+                    </div>
+                    <div className="text-xs text-[var(--color-text-disabled)] truncate">
+                      {bot.description}
+                    </div>
+                  </div>
+                  <span className={`ml-auto text-xs font-medium flex-shrink-0 ${
+                    isAllowed ? 'text-emerald-400' : 'text-red-400'
+                  }`}>
+                    {isAllowed ? 'Allow' : 'Block'}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </motion.div>
+
         {/* Analytics Integration */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -422,7 +506,36 @@ Sitemap: https://yoursite.com/sitemap.xml`;
               className="w-full px-4 py-3 bg-surface-elevated border border-border-light rounded-xl text-success placeholder-[var(--color-text-disabled)] focus:outline-none focus:ring-2 focus:ring-success/50 focus:border-success/50 transition-all font-mono text-sm resize-none"
             />
             <p className="mt-2 text-xs text-[var(--color-text-disabled)]">
-              This will be served at /robots.txt
+              Custom robots.txt overrides auto-generated directives. Leave empty to use auto-generated rules with AI bot controls above.
+            </p>
+          </div>
+        </motion.div>
+
+        {/* llms.txt */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.35 }}
+          className="rounded-2xl bg-surface-paper backdrop-blur-xl border border-border-light p-6 mb-6"
+        >
+          <div className="flex items-center gap-3 mb-2">
+            <Sparkles className="w-5 h-5 text-violet-400" />
+            <h2 className="text-xl font-semibold text-[var(--color-text-primary)]">llms.txt</h2>
+          </div>
+          <p className="text-sm text-[var(--color-text-secondary)] mb-4">
+            An AI-readable description of your site for LLM crawlers and AI search engines. Leave empty to auto-generate from your site data.
+          </p>
+
+          <div>
+            <textarea
+              value={llmsTxt}
+              onChange={(e) => setLlmsTxt(e.target.value)}
+              rows={10}
+              placeholder="Leave empty to auto-generate from your published pages, blog posts, and SEO settings..."
+              className="w-full px-4 py-3 bg-surface-elevated border border-border-light rounded-xl text-violet-300 placeholder-[var(--color-text-disabled)] focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-violet-500/50 transition-all font-mono text-sm resize-none"
+            />
+            <p className="mt-2 text-xs text-[var(--color-text-disabled)]">
+              Served at /llms.txt — helps AI models understand your site content and structure.
             </p>
           </div>
         </motion.div>
