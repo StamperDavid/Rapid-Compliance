@@ -1,7 +1,7 @@
 # SalesVelocity.ai - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** February 23, 2026 (Session 35: Hardened domain analysis routing — 6 bugs fixed; DataForSEO credentials configured)
+**Last Updated:** February 23, 2026 (Session 36: Sprint 14 completion + Sprint 15 Competitor SEO Analysis — wired Serper API, GSC integration UI, domain analysis API, competitor analysis page with keyword gap, cost-to-compete, and strategy generator)
 **Branches:** `dev` (latest)
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Architecture:** Single-Tenant (Penthouse Model) - NOT a SaaS platform
@@ -36,8 +36,8 @@
 
 | Metric | Count | Status |
 |--------|-------|--------|
-| Physical Routes (page.tsx) | 173 | Verified February 13, 2026 (added /store/checkout/cancelled, social OAuth routes) |
-| API Endpoints (route.ts) | 271 | Verified February 19, 2026 (Session 26: +/api/admin/usage, +/api/subscriptions/checkout, +/api/webhooks/mollie) |
+| Physical Routes (page.tsx) | 174 | Verified February 23, 2026 (Session 36: +/website/seo/competitors) |
+| API Endpoints (route.ts) | 273 | Verified February 23, 2026 (Session 36: +/api/seo/domain-analysis, +/api/seo/strategy) |
 | AI Agents | 52 | **52 FUNCTIONAL (48 swarm + 4 standalone)** |
 | RBAC Roles | 4 | `owner` (level 3), `admin` (level 2), `manager` (level 1), `member` (level 0) — 4-role RBAC |
 | Firestore Collections | 67+ | Active (sagaState, eventLog collections; 25 composite indexes) |
@@ -454,7 +454,7 @@ SalesVelocity.ai is a **single-company sales and marketing super tool**. This is
 > **Removed:** `/settings/billing`, `/settings/subscription`, `/settings/organization` (subscription system deleted)
 
 **Website Builder:**
-- `/website/editor`, `/website/pages`, `/website/domains`, `/website/seo`
+- `/website/editor`, `/website/pages`, `/website/domains`, `/website/seo`, `/website/seo/competitors`
 - `/website/settings`, `/website/templates`, `/website/navigation`, `/website/audit-log`
 - `/website/blog`, `/website/blog/categories`, `/website/blog/editor`
 
@@ -1421,6 +1421,16 @@ The following endpoints have working infrastructure (rate limiting, caching, aut
 - Runway endpoints updated to `api.dev.runwayml.com/v1` with `gen3a_turbo` model
 - `isProviderConfigured()` switched from `process.env` to Firestore `apiKeyService`
 - Veo/Kling/Pika/StableVideo throw clear "not yet available" errors (triggers fallback chain)
+
+**RESOLVED (February 23, 2026) - Session 36: Sprint 14/15 — Competitor SEO Analysis:**
+- `/api/seo/domain-analysis` - **NEW** POST endpoint, auth-gated, Zod validated. Invokes SEO Expert agent `domain_analysis` action, returns `DomainAnalysisResult`
+- `/api/seo/strategy` - **NEW** POST endpoint, auth-gated, Zod validated. Invokes SEO Expert `30_day_strategy` action, returns `ThirtyDayStrategy`
+- Competitor Researcher agent (`competitor/specialist.ts`) now uses real Serper API instead of stub `simulatedSearch()`
+- Competitor Researcher `estimateDomainAuthority()` tries DataForSEO `getDomainMetrics()` first, heuristic fallback
+- Google OAuth auth/callback routes support `?service=gsc` for Search Console scope (`webmasters.readonly`)
+- Google Search Console integration UI added to Settings > Integrations (SEO Tools category)
+- New page: `/website/seo/competitors` — domain input, bulk entry, analysis cards, keyword gap, cost-to-compete, 30-day strategy generator
+- Shared types extracted to `src/types/seo-analysis.ts` (DomainAnalysisResult, CompetitorEntry, ThirtyDayStrategy)
 
 **RESOLVED (February 12, 2026) - Social Media Platform Enhancement:**
 - `/api/social/*` - 6-phase expansion with enterprise-grade features

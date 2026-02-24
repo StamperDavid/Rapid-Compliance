@@ -16,6 +16,8 @@
 import { BaseSpecialist } from '../../base-specialist';
 import type { AgentMessage, AgentReport, SpecialistConfig, Signal } from '../../types';
 import { scrapeWebsite, extractDataPoints } from '@/lib/enrichment/web-scraper';
+import { getSerperSEOService } from '@/lib/integrations/seo/serper-seo-service';
+import { getDataForSEOService } from '@/lib/integrations/seo/dataforseo-service';
 import { logger } from '@/lib/logger/logger';
 
 // ============================================================================
@@ -377,24 +379,14 @@ export class CompetitorResearcher extends BaseSpecialist {
   }
 
   /**
-   * Collect candidate URLs from search results
-   * NOTE: In production, this would use a real search API (Google Custom Search, SerpAPI, etc.)
+   * Collect candidate URLs from search results via Serper API
    */
   private async collectCandidateUrls(queries: string[], errors: string[]): Promise<string[]> {
     const candidates: string[] = [];
 
-    // In production, you would call a search API here
-    // For now, we'll generate plausible URLs based on the niche
-    // This is where you'd integrate with:
-    // - Google Custom Search API
-    // - SerpAPI
-    // - Bing Search API
-    // - DataForSEO
-
     for (const query of queries) {
       try {
-        // Simulated search results - replace with actual API call
-        const results = await this.simulatedSearch(query);
+        const results = await this.searchViaSerper(query);
         candidates.push(...results);
       } catch (error) {
         const msg = error instanceof Error ? error.message : 'Search failed';
@@ -406,21 +398,18 @@ export class CompetitorResearcher extends BaseSpecialist {
   }
 
   /**
-   * Simulated search - Replace with real search API integration
+   * Search via Serper API and extract organic result URLs
    */
-  private simulatedSearch(query: string): Promise<string[]> {
-    // This is a placeholder - in production, call a real search API
-    // For demonstration, we'll return a message indicating this needs integration
+  private async searchViaSerper(query: string): Promise<string[]> {
+    const serper = getSerperSEOService();
+    const result = await serper.searchSERP(query, { num: 10 });
 
-    logger.info('Competitor search query', { query, note: 'Requires search API integration' });
+    if (!result.success || !result.data) {
+      logger.warn('Serper search returned no data', { query, error: result.error ?? undefined });
+      return [];
+    }
 
-    // Return empty array - real implementation would return actual search results
-    // The structure would be:
-    // const response = await fetch(`https://serpapi.com/search?q=${encodeURIComponent(query)}&api_key=${API_KEY}`);
-    // const data = await response.json();
-    // return data.organic_results.map(r => r.link);
-
-    return Promise.resolve([]);
+    return result.data.organic.map(item => item.link);
   }
 
   /**
@@ -500,7 +489,7 @@ export class CompetitorResearcher extends BaseSpecialist {
       const domain = new URL(url).hostname.replace('www.', '');
 
       // Analyze SEO metrics
-      const seoMetrics = this.analyzeSEOMetrics(content, niche);
+      const seoMetrics = await this.analyzeSEOMetrics(content, niche, domain);
 
       // Extract positioning
       const positioning = this.extractPositioning(content);
@@ -531,10 +520,11 @@ export class CompetitorResearcher extends BaseSpecialist {
   /**
    * Analyze SEO metrics from scraped content
    */
-  private analyzeSEOMetrics(
+  private async analyzeSEOMetrics(
     content: Awaited<ReturnType<typeof scrapeWebsite>>,
-    niche: string
-  ): SEOMetrics {
+    niche: string,
+    domain?: string
+  ): Promise<SEOMetrics> {
     const text = content.cleanedText?.toLowerCase() || '';
     const nicheWords = niche.toLowerCase().split(/\s+/);
 
@@ -559,8 +549,8 @@ export class CompetitorResearcher extends BaseSpecialist {
       trafficEstimate = 'medium';
     }
 
-    // Estimate domain authority (would use real API in production)
-    const domainAuthority = this.estimateDomainAuthority(content);
+    // Estimate domain authority — DataForSEO first, heuristic fallback
+    const domainAuthority = await this.estimateDomainAuthority(content, domain);
 
     // Content quality
     const contentQuality = text.length > 3000 ? 'high' : text.length > 1000 ? 'medium' : 'low';
@@ -574,12 +564,30 @@ export class CompetitorResearcher extends BaseSpecialist {
   }
 
   /**
-   * Estimate domain authority (placeholder for real API integration)
+   * Estimate domain authority — tries DataForSEO first, falls back to heuristic
    */
-  private estimateDomainAuthority(content: Awaited<ReturnType<typeof scrapeWebsite>>): number {
-    // In production, use Moz, Ahrefs, or SEMrush API
-    // For now, estimate based on content signals
-    let score = 30; // Base score
+  private async estimateDomainAuthority(
+    content: Awaited<ReturnType<typeof scrapeWebsite>>,
+    domain?: string
+  ): Promise<number> {
+    // Try DataForSEO real domain rank first
+    if (domain) {
+      try {
+        const dataForSEO = getDataForSEOService();
+        const metricsResult = await dataForSEO.getDomainMetrics(domain);
+        if (metricsResult.success && metricsResult.data) {
+          const rank = metricsResult.data.domainRank;
+          if (typeof rank === 'number' && rank > 0) {
+            return Math.min(rank, 100);
+          }
+        }
+      } catch {
+        // DataForSEO unavailable — fall back to heuristic
+      }
+    }
+
+    // Heuristic fallback based on content signals
+    let score = 30;
 
     if (content.cleanedText && content.cleanedText.length > 5000) {
       score += 15;

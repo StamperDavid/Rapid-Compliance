@@ -168,6 +168,7 @@ Sitemap: https://yoursite.com/sitemap.xml`;
       <div>
         <SubpageNav items={[
           { label: 'SEO', href: '/website/seo' },
+          { label: 'Competitors', href: '/website/seo/competitors' },
           { label: 'Domains', href: '/website/domains' },
           { label: 'Site Settings', href: '/website/settings' },
         ]} />

@@ -19,6 +19,7 @@ import TeamsIntegration from '@/components/integrations/TeamsIntegration';
 import ZapierIntegration from '@/components/integrations/ZapierIntegration';
 import TwitterIntegration from '@/components/integrations/TwitterIntegration';
 import LinkedInIntegration from '@/components/integrations/LinkedInIntegration';
+import GoogleSearchConsoleIntegration from '@/components/integrations/GoogleSearchConsoleIntegration';
 import type { ConnectedIntegration } from '@/types/integrations';
 import { STANDARD_SCHEMAS } from '@/lib/schema/standard-schemas'
 import { logger } from '@/lib/logger/logger';
@@ -209,6 +210,14 @@ export default function IntegrationsPage() {
       integrations: [
         { id: 'twitter', component: TwitterIntegration },
         { id: 'linkedin', component: LinkedInIntegration },
+      ],
+    },
+    {
+      id: 'seo',
+      name: 'SEO Tools',
+      icon: '🔍',
+      integrations: [
+        { id: 'google-search-console', component: GoogleSearchConsoleIntegration },
       ],
     },
     {

@@ -57,17 +57,25 @@ export async function GET(request: NextRequest) {
       redirectUri
     );
 
+    // Determine scopes based on requested service
+    const { searchParams } = new URL(request.url);
+    const service = searchParams.get('service');
+
+    const scopes = service === 'gsc'
+      ? ['https://www.googleapis.com/auth/webmasters.readonly']
+      : [
+          'https://www.googleapis.com/auth/gmail.readonly',
+          'https://www.googleapis.com/auth/gmail.send',
+          'https://www.googleapis.com/auth/gmail.modify',
+          'https://www.googleapis.com/auth/calendar',
+          'https://www.googleapis.com/auth/calendar.events',
+        ];
+
     const authUrl = oauth2Client.generateAuthUrl({
       access_type: 'offline',
-      scope: [
-        'https://www.googleapis.com/auth/gmail.readonly',
-        'https://www.googleapis.com/auth/gmail.send',
-        'https://www.googleapis.com/auth/gmail.modify',
-        'https://www.googleapis.com/auth/calendar',
-        'https://www.googleapis.com/auth/calendar.events',
-      ],
+      scope: scopes,
       prompt: 'consent',
-      state,
+      state: `${state}${service === 'gsc' ? ':gsc' : ''}`,
     });
 
     return NextResponse.redirect(authUrl);

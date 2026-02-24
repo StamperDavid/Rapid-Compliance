@@ -37,8 +37,12 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    // Detect GSC service from state suffix
+    const isGSC = state.endsWith(':gsc');
+    const cleanState = isGSC ? state.slice(0, -4) : state;
+
     // Validate CSRF-safe state token against Firestore
-    const userId = await validateOAuthState(state, 'google');
+    const userId = await validateOAuthState(cleanState, 'google');
     if (!userId) {
       logger.warn('Invalid or expired OAuth state', { route: '/api/integrations/google/callback' });
       return NextResponse.redirect(getRedirectUrl(request, '/admin/settings/integrations?error=invalid_state'));
@@ -55,7 +59,8 @@ export async function GET(request: NextRequest) {
       throw new Error('Firebase Admin not initialized');
     }
 
-    const integrationId = `google_${Date.now()}`;
+    const serviceName = isGSC ? 'google-search-console' : 'gmail';
+    const integrationId = isGSC ? `gsc_${Date.now()}` : `google_${Date.now()}`;
     const integrationsPath = getOrgSubCollection('integrations');
     await adminDb
       .collection(integrationsPath)
@@ -63,7 +68,7 @@ export async function GET(request: NextRequest) {
       .set({
         id: integrationId,
         userId,
-        service: 'gmail',
+        service: serviceName,
         providerId: 'google',
         status: 'connected',
         accessToken: encryptToken(tokens.access_token),
@@ -74,9 +79,10 @@ export async function GET(request: NextRequest) {
         updatedAt: new Date().toISOString(),
       });
 
-    logger.info('Gmail integration saved', { route: '/api/integrations/google/callback', PLATFORM_ID });
+    const successParam = isGSC ? 'google-search-console' : 'gmail';
+    logger.info(`${serviceName} integration saved`, { route: '/api/integrations/google/callback', PLATFORM_ID });
 
-    return NextResponse.redirect(getRedirectUrl(request, '/admin/settings/integrations?success=gmail'));
+    return NextResponse.redirect(getRedirectUrl(request, `/admin/settings/integrations?success=${successParam}`));
   } catch (error: unknown) {
     logger.error('Google OAuth callback error', error instanceof Error ? error : new Error(String(error)), { route: '/api/integrations/google/callback' });
     return NextResponse.redirect(getRedirectUrl(request, '/admin/settings/integrations?error=oauth_failed'));
