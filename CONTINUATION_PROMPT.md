@@ -89,6 +89,7 @@ Last Session: February 23, 2026 (Session 37 — Jasper Delegation Audit + Missio
 | No Commerce delegation | No `delegate_to_commerce` tool | Can't invoke Commerce Manager for checkout orchestration |
 | No blog save-as-draft bridge | `generate_content` generates text but doesn't save to Firestore blog system | Can't complete generate → draft → publish loop |
 | No live delegation tracking UI | No "follow along" / mission control view | User can't watch multi-step delegations in real-time |
+| `web_migrator` is a stub | `migrate_website` action declared but returns `status: 'queued'` with no implementation | Can't clone/replicate external websites into the builder — **Sprint 21** |
 
 ---
 
@@ -161,12 +162,79 @@ Blog draft appears in /website/blog when complete.
 
 ---
 
+### Sprint 21 — Website Migration Pipeline ("Clone This Site")
+
+#### Overview
+
+Wire a fully functional pipeline that lets a user tell Jasper "I have a website I want you to duplicate" with just a URL, and have the system scrape, analyze, and reconstruct that site in the Website Builder. The `web_migrator` specialist and its `migrate_website` action already exist as stubs — this sprint makes them real.
+
+**Why:** Instant website migration is a massive competitive differentiator. Prospects can see their existing site rebuilt inside SalesVelocity.ai in minutes, dramatically shortening the sales cycle. All building blocks already exist (scraper, AI page generator, website builder) — they just need to be connected.
+
+#### Architecture
+
+The pipeline follows this flow:
+
+```
+User → Jasper ("clone example.com")
+  → Step 1: Deep Scrape (enhanced web-scraper.ts)
+       Extract: page structure, section layout, copy, colors, fonts, CTAs, images, nav structure, meta/SEO
+  → Step 2: Site Blueprint (new site-blueprint-extractor.ts)
+       Normalize scraped data into a structured SiteBlueprint: pages[], globalStyles, navigation, brand
+  → Step 3: Page Generation Loop (ai-page-generator.ts, enhanced)
+       For each page in the blueprint, call generatePageFromPrompt() with the extracted structure/copy as context
+  → Step 4: Assembly & Save (website-builder page API)
+       Save all generated pages to Firestore, set homepage, configure nav, apply brand colors
+  → Step 5: Report back to user with link to /website/editor
+```
+
+If Mission Control (Sprint 18) is complete, the entire pipeline streams live via SSE.
+
+#### Sprint Plan
+
+| # | Task | Details | Effort |
+|---|------|---------|--------|
+| 21.1 | **Enhanced deep scraper** | Extend `src/lib/enrichment/web-scraper.ts` with a new `deepScrape(url)` mode that extracts: HTML section structure (hero, features, testimonials, CTA, footer), all visible text per section, inline/computed styles (colors, fonts, spacing), image URLs, navigation links, meta tags, and Open Graph data. Returns a `DeepScrapeResult` typed object. | ~4h |
+| 21.2 | **Multi-page crawler** | Add `crawlSite(url, maxPages)` that follows internal links from the homepage (same domain only, respecting robots.txt), runs `deepScrape` on each page, and returns a `SiteCrawlResult` with all pages and their relationships. Default max: 10 pages. | ~4h |
+| 21.3 | **Site Blueprint Extractor** | New service `src/lib/website-builder/site-blueprint-extractor.ts`. Takes `SiteCrawlResult` → calls AI to normalize into a `SiteBlueprint` schema: `{ brand: { name, colors, fonts, logo }, pages: [{ type, title, sections: [{ type, heading, body, cta, images }] }], navigation: { items[] }, seo: { title, description, keywords } }`. Uses structured output from GPT-4o. | ~5h |
+| 21.4 | **AI Page Generator enhancement** | Extend `ai-page-generator.ts` to accept an optional `SiteBlueprintPage` input that provides exact section structure, copy, and styling hints instead of generating from scratch. The AI replicates the layout and copy while adapting it to the website builder's widget system. | ~3h |
+| 21.5 | **Migration orchestration service** | New service `src/lib/website-builder/site-migration-service.ts`. Orchestrates the full pipeline: `deepScrape` → `crawlSite` → `extractBlueprint` → loop `generatePage` → save all pages via website API → configure nav + brand. Emits saga events at each step for Mission Control visibility. Returns `MigrationResult` with page count, success/failure per page, and editor link. | ~5h |
+| 21.6 | **Wire `web_migrator` specialist** | Replace the stub in `jasper-tools.ts` `executeDelegateToAgent` for `web_migrator` / `migrate_website`. Instead of returning `status: 'queued'`, call the migration orchestration service. Create mission events so the user can watch via Mission Control. | ~3h |
+| 21.7 | **Migration API endpoint** | `POST /api/website/migrate` — accepts `{ sourceUrl, maxPages?, includeImages? }`, validates with Zod, authenticates, calls migration service. `GET /api/website/migrate/[migrationId]` SSE endpoint for progress streaming. | ~3h |
+| 21.8 | **Migration UI (optional)** | Add a "Migrate Existing Site" button/card to the Website Builder dashboard that opens a modal: paste URL → confirm → watch progress. Falls back to Jasper chat if user prefers conversational approach. | ~3h |
+
+**Total estimated effort: ~30h**
+
+#### Dependencies
+
+- **Hard dependency on Sprint 19.2** (`delegate_to_architect`) — the Architect Manager generates site blueprints; the migration pipeline's blueprint step benefits from the same infrastructure.
+- **Soft dependency on Sprint 18** (Mission Control) — migration works without it, but live progress tracking is a much better UX.
+- **No dependency on Sprint 20** (AI Search Optimization) — fully independent.
+
+#### End State
+
+```
+User: "Jasper, I want you to clone example.com and rebuild it in our website builder"
+
+Jasper: "On it. I'm launching a website migration mission:
+1. Deep-scraping example.com and all linked pages (up to 10)
+2. Extracting the site blueprint — layout, copy, brand colors, nav structure
+3. Regenerating each page in our website builder
+4. Assembling the full site with navigation and branding
+[Watch Live →]"
+
+Mission Control shows each page being scraped, analyzed, and generated.
+~2-5 minutes later, user has a fully editable replica in /website/editor.
+```
+
+---
+
 ## Execution Order (Current Roadmap)
 
 ```
 Sprint 18 (NEXT):    Jasper Mission Control — live delegation tracker UI
 Sprint 19:           Complete Jasper delegation coverage (5 missing tools + blog bridge + trend research)
 Sprint 20:           AI Search Optimization (robots.txt, llms.txt, schema markup, monitoring)
+Sprint 21:           Website Migration Pipeline — "clone this site" via Jasper + web_migrator
 ```
 
 Sprint 18 is the priority — without visibility into what Jasper is doing, users won't trust it with complex workflows.

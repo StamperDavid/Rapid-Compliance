@@ -175,6 +175,7 @@ The Claude Code Governance Layer defines binding operational constraints for AI-
 | **Sprint 18** | Jasper Mission Control — live delegation tracker UI | **NEXT** |
 | **Sprint 19** | Complete Jasper delegation coverage (5 missing tools + blog bridge + trend research) | PLANNED |
 | **Sprint 20** | AI Search Optimization (robots.txt, llms.txt, schema markup, monitoring) | PLANNED |
+| **Sprint 21** | Website Migration Pipeline — "clone this site" via Jasper + web_migrator (deep scrape → blueprint → AI page gen → assemble) | PLANNED |
 
 ### Completed Roadmaps (Archived)
 
