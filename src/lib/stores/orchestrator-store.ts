@@ -26,6 +26,7 @@ export interface ChatMessage {
     toolUsed?: string;
     specialistInvoked?: string;
     actionTaken?: string;
+    missionId?: string;
   };
 }
 

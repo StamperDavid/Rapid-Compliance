@@ -14,6 +14,61 @@ import { SystemHealthService } from './system-health-service';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { PLATFORM_ID } from '@/lib/constants/platform';
+import {
+  addMissionStep,
+  updateMissionStep,
+  type MissionStepStatus,
+} from './mission-persistence';
+
+// ============================================================================
+// MISSION TRACKING CONTEXT
+// ============================================================================
+
+export interface ToolCallContext {
+  conversationId?: string;
+  missionId?: string;
+  userPrompt?: string;
+}
+
+/**
+ * Fire-and-forget mission step tracking. Never throws, never blocks Jasper.
+ */
+function trackMissionStep(
+  context: ToolCallContext | undefined,
+  toolName: string,
+  status: MissionStepStatus,
+  extras?: { summary?: string; durationMs?: number; error?: string }
+): void {
+  if (!context?.missionId) { return; }
+
+  const stepId = `step_${toolName}_${Date.now()}`;
+
+  if (status === 'RUNNING') {
+    void addMissionStep(context.missionId, {
+      stepId,
+      toolName,
+      delegatedTo: toolName.replace('delegate_to_', '').toUpperCase(),
+      status: 'RUNNING',
+      startedAt: new Date().toISOString(),
+    }).catch((err: unknown) => {
+      logger.warn('[MissionTrack] Failed to add step', {
+        missionId: context.missionId,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    });
+  } else {
+    void updateMissionStep(context.missionId, stepId, {
+      status,
+      completedAt: new Date().toISOString(),
+      ...extras,
+    }).catch((err: unknown) => {
+      logger.warn('[MissionTrack] Failed to update step', {
+        missionId: context.missionId,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    });
+  }
+}
 
 // ============================================================================
 // ORGANIZATION TYPE (for type-safe Firestore queries)
@@ -1732,7 +1787,7 @@ export async function executeGetSystemState(): Promise<SystemState> {
 /**
  * Execute a tool call and return the result.
  */
-export async function executeToolCall(toolCall: ToolCall): Promise<ToolResult> {
+export async function executeToolCall(toolCall: ToolCall, context?: ToolCallContext): Promise<ToolResult> {
   const { name, arguments: argsString } = toolCall.function;
   let args: Record<string, unknown> = {};
 
@@ -1995,8 +2050,12 @@ export async function executeToolCall(toolCall: ToolCall): Promise<ToolResult> {
       // AGENT DELEGATION TOOLS
       // ═══════════════════════════════════════════════════════════════════════
       case 'delegate_to_agent': {
+        const agentStart = Date.now();
+        trackMissionStep(context, 'delegate_to_agent', 'RUNNING');
+
         const parsedArgs = parseDelegateToAgentArgs(args);
         if (!parsedArgs) {
+          trackMissionStep(context, 'delegate_to_agent', 'FAILED', { error: 'Invalid arguments' });
           content = JSON.stringify({ error: 'Invalid arguments: agentId and action are required' });
           break;
         }
@@ -2005,6 +2064,14 @@ export async function executeToolCall(toolCall: ToolCall): Promise<ToolResult> {
           parsedArgs.action,
           parsedArgs.parameters
         );
+
+        const agentDuration = Date.now() - agentStart;
+        const agentStatus = typeof delegation === 'object' && delegation !== null && 'error' in delegation ? 'FAILED' : 'COMPLETED';
+        trackMissionStep(context, 'delegate_to_agent', agentStatus as MissionStepStatus, {
+          summary: `Agent ${parsedArgs.agentId}: ${agentStatus}`,
+          durationMs: agentDuration,
+        });
+
         content = JSON.stringify(delegation);
         break;
       }
@@ -2268,6 +2335,9 @@ export async function executeToolCall(toolCall: ToolCall): Promise<ToolResult> {
       // ARCHITECT DEPARTMENT EXECUTION
       // ═══════════════════════════════════════════════════════════════════════
       case 'delegate_to_builder': {
+        const builderStart = Date.now();
+        trackMissionStep(context, 'delegate_to_builder', 'RUNNING');
+
         const { ArchitectManager } = await import('@/lib/agents/architect/manager');
         const manager = new ArchitectManager();
         await manager.initialize();
@@ -2295,6 +2365,12 @@ export async function executeToolCall(toolCall: ToolCall): Promise<ToolResult> {
           traceId: `trace_${Date.now()}`,
         });
 
+        const builderDuration = Date.now() - builderStart;
+        trackMissionStep(context, 'delegate_to_builder',
+          result.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED',
+          { summary: `Architect: ${result.status}`, durationMs: builderDuration }
+        );
+
         content = JSON.stringify({
           status: result.status,
           data: result.data,
@@ -2311,6 +2387,9 @@ export async function executeToolCall(toolCall: ToolCall): Promise<ToolResult> {
       // SALES DEPARTMENT EXECUTION
       // ═══════════════════════════════════════════════════════════════════════
       case 'delegate_to_sales': {
+        const salesStart = Date.now();
+        trackMissionStep(context, 'delegate_to_sales', 'RUNNING');
+
         const { RevenueDirector } = await import('@/lib/agents/sales/revenue/manager');
         const director = new RevenueDirector();
         await director.initialize();
@@ -2365,6 +2444,12 @@ export async function executeToolCall(toolCall: ToolCall): Promise<ToolResult> {
           traceId: `trace_${Date.now()}`,
         });
 
+        const salesDuration = Date.now() - salesStart;
+        trackMissionStep(context, 'delegate_to_sales',
+          result.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED',
+          { summary: `Sales: ${result.status}`, durationMs: salesDuration }
+        );
+
         content = JSON.stringify({
           status: result.status,
           data: result.data,
@@ -2381,6 +2466,9 @@ export async function executeToolCall(toolCall: ToolCall): Promise<ToolResult> {
       // MARKETING DEPARTMENT EXECUTION
       // ═══════════════════════════════════════════════════════════════════════
       case 'delegate_to_marketing': {
+        const marketingStart = Date.now();
+        trackMissionStep(context, 'delegate_to_marketing', 'RUNNING');
+
         const { MarketingManager } = await import('@/lib/agents/marketing/manager');
         const manager = new MarketingManager();
         await manager.initialize();
@@ -2409,6 +2497,12 @@ export async function executeToolCall(toolCall: ToolCall): Promise<ToolResult> {
           traceId: `trace_${Date.now()}`,
         });
 
+        const marketingDuration = Date.now() - marketingStart;
+        trackMissionStep(context, 'delegate_to_marketing',
+          result.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED',
+          { summary: `Marketing: ${result.status}`, durationMs: marketingDuration }
+        );
+
         content = JSON.stringify({
           status: result.status,
           data: result.data,
@@ -2417,6 +2511,50 @@ export async function executeToolCall(toolCall: ToolCall): Promise<ToolResult> {
           delegatedTo: result.data && typeof result.data === 'object' && 'platformStrategy' in result.data
             ? (result.data as Record<string, unknown>).platformStrategy
             : 'See data for details',
+        });
+        break;
+      }
+
+      // ═══════════════════════════════════════════════════════════════════════
+      // TRUST & REPUTATION DEPARTMENT EXECUTION
+      // ═══════════════════════════════════════════════════════════════════════
+      case 'delegate_to_trust': {
+        const trustStart = Date.now();
+        trackMissionStep(context, 'delegate_to_trust', 'RUNNING');
+
+        const { ReputationManager } = await import('@/lib/agents/trust/reputation/manager');
+        const trustManager = new ReputationManager();
+        await trustManager.initialize();
+
+        const trustPayload = {
+          action: args.action as string,
+          target: args.target as string | undefined,
+          context: args.context as string | undefined,
+        };
+
+        const trustResult = await trustManager.execute({
+          id: `trust_${Date.now()}`,
+          timestamp: new Date(),
+          from: 'JASPER',
+          to: 'REPUTATION_MANAGER',
+          type: 'COMMAND',
+          priority: 'NORMAL',
+          payload: trustPayload,
+          requiresResponse: true,
+          traceId: `trace_${Date.now()}`,
+        });
+
+        const trustDuration = Date.now() - trustStart;
+        trackMissionStep(context, 'delegate_to_trust',
+          trustResult.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED',
+          { summary: `Trust: ${trustResult.status}`, durationMs: trustDuration }
+        );
+
+        content = JSON.stringify({
+          status: trustResult.status,
+          data: trustResult.data,
+          errors: trustResult.errors,
+          manager: 'REPUTATION_MANAGER',
         });
         break;
       }
@@ -2442,6 +2580,6 @@ export async function executeToolCall(toolCall: ToolCall): Promise<ToolResult> {
 /**
  * Process multiple tool calls in parallel.
  */
-export async function executeToolCalls(toolCalls: ToolCall[]): Promise<ToolResult[]> {
-  return Promise.all(toolCalls.map(executeToolCall));
+export async function executeToolCalls(toolCalls: ToolCall[], context?: ToolCallContext): Promise<ToolResult[]> {
+  return Promise.all(toolCalls.map((tc) => executeToolCall(tc, context)));
 }

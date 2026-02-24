@@ -26,10 +26,11 @@ import { FirestoreService } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { VoiceEngineFactory } from '@/lib/voice/tts/voice-engine-factory';
-import { JASPER_TOOLS, executeToolCalls } from '@/lib/orchestrator/jasper-tools';
+import { JASPER_TOOLS, executeToolCalls, type ToolCallContext } from '@/lib/orchestrator/jasper-tools';
 import { SystemStateService } from '@/lib/orchestrator/system-state-service';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import { getSubCollection } from '@/lib/firebase/collections';
+import { createMission, finalizeMission } from '@/lib/orchestrator/mission-persistence';
 
 // ============================================================================
 // Type Definitions
@@ -223,6 +224,7 @@ interface OrchestratorChatResponse {
     };
     toolExecuted?: string;
     responseTime?: number;
+    missionId?: string;
   };
   // Voice output (base64 audio if voiceEnabled)
   audio?: {
@@ -344,6 +346,12 @@ export async function POST(request: NextRequest) {
     const toolsExecuted: string[] = [];
     let modelUsed = selectedModel;
 
+    // Mission tracking — generate ID for potential delegation tracking
+    const missionId = `mission_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    const conversationId = `jasper_${context}`;
+    const missionContext: ToolCallContext = { conversationId, missionId, userPrompt: message };
+    let hasDelegation = false;
+
     // Build model fallback chain: selected model + fallback models
     const modelsToTry = [selectedModel, ...FALLBACK_MODELS.filter(m => m !== selectedModel)];
 
@@ -382,8 +390,14 @@ export async function POST(request: NextRequest) {
           iteration: iterationCount,
         });
 
-        const toolResults = await executeToolCalls(response.toolCalls);
+        const toolResults = await executeToolCalls(response.toolCalls, missionContext);
         toolsExecuted.push(...response.toolCalls.map((tc: ToolCall) => tc.function.name));
+
+        // Track if any delegation tools fired
+        const delegationTools = ['delegate_to_builder', 'delegate_to_sales', 'delegate_to_marketing', 'delegate_to_agent', 'delegate_to_trust'];
+        if (response.toolCalls.some((tc: ToolCall) => delegationTools.includes(tc.function.name))) {
+          hasDelegation = true;
+        }
 
         // Add assistant message with tool calls
         currentMessages.push({
@@ -442,6 +456,29 @@ export async function POST(request: NextRequest) {
 
     const responseTime = Date.now() - startTime;
 
+    // Create mission record if delegation tools fired (fire-and-forget)
+    if (hasDelegation) {
+      const now = new Date().toISOString();
+      const titleSnippet = message.slice(0, 80) + (message.length > 80 ? '...' : '');
+      void createMission({
+        missionId,
+        conversationId,
+        status: 'IN_PROGRESS',
+        title: titleSnippet,
+        userPrompt: message,
+        steps: [],
+        createdAt: now,
+        updatedAt: now,
+      }).then(() => {
+        // Finalize after response is sent (steps are already tracked inline)
+        void finalizeMission(missionId, 'COMPLETED');
+      }).catch((err: unknown) => {
+        logger.warn('[Jasper] Mission creation failed (non-blocking)', {
+          error: err instanceof Error ? err.message : String(err),
+        });
+      });
+    }
+
     // Log the interaction for analytics
     logger.info('[Jasper] Chat completed via OpenRouter', {
       context,
@@ -498,6 +535,7 @@ export async function POST(request: NextRequest) {
         model: modelUsed,
         responseTime,
         toolExecuted: toolsExecuted.length > 0 ? toolsExecuted.join(', ') : undefined,
+        missionId: hasDelegation ? missionId : undefined,
       },
       audio: audioOutput,
     };

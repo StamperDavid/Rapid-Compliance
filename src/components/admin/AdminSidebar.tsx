@@ -40,6 +40,7 @@ import {
   Activity,
   Globe,
   FileEdit,
+  Radar,
   Settings,
   ChevronLeft,
   ChevronRight,
@@ -122,6 +123,7 @@ const NAV_SECTIONS: NavigationSection[] = [
     allowedRoles: ['owner', 'admin', 'manager'],
     items: [
       { id: 'agent-registry', label: 'Agent Registry', href: '/ai-agents', icon: Bot, iconColor: 'var(--color-cyan)', requiredPermission: 'canDeployAIAgents' },
+      { id: 'mission-control', label: 'Mission Control', href: '/mission-control', icon: Radar, iconColor: 'var(--color-primary)', requiredPermission: 'canDeployAIAgents' },
       { id: 'training-hub', label: 'Training Hub', href: '/settings/ai-agents/training', icon: GraduationCap, iconColor: 'var(--color-success)', requiredPermission: 'canTrainAIAgents' },
       { id: 'models', label: 'Models & Data', href: '/ai/datasets', icon: Database, iconColor: 'var(--color-primary)', requiredPermission: 'canManageAIAgents' },
     ],

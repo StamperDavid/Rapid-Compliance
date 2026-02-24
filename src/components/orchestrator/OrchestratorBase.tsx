@@ -41,6 +41,7 @@ import {
   VolumeX,
   Settings,
   Radio,
+  Radar,
 } from 'lucide-react';
 import { auth } from '@/lib/firebase/config';
 import { ASSISTANT_NAME } from '@/lib/constants/platform';
@@ -109,6 +110,7 @@ interface ChatApiResponse {
   response: string;
   metadata?: {
     toolExecuted?: string;
+    missionId?: string;
   };
   audio?: {
     data: string;
@@ -491,9 +493,10 @@ export function OrchestratorBase({ config }: { config: OrchestratorConfig }) {
         addMessage({
           role: 'assistant',
           content: data.response,
-          metadata: data.metadata?.toolExecuted
-            ? { toolUsed: data.metadata.toolExecuted }
-            : undefined,
+          metadata: {
+            ...(data.metadata?.toolExecuted ? { toolUsed: data.metadata.toolExecuted } : {}),
+            ...(data.metadata?.missionId ? { missionId: data.metadata.missionId } : {}),
+          },
         });
 
         // Play audio if voice is enabled and audio was returned
@@ -975,6 +978,28 @@ function MessageBubble({ message }: { message: ChatMessage }) {
         <div className="text-sm leading-relaxed">
           {renderMarkdown(message.content)}
         </div>
+        {message.metadata?.missionId && (
+          <a
+            href={`/mission-control?mission=${message.metadata.missionId}`}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.375rem',
+              marginTop: '0.5rem',
+              padding: '0.25rem 0.75rem',
+              borderRadius: '9999px',
+              backgroundColor: 'rgba(var(--color-primary-rgb), 0.15)',
+              color: 'var(--color-primary)',
+              fontSize: '0.6875rem',
+              fontWeight: 600,
+              textDecoration: 'none',
+              transition: 'background-color 0.15s ease',
+            }}
+          >
+            <Radar style={{ width: 12, height: 12 }} />
+            Watch Live
+          </a>
+        )}
       </div>
     </motion.div>
   );
