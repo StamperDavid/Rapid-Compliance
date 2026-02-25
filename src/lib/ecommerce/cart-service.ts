@@ -3,10 +3,10 @@
  * Manages shopping cart operations
  */
 
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
+import { COLLECTIONS } from '@/lib/db/firestore-service';
 import type { Cart, CartItem, AppliedDiscount } from '@/types/ecommerce';
-import { Timestamp, runTransaction, doc } from 'firebase/firestore';
-import { db } from '@/lib/firebase/config';
+import { Timestamp } from 'firebase/firestore';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import { logger } from '@/lib/logger/logger';
 import { getEcommerceConfig } from './types';
@@ -74,12 +74,13 @@ export async function getOrCreateCart(
   userId?: string
 ): Promise<Cart> {
   // Try to get existing cart
-  const existingCart = await FirestoreService.get<Cart>(
+  const existingDoc = await AdminFirestoreService.get(
     `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/carts`,
     sessionId
   );
 
-  if (existingCart) {
+  if (existingDoc) {
+    const existingCart = existingDoc as unknown as Cart;
     // Check if cart is expired
     const expiresAt = existingCart.expiresAt;
     const expiresDate = toDateOrString(expiresAt);
@@ -122,7 +123,7 @@ async function createCart(
     status: 'active',
   };
 
-  await FirestoreService.set(
+  await AdminFirestoreService.set(
     `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/carts`,
     sessionId,
     {
@@ -291,21 +292,21 @@ export async function applyDiscountCode(
   await saveCart(cart);
 
   // Atomically check limit and increment usage count to prevent race conditions
-  if (discount.usageLimit && db) {
+  if (discount.usageLimit) {
     try {
       const discountPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/discountCodes`;
-      const discountRef = doc(db, discountPath, discount.docId);
 
-      await runTransaction(db, async (transaction) => {
+      await AdminFirestoreService.runTransaction(async (transaction) => {
+        const discountRef = AdminFirestoreService.doc(discountPath, discount.docId);
         const snapshot = await transaction.get(discountRef);
-        if (!snapshot.exists()) {
+        if (!snapshot.exists) {
           throw new Error('Discount code no longer exists');
         }
         const data = snapshot.data();
         const currentCount = (data?.usageCount as number) ?? 0;
-        const usageLimit = (data?.usageLimit as number) ?? 0;
+        const usageLimitVal = (data?.usageLimit as number) ?? 0;
 
-        if (currentCount >= usageLimit) {
+        if (currentCount >= usageLimitVal) {
           throw new Error('Discount code usage limit reached');
         }
 
@@ -349,7 +350,7 @@ export async function removeDiscountCode(
     const discount = await getDiscountCode(code);
     if (discount?.usageLimit && (discount.usageCount ?? 0) > 0) {
       const discountPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/discountCodes`;
-      await FirestoreService.update(discountPath, discount.docId, {
+      await AdminFirestoreService.update(discountPath, discount.docId, {
         usageCount: (discount.usageCount ?? 1) - 1,
       });
     }
@@ -387,7 +388,7 @@ function recalculateCartTotals(cart: Cart): void {
  * Save cart to Firestore
  */
 async function saveCart(cart: Cart): Promise<void> {
-  await FirestoreService.set(
+  await AdminFirestoreService.set(
     `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/carts`,
     cart.id,
     {
@@ -431,7 +432,7 @@ async function getProduct(productId: string): Promise<ProductData | null> {
   const productSchema = config.productSchema;
 
   // Get product entity from records collection
-  const product = await FirestoreService.get(
+  const product = await AdminFirestoreService.get(
     `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/entities/${productSchema}/records`,
     productId
   );
@@ -458,16 +459,15 @@ async function getProduct(productId: string): Promise<ProductData | null> {
  * Get discount code
  */
 async function getDiscountCode(code: string): Promise<DiscountData | null> {
-  const { where } = await import('firebase/firestore');
-  const discounts = await FirestoreService.getAll(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/discountCodes`,
-    [where('code', '==', code.toUpperCase())]
-  );
+  const discountPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/discountCodes`;
+  const collRef = AdminFirestoreService.collection(discountPath);
+  const snapshot = await collRef.where('code', '==', code.toUpperCase()).limit(1).get();
 
-  if (discounts.length === 0) {return null;}
-  const d = discounts[0] as Record<string, unknown>;
+  if (snapshot.empty) {return null;}
+  const docSnap = snapshot.docs[0];
+  const d = docSnap.data();
   return {
-    docId: d.id as string,
+    docId: docSnap.id,
     code: d.code as string,
     type: d.type as string,
     value: d.value as number,
@@ -545,7 +545,7 @@ function calculateDiscountAmount(discount: DiscountData, cart: Cart): number {
 export async function clearCart(
   sessionId: string
 ): Promise<void> {
-  await FirestoreService.delete(
+  await AdminFirestoreService.delete(
     `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/carts`,
     sessionId
   );

@@ -1,6 +1,7 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/api-auth';
-import { listForms, createForm, deleteForm } from '@/lib/forms/form-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
+import { getFormsCollection } from '@/lib/firebase/collections';
 import type { FormDefinition } from '@/lib/forms/types';
 import { z } from 'zod';
 import { logger } from '@/lib/logger/logger';
@@ -35,13 +36,22 @@ export async function GET(
     const pageSizeParam = searchParams.get('pageSize');
     const pageSize = parseInt(pageSizeParam ?? '50');
 
-    const result = await listForms({
-      status: status ?? undefined,
-      category: category ?? undefined,
-      pageSize,
-    });
+    // Use Admin SDK to bypass Firestore security rules (server-side)
+    const formsPath = getFormsCollection();
+    let query: FirebaseFirestore.Query = AdminFirestoreService.collection(formsPath);
 
-    return NextResponse.json(result);
+    if (status) {
+      query = query.where('status', '==', status);
+    }
+    if (category) {
+      query = query.where('category', '==', category);
+    }
+
+    query = query.orderBy('updatedAt', 'desc').limit(pageSize);
+    const snapshot = await query.get();
+    const forms = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as FormDefinition));
+
+    return NextResponse.json({ forms, hasMore: forms.length === pageSize });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Failed to fetch forms';
     logger.error('Failed to fetch forms:', error instanceof Error ? error : undefined);
@@ -74,8 +84,13 @@ export async function POST(
 
     const { name, description } = parseResult.data;
 
-    // Create form with default settings
-    const formData: Omit<FormDefinition, 'id' | 'createdAt' | 'updatedAt' | 'submissionCount' | 'viewCount'> = {
+    // Create form via Admin SDK
+    const formsPath = getFormsCollection();
+    const formId = AdminFirestoreService.collection(formsPath).doc().id;
+    const now = new Date().toISOString();
+
+    const form: Record<string, unknown> = {
+      id: formId,
       name,
       description: description ?? '',
       status: 'draft',
@@ -118,9 +133,13 @@ export async function POST(
       publicAccess: true,
       createdBy: 'system',
       lastModifiedBy: 'system',
+      submissionCount: 0,
+      viewCount: 0,
+      createdAt: now,
+      updatedAt: now,
     };
 
-    const form = await createForm(formData);
+    await AdminFirestoreService.set(formsPath, formId, form);
 
     return NextResponse.json(form, { status: 201 });
   } catch (error: unknown) {
@@ -154,8 +173,9 @@ export async function DELETE(
     }
 
     const { ids } = bodyResult.data;
+    const formsPath = getFormsCollection();
     const results = await Promise.allSettled(
-      ids.map(id => deleteForm(id))
+      ids.map(id => AdminFirestoreService.delete(formsPath, id))
     );
 
     const failed = results.filter(r => r.status === 'rejected');

@@ -55,14 +55,16 @@ export async function performHealthCheck(): Promise<HealthCheckResult> {
   const [
     databaseHealth,
     cacheHealth,
+    aiHealth,
+    paymentsHealth,
+    integrationsHealth,
   ] = await Promise.all([
     checkDatabase(),
     checkCache(),
+    checkAI(),
+    checkPayments(),
+    checkIntegrations(),
   ]);
-
-  const aiHealth = checkAI();
-  const paymentsHealth = checkPayments();
-  const integrationsHealth = await checkIntegrations();
   const metrics = gatherMetrics();
   
   // Determine overall status
@@ -159,32 +161,33 @@ async function checkCache(): Promise<HealthStatus> {
 }
 
 /**
- * Check AI services
+ * Check AI services — checks Firestore API key service for configured providers
  */
-function checkAI(): HealthStatus {
+async function checkAI(): Promise<HealthStatus> {
   try {
-    // Check if AI services are configured
-    const hasGemini = !!process.env.GEMINI_API_KEY;
-    const hasOpenAI = !!process.env.OPENAI_API_KEY;
-    const hasAnthropic = !!process.env.ANTHROPIC_API_KEY;
+    const { apiKeyService } = await import('@/lib/api-keys/api-key-service');
+    const { PLATFORM_ID } = await import('@/lib/constants/platform');
 
-    if (!hasGemini && !hasOpenAI && !hasAnthropic) {
+    const openrouterKey = await apiKeyService.getServiceKey(PLATFORM_ID, 'openrouter');
+    const hasOpenRouter = typeof openrouterKey === 'string' && openrouterKey.length > 0;
+
+    if (!hasOpenRouter) {
       return {
-        status: 'fail',
-        message: 'No AI providers configured',
+        status: 'warn',
+        message: 'No AI providers configured in API key settings',
         lastChecked: new Date().toISOString(),
       };
     }
 
     return {
       status: 'pass',
-      message: `AI providers configured: ${[hasGemini && 'Gemini', hasOpenAI && 'OpenAI', hasAnthropic && 'Anthropic'].filter(Boolean).join(', ')}`,
+      message: `AI providers configured: ${[hasOpenRouter && 'OpenRouter'].filter(Boolean).join(', ')}`,
       lastChecked: new Date().toISOString(),
     };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return {
-      status: 'fail',
+      status: 'warn',
       message: `AI check error: ${errorMessage}`,
       lastChecked: new Date().toISOString(),
     };
@@ -192,15 +195,19 @@ function checkAI(): HealthStatus {
 }
 
 /**
- * Check payment services
+ * Check payment services — checks Firestore API key service for Stripe
  */
-function checkPayments(): HealthStatus {
+async function checkPayments(): Promise<HealthStatus> {
   try {
-    const hasStripe = !!process.env.STRIPE_SECRET_KEY;
+    const { apiKeyService } = await import('@/lib/api-keys/api-key-service');
+    const { PLATFORM_ID } = await import('@/lib/constants/platform');
+
+    const stripeConfig = await apiKeyService.getServiceKey(PLATFORM_ID, 'stripe');
+    const hasStripe = stripeConfig != null && typeof stripeConfig === 'object' && 'secretKey' in stripeConfig;
 
     return {
       status: hasStripe ? 'pass' : 'warn',
-      message: hasStripe ? 'Payment providers configured' : 'No payment providers configured',
+      message: hasStripe ? 'Payment providers configured' : 'No payment providers configured (Stripe pending)',
       lastChecked: new Date().toISOString(),
     };
   } catch (error) {

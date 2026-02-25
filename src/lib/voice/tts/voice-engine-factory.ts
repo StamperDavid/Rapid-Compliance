@@ -76,7 +76,7 @@ export class VoiceEngineFactory {
     }
 
     // Create provider with appropriate API key
-    const apiKey = this.getApiKey(effectiveEngine, orgConfig);
+    const apiKey = await this.getApiKey(effectiveEngine, orgConfig);
     const provider = this.createProvider(effectiveEngine, apiKey);
 
     // Cache it
@@ -102,16 +102,26 @@ export class VoiceEngineFactory {
   /**
    * Get API key for provider based on org settings
    */
-  private static getApiKey(
+  private static async getApiKey(
     engine: TTSEngineType,
     config: TTSEngineConfig
-  ): string | undefined {
+  ): Promise<string | undefined> {
     if (config.keyMode === 'user' && config.userApiKey) {
       // User's own API key
       return config.userApiKey;
     }
 
-    // Platform keys from environment
+    // Platform keys from Firestore API key service
+    try {
+      const { apiKeyService } = await import('@/lib/api-keys/api-key-service');
+      const serviceName = engine === 'unreal' ? 'unrealSpeech' : 'elevenlabs';
+      const key = await apiKeyService.getServiceKey(PLATFORM_ID, serviceName);
+      if (typeof key === 'string' && key) {return key;}
+    } catch (_error) {
+      logger.warn('Failed to fetch TTS API key from Firestore, falling back to env', { file: 'voice-engine-factory.ts' });
+    }
+
+    // Fallback to environment variables
     switch (engine) {
       case 'unreal':
         return process.env.UNREAL_SPEECH_API_KEY;
