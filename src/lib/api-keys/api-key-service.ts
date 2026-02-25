@@ -210,6 +210,12 @@ return keys.ai?.anthropicApiKey ?? keys.ai?.openrouterApiKey ?? null;
       case 'dataforseo':
         return keys.seo ? { login: keys.seo.dataforseoLogin, password: keys.seo.dataforseoPassword } : null;
 
+      // Social Media
+      case 'twitter':
+        return keys.social?.twitter ?? null;
+      case 'linkedin':
+        return keys.social?.linkedin ?? null;
+
       default:
         return null;
     }

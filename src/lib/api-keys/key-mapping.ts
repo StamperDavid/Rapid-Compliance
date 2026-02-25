@@ -58,6 +58,12 @@ export const UI_TO_CONFIG_MAP: Record<string, string> = {
   pagespeed: 'seo.pagespeedApiKey',
   dataforseo_login: 'seo.dataforseoLogin',
   dataforseo_password: 'seo.dataforseoPassword',
+
+  // Social Media - Twitter/X
+  twitter_consumer_key: 'social.twitter.clientId',
+  twitter_consumer_secret: 'social.twitter.clientSecret',
+  twitter_access_token: 'social.twitter.accessToken',
+  twitter_access_secret: 'social.twitter.refreshToken',
 };
 
 /**

@@ -96,3 +96,4 @@ nul
 .claude/
 .playwright-mcp/
 scripts/update-openrouter-key.js
+scripts/api-keys.local.json
