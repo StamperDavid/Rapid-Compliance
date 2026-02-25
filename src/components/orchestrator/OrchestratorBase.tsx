@@ -355,7 +355,6 @@ export function OrchestratorBase({ config }: { config: OrchestratorConfig }) {
     setOpen,
     setMinimized,
     addMessage,
-    setHistory,
     setTyping,
     markWelcomeSeen,
     openFeedbackModal,
@@ -375,11 +374,6 @@ export function OrchestratorBase({ config }: { config: OrchestratorConfig }) {
     liveMode: config.voiceSettings?.liveMode ?? false,
   });
   const [selectedModel, setSelectedModel] = useState(config.modelId ?? 'google/gemini-2.0-flash-exp');
-
-  // History loading state — start true so the welcome message effect waits
-  // for the history check to resolve before deciding whether to fire
-  const [isLoadingHistory, setIsLoadingHistory] = useState(true);
-  const historyLoadedRef = useRef(false);
 
   // Audio playback hook
   const { playAudio, stopAudio, isPlaying } = useAudioPlayback();
@@ -418,72 +412,16 @@ export function OrchestratorBase({ config }: { config: OrchestratorConfig }) {
     }
   }, [chatHistory]);
 
-  // Load conversation history from Firestore on first open
+  // Welcome message on first open
   useEffect(() => {
-    if (!isOpen || historyLoadedRef.current || chatHistory.length > 0) {
-      return;
-    }
-
-    historyLoadedRef.current = true;
-
-    const loadHistory = async () => {
-      try {
-        const currentUser = auth?.currentUser;
-        if (!currentUser) {
-          setIsLoadingHistory(false);
-          return;
-        }
-
-        const idToken = await currentUser.getIdToken(true);
-        const response = await fetch(
-          `/api/orchestrator/chat/history?context=${config.context}`,
-          {
-            headers: { Authorization: `Bearer ${idToken}` },
-          }
-        );
-
-        if (!response.ok) {
-          setIsLoadingHistory(false);
-          return;
-        }
-
-        const data = await response.json() as {
-          success: boolean;
-          messages: Array<{ role: 'user' | 'assistant'; content: string; timestamp: string }>;
-        };
-
-        if (data.success && data.messages.length > 0) {
-          const restored: ChatMessage[] = data.messages.map((msg, i) => ({
-            id: `history_${i}_${Date.now()}`,
-            role: msg.role,
-            content: msg.content,
-            timestamp: new Date(msg.timestamp),
-          }));
-          setHistory(restored);
-        }
-      } catch (error: unknown) {
-        logger.error(
-          '[Jasper] Failed to load history',
-          error instanceof Error ? error : new Error(String(error))
-        );
-      } finally {
-        setIsLoadingHistory(false);
-      }
-    };
-
-    void loadHistory();
-  }, [isOpen, chatHistory.length, config.context, setHistory]);
-
-  // Welcome message on first open (waits for history load to finish)
-  useEffect(() => {
-    if (isOpen && !hasSeenWelcome && chatHistory.length === 0 && !isLoadingHistory) {
+    if (isOpen && !hasSeenWelcome && chatHistory.length === 0) {
       addMessage({
         role: 'assistant',
         content: config.welcomeMessage,
       });
       markWelcomeSeen();
     }
-  }, [isOpen, hasSeenWelcome, chatHistory.length, isLoadingHistory, config.welcomeMessage, addMessage, markWelcomeSeen]);
+  }, [isOpen, hasSeenWelcome, chatHistory.length, config.welcomeMessage, addMessage, markWelcomeSeen]);
 
   // Focus input when opened
   useEffect(() => {
@@ -792,16 +730,6 @@ export function OrchestratorBase({ config }: { config: OrchestratorConfig }) {
               ref={chatContainerRef}
               className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-thin scrollbar-thumb-white/10"
             >
-              {isLoadingHistory && chatHistory.length === 0 && (
-                <div className="flex items-center justify-center gap-2 py-8 text-[var(--color-text-secondary)] text-sm">
-                  <motion.div
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                    className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full"
-                  />
-                  <span>Loading conversation...</span>
-                </div>
-              )}
               {chatHistory.map((message) => (
                 <MessageBubble key={message.id} message={message} />
               ))}

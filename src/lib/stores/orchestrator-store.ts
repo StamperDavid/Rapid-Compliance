@@ -67,7 +67,6 @@ export interface OrchestratorUIState {
   setOpen: (open: boolean) => void;
   setMinimized: (minimized: boolean) => void;
   addMessage: (message: Omit<ChatMessage, 'id' | 'timestamp'>) => void;
-  setHistory: (messages: ChatMessage[]) => void;
   clearHistory: () => void;
   setTyping: (typing: boolean) => void;
   markWelcomeSeen: () => void;
@@ -122,8 +121,6 @@ export const useOrchestratorStore = create<OrchestratorUIState>()(
           },
         ],
       })),
-
-      setHistory: (messages) => set({ chatHistory: messages }),
 
       clearHistory: () => set({ chatHistory: [] }),
 
@@ -187,7 +184,6 @@ export const useOrchestratorChat = () => useOrchestratorStore((state) => ({
   setOpen: state.setOpen,
   setMinimized: state.setMinimized,
   addMessage: state.addMessage,
-  setHistory: state.setHistory,
   clearHistory: state.clearHistory,
   setTyping: state.setTyping,
 }));

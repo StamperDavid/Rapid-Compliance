@@ -14,6 +14,8 @@ import { SystemHealthService } from './system-health-service';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { PLATFORM_ID } from '@/lib/constants/platform';
+import { orderBy, limit as firestoreLimit } from 'firebase/firestore';
+import { getSubCollection } from '@/lib/firebase/collections';
 import {
   addMissionStep,
   updateMissionStep,
@@ -164,6 +166,11 @@ interface InspectAgentLogsArgs {
   source: 'provisioner' | 'agents' | 'errors' | 'all';
   limit?: number;
   PLATFORM_ID?: string;
+}
+
+interface RecallHistoryArgs {
+  topic?: string;
+  limit?: string;
 }
 
 // ============================================================================
@@ -1694,6 +1701,32 @@ export const JASPER_TOOLS: ToolDefinition[] = [
           },
         },
         required: ['sourceUrl'],
+      },
+    },
+  },
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // CONVERSATION MEMORY RECALL
+  // ═══════════════════════════════════════════════════════════════════════════
+  {
+    type: 'function',
+    function: {
+      name: 'recall_conversation_history',
+      description:
+        'Search past conversations for context when the user asks "do you remember", "we talked about", "last time", or references a previous discussion. Retrieves recent conversation history from Firestore and optionally filters by a topic keyword. ENABLED: TRUE.',
+      parameters: {
+        type: 'object',
+        properties: {
+          topic: {
+            type: 'string',
+            description: 'Optional keyword or phrase to search for in past messages (e.g., "pricing", "email campaign", "website migration")',
+          },
+          limit: {
+            type: 'string',
+            description: 'Maximum number of message pairs to retrieve (default: 30, max: 100)',
+          },
+        },
+        required: [],
       },
     },
   },
@@ -3535,6 +3568,77 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
           });
           content = JSON.stringify({ error: migrateErrorMsg });
         }
+        break;
+      }
+
+      // ═══════════════════════════════════════════════════════════════════════
+      // CONVERSATION MEMORY RECALL
+      // ═══════════════════════════════════════════════════════════════════════
+      case 'recall_conversation_history': {
+        const recallArgs = args as unknown as RecallHistoryArgs;
+        const recallLimit = Math.min(parseInt(recallArgs.limit ?? '30', 10) || 30, 100);
+        const conversationId = context?.conversationId ?? 'jasper_admin';
+        const messagesPath = `${getSubCollection('orchestratorConversations')}/${conversationId}/messages`;
+
+        interface StoredConversation {
+          id: string;
+          userMessage: string;
+          assistantResponse: string;
+          timestamp: string;
+        }
+
+        const docs = await FirestoreService.getAll<StoredConversation>(messagesPath, [
+          orderBy('timestamp', 'desc'),
+          firestoreLimit(recallLimit),
+        ]);
+
+        if (docs.length === 0) {
+          content = JSON.stringify({
+            found: false,
+            message: 'No previous conversations found.',
+          });
+          break;
+        }
+
+        // Filter by topic if provided
+        let filtered = docs;
+        if (recallArgs.topic) {
+          const topicLower = recallArgs.topic.toLowerCase();
+          filtered = docs.filter(
+            (d) =>
+              d.userMessage.toLowerCase().includes(topicLower) ||
+              d.assistantResponse.toLowerCase().includes(topicLower)
+          );
+        }
+
+        if (filtered.length === 0) {
+          content = JSON.stringify({
+            found: false,
+            topic: recallArgs.topic,
+            totalConversations: docs.length,
+            message: `Found ${docs.length} past conversations but none matched the topic "${recallArgs.topic}".`,
+          });
+          break;
+        }
+
+        // Sort chronologically (oldest first) and format
+        filtered.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+
+        const history = filtered.map((d) => ({
+          timestamp: d.timestamp,
+          user: d.userMessage,
+          assistant: d.assistantResponse.length > 500
+            ? `${d.assistantResponse.slice(0, 500)}...`
+            : d.assistantResponse,
+        }));
+
+        content = JSON.stringify({
+          found: true,
+          topic: recallArgs.topic ?? null,
+          matchCount: filtered.length,
+          totalConversations: docs.length,
+          conversations: history,
+        });
         break;
       }
 
