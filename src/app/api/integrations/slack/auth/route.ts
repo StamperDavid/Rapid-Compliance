@@ -23,7 +23,8 @@ export async function GET(request: NextRequest) {
   const userId = authResult.user.uid;
 
   const state = await generateOAuthState(userId, 'slack');
-  const authUrl = `${getSlackAuthUrl()}&state=${state}`;
+  const baseUrl = await getSlackAuthUrl();
+  const authUrl = `${baseUrl}&state=${state}`;
 
   return NextResponse.redirect(authUrl);
 }

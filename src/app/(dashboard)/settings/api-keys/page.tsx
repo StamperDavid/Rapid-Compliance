@@ -363,6 +363,21 @@ export default function APIKeysPage() {
       why: 'Needed with Account SID.',
     },
     {
+      id: 'twilio_phone_number',
+      name: 'Twilio Phone Number',
+      icon: '📞',
+      description: 'Your Twilio number for outbound calls & SMS',
+      required: false,
+      placeholder: '+18449553015',
+      setupUrl: 'https://www.twilio.com/console/phone-numbers',
+      setupSteps: [
+        'Go to Phone Numbers in Twilio Console',
+        'Copy your number in E.164 format (e.g. +18449553015)',
+      ],
+      cost: '$2/month',
+      why: 'Caller ID for outbound voice calls and SMS messages.',
+    },
+    {
       id: 'slack_webhook',
       name: 'Slack Webhook URL',
       icon: '💬',

@@ -31,8 +31,12 @@ export const UI_TO_CONFIG_MAP: Record<string, string> = {
   // SMS / Voice
   twilio_account_sid: 'sms.twilio.accountSid',
   twilio_auth_token: 'sms.twilio.authToken',
+  twilio_phone_number: 'sms.twilio.phoneNumber',
 
-  // Integrations
+  // Integrations - Slack
+  slack_client_id: 'integrations.slack.clientId',
+  slack_client_secret: 'integrations.slack.clientSecret',
+  slack_signing_secret: 'integrations.slack.signingSecret',
   slack_webhook: 'integrations.slack.webhookUrl',
   zapier_webhook: 'integrations.zapier.webhookUrl',
   hubspot_api_key: 'integrations.hubspot.apiKey',

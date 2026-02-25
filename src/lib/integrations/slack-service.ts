@@ -5,16 +5,47 @@
 
 import { WebClient } from '@slack/web-api';
 import { logger } from '@/lib/logger/logger';
+import { apiKeyService } from '@/lib/api-keys/api-key-service';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
-const SLACK_CLIENT_ID = process.env.SLACK_CLIENT_ID;
-const SLACK_CLIENT_SECRET = process.env.SLACK_CLIENT_SECRET;
-const slackRedirectUriEnv = process.env.SLACK_REDIRECT_URI;
-const SLACK_REDIRECT_URI = (slackRedirectUriEnv !== '' && slackRedirectUriEnv != null) ? slackRedirectUriEnv : 'http://localhost:3000/api/integrations/slack/callback';
+const SLACK_REDIRECT_URI = process.env.SLACK_REDIRECT_URI ?? 'http://localhost:3000/api/integrations/slack/callback';
+
+interface SlackCredentials {
+  clientId: string;
+  clientSecret: string;
+  signingSecret?: string;
+}
+
+/**
+ * Get Slack OAuth credentials from Firestore API keys
+ */
+async function getSlackCredentials(): Promise<SlackCredentials | null> {
+  const slackConfig = await apiKeyService.getServiceKey(PLATFORM_ID, 'slack');
+  if (slackConfig && typeof slackConfig === 'object' && 'clientId' in slackConfig) {
+    const config = slackConfig;
+    return {
+      clientId: config.clientId as string,
+      clientSecret: config.clientSecret as string,
+      signingSecret: config.signingSecret as string | undefined,
+    };
+  }
+  // Fallback to env vars
+  if (process.env.SLACK_CLIENT_ID) {
+    return {
+      clientId: process.env.SLACK_CLIENT_ID,
+      clientSecret: process.env.SLACK_CLIENT_SECRET ?? '',
+    };
+  }
+  return null;
+}
 
 /**
  * Get Slack OAuth URL
  */
-export function getSlackAuthUrl(): string {
+export async function getSlackAuthUrl(): Promise<string> {
+  const creds = await getSlackCredentials();
+  const clientId = creds?.clientId ?? '';
+
   const scopes = [
     'channels:read',
     'channels:write',
@@ -23,7 +54,7 @@ export function getSlackAuthUrl(): string {
     'users:read.email',
   ].join(',');
 
-  return `https://slack.com/oauth/v2/authorize?client_id=${SLACK_CLIENT_ID}&scope=${scopes}&redirect_uri=${encodeURIComponent(SLACK_REDIRECT_URI)}`;
+  return `https://slack.com/oauth/v2/authorize?client_id=${clientId}&scope=${scopes}&redirect_uri=${encodeURIComponent(SLACK_REDIRECT_URI)}`;
 }
 
 interface SlackTokenResponse {
@@ -42,14 +73,16 @@ export async function getTokensFromCode(code: string): Promise<{
   team_id: string;
   team_name: string;
 }> {
+  const creds = await getSlackCredentials();
+
   const response = await fetch('https://slack.com/api/oauth.v2.access', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
     },
     body: new URLSearchParams({
-      client_id: SLACK_CLIENT_ID ?? '',
-      client_secret: SLACK_CLIENT_SECRET ?? '',
+      client_id: creds?.clientId ?? '',
+      client_secret: creds?.clientSecret ?? '',
       code,
       redirect_uri: SLACK_REDIRECT_URI,
     }),
