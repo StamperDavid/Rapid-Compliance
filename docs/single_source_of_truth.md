@@ -1,7 +1,7 @@
 # SalesVelocity.ai - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** February 24, 2026 (Sprint 23 — Mission Control Live Stream)
+**Last Updated:** February 24, 2026 (Video Content Library — gallery, review flow & Jasper pipeline integration)
 **Branches:** `dev` (latest)
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Architecture:** Single-Tenant (Penthouse Model) - NOT a SaaS platform
@@ -36,7 +36,7 @@
 
 | Metric | Count | Status |
 |--------|-------|--------|
-| Physical Routes (page.tsx) | 176 | Verified February 24, 2026 (Sprint 18: +/mission-control, +/mission-control/history) |
+| Physical Routes (page.tsx) | 177 | Verified February 24, 2026 (+/content/video/library) |
 | API Endpoints (route.ts) | 281 | Verified February 24, 2026 (Sprint 23: +/api/orchestrator/missions/[missionId]/stream, +/api/orchestrator/missions/[missionId]/cancel) |
 | AI Agents | 52 | **52 FUNCTIONAL (48 swarm + 4 standalone)** |
 | RBAC Roles | 4 | `owner` (level 3), `admin` (level 2), `manager` (level 1), `member` (level 0) — 4-role RBAC |
@@ -330,7 +330,7 @@ border-color: #1a1a1a;
 | 1 | **Home** | Dashboard, Conversations | Dashboard tabs: Dashboard, Executive Briefing, Workforce HQ |
 | 2 | **CRM** | Leads, Deals/Pipeline, Contacts, Living Ledger | — |
 | 3 | **Outreach** | Outbound, Sequences, Campaigns, Email Writer, Nurture, Calls | Lead tools tabs: Lead Research, Lead Scoring, Marketing Scraper; Outbound tabs: Email Writer, Nurture |
-| 4 | **Content** | Social Hub, Video Studio, Proposals, Battlecards | Social Hub tabs: Command Center, Campaigns, Calendar, Approvals, Listening, Activity, Agent Rules, Playbook |
+| 4 | **Content** | Social Hub, Video Library, Video Studio, Proposals, Battlecards | Social Hub tabs: Command Center, Campaigns, Calendar, Approvals, Listening, Activity, Agent Rules, Playbook |
 | 5 | **AI Workforce** | Agent Registry, Training Hub, Models & Data | Training Hub tabs: Training Center, Persona, Voice & Speech, Voice AI Lab, Social AI Lab, SEO AI Lab; Models tabs: Datasets, Fine-Tuning |
 | 6 | **Commerce** | Products, Orders, Storefront | — |
 | 7 | **Website** | Site Editor, Pages, Blog | Website tabs: SEO, Domains, Site Settings |
@@ -418,14 +418,14 @@ SalesVelocity.ai is a **single-company sales and marketing super tool**. This is
 
 | Area | Routes | Dynamic Params | Status |
 |------|--------|----------------|--------|
-| Dashboard (`/(dashboard)/*`) | 126 | 8 | **Flattened** single-tenant (incl. former admin routes + social pages + mission-control) |
+| Dashboard (`/(dashboard)/*`) | 127 | 8 | **Flattened** single-tenant (incl. former admin routes + social pages + mission-control + video library) |
 | Public (`/(public)/*`) | 16 | 0 | All pages exist |
 | Dashboard sub-routes (`/dashboard/*`) | 16 | 0 | Analytics, coaching, marketing, performance |
 | Store (`/store/*`) | 6 | 1 (`[productId]`) | E-commerce storefront (added `/store/checkout/cancelled`) |
 | Onboarding (`/onboarding/*`) | 2 | 0 | Account + industry setup |
 | Auth (`/(auth)/*`) | 1 | 0 | Admin login |
 | Other (`/preview`, `/profile`, `/sites`) | 3 | 2 | Preview tokens, user profile, site builder |
-| **TOTAL** | **176** | **11** | **Verified February 24, 2026** |
+| **TOTAL** | **177** | **11** | **Verified February 24, 2026** |
 
 **DELETED:** `src/app/workspace/[orgId]/*` (95 pages) and `src/app/admin/*` (92 pages) - multi-tenant and standalone admin routes removed/consolidated into `(dashboard)`
 
@@ -434,7 +434,7 @@ SalesVelocity.ai is a **single-company sales and marketing super tool**. This is
 > **Note:** The standalone `/admin/*` page routes (92 pages) were removed during the single-tenant consolidation. All administrative functionality now lives within the `/(dashboard)/*` route group, accessible via RBAC role-gating (`owner`/`admin` roles). Admin API routes (`/api/admin/*`) still exist for backend operations.
 >
 > **Admin Login:** `/(auth)/admin-login` — Firebase admin auth
-### Dashboard Routes (114 in /(dashboard)/* - Flattened Single-Tenant)
+### Dashboard Routes (127 in /(dashboard)/* - Flattened Single-Tenant)
 
 > **Note:** These routes were migrated from `/workspace/[orgId]/*` to `/(dashboard)/*` as part of the single-tenant conversion. All routes now use `DEFAULT_ORG_ID = 'rapid-compliance-root'` internally.
 
@@ -458,6 +458,10 @@ SalesVelocity.ai is a **single-company sales and marketing super tool**. This is
 - `/outbound`, `/outbound/email-writer`, `/outbound/sequences`
 - `/social/campaigns` (Content Studio — dual-mode autopilot/manual), `/social/training`, `/social/approvals` (batch review, correction capture, "Why" badge), `/social/calendar`, `/social/listening`
 - `/social/command-center` (kill switch, velocity gauges, agent status), `/social/activity` (activity feed), `/social/analytics` (dashboard), `/social/agent-rules` (guardrails editor)
+
+**Video:**
+- `/content/video` (Video Studio — 7-step production pipeline: Request → Decompose → Pre-Production → Approval → Generation → Assembly → Post-Production)
+- `/content/video/library` (NEW — Video Library gallery with grid view, filter tabs, detail expansion, edit/download/delete actions)
 
 **AI Workforce:**
 - `/mission-control` (NEW Sprint 18 — 3-panel live delegation tracker: sidebar, timeline, step detail)
@@ -1929,7 +1933,7 @@ Users see 8 sidebar sections with sub-pages accessible via tab bars:
 1. **Home** - Dashboard (tabs: Executive Briefing, Workforce HQ), Conversations
 2. **CRM** - Leads, Deals/Pipeline, Contacts, Living Ledger
 3. **Outreach** - Outbound, Sequences, Campaigns, Email Writer (tabs: Nurture), Calls, Lead Research (tabs: Lead Scoring, Marketing Scraper)
-4. **Content** - Social Hub (tabs: Command Center, Campaigns, Calendar, Approvals, Listening, Activity, Agent Rules, Playbook), Video Studio, Proposals, Battlecards
+4. **Content** - Social Hub (tabs: Command Center, Campaigns, Calendar, Approvals, Listening, Activity, Agent Rules, Playbook), Video Library, Video Studio, Proposals, Battlecards
 5. **AI Workforce** - Agent Registry, Training Hub (tabs: Training Center, Persona, Voice & Speech, Voice AI Lab, Social AI Lab, SEO AI Lab), Models & Data (tabs: Datasets, Fine-Tuning)
 6. **Commerce** - Products, Orders, Storefront
 7. **Website** - Site Editor, Pages, Blog (tabs: SEO, Domains, Site Settings)
@@ -2097,7 +2101,8 @@ The `/admin/organizations/[id]/*` route tree now has **45 functional pages** (Ja
 | Deals | CRM | `canViewDeals` | `/deals` |
 | Social Hub | Content | `canManageSocialMedia` | `/social/command-center` |
 | Sequences | Outreach | `canManageEmailCampaigns` | `/sequences` |
-| Video Studio | Content | `canManageSocialMedia` | `/video-studio` |
+| Video Library | Content | `canManageSocialMedia` | `/content/video/library` |
+| Video Studio | Content | `canManageSocialMedia` | `/content/video` |
 | Training Hub | AI Workforce | `canTrainAIAgents` | `/settings/ai-agents/training` |
 | Models & Data | AI Workforce | `canTrainAIAgents` | `/ai/datasets` |
 | Products | Commerce | `canManageProducts` | `/products` |
