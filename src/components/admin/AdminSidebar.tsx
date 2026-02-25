@@ -40,6 +40,7 @@ import {
   Activity,
   Globe,
   FileEdit,
+  Film,
   Radar,
   Settings,
   ChevronLeft,
@@ -111,6 +112,7 @@ const NAV_SECTIONS: NavigationSection[] = [
     items: [
       { id: 'social-hub', label: 'Social Hub', href: '/social/command-center', icon: Activity, iconColor: 'var(--color-success)', requiredPermission: 'canManageSocialMedia' },
       { id: 'social-analytics', label: 'Social Analytics', href: '/social/analytics', icon: BarChart3, iconColor: 'var(--color-cyan)', requiredPermission: 'canManageSocialMedia' },
+      { id: 'video-library', label: 'Video Library', href: '/content/video/library', icon: Film, iconColor: 'var(--color-primary)', requiredPermission: 'canManageSocialMedia' },
       { id: 'video-studio', label: 'Video Studio', href: '/content/video', icon: Video, iconColor: 'var(--color-primary)', requiredPermission: 'canManageSocialMedia' },
       { id: 'proposals', label: 'Proposals', href: '/proposals/builder', icon: FileText, iconColor: 'var(--color-secondary)' },
     ],

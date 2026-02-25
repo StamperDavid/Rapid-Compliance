@@ -2463,69 +2463,127 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
         const videoStart = Date.now();
         trackMissionStep(context, 'create_video', 'RUNNING', { toolArgs: args });
 
-        const { generateVideo, createVideoProject, isProviderConfigured } = await import('@/lib/video/video-service');
+        const { createProject, updateProject } = await import('@/lib/video/pipeline-project-service');
         const description = args.description as string;
         const title = (args.title as string) ?? `Video: ${description.slice(0, 50)}`;
         const duration = args.duration ? Number(args.duration) : 30;
         const aspectRatio = (args.aspectRatio as '16:9' | '9:16' | '1:1') ?? '16:9';
-        const videoType = (args.type as 'text-to-video' | 'avatar' | 'image-to-video') ?? 'text-to-video';
+        const platform = (args.platform as 'youtube' | 'tiktok' | 'instagram' | 'linkedin' | 'website') ?? 'youtube';
+        const videoType = (args.videoType as 'tutorial' | 'explainer' | 'product-demo' | 'sales-pitch' | 'testimonial' | 'social-ad') ?? 'explainer';
 
-        // Auto-select provider if not specified (HeyGen is the default)
-        let provider = args.provider as string | undefined;
-        if (!provider || provider === 'auto') {
-          if (await isProviderConfigured('heygen')) {
-            provider = 'heygen';
-          } else if (await isProviderConfigured('sora')) {
-            provider = 'sora';
-          } else if (await isProviderConfigured('runway')) {
-            provider = 'runway';
-          } else {
-            provider = 'heygen';
-          }
-        }
-
-        // Create a project in the video library
-        const projectResult = await createVideoProject({
-          name: title,
+        // Build the pipeline brief
+        const brief = {
           description,
-          status: 'in-progress',
-          userId: 'admin',
-          createdBy: 'jasper',
-        });
-
-        // Trigger video generation
-        const videoResult = await generateVideo({
-          prompt: description,
-          provider: provider as 'heygen' | 'sora' | 'runway',
-          type: videoType,
+          videoType,
+          platform,
           duration,
           aspectRatio,
-          userId: 'admin',
-        });
+          resolution: '1080p' as const,
+        };
 
-        if ('status' in videoResult && videoResult.status === 'coming_soon') {
+        // Create a pipeline project (starts as draft at 'request' step)
+        const projectResult = await createProject(brief, 'jasper');
+
+        if (!projectResult.success || !projectResult.projectId) {
           content = JSON.stringify({
-            status: 'queued',
-            message: `Video generation queued. The ${provider} provider API key needs to be configured for live generation. Your project "${title}" has been created in the video library.`,
-            projectId: projectResult.projectId ?? null,
-            provider,
-            videoLibraryPath: '/content/video',
+            status: 'error',
+            message: `Failed to create video project: ${projectResult.error ?? 'Unknown error'}`,
           });
-        } else {
-          const response = videoResult as { id: string; requestId: string; status: string; provider: string };
-          content = JSON.stringify({
-            status: 'generating',
-            videoId: response.id,
-            requestId: response.requestId,
-            provider: response.provider,
-            projectId: projectResult.projectId ?? null,
-            message: `Video generation started with ${provider}. Estimated completion: 2-10 minutes. The video will be available in your video library.`,
-            videoLibraryPath: '/content/video',
+          trackMissionStep(context, 'create_video', 'FAILED', {
+            summary: 'Project creation failed',
+            durationMs: Date.now() - videoStart,
           });
+          break;
         }
 
+        const projectId = projectResult.projectId;
+
+        // Run decompose logic to generate scene breakdown
+        const sceneCount = Math.max(2, Math.min(8, Math.ceil(duration / 15)));
+        const durationPerScene = Math.floor(duration / sceneCount);
+        const extractedContext = description.substring(0, 100);
+
+        // Generate scenes based on video type
+        const sceneTemplates: Record<string, Array<{ title: string; scriptPrefix: string }>> = {
+          'explainer': [
+            { title: 'Hook', scriptPrefix: `Did you know that most businesses struggle with ${extractedContext}?` },
+            { title: 'The Problem', scriptPrefix: `Traditional approaches to ${extractedContext} are time-consuming and costly.` },
+            { title: 'The Solution', scriptPrefix: `That's where ${extractedContext} comes in.` },
+            { title: 'Key Benefits', scriptPrefix: `With ${extractedContext}, you'll save time, reduce costs, and improve outcomes.` },
+            { title: 'Call to Action', scriptPrefix: `Ready to transform your workflow? Get started today.` },
+          ],
+          'tutorial': [
+            { title: 'Introduction', scriptPrefix: `Welcome to this tutorial on ${extractedContext}.` },
+            { title: 'Step 1', scriptPrefix: `First, let's set up the foundation for ${extractedContext}.` },
+            { title: 'Step 2', scriptPrefix: `Next, we implement the key aspects of ${extractedContext}.` },
+            { title: 'Summary', scriptPrefix: `Great job! You've now learned the essentials of ${extractedContext}.` },
+          ],
+          'sales-pitch': [
+            { title: 'The Pain Point', scriptPrefix: `Are you tired of dealing with ${extractedContext}?` },
+            { title: 'The Solution', scriptPrefix: `Imagine if ${extractedContext} could be completely automated.` },
+            { title: 'Why It Works', scriptPrefix: `Unlike other approaches, ${extractedContext} delivers consistent results.` },
+            { title: 'Call to Action', scriptPrefix: `Ready to see results? Get started today.` },
+          ],
+          'social-ad': [
+            { title: 'Hook', scriptPrefix: `Stop scrolling! ${extractedContext} changes everything.` },
+            { title: 'Value Prop', scriptPrefix: `${extractedContext} delivers immediate, visible results.` },
+            { title: 'CTA', scriptPrefix: `Don't wait — tap the link now and get started in seconds.` },
+          ],
+        };
+
+        const fallback = sceneTemplates['explainer'];
+        const templates = sceneTemplates[videoType] ?? fallback;
+        const scenesToUse = templates.slice(0, sceneCount);
+
+        const scenes = scenesToUse.map((tpl, i) => ({
+          id: `scene-${i + 1}-${Date.now()}`,
+          sceneNumber: i + 1,
+          scriptText: tpl.scriptPrefix,
+          screenshotUrl: null,
+          avatarId: null,
+          voiceId: null,
+          duration: durationPerScene,
+          engine: null,
+          status: 'draft' as const,
+        }));
+
+        const decompositionPlan = {
+          videoType,
+          targetAudience: 'Business professionals and teams',
+          keyMessages: scenesToUse.map((s) => s.title),
+          scenes: scenesToUse.map((tpl, i) => ({
+            sceneNumber: i + 1,
+            title: tpl.title,
+            scriptText: tpl.scriptPrefix,
+            visualDescription: `Visual content for ${tpl.title.toLowerCase()}`,
+            suggestedDuration: durationPerScene,
+          })),
+          assetsNeeded: ['Brand logo', 'Background music'],
+          avatarRecommendation: null,
+          estimatedTotalDuration: duration,
+        };
+
+        // Advance project to decompose step with scenes and plan
+        await updateProject(projectId, {
+          name: title,
+          currentStep: 'decompose',
+          scenes,
+          status: 'draft',
+        });
+
+        content = JSON.stringify({
+          status: 'prepared',
+          projectId,
+          sceneCount: scenes.length,
+          estimatedDuration: duration,
+          decompositionPlan,
+          message: `I've prepared a video project "${title}" with ${scenes.length} scenes and a full script. Review it in your Video Library, then approve and generate when ready.`,
+          videoLibraryPath: '/content/video/library',
+          editPath: `/content/video?project=${projectId}`,
+        });
+
         trackMissionStep(context, 'create_video', 'COMPLETED', {
-          summary: `Video creation: ${provider}`,
+          summary: `Video prepared: ${title} (${scenes.length} scenes, ${videoType})`,
           durationMs: Date.now() - videoStart,
           toolResult: content.slice(0, 2000),
         });

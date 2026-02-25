@@ -1,14 +1,16 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
-import { Wand2, Download, Save, RefreshCw, Play, Edit3, Loader2, CheckCircle } from 'lucide-react';
+import { Wand2, Download, Save, RefreshCw, Play, Edit3, Loader2, CheckCircle, Library } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { VideoPlayer } from './VideoPlayer';
 import { useVideoPipelineStore } from '@/lib/stores/video-pipeline-store';
 
 export function StepPostProduction() {
+  const router = useRouter();
   const authFetch = useAuthFetch();
   const {
     projectId,
@@ -145,8 +147,6 @@ export function StepPostProduction() {
       if (data.success && data.projectId) {
         setProjectId(data.projectId);
         setSaved(true);
-        // Reset saved indicator after 3 seconds
-        setTimeout(() => { setSaved(false); }, 3000);
       }
     } catch {
       // Save error silently — button returns to default state
@@ -305,7 +305,23 @@ export function StepPostProduction() {
             ) : (
               <Save className="w-4 h-4" />
             )}
-            {saving ? 'Saving...' : saved ? 'Saved!' : 'Save to Library'}
+            {saving ? 'Saving...' : saved ? 'Saved!' : 'Save'}
+          </Button>
+          <Button
+            className="gap-2 bg-green-600 hover:bg-green-700 text-white"
+            onClick={() => {
+              void handleSaveToLibrary().then(() => {
+                router.push('/content/video/library');
+              });
+            }}
+            disabled={saving}
+          >
+            {saving ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Library className="w-4 h-4" />
+            )}
+            {saving ? 'Saving...' : 'Save to Library'}
           </Button>
         </div>
       </div>

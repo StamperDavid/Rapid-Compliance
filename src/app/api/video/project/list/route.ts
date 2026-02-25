@@ -7,8 +7,11 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger/logger';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { listProjects } from '@/lib/video/pipeline-project-service';
+import type { ProjectStatus } from '@/types/video-pipeline';
 
 export const dynamic = 'force-dynamic';
+
+const VALID_STATUSES: ProjectStatus[] = ['draft', 'approved', 'generating', 'assembled', 'completed'];
 
 // ============================================================================
 // Route Handler
@@ -24,12 +27,19 @@ export async function GET(request: NextRequest) {
 
     const { user } = authResult;
 
+    // Parse optional status filter from query params
+    const statusParams = request.nextUrl.searchParams.getAll('status');
+    const statusFilter = statusParams.length > 0
+      ? statusParams.filter((s): s is ProjectStatus => VALID_STATUSES.includes(s as ProjectStatus))
+      : undefined;
+
     logger.info('Listing video pipeline projects', {
       file: 'api/video/project/list/route.ts',
       userId: user.uid,
+      statusFilter: statusFilter ?? 'all',
     });
 
-    const projects = await listProjects(user.uid);
+    const projects = await listProjects(user.uid, statusFilter);
 
     // Return lightweight project summaries (no full scene data)
     const summaries = projects.map((p) => ({

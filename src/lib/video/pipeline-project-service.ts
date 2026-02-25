@@ -17,6 +17,7 @@ import {
   orderBy,
   serverTimestamp,
   Timestamp,
+  type QueryConstraint,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import { logger } from '@/lib/logger/logger';
@@ -222,9 +223,12 @@ export async function updateProject(
 }
 
 /**
- * List all projects, optionally filtered by userId
+ * List all projects, optionally filtered by userId and/or status
  */
-export async function listProjects(userId?: string): Promise<PipelineProject[]> {
+export async function listProjects(
+  userId?: string,
+  statusFilter?: ProjectStatus[]
+): Promise<PipelineProject[]> {
   try {
     if (!db) {
       logger.warn('Database not available for listing projects', { file: 'pipeline-project-service.ts' });
@@ -232,12 +236,17 @@ export async function listProjects(userId?: string): Promise<PipelineProject[]> 
     }
 
     const projectsRef = collection(db, 'organizations', PLATFORM_ID, 'video_pipeline_projects');
-
-    let q = query(projectsRef, orderBy('updatedAt', 'desc'));
+    const constraints: QueryConstraint[] = [orderBy('updatedAt', 'desc')];
 
     if (userId) {
-      q = query(projectsRef, where('createdBy', '==', userId), orderBy('updatedAt', 'desc'));
+      constraints.push(where('createdBy', '==', userId));
     }
+
+    if (statusFilter && statusFilter.length > 0) {
+      constraints.push(where('status', 'in', statusFilter));
+    }
+
+    const q = query(projectsRef, ...constraints);
 
     const snapshot = await getDocs(q);
     const projects: PipelineProject[] = snapshot.docs.map((docSnap) => {
