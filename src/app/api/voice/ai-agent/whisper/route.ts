@@ -11,6 +11,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { voiceAgentHandler } from '@/lib/voice/voice-agent-handler';
 import { logger } from '@/lib/logger/logger';
 import { verifyTwilioSignature, parseFormBody } from '@/lib/security/webhook-verification';
+import { getTwilioAuthToken } from '@/lib/security/twilio-verification';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,8 +21,8 @@ export const dynamic = 'force-dynamic';
  */
 export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
-    // Verify Twilio webhook signature
-    const authToken = process.env.TWILIO_AUTH_TOKEN;
+    // Verify Twilio webhook signature (auth token from Firestore API keys)
+    const authToken = await getTwilioAuthToken();
     if (authToken) {
       const signature = request.headers.get('x-twilio-signature');
       if (!signature) {

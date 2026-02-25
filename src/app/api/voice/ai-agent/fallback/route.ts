@@ -13,6 +13,7 @@ import { callTransferService } from '@/lib/voice/call-transfer-service';
 import { aiConversationService } from '@/lib/voice/ai-conversation-service';
 import { logger } from '@/lib/logger/logger';
 import { verifyTwilioSignature, parseFormBody } from '@/lib/security/webhook-verification';
+import { getTwilioAuthToken } from '@/lib/security/twilio-verification';
 
 export const dynamic = 'force-dynamic';
 
@@ -36,8 +37,8 @@ interface ConversationContext {
  */
 async function handleFallback(request: NextRequest): Promise<NextResponse> {
   try {
-    // Verify Twilio signature — fail-closed
-    const authToken = process.env.TWILIO_AUTH_TOKEN;
+    // Verify Twilio signature — fail-closed (auth token from Firestore API keys)
+    const authToken = await getTwilioAuthToken();
     if (authToken) {
       const signature = request.headers.get('x-twilio-signature');
       if (!signature) {
@@ -55,7 +56,7 @@ async function handleFallback(request: NextRequest): Promise<NextResponse> {
         return NextResponse.json({ error: 'Invalid webhook signature' }, { status: 401 });
       }
     } else if (process.env.NODE_ENV === 'production') {
-      logger.error('[AI-Fallback] TWILIO_AUTH_TOKEN not configured in production', undefined, { file: 'ai-agent/fallback/route.ts' });
+      logger.error('[AI-Fallback] Twilio auth token not configured in API keys', undefined, { file: 'ai-agent/fallback/route.ts' });
       return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
     }
 
@@ -163,8 +164,8 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 }
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
-  // Verify Twilio webhook signature
-  const authToken = process.env.TWILIO_AUTH_TOKEN;
+  // Verify Twilio webhook signature (auth token from Firestore API keys)
+  const authToken = await getTwilioAuthToken();
   if (authToken) {
     const signature = request.headers.get('x-twilio-signature');
     if (!signature) {

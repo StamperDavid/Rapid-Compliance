@@ -173,6 +173,25 @@ interface RecallHistoryArgs {
   limit?: string;
 }
 
+interface VoiceAgentArgs {
+  action: 'configure' | 'get_status' | 'end_call';
+  mode?: 'prospector' | 'closer';
+  callId?: string;
+  companyName?: string;
+  productDescription?: string;
+  valueProposition?: string;
+}
+
+interface SocialPostArgs {
+  action: 'POST' | 'REPLY' | 'LIKE' | 'FOLLOW' | 'REPOST' | 'RECYCLE' | 'get_status';
+  platform?: 'twitter' | 'linkedin';
+  content?: string;
+  targetPostId?: string;
+  targetAccountId?: string;
+  mediaUrls?: string[];
+  hashtags?: string[];
+}
+
 // ============================================================================
 // TYPE VALIDATION FUNCTIONS (No unsafe casts)
 // ============================================================================
@@ -207,6 +226,66 @@ function parseInspectAgentLogsArgs(args: Record<string, unknown>): InspectAgentL
     source: args.source as InspectAgentLogsArgs['source'],
     limit: typeof args.limit === 'number' ? args.limit : undefined,
     PLATFORM_ID: typeof args.PLATFORM_ID === 'string' ? args.PLATFORM_ID : undefined,
+  };
+}
+
+function parseVoiceAgentArgs(args: Record<string, unknown>): VoiceAgentArgs | null {
+  const validActions = ['configure', 'get_status', 'end_call'] as const;
+  if (typeof args.action !== 'string' || !validActions.includes(args.action as VoiceAgentArgs['action'])) {
+    return null;
+  }
+  return {
+    action: args.action as VoiceAgentArgs['action'],
+    mode: typeof args.mode === 'string' && (args.mode === 'prospector' || args.mode === 'closer')
+      ? args.mode
+      : undefined,
+    callId: typeof args.callId === 'string' ? args.callId : undefined,
+    companyName: typeof args.companyName === 'string' ? args.companyName : undefined,
+    productDescription: typeof args.productDescription === 'string' ? args.productDescription : undefined,
+    valueProposition: typeof args.valueProposition === 'string' ? args.valueProposition : undefined,
+  };
+}
+
+function parseSocialPostArgs(args: Record<string, unknown>): SocialPostArgs | null {
+  const validActions = ['POST', 'REPLY', 'LIKE', 'FOLLOW', 'REPOST', 'RECYCLE', 'get_status'] as const;
+  if (typeof args.action !== 'string' || !validActions.includes(args.action as SocialPostArgs['action'])) {
+    return null;
+  }
+
+  let mediaUrls: string[] | undefined;
+  if (typeof args.mediaUrls === 'string') {
+    try {
+      const parsed: unknown = JSON.parse(args.mediaUrls);
+      if (Array.isArray(parsed) && parsed.every((u): u is string => typeof u === 'string')) {
+        mediaUrls = parsed;
+      }
+    } catch {
+      // Invalid JSON — ignore
+    }
+  }
+
+  let hashtags: string[] | undefined;
+  if (typeof args.hashtags === 'string') {
+    try {
+      const parsed: unknown = JSON.parse(args.hashtags);
+      if (Array.isArray(parsed) && parsed.every((h): h is string => typeof h === 'string')) {
+        hashtags = parsed;
+      }
+    } catch {
+      // Invalid JSON — ignore
+    }
+  }
+
+  return {
+    action: args.action as SocialPostArgs['action'],
+    platform: typeof args.platform === 'string' && (args.platform === 'twitter' || args.platform === 'linkedin')
+      ? args.platform
+      : undefined,
+    content: typeof args.content === 'string' ? args.content : undefined,
+    targetPostId: typeof args.targetPostId === 'string' ? args.targetPostId : undefined,
+    targetAccountId: typeof args.targetAccountId === 'string' ? args.targetAccountId : undefined,
+    mediaUrls,
+    hashtags,
   };
 }
 
@@ -1730,6 +1809,98 @@ export const JASPER_TOOLS: ToolDefinition[] = [
       },
     },
   },
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // VOICE AI AGENT
+  // ═══════════════════════════════════════════════════════════════════════════
+  {
+    type: 'function',
+    function: {
+      name: 'voice_agent',
+      description:
+        'Manage the AI Voice Agent. Can configure the agent mode (prospector for lead qualification, closer for deal closing), check active call status, or end calls. The voice agent handles AI-powered phone conversations via Twilio/Telnyx. ENABLED: TRUE.',
+      parameters: {
+        type: 'object',
+        properties: {
+          action: {
+            type: 'string',
+            description: 'The voice agent action to perform',
+            enum: ['configure', 'get_status', 'end_call'],
+          },
+          mode: {
+            type: 'string',
+            description: 'Agent mode: "prospector" for lead qualification, "closer" for deal closing',
+            enum: ['prospector', 'closer'],
+          },
+          callId: {
+            type: 'string',
+            description: 'Call ID for status check or call management',
+          },
+          companyName: {
+            type: 'string',
+            description: 'Company name for AI conversation context',
+          },
+          productDescription: {
+            type: 'string',
+            description: 'Product or service description for AI pitch context',
+          },
+          valueProposition: {
+            type: 'string',
+            description: 'Value proposition for the AI conversation',
+          },
+        },
+        required: ['action'],
+      },
+    },
+  },
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // AUTONOMOUS SOCIAL POSTING
+  // ═══════════════════════════════════════════════════════════════════════════
+  {
+    type: 'function',
+    function: {
+      name: 'social_post',
+      description:
+        'Execute social media actions through the Autonomous Posting Agent. Supports posting content, replying, liking, following, reposting, and recycling content on Twitter/X and LinkedIn. Includes compliance guardrails (velocity limits, sentiment checks, human escalation). ENABLED: TRUE.',
+      parameters: {
+        type: 'object',
+        properties: {
+          action: {
+            type: 'string',
+            description: 'The social media action to perform',
+            enum: ['POST', 'REPLY', 'LIKE', 'FOLLOW', 'REPOST', 'RECYCLE', 'get_status'],
+          },
+          platform: {
+            type: 'string',
+            description: 'Target social media platform',
+            enum: ['twitter', 'linkedin'],
+          },
+          content: {
+            type: 'string',
+            description: 'Post content or reply text (required for POST and REPLY actions)',
+          },
+          targetPostId: {
+            type: 'string',
+            description: 'Target post ID (required for REPLY, LIKE, REPOST actions)',
+          },
+          targetAccountId: {
+            type: 'string',
+            description: 'Target account ID (required for FOLLOW action)',
+          },
+          mediaUrls: {
+            type: 'string',
+            description: 'JSON-encoded array of media URLs to attach (e.g., \'["https://..."]\')',
+          },
+          hashtags: {
+            type: 'string',
+            description: 'JSON-encoded array of hashtags to include (e.g., \'["#AI", "#SaaS"]\')',
+          },
+        },
+        required: ['action'],
+      },
+    },
+  },
 ];
 
 // ============================================================================
@@ -1990,23 +2161,341 @@ export async function executeGetPlatformStats(
 }
 
 /**
- * Delegate a task to a specialized agent.
+ * Route a delegate_to_agent call through the MarketingManager for platforms
+ * that have existing specialist implementations.
  */
-export function executeDelegateToAgent(
+async function routeThroughMarketing(
+  platform: 'tiktok' | 'x_twitter' | 'meta_facebook' | 'linkedin',
+  action: string,
+  params: Record<string, unknown>
+): Promise<Record<string, unknown>> {
+  const { MarketingManager } = await import('@/lib/agents/marketing/manager');
+  const manager = new MarketingManager();
+  await manager.initialize();
+
+  const platformMap: Record<string, string> = {
+    tiktok: 'tiktok',
+    x_twitter: 'twitter',
+    meta_facebook: 'facebook',
+    linkedin: 'linkedin',
+  };
+
+  const goal = (params.topic as string) ?? (params.goal as string) ?? action.replace(/_/g, ' ');
+  const result = await manager.execute({
+    id: `specialist_${platform}_${Date.now()}`,
+    timestamp: new Date(),
+    from: 'JASPER',
+    to: 'MARKETING_MANAGER',
+    type: 'COMMAND',
+    priority: 'NORMAL',
+    payload: {
+      goal,
+      platform: platformMap[platform],
+      niche: params.niche as string | undefined,
+      audience: params.audience as string | undefined,
+      contentType: params.contentType as string | undefined,
+      message: goal,
+    },
+    requiresResponse: true,
+    traceId: `trace_${Date.now()}`,
+  });
+
+  return { status: result.status, data: result.data, errors: result.errors };
+}
+
+/**
+ * Route a delegate_to_agent call through the ContentManager for platforms
+ * without dedicated specialist implementations (YouTube, Instagram, Pinterest, Truth Social).
+ */
+async function routeThroughContent(
+  platform: 'youtube' | 'instagram' | 'truth_social' | 'pinterest',
+  action: string,
+  params: Record<string, unknown>
+): Promise<Record<string, unknown>> {
+  const { ContentManager } = await import('@/lib/agents/content/manager');
+  const contentMgr = new ContentManager();
+  await contentMgr.initialize();
+
+  const contentTypeMap: Record<string, string> = {
+    generate_youtube_script: 'video_script',
+    design_thumbnail: 'visual_concept',
+    optimize_youtube_metadata: 'seo_metadata',
+    schedule_youtube_content: 'content_calendar',
+    create_instagram_post: 'social_post',
+    design_instagram_stories: 'story_sequence',
+    script_instagram_reels: 'short_video_script',
+    build_instagram_carousel: 'carousel_slides',
+    create_truth_post: 'social_post',
+    engage_truth_community: 'engagement_response',
+    schedule_truth_content: 'content_calendar',
+    create_pinterest_pins: 'visual_concept',
+    organize_pinterest_boards: 'content_strategy',
+    optimize_pinterest_seo: 'seo_metadata',
+  };
+
+  const topic = (params.topic as string) ?? (params.description as string) ?? action.replace(/_/g, ' ');
+  const contentType = contentTypeMap[action] ?? 'social_post';
+
+  const result = await contentMgr.execute({
+    id: `${platform}_content_${Date.now()}`,
+    timestamp: new Date(),
+    from: 'JASPER',
+    to: 'CONTENT_MANAGER',
+    type: 'COMMAND',
+    priority: 'NORMAL',
+    payload: {
+      contentType,
+      topic: `[${platform.toUpperCase()}] ${topic}`,
+      audience: params.audience as string | undefined,
+      format: platform,
+      seoKeywords: typeof params.keywords === 'string'
+        ? params.keywords.split(',').map((k: string) => k.trim())
+        : undefined,
+    },
+    requiresResponse: true,
+    traceId: `trace_${Date.now()}`,
+  });
+
+  return { status: result.status, platform, action, data: result.data, errors: result.errors };
+}
+
+/**
+ * Route web_migrator actions to existing services (migration pipeline, architect, SEO).
+ */
+async function routeWebMigrator(
+  action: string,
+  params: Record<string, unknown>,
+  context?: ToolCallContext
+): Promise<Record<string, unknown>> {
+  switch (action) {
+    case 'migrate_website': {
+      const { migrateSite } = await import('@/lib/website-builder/site-migration-service');
+      const migrationResult = await migrateSite({
+        sourceUrl: params.sourceUrl as string,
+        maxPages: (params.maxPages as number | undefined) ?? 10,
+        includeImages: (params.includeImages as boolean | undefined) ?? true,
+        missionId: context?.missionId,
+      });
+      return {
+        status: migrationResult.status,
+        sourceUrl: migrationResult.sourceUrl,
+        totalPages: migrationResult.totalPages,
+        successCount: migrationResult.successCount,
+        editorLink: migrationResult.editorLink,
+      };
+    }
+    case 'build_landing_page': {
+      const { ArchitectManager } = await import('@/lib/agents/architect/manager');
+      const architect = new ArchitectManager();
+      await architect.initialize();
+      const result = await architect.execute({
+        id: `web_build_${Date.now()}`,
+        timestamp: new Date(),
+        from: 'JASPER',
+        to: 'ARCHITECT_MANAGER',
+        type: 'COMMAND',
+        priority: 'NORMAL',
+        payload: {
+          niche: params.niche as string | undefined,
+          objective: (params.objective as string) ?? 'lead_generation',
+          audience: params.audience as string | undefined,
+          pageType: 'landing',
+        },
+        requiresResponse: true,
+        traceId: `trace_${Date.now()}`,
+      });
+      return { status: result.status, data: result.data };
+    }
+    case 'audit_website_seo':
+    case 'optimize_website_speed': {
+      const { MarketingManager } = await import('@/lib/agents/marketing/manager');
+      const seoManager = new MarketingManager();
+      await seoManager.initialize();
+      const seoResult = await seoManager.execute({
+        id: `seo_${Date.now()}`,
+        timestamp: new Date(),
+        from: 'JASPER',
+        to: 'MARKETING_MANAGER',
+        type: 'COMMAND',
+        priority: 'NORMAL',
+        payload: {
+          goal: action === 'audit_website_seo'
+            ? `SEO audit for ${(params.url as string) ?? 'website'}`
+            : `Speed optimization analysis for ${(params.url as string) ?? 'website'}`,
+          platform: 'seo',
+        },
+        requiresResponse: true,
+        traceId: `trace_${Date.now()}`,
+      });
+      return { status: seoResult.status, data: seoResult.data };
+    }
+    default:
+      throw new Error(`Unknown web_migrator action: ${action}`);
+  }
+}
+
+/**
+ * Route lead_hunter actions to the IntelligenceManager.
+ */
+async function routeLeadHunter(
+  action: string,
+  params: Record<string, unknown>
+): Promise<Record<string, unknown>> {
+  const { IntelligenceManager } = await import('@/lib/agents/intelligence/manager');
+  const intelMgr = new IntelligenceManager();
+  await intelMgr.initialize();
+
+  const researchTypeMap: Record<string, string> = {
+    start_lead_scan: 'lead_discovery',
+    enrich_leads: 'lead_enrichment',
+    score_leads: 'lead_scoring',
+    create_lead_segment: 'lead_segmentation',
+  };
+
+  const researchType = researchTypeMap[action];
+  if (!researchType) {
+    throw new Error(`Unknown lead_hunter action: ${action}`);
+  }
+
+  const result = await intelMgr.execute({
+    id: `lead_${action}_${Date.now()}`,
+    timestamp: new Date(),
+    from: 'JASPER',
+    to: 'INTELLIGENCE_MANAGER',
+    type: 'COMMAND',
+    priority: 'NORMAL',
+    payload: {
+      researchType,
+      industry: params.industry as string | undefined,
+      location: params.location as string | undefined,
+      companySize: params.companySize as string | undefined,
+      keywords: params.keywords as string | undefined,
+      leadId: params.leadId as string | undefined,
+      leadIds: params.leadIds as string | undefined,
+      segmentName: params.segmentName as string | undefined,
+      criteria: params.criteria as string | undefined,
+    },
+    requiresResponse: true,
+    traceId: `trace_${Date.now()}`,
+  });
+
+  return { status: result.status, data: result.data, errors: result.errors };
+}
+
+/**
+ * Route newsletter actions to ContentManager (content) or OutreachManager (ops).
+ */
+async function routeNewsletter(
+  action: string,
+  params: Record<string, unknown>
+): Promise<Record<string, unknown>> {
+  switch (action) {
+    case 'write_newsletter':
+    case 'optimize_newsletter_subjects': {
+      const { ContentManager } = await import('@/lib/agents/content/manager');
+      const contentMgr = new ContentManager();
+      await contentMgr.initialize();
+      const result = await contentMgr.execute({
+        id: `newsletter_content_${Date.now()}`,
+        timestamp: new Date(),
+        from: 'JASPER',
+        to: 'CONTENT_MANAGER',
+        type: 'COMMAND',
+        priority: 'NORMAL',
+        payload: {
+          contentType: action === 'write_newsletter' ? 'email_newsletter' : 'subject_line_optimization',
+          topic: (params.topic as string) ?? (params.subject as string) ?? 'newsletter',
+          audience: params.audience as string | undefined,
+          format: 'email',
+        },
+        requiresResponse: true,
+        traceId: `trace_${Date.now()}`,
+      });
+      return { status: result.status, data: result.data };
+    }
+    case 'segment_newsletter_audience':
+    case 'build_newsletter_automation': {
+      const { OutreachManager } = await import('@/lib/agents/outreach/manager');
+      const outreachMgr = new OutreachManager();
+      await outreachMgr.initialize();
+      const result = await outreachMgr.execute({
+        id: `newsletter_ops_${Date.now()}`,
+        timestamp: new Date(),
+        from: 'JASPER',
+        to: 'OUTREACH_MANAGER',
+        type: 'COMMAND',
+        priority: 'NORMAL',
+        payload: {
+          sequenceType: action === 'build_newsletter_automation' ? 'automation' : 'segmentation',
+          channel: 'email',
+          message: (params.description as string) ?? action.replace(/_/g, ' '),
+        },
+        requiresResponse: true,
+        traceId: `trace_${Date.now()}`,
+      });
+      return { status: result.status, data: result.data };
+    }
+    default:
+      throw new Error(`Unknown newsletter action: ${action}`);
+  }
+}
+
+/**
+ * Central dispatcher — routes (agentId, action) to the appropriate manager/service.
+ */
+async function routeToSpecialist(
   agentId: SpecialistPlatform,
   action: string,
-  parameters?: string
+  params: Record<string, unknown>,
+  context?: ToolCallContext
+): Promise<Record<string, unknown>> {
+  switch (agentId) {
+    // Route through MarketingManager (existing specialists)
+    case 'tiktok':
+    case 'x_twitter':
+    case 'meta_facebook':
+    case 'linkedin':
+      return routeThroughMarketing(agentId, action, params);
+
+    // Route through ContentManager (AI content generation)
+    case 'youtube':
+    case 'instagram':
+    case 'truth_social':
+    case 'pinterest':
+      return routeThroughContent(agentId, action, params);
+
+    // Route to existing services
+    case 'web_migrator':
+      return routeWebMigrator(action, params, context);
+    case 'lead_hunter':
+      return routeLeadHunter(action, params);
+    case 'newsletter':
+      return routeNewsletter(action, params);
+
+    default:
+      throw new Error(`No execution route configured for agent: ${agentId}`);
+  }
+}
+
+/**
+ * Delegate a task to a specialized agent — routes to real manager execution.
+ */
+export async function executeDelegateToAgent(
+  agentId: SpecialistPlatform,
+  action: string,
+  parameters?: string,
+  context?: ToolCallContext
 ): Promise<AgentDelegation> {
   const specialist = getSpecialist(agentId);
 
   if (!specialist) {
-    return Promise.resolve({
+    return {
       agentId,
       action,
       parameters: {},
       status: 'failed',
       result: `Unknown agent: ${agentId}. Available agents: ${SPECIALISTS.map((s) => s.id).join(', ')}`,
-    });
+    };
   }
 
   // Check if action is valid for this specialist
@@ -2015,13 +2504,13 @@ export function executeDelegateToAgent(
   );
 
   if (!capability) {
-    return Promise.resolve({
+    return {
       agentId,
       action,
       parameters: {},
       status: 'failed',
       result: `Invalid action "${action}" for ${specialist.name}. Available actions: ${specialist.capabilities.map((c) => c.action).join(', ')}`,
-    });
+    };
   }
 
   // Parse parameters
@@ -2034,22 +2523,34 @@ export function executeDelegateToAgent(
     }
   }
 
-  // Queue the delegation (actual execution would be async)
-  const delegation: AgentDelegation = {
+  logger.info('[Jasper Tools] Agent delegation executing', {
     agentId,
     action: capability.action,
-    parameters: parsedParams,
-    status: 'queued',
-    result: `Task queued: ${specialist.name} will execute "${capability.name}". ${specialist.requiresConnection ? `Note: Requires ${specialist.connectionLabel} connection.` : ''}`,
-  };
-
-  logger.info('[Jasper Tools] Agent delegation queued', {
-    agentId: delegation.agentId,
-    action: delegation.action,
-    status: delegation.status,
   });
 
-  return Promise.resolve(delegation);
+  try {
+    const result = await routeToSpecialist(agentId, capability.action, parsedParams, context);
+    return {
+      agentId,
+      action: capability.action,
+      parameters: parsedParams,
+      status: 'completed',
+      result: JSON.stringify(result),
+    };
+  } catch (error: unknown) {
+    const errMsg = error instanceof Error ? error.message : 'Unknown execution error';
+    logger.error('[Jasper Tools] Agent delegation failed', new Error(errMsg), {
+      agentId,
+      action: capability.action,
+    });
+    return {
+      agentId,
+      action: capability.action,
+      parameters: parsedParams,
+      status: 'failed',
+      result: errMsg,
+    };
+  }
 }
 
 /**
@@ -2459,11 +2960,12 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
         const delegation = await executeDelegateToAgent(
           parsedArgs.agentId as SpecialistPlatform,
           parsedArgs.action,
-          parsedArgs.parameters
+          parsedArgs.parameters,
+          context
         );
 
         const agentDuration = Date.now() - agentStart;
-        const agentStatus = typeof delegation === 'object' && delegation !== null && 'error' in delegation ? 'FAILED' : 'COMPLETED';
+        const agentStatus = delegation.status === 'failed' ? 'FAILED' : 'COMPLETED';
         trackMissionStep(context, 'delegate_to_agent', agentStatus as MissionStepStatus, {
           summary: `Agent ${parsedArgs.agentId}: ${agentStatus}`,
           durationMs: agentDuration,
@@ -3432,9 +3934,15 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
           const { getSerperSEOService } = await import('@/lib/integrations/seo/serper-seo-service');
           const { getDataForSEOService } = await import('@/lib/integrations/seo/dataforseo-service');
 
-          const keywords = (args.keywords as string).split(',').map((k: string) => k.trim());
+          const rawKeywords = (args.keywords as string).split(',').map((k: string) => k.trim());
+          const industry = typeof args.industry === 'string' ? args.industry.trim() : '';
           const maxResults = (args.maxResults as number) || 10;
           const includeVolume = args.includeSearchVolume !== false;
+
+          // Contextualize keywords with industry when provided
+          const keywords = industry
+            ? rawKeywords.map((k) => `${k} ${industry}`)
+            : rawKeywords;
 
           const serperService = getSerperSEOService();
           const trendingTopics: Array<{
@@ -3639,6 +4147,161 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
           totalConversations: docs.length,
           conversations: history,
         });
+        break;
+      }
+
+      // ═══════════════════════════════════════════════════════════════════════
+      // VOICE AI AGENT EXECUTION
+      // ═══════════════════════════════════════════════════════════════════════
+      case 'voice_agent': {
+        const voiceStart = Date.now();
+        trackMissionStep(context, 'voice_agent', 'RUNNING', { toolArgs: args });
+
+        const voiceArgs = parseVoiceAgentArgs(args);
+        if (!voiceArgs) {
+          trackMissionStep(context, 'voice_agent', 'FAILED', { error: 'Invalid arguments' });
+          content = JSON.stringify({ error: 'Invalid arguments: action is required (configure, get_status, end_call)' });
+          break;
+        }
+
+        try {
+          const { voiceAgentHandler } = await import('@/lib/voice/voice-agent-handler');
+
+          switch (voiceArgs.action) {
+            case 'configure': {
+              const mode = voiceArgs.mode ?? 'prospector';
+              await voiceAgentHandler.initialize({
+                mode,
+                agentId: `jasper_voice_${mode}_${Date.now()}`,
+                companyName: voiceArgs.companyName,
+                productDescription: voiceArgs.productDescription,
+                valueProposition: voiceArgs.valueProposition,
+              });
+              content = JSON.stringify({
+                status: 'configured',
+                mode,
+                message: `Voice agent configured in ${mode} mode. It will handle incoming calls at /api/voice/ai-agent.`,
+                webhookUrl: '/api/voice/ai-agent',
+              });
+              break;
+            }
+            case 'get_status': {
+              if (voiceArgs.callId) {
+                const callContext = voiceAgentHandler.getConversationContext(voiceArgs.callId);
+                content = JSON.stringify({
+                  status: callContext ? 'active' : 'not_found',
+                  callId: voiceArgs.callId,
+                  conversationState: callContext?.state ?? null,
+                  qualificationScore: callContext?.qualificationScore ?? null,
+                });
+              } else {
+                content = JSON.stringify({
+                  status: 'ready',
+                  message: 'Voice agent is available. Provide a callId to check a specific call.',
+                  webhookUrl: '/api/voice/ai-agent',
+                });
+              }
+              break;
+            }
+            case 'end_call': {
+              if (!voiceArgs.callId) {
+                content = JSON.stringify({ error: 'callId is required for end_call action' });
+                break;
+              }
+              voiceAgentHandler.endConversation(voiceArgs.callId);
+              content = JSON.stringify({
+                status: 'ended',
+                callId: voiceArgs.callId,
+                message: `Call ${voiceArgs.callId} ended successfully.`,
+              });
+              break;
+            }
+          }
+
+          const voiceDuration = Date.now() - voiceStart;
+          trackMissionStep(context, 'voice_agent', 'COMPLETED', {
+            summary: `Voice agent: ${voiceArgs.action}`,
+            durationMs: voiceDuration,
+            toolResult: content.slice(0, 2000),
+          });
+        } catch (voiceError: unknown) {
+          const voiceErrorMsg = voiceError instanceof Error ? voiceError.message : 'Unknown error';
+          trackMissionStep(context, 'voice_agent', 'FAILED', {
+            error: voiceErrorMsg,
+            durationMs: Date.now() - voiceStart,
+          });
+          content = JSON.stringify({ error: voiceErrorMsg });
+        }
+        break;
+      }
+
+      // ═══════════════════════════════════════════════════════════════════════
+      // AUTONOMOUS SOCIAL POSTING EXECUTION
+      // ═══════════════════════════════════════════════════════════════════════
+      case 'social_post': {
+        const socialStart = Date.now();
+        trackMissionStep(context, 'social_post', 'RUNNING', { toolArgs: args });
+
+        const socialArgs = parseSocialPostArgs(args);
+        if (!socialArgs) {
+          trackMissionStep(context, 'social_post', 'FAILED', { error: 'Invalid arguments' });
+          content = JSON.stringify({ error: 'Invalid arguments: action is required (POST, REPLY, LIKE, FOLLOW, REPOST, RECYCLE, get_status)' });
+          break;
+        }
+
+        try {
+          if (socialArgs.action === 'get_status') {
+            const { AgentConfigService } = await import('@/lib/social/agent-config-service');
+            const agentConfig = await AgentConfigService.getConfig();
+            content = JSON.stringify({
+              status: agentConfig.agentEnabled ? 'active' : 'paused',
+              message: agentConfig.agentEnabled
+                ? 'Autonomous posting agent is active with compliance guardrails.'
+                : 'Autonomous posting agent is paused (kill switch active).',
+              platforms: ['twitter', 'linkedin'],
+            });
+          } else {
+            const platform = socialArgs.platform ?? 'twitter';
+            const { createPostingAgent } = await import('@/lib/social/autonomous-posting-agent');
+            const agent = await createPostingAgent({ platforms: [platform] });
+
+            const actionResult = await agent.executeAction({
+              type: socialArgs.action,
+              platform,
+              content: socialArgs.content,
+              targetPostId: socialArgs.targetPostId,
+              targetAccountId: socialArgs.targetAccountId,
+              mediaUrls: socialArgs.mediaUrls,
+              hashtags: socialArgs.hashtags,
+            });
+
+            content = JSON.stringify({
+              status: actionResult.success ? 'completed' : 'failed',
+              actionType: actionResult.actionType,
+              platform: actionResult.platform,
+              actionId: actionResult.actionId ?? null,
+              platformActionId: actionResult.platformActionId ?? null,
+              executedAt: actionResult.executedAt?.toISOString() ?? null,
+              error: actionResult.error ?? null,
+              complianceBlocked: actionResult.complianceBlocked ?? false,
+              complianceReason: actionResult.complianceReason ?? null,
+            });
+          }
+
+          const socialDuration = Date.now() - socialStart;
+          trackMissionStep(context, 'social_post', 'COMPLETED', {
+            summary: `Social ${socialArgs.action}: ${socialArgs.platform ?? 'twitter'}`,
+            durationMs: socialDuration,
+            toolResult: content.slice(0, 2000),
+          });
+        } catch (socialError: unknown) {
+          const socialErrorMsg = socialError instanceof Error ? socialError.message : 'Unknown error';
+          trackMissionStep(context, 'social_post', 'FAILED', {
+            error: socialErrorMsg,
+            durationMs: Date.now() - socialStart,
+          });
+          content = JSON.stringify({ error: socialErrorMsg });
+        }
         break;
       }
 

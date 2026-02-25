@@ -11,6 +11,7 @@ import { getSubCollection } from '@/lib/firebase/collections';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { verifyTwilioSignature, parseFormBody } from '@/lib/security/webhook-verification';
+import { getTwilioAuthToken } from '@/lib/security/twilio-verification';
 import { isStopKeyword, addToSuppressionList } from '@/lib/compliance/tcpa-service';
 
 export const dynamic = 'force-dynamic';
@@ -82,8 +83,8 @@ export async function POST(request: NextRequest) {
     // Get raw body for signature verification
     const rawBody = await request.text();
 
-    // Verify Twilio signature if auth token is configured
-    const authToken = process.env.TWILIO_AUTH_TOKEN;
+    // Verify Twilio signature (auth token from Firestore API keys)
+    const authToken = await getTwilioAuthToken();
     if (authToken) {
       const signature = request.headers.get('x-twilio-signature');
       if (!signature) {
@@ -115,7 +116,7 @@ export async function POST(request: NextRequest) {
         route: '/api/webhooks/sms'
       });
     } else {
-      logger.error('TWILIO_AUTH_TOKEN not configured — rejecting request', new Error('Missing TWILIO_AUTH_TOKEN'), {
+      logger.error('Twilio auth token not configured in API keys — rejecting request', new Error('Missing Twilio auth token'), {
         route: '/api/webhooks/sms',
       });
       return NextResponse.json(

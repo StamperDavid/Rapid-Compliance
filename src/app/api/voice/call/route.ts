@@ -6,6 +6,7 @@ import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { getSubCollection } from '@/lib/firebase/collections';
+import { getTwilioCredentials } from '@/lib/security/twilio-verification';
 import twilio from 'twilio';
 
 export const dynamic = 'force-dynamic';
@@ -73,21 +74,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Initialize Twilio client
-    const accountSid = process.env.TWILIO_ACCOUNT_SID;
-    const authToken = process.env.TWILIO_AUTH_TOKEN;
-    const fromNumber = process.env.TWILIO_PHONE_NUMBER;
+    // Initialize Twilio client (credentials from Firestore API keys)
+    const twilioKeys = await getTwilioCredentials();
 
-    if (!accountSid || !authToken || !fromNumber) {
-      return errors.badRequest('Twilio is not configured. Please add credentials in settings.');
+    if (!twilioKeys?.accountSid || !twilioKeys?.authToken || !twilioKeys?.phoneNumber) {
+      return errors.badRequest('Twilio is not configured. Please add credentials in Settings > API Keys.');
     }
 
-    const client = twilio(accountSid, authToken);
+    const client = twilio(twilioKeys.accountSid, twilioKeys.authToken);
 
     // Make the call
     const call: TwilioCallInstance = await client.calls.create({
       to: to,
-      from: fromNumber,
+      from: twilioKeys.phoneNumber,
       url: `${(process.env.NEXT_PUBLIC_APP_URL !== '' && process.env.NEXT_PUBLIC_APP_URL != null) ? process.env.NEXT_PUBLIC_APP_URL : 'http://localhost:3000'}/api/voice/twiml`,
       statusCallback: `${(process.env.NEXT_PUBLIC_APP_URL !== '' && process.env.NEXT_PUBLIC_APP_URL != null) ? process.env.NEXT_PUBLIC_APP_URL : 'http://localhost:3000'}/api/webhooks/voice`,
       statusCallbackEvent: ['initiated', 'ringing', 'answered', 'completed'],

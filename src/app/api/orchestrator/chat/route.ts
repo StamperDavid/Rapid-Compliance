@@ -359,6 +359,7 @@ export async function POST(request: NextRequest) {
       'delegate_to_architect', 'delegate_to_outreach', 'delegate_to_intelligence',
       'delegate_to_commerce', 'create_video', 'generate_content',
       'scan_leads', 'enrich_lead', 'draft_outreach_email',
+      'voice_agent', 'social_post',
     ];
 
     // Build model fallback chain: selected model + fallback models

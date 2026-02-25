@@ -16,6 +16,7 @@ import { voiceAgentHandler } from '@/lib/voice/voice-agent-handler';
 import { logger } from '@/lib/logger/logger';
 import { getSubCollection } from '@/lib/firebase/collections';
 import { verifyTwilioSignature, parseFormBody } from '@/lib/security/webhook-verification';
+import { getTwilioAuthToken } from '@/lib/security/twilio-verification';
 
 /**
  * Permissive schema for Telnyx speech recognition JSON payloads.
@@ -44,8 +45,8 @@ export async function POST(request: NextRequest) {
   const startTime = Date.now();
 
   try {
-    // Verify Twilio signature — fail-closed (reject if missing or invalid)
-    const authToken = process.env.TWILIO_AUTH_TOKEN;
+    // Verify Twilio signature — fail-closed (auth token from Firestore API keys)
+    const authToken = await getTwilioAuthToken();
     if (authToken) {
       const signature = request.headers.get('x-twilio-signature');
       if (!signature) {
@@ -63,7 +64,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Invalid webhook signature' }, { status: 401 });
       }
     } else if (process.env.NODE_ENV === 'production') {
-      logger.error('[AI-Speech] TWILIO_AUTH_TOKEN not configured in production', undefined, { file: 'ai-agent/speech/route.ts' });
+      logger.error('[AI-Speech] Twilio auth token not configured in API keys', undefined, { file: 'ai-agent/speech/route.ts' });
       return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
     }
 
