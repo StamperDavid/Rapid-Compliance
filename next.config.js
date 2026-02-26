@@ -125,11 +125,19 @@ const nextConfig = {
         'node:util': false,
       };
       
-      // Exclude firebase-admin and playwright from client bundle
-      config.externals = config.externals || [];
-      config.externals.push('firebase-admin');
-      config.externals.push('playwright');
-      config.externals.push('playwright-core');
+      // Stub out server-only packages on the client side
+      // Using resolve.alias (not externals) so webpack provides an empty module
+      // instead of emitting a global-variable reference that crashes at runtime.
+      config.resolve.alias = {
+        ...config.resolve.alias,
+        'firebase-admin': false,
+        'firebase-admin/app': false,
+        'firebase-admin/auth': false,
+        'firebase-admin/firestore': false,
+        'firebase-admin/storage': false,
+        playwright: false,
+        'playwright-core': false,
+      };
     }
     return config;
   },
