@@ -20,6 +20,9 @@ import {
   AlertCircle,
   UserPlus,
   Trash2,
+  Upload,
+  X,
+  CheckCircle,
 } from 'lucide-react';
 
 interface Lead {
@@ -59,10 +62,24 @@ const getLeadCompany = (lead: Lead) => {
   return lead.company ?? lead.companyName ?? '-';
 };
 
+interface ImportResult {
+  total: number;
+  imported: number;
+  skipped: number;
+  errors: Array<{ row: number; email: string | undefined; reason: string }>;
+}
+
 export default function LeadsPage() {
   const router = useRouter();
   const { loading: authLoading } = useAuth();
   const [filter, setFilter] = useState('all');
+
+  // CSV Import state
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState<ImportResult | null>(null);
+  const [importError, setImportError] = useState('');
 
   const fetchLeads = useCallback(async (lastDoc?: unknown) => {
     const searchParams = new URLSearchParams({
@@ -288,13 +305,22 @@ export default function LeadsPage() {
           </div>
         </div>
 
-        <button
-          onClick={() => router.push(`/leads/new`)}
-          className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-primary to-secondary hover:from-primary-light hover:to-secondary-light text-white font-semibold rounded-xl transition-all shadow-lg shadow-primary/25"
-        >
-          <Plus className="w-5 h-5" />
-          Add Lead
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShowImportModal(true)}
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-surface-elevated hover:bg-surface-elevated border border-border-light hover:border-primary text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] font-semibold rounded-xl transition-all"
+          >
+            <Upload className="w-5 h-5" />
+            Import CSV
+          </button>
+          <button
+            onClick={() => router.push(`/leads/new`)}
+            className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-primary to-secondary hover:from-primary-light hover:to-secondary-light text-white font-semibold rounded-xl transition-all shadow-lg shadow-primary/25"
+          >
+            <Plus className="w-5 h-5" />
+            Add Lead
+          </button>
+        </div>
       </motion.div>
 
       {/* Status Filters */}
@@ -372,6 +398,115 @@ export default function LeadsPage() {
         variant="destructive"
         loading={deleting}
       />
+
+      {/* CSV Import Modal */}
+      {showImportModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => !importing && setShowImportModal(false)}>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-surface-elevated border border-border-light rounded-2xl shadow-2xl p-6 w-full max-w-lg mx-4"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-[var(--color-text-primary)]">Import Leads from CSV</h2>
+              <button onClick={() => { setShowImportModal(false); setImportFile(null); setImportResult(null); setImportError(''); }} className="text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {importResult ? (
+              <div>
+                <div className="flex items-center gap-2 mb-4">
+                  <CheckCircle className="w-5 h-5 text-emerald-400" />
+                  <span className="font-semibold text-emerald-300">Import Complete</span>
+                </div>
+                <div className="space-y-2 text-sm text-[var(--color-text-secondary)] mb-4">
+                  <p>Total rows: {importResult.total}</p>
+                  <p className="text-emerald-300">Imported: {importResult.imported}</p>
+                  {importResult.skipped > 0 && <p className="text-yellow-300">Skipped: {importResult.skipped}</p>}
+                </div>
+                {importResult.errors.length > 0 && (
+                  <div className="max-h-40 overflow-y-auto bg-surface-main rounded-lg p-3 mb-4 text-xs space-y-1">
+                    {importResult.errors.slice(0, 20).map((err, i) => (
+                      <p key={i} className="text-yellow-300">Row {err.row}{err.email ? ` (${err.email})` : ''}: {err.reason}</p>
+                    ))}
+                    {importResult.errors.length > 20 && (
+                      <p className="text-[var(--color-text-disabled)]">...and {importResult.errors.length - 20} more</p>
+                    )}
+                  </div>
+                )}
+                <button
+                  onClick={() => { setShowImportModal(false); setImportFile(null); setImportResult(null); setImportError(''); void refresh(); }}
+                  className="w-full py-2.5 bg-gradient-to-r from-primary to-secondary text-white font-semibold rounded-xl"
+                >
+                  Done
+                </button>
+              </div>
+            ) : (
+              <div>
+                <p className="text-sm text-[var(--color-text-secondary)] mb-4">
+                  Upload a CSV file with columns: First Name, Last Name, Email, Phone, Company, Title, Source, Status, Tags, Notes
+                </p>
+                <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-border-light rounded-xl cursor-pointer hover:border-primary transition-colors mb-4">
+                  <Upload className="w-8 h-8 text-[var(--color-text-disabled)] mb-2" />
+                  <span className="text-sm text-[var(--color-text-secondary)]">
+                    {importFile ? importFile.name : 'Click to select CSV file'}
+                  </span>
+                  <input
+                    type="file" accept=".csv,text/csv" className="hidden"
+                    onChange={e => { setImportFile(e.target.files?.[0] ?? null); setImportError(''); }}
+                  />
+                </label>
+                {importError && (
+                  <p className="text-sm text-error mb-4">{importError}</p>
+                )}
+                <div className="flex gap-3 justify-end">
+                  <button
+                    onClick={() => { setShowImportModal(false); setImportFile(null); setImportError(''); }}
+                    className="px-4 py-2.5 text-sm text-[var(--color-text-secondary)] border border-border-light rounded-xl hover:text-[var(--color-text-primary)]"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    disabled={!importFile || importing}
+                    onClick={() => {
+                      if (!importFile) { return; }
+                      void (async () => {
+                        setImporting(true);
+                        setImportError('');
+                        try {
+                          const token = await auth?.currentUser?.getIdToken();
+                          const fd = new FormData();
+                          fd.append('file', importFile);
+                          const res = await fetch('/api/leads/import', {
+                            method: 'POST',
+                            headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+                            body: fd,
+                          });
+                          const data = await res.json() as ImportResult & { error?: string };
+                          if (!res.ok) {
+                            throw new Error(data.error ?? 'Import failed');
+                          }
+                          setImportResult(data);
+                        } catch (err: unknown) {
+                          setImportError(err instanceof Error ? err.message : 'Import failed');
+                        } finally {
+                          setImporting(false);
+                        }
+                      })();
+                    }}
+                    className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-primary to-secondary text-white font-semibold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {importing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                    {importing ? 'Importing...' : 'Import'}
+                  </button>
+                </div>
+              </div>
+            )}
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }

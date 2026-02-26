@@ -1625,21 +1625,40 @@ export class AutonomousPostingAgent {
     try {
       const { generateText } = await import('@/lib/ai/gemini-service');
 
+      // Load Brand DNA for brand-aware content generation
+      let brandDnaContext = '';
+      try {
+        const { buildToolSystemPrompt } = await import('@/lib/brand/brand-dna-service');
+        const brandPrompt = await buildToolSystemPrompt('social');
+        if (brandPrompt) {
+          brandDnaContext = brandPrompt;
+        }
+      } catch {
+        // Non-blocking — generate without Brand DNA if unavailable
+      }
+
       // Load active Golden Playbook for brand voice + learned corrections
       let systemInstruction: string | undefined;
       try {
         const { getActivePlaybook } = await import('@/lib/social/golden-playbook-builder');
         const activePlaybook = await getActivePlaybook();
         if (activePlaybook?.compiledPrompt) {
-          systemInstruction = activePlaybook.compiledPrompt;
+          systemInstruction = brandDnaContext
+            ? `${brandDnaContext}\n\n${activePlaybook.compiledPrompt}`
+            : activePlaybook.compiledPrompt;
           logger.info('AutonomousPostingAgent: Using Golden Playbook for generation', {
             version: activePlaybook.version,
             isActive: activePlaybook.isActive,
             file: 'autonomous-posting-agent.ts',
           });
+        } else if (brandDnaContext) {
+          systemInstruction = brandDnaContext;
         }
       } catch (playbookError) {
         // Non-blocking — generate without playbook if unavailable
+        if (brandDnaContext) {
+          systemInstruction = brandDnaContext;
+        }
         logger.warn('AutonomousPostingAgent: Could not load Golden Playbook, generating without it', {
           error: playbookError instanceof Error ? playbookError.message : String(playbookError),
           file: 'autonomous-posting-agent.ts',

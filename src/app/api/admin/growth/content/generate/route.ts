@@ -57,6 +57,19 @@ export async function POST(request: NextRequest) {
     // Generate content using AI
     const { generateText } = await import('@/lib/ai/gemini-service');
 
+    // Load Brand DNA for brand-aware content generation
+    let brandDnaContext = '';
+    try {
+      const { buildToolSystemPrompt } = await import('@/lib/brand/brand-dna-service');
+      const toolType = type === 'social' ? 'social' : 'seo';
+      const brandPrompt = await buildToolSystemPrompt(toolType);
+      if (brandPrompt) {
+        brandDnaContext = brandPrompt;
+      }
+    } catch {
+      // Non-blocking — generate without Brand DNA if unavailable
+    }
+
     // Load Golden Playbook for social content generation
     let systemInstruction: string | undefined;
     if (type === 'social') {
@@ -64,12 +77,21 @@ export async function POST(request: NextRequest) {
         const { getActivePlaybook } = await import('@/lib/social/golden-playbook-builder');
         const activePlaybook = await getActivePlaybook();
         if (activePlaybook?.compiledPrompt) {
-          systemInstruction = activePlaybook.compiledPrompt;
+          systemInstruction = brandDnaContext
+            ? `${brandDnaContext}\n\n${activePlaybook.compiledPrompt}`
+            : activePlaybook.compiledPrompt;
+        } else if (brandDnaContext) {
+          systemInstruction = brandDnaContext;
         }
       } catch {
-        // Non-blocking — generate without playbook if unavailable
+        if (brandDnaContext) {
+          systemInstruction = brandDnaContext;
+        }
         logger.warn('[AdminContent] Could not load Golden Playbook for social generation', { file: 'content/generate/route.ts' });
       }
+    } else if (brandDnaContext) {
+      // Blog generation — use Brand DNA as system instruction
+      systemInstruction = brandDnaContext;
     }
 
     let prompt = '';

@@ -196,17 +196,30 @@ async function generateWithAI(
   const prompt = buildAIPrompt(request, tokens, template);
   
   try {
+    // Load Brand DNA for brand-aware email generation
+    let brandContext = '';
+    try {
+      const { buildToolSystemPrompt } = await import('@/lib/brand/brand-dna-service');
+      const brandPrompt = await buildToolSystemPrompt('seo');
+      if (brandPrompt) {
+        brandContext = brandPrompt;
+      }
+    } catch {
+      // Non-blocking — generate without Brand DNA if unavailable
+    }
+
     // Use unified AI service
     const { sendUnifiedChatMessage } = await import('@/lib/ai/unified-ai-service');
-    
+
+    const messages: Array<{ role: 'system' | 'user'; content: string }> = [];
+    if (brandContext) {
+      messages.push({ role: 'system', content: brandContext });
+    }
+    messages.push({ role: 'user', content: prompt });
+
     const response = await sendUnifiedChatMessage({
       model: 'gpt-4-turbo', // Use GPT-4 for best quality cold emails
-      messages: [
-        {
-          role: 'user',
-          content: prompt,
-        }
-      ],
+      messages,
       temperature: 0.7, // Some creativity but not too much
       maxTokens: 500,
     });

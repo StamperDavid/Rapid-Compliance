@@ -210,7 +210,7 @@ export async function generateSalesEmail(
       messages: [
         {
           role: 'system',
-          content: buildSystemPrompt(options, template, dealScore),
+          content: await buildSystemPrompt(options, template, dealScore),
         },
         {
           role: 'user',
@@ -302,16 +302,28 @@ export async function generateSalesEmail(
 /**
  * Build system prompt based on email type and deal context
  */
-function buildSystemPrompt(
+async function buildSystemPrompt(
   options: EmailGenerationOptions,
   template: EmailTemplate,
   dealScore?: DealScore
-): string {
+): Promise<string> {
   const dealTier = dealScore?.tier;
   const tier = (dealTier ?? 'warm');
   const score = dealScore?.score ?? 50;
-  
-  let systemPrompt = `You are an expert B2B sales email writer. Your goal is to write ${template.name} that:
+
+  // Load Brand DNA for brand-aware email generation
+  let brandContext = '';
+  try {
+    const { buildToolSystemPrompt } = await import('@/lib/brand/brand-dna-service');
+    const brandPrompt = await buildToolSystemPrompt('seo');
+    if (brandPrompt) {
+      brandContext = `${brandPrompt}\n`;
+    }
+  } catch {
+    // Non-blocking — generate without Brand DNA if unavailable
+  }
+
+  let systemPrompt = `${brandContext}You are an expert B2B sales email writer. Your goal is to write ${template.name} that:
 
 1. ${template.goal}
 2. Uses a ${options.tone ?? determineToneFromScore(dealScore)} tone

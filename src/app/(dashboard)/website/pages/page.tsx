@@ -31,6 +31,21 @@ interface CreatePageResponse {
   page: Page;
 }
 
+interface CloneWebsiteResponse {
+  success: boolean;
+  status: 'COMPLETED' | 'PARTIAL' | 'FAILED';
+  sourceUrl: string;
+  totalPages: number;
+  successCount: number;
+  failedCount: number;
+  pages: Array<{ url: string; status: string; slug?: string }>;
+  brand: { name?: string; colors?: string[]; fonts?: string[]; logo?: string };
+  editorLink: string;
+  message: string;
+}
+
+type CloneStatus = 'idle' | 'cloning' | 'success' | 'error';
+
 export default function PagesManagementPage() {
   const router = useRouter();
   const toast = useToast();
@@ -43,6 +58,15 @@ export default function PagesManagementPage() {
   const [aiPrompt, setAiPrompt] = useState('');
   const [aiPageType, setAiPageType] = useState('');
   const [aiGenerating, setAiGenerating] = useState(false);
+
+  // Clone Website state
+  const [showCloneModal, setShowCloneModal] = useState(false);
+  const [cloneSourceUrl, setCloneSourceUrl] = useState('');
+  const [cloneMaxPages, setCloneMaxPages] = useState(10);
+  const [cloneIncludeImages, setCloneIncludeImages] = useState(true);
+  const [cloneStatus, setCloneStatus] = useState<CloneStatus>('idle');
+  const [cloneResult, setCloneResult] = useState<CloneWebsiteResponse | null>(null);
+  const [cloneError, setCloneError] = useState('');
 
   // Use a ref for toast to avoid re-render loops in useCallback deps
   const toastRef = useRef(toast);
@@ -224,6 +248,59 @@ export default function PagesManagementPage() {
     router.push(`/website/editor?pageId=${pageId}`);
   }
 
+  async function cloneWebsite(): Promise<void> {
+    try {
+      new URL(cloneSourceUrl.trim());
+    } catch {
+      setCloneError('Please enter a valid URL (e.g. https://example.com)');
+      return;
+    }
+
+    try {
+      setCloneStatus('cloning');
+      setCloneError('');
+      setCloneResult(null);
+
+      const token = await auth?.currentUser?.getIdToken();
+      const response = await fetch('/api/website/migrate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          sourceUrl: cloneSourceUrl.trim(),
+          maxPages: cloneMaxPages,
+          includeImages: cloneIncludeImages,
+        }),
+      });
+
+      const data = await response.json() as CloneWebsiteResponse;
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.message ?? 'Clone failed');
+      }
+
+      setCloneResult(data);
+      setCloneStatus('success');
+      void loadPages();
+    } catch (error: unknown) {
+      logger.error('[Pages] Clone error', error instanceof Error ? error : new Error(String(error)));
+      setCloneError(error instanceof Error ? error.message : 'Clone failed');
+      setCloneStatus('error');
+    }
+  }
+
+  function resetCloneModal(): void {
+    setShowCloneModal(false);
+    setCloneSourceUrl('');
+    setCloneMaxPages(10);
+    setCloneIncludeImages(true);
+    setCloneStatus('idle');
+    setCloneResult(null);
+    setCloneError('');
+  }
+
   if (loading) {
     return (
       <div style={{ padding: '2rem', fontFamily: 'system-ui' }}>
@@ -253,6 +330,21 @@ export default function PagesManagementPage() {
           </div>
 
           <div style={{ display: 'flex', gap: '0.75rem' }}>
+            <button
+              onClick={() => setShowCloneModal(true)}
+              style={{
+                padding: '0.75rem 1.5rem',
+                background: 'linear-gradient(135deg, #0ea5e9, #2563eb)',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '1rem',
+                fontWeight: '600',
+              }}
+            >
+              Clone Website
+            </button>
             <button
               onClick={() => setShowAIModal(true)}
               style={{
@@ -586,6 +678,121 @@ export default function PagesManagementPage() {
                 {aiGenerating ? 'Generating...' : 'Generate Page'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Clone Website Modal */}
+      {showCloneModal && (
+        <div
+          style={{
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+            background: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            zIndex: 1000,
+          }}
+          onClick={() => cloneStatus !== 'cloning' && resetCloneModal()}
+        >
+          <div
+            style={{
+              background: 'var(--color-bg-paper)',
+              borderRadius: '12px', padding: '2rem',
+              width: '100%', maxWidth: '540px',
+              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            <h2 style={{ margin: '0 0 0.5rem', fontSize: '1.5rem', color: 'var(--color-text-primary)' }}>
+              Clone Website
+            </h2>
+            <p style={{ margin: '0 0 1.5rem', color: 'var(--color-text-secondary)', fontSize: '0.875rem' }}>
+              Import pages from an existing website into your website builder.
+            </p>
+
+            {cloneStatus === 'cloning' && (
+              <div style={{ textAlign: 'center', padding: '2rem 0' }}>
+                <div style={{ fontSize: '2rem', marginBottom: '1rem', animation: 'spin 1s linear infinite' }}>&#9881;</div>
+                <p style={{ color: 'var(--color-text-secondary)', margin: 0 }}>Cloning in progress... This may take a minute.</p>
+              </div>
+            )}
+
+            {cloneStatus === 'success' && cloneResult && (
+              <div>
+                <div style={{
+                  background: 'var(--color-bg-elevated)', borderRadius: '8px',
+                  padding: '1.25rem', marginBottom: '1.5rem',
+                  border: '1px solid var(--color-border-light)',
+                }}>
+                  <p style={{ margin: '0 0 0.5rem', fontWeight: '600', color: 'var(--color-text-primary)' }}>
+                    Clone complete
+                  </p>
+                  <p style={{ margin: '0 0 0.25rem', fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>
+                    Pages cloned: {cloneResult.successCount} / {cloneResult.totalPages}
+                  </p>
+                  {cloneResult.brand?.name && (
+                    <p style={{ margin: '0 0 0.25rem', fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>
+                      Brand extracted: {cloneResult.brand.name}
+                    </p>
+                  )}
+                  {cloneResult.failedCount > 0 && (
+                    <p style={{ margin: '0.25rem 0 0', fontSize: '0.875rem', color: 'var(--color-warning)' }}>
+                      {cloneResult.failedCount} page(s) could not be cloned.
+                    </p>
+                  )}
+                </div>
+                <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+                  <button onClick={resetCloneModal} style={{ padding: '0.75rem 1.5rem', background: 'transparent', color: 'var(--color-text-secondary)', border: '1px solid var(--color-border-light)', borderRadius: '6px', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '500' }}>
+                    Close
+                  </button>
+                  <button onClick={() => { resetCloneModal(); void loadPages(); }} style={{ padding: '0.75rem 1.5rem', background: 'linear-gradient(135deg, #0ea5e9, #2563eb)', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600' }}>
+                    View Pages
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {(cloneStatus === 'idle' || cloneStatus === 'error') && (
+              <div>
+                <div style={{ marginBottom: '1rem' }}>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', fontSize: '0.875rem', color: 'var(--color-text-primary)' }}>
+                    Source URL
+                  </label>
+                  <input
+                    type="url" value={cloneSourceUrl} onChange={e => setCloneSourceUrl(e.target.value)}
+                    placeholder="https://example.com"
+                    style={{ width: '100%', padding: '0.75rem', border: '1px solid var(--color-border-light)', borderRadius: '6px', fontSize: '0.875rem', fontFamily: 'inherit', background: 'var(--color-bg-elevated)', color: 'var(--color-text-primary)', boxSizing: 'border-box' }}
+                  />
+                </div>
+                <div style={{ marginBottom: '1rem' }}>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', fontSize: '0.875rem', color: 'var(--color-text-primary)' }}>
+                    Max pages (1-20)
+                  </label>
+                  <input
+                    type="number" min={1} max={20} value={cloneMaxPages}
+                    onChange={e => setCloneMaxPages(Math.min(20, Math.max(1, Number(e.target.value))))}
+                    style={{ width: '100%', padding: '0.75rem', border: '1px solid var(--color-border-light)', borderRadius: '6px', fontSize: '0.875rem', fontFamily: 'inherit', background: 'var(--color-bg-elevated)', color: 'var(--color-text-primary)', boxSizing: 'border-box' }}
+                  />
+                </div>
+                <div style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <input id="clone-include-images" type="checkbox" checked={cloneIncludeImages} onChange={e => setCloneIncludeImages(e.target.checked)} style={{ width: '1rem', height: '1rem', cursor: 'pointer' }} />
+                  <label htmlFor="clone-include-images" style={{ fontSize: '0.875rem', color: 'var(--color-text-primary)', cursor: 'pointer' }}>Include images</label>
+                </div>
+                {cloneStatus === 'error' && cloneError && (
+                  <p style={{ margin: '0 0 1rem', fontSize: '0.875rem', color: 'var(--color-error)' }}>{cloneError}</p>
+                )}
+                <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+                  <button onClick={resetCloneModal} style={{ padding: '0.75rem 1.5rem', background: 'transparent', color: 'var(--color-text-secondary)', border: '1px solid var(--color-border-light)', borderRadius: '6px', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '500' }}>
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => void cloneWebsite()} disabled={!cloneSourceUrl.trim()}
+                    style={{ padding: '0.75rem 1.5rem', background: cloneSourceUrl.trim() ? 'linear-gradient(135deg, #0ea5e9, #2563eb)' : 'var(--color-text-disabled)', color: 'white', border: 'none', borderRadius: '6px', cursor: cloneSourceUrl.trim() ? 'pointer' : 'not-allowed', fontSize: '0.875rem', fontWeight: '600' }}
+                  >
+                    Start Cloning
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

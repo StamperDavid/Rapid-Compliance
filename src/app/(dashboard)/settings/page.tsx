@@ -45,6 +45,7 @@ export default function SettingsPage() {
       title: 'Customization',
       items: [
         { icon: '🎨', label: 'CRM Theme & Branding', description: 'White-label your CRM platform with custom colors and logo', href: `/settings/theme`, permission: canManageTheme },
+        { icon: '🧬', label: 'Brand DNA', description: 'Define your brand identity for AI-powered email, social, and content generation', href: `/settings/brand-dna`, permission: canManageTheme },
       ]
     },
     {
