@@ -20,6 +20,7 @@ const SEED_USER_ID = 'system-seed';
 
 // No prefix — single Firestore path for all environments
 const PREFIX = '';
+const APP_ENV = process.env.NEXT_PUBLIC_APP_ENV ?? process.env.NODE_ENV ?? 'development';
 
 // Path builders
 const orgDoc = `organizations/${PLATFORM_ID}`;
@@ -339,8 +340,13 @@ async function main() {
       createdBy: SEED_USER_ID,
       notes: 'Auto-generated from seed-onboarding.ts',
     };
-    await db.doc(`${subCol('baseModels')}/base-model-seed-001`).set(baseModel);
-    console.log('        ✅ Base model saved');
+    // Save to top-level baseModels collection (where getBaseModel() queries)
+    // with orgId field so the where('orgId', '==', PLATFORM_ID) filter finds it
+    await db.doc(`baseModels/base-model-seed-001`).set({
+      ...baseModel,
+      orgId: PLATFORM_ID,
+    });
+    console.log('        ✅ Base model saved to top-level baseModels collection');
   } catch (error) {
     console.error('        ❌ Processor error (non-fatal):', error);
     console.log('        Onboarding data is still written — processor can be re-run from the UI.');

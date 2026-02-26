@@ -158,14 +158,17 @@ export async function saveBaseModel(baseModel: BaseModel): Promise<void> {
     file: 'base-model-builder.ts'
   });
   
+  const dataToSave = {
+    ...baseModel,
+    orgId: PLATFORM_ID,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+
   if (isServer) {
     // Server-side: Use Admin SDK (bypasses security rules)
     const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
-    await AdminFirestoreService.set('baseModels', baseModel.id, {
-      ...baseModel,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    });
+    await AdminFirestoreService.set('baseModels', baseModel.id, dataToSave);
     logger.info('[saveBaseModel] Successfully saved to baseModels collection', { file: 'base-model-builder.ts' });
   } else {
     // Client-side: Use Client SDK with DAL (follows security rules)
@@ -173,6 +176,7 @@ export async function saveBaseModel(baseModel: BaseModel): Promise<void> {
     const { serverTimestamp } = await import('firebase/firestore');
     await dal.safeSetDoc('BASE_MODELS', baseModel.id, {
       ...baseModel,
+      orgId: PLATFORM_ID,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     }, {

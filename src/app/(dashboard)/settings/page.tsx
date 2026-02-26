@@ -118,11 +118,6 @@ export default function SettingsPage() {
                 {user?.email} • {user?.role && <span style={{ textTransform: 'capitalize', color: primaryColor, fontWeight: '600' }}>{user.role}</span>}
               </p>
             </div>
-            {canManageOrganization && (
-              <Link href={`/settings/organization`} style={{ padding: '0.625rem 1.25rem', backgroundColor: 'var(--color-bg-elevated)', color: 'var(--color-text-primary)', borderRadius: '0.5rem', textDecoration: 'none', fontSize: '0.875rem', fontWeight: '500', border: '1px solid var(--color-border-light)' }}>
-                Edit Details
-              </Link>
-            )}
           </div>
         </div>
 
