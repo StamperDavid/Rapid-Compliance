@@ -10,11 +10,11 @@
 import { SPECIALISTS, getSpecialist, type SpecialistPlatform } from './feature-manifest';
 import { SYSTEM_BLUEPRINT } from './system-blueprint';
 import { SystemHealthService } from './system-health-service';
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { COLLECTIONS, getSubCollection } from '@/lib/firebase/collections';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import { orderBy, limit as firestoreLimit } from 'firebase/firestore';
-import { getSubCollection } from '@/lib/firebase/collections';
 import {
   addMissionStep,
   updateMissionStep,
@@ -2111,9 +2111,9 @@ export async function executeGetPlatformStats(
     };
 
     if (metric === 'all' || metric === 'organizations') {
-      // Get organization counts from Firestore
-      const orgsSnapshot = await FirestoreService.getAll(COLLECTIONS.ORGANIZATIONS);
-      const orgs = (orgsSnapshot || []) as OrganizationRecord[];
+      // Get organization counts from Firestore (Admin SDK for server-side reliability)
+      const orgsSnapshot = await AdminFirestoreService.getAll(COLLECTIONS.ORGANIZATIONS);
+      const orgs = (orgsSnapshot || []) as unknown as OrganizationRecord[];
 
       stats.organizations = {
         total: orgs.length,
@@ -2652,9 +2652,9 @@ export async function executeGetSystemState(): Promise<SystemState> {
   };
 
   try {
-    // Fetch real organization data
-    const orgsSnapshot = await FirestoreService.getAll(COLLECTIONS.ORGANIZATIONS);
-    const orgs = (orgsSnapshot || []) as OrganizationRecord[];
+    // Fetch real organization data (Admin SDK for server-side reliability)
+    const orgsSnapshot = await AdminFirestoreService.getAll(COLLECTIONS.ORGANIZATIONS);
+    const orgs = (orgsSnapshot || []) as unknown as OrganizationRecord[];
 
     state.platform = {
       totalOrganizations: orgs.length,
@@ -2742,8 +2742,8 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
       // ═══════════════════════════════════════════════════════════════════════
       case 'list_organizations': {
         const typedArgs = args as unknown as ListOrganizationsArgs;
-        const orgs = await FirestoreService.getAll(COLLECTIONS.ORGANIZATIONS);
-        let filtered = (orgs ?? []) as OrganizationRecord[];
+        const orgs = await AdminFirestoreService.getAll(COLLECTIONS.ORGANIZATIONS);
+        let filtered = (orgs ?? []) as unknown as OrganizationRecord[];
         if (typedArgs.status && typedArgs.status !== 'all') {
           filtered = filtered.filter((o) => o.status === typedArgs.status || o.plan === typedArgs.status);
         }
@@ -2765,7 +2765,7 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
       }
 
       case 'get_organization': {
-        const org = await FirestoreService.get(COLLECTIONS.ORGANIZATIONS, args.PLATFORM_ID as string);
+        const org = await AdminFirestoreService.get(COLLECTIONS.ORGANIZATIONS, args.PLATFORM_ID as string);
         content = JSON.stringify(org ?? { error: 'Organization not found' });
         break;
       }
@@ -2777,7 +2777,7 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
         } catch {
           updates = { note: args.updates };
         }
-        await FirestoreService.update(COLLECTIONS.ORGANIZATIONS, args.PLATFORM_ID as string, updates);
+        await AdminFirestoreService.update(COLLECTIONS.ORGANIZATIONS, args.PLATFORM_ID as string, updates);
         content = JSON.stringify({ success: true, PLATFORM_ID: args.PLATFORM_ID, updates });
         break;
       }
@@ -2797,8 +2797,8 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
       // COUPON & PRICING TOOLS
       // ═══════════════════════════════════════════════════════════════════════
       case 'list_coupons': {
-        const coupons = await FirestoreService.getAll('platform-coupons');
-        let filtered = (coupons ?? []) as CouponRecord[];
+        const coupons = await AdminFirestoreService.getAll('platform-coupons');
+        let filtered = (coupons ?? []) as unknown as CouponRecord[];
         if (args.status && args.status !== 'all') {
           filtered = filtered.filter((c) => c.status === args.status);
         }
@@ -2819,19 +2819,19 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
           usageCount: 0,
           createdAt: new Date().toISOString(),
         };
-        await FirestoreService.set('platform-coupons', couponData.code, couponData, false);
+        await AdminFirestoreService.set('platform-coupons', couponData.code, couponData);
         content = JSON.stringify({ success: true, coupon: couponData });
         break;
       }
 
       case 'update_coupon_status': {
-        await FirestoreService.update('platform-coupons', args.couponId as string, { status: args.status });
+        await AdminFirestoreService.update('platform-coupons', args.couponId as string, { status: args.status as string });
         content = JSON.stringify({ success: true, couponId: args.couponId, status: args.status });
         break;
       }
 
       case 'get_pricing_tiers': {
-        const pricing = (await FirestoreService.get('platform-config', 'pricing')) ?? {
+        const pricing = (await AdminFirestoreService.get('platform-config', 'pricing')) ?? {
           tiers: {
             starter: { monthly: 49, yearly: 470, features: ['CRM', 'Lead Gen', '5 Agents'] },
             professional: { monthly: 99, yearly: 950, features: ['All Starter', '11 Agents', 'Analytics'] },
@@ -2929,8 +2929,8 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
       // ═══════════════════════════════════════════════════════════════════════
       case 'list_users': {
         const typedArgs = args as unknown as ListUsersArgs;
-        const users = await FirestoreService.getAll('users');
-        let filtered = (users ?? []) as UserRecord[];
+        const users = await AdminFirestoreService.getAll(COLLECTIONS.USERS);
+        let filtered = (users ?? []) as unknown as UserRecord[];
         if (typedArgs.PLATFORM_ID) {
           filtered = filtered.filter((u) => u.PLATFORM_ID === typedArgs.PLATFORM_ID);
         }
@@ -2950,7 +2950,7 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
       }
 
       case 'update_user_role': {
-        await FirestoreService.update('users', args.userId as string, { role: args.newRole });
+        await AdminFirestoreService.update(COLLECTIONS.USERS, args.userId as string, { role: args.newRole as string });
         content = JSON.stringify({ success: true, userId: args.userId, newRole: args.newRole });
         break;
       }
@@ -3189,8 +3189,8 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
         };
 
         if (args.reportType === 'overview' || args.reportType === 'all') {
-          const orgsData = await FirestoreService.getAll(COLLECTIONS.ORGANIZATIONS);
-          const orgs = (orgsData ?? []) as OrganizationRecord[];
+          const orgsData = await AdminFirestoreService.getAll(COLLECTIONS.ORGANIZATIONS);
+          const orgs = (orgsData ?? []) as unknown as OrganizationRecord[];
           analytics.overview = {
             totalOrganizations: orgs.length,
             activeTrials: orgs.filter((o) => o.plan === 'trial').length,
@@ -4106,10 +4106,10 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
           timestamp: string;
         }
 
-        const docs = await FirestoreService.getAll<StoredConversation>(messagesPath, [
+        const docs = await AdminFirestoreService.getAll(messagesPath, [
           orderBy('timestamp', 'desc'),
           firestoreLimit(recallLimit),
-        ]);
+        ]) as unknown as StoredConversation[];
 
         if (docs.length === 0) {
           content = JSON.stringify({
