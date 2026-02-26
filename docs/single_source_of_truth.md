@@ -1,7 +1,7 @@
 # SalesVelocity.ai - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** February 24, 2026 (Video Content Library — gallery, review flow & Jasper pipeline integration)
+**Last Updated:** February 25, 2026 (Admin SDK migration — 64 API routes, system page rewrite, smoke test 48/48)
 **Branches:** `dev` (latest)
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Architecture:** Single-Tenant (Penthouse Model) - NOT a SaaS platform
@@ -142,9 +142,9 @@ The Claude Code Governance Layer defines binding operational constraints for AI-
 
 ---
 
-## Current Status (February 23, 2026)
+## Current Status (February 25, 2026)
 
-### Production Readiness: ~95%
+### Production Readiness: ~97%
 
 | Area | Status |
 |------|--------|
@@ -167,6 +167,11 @@ The Claude Code Governance Layer defines binding operational constraints for AI-
 | ~~**Mission Control UI**~~ | ~~No live delegation tracker~~ | ~~MEDIUM~~ | **RESOLVED (Sprint 18)** — `/mission-control` with 3-panel layout, live polling, approval gates |
 | **Video render pipeline** | Returns empty responses; real integrations gated by API keys | LOW |
 | **Asset Generator** | Returns empty; no actual image generation | LOW |
+| ~~**Client SDK in API routes**~~ | ~~63 API routes using FirestoreService (client) instead of AdminFirestoreService~~ | ~~CRITICAL~~ | **RESOLVED (Feb 25, 2026)** — All 64 API routes migrated to Admin SDK |
+| ~~**System page dead links**~~ | ~~6 `/admin/*` links pointing to non-existent routes, hardcoded stats~~ | ~~MEDIUM~~ | **RESOLVED (Feb 25, 2026)** — Rewritten with live health API data and real settings links |
+| **Stripe live keys** | Test keys configured; live keys blocked on bank account setup | MEDIUM |
+| **PageSpeed API** | Google API key saved but API not enabled in Cloud Console | LOW |
+| **Stub integrations** | Salesforce, HubSpot (field mapping only), QuickBooks (partial), Shopify (types only) | LOW |
 
 ### Active Roadmap
 
@@ -178,6 +183,7 @@ The Claude Code Governance Layer defines binding operational constraints for AI-
 | **Sprint 21** | Website Migration Pipeline — "clone this site" via Jasper + web_migrator (deep scrape → blueprint → AI page gen → assemble) | **COMPLETE** (Feb 24, 2026) |
 | **Sprint 22** | Security Hardening — webhook fail-closed, workflow timeouts + depth limits, SMS orchestrator wiring | **COMPLETE** (Feb 24, 2026) |
 | **Sprint 23** | Mission Control Live Stream — SSE streaming replaces 5s polling, cancel button, tool args/results in step detail | **COMPLETE** (Feb 24, 2026) |
+| **Sprint 24** | Admin SDK Migration — 64 API routes migrated from Client SDK to Admin SDK, system page rewrite, API keys to Firestore | **COMPLETE** (Feb 25, 2026) |
 
 ### Completed Roadmaps (Archived)
 
@@ -1446,6 +1452,16 @@ The following endpoints have working infrastructure (rate limiting, caching, aut
 - `/api/commerce/brief` — CommerceBrief revenue metrics
 - `/api/reputation/brief` — ReputationBrief trust scores
 - `/api/risk/interventions` — Risk intervention CRUD
+
+**Admin SDK Migration (February 25, 2026):**
+
+All 64 API routes that were using the client-side `FirestoreService` have been migrated to `AdminFirestoreService` (Firebase Admin SDK). This resolves PERMISSION_DENIED errors in production where server-side routes were incorrectly using the client SDK which is subject to Firestore security rules.
+
+**Affected areas:** admin, analytics, agent, chat, checkout, contacts, coupons, custom-tools, ecommerce, email tracking, integrations, leads, learning, notifications, orchestrator, outbound, public, reports, settings, setup, social, subscriptions, team, training, webhooks, voice fallback.
+
+**Smoke test:** 48/48 passing (100%) after migration.
+
+**API Keys to Firestore:** All service API keys (OpenRouter, SendGrid, Stripe, Twilio, ElevenLabs, HeyGen, Serper, DataForSEO, Twitter/X, Slack, PageSpeed) are now stored in Firestore via `apiKeyService` rather than `.env` files. `process.env` remains as fallback for development and for system secrets (webhook verification keys, Firebase admin credentials, encryption keys).
 
 ### Testing Infrastructure (Audit: January 30, 2026)
 
