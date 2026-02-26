@@ -7,9 +7,8 @@
  * @module jasper-tools
  */
 
-import { readFileSync } from 'fs';
-import { join } from 'path';
 import { SPECIALISTS, getSpecialist, type SpecialistPlatform } from './feature-manifest';
+import { SYSTEM_BLUEPRINT } from './system-blueprint';
 import { SystemHealthService } from './system-health-service';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import { logger } from '@/lib/logger/logger';
@@ -1916,16 +1915,8 @@ export function executeQueryDocs(
   section?: string
 ): Promise<BlueprintSection[]> {
   try {
-    // Read the blueprint file
-    const blueprintPath = join(__dirname, 'system-blueprint.md');
-    let blueprintContent: string;
-
-    try {
-      blueprintContent = readFileSync(blueprintPath, 'utf-8');
-    } catch {
-      // Fallback: return hardcoded essential info if file not accessible at runtime
-      return Promise.resolve(getHardcodedBlueprintSection(query, section));
-    }
+    // Blueprint is imported as a build-time constant — always available at runtime
+    const blueprintContent = SYSTEM_BLUEPRINT;
 
     const results: BlueprintSection[] = [];
     const queryLower = query.toLowerCase();
