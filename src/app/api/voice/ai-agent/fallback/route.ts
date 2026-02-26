@@ -195,10 +195,10 @@ async function logFallback(
   context: ConversationContext | undefined
 ): Promise<void> {
   try {
-    const { FirestoreService } = await import('@/lib/db/firestore-service');
+    const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
 
     const logId = `fallback-${callId}-${Date.now()}`;
-    await FirestoreService.set(
+    await AdminFirestoreService.set(
       'conversationFallbacks',
       logId,
       {
