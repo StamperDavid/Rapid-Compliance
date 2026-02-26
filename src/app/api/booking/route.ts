@@ -46,11 +46,11 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       return NextResponse.json({ error: 'date query param required (YYYY-MM-DD)' }, { status: 400 });
     }
 
-    // Load booking config from Firestore
-    const { FirestoreService } = await import('@/lib/db/firestore-service');
+    // Load booking config from Firestore (Admin SDK — public endpoint)
+    const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
     const { getSubCollection } = await import('@/lib/firebase/collections');
 
-    const configDoc = await FirestoreService.get(getSubCollection('settings'), 'booking');
+    const configDoc = await AdminFirestoreService.get(getSubCollection('settings'), 'booking');
     const config = (configDoc ?? {}) as Record<string, unknown>;
 
     const businessStart = typeof config.businessHoursStart === 'number' ? config.businessHoursStart : 9;
@@ -58,7 +58,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const timezone = typeof config.timezone === 'string' ? config.timezone : 'America/New_York';
 
     // Check if Google Calendar tokens exist for availability check
-    const calendarTokenDoc = await FirestoreService.get(getSubCollection('integrations'), 'google-calendar');
+    const calendarTokenDoc = await AdminFirestoreService.get(getSubCollection('integrations'), 'google-calendar');
     const calendarTokens = calendarTokenDoc as { access_token?: string; refresh_token?: string } | null;
 
     const requestedDate = new Date(`${dateStr}T00:00:00`);
@@ -95,7 +95,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     // Also check existing bookings in Firestore
     const bookingsPath = getSubCollection('bookings');
     const { where: firestoreWhere } = await import('firebase/firestore');
-    const existingBookings = await FirestoreService.getAll(bookingsPath, [
+    const existingBookings = await AdminFirestoreService.getAll(bookingsPath, [
       firestoreWhere('date', '==', dateStr),
       firestoreWhere('status', '==', 'confirmed'),
     ]);
@@ -186,12 +186,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     endTime.setMinutes(endTime.getMinutes() + duration);
 
     // Verify the slot is still available (prevent double-booking)
-    const { FirestoreService } = await import('@/lib/db/firestore-service');
+    const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
     const { getSubCollection } = await import('@/lib/firebase/collections');
 
     const bookingsPath = getSubCollection('bookings');
     const { where: fw } = await import('firebase/firestore');
-    const existingBookings = await FirestoreService.getAll<Record<string, unknown>>(bookingsPath, [
+    const existingBookings = await AdminFirestoreService.getAll(bookingsPath, [
       fw('date', '==', date),
       fw('status', '==', 'confirmed'),
     ]);
@@ -230,12 +230,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       createdAt: new Date().toISOString(),
     };
 
-    await FirestoreService.set(bookingsPath, bookingId, booking);
+    await AdminFirestoreService.set(bookingsPath, bookingId, booking);
 
     // Try to create Google Calendar event (non-blocking)
     void (async () => {
       try {
-        const calendarTokenDoc = await FirestoreService.get(getSubCollection('integrations'), 'google-calendar');
+        const calendarTokenDoc = await AdminFirestoreService.get(getSubCollection('integrations'), 'google-calendar');
         const calendarTokens = calendarTokenDoc as { access_token?: string; refresh_token?: string } | null;
 
         if (calendarTokens?.access_token) {
