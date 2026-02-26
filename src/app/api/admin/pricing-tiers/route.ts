@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { FirestoreService } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { requireRole } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
 
@@ -37,7 +37,8 @@ export async function GET(request: NextRequest) {
     }
 
     // Get pricing tiers from Firestore
-    const pricingDoc = await FirestoreService.get<PricingDoc>('platform_config', 'pricing_tiers');
+    const pricingDocRaw = await AdminFirestoreService.get('platform_config', 'pricing_tiers');
+    const pricingDoc = pricingDocRaw as PricingDoc | null;
 
     if (pricingDoc?.tiers) {
       return NextResponse.json({ success: true, tiers: pricingDoc.tiers });
@@ -88,7 +89,7 @@ export async function POST(request: NextRequest) {
     const { tiers } = validationResult.data;
 
     // Save to Firestore
-    await FirestoreService.set('platform_config', 'pricing_tiers', {
+    await AdminFirestoreService.set('platform_config', 'pricing_tiers', {
       tiers,
       updatedAt: new Date().toISOString(),
       updatedBy: user.uid,

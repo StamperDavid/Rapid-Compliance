@@ -5,7 +5,7 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireAuth } from '@/lib/auth/api-auth';
-import { FirestoreService } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { applyUpdateRequest } from '@/lib/training/golden-master-updater';
 import type { GoldenMasterUpdateRequest } from '@/types/training';
 import { logger } from '@/lib/logger/logger';
@@ -42,10 +42,10 @@ export async function POST(request: NextRequest) {
     const { updateRequestId, approved, reviewNotes } = parseResult.data;
 
     // Get the update request
-    const updateRequest = await FirestoreService.get(
+    const updateRequest = await AdminFirestoreService.get(
       getSubCollection('goldenMasterUpdates'),
       updateRequestId
-    ) as GoldenMasterUpdateRequest;
+    ) as unknown as GoldenMasterUpdateRequest;
 
     if (!updateRequest) {
       return NextResponse.json(
@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
 
     if (!approved) {
       // Reject the update request
-      await FirestoreService.set(
+      await AdminFirestoreService.set(
         getSubCollection('goldenMasterUpdates'),
         updateRequestId,
         {
@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Approve and apply the update request
-    await FirestoreService.set(
+    await AdminFirestoreService.set(
       getSubCollection('goldenMasterUpdates'),
       updateRequestId,
       {

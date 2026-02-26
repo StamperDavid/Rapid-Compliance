@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from 'next/server';
-import { FirestoreService } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { COLLECTIONS, getMerchantCouponsCollection } from '@/lib/firebase/collections';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
@@ -21,10 +21,10 @@ export async function GET(
 
     // Get all coupons
     const couponsPath = getMerchantCouponsCollection();
-    const coupons = await FirestoreService.getAll<MerchantCoupon>(couponsPath) ?? [];
+    const coupons = ((await AdminFirestoreService.getAll(couponsPath)) as unknown as MerchantCoupon[]) ?? [];
 
     // Get redemptions for merchant coupons
-    const allRedemptions = await FirestoreService.getAll<CouponRedemption>(COLLECTIONS.COUPON_REDEMPTIONS) ?? [];
+    const allRedemptions = ((await AdminFirestoreService.getAll(COLLECTIONS.COUPON_REDEMPTIONS)) as unknown as CouponRedemption[]) ?? [];
     const redemptions = allRedemptions.filter(
       r => r.coupon_type === 'merchant'
     );

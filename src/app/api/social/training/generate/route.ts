@@ -9,7 +9,7 @@ import { z } from 'zod';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
-import { FirestoreService } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { COLLECTIONS, getSubCollection } from '@/lib/firebase/collections';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import type { ModelName } from '@/types/ai-models';
@@ -68,8 +68,8 @@ export async function POST(request: NextRequest) {
 
     // Load training settings and brand DNA in parallel
     const [settingsData, orgData] = await Promise.all([
-      FirestoreService.get(TRAINING_COLLECTION, 'social'),
-      FirestoreService.get(COLLECTIONS.ORGANIZATIONS, PLATFORM_ID),
+      AdminFirestoreService.get(TRAINING_COLLECTION, 'social'),
+      AdminFirestoreService.get(COLLECTIONS.ORGANIZATIONS, PLATFORM_ID),
     ]);
 
     const settings = settingsData as TrainingSettings | null | undefined;
@@ -109,7 +109,7 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
     // Try AI generation
     let responseText = '';
     try {
-      const adminKeysRaw = await FirestoreService.get('admin', 'platform-api-keys');
+      const adminKeysRaw = await AdminFirestoreService.get('admin', 'platform-api-keys');
       const adminKeys = adminKeysRaw as { openrouter?: { apiKey?: string } } | null | undefined;
 
       if (adminKeys?.openrouter?.apiKey) {
@@ -158,7 +158,7 @@ Generate ONLY the post content, keeping it under ${platformLimit} characters. In
 
     // Optionally save to history
     if (saveToHistory) {
-      await FirestoreService.set(HISTORY_COLLECTION, postId, {
+      await AdminFirestoreService.set(HISTORY_COLLECTION, postId, {
         ...post,
         saved: true,
       }, false);

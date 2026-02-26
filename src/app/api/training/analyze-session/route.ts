@@ -5,7 +5,7 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireAuth } from '@/lib/auth/api-auth';
-import { FirestoreService } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { analyzeTrainingSession } from '@/lib/training/feedback-processor';
 import type { TrainingSession } from '@/types/training';
 import { logger } from '@/lib/logger/logger';
@@ -40,10 +40,10 @@ export async function POST(request: NextRequest) {
     const { sessionId } = parseResult.data;
 
     // Get the training session
-    const session = await FirestoreService.get(
+    const session = await AdminFirestoreService.get(
       getSubCollection('trainingSessions'),
       sessionId
-    ) as TrainingSession;
+    ) as unknown as TrainingSession;
 
     if (!session) {
       return NextResponse.json(
@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
     const analysis = await analyzeTrainingSession(session);
 
     // Update the session with analysis
-    await FirestoreService.set(
+    await AdminFirestoreService.set(
       getSubCollection('trainingSessions'),
       sessionId,
       {

@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic';
 
 import { type NextRequest, NextResponse } from 'next/server';
-import { FirestoreService } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
@@ -45,7 +45,7 @@ export async function GET(
     const userAgent = request.headers.get('user-agent') ?? 'unknown';
 
     // Fire and forget - try to record tracking event
-    FirestoreService.set(
+    AdminFirestoreService.set(
       'emailTrackingEvents',
       `${trackingId}_${Date.now()}`,
       {

@@ -7,7 +7,7 @@ import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { PLATFORM_ID } from '@/lib/constants/platform';
-import { FirestoreService } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { getOrdersCollection } from '@/lib/firebase/collections';
 
 export const dynamic = 'force-dynamic';
@@ -125,7 +125,7 @@ export async function POST(request: NextRequest) {
       updatedAt: now,
     };
 
-    await FirestoreService.set(
+    await AdminFirestoreService.set(
       getOrdersCollection(),
       orderId,
       orderRecord

@@ -8,7 +8,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
-import { FirestoreService } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { getSubCollection } from '@/lib/firebase/collections';
 import type { SocialMediaPost, PostMetrics } from '@/types/social';
 
@@ -35,10 +35,10 @@ export async function GET(request: NextRequest) {
     const { where, orderBy, limit } = await import('firebase/firestore');
 
     // Fetch published posts (up to 100, most recent first)
-    const publishedPosts = await FirestoreService.getAll<SocialMediaPost>(
+    const publishedPosts = (await AdminFirestoreService.getAll(
       SOCIAL_POSTS_COLLECTION,
       [where('status', '==', 'published'), orderBy('publishedAt', 'desc'), limit(100)]
-    ).catch(() => [] as SocialMediaPost[]);
+    ).catch(() => [])) as SocialMediaPost[];
 
     // Filter to posts that have metrics data
     const postsWithMetrics = publishedPosts.filter(

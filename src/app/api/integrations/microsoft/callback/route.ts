@@ -5,7 +5,8 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { getTokensFromCode } from '@/lib/integrations/outlook-service';
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
+import { COLLECTIONS } from '@/lib/firebase/collections';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { logger } from '@/lib/logger/logger';
 import { PLATFORM_ID } from '@/lib/constants/platform';
@@ -39,7 +40,7 @@ export async function GET(request: NextRequest) {
 
     const tokens = await getTokensFromCode(code);
 
-    await FirestoreService.set(
+    await AdminFirestoreService.set(
       COLLECTIONS.INTEGRATIONS,
       `microsoft_${userId}`,
       {

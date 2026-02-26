@@ -1,11 +1,11 @@
 import { type NextRequest, NextResponse } from 'next/server';
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
+import { COLLECTIONS, getSubCollection } from '@/lib/firebase/collections';
 import { logger } from '@/lib/logger/logger';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { PLATFORM_ID } from '@/lib/constants/platform';
-import { getSubCollection } from '@/lib/firebase/collections';
 
 export const dynamic = 'force-dynamic';
 
@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
     const now = new Date();
 
     // Create organization document
-    await FirestoreService.set(
+    await AdminFirestoreService.set(
       COLLECTIONS.ORGANIZATIONS,
       PLATFORM_ID,
       {
@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
     );
 
     // Enable chat widget
-    await FirestoreService.set(
+    await AdminFirestoreService.set(
       getSubCollection('settings'),
       'chatWidget',
       {
@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
     );
 
     // Set default agent config
-    await FirestoreService.set(
+    await AdminFirestoreService.set(
       getSubCollection('agentConfig'),
       'default',
       {

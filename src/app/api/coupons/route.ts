@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from 'next/server';
-import { FirestoreService } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { getMerchantCouponsCollection } from '@/lib/firebase/collections';
 import { requireAuth, requireRole } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
@@ -46,7 +46,7 @@ export async function GET(
 
     // Get all coupons from merchant's sub-collection
     const couponsPath = getMerchantCouponsCollection();
-    const coupons = await FirestoreService.getAll<MerchantCoupon>(couponsPath);
+    const coupons = (await AdminFirestoreService.getAll(couponsPath)) as unknown as MerchantCoupon[];
 
     return NextResponse.json({
       success: true,
@@ -93,7 +93,7 @@ export async function POST(
 
     if (!couponId) {
       // Check if code already exists
-      const existingCoupons = await FirestoreService.getAll<MerchantCoupon>(couponsPath);
+      const existingCoupons = (await AdminFirestoreService.getAll(couponsPath)) as unknown as MerchantCoupon[];
       const existing = existingCoupons?.find(c => c.code === normalizedCode);
 
       if (existing) {
@@ -108,7 +108,7 @@ export async function POST(
     }
 
     // Get existing data if updating
-    const existingCoupon = isNew ? null : await FirestoreService.get<MerchantCoupon>(couponsPath, couponId);
+    const existingCoupon = isNew ? null : await AdminFirestoreService.get(couponsPath, couponId) as MerchantCoupon | null;
 
     // Build coupon object
     const coupon: MerchantCoupon = {
@@ -140,7 +140,7 @@ export async function POST(
     };
 
     // Save to Firestore
-    await FirestoreService.set(couponsPath, couponId, coupon);
+    await AdminFirestoreService.set(couponsPath, couponId, coupon as unknown as Record<string, unknown>);
 
     logger.info('Merchant coupon saved', {
       userId: user.uid,

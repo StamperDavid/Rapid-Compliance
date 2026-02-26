@@ -9,9 +9,9 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
-import { FirestoreService } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { getSubCollection } from '@/lib/firebase/collections';
-import type { SocialMediaAsset } from '@/types/social';
+
 
 export const dynamic = 'force-dynamic';
 
@@ -32,7 +32,7 @@ export async function GET(
 
     const { mediaId } = await params;
 
-    const asset = await FirestoreService.get<SocialMediaAsset>(mediaPath(), mediaId);
+    const asset = await AdminFirestoreService.get(mediaPath(), mediaId);
 
     if (!asset) {
       return NextResponse.json(
@@ -65,7 +65,7 @@ export async function DELETE(
     const { mediaId } = await params;
 
     // Try to delete from Firestore metadata
-    await FirestoreService.delete(mediaPath(), mediaId);
+    await AdminFirestoreService.delete(mediaPath(), mediaId);
 
     logger.info('Media API: Asset deleted', { mediaId });
 

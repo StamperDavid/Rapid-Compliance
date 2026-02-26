@@ -5,7 +5,7 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/api-auth';
-import { FirestoreService } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
     // Count contacts
     let contacts = 0;
     try {
-      const contactDocs = await FirestoreService.getAll(getSubCollection('contacts'));
+      const contactDocs = await AdminFirestoreService.getAll(getSubCollection('contacts'));
       contacts = contactDocs.length;
     } catch {
       // Collection may not exist yet
@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
       startOfMonth.setDate(1);
       startOfMonth.setHours(0, 0, 0, 0);
 
-      const emailCampaigns = await FirestoreService.getAll(
+      const emailCampaigns = await AdminFirestoreService.getAll(
         getSubCollection('emailCampaigns'),
         [where('sentAt', '>=', startOfMonth.toISOString())]
       );
@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
       startOfMonth.setDate(1);
       startOfMonth.setHours(0, 0, 0, 0);
 
-      const aiUsageDocs = await FirestoreService.getAll(
+      const aiUsageDocs = await AdminFirestoreService.getAll(
         getSubCollection('ai_usage'),
         [where('createdAt', '>=', startOfMonth.toISOString())]
       );

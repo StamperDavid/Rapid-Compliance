@@ -7,7 +7,7 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/api-auth';
-import { FirestoreService } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
@@ -119,7 +119,7 @@ export async function GET(request: NextRequest) {
     const authResult = await requireAuth(request);
     if (authResult instanceof NextResponse) {return authResult;}
 
-    const subscription = await FirestoreService.get<Record<string, unknown>>(
+    const subscription = await AdminFirestoreService.get(
       SUBSCRIPTIONS_PATH,
       authResult.user.uid
     );
@@ -171,7 +171,7 @@ export async function POST(request: NextRequest) {
         updatedAt: new Date().toISOString(),
       };
 
-      await FirestoreService.set(SUBSCRIPTIONS_PATH, user.uid, subscription);
+      await AdminFirestoreService.set(SUBSCRIPTIONS_PATH, user.uid, subscription);
       return NextResponse.json({ success: true, subscription }, { status: 201 });
     }
 
@@ -197,7 +197,7 @@ export async function POST(request: NextRequest) {
         updatedAt: new Date().toISOString(),
       };
 
-      await FirestoreService.set(SUBSCRIPTIONS_PATH, user.uid, subscription);
+      await AdminFirestoreService.set(SUBSCRIPTIONS_PATH, user.uid, subscription);
 
       logger.info('Admin provisioned subscription', {
         route: '/api/subscriptions',
@@ -245,7 +245,7 @@ export async function POST(request: NextRequest) {
       updatedAt: new Date().toISOString(),
     };
 
-    await FirestoreService.set(SUBSCRIPTIONS_PATH, user.uid, subscription);
+    await AdminFirestoreService.set(SUBSCRIPTIONS_PATH, user.uid, subscription);
 
     logger.info('Subscription created via Stripe checkout', {
       route: '/api/subscriptions',
@@ -278,7 +278,7 @@ export async function PUT(request: NextRequest) {
     const { tier, action, stripeSessionId, adminOverride, adminReason } = validation.data;
     const user = authResult.user;
 
-    const existing = await FirestoreService.get<Record<string, unknown>>(
+    const existing = await AdminFirestoreService.get(
       SUBSCRIPTIONS_PATH,
       user.uid
     );
@@ -378,7 +378,7 @@ export async function PUT(request: NextRequest) {
       updates.previousTier = existing.tier;
     }
 
-    await FirestoreService.update(SUBSCRIPTIONS_PATH, user.uid, updates);
+    await AdminFirestoreService.update(SUBSCRIPTIONS_PATH, user.uid, updates);
 
     return NextResponse.json({
       success: true,

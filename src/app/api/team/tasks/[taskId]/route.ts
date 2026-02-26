@@ -9,7 +9,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
-import { FirestoreService } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { getSubCollection } from '@/lib/firebase/collections';
 
 export const dynamic = 'force-dynamic';
@@ -67,7 +67,7 @@ export async function PUT(
     }
 
     const tasksPath = getTasksPath();
-    await FirestoreService.update(tasksPath, taskId, updates);
+    await AdminFirestoreService.update(tasksPath, taskId, updates);
 
     logger.info('Task updated', { taskId, fields: Object.keys(validation.data) });
 
@@ -94,7 +94,7 @@ export async function DELETE(
     const { taskId } = await params;
     const tasksPath = getTasksPath();
 
-    await FirestoreService.delete(tasksPath, taskId);
+    await AdminFirestoreService.delete(tasksPath, taskId);
 
     logger.info('Task deleted', { taskId });
 

@@ -5,9 +5,9 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/api-auth';
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
+import { COLLECTIONS, getSubCollection } from '@/lib/firebase/collections';
 import { logger } from '@/lib/logger/logger';
-import { getSubCollection } from '@/lib/firebase/collections';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
@@ -189,7 +189,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get report configuration
-    const reportDoc = await FirestoreService.get(
+    const reportDoc = await AdminFirestoreService.get(
       getSubCollection('reports'),
       reportId
     );
@@ -198,7 +198,7 @@ export async function POST(request: NextRequest) {
       return errors.notFound('Report not found');
     }
 
-    const report = reportDoc as Report;
+    const report = reportDoc as unknown as Report;
     logger.info('Executing report', { reportId, type: report.type });
 
     // Execute report based on type
@@ -332,8 +332,8 @@ async function executeLeadsReport(
 ): Promise<LeadsReportResult> {
   const { PLATFORM_ID } = await import('@/lib/constants/platform');
   const leadsPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/default/entities/leads/records`;
-  const allLeadsData = await FirestoreService.getAll(leadsPath, []);
-  const allLeads = allLeadsData as LeadData[];
+  const allLeadsData = await AdminFirestoreService.getAll(leadsPath, []);
+  const allLeads = allLeadsData as unknown as LeadData[];
 
   // Group by status
   const statusMap = new Map<string, number>();
@@ -375,8 +375,8 @@ async function executeDealsReport(
 ): Promise<DealsReportResult> {
   const { PLATFORM_ID } = await import('@/lib/constants/platform');
   const dealsPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/default/entities/deals/records`;
-  const allDealsData = await FirestoreService.getAll(dealsPath, []);
-  const allDeals = allDealsData as DealData[];
+  const allDealsData = await AdminFirestoreService.getAll(dealsPath, []);
+  const allDeals = allDealsData as unknown as DealData[];
 
   const totalValue = allDeals.reduce(
     (sum: number, deal) => sum + (parseFloat(deal.value.toString()) || 0),
@@ -431,8 +431,8 @@ async function executeContactsReport(
 ): Promise<ContactsReportResult> {
   const { PLATFORM_ID } = await import('@/lib/constants/platform');
   const contactsPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/default/entities/contacts/records`;
-  const allContactsData = await FirestoreService.getAll(contactsPath, []);
-  const allContacts = allContactsData as ContactData[];
+  const allContactsData = await AdminFirestoreService.getAll(contactsPath, []);
+  const allContacts = allContactsData as unknown as ContactData[];
 
   return {
     type: 'contacts',
@@ -465,7 +465,7 @@ async function executeCustomReport(
   }
 
   const entityPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/default/entities/${entity}/records`;
-  const recordsData = await FirestoreService.getAll(entityPath, []);
+  const recordsData = await AdminFirestoreService.getAll(entityPath, []);
   const records = recordsData as Array<Record<string, unknown>>;
 
   // Apply filters (simple key-value matching)

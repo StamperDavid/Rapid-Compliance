@@ -21,7 +21,7 @@ export const dynamic = 'force-dynamic';
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getNotificationsRequestSchema } from '@/lib/notifications/validation';
-import { FirestoreService } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { getSubCollection } from '@/lib/firebase/collections';
 import type { Notification } from '@/lib/notifications/types';
@@ -112,10 +112,11 @@ export async function GET(request: NextRequest) {
       limitFn(validatedFilters.limit || 50),
     ];
 
-    let notifications = await FirestoreService.getAll<Notification>(
+    const rawNotifications = await AdminFirestoreService.getAll(
       getSubCollection('notifications'),
       constraints
     );
+    let notifications = rawNotifications as unknown as Notification[];
 
     // Apply filters
     const filterCategories = validatedFilters.categories;
@@ -269,7 +270,7 @@ export async function POST(request: NextRequest) {
 
     // Mark as read
     const updatePromises = validIds.map((id) =>
-      FirestoreService.update(
+      AdminFirestoreService.update(
         getSubCollection('notifications'),
         id,
         {

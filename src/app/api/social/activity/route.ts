@@ -15,7 +15,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
-import { FirestoreService } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { getSubCollection } from '@/lib/firebase/collections';
 import type { SocialMediaPost, ApprovalItem, QueuedPost } from '@/types/social';
 
@@ -55,18 +55,18 @@ export async function GET(request: NextRequest) {
 
     // Fetch recent posts (published, failed, cancelled, scheduled), recent approvals, and recent queued
     const [allPosts, approvals, queuedPosts] = await Promise.all([
-      FirestoreService.getAll<SocialMediaPost>(
+      AdminFirestoreService.getAll(
         SOCIAL_POSTS_COLLECTION,
         [orderBy('updatedAt', 'desc'), limit(safeLimit)]
-      ).catch(() => [] as SocialMediaPost[]),
-      FirestoreService.getAll<ApprovalItem>(
+      ).catch(() => []).then(r => r as SocialMediaPost[]),
+      AdminFirestoreService.getAll(
         SOCIAL_APPROVALS_COLLECTION,
         [orderBy('flaggedAt', 'desc'), limit(safeLimit)]
-      ).catch(() => [] as ApprovalItem[]),
-      FirestoreService.getAll<QueuedPost>(
+      ).catch(() => []).then(r => r as ApprovalItem[]),
+      AdminFirestoreService.getAll(
         SOCIAL_QUEUE_COLLECTION,
         [orderBy('createdAt', 'desc'), limit(10)]
-      ).catch(() => [] as QueuedPost[]),
+      ).catch(() => []).then(r => r as QueuedPost[]),
     ]);
 
     const events: ActivityEvent[] = [];

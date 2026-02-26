@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server';
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
+import { COLLECTIONS } from '@/lib/firebase/collections';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
@@ -131,7 +132,7 @@ async function calculateWinLossAnalytics(period: string) {
       where('updatedAt', '>=', startDate),
       limit(QUERY_LIMIT),
     ];
-    allDeals = await FirestoreService.getAll(dealsPath, constraints);
+    allDeals = (await AdminFirestoreService.getAll(dealsPath, constraints)) as DealRecord[];
     if (allDeals.length === QUERY_LIMIT) {
       logger.warn('Win-loss analytics hit query limit', { period, limit: QUERY_LIMIT });
     }

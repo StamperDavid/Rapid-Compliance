@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server';
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
+import { COLLECTIONS } from '@/lib/firebase/collections';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
@@ -128,7 +129,7 @@ async function calculateLeadScoringAnalytics(period: string) {
   const QUERY_LIMIT = 10000;
 
   try {
-    allLeads = await FirestoreService.getAll(leadsPath, [limit(QUERY_LIMIT)]);
+    allLeads = (await AdminFirestoreService.getAll(leadsPath, [limit(QUERY_LIMIT)])) as LeadRecord[];
     if (allLeads.length === QUERY_LIMIT) {
       logger.warn('Lead scoring analytics hit query limit', { period, limit: QUERY_LIMIT });
     }

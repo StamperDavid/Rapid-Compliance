@@ -22,7 +22,7 @@ import { requireAuth } from '@/lib/auth/api-auth';
 
 // Force dynamic rendering - required for Firebase Auth token verification
 export const dynamic = 'force-dynamic';
-import { FirestoreService } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { VoiceEngineFactory } from '@/lib/voice/tts/voice-engine-factory';
@@ -723,7 +723,7 @@ async function persistConversation(
 
   const conversationsPath = getSubCollection('orchestratorConversations');
 
-  await FirestoreService.set(
+  await AdminFirestoreService.set(
     `${conversationsPath}/${conversationId}/messages`,
     messageId,
     {
@@ -736,7 +736,7 @@ async function persistConversation(
     false
   );
 
-  await FirestoreService.set(
+  await AdminFirestoreService.set(
     conversationsPath,
     conversationId,
     {

@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from 'next/server';
-import { FirestoreService } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { getMerchantCouponsCollection } from '@/lib/firebase/collections';
 import { requireRole } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
@@ -46,7 +46,7 @@ export async function PATCH(
     const couponsPath = getMerchantCouponsCollection();
 
     // Check if coupon exists
-    const existingCoupon = await FirestoreService.get<MerchantCoupon>(couponsPath, couponId);
+    const existingCoupon = await AdminFirestoreService.get(couponsPath, couponId) as MerchantCoupon | null;
     if (!existingCoupon) {
       return NextResponse.json(
         { success: false, error: 'Coupon not found' },
@@ -55,7 +55,7 @@ export async function PATCH(
     }
 
     // Update status
-    await FirestoreService.update(couponsPath, couponId, {
+    await AdminFirestoreService.update(couponsPath, couponId, {
       status,
       updated_at: new Date().toISOString(),
     });

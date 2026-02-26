@@ -1,12 +1,12 @@
 import { type NextRequest, NextResponse } from 'next/server';
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
+import { COLLECTIONS, getOrdersCollection } from '@/lib/firebase/collections';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { withCache } from '@/lib/cache/analytics-cache';
 import { PLATFORM_ID } from '@/lib/constants/platform';
-import { getOrdersCollection } from '@/lib/firebase/collections';
 import { where, limit, orderBy } from 'firebase/firestore';
 
 export const dynamic = 'force-dynamic';
@@ -145,7 +145,7 @@ async function calculateRevenueAnalytics(period: string) {
         orderBy('createdAt', 'desc'),
         limit(QUERY_LIMIT),
       ];
-      allDeals = await FirestoreService.getAll<DealRecord>(dealsPath, dealsConstraints);
+      allDeals = (await AdminFirestoreService.getAll(dealsPath, dealsConstraints)) as DealRecord[];
       if (allDeals.length === QUERY_LIMIT) {
         logger.warn('Revenue analytics deals query hit limit', { limit: QUERY_LIMIT, period });
       }
@@ -172,7 +172,7 @@ async function calculateRevenueAnalytics(period: string) {
         orderBy('createdAt', 'desc'),
         limit(QUERY_LIMIT),
       ];
-      allOrders = await FirestoreService.getAll<OrderRecord>(ordersPath, ordersConstraints);
+      allOrders = (await AdminFirestoreService.getAll(ordersPath, ordersConstraints)) as OrderRecord[];
       if (allOrders.length === QUERY_LIMIT) {
         logger.warn('Revenue analytics orders query hit limit', { limit: QUERY_LIMIT, period });
       }

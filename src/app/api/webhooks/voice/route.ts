@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from 'next/server';
-import { FirestoreService } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { getSubCollection } from '@/lib/firebase/collections';
 import { logger } from '@/lib/logger/logger';
 import { verifyTwilioSignature, parseFormBody } from '@/lib/security/webhook-verification';
@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'CallSid required' }, { status: 400 });
     }
 
-    const calls = await FirestoreService.getAll(
+    const calls = await AdminFirestoreService.getAll(
       `${getSubCollection('workspaces')}/default/calls`,
       []
     );
@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
     });
 
     if (call && isCallRecord(call)) {
-      await FirestoreService.update(
+      await AdminFirestoreService.update(
         `${getSubCollection('workspaces')}/default/calls`,
         call.id,
         {

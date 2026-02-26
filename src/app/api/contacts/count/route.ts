@@ -5,7 +5,7 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/api-auth';
-import { FirestoreService } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { where, limit, type QueryConstraint } from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
@@ -155,14 +155,14 @@ export async function POST(request: NextRequest) {
 
     if (constraints.length === 0) {
       // No filters - count all contacts (with safety limit)
-      const allContacts = await FirestoreService.getAll(collectionPath, [limit(QUERY_LIMIT)]);
+      const allContacts = await AdminFirestoreService.getAll(collectionPath, [limit(QUERY_LIMIT)]);
       count = allContacts.length;
       if (count === QUERY_LIMIT) {
         logger.warn('Contact count hit query limit', { limit: QUERY_LIMIT });
       }
     } else {
       // With filters - query and count (with safety limit)
-      const filteredContacts = await FirestoreService.getAll(collectionPath, [...constraints, limit(QUERY_LIMIT)]);
+      const filteredContacts = await AdminFirestoreService.getAll(collectionPath, [...constraints, limit(QUERY_LIMIT)]);
       count = filteredContacts.length;
       if (count === QUERY_LIMIT) {
         logger.warn('Contact count hit query limit with filters', { limit: QUERY_LIMIT, filterCount: filters.length });

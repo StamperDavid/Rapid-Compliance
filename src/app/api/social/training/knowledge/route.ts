@@ -11,7 +11,7 @@ import { z } from 'zod';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
-import { FirestoreService } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { getSubCollection } from '@/lib/firebase/collections';
 import { orderBy } from 'firebase/firestore';
 
@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
     const authResult = await requireAuth(request);
     if (authResult instanceof NextResponse) { return authResult; }
 
-    const result = await FirestoreService.getAllPaginated(
+    const result = await AdminFirestoreService.getAllPaginated(
       KNOWLEDGE_COLLECTION,
       [orderBy('uploadedAt', 'desc')],
       100
@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
       uploadedBy: authResult.user.uid,
     };
 
-    await FirestoreService.set(KNOWLEDGE_COLLECTION, itemId, item, false);
+    await AdminFirestoreService.set(KNOWLEDGE_COLLECTION, itemId, item, false);
 
     logger.info('Knowledge API: Item uploaded', { itemId, type: validation.data.type });
 
@@ -112,7 +112,7 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    await FirestoreService.delete(KNOWLEDGE_COLLECTION, itemId);
+    await AdminFirestoreService.delete(KNOWLEDGE_COLLECTION, itemId);
 
     logger.info('Knowledge API: Item deleted', { itemId });
 

@@ -2,7 +2,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { processKnowledgeBase } from '@/lib/agent/knowledge-processor';
 import { indexKnowledgeBase } from '@/lib/agent/vector-search';
-import { FirestoreService } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Save to Firestore
-    await FirestoreService.set(
+    await AdminFirestoreService.set(
       getSubCollection('knowledgeBase'),
       'current',
       {

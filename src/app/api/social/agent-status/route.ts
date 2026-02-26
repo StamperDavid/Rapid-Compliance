@@ -12,7 +12,7 @@ import { logger } from '@/lib/logger/logger';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { AgentConfigService } from '@/lib/social/agent-config-service';
 import { SocialAccountService } from '@/lib/social/social-account-service';
-import { FirestoreService } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { getSubCollection } from '@/lib/firebase/collections';
 import type { SocialMediaPost, QueuedPost, ApprovalItem, SocialAccount } from '@/types/social';
 
@@ -43,23 +43,23 @@ export async function GET(request: NextRequest) {
     // Parallel fetch: config, queue, scheduled posts, recent published, accounts, pending approvals
     const [config, queuedPosts, scheduledPosts, recentPublished, accounts, pendingApprovals] = await Promise.all([
       AgentConfigService.getConfig(),
-      FirestoreService.getAll<QueuedPost>(
+      AdminFirestoreService.getAll(
         SOCIAL_QUEUE_COLLECTION,
         [orderBy('queuePosition', 'asc')]
-      ).catch(() => [] as QueuedPost[]),
-      FirestoreService.getAll<SocialMediaPost>(
+      ).catch(() => []).then(r => r as QueuedPost[]),
+      AdminFirestoreService.getAll(
         SOCIAL_POSTS_COLLECTION,
         [where('status', '==', 'scheduled'), orderBy('scheduledAt', 'asc'), limit(5)]
-      ).catch(() => [] as SocialMediaPost[]),
-      FirestoreService.getAll<SocialMediaPost>(
+      ).catch(() => []).then(r => r as SocialMediaPost[]),
+      AdminFirestoreService.getAll(
         SOCIAL_POSTS_COLLECTION,
         [where('status', '==', 'published'), orderBy('publishedAt', 'desc'), limit(10)]
-      ).catch(() => [] as SocialMediaPost[]),
+      ).catch(() => []).then(r => r as SocialMediaPost[]),
       SocialAccountService.listAccounts().catch(() => [] as SocialAccount[]),
-      FirestoreService.getAll<ApprovalItem>(
+      AdminFirestoreService.getAll(
         SOCIAL_APPROVALS_COLLECTION,
         [where('status', '==', 'pending_review')]
-      ).catch(() => [] as ApprovalItem[]),
+      ).catch(() => []).then(r => r as ApprovalItem[]),
     ]);
 
     // Compute next scheduled post time

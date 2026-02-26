@@ -11,7 +11,7 @@ import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { apiKeyService } from '@/lib/api-keys/api-key-service';
 import { PLATFORM_ID } from '@/lib/constants/platform';
-import { FirestoreService } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { getOrdersCollection } from '@/lib/firebase/collections';
 import { where } from 'firebase/firestore';
 import { z } from 'zod';
@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
     const payment = (await paymentResponse.json()) as MolliePayment;
 
     // Find the order by transaction ID
-    const orders = await FirestoreService.getAll(
+    const orders = await AdminFirestoreService.getAll(
       ORDERS_PATH,
       [where('payment.transactionId', '==', id)]
     );
@@ -114,7 +114,7 @@ export async function POST(request: NextRequest) {
         paymentStatus = payment.status;
     }
 
-    await FirestoreService.update(ORDERS_PATH, orderId, {
+    await AdminFirestoreService.update(ORDERS_PATH, orderId, {
       status: orderStatus,
       paymentStatus,
       'payment.mollieStatus': payment.status,

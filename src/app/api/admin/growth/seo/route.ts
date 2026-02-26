@@ -5,7 +5,7 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { verifyAdminRequest, isAuthError } from '@/lib/api/admin-auth';
-import { FirestoreService } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { getSubCollection } from '@/lib/firebase/collections';
 import { z } from 'zod';
@@ -56,10 +56,10 @@ export async function POST(request: NextRequest) {
     const { title } = validatedBody;
 
     // Save SEO settings to Firestore
-    await FirestoreService.set(
+    await AdminFirestoreService.set(
       getSubCollection('platform_settings'),
       'seo',
-      validatedBody
+      validatedBody as Record<string, unknown>
     );
 
     logger.info('[AdminSEO] Settings saved', { title, file: 'seo/route.ts' });

@@ -6,7 +6,7 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { apiKeyService } from '@/lib/api-keys/api-key-service';
-import { FirestoreService } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import { getIntegrationsCollection } from '@/lib/firebase/collections';
@@ -107,7 +107,7 @@ export async function GET(request: NextRequest) {
     const tokens = await tokenResponse.json() as MicrosoftTokenResponse;
 
     // Store tokens
-    await FirestoreService.set(
+    await AdminFirestoreService.set(
       getIntegrationsCollection(),
       'teams',
       {

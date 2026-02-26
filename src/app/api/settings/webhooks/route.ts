@@ -12,7 +12,7 @@ import { z } from 'zod';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
 import { getSubCollection } from '@/lib/firebase/collections';
-import { FirestoreService } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { orderBy } from 'firebase/firestore';
 
 export const dynamic = 'force-dynamic';
@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
       return authResult;
     }
 
-    const webhooks = await FirestoreService.getAll<WebhookDoc>(
+    const webhooks = await AdminFirestoreService.getAll(
       webhookPath,
       [orderBy('createdAt', 'desc')]
     );
@@ -104,7 +104,7 @@ export async function POST(request: NextRequest) {
       createdBy: authResult.user.uid,
     };
 
-    await FirestoreService.set(webhookPath, webhookId, webhook, false);
+    await AdminFirestoreService.set(webhookPath, webhookId, webhook as unknown as Record<string, unknown>, false);
 
     logger.info('Webhook created', { webhookId, name });
 
@@ -137,7 +137,7 @@ export async function PUT(request: NextRequest) {
 
     const { webhookId, ...updates } = validation.data;
 
-    await FirestoreService.update(webhookPath, webhookId, {
+    await AdminFirestoreService.update(webhookPath, webhookId, {
       ...updates,
       updatedAt: new Date(),
     });
@@ -171,7 +171,7 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    await FirestoreService.delete(webhookPath, webhookId);
+    await AdminFirestoreService.delete(webhookPath, webhookId);
 
     logger.info('Webhook deleted', { webhookId });
 

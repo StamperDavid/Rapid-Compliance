@@ -1,8 +1,8 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/api-auth';
-import { FirestoreService } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { where, orderBy } from 'firebase/firestore';
-import type { Order } from '@/types/ecommerce';
+
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
@@ -63,8 +63,8 @@ export async function GET(request: NextRequest) {
 
     // Use paginated query - canonical orders path
     const { PLATFORM_ID } = await import('@/lib/constants/platform');
-    const { COLLECTIONS: COLS } = await import('@/lib/db/firestore-service');
-    const result = await FirestoreService.getAllPaginated<Order>(
+    const { COLLECTIONS: COLS } = await import('@/lib/firebase/collections');
+    const result = await AdminFirestoreService.getAllPaginated(
       `${COLS.ORGANIZATIONS}/${PLATFORM_ID}/orders`,
       constraints,
       Math.min(pageSize, 100) // Max 100 per page

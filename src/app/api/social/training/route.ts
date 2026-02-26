@@ -11,7 +11,7 @@ import { z } from 'zod';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
-import { FirestoreService } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { COLLECTIONS, getSubCollection } from '@/lib/firebase/collections';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import { orderBy } from 'firebase/firestore';
@@ -67,10 +67,10 @@ export async function GET(request: NextRequest) {
 
     // Fetch settings, brand DNA, history, and knowledge in parallel
     const [settingsData, orgData, historyResult, knowledgeResult] = await Promise.all([
-      FirestoreService.get(TRAINING_COLLECTION, 'social'),
-      FirestoreService.get(COLLECTIONS.ORGANIZATIONS, PLATFORM_ID),
-      FirestoreService.getAllPaginated(HISTORY_COLLECTION, [orderBy('generatedAt', 'desc')], 50),
-      FirestoreService.getAllPaginated(KNOWLEDGE_COLLECTION, [orderBy('uploadedAt', 'desc')], 50),
+      AdminFirestoreService.get(TRAINING_COLLECTION, 'social'),
+      AdminFirestoreService.get(COLLECTIONS.ORGANIZATIONS, PLATFORM_ID),
+      AdminFirestoreService.getAllPaginated(HISTORY_COLLECTION, [orderBy('generatedAt', 'desc')], 50),
+      AdminFirestoreService.getAllPaginated(KNOWLEDGE_COLLECTION, [orderBy('uploadedAt', 'desc')], 50),
     ]);
 
     const orgRecord = orgData as { brandDNA?: BrandDNA } | null | undefined;
@@ -109,7 +109,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    await FirestoreService.set(TRAINING_COLLECTION, 'social', {
+    await AdminFirestoreService.set(TRAINING_COLLECTION, 'social', {
       ...validation.data,
       updatedAt: new Date().toISOString(),
       updatedBy: authResult.user.uid,
@@ -145,7 +145,7 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    await FirestoreService.set(HISTORY_COLLECTION, validation.data.id, {
+    await AdminFirestoreService.set(HISTORY_COLLECTION, validation.data.id, {
       ...validation.data,
       saved: true,
     }, false);

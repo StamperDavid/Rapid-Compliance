@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from 'next/server';
-import { FirestoreService } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
@@ -91,7 +91,7 @@ export async function GET(request: NextRequest) {
     let allWorkflows: WorkflowRecord[] = [];
 
     try {
-      allWorkflows = await FirestoreService.getAll(workflowsPath, []);
+      allWorkflows = (await AdminFirestoreService.getAll(workflowsPath, [])) as WorkflowRecord[];
     } catch (_e) {
       logger.debug('No workflows collection yet');
     }
@@ -101,7 +101,7 @@ export async function GET(request: NextRequest) {
     let allExecutions: WorkflowExecutionRecord[] = [];
     
     try {
-      allExecutions = await FirestoreService.getAll(executionsPath, []);
+      allExecutions = (await AdminFirestoreService.getAll(executionsPath, [])) as WorkflowExecutionRecord[];
     } catch (_e) {
       logger.debug('No workflow executions collection yet');
     }

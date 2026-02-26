@@ -13,7 +13,7 @@ export const dynamic = 'force-dynamic';
 import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
 import { updatePreferencesRequestSchema } from '@/lib/notifications/validation';
-import { FirestoreService } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import { getSubCollection } from '@/lib/firebase/collections';
@@ -34,12 +34,6 @@ interface UpdatePreferencesRequestBody {
   [key: string]: unknown;
 }
 
-/**
- * Firestore document with unknown data structure
- */
-interface FirestoreDocument {
-  [key: string]: unknown;
-}
 
 /**
  * Rate limiting map
@@ -92,7 +86,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get preferences from Firestore
-    const preferences = await FirestoreService.get(
+    const preferences = await AdminFirestoreService.get(
       getSubCollection('notification_preferences'),
       userId
     );
@@ -183,7 +177,7 @@ export async function PUT(request: NextRequest) {
     }
 
     // Get existing preferences
-    const existingPrefsDoc = await FirestoreService.get<FirestoreDocument>(
+    const existingPrefsDoc = await AdminFirestoreService.get(
       getSubCollection('notification_preferences'),
       userId
     );
@@ -271,10 +265,10 @@ export async function PUT(request: NextRequest) {
     };
 
     // Save to Firestore
-    await FirestoreService.set(
+    await AdminFirestoreService.set(
       getSubCollection('notification_preferences'),
       userId,
-      updatedPrefs
+      updatedPrefs as unknown as Record<string, unknown>
     );
 
     return NextResponse.json(

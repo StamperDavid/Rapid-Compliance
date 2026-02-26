@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic';
 
 import { type NextRequest, NextResponse } from 'next/server';
-import { FirestoreService } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { getSubCollection } from '@/lib/firebase/collections';
@@ -37,7 +37,7 @@ export async function GET(
     }
 
     // Look up the original URL from Firestore
-    const linkData = await FirestoreService.get(
+    const linkData = await AdminFirestoreService.get(
       getSubCollection('trackedLinks'),
       linkId
     );
@@ -47,7 +47,7 @@ export async function GET(
       return new NextResponse('Link not found', { status: 404 });
     }
 
-    const trackedLink = linkData as TrackedLink;
+    const trackedLink = linkData as unknown as TrackedLink;
     const { originalUrl, messageId } = trackedLink;
 
     // Extract IP address and user agent for tracking
@@ -57,7 +57,7 @@ export async function GET(
     const userAgent = request.headers.get('user-agent') ?? 'unknown';
 
     // Fire and forget - record click event in Firestore
-    FirestoreService.set(
+    AdminFirestoreService.set(
       'emailTrackingEvents',
       `${linkId}_${Date.now()}`,
       {
@@ -80,7 +80,7 @@ export async function GET(
     });
 
     // Update the emailTracking document to mark as clicked
-    FirestoreService.set(
+    AdminFirestoreService.set(
       getSubCollection('emailTracking'),
       messageId,
       {

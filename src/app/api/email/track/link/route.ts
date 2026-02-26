@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/api-auth';
-import { FirestoreService } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { getSubCollection } from '@/lib/firebase/collections';
@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Store link mapping in Firestore
-    await FirestoreService.set(
+    await AdminFirestoreService.set(
       getSubCollection('trackedLinks'),
       linkId,
       {

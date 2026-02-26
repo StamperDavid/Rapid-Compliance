@@ -10,7 +10,7 @@ import {
   checkAndDeployWinner
 } from '@/lib/ai/learning/continuous-learning-engine';
 import { getTrainingDataStats, getTrainingExamples, approveTrainingExample, rejectTrainingExample } from '@/lib/ai/fine-tuning/data-collector';
-import { FirestoreService } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
@@ -48,13 +48,6 @@ interface FineTunePutRequestBody {
   config?: Record<string, unknown>;
 }
 
-interface LearningConfig {
-  autoCollectTrainingData?: boolean;
-  autoTriggerFineTuning?: boolean;
-  autoDeployFineTunedModels?: boolean;
-  minExamplesForTraining?: number;
-  trainingFrequency?: string;
-}
 
 function isFineTunePostRequestBody(value: unknown): value is FineTunePostRequestBody {
   return typeof value === 'object' && value !== null;
@@ -90,13 +83,13 @@ export async function GET(request: NextRequest) {
         const stats = await getTrainingDataStats();
 
         // Get fine-tuning jobs
-        const jobs = await FirestoreService.getAll(
+        const jobs = await AdminFirestoreService.getAll(
           getSubCollection('fineTuningJobs'),
           []
         );
 
         // Get learning config
-        const config = await FirestoreService.get<LearningConfig>(
+        const config = await AdminFirestoreService.get(
           getSubCollection('config'),
           'continuousLearning'
         );
@@ -122,7 +115,7 @@ export async function GET(request: NextRequest) {
       }
 
       case 'jobs': {
-        const jobs = await FirestoreService.getAll(
+        const jobs = await AdminFirestoreService.getAll(
           getSubCollection('fineTuningJobs'),
           []
         );
@@ -311,7 +304,7 @@ export async function PUT(request: NextRequest) {
       updatedAt: new Date().toISOString(),
     };
 
-    await FirestoreService.set(
+    await AdminFirestoreService.set(
       getSubCollection('config'),
       'continuousLearning',
       configData,

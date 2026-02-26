@@ -4,13 +4,13 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/api-auth';
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import Stripe from 'stripe';
 import { z } from 'zod';
 import { apiKeyService } from '@/lib/api-keys/api-key-service';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import { getEcommerceConfig } from '@/lib/ecommerce/types';
-import { getCartsCollection, getOrdersCollection } from '@/lib/firebase/collections';
+import { COLLECTIONS, getCartsCollection, getOrdersCollection } from '@/lib/firebase/collections';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
@@ -83,10 +83,10 @@ export async function POST(request: NextRequest) {
     const stripe = new Stripe(stripeKeys.secretKey, { apiVersion: '2023-10-16' });
 
     // Get cart (path must match cart-service.ts)
-    const cart = await FirestoreService.get<Cart>(
+    const cart = await AdminFirestoreService.get(
       getCartsCollection(),
       authResult.user.uid
-    );
+    ) as Cart | null;
 
     if (!cart?.items || cart.items.length === 0) {
       return errors.badRequest('Cart is empty');
@@ -97,10 +97,10 @@ export async function POST(request: NextRequest) {
     const productSchema = ecomConfig?.productSchema ?? 'products';
     for (const item of cart.items) {
       if (item.productId) {
-        const product = await FirestoreService.get<{ stockLevel?: number }>(
+        const product = await AdminFirestoreService.get(
           `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/entities/${productSchema}/records`,
           item.productId
-        );
+        ) as { stockLevel?: number } | null;
         if (product && typeof product.stockLevel === 'number' && product.stockLevel < item.quantity) {
           return errors.badRequest(
             `Insufficient stock for "${item.name}". Available: ${product.stockLevel}, Requested: ${item.quantity}`
@@ -175,7 +175,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Create pending order AFTER Stripe session succeeds (no ghost orders on Stripe failure)
-    await FirestoreService.set(
+    await AdminFirestoreService.set(
       getOrdersCollection(),
       orderId,
       {

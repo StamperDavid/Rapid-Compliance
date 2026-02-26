@@ -14,7 +14,7 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { FirestoreService } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { getSubCollection, getContactsCollection } from '@/lib/firebase/collections';
 import { PLATFORM_ID } from '@/lib/constants/platform';
@@ -167,7 +167,7 @@ async function processEmailTokenUnsubscribe(email: string, _token: string): Prom
     // Find contact by email
     const { where } = await import('firebase/firestore');
     const contactPath = getContactsCollection();
-    const contacts = await FirestoreService.getAll(contactPath, [
+    const contacts = await AdminFirestoreService.getAll(contactPath, [
       where('email', '==', email.toLowerCase()),
     ]);
 
@@ -202,7 +202,7 @@ async function processContactIdUnsubscribe(contactId: string, emailId: string | 
 
     // Record the unsubscribe in the suppression list
     const suppressionId = `unsub_${contactId}_${Date.now()}`;
-    await FirestoreService.set(
+    await AdminFirestoreService.set(
       getSubCollection('suppressions'),
       suppressionId,
       {
@@ -220,9 +220,9 @@ async function processContactIdUnsubscribe(contactId: string, emailId: string | 
     // Update contact preferences if the contact exists
     try {
       const contactPath = getContactsCollection();
-      const existingContact: unknown = await FirestoreService.get(contactPath, contactId);
+      const existingContact: unknown = await AdminFirestoreService.get(contactPath, contactId);
       if (existingContact && typeof existingContact === 'object') {
-        await FirestoreService.set(
+        await AdminFirestoreService.set(
           contactPath,
           contactId,
           {
@@ -245,7 +245,7 @@ async function processContactIdUnsubscribe(contactId: string, emailId: string | 
       const { where } = await import('firebase/firestore');
 
       // Find prospects matching this contact
-      const prospects = await FirestoreService.getAll(
+      const prospects = await AdminFirestoreService.getAll(
         getSubCollection('prospects'),
         [where('contactId', '==', contactId)],
       );
@@ -254,7 +254,7 @@ async function processContactIdUnsubscribe(contactId: string, emailId: string | 
         if (typeof prospect === 'object' && prospect !== null && 'id' in prospect) {
           const prospectId = String((prospect as { id: string }).id);
 
-          const enrollments = await FirestoreService.getAll(
+          const enrollments = await AdminFirestoreService.getAll(
             getSubCollection('enrollments'),
             [
               where('prospectId', '==', prospectId),
@@ -265,7 +265,7 @@ async function processContactIdUnsubscribe(contactId: string, emailId: string | 
           for (const enrollment of enrollments) {
             if (typeof enrollment === 'object' && enrollment !== null && 'id' in enrollment) {
               const enrollmentId = String((enrollment as { id: string }).id);
-              await FirestoreService.set(
+              await AdminFirestoreService.set(
                 getSubCollection('enrollments'),
                 enrollmentId,
                 {

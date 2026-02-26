@@ -12,7 +12,7 @@ import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { verifyStripeSignature } from '@/lib/security/webhook-verification';
-import { FirestoreService } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { getSubCollection, getOrdersCollection } from '@/lib/firebase/collections';
 import { where, limit } from 'firebase/firestore';
 
@@ -61,7 +61,7 @@ async function findUserSubscription(
   stripeSubscriptionId: string
 ): Promise<Record<string, unknown> | null> {
   try {
-    const results = await FirestoreService.getAll<Record<string, unknown>>(
+    const results = await AdminFirestoreService.getAll(
       SUBSCRIPTIONS_PATH,
       [where('stripeSubscriptionId', '==', stripeSubscriptionId), limit(1)]
     );
@@ -147,7 +147,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Idempotency: check if this event was already processed
-    const existingEvent = await FirestoreService.get<{ processed?: boolean }>(
+    const existingEvent = await AdminFirestoreService.get(
       EVENTS_PATH,
       event.id
     );
@@ -161,7 +161,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Store event as received before processing
-    await FirestoreService.set(EVENTS_PATH, event.id, {
+    await AdminFirestoreService.set(EVENTS_PATH, event.id, {
       id: event.id,
       type: event.type,
       data: event.data,
@@ -175,7 +175,7 @@ export async function POST(request: NextRequest) {
       await processStripeEvent(event);
 
       // Mark event as successfully processed
-      await FirestoreService.update(EVENTS_PATH, event.id, {
+      await AdminFirestoreService.update(EVENTS_PATH, event.id, {
         processed: true,
         processedAt: new Date().toISOString(),
       });
@@ -233,7 +233,7 @@ async function processStripeEvent(event: StripeWebhookEvent): Promise<void> {
         const metadata = session.metadata as Record<string, unknown>;
         const orderId = metadata.orderId;
         if (typeof orderId === 'string') {
-          await FirestoreService.update(ORDERS_PATH, orderId, {
+          await AdminFirestoreService.update(ORDERS_PATH, orderId, {
             status: 'completed',
             stripeSessionId: String(session.id ?? ''),
             completedAt: new Date().toISOString(),
@@ -248,7 +248,7 @@ async function processStripeEvent(event: StripeWebhookEvent): Promise<void> {
         const cartId = metadata.cartId;
         if (typeof cartId === 'string') {
           try {
-            await FirestoreService.delete(
+            await AdminFirestoreService.delete(
               getSubCollection('carts'),
               cartId
             );
@@ -280,7 +280,7 @@ async function processStripeEvent(event: StripeWebhookEvent): Promise<void> {
       // Safety net: update order status if client-side completion failed
       if (piId) {
         try {
-          const matchingOrders = await FirestoreService.getAll<Record<string, unknown>>(
+          const matchingOrders = await AdminFirestoreService.getAll(
             ORDERS_PATH,
             [where('paymentIntentId', '==', piId), limit(1)]
           );
@@ -290,7 +290,7 @@ async function processStripeEvent(event: StripeWebhookEvent): Promise<void> {
             const existingOrderId = String(existingOrder?.id ?? '');
             const existingStatus = String(existingOrder?.status ?? '');
             if (existingOrderId && existingStatus !== 'processing' && existingStatus !== 'completed') {
-              await FirestoreService.update(ORDERS_PATH, existingOrderId, {
+              await AdminFirestoreService.update(ORDERS_PATH, existingOrderId, {
                 status: 'processing',
                 paymentStatus: 'captured',
                 webhookUpdatedAt: new Date().toISOString(),
@@ -336,7 +336,7 @@ async function processStripeEvent(event: StripeWebhookEvent): Promise<void> {
       const cancelAtPeriodEnd = subscription.cancel_at_period_end === true;
 
       // Store in stripe_subscriptions for audit/lookup
-      await FirestoreService.set(
+      await AdminFirestoreService.set(
         getSubCollection('stripe_subscriptions'),
         subscriptionId,
         {
@@ -353,7 +353,7 @@ async function processStripeEvent(event: StripeWebhookEvent): Promise<void> {
       // Sync to user's subscription record
       const userSub = await findUserSubscription(subscriptionId);
       if (userSub?.id) {
-        await FirestoreService.update(SUBSCRIPTIONS_PATH, String(userSub.id), {
+        await AdminFirestoreService.update(SUBSCRIPTIONS_PATH, String(userSub.id), {
           stripeStatus: status,
           currentPeriodEnd,
           cancelAtPeriodEnd,
@@ -376,7 +376,7 @@ async function processStripeEvent(event: StripeWebhookEvent): Promise<void> {
       const customerId = String(subscription.customer ?? '');
 
       // Update stripe_subscriptions
-      await FirestoreService.set(
+      await AdminFirestoreService.set(
         getSubCollection('stripe_subscriptions'),
         subscriptionId,
         {
@@ -392,7 +392,7 @@ async function processStripeEvent(event: StripeWebhookEvent): Promise<void> {
       // Sync cancellation to user's subscription record
       const userSub = await findUserSubscription(subscriptionId);
       if (userSub?.id) {
-        await FirestoreService.update(SUBSCRIPTIONS_PATH, String(userSub.id), {
+        await AdminFirestoreService.update(SUBSCRIPTIONS_PATH, String(userSub.id), {
           status: 'cancelled',
           stripeStatus: 'canceled',
           cancelledAt: new Date().toISOString(),
@@ -418,7 +418,7 @@ async function processStripeEvent(event: StripeWebhookEvent): Promise<void> {
       if (subscriptionId) {
         const userSub = await findUserSubscription(subscriptionId);
         if (userSub?.id) {
-          await FirestoreService.update(SUBSCRIPTIONS_PATH, String(userSub.id), {
+          await AdminFirestoreService.update(SUBSCRIPTIONS_PATH, String(userSub.id), {
             lastPaymentAt: new Date().toISOString(),
             lastPaymentAmount: typeof invoice.amount_paid === 'number' ? invoice.amount_paid : 0,
             paymentStatus: 'current',
@@ -446,7 +446,7 @@ async function processStripeEvent(event: StripeWebhookEvent): Promise<void> {
       if (subscriptionId) {
         const userSub = await findUserSubscription(subscriptionId);
         if (userSub?.id) {
-          await FirestoreService.update(SUBSCRIPTIONS_PATH, String(userSub.id), {
+          await AdminFirestoreService.update(SUBSCRIPTIONS_PATH, String(userSub.id), {
             paymentStatus: 'past_due',
             lastPaymentFailedAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
@@ -476,13 +476,13 @@ async function processStripeEvent(event: StripeWebhookEvent): Promise<void> {
       // Update order with refund info
       if (paymentIntentId) {
         try {
-          const matchingOrders = await FirestoreService.getAll<Record<string, unknown>>(
+          const matchingOrders = await AdminFirestoreService.getAll(
             ORDERS_PATH,
             [where('paymentIntentId', '==', paymentIntentId), limit(1)]
           );
           if (matchingOrders.length > 0 && matchingOrders[0]?.id) {
             const chargeAmount = typeof charge.amount === 'number' ? charge.amount : 0;
-            await FirestoreService.update(ORDERS_PATH, String(matchingOrders[0].id), {
+            await AdminFirestoreService.update(ORDERS_PATH, String(matchingOrders[0].id), {
               refundedAmount: amountRefunded,
               refundedAt: new Date().toISOString(),
               status: amountRefunded >= chargeAmount ? 'refunded' : 'partially_refunded',

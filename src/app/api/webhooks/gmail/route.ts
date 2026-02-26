@@ -7,7 +7,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { getEmail, parseEmailHeaders, getEmailBody, type GmailMessage } from '@/lib/integrations/gmail-service';
 import { classifyReply, sendReplyEmail, type ReplyClassification } from '@/lib/outbound/reply-handler';
-import { FirestoreService } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { COLLECTIONS, getSubCollection } from '@/lib/firebase/collections';
 import { errors } from '@/lib/middleware/error-handler';
@@ -169,7 +169,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Update last history ID
-    await FirestoreService.set(
+    await AdminFirestoreService.set(
       COLLECTIONS.INTEGRATIONS,
       integration.id,
       { ...integration, lastHistoryId: historyId },
@@ -266,7 +266,7 @@ async function findIntegrationByEmail(email: string): Promise<GmailIntegration |
     const { where } = await import('firebase/firestore');
 
     // Use getAll with proper query constraints
-    const integrations = await FirestoreService.getAll(
+    const integrations = await AdminFirestoreService.getAll(
       COLLECTIONS.INTEGRATIONS,
       [
         where('provider', '==', 'google'),
@@ -420,7 +420,7 @@ async function unenrollProspectFromSequences(
 ): Promise<void> {
   try {
     const { where } = await import('firebase/firestore');
-    const prospects = await FirestoreService.getAll(
+    const prospects = await AdminFirestoreService.getAll(
       getSubCollection('prospects'),
       [where('email', '==', prospectEmail)]
     );
@@ -438,7 +438,7 @@ async function unenrollProspectFromSequences(
 
     const prospectId = firstProspect.id;
 
-    const enrollments = await FirestoreService.getAll(
+    const enrollments = await AdminFirestoreService.getAll(
       getSubCollection('enrollments'),
       [
         where('prospectId', '==', prospectId),
@@ -477,7 +477,7 @@ async function pauseProspectSequences(
 ): Promise<void> {
   try {
     const { where } = await import('firebase/firestore');
-    const prospects = await FirestoreService.getAll(
+    const prospects = await AdminFirestoreService.getAll(
       getSubCollection('prospects'),
       [where('email', '==', prospectEmail)]
     );
@@ -491,7 +491,7 @@ async function pauseProspectSequences(
 
     const prospectId = firstProspect.id;
 
-    const enrollments = await FirestoreService.getAll(
+    const enrollments = await AdminFirestoreService.getAll(
       getSubCollection('enrollments'),
       [
         where('prospectId', '==', prospectId),
@@ -504,7 +504,7 @@ async function pauseProspectSequences(
         continue;
       }
 
-      await FirestoreService.set(
+      await AdminFirestoreService.set(
         getSubCollection('enrollments'),
         enrollment.id,
         {
@@ -536,7 +536,7 @@ async function saveForReview(
   const body = getEmailBody(email);
 
   const emailId = email.id ?? `unknown_${Date.now()}`;
-  await FirestoreService.set(
+  await AdminFirestoreService.set(
     getSubCollection('inbox'),
     emailId,
     {

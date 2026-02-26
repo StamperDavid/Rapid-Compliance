@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
 import { orderBy } from 'firebase/firestore';
-import { FirestoreService } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { validateToolUrl, type CustomTool } from '@/types/custom-tools';
 import { getSubCollection } from '@/lib/firebase/collections';
 import { requireAuth } from '@/lib/auth/api-auth';
@@ -73,7 +73,7 @@ export async function GET(
 
     // Fetch single tool
     if (toolId) {
-      const tool = await FirestoreService.get<CustomTool>(collectionPath, toolId);
+      const tool = await AdminFirestoreService.get(collectionPath, toolId);
 
       if (!tool) {
         return NextResponse.json(
@@ -86,7 +86,7 @@ export async function GET(
     }
 
     // Fetch all tools, ordered by order field
-    const tools = await FirestoreService.getAll<CustomTool>(
+    const tools = await AdminFirestoreService.getAll(
       collectionPath,
       [orderBy('order', 'asc')]
     );
@@ -156,7 +156,7 @@ export async function POST(
     };
 
     const collectionPath = getCollectionPath();
-    await FirestoreService.set(collectionPath, toolId, toolData, false);
+    await AdminFirestoreService.set(collectionPath, toolId, toolData as Record<string, unknown>, false);
 
     const tool: CustomTool = {
       id: toolId,
@@ -205,7 +205,7 @@ export async function PUT(
     const collectionPath = getCollectionPath();
 
     // Check if tool exists
-    const existingTool = await FirestoreService.get<CustomTool>(collectionPath, id);
+    const existingTool = await AdminFirestoreService.get(collectionPath, id);
     if (!existingTool) {
       return NextResponse.json(
         { error: 'Tool not found' },
@@ -251,11 +251,11 @@ export async function PUT(
       updateData.allowedRoles = allowedRoles;
     }
 
-    await FirestoreService.update(collectionPath, id, updateData);
+    await AdminFirestoreService.update(collectionPath, id, updateData as Record<string, unknown>);
 
     // Return updated tool
     const updatedTool: CustomTool = {
-      ...existingTool,
+      ...(existingTool as unknown as CustomTool),
       ...updateData,
       id,
     };
@@ -302,7 +302,7 @@ export async function DELETE(
     const collectionPath = getCollectionPath();
 
     // Check if tool exists
-    const existingTool = await FirestoreService.get<CustomTool>(collectionPath, id);
+    const existingTool = await AdminFirestoreService.get(collectionPath, id);
     if (!existingTool) {
       return NextResponse.json(
         { error: 'Tool not found' },
@@ -310,7 +310,7 @@ export async function DELETE(
       );
     }
 
-    await FirestoreService.delete(collectionPath, id);
+    await AdminFirestoreService.delete(collectionPath, id);
 
     return NextResponse.json({ success: true, deleted: id });
   } catch (error: unknown) {

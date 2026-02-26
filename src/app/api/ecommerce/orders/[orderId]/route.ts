@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireAuth } from '@/lib/auth/api-auth';
-import { FirestoreService } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import type { Order, OrderStatus, FulfillmentStatus } from '@/types/ecommerce';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
@@ -33,7 +33,7 @@ export async function GET(
       return authResult;
     }
 
-    const order = await FirestoreService.get<Order>(ORDERS_PATH, orderId);
+    const order = await AdminFirestoreService.get(ORDERS_PATH, orderId) as Order | null;
 
     if (!order) {
       return errors.notFound('Order not found');
@@ -112,7 +112,7 @@ export async function PUT(
       updates.internalNotes = validation.data.internalNotes;
     }
 
-    await FirestoreService.update(ORDERS_PATH, orderId, updates);
+    await AdminFirestoreService.update(ORDERS_PATH, orderId, updates);
 
     logger.info('Order updated', { orderId, fields: Object.keys(validation.data) });
 

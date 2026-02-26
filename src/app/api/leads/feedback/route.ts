@@ -5,7 +5,7 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { FirestoreService } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
 
     // Store feedback in Firestore
     const feedbackId = `feedback_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-    await FirestoreService.set(
+    await AdminFirestoreService.set(
       getSubCollection('lead-feedback'),
       feedbackId,
       {

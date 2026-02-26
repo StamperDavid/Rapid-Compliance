@@ -9,7 +9,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
-import { FirestoreService } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { getSubCollection } from '@/lib/firebase/collections';
 
 export const dynamic = 'force-dynamic';
@@ -88,15 +88,15 @@ export async function GET(request: NextRequest) {
     // Fetch from all 3 sources in parallel
     const [agentPosts, queuedPosts, campaignPosts] = await Promise.all([
       // Source 1: Autonomous agent posts (scheduled + published)
-      FirestoreService.getAll<PostDoc>(
+      AdminFirestoreService.getAll(
         getSubCollection('social_posts')
       ),
       // Source 2: Queued posts
-      FirestoreService.getAll<PostDoc>(
+      AdminFirestoreService.getAll(
         getSubCollection('social_queue')
       ),
       // Source 3: Campaign posts (the campaigns page store)
-      FirestoreService.getAll<PostDoc>(
+      AdminFirestoreService.getAll(
         `${getSubCollection('workspaces')}/default/test_socialPosts`
       ),
     ]);
@@ -114,9 +114,9 @@ export async function GET(request: NextRequest) {
       }
     };
 
-    addEvents(agentPosts, 'agent');
-    addEvents(queuedPosts, 'queue');
-    addEvents(campaignPosts, 'campaigns');
+    addEvents(agentPosts as unknown as PostDoc[], 'agent');
+    addEvents(queuedPosts as unknown as PostDoc[], 'queue');
+    addEvents(campaignPosts as unknown as PostDoc[], 'campaigns');
 
     // Sort by start date
     events.sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());

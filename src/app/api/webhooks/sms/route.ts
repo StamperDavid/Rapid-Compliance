@@ -5,7 +5,7 @@
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
-import { FirestoreService } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { getSubCollection } from '@/lib/firebase/collections';
 import { errors } from '@/lib/middleware/error-handler';
@@ -214,7 +214,7 @@ async function updateSMSRecord(
   }
 ): Promise<void> {
   try {
-    const smsMessages = await FirestoreService.getAll(
+    const smsMessages = await AdminFirestoreService.getAll(
       getSubCollection('smsMessages'),
       []
     );
@@ -227,7 +227,7 @@ async function updateSMSRecord(
     });
 
     if (smsRecord && isSMSMessage(smsRecord)) {
-      await FirestoreService.update(
+      await AdminFirestoreService.update(
         getSubCollection('smsMessages'),
         smsRecord.id,
         {
@@ -269,7 +269,7 @@ async function handleSMSFailure(
       errorMessage
     });
 
-    const smsMessages = await FirestoreService.getAll(
+    const smsMessages = await AdminFirestoreService.getAll(
       getSubCollection('smsMessages'),
       []
     );
@@ -282,7 +282,7 @@ async function handleSMSFailure(
     });
 
     if (smsRecord && isSMSMessage(smsRecord) && smsRecord.enrollmentId) {
-      const enrollment = await FirestoreService.get(
+      const enrollment = await AdminFirestoreService.get(
         getSubCollection('enrollments'),
         smsRecord.enrollmentId
       );
@@ -295,7 +295,7 @@ async function handleSMSFailure(
           action.error = errorMessage ?? `Error ${errorCode}`;
           action.updatedAt = new Date().toISOString();
 
-          await FirestoreService.update(
+          await AdminFirestoreService.update(
             getSubCollection('enrollments'),
             smsRecord.enrollmentId,
             {

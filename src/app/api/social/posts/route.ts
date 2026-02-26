@@ -11,7 +11,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
-import { FirestoreService } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { getSubCollection } from '@/lib/firebase/collections';
 import { orderBy, where, type QueryConstraint } from 'firebase/firestore';
 
@@ -80,7 +80,7 @@ export async function GET(request: NextRequest) {
 
     constraints.push(orderBy('createdAt', 'desc'));
 
-    const posts = await FirestoreService.getAll<SocialPostDoc>(postsPath, constraints);
+    const posts = await AdminFirestoreService.getAll(postsPath, constraints);
 
     return NextResponse.json({ success: true, posts });
   } catch (error: unknown) {
@@ -120,7 +120,7 @@ export async function POST(request: NextRequest) {
       createdBy: authResult.user.uid,
     };
 
-    await FirestoreService.set(postsPath, postId, post, false);
+    await AdminFirestoreService.set(postsPath, postId, post as unknown as Record<string, unknown>, false);
 
     logger.info('Social post created', { postId, platform: validation.data.platform });
 
@@ -153,7 +153,7 @@ export async function PUT(request: NextRequest) {
 
     const { postId, ...updates } = validation.data;
 
-    await FirestoreService.update(postsPath, postId, {
+    await AdminFirestoreService.update(postsPath, postId, {
       ...updates,
       updatedAt: new Date(),
     });
@@ -184,7 +184,7 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'postId is required' }, { status: 400 });
     }
 
-    await FirestoreService.delete(postsPath, postId);
+    await AdminFirestoreService.delete(postsPath, postId);
 
     logger.info('Social post deleted', { postId });
 

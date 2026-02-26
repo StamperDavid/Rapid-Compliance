@@ -3,7 +3,7 @@ import { AgentInstanceManager } from '@/lib/agent/instance-manager';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { agentChatSchema, validateInput } from '@/lib/validation/schemas';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
-import { FirestoreService } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { handleAPIError, errors } from '@/lib/api/error-handler';
 import { logger } from '@/lib/logger/logger';
 import { getSubCollection } from '@/lib/firebase/collections';
@@ -253,7 +253,7 @@ export async function POST(request: NextRequest) {
     const instance = await instanceManager.spawnInstance(customerId);
 
     // Get agent configuration
-    const agentConfigRaw: unknown = await FirestoreService.get(
+    const agentConfigRaw: unknown = await AdminFirestoreService.get(
       getSubCollection('agentConfig'),
       'default'
     );

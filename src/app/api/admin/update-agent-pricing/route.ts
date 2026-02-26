@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server';
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
+import { COLLECTIONS } from '@/lib/firebase/collections';
 import { requireRole } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
 
@@ -233,17 +234,17 @@ ${tierDescriptions}
     };
 
     // Save to agent knowledge base
-    await FirestoreService.set(
+    await AdminFirestoreService.set(
       'platform_config',
       'agent_pricing_knowledge',
-      pricingKnowledge
+      pricingKnowledge as unknown as Record<string, unknown>
     );
 
     // Also update all organization-level agents if they exist
     // This ensures customer-facing agents get the updated pricing
     let orgs: OrganizationDocument[] = [];
     try {
-      orgs = await FirestoreService.getAll<OrganizationDocument>(COLLECTIONS.ORGANIZATIONS, []);
+      orgs = (await AdminFirestoreService.getAll(COLLECTIONS.ORGANIZATIONS, [])) as OrganizationDocument[];
     } catch (fetchError: unknown) {
       const errorMessage = fetchError instanceof Error ? fetchError.message : 'Unknown error';
       logger.error('[Admin] Failed to fetch organizations:', fetchError instanceof Error ? fetchError : new Error(String(fetchError)));
@@ -259,10 +260,10 @@ ${tierDescriptions}
     for (const org of orgs) {
       try {
         // Update agent knowledge for this organization
-        await FirestoreService.set(
+        await AdminFirestoreService.set(
           `${COLLECTIONS.ORGANIZATIONS}/${org.id}/agent_knowledge`,
           'pricing',
-          pricingKnowledge
+          pricingKnowledge as unknown as Record<string, unknown>
         );
         successCount++;
       } catch (error: unknown) {

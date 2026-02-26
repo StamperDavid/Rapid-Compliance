@@ -1,12 +1,12 @@
 import { type NextRequest, NextResponse } from 'next/server';
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
+import { COLLECTIONS, getOrdersCollection, getSubCollection } from '@/lib/firebase/collections';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { withCache } from '@/lib/cache/analytics-cache';
 import { PLATFORM_ID } from '@/lib/constants/platform';
-import { getOrdersCollection, getSubCollection } from '@/lib/firebase/collections';
 
 export const dynamic = 'force-dynamic';
 
@@ -204,10 +204,10 @@ async function calculateAttributionAnalytics(period: string): Promise<Attributio
   let allOrders: OrderRecord[] = [];
   let allFormSubmissions: FormSubmissionRecord[] = [];
 
-  try { allLeads = await FirestoreService.getAll<LeadRecord>(leadsPath, []); } catch { logger.debug('No leads collection yet'); }
-  try { allDeals = await FirestoreService.getAll<DealRecord>(dealsPath, []); } catch { logger.debug('No deals collection yet'); }
-  try { allOrders = await FirestoreService.getAll<OrderRecord>(ordersPath, []); } catch { logger.debug('No orders collection yet'); }
-  try { allFormSubmissions = await FirestoreService.getAll<FormSubmissionRecord>(formSubmissionsPath, []); } catch { logger.debug('No form submissions collection yet'); }
+  try { allLeads = (await AdminFirestoreService.getAll(leadsPath, [])) as LeadRecord[]; } catch { logger.debug('No leads collection yet'); }
+  try { allDeals = (await AdminFirestoreService.getAll(dealsPath, [])) as DealRecord[]; } catch { logger.debug('No deals collection yet'); }
+  try { allOrders = (await AdminFirestoreService.getAll(ordersPath, [])) as OrderRecord[]; } catch { logger.debug('No orders collection yet'); }
+  try { allFormSubmissions = (await AdminFirestoreService.getAll(formSubmissionsPath, [])) as FormSubmissionRecord[]; } catch { logger.debug('No form submissions collection yet'); }
 
   // Filter by date range
   const leads = allLeads.filter(l => {

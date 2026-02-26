@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/api-auth';
-import { FirestoreService } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
@@ -111,7 +111,7 @@ export async function GET(request: NextRequest) {
         orderBy('createdAt', 'desc'),
         limit(QUERY_LIMIT),
       ];
-      allOrders = await FirestoreService.getAll<OrderRecord>(ordersPath, ordersConstraints);
+      allOrders = (await AdminFirestoreService.getAll(ordersPath, ordersConstraints)) as OrderRecord[];
       if (allOrders.length === QUERY_LIMIT) {
         logger.warn('Ecommerce analytics orders query hit limit', { limit: QUERY_LIMIT, period });
       }
@@ -142,7 +142,7 @@ export async function GET(request: NextRequest) {
         orderBy('createdAt', 'desc'),
         limit(QUERY_LIMIT),
       ];
-      allCarts = await FirestoreService.getAll<CartRecord>(cartsPath, cartsConstraints);
+      allCarts = (await AdminFirestoreService.getAll(cartsPath, cartsConstraints)) as CartRecord[];
       if (allCarts.length === QUERY_LIMIT) {
         logger.warn('Ecommerce analytics carts query hit limit', { limit: QUERY_LIMIT, period });
       }

@@ -1,7 +1,8 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getTokensFromCode } from '@/lib/integrations/slack-service';
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
+import { COLLECTIONS } from '@/lib/firebase/collections';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { encryptToken } from '@/lib/security/token-encryption';
 import { validateOAuthState } from '@/lib/security/oauth-state';
@@ -39,7 +40,7 @@ export async function GET(request: NextRequest) {
     }
     const tokens = await getTokensFromCode(validation.data.code);
 
-    await FirestoreService.set(
+    await AdminFirestoreService.set(
       COLLECTIONS.INTEGRATIONS,
       `slack_${tokens.team_id}`,
       {

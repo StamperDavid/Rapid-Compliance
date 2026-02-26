@@ -9,7 +9,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
-import { FirestoreService } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { getSubCollection } from '@/lib/firebase/collections';
 import { classifyReply, type ReplyClassification } from '@/lib/outbound/reply-handler';
 import { v4 as uuidv4 } from 'uuid';
@@ -251,7 +251,7 @@ async function findOriginalEmail(
 
     // Try to find by Message-ID first (most reliable)
     if (inReplyTo) {
-      const sentEmails = await FirestoreService.getAll(
+      const sentEmails = await AdminFirestoreService.getAll(
         getSubCollection('sentEmails'),
         [where('messageId', '==', inReplyTo)]
       );
@@ -262,7 +262,7 @@ async function findOriginalEmail(
     }
 
     // Fall back to finding by recipient address (less reliable)
-    const sentEmails = await FirestoreService.getAll(
+    const sentEmails = await AdminFirestoreService.getAll(
       getSubCollection('sentEmails'),
       [where('to', '==', recipientAddress)]
     );
@@ -401,7 +401,7 @@ async function unenrollProspectFromSequences(
 ): Promise<void> {
   try {
     const { where } = await import('firebase/firestore');
-    const prospects = await FirestoreService.getAll(
+    const prospects = await AdminFirestoreService.getAll(
       getSubCollection('prospects'),
       [where('email', '==', prospectEmail)]
     );
@@ -419,7 +419,7 @@ async function unenrollProspectFromSequences(
 
     const prospectId = firstProspect.id;
 
-    const enrollments = await FirestoreService.getAll(
+    const enrollments = await AdminFirestoreService.getAll(
       getSubCollection('enrollments'),
       [
         where('prospectId', '==', prospectId),
@@ -458,7 +458,7 @@ async function pauseProspectSequences(
 ): Promise<void> {
   try {
     const { where } = await import('firebase/firestore');
-    const prospects = await FirestoreService.getAll(
+    const prospects = await AdminFirestoreService.getAll(
       getSubCollection('prospects'),
       [where('email', '==', prospectEmail)]
     );
@@ -472,7 +472,7 @@ async function pauseProspectSequences(
 
     const prospectId = firstProspect.id;
 
-    const enrollments = await FirestoreService.getAll(
+    const enrollments = await AdminFirestoreService.getAll(
       getSubCollection('enrollments'),
       [
         where('prospectId', '==', prospectId),
@@ -485,7 +485,7 @@ async function pauseProspectSequences(
         continue;
       }
 
-      await FirestoreService.set(
+      await AdminFirestoreService.set(
         getSubCollection('enrollments'),
         enrollment.id,
         {
@@ -519,7 +519,7 @@ async function logInboundEmail(
   const emailId = `inbound_${uuidv4()}`;
 
   try {
-    await FirestoreService.set(
+    await AdminFirestoreService.set(
       getSubCollection('inboundEmails'),
       emailId,
       {

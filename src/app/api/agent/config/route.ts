@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { FirestoreService } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
@@ -99,7 +99,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Get agent configuration
-    const agentConfigRaw = await FirestoreService.get(
+    const agentConfigRaw = await AdminFirestoreService.get(
       getSubCollection('agentConfig'),
       'default'
     );
@@ -175,10 +175,10 @@ export async function POST(request: NextRequest) {
     };
 
     // Save agent configuration (single model - ensemble removed for MVP)
-    await FirestoreService.set(
+    await AdminFirestoreService.set(
       getSubCollection('agentConfig'),
       'default',
-      configData,
+      configData as unknown as Record<string, unknown>,
       false
     );
 

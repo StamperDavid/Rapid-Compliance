@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server';
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
+import { COLLECTIONS } from '@/lib/firebase/collections';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
@@ -102,7 +103,7 @@ export async function GET(request: NextRequest) {
     const QUERY_LIMIT = 1000;
 
     try {
-      allDeals = await FirestoreService.getAll(dealsPath, [limit(QUERY_LIMIT)]);
+      allDeals = (await AdminFirestoreService.getAll(dealsPath, [limit(QUERY_LIMIT)])) as DealRecord[];
       if (allDeals.length === QUERY_LIMIT) {
         logger.warn('Forecast analytics hit query limit', { limit: QUERY_LIMIT });
       }
