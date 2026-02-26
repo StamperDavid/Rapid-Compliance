@@ -51,13 +51,19 @@ export function MerchantOrchestrator() {
   // Fetch system health + implementation context via API (server-side)
   useEffect(() => {
     async function fetchHealthAndContext() {
-      if (!profile) {return;}
+      if (!profile || !user) {return;}
       try {
+        const { getCurrentUser } = await import('@/lib/auth/auth-service');
+        const firebaseUser = getCurrentUser();
+        if (!firebaseUser) {return;}
+        const token = await firebaseUser.getIdToken();
         const params = new URLSearchParams();
         if (profile.ownerName) {params.set('ownerName', profile.ownerName);}
         if (profile.industry) {params.set('industry', profile.industry);}
 
-        const res = await fetch(`/api/system/health?${params.toString()}`);
+        const res = await fetch(`/api/system/health?${params.toString()}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
         if (!res.ok) {return;}
 
         const data = await res.json() as {
@@ -73,7 +79,7 @@ export function MerchantOrchestrator() {
       }
     }
     void fetchHealthAndContext();
-  }, [profile]);
+  }, [profile, user]);
 
   // Fetch merchant profile from Firestore
   useEffect(() => {
