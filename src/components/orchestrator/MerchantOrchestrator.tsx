@@ -21,8 +21,7 @@ import {
   type IndustryPersona,
   type IndustryType,
 } from '@/lib/ai/persona-mapper';
-import { ImplementationGuide, type ImplementationContext } from '@/lib/orchestrator/implementation-guide';
-import { SystemHealthService, type SystemHealthReport } from '@/lib/orchestrator/system-health-service';
+import type { SystemHealthReport } from '@/lib/orchestrator/system-health-service';
 import { PLATFORM_ID, ASSISTANT_NAME } from '@/lib/constants/platform';
 import { logger } from '@/lib/logger/logger';
 
@@ -41,45 +40,40 @@ export function MerchantOrchestrator() {
   const [profile, setProfile] = useState<MerchantProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [healthReport, setHealthReport] = useState<SystemHealthReport | null>(null);
-  const [implContext, setImplContext] = useState<ImplementationContext | null>(null);
+  const [implSystemPrompt, setImplSystemPrompt] = useState<string | null>(null);
+  const [implPhase, setImplPhase] = useState<string | null>(null);
 
   // Set context on mount
   useEffect(() => {
     setContext('merchant');
   }, [setContext]);
 
-  // Fetch system health report for Implementation Guide
+  // Fetch system health + implementation context via API (server-side)
   useEffect(() => {
-    async function fetchSystemHealth() {
+    async function fetchHealthAndContext() {
+      if (!profile) {return;}
       try {
-        const report = await SystemHealthService.generateHealthReport();
-        setHealthReport(report);
+        const params = new URLSearchParams();
+        if (profile.ownerName) {params.set('ownerName', profile.ownerName);}
+        if (profile.industry) {params.set('industry', profile.industry);}
+
+        const res = await fetch(`/api/system/health?${params.toString()}`);
+        if (!res.ok) {return;}
+
+        const data = await res.json() as {
+          healthReport: SystemHealthReport;
+          implContext: { currentPhase: string };
+          implSystemPrompt: string;
+        };
+        setHealthReport(data.healthReport);
+        setImplSystemPrompt(data.implSystemPrompt);
+        setImplPhase(data.implContext?.currentPhase ?? null);
       } catch (error) {
         logger.error('Error fetching system health', error instanceof Error ? error : new Error(String(error)));
       }
     }
-    void fetchSystemHealth();
-  }, []);
-
-  // Build Implementation Context once we have profile and health report
-  useEffect(() => {
-    async function buildImplContext() {
-      if (!profile || !healthReport) {
-        return;
-      }
-      try {
-        const context = await ImplementationGuide.buildContext(
-          ASSISTANT_NAME,
-          profile.ownerName,
-          profile.industry
-        );
-        setImplContext(context);
-      } catch (error) {
-        logger.error('Error building implementation context', error instanceof Error ? error : new Error(String(error)));
-      }
-    }
-    void buildImplContext();
-  }, [profile, healthReport]);
+    void fetchHealthAndContext();
+  }, [profile]);
 
   // Fetch merchant profile from Firestore
   useEffect(() => {
@@ -144,7 +138,7 @@ export function MerchantOrchestrator() {
 
     // First contact - natural introduction
     const systemContext = buildSystemContext();
-    const recommendation = implContext?.currentPhase === 'onboarding'
+    const recommendation = implPhase === 'onboarding'
       ? `Since you're getting started, I'd recommend we set up lead generation first - that's usually the highest impact.`
       : `I'm ready to manage leads, content, and outreach for ${industryContext.toLowerCase()} businesses like yours.`;
 
@@ -156,26 +150,19 @@ ${recommendation} What would you like to focus on?`;
   };
 
   // Generate briefing for returning users - natural conversation style
-  const generateBriefing = async (): Promise<string> => {
-    // Get fresh health report for briefing
-    let currentHealth = healthReport;
-    if (!currentHealth) {
-      try {
-        currentHealth = await SystemHealthService.generateHealthReport();
-      } catch (e) {
-        logger.error('Failed to fetch health report for briefing', e instanceof Error ? e : new Error(String(e)));
-      }
-    }
+  const generateBriefing = (): Promise<string> => {
+    // Use cached health report (fetched via API on mount)
+    const currentHealth = healthReport;
 
     const businessName = profile?.name ?? 'your business';
     const emailConnected = currentHealth?.integrations.find(i => i.id === 'email')?.connected;
     const recommendation = currentHealth?.recommendations[0]?.title ?? 'setting up your lead pipeline';
 
-    return `Here's where things stand for ${businessName}:
+    return Promise.resolve(`Here's where things stand for ${businessName}:
 
 Lead scanning is active and I'm tracking prospects in the ${industryPersona.industryDisplayName.toLowerCase()} vertical. ${emailConnected ? 'Email is connected and ready for outreach.' : "Email isn't connected yet - we can set that up when you're ready to start outreach campaigns."}
 
-Based on your setup, ${recommendation.toLowerCase()} looks like the next high-impact move. Want me to get started on that?`;
+Based on your setup, ${recommendation.toLowerCase()} looks like the next high-impact move. Want me to get started on that?`);
   };
 
   if (isLoading) {
@@ -189,9 +176,9 @@ Based on your setup, ${recommendation.toLowerCase()} looks like the next high-im
     // Add industry persona
     prompt += `\n\n${buildPersonaSystemPrompt(ASSISTANT_NAME, ownerName, (profile?.industry as IndustryType) ?? 'custom', 'client')}`;
 
-    // Add Implementation Guide context if available
-    if (implContext) {
-      prompt += `\n\n${ImplementationGuide.generateSystemPrompt(implContext)}`;
+    // Add Implementation Guide context if available (pre-built server-side)
+    if (implSystemPrompt) {
+      prompt += `\n\n${implSystemPrompt}`;
     }
 
     // Add system health awareness
