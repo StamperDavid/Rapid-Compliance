@@ -18,14 +18,12 @@ import * as path from 'path';
 const PLATFORM_ID = 'rapid-compliance-root';
 const SEED_USER_ID = 'system-seed';
 
-// Environment-aware prefix (dev = test_, production = no prefix)
-const APP_ENV = process.env.NEXT_PUBLIC_APP_ENV ?? process.env.NODE_ENV ?? 'development';
-const IS_PRODUCTION = APP_ENV === 'production';
-const PREFIX = IS_PRODUCTION ? '' : 'test_';
+// No prefix — single Firestore path for all environments
+const PREFIX = '';
 
 // Path builders
-const orgDoc = `${PREFIX}organizations/${PLATFORM_ID}`;
-const subCol = (name: string) => `${orgDoc}/${PREFIX}${name}`;
+const orgDoc = `organizations/${PLATFORM_ID}`;
+const subCol = (name: string) => `${orgDoc}/${name}`;
 
 // ============================================================================
 // INITIALIZE FIREBASE ADMIN

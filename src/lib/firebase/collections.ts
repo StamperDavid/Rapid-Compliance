@@ -1,28 +1,20 @@
 /**
  * Centralized Collection Names
- * Supports environment-aware prefixes for test data isolation
  *
- * CRITICAL: This file prevents test data pollution by automatically prefixing
- * collection names based on the environment.
- *
- * ENVIRONMENT ISOLATION STRATEGY:
- * - Production (NEXT_PUBLIC_APP_ENV === 'production'): No prefix
- * - All other environments (dev, staging, test): 'test_' prefix
- *
- * This prevents the "ticking time bomb" of test data polluting production.
+ * Single Firestore path for all environments (single Firebase project).
+ * Environment isolation, if needed, should use separate Firebase projects
+ * rather than collection prefixes within the same project.
  */
 
 import { PLATFORM_ID } from '@/lib/constants/platform';
 
-// Check NEXT_PUBLIC_APP_ENV first, fallback to NODE_ENV
 const APP_ENV = (process.env.NEXT_PUBLIC_APP_ENV ?? process.env.NODE_ENV) || 'development';
-const IS_PRODUCTION = APP_ENV === 'production';
 const IS_TEST = APP_ENV === 'test' || process.env.NODE_ENV === 'test' || !!process.env.JEST_WORKER_ID;
 const IS_DEV = APP_ENV === 'development';
+const IS_PRODUCTION = APP_ENV === 'production';
 
-// CRITICAL: Only production has no prefix
-// All other environments (dev, staging, test) get test_ prefix
-const PREFIX = IS_PRODUCTION ? '' : 'test_';
+// No prefix — all environments use the same Firestore paths
+const PREFIX = '';
 
 /**
  * Centralized Collection Registry
@@ -135,7 +127,7 @@ export const getCollection = (name: keyof typeof COLLECTIONS): string => {
 /**
  * Helper for platform sub-collections
  * Usage: getSubCollection('records')
- * Returns: 'organizations/rapid-compliance-root/records' (or 'test_organizations/rapid-compliance-root/test_records' in test mode)
+ * Returns: 'organizations/rapid-compliance-root/records'
  */
 export const getSubCollection = (
   subCollection: string
@@ -222,7 +214,7 @@ export const logCollectionConfig = () => {
         testMode: IS_TEST,
         devMode: IS_DEV,
         prefix: PREFIX,
-        isolated: PREFIX ? 'Isolated (test_ prefix)' : 'Production (no prefix)',
+        isolated: false,
         file: 'collections.ts',
       });
     }).catch(() => {

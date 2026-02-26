@@ -33,10 +33,8 @@ const DEMO_OWNER_ID = 'demo-owner-001';
 const DEMO_OWNER_NAME = '(Demo) Alex Morgan';
 const DEMO_OWNER_EMAIL = 'alex.morgan@salesvelocity.ai';
 
-// Environment-aware prefix (dev = test_, production = no prefix)
-const APP_ENV = process.env.NEXT_PUBLIC_APP_ENV ?? process.env.NODE_ENV ?? 'development';
-const IS_PRODUCTION = APP_ENV === 'production';
-const PREFIX = IS_PRODUCTION ? '' : 'test_';
+// No prefix — single Firestore path for all environments
+const PREFIX = '';
 
 // Path builders
 const orgRoot = `${PREFIX}organizations/${PLATFORM_ID}`;

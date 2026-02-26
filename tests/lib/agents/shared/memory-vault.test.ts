@@ -29,8 +29,8 @@ jest.mock('@/lib/firebase/admin', () => {
 
 jest.mock('@/lib/firebase/collections', () => ({
   __esModule: true,
-  getSubCollection: jest.fn((sub: string) => `test_organizations/rapid-compliance-root/test_${sub}`),
-  getOrgSubCollection: jest.fn((sub: string) => `test_organizations/rapid-compliance-root/test_${sub}`),
+  getSubCollection: jest.fn((sub: string) => `organizations/rapid-compliance-root/${sub}`),
+  getOrgSubCollection: jest.fn((sub: string) => `organizations/rapid-compliance-root/${sub}`),
 }));
 
 jest.mock('@/lib/logger/logger', () => ({

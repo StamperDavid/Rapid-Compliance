@@ -24,10 +24,10 @@ import { test, expect, type APIRequestContext } from '@playwright/test';
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
 
 /**
- * Firestore path for missions in dev/test mode:
- * test_organizations/rapid-compliance-root/test_missions
+ * Firestore path for missions:
+ * organizations/rapid-compliance-root/missions
  */
-const MISSIONS_COLLECTION = 'test_organizations/rapid-compliance-root/test_missions';
+const MISSIONS_COLLECTION = 'organizations/rapid-compliance-root/missions';
 
 /** Mission IDs created during tests — shared across describe blocks */
 const createdMissionIds: string[] = [];

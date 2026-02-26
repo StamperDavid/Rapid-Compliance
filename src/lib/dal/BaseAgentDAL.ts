@@ -1,18 +1,12 @@
 /**
  * BaseAgentDAL - Enterprise Data Access Layer
- * 
+ *
  * CRITICAL FEATURES:
- * - Dynamic environment-aware collection naming based on NEXT_PUBLIC_APP_ENV
- * - Automatic test_ prefix for non-production environments
  * - Type-safe collection path resolution
- * - Organization-scoped multi-tenancy support
+ * - Organization-scoped data access
  * - Audit logging and compliance
- * 
- * ENVIRONMENT ISOLATION STRATEGY:
- * - Production (NEXT_PUBLIC_APP_ENV === 'production'): No prefix
- * - All other environments (dev, staging, test): 'test_' prefix
- * 
- * This prevents test data pollution and ensures clean environment separation.
+ *
+ * All environments use the same Firestore paths (single Firebase project).
  */
 
 import {
@@ -95,21 +89,11 @@ export class BaseAgentDAL {
   // ========================================
   
   /**
-   * Calculate the environment prefix based on NEXT_PUBLIC_APP_ENV
-   * 
-   * CRITICAL: Returns 'test_' for all non-production environments
-   * This is the "ticking time bomb" fix mentioned in the architecture docs
+   * Environment prefix — always empty (single Firebase project, single path).
+   * Environment isolation should use separate Firebase projects, not prefixes.
    */
   private calculateEnvPrefix(): string {
-    const appEnv = (process.env.NEXT_PUBLIC_APP_ENV ?? process.env.NODE_ENV) || 'development';
-    
-    // Only production has no prefix
-    if (appEnv === 'production') {
-      return '';
-    }
-    
-    // All other environments (dev, staging, test, etc.) get test_ prefix
-    return 'test_';
+    return '';
   }
   
   /**
