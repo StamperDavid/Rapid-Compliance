@@ -13,9 +13,10 @@
  * @module system-health-service
  */
 
-import { FirestoreService } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { SPECIALISTS, type SpecialistPlatform } from './feature-manifest';
 import { PLATFORM_ID } from '@/lib/constants/platform';
+import { COLLECTIONS, getSubCollection } from '@/lib/firebase/collections';
 
 // ============================================================================
 // TYPES
@@ -385,7 +386,7 @@ export class SystemHealthService {
 
   private static async getOrganization() {
     try {
-      return await FirestoreService.get<Record<string, unknown>>('organizations', PLATFORM_ID);
+      return await AdminFirestoreService.get(COLLECTIONS.ORGANIZATIONS, PLATFORM_ID);
     } catch {
       return null;
     }
@@ -408,8 +409,8 @@ export class SystemHealthService {
     ];
 
     try {
-      const integrationDocs = await FirestoreService.getAll<Record<string, unknown>>(
-        `organizations/$rapid-compliance-root/integrations`,
+      const integrationDocs = await AdminFirestoreService.getAll(
+        getSubCollection('integrations'),
         []
       );
 
@@ -434,8 +435,8 @@ export class SystemHealthService {
 
   private static async getBaseModel() {
     try {
-      const models = await FirestoreService.getAll<Record<string, unknown>>(
-        `organizations/$rapid-compliance-root/baseModels`,
+      const models = await AdminFirestoreService.getAll(
+        getSubCollection('baseModels'),
         []
       );
       return models[0] ?? null;
@@ -446,8 +447,8 @@ export class SystemHealthService {
 
   private static async getGoldenMasters() {
     try {
-      return await FirestoreService.getAll<Record<string, unknown>>(
-        `organizations/$rapid-compliance-root/goldenMasters`,
+      return await AdminFirestoreService.getAll(
+        getSubCollection('goldenMasters'),
         []
       );
     } catch {
@@ -457,8 +458,8 @@ export class SystemHealthService {
 
   private static async getRecordCount(collection: string): Promise<number> {
     try {
-      const records = await FirestoreService.getAll<Record<string, unknown>>(
-        `organizations/$rapid-compliance-root/${collection}`,
+      const records = await AdminFirestoreService.getAll(
+        getSubCollection(collection),
         []
       );
       return records.length;
@@ -469,8 +470,8 @@ export class SystemHealthService {
 
   private static async getFeatureSettings(): Promise<Record<string, FeatureStatus>> {
     try {
-      const settings = await FirestoreService.get<Record<string, unknown>>(
-        `organizations/$rapid-compliance-root/settings`,
+      const settings = await AdminFirestoreService.get(
+        getSubCollection('settings'),
         'featureVisibility'
       );
       return (settings?.visibility as Record<string, FeatureStatus>) ?? {};
@@ -489,28 +490,102 @@ export class SystemHealthService {
   ): FeatureHealthCheck[] {
     const checks: FeatureHealthCheck[] = [];
 
+    // Explicit mapping from feature ID to integration IDs
+    const featureToIntegrationIds: Record<string, string[]> = {
+      email_smtp: ['email'],
+      crm_sync: [], // Built-in CRM — no external integration needed
+      calendar: ['calendar'],
+      payments: ['stripe', 'paypal'],
+      social_accounts: ['facebook', 'instagram', 'linkedin', 'twitter', 'tiktok', 'pinterest', 'youtube'],
+    };
+
     // Check integrations
     for (const feature of Object.values(PLATFORM_FEATURES)) {
       if (feature.category === 'integration') {
-        const integration = integrations.find(i =>
-          feature.id.includes(i.id) || i.id.includes(feature.id.split('_')[0])
+        const mappedIds = featureToIntegrationIds[feature.id] ?? [];
+
+        // CRM is built-in — always "configured"
+        const isCrmBuiltIn = feature.id === 'crm_sync';
+
+        // Feature is configured if ANY of its mapped integrations are connected
+        const isConnected = isCrmBuiltIn || mappedIds.some(mid =>
+          integrations.some(i => i.id === mid && i.connected)
         );
 
         // Check if hidden
         const isHidden = featureSettings[feature.id] === 'hidden';
 
+        const connectedIntegration = integrations.find(i =>
+          mappedIds.includes(i.id) && i.connected
+        );
+
         checks.push({
           featureId: feature.id,
           featureName: feature.name,
           icon: feature.icon,
-          status: isHidden ? 'hidden' : (integration?.connected ? 'configured' : 'unconfigured'),
+          status: isHidden ? 'hidden' : (isConnected ? 'configured' : 'unconfigured'),
           category: feature.category,
           description: feature.description,
-          configuredAt: integration?.connectedAt,
-          missingRequirements: integration?.connected ? undefined : ['Connection required'],
-          recommendedAction: integration?.connected ? undefined : `Connect your ${feature.name}`,
+          configuredAt: connectedIntegration?.connectedAt,
+          missingRequirements: isConnected ? undefined : ['Connection required'],
+          recommendedAction: isConnected ? undefined : `Connect your ${feature.name}`,
         });
       }
+    }
+
+    // Check tools (lead_scoring, workflows, email_sequences, website_builder, ecommerce)
+    // These are built-in platform tools — they're always "configured" since the code exists
+    // The real question is whether the user has data in them
+    const toolFeatureChecks: Array<{
+      feature: typeof PLATFORM_FEATURES[keyof typeof PLATFORM_FEATURES];
+      isActive: boolean;
+      missing: string;
+      action: string;
+    }> = [
+      {
+        feature: PLATFORM_FEATURES.LEAD_SCORING,
+        isActive: counts.leadCount > 0, // Scoring needs leads to score
+        missing: 'Import leads to enable scoring',
+        action: 'Import leads first, then scoring runs automatically',
+      },
+      {
+        feature: PLATFORM_FEATURES.WORKFLOWS,
+        isActive: true, // Workflow engine is always available
+        missing: 'Create your first workflow',
+        action: 'Create an automation workflow',
+      },
+      {
+        feature: PLATFORM_FEATURES.EMAIL_SEQUENCES,
+        isActive: true, // Sequence engine is always available
+        missing: 'Create your first email sequence',
+        action: 'Build an email nurture sequence',
+      },
+      {
+        feature: PLATFORM_FEATURES.WEBSITE_BUILDER,
+        isActive: true, // Website builder is always available
+        missing: 'Create your first page',
+        action: 'Build a landing page or website',
+      },
+      {
+        feature: PLATFORM_FEATURES.ECOMMERCE,
+        isActive: counts.productCount > 0, // E-commerce needs products
+        missing: 'Add products to your catalog',
+        action: 'Add your first product to enable e-commerce',
+      },
+    ];
+
+    for (const toolCheck of toolFeatureChecks) {
+      const isHidden = featureSettings[toolCheck.feature.id] === 'hidden';
+      checks.push({
+        featureId: toolCheck.feature.id,
+        featureName: toolCheck.feature.name,
+        icon: toolCheck.feature.icon,
+        status: isHidden ? 'hidden' : (toolCheck.isActive ? 'configured' : 'partial'),
+        category: toolCheck.feature.category,
+        description: toolCheck.feature.description,
+        missingRequirements: toolCheck.isActive ? undefined : [toolCheck.missing],
+        recommendedAction: toolCheck.isActive ? undefined : toolCheck.action,
+      });
     }
 
     // Check data
@@ -548,6 +623,19 @@ export class SystemHealthService {
       description: 'Brand voice and identity',
       missingRequirements: organization?.brandDNA ? undefined : ['Complete brand profile'],
       recommendedAction: organization?.brandDNA ? undefined : 'Define your brand voice',
+    });
+
+    const hasKnowledgeBase = !!(baseModel?.knowledgeBase as { documents?: unknown[] } | undefined)?.documents?.length;
+    checks.push({
+      featureId: 'knowledge_base',
+      featureName: 'Knowledge Base',
+      icon: '📚',
+      status: featureSettings.knowledge_base === 'hidden' ? 'hidden' :
+              (hasKnowledgeBase ? 'configured' : 'unconfigured'),
+      category: 'data',
+      description: 'Training documents and FAQs',
+      missingRequirements: hasKnowledgeBase ? undefined : ['Upload training documents'],
+      recommendedAction: hasKnowledgeBase ? undefined : 'Upload FAQs and product docs to the knowledge base',
     });
 
     // Check training

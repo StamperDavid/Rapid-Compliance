@@ -2676,10 +2676,10 @@ export async function executeGetSystemState(): Promise<SystemState> {
       state.features = {
         configured: healthReport.features
           .filter((f) => f.status === 'configured')
-          .map((f) => f.category),
+          .map((f) => f.featureId),
         unconfigured: healthReport.features
           .filter((f) => f.status === 'unconfigured')
-          .map((f) => f.category),
+          .map((f) => f.featureId),
       };
     }
   } catch (error) {
