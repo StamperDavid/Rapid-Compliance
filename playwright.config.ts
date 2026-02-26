@@ -16,6 +16,7 @@ const authFile = path.join(__dirname, 'tests/e2e/.auth/user.json');
 const adminAuthFile = path.join(__dirname, 'tests/e2e/.auth/admin.json');
 
 export default defineConfig({
+  globalTeardown: path.join(__dirname, 'tests/e2e/fixtures/global-teardown.ts'),
   testDir: './tests/e2e',
   testMatch: '**/*.spec.ts',
   fullyParallel: true,
