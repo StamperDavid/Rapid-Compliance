@@ -11,6 +11,9 @@ import { requireAuth } from '@/lib/auth/api-auth';
 import { errors } from '@/lib/middleware/error-handler';
 import { getSEOExpert } from '@/lib/agents/marketing/seo/specialist';
 import { logger } from '@/lib/logger/logger';
+import { adminDb } from '@/lib/firebase/admin';
+import { getSeoResearchCollection } from '@/lib/firebase/collections';
+import { FieldValue } from 'firebase-admin/firestore';
 
 const StrategySchema = z.object({
   industry: z.string().min(1, 'Industry is required'),
@@ -64,6 +67,22 @@ export async function POST(request: NextRequest) {
         { success: false, error: errorMsg },
         { status: 502 }
       );
+    }
+
+    // Fire-and-forget: persist strategy to Firestore
+    if (adminDb && report.data) {
+      adminDb.collection(getSeoResearchCollection()).add({
+        type: 'strategy',
+        domain: parsed.data.industry,
+        data: report.data as Record<string, unknown>,
+        tags: parsed.data.businessGoals,
+        createdAt: FieldValue.serverTimestamp(),
+        createdBy: authResult.user.uid,
+      }).catch((persistErr: unknown) => {
+        logger.warn('Failed to persist SEO strategy', {
+          error: persistErr instanceof Error ? persistErr.message : String(persistErr),
+        });
+      });
     }
 
     return NextResponse.json({

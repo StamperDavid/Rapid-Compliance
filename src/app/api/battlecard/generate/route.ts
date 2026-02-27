@@ -10,6 +10,9 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { discoverCompetitor, generateBattlecard, type BattlecardOptions } from '@/lib/battlecard';
 import { logger } from '@/lib/logger/logger';
 import { requireAuth } from '@/lib/auth/api-auth';
+import { adminDb } from '@/lib/firebase/admin';
+import { getSeoResearchCollection } from '@/lib/firebase/collections';
+import { FieldValue } from 'firebase-admin/firestore';
 
 export const dynamic = 'force-dynamic';
 
@@ -59,6 +62,24 @@ export async function POST(request: NextRequest) {
 
     // Step 2: Generate battlecard
     const battlecard = await generateBattlecard(competitorProfile, options);
+
+    // Fire-and-forget: persist battlecard to Firestore
+    if (adminDb) {
+      const cleanDomain = competitorDomain.replace(/^https?:\/\//, '').replace(/\/+$/, '').toLowerCase();
+      adminDb.collection(getSeoResearchCollection()).add({
+        type: 'battlecard',
+        domain: cleanDomain,
+        data: JSON.parse(JSON.stringify(battlecard)) as Record<string, unknown>,
+        tags: [battlecard.competitorName, options.ourProduct].filter(Boolean),
+        createdAt: FieldValue.serverTimestamp(),
+        createdBy: authResult.user.uid,
+      }).catch((persistErr: unknown) => {
+        logger.warn('Failed to persist battlecard', {
+          domain: cleanDomain,
+          error: persistErr instanceof Error ? persistErr.message : String(persistErr),
+        });
+      });
+    }
 
     return NextResponse.json({
       success: true,

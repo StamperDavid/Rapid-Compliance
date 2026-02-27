@@ -5,7 +5,7 @@
 
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import CompetitorAnalysisCard from '@/components/seo/CompetitorAnalysisCard';
 import KeywordGapAnalysis from '@/components/seo/KeywordGapAnalysis';
@@ -29,6 +29,22 @@ interface AnalysisResponse {
   error?: string;
 }
 
+interface SavedResearchDoc {
+  id: string;
+  type: string;
+  domain: string;
+  data: DomainAnalysisResult;
+  tags: string[];
+  createdAt: { _seconds: number };
+  createdBy: string;
+}
+
+interface SavedResearchResponse {
+  success: boolean;
+  data?: SavedResearchDoc[];
+  error?: string;
+}
+
 export default function CompetitorSEOPage() {
   const authFetch = useAuthFetch();
   const [domainInput, setDomainInput] = useState('');
@@ -39,6 +55,52 @@ export default function CompetitorSEOPage() {
   const [yourKeywords, setYourKeywords] = useState<DomainAnalysisResult['topKeywords']>([]);
   const [yourDomainLoading, setYourDomainLoading] = useState(false);
   const [yourDomain, setYourDomain] = useState('');
+  const [initialLoadDone, setInitialLoadDone] = useState(false);
+
+  // Load saved domain analyses on mount
+  useEffect(() => {
+    if (initialLoadDone) {return;}
+    let cancelled = false;
+
+    const loadSaved = async () => {
+      try {
+        const response = await authFetch('/api/seo/research?type=domain_analysis&limit=20');
+        const result = await response.json() as SavedResearchResponse;
+        if (cancelled || !result.success || !result.data?.length) {return;}
+
+        // Deduplicate by domain (keep most recent — already sorted by createdAt desc)
+        const seen = new Set<string>();
+        const entries: CompetitorEntry[] = [];
+        for (const doc of result.data) {
+          if (seen.has(doc.domain)) {continue;}
+          seen.add(doc.domain);
+          entries.push({
+            id: `saved-${doc.id}`,
+            domain: doc.domain,
+            status: 'complete',
+            result: doc.data,
+            error: null,
+            addedAt: new Date(doc.createdAt._seconds * 1000).toISOString(),
+            analyzedAt: new Date(doc.createdAt._seconds * 1000).toISOString(),
+          });
+        }
+        if (!cancelled) {
+          setCompetitors(entries);
+        }
+      } catch (err) {
+        logger.warn('Failed to load saved competitor analyses', {
+          error: err instanceof Error ? err.message : String(err),
+        });
+      } finally {
+        if (!cancelled) {
+          setInitialLoadDone(true);
+        }
+      }
+    };
+
+    void loadSaved();
+    return () => { cancelled = true; };
+  }, [authFetch, initialLoadDone]);
 
   const analyzeDomain = useCallback(async (domain: string, keywordLimit?: number, noCache?: boolean) => {
     const cleanDomain = domain.replace(/^https?:\/\//, '').replace(/\/+$/, '').toLowerCase().trim();

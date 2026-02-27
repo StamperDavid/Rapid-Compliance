@@ -78,6 +78,7 @@ export const COLLECTIONS = {
   // ========================================
   ANALYTICS_EVENTS: `${PREFIX}analyticsEvents`,
   REPORTS: `${PREFIX}reports`,
+  SEO_RESEARCH: `${PREFIX}seoResearch`,
 
   // ========================================
   // PLATFORM SYSTEM COLLECTIONS
@@ -158,6 +159,7 @@ export const getNurtureSequencesCollection = (): string => getSubCollection('nur
 export const getLeadEnrichmentsCollection = (): string => getSubCollection('leadEnrichments');
 export const getThemesCollection = (): string => getSubCollection('themes');
 export const getIntegrationsCollection = (): string => getSubCollection('integrations');
+export const getSeoResearchCollection = (): string => getSubCollection('seoResearch');
 
 /**
  * Helper for schema sub-collections

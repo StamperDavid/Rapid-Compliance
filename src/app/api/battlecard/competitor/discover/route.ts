@@ -10,6 +10,9 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { discoverCompetitor, type CompetitorProfile } from '@/lib/battlecard';
 import { logger } from '@/lib/logger/logger';
 import { requireAuth } from '@/lib/auth/api-auth';
+import { adminDb } from '@/lib/firebase/admin';
+import { getSeoResearchCollection } from '@/lib/firebase/collections';
+import { FieldValue } from 'firebase-admin/firestore';
 
 export const dynamic = 'force-dynamic';
 
@@ -55,6 +58,24 @@ export async function POST(request: NextRequest) {
     });
 
     const profile: CompetitorProfile = await discoverCompetitor(domain);
+
+    // Fire-and-forget: persist competitor discovery to Firestore
+    if (adminDb) {
+      const cleanDomain = domain.replace(/^https?:\/\//, '').replace(/\/+$/, '').toLowerCase();
+      adminDb.collection(getSeoResearchCollection()).add({
+        type: 'competitor_discovery',
+        domain: cleanDomain,
+        data: JSON.parse(JSON.stringify(profile)) as Record<string, unknown>,
+        tags: [profile.companyName, profile.industry ?? ''].filter(Boolean),
+        createdAt: FieldValue.serverTimestamp(),
+        createdBy: authResult.user.uid,
+      }).catch((persistErr: unknown) => {
+        logger.warn('Failed to persist competitor discovery', {
+          domain: cleanDomain,
+          error: persistErr instanceof Error ? persistErr.message : String(persistErr),
+        });
+      });
+    }
 
     return NextResponse.json({
       success: true,

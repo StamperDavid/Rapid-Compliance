@@ -12,7 +12,7 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { CompetitorProfileCard } from '@/components/battlecard/CompetitorProfileCard';
 import { BattlecardView } from '@/components/battlecard/BattlecardView';
 import type { CompetitorProfile, Battlecard, BattlecardOptions } from '@/lib/battlecard';
@@ -37,19 +37,102 @@ interface GenerateBattlecardResponse {
   battlecard: Battlecard;
 }
 
+interface SavedResearchDoc {
+  id: string;
+  type: string;
+  domain: string;
+  data: Record<string, unknown>;
+  tags: string[];
+  createdAt: { _seconds: number };
+  createdBy: string;
+}
+
+interface SavedResearchResponse {
+  success: boolean;
+  data?: SavedResearchDoc[];
+  error?: string;
+}
+
 export default function BattlecardsPage() {
   const [view, setView] = useState<'discovery' | 'battlecard'>('discovery');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
+
   // Discovery state
   const [competitorDomain, setCompetitorDomain] = useState('');
   const [competitorProfile, setCompetitorProfile] = useState<CompetitorProfile | null>(null);
-  
+
   // Battlecard state
   const [ourProduct, setOurProduct] = useState('');
   const [battlecard, setBattlecard] = useState<Battlecard | null>(null);
   const [isExporting, setIsExporting] = useState(false);
+
+  // Saved research state
+  const [savedProfiles, setSavedProfiles] = useState<Array<{ domain: string; profile: CompetitorProfile; savedAt: string }>>([]);
+  const [savedBattlecards, setSavedBattlecards] = useState<Array<{ domain: string; battlecard: Battlecard; savedAt: string }>>([]);
+
+  // Load saved competitor discoveries and battlecards on mount
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadSaved = async () => {
+      try {
+        const token = await auth?.currentUser?.getIdToken();
+        if (!token) {return;}
+
+        const headers = { Authorization: `Bearer ${token}` };
+
+        const [discoveriesRes, battlecardsRes] = await Promise.all([
+          fetch('/api/seo/research?type=competitor_discovery&limit=20', { headers }),
+          fetch('/api/seo/research?type=battlecard&limit=10', { headers }),
+        ]);
+
+        const [discoveries, bcards] = await Promise.all([
+          discoveriesRes.json() as Promise<SavedResearchResponse>,
+          battlecardsRes.json() as Promise<SavedResearchResponse>,
+        ]);
+
+        if (cancelled) {return;}
+
+        if (discoveries.success && discoveries.data?.length) {
+          const seen = new Set<string>();
+          const profiles: Array<{ domain: string; profile: CompetitorProfile; savedAt: string }> = [];
+          for (const doc of discoveries.data) {
+            if (seen.has(doc.domain)) {continue;}
+            seen.add(doc.domain);
+            profiles.push({
+              domain: doc.domain,
+              profile: doc.data as unknown as CompetitorProfile,
+              savedAt: new Date(doc.createdAt._seconds * 1000).toISOString(),
+            });
+          }
+          setSavedProfiles(profiles);
+        }
+
+        if (bcards.success && bcards.data?.length) {
+          const seen = new Set<string>();
+          const cards: Array<{ domain: string; battlecard: Battlecard; savedAt: string }> = [];
+          for (const doc of bcards.data) {
+            if (seen.has(doc.domain)) {continue;}
+            seen.add(doc.domain);
+            cards.push({
+              domain: doc.domain,
+              battlecard: doc.data as unknown as Battlecard,
+              savedAt: new Date(doc.createdAt._seconds * 1000).toISOString(),
+            });
+          }
+          setSavedBattlecards(cards);
+        }
+      } catch (err) {
+        logger.warn('Failed to load saved competitive research', {
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+    };
+
+    void loadSaved();
+    return () => { cancelled = true; };
+  }, []);
 
   const handleDiscoverCompetitor = async () => {
     if (!competitorDomain.trim()) {
@@ -315,8 +398,65 @@ export default function BattlecardsPage() {
               </>
             )}
 
+            {/* Previously Researched Competitors */}
+            {!competitorProfile && !isLoading && savedProfiles.length > 0 && (
+              <div className="bg-surface-paper border border-border-light rounded-lg p-6">
+                <h2 className="text-xl font-bold text-[var(--color-text-primary)] mb-4">
+                  Previously Researched Competitors
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {savedProfiles.map((item) => (
+                    <button
+                      key={item.domain}
+                      onClick={() => {
+                        setCompetitorProfile(item.profile);
+                        setCompetitorDomain(item.domain);
+                      }}
+                      className="text-left p-4 rounded-lg bg-surface-elevated border border-border-light hover:border-primary/50 transition-all"
+                    >
+                      <p className="font-semibold text-[var(--color-text-primary)]">{item.profile.companyName || item.domain}</p>
+                      <p className="text-sm text-[var(--color-text-secondary)]">{item.domain}</p>
+                      {item.profile.industry && (
+                        <p className="text-xs text-[var(--color-text-disabled)] mt-1">{item.profile.industry}</p>
+                      )}
+                      <p className="text-xs text-[var(--color-text-disabled)] mt-2">
+                        Researched {new Date(item.savedAt).toLocaleDateString()}
+                      </p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Saved Battlecards */}
+            {!competitorProfile && !isLoading && savedBattlecards.length > 0 && (
+              <div className="bg-surface-paper border border-border-light rounded-lg p-6">
+                <h2 className="text-xl font-bold text-[var(--color-text-primary)] mb-4">
+                  Saved Battlecards
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {savedBattlecards.map((item) => (
+                    <button
+                      key={item.domain}
+                      onClick={() => {
+                        setBattlecard(item.battlecard);
+                        setView('battlecard');
+                      }}
+                      className="text-left p-4 rounded-lg bg-surface-elevated border border-border-light hover:border-primary/50 transition-all"
+                    >
+                      <p className="font-semibold text-[var(--color-text-primary)]">{item.battlecard.competitorName}</p>
+                      <p className="text-sm text-[var(--color-text-secondary)]">{item.domain}</p>
+                      <p className="text-xs text-[var(--color-text-disabled)] mt-2">
+                        Generated {new Date(item.savedAt).toLocaleDateString()}
+                      </p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Empty State */}
-            {!competitorProfile && !isLoading && (
+            {!competitorProfile && !isLoading && savedProfiles.length === 0 && (
               <div className="bg-surface-paper border-2 border-dashed border-border-light rounded-lg p-12 text-center">
                 <svg className="w-16 h-16 mx-auto text-[var(--color-text-disabled)] mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />

@@ -11,6 +11,9 @@ import { requireAuth } from '@/lib/auth/api-auth';
 import { errors } from '@/lib/middleware/error-handler';
 import { getSEOExpert } from '@/lib/agents/marketing/seo/specialist';
 import { logger } from '@/lib/logger/logger';
+import { adminDb } from '@/lib/firebase/admin';
+import { getSeoResearchCollection } from '@/lib/firebase/collections';
+import { FieldValue } from 'firebase-admin/firestore';
 
 const DomainAnalysisSchema = z.object({
   domain: z.string().min(1, 'Domain is required'),
@@ -71,6 +74,23 @@ export async function POST(request: NextRequest) {
         { success: false, error: errorMsg },
         { status: 502 }
       );
+    }
+
+    // Fire-and-forget: persist to Firestore for future reference
+    if (adminDb && report.data) {
+      adminDb.collection(getSeoResearchCollection()).add({
+        type: 'domain_analysis',
+        domain: cleanDomain,
+        data: report.data as Record<string, unknown>,
+        tags: [],
+        createdAt: FieldValue.serverTimestamp(),
+        createdBy: authResult.user.uid,
+      }).catch((persistErr: unknown) => {
+        logger.warn('Failed to persist domain analysis', {
+          domain: cleanDomain,
+          error: persistErr instanceof Error ? persistErr.message : String(persistErr),
+        });
+      });
     }
 
     return NextResponse.json({
