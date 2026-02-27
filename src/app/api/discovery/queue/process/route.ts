@@ -10,16 +10,17 @@
 export const dynamic = 'force-dynamic';
 
 import { type NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { processDiscoveryQueue } from '@/lib/services/discovery-dispatcher';
 import { logger } from '@/lib/logger/logger';
 import { requireAuth } from '@/lib/auth/api-auth';
 
-interface RequestPayload {
-  batchSize?: number;
-  concurrency?: number;
-  maxRetries?: number;
-  delayMs?: number;
-}
+const ProcessQueueSchema = z.object({
+  batchSize: z.number().int().positive().optional(),
+  concurrency: z.number().int().positive().optional(),
+  maxRetries: z.number().int().nonnegative().optional(),
+  delayMs: z.number().int().nonnegative().optional(),
+});
 
 export async function POST(request: NextRequest) {
   try {
@@ -31,14 +32,21 @@ export async function POST(request: NextRequest) {
 
     logger.info('[API] Discovery queue processing started');
 
-    // Parse request body for config options
-    const body = await request.json().catch(() => ({})) as RequestPayload;
+    // Parse request body for config options — body is optional for this endpoint
+    const rawBody: unknown = await request.json().catch(() => ({}));
+    const parsed = ProcessQueueSchema.safeParse(rawBody);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Invalid input', details: parsed.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
 
     const config = {
-      batchSize: body.batchSize ?? 10,
-      concurrency: body.concurrency ?? 3,
-      maxRetries: body.maxRetries ?? 3,
-      delayMs: body.delayMs ?? 2000,
+      batchSize: parsed.data.batchSize ?? 10,
+      concurrency: parsed.data.concurrency ?? 3,
+      maxRetries: parsed.data.maxRetries ?? 3,
+      delayMs: parsed.data.delayMs ?? 2000,
     };
 
     // Process the queue

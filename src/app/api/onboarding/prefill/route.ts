@@ -5,17 +5,14 @@
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { logger } from '@/lib/logger/logger';
 import { prefillOnboardingData } from '@/lib/onboarding/prefill-engine';
 import { requireAuth } from '@/lib/auth/api-auth';
 
-interface PrefillRequestBody {
-  websiteUrl?: string;
-}
-
-function isPrefillRequestBody(value: unknown): value is PrefillRequestBody {
-  return typeof value === 'object' && value !== null;
-}
+const PrefillSchema = z.object({
+  websiteUrl: z.string().url(),
+});
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -28,18 +25,14 @@ export async function POST(request: NextRequest) {
     }
 
     const body: unknown = await request.json();
-    if (!isPrefillRequestBody(body)) {
-      return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
-    }
-    const { websiteUrl } = body;
-
-    // Validation
-    if (!websiteUrl || typeof websiteUrl !== 'string') {
+    const parsed = PrefillSchema.safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: 'Website URL is required' },
+        { error: 'Invalid input', details: parsed.error.flatten().fieldErrors },
         { status: 400 }
       );
     }
+    const { websiteUrl } = parsed.data;
 
     logger.info('Prefill API request received', {
       websiteUrl,

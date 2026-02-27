@@ -4,24 +4,24 @@
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { executeFunctionCall } from '@/lib/integrations/function-calling';
 import type { FunctionCallRequest } from '@/types/integrations';
 import { logger } from '@/lib/logger/logger';
-import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
 export const dynamic = 'force-dynamic';
 
-interface RequestPayload {
-  integrationId: string;
-  functionName: string;
-  parameters: Record<string, unknown>;
-  conversationId?: string;
-  customerId?: string;
-  conversationContext?: string;
-  userMessage?: string;
-}
+const FunctionCallSchema = z.object({
+  integrationId: z.string().min(1),
+  functionName: z.string().min(1),
+  parameters: z.record(z.unknown()),
+  conversationId: z.string().optional(),
+  customerId: z.string().optional(),
+  conversationContext: z.string().optional(),
+  userMessage: z.string().optional(),
+});
 
 export async function POST(request: NextRequest) {
   try {
@@ -38,19 +38,25 @@ export async function POST(request: NextRequest) {
 
     // Penthouse: use default organization ID
 
-    // Parse request
-    const body = await request.json() as RequestPayload;
+    // Parse and validate request
+    const body: unknown = await request.json();
+    const parsed = FunctionCallSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Invalid input', details: parsed.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+
     const {
       integrationId,
       functionName,
       parameters,
       conversationId,
       customerId,
-    } = body;
-
-    if (!integrationId || !functionName || !parameters) {
-      return errors.badRequest('Missing required fields');
-    }
+      conversationContext,
+      userMessage,
+    } = parsed.data;
 
     // Build function call request
     const functionCallRequest: FunctionCallRequest = {
@@ -59,8 +65,8 @@ export async function POST(request: NextRequest) {
       integrationId,
       functionName,
       parameters,
-      conversationContext: body.conversationContext ?? '',
-      userMessage: body.userMessage ?? '',
+      conversationContext: conversationContext ?? '',
+      userMessage: userMessage ?? '',
       timestamp: new Date().toISOString(),
     };
 

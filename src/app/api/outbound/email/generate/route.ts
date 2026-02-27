@@ -5,6 +5,7 @@
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { type ProspectData, researchProspect } from '@/lib/outbound/prospect-research';
 import { type EmailTemplate, type EmailTone, generateColdEmail, validateEmail } from '@/lib/outbound/email-writer';
@@ -14,34 +15,23 @@ import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
 export const dynamic = 'force-dynamic';
 
-interface ProspectInput {
-  name?: string;
-  company?: string;
-  title?: string;
-  email?: string;
-  linkedin?: string;
-}
+const EmailTemplateEnum = z.enum(['AIDA', 'PAS', 'BAB', 'custom']);
+const EmailToneEnum = z.enum(['professional', 'casual', 'friendly', 'direct']);
 
-interface EmailGenerateRequestBody {
-  prospect?: ProspectInput;
-  template?: string;
-  tone?: string;
-  valueProposition?: string;
-  cta?: string;
-  skipResearch?: boolean;
-}
-
-function isEmailGenerateRequestBody(value: unknown): value is EmailGenerateRequestBody {
-  return typeof value === 'object' && value !== null;
-}
-
-function isValidEmailTemplate(value: string): value is EmailTemplate {
-  return ['AIDA', 'PAS', 'BAB', 'STAR', 'CUSTOM'].includes(value);
-}
-
-function isValidEmailTone(value: string): value is EmailTone {
-  return ['professional', 'casual', 'friendly', 'formal', 'urgent'].includes(value);
-}
+const EmailGenerateSchema = z.object({
+  prospect: z.object({
+    name: z.string().min(1),
+    company: z.string().min(1),
+    title: z.string().optional(),
+    email: z.string().email().optional(),
+    linkedin: z.string().url().optional(),
+  }),
+  template: EmailTemplateEnum.optional().default('AIDA'),
+  tone: EmailToneEnum.optional().default('professional'),
+  valueProposition: z.string().optional(),
+  cta: z.string().optional(),
+  skipResearch: z.boolean().optional().default(false),
+});
 
 export async function POST(request: NextRequest) {
   try {
@@ -55,23 +45,22 @@ export async function POST(request: NextRequest) {
     }
 
     const body: unknown = await request.json();
-    if (!isEmailGenerateRequestBody(body)) {
-      return errors.badRequest('Invalid request body');
+    const parsed = EmailGenerateSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Invalid input', details: parsed.error.flatten().fieldErrors },
+        { status: 400 }
+      );
     }
 
     const {
       prospect,
-      template = 'AIDA',
-      tone = 'professional',
+      template,
+      tone,
       valueProposition,
       cta,
-      skipResearch = false
-    } = body;
-
-    // Validate required fields
-    if (!prospect?.name || !prospect.company) {
-      return errors.badRequest('Prospect name and company are required');
-    }
+      skipResearch,
+    } = parsed.data;
 
     // Penthouse model: All features available
 
@@ -95,9 +84,9 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Validate template and tone
-    const validTemplate: EmailTemplate = isValidEmailTemplate(template) ? template : 'AIDA';
-    const validTone: EmailTone = isValidEmailTone(tone) ? tone : 'professional';
+    // Template and tone are already validated and narrowed by Zod enums
+    const validTemplate: EmailTemplate = template;
+    const validTone: EmailTone = tone;
 
     // Generate email using AI
     const startTime = Date.now();

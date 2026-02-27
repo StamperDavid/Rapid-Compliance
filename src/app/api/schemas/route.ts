@@ -3,6 +3,7 @@
  */
 
 import { NextResponse, type NextRequest } from 'next/server';
+import { z } from 'zod';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import { FieldValue } from 'firebase-admin/firestore';
@@ -35,23 +36,43 @@ interface SchemaSettings {
   enableVersioning: boolean;
 }
 
-interface IncomingSchema {
-  id?: string;
-  name: string;
-  pluralName?: string;
-  singularName?: string;
-  description?: string;
-  icon?: string;
-  color?: string;
-  fields?: SchemaField[];
-  permissions?: SchemaPermissions;
-  settings?: SchemaSettings;
-}
+const SchemaFieldInputSchema = z.object({
+  id: z.string().optional(),
+  key: z.string().optional(),
+  label: z.string().optional(),
+  type: z.string().optional(),
+  required: z.boolean().optional(),
+});
 
-interface RequestBody {
-  schema?: IncomingSchema;
-  userId?: string;
-}
+const SchemaPermissionsInputSchema = z.object({
+  create: z.array(z.string()),
+  read: z.array(z.string()),
+  update: z.array(z.string()),
+  delete: z.array(z.string()),
+});
+
+const SchemaSettingsInputSchema = z.object({
+  allowAttachments: z.boolean(),
+  allowComments: z.boolean(),
+  allowActivityLog: z.boolean(),
+  enableVersioning: z.boolean(),
+});
+
+const PostSchemasSchema = z.object({
+  schema: z.object({
+    id: z.string().optional(),
+    name: z.string().min(1),
+    pluralName: z.string().optional(),
+    singularName: z.string().optional(),
+    description: z.string().optional(),
+    icon: z.string().optional(),
+    color: z.string().optional(),
+    fields: z.array(SchemaFieldInputSchema).optional(),
+    permissions: SchemaPermissionsInputSchema.optional(),
+    settings: SchemaSettingsInputSchema.optional(),
+  }),
+  userId: z.string().optional(),
+});
 
 interface ProcessedSchemaField {
   id: string;
@@ -167,15 +188,14 @@ export async function POST(request: NextRequest) {
     }
 
     const rawBody: unknown = await request.json();
-    const body = rawBody as RequestBody;
-    const { schema, userId } = body ?? {};
-
-    if (!schema?.name) {
+    const parsedBody = PostSchemasSchema.safeParse(rawBody);
+    if (!parsedBody.success) {
       return NextResponse.json(
-        { error: 'schema.name is required' },
+        { error: 'Invalid input', details: parsedBody.error.flatten().fieldErrors },
         { status: 400 }
       );
     }
+    const { schema, userId } = parsedBody.data;
 
     const now = FieldValue.serverTimestamp();
     const schemaId: string = schema.id ?? buildSchemaId(schema.name);

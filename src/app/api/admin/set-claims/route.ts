@@ -13,6 +13,7 @@
  */
 
 import type { NextRequest } from 'next/server';
+import { z } from 'zod';
 import { adminAuth } from '@/lib/firebase/admin';
 import {
   verifyAdminRequest,
@@ -26,21 +27,18 @@ import { logger } from '@/lib/logger/logger';
 export const dynamic = 'force-dynamic';
 
 // ============================================================================
-// TYPE DEFINITIONS
+// SCHEMAS & TYPE DEFINITIONS
 // ============================================================================
+
+const SetClaimsSchema = z.object({
+  userId: z.string().min(1),
+  role: z.literal('admin'),
+});
 
 /**
  * Valid role types for the platform
  */
 type RoleType = 'admin';
-
-/**
- * Request body for setting custom claims
- */
-interface SetClaimsRequestBody {
-  readonly userId: string;
-  readonly role: RoleType;
-}
 
 /**
  * Custom claims object structure
@@ -59,38 +57,6 @@ interface SetClaimsResponse {
   readonly claims: CustomClaims;
   readonly setBy: string;
   readonly setAt: string;
-}
-
-// ============================================================================
-// TYPE GUARDS & VALIDATORS
-// ============================================================================
-
-/**
- * Type guard for valid role types
- */
-function isValidRole(role: unknown): role is RoleType {
-  return typeof role === 'string' && role === 'admin';
-}
-
-/**
- * Type guard for set claims request body
- */
-function isSetClaimsRequestBody(body: unknown): body is SetClaimsRequestBody {
-  if (typeof body !== 'object' || body === null) {
-    return false;
-  }
-
-  const obj = body as Record<string, unknown>;
-
-  if (typeof obj.userId !== 'string' || obj.userId.length === 0) {
-    return false;
-  }
-
-  if (!isValidRole(obj.role)) {
-    return false;
-  }
-
-  return true;
 }
 
 // ============================================================================
@@ -141,14 +107,15 @@ export async function POST(request: NextRequest) {
       return createErrorResponse('Invalid JSON in request body', 400);
     }
 
-    if (!isSetClaimsRequestBody(rawBody)) {
+    const parsed = SetClaimsSchema.safeParse(rawBody);
+    if (!parsed.success) {
       return createErrorResponse(
         'Invalid request body. Required: userId (string), role (admin)',
         400
       );
     }
 
-    const body: SetClaimsRequestBody = rawBody;
+    const body = parsed.data;
 
     let targetUser;
     try {

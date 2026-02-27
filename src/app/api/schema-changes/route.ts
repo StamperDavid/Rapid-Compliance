@@ -4,6 +4,7 @@
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { type QueryConstraint, where } from 'firebase/firestore';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
@@ -16,6 +17,10 @@ import {
   processSchemaChangeEvent,
   processUnprocessedEvents,
 } from '@/lib/schema/schema-change-handler';
+
+const PostSchemaChangesSchema = z.object({
+  eventId: z.string().optional(),
+});
 
 export const dynamic = 'force-dynamic';
 
@@ -75,10 +80,6 @@ export async function GET(request: NextRequest) {
  * POST /api/schema-changes/process
  * Manually process schema change events
  */
-interface ProcessRequestBody {
-  eventId?: string;
-}
-
 export async function POST(request: NextRequest) {
   try {
     const authResult = await requireAuth(request);
@@ -86,8 +87,15 @@ export async function POST(request: NextRequest) {
       return authResult;
     }
 
-    const body = (await request.json()) as ProcessRequestBody;
-    const { eventId } = body;
+    const rawBody: unknown = await request.json();
+    const parsed = PostSchemaChangesSchema.safeParse(rawBody);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Invalid input', details: parsed.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+    const { eventId } = parsed.data;
 
     if (eventId) {
       // Process single event

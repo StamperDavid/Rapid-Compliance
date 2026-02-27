@@ -5,6 +5,7 @@
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import { getSubCollection } from '@/lib/firebase/collections';
 import { randomBytes } from 'crypto';
@@ -21,9 +22,9 @@ interface TokenData {
   expiresAt: string;
 }
 
-interface RequestBody {
-  expiresIn?: number;
-}
+const PostPreviewSchema = z.object({
+  expiresIn: z.number().int().positive().optional(),
+});
 
 /**
  * POST /api/website/pages/[pageId]/preview
@@ -44,8 +45,15 @@ export async function POST(
     }
 
     const params = await context.params;
-    const body = await request.json() as RequestBody;
-    const { expiresIn } = body; // expiresIn in hours, default 24
+    const rawBody: unknown = await request.json();
+    const parsed = PostPreviewSchema.safeParse(rawBody);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Invalid input', details: parsed.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+    const { expiresIn } = parsed.data; // expiresIn in hours, default 24
 
     const pageRef = adminDal.getNestedDocRef(
       `${getSubCollection('website')}/pages/items/{pageId}`,

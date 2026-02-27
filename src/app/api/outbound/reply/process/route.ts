@@ -5,6 +5,7 @@
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { requireAuth } from '@/lib/auth/api-auth';
 import {
   classifyReply,
@@ -21,15 +22,35 @@ import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
 export const dynamic = 'force-dynamic';
 
-interface ReplyProcessRequestBody {
-  emailReply?: EmailReply;
-  prospectContext?: ProspectContext;
-  autoSend?: boolean;
-}
+const EmailReplySchema = z.object({
+  from: z.string().email(),
+  to: z.string().email(),
+  subject: z.string(),
+  body: z.string(),
+  threadId: z.string(),
+  inReplyTo: z.string().optional(),
+  receivedAt: z.string(),
+  headers: z.record(z.string(), z.string()).optional(),
+});
 
-function isReplyProcessRequestBody(value: unknown): value is ReplyProcessRequestBody {
-  return typeof value === 'object' && value !== null;
-}
+const ProspectContextSchema = z.object({
+  prospectName: z.string(),
+  companyName: z.string(),
+  conversationHistory: z.array(EmailReplySchema),
+  originalOutreach: z.object({
+    subject: z.string(),
+    body: z.string(),
+    sentAt: z.string(),
+  }),
+  product: z.string().optional(),
+  valueProposition: z.string().optional(),
+});
+
+const ReplyProcessSchema = z.object({
+  emailReply: EmailReplySchema,
+  prospectContext: ProspectContextSchema.optional(),
+  autoSend: z.boolean().optional().default(false),
+});
 
 export async function POST(request: NextRequest) {
   try {
@@ -42,32 +63,29 @@ export async function POST(request: NextRequest) {
     }
 
     const body: unknown = await request.json();
-    if (!isReplyProcessRequestBody(body)) {
-      return errors.badRequest('Invalid request body');
+    const parsed = ReplyProcessSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Invalid input', details: parsed.error.flatten().fieldErrors },
+        { status: 400 }
+      );
     }
 
-    const { emailReply, prospectContext, autoSend = false } = body;
-
-    if (!emailReply) {
-      return errors.badRequest('Email reply data is required');
-    }
-
-    // Extract reply details with explicit types after validation
-    const validatedReply: EmailReply = emailReply;
+    const { emailReply: validatedReply, prospectContext: validatedContext, autoSend } = parsed.data;
 
     // Penthouse model: All features available
 
     // Classify the reply
     logger.info('Processing reply', { route: '/api/outbound/reply/process', from: validatedReply.from });
-    const classification = await classifyReply(validatedReply);
+    const classification = await classifyReply(validatedReply as EmailReply);
 
     // Generate suggested response
     let suggestedResponse = null;
-    if (classification.suggestedAction === 'send_response' && prospectContext) {
+    if (classification.suggestedAction === 'send_response' && validatedContext) {
       suggestedResponse = await generateReply(
-        validatedReply,
+        validatedReply as EmailReply,
         classification,
-        prospectContext
+        validatedContext as ProspectContext
       );
     }
 

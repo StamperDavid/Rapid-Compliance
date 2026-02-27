@@ -5,11 +5,16 @@
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import { getSubCollection } from '@/lib/firebase/collections';
 import { FieldValue } from 'firebase-admin/firestore';
 import { logger } from '@/lib/logger/logger';
 import { requireAuth } from '@/lib/auth/api-auth';
+
+const PostDomainsSchema = z.object({
+  domain: z.string().min(1),
+});
 
 export const dynamic = 'force-dynamic';
 
@@ -30,10 +35,6 @@ interface DNSRecord {
   name: string;
   value: string;
   status: string;
-}
-
-interface RequestBody {
-  domain?: string;
 }
 
 /**
@@ -94,15 +95,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
     }
 
-    const body = await request.json() as RequestBody;
-    const { domain } = body;
-
-    if (!domain) {
+    const rawBody: unknown = await request.json();
+    const parsed = PostDomainsSchema.safeParse(rawBody);
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: 'domain is required' },
+        { error: 'Invalid input', details: parsed.error.flatten().fieldErrors },
         { status: 400 }
       );
     }
+    const { domain } = parsed.data;
 
     // Validate domain format
     const domainRegex = /^([a-z0-9]+(-[a-z0-9]+)*\.)+[a-z]{2,}$/i;

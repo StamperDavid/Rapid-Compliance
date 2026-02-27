@@ -4,6 +4,7 @@
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import {
   processConversationFeedback,
   processCompletedFineTuningJob,
@@ -22,40 +23,31 @@ export const dynamic = 'force-dynamic';
 type TrainingExampleStatus = 'pending' | 'approved' | 'rejected' | 'used_in_training';
 type FineTuneBaseModel = 'gpt-3.5-turbo' | 'gpt-4';
 
-interface TrainingMessage {
-  role: string;
-  content: string;
-}
+const TrainingMessageSchema = z.object({
+  role: z.string(),
+  content: z.string(),
+});
 
-interface FineTunePostRequestBody {
-  PLATFORM_ID?: string;
-  action?: string;
-  conversationId?: string;
-  messages?: TrainingMessage[];
-  confidence?: number;
-  userRating?: number;
-  didConvert?: boolean;
-  userFeedback?: string;
-  exampleId?: string;
-  approvedBy?: string;
-  baseModel?: FineTuneBaseModel;
-  hyperparameters?: Record<string, unknown>;
-  jobId?: string;
-}
+const FineTunePostSchema = z.object({
+  PLATFORM_ID: z.string().optional(),
+  action: z.string().optional(),
+  conversationId: z.string().optional(),
+  messages: z.array(TrainingMessageSchema).optional(),
+  confidence: z.number().optional(),
+  userRating: z.number().optional(),
+  didConvert: z.boolean().optional(),
+  userFeedback: z.string().optional(),
+  exampleId: z.string().optional(),
+  approvedBy: z.string().optional(),
+  baseModel: z.enum(['gpt-3.5-turbo', 'gpt-4']).optional(),
+  hyperparameters: z.record(z.unknown()).optional(),
+  jobId: z.string().optional(),
+});
 
-interface FineTunePutRequestBody {
-  PLATFORM_ID?: string;
-  config?: Record<string, unknown>;
-}
-
-
-function isFineTunePostRequestBody(value: unknown): value is FineTunePostRequestBody {
-  return typeof value === 'object' && value !== null;
-}
-
-function isFineTunePutRequestBody(value: unknown): value is FineTunePutRequestBody {
-  return typeof value === 'object' && value !== null;
-}
+const FineTunePutSchema = z.object({
+  PLATFORM_ID: z.string().optional(),
+  config: z.record(z.unknown()).optional(),
+});
 
 function isValidTrainingExampleStatus(value: string | null): value is TrainingExampleStatus {
   return value === 'pending' || value === 'approved' || value === 'rejected' || value === 'used_in_training';
@@ -149,11 +141,15 @@ export async function POST(request: NextRequest) {
     }
 
     const body: unknown = await request.json();
-    if (!isFineTunePostRequestBody(body)) {
-      return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+    const parsed = FineTunePostSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Invalid input', details: parsed.error.flatten().fieldErrors },
+        { status: 400 }
+      );
     }
 
-    const { PLATFORM_ID, action } = body;
+    const { PLATFORM_ID, action } = parsed.data;
 
     if (!PLATFORM_ID) {
       return NextResponse.json(
@@ -166,12 +162,12 @@ export async function POST(request: NextRequest) {
       case 'collect_feedback': {
         // Collect training data from conversation
         const result = await processConversationFeedback({
-          conversationId: body.conversationId ?? '',
-          messages: body.messages ?? [],
-          confidence: body.confidence ?? 0,
-          userRating: body.userRating,
-          didConvert: body.didConvert,
-          userFeedback: body.userFeedback,
+          conversationId: parsed.data.conversationId ?? '',
+          messages: parsed.data.messages ?? [],
+          confidence: parsed.data.confidence ?? 0,
+          userRating: parsed.data.userRating,
+          didConvert: parsed.data.didConvert,
+          userFeedback: parsed.data.userFeedback,
         });
 
         return NextResponse.json({
@@ -181,8 +177,8 @@ export async function POST(request: NextRequest) {
       }
 
       case 'approve_example': {
-        const exampleId = body.exampleId;
-        const approvedBy = body.approvedBy;
+        const exampleId = parsed.data.exampleId;
+        const approvedBy = parsed.data.approvedBy;
         if (!exampleId) {
           return NextResponse.json(
             { error: 'Example ID required' },
@@ -199,7 +195,7 @@ export async function POST(request: NextRequest) {
       }
 
       case 'reject_example': {
-        const exampleId = body.exampleId;
+        const exampleId = parsed.data.exampleId;
         if (!exampleId) {
           return NextResponse.json(
             { error: 'Example ID required' },
@@ -226,12 +222,12 @@ export async function POST(request: NextRequest) {
           );
         }
 
-        const baseModel: FineTuneBaseModel = body.baseModel ?? 'gpt-3.5-turbo';
+        const baseModel: FineTuneBaseModel = parsed.data.baseModel ?? 'gpt-3.5-turbo';
 
         const job = await createOpenAIFineTuningJob({
           baseModel,
           examples,
-          hyperparameters: body.hyperparameters,
+          hyperparameters: parsed.data.hyperparameters,
         });
 
         return NextResponse.json({
@@ -243,7 +239,7 @@ export async function POST(request: NextRequest) {
 
       case 'process_completed_job': {
         // Process a completed fine-tuning job (start A/B testing)
-        const jobId = body.jobId;
+        const jobId = parsed.data.jobId;
         if (!jobId) {
           return NextResponse.json(
             { error: 'Job ID required' },
@@ -284,11 +280,15 @@ export async function PUT(request: NextRequest) {
     }
 
     const body: unknown = await request.json();
-    if (!isFineTunePutRequestBody(body)) {
-      return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+    const parsedPut = FineTunePutSchema.safeParse(body);
+    if (!parsedPut.success) {
+      return NextResponse.json(
+        { error: 'Invalid input', details: parsedPut.error.flatten().fieldErrors },
+        { status: 400 }
+      );
     }
 
-    const { PLATFORM_ID, config } = body;
+    const { PLATFORM_ID, config } = parsedPut.data;
 
     if (!PLATFORM_ID) {
       return NextResponse.json(

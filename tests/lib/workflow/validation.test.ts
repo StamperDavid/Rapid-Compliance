@@ -410,12 +410,3 @@ describe('Workflow Execution Validation', () => {
   });
 });
 
-// ============================================================================
-// SUMMARY
-// ============================================================================
-
-describe('Validation - Summary', () => {
-  it('should pass all validation tests', () => {
-    expect(true).toBe(true);
-  });
-});

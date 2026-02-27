@@ -11,6 +11,7 @@
 export const dynamic = 'force-dynamic';
 
 import { type NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { startDealMonitor } from '@/lib/crm/deal-monitor';
 import { logger } from '@/lib/logger/logger';
@@ -38,25 +39,11 @@ function stopMonitor(sessionId: string): boolean {
   return false;
 }
 
-/** Request body interface for starting deal monitor */
-interface StartDealMonitorRequestBody {
-  autoGenerateRecommendations?: boolean;
-  autoRecalculateHealth?: boolean;
-  signalPriority?: string;
-}
-
-/** Parse and validate body with fallback to empty object */
-function parseBody(rawBody: unknown): StartDealMonitorRequestBody {
-  if (typeof rawBody !== 'object' || rawBody === null) {
-    return {};
-  }
-  const b = rawBody as Record<string, unknown>;
-  return {
-    autoGenerateRecommendations: typeof b.autoGenerateRecommendations === 'boolean' ? b.autoGenerateRecommendations : undefined,
-    autoRecalculateHealth: typeof b.autoRecalculateHealth === 'boolean' ? b.autoRecalculateHealth : undefined,
-    signalPriority: typeof b.signalPriority === 'string' ? b.signalPriority : undefined,
-  };
-}
+const StartMonitorSchema = z.object({
+  autoGenerateRecommendations: z.boolean().optional(),
+  autoRecalculateHealth: z.boolean().optional(),
+  signalPriority: z.enum(['Low', 'Medium', 'High']).optional(),
+});
 
 export async function POST(request: NextRequest) {
   try {
@@ -67,20 +54,20 @@ export async function POST(request: NextRequest) {
 
     const orgId = 'default';
 
-    // Get config from request body
-    const rawBody = await request.json().catch(() => ({})) as unknown;
-    const body = parseBody(rawBody);
-
-    const signalPriorityValue = body.signalPriority;
-    const validPriorities = ['Low', 'Medium', 'High'] as const;
-    const signalPriority: 'Low' | 'Medium' | 'High' = (signalPriorityValue && validPriorities.includes(signalPriorityValue as typeof validPriorities[number]))
-      ? signalPriorityValue as 'Low' | 'Medium' | 'High'
-      : 'Medium';
+    // Get config from request body — body is optional for this endpoint
+    const rawBody: unknown = await request.json().catch(() => ({}));
+    const parsed = StartMonitorSchema.safeParse(rawBody);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Invalid input', details: parsed.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
 
     const config = {
-      autoGenerateRecommendations: body.autoGenerateRecommendations ?? true,
-      autoRecalculateHealth: body.autoRecalculateHealth ?? true,
-      signalPriority,
+      autoGenerateRecommendations: parsed.data.autoGenerateRecommendations ?? true,
+      autoRecalculateHealth: parsed.data.autoRecalculateHealth ?? true,
+      signalPriority: parsed.data.signalPriority ?? 'Medium',
     };
 
     // Check if a monitor is already running for this org

@@ -5,6 +5,7 @@
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import { getSubCollection } from '@/lib/firebase/collections';
 import { FieldValue } from 'firebase-admin/firestore';
@@ -28,9 +29,9 @@ interface VersionData {
   slug?: string;
 }
 
-interface RequestBody {
-  versionId?: string;
-}
+const PostVersionSchema = z.object({
+  versionId: z.string().min(1),
+});
 
 /**
  * GET /api/website/pages/[pageId]/versions
@@ -122,15 +123,15 @@ export async function POST(
     }
 
     const params = await context.params;
-    const body = await request.json() as RequestBody;
-    const { versionId } = body;
-
-    if (!versionId) {
+    const rawBody: unknown = await request.json();
+    const parsedVersion = PostVersionSchema.safeParse(rawBody);
+    if (!parsedVersion.success) {
       return NextResponse.json(
-        { error: 'versionId is required' },
+        { error: 'Invalid input', details: parsedVersion.error.flatten().fieldErrors },
         { status: 400 }
       );
     }
+    const { versionId } = parsedVersion.data;
 
     const pageRef = adminDal.getNestedDocRef(
       `${getSubCollection('website')}/pages/items/{pageId}`,

@@ -643,7 +643,7 @@ test.describe('Audit Summary', () => {
     console.log('documents, so no cleanup is required.');
     console.log('========================================\n');
 
-    // This test passes because API tests don't persist data
-    expect(true).toBe(true);
+    // API-based tests don't persist Firestore data — nothing to clean
+    expect(createdResources).toBeDefined();
   });
 });

@@ -7,62 +7,22 @@
  */
 
 import { NextResponse, type NextRequest } from 'next/server';
+import { z } from 'zod';
 import { queueDiscoveryTask } from '@/lib/services/discovery-dispatcher';
 import { logger } from '@/lib/logger/logger';
 import { requireAuth } from '@/lib/auth/api-auth';
 
 export const dynamic = 'force-dynamic';
 
-/**
- * Discovery task request body schema
- */
-interface DiscoveryTaskRequest {
-  type: 'company' | 'person';
-  target: string;
-  priority?: number;
-}
+const DiscoveryTaskSchema = z.object({
+  type: z.enum(['company', 'person']),
+  target: z.string(),
+  priority: z.number().optional(),
+});
 
-/**
- * Batch discovery tasks request body schema
- */
-interface BatchDiscoveryTasksRequest {
-  tasks: DiscoveryTaskRequest[];
-}
-
-/**
- * Type guard to validate discovery task request
- */
-function isDiscoveryTaskRequest(body: unknown): body is DiscoveryTaskRequest {
-  if (typeof body !== 'object' || body === null) {
-    return false;
-  }
-
-  const obj = body as Record<string, unknown>;
-
-  return (
-    (obj.type === 'company' || obj.type === 'person') &&
-    typeof obj.target === 'string' &&
-    (obj.priority === undefined || typeof obj.priority === 'number')
-  );
-}
-
-/**
- * Type guard to validate batch tasks request
- */
-function isBatchDiscoveryTasksRequest(
-  body: unknown
-): body is BatchDiscoveryTasksRequest {
-  if (typeof body !== 'object' || body === null) {
-    return false;
-  }
-
-  const obj = body as Record<string, unknown>;
-
-  return (
-    Array.isArray(obj.tasks) &&
-    obj.tasks.every((task) => isDiscoveryTaskRequest(task))
-  );
-}
+const BatchDiscoveryTasksSchema = z.object({
+  tasks: z.array(DiscoveryTaskSchema),
+});
 
 export async function POST(request: NextRequest) {
   try {
@@ -72,35 +32,31 @@ export async function POST(request: NextRequest) {
     }
 
     const body: unknown = await request.json();
-
-    // Validate request body structure
-    if (!isDiscoveryTaskRequest(body)) {
+    const parsed = DiscoveryTaskSchema.safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json(
-        {
-          error:
-            'Invalid request body. Must include type (company/person) and target.',
-        },
+        { error: 'Invalid input', details: parsed.error.flatten().fieldErrors },
         { status: 400 }
       );
     }
 
     // Queue the task
     const taskId = await queueDiscoveryTask(
-      body.type,
-      body.target,
-      body.priority ?? 0
+      parsed.data.type,
+      parsed.data.target,
+      parsed.data.priority ?? 0
     );
 
     logger.info('[API] Discovery task queued', {
       taskId,
-      type: body.type,
-      target: body.target,
+      type: parsed.data.type,
+      target: parsed.data.target,
     });
 
     return NextResponse.json({
       success: true,
       taskId,
-      message: `Discovery task queued for ${body.type}: ${body.target}`,
+      message: `Discovery task queued for ${parsed.data.type}: ${parsed.data.target}`,
     });
   } catch (error: unknown) {
     logger.error('[API] Failed to queue discovery task', error instanceof Error ? error : new Error(String(error)));
@@ -126,20 +82,16 @@ export async function PUT(request: NextRequest) {
     }
 
     const body: unknown = await request.json();
-
-    // Validate request body structure
-    if (!isBatchDiscoveryTasksRequest(body)) {
+    const parsed = BatchDiscoveryTasksSchema.safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json(
-        {
-          error:
-            'Request body must contain a "tasks" array with valid discovery task objects',
-        },
+        { error: 'Invalid input', details: parsed.error.flatten().fieldErrors },
         { status: 400 }
       );
     }
 
     const results = await Promise.allSettled(
-      body.tasks.map((task: DiscoveryTaskRequest) =>
+      parsed.data.tasks.map((task) =>
         queueDiscoveryTask(
           task.type,
           task.target,
@@ -156,7 +108,7 @@ export async function PUT(request: NextRequest) {
     );
 
     logger.info('[API] Batch discovery tasks queued', {
-      total: body.tasks.length,
+      total: parsed.data.tasks.length,
       succeeded: succeeded.length,
       failed: failed.length,
     });
@@ -164,7 +116,7 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({
       success: true,
       stats: {
-        total: body.tasks.length,
+        total: parsed.data.tasks.length,
         succeeded: succeeded.length,
         failed: failed.length,
       },

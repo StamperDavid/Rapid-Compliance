@@ -4,6 +4,7 @@
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { getSubCollection, getLeadsCollection, getDealsCollection, getContactsCollection } from '@/lib/firebase/collections';
@@ -13,12 +14,13 @@ import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
 export const dynamic = 'force-dynamic';
 
-// Type Interfaces
-interface RequestBody {
-  reportId: string;
-  parameters?: ReportParameters;
-}
+// Zod Schema
+const ExecuteReportSchema = z.object({
+  reportId: z.string().min(1),
+  parameters: z.record(z.unknown()).optional(),
+});
 
+// Type Interfaces
 interface ReportParameters {
   period?: string;
   [key: string]: unknown;
@@ -181,12 +183,16 @@ export async function POST(request: NextRequest) {
       return authResult;
     }
 
-    const body = (await request.json()) as RequestBody;
-    const { reportId, parameters } = body;
-
-    if (!reportId) {
-      return errors.badRequest('reportId is required');
+    const body: unknown = await request.json();
+    const parsed = ExecuteReportSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Invalid input', details: parsed.error.flatten().fieldErrors },
+        { status: 400 }
+      );
     }
+
+    const { reportId, parameters } = parsed.data;
 
     // Get report configuration
     const reportDoc = await AdminFirestoreService.get(

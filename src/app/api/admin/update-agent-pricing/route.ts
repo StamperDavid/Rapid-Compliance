@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { COLLECTIONS } from '@/lib/firebase/collections';
 import { requireRole } from '@/lib/auth/api-auth';
@@ -6,24 +7,28 @@ import { logger } from '@/lib/logger/logger';
 
 export const dynamic = 'force-dynamic';
 
+const PricingTierSchema = z.object({
+  name: z.string().min(1),
+  price: z.number(),
+  recordMin: z.number(),
+  recordMax: z.number(),
+  description: z.string(),
+  active: z.boolean(),
+});
+
+const UpdateAgentPricingSchema = z.object({
+  tiers: z.array(PricingTierSchema).min(1, 'At least one pricing tier is required'),
+});
+
 /**
  * Pricing tier interface matching the subscription plan structure
  */
-interface PricingTier {
-  readonly name: string;
-  readonly price: number;
-  readonly recordMin: number;
-  readonly recordMax: number;
-  readonly description: string;
-  readonly active: boolean;
-}
+type PricingTier = z.infer<typeof PricingTierSchema>;
 
 /**
  * Request body structure
  */
-interface UpdateAgentPricingBody {
-  readonly tiers: ReadonlyArray<PricingTier>;
-}
+type UpdateAgentPricingBody = z.infer<typeof UpdateAgentPricingSchema>;
 
 /**
  * Organization document from Firestore with strict typing
@@ -65,36 +70,6 @@ interface UpdateAgentPricingError {
 type _UpdateAgentPricingResponse = UpdateAgentPricingSuccess | UpdateAgentPricingError;
 
 /**
- * Validates the request body structure
- */
-function isValidUpdateAgentPricingBody(body: unknown): body is UpdateAgentPricingBody {
-  if (typeof body !== 'object' || body === null) {
-    return false;
-  }
-
-  const candidate = body as Record<string, unknown>;
-
-  if (!Array.isArray(candidate.tiers)) {
-    return false;
-  }
-
-  return candidate.tiers.every((tier: unknown) => {
-    if (typeof tier !== 'object' || tier === null) {
-      return false;
-    }
-    const t = tier as Record<string, unknown>;
-    return (
-      typeof t.name === 'string' &&
-      typeof t.price === 'number' &&
-      typeof t.recordMin === 'number' &&
-      typeof t.recordMax === 'number' &&
-      typeof t.description === 'string' &&
-      typeof t.active === 'boolean'
-    );
-  });
-}
-
-/**
  * POST: Update AI Agent's pricing knowledge
  * This updates the agent's knowledge base so it can answer pricing questions accurately
  */
@@ -108,9 +83,9 @@ export async function POST(request: NextRequest) {
     const { user } = authResult;
 
     // Parse and validate request body
-    let body: unknown;
+    let rawBody: unknown;
     try {
-      body = await request.json();
+      rawBody = await request.json();
     } catch (parseError: unknown) {
       const errorMessage = parseError instanceof Error ? parseError.message : 'Invalid JSON';
       logger.error('[Admin] Failed to parse request body:', parseError instanceof Error ? parseError : new Error(String(parseError)));
@@ -120,22 +95,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!isValidUpdateAgentPricingBody(body)) {
-      return NextResponse.json<UpdateAgentPricingError>(
-        { success: false, error: 'Invalid pricing tiers data structure' },
+    const parsed = UpdateAgentPricingSchema.safeParse(rawBody);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid input', details: parsed.error.flatten().fieldErrors },
         { status: 400 }
       );
     }
 
+    const body: UpdateAgentPricingBody = parsed.data;
     const { tiers } = body;
-
-    // Validate tiers array is not empty
-    if (tiers.length === 0) {
-      return NextResponse.json<UpdateAgentPricingError>(
-        { success: false, error: 'At least one pricing tier is required' },
-        { status: 400 }
-      );
-    }
 
     // Format pricing knowledge for AI agent
     // Safe access: tiers.length > 0 is validated above

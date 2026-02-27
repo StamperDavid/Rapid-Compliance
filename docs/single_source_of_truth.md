@@ -1,7 +1,7 @@
 # SalesVelocity.ai - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** February 27, 2026 (Eradicated all workspace Firestore paths — 53 files migrated to flat org-scoped collection helpers)
+**Last Updated:** February 27, 2026 (System-wide code review — updated metrics: 169 routes, 298 API endpoints, 43 Jasper tools, 26 real integrations verified, cleaned open items and roadmap)
 **Branches:** `dev` (latest)
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Architecture:** Single-Tenant (Penthouse Model) - NOT a SaaS platform
@@ -12,7 +12,7 @@
 ## Table of Contents
 
 1. [Executive Summary](#executive-summary)
-2. [Current Status](#current-status-february-20-2026)
+2. [Current Status](#current-status-february-27-2026)
 3. [Ironclad Architecture Rules](#ironclad-architecture-rules) **[BINDING]**
 4. [Single-Tenant Architecture](#single-tenant-architecture-complete)
 5. [Verified Live Route Map](#verified-live-route-map)
@@ -36,8 +36,8 @@
 
 | Metric | Count | Status |
 |--------|-------|--------|
-| Physical Routes (page.tsx) | 174 | Verified February 27, 2026 (9 pages replaced with redirects to canonical versions; net route count unchanged — redirects still exist as page.tsx files) |
-| API Endpoints (route.ts) | 282 | Verified February 26, 2026 (+/api/seo/research GET/POST) |
+| Physical Routes (page.tsx) | 169 | Verified February 27, 2026 (full filesystem count; 9 redirect stubs included) |
+| API Endpoints (route.ts) | 298 | Verified February 27, 2026 (full filesystem count) |
 | AI Agents | 52 | **52 FUNCTIONAL (48 swarm + 4 standalone)** |
 | RBAC Roles | 4 | `owner` (level 3), `admin` (level 2), `manager` (level 1), `member` (level 0) — 4-role RBAC |
 | Firestore Collections | 69+ | Active (+seoResearch collection for persistent SEO/competitor research) |
@@ -54,37 +54,24 @@
 - **Voice:** VoiceEngineFactory (ElevenLabs, Unreal Speech)
 - **Payments:** Stripe
 
-### Codebase Scale (February 6, 2026)
+### Codebase Scale (February 27, 2026)
 
-**Total Lines of Code Analysis (via `cloc src/`):**
+| Metric | Count |
+|--------|-------|
+| **TypeScript Files** | 1,397 |
+| **Estimated Code Lines** | ~330,000 |
+| **Test Files (Jest + Playwright)** | 97 |
 
-| Metric | Count | Change vs. Pre-Purge |
-|--------|-------|--------|
-| **Total Files** | 1,134 | -157 files |
-| **Total Lines** | 430,060 | -84,011 lines |
-| **Code Lines** | **329,557** | -73,537 lines |
-| **Comment Lines** | 50,397 | -3,182 lines |
-| **Blank Lines** | 50,106 | -7,192 lines |
+**Breakdown by Directory (TypeScript):**
 
-**Breakdown by Language:**
-
-| Language | Files | Code | Comments | Blank |
-|----------|-------|------|----------|-------|
-| TypeScript | 1,129 | 328,704 | 50,372 | 49,951 |
-| Markdown | 2 | 551 | 0 | 139 |
-| JSON | 2 | 191 | 0 | 0 |
-| CSS | 1 | 111 | 25 | 16 |
-
-**Breakdown by Directory (TypeScript LOC):**
-
-| Directory | Files | Code Lines | Purpose |
-|-----------|-------|------------|---------|
-| `src/lib/` | ~480 | ~190,000 | Core business logic, services, agents |
-| `src/components/` | ~185 | ~40,000 | UI components (incl. new DataTable system) |
-| `src/app/api/` | 215 | ~28,000 | API routes (flat structure) |
-| `src/app/(dashboard)/` | 114 | ~18,000 | Dashboard pages (flattened, incl. former admin) |
-| `src/types/` | 39 | ~9,500 | TypeScript definitions |
-| `src/hooks/` | 14 | ~2,200 | React hooks |
+| Directory | Files | Purpose |
+|-----------|-------|---------|
+| `src/lib/` | ~480 | Core business logic, services, agents |
+| `src/components/` | ~185 | UI components |
+| `src/app/api/` | ~298 | API routes (298 route.ts files) |
+| `src/app/(dashboard)/` | ~110 | Dashboard pages |
+| `src/types/` | ~40 | TypeScript definitions |
+| `src/hooks/` | ~15 | React hooks |
 
 ### AI Governance Layer
 
@@ -142,60 +129,71 @@ The Claude Code Governance Layer defines binding operational constraints for AI-
 
 ---
 
-## Current Status (February 25, 2026)
+## Current Status (February 27, 2026)
 
 ### Production Readiness: ~97%
 
 | Area | Status |
 |------|--------|
-| Single-tenant architecture | **COMPLETE** — Firebase kill-switch, PLATFORM_ID constant, -80K+ lines purged |
-| 4-role RBAC | **ENFORCED** — `requireRole()` on API routes, sidebar filtering, 47 permissions |
-| Agent hierarchy | **STRUCTURALLY COMPLETE** — 52 agents, manager orchestration, saga persistence |
-| Jasper delegation | **COMPLETE** — All 9 manager delegation tools wired (Marketing, Builder, Sales, Trust, Agent, Content, Architect, Outreach, Intelligence, Commerce) + `save_blog_draft` bridge + `research_trending_topics` tool. **Mission Control live** — fire-and-forget step tracking on all delegation tools |
-| Type safety | **CLEAN** — `tsc --noEmit` passes, zero `any` policy |
-| Build pipeline | **CLEAN** — `npm run build` passes, pre-commit hooks enforced |
-| Test coverage | **1,289 Jest tests** (49 suites) + **165 Playwright E2E tests** (18 specs) |
-| CI/CD | **4 parallel jobs** — lint+typecheck, unit tests, Playwright, build |
+| Single-tenant architecture | **COMPLETE** — Firebase kill-switch, PLATFORM_ID constant, workspace paths eradicated (53 files migrated) |
+| 4-role RBAC | **ENFORCED** — `requireRole()` on 290/298 API routes (8 intentionally public), sidebar filtering, 47 permissions |
+| Agent hierarchy | **100% COMPLETE** — 52 agents (48 swarm + 4 standalone), all managers orchestrate all specialists |
+| Jasper delegation | **COMPLETE** — 43 tools (9 delegate_to_*, 34 utility). Mission Control SSE streaming live |
+| Type safety | **CLEAN** — `tsc --noEmit` passes, zero `any` types, zero `@ts-ignore`, zero `@ts-expect-error` |
+| Build pipeline | **CLEAN** — `npm run build` passes, `npm run lint` zero warnings, pre-commit hooks enforced |
+| Test coverage | **78 Jest test files** + **19 Playwright E2E specs**, all passing |
+| CI/CD | **6 jobs** — lint+typecheck, unit tests, Playwright, build, security audit, deploy |
+| Dashboard UI | **~80 fully functional pages** with 12-module feature toggle system |
+| Integrations | **26 real integrations** verified with actual API calls |
 
 ### Open Items
 
 | Area | Issue | Severity |
 |------|-------|----------|
-| **Facebook/Instagram** | No implementation. Blocked: Meta Developer Portal approval | MEDIUM |
-| **LinkedIn** | Unofficial RapidAPI wrapper. Blocked: Marketing Developer Platform | MEDIUM |
-| ~~**Jasper delegation gaps**~~ | ~~Missing delegate_to_* tools, blog bridge, trend research~~ | ~~MEDIUM~~ | **RESOLVED (Sprint 19)** — All 9 managers wired + save_blog_draft + research_trending_topics |
-| ~~**Mission Control UI**~~ | ~~No live delegation tracker~~ | ~~MEDIUM~~ | **RESOLVED (Sprint 18)** — `/mission-control` with 3-panel layout, live polling, approval gates |
-| **Video render pipeline** | Returns empty responses; real integrations gated by API keys | LOW |
-| **Asset Generator** | Returns empty; no actual image generation | LOW |
-| ~~**Client SDK in API routes**~~ | ~~63 API routes using FirestoreService (client) instead of AdminFirestoreService~~ | ~~CRITICAL~~ | **RESOLVED (Feb 25, 2026)** — All 64 API routes migrated to Admin SDK |
-| ~~**System page dead links**~~ | ~~6 `/admin/*` links pointing to non-existent routes, hardcoded stats~~ | ~~MEDIUM~~ | **RESOLVED (Feb 25, 2026)** — Rewritten with live health API data and real settings links |
+| **Placeholder tests** | 115 `expect(true).toBe(true)` across 11 files inflate pass counts; `playbook-engine.test.ts` has 94 stubs | HIGH |
+| **Zod validation gaps** | ~49% of API routes have Zod schemas; video, social, and webhook routes need coverage | MEDIUM |
+| **Facebook/Instagram** | No API implementation. Blocked: Meta Developer Portal approval | MEDIUM |
+| **LinkedIn** | Unofficial RapidAPI wrapper. Blocked: Marketing Developer Platform approval | MEDIUM |
 | **Stripe live keys** | Test keys configured; live keys blocked on bank account setup | MEDIUM |
-| **PageSpeed API** | Google API key saved but API not enabled in Cloud Console | LOW |
-| **Stub integrations** | Salesforce, HubSpot (field mapping only), QuickBooks (partial), Shopify (types only) | LOW |
+| **Skipped tests** | 52 `it.skip` — 31 need Firestore emulator, 16 obsolete multi-tenant tests to delete | MEDIUM |
+| **Video render pipeline** | Returns "coming soon" without API keys; works when HeyGen/Sora/Runway keys configured | LOW |
+| **Stub integrations** | Square, Vonage, Resend, SMTP, Calendly — type defs only, no implementation | LOW |
 
 ### Active Roadmap
 
-| Sprint | Focus | Status |
-|--------|-------|--------|
-| **Sprint 18** | Jasper Mission Control — live delegation tracker UI | **COMPLETE** (Feb 24, 2026) |
-| **Sprint 19** | Complete Jasper delegation coverage (5 new delegate_to_* tools + blog bridge + trend research) | **COMPLETE** (Feb 24, 2026) |
-| **Sprint 20** | AI Search Optimization (llms.txt, AI bot access, schema markup service, monitoring dashboard) | **COMPLETE** (Feb 24, 2026) |
-| **Sprint 21** | Website Migration Pipeline — "clone this site" via Jasper + web_migrator (deep scrape → blueprint → AI page gen → assemble) | **COMPLETE** (Feb 24, 2026) |
-| **Sprint 22** | Security Hardening — webhook fail-closed, workflow timeouts + depth limits, SMS orchestrator wiring | **COMPLETE** (Feb 24, 2026) |
-| **Sprint 23** | Mission Control Live Stream — SSE streaming replaces 5s polling, cancel button, tool args/results in step detail | **COMPLETE** (Feb 24, 2026) |
-| **Sprint 24** | Admin SDK Migration — 64 API routes migrated from Client SDK to Admin SDK, system page rewrite, API keys to Firestore | **COMPLETE** (Feb 25, 2026) |
+| Priority | Focus | Status |
+|----------|-------|--------|
+| **Test quality** | Delete/implement 115 placeholder tests, remove 16 obsolete skipped tests | PENDING |
+| **Zod coverage** | Add Zod validation to remaining ~150 API routes (video, social, webhook, cron) | PENDING |
+| **Facebook/Instagram** | Implement when Meta Developer Portal approval obtained | BLOCKED |
+| **LinkedIn official** | Replace RapidAPI wrapper when Marketing Developer Platform approved | BLOCKED |
+| **Stripe go-live** | Switch from test to live keys when bank account setup complete | BLOCKED |
+
+### Completed Sprints (All)
+
+| Sprint | Summary | Date |
+|--------|---------|------|
+| **18** | Mission Control — 3-panel live delegation tracker, approval gates, history | Feb 24 |
+| **19** | Full delegation coverage — 9 `delegate_to_*` tools + blog bridge + trend research | Feb 24 |
+| **20** | AI Search Optimization — `llms.txt`, AI bot access, schema markup, monitoring | Feb 24 |
+| **21** | Website Migration Pipeline — deep scrape → blueprint → AI page gen → assemble | Feb 24 |
+| **22** | Security Hardening — webhooks fail-closed, workflow timeouts + depth limits, SMS wiring | Feb 24 |
+| **23** | Mission Control Live Stream — SSE via Firestore onSnapshot, cancel, tool detail | Feb 24 |
+| **24** | Admin SDK Migration — 64 API routes migrated, system page rewrite | Feb 25 |
+| **25** | Workspace path eradication — 53 files migrated to flat org-scoped collection helpers | Feb 27 |
+| **26** | Nav redundancy cleanup — 9 redirect pages, 3 deleted duplicates, centralized SubpageNav | Feb 27 |
+| **27** | Feature module toggle system — 12-module gating + consultative onboarding + demo seed data | Feb 27 |
 
 ### Completed Roadmaps (Archived)
 
-The following roadmaps are fully complete. Details in git history and `docs/archive/`:
-- **Stabilization Roadmap** — Tiers 1-3 (15/15 tasks DONE)
-- **Production Readiness Roadmap** — Tiers 1-3 (all DONE except Meta/LinkedIn blocked externally)
-- **Social Media Growth Engine** — All 6 phases COMPLETE
-- **Autonomous Business Operations** — All 8 phases COMPLETE
-- **Session 25 Production Audit** — All 28 blockers resolved (Sessions 26-27)
-- **Session 31 Code Readiness Audit** — All 13 items resolved
-- **Sprint 14-15** — SEO data API integration + Competitor SEO analysis page COMPLETE
-- **Sprint 18** — Jasper Mission Control — live delegation tracker, 3-panel UI, approval gates, history COMPLETE
+All roadmaps fully complete. Details in git history and `docs/archive/`:
+- Stabilization Roadmap (Tiers 1-3, 15/15 tasks)
+- Production Readiness Roadmap (Tiers 1-3, all done except Meta/LinkedIn blocked externally)
+- Social Media Growth Engine (6 phases)
+- Autonomous Business Operations (8 phases)
+- Session 25 Production Audit (28 blockers resolved)
+- Session 31 Code Readiness Audit (13 items resolved)
+- Sprint 14-15 (SEO data API + Competitor analysis)
 
 ---
 
@@ -424,18 +422,18 @@ SalesVelocity.ai is a **single-company sales and marketing super tool**. This is
 
 ## Verified Live Route Map
 
-### Route Distribution (February 13, 2026)
+### Route Distribution (February 27, 2026)
 
 | Area | Routes | Dynamic Params | Status |
 |------|--------|----------------|--------|
-| Dashboard (`/(dashboard)/*`) | 124 | 8 | **Flattened** single-tenant (incl. former admin routes + social pages + mission-control + video library; -3 duplicates deleted Feb 26) |
-| Public (`/(public)/*`) | 16 | 0 | All pages exist |
+| Dashboard (`/(dashboard)/*`) | ~110 | 8 | **Flattened** single-tenant (incl. social, mission-control, video, settings; 9 redirects included) |
+| Public (`/(public)/*`) | ~20 | 1 (`[formId]`) | Marketing + auth pages |
 | Dashboard sub-routes (`/dashboard/*`) | 16 | 0 | Analytics, coaching, marketing, performance |
-| Store (`/store/*`) | 6 | 1 (`[productId]`) | E-commerce storefront (added `/store/checkout/cancelled`) |
-| Onboarding (`/onboarding/*`) | 2 | 0 | Account + industry setup |
+| Store (`/store/*`) | ~5 | 1 (`[productId]`) | E-commerce storefront |
+| Onboarding (`/onboarding/*`) | 1 | 0 | Account setup |
 | Auth (`/(auth)/*`) | 1 | 0 | Admin login |
 | Other (`/preview`, `/profile`, `/sites`) | 3 | 2 | Preview tokens, user profile, site builder |
-| **TOTAL** | **174** | **11** | **Verified February 26, 2026** |
+| **TOTAL** | **169** | **~11** | **Verified February 27, 2026 (filesystem count)** |
 
 **DELETED:** `src/app/workspace/[orgId]/*` (95 pages) and `src/app/admin/*` (92 pages) - multi-tenant and standalone admin routes removed/consolidated into `(dashboard)`
 
@@ -558,10 +556,7 @@ SalesVelocity.ai is a **single-company sales and marketing super tool**. This is
 
 ### Route Issues
 
-| Issue | Location | Severity | Status |
-|-------|----------|----------|--------|
-| ~~Stub Page~~ | `/admin/command-center` | ~~LOW~~ | ✅ RESOLVED — Admin routes consolidated into dashboard |
-| ~~Duplicate Destination~~ | `settingsEcommerce` + `settingsProducts` | ~~INFO~~ | ✅ RESOLVED — Admin routes removed |
+No open route issues. All previously identified stub pages and duplicate destinations have been resolved.
 
 ---
 
@@ -938,7 +933,7 @@ These agents operate independently of the L1/L2/L3 swarm hierarchy:
 
 | Agent | Type | Path | Status | Description |
 |-------|------|------|--------|-------------|
-| Jasper | Platform AI Assistant | Firestore `goldenMasters/` + `src/lib/orchestrator/jasper-tools.ts` | FUNCTIONAL | Jasper — the platform AI assistant and primary human interface to the agent swarm. **32 tools** across 8 categories. Delegates to 5 of 9 domain managers via tool functions (`delegate_to_marketing`, `delegate_to_builder`, `delegate_to_sales`, `delegate_to_trust`, `delegate_to_agent`). Missing delegation tools: content, architect, outreach, intelligence, commerce (Sprint 19). Anti-hallucination design: tools force data verification. |
+| Jasper | Platform AI Assistant | Firestore `goldenMasters/` + `src/lib/orchestrator/jasper-tools.ts` | FUNCTIONAL | Jasper — the platform AI assistant and primary human interface to the agent swarm. **43 tools** across delegation, intelligence, content, and platform categories. Delegates to all 9 domain managers via `delegate_to_*` tools. Anti-hallucination design: tools force data verification. Mission Control SSE streaming for live tool tracking. |
 | Voice Agent Handler | Voice AI Agent | `src/lib/voice/voice-agent-handler.ts` | FUNCTIONAL | Hybrid AI/human voice agent with two modes: **Prospector** (lead qualification) and **Closer** (deal closing with warm transfer). API routes: `src/app/api/voice/ai-agent/` |
 | Autonomous Posting Agent | Social Media Automation | `src/lib/social/autonomous-posting-agent.ts` | FUNCTIONAL | Manages autonomous content posting across LinkedIn and Twitter/X with scheduling, queueing, and analytics tracking. |
 | Chat Session Service | Agent Infrastructure | `src/lib/agent/chat-session-service.ts` | FUNCTIONAL | Manages real-time AI chat sessions and agent instance lifecycle. `AgentInstanceManager` (`src/lib/agent/instance-manager.ts`) handles ephemeral agent instances spawned from Golden Masters. |
@@ -1259,29 +1254,18 @@ const res = await authFetch('/api/some-endpoint');
 
 **Resolved Issues (9 total):** All CRITICAL security findings have been resolved — 82 unprotected API routes hardened (Session 4), OAuth CSRF + encryption fixed (Session 9), rate limiting + CAPTCHA enforced (Session 9), CAN-SPAM unsubscribe route created (Session 9), 53 bare fetch calls migrated to `authFetch` (Session 33), system status auth handshake fixed (Jan 29). See git history for details.
 
-**Remaining Open Issues:**
-
-| Severity | Issue | Location | Status |
-|----------|-------|----------|--------|
-| MAJOR | 4 webhook endpoints fail open when verification keys missing | `src/app/api/webhooks/{email,gmail,sms,voice}` | **RESOLVED (Sprint 22)** — All 4 webhooks now fail closed with 503 |
-| MAJOR | Feature toggle GET endpoint is unauthenticated | `src/app/api/orchestrator/feature-toggle/route.ts` | **FALSE POSITIVE** — Already has requireAuth() on both GET and POST |
-| MAJOR | Workflow engine has no execution timeout or recursion prevention | `src/lib/workflows/workflow-engine.ts` | **RESOLVED (Sprint 22)** — 60s global timeout + depth limit of 15 |
-| LOW | Token claim extraction lacks strict validation | `api-auth.ts` | **RESOLVED** — `isValidRole()` type guard, strict claim extraction, no bare casts |
-| LOW | Manual organization check in agent routes | `/api/agent/chat` | **FALSE POSITIVE** — Already uses standard `requireAuth()` pattern |
+**Remaining Open Issues:** None — all previously identified security issues are resolved (webhook fail-closed, workflow timeouts, strict claim validation). See git history for details.
 
 ### API Route Protection Summary
 
-**Audit Date:** February 11, 2026
-**Total Routes:** 228
+**Audit Date:** February 27, 2026
+**Total Routes:** 298
 
 | Protection Type | Count | Details |
 |----------------|-------|---------|
-| `requireAuth` middleware | ~167 | Standard dashboard route protection (82 added Feb 11) |
-| `verifyAdminRequest` | ~15 | Admin routes via `@/lib/api/admin-auth` |
-| `requireUserRole` | 2 | Admin template routes via `@/lib/auth/server-auth` |
-| Manual `verifyIdToken` | ~8 | Workflows, lead-scoring (Firebase Admin SDK direct) |
-| `CRON_SECRET` verification | 5 | Cron jobs: intelligence-sweep, operations-cycle, social-metrics, process-sequences, scheduled-publisher |
-| Legitimately public | 31 | Webhooks (6), OAuth callbacks (7), tracking pixels (3), TwiML/voice (5), public website (5), health/chat/forms (3), workflow webhooks (1), RSS/robots/sitemap (1) |
+| Auth-protected (any method) | ~290 | `requireAuth`, `requireRole`, `verifyAdminRequest`, manual `verifyIdToken` |
+| Intentionally public | ~8 | Public contact/forms, health check, booking, public chat, email tracking pixels |
+| Webhook endpoints | varies | Signature-verified (Stripe, SendGrid, Gmail, SMS) — not token-based |
 
 **Auth systems in use:**
 - `requireAuth` from `@/lib/auth/api-auth` — primary dashboard auth (verifies Firebase token, returns `{ user }` or 401)
@@ -1361,7 +1345,7 @@ This script:
 
 ## Tooling Inventory
 
-### API Routes (240 Total)
+### API Routes (298 Total — Verified February 27, 2026)
 
 | Category | Count | Path Pattern | Status |
 |----------|-------|--------------|--------|
@@ -1707,7 +1691,7 @@ All 64 API routes that were using the client-side `FirestoreService` have been m
 
 ## Integration Status
 
-### Integration Audit (Verified February 13, 2026)
+### Integration Audit (Verified February 27, 2026)
 
 | Integration | Status | Details |
 |-------------|--------|---------|
@@ -1717,8 +1701,8 @@ All 64 API routes that were using the client-side `FirestoreService` have been m
 | **Instagram** | **NOT BUILT** | No code exists. Requires Meta Developer sandbox + app review. |
 | **Stripe** | **REAL** | Full API — `checkout.sessions.create()`, `products.create()`, `prices.create()`, `paymentLinks.create()`, PaymentElement checkout (3DS), payment intents, webhook `payment_intent.succeeded`. Production-ready. |
 | **Email (SendGrid)** | **REAL** | Primary provider. `@sendgrid/mail` SDK, tracking pixels, click tracking. |
-| **Email (Resend)** | **REAL** | Alternative provider. Direct API at `api.resend.com`. |
-| **Email (SMTP)** | **REAL** | Server-side via `/api/email/send-smtp`. |
+| **Email (Resend)** | **STUB** | Type definitions exist but no implementation file |
+| **Email (SMTP)** | **STUB** | Type definitions exist but no implementation file |
 | **Voice (Twilio)** | **REAL** | Twilio SDK — call initiation, control, conferencing. |
 | **Voice (Telnyx)** | **REAL** | Direct API — 60-70% cheaper than Twilio. |
 | **TTS (ElevenLabs)** | **REAL** | `api.elevenlabs.io/v1`, 20+ premium voices. |
@@ -1733,6 +1717,18 @@ All 64 API routes that were using the client-side `FirestoreService` have been m
 | **Social Engagement (REPLY/LIKE/FOLLOW/REPOST)** | **REAL (Twitter)** | Wired to Twitter API v2: likeTweet, retweet, followUser, postTweet w/ replyToTweetId. Non-Twitter platforms pending. |
 | **Social OAuth (Twitter)** | **REAL** | PKCE flow with code challenge, auth URL generation, code exchange, profile fetch. AES-256-GCM token encryption. |
 | **Social OAuth (LinkedIn)** | **REAL** | OAuth 2.0 authorization code flow, token exchange, profile fetch. AES-256-GCM token encryption. |
+| **Email (Gmail)** | **REAL** | Google APIs OAuth2 — list, send, watch, history sync to CRM |
+| **Email (Outlook)** | **REAL** | Microsoft Graph — list, send, calendar events, free/busy |
+| **Slack** | **REAL** | `@slack/web-api` — channels, messages, files, users |
+| **Microsoft Teams** | **REAL** | Microsoft Graph — teams, channels, messages, meetings |
+| **PayPal** | **REAL** | Orders API v2, payouts API v1, OAuth token exchange |
+| **Shopify** | **REAL** | Admin API 2024-01 — inventory, cart, products |
+| **HubSpot** | **REAL** | CRM v3 API — contact sync |
+| **Salesforce** | **REAL** | REST API v58.0 — lead creation |
+| **Xero** | **REAL** | OAuth2, invoices, contacts, payments |
+| **QuickBooks** | **REAL** | OAuth2, invoices, customers, company info |
+| **Zoom** | **REAL** | Meetings API — create, cancel, recording, waiting room |
+| **Twilio Verify** | **REAL** | OTP/2FA verification |
 
 ### SEO Data Integrations (NEW: February 23, 2026)
 
@@ -1786,12 +1782,13 @@ All 64 API routes that were using the client-side `FirestoreService` have been m
 **Mission Statuses:** `PENDING`, `IN_PROGRESS`, `AWAITING_APPROVAL`, `COMPLETED`, `FAILED`
 **Step Statuses:** `PENDING`, `RUNNING`, `COMPLETED`, `FAILED`, `AWAITING_APPROVAL`
 
-### Planned Integrations (NOT STARTED)
+### Previously Planned Integrations (NOW LIVE)
 
-- Salesforce CRM
-- HubSpot
-- Xero Accounting
-- PayPal Payments
+All previously planned integrations are now implemented:
+- **Salesforce CRM** — REAL (lead sync via `sobjects/Lead` API)
+- **HubSpot** — REAL (contact sync via CRM v3 API)
+- **Xero Accounting** — REAL (OAuth, invoices, contacts)
+- **PayPal Payments** — REAL (orders, capture, payouts)
 
 ### Dashboard-Swarm Connectivity (LIVE: January 29, 2026)
 
@@ -1803,7 +1800,7 @@ All 64 API routes that were using the client-side `FirestoreService` have been m
 |----------|--------|----------------|
 | State Alignment | **LIVE** | `getSwarmStatus()` exposed via `/api/system/status`, consumed by `useSystemStatus` hook |
 | Telemetry Trace | **LIVE** | SwarmMonitorWidget polls live metrics from MASTER_ORCHESTRATOR |
-| Agent ID Verification | **ALIGNED** | `COMPETITOR_RESEARCHER` unified across frontend and backend (47 agents) |
+| Agent ID Verification | **ALIGNED** | All agent IDs unified across frontend and backend (52 agents) |
 | Brief Injection | PARTIAL | Manager briefs live; Commerce/Reputation briefs need dedicated routes |
 
 **Implemented API Routes:**

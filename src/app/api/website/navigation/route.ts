@@ -5,6 +5,7 @@
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import { getSubCollection } from '@/lib/firebase/collections';
 import type { Navigation } from '@/types/website';
@@ -13,9 +14,9 @@ import { requireAuth } from '@/lib/auth/api-auth';
 
 export const dynamic = 'force-dynamic';
 
-interface RequestBody {
-  navigation?: Partial<Navigation>;
-}
+const PostNavigationSchema = z.object({
+  navigation: z.record(z.unknown()),
+});
 
 /**
  * GET /api/website/navigation
@@ -76,19 +77,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
     }
 
-    const body = await request.json() as RequestBody;
-    const { navigation } = body;
-
-    // Validate navigation data
-    if (!navigation) {
+    const rawBody: unknown = await request.json();
+    const parsed = PostNavigationSchema.safeParse(rawBody);
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: 'Invalid navigation data' },
+        { error: 'Invalid input', details: parsed.error.flatten().fieldErrors },
         { status: 400 }
       );
     }
+    const { navigation } = parsed.data;
 
     const navigationData: Navigation = {
-      ...navigation,
+      ...(navigation as Partial<Navigation>),
       id: 'navigation',
       updatedAt: new Date().toISOString(),
     } as Navigation;

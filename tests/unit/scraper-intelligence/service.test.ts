@@ -104,11 +104,8 @@ describe('Scraper Intelligence Service - Unit Tests', () => {
       expect(stats.signalsCacheSize).toBe(0);
     });
 
-    it('should invalidate organization caches', () => {
-      invalidateOrganizationCaches();
-
-      // Should not throw
-      expect(true).toBe(true);
+    it('should invalidate organization caches without throwing', () => {
+      expect(() => invalidateOrganizationCaches()).not.toThrow();
     });
   });
 

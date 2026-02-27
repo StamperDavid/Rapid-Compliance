@@ -4,6 +4,7 @@
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { routeLead } from '@/lib/crm/lead-routing';
 import { updateLead, getLead } from '@/lib/crm/lead-service';
 import { logger } from '@/lib/logger/logger';
@@ -11,13 +12,9 @@ import { requireAuth } from '@/lib/auth/api-auth';
 
 export const dynamic = 'force-dynamic';
 
-interface RouteLeadRequestBody {
-  leadId?: string;
-}
-
-function isRouteLeadRequestBody(value: unknown): value is RouteLeadRequestBody {
-  return typeof value === 'object' && value !== null;
-}
+const RouteLeadSchema = z.object({
+  leadId: z.string(),
+});
 
 export async function POST(request: NextRequest) {
   try {
@@ -27,18 +24,15 @@ export async function POST(request: NextRequest) {
     }
 
     const body: unknown = await request.json();
-    if (!isRouteLeadRequestBody(body)) {
-      return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
-    }
-
-    const leadId = body.leadId;
-
-    if (!leadId) {
+    const parsed = RouteLeadSchema.safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: 'leadId is required' },
+        { error: 'Invalid input', details: parsed.error.flatten().fieldErrors },
         { status: 400 }
       );
     }
+
+    const { leadId } = parsed.data;
 
     // Get lead
     const lead = await getLead(leadId);

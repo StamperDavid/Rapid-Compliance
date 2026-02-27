@@ -5,6 +5,7 @@
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { scheduleMeeting, type MeetingRequest } from '@/lib/outbound/meeting-scheduler';
 import { logger } from '@/lib/logger/logger';
@@ -12,33 +13,18 @@ import { errors } from '@/lib/middleware/error-handler';
 
 export const dynamic = 'force-dynamic';
 
-type MeetingType = 'demo' | 'discovery' | 'intro' | 'follow-up' | 'custom';
-type MeetingUrgency = 'asap' | 'this_week' | 'next_week' | 'flexible';
-
-interface MeetingScheduleRequestBody {
-  prospectEmail?: string;
-  prospectName?: string;
-  companyName?: string;
-  duration?: number;
-  meetingType?: string;
-  topic?: string;
-  suggestedTimes?: string[];
-  timezone?: string;
-  urgency?: string;
-  context?: string;
-}
-
-function isValidMeetingType(value: string): value is MeetingType {
-  return ['demo', 'discovery', 'intro', 'follow-up', 'custom'].includes(value);
-}
-
-function isValidMeetingUrgency(value: string): value is MeetingUrgency {
-  return ['asap', 'this_week', 'next_week', 'flexible'].includes(value);
-}
-
-function isMeetingScheduleRequestBody(value: unknown): value is MeetingScheduleRequestBody {
-  return typeof value === 'object' && value !== null;
-}
+const MeetingScheduleSchema = z.object({
+  prospectEmail: z.string().email(),
+  prospectName: z.string().min(1),
+  companyName: z.string().min(1),
+  duration: z.number().int().positive().optional().default(30),
+  meetingType: z.enum(['demo', 'discovery', 'intro', 'follow-up', 'custom']).optional().default('discovery'),
+  topic: z.string().optional(),
+  suggestedTimes: z.array(z.string()).optional(),
+  timezone: z.string().optional(),
+  urgency: z.enum(['asap', 'this_week', 'next_week', 'flexible']).optional(),
+  context: z.string().optional(),
+});
 
 export async function POST(request: NextRequest) {
   try {
@@ -48,46 +34,39 @@ export async function POST(request: NextRequest) {
     }
 
     const body: unknown = await request.json();
-    if (!isMeetingScheduleRequestBody(body)) {
-      return errors.badRequest('Invalid request body');
+    const parsed = MeetingScheduleSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Invalid input', details: parsed.error.flatten().fieldErrors },
+        { status: 400 }
+      );
     }
 
     const {
       prospectEmail,
       prospectName,
       companyName,
-      duration = 30,
-      meetingType = 'discovery',
+      duration,
+      meetingType,
       topic,
       suggestedTimes,
       timezone,
       urgency,
       context,
-    } = body;
-
-    if (!prospectEmail || !prospectName || !companyName) {
-      return NextResponse.json(
-        { success: false, error: 'Prospect email, name, and company are required' },
-        { status: 400 }
-      );
-    }
+    } = parsed.data;
 
     // Penthouse model: All features available
-
-    // Validate meetingType and urgency
-    const validMeetingType: MeetingType = isValidMeetingType(meetingType) ? meetingType : 'discovery';
-    const validUrgency: MeetingUrgency | undefined = urgency && isValidMeetingUrgency(urgency) ? urgency : undefined;
 
     const meetingRequest: MeetingRequest = {
       prospectEmail,
       prospectName,
       companyName,
       duration,
-      meetingType: validMeetingType,
+      meetingType,
       topic,
       suggestedTimes: suggestedTimes?.map((t) => new Date(t)),
       timezone,
-      urgency: validUrgency,
+      urgency,
       context,
     };
 

@@ -540,12 +540,3 @@ describe('WorkflowEngine - Action Execution', () => {
   });
 });
 
-// ============================================================================
-// SUMMARY
-// ============================================================================
-
-describe('WorkflowEngine - Summary', () => {
-  it('should pass all workflow engine tests', () => {
-    expect(true).toBe(true);
-  });
-});

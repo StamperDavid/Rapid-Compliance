@@ -1,4 +1,5 @@
 import type { NextRequest} from 'next/server';
+import { z } from 'zod';
 
 import { verifyAdminRequest, createErrorResponse, createSuccessResponse, isAuthError } from '@/lib/api/admin-auth';
 import { apiKeyService } from '@/lib/api-keys/api-key-service';
@@ -8,12 +9,12 @@ import { PLATFORM_ID } from '@/lib/constants/platform';
 export const dynamic = 'force-dynamic';
 
 // ============================================================================
-// Type Definitions
+// Schemas & Type Definitions
 // ============================================================================
 
-interface TestConnectionRequestBody {
-  service: string;
-}
+const TestConnectionSchema = z.object({
+  service: z.enum(['openai', 'anthropic', 'openrouter', 'gemini']),
+});
 
 interface ConnectionTestDetails {
   model?: string;
@@ -54,19 +55,6 @@ interface ApiErrorResponse {
 // Type Guards
 // ============================================================================
 
-function isTestConnectionRequestBody(body: unknown): body is TestConnectionRequestBody {
-  return (
-    typeof body === 'object' &&
-    body !== null &&
-    'service' in body &&
-    typeof (body as TestConnectionRequestBody).service === 'string'
-  );
-}
-
-function isValidService(service: string): service is 'openai' | 'anthropic' | 'openrouter' | 'gemini' {
-  return ['openai', 'anthropic', 'openrouter', 'gemini'].includes(service);
-}
-
 function isOpenAIResponse(data: unknown): data is OpenAIResponse {
   return typeof data === 'object' && data !== null;
 }
@@ -106,20 +94,17 @@ export async function POST(request: NextRequest) {
   try {
     const body: unknown = await request.json();
 
-    if (!isTestConnectionRequestBody(body)) {
+    const parsed = TestConnectionSchema.safeParse(body);
+    if (!parsed.success) {
       return createErrorResponse('Missing or invalid service', 400);
     }
 
-    const { service } = body;
+    const { service } = parsed.data;
 
     // Get API key for the service
     const keys = await apiKeyService.getKeys();
     if (!keys) {
       return createErrorResponse('No API keys configured for this organization', 404);
-    }
-
-    if (!isValidService(service)) {
-      return createErrorResponse(`Unsupported service: ${service}`, 400);
     }
 
     let testResult: ConnectionTestResult;

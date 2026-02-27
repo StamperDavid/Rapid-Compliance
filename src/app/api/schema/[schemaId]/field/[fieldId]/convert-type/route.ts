@@ -3,6 +3,7 @@
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
 import { adminDal } from '@/lib/firebase/admin-dal';
@@ -11,11 +12,18 @@ import type { FieldType, SchemaField } from '@/types/schema';
 
 export const dynamic = 'force-dynamic';
 
-interface ConversionRequestBody {
-  fieldKey: string;
-  oldType: FieldType;
-  newType: FieldType;
-}
+const FieldTypeSchema = z.enum([
+  'text', 'longText', 'number', 'currency', 'percent', 'email', 'url',
+  'phoneNumber', 'singleSelect', 'multiSelect', 'checkbox', 'rating',
+  'date', 'dateTime', 'time', 'duration', 'linkToRecord', 'lookup',
+  'rollup', 'attachment', 'image', 'formula', 'autoNumber', 'barcode', 'button',
+]);
+
+const PostConvertTypeSchema = z.object({
+  fieldKey: z.string().min(1),
+  oldType: FieldTypeSchema,
+  newType: FieldTypeSchema,
+});
 
 interface SchemaData {
   name: string;
@@ -101,16 +109,15 @@ export async function POST(
     }
 
     const params = await context.params;
-    const body = (await request.json()) as ConversionRequestBody;
-    const { fieldKey, oldType, newType } = body;
-
-    // Validate required fields
-    if (!fieldKey || !oldType || !newType) {
+    const rawBody: unknown = await request.json();
+    const parsed = PostConvertTypeSchema.safeParse(rawBody);
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: 'Missing required fields: fieldKey, oldType, newType' },
+        { error: 'Invalid input', details: parsed.error.flatten().fieldErrors },
         { status: 400 }
       );
     }
+    const { fieldKey, oldType, newType } = parsed.data;
 
     if (!adminDal) {
       return NextResponse.json(

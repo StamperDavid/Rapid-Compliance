@@ -4,18 +4,15 @@
  * Triggers multi-channel recovery siege when a lead abandons.
  */
 import { type NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
 
 export const dynamic = 'force-dynamic';
 
-interface RecoveryCampaignRequestBody {
-  merchantId?: string;
-}
-
-function isRecoveryCampaignRequestBody(value: unknown): value is RecoveryCampaignRequestBody {
-  return typeof value === 'object' && value !== null;
-}
+const RecoveryCampaignSchema = z.object({
+  merchantId: z.string().min(1),
+});
 
 export async function POST(request: NextRequest) {
   try {
@@ -25,21 +22,15 @@ export async function POST(request: NextRequest) {
     }
 
     const body: unknown = await request.json();
-    if (!isRecoveryCampaignRequestBody(body)) {
+    const parsed = RecoveryCampaignSchema.safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: 'Invalid request body' },
+        { error: 'Invalid input', details: parsed.error.flatten().fieldErrors },
         { status: 400 }
       );
     }
 
-    const { merchantId } = body;
-
-    if (!merchantId) {
-      return NextResponse.json(
-        { error: 'merchantId required' },
-        { status: 400 }
-      );
-    }
+    const { merchantId } = parsed.data;
 
     // Dynamic import to avoid build issues
     const { usePendingMerchantStore } = await import('@/lib/stores/pending-merchants-store');

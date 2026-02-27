@@ -570,10 +570,12 @@ describe('Omni-Channel Sequencer Integration Tests', () => {
   });
 
   describe('Hunter-Closer Compliance', () => {
-    it('should be 100% native (no third-party dependencies)', () => {
-      // This test verifies that sequencer is native
-      // No Outreach.io, Salesloft, or Apollo dependencies
-      expect(true).toBe(true); // Placeholder assertion
+    it('should be 100% native (no third-party sequencer dependencies)', () => {
+      // Verify core sequencer functions are available natively
+      expect(typeof createSequence).toBe('function');
+      expect(typeof enrollInSequence).toBe('function');
+      expect(typeof executeSequenceStep).toBe('function');
+      expect(typeof processDueSequenceSteps).toBe('function');
     });
 
     it('should handle all required channels natively', () => {

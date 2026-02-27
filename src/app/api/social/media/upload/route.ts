@@ -5,6 +5,7 @@
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
@@ -13,7 +14,8 @@ import type { SocialPlatform } from '@/types/social';
 
 export const dynamic = 'force-dynamic';
 
-const VALID_PLATFORMS = ['twitter', 'linkedin', 'facebook', 'instagram'];
+// FormData fields (strings) are validated individually via Zod
+const SocialPlatformEnum = z.enum(['twitter', 'linkedin']);
 
 export async function POST(request: NextRequest) {
   try {
@@ -25,7 +27,7 @@ export async function POST(request: NextRequest) {
 
     const formData = await request.formData();
     const file = formData.get('file');
-    const platform = formData.get('platform') as string | null;
+    const platformRaw = formData.get('platform');
     const postId = formData.get('postId') as string | null;
 
     if (!file || !(file instanceof Blob)) {
@@ -35,11 +37,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (platform && !VALID_PLATFORMS.includes(platform)) {
-      return NextResponse.json(
-        { success: false, error: `Invalid platform. Must be one of: ${VALID_PLATFORMS.join(', ')}` },
-        { status: 400 }
-      );
+    // Validate platform using Zod enum when present
+    let platform: SocialPlatform | undefined;
+    if (platformRaw !== null) {
+      const platformParsed = SocialPlatformEnum.safeParse(platformRaw);
+      if (!platformParsed.success) {
+        return NextResponse.json(
+          { success: false, error: `Invalid platform. Must be one of: ${SocialPlatformEnum.options.join(', ')}` },
+          { status: 400 }
+        );
+      }
+      platform = platformParsed.data;
     }
 
     // Convert Blob to Buffer
@@ -51,7 +59,7 @@ export async function POST(request: NextRequest) {
     const mimeType = file.type || 'application/octet-stream';
 
     const asset = await SocialMediaService.upload(buffer, fileName, mimeType, {
-      platform: platform as SocialPlatform | undefined,
+      platform,
       postId: postId ?? undefined,
     });
 

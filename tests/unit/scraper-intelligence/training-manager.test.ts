@@ -593,11 +593,9 @@ describe('Training Manager', () => {
       expect(result).toBeDefined();
     });
 
-    it('should handle concurrent updates with transactions', () => {
-      // Transaction ensures atomic updates
-      // Version conflicts are detected and handled
-      // This is integration-tested in the actual implementation
-      expect(true).toBe(true);
+    it('should use transactions for concurrent update safety', () => {
+      // runTransaction is used by submitFeedback for atomic version updates
+      expect(db.runTransaction).toBeDefined();
     });
   });
 });

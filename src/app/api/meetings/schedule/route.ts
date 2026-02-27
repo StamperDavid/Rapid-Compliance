@@ -4,37 +4,28 @@
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { scheduleMeeting } from '@/lib/meetings/scheduler-engine';
 import { logger } from '@/lib/logger/logger';
 import { requireAuth } from '@/lib/auth/api-auth';
 
 export const dynamic = 'force-dynamic';
 
-type RelatedEntityType = 'lead' | 'contact' | 'deal';
+const MeetingAttendeeSchema = z.object({
+  name: z.string(),
+  email: z.string().email(),
+  phone: z.string().optional(),
+});
 
-interface MeetingAttendee {
-  name: string;
-  email: string;
-  phone?: string;
-}
-
-interface ScheduleMeetingRequestBody {
-  schedulerConfigId?: string;
-  title?: string;
-  startTime?: string;
-  attendees?: MeetingAttendee[];
-  notes?: string;
-  relatedEntityType?: string;
-  relatedEntityId?: string;
-}
-
-function isScheduleMeetingRequestBody(value: unknown): value is ScheduleMeetingRequestBody {
-  return typeof value === 'object' && value !== null;
-}
-
-function isValidRelatedEntityType(value: string | undefined): value is RelatedEntityType | undefined {
-  return value === undefined || value === 'lead' || value === 'contact' || value === 'deal';
-}
+const ScheduleMeetingSchema = z.object({
+  schedulerConfigId: z.string().min(1),
+  title: z.string().min(1),
+  startTime: z.string().optional(),
+  attendees: z.array(MeetingAttendeeSchema).min(1),
+  notes: z.string().optional(),
+  relatedEntityType: z.enum(['lead', 'contact', 'deal']).optional(),
+  relatedEntityId: z.string().optional(),
+});
 
 export async function POST(request: NextRequest) {
   try {
@@ -44,36 +35,32 @@ export async function POST(request: NextRequest) {
     }
 
     const body: unknown = await request.json();
-    if (!isScheduleMeetingRequestBody(body)) {
-      return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+    const parsed = ScheduleMeetingSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Invalid input', details: parsed.error.flatten().fieldErrors },
+        { status: 400 }
+      );
     }
 
-    // Validate required fields
-    if (!body.schedulerConfigId) {
-      return NextResponse.json({ error: 'schedulerConfigId is required' }, { status: 400 });
-    }
-
-    if (!body.title) {
-      return NextResponse.json({ error: 'title is required' }, { status: 400 });
-    }
-
-    if (!body.attendees || body.attendees.length === 0) {
-      return NextResponse.json({ error: 'attendees are required' }, { status: 400 });
-    }
-
-    // Validate relatedEntityType if provided
-    const relatedEntityType = isValidRelatedEntityType(body.relatedEntityType)
-      ? body.relatedEntityType
-      : undefined;
+    const {
+      schedulerConfigId,
+      title,
+      startTime,
+      attendees,
+      notes,
+      relatedEntityType,
+      relatedEntityId,
+    } = parsed.data;
 
     const meeting = await scheduleMeeting({
-      schedulerConfigId: body.schedulerConfigId,
-      title: body.title,
-      startTime: body.startTime ? new Date(body.startTime) : new Date(),
-      attendees: body.attendees,
-      notes: body.notes,
+      schedulerConfigId,
+      title,
+      startTime: startTime ? new Date(startTime) : new Date(),
+      attendees,
+      notes,
       relatedEntityType,
-      relatedEntityId: body.relatedEntityId,
+      relatedEntityId,
     });
 
     return NextResponse.json({

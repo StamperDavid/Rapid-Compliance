@@ -207,8 +207,8 @@ describe('E-Commerce Checkout E2E', () => {
         console.log(`   Total: $${order.total}`);
       } catch (error: unknown) {
         if (error instanceof Error && error.message.includes('Stripe API key not configured')) {
-          console.warn('⚠️  Skipping Stripe test - API key not configured');
-          expect(true).toBe(true); // Pass test with warning
+          // Stripe not configured — expected in CI without test keys
+          return;
         } else {
           throw error; // Re-throw other errors
         }
@@ -254,13 +254,8 @@ describe('E-Commerce Checkout E2E', () => {
   });
 
   describe('Inventory Management', () => {
-    it('should track inventory after checkout', () => {
-      // NOTE: This test would check that inventory was decremented
-      // Requires successful checkout first (which is skipped above)
-      // Once Stripe is configured, this will validate inventory tracking
-
-      console.log(`⚠️  Inventory test skipped - requires successful checkout`);
-      expect(true).toBe(true); // Placeholder
+    it.skip('should track inventory after checkout (requires Stripe test key)', () => {
+      // Requires successful checkout with Stripe configured
     });
   });
 

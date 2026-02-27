@@ -4,6 +4,7 @@
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import { getSubCollection } from '@/lib/firebase/collections';
 import { FieldValue } from 'firebase-admin/firestore';
@@ -33,16 +34,22 @@ interface PageData {
   lastEditedBy: string;
 }
 
-interface RequestBody {
-  page?: {
-    id?: string;
-    title?: string;
-    slug?: string;
-    status?: string;
-    content?: unknown[];
-    seo?: PageSEO;
-  };
-}
+const PageSEOSchema = z.object({
+  title: z.string().optional(),
+  description: z.string().optional(),
+  keywords: z.array(z.string()).optional(),
+});
+
+const PostPagesSchema = z.object({
+  page: z.object({
+    id: z.string().optional(),
+    title: z.string().min(1),
+    slug: z.string().min(1),
+    status: z.string().optional(),
+    content: z.array(z.unknown()).optional(),
+    seo: PageSEOSchema.optional(),
+  }),
+});
 
 /**
  * GET /api/website/pages
@@ -120,23 +127,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
     }
 
-    const body = await request.json() as RequestBody;
-    const { page } = body;
-
-    if (!page) {
+    const rawBody: unknown = await request.json();
+    const parsed = PostPagesSchema.safeParse(rawBody);
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: 'page object is required' },
+        { error: 'Invalid input', details: parsed.error.flatten().fieldErrors },
         { status: 400 }
       );
     }
-
-    // Validate required fields
-    if (!page.title || !page.slug) {
-      return NextResponse.json(
-        { error: 'title and slug are required' },
-        { status: 400 }
-      );
-    }
+    const { page } = parsed.data;
 
     const performedBy = await getUserIdentifier();
     const pageId = (page.id !== '' && page.id != null) ? page.id : `page_${Date.now()}`;

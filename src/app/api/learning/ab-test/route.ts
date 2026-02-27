@@ -4,6 +4,7 @@
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import {
   createABTest,
   getActiveABTest,
@@ -18,27 +19,19 @@ import { requireAuth } from '@/lib/auth/api-auth';
 
 export const dynamic = 'force-dynamic';
 
-interface CreateABTestRequestBody {
-  controlModel?: string;
-  treatmentModel?: string;
-  trafficSplit?: number;
-  minSampleSize?: number;
-  confidenceThreshold?: number;
-}
+const CreateABTestSchema = z.object({
+  controlModel: z.string().optional(),
+  treatmentModel: z.string().optional(),
+  trafficSplit: z.number().optional(),
+  minSampleSize: z.number().optional(),
+  confidenceThreshold: z.number().optional(),
+});
 
-interface UpdateABTestRequestBody {
-  action?: string;
-  testId?: string;
-  autoDeploy?: boolean;
-}
-
-function isCreateABTestRequestBody(value: unknown): value is CreateABTestRequestBody {
-  return typeof value === 'object' && value !== null;
-}
-
-function isUpdateABTestRequestBody(value: unknown): value is UpdateABTestRequestBody {
-  return typeof value === 'object' && value !== null;
-}
+const UpdateABTestSchema = z.object({
+  action: z.string().optional(),
+  testId: z.string().optional(),
+  autoDeploy: z.boolean().optional(),
+});
 
 export async function GET(request: NextRequest) {
   try {
@@ -82,8 +75,12 @@ export async function POST(request: NextRequest) {
     }
 
     const body: unknown = await request.json();
-    if (!isCreateABTestRequestBody(body)) {
-      return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+    const parsed = CreateABTestSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Invalid input', details: parsed.error.flatten().fieldErrors },
+        { status: 400 }
+      );
     }
 
     const {
@@ -92,7 +89,7 @@ export async function POST(request: NextRequest) {
       trafficSplit,
       minSampleSize,
       confidenceThreshold,
-    } = body;
+    } = parsed.data;
 
     if (!controlModel || !treatmentModel) {
       return NextResponse.json(
@@ -142,11 +139,15 @@ export async function PUT(request: NextRequest) {
     }
 
     const body: unknown = await request.json();
-    if (!isUpdateABTestRequestBody(body)) {
-      return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+    const parsedUpdate = UpdateABTestSchema.safeParse(body);
+    if (!parsedUpdate.success) {
+      return NextResponse.json(
+        { error: 'Invalid input', details: parsedUpdate.error.flatten().fieldErrors },
+        { status: 400 }
+      );
     }
 
-    const { action, testId, autoDeploy } = body;
+    const { action, testId, autoDeploy } = parsedUpdate.data;
 
     if (action === 'evaluate') {
       // Force evaluation of current test

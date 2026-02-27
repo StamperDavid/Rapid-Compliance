@@ -4,6 +4,7 @@
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import { FieldValue } from 'firebase-admin/firestore';
@@ -14,10 +15,10 @@ import type { Schema } from '@/types/schema';
 
 export const dynamic = 'force-dynamic';
 
-interface SchemaUpdateRequestBody {
-  updates: Partial<Schema>;
-  userId: string;
-}
+const PostSchemaUpdateSchema = z.object({
+  updates: z.record(z.unknown()),
+  userId: z.string().min(1),
+});
 
 /**
  * POST /api/schemas/[schemaId]/update
@@ -41,15 +42,15 @@ export async function POST(
     }
 
     const params = await context.params;
-    const body = (await request.json()) as SchemaUpdateRequestBody;
-    const { updates, userId } = body;
-
-    if (!updates || !userId) {
+    const rawBody: unknown = await request.json();
+    const parsed = PostSchemaUpdateSchema.safeParse(rawBody);
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: 'updates and userId are required' },
+        { error: 'Invalid input', details: parsed.error.flatten().fieldErrors },
         { status: 400 }
       );
     }
+    const { updates, userId } = parsed.data;
 
     // Get current schema using Admin DAL
     const schemasCollection = adminDal.getOrgCollection('schemas');

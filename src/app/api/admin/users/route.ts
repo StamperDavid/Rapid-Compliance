@@ -1,4 +1,5 @@
 import type { NextRequest } from 'next/server';
+import { z } from 'zod';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import { FieldValue, type Timestamp } from 'firebase-admin/firestore';
 import { getAuth } from 'firebase-admin/auth';
@@ -94,20 +95,15 @@ interface UpdateUserResponse {
 }
 
 // ============================================================================
-// TYPE GUARDS & VALIDATORS
+// SCHEMAS & VALIDATORS
 // ============================================================================
 
-/**
- * Type guard for update user request body
- * Validates that the body has required userId field
- */
-function isUpdateUserRequestBody(body: unknown): body is UpdateUserRequestBody {
-  if (typeof body !== 'object' || body === null) {
-    return false;
-  }
-  const obj = body as Record<string, unknown>;
-  return typeof obj.userId === 'string' && obj.userId.length > 0;
-}
+const UpdateUserSchema = z.object({
+  userId: z.string().min(1),
+  name: z.string().optional(),
+  role: z.string().optional(),
+  status: z.string().optional(),
+});
 
 /**
  * Type guard for objects with toDate method (Firestore Timestamps)
@@ -276,11 +272,12 @@ export async function PATCH(request: NextRequest) {
 
     const rawBody: unknown = await request.json();
 
-    if (!isUpdateUserRequestBody(rawBody)) {
+    const parsed = UpdateUserSchema.safeParse(rawBody);
+    if (!parsed.success) {
       return createErrorResponse('User ID is required', 400);
     }
 
-    const body: UpdateUserRequestBody = rawBody;
+    const body: UpdateUserRequestBody = parsed.data;
 
     // Build validated update object with only provided fields
     const partialUpdates: Partial<Omit<ValidatedUpdateFields, 'updatedAt' | 'updatedBy'>> = {};

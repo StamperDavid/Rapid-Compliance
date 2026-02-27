@@ -5,6 +5,7 @@
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { SequenceEngine } from '@/lib/outbound/sequence-engine';
 import { logger } from '@/lib/logger/logger';
@@ -13,14 +14,10 @@ import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
 export const dynamic = 'force-dynamic';
 
-interface SequenceEnrollRequestBody {
-  sequenceId?: string;
-  prospectIds?: string[];
-}
-
-function isSequenceEnrollRequestBody(value: unknown): value is SequenceEnrollRequestBody {
-  return typeof value === 'object' && value !== null;
-}
+const SequenceEnrollSchema = z.object({
+  sequenceId: z.string().min(1),
+  prospectIds: z.array(z.string().min(1)).min(1),
+});
 
 export async function POST(request: NextRequest) {
   try {
@@ -33,25 +30,15 @@ export async function POST(request: NextRequest) {
     }
 
     const body: unknown = await request.json();
-    if (!isSequenceEnrollRequestBody(body)) {
-      return errors.badRequest('Invalid request body');
-    }
-
-    const { sequenceId, prospectIds } = body;
-
-    if (!sequenceId) {
+    const parsed = SequenceEnrollSchema.safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json(
-        { success: false, error: 'Sequence ID is required' },
+        { error: 'Invalid input', details: parsed.error.flatten().fieldErrors },
         { status: 400 }
       );
     }
 
-    if (!prospectIds || !Array.isArray(prospectIds) || prospectIds.length === 0) {
-      return NextResponse.json(
-        { success: false, error: 'At least one prospect ID is required' },
-        { status: 400 }
-      );
-    }
+    const { sequenceId, prospectIds } = parsed.data;
 
     // Penthouse model: All features available
 

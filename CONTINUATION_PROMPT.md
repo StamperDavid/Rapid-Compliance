@@ -6,7 +6,7 @@
 
 Repository: https://github.com/StamperDavid/Rapid-Compliance
 Branch: dev
-Last Session: February 24, 2026 (Session 38 — Sprint 23: Mission Control Live Stream)
+Last Session: February 27, 2026 (System-wide code review + documentation cleanup)
 
 ## Current State
 
@@ -14,85 +14,84 @@ Last Session: February 24, 2026 (Session 38 — Sprint 23: Mission Control Live 
 - **Single-tenant penthouse model** — org ID `rapid-compliance-root`, Firebase `rapid-compliance-65f87`
 - **52 AI agents** (48 swarm + 4 standalone) with hierarchical orchestration
 - **4-role RBAC** (owner/admin/manager/member) with 47 permissions
-- **176 physical routes**, **281 API endpoints**, **330K+ lines of TypeScript**
+- **169 physical routes**, **298 API endpoints**, **1,397 TypeScript files** (~330K LOC)
 - **Deployed via Vercel** — dev → main → Vercel auto-deploy
 
 ### Build Health
-- `tsc --noEmit` — **PASSES**
+- `tsc --noEmit` — **PASSES (zero errors)**
 - `npm run lint` — **PASSES (zero errors, zero warnings)**
 - `npm run build` — **PASSES**
-- Pre-commit hooks — **PASSES** (bypass ratchet 23/26, Windows-safe tsc runner)
+- `@ts-ignore` / `@ts-expect-error` — **0**
+- `any` type violations — **0** (Zero-Any Policy enforced)
+- `eslint-disable` comments — **16** (all justified, within budget)
 
-### Production Readiness: ~95%
-- Sessions 1-38 completed all stabilization, feature buildout, audit fixes, and deployment
-- 49 Jest suites (1,289 tests), 18 Playwright E2E specs (~165 tests), all passing
-- Zero TODO comments, zero console statements in src/, zero `@ts-ignore`
-- CI/CD pipeline: 4 parallel jobs (lint+typecheck, unit tests, Playwright, build)
-
-### Integration Status
-
-| Integration | Status | Notes |
-|---|---|---|
-| **Twitter/X** | REAL | API v2, OAuth2 PKCE, posting, media, engagement |
-| **LinkedIn** | PARTIAL | RapidAPI wrapper. Blocked: official Marketing Developer Platform approval |
-| **Facebook/Instagram** | NOT BUILT | Blocked: Meta Developer Portal approval |
-| **Stripe** | REAL | PaymentElement (3DS), webhooks, subscriptions via Checkout Sessions |
-| **Mollie** | REAL | Webhook handler, payment status updates, order reconciliation |
-| **Email** | REAL | SendGrid/Resend/SMTP, open/click tracking, CAN-SPAM unsubscribe |
-| **Voice** | REAL | Twilio/Telnyx — call initiation, control, conferencing |
-| **TTS** | REAL | ElevenLabs — 20+ premium voices |
-| **Video** | REAL | HeyGen/Sora/Runway APIs via render pipeline |
-| **AI Images** | REAL | DALL-E 3 with size mapping and graceful fallback |
-| **Firebase** | REAL | Auth + Firestore, single-tenant |
-| **OpenRouter** | REAL | AI gateway, 100+ models |
-| **SEO Data** | REAL | DataForSEO, Serper, PageSpeed Insights, Google Search Console |
+### Production Readiness: ~97%
+- Sessions 1-44 completed all stabilization, feature buildout, audit fixes, and deployment
+- 78 Jest test files + 19 Playwright E2E specs, all passing
+- CI/CD pipeline: 6 jobs (lint+typecheck, unit tests, Playwright, build, security, deploy)
 
 ---
 
-## Known Open Issues
+## Integration Status (Verified February 27, 2026)
+
+### Real Integrations (26)
+
+| Category | Integrations |
+|----------|-------------|
+| **Payments** | Stripe (Checkout, webhooks, subscriptions), PayPal (orders, payouts) |
+| **Email** | SendGrid (bulk + transactional), Gmail (OAuth, sync-to-CRM), Outlook (Microsoft Graph) |
+| **Voice/TTS** | Twilio (calls, SMS, verification), Telnyx (calls, SMS, 60-70% cheaper), ElevenLabs (20+ voices) |
+| **Social** | Twitter/X (full API v2, OAuth2 PKCE), Slack (Web API), Microsoft Teams (Graph API) |
+| **AI** | OpenRouter (100+ models, tool calling) |
+| **SEO** | DataForSEO (domain metrics, keywords, backlinks), Serper (SERP), PageSpeed Insights, Google Search Console |
+| **CRM** | HubSpot (contact sync), Salesforce (lead sync) |
+| **Accounting** | Xero (OAuth, invoices, contacts), QuickBooks (OAuth, invoices, customers) |
+| **E-Commerce** | Shopify (inventory, cart, products) |
+| **Video** | HeyGen, Sora, Runway (real API calls when keys configured, graceful "coming soon" fallback) |
+| **Calendar** | Google Calendar (OAuth), Zoom (meetings, recording) |
+
+### Blocked / Partial
+
+| Integration | Status | Blocker |
+|-------------|--------|---------|
+| **Facebook/Instagram** | NOT BUILT | Meta Developer Portal approval required |
+| **LinkedIn** | PARTIAL | RapidAPI wrapper; official Marketing Developer Platform approval needed |
+| **Stripe Live** | TEST MODE | Bank account setup required for live keys |
+
+### Type Defs Only (Not Implemented)
+
+Square, Vonage, Resend, SMTP, Calendly, Kling, Luma — type definitions exist but no implementation.
+
+---
+
+## Jasper AI Assistant
+
+**43 tools** across delegation, intelligence, admin, and platform categories. All stream live to Mission Control via SSE.
+
+### Delegation Tools (9) → Domain Managers
+`delegate_to_intelligence`, `delegate_to_marketing`, `delegate_to_builder`, `delegate_to_architect`, `delegate_to_commerce`, `delegate_to_outreach`, `delegate_to_content`, `delegate_to_sales`, `delegate_to_trust`
+
+### Specialist Tools (3) → Direct Agent Access
+`scrape_website`, `research_competitors`, `scan_tech_stack`
+
+### Content & Media Tools
+`save_blog_draft`, `research_trending_topics`, `migrate_website`, `create_video`, `get_video_status`, `generate_content`, `social_post`
+
+### Platform & Admin Tools
+`query_docs`, `get_platform_stats`, `get_system_state`, `get_analytics`, `generate_report`, `scan_leads`, `enrich_lead`, `score_leads`, `inspect_agent_logs`, `recall_conversation_history`, `voice_agent`, org/user/coupon/pricing management
+
+---
+
+## Known Issues & Technical Debt
 
 | Issue | Severity | Details |
 |-------|----------|---------|
-| Facebook/Instagram missing | BLOCKED | Requires Meta Developer Portal approval |
-| LinkedIn unofficial | BLOCKED | Uses RapidAPI, requires Marketing Developer Platform approval |
-| 16 eslint-disable comments | LOW | Budget 16/26 — 2 are `no-implied-eval` (sandboxed), rest are legitimate suppressions |
-
----
-
-## Jasper Capabilities (All Delegation Tools Wired)
-
-Jasper has **13 instrumented delegation tools** — all stream live to Mission Control with tool args/results:
-
-| Tool | Target | Capability |
-|------|--------|------------|
-| `delegate_to_builder` | Architect Manager | Website/funnel blueprints, design systems, copy |
-| `delegate_to_sales` | Revenue Director | Lead qualification, outreach, pipeline, deal closing |
-| `delegate_to_marketing` | Marketing Manager | Campaigns, viral hooks, threads, ad creatives |
-| `delegate_to_trust` | Reputation Manager | Reviews, GMB, brand health, crisis handling |
-| `delegate_to_content` | Content Manager | Brand DNA, SEO injection, content calendar, video |
-| `delegate_to_architect` | Architect Manager | Strategic blueprints, UX specs, funnel architecture |
-| `delegate_to_outreach` | Outreach Manager | Email/SMS sequences with compliance checks |
-| `delegate_to_intelligence` | Intelligence Manager | Competitor, market, tech, sentiment research |
-| `delegate_to_commerce` | Commerce Manager | Checkout, catalog, pricing, inventory |
-| `delegate_to_agent` | Any Specialist | YouTube, TikTok, Instagram, Twitter, LinkedIn, etc. |
-| `save_blog_draft` | Firestore Blog | Generate → save as draft → editor link |
-| `research_trending_topics` | Serper/DataForSEO | Trending topics by industry/keyword with volume |
-| `migrate_website` | Migration Pipeline | Deep scrape → blueprint → AI page gen → assemble |
-
-Additional tools: `create_video`, `get_video_status`, `get_analytics`, `generate_report`, `scan_leads`, `enrich_lead`, `score_leads`, `query_docs`, `get_platform_stats`, `inspect_agent_logs`, `generate_content`, `scrape_website`, `research_competitors`, `scan_tech_stack`, org/user/coupon/pricing management.
-
----
-
-## Completed Sprints (18-23)
-
-| Sprint | Summary |
-|--------|---------|
-| **18** | Mission Control — 3-panel live delegation tracker, approval gates, history, auto-nav from chat |
-| **19** | Full delegation coverage — 5 new `delegate_to_*` tools + `save_blog_draft` + `research_trending_topics` |
-| **20** | AI Search Optimization — `llms.txt`, AI bot access, schema markup service, monitoring dashboard |
-| **21** | Website Migration Pipeline — deep scrape → blueprint → AI page gen → assemble site from URL |
-| **22** | Security Hardening — webhooks fail-closed (503), workflow 60s timeout + depth limit 15, SMS wiring |
-| **23** | Mission Control Live Stream — SSE via Firestore onSnapshot, cancel button, tool args/results in step detail |
+| **Placeholder tests** | HIGH | 115 `expect(true).toBe(true)` across 11 files inflate pass counts (worst: `playbook-engine.test.ts` with 94 stubs) |
+| **Skipped tests** | MEDIUM | 52 `it.skip` (31 need Firestore emulator, 16 obsolete multi-tenant tests) |
+| **Zod validation gaps** | MEDIUM | ~49% of API routes have Zod schemas; video/social/webhook routes need coverage |
+| **Facebook/Instagram** | BLOCKED | No implementation — requires Meta Developer Portal approval |
+| **LinkedIn** | BLOCKED | Unofficial RapidAPI wrapper — requires Marketing Developer Platform approval |
+| **Stripe live keys** | BLOCKED | Test mode only — bank account setup required |
 
 ---
 
@@ -105,18 +104,18 @@ Additional tools: `create_video`, `get_video_status`, `get_analytics`, `generate
 | `ENGINEERING_STANDARDS.md` | Code quality requirements |
 | `AGENT_REGISTRY.json` | AI agent configurations (52 agents) |
 | `src/lib/constants/platform.ts` | PLATFORM_ID and platform identity |
-| `src/lib/orchestrator/jasper-tools.ts` | Jasper's 32+ function-calling tools |
-| `src/lib/orchestrator/mission-persistence.ts` | Mission types, CRUD, cancel — Firestore-backed |
-| `src/lib/orchestrator/jasper-command-authority.ts` | Jasper delegation + briefings + approval gateway |
+| `src/lib/orchestrator/jasper-tools.ts` | Jasper's 43 function-calling tools |
+| `src/lib/orchestrator/mission-persistence.ts` | Mission CRUD — Admin SDK, Firestore-backed |
+| `src/lib/orchestrator/jasper-command-authority.ts` | Delegation + briefings + approval gateway |
 | `src/hooks/useMissionStream.ts` | SSE streaming hook for Mission Control |
-| `src/app/(dashboard)/mission-control/page.tsx` | Mission Control UI (SSE + cancel + tool detail) |
-| `src/app/api/orchestrator/chat/route.ts` | Jasper chat API |
+| `src/components/admin/AdminSidebar.tsx` | 9-section sidebar with feature module gating |
+| `src/lib/constants/subpage-nav.ts` | 18 centralized tab arrays for SubpageNav |
 
 ---
 
 ## Session History (Archived)
 
-Sessions 1-38 completed all platform stabilization, feature buildout, nav consolidation, production audits, deployment, SEO data integration, Jasper delegation wiring, and Mission Control live streaming. Details in git history and `docs/archive/`.
+Sessions 1-44 completed all platform stabilization, feature buildout, nav consolidation, production audits, deployment, SEO data integration, Jasper delegation wiring, Mission Control live streaming, Admin SDK migration, workspace path eradication, feature module toggle system, and consultative onboarding.
 
 Key milestones:
 - Sessions 1-8: Core infrastructure (saga persistence, kill switch, revenue attribution, integrations)
@@ -125,9 +124,11 @@ Key milestones:
 - Sessions 19-24: Feature completion (8 sprints, 36 features, all dashboard modules)
 - Session 25: Nav consolidation (13 sections → 8) + full production audit
 - Sessions 26-27: All 28 audit blockers resolved (commerce, fake data, Zod, workflows)
-- Sessions 28-29: Test suite (1,289 Jest + 165 Playwright tests), CI/CD pipeline overhaul
+- Sessions 28-29: Test suite + CI/CD pipeline overhaul
 - Session 30: Production deployment — merged to main, Vercel auto-deploy
-- Session 31: Final code readiness audit — all 13 items resolved, 123 new tests
+- Session 31: Final code readiness audit — all 13 items resolved
 - Sessions 32-35: SEO Intelligence planning + domain analysis hardening
-- Sessions 36-37: Jasper delegation audit + Mission Control planning
-- Session 38: Sprint 23 — Mission Control Live Stream (SSE, cancel, tool detail)
+- Sessions 36-38: Jasper delegation audit + Mission Control SSE streaming
+- Sessions 39-41: Admin SDK migration (64 API routes), system page rewrite
+- Sessions 42-43: Workspace path eradication (53 files), nav redundancy cleanup
+- Session 44: Feature module toggle system + consultative onboarding + demo seed data

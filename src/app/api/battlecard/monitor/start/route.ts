@@ -7,25 +7,32 @@
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
-import { getCompetitiveMonitor, type CompetitorMonitorConfig } from '@/lib/battlecard';
+import { z } from 'zod';
+import { getCompetitiveMonitor } from '@/lib/battlecard';
 import { logger } from '@/lib/logger/logger';
 import { requireAuth } from '@/lib/auth/api-auth';
 
 export const dynamic = 'force-dynamic';
 
-/** Request body interface for starting competitive monitoring */
-interface StartMonitorRequestBody {
-  competitors: CompetitorMonitorConfig[];
-}
+const CompetitorMonitorConfigSchema = z.object({
+  competitorId: z.string(),
+  domain: z.string(),
+  priority: z.enum(['high', 'medium', 'low']),
+  checkFrequency: z.enum(['daily', 'weekly', 'monthly']),
+  alertOn: z.object({
+    pricingChanges: z.boolean(),
+    featureChanges: z.boolean(),
+    positioningChanges: z.boolean(),
+    growthSignals: z.boolean(),
+    weaknessesDetected: z.boolean(),
+  }),
+  lastChecked: z.string().transform((s) => new Date(s)).optional(),
+  nextCheck: z.string().transform((s) => new Date(s)).optional(),
+});
 
-/** Type guard for validating request body */
-function isValidRequestBody(body: unknown): body is StartMonitorRequestBody {
-  if (typeof body !== 'object' || body === null) {
-    return false;
-  }
-  const b = body as Record<string, unknown>;
-  return Array.isArray(b.competitors);
-}
+const StartMonitorSchema = z.object({
+  competitors: z.array(CompetitorMonitorConfigSchema),
+});
 
 export async function POST(request: NextRequest) {
   try {
@@ -35,15 +42,15 @@ export async function POST(request: NextRequest) {
     }
 
     const body: unknown = await request.json();
-
-    if (!isValidRequestBody(body)) {
+    const parsed = StartMonitorSchema.safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json(
-        { success: false, error: 'Missing required fields: competitors (array)' },
+        { success: false, error: 'Invalid input', details: parsed.error.flatten().fieldErrors },
         { status: 400 }
       );
     }
 
-    const { competitors } = body;
+    const { competitors } = parsed.data;
 
     logger.info('API: Start competitive monitoring', {
       competitorCount: competitors.length,

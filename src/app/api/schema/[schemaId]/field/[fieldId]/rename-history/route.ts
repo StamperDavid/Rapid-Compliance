@@ -4,6 +4,7 @@
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
 import { FieldRenameManager } from '@/lib/schema/field-rename-manager';
@@ -18,10 +19,10 @@ interface SchemaData {
   [key: string]: unknown;
 }
 
-interface RollbackRequestBody {
-  toVersion: number;
-  userId: string;
-}
+const PostRollbackSchema = z.object({
+  toVersion: z.number().int().nonnegative(),
+  userId: z.string().min(1),
+});
 
 /**
  * GET /api/schema/[schemaId]/field/[fieldId]/rename-history
@@ -116,15 +117,15 @@ export async function POST(
     }
 
     const params = await context.params;
-    const body = (await request.json()) as RollbackRequestBody;
-    const { toVersion, userId } = body;
-
-    if (toVersion === undefined || !userId) {
+    const rawBody: unknown = await request.json();
+    const parsed = PostRollbackSchema.safeParse(rawBody);
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: 'toVersion and userId are required' },
+        { error: 'Invalid input', details: parsed.error.flatten().fieldErrors },
         { status: 400 }
       );
     }
+    const { toVersion, userId } = parsed.data;
 
     // Rollback field
     await FieldRenameManager.rollbackField(

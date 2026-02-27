@@ -4,6 +4,7 @@
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import { getSubCollection } from '@/lib/firebase/collections';
 import { FieldValue } from 'firebase-admin/firestore';
@@ -17,9 +18,9 @@ interface PageData {
   version?: number;
 }
 
-interface RequestBody {
-  page?: Record<string, unknown>;
-}
+const PutPageSchema = z.object({
+  page: z.record(z.unknown()),
+});
 
 /**
  * GET /api/website/pages/[pageId]
@@ -93,8 +94,15 @@ export async function PUT(
     }
 
     const params = await context.params;
-    const body = await request.json() as RequestBody;
-    const { page } = body;
+    const rawBody: unknown = await request.json();
+    const parsed = PutPageSchema.safeParse(rawBody);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Invalid input', details: parsed.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+    const { page } = parsed.data;
 
     const pageRef = adminDal.getNestedDocRef(
       `${getSubCollection('website')}/pages/items/{pageId}`,

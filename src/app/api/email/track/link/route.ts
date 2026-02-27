@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { logger } from '@/lib/logger/logger';
@@ -7,11 +8,11 @@ import { getSubCollection } from '@/lib/firebase/collections';
 
 export const dynamic = 'force-dynamic';
 
-interface RequestPayload {
-  linkId: string;
-  messageId: string;
-  originalUrl: string;
-}
+const TrackLinkSchema = z.object({
+  linkId: z.string().min(1),
+  messageId: z.string().min(1),
+  originalUrl: z.string().url(),
+});
 
 /**
  * Store tracked link mapping
@@ -30,15 +31,15 @@ export async function POST(request: NextRequest) {
       return authResult;
     }
 
-    const body = await request.json() as RequestPayload;
-    const { linkId, messageId, originalUrl } = body;
-
-    if (!linkId || !messageId || !originalUrl) {
+    const body: unknown = await request.json();
+    const parsed = TrackLinkSchema.safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json(
-        { success: false, error: 'Missing required fields' },
+        { error: 'Invalid input', details: parsed.error.flatten().fieldErrors },
         { status: 400 }
       );
     }
+    const { linkId, messageId, originalUrl } = parsed.data;
 
     // Store link mapping in Firestore
     await AdminFirestoreService.set(

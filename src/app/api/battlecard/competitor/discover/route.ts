@@ -7,6 +7,7 @@
  */
 
 import { NextResponse, type NextRequest } from 'next/server';
+import { z } from 'zod';
 import { discoverCompetitor, type CompetitorProfile } from '@/lib/battlecard';
 import { logger } from '@/lib/logger/logger';
 import { requireAuth } from '@/lib/auth/api-auth';
@@ -16,24 +17,9 @@ import { FieldValue } from 'firebase-admin/firestore';
 
 export const dynamic = 'force-dynamic';
 
-/**
- * Request body structure for competitor discovery
- */
-interface DiscoverCompetitorRequest {
-  domain: string;
-}
-
-/**
- * Type guard to validate request body
- */
-function isValidDiscoverRequest(body: unknown): body is DiscoverCompetitorRequest {
-  return (
-    typeof body === 'object' &&
-    body !== null &&
-    'domain' in body &&
-    typeof body.domain === 'string'
-  );
-}
+const DiscoverCompetitorSchema = z.object({
+  domain: z.string().min(1),
+});
 
 export async function POST(request: NextRequest) {
   try {
@@ -43,15 +29,15 @@ export async function POST(request: NextRequest) {
     }
 
     const body: unknown = await request.json();
-
-    if (!isValidDiscoverRequest(body)) {
+    const parsed = DiscoverCompetitorSchema.safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json(
-        { error: 'Missing required field: domain' },
+        { error: 'Invalid input', details: parsed.error.flatten().fieldErrors },
         { status: 400 }
       );
     }
 
-    const { domain } = body;
+    const { domain } = parsed.data;
 
     logger.info('API: Discover competitor request', {
       domain,

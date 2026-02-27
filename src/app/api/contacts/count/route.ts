@@ -4,6 +4,7 @@
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { where, limit, type QueryConstraint } from 'firebase/firestore';
@@ -15,18 +16,9 @@ import type { ViewFilter } from '@/types/filters';
 
 export const dynamic = 'force-dynamic';
 
-/** Request body interface for counting contacts */
-interface CountContactsRequestBody {
-  filters?: ViewFilter[];
-}
-
-/** Type guard for validating request body */
-function isValidRequestBody(body: unknown): body is CountContactsRequestBody {
-  if (typeof body !== 'object' || body === null) {
-    return false;
-  }
-  return true;
-}
+const CountContactsSchema = z.object({
+  filters: z.array(z.unknown()).optional(),
+});
 
 /**
  * Convert ViewFilter to Firestore query constraints
@@ -137,12 +129,15 @@ export async function POST(request: NextRequest) {
     }
 
     const body: unknown = await request.json();
-
-    if (!isValidRequestBody(body)) {
-      return errors.badRequest('Invalid request body');
+    const parsed = CountContactsSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Invalid input', details: parsed.error.flatten().fieldErrors },
+        { status: 400 }
+      );
     }
 
-    const { filters = [] } = body;
+    const filters = (parsed.data.filters ?? []) as ViewFilter[];
 
     // Build Firestore query constraints from filters
     const constraints = buildQueryConstraints(filters);

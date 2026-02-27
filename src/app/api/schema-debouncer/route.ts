@@ -4,6 +4,7 @@
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
 import { SchemaChangeDebouncer } from '@/lib/schema/schema-change-debouncer';
@@ -41,15 +42,15 @@ export async function GET(request: NextRequest) {
   }
 }
 
+const PostDebouncerSchema = z.object({
+  action: z.enum(['flush', 'clear', 'set_debounce']),
+  debounceMs: z.number().int().positive().optional(),
+});
+
 /**
  * POST /api/schema-debouncer
  * Control debouncer
  */
-interface DebouncerRequestBody {
-  action: 'flush' | 'clear' | 'set_debounce';
-  debounceMs?: number;
-}
-
 export async function POST(request: NextRequest) {
   try {
     const authResult = await requireAuth(request);
@@ -57,8 +58,15 @@ export async function POST(request: NextRequest) {
       return authResult;
     }
 
-    const body = (await request.json()) as DebouncerRequestBody;
-    const { action, debounceMs } = body;
+    const rawBody: unknown = await request.json();
+    const parsed = PostDebouncerSchema.safeParse(rawBody);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Invalid input', details: parsed.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+    const { action, debounceMs } = parsed.data;
     
     const debouncer = SchemaChangeDebouncer.getInstance();
     

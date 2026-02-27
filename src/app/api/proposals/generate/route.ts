@@ -4,32 +4,29 @@
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { generateProposal } from '@/lib/documents/proposal-generator';
 import { logger } from '@/lib/logger/logger';
 import { requireAuth } from '@/lib/auth/api-auth';
 
 export const dynamic = 'force-dynamic';
 
-interface LineItem {
-  description: string;
-  quantity: number;
-  unitPrice: number;
-  discount?: number;
-}
+const LineItemSchema = z.object({
+  description: z.string(),
+  quantity: z.number(),
+  unitPrice: z.number(),
+  discount: z.number().optional(),
+});
 
-interface ProposalGenerateRequestBody {
-  templateId?: string;
-  dealId?: string;
-  contactId?: string;
-  variables?: Record<string, unknown>;
-  lineItems?: LineItem[];
-  validUntil?: string;
-  notes?: string;
-}
-
-function isProposalGenerateRequestBody(value: unknown): value is ProposalGenerateRequestBody {
-  return typeof value === 'object' && value !== null;
-}
+const ProposalGenerateSchema = z.object({
+  templateId: z.string().min(1),
+  dealId: z.string().optional(),
+  contactId: z.string().optional(),
+  variables: z.record(z.unknown()).optional(),
+  lineItems: z.array(LineItemSchema).optional(),
+  validUntil: z.string().optional(),
+  notes: z.string().optional(),
+});
 
 export async function POST(request: NextRequest) {
   try {
@@ -39,22 +36,24 @@ export async function POST(request: NextRequest) {
     }
 
     const body: unknown = await request.json();
-    if (!isProposalGenerateRequestBody(body)) {
-      return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+    const parsed = ProposalGenerateSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Invalid input', details: parsed.error.flatten().fieldErrors },
+        { status: 400 }
+      );
     }
 
-    if (!body.templateId) {
-      return NextResponse.json({ error: 'Template ID required' }, { status: 400 });
-    }
+    const { templateId, dealId, contactId, variables, lineItems, validUntil, notes } = parsed.data;
 
     const proposal = await generateProposal({
-      templateId: body.templateId,
-      dealId: body.dealId,
-      contactId: body.contactId,
-      variables: (body.variables ?? {}) as Record<string, string | number | Date>,
-      lineItems: body.lineItems ?? [],
-      validUntil: body.validUntil ? new Date(body.validUntil) : undefined,
-      notes: body.notes,
+      templateId,
+      dealId,
+      contactId,
+      variables: (variables ?? {}) as Record<string, string | number | Date>,
+      lineItems: lineItems ?? [],
+      validUntil: validUntil ? new Date(validUntil) : undefined,
+      notes,
     });
 
     return NextResponse.json({

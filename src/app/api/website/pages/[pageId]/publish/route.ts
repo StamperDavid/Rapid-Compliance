@@ -5,6 +5,7 @@
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import { getSubCollection } from '@/lib/firebase/collections';
 import { FieldValue } from 'firebase-admin/firestore';
@@ -16,6 +17,10 @@ import {
 import { getUserIdentifier } from '@/lib/server-auth';
 import { requireAuth } from '@/lib/auth/api-auth';
 
+const PostPublishSchema = z.object({
+  scheduledFor: z.string().optional(),
+});
+
 export const dynamic = 'force-dynamic';
 
 interface PageData {
@@ -25,10 +30,6 @@ interface PageData {
   slug?: string;
   status?: string;
   version?: number;
-}
-
-interface RequestBody {
-  scheduledFor?: string;
 }
 
 interface UpdateData {
@@ -60,8 +61,12 @@ export async function POST(
     }
 
     const params = await context.params;
-    const body = await request.json() as RequestBody;
-    const { scheduledFor } = body;
+    const rawBody: unknown = await request.json();
+    const parsed = PostPublishSchema.safeParse(rawBody);
+    if (!parsed.success) {
+      return errorResponse('Invalid input', 400, 'INVALID_INPUT');
+    }
+    const { scheduledFor } = parsed.data;
 
     const pageRef = adminDal.getNestedDocRef(
       `${getSubCollection('website')}/pages/items/{pageId}`,

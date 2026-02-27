@@ -7,7 +7,8 @@
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
-import { discoverCompetitor, generateBattlecard, type BattlecardOptions } from '@/lib/battlecard';
+import { z } from 'zod';
+import { discoverCompetitor, generateBattlecard } from '@/lib/battlecard';
 import { logger } from '@/lib/logger/logger';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { adminDb } from '@/lib/firebase/admin';
@@ -16,23 +17,22 @@ import { FieldValue } from 'firebase-admin/firestore';
 
 export const dynamic = 'force-dynamic';
 
-/** Request body interface for battlecard generation */
-interface GenerateBattlecardRequestBody {
-  competitorDomain: string;
-  options: BattlecardOptions;
-}
+const BattlecardOptionsSchema = z.object({
+  ourProduct: z.string(),
+  ourCompanyInfo: z.object({
+    strengths: z.array(z.string()).optional(),
+    features: z.array(z.string()).optional(),
+    pricing: z.string().optional(),
+    targetMarket: z.array(z.string()).optional(),
+  }).optional(),
+  focusAreas: z.array(z.enum(['features', 'pricing', 'positioning', 'objections'])).optional(),
+  includeAdvanced: z.boolean().optional(),
+});
 
-/** Type guard for validating request body */
-function isValidRequestBody(body: unknown): body is GenerateBattlecardRequestBody {
-  if (typeof body !== 'object' || body === null) {
-    return false;
-  }
-  const b = body as Record<string, unknown>;
-  return (
-    typeof b.competitorDomain === 'string' &&
-    typeof b.options === 'object' && b.options !== null
-  );
-}
+const GenerateBattlecardSchema = z.object({
+  competitorDomain: z.string().min(1),
+  options: BattlecardOptionsSchema,
+});
 
 export async function POST(request: NextRequest) {
   try {
@@ -42,15 +42,15 @@ export async function POST(request: NextRequest) {
     }
 
     const body: unknown = await request.json();
-
-    if (!isValidRequestBody(body)) {
+    const parsed = GenerateBattlecardSchema.safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json(
-        { success: false, error: 'Missing required fields: competitorDomain, options' },
+        { success: false, error: 'Invalid input', details: parsed.error.flatten().fieldErrors },
         { status: 400 }
       );
     }
 
-    const { competitorDomain, options } = body;
+    const { competitorDomain, options } = parsed.data;
 
     logger.info('API: Generate battlecard request', {
       competitorDomain,
