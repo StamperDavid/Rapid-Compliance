@@ -483,7 +483,8 @@ export type NavigationCategory =
   | 'ecommerce'
   | 'commerce'
   | 'website'
-  | 'analytics';
+  | 'analytics'
+  | 'system';
 
 /**
  * Navigation item definition

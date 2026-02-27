@@ -98,10 +98,42 @@ export const EMAIL_STUDIO_TABS: SubpageNavItem[] = [
 export const COACHING_TABS: SubpageNavItem[] = [
   { label: 'My Coaching', href: '/coaching' },
   { label: 'Team Coaching', href: '/coaching/team' },
+  { label: 'Playbook', href: '/playbook' },
 ];
 
 // ── Team ────────────────────────────────────────────────────────────────────
 export const TEAM_TABS: SubpageNavItem[] = [
   { label: 'Leaderboard', href: '/team/leaderboard' },
   { label: 'Tasks', href: '/team/tasks' },
+  { label: 'Performance', href: '/performance' },
+];
+
+// ── Proposals ───────────────────────────────────────────────────────────────
+export const PROPOSALS_TABS: SubpageNavItem[] = [
+  { label: 'Proposals', href: '/proposals' },
+  { label: 'Builder', href: '/proposals/builder' },
+];
+
+// ── Training Hub (AI Workforce training across domains) ─────────────────────
+export const TRAINING_HUB_TABS: SubpageNavItem[] = [
+  { label: 'AI Training', href: '/settings/ai-agents/training' },
+  { label: 'Voice', href: '/voice/training' },
+  { label: 'Social', href: '/social/training' },
+  { label: 'SEO', href: '/seo/training' },
+];
+
+// ── AI Agent Settings ───────────────────────────────────────────────────────
+export const AI_AGENTS_SETTINGS_TABS: SubpageNavItem[] = [
+  { label: 'Overview', href: '/settings/ai-agents' },
+  { label: 'Persona', href: '/settings/ai-agents/persona' },
+  { label: 'Training', href: '/settings/ai-agents/training' },
+  { label: 'Business Setup', href: '/settings/ai-agents/business-setup' },
+  { label: 'Configuration', href: '/settings/ai-agents/configuration' },
+  { label: 'Voice', href: '/settings/ai-agents/voice' },
+];
+
+// ── System (owner-only admin tools) ─────────────────────────────────────────
+export const SYSTEM_TABS: SubpageNavItem[] = [
+  { label: 'System Health', href: '/system' },
+  { label: 'Impersonate', href: '/system/impersonate' },
 ];

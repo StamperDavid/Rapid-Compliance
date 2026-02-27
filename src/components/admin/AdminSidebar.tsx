@@ -60,6 +60,11 @@ import {
   AlertTriangle,
   PenLine,
   Plug,
+  Shield,
+  Eye,
+  Compass,
+  Gauge,
+  Layers,
 } from 'lucide-react';
 
 // ============================================================================
@@ -76,6 +81,8 @@ const NAV_SECTIONS: NavigationSection[] = [
     items: [
       { id: 'dashboard', label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, iconColor: 'var(--color-primary)' },
       { id: 'team', label: 'Team', href: '/team/leaderboard', icon: Trophy, iconColor: 'var(--color-warning)' },
+      { id: 'performance', label: 'Performance', href: '/performance', icon: Gauge, iconColor: 'var(--color-cyan)' },
+      { id: 'onboarding', label: 'Onboarding', href: '/onboarding', icon: Compass, iconColor: 'var(--color-success)' },
     ],
   },
   // ── CRM ─────────────────────────────────────────────────────────────
@@ -92,6 +99,7 @@ const NAV_SECTIONS: NavigationSection[] = [
       { id: 'living-ledger', label: 'Living Ledger', href: '/living-ledger', icon: BookOpen, iconColor: 'var(--color-warning)', requiredPermission: 'canViewAllRecords' },
       { id: 'lead-intel', label: 'Lead Intelligence', href: '/leads/research', icon: Search, iconColor: 'var(--color-primary)', requiredPermission: 'canViewLeads' },
       { id: 'coaching', label: 'Coaching', href: '/coaching', icon: GraduationCap, iconColor: 'var(--color-success)' },
+      { id: 'playbook', label: 'Playbook', href: '/playbook', icon: BookOpen, iconColor: 'var(--color-secondary)' },
       { id: 'risk', label: 'Risk', href: '/risk', icon: AlertTriangle, iconColor: 'var(--color-error)' },
     ],
   },
@@ -122,7 +130,7 @@ const NAV_SECTIONS: NavigationSection[] = [
       { id: 'social-analytics', label: 'Social Analytics', href: '/social/analytics', icon: BarChart3, iconColor: 'var(--color-cyan)', requiredPermission: 'canManageSocialMedia' },
       { id: 'video-library', label: 'Video Library', href: '/content/video/library', icon: Film, iconColor: 'var(--color-primary)', requiredPermission: 'canManageSocialMedia' },
       { id: 'video-studio', label: 'Video Studio', href: '/content/video', icon: Video, iconColor: 'var(--color-primary)', requiredPermission: 'canManageSocialMedia' },
-      { id: 'proposals', label: 'Proposals', href: '/proposals/builder', icon: FileText, iconColor: 'var(--color-secondary)' },
+      { id: 'proposals', label: 'Proposals', href: '/proposals', icon: FileText, iconColor: 'var(--color-secondary)' },
     ],
   },
   // ── AI Workforce (consolidated) ─────────────────────────────────────
@@ -150,7 +158,7 @@ const NAV_SECTIONS: NavigationSection[] = [
       { id: 'storefront', label: 'Storefront', href: '/settings/storefront', icon: Store, iconColor: 'var(--color-warning)', requiredPermission: 'canManageEcommerce' },
     ],
   },
-  // ── Website (single entry — Pages/Blog/SEO/Settings via hub tabs) ───
+  // ── Website & SEO ──────────────────────────────────────────────────────
   {
     id: 'website',
     label: 'Website',
@@ -158,6 +166,7 @@ const NAV_SECTIONS: NavigationSection[] = [
     allowedRoles: ['owner', 'admin', 'manager'],
     items: [
       { id: 'website', label: 'Website', href: '/website/editor', icon: Globe, iconColor: 'var(--color-primary)', requiredPermission: 'canManageWebsite' },
+      { id: 'seo', label: 'SEO', href: '/website/seo', icon: Search, iconColor: 'var(--color-success)', requiredPermission: 'canManageWebsite' },
     ],
   },
   // ── Analytics (consolidated — Revenue/Pipeline/Sales → tabs) ────────
@@ -169,6 +178,18 @@ const NAV_SECTIONS: NavigationSection[] = [
     items: [
       { id: 'analytics-overview', label: 'Overview', href: '/analytics', icon: PieChart, iconColor: 'var(--color-cyan)', requiredPermission: 'canViewReports' },
       { id: 'ab-testing', label: 'A/B Testing', href: '/ab-tests', icon: FlaskConical, iconColor: 'var(--color-success)' },
+    ],
+  },
+  // ── System (owner-only admin tools) ───────────────────────────────────
+  {
+    id: 'system',
+    label: 'System',
+    icon: Shield,
+    allowedRoles: ['owner'],
+    items: [
+      { id: 'system-health', label: 'System Health', href: '/system', icon: Activity, iconColor: 'var(--color-primary)' },
+      { id: 'impersonate', label: 'Impersonate', href: '/system/impersonate', icon: Eye, iconColor: 'var(--color-warning)' },
+      { id: 'schemas', label: 'Schemas', href: '/schemas', icon: Layers, iconColor: 'var(--color-cyan)' },
     ],
   },
 ];
@@ -263,9 +284,25 @@ export default function AdminSidebar() {
       return pathname.startsWith('/team/') ||
         pathname.startsWith('/performance');
     }
-    // Website matches all /website/* paths
+    // SEO matches /website/seo/* and /seo/* (training)
+    if (href === '/website/seo') {
+      return pathname.startsWith('/website/seo') || pathname.startsWith('/seo/');
+    }
+    // Website matches all /website/* except SEO sub-pages
     if (href === '/website/editor') {
-      return pathname.startsWith('/website/');
+      return pathname.startsWith('/website/') && !pathname.startsWith('/website/seo');
+    }
+    // System health — exact match only (don't match /system/impersonate)
+    if (href === '/system') {
+      return pathname === '/system';
+    }
+    // Proposals matches list and builder
+    if (href === '/proposals') {
+      return pathname.startsWith('/proposals');
+    }
+    // Playbook — exact match
+    if (href === '/playbook') {
+      return pathname === '/playbook';
     }
     return pathname.startsWith(href);
   };
