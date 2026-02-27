@@ -108,8 +108,7 @@ import { executeWorkflow } from '@/lib/workflows/workflow-executor';
 import type { Workflow } from '@/types/workflow';
 import { createCampaign, listCampaigns } from '@/lib/email/campaign-manager';
 import { FirestoreService } from '@/lib/db/firestore-service';
-import { PLATFORM_ID } from '@/lib/constants/platform';
-import { getSubCollection, COLLECTIONS } from '@/lib/firebase/collections';
+import { getSubCollection } from '@/lib/firebase/collections';
 
 describe('E-Commerce UI Integration', () => {
   const testOrgId = `test-org-${Date.now()}`;
@@ -233,9 +232,9 @@ describe('E-Commerce UI Integration', () => {
     await FirestoreService.set(getSubCollection('ecommerce'), 'config', ecommerceConfig, false);
 
     // Write product at the platform path so cart-service getProduct() can find it.
-    // getProduct reads from COLLECTIONS.ORGANIZATIONS/PLATFORM_ID/entities/productSchema/records
+    // getProduct reads from getSubCollection(productSchema) = organizations/PLATFORM_ID/products
     await FirestoreService.set(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/entities/products/records`,
+      getSubCollection('products'),
       'test-product-1',
       {
         id: 'test-product-1',

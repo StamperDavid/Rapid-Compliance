@@ -148,7 +148,15 @@ export async function saveToDiscoveryArchive(params: {
     if (!existing.empty) {
       // Duplicate found - just update lastSeen and scrapeCount
       const doc = existing.docs[0];
-      const existingData = doc.data() as TemporaryScrape;
+      const raw = doc.data();
+
+      // Convert Firestore Timestamps to native Dates
+      const existingData: TemporaryScrape = {
+        ...raw,
+        createdAt: toDate(raw.createdAt as Date | FirestoreTimestamp),
+        lastSeen: toDate(raw.lastSeen as Date | FirestoreTimestamp),
+        expiresAt: toDate(raw.expiresAt as Date | FirestoreTimestamp),
+      } as TemporaryScrape;
 
       const updated: Partial<TemporaryScrape> = {
         lastSeen: new Date(),
@@ -189,9 +197,13 @@ export async function saveToDiscoveryArchive(params: {
       relatedRecordId,
     };
 
-    // Filter out undefined values for Firestore
+    // Filter out undefined values for Firestore (including nested objects)
     const cleanData = Object.fromEntries(
-      Object.entries(newScrape).filter(([_, v]) => v !== undefined)
+      Object.entries(newScrape)
+        .filter(([, v]) => v !== undefined)
+        .map(([k, v]) => [k, v !== null && typeof v === 'object' && !Array.isArray(v) && !(v instanceof Date)
+          ? Object.fromEntries(Object.entries(v as Record<string, unknown>).filter(([, nv]) => nv !== undefined))
+          : v])
     );
 
     await db.collection(DISCOVERY_ARCHIVE_COLLECTION).doc(newScrape.id).set(cleanData);

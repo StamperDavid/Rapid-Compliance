@@ -10,8 +10,8 @@ import { enrichCompany } from '@/lib/enrichment/enrichment-service';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import { db } from '@/lib/firebase-admin';
 
-// Set timeout for real Firestore operations
-jest.setTimeout(30000);
+// Set timeout for real enrichment operations (external API calls)
+jest.setTimeout(60000);
 
 describe('Enrichment + Distillation Integration', () => {
   const TEST_ORG_ID = PLATFORM_ID;
@@ -89,7 +89,7 @@ describe('Enrichment + Distillation Integration', () => {
         console.log('- Lead score:', result.data.leadScore ?? 0);
         console.log('- Confidence:', result.data.confidence);
       }
-    }, 30000); // 30s timeout for enrichment
+    }, 60000);
 
     it('should save raw scrape to discovery archive with TTL', async () => {
       const result = await enrichCompany(

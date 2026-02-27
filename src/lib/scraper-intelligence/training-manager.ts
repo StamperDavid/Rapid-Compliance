@@ -187,11 +187,11 @@ export async function submitFeedback(params: {
     }
 
 
-    // Save feedback to database
-    await db.collection(FEEDBACK_COLLECTION).doc(feedbackId).set({
-      ...feedback,
-      submittedAt: now, // Firestore Timestamp
-    });
+    // Save feedback to database (filter undefined values for Firestore)
+    const feedbackData = Object.fromEntries(
+      Object.entries({ ...feedback, submittedAt: now }).filter(([, v]) => v !== undefined)
+    );
+    await db.collection(FEEDBACK_COLLECTION).doc(feedbackId).set(feedbackData);
 
     // If feedback is positive (correct), flag scrape for deletion
     if (params.feedbackType === 'correct') {

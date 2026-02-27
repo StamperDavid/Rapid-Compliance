@@ -23,8 +23,7 @@ import { logger } from '@/lib/logger/logger';
 import { createBrowserController } from './BrowserController';
 import {
   saveToDiscoveryArchive,
-  getFromDiscoveryArchiveByHash,
-  calculateContentHash
+  getFromDiscoveryArchiveByUrl,
 } from '@/lib/scraper-intelligence/discovery-archive-service';
 import { sendUnifiedChatMessage } from '@/lib/ai/unified-ai-service';
 import type { TemporaryScrape } from '@/types/scraper-intelligence';
@@ -302,15 +301,16 @@ async function checkDiscoveryArchive(
   domain: string
 ): Promise<{ scrape: TemporaryScrape } | null> {
   try {
-    // We'll use URL as the cache key
+    // Look up by URL (matches what saveToArchive stores)
     const url = domain.startsWith('http') ? domain : `https://${domain}`;
-    const contentHash = calculateContentHash(url);
+    const results = await getFromDiscoveryArchiveByUrl(url);
 
-    const cached = await getFromDiscoveryArchiveByHash(contentHash);
-    
-    if (!cached) {
+    if (results.length === 0) {
       return null;
     }
+
+    // Use the most recent entry
+    const cached = results[0];
 
     // Check if still valid (not expired)
     if (cached.expiresAt < new Date()) {
@@ -862,7 +862,7 @@ async function saveToArchive(
       cleanedContent: JSON.stringify(company),
       metadata: {
         title: company.companyName ?? extractDomainName(domain),
-        description: company.description,
+        ...(company.description !== undefined && { description: company.description }),
         author: 'discovery-engine',
       },
     });
@@ -871,7 +871,9 @@ async function saveToArchive(
       domain,
       scrapeId: result.scrape.id,
       isNew: result.isNew,
-      expiresAt: result.scrape.expiresAt.toISOString(),
+      expiresAt: result.scrape.expiresAt instanceof Date
+        ? result.scrape.expiresAt.toISOString()
+        : String(result.scrape.expiresAt),
     });
 
     return result;
@@ -985,8 +987,8 @@ export async function discoverPerson(
 
     // Step 1: Check discoveryArchive (30-day cache)
     const cacheKey = `person:${email}`;
-    const contentHash = calculateContentHash(cacheKey);
-    const cached = await getFromDiscoveryArchiveByHash(contentHash);
+    const cachedResults = await getFromDiscoveryArchiveByUrl(cacheKey);
+    const cached = cachedResults.length > 0 ? cachedResults[0] : null;
 
     if (cached && cached.expiresAt > new Date()) {
       logger.info('Person discovery archive HIT', {
@@ -1019,8 +1021,8 @@ export async function discoverPerson(
       rawHtml: JSON.stringify({ email, discoveredAt: new Date() }),
       cleanedContent: JSON.stringify(person),
       metadata: {
-        title:person.fullName ?? email,
-        description: person.title,
+        title: person.fullName ?? email,
+        ...(person.title !== undefined && { description: person.title }),
         author: 'person-discovery',
       },
     });

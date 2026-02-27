@@ -149,9 +149,13 @@ export async function saveTemporaryScrape(params: {
       relatedRecordId,
     };
 
-    // Filter out undefined values for Firestore
+    // Filter out undefined values for Firestore (including nested objects)
     const cleanData = Object.fromEntries(
-      Object.entries(newScrape).filter(([_key, v]) => v !== undefined)
+      Object.entries(newScrape)
+        .filter(([, v]) => v !== undefined)
+        .map(([k, v]) => [k, v !== null && typeof v === 'object' && !Array.isArray(v) && !(v instanceof Date)
+          ? Object.fromEntries(Object.entries(v as Record<string, unknown>).filter(([, nv]) => nv !== undefined))
+          : v])
     );
 
     await db.collection(TEMPORARY_SCRAPES_COLLECTION).doc(newScrape.id).set(cleanData);
