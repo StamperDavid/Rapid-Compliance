@@ -19,6 +19,7 @@ import { auth, db } from '@/lib/firebase/config';
 import { doc, writeBatch, arrayUnion, serverTimestamp } from 'firebase/firestore';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import { COLLECTIONS } from '@/lib/firebase/collections';
+import { DEFAULT_FEATURE_CONFIG } from '@/lib/constants/feature-modules';
 import { Building2, Lock, Eye, EyeOff } from 'lucide-react';
 
 export default function AccountCreationPage() {
@@ -139,6 +140,20 @@ export default function AccountCreationPage() {
           emailVerified: false,
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
+        });
+
+        // Write default feature config (CRM-only) for new users
+        const featureConfigRef = doc(
+          db,
+          COLLECTIONS.ORGANIZATIONS,
+          PLATFORM_ID,
+          'settings',
+          'feature_config',
+        );
+        batch.set(featureConfigRef, {
+          ...DEFAULT_FEATURE_CONFIG,
+          updatedAt: new Date().toISOString(),
+          updatedBy: userId,
         });
 
         await batch.commit();

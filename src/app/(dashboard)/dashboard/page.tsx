@@ -3,6 +3,7 @@
 import { getSubCollection } from '@/lib/firebase/collections';
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useFeatureModules } from '@/hooks/useFeatureModules';
 import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase/config';
 import { logger } from '@/lib/logger/logger';
@@ -147,6 +148,7 @@ export default function WorkspaceDashboardPage() {
   const [pipeline, setPipeline] = useState<PipelineStage[]>([]);
   const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const { config: featureConfig, initialized: featuresInitialized } = useFeatureModules();
 
   useEffect(() => {
     async function fetchDashboardData() {
@@ -363,6 +365,36 @@ export default function WorkspaceDashboardPage() {
           Platform overview — everything at a glance.
         </p>
       </div>
+
+      {/* First-time setup banner */}
+      {featuresInitialized && !featureConfig && (
+        <Link
+          href="/settings/features"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.75rem',
+            padding: '1rem 1.25rem',
+            marginBottom: '1rem',
+            borderRadius: '0.75rem',
+            background: 'var(--gradient-brand, var(--color-primary))',
+            textDecoration: 'none',
+            color: 'white',
+            transition: 'opacity 0.2s',
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.9'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; }}
+        >
+          <span style={{ fontSize: '1.5rem' }}>&#9889;</span>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontWeight: 600, fontSize: '0.9375rem' }}>Welcome! Set up your workspace</div>
+            <div style={{ fontSize: '0.8125rem', opacity: 0.85 }}>
+              Tell us about your business, enable features, and configure API keys so everything works out of the box.
+            </div>
+          </div>
+          <ArrowRight className="w-5 h-5" style={{ flexShrink: 0 }} />
+        </Link>
+      )}
 
       <SubpageNav items={DASHBOARD_TABS} />
 

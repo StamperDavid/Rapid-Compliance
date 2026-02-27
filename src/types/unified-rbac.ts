@@ -11,6 +11,7 @@
 
 import type { LucideIcon } from 'lucide-react';
 import type { Timestamp } from 'firebase/firestore';
+import type { FeatureModuleId } from '@/types/feature-modules';
 
 // =============================================================================
 // ACCOUNT ROLE - Single source of truth
@@ -509,6 +510,9 @@ export interface NavigationItem {
 
   /** Icon color (hex) - used for colorful icon display in sidebar */
   iconColor?: string;
+
+  /** Feature module that controls this item's visibility */
+  featureModuleId?: FeatureModuleId;
 }
 
 /**

@@ -4,6 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { useAuth, usePermission } from '@/hooks/useAuth';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
+import { Sliders } from 'lucide-react';
 
 export default function SettingsPage() {
   const { user } = useAuth();
@@ -120,6 +121,55 @@ export default function SettingsPage() {
             </div>
           </div>
         </div>
+
+        {/* Features & Modules Card (admin/owner only) */}
+        {(user?.role === 'admin' || user?.role === 'owner') && (
+          <Link
+            href="/settings/features"
+            style={{
+              display: 'flex',
+              gap: '1rem',
+              padding: '1.5rem',
+              backgroundColor: 'var(--color-bg-elevated)',
+              border: '2px solid var(--color-primary)',
+              borderRadius: '0.75rem',
+              textDecoration: 'none',
+              transition: 'all 0.2s',
+              cursor: 'pointer',
+              marginBottom: '2rem',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.boxShadow = '0 4px 12px rgba(var(--color-primary-rgb), 0.2)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = 'none';
+            }}
+          >
+            <div style={{
+              width: '60px',
+              height: '60px',
+              borderRadius: '0.75rem',
+              background: 'var(--gradient-brand, var(--color-primary))',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+            }}>
+              <Sliders className="w-7 h-7" style={{ color: 'white' }} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: '1.125rem', fontWeight: '700', color: 'var(--color-text-primary)', marginBottom: '0.25rem' }}>
+                Features & Modules
+              </div>
+              <div style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', lineHeight: '1.4' }}>
+                Choose which features to enable, set up your API keys, and configure your workspace.
+              </div>
+            </div>
+            <div style={{ color: 'var(--color-primary)', fontSize: '1.25rem', display: 'flex', alignItems: 'center' }}>→</div>
+          </Link>
+        )}
 
         {/* Settings Sections */}
         {settingsSections.map((section, sectionIdx) => {
