@@ -339,13 +339,6 @@
       ]
     },
     {
-      "collectionGroup": "temporary_scrapes",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "contentHash", "order": "ASCENDING" }
-      ]
-    },
-    {
       "collectionGroup": "training_data",
       "queryScope": "COLLECTION",
       "fields": [
