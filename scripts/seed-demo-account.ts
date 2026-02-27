@@ -32,6 +32,10 @@ const DEMO_OWNER_ID = 'demo-owner-001';
 const DEMO_OWNER_NAME = '(Demo) Alex Morgan';
 const DEMO_OWNER_EMAIL = 'alex.morgan@salesvelocity.ai';
 
+// Runtime environment helpers
+const APP_ENV = process.env.NODE_ENV ?? 'development';
+const IS_PRODUCTION = APP_ENV === 'production';
+
 // No prefix — single Firestore path for all environments
 const PREFIX = '';
 
@@ -143,6 +147,9 @@ const DEMO_CONTACTS = [
     name: 'Sarah Mitchell',
     email: 'sarah.mitchell@techforward.io',
     phone: '(555) 234-5678',
+    mobile: '(555) 234-9001',
+    source: 'Website Form',
+    photoURL: 'https://i.pravatar.cc/150?u=demo-contact-001',
     company: '(Demo) TechForward Solutions',
     title: 'VP of Marketing',
     department: 'Marketing',
@@ -167,6 +174,9 @@ const DEMO_CONTACTS = [
     name: 'Marcus Chen',
     email: 'marcus.chen@blueridgecap.com',
     phone: '(555) 345-6789',
+    mobile: '(555) 345-9002',
+    source: 'LinkedIn Outbound',
+    photoURL: 'https://i.pravatar.cc/150?u=demo-contact-002',
     company: '(Demo) Blue Ridge Capital',
     title: 'Managing Director',
     department: 'Executive',
@@ -191,6 +201,9 @@ const DEMO_CONTACTS = [
     name: 'Jessica Ramirez',
     email: 'jess@suncoastrealty.com',
     phone: '(555) 456-7890',
+    mobile: '(555) 456-9003',
+    source: 'Referral',
+    photoURL: 'https://i.pravatar.cc/150?u=demo-contact-003',
     company: '(Demo) Suncoast Realty Group',
     title: 'Broker / Owner',
     department: 'Leadership',
@@ -215,6 +228,9 @@ const DEMO_CONTACTS = [
     name: 'David Okonkwo',
     email: 'david@fitlifewellness.com',
     phone: '(555) 567-8901',
+    mobile: '(555) 567-9004',
+    source: 'Google Ads',
+    photoURL: 'https://i.pravatar.cc/150?u=demo-contact-004',
     company: '(Demo) FitLife Wellness',
     title: 'CEO & Founder',
     department: 'Executive',
@@ -239,6 +255,9 @@ const DEMO_CONTACTS = [
     name: 'Emily Thornton',
     email: 'emily.thornton@grantham.edu',
     phone: '(555) 678-9012',
+    mobile: '(555) 678-9005',
+    source: 'Conference',
+    photoURL: 'https://i.pravatar.cc/150?u=demo-contact-005',
     company: '(Demo) Grantham University',
     title: 'Director of Admissions Marketing',
     department: 'Marketing',
@@ -263,6 +282,9 @@ const DEMO_CONTACTS = [
     name: 'Ryan Kowalski',
     email: 'ryan@precisionmfg.com',
     phone: '(555) 789-0123',
+    mobile: '(555) 789-9006',
+    source: 'Cold Email',
+    photoURL: 'https://i.pravatar.cc/150?u=demo-contact-006',
     company: '(Demo) Precision Manufacturing Co',
     title: 'Operations Manager',
     department: 'Operations',
@@ -287,6 +309,9 @@ const DEMO_CONTACTS = [
     name: 'Olivia Park',
     email: 'olivia@luminarydesigns.co',
     phone: '(555) 890-1234',
+    mobile: '(555) 890-9007',
+    source: 'Partner Referral',
+    photoURL: 'https://i.pravatar.cc/150?u=demo-contact-007',
     company: '(Demo) Luminary Interior Designs',
     title: 'Creative Director',
     department: 'Design',
@@ -311,6 +336,9 @@ const DEMO_CONTACTS = [
     name: 'James Whitfield',
     email: 'jwhitfield@greenvalleyfarms.com',
     phone: '(555) 901-2345',
+    mobile: '(555) 901-9008',
+    source: 'Webinar',
+    photoURL: 'https://i.pravatar.cc/150?u=demo-contact-008',
     company: '(Demo) Green Valley Organic Farms',
     title: 'Marketing Manager',
     department: 'Marketing',
@@ -335,6 +363,9 @@ const DEMO_CONTACTS = [
     name: 'Priya Sharma',
     email: 'priya@cloudninesaas.io',
     phone: '(555) 012-3456',
+    mobile: '(555) 012-9009',
+    source: 'Twitter DM',
+    photoURL: 'https://i.pravatar.cc/150?u=demo-contact-009',
     company: '(Demo) CloudNine SaaS',
     title: 'Head of Growth',
     department: 'Growth',
@@ -359,6 +390,9 @@ const DEMO_CONTACTS = [
     name: 'Nathan Brooks',
     email: 'nathan@brookslegal.com',
     phone: '(555) 123-4567',
+    mobile: '(555) 123-9010',
+    source: 'Trade Show',
+    photoURL: 'https://i.pravatar.cc/150?u=demo-contact-010',
     company: '(Demo) Brooks & Associates Law',
     title: 'Senior Partner',
     department: 'Legal',
@@ -388,6 +422,8 @@ const DEMO_LEADS = [
     email: 'arivera@brightpathconsulting.com', phone: '(555) 210-0001',
     company: '(Demo) BrightPath Consulting', companyName: '(Demo) BrightPath Consulting',
     title: 'Partner', status: 'new' as const, score: 82, source: 'Website Form',
+    utmSource: 'google', utmMedium: 'organic', utmCampaign: 'q1-growth-2026',
+    formId: 'demo-form-001', formSubmissionId: 'demo-submission-001',
     ownerId: DEMO_OWNER_ID, tags: ['(Demo)', 'Consulting', 'Inbound', 'Hot'],
     customFields: { leadPriority: 'High', campaignSource: 'Q1 SEO Blog', estimatedDealSize: 35000, nextAction: 'Schedule discovery call' },
     enrichmentData: {
@@ -408,6 +444,7 @@ const DEMO_LEADS = [
     email: 'thawkins@velocitymotors.com', phone: '(555) 210-0002',
     company: '(Demo) Velocity Motors', companyName: '(Demo) Velocity Motors',
     title: 'Marketing Director', status: 'contacted' as const, score: 65, source: 'LinkedIn',
+    utmSource: 'linkedin', utmMedium: 'social', utmCampaign: 'linkedin-outbound-feb',
     ownerId: DEMO_OWNER_ID, tags: ['(Demo)', 'Automotive', 'Outbound', 'Multi-Location'],
     customFields: { leadPriority: 'Medium', campaignSource: 'LinkedIn Outbound Q1', estimatedDealSize: 28000, nextAction: 'Send case study packet' },
     enrichmentData: {
@@ -428,6 +465,7 @@ const DEMO_LEADS = [
     email: 'msantos@pureluxspa.com', phone: '(555) 210-0003',
     company: '(Demo) PureLux Day Spa', companyName: '(Demo) PureLux Day Spa',
     title: 'Owner', status: 'qualified' as const, score: 91, source: 'Referral',
+    utmSource: 'referral', utmMedium: 'referral', utmCampaign: 'partner-referral-olivia',
     ownerId: DEMO_OWNER_ID, tags: ['(Demo)', 'Spa', 'High-Intent', 'Referral', 'Ready to Close'],
     customFields: { leadPriority: 'Critical', campaignSource: 'Referral - Olivia Park', estimatedDealSize: 42000, nextAction: 'Send proposal' },
     enrichmentData: {
@@ -448,6 +486,7 @@ const DEMO_LEADS = [
     email: 'lfoster@summitoutdoors.com', phone: '(555) 210-0004',
     company: '(Demo) Summit Outdoor Gear', companyName: '(Demo) Summit Outdoor Gear',
     title: 'E-commerce Manager', status: 'qualified' as const, score: 78, source: 'Google Ads',
+    utmSource: 'google', utmMedium: 'cpc', utmCampaign: 'google-brand-search',
     ownerId: DEMO_OWNER_ID, tags: ['(Demo)', 'E-commerce', 'Outdoor', 'PPC', 'Shopify'],
     customFields: { leadPriority: 'High', campaignSource: 'Google Ads - E-commerce', estimatedDealSize: 24000, nextAction: 'Schedule PPC audit review' },
     enrichmentData: {
@@ -468,6 +507,7 @@ const DEMO_LEADS = [
     email: 'dnguyen@harborviewmed.org', phone: '(555) 210-0005',
     company: '(Demo) HarborView Medical Center', companyName: '(Demo) HarborView Medical Center',
     title: 'Chief Marketing Officer', status: 'new' as const, score: 88, source: 'Conference',
+    utmSource: 'direct', utmMedium: 'referral', utmCampaign: 'himss-2026-conference',
     ownerId: DEMO_OWNER_ID, tags: ['(Demo)', 'Healthcare', 'Enterprise', 'Conference Lead', 'High Value'],
     customFields: { leadPriority: 'Critical', campaignSource: 'HIMSS 2026 Conference', estimatedDealSize: 95000, nextAction: 'Send follow-up from conference' },
     enrichmentData: {
@@ -488,6 +528,7 @@ const DEMO_LEADS = [
     email: 'bwright@ironcladsecurity.com', phone: '(555) 210-0006',
     company: '(Demo) Ironclad Security Solutions', companyName: '(Demo) Ironclad Security Solutions',
     title: 'VP Business Development', status: 'contacted' as const, score: 55, source: 'Cold Outreach',
+    utmSource: 'email', utmMedium: 'email', utmCampaign: 'cold-email-cybersecurity-q1',
     ownerId: DEMO_OWNER_ID, tags: ['(Demo)', 'Security', 'B2B', 'Outbound', 'Tech'],
     customFields: { leadPriority: 'Medium', campaignSource: 'Cold Email Sequence - Cybersecurity', estimatedDealSize: 45000, nextAction: 'Follow up on demo request' },
     enrichmentData: {
@@ -508,6 +549,8 @@ const DEMO_LEADS = [
     email: 'chughes@petalperfect.com', phone: '(555) 210-0007',
     company: '(Demo) Petal Perfect Floral', companyName: '(Demo) Petal Perfect Floral',
     title: 'Owner', status: 'converted' as const, score: 96, source: 'Website Form',
+    utmSource: 'google', utmMedium: 'organic', utmCampaign: 'smb-marketing-blog-q1',
+    formId: 'demo-form-001', formSubmissionId: 'demo-submission-002',
     ownerId: DEMO_OWNER_ID, tags: ['(Demo)', 'Floral', 'SMB', 'Converted', 'Active Client'],
     customFields: { leadPriority: 'Closed', campaignSource: 'Blog - Small Business Marketing Tips', estimatedDealSize: 18000, nextAction: 'Converted to contact' },
     enrichmentData: {
@@ -528,6 +571,7 @@ const DEMO_LEADS = [
     email: 'dcalloway@apextrade.com', phone: '(555) 210-0008',
     company: '(Demo) Apex Trade Finance', companyName: '(Demo) Apex Trade Finance',
     title: 'Head of Client Acquisition', status: 'lost' as const, score: 42, source: 'LinkedIn',
+    utmSource: 'linkedin', utmMedium: 'social', utmCampaign: 'linkedin-outbound-q4',
     ownerId: DEMO_OWNER_ID, tags: ['(Demo)', 'Finance', 'Lost', 'Price Sensitive', 'Re-engage Later'],
     customFields: { leadPriority: 'Low', campaignSource: 'LinkedIn Outbound Q4', estimatedDealSize: 38000, nextAction: 'Re-engage in 6 months', lostReason: 'Price too high - went with cheaper competitor' },
     enrichmentData: {
@@ -548,6 +592,7 @@ const DEMO_LEADS = [
     email: 'mtran@nomadcoffee.co', phone: '(555) 210-0009',
     company: '(Demo) Nomad Coffee Roasters', companyName: '(Demo) Nomad Coffee Roasters',
     title: 'Brand Manager', status: 'new' as const, score: 74, source: 'Instagram',
+    utmSource: 'instagram', utmMedium: 'social', utmCampaign: 'instagram-dtc-brands-feb',
     ownerId: DEMO_OWNER_ID, tags: ['(Demo)', 'Food & Beverage', 'DTC', 'Social', 'E-commerce'],
     customFields: { leadPriority: 'High', campaignSource: 'Instagram Ad - DTC Brands', estimatedDealSize: 22000, nextAction: 'Schedule intro call' },
     enrichmentData: {
@@ -568,6 +613,7 @@ const DEMO_LEADS = [
     email: 'gpatel@horizonarchitects.com', phone: '(555) 210-0010',
     company: '(Demo) Horizon Architecture Group', companyName: '(Demo) Horizon Architecture Group',
     title: 'Principal Architect', status: 'contacted' as const, score: 60, source: 'Google Ads',
+    utmSource: 'google', utmMedium: 'cpc', utmCampaign: 'google-professional-services-q1',
     ownerId: DEMO_OWNER_ID, tags: ['(Demo)', 'Architecture', 'Professional Services', 'Portland'],
     customFields: { leadPriority: 'Medium', campaignSource: 'Google Ads - Professional Services', estimatedDealSize: 30000, nextAction: 'Send portfolio examples' },
     enrichmentData: {
@@ -588,6 +634,7 @@ const DEMO_LEADS = [
     email: 'rkim@stellarfintech.io', phone: '(555) 210-0011',
     company: '(Demo) Stellar FinTech', companyName: '(Demo) Stellar FinTech',
     title: 'Growth Lead', status: 'qualified' as const, score: 85, source: 'Webinar',
+    utmSource: 'youtube', utmMedium: 'organic', utmCampaign: 'saas-growth-webinar-feb',
     ownerId: DEMO_OWNER_ID, tags: ['(Demo)', 'FinTech', 'SaaS', 'Inbound', 'Webinar Attendee'],
     customFields: { leadPriority: 'High', campaignSource: 'Webinar - SaaS Growth Playbook', estimatedDealSize: 55000, nextAction: 'Present growth strategy proposal' },
     enrichmentData: {
@@ -608,6 +655,7 @@ const DEMO_LEADS = [
     email: 'tanderson@elementgym.com', phone: '(555) 210-0012',
     company: '(Demo) Element Fitness Studios', companyName: '(Demo) Element Fitness Studios',
     title: 'Co-Founder', status: 'lost' as const, score: 38, source: 'Facebook Ad',
+    utmSource: 'facebook', utmMedium: 'social', utmCampaign: 'facebook-fitness-studios-q4',
     ownerId: DEMO_OWNER_ID, tags: ['(Demo)', 'Fitness', 'Lost', 'Timing', 'Revisit Q3'],
     customFields: { leadPriority: 'Low', campaignSource: 'Facebook Ad - Fitness Studios', estimatedDealSize: 15000, nextAction: 'Re-engage after summer launch', lostReason: 'Bad timing - still building out second location' },
     enrichmentData: {
@@ -633,11 +681,17 @@ const DEMO_DEALS = [
     id: 'demo-deal-001', isDemo: true,
     name: '(Demo) TechForward - Enterprise Marketing Package',
     company: '(Demo) TechForward Solutions', companyName: '(Demo) TechForward Solutions',
-    contactId: 'demo-contact-001', value: 84000, currency: 'USD',
+    contactId: 'demo-contact-001', leadId: 'demo-lead-001', value: 84000, currency: 'USD',
     stage: 'negotiation' as const, probability: 75,
     expectedCloseDate: daysFromNow(14), ownerId: DEMO_OWNER_ID, source: 'Inbound - Website',
     notes: '(Demo) Annual contract. Includes SEO, PPC, content marketing, and social media management. Awaiting legal review of MSA. Champion: Sarah Mitchell.',
     customFields: { contractLength: '12 months', services: ['SEO', 'PPC', 'Content Marketing', 'Social Media'], competitor: 'None identified', decisionProcess: 'Sarah + Legal review' },
+    stageHistory: [
+      { fromStage: null, toStage: 'prospecting', changedAt: ts.fromDate(new Date(Date.now() - 30 * 86400000)), changedBy: DEMO_OWNER_ID, changedByName: DEMO_OWNER_NAME, notes: 'New deal created from inbound website inquiry.' },
+      { fromStage: 'prospecting', toStage: 'qualification', changedAt: ts.fromDate(new Date(Date.now() - 22 * 86400000)), changedBy: DEMO_OWNER_ID, changedByName: DEMO_OWNER_NAME, notes: 'Discovery call completed. Budget confirmed at $84K.' },
+      { fromStage: 'qualification', toStage: 'proposal', changedAt: ts.fromDate(new Date(Date.now() - 14 * 86400000)), changedBy: DEMO_OWNER_ID, changedByName: DEMO_OWNER_NAME, notes: 'Proposal sent — 24-page PDF with ROI projections.' },
+      { fromStage: 'proposal', toStage: 'negotiation', changedAt: ts.fromDate(new Date(Date.now() - 7 * 86400000)), changedBy: DEMO_OWNER_ID, changedByName: DEMO_OWNER_NAME, notes: 'Proposal accepted. Legal review of MSA in progress.' },
+    ],
     createdAt: daysAgo(30), updatedAt: daysAgo(1),
   },
   {
@@ -649,6 +703,11 @@ const DEMO_DEALS = [
     expectedCloseDate: daysFromNow(30), ownerId: DEMO_OWNER_ID, source: 'Referral',
     notes: '(Demo) Quarterly thought leadership articles, investor newsletter, and LinkedIn presence management. Waiting on budget approval from board. Marcus is champion.',
     customFields: { contractLength: '12 months', services: ['Thought Leadership', 'Newsletter', 'LinkedIn Management'], competitor: 'McKinsey Content Studio', decisionProcess: 'Board approval required' },
+    stageHistory: [
+      { fromStage: null, toStage: 'prospecting', changedAt: ts.fromDate(new Date(Date.now() - 22 * 86400000)), changedBy: DEMO_OWNER_ID, changedByName: DEMO_OWNER_NAME, notes: 'Deal created via referral from Olivia Park.' },
+      { fromStage: 'prospecting', toStage: 'qualification', changedAt: ts.fromDate(new Date(Date.now() - 15 * 86400000)), changedBy: DEMO_OWNER_ID, changedByName: DEMO_OWNER_NAME, notes: 'Initial call confirmed enterprise budget and board timeline.' },
+      { fromStage: 'qualification', toStage: 'proposal', changedAt: ts.fromDate(new Date(Date.now() - 5 * 86400000)), changedBy: DEMO_OWNER_ID, changedByName: DEMO_OWNER_NAME, notes: 'Case studies delivered. Proposal submitted for board review.' },
+    ],
     createdAt: daysAgo(22), updatedAt: daysAgo(2),
   },
   {
@@ -660,6 +719,10 @@ const DEMO_DEALS = [
     expectedCloseDate: daysFromNow(45), ownerId: DEMO_OWNER_ID, source: 'Inbound - Website',
     notes: '(Demo) Facebook/Instagram ad funnels for 3 new markets (Sarasota, Naples, Fort Myers). Discovery call went well, need to scope technical requirements.',
     customFields: { contractLength: '6 months', services: ['Facebook Ads', 'Instagram Ads', 'Landing Pages'], competitor: 'Local agency', decisionProcess: 'Jessica + business partner' },
+    stageHistory: [
+      { fromStage: null, toStage: 'prospecting', changedAt: ts.fromDate(new Date(Date.now() - 18 * 86400000)), changedBy: DEMO_OWNER_ID, changedByName: DEMO_OWNER_NAME, notes: 'Inbound inquiry via website contact form.' },
+      { fromStage: 'prospecting', toStage: 'qualification', changedAt: ts.fromDate(new Date(Date.now() - 10 * 86400000)), changedBy: DEMO_OWNER_ID, changedByName: DEMO_OWNER_NAME, notes: 'Discovery call completed. Needs partner sign-off before progressing.' },
+    ],
     createdAt: daysAgo(18), updatedAt: daysAgo(5),
   },
   {
@@ -671,6 +734,9 @@ const DEMO_DEALS = [
     expectedCloseDate: daysFromNow(60), ownerId: DEMO_OWNER_ID, source: 'Inbound - LinkedIn',
     notes: '(Demo) Full brand identity, Shopify website build, and launch campaign for DTC supplement line "VitalEdge". Early stage discussions. Need to schedule deep-dive.',
     customFields: { contractLength: '3 months (project)', services: ['Brand Identity', 'Website Build', 'Launch Campaign', 'Paid Ads'], competitor: 'In-house freelancers', decisionProcess: 'David sole decision maker' },
+    stageHistory: [
+      { fromStage: null, toStage: 'prospecting', changedAt: ts.fromDate(new Date(Date.now() - 10 * 86400000)), changedBy: DEMO_OWNER_ID, changedByName: DEMO_OWNER_NAME, notes: 'New deal from LinkedIn DM. Early-stage exploration.' },
+    ],
     createdAt: daysAgo(10), updatedAt: daysAgo(4),
   },
   {
@@ -683,17 +749,30 @@ const DEMO_DEALS = [
     ownerId: DEMO_OWNER_ID, source: 'Referral',
     notes: '(Demo) CLOSED WON! 12-month Instagram + Pinterest management retainer. Includes content creation, influencer partnerships, and monthly reporting. Onboarding complete.',
     customFields: { contractLength: '12 months', services: ['Instagram Management', 'Pinterest Management', 'Influencer Partnerships', 'Monthly Reporting'], competitor: 'None', decisionProcess: 'Olivia sole decision maker', wonReason: 'Strong portfolio + referral trust' },
+    stageHistory: [
+      { fromStage: null, toStage: 'prospecting', changedAt: ts.fromDate(new Date(Date.now() - 35 * 86400000)), changedBy: DEMO_OWNER_ID, changedByName: DEMO_OWNER_NAME, notes: 'Referral from Marcus Chen. Initial contact made.' },
+      { fromStage: 'prospecting', toStage: 'qualification', changedAt: ts.fromDate(new Date(Date.now() - 28 * 86400000)), changedBy: DEMO_OWNER_ID, changedByName: DEMO_OWNER_NAME, notes: 'Intro call confirmed budget and fit. Excellent match.' },
+      { fromStage: 'qualification', toStage: 'proposal', changedAt: ts.fromDate(new Date(Date.now() - 20 * 86400000)), changedBy: DEMO_OWNER_ID, changedByName: DEMO_OWNER_NAME, notes: 'Proposal for 12-month social retainer sent.' },
+      { fromStage: 'proposal', toStage: 'negotiation', changedAt: ts.fromDate(new Date(Date.now() - 12 * 86400000)), changedBy: DEMO_OWNER_ID, changedByName: DEMO_OWNER_NAME, notes: 'Proposal accepted in principle. Contract terms negotiation.' },
+      { fromStage: 'negotiation', toStage: 'closed_won', changedAt: ts.fromDate(new Date(Date.now() - 5 * 86400000)), changedBy: DEMO_OWNER_ID, changedByName: DEMO_OWNER_NAME, notes: 'DocuSign signed. First payment processed. Onboarding started.' },
+    ],
     createdAt: daysAgo(35), updatedAt: daysAgo(5),
   },
   {
     id: 'demo-deal-006', isDemo: true,
     name: '(Demo) CloudNine - PLG Growth Engine',
     company: '(Demo) CloudNine SaaS', companyName: '(Demo) CloudNine SaaS',
-    contactId: 'demo-contact-009', value: 96000, currency: 'USD',
+    contactId: 'demo-contact-009', leadId: 'demo-lead-011', value: 96000, currency: 'USD',
     stage: 'negotiation' as const, probability: 80,
     expectedCloseDate: daysFromNow(7), ownerId: DEMO_OWNER_ID, source: 'Outbound - LinkedIn',
     notes: '(Demo) Product-led growth strategy + outbound sequences. 12-month engagement. Pricing approved, finalizing SOW details. Priya is champion, CEO is final sign-off.',
     customFields: { contractLength: '12 months', services: ['PLG Strategy', 'Outbound Sequences', 'Content Marketing', 'Analytics Dashboard'], competitor: 'Refine Labs', decisionProcess: 'Priya recommends, CEO approves' },
+    stageHistory: [
+      { fromStage: null, toStage: 'prospecting', changedAt: ts.fromDate(new Date(Date.now() - 20 * 86400000)), changedBy: DEMO_OWNER_ID, changedByName: DEMO_OWNER_NAME, notes: 'LinkedIn outbound sequence responded. High intent from first message.' },
+      { fromStage: 'prospecting', toStage: 'qualification', changedAt: ts.fromDate(new Date(Date.now() - 15 * 86400000)), changedBy: DEMO_OWNER_ID, changedByName: DEMO_OWNER_NAME, notes: 'Intro call: Series B budget confirmed, aggressive ARR goals.' },
+      { fromStage: 'qualification', toStage: 'proposal', changedAt: ts.fromDate(new Date(Date.now() - 10 * 86400000)), changedBy: DEMO_OWNER_ID, changedByName: DEMO_OWNER_NAME, notes: 'PLG strategy proposal delivered. Priya extremely enthusiastic.' },
+      { fromStage: 'proposal', toStage: 'negotiation', changedAt: ts.fromDate(new Date(Date.now() - 4 * 86400000)), changedBy: DEMO_OWNER_ID, changedByName: DEMO_OWNER_NAME, notes: 'Pricing approved at $96K with 10% volume discount. SOW review with CEO.' },
+    ],
     createdAt: daysAgo(20), updatedAt: hoursAgo(4),
   },
   {
@@ -706,6 +785,13 @@ const DEMO_DEALS = [
     ownerId: DEMO_OWNER_ID, source: 'Google Ads',
     notes: '(Demo) CLOSED WON! Local SEO, Google Business Profile optimization, review management, and Google Ads for PI leads. Already seeing 35% increase in calls.',
     customFields: { contractLength: '12 months', services: ['Local SEO', 'Google Business Profile', 'Review Management', 'Google Ads'], competitor: 'FindLaw', decisionProcess: 'Nathan sole decision maker', wonReason: 'Competitive pricing + legal industry expertise' },
+    stageHistory: [
+      { fromStage: null, toStage: 'prospecting', changedAt: ts.fromDate(new Date(Date.now() - 40 * 86400000)), changedBy: DEMO_OWNER_ID, changedByName: DEMO_OWNER_NAME, notes: 'Google Ads click-to-call lead. Warm from first contact.' },
+      { fromStage: 'prospecting', toStage: 'qualification', changedAt: ts.fromDate(new Date(Date.now() - 35 * 86400000)), changedBy: DEMO_OWNER_ID, changedByName: DEMO_OWNER_NAME, notes: 'BANT qualified: solid budget, 60-day timeline, Nathan sole decision maker.' },
+      { fromStage: 'qualification', toStage: 'proposal', changedAt: ts.fromDate(new Date(Date.now() - 28 * 86400000)), changedBy: DEMO_OWNER_ID, changedByName: DEMO_OWNER_NAME, notes: 'Local SEO audit delivered. Proposal sent with ROI case study.' },
+      { fromStage: 'proposal', toStage: 'negotiation', changedAt: ts.fromDate(new Date(Date.now() - 20 * 86400000)), changedBy: DEMO_OWNER_ID, changedByName: DEMO_OWNER_NAME, notes: 'Minor scope adjustments. Annual pricing negotiated.' },
+      { fromStage: 'negotiation', toStage: 'closed_won', changedAt: ts.fromDate(new Date(Date.now() - 15 * 86400000)), changedBy: DEMO_OWNER_ID, changedByName: DEMO_OWNER_NAME, notes: 'Contract signed. First payment received. Onboarding initiated.' },
+    ],
     createdAt: daysAgo(40), updatedAt: daysAgo(7),
   },
   {
@@ -719,6 +805,13 @@ const DEMO_DEALS = [
     lostReason: 'Budget constraints - decided to hire internally instead of outsourcing marketing',
     notes: '(Demo) LOST. LinkedIn outreach + trade show marketing. They decided to bring marketing in-house. Follow up in Q3 when their new hire is ramped.',
     customFields: { contractLength: '6 months', services: ['LinkedIn Outreach', 'Trade Show Marketing'], competitor: 'Internal hire', decisionProcess: 'Ryan + CEO', lostDetails: 'CEO overruled, preferred in-house control' },
+    stageHistory: [
+      { fromStage: null, toStage: 'prospecting', changedAt: ts.fromDate(new Date(Date.now() - 35 * 86400000)), changedBy: DEMO_OWNER_ID, changedByName: DEMO_OWNER_NAME, notes: 'Cold outreach via trade show follow-up. Initial interest expressed.' },
+      { fromStage: 'prospecting', toStage: 'qualification', changedAt: ts.fromDate(new Date(Date.now() - 28 * 86400000)), changedBy: DEMO_OWNER_ID, changedByName: DEMO_OWNER_NAME, notes: 'Qualified: B2B lead gen need confirmed. Budget tighter than expected.' },
+      { fromStage: 'qualification', toStage: 'proposal', changedAt: ts.fromDate(new Date(Date.now() - 20 * 86400000)), changedBy: DEMO_OWNER_ID, changedByName: DEMO_OWNER_NAME, notes: 'Proposal for B2B outreach + trade show support submitted.' },
+      { fromStage: 'proposal', toStage: 'negotiation', changedAt: ts.fromDate(new Date(Date.now() - 14 * 86400000)), changedBy: DEMO_OWNER_ID, changedByName: DEMO_OWNER_NAME, notes: 'Counter-proposal with reduced scope to meet budget. CEO reviewing.' },
+      { fromStage: 'negotiation', toStage: 'closed_lost', changedAt: ts.fromDate(new Date(Date.now() - 10 * 86400000)), changedBy: DEMO_OWNER_ID, changedByName: DEMO_OWNER_NAME, notes: 'CEO decided to hire internally. Re-engage Q3 when new hire is ramped.' },
+    ],
     createdAt: daysAgo(35), updatedAt: daysAgo(10),
   },
 ];
@@ -837,7 +930,7 @@ const DEMO_ACTIVITIES = [
     body: 'Ryan mentioned they are also talking to WebFX and Directive. Key differentiator for us: industry-specific experience in B2B manufacturing + trade show expertise.',
     summary: 'Competitive intel gathered. Ryan evaluating WebFX and Directive alongside us.',
     relatedTo: [{ entityType: 'contact', entityId: 'demo-contact-006', entityName: 'Ryan Kowalski' }, { entityType: 'deal', entityId: 'demo-deal-008', entityName: 'Precision Mfg - B2B Lead Gen' }],
-    metadata: {},
+    metadata: { noteType: 'competitive_intel', source: 'call_notes', wordCount: 89 },
     occurredAt: daysAgo(12), createdAt: daysAgo(12), tags: ['(Demo)', 'Competitive Intel', 'Note'],
   }),
   makeActivity({
@@ -846,7 +939,7 @@ const DEMO_ACTIVITIES = [
     body: 'James needs spring campaign live by March 1. Content production must start by Feb 15. Coordinate with photo team for product shoots. Budget: $8K for spring campaign.',
     summary: 'Spring campaign deadline: March 1. Content production starts Feb 15.',
     relatedTo: [{ entityType: 'contact', entityId: 'demo-contact-008', entityName: 'James Whitfield' }],
-    metadata: {},
+    metadata: { noteType: 'project_timeline', source: 'meeting_notes', wordCount: 156 },
     occurredAt: daysAgo(3), createdAt: daysAgo(3), tags: ['(Demo)', 'Timeline', 'Note'],
   }),
   makeActivity({
@@ -936,7 +1029,7 @@ const DEMO_ACTIVITIES = [
     body: 'SMS: "Hey Jessica! Just checking in on the lead gen proposal for your new markets. Happy to hop on a quick call this week if you have questions. - Alex @ SalesVelocity"',
     summary: 'Follow-up SMS sent to Jessica about lead gen proposal.',
     relatedTo: [{ entityType: 'contact', entityId: 'demo-contact-003', entityName: 'Jessica Ramirez' }, { entityType: 'deal', entityId: 'demo-deal-003', entityName: 'Suncoast Realty - Lead Gen Funnels' }],
-    metadata: {},
+    metadata: { smsId: 'sms-demo-001', toPhone: '(555) 456-7890', messageLength: 156, deliveryStatus: 'delivered', provider: 'twilio' },
     occurredAt: daysAgo(2), createdAt: daysAgo(2), tags: ['(Demo)', 'SMS', 'Follow-up'],
   }),
   makeActivity({
@@ -976,8 +1069,10 @@ const DEMO_PRODUCTS = [
   {
     id: 'demo-product-001', isDemo: true,
     name: '(Demo) Starter Growth Package', description: 'Essential digital marketing for small businesses. Includes basic SEO audit, social media account setup (3 platforms), Google Business Profile optimization, and monthly performance report.',
+    slug: 'starter-growth-package',
     sku: 'DEMO-PKG-STARTER', price: 1500, compareAtPrice: 1800, cost: 600, currency: 'USD',
     category: 'Marketing Packages', tags: ['(Demo)', 'Starter', 'Monthly', 'SMB'],
+    seoKeywords: ['small business marketing', 'starter marketing package', 'affordable SEO', 'Google Business Profile optimization', 'social media setup'],
     images: ['/demo/product-starter-hero.jpg', '/demo/product-starter-detail.jpg'],
     inStock: true, stockQuantity: 999, trackInventory: false, isDigital: true,
     variants: [
@@ -992,8 +1087,10 @@ const DEMO_PRODUCTS = [
   {
     id: 'demo-product-002', isDemo: true,
     name: '(Demo) Professional Marketing Suite', description: 'Comprehensive marketing for growing businesses. Includes ongoing SEO optimization, PPC management (Google + Meta), social media management (5 platforms), email campaigns (4/month), and bi-weekly performance reporting with strategy calls.',
+    slug: 'professional-marketing-suite',
     sku: 'DEMO-PKG-PRO', price: 4000, compareAtPrice: 4800, cost: 1800, currency: 'USD',
     category: 'Marketing Packages', tags: ['(Demo)', 'Professional', 'Monthly', 'Growing Business'],
+    seoKeywords: ['full service digital marketing', 'PPC management', 'social media management', 'email marketing agency', 'SEO and PPC bundle'],
     images: ['/demo/product-pro-hero.jpg', '/demo/product-pro-detail.jpg'],
     inStock: true, stockQuantity: 999, trackInventory: false, isDigital: true,
     variants: [
@@ -1008,8 +1105,10 @@ const DEMO_PRODUCTS = [
   {
     id: 'demo-product-003', isDemo: true,
     name: '(Demo) Enterprise Growth Engine', description: 'Full-service marketing for enterprises. Dedicated strategist, all marketing channels, custom analytics dashboards, weekly reporting, quarterly business reviews, and priority support. White-glove service.',
+    slug: 'enterprise-growth-engine',
     sku: 'DEMO-PKG-ENTERPRISE', price: 8000, compareAtPrice: 10000, cost: 3500, currency: 'USD',
     category: 'Marketing Packages', tags: ['(Demo)', 'Enterprise', 'Monthly', 'White Glove'],
+    seoKeywords: ['enterprise marketing agency', 'white glove marketing service', 'dedicated marketing strategist', 'custom analytics dashboard', 'enterprise digital marketing'],
     images: ['/demo/product-enterprise-hero.jpg', '/demo/product-enterprise-detail.jpg'],
     inStock: true, stockQuantity: 999, trackInventory: false, isDigital: true,
     variants: [
@@ -1024,8 +1123,10 @@ const DEMO_PRODUCTS = [
   {
     id: 'demo-product-004', isDemo: true,
     name: '(Demo) Website Design & Build', description: 'Custom website design and development. Includes stakeholder interviews, UX research, wireframing, responsive design (mobile-first), CMS setup (WordPress or Webflow), 5 content pages, blog setup, and 30-day post-launch support.',
+    slug: 'website-design-and-build',
     sku: 'DEMO-SVC-WEB', price: 12000, compareAtPrice: 15000, cost: 5000, currency: 'USD',
     category: 'One-Time Services', tags: ['(Demo)', 'Website', 'One-Time', 'Design'],
+    seoKeywords: ['custom website design', 'website development agency', 'WordPress website build', 'Webflow design', 'mobile-first website'],
     images: ['/demo/product-website-hero.jpg', '/demo/product-website-portfolio.jpg'],
     inStock: true, stockQuantity: 999, trackInventory: false, isDigital: true,
     variants: [
@@ -1041,8 +1142,10 @@ const DEMO_PRODUCTS = [
   {
     id: 'demo-product-005', isDemo: true,
     name: '(Demo) Brand Identity Package', description: 'Complete brand identity system: primary and secondary logo designs, color palette with hex/RGB/CMYK codes, typography selection, 40-page brand guidelines document, social media template kit (20 templates), and business card design.',
+    slug: 'brand-identity-package',
     sku: 'DEMO-SVC-BRAND', price: 6500, compareAtPrice: 8000, cost: 2800, currency: 'USD',
     category: 'One-Time Services', tags: ['(Demo)', 'Branding', 'One-Time', 'Identity'],
+    seoKeywords: ['brand identity design', 'logo design agency', 'brand guidelines document', 'visual identity package', 'social media brand templates'],
     images: ['/demo/product-brand-hero.jpg', '/demo/product-brand-samples.jpg'],
     inStock: true, stockQuantity: 999, trackInventory: false, isDigital: true,
     variants: [
@@ -1057,8 +1160,10 @@ const DEMO_PRODUCTS = [
   {
     id: 'demo-product-006', isDemo: true,
     name: '(Demo) AI Chatbot Setup & Training', description: 'Custom AI chatbot for your website. Includes requirements gathering, chatbot personality design, training on your business data (products, FAQs, policies), website integration, testing, and 90-day optimization period with weekly tuning.',
+    slug: 'ai-chatbot-setup-and-training',
     sku: 'DEMO-SVC-AI', price: 3500, compareAtPrice: 4500, cost: 1200, currency: 'USD',
     category: 'AI Services', tags: ['(Demo)', 'AI', 'Chatbot', 'Automation'],
+    seoKeywords: ['AI chatbot for website', 'custom chatbot setup', 'lead capture chatbot', 'AI sales assistant', 'chatbot training service'],
     images: ['/demo/product-ai-hero.jpg', '/demo/product-ai-demo.jpg'],
     inStock: true, stockQuantity: 999, trackInventory: false, isDigital: true,
     variants: [
@@ -1083,6 +1188,31 @@ const DEMO_CAMPAIGNS = [
     name: '(Demo) Q1 Service Launch Announcement', type: 'broadcast', status: 'sent',
     subject: 'Introducing Our New AI-Powered Growth Services',
     fromName: DEMO_OWNER_NAME, fromEmail: DEMO_OWNER_EMAIL,
+    replyTo: 'hello@salesvelocity.ai',
+    previewText: 'We\'re launching two new AI-driven services that can 3x your pipeline this quarter. Here\'s what\'s new.',
+    htmlBody: `<html><body style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;color:#222;">
+  <div style="background:#0f172a;padding:24px 32px;">
+    <h1 style="color:#fff;font-size:22px;margin:0;">SalesVelocity.ai</h1>
+  </div>
+  <div style="padding:32px;">
+    <p style="font-size:16px;">Hi {{firstName}},</p>
+    <p style="font-size:15px;line-height:1.6;">We've been working behind the scenes on something big — and today we're ready to share it with you.</p>
+    <p style="font-size:15px;line-height:1.6;">Starting this quarter, SalesVelocity.ai is offering two new AI-powered growth services designed to help businesses like yours scale faster and smarter:</p>
+    <ul style="font-size:15px;line-height:1.8;">
+      <li><strong>AI Growth Engine</strong> — Automated outbound sequences, lead enrichment, and pipeline analytics in one platform.</li>
+      <li><strong>AI Chatbot Setup &amp; Training</strong> — A custom chatbot trained on your business, live on your site in under 3 weeks.</li>
+    </ul>
+    <p style="font-size:15px;line-height:1.6;">Early clients are already seeing 40% more qualified leads per month. We'd love to show you how.</p>
+    <div style="text-align:center;margin:32px 0;">
+      <a href="https://salesvelocity.ai/services/ai" style="background:#6366f1;color:#fff;padding:14px 28px;border-radius:6px;text-decoration:none;font-weight:bold;font-size:15px;">See the New Services</a>
+    </div>
+    <p style="font-size:14px;color:#555;">Questions? Just reply to this email — we read every response.</p>
+    <p style="font-size:14px;">Warm regards,<br/><strong>Alex Morgan</strong><br/>SalesVelocity.ai</p>
+  </div>
+  <div style="background:#f1f5f9;padding:16px 32px;font-size:12px;color:#888;">
+    <p>You received this because you're on our client list. <a href="{{unsubscribeUrl}}" style="color:#6366f1;">Unsubscribe</a></p>
+  </div>
+</body></html>`,
     recipients: 156, sent: 156, delivered: 148, opened: 67, clicked: 23, bounced: 8, unsubscribed: 2,
     openRate: 45.3, clickRate: 15.5, bounceRate: 5.1, unsubscribeRate: 1.3,
     tags: ['(Demo)', 'Launch', 'AI Services'],
@@ -1094,6 +1224,30 @@ const DEMO_CAMPAIGNS = [
     name: '(Demo) Monthly Client Newsletter - February', type: 'broadcast', status: 'sent',
     subject: 'February Insights: Marketing Trends + Client Wins',
     fromName: DEMO_OWNER_NAME, fromEmail: DEMO_OWNER_EMAIL,
+    replyTo: 'hello@salesvelocity.ai',
+    previewText: 'This month: AI search is reshaping SEO, our client Luminary Designs hit 10K followers, and a spring promotion is coming your way.',
+    htmlBody: `<html><body style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;color:#222;">
+  <div style="background:#0f172a;padding:24px 32px;">
+    <h1 style="color:#fff;font-size:22px;margin:0;">SalesVelocity.ai — February Newsletter</h1>
+  </div>
+  <div style="padding:32px;">
+    <p style="font-size:16px;">Hi {{firstName}},</p>
+    <p style="font-size:15px;line-height:1.6;">Welcome to your February marketing briefing. Here's what we're watching, celebrating, and planning this month.</p>
+    <h2 style="font-size:17px;color:#0f172a;border-bottom:2px solid #e2e8f0;padding-bottom:8px;">Trend Watch: AI Is Rewriting SEO</h2>
+    <p style="font-size:15px;line-height:1.6;">Google's AI Overviews are now appearing in 65% of commercial searches. If your content isn't optimized for AI-generated summaries, you're losing visibility. We've updated our SEO playbook — ask us about the changes at your next strategy call.</p>
+    <h2 style="font-size:17px;color:#0f172a;border-bottom:2px solid #e2e8f0;padding-bottom:8px;">Client Win: Luminary Interior Designs</h2>
+    <p style="font-size:15px;line-height:1.6;">Congrats to Olivia and the Luminary team — their Instagram hit 10,000 followers this month, driven by our Reels strategy. Engagement rate is at 6.2%, nearly 3x the industry average.</p>
+    <h2 style="font-size:17px;color:#0f172a;border-bottom:2px solid #e2e8f0;padding-bottom:8px;">Coming Up: Spring SEO Audit Offer</h2>
+    <p style="font-size:15px;line-height:1.6;">We're running a free SEO audit promotion for the next 30 days. Share it with a colleague who needs a marketing refresh — details in next week's email.</p>
+    <div style="text-align:center;margin:32px 0;">
+      <a href="https://salesvelocity.ai/blog" style="background:#6366f1;color:#fff;padding:14px 28px;border-radius:6px;text-decoration:none;font-weight:bold;font-size:15px;">Read More on Our Blog</a>
+    </div>
+    <p style="font-size:14px;">Until next month,<br/><strong>Alex Morgan</strong><br/>SalesVelocity.ai</p>
+  </div>
+  <div style="background:#f1f5f9;padding:16px 32px;font-size:12px;color:#888;">
+    <p>You're receiving this monthly newsletter as a SalesVelocity.ai client. <a href="{{unsubscribeUrl}}" style="color:#6366f1;">Unsubscribe</a></p>
+  </div>
+</body></html>`,
     recipients: 312, sent: 312, delivered: 298, opened: 134, clicked: 45, bounced: 14, unsubscribed: 3,
     openRate: 45.0, clickRate: 15.1, bounceRate: 4.5, unsubscribeRate: 1.0,
     tags: ['(Demo)', 'Newsletter', 'Monthly'],
@@ -1105,6 +1259,34 @@ const DEMO_CAMPAIGNS = [
     name: '(Demo) Spring Promotion: Free SEO Audit', type: 'broadcast', status: 'draft',
     subject: 'Get Your Free SEO Audit - Limited Time Offer',
     fromName: DEMO_OWNER_NAME, fromEmail: DEMO_OWNER_EMAIL,
+    replyTo: 'hello@salesvelocity.ai',
+    previewText: 'For the next 30 days, we\'re offering a free comprehensive SEO audit — no strings attached. Claim yours before spots fill up.',
+    htmlBody: `<html><body style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;color:#222;">
+  <div style="background:#0f172a;padding:24px 32px;">
+    <h1 style="color:#fff;font-size:22px;margin:0;">SalesVelocity.ai</h1>
+  </div>
+  <div style="padding:32px;">
+    <p style="font-size:16px;">Hi {{firstName}},</p>
+    <p style="font-size:15px;line-height:1.6;">Spring is right around the corner — and with it comes the biggest opportunity window of the year for organic search traffic.</p>
+    <p style="font-size:15px;line-height:1.6;">For the next <strong>30 days only</strong>, we're offering a <strong>free comprehensive SEO audit</strong> for businesses that want to know exactly where they stand before Q2 begins.</p>
+    <p style="font-size:15px;line-height:1.6;">Here's what you'll get:</p>
+    <ul style="font-size:15px;line-height:1.8;">
+      <li>Full technical SEO analysis (crawl errors, site speed, Core Web Vitals)</li>
+      <li>Keyword gap report vs. your top 3 competitors</li>
+      <li>On-page optimization scorecard</li>
+      <li>Actionable 90-day roadmap to climb the rankings</li>
+    </ul>
+    <p style="font-size:15px;line-height:1.6;">We have capacity for <strong>15 audits</strong> this month. First come, first served.</p>
+    <div style="text-align:center;margin:32px 0;">
+      <a href="https://salesvelocity.ai/free-seo-audit" style="background:#16a34a;color:#fff;padding:14px 28px;border-radius:6px;text-decoration:none;font-weight:bold;font-size:15px;">Claim My Free SEO Audit</a>
+    </div>
+    <p style="font-size:14px;color:#555;">This offer expires in 30 days. No credit card required.</p>
+    <p style="font-size:14px;">Looking forward to digging in,<br/><strong>Alex Morgan</strong><br/>SalesVelocity.ai</p>
+  </div>
+  <div style="background:#f1f5f9;padding:16px 32px;font-size:12px;color:#888;">
+    <p>You received this promotional email from SalesVelocity.ai. <a href="{{unsubscribeUrl}}" style="color:#6366f1;">Unsubscribe</a></p>
+  </div>
+</body></html>`,
     recipients: 0, sent: 0, delivered: 0, opened: 0, clicked: 0, bounced: 0, unsubscribed: 0,
     openRate: 0, clickRate: 0, bounceRate: 0, unsubscribeRate: 0,
     tags: ['(Demo)', 'Promotion', 'SEO', 'Spring'],
@@ -1123,16 +1305,18 @@ const DEMO_SEQUENCES = [
     name: '(Demo) Inbound Lead Nurture',
     description: 'Automated nurture sequence for new inbound leads. 5-step email series over 14 days designed to educate, build trust, and convert.',
     status: 'active',
+    createdBy: DEMO_OWNER_ID,
     steps: [
-      { id: 'step-1', order: 1, type: 'email', subject: 'Welcome! Here\'s what we do best', body: 'Hi {{firstName}}, thanks for reaching out...', delayDays: 0, delayHours: 0, sent: 45, delivered: 43, opened: 28, clicked: 12, replied: 5, bounced: 2 },
-      { id: 'step-2', order: 2, type: 'email', subject: 'How [Company] grew 300% with us', body: 'Hi {{firstName}}, I wanted to share a quick success story...', delayDays: 3, delayHours: 0, sent: 40, delivered: 39, opened: 22, clicked: 8, replied: 3, bounced: 1 },
-      { id: 'step-3', order: 3, type: 'email', subject: 'Your industry-specific growth playbook', body: 'Hi {{firstName}}, based on your industry ({{company.industry}})...', delayDays: 7, delayHours: 0, sent: 35, delivered: 34, opened: 18, clicked: 6, replied: 2, bounced: 1 },
-      { id: 'step-4', order: 4, type: 'email', subject: 'Let\'s talk about your goals', body: 'Hi {{firstName}}, I hope the resources have been helpful...', delayDays: 10, delayHours: 0, sent: 30, delivered: 29, opened: 15, clicked: 5, replied: 4, bounced: 1 },
-      { id: 'step-5', order: 5, type: 'email', subject: 'One more thing before I go...', body: 'Hi {{firstName}}, this is my last automated message...', delayDays: 14, delayHours: 0, sent: 25, delivered: 24, opened: 12, clicked: 3, replied: 2, bounced: 1 },
+      { id: 'step-1', order: 1, type: 'email', subject: 'Welcome! Here\'s what we do best', body: 'Hi {{firstName}}, thanks for reaching out...', delayDays: 0, delayHours: 0, sent: 45, delivered: 43, opened: 28, clicked: 12, replied: 5, bounced: 2, sequenceId: 'demo-sequence-001', createdAt: new Date(Date.now() - 30 * 86400000).toISOString(), updatedAt: new Date(Date.now() - 25 * 86400000).toISOString() },
+      { id: 'step-2', order: 2, type: 'email', subject: 'How [Company] grew 300% with us', body: 'Hi {{firstName}}, I wanted to share a quick success story...', delayDays: 3, delayHours: 0, sent: 40, delivered: 39, opened: 22, clicked: 8, replied: 3, bounced: 1, sequenceId: 'demo-sequence-001', createdAt: new Date(Date.now() - 30 * 86400000).toISOString(), updatedAt: new Date(Date.now() - 25 * 86400000).toISOString() },
+      { id: 'step-3', order: 3, type: 'email', subject: 'Your industry-specific growth playbook', body: 'Hi {{firstName}}, based on your industry ({{company.industry}})...', delayDays: 7, delayHours: 0, sent: 35, delivered: 34, opened: 18, clicked: 6, replied: 2, bounced: 1, sequenceId: 'demo-sequence-001', createdAt: new Date(Date.now() - 30 * 86400000).toISOString(), updatedAt: new Date(Date.now() - 25 * 86400000).toISOString() },
+      { id: 'step-4', order: 4, type: 'email', subject: 'Let\'s talk about your goals', body: 'Hi {{firstName}}, I hope the resources have been helpful...', delayDays: 10, delayHours: 0, sent: 30, delivered: 29, opened: 15, clicked: 5, replied: 4, bounced: 1, sequenceId: 'demo-sequence-001', createdAt: new Date(Date.now() - 30 * 86400000).toISOString(), updatedAt: new Date(Date.now() - 25 * 86400000).toISOString() },
+      { id: 'step-5', order: 5, type: 'email', subject: 'One more thing before I go...', body: 'Hi {{firstName}}, this is my last automated message...', delayDays: 14, delayHours: 0, sent: 25, delivered: 24, opened: 12, clicked: 3, replied: 2, bounced: 1, sequenceId: 'demo-sequence-001', createdAt: new Date(Date.now() - 30 * 86400000).toISOString(), updatedAt: new Date(Date.now() - 25 * 86400000).toISOString() },
     ],
     analytics: {
       totalEnrolled: 48, activeProspects: 12, completedProspects: 25, removedProspects: 11,
       totalSent: 175, totalDelivered: 169, totalOpened: 95, totalClicked: 34, totalReplied: 16, totalBounced: 6,
+      totalUnsubscribed: 2,
       deliveryRate: 96.6, openRate: 54.3, clickRate: 19.4, replyRate: 9.1, bounceRate: 3.4,
       meetingsBooked: 8, dealsCreated: 5, revenue: 72000, conversionRate: 10.4,
     },
@@ -1146,14 +1330,16 @@ const DEMO_SEQUENCES = [
     name: '(Demo) Re-engagement: Lost Deals',
     description: 'Win-back sequence for lost deals. 3-step sequence with value-driven content. Triggered manually when a deal is marked as lost.',
     status: 'active',
+    createdBy: DEMO_OWNER_ID,
     steps: [
-      { id: 'step-1', order: 1, type: 'email', subject: 'We\'ve been thinking about you', body: 'Hi {{firstName}}, it\'s been a while since we last spoke...', delayDays: 0, delayHours: 0, sent: 18, delivered: 17, opened: 10, clicked: 4, replied: 2, bounced: 1 },
-      { id: 'step-2', order: 2, type: 'email', subject: 'New case study: [Similar Company] success story', body: 'Hi {{firstName}}, I wanted to share something relevant...', delayDays: 7, delayHours: 0, sent: 14, delivered: 14, opened: 7, clicked: 3, replied: 1, bounced: 0 },
-      { id: 'step-3', order: 3, type: 'email', subject: 'Special offer for returning clients', body: 'Hi {{firstName}}, we value the relationship we built...', delayDays: 14, delayHours: 0, sent: 10, delivered: 10, opened: 5, clicked: 2, replied: 1, bounced: 0 },
+      { id: 'step-1', order: 1, type: 'email', subject: 'We\'ve been thinking about you', body: 'Hi {{firstName}}, it\'s been a while since we last spoke...', delayDays: 0, delayHours: 0, sent: 18, delivered: 17, opened: 10, clicked: 4, replied: 2, bounced: 1, sequenceId: 'demo-sequence-002', createdAt: new Date(Date.now() - 30 * 86400000).toISOString(), updatedAt: new Date(Date.now() - 25 * 86400000).toISOString() },
+      { id: 'step-2', order: 2, type: 'email', subject: 'New case study: [Similar Company] success story', body: 'Hi {{firstName}}, I wanted to share something relevant...', delayDays: 7, delayHours: 0, sent: 14, delivered: 14, opened: 7, clicked: 3, replied: 1, bounced: 0, sequenceId: 'demo-sequence-002', createdAt: new Date(Date.now() - 30 * 86400000).toISOString(), updatedAt: new Date(Date.now() - 25 * 86400000).toISOString() },
+      { id: 'step-3', order: 3, type: 'email', subject: 'Special offer for returning clients', body: 'Hi {{firstName}}, we value the relationship we built...', delayDays: 14, delayHours: 0, sent: 10, delivered: 10, opened: 5, clicked: 2, replied: 1, bounced: 0, sequenceId: 'demo-sequence-002', createdAt: new Date(Date.now() - 30 * 86400000).toISOString(), updatedAt: new Date(Date.now() - 25 * 86400000).toISOString() },
     ],
     analytics: {
       totalEnrolled: 20, activeProspects: 5, completedProspects: 10, removedProspects: 5,
       totalSent: 42, totalDelivered: 41, totalOpened: 22, totalClicked: 9, totalReplied: 4, totalBounced: 1,
+      totalUnsubscribed: 1,
       deliveryRate: 97.6, openRate: 52.4, clickRate: 21.4, replyRate: 9.5, bounceRate: 2.4,
       meetingsBooked: 3, dealsCreated: 2, revenue: 36000, conversionRate: 10.0,
     },

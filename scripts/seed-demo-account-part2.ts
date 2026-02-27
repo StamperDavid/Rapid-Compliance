@@ -329,8 +329,8 @@ function getWorkflows(): Array<Record<string, unknown>> {
         id: 'trigger-lead-created',
         name: 'Lead Created',
         schemaId: 'leads',
-        specificFields: [],
-        filters: [],
+        specificFields: ['email', 'company', 'source', 'phone'],
+        filters: [{ field: 'source', operator: 'equals', value: 'website' }],
       },
       conditions: [
         { id: 'cond-1', source: 'trigger_data', field: 'email', operator: 'is_not_empty', value: true, logicOperator: 'and' },
@@ -338,7 +338,7 @@ function getWorkflows(): Array<Record<string, unknown>> {
       ],
       conditionOperator: 'and',
       actions: [
-        { id: 'action-1', type: 'ai_agent', name: 'Enrich Lead Data', agentId: 'enrichment-agent', prompt: 'Enrich this lead with company data: {{trigger.company}}', context: {}, saveResponseAs: 'enrichmentResult', awaitResponse: true, continueOnError: true, retry: { enabled: true, maxAttempts: 2, backoffMultiplier: 2 } },
+        { id: 'action-1', type: 'ai_agent', name: 'Enrich Lead Data', agentId: 'enrichment-agent', prompt: 'Enrich this lead with company data: {{trigger.company}}', context: { enrichmentDepth: 'full', includeCompanyData: true, includeSocialProfiles: true }, saveResponseAs: 'enrichmentResult', awaitResponse: true, continueOnError: true, retry: { enabled: true, maxAttempts: 2, backoffMultiplier: 2 } },
         { id: 'action-2', type: 'update_entity', name: 'Update Lead Score', schemaId: 'leads', targetRecord: 'trigger', fieldMappings: [{ targetField: 'score', source: 'variable', sourceField: 'enrichmentResult.score' }], continueOnError: true },
         { id: 'action-3', type: 'send_email', name: 'Notify Sales Rep', to: [DEMO_OWNER_EMAIL], subject: 'New Lead Assigned: {{trigger.firstName}} {{trigger.lastName}}', body: '<p>A new lead has been assigned to you:</p><ul><li>Name: {{trigger.firstName}} {{trigger.lastName}}</li><li>Company: {{trigger.company}}</li><li>Score: {{enrichmentResult.score}}</li></ul>', bodyType: 'html', continueOnError: true },
       ],
@@ -378,10 +378,10 @@ function getWorkflows(): Array<Record<string, unknown>> {
       conditions: [],
       conditionOperator: 'and',
       actions: [
-        { id: 'action-1', type: 'ai_agent', name: 'Generate Pipeline Report', agentId: 'reporting-agent', prompt: 'Generate a weekly pipeline summary report for workspace {{workspaceId}}', context: {}, saveResponseAs: 'report', awaitResponse: true, continueOnError: false },
+        { id: 'action-1', type: 'ai_agent', name: 'Generate Pipeline Report', agentId: 'reporting-agent', prompt: 'Generate a weekly pipeline summary report for workspace {{workspaceId}}', context: { reportPeriod: 'weekly', includeForecasts: true, compareToLastWeek: true }, saveResponseAs: 'report', awaitResponse: true, continueOnError: false },
         { id: 'action-2', type: 'send_email', name: 'Email Report to Team', to: [DEMO_OWNER_EMAIL, 'team@demo-acme.com'], subject: 'Weekly Pipeline Review — {{report.weekOf}}', body: '{{report.htmlContent}}', bodyType: 'html', continueOnError: true },
       ],
-      settings: { enabled: true, timeout: 300, maxConcurrentRuns: 1, queueStrategy: 'sequential', onError: 'notify', stopOnError: false, errorNotificationEmail: DEMO_OWNER_EMAIL, logLevel: 'all', retentionDays: 90 },
+      settings: { enabled: true, timeout: 300, maxConcurrentRuns: 1, queueStrategy: 'sequential', onError: 'notify', stopOnError: false, errorNotificationEmail: DEMO_OWNER_EMAIL, logLevel: 'all', retentionDays: 90, rateLimit: { enabled: false, maxRunsPerHour: 1, maxRunsPerDay: 7 } },
       permissions: { canView: ['owner', 'admin', 'manager', 'member'], canEdit: ['owner', 'admin'], canExecute: ['owner', 'admin'] },
       stats: { totalRuns: 4, successfulRuns: 4, failedRuns: 0, lastRunAt: daysAgo(1), lastRunStatus: 'success' },
       createdAt: daysAgo(30),
@@ -419,7 +419,7 @@ function getWorkflows(): Array<Record<string, unknown>> {
         ], continueOnError: false },
         { id: 'action-2', type: 'send_slack', name: 'Notify Sales Channel', channel: '#sales', message: '🔔 New form submission from {{trigger.responses.firstName}} {{trigger.responses.lastName}} ({{trigger.responses.company}})', mentions: [DEMO_OWNER_ID], continueOnError: true },
       ],
-      settings: { enabled: true, timeout: 60, maxConcurrentRuns: 10, queueStrategy: 'parallel', onError: 'continue', logLevel: 'all', retentionDays: 30 },
+      settings: { enabled: true, timeout: 60, maxConcurrentRuns: 10, queueStrategy: 'parallel', onError: 'continue', stopOnError: false, errorNotificationEmail: DEMO_OWNER_EMAIL, logLevel: 'all', retentionDays: 30, rateLimit: { enabled: true, maxRunsPerHour: 50, maxRunsPerDay: 200 } },
       permissions: { canView: ['owner', 'admin', 'manager'], canEdit: ['owner', 'admin'], canExecute: ['owner', 'admin', 'manager'] },
       stats: { totalRuns: 12, successfulRuns: 11, failedRuns: 1, lastRunAt: daysAgo(1), lastRunStatus: 'success' },
       createdAt: daysAgo(21),
@@ -545,6 +545,8 @@ function getForms(): Array<{ form: Record<string, unknown>; fields: Array<Record
           linkedLeadId: 'demo-lead-003',
           crmSyncStatus: 'synced',
           crmSyncedAt: daysAgo(3),
+          workflowsTriggered: ['demo-workflow-003'],
+          workflowStatus: { 'demo-workflow-003': 'completed' },
           metadata: { sessionId: 'sess_demo_002', ipAddress: '10.0.0.55', userAgent: 'Mozilla/5.0 (Macintosh)', deviceType: 'desktop', browser: 'Safari 17', os: 'macOS Sonoma', country: 'US', region: 'New York', city: 'New York', source: 'organic', referrer: 'https://www.google.com' },
           startedAt: daysAgo(3),
           submittedAt: daysAgo(3),
@@ -585,6 +587,9 @@ function getForms(): Array<{ form: Record<string, unknown>; fields: Array<Record
         crmMapping: { enabled: false, entityType: 'contact', fieldMappings: [], createNew: false, updateExisting: false },
         trackingEnabled: true,
         publicAccess: false,
+        embedAllowedDomains: ['demo-acme.salesvelocity.ai'],
+        shareableLink: 'https://demo-acme.salesvelocity.ai/f/demo-form-002',
+        workflowTriggers: [],
         createdBy: DEMO_OWNER_ID,
         lastModifiedBy: DEMO_OWNER_ID,
         createdAt: daysAgo(14),
@@ -670,11 +675,12 @@ function getWebsitePages(): Array<Record<string, unknown>> {
         { id: 'about-hero', type: 'section', columns: [{ id: 'col-1', width: 100, widgets: [{ id: 'heading', type: 'heading', data: { text: 'About Acme Digital Solutions', level: 1 }, style: { textAlign: 'center', padding: { top: '60px', bottom: '20px' } } }, { id: 'text', type: 'text', data: { text: 'We believe every sales team deserves access to AI-powered tools that were previously only available to Fortune 500 companies. Founded in 2023, Acme Digital Solutions helps B2B companies close more deals with less effort.' }, style: { textAlign: 'center', maxWidth: '700px', margin: { left: 'auto', right: 'auto' }, padding: { bottom: '40px' } } }] }], name: 'About Hero' },
         { id: 'stats-section', type: 'section', columns: [{ id: 'col-1', width: 100, widgets: [{ id: 'stats', type: 'stats', data: { stats: [{ label: 'Companies', value: '500+' }, { label: 'Deals Closed', value: '$2.4B' }, { label: 'Leads Scored', value: '1.2M' }, { label: 'Uptime', value: '99.9%' }] }, style: { padding: { top: '40px', bottom: '40px' }, backgroundColor: '#f8fafc' } }] }], name: 'Stats' },
       ],
-      seo: { metaTitle: 'About Us — Acme Digital Solutions', metaDescription: 'Learn about Acme Digital Solutions and our mission to democratize AI-powered sales tools for every business.', noIndex: false, noFollow: false },
+      seo: { metaTitle: 'About Us — Acme Digital Solutions', metaDescription: 'Learn about Acme Digital Solutions and our mission to democratize AI-powered sales tools for every business.', metaKeywords: ['Acme Digital Solutions', 'about us', 'AI CRM company', 'sales automation platform'], ogTitle: 'About Acme Digital Solutions — AI-Powered CRM', ogDescription: 'We democratize AI-powered sales tools for businesses of every size. Learn our story.', ogImage: '/images/og-default.jpg', noIndex: false, noFollow: false },
       status: 'published',
       publishedAt: new Date(Date.now() - 25 * 86400000).toISOString(),
       isPublished: true,
       version: 2,
+      lastPublishedVersion: 2,
       createdAt: new Date(Date.now() - 28 * 86400000).toISOString(),
       updatedAt: new Date(Date.now() - 10 * 86400000).toISOString(),
       createdBy: DEMO_OWNER_ID,
@@ -688,11 +694,12 @@ function getWebsitePages(): Array<Record<string, unknown>> {
       content: [
         { id: 'pricing-hero', type: 'section', columns: [{ id: 'col-1', width: 100, widgets: [{ id: 'pricing', type: 'pricing', data: { heading: 'Simple, Transparent Pricing', subheading: 'No hidden fees. Cancel anytime.', plans: [{ name: 'Starter', price: '$99/mo', features: ['Up to 1,000 contacts', 'Basic pipeline', 'Email campaigns', 'Forms'], ctaText: 'Start Free Trial', ctaUrl: '/signup?plan=starter', highlighted: false }, { name: 'Growth', price: '$149/mo', features: ['Up to 10,000 contacts', 'Advanced pipeline', 'AI lead scoring', 'Workflow automation', 'Priority support'], ctaText: 'Start Free Trial', ctaUrl: '/signup?plan=growth', highlighted: true }, { name: 'Enterprise', price: '$399/mo', features: ['Unlimited contacts', 'AI Sales Agent', 'Custom integrations', 'Dedicated CSM', '99.9% SLA'], ctaText: 'Contact Sales', ctaUrl: '/contact', highlighted: false }] }, style: { padding: { top: '60px', bottom: '60px' } } }] }], name: 'Pricing' },
       ],
-      seo: { metaTitle: 'Pricing — Acme Digital Solutions', metaDescription: 'Simple, transparent pricing starting at $99/month. AI-powered CRM with no hidden fees.', noIndex: false, noFollow: false },
+      seo: { metaTitle: 'Pricing — Acme Digital Solutions', metaDescription: 'Simple, transparent pricing starting at $99/month. AI-powered CRM with no hidden fees.', metaKeywords: ['CRM pricing', 'AI CRM plans', 'sales automation pricing', 'Acme pricing', 'affordable CRM'], ogTitle: 'Pricing — Acme Digital Solutions', ogDescription: 'Simple, transparent pricing from $99/month. No hidden fees, cancel anytime.', ogImage: '/images/og-default.jpg', noIndex: false, noFollow: false },
       status: 'published',
       publishedAt: new Date(Date.now() - 24 * 86400000).toISOString(),
       isPublished: true,
       version: 4,
+      lastPublishedVersion: 4,
       createdAt: new Date(Date.now() - 28 * 86400000).toISOString(),
       updatedAt: new Date(Date.now() - 2 * 86400000).toISOString(),
       createdBy: DEMO_OWNER_ID,
@@ -713,7 +720,12 @@ function getBlogPosts(): Array<Record<string, unknown>> {
       slug: 'ai-lead-scoring-guide',
       title: '(Demo) The Complete Guide to AI Lead Scoring in 2026',
       excerpt: 'Learn how AI lead scoring can help your sales team prioritize the right prospects and close deals 3x faster.',
-      content: [{ id: 'section-1', type: 'section', columns: [{ id: 'col-1', width: 100, widgets: [{ id: 'text-1', type: 'text', data: { text: 'AI lead scoring has transformed how modern sales teams prioritize their pipeline...' } }] }] }],
+      content: [
+        { type: 'text', props: { text: '## What is AI-Powered Lead Scoring?\n\nTraditional lead scoring relies on manual rules: assign 10 points for opening an email, 20 for visiting the pricing page. But these static models miss the nuance that separates a tire-kicker from a genuine buyer.\n\nAI-powered lead scoring analyzes hundreds of behavioral signals in real-time — email engagement patterns, website visit frequency, content consumption depth, social media interactions, and even the sentiment of chat conversations — to produce a dynamic score that updates continuously.\n\n### Why It Matters\n\nSales teams waste 67% of their time on leads that will never convert (Forrester Research). With AI scoring, your reps focus exclusively on the leads most likely to close, improving conversion rates by 30-50% on average.' } },
+        { type: 'text', props: { text: '## The 5 Pillars of Effective Lead Scoring\n\n### 1. Behavioral Signals\nTrack every touchpoint: email opens, link clicks, page visits, form submissions, chatbot interactions, and document downloads. Weight recent activity higher than historical.\n\n### 2. Firmographic Data\nCompany size, industry, revenue, tech stack, and growth trajectory all indicate fit. A 500-person SaaS company in growth mode scores differently than a 10-person local business.\n\n### 3. Engagement Velocity\nIt is not just what they do — it is how fast. A prospect who visits your pricing page three times in 48 hours is hotter than one who visits once a month.\n\n### 4. Negative Scoring\nSubtract points for disengagement: unsubscribes, bounced emails, extended inactivity, or visiting the careers page (they might be job hunting, not buying).\n\n### 5. Predictive Intent\nAI models trained on your closed-won deals learn the patterns that precede a purchase. They spot buying signals invisible to human reps.' } },
+        { type: 'text', props: { text: '## Implementation Checklist\n\n- **Define your ICP** (Ideal Customer Profile) with at least 10 firmographic criteria\n- **Map your buying journey** — identify the 15-20 key touchpoints from awareness to decision\n- **Set score thresholds** — Hot (80+), Warm (50-79), Cold (below 50)\n- **Configure decay rules** — scores should decrease 10% every 30 days of inactivity\n- **Build feedback loops** — when sales marks a lead as "not qualified," feed that back into the model\n- **Review monthly** — audit your top-scoring leads against actual conversion data\n\n> Pro tip: Start with a simple model and iterate. A basic AI scoring model that gets refined weekly will outperform a complex model that never gets updated.' } },
+        { type: 'text', props: { text: '## Measuring Success\n\nTrack these KPIs after implementing AI lead scoring:\n\n| Metric | Before AI | After AI (avg) |\n|--------|-----------|----------------|\n| Sales cycle length | 45 days | 28 days |\n| Lead-to-opportunity rate | 12% | 23% |\n| Rep productivity (calls/day) | 35 | 52 |\n| Win rate | 18% | 31% |\n| Revenue per rep | $420K/yr | $680K/yr |\n\nThe ROI typically becomes apparent within 60-90 days of deployment. The key is ensuring your sales team trusts the scores — schedule weekly calibration sessions during the first quarter to build confidence in the system.\n\n---\n\n*Ready to implement AI lead scoring? SalesVelocity.ai comes with built-in scoring that adapts to your specific sales patterns. [Start your free trial →](/pricing)*' } },
+      ],
       featuredImage: '/images/blog/ai-lead-scoring.jpg',
       author: DEMO_OWNER_ID,
       authorName: DEMO_OWNER_NAME,
@@ -722,7 +734,7 @@ function getBlogPosts(): Array<Record<string, unknown>> {
       categories: ['Sales', 'AI', 'Lead Management'],
       tags: ['lead scoring', 'artificial intelligence', 'sales automation', 'CRM'],
       featured: true,
-      seo: { metaTitle: 'The Complete Guide to AI Lead Scoring in 2026', metaDescription: 'Discover how AI lead scoring transforms sales pipelines. Step-by-step guide with real examples.', metaKeywords: ['AI lead scoring', 'sales automation', 'CRM guide'], noIndex: false, noFollow: false },
+      seo: { metaTitle: 'The Complete Guide to AI Lead Scoring in 2026', metaDescription: 'Discover how AI lead scoring transforms sales pipelines. Step-by-step guide with real examples.', metaKeywords: ['AI lead scoring', 'predictive lead scoring', 'sales automation', 'lead qualification', 'CRM AI features'], ogImage: '/images/blog/ai-lead-scoring-og.jpg', noIndex: false, noFollow: false },
       status: 'published',
       views: 342,
       readTime: 8,
@@ -737,7 +749,12 @@ function getBlogPosts(): Array<Record<string, unknown>> {
       slug: '5-email-sequence-templates',
       title: '(Demo) 5 Email Sequence Templates That Convert',
       excerpt: 'Proven email sequences for onboarding, nurture, re-engagement, and more — ready to copy and customize.',
-      content: [{ id: 'section-1', type: 'section', columns: [{ id: 'col-1', width: 100, widgets: [{ id: 'text-1', type: 'text', data: { text: 'Great email sequences are the backbone of any outbound sales strategy...' } }] }] }],
+      content: [
+        { type: 'text', props: { text: '## Why Email Sequences Win Deals\n\nSingle emails get ignored. Sequences build relationships. Research from Salesforce shows it takes an average of 8 touchpoints to book a first meeting with a cold prospect — yet most reps give up after 2 attempts.\n\nA well-crafted email sequence keeps you top-of-mind without being annoying. The secret is relevance: each email should deliver standalone value, not just nudge the prospect to buy.\n\nHere are 5 proven sequences you can copy today. Each includes the subject line, send timing, and a snippet of the body copy.' } },
+        { type: 'text', props: { text: '## Template 1: Cold Outreach (5-Email, 14 Days)\n\n**Day 1 — The Hook**\nSubject: Quick question about {{companyName}} sales process\nBody: "Hi {{firstName}}, I noticed {{companyName}} recently expanded into {{newMarket}}. Companies in growth mode typically struggle with {{commonPainPoint}} — does that resonate? We helped [Similar Company] solve this and grew their pipeline 40% in 90 days. Worth a 15-minute chat?"\n\n**Day 3 — The Value Add**\nSubject: [Resource] Sales pipeline benchmarks for {{industry}}\nBody: "{{firstName}}, sharing this without any agenda — our 2026 Sales Benchmark Report for {{industry}} companies shows the top performers are doing these 3 things..."\n\n**Day 7 — The Case Study**\nSubject: How [Competitor Customer] closed $2M without hiring more reps\nBody: "{{firstName}}, thought this might be relevant. [Case Study Link] — they were in a similar position to {{companyName}} 6 months ago."\n\n**Day 10 — The Objection Pre-empt**\nSubject: Re: Quick question (following up)\nBody: "{{firstName}}, I know you are busy — totally get it. Most {{jobTitle}}s tell me their top objection is [Objection]. Here is how we address that: [Short Answer]. Still worth 15 minutes?"\n\n**Day 14 — The Graceful Exit**\nSubject: Closing the loop\nBody: "{{firstName}}, I will stop reaching out after this. If the timing ever changes and managing {{painPoint}} becomes a priority, I am always here. Wishing {{companyName}} continued success."' } },
+        { type: 'text', props: { text: '## Template 2: Post-Demo Follow-Up (3-Email, 7 Days)\n\n**Day 1 — The Recap**\nSubject: Your personalized demo recap + next steps\nBody: "Hi {{firstName}}, thanks for the time today! Here is what we covered: [Bullet 1], [Bullet 2], [Bullet 3]. Based on your needs, I recommend the {{recommendedPlan}} plan. Your trial link: {{trialLink}}"\n\n**Day 3 — The Social Proof**\nSubject: How {{similarCompany}} got started (and results after 60 days)\nBody: "{{firstName}}, wanted to share what {{similarCompany}} — a company similar to yours — achieved in their first 60 days with Acme: [Specific Result 1], [Specific Result 2]. Full case study here: [Link]"\n\n**Day 7 — The Decision Nudge**\nSubject: Your trial expires in 7 days — need anything?\nBody: "{{firstName}}, your free trial is halfway through. Quick check-in — any questions or roadblocks? I am happy to hop on a 10-minute call to make sure you are getting value. Also, here is a discount code valid until end of month: {{discountCode}}"\n\n## Template 3: Onboarding Sequence (4-Email, 14 Days)\n**Day 0:** Welcome + account setup guide\n**Day 2:** Feature spotlight — AI Lead Scoring walkthrough\n**Day 7:** Success milestone check-in + tips\n**Day 14:** ROI check + upsell to next tier' } },
+        { type: 'text', props: { text: '## Template 4: Re-Engagement (3-Email, 10 Days)\n\nFor contacts who have gone cold (no activity in 60+ days):\n\n**Email 1 — The Curiosity Reopen**\nSubject: Still thinking about CRM?\nBody: "{{firstName}}, it has been a while! We have released some features you might find useful: [Feature 1], [Feature 2]. Things may have changed on your end too — still evaluating options?"\n\n**Email 2 — The New Angle**\nSubject: Something new for {{companyName}}\nBody: "{{firstName}}, sharing one thing that might change your mind: [New Feature / Case Study / Pricing Change]. This directly addresses {{painPoint}} we discussed."\n\n**Email 3 — The Break-Up**\nSubject: Should I close your file?\nBody: "{{firstName}}, I want to be respectful of your time. Should I keep you on my follow-up list, or has this moved off your radar? No hard feelings either way — just let me know."\n\n## Template 5: Deal Rescue (2-Email, 3 Days)\n\nFor deals stuck at proposal stage for 14+ days:\n\n**Email 1 — The Check-In**\nSubject: Checking in on your proposal\nBody: "Hi {{firstName}}, just circling back on the proposal I sent. Is there anything I can clarify, adjust, or answer for your team? Happy to hop on a quick call."\n\n**Email 2 — The Incentive**\nSubject: One more thing before end of quarter\nBody: "{{firstName}}, we have one onboarding slot available this quarter with a complimentary setup session ($500 value). Happy to lock it in for {{companyName}} if you are ready to move forward. Let me know!"' } },
+      ],
       featuredImage: '/images/blog/email-templates.jpg',
       author: DEMO_OWNER_ID,
       authorName: DEMO_OWNER_NAME,
@@ -746,7 +763,7 @@ function getBlogPosts(): Array<Record<string, unknown>> {
       categories: ['Marketing', 'Email'],
       tags: ['email sequences', 'templates', 'outbound sales', 'automation'],
       featured: false,
-      seo: { metaTitle: '5 Email Sequence Templates That Convert | Acme Blog', metaDescription: 'Ready-to-use email sequences for onboarding, nurture, and re-engagement campaigns.', noIndex: false, noFollow: false },
+      seo: { metaTitle: '5 Email Sequence Templates That Convert | Acme Blog', metaDescription: 'Ready-to-use email sequences for onboarding, nurture, and re-engagement campaigns.', metaKeywords: ['email sequence templates', 'sales email templates', 'cold outreach email', 'email automation', 'follow-up email'], ogImage: '/images/blog/email-templates-og.jpg', noIndex: false, noFollow: false },
       status: 'published',
       views: 156,
       readTime: 6,
@@ -761,7 +778,11 @@ function getBlogPosts(): Array<Record<string, unknown>> {
       slug: 'crm-migration-checklist',
       title: '(Demo) CRM Migration Checklist: Moving from Spreadsheets to a Real CRM',
       excerpt: 'Step-by-step guide to migrating your sales data from spreadsheets to a modern CRM without losing anything.',
-      content: [{ id: 'section-1', type: 'section', columns: [{ id: 'col-1', width: 100, widgets: [{ id: 'text-1', type: 'text', data: { text: 'Draft content — Coming soon...' } }] }] }],
+      content: [
+        { type: 'text', props: { text: '## Before You Migrate: Audit Your Spreadsheets\n\nBefore touching a CRM, do a full audit of what you actually have. Most teams discover their spreadsheets are messier than expected — duplicates, inconsistent formatting, missing data, and columns that only one person understands.\n\n**Pre-Migration Checklist:**\n- [ ] Export all contact records to CSV and count total rows\n- [ ] Identify and remove duplicate entries (match on email address)\n- [ ] Standardize phone number format: (555) 123-4567\n- [ ] Standardize company names (decide: "Acme Inc" or "Acme, Inc." or "Acme")\n- [ ] Document every column header and what it means\n- [ ] Flag any columns your CRM does not have a native field for (you will create custom fields)\n- [ ] Note which contacts have associated deals/pipeline stages\n- [ ] Identify which contacts are active vs. archived\n\n**Common Data Issues to Fix First:**\n- Email addresses with typos or outdated domains\n- Phone numbers formatted inconsistently\n- "Company" field left blank for individual contacts\n- Stage names that do not map to standard CRM stages\n- Notes scattered across multiple columns' } },
+        { type: 'text', props: { text: '## During Migration: The 5-Step Import Process\n\n### Step 1: Set Up Custom Fields First\nBefore importing, create all the custom fields in your CRM that your spreadsheet uses. Common ones: Lead Source, Industry Vertical, Contract Value, Referral Partner. If you import first and add fields later, you have to re-import.\n\n### Step 2: Import Contacts in Batches\nDo not import all 10,000 contacts at once. Import 100-200 first, verify everything looks correct, then do the full import. Check: names display correctly, emails are accurate, phone numbers formatted properly.\n\n### Step 3: Import Deals Linked to Contacts\nMost CRMs let you import deals as a separate CSV linked by contact email. Map your spreadsheet "Stage" column to CRM pipeline stages. Map deal values, expected close dates, and assigned owners.\n\n### Step 4: Set Up Automations Before Going Live\nConfigure your workflows before your team starts using the CRM: lead assignment rules, follow-up reminders, email sequence triggers. A CRM without automations is just an expensive spreadsheet.\n\n### Step 5: Run a Parallel Period\nFor 2 weeks, keep your old spreadsheet updated alongside the new CRM. This catches anything that fell through the cracks and gives your team confidence during the transition.' } },
+        { type: 'text', props: { text: '## After Migration: Verification Checklist\n\n**Data Integrity:**\n- [ ] Total contact count in CRM matches spreadsheet export\n- [ ] All open deals imported with correct stage and value\n- [ ] Custom fields populated correctly for at least 20 sample records\n- [ ] No duplicate contacts (run de-dupe tool)\n- [ ] All email addresses valid (run email validation)\n\n**Team Readiness:**\n- [ ] Every team member has logged in and completed their profile\n- [ ] Mobile app installed on all phones\n- [ ] Email integration connected (Gmail/Outlook sync)\n- [ ] Calendar connected for demo booking\n- [ ] Training session completed (record it for new hires)\n\n**Process Readiness:**\n- [ ] Pipeline stages match your actual sales process\n- [ ] Lead assignment rules tested with a test lead\n- [ ] Email sequences activated and tested\n- [ ] Reporting dashboard configured for weekly review\n- [ ] Old spreadsheet archived (do not delete — keep for 90 days just in case)\n\n---\n\n*Need help with your migration? Acme includes free assisted migration for all plans. Book a migration call: [/contact](/contact)*' } },
+      ],
       featuredImage: '/images/blog/crm-migration.jpg',
       author: DEMO_OWNER_ID,
       authorName: DEMO_OWNER_NAME,
@@ -769,7 +790,7 @@ function getBlogPosts(): Array<Record<string, unknown>> {
       categories: ['CRM', 'Getting Started'],
       tags: ['migration', 'onboarding', 'data import', 'CRM setup'],
       featured: false,
-      seo: { metaTitle: 'CRM Migration Checklist | Acme Blog', metaDescription: 'Complete checklist for migrating from spreadsheets to a real CRM.', noIndex: true, noFollow: false },
+      seo: { metaTitle: 'CRM Migration Checklist | Acme Blog', metaDescription: 'Complete checklist for migrating from spreadsheets to a real CRM.', metaKeywords: ['CRM migration', 'spreadsheet to CRM', 'CRM setup checklist', 'data migration', 'CRM onboarding'], ogImage: '/images/blog/crm-migration-og.jpg', noIndex: true, noFollow: false },
       status: 'draft',
       views: 0,
       readTime: 10,
@@ -804,6 +825,9 @@ function getSiteConfig(): Record<string, unknown> {
       robotsFollow: true,
     },
     analytics: { googleAnalyticsId: 'G-DEMO123456', facebookPixelId: 'DEMO_FB_PIXEL_123' },
+    branding: { logo: '/images/logo.svg', brandName: '(Demo) Acme Digital Solutions', tagline: 'Close Deals 3x Faster with AI' },
+    contact: { email: 'hello@demo-acme.com', phone: '(555) 100-2000', address: '100 Innovation Dr, San Francisco, CA 94107' },
+    social: { twitter: 'https://twitter.com/demoacme', linkedin: 'https://linkedin.com/company/demoacme' },
     status: 'published',
     publishedAt: new Date(Date.now() - 25 * 86400000).toISOString(),
     createdAt: new Date(Date.now() - 28 * 86400000).toISOString(),
@@ -863,14 +887,14 @@ function getNavigation(): Record<string, unknown> {
 
 function getSocialPosts(): Array<Record<string, unknown>> {
   return [
-    { id: 'demo-social-001', isDemo: true, platform: 'twitter', content: '🚀 Just launched our AI Lead Scoring feature! Your sales team can now auto-prioritize leads based on 20+ signals. No more guessing — let AI do the heavy lifting. #SalesAI #CRM #B2B', status: 'published', publishedAt: daysAgo(7), platformPostId: 'tw_demo_001', metrics: { impressions: 4200, engagements: 312, likes: 89, comments: 14, shares: 28, clicks: 67, reach: 3800 }, createdBy: DEMO_OWNER_ID, createdAt: daysAgo(7), updatedAt: daysAgo(7) },
-    { id: 'demo-social-002', isDemo: true, platform: 'linkedin', content: 'Exciting news from Acme Digital Solutions! 🎉\n\nWe just hit 500+ companies using our AI-powered CRM. In the past quarter alone, our customers:\n\n✅ Closed 3x more deals\n✅ Reduced lead response time by 80%\n✅ Saved 15+ hours/week on manual data entry\n\nThe future of sales is AI-native. Are you ready?\n\n#SalesAutomation #AI #CRM #SaaS #B2BSales', status: 'published', publishedAt: daysAgo(5), platformPostId: 'li_demo_001', metrics: { impressions: 8900, engagements: 567, likes: 234, comments: 42, shares: 89, clicks: 156, reach: 7200 }, createdBy: DEMO_OWNER_ID, createdAt: daysAgo(5), updatedAt: daysAgo(5) },
-    { id: 'demo-social-003', isDemo: true, platform: 'twitter', content: '💡 Pro tip: The best time to follow up with a lead is within 5 minutes of their first interaction. Our AI agent does this automatically — 24/7, no coffee breaks needed. ☕ #SalesTips #AIAgent', status: 'published', publishedAt: daysAgo(3), platformPostId: 'tw_demo_002', metrics: { impressions: 2800, engagements: 198, likes: 67, comments: 8, shares: 19, clicks: 34, reach: 2400 }, createdBy: DEMO_OWNER_ID, createdAt: daysAgo(3), updatedAt: daysAgo(3) },
-    { id: 'demo-social-004', isDemo: true, platform: 'linkedin', content: 'New blog post: "The Complete Guide to AI Lead Scoring in 2026"\n\nWe break down exactly how AI scoring works, why it matters, and how to set it up in under 10 minutes.\n\n🔗 Read the full guide: https://demo-acme.salesvelocity.ai/blog/ai-lead-scoring-guide\n\n#LeadScoring #SalesAutomation #AIinSales', status: 'scheduled', scheduledAt: daysFromNow(1), createdBy: DEMO_OWNER_ID, createdAt: daysAgo(1), updatedAt: daysAgo(1) },
-    { id: 'demo-social-005', isDemo: true, platform: 'twitter', content: '📊 Did you know? Companies that use AI for lead scoring see a 30% increase in sales productivity. We built ours from the ground up — no third-party APIs, no data leaving your account. Privacy-first AI. 🔒', status: 'scheduled', scheduledAt: daysFromNow(2), createdBy: DEMO_OWNER_ID, createdAt: daysAgo(1), updatedAt: daysAgo(1) },
-    { id: 'demo-social-006', isDemo: true, platform: 'twitter', content: 'Thinking about migrating your CRM? Here is a quick checklist:\n\n1️⃣ Export all contacts + deals\n2️⃣ Map your custom fields\n3️⃣ Set up automations\n4️⃣ Train your team\n5️⃣ Go live with confidence\n\nWe handle steps 1-4 for free. Seriously. 🤝', status: 'draft', createdBy: DEMO_OWNER_ID, createdAt: daysAgo(1), updatedAt: daysAgo(1) },
-    { id: 'demo-social-007', isDemo: true, platform: 'linkedin', content: 'Case Study: How TechForward Inc. Closed $1.2M in Pipeline Using Acme AI\n\n(Full case study coming next week — stay tuned!)', status: 'draft', createdBy: DEMO_OWNER_ID, createdAt: now, updatedAt: now },
-    { id: 'demo-social-008', isDemo: true, platform: 'twitter', content: 'Our latest customer went from spreadsheets to closing their first deal in Acme CRM in under 48 hours. Setup wizard + AI import = magic. ✨ Try it free → https://demo-acme.salesvelocity.ai/signup', status: 'queued', createdBy: DEMO_OWNER_ID, createdAt: daysAgo(2), updatedAt: daysAgo(2) },
+    { id: 'demo-social-001', isDemo: true, platform: 'twitter', content: '🚀 Just launched our AI Lead Scoring feature! Your sales team can now auto-prioritize leads based on 20+ signals. No more guessing — let AI do the heavy lifting. #SalesAI #CRM #B2B', status: 'published', publishedAt: daysAgo(7), platformPostId: 'tw_demo_001', mediaUrls: ['/images/social/post-001.jpg'], metrics: { impressions: 4200, engagements: 312, likes: 89, comments: 14, shares: 28, clicks: 67, reach: 3800 }, createdBy: DEMO_OWNER_ID, createdAt: daysAgo(7), updatedAt: daysAgo(7) },
+    { id: 'demo-social-002', isDemo: true, platform: 'linkedin', content: 'Exciting news from Acme Digital Solutions! 🎉\n\nWe just hit 500+ companies using our AI-powered CRM. In the past quarter alone, our customers:\n\n✅ Closed 3x more deals\n✅ Reduced lead response time by 80%\n✅ Saved 15+ hours/week on manual data entry\n\nThe future of sales is AI-native. Are you ready?\n\n#SalesAutomation #AI #CRM #SaaS #B2BSales', status: 'published', publishedAt: daysAgo(5), platformPostId: 'li_demo_001', mediaUrls: ['/images/social/post-002.jpg'], metrics: { impressions: 8900, engagements: 567, likes: 234, comments: 42, shares: 89, clicks: 156, reach: 7200 }, createdBy: DEMO_OWNER_ID, createdAt: daysAgo(5), updatedAt: daysAgo(5) },
+    { id: 'demo-social-003', isDemo: true, platform: 'twitter', content: '💡 Pro tip: The best time to follow up with a lead is within 5 minutes of their first interaction. Our AI agent does this automatically — 24/7, no coffee breaks needed. ☕ #SalesTips #AIAgent', status: 'published', publishedAt: daysAgo(3), platformPostId: 'tw_demo_002', mediaUrls: ['/images/social/post-003.jpg'], metrics: { impressions: 2800, engagements: 198, likes: 67, comments: 8, shares: 19, clicks: 34, reach: 2400 }, createdBy: DEMO_OWNER_ID, createdAt: daysAgo(3), updatedAt: daysAgo(3) },
+    { id: 'demo-social-004', isDemo: true, platform: 'linkedin', content: 'New blog post: "The Complete Guide to AI Lead Scoring in 2026"\n\nWe break down exactly how AI scoring works, why it matters, and how to set it up in under 10 minutes.\n\n🔗 Read the full guide: https://demo-acme.salesvelocity.ai/blog/ai-lead-scoring-guide\n\n#LeadScoring #SalesAutomation #AIinSales', status: 'scheduled', scheduledAt: daysFromNow(1), platformPostId: null, mediaUrls: ['/images/social/post-004.jpg'], metrics: { impressions: 0, engagements: 0, likes: 0, comments: 0, shares: 0, clicks: 0, reach: 0 }, createdBy: DEMO_OWNER_ID, createdAt: daysAgo(1), updatedAt: daysAgo(1) },
+    { id: 'demo-social-005', isDemo: true, platform: 'twitter', content: '📊 Did you know? Companies that use AI for lead scoring see a 30% increase in sales productivity. We built ours from the ground up — no third-party APIs, no data leaving your account. Privacy-first AI. 🔒', status: 'scheduled', scheduledAt: daysFromNow(2), platformPostId: null, mediaUrls: ['/images/social/post-005.jpg'], metrics: { impressions: 0, engagements: 0, likes: 0, comments: 0, shares: 0, clicks: 0, reach: 0 }, createdBy: DEMO_OWNER_ID, createdAt: daysAgo(1), updatedAt: daysAgo(1) },
+    { id: 'demo-social-006', isDemo: true, platform: 'twitter', content: 'Thinking about migrating your CRM? Here is a quick checklist:\n\n1️⃣ Export all contacts + deals\n2️⃣ Map your custom fields\n3️⃣ Set up automations\n4️⃣ Train your team\n5️⃣ Go live with confidence\n\nWe handle steps 1-4 for free. Seriously. 🤝', status: 'draft', platformPostId: null, mediaUrls: ['/images/social/post-006.jpg'], metrics: { impressions: 0, engagements: 0, likes: 0, comments: 0, shares: 0, clicks: 0, reach: 0 }, createdBy: DEMO_OWNER_ID, createdAt: daysAgo(1), updatedAt: daysAgo(1) },
+    { id: 'demo-social-007', isDemo: true, platform: 'linkedin', content: 'Case Study: How TechForward Inc. Closed $1.2M in Pipeline Using Acme AI\n\n(Full case study coming next week — stay tuned!)', status: 'draft', platformPostId: null, mediaUrls: ['/images/social/post-007.jpg'], metrics: { impressions: 0, engagements: 0, likes: 0, comments: 0, shares: 0, clicks: 0, reach: 0 }, createdBy: DEMO_OWNER_ID, createdAt: now, updatedAt: now },
+    { id: 'demo-social-008', isDemo: true, platform: 'twitter', content: 'Our latest customer went from spreadsheets to closing their first deal in Acme CRM in under 48 hours. Setup wizard + AI import = magic. ✨ Try it free → https://demo-acme.salesvelocity.ai/signup', status: 'queued', platformPostId: null, mediaUrls: ['/images/social/post-008.jpg'], metrics: { impressions: 0, engagements: 0, likes: 0, comments: 0, shares: 0, clicks: 0, reach: 0 }, createdBy: DEMO_OWNER_ID, createdAt: daysAgo(2), updatedAt: daysAgo(2) },
   ];
 }
 
@@ -889,6 +913,7 @@ function getOrders(): Array<Record<string, unknown>> {
       shippingAddress: null, billingAddress: { street: '456 Design Ave', city: 'Portland', state: 'OR', zip: '97201', country: 'US' },
       notes: 'Annual billing applied. Migration completed within 3 business days.',
       tags: ['enterprise', 'annual', 'migration'],
+      createdBy: DEMO_OWNER_ID,
       createdAt: daysAgo(22), updatedAt: daysAgo(18),
     },
     {
@@ -900,6 +925,7 @@ function getOrders(): Array<Record<string, unknown>> {
       shippingAddress: null, billingAddress: { street: '789 Cloud St', city: 'Austin', state: 'TX', zip: '73301', country: 'US' },
       notes: 'Enterprise onboarding in progress.',
       tags: ['enterprise'],
+      createdBy: DEMO_OWNER_ID,
       createdAt: daysAgo(5), updatedAt: daysAgo(3),
     },
     {
@@ -908,9 +934,10 @@ function getOrders(): Array<Record<string, unknown>> {
       items: [{ productId: 'demo-product-003', name: '(Demo) Starter Plan — Monthly', quantity: 1, price: 9900, currency: 'USD', sku: 'PLAN-START-MO' }, { productId: 'demo-product-005', name: '(Demo) Custom AI Training Session', quantity: 2, price: 29900, currency: 'USD', sku: 'SVC-AI-TRAIN' }],
       subtotal: 69700, tax: 5576, taxRate: 8, shipping: 0, discount: 0, total: 75276, currency: 'USD',
       payment: { method: 'card', status: 'paid', transactionId: 'pi_demo_003', paidAt: daysAgo(1), cardLast4: '1234', cardBrand: 'amex' },
-      billingAddress: { street: '321 Wellness Blvd', city: 'Denver', state: 'CO', zip: '80201', country: 'US' },
+      shippingAddress: null, billingAddress: { street: '321 Wellness Blvd', city: 'Denver', state: 'CO', zip: '80201', country: 'US' },
       notes: 'Training sessions scheduled for next week.',
       tags: ['starter', 'training'],
+      createdBy: DEMO_OWNER_ID,
       createdAt: daysAgo(1), updatedAt: now,
     },
     {
@@ -918,10 +945,11 @@ function getOrders(): Array<Record<string, unknown>> {
       customer: { id: 'demo-contact-004', firstName: '(Demo) Rachel', lastName: 'Kim', email: 'rkim@suncoastrealty.com', phone: '(555) 456-7890', company: '(Demo) Suncoast Realty' },
       items: [{ productId: 'demo-product-001', name: '(Demo) Growth Plan — Monthly', quantity: 1, price: 14900, currency: 'USD', sku: 'PLAN-GROWTH-MO' }],
       subtotal: 14900, tax: 1192, taxRate: 8, shipping: 0, discount: 2980, discountCode: 'REALESTATE20', total: 13112, currency: 'USD',
-      payment: { method: 'card', status: 'pending', transactionId: null },
-      billingAddress: { street: '555 Beach Dr', city: 'Tampa', state: 'FL', zip: '33601', country: 'US' },
+      payment: { method: 'card', status: 'pending', transactionId: null, paidAt: null, cardLast4: null, cardBrand: null },
+      shippingAddress: null, billingAddress: { street: '555 Beach Dr', city: 'Tampa', state: 'FL', zip: '33601', country: 'US' },
       notes: 'Awaiting payment confirmation.',
       tags: ['real-estate', 'discount'],
+      createdBy: DEMO_OWNER_ID,
       createdAt: now, updatedAt: now,
     },
   ];
@@ -933,9 +961,9 @@ function getOrders(): Array<Record<string, unknown>> {
 
 function getTemplates(): Array<Record<string, unknown>> {
   return [
-    { id: 'demo-template-email-001', isDemo: true, type: 'email', name: '(Demo) Welcome Email', description: 'Sent immediately after signup to welcome new customers', category: 'onboarding', subject: 'Welcome to Acme Digital Solutions, {{firstName}}! 🎉', body: '<h1>Welcome, {{firstName}}!</h1><p>Thanks for joining Acme Digital Solutions. Here is what to do next:</p><ol><li>Complete your business setup</li><li>Import your contacts</li><li>Set up your first workflow</li></ol><p>Questions? Reply to this email or book a call with our team.</p><p>— The Acme Team</p>', bodyType: 'html', variables: ['firstName', 'companyName', 'planName'], tags: ['onboarding', 'welcome'], isActive: true, usageCount: 47, lastUsedAt: daysAgo(1), createdBy: DEMO_OWNER_ID, createdAt: daysAgo(28), updatedAt: daysAgo(5) },
-    { id: 'demo-template-email-002', isDemo: true, type: 'email', name: '(Demo) Follow-Up After Demo', description: 'Sent 24 hours after a product demo', category: 'sales', subject: 'Great connecting today, {{firstName}}!', body: '<p>Hi {{firstName}},</p><p>It was great chatting about how Acme can help {{companyName}}. As discussed:</p><ul><li>{{painPoint1}} → Our AI lead scoring solves this</li><li>{{painPoint2}} → Workflow automation handles this</li></ul><p>Here is your personalized trial link: <a href="{{trialLink}}">Start Free Trial</a></p><p>Want to hop on a quick call to answer any remaining questions? <a href="{{bookingLink}}">Book 15 minutes here</a>.</p><p>Best,<br>{{senderName}}</p>', bodyType: 'html', variables: ['firstName', 'companyName', 'painPoint1', 'painPoint2', 'trialLink', 'bookingLink', 'senderName'], tags: ['sales', 'follow-up'], isActive: true, usageCount: 23, lastUsedAt: daysAgo(2), createdBy: DEMO_OWNER_ID, createdAt: daysAgo(20), updatedAt: daysAgo(7) },
-    { id: 'demo-template-email-003', isDemo: true, type: 'email', name: '(Demo) Deal Won — Thank You', description: 'Sent when a deal is marked as Closed Won', category: 'post-sale', subject: 'You are officially an Acme customer! 🎉', body: '<h1>Congratulations, {{firstName}}!</h1><p>Your {{planName}} subscription is now active. Here is your onboarding timeline:</p><p><strong>Day 1-2:</strong> Account setup + data migration<br><strong>Day 3-5:</strong> Team training sessions<br><strong>Day 6-7:</strong> Go live with full support</p><p>Your dedicated success manager is {{csmName}} ({{csmEmail}}).</p>', bodyType: 'html', variables: ['firstName', 'planName', 'csmName', 'csmEmail'], tags: ['post-sale', 'onboarding'], isActive: true, usageCount: 8, lastUsedAt: daysAgo(5), createdBy: DEMO_OWNER_ID, createdAt: daysAgo(15), updatedAt: daysAgo(10) },
+    { id: 'demo-template-email-001', isDemo: true, type: 'email', name: '(Demo) Welcome Email', description: 'Sent immediately after signup to welcome new customers', category: 'onboarding', subject: 'Welcome to Acme Digital Solutions, {{firstName}}! 🎉', previewText: 'Your account is ready — here are your first 3 steps to get started with Acme.', fromName: '(Demo) Acme Digital Solutions', fromEmail: 'hello@demo-acme.com', body: '<h1>Welcome, {{firstName}}!</h1><p>Thanks for joining Acme Digital Solutions. Here is what to do next:</p><ol><li>Complete your business setup</li><li>Import your contacts</li><li>Set up your first workflow</li></ol><p>Questions? Reply to this email or book a call with our team.</p><p>— The Acme Team</p>', bodyType: 'html', variables: ['firstName', 'companyName', 'planName'], tags: ['onboarding', 'welcome'], isActive: true, usageCount: 47, lastUsedAt: daysAgo(1), createdBy: DEMO_OWNER_ID, createdAt: daysAgo(28), updatedAt: daysAgo(5) },
+    { id: 'demo-template-email-002', isDemo: true, type: 'email', name: '(Demo) Follow-Up After Demo', description: 'Sent 24 hours after a product demo', category: 'sales', subject: 'Great connecting today, {{firstName}}!', previewText: 'Here is a recap of our conversation plus your personalized trial link and booking options.', fromName: '(Demo) Acme Digital Solutions', fromEmail: 'hello@demo-acme.com', body: '<p>Hi {{firstName}},</p><p>It was great chatting about how Acme can help {{companyName}}. As discussed:</p><ul><li>{{painPoint1}} → Our AI lead scoring solves this</li><li>{{painPoint2}} → Workflow automation handles this</li></ul><p>Here is your personalized trial link: <a href="{{trialLink}}">Start Free Trial</a></p><p>Want to hop on a quick call to answer any remaining questions? <a href="{{bookingLink}}">Book 15 minutes here</a>.</p><p>Best,<br>{{senderName}}</p>', bodyType: 'html', variables: ['firstName', 'companyName', 'painPoint1', 'painPoint2', 'trialLink', 'bookingLink', 'senderName'], tags: ['sales', 'follow-up'], isActive: true, usageCount: 23, lastUsedAt: daysAgo(2), createdBy: DEMO_OWNER_ID, createdAt: daysAgo(20), updatedAt: daysAgo(7) },
+    { id: 'demo-template-email-003', isDemo: true, type: 'email', name: '(Demo) Deal Won — Thank You', description: 'Sent when a deal is marked as Closed Won', category: 'post-sale', subject: 'You are officially an Acme customer! 🎉', previewText: 'Your subscription is active — here is your onboarding timeline and your dedicated success manager.', fromName: '(Demo) Acme Digital Solutions', fromEmail: 'hello@demo-acme.com', body: '<h1>Congratulations, {{firstName}}!</h1><p>Your {{planName}} subscription is now active. Here is your onboarding timeline:</p><p><strong>Day 1-2:</strong> Account setup + data migration<br><strong>Day 3-5:</strong> Team training sessions<br><strong>Day 6-7:</strong> Go live with full support</p><p>Your dedicated success manager is {{csmName}} ({{csmEmail}}).</p>', bodyType: 'html', variables: ['firstName', 'planName', 'csmName', 'csmEmail'], tags: ['post-sale', 'onboarding'], isActive: true, usageCount: 8, lastUsedAt: daysAgo(5), createdBy: DEMO_OWNER_ID, createdAt: daysAgo(15), updatedAt: daysAgo(10) },
     { id: 'demo-template-sms-001', isDemo: true, type: 'sms', name: '(Demo) Appointment Reminder', description: 'Sent 1 hour before scheduled demo call', category: 'reminders', body: 'Hi {{firstName}}! Just a reminder — your demo with Acme is in 1 hour at {{time}}. Join here: {{meetingLink}} — Reply HELP for support or STOP to opt out.', variables: ['firstName', 'time', 'meetingLink'], tags: ['reminder', 'demo'], isActive: true, usageCount: 31, lastUsedAt: daysAgo(1), createdBy: DEMO_OWNER_ID, createdAt: daysAgo(20), updatedAt: daysAgo(10) },
     { id: 'demo-template-sms-002', isDemo: true, type: 'sms', name: '(Demo) Quick Follow-Up', description: 'Short text follow-up after no response to email', category: 'sales', body: 'Hey {{firstName}}, Alex from Acme here. Sent you an email about {{topic}} — did you get a chance to look? Happy to jump on a quick call if easier. 📞', variables: ['firstName', 'topic'], tags: ['sales', 'follow-up'], isActive: true, usageCount: 15, lastUsedAt: daysAgo(3), createdBy: DEMO_OWNER_ID, createdAt: daysAgo(18), updatedAt: daysAgo(12) },
   ];
@@ -965,6 +993,9 @@ function getScoringRules(): Record<string, unknown> {
     },
     intentWeights: { hiring: 5, funding: 8, job_change: 6, tech_stack_match: 4, expansion: 6, press_mention: 3, website_update: 2, high_growth: 7, exec_new: 5, product_launch: 4 },
     engagementRules: { email: { openedPoints: 1, clickedPoints: 2, repliedPoints: 5 }, linkedin: { viewedPoints: 1, connectedPoints: 3, repliedPoints: 5 }, phone: { answeredPoints: 5, voicemailPoints: 2 } },
+    scoreThresholds: { hot: 80, warm: 50, cold: 20 },
+    maxScore: 100,
+    decayRules: { enabled: true, decayPeriodDays: 30, decayPercentage: 10 },
     createdAt: daysAgo(28),
     updatedAt: daysAgo(7),
     createdBy: DEMO_OWNER_ID,
@@ -988,9 +1019,9 @@ function getWebhooks(): Array<Record<string, unknown>> {
 
 function getTeamTasks(): Array<Record<string, unknown>> {
   return [
-    { id: 'demo-task-001', isDemo: true, title: '(Demo) Follow up with TechForward Inc. on Enterprise proposal', description: 'Sarah Mitchell requested custom pricing for 50 seats. Prepare and send Enterprise proposal by EOD Friday.', assignedTo: DEMO_OWNER_ID, assignedToName: DEMO_OWNER_NAME, status: 'in_progress', priority: 'high', dueDate: daysFromNow(2), linkedEntityType: 'deal', linkedEntityId: 'demo-deal-004', linkedEntityName: '(Demo) TechForward Enterprise Deal', tags: ['sales', 'enterprise', 'proposal'], createdBy: DEMO_OWNER_ID, createdAt: daysAgo(2), updatedAt: daysAgo(1) },
-    { id: 'demo-task-002', isDemo: true, title: '(Demo) Prepare weekly pipeline report for team meeting', description: 'Compile Q1 pipeline metrics, highlight top 5 deals, and note any at-risk opportunities.', assignedTo: DEMO_OWNER_ID, assignedToName: DEMO_OWNER_NAME, status: 'pending', priority: 'medium', dueDate: daysFromNow(4), tags: ['reporting', 'weekly'], createdBy: DEMO_OWNER_ID, createdAt: daysAgo(1), updatedAt: daysAgo(1) },
-    { id: 'demo-task-003', isDemo: true, title: '(Demo) Onboard Brooks Legal Group — data migration', description: 'Brooks Legal closed their deal. Begin data migration from their spreadsheets. Contact: Michael Brooks, mbrooks@brookslegal.com', assignedTo: DEMO_OWNER_ID, assignedToName: DEMO_OWNER_NAME, status: 'pending', priority: 'high', dueDate: daysFromNow(5), linkedEntityType: 'deal', linkedEntityId: 'demo-deal-006', linkedEntityName: '(Demo) Brooks Legal CRM Migration', tags: ['onboarding', 'migration'], createdBy: DEMO_OWNER_ID, createdAt: daysAgo(3), updatedAt: daysAgo(3) },
+    { id: 'demo-task-001', isDemo: true, title: '(Demo) Follow up with TechForward Inc. on Enterprise proposal', description: 'Sarah Mitchell requested custom pricing for 50 seats. Prepare and send Enterprise proposal by EOD Friday.', assignedTo: DEMO_OWNER_ID, assignedToName: DEMO_OWNER_NAME, status: 'in_progress', priority: 'high', dueDate: daysFromNow(2), linkedEntityType: 'deal', linkedEntityId: 'demo-deal-004', linkedEntityName: '(Demo) TechForward Enterprise Deal', tags: ['sales', 'enterprise', 'proposal'], comments: [{ id: 'comment-001', text: 'Proposal drafted, sending for review', authorId: DEMO_OWNER_ID, authorName: DEMO_OWNER_NAME, createdAt: new Date(Date.now() - 86400000).toISOString() }, { id: 'comment-002', text: 'Sarah confirmed she will loop in their VP of Sales — follow up Monday.', authorId: DEMO_OWNER_ID, authorName: DEMO_OWNER_NAME, createdAt: new Date(Date.now() - 43200000).toISOString() }], createdBy: DEMO_OWNER_ID, createdAt: daysAgo(2), updatedAt: daysAgo(1) },
+    { id: 'demo-task-002', isDemo: true, title: '(Demo) Prepare weekly pipeline report for team meeting', description: 'Compile Q1 pipeline metrics, highlight top 5 deals, and note any at-risk opportunities.', assignedTo: DEMO_OWNER_ID, assignedToName: DEMO_OWNER_NAME, status: 'pending', priority: 'medium', dueDate: daysFromNow(4), tags: ['reporting', 'weekly'], comments: [{ id: 'comment-003', text: 'Data pulled from CRM — will compile the slides tomorrow morning.', authorId: DEMO_OWNER_ID, authorName: DEMO_OWNER_NAME, createdAt: new Date(Date.now() - 7200000).toISOString() }], createdBy: DEMO_OWNER_ID, createdAt: daysAgo(1), updatedAt: daysAgo(1) },
+    { id: 'demo-task-003', isDemo: true, title: '(Demo) Onboard Brooks Legal Group — data migration', description: 'Brooks Legal closed their deal. Begin data migration from their spreadsheets. Contact: Michael Brooks, mbrooks@brookslegal.com', assignedTo: DEMO_OWNER_ID, assignedToName: DEMO_OWNER_NAME, status: 'pending', priority: 'high', dueDate: daysFromNow(5), linkedEntityType: 'deal', linkedEntityId: 'demo-deal-006', linkedEntityName: '(Demo) Brooks Legal CRM Migration', tags: ['onboarding', 'migration'], comments: [{ id: 'comment-004', text: 'Michael sent over their spreadsheet export — 847 contacts total. Starting field mapping.', authorId: DEMO_OWNER_ID, authorName: DEMO_OWNER_NAME, createdAt: new Date(Date.now() - 172800000).toISOString() }], createdBy: DEMO_OWNER_ID, createdAt: daysAgo(3), updatedAt: daysAgo(3) },
     { id: 'demo-task-004', isDemo: true, title: '(Demo) Review and update email sequence templates', description: 'Audit all 3 email templates for accuracy. Update pricing references and add new case study link.', assignedTo: DEMO_OWNER_ID, assignedToName: DEMO_OWNER_NAME, status: 'completed', priority: 'low', dueDate: daysAgo(1), completedAt: daysAgo(1), tags: ['marketing', 'templates'], createdBy: DEMO_OWNER_ID, createdAt: daysAgo(5), updatedAt: daysAgo(1) },
     { id: 'demo-task-005', isDemo: true, title: '(Demo) Schedule demo call with FitLife Wellness', description: 'Tom Bradley from FitLife Wellness wants a 30-minute product demo. Coordinate with calendar and send invite.', assignedTo: DEMO_OWNER_ID, assignedToName: DEMO_OWNER_NAME, status: 'pending', priority: 'medium', dueDate: daysFromNow(3), linkedEntityType: 'contact', linkedEntityId: 'demo-contact-008', linkedEntityName: '(Demo) Tom Bradley', tags: ['sales', 'demo'], createdBy: DEMO_OWNER_ID, createdAt: daysAgo(1), updatedAt: daysAgo(1) },
   ];
@@ -1019,6 +1050,7 @@ function getConversations(): Array<Record<string, unknown>> {
         { id: 'msg-009', role: 'assistant', content: 'You are welcome, Sarah! Looking forward to showing you how Acme can transform your sales process. Have a great day! 😊', timestamp: daysAgo(6) },
       ],
       messageCount: 9, duration: 480, satisfaction: 5,
+      tags: ['demo-booked', 'website-widget'],
       metadata: { source: 'website_chat', page: '/pricing', device: 'desktop', browser: 'Chrome', country: 'US' },
       linkedLeadId: 'demo-lead-001', linkedContactId: 'demo-contact-001',
       createdAt: daysAgo(6), updatedAt: daysAgo(6),
@@ -1036,6 +1068,8 @@ function getConversations(): Array<Record<string, unknown>> {
         { id: 'msg-105', role: 'assistant', content: 'You are welcome! If you have any more questions, feel free to come back anytime. You can also start a free trial at https://demo-acme.salesvelocity.ai/signup — no credit card required. Have a great day!', timestamp: daysAgo(2) },
       ],
       messageCount: 5, duration: 120, satisfaction: null,
+      tags: ['pricing-inquiry'],
+      linkedLeadId: null, linkedContactId: null,
       metadata: { source: 'website_chat', page: '/pricing', device: 'mobile', browser: 'Safari', country: 'US' },
       createdAt: daysAgo(2), updatedAt: daysAgo(2),
     },
@@ -1048,9 +1082,9 @@ function getConversations(): Array<Record<string, unknown>> {
 
 function getIntegrations(): Array<Record<string, unknown>> {
   return [
-    { id: 'demo-integration-001', isDemo: true, type: 'google-calendar', name: '(Demo) Google Calendar', status: 'active', connectedAt: daysAgo(25), lastSyncAt: hoursAgo(1), settings: { autoCreateEvents: true, defaultReminder: 15, syncCalendars: ['primary', 'sales-demos'], twoWaySync: true, reminderSettings: { defaultReminderMinutes: 15 } }, accountEmail: 'alex.morgan@demo-acme.com', capabilities: ['create_events', 'read_events', 'sync'], createdBy: DEMO_OWNER_ID, createdAt: daysAgo(25), updatedAt: hoursAgo(1) },
-    { id: 'demo-integration-002', isDemo: true, type: 'slack', name: '(Demo) Slack — #sales channel', status: 'active', connectedAt: daysAgo(21), lastSyncAt: hoursAgo(3), settings: { channelId: '#sales', notifyOnNewLead: true, notifyOnDealWon: true, notifyOnDealLost: true, dailyDigest: true, digestTime: '09:00' }, teamName: 'Acme Digital', capabilities: ['send_messages', 'create_channels', 'read_messages'], createdBy: DEMO_OWNER_ID, createdAt: daysAgo(21), updatedAt: hoursAgo(3) },
-    { id: 'demo-integration-003', isDemo: true, type: 'stripe', name: '(Demo) Stripe Payments', status: 'active', connectedAt: daysAgo(20), lastSyncAt: daysAgo(1), settings: { testMode: true, webhookEndpoint: 'https://demo-acme.salesvelocity.ai/api/webhooks/stripe', autoCreateInvoice: true, autoRecordPayment: true, currency: 'USD' }, accountId: 'acct_demo_stripe_001', capabilities: ['charge', 'refund', 'subscription', 'invoice'], createdBy: DEMO_OWNER_ID, createdAt: daysAgo(20), updatedAt: daysAgo(1) },
+    { id: 'demo-integration-001', isDemo: true, type: 'google-calendar', name: '(Demo) Google Calendar', status: 'active', connectedAt: daysAgo(25), lastSyncAt: hoursAgo(1), settings: { autoCreateEvents: true, defaultReminder: 15, syncCalendars: ['primary', 'sales-demos'], twoWaySync: true, reminderSettings: { defaultReminderMinutes: 15 } }, accountEmail: 'alex.morgan@demo-acme.com', capabilities: ['create_events', 'read_events', 'sync'], lastError: null, createdBy: DEMO_OWNER_ID, updatedBy: DEMO_OWNER_ID, createdAt: daysAgo(25), updatedAt: hoursAgo(1) },
+    { id: 'demo-integration-002', isDemo: true, type: 'slack', name: '(Demo) Slack — #sales channel', status: 'active', connectedAt: daysAgo(21), lastSyncAt: hoursAgo(3), settings: { channelId: '#sales', notifyOnNewLead: true, notifyOnDealWon: true, notifyOnDealLost: true, dailyDigest: true, digestTime: '09:00' }, teamName: 'Acme Digital', capabilities: ['send_messages', 'create_channels', 'read_messages'], lastError: null, createdBy: DEMO_OWNER_ID, updatedBy: DEMO_OWNER_ID, createdAt: daysAgo(21), updatedAt: hoursAgo(3) },
+    { id: 'demo-integration-003', isDemo: true, type: 'stripe', name: '(Demo) Stripe Payments', status: 'active', connectedAt: daysAgo(20), lastSyncAt: daysAgo(1), settings: { testMode: true, webhookEndpoint: 'https://demo-acme.salesvelocity.ai/api/webhooks/stripe', autoCreateInvoice: true, autoRecordPayment: true, currency: 'USD' }, accountId: 'acct_demo_stripe_001', capabilities: ['charge', 'refund', 'subscription', 'invoice'], lastError: null, createdBy: DEMO_OWNER_ID, updatedBy: DEMO_OWNER_ID, createdAt: daysAgo(20), updatedAt: daysAgo(1) },
   ];
 }
 
@@ -1060,8 +1094,8 @@ function getIntegrations(): Array<Record<string, unknown>> {
 
 function getCustomTools(): Array<Record<string, unknown>> {
   return [
-    { id: 'demo-tool-001', isDemo: true, name: '(Demo) Company Research Tool', description: 'Look up company information from Crunchbase and LinkedIn using our discovery engine.', url: 'https://demo-acme.salesvelocity.ai/api/tools/company-research', icon: '🔍', method: 'POST', headers: { 'Content-Type': 'application/json' }, inputSchema: { type: 'object', properties: { companyName: { type: 'string' }, domain: { type: 'string' } }, required: ['companyName'] }, roles: ['owner', 'admin', 'manager'], enabled: true, displayOrder: 1, usageCount: 67, lastUsedAt: daysAgo(1), createdBy: DEMO_OWNER_ID, createdAt: daysAgo(20), updatedAt: daysAgo(5) },
-    { id: 'demo-tool-002', isDemo: true, name: '(Demo) ROI Calculator', description: 'Calculate potential ROI for prospects based on their current tool stack and team size.', url: 'https://demo-acme.salesvelocity.ai/api/tools/roi-calculator', icon: '💰', method: 'POST', headers: { 'Content-Type': 'application/json' }, inputSchema: { type: 'object', properties: { teamSize: { type: 'number' }, currentTools: { type: 'array', items: { type: 'string' } }, avgDealSize: { type: 'number' } }, required: ['teamSize'] }, roles: ['owner', 'admin', 'manager', 'member'], enabled: true, displayOrder: 2, usageCount: 34, lastUsedAt: daysAgo(2), createdBy: DEMO_OWNER_ID, createdAt: daysAgo(15), updatedAt: daysAgo(8) },
+    { id: 'demo-tool-001', isDemo: true, name: '(Demo) Company Research Tool', description: 'Look up company information from Crunchbase and LinkedIn using our discovery engine.', url: 'https://demo-acme.salesvelocity.ai/api/tools/company-research', icon: '🔍', method: 'POST', headers: { 'Content-Type': 'application/json' }, inputSchema: { type: 'object', properties: { companyName: { type: 'string' }, domain: { type: 'string' } }, required: ['companyName'] }, outputSchema: { type: 'object', properties: { result: { type: 'string' }, confidence: { type: 'number' } } }, timeout: 30, roles: ['owner', 'admin', 'manager'], enabled: true, displayOrder: 1, usageCount: 67, lastUsedAt: daysAgo(1), createdBy: DEMO_OWNER_ID, updatedBy: DEMO_OWNER_ID, createdAt: daysAgo(20), updatedAt: daysAgo(5) },
+    { id: 'demo-tool-002', isDemo: true, name: '(Demo) ROI Calculator', description: 'Calculate potential ROI for prospects based on their current tool stack and team size.', url: 'https://demo-acme.salesvelocity.ai/api/tools/roi-calculator', icon: '💰', method: 'POST', headers: { 'Content-Type': 'application/json' }, inputSchema: { type: 'object', properties: { teamSize: { type: 'number' }, currentTools: { type: 'array', items: { type: 'string' } }, avgDealSize: { type: 'number' } }, required: ['teamSize'] }, outputSchema: { type: 'object', properties: { result: { type: 'string' }, confidence: { type: 'number' } } }, timeout: 30, roles: ['owner', 'admin', 'manager', 'member'], enabled: true, displayOrder: 2, usageCount: 34, lastUsedAt: daysAgo(2), createdBy: DEMO_OWNER_ID, updatedBy: DEMO_OWNER_ID, createdAt: daysAgo(15), updatedAt: daysAgo(8) },
   ];
 }
 
