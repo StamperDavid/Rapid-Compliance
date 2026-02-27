@@ -1,7 +1,7 @@
 # SalesVelocity.ai - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** February 27, 2026 (Redundancy cleanup — 7 duplicate pages replaced with redirects, 2 analytics views merged, sidebar consolidated from ~40 to ~37 items, net -2,850 lines removed)
+**Last Updated:** February 27, 2026 (Eradicated all workspace Firestore paths — 53 files migrated to flat org-scoped collection helpers)
 **Branches:** `dev` (latest)
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Architecture:** Single-Tenant (Penthouse Model) - NOT a SaaS platform
@@ -391,22 +391,20 @@ border-color: #1a1a1a;
 | Agent Config | `organizations/rapid-compliance-root/agentConfig/{agentId}` | AI agent settings |
 | Golden Masters | `organizations/rapid-compliance-root/goldenMasters/{masterId}` | Trained AI model snapshots |
 | Themes | `organizations/rapid-compliance-root/themes/default` | Client theme configuration |
-| Workspaces | `organizations/rapid-compliance-root/workspaces/{wsId}` | Workspace containers |
-| CRM Records | `organizations/rapid-compliance-root/workspaces/{wsId}/entities/{entity}/records/{id}` | Entity records |
-| Schemas | `organizations/rapid-compliance-root/workspaces/{wsId}/schemas/{schemaId}` | Data schemas |
+| CRM Records | `organizations/rapid-compliance-root/{entity}/{id}` | Entity records (flat, no workspace nesting) |
+| Schemas | `organizations/rapid-compliance-root/schemas/{schemaId}` | Data schemas (flat, no workspace nesting) |
 | Email Campaigns | `organizations/rapid-compliance-root/emailCampaigns/{campaignId}` | Email campaign data |
 | Nurture Sequences | `organizations/rapid-compliance-root/nurtureSequences/{sequenceId}` | Nurture sequence data |
 | Signals | `organizations/rapid-compliance-root/signals/{signalId}` | Agent signal bus events |
 
-**Path Builders (in `src/lib/db/firestore-service.ts`):**
+**Collection Helpers (in `src/lib/firebase/collections.ts`):**
 
 ```typescript
-orgPath(subPath)           → organizations/rapid-compliance-root/{subPath}
-workspacePath(wsId, sub)   → organizations/rapid-compliance-root/workspaces/{wsId}/{sub}
-entityRecordsPath(wsId, e) → organizations/rapid-compliance-root/workspaces/{wsId}/entities/{e}/records
+orgCol(collection)         → organizations/rapid-compliance-root/{collection}
+orgDoc(collection, id)     → organizations/rapid-compliance-root/{collection}/{id}
 ```
 
-All three functions are hardcoded to `DEFAULT_ORG_ID`. There is no dynamic org parameter.
+All helpers are hardcoded to `DEFAULT_ORG_ID`. There is no dynamic org parameter. Workspace-scoped path builders (`workspacePath`, `entityRecordsPath`) have been fully eradicated — 53 files migrated to flat org-scoped paths as of February 27, 2026.
 
 **Bug Definition:** Any code that constructs Firestore paths with dynamic organization IDs, nests `users` or `platform_settings` under an organization document, or creates per-user root-level collections for data that belongs at org scope is a **bug**.
 
@@ -1294,6 +1292,8 @@ const res = await authFetch('/api/some-endpoint');
 
 **Utility:** `scripts/find-unprotected.ps1` — PowerShell script to scan for routes missing auth patterns
 
+**Utility:** `scripts/nuke-demo-data.ts` — Cleanup script that wipes all demo/seed data from Firestore under `organizations/rapid-compliance-root`. Run after workspace path migration or before a fresh demo environment reset.
+
 ### Admin Account Bootstrap
 
 To properly configure an admin account, Firebase custom claims must be set:
@@ -1663,7 +1663,7 @@ All 64 API routes that were using the client-side `FirestoreService` have been m
 **Process Flow:**
 1. Authenticate via `requireOrganization` (Bearer token)
 2. Verify `canAssignRecords` permission (RBAC)
-3. Fetch lead from Firestore (`organizations/{orgId}/workspaces/{workspaceId}/entities/leads/records`)
+3. Fetch lead from Firestore (`organizations/rapid-compliance-root/leads/{leadId}`) via flat collection helper
 4. Evaluate routing rules by priority (`organizations/{orgId}/leadRoutingRules`)
 5. Apply matching strategy (round-robin → territory → skill → load-balance)
 6. Update `lead.ownerId` with assigned rep
@@ -1859,8 +1859,7 @@ All 64 API routes that were using the client-side `FirestoreService` have been m
 
 ```
 organizations/{orgId}/
-├── records/                  # CRM records
-├── workspaces/               # Workspace definitions
+├── records/                  # CRM records (flat, workspace nesting removed Feb 27)
 ├── sequences/                # Email sequences
 ├── campaigns/                # Marketing campaigns
 ├── workflows/                # Automation workflows
