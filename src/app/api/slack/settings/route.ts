@@ -14,6 +14,7 @@ import { updateWorkspaceSettingsSchema } from '@/lib/slack/validation';
 import { db } from '@/lib/firebase-admin';
 import { Timestamp } from 'firebase-admin/firestore';
 import type { SlackWorkspace } from '@/lib/slack/types';
+import { getSlackWorkspacesCollection } from '@/lib/firebase/collections';
 import { z } from 'zod';
 
 export const dynamic = 'force-dynamic';
@@ -55,7 +56,7 @@ export async function GET(request: NextRequest) {
     }
     
     // Get workspace
-    const workspaceDoc = await db.collection('slack_workspaces').doc(workspaceId).get();
+    const workspaceDoc = await db.collection(getSlackWorkspacesCollection()).doc(workspaceId).get();
     
     if (!workspaceDoc.exists) {
       return NextResponse.json(
@@ -145,7 +146,7 @@ export async function PUT(request: NextRequest) {
     }
     
     // Get workspace
-    const workspaceDoc = await db.collection('slack_workspaces').doc(workspaceId).get();
+    const workspaceDoc = await db.collection(getSlackWorkspacesCollection()).doc(workspaceId).get();
     
     if (!workspaceDoc.exists) {
       return NextResponse.json(
@@ -163,7 +164,7 @@ export async function PUT(request: NextRequest) {
     };
     
     // Save updated workspace
-    await db.collection('slack_workspaces').doc(workspaceId).update({
+    await db.collection(getSlackWorkspacesCollection()).doc(workspaceId).update({
       settings: updatedSettings,
       updatedAt: Timestamp.now(),
     });

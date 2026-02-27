@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { FirestoreService } from '@/lib/db/firestore-service';
-import { getSubCollection } from '@/lib/firebase/collections';
+import { getDealsCollection } from '@/lib/firebase/collections';
 import { Timestamp } from 'firebase/firestore'
 import { logger } from '@/lib/logger/logger';;
 
@@ -32,7 +32,7 @@ export default function EditDealPage() {
 
   const loadDeal = useCallback(async () => {
     try {
-      const data = await FirestoreService.get(`${getSubCollection('workspaces')}/default/entities/deals/records`, dealId);
+      const data = await FirestoreService.get(getDealsCollection(), dealId);
       setDeal(data as Deal | null);
     } catch (error: unknown) {
       logger.error('Error loading deal:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
@@ -53,7 +53,7 @@ export default function EditDealPage() {
     setErrorMessage(null);
     try {
       setSaving(true);
-      await FirestoreService.update(`${getSubCollection('workspaces')}/default/entities/deals/records`, dealId, { ...deal, updatedAt: Timestamp.now() });
+      await FirestoreService.update(getDealsCollection(), dealId, { ...deal, updatedAt: Timestamp.now() });
       router.push(`/deals/${dealId}`);
     } catch (error: unknown) {
       logger.error('Error updating deal:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });

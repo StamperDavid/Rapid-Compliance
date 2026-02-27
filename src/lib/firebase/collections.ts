@@ -160,6 +160,19 @@ export const getLeadEnrichmentsCollection = (): string => getSubCollection('lead
 export const getThemesCollection = (): string => getSubCollection('themes');
 export const getIntegrationsCollection = (): string => getSubCollection('integrations');
 export const getSeoResearchCollection = (): string => getSubCollection('seoResearch');
+export const getCallsCollection = (): string => getSubCollection('calls');
+export const getTasksCollection = (): string => getSubCollection('tasks');
+export const getConversationsCollection = (): string => getSubCollection('conversations');
+export const getSocialPostsCollection = (): string => getSubCollection('socialPosts');
+export const getBlogPostsCollection = (): string => getSubCollection('blogPosts');
+export const getWebhooksCollection = (): string => getSubCollection('webhooks');
+export const getSlackWorkspacesCollection = (): string => getSubCollection('slack_workspaces');
+export const getTeamTasksCollection = (): string => getSubCollection('teamTasks');
+export const getAnalyticsCollection = (): string => getSubCollection('analytics');
+export const getScoringRulesCollection = (): string => getSubCollection('scoringRules');
+export const getCustomToolsCollection = (): string => getSubCollection('customTools');
+export const getGlobalTemplatesSubCollection = (): string => getSubCollection('globalTemplates');
+export const getPagesCollection = (): string => getSubCollection('pages');
 
 /**
  * Helper for schema sub-collections

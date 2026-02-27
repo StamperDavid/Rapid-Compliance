@@ -19,6 +19,7 @@ import type { SlackService } from './slack-service';
 import { SlackMessageBuilder } from './message-builder';
 import { db } from '@/lib/firebase-admin';
 import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSlackWorkspacesCollection } from '@/lib/firebase/collections';
 import type {
   SlackWorkspace,
   SlackChannelMapping,
@@ -631,7 +632,7 @@ export class SlackSignalHandler {
     category: string
   ): Promise<SlackChannelMapping | null> {
     try {
-      const workspace = await db.collection('slack_workspaces').doc(workspaceId).get();
+      const workspace = await db.collection(getSlackWorkspacesCollection()).doc(workspaceId).get();
       
       if (!workspace.exists) {
         return null;

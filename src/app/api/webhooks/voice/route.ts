@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
-import { getSubCollection } from '@/lib/firebase/collections';
+import { getCallsCollection } from '@/lib/firebase/collections';
 import { logger } from '@/lib/logger/logger';
 import { verifyTwilioSignature, parseFormBody } from '@/lib/security/webhook-verification';
 import { getTwilioAuthToken } from '@/lib/security/twilio-verification';
@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
     }
 
     const calls = await AdminFirestoreService.getAll(
-      `${getSubCollection('workspaces')}/default/calls`,
+      getCallsCollection(),
       []
     );
 
@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
 
     if (call && isCallRecord(call)) {
       await AdminFirestoreService.update(
-        `${getSubCollection('workspaces')}/default/calls`,
+        getCallsCollection(),
         call.id,
         {
           status: callStatus,

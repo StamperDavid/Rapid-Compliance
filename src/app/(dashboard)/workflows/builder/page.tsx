@@ -15,7 +15,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { FirestoreService } from '@/lib/db/firestore-service';
-import { getSubCollection } from '@/lib/firebase/collections';
+import { getWorkflowsCollection } from '@/lib/firebase/collections';
 import { Timestamp } from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
 import { useToast } from '@/hooks/useToast';
@@ -61,7 +61,7 @@ export default function WorkflowBuilderPage() {
     try {
       setIsLoading(true);
       const data = await FirestoreService.get(
-        `${getSubCollection('workspaces')}/default/workflows`,
+        getWorkflowsCollection(),
         id
       );
 
@@ -274,13 +274,13 @@ export default function WorkflowBuilderPage() {
 
       if (workflowId) {
         await FirestoreService.update(
-          `${getSubCollection('workspaces')}/default/workflows`,
+          getWorkflowsCollection(),
           id,
           workflowData
         );
       } else {
         await FirestoreService.set(
-          `${getSubCollection('workspaces')}/default/workflows`,
+          getWorkflowsCollection(),
           id,
           workflowData,
           false

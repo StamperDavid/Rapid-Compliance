@@ -18,6 +18,7 @@ import {
 import { db } from '@/lib/firebase-admin';
 import { Timestamp } from 'firebase-admin/firestore';
 import type { SlackChannelMapping, SlackWorkspace } from '@/lib/slack/types';
+import { getSlackWorkspacesCollection } from '@/lib/firebase/collections';
 
 export const dynamic = 'force-dynamic';
 
@@ -89,7 +90,7 @@ export async function GET(request: NextRequest) {
     }
     
     // Get workspace to verify it exists
-    const workspaceDoc = await db.collection('slack_workspaces').doc(workspaceId).get();
+    const workspaceDoc = await db.collection(getSlackWorkspacesCollection()).doc(workspaceId).get();
 
     if (!workspaceDoc.exists) {
       return NextResponse.json(
@@ -172,7 +173,7 @@ export async function POST(request: NextRequest) {
     const data = validation.data;
     
     // Get workspace
-    const workspaceDoc = await db.collection('slack_workspaces').doc(data.workspaceId).get();
+    const workspaceDoc = await db.collection(getSlackWorkspacesCollection()).doc(data.workspaceId).get();
 
     if (!workspaceDoc.exists) {
       return NextResponse.json(

@@ -703,34 +703,24 @@ async function getLeadData(leadId: string): Promise<LeadData | null> {
       throw new Error('Admin DAL not initialized');
     }
 
-    // Get all workspaces for this organization
-    const workspacesRef = adminDal.getNestedCollection(
-      getSubCollection('workspaces')
-    );
-    const workspacesSnapshot = await workspacesRef.get();
+    // Check leads collection (flat org-scoped path)
+    const leadRef = adminDal.getNestedCollection(
+      getSubCollection('leads')
+    ).doc(leadId);
 
-    for (const workspaceDoc of workspacesSnapshot.docs) {
-      // Check leads collection
-      const leadRef = adminDal.getNestedCollection(
-        `${getSubCollection('workspaces')}/{wsId}/entities/leads/records`,
-        { wsId: workspaceDoc.id }
-      ).doc(leadId);
+    const leadDoc = await leadRef.get();
+    if (leadDoc.exists) {
+      return { id: leadDoc.id, ...leadDoc.data() } as LeadData;
+    }
 
-      const leadDoc = await leadRef.get();
-      if (leadDoc.exists) {
-        return { id: leadDoc.id, ...leadDoc.data() } as LeadData;
-      }
+    // Also check contacts collection (flat org-scoped path)
+    const contactRef = adminDal.getNestedCollection(
+      getSubCollection('contacts')
+    ).doc(leadId);
 
-      // Also check contacts collection
-      const contactRef = adminDal.getNestedCollection(
-        `${getSubCollection('workspaces')}/{wsId}/entities/contacts/records`,
-        { wsId: workspaceDoc.id }
-      ).doc(leadId);
-
-      const contactDoc = await contactRef.get();
-      if (contactDoc.exists) {
-        return { id: contactDoc.id, ...contactDoc.data() } as LeadData;
-      }
+    const contactDoc = await contactRef.get();
+    if (contactDoc.exists) {
+      return { id: contactDoc.id, ...contactDoc.data() } as LeadData;
     }
 
     return null;

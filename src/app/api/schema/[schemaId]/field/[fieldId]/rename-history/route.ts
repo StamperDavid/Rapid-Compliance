@@ -9,7 +9,7 @@ import { logger } from '@/lib/logger/logger';
 import { FieldRenameManager } from '@/lib/schema/field-rename-manager';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import type { SchemaField } from '@/types/schema';
-import { getSubCollection } from '@/lib/firebase/collections';
+import { getSchemasCollection } from '@/lib/firebase/collections';
 
 export const dynamic = 'force-dynamic';
 
@@ -48,7 +48,7 @@ export async function GET(
 
     // Get schema
     const schemaRef = adminDal.getNestedDocRef(
-      `${getSubCollection('workspaces')}/default/schemas/{schemaId}`,
+      `${getSchemasCollection()}/{schemaId}`,
       { schemaId: params.schemaId }
     );
     const schemaDoc = await schemaRef.get();

@@ -28,7 +28,6 @@ import * as path from 'path';
 // ============================================================================
 
 const PLATFORM_ID = 'rapid-compliance-root';
-const WORKSPACE_ID = 'default';
 const DEMO_OWNER_ID = 'demo-owner-001';
 const DEMO_OWNER_NAME = '(Demo) Alex Morgan';
 const DEMO_OWNER_EMAIL = 'alex.morgan@salesvelocity.ai';
@@ -36,17 +35,16 @@ const DEMO_OWNER_EMAIL = 'alex.morgan@salesvelocity.ai';
 // No prefix — single Firestore path for all environments
 const PREFIX = '';
 
-// Path builders
+// Path builders — flat org-level structure (no workspace layer)
 const orgRoot = `${PREFIX}organizations/${PLATFORM_ID}`;
-const wsRoot = `${orgRoot}/${PREFIX}workspaces/${WORKSPACE_ID}`;
-const contactsPath = `${wsRoot}/entities/contacts/records`;
-const leadsPath = `${wsRoot}/entities/leads/records`;
-const dealsPath = `${wsRoot}/entities/deals/records`;
-const activitiesPath = `${wsRoot}/activities`;
-const productsPath = `${wsRoot}/entities/products/records`;
-const campaignsPath = `${wsRoot}/${PREFIX}emailCampaigns`;
-const sequencesPath = `${wsRoot}/${PREFIX}nurtureSequences`;
-const analyticsPath = `${wsRoot}/analytics`;
+const contactsPath = `${orgRoot}/contacts`;
+const leadsPath = `${orgRoot}/leads`;
+const dealsPath = `${orgRoot}/deals`;
+const activitiesPath = `${orgRoot}/activities`;
+const productsPath = `${orgRoot}/products`;
+const campaignsPath = `${orgRoot}/emailCampaigns`;
+const sequencesPath = `${orgRoot}/nurtureSequences`;
+const analyticsPath = `${orgRoot}/analytics`;
 
 // ============================================================================
 // INITIALIZE FIREBASE ADMIN
@@ -139,7 +137,7 @@ function hoursAgo(n: number): admin.firestore.Timestamp {
 const DEMO_CONTACTS = [
   {
     id: 'demo-contact-001',
-    workspaceId: WORKSPACE_ID,
+    isDemo: true,
     firstName: 'Sarah',
     lastName: 'Mitchell',
     name: 'Sarah Mitchell',
@@ -163,7 +161,7 @@ const DEMO_CONTACTS = [
   },
   {
     id: 'demo-contact-002',
-    workspaceId: WORKSPACE_ID,
+    isDemo: true,
     firstName: 'Marcus',
     lastName: 'Chen',
     name: 'Marcus Chen',
@@ -187,7 +185,7 @@ const DEMO_CONTACTS = [
   },
   {
     id: 'demo-contact-003',
-    workspaceId: WORKSPACE_ID,
+    isDemo: true,
     firstName: 'Jessica',
     lastName: 'Ramirez',
     name: 'Jessica Ramirez',
@@ -211,7 +209,7 @@ const DEMO_CONTACTS = [
   },
   {
     id: 'demo-contact-004',
-    workspaceId: WORKSPACE_ID,
+    isDemo: true,
     firstName: 'David',
     lastName: 'Okonkwo',
     name: 'David Okonkwo',
@@ -235,7 +233,7 @@ const DEMO_CONTACTS = [
   },
   {
     id: 'demo-contact-005',
-    workspaceId: WORKSPACE_ID,
+    isDemo: true,
     firstName: 'Emily',
     lastName: 'Thornton',
     name: 'Emily Thornton',
@@ -259,7 +257,7 @@ const DEMO_CONTACTS = [
   },
   {
     id: 'demo-contact-006',
-    workspaceId: WORKSPACE_ID,
+    isDemo: true,
     firstName: 'Ryan',
     lastName: 'Kowalski',
     name: 'Ryan Kowalski',
@@ -283,7 +281,7 @@ const DEMO_CONTACTS = [
   },
   {
     id: 'demo-contact-007',
-    workspaceId: WORKSPACE_ID,
+    isDemo: true,
     firstName: 'Olivia',
     lastName: 'Park',
     name: 'Olivia Park',
@@ -307,7 +305,7 @@ const DEMO_CONTACTS = [
   },
   {
     id: 'demo-contact-008',
-    workspaceId: WORKSPACE_ID,
+    isDemo: true,
     firstName: 'James',
     lastName: 'Whitfield',
     name: 'James Whitfield',
@@ -331,7 +329,7 @@ const DEMO_CONTACTS = [
   },
   {
     id: 'demo-contact-009',
-    workspaceId: WORKSPACE_ID,
+    isDemo: true,
     firstName: 'Priya',
     lastName: 'Sharma',
     name: 'Priya Sharma',
@@ -355,7 +353,7 @@ const DEMO_CONTACTS = [
   },
   {
     id: 'demo-contact-010',
-    workspaceId: WORKSPACE_ID,
+    isDemo: true,
     firstName: 'Nathan',
     lastName: 'Brooks',
     name: 'Nathan Brooks',
@@ -385,7 +383,7 @@ const DEMO_CONTACTS = [
 
 const DEMO_LEADS = [
   {
-    id: 'demo-lead-001', workspaceId: WORKSPACE_ID,
+    id: 'demo-lead-001', isDemo: true,
     firstName: 'Alexandra', lastName: 'Rivera', name: 'Alexandra Rivera',
     email: 'arivera@brightpathconsulting.com', phone: '(555) 210-0001',
     company: '(Demo) BrightPath Consulting', companyName: '(Demo) BrightPath Consulting',
@@ -405,7 +403,7 @@ const DEMO_LEADS = [
     createdAt: daysAgo(2), updatedAt: daysAgo(0),
   },
   {
-    id: 'demo-lead-002', workspaceId: WORKSPACE_ID,
+    id: 'demo-lead-002', isDemo: true,
     firstName: 'Trevor', lastName: 'Hawkins', name: 'Trevor Hawkins',
     email: 'thawkins@velocitymotors.com', phone: '(555) 210-0002',
     company: '(Demo) Velocity Motors', companyName: '(Demo) Velocity Motors',
@@ -425,7 +423,7 @@ const DEMO_LEADS = [
     createdAt: daysAgo(8), updatedAt: daysAgo(3),
   },
   {
-    id: 'demo-lead-003', workspaceId: WORKSPACE_ID,
+    id: 'demo-lead-003', isDemo: true,
     firstName: 'Monica', lastName: 'Santos', name: 'Monica Santos',
     email: 'msantos@pureluxspa.com', phone: '(555) 210-0003',
     company: '(Demo) PureLux Day Spa', companyName: '(Demo) PureLux Day Spa',
@@ -445,7 +443,7 @@ const DEMO_LEADS = [
     createdAt: daysAgo(12), updatedAt: daysAgo(0),
   },
   {
-    id: 'demo-lead-004', workspaceId: WORKSPACE_ID,
+    id: 'demo-lead-004', isDemo: true,
     firstName: 'Liam', lastName: 'Foster', name: 'Liam Foster',
     email: 'lfoster@summitoutdoors.com', phone: '(555) 210-0004',
     company: '(Demo) Summit Outdoor Gear', companyName: '(Demo) Summit Outdoor Gear',
@@ -465,7 +463,7 @@ const DEMO_LEADS = [
     createdAt: daysAgo(6), updatedAt: daysAgo(2),
   },
   {
-    id: 'demo-lead-005', workspaceId: WORKSPACE_ID,
+    id: 'demo-lead-005', isDemo: true,
     firstName: 'Danielle', lastName: 'Nguyen', name: 'Danielle Nguyen',
     email: 'dnguyen@harborviewmed.org', phone: '(555) 210-0005',
     company: '(Demo) HarborView Medical Center', companyName: '(Demo) HarborView Medical Center',
@@ -485,7 +483,7 @@ const DEMO_LEADS = [
     createdAt: daysAgo(3), updatedAt: daysAgo(1),
   },
   {
-    id: 'demo-lead-006', workspaceId: WORKSPACE_ID,
+    id: 'demo-lead-006', isDemo: true,
     firstName: 'Brandon', lastName: 'Wright', name: 'Brandon Wright',
     email: 'bwright@ironcladsecurity.com', phone: '(555) 210-0006',
     company: '(Demo) Ironclad Security Solutions', companyName: '(Demo) Ironclad Security Solutions',
@@ -505,7 +503,7 @@ const DEMO_LEADS = [
     createdAt: daysAgo(10), updatedAt: daysAgo(5),
   },
   {
-    id: 'demo-lead-007', workspaceId: WORKSPACE_ID,
+    id: 'demo-lead-007', isDemo: true,
     firstName: 'Caroline', lastName: 'Hughes', name: 'Caroline Hughes',
     email: 'chughes@petalperfect.com', phone: '(555) 210-0007',
     company: '(Demo) Petal Perfect Floral', companyName: '(Demo) Petal Perfect Floral',
@@ -525,7 +523,7 @@ const DEMO_LEADS = [
     createdAt: daysAgo(30), updatedAt: daysAgo(14),
   },
   {
-    id: 'demo-lead-008', workspaceId: WORKSPACE_ID,
+    id: 'demo-lead-008', isDemo: true,
     firstName: 'Derek', lastName: 'Calloway', name: 'Derek Calloway',
     email: 'dcalloway@apextrade.com', phone: '(555) 210-0008',
     company: '(Demo) Apex Trade Finance', companyName: '(Demo) Apex Trade Finance',
@@ -545,7 +543,7 @@ const DEMO_LEADS = [
     createdAt: daysAgo(45), updatedAt: daysAgo(20),
   },
   {
-    id: 'demo-lead-009', workspaceId: WORKSPACE_ID,
+    id: 'demo-lead-009', isDemo: true,
     firstName: 'Megan', lastName: 'Tran', name: 'Megan Tran',
     email: 'mtran@nomadcoffee.co', phone: '(555) 210-0009',
     company: '(Demo) Nomad Coffee Roasters', companyName: '(Demo) Nomad Coffee Roasters',
@@ -565,7 +563,7 @@ const DEMO_LEADS = [
     createdAt: daysAgo(1), updatedAt: daysAgo(0),
   },
   {
-    id: 'demo-lead-010', workspaceId: WORKSPACE_ID,
+    id: 'demo-lead-010', isDemo: true,
     firstName: 'Greg', lastName: 'Patel', name: 'Greg Patel',
     email: 'gpatel@horizonarchitects.com', phone: '(555) 210-0010',
     company: '(Demo) Horizon Architecture Group', companyName: '(Demo) Horizon Architecture Group',
@@ -585,7 +583,7 @@ const DEMO_LEADS = [
     createdAt: daysAgo(9), updatedAt: daysAgo(4),
   },
   {
-    id: 'demo-lead-011', workspaceId: WORKSPACE_ID,
+    id: 'demo-lead-011', isDemo: true,
     firstName: 'Rachel', lastName: 'Kim', name: 'Rachel Kim',
     email: 'rkim@stellarfintech.io', phone: '(555) 210-0011',
     company: '(Demo) Stellar FinTech', companyName: '(Demo) Stellar FinTech',
@@ -605,7 +603,7 @@ const DEMO_LEADS = [
     createdAt: daysAgo(7), updatedAt: daysAgo(1),
   },
   {
-    id: 'demo-lead-012', workspaceId: WORKSPACE_ID,
+    id: 'demo-lead-012', isDemo: true,
     firstName: 'Tyler', lastName: 'Anderson', name: 'Tyler Anderson',
     email: 'tanderson@elementgym.com', phone: '(555) 210-0012',
     company: '(Demo) Element Fitness Studios', companyName: '(Demo) Element Fitness Studios',
@@ -632,7 +630,7 @@ const DEMO_LEADS = [
 
 const DEMO_DEALS = [
   {
-    id: 'demo-deal-001', workspaceId: WORKSPACE_ID,
+    id: 'demo-deal-001', isDemo: true,
     name: '(Demo) TechForward - Enterprise Marketing Package',
     company: '(Demo) TechForward Solutions', companyName: '(Demo) TechForward Solutions',
     contactId: 'demo-contact-001', value: 84000, currency: 'USD',
@@ -643,7 +641,7 @@ const DEMO_DEALS = [
     createdAt: daysAgo(30), updatedAt: daysAgo(1),
   },
   {
-    id: 'demo-deal-002', workspaceId: WORKSPACE_ID,
+    id: 'demo-deal-002', isDemo: true,
     name: '(Demo) Blue Ridge - Investor Relations Content',
     company: '(Demo) Blue Ridge Capital', companyName: '(Demo) Blue Ridge Capital',
     contactId: 'demo-contact-002', value: 120000, currency: 'USD',
@@ -654,7 +652,7 @@ const DEMO_DEALS = [
     createdAt: daysAgo(22), updatedAt: daysAgo(2),
   },
   {
-    id: 'demo-deal-003', workspaceId: WORKSPACE_ID,
+    id: 'demo-deal-003', isDemo: true,
     name: '(Demo) Suncoast Realty - Lead Gen Funnels',
     company: '(Demo) Suncoast Realty Group', companyName: '(Demo) Suncoast Realty Group',
     contactId: 'demo-contact-003', value: 36000, currency: 'USD',
@@ -665,7 +663,7 @@ const DEMO_DEALS = [
     createdAt: daysAgo(18), updatedAt: daysAgo(5),
   },
   {
-    id: 'demo-deal-004', workspaceId: WORKSPACE_ID,
+    id: 'demo-deal-004', isDemo: true,
     name: '(Demo) FitLife - Brand Launch Package',
     company: '(Demo) FitLife Wellness', companyName: '(Demo) FitLife Wellness',
     contactId: 'demo-contact-004', value: 52000, currency: 'USD',
@@ -676,7 +674,7 @@ const DEMO_DEALS = [
     createdAt: daysAgo(10), updatedAt: daysAgo(4),
   },
   {
-    id: 'demo-deal-005', workspaceId: WORKSPACE_ID,
+    id: 'demo-deal-005', isDemo: true,
     name: '(Demo) Luminary Designs - Social Media Retainer',
     company: '(Demo) Luminary Interior Designs', companyName: '(Demo) Luminary Interior Designs',
     contactId: 'demo-contact-007', value: 48000, currency: 'USD',
@@ -688,7 +686,7 @@ const DEMO_DEALS = [
     createdAt: daysAgo(35), updatedAt: daysAgo(5),
   },
   {
-    id: 'demo-deal-006', workspaceId: WORKSPACE_ID,
+    id: 'demo-deal-006', isDemo: true,
     name: '(Demo) CloudNine - PLG Growth Engine',
     company: '(Demo) CloudNine SaaS', companyName: '(Demo) CloudNine SaaS',
     contactId: 'demo-contact-009', value: 96000, currency: 'USD',
@@ -699,7 +697,7 @@ const DEMO_DEALS = [
     createdAt: daysAgo(20), updatedAt: hoursAgo(4),
   },
   {
-    id: 'demo-deal-007', workspaceId: WORKSPACE_ID,
+    id: 'demo-deal-007', isDemo: true,
     name: '(Demo) Brooks Legal - Local SEO Package',
     company: '(Demo) Brooks & Associates Law', companyName: '(Demo) Brooks & Associates Law',
     contactId: 'demo-contact-010', value: 24000, currency: 'USD',
@@ -711,7 +709,7 @@ const DEMO_DEALS = [
     createdAt: daysAgo(40), updatedAt: daysAgo(7),
   },
   {
-    id: 'demo-deal-008', workspaceId: WORKSPACE_ID,
+    id: 'demo-deal-008', isDemo: true,
     name: '(Demo) Precision Mfg - B2B Lead Gen',
     company: '(Demo) Precision Manufacturing Co', companyName: '(Demo) Precision Manufacturing Co',
     contactId: 'demo-contact-006', value: 18000, currency: 'USD',
@@ -731,7 +729,7 @@ const DEMO_DEALS = [
 
 function makeActivity(overrides: Record<string, unknown>) {
   return {
-    workspaceId: WORKSPACE_ID,
+    isDemo: true,
     createdBy: DEMO_OWNER_ID,
     createdByName: DEMO_OWNER_NAME,
     assignedTo: DEMO_OWNER_ID,
@@ -976,7 +974,7 @@ const DEMO_ACTIVITIES = [
 
 const DEMO_PRODUCTS = [
   {
-    id: 'demo-product-001', workspaceId: WORKSPACE_ID,
+    id: 'demo-product-001', isDemo: true,
     name: '(Demo) Starter Growth Package', description: 'Essential digital marketing for small businesses. Includes basic SEO audit, social media account setup (3 platforms), Google Business Profile optimization, and monthly performance report.',
     sku: 'DEMO-PKG-STARTER', price: 1500, compareAtPrice: 1800, cost: 600, currency: 'USD',
     category: 'Marketing Packages', tags: ['(Demo)', 'Starter', 'Monthly', 'SMB'],
@@ -992,7 +990,7 @@ const DEMO_PRODUCTS = [
     active: true, createdAt: daysAgo(120), updatedAt: daysAgo(10),
   },
   {
-    id: 'demo-product-002', workspaceId: WORKSPACE_ID,
+    id: 'demo-product-002', isDemo: true,
     name: '(Demo) Professional Marketing Suite', description: 'Comprehensive marketing for growing businesses. Includes ongoing SEO optimization, PPC management (Google + Meta), social media management (5 platforms), email campaigns (4/month), and bi-weekly performance reporting with strategy calls.',
     sku: 'DEMO-PKG-PRO', price: 4000, compareAtPrice: 4800, cost: 1800, currency: 'USD',
     category: 'Marketing Packages', tags: ['(Demo)', 'Professional', 'Monthly', 'Growing Business'],
@@ -1008,7 +1006,7 @@ const DEMO_PRODUCTS = [
     active: true, createdAt: daysAgo(120), updatedAt: daysAgo(10),
   },
   {
-    id: 'demo-product-003', workspaceId: WORKSPACE_ID,
+    id: 'demo-product-003', isDemo: true,
     name: '(Demo) Enterprise Growth Engine', description: 'Full-service marketing for enterprises. Dedicated strategist, all marketing channels, custom analytics dashboards, weekly reporting, quarterly business reviews, and priority support. White-glove service.',
     sku: 'DEMO-PKG-ENTERPRISE', price: 8000, compareAtPrice: 10000, cost: 3500, currency: 'USD',
     category: 'Marketing Packages', tags: ['(Demo)', 'Enterprise', 'Monthly', 'White Glove'],
@@ -1024,7 +1022,7 @@ const DEMO_PRODUCTS = [
     active: true, createdAt: daysAgo(120), updatedAt: daysAgo(10),
   },
   {
-    id: 'demo-product-004', workspaceId: WORKSPACE_ID,
+    id: 'demo-product-004', isDemo: true,
     name: '(Demo) Website Design & Build', description: 'Custom website design and development. Includes stakeholder interviews, UX research, wireframing, responsive design (mobile-first), CMS setup (WordPress or Webflow), 5 content pages, blog setup, and 30-day post-launch support.',
     sku: 'DEMO-SVC-WEB', price: 12000, compareAtPrice: 15000, cost: 5000, currency: 'USD',
     category: 'One-Time Services', tags: ['(Demo)', 'Website', 'One-Time', 'Design'],
@@ -1041,7 +1039,7 @@ const DEMO_PRODUCTS = [
     active: true, createdAt: daysAgo(120), updatedAt: daysAgo(10),
   },
   {
-    id: 'demo-product-005', workspaceId: WORKSPACE_ID,
+    id: 'demo-product-005', isDemo: true,
     name: '(Demo) Brand Identity Package', description: 'Complete brand identity system: primary and secondary logo designs, color palette with hex/RGB/CMYK codes, typography selection, 40-page brand guidelines document, social media template kit (20 templates), and business card design.',
     sku: 'DEMO-SVC-BRAND', price: 6500, compareAtPrice: 8000, cost: 2800, currency: 'USD',
     category: 'One-Time Services', tags: ['(Demo)', 'Branding', 'One-Time', 'Identity'],
@@ -1057,7 +1055,7 @@ const DEMO_PRODUCTS = [
     active: true, createdAt: daysAgo(120), updatedAt: daysAgo(10),
   },
   {
-    id: 'demo-product-006', workspaceId: WORKSPACE_ID,
+    id: 'demo-product-006', isDemo: true,
     name: '(Demo) AI Chatbot Setup & Training', description: 'Custom AI chatbot for your website. Includes requirements gathering, chatbot personality design, training on your business data (products, FAQs, policies), website integration, testing, and 90-day optimization period with weekly tuning.',
     sku: 'DEMO-SVC-AI', price: 3500, compareAtPrice: 4500, cost: 1200, currency: 'USD',
     category: 'AI Services', tags: ['(Demo)', 'AI', 'Chatbot', 'Automation'],
@@ -1081,7 +1079,7 @@ const DEMO_PRODUCTS = [
 
 const DEMO_CAMPAIGNS = [
   {
-    id: 'demo-campaign-001', workspaceId: WORKSPACE_ID,
+    id: 'demo-campaign-001', isDemo: true,
     name: '(Demo) Q1 Service Launch Announcement', type: 'broadcast', status: 'sent',
     subject: 'Introducing Our New AI-Powered Growth Services',
     fromName: DEMO_OWNER_NAME, fromEmail: DEMO_OWNER_EMAIL,
@@ -1092,7 +1090,7 @@ const DEMO_CAMPAIGNS = [
     createdAt: daysAgo(20), updatedAt: daysAgo(14),
   },
   {
-    id: 'demo-campaign-002', workspaceId: WORKSPACE_ID,
+    id: 'demo-campaign-002', isDemo: true,
     name: '(Demo) Monthly Client Newsletter - February', type: 'broadcast', status: 'sent',
     subject: 'February Insights: Marketing Trends + Client Wins',
     fromName: DEMO_OWNER_NAME, fromEmail: DEMO_OWNER_EMAIL,
@@ -1103,7 +1101,7 @@ const DEMO_CAMPAIGNS = [
     createdAt: daysAgo(10), updatedAt: daysAgo(5),
   },
   {
-    id: 'demo-campaign-003', workspaceId: WORKSPACE_ID,
+    id: 'demo-campaign-003', isDemo: true,
     name: '(Demo) Spring Promotion: Free SEO Audit', type: 'broadcast', status: 'draft',
     subject: 'Get Your Free SEO Audit - Limited Time Offer',
     fromName: DEMO_OWNER_NAME, fromEmail: DEMO_OWNER_EMAIL,
@@ -1121,7 +1119,7 @@ const DEMO_CAMPAIGNS = [
 
 const DEMO_SEQUENCES = [
   {
-    id: 'demo-sequence-001', workspaceId: WORKSPACE_ID,
+    id: 'demo-sequence-001', isDemo: true,
     name: '(Demo) Inbound Lead Nurture',
     description: 'Automated nurture sequence for new inbound leads. 5-step email series over 14 days designed to educate, build trust, and convert.',
     status: 'active',
@@ -1144,7 +1142,7 @@ const DEMO_SEQUENCES = [
     createdAt: daysAgo(60), updatedAt: daysAgo(1),
   },
   {
-    id: 'demo-sequence-002', workspaceId: WORKSPACE_ID,
+    id: 'demo-sequence-002', isDemo: true,
     name: '(Demo) Re-engagement: Lost Deals',
     description: 'Win-back sequence for lost deals. 3-step sequence with value-driven content. Triggered manually when a deal is marked as lost.',
     status: 'active',
@@ -1178,7 +1176,6 @@ async function seedDemoAccount() {
   console.log(`  Environment: ${APP_ENV}`);
   console.log(`  Collection prefix: "${PREFIX}" ${IS_PRODUCTION ? '(PRODUCTION - no prefix)' : '(dev - test_ prefix)'}`);
   console.log(`  Platform ID: ${PLATFORM_ID}`);
-  console.log(`  Workspace: ${WORKSPACE_ID}`);
   console.log(`  Demo Owner: ${DEMO_OWNER_NAME} (${DEMO_OWNER_ID})`);
   console.log('');
 
@@ -1259,7 +1256,7 @@ async function seedDemoAccount() {
 
     await db.doc(`${analyticsPath}/${dateStr}`).set({
       date: dateStr,
-      workspaceId: WORKSPACE_ID,
+      isDemo: true,
       leadsCreated: Math.round((Math.random() * 4 + 1) * recencyMultiplier * weekdayMultiplier),
       contactsCreated: Math.round((Math.random() * 2 + 1) * recencyMultiplier * weekdayMultiplier),
       dealsCreated: Math.round((Math.random() * 2) * recencyMultiplier * weekdayMultiplier),
@@ -1281,7 +1278,6 @@ async function seedDemoAccount() {
       conversionRate: Math.round((Math.random() * 15 + 10) * 100) / 100,
       averageDealSize: Math.round(35000 + (Math.random() * 10000 - 5000)),
       timestamp: ts.fromDate(date),
-      isDemo: true,
       createdAt: ts.fromDate(date),
       updatedAt: ts.fromDate(date),
     });

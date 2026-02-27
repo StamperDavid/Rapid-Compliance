@@ -1,11 +1,10 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
-import { COLLECTIONS } from '@/lib/firebase/collections';
+import { getLeadsCollection } from '@/lib/firebase/collections';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { withCache } from '@/lib/cache/analytics-cache';
-import { PLATFORM_ID } from '@/lib/constants/platform';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { limit } from 'firebase/firestore';
 
@@ -124,7 +123,7 @@ async function calculateLeadScoringAnalytics(period: string) {
   }
 
   // Get leads from Firestore (with safety limit)
-  const leadsPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/default/entities/leads`;
+  const leadsPath = getLeadsCollection();
   let allLeads: LeadRecord[] = [];
   const QUERY_LIMIT = 10000;
 

@@ -16,6 +16,7 @@ import { listChannelsSchema } from '@/lib/slack/validation';
 import { db } from '@/lib/firebase-admin';
 import { Timestamp } from 'firebase-admin/firestore';
 import type { SlackWorkspace, SlackChannel } from '@/lib/slack/types';
+import { getSlackWorkspacesCollection } from '@/lib/firebase/collections';
 
 export const dynamic = 'force-dynamic';
 
@@ -67,7 +68,7 @@ export async function GET(request: NextRequest) {
     
     // Get workspace
     const validatedWorkspaceId = validation.data.workspaceId;
-    const workspaceDoc = await db.collection('slack_workspaces').doc(validatedWorkspaceId).get();
+    const workspaceDoc = await db.collection(getSlackWorkspacesCollection()).doc(validatedWorkspaceId).get();
     
     if (!workspaceDoc.exists) {
       return NextResponse.json(

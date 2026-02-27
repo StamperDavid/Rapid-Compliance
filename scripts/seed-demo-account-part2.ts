@@ -44,36 +44,31 @@ import * as path from 'path';
 // ============================================================================
 
 const PLATFORM_ID = 'rapid-compliance-root';
-const WORKSPACE_ID = 'default';
 const DEMO_OWNER_ID = 'demo-owner-001';
 const DEMO_OWNER_NAME = '(Demo) Alex Morgan';
 const DEMO_OWNER_EMAIL = 'alex.morgan@salesvelocity.ai';
 
-// No prefix — single Firestore path for all environments
-const PREFIX = '';
-
-// Path builders
-const orgRoot = `${PREFIX}organizations/${PLATFORM_ID}`;
-const wsRoot = `${orgRoot}/${PREFIX}workspaces/${WORKSPACE_ID}`;
+// Flat org-level paths — no workspace layer
+const orgRoot = `organizations/${PLATFORM_ID}`;
 
 // Part 2 collection paths
-const workflowsPath = `${wsRoot}/${PREFIX}workflows`;
-const formsPath = `${wsRoot}/${PREFIX}forms`;
-const pagesPath = `${wsRoot}/${PREFIX}pages`;
-const blogPostsPath = `${wsRoot}/${PREFIX}blogPosts`;
-const siteConfigPath = `${orgRoot}/${PREFIX}siteConfig`;
-const themesPath = `${orgRoot}/${PREFIX}themes`;
-const navigationPath = `${orgRoot}/${PREFIX}navigation`;
-const socialPostsPath = `${wsRoot}/${PREFIX}socialPosts`;
-const ordersPath = `${wsRoot}/entities/orders/records`;
-const globalTemplatesPath = `${wsRoot}/${PREFIX}globalTemplates`;
-const scoringRulesPath = `${wsRoot}/${PREFIX}scoringRules`;
-const webhooksPath = `${wsRoot}/${PREFIX}webhooks`;
-const teamTasksPath = `${wsRoot}/${PREFIX}teamTasks`;
-const conversationsPath = `${wsRoot}/${PREFIX}conversations`;
-const integrationsPath = `${wsRoot}/${PREFIX}integrations`;
-const customToolsPath = `${wsRoot}/${PREFIX}customTools`;
-const onboardingPath = `${orgRoot}/${PREFIX}onboarding`;
+const workflowsPath = `${orgRoot}/workflows`;
+const formsPath = `${orgRoot}/forms`;
+const pagesPath = `${orgRoot}/pages`;
+const blogPostsPath = `${orgRoot}/blogPosts`;
+const siteConfigPath = `${orgRoot}/siteConfig`;
+const themesPath = `${orgRoot}/themes`;
+const navigationPath = `${orgRoot}/navigation`;
+const socialPostsPath = `${orgRoot}/socialPosts`;
+const ordersPath = `${orgRoot}/orders`;
+const globalTemplatesPath = `${orgRoot}/globalTemplates`;
+const scoringRulesPath = `${orgRoot}/scoringRules`;
+const webhooksPath = `${orgRoot}/webhooks`;
+const teamTasksPath = `${orgRoot}/teamTasks`;
+const conversationsPath = `${orgRoot}/conversations`;
+const integrationsPath = `${orgRoot}/integrations`;
+const customToolsPath = `${orgRoot}/customTools`;
+const onboardingPath = `${orgRoot}/onboarding`;
 const personaPath = `${orgRoot}/agent`;
 
 // ============================================================================
@@ -248,6 +243,7 @@ function getOnboardingData(): Record<string, unknown> {
     completedAt: new Date(Date.now() - 30 * 86400000).toISOString(),
     completedBy: DEMO_OWNER_ID,
     version: '2.0',
+    isDemo: true,
   };
 }
 
@@ -311,6 +307,7 @@ function getAgentPersona(): Record<string, unknown> {
     createdBy: DEMO_OWNER_ID,
     updatedBy: DEMO_OWNER_ID,
     version: 3,
+    isDemo: true,
   };
 }
 
@@ -322,7 +319,7 @@ function getWorkflows(): Array<Record<string, unknown>> {
   return [
     {
       id: 'demo-workflow-001',
-      workspaceId: WORKSPACE_ID,
+      isDemo: true,
       name: '(Demo) New Lead Auto-Enrichment & Assignment',
       description: 'When a new lead is created, automatically enrich with company data, score the lead, and assign to the appropriate sales rep.',
       icon: '🔄',
@@ -367,7 +364,7 @@ function getWorkflows(): Array<Record<string, unknown>> {
     },
     {
       id: 'demo-workflow-002',
-      workspaceId: WORKSPACE_ID,
+      isDemo: true,
       name: '(Demo) Weekly Pipeline Review Report',
       description: 'Every Monday at 9am, compile pipeline metrics and email a summary to the sales team.',
       icon: '📊',
@@ -395,7 +392,7 @@ function getWorkflows(): Array<Record<string, unknown>> {
     },
     {
       id: 'demo-workflow-003',
-      workspaceId: WORKSPACE_ID,
+      isDemo: true,
       name: '(Demo) Contact Form → Lead + Slack Notification',
       description: 'When the website contact form is submitted, create a lead and notify the #sales channel in Slack.',
       icon: '📝',
@@ -443,7 +440,7 @@ function getForms(): Array<{ form: Record<string, unknown>; fields: Array<Record
     {
       form: {
         id: 'demo-form-001',
-        workspaceId: WORKSPACE_ID,
+        isDemo: true,
         name: '(Demo) Website Contact Form',
         description: 'Main contact form embedded on the website. Captures leads and maps to CRM.',
         status: 'published',
@@ -487,19 +484,19 @@ function getForms(): Array<{ form: Record<string, unknown>; fields: Array<Record
         viewCount: 187,
       },
       fields: [
-        { id: 'field-fname', formId: 'demo-form-001', workspaceId: WORKSPACE_ID, type: 'text', label: 'First Name', name: 'firstName', placeholder: 'John', order: 0, pageIndex: 0, width: 'half', validation: { required: true, minLength: 1, maxLength: 50 }, createdAt: daysAgo(25), updatedAt: daysAgo(25) },
-        { id: 'field-lname', formId: 'demo-form-001', workspaceId: WORKSPACE_ID, type: 'text', label: 'Last Name', name: 'lastName', placeholder: 'Doe', order: 1, pageIndex: 0, width: 'half', validation: { required: true, minLength: 1, maxLength: 50 }, createdAt: daysAgo(25), updatedAt: daysAgo(25) },
-        { id: 'field-email', formId: 'demo-form-001', workspaceId: WORKSPACE_ID, type: 'email', label: 'Email Address', name: 'email', placeholder: 'john@company.com', order: 2, pageIndex: 0, width: 'full', validation: { required: true }, createdAt: daysAgo(25), updatedAt: daysAgo(25) },
-        { id: 'field-company', formId: 'demo-form-001', workspaceId: WORKSPACE_ID, type: 'text', label: 'Company', name: 'company', placeholder: 'Acme Inc.', order: 3, pageIndex: 0, width: 'half', validation: { required: false }, createdAt: daysAgo(25), updatedAt: daysAgo(25) },
-        { id: 'field-phone', formId: 'demo-form-001', workspaceId: WORKSPACE_ID, type: 'phone', label: 'Phone', name: 'phone', placeholder: '(555) 123-4567', order: 4, pageIndex: 0, width: 'half', validation: { required: false }, createdAt: daysAgo(25), updatedAt: daysAgo(25) },
-        { id: 'field-message', formId: 'demo-form-001', workspaceId: WORKSPACE_ID, type: 'textarea', label: 'Message', name: 'message', placeholder: 'Tell us about your needs...', order: 5, pageIndex: 0, width: 'full', validation: { required: true, minLength: 10, maxLength: 2000 }, createdAt: daysAgo(25), updatedAt: daysAgo(25) },
+        { id: 'field-fname', formId: 'demo-form-001', isDemo: true, type: 'text', label: 'First Name', name: 'firstName', placeholder: 'John', order: 0, pageIndex: 0, width: 'half', validation: { required: true, minLength: 1, maxLength: 50 }, createdAt: daysAgo(25), updatedAt: daysAgo(25) },
+        { id: 'field-lname', formId: 'demo-form-001', isDemo: true, type: 'text', label: 'Last Name', name: 'lastName', placeholder: 'Doe', order: 1, pageIndex: 0, width: 'half', validation: { required: true, minLength: 1, maxLength: 50 }, createdAt: daysAgo(25), updatedAt: daysAgo(25) },
+        { id: 'field-email', formId: 'demo-form-001', isDemo: true, type: 'email', label: 'Email Address', name: 'email', placeholder: 'john@company.com', order: 2, pageIndex: 0, width: 'full', validation: { required: true }, createdAt: daysAgo(25), updatedAt: daysAgo(25) },
+        { id: 'field-company', formId: 'demo-form-001', isDemo: true, type: 'text', label: 'Company', name: 'company', placeholder: 'Acme Inc.', order: 3, pageIndex: 0, width: 'half', validation: { required: false }, createdAt: daysAgo(25), updatedAt: daysAgo(25) },
+        { id: 'field-phone', formId: 'demo-form-001', isDemo: true, type: 'phone', label: 'Phone', name: 'phone', placeholder: '(555) 123-4567', order: 4, pageIndex: 0, width: 'half', validation: { required: false }, createdAt: daysAgo(25), updatedAt: daysAgo(25) },
+        { id: 'field-message', formId: 'demo-form-001', isDemo: true, type: 'textarea', label: 'Message', name: 'message', placeholder: 'Tell us about your needs...', order: 5, pageIndex: 0, width: 'full', validation: { required: true, minLength: 10, maxLength: 2000 }, createdAt: daysAgo(25), updatedAt: daysAgo(25) },
       ],
       submissions: [
         {
           id: 'demo-submission-001',
           formId: 'demo-form-001',
           formVersion: 2,
-          workspaceId: WORKSPACE_ID,
+          isDemo: true,
           status: 'completed',
           responses: [
             { fieldId: 'field-fname', fieldName: 'firstName', fieldType: 'text', value: 'Sarah', displayValue: 'Sarah' },
@@ -529,7 +526,7 @@ function getForms(): Array<{ form: Record<string, unknown>; fields: Array<Record
           id: 'demo-submission-002',
           formId: 'demo-form-001',
           formVersion: 2,
-          workspaceId: WORKSPACE_ID,
+          isDemo: true,
           status: 'completed',
           responses: [
             { fieldId: 'field-fname', fieldName: 'firstName', fieldType: 'text', value: 'Michael', displayValue: 'Michael' },
@@ -558,7 +555,7 @@ function getForms(): Array<{ form: Record<string, unknown>; fields: Array<Record
     {
       form: {
         id: 'demo-form-002',
-        workspaceId: WORKSPACE_ID,
+        isDemo: true,
         name: '(Demo) Customer Satisfaction Survey',
         description: 'Post-onboarding survey to gauge customer satisfaction and gather product feedback.',
         status: 'published',
@@ -598,18 +595,18 @@ function getForms(): Array<{ form: Record<string, unknown>; fields: Array<Record
         viewCount: 24,
       },
       fields: [
-        { id: 'field-rating', formId: 'demo-form-002', workspaceId: WORKSPACE_ID, type: 'rating', label: 'Overall satisfaction', name: 'satisfaction', order: 0, pageIndex: 0, width: 'full', validation: { required: true }, createdAt: daysAgo(14), updatedAt: daysAgo(14) },
-        { id: 'field-recommend', formId: 'demo-form-002', workspaceId: WORKSPACE_ID, type: 'scale', label: 'How likely are you to recommend us? (1-10)', name: 'npsScore', order: 1, pageIndex: 0, width: 'full', validation: { required: true, min: 1, max: 10 }, createdAt: daysAgo(14), updatedAt: daysAgo(14) },
-        { id: 'field-fav-feature', formId: 'demo-form-002', workspaceId: WORKSPACE_ID, type: 'dropdown', label: 'Favorite feature', name: 'favoriteFeature', order: 0, pageIndex: 1, width: 'full', options: [{ label: 'AI Lead Scoring', value: 'lead_scoring' }, { label: 'Email Campaigns', value: 'email_campaigns' }, { label: 'Pipeline Management', value: 'pipeline' }, { label: 'Workflow Automation', value: 'workflows' }, { label: 'Forms', value: 'forms' }], validation: { required: true }, createdAt: daysAgo(14), updatedAt: daysAgo(14) },
-        { id: 'field-improvement', formId: 'demo-form-002', workspaceId: WORKSPACE_ID, type: 'textarea', label: 'What could we improve?', name: 'improvement', placeholder: 'Your suggestions...', order: 1, pageIndex: 1, width: 'full', validation: { required: false, maxLength: 1000 }, createdAt: daysAgo(14), updatedAt: daysAgo(14) },
-        { id: 'field-followup', formId: 'demo-form-002', workspaceId: WORKSPACE_ID, type: 'checkbox', label: 'I am open to a follow-up call', name: 'openToFollowUp', order: 2, pageIndex: 1, width: 'full', validation: { required: false }, createdAt: daysAgo(14), updatedAt: daysAgo(14) },
+        { id: 'field-rating', formId: 'demo-form-002', isDemo: true, type: 'rating', label: 'Overall satisfaction', name: 'satisfaction', order: 0, pageIndex: 0, width: 'full', validation: { required: true }, createdAt: daysAgo(14), updatedAt: daysAgo(14) },
+        { id: 'field-recommend', formId: 'demo-form-002', isDemo: true, type: 'scale', label: 'How likely are you to recommend us? (1-10)', name: 'npsScore', order: 1, pageIndex: 0, width: 'full', validation: { required: true, min: 1, max: 10 }, createdAt: daysAgo(14), updatedAt: daysAgo(14) },
+        { id: 'field-fav-feature', formId: 'demo-form-002', isDemo: true, type: 'dropdown', label: 'Favorite feature', name: 'favoriteFeature', order: 0, pageIndex: 1, width: 'full', options: [{ label: 'AI Lead Scoring', value: 'lead_scoring' }, { label: 'Email Campaigns', value: 'email_campaigns' }, { label: 'Pipeline Management', value: 'pipeline' }, { label: 'Workflow Automation', value: 'workflows' }, { label: 'Forms', value: 'forms' }], validation: { required: true }, createdAt: daysAgo(14), updatedAt: daysAgo(14) },
+        { id: 'field-improvement', formId: 'demo-form-002', isDemo: true, type: 'textarea', label: 'What could we improve?', name: 'improvement', placeholder: 'Your suggestions...', order: 1, pageIndex: 1, width: 'full', validation: { required: false, maxLength: 1000 }, createdAt: daysAgo(14), updatedAt: daysAgo(14) },
+        { id: 'field-followup', formId: 'demo-form-002', isDemo: true, type: 'checkbox', label: 'I am open to a follow-up call', name: 'openToFollowUp', order: 2, pageIndex: 1, width: 'full', validation: { required: false }, createdAt: daysAgo(14), updatedAt: daysAgo(14) },
       ],
       submissions: [
         {
           id: 'demo-submission-003',
           formId: 'demo-form-002',
           formVersion: 1,
-          workspaceId: WORKSPACE_ID,
+          isDemo: true,
           status: 'completed',
           responses: [
             { fieldId: 'field-rating', fieldName: 'satisfaction', fieldType: 'rating', value: 5, displayValue: '5/5' },
@@ -645,6 +642,7 @@ function getWebsitePages(): Array<Record<string, unknown>> {
   return [
     {
       id: 'demo-page-home',
+      isDemo: true,
       slug: '/',
       title: '(Demo) Home — Acme Digital Solutions',
       content: [
@@ -665,6 +663,7 @@ function getWebsitePages(): Array<Record<string, unknown>> {
     },
     {
       id: 'demo-page-about',
+      isDemo: true,
       slug: '/about',
       title: '(Demo) About Us — Acme Digital Solutions',
       content: [
@@ -683,6 +682,7 @@ function getWebsitePages(): Array<Record<string, unknown>> {
     },
     {
       id: 'demo-page-pricing',
+      isDemo: true,
       slug: '/pricing',
       title: '(Demo) Pricing — Acme Digital Solutions',
       content: [
@@ -709,6 +709,7 @@ function getBlogPosts(): Array<Record<string, unknown>> {
   return [
     {
       id: 'demo-blog-001',
+      isDemo: true,
       slug: 'ai-lead-scoring-guide',
       title: '(Demo) The Complete Guide to AI Lead Scoring in 2026',
       excerpt: 'Learn how AI lead scoring can help your sales team prioritize the right prospects and close deals 3x faster.',
@@ -732,6 +733,7 @@ function getBlogPosts(): Array<Record<string, unknown>> {
     },
     {
       id: 'demo-blog-002',
+      isDemo: true,
       slug: '5-email-sequence-templates',
       title: '(Demo) 5 Email Sequence Templates That Convert',
       excerpt: 'Proven email sequences for onboarding, nurture, re-engagement, and more — ready to copy and customize.',
@@ -755,6 +757,7 @@ function getBlogPosts(): Array<Record<string, unknown>> {
     },
     {
       id: 'demo-blog-003',
+      isDemo: true,
       slug: 'crm-migration-checklist',
       title: '(Demo) CRM Migration Checklist: Moving from Spreadsheets to a Real CRM',
       excerpt: 'Step-by-step guide to migrating your sales data from spreadsheets to a modern CRM without losing anything.',
@@ -785,6 +788,7 @@ function getBlogPosts(): Array<Record<string, unknown>> {
 function getSiteConfig(): Record<string, unknown> {
   return {
     id: 'demo-site-config',
+    isDemo: true,
     subdomain: 'demo-acme',
     customDomain: 'demo-acme.salesvelocity.ai',
     customDomainVerified: true,
@@ -811,6 +815,7 @@ function getSiteConfig(): Record<string, unknown> {
 function getSiteTheme(): Record<string, unknown> {
   return {
     id: 'demo-theme',
+    isDemo: true,
     branding: { logo: '/images/logo.svg', logoLight: '/images/logo-white.svg', logoDark: '/images/logo-dark.svg', favicon: '/favicon.ico', brandName: '(Demo) Acme Digital Solutions', tagline: 'Close Deals 3x Faster with AI' },
     colors: { primary: '#2563eb', secondary: '#7c3aed', accent: '#f59e0b', background: '#ffffff', surface: '#f8fafc', text: '#0f172a', textSecondary: '#64748b', border: '#e2e8f0', success: '#22c55e', warning: '#f59e0b', error: '#ef4444', info: '#3b82f6' },
     typography: { headingFont: 'Inter', bodyFont: 'Inter', h1Size: '3rem', h2Size: '2.25rem', h3Size: '1.875rem', h4Size: '1.5rem', h5Size: '1.25rem', h6Size: '1rem', bodySize: '1rem', headingWeight: 700, bodyWeight: 400, headingLineHeight: '1.2', bodyLineHeight: '1.6' },
@@ -823,6 +828,7 @@ function getSiteTheme(): Record<string, unknown> {
 function getNavigation(): Record<string, unknown> {
   return {
     id: 'demo-navigation',
+    isDemo: true,
     header: [
       { id: 'nav-home', label: 'Home', url: '/', type: 'page', newTab: false },
       { id: 'nav-features', label: 'Features', url: '/features', type: 'page', newTab: false },
@@ -857,14 +863,14 @@ function getNavigation(): Record<string, unknown> {
 
 function getSocialPosts(): Array<Record<string, unknown>> {
   return [
-    { id: 'demo-social-001', platform: 'twitter', content: '🚀 Just launched our AI Lead Scoring feature! Your sales team can now auto-prioritize leads based on 20+ signals. No more guessing — let AI do the heavy lifting. #SalesAI #CRM #B2B', status: 'published', publishedAt: daysAgo(7), platformPostId: 'tw_demo_001', metrics: { impressions: 4200, engagements: 312, likes: 89, comments: 14, shares: 28, clicks: 67, reach: 3800 }, createdBy: DEMO_OWNER_ID, createdAt: daysAgo(7), updatedAt: daysAgo(7) },
-    { id: 'demo-social-002', platform: 'linkedin', content: 'Exciting news from Acme Digital Solutions! 🎉\n\nWe just hit 500+ companies using our AI-powered CRM. In the past quarter alone, our customers:\n\n✅ Closed 3x more deals\n✅ Reduced lead response time by 80%\n✅ Saved 15+ hours/week on manual data entry\n\nThe future of sales is AI-native. Are you ready?\n\n#SalesAutomation #AI #CRM #SaaS #B2BSales', status: 'published', publishedAt: daysAgo(5), platformPostId: 'li_demo_001', metrics: { impressions: 8900, engagements: 567, likes: 234, comments: 42, shares: 89, clicks: 156, reach: 7200 }, createdBy: DEMO_OWNER_ID, createdAt: daysAgo(5), updatedAt: daysAgo(5) },
-    { id: 'demo-social-003', platform: 'twitter', content: '💡 Pro tip: The best time to follow up with a lead is within 5 minutes of their first interaction. Our AI agent does this automatically — 24/7, no coffee breaks needed. ☕ #SalesTips #AIAgent', status: 'published', publishedAt: daysAgo(3), platformPostId: 'tw_demo_002', metrics: { impressions: 2800, engagements: 198, likes: 67, comments: 8, shares: 19, clicks: 34, reach: 2400 }, createdBy: DEMO_OWNER_ID, createdAt: daysAgo(3), updatedAt: daysAgo(3) },
-    { id: 'demo-social-004', platform: 'linkedin', content: 'New blog post: "The Complete Guide to AI Lead Scoring in 2026"\n\nWe break down exactly how AI scoring works, why it matters, and how to set it up in under 10 minutes.\n\n🔗 Read the full guide: https://demo-acme.salesvelocity.ai/blog/ai-lead-scoring-guide\n\n#LeadScoring #SalesAutomation #AIinSales', status: 'scheduled', scheduledAt: daysFromNow(1), createdBy: DEMO_OWNER_ID, createdAt: daysAgo(1), updatedAt: daysAgo(1) },
-    { id: 'demo-social-005', platform: 'twitter', content: '📊 Did you know? Companies that use AI for lead scoring see a 30% increase in sales productivity. We built ours from the ground up — no third-party APIs, no data leaving your account. Privacy-first AI. 🔒', status: 'scheduled', scheduledAt: daysFromNow(2), createdBy: DEMO_OWNER_ID, createdAt: daysAgo(1), updatedAt: daysAgo(1) },
-    { id: 'demo-social-006', platform: 'twitter', content: 'Thinking about migrating your CRM? Here is a quick checklist:\n\n1️⃣ Export all contacts + deals\n2️⃣ Map your custom fields\n3️⃣ Set up automations\n4️⃣ Train your team\n5️⃣ Go live with confidence\n\nWe handle steps 1-4 for free. Seriously. 🤝', status: 'draft', createdBy: DEMO_OWNER_ID, createdAt: daysAgo(1), updatedAt: daysAgo(1) },
-    { id: 'demo-social-007', platform: 'linkedin', content: 'Case Study: How TechForward Inc. Closed $1.2M in Pipeline Using Acme AI\n\n(Full case study coming next week — stay tuned!)', status: 'draft', createdBy: DEMO_OWNER_ID, createdAt: now, updatedAt: now },
-    { id: 'demo-social-008', platform: 'twitter', content: 'Our latest customer went from spreadsheets to closing their first deal in Acme CRM in under 48 hours. Setup wizard + AI import = magic. ✨ Try it free → https://demo-acme.salesvelocity.ai/signup', status: 'queued', createdBy: DEMO_OWNER_ID, createdAt: daysAgo(2), updatedAt: daysAgo(2) },
+    { id: 'demo-social-001', isDemo: true, platform: 'twitter', content: '🚀 Just launched our AI Lead Scoring feature! Your sales team can now auto-prioritize leads based on 20+ signals. No more guessing — let AI do the heavy lifting. #SalesAI #CRM #B2B', status: 'published', publishedAt: daysAgo(7), platformPostId: 'tw_demo_001', metrics: { impressions: 4200, engagements: 312, likes: 89, comments: 14, shares: 28, clicks: 67, reach: 3800 }, createdBy: DEMO_OWNER_ID, createdAt: daysAgo(7), updatedAt: daysAgo(7) },
+    { id: 'demo-social-002', isDemo: true, platform: 'linkedin', content: 'Exciting news from Acme Digital Solutions! 🎉\n\nWe just hit 500+ companies using our AI-powered CRM. In the past quarter alone, our customers:\n\n✅ Closed 3x more deals\n✅ Reduced lead response time by 80%\n✅ Saved 15+ hours/week on manual data entry\n\nThe future of sales is AI-native. Are you ready?\n\n#SalesAutomation #AI #CRM #SaaS #B2BSales', status: 'published', publishedAt: daysAgo(5), platformPostId: 'li_demo_001', metrics: { impressions: 8900, engagements: 567, likes: 234, comments: 42, shares: 89, clicks: 156, reach: 7200 }, createdBy: DEMO_OWNER_ID, createdAt: daysAgo(5), updatedAt: daysAgo(5) },
+    { id: 'demo-social-003', isDemo: true, platform: 'twitter', content: '💡 Pro tip: The best time to follow up with a lead is within 5 minutes of their first interaction. Our AI agent does this automatically — 24/7, no coffee breaks needed. ☕ #SalesTips #AIAgent', status: 'published', publishedAt: daysAgo(3), platformPostId: 'tw_demo_002', metrics: { impressions: 2800, engagements: 198, likes: 67, comments: 8, shares: 19, clicks: 34, reach: 2400 }, createdBy: DEMO_OWNER_ID, createdAt: daysAgo(3), updatedAt: daysAgo(3) },
+    { id: 'demo-social-004', isDemo: true, platform: 'linkedin', content: 'New blog post: "The Complete Guide to AI Lead Scoring in 2026"\n\nWe break down exactly how AI scoring works, why it matters, and how to set it up in under 10 minutes.\n\n🔗 Read the full guide: https://demo-acme.salesvelocity.ai/blog/ai-lead-scoring-guide\n\n#LeadScoring #SalesAutomation #AIinSales', status: 'scheduled', scheduledAt: daysFromNow(1), createdBy: DEMO_OWNER_ID, createdAt: daysAgo(1), updatedAt: daysAgo(1) },
+    { id: 'demo-social-005', isDemo: true, platform: 'twitter', content: '📊 Did you know? Companies that use AI for lead scoring see a 30% increase in sales productivity. We built ours from the ground up — no third-party APIs, no data leaving your account. Privacy-first AI. 🔒', status: 'scheduled', scheduledAt: daysFromNow(2), createdBy: DEMO_OWNER_ID, createdAt: daysAgo(1), updatedAt: daysAgo(1) },
+    { id: 'demo-social-006', isDemo: true, platform: 'twitter', content: 'Thinking about migrating your CRM? Here is a quick checklist:\n\n1️⃣ Export all contacts + deals\n2️⃣ Map your custom fields\n3️⃣ Set up automations\n4️⃣ Train your team\n5️⃣ Go live with confidence\n\nWe handle steps 1-4 for free. Seriously. 🤝', status: 'draft', createdBy: DEMO_OWNER_ID, createdAt: daysAgo(1), updatedAt: daysAgo(1) },
+    { id: 'demo-social-007', isDemo: true, platform: 'linkedin', content: 'Case Study: How TechForward Inc. Closed $1.2M in Pipeline Using Acme AI\n\n(Full case study coming next week — stay tuned!)', status: 'draft', createdBy: DEMO_OWNER_ID, createdAt: now, updatedAt: now },
+    { id: 'demo-social-008', isDemo: true, platform: 'twitter', content: 'Our latest customer went from spreadsheets to closing their first deal in Acme CRM in under 48 hours. Setup wizard + AI import = magic. ✨ Try it free → https://demo-acme.salesvelocity.ai/signup', status: 'queued', createdBy: DEMO_OWNER_ID, createdAt: daysAgo(2), updatedAt: daysAgo(2) },
   ];
 }
 
@@ -875,7 +881,7 @@ function getSocialPosts(): Array<Record<string, unknown>> {
 function getOrders(): Array<Record<string, unknown>> {
   return [
     {
-      id: 'demo-order-001', workspaceId: WORKSPACE_ID, orderNumber: 'DEMO-ORD-1001', status: 'delivered',
+      id: 'demo-order-001', isDemo: true, orderNumber: 'DEMO-ORD-1001', status: 'delivered',
       customer: { id: 'demo-contact-002', firstName: '(Demo) Jessica', lastName: 'Chen', email: 'jchen@luminarydesigns.co', phone: '(555) 345-6789', company: '(Demo) Luminary Designs' },
       items: [{ productId: 'demo-product-001', name: '(Demo) Growth Plan — Monthly', quantity: 1, price: 14900, currency: 'USD', sku: 'PLAN-GROWTH-MO' }, { productId: 'demo-product-004', name: '(Demo) Data Migration Service', quantity: 1, price: 49900, currency: 'USD', sku: 'SVC-MIGRATE' }],
       subtotal: 64800, tax: 5184, taxRate: 8, shipping: 0, discount: 9720, discountCode: 'EARLY15', total: 60264, currency: 'USD',
@@ -886,7 +892,7 @@ function getOrders(): Array<Record<string, unknown>> {
       createdAt: daysAgo(22), updatedAt: daysAgo(18),
     },
     {
-      id: 'demo-order-002', workspaceId: WORKSPACE_ID, orderNumber: 'DEMO-ORD-1002', status: 'shipped',
+      id: 'demo-order-002', isDemo: true, orderNumber: 'DEMO-ORD-1002', status: 'shipped',
       customer: { id: 'demo-contact-005', firstName: '(Demo) David', lastName: 'Park', email: 'dpark@cloudnine.dev', phone: '(555) 567-8901', company: '(Demo) CloudNine Solutions' },
       items: [{ productId: 'demo-product-002', name: '(Demo) Enterprise Plan — Monthly', quantity: 1, price: 39900, currency: 'USD', sku: 'PLAN-ENT-MO' }],
       subtotal: 39900, tax: 3192, taxRate: 8, shipping: 0, discount: 0, total: 43092, currency: 'USD',
@@ -897,7 +903,7 @@ function getOrders(): Array<Record<string, unknown>> {
       createdAt: daysAgo(5), updatedAt: daysAgo(3),
     },
     {
-      id: 'demo-order-003', workspaceId: WORKSPACE_ID, orderNumber: 'DEMO-ORD-1003', status: 'processing',
+      id: 'demo-order-003', isDemo: true, orderNumber: 'DEMO-ORD-1003', status: 'processing',
       customer: { id: 'demo-contact-008', firstName: '(Demo) Tom', lastName: 'Bradley', email: 'tbradley@fitlife.com', phone: '(555) 890-1234', company: '(Demo) FitLife Wellness' },
       items: [{ productId: 'demo-product-003', name: '(Demo) Starter Plan — Monthly', quantity: 1, price: 9900, currency: 'USD', sku: 'PLAN-START-MO' }, { productId: 'demo-product-005', name: '(Demo) Custom AI Training Session', quantity: 2, price: 29900, currency: 'USD', sku: 'SVC-AI-TRAIN' }],
       subtotal: 69700, tax: 5576, taxRate: 8, shipping: 0, discount: 0, total: 75276, currency: 'USD',
@@ -908,7 +914,7 @@ function getOrders(): Array<Record<string, unknown>> {
       createdAt: daysAgo(1), updatedAt: now,
     },
     {
-      id: 'demo-order-004', workspaceId: WORKSPACE_ID, orderNumber: 'DEMO-ORD-1004', status: 'pending',
+      id: 'demo-order-004', isDemo: true, orderNumber: 'DEMO-ORD-1004', status: 'pending',
       customer: { id: 'demo-contact-004', firstName: '(Demo) Rachel', lastName: 'Kim', email: 'rkim@suncoastrealty.com', phone: '(555) 456-7890', company: '(Demo) Suncoast Realty' },
       items: [{ productId: 'demo-product-001', name: '(Demo) Growth Plan — Monthly', quantity: 1, price: 14900, currency: 'USD', sku: 'PLAN-GROWTH-MO' }],
       subtotal: 14900, tax: 1192, taxRate: 8, shipping: 0, discount: 2980, discountCode: 'REALESTATE20', total: 13112, currency: 'USD',
@@ -927,11 +933,11 @@ function getOrders(): Array<Record<string, unknown>> {
 
 function getTemplates(): Array<Record<string, unknown>> {
   return [
-    { id: 'demo-template-email-001', workspaceId: WORKSPACE_ID, type: 'email', name: '(Demo) Welcome Email', description: 'Sent immediately after signup to welcome new customers', category: 'onboarding', subject: 'Welcome to Acme Digital Solutions, {{firstName}}! 🎉', body: '<h1>Welcome, {{firstName}}!</h1><p>Thanks for joining Acme Digital Solutions. Here is what to do next:</p><ol><li>Complete your business setup</li><li>Import your contacts</li><li>Set up your first workflow</li></ol><p>Questions? Reply to this email or book a call with our team.</p><p>— The Acme Team</p>', bodyType: 'html', variables: ['firstName', 'companyName', 'planName'], tags: ['onboarding', 'welcome'], isActive: true, usageCount: 47, lastUsedAt: daysAgo(1), createdBy: DEMO_OWNER_ID, createdAt: daysAgo(28), updatedAt: daysAgo(5) },
-    { id: 'demo-template-email-002', workspaceId: WORKSPACE_ID, type: 'email', name: '(Demo) Follow-Up After Demo', description: 'Sent 24 hours after a product demo', category: 'sales', subject: 'Great connecting today, {{firstName}}!', body: '<p>Hi {{firstName}},</p><p>It was great chatting about how Acme can help {{companyName}}. As discussed:</p><ul><li>{{painPoint1}} → Our AI lead scoring solves this</li><li>{{painPoint2}} → Workflow automation handles this</li></ul><p>Here is your personalized trial link: <a href="{{trialLink}}">Start Free Trial</a></p><p>Want to hop on a quick call to answer any remaining questions? <a href="{{bookingLink}}">Book 15 minutes here</a>.</p><p>Best,<br>{{senderName}}</p>', bodyType: 'html', variables: ['firstName', 'companyName', 'painPoint1', 'painPoint2', 'trialLink', 'bookingLink', 'senderName'], tags: ['sales', 'follow-up'], isActive: true, usageCount: 23, lastUsedAt: daysAgo(2), createdBy: DEMO_OWNER_ID, createdAt: daysAgo(20), updatedAt: daysAgo(7) },
-    { id: 'demo-template-email-003', workspaceId: WORKSPACE_ID, type: 'email', name: '(Demo) Deal Won — Thank You', description: 'Sent when a deal is marked as Closed Won', category: 'post-sale', subject: 'You are officially an Acme customer! 🎉', body: '<h1>Congratulations, {{firstName}}!</h1><p>Your {{planName}} subscription is now active. Here is your onboarding timeline:</p><p><strong>Day 1-2:</strong> Account setup + data migration<br><strong>Day 3-5:</strong> Team training sessions<br><strong>Day 6-7:</strong> Go live with full support</p><p>Your dedicated success manager is {{csmName}} ({{csmEmail}}).</p>', bodyType: 'html', variables: ['firstName', 'planName', 'csmName', 'csmEmail'], tags: ['post-sale', 'onboarding'], isActive: true, usageCount: 8, lastUsedAt: daysAgo(5), createdBy: DEMO_OWNER_ID, createdAt: daysAgo(15), updatedAt: daysAgo(10) },
-    { id: 'demo-template-sms-001', workspaceId: WORKSPACE_ID, type: 'sms', name: '(Demo) Appointment Reminder', description: 'Sent 1 hour before scheduled demo call', category: 'reminders', body: 'Hi {{firstName}}! Just a reminder — your demo with Acme is in 1 hour at {{time}}. Join here: {{meetingLink}} — Reply HELP for support or STOP to opt out.', variables: ['firstName', 'time', 'meetingLink'], tags: ['reminder', 'demo'], isActive: true, usageCount: 31, lastUsedAt: daysAgo(1), createdBy: DEMO_OWNER_ID, createdAt: daysAgo(20), updatedAt: daysAgo(10) },
-    { id: 'demo-template-sms-002', workspaceId: WORKSPACE_ID, type: 'sms', name: '(Demo) Quick Follow-Up', description: 'Short text follow-up after no response to email', category: 'sales', body: 'Hey {{firstName}}, Alex from Acme here. Sent you an email about {{topic}} — did you get a chance to look? Happy to jump on a quick call if easier. 📞', variables: ['firstName', 'topic'], tags: ['sales', 'follow-up'], isActive: true, usageCount: 15, lastUsedAt: daysAgo(3), createdBy: DEMO_OWNER_ID, createdAt: daysAgo(18), updatedAt: daysAgo(12) },
+    { id: 'demo-template-email-001', isDemo: true, type: 'email', name: '(Demo) Welcome Email', description: 'Sent immediately after signup to welcome new customers', category: 'onboarding', subject: 'Welcome to Acme Digital Solutions, {{firstName}}! 🎉', body: '<h1>Welcome, {{firstName}}!</h1><p>Thanks for joining Acme Digital Solutions. Here is what to do next:</p><ol><li>Complete your business setup</li><li>Import your contacts</li><li>Set up your first workflow</li></ol><p>Questions? Reply to this email or book a call with our team.</p><p>— The Acme Team</p>', bodyType: 'html', variables: ['firstName', 'companyName', 'planName'], tags: ['onboarding', 'welcome'], isActive: true, usageCount: 47, lastUsedAt: daysAgo(1), createdBy: DEMO_OWNER_ID, createdAt: daysAgo(28), updatedAt: daysAgo(5) },
+    { id: 'demo-template-email-002', isDemo: true, type: 'email', name: '(Demo) Follow-Up After Demo', description: 'Sent 24 hours after a product demo', category: 'sales', subject: 'Great connecting today, {{firstName}}!', body: '<p>Hi {{firstName}},</p><p>It was great chatting about how Acme can help {{companyName}}. As discussed:</p><ul><li>{{painPoint1}} → Our AI lead scoring solves this</li><li>{{painPoint2}} → Workflow automation handles this</li></ul><p>Here is your personalized trial link: <a href="{{trialLink}}">Start Free Trial</a></p><p>Want to hop on a quick call to answer any remaining questions? <a href="{{bookingLink}}">Book 15 minutes here</a>.</p><p>Best,<br>{{senderName}}</p>', bodyType: 'html', variables: ['firstName', 'companyName', 'painPoint1', 'painPoint2', 'trialLink', 'bookingLink', 'senderName'], tags: ['sales', 'follow-up'], isActive: true, usageCount: 23, lastUsedAt: daysAgo(2), createdBy: DEMO_OWNER_ID, createdAt: daysAgo(20), updatedAt: daysAgo(7) },
+    { id: 'demo-template-email-003', isDemo: true, type: 'email', name: '(Demo) Deal Won — Thank You', description: 'Sent when a deal is marked as Closed Won', category: 'post-sale', subject: 'You are officially an Acme customer! 🎉', body: '<h1>Congratulations, {{firstName}}!</h1><p>Your {{planName}} subscription is now active. Here is your onboarding timeline:</p><p><strong>Day 1-2:</strong> Account setup + data migration<br><strong>Day 3-5:</strong> Team training sessions<br><strong>Day 6-7:</strong> Go live with full support</p><p>Your dedicated success manager is {{csmName}} ({{csmEmail}}).</p>', bodyType: 'html', variables: ['firstName', 'planName', 'csmName', 'csmEmail'], tags: ['post-sale', 'onboarding'], isActive: true, usageCount: 8, lastUsedAt: daysAgo(5), createdBy: DEMO_OWNER_ID, createdAt: daysAgo(15), updatedAt: daysAgo(10) },
+    { id: 'demo-template-sms-001', isDemo: true, type: 'sms', name: '(Demo) Appointment Reminder', description: 'Sent 1 hour before scheduled demo call', category: 'reminders', body: 'Hi {{firstName}}! Just a reminder — your demo with Acme is in 1 hour at {{time}}. Join here: {{meetingLink}} — Reply HELP for support or STOP to opt out.', variables: ['firstName', 'time', 'meetingLink'], tags: ['reminder', 'demo'], isActive: true, usageCount: 31, lastUsedAt: daysAgo(1), createdBy: DEMO_OWNER_ID, createdAt: daysAgo(20), updatedAt: daysAgo(10) },
+    { id: 'demo-template-sms-002', isDemo: true, type: 'sms', name: '(Demo) Quick Follow-Up', description: 'Short text follow-up after no response to email', category: 'sales', body: 'Hey {{firstName}}, Alex from Acme here. Sent you an email about {{topic}} — did you get a chance to look? Happy to jump on a quick call if easier. 📞', variables: ['firstName', 'topic'], tags: ['sales', 'follow-up'], isActive: true, usageCount: 15, lastUsedAt: daysAgo(3), createdBy: DEMO_OWNER_ID, createdAt: daysAgo(18), updatedAt: daysAgo(12) },
   ];
 }
 
@@ -942,6 +948,7 @@ function getTemplates(): Array<Record<string, unknown>> {
 function getScoringRules(): Record<string, unknown> {
   return {
     id: 'demo-scoring-rules-001',
+    isDemo: true,
     name: '(Demo) SaaS B2B Scoring Rules',
     description: 'Optimized for B2B SaaS companies with 10-500 employees. Weights company fit, person seniority, and intent signals.',
     isActive: true,
@@ -970,8 +977,8 @@ function getScoringRules(): Record<string, unknown> {
 
 function getWebhooks(): Array<Record<string, unknown>> {
   return [
-    { id: 'demo-webhook-001', workspaceId: WORKSPACE_ID, name: '(Demo) Slack New Deal Notification', url: 'https://hooks.slack.com/services/DEMO/WEBHOOK/URL', events: ['deal.created', 'deal.won', 'deal.lost'], method: 'POST', headers: { 'Content-Type': 'application/json' }, secret: 'whsec_demo_secret_001', isActive: true, retryPolicy: { maxRetries: 3, backoffMultiplier: 2 }, stats: { totalSent: 34, successCount: 32, failureCount: 2, lastSentAt: daysAgo(1), lastStatus: 200 }, createdBy: DEMO_OWNER_ID, createdAt: daysAgo(21), updatedAt: daysAgo(1) },
-    { id: 'demo-webhook-002', workspaceId: WORKSPACE_ID, name: '(Demo) Zapier Lead Sync', url: 'https://hooks.zapier.com/hooks/catch/DEMO/WEBHOOK/', events: ['lead.created', 'lead.statusChanged', 'lead.scored'], method: 'POST', headers: { 'Content-Type': 'application/json', 'X-API-Key': 'demo_zapier_key_001' }, secret: 'whsec_demo_secret_002', isActive: true, retryPolicy: { maxRetries: 5, backoffMultiplier: 3 }, stats: { totalSent: 89, successCount: 87, failureCount: 2, lastSentAt: hoursAgo(3), lastStatus: 200 }, createdBy: DEMO_OWNER_ID, createdAt: daysAgo(18), updatedAt: hoursAgo(3) },
+    { id: 'demo-webhook-001', isDemo: true, name: '(Demo) Slack New Deal Notification', url: 'https://hooks.slack.com/services/DEMO/WEBHOOK/URL', events: ['deal.created', 'deal.won', 'deal.lost'], method: 'POST', headers: { 'Content-Type': 'application/json' }, secret: 'whsec_demo_secret_001', isActive: true, retryPolicy: { maxRetries: 3, backoffMultiplier: 2 }, stats: { totalSent: 34, successCount: 32, failureCount: 2, lastSentAt: daysAgo(1), lastStatus: 200 }, createdBy: DEMO_OWNER_ID, createdAt: daysAgo(21), updatedAt: daysAgo(1) },
+    { id: 'demo-webhook-002', isDemo: true, name: '(Demo) Zapier Lead Sync', url: 'https://hooks.zapier.com/hooks/catch/DEMO/WEBHOOK/', events: ['lead.created', 'lead.statusChanged', 'lead.scored'], method: 'POST', headers: { 'Content-Type': 'application/json', 'X-API-Key': 'demo_zapier_key_001' }, secret: 'whsec_demo_secret_002', isActive: true, retryPolicy: { maxRetries: 5, backoffMultiplier: 3 }, stats: { totalSent: 89, successCount: 87, failureCount: 2, lastSentAt: hoursAgo(3), lastStatus: 200 }, createdBy: DEMO_OWNER_ID, createdAt: daysAgo(18), updatedAt: hoursAgo(3) },
   ];
 }
 
@@ -981,11 +988,11 @@ function getWebhooks(): Array<Record<string, unknown>> {
 
 function getTeamTasks(): Array<Record<string, unknown>> {
   return [
-    { id: 'demo-task-001', workspaceId: WORKSPACE_ID, title: '(Demo) Follow up with TechForward Inc. on Enterprise proposal', description: 'Sarah Mitchell requested custom pricing for 50 seats. Prepare and send Enterprise proposal by EOD Friday.', assignedTo: DEMO_OWNER_ID, assignedToName: DEMO_OWNER_NAME, status: 'in_progress', priority: 'high', dueDate: daysFromNow(2), linkedEntityType: 'deal', linkedEntityId: 'demo-deal-004', linkedEntityName: '(Demo) TechForward Enterprise Deal', tags: ['sales', 'enterprise', 'proposal'], createdBy: DEMO_OWNER_ID, createdAt: daysAgo(2), updatedAt: daysAgo(1) },
-    { id: 'demo-task-002', workspaceId: WORKSPACE_ID, title: '(Demo) Prepare weekly pipeline report for team meeting', description: 'Compile Q1 pipeline metrics, highlight top 5 deals, and note any at-risk opportunities.', assignedTo: DEMO_OWNER_ID, assignedToName: DEMO_OWNER_NAME, status: 'pending', priority: 'medium', dueDate: daysFromNow(4), tags: ['reporting', 'weekly'], createdBy: DEMO_OWNER_ID, createdAt: daysAgo(1), updatedAt: daysAgo(1) },
-    { id: 'demo-task-003', workspaceId: WORKSPACE_ID, title: '(Demo) Onboard Brooks Legal Group — data migration', description: 'Brooks Legal closed their deal. Begin data migration from their spreadsheets. Contact: Michael Brooks, mbrooks@brookslegal.com', assignedTo: DEMO_OWNER_ID, assignedToName: DEMO_OWNER_NAME, status: 'pending', priority: 'high', dueDate: daysFromNow(5), linkedEntityType: 'deal', linkedEntityId: 'demo-deal-006', linkedEntityName: '(Demo) Brooks Legal CRM Migration', tags: ['onboarding', 'migration'], createdBy: DEMO_OWNER_ID, createdAt: daysAgo(3), updatedAt: daysAgo(3) },
-    { id: 'demo-task-004', workspaceId: WORKSPACE_ID, title: '(Demo) Review and update email sequence templates', description: 'Audit all 3 email templates for accuracy. Update pricing references and add new case study link.', assignedTo: DEMO_OWNER_ID, assignedToName: DEMO_OWNER_NAME, status: 'completed', priority: 'low', dueDate: daysAgo(1), completedAt: daysAgo(1), tags: ['marketing', 'templates'], createdBy: DEMO_OWNER_ID, createdAt: daysAgo(5), updatedAt: daysAgo(1) },
-    { id: 'demo-task-005', workspaceId: WORKSPACE_ID, title: '(Demo) Schedule demo call with FitLife Wellness', description: 'Tom Bradley from FitLife Wellness wants a 30-minute product demo. Coordinate with calendar and send invite.', assignedTo: DEMO_OWNER_ID, assignedToName: DEMO_OWNER_NAME, status: 'pending', priority: 'medium', dueDate: daysFromNow(3), linkedEntityType: 'contact', linkedEntityId: 'demo-contact-008', linkedEntityName: '(Demo) Tom Bradley', tags: ['sales', 'demo'], createdBy: DEMO_OWNER_ID, createdAt: daysAgo(1), updatedAt: daysAgo(1) },
+    { id: 'demo-task-001', isDemo: true, title: '(Demo) Follow up with TechForward Inc. on Enterprise proposal', description: 'Sarah Mitchell requested custom pricing for 50 seats. Prepare and send Enterprise proposal by EOD Friday.', assignedTo: DEMO_OWNER_ID, assignedToName: DEMO_OWNER_NAME, status: 'in_progress', priority: 'high', dueDate: daysFromNow(2), linkedEntityType: 'deal', linkedEntityId: 'demo-deal-004', linkedEntityName: '(Demo) TechForward Enterprise Deal', tags: ['sales', 'enterprise', 'proposal'], createdBy: DEMO_OWNER_ID, createdAt: daysAgo(2), updatedAt: daysAgo(1) },
+    { id: 'demo-task-002', isDemo: true, title: '(Demo) Prepare weekly pipeline report for team meeting', description: 'Compile Q1 pipeline metrics, highlight top 5 deals, and note any at-risk opportunities.', assignedTo: DEMO_OWNER_ID, assignedToName: DEMO_OWNER_NAME, status: 'pending', priority: 'medium', dueDate: daysFromNow(4), tags: ['reporting', 'weekly'], createdBy: DEMO_OWNER_ID, createdAt: daysAgo(1), updatedAt: daysAgo(1) },
+    { id: 'demo-task-003', isDemo: true, title: '(Demo) Onboard Brooks Legal Group — data migration', description: 'Brooks Legal closed their deal. Begin data migration from their spreadsheets. Contact: Michael Brooks, mbrooks@brookslegal.com', assignedTo: DEMO_OWNER_ID, assignedToName: DEMO_OWNER_NAME, status: 'pending', priority: 'high', dueDate: daysFromNow(5), linkedEntityType: 'deal', linkedEntityId: 'demo-deal-006', linkedEntityName: '(Demo) Brooks Legal CRM Migration', tags: ['onboarding', 'migration'], createdBy: DEMO_OWNER_ID, createdAt: daysAgo(3), updatedAt: daysAgo(3) },
+    { id: 'demo-task-004', isDemo: true, title: '(Demo) Review and update email sequence templates', description: 'Audit all 3 email templates for accuracy. Update pricing references and add new case study link.', assignedTo: DEMO_OWNER_ID, assignedToName: DEMO_OWNER_NAME, status: 'completed', priority: 'low', dueDate: daysAgo(1), completedAt: daysAgo(1), tags: ['marketing', 'templates'], createdBy: DEMO_OWNER_ID, createdAt: daysAgo(5), updatedAt: daysAgo(1) },
+    { id: 'demo-task-005', isDemo: true, title: '(Demo) Schedule demo call with FitLife Wellness', description: 'Tom Bradley from FitLife Wellness wants a 30-minute product demo. Coordinate with calendar and send invite.', assignedTo: DEMO_OWNER_ID, assignedToName: DEMO_OWNER_NAME, status: 'pending', priority: 'medium', dueDate: daysFromNow(3), linkedEntityType: 'contact', linkedEntityId: 'demo-contact-008', linkedEntityName: '(Demo) Tom Bradley', tags: ['sales', 'demo'], createdBy: DEMO_OWNER_ID, createdAt: daysAgo(1), updatedAt: daysAgo(1) },
   ];
 }
 
@@ -996,7 +1003,7 @@ function getTeamTasks(): Array<Record<string, unknown>> {
 function getConversations(): Array<Record<string, unknown>> {
   return [
     {
-      id: 'demo-conversation-001', workspaceId: WORKSPACE_ID, type: 'public_chat',
+      id: 'demo-conversation-001', isDemo: true, type: 'public_chat',
       customerName: '(Demo) Sarah Mitchell', customerEmail: 'sarah.mitchell@techforward.io', customerCompany: 'TechForward Inc.',
       agentName: '(Demo) Jasper', agentId: 'demo-agent-001',
       status: 'completed', outcome: 'demo_booked',
@@ -1017,7 +1024,7 @@ function getConversations(): Array<Record<string, unknown>> {
       createdAt: daysAgo(6), updatedAt: daysAgo(6),
     },
     {
-      id: 'demo-conversation-002', workspaceId: WORKSPACE_ID, type: 'public_chat',
+      id: 'demo-conversation-002', isDemo: true, type: 'public_chat',
       customerName: '(Demo) Anonymous Visitor', customerEmail: null, customerCompany: null,
       agentName: '(Demo) Jasper', agentId: 'demo-agent-001',
       status: 'completed', outcome: 'information_provided',
@@ -1041,9 +1048,9 @@ function getConversations(): Array<Record<string, unknown>> {
 
 function getIntegrations(): Array<Record<string, unknown>> {
   return [
-    { id: 'demo-integration-001', workspaceId: WORKSPACE_ID, type: 'google-calendar', name: '(Demo) Google Calendar', status: 'active', connectedAt: daysAgo(25), lastSyncAt: hoursAgo(1), settings: { autoCreateEvents: true, defaultReminder: 15, syncCalendars: ['primary', 'sales-demos'], twoWaySync: true, reminderSettings: { defaultReminderMinutes: 15 } }, accountEmail: 'alex.morgan@demo-acme.com', capabilities: ['create_events', 'read_events', 'sync'], createdBy: DEMO_OWNER_ID, createdAt: daysAgo(25), updatedAt: hoursAgo(1) },
-    { id: 'demo-integration-002', workspaceId: WORKSPACE_ID, type: 'slack', name: '(Demo) Slack — #sales channel', status: 'active', connectedAt: daysAgo(21), lastSyncAt: hoursAgo(3), settings: { channelId: '#sales', notifyOnNewLead: true, notifyOnDealWon: true, notifyOnDealLost: true, dailyDigest: true, digestTime: '09:00' }, teamName: 'Acme Digital', capabilities: ['send_messages', 'create_channels', 'read_messages'], createdBy: DEMO_OWNER_ID, createdAt: daysAgo(21), updatedAt: hoursAgo(3) },
-    { id: 'demo-integration-003', workspaceId: WORKSPACE_ID, type: 'stripe', name: '(Demo) Stripe Payments', status: 'active', connectedAt: daysAgo(20), lastSyncAt: daysAgo(1), settings: { testMode: true, webhookEndpoint: 'https://demo-acme.salesvelocity.ai/api/webhooks/stripe', autoCreateInvoice: true, autoRecordPayment: true, currency: 'USD' }, accountId: 'acct_demo_stripe_001', capabilities: ['charge', 'refund', 'subscription', 'invoice'], createdBy: DEMO_OWNER_ID, createdAt: daysAgo(20), updatedAt: daysAgo(1) },
+    { id: 'demo-integration-001', isDemo: true, type: 'google-calendar', name: '(Demo) Google Calendar', status: 'active', connectedAt: daysAgo(25), lastSyncAt: hoursAgo(1), settings: { autoCreateEvents: true, defaultReminder: 15, syncCalendars: ['primary', 'sales-demos'], twoWaySync: true, reminderSettings: { defaultReminderMinutes: 15 } }, accountEmail: 'alex.morgan@demo-acme.com', capabilities: ['create_events', 'read_events', 'sync'], createdBy: DEMO_OWNER_ID, createdAt: daysAgo(25), updatedAt: hoursAgo(1) },
+    { id: 'demo-integration-002', isDemo: true, type: 'slack', name: '(Demo) Slack — #sales channel', status: 'active', connectedAt: daysAgo(21), lastSyncAt: hoursAgo(3), settings: { channelId: '#sales', notifyOnNewLead: true, notifyOnDealWon: true, notifyOnDealLost: true, dailyDigest: true, digestTime: '09:00' }, teamName: 'Acme Digital', capabilities: ['send_messages', 'create_channels', 'read_messages'], createdBy: DEMO_OWNER_ID, createdAt: daysAgo(21), updatedAt: hoursAgo(3) },
+    { id: 'demo-integration-003', isDemo: true, type: 'stripe', name: '(Demo) Stripe Payments', status: 'active', connectedAt: daysAgo(20), lastSyncAt: daysAgo(1), settings: { testMode: true, webhookEndpoint: 'https://demo-acme.salesvelocity.ai/api/webhooks/stripe', autoCreateInvoice: true, autoRecordPayment: true, currency: 'USD' }, accountId: 'acct_demo_stripe_001', capabilities: ['charge', 'refund', 'subscription', 'invoice'], createdBy: DEMO_OWNER_ID, createdAt: daysAgo(20), updatedAt: daysAgo(1) },
   ];
 }
 
@@ -1053,8 +1060,8 @@ function getIntegrations(): Array<Record<string, unknown>> {
 
 function getCustomTools(): Array<Record<string, unknown>> {
   return [
-    { id: 'demo-tool-001', workspaceId: WORKSPACE_ID, name: '(Demo) Company Research Tool', description: 'Look up company information from Crunchbase and LinkedIn using our discovery engine.', url: 'https://demo-acme.salesvelocity.ai/api/tools/company-research', icon: '🔍', method: 'POST', headers: { 'Content-Type': 'application/json' }, inputSchema: { type: 'object', properties: { companyName: { type: 'string' }, domain: { type: 'string' } }, required: ['companyName'] }, roles: ['owner', 'admin', 'manager'], enabled: true, displayOrder: 1, usageCount: 67, lastUsedAt: daysAgo(1), createdBy: DEMO_OWNER_ID, createdAt: daysAgo(20), updatedAt: daysAgo(5) },
-    { id: 'demo-tool-002', workspaceId: WORKSPACE_ID, name: '(Demo) ROI Calculator', description: 'Calculate potential ROI for prospects based on their current tool stack and team size.', url: 'https://demo-acme.salesvelocity.ai/api/tools/roi-calculator', icon: '💰', method: 'POST', headers: { 'Content-Type': 'application/json' }, inputSchema: { type: 'object', properties: { teamSize: { type: 'number' }, currentTools: { type: 'array', items: { type: 'string' } }, avgDealSize: { type: 'number' } }, required: ['teamSize'] }, roles: ['owner', 'admin', 'manager', 'member'], enabled: true, displayOrder: 2, usageCount: 34, lastUsedAt: daysAgo(2), createdBy: DEMO_OWNER_ID, createdAt: daysAgo(15), updatedAt: daysAgo(8) },
+    { id: 'demo-tool-001', isDemo: true, name: '(Demo) Company Research Tool', description: 'Look up company information from Crunchbase and LinkedIn using our discovery engine.', url: 'https://demo-acme.salesvelocity.ai/api/tools/company-research', icon: '🔍', method: 'POST', headers: { 'Content-Type': 'application/json' }, inputSchema: { type: 'object', properties: { companyName: { type: 'string' }, domain: { type: 'string' } }, required: ['companyName'] }, roles: ['owner', 'admin', 'manager'], enabled: true, displayOrder: 1, usageCount: 67, lastUsedAt: daysAgo(1), createdBy: DEMO_OWNER_ID, createdAt: daysAgo(20), updatedAt: daysAgo(5) },
+    { id: 'demo-tool-002', isDemo: true, name: '(Demo) ROI Calculator', description: 'Calculate potential ROI for prospects based on their current tool stack and team size.', url: 'https://demo-acme.salesvelocity.ai/api/tools/roi-calculator', icon: '💰', method: 'POST', headers: { 'Content-Type': 'application/json' }, inputSchema: { type: 'object', properties: { teamSize: { type: 'number' }, currentTools: { type: 'array', items: { type: 'string' } }, avgDealSize: { type: 'number' } }, required: ['teamSize'] }, roles: ['owner', 'admin', 'manager', 'member'], enabled: true, displayOrder: 2, usageCount: 34, lastUsedAt: daysAgo(2), createdBy: DEMO_OWNER_ID, createdAt: daysAgo(15), updatedAt: daysAgo(8) },
   ];
 }
 
@@ -1067,12 +1074,12 @@ async function seedDemoAccountPart2(): Promise<void> {
   console.log('  (DEMO) ACCOUNT SEED — PART 2: FULL PLATFORM COVERAGE');
   console.log('  SalesVelocity.ai - Beyond CRM');
   console.log('='.repeat(70));
-  console.log(`  Environment: ${APP_ENV}`);
-  console.log(`  Collection prefix: "${PREFIX}" (${IS_PRODUCTION ? 'PRODUCTION' : `dev - ${PREFIX} prefix`})`);
+  console.log(`  Environment: ${process.env.NODE_ENV ?? 'development'}`);
+  console.log(`  Org root: "${orgRoot}"`);
   console.log('');
 
-  if (IS_PRODUCTION) {
-    console.error('  ❌ SAFETY: Cannot run demo seed in production environment.');
+  if (process.env.NODE_ENV === 'production') {
+    console.error('  SAFETY: Cannot run demo seed in production environment.');
     process.exit(1);
   }
 
@@ -1110,11 +1117,11 @@ async function seedDemoAccountPart2(): Promise<void> {
     await db.doc(`${formsPath}/${form.id}`).set(form);
     totalDocs += 1;
     for (const field of fields) {
-      await db.doc(`${formsPath}/${form.id}/${PREFIX}fields/${field.id}`).set(field);
+      await db.doc(`${formsPath}/${form.id}/fields/${field.id}`).set(field);
       totalDocs += 1;
     }
     for (const sub of submissions) {
-      await db.doc(`${formsPath}/${form.id}/${PREFIX}submissions/${sub.id}`).set(sub);
+      await db.doc(`${formsPath}/${form.id}/submissions/${sub.id}`).set(sub);
       totalDocs += 1;
     }
   }

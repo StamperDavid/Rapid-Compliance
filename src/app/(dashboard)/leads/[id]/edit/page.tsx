@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { FirestoreService } from '@/lib/db/firestore-service';
-import { getSubCollection } from '@/lib/firebase/collections';
+import { getLeadsCollection } from '@/lib/firebase/collections';
 import { Timestamp } from 'firebase/firestore'
 import { logger } from '@/lib/logger/logger';
 import { useToast } from '@/hooks/useToast';
@@ -32,7 +32,7 @@ export default function EditLeadPage() {
 
   const loadLead = useCallback(async () => {
     try {
-      const data = await FirestoreService.get(`${getSubCollection('workspaces')}/default/entities/leads/records`, leadId);
+      const data = await FirestoreService.get(getLeadsCollection(), leadId);
       setLead(data as Lead);
     } catch (error: unknown) {
       logger.error('Error loading lead:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
@@ -49,7 +49,7 @@ export default function EditLeadPage() {
     e.preventDefault();
     try {
       setSaving(true);
-      await FirestoreService.update(`${getSubCollection('workspaces')}/default/entities/leads/records`, leadId, { ...lead, updatedAt: Timestamp.now() });
+      await FirestoreService.update(getLeadsCollection(), leadId, { ...lead, updatedAt: Timestamp.now() });
       router.push(`/leads/${leadId}`);
     } catch (error: unknown) {
       logger.error('Error updating lead:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });

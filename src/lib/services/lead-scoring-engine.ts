@@ -1141,48 +1141,21 @@ async function getLeadData(leadId: string): Promise<LeadData | null> {
       };
     }
 
-    // Fallback: check workspace paths (legacy)
-    const workspacesRef = adminDal.getNestedCollection(
-      getSubCollection('workspaces')
-    );
-    const workspacesSnapshot = await workspacesRef.get();
+    // Check contacts collection (flat org-scoped path)
+    const contactRef = adminDal.getNestedCollection(
+      getSubCollection('contacts')
+    ).doc(leadId);
 
-    for (const workspaceDoc of workspacesSnapshot.docs) {
-      // Check leads collection
-      const leadRef = adminDal.getNestedCollection(
-        `${getSubCollection('workspaces')}/{wsId}/entities/leads/records`,
-        { wsId: workspaceDoc.id }
-      ).doc(leadId);
-
-      const leadDoc = await leadRef.get();
-      if (leadDoc.exists) {
-        const data = leadDoc.data();
-        return {
-          id: leadDoc.id,
-          company: typeof data?.company === 'string' ? data.company : null,
-          companyDomain: typeof data?.companyDomain === 'string' ? data.companyDomain : null,
-          email: typeof data?.email === 'string' ? data.email : null,
-          ...data,
-        };
-      }
-
-      // Also check contacts
-      const contactRef = adminDal.getNestedCollection(
-        `${getSubCollection('workspaces')}/{wsId}/entities/contacts/records`,
-        { wsId: workspaceDoc.id }
-      ).doc(leadId);
-
-      const contactDoc = await contactRef.get();
-      if (contactDoc.exists) {
-        const data = contactDoc.data();
-        return {
-          id: contactDoc.id,
-          company: typeof data?.company === 'string' ? data.company : null,
-          companyDomain: typeof data?.companyDomain === 'string' ? data.companyDomain : null,
-          email: typeof data?.email === 'string' ? data.email : null,
-          ...data,
-        };
-      }
+    const contactDoc = await contactRef.get();
+    if (contactDoc.exists) {
+      const data = contactDoc.data();
+      return {
+        id: contactDoc.id,
+        company: typeof data?.company === 'string' ? data.company : null,
+        companyDomain: typeof data?.companyDomain === 'string' ? data.companyDomain : null,
+        email: typeof data?.email === 'string' ? data.email : null,
+        ...data,
+      };
     }
 
     return null;

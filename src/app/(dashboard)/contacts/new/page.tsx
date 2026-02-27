@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { contactFormSchema, type ContactFormValues } from '@/lib/validation/contact-form-schema';
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
 import { FirestoreService } from '@/lib/db/firestore-service';
-import { getSubCollection } from '@/lib/firebase/collections';
+import { getContactsCollection } from '@/lib/firebase/collections';
 import { Timestamp } from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
 import { useToast } from '@/hooks/useToast';
@@ -31,7 +31,7 @@ export default function NewContactPage() {
     try {
       const contactId = `contact-${Date.now()}`;
       await FirestoreService.set(
-        `${getSubCollection('workspaces')}/default/entities/contacts/records`,
+        getContactsCollection(),
         contactId,
         { ...data, id: contactId, createdAt: Timestamp.now() },
         false

@@ -5,6 +5,7 @@
 
 import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { COLLECTIONS } from '@/lib/db/firestore-service';
+import { getSubCollection } from '@/lib/firebase/collections';
 import type { Cart, CartItem, AppliedDiscount } from '@/types/ecommerce';
 import { Timestamp } from 'firebase/firestore';
 import { PLATFORM_ID } from '@/lib/constants/platform';
@@ -433,7 +434,7 @@ async function getProduct(productId: string): Promise<ProductData | null> {
 
   // Get product entity from records collection
   const product = await AdminFirestoreService.get(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/entities/${productSchema}/records`,
+    getSubCollection(productSchema),
     productId
   );
 

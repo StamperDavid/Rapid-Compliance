@@ -1,12 +1,11 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
-import { COLLECTIONS, getOrdersCollection } from '@/lib/firebase/collections';
+import { getOrdersCollection, getDealsCollection } from '@/lib/firebase/collections';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { withCache } from '@/lib/cache/analytics-cache';
-import { PLATFORM_ID } from '@/lib/constants/platform';
 import { where, limit, orderBy } from 'firebase/firestore';
 
 export const dynamic = 'force-dynamic';
@@ -136,7 +135,7 @@ async function calculateRevenueAnalytics(period: string) {
       : startDate;
 
     // Get deals from Firestore scoped to the extended query window
-    const dealsPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/default/entities/deals`;
+    const dealsPath = getDealsCollection();
     let allDeals: DealRecord[] = [];
 
     try {

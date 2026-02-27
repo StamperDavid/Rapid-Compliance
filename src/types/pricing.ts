@@ -52,7 +52,7 @@ export interface PlatformPricingPlan {
 export interface FeatureLimits {
   // Record/Data limits
   max_records: number; // -1 for unlimited
-  max_workspaces: number;
+  max_projects: number;
   max_team_members: number;
 
   // AI limits
@@ -319,7 +319,7 @@ export interface AIDiscountRequest {
 
 export const DEFAULT_FEATURE_LIMITS: FeatureLimits = {
   max_records: 100,
-  max_workspaces: 1,
+  max_projects: 1,
   max_team_members: 3,
   ai_conversations_per_month: 100,
   ai_email_generations_per_month: 50,
@@ -361,7 +361,7 @@ export const DEFAULT_PRICING_TIERS: Omit<PlatformPricingPlan, 'created_at' | 'up
     is_active: true,
     feature_limits: {
       max_records: 500,
-      max_workspaces: 1,
+      max_projects: 1,
       max_team_members: 3,
       ai_conversations_per_month: 500,
       ai_email_generations_per_month: 200,
@@ -399,7 +399,7 @@ export const DEFAULT_PRICING_TIERS: Omit<PlatformPricingPlan, 'created_at' | 'up
     is_active: true,
     feature_limits: {
       max_records: 5000,
-      max_workspaces: 5,
+      max_projects: 5,
       max_team_members: 10,
       ai_conversations_per_month: -1, // Unlimited
       ai_email_generations_per_month: -1,
@@ -437,7 +437,7 @@ export const DEFAULT_PRICING_TIERS: Omit<PlatformPricingPlan, 'created_at' | 'up
     is_active: true,
     feature_limits: {
       max_records: 25000,
-      max_workspaces: 10,
+      max_projects: 10,
       max_team_members: 25,
       ai_conversations_per_month: -1,
       ai_email_generations_per_month: -1,
@@ -474,7 +474,7 @@ export const DEFAULT_PRICING_TIERS: Omit<PlatformPricingPlan, 'created_at' | 'up
     is_active: true,
     feature_limits: {
       max_records: -1,
-      max_workspaces: -1,
+      max_projects: -1,
       max_team_members: -1,
       ai_conversations_per_month: -1,
       ai_email_generations_per_month: -1,

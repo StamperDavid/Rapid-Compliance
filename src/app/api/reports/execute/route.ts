@@ -6,7 +6,7 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
-import { COLLECTIONS, getSubCollection } from '@/lib/firebase/collections';
+import { getSubCollection, getLeadsCollection, getDealsCollection, getContactsCollection } from '@/lib/firebase/collections';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
@@ -330,8 +330,7 @@ async function executeLeadsReport(
   _config: ReportConfig,
   _parameters: ReportParameters
 ): Promise<LeadsReportResult> {
-  const { PLATFORM_ID } = await import('@/lib/constants/platform');
-  const leadsPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/default/entities/leads/records`;
+  const leadsPath = getLeadsCollection();
   const allLeadsData = await AdminFirestoreService.getAll(leadsPath, []);
   const allLeads = allLeadsData as unknown as LeadData[];
 
@@ -373,8 +372,7 @@ async function executeDealsReport(
   _config: ReportConfig,
   _parameters: ReportParameters
 ): Promise<DealsReportResult> {
-  const { PLATFORM_ID } = await import('@/lib/constants/platform');
-  const dealsPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/default/entities/deals/records`;
+  const dealsPath = getDealsCollection();
   const allDealsData = await AdminFirestoreService.getAll(dealsPath, []);
   const allDeals = allDealsData as unknown as DealData[];
 
@@ -429,8 +427,7 @@ async function executeContactsReport(
   _config: ReportConfig,
   _parameters: ReportParameters
 ): Promise<ContactsReportResult> {
-  const { PLATFORM_ID } = await import('@/lib/constants/platform');
-  const contactsPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/default/entities/contacts/records`;
+  const contactsPath = getContactsCollection();
   const allContactsData = await AdminFirestoreService.getAll(contactsPath, []);
   const allContacts = allContactsData as unknown as ContactData[];
 
@@ -456,7 +453,6 @@ async function executeCustomReport(
   config: ReportConfig,
   _parameters: ReportParameters
 ): Promise<CustomReportResult> {
-  const { PLATFORM_ID } = await import('@/lib/constants/platform');
   // For custom reports, execute the configured query
   const { entity, filters, groupBy, aggregations } = config;
 
@@ -464,7 +460,7 @@ async function executeCustomReport(
     throw new Error('Entity is required for custom reports');
   }
 
-  const entityPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/default/entities/${entity}/records`;
+  const entityPath = getSubCollection(entity);
   const recordsData = await AdminFirestoreService.getAll(entityPath, []);
   const records = recordsData as Array<Record<string, unknown>>;
 

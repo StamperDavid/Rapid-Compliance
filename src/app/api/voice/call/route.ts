@@ -5,7 +5,7 @@ import { checkTCPAConsent, checkCallTimeRestrictions } from '@/lib/compliance/tc
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
-import { getSubCollection } from '@/lib/firebase/collections';
+import { getCallsCollection } from '@/lib/firebase/collections';
 import { getTwilioCredentials } from '@/lib/security/twilio-verification';
 import twilio from 'twilio';
 
@@ -97,7 +97,7 @@ export async function POST(request: NextRequest) {
     const callId = `call-${Date.now()}`;
 
     await FirestoreService.set(
-      `${getSubCollection('workspaces')}/default/calls`,
+      getCallsCollection(),
       callId,
       {
         id: callId,

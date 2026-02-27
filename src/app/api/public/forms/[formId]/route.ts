@@ -14,7 +14,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { logger } from '@/lib/logger/logger';
 import { db } from '@/lib/firebase/config';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getFormsCollection } from '@/lib/firebase/collections';
 import {
   collection,
   doc,
@@ -100,31 +100,14 @@ export async function GET(
     let form: FormDefinition | null = null;
     let fields: FormFieldConfig[] = [];
 
-    const formRef = doc(
-      db,
-      'organizations',
-      PLATFORM_ID,
-      'workspaces',
-      'default',
-      'forms',
-      formId
-    );
+    const formRef = doc(collection(db, getFormsCollection()), formId);
     const formSnap = await getDoc(formRef);
 
     if (formSnap.exists()) {
       form = { id: formSnap.id, ...formSnap.data() } as FormDefinition;
 
       // Fetch fields
-      const fieldsRef = collection(
-        db,
-        'organizations',
-        PLATFORM_ID,
-        'workspaces',
-        'default',
-        'forms',
-        formId,
-        'fields'
-      );
+      const fieldsRef = collection(db, getFormsCollection(), formId, 'fields');
       const fieldsQuery = query(fieldsRef, orderBy('pageIndex'), orderBy('order'));
       const fieldsSnap = await getDocs(fieldsQuery);
       fields = fieldsSnap.docs.map((d) => ({
@@ -153,15 +136,7 @@ export async function GET(
     }
 
     // Increment view count
-    const formRefForUpdate = doc(
-      db,
-      'organizations',
-      PLATFORM_ID,
-      'workspaces',
-      'default',
-      'forms',
-      formId
-    );
+    const formRefForUpdate = doc(collection(db, getFormsCollection()), formId);
     await updateDoc(formRefForUpdate, {
       viewCount: increment(1),
     });
@@ -266,31 +241,14 @@ export async function POST(
     let form: FormDefinition | null = null;
     let fields: FormFieldConfig[] = [];
 
-    const formRef = doc(
-      db,
-      'organizations',
-      PLATFORM_ID,
-      'workspaces',
-      'default',
-      'forms',
-      formId
-    );
+    const formRef = doc(collection(db, getFormsCollection()), formId);
     const formSnap = await getDoc(formRef);
 
     if (formSnap.exists()) {
       form = { id: formSnap.id, ...formSnap.data() } as FormDefinition;
 
       // Fetch fields for validation
-      const fieldsRef = collection(
-        db,
-        'organizations',
-        PLATFORM_ID,
-        'workspaces',
-        'default',
-        'forms',
-        formId,
-        'fields'
-      );
+      const fieldsRef = collection(db, getFormsCollection(), formId, 'fields');
       const fieldsSnap = await getDocs(fieldsRef);
       fields = fieldsSnap.docs.map((d) => ({
         id: d.id,
@@ -404,28 +362,11 @@ export async function POST(
     };
 
     // Save submission
-    const submissionsRef = collection(
-      db,
-      'organizations',
-      PLATFORM_ID,
-      'workspaces',
-      'default',
-      'forms',
-      formId,
-      'submissions'
-    );
+    const submissionsRef = collection(db, getFormsCollection(), formId, 'submissions');
     const submissionDoc = await addDoc(submissionsRef, submission);
 
     // Update form submission count
-    const formRefForSubmissionCount = doc(
-      db,
-      'organizations',
-      PLATFORM_ID,
-      'workspaces',
-      'default',
-      'forms',
-      formId
-    );
+    const formRefForSubmissionCount = doc(collection(db, getFormsCollection()), formId);
     await updateDoc(formRefForSubmissionCount, {
       submissionCount: increment(1),
     });

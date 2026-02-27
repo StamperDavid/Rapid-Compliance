@@ -12,7 +12,7 @@ import { z } from 'zod';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
 import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
-import { getSubCollection } from '@/lib/firebase/collections';
+import { getSocialPostsCollection } from '@/lib/firebase/collections';
 import { orderBy, where, type QueryConstraint } from 'firebase/firestore';
 
 export const dynamic = 'force-dynamic';
@@ -37,7 +37,7 @@ interface SocialPostDoc {
   createdBy: string;
 }
 
-const postsPath = `${getSubCollection('workspaces')}/default/test_socialPosts`;
+const postsPath = getSocialPostsCollection();
 
 const createPostSchema = z.object({
   platform: z.enum(['twitter', 'linkedin', 'facebook', 'instagram']),

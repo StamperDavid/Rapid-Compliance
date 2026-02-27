@@ -10,7 +10,7 @@ import { z } from 'zod';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
 import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
-import { getSubCollection } from '@/lib/firebase/collections';
+import { getTeamTasksCollection } from '@/lib/firebase/collections';
 
 export const dynamic = 'force-dynamic';
 
@@ -26,7 +26,7 @@ const updateTaskSchema = z.object({
 });
 
 function getTasksPath(): string {
-  return `${getSubCollection('workspaces')}/default/tasks`;
+  return getTeamTasksCollection();
 }
 
 export async function PUT(

@@ -3,9 +3,9 @@
  * Handles checkout process and order creation
  */
 
-import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
+import { FirestoreService } from '@/lib/db/firestore-service';
 import { getOrCreateCart, clearCart } from './cart-service';
-import { getOrdersCollection } from '@/lib/firebase/collections';
+import { getOrdersCollection, getSubCollection } from '@/lib/firebase/collections';
 import type { Cart, Order, Address, OrderPayment, OrderShipping } from '@/types/ecommerce';
 import { Timestamp } from 'firebase/firestore';
 import { processPayment } from './payment-service';
@@ -294,15 +294,13 @@ function generateOrderNumber(): string {
  * Get product (helper)
  */
 async function getProduct(productId: string): Promise<Record<string, unknown> | null> {
-  const { PLATFORM_ID } = await import('@/lib/constants/platform');
-
   const config = await getEcommerceConfig();
   if (!config) {
     throw new Error('E-commerce not configured');
   }
 
   const product = await FirestoreService.get(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/entities/${config.productSchema}/records`,
+    getSubCollection(config.productSchema),
     productId
   );
 
@@ -324,8 +322,6 @@ async function getProduct(productId: string): Promise<Record<string, unknown> | 
  * Update inventory
  */
 async function updateInventory(items: Array<{ productId: string; quantity: number }>): Promise<void> {
-  const { PLATFORM_ID } = await import('@/lib/constants/platform');
-
   const config = await getEcommerceConfig();
   if (!config?.inventory?.trackInventory) {
     return; // Inventory tracking disabled
@@ -340,14 +336,14 @@ async function updateInventory(items: Array<{ productId: string; quantity: numbe
 
   for (const item of items) {
     const product = await FirestoreService.get(
-      `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/entities/${productSchema}/records`,
+      getSubCollection(productSchema),
       item.productId
     );
 
     if (product?.[inventoryField] !== undefined) {
       const newStock = Math.max(0, product[inventoryField] - item.quantity);
       await FirestoreService.set(
-        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/entities/${productSchema}/records`,
+        getSubCollection(productSchema),
         item.productId,
         {
           [inventoryField]: newStock,
@@ -362,8 +358,6 @@ async function updateInventory(items: Array<{ productId: string; quantity: numbe
  * Create customer entity
  */
 async function createCustomerEntity(customer: { firstName: string; lastName: string; email: string; phone?: string }, orderId: string): Promise<void> {
-  const { PLATFORM_ID } = await import('@/lib/constants/platform');
-
   const config = await getEcommerceConfig();
   if (!config?.integration?.createCustomerEntity) {
     return;
@@ -376,7 +370,7 @@ async function createCustomerEntity(customer: { firstName: string; lastName: str
   // Check if customer already exists
   const { where } = await import('firebase/firestore');
   const existing = await FirestoreService.getAll(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/entities/${customerSchema}/records`,
+    getSubCollection(customerSchema),
     [where('email', '==', customer.email)]
   );
 
@@ -387,7 +381,7 @@ async function createCustomerEntity(customer: { firstName: string; lastName: str
   // Create customer
   const customerId = `contact_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   await FirestoreService.set(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/entities/${customerSchema}/records`,
+    getSubCollection(customerSchema),
     customerId,
     {
       firstName: customer.firstName,
@@ -406,8 +400,6 @@ async function createCustomerEntity(customer: { firstName: string; lastName: str
  * Create order entity
  */
 async function createOrderEntity(order: Order): Promise<void> {
-  const { PLATFORM_ID } = await import('@/lib/constants/platform');
-
   const config = await getEcommerceConfig();
   if (!config?.integration?.createOrderEntity) {
     return;
@@ -418,7 +410,7 @@ async function createOrderEntity(order: Order): Promise<void> {
     : 'orders';
 
   await FirestoreService.set(
-    `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/entities/${orderSchema}/records`,
+    getSubCollection(orderSchema),
     order.id,
     {
       orderNumber: order.orderNumber,

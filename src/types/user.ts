@@ -70,7 +70,7 @@ export interface UserSession {
 
 /**
  * Invitation
- * Invite users to workspaces
+ * Invite users to the platform
  */
 export interface Invitation {
   id: string;

@@ -253,7 +253,7 @@ function CRMContent() {
         setRecordsLoading(true);
         const { FirestoreService } = await import('@/lib/db/firestore-service');
         const { getSubCollection } = await import('@/lib/firebase/collections');
-        const collectionPath = `${getSubCollection('workspaces')}/default/entities/${activeView}/records`;
+        const collectionPath = getSubCollection(activeView);
         const records = await FirestoreService.getAll<CRMRecord>(collectionPath);
         const setter = setters[activeView];
         if (setter) {

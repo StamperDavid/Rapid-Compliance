@@ -8,6 +8,7 @@ import { z } from 'zod';
 import { logger } from '@/lib/logger/logger';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { getAuthToken } from '@/lib/auth/server-auth';
+import { getSubCollection } from '@/lib/firebase/collections';
 
 export const dynamic = 'force-dynamic';
 
@@ -54,7 +55,7 @@ export async function POST(request: NextRequest) {
     const { entityType, keepId, mergeId } = validation.data;
 
     // Use batch write for transaction safety
-    const collectionPath = `${await import('@/lib/firebase/collections').then(m => m.getSubCollection('workspaces'))}/default/entities/${entityType}s/records`;
+    const collectionPath = getSubCollection(`${entityType}s`);
     const { FirestoreService } = await import('@/lib/db/firestore-service');
 
     // Get both records

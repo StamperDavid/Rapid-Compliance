@@ -13,7 +13,7 @@ import { db } from '@/lib/firebase/config';
 import type { FormFieldConfig, FormDefinition } from '@/lib/forms/types';
 import { z } from 'zod';
 import { logger } from '@/lib/logger/logger';
-import { getSubCollection } from '@/lib/firebase/collections';
+import { getFormsCollection } from '@/lib/firebase/collections';
 
 export const dynamic = 'force-dynamic';
 
@@ -69,7 +69,7 @@ export async function GET(
 
     // Get fields
     const firestore = getDb();
-    const fieldsPath = `${getSubCollection('workspaces')}/default/forms/${formId}/fields`;
+    const fieldsPath = `${getFormsCollection()}/${formId}/fields`;
     const fieldsRef = collection(firestore, fieldsPath);
     const fieldsQuery = query(fieldsRef, orderBy('order', 'asc'));
     const fieldsSnapshot = await getDocs(fieldsQuery);
@@ -115,7 +115,7 @@ export async function PUT(
     // Update fields if provided
     if (fields && Array.isArray(fields)) {
       const firestore = getDb();
-      const fieldsPath = `${getSubCollection('workspaces')}/default/forms/${formId}/fields`;
+      const fieldsPath = `${getFormsCollection()}/${formId}/fields`;
       const batch = writeBatch(firestore);
 
       // Delete existing fields
@@ -172,7 +172,7 @@ export async function DELETE(
 
     // MAJ-14: Check for existing submissions before delete
     const firestore = getDb();
-    const submissionsPath = `${getSubCollection('workspaces')}/default/forms/${formId}/submissions`;
+    const submissionsPath = `${getFormsCollection()}/${formId}/submissions`;
     const submissionsRef = collection(firestore, submissionsPath);
     const submissionsSnapshot = await getDocs(submissionsRef);
     if (!submissionsSnapshot.empty) {

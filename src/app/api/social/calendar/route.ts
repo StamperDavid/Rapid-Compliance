@@ -10,7 +10,7 @@ import { requireAuth } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
-import { getSubCollection } from '@/lib/firebase/collections';
+import { getSubCollection, getSocialPostsCollection } from '@/lib/firebase/collections';
 
 export const dynamic = 'force-dynamic';
 
@@ -97,7 +97,7 @@ export async function GET(request: NextRequest) {
       ),
       // Source 3: Campaign posts (the campaigns page store)
       AdminFirestoreService.getAll(
-        `${getSubCollection('workspaces')}/default/test_socialPosts`
+        getSocialPostsCollection()
       ),
     ]);
 

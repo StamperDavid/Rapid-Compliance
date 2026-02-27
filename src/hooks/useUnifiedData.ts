@@ -334,36 +334,3 @@ export function useRecords<T>(
   };
 }
 
-/**
- * Fetch workspaces (deprecated in single-tenant architecture)
- *
- * @returns Empty array - workspaces do not exist in single-tenant mode
- */
-export function useWorkspaces(): UseDataReturn<Record<string, unknown>> {
-  const { user } = useUnifiedAuth();
-  const [data] = useState<Record<string, unknown>[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error] = useState<Error | null>(null);
-
-  const fetchData = useCallback(async () => {
-    if (!user) {
-      setLoading(false);
-      return;
-    }
-
-    // In single-tenant mode, there are no workspaces
-    await Promise.resolve();
-    setLoading(false);
-  }, [user]);
-
-  useEffect(() => {
-    void fetchData();
-  }, [fetchData]);
-
-  return {
-    data,
-    loading,
-    error,
-    refetch: fetchData,
-  };
-}

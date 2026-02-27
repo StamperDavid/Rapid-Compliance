@@ -22,7 +22,7 @@ import TemplateSelector from '@/components/templates/TemplateSelector';
 import DealScoreCard from '@/components/templates/DealScoreCard';
 import RevenueForecastChart from '@/components/templates/RevenueForecastChart';
 import type { DealScore, RevenueForecast } from '@/lib/templates';
-import { getSubCollection } from '@/lib/firebase/collections';
+import { getDealsCollection } from '@/lib/firebase/collections';
 import { logger } from '@/lib/logger/logger';
 import SubpageNav from '@/components/ui/SubpageNav';
 import { EMAIL_STUDIO_TABS } from '@/lib/constants/subpage-nav';
@@ -83,7 +83,7 @@ export default function TemplatesDashboard() {
 
       // Fetch real deal IDs from Firestore
       const { FirestoreService } = await import('@/lib/db/firestore-service');
-      const collectionPath = `${getSubCollection('workspaces')}/default/entities/deals/records`;
+      const collectionPath = getDealsCollection();
       const dealRecords = await FirestoreService.getAll<{ id: string }>(collectionPath);
       const dealIds = dealRecords.map(d => d.id);
       const scores = new Map<string, DealScore>();

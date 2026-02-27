@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { FirestoreService } from '@/lib/db/firestore-service';
-import { getSubCollection } from '@/lib/firebase/collections';
+import { getLeadsCollection, getDealsCollection } from '@/lib/firebase/collections';
 import { Timestamp } from 'firebase/firestore'
 import { logger } from '@/lib/logger/logger';
 import ActivityTimeline from '@/components/ActivityTimeline';
@@ -40,7 +40,7 @@ export default function LeadDetailPage() {
 
   const loadLead = useCallback(async (): Promise<void> => {
     try {
-      const data = await FirestoreService.get(`${getSubCollection('workspaces')}/default/entities/leads/records`, leadId);
+      const data = await FirestoreService.get(getLeadsCollection(), leadId);
 
       // Type guard for lead data
       if (!data || typeof data !== 'object') {
@@ -450,7 +450,7 @@ export default function LeadDetailPage() {
                           const displayName = getDisplayName();
 
                           await FirestoreService.set(
-                            `${getSubCollection('workspaces')}/default/entities/deals/records`,
+                            getDealsCollection(),
                             dealId,
                             {
                               id: dealId,

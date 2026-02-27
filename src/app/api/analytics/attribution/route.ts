@@ -1,12 +1,11 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
-import { COLLECTIONS, getOrdersCollection, getSubCollection } from '@/lib/firebase/collections';
+import { getOrdersCollection, getSubCollection, getLeadsCollection, getDealsCollection } from '@/lib/firebase/collections';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { withCache } from '@/lib/cache/analytics-cache';
-import { PLATFORM_ID } from '@/lib/constants/platform';
 
 export const dynamic = 'force-dynamic';
 
@@ -194,8 +193,8 @@ async function calculateAttributionAnalytics(period: string): Promise<Attributio
   }
 
   // Fetch all collections
-  const leadsPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/default/entities/leads`;
-  const dealsPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/default/entities/deals`;
+  const leadsPath = getLeadsCollection();
+  const dealsPath = getDealsCollection();
   const ordersPath = getOrdersCollection();
   const formSubmissionsPath = getSubCollection('formSubmissions');
 

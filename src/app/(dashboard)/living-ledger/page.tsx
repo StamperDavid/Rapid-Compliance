@@ -22,7 +22,7 @@ import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { useToast } from '@/hooks/useToast';
 import { logger } from '@/lib/logger/logger';
 import { PLATFORM_ID } from '@/lib/constants/platform';
-import { getSubCollection } from '@/lib/firebase/collections';
+import { getDealsCollection } from '@/lib/firebase/collections';
 import type { Deal } from '@/lib/crm/deal-service';
 import type { DealHealthScore } from '@/lib/crm/deal-health';
 import type { ActionRecommendations } from '@/lib/crm/next-best-action-engine';
@@ -66,7 +66,7 @@ export default function LivingLedgerPage() {
     const loadDeals = async () => {
       try {
         const { FirestoreService } = await import('@/lib/db/firestore-service');
-        const collectionPath = `${getSubCollection('workspaces')}/default/entities/deals/records`;
+        const collectionPath = getDealsCollection();
         const records = await FirestoreService.getAll<Deal>(collectionPath);
 
         setDeals(records);

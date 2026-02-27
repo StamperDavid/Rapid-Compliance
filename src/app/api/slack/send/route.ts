@@ -17,6 +17,7 @@ import { sendSlackMessageSchema } from '@/lib/slack/validation';
 import { db } from '@/lib/firebase-admin';
 import { Timestamp } from 'firebase-admin/firestore';
 import type { SlackWorkspace, SlackMessage } from '@/lib/slack/types';
+import { getSlackWorkspacesCollection } from '@/lib/firebase/collections';
 
 export const dynamic = 'force-dynamic';
 
@@ -58,7 +59,7 @@ export async function POST(request: NextRequest) {
     const data = validation.data;
     
     // Get workspace
-    const workspaceDoc = await db.collection('slack_workspaces').doc(data.workspaceId).get();
+    const workspaceDoc = await db.collection(getSlackWorkspacesCollection()).doc(data.workspaceId).get();
     
     if (!workspaceDoc.exists) {
       return NextResponse.json(

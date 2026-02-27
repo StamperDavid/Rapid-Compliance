@@ -1,10 +1,9 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
-import { COLLECTIONS } from '@/lib/firebase/collections';
+import { getDealsCollection } from '@/lib/firebase/collections';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
-import { PLATFORM_ID } from '@/lib/constants/platform';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { limit } from 'firebase/firestore';
 
@@ -98,7 +97,7 @@ export async function GET(request: NextRequest) {
     // Get open deals from Firestore — forecast operates on all currently open deals
     // regardless of creation date, so no date constraint is added here. The limit
     // prevents unbounded scans on large collections.
-    const dealsPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/default/entities/deals`;
+    const dealsPath = getDealsCollection();
     let allDeals: DealRecord[] = [];
     const QUERY_LIMIT = 1000;
 

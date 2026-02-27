@@ -101,8 +101,7 @@ async function runTests() {
 
   // Configuration (REPLACE WITH YOUR IDs)
   const config = {
-    organizationId: process.env.TEST_ORG_ID || 'org_change_this',
-    workspaceId: process.env.TEST_WORKSPACE_ID || 'ws_change_this',
+    organizationId: process.env.TEST_ORG_ID || 'rapid-compliance-root',
     schemaId: null, // Will be created
     fieldId: null,  // Will be created
     userId: 'test_user_123',
@@ -114,8 +113,8 @@ async function runTests() {
 
   // If config has placeholder values, warn user
   if (config.organizationId.includes('change_this')) {
-    warn('⚠️  Using placeholder IDs. Set TEST_ORG_ID and TEST_WORKSPACE_ID environment variables for real testing.');
-    warn('⚠️  Example: TEST_ORG_ID=org_abc123 TEST_WORKSPACE_ID=ws_xyz789 node scripts/test-schema-adaptability.js\n');
+    warn('⚠️  Using placeholder IDs. Set TEST_ORG_ID environment variable for real testing.');
+    warn('⚠️  Example: TEST_ORG_ID=rapid-compliance-root node scripts/test-schema-adaptability.js\n');
   }
 
   try {
@@ -209,7 +208,7 @@ async function runTests() {
     ];
 
     // Correct path format for entities/records
-    const entitiesPath = `organizations/${config.organizationId}/workspaces/${config.workspaceId}/entities/Test Products/records`;
+    const entitiesPath = `organizations/${config.organizationId}/products`;
     
     for (const record of testRecords) {
       await db.collection(entitiesPath).doc(record.id).set({

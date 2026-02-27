@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { FirestoreService } from '@/lib/db/firestore-service';
-import { getSubCollection } from '@/lib/firebase/collections';
+import { getWorkflowsCollection } from '@/lib/firebase/collections';
 import { Timestamp } from 'firebase/firestore'
 import { logger } from '@/lib/logger/logger';
 import { useToast } from '@/hooks/useToast';
@@ -27,7 +27,7 @@ export default function WorkflowEditPage() {
 
   const loadWorkflow = useCallback(async () => {
     try {
-      const data = await FirestoreService.get(`${getSubCollection('workspaces')}/default/workflows`, workflowId);
+      const data = await FirestoreService.get(getWorkflowsCollection(), workflowId);
       setWorkflow(data as WorkflowData);
     } catch (err) {
       const error = err instanceof Error ? err : new Error(String(err));
@@ -48,7 +48,7 @@ export default function WorkflowEditPage() {
 
     try {
       setSaving(true);
-      await FirestoreService.update(`${getSubCollection('workspaces')}/default/workflows`, workflowId, {
+      await FirestoreService.update(getWorkflowsCollection(), workflowId, {
         ...workflow,
         updatedAt: Timestamp.now(),
       });

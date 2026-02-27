@@ -10,7 +10,7 @@ import { z } from 'zod';
 import { apiKeyService } from '@/lib/api-keys/api-key-service';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import { getEcommerceConfig } from '@/lib/ecommerce/types';
-import { COLLECTIONS, getCartsCollection, getOrdersCollection } from '@/lib/firebase/collections';
+import { getCartsCollection, getOrdersCollection, getSubCollection } from '@/lib/firebase/collections';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
@@ -98,7 +98,7 @@ export async function POST(request: NextRequest) {
     for (const item of cart.items) {
       if (item.productId) {
         const product = await AdminFirestoreService.get(
-          `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/entities/${productSchema}/records`,
+          getSubCollection(productSchema),
           item.productId
         ) as { stockLevel?: number } | null;
         if (product && typeof product.stockLevel === 'number' && product.stockLevel < item.quantity) {

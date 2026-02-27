@@ -19,7 +19,6 @@
 import { BaseSpecialist } from '../../base-specialist';
 import type { AgentMessage, AgentReport, SpecialistConfig, Signal } from '../../types';
 import { logger } from '@/lib/logger/logger';
-import { PLATFORM_ID } from '@/lib/constants/platform';
 import { getSubCollection } from '@/lib/firebase/collections';
 
 // ============================================================================
@@ -299,7 +298,7 @@ export class CatalogManagerSpecialist extends BaseSpecialist {
    */
   private async handleFetchProducts(payload: FetchProductsPayload): Promise<CatalogResult> {
     try {
-      const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+      const { FirestoreService } = await import('@/lib/db/firestore-service');
       const { where, orderBy: _orderBy, limit: _limit } = await import('firebase/firestore');
 
       const constraints = [];
@@ -323,8 +322,9 @@ export class CatalogManagerSpecialist extends BaseSpecialist {
 
       if (ecommerceConfig?.productSchema) {
         // Fetch from configured entity schema
+        const productSchema = String(ecommerceConfig.productSchema);
         const records = await FirestoreService.getAll(
-          `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/entities/${ecommerceConfig.productSchema}/records`,
+          getSubCollection(productSchema),
           constraints
         );
 
@@ -401,7 +401,7 @@ export class CatalogManagerSpecialist extends BaseSpecialist {
    */
   private async handleGetProduct(payload: GetProductPayload): Promise<CatalogResult> {
     try {
-      const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+      const { FirestoreService } = await import('@/lib/db/firestore-service');
 
       // Get e-commerce config
       const ecommerceConfig = await FirestoreService.get(
@@ -412,8 +412,9 @@ export class CatalogManagerSpecialist extends BaseSpecialist {
       let product: Product | null = null;
 
       if (ecommerceConfig?.productSchema) {
+        const productSchema = String(ecommerceConfig.productSchema);
         const record = await FirestoreService.get(
-          `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/entities/${ecommerceConfig.productSchema}/records`,
+          getSubCollection(productSchema),
           payload.productId
         );
 

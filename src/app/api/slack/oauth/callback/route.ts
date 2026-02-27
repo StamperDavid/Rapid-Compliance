@@ -15,7 +15,7 @@ import { oauthCallbackSchema } from '@/lib/slack/validation';
 import { Timestamp } from 'firebase-admin/firestore';
 import { db } from '@/lib/firebase-admin';
 import type { SlackWorkspace, SlackOAuthState } from '@/lib/slack/types';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSlackWorkspacesCollection } from '@/lib/firebase/collections';
 import { encryptToken } from '@/lib/security/token-encryption';
 
 export const dynamic = 'force-dynamic';
@@ -144,9 +144,7 @@ export async function GET(request: NextRequest) {
     };
     
     await db
-      .collection('organizations')
-      .doc(PLATFORM_ID)
-      .collection('slack_workspaces')
+      .collection(getSlackWorkspacesCollection())
       .doc(workspaceId)
       .set(workspace);
 

@@ -32,7 +32,7 @@ export const PRICING_TIER_BLUEPRINTS: Record<string, PricingTierBlueprint> = {
     features: [
       'Basic CRM features',
       'AI chat assistant (limited)',
-      '1 workspace',
+      '1 project',
       'Email support',
       'Basic analytics',
     ],
@@ -80,7 +80,7 @@ export const PRICING_TIER_BLUEPRINTS: Record<string, PricingTierBlueprint> = {
     },
     features: [
       'Everything in Pro',
-      'Unlimited workspaces',
+      'Unlimited projects',
       'Unlimited team members',
       'Fine-tuning capabilities',
       'Dedicated account manager',

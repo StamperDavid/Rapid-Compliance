@@ -10,7 +10,7 @@ import { where, limit, type QueryConstraint } from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
-import { getSubCollection } from '@/lib/firebase/collections';
+import { getContactsCollection } from '@/lib/firebase/collections';
 import type { ViewFilter } from '@/types/filters';
 
 export const dynamic = 'force-dynamic';
@@ -148,7 +148,7 @@ export async function POST(request: NextRequest) {
     const constraints = buildQueryConstraints(filters);
 
     // Query contacts collection
-    const collectionPath = `${getSubCollection('workspaces')}/default/entities/contacts/records`;
+    const collectionPath = getContactsCollection();
 
     let count = 0;
     const QUERY_LIMIT = 10000;

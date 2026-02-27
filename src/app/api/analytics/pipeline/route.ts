@@ -1,11 +1,10 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
-import { COLLECTIONS } from '@/lib/firebase/collections';
+import { getDealsCollection } from '@/lib/firebase/collections';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { withCache } from '@/lib/cache/analytics-cache';
-import { PLATFORM_ID } from '@/lib/constants/platform';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { limit } from 'firebase/firestore';
 
@@ -111,7 +110,7 @@ export async function GET(request: NextRequest) {
 async function calculatePipelineAnalytics(_period: string) {
   // Get all deals from Firestore (pipeline is a current snapshot — no date filter
   // is applied because old-but-still-open deals must be included regardless of age)
-  const dealsPath = `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/workspaces/default/entities/deals`;
+  const dealsPath = getDealsCollection();
   let allDeals: DealRecord[] = [];
   const QUERY_LIMIT = 1000;
 

@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { FirestoreService } from '@/lib/db/firestore-service';
-import { getSubCollection } from '@/lib/firebase/collections';
+import { getContactsCollection } from '@/lib/firebase/collections';
 import { Timestamp } from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
 import { showErrorToast } from '@/components/ErrorToast';
@@ -19,7 +19,7 @@ export default function EditContactPage() {
 
   const loadContact = useCallback(async () => {
     try {
-      const data = await FirestoreService.get(`${getSubCollection('workspaces')}/default/entities/contacts/records`, contactId);
+      const data = await FirestoreService.get(getContactsCollection(), contactId);
       setContact(data as Contact);
     } catch (error: unknown) {
       logger.error('Error loading contact:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
@@ -40,7 +40,7 @@ export default function EditContactPage() {
 
     try {
       setSaving(true);
-      await FirestoreService.update(`${getSubCollection('workspaces')}/default/entities/contacts/records`, contactId, { ...contact, updatedAt: Timestamp.now() });
+      await FirestoreService.update(getContactsCollection(), contactId, { ...contact, updatedAt: Timestamp.now() });
       router.push(`/contacts/${contactId}`);
     } catch (error: unknown) {
       logger.error('Error updating contact:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
