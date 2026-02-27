@@ -9,7 +9,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
-import SubpageNav from '@/components/ui/SubpageNav';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { logger } from '@/lib/logger/logger';
 
@@ -133,12 +132,6 @@ export default function WebsiteSettingsPage() {
     <div style={{ fontFamily: 'system-ui', minHeight: '100vh', background: 'transparent' }}>
 
       <div style={{ padding: '2rem' }}>
-        <SubpageNav items={[
-          { label: 'SEO', href: '/website/seo' },
-          { label: 'Domains', href: '/website/domains' },
-          { label: 'Site Settings', href: '/website/settings' },
-        ]} />
-
         <div style={{ marginBottom: '2rem' }}>
           <h1 style={{ fontSize: '2rem', margin: '0 0 0.5rem', color: 'var(--color-text-primary)' }}>
             Website Settings

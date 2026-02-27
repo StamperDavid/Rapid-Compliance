@@ -16,7 +16,6 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { useMissionStream } from '@/hooks/useMissionStream';
-import SubpageNav from '@/components/ui/SubpageNav';
 import MissionSidebar from './_components/MissionSidebar';
 import MissionTimeline from './_components/MissionTimeline';
 import ApprovalCard from './_components/ApprovalCard';
@@ -255,11 +254,6 @@ export default function MissionControlPage() {
         </h1>
         {isStreaming && <LiveBadge />}
       </div>
-
-      <SubpageNav items={[
-        { label: 'Live', href: '/mission-control' },
-        { label: 'History', href: '/mission-control/history' },
-      ]} />
 
       {/* 3-Panel Layout */}
       <div style={{

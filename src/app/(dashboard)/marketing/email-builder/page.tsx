@@ -7,6 +7,8 @@ import { buildEmailHTML, type EmailTemplate, type EmailBlock } from '@/lib/email
 import { useToast } from '@/hooks/useToast';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import SafeHtml from '@/components/SafeHtml';
+import SubpageNav from '@/components/ui/SubpageNav';
+import { EMAIL_STUDIO_TABS } from '@/lib/constants/subpage-nav';
 
 export default function EmailBuilderPage() {
   const router = useRouter();
@@ -115,6 +117,7 @@ export default function EmailBuilderPage() {
 
   return (
     <div className="h-screen flex flex-col bg-surface-main">
+      <SubpageNav items={EMAIL_STUDIO_TABS} />
       {/* Top Bar */}
       <div className="bg-surface-paper border-b border-border-light px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-4">

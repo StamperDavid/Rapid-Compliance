@@ -1,5 +1,5 @@
 /**
- * Battlecards Dashboard
+ * Competitor Research Dashboard
  * 
  * SOVEREIGN CORPORATE BRAIN - COMPETITIVE INTELLIGENCE CENTER
  * 
@@ -19,6 +19,8 @@ import type { CompetitorProfile, Battlecard, BattlecardOptions } from '@/lib/bat
 import { showSuccessToast, showErrorToast } from '@/components/ErrorToast';
 import { auth } from '@/lib/firebase/config';
 import { logger } from '@/lib/logger/logger';
+import SubpageNav from '@/components/ui/SubpageNav';
+import { ANALYTICS_TABS } from '@/lib/constants/subpage-nav';
 
 interface ExportErrorResponse {
   error?: string;
@@ -146,13 +148,14 @@ export default function BattlecardsPage() {
 
   return (
     <div className="min-h-screen bg-[var(--color-bg-main)]">
+      <SubpageNav items={ANALYTICS_TABS} />
       {/* Header */}
       <div className="bg-gradient-to-r from-primary to-secondary border-b border-border-light">
         <div className="px-6 py-8">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold text-[var(--color-text-primary)] mb-2">
-                🎯 Competitive Battlecards
+                🎯 Competitor Research
               </h1>
               <p className="text-[var(--color-text-secondary)]">
                 AI-powered competitive intelligence for winning more deals

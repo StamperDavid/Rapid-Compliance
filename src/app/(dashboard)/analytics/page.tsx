@@ -3,7 +3,6 @@
 import { PLATFORM_ID } from '@/lib/constants/platform';
 
 import React, { useState, useEffect } from 'react';
-import SubpageNav from '@/components/ui/SubpageNav';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
@@ -202,14 +201,6 @@ export default function AnalyticsDashboard() {
   return (
     <div className="bg-surface-main min-h-screen p-8 overflow-y-auto">
       <div className="max-w-[1400px] mx-auto">
-        <SubpageNav items={[
-          { label: 'Overview', href: '/analytics' },
-          { label: 'Revenue', href: '/analytics/revenue' },
-          { label: 'Pipeline', href: '/analytics/pipeline' },
-          { label: 'Sales Performance', href: '/analytics/sales' },
-          { label: 'Sequences', href: '/sequences/analytics' },
-        ]} />
-
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}

@@ -11,19 +11,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
-import SubpageNav from '@/components/ui/SubpageNav';
 import { logger } from '@/lib/logger/logger';
-
-const SOCIAL_NAV_ITEMS = [
-  { label: 'Command Center', href: '/social/command-center' },
-  { label: 'Campaigns', href: '/social/campaigns' },
-  { label: 'Calendar', href: '/social/calendar' },
-  { label: 'Approvals', href: '/social/approvals' },
-  { label: 'Listening', href: '/social/listening' },
-  { label: 'Activity', href: '/social/activity' },
-  { label: 'Agent Rules', href: '/social/agent-rules' },
-  { label: 'Playbook', href: '/social/playbook' },
-];
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -372,8 +360,6 @@ export default function CommandCenterPage() {
           </button>
         </div>
       </div>
-
-      <SubpageNav items={SOCIAL_NAV_ITEMS} />
 
       {/* ── Kill Switch + Agent Status Banner ──────────────────────────── */}
       <div

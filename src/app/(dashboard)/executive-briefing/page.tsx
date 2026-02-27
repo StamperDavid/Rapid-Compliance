@@ -6,6 +6,8 @@ import { useOrgTheme } from '@/hooks/useOrgTheme';
 import { useUnifiedAuth } from '@/hooks/useUnifiedAuth';
 import { auth } from '@/lib/firebase/config';
 import { logger } from '@/lib/logger/logger';
+import SubpageNav from '@/components/ui/SubpageNav';
+import { DASHBOARD_TABS } from '@/lib/constants/subpage-nav';
 
 // ============================================================================
 // TYPES
@@ -192,6 +194,7 @@ export default function ExecutiveBriefingPage() {
   return (
     <div style={{ padding: '2rem' }}>
       <div>
+        <SubpageNav items={DASHBOARD_TABS} />
         {/* Header */}
         <div style={{ marginBottom: '2rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

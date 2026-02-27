@@ -5,7 +5,6 @@ import { useAuth } from '@/hooks/useAuth';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
 import { useToast } from '@/hooks/useToast';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
-import SubpageNav from '@/components/ui/SubpageNav';
 
 // Minimal type definitions for this component
 interface SocialTrainingSettings {
@@ -458,14 +457,6 @@ export default function SocialMediaTrainingPage() {
           <p style={{ color: 'var(--color-text-secondary)', marginBottom: '1.5rem' }}>
             Configure how your AI generates social media content across platforms
           </p>
-          <SubpageNav items={[
-            { label: 'Training Center', href: '/settings/ai-agents/training' },
-            { label: 'Persona', href: '/settings/ai-agents/persona' },
-            { label: 'Voice & Speech', href: '/settings/ai-agents/voice' },
-            { label: 'Voice AI Lab', href: '/voice/training' },
-            { label: 'Social AI Lab', href: '/social/training' },
-            { label: 'SEO AI Lab', href: '/seo/training' },
-          ]} />
         </div>
       </div>
 

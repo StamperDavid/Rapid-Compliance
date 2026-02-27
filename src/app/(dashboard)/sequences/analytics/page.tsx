@@ -18,6 +18,7 @@ import { PLATFORM_ID } from '@/lib/constants/platform';
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import SubpageNav from '@/components/ui/SubpageNav';
+import { ANALYTICS_TABS } from '@/lib/constants/subpage-nav';
 import { useAuth } from '@/hooks/useAuth';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { logger } from '@/lib/logger/logger';
@@ -255,13 +256,7 @@ export default function SequenceAnalyticsPage() {
       <div>
         {/* Header */}
         <div style={{ marginBottom: '2rem' }}>
-          <SubpageNav items={[
-            { label: 'Overview', href: '/analytics' },
-            { label: 'Revenue', href: '/analytics/revenue' },
-            { label: 'Pipeline', href: '/analytics/pipeline' },
-            { label: 'Sales Performance', href: '/analytics/sales' },
-            { label: 'Sequences', href: '/sequences/analytics' },
-          ]} />
+          <SubpageNav items={ANALYTICS_TABS} />
           <Link href={`/outbound/sequences`} style={{ color: 'var(--color-primary)', fontSize: '0.875rem', fontWeight: '500', textDecoration: 'none' }}>
             ← Back to Sequences
           </Link>

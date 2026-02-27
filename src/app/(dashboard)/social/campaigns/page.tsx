@@ -4,18 +4,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { useToast } from '@/hooks/useToast';
-import SubpageNav from '@/components/ui/SubpageNav';
-
-const SOCIAL_NAV_ITEMS = [
-  { label: 'Command Center', href: '/social/command-center' },
-  { label: 'Campaigns', href: '/social/campaigns' },
-  { label: 'Calendar', href: '/social/calendar' },
-  { label: 'Approvals', href: '/social/approvals' },
-  { label: 'Listening', href: '/social/listening' },
-  { label: 'Activity', href: '/social/activity' },
-  { label: 'Agent Rules', href: '/social/agent-rules' },
-  { label: 'Playbook', href: '/social/playbook' },
-];
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -365,8 +353,6 @@ export default function SocialMediaCampaignsPage() {
             )}
           </div>
         </div>
-
-        <SubpageNav items={SOCIAL_NAV_ITEMS} />
 
         {/* ── Mode Toggle ─────────────────────────────────────────── */}
         <div className="flex items-center gap-1 mb-6 p-1 bg-surface-elevated border border-border-light rounded-xl w-fit">

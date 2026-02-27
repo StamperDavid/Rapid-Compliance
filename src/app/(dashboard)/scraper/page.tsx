@@ -11,6 +11,7 @@ import React, { useState, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { auth } from '@/lib/firebase/config';
 import SubpageNav from '@/components/ui/SubpageNav';
+import { LEAD_INTEL_TABS } from '@/lib/constants/subpage-nav';
 import type { ScrapingPlatform } from '@/types/scraper-intelligence';
 import DistillationPreviewDialog from '@/components/scraper/DistillationPreviewDialog';
 
@@ -168,11 +169,7 @@ export default function ScraperDashboardPage() {
         </div>
 
         {/* Sub-page Navigation */}
-        <SubpageNav items={[
-          { label: 'Lead Research', href: '/leads/research' },
-          { label: 'Lead Scoring', href: '/lead-scoring' },
-          { label: 'Marketing Scraper', href: '/scraper' },
-        ]} />
+        <SubpageNav items={LEAD_INTEL_TABS} />
 
         {/* Stats Row */}
         <div

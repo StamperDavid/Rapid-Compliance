@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import SubpageNav from '@/components/ui/SubpageNav';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { logger } from '@/lib/logger/logger';;
@@ -80,13 +79,6 @@ export default function PipelineAnalyticsPage() {
       <div style={{ flex: 1, padding: '2rem', overflowY: 'auto' }}>
         <div>
           <div style={{ marginBottom: '2rem' }}>
-            <SubpageNav items={[
-              { label: 'Overview', href: '/analytics' },
-              { label: 'Revenue', href: '/analytics/revenue' },
-              { label: 'Pipeline', href: '/analytics/pipeline' },
-              { label: 'Sales Performance', href: '/analytics/sales' },
-              { label: 'Sequences', href: '/sequences/analytics' },
-            ]} />
             <Link href={`/analytics`} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', color: primaryColor, fontSize: '0.875rem', fontWeight: '500', textDecoration: 'none', marginBottom: '1.5rem' }}>
               ← Back to Analytics
             </Link>

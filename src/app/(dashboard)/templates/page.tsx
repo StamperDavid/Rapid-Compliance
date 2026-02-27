@@ -24,6 +24,8 @@ import RevenueForecastChart from '@/components/templates/RevenueForecastChart';
 import type { DealScore, RevenueForecast } from '@/lib/templates';
 import { getSubCollection } from '@/lib/firebase/collections';
 import { logger } from '@/lib/logger/logger';
+import SubpageNav from '@/components/ui/SubpageNav';
+import { EMAIL_STUDIO_TABS } from '@/lib/constants/subpage-nav';
 
 type Tab = 'templates' | 'scoring' | 'forecasting';
 
@@ -157,6 +159,7 @@ export default function TemplatesDashboard() {
 
   return (
     <div className="min-h-screen bg-surface-paper">
+      <SubpageNav items={EMAIL_STUDIO_TABS} />
       {/* Header */}
       <div className="bg-gradient-to-r from-primary via-primary to-secondary border-b border-border-light">
         <div className="max-w-7xl mx-auto px-6 py-8">

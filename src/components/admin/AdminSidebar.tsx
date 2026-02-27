@@ -39,7 +39,6 @@ import {
   BarChart3,
   Activity,
   Globe,
-  FileEdit,
   Film,
   Radar,
   Settings,
@@ -55,8 +54,12 @@ import {
   ShoppingCart,
   Store,
   PieChart,
-  BookOpenText,
   HelpCircle,
+  Search,
+  Trophy,
+  AlertTriangle,
+  PenLine,
+  Plug,
 } from 'lucide-react';
 
 // ============================================================================
@@ -72,6 +75,7 @@ const NAV_SECTIONS: NavigationSection[] = [
     allowedRoles: ['owner', 'admin', 'manager', 'member'],
     items: [
       { id: 'dashboard', label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, iconColor: 'var(--color-primary)' },
+      { id: 'team', label: 'Team', href: '/team/leaderboard', icon: Trophy, iconColor: 'var(--color-warning)' },
     ],
   },
   // ── CRM ─────────────────────────────────────────────────────────────
@@ -86,6 +90,9 @@ const NAV_SECTIONS: NavigationSection[] = [
       { id: 'contacts', label: 'Contacts', href: '/contacts', icon: Contact, iconColor: 'var(--color-cyan)', requiredPermission: 'canCreateRecords' },
       { id: 'conversations', label: 'Conversations', href: '/conversations', icon: MessageSquare, iconColor: 'var(--color-success)', requiredPermission: 'canCreateRecords' },
       { id: 'living-ledger', label: 'Living Ledger', href: '/living-ledger', icon: BookOpen, iconColor: 'var(--color-warning)', requiredPermission: 'canViewAllRecords' },
+      { id: 'lead-intel', label: 'Lead Intelligence', href: '/leads/research', icon: Search, iconColor: 'var(--color-primary)', requiredPermission: 'canViewLeads' },
+      { id: 'coaching', label: 'Coaching', href: '/coaching', icon: GraduationCap, iconColor: 'var(--color-success)' },
+      { id: 'risk', label: 'Risk', href: '/risk', icon: AlertTriangle, iconColor: 'var(--color-error)' },
     ],
   },
   // ── Outreach (merged Lead Gen + Outbound + Workflows) ───────────────
@@ -101,6 +108,7 @@ const NAV_SECTIONS: NavigationSection[] = [
       { id: 'calls', label: 'Calls', href: '/calls', icon: PhoneCall, iconColor: 'var(--color-error)', requiredPermission: 'canAccessVoiceAgents' },
       { id: 'forms', label: 'Forms', href: '/forms', icon: ClipboardList, iconColor: 'var(--color-success)' },
       { id: 'workflows', label: 'Workflows', href: '/workflows', icon: Workflow, iconColor: 'var(--color-warning)', requiredPermission: 'canCreateWorkflows' },
+      { id: 'email-studio', label: 'Email Studio', href: '/email-writer', icon: PenLine, iconColor: 'var(--color-primary)', requiredPermission: 'canManageEmailCampaigns' },
     ],
   },
   // ── Content (consolidated from Content Factory) ─────────────────────
@@ -142,16 +150,14 @@ const NAV_SECTIONS: NavigationSection[] = [
       { id: 'storefront', label: 'Storefront', href: '/settings/storefront', icon: Store, iconColor: 'var(--color-warning)', requiredPermission: 'canManageEcommerce' },
     ],
   },
-  // ── Website (consolidated — SEO/Domains/Settings → tabs) ───────────
+  // ── Website (single entry — Pages/Blog/SEO/Settings via hub tabs) ───
   {
     id: 'website',
     label: 'Website',
     icon: Globe,
     allowedRoles: ['owner', 'admin', 'manager'],
     items: [
-      { id: 'site-editor', label: 'Site Editor', href: '/website/editor', icon: Globe, iconColor: 'var(--color-primary)', requiredPermission: 'canManageWebsite' },
-      { id: 'pages', label: 'Pages', href: '/website/pages', icon: FileEdit, iconColor: 'var(--color-secondary)', requiredPermission: 'canManageWebsite' },
-      { id: 'blog', label: 'Blog', href: '/website/blog', icon: BookOpenText, iconColor: 'var(--color-cyan)', requiredPermission: 'canManageWebsite' },
+      { id: 'website', label: 'Website', href: '/website/editor', icon: Globe, iconColor: 'var(--color-primary)', requiredPermission: 'canManageWebsite' },
     ],
   },
   // ── Analytics (consolidated — Revenue/Pipeline/Sales → tabs) ────────
@@ -233,6 +239,33 @@ export default function AdminSidebar() {
       return pathname === '/analytics' ||
         pathname.startsWith('/analytics/') ||
         pathname.startsWith('/sequences/analytics');
+    }
+    // Lead Intelligence matches all lead intel hub pages
+    if (href === '/leads/research') {
+      return pathname.startsWith('/leads/research') ||
+        pathname.startsWith('/lead-scoring') ||
+        pathname.startsWith('/scraper');
+    }
+    // Coaching matches all coaching pages + playbook
+    if (href === '/coaching') {
+      return pathname.startsWith('/coaching') ||
+        pathname.startsWith('/playbook');
+    }
+    // Email Studio matches email writer + nurture + email builder + templates
+    if (href === '/email-writer') {
+      return pathname.startsWith('/email-writer') ||
+        pathname.startsWith('/nurture') ||
+        pathname.startsWith('/marketing/email-builder') ||
+        pathname === '/templates';
+    }
+    // Team matches leaderboard + tasks + performance
+    if (href === '/team/leaderboard') {
+      return pathname.startsWith('/team/') ||
+        pathname.startsWith('/performance');
+    }
+    // Website matches all /website/* paths
+    if (href === '/website/editor') {
+      return pathname.startsWith('/website/');
     }
     return pathname.startsWith(href);
   };
@@ -559,7 +592,39 @@ export default function AdminSidebar() {
             backgroundColor: 'var(--color-bg-elevated)',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: isCollapsed ? '0' : '0.25rem', justifyContent: isCollapsed ? 'center' : 'flex-start' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: isCollapsed ? '0' : '0.25rem', justifyContent: isCollapsed ? 'center' : 'flex-start', flexWrap: 'wrap' }}>
+            <Link
+              href="/integrations"
+              title="Integrations"
+              onClick={handleMobileClose}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                padding: '0.5rem 0.5rem',
+                borderRadius: '0.375rem',
+                textDecoration: 'none',
+                color: pathname?.startsWith('/integrations') ? 'var(--color-primary)' : 'var(--color-text-secondary)',
+                backgroundColor: pathname?.startsWith('/integrations') ? 'rgba(var(--color-primary-rgb), 0.08)' : 'transparent',
+                transition: 'all 0.15s ease',
+                flex: isCollapsed ? 'none' : 1,
+              }}
+              onMouseEnter={(e) => {
+                if (!pathname?.startsWith('/integrations')) {
+                  e.currentTarget.style.backgroundColor = 'rgba(var(--color-primary-rgb), 0.04)';
+                  e.currentTarget.style.color = 'var(--color-text-primary)';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!pathname?.startsWith('/integrations')) {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                  e.currentTarget.style.color = 'var(--color-text-secondary)';
+                }
+              }}
+            >
+              <Plug className="w-4 h-4 flex-shrink-0" />
+              {!isCollapsed && <span style={{ fontSize: '0.8125rem', fontWeight: 500 }}>Integrations</span>}
+            </Link>
             <Link
               href="/settings"
               title="Settings"

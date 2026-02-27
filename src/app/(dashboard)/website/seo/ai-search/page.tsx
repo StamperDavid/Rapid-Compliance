@@ -8,7 +8,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
-import SubpageNav from '@/components/ui/SubpageNav';
 import {
   Sparkles,
   Shield,
@@ -136,14 +135,6 @@ export default function AISearchDashboardPage() {
   return (
     <div className="min-h-screen bg-[var(--color-bg-main)] p-8">
       <div>
-        <SubpageNav items={[
-          { label: 'SEO', href: '/website/seo' },
-          { label: 'AI Search', href: '/website/seo/ai-search' },
-          { label: 'Competitors', href: '/website/seo/competitors' },
-          { label: 'Domains', href: '/website/domains' },
-          { label: 'Site Settings', href: '/website/settings' },
-        ]} />
-
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}

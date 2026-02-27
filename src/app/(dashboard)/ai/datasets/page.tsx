@@ -2,7 +2,6 @@
 
 import { useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import SubpageNav from '@/components/ui/SubpageNav';
 import { FirestoreService } from '@/lib/db/firestore-service';
 import { getSubCollection } from '@/lib/firebase/collections';
 import { usePagination } from '@/hooks/usePagination';
@@ -62,10 +61,6 @@ export default function DatasetsPage() {
           <h1 className="text-3xl font-bold text-[var(--color-text-primary)]">Training Datasets</h1>
           <button onClick={() => router.push(`/ai/datasets/new`)} className="px-4 py-2 bg-primary text-white rounded-lg hover:from-primary-light hover:to-secondary-light">+ Create Dataset</button>
         </div>
-        <SubpageNav items={[
-          { label: 'Datasets', href: '/ai/datasets' },
-          { label: 'Fine-Tuning', href: '/ai/fine-tuning' },
-        ]} />
       </div>
 
       {error && (

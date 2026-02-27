@@ -17,6 +17,8 @@ import { TopPerformersCard } from '@/components/performance/TopPerformersCard';
 import { TrendsCard } from '@/components/performance/TrendsCard';
 import type { TeamPerformanceAnalytics } from '@/lib/performance';
 import { logger } from '@/lib/logger/logger';
+import SubpageNav from '@/components/ui/SubpageNav';
+import { TEAM_TABS } from '@/lib/constants/subpage-nav';
 
 export default function PerformanceDashboardPage() {
   const authFetch = useAuthFetch();
@@ -67,6 +69,7 @@ export default function PerformanceDashboardPage() {
 
   return (
     <div className="min-h-screen bg-surface-main">
+      <SubpageNav items={TEAM_TABS} />
       {/* Header */}
       <div className="bg-surface-paper border-b border-border-light">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">

@@ -23,6 +23,8 @@ import { AdoptionMetricsCard } from '@/components/playbook/AdoptionMetricsCard';
 import { auth } from '@/lib/firebase/config';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import { logger } from '@/lib/logger/logger';
+import SubpageNav from '@/components/ui/SubpageNav';
+import { COACHING_TABS } from '@/lib/constants/subpage-nav';
 import type {
   Playbook,
   PlaybookAdoptionMetrics,
@@ -254,6 +256,7 @@ export default function PlaybookDashboardPage() {
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: 'var(--color-bg-main)', padding: '1.5rem' }}>
+      <SubpageNav items={COACHING_TABS} />
       {/* Header */}
       <div style={{ marginBottom: '2rem' }}>
         <h1 style={{ fontSize: '1.875rem', fontWeight: 700, color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>

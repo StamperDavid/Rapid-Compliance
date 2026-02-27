@@ -20,6 +20,7 @@ import { EmailWriterCard } from '@/components/email-writer/EmailWriterCard';
 import type { GeneratedEmail } from '@/lib/email-writer';
 import { useAuth } from '@/hooks/useAuth';
 import SubpageNav from '@/components/ui/SubpageNav';
+import { EMAIL_STUDIO_TABS } from '@/lib/constants/subpage-nav';
 
 // ============================================================================
 // TYPES
@@ -89,10 +90,7 @@ export default function EmailWriterPage() {
         </div>
 
         {/* Sub-page Navigation */}
-        <SubpageNav items={[
-          { label: 'Email Writer', href: '/email-writer' },
-          { label: 'Nurture', href: '/nurture' },
-        ]} />
+        <SubpageNav items={EMAIL_STUDIO_TABS} />
 
         {/* Stats Cards */}
         <div className="grid grid-cols-4 gap-4">

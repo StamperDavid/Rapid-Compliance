@@ -8,7 +8,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
-import SubpageNav from '@/components/ui/SubpageNav';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { useToast } from '@/hooks/useToast';
 import { logger } from '@/lib/logger/logger';
@@ -214,12 +213,6 @@ export default function CustomDomainsPage() {
       padding: '40px 20px',
       fontFamily: 'system-ui, -apple-system, sans-serif',
     }}>
-      <SubpageNav items={[
-        { label: 'SEO', href: '/website/seo' },
-        { label: 'Domains', href: '/website/domains' },
-        { label: 'Site Settings', href: '/website/settings' },
-      ]} />
-
       {/* Header */}
       <div style={{
         display: 'flex',

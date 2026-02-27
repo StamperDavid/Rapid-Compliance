@@ -9,6 +9,7 @@ import { db } from '@/lib/firebase/config';
 import { useOrgTheme } from '@/hooks/useOrgTheme'
 import { logger } from '@/lib/logger/logger';
 import SubpageNav from '@/components/ui/SubpageNav';
+import { DASHBOARD_TABS } from '@/lib/constants/subpage-nav';
 
 interface DashboardStats {
   totalLeads: number;
@@ -321,11 +322,7 @@ export default function WorkspaceDashboardPage() {
           </div>
         </div>
 
-        <SubpageNav items={[
-          { label: 'Dashboard', href: '/dashboard' },
-          { label: 'Executive Briefing', href: '/executive-briefing' },
-          { label: 'Workforce HQ', href: '/workforce' },
-        ]} />
+        <SubpageNav items={DASHBOARD_TABS} />
 
         {/* Stats Grid */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>

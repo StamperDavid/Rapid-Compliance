@@ -4,7 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
-interface SubpageNavItem {
+export interface SubpageNavItem {
   label: string;
   href: string;
 }

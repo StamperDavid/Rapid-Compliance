@@ -11,6 +11,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { FirestoreService } from '@/lib/db/firestore-service';
 import { getSubCollection } from '@/lib/firebase/collections';
 import { logger } from '@/lib/logger/logger';
+import SubpageNav from '@/components/ui/SubpageNav';
+import { ANALYTICS_TABS } from '@/lib/constants/subpage-nav';
 
 interface ComplianceReport {
   id: string;
@@ -87,6 +89,7 @@ export default function ComplianceReportsPage() {
   return (
     <div style={{ padding: '2rem' }}>
       <div>
+        <SubpageNav items={ANALYTICS_TABS} />
         {/* Header */}
         <div style={{ marginBottom: '2rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>

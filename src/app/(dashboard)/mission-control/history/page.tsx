@@ -8,7 +8,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
-import SubpageNav from '@/components/ui/SubpageNav';
 import type { Mission, MissionStatus } from '@/lib/orchestrator/mission-persistence';
 
 interface MissionListResponse {
@@ -100,11 +99,6 @@ export default function MissionHistoryPage() {
       }}>
         Mission Control
       </h1>
-
-      <SubpageNav items={[
-        { label: 'Live', href: '/mission-control' },
-        { label: 'History', href: '/mission-control/history' },
-      ]} />
 
       {/* Table */}
       <div style={{

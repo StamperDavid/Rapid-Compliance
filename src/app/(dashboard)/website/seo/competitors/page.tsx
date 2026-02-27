@@ -7,7 +7,6 @@
 
 import React, { useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import SubpageNav from '@/components/ui/SubpageNav';
 import CompetitorAnalysisCard from '@/components/seo/CompetitorAnalysisCard';
 import KeywordGapAnalysis from '@/components/seo/KeywordGapAnalysis';
 import CostToCompete from '@/components/seo/CostToCompete';
@@ -168,14 +167,6 @@ export default function CompetitorSEOPage() {
   return (
     <div className="min-h-screen bg-[var(--color-bg-main)] p-8">
       <div>
-        <SubpageNav items={[
-          { label: 'SEO', href: '/website/seo' },
-          { label: 'AI Search', href: '/website/seo/ai-search' },
-          { label: 'Competitors', href: '/website/seo/competitors' },
-          { label: 'Domains', href: '/website/domains' },
-          { label: 'Site Settings', href: '/website/settings' },
-        ]} />
-
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
