@@ -21,7 +21,6 @@ export const SOCIAL_TABS: SubpageNavItem[] = [
   { label: 'Calendar', href: '/social/calendar' },
   { label: 'Approvals', href: '/social/approvals' },
   { label: 'Listening', href: '/social/listening' },
-  { label: 'Activity', href: '/social/activity' },
   { label: 'Agent Rules', href: '/social/agent-rules' },
   { label: 'Playbook', href: '/social/playbook' },
 ];
@@ -30,8 +29,7 @@ export const SOCIAL_TABS: SubpageNavItem[] = [
 export const ANALYTICS_TABS: SubpageNavItem[] = [
   { label: 'Overview', href: '/analytics' },
   { label: 'Revenue', href: '/analytics/revenue' },
-  { label: 'Pipeline', href: '/analytics/pipeline' },
-  { label: 'Sales', href: '/analytics/sales' },
+  { label: 'CRM Analytics', href: '/analytics/sales' },
   { label: 'E-Commerce', href: '/analytics/ecommerce' },
   { label: 'Attribution', href: '/analytics/attribution' },
   { label: 'Workflows', href: '/analytics/workflows' },
@@ -62,7 +60,6 @@ export const WEBSITE_BLOG_TABS: SubpageNavItem[] = [
 // ── Website > SEO sub-hub ───────────────────────────────────────────────────
 export const WEBSITE_SEO_TABS: SubpageNavItem[] = [
   { label: 'SEO', href: '/website/seo' },
-  { label: 'AI Search', href: '/website/seo/ai-search' },
   { label: 'Competitors', href: '/website/seo/competitors' },
   { label: 'Domains', href: '/website/domains' },
 ];

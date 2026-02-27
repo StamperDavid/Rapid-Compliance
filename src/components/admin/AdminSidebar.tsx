@@ -22,7 +22,6 @@ import {
   LayoutDashboard,
   Users,
   Handshake,
-  Contact,
   MessageSquare,
   BookOpen,
   Send,
@@ -92,9 +91,8 @@ const NAV_SECTIONS: NavigationSection[] = [
     icon: Users,
     allowedRoles: ['owner', 'admin', 'manager', 'member'],
     items: [
-      { id: 'leads', label: 'Leads', href: '/leads', icon: Users, iconColor: 'var(--color-primary)', requiredPermission: 'canViewLeads' },
+      { id: 'crm-hub', label: 'CRM', href: '/crm', icon: Users, iconColor: 'var(--color-primary)', requiredPermission: 'canViewLeads' },
       { id: 'deals', label: 'Deals / Pipeline', href: '/deals', icon: Handshake, iconColor: 'var(--color-secondary)', requiredPermission: 'canViewDeals' },
-      { id: 'contacts', label: 'Contacts', href: '/contacts', icon: Contact, iconColor: 'var(--color-cyan)', requiredPermission: 'canCreateRecords' },
       { id: 'conversations', label: 'Conversations', href: '/conversations', icon: MessageSquare, iconColor: 'var(--color-success)', requiredPermission: 'canCreateRecords' },
       { id: 'living-ledger', label: 'Living Ledger', href: '/living-ledger', icon: BookOpen, iconColor: 'var(--color-warning)', requiredPermission: 'canViewAllRecords' },
       { id: 'lead-intel', label: 'Lead Intelligence', href: '/leads/research', icon: Search, iconColor: 'var(--color-primary)', requiredPermission: 'canViewLeads' },
@@ -110,7 +108,7 @@ const NAV_SECTIONS: NavigationSection[] = [
     icon: Send,
     allowedRoles: ['owner', 'admin', 'manager'],
     items: [
-      { id: 'outbound-hub', label: 'Outbound', href: '/outbound', icon: Send, iconColor: 'var(--color-primary)', requiredPermission: 'canManageLeads' },
+      { id: 'outbound-hub', label: 'Outbound', href: '/outbound/sequences', icon: Send, iconColor: 'var(--color-primary)', requiredPermission: 'canManageLeads' },
       { id: 'sequences', label: 'Sequences', href: '/outbound/sequences', icon: ListOrdered, iconColor: 'var(--color-secondary)', requiredPermission: 'canManageLeads' },
       { id: 'email-campaigns', label: 'Campaigns', href: '/email/campaigns', icon: Mail, iconColor: 'var(--color-cyan)', requiredPermission: 'canManageEmailCampaigns' },
       { id: 'calls', label: 'Calls', href: '/calls', icon: PhoneCall, iconColor: 'var(--color-error)', requiredPermission: 'canAccessVoiceAgents' },
@@ -140,7 +138,7 @@ const NAV_SECTIONS: NavigationSection[] = [
     icon: Bot,
     allowedRoles: ['owner', 'admin', 'manager'],
     items: [
-      { id: 'agent-registry', label: 'Agent Registry', href: '/ai-agents', icon: Bot, iconColor: 'var(--color-cyan)', requiredPermission: 'canDeployAIAgents' },
+      { id: 'agent-registry', label: 'Agent Registry', href: '/workforce', icon: Bot, iconColor: 'var(--color-cyan)', requiredPermission: 'canDeployAIAgents' },
       { id: 'mission-control', label: 'Mission Control', href: '/mission-control', icon: Radar, iconColor: 'var(--color-primary)', requiredPermission: 'canDeployAIAgents' },
       { id: 'training-hub', label: 'Training Hub', href: '/settings/ai-agents/training', icon: GraduationCap, iconColor: 'var(--color-success)', requiredPermission: 'canTrainAIAgents' },
       { id: 'models', label: 'Models & Data', href: '/ai/datasets', icon: Database, iconColor: 'var(--color-primary)', requiredPermission: 'canManageAIAgents' },
@@ -271,6 +269,18 @@ export default function AdminSidebar() {
     if (href === '/coaching') {
       return pathname.startsWith('/coaching') ||
         pathname.startsWith('/playbook');
+    }
+    // Agent Registry matches /workforce
+    if (href === '/workforce') {
+      return pathname.startsWith('/workforce') ||
+        pathname === '/ai-agents';
+    }
+    // CRM hub matches /crm, /leads, /contacts
+    if (href === '/crm') {
+      return pathname === '/crm' ||
+        pathname.startsWith('/crm?') ||
+        pathname === '/leads' ||
+        pathname === '/contacts';
     }
     // Email Studio matches email writer + nurture + email builder + templates
     if (href === '/email-writer') {
@@ -631,7 +641,7 @@ export default function AdminSidebar() {
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: isCollapsed ? '0' : '0.25rem', justifyContent: isCollapsed ? 'center' : 'flex-start', flexWrap: 'wrap' }}>
             <Link
-              href="/integrations"
+              href="/settings/integrations"
               title="Integrations"
               onClick={handleMobileClose}
               style={{
@@ -641,19 +651,19 @@ export default function AdminSidebar() {
                 padding: '0.5rem 0.5rem',
                 borderRadius: '0.375rem',
                 textDecoration: 'none',
-                color: pathname?.startsWith('/integrations') ? 'var(--color-primary)' : 'var(--color-text-secondary)',
-                backgroundColor: pathname?.startsWith('/integrations') ? 'rgba(var(--color-primary-rgb), 0.08)' : 'transparent',
+                color: pathname?.startsWith('/settings/integrations') ? 'var(--color-primary)' : 'var(--color-text-secondary)',
+                backgroundColor: pathname?.startsWith('/settings/integrations') ? 'rgba(var(--color-primary-rgb), 0.08)' : 'transparent',
                 transition: 'all 0.15s ease',
                 flex: isCollapsed ? 'none' : 1,
               }}
               onMouseEnter={(e) => {
-                if (!pathname?.startsWith('/integrations')) {
+                if (!pathname?.startsWith('/settings/integrations')) {
                   e.currentTarget.style.backgroundColor = 'rgba(var(--color-primary-rgb), 0.04)';
                   e.currentTarget.style.color = 'var(--color-text-primary)';
                 }
               }}
               onMouseLeave={(e) => {
-                if (!pathname?.startsWith('/integrations')) {
+                if (!pathname?.startsWith('/settings/integrations')) {
                   e.currentTarget.style.backgroundColor = 'transparent';
                   e.currentTarget.style.color = 'var(--color-text-secondary)';
                 }
