@@ -1,7 +1,7 @@
 # SalesVelocity.ai - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** February 26, 2026 (Hub navigation consolidation — 9 layout.tsx files, centralized SubpageNav, 3 duplicates deleted, SEO research Firestore persistence)
+**Last Updated:** February 27, 2026 (Orphaned page consolidation — all pages now linked via sidebar or hub tabs, SEO direct access, new System section, 6 new tab arrays)
 **Branches:** `dev` (latest)
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Architecture:** Single-Tenant (Penthouse Model) - NOT a SaaS platform
@@ -322,25 +322,26 @@ border-color: #1a1a1a;
 | Aspect | Detail |
 |--------|--------|
 | **Source** | `src/components/admin/AdminSidebar.tsx` |
-| **Sections** | 8 navigation sections, ~32 sidebar items |
+| **Sections** | 9 navigation sections, ~40 sidebar items |
 | **Width** | 280px expanded / 64px collapsed |
 | **Theming** | 100% CSS variable-driven via `var(--color-*)` |
 | **Routing** | All static routes — no `[orgId]` parameters in sidebar links |
 | **Footer** | Integrations (plug icon → `/integrations`), Settings (gear icon → `/settings`), and Help/Academy (help icon → `/academy`) |
 | **Tab Navigation** | `SubpageNav` component provides route-based tabs on hub/parent pages |
 
-**Consolidated Navigation Structure (February 26, 2026 — Hub Layout Consolidation):**
+**Consolidated Navigation Structure (February 27, 2026 — Orphaned Page Consolidation):**
 
 | # | Section | Sidebar Items | Sub-pages (via SubpageNav tabs) |
 |---|---------|---------------|----------------------------------|
-| 1 | **Home** | Dashboard, Conversations, Team | Dashboard tabs: Dashboard, Executive Briefing, Workforce HQ; Team tabs: Leaderboard, Tasks, Performance |
-| 2 | **CRM** | Leads, Deals/Pipeline, Contacts, Living Ledger, Lead Intelligence, Coaching, Risk | Lead Intelligence tabs: Lead Research, Lead Scoring, Marketing Scraper; Coaching tabs: My Coaching, Team Coaching, Playbooks |
-| 3 | **Outreach** | Outbound, Sequences, Campaigns, Email Studio, Calls | Email Studio tabs: Email Writer, Nurture, Email Builder, Templates |
-| 4 | **Content** | Social Hub, Video Library, Video Studio, Proposals | Social Hub tabs (layout): Command Center, Campaigns, Calendar, Approvals, Listening, Activity, Agent Rules, Playbook |
-| 5 | **AI Workforce** | Agent Registry, Training Hub, Models & Data | Training Hub tabs: Training Center, Persona, Voice & Speech, Voice AI Lab, Social AI Lab, SEO AI Lab; Models tabs (layout): Datasets, Fine-Tuning; AI Data tabs: Datasets, Schemas |
+| 1 | **Home** | Dashboard, Team, Performance, Onboarding | Dashboard tabs: Dashboard, Executive Briefing, Workforce HQ; Team tabs: Leaderboard, Tasks, Performance |
+| 2 | **CRM** | Leads, Deals/Pipeline, Contacts, Conversations, Living Ledger, Lead Intelligence, Coaching, Playbook, Risk | Lead Intelligence tabs: Lead Research, Lead Scoring, Marketing Scraper; Coaching tabs: My Coaching, Team Coaching, Playbook |
+| 3 | **Outreach** | Outbound, Sequences, Campaigns, Calls, Forms, Workflows, Email Studio | Email Studio tabs: Email Writer, Nurture, Email Builder, Templates |
+| 4 | **Content** | Social Hub, Social Analytics, Video Library, Video Studio, Proposals | Social Hub tabs (layout): Command Center, Campaigns, Calendar, Approvals, Listening, Activity, Agent Rules, Playbook; Proposals tabs: Proposals, Builder |
+| 5 | **AI Workforce** | Agent Registry, Mission Control, Training Hub, Models & Data | Training Hub tabs: AI Training, Voice, Social, SEO; Mission Control tabs (layout): Live, History; Models tabs (layout): Datasets, Fine-Tuning; AI Agent Settings tabs: Overview, Persona, Training, Business Setup, Configuration, Voice |
 | 6 | **Commerce** | Products, Orders, Storefront | — |
-| 7 | **Website** | Website | Website tabs (layout): Editor, Pages, Templates, Blog, SEO, Navigation, Settings, Audit Log; Blog sub-tabs (layout): Posts, Editor, Categories; SEO sub-tabs (layout): SEO, AI Search, Competitors, Domains |
-| 8 | **Analytics** | Overview | Analytics tabs (layout): Overview, Revenue, Pipeline, Sales, E-Commerce, Attribution, Workflows, Sequences, Compliance, Competitor Research |
+| 7 | **Website** | Website, SEO | Website tabs (layout): Editor, Pages, Templates, Blog, SEO, Navigation, Settings, Audit Log; Blog sub-tabs (layout): Posts, Editor, Categories; SEO sub-tabs (layout): SEO, AI Search, Competitors, Domains |
+| 8 | **Analytics** | Overview, A/B Testing | Analytics tabs (layout): Overview, Revenue, Pipeline, Sales, E-Commerce, Attribution, Workflows, Sequences, Compliance, Competitor Research |
+| 9 | **System** (owner-only) | System Health, Impersonate, Schemas | System tabs: System Health, Impersonate |
 
 **Footer Navigation (outside main sections):**
 - **Integrations** (plug icon) → `/integrations`
@@ -349,7 +350,7 @@ border-color: #1a1a1a;
 
 **SubpageNav Architecture (February 26, 2026):**
 - **Component:** `src/components/ui/SubpageNav.tsx` — Route-based tab bar using `usePathname()` from Next.js
-- **Centralized Config:** `src/lib/constants/subpage-nav.ts` — 12 tab arrays (DASHBOARD_TABS, SOCIAL_TABS, ANALYTICS_TABS, WEBSITE_TABS, WEBSITE_BLOG_TABS, WEBSITE_SEO_TABS, MISSION_CONTROL_TABS, AI_DATA_TABS, LEAD_INTEL_TABS, EMAIL_STUDIO_TABS, COACHING_TABS, TEAM_TABS)
+- **Centralized Config:** `src/lib/constants/subpage-nav.ts` — 18 tab arrays (DASHBOARD_TABS, SOCIAL_TABS, ANALYTICS_TABS, WEBSITE_TABS, WEBSITE_BLOG_TABS, WEBSITE_SEO_TABS, MISSION_CONTROL_TABS, AI_DATA_TABS, LEAD_INTEL_TABS, EMAIL_STUDIO_TABS, COACHING_TABS, TEAM_TABS, PROPOSALS_TABS, TRAINING_HUB_TABS, AI_AGENTS_SETTINGS_TABS, SYSTEM_TABS)
 - **9 layout.tsx files** render SubpageNav automatically for all child routes: social, analytics, website, website/blog, website/seo, mission-control, ai, coaching, team
 - **Cross-route pages** (outside hub prefix) import from centralized constants and render inline SubpageNav
 - **Deleted 3 duplicate pages:** `/marketing/ab-tests` (dup of `/ab-tests`), `/outbound/email-writer` (dup of `/email-writer`), `/identity/refine` (dup of `/settings/ai-agents/persona`)
@@ -359,7 +360,7 @@ border-color: #1a1a1a;
 - God Mode sidebar logic — Absorbed into unified `AdminSidebar.tsx`
 - `UnifiedSidebar.tsx` in admin context — Superseded by `AdminSidebar.tsx` for admin routes
 
-**Previous Structure (Pre-Session 25):** 13 sections with 83 items — consolidated to 8 sections with ~32 items via competitive analysis (Close.com, HubSpot, Salesforce, GoHighLevel, Pipedrive). Further refined Feb 26 with hub layout.tsx files and centralized tab config.
+**Previous Structure (Pre-Session 25):** 13 sections with 83 items — consolidated to 8 sections with ~32 items via competitive analysis (Close.com, HubSpot, Salesforce, GoHighLevel, Pipedrive). Refined Feb 26 with hub layout.tsx files and centralized tab config. Expanded to 9 sections (~40 items) Feb 27 to eliminate orphaned pages.
 
 **Bug Definition:** Any code that creates parallel navigation structures, reintroduces God Mode sidebars, builds shadow navigation components, or splits sidebar logic into disconnected files is a **bug**.
 
@@ -1140,9 +1141,9 @@ src/lib/agent/instance-manager.ts       # Agent Instance Manager
 | canProcessOrders | YES | YES | YES | YES |
 | canManageProducts | YES | YES | YES | - |
 
-### Navigation Section Visibility (8 Sections — 4-Role RBAC)
+### Navigation Section Visibility (9 Sections — 4-Role RBAC)
 
-**8 Consolidated Sections** in `AdminSidebar.tsx` (permission-gated per role via `filterNavigationByRole()`):
+**9 Consolidated Sections** in `AdminSidebar.tsx` (permission-gated per role via `filterNavigationByRole()`):
 
 | Section | owner | admin | manager | member | Key Permission |
 |---------|-------|-------|---------|--------|----------------|
@@ -1154,6 +1155,7 @@ src/lib/agent/instance-manager.ts       # Agent Instance Manager
 | 6. Commerce | YES | YES | YES | YES* | canProcessOrders |
 | 7. Website | YES | YES | YES | - | canManageWebsite |
 | 8. Analytics | YES | YES | YES | YES* | canViewReports |
+| 9. System | YES | - | - | - | owner-only |
 
 **Footer items** (Settings, Academy) visible to all roles. Settings hub page internally gates Compliance & Admin items to owner/admin via `canManageOrganization`.
 
@@ -1938,18 +1940,19 @@ The middleware (`src/middleware.ts`) uses **Role-Based Segment Routing**:
 **Legacy Client UI Restored:** January 27, 2026 (1/25/2026 Baseline)
 **Dynamic Theming Enabled:** January 27, 2026 - Hardcoded hex colors replaced with CSS variables
 **Nav Consolidation:** February 26, 2026 - 9 hub layout.tsx files, centralized SubpageNav config, 3 duplicate pages deleted, 5 new sidebar items + footer Integrations link
+**Orphaned Page Consolidation:** February 27, 2026 - Added SEO direct link, Performance, Onboarding, Playbook, System section (owner-only with System Health, Impersonate, Schemas). 6 new tab arrays (Proposals, Training Hub, AI Agent Settings, System). All 168 pages now reachable via navigation.
 
-> **IMPORTANT:** The sidebar was consolidated from 13 sections (~83 items) to 8 sections (~32 items). Sub-pages are accessed via `SubpageNav` tab bars rendered by 9 hub layout.tsx files + inline imports from `src/lib/constants/subpage-nav.ts`.
+> **IMPORTANT:** The sidebar was consolidated from 13 sections (~83 items) to 9 sections (~40 items). Sub-pages are accessed via `SubpageNav` tab bars rendered by 9 hub layout.tsx files + inline imports from `src/lib/constants/subpage-nav.ts`.
 > Settings and Academy in sidebar footer icons. Integrations added as footer icon (Feb 26).
-> System tools remain HARD-GATED in the `/admin/*` route tree.
+> System section (owner-only) added to dashboard sidebar (Feb 27) with System Health, Impersonate, and Schemas.
 
 #### Current Implementation (SINGLE-TENANT ARCHITECTURE)
 
 | Component | Location | Used By | Status |
 |-----------|----------|---------|--------|
 | **Dashboard Layout** | `src/app/(dashboard)/layout.tsx` | Dashboard Routes | ACTIVE - Flattened single-tenant |
-| **AdminSidebar** | `src/components/admin/AdminSidebar.tsx` | Dashboard Layout | ACTIVE - 8 sections + footer (updated Feb 26: +5 items, +Integrations footer) |
-| **SubpageNav** | `src/components/ui/SubpageNav.tsx` | 9 layouts + ~17 cross-route pages | ACTIVE - Route-based tab navigation, centralized config in `subpage-nav.ts` |
+| **AdminSidebar** | `src/components/admin/AdminSidebar.tsx` | Dashboard Layout | ACTIVE - 9 sections + footer (updated Feb 27: +System section, +SEO, +Performance, +Onboarding, +Playbook) |
+| **SubpageNav** | `src/components/ui/SubpageNav.tsx` | 9 layouts + ~17 cross-route pages | ACTIVE - Route-based tab navigation, 18 tab arrays in `subpage-nav.ts` |
 | **UnifiedSidebar** | `src/components/dashboard/UnifiedSidebar.tsx` | Admin Layout | ACTIVE - Uses `getNavigationForRole()` |
 | **Navigation Config** | `src/components/dashboard/navigation-config.ts` | UnifiedSidebar | ACTIVE - Hard-gated System section |
 
@@ -1958,7 +1961,7 @@ The middleware (`src/middleware.ts`) uses **Role-Based Segment Routing**:
 #### Navigation Architecture
 
 **Dashboard Routes (`/(dashboard)/*`):**
-- Uses `AdminSidebar.tsx` with 8 consolidated sections
+- Uses `AdminSidebar.tsx` with 9 consolidated sections
 - Hub pages use `SubpageNav` component for tab navigation to sub-pages
 - Settings and Academy accessible via footer icons
 - Dark theme with Lucide icons and CSS variable theming
@@ -1968,18 +1971,19 @@ The middleware (`src/middleware.ts`) uses **Role-Based Segment Routing**:
 - Navigation from `getNavigationForRole()` in navigation-config.ts
 - Hard-gated System section for superadmin only
 
-#### Dashboard Navigation Structure (8 Sections + Footer)
+#### Dashboard Navigation Structure (9 Sections + Footer)
 
-Users see 8 sidebar sections with sub-pages accessible via SubpageNav tab bars (rendered via layout.tsx or inline):
+Users see 9 sidebar sections with sub-pages accessible via SubpageNav tab bars (rendered via layout.tsx or inline):
 
-1. **Home** - Dashboard (tabs: Executive Briefing, Workforce HQ), Conversations, Team (tabs: Leaderboard, Tasks, Performance)
-2. **CRM** - Leads, Deals/Pipeline, Contacts, Living Ledger, Lead Intelligence (tabs: Lead Research, Lead Scoring, Marketing Scraper), Coaching (tabs: My Coaching, Team Coaching, Playbooks), Risk
-3. **Outreach** - Outbound, Sequences, Campaigns, Email Studio (tabs: Email Writer, Nurture, Email Builder, Templates), Calls
-4. **Content** - Social Hub (tabs via layout: Command Center, Campaigns, Calendar, Approvals, Listening, Activity, Agent Rules, Playbook), Video Library, Video Studio, Proposals
-5. **AI Workforce** - Agent Registry, Training Hub (tabs: Training Center, Persona, Voice & Speech, Voice AI Lab, Social AI Lab, SEO AI Lab), Models & Data (tabs via layout: Datasets, Fine-Tuning)
+1. **Home** - Dashboard (tabs: Executive Briefing, Workforce HQ), Team (tabs: Leaderboard, Tasks, Performance), Performance, Onboarding
+2. **CRM** - Leads, Deals/Pipeline, Contacts, Conversations, Living Ledger, Lead Intelligence (tabs: Lead Research, Lead Scoring, Marketing Scraper), Coaching (tabs: My Coaching, Team Coaching, Playbook), Playbook, Risk
+3. **Outreach** - Outbound, Sequences, Campaigns, Calls, Forms, Workflows, Email Studio (tabs: Email Writer, Nurture, Email Builder, Templates)
+4. **Content** - Social Hub (tabs via layout: Command Center, Campaigns, Calendar, Approvals, Listening, Activity, Agent Rules, Playbook), Social Analytics, Video Library, Video Studio, Proposals (tabs: Proposals, Builder)
+5. **AI Workforce** - Agent Registry, Mission Control (tabs: Live, History), Training Hub (tabs: AI Training, Voice, Social, SEO), Models & Data (tabs via layout: Datasets, Fine-Tuning)
 6. **Commerce** - Products, Orders, Storefront
-7. **Website** - Website (single entry; tabs via layout: Editor, Pages, Templates, Blog, SEO, Navigation, Settings, Audit Log; Blog sub-tabs: Posts, Editor, Categories; SEO sub-tabs: SEO, AI Search, Competitors, Domains)
-8. **Analytics** - Overview (tabs via layout: Overview, Revenue, Pipeline, Sales, E-Commerce, Attribution, Workflows, Sequences, Compliance, Competitor Research)
+7. **Website** - Website (tabs via layout: Editor, Pages, Templates, Blog, SEO, Navigation, Settings, Audit Log; Blog sub-tabs: Posts, Editor, Categories; SEO sub-tabs: SEO, AI Search, Competitors, Domains), SEO (direct sidebar link)
+8. **Analytics** - Overview (tabs via layout: Overview, Revenue, Pipeline, Sales, E-Commerce, Attribution, Workflows, Sequences, Compliance, Competitor Research), A/B Testing
+9. **System** (owner-only) - System Health, Impersonate, Schemas
 
 **Footer:**
 - Integrations → `/integrations`
@@ -1992,7 +1996,7 @@ Admin users access the `/admin/*` route tree with the System section:
 
 - **System** (admin ONLY) - System Overview, Organizations, All Users, Feature Flags, Audit Logs, System Settings
 
-**CRITICAL:** The System section is NOT part of the dashboard sidebar. It is only accessible in the `/admin/*` route tree via `getNavigationForRole()`.
+**Note:** A dashboard-level System section (owner-only) was added Feb 27 with System Health, Impersonate, and Schemas. The `/admin/*` route tree retains its own hard-gated System section via `getNavigationForRole()` for admin-specific tools.
 
 #### Route Pattern (Single-Tenant)
 
