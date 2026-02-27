@@ -1,7 +1,7 @@
 # SalesVelocity.ai - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** February 27, 2026 (Orphaned page consolidation — all pages now linked via sidebar or hub tabs, SEO direct access, new System section, 6 new tab arrays)
+**Last Updated:** February 27, 2026 (Redundancy cleanup — 7 duplicate pages replaced with redirects, 2 analytics views merged, sidebar consolidated from ~40 to ~37 items, net -2,850 lines removed)
 **Branches:** `dev` (latest)
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Architecture:** Single-Tenant (Penthouse Model) - NOT a SaaS platform
@@ -36,7 +36,7 @@
 
 | Metric | Count | Status |
 |--------|-------|--------|
-| Physical Routes (page.tsx) | 174 | Verified February 26, 2026 (-3 duplicate pages deleted: marketing/ab-tests, outbound/email-writer, identity/refine) |
+| Physical Routes (page.tsx) | 174 | Verified February 27, 2026 (9 pages replaced with redirects to canonical versions; net route count unchanged — redirects still exist as page.tsx files) |
 | API Endpoints (route.ts) | 282 | Verified February 26, 2026 (+/api/seo/research GET/POST) |
 | AI Agents | 52 | **52 FUNCTIONAL (48 swarm + 4 standalone)** |
 | RBAC Roles | 4 | `owner` (level 3), `admin` (level 2), `manager` (level 1), `member` (level 0) — 4-role RBAC |
@@ -326,41 +326,43 @@ border-color: #1a1a1a;
 | **Width** | 280px expanded / 64px collapsed |
 | **Theming** | 100% CSS variable-driven via `var(--color-*)` |
 | **Routing** | All static routes — no `[orgId]` parameters in sidebar links |
-| **Footer** | Integrations (plug icon → `/integrations`), Settings (gear icon → `/settings`), and Help/Academy (help icon → `/academy`) |
+| **Footer** | Integrations (plug icon → `/settings/integrations`), Settings (gear icon → `/settings`), and Help/Academy (help icon → `/academy`) |
 | **Tab Navigation** | `SubpageNav` component provides route-based tabs on hub/parent pages |
 
-**Consolidated Navigation Structure (February 27, 2026 — Orphaned Page Consolidation):**
+**Consolidated Navigation Structure (February 27, 2026 — Redundancy Cleanup):**
 
 | # | Section | Sidebar Items | Sub-pages (via SubpageNav tabs) |
 |---|---------|---------------|----------------------------------|
 | 1 | **Home** | Dashboard, Team, Performance, Onboarding | Dashboard tabs: Dashboard, Executive Briefing, Workforce HQ; Team tabs: Leaderboard, Tasks, Performance |
-| 2 | **CRM** | Leads, Deals/Pipeline, Contacts, Conversations, Living Ledger, Lead Intelligence, Coaching, Playbook, Risk | Lead Intelligence tabs: Lead Research, Lead Scoring, Marketing Scraper; Coaching tabs: My Coaching, Team Coaching, Playbook |
-| 3 | **Outreach** | Outbound, Sequences, Campaigns, Calls, Forms, Workflows, Email Studio | Email Studio tabs: Email Writer, Nurture, Email Builder, Templates |
-| 4 | **Content** | Social Hub, Social Analytics, Video Library, Video Studio, Proposals | Social Hub tabs (layout): Command Center, Campaigns, Calendar, Approvals, Listening, Activity, Agent Rules, Playbook; Proposals tabs: Proposals, Builder |
-| 5 | **AI Workforce** | Agent Registry, Mission Control, Training Hub, Models & Data | Training Hub tabs: AI Training, Voice, Social, SEO; Mission Control tabs (layout): Live, History; Models tabs (layout): Datasets, Fine-Tuning; AI Agent Settings tabs: Overview, Persona, Training, Business Setup, Configuration, Voice |
+| 2 | **CRM** | CRM (unified → `/crm`), Deals/Pipeline, Conversations, Living Ledger, Lead Intelligence, Coaching, Playbook, Risk | CRM page has entity tabs: leads, companies, contacts, deals, products, quotes, invoices, payments, orders, tasks; Lead Intelligence tabs: Lead Research, Lead Scoring, Marketing Scraper; Coaching tabs: My Coaching, Team Coaching, Playbook |
+| 3 | **Outreach** | Outbound (→ `/outbound/sequences`), Sequences, Campaigns, Calls, Forms, Workflows, Email Studio | Email Studio tabs: Email Writer, Nurture, Email Builder, Templates |
+| 4 | **Content** | Social Hub, Social Analytics, Video Library, Video Studio, Proposals | Social Hub tabs (layout): Command Center, Campaigns, Calendar, Approvals, Listening, Agent Rules, Playbook; Proposals tabs: Proposals, Builder |
+| 5 | **AI Workforce** | Agent Registry (→ `/workforce`), Mission Control, Training Hub, Models & Data | Training Hub tabs: AI Training, Voice, Social, SEO; Mission Control tabs (layout): Live, History; Models tabs (layout): Datasets, Fine-Tuning; AI Agent Settings tabs: Overview, Persona, Training, Business Setup, Configuration, Voice |
 | 6 | **Commerce** | Products, Orders, Storefront | — |
-| 7 | **Website** | Website, SEO | Website tabs (layout): Editor, Pages, Templates, Blog, SEO, Navigation, Settings, Audit Log; Blog sub-tabs (layout): Posts, Editor, Categories; SEO sub-tabs (layout): SEO, AI Search, Competitors, Domains |
-| 8 | **Analytics** | Overview, A/B Testing | Analytics tabs (layout): Overview, Revenue, Pipeline, Sales, E-Commerce, Attribution, Workflows, Sequences, Compliance, Competitor Research |
+| 7 | **Website** | Website, SEO | Website tabs (layout): Editor, Pages, Templates, Blog, SEO, Navigation, Settings, Audit Log; Blog sub-tabs (layout): Posts, Editor, Categories; SEO sub-tabs (layout): SEO, Competitors, Domains |
+| 8 | **Analytics** | Overview, A/B Testing | Analytics tabs (layout): Overview, Revenue, CRM Analytics (merged sales+pipeline), E-Commerce, Attribution, Workflows, Sequences, Compliance, Competitor Research |
 | 9 | **System** (owner-only) | System Health, Impersonate, Schemas | System tabs: System Health, Impersonate |
 
 **Footer Navigation (outside main sections):**
-- **Integrations** (plug icon) → `/integrations`
+- **Integrations** (plug icon) → `/settings/integrations` (canonical — `/integrations` redirects here)
 - **Settings** (gear icon) → `/settings` hub page with sections: General, Users & Team, Integrations, API Keys, Theme & Branding, Security, Compliance & Admin
 - **Academy** (help icon) → `/academy`
 
-**SubpageNav Architecture (February 26, 2026):**
+**SubpageNav Architecture (February 27, 2026):**
 - **Component:** `src/components/ui/SubpageNav.tsx` — Route-based tab bar using `usePathname()` from Next.js
 - **Centralized Config:** `src/lib/constants/subpage-nav.ts` — 18 tab arrays (DASHBOARD_TABS, SOCIAL_TABS, ANALYTICS_TABS, WEBSITE_TABS, WEBSITE_BLOG_TABS, WEBSITE_SEO_TABS, MISSION_CONTROL_TABS, AI_DATA_TABS, LEAD_INTEL_TABS, EMAIL_STUDIO_TABS, COACHING_TABS, TEAM_TABS, PROPOSALS_TABS, TRAINING_HUB_TABS, AI_AGENTS_SETTINGS_TABS, SYSTEM_TABS)
 - **9 layout.tsx files** render SubpageNav automatically for all child routes: social, analytics, website, website/blog, website/seo, mission-control, ai, coaching, team
 - **Cross-route pages** (outside hub prefix) import from centralized constants and render inline SubpageNav
-- **Deleted 3 duplicate pages:** `/marketing/ab-tests` (dup of `/ab-tests`), `/outbound/email-writer` (dup of `/email-writer`), `/identity/refine` (dup of `/settings/ai-agents/persona`)
+- **Deleted 3 duplicate pages (Feb 26):** `/marketing/ab-tests` (dup of `/ab-tests`), `/outbound/email-writer` (dup of `/email-writer`), `/identity/refine` (dup of `/settings/ai-agents/persona`)
+- **Redirected 9 redundant pages (Feb 27):** `/integrations` → `/settings/integrations`, `/ai-agents` → `/workforce`, `/settings/workflows` → `/workflows`, `/outbound` → `/email-writer`, `/leads` → `/crm?view=leads`, `/contacts` → `/crm?view=contacts`, `/social/activity` → `/social/command-center`, `/analytics/pipeline` → `/analytics/sales`, `/website/seo/ai-search` → `/website/seo`
+- **Tab cleanup (Feb 27):** Removed Activity tab from SOCIAL_TABS, removed AI Search tab from WEBSITE_SEO_TABS, merged Pipeline+Sales into single "CRM Analytics" tab in ANALYTICS_TABS
 
 **Deleted Components (Forensic Record):**
 - `CommandCenterSidebar.tsx` — Deleted January 26, 2026 (commit `f2d2497b`)
 - God Mode sidebar logic — Absorbed into unified `AdminSidebar.tsx`
 - `UnifiedSidebar.tsx` in admin context — Superseded by `AdminSidebar.tsx` for admin routes
 
-**Previous Structure (Pre-Session 25):** 13 sections with 83 items — consolidated to 8 sections with ~32 items via competitive analysis (Close.com, HubSpot, Salesforce, GoHighLevel, Pipedrive). Refined Feb 26 with hub layout.tsx files and centralized tab config. Expanded to 9 sections (~40 items) Feb 27 to eliminate orphaned pages.
+**Previous Structure (Pre-Session 25):** 13 sections with 83 items — consolidated to 8 sections with ~32 items via competitive analysis (Close.com, HubSpot, Salesforce, GoHighLevel, Pipedrive). Refined Feb 26 with hub layout.tsx files and centralized tab config. Expanded to 9 sections (~40 items) Feb 27 to eliminate orphaned pages. Cleaned Feb 27 — redundancy audit replaced 9 duplicate pages with redirects, merged Leads/Contacts into CRM hub link, merged analytics/sales+pipeline into CRM Analytics tab (~37 sidebar items).
 
 **Bug Definition:** Any code that creates parallel navigation structures, reintroduces God Mode sidebars, builds shadow navigation components, or splits sidebar logic into disconnected files is a **bug**.
 
@@ -449,14 +451,15 @@ SalesVelocity.ai is a **single-company sales and marketing super tool**. This is
 > **Note:** These routes were migrated from `/workspace/[orgId]/*` to `/(dashboard)/*` as part of the single-tenant conversion. All routes now use `DEFAULT_ORG_ID = 'rapid-compliance-root'` internally.
 
 **Core Navigation:**
-- `/dashboard`, `/settings`, `/analytics`, `/integrations`, `/templates`
+- `/dashboard`, `/settings`, `/analytics`, `/templates`
 - `/battlecards`, `/email-writer`, `/lead-scoring`, `/living-ledger`
-- `/conversations`, `/workforce`
+- `/conversations`, `/workforce`, `/crm` (unified CRM with entity tabs)
 
 **CRM Entities:**
-- `/leads`, `/leads/new`, `/leads/[id]`, `/leads/[id]/edit`, `/leads/research`
+- `/crm` (unified: leads, companies, contacts, deals, products, quotes, invoices, payments, orders, tasks via `?view=` param)
+- `/leads/new`, `/leads/[id]`, `/leads/[id]/edit`, `/leads/research`
 - `/deals`, `/deals/new`, `/deals/[id]`, `/deals/[id]/edit`
-- `/contacts`, `/contacts/new`, `/contacts/[id]`, `/contacts/[id]/edit`
+- `/contacts/new`, `/contacts/[id]`, `/contacts/[id]/edit`
 - `/products`, `/products/new`, `/products/[id]/edit`
 - `/orders` (NEW Feb 12 — full order management with table, filters, detail drawer)
 - `/entities/[entityName]`
@@ -465,14 +468,25 @@ SalesVelocity.ai is a **single-company sales and marketing super tool**. This is
 - `/email/campaigns`, `/email/campaigns/new`, `/email/campaigns/[campaignId]`
 - `/nurture`, `/nurture/new`, `/nurture/[id]`, `/nurture/[id]/stats`
 - `/ab-tests`, `/ab-tests/new`, `/ab-tests/[id]`
-- `/outbound`, `/outbound/sequences`
+- `/outbound/sequences`
 - `/social/campaigns` (Content Studio — dual-mode autopilot/manual), `/social/training`, `/social/approvals` (batch review, correction capture, "Why" badge), `/social/calendar`, `/social/listening`
-- `/social/command-center` (kill switch, velocity gauges, agent status), `/social/activity` (activity feed), `/social/analytics` (dashboard), `/social/agent-rules` (guardrails editor)
+- `/social/command-center` (kill switch, velocity gauges, agent status, activity feed), `/social/analytics` (dashboard), `/social/agent-rules` (guardrails editor)
 
 **Deleted Duplicates (February 26, 2026):**
 - `/marketing/ab-tests` — duplicate of `/ab-tests`
 - `/outbound/email-writer` — duplicate of `/email-writer`
 - `/identity/refine` — duplicate of `/settings/ai-agents/persona`
+
+**Redirected Duplicates (February 27, 2026):**
+- `/integrations` → `/settings/integrations` (settings version has per-provider OAuth components)
+- `/ai-agents` → `/workforce` (workforce is superset with tier filtering + hierarchy view)
+- `/settings/workflows` → `/workflows` (canonical version with dedicated visual builder)
+- `/outbound` → `/email-writer` (was broken nav shell linking to non-existent routes)
+- `/leads` → `/crm?view=leads` (standalone page duplicated CRM leads tab)
+- `/contacts` → `/crm?view=contacts` (standalone page duplicated CRM contacts tab)
+- `/social/activity` → `/social/command-center` (command center already contains activity feed)
+- `/analytics/pipeline` → `/analytics/sales` (merged into CRM Analytics with velocity + pipeline tabs)
+- `/website/seo/ai-search` → `/website/seo` (AI bot controls already on SEO page)
 
 **Video:**
 - `/content/video` (Video Studio — 7-step production pipeline: Request → Decompose → Pre-Production → Approval → Generation → Assembly → Post-Production)
