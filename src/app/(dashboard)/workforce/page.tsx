@@ -11,13 +11,14 @@ import {
 } from '@/hooks/useSystemStatus';
 import SubpageNav from '@/components/ui/SubpageNav';
 import { DASHBOARD_TABS } from '@/lib/constants/subpage-nav';
+import { Tooltip } from '@/components/ui/tooltip';
 
 // ============================================================================
 // TYPES
 // ============================================================================
 
 type ViewMode = 'grid' | 'hierarchy';
-type FilterTier = 'all' | AgentTier;
+type FilterTier = 'all' | AgentTier | 'STANDALONE';
 
 // ============================================================================
 // AGENT CARD COMPONENT (Memoized for performance)
@@ -69,10 +70,31 @@ const AgentCard = memo(function AgentCard({
       case 'L1': return { label: 'CEO', color: 'var(--color-secondary)', bg: 'rgba(var(--color-secondary-rgb), 0.1)' };
       case 'L2': return { label: 'MGR', color: 'var(--color-info)', bg: 'rgba(var(--color-info-rgb), 0.1)' };
       case 'L3': return { label: 'SPL', color: 'var(--color-success)', bg: 'rgba(var(--color-success-rgb), 0.1)' };
+      case 'STANDALONE': return { label: 'SOLO', color: 'var(--color-warning)', bg: 'rgba(var(--color-warning-rgb), 0.1)' };
     }
   };
 
   const tierBadge = getTierBadge(agent.tier);
+
+  const tierTooltips: Record<AgentTier, string> = {
+    L1: 'Level 1 — Master Orchestrator. Routes goals to domain managers.',
+    L2: 'Level 2 — Domain Manager. Commands specialists in a specific area.',
+    L3: 'Level 3 — Specialist. Executes specific tasks within a domain.',
+    STANDALONE: 'Standalone — Operates independently outside the swarm hierarchy.',
+  };
+
+  const statusTooltips: Record<SystemAgentStatus['status'], string> = {
+    FUNCTIONAL: 'Agent is functional and ready to accept tasks.',
+    EXECUTING: 'Agent is currently executing a task.',
+    SHELL: 'Agent structure exists but implementation is incomplete.',
+    GHOST: 'Agent is defined but not yet built.',
+  };
+
+  const healthTooltips: Record<SystemAgentStatus['health'], string> = {
+    HEALTHY: 'Agent is operating normally.',
+    DEGRADED: 'Agent is operational but experiencing issues.',
+    OFFLINE: 'Agent is not responding.',
+  };
 
   return (
     <div
@@ -94,18 +116,20 @@ const AgentCard = memo(function AgentCard({
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1 }}>
           {/* Tier Badge */}
-          <span style={{
-            padding: '0.25rem 0.5rem',
-            backgroundColor: tierBadge.bg,
-            border: `1px solid ${tierBadge.color}`,
-            borderRadius: '0.25rem',
-            color: tierBadge.color,
-            fontSize: '0.625rem',
-            fontWeight: '700',
-            letterSpacing: '0.05em',
-          }}>
-            {tierBadge.label}
-          </span>
+          <Tooltip content={tierTooltips[agent.tier]} position="top">
+            <span style={{
+              padding: '0.25rem 0.5rem',
+              backgroundColor: tierBadge.bg,
+              border: `1px solid ${tierBadge.color}`,
+              borderRadius: '0.25rem',
+              color: tierBadge.color,
+              fontSize: '0.625rem',
+              fontWeight: '700',
+              letterSpacing: '0.05em',
+            }}>
+              {tierBadge.label}
+            </span>
+          </Tooltip>
           <div style={{ minWidth: 0 }}>
             <h3 style={{
               color: 'var(--color-text-primary)',
@@ -131,14 +155,16 @@ const AgentCard = memo(function AgentCard({
                 borderRadius: '50%',
                 animation: agent.status === 'EXECUTING' ? 'pulse 2s infinite' : 'none',
               }} />
-              <span style={{
-                color: getStatusColor(agent.status),
-                fontSize: '0.625rem',
-                fontWeight: '600',
-                letterSpacing: '0.05em',
-              }}>
-                {getStatusLabel(agent.status)}
-              </span>
+              <Tooltip content={statusTooltips[agent.status]} position="top">
+                <span style={{
+                  color: getStatusColor(agent.status),
+                  fontSize: '0.625rem',
+                  fontWeight: '600',
+                  letterSpacing: '0.05em',
+                }}>
+                  {getStatusLabel(agent.status)}
+                </span>
+              </Tooltip>
               <span style={{
                 width: '1px',
                 height: '10px',
@@ -150,12 +176,14 @@ const AgentCard = memo(function AgentCard({
                 backgroundColor: getHealthColor(agent.health),
                 borderRadius: '50%',
               }} />
-              <span style={{
-                color: 'var(--color-text-disabled)',
-                fontSize: '0.625rem',
-              }}>
-                {agent.health}
-              </span>
+              <Tooltip content={healthTooltips[agent.health]} position="top">
+                <span style={{
+                  color: 'var(--color-text-disabled)',
+                  fontSize: '0.625rem',
+                }}>
+                  {agent.health}
+                </span>
+              </Tooltip>
             </div>
           </div>
         </div>
@@ -226,59 +254,65 @@ const AgentCard = memo(function AgentCard({
         display: 'flex',
         gap: '0.5rem',
       }}>
-        <button
-          onClick={() => onExecute(agent.id)}
-          disabled={agent.status === 'GHOST' || agent.status === 'SHELL'}
-          style={{
-            flex: 1,
-            padding: '0.5rem',
-            backgroundColor: agent.status === 'FUNCTIONAL' || agent.status === 'EXECUTING'
-              ? 'rgba(var(--color-success-rgb), 0.1)'
-              : 'var(--color-bg-paper)',
-            border: agent.status === 'FUNCTIONAL' || agent.status === 'EXECUTING'
-              ? '1px solid var(--color-success)'
-              : '1px solid var(--color-border-strong)',
-            borderRadius: '0.375rem',
-            color: agent.status === 'FUNCTIONAL' || agent.status === 'EXECUTING'
-              ? 'var(--color-success)'
-              : 'var(--color-text-disabled)',
-            fontSize: '0.75rem',
-            cursor: agent.status === 'GHOST' || agent.status === 'SHELL' ? 'not-allowed' : 'pointer',
-            fontWeight: '500',
-          }}
-        >
-          Execute
-        </button>
-        <button
-          onClick={() => onConfigure(agent.id)}
-          style={{
-            flex: 1,
-            padding: '0.5rem',
-            backgroundColor: 'var(--color-bg-paper)',
-            border: '1px solid var(--color-border-strong)',
-            borderRadius: '0.375rem',
-            color: 'var(--color-text-secondary)',
-            fontSize: '0.75rem',
-            cursor: 'pointer',
-          }}
-        >
-          Configure
-        </button>
-        <button
-          onClick={() => onViewLogs(agent.id)}
-          style={{
-            flex: 1,
-            padding: '0.5rem',
-            backgroundColor: 'var(--color-bg-paper)',
-            border: '1px solid var(--color-border-strong)',
-            borderRadius: '0.375rem',
-            color: 'var(--color-text-secondary)',
-            fontSize: '0.75rem',
-            cursor: 'pointer',
-          }}
-        >
-          Logs
-        </button>
+        <Tooltip content="Trigger this agent to run a task." position="bottom">
+          <button
+            onClick={() => onExecute(agent.id)}
+            disabled={agent.status === 'GHOST' || agent.status === 'SHELL'}
+            style={{
+              flex: 1,
+              padding: '0.5rem',
+              backgroundColor: agent.status === 'FUNCTIONAL' || agent.status === 'EXECUTING'
+                ? 'rgba(var(--color-success-rgb), 0.1)'
+                : 'var(--color-bg-paper)',
+              border: agent.status === 'FUNCTIONAL' || agent.status === 'EXECUTING'
+                ? '1px solid var(--color-success)'
+                : '1px solid var(--color-border-strong)',
+              borderRadius: '0.375rem',
+              color: agent.status === 'FUNCTIONAL' || agent.status === 'EXECUTING'
+                ? 'var(--color-success)'
+                : 'var(--color-text-disabled)',
+              fontSize: '0.75rem',
+              cursor: agent.status === 'GHOST' || agent.status === 'SHELL' ? 'not-allowed' : 'pointer',
+              fontWeight: '500',
+            }}
+          >
+            Execute
+          </button>
+        </Tooltip>
+        <Tooltip content="Edit this agent's settings and parameters." position="bottom">
+          <button
+            onClick={() => onConfigure(agent.id)}
+            style={{
+              flex: 1,
+              padding: '0.5rem',
+              backgroundColor: 'var(--color-bg-paper)',
+              border: '1px solid var(--color-border-strong)',
+              borderRadius: '0.375rem',
+              color: 'var(--color-text-secondary)',
+              fontSize: '0.75rem',
+              cursor: 'pointer',
+            }}
+          >
+            Configure
+          </button>
+        </Tooltip>
+        <Tooltip content="View this agent's execution history." position="bottom">
+          <button
+            onClick={() => onViewLogs(agent.id)}
+            style={{
+              flex: 1,
+              padding: '0.5rem',
+              backgroundColor: 'var(--color-bg-paper)',
+              border: '1px solid var(--color-border-strong)',
+              borderRadius: '0.375rem',
+              color: 'var(--color-text-secondary)',
+              fontSize: '0.75rem',
+              cursor: 'pointer',
+            }}
+          >
+            Logs
+          </button>
+        </Tooltip>
       </div>
     </div>
   );
@@ -394,12 +428,13 @@ const HierarchySection = memo(function HierarchySection({
 // ============================================================================
 
 /**
- * Workforce Command Center - Full 47-Agent Swarm Dashboard
+ * Workforce Command Center - Full 52-Agent Dashboard
  *
  * Displays live telemetry from the MASTER_ORCHESTRATOR including:
  * - 1 Orchestrator (L1 Swarm CEO)
  * - 9 Managers (L2 Domain Commanders)
- * - 37 Specialists (L3 Workers)
+ * - 38 Specialists (L3 Workers)
+ * - 4 Standalone Agents (Jasper, Voice, Autonomous Posting, Chat Session)
  */
 export default function WorkforceCommandCenterPage() {
   const router = useRouter();
@@ -409,7 +444,7 @@ export default function WorkforceCommandCenterPage() {
   const [viewMode, setViewMode] = useState<ViewMode>('hierarchy');
   const [filterTier, setFilterTier] = useState<FilterTier>('all');
   const [expandedSections, setExpandedSections] = useState<Set<string>>(
-    new Set(['L1', 'L2', 'L3'])
+    new Set(['L1', 'L2', 'L3', 'STANDALONE'])
   );
 
   // Live data from Master Orchestrator
@@ -625,7 +660,7 @@ export default function WorkforceCommandCenterPage() {
               )}
             </h1>
             <p style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>
-              Live telemetry from the 47-agent AI swarm • Last updated: {lastUpdated?.toLocaleTimeString() ?? 'Never'}
+              Live telemetry from the 52-agent AI workforce • Last updated: {lastUpdated?.toLocaleTimeString() ?? 'Never'}
             </p>
           </div>
 
@@ -684,7 +719,8 @@ export default function WorkforceCommandCenterPage() {
               <option value="all">All Tiers ({agents.length})</option>
               <option value="L1">L1 - Orchestrator ({metrics?.byTier?.L1?.total ?? 1})</option>
               <option value="L2">L2 - Managers ({metrics?.byTier?.L2?.total ?? 9})</option>
-              <option value="L3">L3 - Specialists ({metrics?.byTier?.L3?.total ?? 37})</option>
+              <option value="L3">L3 - Specialists ({metrics?.byTier?.L3?.total ?? 38})</option>
+              <option value="STANDALONE">Standalone ({metrics?.byTier?.STANDALONE?.total ?? 4})</option>
             </select>
 
             {/* Refresh Button */}
@@ -812,6 +848,20 @@ export default function WorkforceCommandCenterPage() {
                   );
                 })}
               </>
+            )}
+
+            {/* Standalone Agents */}
+            {(filterTier === 'all' || filterTier === 'STANDALONE') && hierarchy.standalone && hierarchy.standalone.length > 0 && (
+              <HierarchySection
+                title="⚡ Standalone Agents"
+                agents={hierarchy.standalone}
+                color="var(--color-warning)"
+                isExpanded={expandedSections.has('STANDALONE')}
+                onToggle={() => toggleSection('STANDALONE')}
+                onExecute={handleExecute}
+                onConfigure={handleConfigure}
+                onViewLogs={handleViewLogs}
+              />
             )}
           </div>
         ) : (

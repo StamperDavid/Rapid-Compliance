@@ -5,7 +5,7 @@
  * from the MASTER_ORCHESTRATOR to Dashboard components.
  *
  * Features:
- * - Full 47-agent swarm hierarchy (1 orchestrator + 9 managers + 37 specialists)
+ * - Full 52-agent registry (48 swarm + 4 standalone)
  * - Configurable polling interval (default 30s)
  * - Automatic error recovery
  * - Loading and error states
@@ -38,13 +38,14 @@ export interface UseSystemStatusOptions {
 }
 
 export interface UseSystemStatusReturn {
-  /** Array of all 47 agent statuses */
+  /** Array of all 52 agent statuses */
   agents: SystemAgentStatus[];
   /** Hierarchical breakdown of agents by tier */
   hierarchy: {
     orchestrator: SystemAgentStatus | null;
     managers: SystemAgentStatus[];
     specialists: SystemAgentStatus[];
+    standalone: SystemAgentStatus[];
   };
   /** Overall system health */
   overallHealth: 'HEALTHY' | 'DEGRADED' | 'CRITICAL' | 'OFFLINE' | null;
@@ -92,6 +93,7 @@ const EMPTY_METRICS: SystemStatusResponse['metrics'] = {
     L1: { total: 0, functional: 0 },
     L2: { total: 0, functional: 0 },
     L3: { total: 0, functional: 0 },
+    STANDALONE: { total: 0, functional: 0 },
   },
 };
 
@@ -107,6 +109,7 @@ const EMPTY_HIERARCHY = {
   orchestrator: null,
   managers: [],
   specialists: [],
+  standalone: [],
 };
 
 export function useSystemStatus(

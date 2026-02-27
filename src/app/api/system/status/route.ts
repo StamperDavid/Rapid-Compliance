@@ -2,13 +2,13 @@
  * System Status API Route
  *
  * Returns live telemetry from the MASTER_ORCHESTRATOR including:
- * - Full 47-agent swarm hierarchy (1 orchestrator + 9 managers + 37 specialists)
- * - Agent health status with tier information (L1/L2/L3)
+ * - Full 52-agent registry (48 swarm: 1 orchestrator + 9 managers + 38 specialists, plus 4 standalone)
+ * - Agent health status with tier information (L1/L2/L3/STANDALONE)
  * - Active saga counts
  * - Command success rates
  * - Recent insights
  *
- * This bridges the gap between the 47 backend agents and the Dashboard UI.
+ * This bridges the gap between the 52 registered agents and the Dashboard UI.
  *
  * @module api/system/status
  */
@@ -32,7 +32,7 @@ export const dynamic = 'force-dynamic';
 /**
  * Agent tier in the swarm hierarchy
  */
-export type AgentTier = 'L1' | 'L2' | 'L3';
+export type AgentTier = 'L1' | 'L2' | 'L3' | 'STANDALONE';
 
 /**
  * Frontend-compatible agent status for UI rendering
@@ -63,6 +63,7 @@ export interface SystemStatusResponse {
     orchestrator: SystemAgentStatus | null;
     managers: SystemAgentStatus[];
     specialists: SystemAgentStatus[];
+    standalone: SystemAgentStatus[];
   };
   metrics: {
     totalAgents: number;
@@ -78,6 +79,7 @@ export interface SystemStatusResponse {
       L1: { total: number; functional: number };
       L2: { total: number; functional: number };
       L3: { total: number; functional: number };
+      STANDALONE: { total: number; functional: number };
     };
   };
   insights: Array<{
@@ -97,7 +99,7 @@ export interface SystemStatusError {
 }
 
 // ============================================================================
-// COMPLETE 47-AGENT REGISTRY
+// COMPLETE 52-AGENT REGISTRY
 // ============================================================================
 
 interface AgentDefinition {
@@ -110,8 +112,8 @@ interface AgentDefinition {
 }
 
 /**
- * Complete registry of all 47 agents in the swarm
- * 1 Orchestrator (L1) + 9 Managers (L2) + 37 Specialists (L3)
+ * Complete registry of all 52 agents
+ * 1 Orchestrator (L1) + 9 Managers (L2) + 38 Specialists (L3) + 4 Standalone
  */
 const AGENT_REGISTRY: AgentDefinition[] = [
   // =========================================================================
@@ -247,7 +249,7 @@ const AGENT_REGISTRY: AgentDefinition[] = [
   },
 
   // =========================================================================
-  // L3 - MARKETING SPECIALISTS (5)
+  // L3 - MARKETING SPECIALISTS (6)
   // =========================================================================
   {
     id: 'TIKTOK_EXPERT',
@@ -288,6 +290,15 @@ const AGENT_REGISTRY: AgentDefinition[] = [
     tier: 'L3',
     parentId: 'MARKETING_MANAGER',
     capabilities: ['Keyword Research', 'On-Page SEO', 'Technical SEO'],
+  },
+
+  {
+    id: 'GROWTH_ANALYST',
+    name: 'Growth Analyst',
+    role: 'Growth Analytics Specialist',
+    tier: 'L3',
+    parentId: 'MARKETING_MANAGER',
+    capabilities: ['Metrics Aggregation', 'KPI Calculation', 'Pattern Identification', 'Weekly Reports'],
   },
 
   // =========================================================================
@@ -355,8 +366,24 @@ const AGENT_REGISTRY: AgentDefinition[] = [
   },
 
   // =========================================================================
-  // L3 - COMMERCE SPECIALISTS (2)
+  // L3 - COMMERCE SPECIALISTS (4)
   // =========================================================================
+  {
+    id: 'PAYMENT_SPECIALIST',
+    name: 'Payment Specialist',
+    role: 'Checkout & Payments Specialist',
+    tier: 'L3',
+    parentId: 'COMMERCE_MANAGER',
+    capabilities: ['Checkout Sessions', 'Payment Intents', 'Refunds', 'Stripe Integration'],
+  },
+  {
+    id: 'CATALOG_MANAGER',
+    name: 'Catalog Manager',
+    role: 'Product Catalog Specialist',
+    tier: 'L3',
+    parentId: 'COMMERCE_MANAGER',
+    capabilities: ['Product CRUD', 'Variant Management', 'Catalog Search', 'Inventory Tracking'],
+  },
   {
     id: 'PRICING_STRATEGIST',
     name: 'Pricing Strategist',
@@ -501,6 +528,42 @@ const AGENT_REGISTRY: AgentDefinition[] = [
     parentId: 'REPUTATION_MANAGER',
     capabilities: ['Success Stories', 'ROI Documentation', 'Testimonial Collection'],
   },
+
+  // =========================================================================
+  // STANDALONE AGENTS (4) - Operate outside the swarm hierarchy
+  // =========================================================================
+  {
+    id: 'JASPER',
+    name: 'Jasper',
+    role: 'Platform AI Assistant',
+    tier: 'STANDALONE',
+    parentId: null,
+    capabilities: ['Public Chat', 'Lead Qualification', 'Product Demos', 'Pricing Discussion', 'Swarm Command'],
+  },
+  {
+    id: 'VOICE_AGENT_HANDLER',
+    name: 'Voice Agent',
+    role: 'Voice AI Agent',
+    tier: 'STANDALONE',
+    parentId: null,
+    capabilities: ['AI Phone Conversations', 'Lead Qualification (Voice)', 'Deal Closing (Voice)', 'Warm Transfer'],
+  },
+  {
+    id: 'AUTONOMOUS_POSTING_AGENT',
+    name: 'Autonomous Posting Agent',
+    role: 'Social Media Automation',
+    tier: 'STANDALONE',
+    parentId: null,
+    capabilities: ['LinkedIn Posting', 'Twitter Posting', 'Content Scheduling', 'Queue Management'],
+  },
+  {
+    id: 'CHAT_SESSION_SERVICE',
+    name: 'Chat Session Service',
+    role: 'Agent Infrastructure',
+    tier: 'STANDALONE',
+    parentId: null,
+    capabilities: ['Session Management', 'Conversation Monitoring', 'Agent Instance Lifecycle', 'Golden Master Spawning'],
+  },
 ];
 
 // ============================================================================
@@ -577,7 +640,7 @@ function transformAgentDefinition(
 }
 
 /**
- * Transform full SwarmStatus to SystemStatusResponse with all 47 agents
+ * Transform full SwarmStatus to SystemStatusResponse with all 52 agents
  */
 function transformSwarmStatus(swarmStatus: SwarmStatus): SystemStatusResponse {
   const allAgents: SystemAgentStatus[] = [];
@@ -586,7 +649,15 @@ function transformSwarmStatus(swarmStatus: SwarmStatus): SystemStatusResponse {
   for (const agentDef of AGENT_REGISTRY) {
     let liveStatus: { status: AgentStatus; health: 'HEALTHY' | 'DEGRADED' | 'OFFLINE'; activeWorkloads: number; errors: string[] };
 
-    if (agentDef.tier === 'L1') {
+    if (agentDef.tier === 'STANDALONE') {
+      // Standalone agents - always FUNCTIONAL, independent of swarm
+      liveStatus = {
+        status: 'FUNCTIONAL',
+        health: 'HEALTHY',
+        activeWorkloads: 0,
+        errors: [],
+      };
+    } else if (agentDef.tier === 'L1') {
       // Orchestrator - use overall swarm health
       liveStatus = {
         status: 'FUNCTIONAL',
@@ -621,6 +692,7 @@ function transformSwarmStatus(swarmStatus: SwarmStatus): SystemStatusResponse {
   const orchestrator = allAgents.find(a => a.tier === 'L1') ?? null;
   const managers = allAgents.filter(a => a.tier === 'L2');
   const specialists = allAgents.filter(a => a.tier === 'L3');
+  const standalone = allAgents.filter(a => a.tier === 'STANDALONE');
 
   // Calculate metrics
   const functionalAgents = allAgents.filter(
@@ -632,6 +704,7 @@ function transformSwarmStatus(swarmStatus: SwarmStatus): SystemStatusResponse {
   const l1Agents = allAgents.filter(a => a.tier === 'L1');
   const l2Agents = allAgents.filter(a => a.tier === 'L2');
   const l3Agents = allAgents.filter(a => a.tier === 'L3');
+  const standaloneAgents = allAgents.filter(a => a.tier === 'STANDALONE');
 
   return {
     success: true,
@@ -644,6 +717,7 @@ function transformSwarmStatus(swarmStatus: SwarmStatus): SystemStatusResponse {
       orchestrator,
       managers,
       specialists,
+      standalone,
     },
     metrics: {
       totalAgents: allAgents.length,
@@ -667,6 +741,10 @@ function transformSwarmStatus(swarmStatus: SwarmStatus): SystemStatusResponse {
         L3: {
           total: l3Agents.length,
           functional: l3Agents.filter(a => a.status === 'FUNCTIONAL' || a.status === 'EXECUTING').length,
+        },
+        STANDALONE: {
+          total: standaloneAgents.length,
+          functional: standaloneAgents.filter(a => a.status === 'FUNCTIONAL' || a.status === 'EXECUTING').length,
         },
       },
     },
