@@ -1,7 +1,7 @@
 # SalesVelocity.ai - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** February 25, 2026 (Admin SDK migration — 64 API routes, system page rewrite, smoke test 48/48)
+**Last Updated:** February 26, 2026 (Hub navigation consolidation — 9 layout.tsx files, centralized SubpageNav, 3 duplicates deleted, SEO research Firestore persistence)
 **Branches:** `dev` (latest)
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Architecture:** Single-Tenant (Penthouse Model) - NOT a SaaS platform
@@ -36,11 +36,11 @@
 
 | Metric | Count | Status |
 |--------|-------|--------|
-| Physical Routes (page.tsx) | 177 | Verified February 24, 2026 (+/content/video/library) |
-| API Endpoints (route.ts) | 281 | Verified February 24, 2026 (Sprint 23: +/api/orchestrator/missions/[missionId]/stream, +/api/orchestrator/missions/[missionId]/cancel) |
+| Physical Routes (page.tsx) | 174 | Verified February 26, 2026 (-3 duplicate pages deleted: marketing/ab-tests, outbound/email-writer, identity/refine) |
+| API Endpoints (route.ts) | 282 | Verified February 26, 2026 (+/api/seo/research GET/POST) |
 | AI Agents | 52 | **52 FUNCTIONAL (48 swarm + 4 standalone)** |
 | RBAC Roles | 4 | `owner` (level 3), `admin` (level 2), `manager` (level 1), `member` (level 0) — 4-role RBAC |
-| Firestore Collections | 68+ | Active (sagaState, eventLog, missions collections; 25 composite indexes) |
+| Firestore Collections | 69+ | Active (+seoResearch collection for persistent SEO/competitor research) |
 
 **Architecture:** Single-company deployment for SalesVelocity.ai. Clients purchase services/products - they do NOT get SaaS tenants.
 
@@ -322,41 +322,44 @@ border-color: #1a1a1a;
 | Aspect | Detail |
 |--------|--------|
 | **Source** | `src/components/admin/AdminSidebar.tsx` |
-| **Sections** | 8 navigation sections, ~27 sidebar items |
+| **Sections** | 8 navigation sections, ~32 sidebar items |
 | **Width** | 280px expanded / 64px collapsed |
 | **Theming** | 100% CSS variable-driven via `var(--color-*)` |
 | **Routing** | All static routes — no `[orgId]` parameters in sidebar links |
-| **Footer** | Settings (gear icon → `/settings`) and Help/Academy (help icon → `/academy`) |
+| **Footer** | Integrations (plug icon → `/integrations`), Settings (gear icon → `/settings`), and Help/Academy (help icon → `/academy`) |
 | **Tab Navigation** | `SubpageNav` component provides route-based tabs on hub/parent pages |
 
-**Consolidated Navigation Structure (February 19, 2026 — Session 25):**
+**Consolidated Navigation Structure (February 26, 2026 — Hub Layout Consolidation):**
 
 | # | Section | Sidebar Items | Sub-pages (via SubpageNav tabs) |
 |---|---------|---------------|----------------------------------|
-| 1 | **Home** | Dashboard, Conversations | Dashboard tabs: Dashboard, Executive Briefing, Workforce HQ |
-| 2 | **CRM** | Leads, Deals/Pipeline, Contacts, Living Ledger | — |
-| 3 | **Outreach** | Outbound, Sequences, Campaigns, Email Writer, Nurture, Calls | Lead tools tabs: Lead Research, Lead Scoring, Marketing Scraper; Outbound tabs: Email Writer, Nurture |
-| 4 | **Content** | Social Hub, Video Library, Video Studio, Proposals, Battlecards | Social Hub tabs: Command Center, Campaigns, Calendar, Approvals, Listening, Activity, Agent Rules, Playbook |
-| 5 | **AI Workforce** | Agent Registry, Training Hub, Models & Data | Training Hub tabs: Training Center, Persona, Voice & Speech, Voice AI Lab, Social AI Lab, SEO AI Lab; Models tabs: Datasets, Fine-Tuning |
+| 1 | **Home** | Dashboard, Conversations, Team | Dashboard tabs: Dashboard, Executive Briefing, Workforce HQ; Team tabs: Leaderboard, Tasks, Performance |
+| 2 | **CRM** | Leads, Deals/Pipeline, Contacts, Living Ledger, Lead Intelligence, Coaching, Risk | Lead Intelligence tabs: Lead Research, Lead Scoring, Marketing Scraper; Coaching tabs: My Coaching, Team Coaching, Playbooks |
+| 3 | **Outreach** | Outbound, Sequences, Campaigns, Email Studio, Calls | Email Studio tabs: Email Writer, Nurture, Email Builder, Templates |
+| 4 | **Content** | Social Hub, Video Library, Video Studio, Proposals | Social Hub tabs (layout): Command Center, Campaigns, Calendar, Approvals, Listening, Activity, Agent Rules, Playbook |
+| 5 | **AI Workforce** | Agent Registry, Training Hub, Models & Data | Training Hub tabs: Training Center, Persona, Voice & Speech, Voice AI Lab, Social AI Lab, SEO AI Lab; Models tabs (layout): Datasets, Fine-Tuning; AI Data tabs: Datasets, Schemas |
 | 6 | **Commerce** | Products, Orders, Storefront | — |
-| 7 | **Website** | Site Editor, Pages, Blog | Website tabs: SEO, Domains, Site Settings |
-| 8 | **Analytics** | Overview | Analytics tabs: Overview, Revenue, Pipeline, Sales Performance, Sequences |
+| 7 | **Website** | Website | Website tabs (layout): Editor, Pages, Templates, Blog, SEO, Navigation, Settings, Audit Log; Blog sub-tabs (layout): Posts, Editor, Categories; SEO sub-tabs (layout): SEO, AI Search, Competitors, Domains |
+| 8 | **Analytics** | Overview | Analytics tabs (layout): Overview, Revenue, Pipeline, Sales, E-Commerce, Attribution, Workflows, Sequences, Compliance, Competitor Research |
 
 **Footer Navigation (outside main sections):**
-- **Settings** (gear icon) → `/settings` hub page with sections: General, Users & Team, Integrations, API Keys, Theme & Branding, Security, Compliance & Admin (Compliance Reports, Audit Log, Impersonate User, Lead Routing)
+- **Integrations** (plug icon) → `/integrations`
+- **Settings** (gear icon) → `/settings` hub page with sections: General, Users & Team, Integrations, API Keys, Theme & Branding, Security, Compliance & Admin
 - **Academy** (help icon) → `/academy`
 
-**SubpageNav Component:** `src/components/ui/SubpageNav.tsx`
-- Route-based tab bar using `usePathname()` from Next.js
-- Applied to 31 page files across all hub routes
-- Provides discoverability for sub-pages that were removed from the sidebar
+**SubpageNav Architecture (February 26, 2026):**
+- **Component:** `src/components/ui/SubpageNav.tsx` — Route-based tab bar using `usePathname()` from Next.js
+- **Centralized Config:** `src/lib/constants/subpage-nav.ts` — 12 tab arrays (DASHBOARD_TABS, SOCIAL_TABS, ANALYTICS_TABS, WEBSITE_TABS, WEBSITE_BLOG_TABS, WEBSITE_SEO_TABS, MISSION_CONTROL_TABS, AI_DATA_TABS, LEAD_INTEL_TABS, EMAIL_STUDIO_TABS, COACHING_TABS, TEAM_TABS)
+- **9 layout.tsx files** render SubpageNav automatically for all child routes: social, analytics, website, website/blog, website/seo, mission-control, ai, coaching, team
+- **Cross-route pages** (outside hub prefix) import from centralized constants and render inline SubpageNav
+- **Deleted 3 duplicate pages:** `/marketing/ab-tests` (dup of `/ab-tests`), `/outbound/email-writer` (dup of `/email-writer`), `/identity/refine` (dup of `/settings/ai-agents/persona`)
 
 **Deleted Components (Forensic Record):**
 - `CommandCenterSidebar.tsx` — Deleted January 26, 2026 (commit `f2d2497b`)
 - God Mode sidebar logic — Absorbed into unified `AdminSidebar.tsx`
 - `UnifiedSidebar.tsx` in admin context — Superseded by `AdminSidebar.tsx` for admin routes
 
-**Previous Structure (Pre-Session 25):** 13 sections with 83 items — consolidated to 8 sections with ~27 items via competitive analysis (Close.com, HubSpot, Salesforce, GoHighLevel, Pipedrive).
+**Previous Structure (Pre-Session 25):** 13 sections with 83 items — consolidated to 8 sections with ~32 items via competitive analysis (Close.com, HubSpot, Salesforce, GoHighLevel, Pipedrive). Further refined Feb 26 with hub layout.tsx files and centralized tab config.
 
 **Bug Definition:** Any code that creates parallel navigation structures, reintroduces God Mode sidebars, builds shadow navigation components, or splits sidebar logic into disconnected files is a **bug**.
 
@@ -424,14 +427,14 @@ SalesVelocity.ai is a **single-company sales and marketing super tool**. This is
 
 | Area | Routes | Dynamic Params | Status |
 |------|--------|----------------|--------|
-| Dashboard (`/(dashboard)/*`) | 127 | 8 | **Flattened** single-tenant (incl. former admin routes + social pages + mission-control + video library) |
+| Dashboard (`/(dashboard)/*`) | 124 | 8 | **Flattened** single-tenant (incl. former admin routes + social pages + mission-control + video library; -3 duplicates deleted Feb 26) |
 | Public (`/(public)/*`) | 16 | 0 | All pages exist |
 | Dashboard sub-routes (`/dashboard/*`) | 16 | 0 | Analytics, coaching, marketing, performance |
 | Store (`/store/*`) | 6 | 1 (`[productId]`) | E-commerce storefront (added `/store/checkout/cancelled`) |
 | Onboarding (`/onboarding/*`) | 2 | 0 | Account + industry setup |
 | Auth (`/(auth)/*`) | 1 | 0 | Admin login |
 | Other (`/preview`, `/profile`, `/sites`) | 3 | 2 | Preview tokens, user profile, site builder |
-| **TOTAL** | **177** | **11** | **Verified February 24, 2026** |
+| **TOTAL** | **174** | **11** | **Verified February 26, 2026** |
 
 **DELETED:** `src/app/workspace/[orgId]/*` (95 pages) and `src/app/admin/*` (92 pages) - multi-tenant and standalone admin routes removed/consolidated into `(dashboard)`
 
@@ -461,9 +464,14 @@ SalesVelocity.ai is a **single-company sales and marketing super tool**. This is
 - `/email/campaigns`, `/email/campaigns/new`, `/email/campaigns/[campaignId]`
 - `/nurture`, `/nurture/new`, `/nurture/[id]`, `/nurture/[id]/stats`
 - `/ab-tests`, `/ab-tests/new`, `/ab-tests/[id]`
-- `/outbound`, `/outbound/email-writer`, `/outbound/sequences`
+- `/outbound`, `/outbound/sequences`
 - `/social/campaigns` (Content Studio — dual-mode autopilot/manual), `/social/training`, `/social/approvals` (batch review, correction capture, "Why" badge), `/social/calendar`, `/social/listening`
 - `/social/command-center` (kill switch, velocity gauges, agent status), `/social/activity` (activity feed), `/social/analytics` (dashboard), `/social/agent-rules` (guardrails editor)
+
+**Deleted Duplicates (February 26, 2026):**
+- `/marketing/ab-tests` — duplicate of `/ab-tests`
+- `/outbound/email-writer` — duplicate of `/email-writer`
+- `/identity/refine` — duplicate of `/settings/ai-agents/persona`
 
 **Video:**
 - `/content/video` (Video Studio — 7-step production pipeline: Request → Decompose → Pre-Production → Approval → Generation → Assembly → Post-Production)
@@ -1368,6 +1376,7 @@ This script:
 | Reports | 1 | `/api/reports/*` | Partial |
 | Risk | 1 | `/api/risk/*` | Functional |
 | Schemas | 6 | `/api/schema*/*` | Functional |
+| SEO | 4 | `/api/seo/*` | Functional (domain-analysis, strategy, research GET/POST) |
 | Settings | 1 | `/api/settings/webhooks` | Functional (NEW Feb 12) |
 | Social | 15 | `/api/social/*` | Functional (EXPANDED Feb 13 — added agent-status, activity, OAuth auth/callback, accounts verify) |
 | Team | 1 | `/api/team/tasks/[taskId]` | Functional (NEW Feb 12) |
@@ -1431,6 +1440,19 @@ This script:
 |----------|--------|---------|--------|
 | `/api/website/migrate` | POST | Website migration pipeline — clone external site via deep scrape, blueprint extraction, and AI page assembly | FUNCTIONAL (Sprint 21) |
 
+#### SEO Research Persistence (NEW February 26, 2026)
+
+| Endpoint | Method | Purpose | Status |
+|----------|--------|---------|--------|
+| `/api/seo/research` | GET | List saved SEO research (filter by type/domain, paginated) | FUNCTIONAL |
+| `/api/seo/research` | POST | Save new research document (Zod validated) | FUNCTIONAL |
+| `/api/seo/domain-analysis` | POST | Domain analysis + fire-and-forget persist to Firestore | FUNCTIONAL (updated) |
+| `/api/seo/strategy` | POST | 30-day strategy + fire-and-forget persist to Firestore | FUNCTIONAL (updated) |
+| `/api/battlecard/competitor/discover` | POST | Competitor discovery + fire-and-forget persist | FUNCTIONAL (updated) |
+| `/api/battlecard/generate` | POST | Battlecard generation + fire-and-forget persist | FUNCTIONAL (updated) |
+
+**Pattern:** All SEO/competitor API routes now fire-and-forget persist results to the `seoResearch` Firestore collection after returning the response. Client pages load saved research on mount so data survives page refreshes.
+
 ### API Implementation Notes
 
 The following endpoints have working infrastructure (rate limiting, caching, auth) but use **mock data** for core business logic:
@@ -1445,9 +1467,12 @@ The following endpoints have working infrastructure (rate limiting, caching, aut
 
 **Resolved API Issues (Archived):** All previous API implementation gaps have been resolved across Sessions 7-37. Key resolutions include: social post persistence, video render pipeline (HeyGen/Sora/Runway), DALL-E 3 image generation, competitor SEO analysis endpoints (`/api/seo/domain-analysis`, `/api/seo/strategy`), social media 6-phase expansion, AI Social Media Command Center, 14 Critical QA issues, commerce pipeline (9 fixes), fake data removal (35+ methods), data integrity (125+ files), workflow infrastructure (6 fixes), and code quality hardening. See git history for commit-level details.
 
-**Latest API additions (Session 36-37):**
-- `/api/seo/domain-analysis` — POST, auth-gated, Zod validated. SEO Expert `domain_analysis` action with DataForSEO integration
-- `/api/seo/strategy` — POST, auth-gated, Zod validated. SEO Expert `30_day_strategy` action
+**Latest API additions (Session 36-37, updated Feb 26):**
+- `/api/seo/domain-analysis` — POST, auth-gated, Zod validated. SEO Expert `domain_analysis` action with DataForSEO integration. Fire-and-forget persists to `seoResearch` collection.
+- `/api/seo/strategy` — POST, auth-gated, Zod validated. SEO Expert `30_day_strategy` action. Fire-and-forget persists to `seoResearch` collection.
+- `/api/seo/research` — GET/POST, auth-gated, Zod validated. List and save SEO research documents (domain_analysis, strategy, competitor_discovery, battlecard). NEW Feb 26.
+- `/api/battlecard/competitor/discover` — Fire-and-forget persists to `seoResearch` collection (updated Feb 26)
+- `/api/battlecard/generate` — Fire-and-forget persists to `seoResearch` collection (updated Feb 26)
 - `/api/battlecard/export` — Battlecard HTML export
 - `/api/commerce/brief` — CommerceBrief revenue metrics
 - `/api/reputation/brief` — ReputationBrief trust scores
@@ -1814,7 +1839,7 @@ All 64 API routes that were using the client-side `FirestoreService` have been m
 | `slack_channels` | Slack channel mappings |
 | `slack_messages` | Message history |
 
-### Organization Sub-Collections (36)
+### Organization Sub-Collections (37)
 
 ```
 organizations/{orgId}/
@@ -1842,6 +1867,7 @@ organizations/{orgId}/
 ├── socialApprovals/          # Social approval workflow (NEW Feb 12)
 ├── socialListening/          # Social listening mentions (NEW Feb 12)
 ├── socialSettings/           # Social agent config (NEW Feb 12)
+├── seoResearch/              # SEO & competitor research persistence (NEW Feb 26 — domain_analysis, strategy, competitor_discovery, battlecard)
 ├── forms/                    # Form builder forms
 │   ├── fields/               # Form fields
 │   ├── submissions/          # Form submissions
@@ -1858,7 +1884,7 @@ organizations/{orgId}/
 └── provisionerLogs/          # Provisioning logs
 ```
 
-### Total: 65+ Collections
+### Total: 69+ Collections
 
 ---
 
@@ -1911,10 +1937,10 @@ The middleware (`src/middleware.ts`) uses **Role-Based Segment Routing**:
 **Forensic Investigation Completed:** January 26, 2026
 **Legacy Client UI Restored:** January 27, 2026 (1/25/2026 Baseline)
 **Dynamic Theming Enabled:** January 27, 2026 - Hardcoded hex colors replaced with CSS variables
-**Nav Consolidation:** February 19, 2026 - 13 sections → 8, SubpageNav tabs, footer icons for Settings/Academy
+**Nav Consolidation:** February 26, 2026 - 9 hub layout.tsx files, centralized SubpageNav config, 3 duplicate pages deleted, 5 new sidebar items + footer Integrations link
 
-> **IMPORTANT:** The sidebar was consolidated from 13 sections (~83 items) to 8 sections (~27 items) in Session 25.
-> Settings and Academy moved to sidebar footer icons. Sub-pages are accessed via `SubpageNav` tab bars on hub pages.
+> **IMPORTANT:** The sidebar was consolidated from 13 sections (~83 items) to 8 sections (~32 items). Sub-pages are accessed via `SubpageNav` tab bars rendered by 9 hub layout.tsx files + inline imports from `src/lib/constants/subpage-nav.ts`.
+> Settings and Academy in sidebar footer icons. Integrations added as footer icon (Feb 26).
 > System tools remain HARD-GATED in the `/admin/*` route tree.
 
 #### Current Implementation (SINGLE-TENANT ARCHITECTURE)
@@ -1922,8 +1948,8 @@ The middleware (`src/middleware.ts`) uses **Role-Based Segment Routing**:
 | Component | Location | Used By | Status |
 |-----------|----------|---------|--------|
 | **Dashboard Layout** | `src/app/(dashboard)/layout.tsx` | Dashboard Routes | ACTIVE - Flattened single-tenant |
-| **AdminSidebar** | `src/components/admin/AdminSidebar.tsx` | Dashboard Layout | ACTIVE - 8 sections + footer |
-| **SubpageNav** | `src/components/ui/SubpageNav.tsx` | 31 hub/sub-pages | ACTIVE - Route-based tab navigation |
+| **AdminSidebar** | `src/components/admin/AdminSidebar.tsx` | Dashboard Layout | ACTIVE - 8 sections + footer (updated Feb 26: +5 items, +Integrations footer) |
+| **SubpageNav** | `src/components/ui/SubpageNav.tsx` | 9 layouts + ~17 cross-route pages | ACTIVE - Route-based tab navigation, centralized config in `subpage-nav.ts` |
 | **UnifiedSidebar** | `src/components/dashboard/UnifiedSidebar.tsx` | Admin Layout | ACTIVE - Uses `getNavigationForRole()` |
 | **Navigation Config** | `src/components/dashboard/navigation-config.ts` | UnifiedSidebar | ACTIVE - Hard-gated System section |
 
@@ -1944,20 +1970,21 @@ The middleware (`src/middleware.ts`) uses **Role-Based Segment Routing**:
 
 #### Dashboard Navigation Structure (8 Sections + Footer)
 
-Users see 8 sidebar sections with sub-pages accessible via tab bars:
+Users see 8 sidebar sections with sub-pages accessible via SubpageNav tab bars (rendered via layout.tsx or inline):
 
-1. **Home** - Dashboard (tabs: Executive Briefing, Workforce HQ), Conversations
-2. **CRM** - Leads, Deals/Pipeline, Contacts, Living Ledger
-3. **Outreach** - Outbound, Sequences, Campaigns, Email Writer (tabs: Nurture), Calls, Lead Research (tabs: Lead Scoring, Marketing Scraper)
-4. **Content** - Social Hub (tabs: Command Center, Campaigns, Calendar, Approvals, Listening, Activity, Agent Rules, Playbook), Video Library, Video Studio, Proposals, Battlecards
-5. **AI Workforce** - Agent Registry, Training Hub (tabs: Training Center, Persona, Voice & Speech, Voice AI Lab, Social AI Lab, SEO AI Lab), Models & Data (tabs: Datasets, Fine-Tuning)
+1. **Home** - Dashboard (tabs: Executive Briefing, Workforce HQ), Conversations, Team (tabs: Leaderboard, Tasks, Performance)
+2. **CRM** - Leads, Deals/Pipeline, Contacts, Living Ledger, Lead Intelligence (tabs: Lead Research, Lead Scoring, Marketing Scraper), Coaching (tabs: My Coaching, Team Coaching, Playbooks), Risk
+3. **Outreach** - Outbound, Sequences, Campaigns, Email Studio (tabs: Email Writer, Nurture, Email Builder, Templates), Calls
+4. **Content** - Social Hub (tabs via layout: Command Center, Campaigns, Calendar, Approvals, Listening, Activity, Agent Rules, Playbook), Video Library, Video Studio, Proposals
+5. **AI Workforce** - Agent Registry, Training Hub (tabs: Training Center, Persona, Voice & Speech, Voice AI Lab, Social AI Lab, SEO AI Lab), Models & Data (tabs via layout: Datasets, Fine-Tuning)
 6. **Commerce** - Products, Orders, Storefront
-7. **Website** - Site Editor, Pages, Blog (tabs: SEO, Domains, Site Settings)
-8. **Analytics** - Overview (tabs: Revenue, Pipeline, Sales Performance, Sequences)
+7. **Website** - Website (single entry; tabs via layout: Editor, Pages, Templates, Blog, SEO, Navigation, Settings, Audit Log; Blog sub-tabs: Posts, Editor, Categories; SEO sub-tabs: SEO, AI Search, Competitors, Domains)
+8. **Analytics** - Overview (tabs via layout: Overview, Revenue, Pipeline, Sales, E-Commerce, Attribution, Workflows, Sequences, Compliance, Competitor Research)
 
 **Footer:**
-- ⚙️ Settings → `/settings` hub (General, Users & Team, Integrations, API Keys, Theme & Branding, Security, Compliance & Admin)
-- ❓ Academy → `/academy`
+- Integrations → `/integrations`
+- Settings → `/settings` hub (General, Users & Team, Integrations, API Keys, Theme & Branding, Security, Compliance & Admin)
+- Academy → `/academy`
 
 #### Platform Admin Tools (HARD-GATED)
 
