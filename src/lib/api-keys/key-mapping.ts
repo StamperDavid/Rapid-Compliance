@@ -68,6 +68,9 @@ export const UI_TO_CONFIG_MAP: Record<string, string> = {
   twitter_consumer_secret: 'social.twitter.clientSecret',
   twitter_access_token: 'social.twitter.accessToken',
   twitter_access_secret: 'social.twitter.refreshToken',
+
+  // Social Media - Later
+  later: 'social.later.apiKey',
 };
 
 /**

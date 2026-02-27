@@ -626,6 +626,23 @@ export default function APIKeysPage() {
       why: 'Access LinkedIn data and other third-party APIs for prospect research.',
     },
     {
+      id: 'later',
+      name: 'Later',
+      icon: '📅',
+      description: 'Later.com social media scheduling and publishing API',
+      required: false,
+      placeholder: 'sk_...',
+      setupUrl: 'https://later.com',
+      setupSteps: [
+        'Log in to your Later account',
+        'Go to Settings → Integrations → API',
+        'Generate or copy your API key',
+        'Paste it here',
+      ],
+      cost: 'Included with Later plan',
+      why: 'Multi-platform social posting (Instagram, TikTok, Facebook, Pinterest, LinkedIn) via Later API.',
+    },
+    {
       id: 'twitter_consumer_key',
       name: 'Twitter/X Consumer Key',
       icon: '🐦',

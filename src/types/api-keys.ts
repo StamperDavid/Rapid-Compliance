@@ -176,6 +176,9 @@ export interface APIKeysConfig {
       refreshToken?: string;
       tokenExpiresAt?: Date;
     };
+    later?: {
+      apiKey: string;
+    };
   };
 
   // Other Integrations
@@ -291,6 +294,7 @@ export type APIServiceName =
   | 'unrealSpeech' // Unreal Speech TTS
   | 'serper'        // Serper.dev Google Search API
   | 'pagespeed'     // Google PageSpeed Insights
-  | 'dataforseo';   // DataForSEO (keyword data, SERP, domain metrics)
+  | 'dataforseo'   // DataForSEO (keyword data, SERP, domain metrics)
+  | 'later';       // Later.com social media scheduling
 
 
