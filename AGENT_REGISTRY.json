@@ -418,7 +418,7 @@
       "apiRoutes": ["src/app/api/chat/public/route.ts", "src/app/api/chat/facebook/route.ts"],
       "model": "openrouter/anthropic/claude-3.5-sonnet",
       "capabilities": ["website_chat", "facebook_messenger", "lead_qualification", "product_questions", "trial_guidance", "demo_scheduling", "objection_handling"],
-      "note": "Customer-facing AI sales agent for website chat widget and Facebook Messenger. Sells SalesVelocity.ai as a multi-tenant SaaS subscription. Uses its own Golden Master separate from Jasper."
+      "note": "Alex — customer-facing AI sales agent for website chat widget and Facebook Messenger. Sells SalesVelocity.ai as a multi-tenant SaaS subscription. Uses its own Golden Master separate from Jasper. Knowledge auto-compiled from AGENT_REGISTRY.json via scripts/compile-alex-knowledge.js."
     },
     "GROWTH_STRATEGIST": {
       "status": "FUNCTIONAL",

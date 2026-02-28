@@ -103,9 +103,28 @@ export class AgentInstanceManager implements InstanceLifecycleService {
   }
   
   /**
-   * Compile system prompt by combining Golden Master config with customer context
+   * Compile system prompt by combining Golden Master config with customer context.
+   *
+   * Two modes:
+   *   1. If the Golden Master has a pre-compiled systemPrompt (e.g. from the Alex
+   *      knowledge compiler), use it directly. This is the preferred path for agents
+   *      whose knowledge is compiled from authoritative sources at build/deploy time.
+   *   2. Otherwise, assemble the prompt from structured businessContext / agentPersona
+   *      fields. This is the path for onboarding-configured client agents.
    */
   private compileSystemPrompt(goldenMaster: GoldenMaster, customerMemory: CustomerMemory): string {
+    // --- Path 1: Pre-compiled system prompt (Alex / compiled agents) ---
+    // If the Golden Master has a substantial systemPrompt (not just a one-liner),
+    // use it directly. The compiler script produces 3000+ char prompts.
+    const preCompiled = goldenMaster.systemPrompt;
+    if (typeof preCompiled === 'string' && preCompiled.length > 500) {
+      let prompt = preCompiled;
+      // Still append customer context for returning visitors
+      prompt += this.buildCustomerContextBlock(customerMemory);
+      return prompt;
+    }
+
+    // --- Path 2: Assemble from structured fields (onboarding-configured agents) ---
     // Handle both nested and flat structures for backwards compatibility
     // Extract string values to avoid empty strings in prompt (Explicit Ternary for STRINGS)
     const bc = goldenMaster.businessContext;
@@ -152,7 +171,7 @@ export class AgentInstanceManager implements InstanceLifecycleService {
       requiredDisclosures,
       prohibitedTopics
     };
-    
+
     // Extract agent persona strings (Explicit Ternary for STRINGS)
     const ap = goldenMaster.agentPersona;
     const personaName = (ap?.name !== '' && ap?.name != null) ? ap.name : 'AI Assistant';
@@ -168,7 +187,7 @@ export class AgentInstanceManager implements InstanceLifecycleService {
       objectives: ap?.objectives ?? [],
       escalationRules: ap?.escalationRules ?? []
     };
-    
+
     // Extract behavior config (STRING for responseLength, NUMBERS for aggressiveness/level - use ?? for numbers)
     const bhv = goldenMaster.behaviorConfig;
     const questionFrequency = bhv?.questionFrequency ?? 3;
@@ -181,15 +200,15 @@ export class AgentInstanceManager implements InstanceLifecycleService {
       proactiveLevel: bhv?.proactiveLevel ?? 5,
       idleTimeoutMinutes: 30
     };
-    
+
     // Training learnings are available but not currently used in the prompt
     // Future: Add training-based adaptations to system prompt (from goldenMaster.trainedScenarios)
-    
+
     // Extract agentPersona.name to avoid putting complex logic in template (Template Extraction Rule)
     const displayAgentName = (agentPersona.name !== '' && agentPersona.name != null) ? agentPersona.name : 'AI Assistant';
     // Extract requiredDisclosures to avoid putting coalescing in template
     const disclosuresText = (businessContext.requiredDisclosures !== '' && businessContext.requiredDisclosures != null) ? businessContext.requiredDisclosures : '';
-    
+
     let prompt = `You are an AI sales and customer service agent for ${businessContext.businessName}.
 
 # Your Role & Objectives
@@ -247,15 +266,28 @@ Prohibited Topics: ${businessContext.prohibitedTopics}
 `;
 
     // Add customer-specific context if returning customer
-    if (customerMemory.totalInteractions > 0) {
-      // Extract customer strings to avoid empty strings in prompt (Explicit Ternary for STRINGS)
-      const customerName = customerMemory.name ?? 'Unknown';
-      const customerEmail = customerMemory.email ?? 'Not provided';
-      const customerBudget = customerMemory.preferences.budget ?? 'Unknown';
-      const customerInterests = customerMemory.preferences.interests.join(', ') || 'None recorded';
-      const customerPreferredTone = customerMemory.preferences.preferredTone ?? 'Not specified';
-      
-      prompt += `
+    prompt += this.buildCustomerContextBlock(customerMemory);
+
+    return prompt;
+  }
+  
+  /**
+   * Build customer context block for returning visitors.
+   * Used by both the pre-compiled and assembled prompt paths.
+   */
+  private buildCustomerContextBlock(customerMemory: CustomerMemory): string {
+    if (customerMemory.totalInteractions <= 0) {
+      return '';
+    }
+
+    // Extract customer strings to avoid empty strings in prompt (Explicit Ternary for STRINGS)
+    const customerName = customerMemory.name ?? 'Unknown';
+    const customerEmail = customerMemory.email ?? 'Not provided';
+    const customerBudget = customerMemory.preferences.budget ?? 'Unknown';
+    const customerInterests = customerMemory.preferences.interests.join(', ') || 'None recorded';
+    const customerPreferredTone = customerMemory.preferences.preferredTone ?? 'Not specified';
+
+    return `
 
 # CUSTOMER CONTEXT - This is a returning customer!
 
@@ -272,8 +304,8 @@ Interests: ${customerInterests}
 Communication Preference: ${customerPreferredTone}
 
 ## Purchase History
-${customerMemory.purchaseHistory.length > 0 
-  ? customerMemory.purchaseHistory.map(p => 
+${customerMemory.purchaseHistory.length > 0
+  ? customerMemory.purchaseHistory.map(p =>
       `- Order ${p.orderId}: $${p.totalAmount} on ${new Date(p.orderDate).toLocaleDateString()} (${p.status})`
     ).join('\n')
   : 'No previous purchases'
@@ -281,7 +313,7 @@ ${customerMemory.purchaseHistory.length > 0
 
 ## Agent Notes (Insights from previous interactions)
 ${customerMemory.agentNotes.length > 0
-  ? customerMemory.agentNotes.map(note => 
+  ? customerMemory.agentNotes.map(note =>
       `- [${note.category}] ${note.content}`
     ).join('\n')
   : 'No notes yet'
@@ -298,11 +330,8 @@ ${this.summarizeRecentConversations(customerMemory)}
 
 **IMPORTANT**: Use this context to provide personalized, continuous service. Reference their previous interactions naturally. Don't mention you're looking at their history - just use it to be helpful.
 `;
-    }
-
-    return prompt;
   }
-  
+
   /**
    * Summarize recent conversations for context
    */

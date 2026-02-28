@@ -1,11 +1,19 @@
 /**
- * Setup AI Chat Sales Agent - Golden Master
+ * Setup AI Chat Sales Agent (Alex) - Golden Master
  *
  * Creates the customer-facing sales agent Golden Master, separate from Jasper.
  * This agent powers the website chat widget and Facebook Messenger integration.
  *
  * It sells SalesVelocity.ai as a multi-tenant SaaS product.
  * Each subscriber gets their own isolated deployment with a full 52-agent AI swarm.
+ *
+ * IMPORTANT: After running this script, run the knowledge compiler to populate
+ * Alex with current platform knowledge:
+ *
+ *   node scripts/compile-alex-knowledge.js --deploy
+ *
+ * The compiler reads from AGENT_REGISTRY.json and other authoritative sources
+ * to build Alex's system prompt. Run the compiler on every deploy.
  *
  * Run: node scripts/setup-sales-agent-golden-master.js
  */
@@ -143,9 +151,9 @@ This is NOT a service — subscribers own their platform instance.
 
     // Agent Persona — customizable by the client from settings
     agentPersona: {
-      name: 'Sales Agent',
+      name: 'Alex',
       tone: 'Professional, consultative, approachable',
-      greeting: 'Hey! I can help you learn about SalesVelocity.ai. What brings you here today?',
+      greeting: "Hi there! I'm Alex, your AI sales assistant for SalesVelocity.ai. What brings you here today?",
       closingMessage: 'Thanks for your interest! Feel free to come back anytime.',
       objectives: [
         'Qualify leads based on budget, need, timeline, and decision-making authority',
@@ -187,8 +195,8 @@ This is NOT a service — subscribers own their platform instance.
 
     // Chat Widget Configuration (customizable by client)
     chatWidgetConfig: {
-      headerText: 'Chat with us',
-      welcomeMessage: 'Hey! I can help you learn about SalesVelocity.ai. What brings you here today?',
+      headerText: 'Chat with Alex',
+      welcomeMessage: "Hi there! I'm Alex, your AI sales assistant for SalesVelocity.ai. What brings you here today?",
       placeholderText: 'Ask about features, pricing, or getting started...',
       theme: {
         primaryColor: '#6366f1',

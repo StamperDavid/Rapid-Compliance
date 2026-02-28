@@ -7,6 +7,9 @@ node_modules/
 /coverage
 tests/e2e/.auth/
 
+# Build artifacts
+scripts/alex-knowledge.json
+
 # Next.js
 /.next/
 /out/
