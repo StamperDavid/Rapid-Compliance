@@ -14,6 +14,8 @@ import { useOrgTheme } from '@/hooks/useOrgTheme';
 import { logger } from '@/lib/logger/logger';
 type ViewType = 'leads' | 'companies' | 'contacts' | 'deals' | 'products' | 'quotes' | 'invoices' | 'payments' | 'orders' | 'tasks';
 
+const CRM_CORE_VIEWS: ViewType[] = ['leads', 'companies', 'contacts', 'deals', 'products', 'quotes', 'invoices', 'payments', 'orders', 'tasks'];
+
 // Type definitions for CRM entities
 interface BaseRecord {
   id: string;
@@ -151,7 +153,7 @@ function CRMContent() {
   // Update activeView based on URL query parameter
   useEffect(() => {
     const viewParam = searchParams.get('view') as ViewType | null;
-    if (viewParam && ['leads', 'companies', 'contacts', 'deals', 'products', 'quotes', 'invoices', 'payments', 'orders', 'tasks'].includes(viewParam)) {
+    if (viewParam && (CRM_CORE_VIEWS as string[]).includes(viewParam)) {
       setActiveView(viewParam);
     }
   }, [searchParams]);
@@ -563,11 +565,13 @@ function CRMContent() {
           {/* Divider */}
           <div style={{ height: '1px', backgroundColor: 'var(--color-bg-paper)', margin: '0.5rem 0' }}></div>
 
-          {/* Entity Navigation */}
-          {Object.entries(STANDARD_SCHEMAS).map(([key, schema]) => (
+          {/* Entity Navigation — CRM Core objects only */}
+          {CRM_CORE_VIEWS.map((key) => {
+            const schema = STANDARD_SCHEMAS[key];
+            return (
             <button
               key={key}
-              onClick={() => setActiveView(key as ViewType)}
+              onClick={() => setActiveView(key)}
                 style={{
                   width: '100%',
                   padding: '0.875rem 1.25rem',
@@ -594,7 +598,8 @@ function CRMContent() {
               <span style={{ fontSize: '1.25rem' }}>{schema.icon}</span>
               {sidebarOpen && <span>{schema.pluralName}</span>}
             </button>
-          ))}
+            );
+          })}
         </nav>
 
         {/* Settings Links - REMOVED (now in AdminBar) */}
