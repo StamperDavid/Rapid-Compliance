@@ -1,7 +1,7 @@
 # SalesVelocity.ai - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** February 27, 2026 (System-wide code review — updated metrics: 169 routes, 298 API endpoints, 43 Jasper tools, 26 real integrations verified, cleaned open items and roadmap)
+**Last Updated:** February 27, 2026 (Added AI Chat Sales Agent + Growth Strategist — 52 agents now real. Refactored Jasper to internal-only. Added Facebook Messenger webhook.)
 **Branches:** `dev` (latest)
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Architecture:** Single-Tenant (Penthouse Model) - NOT a SaaS platform
@@ -38,7 +38,7 @@
 |--------|-------|--------|
 | Physical Routes (page.tsx) | 169 | Verified February 27, 2026 (full filesystem count; 9 redirect stubs included) |
 | API Endpoints (route.ts) | 298 | Verified February 27, 2026 (full filesystem count) |
-| AI Agents | 52 | **52 FUNCTIONAL (48 swarm + 4 standalone)** |
+| AI Agents | 52 | **52 FUNCTIONAL (46 swarm + 6 standalone)** |
 | RBAC Roles | 4 | `owner` (level 3), `admin` (level 2), `manager` (level 1), `member` (level 0) — 4-role RBAC |
 | Firestore Collections | 69+ | Active (+seoResearch collection for persistent SEO/competitor research) |
 
@@ -564,14 +564,14 @@ No open route issues. All previously identified stub pages and duplicate destina
 
 ### Agent Swarm Overview
 
-**Total Agents:** 52 (48 swarm + 4 standalone)
-- **Swarm Agents:** 48 (1 orchestrator + 9 managers + 38 specialists)
-- **Standalone Agents:** 4 (outside swarm hierarchy)
+**Total Agents:** 52 (46 swarm + 6 standalone)
+- **Swarm Agents:** 46 (1 orchestrator + 9 managers + 36 specialists)
+- **Standalone Agents:** 6 (outside swarm hierarchy)
 
 | Status | Count | Description |
 |--------|-------|-------------|
-| FUNCTIONAL (Swarm) | 48 | **100% SWARM COMPLETION** - All agents fully operational |
-| FUNCTIONAL (Standalone) | 4 | Jasper (AI Assistant), Voice Agent, Autonomous Posting Agent, Chat Session Service |
+| FUNCTIONAL (Swarm) | 46 | **100% SWARM COMPLETION** - All agents fully operational |
+| FUNCTIONAL (Standalone) | 6 | Jasper (Internal Assistant), Voice Agent, Autonomous Posting Agent, Chat Session Service, AI Chat Sales Agent, Growth Strategist |
 | GHOST | 0 | All specialists have been implemented |
 
 ### Master Orchestrator (1) - L1 Swarm CEO
@@ -927,16 +927,18 @@ The REPUTATION_MANAGER implements brand defense through coordinated review manag
 - GMB_SPECIALIST: Local SEO optimization, profile updates, map pack positioning
 - SENTIMENT_ANALYST: Deep sentiment analysis, crisis detection, trend monitoring
 
-### Standalone Agents (4) - Outside Swarm Hierarchy
+### Standalone Agents (6) - Outside Swarm Hierarchy
 
 These agents operate independently of the L1/L2/L3 swarm hierarchy:
 
 | Agent | Type | Path | Status | Description |
 |-------|------|------|--------|-------------|
-| Jasper | Platform AI Assistant | Firestore `goldenMasters/` + `src/lib/orchestrator/jasper-tools.ts` | FUNCTIONAL | Jasper — the platform AI assistant and primary human interface to the agent swarm. **43 tools** across delegation, intelligence, content, and platform categories. Delegates to all 9 domain managers via `delegate_to_*` tools. Anti-hallucination design: tools force data verification. Mission Control SSE streaming for live tool tracking. |
+| Jasper | Internal AI Assistant & Swarm Commander | Firestore `goldenMasters/` + `src/lib/orchestrator/jasper-tools.ts` | FUNCTIONAL | Jasper — the founder's internal AI assistant and swarm commander. **43 tools** across delegation, intelligence, content, and platform categories. Delegates to all 9 domain managers via `delegate_to_*` tools. Does NOT handle customer-facing sales (that's the AI Chat Sales Agent). Relays Growth Strategist briefings. |
+| AI Chat Sales Agent | Customer-Facing Sales Agent | `src/lib/agents/sales-chat/specialist.ts` | FUNCTIONAL | Customer-facing AI sales agent for website chat widget and Facebook Messenger. Sells SalesVelocity.ai as a **multi-tenant SaaS subscription**. Uses its own Golden Master separate from Jasper. Setup: `scripts/setup-sales-agent-golden-master.js`. Routes: `/api/chat/public`, `/api/chat/facebook`. |
+| Growth Strategist | Chief Growth Officer | `src/lib/agents/growth-strategist/specialist.ts` | FUNCTIONAL | Cross-domain business intelligence agent. Aggregates data from all analytics sources (revenue, SEO, social, email, pipeline). Produces strategic directives for domain managers. Briefings accessible through Jasper. Data aggregator: `src/lib/agents/growth-strategist/data-aggregator.ts`. |
 | Voice Agent Handler | Voice AI Agent | `src/lib/voice/voice-agent-handler.ts` | FUNCTIONAL | Hybrid AI/human voice agent with two modes: **Prospector** (lead qualification) and **Closer** (deal closing with warm transfer). API routes: `src/app/api/voice/ai-agent/` |
 | Autonomous Posting Agent | Social Media Automation | `src/lib/social/autonomous-posting-agent.ts` | FUNCTIONAL | Manages autonomous content posting across LinkedIn and Twitter/X with scheduling, queueing, and analytics tracking. |
-| Chat Session Service | Agent Infrastructure | `src/lib/agent/chat-session-service.ts` | FUNCTIONAL | Manages real-time AI chat sessions and agent instance lifecycle. `AgentInstanceManager` (`src/lib/agent/instance-manager.ts`) handles ephemeral agent instances spawned from Golden Masters. |
+| Chat Session Service | Agent Infrastructure | `src/lib/agent/chat-session-service.ts` | FUNCTIONAL | Manages real-time AI chat sessions and agent instance lifecycle. `AgentInstanceManager` (`src/lib/agent/instance-manager.ts`) handles ephemeral agent instances spawned from Golden Masters. Supports `agentType` parameter for Golden Master selection. |
 
 ### Agent File Locations
 
@@ -1010,11 +1012,15 @@ src/lib/agents/
     └── case-study/specialist.ts
 
 # Standalone Agent Files (outside swarm)
-src/lib/orchestrator/jasper-tools.ts    # Jasper AI assistant tools
-src/lib/voice/voice-agent-handler.ts    # Voice AI Agent (Prospector/Closer)
-src/lib/social/autonomous-posting-agent.ts  # Autonomous Social Posting
-src/lib/agent/chat-session-service.ts   # Chat Session Service
-src/lib/agent/instance-manager.ts       # Agent Instance Manager
+src/lib/orchestrator/jasper-tools.ts          # Jasper internal AI assistant tools
+src/lib/agents/sales-chat/specialist.ts       # AI Chat Sales Agent (customer-facing)
+src/lib/agents/growth-strategist/specialist.ts # Growth Strategist (Chief Growth Officer)
+src/lib/agents/growth-strategist/data-aggregator.ts # Cross-domain data aggregation
+src/lib/voice/voice-agent-handler.ts          # Voice AI Agent (Prospector/Closer)
+src/lib/social/autonomous-posting-agent.ts    # Autonomous Social Posting
+src/lib/agent/chat-session-service.ts         # Chat Session Service
+src/lib/agent/instance-manager.ts             # Agent Instance Manager
+src/app/api/chat/facebook/route.ts            # Facebook Messenger webhook
 ```
 
 ---
@@ -1237,7 +1243,7 @@ const authFetch = useAuthFetch();
 const res = await authFetch('/api/some-endpoint');
 ```
 
-**Coverage (as of Session 33):** All 65 dashboard pages and components use `authFetch`. The only intentionally unauthenticated client call is `PublicLayout.tsx → /api/chat/public` (public chatbot widget).
+**Coverage (as of Session 33):** All 65 dashboard pages and components use `authFetch`. The intentionally unauthenticated client calls are `PublicLayout.tsx → /api/chat/public` (public chatbot widget, now powered by AI Chat Sales Agent Golden Master) and `/api/chat/facebook` (Facebook Messenger webhook).
 
 ### Security Strengths
 
