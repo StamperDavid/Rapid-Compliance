@@ -1,7 +1,7 @@
 # SalesVelocity.ai - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** February 27, 2026 (Onboarding overhaul — 4-step flow with 15 categories → 49 niche templates, injection questions, API key setup, processOnboarding() wiring. New pages: /onboarding/niche, /onboarding/setup.)
+**Last Updated:** February 28, 2026 (CRM entity configurability — 18 toggleable entities with industry defaults, new /api/entity-config endpoint, Settings > Features gets 5th tab "CRM Entities", entity page gating + schema editor filtering)
 **Branches:** `dev` (latest)
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Architecture:** Single-Tenant (Penthouse Model) - NOT a SaaS platform
@@ -12,7 +12,7 @@
 ## Table of Contents
 
 1. [Executive Summary](#executive-summary)
-2. [Current Status](#current-status-february-27-2026)
+2. [Current Status](#current-status-february-28-2026)
 3. [Ironclad Architecture Rules](#ironclad-architecture-rules) **[BINDING]**
 4. [Single-Tenant Architecture](#single-tenant-architecture-complete)
 5. [Verified Live Route Map](#verified-live-route-map)
@@ -37,7 +37,7 @@
 | Metric | Count | Status |
 |--------|-------|--------|
 | Physical Routes (page.tsx) | 170 | Verified February 27, 2026 (+2 onboarding pages: niche, setup; full filesystem count; 9 redirect stubs included) |
-| API Endpoints (route.ts) | 298 | Verified February 27, 2026 (full filesystem count) |
+| API Endpoints (route.ts) | 299 | Verified February 28, 2026 (+1: /api/entity-config) |
 | AI Agents | 52 | **52 FUNCTIONAL (46 swarm + 6 standalone)** |
 | RBAC Roles | 4 | `owner` (level 3), `admin` (level 2), `manager` (level 1), `member` (level 0) — 4-role RBAC |
 | Firestore Collections | 69+ | Active (+seoResearch collection for persistent SEO/competitor research) |
@@ -129,7 +129,7 @@ The Claude Code Governance Layer defines binding operational constraints for AI-
 
 ---
 
-## Current Status (February 27, 2026)
+## Current Status (February 28, 2026)
 
 ### Production Readiness: ~97%
 
@@ -459,7 +459,15 @@ SalesVelocity.ai is a **single-company sales and marketing super tool** running 
 - `/contacts/new`, `/contacts/[id]`, `/contacts/[id]/edit`
 - `/products`, `/products/new`, `/products/[id]/edit`
 - `/orders` (NEW Feb 12 — full order management with table, filters, detail drawer)
-- `/entities/[entityName]`
+- `/entities/[entityName]` (entity config gating — disabled entities show "not enabled" banner with Enable button for admin, "contact admin" for users)
+
+**Entity Config System (NEW Feb 28):**
+- 5 Always-On: `leads`, `contacts`, `companies`, `deals`, `tasks` — cannot be toggled off
+- 5 CRM Extended: `products`, `quotes`, `invoices`, `payments`, `orders` — toggleable, default ON
+- 13 Industry-Specific: `drivers`, `vehicles`, `compliance_documents`, `projects`, `time_entries`, `customers`, `inventory`, `properties`, `showings`, `cases`, `billing_entries`, `patients`, `appointments` — toggled by category defaults
+- Schema Editor dims disabled entities (50% opacity), hides "View Data", shows "Enable in Settings" link
+- Settings > Features page has 5 tabs: Your Business → Features → **CRM Entities** → API Keys → Summary
+- Stored in Firestore: `organizations/{PLATFORM_ID}/settings/entity_config`
 
 **Marketing & Outbound:**
 - `/email/campaigns`, `/email/campaigns/new`, `/email/campaigns/[campaignId]`
@@ -498,6 +506,7 @@ SalesVelocity.ai is a **single-company sales and marketing super tool** running 
 - `email-templates`, `sms-messages`, `theme`, `users`
 - `security`, `integrations`, `webhooks`, `custom-tools`, `workflows`
 - `lead-routing`, `meeting-scheduler`
+- `features` (5 tabs: Your Business → Features → CRM Entities → API Keys → Summary)
 - `ai-agents/*` (6 routes: hub, business-setup, configuration, persona, training, voice)
 
 > **Removed:** `/settings/billing`, `/settings/subscription`, `/settings/organization` (subscription system deleted)
@@ -1413,6 +1422,14 @@ This script:
 | `/api/admin/platform-pricing` | GET/PUT | Pricing config | FUNCTIONAL |
 | `/api/admin/platform-coupons` | GET/POST | Coupon management | FUNCTIONAL |
 
+#### Entity & Feature Configuration (NEW Feb 28)
+
+| Endpoint | Method | Purpose | Status |
+|----------|--------|---------|--------|
+| `/api/entity-config` | GET/PUT | CRM entity toggle config (auth required, Zod validated) | FUNCTIONAL |
+| `/api/features` | GET/PUT | Feature module toggles | FUNCTIONAL |
+| `/api/features/business-profile` | GET/PUT | Business profile for onboarding | FUNCTIONAL |
+
 #### Voice & AI
 
 | Endpoint | Method | Purpose | Status |
@@ -1495,6 +1512,19 @@ The onboarding flow now calls `POST /api/agent/process-onboarding` on Step 4 (AP
 - The route forwards these to `processOnboarding()` → `buildBaseModel()` → system prompt generation
 - Injection answers are interpolated into the system prompt under "Industry-Specific Context"
 - New mapping file: `src/lib/persona/category-template-map.ts` (15 categories, 49 template IDs)
+- `OnboardingCategory` interface now includes `defaultEntities?: string[]` for entity config during onboarding
+
+**Entity Configuration System (February 28, 2026):**
+
+CRM entity visibility is now configurable per-industry. The system mirrors the feature module pattern (6 layers):
+- **Types:** `src/types/entity-config.ts` — `EntityTier`, `EntityMetadata`, `EntityConfig`
+- **Constants:** `src/lib/constants/entity-config.ts` — `ALWAYS_ON_ENTITIES`, `ENTITY_METADATA` (18 entries), `CATEGORY_ENTITY_DEFAULTS` (15 categories)
+- **Validation:** `src/lib/validation/entity-config-schemas.ts` — `entityConfigSchema`, `updateEntityConfigSchema`
+- **Service:** `src/lib/services/entity-config-service.ts` — Firestore CRUD at `settings/entity_config`
+- **Store:** `src/lib/stores/entity-config-store.ts` — Zustand with `isEntityEnabled()`, backward compat (no config = all enabled)
+- **Hook:** `src/hooks/useEntityConfig.ts` — auto-load on first mount
+- **API:** `src/app/api/entity-config/route.ts` — GET/PUT with auth + Zod
+- **UI gating:** Entity page shows "not enabled" banner; Schema Editor dims disabled entities; Settings > Features has new "CRM Entities" tab
 
 **Admin SDK Migration (February 25, 2026):**
 
@@ -1888,7 +1918,7 @@ organizations/{PLATFORM_ID}/
 ├── integrations/             # Integration configs
 ├── merchant_coupons/         # Merchant coupons
 ├── members/                  # Organization members
-├── settings/                 # Org settings
+├── settings/                 # Org settings (feature_config, business_profile, entity_config)
 ├── agentConfig/              # Agent configurations
 ├── goldenMasters/            # Golden master agents
 ├── signals/                  # Agent signals
