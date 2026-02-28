@@ -183,14 +183,14 @@ async function setupJasperGoldenMaster() {
     console.log(`   Version: ${goldenMaster.version}`);
     console.log(`   Model: ${goldenMaster.model}\n`);
 
-    // Set as active Golden Master
+    // Set as active Golden Master (merge to create org doc if it doesn't exist)
     await db
       .collection('organizations')
       .doc(orgId)
-      .update({
+      .set({
         activeGoldenMasterId: goldenMasterId,
         updatedAt: new Date(),
-      });
+      }, { merge: true });
     
     console.log('✅ Set as active Golden Master for platform organization\n');
 
