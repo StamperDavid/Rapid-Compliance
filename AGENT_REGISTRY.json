@@ -1,12 +1,12 @@
 {
   "$schema": "SWARM_REGISTRY_V2",
-  "lastAudit": "2026-02-03",
+  "lastAudit": "2026-02-27",
   "totalAgents": 52,
-  "swarmAgents": 48,
-  "standaloneAgents": 4,
+  "swarmAgents": 46,
+  "standaloneAgents": 6,
   "functionalAgents": 52,
   "ghostAgents": 0,
-  "assessment": "FULL INVENTORY COMPLETE - 48 swarm agents (1 orchestrator + 9 managers + 38 specialists) all FUNCTIONAL, plus 4 standalone agents operating outside the swarm hierarchy. 100% operational.",
+  "assessment": "FULL INVENTORY COMPLETE - 46 swarm agents (1 orchestrator + 9 managers + 36 specialists) all FUNCTIONAL, plus 6 standalone agents operating outside the swarm hierarchy. 100% operational.",
 
   "hierarchy": {
     "MASTER_ORCHESTRATOR": {
@@ -402,13 +402,30 @@
   "standaloneAgents": {
     "JASPER": {
       "status": "FUNCTIONAL",
-      "type": "Platform AI Assistant",
+      "type": "Internal AI Assistant & Swarm Commander",
       "path": "Firestore: organizations/platform/goldenMasters/",
       "configPath": "src/lib/orchestrator/jasper-tools.ts",
       "setupScript": "scripts/setup-jasper-golden-master.js",
       "model": "openrouter/anthropic/claude-3.5-sonnet",
-      "capabilities": ["public_chat", "lead_qualification", "product_demos", "pricing_discussion", "tool_delegation", "swarm_command"],
-      "note": "Jasper — the platform AI assistant and primary human interface to the agent swarm. Speaks as a natural business partner, delegates to all 9 domain managers via tool functions, and provides strategic guidance across the platform."
+      "capabilities": ["swarm_command", "executive_briefings", "system_orchestration", "strategic_guidance", "employee_management"],
+      "note": "Jasper — the founder's internal AI assistant and swarm commander. Does NOT handle customer-facing sales (that's the AI Chat Sales Agent). Speaks as a natural business partner, delegates to all 9 domain managers via tool functions."
+    },
+    "AI_CHAT_SALES_AGENT": {
+      "status": "FUNCTIONAL",
+      "type": "Customer-Facing Sales Agent",
+      "path": "src/lib/agents/sales-chat/specialist.ts",
+      "setupScript": "scripts/setup-sales-agent-golden-master.js",
+      "apiRoutes": ["src/app/api/chat/public/route.ts", "src/app/api/chat/facebook/route.ts"],
+      "model": "openrouter/anthropic/claude-3.5-sonnet",
+      "capabilities": ["website_chat", "facebook_messenger", "lead_qualification", "product_questions", "trial_guidance", "demo_scheduling", "objection_handling"],
+      "note": "Customer-facing AI sales agent for website chat widget and Facebook Messenger. Sells SalesVelocity.ai as a multi-tenant SaaS subscription. Uses its own Golden Master separate from Jasper."
+    },
+    "GROWTH_STRATEGIST": {
+      "status": "FUNCTIONAL",
+      "type": "Chief Growth Officer",
+      "path": "src/lib/agents/growth-strategist/specialist.ts",
+      "capabilities": ["business_review", "seo_strategy", "ad_spend_analysis", "demographic_targeting", "channel_attribution", "strategic_briefing", "cross_domain_synthesis"],
+      "note": "Chief Growth Officer — reviews the entire business, synthesizes cross-domain data (traffic, SEO, revenue, marketing, social, email, conversions), and produces strategic directives for managers. Briefings accessible through Jasper."
     },
     "VOICE_AGENT_HANDLER": {
       "status": "FUNCTIONAL",

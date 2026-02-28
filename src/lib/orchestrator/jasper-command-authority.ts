@@ -127,6 +127,11 @@ export class JasperCommandAuthority {
     AGENT_IDS.REPUTATION_MANAGER,
   ] as const;
 
+  /** Standalone agents that produce strategic briefings for executive summaries */
+  private readonly BRIEFING_SOURCES = [
+    AGENT_IDS.GROWTH_STRATEGIST,
+  ] as const;
+
   // ==========================================================================
   // 8a. BRIEFING SYSTEM
   // ==========================================================================
@@ -146,8 +151,29 @@ export class JasperCommandAuthority {
     // Build briefing metrics
     const metrics = await this.buildBriefingMetrics();
 
+    // Pull Growth Strategist strategic briefings for executive context
+    const strategyEntries = await vault.query('JASPER', {
+      category: 'STRATEGY',
+      createdBy: 'GROWTH_STRATEGIST',
+      sortBy: 'createdAt',
+      sortOrder: 'desc',
+      limit: 1,
+    });
+    const latestStrategy = strategyEntries[0]?.value as Record<string, unknown> | undefined;
+
     // Build highlights from recent activity
     const highlights = this.buildHighlights(departmentSummaries);
+
+    // Add Growth Strategist highlight if available
+    if (latestStrategy?.executiveSummary) {
+      highlights.unshift({
+        department: 'Growth Strategy',
+        type: 'INFO',
+        title: 'Growth Strategist Briefing',
+        description: String(latestStrategy.executiveSummary),
+        impact: 'HIGH',
+      });
+    }
 
     // Generate natural language summary
     const summary = this.generateBriefingSummary(highlights, metrics);

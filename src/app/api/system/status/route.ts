@@ -2,7 +2,7 @@
  * System Status API Route
  *
  * Returns live telemetry from the MASTER_ORCHESTRATOR including:
- * - Full 52-agent registry (48 swarm: 1 orchestrator + 9 managers + 38 specialists, plus 4 standalone)
+ * - Full 52-agent registry (1 orchestrator + 9 managers + 36 specialists + 6 standalone)
  * - Agent health status with tier information (L1/L2/L3/STANDALONE)
  * - Active saga counts
  * - Command success rates
@@ -113,7 +113,7 @@ interface AgentDefinition {
 
 /**
  * Complete registry of all 52 agents
- * 1 Orchestrator (L1) + 9 Managers (L2) + 38 Specialists (L3) + 4 Standalone
+ * 1 Orchestrator (L1) + 9 Managers (L2) + 36 Specialists (L3) + 6 Standalone
  */
 const AGENT_REGISTRY: AgentDefinition[] = [
   // =========================================================================
@@ -530,15 +530,15 @@ const AGENT_REGISTRY: AgentDefinition[] = [
   },
 
   // =========================================================================
-  // STANDALONE AGENTS (4) - Operate outside the swarm hierarchy
+  // STANDALONE AGENTS (6) - Operate outside the swarm hierarchy
   // =========================================================================
   {
     id: 'JASPER',
     name: 'Jasper',
-    role: 'Platform AI Assistant',
+    role: 'Internal AI Assistant & Swarm Commander',
     tier: 'STANDALONE',
     parentId: null,
-    capabilities: ['Public Chat', 'Lead Qualification', 'Product Demos', 'Pricing Discussion', 'Swarm Command'],
+    capabilities: ['Swarm Command', 'Executive Briefings', 'System Orchestration', 'Employee Management', 'Strategic Guidance'],
   },
   {
     id: 'VOICE_AGENT_HANDLER',
@@ -563,6 +563,22 @@ const AGENT_REGISTRY: AgentDefinition[] = [
     tier: 'STANDALONE',
     parentId: null,
     capabilities: ['Session Management', 'Conversation Monitoring', 'Agent Instance Lifecycle', 'Golden Master Spawning'],
+  },
+  {
+    id: 'AI_CHAT_SALES_AGENT',
+    name: 'AI Chat Sales Agent',
+    role: 'Customer-Facing Sales Agent',
+    tier: 'STANDALONE',
+    parentId: null,
+    capabilities: ['Website Chat', 'Facebook Messenger', 'Lead Qualification', 'Product Questions', 'Trial Guidance', 'Demo Scheduling'],
+  },
+  {
+    id: 'GROWTH_STRATEGIST',
+    name: 'Growth Strategist',
+    role: 'Chief Growth Officer',
+    tier: 'STANDALONE',
+    parentId: null,
+    capabilities: ['Business Review', 'SEO Strategy', 'Ad Spend Analysis', 'Demographic Targeting', 'Channel Attribution', 'Strategic Briefing'],
   },
 ];
 

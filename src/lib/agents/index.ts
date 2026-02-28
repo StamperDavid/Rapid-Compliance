@@ -4,7 +4,10 @@
  *
  * SWARM STATUS REPORT (Updated - 100% Swarm Completion)
  *
- * Total Agents: 48 (10 managers + 38 specialists)
+ * Total Agents: 52 (48 swarm + 4 standalone + 2 standalone new = 52 deployed)
+ *   Swarm: 1 Orchestrator (L1) + 9 Managers (L2) + 38 Specialists (L3) = 48
+ *   Standalone: Jasper, Voice Agent, Autonomous Posting, Chat Session Service,
+ *               AI Chat Sales Agent, Growth Strategist = 6
  *
  * ORCHESTRATOR (1):
  * - MasterOrchestrator (Swarm CEO) - L1 orchestrator coordinating all managers
@@ -14,7 +17,7 @@
  * - CommerceManager, OutreachManager, ContentManager
  * - ArchitectManager, RevenueDirector, ReputationManager
  *
- * SPECIALISTS (37):
+ * SPECIALISTS (38):
  * - Intelligence: CompetitorResearcher, SentimentAnalyst, TechnographicScout, ScraperSpecialist, TrendScout
  * - Marketing: TikTokExpert, TwitterExpert, FacebookAdsExpert, LinkedInExpert, SEOExpert, GrowthAnalyst
  * - Builder: UxUiArchitect, FunnelEngineer, AssetGenerator, WorkflowOptimizer
@@ -25,8 +28,13 @@
  * - Sales: MerchandiserSpecialist, OutreachSpecialist, LeadQualifierSpecialist, DealCloserSpecialist, ObjectionHandlerSpecialist
  * - Trust: GMBSpecialist, ReviewSpecialist, ReviewManagerSpecialist, CaseStudyBuilderSpecialist
  *
+ * STANDALONE (6):
+ * - Jasper (internal AI assistant), Voice Agent, Autonomous Posting, Chat Session Service
+ * - AI Chat Sales Agent (customer-facing website/FB Messenger)
+ * - Growth Strategist (Chief Growth Officer)
+ *
  * Status Breakdown:
- * - FUNCTIONAL: 48 (100% Swarm Completion Achieved!)
+ * - FUNCTIONAL: 52 (100% operational)
  * - SHELL: 0 (All agents fully operational)
  * - GHOST: 0 (All specialists implemented)
  */
@@ -161,6 +169,16 @@ export { ReviewManagerSpecialist } from './trust/review-manager/specialist';
 export { CaseStudyBuilderSpecialist } from './trust/case-study/specialist';
 
 // ============================================================================
+// STANDALONE AGENTS (outside swarm hierarchy)
+// ============================================================================
+
+// AI Chat Sales Agent (customer-facing website chat + Facebook Messenger)
+export { SalesChatSpecialist } from './sales-chat/specialist';
+
+// Growth Strategist (Chief Growth Officer - cross-domain business intelligence)
+export { GrowthStrategist } from './growth-strategist/specialist';
+
+// ============================================================================
 // AGENT REGISTRY UTILITY
 // ============================================================================
 
@@ -233,6 +251,10 @@ export const AGENT_IDS = {
   REVIEW_SPECIALIST: 'REVIEW_SPECIALIST',
   REV_MGR: 'REV_MGR',
   CASE_STUDY: 'CASE_STUDY',
+
+  // Standalone Agents
+  AI_CHAT_SALES_AGENT: 'AI_CHAT_SALES_AGENT',
+  GROWTH_STRATEGIST: 'GROWTH_STRATEGIST',
 } as const;
 
 export type AgentId = typeof AGENT_IDS[keyof typeof AGENT_IDS];

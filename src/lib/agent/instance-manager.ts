@@ -30,11 +30,11 @@ export class AgentInstanceManager implements InstanceLifecycleService {
    * 4. Spawn instance with Golden Master config + customer memory
    * 5. Return ready-to-use instance
    */
-  async spawnInstance(customerId: string): Promise<AgentInstance> {
-    logger.info('Spawning agent instance', { customerId });
+  async spawnInstance(customerId: string, agentType?: string): Promise<AgentInstance> {
+    logger.info('Spawning agent instance', { customerId, agentType });
 
-    // 1. Get active Golden Master
-    const goldenMaster = await this.getActiveGoldenMaster();
+    // 1. Get active Golden Master (optionally filtered by agentType)
+    const goldenMaster = await this.getActiveGoldenMaster(agentType);
     if (!goldenMaster) {
       logger.error('No active Golden Master found', new Error('No active Golden Master found'));
       throw new Error('No active Golden Master found. Please deploy a Golden Master first.');
@@ -590,9 +590,9 @@ ${this.summarizeRecentConversations(customerMemory)}
   
   // ===== Database/Storage Methods =====
 
-  private async getActiveGoldenMaster(): Promise<GoldenMaster | null> {
+  private async getActiveGoldenMaster(agentType?: string): Promise<GoldenMaster | null> {
     try {
-      logger.info(`Instance Manager Fetching Golden Masters for org: ${PLATFORM_ID}`, { file: 'instance-manager.ts' });
+      logger.info(`Instance Manager Fetching Golden Masters for org: ${PLATFORM_ID}`, { file: 'instance-manager.ts', agentType });
 
       // Prefer admin SDK to bypass security rules
       try {
@@ -610,9 +610,26 @@ ${this.summarizeRecentConversations(customerMemory)}
             file: 'instance-manager.ts'
           });
 
-          const active = goldenMasters.find((gm) => gm.isActive === true);
+          // If agentType is specified, find a Golden Master matching that type
+          let active: GoldenMaster | undefined;
+          if (agentType) {
+            active = goldenMasters.find(
+              (gm) => (gm as GoldenMaster & { agentType?: string }).agentType === agentType && gm.isActive === true
+            );
+            // Fall back to any active GM if type-specific one not found
+            active ??= goldenMasters.find((gm) => gm.isActive === true);
+          } else {
+            // Default: find any active GM that is NOT a typed agent (backward compatible)
+            active = goldenMasters.find(
+              (gm) => gm.isActive === true && !(gm as GoldenMaster & { agentType?: string }).agentType
+            );
+            // Fall back to any active GM
+            active ??= goldenMasters.find((gm) => gm.isActive === true);
+          }
+
           logger.info('Instance Manager Active Golden Master', {
             activeId: active ? active.id : 'NONE',
+            agentType,
             file: 'instance-manager.ts'
           });
           return active ?? null;
@@ -631,7 +648,16 @@ ${this.summarizeRecentConversations(customerMemory)}
         []
       );
       logger.info(`Instance Manager Found ${goldenMasters.length} Golden Masters (client SDK)`, { file: 'instance-manager.ts' });
-      const active = goldenMasters.find((gm) => gm.isActive === true);
+
+      let active: GoldenMaster | undefined;
+      if (agentType) {
+        active = goldenMasters.find(
+          (gm) => (gm as GoldenMaster & { agentType?: string }).agentType === agentType && gm.isActive === true
+        );
+        active ??= goldenMasters.find((gm) => gm.isActive === true);
+      } else {
+        active = goldenMasters.find((gm) => gm.isActive === true);
+      }
       return active ?? null;
     } catch (error) {
       logger.error('[Instance Manager] Error fetching Golden Master:', error instanceof Error ? error : new Error(String(error)), { file: 'instance-manager.ts' });

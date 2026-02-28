@@ -3,7 +3,7 @@
  * STATUS: PRODUCTION-READY
  *
  * Provides a unified registry for dynamic agent instantiation.
- * Maps all 47 AGENT_IDS to their corresponding getter functions.
+ * Maps all 50 AGENT_IDS to their corresponding getter functions.
  *
  * USAGE:
  * ```typescript
@@ -23,7 +23,7 @@ import { AGENT_IDS, type AgentId } from './index';
 import type { BaseSpecialist } from './base-specialist';
 
 // ============================================================================
-// AGENT GETTER IMPORTS - All 47 Agents
+// AGENT GETTER IMPORTS - All 50 Agents
 // ============================================================================
 
 // Orchestrator (L1)
@@ -91,6 +91,10 @@ import { getGMBSpecialist } from './trust/gmb/specialist';
 import { getReviewSpecialist } from './trust/review/specialist';
 import { getReviewManagerSpecialist } from './trust/review-manager/specialist';
 import { getCaseStudyBuilderSpecialist } from './trust/case-study/specialist';
+
+// Standalone Agents
+import { getSalesChatSpecialist } from './sales-chat/specialist';
+import { getGrowthStrategist } from './growth-strategist/specialist';
 
 // ============================================================================
 // AGENT FACTORY REGISTRY
@@ -171,6 +175,10 @@ const AGENT_FACTORY_REGISTRY: Record<AgentId, AgentGetter> = {
   [AGENT_IDS.REVIEW_SPECIALIST]: getReviewSpecialist,
   [AGENT_IDS.REV_MGR]: getReviewManagerSpecialist,
   [AGENT_IDS.CASE_STUDY]: getCaseStudyBuilderSpecialist,
+
+  // Standalone Agents
+  [AGENT_IDS.AI_CHAT_SALES_AGENT]: getSalesChatSpecialist,
+  [AGENT_IDS.GROWTH_STRATEGIST]: getGrowthStrategist,
 };
 
 // ============================================================================

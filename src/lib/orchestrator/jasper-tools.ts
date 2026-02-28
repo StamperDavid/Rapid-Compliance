@@ -971,6 +971,8 @@ export const JASPER_TOOLS: ToolDefinition[] = [
               'newsletter',
               'web_migrator',
               'lead_hunter',
+              'sales_chat_agent',
+              'growth_strategist',
             ],
           },
           action: {
