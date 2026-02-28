@@ -1,7 +1,7 @@
 # SalesVelocity.ai - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** February 27, 2026 (Added AI Chat Sales Agent + Growth Strategist — 52 agents now real. Refactored Jasper to internal-only. Added Facebook Messenger webhook.)
+**Last Updated:** February 27, 2026 (Purged multi-tenant naming from 37 files: getOrgSubCollection→getSubCollection, getOrgCollection→getPlatformCollection, TenantMemoryVault→MemoryVault. Added AI Chat Sales Agent + Growth Strategist — 52 agents. Refactored Jasper to internal-only.)
 **Branches:** `dev` (latest)
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Architecture:** Single-Tenant (Penthouse Model) - NOT a SaaS platform
@@ -155,7 +155,7 @@ The Claude Code Governance Layer defines binding operational constraints for AI-
 | **Facebook/Instagram** | No API implementation. Blocked: Meta Developer Portal approval | MEDIUM |
 | **LinkedIn** | Unofficial RapidAPI wrapper. Blocked: Marketing Developer Platform approval | MEDIUM |
 | **Stripe live keys** | Test keys configured; live keys blocked on bank account setup | MEDIUM |
-| **Skipped tests** | 52 `it.skip` — 31 need Firestore emulator, 16 obsolete multi-tenant tests to delete | MEDIUM |
+| **Skipped tests** | 52 `it.skip` — 31 need Firestore emulator, 16 obsolete tests to delete | MEDIUM |
 | **Video render pipeline** | Returns "coming soon" without API keys; works when HeyGen/Sora/Runway keys configured | LOW |
 | **Stub integrations** | Square, Vonage, Resend, SMTP, Calendly — type defs only, no implementation | LOW |
 
@@ -212,20 +212,20 @@ All roadmaps fully complete. Details in git history and `docs/archive/`:
 | **Constant** | `DEFAULT_ORG_ID = 'rapid-compliance-root'` in `src/lib/constants/platform.ts` |
 | **Company Config** | `COMPANY_CONFIG = { id: 'rapid-compliance-root', name: 'SalesVelocity.ai' }` |
 | **Firebase Project** | `rapid-compliance-65f87` (enforced by `CriticalConfigurationError` kill-switch) |
-| **Validation Helpers** | `isDefaultOrg(orgId)` confirms identity; `getDefaultOrgId()` returns the constant |
+| **Validation Helpers** | `PLATFORM_ID` constant; `getSubCollection()` builds platform-scoped Firestore paths |
 
 **Enforcement:**
 - All Firestore paths, API routes, and service classes use `DEFAULT_ORG_ID` exclusively
 - `CriticalConfigurationError` in `src/lib/firebase/config.ts` halts the application if any other Firebase project is detected at runtime
-- Service classes accept deprecated `orgId` parameters for backward compatibility but **ignore them** — all methods route to `DEFAULT_ORG_ID` internally
+- All Firestore path helpers (`getSubCollection`, `getPlatformCollection`) use `PLATFORM_ID` internally — no dynamic org routing
 
-**Bug Definition:** Any code that introduces dynamic organization IDs, org-switching logic, tenant selection, multi-org routing, or parameterized org resolution is a **bug**. There is no org picker. There is no tenant dropdown. Clients purchase services — they do NOT get tenants.
+**Bug Definition:** Any code that introduces dynamic organization IDs, org-switching logic, tenant selection, multi-org routing, or parameterized org resolution is a **bug**. There is no org picker. There is no tenant dropdown. All paths use `PLATFORM_ID` constant.
 
 ---
 
 ### Rule 2: Unified AI Workforce Registry
 
-**The 52 AI Agents are managed through a single global registry in Firestore, not per-user and not per-tenant.**
+**The 52 AI Agents are managed through a single global registry in Firestore, not per-user.**
 
 | Aspect | Detail |
 |--------|--------|
@@ -257,7 +257,7 @@ Standalone: JASPER, VOICE_AGENT_HANDLER,
 
 **Governance:** Agents are deployed, trained, and configured at the **platform level**. The `AgentInstanceManager` (`src/lib/agent/instance-manager.ts`) creates ephemeral session instances from Golden Masters — these are temporary runtime objects, not persistent per-user registries.
 
-**Bug Definition:** Any code that creates user-scoped agent registries, per-tenant agent configurations, or duplicate agent manifests outside the global registry is a **bug**.
+**Bug Definition:** Any code that creates user-scoped agent registries or duplicate agent manifests outside the global registry is a **bug**.
 
 ---
 
@@ -323,7 +323,7 @@ border-color: #1a1a1a;
 | **Sections** | 9 navigation sections, ~40 sidebar items |
 | **Width** | 280px expanded / 64px collapsed |
 | **Theming** | 100% CSS variable-driven via `var(--color-*)` |
-| **Routing** | All static routes — no `[orgId]` parameters in sidebar links |
+| **Routing** | All static routes — no dynamic org parameters in sidebar links |
 | **Footer** | Integrations (plug icon → `/settings/integrations`), Settings (gear icon → `/settings`), and Help/Academy (help icon → `/academy`) |
 | **Tab Navigation** | `SubpageNav` component provides route-based tabs on hub/parent pages |
 
@@ -412,9 +412,9 @@ All helpers are hardcoded to `DEFAULT_ORG_ID`. There is no dynamic org parameter
 
 **Status:** FULLY COMPLETE — February 2, 2026 | **Net Result:** -185 files, -71,369 lines of code
 
-SalesVelocity.ai is a **single-company sales and marketing super tool**. This is NOT a SaaS platform. Clients purchase services and products — they do NOT get tenants.
+SalesVelocity.ai is a **single-company sales and marketing super tool** running on the Penthouse Model (single-tenant development strategy). All data paths use `PLATFORM_ID` constant.
 
-**Security:** Firebase kill-switch in `src/lib/firebase/config.ts` — only `rapid-compliance-65f87` project allowed, `CriticalConfigurationError` halts on mismatch. Routes flattened from `/workspace/[orgId]/*` to `/(dashboard)/*`. Legacy URLs redirect via middleware.
+**Security:** Firebase kill-switch in `src/lib/firebase/config.ts` — only `rapid-compliance-65f87` project allowed, `CriticalConfigurationError` halts on mismatch. Routes use `/(dashboard)/*` layout. Legacy URLs redirect via middleware.
 
 > Migration details, backend status tables, and conversion phase records archived in `docs/archive/`.
 
@@ -435,16 +435,16 @@ SalesVelocity.ai is a **single-company sales and marketing super tool**. This is
 | Other (`/preview`, `/profile`, `/sites`) | 3 | 2 | Preview tokens, user profile, site builder |
 | **TOTAL** | **169** | **~11** | **Verified February 27, 2026 (filesystem count)** |
 
-**DELETED:** `src/app/workspace/[orgId]/*` (95 pages) and `src/app/admin/*` (92 pages) - multi-tenant and standalone admin routes removed/consolidated into `(dashboard)`
+**DELETED:** `src/app/workspace/` (95 pages) and `src/app/admin/*` (92 pages) - legacy routes removed/consolidated into `(dashboard)`
 
 ### Admin Routes (ARCHIVED — Consolidated into Dashboard)
 
-> **Note:** The standalone `/admin/*` page routes (92 pages) were removed during the single-tenant consolidation. All administrative functionality now lives within the `/(dashboard)/*` route group, accessible via RBAC role-gating (`owner`/`admin` roles). Admin API routes (`/api/admin/*`) still exist for backend operations.
+> **Note:** The standalone `/admin/*` page routes (92 pages) were removed during consolidation. All administrative functionality now lives within the `/(dashboard)/*` route group, accessible via RBAC role-gating (`owner`/`admin` roles). Admin API routes (`/api/admin/*`) still exist for backend operations.
 >
 > **Admin Login:** `/(auth)/admin-login` — Firebase admin auth
 ### Dashboard Routes (127 in /(dashboard)/* - Flattened Single-Tenant)
 
-> **Note:** These routes were migrated from `/workspace/[orgId]/*` to `/(dashboard)/*` as part of the single-tenant conversion. All routes now use `DEFAULT_ORG_ID = 'rapid-compliance-root'` internally.
+> **Note:** All dashboard routes use `PLATFORM_ID = 'rapid-compliance-root'` internally via `getSubCollection()`.
 
 **Core Navigation:**
 - `/dashboard`, `/settings`, `/analytics`, `/templates`
@@ -578,7 +578,7 @@ No open route issues. All previously identified stub pages and duplicate destina
 
 | Agent ID | Class Name | Domain | Status | Notes |
 |----------|------------|--------|--------|-------|
-| MASTER_ORCHESTRATOR | MasterOrchestrator | Swarm Coordination | FUNCTIONAL | **Swarm CEO** - 2000+ LOC implementing Command Pattern for task dispatching, Saga Pattern for multi-manager workflows with compensation, processGoal() hierarchical task decomposition, intent-based domain routing engine with 9 intent categories, cross-domain synchronization with dependency graph resolution, getSwarmStatus() global state aggregation from all 9 managers, TenantMemoryVault integration for goal insights |
+| MASTER_ORCHESTRATOR | MasterOrchestrator | Swarm Coordination | FUNCTIONAL | **Swarm CEO** - 2000+ LOC implementing Command Pattern for task dispatching, Saga Pattern for multi-manager workflows with compensation, processGoal() hierarchical task decomposition, intent-based domain routing engine with 9 intent categories, cross-domain synchronization with dependency graph resolution, getSwarmStatus() global state aggregation from all 9 managers, MemoryVault integration for goal insights |
 
 ### Managers (9) - L2 Orchestrators
 
@@ -587,10 +587,10 @@ No open route issues. All previously identified stub pages and duplicate destina
 | INTELLIGENCE_MANAGER | IntelligenceManager | Research & Analysis | FUNCTIONAL | Dynamic orchestration engine with parallel execution, graceful degradation |
 | MARKETING_MANAGER | MarketingManager | Social & Ads | FUNCTIONAL | **Industry-agnostic Cross-Channel Commander** - 1200+ LOC with dynamic specialist resolution (6 specialists: TIKTOK_EXPERT, TWITTER_X_EXPERT, FACEBOOK_ADS_EXPERT, LINKEDIN_EXPERT, SEO_EXPERT, GROWTH_ANALYST), Brand DNA integration, SEO-social feedback loop, intelligence signal wiring (TREND_SCOUT, SENTIMENT_ANALYST), GROWTH_LOOP orchestration cycle, OPPORTUNISTIC/CRISIS_RESPONSE/AMPLIFICATION modes, parallel execution |
 | BUILDER_MANAGER | BuilderManager | Site Building | FUNCTIONAL | **Autonomous Construction Commander** - 1650+ LOC with dynamic specialist resolution (3 specialists: UX_UI_ARCHITECT, FUNNEL_ENGINEER, ASSET_GENERATOR), Blueprint-to-Deployment workflow, pixel injection (GA4, GTM, Meta Pixel, Hotjar), build state machine (PENDING_BLUEPRINT → ASSEMBLING → INJECTING_SCRIPTS → DEPLOYING → LIVE), Vercel deployment manifest generation, SignalBus `website.build_complete` broadcast, parallel execution, graceful degradation |
-| COMMERCE_MANAGER | CommerceManager | E-commerce | FUNCTIONAL | **Transactional Commerce Commander** - 1400+ LOC with dynamic specialist resolution (4 specialists: PAYMENT_SPECIALIST, CATALOG_MANAGER, PRICING_STRATEGIST, INVENTORY_MANAGER), Product-to-Payment checkout orchestration, CommerceBrief revenue synthesis (Transaction Volume), TenantMemoryVault tax/currency settings, parallel execution, graceful degradation |
-| OUTREACH_MANAGER | OutreachManager | Email & SMS | FUNCTIONAL | **Omni-Channel Communication Commander** - 1900+ LOC with dynamic specialist resolution (EMAIL_SPECIALIST, SMS_SPECIALIST), Multi-Step Sequence execution, channel escalation (EMAIL → SMS → VOICE), sentiment-aware routing via INTELLIGENCE_MANAGER, DNC compliance via TenantMemoryVault, frequency throttling, quiet hours enforcement, SignalBus integration |
+| COMMERCE_MANAGER | CommerceManager | E-commerce | FUNCTIONAL | **Transactional Commerce Commander** - 1400+ LOC with dynamic specialist resolution (4 specialists: PAYMENT_SPECIALIST, CATALOG_MANAGER, PRICING_STRATEGIST, INVENTORY_MANAGER), Product-to-Payment checkout orchestration, CommerceBrief revenue synthesis (Transaction Volume), MemoryVault tax/currency settings, parallel execution, graceful degradation |
+| OUTREACH_MANAGER | OutreachManager | Email & SMS | FUNCTIONAL | **Omni-Channel Communication Commander** - 1900+ LOC with dynamic specialist resolution (EMAIL_SPECIALIST, SMS_SPECIALIST), Multi-Step Sequence execution, channel escalation (EMAIL → SMS → VOICE), sentiment-aware routing via INTELLIGENCE_MANAGER, DNC compliance via MemoryVault, frequency throttling, quiet hours enforcement, SignalBus integration |
 | CONTENT_MANAGER | ContentManager | Content Creation | FUNCTIONAL | **Multi-Modal Production Commander** - 1600+ LOC with dynamic specialist resolution (4 specialists: COPYWRITER, CALENDAR_COORDINATOR, VIDEO_SPECIALIST, ASSET_GENERATOR), TechnicalBrief consumption from ARCHITECT_MANAGER, Brand DNA integration (avoidPhrases, toneOfVoice, keyPhrases), SEO-to-Copy keyword injection, ContentPackage synthesis, validateContent() quality gate, SignalBus `content.package_ready` broadcast, parallel execution, graceful degradation |
-| ARCHITECT_MANAGER | ArchitectManager | Site Architecture | FUNCTIONAL | **Strategic Infrastructure Commander** - 2100+ LOC with dynamic specialist resolution (3 specialists), Brand DNA integration, TenantMemoryVault Intelligence Brief consumption, SiteArchitecture + TechnicalBrief synthesis, SignalBus `site.blueprint_ready` broadcast, parallel execution, graceful degradation |
+| ARCHITECT_MANAGER | ArchitectManager | Site Architecture | FUNCTIONAL | **Strategic Infrastructure Commander** - 2100+ LOC with dynamic specialist resolution (3 specialists), Brand DNA integration, MemoryVault Intelligence Brief consumption, SiteArchitecture + TechnicalBrief synthesis, SignalBus `site.blueprint_ready` broadcast, parallel execution, graceful degradation |
 | REVENUE_DIRECTOR | RevenueDirector | Sales Ops | FUNCTIONAL | **Sales Ops Commander** - 1800+ LOC with dynamic specialist resolution (5 specialists), Golden Master persona tuning, RevenueBrief synthesis, objection library battlecards, cross-agent signal sharing |
 | REPUTATION_MANAGER | ReputationManager | Trust & Reviews | FUNCTIONAL | **Brand Defense Commander** - 2000+ LOC with dynamic specialist resolution (4 specialists: REVIEW_SPECIALIST, GMB_SPECIALIST, REV_MGR, CASE_STUDY), automated review solicitation from sale.completed signals, AI-powered response engine with star-rating strategies, GMB profile optimization coordination, ReputationBrief trust score synthesis, webhook.review.received signal handling, Review-to-Revenue feedback loop |
 
@@ -641,8 +641,8 @@ No open route issues. All previously identified stub pages and duplicate destina
 The ARCHITECT_MANAGER implements dynamic site architecture generation from Brand DNA:
 
 **Architecture Derivation Pipeline:**
-1. Load Brand DNA from tenant context (industry, tone, audience, unique value)
-2. Query TenantMemoryVault for existing Intelligence Briefs (market context)
+1. Load Brand DNA from platform context (industry, tone, audience, unique value)
+2. Query MemoryVault for existing Intelligence Briefs (market context)
 3. Derive site requirements: industry type, funnel type, target audience, integrations
 4. Generate site map from 7 industry templates (SaaS, Agency, E-commerce, Coach, Local Business, Media, Nonprofit)
 5. Design funnel flow from 4 funnel templates (Lead Gen, E-commerce, Course, Service)
@@ -664,7 +664,7 @@ The ARCHITECT_MANAGER implements dynamic site architecture generation from Brand
 
 **Signal Broadcasting:**
 - Broadcasts `site.blueprint_ready` signal to BUILDER_MANAGER, CONTENT_MANAGER, MARKETING_MANAGER
-- Stores blueprint as insight in TenantMemoryVault for cross-agent consumption
+- Stores blueprint as insight in MemoryVault for cross-agent consumption
 
 **Specialist Orchestration:**
 - UX_UI_SPECIALIST: Wireframes, component library, color psychology, accessibility
@@ -677,7 +677,7 @@ The BUILDER_MANAGER implements autonomous site construction from architectural b
 
 **Blueprint-to-Deployment Pipeline:**
 1. Receive `site.blueprint_ready` signal from ARCHITECT_MANAGER
-2. Load SiteArchitecture from TenantMemoryVault
+2. Load SiteArchitecture from MemoryVault
 3. Execute specialists in parallel: UX_UI_ARCHITECT, FUNNEL_ENGINEER, ASSET_GENERATOR
 4. Assemble page components by mapping sections to templates
 5. Inject tracking pixels (GA4, GTM, Meta Pixel, Hotjar) into page headers
@@ -707,7 +707,7 @@ The BUILDER_MANAGER implements autonomous site construction from architectural b
 
 **Signal Broadcasting:**
 - Broadcasts `website.build_complete` signal to CONTENT_MANAGER, MARKETING_MANAGER
-- Stores build result as insight in TenantMemoryVault for cross-agent consumption
+- Stores build result as insight in MemoryVault for cross-agent consumption
 
 **Specialist Orchestration:**
 - UX_UI_ARCHITECT: Design system tokens, color palettes, typography, accessibility
@@ -720,7 +720,7 @@ The CONTENT_MANAGER implements multi-modal content production from architectural
 
 **SEO-to-Copy Injection Workflow:**
 1. Receive `site.blueprint_ready` signal from ARCHITECT_MANAGER
-2. Load Brand DNA from TenantMemoryVault (toneOfVoice, avoidPhrases, keyPhrases, colorPalette)
+2. Load Brand DNA from MemoryVault (toneOfVoice, avoidPhrases, keyPhrases, colorPalette)
 3. Extract SEO mandates from TechnicalBrief (perPage keywords, meta templates)
 4. Inject SEO keywords into COPYWRITER briefs for each page
 5. Execute specialists in parallel with brand + SEO context
@@ -744,7 +744,7 @@ The CONTENT_MANAGER implements multi-modal content production from architectural
 
 **Signal Broadcasting:**
 - Broadcasts `content.package_ready` signal to BUILDER_MANAGER, MARKETING_MANAGER
-- Stores content insights in TenantMemoryVault for cross-agent consumption
+- Stores content insights in MemoryVault for cross-agent consumption
 
 **Specialist Orchestration:**
 - COPYWRITER: Headlines (H1-H6), product descriptions, email copy, ad copy, landing pages
@@ -766,7 +766,7 @@ The CONTENT_MANAGER implements multi-modal content production from architectural
 The COMMERCE_MANAGER implements Product-to-Payment commerce orchestration:
 
 **Checkout Orchestration Pipeline:**
-1. Fetch tenant commerce settings from TenantMemoryVault (currency, tax config)
+1. Fetch commerce settings from MemoryVault (currency, tax config)
 2. Validate products via CATALOG_MANAGER
 3. Calculate totals via PRICING_STRATEGIST (subtotal, tax, shipping, discounts)
 4. Initialize checkout session via PAYMENT_SPECIALIST
@@ -799,7 +799,7 @@ The OUTREACH_MANAGER implements omni-channel communication with intelligent sequ
 
 **Multi-Step Sequence Execution Pipeline:**
 1. Receive outreach brief with lead profile, sequence steps, and communication settings
-2. Query TenantMemoryVault for DNC lists and contact history
+2. Query MemoryVault for DNC lists and contact history
 3. Query INTELLIGENCE_MANAGER insights for lead sentiment (block HOSTILE)
 4. Validate compliance: DNC check, frequency limits, quiet hours
 5. Execute sequence steps with channel escalation (EMAIL → SMS → VOICE)
@@ -813,7 +813,7 @@ The OUTREACH_MANAGER implements omni-channel communication with intelligent sequ
 - Escalation triggers: no response after N attempts, high lead score, time-sensitive offers
 
 **Compliance Enforcement:**
-- **DNC Lists:** Check TenantMemoryVault before ANY outreach, block if on list
+- **DNC Lists:** Check MemoryVault before ANY outreach, block if on list
 - **Frequency Throttling:** Max 1 email/day, 1 SMS/week per lead (configurable)
 - **Quiet Hours:** No outreach between 9PM-8AM local time (respects lead timezone)
 - **Opt-Out Handling:** Immediate DNC list addition on unsubscribe signal
@@ -875,7 +875,7 @@ The REVENUE_DIRECTOR implements dynamic persona adjustment based on win/loss sig
 **Signal Sources:**
 - `deal.won` - Positive outcome signals from DEAL_CLOSER
 - `deal.lost` - Loss signals with reason analysis
-- TenantMemoryVault cross-agent communication
+- MemoryVault cross-agent communication
 
 **Feedback Loop:**
 DEAL_CLOSER closed-won signals are broadcast to LEAD_QUALIFIER for continuous BANT threshold optimization.
@@ -898,7 +898,7 @@ The REPUTATION_MANAGER implements brand defense through coordinated review manag
 2. Extract customer profile and purchase details
 3. Calculate optimal review solicitation timing (3-7 days post-purchase)
 4. Broadcast `reputation.review_solicitation_requested` signal to OUTREACH_MANAGER
-5. Store solicitation record in TenantMemoryVault for tracking
+5. Store solicitation record in MemoryVault for tracking
 
 **AI-Powered Response Engine:**
 1. Receive `webhook.review.received` signal
@@ -907,7 +907,7 @@ The REPUTATION_MANAGER implements brand defense through coordinated review manag
 4. Load Brand DNA for tone alignment
 5. For negative reviews (1-3 stars): Flag HIGH PRIORITY, queue for human approval
 6. For positive reviews (4-5 stars): Auto-approve with review option
-7. Cache successful response templates in TenantMemoryVault
+7. Cache successful response templates in MemoryVault
 
 **Trust Score Synthesis (ReputationBrief):**
 - Overall Trust Score: 0-100 composite metric
@@ -952,7 +952,7 @@ src/lib/agents/
 │   └── manager.ts              # MASTER_ORCHESTRATOR (Swarm CEO) - L1 Orchestrator
 ├── shared/
 │   ├── index.ts
-│   └── tenant-memory-vault.ts  # Cross-agent memory
+│   └── memory-vault.ts  # Cross-agent memory
 ├── intelligence/
 │   ├── manager.ts
 │   ├── competitor/specialist.ts
@@ -1308,7 +1308,7 @@ This script:
 |---------------|----------------|-------------|
 | `/admin/*` | Any user (layout enforces role) | Admin Layout |
 | `/workspace/platform-admin/*` | N/A | 308 redirect to `/admin/*` |
-| `/sites/{orgId}/*` | Not required | Middleware rewrite |
+| `/sites/*` | Not required | Middleware rewrite |
 | `/api/*` | Skipped at middleware | Per-route enforcement |
 
 #### Admin Layout Enforcement (`src/app/admin/layout.tsx`)
@@ -1654,7 +1654,7 @@ All 64 API routes that were using the client-side `FirestoreService` have been m
 1. Authenticate via `requireOrganization` (Bearer token)
 2. Verify `canAssignRecords` permission (RBAC)
 3. Fetch lead from Firestore (`organizations/rapid-compliance-root/leads/{leadId}`) via flat collection helper
-4. Evaluate routing rules by priority (`organizations/{orgId}/leadRoutingRules`)
+4. Evaluate routing rules by priority (`organizations/{PLATFORM_ID}/leadRoutingRules`)
 5. Apply matching strategy (round-robin → territory → skill → load-balance)
 6. Update `lead.ownerId` with assigned rep
 7. Create audit log entry via `logStatusChange()`
@@ -1668,7 +1668,7 @@ All 64 API routes that were using the client-side `FirestoreService` have been m
 ```typescript
 {
   id: string;
-  organizationId: string;
+  platformId: string;        // Always PLATFORM_ID
   name: string;
   enabled: boolean;
   priority: number;  // Higher = evaluated first
@@ -1861,7 +1861,7 @@ All previously planned integrations are now implemented:
 ### Organization Sub-Collections (37)
 
 ```
-organizations/{orgId}/
+organizations/{PLATFORM_ID}/
 ├── records/                  # CRM records (flat, workspace nesting removed Feb 27)
 ├── sequences/                # Email sequences
 ├── campaigns/                # Marketing campaigns
@@ -1936,10 +1936,10 @@ The build pipeline now enforces **mandatory TypeScript type-checking** as a non-
 
 - **One organization:** `rapid-compliance-root` is the only org in the system (Rule 1)
 - All Firestore data scoped to `organizations/rapid-compliance-root/` or flat root collections (Rule 5)
-- Feature visibility configurable at the platform level, not per-tenant
+- Feature visibility configurable at the platform level
 - All 52 AI agents operate under the single org identity (Rule 2)
 - `DEFAULT_ORG_ID` constant used by all service classes — no dynamic org resolution
-- Legacy `organizationId` parameters in service classes are deprecated and ignored
+- All service classes use `PLATFORM_ID` constant directly — no dynamic org parameters
 
 ### Middleware Routing Strategy
 
@@ -1966,13 +1966,13 @@ The middleware (`src/middleware.ts`) uses **Role-Based Segment Routing**:
 
 | Component | Location | Used By | Status |
 |-----------|----------|---------|--------|
-| **Dashboard Layout** | `src/app/(dashboard)/layout.tsx` | Dashboard Routes | ACTIVE - Flattened single-tenant |
+| **Dashboard Layout** | `src/app/(dashboard)/layout.tsx` | Dashboard Routes | ACTIVE |
 | **AdminSidebar** | `src/components/admin/AdminSidebar.tsx` | Dashboard Layout | ACTIVE - 9 sections + footer (updated Feb 27: +System section, +SEO, +Performance, +Onboarding, +Playbook) |
 | **SubpageNav** | `src/components/ui/SubpageNav.tsx` | 9 layouts + ~17 cross-route pages | ACTIVE - Route-based tab navigation, 18 tab arrays in `subpage-nav.ts` |
 | **UnifiedSidebar** | `src/components/dashboard/UnifiedSidebar.tsx` | Admin Layout | ACTIVE - Uses `getNavigationForRole()` |
 | **Navigation Config** | `src/components/dashboard/navigation-config.ts` | UnifiedSidebar | ACTIVE - Hard-gated System section |
 
-> **Note:** The workspace layout at `src/app/workspace/[orgId]/layout.tsx` has been **DELETED** as part of the multi-tenant purge. All dashboard routes now use the flattened `/(dashboard)/` layout with `DEFAULT_ORG_ID`.
+> **Note:** All dashboard routes use the `/(dashboard)/` layout with `PLATFORM_ID`.
 
 #### Navigation Architecture
 
@@ -2018,10 +2018,8 @@ Admin users access the `/admin/*` route tree with the System section:
 
 - **Dashboard Routes:** `/(dashboard)/*` (11 operational sections, flattened)
 - **Admin Routes:** `/admin/*` (System section)
-- **Sites Routes:** `/sites/[orgId]/*` (uses DEFAULT_ORG_ID internally)
-- **Store Routes:** `/store/[orgId]/*` (uses DEFAULT_ORG_ID internally)
-
-> **DELETED:** `/workspace/[orgId]/*` routes - migrated to `/(dashboard)/*`
+- **Sites Routes:** `/sites/*` (uses PLATFORM_ID internally)
+- **Store Routes:** `/store/*` (uses PLATFORM_ID internally)
 
 #### Admin Navigation Context (January 30, 2026)
 
@@ -2127,8 +2125,8 @@ The `/admin/organizations/[id]/*` route tree now has **45 functional pages** (Ja
 
 #### Bug Fix (January 27, 2026)
 
-**Issue:** UnifiedSidebar href resolution was checking for `[orgId]` placeholder but navigation-config.ts uses `:orgId`.
-**Fix:** Updated UnifiedSidebar.tsx to correctly replace `:orgId` placeholder in all 3 locations:
+**Issue:** UnifiedSidebar href resolution was checking for dynamic org placeholder in navigation-config.ts.
+**Fix:** Updated UnifiedSidebar.tsx to use static routes:
 - `NavItemComponent` href builder (line 72-77)
 - `NavSectionComponent` active item check (line 119-126)
 - Section items active state check (line 166-170)
@@ -2234,14 +2232,14 @@ The Admin UI and Client UI now have **completely independent theme-variable pipe
 | Aspect | Admin Dashboard | Client Workspace |
 |--------|-----------------|------------------|
 | **Hook** | `useAdminTheme()` | `useOrgTheme()` |
-| **Source** | Platform-level Firestore (`platform_settings/adminTheme`) | Org-level Firestore (`organizations/{orgId}/themes/default`) |
+| **Source** | Platform-level Firestore (`platform_settings/adminTheme`) | Platform Firestore (`organizations/{PLATFORM_ID}/themes/default`) |
 | **Scope** | `.admin-theme-scope` container class | `document.documentElement` |
 | **Variable Prefix** | `--admin-color-*` (with standard override) | `--color-*` |
 | **Isolation** | CSS cascading via scoped container | Global application |
 
 #### How Isolation Works
 
-1. **Client Workspace** (`/workspace/[orgId]/*`):
+1. **Dashboard** (`/(dashboard)/*`):
    - `useOrgTheme()` loads organization-specific theme from Firestore
    - Applies CSS variables to `document.documentElement` (root level)
    - Each organization can have different colors, fonts, branding
@@ -2281,9 +2279,9 @@ document.documentElement.style.setProperty('--color-primary', orgTheme.primary);
 | `src/hooks/useOrgTheme.ts` | Client theme hook - root application |
 | `src/app/globals.css` | Base variables + Admin scope class |
 | `src/app/admin/layout.tsx` | Applies `.admin-theme-scope` container |
-| `src/app/workspace/[orgId]/settings/theme/page.tsx` | **Org Theme Editor** (UI exists) |
+| `src/app/(dashboard)/settings/theme/page.tsx` | **Theme Editor** (UI exists) |
 
-> **Note:** The **Admin Theme Editor UI does NOT exist** yet. Admin themes can only be modified via direct Firestore writes to `platform_settings/adminTheme`. The Org Theme Editor at `/workspace/[orgId]/settings/theme` is fully functional.
+> **Note:** The **Admin Theme Editor UI does NOT exist** yet. Admin themes can only be modified via direct Firestore writes to `platform_settings/adminTheme`. The Theme Editor at `/(dashboard)/settings/theme` is fully functional.
 
 #### Admin Sidebar Dynamic Styling (January 27, 2026)
 
@@ -2353,7 +2351,7 @@ AdminSidebar and UnifiedSidebar achieve reactivity through:
 
 ### Agent Communication
 
-Agents communicate via **TenantMemoryVault** (Firestore-backed since Feb 8, 2026):
+Agents communicate via **MemoryVault** (Firestore-backed since Feb 8, 2026):
 - Cross-agent memory sharing
 - Signal broadcasting
 - Insight sharing
@@ -2416,7 +2414,7 @@ The Intelligence Manager is the orchestration engine for market intelligence gat
    ↓
 5. Synthesize Brief → Aggregate into IntelligenceBrief
    ↓
-6. Store in Vault → Share insights via TenantMemoryVault
+6. Store in Vault → Share insights via MemoryVault
 ```
 
 #### IntelligenceBrief Output Structure
@@ -2458,14 +2456,14 @@ The Intelligence Manager is the orchestration engine for market intelligence gat
 | **Graceful Degradation** | Returns partial results if some specialists fail |
 | **Intent Detection** | Keyword-based intent mapping + explicit intent parameter |
 | **Contextual Synthesis** | Weighted confidence scoring, contradiction detection |
-| **Vault Integration** | Stores insights and broadcasts signals to TenantMemoryVault |
+| **Vault Integration** | Stores insights and broadcasts signals to MemoryVault |
 
 ### Marketing Manager - Industry-Agnostic Cross-Channel Commander
 
 **Status:** FUNCTIONAL (January 29, 2026)
 **Location:** `src/lib/agents/marketing/manager.ts`
 
-The Marketing Manager is an **industry-agnostic** orchestration engine for cross-channel marketing campaigns. It dynamically adapts to ANY business context via the TenantMemoryVault Brand DNA, eliminating all hardcoded industry assumptions.
+The Marketing Manager is an **industry-agnostic** orchestration engine for cross-channel marketing campaigns. It dynamically adapts to ANY business context via the MemoryVault Brand DNA, eliminating all hardcoded industry assumptions.
 
 #### Key Design Principles
 
@@ -2474,7 +2472,7 @@ The Marketing Manager is an **industry-agnostic** orchestration engine for cross
 | **Zero Industry Bias** | All industry context derived from Brand DNA at runtime |
 | **Dynamic Specialist Resolution** | 5 specialists resolved from SwarmRegistry via factory functions |
 | **SEO-Social Feedback Loop** | SEO keywords flow into social content briefs |
-| **Brand Voice Consistency** | All content adapts to tenant's tone, key phrases, and avoid-phrases |
+| **Brand Voice Consistency** | All content adapts to brand tone, key phrases, and avoid-phrases |
 | **Parallel Execution** | Social specialists execute concurrently for performance |
 
 #### Campaign Intent Detection
@@ -2493,7 +2491,7 @@ The Marketing Manager is an **industry-agnostic** orchestration engine for cross
 #### Orchestration Flow
 
 ```
-1. Load Brand DNA → Industry, tone, key phrases from TenantMemoryVault
+1. Load Brand DNA → Industry, tone, key phrases from MemoryVault
    ↓
 2. Detect Campaign Intent → Keyword-based + objective mapping
    ↓
@@ -2509,7 +2507,7 @@ The Marketing Manager is an **industry-agnostic** orchestration engine for cross
    ↓
 6. Aggregate Results → Unified CampaignBrief with cross-platform recommendations
    ↓
-7. Store Insights → Share campaign strategy via TenantMemoryVault
+7. Store Insights → Share campaign strategy via MemoryVault
 ```
 
 #### CampaignBrief Output Structure
@@ -2554,11 +2552,11 @@ The Marketing Manager is an **industry-agnostic** orchestration engine for cross
 
 #### Brand DNA Integration
 
-The manager loads tenant-specific context at runtime:
+The manager loads platform context at runtime:
 
 ```typescript
 BrandContext {
-  organizationId: string;      // Always DEFAULT_ORG_ID in single-tenant
+  platformId: string;           // Always PLATFORM_ID
   companyDescription: string;  // What the business does
   uniqueValue: string;         // USP - derived dynamically
   targetAudience: string;      // Who to target
@@ -2570,7 +2568,7 @@ BrandContext {
 }
 ```
 
-This architecture ensures the Marketing Manager works for **any industry**: SaaS, real estate, e-commerce, healthcare, finance, or any custom vertical defined in the tenant's Brand DNA.
+This architecture ensures the Marketing Manager works for **any industry**: SaaS, real estate, e-commerce, healthcare, finance, or any custom vertical defined in the Brand DNA.
 
 ### Master Orchestrator - Swarm CEO (L1 Orchestrator)
 
@@ -2723,7 +2721,7 @@ interface UnifiedUser {
   email: string;
   displayName: string;
   role: AccountRole;  // 'admin' | 'user'
-  organizationId: string;  // Always DEFAULT_ORG_ID in single-tenant
+  platformId: string;       // Always PLATFORM_ID
   status: 'active' | 'suspended' | 'pending';
   mfaEnabled: boolean;
 }
@@ -2793,7 +2791,7 @@ interface AdminThemeConfig {
 | `--color-bg-paper` (scoped) | `#0a0a0a` | `#0a0a0a` | PASS |
 
 - **Sidebar Background:** `rgb(10, 10, 10)` = `#0a0a0a` (matches expected)
-- **Theme Bleeding:** NONE detected - Admin theme is properly isolated from tenant themes
+- **Theme Bleeding:** NONE detected - Admin theme is properly isolated
 
 #### Playwright Test Suite Status
 
