@@ -6,7 +6,7 @@
 
 Repository: https://github.com/StamperDavid/Rapid-Compliance
 Branch: dev
-Last Session: February 27, 2026 (CRM hub removal + sidebar entity links)
+Last Session: February 28, 2026 (CRM Entity Configurability — full implementation)
 
 ## Current State
 
@@ -14,7 +14,7 @@ Last Session: February 27, 2026 (CRM hub removal + sidebar entity links)
 - **Single-tenant penthouse model** — org ID `rapid-compliance-root`, Firebase `rapid-compliance-65f87`
 - **52 AI agents** (48 swarm + 4 standalone) with hierarchical orchestration
 - **4-role RBAC** (owner/admin/manager/member) with 47 permissions
-- **169 physical routes**, **298 API endpoints**, **~330K LOC**
+- **169 physical routes**, **299 API endpoints**, **~330K LOC**
 - **Deployed via Vercel** — dev → main → Vercel auto-deploy
 
 ### Build Health
@@ -25,41 +25,49 @@ Last Session: February 27, 2026 (CRM hub removal + sidebar entity links)
 
 ---
 
-## What Just Changed (Session 45)
+## What Just Changed (Session 46)
 
-### CRM Hub Removed — Direct Sidebar Navigation
-- **Deleted** `/crm` hub page (1,280-line legacy page with internal sidebar + useState tab switching)
-- **Added** Leads, Contacts, Companies, Deals as direct sidebar items under CRM section
-- `/leads` → redirects to `/entities/leads`, `/contacts` → redirects to `/entities/contacts`
-- `/entities/companies` and `/deals` are direct links
-- All `/crm` references across the codebase updated (dashboard, profile, settings, living-ledger, manifest.json, e2e tests)
-- Conversations, Living Ledger, Lead Intelligence, Coaching, Playbook, Risk remain unchanged in sidebar
+### CRM Entity Configurability — Full Implementation
+Implemented a 3-tier entity configurability system (11 phases, 13 files, +1,116 lines):
+
+**Architecture:**
+- **Always-On (5):** leads, contacts, companies, deals, tasks — cannot be toggled off
+- **CRM Extended (5):** products, quotes, invoices, payments, orders — toggleable, default ON
+- **Industry-Specific (13):** drivers, vehicles, compliance_documents, projects, time_entries, customers, inventory, properties, showings, cases, billing_entries, patients, appointments — toggled by industry defaults
+
+**6-Layer Pattern (mirroring feature modules):**
+1. `src/types/entity-config.ts` — EntityTier, EntityMetadata, EntityConfig types
+2. `src/lib/validation/entity-config-schemas.ts` — Zod schemas
+3. `src/lib/constants/entity-config.ts` — metadata, defaults, category mappings, helpers
+4. `src/lib/services/entity-config-service.ts` — Firestore CRUD
+5. `src/lib/stores/entity-config-store.ts` — Zustand store with isEntityEnabled()
+6. `src/hooks/useEntityConfig.ts` — React hook with auto-load
+
+**API & UI:**
+- `GET/PUT /api/entity-config` — auth-protected, Zod-validated (endpoint #299)
+- Entity page gating — disabled entities show banner with Enable button (admin) or "Contact admin" (user)
+- Schema Editor — disabled entities dimmed at 50% opacity, "Enable in Settings" link
+- Settings > Features > CRM Entities tab — toggle cards grouped by tier
+- Onboarding — 15 categories have `defaultEntities` mapping; `buildEntityConfigForCategory()` helper ready
+
+**Firestore:** `organizations/rapid-compliance-root/settings/entity_config`
 
 ---
 
-## Next Up: CRM Entity Configurability
+## Next Up
 
-### Problem
-The CRM ships with 10 hardcoded entity types from `STANDARD_SCHEMAS`: leads, companies, contacts, deals, products, quotes, invoices, payments, orders, tasks. Several don't fit SalesVelocity.ai's own business model (SaaS priced per CRM record — not selling physical products or issuing invoices).
+### 1. Technical Debt — Placeholder Tests
+- **115 `expect(true).toBe(true)` placeholder tests** across 11 files (HIGH severity)
+- **52 `it.skip` tests** — 31 need Firestore emulator, 16 obsolete (MEDIUM)
+- **~49% Zod validation coverage** on API routes (MEDIUM)
 
-### Goal
-Make CRM entity visibility **industry-configurable** so that:
-1. **SalesVelocity.ai's own CRM** shows only relevant objects (Leads, Contacts, Companies, Deals, Tasks)
-2. **Future multi-tenant clients** get industry-appropriate defaults from the onboarding template system
-3. The schema definitions stay intact — visibility is a toggle, not a deletion
+### 2. E2E Test Infrastructure
+- Provision `e2e-member@salesvelocity.ai` and `e2e-admin@salesvelocity.ai` in Firebase Auth
+- Authenticated Playwright tests currently skip because accounts don't exist
 
-### Approach
-1. **Add `enabledEntities` to org/industry config** — the onboarding industry templates already exist in `src/lib/onboarding/`; extend them to specify which CRM entities are active
-2. **Filter entity visibility** — the `/entities/[entityName]` dynamic route and Schema Editor's "View Data" buttons should respect the enabled list
-3. **Admin override** — owner/admin can toggle entities on/off from Settings regardless of industry template
-4. **Sidebar stays static** — the 4 core items (Leads, Contacts, Companies, Deals) are always in the sidebar; other entities are accessible via Schema Editor if enabled
-
-### Key Files
-- `src/lib/schema/standard-schemas.ts` — the 10 entity type definitions
-- `src/lib/onboarding/` — industry template system (already has industry selection)
-- `src/app/(dashboard)/entities/[entityName]/page.tsx` — generic entity page
-- `src/components/admin/AdminSidebar.tsx` — sidebar (already updated)
-- `src/app/(dashboard)/schemas/` — Schema Editor
+### 3. Merge dev → main
+- 1,116+ lines of entity config changes on dev, not yet on main
+- Once stable, PR or merge to main deploys to Vercel
 
 ---
 
@@ -74,6 +82,11 @@ Make CRM entity visibility **industry-configurable** so that:
 | `src/lib/constants/platform.ts` | PLATFORM_ID and platform identity |
 | `src/components/admin/AdminSidebar.tsx` | 9-section sidebar with feature module gating |
 | `src/lib/schema/standard-schemas.ts` | CRM entity type definitions |
+| `src/lib/constants/entity-config.ts` | Entity config constants, metadata, category defaults |
+| `src/lib/services/entity-config-service.ts` | Entity config Firestore CRUD |
+| `src/lib/stores/entity-config-store.ts` | Entity config Zustand store |
+| `src/hooks/useEntityConfig.ts` | Entity config React hook |
+| `src/app/api/entity-config/route.ts` | Entity config API (GET/PUT) |
 | `src/lib/onboarding/` | Industry template + onboarding flow |
 
 ---

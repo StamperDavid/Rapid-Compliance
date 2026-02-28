@@ -17,13 +17,18 @@ export async function loginViaUI(
   password: string,
   options?: { expectDashboard?: boolean }
 ): Promise<void> {
-  await page.goto(`${BASE_URL}/login`);
+  await page.goto(`${BASE_URL}/login`, { waitUntil: 'domcontentloaded' });
   await page.locator('input[type="email"]').fill(email);
   await page.locator('input[type="password"]').fill(password);
   await page.locator('button[type="submit"]').click();
 
   if (options?.expectDashboard !== false) {
-    await page.waitForURL('**/dashboard', { timeout: 30_000 });
+    // Wait for the "Redirecting" spinner (confirms Firebase auth succeeded),
+    // then wait for client-side navigation to /dashboard
+    await page.locator('text=Redirecting').waitFor({ timeout: 30_000 }).catch(() => {});
+    await page.waitForURL('**/dashboard', { waitUntil: 'domcontentloaded', timeout: 30_000 });
+    // Wait for sidebar to confirm dashboard layout rendered
+    await expect(page.locator('aside')).toBeVisible({ timeout: 15_000 });
   }
 }
 
@@ -96,9 +101,10 @@ export async function ensureAuthenticated(
   password?: string
 ): Promise<void> {
   const { TEST_USER } = await import('./test-accounts');
-  await page.goto(`${BASE_URL}/dashboard`);
+  await page.goto(`${BASE_URL}/dashboard`, { waitUntil: 'domcontentloaded' });
   try {
-    await expect(page.locator('h1')).toContainText('Dashboard', { timeout: 8_000 });
+    // Check if we're already on the dashboard with an active session
+    await expect(page.locator('aside')).toBeVisible({ timeout: 10_000 });
   } catch {
     // Storage state didn't restore Firebase auth — log in via UI
     await loginViaUI(

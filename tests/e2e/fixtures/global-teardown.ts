@@ -10,7 +10,7 @@
  * Safe-listed collections/docs are preserved:
  *   - toolTraining/voice
  *   - orchestratorConversations/*
- *   - settings/booking, settings/api-keys, settings/brand-dna
+ *   - settings/booking, settings/api-keys, settings/brand-dna, settings/entity_config, settings/feature_modules
  *   - integrations/* (real config)
  */
 
@@ -42,7 +42,7 @@ const WIPE_COLLECTIONS = [
 const SAFE_DOCS: Record<string, string[]> = {
   toolTraining: ['voice'],
   orchestratorConversations: [], // keep all
-  settings: ['booking', 'api-keys', 'brand-dna'],
+  settings: ['booking', 'api-keys', 'brand-dna', 'entity_config', 'feature_modules'],
   integrations: [], // keep all
 };
 

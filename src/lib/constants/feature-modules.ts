@@ -119,7 +119,7 @@ export const FEATURE_MODULES: FeatureModuleDefinition[] = [
     features: ['Lead management', 'Deal tracking', 'Contact database', 'Living Ledger', 'Lead intelligence'],
     useCases: ['Sales teams', 'Account management', 'Relationship tracking'],
     ifYouSkip: 'You won\'t have a centralized place to track your leads and deals.',
-    sidebarItemIds: ['crm-hub', 'deals', 'living-ledger', 'lead-intel'],
+    sidebarItemIds: ['leads', 'contacts', 'companies', 'deals', 'living-ledger', 'lead-intel'],
     requiredApiKeys: [],
   },
   {

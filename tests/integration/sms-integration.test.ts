@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect } from '@jest/globals';
-import { sendSMS, getSMSDeliveryStatus, validatePhoneNumber, SMS_PROVIDERS, renderSMSTemplate } from '@/lib/sms/sms-service';
+import { sendSMS, validatePhoneNumber, SMS_PROVIDERS, renderSMSTemplate } from '@/lib/sms/sms-service';
 
 describe('SMS Integration Tests', () => {
   describe('SMS Sending (Requires Twilio Test Account)', () => {
@@ -48,7 +48,7 @@ describe('SMS Integration Tests', () => {
       expect(SMS_PROVIDERS).toBeDefined();
       expect(Array.isArray(SMS_PROVIDERS)).toBe(true);
       
-      const providerIds = SMS_PROVIDERS.map((p: any) => p.id);
+      const providerIds = SMS_PROVIDERS.map((p) => p.id);
       expect(providerIds).toContain('twilio');
       expect(providerIds).toContain('vonage');
     });

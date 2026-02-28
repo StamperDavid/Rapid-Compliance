@@ -9,6 +9,8 @@ import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import { getSubCollection } from '@/lib/firebase/collections';
+import { buildEntityConfigForCategory } from '@/lib/constants/entity-config';
+import type { EntityConfig } from '@/types/entity-config';
 
 export const dynamic = 'force-dynamic';
 
@@ -171,6 +173,28 @@ export async function POST(request: NextRequest) {
     }
 
     await AdminFirestoreService.update(COLLECTIONS.ORGANIZATIONS, PLATFORM_ID, orgUpdate);
+
+    // Save entity config based on selected industry category
+    const categoryId = typeof typedOnboardingData.industryCategory === 'string'
+      ? typedOnboardingData.industryCategory
+      : industry;
+    const entityToggles = buildEntityConfigForCategory(categoryId);
+    const entityConfig: EntityConfig = {
+      entities: entityToggles,
+      updatedAt: new Date().toISOString(),
+      updatedBy: user.uid,
+    };
+    await AdminFirestoreService.set(
+      getSubCollection('settings'),
+      'entity_config',
+      { ...entityConfig } as Record<string, unknown>,
+      false,
+    );
+    logger.info('Entity config saved during onboarding', {
+      categoryId,
+      enabledCount: Object.values(entityToggles).filter(Boolean).length,
+      route: '/api/agent/process-onboarding',
+    });
 
     // Process onboarding - processOnboarding will validate the shape internally
     const result = await processOnboarding({
