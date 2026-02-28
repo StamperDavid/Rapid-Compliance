@@ -347,7 +347,7 @@ async function processFeedbackAsync(feedback: ClientFeedback): Promise<void> {
         version: 1,
         active: true,
         metadata: {
-          industry: feedback.metadata?.industry,
+          ...(feedback.metadata?.industry !== undefined && { industry: feedback.metadata.industry }),
           examples: [sourceText.substring(0, 200)],
         },
       };
@@ -678,10 +678,11 @@ function logTrainingHistory(
   };
 
   const ref = db.collection(TRAINING_HISTORY_COLLECTION).doc(historyId);
-  transaction.set(ref, {
-    ...history,
-    changedAt: now,
-  });
+  // Filter undefined values for Firestore compatibility
+  const cleanHistory = Object.fromEntries(
+    Object.entries({ ...history, changedAt: now }).filter(([, v]) => v !== undefined)
+  );
+  transaction.set(ref, cleanHistory);
 }
 
 /**

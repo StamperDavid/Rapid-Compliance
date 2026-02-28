@@ -378,6 +378,14 @@
         { "fieldPath": "processed", "order": "ASCENDING" },
         { "fieldPath": "submittedAt", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "enrichment-costs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "companyDomain", "order": "ASCENDING" },
+        { "fieldPath": "timestamp", "order": "DESCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

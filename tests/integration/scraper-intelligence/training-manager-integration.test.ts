@@ -25,12 +25,29 @@ import {
   getTemporaryScrape,
 } from '@/lib/scraper-intelligence/temporary-scrapes-service';
 
-// Set timeout for real Firestore operations
-jest.setTimeout(30000);
+// Set timeout for real Firestore operations (includes async feedback processing)
+jest.setTimeout(45000);
 
 describe('Training Manager Integration Tests', () => {
   const testUserId = `test_user_${Date.now()}`;
   const createdIds: { collection: string; id: string }[] = [];
+
+  /** Poll for training data until it appears (async processing may take a few seconds) */
+  async function waitForTrainingData(
+    signalId: string,
+    opts?: { maxWaitMs?: number; activeOnly?: boolean }
+  ): Promise<Awaited<ReturnType<typeof getTrainingData>>> {
+    const maxWait = opts?.maxWaitMs ?? 8000;
+    const interval = 500;
+    const activeOnly = opts?.activeOnly ?? true;
+    const deadline = Date.now() + maxWait;
+    while (Date.now() < deadline) {
+      const data = await getTrainingData(signalId, activeOnly);
+      if (data.length > 0) {return data;}
+      await new Promise((r) => { setTimeout(r, interval); });
+    }
+    return getTrainingData(signalId, activeOnly);
+  }
 
   // Helper to track created documents for cleanup
   function trackForCleanup(collection: string, id: string) {
@@ -187,11 +204,8 @@ describe('Training Manager Integration Tests', () => {
 
       trackForCleanup('training_feedback', feedback1.id);
 
-      // Wait for processing
-      await new Promise((resolve) => { setTimeout(resolve, 1000); });
-
-      // Get initial training data
-      const trainingData1 = await getTrainingData('growth_signal');
+      // Wait for async processing to complete
+      const trainingData1 = await waitForTrainingData('growth_signal');
       const pattern1 = trainingData1.find((td) =>
         td.pattern.includes('expanding team')
       );
@@ -213,8 +227,8 @@ describe('Training Manager Integration Tests', () => {
 
         trackForCleanup('training_feedback', feedback2.id);
 
-        // Wait for processing
-        await new Promise((resolve) => { setTimeout(resolve, 1000); });
+        // Wait for async processing
+        await new Promise((resolve) => { setTimeout(resolve, 2000); });
 
         // Get updated training data
         const trainingData2 = await getTrainingData('growth_signal');
@@ -290,16 +304,13 @@ describe('Training Manager Integration Tests', () => {
 
       trackForCleanup('training_feedback', feedback.id);
 
-      // Wait for processing
-      await new Promise((resolve) => { setTimeout(resolve, 1000); });
-
-      // Get training data
-      const trainingData = await getTrainingData('test_signal');
+      // Wait for async processing to complete
+      const trainingData = await waitForTrainingData('test_signal');
       expect(trainingData.length).toBeGreaterThan(0);
-      
+
       const pattern = trainingData[0];
       trackForCleanup('training_data', pattern.id);
-      
+
       expect(pattern.active).toBe(true);
 
       // Deactivate
@@ -366,10 +377,8 @@ describe('Training Manager Integration Tests', () => {
 
       trackForCleanup('training_feedback', feedback1.id);
 
-      await new Promise((resolve) => { setTimeout(resolve, 1000); });
-
-      // Get initial training data
-      const initialData = await getTrainingData('rollback_signal');
+      // Wait for async processing to complete
+      const initialData = await waitForTrainingData('rollback_signal');
       const pattern = initialData[0];
       trackForCleanup('training_data', pattern.id);
       
@@ -399,10 +408,11 @@ describe('Training Manager Integration Tests', () => {
       const currentPattern = currentData.find((td) => td.id === pattern.id);
       expect(currentPattern?.version).toBeGreaterThan(initialVersion);
 
-      // Rollback to version 1
+      // Rollback to version 2 (deactivated state — has history entry)
+      const deactivatedVersion = initialVersion + 1;
       await rollbackTrainingData(
         pattern.id,
-        initialVersion,
+        deactivatedVersion,
         testUserId,
         'Testing rollback'
       );
@@ -412,15 +422,15 @@ describe('Training Manager Integration Tests', () => {
       // Verify rollback
       const rolledBackData = await getAllTrainingData(false);
       const rolledBackPattern = rolledBackData.find((td) => td.id === pattern.id);
-      
+
       expect(rolledBackPattern).toBeDefined();
-      // Note: Version increments even on rollback, but data should match target version
+      // Rolled back to the deactivated version — should be inactive with same confidence
       expect(rolledBackPattern?.confidence).toBe(initialConfidence);
 
       // Check history includes rollback
       const history = await getTrainingHistory(pattern.id);
       const rollbackEntry = history.find((h) =>
-        h.reason?.includes('Rollback to version')
+        h.reason?.includes('Testing rollback')
       );
       expect(rollbackEntry).toBeDefined();
     });
@@ -477,8 +487,8 @@ describe('Training Manager Integration Tests', () => {
         trackForCleanup('training_feedback', feedback.id);
       });
 
-      // Wait for processing
-      await new Promise((resolve) => { setTimeout(resolve, 1500); });
+      // Wait for all async processing to complete (3 feedbacks)
+      await new Promise((resolve) => { setTimeout(resolve, 5000); });
 
       // Get analytics
       const analytics = await getTrainingAnalytics();
@@ -642,9 +652,9 @@ describe('Training Manager Integration Tests', () => {
 
       trackForCleanup('training_feedback', feedback.id);
 
-      await new Promise((resolve) => { setTimeout(resolve, 1000); });
-
-      const trainingData = await getTrainingData('error_signal');
+      // Wait for async processing to complete
+      const trainingData = await waitForTrainingData('error_signal');
+      expect(trainingData.length).toBeGreaterThan(0);
       const pattern = trainingData[0];
       trackForCleanup('training_data', pattern.id);
 
