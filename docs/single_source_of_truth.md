@@ -1,7 +1,7 @@
 # SalesVelocity.ai - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** February 27, 2026 (Purged multi-tenant naming from 37 files: getOrgSubCollection→getSubCollection, getOrgCollection→getPlatformCollection, TenantMemoryVault→MemoryVault. Added AI Chat Sales Agent + Growth Strategist — 52 agents. Refactored Jasper to internal-only.)
+**Last Updated:** February 27, 2026 (Onboarding overhaul — 4-step flow with 15 categories → 49 niche templates, injection questions, API key setup, processOnboarding() wiring. New pages: /onboarding/niche, /onboarding/setup.)
 **Branches:** `dev` (latest)
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Architecture:** Single-Tenant (Penthouse Model) - NOT a SaaS platform
@@ -36,7 +36,7 @@
 
 | Metric | Count | Status |
 |--------|-------|--------|
-| Physical Routes (page.tsx) | 169 | Verified February 27, 2026 (full filesystem count; 9 redirect stubs included) |
+| Physical Routes (page.tsx) | 170 | Verified February 27, 2026 (+2 onboarding pages: niche, setup; full filesystem count; 9 redirect stubs included) |
 | API Endpoints (route.ts) | 298 | Verified February 27, 2026 (full filesystem count) |
 | AI Agents | 52 | **52 FUNCTIONAL (46 swarm + 6 standalone)** |
 | RBAC Roles | 4 | `owner` (level 3), `admin` (level 2), `manager` (level 1), `member` (level 0) — 4-role RBAC |
@@ -183,6 +183,7 @@ The Claude Code Governance Layer defines binding operational constraints for AI-
 | **25** | Workspace path eradication — 53 files migrated to flat org-scoped collection helpers | Feb 27 |
 | **26** | Nav redundancy cleanup — 9 redirect pages, 3 deleted duplicates, centralized SubpageNav | Feb 27 |
 | **27** | Feature module toggle system — 12-module gating + consultative onboarding + demo seed data | Feb 27 |
+| **28** | Onboarding overhaul — 4-step flow: 15 categories → 49 niche templates, injection questions, API key setup + processOnboarding() trigger | Feb 27 |
 
 ### Completed Roadmaps (Archived)
 
@@ -430,7 +431,7 @@ SalesVelocity.ai is a **single-company sales and marketing super tool** running 
 | Public (`/(public)/*`) | ~20 | 1 (`[formId]`) | Marketing + auth pages |
 | Dashboard sub-routes (`/dashboard/*`) | 16 | 0 | Analytics, coaching, marketing, performance |
 | Store (`/store/*`) | ~5 | 1 (`[productId]`) | E-commerce storefront |
-| Onboarding (`/onboarding/*`) | 1 | 0 | Account setup |
+| Onboarding (`/onboarding/*`) | 4 | 0 | 4-step onboarding: industry category, niche drill-down, account creation, API key setup |
 | Auth (`/(auth)/*`) | 1 | 0 | Admin login |
 | Other (`/preview`, `/profile`, `/sites`) | 3 | 2 | Preview tokens, user profile, site builder |
 | **TOTAL** | **169** | **~11** | **Verified February 27, 2026 (filesystem count)** |
@@ -1484,6 +1485,17 @@ The following endpoints have working infrastructure (rate limiting, caching, aut
 - `/api/reputation/brief` — ReputationBrief trust scores
 - `/api/risk/interventions` — Risk intervention CRUD
 
+**Onboarding Pipeline (February 27, 2026):**
+
+The onboarding flow now calls `POST /api/agent/process-onboarding` on Step 4 (API key setup) with enriched data:
+- `industryCategory`, `industryCategoryName` — from 15-category selection
+- `industryTemplateId`, `industryTemplateName` — from 49 niche template drill-down
+- `injectionAnswer`, `injectionVariable` — from industry-specific injection question
+- `customNiche` — freeform text for categories with no templates (e.g., Automotive)
+- The route forwards these to `processOnboarding()` → `buildBaseModel()` → system prompt generation
+- Injection answers are interpolated into the system prompt under "Industry-Specific Context"
+- New mapping file: `src/lib/persona/category-template-map.ts` (15 categories, 49 template IDs)
+
 **Admin SDK Migration (February 25, 2026):**
 
 All 64 API routes that were using the client-side `FirestoreService` have been migrated to `AdminFirestoreService` (Firebase Admin SDK). This resolves PERMISSION_DENIED errors in production where server-side routes were incorrectly using the client SDK which is subject to Firestore security rules.
@@ -2336,7 +2348,7 @@ The platform uses a **layered state management** approach:
 
 | Store | Location | Purpose |
 |-------|----------|---------|
-| `useOnboardingStore` | `src/lib/stores/onboarding-store.ts` | Multi-step onboarding flow |
+| `useOnboardingStore` | `src/lib/stores/onboarding-store.ts` | 4-step onboarding flow (industry → niche → account → apikey → complete). Tracks selectedCategory, selectedTemplate, injectionAnswer, customNiche, apiKeyConfigured |
 | `useOrchestratorStore` | `src/lib/stores/orchestrator-store.ts` | AI assistant UI state |
 | `usePendingMerchantStore` | `src/lib/stores/pending-merchants-store.ts` | Lead capture & abandonment tracking |
 
