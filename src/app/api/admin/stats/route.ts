@@ -5,7 +5,7 @@
  * Returns verified platform statistics for Jasper (Admin AI Assistant).
  *
  * Uses Firestore .count() aggregation for accurate counts.
- * Filters by user's authenticated orgId unless they are a Super Admin.
+ * Filters by authenticated user. Platform-scoped (single-tenant).
  *
  * @module admin-stats-route
  */
@@ -22,7 +22,7 @@ import {
 } from '@/lib/api/admin-auth';
 import { logger } from '@/lib/logger/logger';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
-import { COLLECTIONS, getOrgSubCollection, getSubCollection } from '@/lib/firebase/collections';
+import { COLLECTIONS, getSubCollection } from '@/lib/firebase/collections';
 
 // ============================================================================
 // TYPES
@@ -229,12 +229,12 @@ export async function GET(request: NextRequest) {
 
       // Agent config collection path (under the organization)
       const agentConfigPath = getSubCollection('agentConfig');
-      const conversationsPath = getOrgSubCollection('conversations');
-      const playbooksPath = getOrgSubCollection('playbooks');
+      const conversationsPath = getSubCollection('conversations');
+      const playbooksPath = getSubCollection('playbooks');
       const trainingMaterialsPath = getSubCollection('trainingMaterials');
       const trainingSessionsPath = getSubCollection('trainingSessions');
       const goldenMastersPath = getSubCollection('goldenMasters');
-      const workflowsPath = getOrgSubCollection('workflows');
+      const workflowsPath = getSubCollection('workflows');
 
       // Parallel count queries for efficiency
       const [totalOrgs, totalUsers, trialOrgs, totalAgentCount, totalConversations, totalPlaybooks, trainingMaterialsCount, trainingSessionsCount, goldenMastersCount, workflowsCount] = await Promise.all([

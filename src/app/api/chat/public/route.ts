@@ -64,13 +64,13 @@ async function handlePublicChat(request: NextRequest) {
     let chatConfig: { enabled?: boolean } | null = null;
     try {
       const { adminDb } = await import('@/lib/firebase/admin');
-      const { getOrgSubCollection } = await import('@/lib/firebase/collections');
+      const { getSubCollection } = await import('@/lib/firebase/collections');
       if (adminDb) {
         const orgSnap = await adminDb.collection(COLLECTIONS.ORGANIZATIONS).doc(PLATFORM_ID).get();
         if (orgSnap.exists) {
           organization = { id: orgSnap.id, ...orgSnap.data() } as Organization;
         }
-        const settingsPath = getOrgSubCollection('settings');
+        const settingsPath = getSubCollection('settings');
         const chatSnap = await adminDb
           .collection(settingsPath)
           .doc('chatWidget')
@@ -136,9 +136,9 @@ async function handlePublicChat(request: NextRequest) {
     let agentConfig: AgentConfigData | null = null;
     try {
       const { adminDb } = await import('@/lib/firebase/admin');
-      const { getOrgSubCollection } = await import('@/lib/firebase/collections');
+      const { getSubCollection } = await import('@/lib/firebase/collections');
       if (adminDb) {
-        const agentConfigPath = getOrgSubCollection('agentConfig');
+        const agentConfigPath = getSubCollection('agentConfig');
         const cfgSnap = await adminDb
           .collection(agentConfigPath)
           .doc('default')

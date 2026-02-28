@@ -245,7 +245,7 @@ export class SignalCoordinator {
       };
 
       // Get signals collection with environment awareness
-      const signalsCollection = this.dal.getOrgSubCollection('signals');
+      const signalsCollection = this.dal.getPlatformSubCollection('signals');
 
       // Emit to Firestore
       const docRef = await addDoc(signalsCollection, enrichedSignal);
@@ -364,7 +364,7 @@ export class SignalCoordinator {
 
 
     // Get signals collection with environment awareness
-    const signalsCollection = this.dal.getOrgSubCollection('signals');
+    const signalsCollection = this.dal.getPlatformSubCollection('signals');
 
     // Build query
     const q = query(signalsCollection, ...constraints);
@@ -460,7 +460,7 @@ export class SignalCoordinator {
     }
   ): Promise<void> {
     try {
-      const signalsCollection = this.dal.getOrgSubCollection('signals');
+      const signalsCollection = this.dal.getPlatformSubCollection('signals');
       const signalRef = doc(signalsCollection, signalId);
 
       await updateDoc(signalRef, {
@@ -650,7 +650,7 @@ export class SignalCoordinator {
     signal: Omit<SalesSignal, 'id'>
   ): Promise<void> {
     try {
-      const logsCollection = this.dal.getOrgSubCollection('signal_logs');
+      const logsCollection = this.dal.getPlatformSubCollection('signal_logs');
 
       const logEntry = {
         signalId,

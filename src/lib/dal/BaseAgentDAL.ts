@@ -3,7 +3,7 @@
  *
  * CRITICAL FEATURES:
  * - Type-safe collection path resolution
- * - Organization-scoped data access
+ * - Platform-scoped data access
  * - Audit logging and compliance
  *
  * All environments use the same Firestore paths (single Firebase project).
@@ -51,16 +51,16 @@ export interface WriteOptions {
  * Usage Example:
  * ```typescript
  * const dal = new BaseAgentDAL(db);
- * 
- * // Get environment-aware collection path
- * const orgsPath = dal.getColPath('organizations'); // 'test_organizations' in dev
- * 
- * // Get organization sub-collection
- * const leadsRef = dal.getOrgSubCollection('org123', 'leads');
- * 
+ *
+ * // Get collection path
+ * const orgsPath = dal.getColPath('organizations');
+ *
+ * // Get platform sub-collection
+ * const leadsRef = dal.getPlatformSubCollection('leads');
+ *
  * // Safe write with audit
- * await dal.safeSetDoc('organizations', 'org123', {
- *   name: 'Acme Inc',
+ * await dal.safeSetDoc('organizations', 'platform-root', {
+ *   name: 'SalesVelocity',
  *   tier: 'tier1'
  * }, { audit: true, userId: 'user123' });
  * ```
@@ -124,24 +124,28 @@ export class BaseAgentDAL {
   }
   
   /**
-   * Get an organization sub-collection reference
+   * Get a platform sub-collection reference
    * Handles nested collection paths with environment awareness
    *
    * @param subCollection - Sub-collection name (e.g., 'records', 'schemas')
-   * @returns CollectionReference for the org sub-collection
+   * @returns CollectionReference for the platform sub-collection
    *
    * @example
-   * dal.getOrgSubCollection('records')
-   * // Returns: 'test_organizations/rapid-compliance-root/test_records' (dev)
-   * // Returns: 'organizations/rapid-compliance-root/records' (production)
+   * dal.getPlatformSubCollection('records')
+   * // Returns: 'organizations/rapid-compliance-root/records'
    */
-  getOrgSubCollection(subCollection: string): CollectionReference {
+  getPlatformSubCollection(subCollection: string): CollectionReference {
     const orgPath = this.getColPath('organizations');
     const subPath = this.getColPath(subCollection);
     const fullPath = `${orgPath}/${PLATFORM_ID}/${subPath}`;
     return collection(this.db, fullPath);
   }
-  
+
+  /** @deprecated Use getPlatformSubCollection instead */
+  getOrgSubCollection(subCollection: string): CollectionReference {
+    return this.getPlatformSubCollection(subCollection);
+  }
+
   /**
    * Get a document reference with environment-aware path
    * 
@@ -401,9 +405,9 @@ export class BaseAgentDAL {
 
   /**
    * Verify that a user has access
-   * @deprecated Single-tenant system does not require org-level access control
+   * @deprecated Single-tenant system — access verified at auth layer
    */
-  private verifyOrgAccess(
+  private verifyAccess(
     userId: string | undefined,
   ): void {
     logger.debug('🔒 Verifying access', {

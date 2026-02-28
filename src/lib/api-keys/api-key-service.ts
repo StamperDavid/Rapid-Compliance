@@ -243,8 +243,8 @@ return keys.ai?.anthropicApiKey ?? keys.ai?.openrouterApiKey ?? null;
     // Prefer Admin SDK (bypasses Firestore security rules) — same as fetchKeys
     const { adminDb } = await import('../firebase/admin');
     if (adminDb) {
-      const { getOrgSubCollection } = await import('../firebase/collections');
-      const apiKeysPath = getOrgSubCollection('apiKeys');
+      const { getSubCollection } = await import('../firebase/collections');
+      const apiKeysPath = getSubCollection('apiKeys');
       await adminDb.collection(apiKeysPath).doc(PLATFORM_ID).set(dataToSave, { merge: true });
     } else {
       // Fallback to client SDK
@@ -367,9 +367,9 @@ return keys.ai?.anthropicApiKey ?? keys.ai?.openrouterApiKey ?? null;
     try {
       // Prefer admin SDK (bypasses client-side security rules) when available
       const { adminDb } = await import('../firebase/admin');
-      const { getOrgSubCollection } = await import('../firebase/collections');
+      const { getSubCollection } = await import('../firebase/collections');
       if (adminDb) {
-        const apiKeysPath = getOrgSubCollection('apiKeys');
+        const apiKeysPath = getSubCollection('apiKeys');
         const snap = await adminDb
           .collection(apiKeysPath)
           .doc(PLATFORM_ID)

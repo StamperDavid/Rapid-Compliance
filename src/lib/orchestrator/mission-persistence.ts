@@ -6,7 +6,7 @@
  * user-facing documents designed for polling and display.
  *
  * Firestore Collection:
- * - organizations/{orgId}/missions/{missionId}
+ * - organizations/{PLATFORM_ID}/missions/{missionId}
  *
  * @module orchestrator/mission-persistence
  */

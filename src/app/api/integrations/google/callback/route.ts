@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
 
     // Save integration using Admin SDK (server-side, bypasses security rules)
     const { adminDb } = await import('@/lib/firebase/admin');
-    const { getOrgSubCollection } = await import('@/lib/firebase/collections');
+    const { getSubCollection } = await import('@/lib/firebase/collections');
 
     if (!adminDb) {
       throw new Error('Firebase Admin not initialized');
@@ -61,7 +61,7 @@ export async function GET(request: NextRequest) {
 
     const serviceName = isGSC ? 'google-search-console' : 'gmail';
     const integrationId = isGSC ? `gsc_${Date.now()}` : `google_${Date.now()}`;
-    const integrationsPath = getOrgSubCollection('integrations');
+    const integrationsPath = getSubCollection('integrations');
     await adminDb
       .collection(integrationsPath)
       .doc(integrationId)

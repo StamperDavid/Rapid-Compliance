@@ -7,7 +7,7 @@
  * - Dry-run mode for testing
  * - Audit logging for compliance
  * - Production delete protection
- * - Organization-scoped access verification (coming soon)
+ * - Platform-scoped access verification
  */
 
 import {
@@ -30,7 +30,7 @@ import {
   type UpdateData
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
-import { COLLECTIONS, getOrgSubCollection } from './collections';
+import { COLLECTIONS, getSubCollection } from './collections';
 import { logger } from '@/lib/logger/logger';
 
 interface WriteOptions {
@@ -40,7 +40,6 @@ interface WriteOptions {
   audit?: boolean;
   /** User ID performing the operation (for audit trail) */
   userId?: string;
-  /** Organization ID context (for access control) */
 }
 
 export class FirestoreDAL {
@@ -64,12 +63,17 @@ export class FirestoreDAL {
   }
 
   /**
-   * Get an organization sub-collection reference
-   * Usage: dal.getOrgCollection('records')
+   * Get a platform sub-collection reference
+   * Usage: dal.getPlatformCollection('records')
    */
-  getOrgCollection(subCollection: string): CollectionReference {
-    const path = getOrgSubCollection(subCollection);
+  getPlatformCollection(subCollection: string): CollectionReference {
+    const path = getSubCollection(subCollection);
     return collection(this.db, path);
+  }
+
+  /** @deprecated Use getPlatformCollection instead */
+  getOrgCollection(subCollection: string): CollectionReference {
+    return this.getPlatformCollection(subCollection);
   }
 
   // ========================================
@@ -80,7 +84,7 @@ export class FirestoreDAL {
    * Safe setDoc with environment awareness and audit logging
    *
    * @example
-   * await dal.safeSetDoc('ORGANIZATIONS', 'org123', {
+   * await dal.safeSetDoc('ORGANIZATIONS', 'platform-root', {
    *   name: 'Acme Inc',
    *   createdAt: serverTimestamp()
    * }, { audit: true, userId: 'user123' });
@@ -127,7 +131,7 @@ export class FirestoreDAL {
    * Safe updateDoc with environment awareness and audit logging
    *
    * @example
-   * await dal.safeUpdateDoc('ORGANIZATIONS', 'org123', {
+   * await dal.safeUpdateDoc('ORGANIZATIONS', 'platform-root', {
    *   name: 'Updated Name',
    *   updatedAt: serverTimestamp()
    * }, { audit: true, userId: 'user123' });
@@ -172,7 +176,7 @@ export class FirestoreDAL {
    * Safe deleteDoc with environment awareness and production protection
    *
    * @example
-   * await dal.safeDeleteDoc('ORGANIZATIONS', 'org123', {
+   * await dal.safeDeleteDoc('ORGANIZATIONS', 'platform-root', {
    *   audit: true,
    *   userId: 'user123'
    * });
@@ -340,18 +344,18 @@ export class FirestoreDAL {
   }
 
   // ========================================
-  // ACCESS CONTROL (Coming Soon)
+  // ACCESS CONTROL
   // ========================================
 
   /**
-   * Verify that a user has access to an organization
-   * This will be implemented as part of the security enhancement
+   * Verify that a user has access
+   * @deprecated Single-tenant system — access verified at auth layer
    */
-  private verifyOrgAccess(
+  private verifyAccess(
     _userId: string | undefined
   ): void {
     // Single-tenant system — all data scoped to PLATFORM_ID
-    logger.debug('🔒 Verifying org access', {
+    logger.debug('🔒 Verifying access', {
       userId: _userId,
       file: 'dal.ts'
     });

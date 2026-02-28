@@ -779,7 +779,7 @@ async function getRevenueMetrics(
   const previousRevenue = previousWonDeals.reduce((sum: number, d: DealAnalyticsRecord) => sum + (d.value ?? 0), 0);
 
   // Get quota from platform settings (configurable via Firestore)
-  const orgSettings = await adminDal.getOrgSettings();
+  const orgSettings = await adminDal.getPlatformSettings();
   const quota = typeof orgSettings.revenueQuota === 'number' ? orgSettings.revenueQuota : 100000;
   const quotaAttainment = quota > 0 ? (totalRevenue / quota) * 100 : 0;
   

@@ -157,7 +157,7 @@ export async function GET(request: NextRequest) {
 
     const dal = adminDal; // Type narrowing for callback
     const snapshot = await dal.safeQuery('ORGANIZATIONS', (_ref) => {
-      return dal.getOrgCollection('schemas')
+      return dal.getPlatformCollection('schemas')
         .where('status', '==', 'active');
     });
 
@@ -255,11 +255,11 @@ export async function POST(request: NextRequest) {
       version: 1,
     };
 
-    const schemasCollection = adminDal.getOrgCollection('schemas');
+    const schemasCollection = adminDal.getPlatformCollection('schemas');
     await schemasCollection.doc(schemaId).set(newSchema);
 
     // Initialize entity collection metadata
-    const entitiesCollection = adminDal.getOrgCollection('entities');
+    const entitiesCollection = adminDal.getPlatformCollection('entities');
     const metadataRef = entitiesCollection.doc(schemaId).collection('_metadata').doc('info');
 
     await metadataRef.set({

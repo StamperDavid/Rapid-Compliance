@@ -467,9 +467,9 @@ async function getMeetingById(
   if (!db) {throw new Error('Firestore not initialized');}
 
   const { doc, getDoc } = await import('firebase/firestore');
-  const { getOrgSubCollection } = await import('@/lib/firebase/collections');
+  const { getSubCollection } = await import('@/lib/firebase/collections');
 
-  const meetingPath = getOrgSubCollection('meetings');
+  const meetingPath = getSubCollection('meetings');
   const meetingDoc = await getDoc(doc(db, meetingPath, meetingId));
 
   return meetingDoc.exists() ? (meetingDoc.data() as ScheduledMeeting) : null;
@@ -637,9 +637,9 @@ async function sendMeetingUpdate(
     if (!db) {throw new Error('Firestore not initialized');}
     
     const { doc, getDoc } = await import('firebase/firestore');
-    const { getOrgSubCollection } = await import('@/lib/firebase/collections');
+    const { getSubCollection } = await import('@/lib/firebase/collections');
 
-    const settingsPath = getOrgSubCollection('settings');
+    const settingsPath = getSubCollection('settings');
     interface OrgEmailSettings {
       companyName?: string;
       replyToEmail?: string;

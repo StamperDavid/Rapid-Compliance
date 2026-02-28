@@ -23,7 +23,7 @@ import sgMail from '@sendgrid/mail';
 import { logger } from '@/lib/logger/logger';
 import { getServerSignalCoordinator } from '@/lib/orchestration/coordinator-factory-server';
 import { adminDb } from '@/lib/firebase/admin';
-import { getOrgSubCollection } from '@/lib/firebase/collections';
+import { getSubCollection } from '@/lib/firebase/collections';
 import { retryWithBackoff } from '@/lib/utils/retry';
 import { Timestamp, FieldValue } from 'firebase-admin/firestore';
 
@@ -351,7 +351,7 @@ export async function sendEmail(
  */
 async function saveDeliveryRecord(record: EmailDeliveryRecord): Promise<void> {
   const deliveriesRef = ensureAdminDb()
-    .collection(getOrgSubCollection('email_deliveries'))
+    .collection(getSubCollection('email_deliveries'))
     .doc(record.id);
 
   await deliveriesRef.set(record);
@@ -371,7 +371,7 @@ export async function updateDeliveryStatus(
   }
 ): Promise<void> {
   const deliveriesRef = ensureAdminDb()
-    .collection(getOrgSubCollection('email_deliveries'))
+    .collection(getSubCollection('email_deliveries'))
     .doc(deliveryId);
   
   const updates: Partial<EmailDeliveryRecord> = {
@@ -407,7 +407,7 @@ export async function incrementOpenCount(
   deliveryId: string
 ): Promise<void> {
   const deliveriesRef = ensureAdminDb()
-    .collection(getOrgSubCollection('email_deliveries'))
+    .collection(getSubCollection('email_deliveries'))
     .doc(deliveryId);
 
   await deliveriesRef.update({
@@ -427,7 +427,7 @@ export async function incrementClickCount(
   deliveryId: string
 ): Promise<void> {
   const deliveriesRef = ensureAdminDb()
-    .collection(getOrgSubCollection('email_deliveries'))
+    .collection(getSubCollection('email_deliveries'))
     .doc(deliveryId);
 
   await deliveriesRef.update({
@@ -447,7 +447,7 @@ export async function getDeliveryRecord(
   deliveryId: string
 ): Promise<EmailDeliveryRecord | null> {
   const deliveriesRef = ensureAdminDb()
-    .collection(getOrgSubCollection('email_deliveries'))
+    .collection(getSubCollection('email_deliveries'))
     .doc(deliveryId);
   
   const doc = await deliveriesRef.get();
@@ -466,7 +466,7 @@ export async function getDeliveryRecordsForDeal(
   dealId: string
 ): Promise<EmailDeliveryRecord[]> {
   const deliveriesRef = ensureAdminDb()
-    .collection(getOrgSubCollection('email_deliveries'))
+    .collection(getSubCollection('email_deliveries'))
     .where('dealId', '==', dealId)
     .orderBy('createdAt', 'desc')
     .limit(100);
@@ -495,7 +495,7 @@ export async function getDeliveryStatsForUser(
   bounceRate: number;
 }> {
   let query = ensureAdminDb()
-    .collection(getOrgSubCollection('email_deliveries'))
+    .collection(getSubCollection('email_deliveries'))
     .where('userId', '==', userId);
   
   if (startDate) {

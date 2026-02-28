@@ -137,11 +137,11 @@ export async function POST(
 
     // Import admin SDK and helpers
     const { getFirestore } = await import('firebase-admin/firestore');
-    const { getOrgSubCollection } = await import('@/lib/firebase/collections');
+    const { getSubCollection } = await import('@/lib/firebase/collections');
     const db = getFirestore();
 
     // Get schema to get schema name (using environment-aware paths)
-    const schemasPath = getOrgSubCollection('schemas');
+    const schemasPath = getSubCollection('schemas');
     const schemaRef = db.collection(schemasPath).doc(params.schemaId);
 
     const schemaDoc = await schemaRef.get();
@@ -164,7 +164,7 @@ export async function POST(
     }
 
     // Get all records (using environment-aware paths for entities)
-    const entitiesPath = getOrgSubCollection('entities');
+    const entitiesPath = getSubCollection('entities');
     const recordsPath = adminDal.getSubColPath('records');
     const recordsRef = db.collection(`${entitiesPath}/${schemaName}/${recordsPath}`);
     

@@ -127,9 +127,9 @@ export async function POST(request: NextRequest) {
     // Update API key document with test result
     try {
       const { adminDb } = await import('@/lib/firebase/admin');
-      const { getOrgSubCollection } = await import('@/lib/firebase/collections');
+      const { getSubCollection } = await import('@/lib/firebase/collections');
       if (adminDb) {
-        const apiKeysPath = getOrgSubCollection('apiKeys');
+        const apiKeysPath = getSubCollection('apiKeys');
         await adminDb
           .collection(apiKeysPath)
           .doc(PLATFORM_ID)

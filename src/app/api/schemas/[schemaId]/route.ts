@@ -28,7 +28,7 @@ export async function GET(
     }
 
     const params = await context.params;
-    const schemasCollection = adminDal.getOrgCollection('schemas');
+    const schemasCollection = adminDal.getPlatformCollection('schemas');
     const docSnap = await schemasCollection.doc(params.schemaId).get();
 
     if (!docSnap.exists) {
@@ -66,7 +66,7 @@ export async function DELETE(
     }
 
     const params = await context.params;
-    const schemasCollection = adminDal.getOrgCollection('schemas');
+    const schemasCollection = adminDal.getPlatformCollection('schemas');
     const docRef = schemasCollection.doc(params.schemaId);
 
     const docSnap = await docRef.get();

@@ -19,7 +19,7 @@ jest.mock('@/lib/firebase/admin-dal', () => ({
     getClosedDeals: jest.fn(),
     getWonDeals: jest.fn(),
     getRevenueForecast: jest.fn(),
-    getOrgSettings: jest.fn(),
+    getPlatformSettings: jest.fn(),
     getSalesReps: jest.fn(),
     getRepDeals: jest.fn(),
   },
@@ -132,7 +132,7 @@ describe('Analytics Engine', () => {
       (mockAdminDal.getClosedDeals).mockResolvedValue([]);
       (mockAdminDal.getWonDeals).mockResolvedValue([]);
       (mockAdminDal.getRevenueForecast).mockResolvedValue({ optimistic: 100000, realistic: 80000, pessimistic: 60000 });
-      (mockAdminDal.getOrgSettings).mockResolvedValue({});
+      (mockAdminDal.getPlatformSettings).mockResolvedValue({});
       (mockAdminDal.getSalesReps).mockResolvedValue([]);
       (mockAdminDal.getRepDeals).mockResolvedValue([]);
 
@@ -199,7 +199,7 @@ describe('Analytics Engine', () => {
       (mockAdminDal.getClosedDeals).mockResolvedValue([]);
       (mockAdminDal.getWonDeals).mockResolvedValue([]);
       (mockAdminDal.getRevenueForecast).mockResolvedValue({ optimistic: 100000, realistic: 80000, pessimistic: 60000 });
-      (mockAdminDal.getOrgSettings).mockResolvedValue({});
+      (mockAdminDal.getPlatformSettings).mockResolvedValue({});
       (mockAdminDal.getSalesReps).mockResolvedValue([]);
 
       // Execute
@@ -249,7 +249,7 @@ describe('Analytics Engine', () => {
       (mockAdminDal.getClosedDeals).mockResolvedValue([]);
       (mockAdminDal.getWonDeals).mockResolvedValue([]);
       (mockAdminDal.getRevenueForecast).mockResolvedValue({ optimistic: 100000, realistic: 80000, pessimistic: 60000 });
-      (mockAdminDal.getOrgSettings).mockResolvedValue({});
+      (mockAdminDal.getPlatformSettings).mockResolvedValue({});
       (mockAdminDal.getSalesReps).mockResolvedValue([]);
 
       // Execute
@@ -295,7 +295,7 @@ describe('Analytics Engine', () => {
       (mockAdminDal.getClosedDeals).mockResolvedValue(mockClosedDeals);
       (mockAdminDal.getWonDeals).mockResolvedValue([]);
       (mockAdminDal.getRevenueForecast).mockResolvedValue({ optimistic: 100000, realistic: 80000, pessimistic: 60000 });
-      (mockAdminDal.getOrgSettings).mockResolvedValue({});
+      (mockAdminDal.getPlatformSettings).mockResolvedValue({});
       (mockAdminDal.getSalesReps).mockResolvedValue([]);
 
       // Execute
@@ -340,7 +340,7 @@ describe('Analytics Engine', () => {
         realistic: 100000,
         pessimistic: 80000,
       });
-      (mockAdminDal.getOrgSettings).mockResolvedValue({});
+      (mockAdminDal.getPlatformSettings).mockResolvedValue({});
       (mockAdminDal.getSalesReps).mockResolvedValue([]);
 
       // Execute
@@ -371,7 +371,7 @@ describe('Analytics Engine', () => {
       (mockAdminDal.getClosedDeals).mockResolvedValue([]);
       (mockAdminDal.getWonDeals).mockResolvedValue([]);
       (mockAdminDal.getRevenueForecast).mockResolvedValue({ optimistic: 100000, realistic: 80000, pessimistic: 60000 });
-      (mockAdminDal.getOrgSettings).mockResolvedValue({});
+      (mockAdminDal.getPlatformSettings).mockResolvedValue({});
       (mockAdminDal.getSalesReps).mockResolvedValue([]);
 
       // First call
@@ -417,7 +417,7 @@ describe('Analytics Engine', () => {
       (mockAdminDal.getClosedDeals).mockResolvedValue([]);
       (mockAdminDal.getWonDeals).mockResolvedValue([]);
       (mockAdminDal.getRevenueForecast).mockResolvedValue({ optimistic: 100000, realistic: 80000, pessimistic: 60000 });
-      (mockAdminDal.getOrgSettings).mockResolvedValue({});
+      (mockAdminDal.getPlatformSettings).mockResolvedValue({});
       (mockAdminDal.getSalesReps).mockResolvedValue([]);
 
       // Execute
@@ -441,7 +441,7 @@ describe('Analytics Engine', () => {
       (mockAdminDal.getClosedDeals).mockResolvedValue([]);
       (mockAdminDal.getWonDeals).mockResolvedValue([]);
       (mockAdminDal.getRevenueForecast).mockResolvedValue({ optimistic: 100000, realistic: 80000, pessimistic: 60000 });
-      (mockAdminDal.getOrgSettings).mockResolvedValue({});
+      (mockAdminDal.getPlatformSettings).mockResolvedValue({});
       (mockAdminDal.getSalesReps).mockResolvedValue([]);
 
       // Test different periods
@@ -479,7 +479,7 @@ describe('Analytics Engine', () => {
       (mockAdminDal.getClosedDeals).mockResolvedValue([]);
       (mockAdminDal.getWonDeals).mockResolvedValue([]);
       (mockAdminDal.getRevenueForecast).mockResolvedValue({ optimistic: 100000, realistic: 80000, pessimistic: 60000 });
-      (mockAdminDal.getOrgSettings).mockResolvedValue({});
+      (mockAdminDal.getPlatformSettings).mockResolvedValue({});
       (mockAdminDal.getSalesReps).mockResolvedValue([]);
 
       // Execute

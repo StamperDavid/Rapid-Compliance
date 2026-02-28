@@ -188,9 +188,9 @@ async function handleFacebookMessage(senderId: string, text: string): Promise<vo
   let agentConfig: AgentConfigData | null = null;
   try {
     const { adminDb } = await import('@/lib/firebase/admin');
-    const { getOrgSubCollection } = await import('@/lib/firebase/collections');
+    const { getSubCollection } = await import('@/lib/firebase/collections');
     if (adminDb) {
-      const agentConfigPath = getOrgSubCollection('agentConfig');
+      const agentConfigPath = getSubCollection('agentConfig');
       const cfgSnap = await adminDb.collection(agentConfigPath).doc('default').get();
       if (cfgSnap.exists) {
         agentConfig = cfgSnap.data() as AgentConfigData;

@@ -7,7 +7,7 @@
  * - Per-agent pause (freeze individual specialists)
  *
  * State is persisted in Firestore at:
- *   organizations/{orgId}/settings/swarm_control
+ *   organizations/{PLATFORM_ID}/settings/swarm_control
  *
  * All orchestration entry points (EventRouter, MasterOrchestrator,
  * SignalBus, BaseManager) check swarm control state before executing.

@@ -4,7 +4,7 @@
  * Captures corrections when users edit AI-generated social media drafts.
  * Primary training signal for the Golden Playbook system.
  *
- * Firestore path: organizations/{orgId}/socialCorrections/{correctionId}
+ * Firestore path: organizations/{PLATFORM_ID}/socialCorrections/{correctionId}
  */
 
 import type { SocialCorrection, SocialPlatform } from '@/types/social';

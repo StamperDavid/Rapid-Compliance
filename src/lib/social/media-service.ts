@@ -3,7 +3,7 @@
  * Handles media uploads to Firebase Storage, validates file type/size per platform,
  * and returns metadata for social media posts.
  *
- * Storage path: social-media/{orgId}/{postId}/original/
+ * Storage path: social-media/{PLATFORM_ID}/{postId}/original/
  */
 
 import { logger } from '@/lib/logger/logger';

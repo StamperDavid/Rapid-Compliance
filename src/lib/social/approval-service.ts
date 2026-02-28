@@ -4,7 +4,7 @@
  * Posts flagged by the autonomous agent or manually are stored as ApprovalItems
  * and surfaced in the Approval Queue UI.
  *
- * Firestore path: organizations/{orgId}/social_approvals/{approvalId}
+ * Firestore path: organizations/{PLATFORM_ID}/social_approvals/{approvalId}
  */
 
 import { FirestoreService } from '@/lib/db/firestore-service';

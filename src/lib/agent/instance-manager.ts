@@ -597,9 +597,9 @@ ${this.summarizeRecentConversations(customerMemory)}
       // Prefer admin SDK to bypass security rules
       try {
         const { adminDb } = await import('@/lib/firebase/admin');
-        const { getOrgSubCollection } = await import('@/lib/firebase/collections');
+        const { getSubCollection } = await import('@/lib/firebase/collections');
         if (adminDb) {
-          const goldenMastersPath = getOrgSubCollection('goldenMasters');
+          const goldenMastersPath = getSubCollection('goldenMasters');
           const snap = await adminDb
             .collection(goldenMastersPath)
             .get();
@@ -671,9 +671,9 @@ ${this.summarizeRecentConversations(customerMemory)}
       // Prefer admin SDK
       try {
         const { adminDb } = await import('@/lib/firebase/admin');
-        const { getOrgSubCollection } = await import('@/lib/firebase/collections');
+        const { getSubCollection } = await import('@/lib/firebase/collections');
         if (adminDb) {
-          const customerMemoriesPath = getOrgSubCollection('customerMemories');
+          const customerMemoriesPath = getSubCollection('customerMemories');
           const doc = await adminDb
             .collection(customerMemoriesPath)
             .doc(customerId)
@@ -756,9 +756,9 @@ ${this.summarizeRecentConversations(customerMemory)}
       // Prefer admin SDK
       try {
         const { adminDb } = await import('@/lib/firebase/admin');
-        const { getOrgSubCollection } = await import('@/lib/firebase/collections');
+        const { getSubCollection } = await import('@/lib/firebase/collections');
         if (adminDb) {
-          const customerMemoriesPath = getOrgSubCollection('customerMemories');
+          const customerMemoriesPath = getSubCollection('customerMemories');
           await adminDb
             .collection(customerMemoriesPath)
             .doc(memory.customerId)
@@ -806,8 +806,8 @@ ${this.summarizeRecentConversations(customerMemory)}
     // In production, check Redis first, then Firestore
     // For now, just check Firestore
     try {
-      // Need orgId to query - this is a limitation of current design
-      // In production, maintain a lookup table or use Redis with instanceId as key
+      // Lookup by instanceId — in production, maintain a Redis index keyed by instanceId
+      // for O(1) retrieval without scanning the Firestore collection
       return Promise.resolve(null);
     } catch (error) {
       logger.error('Error getting active instance:', error instanceof Error ? error : new Error(String(error)), { file: 'instance-manager.ts' });

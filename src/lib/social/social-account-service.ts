@@ -1,7 +1,7 @@
 /**
  * Social Account Service
  * CRUD operations for managing multiple social media accounts per platform.
- * Credentials stored in Firestore under organizations/{orgId}/social_accounts/{accountId}
+ * Credentials stored in Firestore under organizations/{PLATFORM_ID}/social_accounts/{accountId}
  */
 
 import { FirestoreService } from '@/lib/db/firestore-service';

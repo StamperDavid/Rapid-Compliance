@@ -6,8 +6,8 @@
  * after each step completion, and can be resumed from the last successful step.
  *
  * Firestore Collections:
- * - organizations/{orgId}/sagaState/{sagaId} — checkpoint data
- * - organizations/{orgId}/eventLog/{eventId} — event persistence with dedup
+ * - organizations/{PLATFORM_ID}/sagaState/{sagaId} — checkpoint data
+ * - organizations/{PLATFORM_ID}/eventLog/{eventId} — event persistence with dedup
  *
  * @module orchestration/saga-persistence
  */

@@ -4,7 +4,7 @@
  */
 
 import { db } from '@/lib/firebase-admin';
-import { getOrgSubCollection } from '@/lib/firebase/collections';
+import { getSubCollection } from '@/lib/firebase/collections';
 import type { FieldType } from '@/types/schema';
 
 /**
@@ -59,7 +59,7 @@ export class FieldTypeConverterServer {
     estimatedFailures: number;
   }> {
     // Get schema (using environment-aware paths)
-    const schemasPath = getOrgSubCollection('schemas');
+    const schemasPath = getSubCollection('schemas');
     const schemaDoc = await db
       .collection(schemasPath)
       .doc(schemaId)
@@ -78,7 +78,7 @@ export class FieldTypeConverterServer {
 
     // Get records (using environment-aware paths for nested entities)
     const { getPrefix } = await import('@/lib/firebase/collections');
-    const entitiesPath = getOrgSubCollection('entities');
+    const entitiesPath = getSubCollection('entities');
     const recordsPath = `${getPrefix()}records`;
     const recordsSnapshot = await db
       .collection(`${entitiesPath}/${schemaName}/${recordsPath}`)

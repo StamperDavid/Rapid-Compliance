@@ -194,16 +194,15 @@ export type SignalType =
  * is represented as a SalesSignal. These are persisted in Firestore and
  * observed in real-time by the SignalCoordinator.
  * 
- * MULTI-TENANCY: All signals are scoped to an organization (orgId)
+ * PLATFORM-SCOPED: All signals are scoped to the platform (PLATFORM_ID)
  * AUDITABILITY: All signals are logged to signal_logs sub-collection
  * TTL: Signals auto-expire after ttl period (default 30 days)
- * 
+ *
  * @example
  * const signal: SalesSignal = {
  *   id: 'sig_12345',
  *   type: 'lead.intent.high',
  *   leadId: 'lead_abc',
- *   orgId: 'org_acme',
  *   confidence: 0.94,
  *   priority: 'High',
  *   metadata: {

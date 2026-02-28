@@ -23,7 +23,7 @@ jest.mock('@sendgrid/mail');
 jest.mock('@/lib/logger/logger');
 jest.mock('@/lib/orchestration/coordinator-factory-server');
 jest.mock('@/lib/firebase/collections', () => ({
-  getOrgSubCollection: jest.fn((sub: string) => `organizations/rapid-compliance-root/${sub}`),
+  getSubCollection: jest.fn((sub: string) => `organizations/rapid-compliance-root/${sub}`),
   COLLECTIONS: { ORGANIZATIONS: 'organizations' },
 }));
 

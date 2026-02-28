@@ -139,6 +139,9 @@ export const getSubCollection = (
 /** @deprecated Use getSubCollection instead */
 export const getOrgSubCollection = getSubCollection;
 
+/** Alias with clearer penthouse-model naming */
+export const getPlatformSubCollection = getSubCollection;
+
 // ============================================================================
 // Convenience Collection Getters — single source of truth for every path
 // ============================================================================

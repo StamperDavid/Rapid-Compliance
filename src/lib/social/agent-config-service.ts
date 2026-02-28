@@ -3,7 +3,7 @@
  * Loads/saves autonomous posting agent configuration from Firestore.
  * Replaces hardcoded constants in autonomous-posting-agent.ts with dynamic config.
  *
- * Firestore path: organizations/{orgId}/settings/social_agent_config
+ * Firestore path: organizations/{PLATFORM_ID}/settings/social_agent_config
  */
 
 import { FirestoreService } from '@/lib/db/firestore-service';

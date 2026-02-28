@@ -4,8 +4,8 @@
  * Stores mentions in Firestore and runs sentiment analysis.
  *
  * Firestore paths:
- *   organizations/{orgId}/social_mentions/{mentionId}
- *   organizations/{orgId}/settings/social_listening_config
+ *   organizations/{PLATFORM_ID}/social_mentions/{mentionId}
+ *   organizations/{PLATFORM_ID}/settings/social_listening_config
  */
 
 import { FirestoreService } from '@/lib/db/firestore-service';
