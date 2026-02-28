@@ -402,7 +402,7 @@ export default function TeamMembersPage() {
         }}>
           <nav style={{ flex: 1, padding: '1rem 0', overflowY: 'auto' }}>
             <Link
-              href="/crm"
+              href="/leads"
               style={{
                 width: '100%', padding: '0.875rem 1.25rem', display: 'flex', alignItems: 'center', gap: '0.75rem',
                 backgroundColor: 'transparent', color: 'var(--color-text-secondary)', borderLeft: '3px solid transparent',
@@ -416,7 +416,7 @@ export default function TeamMembersPage() {
             {Object.entries(STANDARD_SCHEMAS).map(([key, schema]) => (
               <Link
                 key={key}
-                href={`/crm?view=${key}`}
+                href={`/entities/${key}`}
                 style={{
                   width: '100%', padding: '0.875rem 1.25rem', display: 'flex', alignItems: 'center', gap: '0.75rem',
                   backgroundColor: 'transparent', color: 'var(--color-text-secondary)', borderLeft: '3px solid transparent',

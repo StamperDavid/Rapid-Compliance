@@ -28,7 +28,7 @@
       "name": "CRM",
       "short_name": "CRM",
       "description": "Open CRM dashboard",
-      "url": "/crm",
+      "url": "/leads",
       "icons": [{ "src": "/icon-192x192.png", "sizes": "192x192" }]
     },
     {

@@ -134,17 +134,17 @@ export default function ProfilePage() {
         <div className="bg-surface-paper border-r border-border-light flex flex-col transition-all duration-300" style={{ width: sidebarOpen ? '260px' : '70px' }}>
           <nav className="flex-1 py-4 overflow-y-auto">
             <Link
-              href="/crm"
+              href="/leads"
               className="w-full py-3.5 px-5 flex items-center gap-3 bg-transparent text-text-secondary border-l-[3px] border-transparent text-sm font-normal no-underline"
             >
               <span className="text-xl">🏠</span>
-              {sidebarOpen && <span>Back to CRM</span>}
+              {sidebarOpen && <span>Leads</span>}
             </Link>
 
             {Object.entries(STANDARD_SCHEMAS).map(([key, schema]) => (
               <Link
                 key={key}
-                href={`/crm?view=${key}`}
+                href={`/entities/${key}`}
                 className="w-full py-3.5 px-5 flex items-center gap-3 bg-transparent text-text-secondary border-l-[3px] border-transparent text-sm font-normal no-underline"
               >
                 <span className="text-xl">{schema.icon}</span>
@@ -169,11 +169,11 @@ export default function ProfilePage() {
             {/* Header */}
             <div className="mb-8">
               <Link
-                href="/crm"
+                href="/leads"
                 className="inline-flex items-center gap-2 text-sm font-medium no-underline mb-6"
                 style={{ color: primaryColor }}
               >
-                ← Back to CRM
+                ← Back to Leads
               </Link>
               <h1 className="text-3xl font-bold text-text-primary mb-2">My Profile</h1>
               <p className="text-text-secondary text-sm">
@@ -332,7 +332,7 @@ export default function ProfilePage() {
             {/* Action Buttons */}
             <div className="flex gap-4 justify-end">
               <Link
-                href="/crm"
+                href="/leads"
                 className="px-6 py-3 bg-surface-elevated text-text-secondary rounded-lg no-underline text-sm font-medium border border-border-light"
               >
                 Cancel

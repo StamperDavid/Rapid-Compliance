@@ -246,7 +246,7 @@ export default function IntegrationsPage() {
         }}>
           <nav style={{ flex: 1, padding: '1rem 0', overflowY: 'auto' }}>
             <Link
-              href="/crm"
+              href="/leads"
               style={{
                 width: '100%',
                 padding: '0.875rem 1.25rem',
@@ -268,7 +268,7 @@ export default function IntegrationsPage() {
             {Object.entries(STANDARD_SCHEMAS).map(([key, schema]) => (
               <Link
                 key={key}
-                href={`/crm?view=${key}`}
+                href={`/entities/${key}`}
                 style={{
                   width: '100%',
                   padding: '0.875rem 1.25rem',

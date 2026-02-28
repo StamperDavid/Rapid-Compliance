@@ -15,6 +15,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { DealHealthCard } from '@/components/crm/DealHealthCard';
 import { NextBestActionsCard } from '@/components/crm/NextBestActionsCard';
 import { useAuth } from '@/hooks/useAuth';
@@ -350,8 +351,8 @@ export default function LivingLedgerPage() {
                 <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginBottom: '1rem' }}>
                   Add deals from the CRM to track health scores and get AI recommendations.
                 </div>
-                <a
-                  href="/crm?view=deals"
+                <Link
+                  href="/deals"
                   style={{
                     display: 'inline-block',
                     padding: '0.5rem 1rem',
@@ -363,8 +364,8 @@ export default function LivingLedgerPage() {
                     textDecoration: 'none',
                   }}
                 >
-                  Go to CRM
-                </a>
+                  Go to Deals
+                </Link>
               </div>
             ) : deals.map((deal) => (
               <div

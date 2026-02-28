@@ -370,7 +370,7 @@ export default function WorkspaceDashboardPage() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '0.75rem', marginBottom: '1.5rem' }}>
         <KPICard label="Pipeline" value={val(`$${stats.pipelineValue.toLocaleString()}`)} icon={<DollarSign size={16} />} color="var(--color-success)" href="/deals" />
         <KPICard label="Active Deals" value={val(stats.activeDeals)} icon={<Briefcase size={16} />} color="var(--color-primary)" href="/deals" />
-        <KPICard label="Leads" value={val(stats.totalLeads)} icon={<Target size={16} />} color="var(--color-info)" href="/crm" />
+        <KPICard label="Leads" value={val(stats.totalLeads)} icon={<Target size={16} />} color="var(--color-info)" href="/leads" />
         <KPICard label="Win Rate" value={val(`${winRate}%`)} icon={<Trophy size={16} />} color="var(--color-warning)" href="/analytics" subtitle={`${stats.wonDeals}W / ${stats.lostDeals}L`} />
         <KPICard label="Conversations" value={val(convoStats.total)} icon={<MessageSquare size={16} />} color="var(--color-secondary)" href="/conversations" subtitle={`${convoStats.active} active`} />
         <KPICard label="AI Agents" value={val(`${agentHealth.functional}/${agentHealth.total}`)} icon={<Bot size={16} />} color={agentHealth.health === 'HEALTHY' ? 'var(--color-success)' : 'var(--color-warning)'} href="/workforce" subtitle={agentHealth.health !== 'UNKNOWN' ? agentHealth.health : undefined} />

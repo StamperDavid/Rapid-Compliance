@@ -64,6 +64,7 @@ import {
   Eye,
   Gauge,
   Layers,
+  Building2,
 } from 'lucide-react';
 
 // ============================================================================
@@ -90,10 +91,12 @@ const NAV_SECTIONS: NavigationSection[] = [
     icon: Users,
     allowedRoles: ['owner', 'admin', 'manager', 'member'],
     items: [
-      { id: 'crm-hub', label: 'CRM', href: '/crm', icon: Users, iconColor: 'var(--color-primary)', requiredPermission: 'canViewLeads', featureModuleId: 'crm_pipeline' },
-      { id: 'deals', label: 'Deals / Pipeline', href: '/deals', icon: Handshake, iconColor: 'var(--color-secondary)', requiredPermission: 'canViewDeals', featureModuleId: 'crm_pipeline' },
+      { id: 'leads', label: 'Leads', href: '/leads', icon: Users, iconColor: 'var(--color-primary)', requiredPermission: 'canViewLeads', featureModuleId: 'crm_pipeline' },
+      { id: 'contacts', label: 'Contacts', href: '/contacts', icon: Users, iconColor: 'var(--color-info)', requiredPermission: 'canViewLeads', featureModuleId: 'crm_pipeline' },
+      { id: 'companies', label: 'Companies', href: '/entities/companies', icon: Building2, iconColor: 'var(--color-secondary)', requiredPermission: 'canViewLeads', featureModuleId: 'crm_pipeline' },
+      { id: 'deals', label: 'Deals', href: '/deals', icon: Handshake, iconColor: 'var(--color-warning)', requiredPermission: 'canViewDeals', featureModuleId: 'crm_pipeline' },
       { id: 'conversations', label: 'Conversations', href: '/conversations', icon: MessageSquare, iconColor: 'var(--color-success)', requiredPermission: 'canCreateRecords', featureModuleId: 'conversations' },
-      { id: 'living-ledger', label: 'Living Ledger', href: '/living-ledger', icon: BookOpen, iconColor: 'var(--color-warning)', requiredPermission: 'canViewAllRecords', featureModuleId: 'crm_pipeline' },
+      { id: 'living-ledger', label: 'Living Ledger', href: '/living-ledger', icon: BookOpen, iconColor: 'var(--color-cyan)', requiredPermission: 'canViewAllRecords', featureModuleId: 'crm_pipeline' },
       { id: 'lead-intel', label: 'Lead Intelligence', href: '/leads/research', icon: Search, iconColor: 'var(--color-primary)', requiredPermission: 'canViewLeads', featureModuleId: 'crm_pipeline' },
       { id: 'coaching', label: 'Coaching', href: '/coaching', icon: GraduationCap, iconColor: 'var(--color-success)', featureModuleId: 'sales_automation' },
       { id: 'playbook', label: 'Playbook', href: '/playbook', icon: BookOpen, iconColor: 'var(--color-secondary)', featureModuleId: 'sales_automation' },
@@ -287,12 +290,17 @@ export default function AdminSidebar() {
       return pathname.startsWith('/workforce') ||
         pathname === '/ai-agents';
     }
-    // CRM hub matches /crm, /leads, /contacts
-    if (href === '/crm') {
-      return pathname === '/crm' ||
-        pathname.startsWith('/crm?') ||
-        pathname === '/leads' ||
-        pathname === '/contacts';
+    // Leads matches /leads but not /leads/research (separate item)
+    if (href === '/leads') {
+      return pathname === '/leads';
+    }
+    // Contacts matches /contacts*
+    if (href === '/contacts') {
+      return pathname.startsWith('/contacts');
+    }
+    // Companies matches /entities/companies*
+    if (href === '/entities/companies') {
+      return pathname.startsWith('/entities/companies');
     }
     // Email Studio matches email writer + nurture + email builder + templates
     if (href === '/email-writer') {
