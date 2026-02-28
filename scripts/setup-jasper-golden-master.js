@@ -21,7 +21,7 @@ const db = admin.firestore();
 async function setupJasperGoldenMaster() {
   console.log('🤖 Setting up Jasper - Internal AI Assistant & Swarm Commander...\n');
 
-  const orgId = 'rapid-compliance-root';
+  const PLATFORM_ID = 'rapid-compliance-root';
   const goldenMasterId = 'jasper-v1';
 
   // Jasper's personality and knowledge
@@ -29,7 +29,6 @@ async function setupJasperGoldenMaster() {
     id: goldenMasterId,
     version: '1.0.0',
     name: 'Jasper',
-    organizationId: orgId,
     
     agentType: 'INTERNAL_ASSISTANT',
 
@@ -173,7 +172,7 @@ async function setupJasperGoldenMaster() {
     // Create Golden Master
     await db
       .collection('organizations')
-      .doc(orgId)
+      .doc(PLATFORM_ID)
       .collection('goldenMasters')
       .doc(goldenMasterId)
       .set(goldenMaster);
@@ -186,7 +185,7 @@ async function setupJasperGoldenMaster() {
     // Set as active Golden Master (merge to create org doc if it doesn't exist)
     await db
       .collection('organizations')
-      .doc(orgId)
+      .doc(PLATFORM_ID)
       .set({
         activeGoldenMasterId: goldenMasterId,
         updatedAt: new Date(),
@@ -210,7 +209,7 @@ async function setupJasperGoldenMaster() {
 
     await db
       .collection('organizations')
-      .doc(orgId)
+      .doc(PLATFORM_ID)
       .collection('agentConfig')
       .doc('default')
       .set(agentConfig);

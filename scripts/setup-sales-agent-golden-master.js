@@ -24,14 +24,13 @@ const db = admin.firestore();
 async function setupSalesAgentGoldenMaster() {
   console.log('🛒 Setting up AI Chat Sales Agent - Golden Master...\n');
 
-  const orgId = 'rapid-compliance-root';
+  const PLATFORM_ID = 'rapid-compliance-root';
   const goldenMasterId = 'sales-agent-v1';
 
   const goldenMaster = {
     id: goldenMasterId,
     version: '1.0.0',
     name: 'AI Sales Agent',
-    organizationId: orgId,
     agentType: 'SALES_CHAT',
 
     // Core AI Configuration
@@ -219,7 +218,7 @@ This is NOT a service — subscribers own their platform instance.
     // Create Golden Master
     await db
       .collection('organizations')
-      .doc(orgId)
+      .doc(PLATFORM_ID)
       .collection('goldenMasters')
       .doc(goldenMasterId)
       .set(goldenMaster);
