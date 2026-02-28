@@ -402,13 +402,13 @@ export default function EntityTablePage() {
         // Lookup field with record picker
         return (
           <LookupFieldPicker
-            targetEntity={(field.lookupEntity !== '' && field.lookupEntity != null) ? field.lookupEntity : 'contacts'}
+            targetEntity={(field.lookupEntity !== '' && field.lookupEntity != null) ? field.lookupEntity : field.config?.linkedSchema ?? 'contacts'}
             value={typeof value === 'string' ? value : value != null ? String(value) : null}
             onChange={(recordId: string | null) => {
               setFormData({ ...formData, [field.key]: recordId });
             }}
             label={field.label}
-            placeholder={`Search ${(field.lookupEntity !== '' && field.lookupEntity != null) ? field.lookupEntity : 'records'}...`}
+            placeholder={`Search ${(field.lookupEntity !== '' && field.lookupEntity != null) ? field.lookupEntity : field.config?.linkedSchema ?? 'records'}...`}
             style={baseInputStyle}
           />
         );

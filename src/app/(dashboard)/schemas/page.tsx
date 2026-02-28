@@ -9,6 +9,7 @@ import Link from 'next/link';
 import { STANDARD_SCHEMAS } from '@/lib/schema/standard-schemas';
 import { useConfirm } from '@/hooks/useConfirm';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Field {
   id: string;
@@ -16,6 +17,8 @@ interface Field {
   label: string;
   type: string;
   required: boolean;
+  config?: { linkedSchema?: string };
+  lookupEntity?: string;
 }
 
 interface Schema {
@@ -24,6 +27,7 @@ interface Schema {
   pluralName: string;
   icon: string;
   fields: Field[];
+  isStandard?: boolean;
 }
 
 interface ApiErrorResponse {
@@ -58,12 +62,14 @@ const FIELD_TYPES = [
   'singleSelect',
   'multiSelect',
   'currency',
-  'phoneNumber'
+  'phoneNumber',
+  'lookup'
 ];
 
 export default function SchemaBuilderPage() {
   const confirmDialog = useConfirm();
   const authFetch = useAuthFetch();
+  const { user } = useAuth();
 
   // Convert STANDARD_SCHEMAS to the format we need
   const standardSchemasArray: Schema[] = useMemo(() => Object.values(STANDARD_SCHEMAS).map(schema => ({
@@ -71,13 +77,19 @@ export default function SchemaBuilderPage() {
     name: schema.name,
     pluralName: schema.pluralName,
     icon: schema.icon,
-    fields: schema.fields.map(f => ({
-      id: f.id,
-      key: f.key,
-      label: f.label,
-      type: f.type,
-      required: f.required
-    }))
+    isStandard: true,
+    fields: schema.fields.map(f => {
+      const fieldConfig = 'config' in f ? (f.config as { linkedSchema?: string } | undefined) : undefined;
+      return {
+        id: f.id,
+        key: f.key,
+        label: f.label,
+        type: f.type,
+        required: f.required,
+        config: fieldConfig,
+        lookupEntity: fieldConfig?.linkedSchema,
+      };
+    })
   })), []);
 
   const [schemas, setSchemas] = useState<Schema[]>([]);
@@ -88,7 +100,7 @@ export default function SchemaBuilderPage() {
   const [isCreating, setIsCreating] = useState(false);
   const [editingSchema, setEditingSchema] = useState<Schema | null>(null);
 
-  const [newSchema, setNewSchema] = useState({
+  const [newSchema, setNewSchema] = useState<{ name: string; pluralName: string; icon: string; fields: Field[] }>({
     name: '',
     pluralName: '',
     icon: '📋',
@@ -108,11 +120,10 @@ export default function SchemaBuilderPage() {
       }
       const data = await res.json() as SchemaListResponse;
       const serverSchemas = data.schemas ?? [];
-      if (serverSchemas.length === 0) {
-        setSchemas(standardSchemasArray);
-      } else {
-        setSchemas(serverSchemas);
-      }
+      // Always show standard schemas + any custom schemas from the API
+      const standardIds = new Set(standardSchemasArray.map(s => s.id));
+      const customSchemas = serverSchemas.filter(s => !standardIds.has(s.id));
+      setSchemas([...standardSchemasArray, ...customSchemas]);
     } catch (err: unknown) {
       const errorMessage = isErrorWithMessage(err) ? err.message : 'Failed to load schemas';
       setError(errorMessage);
@@ -138,7 +149,7 @@ export default function SchemaBuilderPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           schema: newSchema,
-          userId: 'ui-schema-builder'
+          userId: user?.uid ?? 'ui-schema-builder'
         })
       });
 
@@ -224,8 +235,8 @@ export default function SchemaBuilderPage() {
     }
   };
 
-  const _saveEditedSchema = async () => {
-    if (!editingSchema) {return;}
+  const saveEditedSchema = async () => {
+    if (!editingSchema || saving) {return;}
     setSaving(true);
     setError(null);
     try {
@@ -234,7 +245,7 @@ export default function SchemaBuilderPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           updates: editingSchema,
-          userId: 'ui-schema-builder'
+          userId: user?.uid ?? 'ui-schema-builder'
         })
       });
 
@@ -311,25 +322,34 @@ export default function SchemaBuilderPage() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                   <span style={{ fontSize: '2rem' }}>{schema.icon}</span>
                   <div>
-                    <h3 style={{ fontSize: '1.125rem', fontWeight: 'bold', color: 'var(--color-text-primary)', margin: 0 }}>{schema.name}</h3>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <h3 style={{ fontSize: '1.125rem', fontWeight: 'bold', color: 'var(--color-text-primary)', margin: 0 }}>{schema.name}</h3>
+                      {schema.isStandard && (
+                        <span style={{ fontSize: '0.625rem', fontWeight: '600', color: 'var(--color-primary)', backgroundColor: 'var(--color-primary-dark)', padding: '0.125rem 0.5rem', borderRadius: '9999px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Standard</span>
+                      )}
+                    </div>
                     <p style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', margin: 0 }}>{schema.pluralName}</p>
                   </div>
                 </div>
-                <button
-                  onClick={() => void deleteSchema(schema.id)}
-                  style={{ color: 'var(--color-error)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.25rem' }}
-                  title="Delete"
-                >
-                  🗑️
-                </button>
+                {!schema.isStandard && (
+                  <button
+                    onClick={() => void deleteSchema(schema.id)}
+                    style={{ color: 'var(--color-error)', background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.25rem' }}
+                    title="Delete"
+                  >
+                    🗑️
+                  </button>
+                )}
               </div>
-              
+
               <div style={{ marginBottom: '1rem' }}>
                 <p style={{ fontSize: '0.875rem', fontWeight: '500', color: 'var(--color-text-secondary)', marginBottom: '0.5rem' }}>Fields ({schema.fields.length})</p>
                 {schema.fields.slice(0, 3).map((field) => (
                   <div key={field.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.875rem', backgroundColor: 'var(--color-bg-elevated)', padding: '0.625rem 0.875rem', borderRadius: 'var(--radius-input)', marginBottom: '0.5rem', border: '1px solid var(--color-border-light)' }}>
                     <span style={{ color: 'var(--color-text-primary)' }}>{field.label}</span>
-                    <span style={{ color: 'var(--color-text-secondary)', fontSize: '0.75rem' }}>{field.type}</span>
+                    <span style={{ color: 'var(--color-text-secondary)', fontSize: '0.75rem' }}>
+                      {field.type}{field.type === 'lookup' && field.config?.linkedSchema ? ` → ${field.config.linkedSchema}` : ''}
+                    </span>
                   </div>
                 ))}
                 {schema.fields.length > 3 && (
@@ -344,12 +364,14 @@ export default function SchemaBuilderPage() {
                 >
                   View Data
                 </Link>
-                <button
-                  onClick={() => setEditingSchema(schema)}
-                  style={{ flex: 1, padding: '0.625rem 0.875rem', backgroundColor: 'var(--color-bg-elevated)', color: 'var(--color-text-secondary)', borderRadius: 'var(--radius-button)', fontSize: '0.875rem', border: '1px solid var(--color-border-main)', cursor: 'pointer', fontWeight: '500' }}
-                >
-                  Edit
-                </button>
+                {!schema.isStandard && (
+                  <button
+                    onClick={() => setEditingSchema(schema)}
+                    style={{ flex: 1, padding: '0.625rem 0.875rem', backgroundColor: 'var(--color-bg-elevated)', color: 'var(--color-text-secondary)', borderRadius: 'var(--radius-button)', fontSize: '0.875rem', border: '1px solid var(--color-border-main)', cursor: 'pointer', fontWeight: '500' }}
+                  >
+                    Edit
+                  </button>
+                )}
               </div>
             </div>
           ))}
@@ -426,7 +448,7 @@ export default function SchemaBuilderPage() {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                     {newSchema.fields.map((field, index) => (
                       <div key={field.id} style={{ backgroundColor: 'var(--color-bg-main)', borderRadius: '0.5rem', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: field.type === 'lookup' ? '1fr 1fr 1fr 1fr' : 'repeat(3, 1fr)', gap: '0.75rem' }}>
                           <input
                             type="text"
                             value={field.label}
@@ -443,13 +465,43 @@ export default function SchemaBuilderPage() {
                           />
                           <select
                             value={field.type}
-                            onChange={(e) => updateField(index, 'type', e.target.value)}
+                            onChange={(e) => {
+                              const updatedFields = [...newSchema.fields];
+                              const current = updatedFields[index];
+                              if (current) {
+                                updatedFields[index] = { ...current, type: e.target.value };
+                              }
+                              setNewSchema({ ...newSchema, fields: updatedFields });
+                            }}
                             style={{ padding: '0.625rem 0.875rem', backgroundColor: 'var(--color-bg-paper)', color: 'var(--color-text-primary)', border: '1px solid var(--color-border-strong)', borderRadius: '0.5rem', fontSize: '0.875rem' }}
                           >
                             {FIELD_TYPES.map(type => (
                               <option key={type} value={type}>{type}</option>
                             ))}
                           </select>
+                          {field.type === 'lookup' && (
+                            <select
+                              value={field.config?.linkedSchema ?? ''}
+                              onChange={(e) => {
+                                const updatedFields = [...newSchema.fields];
+                                const current = updatedFields[index];
+                                if (current) {
+                                  updatedFields[index] = {
+                                    ...current,
+                                    config: { linkedSchema: e.target.value },
+                                    lookupEntity: e.target.value,
+                                  };
+                                }
+                                setNewSchema({ ...newSchema, fields: updatedFields });
+                              }}
+                              style={{ padding: '0.625rem 0.875rem', backgroundColor: 'var(--color-bg-paper)', color: 'var(--color-text-primary)', border: '1px solid var(--color-border-strong)', borderRadius: '0.5rem', fontSize: '0.875rem' }}
+                            >
+                              <option value="">Target Object...</option>
+                              {schemas.map(s => (
+                                <option key={s.id} value={s.id}>{s.icon} {s.name}</option>
+                              ))}
+                            </select>
+                          )}
                         </div>
 
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -571,7 +623,7 @@ export default function SchemaBuilderPage() {
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                     {editingSchema.fields.map((field, index) => (
-                      <div key={field.id} style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', padding: '0.75rem', backgroundColor: 'var(--color-bg-main)', borderRadius: '0.5rem', border: '1px solid var(--color-bg-elevated)' }}>
+                      <div key={field.id} style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', padding: '0.75rem', backgroundColor: 'var(--color-bg-main)', borderRadius: '0.5rem', border: '1px solid var(--color-bg-elevated)', flexWrap: 'wrap' }}>
                         <input
                           type="text"
                           value={field.label}
@@ -581,7 +633,7 @@ export default function SchemaBuilderPage() {
                             setEditingSchema({ ...editingSchema, fields: updatedFields });
                           }}
                           placeholder="Field Label"
-                          style={{ flex: 2, padding: '0.5rem', backgroundColor: 'var(--color-bg-main)', color: 'var(--color-text-primary)', border: '1px solid var(--color-border-strong)', borderRadius: '0.375rem', fontSize: '0.875rem' }}
+                          style={{ flex: 2, minWidth: '120px', padding: '0.5rem', backgroundColor: 'var(--color-bg-main)', color: 'var(--color-text-primary)', border: '1px solid var(--color-border-strong)', borderRadius: '0.375rem', fontSize: '0.875rem' }}
                         />
                         <select
                           value={field.type}
@@ -590,12 +642,32 @@ export default function SchemaBuilderPage() {
                             updatedFields[index] = { ...field, type: e.target.value };
                             setEditingSchema({ ...editingSchema, fields: updatedFields });
                           }}
-                          style={{ flex: 1, padding: '0.5rem', backgroundColor: 'var(--color-bg-main)', color: 'var(--color-text-primary)', border: '1px solid var(--color-border-strong)', borderRadius: '0.375rem', fontSize: '0.875rem' }}
+                          style={{ flex: 1, minWidth: '100px', padding: '0.5rem', backgroundColor: 'var(--color-bg-main)', color: 'var(--color-text-primary)', border: '1px solid var(--color-border-strong)', borderRadius: '0.375rem', fontSize: '0.875rem' }}
                         >
                           {FIELD_TYPES.map(type => (
                             <option key={type} value={type}>{type}</option>
                           ))}
                         </select>
+                        {field.type === 'lookup' && (
+                          <select
+                            value={field.config?.linkedSchema ?? field.lookupEntity ?? ''}
+                            onChange={(e) => {
+                              const updatedFields = [...editingSchema.fields];
+                              updatedFields[index] = {
+                                ...field,
+                                config: { linkedSchema: e.target.value },
+                                lookupEntity: e.target.value,
+                              };
+                              setEditingSchema({ ...editingSchema, fields: updatedFields });
+                            }}
+                            style={{ flex: 1, minWidth: '120px', padding: '0.5rem', backgroundColor: 'var(--color-bg-main)', color: 'var(--color-text-primary)', border: '1px solid var(--color-border-strong)', borderRadius: '0.375rem', fontSize: '0.875rem' }}
+                          >
+                            <option value="">Target Object...</option>
+                            {schemas.map(s => (
+                              <option key={s.id} value={s.id}>{s.icon} {s.name}</option>
+                            ))}
+                          </select>
+                        )}
                         <label style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: 'var(--color-text-secondary)', fontSize: '0.75rem' }}>
                           <input
                             type="checkbox"
@@ -633,14 +705,11 @@ export default function SchemaBuilderPage() {
                     Cancel
                   </button>
                   <button
-                    onClick={() => {
-                      // Update the schema in the list
-                      setSchemas(schemas.map(s => s.id === editingSchema.id ? editingSchema : s));
-                      setEditingSchema(null);
-                    }}
-                    style={{ flex: 1, padding: '0.75rem 1rem', backgroundColor: 'var(--color-primary)', color: 'white', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600', border: 'none' }}
+                    onClick={() => void saveEditedSchema()}
+                    disabled={saving}
+                    style={{ flex: 1, padding: '0.75rem 1rem', backgroundColor: saving ? 'var(--color-border-strong)' : 'var(--color-primary)', color: 'white', borderRadius: '0.5rem', cursor: saving ? 'not-allowed' : 'pointer', fontSize: '0.875rem', fontWeight: '600', border: 'none' }}
                   >
-                    Save Changes
+                    {saving ? 'Saving...' : 'Save Changes'}
                   </button>
                 </div>
               </div>
