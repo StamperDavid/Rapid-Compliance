@@ -24,7 +24,7 @@ const db = admin.firestore();
 async function setupSalesAgentGoldenMaster() {
   console.log('🛒 Setting up AI Chat Sales Agent - Golden Master...\n');
 
-  const orgId = 'platform';
+  const orgId = 'rapid-compliance-root';
   const goldenMasterId = 'sales-agent-v1';
 
   const goldenMaster = {

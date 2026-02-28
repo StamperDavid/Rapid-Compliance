@@ -21,7 +21,7 @@ const db = admin.firestore();
 async function setupJasperGoldenMaster() {
   console.log('🤖 Setting up Jasper - Internal AI Assistant & Swarm Commander...\n');
 
-  const orgId = 'platform';
+  const orgId = 'rapid-compliance-root';
   const goldenMasterId = 'jasper-v1';
 
   // Jasper's personality and knowledge
