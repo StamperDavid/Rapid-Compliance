@@ -5,14 +5,14 @@
 This document describes the Firestore database schema for the Form Builder module. The design is optimized for:
 
 1. **Read-heavy workloads** - Form rendering needs to be fast
-2. **Org-scoped isolation** - All data lives under `organizations/rapid-compliance-root`
+2. **Platform-scoped isolation** - All data lives under `organizations/rapid-compliance-root`
 3. **Efficient querying** - Common queries are supported with composite indexes
 4. **Scalability** - Subcollections prevent document size limits
 
 ## Collection Structure
 
 ```
-organizations/{orgId}/
+organizations/{PLATFORM_ID}/
 ├── forms/{formId}                              # Form definitions
 │   ├── fields/{fieldId}                        # Form fields (subcollection)
 │   ├── submissions/{submissionId}              # Form submissions (subcollection)
@@ -29,7 +29,7 @@ Use `getFormsCollection()` from `@/lib/firebase/collections` to get the canonica
 ### FormDefinition
 
 ```typescript
-// Path: organizations/{orgId}/forms/{formId}
+// Path: organizations/{PLATFORM_ID}/forms/{formId}
 {
   id: string;
 
@@ -80,7 +80,7 @@ Use `getFormsCollection()` from `@/lib/firebase/collections` to get the canonica
 ### FormFieldConfig
 
 ```typescript
-// Path: organizations/{orgId}/forms/{formId}/fields/{fieldId}
+// Path: organizations/{PLATFORM_ID}/forms/{formId}/fields/{fieldId}
 {
   id: string;
   formId: string;
@@ -122,7 +122,7 @@ Use `getFormsCollection()` from `@/lib/firebase/collections` to get the canonica
 ### FormSubmission
 
 ```typescript
-// Path: organizations/{orgId}/forms/{formId}/submissions/{submissionId}
+// Path: organizations/{PLATFORM_ID}/forms/{formId}/submissions/{submissionId}
 {
   id: string;
   formId: string;
@@ -184,7 +184,7 @@ Use `getFormsCollection()` from `@/lib/firebase/collections` to get the canonica
 ### FormAnalyticsSummary
 
 ```typescript
-// Path: organizations/{orgId}/forms/{formId}/analytics/{YYYY-MM-DD}
+// Path: organizations/{PLATFORM_ID}/forms/{formId}/analytics/{YYYY-MM-DD}
 {
   id: string;                      // Format: YYYY-MM-DD
   formId: string;
@@ -383,12 +383,12 @@ query(
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /organizations/{orgId}/forms/{formId} {
+    match /organizations/{PLATFORM_ID}/forms/{formId} {
       allow read: if isOrgMember() || resource.data.publicAccess == true;
       allow write: if isOrgMember();
 
       match /fields/{fieldId} {
-        allow read: if isOrgMember() || get(/databases/$(database)/documents/organizations/$(orgId)/forms/$(formId)).data.publicAccess == true;
+        allow read: if isOrgMember() || get(/databases/$(database)/documents/organizations/$(PLATFORM_ID)/forms/$(formId)).data.publicAccess == true;
         allow write: if isOrgMember();
       }
 
@@ -410,7 +410,7 @@ service cloud.firestore {
       }
     }
 
-    match /organizations/{orgId}/formTemplates/{templateId} {
+    match /organizations/{PLATFORM_ID}/formTemplates/{templateId} {
       allow read: if isOrgMember();
       allow write: if isOrgMember();
     }

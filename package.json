@@ -26,8 +26,6 @@
     "test:all": "npm run test && npm run test:e2e && npm run test:playwright",
     "firebase:init": "firebase init",
     "firebase:deploy": "firebase deploy",
-    "seed:test-orgs": "tsx scripts/seed-test-organizations.ts",
-    "seed:quick": "tsx scripts/seed-test-organizations.ts",
     "seed:e2e": "node scripts/seed-e2e-test-data.js",
     "seed:website-test": "node scripts/seed-website-test-data.js",
     "test:payments": "node scripts/test-payments.js",

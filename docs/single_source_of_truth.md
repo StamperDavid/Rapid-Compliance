@@ -155,7 +155,7 @@ The Claude Code Governance Layer defines binding operational constraints for AI-
 | **Facebook/Instagram** | No API implementation. Blocked: Meta Developer Portal approval | MEDIUM |
 | **LinkedIn** | Unofficial RapidAPI wrapper. Blocked: Marketing Developer Platform approval | MEDIUM |
 | **Stripe live keys** | Test keys configured; live keys blocked on bank account setup | MEDIUM |
-| **Skipped tests** | 52 `it.skip` — 31 need Firestore emulator, 16 obsolete tests to delete | MEDIUM |
+| **Skipped tests** | 37 `it.skip` — need external services (Firestore emulator, SendGrid, Twilio, Stripe) | LOW |
 | **Video render pipeline** | Returns "coming soon" without API keys; works when HeyGen/Sora/Runway keys configured | LOW |
 | **Stub integrations** | Square, Vonage, Resend, SMTP, Calendly — type defs only, no implementation | LOW |
 
