@@ -8,6 +8,9 @@ import { STANDARD_SCHEMAS, PICKLIST_VALUES } from '@/lib/schema/standard-schemas
 import { logger } from '@/lib/logger/logger';
 import LookupFieldPicker from '@/components/LookupFieldPicker';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
+import { useEntityConfig } from '@/hooks/useEntityConfig';
+import { getEntityMetadata } from '@/lib/constants/entity-config';
+import { useAuth } from '@/contexts/AuthContext';
 
 // Proper type for dynamic record data
 type RecordValue = string | number | boolean | null;
@@ -45,6 +48,8 @@ export default function EntityTablePage() {
   const params = useParams();
   const entityName = params.entityName as string;
   const authFetch = useAuthFetch();
+  const { isEntityEnabled, initialized: entityConfigInitialized } = useEntityConfig();
+  const { user } = useAuth();
 
   const {
     records,
@@ -431,6 +436,75 @@ export default function EntityTablePage() {
   const schemaIcon = schema?.icon;
   const entityIcon = (schemaIcon ?? '📋');
   const singularName = (schema?.singularName && schema.singularName !== '') ? schema.singularName : 'Record';
+
+  // Entity config gating — show "not enabled" banner if entity is disabled
+  const entityEnabled = isEntityEnabled(entityName);
+  const entityMeta = getEntityMetadata(entityName);
+  const isAdmin = (user as { role?: string } | null)?.role === 'admin' || (user as { role?: string } | null)?.role === 'owner';
+
+  if (entityConfigInitialized && !entityEnabled) {
+    const handleEnable = async () => {
+      try {
+        const res = await authFetch('/api/entity-config');
+        if (!res.ok) { return; }
+        const data = (await res.json()) as { config: { entities: Record<string, boolean> } | null };
+        const current = data.config?.entities ?? {};
+        await authFetch('/api/entity-config', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ entities: { ...current, [entityName]: true } }),
+        });
+        window.location.reload();
+      } catch {
+        // Silently fail — user can retry
+      }
+    };
+
+    return (
+      <div style={{ minHeight: '100vh', backgroundColor: 'var(--color-bg-main)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ maxWidth: '28rem', textAlign: 'center', padding: '3rem 2rem' }}>
+          <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>{entityMeta?.icon ?? entityIcon}</div>
+          <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
+            {entityMeta?.pluralLabel ?? entityDisplayName}
+          </h1>
+          <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem', marginBottom: '0.25rem' }}>
+            This entity is not currently enabled for your workspace.
+          </p>
+          {entityMeta?.description && (
+            <p style={{ color: 'var(--color-text-disabled)', fontSize: '0.8125rem', marginBottom: '1.5rem' }}>
+              {entityMeta.description}
+            </p>
+          )}
+          {isAdmin ? (
+            <button
+              onClick={() => void handleEnable()}
+              style={{
+                padding: '0.75rem 2rem',
+                backgroundColor: 'var(--color-primary)',
+                color: 'white',
+                borderRadius: '0.5rem',
+                border: 'none',
+                cursor: 'pointer',
+                fontSize: '0.875rem',
+                fontWeight: 600,
+              }}
+            >
+              Enable {entityMeta?.pluralLabel ?? entityDisplayName}
+            </button>
+          ) : (
+            <p style={{ color: 'var(--color-text-disabled)', fontSize: '0.8125rem' }}>
+              Contact your admin to enable this entity.
+            </p>
+          )}
+          <div style={{ marginTop: '1.5rem' }}>
+            <Link href="/schemas" style={{ color: 'var(--color-primary)', fontSize: '0.875rem', textDecoration: 'none' }}>
+              ← Back to Schemas
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: 'var(--color-bg-main)' }}>

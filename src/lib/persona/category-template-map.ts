@@ -17,6 +17,8 @@ export interface OnboardingCategory {
   description: string;
   color: string;
   templateIds: string[];
+  /** Industry-specific entity IDs to enable when this category is selected during onboarding */
+  defaultEntities?: string[];
   defaultPersona?: {
     tone: string;
     objectives: string[];
@@ -42,6 +44,7 @@ export const ONBOARDING_CATEGORIES: OnboardingCategory[] = [
       'mortgage-lending',
       'title-escrow',
     ],
+    defaultEntities: ['properties', 'showings'],
     defaultPersona: {
       tone: 'professional_friendly',
       objectives: ['Qualify buyers/sellers', 'Schedule viewings', 'Build trust'],
@@ -59,6 +62,7 @@ export const ONBOARDING_CATEGORIES: OnboardingCategory[] = [
       'architecture',
       'construction-development',
     ],
+    defaultEntities: ['projects', 'time_entries'],
     defaultPersona: {
       tone: 'creative_professional',
       objectives: ['Showcase portfolio', 'Book consultations', 'Demonstrate expertise'],
@@ -78,6 +82,7 @@ export const ONBOARDING_CATEGORIES: OnboardingCategory[] = [
       'chiropractic',
       'veterinary-practices',
     ],
+    defaultEntities: ['patients', 'appointments'],
     defaultPersona: {
       tone: 'empathetic_professional',
       objectives: ['Schedule appointments', 'Answer FAQs', 'Provide care information'],
@@ -95,6 +100,7 @@ export const ONBOARDING_CATEGORIES: OnboardingCategory[] = [
       'personal-training',
       'nutritional-coaching',
     ],
+    defaultEntities: ['patients', 'appointments'],
     defaultPersona: {
       tone: 'motivational_friendly',
       objectives: ['Sign up members', 'Book sessions', 'Motivate prospects'],
@@ -118,6 +124,7 @@ export const ONBOARDING_CATEGORIES: OnboardingCategory[] = [
       'electrical-services',
       'home-security',
     ],
+    defaultEntities: ['projects', 'time_entries'],
     defaultPersona: {
       tone: 'friendly_professional',
       objectives: ['Book appointments', 'Provide quotes', 'Schedule follow-ups'],
@@ -137,6 +144,7 @@ export const ONBOARDING_CATEGORIES: OnboardingCategory[] = [
       'managed-it-msp',
       'edtech',
     ],
+    defaultEntities: ['projects', 'time_entries', 'customers'],
     defaultPersona: {
       tone: 'professional',
       objectives: ['Qualify leads', 'Book demos', 'Reduce churn'],
@@ -149,6 +157,7 @@ export const ONBOARDING_CATEGORIES: OnboardingCategory[] = [
     description: 'Online stores, D2C brands, and retail businesses',
     color: '#8B5CF6',
     templateIds: ['ecommerce-d2c'],
+    defaultEntities: ['customers', 'inventory'],
     defaultPersona: {
       tone: 'professional_friendly',
       objectives: ['Convert visitors to buyers', 'Reduce cart abandonment', 'Increase AOV'],
@@ -161,6 +170,7 @@ export const ONBOARDING_CATEGORIES: OnboardingCategory[] = [
     description: 'Digital marketing, creative studios, and PR firms',
     color: '#A855F7',
     templateIds: ['digital-marketing'],
+    defaultEntities: ['projects', 'time_entries'],
     defaultPersona: {
       tone: 'creative_professional',
       objectives: ['Qualify leads', 'Showcase portfolio', 'Book discovery calls'],
@@ -173,6 +183,7 @@ export const ONBOARDING_CATEGORIES: OnboardingCategory[] = [
     description: 'Personal injury law and family law practices',
     color: '#6366F1',
     templateIds: ['law-personal-injury', 'family-law'],
+    defaultEntities: ['cases', 'billing_entries'],
     defaultPersona: {
       tone: 'professional',
       objectives: ['Qualify prospects', 'Schedule consultations', 'Build trust'],
@@ -185,6 +196,7 @@ export const ONBOARDING_CATEGORIES: OnboardingCategory[] = [
     description: 'Accounting, financial planning, and insurance',
     color: '#0EA5E9',
     templateIds: ['accounting-tax', 'financial-planning', 'insurance-agency'],
+    defaultEntities: ['projects', 'time_entries'],
     defaultPersona: {
       tone: 'trustworthy_professional',
       objectives: ['Qualify leads', 'Schedule consultations', 'Build trust'],
@@ -197,6 +209,7 @@ export const ONBOARDING_CATEGORIES: OnboardingCategory[] = [
     description: 'Business coaching, recruitment, and logistics',
     color: '#14B8A6',
     templateIds: ['business-coaching', 'recruitment-hr', 'logistics-freight'],
+    defaultEntities: ['projects', 'time_entries'],
     defaultPersona: {
       tone: 'professional',
       objectives: ['Qualify prospects', 'Schedule consultations', 'Showcase expertise'],
@@ -209,6 +222,7 @@ export const ONBOARDING_CATEGORIES: OnboardingCategory[] = [
     description: 'Restaurants, travel concierge, and event planning',
     color: '#F59E0B',
     templateIds: ['mexican-restaurant', 'travel-concierge', 'event-planning'],
+    defaultEntities: ['customers', 'inventory'],
     defaultPersona: {
       tone: 'warm_professional',
       objectives: ['Book reservations', 'Answer inquiries', 'Upsell experiences'],
@@ -221,6 +235,7 @@ export const ONBOARDING_CATEGORIES: OnboardingCategory[] = [
     description: 'Charitable organizations, NGOs, and community groups',
     color: '#F43F5E',
     templateIds: ['nonprofit-fundraising'],
+    defaultEntities: [],
     defaultPersona: {
       tone: 'warm_passionate',
       objectives: ['Engage donors', 'Share impact stories', 'Recruit volunteers'],
@@ -233,6 +248,7 @@ export const ONBOARDING_CATEGORIES: OnboardingCategory[] = [
     description: 'Dealerships, auto services, and vehicle sales',
     color: '#64748B',
     templateIds: [],
+    defaultEntities: ['drivers', 'vehicles', 'compliance_documents'],
     defaultPersona: {
       tone: 'professional_friendly',
       objectives: ['Schedule test drives', 'Qualify buyers', 'Book service appointments'],
@@ -245,6 +261,7 @@ export const ONBOARDING_CATEGORIES: OnboardingCategory[] = [
     description: 'Content creators, streamers, and digital personalities',
     color: '#EC4899',
     templateIds: [],
+    defaultEntities: [],
     defaultPersona: {
       tone: 'casual_friendly',
       objectives: ['Build authentic connections', 'Drive engagement', 'Convert followers to customers'],

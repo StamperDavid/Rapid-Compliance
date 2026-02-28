@@ -20,6 +20,9 @@ import { FeatureModuleCard } from './components/FeatureModuleCard';
 import { BusinessQuestionCard } from './components/BusinessQuestionCard';
 import { ApiKeySetupCard } from './components/ApiKeySetupCard';
 import { OnboardingSummary } from './components/OnboardingSummary';
+import { useEntityConfig } from '@/hooks/useEntityConfig';
+import { ENTITY_METADATA, ALWAYS_ON_ENTITIES } from '@/lib/constants/entity-config';
+import type { EntityMetadata } from '@/types/entity-config';
 
 // Business question definitions
 const BUSINESS_QUESTIONS = [
@@ -82,15 +85,25 @@ const DEFAULT_BUSINESS_PROFILE: BusinessProfile = {
 export default function FeaturesPage() {
   const router = useRouter();
   const { config, updateAllModules, setConfig, loadConfig, initialized } = useFeatureModules();
+  const { config: entityConfig, isEntityEnabled, updateEntity, loadConfig: loadEntityConfig, initialized: entityConfigInitialized } = useEntityConfig();
 
   const [activeTab, setActiveTab] = useState('business');
   const [businessProfile, setBusinessProfile] = useState<BusinessProfile>(DEFAULT_BUSINESS_PROFILE);
   const [modules, setModules] = useState<Record<FeatureModuleId, boolean>>(
     DEFAULT_FEATURE_CONFIG.modules,
   );
+  const [entityToggles, setEntityToggles] = useState<Record<string, boolean>>({});
+  const [savingEntities, setSavingEntities] = useState(false);
   const [configuredKeys, setConfiguredKeys] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
   const [launching, setLaunching] = useState(false);
+
+  // Load existing entity config
+  useEffect(() => {
+    if (entityConfigInitialized && entityConfig) {
+      setEntityToggles(entityConfig.entities);
+    }
+  }, [entityConfigInitialized, entityConfig]);
 
   // Load existing config
   useEffect(() => {
@@ -195,9 +208,9 @@ export default function FeaturesPage() {
         setConfig(data.config);
         updateAllModules(modules);
       }
-      setActiveTab('api-keys');
+      setActiveTab('entities');
     } catch {
-      setActiveTab('api-keys');
+      setActiveTab('entities');
     } finally {
       setSaving(false);
     }
@@ -271,8 +284,9 @@ export default function FeaturesPage() {
         >
           <TabsTrigger value="business" style={{ flex: 1 }}>1. Your Business</TabsTrigger>
           <TabsTrigger value="modules" style={{ flex: 1 }}>2. Features</TabsTrigger>
-          <TabsTrigger value="api-keys" style={{ flex: 1 }}>3. API Keys</TabsTrigger>
-          <TabsTrigger value="summary" style={{ flex: 1 }}>4. Summary</TabsTrigger>
+          <TabsTrigger value="entities" style={{ flex: 1 }}>3. CRM Entities</TabsTrigger>
+          <TabsTrigger value="api-keys" style={{ flex: 1 }}>4. API Keys</TabsTrigger>
+          <TabsTrigger value="summary" style={{ flex: 1 }}>5. Summary</TabsTrigger>
         </TabsList>
 
         {/* ── Tab 1: Your Business ──────────────────────────────────── */}
@@ -365,7 +379,216 @@ export default function FeaturesPage() {
           </button>
         </TabsContent>
 
-        {/* ── Tab 3: API Keys Setup ────────────────────────────────── */}
+        {/* ── Tab 3: CRM Entities ──────────────────────────────────── */}
+        <TabsContent value="entities">
+          {/* Always-On Entities */}
+          <h3 style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--color-text-disabled)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem' }}>
+            Always On
+          </h3>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '0.75rem', marginBottom: '1.5rem' }}>
+            {ALWAYS_ON_ENTITIES.map((entityId) => (
+              <div
+                key={entityId}
+                style={{
+                  padding: '0.875rem 1rem',
+                  borderRadius: '0.5rem',
+                  border: '1px solid var(--color-border-light)',
+                  backgroundColor: 'var(--color-bg-elevated)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.75rem',
+                  opacity: 0.6,
+                }}
+              >
+                <span style={{ fontSize: '1.25rem' }}>
+                  {entityId === 'leads' ? '🎯' : entityId === 'contacts' ? '👤' : entityId === 'companies' ? '🏢' : entityId === 'deals' ? '💼' : '✅'}
+                </span>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--color-text-primary)' }}>
+                    {entityId.charAt(0).toUpperCase() + entityId.slice(1)}
+                  </div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)' }}>Core CRM — always enabled</div>
+                </div>
+                <span style={{ fontSize: '0.625rem', fontWeight: '600', color: 'var(--color-success)', backgroundColor: 'var(--color-success-dark)', padding: '0.125rem 0.5rem', borderRadius: '9999px', textTransform: 'uppercase' }}>
+                  Locked
+                </span>
+              </div>
+            ))}
+          </div>
+
+          {/* CRM Extended */}
+          <h3 style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--color-text-disabled)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem' }}>
+            CRM Extended
+          </h3>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '0.75rem', marginBottom: '1.5rem' }}>
+            {ENTITY_METADATA.filter((e) => e.tier === 'crm_extended').map((entity: EntityMetadata) => {
+              const enabled = entityToggles[entity.id] ?? isEntityEnabled(entity.id);
+              return (
+                <div
+                  key={entity.id}
+                  style={{
+                    padding: '0.875rem 1rem',
+                    borderRadius: '0.5rem',
+                    border: `1px solid ${enabled ? 'var(--color-primary)' : 'var(--color-border-light)'}`,
+                    backgroundColor: enabled ? 'rgba(var(--color-primary-rgb), 0.04)' : 'var(--color-bg-paper)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.75rem',
+                    cursor: 'pointer',
+                    transition: 'border-color 0.2s, background-color 0.2s',
+                  }}
+                  onClick={() => setEntityToggles((prev) => ({ ...prev, [entity.id]: !enabled }))}
+                >
+                  <span style={{ fontSize: '1.25rem' }}>{entity.icon}</span>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--color-text-primary)' }}>{entity.pluralLabel}</div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>{entity.description}</div>
+                  </div>
+                  <div
+                    style={{
+                      width: '2.5rem',
+                      height: '1.375rem',
+                      borderRadius: '9999px',
+                      backgroundColor: enabled ? 'var(--color-primary)' : 'var(--color-border-strong)',
+                      position: 'relative',
+                      transition: 'background-color 0.2s',
+                      flexShrink: 0,
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: '1rem',
+                        height: '1rem',
+                        borderRadius: '50%',
+                        backgroundColor: 'white',
+                        position: 'absolute',
+                        top: '0.1875rem',
+                        left: enabled ? '1.3125rem' : '0.1875rem',
+                        transition: 'left 0.2s',
+                      }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Industry-Specific */}
+          <h3 style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--color-text-disabled)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem' }}>
+            Industry-Specific
+          </h3>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '0.75rem', marginBottom: '1.5rem' }}>
+            {ENTITY_METADATA.filter((e) => e.tier === 'industry_specific').map((entity: EntityMetadata) => {
+              const enabled = entityToggles[entity.id] ?? isEntityEnabled(entity.id);
+              return (
+                <div
+                  key={entity.id}
+                  style={{
+                    padding: '0.875rem 1rem',
+                    borderRadius: '0.5rem',
+                    border: `1px solid ${enabled ? 'var(--color-primary)' : 'var(--color-border-light)'}`,
+                    backgroundColor: enabled ? 'rgba(var(--color-primary-rgb), 0.04)' : 'var(--color-bg-paper)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.75rem',
+                    cursor: 'pointer',
+                    transition: 'border-color 0.2s, background-color 0.2s',
+                  }}
+                  onClick={() => setEntityToggles((prev) => ({ ...prev, [entity.id]: !enabled }))}
+                >
+                  <span style={{ fontSize: '1.25rem' }}>{entity.icon}</span>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--color-text-primary)' }}>{entity.pluralLabel}</div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>{entity.description}</div>
+                  </div>
+                  <div
+                    style={{
+                      width: '2.5rem',
+                      height: '1.375rem',
+                      borderRadius: '9999px',
+                      backgroundColor: enabled ? 'var(--color-primary)' : 'var(--color-border-strong)',
+                      position: 'relative',
+                      transition: 'background-color 0.2s',
+                      flexShrink: 0,
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: '1rem',
+                        height: '1rem',
+                        borderRadius: '50%',
+                        backgroundColor: 'white',
+                        position: 'absolute',
+                        top: '0.1875rem',
+                        left: enabled ? '1.3125rem' : '0.1875rem',
+                        transition: 'left 0.2s',
+                      }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div
+            style={{
+              padding: '0.75rem 1rem',
+              borderRadius: '0.5rem',
+              backgroundColor: 'rgba(var(--color-text-primary-rgb, 255, 255, 255), 0.03)',
+              border: '1px solid var(--color-border-light)',
+              fontSize: '0.8125rem',
+              color: 'var(--color-text-disabled)',
+              marginBottom: '1rem',
+            }}
+          >
+            <strong style={{ color: 'var(--color-text-secondary)' }}>Platform schemas</strong>{' '}
+            (activities, campaigns, workflows, etc.) are controlled by the Feature Modules tab above.
+          </div>
+
+          <button
+            type="button"
+            disabled={savingEntities}
+            onClick={() => {
+              void (async () => {
+                setSavingEntities(true);
+                try {
+                  const res = await fetch('/api/entity-config', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ entities: entityToggles }),
+                  });
+                  if (res.ok) {
+                    // Update store with each toggle
+                    for (const [id, enabled] of Object.entries(entityToggles)) {
+                      updateEntity(id, enabled);
+                    }
+                    await loadEntityConfig();
+                  }
+                  setActiveTab('api-keys');
+                } catch {
+                  setActiveTab('api-keys');
+                } finally {
+                  setSavingEntities(false);
+                }
+              })();
+            }}
+            style={{
+              padding: '0.75rem 2rem',
+              borderRadius: '0.5rem',
+              border: 'none',
+              backgroundColor: 'var(--color-primary)',
+              color: 'white',
+              fontSize: '0.875rem',
+              fontWeight: 600,
+              cursor: savingEntities ? 'not-allowed' : 'pointer',
+              opacity: savingEntities ? 0.7 : 1,
+            }}
+          >
+            {savingEntities ? 'Saving...' : 'Save & Continue'}
+          </button>
+        </TabsContent>
+
+        {/* ── Tab 4: API Keys Setup ────────────────────────────────── */}
         <TabsContent value="api-keys">
           {requiredApiKeys.length === 0 ? (
             <div

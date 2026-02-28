@@ -10,6 +10,7 @@ import { STANDARD_SCHEMAS } from '@/lib/schema/standard-schemas';
 import { useConfirm } from '@/hooks/useConfirm';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { useAuth } from '@/contexts/AuthContext';
+import { useEntityConfig } from '@/hooks/useEntityConfig';
 
 interface Field {
   id: string;
@@ -70,6 +71,7 @@ export default function SchemaBuilderPage() {
   const confirmDialog = useConfirm();
   const authFetch = useAuthFetch();
   const { user } = useAuth();
+  const { isEntityEnabled } = useEntityConfig();
 
   // Convert STANDARD_SCHEMAS to the format we need
   const standardSchemasArray: Schema[] = useMemo(() => Object.values(STANDARD_SCHEMAS).map(schema => ({
@@ -316,8 +318,11 @@ export default function SchemaBuilderPage() {
           {!loading && schemas.length === 0 && (
             <div style={{ color: 'var(--color-text-secondary)' }}>No schemas found. Create one to get started.</div>
           )}
-          {schemas.map((schema) => (
-            <div key={schema.id} style={{ backgroundColor: 'var(--color-bg-paper)', borderRadius: 'var(--radius-card)', border: '1px solid var(--color-border-main)', padding: '1.5rem' }}>
+          {schemas.map((schema) => {
+            const entityId = (schema.id || schema.name).toLowerCase();
+            const disabled = !isEntityEnabled(entityId);
+            return (
+            <div key={schema.id} style={{ backgroundColor: 'var(--color-bg-paper)', borderRadius: 'var(--radius-card)', border: '1px solid var(--color-border-main)', padding: '1.5rem', opacity: disabled ? 0.5 : 1, transition: 'opacity 0.2s' }}>
               <div style={{ display: 'flex', alignItems: 'start', justifyContent: 'space-between', marginBottom: '1rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                   <span style={{ fontSize: '2rem' }}>{schema.icon}</span>
@@ -326,6 +331,9 @@ export default function SchemaBuilderPage() {
                       <h3 style={{ fontSize: '1.125rem', fontWeight: 'bold', color: 'var(--color-text-primary)', margin: 0 }}>{schema.name}</h3>
                       {schema.isStandard && (
                         <span style={{ fontSize: '0.625rem', fontWeight: '600', color: 'var(--color-primary)', backgroundColor: 'var(--color-primary-dark)', padding: '0.125rem 0.5rem', borderRadius: '9999px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Standard</span>
+                      )}
+                      {disabled && (
+                        <span style={{ fontSize: '0.625rem', fontWeight: '600', color: 'var(--color-text-disabled)', backgroundColor: 'var(--color-bg-elevated)', padding: '0.125rem 0.5rem', borderRadius: '9999px', textTransform: 'uppercase', letterSpacing: '0.05em', border: '1px solid var(--color-border-light)' }}>Disabled</span>
                       )}
                     </div>
                     <p style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', margin: 0 }}>{schema.pluralName}</p>
@@ -358,12 +366,22 @@ export default function SchemaBuilderPage() {
               </div>
 
               <div style={{ paddingTop: '1rem', borderTop: '1px solid var(--color-border-main)', display: 'flex', gap: '0.5rem' }}>
-                <Link
-                  href={`/entities/${(schema.id || schema.name).toLowerCase()}`}
-                  style={{ flex: 1, textAlign: 'center', padding: '0.625rem 0.875rem', backgroundColor: 'var(--color-bg-elevated)', color: 'var(--color-primary)', borderRadius: 'var(--radius-button)', fontSize: '0.875rem', textDecoration: 'none', border: '1px solid var(--color-border-main)', fontWeight: '500' }}
-                >
-                  View Data
-                </Link>
+                {!disabled && (
+                  <Link
+                    href={`/entities/${entityId}`}
+                    style={{ flex: 1, textAlign: 'center', padding: '0.625rem 0.875rem', backgroundColor: 'var(--color-bg-elevated)', color: 'var(--color-primary)', borderRadius: 'var(--radius-button)', fontSize: '0.875rem', textDecoration: 'none', border: '1px solid var(--color-border-main)', fontWeight: '500' }}
+                  >
+                    View Data
+                  </Link>
+                )}
+                {disabled && (
+                  <Link
+                    href="/settings/features"
+                    style={{ flex: 1, textAlign: 'center', padding: '0.625rem 0.875rem', backgroundColor: 'var(--color-bg-elevated)', color: 'var(--color-text-disabled)', borderRadius: 'var(--radius-button)', fontSize: '0.875rem', textDecoration: 'none', border: '1px solid var(--color-border-light)', fontWeight: '500' }}
+                  >
+                    Enable in Settings
+                  </Link>
+                )}
                 {!schema.isStandard && (
                   <button
                     onClick={() => setEditingSchema(schema)}
@@ -374,7 +392,8 @@ export default function SchemaBuilderPage() {
                 )}
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
 
         {/* Create Schema Form */}
