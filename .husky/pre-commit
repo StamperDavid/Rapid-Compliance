@@ -19,4 +19,10 @@ node scripts/run-tsc-check.js || exit 1
 echo "Bypass Ratchet: Checking eslint-disable budget..."
 node scripts/check-bypass-budget.js || exit 1
 
+# Step 4: Auto-compile Alex knowledge if AGENT_REGISTRY.json changed
+if git diff --cached --name-only | grep -q "AGENT_REGISTRY.json"; then
+  echo "Alex: AGENT_REGISTRY.json changed — recompiling sales knowledge..."
+  node scripts/compile-alex-knowledge.js --deploy || echo "⚠️  Alex deploy failed (non-blocking) — run manually: node scripts/compile-alex-knowledge.js --deploy"
+fi
+
 echo "Quality check passed!"
