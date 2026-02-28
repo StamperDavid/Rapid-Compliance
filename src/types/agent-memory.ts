@@ -357,6 +357,14 @@ export interface OnboardingData {
 
   // ===== INDUSTRY TEMPLATE (Step 15.5) =====
   industryTemplateId?: string; // ID of selected niche template for mutation
+
+  // ===== ONBOARDING CATEGORY / NICHE (from 4-step onboarding) =====
+  industryCategory?: string;
+  industryCategoryName?: string;
+  industryTemplateName?: string;
+  injectionAnswer?: string | string[];
+  injectionVariable?: string;
+  customNiche?: string;
   
   // ===== AGENT IDENTITY (Step 16) =====
   agentName?: string;

@@ -1,11 +1,11 @@
 'use client';
 
 /**
- * Account Creation Page
+ * Account Creation Page — Step 3 of 4
  *
- * Second step of onboarding - create account after industry selection.
- * Skips plan selection entirely - users get default trial plan.
- * Updated with glassmorphism theme to match industry selection page.
+ * Creates Firebase Auth user + Firestore profile.
+ * Enriched with category/template/injection data from steps 1-2.
+ * On success → /onboarding/setup (API key step).
  */
 
 import { useState, useEffect } from 'react';
@@ -26,8 +26,13 @@ export default function AccountCreationPage() {
   const router = useRouter();
   const { user } = useAuth();
   const {
+    selectedCategory,
+    selectedTemplate,
     selectedIndustry,
     customIndustry,
+    injectionAnswer,
+    injectionVariable,
+    customNiche,
     fullName,
     email: storedEmail,
     phoneNumber,
@@ -47,14 +52,14 @@ export default function AccountCreationPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  // Redirect if no industry selected
+  // Redirect if no category selected
   useEffect(() => {
-    if (!selectedIndustry) {
+    if (!selectedCategory && !selectedIndustry) {
       router.push('/onboarding/industry');
     }
-  }, [selectedIndustry, router]);
+  }, [selectedCategory, selectedIndustry, router]);
 
-  // If already logged in, redirect to their workspace
+  // If already logged in, redirect
   useEffect(() => {
     if (user) {
       router.push('/');
@@ -90,10 +95,7 @@ export default function AccountCreationPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!validateForm()) {
-      return;
-    }
+    if (!validateForm()) { return; }
 
     setIsLoading(true);
 
@@ -111,8 +113,7 @@ export default function AccountCreationPage() {
 
       const userId = userCredential.user.uid;
 
-      // Step 2: Atomic batch write — org membership + user profile
-      // If this fails, we roll back the Firebase Auth user to prevent orphans
+      // Step 2: Atomic batch write
       try {
         const batch = writeBatch(db);
 
@@ -123,7 +124,7 @@ export default function AccountCreationPage() {
           updatedAt: serverTimestamp(),
         });
 
-        // Create user profile with explicit role assignment
+        // Create user profile with enriched industry data
         const userRef = doc(db, COLLECTIONS.USERS, userId);
         batch.set(userRef, {
           email: formData.email,
@@ -133,8 +134,20 @@ export default function AccountCreationPage() {
           organizations: [PLATFORM_ID],
           defaultOrganization: PLATFORM_ID,
           companyName: formData.companyName,
-          industry: selectedIndustry?.id ?? 'other',
-          industryName: selectedIndustry?.name ?? customIndustry ?? 'Other',
+
+          // New: enriched industry data
+          industryCategory: selectedCategory?.id ?? selectedIndustry?.id ?? 'other',
+          industryCategoryName: selectedCategory?.name ?? selectedIndustry?.name ?? customIndustry ?? 'Other',
+          industryTemplateId: selectedTemplate?.id ?? null,
+          industryTemplateName: selectedTemplate?.name ?? null,
+          injectionAnswer: injectionAnswer ?? null,
+          injectionVariable: injectionVariable ?? null,
+          customNiche: customNiche || null,
+
+          // Backward compat
+          industry: selectedCategory?.id ?? selectedIndustry?.id ?? 'other',
+          industryName: selectedCategory?.name ?? selectedIndustry?.name ?? customIndustry ?? 'Other',
+
           role: 'member',
           status: 'active',
           emailVerified: false,
@@ -142,7 +155,7 @@ export default function AccountCreationPage() {
           updatedAt: serverTimestamp(),
         });
 
-        // Write default feature config (CRM-only) for new users
+        // Write default feature config
         const featureConfigRef = doc(
           db,
           COLLECTIONS.ORGANIZATIONS,
@@ -158,17 +171,15 @@ export default function AccountCreationPage() {
 
         await batch.commit();
       } catch (batchError: unknown) {
-        // Rollback: delete the orphaned Firebase Auth user
         await deleteUser(userCredential.user);
         throw batchError;
       }
 
-      // Store account info and redirect to dashboard
+      // Store account info and redirect to API key setup
       setAccountInfo(formData.email, formData.companyName);
-      setStep('complete');
-      router.push('/dashboard');
+      setStep('apikey');
+      router.push('/onboarding/setup');
     } catch (error: unknown) {
-
       if (error instanceof Error && 'code' in error) {
         const firebaseError = error as { code: string };
         if (firebaseError.code === 'auth/email-already-in-use') {
@@ -186,7 +197,10 @@ export default function AccountCreationPage() {
     }
   };
 
-  const industryDisplay = customIndustry ?? selectedIndustry?.name ?? 'Your Industry';
+  // Industry badge display
+  const categoryDisplay = selectedCategory?.name ?? customIndustry ?? selectedIndustry?.name ?? 'Your Industry';
+  const categoryIcon = selectedCategory?.icon ?? selectedIndustry?.icon ?? '🌐';
+  const nicheDisplay = selectedTemplate?.name;
 
   const handleFormSubmit = (e: React.FormEvent) => {
     void handleSubmit(e);
@@ -194,13 +208,9 @@ export default function AccountCreationPage() {
 
   return (
     <div className="min-h-screen bg-black">
-      {/* Background gradient */}
       <div className="absolute inset-0 bg-gradient-to-br from-indigo-950/30 via-black to-purple-950/20" />
-
-      {/* Grid pattern overlay */}
       <div className="absolute inset-0 bg-[url('/grid.svg')] bg-center opacity-5" />
 
-      {/* Content */}
       <div className="relative z-10 max-w-xl mx-auto px-4 py-12">
         {/* Header */}
         <div className="text-center mb-8">
@@ -219,10 +229,16 @@ export default function AccountCreationPage() {
               Create your account
             </h1>
 
-            {/* Industry badge */}
+            {/* Industry badge: category > niche */}
             <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/5 backdrop-blur-sm rounded-full border border-white/10">
-              <span className="text-lg">{selectedIndustry?.icon ?? '🌐'}</span>
-              <span className="text-gray-300">{industryDisplay}</span>
+              <span className="text-lg">{categoryIcon}</span>
+              <span className="text-gray-300">{categoryDisplay}</span>
+              {nicheDisplay && (
+                <>
+                  <span className="text-gray-500">&rsaquo;</span>
+                  <span className="text-white text-sm">{nicheDisplay}</span>
+                </>
+              )}
               <Link
                 href="/onboarding/industry"
                 className="text-indigo-400 hover:text-indigo-300 text-sm ml-2 transition-colors"
@@ -232,15 +248,16 @@ export default function AccountCreationPage() {
             </div>
           </motion.div>
 
-          {/* Progress indicator */}
+          {/* Progress: 3/4 */}
           <div className="flex items-center justify-center gap-2 mt-6">
+            <div className="w-10 h-1.5 rounded-full bg-indigo-500" />
             <div className="w-10 h-1.5 rounded-full bg-indigo-500" />
             <div className="w-10 h-1.5 rounded-full bg-indigo-500" />
             <div className="w-10 h-1.5 rounded-full bg-white/10" />
           </div>
         </div>
 
-        {/* Form Card - Glassmorphism */}
+        {/* Form Card */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -270,7 +287,7 @@ export default function AccountCreationPage() {
               )}
             </div>
 
-            {/* Email - Pre-filled from step 1 */}
+            {/* Email */}
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">
                 Email Address <span className="text-red-400">*</span>
@@ -365,7 +382,7 @@ export default function AccountCreationPage() {
               </div>
             </div>
 
-            {/* Submit Button */}
+            {/* Submit */}
             <button
               type="submit"
               disabled={isLoading}
@@ -390,7 +407,6 @@ export default function AccountCreationPage() {
             </button>
           </form>
 
-          {/* Terms */}
           <p className="mt-6 text-center text-gray-500 text-sm">
             By creating an account, you agree to our{' '}
             <Link href="/terms" className="text-indigo-400 hover:text-indigo-300 transition-colors">
@@ -403,7 +419,6 @@ export default function AccountCreationPage() {
           </p>
         </motion.div>
 
-        {/* Sign In Link */}
         <div className="mt-8 text-center text-gray-500 text-sm">
           Already have an account?{' '}
           <Link href="/login" className="text-indigo-400 hover:text-indigo-300 transition-colors">

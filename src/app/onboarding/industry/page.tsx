@@ -1,63 +1,75 @@
 'use client';
 
 /**
- * Industry Selection Page (Refactored)
+ * Industry Selection Page — Step 1 of 4
  *
- * First step of the onboarding flow - collects user info and industry selection
- * via a searchable combobox dropdown with glassmorphism styling.
+ * Collects contact info + industry CATEGORY selection (15 categories).
+ * Uses a searchable combobox dropdown with glassmorphism styling.
+ *
+ * After category selection:
+ *  - If 0 templates → show "Describe your niche" inline
+ *  - If 1 template  → show the injection question inline
+ *  - If 2+ templates → continue to /onboarding/niche
  */
 
-import { useState, useRef, useEffect, useMemo } from 'react';
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useOnboardingStore } from '@/lib/stores/onboarding-store';
 import {
-  useOnboardingStore,
-  INDUSTRIES,
-  type IndustryOption,
-} from '@/lib/stores/onboarding-store';
-import { Search, ChevronDown, Check, User, Mail, Phone, FileText } from 'lucide-react';
+  ONBOARDING_CATEGORIES,
+  type OnboardingCategory,
+  categoryHasDrillDown,
+  categorySingleTemplateId,
+} from '@/lib/persona/category-template-map';
+import {
+  getIndustryInjectionQuestion,
+  type IndustryInjectionQuestion,
+} from '@/lib/persona/industry-injection-questions';
+import { Search, ChevronDown, Check, User, Mail, Phone } from 'lucide-react';
 
 export default function IndustrySelectionPage() {
   const router = useRouter();
   const {
-    selectedIndustry,
-    setIndustry,
-    setCustomIndustry,
+    selectedCategory,
+    setCategory,
+    setTemplate,
+    setInjectionAnswer,
+    setCustomNiche,
     setContactInfo,
     setStep,
     fullName: storedFullName,
     email: storedEmail,
     phoneNumber: storedPhoneNumber,
-    nicheDescription: storedNicheDescription,
   } = useOnboardingStore();
 
   // Form state
   const [fullName, setFullName] = useState(storedFullName || '');
   const [email, setEmail] = useState(storedEmail || '');
   const [phoneNumber, setPhoneNumber] = useState(storedPhoneNumber || '');
-  const [nicheDescription, setNicheDescription] = useState(storedNicheDescription || '');
 
   // Combobox state
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [customIndustryInput, setCustomIndustryInput] = useState('');
-  const [showCustomInput, setShowCustomInput] = useState(false);
+
+  // Inline fields for 0-template and 1-template categories
+  const [customNicheInput, setCustomNicheInput] = useState('');
+  const [inlineInjection, setInlineInjection] = useState<IndustryInjectionQuestion | null>(null);
+  const [inlineAnswer, setInlineAnswer] = useState<string | string[]>('');
 
   // Refs
   const dropdownRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // Filter industries based on search
-  const filteredIndustries = useMemo(() => {
-    if (!searchQuery.trim()) {
-      return INDUSTRIES;
-    }
+  // Filter categories based on search
+  const filteredCategories = useMemo(() => {
+    if (!searchQuery.trim()) { return ONBOARDING_CATEGORIES; }
     const query = searchQuery.toLowerCase();
-    return INDUSTRIES.filter(
-      (industry) =>
-        industry.name.toLowerCase().includes(query) ||
-        industry.description.toLowerCase().includes(query)
+    return ONBOARDING_CATEGORIES.filter(
+      (c) =>
+        c.name.toLowerCase().includes(query) ||
+        c.description.toLowerCase().includes(query)
     );
   }, [searchQuery]);
 
@@ -79,65 +91,80 @@ export default function IndustrySelectionPage() {
     }
   }, [isOpen]);
 
-  const handleSelectIndustry = (industry: IndustryOption) => {
-    if (industry.id === 'other') {
-      setShowCustomInput(true);
-      setIndustry(industry);
-    } else {
-      setIndustry(industry);
-      setShowCustomInput(false);
-      setCustomIndustryInput('');
-    }
+  const handleSelectCategory = useCallback((category: OnboardingCategory) => {
+    setCategory(category);
     setIsOpen(false);
     setSearchQuery('');
-  };
 
-  const validateEmail = (email: string) => {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-  };
+    // Reset inline fields
+    setCustomNicheInput('');
+    setInlineAnswer('');
+
+    // Check if 1-template category — load injection question inline
+    const singleId = categorySingleTemplateId(category.id);
+    if (singleId) {
+      const q = getIndustryInjectionQuestion(singleId);
+      setInlineInjection(q);
+      // Also set the template in store immediately
+      setTemplate({ id: singleId, name: category.name, description: category.description });
+    } else {
+      setInlineInjection(null);
+      setTemplate(null);
+    }
+  }, [setCategory, setTemplate]);
+
+  const validateEmail = (val: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val);
 
   const isFormValid = () => {
-    return (
-      fullName.trim() !== '' &&
-      email.trim() !== '' &&
-      validateEmail(email) &&
-      selectedIndustry !== null &&
-      (selectedIndustry.id !== 'other' || customIndustryInput.trim() !== '')
-    );
+    if (!fullName.trim() || !email.trim() || !validateEmail(email) || !selectedCategory) {
+      return false;
+    }
+    // For 0-template categories, require custom niche
+    if (selectedCategory.templateIds.length === 0 && !customNicheInput.trim()) {
+      return false;
+    }
+    return true;
   };
 
   const handleContinue = () => {
-    if (!isFormValid()) {
-      return;
-    }
+    if (!isFormValid() || !selectedCategory) { return; }
 
-    // Save contact info to store
+    // Save contact info
     setContactInfo({
       fullName: fullName.trim(),
       email: email.trim(),
       phoneNumber: phoneNumber.trim(),
-      nicheDescription: nicheDescription.trim(),
+      nicheDescription: '', // No longer used — replaced by customNiche / injection
     });
 
-    // Save custom industry if applicable
-    if (selectedIndustry?.id === 'other' && customIndustryInput.trim()) {
-      setCustomIndustry(customIndustryInput.trim());
+    // Save inline answers if applicable
+    if (selectedCategory.templateIds.length === 0) {
+      setCustomNiche(customNicheInput.trim());
     }
 
-    // Navigate to next step
-    setStep('account');
-    router.push('/onboarding/account');
+    if (inlineInjection && inlineAnswer) {
+      setInjectionAnswer(inlineAnswer, inlineInjection.variable);
+    }
+
+    // Route decision
+    if (categoryHasDrillDown(selectedCategory.id)) {
+      setStep('niche');
+      router.push('/onboarding/niche');
+    } else {
+      setStep('account');
+      router.push('/onboarding/account');
+    }
   };
+
+  // Determine if we need inline fields
+  const showCustomNicheField = selectedCategory?.templateIds.length === 0;
+  const showInlineInjection = selectedCategory && inlineInjection;
 
   return (
     <div className="min-h-screen bg-black">
-      {/* Background gradient */}
       <div className="absolute inset-0 bg-gradient-to-br from-indigo-950/30 via-black to-purple-950/20" />
-
-      {/* Grid pattern overlay */}
       <div className="absolute inset-0 bg-[url('/grid.svg')] bg-center opacity-5" />
 
-      {/* Content */}
       <div className="relative z-10 max-w-2xl mx-auto px-4 py-12">
         {/* Header */}
         <div className="text-center mb-10">
@@ -153,22 +180,23 @@ export default function IndustrySelectionPage() {
             transition={{ duration: 0.5 }}
           >
             <h1 className="text-3xl md:text-4xl font-bold text-white mb-3">
-              Let&apos;s get started
+              Tell us about you
             </h1>
             <p className="text-lg text-gray-400 max-w-md mx-auto">
-              Tell us about yourself so we can tailor your AI sales experience.
+              We&apos;ll tailor your AI sales agent to your industry.
             </p>
           </motion.div>
 
-          {/* Progress indicator */}
+          {/* Progress indicator — 4 dots */}
           <div className="flex items-center justify-center gap-2 mt-6">
             <div className="w-10 h-1.5 rounded-full bg-indigo-500" />
+            <div className="w-10 h-1.5 rounded-full bg-white/10" />
             <div className="w-10 h-1.5 rounded-full bg-white/10" />
             <div className="w-10 h-1.5 rounded-full bg-white/10" />
           </div>
         </div>
 
-        {/* Main Form Card - Glassmorphism */}
+        {/* Main Form Card */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -234,10 +262,10 @@ export default function IndustrySelectionPage() {
               </div>
             </div>
 
-            {/* Industry Combobox */}
+            {/* Category Combobox */}
             <div ref={dropdownRef}>
               <label className="block text-sm font-medium text-gray-300 mb-2">
-                Industry <span className="text-red-400">*</span>
+                Industry Category <span className="text-red-400">*</span>
               </label>
               <div className="relative">
                 <button
@@ -249,11 +277,11 @@ export default function IndustrySelectionPage() {
                       : 'border-white/10 hover:border-white/20'
                   }`}
                 >
-                  <span className={selectedIndustry ? 'text-white' : 'text-gray-500'}>
-                    {selectedIndustry ? (
+                  <span className={selectedCategory ? 'text-white' : 'text-gray-500'}>
+                    {selectedCategory ? (
                       <span className="flex items-center gap-2">
-                        <span>{selectedIndustry.icon}</span>
-                        <span>{selectedIndustry.name}</span>
+                        <span>{selectedCategory.icon}</span>
+                        <span>{selectedCategory.name}</span>
                       </span>
                     ) : (
                       'Select your industry...'
@@ -262,7 +290,6 @@ export default function IndustrySelectionPage() {
                   <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
                 </button>
 
-                {/* Dropdown */}
                 <AnimatePresence>
                   {isOpen && (
                     <motion.div
@@ -272,7 +299,6 @@ export default function IndustrySelectionPage() {
                       transition={{ duration: 0.15 }}
                       className="absolute z-50 w-full mt-2 backdrop-blur-xl bg-gray-900/95 border border-white/10 rounded-xl shadow-2xl overflow-hidden"
                     >
-                      {/* Search Input */}
                       <div className="p-3 border-b border-white/10">
                         <div className="relative">
                           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -281,37 +307,36 @@ export default function IndustrySelectionPage() {
                             type="text"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            placeholder="Search industries..."
+                            placeholder="Search categories..."
                             className="w-full pl-9 pr-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-white text-sm placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-indigo-500/50"
                           />
                         </div>
                       </div>
 
-                      {/* Options List */}
                       <div className="max-h-64 overflow-y-auto">
-                        {filteredIndustries.length > 0 ? (
-                          filteredIndustries.map((industry) => (
+                        {filteredCategories.length > 0 ? (
+                          filteredCategories.map((cat) => (
                             <button
-                              key={industry.id}
+                              key={cat.id}
                               type="button"
-                              onClick={() => handleSelectIndustry(industry)}
+                              onClick={() => handleSelectCategory(cat)}
                               className={`w-full px-4 py-3 flex items-center gap-3 hover:bg-white/5 transition-colors ${
-                                selectedIndustry?.id === industry.id ? 'bg-indigo-500/20' : ''
+                                selectedCategory?.id === cat.id ? 'bg-indigo-500/20' : ''
                               }`}
                             >
-                              <span className="text-xl">{industry.icon}</span>
+                              <span className="text-xl">{cat.icon}</span>
                               <div className="flex-1 text-left">
-                                <div className="text-white text-sm font-medium">{industry.name}</div>
-                                <div className="text-gray-400 text-xs">{industry.description}</div>
+                                <div className="text-white text-sm font-medium">{cat.name}</div>
+                                <div className="text-gray-400 text-xs">{cat.description}</div>
                               </div>
-                              {selectedIndustry?.id === industry.id && (
+                              {selectedCategory?.id === cat.id && (
                                 <Check className="w-4 h-4 text-indigo-400" />
                               )}
                             </button>
                           ))
                         ) : (
                           <div className="px-4 py-6 text-center text-gray-400 text-sm">
-                            No industries found. Try &quot;Other Industry&quot;.
+                            No categories found.
                           </div>
                         )}
                       </div>
@@ -321,9 +346,9 @@ export default function IndustrySelectionPage() {
               </div>
             </div>
 
-            {/* Custom Industry Input (shown when "Other" selected) */}
+            {/* Inline: custom niche for 0-template categories */}
             <AnimatePresence>
-              {showCustomInput && (
+              {showCustomNicheField && (
                 <motion.div
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: 'auto' }}
@@ -331,36 +356,37 @@ export default function IndustrySelectionPage() {
                   transition={{ duration: 0.2 }}
                 >
                   <label className="block text-sm font-medium text-gray-300 mb-2">
-                    Describe your industry <span className="text-red-400">*</span>
+                    Describe your niche <span className="text-red-400">*</span>
                   </label>
-                  <input
-                    type="text"
-                    value={customIndustryInput}
-                    onChange={(e) => setCustomIndustryInput(e.target.value)}
-                    placeholder="e.g., Pet grooming services"
-                    className="w-full px-4 py-3.5 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all"
+                  <textarea
+                    value={customNicheInput}
+                    onChange={(e) => setCustomNicheInput(e.target.value)}
+                    placeholder="What does your business do? Who are your ideal customers?"
+                    rows={3}
+                    className="w-full px-4 py-3.5 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all resize-none"
                     autoFocus
                   />
                 </motion.div>
               )}
             </AnimatePresence>
 
-            {/* Niche Description */}
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Tell us more about your niche <span className="text-gray-500">(optional)</span>
-              </label>
-              <div className="relative">
-                <FileText className="absolute left-4 top-4 w-5 h-5 text-gray-500" />
-                <textarea
-                  value={nicheDescription}
-                  onChange={(e) => setNicheDescription(e.target.value)}
-                  placeholder="What makes your business unique? Who are your ideal customers?"
-                  rows={3}
-                  className="w-full pl-12 pr-4 py-3.5 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all resize-none"
-                />
-              </div>
-            </div>
+            {/* Inline injection question for 1-template categories */}
+            <AnimatePresence>
+              {showInlineInjection && inlineInjection && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <InjectionQuestionField
+                    question={inlineInjection}
+                    value={inlineAnswer}
+                    onChange={setInlineAnswer}
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {/* Continue Button */}
             <button
@@ -376,7 +402,7 @@ export default function IndustrySelectionPage() {
           </div>
         </motion.div>
 
-        {/* Benefits Section */}
+        {/* Benefits */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -391,7 +417,6 @@ export default function IndustrySelectionPage() {
             </div>
             <p className="text-gray-400 text-sm">Industry-Trained AI</p>
           </div>
-
           <div className="text-center p-4">
             <div className="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center mx-auto mb-3">
               <svg className="w-5 h-5 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -400,7 +425,6 @@ export default function IndustrySelectionPage() {
             </div>
             <p className="text-gray-400 text-sm">Ready in Minutes</p>
           </div>
-
           <div className="text-center p-4">
             <div className="w-10 h-10 rounded-full bg-amber-500/20 flex items-center justify-center mx-auto mb-3">
               <svg className="w-5 h-5 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -411,7 +435,6 @@ export default function IndustrySelectionPage() {
           </div>
         </motion.div>
 
-        {/* Footer */}
         <div className="mt-8 text-center text-gray-500 text-sm">
           Already have an account?{' '}
           <Link href="/login" className="text-indigo-400 hover:text-indigo-300 transition-colors">
@@ -419,6 +442,99 @@ export default function IndustrySelectionPage() {
           </Link>
         </div>
       </div>
+    </div>
+  );
+}
+
+// ─── Injection question renderer ───
+function InjectionQuestionField({
+  question,
+  value,
+  onChange,
+}: {
+  question: IndustryInjectionQuestion;
+  value: string | string[];
+  onChange: (val: string | string[]) => void;
+}) {
+  const { fieldType, options } = question;
+
+  return (
+    <div>
+      <label className="block text-sm font-medium text-gray-300 mb-2">
+        {question.question}
+      </label>
+      {question.helpText && (
+        <p className="text-xs text-gray-500 mb-2">{question.helpText}</p>
+      )}
+
+      {fieldType === 'text' && (
+        <input
+          type="text"
+          value={typeof value === 'string' ? value : ''}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={question.placeholder}
+          className="w-full px-4 py-3.5 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all"
+        />
+      )}
+
+      {fieldType === 'textarea' && (
+        <textarea
+          value={typeof value === 'string' ? value : ''}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={question.placeholder}
+          rows={3}
+          className="w-full px-4 py-3.5 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all resize-none"
+        />
+      )}
+
+      {fieldType === 'select' && options && (
+        <div className="space-y-2">
+          {options.map((opt) => (
+            <button
+              key={opt}
+              type="button"
+              onClick={() => onChange(opt)}
+              className={`w-full px-4 py-3 rounded-xl text-left text-sm transition-all ${
+                value === opt
+                  ? 'bg-indigo-500/20 border border-indigo-500/50 text-white'
+                  : 'bg-white/5 border border-white/10 text-gray-300 hover:border-white/20'
+              }`}
+            >
+              {opt}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {fieldType === 'multiselect' && options && (
+        <div className="space-y-2">
+          {options.map((opt) => {
+            const selected = Array.isArray(value) && value.includes(opt);
+            return (
+              <button
+                key={opt}
+                type="button"
+                onClick={() => {
+                  const arr = Array.isArray(value) ? value : [];
+                  onChange(selected ? arr.filter((v) => v !== opt) : [...arr, opt]);
+                }}
+                className={`w-full px-4 py-3 rounded-xl text-left text-sm transition-all flex items-center gap-2 ${
+                  selected
+                    ? 'bg-indigo-500/20 border border-indigo-500/50 text-white'
+                    : 'bg-white/5 border border-white/10 text-gray-300 hover:border-white/20'
+                }`}
+              >
+                <div className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 ${
+                  selected ? 'bg-indigo-500 border-indigo-500' : 'border-gray-500'
+                }`}>
+                  {selected && <Check className="w-3 h-3 text-white" />}
+                </div>
+                {opt}
+              </button>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

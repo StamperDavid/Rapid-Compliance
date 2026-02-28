@@ -435,7 +435,25 @@ function buildSystemPrompt(params: {
   sections.push(`Proactive Level: ${behaviorConfig.proactiveLevel}/10`);
   sections.push('');
 
-  // NEW: Industry Template Enhancement
+  // Industry-Specific Context from injection question
+  if (businessContext.injectionAnswer && businessContext.injectionVariable) {
+    sections.push('## Industry-Specific Context');
+    const label = businessContext.injectionVariable.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+    const answer = Array.isArray(businessContext.injectionAnswer)
+      ? businessContext.injectionAnswer.join(', ')
+      : businessContext.injectionAnswer;
+    sections.push(`${label}: ${answer}`);
+    sections.push('');
+  }
+
+  // Custom niche description (for categories without templates)
+  if (businessContext.customNiche) {
+    sections.push('## Niche Description');
+    sections.push(businessContext.customNiche);
+    sections.push('');
+  }
+
+  // Industry Template Enhancement
   if (template) {
     sections.push('## Industry-Specific Strategy');
     sections.push(`Industry Framework: ${template.cognitiveLogic.framework}`);

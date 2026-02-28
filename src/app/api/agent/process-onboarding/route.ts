@@ -146,7 +146,19 @@ export async function POST(request: NextRequest) {
     const orgUpdate: Record<string, unknown> = {
       updatedAt: new Date().toISOString(),
       industry: industry,
-      industryName: industry, // Industry display name
+      industryName: typeof typedOnboardingData.industryCategoryName === 'string'
+        ? typedOnboardingData.industryCategoryName
+        : industry,
+      // Enriched onboarding fields
+      ...(typeof typedOnboardingData.industryCategory === 'string' && {
+        industryCategory: typedOnboardingData.industryCategory,
+      }),
+      ...(typeof typedOnboardingData.industryTemplateId === 'string' && {
+        industryTemplateId: typedOnboardingData.industryTemplateId,
+      }),
+      ...(typeof typedOnboardingData.industryTemplateName === 'string' && {
+        industryTemplateName: typedOnboardingData.industryTemplateName,
+      }),
     };
 
     // Save owner name if provided
