@@ -218,11 +218,14 @@ async function calculateIndividualMetrics(
   const analysesByRep = new Map<string, ConversationAnalysis[]>();
 
   for (const analysis of analyses) {
-    // Get rep ID from conversation
-    const conversation = await getConversationForAnalysis(analysis.conversationId);
-    if (!conversation) {continue;}
+    // Get rep ID directly from analysis or fall back to conversation lookup
+    let repId = analysis.repId;
+    if (!repId) {
+      const conversation = await getConversationForAnalysis(analysis.conversationId);
+      if (!conversation) { continue; }
+      repId = conversation.repId;
+    }
 
-    const repId = conversation.repId;
     if (!analysesByRep.has(repId)) {
       analysesByRep.set(repId, []);
     }
@@ -1344,21 +1347,46 @@ async function getConversationAnalyses(
 }
 
 /**
- * Get conversation for analysis
+ * Get conversation for analysis — looks up a chatSession by ID and returns its repId.
  */
-function getConversationForAnalysis(_conversationId: string): Promise<{ repId: string } | null> {
-  // This would query Firestore for conversation
-  // For now, returning null - would be implemented in production
-  return Promise.resolve(null);
+async function getConversationForAnalysis(conversationId: string): Promise<{ repId: string } | null> {
+  try {
+    const doc = await FirestoreService.get<{ assignedTo?: string; userId?: string }>(
+      getSubCollection('chatSessions'),
+      conversationId
+    );
+    if (!doc) { return null; }
+    const repId = doc.assignedTo ?? doc.userId;
+    return repId ? { repId } : null;
+  } catch {
+    return null;
+  }
 }
 
 /**
- * Get rep info
+ * Get rep info — queries the members collection, falling back to the users collection.
  */
-function getRepInfo(_repId: string): Promise<{ name: string; email?: string }> {
-  // This would query Firestore for rep info
-  // For now, returning placeholder
-  return Promise.resolve({ name: 'Rep Name', email: 'rep@example.com' });
+async function getRepInfo(repId: string): Promise<{ name: string; email?: string }> {
+  try {
+    const member = await FirestoreService.get<{ displayName?: string; name?: string; email?: string }>(
+      getSubCollection('members'),
+      repId
+    );
+    if (member) {
+      return { name: member.displayName ?? member.name ?? 'Unknown', email: member.email };
+    }
+    // Fall back to users collection
+    const user = await FirestoreService.get<{ displayName?: string; email?: string }>(
+      'users',
+      repId
+    );
+    if (user) {
+      return { name: user.displayName ?? 'Unknown', email: user.email };
+    }
+    return { name: 'Unknown Rep' };
+  } catch {
+    return { name: 'Unknown Rep' };
+  }
 }
 
 /**

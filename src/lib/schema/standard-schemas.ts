@@ -13,16 +13,16 @@ export const STANDARD_SCHEMAS = {
     singularName: 'Lead',
     icon: '🎯',
     fields: [
-      { id: 'f1', key: 'first_name', label: 'First Name', type: 'text', required: true },
-      { id: 'f2', key: 'last_name', label: 'Last Name', type: 'text', required: true },
+      { id: 'f1', key: 'firstName', label: 'First Name', type: 'text', required: true },
+      { id: 'f2', key: 'lastName', label: 'Last Name', type: 'text', required: true },
       { id: 'f3', key: 'email', label: 'Email', type: 'email', required: true },
       { id: 'f4', key: 'phone', label: 'Phone', type: 'phoneNumber', required: false },
       { id: 'f5', key: 'company', label: 'Company', type: 'text', required: false },
       { id: 'f6', key: 'title', label: 'Job Title', type: 'text', required: false },
-      { id: 'f7', key: 'lead_source', label: 'Lead Source', type: 'singleSelect', required: false, options: ['Website', 'Referral', 'Cold Call', 'Social Media', 'Email Campaign', 'Trade Show', 'Other'] },
-      { id: 'f8', key: 'lead_status', label: 'Status', type: 'singleSelect', required: true, options: ['New', 'Contacted', 'Qualified', 'Unqualified', 'Converted'] },
+      { id: 'f7', key: 'source', label: 'Lead Source', type: 'singleSelect', required: false, options: ['Website', 'Referral', 'Cold Call', 'Social Media', 'Email Campaign', 'Trade Show', 'Other'] },
+      { id: 'f8', key: 'status', label: 'Status', type: 'singleSelect', required: true, options: ['New', 'Contacted', 'Qualified', 'Unqualified', 'Converted'] },
       { id: 'f9', key: 'rating', label: 'Rating', type: 'singleSelect', required: false, options: ['Hot', 'Warm', 'Cold'] },
-      { id: 'f10', key: 'estimated_value', label: 'Estimated Value', type: 'currency', required: false },
+      { id: 'f10', key: 'score', label: 'Lead Score', type: 'number', required: false },
       { id: 'f11', key: 'notes', label: 'Notes', type: 'longText', required: false }
     ]
   },
@@ -57,14 +57,14 @@ export const STANDARD_SCHEMAS = {
     singularName: 'Contact',
     icon: '👤',
     fields: [
-      { id: 'f1', key: 'first_name', label: 'First Name', type: 'text', required: true },
-      { id: 'f2', key: 'last_name', label: 'Last Name', type: 'text', required: true },
+      { id: 'f1', key: 'firstName', label: 'First Name', type: 'text', required: true },
+      { id: 'f2', key: 'lastName', label: 'Last Name', type: 'text', required: true },
       { id: 'f3', key: 'email', label: 'Email', type: 'email', required: true },
       { id: 'f4', key: 'phone', label: 'Phone', type: 'phoneNumber', required: false },
       { id: 'f5', key: 'mobile', label: 'Mobile', type: 'phoneNumber', required: false },
       { id: 'f6', key: 'title', label: 'Job Title', type: 'text', required: false },
-      { id: 'f7', key: 'company_id', label: 'Company', type: 'lookup', required: false, config: { linkedSchema: 'companies' } },
-      { id: 'f8', key: 'linkedin', label: 'LinkedIn', type: 'url', required: false },
+      { id: 'f7', key: 'company', label: 'Company', type: 'text', required: false },
+      { id: 'f8', key: 'linkedInUrl', label: 'LinkedIn', type: 'url', required: false },
       { id: 'f9', key: 'status', label: 'Status', type: 'singleSelect', required: true }
     ]
   },
@@ -77,16 +77,16 @@ export const STANDARD_SCHEMAS = {
     icon: '💼',
     fields: [
       { id: 'f1', key: 'name', label: 'Deal Name', type: 'text', required: true },
-      { id: 'f2', key: 'company_id', label: 'Company', type: 'lookup', required: true, config: { linkedSchema: 'companies' } },
-      { id: 'f3', key: 'contact_id', label: 'Primary Contact', type: 'lookup', required: false, config: { linkedSchema: 'contacts' } },
-      { id: 'f4', key: 'amount', label: 'Amount', type: 'currency', required: true },
+      { id: 'f2', key: 'company', label: 'Company', type: 'text', required: true },
+      { id: 'f3', key: 'contactId', label: 'Primary Contact', type: 'text', required: false },
+      { id: 'f4', key: 'value', label: 'Amount', type: 'currency', required: true },
       { id: 'f5', key: 'stage', label: 'Stage', type: 'singleSelect', required: true },
       { id: 'f6', key: 'probability', label: 'Probability', type: 'percent', required: false },
-      { id: 'f7', key: 'expected_close_date', label: 'Expected Close Date', type: 'date', required: true },
-      { id: 'f8', key: 'actual_close_date', label: 'Actual Close Date', type: 'date', required: false },
+      { id: 'f7', key: 'expectedCloseDate', label: 'Expected Close Date', type: 'date', required: true },
+      { id: 'f8', key: 'actualCloseDate', label: 'Actual Close Date', type: 'date', required: false },
       { id: 'f9', key: 'description', label: 'Description', type: 'longText', required: false },
-      { id: 'f10', key: 'next_step', label: 'Next Step', type: 'text', required: false },
-      { id: 'f11', key: 'lost_reason', label: 'Lost Reason', type: 'text', required: false }
+      { id: 'f10', key: 'notes', label: 'Next Step', type: 'text', required: false },
+      { id: 'f11', key: 'lostReason', label: 'Lost Reason', type: 'text', required: false }
     ]
   },
 

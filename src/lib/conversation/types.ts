@@ -122,6 +122,7 @@ export type ParticipantRole =
  */
 export interface ConversationAnalysis {
   conversationId: string;
+  repId?: string;
 
   // Core Analysis
   sentiment: SentimentAnalysis;

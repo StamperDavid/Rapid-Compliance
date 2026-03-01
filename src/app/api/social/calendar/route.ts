@@ -89,11 +89,11 @@ export async function GET(request: NextRequest) {
     const [agentPosts, queuedPosts, campaignPosts] = await Promise.all([
       // Source 1: Autonomous agent posts (scheduled + published)
       AdminFirestoreService.getAll(
-        getSubCollection('social_posts')
+        getSubCollection('socialPosts')
       ),
       // Source 2: Queued posts
       AdminFirestoreService.getAll(
-        getSubCollection('social_queue')
+        getSubCollection('socialQueue')
       ),
       // Source 3: Campaign posts (the campaigns page store)
       AdminFirestoreService.getAll(
