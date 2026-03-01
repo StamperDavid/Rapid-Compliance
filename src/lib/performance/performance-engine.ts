@@ -19,6 +19,9 @@
 
 import { logger } from '@/lib/logger/logger';
 import { getServerSignalCoordinator } from '@/lib/orchestration/coordinator-factory-server';
+import { FirestoreService } from '@/lib/db/firestore-service';
+import { getSubCollection } from '@/lib/firebase/collections';
+import { where, orderBy } from 'firebase/firestore';
 import {
   DEFAULT_PERFORMANCE_CONFIG,
   type TeamPerformanceAnalytics,
@@ -1320,13 +1323,24 @@ function determinePeriod(request: PerformanceAnalyticsRequest): {
 /**
  * Get conversation analyses for a period
  */
-function getConversationAnalyses(
-  _startDate: Date,
-  _endDate: Date
+async function getConversationAnalyses(
+  startDate: Date,
+  endDate: Date
 ): Promise<ConversationAnalysis[]> {
-  // This would query Firestore for conversation analyses
-  // For now, returning empty array - would be implemented in production
-  return Promise.resolve([]);
+  try {
+    const analyses = await FirestoreService.getAll<ConversationAnalysis>(
+      getSubCollection('conversationAnalyses'),
+      [
+        where('analyzedAt', '>=', startDate),
+        where('analyzedAt', '<=', endDate),
+        orderBy('analyzedAt', 'desc'),
+      ]
+    );
+    return analyses;
+  } catch (error) {
+    logger.error('Failed to fetch conversation analyses', error instanceof Error ? error : new Error(String(error)), { startDate: startDate.toISOString(), endDate: endDate.toISOString() });
+    return [];
+  }
 }
 
 /**
