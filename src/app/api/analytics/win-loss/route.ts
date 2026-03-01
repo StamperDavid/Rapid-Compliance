@@ -6,7 +6,6 @@ import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { withCache } from '@/lib/cache/analytics-cache';
 import { requireAuth } from '@/lib/auth/api-auth';
-import { where, limit } from 'firebase/firestore';
 
 export const dynamic = 'force-dynamic';
 
@@ -127,11 +126,11 @@ async function calculateWinLossAnalytics(period: string) {
 
   try {
     // Only query deals that were updated/closed within the period
-    const constraints = [
-      where('updatedAt', '>=', startDate),
-      limit(QUERY_LIMIT),
-    ];
-    allDeals = (await AdminFirestoreService.getAll(dealsPath, constraints)) as DealRecord[];
+    const dealsSnapshot = await AdminFirestoreService.collection(dealsPath)
+      .where('updatedAt', '>=', startDate)
+      .limit(QUERY_LIMIT)
+      .get();
+    allDeals = dealsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as DealRecord[];
     if (allDeals.length === QUERY_LIMIT) {
       logger.warn('Win-loss analytics hit query limit', { period, limit: QUERY_LIMIT });
     }

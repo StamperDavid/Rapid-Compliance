@@ -5,7 +5,7 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { type QueryConstraint, where } from 'firebase/firestore';
+import { adminDb } from '@/lib/firebase/admin';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
 import { getSubCollection } from '@/lib/firebase/collections';
@@ -47,23 +47,33 @@ export async function GET(request: NextRequest) {
         schemaId ?? undefined
       );
     } else {
-      const { FirestoreService } = await import('@/lib/db/firestore-service');
-      const eventsPath = getSubCollection('schemaChangeEvents');
-
-      const filters: QueryConstraint[] = [];
-      if (schemaId) {
-        filters.push(where('schemaId', '==', schemaId));
+      if (!adminDb) {
+        return NextResponse.json(
+          { error: 'Database not configured' },
+          { status: 500 }
+        );
       }
 
-      events = await FirestoreService.getAll<SchemaChangeEvent>(eventsPath, filters);
+      const eventsPath = getSubCollection('schemaChangeEvents');
+      let queryRef: FirebaseFirestore.Query = adminDb.collection(eventsPath);
+
+      if (schemaId) {
+        queryRef = queryRef.where('schemaId', '==', schemaId);
+      }
+
+      const snapshot = await queryRef.get();
+      events = snapshot.docs.map((d) => ({
+        id: d.id,
+        ...d.data(),
+      })) as SchemaChangeEvent[];
     }
-    
+
     return NextResponse.json({
       success: true,
       events,
       count: events.length,
     });
-    
+
   } catch (error: unknown) {
     logger.error('[Schema Changes API] GET failed', error instanceof Error ? error : new Error(String(error)), {
       file: 'route.ts',
@@ -99,19 +109,26 @@ export async function POST(request: NextRequest) {
 
     if (eventId) {
       // Process single event
-      const { FirestoreService } = await import('@/lib/db/firestore-service');
+      if (!adminDb) {
+        return NextResponse.json(
+          { error: 'Database not configured' },
+          { status: 500 }
+        );
+      }
+
       const eventsPath = getSubCollection('schemaChangeEvents');
+      const docSnap = await adminDb.collection(eventsPath).doc(eventId).get();
 
-      const event = await FirestoreService.get(eventsPath, eventId);
-
-      if (!event) {
+      if (!docSnap.exists) {
         return NextResponse.json(
           { error: 'Event not found' },
           { status: 404 }
         );
       }
 
-      await processSchemaChangeEvent(event as SchemaChangeEvent);
+      const event = { id: docSnap.id, ...docSnap.data() } as SchemaChangeEvent;
+
+      await processSchemaChangeEvent(event);
 
       return NextResponse.json({
         success: true,
@@ -128,7 +145,7 @@ export async function POST(request: NextRequest) {
         failed: result.failed,
       });
     }
-    
+
   } catch (error: unknown) {
     logger.error('[Schema Changes API] POST failed', error instanceof Error ? error : new Error(String(error)), {
       file: 'route.ts',
@@ -140,6 +157,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-
-
-

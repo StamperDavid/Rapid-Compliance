@@ -14,7 +14,6 @@ import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { verifyStripeSignature } from '@/lib/security/webhook-verification';
 import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { getSubCollection, getOrdersCollection } from '@/lib/firebase/collections';
-import { where, limit } from 'firebase/firestore';
 
 export const dynamic = 'force-dynamic';
 
@@ -61,11 +60,13 @@ async function findUserSubscription(
   stripeSubscriptionId: string
 ): Promise<Record<string, unknown> | null> {
   try {
-    const results = await AdminFirestoreService.getAll(
-      SUBSCRIPTIONS_PATH,
-      [where('stripeSubscriptionId', '==', stripeSubscriptionId), limit(1)]
-    );
-    return results.length > 0 ? results[0] ?? null : null;
+    const snapshot = await AdminFirestoreService.collection(SUBSCRIPTIONS_PATH)
+      .where('stripeSubscriptionId', '==', stripeSubscriptionId)
+      .limit(1)
+      .get();
+    if (snapshot.empty) {return null;}
+    const doc = snapshot.docs[0];
+    return doc ? { id: doc.id, ...doc.data() } : null;
   } catch {
     return null;
   }
@@ -280,15 +281,16 @@ async function processStripeEvent(event: StripeWebhookEvent): Promise<void> {
       // Safety net: update order status if client-side completion failed
       if (piId) {
         try {
-          const matchingOrders = await AdminFirestoreService.getAll(
-            ORDERS_PATH,
-            [where('paymentIntentId', '==', piId), limit(1)]
-          );
+          const ordersSnapshot = await AdminFirestoreService.collection(ORDERS_PATH)
+            .where('paymentIntentId', '==', piId)
+            .limit(1)
+            .get();
+          const matchingOrders = ordersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Record<string, unknown>));
 
           if (matchingOrders.length > 0) {
             const existingOrder = matchingOrders[0];
-            const existingOrderId = String(existingOrder?.id ?? '');
-            const existingStatus = String(existingOrder?.status ?? '');
+            const existingOrderId = String(existingOrder?.['id'] ?? '');
+            const existingStatus = String(existingOrder?.['status'] ?? '');
             if (existingOrderId && existingStatus !== 'processing' && existingStatus !== 'completed') {
               await AdminFirestoreService.update(ORDERS_PATH, existingOrderId, {
                 status: 'processing',
@@ -476,10 +478,11 @@ async function processStripeEvent(event: StripeWebhookEvent): Promise<void> {
       // Update order with refund info
       if (paymentIntentId) {
         try {
-          const matchingOrders = await AdminFirestoreService.getAll(
-            ORDERS_PATH,
-            [where('paymentIntentId', '==', paymentIntentId), limit(1)]
-          );
+          const refundSnapshot = await AdminFirestoreService.collection(ORDERS_PATH)
+            .where('paymentIntentId', '==', paymentIntentId)
+            .limit(1)
+            .get();
+          const matchingOrders = refundSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
           if (matchingOrders.length > 0 && matchingOrders[0]?.id) {
             const chargeAmount = typeof charge.amount === 'number' ? charge.amount : 0;
             await AdminFirestoreService.update(ORDERS_PATH, String(matchingOrders[0].id), {

@@ -6,7 +6,6 @@ import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { withCache } from '@/lib/cache/analytics-cache';
 import { requireAuth } from '@/lib/auth/api-auth';
-import { limit } from 'firebase/firestore';
 
 export const dynamic = 'force-dynamic';
 
@@ -115,7 +114,10 @@ async function calculatePipelineAnalytics(_period: string) {
   const QUERY_LIMIT = 1000;
 
   try {
-    allDeals = (await AdminFirestoreService.getAll(dealsPath, [limit(QUERY_LIMIT)])) as DealRecord[];
+    const dealsSnapshot = await AdminFirestoreService.collection(dealsPath)
+      .limit(QUERY_LIMIT)
+      .get();
+    allDeals = dealsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as DealRecord[];
     if (allDeals.length === QUERY_LIMIT) {
       logger.warn('Pipeline analytics hit query limit', { limit: QUERY_LIMIT });
     }

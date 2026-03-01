@@ -1,6 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
-import { orderBy } from 'firebase/firestore';
 import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { validateToolUrl, type CustomTool } from '@/types/custom-tools';
 import { getSubCollection } from '@/lib/firebase/collections';
@@ -86,10 +85,10 @@ export async function GET(
     }
 
     // Fetch all tools, ordered by order field
-    const tools = await AdminFirestoreService.getAll(
-      collectionPath,
-      [orderBy('order', 'asc')]
-    );
+    const toolsSnapshot = await AdminFirestoreService.collection(collectionPath)
+      .orderBy('order', 'asc')
+      .get();
+    const tools = toolsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
     return NextResponse.json({ tools });
   } catch (error: unknown) {

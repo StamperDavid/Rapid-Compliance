@@ -5,7 +5,6 @@ import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { requireAuth } from '@/lib/auth/api-auth';
-import { limit } from 'firebase/firestore';
 
 export const dynamic = 'force-dynamic';
 
@@ -102,7 +101,10 @@ export async function GET(request: NextRequest) {
     const QUERY_LIMIT = 1000;
 
     try {
-      allDeals = (await AdminFirestoreService.getAll(dealsPath, [limit(QUERY_LIMIT)])) as DealRecord[];
+      const dealsSnapshot = await AdminFirestoreService.collection(dealsPath)
+        .limit(QUERY_LIMIT)
+        .get();
+      allDeals = dealsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as DealRecord[];
       if (allDeals.length === QUERY_LIMIT) {
         logger.warn('Forecast analytics hit query limit', { limit: QUERY_LIMIT });
       }

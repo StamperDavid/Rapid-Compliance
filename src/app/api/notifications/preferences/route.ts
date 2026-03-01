@@ -17,9 +17,22 @@ import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import { getSubCollection } from '@/lib/firebase/collections';
-import { Timestamp } from 'firebase/firestore';
+import { admin } from '@/lib/firebase/admin';
+import type { Timestamp } from 'firebase/firestore';
 import type { NotificationPreferences } from '@/lib/notifications/types';
+
 import { logger } from '@/lib/logger/logger';
+
+/**
+ * Create a server-side Firestore Timestamp for the current time.
+ * Uses the admin SDK (firebase-admin) which is the correct choice for
+ * API routes. The return value is cast to the client SDK Timestamp type
+ * because NotificationPreferences uses firebase/firestore types, but the
+ * two types are structurally identical and interchangeable at runtime.
+ */
+function nowTimestamp(): Timestamp {
+  return admin.firestore.Timestamp.now() as unknown as Timestamp;
+}
 
 /**
  * Request body interface for PUT /api/notifications/preferences
@@ -189,7 +202,7 @@ export async function PUT(request: NextRequest) {
 
     // Merge with updates
     // Deep merge is necessary because validatedData uses deepPartial()
-    const now = Timestamp.now();
+    const now = nowTimestamp();
 
     // Construct updated preferences by merging with existing
     // Type assertion is safe because existingPrefs has all required fields
@@ -319,7 +332,7 @@ function isObject(value: unknown): value is Record<string, unknown> {
  * Get default notification preferences
  */
 function getDefaultPreferences(userId: string): NotificationPreferences {
-  const now = Timestamp.now();
+  const now = nowTimestamp();
 
   const categories: NotificationPreferences['categories'] = {
     deal_risk: { enabled: true, minPriority: 'low' },

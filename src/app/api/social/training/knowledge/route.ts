@@ -13,7 +13,6 @@ import { logger } from '@/lib/logger/logger';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { getSubCollection } from '@/lib/firebase/collections';
-import { orderBy } from 'firebase/firestore';
 
 export const dynamic = 'force-dynamic';
 
@@ -33,16 +32,16 @@ export async function GET(request: NextRequest) {
     const authResult = await requireAuth(request);
     if (authResult instanceof NextResponse) { return authResult; }
 
-    const result = await AdminFirestoreService.getAllPaginated(
-      KNOWLEDGE_COLLECTION,
-      [orderBy('uploadedAt', 'desc')],
-      100
-    );
+    const knowledgeSnapshot = await AdminFirestoreService.collection(KNOWLEDGE_COLLECTION)
+      .orderBy('uploadedAt', 'desc')
+      .limit(100)
+      .get();
+    const items = knowledgeSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
     return NextResponse.json({
       success: true,
-      items: result.data ?? [],
-      total: (result.data ?? []).length,
+      items,
+      total: items.length,
     });
   } catch (error: unknown) {
     logger.error('Knowledge API: GET failed', error instanceof Error ? error : new Error(String(error)));

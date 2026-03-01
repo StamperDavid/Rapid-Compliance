@@ -6,7 +6,6 @@ import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { withCache } from '@/lib/cache/analytics-cache';
-import { where, limit, orderBy } from 'firebase/firestore';
 
 export const dynamic = 'force-dynamic';
 
@@ -139,12 +138,12 @@ async function calculateRevenueAnalytics(period: string) {
     let allDeals: DealRecord[] = [];
 
     try {
-      const dealsConstraints = [
-        where('createdAt', '>=', queryStart),
-        orderBy('createdAt', 'desc'),
-        limit(QUERY_LIMIT),
-      ];
-      allDeals = (await AdminFirestoreService.getAll(dealsPath, dealsConstraints)) as DealRecord[];
+      const dealsSnapshot = await AdminFirestoreService.collection(dealsPath)
+        .where('createdAt', '>=', queryStart)
+        .orderBy('createdAt', 'desc')
+        .limit(QUERY_LIMIT)
+        .get();
+      allDeals = dealsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as DealRecord[];
       if (allDeals.length === QUERY_LIMIT) {
         logger.warn('Revenue analytics deals query hit limit', { limit: QUERY_LIMIT, period });
       }
@@ -166,12 +165,12 @@ async function calculateRevenueAnalytics(period: string) {
     let allOrders: OrderRecord[] = [];
 
     try {
-      const ordersConstraints = [
-        where('createdAt', '>=', queryStart),
-        orderBy('createdAt', 'desc'),
-        limit(QUERY_LIMIT),
-      ];
-      allOrders = (await AdminFirestoreService.getAll(ordersPath, ordersConstraints)) as OrderRecord[];
+      const ordersSnapshot = await AdminFirestoreService.collection(ordersPath)
+        .where('createdAt', '>=', queryStart)
+        .orderBy('createdAt', 'desc')
+        .limit(QUERY_LIMIT)
+        .get();
+      allOrders = ordersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as OrderRecord[];
       if (allOrders.length === QUERY_LIMIT) {
         logger.warn('Revenue analytics orders query hit limit', { limit: QUERY_LIMIT, period });
       }

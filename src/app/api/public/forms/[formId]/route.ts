@@ -13,20 +13,9 @@ export const dynamic = 'force-dynamic';
 import { type NextRequest, NextResponse } from 'next/server';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { logger } from '@/lib/logger/logger';
-import { db } from '@/lib/firebase/config';
+import { adminDb } from '@/lib/firebase/admin';
+import { FieldValue } from 'firebase-admin/firestore';
 import { getFormsCollection } from '@/lib/firebase/collections';
-import {
-  collection,
-  doc,
-  getDoc,
-  getDocs,
-  addDoc,
-  updateDoc,
-  increment,
-  query,
-  orderBy,
-  serverTimestamp,
-} from 'firebase/firestore';
 import { z } from 'zod';
 import type {
   FormDefinition,
@@ -90,7 +79,7 @@ export async function GET(
 
     const { formId } = await params;
 
-    if (!db) {
+    if (!adminDb) {
       return NextResponse.json(
         { error: 'Database not configured' },
         { status: 500 }
@@ -100,16 +89,19 @@ export async function GET(
     let form: FormDefinition | null = null;
     let fields: FormFieldConfig[] = [];
 
-    const formRef = doc(collection(db, getFormsCollection()), formId);
-    const formSnap = await getDoc(formRef);
+    const formSnap = await adminDb.collection(getFormsCollection()).doc(formId).get();
 
-    if (formSnap.exists()) {
+    if (formSnap.exists) {
       form = { id: formSnap.id, ...formSnap.data() } as FormDefinition;
 
-      // Fetch fields
-      const fieldsRef = collection(db, getFormsCollection(), formId, 'fields');
-      const fieldsQuery = query(fieldsRef, orderBy('pageIndex'), orderBy('order'));
-      const fieldsSnap = await getDocs(fieldsQuery);
+      // Fetch fields ordered by pageIndex then order
+      const fieldsSnap = await adminDb
+        .collection(getFormsCollection())
+        .doc(formId)
+        .collection('fields')
+        .orderBy('pageIndex')
+        .orderBy('order')
+        .get();
       fields = fieldsSnap.docs.map((d) => ({
         id: d.id,
         ...d.data(),
@@ -136,9 +128,8 @@ export async function GET(
     }
 
     // Increment view count
-    const formRefForUpdate = doc(collection(db, getFormsCollection()), formId);
-    await updateDoc(formRefForUpdate, {
-      viewCount: increment(1),
+    await adminDb.collection(getFormsCollection()).doc(formId).update({
+      viewCount: FieldValue.increment(1),
     });
 
     // Return public form data (exclude sensitive settings)
@@ -231,7 +222,7 @@ export async function POST(
 
     const { responses, metadata } = body;
 
-    if (!db) {
+    if (!adminDb) {
       return NextResponse.json(
         { error: 'Database not configured' },
         { status: 500 }
@@ -241,15 +232,17 @@ export async function POST(
     let form: FormDefinition | null = null;
     let fields: FormFieldConfig[] = [];
 
-    const formRef = doc(collection(db, getFormsCollection()), formId);
-    const formSnap = await getDoc(formRef);
+    const formSnap = await adminDb.collection(getFormsCollection()).doc(formId).get();
 
-    if (formSnap.exists()) {
+    if (formSnap.exists) {
       form = { id: formSnap.id, ...formSnap.data() } as FormDefinition;
 
       // Fetch fields for validation
-      const fieldsRef = collection(db, getFormsCollection(), formId, 'fields');
-      const fieldsSnap = await getDocs(fieldsRef);
+      const fieldsSnap = await adminDb
+        .collection(getFormsCollection())
+        .doc(formId)
+        .collection('fields')
+        .get();
       fields = fieldsSnap.docs.map((d) => ({
         id: d.id,
         ...d.data(),
@@ -340,7 +333,8 @@ export async function POST(
     // Generate confirmation number
     const confirmationNumber = `SUB-${Date.now().toString(36).toUpperCase()}`;
 
-    // Create submission
+    // Create submission — submittedAt is written as a server timestamp;
+    // the cast satisfies the FormSubmission type for the object literal.
     const submission: Omit<FormSubmission, 'id'> = {
       formId,
       formVersion: form.version,
@@ -358,17 +352,19 @@ export async function POST(
         utmMedium: metadata?.utmMedium as string | undefined,
         utmCampaign: metadata?.utmCampaign as string | undefined,
       },
-      submittedAt: serverTimestamp() as FormSubmission['submittedAt'],
+      submittedAt: FieldValue.serverTimestamp() as unknown as FormSubmission['submittedAt'],
     };
 
     // Save submission
-    const submissionsRef = collection(db, getFormsCollection(), formId, 'submissions');
-    const submissionDoc = await addDoc(submissionsRef, submission);
+    const submissionRef = await adminDb
+      .collection(getFormsCollection())
+      .doc(formId)
+      .collection('submissions')
+      .add(submission);
 
     // Update form submission count
-    const formRefForSubmissionCount = doc(collection(db, getFormsCollection()), formId);
-    await updateDoc(formRefForSubmissionCount, {
-      submissionCount: increment(1),
+    await adminDb.collection(getFormsCollection()).doc(formId).update({
+      submissionCount: FieldValue.increment(1),
     });
 
     // Attribution: Auto-create lead from form submission if email is present
@@ -407,14 +403,14 @@ export async function POST(
           status: 'new',
           source: sourceValue,
           formId,
-          formSubmissionId: submissionDoc.id,
+          formSubmissionId: submissionRef.id,
           utmSource,
           utmMedium,
           utmCampaign,
         }, { autoEnrich: true });
         logger.info('Lead auto-created from form submission', {
           formId,
-          submissionId: submissionDoc.id,
+          submissionId: submissionRef.id,
           source: sourceValue,
         });
       } catch (leadError) {
@@ -428,7 +424,7 @@ export async function POST(
 
     return NextResponse.json({
       success: true,
-      submissionId: submissionDoc.id,
+      submissionId: submissionRef.id,
       confirmationNumber,
       confirmationMessage:
         form.settings.confirmationMessage ?? 'Thank you for your submission!',

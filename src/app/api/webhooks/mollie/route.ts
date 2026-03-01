@@ -13,7 +13,6 @@ import { apiKeyService } from '@/lib/api-keys/api-key-service';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { getOrdersCollection } from '@/lib/firebase/collections';
-import { where } from 'firebase/firestore';
 import { z } from 'zod';
 
 export const dynamic = 'force-dynamic';
@@ -74,10 +73,10 @@ export async function POST(request: NextRequest) {
     const payment = (await paymentResponse.json()) as MolliePayment;
 
     // Find the order by transaction ID
-    const orders = await AdminFirestoreService.getAll(
-      ORDERS_PATH,
-      [where('payment.transactionId', '==', id)]
-    );
+    const ordersSnapshot = await AdminFirestoreService.collection(ORDERS_PATH)
+      .where('payment.transactionId', '==', id)
+      .get();
+    const orders = ordersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
     if (orders.length === 0) {
       logger.warn('Mollie webhook: no matching order found', {

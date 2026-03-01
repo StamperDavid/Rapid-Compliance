@@ -1,15 +1,7 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { getForm, updateForm, deleteForm } from '@/lib/forms/form-service';
-import {
-  collection,
-  getDocs,
-  query,
-  orderBy,
-  writeBatch,
-  doc,
-} from 'firebase/firestore';
-import { db } from '@/lib/firebase/config';
+import { adminDb } from '@/lib/firebase/admin';
 import type { FormFieldConfig, FormDefinition } from '@/lib/forms/types';
 import { z } from 'zod';
 import { logger } from '@/lib/logger/logger';
@@ -21,12 +13,12 @@ interface RouteContext {
   params: Promise<{ formId: string }>;
 }
 
-// Helper to ensure db is available
+// Helper to ensure adminDb is available
 function getDb() {
-  if (!db) {
-    throw new Error('Firebase is not initialized');
+  if (!adminDb) {
+    throw new Error('Firebase Admin is not initialized');
   }
-  return db;
+  return adminDb;
 }
 
 const UpdateFormBodySchema = z.object({
@@ -67,12 +59,10 @@ export async function GET(
       return NextResponse.json({ error: 'Form not found' }, { status: 404 });
     }
 
-    // Get fields
+    // Get fields using Admin SDK
     const firestore = getDb();
     const fieldsPath = `${getFormsCollection()}/${formId}/fields`;
-    const fieldsRef = collection(firestore, fieldsPath);
-    const fieldsQuery = query(fieldsRef, orderBy('order', 'asc'));
-    const fieldsSnapshot = await getDocs(fieldsQuery);
+    const fieldsSnapshot = await firestore.collection(fieldsPath).orderBy('order', 'asc').get();
     const fields = fieldsSnapshot.docs.map((docSnap) => docSnap.data() as FormFieldConfig);
 
     return NextResponse.json({ form, fields });
@@ -116,18 +106,17 @@ export async function PUT(
     if (fields && Array.isArray(fields)) {
       const firestore = getDb();
       const fieldsPath = `${getFormsCollection()}/${formId}/fields`;
-      const batch = writeBatch(firestore);
+      const batch = firestore.batch();
 
       // Delete existing fields
-      const existingFieldsRef = collection(firestore, fieldsPath);
-      const existingSnapshot = await getDocs(existingFieldsRef);
+      const existingSnapshot = await firestore.collection(fieldsPath).get();
       existingSnapshot.docs.forEach((docSnapshot) => {
         batch.delete(docSnapshot.ref);
       });
 
       // Add new fields
       fields.forEach((field) => {
-        const fieldRef = doc(firestore, fieldsPath, field.id);
+        const fieldRef = firestore.collection(fieldsPath).doc(field.id);
         batch.set(fieldRef, {
           ...field,
           formId,
@@ -173,8 +162,7 @@ export async function DELETE(
     // MAJ-14: Check for existing submissions before delete
     const firestore = getDb();
     const submissionsPath = `${getFormsCollection()}/${formId}/submissions`;
-    const submissionsRef = collection(firestore, submissionsPath);
-    const submissionsSnapshot = await getDocs(submissionsRef);
+    const submissionsSnapshot = await firestore.collection(submissionsPath).get();
     if (!submissionsSnapshot.empty) {
       return NextResponse.json(
         { error: `Cannot delete form: ${submissionsSnapshot.size} submission(s) exist. Archive or delete them first.` },

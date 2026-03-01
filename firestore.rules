@@ -574,15 +574,23 @@ service cloud.firestore {
     // CHAT SESSIONS
     // ========================================
 
-    // Chat sessions
+    // Chat sessions (top-level collection — legacy path)
     match /chatSessions/{sessionId} {
       // All authenticated users can read/write sessions
       allow read, write: if isAuthenticated();
     }
 
-    // Chat messages within sessions
+    // Chat messages within top-level sessions (legacy path)
     match /chatSessions/{sessionId}/messages/{messageId} {
       // All authenticated users can read/write messages
+      allow read, write: if isAuthenticated();
+    }
+
+    // Chat session messages subcollection under organizations (active path)
+    // Path: organizations/{orgId}/chatSessions/{sessionId}/messages/{messageId}
+    // The generic org rule covers chatSessions documents but NOT their message subcollections.
+    match /organizations/{orgId}/chatSessions/{sessionId}/messages/{messageId} {
+      // All authenticated users can read/write messages (agents take over, AI writes)
       allow read, write: if isAuthenticated();
     }
 

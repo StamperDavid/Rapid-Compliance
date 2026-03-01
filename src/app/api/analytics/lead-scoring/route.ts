@@ -6,7 +6,6 @@ import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { withCache } from '@/lib/cache/analytics-cache';
 import { requireAuth } from '@/lib/auth/api-auth';
-import { limit } from 'firebase/firestore';
 
 export const dynamic = 'force-dynamic';
 
@@ -128,7 +127,10 @@ async function calculateLeadScoringAnalytics(period: string) {
   const QUERY_LIMIT = 10000;
 
   try {
-    allLeads = (await AdminFirestoreService.getAll(leadsPath, [limit(QUERY_LIMIT)])) as LeadRecord[];
+    const leadsSnapshot = await AdminFirestoreService.collection(leadsPath)
+      .limit(QUERY_LIMIT)
+      .get();
+    allLeads = leadsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as LeadRecord[];
     if (allLeads.length === QUERY_LIMIT) {
       logger.warn('Lead scoring analytics hit query limit', { period, limit: QUERY_LIMIT });
     }

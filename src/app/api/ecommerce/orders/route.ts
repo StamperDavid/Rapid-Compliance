@@ -1,15 +1,11 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
-import { where, orderBy } from 'firebase/firestore';
-
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
 export const dynamic = 'force-dynamic';
-
-type QueryConstraint = ReturnType<typeof where> | ReturnType<typeof orderBy>;
 
 /**
  * GET /api/ecommerce/orders - List orders with pagination
@@ -37,23 +33,8 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status');
     const pageSize = parseInt(searchParams.get('limit') ?? '50');
 
-    const constraints: QueryConstraint[] = [orderBy('createdAt', 'desc')];
-
     // Filter by authenticated user's orders only (non-admin users)
     const isAdmin = authResult.user.role === 'owner' || authResult.user.role === 'admin';
-    if (!isAdmin) {
-      constraints.push(where('userId', '==', authResult.user.uid));
-    }
-
-    // Filter by customer email if provided
-    if (customerEmail) {
-      constraints.push(where('customerEmail', '==', customerEmail));
-    }
-
-    // Filter by status if provided
-    if (status) {
-      constraints.push(where('status', '==', status));
-    }
 
     logger.info('Fetching orders', {
       route: '/api/ecommerce/orders',
@@ -61,27 +42,43 @@ export async function GET(request: NextRequest) {
       filters: JSON.stringify({ customerEmail, status }),
     });
 
-    // Use paginated query - canonical orders path
+    // Build native admin query - canonical orders path
     const { PLATFORM_ID } = await import('@/lib/constants/platform');
     const { COLLECTIONS: COLS } = await import('@/lib/firebase/collections');
-    const result = await AdminFirestoreService.getAllPaginated(
-      `${COLS.ORGANIZATIONS}/${PLATFORM_ID}/orders`,
-      constraints,
-      Math.min(pageSize, 100) // Max 100 per page
-    );
+    const ordersPath = `${COLS.ORGANIZATIONS}/${PLATFORM_ID}/orders`;
+    const cappedPageSize = Math.min(pageSize, 100);
+
+    let query: FirebaseFirestore.Query = AdminFirestoreService.collection(ordersPath)
+      .orderBy('createdAt', 'desc');
+
+    if (!isAdmin) {
+      query = query.where('userId', '==', authResult.user.uid);
+    }
+    if (customerEmail) {
+      query = query.where('customerEmail', '==', customerEmail);
+    }
+    if (status) {
+      query = query.where('status', '==', status);
+    }
+
+    // Fetch pageSize + 1 to determine if there are more pages
+    const snapshot = await query.limit(cappedPageSize + 1).get();
+    const allDocs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    const hasMore = allDocs.length > cappedPageSize;
+    const orders = hasMore ? allDocs.slice(0, cappedPageSize) : allDocs;
 
     logger.info('Orders fetched successfully', {
       route: '/api/ecommerce/orders',
-      count: result.data.length,
-      hasMore: result.hasMore,
+      count: orders.length,
+      hasMore,
     });
 
     return NextResponse.json({
       success: true,
-      orders: result.data,
+      orders,
       pagination: {
-        hasMore: result.hasMore,
-        pageSize: result.data.length,
+        hasMore,
+        pageSize: orders.length,
       },
     });
   } catch (error: unknown) {

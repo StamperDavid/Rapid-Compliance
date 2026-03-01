@@ -15,8 +15,8 @@ import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { logger } from '@/lib/logger/logger';
 import { sendEmail } from '@/lib/email/email-service';
 import { z } from 'zod';
-import { db } from '@/lib/firebase/config';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { adminDb } from '@/lib/firebase/admin';
+import { FieldValue } from 'firebase-admin/firestore';
 import { getSubCollection } from '@/lib/firebase/collections';
 
 const ContactFormSchema = z.object({
@@ -44,15 +44,15 @@ export async function POST(request: NextRequest) {
 
     const { name, email, company, message } = parsed.data;
 
-    // Store submission in Firestore for record-keeping
-    if (db) {
+    // Store submission in Firestore for record-keeping using Admin SDK
+    if (adminDb) {
       const submissionsPath = getSubCollection('contactSubmissions');
-      await addDoc(collection(db, submissionsPath), {
+      await adminDb.collection(submissionsPath).add({
         name,
         email,
         company,
         message,
-        submittedAt: serverTimestamp(),
+        submittedAt: FieldValue.serverTimestamp(),
         ip: request.headers.get('x-forwarded-for') ?? request.headers.get('x-real-ip') ?? 'unknown',
         status: 'new',
       });

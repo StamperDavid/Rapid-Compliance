@@ -13,7 +13,6 @@ import { requireAuth } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
 import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { getSocialPostsCollection } from '@/lib/firebase/collections';
-import { orderBy, where, type QueryConstraint } from 'firebase/firestore';
 
 export const dynamic = 'force-dynamic';
 
@@ -69,18 +68,19 @@ export async function GET(request: NextRequest) {
     const statusFilter = searchParams.get('status');
     const platformFilter = searchParams.get('platform');
 
-    const constraints: QueryConstraint[] = [];
+    let query: FirebaseFirestore.Query = AdminFirestoreService.collection(postsPath);
 
     if (statusFilter) {
-      constraints.push(where('status', '==', statusFilter));
+      query = query.where('status', '==', statusFilter);
     }
     if (platformFilter) {
-      constraints.push(where('platform', '==', platformFilter));
+      query = query.where('platform', '==', platformFilter);
     }
 
-    constraints.push(orderBy('createdAt', 'desc'));
+    query = query.orderBy('createdAt', 'desc');
 
-    const posts = await AdminFirestoreService.getAll(postsPath, constraints);
+    const postsSnapshot = await query.get();
+    const posts = postsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
     return NextResponse.json({ success: true, posts });
   } catch (error: unknown) {

@@ -10,7 +10,6 @@
 
 import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
-import { orderBy, limit as firestoreLimit } from 'firebase/firestore';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { getSubCollection } from '@/lib/firebase/collections';
@@ -61,10 +60,11 @@ export async function GET(request: NextRequest) {
     const conversationId = `jasper_${context}`;
     const messagesPath = `${getSubCollection('orchestratorConversations')}/${conversationId}/messages`;
 
-    const docs = (await AdminFirestoreService.getAll(messagesPath, [
-      orderBy('timestamp', 'desc'),
-      firestoreLimit(50),
-    ])) as unknown as StoredMessage[];
+    const messagesSnapshot = await AdminFirestoreService.collection(messagesPath)
+      .orderBy('timestamp', 'desc')
+      .limit(50)
+      .get();
+    const docs = messagesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as unknown as StoredMessage[];
 
     // Expand each stored doc into a user + assistant message pair
     const messages: HistoryMessage[] = [];

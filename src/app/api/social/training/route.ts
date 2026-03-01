@@ -14,7 +14,6 @@ import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { COLLECTIONS, getSubCollection } from '@/lib/firebase/collections';
 import { PLATFORM_ID } from '@/lib/constants/platform';
-import { orderBy } from 'firebase/firestore';
 
 export const dynamic = 'force-dynamic';
 
@@ -66,11 +65,11 @@ export async function GET(request: NextRequest) {
     if (authResult instanceof NextResponse) { return authResult; }
 
     // Fetch settings, brand DNA, history, and knowledge in parallel
-    const [settingsData, orgData, historyResult, knowledgeResult] = await Promise.all([
+    const [settingsData, orgData, historySnapshot, knowledgeSnapshot] = await Promise.all([
       AdminFirestoreService.get(TRAINING_COLLECTION, 'social'),
       AdminFirestoreService.get(COLLECTIONS.ORGANIZATIONS, PLATFORM_ID),
-      AdminFirestoreService.getAllPaginated(HISTORY_COLLECTION, [orderBy('generatedAt', 'desc')], 50),
-      AdminFirestoreService.getAllPaginated(KNOWLEDGE_COLLECTION, [orderBy('uploadedAt', 'desc')], 50),
+      AdminFirestoreService.collection(HISTORY_COLLECTION).orderBy('generatedAt', 'desc').limit(50).get(),
+      AdminFirestoreService.collection(KNOWLEDGE_COLLECTION).orderBy('uploadedAt', 'desc').limit(50).get(),
     ]);
 
     const orgRecord = orgData as { brandDNA?: BrandDNA } | null | undefined;
@@ -79,8 +78,8 @@ export async function GET(request: NextRequest) {
       success: true,
       settings: settingsData ?? null,
       brandDNA: orgRecord?.brandDNA ?? null,
-      history: historyResult.data ?? [],
-      knowledge: knowledgeResult.data ?? [],
+      history: historySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })),
+      knowledge: knowledgeSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })),
     });
   } catch (error: unknown) {
     logger.error('Training API: GET failed', error instanceof Error ? error : new Error(String(error)));

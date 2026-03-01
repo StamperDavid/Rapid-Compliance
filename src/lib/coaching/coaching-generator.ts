@@ -3,7 +3,7 @@
  * 
  * SOVEREIGN CORPORATE BRAIN - COACHING MODULE
  * 
- * Uses GPT-4o to generate personalized coaching insights and recommendations
+ * Uses Claude Sonnet to generate personalized coaching insights and recommendations
  * based on comprehensive performance analysis.
  * 
  * CAPABILITIES:
@@ -18,12 +18,12 @@
  * - Actionable item creation with timelines
  * 
  * INTEGRATION:
- * - Uses unified-ai-service for GPT-4o access
+ * - Uses unified-ai-service for Claude Sonnet access
  * - Coaching Analytics Engine for performance data
  * - Signal Bus for event tracking
  * 
  * AI MODEL:
- * - GPT-4o for high-quality coaching insights
+ * - Claude Sonnet for high-quality coaching insights
  * - Structured output for consistency
  * - Temperature 0.7 for creative but grounded suggestions
  */
@@ -145,7 +145,7 @@ export class CoachingGenerator {
     const prompt = this.buildPerformanceSummaryPrompt(performance);
     
     const response = await sendUnifiedChatMessage({
-      model: 'gpt-4o',
+      model: 'claude-sonnet-4-5-20250514',
       messages: [
         { role: 'user', content: prompt }
       ],
@@ -184,7 +184,7 @@ export class CoachingGenerator {
     const prompt = this.buildStrengthsPrompt(performance);
 
     const response = await sendUnifiedChatMessage({
-      model: 'gpt-4o',
+      model: 'claude-sonnet-4-5-20250514',
       messages: [
         { role: 'user', content: prompt }
       ],
@@ -211,7 +211,7 @@ export class CoachingGenerator {
     const prompt = this.buildWeaknessesPrompt(performance);
 
     const response = await sendUnifiedChatMessage({
-      model: 'gpt-4o',
+      model: 'claude-sonnet-4-5-20250514',
       messages: [
         { role: 'user', content: prompt }
       ],
@@ -238,7 +238,7 @@ export class CoachingGenerator {
     const prompt = this.buildOpportunitiesPrompt(performance);
 
     const response = await sendUnifiedChatMessage({
-      model: 'gpt-4o',
+      model: 'claude-sonnet-4-5-20250514',
       messages: [
         { role: 'user', content: prompt }
       ],
@@ -265,7 +265,7 @@ export class CoachingGenerator {
     const prompt = this.buildRisksPrompt(performance);
 
     const response = await sendUnifiedChatMessage({
-      model: 'gpt-4o',
+      model: 'claude-sonnet-4-5-20250514',
       messages: [
         { role: 'user', content: prompt }
       ],
@@ -292,7 +292,7 @@ export class CoachingGenerator {
     const prompt = this.buildBestPracticesPrompt(performance);
 
     const response = await sendUnifiedChatMessage({
-      model: 'gpt-4o',
+      model: 'claude-sonnet-4-5-20250514',
       messages: [
         { role: 'user', content: prompt }
       ],
@@ -319,7 +319,7 @@ export class CoachingGenerator {
     const prompt = this.buildRecommendationsPrompt(performance);
 
     const response = await sendUnifiedChatMessage({
-      model: 'gpt-4o',
+      model: 'claude-sonnet-4-5-20250514',
       messages: [
         { role: 'user', content: prompt }
       ],
@@ -347,7 +347,7 @@ export class CoachingGenerator {
     const prompt = this.buildTrainingPrompt(performance, _weaknesses);
 
     const response = await sendUnifiedChatMessage({
-      model: 'gpt-4o',
+      model: 'claude-sonnet-4-5-20250514',
       messages: [
         { role: 'user', content: prompt }
       ],
@@ -375,7 +375,7 @@ export class CoachingGenerator {
     const prompt = this.buildActionItemsPrompt(performance, _recommendations);
 
     const response = await sendUnifiedChatMessage({
-      model: 'gpt-4o',
+      model: 'claude-sonnet-4-5-20250514',
       messages: [
         { role: 'user', content: prompt }
       ],

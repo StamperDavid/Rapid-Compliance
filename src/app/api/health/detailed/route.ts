@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from 'next/server';
-import { db, isFirebaseConfigured } from '@/lib/firebase/config';
+import { adminDb } from '@/lib/firebase/admin';
 import { requireRole } from '@/lib/auth/api-auth';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
@@ -23,6 +23,8 @@ export async function GET(request: NextRequest) {
       return authResult;
     }
 
+    const isAdminDbConfigured = adminDb !== null;
+
     const health = {
       status: 'healthy',
       timestamp: new Date().toISOString(),
@@ -31,7 +33,7 @@ export async function GET(request: NextRequest) {
       services: {
         database: {
           status: 'unknown' as string,
-          configured: isFirebaseConfigured,
+          configured: isAdminDbConfigured,
           error: undefined as string | undefined,
         },
         api: {
@@ -48,12 +50,10 @@ export async function GET(request: NextRequest) {
       },
     };
 
-    // Check Firestore
+    // Check Firestore using Admin SDK
     try {
-      if (db && isFirebaseConfigured) {
-        const { collection, limit, getDocs, query } = await import('firebase/firestore');
-        const testQuery = query(collection(db, 'health'), limit(1));
-        await getDocs(testQuery);
+      if (adminDb && isAdminDbConfigured) {
+        await adminDb.collection('health').limit(1).get();
         health.services.database.status = 'healthy';
       } else {
         health.services.database.status = 'unavailable';

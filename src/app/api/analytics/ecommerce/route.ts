@@ -5,7 +5,6 @@ import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { getOrdersCollection, getCartsCollection } from '@/lib/firebase/collections';
-import { where, limit, orderBy } from 'firebase/firestore';
 
 export const dynamic = 'force-dynamic';
 
@@ -106,12 +105,12 @@ export async function GET(request: NextRequest) {
     let allOrders: OrderRecord[] = [];
 
     try {
-      const ordersConstraints = [
-        where('createdAt', '>=', startDate),
-        orderBy('createdAt', 'desc'),
-        limit(QUERY_LIMIT),
-      ];
-      allOrders = (await AdminFirestoreService.getAll(ordersPath, ordersConstraints)) as OrderRecord[];
+      const ordersSnapshot = await AdminFirestoreService.collection(ordersPath)
+        .where('createdAt', '>=', startDate)
+        .orderBy('createdAt', 'desc')
+        .limit(QUERY_LIMIT)
+        .get();
+      allOrders = ordersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as OrderRecord[];
       if (allOrders.length === QUERY_LIMIT) {
         logger.warn('Ecommerce analytics orders query hit limit', { limit: QUERY_LIMIT, period });
       }
@@ -137,12 +136,12 @@ export async function GET(request: NextRequest) {
     let allCarts: CartRecord[] = [];
 
     try {
-      const cartsConstraints = [
-        where('createdAt', '>=', startDate),
-        orderBy('createdAt', 'desc'),
-        limit(QUERY_LIMIT),
-      ];
-      allCarts = (await AdminFirestoreService.getAll(cartsPath, cartsConstraints)) as CartRecord[];
+      const cartsSnapshot = await AdminFirestoreService.collection(cartsPath)
+        .where('createdAt', '>=', startDate)
+        .orderBy('createdAt', 'desc')
+        .limit(QUERY_LIMIT)
+        .get();
+      allCarts = cartsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as CartRecord[];
       if (allCarts.length === QUERY_LIMIT) {
         logger.warn('Ecommerce analytics carts query hit limit', { limit: QUERY_LIMIT, period });
       }

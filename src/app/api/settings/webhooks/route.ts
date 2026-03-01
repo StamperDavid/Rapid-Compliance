@@ -13,7 +13,6 @@ import { requireAuth } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
 import { getSubCollection } from '@/lib/firebase/collections';
 import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
-import { orderBy } from 'firebase/firestore';
 
 export const dynamic = 'force-dynamic';
 
@@ -56,10 +55,10 @@ export async function GET(request: NextRequest) {
       return authResult;
     }
 
-    const webhooks = await AdminFirestoreService.getAll(
-      webhookPath,
-      [orderBy('createdAt', 'desc')]
-    );
+    const webhooksSnapshot = await AdminFirestoreService.collection(webhookPath)
+      .orderBy('createdAt', 'desc')
+      .get();
+    const webhooks = webhooksSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
     return NextResponse.json({ success: true, webhooks });
   } catch (error: unknown) {
