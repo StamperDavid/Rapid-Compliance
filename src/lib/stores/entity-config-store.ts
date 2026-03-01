@@ -10,6 +10,7 @@
 import { create } from 'zustand';
 import type { EntityConfig } from '@/types/entity-config';
 import { isAlwaysOnEntity, DEFAULT_ENTITY_CONFIG } from '@/lib/constants/entity-config';
+import { getCurrentUser } from '@/lib/auth/auth-service';
 
 interface EntityConfigStoreState {
   config: EntityConfig | null;
@@ -46,7 +47,13 @@ export const useEntityConfigStore = create<EntityConfigStoreState>((set, get) =>
     set({ loading: true });
 
     try {
-      const res = await fetch('/api/entity-config');
+      const headers: Record<string, string> = {};
+      const user = getCurrentUser();
+      if (user) {
+        const token = await user.getIdToken();
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      const res = await fetch('/api/entity-config', { headers });
       if (res.ok) {
         const data = (await res.json()) as { config: EntityConfig | null };
         set({

@@ -1,17 +1,12 @@
 /**
  * Playwright Global Teardown
  *
- * Runs AFTER all E2E tests complete. Recursively deletes test data
- * from production Firestore subcollections under the platform org.
+ * Runs AFTER all E2E tests complete. ONLY deletes documents that were
+ * created by E2E tests (identified by the E2E_TEMP_ prefix).
  *
- * This prevents test data pollution when NEXT_PUBLIC_APP_ENV=production
- * causes the dev server to write to production Firestore paths.
- *
- * Safe-listed collections/docs are preserved:
- *   - toolTraining/voice
- *   - orchestratorConversations/*
- *   - settings/booking, settings/api-keys, settings/brand-dna, settings/entity_config, settings/feature_modules
- *   - integrations/* (real config)
+ * SAFETY RULE: This teardown NEVER deletes documents unless their ID
+ * starts with "E2E_TEMP_". Production data, demo data, API keys, and
+ * all user-created content are left untouched.
  */
 
 import * as admin from 'firebase-admin';
@@ -21,30 +16,8 @@ import * as path from 'path';
 const PLATFORM_ID = 'rapid-compliance-root';
 const ORG_DOC = `organizations/${PLATFORM_ID}`;
 
-/** Collections that should be fully wiped after every test run */
-const WIPE_COLLECTIONS = [
-  'products',
-  'leads',
-  'bookings',
-  'deals',
-  'carts',
-  'workflows',
-  'emailCampaigns',
-  'workflowExecutions',
-  'workflowWaits',
-  'tasks',
-  'missions',
-  'eventLog',
-  'memoryVault',
-] as const;
-
-/** Documents to always keep (collection → list of safe doc IDs; empty = keep all) */
-const SAFE_DOCS: Record<string, string[]> = {
-  toolTraining: ['voice'],
-  orchestratorConversations: [], // keep all
-  settings: ['booking', 'api-keys', 'brand-dna', 'entity_config', 'feature_modules'],
-  integrations: [], // keep all
-};
+/** Prefix that ALL E2E test data must use */
+const E2E_PREFIX = 'E2E_TEMP_';
 
 function initAdmin(): admin.app.App {
   const existing = admin.apps[0];
@@ -63,41 +36,22 @@ function initAdmin(): admin.app.App {
   });
 }
 
-async function deleteCollection(db: admin.firestore.Firestore, collectionPath: string): Promise<number> {
-  const collRef = db.collection(collectionPath);
+async function deleteDocRecursively(db: admin.firestore.Firestore, docRef: admin.firestore.DocumentReference): Promise<number> {
   let deleted = 0;
-  const batchSize = 400;
-
-  while (true) {
-    const snapshot = await collRef.limit(batchSize).get();
-    if (snapshot.empty) {break;}
-
-    const batch = db.batch();
+  const subcollections = await docRef.listCollections();
+  for (const sub of subcollections) {
+    const snapshot = await sub.get();
     for (const doc of snapshot.docs) {
-      const subcollections = await doc.ref.listCollections();
-      for (const sub of subcollections) {
-        await deleteCollection(db, sub.path);
-      }
-      batch.delete(doc.ref);
-      deleted++;
+      deleted += await deleteDocRecursively(db, doc.ref);
     }
-    await batch.commit();
   }
-
+  await docRef.delete();
+  deleted++;
   return deleted;
 }
 
-async function deleteDoc(db: admin.firestore.Firestore, docPath: string): Promise<void> {
-  const docRef = db.doc(docPath);
-  const subcollections = await docRef.listCollections();
-  for (const sub of subcollections) {
-    await deleteCollection(db, sub.path);
-  }
-  await docRef.delete();
-}
-
 async function globalTeardown() {
-  console.info('\n[Global Teardown] Cleaning test data from Firestore...');
+  console.info('\n[Global Teardown] Cleaning E2E_TEMP_ test data from Firestore...');
 
   let app: admin.app.App;
   try {
@@ -110,35 +64,53 @@ async function globalTeardown() {
   const db = admin.firestore(app);
   let totalDeleted = 0;
 
-  // 1. Wipe known test-data collections
-  for (const col of WIPE_COLLECTIONS) {
-    const count = await deleteCollection(db, `${ORG_DOC}/${col}`);
-    if (count > 0) {
-      console.info(`  [WIPED] ${col}: ${count} docs`);
-      totalDeleted += count;
-    }
-  }
-
-  // 2. Scan remaining subcollections — delete anything not safe-listed
+  // Scan all subcollections under the platform org
   const orgRef = db.doc(ORG_DOC);
   const subcollections = await orgRef.listCollections();
 
   for (const sub of subcollections) {
-    const colName = sub.id;
-    if ((WIPE_COLLECTIONS as readonly string[]).includes(colName)) {continue;}
+    const snapshot = await sub.get();
 
-    const safeList = SAFE_DOCS[colName];
+    for (const doc of snapshot.docs) {
+      // ONLY delete documents with the E2E_TEMP_ prefix
+      if (!doc.id.startsWith(E2E_PREFIX)) {
+        continue;
+      }
 
-    // Keep all docs in fully safe-listed collections
-    if (safeList?.length === 0) {continue;}
+      const count = await deleteDocRecursively(db, doc.ref);
+      totalDeleted += count;
+      console.info(`  [DELETED] ${sub.id}/${doc.id} (${count} docs)`);
+    }
+  }
 
-    const snap = await sub.get();
-    for (const doc of snap.docs) {
-      if (safeList?.includes(doc.id)) {continue;}
+  // Also clean up E2E_TEMP_ organizations (top-level)
+  const orgsSnapshot = await db.collection('organizations')
+    .where('__name__', '>=', E2E_PREFIX)
+    .where('__name__', '<', `${E2E_PREFIX}\uf8ff`)
+    .get();
 
-      await deleteDoc(db, `${ORG_DOC}/${colName}/${doc.id}`);
+  for (const doc of orgsSnapshot.docs) {
+    const count = await deleteDocRecursively(db, doc.ref);
+    totalDeleted += count;
+    console.info(`  [DELETED] organizations/${doc.id} (${count} docs)`);
+  }
+
+  // Clean up E2E_TEMP_ users
+  const usersSnapshot = await db.collection('users').get();
+  const batch = db.batch();
+  let batchCount = 0;
+
+  for (const doc of usersSnapshot.docs) {
+    if (doc.id.startsWith(E2E_PREFIX)) {
+      batch.delete(doc.ref);
+      batchCount++;
       totalDeleted++;
     }
+  }
+
+  if (batchCount > 0) {
+    await batch.commit();
+    console.info(`  [DELETED] ${batchCount} E2E_TEMP_ users`);
   }
 
   if (totalDeleted > 0) {

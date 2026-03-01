@@ -9,6 +9,7 @@
 import { create } from 'zustand';
 import type { FeatureConfig, FeatureModuleId } from '@/types/feature-modules';
 import { DEFAULT_FEATURE_CONFIG } from '@/lib/constants/feature-modules';
+import { getCurrentUser } from '@/lib/auth/auth-service';
 
 interface FeatureStoreState {
   config: FeatureConfig | null;
@@ -44,7 +45,13 @@ export const useFeatureStore = create<FeatureStoreState>((set, get) => ({
     set({ loading: true });
 
     try {
-      const res = await fetch('/api/features');
+      const headers: Record<string, string> = {};
+      const user = getCurrentUser();
+      if (user) {
+        const token = await user.getIdToken();
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      const res = await fetch('/api/features', { headers });
       if (res.ok) {
         const data = (await res.json()) as { config: FeatureConfig | null };
         set({
