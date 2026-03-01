@@ -69,31 +69,6 @@ export default defineConfig({
         /auth-rbac\.spec\.ts/,
       ],
     },
-    {
-      name: 'firefox',
-      use: {
-        ...devices['Desktop Firefox'],
-        storageState: authFile,
-      },
-      dependencies: ['auth-setup'],
-      testIgnore: [
-        /auth-(login|signup)\.spec\.ts/,
-        /auth-rbac\.spec\.ts/,
-      ],
-    },
-    {
-      name: 'webkit',
-      use: {
-        ...devices['Desktop Safari'],
-        storageState: authFile,
-      },
-      dependencies: ['auth-setup'],
-      testIgnore: [
-        /auth-(login|signup)\.spec\.ts/,
-        /auth-rbac\.spec\.ts/,
-      ],
-    },
-
     // --- RBAC tests need their own auth handling ---
     {
       name: 'rbac',
@@ -101,29 +76,59 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'] },
     },
 
-    // --- Mobile (authenticated) ---
-    {
-      name: 'Mobile Chrome',
-      use: {
-        ...devices['Pixel 5'],
-        storageState: authFile,
+    // --- Cross-browser and mobile projects (opt-in) ---
+    // Enable via: npx playwright test --project=firefox --project=webkit
+    // Disabled by default to avoid Firebase auth quota exhaustion.
+    // When all 5 browser projects run simultaneously, the ~100+ tests
+    // trigger hundreds of Firebase auth calls which hit rate limits.
+    ...(process.env.E2E_CROSS_BROWSER ? [
+      {
+        name: 'firefox',
+        use: {
+          ...devices['Desktop Firefox'],
+          storageState: authFile,
+        },
+        dependencies: ['auth-setup'],
+        testIgnore: [
+          /auth-(login|signup)\.spec\.ts/,
+          /auth-rbac\.spec\.ts/,
+        ],
       },
-      dependencies: ['auth-setup'],
-      testIgnore: [
-        /auth-(login|signup|rbac|session)\.spec\.ts/,
-      ],
-    },
-    {
-      name: 'Mobile Safari',
-      use: {
-        ...devices['iPhone 12'],
-        storageState: authFile,
+      {
+        name: 'webkit',
+        use: {
+          ...devices['Desktop Safari'],
+          storageState: authFile,
+        },
+        dependencies: ['auth-setup'],
+        testIgnore: [
+          /auth-(login|signup)\.spec\.ts/,
+          /auth-rbac\.spec\.ts/,
+        ],
       },
-      dependencies: ['auth-setup'],
-      testIgnore: [
-        /auth-(login|signup|rbac|session)\.spec\.ts/,
-      ],
-    },
+      {
+        name: 'Mobile Chrome',
+        use: {
+          ...devices['Pixel 5'],
+          storageState: authFile,
+        },
+        dependencies: ['auth-setup'],
+        testIgnore: [
+          /auth-(login|signup|rbac|session)\.spec\.ts/,
+        ],
+      },
+      {
+        name: 'Mobile Safari',
+        use: {
+          ...devices['iPhone 12'],
+          storageState: authFile,
+        },
+        dependencies: ['auth-setup'],
+        testIgnore: [
+          /auth-(login|signup|rbac|session)\.spec\.ts/,
+        ],
+      },
+    ] : []),
   ],
 
   webServer: {

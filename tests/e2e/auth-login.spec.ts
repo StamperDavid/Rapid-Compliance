@@ -15,7 +15,9 @@ import { TEST_USER, TEST_ADMIN, BASE_URL } from './fixtures/test-accounts';
 
 test.describe('Login Flow', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto(`${BASE_URL}/login`);
+    await page.goto(`${BASE_URL}/login`, { waitUntil: 'load', timeout: 60_000 });
+    // Wait for React hydration
+    await expect(page.locator('button[type="submit"]')).toBeEnabled({ timeout: 15_000 });
   });
 
   test('should display login form with all required elements', async ({ page }) => {
@@ -37,43 +39,49 @@ test.describe('Login Flow', () => {
 
   test('should login with valid credentials and redirect to dashboard', async ({ page }) => {
     // Fill in credentials
-    await page.locator('input[type="email"]').fill(TEST_USER.email);
-    await page.locator('input[type="password"]').fill(TEST_USER.password);
+    const emailInput = page.locator('input[type="email"]');
+    const passwordInput = page.locator('input[type="password"]');
+    await emailInput.click();
+    await emailInput.fill(TEST_USER.email);
+    await passwordInput.click();
+    await passwordInput.fill(TEST_USER.password);
 
     // Submit form
     await page.locator('button[type="submit"]').click();
 
-    // Should show loading state
-    await expect(page.locator('button[type="submit"]')).toContainText(/Signing in/i);
-
     // Should redirect to dashboard
-    await page.waitForURL('**/dashboard', { timeout: 30_000 });
+    await page.waitForURL('**/dashboard', { waitUntil: 'commit', timeout: 60_000 });
 
-    // Verify dashboard loaded
-    await expect(page.locator('h1')).toContainText('Dashboard');
-    await expect(
-      page.locator('text=Welcome back')
-    ).toBeVisible();
+    // Verify dashboard loaded (sidebar visible = auth resolved)
+    await expect(page.locator('aside')).toBeVisible({ timeout: 15_000 });
   });
 
   test('should show error for invalid email', async ({ page }) => {
-    await page.locator('input[type="email"]').fill('nonexistent@example.com');
-    await page.locator('input[type="password"]').fill('wrongpassword');
+    const emailInput = page.locator('input[type="email"]');
+    const passwordInput = page.locator('input[type="password"]');
+    await emailInput.click();
+    await emailInput.fill('nonexistent@example.com');
+    await passwordInput.click();
+    await passwordInput.fill('wrongpassword');
     await page.locator('button[type="submit"]').click();
 
     // Wait for error message (Firebase returns user-not-found or invalid-credential)
-    const errorContainer = page.locator('.bg-red-900\\/30, [role="alert"]');
-    await expect(errorContainer).toBeVisible({ timeout: 10_000 });
+    const errorContainer = page.locator('.bg-red-900\\/30');
+    await expect(errorContainer).toBeVisible({ timeout: 15_000 });
   });
 
   test('should show error for wrong password', async ({ page }) => {
-    await page.locator('input[type="email"]').fill(TEST_USER.email);
-    await page.locator('input[type="password"]').fill('CompletelyWrongPassword!');
+    const emailInput = page.locator('input[type="email"]');
+    const passwordInput = page.locator('input[type="password"]');
+    await emailInput.click();
+    await emailInput.fill(TEST_USER.email);
+    await passwordInput.click();
+    await passwordInput.fill('CompletelyWrongPassword!');
     await page.locator('button[type="submit"]').click();
 
     // Wait for error message
-    const errorContainer = page.locator('.bg-red-900\\/30, [role="alert"]');
-    await expect(errorContainer).toBeVisible({ timeout: 10_000 });
+    const errorContainer = page.locator('.bg-red-900\\/30');
+    await expect(errorContainer).toBeVisible({ timeout: 15_000 });
   });
 
   test('should prevent submission with empty fields', async ({ page }) => {
@@ -86,40 +94,48 @@ test.describe('Login Flow', () => {
 
   test('should navigate to signup from login page', async ({ page }) => {
     await page.locator('a[href="/onboarding/industry"]').click();
-    await page.waitForURL('**/onboarding/industry');
+    await page.waitForURL('**/onboarding/industry', { timeout: 30_000 });
     await expect(page).toHaveURL(/\/onboarding\/industry/);
   });
 
   test('should navigate to forgot password from login page', async ({ page }) => {
     await page.locator('a[href="/forgot-password"]').click();
-    await expect(page).toHaveURL(/\/forgot-password/);
+    await expect(page).toHaveURL(/\/forgot-password/, { timeout: 15_000 });
   });
 });
 
 test.describe('Admin Login Flow', () => {
   test('should login via admin login page', async ({ page }) => {
-    await page.goto(`${BASE_URL}/admin-login`);
+    await page.goto(`${BASE_URL}/admin-login`, { waitUntil: 'load', timeout: 60_000 });
+
+    // Wait for Firebase ready (button disabled until isFirebaseReady)
+    const submitBtn = page.locator('button[type="submit"]');
+    await expect(submitBtn).toBeEnabled({ timeout: 15_000 });
 
     // Verify admin login form
     await expect(page.locator('input[type="email"]')).toBeVisible();
     await expect(page.locator('input[type="password"]')).toBeVisible();
 
     // Fill admin credentials
-    await page.locator('input[type="email"]').fill(TEST_ADMIN.email);
-    await page.locator('input[type="password"]').fill(TEST_ADMIN.password);
-    await page.locator('button[type="submit"]').click();
+    const emailInput = page.locator('input[type="email"]');
+    const passwordInput = page.locator('input[type="password"]');
+    await emailInput.click();
+    await emailInput.fill(TEST_ADMIN.email);
+    await passwordInput.click();
+    await passwordInput.fill(TEST_ADMIN.password);
+    await submitBtn.click();
 
     // Should redirect to dashboard
-    await page.waitForURL('**/dashboard', { timeout: 30_000 });
+    await page.waitForURL('**/dashboard', { waitUntil: 'commit', timeout: 60_000 });
   });
 
   test('should show admin-specific warning text', async ({ page }) => {
-    await page.goto(`${BASE_URL}/admin-login`);
+    await page.goto(`${BASE_URL}/admin-login`, { waitUntil: 'load', timeout: 60_000 });
 
     // Admin login page should contain a warning about admin access
     await expect(
       page.locator('text=admin account')
-    ).toBeVisible();
+    ).toBeVisible({ timeout: 15_000 });
   });
 });
 
@@ -129,9 +145,9 @@ test.describe('Login Redirect Behavior', () => {
     await page.context().clearCookies();
 
     // Try to access dashboard directly
-    await page.goto(`${BASE_URL}/dashboard`);
+    await page.goto(`${BASE_URL}/dashboard`, { waitUntil: 'load', timeout: 60_000 });
 
-    // Should redirect to login
-    await page.waitForURL(/\/(login|admin-login)/, { timeout: 15_000 });
+    // Should redirect to login (client-side redirect via useUnifiedAuth)
+    await page.waitForURL(/\/(login|admin-login)/, { waitUntil: 'commit', timeout: 30_000 });
   });
 });

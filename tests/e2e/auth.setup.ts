@@ -78,8 +78,10 @@ async function loginAndWaitForDashboard(
   );
 
   // Race: dashboard navigation vs error message
+  // Use waitUntil:'commit' — the dashboard has long-running Firebase connections
+  // that prevent 'load' from ever resolving on the dev server.
   const result = await Promise.race([
-    page.waitForURL('**/dashboard', { timeout: 60_000 })
+    page.waitForURL('**/dashboard', { waitUntil: 'commit', timeout: 60_000 })
       .then(() => 'dashboard' as const),
     errorLocator.waitFor({ timeout: 60_000 })
       .then(() => 'error' as const),

@@ -10,6 +10,9 @@ import { BASE_URL } from './test-accounts';
 /**
  * Log in via the UI login form. Used in tests that need fresh auth
  * (e.g., login tests, RBAC tests) rather than reusing stored state.
+ *
+ * Retries up to 2 times on Firebase quota errors (auth/quota-exceeded)
+ * which occur when multiple workers hit Firebase auth simultaneously.
  */
 export async function loginViaUI(
   page: Page,
@@ -17,18 +20,51 @@ export async function loginViaUI(
   password: string,
   options?: { expectDashboard?: boolean }
 ): Promise<void> {
-  await page.goto(`${BASE_URL}/login`, { waitUntil: 'domcontentloaded' });
-  await page.locator('input[type="email"]').fill(email);
-  await page.locator('input[type="password"]').fill(password);
-  await page.locator('button[type="submit"]').click();
+  const maxRetries = 2;
 
-  if (options?.expectDashboard !== false) {
-    // Wait for the "Redirecting" spinner (confirms Firebase auth succeeded),
-    // then wait for client-side navigation to /dashboard
-    await page.locator('text=Redirecting').waitFor({ timeout: 30_000 }).catch(() => {});
-    await page.waitForURL('**/dashboard', { waitUntil: 'domcontentloaded', timeout: 30_000 });
-    // Wait for sidebar to confirm dashboard layout rendered
-    await expect(page.locator('aside')).toBeVisible({ timeout: 15_000 });
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    await page.goto(`${BASE_URL}/login`, { waitUntil: 'load', timeout: 60_000 });
+
+    // Wait for React hydration — submit button must be enabled
+    const submitBtn = page.locator('button[type="submit"]');
+    await expect(submitBtn).toBeEnabled({ timeout: 15_000 });
+
+    // Fill credentials (click first to ensure focus in controlled inputs)
+    const emailInput = page.locator('input[type="email"]');
+    const passwordInput = page.locator('input[type="password"]');
+    await emailInput.click();
+    await emailInput.fill(email);
+    await passwordInput.click();
+    await passwordInput.fill(password);
+
+    await submitBtn.click();
+
+    if (options?.expectDashboard !== false) {
+      // Race between dashboard navigation and quota error
+      const quotaError = page.locator('text=quota-exceeded').or(page.locator('text=Exceeded quota'));
+      const dashboardResult = await Promise.race([
+        page.waitForURL('**/dashboard', { waitUntil: 'commit', timeout: 30_000 })
+          .then(() => 'dashboard' as const),
+        quotaError.waitFor({ timeout: 30_000 })
+          .then(() => 'quota' as const),
+      ]).catch(() => 'timeout' as const);
+
+      if (dashboardResult === 'quota' && attempt < maxRetries) {
+        // Wait before retrying — Firebase quota resets after a short delay
+        await page.waitForTimeout(5_000 * (attempt + 1));
+        continue;
+      }
+
+      if (dashboardResult !== 'dashboard') {
+        // Final attempt or non-quota failure — try waiting for dashboard directly
+        await page.waitForURL('**/dashboard', { waitUntil: 'commit', timeout: 60_000 });
+      }
+
+      await expect(page.locator('aside')).toBeVisible({ timeout: 15_000 });
+    }
+
+    // Login succeeded
+    return;
   }
 }
 
@@ -40,19 +76,32 @@ export async function adminLoginViaUI(
   email: string,
   password: string
 ): Promise<void> {
-  await page.goto(`${BASE_URL}/admin-login`);
-  await page.locator('input[type="email"]').fill(email);
-  await page.locator('input[type="password"]').fill(password);
-  await page.locator('button[type="submit"]').click();
-  await page.waitForURL('**/dashboard', { timeout: 30_000 });
+  await page.goto(`${BASE_URL}/admin-login`, { waitUntil: 'load', timeout: 60_000 });
+
+  // Wait for Firebase to initialize (button disabled until isFirebaseReady)
+  const submitBtn = page.locator('button[type="submit"]');
+  await expect(submitBtn).toBeEnabled({ timeout: 15_000 });
+
+  const emailInput = page.locator('input[type="email"]');
+  const passwordInput = page.locator('input[type="password"]');
+  await emailInput.click();
+  await emailInput.fill(email);
+  await passwordInput.click();
+  await passwordInput.fill(password);
+
+  await submitBtn.click();
+  await page.waitForURL('**/dashboard', { waitUntil: 'commit', timeout: 60_000 });
 }
 
 /**
  * Assert that the user is on the dashboard page.
  */
 export async function expectDashboard(page: Page): Promise<void> {
-  await expect(page).toHaveURL(/\/dashboard/);
-  await expect(page.locator('h1')).toContainText('Dashboard');
+  await expect(page).toHaveURL(/\/dashboard/, { timeout: 15_000 });
+  // Dashboard h1 or sidebar visible confirms auth resolved and page rendered
+  const h1 = page.locator('h1');
+  const sidebar = page.locator('aside');
+  await expect(h1.or(sidebar).first()).toBeVisible({ timeout: 20_000 });
 }
 
 /**
@@ -103,8 +152,9 @@ export async function ensureAuthenticated(
   const { TEST_USER } = await import('./test-accounts');
   await page.goto(`${BASE_URL}/dashboard`, { waitUntil: 'domcontentloaded' });
   try {
-    // Check if we're already on the dashboard with an active session
-    await expect(page.locator('aside')).toBeVisible({ timeout: 10_000 });
+    // Check if we're already on the dashboard with an active session.
+    // Firebase auth resolution from storage state can take 15-20s on dev server.
+    await expect(page.locator('aside')).toBeVisible({ timeout: 20_000 });
   } catch {
     // Storage state didn't restore Firebase auth — log in via UI
     await loginViaUI(

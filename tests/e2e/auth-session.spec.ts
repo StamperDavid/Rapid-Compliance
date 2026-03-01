@@ -19,9 +19,10 @@ test.describe('Session Persistence', () => {
   // so we log in explicitly to establish a real Firebase session.
   test.beforeEach(async ({ page }) => {
     // Check if stored auth state works by navigating to dashboard
-    await page.goto(`${BASE_URL}/dashboard`);
+    await page.goto(`${BASE_URL}/dashboard`, { waitUntil: 'domcontentloaded', timeout: 30_000 });
     try {
-      await expect(page.locator('h1')).toContainText('Dashboard', { timeout: 8_000 });
+      // Firebase auth from storage state can take 15-20s to resolve
+      await expect(page.locator('aside')).toBeVisible({ timeout: 20_000 });
     } catch {
       // Storage state didn't restore Firebase auth — log in via UI
       await loginViaUI(page, TEST_USER.email, TEST_USER.password);

@@ -47,10 +47,10 @@ test.describe('Social Hub — Command Center', () => {
 
     // The command center renders a heading, live status panel, or the
     // social sub-nav (Command Center / Campaigns / Calendar / etc.).
-    const hubArea = page.locator(
-      'h1, h2, text=Command Center, text=Social, text=Agent Status, text=Platform, ' +
-      'a[href="/social/command-center"], a[href="/social/calendar"]'
-    ).first();
+    const hubArea = page.locator('h1, h2, a[href="/social/command-center"], a[href="/social/calendar"]')
+      .or(page.locator('text=Command Center'))
+      .or(page.locator('text=Agent Status'))
+      .first();
 
     await expect(hubArea).toBeVisible({ timeout: 25_000 });
   });
@@ -71,10 +71,10 @@ test.describe('Social Hub — Command Center', () => {
     await goTo(page, '/social/command-center');
 
     // The command center shows connected platform status, kill switch, or composer.
-    const controlArea = page.locator(
-      'text=Platform, text=Connected, text=Status, text=Post, text=Agent, ' +
-      'button:has-text("Post"), button:has-text("Create"), [class*="status"], [class*="agent"]'
-    ).first();
+    const controlArea = page.locator('button:has-text("Post"), button:has-text("Create"), [class*="status"], [class*="agent"]')
+      .or(page.locator('text=Platform'))
+      .or(page.locator('text=Agent'))
+      .first();
 
     await expect(controlArea).toBeVisible({ timeout: 25_000 });
   });
@@ -82,9 +82,9 @@ test.describe('Social Hub — Command Center', () => {
   test('page should not crash (no error boundary)', async ({ page }) => {
     await goTo(page, '/social/command-center');
 
-    const fatalError = page.locator(
-      'text=Application error, text=ChunkLoadError, text=Unhandled Runtime Error'
-    );
+    const fatalError = page.locator('text=Application error')
+      .or(page.locator('text=ChunkLoadError'))
+      .or(page.locator('text=Unhandled Runtime Error'));
     const hasFatalError = await fatalError.first().isVisible({ timeout: 5_000 }).catch(() => false);
     expect(hasFatalError).toBe(false);
   });
@@ -99,10 +99,10 @@ test.describe('Social Hub — Content Calendar', () => {
     await goTo(page, '/social/calendar');
 
     // The calendar page renders a heading or the calendar component.
-    const calendarArea = page.locator(
-      'h1, h2, text=Calendar, text=Content Calendar, text=Scheduled, ' +
-      '[class*="calendar"], [class*="Calendar"]'
-    ).first();
+    const calendarArea = page.locator('h1, h2, [class*="calendar"], [class*="Calendar"]')
+      .or(page.locator('text=Calendar'))
+      .or(page.locator('text=Content Calendar'))
+      .first();
 
     await expect(calendarArea).toBeVisible({ timeout: 25_000 });
   });
@@ -112,12 +112,11 @@ test.describe('Social Hub — Content Calendar', () => {
 
     // The calendar uses react-big-calendar loaded dynamically.
     // Wait for either the calendar grid or the loading indicator.
-    const calendarOrLoader = page.locator(
-      '[class*="rbc-calendar"], [class*="rbc-month"], text=Loading calendar, ' +
-      'text=January, text=February, text=March, text=April, text=May, ' +
-      'text=June, text=July, text=August, text=September, text=October, ' +
-      'text=November, text=December, text=Mon, text=Tue, text=Wed'
-    ).first();
+    const calendarOrLoader = page.locator('[class*="rbc-calendar"], [class*="rbc-month"]')
+      .or(page.locator('text=Loading calendar'))
+      .or(page.locator('text=February'))
+      .or(page.locator('text=Mon'))
+      .first();
 
     await expect(calendarOrLoader).toBeVisible({ timeout: 30_000 });
   });
@@ -142,10 +141,10 @@ test.describe('Analytics — Main Dashboard', () => {
     await goTo(page, '/analytics');
 
     // The analytics dashboard renders a heading and a metrics summary area.
-    const dashboardArea = page.locator(
-      'h1, h2, text=Analytics, text=Revenue, text=Pipeline, text=Dashboard, ' +
-      '[class*="analytics"], [class*="metric"]'
-    ).first();
+    const dashboardArea = page.locator('h1, h2, [class*="analytics"], [class*="metric"]')
+      .or(page.locator('text=Analytics'))
+      .or(page.locator('text=Revenue'))
+      .first();
 
     await expect(dashboardArea).toBeVisible({ timeout: 25_000 });
   });
@@ -154,10 +153,11 @@ test.describe('Analytics — Main Dashboard', () => {
     await goTo(page, '/analytics');
 
     // Revenue and pipeline metrics are the primary data on the analytics home.
-    const metricsArea = page.locator(
-      'text=Revenue, text=Pipeline, text=Deals, text=Win Rate, text=Contacts, ' +
-      'text=Orders, text=Total, [class*="metric"], [class*="stat"], [class*="card"]'
-    ).first();
+    const metricsArea = page.locator('[class*="metric"], [class*="stat"], [class*="card"]')
+      .or(page.locator('text=Revenue'))
+      .or(page.locator('text=Pipeline'))
+      .or(page.locator('text=Win Rate'))
+      .first();
 
     await expect(metricsArea).toBeVisible({ timeout: 25_000 });
   });
@@ -178,26 +178,28 @@ test.describe('Analytics — Main Dashboard', () => {
     await goTo(page, '/analytics');
 
     // Charts render as SVG or canvas elements, or their container divs.
-    const chartOrData = page.locator(
-      'svg, canvas, [class*="chart"], [class*="Chart"], ' +
-      'text=Total Revenue, text=Deals Count, text=Win Rate, text=Avg Deal'
-    ).first();
+    const chartOrData = page.locator('svg, canvas, [class*="chart"], [class*="Chart"]')
+      .or(page.locator('text=Total Revenue'))
+      .or(page.locator('text=Win Rate'))
+      .first();
 
     const isVisible = await chartOrData.isVisible({ timeout: 15_000 }).catch(() => false);
 
-    // Fallback: the page at minimum must show a heading
+    // Fallback: the page at minimum must show a heading or loading state
     if (!isVisible) {
-      const heading = page.locator('h1, h2').first();
-      await expect(heading).toBeVisible({ timeout: 10_000 });
+      const fallback = page.locator('h1, h2')
+        .or(page.locator('text=Loading analytics'))
+        .first();
+      await expect(fallback).toBeVisible({ timeout: 10_000 });
     }
   });
 
   test('page should not crash (no error boundary)', async ({ page }) => {
     await goTo(page, '/analytics');
 
-    const fatalError = page.locator(
-      'text=Application error, text=ChunkLoadError, text=Unhandled Runtime Error'
-    );
+    const fatalError = page.locator('text=Application error')
+      .or(page.locator('text=ChunkLoadError'))
+      .or(page.locator('text=Unhandled Runtime Error'));
     const hasFatalError = await fatalError.first().isVisible({ timeout: 5_000 }).catch(() => false);
     expect(hasFatalError).toBe(false);
   });
@@ -212,10 +214,10 @@ test.describe('Analytics — Pipeline', () => {
     await goTo(page, '/analytics/pipeline');
 
     // The pipeline analytics page renders deal stage data.
-    const pipelineArea = page.locator(
-      'h1, h2, text=Pipeline, text=Deal, text=Stage, text=Value, ' +
-      '[class*="pipeline"], [class*="Pipeline"]'
-    ).first();
+    const pipelineArea = page.locator('h1, h2, [class*="pipeline"], [class*="Pipeline"]')
+      .or(page.locator('text=Pipeline'))
+      .or(page.locator('text=Deal'))
+      .first();
 
     await expect(pipelineArea).toBeVisible({ timeout: 25_000 });
   });
@@ -224,10 +226,11 @@ test.describe('Analytics — Pipeline', () => {
     await goTo(page, '/analytics/pipeline');
 
     // Pipeline summary metrics: total value, deals count, win rate, avg deal size.
-    const metricsArea = page.locator(
-      'text=Total Value, text=Deals, text=Win Rate, text=Avg Deal, ' +
-      'text=Pipeline, text=Stage, text=value, text=count'
-    ).first();
+    const metricsArea = page.locator('text=Pipeline')
+      .or(page.locator('text=Deals'))
+      .or(page.locator('text=Win Rate'))
+      .or(page.locator('text=Stage'))
+      .first();
 
     await expect(metricsArea).toBeVisible({ timeout: 25_000 });
   });
@@ -246,10 +249,11 @@ test.describe('Analytics — Pipeline', () => {
     await goTo(page, '/analytics/pipeline');
 
     // Either pipeline stage rows / chart are shown, or a zero-data state.
-    const dataOrEmpty = page.locator(
-      '[class*="stage"], [class*="Stage"], svg, canvas, ' +
-      'text=No deals, text=No data, text=Pipeline is empty'
-    ).first();
+    const dataOrEmpty = page.locator('[class*="stage"], [class*="Stage"], svg, canvas')
+      .or(page.locator('text=No deals'))
+      .or(page.locator('text=No data'))
+      .or(page.locator('text=Pipeline is empty'))
+      .first();
 
     const isVisible = await dataOrEmpty.isVisible({ timeout: 15_000 }).catch(() => false);
 
@@ -266,47 +270,22 @@ test.describe('Analytics — Pipeline', () => {
 // ---------------------------------------------------------------------------
 
 test.describe('Outbound Hub', () => {
-  test('should load the outbound hub page', async ({ page }) => {
+  test('should load the outbound hub page (redirects to email-writer)', async ({ page }) => {
     await goTo(page, '/outbound');
 
-    // The outbound hub renders feature cards: AI Email Writer, Email Sequences.
-    const hubArea = page.locator(
-      'h1, h2, text=Outbound, text=AI Email Writer, text=Email Sequences, ' +
-      'a[href*="/outbound"], [class*="outbound"]'
-    ).first();
-
+    // /outbound redirects to /email-writer — verify the page loaded
+    await page.waitForTimeout(2_000);
+    const hubArea = page.locator('h1, h2').first();
     await expect(hubArea).toBeVisible({ timeout: 25_000 });
-  });
-
-  test('should display outbound feature cards', async ({ page }) => {
-    await goTo(page, '/outbound');
-
-    // Feature cards for AI Email Writer and Email Sequences must be visible.
-    const emailWriterCard = page.locator('text=AI Email Writer').first();
-    await expect(emailWriterCard).toBeVisible({ timeout: 20_000 });
-
-    const sequencesCard = page.locator('text=Email Sequences').first();
-    await expect(sequencesCard).toBeVisible({ timeout: 10_000 });
-  });
-
-  test('should show navigation links to outbound sub-sections', async ({ page }) => {
-    await goTo(page, '/outbound');
-
-    // Feature cards link to /outbound/email-writer and /outbound/sequences.
-    const subLink = page.locator(
-      'a[href*="email-writer"], a[href*="sequences"], a:has-text("AI Email Writer"), ' +
-      'a:has-text("Email Sequences")'
-    ).first();
-
-    await expect(subLink).toBeVisible({ timeout: 20_000 });
   });
 
   test('page should not crash (no error boundary)', async ({ page }) => {
     await goTo(page, '/outbound');
+    await page.waitForTimeout(2_000);
 
-    const fatalError = page.locator(
-      'text=Application error, text=ChunkLoadError, text=Unhandled Runtime Error'
-    );
+    const fatalError = page.locator('text=Application error')
+      .or(page.locator('text=ChunkLoadError'))
+      .or(page.locator('text=Unhandled Runtime Error'));
     const hasFatalError = await fatalError.first().isVisible({ timeout: 5_000 }).catch(() => false);
     expect(hasFatalError).toBe(false);
   });

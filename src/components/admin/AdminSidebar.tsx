@@ -242,10 +242,16 @@ export default function AdminSidebar() {
   }, []);
 
   const toggleSection = useCallback((sectionId: string) => {
-    setCollapsedSections((prev) => ({
-      ...prev,
-      [sectionId]: !prev[sectionId],
-    }));
+    setCollapsedSections((prev) => {
+      // If the key has been explicitly set before, simply invert it.
+      if (sectionId in prev) {
+        return { ...prev, [sectionId]: !prev[sectionId] };
+      }
+      // First click on a section that was never toggled — it's currently
+      // in its default state (collapsed unless it has an active item).
+      // Force it to the opposite: expanded (false = not collapsed).
+      return { ...prev, [sectionId]: false };
+    });
   }, []);
 
   const isActive = (href: string): boolean => {

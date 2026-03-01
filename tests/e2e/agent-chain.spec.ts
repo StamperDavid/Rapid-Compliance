@@ -37,13 +37,13 @@ async function apiRequest<T>(
 
   switch (method) {
     case 'GET':
-      response = await request.get(url);
+      response = await request.get(url, { timeout: 30_000 });
       break;
     case 'POST':
-      response = await request.post(url, { data: body });
+      response = await request.post(url, { data: body, timeout: 30_000 });
       break;
     case 'PUT':
-      response = await request.put(url, { data: body });
+      response = await request.put(url, { data: body, timeout: 30_000 });
       break;
   }
 

@@ -31,9 +31,7 @@ import { loginViaUI, adminLoginViaUI } from './fixtures/helpers';
  * Based on AdminSidebar.tsx role gating.
  */
 const ADMIN_ONLY_SECTIONS = [
-  'Compliance',
-  'Workforce HQ',
-  'Executive Briefing',
+  'System',
 ];
 
 /**
@@ -45,10 +43,21 @@ async function expandSidebarSection(sidebar: Locator, sectionName: string): Prom
   const sectionButton = sidebar.locator(
     `button:has-text("${sectionName}"), [role="button"]:has-text("${sectionName}")`
   ).first();
-  if (await sectionButton.isVisible({ timeout: 3_000 }).catch(() => false)) {
-    await sectionButton.click();
-    // Wait for expand animation
-    await sectionButton.page().waitForTimeout(300);
+  if (await sectionButton.isVisible({ timeout: 5_000 }).catch(() => false)) {
+    // Only click if the section is currently collapsed (aria-expanded="false")
+    const isExpanded = await sectionButton.getAttribute('aria-expanded');
+    if (isExpanded !== 'true') {
+      await sectionButton.click();
+      // Wait for expand animation and re-render
+      await sectionButton.page().waitForTimeout(800);
+
+      // Verify expansion succeeded — retry once if it didn't
+      const expandedAfterClick = await sectionButton.getAttribute('aria-expanded');
+      if (expandedAfterClick !== 'true') {
+        await sectionButton.click();
+        await sectionButton.page().waitForTimeout(800);
+      }
+    }
   }
 }
 
@@ -134,10 +143,12 @@ test.describe('Member Role — Limited Access', () => {
 
     // Expand the sidebar sections that contain the links we're checking.
     // Section labels are title-case in the DOM (displayed uppercase via CSS).
-    await expandSidebarSection(sidebar, 'Command Center');
+    await expandSidebarSection(sidebar, 'Home');
     await expandSidebarSection(sidebar, 'CRM');
+    await expandSidebarSection(sidebar, 'Commerce');
     await expandSidebarSection(sidebar, 'Analytics');
 
+    // Member role sees: Home, CRM, Commerce, Analytics
     const linksToCheck = ['/dashboard', '/leads', '/deals', '/contacts', '/analytics'];
 
     for (const href of linksToCheck) {
@@ -173,7 +184,7 @@ test.describe('Member Role — Limited Access', () => {
       url.includes('/login') ||
       url.includes('/dashboard') ||
       url.includes('/compliance-reports') || // Page may load but with restricted content
-      (await page.locator('text=access denied, text=unauthorized, text=permission').isVisible({ timeout: 3_000 }).catch(() => false));
+      (await page.locator('text=access denied').or(page.locator('text=unauthorized')).or(page.locator('text=permission')).isVisible({ timeout: 3_000 }).catch(() => false));
 
     expect(isBlocked).toBeTruthy();
   });
@@ -187,11 +198,11 @@ test.describe('Manager Role — Mid-Level Access', () => {
     const sidebar = page.locator('aside').first();
     await expect(sidebar).toBeVisible({ timeout: 10_000 });
 
-    // Expand Lead Gen section (label is title-case, displayed uppercase via CSS)
-    await expandSidebarSection(sidebar, 'Lead Gen');
+    // Expand Outreach section (manager can see Outreach)
+    await expandSidebarSection(sidebar, 'Outreach');
 
-    // Managers should see Lead Gen section
-    const leadGenLinks = ['/forms', '/leads/research', '/lead-scoring'];
+    // Managers should see Outreach section links
+    const leadGenLinks = ['/forms', '/outbound/sequences'];
     let visibleCount = 0;
 
     for (const href of leadGenLinks) {
