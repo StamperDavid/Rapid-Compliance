@@ -19,9 +19,8 @@
 
 import { logger } from '@/lib/logger/logger';
 import { getServerSignalCoordinator } from '@/lib/orchestration/coordinator-factory-server';
-import { FirestoreService } from '@/lib/db/firestore-service';
+import { adminDb } from '@/lib/firebase/admin';
 import { getSubCollection } from '@/lib/firebase/collections';
-import { where, orderBy } from 'firebase/firestore';
 import {
   DEFAULT_PERFORMANCE_CONFIG,
   type TeamPerformanceAnalytics,
@@ -1330,16 +1329,18 @@ async function getConversationAnalyses(
   startDate: Date,
   endDate: Date
 ): Promise<ConversationAnalysis[]> {
+  if (!adminDb) {
+    logger.warn('adminDb not available — cannot fetch conversation analyses');
+    return [];
+  }
   try {
-    const analyses = await FirestoreService.getAll<ConversationAnalysis>(
-      getSubCollection('conversationAnalyses'),
-      [
-        where('analyzedAt', '>=', startDate),
-        where('analyzedAt', '<=', endDate),
-        orderBy('analyzedAt', 'desc'),
-      ]
-    );
-    return analyses;
+    const snapshot = await adminDb
+      .collection(getSubCollection('conversationAnalyses'))
+      .where('analyzedAt', '>=', startDate)
+      .where('analyzedAt', '<=', endDate)
+      .orderBy('analyzedAt', 'desc')
+      .get();
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as unknown as ConversationAnalysis));
   } catch (error) {
     logger.error('Failed to fetch conversation analyses', error instanceof Error ? error : new Error(String(error)), { startDate: startDate.toISOString(), endDate: endDate.toISOString() });
     return [];
@@ -1350,15 +1351,21 @@ async function getConversationAnalyses(
  * Get conversation for analysis — looks up a chatSession by ID and returns its repId.
  */
 async function getConversationForAnalysis(conversationId: string): Promise<{ repId: string } | null> {
+  if (!adminDb) {
+    logger.warn('adminDb not available — cannot fetch conversation for analysis');
+    return null;
+  }
   try {
-    const doc = await FirestoreService.get<{ assignedTo?: string; userId?: string }>(
-      getSubCollection('chatSessions'),
-      conversationId
-    );
-    if (!doc) { return null; }
-    const repId = doc.assignedTo ?? doc.userId;
+    const docSnap = await adminDb
+      .collection(getSubCollection('chatSessions'))
+      .doc(conversationId)
+      .get();
+    if (!docSnap.exists) { return null; }
+    const data = docSnap.data() as { assignedTo?: string; userId?: string } | undefined;
+    const repId = data?.assignedTo ?? data?.userId;
     return repId ? { repId } : null;
-  } catch {
+  } catch (error) {
+    logger.error('Failed to fetch conversation for analysis', error instanceof Error ? error : new Error(String(error)), { conversationId });
     return null;
   }
 }
@@ -1367,24 +1374,31 @@ async function getConversationForAnalysis(conversationId: string): Promise<{ rep
  * Get rep info — queries the members collection, falling back to the users collection.
  */
 async function getRepInfo(repId: string): Promise<{ name: string; email?: string }> {
+  if (!adminDb) {
+    logger.warn('adminDb not available — cannot fetch rep info');
+    return { name: 'Unknown Rep' };
+  }
   try {
-    const member = await FirestoreService.get<{ displayName?: string; name?: string; email?: string }>(
-      getSubCollection('members'),
-      repId
-    );
-    if (member) {
-      return { name: member.displayName ?? member.name ?? 'Unknown', email: member.email };
+    const memberSnap = await adminDb
+      .collection(getSubCollection('members'))
+      .doc(repId)
+      .get();
+    if (memberSnap.exists) {
+      const member = memberSnap.data() as { displayName?: string; name?: string; email?: string } | undefined;
+      return { name: member?.displayName ?? member?.name ?? 'Unknown', email: member?.email };
     }
     // Fall back to users collection
-    const user = await FirestoreService.get<{ displayName?: string; email?: string }>(
-      'users',
-      repId
-    );
-    if (user) {
-      return { name: user.displayName ?? 'Unknown', email: user.email };
+    const userSnap = await adminDb
+      .collection('users')
+      .doc(repId)
+      .get();
+    if (userSnap.exists) {
+      const user = userSnap.data() as { displayName?: string; email?: string } | undefined;
+      return { name: user?.displayName ?? 'Unknown', email: user?.email };
     }
     return { name: 'Unknown Rep' };
-  } catch {
+  } catch (error) {
+    logger.error('Failed to fetch rep info', error instanceof Error ? error : new Error(String(error)), { repId });
     return { name: 'Unknown Rep' };
   }
 }

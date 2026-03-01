@@ -2172,10 +2172,11 @@ async function seedPart3(): Promise<void> {
  *   - forms/{id}/fields
  *   - forms/{id}/submissions
  */
-async function cleanupAllDemoData(): Promise<void> {
+async function cleanupPart3DemoData(): Promise<void> {
   console.log('\n' + '='.repeat(70));
-  console.log('  CLEANUP — Removing ALL Demo Data (Parts 1, 2, and 3)');
-  console.log('  Restoring virgin account state');
+  console.log('  CLEANUP — Removing Part 3 Demo Data Only');
+  console.log('  Part 1 and Part 2 have their own seed scripts and cleanup');
+  console.log('  functions. This script must NOT touch those collections.');
   console.log('='.repeat(70) + '\n');
 
   if (process.env.NODE_ENV === 'production') {
@@ -2186,16 +2187,16 @@ async function cleanupAllDemoData(): Promise<void> {
   const db = initFirebase();
   let totalDeleted = 0;
 
-  // All org-level collections across all 3 parts
+  // Part 3 collections ONLY.
+  // Part 1 collections (contacts, leads, deals, activities, products,
+  //   emailCampaigns, nurtureSequences, analytics) are managed by
+  //   seed-demo-account-part1.ts — do NOT add them here.
+  // Part 2 collections (workflows, forms, pages, blogPosts, siteConfig,
+  //   themes, navigation, socialPosts, orders, globalTemplates, scoringRules,
+  //   webhooks, teamTasks, conversations, integrations, customTools,
+  //   onboarding, agent) are managed by seed-demo-account-part2.ts —
+  //   do NOT add them here.
   const ORG_COLLECTIONS = [
-    // Part 1
-    'contacts', 'leads', 'deals', 'activities', 'products',
-    'emailCampaigns', 'nurtureSequences', 'analytics',
-    // Part 2
-    'workflows', 'forms', 'pages', 'blogPosts', 'siteConfig',
-    'themes', 'navigation', 'socialPosts', 'orders', 'globalTemplates',
-    'scoringRules', 'webhooks', 'teamTasks', 'conversations',
-    'integrations', 'customTools', 'onboarding', 'agent',
     // Part 3
     'records', 'members', 'companies', 'conversationAnalyses', 'schemas',
     'chatSessions', 'sequences', 'sequenceEnrollments', 'tasks',
@@ -2267,15 +2268,11 @@ async function cleanupAllDemoData(): Promise<void> {
   }
 
   // 1. Clean subcollections FIRST (before deleting parents)
+  // Note: forms/fields and forms/submissions belong to Part 2 and are
+  // cleaned by seed-demo-account-part2.ts — do NOT add them here.
   console.log('  Phase 1: Cleaning subcollections...');
   totalDeleted += await cleanSubcollections(
     `${orgRoot}/chatSessions`, 'messages', 'chatSessions/messages'
-  );
-  totalDeleted += await cleanSubcollections(
-    `${orgRoot}/forms`, 'fields', 'forms/fields'
-  );
-  totalDeleted += await cleanSubcollections(
-    `${orgRoot}/forms`, 'submissions', 'forms/submissions'
   );
 
   // 2. Clean all org-level collections
@@ -2291,7 +2288,7 @@ async function cleanupAllDemoData(): Promise<void> {
   // Summary
   console.log('\n' + '='.repeat(70));
   console.log(`  CLEANUP COMPLETE: ${totalDeleted} documents deleted`);
-  console.log('  Account restored to virgin state.');
+  console.log('  Part 3 demo data removed. Part 1 and Part 2 data untouched.');
   console.log('='.repeat(70) + '\n');
 }
 
@@ -2302,7 +2299,7 @@ async function cleanupAllDemoData(): Promise<void> {
 const args = process.argv.slice(2);
 
 if (args.includes('--cleanup')) {
-  cleanupAllDemoData()
+  cleanupPart3DemoData()
     .then(() => {
       console.log('  Cleanup complete. Exiting.\n');
       process.exit(0);
