@@ -215,7 +215,43 @@ async function handlePublicChat(request: NextRequest) {
       response.text
     );
 
-    // Track conversation for analytics
+    // Create/update parent chatSessions document so conversations page can query it
+    try {
+      const { adminDb: db } = await import('@/lib/firebase/admin');
+      const { FieldValue } = await import('firebase-admin/firestore');
+      if (db) {
+        const sessionRef = db.collection(getSubCollection('chatSessions')).doc(customerId);
+        const sessionSnap = await sessionRef.get();
+        if (!sessionSnap.exists) {
+          await sessionRef.set({
+            customerId,
+            customerName: customerId,
+            customerEmail: '',
+            status: 'active',
+            sentiment: 'neutral',
+            startedAt: new Date().toISOString(),
+            lastMessage: message,
+            lastMessageAt: new Date().toISOString(),
+            messageCount: 1,
+            agentId: 'alex',
+            channel: 'web_chat',
+          });
+        } else {
+          await sessionRef.update({
+            lastMessage: message,
+            lastMessageAt: new Date().toISOString(),
+            messageCount: FieldValue.increment(1),
+          });
+        }
+      }
+    } catch (sessionError: unknown) {
+      logger.warn('Failed to upsert chatSessions parent document', {
+        route: '/api/chat/public',
+        error: sessionError instanceof Error ? sessionError.message : String(sessionError),
+      });
+    }
+
+    // Track individual messages for analytics
     try {
       await AdminFirestoreService.set(
         `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/chatSessions/${customerId}/messages`,

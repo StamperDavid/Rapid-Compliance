@@ -17,7 +17,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { AgentInstanceManager } from '@/lib/agent/instance-manager';
 import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
-import { COLLECTIONS } from '@/lib/firebase/collections';
+import { COLLECTIONS, getSubCollection } from '@/lib/firebase/collections';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { logger } from '@/lib/logger/logger';
 import type { ChatMessage, ModelName } from '@/types/ai-models';
@@ -247,7 +247,43 @@ async function handleFacebookMessage(senderId: string, text: string): Promise<vo
   // Save conversation to memory
   await instanceManager.addMessageToMemory(`fb_${senderId}`, text, response.text);
 
-  // Track for analytics
+  // Create/update parent chatSessions document so conversations page can query it
+  try {
+    const { adminDb: db } = await import('@/lib/firebase/admin');
+    const { FieldValue } = await import('firebase-admin/firestore');
+    if (db) {
+      const sessionRef = db.collection(getSubCollection('chatSessions')).doc(`fb_${senderId}`);
+      const sessionSnap = await sessionRef.get();
+      if (!sessionSnap.exists) {
+        await sessionRef.set({
+          customerId: `fb_${senderId}`,
+          customerName: `Facebook User ${senderId}`,
+          customerEmail: '',
+          status: 'active',
+          sentiment: 'neutral',
+          startedAt: new Date().toISOString(),
+          lastMessage: text,
+          lastMessageAt: new Date().toISOString(),
+          messageCount: 1,
+          agentId: 'alex',
+          channel: 'facebook_messenger',
+        });
+      } else {
+        await sessionRef.update({
+          lastMessage: text,
+          lastMessageAt: new Date().toISOString(),
+          messageCount: FieldValue.increment(1),
+        });
+      }
+    }
+  } catch (sessionError: unknown) {
+    logger.warn('Failed to upsert chatSessions parent document', {
+      route: '/api/chat/facebook',
+      error: sessionError instanceof Error ? sessionError.message : String(sessionError),
+    });
+  }
+
+  // Track individual messages for analytics
   try {
     await AdminFirestoreService.set(
       `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/chatSessions/fb_${senderId}/messages`,

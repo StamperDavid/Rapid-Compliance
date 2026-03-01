@@ -695,12 +695,14 @@ class VoiceAgentHandler {
         throw new Error('Voice agent not initialized');
       }
 
-      const { FirestoreService } = await import('@/lib/db/firestore-service');
+      const { adminDb: db } = await import('@/lib/firebase/admin');
       const { getSubCollection } = await import('@/lib/firebase/collections');
 
-      await FirestoreService.set(
-        getSubCollection('callContexts'),
-        callId,
+      if (!db) {
+        throw new Error('adminDb not initialized');
+      }
+
+      await db.collection(getSubCollection('callContexts')).doc(callId).set(
         {
           callId,
           state: context.state,
@@ -716,7 +718,7 @@ class VoiceAgentHandler {
           sentiment: context.sentiment,
           updatedAt: new Date().toISOString(),
         },
-        true // merge
+        { merge: true }
       );
     } catch (error) {
       logger.error('[VoiceAgent] Failed to store call context:', error instanceof Error ? error : new Error(String(error)), { file: 'voice-agent-handler.ts' });
@@ -725,12 +727,17 @@ class VoiceAgentHandler {
 
   /**
    * Persist a conversation record to the conversations collection
-   * This enables ConversationMemory to query voice interactions by leadId/phone
+   * This enables ConversationMemory to query voice interactions by leadId/phone.
+   * Also writes a chatSessions parent document so the conversations page can display voice calls.
    */
   private async persistConversationRecord(callId: string, context: ConversationContext): Promise<void> {
     try {
-      const { FirestoreService } = await import('@/lib/db/firestore-service');
+      const { adminDb: db } = await import('@/lib/firebase/admin');
       const { getSubCollection } = await import('@/lib/firebase/collections');
+
+      if (!db) {
+        throw new Error('adminDb not initialized');
+      }
 
       const transcript = context.turns
         .map(t => `${t.role.toUpperCase()}: ${t.content}`)
@@ -740,9 +747,8 @@ class VoiceAgentHandler {
       const endTime = context.turns[context.turns.length - 1]?.timestamp ?? new Date();
       const durationSecs = Math.round((endTime.getTime() - startTime.getTime()) / 1000);
 
-      await FirestoreService.set(
-        getSubCollection('conversations'),
-        `voice-${callId}`,
+      // Write to conversations collection (for ConversationMemory queries)
+      await db.collection(getSubCollection('conversations')).doc(`voice-${callId}`).set(
         {
           id: `voice-${callId}`,
           type: 'discovery_call',
@@ -779,8 +785,24 @@ class VoiceAgentHandler {
           endedAt: endTime.toISOString(),
           updatedAt: new Date().toISOString(),
         },
-        true
+        { merge: true }
       );
+
+      // Write to chatSessions so the conversations page displays voice calls
+      await db.collection(getSubCollection('chatSessions')).doc(`voice-${callId}`).set({
+        customerId: context.customerInfo.phone,
+        customerName: context.customerInfo.name ?? context.customerInfo.phone,
+        customerEmail: context.customerInfo.email ?? '',
+        status: 'completed',
+        sentiment: context.sentiment ?? 'neutral',
+        startedAt: startTime.toISOString(),
+        completedAt: endTime.toISOString(),
+        lastMessage: `Voice call (${durationSecs}s) — ${context.turns.length} turns`,
+        lastMessageAt: endTime.toISOString(),
+        messageCount: context.turns.length,
+        agentId: this.config?.agentId ?? 'ai-agent',
+        channel: 'voice',
+      });
 
       logger.info('[VoiceAgent] Persisted conversation record', {
         callId,
@@ -834,18 +856,18 @@ class VoiceAgentHandler {
       });
 
       // Store analysis alongside conversation record
-      const { FirestoreService } = await import('@/lib/db/firestore-service');
+      const { adminDb: db } = await import('@/lib/firebase/admin');
       const { getSubCollection } = await import('@/lib/firebase/collections');
 
-      await FirestoreService.set(
-        getSubCollection('conversationAnalyses'),
-        `voice-${callId}`,
-        {
-          ...analysis,
-          analyzedAt: new Date().toISOString(),
-        },
-        true
-      );
+      if (db) {
+        await db.collection(getSubCollection('conversationAnalyses')).doc(`voice-${callId}`).set(
+          {
+            ...analysis,
+            analyzedAt: new Date().toISOString(),
+          },
+          { merge: true }
+        );
+      }
 
       // Emit events to Signal Bus for downstream processing
       await emitConversationEvents(analysis, {
