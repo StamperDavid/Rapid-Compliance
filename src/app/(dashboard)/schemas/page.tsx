@@ -9,7 +9,7 @@ import Link from 'next/link';
 import { STANDARD_SCHEMAS } from '@/lib/schema/standard-schemas';
 import { useConfirm } from '@/hooks/useConfirm';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/hooks/useAuth';
 import { useEntityConfig } from '@/hooks/useEntityConfig';
 
 interface Field {
@@ -151,7 +151,7 @@ export default function SchemaBuilderPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           schema: newSchema,
-          userId: user?.uid ?? 'ui-schema-builder'
+          userId: user?.id ?? 'ui-schema-builder'
         })
       });
 
@@ -247,7 +247,7 @@ export default function SchemaBuilderPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           updates: editingSchema,
-          userId: user?.uid ?? 'ui-schema-builder'
+          userId: user?.id ?? 'ui-schema-builder'
         })
       });
 

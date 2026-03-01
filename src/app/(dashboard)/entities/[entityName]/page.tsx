@@ -10,7 +10,7 @@ import LookupFieldPicker from '@/components/LookupFieldPicker';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { useEntityConfig } from '@/hooks/useEntityConfig';
 import { getEntityMetadata } from '@/lib/constants/entity-config';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/hooks/useAuth';
 
 // Proper type for dynamic record data
 type RecordValue = string | number | boolean | null;
