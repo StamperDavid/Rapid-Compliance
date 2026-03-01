@@ -175,7 +175,7 @@ function getRecords(): SeedDoc[] {
 
   const leads: SeedDoc[] = leadNames.map((name, i) => ({
     id: `demo-lead-${String(i + 1).padStart(3, '0')}`,
-    entityType: 'lead',
+    entityType: 'leads',
     name: `(Demo) ${name}`,
     status: cycle(leadStatuses, i),
     sourceEntityId: `demo-lead-${String(i + 1).padStart(3, '0')}`,
@@ -196,7 +196,7 @@ function getRecords(): SeedDoc[] {
 
   const deals: SeedDoc[] = dealNames.map((name, i) => ({
     id: `demo-deal-${String(i + 1).padStart(3, '0')}`,
-    entityType: 'deal',
+    entityType: 'deals',
     name: `(Demo) ${name}`,
     status: cycle(dealStages, i),
     value: dealValues[i],
@@ -215,9 +215,10 @@ function getRecords(): SeedDoc[] {
 
   const tasks: SeedDoc[] = taskNames.map((name, i) => ({
     id: `demo-task-${String(i + 1).padStart(3, '0')}`,
-    entityType: 'task',
+    entityType: 'tasks',
     name: `(Demo) ${name}`,
     status: cycle(['pending', 'in_progress', 'completed'], i),
+    completed: i === 2,
     priority: cycle(taskPriorities, i),
     sourceEntityId: `demo-task-${String(i + 1).padStart(3, '0')}`,
     ownerId: cycle(owners, i),
