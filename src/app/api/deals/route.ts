@@ -1,6 +1,8 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { getDeals, createDeal, deleteDeal } from '@/lib/crm/deal-service';
+import { createDeal, deleteDeal } from '@/lib/crm/deal-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
+import { getDealsCollection } from '@/lib/firebase/collections';
 import { logger } from '@/lib/logger/logger';
 import { requireAuth } from '@/lib/auth/api-auth';
 
@@ -55,12 +57,25 @@ export async function GET(
     }
 
     const { stage, pageSize } = queryResult.data;
-    const filters = stage && stage !== 'all' ? { stage } : undefined;
-    const pagination = { pageSize };
 
-    const result = await getDeals(filters, pagination);
+    // Use the Admin SDK directly so this server-side route has Firestore auth
+    // context. deal-service.ts must remain on the client SDK because it sits in
+    // the module graph of 'use client' components (living-ledger, risk pages)
+    // and importing firebase-admin there would break the client webpack bundle.
+    const collectionPath = getDealsCollection();
+    let query = AdminFirestoreService.collection(collectionPath).orderBy('createdAt', 'desc');
+    if (stage && stage !== 'all') {
+      query = query.where('stage', '==', stage);
+    }
+    // Fetch pageSize + 1 to determine whether another page exists.
+    const snapshot = await query.limit(pageSize + 1).get();
+    const allDocs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    const hasMore = allDocs.length > pageSize;
+    const data = hasMore ? allDocs.slice(0, pageSize) : allDocs;
 
-    return NextResponse.json(result);
+    logger.info('Deals retrieved via admin SDK', { count: data.length, stage: stage ?? 'all' });
+
+    return NextResponse.json({ data, hasMore, lastDoc: null });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Failed to fetch deals';
     logger.error('Failed to fetch deals:', error instanceof Error ? error : undefined);

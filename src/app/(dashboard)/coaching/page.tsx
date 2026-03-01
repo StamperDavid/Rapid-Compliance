@@ -50,12 +50,18 @@ export default function CoachingDashboardPage() {
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
-  const currentUserId = user?.id ?? 'user_default';
+  const currentUserId = user?.id ?? null;
 
   /**
    * Fetch coaching insights
    */
   const fetchCoachingInsights = useCallback(async (showRefreshing = false) => {
+    if (!currentUserId) {
+      setError('You must be signed in to view coaching insights.');
+      setLoading(false);
+      return;
+    }
+
     try {
       if (showRefreshing) {
         setRefreshing(true);

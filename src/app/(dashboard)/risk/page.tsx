@@ -39,7 +39,7 @@ interface ActiveIntervention {
 export default function RiskDashboardPage() {
   const toast = useToast();
   const authFetch = useAuthFetch();
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [prediction, setPrediction] = useState<DealRiskPrediction | null>(null);
   const [deal, setDeal] = useState<Deal | null>(null);

@@ -110,7 +110,6 @@ const NAV_SECTIONS: NavigationSection[] = [
     icon: Send,
     allowedRoles: ['owner', 'admin', 'manager'],
     items: [
-      { id: 'outbound-hub', label: 'Outbound', href: '/outbound/sequences', icon: Send, iconColor: 'var(--color-primary)', requiredPermission: 'canManageLeads', featureModuleId: 'email_outreach' },
       { id: 'sequences', label: 'Sequences', href: '/outbound/sequences', icon: ListOrdered, iconColor: 'var(--color-secondary)', requiredPermission: 'canManageLeads', featureModuleId: 'email_outreach' },
       { id: 'email-campaigns', label: 'Campaigns', href: '/email/campaigns', icon: Mail, iconColor: 'var(--color-cyan)', requiredPermission: 'canManageEmailCampaigns', featureModuleId: 'email_outreach' },
       { id: 'calls', label: 'Calls', href: '/calls', icon: PhoneCall, iconColor: 'var(--color-error)', requiredPermission: 'canAccessVoiceAgents', featureModuleId: 'email_outreach' },
