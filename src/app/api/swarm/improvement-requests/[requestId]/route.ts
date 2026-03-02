@@ -137,11 +137,12 @@ export async function POST(
       return errors.badRequest(result.error ?? 'Failed to apply improvement request');
     }
 
-    logger.info('[ImprovementRequestDetailAPI] Applied', { requestId });
+    logger.info('[ImprovementRequestDetailAPI] Applied', { requestId, goldenMasterVersion: result.goldenMasterVersion });
 
     return NextResponse.json({
       success: true,
       message: `Improvement request ${requestId} applied successfully`,
+      goldenMasterVersion: result.goldenMasterVersion,
     });
   } catch (error) {
     logger.error(

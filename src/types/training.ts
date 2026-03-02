@@ -434,6 +434,31 @@ export interface SpecialistImprovementRequest {
 }
 
 // ============================================================================
+// SPECIALIST GOLDEN MASTERS
+// ============================================================================
+
+/**
+ * Versioned Golden Master snapshot for a swarm specialist.
+ * Created when an improvement request is applied. Supports deploy/rollback.
+ */
+export interface SpecialistGoldenMaster {
+  id: string;                                      // "sgm_{specialistId}_v{version}"
+  specialistId: string;                            // "SCRAPER_SPECIALIST"
+  specialistName: string;
+  version: number;                                 // 1, 2, 3...
+  config: Record<string, unknown>;                 // Full config snapshot
+  systemPromptSnapshot?: string;                   // Prompt if overridden
+  sourceImprovementRequestId: string | null;       // null for v1 (seed)
+  changesApplied: ProposedSpecialistChange[];
+  isActive: boolean;
+  deployedAt?: string;
+  createdAt: string;
+  createdBy: string;
+  notes?: string;
+  previousVersion?: number;
+}
+
+// ============================================================================
 // AGENT-TYPE TRAINING CONFIGURATION
 // ============================================================================
 

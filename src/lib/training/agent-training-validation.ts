@@ -109,6 +109,27 @@ export const SpecialistImprovementRequestSchema = z.object({
 });
 
 // ============================================================================
+// SPECIALIST GOLDEN MASTERS
+// ============================================================================
+
+export const SpecialistGoldenMasterSchema = z.object({
+  id: z.string().min(1),
+  specialistId: z.string().min(1),
+  specialistName: z.string().min(1),
+  version: z.number().int().min(1),
+  config: z.record(z.string(), z.unknown()),
+  systemPromptSnapshot: z.string().optional(),
+  sourceImprovementRequestId: z.string().nullable(),
+  changesApplied: z.array(ProposedSpecialistChangeSchema),
+  isActive: z.boolean(),
+  deployedAt: z.string().optional(),
+  createdAt: z.string().min(1),
+  createdBy: z.string().min(1),
+  notes: z.string().optional(),
+  previousVersion: z.number().int().min(1).optional(),
+});
+
+// ============================================================================
 // AGENT-TYPE TRAINING CONFIGURATION
 // ============================================================================
 
@@ -228,6 +249,32 @@ export const ReviewImprovementRequestSchema = z.object({
  */
 export const ApplyImprovementRequestSchema = z.object({
   action: z.literal('apply'),
+});
+
+/**
+ * Request to list specialist Golden Masters.
+ * GET /api/swarm/golden-masters?specialistId=SCRAPER_SPECIALIST
+ */
+export const ListSpecialistGMsRequestSchema = z.object({
+  specialistId: z.string().min(1, 'Specialist ID is required'),
+});
+
+/**
+ * Request to seed a specialist Golden Master v1.
+ * POST /api/swarm/golden-masters
+ */
+export const SeedSpecialistGMRequestSchema = z.object({
+  specialistId: z.string().min(1, 'Specialist ID is required'),
+  specialistName: z.string().min(1, 'Specialist name is required'),
+});
+
+/**
+ * Request to deploy a specific specialist Golden Master version.
+ * PUT /api/swarm/golden-masters
+ */
+export const DeploySpecialistGMRequestSchema = z.object({
+  specialistId: z.string().min(1, 'Specialist ID is required'),
+  version: z.number().int().min(1, 'Version must be at least 1'),
 });
 
 // ============================================================================

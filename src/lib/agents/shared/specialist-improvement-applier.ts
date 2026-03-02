@@ -6,9 +6,13 @@
  * pending_review → approved/rejected → applied
  *
  * When applying:
- * - Patches the specialist's config in Firestore
- * - Records before/after state for rollback
- * - Emits signal for cross-module notification
+ * - Creates a new versioned Golden Master snapshot
+ * - Deploys the new version (which patches specialistConfigs)
+ * - Updates the request status to 'applied'
+ *
+ * Rollback:
+ * - Deploys the previous Golden Master version
+ * - Reverts the request status to 'approved'
  *
  * @module agents/shared/specialist-improvement-applier
  */
@@ -18,20 +22,21 @@ import { adminDb } from '@/lib/firebase/admin';
 import { getSubCollection } from '@/lib/firebase/collections';
 import { FieldValue } from 'firebase-admin/firestore';
 import type { SpecialistImprovementRequest } from '@/types/training';
+import {
+  getOrCreateSpecialistGM,
+  createSpecialistGMVersion,
+  deploySpecialistGM,
+  rollbackSpecialistGM,
+} from '@/lib/training/specialist-golden-master-service';
 
 // ============================================================================
 // CONSTANTS
 // ============================================================================
 
 const IMPROVEMENT_REQUESTS_COLLECTION = 'specialistImprovementRequests';
-const SPECIALIST_CONFIGS_COLLECTION = 'specialistConfigs';
 
 function getImprovementRequestsPath(): string {
   return getSubCollection(IMPROVEMENT_REQUESTS_COLLECTION);
-}
-
-function getSpecialistConfigsPath(): string {
-  return getSubCollection(SPECIALIST_CONFIGS_COLLECTION);
 }
 
 // ============================================================================
@@ -86,15 +91,14 @@ export async function reviewImprovementRequest(
 /**
  * Apply an approved improvement request to the specialist's config.
  *
- * 1. Loads current specialist config from Firestore
- * 2. Records the before state
- * 3. Applies each proposed change
- * 4. Saves the updated config
- * 5. Updates the request status to 'applied'
+ * 1. Ensures the specialist has a Golden Master (seeds v1 if missing)
+ * 2. Creates a new GM version (vN+1) with the proposed changes
+ * 3. Deploys the new version (which patches specialistConfigs)
+ * 4. Updates the request status to 'applied'
  */
 export async function applyImprovementRequest(
   requestId: string
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; goldenMasterVersion?: number; error?: string }> {
   if (!adminDb) {
     return { success: false, error: 'Database not available' };
   }
@@ -113,43 +117,41 @@ export async function applyImprovementRequest(
   }
 
   try {
-    // 1. Load current specialist config
-    const configRef = adminDb.collection(getSpecialistConfigsPath()).doc(request.specialistId);
-    const configDoc = await configRef.get();
-
-    const currentConfig = configDoc.exists
-      ? configDoc.data() as Record<string, unknown>
-      : {};
-
-    // 2. Record before state for rollback
-    const beforeState: Record<string, unknown> = {};
-    for (const change of request.proposedChanges) {
-      beforeState[change.field] = getNestedValue(currentConfig, change.field);
+    // 1. Ensure specialist has a GM (seed v1 if missing)
+    const seedResult = await getOrCreateSpecialistGM(
+      request.specialistId,
+      request.specialistName,
+      'system'
+    );
+    if (!seedResult) {
+      return { success: false, error: 'Failed to seed initial Golden Master' };
     }
 
-    // 3. Apply each proposed change
-    const updatedConfig = { ...currentConfig };
-    for (const change of request.proposedChanges) {
-      setNestedValue(updatedConfig, change.field, change.proposedValue);
+    // 2. Create vN+1 with the proposed changes
+    const newGM = await createSpecialistGMVersion(
+      request.specialistId,
+      request,
+      'system'
+    );
+    if (!newGM) {
+      return { success: false, error: 'Failed to create new Golden Master version' };
     }
 
-    // 4. Save the updated config with before/after metadata
-    await configRef.set({
-      ...updatedConfig,
-      _lastImprovementRequestId: requestId,
-      _lastImprovedAt: new Date().toISOString(),
-      _beforeState: beforeState,
-    }, { merge: true });
+    // 3. Deploy the new version (patches specialistConfigs)
+    const deployResult = await deploySpecialistGM(request.specialistId, newGM.version);
+    if (!deployResult.success) {
+      return { success: false, error: deployResult.error ?? 'Deploy failed' };
+    }
 
-    // 5. Update request status
+    // 4. Update request status
     await requestRef.update({
       status: 'applied',
       appliedAt: new Date().toISOString(),
     });
 
-    logger.info(`[ImprovementApplier] Applied ${request.proposedChanges.length} changes to ${request.specialistId}`);
+    logger.info(`[ImprovementApplier] Applied ${request.proposedChanges.length} changes to ${request.specialistId} → GM v${newGM.version}`);
 
-    return { success: true };
+    return { success: true, goldenMasterVersion: newGM.version };
   } catch (error) {
     logger.error(
       '[ImprovementApplier] Failed to apply changes',
@@ -165,7 +167,7 @@ export async function applyImprovementRequest(
 
 /**
  * Rollback changes from a previously applied improvement request.
- * Restores the before-state recorded during application.
+ * Deploys the previous Golden Master version instead of manually restoring state.
  */
 export async function rollbackImprovementRequest(
   requestId: string
@@ -188,32 +190,12 @@ export async function rollbackImprovementRequest(
   }
 
   try {
-    const configRef = adminDb.collection(getSpecialistConfigsPath()).doc(request.specialistId);
-    const configDoc = await configRef.get();
+    // Rollback via Golden Master versioning
+    const rollbackResult = await rollbackSpecialistGM(request.specialistId);
 
-    if (!configDoc.exists) {
-      return { success: false, error: 'Specialist config not found' };
+    if (!rollbackResult.success) {
+      return { success: false, error: rollbackResult.error ?? 'Rollback failed' };
     }
-
-    const config = configDoc.data() as Record<string, unknown>;
-    const beforeState = config._beforeState as Record<string, unknown> | undefined;
-
-    if (!beforeState) {
-      return { success: false, error: 'No before-state recorded — cannot rollback' };
-    }
-
-    // Restore before state
-    const restoredConfig = { ...config };
-    for (const [field, value] of Object.entries(beforeState)) {
-      setNestedValue(restoredConfig, field, value);
-    }
-
-    // Clear improvement metadata
-    delete restoredConfig._lastImprovementRequestId;
-    delete restoredConfig._lastImprovedAt;
-    delete restoredConfig._beforeState;
-
-    await configRef.set(restoredConfig);
 
     // Revert request status to approved, remove appliedAt field entirely
     await requestRef.update({
@@ -221,7 +203,7 @@ export async function rollbackImprovementRequest(
       appliedAt: FieldValue.delete(),
     });
 
-    logger.info(`[ImprovementApplier] Rolled back changes from ${requestId} on ${request.specialistId}`);
+    logger.info(`[ImprovementApplier] Rolled back ${requestId} on ${request.specialistId} → GM v${rollbackResult.rolledBackToVersion}`);
 
     return { success: true };
   } catch (error) {
@@ -237,42 +219,3 @@ export async function rollbackImprovementRequest(
   }
 }
 
-// ============================================================================
-// INTERNAL HELPERS
-// ============================================================================
-
-/**
- * Get a nested value from an object using dot-notation path.
- */
-function getNestedValue(obj: Record<string, unknown>, path: string): unknown {
-  const parts = path.split('.');
-  let current: unknown = obj;
-
-  for (const part of parts) {
-    if (current === null || current === undefined || typeof current !== 'object') {
-      return undefined;
-    }
-    current = (current as Record<string, unknown>)[part];
-  }
-
-  return current;
-}
-
-/**
- * Set a nested value on an object using dot-notation path.
- */
-function setNestedValue(obj: Record<string, unknown>, path: string, value: unknown): void {
-  const parts = path.split('.');
-  let current: Record<string, unknown> = obj;
-
-  for (let i = 0; i < parts.length - 1; i++) {
-    const part = parts[i];
-    if (typeof current[part] !== 'object' || current[part] === null) {
-      current[part] = {};
-    }
-    current = current[part] as Record<string, unknown>;
-  }
-
-  const lastPart = parts[parts.length - 1];
-  current[lastPart] = value;
-}

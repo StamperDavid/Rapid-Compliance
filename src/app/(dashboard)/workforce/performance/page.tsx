@@ -118,6 +118,7 @@ export default function SwarmPerformancePage() {
   const [periodDays, setPeriodDays] = useState(30);
   const [performanceData, setPerformanceData] = useState<SwarmPerformanceData | null>(null);
   const [improvementRequests, setImprovementRequests] = useState<ImprovementRequest[]>([]);
+  const [gmVersions, setGmVersions] = useState<Record<string, number | null>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
@@ -137,6 +138,25 @@ export default function SwarmPerformancePage() {
         const data = await perfRes.json() as { success: boolean } & SwarmPerformanceData;
         if (data.success) {
           setPerformanceData(data);
+
+          // Fetch active GM versions for each specialist
+          const versionMap: Record<string, number | null> = {};
+          const gmFetches = (data.specialists ?? []).map(async (s) => {
+            try {
+              const gmRes = await authFetch(`/api/swarm/golden-masters?specialistId=${encodeURIComponent(s.agentId)}`);
+              if (gmRes.ok) {
+                const gmData = await gmRes.json() as { success: boolean; versions: Array<{ version: number; isActive: boolean }> };
+                if (gmData.success) {
+                  const active = gmData.versions.find(v => v.isActive);
+                  versionMap[s.agentId] = active ? active.version : null;
+                }
+              }
+            } catch {
+              versionMap[s.agentId] = null;
+            }
+          });
+          await Promise.all(gmFetches);
+          setGmVersions(versionMap);
         }
       }
 
@@ -405,6 +425,9 @@ export default function SwarmPerformancePage() {
                   <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Trend
                   </th>
+                  <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    GM Version
+                  </th>
                   <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                     Actions
                   </th>
@@ -446,6 +469,18 @@ export default function SwarmPerformancePage() {
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-center">
                         <TrendBadge trend={specialist.qualityTrend} />
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-center">
+                        {gmVersions[specialist.agentId] != null ? (
+                          <a
+                            href={`/settings/ai-agents/training`}
+                            className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400 hover:underline"
+                          >
+                            v{gmVersions[specialist.agentId]}
+                          </a>
+                        ) : (
+                          <span className="text-xs text-gray-400 dark:text-gray-500">--</span>
+                        )}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-right">
                         {isLow && (

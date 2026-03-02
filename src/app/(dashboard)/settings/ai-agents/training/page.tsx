@@ -109,6 +109,9 @@ export default function AgentTrainingPage() {
   const authFetch = useAuthFetch();
   const [activeTab, setActiveTab] = useState<'performance' | 'improvements' | 'review' | 'chat' | 'materials' | 'history' | 'golden'>('performance');
   const [selectedAgentType, setSelectedAgentType] = useState<AgentDomain>('chat');
+  const [viewMode, setViewMode] = useState<'customer' | 'swarm'>('customer');
+  const [selectedSpecialistId, setSelectedSpecialistId] = useState<string>('');
+  const [swarmSpecialists, setSwarmSpecialists] = useState<Array<{ agentId: string; agentType: string }>>([]);
 
   // Base Model & Golden Master states
   const [baseModel, setBaseModel] = useState<BaseModel | null>(null);
@@ -291,6 +294,27 @@ export default function AgentTrainingPage() {
       setFirebaseConfigured(isFirebaseConfigured);
     })();
   }, []);
+
+  // Load swarm specialists when switching to swarm mode
+  useEffect(() => {
+    if (viewMode !== 'swarm') { return; }
+    void (async () => {
+      try {
+        const res = await authFetch('/api/swarm/performance?period=30');
+        if (res.ok) {
+          const data = await res.json() as { success: boolean; specialists?: Array<{ agentId: string; agentType: string }> };
+          if (data.success && data.specialists) {
+            setSwarmSpecialists(data.specialists);
+            if (!selectedSpecialistId && data.specialists.length > 0) {
+              setSelectedSpecialistId(data.specialists[0].agentId);
+            }
+          }
+        }
+      } catch {
+        // silently fail — will show empty state
+      }
+    })();
+  }, [viewMode, authFetch, selectedSpecialistId]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -1016,8 +1040,34 @@ export default function AgentTrainingPage() {
           </p>
           <SubpageNav items={trainingHubItems} />
 
-          {/* Agent Type Selector */}
-          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', marginTop: '0.5rem' }}>
+          {/* View Mode Toggle */}
+          <div style={{ display: 'flex', gap: '0.25rem', marginTop: '0.5rem', marginBottom: '0.75rem', backgroundColor: 'var(--color-bg-paper)', borderRadius: '0.5rem', padding: '0.25rem', width: 'fit-content', border: '1px solid var(--color-border-light)' }}>
+            {([
+              { key: 'customer' as const, label: 'Customer Agents' },
+              { key: 'swarm' as const, label: 'Swarm Specialists' },
+            ]).map(mode => (
+              <button
+                key={mode.key}
+                onClick={() => { setViewMode(mode.key); setActiveTab('performance'); }}
+                style={{
+                  padding: '0.375rem 1rem',
+                  borderRadius: '0.375rem',
+                  border: 'none',
+                  backgroundColor: viewMode === mode.key ? primaryColor : 'transparent',
+                  color: viewMode === mode.key ? 'white' : 'var(--color-text-secondary)',
+                  fontSize: '0.8125rem',
+                  fontWeight: viewMode === mode.key ? '600' : '400',
+                  cursor: 'pointer',
+                }}
+              >
+                {mode.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Agent Type Selector (customer mode) */}
+          {viewMode === 'customer' && (
+          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
             {(['chat', 'voice', 'email', 'social', 'seo'] as const).map(type => (
               <button
                 key={type}
@@ -1038,8 +1088,35 @@ export default function AgentTrainingPage() {
               </button>
             ))}
           </div>
+          )}
+
+          {/* Specialist Selector (swarm mode) */}
+          {viewMode === 'swarm' && (
+          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', alignItems: 'center' }}>
+            <label style={{ fontSize: '0.8125rem', color: 'var(--color-text-secondary)', fontWeight: '500' }}>Specialist:</label>
+            <select
+              value={selectedSpecialistId}
+              onChange={(e) => setSelectedSpecialistId(e.target.value)}
+              style={{
+                padding: '0.375rem 0.75rem',
+                borderRadius: '0.375rem',
+                border: '1px solid var(--color-border-strong)',
+                backgroundColor: 'var(--color-bg-main)',
+                color: 'var(--color-text-primary)',
+                fontSize: '0.8125rem',
+                minWidth: '220px',
+              }}
+            >
+              {swarmSpecialists.length === 0 && <option value="">No specialists found</option>}
+              {swarmSpecialists.map(s => (
+                <option key={s.agentId} value={s.agentId}>{s.agentId}</option>
+              ))}
+            </select>
+          </div>
+          )}
           
-          {/* Status Cards */}
+          {/* Status Cards (customer mode only) */}
+          {viewMode === 'customer' && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1rem' }}>
             <div style={{ padding: '1rem', backgroundColor: 'var(--color-bg-main)', border: '1px solid var(--color-border-light)', borderRadius: '0.5rem' }}>
               <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Base Model Status</div>
@@ -1047,21 +1124,21 @@ export default function AgentTrainingPage() {
                 {baseModel.status === 'draft' ? '📝 Draft' : baseModel.status === 'training' ? '🔄 Training' : '✅ Ready'}
               </div>
             </div>
-            
+
             <div style={{ padding: '1rem', backgroundColor: 'var(--color-bg-main)', border: '1px solid var(--color-border-light)', borderRadius: '0.5rem' }}>
               <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Overall Training Score</div>
               <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: overallScore >= 80 ? 'var(--color-success)' : overallScore >= 60 ? 'var(--color-warning-light)' : 'var(--color-error)' }}>
                 {overallScore}%
               </div>
             </div>
-            
+
             <div style={{ padding: '1rem', backgroundColor: 'var(--color-bg-main)', border: '1px solid var(--color-border-light)', borderRadius: '0.5rem' }}>
               <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Training Sessions</div>
               <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>
                 {baseModel.trainingScenarios?.length ?? 0}
               </div>
             </div>
-            
+
             <div style={{ padding: '1rem', backgroundColor: 'var(--color-bg-main)', border: '1px solid var(--color-border-light)', borderRadius: '0.5rem' }}>
               <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Golden Masters</div>
               <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>
@@ -1074,21 +1151,29 @@ export default function AgentTrainingPage() {
               </div>
             </div>
           </div>
+          )}
         </div>
       </div>
 
       {/* Tabs */}
       <div style={{ borderBottom: '1px solid var(--color-border-light)', backgroundColor: 'var(--color-bg-main)' }}>
         <div style={{ padding: '0 2rem', display: 'flex', gap: '1.5rem', overflowX: 'auto' }}>
-          {([
-            { key: 'performance' as const, label: 'Performance' },
-            { key: 'improvements' as const, label: 'Improvements' },
-            { key: 'review' as const, label: 'Review Queue' },
-            { key: 'chat' as const, label: 'Training Chat' },
-            { key: 'materials' as const, label: 'Materials' },
-            { key: 'history' as const, label: 'History' },
-            { key: 'golden' as const, label: 'Golden Masters' },
-          ]).map(tab => (
+          {(viewMode === 'customer'
+            ? [
+                { key: 'performance' as const, label: 'Performance' },
+                { key: 'improvements' as const, label: 'Improvements' },
+                { key: 'review' as const, label: 'Review Queue' },
+                { key: 'chat' as const, label: 'Training Chat' },
+                { key: 'materials' as const, label: 'Materials' },
+                { key: 'history' as const, label: 'History' },
+                { key: 'golden' as const, label: 'Golden Masters' },
+              ]
+            : [
+                { key: 'performance' as const, label: 'Performance' },
+                { key: 'improvements' as const, label: 'Improvements' },
+                { key: 'golden' as const, label: 'GM Versions' },
+              ]
+          ).map(tab => (
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
@@ -1114,12 +1199,20 @@ export default function AgentTrainingPage() {
       <div style={{ flex: 1, padding: '2rem', overflowY: 'auto' }}>
         <div>
 
-          {activeTab === 'performance' && (
+          {activeTab === 'performance' && viewMode === 'customer' && (
             <PerformanceTab agentType={selectedAgentType} authFetch={authFetch} />
           )}
 
-          {activeTab === 'improvements' && (
+          {activeTab === 'performance' && viewMode === 'swarm' && (
+            <SwarmPerformanceTab specialistId={selectedSpecialistId} authFetch={authFetch} />
+          )}
+
+          {activeTab === 'improvements' && viewMode === 'customer' && (
             <ImprovementsTab agentType={selectedAgentType} authFetch={authFetch} />
+          )}
+
+          {activeTab === 'improvements' && viewMode === 'swarm' && (
+            <SwarmImprovementsTab specialistId={selectedSpecialistId} authFetch={authFetch} />
           )}
 
           {activeTab === 'chat' && (
@@ -1583,7 +1676,11 @@ export default function AgentTrainingPage() {
             </div>
           )}
 
-          {activeTab === 'golden' && (
+          {activeTab === 'golden' && viewMode === 'swarm' && (
+            <SwarmGMVersionsTab specialistId={selectedSpecialistId} authFetch={authFetch} primaryColor={primaryColor} />
+          )}
+
+          {activeTab === 'golden' && viewMode === 'customer' && (
             <div>
               <div style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
@@ -2651,6 +2748,455 @@ function ReviewQueueTab({ agentTypeFilter }: { agentTypeFilter: AgentDomain }) {
                       <li key={i} style={{ fontSize: '0.8125rem', color: 'var(--color-text-secondary)' }}>{issue}</li>
                     ))}
                   </ul>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================================================
+// SWARM PERFORMANCE TAB
+// ============================================================================
+
+interface SwarmPerformanceTabProps {
+  specialistId: string;
+  authFetch: (url: string, options?: RequestInit) => Promise<Response>;
+}
+
+function SwarmPerformanceTab({ specialistId, authFetch }: SwarmPerformanceTabProps) {
+  const [metrics, setMetrics] = useState<{
+    agentId: string;
+    totalExecutions: number;
+    successRate: number;
+    averageQualityScore: number;
+    retryRate: number;
+    qualityTrend: string;
+    commonFailureModes: Array<{ mode: string; count: number }>;
+  } | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!specialistId) { setLoading(false); return; }
+    setLoading(true);
+    void (async () => {
+      try {
+        const res = await authFetch(`/api/swarm/performance?period=30`);
+        if (res.ok) {
+          const data = await res.json() as { success: boolean; specialists?: Array<Record<string, unknown>> };
+          if (data.success && data.specialists) {
+            const match = data.specialists.find(s => s.agentId === specialistId);
+            if (match) {
+              setMetrics(match as typeof metrics);
+            }
+          }
+        }
+      } catch {
+        // silent
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [specialistId, authFetch]);
+
+  if (!specialistId) {
+    return <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--color-text-disabled)' }}>Select a specialist to view performance.</div>;
+  }
+
+  if (loading) {
+    return <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--color-text-secondary)' }}>Loading performance data...</div>;
+  }
+
+  if (!metrics) {
+    return <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--color-text-disabled)' }}>No performance data available for {specialistId}.</div>;
+  }
+
+  const trendColor = metrics.qualityTrend === 'improving' ? 'var(--color-success)' : metrics.qualityTrend === 'declining' ? 'var(--color-error)' : 'var(--color-text-secondary)';
+
+  return (
+    <div>
+      <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '1.5rem' }}>
+        {specialistId} Performance
+      </h2>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
+        <div style={{ padding: '1rem', backgroundColor: 'var(--color-bg-main)', border: '1px solid var(--color-border-light)', borderRadius: '0.5rem' }}>
+          <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Executions</div>
+          <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>{metrics.totalExecutions}</div>
+        </div>
+        <div style={{ padding: '1rem', backgroundColor: 'var(--color-bg-main)', border: '1px solid var(--color-border-light)', borderRadius: '0.5rem' }}>
+          <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Success Rate</div>
+          <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: metrics.successRate >= 0.8 ? 'var(--color-success)' : 'var(--color-warning-light)' }}>{(metrics.successRate * 100).toFixed(1)}%</div>
+        </div>
+        <div style={{ padding: '1rem', backgroundColor: 'var(--color-bg-main)', border: '1px solid var(--color-border-light)', borderRadius: '0.5rem' }}>
+          <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Quality Score</div>
+          <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: metrics.averageQualityScore >= 80 ? 'var(--color-success)' : 'var(--color-warning-light)' }}>{metrics.averageQualityScore.toFixed(1)}</div>
+        </div>
+        <div style={{ padding: '1rem', backgroundColor: 'var(--color-bg-main)', border: '1px solid var(--color-border-light)', borderRadius: '0.5rem' }}>
+          <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Trend</div>
+          <div style={{ fontSize: '1.25rem', fontWeight: 'bold', color: trendColor, textTransform: 'capitalize' }}>{metrics.qualityTrend}</div>
+        </div>
+      </div>
+
+      {metrics.commonFailureModes.length > 0 && (
+        <div style={{ backgroundColor: 'var(--color-bg-main)', border: '1px solid var(--color-border-light)', borderRadius: '0.5rem', padding: '1.5rem' }}>
+          <h3 style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--color-text-primary)', marginBottom: '1rem' }}>Common Failure Modes</h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            {metrics.commonFailureModes.map((fm, i) => (
+              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.5rem 0', borderBottom: '1px solid var(--color-border-light)' }}>
+                <span style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>{fm.mode}</span>
+                <span style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--color-text-primary)' }}>{fm.count}x</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================================================
+// SWARM IMPROVEMENTS TAB
+// ============================================================================
+
+interface SwarmImprovementsTabProps {
+  specialistId: string;
+  authFetch: (url: string, options?: RequestInit) => Promise<Response>;
+}
+
+function SwarmImprovementsTab({ specialistId, authFetch }: SwarmImprovementsTabProps) {
+  const [requests, setRequests] = useState<Array<{
+    id: string;
+    specialistId: string;
+    specialistName: string;
+    proposedChanges: Array<{ field: string; currentValue: unknown; proposedValue: unknown; reason: string; confidence: number }>;
+    impactAnalysis: { expectedImprovement: number; areasImproved: string[]; risks: string[]; confidence: number };
+    status: string;
+    createdAt: string;
+  }>>([]);
+  const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+  const loadRequests = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await authFetch('/api/swarm/improvement-requests');
+      if (res.ok) {
+        const data = await res.json() as { success: boolean; requests: typeof requests };
+        if (data.success) {
+          setRequests(specialistId ? data.requests.filter(r => r.specialistId === specialistId) : data.requests);
+        }
+      }
+    } catch {
+      // silent
+    } finally {
+      setLoading(false);
+    }
+  }, [authFetch, specialistId]);
+
+  useEffect(() => { void loadRequests(); }, [loadRequests]);
+
+  const handleAction = async (requestId: string, method: 'PUT' | 'POST', body: Record<string, string>) => {
+    setActionLoading(requestId);
+    try {
+      const res = await authFetch(`/api/swarm/improvement-requests/${requestId}`, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (res.ok) {
+        await loadRequests();
+      }
+    } catch {
+      // silent
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  if (!specialistId) {
+    return <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--color-text-disabled)' }}>Select a specialist to view improvements.</div>;
+  }
+
+  if (loading) {
+    return <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--color-text-secondary)' }}>Loading improvement requests...</div>;
+  }
+
+  if (requests.length === 0) {
+    return <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--color-text-disabled)' }}>No improvement requests for {specialistId}.</div>;
+  }
+
+  const statusColors: Record<string, string> = {
+    pending_review: 'var(--color-warning-light)',
+    approved: 'var(--color-info)',
+    rejected: 'var(--color-error)',
+    applied: 'var(--color-success)',
+  };
+
+  return (
+    <div>
+      <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '1.5rem' }}>
+        Improvement Requests ({requests.length})
+      </h2>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        {requests.map(req => (
+          <div key={req.id} style={{ padding: '1.25rem', backgroundColor: 'var(--color-bg-main)', border: '1px solid var(--color-border-light)', borderRadius: '0.5rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+              <div>
+                <span style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--color-text-primary)' }}>{req.specialistName}</span>
+                <span style={{ marginLeft: '0.75rem', fontSize: '0.75rem', padding: '0.125rem 0.5rem', borderRadius: '9999px', backgroundColor: statusColors[req.status] ?? 'var(--color-bg-paper)', color: 'white' }}>
+                  {req.status.replace('_', ' ')}
+                </span>
+              </div>
+              <span style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)' }}>{new Date(req.createdAt).toLocaleDateString()}</span>
+            </div>
+
+            <p style={{ fontSize: '0.8125rem', color: 'var(--color-text-secondary)', marginBottom: '0.75rem' }}>
+              {req.proposedChanges.length} changes &middot; +{req.impactAnalysis.expectedImprovement}% expected &middot; {Math.round(req.impactAnalysis.confidence * 100)}% confidence
+            </p>
+
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              {req.status === 'pending_review' && (
+                <>
+                  <button onClick={() => void handleAction(req.id, 'PUT', { action: 'approve' })} disabled={actionLoading === req.id}
+                    style={{ padding: '0.375rem 0.75rem', fontSize: '0.8125rem', fontWeight: '600', borderRadius: '0.25rem', border: 'none', backgroundColor: 'var(--color-success)', color: 'white', cursor: 'pointer', opacity: actionLoading === req.id ? 0.5 : 1 }}>
+                    Approve
+                  </button>
+                  <button onClick={() => void handleAction(req.id, 'PUT', { action: 'reject' })} disabled={actionLoading === req.id}
+                    style={{ padding: '0.375rem 0.75rem', fontSize: '0.8125rem', fontWeight: '600', borderRadius: '0.25rem', border: 'none', backgroundColor: 'var(--color-error)', color: 'white', cursor: 'pointer', opacity: actionLoading === req.id ? 0.5 : 1 }}>
+                    Reject
+                  </button>
+                </>
+              )}
+              {req.status === 'approved' && (
+                <button onClick={() => void handleAction(req.id, 'POST', { action: 'apply' })} disabled={actionLoading === req.id}
+                  style={{ padding: '0.375rem 0.75rem', fontSize: '0.8125rem', fontWeight: '600', borderRadius: '0.25rem', border: 'none', backgroundColor: 'var(--color-info)', color: 'white', cursor: 'pointer', opacity: actionLoading === req.id ? 0.5 : 1 }}>
+                  {actionLoading === req.id ? 'Applying...' : 'Apply Changes'}
+                </button>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// SWARM GM VERSIONS TAB
+// ============================================================================
+
+interface SwarmGMVersionsTabProps {
+  specialistId: string;
+  authFetch: (url: string, options?: RequestInit) => Promise<Response>;
+  primaryColor: string;
+}
+
+function SwarmGMVersionsTab({ specialistId, authFetch, primaryColor }: SwarmGMVersionsTabProps) {
+  const [versions, setVersions] = useState<Array<{
+    id: string;
+    specialistId: string;
+    specialistName: string;
+    version: number;
+    isActive: boolean;
+    deployedAt?: string;
+    createdAt: string;
+    createdBy: string;
+    sourceImprovementRequestId: string | null;
+    changesApplied: Array<{ field: string; reason: string }>;
+    notes?: string;
+    previousVersion?: number;
+  }>>([]);
+  const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState<number | null>(null);
+
+  const loadVersions = useCallback(async () => {
+    if (!specialistId) { setLoading(false); return; }
+    setLoading(true);
+    try {
+      const res = await authFetch(`/api/swarm/golden-masters?specialistId=${encodeURIComponent(specialistId)}`);
+      if (res.ok) {
+        const data = await res.json() as { success: boolean; versions: typeof versions };
+        if (data.success) {
+          setVersions(data.versions);
+        }
+      }
+    } catch {
+      // silent
+    } finally {
+      setLoading(false);
+    }
+  }, [authFetch, specialistId]);
+
+  useEffect(() => { void loadVersions(); }, [loadVersions]);
+
+  const handleDeploy = async (version: number) => {
+    setActionLoading(version);
+    try {
+      const res = await authFetch('/api/swarm/golden-masters', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ specialistId, version }),
+      });
+      if (res.ok) {
+        await loadVersions();
+      }
+    } catch {
+      // silent
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleSeedV1 = async () => {
+    setActionLoading(0);
+    try {
+      const res = await authFetch('/api/swarm/golden-masters', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ specialistId, specialistName: specialistId }),
+      });
+      if (res.ok) {
+        await loadVersions();
+      }
+    } catch {
+      // silent
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  if (!specialistId) {
+    return <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--color-text-disabled)' }}>Select a specialist to view GM versions.</div>;
+  }
+
+  if (loading) {
+    return <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--color-text-secondary)' }}>Loading Golden Master versions...</div>;
+  }
+
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+        <div>
+          <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.25rem' }}>
+            Golden Master Versions
+          </h2>
+          <p style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>
+            Versioned config snapshots for {specialistId}
+          </p>
+        </div>
+        {versions.length === 0 && (
+          <button
+            onClick={() => void handleSeedV1()}
+            disabled={actionLoading === 0}
+            style={{
+              padding: '0.5rem 1rem',
+              backgroundColor: primaryColor,
+              color: 'white',
+              border: 'none',
+              borderRadius: '0.375rem',
+              fontSize: '0.8125rem',
+              fontWeight: '600',
+              cursor: 'pointer',
+              opacity: actionLoading === 0 ? 0.5 : 1,
+            }}
+          >
+            {actionLoading === 0 ? 'Seeding...' : 'Seed v1'}
+          </button>
+        )}
+      </div>
+
+      {versions.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--color-text-disabled)' }}>
+          <p>No Golden Master versions yet.</p>
+          <p style={{ fontSize: '0.875rem', marginTop: '0.5rem' }}>Click &quot;Seed v1&quot; to snapshot the current config, or apply an improvement request.</p>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          {versions.map(gm => (
+            <div
+              key={gm.id}
+              style={{
+                padding: '1.25rem',
+                backgroundColor: 'var(--color-bg-main)',
+                border: gm.isActive ? `2px solid ${primaryColor}` : '1px solid var(--color-border-light)',
+                borderRadius: '0.5rem',
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <span style={{ fontSize: '1.125rem', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>v{gm.version}</span>
+                  {gm.isActive && (
+                    <span style={{ fontSize: '0.6875rem', fontWeight: '600', padding: '0.125rem 0.5rem', borderRadius: '9999px', backgroundColor: 'var(--color-success)', color: 'white' }}>
+                      ACTIVE
+                    </span>
+                  )}
+                </div>
+                {!gm.isActive && (
+                  <button
+                    onClick={() => void handleDeploy(gm.version)}
+                    disabled={actionLoading === gm.version}
+                    style={{
+                      padding: '0.375rem 0.75rem',
+                      backgroundColor: primaryColor,
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '0.25rem',
+                      fontSize: '0.8125rem',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                      opacity: actionLoading === gm.version ? 0.5 : 1,
+                    }}
+                  >
+                    {actionLoading === gm.version ? 'Deploying...' : 'Deploy'}
+                  </button>
+                )}
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '0.75rem', fontSize: '0.8125rem', color: 'var(--color-text-secondary)' }}>
+                <div>
+                  <span style={{ fontWeight: '500' }}>Created: </span>
+                  {new Date(gm.createdAt).toLocaleString()}
+                </div>
+                {gm.deployedAt && (
+                  <div>
+                    <span style={{ fontWeight: '500' }}>Deployed: </span>
+                    {new Date(gm.deployedAt).toLocaleString()}
+                  </div>
+                )}
+                <div>
+                  <span style={{ fontWeight: '500' }}>Source: </span>
+                  {gm.sourceImprovementRequestId ? `Request ${gm.sourceImprovementRequestId.substring(0, 12)}...` : 'Initial seed'}
+                </div>
+              </div>
+
+              {gm.changesApplied.length > 0 && (
+                <div style={{ marginTop: '0.75rem' }}>
+                  <p style={{ fontSize: '0.75rem', fontWeight: '600', color: 'var(--color-text-secondary)', marginBottom: '0.25rem' }}>
+                    Changes ({gm.changesApplied.length}):
+                  </p>
+                  <ul style={{ listStyle: 'disc', paddingLeft: '1.25rem', margin: 0 }}>
+                    {gm.changesApplied.slice(0, 5).map((change, i) => (
+                      <li key={i} style={{ fontSize: '0.8125rem', color: 'var(--color-text-secondary)' }}>
+                        <strong>{change.field}</strong>: {change.reason}
+                      </li>
+                    ))}
+                    {gm.changesApplied.length > 5 && (
+                      <li style={{ fontSize: '0.8125rem', color: 'var(--color-text-disabled)' }}>
+                        ...and {gm.changesApplied.length - 5} more
+                      </li>
+                    )}
+                  </ul>
+                </div>
+              )}
+
+              {gm.notes && (
+                <div style={{ marginTop: '0.75rem', padding: '0.5rem', backgroundColor: 'var(--color-bg-paper)', borderRadius: '0.25rem' }}>
+                  <p style={{ fontSize: '0.8125rem', color: 'var(--color-text-secondary)' }}>{gm.notes}</p>
                 </div>
               )}
             </div>
