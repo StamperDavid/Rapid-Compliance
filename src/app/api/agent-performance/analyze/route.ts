@@ -119,6 +119,9 @@ export async function POST(request: NextRequest) {
         overallScore: performance.overallScore,
         tier: performance.tier,
         period: performance.period,
+        trend: performance.vsTeamAverage?.overallScoreDelta !== undefined
+          ? (performance.vsTeamAverage.overallScoreDelta > 2 ? 'improving' : performance.vsTeamAverage.overallScoreDelta < -2 ? 'declining' : 'stable')
+          : 'stable',
       },
       insights: {
         weaknessCount: insights.weaknesses.length,
@@ -126,6 +129,14 @@ export async function POST(request: NextRequest) {
         trainingCount: insights.training.length,
         riskCount: insights.risks.length,
         confidenceScore: insights.confidenceScore,
+        // Full coaching insights for the Training Center UI
+        strengths: insights.strengths,
+        weaknesses: insights.weaknesses,
+        recommendations: insights.recommendations,
+        training: insights.training,
+        risks: insights.risks,
+        actionItems: insights.actionItems,
+        performanceSummary: insights.performanceSummary,
       },
       training: {
         improvementCount: improvements.length,

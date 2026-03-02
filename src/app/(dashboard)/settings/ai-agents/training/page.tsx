@@ -10,6 +10,7 @@ import { logger } from '@/lib/logger/logger';
 import { useToast } from '@/hooks/useToast';
 import { useConfirm, usePrompt } from '@/hooks/useConfirm';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
+import type { AgentDomain } from '@/types/training';
 
 // Type definitions
 interface BaseModel {
@@ -105,7 +106,9 @@ export default function AgentTrainingPage() {
 
   const [loading, setLoading] = useState(true);
   const { theme } = useOrgTheme();
-  const [activeTab, setActiveTab] = useState<'chat' | 'materials' | 'history' | 'golden' | 'review'>('chat');
+  const authFetch = useAuthFetch();
+  const [activeTab, setActiveTab] = useState<'performance' | 'improvements' | 'review' | 'chat' | 'materials' | 'history' | 'golden'>('performance');
+  const [selectedAgentType, setSelectedAgentType] = useState<AgentDomain>('chat');
 
   // Base Model & Golden Master states
   const [baseModel, setBaseModel] = useState<BaseModel | null>(null);
@@ -1008,10 +1011,33 @@ export default function AgentTrainingPage() {
           <h1 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '0.5rem', color: 'var(--color-text-primary)' }}>
             🎓 AI Agent Training Center
           </h1>
-          <p style={{ color: 'var(--color-text-secondary)', marginBottom: '1.5rem' }}>
-            Train your Base Model through conversations, upload training materials, and save Golden Masters when ready
+          <p style={{ color: 'var(--color-text-secondary)', marginBottom: '1rem' }}>
+            Monitor performance, review coaching insights, approve improvements, and train your AI agents
           </p>
           <SubpageNav items={trainingHubItems} />
+
+          {/* Agent Type Selector */}
+          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', marginTop: '0.5rem' }}>
+            {(['chat', 'voice', 'email', 'social', 'seo'] as const).map(type => (
+              <button
+                key={type}
+                onClick={() => setSelectedAgentType(type)}
+                style={{
+                  padding: '0.375rem 1rem',
+                  borderRadius: '9999px',
+                  border: selectedAgentType === type ? `2px solid ${primaryColor}` : '1px solid var(--color-border-strong)',
+                  backgroundColor: selectedAgentType === type ? primaryColor : 'transparent',
+                  color: selectedAgentType === type ? 'white' : 'var(--color-text-secondary)',
+                  fontSize: '0.8125rem',
+                  fontWeight: selectedAgentType === type ? '600' : '400',
+                  cursor: 'pointer',
+                  textTransform: 'capitalize',
+                }}
+              >
+                {type}
+              </button>
+            ))}
+          </div>
           
           {/* Status Cards */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1rem' }}>
@@ -1053,24 +1079,32 @@ export default function AgentTrainingPage() {
 
       {/* Tabs */}
       <div style={{ borderBottom: '1px solid var(--color-border-light)', backgroundColor: 'var(--color-bg-main)' }}>
-        <div style={{ padding: '0 2rem', display: 'flex', gap: '2rem' }}>
-          {(['chat', 'materials', 'history', 'golden', 'review'] as const).map(tab => (
+        <div style={{ padding: '0 2rem', display: 'flex', gap: '1.5rem', overflowX: 'auto' }}>
+          {([
+            { key: 'performance' as const, label: 'Performance' },
+            { key: 'improvements' as const, label: 'Improvements' },
+            { key: 'review' as const, label: 'Review Queue' },
+            { key: 'chat' as const, label: 'Training Chat' },
+            { key: 'materials' as const, label: 'Materials' },
+            { key: 'history' as const, label: 'History' },
+            { key: 'golden' as const, label: 'Golden Masters' },
+          ]).map(tab => (
             <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key)}
               style={{
-                padding: '1rem 0',
+                padding: '0.75rem 0',
                 backgroundColor: 'transparent',
                 border: 'none',
-                borderBottom: activeTab === tab ? `2px solid ${primaryColor}` : '2px solid transparent',
-                color: activeTab === tab ? 'var(--color-text-primary)' : 'var(--color-text-secondary)',
-                fontWeight: activeTab === tab ? '600' : '400',
+                borderBottom: activeTab === tab.key ? `2px solid ${primaryColor}` : '2px solid transparent',
+                color: activeTab === tab.key ? 'var(--color-text-primary)' : 'var(--color-text-secondary)',
+                fontWeight: activeTab === tab.key ? '600' : '400',
                 cursor: 'pointer',
-                fontSize: '0.875rem',
-                textTransform: 'capitalize',
+                fontSize: '0.8125rem',
+                whiteSpace: 'nowrap',
               }}
             >
-              {tab === 'chat' ? '💬 Training Chat' : tab === 'materials' ? '📚 Training Materials' : tab === 'history' ? '📊 History' : tab === 'golden' ? '⭐ Golden Masters' : '🔍 Review Queue'}
+              {tab.label}
             </button>
           ))}
         </div>
@@ -1079,7 +1113,15 @@ export default function AgentTrainingPage() {
       {/* Content */}
       <div style={{ flex: 1, padding: '2rem', overflowY: 'auto' }}>
         <div>
-          
+
+          {activeTab === 'performance' && (
+            <PerformanceTab agentType={selectedAgentType} authFetch={authFetch} />
+          )}
+
+          {activeTab === 'improvements' && (
+            <ImprovementsTab agentType={selectedAgentType} authFetch={authFetch} />
+          )}
+
           {activeTab === 'chat' && (
             <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr 320px', gap: '2rem' }}>
               {/* Column 1: Training Topics Sidebar */}
@@ -1673,7 +1715,7 @@ export default function AgentTrainingPage() {
           )}
 
           {activeTab === 'review' && (
-            <ReviewQueueTab />
+            <ReviewQueueTab agentTypeFilter={selectedAgentType} />
           )}
 
         </div>
@@ -1827,6 +1869,675 @@ export default function AgentTrainingPage() {
 }
 
 // ============================================================================
+// PERFORMANCE TAB COMPONENT
+// ============================================================================
+
+interface AnalysisInsights {
+  weaknessCount: number;
+  recommendationCount: number;
+  trainingCount: number;
+  riskCount: number;
+  confidenceScore: number;
+  strengths?: Array<{
+    category: string;
+    title: string;
+    description: string;
+    metrics: Array<{ metric: string; value: number; benchmark: number }>;
+    leverageStrategy: string;
+    impact: string;
+  }>;
+  weaknesses?: Array<{
+    category: string;
+    title: string;
+    description: string;
+    metrics: Array<{ metric: string; value: number; benchmark: number; gap: number }>;
+    rootCauses: string[];
+    impact: string;
+    urgency: string;
+  }>;
+  recommendations?: Array<{
+    id: string;
+    title: string;
+    recommendation: string;
+    category: string;
+    rationale: string;
+    actions: Array<{ action: string; timeline: string; owner: string }>;
+    successCriteria: string[];
+    expectedOutcomes: Array<{ metric: string; baseline: number; target: number; timeframe: string }>;
+    priority: string;
+    effort: string;
+    confidence: number;
+  }>;
+  training?: Array<{
+    title: string;
+    description: string;
+    category: string;
+    type: string;
+    resources: Array<{ name: string; type: string; url?: string; duration?: string }>;
+    skillImprovement: Array<{ skill: string; currentLevel: number; targetLevel: number }>;
+    priority: string;
+  }>;
+  risks?: Array<{
+    title: string;
+    description: string;
+    category: string;
+    severity: string;
+    likelihood: string;
+    indicators: string[];
+    mitigationStrategies: string[];
+  }>;
+  performanceSummary?: {
+    assessment: string;
+    currentTier: string;
+    trend: string;
+    focusAreas: string[];
+  };
+}
+
+interface AnalysisResult {
+  success: boolean;
+  agentId: string;
+  agentType: string;
+  performance: { overallScore: number; tier: string; period: string; trend: string };
+  insights: AnalysisInsights;
+  training: { improvementCount: number; updateRequestId: string | null; updateRequestStatus: string | null };
+}
+
+function PerformanceTab({ agentType, authFetch }: { agentType: AgentDomain; authFetch: (url: string, options?: RequestInit) => Promise<Response> }) {
+  const [agentData, setAgentData] = useState<{
+    agent: { agentId: string; agentType: string; agentName: string; goldenMasterId: string | null; thresholds: { flagForTrainingBelow: number; excellentAbove: number } };
+    performance: { agentId: string; totalExecutions: number; successRate: number; averageQualityScore: number; qualityTrend: string } | null;
+    flaggedSessionCount: number;
+  } | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  // Load agent data for the selected type
+  useEffect(() => {
+    void (async () => {
+      setLoading(true);
+      setAnalysis(null);
+      try {
+        const res = await authFetch('/api/agent-performance');
+        const data = await res.json() as {
+          success: boolean;
+          agents?: Array<{
+            agent: { agentId: string; agentType: string; agentName: string; goldenMasterId: string | null; thresholds: { flagForTrainingBelow: number; excellentAbove: number } };
+            performance: { agentId: string; totalExecutions: number; successRate: number; averageQualityScore: number; qualityTrend: string } | null;
+            flaggedSessionCount: number;
+          }>;
+        };
+        if (data.success && data.agents) {
+          const match = data.agents.find(a => a.agent.agentType === agentType);
+          setAgentData(match ?? null);
+        }
+      } catch {
+        setError('Failed to load agent data');
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [authFetch, agentType]);
+
+  const runAnalysis = async () => {
+    if (!agentData) { return; }
+    setAnalyzing(true);
+    setError(null);
+    try {
+      const res = await authFetch('/api/agent-performance/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ agentId: agentData.agent.agentId, period: 'last_30_days' }),
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({ error: 'Analysis failed' })) as { error?: string };
+        setError(errData.error ?? `Analysis failed (${res.status})`);
+        return;
+      }
+      const result = await res.json() as AnalysisResult;
+      setAnalysis(result);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Analysis request failed');
+    } finally {
+      setAnalyzing(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', padding: '3rem' }}>
+        <div style={{ width: '2rem', height: '2rem', border: '2px solid var(--color-border-strong)', borderTop: '2px solid var(--color-primary)', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+      </div>
+    );
+  }
+
+  if (!agentData) {
+    return (
+      <div style={{ padding: '3rem', textAlign: 'center', backgroundColor: 'var(--color-bg-paper)', borderRadius: '0.75rem', border: '1px solid var(--color-border-main)' }}>
+        <p style={{ color: 'var(--color-text-secondary)', fontSize: '1rem', marginBottom: '0.5rem' }}>
+          No agent profile found for <strong style={{ textTransform: 'capitalize' }}>{agentType}</strong>.
+        </p>
+        <p style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>
+          Run the migration script to create agent rep profiles.
+        </p>
+      </div>
+    );
+  }
+
+  const perf = agentData.performance;
+  const ins = analysis?.insights;
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+      {/* Error Banner */}
+      {error && (
+        <div style={{ padding: '0.75rem 1rem', backgroundColor: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '0.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <p style={{ fontSize: '0.875rem', color: '#f87171' }}>{error}</p>
+          <button onClick={() => setError(null)} style={{ fontSize: '0.75rem', color: '#f87171', background: 'none', border: 'none', cursor: 'pointer' }}>Dismiss</button>
+        </div>
+      )}
+
+      {/* Summary Cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem' }}>
+        <div style={{ padding: '1rem', backgroundColor: 'var(--color-bg-paper)', borderRadius: '0.5rem', border: '1px solid var(--color-border-light)' }}>
+          <p style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', textTransform: 'uppercase' }}>Agent</p>
+          <p style={{ fontSize: '1.125rem', fontWeight: '700', color: 'var(--color-text-primary)', marginTop: '0.25rem' }}>{agentData.agent.agentName}</p>
+        </div>
+        <div style={{ padding: '1rem', backgroundColor: 'var(--color-bg-paper)', borderRadius: '0.5rem', border: '1px solid var(--color-border-light)' }}>
+          <p style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', textTransform: 'uppercase' }}>Quality Score</p>
+          <p style={{ fontSize: '1.5rem', fontWeight: '700', color: perf && perf.averageQualityScore >= 80 ? 'var(--color-success)' : perf && perf.averageQualityScore >= 60 ? 'var(--color-warning-light)' : 'var(--color-error)', marginTop: '0.25rem' }}>
+            {perf ? perf.averageQualityScore.toFixed(0) : '--'}
+          </p>
+        </div>
+        <div style={{ padding: '1rem', backgroundColor: 'var(--color-bg-paper)', borderRadius: '0.5rem', border: '1px solid var(--color-border-light)' }}>
+          <p style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', textTransform: 'uppercase' }}>Trend</p>
+          <p style={{ fontSize: '1.25rem', fontWeight: '600', color: perf?.qualityTrend === 'improving' ? 'var(--color-success)' : perf?.qualityTrend === 'declining' ? 'var(--color-error)' : 'var(--color-text-secondary)', marginTop: '0.25rem', textTransform: 'capitalize' }}>
+            {perf?.qualityTrend === 'improving' ? '^ ' : perf?.qualityTrend === 'declining' ? 'v ' : ''}{perf?.qualityTrend ?? '--'}
+          </p>
+        </div>
+        <div style={{ padding: '1rem', backgroundColor: 'var(--color-bg-paper)', borderRadius: '0.5rem', border: '1px solid var(--color-border-light)' }}>
+          <p style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', textTransform: 'uppercase' }}>Executions</p>
+          <p style={{ fontSize: '1.5rem', fontWeight: '700', color: 'var(--color-text-primary)', marginTop: '0.25rem' }}>{perf?.totalExecutions ?? 0}</p>
+        </div>
+        <div style={{ padding: '1rem', backgroundColor: 'var(--color-bg-paper)', borderRadius: '0.5rem', border: '1px solid var(--color-border-light)' }}>
+          <p style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', textTransform: 'uppercase' }}>Flagged</p>
+          <p style={{ fontSize: '1.5rem', fontWeight: '700', color: agentData.flaggedSessionCount > 0 ? 'var(--color-warning-light)' : 'var(--color-text-primary)', marginTop: '0.25rem' }}>{agentData.flaggedSessionCount}</p>
+        </div>
+      </div>
+
+      {/* Run Analysis Button */}
+      {!analysis && (
+        <div style={{ padding: '2rem', backgroundColor: 'var(--color-bg-paper)', borderRadius: '0.75rem', border: '1px solid var(--color-border-main)', textAlign: 'center' }}>
+          <p style={{ color: 'var(--color-text-secondary)', marginBottom: '1rem' }}>
+            Run coaching analysis to identify strengths, weaknesses, and generate improvement recommendations.
+          </p>
+          <button
+            onClick={() => void runAnalysis()}
+            disabled={analyzing}
+            style={{
+              padding: '0.75rem 2rem',
+              backgroundColor: 'var(--color-primary)',
+              color: 'white',
+              border: 'none',
+              borderRadius: '0.5rem',
+              cursor: analyzing ? 'not-allowed' : 'pointer',
+              fontWeight: '600',
+              fontSize: '0.9375rem',
+              opacity: analyzing ? 0.6 : 1,
+            }}
+          >
+            {analyzing ? 'Analyzing...' : 'Run Coaching Analysis'}
+          </button>
+        </div>
+      )}
+
+      {/* Full Coaching Insights */}
+      {analysis && ins && (
+        <>
+          {/* Performance Summary */}
+          {ins.performanceSummary && (
+            <div style={{ padding: '1.25rem', backgroundColor: 'var(--color-bg-paper)', borderRadius: '0.75rem', border: '1px solid var(--color-border-main)' }}>
+              <h3 style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--color-text-primary)', marginBottom: '0.75rem' }}>Performance Summary</h3>
+              <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem', lineHeight: '1.5' }}>{ins.performanceSummary.assessment}</p>
+              <div style={{ display: 'flex', gap: '1rem', marginTop: '0.75rem', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '0.8125rem', color: 'var(--color-text-secondary)' }}>
+                  Tier: <strong style={{ textTransform: 'capitalize' }}>{analysis.performance.tier.replace('_', ' ')}</strong>
+                </span>
+                <span style={{ fontSize: '0.8125rem', color: analysis.performance.trend === 'improving' ? 'var(--color-success)' : analysis.performance.trend === 'declining' ? 'var(--color-error)' : 'var(--color-text-secondary)' }}>
+                  Trend: <strong style={{ textTransform: 'capitalize' }}>{analysis.performance.trend}</strong>
+                </span>
+                {ins.performanceSummary.focusAreas.length > 0 && (
+                  <span style={{ fontSize: '0.8125rem', color: 'var(--color-text-secondary)' }}>
+                    Focus: {ins.performanceSummary.focusAreas.join(', ')}
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Strengths */}
+          {ins.strengths && ins.strengths.length > 0 && (
+            <div style={{ padding: '1.25rem', backgroundColor: 'var(--color-bg-paper)', borderRadius: '0.75rem', border: '1px solid var(--color-border-main)' }}>
+              <h3 style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--color-success)', marginBottom: '0.75rem' }}>Strengths ({ins.strengths.length})</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                {ins.strengths.map((s, i) => (
+                  <div key={i} style={{ padding: '0.75rem', backgroundColor: 'var(--color-bg-main)', borderRadius: '0.5rem', border: '1px solid var(--color-border-light)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.375rem' }}>
+                      <span style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--color-text-primary)' }}>{s.title}</span>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', textTransform: 'capitalize' }}>{s.category.replace('_', ' ')}</span>
+                    </div>
+                    <p style={{ fontSize: '0.8125rem', color: 'var(--color-text-secondary)', lineHeight: '1.4' }}>{s.description}</p>
+                    {s.leverageStrategy && (
+                      <p style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginTop: '0.5rem' }}>
+                        Leverage: {s.leverageStrategy}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Weaknesses */}
+          {ins.weaknesses && ins.weaknesses.length > 0 && (
+            <div style={{ padding: '1.25rem', backgroundColor: 'var(--color-bg-paper)', borderRadius: '0.75rem', border: '1px solid var(--color-border-main)' }}>
+              <h3 style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--color-error)', marginBottom: '0.75rem' }}>Weaknesses ({ins.weaknesses.length})</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                {ins.weaknesses.map((w, i) => (
+                  <div key={i} style={{ padding: '0.75rem', backgroundColor: 'var(--color-bg-main)', borderRadius: '0.5rem', border: '1px solid var(--color-border-light)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.375rem' }}>
+                      <span style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--color-text-primary)' }}>{w.title}</span>
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <span style={{ fontSize: '0.6875rem', padding: '0.125rem 0.5rem', borderRadius: '0.25rem', backgroundColor: w.urgency === 'immediate' ? 'rgba(239,68,68,0.15)' : 'rgba(245,158,11,0.15)', color: w.urgency === 'immediate' ? '#f87171' : '#fbbf24', textTransform: 'capitalize' }}>
+                          {w.urgency.replace('_', ' ')}
+                        </span>
+                        <span style={{ fontSize: '0.6875rem', padding: '0.125rem 0.5rem', borderRadius: '0.25rem', backgroundColor: 'var(--color-bg-paper)', color: 'var(--color-text-disabled)', textTransform: 'capitalize' }}>
+                          {w.impact} impact
+                        </span>
+                      </div>
+                    </div>
+                    <p style={{ fontSize: '0.8125rem', color: 'var(--color-text-secondary)', lineHeight: '1.4' }}>{w.description}</p>
+                    {w.rootCauses.length > 0 && (
+                      <div style={{ marginTop: '0.5rem' }}>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)' }}>Root causes: </span>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>{w.rootCauses.join('; ')}</span>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Recommendations */}
+          {ins.recommendations && ins.recommendations.length > 0 && (
+            <div style={{ padding: '1.25rem', backgroundColor: 'var(--color-bg-paper)', borderRadius: '0.75rem', border: '1px solid var(--color-border-main)' }}>
+              <h3 style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--color-text-primary)', marginBottom: '0.75rem' }}>Recommendations ({ins.recommendations.length})</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                {ins.recommendations.map((r, i) => (
+                  <div key={i} style={{ padding: '0.75rem', backgroundColor: 'var(--color-bg-main)', borderRadius: '0.5rem', border: '1px solid var(--color-border-light)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.375rem' }}>
+                      <span style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--color-text-primary)' }}>{r.title}</span>
+                      <span style={{ fontSize: '0.6875rem', padding: '0.125rem 0.5rem', borderRadius: '0.25rem', backgroundColor: r.priority === 'critical' ? 'rgba(239,68,68,0.15)' : r.priority === 'high' ? 'rgba(245,158,11,0.15)' : 'rgba(59,130,246,0.15)', color: r.priority === 'critical' ? '#f87171' : r.priority === 'high' ? '#fbbf24' : '#60a5fa', textTransform: 'uppercase', fontWeight: '600' }}>
+                        {r.priority}
+                      </span>
+                    </div>
+                    <p style={{ fontSize: '0.8125rem', color: 'var(--color-text-secondary)', lineHeight: '1.4' }}>{r.recommendation}</p>
+                    {r.actions.length > 0 && (
+                      <ul style={{ marginTop: '0.5rem', paddingLeft: '1.25rem', listStyle: 'disc' }}>
+                        {r.actions.map((a, j) => (
+                          <li key={j} style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>
+                            {a.action} <span style={{ color: 'var(--color-text-disabled)' }}>({a.timeline})</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    {r.successCriteria.length > 0 && (
+                      <p style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginTop: '0.375rem' }}>
+                        Success: {r.successCriteria.join('; ')}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Training Suggestions */}
+          {ins.training && ins.training.length > 0 && (
+            <div style={{ padding: '1.25rem', backgroundColor: 'var(--color-bg-paper)', borderRadius: '0.75rem', border: '1px solid var(--color-border-main)' }}>
+              <h3 style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--color-text-primary)', marginBottom: '0.75rem' }}>Training Suggestions ({ins.training.length})</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                {ins.training.map((t, i) => (
+                  <div key={i} style={{ padding: '0.75rem', backgroundColor: 'var(--color-bg-main)', borderRadius: '0.5rem', border: '1px solid var(--color-border-light)' }}>
+                    <span style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--color-text-primary)' }}>{t.title}</span>
+                    <p style={{ fontSize: '0.8125rem', color: 'var(--color-text-secondary)', marginTop: '0.25rem', lineHeight: '1.4' }}>{t.description}</p>
+                    {t.skillImprovement.length > 0 && (
+                      <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem', flexWrap: 'wrap' }}>
+                        {t.skillImprovement.map((s, j) => (
+                          <span key={j} style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)' }}>
+                            {s.skill}: {s.currentLevel} &rarr; {s.targetLevel}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Risks */}
+          {ins.risks && ins.risks.length > 0 && (
+            <div style={{ padding: '1.25rem', backgroundColor: 'var(--color-bg-paper)', borderRadius: '0.75rem', border: '1px solid var(--color-border-main)' }}>
+              <h3 style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--color-warning-light)', marginBottom: '0.75rem' }}>Risks ({ins.risks.length})</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                {ins.risks.map((r, i) => (
+                  <div key={i} style={{ padding: '0.75rem', backgroundColor: 'var(--color-bg-main)', borderRadius: '0.5rem', border: '1px solid var(--color-border-light)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.375rem' }}>
+                      <span style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--color-text-primary)' }}>{r.title}</span>
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <span style={{ fontSize: '0.6875rem', padding: '0.125rem 0.5rem', borderRadius: '0.25rem', backgroundColor: r.severity === 'critical' ? 'rgba(239,68,68,0.15)' : 'rgba(245,158,11,0.15)', color: r.severity === 'critical' ? '#f87171' : '#fbbf24', textTransform: 'uppercase', fontWeight: '600' }}>
+                          {r.severity}
+                        </span>
+                        <span style={{ fontSize: '0.6875rem', color: 'var(--color-text-disabled)', textTransform: 'capitalize' }}>
+                          {r.likelihood.replace('_', ' ')}
+                        </span>
+                      </div>
+                    </div>
+                    <p style={{ fontSize: '0.8125rem', color: 'var(--color-text-secondary)', lineHeight: '1.4' }}>{r.description}</p>
+                    {r.mitigationStrategies.length > 0 && (
+                      <p style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginTop: '0.375rem' }}>
+                        Mitigation: {r.mitigationStrategies.join('; ')}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Re-analyze button */}
+          <div style={{ textAlign: 'center' }}>
+            <button
+              onClick={() => void runAnalysis()}
+              disabled={analyzing}
+              style={{
+                padding: '0.5rem 1.5rem',
+                backgroundColor: 'transparent',
+                border: '1px solid var(--color-border-strong)',
+                borderRadius: '0.5rem',
+                color: 'var(--color-text-secondary)',
+                cursor: analyzing ? 'not-allowed' : 'pointer',
+                fontSize: '0.8125rem',
+                opacity: analyzing ? 0.6 : 1,
+              }}
+            >
+              {analyzing ? 'Re-analyzing...' : 'Re-run Analysis'}
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+// ============================================================================
+// IMPROVEMENTS TAB COMPONENT
+// ============================================================================
+
+interface GMUpdateRequest {
+  id: string;
+  goldenMasterId: string;
+  agentType?: string;
+  sourceSessionIds: string[];
+  improvements: Array<{
+    id: string;
+    type: string;
+    area: string;
+    currentBehavior: string;
+    suggestedBehavior: string;
+    priority: number;
+    estimatedImpact: number;
+    confidence: number;
+  }>;
+  impactAnalysis: {
+    expectedScoreImprovement: number;
+    areasImproved: string[];
+    risks: string[];
+    confidence: number;
+  };
+  status: 'pending_review' | 'approved' | 'rejected' | 'applied';
+  reviewedBy?: string;
+  reviewedAt?: string;
+  reviewNotes?: string;
+  createdAt: string;
+  appliedAt?: string;
+}
+
+function ImprovementsTab({ agentType, authFetch }: { agentType: AgentDomain; authFetch: (url: string, options?: RequestInit) => Promise<Response> }) {
+  const [updates, setUpdates] = useState<GMUpdateRequest[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [processing, setProcessing] = useState<string | null>(null);
+
+  const fetchUpdates = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await authFetch(`/api/training/golden-master-updates?agentType=${agentType}`);
+      const data = await res.json() as { success: boolean; updates?: GMUpdateRequest[] };
+      if (data.success && data.updates) {
+        setUpdates(data.updates);
+      }
+    } catch {
+      setError('Failed to load improvement requests');
+    } finally {
+      setLoading(false);
+    }
+  }, [authFetch, agentType]);
+
+  useEffect(() => {
+    void fetchUpdates();
+  }, [fetchUpdates]);
+
+  const handleAction = async (updateId: string, approved: boolean) => {
+    setProcessing(updateId);
+    setError(null);
+    try {
+      const res = await authFetch('/api/training/apply-update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ updateRequestId: updateId, approved }),
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({ error: 'Action failed' })) as { error?: string };
+        setError(errData.error ?? 'Action failed');
+        return;
+      }
+      // Refresh list
+      await fetchUpdates();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Action failed');
+    } finally {
+      setProcessing(null);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', padding: '3rem' }}>
+        <div style={{ width: '2rem', height: '2rem', border: '2px solid var(--color-border-strong)', borderTop: '2px solid var(--color-primary)', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+      </div>
+    );
+  }
+
+  const statusColor = (status: string) => {
+    switch (status) {
+      case 'pending_review': return { bg: 'rgba(245,158,11,0.15)', text: '#fbbf24' };
+      case 'approved': return { bg: 'rgba(34,197,94,0.15)', text: '#4ade80' };
+      case 'rejected': return { bg: 'rgba(239,68,68,0.15)', text: '#f87171' };
+      case 'applied': return { bg: 'rgba(59,130,246,0.15)', text: '#60a5fa' };
+      default: return { bg: 'var(--color-bg-main)', text: 'var(--color-text-disabled)' };
+    }
+  };
+
+  return (
+    <div>
+      <div style={{ marginBottom: '1.5rem' }}>
+        <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '0.5rem', color: 'var(--color-text-primary)' }}>
+          Improvement Requests
+        </h2>
+        <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem' }}>
+          Golden Master update requests for <strong style={{ textTransform: 'capitalize' }}>{agentType}</strong> agent. Review, approve, or reject proposed changes.
+        </p>
+      </div>
+
+      {error && (
+        <div style={{ padding: '0.75rem 1rem', backgroundColor: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '0.5rem', marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <p style={{ fontSize: '0.875rem', color: '#f87171' }}>{error}</p>
+          <button onClick={() => setError(null)} style={{ fontSize: '0.75rem', color: '#f87171', background: 'none', border: 'none', cursor: 'pointer' }}>Dismiss</button>
+        </div>
+      )}
+
+      {updates.length === 0 ? (
+        <div style={{ padding: '3rem', textAlign: 'center', backgroundColor: 'var(--color-bg-paper)', borderRadius: '0.75rem', border: '1px solid var(--color-border-main)' }}>
+          <p style={{ color: 'var(--color-text-secondary)', fontSize: '1rem' }}>
+            No improvement requests for this agent type.
+          </p>
+          <p style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem', marginTop: '0.5rem' }}>
+            Run a coaching analysis on the Performance tab to generate improvement suggestions.
+          </p>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          {updates.map((update) => {
+            const sc = statusColor(update.status);
+            return (
+              <div
+                key={update.id}
+                style={{
+                  padding: '1.25rem',
+                  backgroundColor: 'var(--color-bg-paper)',
+                  borderRadius: '0.75rem',
+                  border: '1px solid var(--color-border-main)',
+                }}
+              >
+                {/* Header */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.375rem' }}>
+                      <span style={{ fontSize: '0.6875rem', padding: '0.125rem 0.5rem', borderRadius: '0.25rem', backgroundColor: sc.bg, color: sc.text, fontWeight: '600', textTransform: 'uppercase' }}>
+                        {update.status.replace('_', ' ')}
+                      </span>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)' }}>
+                        {update.sourceSessionIds.length > 0
+                          ? `From ${update.sourceSessionIds.length} session(s)`
+                          : 'Coaching Analysis'}
+                      </span>
+                    </div>
+                    <p style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)' }}>
+                      Created: {new Date(update.createdAt).toLocaleString()}
+                      {update.reviewedAt && ` | Reviewed: ${new Date(update.reviewedAt).toLocaleString()}`}
+                    </p>
+                  </div>
+                  {update.status === 'pending_review' && (
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <button
+                        onClick={() => void handleAction(update.id, true)}
+                        disabled={processing === update.id}
+                        style={{
+                          padding: '0.375rem 1rem',
+                          backgroundColor: 'var(--color-success)',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '0.375rem',
+                          cursor: processing === update.id ? 'not-allowed' : 'pointer',
+                          fontSize: '0.8125rem',
+                          fontWeight: '600',
+                          opacity: processing === update.id ? 0.6 : 1,
+                        }}
+                      >
+                        {processing === update.id ? '...' : 'Approve'}
+                      </button>
+                      <button
+                        onClick={() => void handleAction(update.id, false)}
+                        disabled={processing === update.id}
+                        style={{
+                          padding: '0.375rem 1rem',
+                          backgroundColor: 'transparent',
+                          color: 'var(--color-error)',
+                          border: '1px solid var(--color-error)',
+                          borderRadius: '0.375rem',
+                          cursor: processing === update.id ? 'not-allowed' : 'pointer',
+                          fontSize: '0.8125rem',
+                          fontWeight: '600',
+                          opacity: processing === update.id ? 0.6 : 1,
+                        }}
+                      >
+                        Reject
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Impact Analysis */}
+                <div style={{ padding: '0.75rem', backgroundColor: 'var(--color-bg-main)', borderRadius: '0.5rem', marginBottom: '0.75rem' }}>
+                  <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', fontSize: '0.8125rem' }}>
+                    <span style={{ color: 'var(--color-text-secondary)' }}>
+                      Expected improvement: <strong style={{ color: 'var(--color-success)' }}>+{update.impactAnalysis.expectedScoreImprovement.toFixed(1)} pts</strong>
+                    </span>
+                    <span style={{ color: 'var(--color-text-secondary)' }}>
+                      Confidence: <strong>{(update.impactAnalysis.confidence * 100).toFixed(0)}%</strong>
+                    </span>
+                    {update.impactAnalysis.areasImproved.length > 0 && (
+                      <span style={{ color: 'var(--color-text-disabled)' }}>
+                        Areas: {update.impactAnalysis.areasImproved.join(', ')}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Improvements List */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  {update.improvements.map((imp) => (
+                    <div key={imp.id} style={{ padding: '0.625rem', borderLeft: '3px solid var(--color-primary)', backgroundColor: 'var(--color-bg-main)', borderRadius: '0 0.375rem 0.375rem 0' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
+                        <span style={{ fontSize: '0.8125rem', fontWeight: '600', color: 'var(--color-text-primary)', textTransform: 'capitalize' }}>
+                          {imp.area.replace(/_/g, ' ')}
+                        </span>
+                        <span style={{ fontSize: '0.6875rem', color: 'var(--color-text-disabled)' }}>
+                          Priority: {imp.priority}/10 | Impact: {imp.estimatedImpact}/10
+                        </span>
+                      </div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>
+                        <span style={{ color: 'var(--color-error)' }}>Current:</span> {imp.currentBehavior}
+                      </div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginTop: '0.125rem' }}>
+                        <span style={{ color: 'var(--color-success)' }}>Suggested:</span> {imp.suggestedBehavior}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Review Notes */}
+                {update.reviewNotes && (
+                  <div style={{ marginTop: '0.75rem', padding: '0.625rem', backgroundColor: 'var(--color-bg-main)', borderRadius: '0.375rem' }}>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)' }}>Review notes: </span>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>{update.reviewNotes}</span>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================================================
 // REVIEW QUEUE TAB COMPONENT
 // ============================================================================
 
@@ -1840,20 +2551,16 @@ interface FlaggedSessionDisplay {
   processed: boolean;
 }
 
-function ReviewQueueTab() {
+function ReviewQueueTab({ agentTypeFilter }: { agentTypeFilter: AgentDomain }) {
   const authFetch = useAuthFetch();
   const [sessions, setSessions] = useState<FlaggedSessionDisplay[]>([]);
   const [loading, setLoading] = useState(true);
-  const [agentTypeFilter, setAgentTypeFilter] = useState<string>('all');
 
   useEffect(() => {
     void (async () => {
       setLoading(true);
       try {
-        const url = agentTypeFilter === 'all'
-          ? '/api/agent-performance/flagged-sessions'
-          : `/api/agent-performance/flagged-sessions?agentType=${agentTypeFilter}`;
-        const res = await authFetch(url);
+        const res = await authFetch(`/api/agent-performance/flagged-sessions?agentType=${agentTypeFilter}`);
         const data = await res.json() as { success: boolean; sessions?: FlaggedSessionDisplay[] };
         if (data.success && data.sessions) {
           setSessions(data.sessions);
@@ -1868,34 +2575,13 @@ function ReviewQueueTab() {
 
   return (
     <div>
-      <div style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
-          <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '0.5rem', color: 'var(--color-text-primary)' }}>
-            Flagged Sessions Review Queue
-          </h2>
-          <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem' }}>
-            Production sessions that scored below training thresholds
-          </p>
-        </div>
-        <select
-          value={agentTypeFilter}
-          onChange={(e) => setAgentTypeFilter(e.target.value)}
-          style={{
-            padding: '0.5rem 1rem',
-            backgroundColor: 'var(--color-bg-paper)',
-            border: '1px solid var(--color-border-strong)',
-            borderRadius: '0.5rem',
-            color: 'var(--color-text-primary)',
-            fontSize: '0.875rem',
-          }}
-        >
-          <option value="all">All Types</option>
-          <option value="chat">Chat</option>
-          <option value="voice">Voice</option>
-          <option value="email">Email</option>
-          <option value="social">Social</option>
-          <option value="seo">SEO</option>
-        </select>
+      <div style={{ marginBottom: '1.5rem' }}>
+        <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '0.5rem', color: 'var(--color-text-primary)' }}>
+          Flagged Sessions Review Queue
+        </h2>
+        <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem' }}>
+          Production sessions for <strong style={{ textTransform: 'capitalize' }}>{agentTypeFilter}</strong> agent that scored below training thresholds
+        </p>
       </div>
 
       {loading ? (
