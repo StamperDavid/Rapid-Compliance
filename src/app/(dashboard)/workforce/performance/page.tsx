@@ -130,7 +130,7 @@ export default function SwarmPerformancePage() {
     try {
       const [perfRes, reqRes] = await Promise.all([
         authFetch(`/api/swarm/performance?period=${periodDays}`),
-        authFetch('/api/swarm/improvement-requests?status=pending_review'),
+        authFetch('/api/swarm/improvement-requests'),
       ]);
 
       if (perfRes.ok) {
@@ -160,6 +160,7 @@ export default function SwarmPerformancePage() {
   // Actions
   const handleTriggerAnalysis = useCallback(async (specialistId: string, specialistName: string) => {
     setActionLoading(specialistId);
+    setError(null);
     try {
       const res = await authFetch('/api/swarm/improvement-requests', {
         method: 'POST',
@@ -169,9 +170,12 @@ export default function SwarmPerformancePage() {
 
       if (res.ok) {
         await loadData();
+      } else {
+        const errData = await res.json().catch(() => ({ error: 'Analysis failed' })) as { error?: string };
+        setError(errData.error ?? `Analysis failed (${res.status})`);
       }
-    } catch {
-      // Error handled by loadData
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to trigger analysis');
     } finally {
       setActionLoading(null);
     }
@@ -179,6 +183,7 @@ export default function SwarmPerformancePage() {
 
   const handleReviewRequest = useCallback(async (requestId: string, action: 'approve' | 'reject') => {
     setActionLoading(requestId);
+    setError(null);
     try {
       const res = await authFetch(`/api/swarm/improvement-requests/${requestId}`, {
         method: 'PUT',
@@ -188,9 +193,35 @@ export default function SwarmPerformancePage() {
 
       if (res.ok) {
         await loadData();
+      } else {
+        const errData = await res.json().catch(() => ({ error: 'Review failed' })) as { error?: string };
+        setError(errData.error ?? `Review failed (${res.status})`);
       }
-    } catch {
-      // Error handled by loadData
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to submit review');
+    } finally {
+      setActionLoading(null);
+    }
+  }, [authFetch, loadData]);
+
+  const handleApplyRequest = useCallback(async (requestId: string) => {
+    setActionLoading(`apply_${requestId}`);
+    setError(null);
+    try {
+      const res = await authFetch(`/api/swarm/improvement-requests/${requestId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'apply' }),
+      });
+
+      if (res.ok) {
+        await loadData();
+      } else {
+        const errData = await res.json().catch(() => ({ error: 'Apply failed' })) as { error?: string };
+        setError(errData.error ?? `Apply failed (${res.status})`);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to apply changes');
     } finally {
       setActionLoading(null);
     }
@@ -230,6 +261,14 @@ export default function SwarmPerformancePage() {
 
   return (
     <div className="p-6 space-y-6">
+      {/* Inline Error Banner */}
+      {error && !loading && (
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3 flex items-center justify-between">
+          <p className="text-sm text-red-800 dark:text-red-400">{error}</p>
+          <button onClick={() => setError(null)} className="text-xs text-red-600 dark:text-red-400 hover:underline">Dismiss</button>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -274,12 +313,12 @@ export default function SwarmPerformancePage() {
         </div>
       )}
 
-      {/* Pending Improvement Requests */}
+      {/* Improvement Requests */}
       {improvementRequests.length > 0 && (
         <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
           <div className="p-4 border-b border-gray-200 dark:border-gray-700">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-              Pending Improvement Requests ({improvementRequests.length})
+              Improvement Requests ({improvementRequests.length})
             </h2>
           </div>
           <div className="divide-y divide-gray-200 dark:divide-gray-700">
@@ -297,20 +336,33 @@ export default function SwarmPerformancePage() {
                 </div>
                 <div className="flex items-center gap-2 ml-4">
                   <StatusBadge status={req.status} />
-                  <button
-                    onClick={() => void handleReviewRequest(req.id, 'approve')}
-                    disabled={actionLoading === req.id}
-                    className="px-3 py-1 text-xs font-medium rounded bg-green-600 text-white hover:bg-green-700 disabled:opacity-50"
-                  >
-                    Approve
-                  </button>
-                  <button
-                    onClick={() => void handleReviewRequest(req.id, 'reject')}
-                    disabled={actionLoading === req.id}
-                    className="px-3 py-1 text-xs font-medium rounded bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
-                  >
-                    Reject
-                  </button>
+                  {req.status === 'pending_review' && (
+                    <>
+                      <button
+                        onClick={() => void handleReviewRequest(req.id, 'approve')}
+                        disabled={actionLoading === req.id}
+                        className="px-3 py-1 text-xs font-medium rounded bg-green-600 text-white hover:bg-green-700 disabled:opacity-50"
+                      >
+                        Approve
+                      </button>
+                      <button
+                        onClick={() => void handleReviewRequest(req.id, 'reject')}
+                        disabled={actionLoading === req.id}
+                        className="px-3 py-1 text-xs font-medium rounded bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
+                      >
+                        Reject
+                      </button>
+                    </>
+                  )}
+                  {req.status === 'approved' && (
+                    <button
+                      onClick={() => void handleApplyRequest(req.id)}
+                      disabled={actionLoading === `apply_${req.id}`}
+                      className="px-3 py-1 text-xs font-medium rounded bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
+                    >
+                      {actionLoading === `apply_${req.id}` ? 'Applying...' : 'Apply Changes'}
+                    </button>
+                  )}
                 </div>
               </div>
             ))}

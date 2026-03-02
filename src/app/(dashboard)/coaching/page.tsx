@@ -26,6 +26,7 @@ import {
 import { useAuth } from '@/hooks/useAuth';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { logger } from '@/lib/logger/logger';
+import Link from 'next/link';
 
 type CoachingViewMode = 'human' | 'ai';
 
@@ -543,58 +544,74 @@ function AIAgentsCoachingView({ authFetch }: { authFetch: (url: string, options?
   const [agents, setAgents] = useState<AgentPerformanceData[]>([]);
   const [flaggedCount, setFlaggedCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [analyzing, setAnalyzing] = useState<string | null>(null);
 
-  useEffect(() => {
-    void (async () => {
-      try {
-        // Fetch agent types to know which domains exist
-        const typesRes = await authFetch('/api/training/agent-types');
-        const typesData = await typesRes.json() as { success: boolean; domains?: string[] };
-        const domains = typesData.domains ?? ['chat', 'voice', 'email', 'social', 'seo'];
-
-        // Fetch flagged sessions count
-        const flaggedRes = await authFetch('/api/agent-performance/flagged-sessions');
-        const flaggedData = await flaggedRes.json() as { success: boolean; total?: number };
-        setFlaggedCount(flaggedData.total ?? 0);
-
-        // For now, show domains as agent cards (actual agents populate as they're created)
-        const agentData: AgentPerformanceData[] = domains.map((domain: string) => ({
-          agent: {
-            agentId: `agent_${domain}`,
-            agentType: domain,
-            agentName: {
-              chat: 'Sales Chat Agent',
-              voice: 'Voice Agent',
-              email: 'Email Agent',
-              social: 'Social Media Agent',
-              seo: 'SEO Content Agent',
-            }[domain] ?? domain,
-            goldenMasterId: null,
-            thresholds: { flagForTrainingBelow: 65, excellentAbove: 90 },
-          },
-          performance: null,
-        }));
-
-        setAgents(agentData);
-      } catch {
-        // Non-critical
-      } finally {
-        setLoading(false);
+  const fetchAgents = useCallback(async () => {
+    try {
+      setError(null);
+      // Fetch real agent rep profiles with performance data
+      const res = await authFetch('/api/agent-performance');
+      if (!res.ok) {
+        throw new Error(`Failed to load agent profiles (${res.status})`);
       }
-    })();
+      const data = await res.json() as {
+        success: boolean;
+        agents?: Array<{
+          agent: AgentRepData;
+          performance: {
+            agentId: string;
+            totalExecutions: number;
+            successRate: number;
+            averageQualityScore: number;
+            qualityTrend: string;
+          } | null;
+          flaggedSessionCount: number;
+        }>;
+        totalFlagged?: number;
+      };
+
+      if (data.success && data.agents) {
+        setAgents(data.agents.map(a => ({
+          agent: a.agent,
+          performance: a.performance,
+        })));
+        setFlaggedCount(data.totalFlagged ?? 0);
+      } else {
+        // No profiles exist yet — show empty state
+        setAgents([]);
+        setFlaggedCount(0);
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to load agent data';
+      setError(msg);
+      logger.error('[AIAgentsView] Failed to fetch agents', err instanceof Error ? err : new Error(msg));
+    } finally {
+      setLoading(false);
+    }
   }, [authFetch]);
+
+  useEffect(() => {
+    void fetchAgents();
+  }, [fetchAgents]);
 
   const handleAnalyze = async (agentId: string) => {
     setAnalyzing(agentId);
     try {
-      await authFetch('/api/agent-performance/analyze', {
+      const res = await authFetch('/api/agent-performance/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ agentId, period: 'last_30_days' }),
       });
-    } catch {
-      // Error display handled by UI
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({ error: 'Analysis failed' })) as { error?: string };
+        setError(errData.error ?? `Analysis failed (${res.status})`);
+      } else {
+        // Refresh data after analysis completes
+        await fetchAgents();
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Analysis request failed');
     } finally {
       setAnalyzing(null);
     }
@@ -612,11 +629,22 @@ function AIAgentsCoachingView({ authFetch }: { authFetch: (url: string, options?
 
   return (
     <div className="max-w-7xl mx-auto p-6 space-y-6">
+      {/* Error Banner */}
+      {error && (
+        <div className="bg-red-900/20 border border-red-500/30 rounded-lg p-3 flex items-center justify-between">
+          <p className="text-sm text-red-400">{error}</p>
+          <button onClick={() => setError(null)} className="text-xs text-red-400 hover:text-red-300">Dismiss</button>
+        </div>
+      )}
+
       {/* Summary */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="bg-[var(--color-bg-paper)] rounded-lg shadow-sm p-4">
-          <p className="text-sm text-[var(--color-text-secondary)]">AI Agent Types</p>
+          <p className="text-sm text-[var(--color-text-secondary)]">AI Agent Profiles</p>
           <p className="text-2xl font-bold text-[var(--color-text-primary)] mt-1">{agents.length}</p>
+          {agents.length === 0 && (
+            <p className="text-xs text-[var(--color-text-disabled)] mt-1">Run migration to create profiles</p>
+          )}
         </div>
         <div className="bg-[var(--color-bg-paper)] rounded-lg shadow-sm p-4">
           <p className="text-sm text-[var(--color-text-secondary)]">Flagged Sessions</p>
@@ -628,8 +656,8 @@ function AIAgentsCoachingView({ authFetch }: { authFetch: (url: string, options?
         <div className="bg-[var(--color-bg-paper)] rounded-lg shadow-sm p-4">
           <p className="text-sm text-[var(--color-text-secondary)]">Quick Links</p>
           <div className="flex flex-col gap-1 mt-2">
-            <a href="/settings/ai-agents/training" className="text-xs text-[var(--color-primary)] hover:underline">Training Lab</a>
-            <a href="/workforce/performance" className="text-xs text-[var(--color-primary)] hover:underline">Swarm Performance</a>
+            <Link href="/settings/ai-agents/training" className="text-xs text-[var(--color-primary)] hover:underline">Training Lab</Link>
+            <Link href="/workforce/performance" className="text-xs text-[var(--color-primary)] hover:underline">Swarm Performance</Link>
           </div>
         </div>
       </div>
@@ -640,34 +668,65 @@ function AIAgentsCoachingView({ authFetch }: { authFetch: (url: string, options?
           <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">Customer-Facing AI Agents</h2>
           <p className="text-sm text-[var(--color-text-secondary)] mt-1">Coaching analysis and performance tracking for production agents</p>
         </div>
-        <div className="divide-y divide-[var(--color-border-light)]">
-          {agents.map((item) => (
-            <div key={item.agent.agentId} className="p-4 flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-[var(--color-text-primary)]">{item.agent.agentName}</p>
-                <p className="text-xs text-[var(--color-text-secondary)] mt-0.5">
-                  Type: {item.agent.agentType} &middot; Threshold: {item.agent.thresholds.flagForTrainingBelow}
-                </p>
+        {agents.length === 0 ? (
+          <div className="p-8 text-center">
+            <p className="text-sm text-[var(--color-text-secondary)]">No agent rep profiles found.</p>
+            <p className="text-xs text-[var(--color-text-disabled)] mt-1">
+              Run the migration script to create profiles for each agent type.
+            </p>
+          </div>
+        ) : (
+          <div className="divide-y divide-[var(--color-border-light)]">
+            {agents.map((item) => (
+              <div key={item.agent.agentId} className="p-4 flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-[var(--color-text-primary)]">{item.agent.agentName}</p>
+                  <p className="text-xs text-[var(--color-text-secondary)] mt-0.5">
+                    Type: {item.agent.agentType} &middot; Threshold: {item.agent.thresholds.flagForTrainingBelow}
+                    {item.agent.goldenMasterId && (
+                      <> &middot; GM: {item.agent.goldenMasterId}</>
+                    )}
+                  </p>
+                </div>
+                <div className="flex items-center gap-3">
+                  {item.performance ? (
+                    <div className="text-right">
+                      <span className="text-sm font-medium text-[var(--color-text-primary)]">
+                        {item.performance.averageQualityScore.toFixed(0)}
+                      </span>
+                      <span className="text-xs text-[var(--color-text-secondary)] ml-1">
+                        ({item.performance.totalExecutions} runs)
+                      </span>
+                      <div className="flex items-center gap-1 mt-0.5">
+                        <span className={`text-xs ${
+                          item.performance.qualityTrend === 'improving' ? 'text-green-400' :
+                          item.performance.qualityTrend === 'declining' ? 'text-red-400' :
+                          'text-[var(--color-text-disabled)]'
+                        }`}>
+                          {item.performance.qualityTrend === 'improving' ? '↑' :
+                           item.performance.qualityTrend === 'declining' ? '↓' : '→'}
+                          {' '}{item.performance.qualityTrend}
+                        </span>
+                        <span className="text-xs text-[var(--color-text-disabled)]">
+                          &middot; {(item.performance.successRate * 100).toFixed(0)}% success
+                        </span>
+                      </div>
+                    </div>
+                  ) : (
+                    <span className="text-xs text-[var(--color-text-disabled)]">No data yet</span>
+                  )}
+                  <button
+                    onClick={() => void handleAnalyze(item.agent.agentId)}
+                    disabled={analyzing === item.agent.agentId}
+                    className="px-3 py-1.5 text-xs font-medium rounded bg-[var(--color-primary)] text-white hover:opacity-90 disabled:opacity-50"
+                  >
+                    {analyzing === item.agent.agentId ? 'Analyzing...' : 'Run Analysis'}
+                  </button>
+                </div>
               </div>
-              <div className="flex items-center gap-3">
-                {item.performance ? (
-                  <span className="text-sm text-[var(--color-text-secondary)]">
-                    Score: {item.performance.averageQualityScore}
-                  </span>
-                ) : (
-                  <span className="text-xs text-[var(--color-text-disabled)]">No data yet</span>
-                )}
-                <button
-                  onClick={() => void handleAnalyze(item.agent.agentId)}
-                  disabled={analyzing === item.agent.agentId}
-                  className="px-3 py-1 text-xs font-medium rounded bg-[var(--color-primary)] text-white hover:opacity-90 disabled:opacity-50"
-                >
-                  {analyzing === item.agent.agentId ? 'Analyzing...' : 'Run Analysis'}
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

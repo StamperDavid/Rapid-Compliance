@@ -31,7 +31,7 @@ import type { AgentDomain } from '@/types/training';
 function getSessionCollectionForType(agentType: AgentDomain): string {
   switch (agentType) {
     case 'chat':
-      return getSubCollection('conversations');
+      return getSubCollection('chatSessions');
     case 'voice':
       return getSubCollection('calls');
     case 'email':

@@ -266,10 +266,16 @@ export class ChatSessionService {
 
       if (response.ok) {
         const result = await response.json() as { data?: { scores?: { overall?: number } } };
+        const overallScore = result.data?.scores?.overall;
         logger.info('[ChatSession] Auto-analysis completed via API', {
           sessionId,
-          overallScore: result.data?.scores?.overall,
+          overallScore,
           file: 'chat-session-service.ts',
+        });
+
+        // Route through production monitor for scoring + auto-flag pipeline
+        this.triggerProductionMonitor(sessionId, overallScore).catch(err => {
+          logger.error('[ChatSession] Production monitor failed:', err instanceof Error ? err : new Error(String(err)), { file: 'chat-session-service.ts' });
         });
       } else {
         logger.warn('[ChatSession] Auto-analysis API returned non-OK', {
@@ -280,6 +286,48 @@ export class ChatSessionService {
       }
     } catch (error) {
       logger.error('[ChatSession] Analysis error:', error instanceof Error ? error : new Error(String(error)), { file: 'chat-session-service.ts' });
+    }
+  }
+
+  /**
+   * Route a completed session through the production monitor pipeline.
+   * This scores the session, records it, and auto-flags if below threshold.
+   */
+  private static async triggerProductionMonitor(sessionId: string, score?: number): Promise<void> {
+    try {
+      const baseUrl = typeof window !== 'undefined'
+        ? window.location.origin
+        : process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
+
+      const response = await fetch(`${baseUrl}/api/agent-performance/score-session`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId,
+          agentType: 'chat',
+          agentId: 'agent_chat_primary',
+          ...(typeof score === 'number' ? { score } : {}),
+        }),
+      });
+
+      if (response.ok) {
+        const result = await response.json() as { scored: boolean; flagged: boolean; score: number };
+        logger.info('[ChatSession] Production monitor completed', {
+          sessionId,
+          scored: result.scored,
+          flagged: result.flagged,
+          score: result.score,
+          file: 'chat-session-service.ts',
+        });
+      } else {
+        logger.warn('[ChatSession] Production monitor returned non-OK', {
+          sessionId,
+          status: response.status,
+          file: 'chat-session-service.ts',
+        });
+      }
+    } catch (error) {
+      logger.error('[ChatSession] Production monitor error:', error instanceof Error ? error : new Error(String(error)), { file: 'chat-session-service.ts' });
     }
   }
 

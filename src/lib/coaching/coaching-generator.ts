@@ -344,9 +344,9 @@ export class CoachingGenerator {
    */
   private async generateTrainingSuggestions(
     performance: RepPerformanceMetrics,
-    _weaknesses: Weakness[]
+    weaknesses: Weakness[]
   ): Promise<TrainingSuggestion[]> {
-    const prompt = this.buildTrainingPrompt(performance, _weaknesses);
+    const prompt = this.buildTrainingPrompt(performance, weaknesses);
 
     const response = await this.provider.chat({
       model: this.model as ModelName,
@@ -372,9 +372,9 @@ export class CoachingGenerator {
    */
   private async generateActionItems(
     performance: RepPerformanceMetrics,
-    _recommendations: CoachingRecommendation[]
+    recommendations: CoachingRecommendation[]
   ): Promise<ActionItem[]> {
-    const prompt = this.buildActionItemsPrompt(performance, _recommendations);
+    const prompt = this.buildActionItemsPrompt(performance, recommendations);
 
     const response = await this.provider.chat({
       model: this.model as ModelName,
@@ -399,11 +399,33 @@ export class CoachingGenerator {
   // PROMPT BUILDERS
   // ============================================================================
 
+  /**
+   * Returns an AI-aware preamble if the rep is an AI agent.
+   * This adjusts the coaching generator's output to focus on
+   * system prompt and behavior config improvements rather than
+   * personal coaching language.
+   */
+  private getSubjectPreamble(performance: RepPerformanceMetrics): string {
+    if (!performance.isAI) {
+      return '';
+    }
+    return `IMPORTANT CONTEXT: You are analyzing an AI SALES AGENT, not a human. This is an automated agent with a configurable system prompt and behavior parameters. Your coaching recommendations should focus on:
+- System prompt improvements (discovery frameworks, objection handling scripts, closing sequences)
+- Behavior configuration changes (aggressiveness levels, escalation thresholds, tone parameters)
+- Training data adjustments (scenario gaps, edge case handling)
+- Golden Master updates (behavioral rules, persona refinement)
+Do NOT suggest personal development, mentorship, time management tips, or work-life balance advice. Frame all suggestions as configuration/prompt changes.
+
+`;
+  }
+
   private buildPerformanceSummaryPrompt(performance: RepPerformanceMetrics): string {
-    return `You are an expert sales coach analyzing a sales representative's performance.
+    const aiPreamble = this.getSubjectPreamble(performance);
+    const subjectLabel = performance.isAI ? 'AI agent' : 'sales representative';
+    return `${aiPreamble}You are an expert sales coach analyzing a ${subjectLabel}'s performance.
 
 PERFORMANCE DATA:
-- Rep: ${performance.repName}
+- ${performance.isAI ? 'Agent' : 'Rep'}: ${performance.repName}
 - Tier: ${performance.tier}
 - Overall Score: ${performance.overallScore}/100
 - Period: ${performance.period}
@@ -442,7 +464,9 @@ Return as JSON:
   }
 
   private buildStrengthsPrompt(performance: RepPerformanceMetrics): string {
-    return `You are an expert sales coach identifying a rep's key strengths.
+    const aiPreamble = this.getSubjectPreamble(performance);
+    const subjectLabel = performance.isAI ? 'AI agent' : 'rep';
+    return `${aiPreamble}You are an expert sales coach identifying a ${subjectLabel}'s key strengths.
 
 REP SKILLS (0-100):
 ${Object.entries(performance.skills).map(([skill, score]) => `- ${skill}: ${(score as number).toFixed(0)}`).join('\n')}
@@ -476,7 +500,8 @@ Return as JSON:
   }
 
   private buildWeaknessesPrompt(performance: RepPerformanceMetrics): string {
-    return `You are an expert sales coach identifying areas for improvement.
+    const aiPreamble = this.getSubjectPreamble(performance);
+    return `${aiPreamble}You are an expert sales coach identifying areas for improvement.
 
 REP SKILLS (0-100):
 ${Object.entries(performance.skills)
@@ -515,7 +540,8 @@ Return as JSON:
   }
 
   private buildOpportunitiesPrompt(performance: RepPerformanceMetrics): string {
-    return `You are an expert sales coach identifying improvement opportunities.
+    const aiPreamble = this.getSubjectPreamble(performance);
+    return `${aiPreamble}You are an expert sales coach identifying improvement opportunities.
 
 CURRENT PERFORMANCE:
 - Overall Score: ${performance.overallScore}/100
@@ -558,7 +584,8 @@ Return as JSON:
   }
 
   private buildRisksPrompt(performance: RepPerformanceMetrics): string {
-    return `You are an expert sales coach assessing performance risks.
+    const aiPreamble = this.getSubjectPreamble(performance);
+    return `${aiPreamble}You are an expert sales coach assessing performance risks.
 
 RISK INDICATORS:
 - Tier: ${performance.tier}
@@ -595,7 +622,8 @@ Return as JSON:
   }
 
   private buildBestPracticesPrompt(performance: RepPerformanceMetrics): string {
-    return `You are an expert sales coach identifying best practices from top performers.
+    const aiPreamble = this.getSubjectPreamble(performance);
+    return `${aiPreamble}You are an expert sales coach identifying best practices from top performers.
 
 REP PERFORMANCE:
 - Current Tier: ${performance.tier}
@@ -632,9 +660,11 @@ Return as JSON:
   }
 
   private buildRecommendationsPrompt(performance: RepPerformanceMetrics): string {
-    return `You are an expert sales coach creating personalized coaching recommendations.
+    const aiPreamble = this.getSubjectPreamble(performance);
+    const subjectLabel = performance.isAI ? 'AI AGENT' : 'REP';
+    return `${aiPreamble}You are an expert sales coach creating personalized coaching recommendations.
 
-REP: ${performance.repName}
+${subjectLabel}: ${performance.repName}
 TIER: ${performance.tier}
 SCORE: ${performance.overallScore}/100
 
@@ -687,7 +717,8 @@ Return as JSON:
     performance: RepPerformanceMetrics,
     weaknesses: Weakness[]
   ): string {
-    return `You are an expert sales coach recommending training for skill development.
+    const aiPreamble = this.getSubjectPreamble(performance);
+    return `${aiPreamble}You are an expert sales coach recommending training for skill development.
 
 SKILL GAPS:
 ${weaknesses.map(w => `- ${w.category}: ${w.title}`).join('\n')}
@@ -725,7 +756,8 @@ Return as JSON:
     performance: RepPerformanceMetrics,
     recommendations: CoachingRecommendation[]
   ): string {
-    return `You are an expert sales coach creating actionable tasks from recommendations.
+    const aiPreamble = this.getSubjectPreamble(performance);
+    return `${aiPreamble}You are an expert sales coach creating actionable tasks from recommendations.
 
 RECOMMENDATIONS:
 ${recommendations.map((r, i) => `${i + 1}. ${r.title}`).join('\n')}

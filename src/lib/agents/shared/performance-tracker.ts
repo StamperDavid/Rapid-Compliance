@@ -134,22 +134,33 @@ export async function getAgentTrend(
 
   const now = Date.now();
   const collectionPath = getPerformanceCollectionPath();
-  const aggregations: AgentPerformanceAggregation[] = [];
 
-  for (let i = 0; i < periodCount; i++) {
+  // Run all period queries in parallel for performance
+  const periodQueries = Array.from({ length: periodCount }, (_, i) => {
     const periodEnd = new Date(now - i * periodLengthDays * MS_PER_DAY).toISOString();
     const periodStart = new Date(now - (i + 1) * periodLengthDays * MS_PER_DAY).toISOString();
+    return { periodStart, periodEnd, index: i };
+  });
 
-    const snapshot = await adminDb
-      .collection(collectionPath)
-      .where('agentId', '==', agentId)
-      .where('timestamp', '>=', periodStart)
-      .where('timestamp', '<=', periodEnd)
-      .orderBy('timestamp', 'desc')
-      .get();
+  const db = adminDb;
+  const snapshots = await Promise.all(
+    periodQueries.map(async ({ periodStart, periodEnd }) =>
+      db
+        .collection(collectionPath)
+        .where('agentId', '==', agentId)
+        .where('timestamp', '>=', periodStart)
+        .where('timestamp', '<=', periodEnd)
+        .orderBy('timestamp', 'desc')
+        .get()
+    )
+  );
 
+  const aggregations: AgentPerformanceAggregation[] = [];
+  for (let i = 0; i < snapshots.length; i++) {
+    const snapshot = snapshots[i];
     if (!snapshot.empty) {
       const entries = snapshot.docs.map(doc => doc.data() as AgentPerformanceEntry);
+      const { periodStart, periodEnd } = periodQueries[i];
       const periodLabel = `${periodStart.substring(0, 10)}_to_${periodEnd.substring(0, 10)}`;
       const agg = computeAggregation(agentId, entries, periodLabel);
       aggregations.push(agg);

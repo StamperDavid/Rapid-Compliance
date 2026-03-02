@@ -16,6 +16,7 @@
 import { logger } from '@/lib/logger/logger';
 import { adminDb } from '@/lib/firebase/admin';
 import { getSubCollection } from '@/lib/firebase/collections';
+import { FieldValue } from 'firebase-admin/firestore';
 import type { SpecialistImprovementRequest } from '@/types/training';
 
 // ============================================================================
@@ -214,10 +215,10 @@ export async function rollbackImprovementRequest(
 
     await configRef.set(restoredConfig);
 
-    // Revert request status to approved
+    // Revert request status to approved, remove appliedAt field entirely
     await requestRef.update({
       status: 'approved',
-      appliedAt: null,
+      appliedAt: FieldValue.delete(),
     });
 
     logger.info(`[ImprovementApplier] Rolled back changes from ${requestId} on ${request.specialistId}`);

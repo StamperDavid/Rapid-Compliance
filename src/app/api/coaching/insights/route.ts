@@ -245,6 +245,14 @@ export async function POST(request: NextRequest) {
       requestData.customRange
     );
 
+    // Detect AI agents (prefixed with agent_) and set isAI flag before insight generation
+    if (requestData.repId.startsWith('agent_')) {
+      const agentProfile = await getAgentRepProfile(requestData.repId);
+      if (agentProfile) {
+        performance.isAI = true;
+      }
+    }
+
     // Step 2: Generate AI coaching insights via OpenRouter
     const generator = new CoachingGenerator({ model });
     const insights = await generator.generateCoachingInsights(performance, {

@@ -402,6 +402,81 @@
         { "fieldPath": "status", "order": "ASCENDING" },
         { "fieldPath": "lastMessageAt", "order": "DESCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "agentPerformance",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "agentId", "order": "ASCENDING" },
+        { "fieldPath": "timestamp", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "agentPerformance",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "agentId", "order": "ASCENDING" },
+        { "fieldPath": "agentType", "order": "ASCENDING" },
+        { "fieldPath": "timestamp", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "flaggedTrainingSessions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "agentType", "order": "ASCENDING" },
+        { "fieldPath": "processed", "order": "ASCENDING" },
+        { "fieldPath": "flaggedAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "flaggedTrainingSessions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "agentType", "order": "ASCENDING" },
+        { "fieldPath": "processed", "order": "ASCENDING" },
+        { "fieldPath": "flaggedAt", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "goldenMasters",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "agentType", "order": "ASCENDING" },
+        { "fieldPath": "isActive", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "goldenMasterUpdates",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "goldenMasterId", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "specialistImprovementRequests",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "specialistImprovementRequests",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "specialistId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "agentRepProfiles",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "agentType", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

@@ -141,6 +141,7 @@ const NAV_SECTIONS: NavigationSection[] = [
     items: [
       { id: 'agent-registry', label: 'Agent Registry', href: '/workforce', icon: Bot, iconColor: 'var(--color-cyan)', requiredPermission: 'canDeployAIAgents' },
       { id: 'mission-control', label: 'Mission Control', href: '/mission-control', icon: Radar, iconColor: 'var(--color-primary)', requiredPermission: 'canDeployAIAgents' },
+      { id: 'swarm-performance', label: 'Swarm Performance', href: '/workforce/performance', icon: Activity, iconColor: 'var(--color-warning)', requiredPermission: 'canManageAIAgents' },
       { id: 'training-hub', label: 'Training Hub', href: '/settings/ai-agents/training', icon: GraduationCap, iconColor: 'var(--color-success)', requiredPermission: 'canTrainAIAgents' },
       { id: 'models', label: 'Models & Data', href: '/ai/datasets', icon: Database, iconColor: 'var(--color-primary)', requiredPermission: 'canManageAIAgents' },
     ],

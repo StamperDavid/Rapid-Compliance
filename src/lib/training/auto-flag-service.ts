@@ -145,7 +145,7 @@ async function markSessionFlagged(
 
   // Determine which collection the session lives in
   const collectionMap: Record<AgentDomain, string> = {
-    chat: 'conversations',
+    chat: 'chatSessions',
     voice: 'calls',
     email: 'emailCampaigns',
     social: 'socialPosts',
@@ -195,92 +195,108 @@ async function getUnprocessedFlaggedCount(agentType: AgentDomain): Promise<numbe
 async function batchProcessFlaggedSessions(agentType: AgentDomain): Promise<void> {
   if (!adminDb) { return; }
 
+  const db = adminDb;
   logger.info(`[AutoFlag] Batch processing flagged sessions for ${agentType}`);
 
-  // Get unprocessed sessions
-  const snap = await adminDb
-    .collection(getSubCollection(FLAGGED_SESSIONS_COLLECTION))
-    .where('agentType', '==', agentType)
-    .where('processed', '==', false)
-    .orderBy('flaggedAt', 'asc')
-    .limit(BATCH_THRESHOLD * 2) // process up to 2x threshold
-    .get();
+  // Use a transaction to prevent race conditions where two concurrent
+  // requests both try to process the same flagged sessions
+  await db.runTransaction(async (transaction) => {
+    // Get unprocessed sessions inside the transaction
+    const snap = await transaction.get(
+      db
+        .collection(getSubCollection(FLAGGED_SESSIONS_COLLECTION))
+        .where('agentType', '==', agentType)
+        .where('processed', '==', false)
+        .orderBy('flaggedAt', 'asc')
+        .limit(BATCH_THRESHOLD * 2) // process up to 2x threshold
+    );
 
-  if (snap.empty) { return; }
+    if (snap.empty) { return; }
 
-  const flaggedSessions = snap.docs.map(doc => doc.data() as FlaggedSession);
-  const sessionIds = flaggedSessions.map(s => s.sessionId);
-
-  // Generate improvement suggestions from accumulated issues
-  const allIssues = flaggedSessions.flatMap(s => s.issues);
-  const issueFrequency = new Map<string, number>();
-  for (const issue of allIssues) {
-    issueFrequency.set(issue, (issueFrequency.get(issue) ?? 0) + 1);
-  }
-
-  const improvements: ImprovementSuggestion[] = Array.from(issueFrequency.entries())
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 5)
-    .map(([issue, count], index) => ({
-      id: `auto_flag_${agentType}_${Date.now()}_${index}`,
-      type: 'behavior_change' as const,
-      area: categorizeIssue(issue, agentType),
-      currentBehavior: `Recurring issue (${count} occurrences): ${issue}`,
-      suggestedBehavior: `Address the pattern causing: ${issue}`,
-      priority: Math.min(10, 5 + count),
-      estimatedImpact: Math.min(10, 3 + count),
-      confidence: Math.min(0.95, 0.5 + (count / flaggedSessions.length) * 0.4),
-    }));
-
-  // Find the Golden Master for this agent type
-  const gmSnap = await adminDb
-    .collection(getSubCollection('goldenMasters'))
-    .where('agentType', '==', agentType)
-    .where('isActive', '==', true)
-    .limit(1)
-    .get();
-
-  const goldenMasterId = gmSnap.empty
-    ? `pending_${agentType}` // No active GM yet — request still created for review
-    : gmSnap.docs[0].id;
-
-  // Create the update request
-  const avgScore = flaggedSessions.reduce((sum, s) => sum + s.score, 0) / flaggedSessions.length;
-  const updateRequest: GoldenMasterUpdateRequest = {
-    id: `auto_update_${agentType}_${Date.now()}`,
-    goldenMasterId,
-    agentType,
-    sourceSessionIds: sessionIds,
-    improvements,
-    proposedChanges: [],
-    impactAnalysis: {
-      expectedScoreImprovement: Math.round(100 - avgScore) * 0.3,
-      areasImproved: [...new Set(improvements.map(i => i.area))],
-      risks: ['Auto-generated from production flags — human review required'],
-      recommendedTestDuration: 7,
-      confidence: Math.min(0.9, 0.5 + flaggedSessions.length * 0.05),
-    },
-    status: 'pending_review', // Human gate — always requires review
-    createdAt: new Date().toISOString(),
-  };
-
-  // Save update request
-  await adminDb
-    .collection(getSubCollection('goldenMasterUpdates'))
-    .doc(updateRequest.id)
-    .set(updateRequest);
-
-  // Mark all processed sessions
-  const batch = adminDb.batch();
-  for (const doc of snap.docs) {
-    batch.update(doc.ref, {
-      processed: true,
-      updateRequestId: updateRequest.id,
+    // Double-check none were processed between count check and transaction start
+    const unprocessedDocs = snap.docs.filter(doc => {
+      const data = doc.data() as FlaggedSession;
+      return !data.processed;
     });
-  }
-  await batch.commit();
 
-  logger.info(`[AutoFlag] Created update request ${updateRequest.id} from ${flaggedSessions.length} flagged sessions`);
+    if (unprocessedDocs.length < BATCH_THRESHOLD) {
+      logger.info(`[AutoFlag] Not enough unprocessed sessions after recheck (${unprocessedDocs.length}/${BATCH_THRESHOLD})`);
+      return;
+    }
+
+    const flaggedSessions = unprocessedDocs.map(doc => doc.data() as FlaggedSession);
+    const sessionIds = flaggedSessions.map(s => s.sessionId);
+
+    // Generate improvement suggestions from accumulated issues
+    const allIssues = flaggedSessions.flatMap(s => s.issues);
+    const issueFrequency = new Map<string, number>();
+    for (const issue of allIssues) {
+      issueFrequency.set(issue, (issueFrequency.get(issue) ?? 0) + 1);
+    }
+
+    const improvements: ImprovementSuggestion[] = Array.from(issueFrequency.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([issue, count], index) => ({
+        id: `auto_flag_${agentType}_${Date.now()}_${index}`,
+        type: 'behavior_change' as const,
+        area: categorizeIssue(issue, agentType),
+        currentBehavior: `Recurring issue (${count} occurrences): ${issue}`,
+        suggestedBehavior: `Address the pattern causing: ${issue}`,
+        priority: Math.min(10, 5 + count),
+        estimatedImpact: Math.min(10, 3 + count),
+        confidence: Math.min(0.95, 0.5 + (count / flaggedSessions.length) * 0.4),
+      }));
+
+    // Find the Golden Master for this agent type
+    // db is guaranteed non-null by the check at function entry
+    const gmSnap = await db
+      .collection(getSubCollection('goldenMasters'))
+      .where('agentType', '==', agentType)
+      .where('isActive', '==', true)
+      .limit(1)
+      .get();
+
+    const goldenMasterId = gmSnap.empty
+      ? `pending_${agentType}` // No active GM yet — request still created for review
+      : gmSnap.docs[0].id;
+
+    // Create the update request
+    const avgScore = flaggedSessions.reduce((sum, s) => sum + s.score, 0) / flaggedSessions.length;
+    const updateRequest: GoldenMasterUpdateRequest = {
+      id: `auto_update_${agentType}_${Date.now()}`,
+      goldenMasterId,
+      agentType,
+      sourceSessionIds: sessionIds,
+      improvements,
+      proposedChanges: [],
+      impactAnalysis: {
+        expectedScoreImprovement: Math.round(100 - avgScore) * 0.3,
+        areasImproved: [...new Set(improvements.map(i => i.area))],
+        risks: ['Auto-generated from production flags — human review required'],
+        recommendedTestDuration: 7,
+        confidence: Math.min(0.9, 0.5 + flaggedSessions.length * 0.05),
+      },
+      status: 'pending_review', // Human gate — always requires review
+      createdAt: new Date().toISOString(),
+    };
+
+    // Save update request (inside transaction)
+    transaction.set(
+      db.collection(getSubCollection('goldenMasterUpdates')).doc(updateRequest.id),
+      updateRequest
+    );
+
+    // Mark all processed sessions (inside transaction)
+    for (const doc of unprocessedDocs) {
+      transaction.update(doc.ref, {
+        processed: true,
+        updateRequestId: updateRequest.id,
+      });
+    }
+
+    logger.info(`[AutoFlag] Created update request ${updateRequest.id} from ${flaggedSessions.length} flagged sessions`);
+  });
 }
 
 /**
