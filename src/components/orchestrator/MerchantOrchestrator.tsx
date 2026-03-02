@@ -22,7 +22,7 @@ import {
   type IndustryType,
 } from '@/lib/ai/persona-mapper';
 import type { SystemHealthReport } from '@/lib/orchestrator/system-health-service';
-import { PLATFORM_ID, ASSISTANT_NAME } from '@/lib/constants/platform';
+import { PLATFORM_ID, ASSISTANT_NAME, COMPANY_CONFIG } from '@/lib/constants/platform';
 import { logger } from '@/lib/logger/logger';
 
 interface MerchantProfile {
@@ -118,7 +118,7 @@ export function MerchantOrchestrator() {
   // Generate personalized welcome message - natural dialogue, no menus
   const getWelcomeMessage = (): string => {
     const displayName = ownerName ?? 'there';
-    const businessName = profile?.name ?? 'your business';
+    const businessName = profile?.name ?? COMPANY_CONFIG.name;
     const industryContext = industryPersona.industryDisplayName;
 
     // Build system status naturally
@@ -160,7 +160,7 @@ ${recommendation} What would you like to focus on?`;
     // Use cached health report (fetched via API on mount)
     const currentHealth = healthReport;
 
-    const businessName = profile?.name ?? 'your business';
+    const businessName = profile?.name ?? COMPANY_CONFIG.name;
     const emailConnected = currentHealth?.integrations.find(i => i.id === 'email')?.connected;
     const recommendation = currentHealth?.recommendations[0]?.title ?? 'setting up your lead pipeline';
 

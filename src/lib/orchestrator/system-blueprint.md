@@ -4,7 +4,7 @@
 > **Last Updated:** February 25, 2026
 > **Architecture:** Single-Tenant (Penthouse Model) — NOT a SaaS platform
 > **Organization:** rapid-compliance-root
-> **Domain:** rapidcompliance.us (future: SalesVelocity.ai)
+> **Domain:** SalesVelocity.ai
 
 ---
 
