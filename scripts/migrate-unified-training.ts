@@ -18,6 +18,7 @@
 import * as admin from 'firebase-admin';
 import { readFileSync, existsSync } from 'fs';
 import { resolve } from 'path';
+import { config } from 'dotenv';
 
 // ============================================================================
 // CONSTANTS
@@ -57,22 +58,67 @@ function initFirebase(): admin.firestore.Firestore {
     return admin.firestore();
   }
 
+  // Load .env.local for local development
+  config({ path: resolve(__dirname, '../.env.local') });
+
+  // Strategy 1: Full JSON blob from FIREBASE_SERVICE_ACCOUNT_KEY
+  if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
+    const raw = process.env.FIREBASE_SERVICE_ACCOUNT_KEY.trim();
+    let serviceAccount: admin.ServiceAccount;
+    if (raw.startsWith('{')) {
+      serviceAccount = JSON.parse(raw) as admin.ServiceAccount;
+    } else {
+      const decoded = Buffer.from(raw, 'base64').toString('utf-8');
+      serviceAccount = JSON.parse(decoded) as admin.ServiceAccount;
+    }
+    admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
+    console.log('  Firebase initialized via FIREBASE_SERVICE_ACCOUNT_KEY');
+    return admin.firestore();
+  }
+
+  // Strategy 2: Individual env vars (same as src/lib/firebase/admin.ts)
+  if (process.env.FIREBASE_ADMIN_CLIENT_EMAIL && process.env.FIREBASE_ADMIN_PRIVATE_KEY) {
+    const serviceAccount = {
+      projectId: process.env.FIREBASE_ADMIN_PROJECT_ID
+        ?? process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID
+        ?? process.env.FIREBASE_PROJECT_ID,
+      clientEmail: process.env.FIREBASE_ADMIN_CLIENT_EMAIL,
+      privateKey: process.env.FIREBASE_ADMIN_PRIVATE_KEY.replace(/\\n/g, '\n'),
+    } as admin.ServiceAccount;
+    admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
+    console.log('  Firebase initialized via FIREBASE_ADMIN_* env vars');
+    return admin.firestore();
+  }
+
+  // Strategy 3: Service account JSON file
   const possiblePaths = [
     resolve(__dirname, '../firebase-service-account.json'),
     resolve(__dirname, '../service-account.json'),
-    resolve(process.env.GOOGLE_APPLICATION_CREDENTIALS ?? ''),
   ];
+
+  const credPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
+  if (credPath && !credPath.includes('/') && !credPath.includes('\\')) {
+    // Skip if it looks like a directory or empty
+  } else if (credPath) {
+    possiblePaths.push(resolve(credPath));
+  }
 
   for (const p of possiblePaths) {
     if (p && existsSync(p)) {
-      const serviceAccount = JSON.parse(readFileSync(p, 'utf8')) as admin.ServiceAccount;
-      admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
-      return admin.firestore();
+      try {
+        const serviceAccount = JSON.parse(readFileSync(p, 'utf8')) as admin.ServiceAccount;
+        admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
+        console.log(`  Firebase initialized via ${p}`);
+        return admin.firestore();
+      } catch {
+        // Not a valid JSON file, skip
+      }
     }
   }
 
   // Fall back to default credentials (GCP environment)
   admin.initializeApp();
+  console.log('  Firebase initialized via default credentials');
   return admin.firestore();
 }
 
@@ -148,7 +194,7 @@ async function createAgentRepProfiles(db: admin.firestore.Firestore): Promise<vo
       .limit(1)
       .get();
 
-    const goldenMasterId = gmSnap.empty ? undefined : gmSnap.docs[0].id;
+    const goldenMasterId = gmSnap.empty ? null : gmSnap.docs[0].id;
 
     const profile = {
       agentId,
