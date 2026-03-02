@@ -2060,7 +2060,7 @@ ERROR HANDLING:
       content: `
 STACK:
 - Framework: Next.js 15 (App Router)
-- Hosting: Vercel (serverless) — SalesVelocity.ai
+- Hosting: Vercel (serverless) — rapidcompliance.us (migrating to salesvelocity.ai)
 - Database: Firebase Firestore (penthouse model, single-tenant)
 - Auth: Firebase Auth with custom claims (admin/user RBAC)
 - AI: OpenRouter (100+ models), OpenAI, Anthropic, Gemini

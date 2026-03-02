@@ -19,7 +19,7 @@ export const SYSTEM_BLUEPRINT = `# SalesVelocity.ai — System Blueprint
 > **Last Updated:** February 26, 2026
 > **Architecture:** Single-Tenant (Penthouse Model) — NOT a SaaS platform
 > **Organization:** rapid-compliance-root
-> **Domain:** SalesVelocity.ai
+> **Domain:** SalesVelocity.ai (currently hosted at rapidcompliance.us)
 
 ---
 
