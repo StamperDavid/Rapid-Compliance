@@ -56,23 +56,27 @@ function initFirebase(): admin.firestore.Firestore {
 
 const brandDNA = {
   companyDescription:
-    'AI-powered sales automation platform with autonomous agents across chat, voice, email, social media, and SEO. SalesVelocity.ai deploys a full-stack AI sales workforce that handles outreach, qualification, follow-up, and closing — not just a chatbot, but an entire revenue team.',
+    'AI-powered business growth platform with 54 autonomous agents spanning sales, marketing, content creation, social media management, e-commerce, website building, voice AI, email campaigns, and SEO. SalesVelocity.ai deploys a coordinated AI workforce that handles the entire revenue lifecycle — from lead generation and content marketing to closing deals and post-sale engagement.',
   uniqueValue:
-    'Full-stack AI sales workforce — autonomous agents across every channel (chat, voice, email, social, SEO) working together to close more deals. Not a single-trick tool, but a coordinated AI revenue team.',
+    'Full-stack AI business workforce — 54 autonomous agents coordinated across sales, marketing, content, social, e-commerce, voice, email, and SEO. Not a single-channel tool, but an entire AI-powered revenue and marketing team working together.',
   targetAudience:
-    'Sales teams, B2B SaaS companies, digital agencies, growing businesses looking to scale revenue without scaling headcount.',
+    'B2B SaaS companies, digital agencies, e-commerce businesses, and growing companies looking to scale revenue and marketing without scaling headcount.',
   toneOfVoice: 'Professional, confident, results-driven',
   communicationStyle:
     'Direct, data-backed, outcome-focused. Lead with results and ROI. Use concrete numbers over vague claims.',
   keyPhrases: [
-    'AI sales workforce',
-    'autonomous sales agents',
-    'close more deals',
+    'AI business workforce',
+    'autonomous AI agents',
+    'AI sales automation',
+    'AI marketing platform',
+    'AI content generation',
+    'AI social media management',
+    'AI e-commerce',
+    'AI website builder',
+    'AI voice agent',
     'scale revenue',
     'AI-powered outreach',
     'revenue automation',
-    'sales on autopilot',
-    'full-stack AI sales',
   ],
   avoidPhrases: [
     'cheap',
@@ -83,7 +87,7 @@ const brandDNA = {
     'starter',
     'free forever',
   ],
-  industry: 'SaaS / Sales Technology / AI Automation',
+  industry: 'SaaS / AI Automation / Sales & Marketing Technology',
   competitors: [
     'GoHighLevel',
     'HubSpot',
@@ -93,6 +97,8 @@ const brandDNA = {
     'Outreach.io',
     'Salesloft',
     'Drift',
+    'Jasper AI',
+    'Shopify',
   ],
   updatedAt: admin.firestore.FieldValue.serverTimestamp(),
   updatedBy: 'system-seed',
@@ -104,23 +110,42 @@ const brandDNA = {
 
 const websiteSEO = {
   seo: {
-    title: 'SalesVelocity.ai — AI Sales Workforce Platform',
+    title: 'SalesVelocity.ai — AI-Powered Sales, Marketing & Growth Platform',
     description:
-      'Deploy autonomous AI agents across chat, voice, email, social & SEO to close more deals. The full-stack AI sales workforce for modern revenue teams.',
+      'Deploy 54 autonomous AI agents across sales, marketing, content creation, social media, e-commerce, voice, email & SEO. The full-stack AI workforce that grows your business on every channel.',
     keywords: [
+      // Sales
       'AI sales platform',
       'autonomous sales agents',
       'AI sales workforce',
-      'sales automation',
-      'AI outreach',
-      'revenue automation',
+      'sales automation software',
+      'AI outreach platform',
+      // Marketing & Content
+      'AI marketing platform',
+      'AI content generation',
+      'AI content marketing',
+      'AI copywriting',
+      'AI blog writer',
+      // Social Media
+      'AI social media management',
+      'AI social media posting',
+      'automated social media',
+      // E-commerce
+      'AI e-commerce platform',
+      'AI product descriptions',
+      // Voice & Email
       'AI voice agent',
-      'AI email agent',
-      'AI social media',
-      'AI SEO',
-      'sales AI',
+      'AI email campaigns',
+      'AI email marketing',
+      // SEO & Website
+      'AI SEO tools',
+      'AI website builder',
+      'AI landing pages',
+      // General
+      'revenue automation',
       'GoHighLevel alternative',
       'HubSpot AI alternative',
+      'all-in-one AI business platform',
     ],
     robotsIndex: false,
     robotsFollow: false,
@@ -162,6 +187,90 @@ const websiteSEO = {
     'User-agent: cohere-ai',
     'Disallow: /',
   ].join('\n'),
+  llmsTxt: [
+    '# SalesVelocity.ai',
+    '',
+    '> SalesVelocity.ai is an AI-powered business growth platform that deploys 54 autonomous agents',
+    '> across sales, marketing, content creation, social media, e-commerce, website building, voice AI,',
+    '> email campaigns, and SEO. It provides businesses with a coordinated AI workforce that manages',
+    '> the entire revenue and marketing lifecycle.',
+    '',
+    '## What SalesVelocity.ai Does',
+    '',
+    'SalesVelocity.ai replaces the need for multiple point solutions by providing a single platform',
+    'with AI agents that work together across every business growth channel:',
+    '',
+    '### AI Sales Agents',
+    '- Autonomous lead qualification and scoring',
+    '- AI-powered outreach across email, chat, and voice',
+    '- Deal pipeline management and follow-up automation',
+    '- Sales coaching and performance optimization',
+    '',
+    '### AI Marketing & Content',
+    '- Blog post and article generation with SEO optimization',
+    '- Marketing copy and campaign content creation',
+    '- Brand voice consistency across all channels',
+    '- Content calendar planning and execution',
+    '',
+    '### AI Social Media Management',
+    '- Multi-platform posting (Twitter/X, LinkedIn, Facebook, Instagram)',
+    '- Content scheduling and automated publishing',
+    '- Engagement monitoring and response',
+    '- Social media strategy and analytics',
+    '',
+    '### AI Voice Agents',
+    '- Inbound and outbound AI phone calls',
+    '- Lead qualification via voice',
+    '- Appointment scheduling',
+    '- Natural conversation with custom personas',
+    '',
+    '### AI Email Campaigns',
+    '- Drip campaign creation and management',
+    '- Personalized email sequences',
+    '- A/B testing and optimization',
+    '- Deliverability monitoring',
+    '',
+    '### AI SEO',
+    '- Keyword research and tracking',
+    '- Content optimization for search engines',
+    '- Technical SEO auditing',
+    '- Competitor analysis',
+    '',
+    '### AI Website Builder',
+    '- Drag-and-drop page builder with AI assistance',
+    '- Landing page generation',
+    '- Custom domain support',
+    '- Mobile-responsive templates',
+    '',
+    '### E-Commerce',
+    '- Product catalog management',
+    '- AI-generated product descriptions',
+    '- Checkout and payment processing via Stripe',
+    '- Order management',
+    '',
+    '## Platform Architecture',
+    '',
+    '- 54 autonomous AI agents organized in a hierarchical swarm',
+    '- 5 manager agents coordinate specialist teams',
+    '- Real-time performance tracking and self-improvement',
+    '- Built on Next.js 15, Firebase, and Vercel',
+    '',
+    '## Key Differentiators',
+    '',
+    '- **All-in-one**: Replaces GoHighLevel, HubSpot, Salesforce, and multiple point tools',
+    '- **Autonomous**: Agents work independently, not just as chatbots',
+    '- **Coordinated**: Agents share context and work together across channels',
+    '- **Full lifecycle**: From lead generation through closing and post-sale engagement',
+    '',
+    '## Discovery',
+    '',
+    '- Sitemap: https://salesvelocity.ai/sitemap.xml',
+    '- Robots: https://salesvelocity.ai/robots.txt',
+    '',
+    '## Contact',
+    '',
+    'Website: https://salesvelocity.ai',
+  ].join('\n'),
   status: 'draft' as const,
   updatedAt: admin.firestore.FieldValue.serverTimestamp(),
 };
@@ -184,24 +293,40 @@ const seoTraining = {
     useImages: true,
   },
   targetKeywords: [
+    // Sales
     'AI sales platform',
     'autonomous sales agents',
     'AI sales workforce',
     'sales automation software',
-    'AI outreach platform',
-    'revenue automation',
-    'AI voice agent for sales',
-    'AI email outreach',
-    'AI social media marketing',
-    'AI SEO content',
-    'GoHighLevel alternative',
-    'HubSpot AI alternative',
-    'best AI sales tools',
     'AI-powered CRM',
-    'sales AI agents',
-    'automated sales outreach',
     'AI lead generation',
     'close more deals with AI',
+    // Marketing & Content
+    'AI marketing platform',
+    'AI content generation tool',
+    'AI content marketing software',
+    'AI copywriting platform',
+    'AI blog content writer',
+    // Social Media
+    'AI social media management tool',
+    'AI social media marketing',
+    'automated social media posting',
+    // E-commerce
+    'AI e-commerce platform',
+    'AI product description generator',
+    // Voice & Email
+    'AI voice agent for sales',
+    'AI email marketing automation',
+    'AI email outreach',
+    // SEO & Website
+    'AI SEO content generator',
+    'AI website builder for business',
+    'AI landing page builder',
+    // Competitors & General
+    'GoHighLevel alternative',
+    'HubSpot AI alternative',
+    'best all-in-one AI business platform',
+    'revenue automation software',
   ],
   updatedAt: admin.firestore.FieldValue.serverTimestamp(),
   updatedBy: 'system-seed',
@@ -283,7 +408,7 @@ async function main(): Promise<void> {
   console.log(`  ✍️  Style: ${seoTraining.writingStyle}`);
   console.log(`  📏 Length: ${seoTraining.contentLength}`);
   console.log(`  👥 Audience: ${seoTraining.audienceExpertiseLevel}`);
-  console.log(`  🔑 ${seoTraining.targetKeywords.length} target keywords`);
+  console.log(`  🔑 ${seoTraining.targetKeywords.length} target keywords (sales + marketing + social + e-commerce + voice + SEO)`);
 
   // ── Summary ─────────────────────────────────────────────────────────
   console.log('');
@@ -292,8 +417,8 @@ async function main(): Promise<void> {
   console.log('');
   console.log('What was written:');
   console.log('  1. Brand DNA (org doc + 3 tool training docs)');
-  console.log('  2. Website SEO settings (robots OFF, AI bots blocked)');
-  console.log('  3. SEO Lab training settings (18 keywords, commercial intent)');
+  console.log('  2. Website SEO settings (robots OFF, AI bots blocked, llms.txt populated)');
+  console.log(`  3. SEO Lab training settings (${seoTraining.targetKeywords.length} keywords, commercial intent)`);
   console.log('');
   console.log('⚠️  Crawlers are OFF. When ready to launch:');
   console.log('    npx tsx scripts/seo-launch.ts');

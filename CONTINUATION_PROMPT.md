@@ -28,7 +28,7 @@
 
 ## Recent Work (March 2026)
 
-- **SEO system seeded** — Brand DNA, Website SEO (robots OFF), SEO Lab Training (18 keywords) all in Firestore. Launch command: `npx tsx scripts/seo-launch.ts`
+- **SEO system seeded** — Brand DNA, Website SEO (robots OFF), SEO Lab Training (27 keywords), llms.txt (AI discovery) all in Firestore. Launch command: `npx tsx scripts/seo-launch.ts`
 - **Golden Masters extended** to swarm specialists with versioned snapshots
 - **Coaching unified** into Training Center with 7-tab layout
 - **SalesVelocity.ai rebrand** — all Jasper prompts, domain references corrected
