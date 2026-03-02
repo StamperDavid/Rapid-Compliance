@@ -826,21 +826,24 @@ export interface CustomDateRange {
 export interface GenerateCoachingRequest {
   /** Rep ID */
   repId: string;
-  
+
   /** Time period */
   period: TimePeriod;
-  
+
   /** Custom date range (required if period is 'custom') */
   customRange?: CustomDateRange;
-  
+
   /** Include detailed analysis */
   includeDetailed?: boolean;
-  
+
   /** Include training suggestions */
   includeTraining?: boolean;
-  
+
   /** Include action items */
   includeActionItems?: boolean;
+
+  /** Override the saved model preference for this request */
+  modelOverride?: string;
 }
 
 /**

@@ -441,7 +441,8 @@ export const GenerateCoachingRequestSchema = z.object({
   customRange: CustomDateRangeSchema.optional(),
   includeDetailed: z.boolean().optional().default(true),
   includeTraining: z.boolean().optional().default(true),
-  includeActionItems: z.boolean().optional().default(true)
+  includeActionItems: z.boolean().optional().default(true),
+  modelOverride: z.string().optional()
 }).refine(
   (data) => {
     if (data.period === 'custom' && !data.customRange) {

@@ -35,6 +35,8 @@ import type {
   GenerateCoachingRequest,
   GenerateCoachingResponse
 } from '@/lib/coaching/types';
+import { getCoachingPreferences } from '@/lib/coaching/coaching-preferences-service';
+import { DEFAULT_COACHING_MODEL } from '@/lib/coaching/coaching-models';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { requireAuth } from '@/lib/auth/api-auth';
@@ -116,12 +118,12 @@ function cacheResponse(cacheKey: string, data: GenerateCoachingResponse): void {
 /**
  * Generate cache key from request
  */
-function getCacheKey(request: GenerateCoachingRequest): string {
+function getCacheKey(request: GenerateCoachingRequest, model: string): string {
   const { repId, period, customRange } = request;
-  const rangeStr = customRange 
+  const rangeStr = customRange
     ? `${customRange.startDate.toISOString()}_${customRange.endDate.toISOString()}`
     : period;
-  return `coaching:${repId}:${rangeStr}`;
+  return `coaching:${repId}:${rangeStr}:${model}`;
 }
 
 // ============================================================================
@@ -198,16 +200,20 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // Check cache
-    const cacheKey = getCacheKey(requestData);
+    // Resolve the AI model to use
+    const prefs = await getCoachingPreferences();
+    const model = requestData.modelOverride ?? prefs?.selectedModel ?? DEFAULT_COACHING_MODEL;
+
+    // Check cache (includes model in key)
+    const cacheKey = getCacheKey(requestData, model);
     const cachedResponse = getCachedResponse(cacheKey);
-    
+
     if (cachedResponse) {
       logger.info('Returning cached coaching insights', {
         repId: requestData.repId,
         cacheKey
       });
-      
+
       return NextResponse.json(cachedResponse, {
         headers: {
           'X-Cache': 'HIT',
@@ -217,13 +223,14 @@ export async function POST(request: NextRequest) {
         }
       });
     }
-    
+
     // Generate insights
     logger.info('Generating coaching insights', {
       repId: requestData.repId,
-      period: requestData.period
+      period: requestData.period,
+      model
     });
-    
+
     if (!adminDal) {
       return errors.internal('Admin DAL not initialized');
     }
@@ -235,9 +242,9 @@ export async function POST(request: NextRequest) {
       requestData.period,
       requestData.customRange
     );
-    
-    // Step 2: Generate AI coaching insights
-    const generator = new CoachingGenerator();
+
+    // Step 2: Generate AI coaching insights via OpenRouter
+    const generator = new CoachingGenerator({ model });
     const insights = await generator.generateCoachingInsights(performance, {
       includeDetailed: requestData.includeDetailed,
       includeTraining: requestData.includeTraining,
@@ -250,7 +257,7 @@ export async function POST(request: NextRequest) {
       const event = createCoachingInsightsGeneratedEvent(
         performance,
         insights,
-        'gpt-4o',
+        model,
         Date.now() - startTime
       );
       // Transform coaching event to SalesSignal format
@@ -287,7 +294,7 @@ export async function POST(request: NextRequest) {
       insights,
       metadata: {
         generatedAt: new Date(),
-        modelUsed: 'gpt-4o',
+        modelUsed: model,
         processingTimeMs,
         confidenceScore: insights.confidenceScore
       }

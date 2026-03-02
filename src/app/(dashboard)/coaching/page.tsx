@@ -6,7 +6,7 @@
 
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   PerformanceScoreCard,
   CoachingRecommendationsCard,
@@ -19,6 +19,10 @@ import type {
   RepPerformanceMetrics,
   CoachingInsights,
 } from '@/lib/coaching/types';
+import {
+  COACHING_MODELS,
+  DEFAULT_COACHING_MODEL,
+} from '@/lib/coaching/coaching-models';
 import { useAuth } from '@/hooks/useAuth';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { logger } from '@/lib/logger/logger';
@@ -44,19 +48,41 @@ export default function CoachingDashboardPage() {
 
   // State
   const [period, setPeriod] = useState<TimePeriod>('last_30_days');
+  const [selectedModel, setSelectedModel] = useState<string>(DEFAULT_COACHING_MODEL);
   const [performance, setPerformance] = useState<RepPerformanceMetrics | null>(null);
   const [insights, setInsights] = useState<CoachingInsights | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const prefsLoaded = useRef(false);
 
   const currentUserId = user?.id ?? null;
+
+  // Load saved model preference on mount
+  useEffect(() => {
+    if (prefsLoaded.current) {
+      return;
+    }
+    prefsLoaded.current = true;
+    void (async () => {
+      try {
+        const res = await authFetch('/api/coaching/preferences');
+        const data = await res.json() as { success: boolean; selectedModel?: string };
+        if (data.success && data.selectedModel) {
+          setSelectedModel(data.selectedModel);
+        }
+      } catch {
+        // Use default — non-critical
+      }
+    })();
+  }, [authFetch]);
 
   /**
    * Fetch coaching insights
    */
   const fetchCoachingInsights = useCallback(async (showRefreshing = false) => {
-    if (!currentUserId) {
+    // Guard: don't fire until we have a real Firebase UID (not a placeholder)
+    if (!currentUserId || currentUserId.length < 10 || currentUserId === 'user_default') {
       setError('You must be signed in to view coaching insights.');
       setLoading(false);
       return;
@@ -76,6 +102,7 @@ export default function CoachingDashboardPage() {
         includeDetailed: true,
         includeTraining: true,
         includeActionItems: true,
+        modelOverride: selectedModel,
       };
 
       const response = await authFetch('/api/coaching/insights', {
@@ -102,7 +129,7 @@ export default function CoachingDashboardPage() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [currentUserId, period, authFetch]);
+  }, [currentUserId, period, selectedModel, authFetch]);
 
   /**
    * Load insights on mount and when period changes
@@ -116,6 +143,16 @@ export default function CoachingDashboardPage() {
    */
   const handleRefresh = () => {
     void fetchCoachingInsights(true);
+  };
+
+  const handleModelChange = (newModel: string) => {
+    setSelectedModel(newModel);
+    // Persist preference (fire-and-forget)
+    void authFetch('/api/coaching/preferences', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ selectedModel: newModel }),
+    });
   };
 
   /**
@@ -224,6 +261,20 @@ export default function CoachingDashboardPage() {
                 {TIME_PERIODS.map((p) => (
                   <option key={p.value} value={p.value}>
                     {p.label}
+                  </option>
+                ))}
+              </select>
+
+              {/* Model Selector */}
+              <select
+                value={selectedModel}
+                onChange={(e) => handleModelChange(e.target.value)}
+                className="px-4 py-2 border border-[var(--color-border-main)] rounded-lg text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
+                disabled={refreshing}
+              >
+                {Object.entries(COACHING_MODELS).map(([id, info]) => (
+                  <option key={id} value={id}>
+                    {info.name} ({info.costTier})
                   </option>
                 ))}
               </select>

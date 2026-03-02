@@ -1,11 +1,10 @@
 /**
  * AI Coaching Generator
- * 
- * SOVEREIGN CORPORATE BRAIN - COACHING MODULE
- * 
- * Uses Claude Sonnet to generate personalized coaching insights and recommendations
- * based on comprehensive performance analysis.
- * 
+ *
+ * Uses OpenRouter to generate personalized coaching insights and recommendations
+ * based on comprehensive performance analysis. The model is configurable via
+ * coaching preferences (Firestore) or per-request override.
+ *
  * CAPABILITIES:
  * - Performance summary generation
  * - Strength identification and leverage strategies
@@ -16,20 +15,11 @@
  * - Personalized coaching recommendations
  * - Training suggestions with specific resources
  * - Actionable item creation with timelines
- * 
- * INTEGRATION:
- * - Uses unified-ai-service for Claude Sonnet access
- * - Coaching Analytics Engine for performance data
- * - Signal Bus for event tracking
- * 
- * AI MODEL:
- * - Claude Sonnet for high-quality coaching insights
- * - Structured output for consistency
- * - Temperature 0.7 for creative but grounded suggestions
  */
 
 import { logger } from '@/lib/logger/logger';
-import { sendUnifiedChatMessage } from '@/lib/ai/unified-ai-service';
+import { OpenRouterProvider } from '@/lib/ai/openrouter-provider';
+import type { ModelName } from '@/types/ai-models';
 import type {
   RepPerformanceMetrics,
   CoachingInsights,
@@ -49,6 +39,18 @@ import type {
 // ============================================================================
 
 export class CoachingGenerator {
+  private provider: OpenRouterProvider;
+  private model: string;
+
+  constructor(config: { model: string }) {
+    this.model = config.model;
+    this.provider = new OpenRouterProvider({});
+  }
+
+  /** The model ID actually being used */
+  get modelUsed(): string {
+    return this.model;
+  }
   /**
    * Generates comprehensive coaching insights for a sales rep
    */
@@ -144,17 +146,17 @@ export class CoachingGenerator {
   ): Promise<PerformanceSummary> {
     const prompt = this.buildPerformanceSummaryPrompt(performance);
     
-    const response = await sendUnifiedChatMessage({
-      model: 'claude-sonnet-4-5-20250514',
+    const response = await this.provider.chat({
+      model: this.model as ModelName,
       messages: [
         { role: 'user', content: prompt }
       ],
       temperature: 0.7,
       maxTokens: 1000
     });
-    
+
     try {
-      const parsed = JSON.parse(response.text) as {
+      const parsed = JSON.parse(response.content) as {
         assessment?: string;
         trend?: 'improving' | 'stable' | 'declining';
         keyMetrics?: Array<{ metric: string; value: number; vsTeamAverage: number; trend: 'up' | 'down' | 'stable' }>;
@@ -183,8 +185,8 @@ export class CoachingGenerator {
   ): Promise<Strength[]> {
     const prompt = this.buildStrengthsPrompt(performance);
 
-    const response = await sendUnifiedChatMessage({
-      model: 'claude-sonnet-4-5-20250514',
+    const response = await this.provider.chat({
+      model: this.model as ModelName,
       messages: [
         { role: 'user', content: prompt }
       ],
@@ -193,7 +195,7 @@ export class CoachingGenerator {
     });
 
     try {
-      const parsed = JSON.parse(response.text) as { strengths?: Strength[] };
+      const parsed = JSON.parse(response.content) as { strengths?: Strength[] };
       return parsed.strengths ?? this.identifyStrengthsFallback(performance);
     } catch (error) {
       const errorObj = error instanceof Error ? error : new Error(String(error));
@@ -210,8 +212,8 @@ export class CoachingGenerator {
   ): Promise<Weakness[]> {
     const prompt = this.buildWeaknessesPrompt(performance);
 
-    const response = await sendUnifiedChatMessage({
-      model: 'claude-sonnet-4-5-20250514',
+    const response = await this.provider.chat({
+      model: this.model as ModelName,
       messages: [
         { role: 'user', content: prompt }
       ],
@@ -220,7 +222,7 @@ export class CoachingGenerator {
     });
 
     try {
-      const parsed = JSON.parse(response.text) as { weaknesses?: Weakness[] };
+      const parsed = JSON.parse(response.content) as { weaknesses?: Weakness[] };
       return parsed.weaknesses ?? this.identifyWeaknessesFallback(performance);
     } catch (error) {
       const errorObj = error instanceof Error ? error : new Error(String(error));
@@ -237,8 +239,8 @@ export class CoachingGenerator {
   ): Promise<Opportunity[]> {
     const prompt = this.buildOpportunitiesPrompt(performance);
 
-    const response = await sendUnifiedChatMessage({
-      model: 'claude-sonnet-4-5-20250514',
+    const response = await this.provider.chat({
+      model: this.model as ModelName,
       messages: [
         { role: 'user', content: prompt }
       ],
@@ -247,7 +249,7 @@ export class CoachingGenerator {
     });
 
     try {
-      const parsed = JSON.parse(response.text) as { opportunities?: Opportunity[] };
+      const parsed = JSON.parse(response.content) as { opportunities?: Opportunity[] };
       return parsed.opportunities ?? this.identifyOpportunitiesFallback(performance);
     } catch (error) {
       const errorObj = error instanceof Error ? error : new Error(String(error));
@@ -264,8 +266,8 @@ export class CoachingGenerator {
   ): Promise<Risk[]> {
     const prompt = this.buildRisksPrompt(performance);
 
-    const response = await sendUnifiedChatMessage({
-      model: 'claude-sonnet-4-5-20250514',
+    const response = await this.provider.chat({
+      model: this.model as ModelName,
       messages: [
         { role: 'user', content: prompt }
       ],
@@ -274,7 +276,7 @@ export class CoachingGenerator {
     });
 
     try {
-      const parsed = JSON.parse(response.text) as { risks?: Risk[] };
+      const parsed = JSON.parse(response.content) as { risks?: Risk[] };
       return parsed.risks ?? this.assessRisksFallback(performance);
     } catch (error) {
       const errorObj = error instanceof Error ? error : new Error(String(error));
@@ -291,8 +293,8 @@ export class CoachingGenerator {
   ): Promise<BestPractice[]> {
     const prompt = this.buildBestPracticesPrompt(performance);
 
-    const response = await sendUnifiedChatMessage({
-      model: 'claude-sonnet-4-5-20250514',
+    const response = await this.provider.chat({
+      model: this.model as ModelName,
       messages: [
         { role: 'user', content: prompt }
       ],
@@ -301,7 +303,7 @@ export class CoachingGenerator {
     });
 
     try {
-      const parsed = JSON.parse(response.text) as { bestPractices?: BestPractice[] };
+      const parsed = JSON.parse(response.content) as { bestPractices?: BestPractice[] };
       return parsed.bestPractices ?? [];
     } catch (error) {
       const errorObj = error instanceof Error ? error : new Error(String(error));
@@ -318,8 +320,8 @@ export class CoachingGenerator {
   ): Promise<CoachingRecommendation[]> {
     const prompt = this.buildRecommendationsPrompt(performance);
 
-    const response = await sendUnifiedChatMessage({
-      model: 'claude-sonnet-4-5-20250514',
+    const response = await this.provider.chat({
+      model: this.model as ModelName,
       messages: [
         { role: 'user', content: prompt }
       ],
@@ -328,7 +330,7 @@ export class CoachingGenerator {
     });
 
     try {
-      const parsed = JSON.parse(response.text) as { recommendations?: CoachingRecommendation[] };
+      const parsed = JSON.parse(response.content) as { recommendations?: CoachingRecommendation[] };
       return parsed.recommendations ?? this.generateRecommendationsFallback(performance);
     } catch (error) {
       const errorObj = error instanceof Error ? error : new Error(String(error));
@@ -346,8 +348,8 @@ export class CoachingGenerator {
   ): Promise<TrainingSuggestion[]> {
     const prompt = this.buildTrainingPrompt(performance, _weaknesses);
 
-    const response = await sendUnifiedChatMessage({
-      model: 'claude-sonnet-4-5-20250514',
+    const response = await this.provider.chat({
+      model: this.model as ModelName,
       messages: [
         { role: 'user', content: prompt }
       ],
@@ -356,7 +358,7 @@ export class CoachingGenerator {
     });
 
     try {
-      const parsed = JSON.parse(response.text) as { trainingSuggestions?: TrainingSuggestion[] };
+      const parsed = JSON.parse(response.content) as { trainingSuggestions?: TrainingSuggestion[] };
       return parsed.trainingSuggestions ?? [];
     } catch (error) {
       const errorObj = error instanceof Error ? error : new Error(String(error));
@@ -374,8 +376,8 @@ export class CoachingGenerator {
   ): Promise<ActionItem[]> {
     const prompt = this.buildActionItemsPrompt(performance, _recommendations);
 
-    const response = await sendUnifiedChatMessage({
-      model: 'claude-sonnet-4-5-20250514',
+    const response = await this.provider.chat({
+      model: this.model as ModelName,
       messages: [
         { role: 'user', content: prompt }
       ],
@@ -384,7 +386,7 @@ export class CoachingGenerator {
     });
 
     try {
-      const parsed = JSON.parse(response.text) as { actionItems?: ActionItem[] };
+      const parsed = JSON.parse(response.content) as { actionItems?: ActionItem[] };
       return parsed.actionItems ?? [];
     } catch (error) {
       const errorObj = error instanceof Error ? error : new Error(String(error));
