@@ -43,10 +43,11 @@ export async function createUpdateRequest(
   // Analyze impact
   const impactAnalysis = analyzeImpact(improvements, proposedChanges);
 
-  // Create update request
+  // Create update request (propagate agentType from the Golden Master)
   const updateRequest: GoldenMasterUpdateRequest = {
     id: `update_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
     goldenMasterId,
+    agentType: goldenMaster.agentType,
     sourceSessionIds,
     improvements,
     proposedChanges,
@@ -257,11 +258,12 @@ export async function applyUpdateRequest(
   const currentVersion = parseInt(currentGM.version.replace('v', ''));
   const newVersion = `v${currentVersion + 1}`;
 
-  // Apply changes
+  // Apply changes (preserve agentType from original)
   const updatedGM: GoldenMaster = {
     ...currentGM,
     id: `${goldenMasterId}_${newVersion}`,
     version: newVersion,
+    agentType: currentGM.agentType,
     isActive: false,
     createdAt: new Date().toISOString(),
     notes: `Updated based on training feedback. ${updateRequest.improvements.length} improvements applied.`,

@@ -9,6 +9,7 @@ import { useOrgTheme } from '@/hooks/useOrgTheme'
 import { logger } from '@/lib/logger/logger';
 import { useToast } from '@/hooks/useToast';
 import { useConfirm, usePrompt } from '@/hooks/useConfirm';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 
 // Type definitions
 interface BaseModel {
@@ -104,7 +105,7 @@ export default function AgentTrainingPage() {
 
   const [loading, setLoading] = useState(true);
   const { theme } = useOrgTheme();
-  const [activeTab, setActiveTab] = useState<'chat' | 'materials' | 'history' | 'golden'>('chat');
+  const [activeTab, setActiveTab] = useState<'chat' | 'materials' | 'history' | 'golden' | 'review'>('chat');
 
   // Base Model & Golden Master states
   const [baseModel, setBaseModel] = useState<BaseModel | null>(null);
@@ -1053,7 +1054,7 @@ export default function AgentTrainingPage() {
       {/* Tabs */}
       <div style={{ borderBottom: '1px solid var(--color-border-light)', backgroundColor: 'var(--color-bg-main)' }}>
         <div style={{ padding: '0 2rem', display: 'flex', gap: '2rem' }}>
-          {(['chat', 'materials', 'history', 'golden'] as const).map(tab => (
+          {(['chat', 'materials', 'history', 'golden', 'review'] as const).map(tab => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -1069,7 +1070,7 @@ export default function AgentTrainingPage() {
                 textTransform: 'capitalize',
               }}
             >
-              {tab === 'chat' ? '💬 Training Chat' : tab === 'materials' ? '📚 Training Materials' : tab === 'history' ? '📊 History' : '⭐ Golden Masters'}
+              {tab === 'chat' ? '💬 Training Chat' : tab === 'materials' ? '📚 Training Materials' : tab === 'history' ? '📊 History' : tab === 'golden' ? '⭐ Golden Masters' : '🔍 Review Queue'}
             </button>
           ))}
         </div>
@@ -1670,7 +1671,11 @@ export default function AgentTrainingPage() {
               </div>
             </div>
           )}
-          
+
+          {activeTab === 'review' && (
+            <ReviewQueueTab />
+          )}
+
         </div>
       </div>
 
@@ -1815,6 +1820,155 @@ export default function AgentTrainingPage() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================================================
+// REVIEW QUEUE TAB COMPONENT
+// ============================================================================
+
+interface FlaggedSessionDisplay {
+  id: string;
+  sessionId: string;
+  agentType: string;
+  score: number;
+  issues: string[];
+  flaggedAt: string;
+  processed: boolean;
+}
+
+function ReviewQueueTab() {
+  const authFetch = useAuthFetch();
+  const [sessions, setSessions] = useState<FlaggedSessionDisplay[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [agentTypeFilter, setAgentTypeFilter] = useState<string>('all');
+
+  useEffect(() => {
+    void (async () => {
+      setLoading(true);
+      try {
+        const url = agentTypeFilter === 'all'
+          ? '/api/agent-performance/flagged-sessions'
+          : `/api/agent-performance/flagged-sessions?agentType=${agentTypeFilter}`;
+        const res = await authFetch(url);
+        const data = await res.json() as { success: boolean; sessions?: FlaggedSessionDisplay[] };
+        if (data.success && data.sessions) {
+          setSessions(data.sessions);
+        }
+      } catch {
+        // Non-critical
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [authFetch, agentTypeFilter]);
+
+  return (
+    <div>
+      <div style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '0.5rem', color: 'var(--color-text-primary)' }}>
+            Flagged Sessions Review Queue
+          </h2>
+          <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem' }}>
+            Production sessions that scored below training thresholds
+          </p>
+        </div>
+        <select
+          value={agentTypeFilter}
+          onChange={(e) => setAgentTypeFilter(e.target.value)}
+          style={{
+            padding: '0.5rem 1rem',
+            backgroundColor: 'var(--color-bg-paper)',
+            border: '1px solid var(--color-border-strong)',
+            borderRadius: '0.5rem',
+            color: 'var(--color-text-primary)',
+            fontSize: '0.875rem',
+          }}
+        >
+          <option value="all">All Types</option>
+          <option value="chat">Chat</option>
+          <option value="voice">Voice</option>
+          <option value="email">Email</option>
+          <option value="social">Social</option>
+          <option value="seo">SEO</option>
+        </select>
+      </div>
+
+      {loading ? (
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '3rem' }}>
+          <div style={{ width: '2rem', height: '2rem', border: '2px solid var(--color-border-strong)', borderTop: '2px solid var(--color-primary)', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+        </div>
+      ) : sessions.length === 0 ? (
+        <div style={{
+          padding: '3rem',
+          textAlign: 'center',
+          backgroundColor: 'var(--color-bg-paper)',
+          borderRadius: '0.75rem',
+          border: '1px solid var(--color-border-main)',
+        }}>
+          <p style={{ color: 'var(--color-text-secondary)', fontSize: '1rem' }}>
+            No flagged sessions. All production sessions are performing above threshold.
+          </p>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          {sessions.map((session) => (
+            <div
+              key={session.id}
+              style={{
+                padding: '1rem',
+                backgroundColor: 'var(--color-bg-paper)',
+                borderRadius: '0.75rem',
+                border: '1px solid var(--color-border-main)',
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                    <span style={{
+                      padding: '0.125rem 0.5rem',
+                      backgroundColor: 'var(--color-error)',
+                      color: 'white',
+                      borderRadius: '0.25rem',
+                      fontSize: '0.75rem',
+                      fontWeight: '600',
+                    }}>
+                      Score: {session.score}
+                    </span>
+                    <span style={{
+                      padding: '0.125rem 0.5rem',
+                      backgroundColor: 'var(--color-bg-main)',
+                      borderRadius: '0.25rem',
+                      fontSize: '0.75rem',
+                      color: 'var(--color-text-secondary)',
+                    }}>
+                      {session.agentType}
+                    </span>
+                  </div>
+                  <p style={{ fontSize: '0.875rem', color: 'var(--color-text-primary)', fontWeight: '500' }}>
+                    Session: {session.sessionId}
+                  </p>
+                  <p style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginTop: '0.25rem' }}>
+                    Flagged: {new Date(session.flaggedAt).toLocaleString()}
+                  </p>
+                </div>
+              </div>
+              {session.issues.length > 0 && (
+                <div style={{ marginTop: '0.75rem' }}>
+                  <p style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginBottom: '0.25rem', fontWeight: '600' }}>Issues:</p>
+                  <ul style={{ listStyle: 'disc', paddingLeft: '1.25rem', margin: 0 }}>
+                    {session.issues.map((issue, i) => (
+                      <li key={i} style={{ fontSize: '0.8125rem', color: 'var(--color-text-secondary)' }}>{issue}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          ))}
         </div>
       )}
     </div>

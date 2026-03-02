@@ -33,7 +33,10 @@ export interface RepPerformanceMetrics {
   repId: string;
   repName: string;
   repEmail: string;
-  
+
+  /** Whether this rep is an AI agent (used for coaching-to-training pipeline) */
+  isAI?: boolean;
+
   /** Time period for analysis */
   period: TimePeriod;
   startDate: Date;

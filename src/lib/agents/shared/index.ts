@@ -29,3 +29,10 @@ export {
   type MemorySubscriptionCallback,
   type SubscriptionOptions,
 } from './memory-vault';
+
+export {
+  recordExecution,
+  getAgentAggregation,
+  getAgentTrend,
+  cleanupExpiredEntries,
+} from './performance-tracker';

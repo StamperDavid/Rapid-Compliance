@@ -6,7 +6,7 @@
 
 Repository: https://github.com/StamperDavid/Rapid-Compliance
 Branch: dev
-Last Session: February 28, 2026 (CRM Entity Configurability — full implementation)
+Last Session: March 2, 2026 (Unified Agent Training & Performance Intelligence — Phase 1)
 
 ## Current State
 
@@ -25,49 +25,91 @@ Last Session: February 28, 2026 (CRM Entity Configurability — full implementat
 
 ---
 
-## What Just Changed (Session 46)
+## Active Project: Unified Agent Training & Performance Intelligence System
 
-### CRM Entity Configurability — Full Implementation
-Implemented a 3-tier entity configurability system (11 phases, 13 files, +1,116 lines):
+### What This Is
+A unified system connecting Golden Masters (all 5 agent types), production performance monitoring, coaching-to-training pipelines, and swarm specialist improvement loops. The platform has 52 AI agents but only 2 Golden Masters (Jasper + Alex). This project gives every customer-facing agent type its own Golden Master, adds automated production monitoring that flags poor performance, and creates improvement pipelines for internal swarm specialists.
 
-**Architecture:**
-- **Always-On (5):** leads, contacts, companies, deals, tasks — cannot be toggled off
-- **CRM Extended (5):** products, quotes, invoices, payments, orders — toggleable, default ON
-- **Industry-Specific (13):** drivers, vehicles, compliance_documents, projects, time_entries, customers, inventory, properties, showings, cases, billing_entries, patients, appointments — toggled by industry defaults
+### Phase Status
 
-**6-Layer Pattern (mirroring feature modules):**
-1. `src/types/entity-config.ts` — EntityTier, EntityMetadata, EntityConfig types
-2. `src/lib/validation/entity-config-schemas.ts` — Zod schemas
-3. `src/lib/constants/entity-config.ts` — metadata, defaults, category mappings, helpers
-4. `src/lib/services/entity-config-service.ts` — Firestore CRUD
-5. `src/lib/stores/entity-config-store.ts` — Zustand store with isEntityEnabled()
-6. `src/hooks/useEntityConfig.ts` — React hook with auto-load
+| Phase | Description | Status | Key Deliverables |
+|-------|-------------|--------|-----------------|
+| **1** | Foundation — Data Models & Infrastructure | **IN PROGRESS** | Types, Zod schemas, performance tracker, agent-type configs |
+| **2** | Unified Golden Master System | PLANNED | GM factory, playbook bridge, training lab UI, migration |
+| **3** | Production Performance Monitoring Pipeline | PLANNED | Agent rep profiles, auto-flag service, coaching-training bridge |
+| **4** | Swarm Agent Performance Tracking | PLANNED | Specialist metrics, improvement generator/applier, dashboard |
+| **5** | Integration, Wiring & Polish | PLANNED | Signal bus, unified coaching page, review queue, migration |
 
-**API & UI:**
-- `GET/PUT /api/entity-config` — auth-protected, Zod-validated (endpoint #299)
-- Entity page gating — disabled entities show banner with Enable button (admin) or "Contact admin" (user)
-- Schema Editor — disabled entities dimmed at 50% opacity, "Enable in Settings" link
-- Settings > Features > CRM Entities tab — toggle cards grouped by tier
-- Onboarding — 15 categories have `defaultEntities` mapping; `buildEntityConfigForCategory()` helper ready
-
-**Firestore:** `organizations/rapid-compliance-root/settings/entity_config`
+### Phase 1 Progress (Current Session)
+- [x] **1.1** Extended core types — `agentType` on `GoldenMaster` + `BaseModel` in `agent-memory.ts`; expanded `AgentDomain` to include `'seo'`; added `AgentPerformanceEntry`, `AgentPerformanceAggregation`, `SpecialistImprovementRequest`, `ProposedSpecialistChange`, `AgentTypeTrainingConfig` and sub-types in `training.ts`
+- [x] **1.2** Extended swarm review infrastructure — `qualityScore` on `ReviewResult` in `base-manager.ts`; `qualityScore` on `AgentReport` in `types.ts`
+- [ ] **1.3** Performance tracker service — `src/lib/agents/shared/performance-tracker.ts`
+- [ ] **1.4** Agent-type training config registry — `src/lib/training/agent-type-configs.ts`
+- [ ] **1.5** Zod validation schemas — `src/lib/training/agent-training-validation.ts`
+- [ ] **Verification** — `tsc --noEmit`, `npm run lint`, `npm run build`
 
 ---
 
-## Next Up
+## Full Plan Reference
 
-### 1. Technical Debt — Placeholder Tests
-- **115 `expect(true).toBe(true)` placeholder tests** across 11 files (HIGH severity)
-- **52 `it.skip` tests** — 31 need Firestore emulator, 16 obsolete (MEDIUM)
-- **~49% Zod validation coverage** on API routes (MEDIUM)
+The complete 5-phase plan is documented in the conversation transcript at:
+`C:\Users\David\.claude\projects\D--Future-Rapid-Compliance\35f563ae-ef64-4319-9e92-4dc3a00b41e8.jsonl`
 
-### 2. E2E Test Infrastructure
-- Provision `e2e-member@salesvelocity.ai` and `e2e-admin@salesvelocity.ai` in Firebase Auth
-- Authenticated Playwright tests currently skip because accounts don't exist
+### Files Summary
 
-### 3. Merge dev → main
-- 1,116+ lines of entity config changes on dev, not yet on main
-- Once stable, PR or merge to main deploys to Vercel
+**New Files (Phase 1-5):**
+- `src/lib/training/agent-type-configs.ts` — Per-agent-type scoring criteria
+- `src/lib/training/agent-training-validation.ts` — Zod schemas for new types
+- `src/lib/agents/shared/performance-tracker.ts` — Write/query agent performance entries
+- `src/lib/training/golden-master-factory.ts` — Create initial GMs per agent type (Phase 2)
+- `src/lib/training/playbook-bridge.ts` — Bridge GoldenPlaybook → GM pipeline (Phase 2)
+- `src/app/api/training/agent-types/route.ts` — GET agent type configs (Phase 2)
+- `src/app/api/training/golden-masters/route.ts` — GET/POST GMs by agent type (Phase 2)
+- `scripts/migrate-agent-training-configs.ts` — One-time data migration (Phase 2)
+- `src/lib/agents/agent-rep-profiles.ts` — Synthetic rep profiles for AI agents (Phase 3)
+- `src/lib/training/production-monitor.ts` — Generalized production analysis trigger (Phase 3)
+- `src/lib/training/auto-flag-service.ts` — Auto-flag sessions below threshold (Phase 3)
+- `src/lib/training/coaching-training-bridge.ts` — Map coaching insights → training signals (Phase 3)
+- `src/app/api/agent-performance/analyze/route.ts` — Trigger agent performance analysis (Phase 3)
+- `src/app/api/agent-performance/[agentId]/route.ts` — Get agent performance data (Phase 3)
+- `src/app/api/agent-performance/flagged-sessions/route.ts` — List flagged sessions (Phase 3)
+- `src/lib/agents/shared/specialist-metrics.ts` — Query/aggregate specialist metrics (Phase 4)
+- `src/lib/agents/shared/specialist-improvement-generator.ts` — Generate improvement requests (Phase 4)
+- `src/lib/agents/shared/specialist-improvement-applier.ts` — Review/apply improvements (Phase 4)
+- `src/app/api/swarm/performance/route.ts` — Swarm performance dashboard API (Phase 4)
+- `src/app/api/swarm/performance/[specialistId]/route.ts` — Single specialist API (Phase 4)
+- `src/app/api/swarm/improvement-requests/route.ts` — List/create improvement requests (Phase 4)
+- `src/app/api/swarm/improvement-requests/[requestId]/route.ts` — Review/apply requests (Phase 4)
+- `src/app/(dashboard)/workforce/performance/page.tsx` — Swarm performance dashboard UI (Phase 4)
+- `scripts/migrate-unified-training.ts` — Full migration script (Phase 5)
+
+**Modified Files:**
+- `src/types/agent-memory.ts` — `agentType` on `GoldenMaster` and `BaseModel`
+- `src/types/training.ts` — Expanded `AgentDomain`, new interfaces
+- `src/lib/agents/base-manager.ts` — `qualityScore` on `ReviewResult`, instrument `delegateWithReview`
+- `src/lib/agents/types.ts` — `qualityScore` on `AgentReport`
+- `src/lib/agent/golden-master-builder.ts` — Accept/propagate `agentType` (Phase 2)
+- `src/lib/agent/instance-manager.ts` — Remove inline cast (Phase 2)
+- `src/lib/training/golden-master-updater.ts` — Propagate `agentType` (Phase 2)
+- `src/lib/training/feedback-processor.ts` — Add SEO domain (Phase 2)
+- `src/app/(dashboard)/settings/ai-agents/training/page.tsx` — Agent type selector (Phase 2, 5)
+- `src/lib/agent/chat-session-service.ts` — Replace `triggerChatAnalysis` (Phase 3)
+- `src/lib/coaching/coaching-analytics-engine.ts` — `analyzeAgentPerformance` (Phase 3)
+- `src/lib/coaching/coaching-generator.ts` — Agent-aware insights (Phase 3)
+- `src/lib/coaching/types.ts` — `isAI` on `RepPerformanceMetrics` (Phase 3)
+- `src/lib/coaching/events.ts` — Wire to SignalCoordinator (Phase 3)
+- `src/app/(dashboard)/coaching/page.tsx` — Human/AI toggle (Phase 5)
+
+---
+
+## Key Design Decisions
+1. **Agent IDs prefixed `agent_`** — avoids collision with human user IDs
+2. **Synthetic user docs** — created alongside `AgentRepProfile` so coaching engine works
+3. **Human review gate preserved everywhere** — GM updates and specialist improvements always `pending_review`
+4. **GoldenPlaybook not deleted** — bridged into GM pipeline
+5. **MemoryVault + Firestore dual-write** — MemoryVault for fast agent state, Firestore for durable querying
+6. **90-day TTL on performance entries** — prevents unbounded growth
+7. **Signal bus for cross-module communication** — coaching → training via events
 
 ---
 
@@ -80,14 +122,12 @@ Implemented a 3-tier entity configurability system (11 phases, 13 files, +1,116 
 | `ENGINEERING_STANDARDS.md` | Code quality requirements |
 | `AGENT_REGISTRY.json` | AI agent configurations (52 agents) |
 | `src/lib/constants/platform.ts` | PLATFORM_ID and platform identity |
-| `src/components/admin/AdminSidebar.tsx` | 9-section sidebar with feature module gating |
-| `src/lib/schema/standard-schemas.ts` | CRM entity type definitions |
-| `src/lib/constants/entity-config.ts` | Entity config constants, metadata, category defaults |
-| `src/lib/services/entity-config-service.ts` | Entity config Firestore CRUD |
-| `src/lib/stores/entity-config-store.ts` | Entity config Zustand store |
-| `src/hooks/useEntityConfig.ts` | Entity config React hook |
-| `src/app/api/entity-config/route.ts` | Entity config API (GET/PUT) |
-| `src/lib/onboarding/` | Industry template + onboarding flow |
+| `src/types/training.ts` | Training system types (expanded with performance tracking) |
+| `src/types/agent-memory.ts` | Agent memory + Golden Master types |
+| `src/lib/agents/base-manager.ts` | Base manager class with quality gate |
+| `src/lib/agents/shared/memory-vault.ts` | Shared agent memory infrastructure |
+| `src/lib/coaching/coaching-analytics-engine.ts` | Coaching analytics engine |
+| `src/lib/training/feedback-processor.ts` | Training feedback processor |
 
 ---
 

@@ -11,6 +11,7 @@ import type {
   KnowledgeBase,
   BehaviorConfig
 } from '@/types/agent-memory';
+import type { AgentDomain } from '@/types/training';
 import { buildPersonaFromOnboarding, buildBusinessContextFromOnboarding, buildBehaviorConfigFromOnboarding } from './persona-builder';
 import { compileSystemPrompt } from './prompt-compiler';
 import { FirestoreService } from '@/lib/db/firestore-service'
@@ -29,6 +30,7 @@ export interface CreateGoldenMasterFromBaseOptions {
   trainingScore: number;
   trainedScenarios: string[];
   notes?: string;
+  agentType?: AgentDomain;
 }
 
 /**
@@ -38,7 +40,7 @@ export interface CreateGoldenMasterFromBaseOptions {
 export async function createGoldenMasterFromBase(
   options: CreateGoldenMasterFromBaseOptions
 ): Promise<GoldenMaster> {
-  const { baseModel, userId, trainingScore, trainedScenarios, notes } = options;
+  const { baseModel, userId, trainingScore, trainedScenarios, notes, agentType } = options;
   
   logger.info('[Golden Master Builder] Creating Golden Master from Base Model', {
     baseModelId: baseModel.id,
@@ -63,7 +65,10 @@ export async function createGoldenMasterFromBase(
     id: `gm_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
     version: nextVersion,
     baseModelId: baseModel.id,
-    
+
+    // Agent domain (optional — set for typed Golden Masters)
+    agentType: agentType ?? baseModel.agentType,
+
     // Snapshot all configuration from Base Model
     businessContext: baseModel.businessContext,
     agentPersona: baseModel.agentPersona,

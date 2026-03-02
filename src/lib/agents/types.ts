@@ -32,6 +32,7 @@ export interface AgentReport {
   data: unknown;
   errors?: string[];
   nextSteps?: string[];
+  qualityScore?: number; // 0-100, set by manager review or self-assessment
 }
 
 export interface SpecialistConfig {

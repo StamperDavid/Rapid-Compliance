@@ -27,6 +27,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { logger } from '@/lib/logger/logger';
 
+type CoachingViewMode = 'human' | 'ai';
+
 /**
  * Time period options
  */
@@ -45,6 +47,9 @@ const TIME_PERIODS: { value: TimePeriod; label: string }[] = [
 export default function CoachingDashboardPage() {
   const { user } = useAuth();
   const authFetch = useAuthFetch();
+
+  // View mode: human reps vs AI agents
+  const [viewMode, setViewMode] = useState<CoachingViewMode>('human');
 
   // State
   const [period, setPeriod] = useState<TimePeriod>('last_30_days');
@@ -244,10 +249,33 @@ export default function CoachingDashboardPage() {
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">Sales Coaching & Insights</h1>
+              <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">Coaching & Insights</h1>
               <p className="text-sm text-[var(--color-text-disabled)] mt-1">
                 AI-powered performance analysis and personalized recommendations
               </p>
+              {/* Human / AI Agent Toggle */}
+              <div className="flex gap-1 mt-2 bg-[var(--color-bg-main)] rounded-lg p-0.5 w-fit">
+                <button
+                  onClick={() => setViewMode('human')}
+                  className={`px-3 py-1 text-xs font-medium rounded-md transition ${
+                    viewMode === 'human'
+                      ? 'bg-[var(--color-bg-paper)] text-[var(--color-text-primary)] shadow-sm'
+                      : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'
+                  }`}
+                >
+                  Human Reps
+                </button>
+                <button
+                  onClick={() => setViewMode('ai')}
+                  className={`px-3 py-1 text-xs font-medium rounded-md transition ${
+                    viewMode === 'ai'
+                      ? 'bg-[var(--color-bg-paper)] text-[var(--color-text-primary)] shadow-sm'
+                      : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'
+                  }`}
+                >
+                  AI Agents
+                </button>
+              </div>
             </div>
 
             <div className="flex items-center gap-4">
@@ -333,7 +361,13 @@ export default function CoachingDashboardPage() {
         </div>
       </div>
 
-      {/* Main Content */}
+      {/* AI Agents View */}
+      {viewMode === 'ai' && (
+        <AIAgentsCoachingView authFetch={authFetch} />
+      )}
+
+      {/* Human Rep Main Content */}
+      {viewMode === 'human' && (
       <div className="max-w-7xl mx-auto p-6">
         {/* Top Row: Performance Score + Skills */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
@@ -475,6 +509,164 @@ export default function CoachingDashboardPage() {
               </span>
             </div>
           </div>
+        </div>
+      </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================================================
+// AI AGENTS COACHING VIEW
+// ============================================================================
+
+interface AgentRepData {
+  agentId: string;
+  agentType: string;
+  agentName: string;
+  goldenMasterId: string | null;
+  thresholds: { flagForTrainingBelow: number; excellentAbove: number };
+}
+
+interface AgentPerformanceData {
+  agent: AgentRepData;
+  performance: {
+    agentId: string;
+    totalExecutions: number;
+    successRate: number;
+    averageQualityScore: number;
+    qualityTrend: string;
+  } | null;
+}
+
+function AIAgentsCoachingView({ authFetch }: { authFetch: (url: string, options?: RequestInit) => Promise<Response> }) {
+  const [agents, setAgents] = useState<AgentPerformanceData[]>([]);
+  const [flaggedCount, setFlaggedCount] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [analyzing, setAnalyzing] = useState<string | null>(null);
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        // Fetch agent types to know which domains exist
+        const typesRes = await authFetch('/api/training/agent-types');
+        const typesData = await typesRes.json() as { success: boolean; domains?: string[] };
+        const domains = typesData.domains ?? ['chat', 'voice', 'email', 'social', 'seo'];
+
+        // Fetch flagged sessions count
+        const flaggedRes = await authFetch('/api/agent-performance/flagged-sessions');
+        const flaggedData = await flaggedRes.json() as { success: boolean; total?: number };
+        setFlaggedCount(flaggedData.total ?? 0);
+
+        // For now, show domains as agent cards (actual agents populate as they're created)
+        const agentData: AgentPerformanceData[] = domains.map((domain: string) => ({
+          agent: {
+            agentId: `agent_${domain}`,
+            agentType: domain,
+            agentName: {
+              chat: 'Sales Chat Agent',
+              voice: 'Voice Agent',
+              email: 'Email Agent',
+              social: 'Social Media Agent',
+              seo: 'SEO Content Agent',
+            }[domain] ?? domain,
+            goldenMasterId: null,
+            thresholds: { flagForTrainingBelow: 65, excellentAbove: 90 },
+          },
+          performance: null,
+        }));
+
+        setAgents(agentData);
+      } catch {
+        // Non-critical
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [authFetch]);
+
+  const handleAnalyze = async (agentId: string) => {
+    setAnalyzing(agentId);
+    try {
+      await authFetch('/api/agent-performance/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ agentId, period: 'last_30_days' }),
+      });
+    } catch {
+      // Error display handled by UI
+    } finally {
+      setAnalyzing(null);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="max-w-7xl mx-auto p-6">
+        <div className="flex items-center justify-center h-40">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--color-primary)]" />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-7xl mx-auto p-6 space-y-6">
+      {/* Summary */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="bg-[var(--color-bg-paper)] rounded-lg shadow-sm p-4">
+          <p className="text-sm text-[var(--color-text-secondary)]">AI Agent Types</p>
+          <p className="text-2xl font-bold text-[var(--color-text-primary)] mt-1">{agents.length}</p>
+        </div>
+        <div className="bg-[var(--color-bg-paper)] rounded-lg shadow-sm p-4">
+          <p className="text-sm text-[var(--color-text-secondary)]">Flagged Sessions</p>
+          <p className="text-2xl font-bold text-[var(--color-text-primary)] mt-1">{flaggedCount}</p>
+          {flaggedCount > 0 && (
+            <p className="text-xs text-[var(--color-warning)] mt-1">Needs review</p>
+          )}
+        </div>
+        <div className="bg-[var(--color-bg-paper)] rounded-lg shadow-sm p-4">
+          <p className="text-sm text-[var(--color-text-secondary)]">Quick Links</p>
+          <div className="flex flex-col gap-1 mt-2">
+            <a href="/settings/ai-agents/training" className="text-xs text-[var(--color-primary)] hover:underline">Training Lab</a>
+            <a href="/workforce/performance" className="text-xs text-[var(--color-primary)] hover:underline">Swarm Performance</a>
+          </div>
+        </div>
+      </div>
+
+      {/* Agent Cards */}
+      <div className="bg-[var(--color-bg-paper)] rounded-lg shadow-sm">
+        <div className="p-4 border-b border-[var(--color-border-main)]">
+          <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">Customer-Facing AI Agents</h2>
+          <p className="text-sm text-[var(--color-text-secondary)] mt-1">Coaching analysis and performance tracking for production agents</p>
+        </div>
+        <div className="divide-y divide-[var(--color-border-light)]">
+          {agents.map((item) => (
+            <div key={item.agent.agentId} className="p-4 flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-[var(--color-text-primary)]">{item.agent.agentName}</p>
+                <p className="text-xs text-[var(--color-text-secondary)] mt-0.5">
+                  Type: {item.agent.agentType} &middot; Threshold: {item.agent.thresholds.flagForTrainingBelow}
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                {item.performance ? (
+                  <span className="text-sm text-[var(--color-text-secondary)]">
+                    Score: {item.performance.averageQualityScore}
+                  </span>
+                ) : (
+                  <span className="text-xs text-[var(--color-text-disabled)]">No data yet</span>
+                )}
+                <button
+                  onClick={() => void handleAnalyze(item.agent.agentId)}
+                  disabled={analyzing === item.agent.agentId}
+                  className="px-3 py-1 text-xs font-medium rounded bg-[var(--color-primary)] text-white hover:opacity-90 disabled:opacity-50"
+                >
+                  {analyzing === item.agent.agentId ? 'Analyzing...' : 'Run Analysis'}
+                </button>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </div>

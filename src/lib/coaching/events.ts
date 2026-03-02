@@ -31,6 +31,8 @@ import type {
   TrainingSuggestion,
   PerformanceTier
 } from './types';
+import type { AgentDomain } from '@/types/training';
+import { logger } from '@/lib/logger/logger';
 
 // ============================================================================
 // COACHING EVENT TYPES
@@ -326,6 +328,62 @@ export interface TrainingCompletedEvent {
 }
 
 // ============================================================================
+// AGENT PERFORMANCE EVENT TYPES
+// ============================================================================
+
+/**
+ * Event emitted when an AI agent's production session is analyzed and scored
+ */
+export interface AgentPerformanceAnalyzedEvent {
+  type: 'agent.performance.analyzed';
+  timestamp: Date;
+  data: {
+    agentId: string;
+    agentType: AgentDomain;
+    sessionId: string;
+    score: number;
+    flagged: boolean;
+    threshold: number;
+    issues: string[];
+  };
+}
+
+/**
+ * Event emitted when an AI agent's session is flagged for training review
+ */
+export interface AgentPerformanceFlaggedEvent {
+  type: 'agent.performance.flagged';
+  timestamp: Date;
+  data: {
+    agentId: string;
+    agentType: AgentDomain;
+    sessionId: string;
+    score: number;
+    threshold: number;
+    issues: string[];
+    unprocessedCount: number;
+    batchTriggered: boolean;
+  };
+}
+
+/**
+ * Event emitted when the training pipeline is triggered for an AI agent
+ */
+export interface AgentTrainingTriggeredEvent {
+  type: 'agent.training.triggered';
+  timestamp: Date;
+  data: {
+    agentType: AgentDomain;
+    goldenMasterId: string;
+    updateRequestId: string;
+    sourceType: 'coaching_bridge' | 'auto_flag_batch' | 'manual';
+    improvementCount: number;
+    expectedScoreImprovement: number;
+    confidence: number;
+  };
+}
+
+// ============================================================================
 // UNION TYPE
 // ============================================================================
 
@@ -340,7 +398,10 @@ export type CoachingEvent =
   | RecommendationDismissedEvent
   | ActionItemCompletedEvent
   | TrainingStartedEvent
-  | TrainingCompletedEvent;
+  | TrainingCompletedEvent
+  | AgentPerformanceAnalyzedEvent
+  | AgentPerformanceFlaggedEvent
+  | AgentTrainingTriggeredEvent;
 
 // ============================================================================
 // EVENT BUILDERS
@@ -573,4 +634,152 @@ export function createTrainingCompletedEvent(
       assessmentScore
     }
   };
+}
+
+// ============================================================================
+// AGENT PERFORMANCE EVENT BUILDERS
+// ============================================================================
+
+/**
+ * Creates an agent performance analyzed event
+ */
+export function createAgentPerformanceAnalyzedEvent(
+  agentId: string,
+  agentType: AgentDomain,
+  sessionId: string,
+  score: number,
+  flagged: boolean,
+  threshold: number,
+  issues: string[] = []
+): AgentPerformanceAnalyzedEvent {
+  return {
+    type: 'agent.performance.analyzed',
+    timestamp: new Date(),
+    data: {
+      agentId,
+      agentType,
+      sessionId,
+      score,
+      flagged,
+      threshold,
+      issues,
+    },
+  };
+}
+
+/**
+ * Creates an agent performance flagged event
+ */
+export function createAgentPerformanceFlaggedEvent(
+  agentId: string,
+  agentType: AgentDomain,
+  sessionId: string,
+  score: number,
+  threshold: number,
+  issues: string[],
+  unprocessedCount: number,
+  batchTriggered: boolean
+): AgentPerformanceFlaggedEvent {
+  return {
+    type: 'agent.performance.flagged',
+    timestamp: new Date(),
+    data: {
+      agentId,
+      agentType,
+      sessionId,
+      score,
+      threshold,
+      issues,
+      unprocessedCount,
+      batchTriggered,
+    },
+  };
+}
+
+/**
+ * Creates an agent training triggered event
+ */
+export function createAgentTrainingTriggeredEvent(
+  agentType: AgentDomain,
+  goldenMasterId: string,
+  updateRequestId: string,
+  sourceType: 'coaching_bridge' | 'auto_flag_batch' | 'manual',
+  improvementCount: number,
+  expectedScoreImprovement: number,
+  confidence: number
+): AgentTrainingTriggeredEvent {
+  return {
+    type: 'agent.training.triggered',
+    timestamp: new Date(),
+    data: {
+      agentType,
+      goldenMasterId,
+      updateRequestId,
+      sourceType,
+      improvementCount,
+      expectedScoreImprovement,
+      confidence,
+    },
+  };
+}
+
+// ============================================================================
+// SIGNAL COORDINATOR BRIDGE
+// ============================================================================
+
+/**
+ * Emit a coaching event through the SignalCoordinator.
+ *
+ * This bridges the coaching event system to the platform-wide signal bus.
+ * Non-blocking — signal emission failures are logged but never throw.
+ */
+export async function emitCoachingSignal(event: CoachingEvent): Promise<void> {
+  try {
+    // Dynamic import to avoid circular dependencies — orchestration imports are heavy
+    const { getServerSignalCoordinator } = await import('@/lib/orchestration/coordinator-factory-server');
+    const coordinator = getServerSignalCoordinator();
+
+    const signalTypeMap: Record<CoachingEvent['type'], string> = {
+      'coaching.insights.generated': 'coaching.insights.generated',
+      'coaching.insights.viewed': 'coaching.insights.generated', // maps to same signal
+      'coaching.team.insights.generated': 'performance.analyzed',
+      'coaching.recommendation.accepted': 'coaching.insights.generated',
+      'coaching.recommendation.dismissed': 'coaching.insights.generated',
+      'coaching.action.completed': 'coaching.insights.generated',
+      'coaching.training.started': 'coaching.insights.generated',
+      'coaching.training.completed': 'coaching.insights.generated',
+      'agent.performance.analyzed': 'agent.performance.analyzed',
+      'agent.performance.flagged': 'agent.performance.flagged',
+      'agent.training.triggered': 'agent.training.triggered',
+    };
+
+    const signalType = signalTypeMap[event.type] ?? 'coaching.insights.generated';
+
+    const priorityMap: Record<string, 'High' | 'Medium' | 'Low'> = {
+      'agent.performance.flagged': 'High',
+      'agent.training.triggered': 'High',
+      'agent.performance.analyzed': 'Medium',
+      'coaching.insights.generated': 'Medium',
+      'coaching.team.insights.generated': 'Medium',
+    };
+
+    await coordinator.emitSignal({
+      type: signalType as Parameters<typeof coordinator.emitSignal>[0]['type'],
+      confidence: 0.9,
+      priority: priorityMap[event.type] ?? 'Low',
+      metadata: {
+        eventType: event.type,
+        timestamp: event.timestamp.toISOString(),
+        ...event.data,
+      },
+    });
+
+    logger.debug(`[CoachingEvents] Emitted signal: ${event.type} → ${signalType}`);
+  } catch (error) {
+    // Never fail the calling code if signal emission fails
+    logger.warn('[CoachingEvents] Failed to emit coaching signal', {
+      eventType: event.type,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
 }

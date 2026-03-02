@@ -23,7 +23,6 @@
  */
 
 import type { FirestoreAdminDAL } from '@/lib/firebase/admin-dal';
-import { adminDb } from '@/lib/firebase/admin';
 import type {
   RepPerformanceMetrics,
   DealPerformanceMetrics,
@@ -217,7 +216,7 @@ export class CoachingAnalyticsEngine {
   ): Promise<DealPerformanceMetrics> {
     try {
       // Query deals for this rep in the time period
-      const dealsRef = this.adminDal.getCollection('DEALS');
+      const dealsRef = this.adminDal.getPlatformCollection('deals');
       const snapshot = await dealsRef
         .where('ownerId', '==', repId)
         .where('createdAt', '>=', startDate)
@@ -314,23 +313,9 @@ export class CoachingAnalyticsEngine {
     startDate: Date,
     endDate: Date
   ): Promise<CommunicationMetrics> {
-    if (!adminDb) {
-      return {
-        emailsGenerated: 0,
-        emailsSent: 0,
-        emailResponseRate: 0,
-        averageResponseTime: 0,
-        aiEmailUsageRate: 0,
-        personalizationScore: 0,
-        followUpConsistency: 0,
-      };
-    }
-
     try {
-      // Query email activities (using organization sub-collection pattern)
-      // This data may not exist yet, so we handle gracefully
-      const prefix = process.env.NODE_ENV === 'production' ? '' : 'test_';
-      const emailsRef = adminDb.collection(`${prefix}email_activities`);
+      // Query email activities from platform sub-collection
+      const emailsRef = this.adminDal.getPlatformCollection('email_activities');
       const snapshot = await emailsRef
         .where('userId', '==', repId)
         .where('createdAt', '>=', startDate)
@@ -410,23 +395,9 @@ export class CoachingAnalyticsEngine {
     startDate: Date,
     endDate: Date
   ): Promise<ActivityMetrics> {
-    if (!adminDb) {
-      return {
-        totalActivities: 0,
-        activitiesPerDay: 0,
-        callsMade: 0,
-        meetingsHeld: 0,
-        tasksCompleted: 0,
-        taskCompletionRate: 0,
-        workflowsTriggered: 0,
-        crmUpdates: 0,
-      };
-    }
-
     try {
-      // Query activities (using direct collection reference as ACTIVITIES may not be in enum)
-      const prefix = process.env.NODE_ENV === 'production' ? '' : 'test_';
-      const activitiesRef = adminDb.collection(`${prefix}activities`);
+      // Query activities from platform sub-collection
+      const activitiesRef = this.adminDal.getPlatformCollection('activities');
       const snapshot = await activitiesRef
         .where('userId', '==', repId)
         .where('createdAt', '>=', startDate)
@@ -445,8 +416,8 @@ export class CoachingAnalyticsEngine {
       const totalTasks = activities.filter((a: ActivityData) => a.type === 'task').length;
       const taskCompletionRate = totalTasks > 0 ? tasksCompleted / totalTasks : 0;
       
-      // Query workflow executions (reuse prefix from above)
-      const workflowsRef = adminDb.collection(`${prefix}workflow_executions`);
+      // Query workflow executions from platform sub-collection
+      const workflowsRef = this.adminDal.getPlatformCollection('workflowExecutions');
       const workflowSnapshot = await workflowsRef
         .where('triggeredBy', '==', repId)
         .where('createdAt', '>=', startDate)
@@ -494,7 +465,7 @@ export class CoachingAnalyticsEngine {
   ): Promise<ConversionMetrics> {
     try {
       // Query deals for conversion analysis
-      const dealsRef = this.adminDal.getCollection('DEALS');
+      const dealsRef = this.adminDal.getPlatformCollection('deals');
       const snapshot = await dealsRef
         .where('ownerId', '==', repId)
         .where('createdAt', '>=', startDate)
@@ -571,7 +542,7 @@ export class CoachingAnalyticsEngine {
   ): Promise<RevenueMetrics> {
     try {
       // Query deals for revenue analysis
-      const dealsRef = this.adminDal.getCollection('DEALS');
+      const dealsRef = this.adminDal.getPlatformCollection('deals');
       const snapshot = await dealsRef
         .where('ownerId', '==', repId)
         .get();
@@ -610,8 +581,11 @@ export class CoachingAnalyticsEngine {
         return sum + (value * probability);
       }, 0);
       
-      // Forecast accuracy (compare previous forecasts to actual)
-      const forecastAccuracy = 0.85; // Placeholder - would need historical forecast data
+      // Forecast accuracy: proxy based on alignment between weighted pipeline and actual revenue
+      // A real implementation would compare historical forecast snapshots to actuals
+      const forecastAccuracy = (totalRevenue > 0 && weightedPipeline > 0)
+        ? 1 - Math.abs(weightedPipeline - totalRevenue) / Math.max(weightedPipeline, totalRevenue)
+        : 0;
       
       // Average contract value
       const acv = wonDeals.length > 0 ? totalRevenue / wonDeals.length : 0;
@@ -665,25 +639,9 @@ export class CoachingAnalyticsEngine {
     startDate: Date,
     endDate: Date
   ): Promise<EfficiencyMetrics> {
-    if (!adminDb || !this.adminDal) {
-      return {
-        timeToFirstContact: 0,
-        timeToProposal: 0,
-        timeToClose: 0,
-        meetingsPerDeal: 0,
-        emailsPerDeal: 0,
-        touchPointsPerDeal: 0,
-        automationUsage: 0,
-        hoursSaved: 0,
-      };
-    }
-
     try {
-      // Get environment prefix once for all queries
-      const prefix = process.env.NODE_ENV === 'production' ? '' : 'test_';
-      
       // Query deals for efficiency analysis
-      const dealsRef = this.adminDal.getCollection('DEALS');
+      const dealsRef = this.adminDal.getPlatformCollection('deals');
       const snapshot = await dealsRef
         .where('ownerId', '==', repId)
         .where('createdAt', '>=', startDate)
@@ -756,7 +714,7 @@ export class CoachingAnalyticsEngine {
         : 0;
       
       // Touch points per deal (meetings + emails)
-      const activitiesRef = adminDb.collection(`${prefix}activities`);
+      const activitiesRef = this.adminDal.getPlatformCollection('activities');
       const activitiesSnapshot = await activitiesRef
         .where('userId', '==', repId)
         .where('createdAt', '>=', startDate)
@@ -773,7 +731,7 @@ export class CoachingAnalyticsEngine {
       const touchPointsPerDeal = meetingsPerDeal + emailsPerDeal;
       
       // AI automation usage
-      const workflowsRef = adminDb.collection(`${prefix}workflow_executions`);
+      const workflowsRef = this.adminDal.getPlatformCollection('workflowExecutions');
       const workflowSnapshot = await workflowsRef
         .where('triggeredBy', '==', repId)
         .where('createdAt', '>=', startDate)
@@ -784,7 +742,7 @@ export class CoachingAnalyticsEngine {
       const automationUsage = totalActivities > 0 ? workflowExecutions / totalActivities : 0;
       
       // Hours saved (estimate: 5 min per workflow, 10 min per AI email)
-      const emailActivities = await adminDb.collection(`${prefix}email_activities`)
+      const emailActivities = await this.adminDal.getPlatformCollection('email_activities')
         .where('userId', '==', repId)
         .where('createdAt', '>=', startDate)
         .where('createdAt', '<=', endDate)
@@ -969,7 +927,7 @@ export class CoachingAnalyticsEngine {
       }
 
       // Query deals within date range for all sales reps
-      const dealsRef = this.adminDal.getCollection('DEALS');
+      const dealsRef = this.adminDal.getPlatformCollection('deals');
       const dealsSnapshot = await dealsRef
         .where('createdAt', '>=', _startDate)
         .where('createdAt', '<=', _endDate)
@@ -996,11 +954,11 @@ export class CoachingAnalyticsEngine {
       ));
 
       const metrics: TeamMetrics = {
-        overallScore: overallScore || 65, // Fallback to 65 if no data
-        winRate: winRate || 0.45,
-        revenue: totalRevenue || 50000,
-        activityPerDay: Math.round(activityPerDay * 10) / 10 || 12,
-        efficiency: Math.round(efficiency * 100) / 100 || 0.6,
+        overallScore,
+        winRate,
+        revenue: totalRevenue,
+        activityPerDay: Math.round(activityPerDay * 10) / 10,
+        efficiency: Math.round(efficiency * 100) / 100,
       };
 
       return metrics;

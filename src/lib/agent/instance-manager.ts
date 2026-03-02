@@ -643,14 +643,14 @@ ${this.summarizeRecentConversations(customerMemory)}
           let active: GoldenMaster | undefined;
           if (agentType) {
             active = goldenMasters.find(
-              (gm) => (gm as GoldenMaster & { agentType?: string }).agentType === agentType && gm.isActive === true
+              (gm) => gm.agentType === agentType && gm.isActive === true
             );
             // Fall back to any active GM if type-specific one not found
             active ??= goldenMasters.find((gm) => gm.isActive === true);
           } else {
             // Default: find any active GM that is NOT a typed agent (backward compatible)
             active = goldenMasters.find(
-              (gm) => gm.isActive === true && !(gm as GoldenMaster & { agentType?: string }).agentType
+              (gm) => gm.isActive === true && !gm.agentType
             );
             // Fall back to any active GM
             active ??= goldenMasters.find((gm) => gm.isActive === true);
@@ -681,7 +681,7 @@ ${this.summarizeRecentConversations(customerMemory)}
       let active: GoldenMaster | undefined;
       if (agentType) {
         active = goldenMasters.find(
-          (gm) => (gm as GoldenMaster & { agentType?: string }).agentType === agentType && gm.isActive === true
+          (gm) => gm.agentType === agentType && gm.isActive === true
         );
         active ??= goldenMasters.find((gm) => gm.isActive === true);
       } else {

@@ -297,6 +297,10 @@ export class WorkflowCoordinator {
       'content.generated': [],
       'content.scheduled': [],
       'content.published': [],
+      // Agent performance & training signals
+      'agent.performance.analyzed': [],
+      'agent.performance.flagged': [],
+      'agent.training.triggered': [],
       'custom': [],
     };
     

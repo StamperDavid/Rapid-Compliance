@@ -14,6 +14,8 @@ import { BaseSpecialist } from './base-specialist';
 import { getMemoryVault, type MemoryEntry } from './shared/memory-vault';
 import { getSignalBus } from '@/lib/orchestrator/signal-bus';
 import { isManagerPaused } from '@/lib/orchestration/swarm-control';
+import { recordExecution } from './shared/performance-tracker';
+import { logger } from '@/lib/logger/logger';
 
 // ============================================================================
 // TYPES FOR MANAGER AUTHORITY
@@ -26,6 +28,7 @@ export interface ReviewResult {
   approved: boolean;
   feedback: string[];
   severity: 'PASS' | 'MINOR' | 'MAJOR' | 'BLOCK';
+  qualityScore: number; // 0-100, quality assessment of the specialist output
 }
 
 /**
@@ -275,6 +278,7 @@ export abstract class BaseManager extends BaseSpecialist {
       approved: true,
       feedback: [],
       severity: 'PASS',
+      qualityScore: 100,
     };
   }
 
@@ -289,6 +293,7 @@ export abstract class BaseManager extends BaseSpecialist {
   ): Promise<AgentReport> {
     let lastReport: AgentReport | null = null;
     let retries = 0;
+    const startTime = Date.now();
 
     while (retries <= BaseManager.MAX_REVIEW_RETRIES) {
       // If retrying, inject review feedback into the message
@@ -310,8 +315,9 @@ export abstract class BaseManager extends BaseSpecialist {
 
       const report = await this.delegateToSpecialist(specialistId, currentMessage);
 
-      // If specialist failed outright, don't review — just return
+      // If specialist failed outright, record and return
       if (report.status === 'FAILED' || report.status === 'BLOCKED') {
+        this.recordPerformanceEntry(report, { approved: false, feedback: ['Specialist failed outright'], severity: 'BLOCK', qualityScore: 0 }, retries, startTime, report.status === 'FAILED' ? 'outright_failure' : 'blocked');
         return report;
       }
 
@@ -319,6 +325,8 @@ export abstract class BaseManager extends BaseSpecialist {
       const review = this.reviewOutput(report);
 
       if (review.approved) {
+        // Record successful execution
+        this.recordPerformanceEntry(report, review, retries, startTime);
         return report;
       }
 
@@ -329,6 +337,12 @@ export abstract class BaseManager extends BaseSpecialist {
 
     // Max retries exhausted — escalate to Jasper
     this.log('WARN', `Escalating to Jasper after ${BaseManager.MAX_REVIEW_RETRIES} failed reviews`);
+
+    // Record the failed escalation performance entry
+    if (lastReport) {
+      const lastReview = this.reviewOutput(lastReport);
+      this.recordPerformanceEntry(lastReport, lastReview, retries, startTime, 'quality_gate_escalation');
+    }
 
     const escalationReport = this.createReport(
       message.id,
@@ -370,6 +384,30 @@ export abstract class BaseManager extends BaseSpecialist {
     }
 
     return escalationReport;
+  }
+
+  /**
+   * Record a performance entry for a specialist execution.
+   * Non-blocking — failures are logged but never propagated.
+   */
+  private recordPerformanceEntry(
+    report: AgentReport,
+    review: ReviewResult,
+    retryCount: number,
+    startTime: number,
+    failureMode?: string
+  ): void {
+    recordExecution(report, review, {
+      agentType: 'swarm_specialist',
+      responseTimeMs: Date.now() - startTime,
+      retryCount,
+      failureMode,
+    }).catch((error: unknown) => {
+      logger.warn('[BaseManager] Failed to record performance entry', {
+        agentId: report.agentId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    });
   }
 
   // ==========================================================================

@@ -37,6 +37,8 @@ import type {
 } from '@/lib/coaching/types';
 import { getCoachingPreferences } from '@/lib/coaching/coaching-preferences-service';
 import { DEFAULT_COACHING_MODEL } from '@/lib/coaching/coaching-models';
+import { mapCoachingToTrainingSignals, createTrainingRequestFromCoaching } from '@/lib/training/coaching-training-bridge';
+import { getAgentRepProfile } from '@/lib/agents/agent-rep-profiles';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { requireAuth } from '@/lib/auth/api-auth';
@@ -285,7 +287,36 @@ export async function POST(request: NextRequest) {
       logger.error('Failed to emit coaching insights signal', signalError instanceof Error ? signalError : new Error(String(signalError)));
       // Don't fail the request if signal emission fails
     }
-    
+
+    // Step 4: If this is an AI agent, route through coaching-training bridge
+    let trainingUpdateRequestId: string | null = null;
+    if (performance.isAI) {
+      try {
+        const agentProfile = await getAgentRepProfile(requestData.repId);
+        if (agentProfile?.goldenMasterId) {
+          const improvements = mapCoachingToTrainingSignals(insights, agentProfile.agentType);
+          if (improvements.length > 0) {
+            const updateRequest = await createTrainingRequestFromCoaching(
+              agentProfile.goldenMasterId,
+              insights,
+              agentProfile.agentType
+            );
+            trainingUpdateRequestId = updateRequest?.id ?? null;
+            logger.info('[CoachingInsights] AI agent coaching → training bridge', {
+              agentId: requestData.repId,
+              agentType: agentProfile.agentType,
+              improvements: improvements.length,
+              updateRequestId: trainingUpdateRequestId,
+            });
+          }
+        }
+      } catch (bridgeError) {
+        logger.warn('Failed to bridge coaching to training', {
+          error: bridgeError instanceof Error ? bridgeError.message : String(bridgeError),
+        });
+      }
+    }
+
     // Build response
     const processingTimeMs = Date.now() - startTime;
     const response: GenerateCoachingResponse = {
@@ -296,7 +327,8 @@ export async function POST(request: NextRequest) {
         generatedAt: new Date(),
         modelUsed: model,
         processingTimeMs,
-        confidenceScore: insights.confidenceScore
+        confidenceScore: insights.confidenceScore,
+        ...(trainingUpdateRequestId ? { trainingUpdateRequestId } : {}),
       }
     };
     

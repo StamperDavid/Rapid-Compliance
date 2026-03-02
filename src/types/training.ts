@@ -9,7 +9,7 @@ import type { Timestamp } from 'firebase/firestore';
  * Training Session
  * A single training conversation with feedback
  */
-export type AgentDomain = 'chat' | 'social' | 'email' | 'voice';
+export type AgentDomain = 'chat' | 'social' | 'email' | 'voice' | 'seo';
 
 export interface TrainingSession {
   id: string;
@@ -354,7 +354,123 @@ export interface ABTestResults {
   generatedAt: string;
 }
 
+// ============================================================================
+// AGENT PERFORMANCE TRACKING
+// ============================================================================
 
+/**
+ * Per-execution performance record for any agent (customer-facing or swarm specialist).
+ * Written after each task execution for trend analysis and auto-flagging.
+ */
+export interface AgentPerformanceEntry {
+  id: string;
+  agentId: string;
+  agentType: 'swarm_specialist' | AgentDomain;
+  taskId: string;
+  timestamp: string;
+  qualityScore: number;        // 0-100
+  approved: boolean;
+  retryCount: number;
+  responseTimeMs: number;
+  reviewSeverity: 'PASS' | 'MINOR' | 'MAJOR' | 'BLOCK';
+  feedback: string[];
+  failureMode?: string;
+  metadata: Record<string, unknown>;
+}
+
+/**
+ * Rolling aggregation per agent over a time period.
+ * Computed from AgentPerformanceEntry records.
+ */
+export interface AgentPerformanceAggregation {
+  agentId: string;
+  agentType: 'swarm_specialist' | AgentDomain;
+  period: string;
+  totalExecutions: number;
+  successRate: number;
+  averageQualityScore: number;
+  retryRate: number;
+  commonFailureModes: Array<{ mode: string; count: number }>;
+  qualityTrend: 'improving' | 'declining' | 'stable';
+  lastUpdated: string;
+}
+
+// ============================================================================
+// SPECIALIST IMPROVEMENT PIPELINE
+// ============================================================================
+
+/**
+ * A proposed change to a swarm specialist's configuration.
+ */
+export interface ProposedSpecialistChange {
+  field: string;
+  currentValue: unknown;
+  proposedValue: unknown;
+  reason: string;
+  confidence: number;
+}
+
+/**
+ * Improvement request for swarm specialists, generated from performance data.
+ * Requires human review before applying changes.
+ */
+export interface SpecialistImprovementRequest {
+  id: string;
+  specialistId: string;
+  specialistName: string;
+  sourcePerformanceEntries: string[];
+  proposedChanges: ProposedSpecialistChange[];
+  impactAnalysis: {
+    expectedImprovement: number;
+    areasImproved: string[];
+    risks: string[];
+    confidence: number;
+  };
+  status: 'pending_review' | 'approved' | 'rejected' | 'applied';
+  reviewedBy?: string;
+  reviewNotes?: string;
+  createdAt: string;
+  appliedAt?: string;
+}
+
+// ============================================================================
+// AGENT-TYPE TRAINING CONFIGURATION
+// ============================================================================
+
+/**
+ * Scoring criterion for a specific agent type's training evaluation.
+ */
+export interface AgentTypeScoringCriterion {
+  id: string;
+  label: string;
+  description: string;
+  weight: number;
+}
+
+/**
+ * Scenario type for agent training sessions.
+ */
+export interface AgentTypeScenario {
+  id: string;
+  label: string;
+  description: string;
+  examples: string[];
+}
+
+/**
+ * Per-agent-type training configuration.
+ * Defines scoring criteria, scenario types, and performance thresholds.
+ */
+export interface AgentTypeTrainingConfig {
+  agentType: AgentDomain;
+  scoringCriteria: AgentTypeScoringCriterion[];
+  scenarioTypes: AgentTypeScenario[];
+  performanceThresholds: {
+    flagForTrainingBelow: number;   // auto-flag threshold (0-100)
+    excellentAbove: number;         // excellent performance threshold (0-100)
+    minSamplesForTrend: number;     // minimum samples before computing trend
+  };
+}
 
 
 

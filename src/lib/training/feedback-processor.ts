@@ -77,6 +77,11 @@ Areas to evaluate: subject lines, preview text, body structure, personalization,
 Focus on: natural speech patterns, pacing, empathy, clarity, escalation handling, and customer satisfaction signals.
 Areas to evaluate: greeting warmth, listening signals, response timing, escalation judgment, closing effectiveness.`;
     }
+    case 'seo': {
+      return `You are an expert SEO content analyst analyzing a training session for an AI SEO content agent.
+Focus on: keyword optimization, readability, search intent matching, content depth, structure quality, and internal linking.
+Areas to evaluate: keyword density, heading hierarchy, meta descriptions, content comprehensiveness, search intent alignment.`;
+    }
     case 'chat':
     default: {
       return `You are an expert AI trainer analyzing a training session for a sales/support AI agent.
@@ -99,6 +104,9 @@ function getDomainAreas(agentType: AgentDomain): string {
     }
     case 'voice': {
       return 'e.g., "greeting", "active_listening", "pacing", "empathy", "escalation_judgment"';
+    }
+    case 'seo': {
+      return 'e.g., "keyword_optimization", "readability", "search_intent", "content_depth", "heading_structure", "internal_linking"';
     }
     case 'chat':
     default: {

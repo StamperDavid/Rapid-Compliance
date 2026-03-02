@@ -234,7 +234,10 @@ export interface AgentInstance {
 export interface BaseModel {
   id: string;
   status: 'draft' | 'training' | 'ready';
-  
+
+  // Agent domain — which agent type this base model belongs to
+  agentType?: import('@/types/training').AgentDomain;
+
   // Core Configuration (editable - from onboarding + persona)
   businessContext: OnboardingData;
   agentPersona: AgentPersona;
@@ -273,7 +276,10 @@ export interface GoldenMaster {
   id: string;
   version: string; // "v1", "v2", "v3", etc.
   baseModelId: string; // Reference to the Base Model this was created from
-  
+
+  // Agent domain — which agent type this Golden Master belongs to
+  agentType?: import('@/types/training').AgentDomain;
+
   // Core Configuration (snapshot from Base Model at time of saving)
   businessContext: OnboardingData;
   agentPersona: AgentPersona;

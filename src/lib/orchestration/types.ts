@@ -172,6 +172,11 @@ export type SignalType =
   | 'system.quota.warning'      // API quota approaching limit
   | 'system.quota.exceeded'     // API quota exceeded
 
+  // Agent Performance & Training Signals
+  | 'agent.performance.analyzed'  // AI agent performance analysis completed
+  | 'agent.performance.flagged'   // AI agent session flagged for training
+  | 'agent.training.triggered'    // Training pipeline triggered for AI agent
+
   // Workforce Orchestration Signals
   | 'workforce.deployed'        // Workforce template deployed to org
   | 'workforce.updated'         // Workforce configuration updated
