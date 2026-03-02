@@ -1,10 +1,10 @@
 # SalesVelocity.ai - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** February 28, 2026 (CRM entity configurability — 18 toggleable entities with industry defaults, new /api/entity-config endpoint, Settings > Features gets 5th tab "CRM Entities", entity page gating + schema editor filtering)
+**Last Updated:** March 2, 2026 (SEO system seeded — Brand DNA, Website SEO, SEO Lab Training; doc cleanup — removed ~1000 lines of agent orchestration internals)
 **Branches:** `dev` (latest)
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
-**Architecture:** Single-Tenant (Penthouse Model) - NOT a SaaS platform
+**Architecture:** Single-Tenant Penthouse Model (development strategy — multi-tenant SaaS product)
 **Audit Method:** Multi-agent parallel scan with verification + Deep-dive forensic analysis + Playwright Visual Trace Audit
 
 ---
@@ -36,13 +36,14 @@
 
 | Metric | Count | Status |
 |--------|-------|--------|
-| Physical Routes (page.tsx) | 170 | Verified February 27, 2026 (+2 onboarding pages: niche, setup; full filesystem count; 9 redirect stubs included) |
-| API Endpoints (route.ts) | 299 | Verified February 28, 2026 (+1: /api/entity-config) |
-| AI Agents | 52 | **52 FUNCTIONAL (46 swarm + 6 standalone)** |
+| Physical Routes (page.tsx) | 171 | Verified March 2, 2026 |
+| API Endpoints (route.ts) | 315 | Verified March 2, 2026 |
+| AI Agents | 54 | **54 FUNCTIONAL (46 swarm + 6 standalone + 2 variants)** |
 | RBAC Roles | 4 | `owner` (level 3), `admin` (level 2), `manager` (level 1), `member` (level 0) — 4-role RBAC |
-| Firestore Collections | 69+ | Active (+seoResearch collection for persistent SEO/competitor research) |
+| TypeScript Files | 1,439 | Verified March 2, 2026 |
+| Firestore Collections | 69+ | Active |
 
-**Architecture:** Single-company deployment for SalesVelocity.ai. Clients purchase services/products - they do NOT get SaaS tenants.
+**Architecture:** Single-tenant Penthouse Model (development strategy). SalesVelocity.ai is a multi-tenant SaaS product — clients will purchase their own deployment. Penthouse simplifies development; multi-tenancy will be re-enabled.
 
 ### Technology Stack
 
@@ -413,7 +414,7 @@ All helpers are hardcoded to `DEFAULT_ORG_ID`. There is no dynamic org parameter
 
 **Status:** FULLY COMPLETE — February 2, 2026 | **Net Result:** -185 files, -71,369 lines of code
 
-SalesVelocity.ai is a **single-company sales and marketing super tool** running on the Penthouse Model (single-tenant development strategy). All data paths use `PLATFORM_ID` constant.
+SalesVelocity.ai is a **multi-tenant SaaS product** currently running on the Penthouse Model (single-tenant development strategy). Multi-tenancy will be re-enabled after core features are stable. All data paths use `PLATFORM_ID` constant.
 
 **Security:** Firebase kill-switch in `src/lib/firebase/config.ts` — only `rapid-compliance-65f87` project allowed, `CriticalConfigurationError` halts on mismatch. Routes use `/(dashboard)/*` layout. Legacy URLs redirect via middleware.
 
@@ -646,121 +647,7 @@ No open route issues. All previously identified stub pages and duplicate destina
 | FUNNEL_PATHOLOGIST | FunnelPathologist | Funnel analysis | FUNCTIONAL |
 | COPY_SPECIALIST | CopySpecialist | Website copy | FUNCTIONAL |
 
-##### ARCHITECT_MANAGER Site Blueprint Orchestration Logic
-
-The ARCHITECT_MANAGER implements dynamic site architecture generation from Brand DNA:
-
-**Architecture Derivation Pipeline:**
-1. Load Brand DNA from platform context (industry, tone, audience, unique value)
-2. Query MemoryVault for existing Intelligence Briefs (market context)
-3. Derive site requirements: industry type, funnel type, target audience, integrations
-4. Generate site map from 7 industry templates (SaaS, Agency, E-commerce, Coach, Local Business, Media, Nonprofit)
-5. Design funnel flow from 4 funnel templates (Lead Gen, E-commerce, Course, Service)
-6. Execute specialists in parallel with graceful degradation
-7. Synthesize SiteArchitecture + TechnicalBrief output
-
-**Output Types:**
-- `SiteArchitecture`: Complete site blueprint with siteMap, funnelFlow, navigation, designDirection, contentStructure
-- `TechnicalBrief`: API integrations, schema requirements, SEO mandates, performance targets, accessibility checklist
-
-**Industry Templates:**
-- SaaS: Features, Pricing, Integrations, Docs, Case Studies (9 pages)
-- Agency: Portfolio, Services, Case Studies, Process (8 pages)
-- E-commerce: Shop, Product, Cart, Checkout, Account (9 pages)
-- Coach: Services, Programs, Resources, Book a Call (9 pages)
-- Local Business: Services, Gallery, Reviews (6 pages)
-- Media: Articles, Categories, Subscribe (6 pages)
-- Nonprofit: Programs, Impact, Donate, Get Involved (8 pages)
-
-**Signal Broadcasting:**
-- Broadcasts `site.blueprint_ready` signal to BUILDER_MANAGER, CONTENT_MANAGER, MARKETING_MANAGER
-- Stores blueprint as insight in MemoryVault for cross-agent consumption
-
-**Specialist Orchestration:**
-- UX_UI_SPECIALIST: Wireframes, component library, color psychology, accessibility
-- FUNNEL_PATHOLOGIST: Conversion optimization, urgency tactics, pricing strategy
-- COPY_SPECIALIST: Messaging framework, headlines, CTAs, voice alignment
-
-##### BUILDER_MANAGER Blueprint-to-Deployment Orchestration Logic
-
-The BUILDER_MANAGER implements autonomous site construction from architectural blueprints:
-
-**Blueprint-to-Deployment Pipeline:**
-1. Receive `site.blueprint_ready` signal from ARCHITECT_MANAGER
-2. Load SiteArchitecture from MemoryVault
-3. Execute specialists in parallel: UX_UI_ARCHITECT, FUNNEL_ENGINEER, ASSET_GENERATOR
-4. Assemble page components by mapping sections to templates
-5. Inject tracking pixels (GA4, GTM, Meta Pixel, Hotjar) into page headers
-6. Inject custom "Golden Master" conversion scripts as specified by blueprint
-7. Generate Vercel-compatible deployment manifest
-8. Broadcast `website.build_complete` signal to downstream managers
-
-**Build State Machine:**
-- `PENDING_BLUEPRINT` → Awaiting architecture from ARCHITECT_MANAGER
-- `ASSEMBLING` → Coordinating specialists, generating components
-- `INJECTING_SCRIPTS` → Adding tracking pixels and conversion scripts
-- `DEPLOYING` → Generating deployment manifest
-- `LIVE` → Build complete, ready for deployment
-
-**Output Types:**
-- `AssembledPage[]`: Page components with sections, metadata, scripts, styles
-- `AssetPackage`: Logo variants, favicons, social graphics, banners
-- `InjectedScripts`: Head scripts, body scripts, dataLayer configuration
-- `DeploymentManifest`: Pages, assets, redirects, headers, environment, build config
-
-**Pixel Injection Capabilities:**
-- Google Analytics (GA4): gtag.js with measurement ID
-- Google Tag Manager: Container script with dataLayer initialization
-- Meta Pixel: Facebook conversion tracking with PageView events
-- Hotjar: Heatmap and session recording integration
-- Custom Scripts: Priority-sorted injection by placement (head/body_start/body_end)
-
-**Signal Broadcasting:**
-- Broadcasts `website.build_complete` signal to CONTENT_MANAGER, MARKETING_MANAGER
-- Stores build result as insight in MemoryVault for cross-agent consumption
-
-**Specialist Orchestration:**
-- UX_UI_ARCHITECT: Design system tokens, color palettes, typography, accessibility
-- FUNNEL_ENGINEER: Conversion funnel design, landing page optimization, A/B test setup
-- ASSET_GENERATOR: Logo generation, favicon sets, social graphics, banners
-
-##### CONTENT_MANAGER Multi-Modal Content Orchestration Logic
-
-The CONTENT_MANAGER implements multi-modal content production from architectural briefs:
-
-**SEO-to-Copy Injection Workflow:**
-1. Receive `site.blueprint_ready` signal from ARCHITECT_MANAGER
-2. Load Brand DNA from MemoryVault (toneOfVoice, avoidPhrases, keyPhrases, colorPalette)
-3. Extract SEO mandates from TechnicalBrief (perPage keywords, meta templates)
-4. Inject SEO keywords into COPYWRITER briefs for each page
-5. Execute specialists in parallel with brand + SEO context
-6. Synthesize outputs into ContentPackage JSON
-7. Validate all copy against avoidPhrases (quality gate)
-8. Broadcast `content.package_ready` signal to BUILDER_MANAGER, MARKETING_MANAGER
-
-**Output Types:**
-- `ContentPackage`: Complete content package with pageContent, socialSnippets, videoContent, calendar
-- `PageContent[]`: H1-H6 headlines, body copy, CTAs, metadata, visuals per page
-- `SocialSnippets`: Platform-specific promotional copy (Twitter, LinkedIn, Instagram, TikTok, Facebook)
-- `VideoContent`: Storyboards, scripts, thumbnails, video SEO tags
-- `ContentCalendar`: Recommended publishing schedule with optimal timing
-
-**Content Validation (Quality Gate):**
-- Check ALL copy against Brand DNA avoidPhrases list
-- Verify toneOfVoice consistency across all content
-- Validate meta description character limits (120-160)
-- Ensure alt-text is descriptive for accessibility
-- Calculate toneConsistency, seoScore, accessibilityScore
-
-**Signal Broadcasting:**
-- Broadcasts `content.package_ready` signal to BUILDER_MANAGER, MARKETING_MANAGER
-- Stores content insights in MemoryVault for cross-agent consumption
-
-**Specialist Orchestration:**
-- COPYWRITER: Headlines (H1-H6), product descriptions, email copy, ad copy, landing pages
-- CALENDAR_COORDINATOR: Content scheduling, optimal posting times, cross-platform coordination
-- VIDEO_SPECIALIST: Script-to-storyboard, audio cues, video SEO, thumbnail strategy
-- ASSET_GENERATOR: Brand visuals, social graphics, hero images with hex-code palette
+> **Implementation Details:** Manager orchestration logic (pipelines, signal broadcasting, specialist coordination) is documented in the source code. See each manager's `manager.ts` file for details.
 
 #### Commerce Domain (4)
 
@@ -771,30 +658,7 @@ The CONTENT_MANAGER implements multi-modal content production from architectural
 | PRICING_STRATEGIST | PricingStrategist | Dynamic pricing, discounts, totals | FUNCTIONAL |
 | INVENTORY_MANAGER | InventoryManagerAgent | Stock management, demand forecasting | FUNCTIONAL |
 
-##### COMMERCE_MANAGER Transactional Orchestration Logic
-
-The COMMERCE_MANAGER implements Product-to-Payment commerce orchestration:
-
-**Checkout Orchestration Pipeline:**
-1. Fetch commerce settings from MemoryVault (currency, tax config)
-2. Validate products via CATALOG_MANAGER
-3. Calculate totals via PRICING_STRATEGIST (subtotal, tax, shipping, discounts)
-4. Initialize checkout session via PAYMENT_SPECIALIST
-5. Handle webhook completion and update inventory
-6. Broadcast `commerce.checkout_complete` signal to BUILDER_MANAGER
-
-**Revenue Reporting (CommerceBrief):**
-- Transaction Volume and Count
-- Inventory health metrics
-
-**Signal Broadcasting:**
-- `commerce.checkout_complete` → BUILDER_MANAGER, OUTREACH_MANAGER
-
-**Specialist Orchestration:**
-- PAYMENT_SPECIALIST: Stripe checkout sessions, payment intents, webhooks, refunds
-- CATALOG_MANAGER: Product fetching, catalog CRUD, variant management, search
-- PRICING_STRATEGIST: Price validation, discount application, totals calculation
-- INVENTORY_MANAGER: Stock analysis, demand forecasting, reorder alerts
+> Commerce orchestration details in `src/lib/agents/commerce/manager.ts`.
 
 #### Outreach Domain (2)
 
@@ -803,54 +667,7 @@ The COMMERCE_MANAGER implements Product-to-Payment commerce orchestration:
 | EMAIL_SPECIALIST | EmailSpecialist | Email campaigns | FUNCTIONAL |
 | SMS_SPECIALIST | SmsSpecialist | SMS outreach | FUNCTIONAL |
 
-##### OUTREACH_MANAGER Multi-Step Sequence Orchestration Logic
-
-The OUTREACH_MANAGER implements omni-channel communication with intelligent sequencing and compliance:
-
-**Multi-Step Sequence Execution Pipeline:**
-1. Receive outreach brief with lead profile, sequence steps, and communication settings
-2. Query MemoryVault for DNC lists and contact history
-3. Query INTELLIGENCE_MANAGER insights for lead sentiment (block HOSTILE)
-4. Validate compliance: DNC check, frequency limits, quiet hours
-5. Execute sequence steps with channel escalation (EMAIL → SMS → VOICE)
-6. Track delivery status and engagement metrics
-7. Broadcast signals for completed outreach and unsubscribes
-
-**Channel Escalation Logic:**
-- **Step 1-3:** EMAIL channel (cost-effective, async)
-- **Step 4-5:** SMS channel (higher urgency, better open rates)
-- **Step 6+:** VOICE channel (human escalation for high-value leads)
-- Escalation triggers: no response after N attempts, high lead score, time-sensitive offers
-
-**Compliance Enforcement:**
-- **DNC Lists:** Check MemoryVault before ANY outreach, block if on list
-- **Frequency Throttling:** Max 1 email/day, 1 SMS/week per lead (configurable)
-- **Quiet Hours:** No outreach between 9PM-8AM local time (respects lead timezone)
-- **Opt-Out Handling:** Immediate DNC list addition on unsubscribe signal
-
-**Sentiment-Aware Routing:**
-- Query cached insights from INTELLIGENCE_MANAGER before outreach
-- HOSTILE sentiment → Flag for human review, skip automated outreach
-- NEGATIVE sentiment → Softer messaging, longer delays between touches
-- NEUTRAL/POSITIVE → Standard sequence execution
-- Fallback: If no sentiment data, proceed with caution (reduced frequency)
-
-**Output Types:**
-- `OutreachResult`: Success/failure, messageIds, delivery status, next step recommendation
-- `ComplianceReport`: DNC check result, frequency status, quiet hours validation
-- `SequenceProgress`: Current step, completed steps, remaining steps, engagement metrics
-
-**Signal Broadcasting:**
-- `outreach.sequence_started` → Sequence initiated for lead
-- `outreach.step_completed` → Individual step delivered
-- `outreach.sequence_completed` → All steps executed
-- `lead.unsubscribed` → Opt-out received, DNC list updated
-- `outreach.flagged_for_review` → Human intervention required
-
-**Specialist Orchestration:**
-- EMAIL_SPECIALIST: Template rendering, bulk sending, delivery tracking
-- SMS_SPECIALIST: E.164 validation, Twilio/Vonage integration, compliance
-- VOICE_AI_SPECIALIST: (Future) Warm transfer, voicemail drops
+> Outreach orchestration details in `src/lib/agents/outreach/manager.ts`.
 
 #### Content Domain (3)
 
@@ -870,25 +687,7 @@ The OUTREACH_MANAGER implements omni-channel communication with intelligent sequ
 | DEAL_CLOSER | DealCloserSpecialist | Closing strategies | FUNCTIONAL |
 | OBJ_HANDLER | ObjectionHandlerSpecialist | Objection handling | FUNCTIONAL |
 
-##### REVENUE_DIRECTOR Golden Master Tuning Logic
-
-The REVENUE_DIRECTOR implements dynamic persona adjustment based on win/loss signals from the CRM:
-
-**Persona Weight Adjustments:**
-- `urgencyEmphasis` (0-1): Increases when avg days-to-close < 25, decreases when > 45
-- `valueStackDepth` (0-1): Increases when competitor losses exceed 30% of total losses
-- `objectionPreemption` (0-1): Increases when price/timing objections exceed 40%
-- `followUpPersistence` (0-1): Increases when win rate < 30%, decreases when > 60%
-- `discountWillingness` (0-1): Increases when price objections exceed 30% of losses
-- `closingAggression` (0-1): Increases when win rate > 50% AND avg close < 30 days
-
-**Signal Sources:**
-- `deal.won` - Positive outcome signals from DEAL_CLOSER
-- `deal.lost` - Loss signals with reason analysis
-- MemoryVault cross-agent communication
-
-**Feedback Loop:**
-DEAL_CLOSER closed-won signals are broadcast to LEAD_QUALIFIER for continuous BANT threshold optimization.
+> Revenue Director tuning logic details in `src/lib/agents/sales/revenue/manager.ts`.
 
 #### Trust Domain (4)
 
@@ -899,43 +698,7 @@ DEAL_CLOSER closed-won signals are broadcast to LEAD_QUALIFIER for continuous BA
 | REV_MGR | ReviewManagerSpecialist | Review response | FUNCTIONAL |
 | CASE_STUDY | CaseStudyBuilderSpecialist | Case study creation | FUNCTIONAL |
 
-##### REPUTATION_MANAGER Brand Guardian Orchestration Logic
-
-The REPUTATION_MANAGER implements brand defense through coordinated review management and trust score synthesis:
-
-**Review-to-Revenue Feedback Loop:**
-1. Receive `sale.completed` signal from REVENUE_DIRECTOR
-2. Extract customer profile and purchase details
-3. Calculate optimal review solicitation timing (3-7 days post-purchase)
-4. Broadcast `reputation.review_solicitation_requested` signal to OUTREACH_MANAGER
-5. Store solicitation record in MemoryVault for tracking
-
-**AI-Powered Response Engine:**
-1. Receive `webhook.review.received` signal
-2. Delegate to REVIEW_SPECIALIST for sentiment-aware response generation
-3. Apply star-rating specific strategies (1-star Crisis → 5-star Amplification)
-4. Load Brand DNA for tone alignment
-5. For negative reviews (1-3 stars): Flag HIGH PRIORITY, queue for human approval
-6. For positive reviews (4-5 stars): Auto-approve with review option
-7. Cache successful response templates in MemoryVault
-
-**Trust Score Synthesis (ReputationBrief):**
-- Overall Trust Score: 0-100 composite metric
-- Components: Average Rating, Review Velocity, Sentiment Score, Response Rate, NPS
-- Trend Analysis: IMPROVING | DECLINING | STABLE
-- Platform-specific metrics: Google, Yelp, Facebook, Other
-- GMB Health: Profile completeness, posting frequency, map pack position
-- Actionable recommendations based on trust metrics
-
-**Signal Integration:**
-- Receives: `sale.completed`, `deal.won`, `webhook.review.received`, `review.received`
-- Broadcasts: `reputation.review_solicitation_requested`, `reputation.gmb_updated`
-- Shares: PERFORMANCE insights for trust metrics, AUDIENCE insights for solicitations
-
-**Specialist Orchestration:**
-- REVIEW_SPECIALIST: Sentiment-aware response generation, star-rating strategies
-- GMB_SPECIALIST: Local SEO optimization, profile updates, map pack positioning
-- SENTIMENT_ANALYST: Deep sentiment analysis, crisis detection, trend monitoring
+> Reputation Manager orchestration details in `src/lib/agents/trust/reputation/manager.ts`.
 
 ### Standalone Agents (6) - Outside Swarm Hierarchy
 
@@ -1838,47 +1601,11 @@ All previously planned integrations are now implemented:
 - **Xero Accounting** — REAL (OAuth, invoices, contacts)
 - **PayPal Payments** — REAL (orders, capture, payouts)
 
-### Dashboard-Swarm Connectivity (LIVE: January 29, 2026)
+### Dashboard-Swarm Connectivity
 
-**Audit Reference:** `docs/audit_dashboard_connectivity.md`
-
-**Overall Connectivity Score: 85/100 (LIVE)**
-
-| Category | Status | Implementation |
-|----------|--------|----------------|
-| State Alignment | **LIVE** | `getSwarmStatus()` exposed via `/api/system/status`, consumed by `useSystemStatus` hook |
-| Telemetry Trace | **LIVE** | SwarmMonitorWidget polls live metrics from MASTER_ORCHESTRATOR |
-| Agent ID Verification | **ALIGNED** | All agent IDs unified across frontend and backend (52 agents) |
-| Brief Injection | PARTIAL | Manager briefs live; Commerce/Reputation briefs need dedicated routes |
-
-**Implemented API Routes:**
-
-| Route | Purpose | Status |
-|-------|---------|--------|
-| `GET /api/system/status` | Expose `SwarmStatus` with `ManagerBrief[]` | **LIVE** |
-| `GET /api/admin/swarm/execute` | Execute agents with circuit breaker | **LIVE** |
-| `GET /api/commerce/brief` | Expose `CommerceBrief` metrics | PLANNED |
-| `GET /api/reputation/brief` | Expose `ReputationBrief` trust scores | PLANNED |
-
-**Frontend Integration:**
-
-| Component | Status | Notes |
-|-----------|--------|-------|
-| `useSystemStatus` | **LIVE** | New hook polling `/api/system/status` with 30s interval |
-| `SwarmMonitorWidget` | **LIVE** | Consumes live data, displays 9 managers with real metrics |
-| `useOrchestratorStore` | UNCHANGED | Manages chat/UI state (separate concern) |
-
-**Agent ID Alignment (COMPLETED):**
-- Backend Registry: 47 agents (`src/lib/agents/index.ts:169-234`)
-- Frontend Widget: Displays all 9 managers from live API
-- Execute Route Whitelist: 3 agents (`MARKETING_MANAGER`, `COMPETITOR_RESEARCHER`, `TIKTOK_EXPERT`)
-- ID Mismatch **FIXED**: `COMPETITOR_RESEARCHER` → `COMPETITOR_RESEARCHER` unified
-
-**Key Files:**
-- API Route: `src/app/api/system/status/route.ts` (NEW - calls `getSwarmStatus`)
-- Frontend Hook: `src/hooks/useSystemStatus.ts` (NEW - polling hook)
-- Swarm Widget: `src/components/shared/SwarmMonitorWidget.tsx` (UPDATED - live data)
-- Backend Orchestrator: `src/lib/agents/orchestrator/manager.ts:1230` (unchanged)
+- `GET /api/system/status` exposes `SwarmStatus` with `ManagerBrief[]` from `getSwarmStatus()`
+- `useSystemStatus` hook polls every 30s, consumed by `SwarmMonitorWidget`
+- All agent IDs aligned between backend registry and frontend
 
 ---
 
@@ -2063,304 +1790,14 @@ Admin users access the `/admin/*` route tree with the System section:
 - **Sites Routes:** `/sites/*` (uses PLATFORM_ID internally)
 - **Store Routes:** `/store/*` (uses PLATFORM_ID internally)
 
-#### Admin Navigation Context (January 30, 2026)
+> Admin navigation context, impersonation flow, and admin org views are fully implemented. See `src/app/admin/layout.tsx` and `src/components/dashboard/navigation-config.ts` for details.
 
-**Purpose:** Prevent Admin users from being routed OUT of the admin context when viewing organization details.
+### Theme Architecture
 
-**Problem Solved:** The UnifiedSidebar was showing CLIENT_SECTIONS (11 sections) to Admin users in the admin context. Clicking any of these links would cause navigation issues:
-1. Exits the `/admin` route tree
-2. Unmounts Jasper (AdminOrchestrator)
-3. Loses the Admin theme
-4. Routes to dashboard context unnecessarily
-
-**Solution:** Admin Navigation Context system that dynamically switches navigation based on current route:
-
-| Context | Route Pattern | Navigation Shown |
-|---------|---------------|------------------|
-| `admin-global` | `/admin/*` (except org detail) | Support Tools + System |
-| `admin-org-view` | `/admin/organizations/[id]/*` | Organization + Support Tools + System |
-
-**Admin Support Flow** (Stay in Admin Context):
-```
-Admin User → /admin/organizations → /admin/organizations/[id] → /admin/organizations/[id]/edit
-                                                              ↓
-                                   Sidebar shows: Organization, Support Tools, System sections
-                                       Jasper remains mounted, Admin theme active
-```
-
-**Owner Impersonation Flow** (Tier 3.1 — Implemented):
-```
-Owner → /system/impersonate → Search & select user → Enter reason → POST /api/admin/impersonate
-                                                                      ↓
-                              ImpersonationBanner displays at top of viewport (all pages)
-                              Owner sees platform as the target user
-                              Session tracked in Firestore (impersonationSessions collection)
-                              Audit log entry created in auditLogs collection
-                                                                      ↓
-                              Owner clicks "End Session" → DELETE /api/admin/impersonate
-                              Banner removed, session marked as ended
-```
-
-**Implementation Files:**
-- `src/app/admin/layout.tsx` - Detects admin navigation context from pathname
-- `src/components/dashboard/UnifiedSidebar.tsx` - Accepts `adminNavigationContext` and `adminViewingOrgId` props
-- `src/components/dashboard/navigation-config.ts` - Exports `getNavigationForRole(role, adminContext)` with context-aware sections
-- `src/types/unified-rbac.ts` - Defines `admin_org_view` and `admin_support` navigation categories
-
-**Gap Report (0 Missing Routes - COMPLETE):**
-The `/admin/organizations/[id]/*` route tree now has **45 functional pages** (January 30, 2026 - Full Implementation):
-
-| Route | Status | Description |
-|-------|--------|-------------|
-| `/admin/organizations/[id]` | ✅ | Organization detail view |
-| `/admin/organizations/[id]/edit` | ✅ | Edit organization |
-| `/admin/organizations/[id]/dashboard` | ✅ | Admin org dashboard |
-| `/admin/organizations/[id]/leads` | ✅ | Lead management view |
-| `/admin/organizations/[id]/deals` | ✅ | Deal pipeline view |
-| `/admin/organizations/[id]/contacts` | ✅ | Contact management view |
-| `/admin/organizations/[id]/analytics` | ✅ | Analytics dashboard |
-| `/admin/organizations/[id]/analytics-pipeline` | ✅ | Pipeline analytics |
-| `/admin/organizations/[id]/analytics-revenue` | ✅ | Revenue analytics |
-| `/admin/organizations/[id]/calls` | ✅ | Call management view |
-| `/admin/organizations/[id]/conversations` | ✅ | Conversation tracking |
-| `/admin/organizations/[id]/email-campaigns` | ✅ | Email campaign management |
-| `/admin/organizations/[id]/social-campaigns` | ✅ | Social campaign management |
-| `/admin/organizations/[id]/sequences` | ✅ | Sequence management |
-| `/admin/organizations/[id]/nurture` | ✅ | Nurture sequence view |
-| `/admin/organizations/[id]/forms` | ✅ | Form management |
-| `/admin/organizations/[id]/templates` | ✅ | Template management |
-| `/admin/organizations/[id]/products` | ✅ | Product catalog view |
-| `/admin/organizations/[id]/orders` | ✅ | Order management view |
-| `/admin/organizations/[id]/storefront` | ✅ | Storefront management |
-| `/admin/organizations/[id]/proposals` | ✅ | Proposal management |
-| `/admin/organizations/[id]/battlecards` | ✅ | Sales battlecards |
-| `/admin/organizations/[id]/lead-scoring` | ✅ | Lead scoring config |
-| `/admin/organizations/[id]/workflows` | ✅ | Workflow automation |
-| `/admin/organizations/[id]/workforce` | ✅ | AI workforce view |
-| `/admin/organizations/[id]/datasets` | ✅ | Dataset management |
-| `/admin/organizations/[id]/fine-tuning` | ✅ | Model fine-tuning |
-| `/admin/organizations/[id]/agent-training` | ✅ | Agent training |
-| `/admin/organizations/[id]/custom-tools` | ✅ | Custom tools config |
-| `/admin/organizations/[id]/ab-tests` | ✅ | A/B test management |
-| `/admin/organizations/[id]/living-ledger` | ✅ | Living ledger view |
-| `/admin/organizations/[id]/website-pages` | ✅ | Website pages |
-| `/admin/organizations/[id]/website-blog` | ✅ | Blog management |
-| `/admin/organizations/[id]/website-seo` | ✅ | SEO management |
-| `/admin/organizations/[id]/website-domains` | ✅ | Domain management |
-| `/admin/organizations/[id]/video-studio` | ✅ | Video studio |
-| `/admin/organizations/[id]/voice-ai-lab` | ✅ | Voice AI lab |
-| `/admin/organizations/[id]/seo-ai-lab` | ✅ | SEO AI lab |
-| `/admin/organizations/[id]/social-ai-lab` | ✅ | Social AI lab |
-| `/admin/organizations/[id]/integrations` | ✅ | Integration management |
-| `/admin/organizations/[id]/settings` | ✅ | Organization settings |
-| `/admin/organizations/[id]/api-keys` | ✅ | API key management |
-| `/admin/organizations/[id]/webhooks` | ✅ | Webhook management |
-| `/admin/organizations/[id]/billing` | ✅ | Billing management |
-| `/admin/organizations/[id]/security` | ✅ | Security settings |
-
-**All Admin Support Views implemented with:**
-- `useAdminAuth()` permission checks (admin role required)
-- Organization data loading via FirestoreService
-- Consistent Admin Banner with Shield icon
-- Dark theme styling matching platform design
-- Backend integration via existing APIs
-
-#### Bug Fix (January 27, 2026)
-
-**Issue:** UnifiedSidebar href resolution was checking for dynamic org placeholder in navigation-config.ts.
-**Fix:** Updated UnifiedSidebar.tsx to use static routes:
-- `NavItemComponent` href builder (line 72-77)
-- `NavSectionComponent` active item check (line 119-126)
-- Section items active state check (line 166-170)
-
-**All 109 workspace routes and 46 admin routes verified as valid.**
-
-#### Key Finding: Dual-Layout Navigation System
-
-**Investigation Result (January 27, 2026 Restoration):** The codebase uses **separate navigation systems** for dashboard vs admin:
-
-1. **Dashboard Routes** (`/(dashboard)/*`) use `AdminSidebar.tsx`
-   - 8 consolidated sections with ~27 sidebar items (February 19, 2026)
-   - `SubpageNav` tab bars on hub pages for sub-page discovery
-   - Settings and Academy in sidebar footer icons
-   - **Dynamic theming via CSS variables** (replaces hardcoded hex colors as of 1/27/2026):
-     - `var(--color-bg-main)` - Main background (was #000000)
-     - `var(--color-bg-paper)` - Sidebar/header background (was #0a0a0a)
-     - `var(--color-bg-elevated)` - Elevated surfaces like active nav items (was #1a1a1a)
-     - `var(--color-border-main)` - Border colors (was #1a1a1a)
-   - Lucide icons with CSS variable coloring
-   - NO System tools (Audit Logs, Feature Flags, etc.) - completely absent
-
-2. **Admin Routes** (`/admin/*`) use `UnifiedSidebar` component
-   - Navigation from `getNavigationForRole()` with hard-gated System section
-   - Admin users see System tools
-
-#### Navigation Item Locations (Key Routes)
-
-| Feature | Section | Permission Required | Route Pattern |
-|---------|---------|---------------------|---------------|
-| Dashboard | Home | — | `/dashboard` |
-| Leads | CRM | `canViewLeads` | `/leads` |
-| Deals | CRM | `canViewDeals` | `/deals` |
-| Social Hub | Content | `canManageSocialMedia` | `/social/command-center` |
-| Sequences | Outreach | `canManageEmailCampaigns` | `/sequences` |
-| Video Library | Content | `canManageSocialMedia` | `/content/video/library` |
-| Video Studio | Content | `canManageSocialMedia` | `/content/video` |
-| Training Hub | AI Workforce | `canTrainAIAgents` | `/settings/ai-agents/training` |
-| Models & Data | AI Workforce | `canTrainAIAgents` | `/ai/datasets` |
-| Products | Commerce | `canManageProducts` | `/products` |
-| Analytics | Analytics | `canViewReports` | `/analytics` |
-| Site Editor | Website | `canManageWebsite` | `/website/editor` |
-| Settings | Footer | `canAccessSettings` | `/settings` |
-| System Overview | Admin only | `canViewSystemHealth` | `/admin/system/health` |
-
-#### Deleted Components (Forensic Record)
-
-| File | Commit | Date | Reason |
-|------|--------|------|--------|
-| `CommandCenterSidebar.tsx` | `f2d2497b` | Jan 26, 2026 | UI consolidation - migrated to UnifiedSidebar |
-
-**CommandCenterSidebar Contents (437 lines):** 10 navigation categories (Dashboard, Clients, Leads & Sales, Social Media, Email Marketing, AI Voice, Analytics, System, Jasper Lab), collapsible sections, badge support, role display. All functionality migrated to unified system.
-
-#### Section Visibility by Role (8 Sections — 4-Role RBAC)
-
-| # | Section | owner | admin | manager | member |
-|---|---------|-------|-------|---------|--------|
-| 1 | Home | ✅ | ✅ | ✅ | ✅ |
-| 2 | CRM | ✅ | ✅ | ✅ | ✅* |
-| 3 | Outreach | ✅ | ✅ | ✅ | - |
-| 4 | Content | ✅ | ✅ | ✅ | - |
-| 5 | AI Workforce | ✅ | ✅ | ✅ | - |
-| 6 | Commerce | ✅ | ✅ | ✅ | ✅* |
-| 7 | Website | ✅ | ✅ | ✅ | - |
-| 8 | Analytics | ✅ | ✅ | ✅ | ✅* |
-
-Footer (Settings, Academy) visible to all roles. Settings hub internally gates Compliance & Admin to owner/admin.
-
-*Member sees limited items based on specific permissions
-
-#### Files for Navigation Debugging
-
-```
-src/components/admin/
-└── AdminSidebar.tsx             # Dashboard sidebar (8 sections + footer)
-
-src/components/ui/
-└── SubpageNav.tsx               # Route-based tab navigation component
-
-src/components/dashboard/
-├── UnifiedSidebar.tsx           # Admin sidebar (uses getNavigationForRole())
-├── navigation-config.ts         # UNIFIED_NAVIGATION constant (admin routes)
-├── README.md                    # Migration documentation
-├── MIGRATION.md                 # Migration guide
-└── IMPLEMENTATION_SUMMARY.md    # Implementation details
-
-src/types/
-└── unified-rbac.ts              # NavigationCategory type, filterNavigationByRole(), UNIFIED_ROLE_PERMISSIONS
-```
-
-#### Orphaned Code Status: ✅ CLEAN
-
-No disconnected navigation references, unused arrays, or orphaned code found during forensic audit.
-
-### Theme Architecture (INDEPENDENT PIPELINES)
-
-**Isolation Implemented:** January 27, 2026
-
-The Admin UI and Client UI now have **completely independent theme-variable pipelines**. This ensures that organization-specific theme customizations in the Client Workspace do NOT affect the Admin Dashboard, and vice versa.
-
-#### Theme Pipeline Comparison
-
-| Aspect | Admin Dashboard | Client Workspace |
-|--------|-----------------|------------------|
-| **Hook** | `useAdminTheme()` | `useOrgTheme()` |
-| **Source** | Platform-level Firestore (`platform_settings/adminTheme`) | Platform Firestore (`organizations/{PLATFORM_ID}/themes/default`) |
-| **Scope** | `.admin-theme-scope` container class | `document.documentElement` |
-| **Variable Prefix** | `--admin-color-*` (with standard override) | `--color-*` |
-| **Isolation** | CSS cascading via scoped container | Global application |
-
-#### How Isolation Works
-
-1. **Dashboard** (`/(dashboard)/*`):
-   - `useOrgTheme()` loads organization-specific theme from Firestore
-   - Applies CSS variables to `document.documentElement` (root level)
-   - Each organization can have different colors, fonts, branding
-
-2. **Admin Dashboard** (`/admin/*`):
-   - `useAdminTheme()` loads platform-level theme settings
-   - Applies CSS variables to a **scoped container** with class `.admin-theme-scope`
-   - Admin layout wraps all content in this scoped container
-   - Standard CSS variables (`--color-*`) are **overridden within the scope**
-   - This means even if `useOrgTheme` modifies root variables, Admin is unaffected
-
-#### CSS Variable Hierarchy
-
-```css
-/* Root level (globals.css) - Base defaults */
-:root {
-  --color-primary: #6366f1;
-  --admin-color-primary: #6366f1;  /* Admin-specific fallbacks */
-  ...
-}
-
-/* Client themes modify :root via useOrgTheme() */
-document.documentElement.style.setProperty('--color-primary', orgTheme.primary);
-
-/* Admin scope overrides (cascading) */
-.admin-theme-scope {
-  --color-primary: var(--admin-color-primary);  /* Ignores root changes */
-  ...
-}
-```
-
-#### Theme Files
-
-| File | Purpose |
-|------|---------|
-| `src/hooks/useAdminTheme.ts` | Admin theme hook - scoped application |
-| `src/hooks/useOrgTheme.ts` | Client theme hook - root application |
-| `src/app/globals.css` | Base variables + Admin scope class |
-| `src/app/admin/layout.tsx` | Applies `.admin-theme-scope` container |
-| `src/app/(dashboard)/settings/theme/page.tsx` | **Theme Editor** (UI exists) |
-
-> **Note:** The **Admin Theme Editor UI does NOT exist** yet. Admin themes can only be modified via direct Firestore writes to `platform_settings/adminTheme`. The Theme Editor at `/(dashboard)/settings/theme` is fully functional.
-
-#### Admin Sidebar Dynamic Styling (January 27, 2026)
-
-The `AdminSidebar.tsx` and `UnifiedSidebar.tsx` components feature **100% reactive theming** via CSS variables:
-
-**Active State Highlights:**
-- 3px solid left border using `var(--color-primary)` on active navigation items
-- Background uses `var(--color-bg-elevated)` for active items
-- Smooth transitions on all theme-reactive elements
-
-**Lucide SVG Iconography:**
-- Active items: Icons colored with `text-[var(--color-primary)]`
-- Inactive items: Icons colored with `text-[var(--color-text-secondary)]`
-- Section icons: Dynamically colored based on whether section contains active item
-- Hover states: Icons transition to primary color on hover
-
-**Implementation Pattern:**
-```tsx
-// Dynamic icon color tied to theme variables
-const iconColorClass = isActive
-  ? "text-[var(--color-primary)]"
-  : "text-[var(--color-text-secondary)]";
-
-<Icon className={`w-5 h-5 transition-colors ${iconColorClass}`} />
-```
-
-**Reactivity:** Changes made in the Admin Theme Editor (`platform_settings/adminTheme` in Firestore) reflect immediately in the sidebar without requiring a page reload, as CSS variables are applied via `useAdminTheme()` hook to the `.admin-theme-scope` container.
-
-#### Verification Test
-
-To verify isolation:
-1. Navigate to `/(dashboard)/settings/theme`
-2. Change the organization's primary color to red (`#ff0000`)
-3. Navigate to `/admin/*`
-4. Confirm Admin sidebar remains purple/indigo (`#6366f1`)
-
-The Admin UI will NOT be affected by organization theme changes.
+> See **Rule 3** for CSS variable governance. Admin and client themes use independent pipelines:
+> - Admin: `useAdminTheme()` → `.admin-theme-scope` → `platform_settings/adminTheme`
+> - Client: `useOrgTheme()` → `:root` → `organizations/{PLATFORM_ID}/themes/default`
+> - Theme Editor: `/(dashboard)/settings/theme` (client-facing). Admin theme editor not yet built.
 
 ### State Management Architecture
 
@@ -2424,286 +1861,7 @@ Agents communicate via **MemoryVault** (Firestore-backed since Feb 8, 2026):
 
 **Gap Resolved (commit b1c50e8f):** ConversationMemory service now provides unified retrieval across all channels. Agents can query conversation history with auto-analysis and Lead Briefing generation. Voice transcripts persist to Firestore, and all channels are agent-queryable.
 
-### Intelligence Manager - Dynamic Orchestration Engine
-
-**Status:** FUNCTIONAL (January 29, 2026)
-**Location:** `src/lib/agents/intelligence/manager.ts`
-
-The Intelligence Manager is the orchestration engine for market intelligence gathering. It coordinates 5 specialist agents with dynamic resolution, parallel execution, and graceful degradation.
-
-#### Orchestration Patterns
-
-| Intent | Specialists Activated | Use Case |
-|--------|----------------------|----------|
-| `FULL_MARKET_RESEARCH` | All 5 specialists | Complete market analysis |
-| `COMPETITOR_ANALYSIS` | COMPETITOR_RESEARCHER, TECHNOGRAPHIC_SCOUT | Competitive landscape |
-| `BRAND_MONITORING` | SENTIMENT_ANALYST, TREND_SCOUT | Brand health tracking |
-| `TECH_DISCOVERY` | TECHNOGRAPHIC_SCOUT, SCRAPER_SPECIALIST | Technology stack analysis |
-| `TREND_ANALYSIS` | TREND_SCOUT, SENTIMENT_ANALYST | Market signal detection |
-| `COMPANY_PROFILE` | SCRAPER_SPECIALIST, COMPETITOR_RESEARCHER | Company profiling |
-| `SINGLE_SPECIALIST` | (Delegation rules) | Targeted single-specialist query |
-
-#### Execution Flow
-
-```
-1. Parse Request → Detect Intent from payload keywords
-   ↓
-2. Resolve Specialists → Dynamic lookup from SwarmRegistry
-   ↓
-3. Parallel Execution → Promise.allSettled() for isolation
-   ↓
-4. Graceful Degradation → Partial results on specialist failure
-   ↓
-5. Synthesize Brief → Aggregate into IntelligenceBrief
-   ↓
-6. Store in Vault → Share insights via MemoryVault
-```
-
-#### IntelligenceBrief Output Structure
-
-```typescript
-{
-  briefId: string;
-  request: IntelligenceRequest;
-  competitorAnalysis: { competitors, marketInsights, confidence } | null;
-  sentimentAnalysis: { overallSentiment, brandHealth, alerts, confidence } | null;
-  technographicAnalysis: { techStack, platforms, summary, confidence } | null;
-  trendAnalysis: { signals, forecasts, pivotRecommendations, confidence } | null;
-  companyProfile: { keyFindings, contactInfo, businessSignals, confidence } | null;
-  synthesis: {
-    executiveSummary: string;
-    keyFindings: string[];
-    opportunities: string[];
-    threats: string[];
-    recommendedActions: string[];
-    overallConfidence: number;
-  };
-  execution: {
-    totalSpecialists: number;
-    successfulSpecialists: number;
-    failedSpecialists: number;
-    skippedSpecialists: number;
-    totalExecutionTimeMs: number;
-  };
-  errors: string[];
-}
-```
-
-#### Key Features
-
-| Feature | Implementation |
-|---------|----------------|
-| **Dynamic Resolution** | Specialists resolved from SwarmRegistry at runtime, not hard-coded |
-| **Parallel Execution** | All specialists execute via `Promise.allSettled()` |
-| **Graceful Degradation** | Returns partial results if some specialists fail |
-| **Intent Detection** | Keyword-based intent mapping + explicit intent parameter |
-| **Contextual Synthesis** | Weighted confidence scoring, contradiction detection |
-| **Vault Integration** | Stores insights and broadcasts signals to MemoryVault |
-
-### Marketing Manager - Industry-Agnostic Cross-Channel Commander
-
-**Status:** FUNCTIONAL (January 29, 2026)
-**Location:** `src/lib/agents/marketing/manager.ts`
-
-The Marketing Manager is an **industry-agnostic** orchestration engine for cross-channel marketing campaigns. It dynamically adapts to ANY business context via the MemoryVault Brand DNA, eliminating all hardcoded industry assumptions.
-
-#### Key Design Principles
-
-| Principle | Implementation |
-|-----------|----------------|
-| **Zero Industry Bias** | All industry context derived from Brand DNA at runtime |
-| **Dynamic Specialist Resolution** | 5 specialists resolved from SwarmRegistry via factory functions |
-| **SEO-Social Feedback Loop** | SEO keywords flow into social content briefs |
-| **Brand Voice Consistency** | All content adapts to brand tone, key phrases, and avoid-phrases |
-| **Parallel Execution** | Social specialists execute concurrently for performance |
-
-#### Campaign Intent Detection
-
-| Intent | Specialists Activated | Use Case |
-|--------|----------------------|----------|
-| `FULL_FUNNEL` | All 5 specialists | Comprehensive omnichannel campaign |
-| `AWARENESS` | TIKTOK, TWITTER, LINKEDIN | Brand visibility and reach |
-| `LEAD_GENERATION` | SEO, FACEBOOK, LINKEDIN | B2B/B2C lead capture |
-| `THOUGHT_LEADERSHIP` | SEO, TWITTER, LINKEDIN | Authority building |
-| `VIRAL_CONTENT` | TIKTOK, TWITTER | Maximum organic reach |
-| `PAID_ADVERTISING` | FACEBOOK, LINKEDIN | Targeted paid campaigns |
-| `ORGANIC_GROWTH` | SEO + All social | Long-term organic strategy |
-| `SINGLE_PLATFORM` | (Detected dynamically) | Platform-specific request |
-
-#### Orchestration Flow
-
-```
-1. Load Brand DNA → Industry, tone, key phrases from MemoryVault
-   ↓
-2. Detect Campaign Intent → Keyword-based + objective mapping
-   ↓
-3. SEO Routing → Detects domain analysis vs keyword research from message
-   ↓
-3a. Domain Analysis → If traffic/visitors/backlinks detected + domain extracted →
-    SEO_EXPERT.domain_analysis (5 concurrent DataForSEO calls)
-3b. Keyword Research → Otherwise SEO_EXPERT provides target keywords FIRST
-   ↓
-4. Inject Keywords → SEO terms flow into all social briefs
-   ↓
-5. Parallel Execution → Social specialists run via Promise.allSettled()
-   ↓
-6. Aggregate Results → Unified CampaignBrief with cross-platform recommendations
-   ↓
-7. Store Insights → Share campaign strategy via MemoryVault
-```
-
-#### CampaignBrief Output Structure
-
-```typescript
-{
-  briefId: string;
-  campaignGoal: CampaignGoal;
-  brandContext: BrandContext;      // Industry context from Brand DNA
-  detectedIntent: CampaignIntent;
-  seoGuidance: SEOKeywordGuidance | null;  // Keywords for social content
-  campaignAnalysis: CampaignAnalysis;
-  platformStrategy: PlatformStrategy;
-  delegations: DelegationResult[];
-  specialistOutputs: {
-    tiktok: unknown | null;
-    twitter: unknown | null;
-    facebook: unknown | null;
-    linkedin: unknown | null;
-    seo: unknown | null;
-  };
-  aggregatedPlan: AggregatedPlan;
-  crossPlatformRecommendations: string[];
-  confidence: number;
-  execution: {
-    totalSpecialists: number;
-    successfulSpecialists: number;
-    totalExecutionTimeMs: number;
-  };
-}
-```
-
-#### Specialists Orchestrated
-
-| Specialist | Factory Function | Domain |
-|------------|-----------------|--------|
-| `TIKTOK_EXPERT` | `getTikTokExpert()` | Short-form viral video |
-| `TWITTER_X_EXPERT` | `getTwitterExpert()` | Threads, thought leadership |
-| `FACEBOOK_ADS_EXPERT` | `getFacebookAdsExpert()` | Paid ads, lead generation |
-| `LINKEDIN_EXPERT` | `getLinkedInExpert()` | B2B content, professional networking |
-| `SEO_EXPERT` | `getSEOExpert()` | Keyword research, content optimization, **domain analysis** (traffic estimation, backlink profile, referring domains, organic competitors — 5 concurrent DataForSEO API calls) |
-
-#### Brand DNA Integration
-
-The manager loads platform context at runtime:
-
-```typescript
-BrandContext {
-  platformId: string;           // Always PLATFORM_ID
-  companyDescription: string;  // What the business does
-  uniqueValue: string;         // USP - derived dynamically
-  targetAudience: string;      // Who to target
-  industry: string;            // Industry context (never hardcoded!)
-  toneOfVoice: string;         // warm | professional | direct | etc.
-  keyPhrases: string[];        // Phrases to use in content
-  avoidPhrases: string[];      // Phrases to never use
-  competitors: string[];       // For differentiation
-}
-```
-
-This architecture ensures the Marketing Manager works for **any industry**: SaaS, real estate, e-commerce, healthcare, finance, or any custom vertical defined in the Brand DNA.
-
-### Master Orchestrator - Swarm CEO (L1 Orchestrator)
-
-**Status:** FUNCTIONAL (January 29, 2026)
-**Location:** `src/lib/agents/orchestrator/manager.ts`
-
-The Master Orchestrator is the **Swarm CEO** - the primary entry point for the entire AI platform. It interprets complex user goals and coordinates all 8 Domain Managers through sophisticated workflow orchestration.
-
-#### Core Patterns Implemented
-
-| Pattern | Description |
-|---------|-------------|
-| **Command Pattern** | Every task wrapped in a Command with target manager, payload, priority, dependencies, and compensating action |
-| **Saga Pattern** | Multi-manager workflows with sequential/parallel execution, progress tracking, and compensation on failure |
-| **Domain Routing** | Intent-based routing table mapping user goals to appropriate managers |
-| **Dependency Graph** | Cross-domain synchronization ensuring correct execution order |
-
-#### Goal Processing Pipeline
-
-```
-1. User Goal → Intent Classification (9 categories)
-   ↓
-2. Route to Primary Manager + Supporting Managers
-   ↓
-3. Decompose into DecomposedTasks (atomic manager actions)
-   ↓
-4. Create Saga from Template (if multi-manager workflow)
-   ↓
-5. Execute Saga with Dependency Resolution
-   ↓
-6. Handle Failures with Compensating Transactions
-   ↓
-7. Aggregate Results → SwarmStatus Report
-```
-
-#### Intent Categories
-
-| Intent | Primary Manager | Supporting Managers |
-|--------|-----------------|---------------------|
-| FULL_BUSINESS_SETUP | ARCHITECT_MANAGER | All 8 managers |
-| WEBSITE_BUILD | ARCHITECT_MANAGER | BUILDER, CONTENT |
-| MARKETING_CAMPAIGN | MARKETING_MANAGER | CONTENT, INTELLIGENCE |
-| SALES_PIPELINE | REVENUE_DIRECTOR | OUTREACH, INTELLIGENCE |
-| CONTENT_CREATION | CONTENT_MANAGER | MARKETING |
-| CUSTOMER_OUTREACH | OUTREACH_MANAGER | CONTENT, INTELLIGENCE |
-| ECOMMERCE_SETUP | COMMERCE_MANAGER | BUILDER, CONTENT |
-| REPUTATION_MANAGEMENT | REPUTATION_MANAGER | OUTREACH, CONTENT |
-| MARKET_RESEARCH | INTELLIGENCE_MANAGER | (standalone) |
-
-#### Saga Templates
-
-Pre-defined workflows for common business operations:
-
-1. **FULL_BUSINESS_LAUNCH**: Research → Architect → Content → Build → Commerce → Marketing → Outreach → Reputation
-2. **WEBSITE_BUILD**: Architect → Content → Build
-3. **MARKETING_CAMPAIGN**: Research → Content → Launch
-4. **SALES_ACCELERATION**: Research → Qualify → Outreach
-5. **CONTENT_PRODUCTION**: Produce → Distribute
-6. **OUTREACH_SEQUENCE**: Sentiment → Content → Execute
-7. **ECOMMERCE_LAUNCH**: Catalog → Content → Checkout → Build
-8. **REPUTATION_BUILD**: Monitor → GMB → Solicit
-
-#### SwarmStatus Aggregation
-
-The `getSwarmStatus()` method provides real-time health and metrics:
-
-```typescript
-SwarmStatus {
-  orchestratorId: string;
-  timestamp: Date;
-  overallHealth: 'HEALTHY' | 'DEGRADED' | 'CRITICAL' | 'OFFLINE';
-  managers: ManagerBrief[];  // Status from all 9 managers
-  activeSagas: number;
-  completedSagas: number;
-  failedSagas: number;
-  totalCommands: number;
-  successRate: number;
-  averageResponseTimeMs: number;
-  insights: InsightEntry[];
-}
-```
-
-#### Cross-Manager Dependencies
-
-The orchestrator enforces execution order through dependency tracking:
-
-- ARCHITECT must complete before BUILDER starts
-- CONTENT depends on ARCHITECT blueprints
-- MARKETING depends on CONTENT assets
-- OUTREACH depends on CONTENT copy
-- BUILDER depends on ARCHITECT + CONTENT
-- REPUTATION may trigger OUTREACH for review solicitation
-- COMMERCE triggers REPUTATION on sale.completed
+> **Manager orchestration internals** (Intelligence, Marketing, Master Orchestrator pipelines, intents, saga templates, brief structures) are documented in the source code. See `src/lib/agents/*/manager.ts` files for implementation details.
 
 ---
 
@@ -2762,7 +1920,7 @@ interface UnifiedUser {
   id: string;
   email: string;
   displayName: string;
-  role: AccountRole;  // 'admin' | 'user'
+  role: AccountRole;  // 'owner' | 'admin' | 'manager' | 'member'
   platformId: string;       // Always PLATFORM_ID
   status: 'active' | 'suspended' | 'pending';
   mfaEnabled: boolean;
@@ -2785,71 +1943,7 @@ interface AdminThemeConfig {
 
 ## Autonomous Verification
 
-### Admin Gateway E2E Audit
-
-**Audit Date:** January 30, 2026
-**Test File:** `tests/e2e/admin-gateway.spec.ts`
-**Audit Method:** Playwright-driven E2E test + MCP browser manual verification
-
-#### Test Results Summary
-
-| Assertion | Description | Status | Evidence |
-|-----------|-------------|--------|----------|
-| 1 | Smart Redirect: admin → /admin | **PASS** | URL verified as `/admin`, not `/(dashboard)/...` |
-| 2 | UnifiedSidebar System Section | **PASS** | System section visible with 6 hard-gated items |
-| 3 | Admin Theme CSS Isolation | **PASS** | All CSS variables correctly scoped |
-
-#### Detailed Results
-
-##### Assertion 1: Smart Role-Based Redirect
-- **Commit Reference:** `950e5f08` (Smart role-based login redirection)
-- **Behavior:** Admin users (role='admin') are redirected to `/admin` after login
-- **Verification:** URL matches `/admin` pattern, does NOT contain `/(dashboard)/`
-- **FOUC Prevention:** Redirecting state shows clean loading indicator
-
-##### Assertion 2: UnifiedSidebar System Section (Hard-Gated)
-- **Commit Reference:** `1a3c89f5` (Sidebar default collapsed state)
-- **System Section Items Verified:**
-  - System Overview (`/admin/system/health`)
-  - Organizations (`/admin/organizations`)
-  - All Users (`/admin/users`)
-  - Feature Flags (`/admin/system/flags`)
-  - Audit Logs (`/admin/system/logs`)
-  - System Settings (`/admin/system/settings`)
-- **Hard-Gate:** System section ONLY appears for `admin` role
-
-##### Assertion 3: Admin Theme CSS Variable Isolation
-- **Scope Class:** `.admin-theme-scope` present on admin container
-- **CSS Variables Verified:**
-
-| Variable | Expected | Actual | Status |
-|----------|----------|--------|--------|
-| `--admin-color-primary` | `#6366f1` | `#6366f1` | PASS |
-| `--admin-color-bg-main` | `#000000` | `#000000` | PASS |
-| `--admin-color-bg-paper` | `#0a0a0a` | `#0a0a0a` | PASS |
-| `--admin-color-text-primary` | `#ffffff` | `#ffffff` | PASS |
-| `--color-primary` (scoped) | `#6366f1` | `#6366f1` | PASS |
-| `--color-bg-main` (scoped) | `#000000` | `#000000` | PASS |
-| `--color-bg-paper` (scoped) | `#0a0a0a` | `#0a0a0a` | PASS |
-
-- **Sidebar Background:** `rgb(10, 10, 10)` = `#0a0a0a` (matches expected)
-- **Theme Bleeding:** NONE detected - Admin theme is properly isolated
-
-#### Playwright Test Suite Status
-
-| Browser | Tests Passed | Tests Skipped | Tests Failed |
-|---------|--------------|---------------|--------------|
-| Chromium | 5 | 4 | 0 |
-| Mobile Chrome | 5 | 4 | 0 |
-
-*Note: Auth-dependent tests skipped due to E2E_ADMIN_EMAIL not configured in CI environment*
-
-#### Infrastructure Notes
-
-- **Test Isolation:** Playwright config uses `testMatch: '**/*.spec.ts'` to isolate from Jest E2E tests
-- **Admin Layout:** Uses `useAdminTheme` hook with scoped CSS variable application
-- **Fixed Positioning:** Sidebar applies theme variables directly via inline styles for proper inheritance
-- **Navigation Config:** `getNavigationForRole()` hard-gates System section to `admin` only
+> E2E tests (18 Playwright specs + 3 Jest E2E) cover auth flows, admin gateway, website builder, CRM, e-commerce, social, settings, and voice. Run via `npm run test:playwright`. See `tests/e2e/` for specs.
 
 ---
 
@@ -2915,6 +2009,6 @@ See `docs/archive/legacy/README.md` for full archive index.
 **END OF SINGLE SOURCE OF TRUTH**
 
 *Document generated by Claude Code multi-agent audit - January 26, 2026*
-*Last updated: February 20, 2026 — Document cleanup (removed completed roadmaps, resolved trackers, historical milestones)*
+*Last updated: March 2, 2026 — Removed ~1000 lines of agent orchestration internals, fixed SaaS/penthouse language, updated metrics (171 routes, 315 API, 1439 files, 54 agents), corrected RBAC role type*
 
 > Session changelogs, launch gap analysis, and completed roadmap details archived in `docs/archive/`.
