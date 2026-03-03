@@ -39,7 +39,10 @@ export async function GET(request: NextRequest) {
       statusFilter: statusFilter ?? 'all',
     });
 
-    const projects = await listProjects(user.uid, statusFilter);
+    // Single-tenant: show ALL org projects, not just the current user's.
+    // Jasper creates projects with createdBy = user.uid, but older projects
+    // may have createdBy = 'jasper', so filtering by user.uid would hide them.
+    const projects = await listProjects(undefined, statusFilter);
 
     // Return lightweight project summaries (no full scene data)
     const summaries = projects.map((p) => ({

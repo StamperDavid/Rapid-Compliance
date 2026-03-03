@@ -350,7 +350,7 @@ export async function POST(request: NextRequest) {
     // Mission tracking — generate ID for potential delegation tracking
     const missionId = `mission_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
     const conversationId = `jasper_${context}`;
-    const missionContext: ToolCallContext = { conversationId, missionId, userPrompt: message };
+    const missionContext: ToolCallContext = { conversationId, missionId, userPrompt: message, userId: user.uid };
     let missionCreated = false;
 
     // Tools that trigger a live mission on Mission Control

@@ -477,6 +477,14 @@
       "fields": [
         { "fieldPath": "agentType", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "video_pipeline_projects",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "updatedAt", "order": "DESCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

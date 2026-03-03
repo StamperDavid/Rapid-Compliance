@@ -29,6 +29,7 @@ export interface ToolCallContext {
   conversationId?: string;
   missionId?: string;
   userPrompt?: string;
+  userId?: string;
 }
 
 /**
@@ -3153,7 +3154,7 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
           resolution: '1080p' as const,
         };
 
-        const projectResult = await createProject(brief, 'jasper');
+        const projectResult = await createProject(brief, context?.userId ?? 'jasper');
 
         if (!projectResult.success || !projectResult.projectId) {
           content = JSON.stringify({
