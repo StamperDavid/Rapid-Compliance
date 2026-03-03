@@ -1,7 +1,7 @@
 # SalesVelocity.ai - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** March 2, 2026 (SEO system seeded — Brand DNA, Website SEO, SEO Lab Training; doc cleanup — removed ~1000 lines of agent orchestration internals)
+**Last Updated:** March 2, 2026 (Growth Command Center Phase 1 — 5 services, 11 API routes, 3 crons, 7 UI pages, sidebar/nav wiring)
 **Branches:** `dev` (latest)
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Architecture:** Single-Tenant Penthouse Model (development strategy — multi-tenant SaaS product)
@@ -36,12 +36,12 @@
 
 | Metric | Count | Status |
 |--------|-------|--------|
-| Physical Routes (page.tsx) | 171 | Verified March 2, 2026 |
-| API Endpoints (route.ts) | 315 | Verified March 2, 2026 |
+| Physical Routes (page.tsx) | 178 | Verified March 2, 2026 (+7 Growth pages) |
+| API Endpoints (route.ts) | 329 | Verified March 2, 2026 (+11 Growth API + 3 Growth crons) |
 | AI Agents | 54 | **54 FUNCTIONAL (46 swarm + 6 standalone + 2 variants)** |
 | RBAC Roles | 4 | `owner` (level 3), `admin` (level 2), `manager` (level 1), `member` (level 0) — 4-role RBAC |
 | TypeScript Files | 1,439 | Verified March 2, 2026 |
-| Firestore Collections | 69+ | Active |
+| Firestore Collections | 75+ | Active (+6 Growth collections) |
 
 **Architecture:** Single-tenant Penthouse Model (development strategy). SalesVelocity.ai is a multi-tenant SaaS product — clients will purchase their own deployment. Penthouse simplifies development; multi-tenancy will be re-enabled.
 
@@ -497,6 +497,14 @@ SalesVelocity.ai is a **multi-tenant SaaS product** currently running on the Pen
 **Video:**
 - `/content/video` (Video Studio — 7-step production pipeline: Request → Decompose → Pre-Production → Approval → Generation → Assembly → Post-Production)
 - `/content/video/library` (NEW — Video Library gallery with grid view, filter tabs, detail expansion, edit/download/delete actions)
+
+**Growth Command Center (NEW March 2):**
+- `/growth/command-center` — Overview dashboard: stat cards (competitors, keywords, AI visibility), competitive landscape, keyword movers, strategy status, activity feed
+- `/growth/competitors` — Competitor cards, discover by niche, add/analyze/remove, domain authority trends
+- `/growth/keywords` — Keyword ranking table with position/change/volume/CPC/difficulty, bulk add, check ranking
+- `/growth/strategy` — 3-tier strategy comparison (Aggressive/Competitive/Scrappy), approve/reject, budget config, cheaper alternatives
+- `/growth/ai-visibility` — AI search visibility score, query results, competitor presence, run check
+- `/growth/activity` — Timeline activity feed with type filtering and icon/color coding
 
 **AI Workforce:**
 - `/mission-control` (NEW Sprint 18 — 3-panel live delegation tracker: sidebar, timeline, step detail)
@@ -1124,7 +1132,7 @@ This script:
 
 ## Tooling Inventory
 
-### API Routes (298 Total — Verified February 27, 2026)
+### API Routes (312 Total — Verified March 2, 2026)
 
 | Category | Count | Path Pattern | Status |
 |----------|-------|--------------|--------|
@@ -1135,7 +1143,8 @@ This script:
 | Billing | 3 | `/api/billing/*` | Functional |
 | Coaching | 2 | `/api/coaching/*` | Functional |
 | CRM | 9 | `/api/crm/*` | Functional |
-| Cron | 1 | `/api/cron/social-listening-collector` | Functional (NEW Feb 12) |
+| Cron | 4 | `/api/cron/*` | Functional (+3 Growth crons March 2) |
+| Growth | 11 | `/api/growth/*` | Functional (NEW March 2) |
 | Discovery | 1 | `/api/discovery/*` | Functional |
 | E-commerce | 5 | `/api/ecommerce/*` | Functional (orders path fixed Feb 12) |
 | Email | 4 | `/api/email-writer/*`, `/api/email/*` | Functional |
@@ -1220,6 +1229,25 @@ This script:
 | `/api/social/oauth/auth/[provider]` | GET | Initiate OAuth flow (Twitter PKCE, LinkedIn OAuth 2.0) | FUNCTIONAL (NEW Session 6) |
 | `/api/social/oauth/callback/[provider]` | GET | OAuth callback handler with token exchange + encryption | FUNCTIONAL (NEW Session 6) |
 | `/api/social/accounts/verify` | POST | Verify social account connection status | FUNCTIONAL (NEW Session 6) |
+
+#### Growth Command Center (NEW March 2)
+
+| Endpoint | Method | Purpose | Status |
+|----------|--------|---------|--------|
+| `/api/growth/competitors` | GET/POST | List/add competitors | FUNCTIONAL |
+| `/api/growth/competitors/discover` | POST | Discover competitors by niche via CompetitorResearcher | FUNCTIONAL |
+| `/api/growth/competitors/[competitorId]` | GET/DELETE/POST | Get/remove/re-analyze competitor | FUNCTIONAL |
+| `/api/growth/keywords` | GET/POST | List/add keywords for SERP tracking | FUNCTIONAL |
+| `/api/growth/keywords/bulk` | POST | Bulk add keywords | FUNCTIONAL |
+| `/api/growth/keywords/[keywordId]` | GET/DELETE/POST | Get/remove/check keyword ranking | FUNCTIONAL |
+| `/api/growth/strategy` | GET/POST | Get latest / generate 3-tier growth strategy | FUNCTIONAL |
+| `/api/growth/strategy/approve` | POST | Approve strategy tier → dispatches to Marketing Manager | FUNCTIONAL |
+| `/api/growth/strategy/reject` | POST | Reject strategy with feedback | FUNCTIONAL |
+| `/api/growth/ai-visibility` | GET/POST | AI search visibility history / run check | FUNCTIONAL |
+| `/api/growth/activity` | GET | Activity feed with type filtering | FUNCTIONAL |
+| `/api/cron/growth-keyword-tracker` | GET | Daily keyword ranking check (5AM UTC) | FUNCTIONAL |
+| `/api/cron/growth-competitor-monitor` | GET | Weekly competitor scan (Mon 3AM UTC) | FUNCTIONAL |
+| `/api/cron/growth-ai-visibility` | GET | Weekly AI visibility sweep (Wed 4AM UTC) | FUNCTIONAL |
 
 #### Website Migration Pipeline (NEW Sprint 21)
 
@@ -1668,10 +1696,16 @@ organizations/{PLATFORM_ID}/
 ├── brandDNA/                 # Brand configuration
 ├── memoryVault/              # Agent shared memory (Firestore-backed, cold-start safe)
 ├── missions/                 # Mission Control tracking (NEW Sprint 18 — user-facing delegation state)
+├── growthCompetitors/        # Growth Command Center — competitor profiles (NEW March 2)
+├── growthCompetitorSnapshots/ # Competitor snapshots over time (NEW March 2)
+├── growthKeywords/           # Keyword tracking entries with ranking history (NEW March 2)
+├── growthStrategies/         # 3-tier growth strategies (Aggressive/Competitive/Scrappy) (NEW March 2)
+├── growthAiVisibility/       # AI search visibility check results (NEW March 2)
+├── growthActivityLog/        # Activity feed events for Growth Command Center (NEW March 2)
 └── provisionerLogs/          # Provisioning logs
 ```
 
-### Total: 69+ Collections
+### Total: 75+ Collections
 
 ---
 
