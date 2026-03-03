@@ -25,6 +25,8 @@ import {
   UserCheck,
 } from 'lucide-react';
 import { useUnifiedAuth } from '@/hooks/useUnifiedAuth';
+import SubpageNav from '@/components/ui/SubpageNav';
+import { SYSTEM_TABS } from '@/lib/constants/subpage-nav';
 import {
   setActiveImpersonation,
   getActiveImpersonation,
@@ -320,6 +322,7 @@ export default function ImpersonatePage(): React.ReactElement {
 
   return (
     <div className="space-y-6">
+      <SubpageNav items={SYSTEM_TABS} />
       {/* Header */}
       <div>
         <div className="flex items-center gap-3 mb-1">

@@ -15,6 +15,8 @@
 import React, { useState, useCallback } from 'react';
 import { useToast } from '@/hooks/useToast';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
+import SubpageNav from '@/components/ui/SubpageNav';
+import { DEALS_TABS } from '@/lib/constants/subpage-nav';
 import { RiskOverviewCard } from '@/components/risk/RiskOverviewCard';
 import { RiskFactorsCard } from '@/components/risk/RiskFactorsCard';
 import { InterventionsCard } from '@/components/risk/InterventionsCard';
@@ -215,6 +217,7 @@ export default function RiskDashboardPage() {
 
   return (
     <div className="min-h-screen bg-[var(--color-bg-main)]">
+      <SubpageNav items={DEALS_TABS} />
       {/* Header */}
       <header className="bg-[var(--color-bg-paper)] border-b border-[var(--color-border-main)]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">

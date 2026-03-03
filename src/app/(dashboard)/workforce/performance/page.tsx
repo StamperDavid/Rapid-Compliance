@@ -10,6 +10,8 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
+import SubpageNav from '@/components/ui/SubpageNav';
+import { AI_WORKFORCE_TABS } from '@/lib/constants/subpage-nav';
 
 // ============================================================================
 // TYPES
@@ -281,6 +283,7 @@ export default function SwarmPerformancePage() {
 
   return (
     <div className="p-6 space-y-6">
+      <SubpageNav items={AI_WORKFORCE_TABS} />
       {/* Inline Error Banner */}
       {error && !loading && (
         <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-3 flex items-center justify-between">

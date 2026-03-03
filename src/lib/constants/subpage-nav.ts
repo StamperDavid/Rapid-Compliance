@@ -14,7 +14,7 @@ export const DASHBOARD_TABS: SubpageNavItem[] = [
   { label: 'Workforce HQ', href: '/workforce' },
 ];
 
-// ── Social Hub ──────────────────────────────────────────────────────────────
+// ── Social Hub (8 tabs — Analytics absorbed from standalone sidebar item) ────
 export const SOCIAL_TABS: SubpageNavItem[] = [
   { label: 'Command Center', href: '/social/command-center' },
   { label: 'Campaigns', href: '/social/campaigns' },
@@ -23,6 +23,7 @@ export const SOCIAL_TABS: SubpageNavItem[] = [
   { label: 'Listening', href: '/social/listening' },
   { label: 'Agent Rules', href: '/social/agent-rules' },
   { label: 'Playbook', href: '/social/playbook' },
+  { label: 'Analytics', href: '/social/analytics' },
 ];
 
 // ── Analytics ───────────────────────────────────────────────────────────────
@@ -98,11 +99,14 @@ export const COACHING_TABS: SubpageNavItem[] = [
   { label: 'Playbook', href: '/playbook' },
 ];
 
-// ── Team ────────────────────────────────────────────────────────────────────
+// ── Team (expanded hub: leaderboard, tasks, performance, coaching, playbook) ─
 export const TEAM_TABS: SubpageNavItem[] = [
   { label: 'Leaderboard', href: '/team/leaderboard' },
   { label: 'Tasks', href: '/team/tasks' },
   { label: 'Performance', href: '/performance' },
+  { label: 'Coaching', href: '/coaching' },
+  { label: 'Team Coaching', href: '/coaching/team' },
+  { label: 'Playbook', href: '/playbook' },
 ];
 
 // ── Proposals ───────────────────────────────────────────────────────────────
@@ -139,8 +143,38 @@ export const GROWTH_TABS: SubpageNavItem[] = [
   { label: 'Activity', href: '/growth/activity' },
 ];
 
-// ── System (owner-only admin tools) ─────────────────────────────────────────
+// ── System (owner-only admin tools — Schemas absorbed) ──────────────────────
 export const SYSTEM_TABS: SubpageNavItem[] = [
   { label: 'System Health', href: '/system' },
   { label: 'Impersonate', href: '/system/impersonate' },
+  { label: 'Schemas', href: '/schemas' },
+];
+
+// ── Leads Hub (All Leads + Intelligence + Scoring + Scraper) ────────────────
+export const LEADS_TABS: SubpageNavItem[] = [
+  { label: 'All Leads', href: '/leads' },
+  { label: 'Intelligence', href: '/leads/research' },
+  { label: 'Scoring', href: '/lead-scoring' },
+  { label: 'Scraper', href: '/scraper' },
+];
+
+// ── Deals Hub (All Deals + Risk) ───────────────────────────────────────────
+export const DEALS_TABS: SubpageNavItem[] = [
+  { label: 'All Deals', href: '/deals' },
+  { label: 'Risk', href: '/risk' },
+];
+
+// ── Video Hub (Studio + Library merged) ─────────────────────────────────────
+export const VIDEO_TABS: SubpageNavItem[] = [
+  { label: 'Studio', href: '/content/video' },
+  { label: 'Library', href: '/content/video/library' },
+];
+
+// ── AI Workforce Hub (all 5 AI items → 1 hub) ──────────────────────────────
+export const AI_WORKFORCE_TABS: SubpageNavItem[] = [
+  { label: 'Agents', href: '/workforce' },
+  { label: 'Mission Control', href: '/mission-control' },
+  { label: 'Performance', href: '/workforce/performance' },
+  { label: 'Training', href: '/settings/ai-agents/training' },
+  { label: 'Models & Data', href: '/ai/datasets' },
 ];

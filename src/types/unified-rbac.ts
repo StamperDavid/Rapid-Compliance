@@ -479,13 +479,11 @@ export type NavigationCategory =
   | 'home'
   | 'crm'
   | 'outreach'
-  | 'content'
+  | 'marketing'
   | 'ai_workforce'
-  | 'ecommerce'
   | 'commerce'
   | 'website'
   | 'analytics'
-  | 'growth'
   | 'system';
 
 /**

@@ -12,7 +12,7 @@ import { logger } from '@/lib/logger/logger';
 import { LeadScoreCard } from '@/components/lead-scoring/LeadScoreCard';
 import type { StoredLeadScore, LeadScoreAnalytics, ScoringRules } from '@/types/lead-scoring';
 import SubpageNav from '@/components/ui/SubpageNav';
-import { LEAD_INTEL_TABS } from '@/lib/constants/subpage-nav';
+import { LEADS_TABS } from '@/lib/constants/subpage-nav';
 import {
   Target,
   Flame,
@@ -277,7 +277,7 @@ export default function LeadScoringDashboard() {
       </motion.div>
 
       {/* Sub-page Navigation */}
-      <SubpageNav items={LEAD_INTEL_TABS} />
+      <SubpageNav items={LEADS_TABS} />
 
       {/* Analytics Cards */}
       {analytics && (

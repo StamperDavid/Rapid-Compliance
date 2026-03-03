@@ -4,6 +4,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { useVideoPipelineStore } from '@/lib/stores/video-pipeline-store';
+import SubpageNav from '@/components/ui/SubpageNav';
+import { VIDEO_TABS } from '@/lib/constants/subpage-nav';
 import {
   Video,
   Play,
@@ -204,6 +206,7 @@ export default function VideoLibraryPage() {
 
   return (
     <div className="space-y-6 p-6">
+      <SubpageNav items={VIDEO_TABS} />
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

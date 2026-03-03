@@ -2,6 +2,8 @@
 
 import { useCallback, useMemo, useState } from 'react';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
+import SubpageNav from '@/components/ui/SubpageNav';
+import { VIDEO_TABS } from '@/lib/constants/subpage-nav';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, FolderOpen, Loader2, Clock, Film, X, Video } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -126,6 +128,7 @@ export default function VideoStudioPage() {
 
   return (
     <div className="min-h-screen p-6 space-y-6">
+      <SubpageNav items={VIDEO_TABS} />
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

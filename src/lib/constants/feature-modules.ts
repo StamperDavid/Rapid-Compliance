@@ -119,7 +119,7 @@ export const FEATURE_MODULES: FeatureModuleDefinition[] = [
     features: ['Lead management', 'Deal tracking', 'Contact database', 'Living Ledger', 'Lead intelligence'],
     useCases: ['Sales teams', 'Account management', 'Relationship tracking'],
     ifYouSkip: 'You won\'t have a centralized place to track your leads and deals.',
-    sidebarItemIds: ['leads', 'contacts', 'companies', 'deals', 'living-ledger', 'lead-intel'],
+    sidebarItemIds: ['leads', 'contacts', 'companies', 'deals'],
     requiredApiKeys: [],
   },
   {
@@ -145,7 +145,7 @@ export const FEATURE_MODULES: FeatureModuleDefinition[] = [
     features: ['Sales coaching', 'Playbook builder', 'Risk alerts', 'Performance tips'],
     useCases: ['Sales teams', 'Team leads', 'Sales managers'],
     ifYouSkip: 'Your team will miss AI-powered coaching and risk alerts.',
-    sidebarItemIds: ['coaching', 'playbook', 'risk'],
+    sidebarItemIds: [],
     requiredApiKeys: [
       {
         serviceId: 'clearbit_api_key',
@@ -167,7 +167,7 @@ export const FEATURE_MODULES: FeatureModuleDefinition[] = [
     features: ['Email campaigns', 'Drip sequences', 'Outbound tools', 'Call tracking', 'Email studio'],
     useCases: ['Outbound sales', 'Nurture campaigns', 'Cold outreach'],
     ifYouSkip: 'You\'ll need to manage email outreach manually or use a separate tool.',
-    sidebarItemIds: ['outbound-hub', 'sequences', 'email-campaigns', 'calls', 'email-studio'],
+    sidebarItemIds: ['sequences', 'email-campaigns', 'calls', 'email-studio'],
     requiredApiKeys: [
       {
         serviceId: 'sendgrid',
@@ -232,7 +232,7 @@ export const FEATURE_MODULES: FeatureModuleDefinition[] = [
     features: ['Post scheduling', 'Social analytics', 'Multi-platform posting', 'Content calendar'],
     useCases: ['Brand building', 'Social selling', 'Content marketing'],
     ifYouSkip: 'You\'ll manage social media through individual platform apps.',
-    sidebarItemIds: ['social-hub', 'social-analytics'],
+    sidebarItemIds: ['social-hub'],
     requiredApiKeys: [
       {
         serviceId: 'twitter_consumer_key',
@@ -262,7 +262,7 @@ export const FEATURE_MODULES: FeatureModuleDefinition[] = [
     features: ['AI video creation', 'Video library', 'Template system', 'Avatar videos'],
     useCases: ['Marketing videos', 'Sales pitches', 'Training content'],
     ifYouSkip: 'You\'ll need separate video tools or a production team.',
-    sidebarItemIds: ['video-library', 'video-studio'],
+    sidebarItemIds: ['video'],
     requiredApiKeys: [
       {
         serviceId: 'heygen',
@@ -343,7 +343,7 @@ export const FEATURE_MODULES: FeatureModuleDefinition[] = [
     features: ['Page builder', 'Blog', 'SEO analysis', 'Performance tracking'],
     useCases: ['Business websites', 'Landing pages', 'Content marketing'],
     ifYouSkip: 'You\'ll manage your website with WordPress or another platform.',
-    sidebarItemIds: ['website', 'seo'],
+    sidebarItemIds: ['website'],
     requiredApiKeys: [
       {
         serviceId: 'pagespeed',

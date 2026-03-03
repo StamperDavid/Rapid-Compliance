@@ -3,6 +3,8 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
+import SubpageNav from '@/components/ui/SubpageNav';
+import { DEALS_TABS } from '@/lib/constants/subpage-nav';
 import { useAuth } from '@/hooks/useAuth';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { usePagination } from '@/hooks/usePagination';
@@ -245,6 +247,7 @@ export default function DealsPage() {
 
   return (
     <div className="min-h-screen bg-surface-main p-8">
+      <SubpageNav items={DEALS_TABS} />
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}

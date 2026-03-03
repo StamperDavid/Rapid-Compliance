@@ -4,6 +4,7 @@ import { PLATFORM_ID } from '@/lib/constants/platform';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import SubpageNav from '@/components/ui/SubpageNav';
+import { AI_WORKFORCE_TABS } from '@/lib/constants/subpage-nav';
 import { useAuth } from '@/hooks/useAuth';
 import { useOrgTheme } from '@/hooks/useOrgTheme'
 import { logger } from '@/lib/logger/logger';
@@ -1029,6 +1030,7 @@ export default function AgentTrainingPage() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: 0, height: '100%' }}>
+      <SubpageNav items={AI_WORKFORCE_TABS} />
       {/* Header */}
       <div style={{ padding: '2rem', borderBottom: '1px solid var(--color-border-light)' }}>
         <div>

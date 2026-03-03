@@ -2,6 +2,8 @@
 
 import React, { useEffect, useState, useCallback } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import SubpageNav from "@/components/ui/SubpageNav";
+import { SYSTEM_TABS } from "@/lib/constants/subpage-nav";
 import {
   Activity,
   Users,
@@ -85,6 +87,7 @@ export default function SystemPage(): React.ReactElement {
 
   return (
     <div className="space-y-6">
+      <SubpageNav items={SYSTEM_TABS} />
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

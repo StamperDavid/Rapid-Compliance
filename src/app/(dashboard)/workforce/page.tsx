@@ -10,7 +10,7 @@ import {
   type AgentTier,
 } from '@/hooks/useSystemStatus';
 import SubpageNav from '@/components/ui/SubpageNav';
-import { DASHBOARD_TABS } from '@/lib/constants/subpage-nav';
+import { AI_WORKFORCE_TABS } from '@/lib/constants/subpage-nav';
 import { Tooltip } from '@/components/ui/tooltip';
 
 // ============================================================================
@@ -614,7 +614,7 @@ export default function WorkforceCommandCenterPage() {
       `}</style>
 
       <div>
-        <SubpageNav items={DASHBOARD_TABS} />
+        <SubpageNav items={AI_WORKFORCE_TABS} />
         {/* Header */}
         <div style={{
           display: 'flex',

@@ -11,7 +11,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { logger } from '@/lib/logger/logger';
 import SubpageNav from '@/components/ui/SubpageNav';
-import { LEAD_INTEL_TABS } from '@/lib/constants/subpage-nav';
+import { LEADS_TABS } from '@/lib/constants/subpage-nav';
 import {
   Search,
   Send,
@@ -211,7 +211,7 @@ export default function LeadResearchPage() {
         </motion.div>
 
         {/* Sub-page Navigation */}
-        <SubpageNav items={LEAD_INTEL_TABS} />
+        <SubpageNav items={LEADS_TABS} />
 
         {/* Messages Container */}
         <motion.div

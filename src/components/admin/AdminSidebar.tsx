@@ -24,23 +24,18 @@ import {
   Users,
   Handshake,
   MessageSquare,
-  BookOpen,
   Send,
   ListOrdered,
   FileText,
   Mail,
-  Share2,
+  Megaphone,
   FlaskConical,
   Video,
   Bot,
-  GraduationCap,
   PhoneCall,
   Workflow,
-  BarChart3,
   Activity,
   Globe,
-  Film,
-  Radar,
   Settings,
   ChevronLeft,
   ChevronRight,
@@ -49,24 +44,17 @@ import {
   Menu,
   X,
   ClipboardList,
-  Database,
   Package,
   ShoppingCart,
   Store,
   PieChart,
   HelpCircle,
-  Search,
   Trophy,
-  AlertTriangle,
   PenLine,
   Plug,
   Shield,
-  Eye,
-  Gauge,
-  Layers,
   Building2,
   TrendingUp,
-  Target,
 } from 'lucide-react';
 
 // ============================================================================
@@ -74,7 +62,7 @@ import {
 // ============================================================================
 
 const NAV_SECTIONS: NavigationSection[] = [
-  // ── Home ────────────────────────────────────────────────────────────
+  // ── Home (2 items) ──────────────────────────────────────────────────
   {
     id: 'home',
     label: 'Home',
@@ -83,10 +71,9 @@ const NAV_SECTIONS: NavigationSection[] = [
     items: [
       { id: 'dashboard', label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, iconColor: 'var(--color-primary)' },
       { id: 'team', label: 'Team', href: '/team/leaderboard', icon: Trophy, iconColor: 'var(--color-warning)' },
-      { id: 'performance', label: 'Performance', href: '/performance', icon: Gauge, iconColor: 'var(--color-cyan)' },
     ],
   },
-  // ── CRM ─────────────────────────────────────────────────────────────
+  // ── CRM (5 items) ──────────────────────────────────────────────────
   {
     id: 'crm',
     label: 'CRM',
@@ -98,14 +85,9 @@ const NAV_SECTIONS: NavigationSection[] = [
       { id: 'companies', label: 'Companies', href: '/entities/companies', icon: Building2, iconColor: 'var(--color-secondary)', requiredPermission: 'canViewLeads', featureModuleId: 'crm_pipeline' },
       { id: 'deals', label: 'Deals', href: '/deals', icon: Handshake, iconColor: 'var(--color-warning)', requiredPermission: 'canViewDeals', featureModuleId: 'crm_pipeline' },
       { id: 'conversations', label: 'Conversations', href: '/conversations', icon: MessageSquare, iconColor: 'var(--color-success)', requiredPermission: 'canCreateRecords', featureModuleId: 'conversations' },
-      { id: 'living-ledger', label: 'Living Ledger', href: '/living-ledger', icon: BookOpen, iconColor: 'var(--color-cyan)', requiredPermission: 'canViewAllRecords', featureModuleId: 'crm_pipeline' },
-      { id: 'lead-intel', label: 'Lead Intelligence', href: '/leads/research', icon: Search, iconColor: 'var(--color-primary)', requiredPermission: 'canViewLeads', featureModuleId: 'crm_pipeline' },
-      { id: 'coaching', label: 'Coaching', href: '/coaching', icon: GraduationCap, iconColor: 'var(--color-success)', featureModuleId: 'sales_automation' },
-      { id: 'playbook', label: 'Playbook', href: '/playbook', icon: BookOpen, iconColor: 'var(--color-secondary)', featureModuleId: 'sales_automation' },
-      { id: 'risk', label: 'Risk', href: '/risk', icon: AlertTriangle, iconColor: 'var(--color-error)', featureModuleId: 'sales_automation' },
     ],
   },
-  // ── Outreach (merged Lead Gen + Outbound + Workflows) ───────────────
+  // ── Outreach (4 items — Forms & Workflows moved to Marketing) ──────
   {
     id: 'outreach',
     label: 'Outreach',
@@ -114,41 +96,25 @@ const NAV_SECTIONS: NavigationSection[] = [
     items: [
       { id: 'sequences', label: 'Sequences', href: '/outbound/sequences', icon: ListOrdered, iconColor: 'var(--color-secondary)', requiredPermission: 'canManageLeads', featureModuleId: 'email_outreach' },
       { id: 'email-campaigns', label: 'Campaigns', href: '/email/campaigns', icon: Mail, iconColor: 'var(--color-cyan)', requiredPermission: 'canManageEmailCampaigns', featureModuleId: 'email_outreach' },
-      { id: 'calls', label: 'Calls', href: '/calls', icon: PhoneCall, iconColor: 'var(--color-error)', requiredPermission: 'canAccessVoiceAgents', featureModuleId: 'email_outreach' },
-      { id: 'forms', label: 'Forms', href: '/forms', icon: ClipboardList, iconColor: 'var(--color-success)', featureModuleId: 'forms_surveys' },
-      { id: 'workflows', label: 'Workflows', href: '/workflows', icon: Workflow, iconColor: 'var(--color-warning)', requiredPermission: 'canCreateWorkflows', featureModuleId: 'workflows' },
       { id: 'email-studio', label: 'Email Studio', href: '/email-writer', icon: PenLine, iconColor: 'var(--color-primary)', requiredPermission: 'canManageEmailCampaigns', featureModuleId: 'email_outreach' },
+      { id: 'calls', label: 'Calls', href: '/calls', icon: PhoneCall, iconColor: 'var(--color-error)', requiredPermission: 'canAccessVoiceAgents', featureModuleId: 'email_outreach' },
     ],
   },
-  // ── Content (consolidated from Content Factory) ─────────────────────
+  // ── Marketing (5 items — renamed from Content) ─────────────────────
   {
-    id: 'content',
-    label: 'Content',
-    icon: Share2,
+    id: 'marketing',
+    label: 'Marketing',
+    icon: Megaphone,
     allowedRoles: ['owner', 'admin', 'manager'],
     items: [
       { id: 'social-hub', label: 'Social Hub', href: '/social/command-center', icon: Activity, iconColor: 'var(--color-success)', requiredPermission: 'canManageSocialMedia', featureModuleId: 'social_media' },
-      { id: 'social-analytics', label: 'Social Analytics', href: '/social/analytics', icon: BarChart3, iconColor: 'var(--color-cyan)', requiredPermission: 'canManageSocialMedia', featureModuleId: 'social_media' },
-      { id: 'video-library', label: 'Video Library', href: '/content/video/library', icon: Film, iconColor: 'var(--color-primary)', requiredPermission: 'canManageSocialMedia', featureModuleId: 'video_production' },
-      { id: 'video-studio', label: 'Video Studio', href: '/content/video', icon: Video, iconColor: 'var(--color-primary)', requiredPermission: 'canManageSocialMedia', featureModuleId: 'video_production' },
+      { id: 'video', label: 'Video', href: '/content/video', icon: Video, iconColor: 'var(--color-primary)', requiredPermission: 'canManageSocialMedia', featureModuleId: 'video_production' },
       { id: 'proposals', label: 'Proposals', href: '/proposals', icon: FileText, iconColor: 'var(--color-secondary)', featureModuleId: 'proposals_docs' },
+      { id: 'forms', label: 'Forms', href: '/forms', icon: ClipboardList, iconColor: 'var(--color-success)', featureModuleId: 'forms_surveys' },
+      { id: 'workflows', label: 'Workflows', href: '/workflows', icon: Workflow, iconColor: 'var(--color-warning)', requiredPermission: 'canCreateWorkflows', featureModuleId: 'workflows' },
     ],
   },
-  // ── AI Workforce (consolidated) ─────────────────────────────────────
-  {
-    id: 'ai_workforce',
-    label: 'AI Workforce',
-    icon: Bot,
-    allowedRoles: ['owner', 'admin', 'manager'],
-    items: [
-      { id: 'agent-registry', label: 'Agent Registry', href: '/workforce', icon: Bot, iconColor: 'var(--color-cyan)', requiredPermission: 'canDeployAIAgents' },
-      { id: 'mission-control', label: 'Mission Control', href: '/mission-control', icon: Radar, iconColor: 'var(--color-primary)', requiredPermission: 'canDeployAIAgents' },
-      { id: 'swarm-performance', label: 'Swarm Performance', href: '/workforce/performance', icon: Activity, iconColor: 'var(--color-warning)', requiredPermission: 'canManageAIAgents' },
-      { id: 'training-hub', label: 'Training Hub', href: '/settings/ai-agents/training', icon: GraduationCap, iconColor: 'var(--color-success)', requiredPermission: 'canTrainAIAgents' },
-      { id: 'models', label: 'Models & Data', href: '/ai/datasets', icon: Database, iconColor: 'var(--color-primary)', requiredPermission: 'canManageAIAgents' },
-    ],
-  },
-  // ── Commerce ────────────────────────────────────────────────────────
+  // ── Commerce (3 items, unchanged) ──────────────────────────────────
   {
     id: 'commerce',
     label: 'Commerce',
@@ -160,7 +126,7 @@ const NAV_SECTIONS: NavigationSection[] = [
       { id: 'storefront', label: 'Storefront', href: '/settings/storefront', icon: Store, iconColor: 'var(--color-warning)', requiredPermission: 'canManageEcommerce', featureModuleId: 'ecommerce' },
     ],
   },
-  // ── Website & SEO ──────────────────────────────────────────────────────
+  // ── Website (1 item — SEO absorbed as Website tab) ─────────────────
   {
     id: 'website',
     label: 'Website',
@@ -168,44 +134,38 @@ const NAV_SECTIONS: NavigationSection[] = [
     allowedRoles: ['owner', 'admin', 'manager'],
     items: [
       { id: 'website', label: 'Website', href: '/website/editor', icon: Globe, iconColor: 'var(--color-primary)', requiredPermission: 'canManageWebsite', featureModuleId: 'website_builder' },
-      { id: 'seo', label: 'SEO', href: '/website/seo', icon: Search, iconColor: 'var(--color-success)', requiredPermission: 'canManageWebsite', featureModuleId: 'website_builder' },
     ],
   },
-  // ── Analytics (consolidated — Revenue/Pipeline/Sales → tabs) ────────
+  // ── AI Workforce (1 hub item — 5 items collapsed) ─────────────────
+  {
+    id: 'ai_workforce',
+    label: 'AI Workforce',
+    icon: Bot,
+    allowedRoles: ['owner', 'admin', 'manager'],
+    items: [
+      { id: 'ai-workforce', label: 'AI Workforce', href: '/workforce', icon: Bot, iconColor: 'var(--color-cyan)', requiredPermission: 'canDeployAIAgents' },
+    ],
+  },
+  // ── Analytics & Growth (3 items — Growth collapsed to 1 hub) ───────
   {
     id: 'analytics',
-    label: 'Analytics',
+    label: 'Analytics & Growth',
     icon: PieChart,
     allowedRoles: ['owner', 'admin', 'manager', 'member'],
     items: [
       { id: 'analytics-overview', label: 'Overview', href: '/analytics', icon: PieChart, iconColor: 'var(--color-cyan)', requiredPermission: 'canViewReports' },
+      { id: 'growth', label: 'Growth', href: '/growth/command-center', icon: TrendingUp, iconColor: 'var(--color-success)', requiredPermission: 'canViewReports' },
       { id: 'ab-testing', label: 'A/B Testing', href: '/ab-tests', icon: FlaskConical, iconColor: 'var(--color-success)', featureModuleId: 'advanced_analytics' },
     ],
   },
-  // ── Growth ───────────────────────────────────────────────────────────
-  {
-    id: 'growth',
-    label: 'Growth',
-    icon: TrendingUp,
-    allowedRoles: ['owner', 'admin', 'manager'],
-    items: [
-      { id: 'growth-command', label: 'Command Center', href: '/growth/command-center', icon: TrendingUp, iconColor: 'var(--color-success)', requiredPermission: 'canViewReports' },
-      { id: 'growth-competitors', label: 'Competitors', href: '/growth/competitors', icon: Radar, iconColor: 'var(--color-warning)', requiredPermission: 'canViewReports' },
-      { id: 'growth-keywords', label: 'Keywords', href: '/growth/keywords', icon: Target, iconColor: 'var(--color-primary)', requiredPermission: 'canViewReports' },
-      { id: 'growth-strategy', label: 'Strategy', href: '/growth/strategy', icon: Radar, iconColor: 'var(--color-cyan)', requiredPermission: 'canViewReports' },
-      { id: 'growth-ai-visibility', label: 'AI Visibility', href: '/growth/ai-visibility', icon: Eye, iconColor: 'var(--color-primary)', requiredPermission: 'canViewReports' },
-    ],
-  },
-  // ── System (owner-only admin tools) ───────────────────────────────────
+  // ── System (1 hub item — owner only) ───────────────────────────────
   {
     id: 'system',
     label: 'System',
     icon: Shield,
     allowedRoles: ['owner'],
     items: [
-      { id: 'system-health', label: 'System Health', href: '/system', icon: Activity, iconColor: 'var(--color-primary)' },
-      { id: 'impersonate', label: 'Impersonate', href: '/system/impersonate', icon: Eye, iconColor: 'var(--color-warning)' },
-      { id: 'schemas', label: 'Schemas', href: '/schemas', icon: Layers, iconColor: 'var(--color-cyan)' },
+      { id: 'system', label: 'System', href: '/system', icon: Shield, iconColor: 'var(--color-primary)' },
     ],
   },
 ];
@@ -272,98 +232,97 @@ export default function AdminSidebar() {
 
   const isActive = (href: string): boolean => {
     if (!pathname) { return false; }
+
+    // Dashboard — exact match
     if (href === '/dashboard') { return pathname === '/dashboard'; }
-    // Social Hub matches all /social/* except /social/analytics (separate item)
-    if (href === '/social/command-center') {
-      return pathname.startsWith('/social/') &&
-        !pathname.startsWith('/social/analytics') &&
-        !pathname.startsWith('/social/training');
+
+    // Team hub — leaderboard, tasks, performance, coaching, playbook
+    if (href === '/team/leaderboard') {
+      return pathname.startsWith('/team/') ||
+        pathname.startsWith('/performance') ||
+        pathname.startsWith('/coaching') ||
+        pathname === '/playbook';
     }
-    // Training Hub matches all AI agent config + training labs
-    if (href === '/settings/ai-agents/training') {
-      return pathname.startsWith('/settings/ai-agents/') ||
-        pathname.startsWith('/voice/training') ||
-        pathname.startsWith('/social/training') ||
-        pathname.startsWith('/seo/training');
-    }
-    // Models & Data matches all /ai/* paths
-    if (href === '/ai/datasets') {
-      return pathname.startsWith('/ai/');
-    }
-    // Analytics overview matches all analytics sub-pages
-    if (href === '/analytics') {
-      return pathname === '/analytics' ||
-        pathname.startsWith('/analytics/') ||
-        pathname.startsWith('/sequences/analytics');
-    }
-    // Lead Intelligence matches all lead intel hub pages
-    if (href === '/leads/research') {
-      return pathname.startsWith('/leads/research') ||
-        pathname.startsWith('/lead-scoring') ||
-        pathname.startsWith('/scraper');
-    }
-    // Coaching matches all coaching pages + playbook
-    if (href === '/coaching') {
-      return pathname.startsWith('/coaching') ||
-        pathname.startsWith('/playbook');
-    }
-    // Agent Registry matches /workforce
-    if (href === '/workforce') {
-      return pathname.startsWith('/workforce') ||
-        pathname === '/ai-agents';
-    }
-    // Leads matches /leads but not /leads/research (separate item)
+
+    // Leads hub — leads list, intelligence, scoring, scraper
     if (href === '/leads') {
-      return pathname === '/leads';
+      return pathname === '/leads' ||
+        pathname.startsWith('/leads/') ||
+        pathname.startsWith('/lead-scoring') ||
+        pathname.startsWith('/scraper') ||
+        pathname.startsWith('/entities/leads');
     }
-    // Contacts matches /contacts*
-    if (href === '/contacts') {
-      return pathname.startsWith('/contacts');
+
+    // Contacts
+    if (href === '/contacts') { return pathname.startsWith('/contacts'); }
+
+    // Companies
+    if (href === '/entities/companies') { return pathname.startsWith('/entities/companies'); }
+
+    // Deals hub — deals list + risk
+    if (href === '/deals') {
+      return pathname.startsWith('/deals') || pathname.startsWith('/risk');
     }
-    // Companies matches /entities/companies*
-    if (href === '/entities/companies') {
-      return pathname.startsWith('/entities/companies');
-    }
-    // Email Studio matches email writer + nurture + email builder + templates
+
+    // Email Studio — email writer + nurture + email builder + templates
     if (href === '/email-writer') {
       return pathname.startsWith('/email-writer') ||
         pathname.startsWith('/nurture') ||
         pathname.startsWith('/marketing/email-builder') ||
         pathname === '/templates';
     }
-    // Team matches leaderboard + tasks + performance
-    if (href === '/team/leaderboard') {
-      return pathname.startsWith('/team/') ||
-        pathname.startsWith('/performance');
+
+    // Social Hub — all /social/* (analytics now absorbed as tab)
+    if (href === '/social/command-center') {
+      return pathname.startsWith('/social/') && !pathname.startsWith('/social/training');
     }
-    // SEO matches /website/seo/* and /seo/* (training)
-    if (href === '/website/seo') {
-      return pathname.startsWith('/website/seo') || pathname.startsWith('/seo/');
+
+    // Video hub — studio + library
+    if (href === '/content/video') {
+      return pathname.startsWith('/content/video');
     }
-    // Website matches all /website/* except SEO sub-pages
+
+    // Proposals hub — list + builder
+    if (href === '/proposals') { return pathname.startsWith('/proposals'); }
+
+    // Website hub — all /website/* (SEO absorbed as tab)
     if (href === '/website/editor') {
-      return pathname.startsWith('/website/') && !pathname.startsWith('/website/seo');
+      return pathname.startsWith('/website/');
     }
-    // Growth Command Center matches all /growth/*
+
+    // AI Workforce hub — workforce, mission control, training, models
+    if (href === '/workforce') {
+      return pathname.startsWith('/workforce') ||
+        pathname.startsWith('/mission-control') ||
+        pathname.startsWith('/settings/ai-agents/') ||
+        pathname.startsWith('/voice/training') ||
+        pathname.startsWith('/social/training') ||
+        pathname.startsWith('/seo/training') ||
+        pathname.startsWith('/ai/') ||
+        pathname === '/ai-agents';
+    }
+
+    // Analytics overview — all analytics sub-pages
+    if (href === '/analytics') {
+      return pathname === '/analytics' ||
+        pathname.startsWith('/analytics/') ||
+        pathname.startsWith('/sequences/analytics') ||
+        pathname.startsWith('/compliance-reports') ||
+        pathname.startsWith('/battlecards');
+    }
+
+    // Growth hub — all /growth/*
     if (href === '/growth/command-center') {
       return pathname.startsWith('/growth/');
     }
-    // Growth sub-pages — exact prefix match
-    if (href.startsWith('/growth/') && href !== '/growth/command-center') {
-      return pathname.startsWith(href);
-    }
-    // System health — exact match only (don't match /system/impersonate)
+
+    // System hub — system health, impersonate, schemas
     if (href === '/system') {
-      return pathname === '/system';
+      return pathname === '/system' ||
+        pathname.startsWith('/system/') ||
+        pathname === '/schemas';
     }
-    // Proposals matches list and builder
-    if (href === '/proposals') {
-      return pathname.startsWith('/proposals');
-    }
-    // Playbook — exact match
-    if (href === '/playbook') {
-      return pathname === '/playbook';
-    }
+
     return pathname.startsWith(href);
   };
 

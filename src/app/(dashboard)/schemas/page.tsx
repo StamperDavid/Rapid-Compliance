@@ -2,7 +2,7 @@
 
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import SubpageNav from '@/components/ui/SubpageNav';
-import { AI_DATA_TABS } from '@/lib/constants/subpage-nav';
+import { SYSTEM_TABS } from '@/lib/constants/subpage-nav';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
@@ -268,7 +268,7 @@ export default function SchemaBuilderPage() {
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: 'var(--color-bg-main)' }}>
-      <SubpageNav items={AI_DATA_TABS} />
+      <SubpageNav items={SYSTEM_TABS} />
       {/* Header */}
       <div style={{ backgroundColor: 'var(--color-bg-paper)', borderBottom: '1px solid var(--color-border-main)' }}>
         <div style={{ maxWidth: '80rem', margin: '0 auto', padding: '1rem 1.5rem' }}>
