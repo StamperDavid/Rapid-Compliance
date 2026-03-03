@@ -1,7 +1,7 @@
 # SalesVelocity.ai - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** March 2, 2026 (Growth Command Center Phase 1 — 5 services, 11 API routes, 3 crons, 7 UI pages, sidebar/nav wiring)
+**Last Updated:** March 2, 2026 (Demo seed Part 4 — Growth, AI Workforce, Team Coaching, Playbooks, A/B Tests, Calls, Video Pipeline + nuke script updated for all 60+ collections)
 **Branches:** `dev` (latest)
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Architecture:** Single-Tenant Penthouse Model (development strategy — multi-tenant SaaS product)
@@ -1063,7 +1063,22 @@ const res = await authFetch('/api/some-endpoint');
 
 **Utility:** `scripts/find-unprotected.ps1` — PowerShell script to scan for routes missing auth patterns
 
-**Utility:** `scripts/nuke-demo-data.ts` — Cleanup script that wipes all demo/seed data from Firestore under `organizations/rapid-compliance-root`. Run after workspace path migration or before a fresh demo environment reset.
+**Utility:** `scripts/nuke-demo-data.ts` — Cleanup script that wipes ALL demo/seed data from Firestore. Covers 60+ collections across Parts 1-4 plus top-level `users`. Three-layer identification: `demo-` ID prefix, `isDemo: true` flag, `(Demo)` in names. Run with `--execute` to delete (dry-run by default).
+
+#### Demo Data Seed Scripts (4 parts, ~290 documents total)
+
+All demo data has `isDemo: true`, `demo-` prefixed IDs, and `(Demo)` in display names for clean removal.
+
+| Script | Collections | Docs | Coverage |
+|--------|-------------|------|----------|
+| `scripts/seed-demo-account.ts` (Part 1) | 8 | ~85 | CRM: contacts, leads, deals, activities, products, email campaigns, nurture sequences, analytics |
+| `scripts/seed-demo-account-part2.ts` (Part 2) | 16+ | ~65 | Platform: workflows, forms, pages, blog posts, social posts, orders, team tasks, site config |
+| `scripts/seed-demo-account-part3.ts` (Part 3) | 32 | ~103 | Remaining: records, members, companies, schemas, sequences, chat sessions, users, playbooks, 20+ more |
+| `scripts/seed-demo-account-part4.ts` (Part 4) | 15+ | ~82 | Growth Command Center, AI Workforce, team coaching, playbooks (correct shape), A/B tests, calls, video pipeline, battlecards |
+
+**Part 4 collections:** `growthCompetitorProfiles`, `growthCompetitorSnapshots`, `growthKeywordRankings`, `growthStrategies`, `growthAiVisibility`, `growthActivityLog`, `teams`, `members` (+5), `conversationAnalyses` (+24), `users` (+5), `playbooks` (3 correct shape), `abTests`, `calls`, `video_pipeline_projects`, `agentRepProfiles`, `agentPerformance`, `specialistImprovementRequests`, `seoResearch` (+2 battlecards), `teamTasks` (+8)
+
+**Pre-launch cleanup:** Run `npx tsx scripts/nuke-demo-data.ts --execute` to remove all demo data across all 4 parts.
 
 ### Admin Account Bootstrap
 

@@ -1,7 +1,11 @@
 /**
  * Demo Data Cleanup Script — Three-Layer Identification
  *
- * Safely removes all demo data seeded by seed-demo-account.ts and seed-demo-account-part2.ts.
+ * Safely removes ALL demo data seeded by Parts 1-4:
+ *   - seed-demo-account.ts (Part 1: CRM)
+ *   - seed-demo-account-part2.ts (Part 2: Platform)
+ *   - seed-demo-account-part3.ts (Part 3: Remaining Platform)
+ *   - seed-demo-account-part4.ts (Part 4: Growth, AI Workforce, Team, etc.)
  *
  * Identification layers (ANY match = demo data):
  *   1. Document ID starts with "demo-"
@@ -29,17 +33,20 @@ import * as path from 'path';
 const PLATFORM_ID = 'rapid-compliance-root';
 const orgRoot = `organizations/${PLATFORM_ID}`;
 
-/** All org-level subcollections that may contain demo data */
+/** All org-level subcollections that may contain demo data (Parts 1-4) */
 const COLLECTIONS_TO_SCAN: string[] = [
+  // ── Part 1: CRM ───────────────────────────────────────────────────────
   'leads',
   'contacts',
   'deals',
   'activities',
   'products',
-  'orders',
   'emailCampaigns',
   'nurtureSequences',
   'analytics',
+
+  // ── Part 2: Platform ──────────────────────────────────────────────────
+  'orders',
   'workflows',
   'workflowExecutions',
   'forms',
@@ -55,6 +62,57 @@ const COLLECTIONS_TO_SCAN: string[] = [
   'globalTemplates',
   'integrations',
   'slack_workspaces',
+
+  // ── Part 3: Remaining Platform ────────────────────────────────────────
+  'records',
+  'members',
+  'companies',
+  'conversationAnalyses',
+  'schemas',
+  'chatSessions',
+  'sequences',
+  'sequenceEnrollments',
+  'proposalTemplates',
+  'formSubmissions',
+  'missions',
+  'leadRoutingRules',
+  'smsTemplates',
+  'emailTemplates',
+  'storefrontConfig',
+  'notifications',
+  'notification_preferences',
+  'merchant_coupons',
+  'carts',
+  'blogCategories',
+  'bookings',
+  'toolTraining',
+  'voiceKnowledge',
+  'socialKnowledge',
+  'socialCorrections',
+  'seoResearch',
+  'playbooks',
+  'auditLogs',
+  'reports',
+
+  // ── Part 4: Growth, AI Workforce, Team & More ─────────────────────────
+  'teams',
+  'growthCompetitorProfiles',
+  'growthCompetitorSnapshots',
+  'growthKeywordRankings',
+  'growthStrategies',
+  'growthAiVisibility',
+  'growthActivityLog',
+  'abTests',
+  'calls',
+  'video_pipeline_projects',
+  'agentRepProfiles',
+  'agentPerformance',
+  'specialistImprovementRequests',
+];
+
+/** Top-level collections (NOT under orgRoot) that may contain demo data */
+const TOP_LEVEL_COLLECTIONS_TO_SCAN: string[] = [
+  'users',
 ];
 
 /** Settings/config docs that may have been overwritten by seed scripts */
@@ -143,8 +201,9 @@ interface ScanResult {
 async function scanCollection(
   db: admin.firestore.Firestore,
   collectionName: string,
+  pathPrefix: string = orgRoot,
 ): Promise<ScanResult[]> {
-  const collectionPath = `${orgRoot}/${collectionName}`;
+  const collectionPath = pathPrefix ? `${pathPrefix}/${collectionName}` : collectionName;
   const results: ScanResult[] = [];
 
   try {
@@ -307,6 +366,18 @@ async function main(): Promise<void> {
     allResults.push(...results);
   }
 
+  // ── Phase 1b: Scan top-level collections ─────────────────────────────
+  console.log('\n📍 Scanning top-level collections...');
+  const topLevelResults: ScanResult[] = [];
+
+  for (const collection of TOP_LEVEL_COLLECTIONS_TO_SCAN) {
+    const results = await scanCollection(db, collection, '');
+    if (results.length > 0) {
+      console.log(`  ${collection} (top-level): ${results.length} demo docs found`);
+    }
+    topLevelResults.push(...results);
+  }
+
   // ── Phase 2: Scan subcollections ─────────────────────────────────────
   console.log('\n📍 Scanning form subcollections...');
   const formSubs = await scanFormSubcollections(db);
@@ -351,25 +422,31 @@ async function main(): Promise<void> {
     const key = r.collection.split('/')[0];
     byColl[key] = (byColl[key] ?? 0) + 1;
   }
-  for (const [coll, count] of Object.entries(byColl).sort((a, b) => b[1] - a[1])) {
-    console.log(`  ${coll.padEnd(25)} ${count} docs`);
+  for (const r of topLevelResults) {
+    const key = `${r.collection} (top-level)`;
+    byColl[key] = (byColl[key] ?? 0) + 1;
   }
-  console.log(`  ${'settings/config'.padEnd(25)} ${settingsToReset.length} docs`);
-  console.log(`  ${'─'.repeat(40)}`);
-  console.log(`  ${'TOTAL'.padEnd(25)} ${allResults.length + settingsToReset.length} docs`);
+  for (const [coll, count] of Object.entries(byColl).sort((a, b) => b[1] - a[1])) {
+    console.log(`  ${coll.padEnd(30)} ${count} docs`);
+  }
+  console.log(`  ${'settings/config'.padEnd(30)} ${settingsToReset.length} docs`);
+  console.log(`  ${'─'.repeat(45)}`);
+  console.log(`  ${'TOTAL'.padEnd(30)} ${allResults.length + topLevelResults.length + settingsToReset.length} docs`);
 
-  if (allResults.length === 0 && settingsToReset.length === 0) {
+  const totalFound = allResults.length + topLevelResults.length + settingsToReset.length;
+  if (totalFound === 0) {
     console.log('\n✅ No demo data found. Database is clean.');
     process.exit(0);
   }
 
   // ── Detailed listing (first 50) ──────────────────────────────────────
+  const allDocs = [...allResults, ...topLevelResults];
   console.log('\n📋 Documents to delete (showing first 50):');
-  for (const r of allResults.slice(0, 50)) {
+  for (const r of allDocs.slice(0, 50)) {
     console.log(`  ${r.collection}/${r.docId}  [${r.reason}]`);
   }
-  if (allResults.length > 50) {
-    console.log(`  ... and ${allResults.length - 50} more`);
+  if (allDocs.length > 50) {
+    console.log(`  ... and ${allDocs.length - 50} more`);
   }
 
   if (!executeMode) {
@@ -383,16 +460,34 @@ async function main(): Promise<void> {
 
   // Delete subcollection docs first (children before parents)
   const subcollDocs = allResults.filter(r => r.collection.includes('/'));
-  const topLevelDocs = allResults.filter(r => !r.collection.includes('/'));
+  const orgLevelDocs = allResults.filter(r => !r.collection.includes('/'));
 
   if (subcollDocs.length > 0) {
     console.log(`\n  Deleting ${subcollDocs.length} subcollection docs...`);
     await deleteDocuments(db, subcollDocs);
   }
 
-  if (topLevelDocs.length > 0) {
-    console.log(`\n  Deleting ${topLevelDocs.length} top-level docs...`);
-    await deleteDocuments(db, topLevelDocs);
+  if (orgLevelDocs.length > 0) {
+    console.log(`\n  Deleting ${orgLevelDocs.length} org-level docs...`);
+    await deleteDocuments(db, orgLevelDocs);
+  }
+
+  // Delete top-level collection docs (e.g., users — not under orgRoot)
+  if (topLevelResults.length > 0) {
+    console.log(`\n  Deleting ${topLevelResults.length} top-level collection docs...`);
+    const BATCH_SIZE = 500;
+    let deleted = 0;
+    for (let i = 0; i < topLevelResults.length; i += BATCH_SIZE) {
+      const batch = db.batch();
+      const chunk = topLevelResults.slice(i, i + BATCH_SIZE);
+      for (const item of chunk) {
+        const docRef = db.doc(`${item.collection}/${item.docId}`);
+        batch.delete(docRef);
+      }
+      await batch.commit();
+      deleted += chunk.length;
+      console.log(`  Deleted batch: ${deleted}/${topLevelResults.length}`);
+    }
   }
 
   // Delete settings docs
@@ -411,6 +506,13 @@ async function main(): Promise<void> {
     const remaining = await scanCollection(db, collection);
     if (remaining.length > 0) {
       console.log(`  ⚠ ${collection}: ${remaining.length} demo docs STILL EXIST`);
+      remainingCount += remaining.length;
+    }
+  }
+  for (const collection of TOP_LEVEL_COLLECTIONS_TO_SCAN) {
+    const remaining = await scanCollection(db, collection, '');
+    if (remaining.length > 0) {
+      console.log(`  ⚠ ${collection} (top-level): ${remaining.length} demo docs STILL EXIST`);
       remainingCount += remaining.length;
     }
   }
