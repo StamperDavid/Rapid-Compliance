@@ -253,10 +253,10 @@ export async function POST(request: NextRequest) {
 
     const { user } = authResult;
 
-    // Determine admin context based on role
-    // admin gets full admin capabilities (tool calling, etc.)
-    // user gets standard capabilities
-    const isAdminContext = user.role === 'owner' || user.role === 'admin';
+    // All authenticated users get Jasper tool access
+    // Jasper is the primary interface for every employee on the platform
+    // Individual tools handle their own permission checks as needed
+    const isAdminContext = Boolean(user.uid);
 
     logger.info('[Jasper] Authenticated', {
       uid: user.uid,
