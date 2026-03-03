@@ -373,7 +373,7 @@ export function OrchestratorBase({ config }: { config: OrchestratorConfig }) {
     ttsEngine: config.voiceSettings?.ttsEngine ?? 'elevenlabs',
     liveMode: config.voiceSettings?.liveMode ?? false,
   });
-  const [selectedModel, setSelectedModel] = useState(config.modelId ?? 'google/gemini-2.0-flash-exp');
+  const [selectedModel, setSelectedModel] = useState(config.modelId ?? 'anthropic/claude-3.5-sonnet');
 
   // Audio playback hook
   const { playAudio, stopAudio, isPlaying } = useAudioPlayback();
