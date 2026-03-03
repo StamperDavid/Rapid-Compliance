@@ -1743,6 +1743,32 @@ export const JASPER_TOOLS: ToolDefinition[] = [
   },
 
   // ═══════════════════════════════════════════════════════════════════════════
+  // SYSTEM CONFIG ACCESS (SEO, Analytics, Website Settings)
+  // ═══════════════════════════════════════════════════════════════════════════
+  {
+    type: 'function',
+    function: {
+      name: 'get_seo_config',
+      description:
+        'Read the platform SEO configuration including keywords, meta title, meta description, OG image, robots settings, and AI bot access rules. Use this BEFORE researching trends — the SEO keywords define the platform demographic and content strategy. Chain: get_seo_config → research_trending_topics → delegate_to_content. ENABLED: TRUE.',
+      parameters: {
+        type: 'object',
+        properties: {
+          includeAnalytics: {
+            type: 'boolean',
+            description: 'Also return analytics configuration (GA, GTM, Facebook Pixel, Hotjar). Default: false',
+          },
+          includeSiteStatus: {
+            type: 'boolean',
+            description: 'Also return site publish status, domain, and SSL info. Default: false',
+          },
+        },
+        required: [],
+      },
+    },
+  },
+
+  // ═══════════════════════════════════════════════════════════════════════════
   // TRENDING TOPICS RESEARCH (Sprint 19)
   // ═══════════════════════════════════════════════════════════════════════════
   {
@@ -4211,6 +4237,121 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
             durationMs: blogDuration,
           });
           content = JSON.stringify({ error: blogErrorMsg });
+        }
+        break;
+      }
+
+      // ═══════════════════════════════════════════════════════════════════════
+      // SEO CONFIG ACCESS
+      // ═══════════════════════════════════════════════════════════════════════
+      case 'get_seo_config': {
+        const seoStart = Date.now();
+        trackMissionStep(context, 'get_seo_config', 'RUNNING', { toolArgs: args });
+
+        try {
+          const { adminDal } = await import('@/lib/firebase/admin-dal');
+
+          if (!adminDal) {
+            throw new Error('Firestore admin DAL not available');
+          }
+
+          const settingsRef = adminDal.getNestedDocRef(
+            `${getSubCollection('website')}/settings`
+          );
+          const doc = await settingsRef.get();
+
+          if (!doc.exists) {
+            const seoDuration = Date.now() - seoStart;
+            trackMissionStep(context, 'get_seo_config', 'COMPLETED', {
+              summary: 'No website settings found — returning defaults',
+              durationMs: seoDuration,
+            });
+
+            content = JSON.stringify({
+              status: 'OK',
+              source: 'defaults',
+              seo: {
+                title: '',
+                description: '',
+                keywords: [],
+                robotsIndex: true,
+                robotsFollow: true,
+              },
+              message: 'No SEO configuration found. Website settings have not been configured yet. Use the /settings/website page or seed scripts to set up SEO.',
+            });
+            break;
+          }
+
+          const data = doc.data() as Record<string, unknown>;
+          const seo = (data.seo ?? {}) as Record<string, unknown>;
+
+          // Build response with SEO data
+          const response: Record<string, unknown> = {
+            status: 'OK',
+            source: 'firestore',
+            seo: {
+              title: seo.title ?? '',
+              description: seo.description ?? '',
+              keywords: Array.isArray(seo.keywords) ? seo.keywords : [],
+              ogImage: seo.ogImage ?? null,
+              twitterCard: seo.twitterCard ?? null,
+              favicon: seo.favicon ?? null,
+              robotsIndex: seo.robotsIndex ?? true,
+              robotsFollow: seo.robotsFollow ?? true,
+              canonicalUrl: seo.canonicalUrl ?? null,
+              aiBotAccess: seo.aiBotAccess ?? null,
+            },
+          };
+
+          // Optionally include analytics config
+          if (args.includeAnalytics === true) {
+            const analytics = (data.analytics ?? {}) as Record<string, unknown>;
+            response.analytics = {
+              googleAnalyticsId: analytics.googleAnalyticsId ?? null,
+              googleTagManagerId: analytics.googleTagManagerId ?? null,
+              facebookPixelId: analytics.facebookPixelId ?? null,
+              hotjarId: analytics.hotjarId ?? null,
+            };
+          }
+
+          // Optionally include site status
+          if (args.includeSiteStatus === true) {
+            response.site = {
+              subdomain: data.subdomain ?? '',
+              customDomain: data.customDomain ?? null,
+              customDomainVerified: data.customDomainVerified ?? false,
+              sslEnabled: data.sslEnabled ?? false,
+              status: data.status ?? 'draft',
+              publishedAt: data.publishedAt ?? null,
+            };
+          }
+
+          // Add helper message with chain suggestion
+          const keywords = response.seo && typeof response.seo === 'object'
+            ? (response.seo as Record<string, unknown>).keywords
+            : [];
+          const keywordCount = Array.isArray(keywords) ? keywords.length : 0;
+
+          response.message = keywordCount > 0
+            ? `Found ${keywordCount} SEO keywords: ${(keywords as string[]).slice(0, 10).join(', ')}${keywordCount > 10 ? '...' : ''}. Use these with research_trending_topics to discover content opportunities in your demographic.`
+            : 'No SEO keywords configured. Consider setting them up via /settings/website to define your demographic targeting.';
+
+          const seoDuration = Date.now() - seoStart;
+          trackMissionStep(context, 'get_seo_config', 'COMPLETED', {
+            summary: `SEO config loaded: ${keywordCount} keywords`,
+            durationMs: seoDuration,
+            toolResult: JSON.stringify({ keywordCount, title: seo.title }).slice(0, 2000),
+          });
+
+          content = JSON.stringify(response);
+        } catch (seoError: unknown) {
+          const seoDuration = Date.now() - seoStart;
+          const seoErrorMsg = seoError instanceof Error ? seoError.message : 'Unknown error';
+          trackMissionStep(context, 'get_seo_config', 'FAILED', {
+            error: seoErrorMsg,
+            durationMs: seoDuration,
+          });
+          content = JSON.stringify({ error: seoErrorMsg });
         }
         break;
       }
