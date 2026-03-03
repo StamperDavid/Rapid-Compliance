@@ -104,7 +104,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Call Director Service
-    const response = generateStoryboard(directorRequest);
+    const response = await generateStoryboard(directorRequest);
 
     // Transform response for frontend
     const storyboard = {

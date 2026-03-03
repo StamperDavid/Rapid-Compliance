@@ -3083,16 +3083,24 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
         const templates = sceneTemplates[videoType] ?? fallback;
         const scenesToUse = templates.slice(0, sceneCount);
 
-        const scenes = scenesToUse.map((tpl, i) => ({
-          id: `scene-${i + 1}-${Date.now()}`,
-          sceneNumber: i + 1,
-          scriptText: tpl.scriptPrefix,
-          screenshotUrl: null,
-          avatarId: null,
-          voiceId: null,
-          duration: durationPerScene,
-          engine: null,
-          status: 'draft' as const,
+        // Build draft scenes, then assign engines intelligently
+        const { selectEngineForScene } = await import('@/lib/video/scene-generator');
+        const hasAvatar = args.type === 'avatar' || videoType === 'explainer' || videoType === 'sales-pitch';
+
+        const scenes = await Promise.all(scenesToUse.map(async (tpl, i) => {
+          const draft: import('@/types/video-pipeline').PipelineScene = {
+            id: `scene-${i + 1}-${Date.now()}`,
+            sceneNumber: i + 1,
+            scriptText: tpl.scriptPrefix,
+            screenshotUrl: null,
+            avatarId: null,
+            voiceId: null,
+            duration: durationPerScene,
+            engine: null,
+            status: 'draft',
+          };
+          const engine = await selectEngineForScene(draft, hasAvatar);
+          return { ...draft, engine };
         }));
 
         const decompositionPlan = {

@@ -123,7 +123,7 @@ export class DirectorService {
   /**
    * Generate a Master Storyboard from brand DNA and creative brief
    */
-  generateStoryboard(request: DirectorRequest): DirectorResponse {
+  async generateStoryboard(request: DirectorRequest): Promise<DirectorResponse> {
     const startTime = Date.now();
 
     logger.info('Director: Starting storyboard generation', {
@@ -159,7 +159,7 @@ export class DirectorService {
       );
 
       // Step 5: Build audio configuration
-      const audioConfig = this.buildAudioConfiguration(
+      const audioConfig = await this.buildAudioConfiguration(
         voiceoverScript,
         request,
         creativeAnalysis
@@ -881,17 +881,39 @@ export class DirectorService {
   }
 
   /**
+   * Select TTS engine based on provider availability.
+   * ElevenLabs for premium quality, Unreal Speech as fallback.
+   */
+  private async selectTtsEngine(): Promise<'elevenlabs' | 'unreal'> {
+    const { apiKeyService } = await import('@/lib/api-keys/api-key-service');
+    const { PLATFORM_ID } = await import('@/lib/constants/platform');
+
+    const elevenLabsKey = await apiKeyService.getServiceKey(PLATFORM_ID, 'elevenlabs');
+    if (typeof elevenLabsKey === 'string' && elevenLabsKey.length > 0) {
+      return 'elevenlabs';
+    }
+
+    const unrealKey = await apiKeyService.getServiceKey(PLATFORM_ID, 'unrealSpeech');
+    if (typeof unrealKey === 'string' && unrealKey.length > 0) {
+      return 'unreal';
+    }
+
+    // Default to ElevenLabs — will fail with clear error if key is missing
+    return 'elevenlabs';
+  }
+
+  /**
    * Build audio configuration
    */
-  private buildAudioConfiguration(
+  private async buildAudioConfiguration(
     voiceover: VoiceoverScript,
     request: DirectorRequest,
     analysis: CreativeAnalysis
-  ): AudioConfiguration {
+  ): Promise<AudioConfiguration> {
     return {
       voiceover: {
         enabled: true,
-        ttsEngine: 'elevenlabs',
+        ttsEngine: await this.selectTtsEngine(),
         voiceId: '21m00Tcm4TlvDq8ikWAM', // Default to Rachel (ElevenLabs)
         speed: analysis.pacing === 'fast' ? 1.1 : analysis.pacing === 'slow' ? 0.9 : 1.0,
         pitch: 0,
@@ -1302,8 +1324,8 @@ export const directorService = DirectorService.getInstance();
 /**
  * Generate a master storyboard from brand DNA and creative brief
  */
-export function generateStoryboard(
+export async function generateStoryboard(
   request: DirectorRequest
-): DirectorResponse {
+): Promise<DirectorResponse> {
   return directorService.generateStoryboard(request);
 }

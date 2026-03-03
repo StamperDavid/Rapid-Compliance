@@ -10,6 +10,7 @@ import {
   generateRunwayVideo,
   generateSoraVideo,
   getVideoStatus,
+  getVideoProviderKey,
 } from '@/lib/video/video-service';
 import type { PipelineScene, SceneGenerationResult, VideoEngineId } from '@/types/video-pipeline';
 import type { VideoAspectRatio, VideoGenerationResponse, VideoProvider } from '@/types/video';
@@ -153,15 +154,123 @@ async function generateWithSora(
 }
 
 // ============================================================================
+// Intelligent Engine Selection
+// ============================================================================
+
+/** Cached provider availability so we don't re-check on every scene */
+const providerCache: { data: Record<string, boolean> | null; timestamp: number } = {
+  data: null,
+  timestamp: 0,
+};
+const PROVIDER_CACHE_TTL = 60_000; // 1 minute
+
+async function getAvailableProviders(): Promise<Record<string, boolean>> {
+  const now = Date.now();
+  if (providerCache.data && (now - providerCache.timestamp) < PROVIDER_CACHE_TTL) {
+    return providerCache.data;
+  }
+
+  const [heygen, sora, runway] = await Promise.all([
+    getVideoProviderKey('heygen').then((k) => k !== null),
+    getVideoProviderKey('sora').then((k) => k !== null),
+    getVideoProviderKey('runway').then((k) => k !== null),
+  ]);
+
+  const result = { heygen, sora, runway };
+  Object.assign(providerCache, { data: result, timestamp: Date.now() });
+
+  logger.info('Video provider availability check', {
+    heygen, sora, runway,
+    file: 'scene-generator.ts',
+  });
+
+  return result;
+}
+
+/**
+ * Determine whether a scene needs a talking avatar or is purely visual.
+ * Avatar scenes → HeyGen (avatar specialist)
+ * Visual/B-roll scenes → Runway or Sora (cinematic generation)
+ */
+function isAvatarScene(scene: PipelineScene, hasAvatar: boolean): boolean {
+  if (!hasAvatar) {
+    return false;
+  }
+
+  // If the scene has a speaking script that's more than a brief overlay, it's avatar
+  const scriptLength = scene.scriptText?.trim().length ?? 0;
+  if (scriptLength > 30) {
+    return true;
+  }
+
+  // Scenes explicitly tagged as visual-only via keywords
+  const visualKeywords = ['b-roll', 'broll', 'transition', 'montage', 'aerial', 'landscape', 'cinematic', 'background'];
+  const titleLower = (scene.scriptText ?? '').toLowerCase();
+  if (visualKeywords.some((kw) => titleLower.includes(kw))) {
+    return false;
+  }
+
+  return true;
+}
+
+/**
+ * Select the best engine for a scene based on content analysis and provider availability.
+ *
+ * Strategy:
+ * - Avatar scenes (talking head with script) → HeyGen
+ * - Visual/cinematic scenes → Runway (best quality) or Sora (fallback)
+ * - If the preferred provider isn't available, fall back to the next best
+ */
+export async function selectEngineForScene(
+  scene: PipelineScene,
+  hasAvatar: boolean
+): Promise<VideoEngineId> {
+  // If the scene already has an engine explicitly set, respect it
+  if (scene.engine) {
+    return scene.engine;
+  }
+
+  const providers = await getAvailableProviders();
+  const needsAvatar = isAvatarScene(scene, hasAvatar);
+
+  if (needsAvatar) {
+    // Avatar scenes: HeyGen is the only provider that does talking avatars
+    if (providers.heygen) { return 'heygen'; }
+    // No avatar provider available — fall back to text-to-video
+    if (providers.runway) { return 'runway'; }
+    if (providers.sora) { return 'sora'; }
+    return 'heygen'; // Will fail with a clear "not configured" error
+  }
+
+  // Visual/cinematic scenes: prefer Runway (Gen-3 quality), then Sora, then HeyGen
+  if (providers.runway) { return 'runway'; }
+  if (providers.sora) { return 'sora'; }
+  if (providers.heygen) { return 'heygen'; }
+  return 'runway'; // Will fail with a clear "not configured" error
+}
+
+/**
+ * Select engines for all scenes in a batch. Returns a map of sceneId → engine.
+ */
+export async function selectEnginesForScenes(
+  scenes: PipelineScene[],
+  hasAvatar: boolean
+): Promise<Map<string, VideoEngineId>> {
+  const result = new Map<string, VideoEngineId>();
+  for (const scene of scenes) {
+    const engine = await selectEngineForScene(scene, hasAvatar);
+    result.set(scene.id, engine);
+  }
+  return result;
+}
+
+// ============================================================================
 // Scene Generation (Multi-Engine Router)
 // ============================================================================
 
 /**
- * Generate a single scene, dispatching to the selected engine.
- * null or 'heygen' → HeyGen path (default)
- * 'runway' → Runway path
- * 'sora' → Sora path
- * 'kling' / 'luma' → returns failed result (not yet available)
+ * Generate a single scene, dispatching to the best available engine.
+ * Uses intelligent engine selection when scene.engine is null.
  */
 export async function generateScene(
   scene: PipelineScene,
@@ -169,7 +278,17 @@ export async function generateScene(
   voiceId: string,
   aspectRatio: VideoAspectRatio
 ): Promise<SceneGenerationResult> {
-  const engine: VideoEngineId = scene.engine ?? 'heygen';
+  const hasAvatar = Boolean(avatarId);
+  const engine: VideoEngineId = await selectEngineForScene(scene, hasAvatar);
+
+  logger.info('Engine selected for scene', {
+    sceneId: scene.id,
+    explicitEngine: scene.engine,
+    selectedEngine: engine,
+    hasAvatar,
+    scriptLength: scene.scriptText?.length ?? 0,
+    file: 'scene-generator.ts',
+  });
 
   try {
     switch (engine) {
