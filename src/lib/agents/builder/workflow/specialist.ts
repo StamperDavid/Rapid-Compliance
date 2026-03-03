@@ -1154,8 +1154,13 @@ export class WorkflowOptimizer extends BaseSpecialist {
       }
     }
 
-    // Simulate execution (in production, this would dispatch to actual agents)
-    const nodeResults = await this.simulateExecution(workflow, dryRun ?? false);
+    // Execute workflow nodes (dry run simulates, real run dispatches to agents)
+    let nodeResults: NodeExecutionResult[];
+    if (dryRun) {
+      nodeResults = this.simulateDryRun(workflow);
+    } else {
+      nodeResults = await this.executeWorkflowNodes(workflow);
+    }
 
     const completedAt = new Date().toISOString();
     const totalDurationMs = new Date(completedAt).getTime() - new Date(startedAt).getTime();
@@ -1185,61 +1190,169 @@ export class WorkflowOptimizer extends BaseSpecialist {
   }
 
   /**
-   * Simulate workflow execution
+   * Execute workflow nodes by dispatching to real agents via signal bus
    */
-  private async simulateExecution(
-    workflow: Workflow,
-    dryRun: boolean
+  private async executeWorkflowNodes(
+    workflow: Workflow
   ): Promise<NodeExecutionResult[]> {
     const results: NodeExecutionResult[] = [];
     const completed = new Set<string>();
+    const nodeOutputs = new Map<string, unknown>();
 
     // Process nodes in dependency order
     const remaining = [...workflow.nodes];
 
     while (remaining.length > 0) {
-      // Find nodes ready to execute
       const ready = remaining.filter(node =>
         node.dependsOn.every(dep => completed.has(dep))
       );
 
       if (ready.length === 0) {
-        // Circular dependency or error
+        // Log remaining nodes as blocked
+        for (const node of remaining) {
+          results.push({
+            nodeId: node.id,
+            status: 'FAILED',
+            startedAt: new Date().toISOString(),
+            error: `Blocked: unresolved dependencies [${node.dependsOn.filter(d => !completed.has(d)).join(', ')}]`,
+            retryCount: 0,
+          });
+        }
         break;
       }
 
-      // Execute ready nodes (simulated in parallel)
-      for (const node of ready) {
+      // Execute ready nodes in parallel
+      const nodePromises = ready.map(async (node) => {
         const startedAt = new Date().toISOString();
 
-        // Simulate execution time
-        if (!dryRun) {
-          await new Promise<void>(resolve => {
-            setTimeout(resolve, Math.min(100, node.estimatedDurationMs / 50));
-          });
+        try {
+          // Build inputs from dependency outputs (data mapping from edges)
+          const resolvedInputs = { ...node.inputs };
+          for (const edge of workflow.edges) {
+            if (edge.to === node.id && nodeOutputs.has(edge.from)) {
+              const sourceOutput = nodeOutputs.get(edge.from) as Record<string, unknown>;
+              for (const [targetKey, sourceKey] of Object.entries(edge.dataMapping)) {
+                if (sourceOutput && typeof sourceOutput === 'object') {
+                  resolvedInputs[targetKey] = sourceOutput[sourceKey];
+                }
+              }
+            }
+          }
+
+          // Dispatch to the target agent via signal bus
+          await broadcastSignal(
+            this.identity.id,
+            `workflow.execute.${node.agentId.toLowerCase()}.${node.action}`,
+            'HIGH',
+            {
+              workflowId: workflow.id,
+              nodeId: node.id,
+              action: node.action,
+              inputs: resolvedInputs,
+              dispatchedAt: startedAt,
+            },
+            [node.agentId]
+          );
+
+          // Record dispatch in MemoryVault for audit trail
+          await shareInsight(
+            this.identity.id,
+            'PERFORMANCE',
+            `Workflow node dispatched: ${node.agentId}.${node.action}`,
+            `Node ${node.id} in workflow ${workflow.id} dispatched to ${node.agentId} for action ${node.action}`,
+            {
+              confidence: 100,
+              sources: [workflow.id],
+              relatedAgents: [node.agentId],
+              actions: [`execute:${node.action}`],
+            }
+          );
+
+          const completedAt = new Date().toISOString();
+          const durationMs = new Date(completedAt).getTime() - new Date(startedAt).getTime();
+
+          const output = { dispatched: true, agentId: node.agentId, action: node.action };
+          nodeOutputs.set(node.id, output);
+
+          return {
+            nodeId: node.id,
+            status: 'COMPLETED' as NodeStatus,
+            startedAt,
+            completedAt,
+            durationMs,
+            output,
+            retryCount: 0,
+          };
+        } catch (error) {
+          const errorMsg = error instanceof Error ? error.message : String(error);
+          this.log('ERROR', `Node ${node.id} (${node.agentId}) dispatch failed: ${errorMsg}`);
+
+          return {
+            nodeId: node.id,
+            status: 'FAILED' as NodeStatus,
+            startedAt,
+            completedAt: new Date().toISOString(),
+            durationMs: 0,
+            error: errorMsg,
+            retryCount: 0,
+          };
         }
+      });
 
-        const completedAt = new Date().toISOString();
-        const durationMs = dryRun ? 0 : node.estimatedDurationMs / 50;
+      const nodeResults = await Promise.all(nodePromises);
 
-        // Simulate success/failure based on agent reliability
+      for (const result of nodeResults) {
+        results.push(result);
+        if (result.status === 'COMPLETED') {
+          completed.add(result.nodeId);
+        }
+        // Remove from remaining
+        const idx = remaining.findIndex(n => n.id === result.nodeId);
+        if (idx !== -1) {
+          remaining.splice(idx, 1);
+        }
+      }
+    }
+
+    return results;
+  }
+
+  /**
+   * Dry-run simulation: validates workflow structure without dispatching
+   */
+  private simulateDryRun(
+    workflow: Workflow
+  ): NodeExecutionResult[] {
+    const results: NodeExecutionResult[] = [];
+    const completed = new Set<string>();
+    const remaining = [...workflow.nodes];
+
+    while (remaining.length > 0) {
+      const ready = remaining.filter(node =>
+        node.dependsOn.every(dep => completed.has(dep))
+      );
+
+      if (ready.length === 0) {
+        break;
+      }
+
+      for (const node of ready) {
         const agent = AGENT_CATALOG.find(a => a.agentId === node.agentId);
-        const success = dryRun || Math.random() < (agent?.reliabilityScore ?? 0.9);
 
         results.push({
           nodeId: node.id,
-          status: success ? 'COMPLETED' : 'FAILED',
-          startedAt,
-          completedAt,
-          durationMs,
-          output: success ? { simulated: true, agentId: node.agentId } : undefined,
-          error: success ? undefined : 'Simulated failure',
+          status: agent ? 'COMPLETED' : 'FAILED',
+          startedAt: new Date().toISOString(),
+          completedAt: new Date().toISOString(),
+          durationMs: 0,
+          output: agent
+            ? { dryRun: true, agentId: node.agentId, agentFound: true }
+            : undefined,
+          error: agent ? undefined : `Agent ${node.agentId} not found in catalog`,
           retryCount: 0,
         });
 
         completed.add(node.id);
-
-        // Remove from remaining
         const idx = remaining.findIndex(n => n.id === node.id);
         if (idx !== -1) {
           remaining.splice(idx, 1);

@@ -214,56 +214,201 @@ export async function getEmailTrackingStats(
 
 /**
  * Get tracking stats for campaign
- * REAL: Aggregates stats for all emails in campaign
+ * Aggregates stats for all emails in campaign from Firestore
  */
-export function getCampaignTrackingStats(_campaignId: string): EmailTrackingStats | null {
-  // In production, this would query database for all emails in campaign
-  // For now, return null (will be implemented with database)
-  return null;
+export async function getCampaignTrackingStats(campaignId: string): Promise<EmailTrackingStats | null> {
+  try {
+    const { FirestoreService } = await import('@/lib/db/firestore-service');
+    const { where } = await import('firebase/firestore');
+
+    interface TrackingEvent {
+      campaignId: string;
+      messageId: string;
+      type: 'open' | 'click' | 'bounce' | 'unsubscribe';
+      timestamp: string;
+    }
+
+    const events = await FirestoreService.getAll<TrackingEvent>(
+      getSubCollection('emailTracking'),
+      [where('campaignId', '==', campaignId)]
+    );
+
+    if (!events || events.length === 0) {
+      return null;
+    }
+
+    const openEvents = events.filter((e: TrackingEvent) => e.type === 'open');
+    const clickEvents = events.filter((e: TrackingEvent) => e.type === 'click');
+    const bounceEvents = events.filter((e: TrackingEvent) => e.type === 'bounce');
+    const unsubEvents = events.filter((e: TrackingEvent) => e.type === 'unsubscribe');
+
+    // Count unique messages (each message = 1 sent email)
+    const uniqueMessages = new Set(events.map((e: TrackingEvent) => e.messageId));
+    const sent = uniqueMessages.size;
+    const delivered = sent - bounceEvents.length;
+    const opened = new Set(openEvents.map((e: TrackingEvent) => e.messageId)).size;
+    const clicked = new Set(clickEvents.map((e: TrackingEvent) => e.messageId)).size;
+
+    const openTimestamps = openEvents.map((e: TrackingEvent) => new Date(e.timestamp).getTime()).sort();
+    const clickTimestamps = clickEvents.map((e: TrackingEvent) => new Date(e.timestamp).getTime()).sort();
+
+    return {
+      messageId: campaignId,
+      sent,
+      delivered,
+      opened,
+      clicked,
+      bounced: bounceEvents.length,
+      unsubscribed: unsubEvents.length,
+      openRate: sent > 0 ? (opened / sent) * 100 : 0,
+      clickRate: sent > 0 ? (clicked / sent) * 100 : 0,
+      clickToOpenRate: opened > 0 ? (clicked / opened) * 100 : 0,
+      firstOpenedAt: openTimestamps.length > 0 ? new Date(openTimestamps[0]) : undefined,
+      lastOpenedAt: openTimestamps.length > 0 ? new Date(openTimestamps[openTimestamps.length - 1]) : undefined,
+      firstClickedAt: clickTimestamps.length > 0 ? new Date(clickTimestamps[0]) : undefined,
+      lastClickedAt: clickTimestamps.length > 0 ? new Date(clickTimestamps[clickTimestamps.length - 1]) : undefined,
+    };
+  } catch (error: unknown) {
+    logger.error('Failed to get campaign tracking stats', error instanceof Error ? error : undefined, {
+      campaignId,
+    });
+    return null;
+  }
 }
 
 /**
  * Record email open event
- * REAL: Stores open event in database
+ * Stores open event in Firestore emailTracking collection
  */
-export function recordOpenEvent(
+export async function recordOpenEvent(
   trackingId: string,
   ipAddress?: string,
   userAgent?: string
-): void {
-  // In production, this would:
-  // 1. Look up messageId from trackingId
-  // 2. Create/open tracking record in database
-  // 3. Store IP, user agent, timestamp
-  // 4. Trigger webhooks if configured
+): Promise<void> {
+  try {
+    const { FirestoreService } = await import('@/lib/db/firestore-service');
+    const now = new Date().toISOString();
 
-  // For now, log it (API route will handle the actual storage)
-  logger.info('Email opened', { trackingId, ipAddress, userAgent, file: 'email-tracking.ts' });
+    // Store the open event
+    const eventId = `open_${trackingId}_${Date.now()}`;
+    await FirestoreService.set(
+      getSubCollection('emailTracking'),
+      eventId,
+      {
+        trackingId,
+        messageId: trackingId,
+        type: 'open',
+        ipAddress: ipAddress ?? null,
+        userAgent: userAgent ?? null,
+        timestamp: now,
+        createdAt: now,
+      },
+      false
+    );
+
+    // Also update the per-message tracking record
+    const existing = await FirestoreService.get<Record<string, unknown>>(
+      getSubCollection('emailTracking'),
+      trackingId
+    );
+
+    await FirestoreService.set(
+      getSubCollection('emailTracking'),
+      trackingId,
+      {
+        ...(existing ?? {}),
+        messageId: trackingId,
+        opened: true,
+        openedAt: existing?.openedAt ?? now,
+        lastOpenedAt: now,
+        openCount: ((existing?.openCount as number) ?? 0) + 1,
+        updatedAt: now,
+      },
+      true
+    );
+
+    logger.info('Email open event recorded', { trackingId, ipAddress, file: 'email-tracking.ts' });
+  } catch (error: unknown) {
+    logger.error('Failed to record email open event', error instanceof Error ? error : undefined, {
+      trackingId,
+    });
+  }
 }
 
 /**
  * Record email click event
- * REAL: Stores click event and redirects to original URL
+ * Stores click event in Firestore and returns original URL for redirect
  */
-export function recordClickEvent(
+export async function recordClickEvent(
   linkId: string,
   ipAddress?: string,
   userAgent?: string
-): string | null {
-  // In production, this would:
-  // 1. Look up original URL from linkId
-  // 2. Create click event in database
-  // 3. Store IP, user agent, timestamp
-  // 4. Return original URL for redirect
-  // 5. Trigger webhooks if configured
+): Promise<string | null> {
+  try {
+    const { FirestoreService } = await import('@/lib/db/firestore-service');
+    const now = new Date().toISOString();
 
-  // Get link data from Firestore (called from API route, so server-side)
-  // The API route will handle this and return the original URL
-  // For now, return null (API route will handle the lookup and redirect)
-  logger.info('Email clicked', { linkId, ipAddress, userAgent, file: 'email-tracking.ts' });
+    // Look up the link mapping to get original URL and messageId
+    const linkData = await FirestoreService.get<{
+      messageId: string;
+      originalUrl: string;
+      trackingId: string;
+    }>(
+      getSubCollection('emailTrackingLinks'),
+      linkId
+    );
 
-  // The actual lookup and redirect happens in the API route
-  return null;
+    // Store the click event regardless of link lookup
+    const eventId = `click_${linkId}_${Date.now()}`;
+    await FirestoreService.set(
+      getSubCollection('emailTracking'),
+      eventId,
+      {
+        linkId,
+        messageId: linkData?.messageId ?? linkId,
+        type: 'click',
+        originalUrl: linkData?.originalUrl ?? null,
+        ipAddress: ipAddress ?? null,
+        userAgent: userAgent ?? null,
+        timestamp: now,
+        createdAt: now,
+      },
+      false
+    );
+
+    // Update per-message tracking record if we have a messageId
+    if (linkData?.messageId) {
+      const trackingId = linkData.trackingId ?? linkData.messageId;
+      const existing = await FirestoreService.get<Record<string, unknown>>(
+        getSubCollection('emailTracking'),
+        trackingId
+      );
+
+      await FirestoreService.set(
+        getSubCollection('emailTracking'),
+        trackingId,
+        {
+          ...(existing ?? {}),
+          messageId: linkData.messageId,
+          clicked: true,
+          clickedAt: existing?.clickedAt ?? now,
+          lastClickedAt: now,
+          clickCount: ((existing?.clickCount as number) ?? 0) + 1,
+          updatedAt: now,
+        },
+        true
+      );
+    }
+
+    logger.info('Email click event recorded', { linkId, originalUrl: linkData?.originalUrl, file: 'email-tracking.ts' });
+
+    return linkData?.originalUrl ?? null;
+  } catch (error: unknown) {
+    logger.error('Failed to record email click event', error instanceof Error ? error : undefined, {
+      linkId,
+    });
+    return null;
+  }
 }
 
 

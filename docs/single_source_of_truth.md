@@ -147,25 +147,66 @@ The Claude Code Governance Layer defines binding operational constraints for AI-
 | Dashboard UI | **~80 fully functional pages** with 12-module feature toggle system |
 | Integrations | **26 real integrations** verified with actual API calls |
 
-### Open Items
+### Open Items — Launch Punch List
 
-| Area | Issue | Severity |
-|------|-------|----------|
-| **Placeholder tests** | 115 `expect(true).toBe(true)` across 11 files inflate pass counts; `playbook-engine.test.ts` has 94 stubs | HIGH |
-| **Zod validation gaps** | ~49% of API routes have Zod schemas; video, social, and webhook routes need coverage | MEDIUM |
-| **Facebook/Instagram** | No API implementation. Blocked: Meta Developer Portal approval | MEDIUM |
-| **LinkedIn** | Unofficial RapidAPI wrapper. Blocked: Marketing Developer Platform approval | MEDIUM |
-| **Stripe live keys** | Test keys configured; live keys blocked on bank account setup | MEDIUM |
-| **Skipped tests** | 37 `it.skip` — need external services (Firestore emulator, SendGrid, Twilio, Stripe) | LOW |
-| **Video render pipeline** | Returns "coming soon" without API keys; works when HeyGen/Sora/Runway keys configured | LOW |
-| **Stub integrations** | Square, Vonage, Resend, SMTP, Calendly — type defs only, no implementation | LOW |
+#### Tier 1: CRITICAL (Code fixes — actively harmful or demo-breaking)
+
+| # | Area | Issue | Severity |
+|---|------|-------|----------|
+| 1 | **Facebook agent fake data** | Returns `Math.random()` metrics written to MemoryVault as "real" with 85-95% confidence | CRITICAL |
+| 2 | **Twitter agent fake data** | Returns hardcoded fake analytics written to MemoryVault as "real" | CRITICAL |
+| 3 | **CRM event triggers disabled** | `getApplicableWorkflows()` returns `Promise.resolve([])` — zero CRM automation works | CRITICAL |
+| 4 | **Email tracking not recorded** | Open/click events log to console only, never saved to Firestore | CRITICAL |
+| 5 | **Workflow execution simulated** | Uses `simulateExecution()` instead of real agent dispatch | CRITICAL |
+| 6 | **Cross-manager routing fake** | Returns hardcoded SUCCESS without executing commands | CRITICAL |
+| 7 | **Social posting DEV MODE** | Twitter/LinkedIn return mock 200 success without actually posting | HIGH |
+| 8 | **Commerce payment fake** | Creates `cs_${Date.now()}` instead of Stripe checkout session | HIGH |
+| 9 | **Voice outreach blocked** | Returns BLOCKED with "VOICE_AI_SPECIALIST not yet implemented" | HIGH |
+
+#### Tier 2: Functional Gaps (Silent failures, empty responses)
+
+| # | Area | Issue | Severity |
+|---|------|-------|----------|
+| 10 | **Lead nurturing** | Enrollment doesn't schedule emails; enrichment returns empty | MEDIUM |
+| 11 | **Deal pipeline chart** | Time series always returns `[]` | MEDIUM |
+| 12 | **GMB agent** | Competitor analysis returns hardcoded fake data | MEDIUM |
+| 13 | **Review manager** | Trend report always returns all zeros | MEDIUM |
+| 14 | **Catalog sync** | Returns `syncedCount: 0` placeholder | MEDIUM |
+| 15 | **Video assembly** | Stitcher returns placeholder `video://...` URLs, no real processing | MEDIUM |
+| 16 | **Vertex AI tuning** | Fully simulated (fake job IDs, no API call) | LOW |
+| 17 | **Workflow triggers** | Firestore/schedule triggers never deploy Cloud Functions | LOW |
+
+#### Tier 3: External Blockers (Need credentials or third-party action)
+
+| # | Area | What's Needed |
+|---|------|---------------|
+| 18 | **Stripe** | Production API keys (bank account setup) |
+| 19 | **Facebook/Instagram** | Meta Developer Portal approval |
+| 20 | **LinkedIn** | Marketing Developer Platform approval |
+| 21 | **Twilio** | Account verification for voice calls |
+| 22 | **Email DNS** | SPF/DKIM/DMARC for salesvelocity.ai |
+| 23 | **Domain** | CNAME/A records to Vercel, SSL |
+| 24 | **OAuth apps** | Production redirect URIs |
+
+#### Tier 4: Technical Debt (Post-launch OK)
+
+| # | Issue | Severity |
+|---|-------|----------|
+| 25 | 115 placeholder tests (`expect(true).toBe(true)`) | HIGH |
+| 26 | ~49% Zod validation coverage on API routes | MEDIUM |
+| 27 | 37 skipped tests (need external services) | LOW |
+| 28 | Search uses Firestore full-scan (no Algolia) | LOW |
+| 29 | Admin DAL `verifyAccess()` is a no-op | LOW |
+| 30 | Stub integrations: Square, Vonage, Resend, SMTP, Calendly | LOW |
 
 ### Active Roadmap
 
 | Priority | Focus | Status |
 |----------|-------|--------|
-| **Test quality** | Delete/implement 115 placeholder tests, remove 16 obsolete skipped tests | PENDING |
-| **Zod coverage** | Add Zod validation to remaining ~150 API routes (video, social, webhook, cron) | PENDING |
+| **Tier 1 punch list** | Fix 9 critical code issues (fake data, disabled triggers, simulated execution) | IN PROGRESS |
+| **Tier 2 gaps** | Address functional gaps in lead nurturing, analytics, video | PENDING |
+| **Test quality** | Delete/implement 115 placeholder tests | PENDING |
+| **Zod coverage** | Add Zod validation to remaining ~150 API routes | PENDING |
 | **Facebook/Instagram** | Implement when Meta Developer Portal approval obtained | BLOCKED |
 | **LinkedIn official** | Replace RapidAPI wrapper when Marketing Developer Platform approved | BLOCKED |
 | **Stripe go-live** | Switch from test to live keys when bank account setup complete | BLOCKED |

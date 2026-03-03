@@ -644,12 +644,79 @@ export class MasterOrchestrator extends BaseManager {
   async initialize(): Promise<void> {
     this.log('INFO', 'Initializing Master Orchestrator - Swarm CEO...');
 
-    // Load manager instances dynamically (lazy loading pattern)
-    // Managers are loaded on-demand when first accessed
+    // Manager instances are lazy-loaded on first access via getManagerInstance()
     await Promise.resolve();
 
     this.isInitialized = true;
     this.log('INFO', 'Master Orchestrator initialized - Swarm CEO online');
+  }
+
+  /**
+   * Lazy-load and cache a manager instance by ID
+   */
+  private async getManagerInstance(managerId: ManagerId): Promise<BaseManager> {
+    const entry = this.managerRegistry.get(managerId);
+    if (!entry) {
+      throw new Error(`Unknown manager: ${managerId}`);
+    }
+
+    if (entry.instance) {
+      return entry.instance;
+    }
+
+    // Dynamically import and instantiate the manager
+    const instance = await this.createManagerInstance(managerId);
+    await instance.initialize();
+    entry.instance = instance;
+
+    this.log('INFO', `Manager ${managerId} loaded and initialized`);
+    return instance;
+  }
+
+  /**
+   * Create a manager instance via dynamic import (avoids circular deps)
+   */
+  private async createManagerInstance(managerId: ManagerId): Promise<BaseManager> {
+    switch (managerId) {
+      case 'MARKETING_MANAGER': {
+        const { MarketingManager } = await import('../marketing/manager');
+        return new MarketingManager();
+      }
+      case 'REVENUE_DIRECTOR': {
+        const { RevenueDirector } = await import('../sales/revenue/manager');
+        return new RevenueDirector();
+      }
+      case 'ARCHITECT_MANAGER': {
+        const { ArchitectManager } = await import('../architect/manager');
+        return new ArchitectManager();
+      }
+      case 'BUILDER_MANAGER': {
+        const { BuilderManager } = await import('../builder/manager');
+        return new BuilderManager();
+      }
+      case 'CONTENT_MANAGER': {
+        const { ContentManager } = await import('../content/manager');
+        return new ContentManager();
+      }
+      case 'OUTREACH_MANAGER': {
+        const { OutreachManager } = await import('../outreach/manager');
+        return new OutreachManager();
+      }
+      case 'COMMERCE_MANAGER': {
+        const { CommerceManager } = await import('../commerce/manager');
+        return new CommerceManager();
+      }
+      case 'REPUTATION_MANAGER': {
+        const { ReputationManager } = await import('../trust/reputation/manager');
+        return new ReputationManager();
+      }
+      case 'INTELLIGENCE_MANAGER': {
+        const { IntelligenceManager } = await import('../intelligence/manager');
+        return new IntelligenceManager();
+      }
+      default:
+        throw new Error(`No implementation found for manager: ${managerId}`);
+    }
   }
 
   // ==========================================================================
@@ -1180,8 +1247,8 @@ export class MasterOrchestrator extends BaseManager {
         };
       }
 
-      // Create message for the manager (prepared for future actual manager invocation)
-      const _message: AgentMessage = {
+      // Create message for the target manager
+      const message: AgentMessage = {
         id: `msg_${command.id}`,
         timestamp: new Date(),
         from: 'MASTER_ORCHESTRATOR',
@@ -1196,21 +1263,22 @@ export class MasterOrchestrator extends BaseManager {
         traceId: command.id,
       };
 
-      // Execute via manager (simulated - in production would invoke actual manager via _message)
-      // For now, we simulate successful execution
+      // Load the target manager and dispatch the command
+      const manager = await this.getManagerInstance(command.targetManager);
+      const report = await manager.execute(message);
+
       const result: CommandResult = {
         commandId: command.id,
         managerId: command.targetManager,
-        status: 'SUCCESS',
-        data: {
-          message: `Command ${command.id} executed by ${command.targetManager}`,
-          payload: command.payload,
-        },
-        errors: [],
+        status: report.status === 'COMPLETED' ? 'SUCCESS' : 'FAILED',
+        data: report.data,
+        errors: report.errors ?? [],
         executionTimeMs: Date.now() - startTime,
       };
 
-      this.metricsCollector.successfulCommands++;
+      if (result.status === 'SUCCESS') {
+        this.metricsCollector.successfulCommands++;
+      }
       this.metricsCollector.totalResponseTimeMs += result.executionTimeMs;
       this.commandHistory.push(result);
 

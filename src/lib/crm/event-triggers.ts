@@ -93,24 +93,164 @@ export async function fireCRMEvent(event: CRMEvent): Promise<void> {
 }
 
 /**
- * Get workflows that should be triggered by this event
+ * Map CRM event type to workflow entity trigger type
  */
-function getApplicableWorkflows(_event: CRMEvent): Promise<WorkflowTriggerRule[]> {
-  // In production, this would query Firestore for workflow trigger rules
-  // For now, return empty array (workflows need to be set up separately)
+function mapCrmEventToTriggerType(eventType: CRMEventType): string | null {
+  switch (eventType) {
+    case 'lead_created':
+    case 'deal_created':
+    case 'contact_created':
+    case 'company_created':
+      return 'entity.created';
+    case 'lead_status_changed':
+    case 'lead_score_changed':
+    case 'deal_stage_changed':
+    case 'deal_value_changed':
+    case 'deal_won':
+    case 'deal_lost':
+    case 'contact_updated':
+      return 'entity.updated';
+    default:
+      return null;
+  }
+}
 
-  // Example query structure:
-  // const rules = await FirestoreService.getAll<WorkflowTriggerRule>(
-  //   getSubCollection('workflowTriggers')
-  // );
+/**
+ * Extract entity schema key from CRM event type
+ */
+function getEntitySchemaKey(eventType: CRMEventType): string {
+  if (eventType.startsWith('lead_')) {
+    return 'lead';
+  }
+  if (eventType.startsWith('deal_')) {
+    return 'deal';
+  }
+  if (eventType.startsWith('contact_')) {
+    return 'contact';
+  }
+  if (eventType.startsWith('company_')) {
+    return 'company';
+  }
+  return '';
+}
 
-  // return rules.data.filter(rule => {
-  //   if (!rule.enabled) return false;
-  //   if (rule.eventType !== _event.eventType) return false;
-  //   return _evaluateConditions(rule.conditions, _event);
-  // });
+/**
+ * Evaluate workflow conditions against entity data
+ */
+function evaluateWorkflowConditions(
+  conditions: Array<{ field: string; operator: string; value: unknown; source?: string }>,
+  operator: 'and' | 'or',
+  entityData: Record<string, unknown>
+): boolean {
+  const results = conditions.map(cond => {
+    const fieldValue = entityData[cond.field];
+    switch (cond.operator) {
+      case 'equals': return fieldValue === cond.value;
+      case 'not_equals': return fieldValue !== cond.value;
+      case 'contains': return String(fieldValue ?? '').toLowerCase().includes(String(cond.value).toLowerCase());
+      case 'not_contains': return !String(fieldValue ?? '').toLowerCase().includes(String(cond.value).toLowerCase());
+      case 'greater_than': return typeof fieldValue === 'number' && typeof cond.value === 'number' && fieldValue > cond.value;
+      case 'less_than': return typeof fieldValue === 'number' && typeof cond.value === 'number' && fieldValue < cond.value;
+      case 'is_empty': return fieldValue === null || fieldValue === undefined || fieldValue === '';
+      case 'is_not_empty': return fieldValue !== null && fieldValue !== undefined && fieldValue !== '';
+      case 'exists': return fieldValue !== undefined;
+      case 'not_exists': return fieldValue === undefined;
+      default: return true;
+    }
+  });
 
-  return Promise.resolve([]);
+  return operator === 'and'
+    ? results.every(Boolean)
+    : results.some(Boolean);
+}
+
+/**
+ * Get workflows that should be triggered by this event
+ * Queries Firestore for active workflows whose trigger matches the CRM event
+ */
+async function getApplicableWorkflows(event: CRMEvent): Promise<WorkflowTriggerRule[]> {
+  try {
+    const { getWorkflows } = await import('@/lib/workflows/workflow-service');
+
+    // Map CRM event type to workflow trigger type
+    const triggerType = mapCrmEventToTriggerType(event.eventType);
+    if (!triggerType) {
+      return [];
+    }
+
+    // Query active workflows with matching trigger type
+    const result = await getWorkflows({ status: 'active', triggerType });
+    if (!result.data.length) {
+      return [];
+    }
+
+    const entityKey = getEntitySchemaKey(event.eventType);
+    const matching: WorkflowTriggerRule[] = [];
+
+    for (const workflow of result.data) {
+      const trigger = workflow.trigger as {
+        type: string;
+        schemaId?: string;
+        specificFields?: string[];
+      };
+
+      // Verify schemaId matches entity type (case-insensitive partial match)
+      if (trigger.schemaId && entityKey) {
+        const schemaLower = trigger.schemaId.toLowerCase();
+        if (!schemaLower.includes(entityKey)) {
+          continue;
+        }
+      }
+
+      // Check specific field triggers — only fire if a watched field changed
+      if (trigger.specificFields?.length && event.changes?.length) {
+        const changedFields = event.changes.map(c => c.field);
+        const hasMatch = trigger.specificFields.some(f => changedFields.includes(f));
+        if (!hasMatch) {
+          continue;
+        }
+      }
+
+      // Evaluate workflow conditions against entity data
+      const conditions = workflow.conditions as Array<{
+        field: string;
+        operator: string;
+        value: unknown;
+        source?: string;
+      }> | undefined;
+
+      if (conditions?.length && event.entityData) {
+        const condOp = workflow.conditionOperator ?? 'and';
+        const passed = evaluateWorkflowConditions(conditions, condOp, event.entityData);
+        if (!passed) {
+          continue;
+        }
+      }
+
+      matching.push({
+        id: `trigger_${workflow.id}`,
+        name: workflow.name,
+        enabled: true,
+        eventType: event.eventType,
+        workflowId: workflow.id,
+        workflowName: workflow.name,
+      });
+    }
+
+    logger.info('Found applicable workflows for CRM event', {
+      eventType: event.eventType,
+      entityType: event.entityType,
+      matchCount: matching.length,
+    });
+
+    return matching;
+  } catch (error: unknown) {
+    const err = error instanceof Error ? error : undefined;
+    logger.error('Failed to query applicable workflows', err, {
+      eventType: event.eventType,
+    });
+    return [];
+  }
 }
 
 /**

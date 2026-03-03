@@ -187,6 +187,27 @@ export class PaymentSpecialist extends BaseSpecialist {
     }
   }
 
+  /**
+   * Map Stripe payment intent status to our PaymentResult status
+   */
+  private mapStripeStatus(
+    stripeStatus: string
+  ): 'pending' | 'processing' | 'succeeded' | 'failed' | 'canceled' | 'requires_action' {
+    switch (stripeStatus) {
+      case 'succeeded': return 'succeeded';
+      case 'processing': return 'processing';
+      case 'canceled': return 'canceled';
+      case 'requires_action':
+      case 'requires_confirmation':
+      case 'requires_capture':
+        return 'requires_action';
+      case 'requires_payment_method':
+        return 'pending';
+      default:
+        return 'pending';
+    }
+  }
+
   async execute(message: AgentMessage): Promise<AgentReport> {
     const taskId = message.id;
 
@@ -305,9 +326,81 @@ export class PaymentSpecialist extends BaseSpecialist {
         0
       );
 
-      // In production, this would call Stripe API
-      // For now, we create a session record
-      const sessionId = `cs_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+      // Get Stripe key from API Key Service (stored in Firestore settings)
+      const { apiKeyService } = await import('@/lib/api-keys/api-key-service');
+      const { PLATFORM_ID } = await import('@/lib/constants/platform');
+      const stripeKeys = await apiKeyService.getServiceKey(PLATFORM_ID, 'stripe') as {
+        secretKey?: string;
+        publicKey?: string;
+        webhookSecret?: string;
+      } | null;
+      const stripeKey = stripeKeys?.secretKey ?? null;
+
+      if (stripeKey) {
+        // Real Stripe checkout session
+        const Stripe = (await import('stripe')).default;
+        const stripe = new Stripe(stripeKey, { apiVersion: '2023-10-16' });
+
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
+        const session = await stripe.checkout.sessions.create({
+          payment_method_types: ['card'],
+          customer_email: payload.customer.email,
+          line_items: lineItems.map(li => ({
+            price_data: {
+              currency: li.price_data.currency,
+              product_data: {
+                name: li.price_data.product_data.name,
+                description: li.price_data.product_data.description ?? undefined,
+                images: li.price_data.product_data.images ?? undefined,
+              },
+              unit_amount: li.price_data.unit_amount,
+            },
+            quantity: li.quantity,
+          })),
+          mode: 'payment',
+          success_url: payload.successUrl ?? `${appUrl}/store/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
+          cancel_url: payload.cancelUrl ?? `${appUrl}/store/checkout/cancelled`,
+          metadata: {
+            ...payload.metadata,
+            customerName: `${payload.customer.firstName} ${payload.customer.lastName}`.trim(),
+          },
+        });
+
+        // Store session reference in Firestore for tracking
+        await FirestoreService.set(
+          getSubCollection('checkout_sessions'),
+          session.id,
+          {
+            id: session.id,
+            stripeSessionId: session.id,
+            customer: payload.customer,
+            total,
+            currency: payload.currency ?? 'usd',
+            status: 'pending',
+            sessionUrl: session.url,
+            createdAt: new Date().toISOString(),
+            expiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+          },
+          false
+        );
+
+        this.log('INFO', `Stripe checkout session created: ${session.id} for $${total.toFixed(2)}`);
+
+        return {
+          success: true,
+          action: 'initialize_checkout',
+          sessionId: session.id,
+          sessionUrl: session.url ?? `/store/checkout?session_id=${session.id}`,
+          amount: total,
+          currency: payload.currency ?? 'usd',
+          status: 'pending',
+          metadata: { itemCount: payload.items.length },
+        };
+      }
+
+      // Fallback: Stripe not configured — create local session for development
+      this.log('WARN', 'Stripe API key not configured — creating local checkout session');
+      const sessionId = `cs_local_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
 
       const sessionData = {
         id: sessionId,
@@ -321,8 +414,9 @@ export class PaymentSpecialist extends BaseSpecialist {
         successUrl: payload.successUrl,
         cancelUrl: payload.cancelUrl,
         metadata: payload.metadata,
+        stripeConfigured: false,
         createdAt: new Date().toISOString(),
-        expiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString(), // 30 min expiry
+        expiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
       };
 
       await FirestoreService.set(
@@ -332,17 +426,17 @@ export class PaymentSpecialist extends BaseSpecialist {
         false
       );
 
-      this.log('INFO', `Checkout session created: ${sessionId} for $${total.toFixed(2)}`);
+      this.log('INFO', `Local checkout session created: ${sessionId} for $${total.toFixed(2)}`);
 
       return {
         success: true,
         action: 'initialize_checkout',
         sessionId,
-        sessionUrl: `/checkout/${sessionId}`, // Would be Stripe hosted URL in production
+        sessionUrl: `/store/checkout?session_id=${sessionId}`,
         amount: total,
         currency: payload.currency ?? 'usd',
         status: 'pending',
-        metadata: { itemCount: payload.items.length },
+        metadata: { itemCount: payload.items.length, stripeConfigured: false },
       };
     } catch (error) {
       const err = error instanceof Error ? error : new Error(String(error));
@@ -370,15 +464,67 @@ export class PaymentSpecialist extends BaseSpecialist {
       const { FirestoreService } = await import('@/lib/db/firestore-service');
       const { getSubCollection } = await import('@/lib/firebase/collections');
 
-      const paymentIntentId = `pi_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+      // Get Stripe key from API Key Service (stored in Firestore settings)
+      const { apiKeyService } = await import('@/lib/api-keys/api-key-service');
+      const { PLATFORM_ID } = await import('@/lib/constants/platform');
+      const stripeKeys = await apiKeyService.getServiceKey(PLATFORM_ID, 'stripe') as {
+        secretKey?: string;
+      } | null;
+      const stripeKey = stripeKeys?.secretKey ?? null;
+
+      if (stripeKey) {
+        const Stripe = (await import('stripe')).default;
+        const stripe = new Stripe(stripeKey, { apiVersion: '2023-10-16' });
+
+        const intent = await stripe.paymentIntents.create({
+          amount: Math.round(payload.amount * 100), // Convert to cents
+          currency: payload.currency ?? 'usd',
+          customer: payload.customerId ?? undefined,
+          metadata: payload.metadata as Record<string, string> ?? {},
+        });
+
+        // Store reference in Firestore
+        await FirestoreService.set(
+          getSubCollection('payment_intents'),
+          intent.id,
+          {
+            id: intent.id,
+            stripePaymentIntentId: intent.id,
+            clientSecret: intent.client_secret,
+            amount: payload.amount,
+            currency: payload.currency ?? 'usd',
+            customerId: payload.customerId,
+            status: intent.status,
+            createdAt: new Date().toISOString(),
+          },
+          false
+        );
+
+        this.log('INFO', `Stripe payment intent created: ${intent.id} for ${payload.amount} ${payload.currency}`);
+
+        return {
+          success: true,
+          action: 'create_payment_intent',
+          paymentIntentId: intent.id,
+          amount: payload.amount,
+          currency: payload.currency ?? 'usd',
+          status: this.mapStripeStatus(intent.status),
+          metadata: { clientSecret: intent.client_secret },
+        };
+      }
+
+      // Fallback: Stripe not configured
+      this.log('WARN', 'Stripe API key not configured — creating local payment intent');
+      const paymentIntentId = `pi_local_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
 
       const intentData = {
         id: paymentIntentId,
         amount: payload.amount,
-        currency: payload.currency,
+        currency: payload.currency ?? 'usd',
         customerId: payload.customerId,
         status: 'requires_payment_method' as const,
         metadata: payload.metadata,
+        stripeConfigured: false,
         createdAt: new Date().toISOString(),
       };
 
@@ -389,15 +535,16 @@ export class PaymentSpecialist extends BaseSpecialist {
         false
       );
 
-      this.log('INFO', `Payment intent created: ${paymentIntentId} for ${payload.amount} ${payload.currency}`);
+      this.log('INFO', `Local payment intent created: ${paymentIntentId} for ${payload.amount} ${payload.currency}`);
 
       return {
         success: true,
         action: 'create_payment_intent',
         paymentIntentId,
         amount: payload.amount,
-        currency: payload.currency,
+        currency: payload.currency ?? 'usd',
         status: 'pending',
+        metadata: { stripeConfigured: false },
       };
     } catch (error) {
       const err = error instanceof Error ? error : new Error(String(error));
