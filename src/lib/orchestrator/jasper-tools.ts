@@ -434,22 +434,22 @@ export interface AgentLog {
  * Jasper should ALWAYS include the reviewLink in his response to the user.
  */
 const REVIEW_LINK_MAP: Record<string, string> = {
-  delegate_to_builder: '/website/pages',
-  delegate_to_sales: '/crm/contacts',
-  delegate_to_marketing: '/email/campaigns',
+  delegate_to_builder: '/website',
+  delegate_to_sales: '/contacts',
+  delegate_to_marketing: '/email',
   delegate_to_trust: '/analytics',
-  delegate_to_content: '/website/blog',
-  delegate_to_architect: '/website/pages',
-  delegate_to_outreach: '/crm/contacts',
+  delegate_to_content: '/content/video',
+  delegate_to_architect: '/website',
+  delegate_to_outreach: '/leads',
   delegate_to_intelligence: '/analytics',
-  delegate_to_commerce: '/ecommerce/products',
-  create_video: '/video',
-  generate_video: '/video',
-  save_blog_draft: '/website/blog',
+  delegate_to_commerce: '/products',
+  create_video: '/content/video',
+  generate_video: '/content/video',
+  save_blog_draft: '/website',
   research_trending_topics: '/seo',
   get_seo_config: '/seo',
   social_post: '/social',
-  migrate_website: '/website/pages',
+  migrate_website: '/website',
   voice_agent: '/voice',
 };
 
