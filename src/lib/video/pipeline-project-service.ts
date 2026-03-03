@@ -3,41 +3,30 @@
  * Firestore CRUD for video pipeline projects (7-step production flow)
  *
  * Collection path: organizations/{PLATFORM_ID}/video_pipeline_projects/{projectId}
+ *
+ * Uses Admin SDK for server-side operations (API routes, Jasper tools).
  */
 
-import {
-  collection,
-  addDoc,
-  getDoc,
-  getDocs,
-  updateDoc,
-  doc,
-  query,
-  where,
-  orderBy,
-  serverTimestamp,
-  Timestamp,
-  type QueryConstraint,
-} from 'firebase/firestore';
-import { db } from '@/lib/firebase/config';
+import { adminDb } from '@/lib/firebase/admin';
+import { FieldValue } from 'firebase-admin/firestore';
 import { logger } from '@/lib/logger/logger';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import type {
   PipelineBrief,
   PipelineProject,
   PipelineScene,
-  SceneGenerationResult,
   PipelineStep,
+  SceneGenerationResult,
   ProjectStatus,
   TransitionType,
   VideoType,
 } from '@/types/video-pipeline';
 
 // ============================================================================
-// Firestore Document Type
+// Firestore Document Shape
 // ============================================================================
 
-interface FirestorePipelineProjectData {
+interface FirestorePipelineDoc {
   name: string;
   type: VideoType;
   currentStep: PipelineStep;
@@ -51,10 +40,16 @@ interface FirestorePipelineProjectData {
   finalVideoUrl: string | null;
   transitionType: TransitionType;
   status: ProjectStatus;
-  createdAt: Timestamp | ReturnType<typeof serverTimestamp>;
-  updatedAt: Timestamp | ReturnType<typeof serverTimestamp>;
+  createdAt: FirebaseFirestore.Timestamp | null;
+  updatedAt: FirebaseFirestore.Timestamp | null;
   createdBy: string;
 }
+
+// ============================================================================
+// Constants
+// ============================================================================
+
+const COLLECTION_PATH = `organizations/${PLATFORM_ID}/video_pipeline_projects`;
 
 // ============================================================================
 // Helper Functions
@@ -72,13 +67,39 @@ function generateProjectName(description: string): string {
 }
 
 /**
- * Convert Firestore Timestamp to ISO string
+ * Convert Firestore Timestamp or FieldValue to ISO string
  */
 function timestampToISO(timestamp: unknown): string {
-  if (timestamp instanceof Timestamp) {
-    return timestamp.toDate().toISOString();
+  if (timestamp && typeof timestamp === 'object' && 'toDate' in timestamp) {
+    return (timestamp as { toDate: () => Date }).toDate().toISOString();
   }
   return new Date().toISOString();
+}
+
+/**
+ * Map a Firestore doc snapshot to a PipelineProject
+ */
+function docToProject(id: string, raw: FirebaseFirestore.DocumentData): PipelineProject {
+  const data = raw as FirestorePipelineDoc;
+  return {
+    id,
+    name: data.name ?? '',
+    type: data.type ?? 'explainer',
+    currentStep: data.currentStep ?? 'request',
+    brief: data.brief ?? ({} as PipelineBrief),
+    scenes: data.scenes ?? [],
+    avatarId: data.avatarId ?? null,
+    avatarName: data.avatarName ?? null,
+    voiceId: data.voiceId ?? null,
+    voiceName: data.voiceName ?? null,
+    generatedScenes: data.generatedScenes ?? [],
+    finalVideoUrl: data.finalVideoUrl ?? null,
+    transitionType: data.transitionType ?? 'cut',
+    status: data.status ?? 'draft',
+    createdAt: timestampToISO(data.createdAt),
+    updatedAt: timestampToISO(data.updatedAt),
+    createdBy: data.createdBy ?? '',
+  };
 }
 
 // ============================================================================
@@ -93,11 +114,10 @@ export async function createProject(
   createdBy: string
 ): Promise<{ success: boolean; projectId?: string; error?: string }> {
   try {
-    if (!db) {
+    if (!adminDb) {
       return { success: false, error: 'Database not available' };
     }
 
-    const projectsRef = collection(db, 'organizations', PLATFORM_ID, 'video_pipeline_projects');
     const name = generateProjectName(brief.description);
 
     const projectData = {
@@ -115,11 +135,11 @@ export async function createProject(
       transitionType: 'cut' as const,
       status: 'draft' as const,
       createdBy,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
     };
 
-    const docRef = await addDoc(projectsRef, projectData);
+    const docRef = await adminDb.collection(COLLECTION_PATH).add(projectData);
 
     logger.info('Pipeline project created', {
       projectId: docRef.id,
@@ -141,41 +161,23 @@ export async function createProject(
  */
 export async function getProject(projectId: string): Promise<PipelineProject | null> {
   try {
-    if (!db) {
+    if (!adminDb) {
       logger.warn('Database not available for getting project', { file: 'pipeline-project-service.ts' });
       return null;
     }
 
-    const projectRef = doc(db, 'organizations', PLATFORM_ID, 'video_pipeline_projects', projectId);
-    const projectSnap = await getDoc(projectRef);
+    const docSnap = await adminDb.collection(COLLECTION_PATH).doc(projectId).get();
 
-    if (!projectSnap.exists()) {
+    if (!docSnap.exists) {
       logger.warn('Project not found', { projectId, file: 'pipeline-project-service.ts' });
       return null;
     }
 
-    const data = projectSnap.data() as FirestorePipelineProjectData;
-    const project: PipelineProject = {
-      id: projectSnap.id,
-      name: data.name,
-      type: data.type,
-      currentStep: data.currentStep,
-      brief: data.brief,
-      scenes: data.scenes ?? [],
-      avatarId: data.avatarId ?? null,
-      avatarName: data.avatarName ?? null,
-      voiceId: data.voiceId ?? null,
-      voiceName: data.voiceName ?? null,
-      generatedScenes: data.generatedScenes ?? [],
-      finalVideoUrl: data.finalVideoUrl ?? null,
-      transitionType: data.transitionType ?? 'cut',
-      status: data.status,
-      createdAt: timestampToISO(data.createdAt),
-      updatedAt: timestampToISO(data.updatedAt),
-      createdBy: data.createdBy,
-    };
-
-    return project;
+    const data = docSnap.data();
+    if (!data) {
+      return null;
+    }
+    return docToProject(docSnap.id, data);
   } catch (error) {
     logger.error('Failed to get pipeline project', error as Error, {
       projectId,
@@ -193,18 +195,16 @@ export async function updateProject(
   updates: Partial<PipelineProject>
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    if (!db) {
+    if (!adminDb) {
       return { success: false, error: 'Database not available' };
     }
-
-    const projectRef = doc(db, 'organizations', PLATFORM_ID, 'video_pipeline_projects', projectId);
 
     // Remove fields that shouldn't be updated directly
     const { id: _id, createdAt: _createdAt, createdBy: _createdBy, ...safeUpdates } = updates;
 
-    await updateDoc(projectRef, {
+    await adminDb.collection(COLLECTION_PATH).doc(projectId).update({
       ...safeUpdates,
-      updatedAt: serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
     });
 
     logger.info('Pipeline project updated', {
@@ -230,54 +230,55 @@ export async function listProjects(
   statusFilter?: ProjectStatus[]
 ): Promise<PipelineProject[]> {
   try {
-    if (!db) {
+    if (!adminDb) {
       logger.warn('Database not available for listing projects', { file: 'pipeline-project-service.ts' });
       return [];
     }
 
-    const projectsRef = collection(db, 'organizations', PLATFORM_ID, 'video_pipeline_projects');
-    const constraints: QueryConstraint[] = [orderBy('updatedAt', 'desc')];
+    let q: FirebaseFirestore.Query = adminDb.collection(COLLECTION_PATH)
+      .orderBy('updatedAt', 'desc');
 
     if (userId) {
-      constraints.push(where('createdBy', '==', userId));
+      q = q.where('createdBy', '==', userId);
     }
 
     if (statusFilter && statusFilter.length > 0) {
-      constraints.push(where('status', 'in', statusFilter));
+      q = q.where('status', 'in', statusFilter);
     }
 
-    const q = query(projectsRef, ...constraints);
-
-    const snapshot = await getDocs(q);
-    const projects: PipelineProject[] = snapshot.docs.map((docSnap) => {
-      const data = docSnap.data() as FirestorePipelineProjectData;
-      return {
-        id: docSnap.id,
-        name: data.name,
-        type: data.type,
-        currentStep: data.currentStep,
-        brief: data.brief,
-        scenes: data.scenes ?? [],
-        avatarId: data.avatarId ?? null,
-        avatarName: data.avatarName ?? null,
-        voiceId: data.voiceId ?? null,
-        voiceName: data.voiceName ?? null,
-        generatedScenes: data.generatedScenes ?? [],
-        finalVideoUrl: data.finalVideoUrl ?? null,
-        transitionType: data.transitionType ?? 'cut',
-        status: data.status,
-        createdAt: timestampToISO(data.createdAt),
-        updatedAt: timestampToISO(data.updatedAt),
-        createdBy: data.createdBy,
-      };
-    });
-
-    return projects;
+    const snapshot = await q.get();
+    return snapshot.docs.map((docSnap) => docToProject(docSnap.id, docSnap.data()));
   } catch (error) {
     logger.error('Failed to list pipeline projects', error as Error, {
       file: 'pipeline-project-service.ts',
     });
     return [];
+  }
+}
+
+/**
+ * Delete a project by ID
+ */
+export async function deleteProject(projectId: string): Promise<boolean> {
+  try {
+    if (!adminDb) {
+      return false;
+    }
+
+    await adminDb.collection(COLLECTION_PATH).doc(projectId).delete();
+
+    logger.info('Pipeline project deleted', {
+      projectId,
+      file: 'pipeline-project-service.ts',
+    });
+
+    return true;
+  } catch (error) {
+    logger.error('Failed to delete pipeline project', error as Error, {
+      projectId,
+      file: 'pipeline-project-service.ts',
+    });
+    return false;
   }
 }
 
@@ -290,7 +291,7 @@ export async function updateSceneStatus(
   result: SceneGenerationResult
 ): Promise<void> {
   try {
-    if (!db) {
+    if (!adminDb) {
       logger.warn('Database not available for updating scene status', { file: 'pipeline-project-service.ts' });
       return;
     }
@@ -342,7 +343,7 @@ export async function saveApprovedStoryboard(
   voiceName: string
 ): Promise<void> {
   try {
-    if (!db) {
+    if (!adminDb) {
       logger.warn('Database not available for saving storyboard', { file: 'pipeline-project-service.ts' });
       return;
     }

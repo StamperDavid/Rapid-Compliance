@@ -6,8 +6,8 @@
  * (Settings > API Keys), NOT from process.env.
  */
 
-import { collection, addDoc, serverTimestamp, getDocs, query, Timestamp } from 'firebase/firestore';
-import { db } from '@/lib/firebase/config';
+import { adminDb } from '@/lib/firebase/admin';
+import { FieldValue } from 'firebase-admin/firestore';
 import { logger } from '@/lib/logger/logger';
 import { apiKeyService } from '@/lib/api-keys/api-key-service';
 import { PLATFORM_ID } from '@/lib/constants/platform';
@@ -81,18 +81,17 @@ export async function logVideoInterest(
   metadata?: Record<string, unknown>
 ): Promise<void> {
   try {
-    if (!db) {
+    if (!adminDb) {
       logger.warn('Database not available for logging video interest', { file: 'video-service.ts' });
       return;
     }
 
-    const { PLATFORM_ID } = await import('@/lib/constants/platform');
-    await addDoc(collection(db, 'organizations', PLATFORM_ID, 'analytics_events'), {
+    await adminDb.collection(`organizations/${PLATFORM_ID}/analytics_events`).add({
       event: 'video_feature_interest',
       feature,
       userId: userId ?? null,
       metadata: metadata ?? {},
-      timestamp: serverTimestamp(),
+      timestamp: FieldValue.serverTimestamp(),
     });
 
     logger.info(`Video interest logged: ${feature}`, {
@@ -125,11 +124,10 @@ export async function joinVideoWaitlist(
   }
 ): Promise<{ success: boolean; entryId?: string; error?: string }> {
   try {
-    if (!db) {
+    if (!adminDb) {
       return { success: false, error: 'Database not available' };
     }
 
-    const { PLATFORM_ID } = await import('@/lib/constants/platform');
     const entry: Omit<VideoWaitlistEntry, 'id'> = {
       email: email.trim().toLowerCase(),
       name: options?.name ?? undefined,
@@ -142,13 +140,10 @@ export async function joinVideoWaitlist(
       createdAt: new Date(),
     };
 
-    const docRef = await addDoc(
-      collection(db, 'organizations', PLATFORM_ID, 'video_waitlist'),
-      {
-        ...entry,
-        createdAt: serverTimestamp(),
-      }
-    );
+    const docRef = await adminDb.collection(`organizations/${PLATFORM_ID}/video_waitlist`).add({
+      ...entry,
+      createdAt: FieldValue.serverTimestamp(),
+    });
 
     // Log for analytics
     await logVideoInterest('waitlist_signup', options?.userId, {
@@ -957,33 +952,27 @@ export async function listVideoTemplates(
   await logVideoInterest('list_templates');
 
   try {
-    if (!db) {
+    if (!adminDb) {
       logger.warn('Database not available for listing templates', { file: 'video-service.ts' });
       return { templates: [] };
     }
 
-    const { PLATFORM_ID } = await import('@/lib/constants/platform');
-    const templatesRef = collection(db, 'organizations', PLATFORM_ID, 'video_templates');
-
-    let q = query(templatesRef);
+    let q: FirebaseFirestore.Query = adminDb.collection(`organizations/${PLATFORM_ID}/video_templates`);
     if (category) {
-      const { where } = await import('firebase/firestore');
-      q = query(templatesRef, where('category', '==', category));
+      q = q.where('category', '==', category);
     }
 
-    const snapshot = await getDocs(q);
-    const templates: VideoTemplate[] = snapshot.docs.map((doc) => {
-      const data = doc.data();
-      const createdAt = data.createdAt instanceof Timestamp
-        ? data.createdAt.toDate()
-        : new Date();
-      const updatedAt = data.updatedAt instanceof Timestamp
-        ? data.updatedAt.toDate()
-        : new Date();
+    const snapshot = await q.get();
+    const templates: VideoTemplate[] = snapshot.docs.map((docSnap) => {
+      const data = docSnap.data() as Record<string, unknown>;
+      const createdAtField = data.createdAt as { toDate?: () => Date } | undefined;
+      const updatedAtField = data.updatedAt as { toDate?: () => Date } | undefined;
+      const createdAt = createdAtField?.toDate?.() ?? new Date();
+      const updatedAt = updatedAtField?.toDate?.() ?? new Date();
 
       return {
-        id: doc.id,
-        ...data,
+        ...(data as Omit<VideoTemplate, 'id' | 'createdAt' | 'updatedAt'>),
+        id: docSnap.id,
         createdAt,
         updatedAt,
       } as VideoTemplate;
@@ -1007,17 +996,14 @@ export async function createVideoTemplate(
   await logVideoInterest('create_template');
 
   try {
-    if (!db) {
+    if (!adminDb) {
       return { success: false, error: 'Database not available' };
     }
 
-    const { PLATFORM_ID } = await import('@/lib/constants/platform');
-    const templatesRef = collection(db, 'organizations', PLATFORM_ID, 'video_templates');
-
-    const docRef = await addDoc(templatesRef, {
+    const docRef = await adminDb.collection(`organizations/${PLATFORM_ID}/video_templates`).add({
       ...template,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
     });
 
     logger.info('Video template created', {
@@ -1047,33 +1033,27 @@ export async function listVideoProjects(
   await logVideoInterest('list_projects');
 
   try {
-    if (!db) {
+    if (!adminDb) {
       logger.warn('Database not available for listing projects', { file: 'video-service.ts' });
       return { projects: [] };
     }
 
-    const { PLATFORM_ID } = await import('@/lib/constants/platform');
-    const projectsRef = collection(db, 'organizations', PLATFORM_ID, 'video_projects');
-
-    let q = query(projectsRef);
+    let q: FirebaseFirestore.Query = adminDb.collection(`organizations/${PLATFORM_ID}/video_projects`);
     if (userId) {
-      const { where } = await import('firebase/firestore');
-      q = query(projectsRef, where('userId', '==', userId));
+      q = q.where('userId', '==', userId);
     }
 
-    const snapshot = await getDocs(q);
-    const projects: VideoProject[] = snapshot.docs.map((doc) => {
-      const data = doc.data();
-      const createdAt = data.createdAt instanceof Timestamp
-        ? data.createdAt.toDate()
-        : new Date();
-      const updatedAt = data.updatedAt instanceof Timestamp
-        ? data.updatedAt.toDate()
-        : new Date();
+    const snapshot = await q.get();
+    const projects: VideoProject[] = snapshot.docs.map((docSnap) => {
+      const data = docSnap.data() as Record<string, unknown>;
+      const createdAtField = data.createdAt as { toDate?: () => Date } | undefined;
+      const updatedAtField = data.updatedAt as { toDate?: () => Date } | undefined;
+      const createdAt = createdAtField?.toDate?.() ?? new Date();
+      const updatedAt = updatedAtField?.toDate?.() ?? new Date();
 
       return {
-        id: doc.id,
-        ...data,
+        ...(data as Omit<VideoProject, 'id' | 'createdAt' | 'updatedAt'>),
+        id: docSnap.id,
         createdAt,
         updatedAt,
       } as VideoProject;
@@ -1097,18 +1077,15 @@ export async function createVideoProject(
   await logVideoInterest('create_project');
 
   try {
-    if (!db) {
+    if (!adminDb) {
       return { success: false, error: 'Database not available' };
     }
 
-    const { PLATFORM_ID } = await import('@/lib/constants/platform');
-    const projectsRef = collection(db, 'organizations', PLATFORM_ID, 'video_projects');
-
-    const docRef = await addDoc(projectsRef, {
+    const docRef = await adminDb.collection(`organizations/${PLATFORM_ID}/video_projects`).add({
       ...project,
       videos: [],
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
     });
 
     logger.info('Video project created', {

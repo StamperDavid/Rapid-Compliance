@@ -10,7 +10,7 @@
  * Collection: videoJobs (via getSubCollection)
  */
 
-import { FirestoreService } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { v4 as uuidv4 } from 'uuid';
 import type { VideoStatus, VideoAspectRatio, VideoResolution, VideoProvider } from '@/types/video';
@@ -140,10 +140,10 @@ export class VideoJobService {
     };
 
     try {
-      await FirestoreService.set(
+      await AdminFirestoreService.set(
         this.getCollectionPath(),
         jobId,
-        job,
+        job as unknown as Record<string, unknown>,
         false
       );
 
@@ -172,11 +172,11 @@ export class VideoJobService {
    */
   async getJob(jobId: string): Promise<VideoJob | null> {
     try {
-      const job = await FirestoreService.get<VideoJob>(
+      const doc = await AdminFirestoreService.get(
         this.getCollectionPath(),
         jobId
       );
-      return job;
+      return doc as VideoJob | null;
     } catch (error) {
       logger.error(
         'VideoJobService: Failed to get job',
@@ -202,7 +202,7 @@ export class VideoJobService {
         updateData.completedAt = new Date();
       }
 
-      await FirestoreService.update(
+      await AdminFirestoreService.update(
         this.getCollectionPath(),
         jobId,
         updateData
@@ -231,10 +231,10 @@ export class VideoJobService {
    */
   async getAllJobs(): Promise<VideoJob[]> {
     try {
-      const jobs = await FirestoreService.getAll<VideoJob>(
+      const docs = await AdminFirestoreService.getAll(
         this.getCollectionPath()
       );
-      return jobs;
+      return docs as unknown as VideoJob[];
     } catch (error) {
       logger.error(
         'VideoJobService: Failed to get all jobs',
@@ -253,11 +253,11 @@ export class VideoJobService {
   async getPendingJobs(): Promise<VideoJob[]> {
     try {
       const { where } = await import('firebase/firestore');
-      const jobs = await FirestoreService.getAll<VideoJob>(
+      const docs = await AdminFirestoreService.getAll(
         this.getCollectionPath(),
         [where('status', 'in', ['pending', 'processing'])]
       );
-      return jobs;
+      return docs as unknown as VideoJob[];
     } catch (error) {
       logger.error(
         'VideoJobService: Failed to get pending jobs',
@@ -284,7 +284,7 @@ export class VideoJobService {
         errorCode,
       });
       // Increment retry count manually
-      await FirestoreService.update(
+      await AdminFirestoreService.update(
         this.getCollectionPath(),
         jobId,
         { retryCount: job.retryCount + 1 }
