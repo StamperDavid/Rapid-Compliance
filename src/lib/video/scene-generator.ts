@@ -278,19 +278,20 @@ export async function generateScene(
   voiceId: string,
   aspectRatio: VideoAspectRatio
 ): Promise<SceneGenerationResult> {
-  const hasAvatar = Boolean(avatarId);
-  const engine: VideoEngineId = await selectEngineForScene(scene, hasAvatar);
-
-  logger.info('Engine selected for scene', {
-    sceneId: scene.id,
-    explicitEngine: scene.engine,
-    selectedEngine: engine,
-    hasAvatar,
-    scriptLength: scene.scriptText?.length ?? 0,
-    file: 'scene-generator.ts',
-  });
-
+  // Entire function wrapped in try/catch so nothing can crash the batch
   try {
+    const hasAvatar = Boolean(avatarId);
+    const engine: VideoEngineId = await selectEngineForScene(scene, hasAvatar);
+
+    logger.info('Engine selected for scene', {
+      sceneId: scene.id,
+      explicitEngine: scene.engine,
+      selectedEngine: engine,
+      hasAvatar,
+      scriptLength: scene.scriptText?.length ?? 0,
+      file: 'scene-generator.ts',
+    });
+
     switch (engine) {
       case 'heygen':
         return await generateWithHeyGen(scene, avatarId, voiceId, aspectRatio);
@@ -318,14 +319,14 @@ export async function generateScene(
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     logger.error('Scene generation failed', error as Error, {
       sceneId: scene.id,
-      engine,
+      engine: scene.engine ?? 'unknown',
       file: 'scene-generator.ts',
     });
 
     return {
       sceneId: scene.id,
       providerVideoId: '',
-      provider: engine,
+      provider: scene.engine ?? 'heygen',
       status: 'failed',
       videoUrl: null,
       thumbnailUrl: null,

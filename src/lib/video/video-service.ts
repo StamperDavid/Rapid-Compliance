@@ -285,13 +285,22 @@ export async function getVideoStatus(
           throw new Error(`HeyGen API error: ${response.status}`);
         }
 
-        const data = await response.json() as {
-          status: string;
+        // HeyGen v1 status wraps response: { data: { status, video_url, ... } }
+        const raw = await response.json() as {
+          data?: {
+            status?: string;
+            video_url?: string;
+            thumbnail_url?: string;
+            duration?: number;
+            error_message?: string;
+          };
+          status?: string;
           video_url?: string;
           thumbnail_url?: string;
           duration?: number;
           error_message?: string;
         };
+        const statusData = raw.data ?? raw;
 
         const statusMap: Record<string, VideoStatus> = {
           'pending': 'pending',
@@ -303,12 +312,12 @@ export async function getVideoStatus(
         return {
           id: videoId,
           requestId: videoId,
-          status: statusMap[data.status] ?? 'processing',
+          status: statusMap[statusData.status ?? ''] ?? 'processing',
           provider: 'heygen',
-          videoUrl: data.video_url,
-          thumbnailUrl: data.thumbnail_url,
-          duration: data.duration,
-          errorMessage: data.error_message,
+          videoUrl: statusData.video_url,
+          thumbnailUrl: statusData.thumbnail_url,
+          duration: statusData.duration,
+          errorMessage: statusData.error_message,
           createdAt: new Date(),
         };
       }
@@ -610,19 +619,25 @@ export async function generateHeyGenVideoInternal(
       throw new Error(`HeyGen API error: ${response.status} - ${errorText}`);
     }
 
-    const data = await response.json() as {
-      video_id: string;
-      status?: string;
+    // HeyGen v2 wraps response: { data: { video_id: "..." } }
+    const raw = await response.json() as {
+      data?: { video_id?: string };
+      video_id?: string;
     };
+    const videoId = raw.data?.video_id ?? raw.video_id;
+
+    if (!videoId) {
+      throw new Error(`HeyGen API returned no video_id. Response: ${JSON.stringify(raw).slice(0, 500)}`);
+    }
 
     logger.info('HeyGen video generation started', {
-      videoId: data.video_id,
+      videoId,
       file: 'video-service.ts',
     });
 
     return {
-      id: data.video_id,
-      requestId: data.video_id,
+      id: videoId,
+      requestId: videoId,
       status: 'processing',
       provider: 'heygen',
       createdAt: new Date(),
@@ -688,19 +703,25 @@ export async function generateHeyGenSceneVideo(
       throw new Error(`HeyGen API error: ${response.status} - ${errorText}`);
     }
 
-    const data = await response.json() as {
-      video_id: string;
-      status?: string;
+    // HeyGen v2 wraps response: { data: { video_id: "..." } }
+    const raw = await response.json() as {
+      data?: { video_id?: string };
+      video_id?: string;
     };
+    const videoId = raw.data?.video_id ?? raw.video_id;
+
+    if (!videoId) {
+      throw new Error(`HeyGen API returned no video_id. Response: ${JSON.stringify(raw).slice(0, 500)}`);
+    }
 
     logger.info('HeyGen scene video generation started', {
-      videoId: data.video_id,
+      videoId,
       file: 'video-service.ts',
     });
 
     return {
-      id: data.video_id,
-      requestId: data.video_id,
+      id: videoId,
+      requestId: videoId,
       status: 'processing',
       provider: 'heygen',
       createdAt: new Date(),
