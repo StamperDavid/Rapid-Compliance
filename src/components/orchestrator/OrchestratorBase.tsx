@@ -164,11 +164,11 @@ const DEFAULT_VOICE_IDS = {
 };
 
 // Available models
+// Only models with reliable tool calling (45+ tools) are listed here.
+// Gemini models were removed — they ignore tools via OpenRouter.
 const AVAILABLE_MODELS = {
-  'google/gemini-2.0-flash-exp': 'Gemini 2.0 Flash (Fast)',
-  'google/gemini-flash-1.5': 'Gemini 1.5 Flash',
-  'anthropic/claude-3-haiku': 'Claude 3 Haiku',
-  'anthropic/claude-3.5-sonnet': 'Claude 3.5 Sonnet',
+  'anthropic/claude-3.5-sonnet': 'Claude 3.5 Sonnet (Recommended)',
+  'anthropic/claude-3-haiku': 'Claude 3 Haiku (Fast)',
   'openai/gpt-4-turbo': 'GPT-4 Turbo',
 };
 
