@@ -430,6 +430,41 @@ export interface AgentLog {
 // ============================================================================
 
 /**
+ * Maps delegation tool names to the dashboard page where David can review the result.
+ * Jasper should ALWAYS include the reviewLink in his response to the user.
+ */
+const REVIEW_LINK_MAP: Record<string, string> = {
+  delegate_to_builder: '/website/pages',
+  delegate_to_sales: '/crm/contacts',
+  delegate_to_marketing: '/email/campaigns',
+  delegate_to_trust: '/analytics',
+  delegate_to_content: '/website/blog',
+  delegate_to_architect: '/website/pages',
+  delegate_to_outreach: '/crm/contacts',
+  delegate_to_intelligence: '/analytics',
+  delegate_to_commerce: '/ecommerce/products',
+  create_video: '/video',
+  generate_video: '/video',
+  save_blog_draft: '/website/blog',
+  research_trending_topics: '/seo',
+  get_seo_config: '/seo',
+  social_post: '/social',
+  migrate_website: '/website/pages',
+  voice_agent: '/voice',
+};
+
+/**
+ * Get the review link for a given tool name.
+ * Falls back to mission control if no specific page is mapped.
+ */
+function getReviewLink(toolName: string, missionId?: string): string {
+  const specificPage = REVIEW_LINK_MAP[toolName];
+  if (specificPage) { return specificPage; }
+  if (missionId) { return `/mission-control?mission=${missionId}`; }
+  return '/mission-control';
+}
+
+/**
  * Tool definitions in OpenAI function-calling format.
  * Compatible with OpenRouter's tool_choice parameter.
  *
@@ -3281,7 +3316,7 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
           message: successCount > 0
             ? `Video "${title}" is now generating! ${successCount} scene(s) sent to ${[...new Set(genResults.map((r) => r.provider))].join(', ')}. Use get_video_status to check progress.`
             : `Video generation failed for all ${failedCount} scenes. Errors: ${genResults.map((r) => r.error).filter(Boolean).join('; ')}`,
-          videoLibraryPath: '/content/video/library',
+          reviewLink: getReviewLink('create_video', context?.missionId),
         });
 
         trackMissionStep(context, 'create_video', 'COMPLETED', {
@@ -3670,6 +3705,7 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
           data: result.data,
           errors: result.errors,
           manager: 'ARCHITECT_MANAGER',
+          reviewLink: getReviewLink('delegate_to_builder', context?.missionId),
           delegatedTo: result.data && typeof result.data === 'object' && 'delegations' in result.data
             ? (result.data as Record<string, unknown>).delegations
             : 'See data for details',
@@ -3749,6 +3785,7 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
           data: result.data,
           errors: result.errors,
           manager: 'REVENUE_DIRECTOR',
+          reviewLink: getReviewLink('delegate_to_sales', context?.missionId),
           delegatedTo: result.data && typeof result.data === 'object' && 'delegations' in result.data
             ? (result.data as Record<string, unknown>).delegations
             : 'See data for details',
@@ -3802,6 +3839,7 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
           data: result.data,
           errors: result.errors,
           manager: 'MARKETING_MANAGER',
+          reviewLink: getReviewLink('delegate_to_marketing', context?.missionId),
           delegatedTo: result.data && typeof result.data === 'object' && 'platformStrategy' in result.data
             ? (result.data as Record<string, unknown>).platformStrategy
             : 'See data for details',
@@ -3849,6 +3887,7 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
           data: trustResult.data,
           errors: trustResult.errors,
           manager: 'REPUTATION_MANAGER',
+          reviewLink: getReviewLink('delegate_to_trust', context?.missionId),
         });
         break;
       }
@@ -3900,6 +3939,7 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
           data: contentResult.data,
           errors: contentResult.errors,
           manager: 'CONTENT_MANAGER',
+          reviewLink: getReviewLink('delegate_to_content', context?.missionId),
           delegatedTo: contentResult.data && typeof contentResult.data === 'object' && 'delegations' in contentResult.data
             ? (contentResult.data as Record<string, unknown>).delegations
             : 'See data for details',
@@ -3953,6 +3993,7 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
           data: architectResult.data,
           errors: architectResult.errors,
           manager: 'ARCHITECT_MANAGER',
+          reviewLink: getReviewLink('delegate_to_architect', context?.missionId),
           delegatedTo: architectResult.data && typeof architectResult.data === 'object' && 'delegations' in architectResult.data
             ? (architectResult.data as Record<string, unknown>).delegations
             : 'See data for details',
@@ -4013,6 +4054,7 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
           data: outreachResult.data,
           errors: outreachResult.errors,
           manager: 'OUTREACH_MANAGER',
+          reviewLink: getReviewLink('delegate_to_outreach', context?.missionId),
           delegatedTo: outreachResult.data && typeof outreachResult.data === 'object' && 'delegations' in outreachResult.data
             ? (outreachResult.data as Record<string, unknown>).delegations
             : 'See data for details',
@@ -4067,6 +4109,7 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
           data: intelResult.data,
           errors: intelResult.errors,
           manager: 'INTELLIGENCE_MANAGER',
+          reviewLink: getReviewLink('delegate_to_intelligence', context?.missionId),
           delegatedTo: intelResult.data && typeof intelResult.data === 'object' && 'delegations' in intelResult.data
             ? (intelResult.data as Record<string, unknown>).delegations
             : 'See data for details',
@@ -4133,6 +4176,7 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
           data: commerceResult.data,
           errors: commerceResult.errors,
           manager: 'COMMERCE_MANAGER',
+          reviewLink: getReviewLink('delegate_to_commerce', context?.missionId),
           delegatedTo: commerceResult.data && typeof commerceResult.data === 'object' && 'delegations' in commerceResult.data
             ? (commerceResult.data as Record<string, unknown>).delegations
             : 'See data for details',
@@ -4443,6 +4487,7 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
             relatedTrending: allRelated,
             totalResultsFound: trendingTopics.length + allRelated.length,
             timeframe: (args.timeframe as string | undefined) ?? 'current',
+            reviewLink: getReviewLink('research_trending_topics', context?.missionId),
             message: `Researched ${keywords.length} seed keyword(s). Found ${trendingTopics.length} topic clusters with ${allRelated.length} related trending queries.`,
           });
         } catch (trendError: unknown) {
