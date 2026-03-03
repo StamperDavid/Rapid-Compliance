@@ -3295,30 +3295,53 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
           file: 'jasper-tools.ts',
         });
 
-        const genResults = await generateAllScenes(scenes, videoAvatarId, videoVoiceId, aspectRatio);
+        let genResults: import('@/types/video-pipeline').SceneGenerationResult[] = [];
+        let genError: string | null = null;
+
+        try {
+          genResults = await generateAllScenes(scenes, videoAvatarId, videoVoiceId, aspectRatio);
+        } catch (genErr: unknown) {
+          genError = genErr instanceof Error ? genErr.message : String(genErr);
+          logger.error('generateAllScenes threw — video engines failed', genErr instanceof Error ? genErr : new Error(String(genErr)), {
+            projectId,
+            sceneCount: scenes.length,
+            engines: scenes.map((s) => s.engine),
+            avatarId: videoAvatarId,
+            voiceId: videoVoiceId,
+            file: 'jasper-tools.ts',
+          });
+        }
 
         const successCount = genResults.filter((r) => r.status !== 'failed').length;
         const failedCount = genResults.filter((r) => r.status === 'failed').length;
 
-        // ── Step 7: Save results ──
+        // ── Step 7: Save results (always runs, even on error) ──
         await updateProject(projectId, {
           generatedScenes: genResults,
-          currentStep: failedCount === genResults.length ? 'generation' : 'assembly',
+          currentStep: successCount > 0 ? 'assembly' : 'generation',
           status: successCount > 0 ? 'approved' : 'draft',
         });
 
+        const resultStatus = genError ? 'error' : successCount > 0 ? 'generating' : 'failed';
+        const resultMessage = genError
+          ? `Video engine error: ${genError}. Project saved at /content/video/library.`
+          : successCount > 0
+            ? `Video "${title}" is now generating! ${successCount} scene(s) sent to ${[...new Set(genResults.map((r) => r.provider))].join(', ')}. Use get_video_status to check progress.`
+            : `Video generation failed for all ${failedCount} scenes. Errors: ${genResults.map((r) => r.error).filter(Boolean).join('; ')}`;
+
         content = JSON.stringify({
-          status: successCount > 0 ? 'generating' : 'failed',
+          status: resultStatus,
           projectId,
           title,
-          sceneCount: genResults.length,
+          sceneCount: scenes.length,
           successCount,
           failedCount,
+          generationError: genError,
           engines: [...new Set(scenes.map((s) => s.engine))],
           delegations: {
             contentManager: contentResult.status,
             videoSpecialist: storyboardScenes ? 'COMPLETED' : 'SKIPPED',
-            videoEngines: genResults.map((r) => `${r.provider}: ${r.status}`),
+            videoEngines: genError ? [`ERROR: ${genError}`] : genResults.map((r) => `${r.provider}: ${r.status}`),
           },
           results: genResults.map((r) => ({
             sceneId: r.sceneId,
@@ -3327,14 +3350,14 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
             providerVideoId: r.providerVideoId ?? null,
             error: r.error ?? null,
           })),
-          message: successCount > 0
-            ? `Video "${title}" is now generating! ${successCount} scene(s) sent to ${[...new Set(genResults.map((r) => r.provider))].join(', ')}. Use get_video_status to check progress.`
-            : `Video generation failed for all ${failedCount} scenes. Errors: ${genResults.map((r) => r.error).filter(Boolean).join('; ')}`,
+          message: resultMessage,
           reviewLink: getReviewLink('create_video', context?.missionId),
         });
 
-        trackMissionStep(context, 'create_video', 'COMPLETED', {
-          summary: `Video "${title}": ${successCount}/${genResults.length} scenes via Content→Video pipeline`,
+        trackMissionStep(context, 'create_video', genError ? 'FAILED' : 'COMPLETED', {
+          summary: genError
+            ? `Video "${title}" FAILED: ${genError}`
+            : `Video "${title}": ${successCount}/${genResults.length} scenes via Content→Video pipeline`,
           durationMs: Date.now() - videoStart,
           toolResult: content.slice(0, 2000),
         });
