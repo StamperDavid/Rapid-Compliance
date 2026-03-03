@@ -485,6 +485,7 @@ export type NavigationCategory =
   | 'commerce'
   | 'website'
   | 'analytics'
+  | 'growth'
   | 'system';
 
 /**

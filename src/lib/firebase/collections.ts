@@ -116,6 +116,16 @@ export const COLLECTIONS = {
   GOLDEN_PLAYBOOKS: `${PREFIX}goldenPlaybooks`,
   SOCIAL_CORRECTIONS: `${PREFIX}socialCorrections`,
   RECORDS: `${PREFIX}records`,
+
+  // ========================================
+  // GROWTH COMMAND CENTER COLLECTIONS
+  // ========================================
+  GROWTH_COMPETITORS: `${PREFIX}growthCompetitorProfiles`,
+  GROWTH_COMPETITOR_SNAPSHOTS: `${PREFIX}growthCompetitorSnapshots`,
+  GROWTH_KEYWORDS: `${PREFIX}growthKeywordRankings`,
+  GROWTH_STRATEGIES: `${PREFIX}growthStrategies`,
+  GROWTH_AI_VISIBILITY: `${PREFIX}growthAiVisibility`,
+  GROWTH_ACTIVITY_LOG: `${PREFIX}growthActivityLog`,
 } as const;
 
 /**
@@ -176,6 +186,14 @@ export const getScoringRulesCollection = (): string => getSubCollection('scoring
 export const getCustomToolsCollection = (): string => getSubCollection('customTools');
 export const getGlobalTemplatesSubCollection = (): string => getSubCollection('globalTemplates');
 export const getPagesCollection = (): string => getSubCollection('pages');
+
+// ── Growth Command Center ──────────────────────────────────────────────────
+export const getGrowthCompetitorsCollection = (): string => getSubCollection('growthCompetitorProfiles');
+export const getGrowthCompetitorSnapshotsCollection = (): string => getSubCollection('growthCompetitorSnapshots');
+export const getGrowthKeywordsCollection = (): string => getSubCollection('growthKeywordRankings');
+export const getGrowthStrategiesCollection = (): string => getSubCollection('growthStrategies');
+export const getGrowthAiVisibilityCollection = (): string => getSubCollection('growthAiVisibility');
+export const getGrowthActivityLogCollection = (): string => getSubCollection('growthActivityLog');
 
 /**
  * Helper for schema sub-collections

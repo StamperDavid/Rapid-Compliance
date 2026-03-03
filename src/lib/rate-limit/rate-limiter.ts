@@ -86,6 +86,15 @@ const endpointLimits: Record<string, RateLimitConfig> = {
   '/api/social/schedule': { maxRequests: 100, windowMs: 60 * 1000 },
   '/api/social/queue': { maxRequests: 100, windowMs: 60 * 1000 },
 
+  // Growth Command Center (moderate - external API calls)
+  '/api/growth/competitors': { maxRequests: 30, windowMs: 60 * 1000 },
+  '/api/growth/competitors/discover': { maxRequests: 10, windowMs: 60 * 1000 },
+  '/api/growth/keywords': { maxRequests: 30, windowMs: 60 * 1000 },
+  '/api/growth/keywords/bulk': { maxRequests: 10, windowMs: 60 * 1000 },
+  '/api/growth/strategy': { maxRequests: 20, windowMs: 60 * 1000 },
+  '/api/growth/ai-visibility': { maxRequests: 10, windowMs: 60 * 1000 },
+  '/api/growth/activity': { maxRequests: 60, windowMs: 60 * 1000 },
+
   // Setup (strict - should be called rarely)
   '/api/setup/create-platform-org': { maxRequests: 5, windowMs: 60 * 1000 },
 

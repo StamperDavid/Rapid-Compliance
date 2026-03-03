@@ -129,6 +129,16 @@ export const AI_AGENTS_SETTINGS_TABS: SubpageNavItem[] = [
   { label: 'Voice', href: '/settings/ai-agents/voice' },
 ];
 
+// ── Growth Command Center ───────────────────────────────────────────────────
+export const GROWTH_TABS: SubpageNavItem[] = [
+  { label: 'Command Center', href: '/growth/command-center' },
+  { label: 'Competitors', href: '/growth/competitors' },
+  { label: 'Keywords', href: '/growth/keywords' },
+  { label: 'Strategy', href: '/growth/strategy' },
+  { label: 'AI Visibility', href: '/growth/ai-visibility' },
+  { label: 'Activity', href: '/growth/activity' },
+];
+
 // ── System (owner-only admin tools) ─────────────────────────────────────────
 export const SYSTEM_TABS: SubpageNavItem[] = [
   { label: 'System Health', href: '/system' },

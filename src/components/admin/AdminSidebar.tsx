@@ -65,6 +65,8 @@ import {
   Gauge,
   Layers,
   Building2,
+  TrendingUp,
+  Target,
 } from 'lucide-react';
 
 // ============================================================================
@@ -178,6 +180,20 @@ const NAV_SECTIONS: NavigationSection[] = [
     items: [
       { id: 'analytics-overview', label: 'Overview', href: '/analytics', icon: PieChart, iconColor: 'var(--color-cyan)', requiredPermission: 'canViewReports' },
       { id: 'ab-testing', label: 'A/B Testing', href: '/ab-tests', icon: FlaskConical, iconColor: 'var(--color-success)', featureModuleId: 'advanced_analytics' },
+    ],
+  },
+  // ── Growth ───────────────────────────────────────────────────────────
+  {
+    id: 'growth',
+    label: 'Growth',
+    icon: TrendingUp,
+    allowedRoles: ['owner', 'admin', 'manager'],
+    items: [
+      { id: 'growth-command', label: 'Command Center', href: '/growth/command-center', icon: TrendingUp, iconColor: 'var(--color-success)', requiredPermission: 'canViewReports' },
+      { id: 'growth-competitors', label: 'Competitors', href: '/growth/competitors', icon: Radar, iconColor: 'var(--color-warning)', requiredPermission: 'canViewReports' },
+      { id: 'growth-keywords', label: 'Keywords', href: '/growth/keywords', icon: Target, iconColor: 'var(--color-primary)', requiredPermission: 'canViewReports' },
+      { id: 'growth-strategy', label: 'Strategy', href: '/growth/strategy', icon: Radar, iconColor: 'var(--color-cyan)', requiredPermission: 'canViewReports' },
+      { id: 'growth-ai-visibility', label: 'AI Visibility', href: '/growth/ai-visibility', icon: Eye, iconColor: 'var(--color-primary)', requiredPermission: 'canViewReports' },
     ],
   },
   // ── System (owner-only admin tools) ───────────────────────────────────
@@ -327,6 +343,14 @@ export default function AdminSidebar() {
     // Website matches all /website/* except SEO sub-pages
     if (href === '/website/editor') {
       return pathname.startsWith('/website/') && !pathname.startsWith('/website/seo');
+    }
+    // Growth Command Center matches all /growth/*
+    if (href === '/growth/command-center') {
+      return pathname.startsWith('/growth/');
+    }
+    // Growth sub-pages — exact prefix match
+    if (href.startsWith('/growth/') && href !== '/growth/command-center') {
+      return pathname.startsWith(href);
     }
     // System health — exact match only (don't match /system/impersonate)
     if (href === '/system') {
