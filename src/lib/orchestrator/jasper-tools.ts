@@ -3037,15 +3037,52 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
         const videoStart = Date.now();
         trackMissionStep(context, 'create_video', 'RUNNING', { toolArgs: args });
 
-        const { createProject, updateProject } = await import('@/lib/video/pipeline-project-service');
+        // ── Step 1: Delegate to Content Manager → Video Specialist ──
+        // Jasper delegates — he doesn't do the work himself.
+        const { ContentManager } = await import('@/lib/agents/content/manager');
+        const videoContentMgr = new ContentManager();
+        await videoContentMgr.initialize();
+
         const description = args.description as string;
         const title = (args.title as string) ?? `Video: ${description.slice(0, 50)}`;
         const duration = args.duration ? Number(args.duration) : 30;
         const aspectRatio = (args.aspectRatio as '16:9' | '9:16' | '1:1') ?? '16:9';
-        const platform = (args.platform as 'youtube' | 'tiktok' | 'instagram' | 'linkedin' | 'website') ?? 'youtube';
         const videoType = (args.videoType as 'tutorial' | 'explainer' | 'product-demo' | 'sales-pitch' | 'testimonial' | 'social-ad') ?? 'explainer';
 
-        // Build the pipeline brief
+        logger.info('Jasper delegating video to Content Manager', {
+          title, videoType, duration,
+          file: 'jasper-tools.ts',
+        });
+
+        const contentResult = await videoContentMgr.execute({
+          id: `video_${Date.now()}`,
+          timestamp: new Date(),
+          from: 'JASPER',
+          to: 'CONTENT_MANAGER',
+          type: 'COMMAND',
+          priority: 'HIGH',
+          payload: {
+            contentType: 'video_script',
+            topic: description,
+            audience: 'Business professionals and decision-makers',
+            includeVideo: true,
+          },
+          requiresResponse: true,
+          traceId: `trace_video_${Date.now()}`,
+        });
+
+        logger.info('Content Manager returned video package', {
+          status: contentResult.status,
+          hasData: Boolean(contentResult.data),
+          file: 'jasper-tools.ts',
+        });
+
+        // ── Step 2: Create pipeline project from storyboard ──
+        const { createProject, updateProject } = await import('@/lib/video/pipeline-project-service');
+        const { generateAllScenes, selectEngineForScene } = await import('@/lib/video/scene-generator');
+
+        const platform = (args.platform as 'youtube' | 'tiktok' | 'instagram' | 'linkedin' | 'website') ?? 'youtube';
+
         const brief = {
           description,
           videoType,
@@ -3055,13 +3092,13 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
           resolution: '1080p' as const,
         };
 
-        // Create a pipeline project (starts as draft at 'request' step)
         const projectResult = await createProject(brief, 'jasper');
 
         if (!projectResult.success || !projectResult.projectId) {
           content = JSON.stringify({
             status: 'error',
             message: `Failed to create video project: ${projectResult.error ?? 'Unknown error'}`,
+            contentManagerResult: contentResult.status,
           });
           trackMissionStep(context, 'create_video', 'FAILED', {
             summary: 'Project creation failed',
@@ -3072,48 +3109,59 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
 
         const projectId = projectResult.projectId;
 
-        // Run decompose logic to generate scene breakdown
+        // ── Step 3: Build scenes from storyboard + intelligent engine selection ──
+        // Use the storyboard from Content Manager if available, else generate
+        const extractedContext = description.substring(0, 100);
         const sceneCount = Math.max(2, Math.min(8, Math.ceil(duration / 15)));
         const durationPerScene = Math.floor(duration / sceneCount);
-        const extractedContext = description.substring(0, 100);
 
-        // Generate scenes based on video type
-        const sceneTemplates: Record<string, Array<{ title: string; scriptPrefix: string }>> = {
-          'explainer': [
-            { title: 'Hook', scriptPrefix: `Did you know that most businesses struggle with ${extractedContext}?` },
-            { title: 'The Problem', scriptPrefix: `Traditional approaches to ${extractedContext} are time-consuming and costly.` },
-            { title: 'The Solution', scriptPrefix: `That's where ${extractedContext} comes in.` },
-            { title: 'Key Benefits', scriptPrefix: `With ${extractedContext}, you'll save time, reduce costs, and improve outcomes.` },
-            { title: 'Call to Action', scriptPrefix: `Ready to transform your workflow? Get started today.` },
-          ],
-          'tutorial': [
-            { title: 'Introduction', scriptPrefix: `Welcome to this tutorial on ${extractedContext}.` },
-            { title: 'Step 1', scriptPrefix: `First, let's set up the foundation for ${extractedContext}.` },
-            { title: 'Step 2', scriptPrefix: `Next, we implement the key aspects of ${extractedContext}.` },
-            { title: 'Summary', scriptPrefix: `Great job! You've now learned the essentials of ${extractedContext}.` },
-          ],
-          'sales-pitch': [
-            { title: 'The Pain Point', scriptPrefix: `Are you tired of dealing with ${extractedContext}?` },
-            { title: 'The Solution', scriptPrefix: `Imagine if ${extractedContext} could be completely automated.` },
-            { title: 'Why It Works', scriptPrefix: `Unlike other approaches, ${extractedContext} delivers consistent results.` },
-            { title: 'Call to Action', scriptPrefix: `Ready to see results? Get started today.` },
-          ],
-          'social-ad': [
-            { title: 'Hook', scriptPrefix: `Stop scrolling! ${extractedContext} changes everything.` },
-            { title: 'Value Prop', scriptPrefix: `${extractedContext} delivers immediate, visible results.` },
-            { title: 'CTA', scriptPrefix: `Don't wait — tap the link now and get started in seconds.` },
-          ],
-        };
+        // Extract scene scripts from Content Manager's storyboard if available
+        let sceneScripts: Array<{ title: string; scriptPrefix: string }> = [];
+        const cmData = contentResult.data as Record<string, unknown> | null;
+        const videoData = cmData?.video as Record<string, unknown> | null;
+        const storyboardData = videoData?.storyboard as Record<string, unknown> | null;
+        const storyboardScenes = storyboardData?.scenes as Array<{ voiceoverText?: string; sceneNumber?: number }> | null;
 
-        const fallback = sceneTemplates['explainer'];
-        const templates = sceneTemplates[videoType] ?? fallback;
-        const scenesToUse = templates.slice(0, sceneCount);
+        if (storyboardScenes && storyboardScenes.length > 0) {
+          // Use Content Manager's storyboard scenes
+          sceneScripts = storyboardScenes.slice(0, sceneCount).map((s, i) => ({
+            title: `Scene ${i + 1}`,
+            scriptPrefix: s.voiceoverText ?? `Scene ${i + 1} of ${title}`,
+          }));
+          logger.info('Using Content Manager storyboard scenes', {
+            sceneCount: sceneScripts.length,
+            file: 'jasper-tools.ts',
+          });
+        } else {
+          // Fallback: generate scene templates locally
+          const sceneTemplates: Record<string, Array<{ title: string; scriptPrefix: string }>> = {
+            'explainer': [
+              { title: 'Hook', scriptPrefix: `Did you know that most businesses struggle with ${extractedContext}?` },
+              { title: 'The Problem', scriptPrefix: `Traditional approaches to ${extractedContext} are time-consuming and costly.` },
+              { title: 'The Solution', scriptPrefix: `That's where ${extractedContext} comes in.` },
+              { title: 'Key Benefits', scriptPrefix: `With ${extractedContext}, you'll save time, reduce costs, and improve outcomes.` },
+              { title: 'Call to Action', scriptPrefix: `Ready to transform your workflow? Get started today.` },
+            ],
+            'sales-pitch': [
+              { title: 'The Pain Point', scriptPrefix: `Are you tired of dealing with ${extractedContext}?` },
+              { title: 'The Solution', scriptPrefix: `Imagine if ${extractedContext} could be completely automated.` },
+              { title: 'Why It Works', scriptPrefix: `Unlike other approaches, ${extractedContext} delivers consistent results.` },
+              { title: 'Call to Action', scriptPrefix: `Ready to see results? Get started today.` },
+            ],
+            'social-ad': [
+              { title: 'Hook', scriptPrefix: `Stop scrolling! ${extractedContext} changes everything.` },
+              { title: 'Value Prop', scriptPrefix: `${extractedContext} delivers immediate, visible results.` },
+              { title: 'CTA', scriptPrefix: `Don't wait — tap the link now and get started in seconds.` },
+            ],
+          };
+          const fallback = sceneTemplates['explainer'];
+          sceneScripts = (sceneTemplates[videoType] ?? fallback).slice(0, sceneCount);
+        }
 
-        // Build draft scenes, then assign engines intelligently
-        const { selectEngineForScene } = await import('@/lib/video/scene-generator');
+        // ── Step 4: Assign engines per scene ──
         const hasAvatar = args.type === 'avatar' || videoType === 'explainer' || videoType === 'sales-pitch';
 
-        const scenes = await Promise.all(scenesToUse.map(async (tpl, i) => {
+        const scenes = await Promise.all(sceneScripts.map(async (tpl, i) => {
           const draft: import('@/types/video-pipeline').PipelineScene = {
             id: `scene-${i + 1}-${Date.now()}`,
             sceneNumber: i + 1,
@@ -3129,45 +3177,89 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
           return { ...draft, engine };
         }));
 
-        const decompositionPlan = {
-          videoType,
-          targetAudience: 'Business professionals and teams',
-          keyMessages: scenesToUse.map((s) => s.title),
-          scenes: scenesToUse.map((tpl, i) => ({
-            sceneNumber: i + 1,
-            title: tpl.title,
-            scriptText: tpl.scriptPrefix,
-            visualDescription: `Visual content for ${tpl.title.toLowerCase()}`,
-            suggestedDuration: durationPerScene,
-          })),
-          assetsNeeded: ['Brand logo', 'Background music'],
-          avatarRecommendation: null,
-          estimatedTotalDuration: duration,
-        };
+        // ── Step 5: Auto-select avatar & voice for HeyGen scenes ──
+        let videoAvatarId = '';
+        let videoVoiceId = '';
+        const hasHeygenScenes = scenes.some((s) => s.engine === 'heygen');
 
-        // Advance project to decompose step with scenes and plan
+        if (hasHeygenScenes) {
+          try {
+            const { listHeyGenAvatars, listHeyGenVoices } = await import('@/lib/video/video-service');
+
+            const avatarResult = await listHeyGenAvatars();
+            if ('avatars' in avatarResult && avatarResult.avatars && avatarResult.avatars.length > 0) {
+              videoAvatarId = avatarResult.avatars[0].id;
+            }
+
+            const voiceResult = await listHeyGenVoices();
+            if ('voices' in voiceResult && voiceResult.voices && voiceResult.voices.length > 0) {
+              videoVoiceId = voiceResult.voices[0].id;
+            }
+          } catch (avatarError) {
+            logger.warn('HeyGen avatar/voice auto-select failed', {
+              error: avatarError instanceof Error ? avatarError.message : String(avatarError),
+              file: 'jasper-tools.ts',
+            });
+          }
+        }
+
+        // ── Step 6: Start generation (delegate to video engines) ──
         await updateProject(projectId, {
           name: title,
-          currentStep: 'decompose',
+          currentStep: 'generation',
           scenes,
-          status: 'draft',
+          status: 'approved',
+          avatarId: videoAvatarId || null,
+          voiceId: videoVoiceId || null,
+        });
+
+        logger.info('Delegating to video engines for rendering', {
+          projectId,
+          sceneCount: scenes.length,
+          engines: scenes.map((s) => s.engine),
+          file: 'jasper-tools.ts',
+        });
+
+        const genResults = await generateAllScenes(scenes, videoAvatarId, videoVoiceId, aspectRatio);
+
+        const successCount = genResults.filter((r) => r.status !== 'failed').length;
+        const failedCount = genResults.filter((r) => r.status === 'failed').length;
+
+        // ── Step 7: Save results ──
+        await updateProject(projectId, {
+          generatedScenes: genResults,
+          currentStep: failedCount === genResults.length ? 'generation' : 'assembly',
+          status: successCount > 0 ? 'approved' : 'draft',
         });
 
         content = JSON.stringify({
-          status: 'prepared',
+          status: successCount > 0 ? 'generating' : 'failed',
           projectId,
-          sceneCount: scenes.length,
-          estimatedDuration: duration,
-          decompositionPlan,
-          message: `Video project "${title}" prepared with ${scenes.length} scenes. Now call generate_video with projectId "${projectId}" to start rendering.`,
-          nextAction: 'generate_video',
-          nextArgs: { projectId },
+          title,
+          sceneCount: genResults.length,
+          successCount,
+          failedCount,
+          engines: [...new Set(scenes.map((s) => s.engine))],
+          delegations: {
+            contentManager: contentResult.status,
+            videoSpecialist: storyboardScenes ? 'COMPLETED' : 'SKIPPED',
+            videoEngines: genResults.map((r) => `${r.provider}: ${r.status}`),
+          },
+          results: genResults.map((r) => ({
+            sceneId: r.sceneId,
+            provider: r.provider,
+            status: r.status,
+            providerVideoId: r.providerVideoId ?? null,
+            error: r.error ?? null,
+          })),
+          message: successCount > 0
+            ? `Video "${title}" is now generating! ${successCount} scene(s) sent to ${[...new Set(genResults.map((r) => r.provider))].join(', ')}. Use get_video_status to check progress.`
+            : `Video generation failed for all ${failedCount} scenes. Errors: ${genResults.map((r) => r.error).filter(Boolean).join('; ')}`,
           videoLibraryPath: '/content/video/library',
-          editPath: `/content/video?project=${projectId}`,
         });
 
         trackMissionStep(context, 'create_video', 'COMPLETED', {
-          summary: `Video prepared: ${title} (${scenes.length} scenes, ${videoType})`,
+          summary: `Video "${title}": ${successCount}/${genResults.length} scenes via Content→Video pipeline`,
           durationMs: Date.now() - videoStart,
           toolResult: content.slice(0, 2000),
         });
