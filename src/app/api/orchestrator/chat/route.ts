@@ -86,18 +86,15 @@ interface StructuredError {
 // Configuration
 // ============================================================================
 
-// Model configuration - can be overridden via environment variable
-// Claude 3.5 Sonnet is the default because it has the most reliable tool calling
-// with large tool sets (45+ tools). Gemini 1.5 Pro was unreliable — it would
-// ignore tools entirely and hallucinate responses instead of calling them.
-const DEFAULT_MODEL = process.env.JASPER_DEFAULT_MODEL ?? 'anthropic/claude-3.5-sonnet';
+// Model configuration — HARDCODED, not overridable by env vars.
+// Claude 3.5 Sonnet is the ONLY reliable model for 45+ tool calling via OpenRouter.
+// Gemini 1.5 Pro was tested extensively and IGNORES tools, causing hallucinations.
+// DO NOT change this without verifying tool calling works end-to-end.
+const DEFAULT_MODEL = 'anthropic/claude-3.5-sonnet';
 
-// Fallback models in priority order - tried sequentially if primary fails
-// All models in this chain must support OpenAI-compatible tool calling
+// Fallback models — Claude models ONLY. Gemini does not reliably call tools.
 const FALLBACK_MODELS = [
   'anthropic/claude-3-haiku',
-  'google/gemini-pro-1.5',
-  'google/gemini-flash-1.5',
 ];
 
 // Available models for the orchestrator (not exported - use GET endpoint to fetch)
