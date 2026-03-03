@@ -87,24 +87,28 @@ interface StructuredError {
 // ============================================================================
 
 // Model configuration - can be overridden via environment variable
-const DEFAULT_MODEL = process.env.JASPER_DEFAULT_MODEL ?? 'google/gemini-pro-1.5';
+// Claude 3.5 Sonnet is the default because it has the most reliable tool calling
+// with large tool sets (45+ tools). Gemini 1.5 Pro was unreliable — it would
+// ignore tools entirely and hallucinate responses instead of calling them.
+const DEFAULT_MODEL = process.env.JASPER_DEFAULT_MODEL ?? 'anthropic/claude-3.5-sonnet';
 
 // Fallback models in priority order - tried sequentially if primary fails
+// All models in this chain must support OpenAI-compatible tool calling
 const FALLBACK_MODELS = [
-  'google/gemini-flash-1.5',
-  'anthropic/claude-3.5-sonnet',
   'anthropic/claude-3-haiku',
+  'google/gemini-pro-1.5',
+  'google/gemini-flash-1.5',
 ];
 
 // Available models for the orchestrator (not exported - use GET endpoint to fetch)
 const AVAILABLE_MODELS = {
-  // Fast conversational models (recommended for real-time chat)
-  'google/gemini-pro-1.5': { name: 'Gemini 1.5 Pro', latency: 'medium', quality: 'ultra', recommended: true },
-  'google/gemini-flash-1.5': { name: 'Gemini 1.5 Flash', latency: 'low', quality: 'high' },
+  // Recommended: Best tool-calling reliability with large tool sets
+  'anthropic/claude-3.5-sonnet': { name: 'Claude 3.5 Sonnet', latency: 'medium', quality: 'ultra', recommended: true },
   'anthropic/claude-3-haiku': { name: 'Claude 3 Haiku', latency: 'low', quality: 'high' },
 
-  // Balanced models
-  'anthropic/claude-3.5-sonnet': { name: 'Claude 3.5 Sonnet', latency: 'medium', quality: 'ultra' },
+  // Google models (fast but less reliable tool calling through OpenRouter)
+  'google/gemini-pro-1.5': { name: 'Gemini 1.5 Pro', latency: 'medium', quality: 'ultra' },
+  'google/gemini-flash-1.5': { name: 'Gemini 1.5 Flash', latency: 'low', quality: 'high' },
   'openai/gpt-4-turbo': { name: 'GPT-4 Turbo', latency: 'medium', quality: 'ultra' },
 
   // Power models (for complex reasoning)
@@ -365,6 +369,13 @@ export async function POST(request: NextRequest) {
     // Build model fallback chain: selected model + fallback models
     const modelsToTry = [selectedModel, ...FALLBACK_MODELS.filter(m => m !== selectedModel)];
 
+    logger.info('[Jasper] Tool configuration', {
+      useTools,
+      toolCount: JASPER_TOOLS.length,
+      model: selectedModel,
+      fallbacks: modelsToTry.slice(1),
+    });
+
     if (useTools) {
       // TOOL-CALLING LOOP: Allows Jasper to query data before responding
       const currentMessages = [...messages];
@@ -390,6 +401,12 @@ export async function POST(request: NextRequest) {
 
         // If no tool calls, we have the final response
         if (!response.toolCalls || response.toolCalls.length === 0) {
+          logger.info('[Jasper] No tool calls in iteration — returning text response', {
+            iteration: iterationCount,
+            model: modelUsed,
+            finishReason: response.finishReason,
+            responsePreview: response.content.slice(0, 200),
+          });
           finalResponse = response.content;
           break;
         }
