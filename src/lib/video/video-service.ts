@@ -455,17 +455,19 @@ export async function listHeyGenAvatars(): Promise<(ComingSoonResponse & { avata
     }
 
     const data = await response.json() as {
-      avatars?: Array<{
-        avatar_id: string;
-        avatar_name: string;
-        preview_image_url?: string;
-        preview_video_url?: string;
-        gender?: string;
-        is_premium?: boolean;
-      }>;
+      data?: {
+        avatars?: Array<{
+          avatar_id: string;
+          avatar_name: string;
+          preview_image_url?: string;
+          preview_video_url?: string;
+          gender?: string;
+          is_premium?: boolean;
+        }>;
+      };
     };
 
-    const avatars: HeyGenAvatar[] = (data.avatars ?? []).map((avatar) => ({
+    const avatars: HeyGenAvatar[] = (data.data?.avatars ?? []).map((avatar) => ({
       id: avatar.avatar_id,
       name: avatar.avatar_name,
       thumbnailUrl: avatar.preview_image_url ?? '',
@@ -519,20 +521,23 @@ export async function listHeyGenVoices(
     }
 
     const data = await response.json() as {
-      voices?: Array<{
-        voice_id: string;
-        voice_name: string;
-        language: string;
-        accent?: string;
-        gender?: string;
-        preview_audio_url?: string;
-        is_premium?: boolean;
-      }>;
+      data?: {
+        voices?: Array<{
+          voice_id: string;
+          name?: string;
+          voice_name?: string;
+          language: string;
+          accent?: string;
+          gender?: string;
+          preview_audio_url?: string;
+          is_premium?: boolean;
+        }>;
+      };
     };
 
-    const voices: HeyGenVoice[] = (data.voices ?? []).map((voice) => ({
+    const voices: HeyGenVoice[] = (data.data?.voices ?? []).map((voice) => ({
       id: voice.voice_id,
-      name: voice.voice_name,
+      name: voice.name ?? voice.voice_name ?? voice.voice_id,
       language: voice.language,
       accent: voice.accent,
       gender: voice.gender as 'male' | 'female' | 'neutral' | undefined,

@@ -3262,6 +3262,20 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
               file: 'jasper-tools.ts',
             });
           }
+
+          // If avatar/voice selection failed, switch HeyGen scenes to Runway/Sora
+          if (!videoAvatarId || !videoVoiceId) {
+            logger.warn('HeyGen avatar/voice unavailable — falling back to text-to-video engines', {
+              avatarId: videoAvatarId || 'MISSING',
+              voiceId: videoVoiceId || 'MISSING',
+              file: 'jasper-tools.ts',
+            });
+            for (const scene of scenes) {
+              if (scene.engine === 'heygen') {
+                scene.engine = 'sora';
+              }
+            }
+          }
         }
 
         // ── Step 6: Start generation (delegate to video engines) ──
