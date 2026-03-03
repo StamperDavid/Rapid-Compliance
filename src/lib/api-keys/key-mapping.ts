@@ -53,6 +53,7 @@ export const UI_TO_CONFIG_MAP: Record<string, string> = {
   // Video
   heygen: 'video.heygen.apiKey',
   runway: 'video.runway.apiKey',
+  sora: 'video.sora.apiKey',
 
   // Voice
   elevenlabs: 'voice.elevenlabs.apiKey',
