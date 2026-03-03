@@ -6,7 +6,7 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger/logger';
 import { requireAuth } from '@/lib/auth/api-auth';
-import { getProject } from '@/lib/video/pipeline-project-service';
+import { getProject, deleteProject } from '@/lib/video/pipeline-project-service';
 
 export const dynamic = 'force-dynamic';
 
@@ -75,6 +75,56 @@ export async function GET(
         success: false,
         error: 'Failed to load project',
       },
+      { status: 500 }
+    );
+  }
+}
+
+// ============================================================================
+// DELETE Handler
+// ============================================================================
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ projectId: string }> }
+) {
+  try {
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
+    const { projectId } = await params;
+
+    if (!projectId) {
+      return NextResponse.json(
+        { success: false, error: 'Project ID is required' },
+        { status: 400 }
+      );
+    }
+
+    logger.info('Deleting video pipeline project', {
+      file: 'api/video/project/[projectId]/route.ts',
+      projectId,
+    });
+
+    const deleted = await deleteProject(projectId);
+
+    if (!deleted) {
+      return NextResponse.json(
+        { success: false, error: 'Failed to delete project' },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    logger.error('Failed to delete video pipeline project', error as Error, {
+      file: 'api/video/project/[projectId]/route.ts',
+    });
+
+    return NextResponse.json(
+      { success: false, error: 'Failed to delete project' },
       { status: 500 }
     );
   }
