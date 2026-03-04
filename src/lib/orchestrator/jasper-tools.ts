@@ -2534,6 +2534,66 @@ async function routeNewsletter(
 }
 
 /**
+ * Route sales_chat_agent actions to the SalesChatSpecialist.
+ */
+async function routeSalesChatAgent(
+  action: string,
+  params: Record<string, unknown>
+): Promise<Record<string, unknown>> {
+  const { getSalesChatSpecialist } = await import('@/lib/agents/sales-chat/specialist');
+  const agent = getSalesChatSpecialist();
+  await agent.initialize();
+
+  const result = await agent.execute({
+    id: `sales_chat_${Date.now()}`,
+    timestamp: new Date(),
+    from: 'JASPER',
+    to: 'SALES_CHAT_AGENT',
+    type: 'COMMAND',
+    priority: 'NORMAL',
+    payload: {
+      taskType: action,
+      userMessage: (params.userMessage as string | undefined) ?? (params.message as string | undefined),
+      channel: (params.channel as 'website' | 'facebook_messenger' | undefined) ?? 'website',
+      visitorId: (params.visitorId as string | undefined) ?? `jasper_${Date.now()}`,
+    },
+    requiresResponse: true,
+    traceId: `trace_${Date.now()}`,
+  });
+
+  return { status: result.status, data: result.data, errors: result.errors };
+}
+
+/**
+ * Route growth_strategist actions to the GrowthStrategist specialist.
+ */
+async function routeGrowthStrategist(
+  action: string,
+  params: Record<string, unknown>
+): Promise<Record<string, unknown>> {
+  const { getGrowthStrategist } = await import('@/lib/agents/growth-strategist/specialist');
+  const strategist = getGrowthStrategist();
+  await strategist.initialize();
+
+  const result = await strategist.execute({
+    id: `growth_strategy_${Date.now()}`,
+    timestamp: new Date(),
+    from: 'JASPER',
+    to: 'GROWTH_STRATEGIST',
+    type: 'COMMAND',
+    priority: 'NORMAL',
+    payload: {
+      taskType: action,
+      periodDays: (params.periodDays as number | undefined) ?? 30,
+    },
+    requiresResponse: true,
+    traceId: `trace_${Date.now()}`,
+  });
+
+  return { status: result.status, data: result.data, errors: result.errors };
+}
+
+/**
  * Central dispatcher — routes (agentId, action) to the appropriate manager/service.
  */
 async function routeToSpecialist(
@@ -2564,6 +2624,12 @@ async function routeToSpecialist(
       return routeLeadHunter(action, params);
     case 'newsletter':
       return routeNewsletter(action, params);
+
+    // Route to standalone strategic agents
+    case 'sales_chat_agent':
+      return routeSalesChatAgent(action, params);
+    case 'growth_strategist':
+      return routeGrowthStrategist(action, params);
 
     default:
       throw new Error(`No execution route configured for agent: ${agentId}`);

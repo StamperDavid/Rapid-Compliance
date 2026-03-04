@@ -20,9 +20,11 @@ export type SpecialistPlatform =
   | 'meta_facebook'
   | 'newsletter'
   | 'web_migrator'
-  | 'lead_hunter';
+  | 'lead_hunter'
+  | 'sales_chat_agent'
+  | 'growth_strategist';
 
-export type SpecialistCategory = 'creative' | 'social' | 'technical';
+export type SpecialistCategory = 'creative' | 'social' | 'technical' | 'strategic';
 
 export interface SpecialistCapability {
   id: string;
@@ -247,6 +249,45 @@ export const SPECIALISTS: Specialist[] = [
       { id: 'lh_segment', name: 'Create Segment', description: 'Build targeted lead segments', action: 'create_lead_segment' },
     ],
     triggerPhrases: ['leads', 'prospects', 'research', 'find leads', 'enrich', 'hunt'],
+    requiresConnection: false,
+  },
+
+  // STRATEGIC AGENTS (Standalone — no domain manager above them)
+  {
+    id: 'sales_chat_agent',
+    name: 'The Sales Concierge',
+    role: 'AI Chat Sales Agent',
+    icon: '💬',
+    color: '#8B5CF6',
+    category: 'strategic',
+    description: 'Customer-facing sales agent for website chat and Messenger — qualifies leads, answers product questions, and guides prospects to free trials.',
+    capabilities: [
+      { id: 'sca_qualify', name: 'Qualify Lead', description: 'Assess budget, need, timeline, and authority via chat', action: 'QUALIFY_LEAD' },
+      { id: 'sca_answer', name: 'Answer Product Question', description: 'Respond to questions about features and pricing', action: 'ANSWER_PRODUCT_QUESTION' },
+      { id: 'sca_trial', name: 'Guide to Trial', description: 'Walk interested prospects through starting a free trial', action: 'GUIDE_TO_TRIAL' },
+      { id: 'sca_demo', name: 'Schedule Demo', description: 'Book a demo for enterprise or complex prospects', action: 'SCHEDULE_DEMO' },
+      { id: 'sca_objection', name: 'Handle Objection', description: 'Address price, trust, complexity, or competitor concerns', action: 'HANDLE_OBJECTION' },
+    ],
+    triggerPhrases: ['sales chat', 'chat agent', 'website chat', 'messenger', 'qualify lead', 'free trial', 'demo'],
+    requiresConnection: false,
+  },
+  {
+    id: 'growth_strategist',
+    name: 'The Chief Growth Officer',
+    role: 'Growth Strategist & Business Analyst',
+    icon: '📈',
+    color: '#059669',
+    category: 'strategic',
+    description: 'Reviews the entire business, synthesizes cross-domain data, and produces strategic directives on SEO, ad spend, demographics, and channel attribution.',
+    capabilities: [
+      { id: 'gs_review', name: 'Business Review', description: 'Full cross-domain business health assessment', action: 'BUSINESS_REVIEW' },
+      { id: 'gs_seo', name: 'SEO Strategy', description: 'Keyword opportunities, content gaps, competitive positioning', action: 'SEO_STRATEGY' },
+      { id: 'gs_adspend', name: 'Ad Spend Analysis', description: 'Budget allocation across channels, ROI optimization', action: 'AD_SPEND_ANALYSIS' },
+      { id: 'gs_demo', name: 'Demographic Targeting', description: 'Identify ideal customer profiles, narrow targeting', action: 'DEMOGRAPHIC_TARGETING' },
+      { id: 'gs_attr', name: 'Channel Attribution', description: 'Map conversions to sources, identify best channels', action: 'CHANNEL_ATTRIBUTION' },
+      { id: 'gs_brief', name: 'Strategic Briefing', description: 'Executive summary for Jasper to relay to the human', action: 'STRATEGIC_BRIEFING' },
+    ],
+    triggerPhrases: ['growth strategy', 'business review', 'seo strategy', 'ad spend', 'demographics', 'channel attribution', 'strategic briefing', 'cgo', 'growth officer'],
     requiresConnection: false,
   },
 ];

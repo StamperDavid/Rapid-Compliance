@@ -19,6 +19,7 @@
  * @module agents/growth-strategist/specialist
  */
 
+import { z } from 'zod';
 import { BaseSpecialist } from '../base-specialist';
 import type { AgentMessage, AgentReport, SpecialistConfig, Signal } from '../types';
 import {
@@ -29,6 +30,8 @@ import {
   aggregateBusinessData,
   type BusinessSnapshot,
 } from './data-aggregator';
+import { OpenRouterProvider } from '@/lib/ai/openrouter-provider';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 // ============================================================================
 // SYSTEM PROMPT
@@ -131,6 +134,68 @@ export interface StrategicBriefing {
   topPriorities: string[];
   risksAndWarnings: string[];
 }
+
+// ---------------------------------------------------------------------------
+// DEMOGRAPHIC PERSONA — Zod schema + inferred type
+// ---------------------------------------------------------------------------
+
+const DemographicPersonaSchema = z.object({
+  who: z.object({
+    jobTitles: z.array(z.string()),
+    companySizeRange: z.string(),
+    ageRange: z.string(),
+    incomeBracket: z.string(),
+    decisionMakingAuthority: z.string(),
+  }),
+  whereToReachThem: z.object({
+    primaryPlatforms: z.array(z.string()),
+    linkedInVsTwitter: z.string(),
+    emailVsSocial: z.string(),
+    platformNotes: z.string(),
+  }),
+  whenToReachThem: z.object({
+    bestDaysForPosting: z.array(z.string()),
+    bestTimesForPosting: z.array(z.string()),
+    bestTimesForEmail: z.string(),
+    adSchedulingRecommendation: z.string(),
+  }),
+  psychographics: z.object({
+    coreValues: z.array(z.string()),
+    primaryMotivations: z.array(z.string()),
+    mainPainPoints: z.array(z.string()),
+    buyingTriggers: z.array(z.string()),
+    riskTolerance: z.enum(['low', 'medium', 'high']),
+  }),
+  messagingAngle: z.object({
+    resonantLanguage: z.array(z.string()),
+    languageToAvoid: z.array(z.string()),
+    emotionalVsLogical: z.string(),
+    primaryEmotionalHook: z.string(),
+    suggestedHeadlines: z.array(z.string()),
+  }),
+  politicalCulturalProfile: z.object({
+    politicalLean: z.enum(['conservative', 'moderate', 'progressive', 'mixed']),
+    geographicProfile: z.enum(['urban', 'suburban', 'rural', 'mixed']),
+    techForwardness: z.enum(['tech-forward', 'traditional', 'mixed']),
+    adToneImplication: z.string(),
+  }),
+  contentPreferences: z.object({
+    formatPreference: z.enum(['short-form', 'long-form', 'mixed']),
+    mediumPreference: z.enum(['video', 'text', 'mixed']),
+    stylePreference: z.enum(['educational', 'entertaining', 'mixed']),
+    topContentFormats: z.array(z.string()),
+  }),
+  budgetSensitivity: z.object({
+    orientation: z.enum(['price-conscious', 'value-driven', 'premium-seeking']),
+    typicalDealSize: z.string(),
+    decisionTimeline: z.string(),
+    approvalProcess: z.string(),
+  }),
+  confidence: z.number().min(0).max(100),
+  dataBasis: z.string(),
+});
+
+export type DemographicPersona = z.infer<typeof DemographicPersonaSchema>;
 
 // ============================================================================
 // SPECIALIST CLASS
@@ -433,33 +498,286 @@ export class GrowthStrategist extends BaseSpecialist {
   private async analyzeDemographics(
     snapshot: BusinessSnapshot
   ): Promise<Record<string, unknown>> {
-    await Promise.resolve();
-    const directives: StrategicDirective[] = [];
+    // ------------------------------------------------------------------
+    // Primary path: AI-generated deep demographic persona via OpenRouter
+    // ------------------------------------------------------------------
+    try {
+      // Dynamic import so the module is only loaded when this task runs
+      const { getBrandDNA } = await import('@/lib/brand/brand-dna-service');
+      const brandDNA = await getBrandDNA();
 
-    // Analyze lead sources for demographic patterns
-    const topSources = snapshot.pipeline.leadSources
-      .sort((a, b) => b.conversionRate - a.conversionRate)
-      .slice(0, 5);
+      // Build a rich context block to ground the AI analysis
+      const snapshotContext = JSON.stringify({
+        revenue: {
+          mrr: snapshot.revenue.mrr,
+          totalCustomers: snapshot.revenue.totalCustomers,
+          newCustomersThisPeriod: snapshot.revenue.newCustomersThisPeriod,
+          churnRate: snapshot.revenue.churnRate,
+          ltv: snapshot.revenue.ltv,
+          averageOrderValue: snapshot.revenue.averageOrderValue,
+        },
+        pipeline: {
+          totalLeads: snapshot.pipeline.totalLeads,
+          winRate: snapshot.pipeline.winRate,
+          dealsPipeline: snapshot.pipeline.dealsPipeline,
+          avgDealCycleDays: snapshot.pipeline.avgDealCycledays,
+          topLeadSources: snapshot.pipeline.leadSources
+            .sort((a, b) => b.conversionRate - a.conversionRate)
+            .slice(0, 5),
+        },
+        social: {
+          topPlatform: snapshot.social.topPlatform,
+          engagementRate: snapshot.social.engagementRate,
+          totalFollowers: snapshot.social.totalFollowers,
+          platforms: snapshot.social.platforms,
+        },
+        email: {
+          openRate: snapshot.email.openRate,
+          clickRate: snapshot.email.clickRate,
+          totalSubscribers: snapshot.email.totalSubscribers,
+        },
+        channels: snapshot.channels.map(c => ({
+          channel: c.channel,
+          conversionRate: c.conversionRate,
+          roi: c.roi,
+          costPerAcquisition: c.costPerAcquisition,
+        })),
+        seo: {
+          organicTraffic: snapshot.seo.organicTraffic,
+          topKeywords: snapshot.seo.topKeywords.slice(0, 10),
+          domainAuthority: snapshot.seo.domainAuthority,
+        },
+      }, null, 2);
 
-    if (topSources.length > 0) {
-      const bestSource = topSources[0];
+      const brandContext = brandDNA
+        ? JSON.stringify({
+            companyDescription: brandDNA.companyDescription,
+            uniqueValue: brandDNA.uniqueValue,
+            targetAudience: brandDNA.targetAudience,
+            toneOfVoice: brandDNA.toneOfVoice,
+            communicationStyle: brandDNA.communicationStyle,
+            industry: brandDNA.industry,
+            keyPhrases: brandDNA.keyPhrases,
+            avoidPhrases: brandDNA.avoidPhrases,
+            competitors: brandDNA.competitors,
+          }, null, 2)
+        : 'No Brand DNA configured yet.';
+
+      const systemPrompt = `You are an expert CMO and market research analyst. Your job is to synthesize business data and brand identity into a precise, actionable marketing persona that a growth team can immediately act on.
+
+You think in audience segments, buying psychology, media consumption habits, and cultural context. Your recommendations are specific, never vague.
+
+You MUST respond with a single valid JSON object matching the exact schema provided. Do not include any text outside the JSON object.`;
+
+      const userPrompt = `Analyze the following business data and brand identity to generate a comprehensive marketing persona.
+
+## BRAND IDENTITY
+${brandContext}
+
+## BUSINESS SNAPSHOT (Last 30 Days)
+${snapshotContext}
+
+## REQUIRED OUTPUT SCHEMA
+Respond with ONLY a JSON object with these exact fields:
+
+{
+  "who": {
+    "jobTitles": ["array of specific job titles that buy this product"],
+    "companySizeRange": "e.g. 10-200 employees (SMB)",
+    "ageRange": "e.g. 32-52",
+    "incomeBracket": "e.g. $75k-$200k household income",
+    "decisionMakingAuthority": "e.g. Final decision-maker, budget owner"
+  },
+  "whereToReachThem": {
+    "primaryPlatforms": ["ranked list of platforms"],
+    "linkedInVsTwitter": "LinkedIn strongly preferred — explain why",
+    "emailVsSocial": "Email first — explain why",
+    "platformNotes": "Specific notes on platform behavior"
+  },
+  "whenToReachThem": {
+    "bestDaysForPosting": ["Tuesday", "Wednesday", "Thursday"],
+    "bestTimesForPosting": ["7-9am EST", "12-1pm EST"],
+    "bestTimesForEmail": "Tuesday 9-11am EST",
+    "adSchedulingRecommendation": "Specific scheduling strategy"
+  },
+  "psychographics": {
+    "coreValues": ["array of 3-5 values"],
+    "primaryMotivations": ["array of top motivations"],
+    "mainPainPoints": ["array of top pain points"],
+    "buyingTriggers": ["array of what pushes them to buy"],
+    "riskTolerance": "low|medium|high"
+  },
+  "messagingAngle": {
+    "resonantLanguage": ["phrases and words that resonate"],
+    "languageToAvoid": ["phrases that turn them off"],
+    "emotionalVsLogical": "e.g. 70% logical, 30% emotional — explain",
+    "primaryEmotionalHook": "The single strongest emotional angle",
+    "suggestedHeadlines": ["3-5 sample ad/email headlines"]
+  },
+  "politicalCulturalProfile": {
+    "politicalLean": "conservative|moderate|progressive|mixed",
+    "geographicProfile": "urban|suburban|rural|mixed",
+    "techForwardness": "tech-forward|traditional|mixed",
+    "adToneImplication": "How the above should shape your ad tone and creative"
+  },
+  "contentPreferences": {
+    "formatPreference": "short-form|long-form|mixed",
+    "mediumPreference": "video|text|mixed",
+    "stylePreference": "educational|entertaining|mixed",
+    "topContentFormats": ["e.g. case studies", "LinkedIn posts", "short demo videos"]
+  },
+  "budgetSensitivity": {
+    "orientation": "price-conscious|value-driven|premium-seeking",
+    "typicalDealSize": "e.g. $500-$2,000/month",
+    "decisionTimeline": "e.g. 2-4 weeks average",
+    "approvalProcess": "e.g. Single decision-maker, no committee"
+  },
+  "confidence": 82,
+  "dataBasis": "Brief explanation of how confident you are and what data you relied on"
+}`;
+
+      const provider = new OpenRouterProvider(PLATFORM_ID);
+      const response = await provider.chat({
+        model: 'claude-3-5-sonnet',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt },
+        ],
+        temperature: 0.4,
+        maxTokens: 3000,
+      });
+
+      // Strip any markdown code fences the model may have wrapped the JSON in
+      const rawContent = response.content
+        .replace(/^```(?:json)?\s*/i, '')
+        .replace(/\s*```\s*$/i, '')
+        .trim();
+
+      const parsed: unknown = JSON.parse(rawContent);
+      const persona = DemographicPersonaSchema.parse(parsed);
+
+      // Build strategic directives from the persona findings
+      const directives: StrategicDirective[] = [];
+
       directives.push(this.createDirective(
         'DEMOGRAPHIC_TARGETING',
         'MARKETING_MANAGER',
-        `Focus targeting on audiences similar to ${bestSource.source} leads`,
-        `${bestSource.source} has ${bestSource.conversionRate}% conversion rate — highest of all sources`,
-        'Improve overall conversion rate by focusing on proven demographics',
-        'MEDIUM',
-        70
+        `Target ${persona.who.jobTitles.slice(0, 3).join(', ')} on ${persona.whereToReachThem.primaryPlatforms[0] ?? 'LinkedIn'}`,
+        `AI persona analysis (confidence: ${persona.confidence}%) identified ${persona.who.jobTitles[0] ?? 'decision-makers'} at ${persona.who.companySizeRange} companies as the highest-fit audience`,
+        'Improve ad targeting precision and reduce cost-per-acquisition',
+        'HIGH',
+        persona.confidence
       ));
-    }
 
-    return {
-      topLeadSources: topSources,
-      directives,
-      currentCustomerCount: snapshot.revenue.totalCustomers,
-      newCustomersThisPeriod: snapshot.revenue.newCustomersThisPeriod,
-    };
+      directives.push(this.createDirective(
+        'DEMOGRAPHIC_TARGETING',
+        'CONTENT_MANAGER',
+        `Produce ${persona.contentPreferences.topContentFormats[0] ?? 'case studies'} and ${persona.contentPreferences.topContentFormats[1] ?? 'LinkedIn posts'} as primary content formats`,
+        `Persona prefers ${persona.contentPreferences.formatPreference} ${persona.contentPreferences.mediumPreference} content with ${persona.contentPreferences.stylePreference} style`,
+        'Increase content engagement by matching format to audience preference',
+        'MEDIUM',
+        Math.round(persona.confidence * 0.9)
+      ));
+
+      directives.push(this.createDirective(
+        'DEMOGRAPHIC_TARGETING',
+        'MARKETING_MANAGER',
+        `Schedule email sends on ${persona.whenToReachThem.bestTimesForEmail} and social posts on ${persona.whenToReachThem.bestDaysForPosting.slice(0, 2).join('/')}`,
+        `Timing analysis for ${persona.who.jobTitles[0] ?? 'target persona'} shows peak engagement windows`,
+        'Lift open and engagement rates by 15-25% through precise timing',
+        'MEDIUM',
+        75
+      ));
+
+      directives.push(this.createDirective(
+        'DEMOGRAPHIC_TARGETING',
+        'MARKETING_MANAGER',
+        `Lead messaging with: "${persona.messagingAngle.primaryEmotionalHook}" — ${persona.messagingAngle.emotionalVsLogical}`,
+        `Persona responds to ${persona.psychographics.coreValues.slice(0, 2).join(' and ')} framing with primary pain points: ${persona.psychographics.mainPainPoints.slice(0, 2).join(', ')}`,
+        'Improve ad click-through rate and landing page conversion by aligning copy to persona psychology',
+        'HIGH',
+        Math.round(persona.confidence * 0.85)
+      ));
+
+      // Persist persona to MemoryVault under PROFILE category so other agents can reference it
+      const vault = getMemoryVault();
+      vault.write('PROFILE', `marketing_persona_${Date.now()}`, {
+        persona,
+        snapshot: {
+          mrr: snapshot.revenue.mrr,
+          totalCustomers: snapshot.revenue.totalCustomers,
+          topLeadSource: snapshot.pipeline.leadSources[0]?.source ?? 'unknown',
+        },
+        directives,
+        generatedAt: new Date().toISOString(),
+        platformId: PLATFORM_ID,
+      }, 'GROWTH_STRATEGIST', {
+        tags: ['demographic-persona', 'marketing-persona', 'cmo-analysis', 'jasper-accessible'],
+        priority: 'HIGH',
+      });
+
+      // Share as a cross-agent insight
+      await shareInsight(
+        'GROWTH_STRATEGIST',
+        'AUDIENCE',
+        'Marketing Persona Generated',
+        `Target: ${persona.who.jobTitles.slice(0, 2).join(', ')} at ${persona.who.companySizeRange}. ` +
+        `Reach via ${persona.whereToReachThem.primaryPlatforms.slice(0, 2).join(' and ')}. ` +
+        `Primary hook: ${persona.messagingAngle.primaryEmotionalHook}. ` +
+        `Budget orientation: ${persona.budgetSensitivity.orientation}.`,
+        {
+          confidence: persona.confidence,
+          tags: ['demographic-persona', 'marketing-persona', 'jasper-accessible'],
+          actions: directives.map(d => d.action),
+        }
+      );
+
+      return {
+        persona,
+        directives,
+        topLeadSources: snapshot.pipeline.leadSources
+          .sort((a, b) => b.conversionRate - a.conversionRate)
+          .slice(0, 5),
+        currentCustomerCount: snapshot.revenue.totalCustomers,
+        newCustomersThisPeriod: snapshot.revenue.newCustomersThisPeriod,
+        analysisMethod: 'ai-persona',
+      };
+    } catch (aiError: unknown) {
+      // ------------------------------------------------------------------
+      // Fallback path: simple lead-source conversion analysis
+      // ------------------------------------------------------------------
+      this.log(
+        'WARN',
+        `AI demographic analysis failed — falling back to lead-source heuristics: ${aiError instanceof Error ? aiError.message : String(aiError)}`
+      );
+
+      const directives: StrategicDirective[] = [];
+
+      const topSources = snapshot.pipeline.leadSources
+        .sort((a, b) => b.conversionRate - a.conversionRate)
+        .slice(0, 5);
+
+      if (topSources.length > 0) {
+        const bestSource = topSources[0];
+        directives.push(this.createDirective(
+          'DEMOGRAPHIC_TARGETING',
+          'MARKETING_MANAGER',
+          `Focus targeting on audiences similar to ${bestSource.source} leads`,
+          `${bestSource.source} has ${bestSource.conversionRate}% conversion rate — highest of all sources`,
+          'Improve overall conversion rate by focusing on proven demographics',
+          'MEDIUM',
+          70
+        ));
+      }
+
+      return {
+        topLeadSources: topSources,
+        directives,
+        currentCustomerCount: snapshot.revenue.totalCustomers,
+        newCustomersThisPeriod: snapshot.revenue.newCustomersThisPeriod,
+        analysisMethod: 'fallback-heuristic',
+      };
+    }
   }
 
   private async analyzeChannelAttribution(
