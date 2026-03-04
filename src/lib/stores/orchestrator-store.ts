@@ -27,6 +27,7 @@ export interface ChatMessage {
     specialistInvoked?: string;
     actionTaken?: string;
     missionId?: string;
+    reviewLink?: string;
   };
 }
 

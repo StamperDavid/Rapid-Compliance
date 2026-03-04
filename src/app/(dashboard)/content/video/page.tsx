@@ -1,6 +1,7 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import SubpageNav from '@/components/ui/SubpageNav';
 import { VIDEO_TABS } from '@/lib/constants/subpage-nav';
@@ -41,6 +42,9 @@ export default function VideoStudioPage() {
     reset,
     loadProject,
   } = useVideoPipelineStore();
+
+  const searchParams = useSearchParams();
+  const autoLoadAttempted = useRef(false);
 
   const [showLoadModal, setShowLoadModal] = useState(false);
   const [loadingProjects, setLoadingProjects] = useState(false);
@@ -104,6 +108,15 @@ export default function VideoStudioPage() {
       setLoadingProjectId(null);
     }
   }, [loadProject, authFetch]);
+
+  // Auto-load project from ?load={projectId} URL parameter
+  useEffect(() => {
+    const loadId = searchParams.get('load');
+    if (loadId && !autoLoadAttempted.current && !projectId) {
+      autoLoadAttempted.current = true;
+      void handleLoadProject(loadId);
+    }
+  }, [searchParams, handleLoadProject, projectId]);
 
   const renderCurrentStep = () => {
     switch (currentStep) {

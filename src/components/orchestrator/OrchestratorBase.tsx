@@ -41,7 +41,6 @@ import {
   VolumeX,
   Settings,
   Radio,
-  Radar,
 } from 'lucide-react';
 import { auth } from '@/lib/firebase/config';
 import { ASSISTANT_NAME } from '@/lib/constants/platform';
@@ -111,6 +110,7 @@ interface ChatApiResponse {
   metadata?: {
     toolExecuted?: string;
     missionId?: string;
+    reviewLink?: string;
   };
   audio?: {
     data: string;
@@ -496,6 +496,7 @@ export function OrchestratorBase({ config }: { config: OrchestratorConfig }) {
           metadata: {
             ...(data.metadata?.toolExecuted ? { toolUsed: data.metadata.toolExecuted } : {}),
             ...(data.metadata?.missionId ? { missionId: data.metadata.missionId } : {}),
+            ...(data.metadata?.reviewLink ? { reviewLink: data.metadata.reviewLink } : {}),
           },
         });
 
@@ -978,9 +979,9 @@ function MessageBubble({ message }: { message: ChatMessage }) {
         <div className="text-sm leading-relaxed">
           {renderMarkdown(message.content)}
         </div>
-        {message.metadata?.missionId && (
+        {(message.metadata?.reviewLink ?? message.metadata?.missionId) && (
           <a
-            href={`/mission-control?mission=${message.metadata.missionId}`}
+            href={message.metadata.reviewLink ?? `/dashboard`}
             style={{
               display: 'inline-flex',
               alignItems: 'center',
@@ -996,8 +997,8 @@ function MessageBubble({ message }: { message: ChatMessage }) {
               transition: 'background-color 0.15s ease',
             }}
           >
-            <Radar style={{ width: 12, height: 12 }} />
-            Watch Live
+            <Sparkles style={{ width: 12, height: 12 }} />
+            Review / Approve
           </a>
         )}
       </div>

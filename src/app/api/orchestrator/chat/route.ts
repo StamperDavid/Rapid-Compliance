@@ -226,6 +226,7 @@ interface OrchestratorChatResponse {
     toolExecuted?: string;
     responseTime?: number;
     missionId?: string;
+    reviewLink?: string;
   };
   // Voice output (base64 audio if voiceEnabled)
   audio?: {
@@ -345,6 +346,7 @@ export async function POST(request: NextRequest) {
 
     let finalResponse = '';
     const toolsExecuted: string[] = [];
+    let lastReviewLink: string | undefined;
     let modelUsed = selectedModel;
 
     // Mission tracking — generate ID for potential delegation tracking
@@ -447,13 +449,23 @@ export async function POST(request: NextRequest) {
           tool_calls: response.toolCalls,
         });
 
-        // Add tool results
+        // Add tool results and extract reviewLink
         for (const result of toolResults) {
           currentMessages.push({
             role: 'tool',
             content: result.content,
             tool_call_id: result.tool_call_id,
           });
+
+          // Extract reviewLink from tool result JSON (if present)
+          try {
+            const parsed = JSON.parse(result.content) as Record<string, unknown>;
+            if (typeof parsed.reviewLink === 'string' && parsed.reviewLink) {
+              lastReviewLink = parsed.reviewLink;
+            }
+          } catch {
+            // Not JSON or no reviewLink — skip
+          }
         }
 
         // If this was the last iteration, force a response
@@ -565,6 +577,7 @@ export async function POST(request: NextRequest) {
         responseTime,
         toolExecuted: toolsExecuted.length > 0 ? toolsExecuted.join(', ') : undefined,
         missionId: missionCreated ? missionId : undefined,
+        reviewLink: lastReviewLink,
       },
       audio: audioOutput,
     };
@@ -668,7 +681,23 @@ You command a 52-agent AI swarm across 9 domains. You DELEGATE all work to them:
 - ALWAYS delegate via tools, then tell David what you've tasked the team to do
 - ALWAYS include a link to the page where David can review the completed work
 - Example: Say "I've got the team researching that now — I'll update you when it's ready at /seo"
-- Example: Say "The content team is creating that video. Track it here: /video"
+- Example: Say "The content team is drafting that video. Review it here: /content/video"
+
+MULTI-STEP TASK PROTOCOL:
+When a request requires multiple steps (research + content, analysis + action):
+1. Break down the task explicitly — "I'm assigning two tasks:"
+2. List each sub-task with what team/specialist handles it
+3. Include a review link for EACH sub-task in your response
+4. NEVER say "building..." or "working on..." without specifying WHAT is being built
+5. Example: "I've assigned two tasks:
+   - **Market Research**: The intelligence team is analyzing your target demographic → [Review Research](/analytics)
+   - **Video Creation**: The content team is drafting a video storyboard → [Review & Approve Video](/content/video)"
+
+APPROVAL WORKFLOW:
+- When creating content (videos, emails, social posts), you create DRAFTS for review
+- Tell the user to review and approve before anything executes or renders
+- Include the review link so they can go straight to the approval page
+- NEVER imply that content is already being rendered or sent — it's a DRAFT until approved
 
 Your 16 operational systems (speak as your own actions):
 1. CRM — Contact/deal management, pipeline tracking, deal health scoring, duplicate detection

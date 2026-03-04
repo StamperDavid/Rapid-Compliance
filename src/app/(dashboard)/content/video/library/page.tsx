@@ -328,8 +328,8 @@ export default function VideoLibraryPage() {
                         </div>
                       ) : expandedProject ? (
                         <>
-                          {/* Video Player */}
-                          {expandedProject.finalVideoUrl && (
+                          {/* Video Player — final or scene-level */}
+                          {expandedProject.finalVideoUrl ? (
                             <div className="rounded-lg overflow-hidden bg-black">
                               <video
                                 src={expandedProject.finalVideoUrl}
@@ -337,7 +337,41 @@ export default function VideoLibraryPage() {
                                 className="w-full max-h-[400px]"
                               />
                             </div>
-                          )}
+                          ) : expandedProject.generatedScenes?.some((s) => s.videoUrl) ? (
+                            <div className="space-y-3">
+                              <h4 className="text-sm font-medium text-zinc-300 flex items-center gap-2">
+                                <Play className="w-3.5 h-3.5 text-amber-400" />
+                                Scene Videos
+                              </h4>
+                              <div className="grid gap-3">
+                                {expandedProject.generatedScenes
+                                  .filter((s): s is typeof s & { videoUrl: string } => Boolean(s.videoUrl))
+                                  .map((scene, idx) => (
+                                    <div key={scene.sceneId} className="rounded-lg overflow-hidden bg-black/60 border border-zinc-700/50">
+                                      <video
+                                        src={scene.videoUrl}
+                                        controls
+                                        className="w-full max-h-[300px]"
+                                      />
+                                      <div className="flex items-center justify-between px-3 py-1.5 bg-zinc-900/80">
+                                        <span className="text-xs text-zinc-400">
+                                          Scene {idx + 1}
+                                          {scene.provider && <Badge variant="outline" className="ml-2 text-[10px] py-0">{scene.provider}</Badge>}
+                                        </span>
+                                        <a
+                                          href={scene.videoUrl}
+                                          download
+                                          className="text-xs text-amber-400 hover:text-amber-300 flex items-center gap-1"
+                                        >
+                                          <Download className="w-3 h-3" />
+                                          Download
+                                        </a>
+                                      </div>
+                                    </div>
+                                  ))}
+                              </div>
+                            </div>
+                          ) : null}
 
                           {/* Script Preview */}
                           {expandedProject.scenes.length > 0 && (

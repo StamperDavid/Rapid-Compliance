@@ -22,6 +22,10 @@ export default function AgentConfigurationPage() {
   const { theme } = useOrgTheme();
   const toast = useToast();
 
+  // Execution policy state
+  const [executionMode, setExecutionMode] = useState<'require_approval' | 'fully_automate'>('require_approval');
+  const [savingPolicy, setSavingPolicy] = useState(false);
+
   const loadBaseModel = useCallback(async () => {
     try {
       const { getBaseModel } = await import('@/lib/agent/base-model-builder');
@@ -43,6 +47,37 @@ export default function AgentConfigurationPage() {
   useEffect(() => {
     void loadBaseModel();
   }, [loadBaseModel]);
+
+  // Load execution policy on mount
+  useEffect(() => {
+    const loadPolicy = async () => {
+      try {
+        const { getExecutionPolicyClient } = await import('@/lib/orchestrator/execution-policy-service');
+        const policy = await getExecutionPolicyClient();
+        setExecutionMode(policy.mode);
+      } catch (err) {
+        logger.error('Failed to load execution policy', err instanceof Error ? err : new Error(String(err)), { file: 'configuration/page.tsx' });
+      }
+    };
+    void loadPolicy();
+  }, []);
+
+  const handleToggleExecutionPolicy = async (newMode: 'require_approval' | 'fully_automate') => {
+    setSavingPolicy(true);
+    try {
+      const { saveExecutionPolicyClient } = await import('@/lib/orchestrator/execution-policy-service');
+      await saveExecutionPolicyClient(newMode, _user?.id ?? 'unknown');
+      setExecutionMode(newMode);
+      toast.success(newMode === 'require_approval'
+        ? 'Approval mode enabled — Jasper will create drafts for your review.'
+        : 'Auto-execute enabled — Jasper will fully execute tasks without waiting for approval.');
+    } catch (err) {
+      logger.error('Failed to save execution policy', err instanceof Error ? err : new Error(String(err)), { file: 'configuration/page.tsx' });
+      toast.error('Failed to update execution policy.');
+    } finally {
+      setSavingPolicy(false);
+    }
+  };
 
   const handleSave = async () => {
     if (!baseModel) {
@@ -1300,6 +1335,49 @@ export default function AgentConfigurationPage() {
             <p style={{ color: 'var(--color-text-secondary)' }}>
               Edit your agent&apos;s base configuration. Changes will be applied to training and future Golden Masters.
             </p>
+          </div>
+
+          {/* Execution Policy Toggle */}
+          <div style={{
+            marginBottom: '2rem',
+            padding: '1.25rem',
+            backgroundColor: 'var(--color-bg-paper)',
+            borderRadius: '0.75rem',
+            border: '1px solid var(--color-border-strong)',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div>
+                <h3 style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--color-text-primary)', marginBottom: '0.25rem' }}>
+                  Task Approval Mode
+                </h3>
+                <p style={{ fontSize: '0.8125rem', color: 'var(--color-text-secondary)', margin: 0 }}>
+                  {executionMode === 'require_approval'
+                    ? 'Jasper creates drafts and waits for your review before executing. Recommended to prevent wasted credits.'
+                    : 'Jasper fully executes tasks immediately (renders videos, sends emails, etc.) without waiting for approval.'}
+                </p>
+              </div>
+              <button
+                onClick={() => void handleToggleExecutionPolicy(
+                  executionMode === 'require_approval' ? 'fully_automate' : 'require_approval'
+                )}
+                disabled={savingPolicy}
+                style={{
+                  minWidth: '140px',
+                  padding: '0.5rem 1rem',
+                  backgroundColor: executionMode === 'require_approval' ? primaryColor : 'var(--color-border-strong)',
+                  color: 'var(--color-text-primary)',
+                  border: 'none',
+                  borderRadius: '0.5rem',
+                  fontWeight: '600',
+                  cursor: savingPolicy ? 'not-allowed' : 'pointer',
+                  fontSize: '0.8125rem',
+                  opacity: savingPolicy ? 0.6 : 1,
+                  transition: 'all 0.2s',
+                }}
+              >
+                {savingPolicy ? 'Saving...' : executionMode === 'require_approval' ? 'Approval Required' : 'Auto-Execute'}
+              </button>
+            </div>
           </div>
 
           {renderSection()}
