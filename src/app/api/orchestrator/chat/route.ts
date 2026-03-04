@@ -31,6 +31,7 @@ import { SystemStateService } from '@/lib/orchestrator/system-state-service';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import { getSubCollection } from '@/lib/firebase/collections';
 import { createMission, finalizeMission } from '@/lib/orchestrator/mission-persistence';
+import { getAgentCount, getDomainCount } from '@/lib/agents/agent-registry';
 
 // ============================================================================
 // Type Definitions
@@ -676,7 +677,7 @@ When asked "how many organizations" or any count/total question:
 BACKGROUND CAPABILITIES (YOUR AGENT TEAMS — DELEGATE TO THEM)
 ═══════════════════════════════════════════════════════════════════════════════
 
-You command a 52-agent AI swarm across 9 domains. You DELEGATE all work to them:
+You command a ${getAgentCount()}-agent AI swarm across ${getDomainCount()} domains. You DELEGATE all work to them:
 - NEVER mention tool names, agent names, or specialist names to the user
 - ALWAYS delegate via tools, then tell David what you've tasked the team to do
 - ALWAYS include a link to the page where David can review the completed work

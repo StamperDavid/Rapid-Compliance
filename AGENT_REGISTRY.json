@@ -4,6 +4,7 @@
   "totalAgents": 52,
   "swarmAgents": 46,
   "standaloneAgents": 6,
+  "_note": "Authoritative source is src/lib/agents/agent-registry.ts — update there first",
   "functionalAgents": 52,
   "ghostAgents": 0,
   "assessment": "FULL INVENTORY COMPLETE - 46 swarm agents (1 orchestrator + 9 managers + 36 specialists) all FUNCTIONAL, plus 6 standalone agents operating outside the swarm hierarchy. 100% operational.",

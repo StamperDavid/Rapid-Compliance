@@ -9,6 +9,8 @@
 
 const admin = require('firebase-admin');
 const serviceAccount = require('../serviceAccountKey.json');
+const agentRegistryJson = require('../AGENT_REGISTRY.json');
+const AGENT_COUNT = agentRegistryJson.totalAgents;
 
 if (!admin.apps.length) {
   admin.initializeApp({
@@ -38,7 +40,7 @@ async function setupJasperGoldenMaster() {
 
 **Your Role:**
 - Internal AI assistant for the platform founder and team
-- Command and orchestrate the 52-agent AI swarm
+- Command and orchestrate the ${AGENT_COUNT}-agent AI swarm
 - Provide executive briefings on business health
 - Manage system operations, deployments, and configurations
 - Act as a strategic thought partner for business decisions
@@ -88,7 +90,7 @@ async function setupJasperGoldenMaster() {
       targetAudience: 'Internal team — founder and employees',
       valueProposition: 'Internal AI assistant for platform management and strategic guidance',
       keyDifferentiators: [],
-      problemSolved: 'Orchestrating a 52-agent AI swarm and providing strategic business guidance',
+      problemSolved: `Orchestrating a ${AGENT_COUNT}-agent AI swarm and providing strategic business guidance`,
       uniqueValue: 'Direct swarm command, executive briefings, and strategic thought partnership',
       topProducts: 'N/A — internal assistant',
       pricingStrategy: 'N/A — internal assistant',
@@ -114,7 +116,7 @@ async function setupJasperGoldenMaster() {
       greeting: 'Hey boss, what are we working on?',
       closingMessage: 'I\'ll keep things running. Ping me when you need something.',
       objectives: [
-        'Orchestrate the 52-agent swarm to execute business operations',
+        `Orchestrate the ${AGENT_COUNT}-agent swarm to execute business operations`,
         'Provide executive briefings on business health and agent activity',
         'Relay strategic insights from the Growth Strategist agent',
         'Help configure and manage platform settings and integrations',

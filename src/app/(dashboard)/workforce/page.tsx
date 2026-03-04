@@ -12,6 +12,13 @@ import {
 import SubpageNav from '@/components/ui/SubpageNav';
 import { AI_WORKFORCE_TABS } from '@/lib/constants/subpage-nav';
 import { Tooltip } from '@/components/ui/tooltip';
+import {
+  getAgentCount,
+  getOrchestratorCount,
+  getManagerCount,
+  getSpecialistCount,
+  getStandaloneCount,
+} from '@/lib/agents/agent-registry';
 
 // ============================================================================
 // TYPES
@@ -428,13 +435,10 @@ const HierarchySection = memo(function HierarchySection({
 // ============================================================================
 
 /**
- * Workforce Command Center - Full 52-Agent Dashboard
+ * Workforce Command Center - Dynamic Agent Dashboard
  *
- * Displays live telemetry from the MASTER_ORCHESTRATOR including:
- * - 1 Orchestrator (L1 Swarm CEO)
- * - 9 Managers (L2 Domain Commanders)
- * - 38 Specialists (L3 Workers)
- * - 4 Standalone Agents (Jasper, Voice, Autonomous Posting, Chat Session)
+ * Displays live telemetry from the MASTER_ORCHESTRATOR.
+ * Agent counts are derived from the dynamic registry in @/lib/agents/agent-registry.
  */
 export default function WorkforceCommandCenterPage() {
   const router = useRouter();
@@ -660,7 +664,7 @@ export default function WorkforceCommandCenterPage() {
               )}
             </h1>
             <p style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>
-              Live telemetry from the 52-agent AI workforce • Last updated: {lastUpdated?.toLocaleTimeString() ?? 'Never'}
+              Live telemetry from the {getAgentCount()}-agent AI workforce • Last updated: {lastUpdated?.toLocaleTimeString() ?? 'Never'}
             </p>
           </div>
 
@@ -717,10 +721,10 @@ export default function WorkforceCommandCenterPage() {
               }}
             >
               <option value="all">All Tiers ({agents.length})</option>
-              <option value="L1">L1 - Orchestrator ({metrics?.byTier?.L1?.total ?? 1})</option>
-              <option value="L2">L2 - Managers ({metrics?.byTier?.L2?.total ?? 9})</option>
-              <option value="L3">L3 - Specialists ({metrics?.byTier?.L3?.total ?? 38})</option>
-              <option value="STANDALONE">Standalone ({metrics?.byTier?.STANDALONE?.total ?? 4})</option>
+              <option value="L1">L1 - Orchestrator ({metrics?.byTier?.L1?.total ?? getOrchestratorCount()})</option>
+              <option value="L2">L2 - Managers ({metrics?.byTier?.L2?.total ?? getManagerCount()})</option>
+              <option value="L3">L3 - Specialists ({metrics?.byTier?.L3?.total ?? getSpecialistCount()})</option>
+              <option value="STANDALONE">Standalone ({metrics?.byTier?.STANDALONE?.total ?? getStandaloneCount()})</option>
             </select>
 
             {/* Refresh Button */}

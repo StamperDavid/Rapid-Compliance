@@ -13,6 +13,15 @@
  * @module system-blueprint
  */
 
+import {
+  getAgentCount,
+  getOrchestratorCount,
+  getDomainCount,
+  getSpecialistCount,
+  getStandaloneCount,
+  getSwarmAgentCount,
+} from '@/lib/agents/agent-registry';
+
 export const SYSTEM_BLUEPRINT = `# SalesVelocity.ai — System Blueprint
 
 > **Purpose:** This is Jasper's authoritative knowledge base. The query_docs tool reads this file.
@@ -27,13 +36,13 @@ export const SYSTEM_BLUEPRINT = `# SalesVelocity.ai — System Blueprint
 
 SalesVelocity.ai is a single-tenant AI-powered business operations platform. It is NOT a SaaS tool. The platform serves one company (David's organization) and its clients purchase services and products — they do not receive SaaS tenants.
 
-The platform combines a 52-agent AI swarm, full CRM, e-commerce, marketing automation, voice AI, website builder, SEO tools, video generation, workflow engine, and analytics into a unified command center.
+The platform combines a ${getAgentCount()}-agent AI swarm, full CRM, e-commerce, marketing automation, voice AI, website builder, SEO tools, video generation, workflow engine, and analytics into a unified command center.
 
 ---
 
-## AI Agent Swarm (52 Agents)
+## AI Agent Swarm (${getAgentCount()} Agents)
 
-The platform runs a hierarchical AI agent swarm: 1 Master Orchestrator, 9 Domain Managers, 38 Specialists, and 4 Standalone Agents.
+The platform runs a hierarchical AI agent swarm: ${getOrchestratorCount()} Master Orchestrator, ${getDomainCount()} Domain Managers, ${getSpecialistCount()} Specialists, and ${getStandaloneCount()} Standalone Agents.
 
 ### Master Orchestrator (L1)
 - **Role:** Swarm CEO — routes commands to the 9 domain managers
@@ -301,7 +310,7 @@ OAuth integrations with major business platforms.
 |--------|-------|
 | API Endpoints | 281 |
 | Dashboard Pages | 177 |
-| AI Agents | 52 (48 swarm + 4 standalone) |
+| AI Agents | ${getAgentCount()} (${getSwarmAgentCount()} swarm + ${getStandaloneCount()} standalone) |
 | Service Files | 90+ |
 | Cron Jobs | 6 |
 | Integration OAuth Flows | 18 |

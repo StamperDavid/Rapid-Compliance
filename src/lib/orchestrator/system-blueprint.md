@@ -12,13 +12,13 @@
 
 SalesVelocity.ai is a single-tenant AI-powered business operations platform. It is NOT a SaaS tool. The platform serves one company (David's organization) and its clients purchase services and products — they do not receive SaaS tenants.
 
-The platform combines a 52-agent AI swarm, full CRM, e-commerce, marketing automation, voice AI, website builder, SEO tools, video generation, workflow engine, and analytics into a unified command center.
+The platform combines a 52-agent AI swarm (46 swarm + 6 standalone), full CRM, e-commerce, marketing automation, voice AI, website builder, SEO tools, video generation, workflow engine, and analytics into a unified command center.
 
 ---
 
 ## AI Agent Swarm (52 Agents)
 
-The platform runs a hierarchical AI agent swarm: 1 Master Orchestrator, 9 Domain Managers, 38 Specialists, and 4 Standalone Agents.
+The platform runs a hierarchical AI agent swarm: 1 Master Orchestrator, 9 Domain Managers, 36 Specialists, and 6 Standalone Agents.
 
 ### Master Orchestrator (L1)
 - **Role:** Swarm CEO — routes commands to the 9 domain managers
@@ -286,7 +286,7 @@ OAuth integrations with major business platforms.
 |--------|-------|
 | API Endpoints | 281 |
 | Dashboard Pages | 177 |
-| AI Agents | 52 (48 swarm + 4 standalone) |
+| AI Agents | 52 (46 swarm + 6 standalone) |
 | Service Files | 90+ |
 | Cron Jobs | 6 |
 | Integration OAuth Flows | 18 |

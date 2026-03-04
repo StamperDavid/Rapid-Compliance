@@ -5,7 +5,7 @@
 > **API Directory:** HARDENED ZONE - Zero `any` types, 100% Zod validation, strict type safety
 > **Branch:** `dev` (production-bound)
 
-AI-powered sales platform with a 52-agent autonomous swarm, customer memory persistence, real-time conversation management, and full e-commerce capabilities.
+AI-powered sales platform with a 52-agent autonomous swarm (46 swarm + 6 standalone), customer memory persistence, real-time conversation management, and full e-commerce capabilities.
 
 ---
 
@@ -39,7 +39,7 @@ AI-powered sales platform with a 52-agent autonomous swarm, customer memory pers
 |--------|-------|
 | Physical Routes (page.tsx) | 159 |
 | API Endpoints (route.ts) | 226 |
-| AI Agents | 52 (48 swarm + 4 standalone) |
+| AI Agents | 52 (46 swarm + 6 standalone) |
 | RBAC Roles | 4 (owner, admin, manager, member) |
 | Firestore Collections | 60+ |
 
@@ -69,7 +69,7 @@ See [ENGINEERING_STANDARDS.md](./ENGINEERING_STANDARDS.md) for complete coding s
 
 ### 52-Agent Autonomous Swarm
 
-A hierarchical agent system with 1 Master Orchestrator, 9 Domain Managers, 38 Specialists, and 4 Standalone Agents:
+A hierarchical agent system with 1 Master Orchestrator, 9 Domain Managers, 36 Specialists, and 6 Standalone Agents:
 
 - **Master Orchestrator** — Command/Saga pattern task dispatch, intent-based routing
 - **9 Domain Managers** — Intelligence, Marketing, Builder, Architect, Commerce, Outreach, Content, Revenue, Reputation
@@ -175,7 +175,7 @@ Open [http://localhost:3000](http://localhost:3000)
 | [CLAUDE.md](./CLAUDE.md) | Binding AI development governance |
 | [ENGINEERING_STANDARDS.md](./ENGINEERING_STANDARDS.md) | Code quality requirements |
 | [docs/single_source_of_truth.md](./docs/single_source_of_truth.md) | Authoritative architecture reference |
-| [AGENT_REGISTRY.json](./AGENT_REGISTRY.json) | 52-agent system inventory |
+| [AGENT_REGISTRY.json](./AGENT_REGISTRY.json) | Agent system inventory (see src/lib/agents/agent-registry.ts for authoritative source) |
 | [CONTINUATION_PROMPT.md](./CONTINUATION_PROMPT.md) | Current sprint context |
 
 ### Feature Documentation
@@ -203,7 +203,7 @@ src/
 │   └── onboarding/            # Onboarding experience
 ├── components/                # 185 React components (26 categories)
 ├── lib/                       # Core business logic
-│   ├── agents/                # 52-agent swarm system
+│   ├── agents/                # Agent swarm system (dynamic registry)
 │   ├── ai/                    # AI provider abstraction
 │   ├── db/                    # Firestore service layer
 │   ├── conversation/          # ConversationMemory + analysis

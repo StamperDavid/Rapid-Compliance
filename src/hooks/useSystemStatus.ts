@@ -5,7 +5,7 @@
  * from the MASTER_ORCHESTRATOR to Dashboard components.
  *
  * Features:
- * - Full 52-agent registry (48 swarm + 4 standalone)
+ * - Full agent registry (swarm + standalone, counts from dynamic registry)
  * - Configurable polling interval (default 30s)
  * - Automatic error recovery
  * - Loading and error states
@@ -38,7 +38,7 @@ export interface UseSystemStatusOptions {
 }
 
 export interface UseSystemStatusReturn {
-  /** Array of all 52 agent statuses */
+  /** Array of all agent statuses */
   agents: SystemAgentStatus[];
   /** Hierarchical breakdown of agents by tier */
   hierarchy: {

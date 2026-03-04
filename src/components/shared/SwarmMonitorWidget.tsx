@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useSystemStatus, type SystemAgentStatus } from '@/hooks/useSystemStatus';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
+import { getAgentCount, getManagerCount } from '@/lib/agents/agent-registry';
 
 // ============================================================================
 // TYPES
@@ -20,11 +21,11 @@ interface SwarmMonitorWidgetProps {
 // CONSTANTS
 // ============================================================================
 
-/** Total number of agents in the swarm (47 = 1 orchestrator + 9 managers + 37 specialists) */
-const TOTAL_AGENTS = 47;
+/** Total number of agents in the swarm (derived from dynamic registry) */
+const TOTAL_AGENTS = getAgentCount();
 
-/** Number of L2 managers */
-const TOTAL_MANAGERS = 9;
+/** Number of L2 managers (derived from dynamic registry) */
+const TOTAL_MANAGERS = getManagerCount();
 
 // ============================================================================
 // COMPONENT

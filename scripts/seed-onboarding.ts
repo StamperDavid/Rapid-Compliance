@@ -10,6 +10,7 @@
 import * as admin from 'firebase-admin';
 import * as fs from 'fs';
 import * as path from 'path';
+import { getAgentCount } from '../src/lib/agents/agent-registry';
 
 // ============================================================================
 // CONFIGURATION
@@ -96,13 +97,13 @@ const onboardingData = {
   problemSolved:
     'Small and mid-size businesses waste time and money juggling 10+ disconnected tools for marketing, sales, CRM, content, reputation, and website management. They lack the AI expertise and budget to compete with enterprises that have dedicated teams for each function.',
   uniqueValue:
-    'One platform replaces your entire marketing/sales/ops stack with a 52-agent AI swarm that works 24/7 — marketing, sales, content, commerce, reputation, website building, and competitive intelligence, all coordinated by a single AI orchestrator (Jasper).',
+    `One platform replaces your entire marketing/sales/ops stack with a ${getAgentCount()}-agent AI swarm that works 24/7 — marketing, sales, content, commerce, reputation, website building, and competitive intelligence, all coordinated by a single AI orchestrator (Jasper).`,
   targetCustomer:
     'Small to mid-size business owners, solopreneurs, and marketing agencies who want enterprise-level AI-powered business operations without enterprise-level complexity or cost.',
 
   // Products & Services
   topProducts:
-    'Full AI business operations platform including: AI Agent Swarm (52 agents), CRM & Sales Pipeline, Marketing Automation (social media, SEO, email, SMS), E-Commerce (Stripe payments, catalog, pricing), AI Website Builder, Reputation Management (reviews, GMB), Content Production (copy, video, blog), Competitive Intelligence (scraping, research, trends), Voice AI, and Mission Control dashboard.',
+    `Full AI business operations platform including: AI Agent Swarm (${getAgentCount()} agents), CRM & Sales Pipeline, Marketing Automation (social media, SEO, email, SMS), E-Commerce (Stripe payments, catalog, pricing), AI Website Builder, Reputation Management (reviews, GMB), Content Production (copy, video, blog), Competitive Intelligence (scraping, research, trends), Voice AI, and Mission Control dashboard.`,
 
   // Pricing
   priceRange: '$97/month - $497/month',
@@ -125,13 +126,13 @@ const onboardingData = {
   // Competitors
   competitors: ['GoHighLevel', 'HubSpot', 'Salesforce', 'Jasper AI', 'Copy.ai', 'Hootsuite', 'Mailchimp'],
   competitiveAdvantages:
-    'Unlike point solutions, SalesVelocity.ai is a unified AI swarm — not just one tool but 52 coordinated agents that share intelligence. GoHighLevel requires manual setup for each function; we automate it. HubSpot charges per seat and per feature tier; we include everything. No other platform combines CRM + AI content + social + voice + website builder + reputation + commerce in a single coordinated system.',
+    `Unlike point solutions, SalesVelocity.ai is a unified AI swarm — not just one tool but ${getAgentCount()} coordinated agents that share intelligence. GoHighLevel requires manual setup for each function; we automate it. HubSpot charges per seat and per feature tier; we include everything. No other platform combines CRM + AI content + social + voice + website builder + reputation + commerce in a single coordinated system.`,
 
   // Agent Identity
   agentName: 'Jasper',
   communicationStyle: 'consultative',
   greetingMessage:
-    "Hey! I'm Jasper, your AI business operations assistant. I coordinate a team of 52 specialized AI agents to handle your marketing, sales, content, and more. What can I help you with today?",
+    `Hey! I'm Jasper, your AI business operations assistant. I coordinate a team of ${getAgentCount()} specialized AI agents to handle your marketing, sales, content, and more. What can I help you with today?`,
   closingMessage:
     "Great talking with you! Remember, I'm here 24/7 whenever you need help with marketing, sales, content, or anything else. Just ping me anytime.",
   personalityTraits: ['knowledgeable', 'proactive', 'enthusiastic', 'results-oriented', 'approachable'],
@@ -182,16 +183,16 @@ const onboardingData = {
 
 const brandDNA = {
   companyDescription:
-    'SalesVelocity.ai is an all-in-one AI-powered business operations platform featuring a 52-agent AI swarm that handles marketing, sales, content, commerce, reputation management, website building, and competitive intelligence.',
+    `SalesVelocity.ai is an all-in-one AI-powered business operations platform featuring a ${getAgentCount()}-agent AI swarm that handles marketing, sales, content, commerce, reputation management, website building, and competitive intelligence.`,
   uniqueValue:
-    'The only platform with a coordinated 52-agent AI swarm that replaces your entire marketing/sales/ops tool stack.',
+    `The only platform with a coordinated ${getAgentCount()}-agent AI swarm that replaces your entire marketing/sales/ops tool stack.`,
   targetAudience: 'Small to mid-size business owners, solopreneurs, and marketing agencies.',
   toneOfVoice: 'professional yet approachable',
   communicationStyle: 'Consultative and results-focused',
   industry: 'SaaS & Technology',
   keyPhrases: [
     'AI-powered business operations',
-    '52-agent AI swarm',
+    `${getAgentCount()}-agent AI swarm`,
     'all-in-one platform',
     'works 24/7',
     'replace your entire stack',
@@ -307,7 +308,7 @@ async function main() {
         keyMessages: brandDNA.keyPhrases,
         commonPhrases: [
           'AI-powered business operations',
-          '52-agent AI swarm',
+          `${getAgentCount()}-agent AI swarm`,
           'replace your entire stack',
         ],
       },
@@ -387,7 +388,7 @@ function buildSystemPrompt(persona: Record<string, unknown>): string {
   return `You are ${name}, the AI business operations assistant for SalesVelocity.ai.
 
 ## ROLE
-You coordinate a team of 52 specialized AI agents to handle marketing, sales, content, commerce, reputation management, website building, and competitive intelligence.
+You coordinate a team of ${getAgentCount()} specialized AI agents to handle marketing, sales, content, commerce, reputation management, website building, and competitive intelligence.
 
 ## TONE
 ${tone} — professional yet approachable, results-focused, and proactive.

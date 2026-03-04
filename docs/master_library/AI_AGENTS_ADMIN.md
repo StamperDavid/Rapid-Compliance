@@ -34,8 +34,8 @@ The AI Agents Administration Panel allows platform administrators to monitor, co
 2. **Review Agent Overview Statistics**
    - Locate the statistics cards at the top of the page
    - **Active Agents**: Should show count of agents with `status: 'active'`
-   - **Total Agents**: Shows 52 total agents
-   - **Specialists**: Shows 38 specialist agents
+   - **Total Agents**: Shows 52 total agents (derived from dynamic registry)
+   - **Specialists**: Shows 36 specialist agents
    - **Conversations**: Shows total conversation count from Firestore
 
 3. **Browse Agent Registry**
@@ -43,8 +43,8 @@ The AI Agents Administration Panel allows platform administrators to monitor, co
    - Agents are organized by hierarchy:
      - L1: Master Orchestrator (1)
      - L2: Managers (9)
-     - L3: Specialists (38)
-     - Standalone (4)
+     - L3: Specialists (36)
+     - Standalone (6)
    - Total: 52 agents
 
 ---

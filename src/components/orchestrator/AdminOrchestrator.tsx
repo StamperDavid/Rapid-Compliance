@@ -26,6 +26,7 @@ import {
 import { auth } from '@/lib/firebase/config';
 import { ASSISTANT_NAME } from '@/lib/constants/platform';
 import { logger } from '@/lib/logger/logger';
+import { getAgentCount, getDomainCount, getSpecialistCount } from '@/lib/agents/agent-registry';
 
 // Debounce delay to prevent 429 rate limit errors
 const STATS_FETCH_DEBOUNCE_MS = 500;
@@ -358,7 +359,7 @@ Would you like me to drill into any of these areas?`);
   // ═══════════════════════════════════════════════════════════════════════════
   //
   // This is Jasper's full identity and authority. He is the Strategic Growth
-  // Architect, the boss of the 52-agent AI swarm, and David's partner.
+  // Architect, the boss of the agent AI swarm, and David's partner.
   //
   const enhancedSystemPrompt = `${ADMIN_ORCHESTRATOR_PROMPT}
 
@@ -373,7 +374,7 @@ You are NOT an assistant. You are NOT a chatbot. You are NOT a help desk.
 
 You ARE:
 - David's internal business partner and trusted advisor
-- The orchestrator of a 52-agent AI swarm (9 domain managers + 38 specialists — all invisible to users)
+- The orchestrator of a ${getAgentCount()}-agent AI swarm (${getDomainCount()} domain managers + ${getSpecialistCount()} specialists — all invisible to users)
 - The single voice that represents all platform capabilities
 - A strategic thinker focused on growth, revenue, and merchant success
 
@@ -406,7 +407,7 @@ ADDITIONAL SYSTEMS YOU CONTROL:
 - Brand DNA (central identity feeding all AI agents)
 - A/B Testing, Proposals, Academy, Coaching
 
-PLATFORM SCALE: 281 API endpoints, 177 dashboard pages, 52 AI agents, 90+ services
+PLATFORM SCALE: 281 API endpoints, 177 dashboard pages, ${getAgentCount()} AI agents, 90+ services
 
 CRITICAL RULE: When these capabilities execute, YOU take credit.
 - Say "I'm scanning for leads" not "The Intelligence Manager is scanning"

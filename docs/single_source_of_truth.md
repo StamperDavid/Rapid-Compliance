@@ -138,7 +138,7 @@ The Claude Code Governance Layer defines binding operational constraints for AI-
 |------|--------|
 | Single-tenant architecture | **COMPLETE** — Firebase kill-switch, PLATFORM_ID constant, workspace paths eradicated (53 files migrated) |
 | 4-role RBAC | **ENFORCED** — `requireRole()` on 290/298 API routes (8 intentionally public), sidebar filtering, 47 permissions |
-| Agent hierarchy | **100% COMPLETE** — 52 agents (48 swarm + 4 standalone), all managers orchestrate all specialists |
+| Agent hierarchy | **100% COMPLETE** — 52 agents (46 swarm + 6 standalone), all managers orchestrate all specialists |
 | Jasper delegation | **COMPLETE** — 43 tools (9 delegate_to_*, 34 utility). Mission Control SSE streaming live |
 | Type safety | **CLEAN** — `tsc --noEmit` passes, zero `any` types, zero `@ts-ignore`, zero `@ts-expect-error` |
 | Build pipeline | **CLEAN** — `npm run build` passes, `npm run lint` zero warnings, pre-commit hooks enforced |
@@ -268,7 +268,7 @@ All roadmaps fully complete. Details in git history and `docs/archive/`:
 
 ### Rule 2: Unified AI Workforce Registry
 
-**The 52 AI Agents are managed through a single global registry in Firestore, not per-user.**
+**The 52 AI Agents are managed through a single global registry (src/lib/agents/agent-registry.ts), not per-user.**
 
 | Aspect | Detail |
 |--------|--------|
@@ -296,7 +296,7 @@ Standalone: JASPER, VOICE_AGENT_HANDLER,
            AUTONOMOUS_POSTING_AGENT, CHAT_SESSION_SERVICE
 ```
 
-**Total: 48 Swarm (1 + 9 + 38) + 4 Standalone = 52 Agents**
+**Total: 46 Swarm (1 + 9 + 36) + 6 Standalone = 52 Agents**
 
 **Governance:** Agents are deployed, trained, and configured at the **platform level**. The `AgentInstanceManager` (`src/lib/agent/instance-manager.ts`) creates ephemeral session instances from Golden Masters — these are temporary runtime objects, not persistent per-user registries.
 

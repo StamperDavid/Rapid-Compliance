@@ -5,7 +5,7 @@
  * This agent powers the website chat widget and Facebook Messenger integration.
  *
  * It sells SalesVelocity.ai as a multi-tenant SaaS product.
- * Each subscriber gets their own isolated deployment with a full 52-agent AI swarm.
+ * Each subscriber gets their own isolated deployment with a full AI agent swarm.
  *
  * IMPORTANT: After running this script, run the knowledge compiler to populate
  * Alex with current platform knowledge:
@@ -20,6 +20,8 @@
 
 const admin = require('firebase-admin');
 const serviceAccount = require('../serviceAccountKey.json');
+const agentRegistryJson = require('../AGENT_REGISTRY.json');
+const AGENT_COUNT = agentRegistryJson.totalAgents;
 
 if (!admin.apps.length) {
   admin.initializeApp({
@@ -53,7 +55,7 @@ async function setupSalesAgentGoldenMaster() {
 
 **What You Are Selling:**
 SalesVelocity.ai is a multi-tenant SaaS product. Each subscriber gets their own fully isolated deployment with:
-- A 52-agent AI swarm handling marketing, sales, content, SEO, social, analytics, and reputation
+- A ${AGENT_COUNT}-agent AI swarm handling marketing, sales, content, SEO, social, analytics, and reputation
 - AI-powered website builder with funnel optimization
 - Omni-channel outreach: email, SMS, social media, voice AI
 - E-commerce with Stripe integration
@@ -69,7 +71,7 @@ This is NOT a service — subscribers own their platform instance.
 - Annual plans: 20% discount
 
 **Key Features:**
-1. 52-Agent AI Swarm: Marketing, sales, content, analytics, reputation — all automated
+1. ${AGENT_COUNT}-Agent AI Swarm: Marketing, sales, content, analytics, reputation — all automated
 2. Lead Qualification: AI scores and routes leads automatically 24/7
 3. Website Builder: AI-designed pages with conversion optimization
 4. Integrations: Stripe, Google/Microsoft calendars, Slack, social platforms
@@ -121,9 +123,9 @@ This is NOT a service — subscribers own their platform instance.
       businessName: 'SalesVelocity.ai',
       industry: 'SaaS / AI-Powered Business Automation',
       targetAudience: 'Founders, revenue leaders, agency owners, sales teams',
-      valueProposition: 'A 52-agent AI swarm that runs your entire sales, marketing, and operations — so you can focus on strategy',
+      valueProposition: `A ${AGENT_COUNT}-agent AI swarm that runs your entire sales, marketing, and operations — so you can focus on strategy`,
       keyDifferentiators: [
-        '52-agent AI swarm — not just a chatbot, a full workforce',
+        `${AGENT_COUNT}-agent AI swarm — not just a chatbot, a full workforce`,
         'Multi-tenant SaaS — each subscriber gets their own deployment',
         'Multi-model AI for best-in-class responses',
         'White-label ready for agencies',
@@ -131,7 +133,7 @@ This is NOT a service — subscribers own their platform instance.
         'Full API access for custom integrations',
       ],
       problemSolved: 'Replaces 5-10 separate tools with one AI-powered platform that handles sales, marketing, content, analytics, and reputation management',
-      uniqueValue: '52 specialized AI agents that work together as a coordinated swarm — not a single chatbot',
+      uniqueValue: `${AGENT_COUNT} specialized AI agents that work together as a coordinated swarm — not a single chatbot`,
       topProducts: 'AI Agent Swarm, Website Builder, Voice AI, Omni-Channel Outreach, E-Commerce, Analytics',
       pricingStrategy: 'Usage-based pricing starting at $99/mo for 1,000 conversations. Annual plans get 20% discount.',
       discountPolicy: 'Annual plans get 20% discount. Enterprise plans are custom.',
@@ -144,7 +146,7 @@ This is NOT a service — subscribers own their platform instance.
       commonObjections: 'AI accuracy, implementation complexity, cost vs. current stack',
       priceObjections: 'The average subscriber replaces 3-4 separate tools. ROI is usually clear within the first week of the trial.',
       timeObjections: 'Setup takes 15 minutes. The onboarding wizard handles everything, and your AI assistant guides the rest.',
-      competitorObjections: 'Most alternatives give you a chatbot. SalesVelocity gives you a 52-agent workforce — marketing, sales, content, SEO, analytics — all in one platform.',
+      competitorObjections: `Most alternatives give you a chatbot. SalesVelocity gives you a ${AGENT_COUNT}-agent workforce — marketing, sales, content, SEO, analytics — all in one platform.`,
       requiredDisclosures: 'N/A',
       prohibitedTopics: 'Medical advice, legal advice, financial advice, competitor disparagement',
     },

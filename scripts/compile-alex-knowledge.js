@@ -7,7 +7,7 @@
  * (the AI Chat Sales Agent).
  *
  * Sources:
- *   1. AGENT_REGISTRY.json  → Platform capabilities (what the 52 agents DO)
+ *   1. AGENT_REGISTRY.json  → Platform capabilities (what the agents DO)
  *   2. category-template-map → Industries we serve and who benefits
  *   3. single_source_of_truth.md → Platform stats, tech stack, scale
  *
@@ -35,6 +35,9 @@ function readAgentRegistry() {
   const raw = fs.readFileSync(path.join(ROOT, 'AGENT_REGISTRY.json'), 'utf-8');
   return JSON.parse(raw);
 }
+
+const AGENT_REGISTRY_DATA = readAgentRegistry();
+const AGENT_COUNT = AGENT_REGISTRY_DATA.totalAgents;
 
 // ---------------------------------------------------------------------------
 // 2. Transform agent capabilities into sales-friendly descriptions
@@ -106,7 +109,7 @@ const STANDALONE_MAP = {
   JASPER: {
     feature: 'AI Business Assistant (Jasper)',
     headline: 'Your AI chief of staff',
-    benefit: 'A conversational AI assistant that commands the entire 52-agent swarm. Tell Jasper what you need in plain English — it delegates to the right agents and delivers results.',
+    benefit: `A conversational AI assistant that commands the entire ${AGENT_COUNT}-agent swarm. Tell Jasper what you need in plain English — it delegates to the right agents and delivers results.`,
   },
   AI_CHAT_SALES_AGENT: null, // This IS Alex — skip self-reference
   CHAT_SESSION_SERVICE: null, // Infrastructure, not customer-facing

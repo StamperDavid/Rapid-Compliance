@@ -14,6 +14,12 @@ import { COLLECTIONS, getSubCollection } from '@/lib/firebase/collections';
 import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { PLATFORM_ID } from '@/lib/constants/platform';
+import {
+  getAgentCount,
+  getDomainCount,
+  getSpecialistCount,
+  buildAgentBlueprintSection,
+} from '@/lib/agents/agent-registry';
 import { orderBy, limit as firestoreLimit } from 'firebase/firestore';
 import {
   addMissionStep,
@@ -494,7 +500,7 @@ export const JASPER_TOOLS: ToolDefinition[] = [
         properties: {
           query: {
             type: 'string',
-            description: 'The topic to look up (e.g., "52 agents", "provisioner", "feature categories", "architecture", "capabilities")',
+            description: 'The topic to look up (e.g., "agents", "provisioner", "feature categories", "architecture", "capabilities")',
           },
           section: {
             type: 'string',
@@ -995,7 +1001,7 @@ export const JASPER_TOOLS: ToolDefinition[] = [
     function: {
       name: 'delegate_to_agent',
       description:
-        'Delegate a task to one of the 9 domain managers (who oversee 38 specialists). Use this to execute actual work rather than just describing capabilities. ENABLED: TRUE.',
+        `Delegate a task to one of the ${getDomainCount()} domain managers (who oversee ${getSpecialistCount()} specialists). Use this to execute actual work rather than just describing capabilities. ENABLED: TRUE.`,
       parameters: {
         type: 'object',
         properties: {
@@ -2062,7 +2068,7 @@ export function executeQueryDocs(
       return Promise.resolve([
         {
           section: 'Query Result',
-          content: `No specific documentation found for "${query}". The system blueprint covers: Platform Identity, Architecture (281 API endpoints, 177 pages), 52 AI Agents (9 domain managers + 38 specialists), 16 Feature Systems (CRM, leads, email, social, e-commerce, website builder, voice AI, video, SEO, workflows, forms, analytics, Brand DNA, calendar, SMS, integrations), Provisioner, Data Models, and Security.`,
+          content: `No specific documentation found for "${query}". The system blueprint covers: Platform Identity, Architecture (281 API endpoints, 177 pages), ${getAgentCount()} AI Agents (${getDomainCount()} domain managers + ${getSpecialistCount()} specialists), 16 Feature Systems (CRM, leads, email, social, e-commerce, website builder, voice AI, video, SEO, workflows, forms, analytics, Brand DNA, calendar, SMS, integrations), Provisioner, Data Models, and Security.`,
         },
       ]);
     }
@@ -2083,29 +2089,8 @@ function getHardcodedBlueprintSection(query: string, _section?: string): Bluepri
   // Hardcoded essential information
   const essentialInfo: Record<string, BlueprintSection> = {
     agents: {
-      section: 'AI Agent Swarm (52 Agents)',
-      content: `
-52 TOTAL AGENTS: 1 Master Orchestrator + 9 Domain Managers + 38 Specialists + 4 Standalone
-
-MASTER ORCHESTRATOR (L1): Swarm CEO — command dispatch, saga workflows, intent-based domain routing
-
-9 DOMAIN MANAGERS (L2):
-1. Intelligence Manager — 5 specialists (Scraper, Competitor Researcher, Technographic Scout, Sentiment Analyst, Trend Scout)
-2. Marketing Manager — 6 specialists (TikTok, Twitter/X, Facebook, LinkedIn, SEO, Growth Analyst)
-3. Builder Manager — 4 specialists (UX/UI Architect, Funnel Engineer, Asset Generator, Workflow Optimizer)
-4. Architect Manager — 3 specialists (UX/UI, Funnel Pathologist, Copy Specialist)
-5. Commerce Manager — 4 specialists (Payment, Catalog, Pricing Strategist, Inventory)
-6. Outreach Manager — 2 specialists (Email, SMS)
-7. Content Manager — 3 specialists (Copywriter, Calendar Coordinator, Video Specialist)
-8. Revenue Director — 5 specialists (Lead Qualifier, Outreach, Merchandiser, Deal Closer, Objection Handler)
-9. Reputation Manager — 4 specialists (Review, GMB, Review Manager, Case Study)
-
-STANDALONE AGENTS (4):
-- Jasper (Platform AI assistant — delegates to all 9 managers)
-- Voice Agent (AI phone calls — prospector and closer modes)
-- Autonomous Posting Agent (Scheduled social posting)
-- Chat Session Service (Agent lifecycle management)
-      `.trim(),
+      section: `AI Agent Swarm (${getAgentCount()} Agents)`,
+      content: buildAgentBlueprintSection(),
     },
     features: {
       section: 'Platform Capabilities (16 Systems)',
@@ -2172,13 +2157,13 @@ PENTHOUSE MODEL (Single-Tenant):
 - Binary RBAC: admin or user
 - Clients purchase services — they do NOT receive SaaS tenants
 
-SCALE: 281 API endpoints, 177 dashboard pages, 52 AI agents, 90+ service files
+SCALE: 281 API endpoints, 177 dashboard pages, ${getAgentCount()} AI agents, 90+ service files
       `.trim(),
     },
   };
 
   // Match query to section
-  if (queryLower.includes('agent') || queryLower.includes('specialist') || queryLower.includes('swarm') || queryLower.includes('52') || queryLower.includes('manager')) {
+  if (queryLower.includes('agent') || queryLower.includes('specialist') || queryLower.includes('swarm') || queryLower.includes(String(getAgentCount())) || queryLower.includes('manager')) {
     return [essentialInfo.agents];
   }
   if (queryLower.includes('feature') || queryLower.includes('categor') || queryLower.includes('capabilit') || queryLower.includes('what can') || queryLower.includes('system') || queryLower.includes('ready') || queryLower.includes('operational')) {
