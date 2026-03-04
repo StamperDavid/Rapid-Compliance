@@ -6,7 +6,7 @@ import { Video, ArrowRight, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useVideoPipelineStore } from '@/lib/stores/video-pipeline-store';
-import type { VideoType, TargetPlatform } from '@/types/video-pipeline';
+import type { VideoType, TargetPlatform, VideoTone } from '@/types/video-pipeline';
 import type { VideoAspectRatio, VideoResolution } from '@/types/video';
 
 const VIDEO_TYPES: { value: VideoType; label: string; icon: string; description: string }[] = [
@@ -37,6 +37,13 @@ const RESOLUTIONS: { value: VideoResolution; label: string }[] = [
   { value: '720p', label: '720p' },
   { value: '1080p', label: '1080p (Recommended)' },
   { value: '4k', label: '4K' },
+];
+
+const TONES: { value: VideoTone; label: string }[] = [
+  { value: 'conversational', label: 'Conversational' },
+  { value: 'professional', label: 'Professional' },
+  { value: 'energetic', label: 'Energetic' },
+  { value: 'empathetic', label: 'Empathetic' },
 ];
 
 export function StepRequest() {
@@ -165,6 +172,85 @@ export function StepRequest() {
               </select>
             </div>
           </div>
+
+          {/* Advanced Options (collapsible) */}
+          <details className="group">
+            <summary className="cursor-pointer text-sm font-medium text-zinc-400 hover:text-zinc-300 transition-colors">
+              Advanced Options (optional)
+            </summary>
+            <div className="mt-4 space-y-4">
+              {/* Target Audience */}
+              <div>
+                <label className="block text-sm font-medium text-zinc-300 mb-2">
+                  Target Audience
+                </label>
+                <input
+                  type="text"
+                  value={brief.targetAudience ?? ''}
+                  onChange={(e) => setBrief({ targetAudience: e.target.value || undefined })}
+                  placeholder="e.g., Small business owners struggling with follow-ups"
+                  className="w-full px-4 py-2.5 bg-zinc-800 border border-zinc-700 rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500"
+                />
+              </div>
+
+              {/* Pain Points */}
+              <div>
+                <label className="block text-sm font-medium text-zinc-300 mb-2">
+                  Pain Points
+                </label>
+                <input
+                  type="text"
+                  value={brief.painPoints ?? ''}
+                  onChange={(e) => setBrief({ painPoints: e.target.value || undefined })}
+                  placeholder="e.g., Manual processes, missed leads, slow response times"
+                  className="w-full px-4 py-2.5 bg-zinc-800 border border-zinc-700 rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500"
+                />
+              </div>
+
+              {/* Talking Points */}
+              <div>
+                <label className="block text-sm font-medium text-zinc-300 mb-2">
+                  Key Talking Points
+                </label>
+                <input
+                  type="text"
+                  value={brief.talkingPoints ?? ''}
+                  onChange={(e) => setBrief({ talkingPoints: e.target.value || undefined })}
+                  placeholder="e.g., AI automation, 10x faster, no learning curve"
+                  className="w-full px-4 py-2.5 bg-zinc-800 border border-zinc-700 rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Tone */}
+                <div>
+                  <label className="block text-sm font-medium text-zinc-300 mb-2">Tone</label>
+                  <select
+                    value={brief.tone ?? ''}
+                    onChange={(e) => setBrief({ tone: (e.target.value || undefined) as VideoTone | undefined })}
+                    className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+                  >
+                    <option value="">Auto (AI decides)</option>
+                    {TONES.map((t) => (
+                      <option key={t.value} value={t.value}>{t.label}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Call to Action */}
+                <div>
+                  <label className="block text-sm font-medium text-zinc-300 mb-2">Call to Action</label>
+                  <input
+                    type="text"
+                    value={brief.callToAction ?? ''}
+                    onChange={(e) => setBrief({ callToAction: e.target.value || undefined })}
+                    placeholder="e.g., Start your free trial at salesvelocity.ai"
+                    className="w-full px-3 py-2.5 bg-zinc-800 border border-zinc-700 rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500"
+                  />
+                </div>
+              </div>
+            </div>
+          </details>
         </CardContent>
       </Card>
 

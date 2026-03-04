@@ -52,6 +52,7 @@ const SaveProjectSchema = z.object({
       voiceId: z.string().nullable(),
       duration: z.number(),
       engine: z.enum(['heygen', 'runway', 'sora', 'kling', 'luma']).nullable().default(null),
+      backgroundPrompt: z.string().nullable().default(null),
       status: z.enum(['draft', 'approved', 'generating', 'completed', 'failed']),
     })
   ),

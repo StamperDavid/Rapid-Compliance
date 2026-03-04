@@ -95,6 +95,7 @@ export interface PipelineScene {
   voiceId: string | null;
   duration: number; // seconds
   engine: VideoEngineId | null; // null = default (heygen)
+  backgroundPrompt: string | null; // DALL-E prompt for HeyGen scene backgrounds
   status: SceneStatus;
 }
 
@@ -122,6 +123,15 @@ export type ProjectStatus =
 
 export type TransitionType = 'cut' | 'fade' | 'dissolve';
 
+export type VideoTone = 'conversational' | 'professional' | 'energetic' | 'empathetic';
+
+export const VIDEO_TONE_LABELS: Record<VideoTone, string> = {
+  'conversational': 'Conversational',
+  'professional': 'Professional',
+  'energetic': 'Energetic',
+  'empathetic': 'Empathetic',
+} as const;
+
 export interface PipelineBrief {
   description: string;
   videoType: VideoType;
@@ -129,6 +139,11 @@ export interface PipelineBrief {
   duration: number; // seconds
   aspectRatio: VideoAspectRatio;
   resolution: VideoResolution;
+  targetAudience?: string;
+  painPoints?: string;
+  talkingPoints?: string;
+  tone?: VideoTone;
+  callToAction?: string;
 }
 
 export interface PipelineProject {
@@ -223,8 +238,11 @@ export interface DecompositionPlan {
     scriptText: string;
     visualDescription: string;
     suggestedDuration: number;
+    engine: VideoEngineId | null;
+    backgroundPrompt: string | null;
   }>;
   assetsNeeded: string[];
   avatarRecommendation: string | null;
   estimatedTotalDuration: number;
+  generatedBy: 'ai' | 'template';
 }

@@ -1,344 +1,535 @@
 /**
  * Video Decomposition API
  * POST /api/video/decompose - Generate AI-driven scene breakdown from video description
+ *
+ * Uses OpenRouter (Claude 3.5 Sonnet) with Brand DNA and product context to
+ * generate compelling, natural scripts with multi-engine scene direction.
+ * Falls back to templates if AI call fails.
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { logger } from '@/lib/logger/logger';
 import { requireAuth } from '@/lib/auth/api-auth';
+import { OpenRouterProvider } from '@/lib/ai/openrouter-provider';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 export const dynamic = 'force-dynamic';
 
 const VideoTypeValues = ['tutorial', 'explainer', 'product-demo', 'sales-pitch', 'testimonial', 'social-ad'] as const;
 const PlatformValues = ['youtube', 'tiktok', 'instagram', 'linkedin', 'website'] as const;
+const ToneValues = ['conversational', 'professional', 'energetic', 'empathetic'] as const;
+const EngineValues = ['heygen', 'runway', 'sora'] as const;
 
 const DecomposeSchema = z.object({
   description: z.string().min(1, 'Video description required'),
   videoType: z.enum(VideoTypeValues),
   platform: z.enum(PlatformValues),
   duration: z.number().min(10).max(600).default(60),
+  targetAudience: z.string().optional(),
+  painPoints: z.string().optional(),
+  talkingPoints: z.string().optional(),
+  tone: z.enum(ToneValues).optional(),
+  callToAction: z.string().optional(),
 });
 
-interface Scene {
-  sceneNumber: number;
-  title: string;
-  scriptText: string;
-  visualDescription: string;
-  suggestedDuration: number;
-}
+// Zod schema for validating AI response
+const AISceneSchema = z.object({
+  sceneNumber: z.number(),
+  title: z.string(),
+  scriptText: z.string(),
+  visualDescription: z.string(),
+  suggestedDuration: z.number(),
+  engine: z.enum(EngineValues),
+  backgroundPrompt: z.string().nullable(),
+});
+
+const AIResponseSchema = z.object({
+  targetAudience: z.string(),
+  keyMessages: z.array(z.string()),
+  scenes: z.array(AISceneSchema),
+});
+
+type VideoType = typeof VideoTypeValues[number];
 
 interface DecomposePlan {
   videoType: string;
   targetAudience: string;
   keyMessages: string[];
-  scenes: Scene[];
+  scenes: Array<{
+    sceneNumber: number;
+    title: string;
+    scriptText: string;
+    visualDescription: string;
+    suggestedDuration: number;
+    engine: 'heygen' | 'runway' | 'sora' | null;
+    backgroundPrompt: string | null;
+  }>;
   assetsNeeded: string[];
   avatarRecommendation: null;
   estimatedTotalDuration: number;
+  generatedBy: 'ai' | 'template';
 }
 
-type VideoType = typeof VideoTypeValues[number];
+// ============================================================================
+// AI Script Generation
+// ============================================================================
 
-/**
- * Generate scene breakdown based on video type and description
- */
-function generateSceneBreakdown(
+function buildSystemPrompt(
+  brandContext: string | null,
+  productContext: string | null,
+): string {
+  let prompt = `You are a professional video scriptwriter for SalesVelocity.ai. You write scripts that sound natural when spoken aloud — conversational, engaging, and human.
+
+## CRITICAL RULES
+- Write scripts as SPOKEN WORDS, not marketing copy. Use contractions, natural pauses, and conversational language.
+- Never use corporate jargon like "leverage", "synergize", "paradigm shift", or "ecosystem".
+- Never start with "Did you know" or "Are you tired of" — these are cliché and boring.
+- Scripts should feel like a smart friend explaining something, not a telemarketer reading a script.
+- Keep sentences short. Average 10-15 words per sentence for spoken delivery.
+- For B-roll scenes (runway/sora), scriptText MUST be empty string "".
+
+## ENGINE ASSIGNMENT RULES
+Assign each scene one of these engines:
+- **heygen**: Avatar talking-head scenes. Use for dialogue, explanations, introductions, CTAs. ALWAYS include a backgroundPrompt for these scenes.
+- **runway**: Cinematic B-roll, product demonstrations, real-world footage. scriptText must be empty.
+- **sora**: Abstract visuals, motion graphics, data visualizations, dramatic transitions. scriptText must be empty.
+
+Mix engines for visual variety. A 5-scene video should typically have 3 heygen + 1-2 B-roll scenes.
+
+## BACKGROUND PROMPTS (for heygen scenes only)
+Write DALL-E 3 image prompts that create professional, visually rich backgrounds.
+- The presenter wears a casual polo shirt in a professional setting — NO suits, NO ties.
+- Modern, well-lit environments. Think: modern office with plants, creative studio, bright co-working space.
+- Include specific details: lighting, depth of field, color palette.
+- Example: "Modern bright office with large monitors showing analytics dashboards, indoor plants, warm LED lighting, shallow depth of field, clean minimal desk"`;
+
+  if (brandContext) {
+    prompt += `\n\n## BRAND CONTEXT\n${brandContext}`;
+  }
+
+  if (productContext) {
+    prompt += `\n\n## PRODUCTS & SERVICES\nReference these real offerings in scripts where relevant:\n${productContext}`;
+  }
+
+  prompt += `\n\n## RESPONSE FORMAT
+Return ONLY valid JSON (no markdown, no code fences) matching this structure:
+{
+  "targetAudience": "string describing the ideal viewer",
+  "keyMessages": ["3 key takeaways"],
+  "scenes": [
+    {
+      "sceneNumber": 1,
+      "title": "Scene Title",
+      "scriptText": "Spoken words for heygen scenes, empty string for B-roll",
+      "visualDescription": "What the viewer sees",
+      "suggestedDuration": 12,
+      "engine": "heygen" | "runway" | "sora",
+      "backgroundPrompt": "DALL-E prompt for heygen scenes, null for B-roll"
+    }
+  ]
+}`;
+
+  return prompt;
+}
+
+function buildUserPrompt(
   description: string,
-  videoType: VideoType,
+  videoType: string,
   platform: string,
   duration: number,
-  sceneCount: number
-): Scene[] {
-  const scenes: Scene[] = [];
-  const durationPerScene = Math.floor(duration / sceneCount);
+  sceneCount: number,
+  targetAudience?: string,
+  painPoints?: string,
+  talkingPoints?: string,
+  tone?: string,
+  callToAction?: string,
+): string {
+  let prompt = `Create a ${sceneCount}-scene ${videoType.replace('-', ' ')} video script for ${platform}.
 
-  // Extract key phrases from description for script generation
-  const extractedContext = description.substring(0, 100);
+**Topic:** ${description}
+**Total duration:** ${duration} seconds (distribute evenly across scenes)`;
+
+  if (targetAudience) {
+    prompt += `\n**Target audience:** ${targetAudience}`;
+  }
+  if (painPoints) {
+    prompt += `\n**Pain points to address:** ${painPoints}`;
+  }
+  if (talkingPoints) {
+    prompt += `\n**Key talking points:** ${talkingPoints}`;
+  }
+  if (tone) {
+    prompt += `\n**Tone:** ${tone}`;
+  }
+  if (callToAction) {
+    prompt += `\n**Call to action:** ${callToAction}`;
+  }
+
+  prompt += `\n\nWrite the complete scene breakdown as JSON.`;
+
+  return prompt;
+}
+
+async function loadBrandContext(): Promise<string | null> {
+  try {
+    const { buildToolSystemPrompt } = await import('@/lib/brand/brand-dna-service');
+    const brandPrompt = await buildToolSystemPrompt('voice');
+    return brandPrompt || null;
+  } catch {
+    return null;
+  }
+}
+
+async function loadProductContext(): Promise<string | null> {
+  try {
+    // Use adminDb directly for server-side access
+    const { adminDb } = await import('@/lib/firebase/admin');
+    if (!adminDb) { return null; }
+    const snapshot = await adminDb.collection('products').limit(5).get();
+    if (snapshot.empty) { return null; }
+
+    const products = snapshot.docs.map((doc) => {
+      const data = doc.data();
+      const name = String(data.name ?? 'Unnamed');
+      const desc = data.description ? ` — ${String(data.description).substring(0, 100)}` : '';
+      const price = data.price ? ` ($${String(data.price)})` : '';
+      return `- ${name}${desc}${price}`;
+    });
+
+    return products.join('\n');
+  } catch {
+    return null;
+  }
+}
+
+async function generateAISceneBreakdown(
+  description: string,
+  videoType: string,
+  platform: string,
+  duration: number,
+  sceneCount: number,
+  targetAudience?: string,
+  painPoints?: string,
+  talkingPoints?: string,
+  tone?: string,
+  callToAction?: string,
+): Promise<DecomposePlan | null> {
+  try {
+    // Load brand + product context in parallel (non-blocking)
+    const [brandContext, productContext] = await Promise.all([
+      loadBrandContext(),
+      loadProductContext(),
+    ]);
+
+    const provider = new OpenRouterProvider(PLATFORM_ID);
+
+    const systemPrompt = buildSystemPrompt(brandContext, productContext);
+    const userPrompt = buildUserPrompt(
+      description, videoType, platform, duration, sceneCount,
+      targetAudience, painPoints, talkingPoints, tone, callToAction,
+    );
+
+    const response = await provider.chat({
+      model: 'claude-3-5-sonnet',
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt },
+      ],
+      temperature: 0.7,
+      maxTokens: 4000,
+    });
+
+    if (!response.content) {
+      logger.warn('AI scene generation returned empty content');
+      return null;
+    }
+
+    // Strip markdown code fences if present
+    let jsonStr = response.content.trim();
+    if (jsonStr.startsWith('```')) {
+      jsonStr = jsonStr.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
+    }
+
+    const parsed = JSON.parse(jsonStr) as unknown;
+    const validated = AIResponseSchema.parse(parsed);
+
+    const totalDuration = validated.scenes.reduce((sum, s) => sum + s.suggestedDuration, 0);
+
+    return {
+      videoType,
+      targetAudience: validated.targetAudience,
+      keyMessages: validated.keyMessages,
+      scenes: validated.scenes.map((s) => ({
+        ...s,
+        engine: s.engine,
+        backgroundPrompt: s.backgroundPrompt,
+      })),
+      assetsNeeded: determineAssetsNeeded(videoType as VideoType, platform),
+      avatarRecommendation: null,
+      estimatedTotalDuration: totalDuration,
+      generatedBy: 'ai',
+    };
+  } catch (error) {
+    logger.warn('AI scene generation failed, falling back to templates', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return null;
+  }
+}
+
+// ============================================================================
+// Template Fallback
+// ============================================================================
+
+function generateFallbackScenes(
+  description: string,
+  videoType: VideoType,
+  _platform: string,
+  duration: number,
+  sceneCount: number,
+): DecomposePlan {
+  const scenes: DecomposePlan['scenes'] = [];
+  const durationPerScene = Math.floor(duration / sceneCount);
+  const topic = description.substring(0, 120);
 
   switch (videoType) {
     case 'tutorial': {
-      // Intro → Step-by-step scenes → Summary/CTA
       scenes.push({
         sceneNumber: 1,
         title: 'Introduction',
-        scriptText: `Welcome to this tutorial. Today we'll be covering ${extractedContext}. By the end of this video, you'll have a clear understanding of how to achieve your goals with this approach.`,
+        scriptText: `Hey, welcome! Today I'm going to walk you through ${topic}. By the end, you'll know exactly how to do this yourself.`,
         visualDescription: 'Title card with tutorial topic, professional background',
         suggestedDuration: durationPerScene,
+        engine: 'heygen',
+        backgroundPrompt: 'Modern bright office with large monitor showing tutorial interface, indoor plants, warm lighting, clean desk',
       });
 
       for (let i = 2; i < sceneCount; i++) {
         scenes.push({
           sceneNumber: i,
           title: `Step ${i - 1}`,
-          scriptText: `In this step, we focus on implementing the key aspects of ${extractedContext}. Follow along carefully as we demonstrate the exact process you need to replicate these results.`,
-          visualDescription: `Screen recording or demonstration of step ${i - 1}`,
+          scriptText: `Now let me show you step ${i - 1}. This is where things get interesting.`,
+          visualDescription: `Screen recording showing step ${i - 1} in action`,
           suggestedDuration: durationPerScene,
+          engine: 'heygen',
+          backgroundPrompt: 'Clean workspace with soft ambient lighting, monitor displaying software interface, shallow depth of field',
         });
       }
 
       scenes.push({
         sceneNumber: sceneCount,
         title: 'Summary & Next Steps',
-        scriptText: `Great job! You've now learned the essential techniques for ${extractedContext}. Remember to practice these steps and don't hesitate to revisit this tutorial. Subscribe for more helpful content.`,
-        visualDescription: 'Summary slide with key takeaways and call-to-action',
+        scriptText: `And that's it! You've got everything you need to get started. Try it out and let me know how it goes.`,
+        visualDescription: 'Summary slide with key takeaways',
         suggestedDuration: durationPerScene,
+        engine: 'heygen',
+        backgroundPrompt: 'Bright creative studio with motivational backdrop, warm tones, professional lighting',
       });
       break;
     }
 
     case 'explainer': {
-      // Hook → Problem → Solution → Benefits → CTA
       scenes.push({
         sceneNumber: 1,
         title: 'Hook',
-        scriptText: `Did you know that most businesses struggle with ${extractedContext}? In the next ${duration} seconds, we'll show you a better way.`,
-        visualDescription: 'Attention-grabbing visual or statistic',
+        scriptText: `Here's something that might surprise you about ${topic}. Let me break it down.`,
+        visualDescription: 'Attention-grabbing visual with bold text overlay',
         suggestedDuration: durationPerScene,
+        engine: 'heygen',
+        backgroundPrompt: 'Sleek modern conference room with glass walls, city skyline visible, dramatic lighting, shallow depth of field',
       });
 
       scenes.push({
         sceneNumber: 2,
-        title: 'The Problem',
-        scriptText: `Traditional approaches to ${extractedContext} are time-consuming, inefficient, and costly. Many teams waste hours on tasks that could be automated or streamlined.`,
-        visualDescription: 'Visualization of common pain points and challenges',
+        title: 'The Challenge',
+        scriptText: `Most teams waste hours on this. The old way of doing things just doesn't cut it anymore.`,
+        visualDescription: 'Visualization of common pain points',
         suggestedDuration: durationPerScene,
+        engine: 'runway',
+        backgroundPrompt: null,
       });
 
       scenes.push({
         sceneNumber: 3,
         title: 'The Solution',
-        scriptText: `That's where ${extractedContext} comes in. Our approach transforms the way you work by automating complex processes and delivering results in minutes, not hours.`,
-        visualDescription: 'Product or solution demonstration',
+        scriptText: `That's exactly why we built this. It takes what used to be a headache and makes it automatic.`,
+        visualDescription: 'Product demonstration',
         suggestedDuration: durationPerScene,
+        engine: 'heygen',
+        backgroundPrompt: 'Modern tech office with large displays showing dashboards and analytics, blue accent lighting, clean aesthetic',
       });
 
       if (sceneCount > 4) {
         scenes.push({
           sceneNumber: 4,
           title: 'Key Benefits',
-          scriptText: `With ${extractedContext}, you'll save time, reduce costs, and improve outcomes. Teams report up to 10x productivity gains and significantly better results.`,
-          visualDescription: 'Benefits list with icons or graphics',
+          scriptText: `The results speak for themselves. Teams are saving hours every week and getting better outcomes.`,
+          visualDescription: 'Benefits with icons and metrics',
           suggestedDuration: durationPerScene,
+          engine: 'sora',
+          backgroundPrompt: null,
         });
       }
 
       scenes.push({
         sceneNumber: sceneCount,
         title: 'Call to Action',
-        scriptText: `Ready to transform your workflow? Get started today with ${extractedContext}. Click the link below to learn more and start your free trial.`,
-        visualDescription: 'CTA button with website URL or contact information',
+        scriptText: `Ready to see this in action? Head over to the link below and try it free.`,
+        visualDescription: 'CTA with website URL',
         suggestedDuration: durationPerScene,
-      });
-      break;
-    }
-
-    case 'product-demo': {
-      // Intro → Feature highlights → Use cases → CTA
-      scenes.push({
-        sceneNumber: 1,
-        title: 'Product Introduction',
-        scriptText: `Welcome to ${extractedContext}. In this demo, we'll walk you through the key features and show you how our solution can transform your business.`,
-        visualDescription: 'Product logo and hero image',
-        suggestedDuration: durationPerScene,
-      });
-
-      for (let i = 2; i < sceneCount - 1; i++) {
-        scenes.push({
-          sceneNumber: i,
-          title: `Feature ${i - 1}`,
-          scriptText: `Let's explore one of our most powerful features. ${extractedContext} enables you to accomplish tasks faster and more efficiently than ever before.`,
-          visualDescription: `Screen recording showing feature ${i - 1} in action`,
-          suggestedDuration: durationPerScene,
-        });
-      }
-
-      scenes.push({
-        sceneNumber: sceneCount,
-        title: 'Get Started',
-        scriptText: `You've seen how ${extractedContext} can streamline your workflow. Ready to experience it yourself? Sign up now and get instant access to all these powerful features.`,
-        visualDescription: 'Sign-up form or demo request CTA',
-        suggestedDuration: durationPerScene,
+        engine: 'heygen',
+        backgroundPrompt: 'Bright professional studio with branded backdrop, warm inviting lighting, casual setting',
       });
       break;
     }
 
     case 'sales-pitch': {
-      // Pain point → Solution intro → Benefits → Social proof → CTA
       scenes.push({
         sceneNumber: 1,
         title: 'The Pain Point',
-        scriptText: `Are you tired of dealing with ${extractedContext}? You're not alone. Thousands of businesses face this same challenge every single day.`,
-        visualDescription: 'Relatable scenario showing the problem',
+        scriptText: `If you're dealing with ${topic}, I get it. It's frustrating, and you're not alone.`,
+        visualDescription: 'Relatable scenario',
         suggestedDuration: durationPerScene,
+        engine: 'heygen',
+        backgroundPrompt: 'Warm cozy office with bookshelves, soft lighting, plants, inviting atmosphere',
       });
 
       scenes.push({
         sceneNumber: 2,
         title: 'Introducing the Solution',
-        scriptText: `Imagine if ${extractedContext} could be completely automated. Our solution does exactly that, giving you back hours of valuable time.`,
-        visualDescription: 'Product introduction with key value proposition',
+        scriptText: `What if this whole process could run on autopilot? That's exactly what we built.`,
+        visualDescription: 'Product introduction',
         suggestedDuration: durationPerScene,
+        engine: 'runway',
+        backgroundPrompt: null,
       });
 
       scenes.push({
         sceneNumber: 3,
         title: 'Why It Works',
-        scriptText: `Unlike other approaches, ${extractedContext} is built on proven technology that delivers consistent results. It's fast, reliable, and incredibly easy to use.`,
-        visualDescription: 'Feature benefits and comparison chart',
+        scriptText: `Unlike anything else out there, this actually delivers. It's fast, simple, and the results are real.`,
+        visualDescription: 'Feature benefits comparison',
         suggestedDuration: durationPerScene,
+        engine: 'heygen',
+        backgroundPrompt: 'Modern creative workspace with whiteboard showing strategy diagrams, bright natural light',
       });
 
       if (sceneCount > 4) {
         scenes.push({
           sceneNumber: 4,
-          title: 'Proven Results',
-          scriptText: `Don't just take our word for it. Companies using ${extractedContext} report an average ROI of 300% in the first quarter. Results speak louder than promises.`,
-          visualDescription: 'Customer testimonials and success metrics',
+          title: 'Social Proof',
+          scriptText: '',
+          visualDescription: 'Customer testimonials and success metrics montage',
           suggestedDuration: durationPerScene,
+          engine: 'sora',
+          backgroundPrompt: null,
         });
       }
 
       scenes.push({
         sceneNumber: sceneCount,
-        title: 'Special Offer',
-        scriptText: `Ready to see these results for yourself? For a limited time, we're offering exclusive pricing for new customers. Click below to claim your spot before it's gone.`,
-        visualDescription: 'Limited-time offer with pricing details',
+        title: 'Offer',
+        scriptText: `Want to see these results yourself? Click below and let's get you started. Seriously, you'll thank yourself later.`,
+        visualDescription: 'Offer with pricing',
         suggestedDuration: durationPerScene,
-      });
-      break;
-    }
-
-    case 'testimonial': {
-      // Intro → Story → Results → Recommendation
-      scenes.push({
-        sceneNumber: 1,
-        title: 'Introduction',
-        scriptText: `Hi, I'm here to share my experience with ${extractedContext}. Before I started using this solution, I was facing some serious challenges.`,
-        visualDescription: 'Customer speaking to camera, authentic setting',
-        suggestedDuration: durationPerScene,
-      });
-
-      scenes.push({
-        sceneNumber: 2,
-        title: 'The Journey',
-        scriptText: `When I first discovered ${extractedContext}, I was skeptical. But after trying it out, I quickly realized this was different from anything else I'd tried.`,
-        visualDescription: 'Customer describing their experience',
-        suggestedDuration: durationPerScene,
-      });
-
-      scenes.push({
-        sceneNumber: 3,
-        title: 'The Results',
-        scriptText: `The impact has been incredible. Since implementing ${extractedContext}, I've seen measurable improvements across the board. My productivity has doubled, and I'm achieving goals I never thought possible.`,
-        visualDescription: 'B-roll showing success metrics or results',
-        suggestedDuration: durationPerScene,
-      });
-
-      scenes.push({
-        sceneNumber: sceneCount,
-        title: 'My Recommendation',
-        scriptText: `If you're on the fence about ${extractedContext}, my advice is simple: just try it. You have nothing to lose and everything to gain. It's been a game-changer for me.`,
-        visualDescription: 'Customer final thoughts with product logo',
-        suggestedDuration: durationPerScene,
-      });
-      break;
-    }
-
-    case 'social-ad': {
-      // Hook → Value prop → Demo → CTA
-      scenes.push({
-        sceneNumber: 1,
-        title: 'Scroll-Stopping Hook',
-        scriptText: `Stop scrolling! What if I told you ${extractedContext} could change everything? Watch this.`,
-        visualDescription: 'Bold text overlay with eye-catching visual',
-        suggestedDuration: durationPerScene,
-      });
-
-      scenes.push({
-        sceneNumber: 2,
-        title: 'The Promise',
-        scriptText: `${extractedContext} delivers results you can see immediately. No complicated setup, no learning curve—just instant value.`,
-        visualDescription: 'Quick benefit statements with dynamic graphics',
-        suggestedDuration: durationPerScene,
-      });
-
-      if (sceneCount > 3) {
-        scenes.push({
-          sceneNumber: 3,
-          title: 'Quick Demo',
-          scriptText: `Here's exactly how it works. In just a few clicks, you can accomplish what used to take hours. It's that simple.`,
-          visualDescription: 'Fast-paced product demonstration',
-          suggestedDuration: durationPerScene,
-        });
-      }
-
-      scenes.push({
-        sceneNumber: sceneCount,
-        title: 'Urgent CTA',
-        scriptText: `Don't wait—${extractedContext} is waiting for you. Tap the link now and get started in seconds. Limited spots available!`,
-        visualDescription: 'Clear CTA button with urgency indicators',
-        suggestedDuration: durationPerScene,
+        engine: 'heygen',
+        backgroundPrompt: 'Professional studio with clean branded backdrop, confident warm lighting, inviting atmosphere',
       });
       break;
     }
 
     default: {
-      // Fallback generic structure
-      for (let i = 1; i <= sceneCount; i++) {
-        scenes.push({
-          sceneNumber: i,
-          title: `Scene ${i}`,
-          scriptText: `This scene focuses on ${extractedContext}. We'll cover the key points and ensure the message resonates with your audience.`,
-          visualDescription: `Visual content for scene ${i}`,
-          suggestedDuration: durationPerScene,
-        });
+      // product-demo, testimonial, social-ad, and generic fallback
+      scenes.push({
+        sceneNumber: 1,
+        title: 'Opening',
+        scriptText: `Hey! I want to show you something that's going to change how you think about ${topic}.`,
+        visualDescription: 'Opening title with eye-catching visual',
+        suggestedDuration: durationPerScene,
+        engine: 'heygen',
+        backgroundPrompt: 'Modern bright office with clean desk, large monitor, indoor plants, warm professional lighting',
+      });
+
+      for (let i = 2; i < sceneCount; i++) {
+        if (i % 3 === 0) {
+          // B-roll scene
+          scenes.push({
+            sceneNumber: i,
+            title: `Visual Break ${Math.ceil(i / 3)}`,
+            scriptText: '',
+            visualDescription: 'Cinematic B-roll showcasing the product in action',
+            suggestedDuration: durationPerScene,
+            engine: 'runway',
+            backgroundPrompt: null,
+          });
+        } else {
+          scenes.push({
+            sceneNumber: i,
+            title: `Point ${i - 1}`,
+            scriptText: `Let me show you how this works in practice. It's simpler than you'd think.`,
+            visualDescription: `Demonstration of key feature ${i - 1}`,
+            suggestedDuration: durationPerScene,
+            engine: 'heygen',
+            backgroundPrompt: 'Clean modern workspace with ambient lighting, shallow depth of field, professional setting',
+          });
+        }
       }
+
+      scenes.push({
+        sceneNumber: sceneCount,
+        title: 'Wrap Up',
+        scriptText: `That's a wrap! If any of this clicked for you, check out the link below. Let's make it happen.`,
+        visualDescription: 'CTA with contact info',
+        suggestedDuration: durationPerScene,
+        engine: 'heygen',
+        backgroundPrompt: 'Bright creative studio space with branded elements, warm inviting lighting',
+      });
+      break;
     }
   }
 
-  return scenes;
+  return {
+    videoType,
+    targetAudience: 'Business professionals and teams',
+    keyMessages: extractKeyMessages(description, videoType),
+    scenes,
+    assetsNeeded: determineAssetsNeeded(videoType, _platform),
+    avatarRecommendation: null,
+    estimatedTotalDuration: scenes.reduce((sum, s) => sum + s.suggestedDuration, 0),
+    generatedBy: 'template',
+  };
 }
 
-/**
- * Extract key messages from description
- */
+// ============================================================================
+// Helper Functions
+// ============================================================================
+
 function extractKeyMessages(description: string, videoType: VideoType): string[] {
   const messages: string[] = [];
-  const descriptionLower = description.toLowerCase();
 
-  // Add type-specific messages
   if (videoType === 'tutorial') {
-    messages.push('Step-by-step guidance');
-    messages.push('Practical implementation');
+    messages.push('Step-by-step guidance', 'Practical implementation');
   } else if (videoType === 'explainer') {
-    messages.push('Clear problem-solution narrative');
-    messages.push('Educational value');
+    messages.push('Clear problem-solution narrative', 'Educational value');
   } else if (videoType === 'product-demo') {
-    messages.push('Feature showcase');
-    messages.push('Practical use cases');
+    messages.push('Feature showcase', 'Practical use cases');
   } else if (videoType === 'sales-pitch') {
-    messages.push('Value proposition');
-    messages.push('ROI and benefits');
+    messages.push('Value proposition', 'ROI and benefits');
   } else if (videoType === 'testimonial') {
-    messages.push('Authentic customer story');
-    messages.push('Real-world results');
+    messages.push('Authentic customer story', 'Real-world results');
   } else if (videoType === 'social-ad') {
-    messages.push('Immediate engagement');
-    messages.push('Clear call-to-action');
+    messages.push('Immediate engagement', 'Clear call-to-action');
   }
 
-  // Add context from description
-  if (descriptionLower.includes('save time') || descriptionLower.includes('efficiency')) {
+  const descLower = description.toLowerCase();
+  if (descLower.includes('save time') || descLower.includes('efficiency')) {
     messages.push('Time savings and efficiency');
   }
 
   return messages.slice(0, 3);
 }
 
-/**
- * Determine assets needed based on video type
- */
 function determineAssetsNeeded(videoType: VideoType, _platform: string): string[] {
   const baseAssets = ['Brand logo', 'Background music'];
 
@@ -357,6 +548,10 @@ function determineAssetsNeeded(videoType: VideoType, _platform: string): string[
   return baseAssets;
 }
 
+// ============================================================================
+// POST Handler
+// ============================================================================
+
 export async function POST(request: NextRequest) {
   try {
     const authResult = await requireAuth(request);
@@ -374,7 +569,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { description, videoType, platform, duration } = parseResult.data;
+    const { description, videoType, platform, duration,
+            targetAudience, painPoints, talkingPoints, tone, callToAction } = parseResult.data;
 
     logger.info('Video Decompose API: Generating scene breakdown', {
       videoType,
@@ -382,30 +578,22 @@ export async function POST(request: NextRequest) {
       duration,
     });
 
-    // Calculate scene count
     const sceneCount = Math.max(2, Math.min(8, Math.ceil(duration / 15)));
 
-    // Generate scenes
-    const scenes = generateSceneBreakdown(description, videoType, platform, duration, sceneCount);
+    // Try AI-powered generation first
+    const aiPlan = await generateAISceneBreakdown(
+      description, videoType, platform, duration, sceneCount,
+      targetAudience, painPoints, talkingPoints, tone, callToAction,
+    );
 
-    // Calculate total duration from scenes
-    const totalDuration = scenes.reduce((sum, scene) => sum + scene.suggestedDuration, 0);
+    const plan: DecomposePlan = aiPlan ?? generateFallbackScenes(
+      description, videoType, platform, duration, sceneCount,
+    );
 
-    // Extract key messages
-    const keyMessages = extractKeyMessages(description, videoType);
-
-    // Determine assets needed
-    const assetsNeeded = determineAssetsNeeded(videoType, platform);
-
-    const plan: DecomposePlan = {
-      videoType,
-      targetAudience: 'Business professionals and teams',
-      keyMessages,
-      scenes,
-      assetsNeeded,
-      avatarRecommendation: null,
-      estimatedTotalDuration: totalDuration,
-    };
+    logger.info('Video Decompose API: Scene breakdown generated', {
+      generatedBy: plan.generatedBy,
+      sceneCount: plan.scenes.length,
+    });
 
     return NextResponse.json({
       success: true,

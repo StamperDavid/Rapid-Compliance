@@ -3226,6 +3226,7 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
             voiceId: null,
             duration: durationPerScene,
             engine: null,
+            backgroundPrompt: null,
             status: 'draft',
           };
           const engine = await selectEngineForScene(draft, hasAvatar);

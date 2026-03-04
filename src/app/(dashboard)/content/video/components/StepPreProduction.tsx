@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { SceneEditor } from './SceneEditor';
 import { AvatarPicker } from './AvatarPicker';
+import { AvatarUpload } from './AvatarUpload';
 import { VoicePicker } from './VoicePicker';
 import { useVideoPipelineStore } from '@/lib/stores/video-pipeline-store';
 import type { PipelineScene } from '@/types/video-pipeline';
@@ -40,6 +41,7 @@ export function StepPreProduction() {
       voiceId: null,
       duration: 15,
       engine: null,
+      backgroundPrompt: null,
       status: 'draft',
     };
     addScene(newScene);
@@ -146,6 +148,12 @@ export function StepPreProduction() {
                 selectedAvatarId={avatarId}
                 onSelect={(id, name) => setAvatar(id, name)}
               />
+
+              <div className="mt-6">
+                <AvatarUpload
+                  onAvatarCreated={(id, name) => setAvatar(id, name)}
+                />
+              </div>
             </div>
           )}
 

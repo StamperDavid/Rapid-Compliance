@@ -62,6 +62,7 @@ export async function POST(request: NextRequest) {
       voiceId: null,
       duration,
       engine: engine ?? null,
+      backgroundPrompt: null,
       status: 'approved' as const,
     };
 

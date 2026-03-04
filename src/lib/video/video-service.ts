@@ -1201,6 +1201,69 @@ export function estimateVideoCost(
 }
 
 // ============================================================================
+// Custom Avatar Creation (HeyGen Instant Avatar)
+// ============================================================================
+
+interface InstantAvatarResponse {
+  avatarId: string;
+  status: 'pending' | 'processing' | 'completed' | 'failed';
+}
+
+/**
+ * Create a HeyGen Instant Avatar from a photo.
+ * The photo should be a clear, well-lit headshot.
+ * HeyGen processes the photo and returns an avatar_id for use in video generation.
+ */
+export async function createInstantAvatar(
+  photoUrl: string,
+  avatarName: string,
+): Promise<InstantAvatarResponse> {
+  const apiKey = await getVideoProviderKey('heygen');
+  if (!apiKey) {
+    throw new Error('HeyGen API key not configured. Add it in Settings > API Keys.');
+  }
+
+  const response = await fetch('https://api.heygen.com/v2/avatars/instant', {
+    method: 'POST',
+    headers: {
+      'X-Api-Key': apiKey,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      image_url: photoUrl,
+      avatar_name: avatarName,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    logger.error('HeyGen instant avatar creation failed', new Error(errorText), {
+      status: response.status,
+      file: 'video-service.ts',
+    });
+    throw new Error(`HeyGen avatar creation failed: ${response.status}`);
+  }
+
+  const result = await response.json() as { data?: { avatar_id?: string; status?: string } };
+  const avatarId = result.data?.avatar_id;
+
+  if (!avatarId) {
+    throw new Error('HeyGen did not return an avatar ID');
+  }
+
+  logger.info('HeyGen instant avatar created', {
+    avatarId,
+    avatarName,
+    file: 'video-service.ts',
+  });
+
+  return {
+    avatarId,
+    status: (result.data?.status as InstantAvatarResponse['status']) ?? 'pending',
+  };
+}
+
+// ============================================================================
 // Export Types
 // ============================================================================
 

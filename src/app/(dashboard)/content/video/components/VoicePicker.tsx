@@ -18,7 +18,7 @@ export function VoicePicker({ selectedVoiceId, onSelect }: VoicePickerProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [playingId, setPlayingId] = useState<string | null>(null);
-  const [filterGender, setFilterGender] = useState<string>('all');
+  const [filterGender, setFilterGender] = useState<string>('male');
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const fetchVoices = useCallback(async () => {

@@ -16,6 +16,7 @@ const GenerateScenesSchema = z.object({
     screenshotUrl: z.string().nullable(),
     duration: z.number(),
     engine: z.enum(['heygen', 'runway', 'sora', 'kling', 'luma']).nullable().default(null),
+    backgroundPrompt: z.string().nullable().default(null),
   })),
   avatarId: z.string().min(1, 'Avatar ID required'),
   voiceId: z.string().min(1, 'Voice ID required'),
@@ -65,6 +66,7 @@ export async function POST(request: NextRequest) {
       avatarId: null,
       voiceId: null,
       engine: scene.engine ?? null,
+      backgroundPrompt: scene.backgroundPrompt ?? null,
       status: 'approved' as const,
     }));
 
