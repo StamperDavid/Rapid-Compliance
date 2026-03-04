@@ -141,6 +141,8 @@ export default function EntityTablePage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<EntityRecord>(getDefaultFormData());
   const [searchTerm, setSearchTerm] = useState('');
+  const [activeFilters, setActiveFilters] = useState<Record<string, string>>({});
+  const [showFilters, setShowFilters] = useState(false);
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<{ message: string; onConfirm: () => void } | null>(null);
 
@@ -183,17 +185,43 @@ export default function EntityTablePage() {
     return [];
   };
 
-  // Filtered records based on search
+  // Fields that can be filtered (singleSelect fields)
+  const filterableFields = useMemo(() => {
+    return fields.filter(f => f.type === 'singleSelect');
+  }, [fields]);
+
+  // Reset filters when entity changes
+  useEffect(() => {
+    setActiveFilters({});
+    setShowFilters(false);
+  }, [entityName]);
+
+  const activeFilterCount = Object.values(activeFilters).filter(v => v !== '').length;
+
+  // Filtered records based on search + filters
   const filteredRecords = useMemo(() => {
-    if (!searchTerm.trim()) {return records;}
-    const term = searchTerm.toLowerCase();
-    return records.filter(record =>
-      fields.some(field => {
-        const value = record[field.key];
-        return value && String(value).toLowerCase().includes(term);
-      })
-    );
-  }, [records, searchTerm, fields]);
+    let result = records;
+
+    // Apply active filters
+    for (const [key, value] of Object.entries(activeFilters)) {
+      if (value !== '') {
+        result = result.filter(record => String(record[key] ?? '') === value);
+      }
+    }
+
+    // Apply text search
+    if (searchTerm.trim()) {
+      const term = searchTerm.toLowerCase();
+      result = result.filter(record =>
+        fields.some(field => {
+          const val = record[field.key];
+          return val && String(val).toLowerCase().includes(term);
+        })
+      );
+    }
+
+    return result;
+  }, [records, searchTerm, activeFilters, fields]);
 
   // Key fields to show in table (first 5 non-lookup fields)
   const tableFields = useMemo(() => {
@@ -497,8 +525,8 @@ export default function EntityTablePage() {
             </p>
           )}
           <div style={{ marginTop: '1.5rem' }}>
-            <Link href="/schemas" style={{ color: 'var(--color-primary)', fontSize: '0.875rem', textDecoration: 'none' }}>
-              ← Back to Schemas
+            <Link href="/dashboard" style={{ color: 'var(--color-primary)', fontSize: '0.875rem', textDecoration: 'none' }}>
+              ← Back to Dashboard
             </Link>
           </div>
         </div>
@@ -521,10 +549,6 @@ export default function EntityTablePage() {
 
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-              <Link href={`/schemas`} style={{ color: 'var(--color-primary)', fontSize: '0.875rem', fontWeight: '500', textDecoration: 'none' }}>
-                ← Back to Schemas
-              </Link>
-              <div style={{ height: '1.5rem', width: '1px', backgroundColor: 'var(--color-border-strong)' }}></div>
               <div>
                 <h1 style={{ fontSize: '1.75rem', fontWeight: 'bold', color: 'var(--color-text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <span>{entityIcon}</span>
@@ -532,7 +556,7 @@ export default function EntityTablePage() {
                 </h1>
                 <p style={{ fontSize: '0.875rem', color: 'var(--color-text-disabled)', marginTop: '0.25rem' }}>
                   {loading ? 'Loading...' : `${filteredRecords.length} records`}
-                  {searchTerm && ` (filtered from ${records.length})`}
+                  {(searchTerm || activeFilterCount > 0) && ` (filtered from ${records.length})`}
                 </p>
               </div>
             </div>
@@ -556,6 +580,41 @@ export default function EntityTablePage() {
                 />
                 <span style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--color-text-disabled)' }}>🔍</span>
               </div>
+              {/* Filter Toggle */}
+              {filterableFields.length > 0 && (
+                <button
+                  onClick={() => setShowFilters(!showFilters)}
+                  style={{
+                    padding: '0.5rem 1rem',
+                    backgroundColor: activeFilterCount > 0 ? 'var(--color-primary-dark)' : 'var(--color-bg-paper)',
+                    border: `1px solid ${activeFilterCount > 0 ? 'var(--color-primary)' : 'var(--color-border-strong)'}`,
+                    borderRadius: '0.5rem',
+                    color: activeFilterCount > 0 ? 'var(--color-primary-light)' : 'var(--color-text-secondary)',
+                    fontSize: '0.875rem',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.375rem',
+                  }}
+                >
+                  <span style={{ fontSize: '0.8125rem' }}>&#9776;</span>
+                  Filters
+                  {activeFilterCount > 0 && (
+                    <span style={{
+                      backgroundColor: 'var(--color-primary)',
+                      color: 'white',
+                      borderRadius: '999px',
+                      padding: '0 0.375rem',
+                      fontSize: '0.6875rem',
+                      fontWeight: 700,
+                      minWidth: '1.125rem',
+                      textAlign: 'center',
+                    }}>
+                      {activeFilterCount}
+                    </span>
+                  )}
+                </button>
+              )}
               <button
                 onClick={() => setIsAdding(true)}
                 style={{ padding: '0.625rem 1.5rem', backgroundColor: 'var(--color-primary)', color: 'white', borderRadius: '0.5rem', border: 'none', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600' }}
@@ -566,6 +625,55 @@ export default function EntityTablePage() {
           </div>
         </div>
       </div>
+
+      {/* Filter Bar */}
+      {showFilters && filterableFields.length > 0 && (
+        <div style={{ backgroundColor: 'var(--color-bg-paper)', borderBottom: '1px solid var(--color-border-light)' }}>
+          <div style={{ maxWidth: '80rem', margin: '0 auto', padding: '0.75rem 2rem', display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-text-secondary)', textTransform: 'uppercase' }}>Filter by:</span>
+            {filterableFields.map(field => {
+              const options = getPicklistOptions(field);
+              return (
+                <select
+                  key={field.key}
+                  value={activeFilters[field.key] ?? ''}
+                  onChange={(e) => setActiveFilters(prev => ({ ...prev, [field.key]: e.target.value }))}
+                  style={{
+                    padding: '0.375rem 0.625rem',
+                    backgroundColor: activeFilters[field.key] ? 'var(--color-primary-dark)' : 'var(--color-bg-main)',
+                    border: `1px solid ${activeFilters[field.key] ? 'var(--color-primary)' : 'var(--color-border-strong)'}`,
+                    borderRadius: '0.375rem',
+                    color: activeFilters[field.key] ? 'var(--color-primary-light)' : 'var(--color-text-primary)',
+                    fontSize: '0.8125rem',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <option value="">All {field.label}s</option>
+                  {options.map(opt => (
+                    <option key={opt} value={opt}>{opt}</option>
+                  ))}
+                </select>
+              );
+            })}
+            {activeFilterCount > 0 && (
+              <button
+                onClick={() => setActiveFilters({})}
+                style={{
+                  padding: '0.375rem 0.625rem',
+                  backgroundColor: 'transparent',
+                  border: '1px solid var(--color-border-strong)',
+                  borderRadius: '0.375rem',
+                  color: 'var(--color-error)',
+                  fontSize: '0.8125rem',
+                  cursor: 'pointer',
+                }}
+              >
+                Clear all
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       <div style={{ maxWidth: '80rem', margin: '0 auto', padding: '2rem' }}>
         {/* Loading State */}

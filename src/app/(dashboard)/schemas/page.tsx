@@ -122,10 +122,15 @@ export default function SchemaBuilderPage() {
       }
       const data = await res.json() as SchemaListResponse;
       const serverSchemas = data.schemas ?? [];
-      // Always show standard schemas + any custom schemas from the API
+      // Merge: Firestore versions override standard defaults, then add custom schemas
+      const serverMap = new Map(serverSchemas.map(s => [s.id, s]));
+      const mergedStandard = standardSchemasArray.map(std => {
+        const override = serverMap.get(std.id);
+        return override ? { ...override, isStandard: true } : std;
+      });
       const standardIds = new Set(standardSchemasArray.map(s => s.id));
       const customSchemas = serverSchemas.filter(s => !standardIds.has(s.id));
-      setSchemas([...standardSchemasArray, ...customSchemas]);
+      setSchemas([...mergedStandard, ...customSchemas]);
     } catch (err: unknown) {
       const errorMessage = isErrorWithMessage(err) ? err.message : 'Failed to load schemas';
       setError(errorMessage);
@@ -242,6 +247,7 @@ export default function SchemaBuilderPage() {
     setSaving(true);
     setError(null);
     try {
+      // Try update first
       const res = await authFetch(`/api/schemas/${editingSchema.id}/update`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -251,7 +257,22 @@ export default function SchemaBuilderPage() {
         })
       });
 
-      if (!res.ok) {
+      if (res.status === 404 && editingSchema.isStandard) {
+        // Standard schema not yet in Firestore — create it
+        const createRes = await authFetch('/api/schemas', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            schema: { ...editingSchema, id: editingSchema.id },
+            userId: user?.id ?? 'ui-schema-builder'
+          })
+        });
+
+        if (!createRes.ok) {
+          const body = await createRes.json().catch(() => ({})) as ApiErrorResponse;
+          throw new Error(body.error ?? `Failed to save schema (${createRes.status})`);
+        }
+      } else if (!res.ok) {
         const body = await res.json().catch(() => ({})) as ApiErrorResponse;
         throw new Error(body.error ?? `Failed to update schema (${res.status})`);
       }
@@ -382,14 +403,12 @@ export default function SchemaBuilderPage() {
                     Enable in Settings
                   </Link>
                 )}
-                {!schema.isStandard && (
-                  <button
-                    onClick={() => setEditingSchema(schema)}
-                    style={{ flex: 1, padding: '0.625rem 0.875rem', backgroundColor: 'var(--color-bg-elevated)', color: 'var(--color-text-secondary)', borderRadius: 'var(--radius-button)', fontSize: '0.875rem', border: '1px solid var(--color-border-main)', cursor: 'pointer', fontWeight: '500' }}
-                  >
-                    Edit
-                  </button>
-                )}
+                <button
+                  onClick={() => setEditingSchema(schema)}
+                  style={{ flex: 1, padding: '0.625rem 0.875rem', backgroundColor: 'var(--color-bg-elevated)', color: 'var(--color-text-secondary)', borderRadius: 'var(--radius-button)', fontSize: '0.875rem', border: '1px solid var(--color-border-main)', cursor: 'pointer', fontWeight: '500' }}
+                >
+                  Edit
+                </button>
               </div>
             </div>
             );

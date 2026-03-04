@@ -274,9 +274,11 @@ async function generateAIScripts(
       generatedBy: 'ai',
     };
   } catch (error) {
-    logger.warn('AI scene generation failed, falling back to templates', {
-      error: error instanceof Error ? error.message : String(error),
-    });
+    const errMsg = error instanceof Error ? error.message : String(error);
+    logger.error('AI scene generation FAILED — falling back to templates',
+      error instanceof Error ? error : new Error(errMsg),
+      { file: 'script-generation-service.ts' },
+    );
     return null;
   }
 }
