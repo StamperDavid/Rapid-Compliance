@@ -3091,52 +3091,37 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
         const videoStart = Date.now();
         trackMissionStep(context, 'create_video', 'RUNNING', { toolArgs: args });
 
-        // ── Step 1: Delegate to Content Manager → Video Specialist ──
-        // Jasper delegates — he doesn't do the work himself.
-        const { ContentManager } = await import('@/lib/agents/content/manager');
-        const videoContentMgr = new ContentManager();
-        await videoContentMgr.initialize();
-
         const description = args.description as string;
         const title = (args.title as string) ?? `Video: ${description.slice(0, 50)}`;
         const duration = args.duration ? Number(args.duration) : 30;
         const aspectRatio = (args.aspectRatio as '16:9' | '9:16' | '1:1') ?? '16:9';
         const videoType = (args.videoType as 'tutorial' | 'explainer' | 'product-demo' | 'sales-pitch' | 'testimonial' | 'social-ad') ?? 'explainer';
-
-        logger.info('Jasper delegating video to Content Manager', {
-          title, videoType, duration,
-          file: 'jasper-tools.ts',
-        });
-
-        const contentResult = await videoContentMgr.execute({
-          id: `video_${Date.now()}`,
-          timestamp: new Date(),
-          from: 'JASPER',
-          to: 'CONTENT_MANAGER',
-          type: 'COMMAND',
-          priority: 'HIGH',
-          payload: {
-            contentType: 'video_script',
-            topic: description,
-            audience: 'Business professionals and decision-makers',
-            includeVideo: true,
-          },
-          requiresResponse: true,
-          traceId: `trace_video_${Date.now()}`,
-        });
-
-        logger.info('Content Manager returned video package', {
-          status: contentResult.status,
-          hasData: Boolean(contentResult.data),
-          file: 'jasper-tools.ts',
-        });
-
-        // ── Step 2: Create pipeline project from storyboard ──
-        const { createProject, updateProject } = await import('@/lib/video/pipeline-project-service');
-        const { selectEngineForScene } = await import('@/lib/video/scene-generator');
-        const { getExecutionPolicy } = await import('@/lib/orchestrator/execution-policy-service');
-
         const platform = (args.platform as 'youtube' | 'tiktok' | 'instagram' | 'linkedin' | 'website') ?? 'youtube';
+
+        // ── Step 1: AI-powered script generation (Brand DNA + product context) ──
+        const { generateVideoScripts } = await import('@/lib/video/script-generation-service');
+
+        logger.info('Jasper generating AI video scripts', {
+          title, videoType, duration, platform,
+          file: 'jasper-tools.ts',
+        });
+
+        const scriptResult = await generateVideoScripts({
+          description,
+          videoType,
+          platform,
+          duration,
+        });
+
+        logger.info('AI script generation completed', {
+          generatedBy: scriptResult.generatedBy,
+          sceneCount: scriptResult.scenes.length,
+          file: 'jasper-tools.ts',
+        });
+
+        // ── Step 2: Create pipeline project ──
+        const { createProject, updateProject } = await import('@/lib/video/pipeline-project-service');
+        const { getExecutionPolicy } = await import('@/lib/orchestrator/execution-policy-service');
 
         const brief = {
           description,
@@ -3153,7 +3138,6 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
           content = JSON.stringify({
             status: 'error',
             message: `Failed to create video project: ${projectResult.error ?? 'Unknown error'}`,
-            contentManagerResult: contentResult.status,
           });
           trackMissionStep(context, 'create_video', 'FAILED', {
             summary: 'Project creation failed',
@@ -3164,76 +3148,21 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
 
         const projectId = projectResult.projectId;
 
-        // ── Step 3: Build scenes from storyboard + intelligent engine selection ──
-        // Use the storyboard from Content Manager if available, else generate
-        const topicLabel = title || description.substring(0, 60);
-        const sceneCount = Math.max(2, Math.min(8, Math.ceil(duration / 15)));
-        const durationPerScene = Math.floor(duration / sceneCount);
-
-        // Extract scene scripts from Content Manager's storyboard if available
-        let sceneScripts: Array<{ title: string; scriptPrefix: string }> = [];
-        const cmData = contentResult.data as Record<string, unknown> | null;
-        const videoData = cmData?.video as Record<string, unknown> | null;
-        const storyboardData = videoData?.storyboard as Record<string, unknown> | null;
-        const storyboardScenes = storyboardData?.scenes as Array<{ voiceoverText?: string; sceneNumber?: number }> | null;
-
-        if (storyboardScenes && storyboardScenes.length > 0) {
-          // Use Content Manager's storyboard scenes
-          sceneScripts = storyboardScenes.slice(0, sceneCount).map((s, i) => ({
-            title: `Scene ${i + 1}`,
-            scriptPrefix: s.voiceoverText ?? `Scene ${i + 1} of ${title}`,
-          }));
-          logger.info('Using Content Manager storyboard scenes', {
-            sceneCount: sceneScripts.length,
-            file: 'jasper-tools.ts',
-          });
-        } else {
-          // Fallback: generate scene templates locally
-          const sceneTemplates: Record<string, Array<{ title: string; scriptPrefix: string }>> = {
-            'explainer': [
-              { title: 'Hook', scriptPrefix: `Did you know that most businesses struggle with ${topicLabel}?` },
-              { title: 'The Problem', scriptPrefix: `Traditional approaches to ${topicLabel} are time-consuming and costly.` },
-              { title: 'The Solution', scriptPrefix: `That's where ${topicLabel} comes in.` },
-              { title: 'Key Benefits', scriptPrefix: `With ${topicLabel}, you'll save time, reduce costs, and improve outcomes.` },
-              { title: 'Call to Action', scriptPrefix: `Ready to transform your workflow? Get started today.` },
-            ],
-            'sales-pitch': [
-              { title: 'The Pain Point', scriptPrefix: `Are you tired of dealing with ${topicLabel}?` },
-              { title: 'The Solution', scriptPrefix: `Imagine if ${topicLabel} could be completely automated.` },
-              { title: 'Why It Works', scriptPrefix: `Unlike other approaches, ${topicLabel} delivers consistent results.` },
-              { title: 'Call to Action', scriptPrefix: `Ready to see results? Get started today.` },
-            ],
-            'social-ad': [
-              { title: 'Hook', scriptPrefix: `Stop scrolling! ${topicLabel} changes everything.` },
-              { title: 'Value Prop', scriptPrefix: `${topicLabel} delivers immediate, visible results.` },
-              { title: 'CTA', scriptPrefix: `Don't wait — tap the link now and get started in seconds.` },
-            ],
-          };
-          const fallback = sceneTemplates['explainer'];
-          sceneScripts = (sceneTemplates[videoType] ?? fallback).slice(0, sceneCount);
-        }
-
-        // ── Step 4: Assign engines per scene ──
-        const hasAvatar = args.type === 'avatar' || videoType === 'explainer' || videoType === 'sales-pitch';
-
-        const scenes = await Promise.all(sceneScripts.map(async (tpl, i) => {
-          const draft: import('@/types/video-pipeline').PipelineScene = {
-            id: `scene-${i + 1}-${Date.now()}`,
-            sceneNumber: i + 1,
-            scriptText: tpl.scriptPrefix,
-            screenshotUrl: null,
-            avatarId: null,
-            voiceId: null,
-            duration: durationPerScene,
-            engine: null,
-            backgroundPrompt: null,
-            status: 'draft',
-          };
-          const engine = await selectEngineForScene(draft, hasAvatar);
-          return { ...draft, engine };
+        // ── Step 3: Convert AI scripts to PipelineScenes ──
+        const scenes: import('@/types/video-pipeline').PipelineScene[] = scriptResult.scenes.map((s, i) => ({
+          id: `scene-${i + 1}-${Date.now()}`,
+          sceneNumber: s.sceneNumber,
+          scriptText: s.scriptText,
+          screenshotUrl: null,
+          avatarId: null,
+          voiceId: null,
+          duration: s.suggestedDuration,
+          engine: s.engine,
+          backgroundPrompt: s.backgroundPrompt,
+          status: 'draft' as const,
         }));
 
-        // ── Step 5: Check execution policy ──
+        // ── Step 4: Check execution policy ──
         const executionPolicy = await getExecutionPolicy();
         const requireApproval = executionPolicy.mode === 'require_approval';
 
@@ -3253,11 +3182,8 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
             title,
             sceneCount: scenes.length,
             engines: [...new Set(scenes.map((s) => s.engine))],
-            delegations: {
-              contentManager: contentResult.status,
-              videoSpecialist: storyboardScenes ? 'COMPLETED' : 'SKIPPED',
-            },
-            message: `Video "${title}" draft created with ${scenes.length} scenes. Review and edit scripts, pick avatar/voice, then approve in the Video Studio.`,
+            generatedBy: scriptResult.generatedBy,
+            message: `Video "${title}" draft created with ${scenes.length} scenes (${scriptResult.generatedBy === 'ai' ? 'AI-written scripts' : 'template scripts'}). Review and edit scripts, pick avatar/voice, then approve in the Video Studio.`,
             reviewLink: reviewUrl,
           });
 
@@ -3327,7 +3253,7 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
             logger.error('generateAllScenes threw — video engines failed', genErr instanceof Error ? genErr : new Error(String(genErr)), {
               projectId,
               sceneCount: scenes.length,
-              engines: scenes.map((s) => s.engine),
+              engines: scenes.map((s) => s.engine ?? 'heygen'),
               avatarId: videoAvatarId,
               voiceId: videoVoiceId,
               file: 'jasper-tools.ts',
@@ -3359,9 +3285,9 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
             failedCount,
             generationError: genError,
             engines: [...new Set(scenes.map((s) => s.engine))],
+            generatedBy: scriptResult.generatedBy,
             delegations: {
-              contentManager: contentResult.status,
-              videoSpecialist: storyboardScenes ? 'COMPLETED' : 'SKIPPED',
+              scriptGeneration: scriptResult.generatedBy === 'ai' ? 'AI_COMPLETED' : 'TEMPLATE_FALLBACK',
               videoEngines: genError ? [`ERROR: ${genError}`] : genResults.map((r) => `${r.provider}: ${r.status}`),
             },
             results: genResults.map((r) => ({
