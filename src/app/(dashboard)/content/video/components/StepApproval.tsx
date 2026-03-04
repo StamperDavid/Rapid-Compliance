@@ -46,7 +46,15 @@ export function StepApproval() {
     .map(([label, count]) => `${count} via ${label}`)
     .join(', ');
 
+  const missingRequirements: string[] = [];
+  if (!avatarId) { missingRequirements.push('avatar'); }
+  if (!voiceId) { missingRequirements.push('voice'); }
+  if (scenes.length === 0) { missingRequirements.push('scenes'); }
+
   const handleApproveAndGenerate = () => {
+    if (missingRequirements.length > 0) {
+      return;
+    }
     advanceStep();
   };
 
@@ -162,6 +170,19 @@ export function StepApproval() {
         </div>
       </div>
 
+      {/* Missing Requirements */}
+      {missingRequirements.length > 0 && (
+        <div className="flex items-start gap-3 p-4 bg-red-500/5 border border-red-500/20 rounded-lg">
+          <AlertTriangle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-medium text-red-400">Before you can generate</p>
+            <p className="text-xs text-zinc-400 mt-1">
+              Go back to Pre-Production and select {missingRequirements.join(' and ')}.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Actions */}
       <div className="flex justify-between">
         <Button onClick={handleBack} variant="outline" className="gap-2">
@@ -170,7 +191,7 @@ export function StepApproval() {
         </Button>
         <Button
           onClick={handleApproveAndGenerate}
-          disabled={scenes.length === 0 || !avatarId || !voiceId}
+          disabled={missingRequirements.length > 0}
           className="gap-2 bg-green-600 hover:bg-green-700 text-white"
           size="lg"
         >

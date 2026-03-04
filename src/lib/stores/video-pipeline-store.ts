@@ -230,7 +230,10 @@ export const useVideoPipelineStore = create<VideoPipelineState>()(
             );
 
           case 'generation':
-            return state.scenes.every((scene) => scene.scriptText.trim().length > 0);
+            // B-roll scenes (runway/sora) don't need scriptText — only heygen scenes do
+            return state.scenes.every((scene) =>
+              scene.engine === 'runway' || scene.engine === 'sora' || scene.scriptText.trim().length > 0
+            );
 
           case 'assembly':
             return (
