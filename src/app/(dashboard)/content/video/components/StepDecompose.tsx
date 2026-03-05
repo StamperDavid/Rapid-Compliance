@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { motion } from 'framer-motion';
-import { Layers, ArrowRight, ArrowLeft, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Layers, ArrowRight, ArrowLeft, Loader2, AlertCircle, CheckCircle2, Eye, Palette } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useVideoPipelineStore } from '@/lib/stores/video-pipeline-store';
@@ -189,21 +189,50 @@ export function StepDecompose() {
                       <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center rounded-full bg-amber-500/20 text-amber-400 text-sm font-bold">
                         {scene.sceneNumber}
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-white">{scene.title}</p>
-                        <p className="text-xs text-zinc-400 mt-1 line-clamp-2">{scene.scriptText}</p>
-                        <div className="flex items-center gap-2 mt-1">
-                          <p className="text-xs text-zinc-500">{scene.visualDescription} · {scene.suggestedDuration}s</p>
+                      <div className="flex-1 min-w-0 space-y-2">
+                        {/* Title + Metadata */}
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-medium text-white">{scene.title}</p>
+                          <span className="text-xs text-zinc-500">{scene.suggestedDuration}s</span>
                           {scene.engine && (
                             <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
                               scene.engine === 'heygen' ? 'bg-blue-500/20 text-blue-400' :
                               scene.engine === 'runway' ? 'bg-purple-500/20 text-purple-400' :
-                              'bg-green-500/20 text-green-400'
+                              scene.engine === 'sora' ? 'bg-green-500/20 text-green-400' :
+                              scene.engine === 'kling' ? 'bg-orange-500/20 text-orange-400' :
+                              'bg-pink-500/20 text-pink-400'
                             }`}>
                               {scene.engine}
                             </span>
                           )}
                         </div>
+
+                        {/* Script */}
+                        {scene.scriptText && (
+                          <p className="text-xs text-zinc-300 leading-relaxed">{scene.scriptText}</p>
+                        )}
+
+                        {/* Visual Direction */}
+                        {scene.visualDescription && (
+                          <div className="flex gap-2 p-2 bg-sky-500/5 rounded-lg border border-sky-500/10">
+                            <Eye className="w-3 h-3 text-sky-400 flex-shrink-0 mt-0.5" />
+                            <div className="min-w-0">
+                              <p className="text-[9px] uppercase tracking-wider text-sky-400/70 font-medium">Visual Direction</p>
+                              <p className="text-xs text-zinc-400 leading-relaxed">{scene.visualDescription}</p>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Background Prompt */}
+                        {scene.backgroundPrompt && (
+                          <div className="flex gap-2 p-2 bg-violet-500/5 rounded-lg border border-violet-500/10">
+                            <Palette className="w-3 h-3 text-violet-400 flex-shrink-0 mt-0.5" />
+                            <div className="min-w-0">
+                              <p className="text-[9px] uppercase tracking-wider text-violet-400/70 font-medium">Background</p>
+                              <p className="text-xs text-zinc-400 leading-relaxed">{scene.backgroundPrompt}</p>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </motion.div>
                   ))}

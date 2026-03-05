@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { CheckCircle, ArrowLeft, Zap, DollarSign, AlertTriangle, Edit3 } from 'lucide-react';
+import { CheckCircle, ArrowLeft, Zap, DollarSign, AlertTriangle, Edit3, Eye, Palette } from 'lucide-react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -111,11 +111,18 @@ export function StepApproval() {
               </div>
 
               {/* Content */}
-              <div className="flex-1 min-w-0 space-y-2">
-                {scene.title && (
-                  <p className="text-sm font-semibold text-amber-400">{scene.title}</p>
-                )}
+              <div className="flex-1 min-w-0 space-y-2.5">
+                {/* Title + Duration Row */}
+                <div className="flex items-center gap-2">
+                  {scene.title && (
+                    <p className="text-sm font-semibold text-amber-400">{scene.title}</p>
+                  )}
+                  <span className="text-xs text-zinc-500">{scene.duration}s</span>
+                  <span className="text-xs text-zinc-600">·</span>
+                  <span className="text-xs text-zinc-500">Voice: {voiceName ?? 'Default'}</span>
+                </div>
 
+                {/* Script Text */}
                 {editingSceneId === scene.id ? (
                   <textarea
                     value={scene.scriptText}
@@ -129,20 +136,32 @@ export function StepApproval() {
                     className="text-sm text-zinc-200 cursor-pointer hover:text-white transition-colors group"
                     onClick={() => setEditingSceneId(scene.id)}
                   >
-                    {scene.scriptText || <span className="text-zinc-500 italic">No script</span>}
+                    {scene.scriptText || <span className="text-zinc-500 italic">B-roll (no script)</span>}
                     <Edit3 className="w-3 h-3 inline ml-2 opacity-0 group-hover:opacity-50" />
                   </p>
                 )}
 
+                {/* Visual Direction */}
                 {scene.visualDescription && (
-                  <p className="text-xs text-zinc-400 italic">{scene.visualDescription}</p>
+                  <div className="flex gap-2 p-2.5 bg-sky-500/5 rounded-lg border border-sky-500/10">
+                    <Eye className="w-3.5 h-3.5 text-sky-400 flex-shrink-0 mt-0.5" />
+                    <div className="min-w-0">
+                      <p className="text-[10px] uppercase tracking-wider text-sky-400/70 font-medium mb-0.5">Visual Direction</p>
+                      <p className="text-xs text-zinc-300 leading-relaxed">{scene.visualDescription}</p>
+                    </div>
+                  </div>
                 )}
 
-                <div className="flex items-center gap-4 text-xs text-zinc-500">
-                  <span>{scene.duration}s</span>
-                  {scene.screenshotUrl && <span>Has screenshot</span>}
-                  <span>Voice: {voiceName ?? 'Default'}</span>
-                </div>
+                {/* Background Prompt */}
+                {scene.backgroundPrompt && (
+                  <div className="flex gap-2 p-2.5 bg-violet-500/5 rounded-lg border border-violet-500/10">
+                    <Palette className="w-3.5 h-3.5 text-violet-400 flex-shrink-0 mt-0.5" />
+                    <div className="min-w-0">
+                      <p className="text-[10px] uppercase tracking-wider text-violet-400/70 font-medium mb-0.5">Background Prompt</p>
+                      <p className="text-xs text-zinc-300 leading-relaxed">{scene.backgroundPrompt}</p>
+                    </div>
+                  </div>
+                )}
 
                 {/* Engine Selector */}
                 <EngineSelector
