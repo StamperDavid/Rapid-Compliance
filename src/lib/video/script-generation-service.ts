@@ -95,6 +95,14 @@ function buildSystemPrompt(
 - Keep sentences short. Average 10-15 words per sentence for spoken delivery.
 - For B-roll scenes (runway/sora), scriptText MUST be empty string "".
 
+## PRODUCT POSITIONING — MANDATORY
+SalesVelocity.ai is a SaaS platform with a BUILT-IN CRM. Pricing is CRM slot-based.
+- The CRM is BUILT INTO the platform. It is NOT an integration with external CRMs.
+- NEVER write scripts that say "connect your CRM", "sync your data", "import from Salesforce/HubSpot", or suggest any external CRM connection.
+- CORRECT: "Your contacts, deals, and pipeline live right inside SalesVelocity", "everything runs from one dashboard", "the built-in CRM handles your entire pipeline".
+- WRONG: "Just connect your CRM and we'll sync your data", "integrate with your existing tools", "import your contacts".
+- The platform REPLACES external CRMs — it doesn't connect to them. Clients get their own AI-powered CRM with a 52-agent AI swarm managing it.
+
 ## ENGINE ASSIGNMENT RULES
 Assign each scene one of these engines:
 - **heygen**: Avatar talking-head scenes. Use for dialogue, explanations, introductions, CTAs. ALWAYS include a backgroundPrompt for these scenes.

@@ -26,7 +26,7 @@ export const SYSTEM_BLUEPRINT = `# SalesVelocity.ai — System Blueprint
 
 > **Purpose:** This is Jasper's authoritative knowledge base. The query_docs tool reads this file.
 > **Last Updated:** February 26, 2026
-> **Architecture:** Single-Tenant (Penthouse Model) — NOT a SaaS platform
+> **Architecture:** Single-Tenant (Penthouse Model) — multi-tenant SaaS product in single-tenant dev mode
 > **Organization:** rapid-compliance-root
 > **Domain:** SalesVelocity.ai (currently hosted at rapidcompliance.us)
 
@@ -34,9 +34,15 @@ export const SYSTEM_BLUEPRINT = `# SalesVelocity.ai — System Blueprint
 
 ## Platform Identity
 
-SalesVelocity.ai is a single-tenant AI-powered business operations platform. It is NOT a SaaS tool. The platform serves one company (David's organization) and its clients purchase services and products — they do not receive SaaS tenants.
+SalesVelocity.ai is an AI-powered business operations SaaS platform. Clients purchase their own copy of the system — each client gets their own deployment with a full AI agent swarm, built-in CRM, e-commerce, marketing automation, and more. Currently running in single-tenant (Penthouse) mode for development; multi-tenancy will be re-enabled.
 
-The platform combines a ${getAgentCount()}-agent AI swarm, full CRM, e-commerce, marketing automation, voice AI, website builder, SEO tools, video generation, workflow engine, and analytics into a unified command center.
+The platform combines a ${getAgentCount()}-agent AI swarm, built-in CRM, e-commerce, marketing automation, voice AI, website builder, SEO tools, video generation, workflow engine, and analytics into a unified command center.
+
+### Pricing Model
+Pricing is **CRM slot-based** — clients pay per CRM slot (contact/deal capacity). This is the core billing unit, not feature-gating.
+
+### CRITICAL: Built-in CRM Only
+SalesVelocity.ai has its OWN built-in CRM. It does NOT integrate with, sync to, or import from external CRMs (Salesforce, HubSpot, Zoho, Pipedrive, etc.). The AI agents manage ONLY the built-in CRM. All contacts, deals, pipeline, activities, and lead scoring are native to the platform. Never suggest "connecting" or "syncing" an external CRM — the CRM IS the platform.
 
 ---
 

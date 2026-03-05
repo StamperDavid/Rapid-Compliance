@@ -120,10 +120,10 @@ export const PLATFORM_FEATURES = {
   },
   CRM_SYNC: {
     id: 'crm_sync',
-    name: 'CRM Integration',
+    name: 'Built-in CRM',
     icon: '🔄',
     category: 'integration' as const,
-    description: 'Sync with external CRM systems',
+    description: 'Built-in CRM — contacts, deals, pipeline, and activities',
     checkPath: 'integrations.crm',
   },
   CALENDAR: {
