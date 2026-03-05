@@ -11,6 +11,8 @@ import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { useEntityConfig } from '@/hooks/useEntityConfig';
 import { getEntityMetadata } from '@/lib/constants/entity-config';
 import { useAuth } from '@/hooks/useAuth';
+import SubpageNav from '@/components/ui/SubpageNav';
+import { LEADS_TABS } from '@/lib/constants/subpage-nav';
 
 // Proper type for dynamic record data
 type RecordValue = string | number | boolean | null;
@@ -536,6 +538,9 @@ export default function EntityTablePage() {
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: 'var(--color-bg-main)' }}>
+      {/* Leads hub tabs */}
+      {entityName === 'leads' && <SubpageNav items={LEADS_TABS} />}
+
       {/* Header */}
       <div style={{ backgroundColor: 'var(--color-bg-main)', borderBottom: '1px solid var(--color-border-light)' }}>
         <div style={{ maxWidth: '80rem', margin: '0 auto', padding: '1rem 2rem' }}>

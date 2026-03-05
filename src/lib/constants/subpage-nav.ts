@@ -150,14 +150,11 @@ export const SYSTEM_TABS: SubpageNavItem[] = [
   { label: 'Schemas', href: '/schemas' },
 ];
 
-// ── Leads Hub (All Leads + Intelligence + ICP + Discovery + Scoring + Scraper)
+// ── Leads Hub (All Leads + Lead Research + Scoring) ─────────────────────────
 export const LEADS_TABS: SubpageNavItem[] = [
-  { label: 'All Leads', href: '/leads' },
-  { label: 'Intelligence', href: '/leads/research' },
-  { label: 'ICP Profiles', href: '/leads/icp' },
-  { label: 'Discovery', href: '/leads/discovery' },
+  { label: 'All Leads', href: '/entities/leads' },
+  { label: 'Lead Research', href: '/leads/research' },
   { label: 'Scoring', href: '/lead-scoring' },
-  { label: 'Scraper', href: '/scraper' },
 ];
 
 // ── Deals Hub (All Deals + Risk) ───────────────────────────────────────────
