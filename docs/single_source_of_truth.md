@@ -1,7 +1,7 @@
 # SalesVelocity.ai - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** March 2, 2026 (Demo seed Part 4 — Growth, AI Workforce, Team Coaching, Playbooks, A/B Tests, Calls, Video Pipeline + nuke script updated for all 60+ collections)
+**Last Updated:** March 5, 2026 (Lead Research page consolidation — merged 4 tools into 1, fixed leads tab navigation, 13 new components, 5 new API routes)
 **Branches:** `dev` (latest)
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Architecture:** Single-Tenant Penthouse Model (development strategy — multi-tenant SaaS product)
@@ -36,12 +36,12 @@
 
 | Metric | Count | Status |
 |--------|-------|--------|
-| Physical Routes (page.tsx) | 178 | Verified March 2, 2026 (+7 Growth pages) |
-| API Endpoints (route.ts) | 329 | Verified March 2, 2026 (+11 Growth API + 3 Growth crons) |
+| Physical Routes (page.tsx) | 179 | Verified March 5, 2026 |
+| API Endpoints (route.ts) | 343 | Verified March 5, 2026 (+5 Lead Research API) |
 | AI Agents | 54 | **54 FUNCTIONAL (46 swarm + 6 standalone + 2 variants)** |
 | RBAC Roles | 4 | `owner` (level 3), `admin` (level 2), `manager` (level 1), `member` (level 0) — 4-role RBAC |
-| TypeScript Files | 1,439 | Verified March 2, 2026 |
-| Firestore Collections | 75+ | Active (+6 Growth collections) |
+| TypeScript Files | 1,512 | Verified March 5, 2026 |
+| Firestore Collections | 80+ | Active (+2 Lead Research collections) |
 
 **Architecture:** Single-tenant Penthouse Model (development strategy). SalesVelocity.ai is a multi-tenant SaaS product — clients will purchase their own deployment. Penthouse simplifies development; multi-tenancy will be re-enabled.
 
@@ -55,24 +55,24 @@
 - **Voice:** VoiceEngineFactory (ElevenLabs, Unreal Speech)
 - **Payments:** Stripe
 
-### Codebase Scale (February 27, 2026)
+### Codebase Scale (March 5, 2026)
 
 | Metric | Count |
 |--------|-------|
-| **TypeScript Files** | 1,397 |
-| **Estimated Code Lines** | ~330,000 |
-| **Test Files (Jest + Playwright)** | 97 |
+| **TypeScript Files** | 1,512 |
+| **Estimated Code Lines** | ~340,000 |
+| **Test Files (Jest + Playwright)** | 22 |
 
 **Breakdown by Directory (TypeScript):**
 
 | Directory | Files | Purpose |
 |-----------|-------|---------|
-| `src/lib/` | ~480 | Core business logic, services, agents |
-| `src/components/` | ~185 | UI components |
-| `src/app/api/` | ~298 | API routes (298 route.ts files) |
-| `src/app/(dashboard)/` | ~110 | Dashboard pages |
-| `src/types/` | ~40 | TypeScript definitions |
-| `src/hooks/` | ~15 | React hooks |
+| `src/lib/` | ~490 | Core business logic, services, agents |
+| `src/components/` | ~200 | UI components (+13 lead-research) |
+| `src/app/api/` | ~343 | API routes |
+| `src/app/(dashboard)/` | ~115 | Dashboard pages |
+| `src/types/` | ~42 | TypeScript definitions |
+| `src/hooks/` | ~22 | React hooks |
 
 ### AI Governance Layer
 
@@ -117,34 +117,32 @@ The Claude Code Governance Layer defines binding operational constraints for AI-
 ### Recent Major Milestones
 
 > All milestone details (Sessions 1-31) have been archived. Key achievements:
-> - Stripe Checkout + Social OAuth + Website Auth (Session 6)
-> - AI Social Media Command Center — 7 pages built (Session 4)
-> - Feature Completion Sprint — all dashboard UIs functional (Session 3)
-> - SalesVelocity.ai rebrand from RapidCompliance.US (Session 2)
-> - CSS Variable Theme System (100+ components)
-> - Agent Coordination Layer single-tenant refactor
-> - Nav consolidation: 13 sections → 8 (Session 25)
-> - All 36 features across 8 sprints built to production-ready (Sessions 20-24)
+> - **Lead Research consolidation** — 4 tools → 1 page, 13 components, 5 API routes, leads tab nav fixed (March 5)
+> - Growth Command Center — 6 pages, 11 API routes, 3 crons (March 2)
+> - Demo seed Part 4 — Growth, AI Workforce, Team, Playbooks (March 2)
+> - Golden Masters extended to swarm specialists (March 2)
 > - Production deployment to Vercel via main branch (Session 30)
+> - Stripe Checkout + Social OAuth + Website Auth (Session 6)
+> - Nav consolidation: 13 sections → 9 (Session 25-27)
+> - All 36 features across 8 sprints built to production-ready (Sessions 20-24)
 > - Final code readiness audit: all 13 items resolved, 123 new tests (Session 31)
 
 ---
 
-## Current Status (February 28, 2026)
+## Current Status (March 5, 2026)
 
 ### Production Readiness: ~97%
 
 | Area | Status |
 |------|--------|
 | Single-tenant architecture | **COMPLETE** — Firebase kill-switch, PLATFORM_ID constant, workspace paths eradicated (53 files migrated) |
-| 4-role RBAC | **ENFORCED** — `requireRole()` on 290/298 API routes (8 intentionally public), sidebar filtering, 47 permissions |
-| Agent hierarchy | **100% COMPLETE** — 52 agents (46 swarm + 6 standalone), all managers orchestrate all specialists |
-| Jasper delegation | **COMPLETE** — 43 tools (9 delegate_to_*, 34 utility). Mission Control SSE streaming live |
+| 4-role RBAC | **ENFORCED** — `requireRole()` on ~335/343 API routes (8 intentionally public), sidebar filtering, 47 permissions |
+| Agent hierarchy | **100% COMPLETE** — 54 agents (46 swarm + 6 standalone + 2 variants), all managers orchestrate all specialists |
+| Jasper delegation | **COMPLETE** — 53 tools (13 delegate_to_*, 40 utility). Mission Control SSE streaming live |
+| Lead Research | **COMPLETE** — Unified 3-column page with AI chat, results panel, URL sources. 5 API routes, 8-tool AI subset |
 | Type safety | **CLEAN** — `tsc --noEmit` passes, zero `any` types, zero `@ts-ignore`, zero `@ts-expect-error` |
-| Build pipeline | **CLEAN** — `npm run build` passes, `npm run lint` zero warnings, pre-commit hooks enforced |
-| Test coverage | **78 Jest test files** + **19 Playwright E2E specs**, all passing |
-| CI/CD | **6 jobs** — lint+typecheck, unit tests, Playwright, build, security audit, deploy |
-| Dashboard UI | **~80 fully functional pages** with 12-module feature toggle system |
+| Build pipeline | **CLEAN** — `npm run build` passes, `npm run lint` zero warnings, 17 eslint-disable (ratcheted) |
+| Dashboard UI | **179 pages** with 12-module feature toggle system |
 | Integrations | **26 real integrations** verified with actual API calls |
 
 ### Open Items — Launch Punch List
@@ -213,30 +211,19 @@ The Claude Code Governance Layer defines binding operational constraints for AI-
 
 ### Completed Sprints (All)
 
+> Sprints 1-17 archived. Sprints 18+ listed below.
+
 | Sprint | Summary | Date |
 |--------|---------|------|
-| **18** | Mission Control — 3-panel live delegation tracker, approval gates, history | Feb 24 |
-| **19** | Full delegation coverage — 9 `delegate_to_*` tools + blog bridge + trend research | Feb 24 |
-| **20** | AI Search Optimization — `llms.txt`, AI bot access, schema markup, monitoring | Feb 24 |
-| **21** | Website Migration Pipeline — deep scrape → blueprint → AI page gen → assemble | Feb 24 |
-| **22** | Security Hardening — webhooks fail-closed, workflow timeouts + depth limits, SMS wiring | Feb 24 |
-| **23** | Mission Control Live Stream — SSE via Firestore onSnapshot, cancel, tool detail | Feb 24 |
-| **24** | Admin SDK Migration — 64 API routes migrated, system page rewrite | Feb 25 |
-| **25** | Workspace path eradication — 53 files migrated to flat org-scoped collection helpers | Feb 27 |
-| **26** | Nav redundancy cleanup — 9 redirect pages, 3 deleted duplicates, centralized SubpageNav | Feb 27 |
-| **27** | Feature module toggle system — 12-module gating + consultative onboarding + demo seed data | Feb 27 |
-| **28** | Onboarding overhaul — 4-step flow: 15 categories → 49 niche templates, injection questions, API key setup + processOnboarding() trigger | Feb 27 |
+| **18-23** | Mission Control (live SSE, cancel, delegation), AI Search Optimization, Website Migration, Security Hardening | Feb 24 |
+| **24** | Admin SDK Migration — 64 API routes migrated | Feb 25 |
+| **25-28** | Workspace eradication, nav cleanup, feature toggles, onboarding overhaul | Feb 27 |
+| **—** | Demo seed Part 4, Growth Command Center, Golden Masters, Coaching | Mar 2 |
+| **—** | Lead Research consolidation — 4 tools → 1 page, leads tab nav fixed | Mar 5 |
 
 ### Completed Roadmaps (Archived)
 
-All roadmaps fully complete. Details in git history and `docs/archive/`:
-- Stabilization Roadmap (Tiers 1-3, 15/15 tasks)
-- Production Readiness Roadmap (Tiers 1-3, all done except Meta/LinkedIn blocked externally)
-- Social Media Growth Engine (6 phases)
-- Autonomous Business Operations (8 phases)
-- Session 25 Production Audit (28 blockers resolved)
-- Session 31 Code Readiness Audit (13 items resolved)
-- Sprint 14-15 (SEO data API + Competitor analysis)
+All roadmaps fully complete. Details in git history and `docs/archive/`.
 
 ---
 
@@ -268,7 +255,7 @@ All roadmaps fully complete. Details in git history and `docs/archive/`:
 
 ### Rule 2: Unified AI Workforce Registry
 
-**The 52 AI Agents are managed through a single global registry (src/lib/agents/agent-registry.ts), not per-user.**
+**The 54 AI Agents are managed through a single global registry (src/lib/agents/agent-registry.ts), not per-user.**
 
 | Aspect | Detail |
 |--------|--------|
@@ -296,7 +283,7 @@ Standalone: JASPER, VOICE_AGENT_HANDLER,
            AUTONOMOUS_POSTING_AGENT, CHAT_SESSION_SERVICE
 ```
 
-**Total: 46 Swarm (1 + 9 + 36) + 6 Standalone = 52 Agents**
+**Total: 46 Swarm (1 + 9 + 36) + 6 Standalone + 2 Variants = 54 Agents**
 
 **Governance:** Agents are deployed, trained, and configured at the **platform level**. The `AgentInstanceManager` (`src/lib/agent/instance-manager.ts`) creates ephemeral session instances from Golden Masters — these are temporary runtime objects, not persistent per-user registries.
 
@@ -374,36 +361,31 @@ border-color: #1a1a1a;
 
 | # | Section | Sidebar Items | Sub-pages (via SubpageNav tabs) |
 |---|---------|---------------|----------------------------------|
-| 1 | **Home** | Dashboard, Team, Performance, Onboarding | Dashboard tabs: Dashboard, Executive Briefing, Workforce HQ; Team tabs: Leaderboard, Tasks, Performance |
-| 2 | **CRM** | CRM (unified → `/crm`), Deals/Pipeline, Conversations, Living Ledger, Lead Intelligence, Coaching, Playbook, Risk | CRM page has entity tabs: leads, companies, contacts, deals, products, quotes, invoices, payments, orders, tasks; Lead Intelligence tabs: Lead Research, Lead Scoring, Marketing Scraper; Coaching tabs: My Coaching, Team Coaching, Playbook |
-| 3 | **Outreach** | Outbound (→ `/outbound/sequences`), Sequences, Campaigns, Calls, Forms, Workflows, Email Studio | Email Studio tabs: Email Writer, Nurture, Email Builder, Templates |
-| 4 | **Content** | Social Hub, Social Analytics, Video Library, Video Studio, Proposals | Social Hub tabs (layout): Command Center, Campaigns, Calendar, Approvals, Listening, Agent Rules, Playbook; Proposals tabs: Proposals, Builder |
-| 5 | **AI Workforce** | Agent Registry (→ `/workforce`), Mission Control, Training Hub, Models & Data | Training Hub tabs: AI Training, Voice, Social, SEO; Mission Control tabs (layout): Live, History; Models tabs (layout): Datasets, Fine-Tuning; AI Agent Settings tabs: Overview, Persona, Training, Business Setup, Configuration, Voice |
-| 6 | **Commerce** | Products, Orders, Storefront | — |
-| 7 | **Website** | Website, SEO | Website tabs (layout): Editor, Pages, Templates, Blog, SEO, Navigation, Settings, Audit Log; Blog sub-tabs (layout): Posts, Editor, Categories; SEO sub-tabs (layout): SEO, Competitors, Domains |
-| 8 | **Analytics** | Overview, A/B Testing | Analytics tabs (layout): Overview, Revenue, CRM Analytics (merged sales+pipeline), E-Commerce, Attribution, Workflows, Sequences, Compliance, Competitor Research |
-| 9 | **System** (owner-only) | System Health, Impersonate, Schemas | System tabs: System Health, Impersonate |
+| 1 | **Home** | Dashboard, Team | Dashboard tabs: Dashboard, Executive Briefing, Workforce HQ; Team tabs: Leaderboard, Tasks, Performance |
+| 2 | **CRM** | Leads, Contacts, Companies, Deals, Conversations | Leads tabs (layout): All Leads (`/entities/leads`), Lead Research (`/leads/research`), Scoring (`/lead-scoring`) |
+| 3 | **Outreach** | Sequences, Campaigns, Email Studio, Calls | Email Studio tabs: Email Writer, Nurture, Email Builder, Templates |
+| 4 | **Marketing** | Social Hub, Video, Proposals, Forms, Workflows | Social Hub tabs (layout): Command Center, Campaigns, Calendar, Approvals, Listening, Agent Rules, Playbook; Proposals tabs: Proposals, Builder |
+| 5 | **Commerce** | Products, Orders, Storefront | — |
+| 6 | **Website** | Website | Website tabs (layout): Editor, Pages, Templates, Blog, SEO, Navigation, Settings, Audit Log; Blog sub-tabs: Posts, Editor, Categories; SEO sub-tabs: SEO, Competitors, Domains |
+| 7 | **AI Workforce** | AI Workforce | Mission Control tabs (layout): Live, History; Training Hub tabs: AI Training, Voice, Social, SEO; Models tabs: Datasets, Fine-Tuning |
+| 8 | **Analytics & Growth** | Overview, Growth, A/B Testing | Analytics tabs (layout): Overview, Revenue, CRM Analytics, E-Commerce, Attribution, Workflows, Sequences, Compliance, Competitor Research |
+| 9 | **System** (owner-only) | System | System tabs: System Health, Impersonate |
 
-**Footer Navigation (outside main sections):**
-- **Integrations** (plug icon) → `/settings/integrations` (canonical — `/integrations` redirects here)
-- **Settings** (gear icon) → `/settings` hub page with sections: General, Users & Team, Integrations, API Keys, Theme & Branding, Security, Compliance & Admin
-- **Academy** (help icon) → `/academy`
+**Footer:** Integrations → `/settings/integrations`, Settings → `/settings`, Academy → `/academy`
 
-**SubpageNav Architecture (February 27, 2026):**
-- **Component:** `src/components/ui/SubpageNav.tsx` — Route-based tab bar using `usePathname()` from Next.js
-- **Centralized Config:** `src/lib/constants/subpage-nav.ts` — 18 tab arrays (DASHBOARD_TABS, SOCIAL_TABS, ANALYTICS_TABS, WEBSITE_TABS, WEBSITE_BLOG_TABS, WEBSITE_SEO_TABS, MISSION_CONTROL_TABS, AI_DATA_TABS, LEAD_INTEL_TABS, EMAIL_STUDIO_TABS, COACHING_TABS, TEAM_TABS, PROPOSALS_TABS, TRAINING_HUB_TABS, AI_AGENTS_SETTINGS_TABS, SYSTEM_TABS)
-- **9 layout.tsx files** render SubpageNav automatically for all child routes: social, analytics, website, website/blog, website/seo, mission-control, ai, coaching, team
-- **Cross-route pages** (outside hub prefix) import from centralized constants and render inline SubpageNav
-- **Deleted 3 duplicate pages (Feb 26):** `/marketing/ab-tests` (dup of `/ab-tests`), `/outbound/email-writer` (dup of `/email-writer`), `/identity/refine` (dup of `/settings/ai-agents/persona`)
-- **Redirected 9 redundant pages (Feb 27):** `/integrations` → `/settings/integrations`, `/ai-agents` → `/workforce`, `/settings/workflows` → `/workflows`, `/outbound` → `/email-writer`, `/leads` → `/crm?view=leads`, `/contacts` → `/crm?view=contacts`, `/social/activity` → `/social/command-center`, `/analytics/pipeline` → `/analytics/sales`, `/website/seo/ai-search` → `/website/seo`
-- **Tab cleanup (Feb 27):** Removed Activity tab from SOCIAL_TABS, removed AI Search tab from WEBSITE_SEO_TABS, merged Pipeline+Sales into single "CRM Analytics" tab in ANALYTICS_TABS
+**SubpageNav Architecture:**
+- **Component:** `src/components/ui/SubpageNav.tsx` — Route-based tab bar using `usePathname()`
+- **Centralized Config:** `src/lib/constants/subpage-nav.ts` — 21 tab arrays
+- **11 layout.tsx files** render SubpageNav automatically: social, analytics, website, website/blog, website/seo, mission-control, ai, coaching, team, growth, leads
+- **Cross-route pages** import from centralized constants and render inline SubpageNav (e.g., entities/leads page shows LEADS_TABS)
 
-**Deleted Components (Forensic Record):**
-- `CommandCenterSidebar.tsx` — Deleted January 26, 2026 (commit `f2d2497b`)
-- God Mode sidebar logic — Absorbed into unified `AdminSidebar.tsx`
-- `UnifiedSidebar.tsx` in admin context — Superseded by `AdminSidebar.tsx` for admin routes
+**Lead Research Consolidation (March 5, 2026):**
+- `/leads/icp`, `/leads/discovery`, `/scraper` → all redirect to `/leads/research`
+- `/leads` → redirects to `/entities/leads` (All Leads entity page)
+- `entities/[entityName]/page.tsx` renders LEADS_TABS when `entityName === 'leads'`
+- `leads/layout.tsx` renders LEADS_TABS for all `/leads/*` sub-routes
 
-**Previous Structure (Pre-Session 25):** 13 sections with 83 items — consolidated to 8 sections with ~32 items via competitive analysis (Close.com, HubSpot, Salesforce, GoHighLevel, Pipedrive). Refined Feb 26 with hub layout.tsx files and centralized tab config. Expanded to 9 sections (~40 items) Feb 27 to eliminate orphaned pages. Cleaned Feb 27 — redundancy audit replaced 9 duplicate pages with redirects, merged Leads/Contacts into CRM hub link, merged analytics/sales+pipeline into CRM Analytics tab (~37 sidebar items).
+**History:** 13 sections → 9 sections (Sessions 25-27). 11 layout.tsx files render SubpageNav. 21 tab arrays in centralized config. 12 pages redirect to canonical routes.
 
 **Bug Definition:** Any code that creates parallel navigation structures, reintroduces God Mode sidebars, builds shadow navigation components, or splits sidebar logic into disconnected files is a **bug**.
 
@@ -465,18 +447,18 @@ SalesVelocity.ai is a **multi-tenant SaaS product** currently running on the Pen
 
 ## Verified Live Route Map
 
-### Route Distribution (February 27, 2026)
+### Route Distribution (March 5, 2026)
 
 | Area | Routes | Dynamic Params | Status |
 |------|--------|----------------|--------|
-| Dashboard (`/(dashboard)/*`) | ~110 | 8 | **Flattened** single-tenant (incl. social, mission-control, video, settings; 9 redirects included) |
+| Dashboard (`/(dashboard)/*`) | ~115 | 8 | **Flattened** single-tenant (incl. social, mission-control, video, settings; 12 redirects included) |
 | Public (`/(public)/*`) | ~20 | 1 (`[formId]`) | Marketing + auth pages |
 | Dashboard sub-routes (`/dashboard/*`) | 16 | 0 | Analytics, coaching, marketing, performance |
 | Store (`/store/*`) | ~5 | 1 (`[productId]`) | E-commerce storefront |
 | Onboarding (`/onboarding/*`) | 4 | 0 | 4-step onboarding: industry category, niche drill-down, account creation, API key setup |
 | Auth (`/(auth)/*`) | 1 | 0 | Admin login |
 | Other (`/preview`, `/profile`, `/sites`) | 3 | 2 | Preview tokens, user profile, site builder |
-| **TOTAL** | **169** | **~11** | **Verified February 27, 2026 (filesystem count)** |
+| **TOTAL** | **179** | **~11** | **Verified March 5, 2026 (filesystem count)** |
 
 **DELETED:** `src/app/workspace/` (95 pages) and `src/app/admin/*` (92 pages) - legacy routes removed/consolidated into `(dashboard)`
 
@@ -496,7 +478,10 @@ SalesVelocity.ai is a **multi-tenant SaaS product** currently running on the Pen
 
 **CRM Entities:**
 - `/crm` (unified: leads, companies, contacts, deals, products, quotes, invoices, payments, orders, tasks via `?view=` param)
-- `/leads/new`, `/leads/[id]`, `/leads/[id]/edit`, `/leads/research`
+- `/leads/new`, `/leads/[id]`, `/leads/[id]/edit`
+- `/leads/research` (3-column Lead Research page — AI chat, results, URL sources)
+- `/leads/icp` → redirects to `/leads/research`
+- `/leads/discovery` → redirects to `/leads/research`
 - `/deals`, `/deals/new`, `/deals/[id]`, `/deals/[id]/edit`
 - `/contacts/new`, `/contacts/[id]`, `/contacts/[id]/edit`
 - `/products`, `/products/new`, `/products/[id]/edit`
@@ -524,16 +509,19 @@ SalesVelocity.ai is a **multi-tenant SaaS product** currently running on the Pen
 - `/outbound/email-writer` — duplicate of `/email-writer`
 - `/identity/refine` — duplicate of `/settings/ai-agents/persona`
 
-**Redirected Duplicates (February 27, 2026):**
-- `/integrations` → `/settings/integrations` (settings version has per-provider OAuth components)
-- `/ai-agents` → `/workforce` (workforce is superset with tier filtering + hierarchy view)
-- `/settings/workflows` → `/workflows` (canonical version with dedicated visual builder)
-- `/outbound` → `/email-writer` (was broken nav shell linking to non-existent routes)
-- `/leads` → `/crm?view=leads` (standalone page duplicated CRM leads tab)
-- `/contacts` → `/crm?view=contacts` (standalone page duplicated CRM contacts tab)
-- `/social/activity` → `/social/command-center` (command center already contains activity feed)
-- `/analytics/pipeline` → `/analytics/sales` (merged into CRM Analytics with velocity + pipeline tabs)
-- `/website/seo/ai-search` → `/website/seo` (AI bot controls already on SEO page)
+**Redirected Pages:**
+- `/integrations` → `/settings/integrations`
+- `/ai-agents` → `/workforce`
+- `/settings/workflows` → `/workflows`
+- `/outbound` → `/email-writer`
+- `/leads` → `/entities/leads` (All Leads entity page with LEADS_TABS)
+- `/contacts` → `/crm?view=contacts`
+- `/social/activity` → `/social/command-center`
+- `/analytics/pipeline` → `/analytics/sales`
+- `/website/seo/ai-search` → `/website/seo`
+- `/leads/icp` → `/leads/research` (March 5 — consolidated into Lead Research)
+- `/leads/discovery` → `/leads/research` (March 5 — consolidated into Lead Research)
+- `/scraper` → `/leads/research` (March 5 — consolidated into Lead Research)
 
 **Video:**
 - `/content/video` (Video Studio — 7-step production pipeline: Request → Decompose → Pre-Production → Approval → Generation → Assembly → Post-Production)
@@ -624,9 +612,10 @@ No open route issues. All previously identified stub pages and duplicate destina
 
 ### Agent Swarm Overview
 
-**Total Agents:** 52 (46 swarm + 6 standalone)
+**Total Agents:** 54 (46 swarm + 6 standalone + 2 Growth Analyst variants)
 - **Swarm Agents:** 46 (1 orchestrator + 9 managers + 36 specialists)
 - **Standalone Agents:** 6 (outside swarm hierarchy)
+- **Variants:** 2 (Growth Analyst sub-specializations)
 
 | Status | Count | Description |
 |--------|-------|-------------|
@@ -755,7 +744,7 @@ These agents operate independently of the L1/L2/L3 swarm hierarchy:
 
 | Agent | Type | Path | Status | Description |
 |-------|------|------|--------|-------------|
-| Jasper | Internal AI Assistant & Swarm Commander | Firestore `goldenMasters/` + `src/lib/orchestrator/jasper-tools.ts` | FUNCTIONAL | Jasper — the founder's internal AI assistant and swarm commander. **43 tools** across delegation, intelligence, content, and platform categories. Delegates to all 9 domain managers via `delegate_to_*` tools. Does NOT handle customer-facing sales (that's the AI Chat Sales Agent). Relays Growth Strategist briefings. |
+| Jasper | Internal AI Assistant & Swarm Commander | Firestore `goldenMasters/` + `src/lib/orchestrator/jasper-tools.ts` | FUNCTIONAL | Jasper — the founder's internal AI assistant and swarm commander. **53 tools** across delegation, intelligence, content, and platform categories. Delegates to all 9 domain managers via `delegate_to_*` tools. Does NOT handle customer-facing sales (that's the AI Chat Sales Agent). Relays Growth Strategist briefings. |
 | AI Chat Sales Agent | Customer-Facing Sales Agent | `src/lib/agents/sales-chat/specialist.ts` | FUNCTIONAL | Customer-facing AI sales agent for website chat widget and Facebook Messenger. Sells SalesVelocity.ai as a **multi-tenant SaaS subscription**. Uses its own Golden Master separate from Jasper. Setup: `scripts/setup-sales-agent-golden-master.js`. Routes: `/api/chat/public`, `/api/chat/facebook`. |
 | Growth Strategist | Chief Growth Officer | `src/lib/agents/growth-strategist/specialist.ts` | FUNCTIONAL | Cross-domain business intelligence agent. Aggregates data from all analytics sources (revenue, SEO, social, email, pipeline). Produces strategic directives for domain managers. Briefings accessible through Jasper. Data aggregator: `src/lib/agents/growth-strategist/data-aggregator.ts`. |
 | Voice Agent Handler | Voice AI Agent | `src/lib/voice/voice-agent-handler.ts` | FUNCTIONAL | Hybrid AI/human voice agent with two modes: **Prospector** (lead qualification) and **Closer** (deal closing with warm transfer). API routes: `src/app/api/voice/ai-agent/` |
@@ -1086,12 +1075,12 @@ const res = await authFetch('/api/some-endpoint');
 
 ### API Route Protection Summary
 
-**Audit Date:** February 27, 2026
-**Total Routes:** 298
+**Audit Date:** March 5, 2026
+**Total Routes:** 343
 
 | Protection Type | Count | Details |
 |----------------|-------|---------|
-| Auth-protected (any method) | ~290 | `requireAuth`, `requireRole`, `verifyAdminRequest`, manual `verifyIdToken` |
+| Auth-protected (any method) | ~335 | `requireAuth`, `requireRole`, `verifyAdminRequest`, manual `verifyIdToken` |
 | Intentionally public | ~8 | Public contact/forms, health check, booking, public chat, email tracking pixels |
 | Webhook endpoints | varies | Signature-verified (Stripe, SendGrid, Gmail, SMS) — not token-based |
 
@@ -1188,7 +1177,7 @@ This script:
 
 ## Tooling Inventory
 
-### API Routes (312 Total — Verified March 2, 2026)
+### API Routes (343 Total — Verified March 5, 2026)
 
 | Category | Count | Path Pattern | Status |
 |----------|-------|--------------|--------|
@@ -1207,7 +1196,8 @@ This script:
 | Health | 2 | `/api/health/*` | Functional |
 | Integrations | 18 | `/api/integrations/*` | Functional |
 | Lead Scoring | 3 | `/api/lead-scoring/*` | Functional |
-| Leads | 3 | `/api/leads/*` | Functional |
+| Leads | 3 | `/api/leads/*` (icp, discovery, feedback) | Functional |
+| Lead Research | 6 | `/api/leads/research/*` (chat, url-sources, schedule, schedule/run, export, root) | Functional (NEW March 5) |
 | Learning | 2 | `/api/learning/*` | Partial |
 | Meetings | 1 | `/api/meetings/*` | Functional |
 | Onboarding | 1 | `/api/onboarding/*` | Functional |
@@ -1224,7 +1214,7 @@ This script:
 | Settings | 1 | `/api/settings/webhooks` | Functional (NEW Feb 12) |
 | Social | 15 | `/api/social/*` | Functional (EXPANDED Feb 13 — added agent-status, activity, OAuth auth/callback, accounts verify) |
 | Team | 1 | `/api/team/tasks/[taskId]` | Functional (NEW Feb 12) |
-| Other | ~125 | Various | Mixed |
+| Other | ~120 | Various | Mixed |
 
 ### Key API Endpoints
 
@@ -1304,6 +1294,22 @@ This script:
 | `/api/cron/growth-keyword-tracker` | GET | Daily keyword ranking check (5AM UTC) | FUNCTIONAL |
 | `/api/cron/growth-competitor-monitor` | GET | Weekly competitor scan (Mon 3AM UTC) | FUNCTIONAL |
 | `/api/cron/growth-ai-visibility` | GET | Weekly AI visibility sweep (Wed 4AM UTC) | FUNCTIONAL |
+
+#### Lead Research (NEW March 5)
+
+| Endpoint | Method | Purpose | Status |
+|----------|--------|---------|--------|
+| `/api/leads/research/chat` | POST | AI chat with 8-tool lead research subset (Claude 3.5 Sonnet via OpenRouter) | FUNCTIONAL |
+| `/api/leads/research/url-sources` | GET/POST/DELETE | CRUD for URL sources to scrape for business intelligence | FUNCTIONAL |
+| `/api/leads/research/schedule` | GET/PUT | Research schedule config (frequency, auto-approve threshold) | FUNCTIONAL |
+| `/api/leads/research/schedule/run` | POST | Manually trigger discovery batch using active ICP profile | FUNCTIONAL |
+| `/api/leads/research/export` | GET | CSV export of batch results with field selection and status filtering | FUNCTIONAL |
+
+**Lead Research Tools (8-tool subset):** `scan_leads`, `enrich_lead`, `score_leads`, `scrape_website`, `research_competitors`, `scan_tech_stack` (from Jasper) + `update_icp_profile`, `add_url_source` (new). Defined in `src/lib/orchestrator/lead-research-tools.ts`.
+
+**Components (13):** `LeadResearchPage`, `ResearchChatPanel`, `ChatMessageList`, `ChatMessage`, `ChatInput`, `IcpSummaryBadge`, `ResearchControls`, `ResultsPanel`, `ResultCard`, `ResultsBulkActionBar`, `UrlSourcesPanel`, `UrlSourceItem`, `IcpSettingsDrawer` — all in `src/components/lead-research/`.
+
+**Hook:** `src/hooks/useLeadResearch.ts` — centralized state for chat, ICP profiles, batches, results, URL sources, schedule, field selections, CSV export.
 
 #### Website Migration Pipeline (NEW Sprint 21)
 
@@ -1758,10 +1764,12 @@ organizations/{PLATFORM_ID}/
 ├── growthStrategies/         # 3-tier growth strategies (Aggressive/Competitive/Scrappy) (NEW March 2)
 ├── growthAiVisibility/       # AI search visibility check results (NEW March 2)
 ├── growthActivityLog/        # Activity feed events for Growth Command Center (NEW March 2)
+├── lead-research-url-sources/ # URL sources for Lead Research page (NEW March 5)
+├── lead-research-config/     # Lead Research schedule config (NEW March 5)
 └── provisionerLogs/          # Provisioning logs
 ```
 
-### Total: 75+ Collections
+### Total: 80+ Collections
 
 ---
 
@@ -1796,7 +1804,7 @@ The build pipeline now enforces **mandatory TypeScript type-checking** as a non-
 - **One organization:** `rapid-compliance-root` is the only org in the system (Rule 1)
 - All Firestore data scoped to `organizations/rapid-compliance-root/` or flat root collections (Rule 5)
 - Feature visibility configurable at the platform level
-- All 52 AI agents operate under the single org identity (Rule 2)
+- All 54 AI agents operate under the single org identity (Rule 2)
 - `DEFAULT_ORG_ID` constant used by all service classes — no dynamic org resolution
 - All service classes use `PLATFORM_ID` constant directly — no dynamic org parameters
 
@@ -1811,76 +1819,18 @@ The middleware (`src/middleware.ts`) uses **Role-Based Segment Routing**:
 
 ### Sidebar Architecture
 
-**Forensic Investigation Completed:** January 26, 2026
-**Legacy Client UI Restored:** January 27, 2026 (1/25/2026 Baseline)
-**Dynamic Theming Enabled:** January 27, 2026 - Hardcoded hex colors replaced with CSS variables
-**Nav Consolidation:** February 26, 2026 - 9 hub layout.tsx files, centralized SubpageNav config, 3 duplicate pages deleted, 5 new sidebar items + footer Integrations link
-**Orphaned Page Consolidation:** February 27, 2026 - Added SEO direct link, Performance, Onboarding, Playbook, System section (owner-only with System Health, Impersonate, Schemas). 6 new tab arrays (Proposals, Training Hub, AI Agent Settings, System). All 168 pages now reachable via navigation.
+> See [Rule 4: Navigation Hierarchy](#rule-4-navigation-hierarchy--consolidated-sidebar) for the authoritative 9-section navigation structure with all sidebar items and SubpageNav tab definitions.
 
-> **IMPORTANT:** The sidebar was consolidated from 13 sections (~83 items) to 9 sections (~40 items). Sub-pages are accessed via `SubpageNav` tab bars rendered by 9 hub layout.tsx files + inline imports from `src/lib/constants/subpage-nav.ts`.
-> Settings and Academy in sidebar footer icons. Integrations added as footer icon (Feb 26).
-> System section (owner-only) added to dashboard sidebar (Feb 27) with System Health, Impersonate, and Schemas.
+#### Key Components
 
-#### Current Implementation (SINGLE-TENANT ARCHITECTURE)
+| Component | Location | Status |
+|-----------|----------|--------|
+| **AdminSidebar** | `src/components/admin/AdminSidebar.tsx` | 9 sections + footer |
+| **SubpageNav** | `src/components/ui/SubpageNav.tsx` | 11 layouts, 21 tab arrays |
+| **UnifiedSidebar** | `src/components/dashboard/UnifiedSidebar.tsx` | Admin routes only |
+| **Tab Config** | `src/lib/constants/subpage-nav.ts` | Centralized tab definitions |
 
-| Component | Location | Used By | Status |
-|-----------|----------|---------|--------|
-| **Dashboard Layout** | `src/app/(dashboard)/layout.tsx` | Dashboard Routes | ACTIVE |
-| **AdminSidebar** | `src/components/admin/AdminSidebar.tsx` | Dashboard Layout | ACTIVE - 9 sections + footer (updated Feb 27: +System section, +SEO, +Performance, +Onboarding, +Playbook) |
-| **SubpageNav** | `src/components/ui/SubpageNav.tsx` | 9 layouts + ~17 cross-route pages | ACTIVE - Route-based tab navigation, 18 tab arrays in `subpage-nav.ts` |
-| **UnifiedSidebar** | `src/components/dashboard/UnifiedSidebar.tsx` | Admin Layout | ACTIVE - Uses `getNavigationForRole()` |
-| **Navigation Config** | `src/components/dashboard/navigation-config.ts` | UnifiedSidebar | ACTIVE - Hard-gated System section |
-
-> **Note:** All dashboard routes use the `/(dashboard)/` layout with `PLATFORM_ID`.
-
-#### Navigation Architecture
-
-**Dashboard Routes (`/(dashboard)/*`):**
-- Uses `AdminSidebar.tsx` with 9 consolidated sections
-- Hub pages use `SubpageNav` component for tab navigation to sub-pages
-- Settings and Academy accessible via footer icons
-- Dark theme with Lucide icons and CSS variable theming
-
-**Admin Routes (`/admin/*`):**
-- Uses UnifiedSidebar component
-- Navigation from `getNavigationForRole()` in navigation-config.ts
-- Hard-gated System section for superadmin only
-
-#### Dashboard Navigation Structure (9 Sections + Footer)
-
-Users see 9 sidebar sections with sub-pages accessible via SubpageNav tab bars (rendered via layout.tsx or inline):
-
-1. **Home** - Dashboard (tabs: Executive Briefing, Workforce HQ), Team (tabs: Leaderboard, Tasks, Performance), Performance, Onboarding
-2. **CRM** - Leads, Deals/Pipeline, Contacts, Conversations, Living Ledger, Lead Intelligence (tabs: Lead Research, Lead Scoring, Marketing Scraper), Coaching (tabs: My Coaching, Team Coaching, Playbook), Playbook, Risk
-3. **Outreach** - Outbound, Sequences, Campaigns, Calls, Forms, Workflows, Email Studio (tabs: Email Writer, Nurture, Email Builder, Templates)
-4. **Content** - Social Hub (tabs via layout: Command Center, Campaigns, Calendar, Approvals, Listening, Activity, Agent Rules, Playbook), Social Analytics, Video Library, Video Studio, Proposals (tabs: Proposals, Builder)
-5. **AI Workforce** - Agent Registry, Mission Control (tabs: Live, History), Training Hub (tabs: AI Training, Voice, Social, SEO), Models & Data (tabs via layout: Datasets, Fine-Tuning)
-6. **Commerce** - Products, Orders, Storefront
-7. **Website** - Website (tabs via layout: Editor, Pages, Templates, Blog, SEO, Navigation, Settings, Audit Log; Blog sub-tabs: Posts, Editor, Categories; SEO sub-tabs: SEO, AI Search, Competitors, Domains), SEO (direct sidebar link)
-8. **Analytics** - Overview (tabs via layout: Overview, Revenue, Pipeline, Sales, E-Commerce, Attribution, Workflows, Sequences, Compliance, Competitor Research), A/B Testing
-9. **System** (owner-only) - System Health, Impersonate, Schemas
-
-**Footer:**
-- Integrations → `/integrations`
-- Settings → `/settings` hub (General, Users & Team, Integrations, API Keys, Theme & Branding, Security, Compliance & Admin)
-- Academy → `/academy`
-
-#### Platform Admin Tools (HARD-GATED)
-
-Admin users access the `/admin/*` route tree with the System section:
-
-- **System** (admin ONLY) - System Overview, Organizations, All Users, Feature Flags, Audit Logs, System Settings
-
-**Note:** A dashboard-level System section (owner-only) was added Feb 27 with System Health, Impersonate, and Schemas. The `/admin/*` route tree retains its own hard-gated System section via `getNavigationForRole()` for admin-specific tools.
-
-#### Route Pattern (Single-Tenant)
-
-- **Dashboard Routes:** `/(dashboard)/*` (11 operational sections, flattened)
-- **Admin Routes:** `/admin/*` (System section)
-- **Sites Routes:** `/sites/*` (uses PLATFORM_ID internally)
-- **Store Routes:** `/store/*` (uses PLATFORM_ID internally)
-
-> Admin navigation context, impersonation flow, and admin org views are fully implemented. See `src/app/admin/layout.tsx` and `src/components/dashboard/navigation-config.ts` for details.
+**Route groups:** `/(dashboard)/*` (main app), `/admin/*` (platform admin), `/sites/*`, `/store/*` — all use `PLATFORM_ID` internally.
 
 ### Theme Architecture
 
@@ -2099,6 +2049,6 @@ See `docs/archive/legacy/README.md` for full archive index.
 **END OF SINGLE SOURCE OF TRUTH**
 
 *Document generated by Claude Code multi-agent audit - January 26, 2026*
-*Last updated: March 2, 2026 — Removed ~1000 lines of agent orchestration internals, fixed SaaS/penthouse language, updated metrics (171 routes, 315 API, 1439 files, 54 agents), corrected RBAC role type*
+*Last updated: March 5, 2026 — Lead Research consolidation (4 tools → 1 page), updated metrics (179 routes, 343 API, 1512 files, 54 agents), trimmed redundant navigation descriptions, updated sidebar/route/collection info*
 
 > Session changelogs, launch gap analysis, and completed roadmap details archived in `docs/archive/`.
