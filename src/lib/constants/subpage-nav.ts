@@ -150,10 +150,12 @@ export const SYSTEM_TABS: SubpageNavItem[] = [
   { label: 'Schemas', href: '/schemas' },
 ];
 
-// ── Leads Hub (All Leads + Intelligence + Scoring + Scraper) ────────────────
+// ── Leads Hub (All Leads + Intelligence + ICP + Discovery + Scoring + Scraper)
 export const LEADS_TABS: SubpageNavItem[] = [
   { label: 'All Leads', href: '/leads' },
   { label: 'Intelligence', href: '/leads/research' },
+  { label: 'ICP Profiles', href: '/leads/icp' },
+  { label: 'Discovery', href: '/leads/discovery' },
   { label: 'Scoring', href: '/lead-scoring' },
   { label: 'Scraper', href: '/scraper' },
 ];

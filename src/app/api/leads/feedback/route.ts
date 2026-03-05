@@ -19,6 +19,7 @@ const leadFeedbackSchema = z.object({
   leadDomain: z.string().min(1),
   isGoodLead: z.boolean(),
   timestamp: z.string().optional(),
+  icpProfileId: z.string().optional(),
 });
 
 export async function POST(request: NextRequest) {
@@ -40,7 +41,7 @@ export async function POST(request: NextRequest) {
       return errors.badRequest('Missing required fields');
     }
 
-    const { leadDomain, isGoodLead, timestamp } = validation.data;
+    const { leadDomain, isGoodLead, timestamp, icpProfileId } = validation.data;
 
     // Store feedback in Firestore
     const feedbackId = `feedback_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -52,11 +53,37 @@ export async function POST(request: NextRequest) {
         isGoodLead,
         timestamp: timestamp ? new Date(timestamp).toISOString() : new Date().toISOString(),
         createdAt: new Date().toISOString(),
+        ...(icpProfileId && { icpProfileId }),
       },
       false
     );
 
-    logger.info('Lead feedback saved', { route: '/api/leads/feedback', leadDomain, isGoodLead });
+    // Update ICP profile feedback stats + example companies if linked
+    if (icpProfileId) {
+      try {
+        const { getIcpProfile, updateIcpProfile } = await import('@/lib/services/icp-profile-service');
+        const profile = await getIcpProfile(icpProfileId);
+        if (profile) {
+          const stats = profile.feedbackStats ?? { positiveCount: 0, negativeCount: 0 };
+          const examples = profile.exampleCompanies ?? [];
+          const alreadyExists = examples.some(ex => ex.domain === leadDomain);
+
+          await updateIcpProfile(icpProfileId, {
+            feedbackStats: {
+              positiveCount: stats.positiveCount + (isGoodLead ? 1 : 0),
+              negativeCount: stats.negativeCount + (isGoodLead ? 0 : 1),
+            },
+            ...(!alreadyExists && {
+              exampleCompanies: [...examples, { domain: leadDomain, isPositive: isGoodLead }],
+            }),
+          });
+        }
+      } catch (icpError) {
+        logger.warn('Failed to update ICP profile feedback', { icpProfileId, error: icpError instanceof Error ? icpError.message : String(icpError) });
+      }
+    }
+
+    logger.info('Lead feedback saved', { route: '/api/leads/feedback', leadDomain, isGoodLead, icpProfileId });
 
     return NextResponse.json({ success: true });
   } catch (error: unknown) {

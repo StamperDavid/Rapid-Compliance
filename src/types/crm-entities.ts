@@ -336,6 +336,34 @@ export interface DealFilters {
 // ============================================================================
 
 /**
+ * How the lead was originally sourced
+ */
+export type LeadSource =
+  | 'website-scraper'
+  | 'linkedin-scraper'
+  | 'google-search'
+  | 'news-api'
+  | 'crunchbase'
+  | 'form-submission'
+  | 'manual-entry'
+  | 'import-csv'
+  | 'referral'
+  | 'advertisement'
+  | 'social-media'
+  | 'api-integration';
+
+/**
+ * High-level acquisition method for filtering
+ */
+export type LeadAcquisitionMethod =
+  | 'scraped'
+  | 'imported'
+  | 'manual'
+  | 'form'
+  | 'referral'
+  | 'api';
+
+/**
  * Lead status in the qualification process
  */
 export type LeadStatus =
@@ -385,9 +413,18 @@ export interface Lead {
 
   // Lead management
   status: LeadStatus;
-  score?: number; // 0-100 lead score
+  score?: number; // 0-100 behavioral lead score
   source?: string;
   ownerId?: string;
+
+  // Acquisition tracking
+  acquisitionMethod?: LeadAcquisitionMethod;
+  icpScore?: number; // 0-100 ICP fit score (separate from behavioral score)
+  icpProfileId?: string;
+  campaignId?: string;
+  discoveryBatchId?: string;
+  approvedAt?: FirestoreDate;
+  approvedBy?: string;
 
   // Attribution tracking
   formId?: string;
@@ -424,6 +461,7 @@ export interface LeadFilters {
   tags?: string[];
   minScore?: number;
   maxScore?: number;
+  acquisitionMethod?: LeadAcquisitionMethod;
 }
 
 // ============================================================================

@@ -240,19 +240,19 @@ function scoreFirmographics(lead: Lead): number {
 
     const enrichment = lead.enrichmentData;
 
-    // Company size
-    if (enrichment.companySize) {
-      if (enrichment.companySize >= 100) {score += 20;}
-      else if (enrichment.companySize >= 50) {score += 15;}
-      else if (enrichment.companySize >= 10) {score += 10;}
-      else {score += 5;}
-    }
+    // Company size (use employeeCount if available, otherwise map companySize category)
+    const empCount = enrichment.employeeCount ?? 0;
+    if (empCount >= 100) {score += 20;}
+    else if (empCount >= 50) {score += 15;}
+    else if (empCount >= 10) {score += 10;}
+    else if (enrichment.companySize && enrichment.companySize !== 'unknown') {score += 5;}
 
-    // Revenue
+    // Revenue (string like "$10M" or "10000000")
     if (enrichment.revenue) {
-      if (enrichment.revenue >= 10000000) {score += 20;}
-      else if (enrichment.revenue >= 1000000) {score += 15;}
-      else if (enrichment.revenue >= 100000) {score += 10;}
+      const revNum = typeof enrichment.revenue === 'string' ? parseFloat(enrichment.revenue.replace(/[^0-9.]/g, '')) : 0;
+      if (revNum >= 10000000) {score += 20;}
+      else if (revNum >= 1000000) {score += 15;}
+      else if (revNum >= 100000) {score += 10;}
     }
 
     // Industry (would have industry-specific scoring in production)

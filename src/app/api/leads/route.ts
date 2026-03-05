@@ -26,6 +26,12 @@ const leadDataSchema = z.object({
   tags: z.array(z.string()).optional(),
   notes: z.string().optional(),
   customFields: z.record(z.unknown()).optional(),
+  enrichmentData: z.record(z.unknown()).optional(),
+  acquisitionMethod: z.enum(['scraped', 'imported', 'manual', 'form', 'referral', 'api']).optional(),
+  icpScore: z.number().min(0).max(100).optional(),
+  icpProfileId: z.string().optional(),
+  campaignId: z.string().optional(),
+  discoveryBatchId: z.string().optional(),
 });
 
 const postBodySchema = z.object({
@@ -59,7 +65,7 @@ export async function GET(
     }
 
     const { status, pageSize } = queryResult.data;
-    const filters = status && status !== 'all' ? { status } : undefined;
+    const filters = status && status !== 'all' ? { status: status as Lead['status'] } : undefined;
     const pagination = { pageSize };
 
     const result = await getLeads(filters, pagination);
@@ -108,7 +114,13 @@ export async function POST(
       source: leadData.source,
       ownerId: leadData.ownerId,
       tags: leadData.tags,
-      customFields: leadData.customFields,
+      customFields: leadData.customFields as Lead['customFields'],
+      ...(leadData.enrichmentData && { enrichmentData: leadData.enrichmentData as Lead['enrichmentData'] }),
+      ...(leadData.acquisitionMethod && { acquisitionMethod: leadData.acquisitionMethod }),
+      ...(leadData.icpScore !== undefined && { icpScore: leadData.icpScore }),
+      ...(leadData.icpProfileId && { icpProfileId: leadData.icpProfileId }),
+      ...(leadData.campaignId && { campaignId: leadData.campaignId }),
+      ...(leadData.discoveryBatchId && { discoveryBatchId: leadData.discoveryBatchId }),
     };
     const result = await createLead(leadInput);
 

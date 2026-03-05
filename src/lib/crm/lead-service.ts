@@ -5,52 +5,13 @@
  */
 
 import { FirestoreService } from '@/lib/db/firestore-service';
-import { where, orderBy, type QueryConstraint, type QueryDocumentSnapshot, type Timestamp } from 'firebase/firestore';
+import { where, orderBy, type QueryConstraint, type QueryDocumentSnapshot } from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
 import { getSubCollection } from '@/lib/firebase/collections';
+import type { Lead, LeadFilters, EnrichmentData } from '@/types/crm-entities';
 
-export interface EnrichmentData {
-  linkedInUrl?: string;
-  title?: string;
-  companySize?: number;
-  industry?: string;
-  revenue?: number;
-  [key: string]: unknown;
-}
-
-export interface Lead {
-  id: string;
-  firstName: string;
-  lastName: string;
-  name?: string;
-  email: string;
-  phone?: string;
-  company?: string;
-  companyName?: string;
-  title?: string;
-  source?: string;
-  status: 'new' | 'contacted' | 'qualified' | 'converted' | 'lost';
-  score?: number;
-  ownerId?: string;
-  formId?: string;
-  formSubmissionId?: string;
-  utmSource?: string;
-  utmMedium?: string;
-  utmCampaign?: string;
-  tags?: string[];
-  customFields?: Record<string, unknown>;
-  enrichmentData?: EnrichmentData;
-  createdAt: Date | Timestamp;
-  updatedAt?: Date | Timestamp;
-}
-
-export interface LeadFilters {
-  status?: string;
-  score?: { min?: number; max?: number };
-  source?: string;
-  ownerId?: string;
-  tags?: string[];
-}
+// Re-export for backward compatibility
+export type { Lead, LeadFilters, EnrichmentData } from '@/types/crm-entities';
 
 export interface PaginationOptions {
   pageSize?: number;
@@ -85,6 +46,10 @@ export async function getLeads(
 
     if (filters?.ownerId) {
       constraints.push(where('ownerId', '==', filters.ownerId));
+    }
+
+    if (filters?.acquisitionMethod) {
+      constraints.push(where('acquisitionMethod', '==', filters.acquisitionMethod));
     }
 
     // Default ordering
@@ -227,6 +192,19 @@ export async function createLead(
       source: lead.source,
       enriched: !!enrichmentData,
     });
+
+    // Run auto-segmentation (fire-and-forget — don't block lead creation)
+    void (async () => {
+      try {
+        const { evaluateSegmentation, applySegmentationActions } = await import('@/lib/services/lead-segmentation-service');
+        const actions = await evaluateSegmentation(lead);
+        if (actions.length > 0) {
+          await applySegmentationActions(leadId, actions);
+        }
+      } catch (segError) {
+        logger.warn('Auto-segmentation failed', { leadId, error: segError instanceof Error ? segError.message : String(segError) });
+      }
+    })();
 
     return lead;
   } catch (error) {
@@ -404,14 +382,19 @@ function calculateEnrichedScore(lead: Lead, enrichmentData: EnrichmentData | nul
       score += 5;
     }
   }
-  if (enrichmentData.companySize && typeof enrichmentData.companySize === 'number' && enrichmentData.companySize > 50) {
+  if (enrichmentData.employeeCount && typeof enrichmentData.employeeCount === 'number' && enrichmentData.employeeCount > 50) {
     score += 5;
+  } else if (enrichmentData.companySize && enrichmentData.companySize !== 'unknown') {
+    score += 3;
   }
   if (enrichmentData.industry) {
     score += 5;
   }
-  if (enrichmentData.revenue && typeof enrichmentData.revenue === 'number' && enrichmentData.revenue > 1000000) {
-    score += 10;
+  if (enrichmentData.revenue) {
+    const revenueNum = typeof enrichmentData.revenue === 'string' ? parseFloat(enrichmentData.revenue.replace(/[^0-9.]/g, '')) : 0;
+    if (revenueNum > 1000000) {
+      score += 10;
+    }
   }
 
   return Math.min(score, 100); // Cap at 100

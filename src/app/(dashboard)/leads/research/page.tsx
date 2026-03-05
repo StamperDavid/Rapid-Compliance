@@ -25,7 +25,8 @@ import {
   Bot,
   User,
   Plus,
-  Globe
+  Globe,
+  Check
 } from 'lucide-react';
 
 interface Message {
@@ -71,6 +72,8 @@ export default function LeadResearchPage() {
 
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [addedLeads, setAddedLeads] = useState<Set<string>>(new Set());
+  const [addingLead, setAddingLead] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -181,6 +184,53 @@ export default function LeadResearchPage() {
       });
     } catch (error: unknown) {
       logger.error('Failed to save feedback:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
+    }
+  };
+
+  const handleAddToCRM = async (lead: LeadResult) => {
+    if (addedLeads.has(lead.domain) || addingLead === lead.domain) {return;}
+
+    setAddingLead(lead.domain);
+    try {
+      const response = await authFetch('/api/leads', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          leadData: {
+            firstName: lead.name,
+            lastName: '',
+            email: `info@${lead.domain}`,
+            company: lead.name,
+            source: 'website-scraper',
+            acquisitionMethod: 'scraped',
+            enrichmentData: {
+              companyName: lead.name,
+              website: lead.website,
+              domain: lead.domain,
+              industry: lead.industry,
+              description: lead.description,
+              companySize: lead.size?.toLowerCase().includes('startup') ? 'startup'
+                : lead.size?.toLowerCase().includes('enterprise') ? 'enterprise'
+                : lead.size?.toLowerCase().includes('small') ? 'small'
+                : lead.size?.toLowerCase().includes('medium') ? 'medium'
+                : 'unknown' as const,
+              confidence: lead.confidence / 100,
+              dataSource: 'web-scrape' as const,
+              lastEnriched: new Date().toISOString(),
+            },
+          },
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to add lead');
+      }
+
+      setAddedLeads(prev => new Set(prev).add(lead.domain));
+    } catch (error) {
+      logger.error('Failed to add lead to CRM', error instanceof Error ? error : new Error(String(error)), { domain: lead.domain });
+    } finally {
+      setAddingLead(null);
     }
   };
 
@@ -381,10 +431,30 @@ export default function LeadResearchPage() {
                             Not Relevant
                           </button>
                           <button
-                            className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-primary to-secondary hover:from-primary-light hover:to-secondary-light text-white rounded-lg text-sm font-medium transition-all"
+                            onClick={() => void handleAddToCRM(lead)}
+                            disabled={addedLeads.has(lead.domain) || addingLead === lead.domain}
+                            className={`inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                              addedLeads.has(lead.domain)
+                                ? 'bg-green-600/20 text-green-400 border border-green-500/30 cursor-default'
+                                : 'bg-gradient-to-r from-primary to-secondary hover:from-primary-light hover:to-secondary-light text-white'
+                            }`}
                           >
-                            <Plus className="w-4 h-4" />
-                            Add to CRM
+                            {addedLeads.has(lead.domain) ? (
+                              <>
+                                <Check className="w-4 h-4" />
+                                Added
+                              </>
+                            ) : addingLead === lead.domain ? (
+                              <>
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                                Adding...
+                              </>
+                            ) : (
+                              <>
+                                <Plus className="w-4 h-4" />
+                                Add to CRM
+                              </>
+                            )}
                           </button>
                         </div>
                       </motion.div>

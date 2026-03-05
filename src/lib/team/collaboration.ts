@@ -22,7 +22,7 @@ interface FirestoreTimestamp {
   toDate(): Date;
 }
 
-type FirestoreDateField = Date | FirestoreTimestamp | string | number;
+type FirestoreDateField = Date | FirestoreTimestamp | string | number | null;
 
 interface HasCreatedAt {
   createdAt?: FirestoreDateField;
