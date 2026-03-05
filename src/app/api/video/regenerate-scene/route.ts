@@ -10,13 +10,14 @@ export const dynamic = 'force-dynamic';
 const RegenerateSchema = z.object({
   projectId: z.string().min(1),
   sceneId: z.string().min(1),
-  scriptText: z.string().min(1),
+  scriptText: z.string().default(''), // Empty for B-roll scenes
   screenshotUrl: z.string().nullable().default(null),
-  avatarId: z.string().min(1),
-  voiceId: z.string().min(1),
+  avatarId: z.string().default(''), // Empty for non-HeyGen scenes
+  voiceId: z.string().default(''), // Empty for non-HeyGen scenes
   aspectRatio: z.enum(['16:9', '9:16', '1:1', '4:3']).default('16:9'),
   duration: z.number().default(15),
   engine: z.enum(['heygen', 'runway', 'sora', 'kling', 'luma']).nullable().default(null),
+  backgroundPrompt: z.string().nullable().default(null),
 });
 
 export async function POST(request: NextRequest) {
@@ -41,13 +42,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { projectId, sceneId, scriptText, screenshotUrl, avatarId, voiceId, aspectRatio, duration, engine } = parseResult.data;
+    const { projectId, sceneId, scriptText, screenshotUrl, avatarId, voiceId, aspectRatio, duration, engine, backgroundPrompt } = parseResult.data;
 
     logger.info('Regenerating scene', {
       projectId,
       sceneId,
-      avatarId,
-      voiceId,
+      avatarId: avatarId ? avatarId.slice(0, 8) : '(none)',
+      voiceId: voiceId ? voiceId.slice(0, 8) : '(none)',
+      engine,
       aspectRatio,
       file: 'regenerate-scene/route.ts',
     });
@@ -62,7 +64,7 @@ export async function POST(request: NextRequest) {
       voiceId: null,
       duration,
       engine: engine ?? null,
-      backgroundPrompt: null,
+      backgroundPrompt,
       status: 'approved' as const,
     };
 

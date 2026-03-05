@@ -55,9 +55,10 @@ export function StepPostProduction() {
           sceneId,
           scriptText: scene.scriptText,
           screenshotUrl: scene.screenshotUrl,
-          avatarId,
-          voiceId,
+          avatarId: avatarId ?? '',
+          voiceId: voiceId ?? '',
           aspectRatio: brief.aspectRatio,
+          backgroundPrompt: scene.backgroundPrompt ?? null,
           duration: scene.duration,
         }),
       });

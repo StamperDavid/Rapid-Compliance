@@ -274,11 +274,12 @@ export function StepGeneration() {
           sceneId,
           scriptText: scene.scriptText,
           screenshotUrl: scene.screenshotUrl,
-          avatarId,
-          voiceId,
+          avatarId: avatarId ?? '',
+          voiceId: voiceId ?? '',
           aspectRatio: brief.aspectRatio,
           duration: scene.duration,
           engine: scene.engine,
+          backgroundPrompt: scene.backgroundPrompt ?? null,
         }),
       });
 
