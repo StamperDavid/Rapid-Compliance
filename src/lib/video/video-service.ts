@@ -215,7 +215,8 @@ export async function getVideoStatus(
   videoId: string,
   provider?: VideoProvider
 ): Promise<VideoGenerationResponse> {
-  await logVideoInterest('get_video_status');
+  // NOTE: logVideoInterest removed — polling calls this every 5s per scene,
+  // writing to Firestore on each poll was wasteful and slowed down status checks.
 
   // Determine provider from videoId or use provided provider
   let detectedProvider = provider;

@@ -3,13 +3,22 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { motion } from 'framer-motion';
-import { Zap, ArrowRight, Loader2, CheckCircle2 } from 'lucide-react';
+import { Zap, ArrowRight, Loader2, CheckCircle2, Clock, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { SceneProgressCard } from './SceneProgressCard';
 import { useVideoPipelineStore } from '@/lib/stores/video-pipeline-store';
 import { VIDEO_ENGINE_REGISTRY } from '@/lib/video/engine-registry';
 import type { SceneGenerationResult } from '@/types/video-pipeline';
+
+type GenerationPhase = 'submitting' | 'rendering' | 'complete';
+
+function formatElapsed(seconds: number): string {
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  if (mins === 0) { return `${secs}s`; }
+  return `${mins}m ${secs}s`;
+}
 
 export function StepGeneration() {
   const authFetch = useAuthFetch();
@@ -27,13 +36,20 @@ export function StepGeneration() {
   } = useVideoPipelineStore();
 
   const [error, setError] = useState<string | null>(null);
+  const [pollError, setPollError] = useState<string | null>(null);
+  const [phase, setPhase] = useState<GenerationPhase>('submitting');
+  const [elapsed, setElapsed] = useState(0);
+  const [pollCount, setPollCount] = useState(0);
   const hasStarted = useRef(false);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const startTimeRef = useRef<number>(Date.now());
 
   const allComplete = generatedScenes.length > 0 &&
     generatedScenes.every((s) => s.status === 'completed' || s.status === 'failed');
   const completedCount = generatedScenes.filter((s) => s.status === 'completed').length;
   const failedCount = generatedScenes.filter((s) => s.status === 'failed').length;
+  const generatingCount = generatedScenes.filter((s) => s.status === 'generating').length;
   const overallProgress = generatedScenes.length > 0
     ? Math.round((completedCount / generatedScenes.length) * 100)
     : 0;
@@ -47,6 +63,30 @@ export function StepGeneration() {
   }, {});
   const engineList = Object.keys(engineCounts).join(', ');
 
+  // Elapsed time timer
+  useEffect(() => {
+    if (allComplete) {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+      setPhase('complete');
+      return;
+    }
+
+    startTimeRef.current = Date.now();
+    timerRef.current = setInterval(() => {
+      setElapsed(Math.floor((Date.now() - startTimeRef.current) / 1000));
+    }, 1000);
+
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+    };
+  }, [allComplete]);
+
   const startGeneration = useCallback(async () => {
     if (isGenerating || hasStarted.current) {
       return;
@@ -54,6 +94,8 @@ export function StepGeneration() {
     hasStarted.current = true;
     setIsGenerating(true);
     setError(null);
+    setPhase('submitting');
+    startTimeRef.current = Date.now();
 
     // Initialize scene results
     const initialResults: SceneGenerationResult[] = scenes.map((s) => ({
@@ -101,6 +143,18 @@ export function StepGeneration() {
 
       if (data.success && data.results) {
         setGeneratedScenes(data.results);
+        setPhase('rendering');
+
+        // Log which scenes have provider IDs for debugging
+        const withIds = data.results.filter((r) => r.providerVideoId);
+        const withoutIds = data.results.filter((r) => !r.providerVideoId);
+        if (withoutIds.length > 0) {
+          console.warn(`[VideoGen] ${withoutIds.length} scene(s) have no providerVideoId — polling won't track them:`,
+            withoutIds.map((r) => ({ sceneId: r.sceneId, status: r.status, provider: r.provider })));
+        }
+        if (withIds.length > 0) {
+          console.info(`[VideoGen] ${withIds.length} scene(s) submitted to providers — starting poll cycle`);
+        }
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Generation failed');
@@ -113,8 +167,11 @@ export function StepGeneration() {
   useEffect(() => {
     if (generatedScenes.length === 0 && scenes.length > 0) {
       void startGeneration();
+    } else if (generatedScenes.some((s) => s.status === 'generating' && s.providerVideoId)) {
+      // Resuming — scenes already have providerVideoIds, go straight to rendering phase
+      setPhase('rendering');
     }
-  }, [generatedScenes.length, scenes.length, startGeneration]);
+  }, [generatedScenes.length, scenes.length, startGeneration, generatedScenes]);
 
   // Poll for scene status updates every 5 seconds
   useEffect(() => {
@@ -124,7 +181,7 @@ export function StepGeneration() {
       pollingRef.current = null;
     }
 
-    // Only poll if there are scenes still generating
+    // Only poll if there are scenes still generating with a provider video ID
     const generatingScenes = generatedScenes.filter(
       (s) => s.status === 'generating' && s.providerVideoId,
     );
@@ -147,8 +204,14 @@ export function StepGeneration() {
         });
 
         if (!response.ok) {
+          const errorText = await response.text();
+          console.warn(`[VideoGen] Poll failed (${response.status}):`, errorText);
+          setPollError(`Poll error ${response.status}`);
           return;
         }
+
+        setPollError(null);
+        setPollCount((c) => c + 1);
 
         const data = await response.json() as {
           success: boolean;
@@ -164,6 +227,7 @@ export function StepGeneration() {
         if (data.success && data.results) {
           for (const result of data.results) {
             if (result.status !== 'generating') {
+              console.info(`[VideoGen] Scene ${result.sceneId.slice(0, 8)}... → ${result.status}`);
               updateGeneratedScene(result.sceneId, {
                 status: result.status,
                 videoUrl: result.videoUrl,
@@ -174,11 +238,15 @@ export function StepGeneration() {
             }
           }
         }
-      } catch {
-        // Polling failures are non-fatal — will retry on next interval
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'Poll error';
+        console.warn('[VideoGen] Poll exception:', msg);
+        setPollError(msg);
       }
     };
 
+    // Poll immediately, then every 5 seconds
+    void pollStatus();
     pollingRef.current = setInterval(() => { void pollStatus(); }, 5000);
 
     return () => {
@@ -231,6 +299,17 @@ export function StepGeneration() {
     advanceStep();
   };
 
+  // Phase description
+  const phaseDescription = (() => {
+    if (allComplete) {
+      return `All scenes processed. ${completedCount} completed${failedCount > 0 ? `, ${failedCount} failed` : ''}.`;
+    }
+    if (phase === 'submitting') {
+      return `Submitting ${scenes.length} scene${scenes.length !== 1 ? 's' : ''} to ${engineList}...`;
+    }
+    return `Rendering ${generatingCount} scene${generatingCount !== 1 ? 's' : ''} with ${engineList}. ${completedCount} of ${generatedScenes.length} done.`;
+  })();
+
   return (
     <div className="space-y-6">
       {/* Overall Progress */}
@@ -240,18 +319,22 @@ export function StepGeneration() {
             <Zap className="w-5 h-5 text-amber-500" />
             Scene Generation
           </CardTitle>
-          <CardDescription>
-            {allComplete
-              ? `All scenes processed. ${completedCount} completed, ${failedCount} failed.`
-              : `Generating ${scenes.length} scenes with ${engineList}...`}
-          </CardDescription>
+          <CardDescription>{phaseDescription}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Overall Progress Bar */}
           <div>
             <div className="flex justify-between text-sm mb-2">
               <span className="text-zinc-400">Overall Progress</span>
-              <span className="text-white font-medium">{overallProgress}%</span>
+              <div className="flex items-center gap-3">
+                {!allComplete && (
+                  <span className="text-xs text-zinc-500 flex items-center gap-1">
+                    <Clock className="w-3 h-3" />
+                    {formatElapsed(elapsed)}
+                  </span>
+                )}
+                <span className="text-white font-medium">{overallProgress}%</span>
+              </div>
             </div>
             <div className="w-full h-2 bg-zinc-700 rounded-full overflow-hidden">
               <motion.div
@@ -262,6 +345,25 @@ export function StepGeneration() {
               />
             </div>
           </div>
+
+          {/* Phase Indicator */}
+          {!allComplete && (
+            <div className="flex items-center gap-3 px-3 py-2 bg-zinc-800/50 rounded-lg text-xs">
+              <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-400 flex-shrink-0" />
+              {phase === 'submitting' ? (
+                <span className="text-zinc-400">
+                  Submitting scenes to video providers... This usually takes 10-30 seconds.
+                </span>
+              ) : (
+                <span className="text-zinc-400">
+                  Waiting for providers to render videos. HeyGen typically takes 2-5 minutes per scene.
+                  {pollCount > 0 && (
+                    <span className="text-zinc-600"> (poll #{pollCount})</span>
+                  )}
+                </span>
+              )}
+            </div>
+          )}
 
           {/* Scene Progress Cards */}
           <div className="space-y-2">
@@ -281,6 +383,17 @@ export function StepGeneration() {
               <p className="text-sm text-red-400">{error}</p>
             </div>
           )}
+
+          {/* Poll Error Warning */}
+          {pollError && !error && (
+            <div className="flex items-start gap-2 p-3 bg-amber-500/5 border border-amber-500/20 rounded-lg">
+              <AlertTriangle className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-xs text-amber-400 font-medium">Polling issue</p>
+                <p className="text-xs text-zinc-400 mt-0.5">{pollError}. Will retry automatically.</p>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -296,10 +409,16 @@ export function StepGeneration() {
             <ArrowRight className="w-4 h-4" />
           </Button>
         )}
-        {!allComplete && isGenerating && (
+        {!allComplete && phase === 'submitting' && (
           <div className="flex items-center gap-2 text-zinc-400">
             <Loader2 className="w-4 h-4 animate-spin" />
-            <span className="text-sm">Generation in progress...</span>
+            <span className="text-sm">Submitting to providers...</span>
+          </div>
+        )}
+        {!allComplete && phase === 'rendering' && (
+          <div className="flex items-center gap-2 text-zinc-400">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            <span className="text-sm">Rendering {generatingCount} scene{generatingCount !== 1 ? 's' : ''}...</span>
           </div>
         )}
       </div>

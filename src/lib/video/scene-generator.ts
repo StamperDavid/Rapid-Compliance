@@ -19,29 +19,6 @@ import type { VideoAspectRatio, VideoProvider } from '@/types/video';
 // Engine-Specific Generators
 // ============================================================================
 
-async function generateBackgroundImage(backgroundPrompt: string): Promise<string | null> {
-  try {
-    const { generateImage, mapDimensionsToSize } = await import('@/lib/ai/image-generation-service');
-    const size = mapDimensionsToSize(1920, 1080); // Landscape for video backgrounds
-    const result = await generateImage(backgroundPrompt, {
-      size,
-      quality: 'hd',
-      style: 'natural',
-    });
-    logger.info('DALL-E background generated for scene', {
-      revisedPrompt: result.revisedPrompt.substring(0, 80),
-      file: 'scene-generator.ts',
-    });
-    return result.url;
-  } catch (error) {
-    logger.warn('DALL-E background generation failed, proceeding without background', {
-      error: error instanceof Error ? error.message : String(error),
-      file: 'scene-generator.ts',
-    });
-    return null;
-  }
-}
-
 async function generateWithHeyGen(
   scene: PipelineScene,
   avatarId: string,
@@ -52,11 +29,11 @@ async function generateWithHeyGen(
   const heygenAspectRatio: '16:9' | '9:16' | '1:1' =
     aspectRatio === '4:3' ? '16:9' : aspectRatio;
 
-  // Generate DALL-E background if scene has a backgroundPrompt and no existing screenshot
-  let backgroundUrl = scene.screenshotUrl;
-  if (!backgroundUrl && scene.backgroundPrompt) {
-    backgroundUrl = await generateBackgroundImage(scene.backgroundPrompt);
-  }
+  // Use existing screenshot if available. DALL-E background generation is deferred
+  // to avoid blocking scene submission (each DALL-E call takes 10-30s and would make
+  // the entire generate-scenes API call take minutes before any polling can start).
+  // Users can regenerate individual scenes with AI backgrounds in post-production.
+  const backgroundUrl = scene.screenshotUrl;
 
   const response = await generateHeyGenSceneVideo(
     scene.scriptText,
