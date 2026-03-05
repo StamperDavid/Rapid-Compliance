@@ -44,19 +44,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const ext = file.type === 'image/jpeg' ? 'jpg' : file.type === 'image/png' ? 'png' : 'webp';
-    const fileName = `avatar-${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${ext}`;
-    const storagePath = `video/avatars/${fileName}`;
-
-    // Upload to Firebase Storage
     if (!adminStorage) {
       return NextResponse.json(
-        { success: false, error: 'Storage not configured' },
+        { success: false, error: 'Firebase Storage not configured. Check server environment.' },
         { status: 500 },
       );
     }
 
-    const bucket = adminStorage.bucket();
+    const ext = file.type === 'image/jpeg' ? 'jpg' : file.type === 'image/png' ? 'png' : 'webp';
+    const fileName = `avatar-${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${ext}`;
+    const storagePath = `video/avatars/${fileName}`;
+
+    // Get the default bucket (uses FIREBASE_STORAGE_BUCKET from env)
+    const bucketName = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
+    if (!bucketName) {
+      return NextResponse.json(
+        { success: false, error: 'Storage bucket not configured' },
+        { status: 500 },
+      );
+    }
+
+    const bucket = adminStorage.bucket(bucketName);
     const fileRef = bucket.file(storagePath);
     const buffer = Buffer.from(await file.arrayBuffer());
 
@@ -70,10 +78,11 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Make the file publicly accessible
-    await fileRef.makePublic();
-
-    const url = `https://storage.googleapis.com/${bucket.name}/${storagePath}`;
+    // Generate a signed URL (valid for 7 days) — avoids need for public bucket ACLs
+    const [signedUrl] = await fileRef.getSignedUrl({
+      action: 'read',
+      expires: Date.now() + 7 * 24 * 60 * 60 * 1000, // 7 days
+    });
 
     logger.info('Avatar photo uploaded', {
       fileName,
@@ -84,7 +93,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      url,
+      url: signedUrl,
       fileName,
     });
   } catch (error) {

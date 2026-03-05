@@ -25,6 +25,11 @@ async function generateWithHeyGen(
   voiceId: string,
   aspectRatio: VideoAspectRatio
 ): Promise<SceneGenerationResult> {
+  // Validate avatar ID — HeyGen returns 404 "avatar look not found" if empty
+  if (!avatarId) {
+    throw new Error('No avatar selected. Go back to Pre-Production and choose an avatar.');
+  }
+
   // Convert 4:3 to 16:9 for HeyGen (HeyGen only supports 16:9, 9:16, 1:1)
   const heygenAspectRatio: '16:9' | '9:16' | '1:1' =
     aspectRatio === '4:3' ? '16:9' : aspectRatio;
@@ -35,8 +40,12 @@ async function generateWithHeyGen(
   // Users can regenerate individual scenes with AI backgrounds in post-production.
   const backgroundUrl = scene.screenshotUrl;
 
+  // Use scene-level script; if B-roll (empty script), send a minimal placeholder
+  // so HeyGen doesn't error. The avatar will appear briefly with no speech.
+  const script = scene.scriptText.trim() || ' ';
+
   const response = await generateHeyGenSceneVideo(
-    scene.scriptText,
+    script,
     avatarId,
     voiceId,
     backgroundUrl,
@@ -68,7 +77,19 @@ async function generateWithRunway(
   const runwayAspectRatio: '16:9' | '9:16' | '1:1' =
     aspectRatio === '4:3' ? '16:9' : aspectRatio;
 
-  const response = await generateRunwayVideo('text', scene.scriptText, {
+  // For B-roll scenes, use backgroundPrompt or visualDescription as the generation prompt
+  // Runway requires promptText to be at least 1 character
+  const prompt = ((): string => {
+    const script = scene.scriptText.trim();
+    if (script) { return script; }
+    const bg = scene.backgroundPrompt?.trim();
+    if (bg) { return bg; }
+    const vis = scene.visualDescription?.trim();
+    if (vis) { return vis; }
+    return 'Cinematic B-roll footage';
+  })();
+
+  const response = await generateRunwayVideo('text', prompt, {
     duration: Math.min(scene.duration, 10), // Runway max 10s
     ratio: runwayAspectRatio,
   });
@@ -98,7 +119,18 @@ async function generateWithSora(
   const soraAspectRatio: '16:9' | '9:16' | '1:1' =
     aspectRatio === '4:3' ? '16:9' : aspectRatio;
 
-  const response = await generateSoraVideo(scene.scriptText, {
+  // For B-roll scenes, use backgroundPrompt or visualDescription as the generation prompt
+  const prompt = ((): string => {
+    const script = scene.scriptText.trim();
+    if (script) { return script; }
+    const bg = scene.backgroundPrompt?.trim();
+    if (bg) { return bg; }
+    const vis = scene.visualDescription?.trim();
+    if (vis) { return vis; }
+    return 'Cinematic B-roll footage';
+  })();
+
+  const response = await generateSoraVideo(prompt, {
     duration: Math.min(scene.duration, 16), // Sora max 16s (valid: 4, 8, 12, 16)
     aspectRatio: soraAspectRatio,
   });
