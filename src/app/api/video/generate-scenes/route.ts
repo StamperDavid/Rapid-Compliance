@@ -12,14 +12,14 @@ const GenerateScenesSchema = z.object({
   scenes: z.array(z.object({
     id: z.string(),
     sceneNumber: z.number(),
-    scriptText: z.string().min(1),
+    scriptText: z.string(),
     screenshotUrl: z.string().nullable(),
     duration: z.number(),
     engine: z.enum(['heygen', 'runway', 'sora', 'kling', 'luma']).nullable().default(null),
     backgroundPrompt: z.string().nullable().default(null),
   })),
-  avatarId: z.string().min(1, 'Avatar ID required'),
-  voiceId: z.string().min(1, 'Voice ID required'),
+  avatarId: z.string().default(''),
+  voiceId: z.string().default(''),
   aspectRatio: z.enum(['16:9', '9:16', '1:1', '4:3']).default('16:9'),
 });
 

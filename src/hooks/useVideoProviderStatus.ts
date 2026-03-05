@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 import type { VideoEngineId } from '@/types/video-pipeline';
 
 interface ProviderStatusEntry {
@@ -25,6 +26,7 @@ const DEFAULT_STATUS: ProviderStatusMap = {
 };
 
 export function useVideoProviderStatus(): UseVideoProviderStatusReturn {
+  const authFetch = useAuthFetch();
   const [providerStatus, setProviderStatus] = useState<ProviderStatusMap | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -34,7 +36,7 @@ export function useVideoProviderStatus(): UseVideoProviderStatusReturn {
     setError(null);
 
     try {
-      const response = await fetch('/api/video/provider-status');
+      const response = await authFetch('/api/video/provider-status');
 
       if (!response.ok) {
         throw new Error('Failed to fetch provider status');
@@ -58,7 +60,7 @@ export function useVideoProviderStatus(): UseVideoProviderStatusReturn {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [authFetch]);
 
   useEffect(() => {
     void fetchStatus();

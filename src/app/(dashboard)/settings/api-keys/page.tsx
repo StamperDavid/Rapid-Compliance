@@ -427,22 +427,6 @@ export default function APIKeysPage() {
       why: 'Auto-enrich leads with company data, employee count, revenue, etc.',
     },
     {
-      id: 'hubspot_api_key',
-      name: 'HubSpot',
-      icon: '🎯',
-      description: 'HubSpot CRM integration',
-      required: false,
-      placeholder: 'pat-...',
-      setupUrl: 'https://app.hubspot.com',
-      setupSteps: [
-        'Settings → Integrations → Private Apps',
-        'Create private app',
-        'Copy access token',
-      ],
-      cost: 'FREE (HubSpot account required)',
-      why: 'Sync data with HubSpot CRM.',
-    },
-    {
       id: 'heygen',
       name: 'HeyGen',
       icon: '🎬',
