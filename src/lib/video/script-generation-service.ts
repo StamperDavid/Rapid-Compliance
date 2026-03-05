@@ -111,21 +111,24 @@ SalesVelocity.ai is a SaaS platform with a BUILT-IN CRM. Pricing is CRM slot-bas
 - The platform REPLACES external CRMs — it doesn't connect to them. Clients get their own AI-powered CRM with a 52-agent AI swarm managing it.
 
 ## ENGINE ASSIGNMENT RULES
-Assign each scene one of these engines:
-- **heygen**: Avatar talking-head scenes. The presenter speaks directly to camera. Use for dialogue, explanations, introductions, CTAs. ALWAYS include a backgroundPrompt.
-- **runway**: Cinematic B-roll — real-world footage style. Product in use, office environments, people working, city scenes. scriptText must be empty. visualDescription should be a detailed cinematic shot description.
-- **sora**: Motion graphics, abstract visuals, data visualizations, dramatic transitions, UI animations. scriptText must be empty. visualDescription should describe the visual motion/effect.
+The default video style is **presenter-led** — the avatar speaks throughout the entire video. This creates a cohesive, professional result like a real person presenting on camera.
 
-Mix engines for visual variety and pacing. A 5-scene video should have 2-3 heygen + 2-3 B-roll. Never put two heygen scenes back-to-back — break them up with B-roll for visual breathing room.
+Assign **ALL scenes** to **heygen** unless the user specifically requests B-roll or cinematic footage. Each scene should have the presenter speaking with a DIFFERENT backgroundPrompt for visual variety.
 
-## BACKGROUND PROMPTS (for heygen scenes only)
+Only use these engines if the user explicitly asks for B-roll or cinematic inserts:
+- **runway**: Cinematic B-roll — real-world footage style. scriptText must be empty. Only use when explicitly requested.
+- **sora**: Currently unreliable — do NOT assign sora to any scene. Use runway instead if B-roll is needed.
+
+## BACKGROUND PROMPTS (REQUIRED for every scene)
 Write detailed DALL-E 3 prompts for professional, visually rich backgrounds behind the avatar presenter.
+- Each scene MUST have a DIFFERENT background to maintain visual variety without cutting away from the presenter.
 - Modern, well-lit environments: creative studios, bright co-working spaces, modern offices with plants.
 - The presenter wears a casual polo in a professional setting — NO suits, NO ties.
 - Include: specific lighting (warm LEDs, natural window light), depth of field, color palette, props/details.
-- Each background should be DIFFERENT to maintain visual variety across scenes.
 - Example: "Modern bright office with large monitors showing analytics dashboards, indoor plants, warm LED lighting, shallow depth of field, clean minimal desk"
-- Example: "Creative studio with exposed brick, colorful post-it wall, standing desk, warm afternoon light through large windows, bokeh background"`;
+- Example: "Creative studio with exposed brick, colorful post-it wall, standing desk, warm afternoon light through large windows, bokeh background"
+- Example: "Rooftop terrace with city skyline at golden hour, modern outdoor furniture, warm sunset glow, soft bokeh lights"
+- Example: "Minimalist white studio with neon accent lighting, geometric shelving, potted succulents, clean modern aesthetic"`;
 
   if (brandContext) {
     prompt += `\n\n## BRAND CONTEXT\n${brandContext}`;
@@ -500,7 +503,7 @@ function generateFallbackScripts(
         sceneNumber: 1,
         title: 'Hook',
         scriptText: `Here's something that might surprise you about ${topic}. Let me break it down.`,
-        visualDescription: 'Attention-grabbing visual with bold text overlay',
+        visualDescription: 'Presenter opens with a bold statement, direct to camera',
         suggestedDuration: durationPerScene,
         engine: 'heygen',
         backgroundPrompt: 'Sleek modern conference room with glass walls, city skyline visible, dramatic lighting, shallow depth of field',
@@ -510,17 +513,17 @@ function generateFallbackScripts(
         sceneNumber: 2,
         title: 'The Challenge',
         scriptText: `Most teams waste hours on this. The old way of doing things just doesn't cut it anymore.`,
-        visualDescription: 'Visualization of common pain points',
+        visualDescription: 'Presenter explains the pain point with empathy',
         suggestedDuration: durationPerScene,
-        engine: 'runway',
-        backgroundPrompt: null,
+        engine: 'heygen',
+        backgroundPrompt: 'Creative studio with exposed brick walls, warm pendant lighting, comfortable setting with plants and books',
       });
 
       scenes.push({
         sceneNumber: 3,
         title: 'The Solution',
         scriptText: `That's exactly why we built this. It takes what used to be a headache and makes it automatic.`,
-        visualDescription: 'Product demonstration',
+        visualDescription: 'Presenter introduces the solution with enthusiasm',
         suggestedDuration: durationPerScene,
         engine: 'heygen',
         backgroundPrompt: 'Modern tech office with large displays showing dashboards and analytics, blue accent lighting, clean aesthetic',
@@ -531,10 +534,10 @@ function generateFallbackScripts(
           sceneNumber: 4,
           title: 'Key Benefits',
           scriptText: `The results speak for themselves. Teams are saving hours every week and getting better outcomes.`,
-          visualDescription: 'Benefits with icons and metrics',
+          visualDescription: 'Presenter highlights key metrics and results',
           suggestedDuration: durationPerScene,
-          engine: 'sora',
-          backgroundPrompt: null,
+          engine: 'heygen',
+          backgroundPrompt: 'Bright co-working space with whiteboard showing growth charts, natural window light, green plants, energetic atmosphere',
         });
       }
 
@@ -542,7 +545,7 @@ function generateFallbackScripts(
         sceneNumber: sceneCount,
         title: 'Call to Action',
         scriptText: `Ready to see this in action? Head over to the link below and try it free.`,
-        visualDescription: 'CTA with website URL',
+        visualDescription: 'Presenter delivers CTA with confident smile',
         suggestedDuration: durationPerScene,
         engine: 'heygen',
         backgroundPrompt: 'Bright professional studio with branded backdrop, warm inviting lighting, casual setting',
@@ -555,7 +558,7 @@ function generateFallbackScripts(
         sceneNumber: 1,
         title: 'The Pain Point',
         scriptText: `If you're dealing with ${topic}, I get it. It's frustrating, and you're not alone.`,
-        visualDescription: 'Relatable scenario',
+        visualDescription: 'Presenter connects empathetically with the viewer',
         suggestedDuration: durationPerScene,
         engine: 'heygen',
         backgroundPrompt: 'Warm cozy office with bookshelves, soft lighting, plants, inviting atmosphere',
@@ -565,17 +568,17 @@ function generateFallbackScripts(
         sceneNumber: 2,
         title: 'Introducing the Solution',
         scriptText: `What if this whole process could run on autopilot? That's exactly what we built.`,
-        visualDescription: 'Product introduction',
+        visualDescription: 'Presenter introduces the product with excitement',
         suggestedDuration: durationPerScene,
-        engine: 'runway',
-        backgroundPrompt: null,
+        engine: 'heygen',
+        backgroundPrompt: 'Modern tech lab with holographic displays, cool blue ambient lighting, futuristic minimal design',
       });
 
       scenes.push({
         sceneNumber: 3,
         title: 'Why It Works',
         scriptText: `Unlike anything else out there, this actually delivers. It's fast, simple, and the results are real.`,
-        visualDescription: 'Feature benefits comparison',
+        visualDescription: 'Presenter walks through key differentiators',
         suggestedDuration: durationPerScene,
         engine: 'heygen',
         backgroundPrompt: 'Modern creative workspace with whiteboard showing strategy diagrams, bright natural light',
@@ -585,11 +588,11 @@ function generateFallbackScripts(
         scenes.push({
           sceneNumber: 4,
           title: 'Social Proof',
-          scriptText: '',
-          visualDescription: 'Customer testimonials and success metrics montage',
+          scriptText: `Our customers are seeing real results. One team cut their prospecting time by 80% in the first week. Another closed three new deals in their first month.`,
+          visualDescription: 'Presenter shares testimonials with conviction',
           suggestedDuration: durationPerScene,
-          engine: 'sora',
-          backgroundPrompt: null,
+          engine: 'heygen',
+          backgroundPrompt: 'Bright open-plan office with team celebration in background, motivational wall art, warm afternoon light',
         });
       }
 
@@ -597,7 +600,7 @@ function generateFallbackScripts(
         sceneNumber: sceneCount,
         title: 'Offer',
         scriptText: `Want to see these results yourself? Click below and let's get you started. Seriously, you'll thank yourself later.`,
-        visualDescription: 'Offer with pricing',
+        visualDescription: 'Presenter delivers confident CTA',
         suggestedDuration: durationPerScene,
         engine: 'heygen',
         backgroundPrompt: 'Professional studio with clean branded backdrop, confident warm lighting, inviting atmosphere',
@@ -616,28 +619,23 @@ function generateFallbackScripts(
         backgroundPrompt: 'Modern bright office with clean desk, large monitor, indoor plants, warm professional lighting',
       });
 
+      const bgPrompts = [
+        'Creative open workspace with colorful accent wall, modern furniture, warm pendant lighting, plants',
+        'Rooftop terrace with city skyline, golden hour light, modern outdoor lounge furniture, warm atmosphere',
+        'Minimalist white studio with neon accent lighting, geometric shelving, potted succulents, clean aesthetic',
+        'Industrial chic office with exposed beams, brick walls, warm Edison bulbs, comfortable seating area',
+        'Bright library with floor-to-ceiling bookshelves, reading nook, natural light, cozy academic atmosphere',
+      ];
       for (let i = 2; i < sceneCount; i++) {
-        if (i % 3 === 0) {
-          scenes.push({
-            sceneNumber: i,
-            title: `Visual Break ${Math.ceil(i / 3)}`,
-            scriptText: '',
-            visualDescription: 'Cinematic B-roll showcasing the product in action',
-            suggestedDuration: durationPerScene,
-            engine: 'runway',
-            backgroundPrompt: null,
-          });
-        } else {
-          scenes.push({
-            sceneNumber: i,
-            title: `Point ${i - 1}`,
-            scriptText: `Let me show you how this works in practice. It's simpler than you'd think.`,
-            visualDescription: `Demonstration of key feature ${i - 1}`,
-            suggestedDuration: durationPerScene,
-            engine: 'heygen',
-            backgroundPrompt: 'Clean modern workspace with ambient lighting, shallow depth of field, professional setting',
-          });
-        }
+        scenes.push({
+          sceneNumber: i,
+          title: `Point ${i - 1}`,
+          scriptText: `Let me show you how this works in practice. It's simpler than you'd think.`,
+          visualDescription: `Presenter demonstrates key feature ${i - 1}`,
+          suggestedDuration: durationPerScene,
+          engine: 'heygen',
+          backgroundPrompt: bgPrompts[(i - 2) % bgPrompts.length],
+        });
       }
 
       scenes.push({

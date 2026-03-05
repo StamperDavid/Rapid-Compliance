@@ -130,27 +130,44 @@ async function generateWithSora(
     return 'Cinematic B-roll footage';
   })();
 
-  const response = await generateSoraVideo(prompt, {
-    duration: Math.min(scene.duration, 16), // Sora max 16s (valid: 4, 8, 12, 16)
-    aspectRatio: soraAspectRatio,
-  });
+  try {
+    const response = await generateSoraVideo(prompt, {
+      duration: Math.min(scene.duration, 16), // Sora max 16s (valid: 4, 8, 12, 16)
+      aspectRatio: soraAspectRatio,
+    });
 
-  logger.info('Sora scene generation started', {
-    sceneId: scene.id,
-    providerVideoId: response.id,
-    file: 'scene-generator.ts',
-  });
+    logger.info('Sora scene generation started', {
+      sceneId: scene.id,
+      providerVideoId: response.id,
+      file: 'scene-generator.ts',
+    });
 
-  return {
-    sceneId: scene.id,
-    providerVideoId: response.id,
-    provider: 'sora',
-    status: 'generating',
-    videoUrl: null,
-    thumbnailUrl: null,
-    progress: 0,
-    error: null,
-  };
+    return {
+      sceneId: scene.id,
+      providerVideoId: response.id,
+      provider: 'sora',
+      status: 'generating',
+      videoUrl: null,
+      thumbnailUrl: null,
+      progress: 0,
+      error: null,
+    };
+  } catch (soraError) {
+    // Sora failed — auto-fallback to Runway
+    logger.warn('Sora generation failed, falling back to Runway', {
+      sceneId: scene.id,
+      error: soraError instanceof Error ? soraError.message : String(soraError),
+      file: 'scene-generator.ts',
+    });
+
+    const providers = await getAvailableProviders();
+    if (providers.runway) {
+      return generateWithRunway(scene, aspectRatio);
+    }
+
+    // If Runway also unavailable, throw the original Sora error
+    throw soraError;
+  }
 }
 
 // ============================================================================
@@ -242,10 +259,11 @@ export async function selectEngineForScene(
     return 'heygen'; // Will fail with a clear "not configured" error
   }
 
-  // Visual/cinematic scenes: prefer Runway (Gen-3 quality), then Sora, then HeyGen
+  // Visual/cinematic scenes: prefer Runway (Gen-4.5 quality), then HeyGen as fallback
+  // Sora is deprioritized due to reliability issues
   if (providers.runway) { return 'runway'; }
-  if (providers.sora) { return 'sora'; }
   if (providers.heygen) { return 'heygen'; }
+  if (providers.sora) { return 'sora'; }
   return 'runway'; // Will fail with a clear "not configured" error
 }
 
@@ -300,6 +318,7 @@ export async function generateScene(
         return await generateWithRunway(scene, aspectRatio);
 
       case 'sora':
+        // generateWithSora has auto-fallback to Runway on failure
         return await generateWithSora(scene, aspectRatio);
 
       case 'kling':

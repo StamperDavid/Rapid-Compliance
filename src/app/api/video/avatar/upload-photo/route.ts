@@ -55,16 +55,11 @@ export async function POST(request: NextRequest) {
     const fileName = `avatar-${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${ext}`;
     const storagePath = `video/avatars/${fileName}`;
 
-    // Get the default bucket (uses FIREBASE_STORAGE_BUCKET from env)
-    const bucketName = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
-    if (!bucketName) {
-      return NextResponse.json(
-        { success: false, error: 'Storage bucket not configured' },
-        { status: 500 },
-      );
-    }
-
-    const bucket = adminStorage.bucket(bucketName);
+    // Use the default bucket configured in Firebase Admin initialization
+    // Falls back to explicit bucket name from env if needed
+    const bucketName = process.env.FIREBASE_STORAGE_BUCKET
+      ?? process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
+    const bucket = bucketName ? adminStorage.bucket(bucketName) : adminStorage.bucket();
     const fileRef = bucket.file(storagePath);
     const buffer = Buffer.from(await file.arrayBuffer());
 

@@ -81,10 +81,16 @@ function initializeAdmin() {
       ?? process.env.FIREBASE_ADMIN_PROJECT_ID
       ?? 'rapid-compliance-65f87';
 
+    // Resolve storage bucket from env (server-side or public)
+    const storageBucket = process.env.FIREBASE_STORAGE_BUCKET
+      ?? process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+      ?? undefined;
+
     if (serviceAccount) {
       adminApp = admin.initializeApp({
         credential: admin.credential.cert(serviceAccount),
         projectId,
+        storageBucket,
       });
     } else {
       // Initialize with just project ID (no service account credentials)
