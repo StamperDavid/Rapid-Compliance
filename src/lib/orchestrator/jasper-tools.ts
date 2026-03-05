@@ -3237,31 +3237,22 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
         const videoId = args.videoId as string;
         const videoProvider = args.provider as 'heygen' | 'sora' | 'runway' | undefined;
 
-        const statusResult = await checkVideoStatus(videoId, videoProvider);
+        const response = await checkVideoStatus(videoId, videoProvider);
 
-        if ('status' in statusResult && statusResult.status === 'coming_soon') {
-          content = JSON.stringify({
-            status: 'pending',
-            videoId,
-            message: 'Video provider API is not yet configured. The video will be generated once the provider is connected.',
-          });
-        } else {
-          const response = statusResult as { id: string; status: string; videoUrl?: string; thumbnailUrl?: string; provider: string; errorMessage?: string };
-          content = JSON.stringify({
-            status: response.status,
-            videoId: response.id,
-            videoUrl: response.videoUrl ?? null,
-            thumbnailUrl: response.thumbnailUrl ?? null,
-            provider: response.provider,
-            errorMessage: response.errorMessage ?? null,
-            message: response.status === 'completed'
-              ? `Video is ready! You can view it in the video library.`
-              : response.status === 'failed'
-                ? `Video generation failed: ${response.errorMessage ?? 'Unknown error'}`
-                : 'Video is still being generated. Check back in a few minutes.',
-            videoLibraryPath: '/content/video',
-          });
-        }
+        content = JSON.stringify({
+          status: response.status,
+          videoId: response.id,
+          videoUrl: response.videoUrl ?? null,
+          thumbnailUrl: response.thumbnailUrl ?? null,
+          provider: response.provider,
+          errorMessage: response.errorMessage ?? null,
+          message: response.status === 'completed'
+            ? `Video is ready! You can view it in the video library.`
+            : response.status === 'failed'
+              ? `Video generation failed: ${response.errorMessage ?? 'Unknown error'}`
+              : 'Video is still being generated. Check back in a few minutes.',
+          videoLibraryPath: '/content/video',
+        });
 
         trackMissionStep(context, 'get_video_status', 'COMPLETED', {
           summary: `Video status check: ${videoId}`,

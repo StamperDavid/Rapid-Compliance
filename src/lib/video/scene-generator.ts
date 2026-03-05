@@ -13,20 +13,7 @@ import {
   getVideoProviderKey,
 } from '@/lib/video/video-service';
 import type { PipelineScene, SceneGenerationResult, VideoEngineId } from '@/types/video-pipeline';
-import type { VideoAspectRatio, VideoGenerationResponse, VideoProvider } from '@/types/video';
-
-// ============================================================================
-// Type Guards
-// ============================================================================
-
-/**
- * Type guard to check if response is a VideoGenerationResponse
- */
-function isVideoGenerationResponse(
-  response: VideoGenerationResponse | { success: false; status: 'coming_soon'; message: string; expectedLaunch: string }
-): response is VideoGenerationResponse {
-  return 'status' in response && response.status !== 'coming_soon';
-}
+import type { VideoAspectRatio, VideoProvider } from '@/types/video';
 
 // ============================================================================
 // Engine-Specific Generators
@@ -109,19 +96,6 @@ async function generateWithRunway(
     ratio: runwayAspectRatio,
   });
 
-  if (!isVideoGenerationResponse(response)) {
-    return {
-      sceneId: scene.id,
-      providerVideoId: '',
-      provider: 'runway',
-      status: 'failed',
-      videoUrl: null,
-      thumbnailUrl: null,
-      progress: 0,
-      error: response.message,
-    };
-  }
-
   logger.info('Runway scene generation started', {
     sceneId: scene.id,
     providerVideoId: response.id,
@@ -151,19 +125,6 @@ async function generateWithSora(
     duration: Math.min(scene.duration, 16), // Sora max 16s (valid: 4, 8, 12, 16)
     aspectRatio: soraAspectRatio,
   });
-
-  if (!isVideoGenerationResponse(response)) {
-    return {
-      sceneId: scene.id,
-      providerVideoId: '',
-      provider: 'sora',
-      status: 'failed',
-      videoUrl: null,
-      thumbnailUrl: null,
-      progress: 0,
-      error: response.message,
-    };
-  }
 
   logger.info('Sora scene generation started', {
     sceneId: scene.id,
@@ -398,21 +359,6 @@ export async function pollSceneStatus(
 
   try {
     const response = await getVideoStatus(providerVideoId, resolvedProvider as VideoProvider);
-
-    // Type guard: Check if this is a VideoGenerationResponse
-    if (!isVideoGenerationResponse(response)) {
-      logger.warn('Video status returned coming_soon', {
-        providerVideoId,
-        provider: resolvedProvider,
-        file: 'scene-generator.ts',
-      });
-      return {
-        status: 'failed',
-        videoUrl: null,
-        thumbnailUrl: null,
-        error: 'Video service not available',
-      };
-    }
 
     // Map provider status to our scene status
     if (response.status === 'completed') {

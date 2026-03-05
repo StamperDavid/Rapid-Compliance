@@ -45,28 +45,7 @@ export async function getVideoProviderKey(provider: VideoProvider): Promise<stri
 export const VIDEO_SERVICE_STATUS = {
   isAvailable: true,
   message: 'AI Video Generation is available. Configure provider API keys in Settings > API Keys.',
-  expectedLaunch: 'Q1 2026',
 } as const;
-
-// ============================================================================
-// Coming Soon Response Helper
-// ============================================================================
-
-interface ComingSoonResponse {
-  success: false;
-  status: 'coming_soon';
-  message: string;
-  expectedLaunch: string;
-}
-
-function createComingSoonResponse(feature: string): ComingSoonResponse {
-  return {
-    success: false,
-    status: 'coming_soon',
-    message: `${feature} is coming soon. Join the waitlist to be notified when it launches.`,
-    expectedLaunch: VIDEO_SERVICE_STATUS.expectedLaunch,
-  };
-}
 
 // ============================================================================
 // Interest Logging (for analytics)
@@ -173,7 +152,7 @@ export async function joinVideoWaitlist(
  */
 export async function generateVideo(
   request: VideoGenerationRequest
-): Promise<VideoGenerationResponse | (ComingSoonResponse & { request?: VideoGenerationRequest })> {
+): Promise<VideoGenerationResponse> {
   // Log interest for analytics
   await logVideoInterest(
     `generate_video_${request.provider}`,
@@ -181,61 +160,52 @@ export async function generateVideo(
     { type: request.type }
   );
 
-  // Check if provider is configured
-  if (await isProviderConfigured(request.provider)) {
-    try {
-      switch (request.provider) {
-        case 'heygen':
-          if (request.type === 'avatar' && request.script && request.avatarConfig?.avatarId) {
-            return await generateHeyGenVideoInternal(
-              request.script,
-              request.avatarConfig.avatarId,
-              {
-                voiceId: request.avatarConfig.voiceId,
-                backgroundColor: request.avatarConfig.backgroundColor,
-                aspectRatio: request.aspectRatio === '16:9' || request.aspectRatio === '9:16' || request.aspectRatio === '1:1'
-                  ? request.aspectRatio
-                  : '16:9',
-              }
-            );
-          }
-          break;
-        case 'sora':
-          if (request.prompt) {
-            return await generateSoraVideoInternal(request.prompt, {
-              duration: request.duration,
-              aspectRatio: request.aspectRatio === '16:9' || request.aspectRatio === '9:16' || request.aspectRatio === '1:1'
-                ? request.aspectRatio
-                : '16:9',
-            });
-          }
-          break;
-        case 'runway':
-          if (request.type === 'text-to-video' && request.prompt) {
-            return await generateRunwayVideoInternal('text', request.prompt, {
-              duration: request.duration,
-            });
-          } else if (request.type === 'image-to-video' && request.inputImageUrl) {
-            return await generateRunwayVideoInternal('image', request.inputImageUrl, {
-              duration: request.duration,
-            });
-          }
-          break;
-      }
-    } catch (error) {
-      logger.error('Error generating video with provider', error as Error, {
-        provider: request.provider,
-        file: 'video-service.ts',
-      });
-      throw error;
-    }
+  // Verify provider is configured
+  const configured = await isProviderConfigured(request.provider);
+  if (!configured) {
+    throw new Error(`${request.provider} API key is not configured. Add it in Settings → API Keys.`);
   }
 
-  // Return coming soon if provider not configured or request invalid
-  return {
-    ...createComingSoonResponse('Video generation'),
-    request,
-  };
+  switch (request.provider) {
+    case 'heygen':
+      if (request.type === 'avatar' && request.script && request.avatarConfig?.avatarId) {
+        return generateHeyGenVideoInternal(
+          request.script,
+          request.avatarConfig.avatarId,
+          {
+            voiceId: request.avatarConfig.voiceId,
+            backgroundColor: request.avatarConfig.backgroundColor,
+            aspectRatio: request.aspectRatio === '16:9' || request.aspectRatio === '9:16' || request.aspectRatio === '1:1'
+              ? request.aspectRatio
+              : '16:9',
+          }
+        );
+      }
+      throw new Error('HeyGen requires avatar type with script and avatarId');
+    case 'sora':
+      if (request.prompt) {
+        return generateSoraVideoInternal(request.prompt, {
+          duration: request.duration,
+          aspectRatio: request.aspectRatio === '16:9' || request.aspectRatio === '9:16' || request.aspectRatio === '1:1'
+            ? request.aspectRatio
+            : '16:9',
+        });
+      }
+      throw new Error('Sora requires a prompt');
+    case 'runway':
+      if (request.type === 'text-to-video' && request.prompt) {
+        return generateRunwayVideoInternal('text', request.prompt, {
+          duration: request.duration,
+        });
+      } else if (request.type === 'image-to-video' && request.inputImageUrl) {
+        return generateRunwayVideoInternal('image', request.inputImageUrl, {
+          duration: request.duration,
+        });
+      }
+      throw new Error('Runway requires a prompt (text-to-video) or inputImageUrl (image-to-video)');
+    default:
+      throw new Error(`Unsupported video provider: ${request.provider}`);
+  }
 }
 
 /**
@@ -244,7 +214,7 @@ export async function generateVideo(
 export async function getVideoStatus(
   videoId: string,
   provider?: VideoProvider
-): Promise<VideoGenerationResponse | ComingSoonResponse> {
+): Promise<VideoGenerationResponse> {
   await logVideoInterest('get_video_status');
 
   // Determine provider from videoId or use provided provider
@@ -263,7 +233,7 @@ export async function getVideoStatus(
   }
 
   if (!detectedProvider || !(await isProviderConfigured(detectedProvider))) {
-    return createComingSoonResponse('Video status tracking');
+    throw new Error(`No video provider configured for status check. Add API keys in Settings > API Keys.`);
   }
 
   try {
@@ -421,7 +391,7 @@ export async function getVideoStatus(
       }
 
       default:
-        return createComingSoonResponse('Video status tracking');
+        throw new Error(`Unsupported video provider: ${detectedProvider}`);
     }
   } catch (error) {
     logger.error('Failed to get video status', error as Error, {
@@ -435,13 +405,12 @@ export async function getVideoStatus(
 
 /**
  * Cancel video generation
- * @stub Returns coming soon response
+ * Currently not supported by any provider — throws an error.
  */
-export async function cancelVideoGeneration(
+export function cancelVideoGeneration(
   _videoId: string
-): Promise<ComingSoonResponse> {
-  await logVideoInterest('cancel_video');
-  return createComingSoonResponse('Video cancellation');
+): never {
+  throw new Error('Video cancellation is not currently supported by the configured providers.');
 }
 
 // ============================================================================
@@ -451,61 +420,48 @@ export async function cancelVideoGeneration(
 /**
  * List available HeyGen avatars
  */
-export async function listHeyGenAvatars(): Promise<(ComingSoonResponse & { avatars?: HeyGenAvatar[] }) | { avatars: HeyGenAvatar[] }> {
+export async function listHeyGenAvatars(): Promise<{ avatars: HeyGenAvatar[] }> {
   await logVideoInterest('list_heygen_avatars');
 
   const apiKey = await getVideoProviderKey('heygen');
   if (!apiKey) {
-    return {
-      ...createComingSoonResponse('HeyGen avatar library'),
-      avatars: [],
-    };
+    throw new Error('HeyGen API key is not configured. Add it in Settings → API Keys.');
   }
 
-  try {
-    const response = await fetch('https://api.heygen.com/v2/avatars', {
-      method: 'GET',
-      headers: {
-        'X-Api-Key': apiKey,
-      },
-    });
+  const response = await fetch('https://api.heygen.com/v2/avatars', {
+    method: 'GET',
+    headers: {
+      'X-Api-Key': apiKey,
+    },
+  });
 
-    if (!response.ok) {
-      throw new Error(`HeyGen API error: ${response.status}`);
-    }
-
-    const data = await response.json() as {
-      data?: {
-        avatars?: Array<{
-          avatar_id: string;
-          avatar_name: string;
-          preview_image_url?: string;
-          preview_video_url?: string;
-          gender?: string;
-          is_premium?: boolean;
-        }>;
-      };
-    };
-
-    const avatars: HeyGenAvatar[] = (data.data?.avatars ?? []).map((avatar) => ({
-      id: avatar.avatar_id,
-      name: avatar.avatar_name,
-      thumbnailUrl: avatar.preview_image_url ?? '',
-      previewVideoUrl: avatar.preview_video_url,
-      gender: avatar.gender as 'male' | 'female' | 'neutral' | undefined,
-      isPremium: avatar.is_premium,
-    }));
-
-    return { avatars };
-  } catch (error) {
-    logger.error('Failed to list HeyGen avatars', error as Error, {
-      file: 'video-service.ts',
-    });
-    return {
-      ...createComingSoonResponse('HeyGen avatar library'),
-      avatars: [],
-    };
+  if (!response.ok) {
+    throw new Error(`HeyGen API error: ${response.status} ${response.statusText}`);
   }
+
+  const data = await response.json() as {
+    data?: {
+      avatars?: Array<{
+        avatar_id: string;
+        avatar_name: string;
+        preview_image_url?: string;
+        preview_video_url?: string;
+        gender?: string;
+        is_premium?: boolean;
+      }>;
+    };
+  };
+
+  const avatars: HeyGenAvatar[] = (data.data?.avatars ?? []).map((avatar) => ({
+    id: avatar.avatar_id,
+    name: avatar.avatar_name,
+    thumbnailUrl: avatar.preview_image_url ?? '',
+    previewVideoUrl: avatar.preview_video_url,
+    gender: avatar.gender as 'male' | 'female' | 'neutral' | undefined,
+    isPremium: avatar.is_premium,
+  }));
+
+  return { avatars };
 }
 
 /**
@@ -513,68 +469,55 @@ export async function listHeyGenAvatars(): Promise<(ComingSoonResponse & { avata
  */
 export async function listHeyGenVoices(
   language?: string
-): Promise<(ComingSoonResponse & { voices?: HeyGenVoice[] }) | { voices: HeyGenVoice[] }> {
+): Promise<{ voices: HeyGenVoice[] }> {
   await logVideoInterest('list_heygen_voices');
 
   const apiKey = await getVideoProviderKey('heygen');
   if (!apiKey) {
-    return {
-      ...createComingSoonResponse('HeyGen voice library'),
-      voices: [],
-    };
+    throw new Error('HeyGen API key is not configured. Add it in Settings → API Keys.');
   }
 
-  try {
-    const url = language
-      ? `https://api.heygen.com/v2/voices?language=${encodeURIComponent(language)}`
-      : 'https://api.heygen.com/v2/voices';
+  const url = language
+    ? `https://api.heygen.com/v2/voices?language=${encodeURIComponent(language)}`
+    : 'https://api.heygen.com/v2/voices';
 
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: {
-        'X-Api-Key': apiKey,
-      },
-    });
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: {
+      'X-Api-Key': apiKey,
+    },
+  });
 
-    if (!response.ok) {
-      throw new Error(`HeyGen API error: ${response.status}`);
-    }
-
-    const data = await response.json() as {
-      data?: {
-        voices?: Array<{
-          voice_id: string;
-          name?: string;
-          voice_name?: string;
-          language: string;
-          accent?: string;
-          gender?: string;
-          preview_audio_url?: string;
-          is_premium?: boolean;
-        }>;
-      };
-    };
-
-    const voices: HeyGenVoice[] = (data.data?.voices ?? []).map((voice) => ({
-      id: voice.voice_id,
-      name: voice.name ?? voice.voice_name ?? voice.voice_id,
-      language: voice.language,
-      accent: voice.accent,
-      gender: voice.gender as 'male' | 'female' | 'neutral' | undefined,
-      previewUrl: voice.preview_audio_url,
-      isPremium: voice.is_premium,
-    }));
-
-    return { voices };
-  } catch (error) {
-    logger.error('Failed to list HeyGen voices', error as Error, {
-      file: 'video-service.ts',
-    });
-    return {
-      ...createComingSoonResponse('HeyGen voice library'),
-      voices: [],
-    };
+  if (!response.ok) {
+    throw new Error(`HeyGen API error: ${response.status} ${response.statusText}`);
   }
+
+  const data = await response.json() as {
+    data?: {
+      voices?: Array<{
+        voice_id: string;
+        name?: string;
+        voice_name?: string;
+        language: string;
+        accent?: string;
+        gender?: string;
+        preview_audio_url?: string;
+        is_premium?: boolean;
+      }>;
+    };
+  };
+
+  const voices: HeyGenVoice[] = (data.data?.voices ?? []).map((voice) => ({
+    id: voice.voice_id,
+    name: voice.name ?? voice.voice_name ?? voice.voice_id,
+    language: voice.language,
+    accent: voice.accent,
+    gender: voice.gender as 'male' | 'female' | 'neutral' | undefined,
+    previewUrl: voice.preview_audio_url,
+    isPremium: voice.is_premium,
+  }));
+
+  return { voices };
 }
 
 /**
@@ -756,22 +699,15 @@ export async function generateHeyGenVideo(
     backgroundColor?: string;
     aspectRatio?: '16:9' | '9:16' | '1:1';
   }
-): Promise<VideoGenerationResponse | ComingSoonResponse> {
+): Promise<VideoGenerationResponse> {
   await logVideoInterest('generate_heygen_video');
 
   const apiKey = await getVideoProviderKey('heygen');
   if (!apiKey) {
-    return createComingSoonResponse('HeyGen video generation');
+    throw new Error('HeyGen API key is not configured. Add it in Settings → API Keys.');
   }
 
-  try {
-    return await generateHeyGenVideoInternal(script, avatarId, options);
-  } catch (error) {
-    logger.error('Error in generateHeyGenVideo', error as Error, {
-      file: 'video-service.ts',
-    });
-    return createComingSoonResponse('HeyGen video generation');
-  }
+  return generateHeyGenVideoInternal(script, avatarId, options);
 }
 
 // ============================================================================
@@ -875,9 +811,8 @@ export async function generateSoraVideoInternal(
 }
 
 /**
- * Generate video with OpenAI Sora
- * Returns ComingSoonResponse ONLY if the API key is missing.
- * Real API errors are thrown so callers see the actual failure.
+ * Generate video with OpenAI Sora.
+ * Throws on missing API key or API error — no "coming soon" canned responses.
  */
 export async function generateSoraVideo(
   prompt: string,
@@ -886,14 +821,8 @@ export async function generateSoraVideo(
     aspectRatio?: '16:9' | '9:16' | '1:1';
     style?: string;
   }
-): Promise<VideoGenerationResponse | ComingSoonResponse> {
+): Promise<VideoGenerationResponse> {
   await logVideoInterest('generate_sora_video');
-
-  const apiKey = await getVideoProviderKey('sora');
-  if (!apiKey) {
-    return createComingSoonResponse('Sora text-to-video generation');
-  }
-
   return generateSoraVideoInternal(prompt, options);
 }
 
@@ -1008,9 +937,8 @@ export async function generateRunwayVideoInternal(
 }
 
 /**
- * Generate video with Runway
- * Returns ComingSoonResponse ONLY if the API key is missing.
- * Real API errors are thrown so callers see the actual failure.
+ * Generate video with Runway.
+ * Throws on missing API key or API error — no "coming soon" canned responses.
  */
 export async function generateRunwayVideo(
   inputType: 'text' | 'image',
@@ -1020,14 +948,8 @@ export async function generateRunwayVideo(
     motion?: 'auto' | 'slow' | 'fast';
     ratio?: '16:9' | '9:16' | '1:1';
   }
-): Promise<VideoGenerationResponse | ComingSoonResponse> {
+): Promise<VideoGenerationResponse> {
   await logVideoInterest('generate_runway_video');
-
-  const apiKey = await getVideoProviderKey('runway');
-  if (!apiKey) {
-    return createComingSoonResponse('Runway video generation');
-  }
-
   return generateRunwayVideoInternal(inputType, input, options);
 }
 
