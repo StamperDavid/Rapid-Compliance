@@ -835,10 +835,11 @@ export async function generateSoraVideo(
  * Map aspect ratio to Runway's WIDTHxHEIGHT ratio format
  */
 function runwayRatio(aspectRatio: '16:9' | '9:16' | '1:1'): string {
+  // Runway only supports 1280:720 and 720:1280 — fall back to landscape for 1:1
   const ratioMap: Record<string, string> = {
     '16:9': '1280:720',
     '9:16': '720:1280',
-    '1:1': '960:960',
+    '1:1': '1280:720',
   };
   return ratioMap[aspectRatio] ?? '1280:720';
 }
@@ -882,7 +883,6 @@ export async function generateRunwayVideoInternal(
           promptText: input,
           duration,
           ratio,
-          watermark: false,
         }
       : {
           model: 'gen4.5',
@@ -890,7 +890,6 @@ export async function generateRunwayVideoInternal(
           promptText: '', // Required even for image-to-video
           duration,
           ratio,
-          watermark: false,
         };
 
     const response = await fetch(endpoint, {

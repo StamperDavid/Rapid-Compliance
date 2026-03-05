@@ -33,11 +33,13 @@ export async function POST(request: NextRequest) {
     const parseResult = RegenerateSchema.safeParse(body);
 
     if (!parseResult.success) {
+      const zodErrors = parseResult.error.errors.map((e) => `${e.path.join('.')}: ${e.message}`).join(', ');
       logger.warn('Invalid regenerate scene request', {
+        errors: zodErrors,
         file: 'regenerate-scene/route.ts',
       });
       return NextResponse.json(
-        { success: false, error: 'Invalid request data', details: parseResult.error.errors },
+        { success: false, error: `Invalid request: ${zodErrors}`, details: parseResult.error.errors },
         { status: 400 }
       );
     }
