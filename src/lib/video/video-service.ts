@@ -227,7 +227,7 @@ export async function generateVideo(
         provider: request.provider,
         file: 'video-service.ts',
       });
-      // Fall through to coming soon response on error
+      throw error;
     }
   }
 
@@ -341,24 +341,35 @@ export async function getVideoStatus(
 
         const data = await response.json() as {
           id: string;
-          status: string;
-          video_url?: string;
-          error?: { message: string };
+          status: string; // queued | in_progress | completed | failed
+          progress: number;
+          expires_at?: number;
+          error?: { message: string } | null;
         };
 
+        // Sora statuses: queued, in_progress, completed, failed
         const statusMap: Record<string, VideoStatus> = {
-          'pending': 'pending',
-          'processing': 'processing',
+          'queued': 'pending',
+          'in_progress': 'processing',
           'completed': 'completed',
           'failed': 'failed',
         };
+
+        // When completed, the video is available at /content sub-endpoint (not a URL in the response)
+        let soraVideoUrl: string | undefined;
+        if (data.status === 'completed') {
+          // The download URL is the /content endpoint itself — the client or storage service
+          // fetches the binary from this URL with the auth header
+          soraVideoUrl = `https://api.openai.com/v1/videos/${videoId}/content`;
+        }
 
         return {
           id: videoId,
           requestId: videoId,
           status: statusMap[data.status] ?? 'processing',
           provider: 'sora',
-          videoUrl: data.video_url,
+          progress: data.progress,
+          videoUrl: soraVideoUrl,
           errorMessage: data.error?.message,
           createdAt: new Date(),
         };
@@ -418,7 +429,7 @@ export async function getVideoStatus(
       provider: detectedProvider,
       file: 'video-service.ts',
     });
-    return createComingSoonResponse('Video status tracking');
+    throw error;
   }
 }
 
@@ -768,7 +779,31 @@ export async function generateHeyGenVideo(
 // ============================================================================
 
 /**
- * Internal Sora video generation
+ * Map aspect ratio to Sora size format (WIDTHxHEIGHT)
+ */
+function soraSize(aspectRatio: '16:9' | '9:16' | '1:1'): string {
+  const sizeMap: Record<string, string> = {
+    '16:9': '1280x720',
+    '9:16': '720x1280',
+    '1:1': '480x480',
+  };
+  return sizeMap[aspectRatio] ?? '1280x720';
+}
+
+/**
+ * Clamp duration to Sora-supported values: 4, 8, 12, or 16 seconds
+ */
+function soraDuration(seconds: number): string {
+  const valid = [4, 8, 12, 16];
+  const closest = valid.reduce((prev, curr) =>
+    Math.abs(curr - seconds) < Math.abs(prev - seconds) ? curr : prev
+  );
+  return String(closest);
+}
+
+/**
+ * Internal Sora video generation via OpenAI Videos API
+ * Endpoint: POST https://api.openai.com/v1/videos (multipart/form-data)
  */
 export async function generateSoraVideoInternal(
   prompt: string,
@@ -784,19 +819,22 @@ export async function generateSoraVideoInternal(
   }
 
   try {
-    const response = await fetch('https://api.openai.com/v1/videos/generations', {
+    const size = soraSize(options?.aspectRatio ?? '16:9');
+    const seconds = soraDuration(options?.duration ?? 8);
+
+    // Sora API uses multipart/form-data
+    const formData = new FormData();
+    formData.append('prompt', prompt);
+    formData.append('model', 'sora-2');
+    formData.append('size', size);
+    formData.append('seconds', seconds);
+
+    const response = await fetch('https://api.openai.com/v1/videos', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        model: 'sora',
-        prompt,
-        duration: options?.duration ?? 5,
-        aspect_ratio: options?.aspectRatio ?? '16:9',
-        style: options?.style,
-      }),
+      body: formData,
     });
 
     if (!response.ok) {
@@ -806,11 +844,17 @@ export async function generateSoraVideoInternal(
 
     const data = await response.json() as {
       id: string;
-      status?: string;
+      status: string;
+      model: string;
+      seconds: string;
+      size: string;
     };
 
     logger.info('Sora video generation started', {
       videoId: data.id,
+      model: data.model,
+      seconds: data.seconds,
+      size: data.size,
       file: 'video-service.ts',
     });
 
@@ -823,6 +867,7 @@ export async function generateSoraVideoInternal(
     };
   } catch (error) {
     logger.error('Failed to generate Sora video', error as Error, {
+      prompt: prompt.substring(0, 100),
       file: 'video-service.ts',
     });
     throw error;
@@ -831,6 +876,8 @@ export async function generateSoraVideoInternal(
 
 /**
  * Generate video with OpenAI Sora
+ * Returns ComingSoonResponse ONLY if the API key is missing.
+ * Real API errors are thrown so callers see the actual failure.
  */
 export async function generateSoraVideo(
   prompt: string,
@@ -847,22 +894,35 @@ export async function generateSoraVideo(
     return createComingSoonResponse('Sora text-to-video generation');
   }
 
-  try {
-    return await generateSoraVideoInternal(prompt, options);
-  } catch (error) {
-    logger.error('Error in generateSoraVideo', error as Error, {
-      file: 'video-service.ts',
-    });
-    return createComingSoonResponse('Sora text-to-video generation');
-  }
+  return generateSoraVideoInternal(prompt, options);
 }
 
 // ============================================================================
-// Runway Integration (Stubs)
+// Runway Integration
 // ============================================================================
 
 /**
- * Internal Runway video generation
+ * Map aspect ratio to Runway's WIDTHxHEIGHT ratio format
+ */
+function runwayRatio(aspectRatio: '16:9' | '9:16' | '1:1'): string {
+  const ratioMap: Record<string, string> = {
+    '16:9': '1280:720',
+    '9:16': '720:1280',
+    '1:1': '960:960',
+  };
+  return ratioMap[aspectRatio] ?? '1280:720';
+}
+
+/**
+ * Clamp duration to Runway-supported values (2-10 seconds)
+ */
+function runwayDuration(seconds: number): number {
+  return Math.max(2, Math.min(10, Math.round(seconds)));
+}
+
+/**
+ * Internal Runway video generation via Gen-4.5 API
+ * Endpoint: POST https://api.dev.runwayml.com/v1/text_to_video or /v1/image_to_video
  */
 export async function generateRunwayVideoInternal(
   inputType: 'text' | 'image',
@@ -883,18 +943,24 @@ export async function generateRunwayVideoInternal(
       ? 'https://api.dev.runwayml.com/v1/text_to_video'
       : 'https://api.dev.runwayml.com/v1/image_to_video';
 
+    const ratio = runwayRatio(options?.ratio ?? '16:9');
+    const duration = runwayDuration(options?.duration ?? 5);
+
     const requestBody = inputType === 'text'
       ? {
-          model: 'gen3a_turbo',
-          text_prompt: input,
-          duration: options?.duration ?? 5,
-          ratio: options?.ratio ?? '16:9',
+          model: 'gen4.5',
+          promptText: input,
+          duration,
+          ratio,
+          watermark: false,
         }
       : {
-          model: 'gen3a_turbo',
-          image: input,
-          duration: options?.duration ?? 5,
-          ratio: options?.ratio ?? '16:9',
+          model: 'gen4.5',
+          promptImage: input,
+          promptText: '', // Required even for image-to-video
+          duration,
+          ratio,
+          watermark: false,
         };
 
     const response = await fetch(endpoint, {
@@ -914,11 +980,14 @@ export async function generateRunwayVideoInternal(
 
     const data = await response.json() as {
       id: string;
-      status?: string;
     };
 
     logger.info('Runway video generation started', {
       videoId: data.id,
+      model: 'gen4.5',
+      inputType,
+      duration,
+      ratio,
       file: 'video-service.ts',
     });
 
@@ -931,6 +1000,7 @@ export async function generateRunwayVideoInternal(
     };
   } catch (error) {
     logger.error('Failed to generate Runway video', error as Error, {
+      inputType,
       file: 'video-service.ts',
     });
     throw error;
@@ -939,6 +1009,8 @@ export async function generateRunwayVideoInternal(
 
 /**
  * Generate video with Runway
+ * Returns ComingSoonResponse ONLY if the API key is missing.
+ * Real API errors are thrown so callers see the actual failure.
  */
 export async function generateRunwayVideo(
   inputType: 'text' | 'image',
@@ -946,6 +1018,7 @@ export async function generateRunwayVideo(
   options?: {
     duration?: number;
     motion?: 'auto' | 'slow' | 'fast';
+    ratio?: '16:9' | '9:16' | '1:1';
   }
 ): Promise<VideoGenerationResponse | ComingSoonResponse> {
   await logVideoInterest('generate_runway_video');
@@ -955,14 +1028,7 @@ export async function generateRunwayVideo(
     return createComingSoonResponse('Runway video generation');
   }
 
-  try {
-    return await generateRunwayVideoInternal(inputType, input, options);
-  } catch (error) {
-    logger.error('Error in generateRunwayVideo', error as Error, {
-      file: 'video-service.ts',
-    });
-    return createComingSoonResponse('Runway video generation');
-  }
+  return generateRunwayVideoInternal(inputType, input, options);
 }
 
 // ============================================================================

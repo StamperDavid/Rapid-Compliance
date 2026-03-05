@@ -47,6 +47,7 @@
     "prepare": "husky || true"
   },
   "dependencies": {
+    "@ffmpeg-installer/ffmpeg": "^1.1.0",
     "@google-cloud/firestore": "^7.1.0",
     "@google-cloud/secret-manager": "^5.0.0",
     "@google-cloud/storage": "^7.7.0",

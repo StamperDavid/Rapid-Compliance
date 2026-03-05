@@ -18,6 +18,7 @@ const TRANSITIONS: { value: TransitionType; label: string }[] = [
 export function StepAssembly() {
   const authFetch = useAuthFetch();
   const {
+    projectId,
     generatedScenes,
     finalVideoUrl,
     transitionType,
@@ -50,7 +51,7 @@ export function StepAssembly() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          projectId: 'local',
+          projectId: projectId ?? 'local',
           sceneUrls,
           transitionType,
         }),

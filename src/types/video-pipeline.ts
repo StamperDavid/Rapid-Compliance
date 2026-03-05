@@ -89,6 +89,8 @@ export type SceneStatus =
 export interface PipelineScene {
   id: string;
   sceneNumber: number;
+  title?: string; // "The Hook" / "Problem Statement" / "CTA"
+  visualDescription?: string; // "Modern office with sales dashboards on monitors"
   scriptText: string;
   screenshotUrl: string | null;
   avatarId: string | null;

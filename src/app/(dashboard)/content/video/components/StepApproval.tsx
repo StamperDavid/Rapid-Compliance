@@ -112,6 +112,10 @@ export function StepApproval() {
 
               {/* Content */}
               <div className="flex-1 min-w-0 space-y-2">
+                {scene.title && (
+                  <p className="text-sm font-semibold text-amber-400">{scene.title}</p>
+                )}
+
                 {editingSceneId === scene.id ? (
                   <textarea
                     value={scene.scriptText}
@@ -128,6 +132,10 @@ export function StepApproval() {
                     {scene.scriptText || <span className="text-zinc-500 italic">No script</span>}
                     <Edit3 className="w-3 h-3 inline ml-2 opacity-0 group-hover:opacity-50" />
                   </p>
+                )}
+
+                {scene.visualDescription && (
+                  <p className="text-xs text-zinc-400 italic">{scene.visualDescription}</p>
                 )}
 
                 <div className="flex items-center gap-4 text-xs text-zinc-500">

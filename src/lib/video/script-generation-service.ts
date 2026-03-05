@@ -13,6 +13,7 @@ import { z } from 'zod';
 import { logger } from '@/lib/logger/logger';
 import { OpenRouterProvider } from '@/lib/ai/openrouter-provider';
 import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getMemoryVault, shareInsight } from '@/lib/agents/shared';
 
 // ============================================================================
 // Types
@@ -190,6 +191,128 @@ async function loadBrandContext(): Promise<string | null> {
   }
 }
 
+interface MarketingPersona {
+  who?: {
+    jobTitles?: string[];
+    companySize?: string;
+    ageRange?: string;
+    industries?: string[];
+  };
+  psychographics?: {
+    mainPainPoints?: string[];
+    motivations?: string[];
+    buyingTriggers?: string[];
+  };
+  messagingAngle?: {
+    emotionalVsLogical?: string;
+    resonantLanguage?: string[];
+    languageToAvoid?: string[];
+    emotionalHooks?: string[];
+  };
+  contentPreferences?: {
+    formats?: string[];
+    style?: string;
+  };
+}
+
+async function loadMarketingPersona(): Promise<{ persona: MarketingPersona; contextBlock: string } | null> {
+  try {
+    const vault = getMemoryVault();
+    const entries = await vault.query('SCRIPT_GENERATOR', {
+      category: 'PROFILE',
+      tags: ['marketing-persona'],
+      sortBy: 'createdAt',
+      sortOrder: 'desc',
+      limit: 1,
+    });
+
+    if (entries.length === 0) {
+      logger.warn('No marketing persona found in MemoryVault — scripts will use description-only context', {
+        file: 'script-generation-service.ts',
+      });
+      return null;
+    }
+
+    const entryValue = entries[0].value as Record<string, unknown> | undefined;
+    const persona = entryValue?.persona as MarketingPersona | undefined;
+    if (!persona) {
+      return null;
+    }
+
+    const lines: string[] = [];
+
+    if (persona.who) {
+      const who = persona.who;
+      if (who.jobTitles?.length) {
+        lines.push(`**Target roles:** ${who.jobTitles.join(', ')}`);
+      }
+      if (who.companySize) {
+        lines.push(`**Company size:** ${who.companySize}`);
+      }
+      if (who.ageRange) {
+        lines.push(`**Age range:** ${who.ageRange}`);
+      }
+      if (who.industries?.length) {
+        lines.push(`**Industries:** ${who.industries.join(', ')}`);
+      }
+    }
+
+    if (persona.psychographics) {
+      const psych = persona.psychographics;
+      if (psych.mainPainPoints?.length) {
+        lines.push(`**Pain points:** ${psych.mainPainPoints.join('; ')}`);
+      }
+      if (psych.motivations?.length) {
+        lines.push(`**Motivations:** ${psych.motivations.join('; ')}`);
+      }
+      if (psych.buyingTriggers?.length) {
+        lines.push(`**Buying triggers:** ${psych.buyingTriggers.join('; ')}`);
+      }
+    }
+
+    if (persona.messagingAngle) {
+      const msg = persona.messagingAngle;
+      if (msg.emotionalVsLogical) {
+        lines.push(`**Tone approach:** ${msg.emotionalVsLogical}`);
+      }
+      if (msg.resonantLanguage?.length) {
+        lines.push(`**Resonant language:** ${msg.resonantLanguage.join(', ')}`);
+      }
+      if (msg.languageToAvoid?.length) {
+        lines.push(`**Avoid using:** ${msg.languageToAvoid.join(', ')}`);
+      }
+      if (msg.emotionalHooks?.length) {
+        lines.push(`**Emotional hooks:** ${msg.emotionalHooks.join('; ')}`);
+      }
+    }
+
+    if (persona.contentPreferences) {
+      const cp = persona.contentPreferences;
+      if (cp.formats?.length) {
+        lines.push(`**Preferred formats:** ${cp.formats.join(', ')}`);
+      }
+      if (cp.style) {
+        lines.push(`**Content style:** ${cp.style}`);
+      }
+    }
+
+    if (lines.length === 0) {
+      return null;
+    }
+
+    return {
+      persona,
+      contextBlock: lines.join('\n'),
+    };
+  } catch (error) {
+    logger.warn('Failed to load marketing persona from MemoryVault', {
+      error: error instanceof Error ? error.message : String(error),
+      file: 'script-generation-service.ts',
+    });
+    return null;
+  }
+}
+
 async function loadProductContext(): Promise<string | null> {
   try {
     const { adminDb } = await import('@/lib/firebase/admin');
@@ -220,14 +343,18 @@ async function generateAIScripts(
   sceneCount: number,
 ): Promise<ScriptGenerationResult | null> {
   try {
-    const [brandContext, productContext] = await Promise.all([
+    const [brandContext, productContext, personaResult] = await Promise.all([
       loadBrandContext(),
       loadProductContext(),
+      loadMarketingPersona(),
     ]);
 
     const provider = new OpenRouterProvider(PLATFORM_ID);
 
-    const systemPrompt = buildSystemPrompt(brandContext, productContext);
+    let systemPrompt = buildSystemPrompt(brandContext, productContext);
+    if (personaResult) {
+      systemPrompt += `\n\n## MARKETING PERSONA (from Growth Strategist analysis)\nUse this audience intelligence to tailor tone, pain points, and messaging:\n${personaResult.contextBlock}`;
+    }
     const userPrompt = buildUserPrompt(
       params.description, params.videoType, params.platform, params.duration, sceneCount,
       params.targetAudience, params.painPoints, params.talkingPoints, params.tone, params.callToAction,
@@ -259,7 +386,7 @@ async function generateAIScripts(
 
     const totalDuration = validated.scenes.reduce((sum, s) => sum + s.suggestedDuration, 0);
 
-    return {
+    const result: ScriptGenerationResult = {
       videoType: params.videoType,
       targetAudience: validated.targetAudience,
       keyMessages: validated.keyMessages,
@@ -273,6 +400,26 @@ async function generateAIScripts(
       estimatedTotalDuration: totalDuration,
       generatedBy: 'ai',
     };
+
+    // Share storyboard to MemoryVault for cross-agent access
+    try {
+      await shareInsight(
+        'SCRIPT_GENERATOR',
+        'CONTENT',
+        `Video Script: ${params.description.slice(0, 50)}`,
+        `Generated ${validated.scenes.length} scenes for ${params.videoType} video targeting ${validated.targetAudience}`,
+        {
+          confidence: 85,
+          tags: ['video-script', 'storyboard'],
+        },
+      );
+    } catch (vaultError) {
+      logger.warn('Failed to share script insight to MemoryVault', {
+        error: vaultError instanceof Error ? vaultError.message : String(vaultError),
+      });
+    }
+
+    return result;
   } catch (error) {
     const errMsg = error instanceof Error ? error.message : String(error);
     logger.error('AI scene generation FAILED — falling back to templates',

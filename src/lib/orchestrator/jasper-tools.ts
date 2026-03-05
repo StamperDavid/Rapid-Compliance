@@ -3157,224 +3157,39 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
         const videoStart = Date.now();
         trackMissionStep(context, 'create_video', 'RUNNING', { toolArgs: args });
 
-        const description = args.description as string;
-        const title = (args.title as string) ?? `Video: ${description.slice(0, 50)}`;
-        const duration = args.duration ? Number(args.duration) : 30;
-        const aspectRatio = (args.aspectRatio as '16:9' | '9:16' | '1:1') ?? '16:9';
-        const videoType = (args.videoType as 'tutorial' | 'explainer' | 'product-demo' | 'sales-pitch' | 'testimonial' | 'social-ad') ?? 'explainer';
-        const platform = (args.platform as 'youtube' | 'tiktok' | 'instagram' | 'linkedin' | 'website') ?? 'youtube';
+        const { getVideoSpecialist } = await import('@/lib/agents/content/video/specialist');
+        const specialist = getVideoSpecialist();
+        await specialist.initialize();
 
-        // ── Step 1: AI-powered script generation (Brand DNA + product context) ──
-        const { generateVideoScripts } = await import('@/lib/video/script-generation-service');
-
-        logger.info('Jasper generating AI video scripts', {
-          title, videoType, duration, platform,
-          file: 'jasper-tools.ts',
+        const result = await specialist.execute({
+          id: `create_video_${Date.now()}`,
+          timestamp: new Date(),
+          from: 'JASPER',
+          to: 'VIDEO_SPECIALIST',
+          type: 'COMMAND',
+          priority: 'NORMAL',
+          payload: {
+            action: 'create_video_project' as const,
+            description: args.description as string,
+            title: args.title as string | undefined,
+            videoType: args.videoType as 'tutorial' | 'explainer' | 'product-demo' | 'sales-pitch' | 'testimonial' | 'social-ad' | undefined,
+            platform: args.platform as 'youtube' | 'tiktok' | 'instagram' | 'linkedin' | 'website' | undefined,
+            duration: args.duration ? Number(args.duration) : undefined,
+            aspectRatio: args.aspectRatio as '16:9' | '9:16' | '1:1' | undefined,
+            userId: context?.userId,
+          },
+          requiresResponse: true,
+          traceId: `trace_create_video_${Date.now()}`,
         });
 
-        const scriptResult = await generateVideoScripts({
-          description,
-          videoType,
-          platform,
-          duration,
+        const resultData = result.data as Record<string, unknown> | null;
+        content = JSON.stringify({ ...resultData, specialist: 'VIDEO_SPECIALIST' });
+
+        trackMissionStep(context, 'create_video', result.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED', {
+          summary: `VIDEO_SPECIALIST: ${(resultData?.message as string) ?? result.status}`,
+          durationMs: Date.now() - videoStart,
+          toolResult: content.slice(0, 2000),
         });
-
-        logger.info('AI script generation completed', {
-          generatedBy: scriptResult.generatedBy,
-          sceneCount: scriptResult.scenes.length,
-          file: 'jasper-tools.ts',
-        });
-
-        // ── Step 2: Create pipeline project ──
-        const { createProject, updateProject } = await import('@/lib/video/pipeline-project-service');
-        const { getExecutionPolicy } = await import('@/lib/orchestrator/execution-policy-service');
-
-        const brief = {
-          description,
-          videoType,
-          platform,
-          duration,
-          aspectRatio,
-          resolution: '1080p' as const,
-        };
-
-        const projectResult = await createProject(brief, context?.userId ?? 'jasper');
-
-        if (!projectResult.success || !projectResult.projectId) {
-          content = JSON.stringify({
-            status: 'error',
-            message: `Failed to create video project: ${projectResult.error ?? 'Unknown error'}`,
-          });
-          trackMissionStep(context, 'create_video', 'FAILED', {
-            summary: 'Project creation failed',
-            durationMs: Date.now() - videoStart,
-          });
-          break;
-        }
-
-        const projectId = projectResult.projectId;
-
-        // ── Step 3: Convert AI scripts to PipelineScenes ──
-        const scenes: import('@/types/video-pipeline').PipelineScene[] = scriptResult.scenes.map((s, i) => ({
-          id: `scene-${i + 1}-${Date.now()}`,
-          sceneNumber: s.sceneNumber,
-          scriptText: s.scriptText,
-          screenshotUrl: null,
-          avatarId: null,
-          voiceId: null,
-          duration: s.suggestedDuration,
-          engine: s.engine,
-          backgroundPrompt: s.backgroundPrompt,
-          status: 'draft' as const,
-        }));
-
-        // ── Step 4: Check execution policy ──
-        const executionPolicy = await getExecutionPolicy();
-        const requireApproval = executionPolicy.mode === 'require_approval';
-
-        if (requireApproval) {
-          // ── APPROVAL MODE: Save as draft, let user review in Studio ──
-          await updateProject(projectId, {
-            name: title,
-            currentStep: 'pre-production',
-            scenes,
-            status: 'draft',
-          });
-
-          const reviewUrl = `/content/video?load=${projectId}`;
-          content = JSON.stringify({
-            status: 'draft',
-            projectId,
-            title,
-            sceneCount: scenes.length,
-            engines: [...new Set(scenes.map((s) => s.engine))],
-            generatedBy: scriptResult.generatedBy,
-            message: `Video "${title}" draft created with ${scenes.length} scenes (${scriptResult.generatedBy === 'ai' ? 'AI-written scripts' : 'template scripts'}). Review and edit scripts, pick avatar/voice, then approve in the Video Studio.`,
-            reviewLink: reviewUrl,
-          });
-
-          trackMissionStep(context, 'create_video', 'COMPLETED', {
-            summary: `Video "${title}" saved as DRAFT (${scenes.length} scenes) — awaiting user approval`,
-            durationMs: Date.now() - videoStart,
-            toolResult: content.slice(0, 2000),
-          });
-        } else {
-          // ── AUTOMATE MODE: Full generation (avatar pick + render) ──
-          let videoAvatarId = '';
-          let videoVoiceId = '';
-          const hasHeygenScenes = scenes.some((s) => s.engine === 'heygen');
-
-          if (hasHeygenScenes) {
-            try {
-              const { listHeyGenAvatars, listHeyGenVoices } = await import('@/lib/video/video-service');
-
-              const avatarResult = await listHeyGenAvatars();
-              if ('avatars' in avatarResult && avatarResult.avatars && avatarResult.avatars.length > 0) {
-                videoAvatarId = avatarResult.avatars[0].id;
-              }
-
-              const voiceResult = await listHeyGenVoices();
-              if ('voices' in voiceResult && voiceResult.voices && voiceResult.voices.length > 0) {
-                videoVoiceId = voiceResult.voices[0].id;
-              }
-            } catch (avatarError) {
-              logger.warn('HeyGen avatar/voice auto-select failed', {
-                error: avatarError instanceof Error ? avatarError.message : String(avatarError),
-                file: 'jasper-tools.ts',
-              });
-            }
-
-            if (!videoAvatarId || !videoVoiceId) {
-              logger.warn('HeyGen avatar/voice unavailable — falling back to text-to-video engines', {
-                avatarId: videoAvatarId || 'MISSING',
-                voiceId: videoVoiceId || 'MISSING',
-                file: 'jasper-tools.ts',
-              });
-              for (const scene of scenes) {
-                if (scene.engine === 'heygen') {
-                  scene.engine = 'sora';
-                }
-              }
-            }
-          }
-
-          await updateProject(projectId, {
-            name: title,
-            currentStep: 'generation',
-            scenes,
-            status: 'approved',
-            avatarId: videoAvatarId || null,
-            voiceId: videoVoiceId || null,
-          });
-
-          const { generateAllScenes } = await import('@/lib/video/scene-generator');
-
-          let genResults: import('@/types/video-pipeline').SceneGenerationResult[] = [];
-          let genError: string | null = null;
-
-          try {
-            genResults = await generateAllScenes(scenes, videoAvatarId, videoVoiceId, aspectRatio);
-          } catch (genErr: unknown) {
-            genError = genErr instanceof Error ? genErr.message : String(genErr);
-            logger.error('generateAllScenes threw — video engines failed', genErr instanceof Error ? genErr : new Error(String(genErr)), {
-              projectId,
-              sceneCount: scenes.length,
-              engines: scenes.map((s) => s.engine ?? 'heygen'),
-              avatarId: videoAvatarId,
-              voiceId: videoVoiceId,
-              file: 'jasper-tools.ts',
-            });
-          }
-
-          const successCount = genResults.filter((r) => r.status !== 'failed').length;
-          const failedCount = genResults.filter((r) => r.status === 'failed').length;
-
-          await updateProject(projectId, {
-            generatedScenes: genResults,
-            currentStep: successCount > 0 ? 'assembly' : 'generation',
-            status: successCount > 0 ? 'approved' : 'draft',
-          });
-
-          const resultStatus = genError ? 'error' : successCount > 0 ? 'generating' : 'failed';
-          const resultMessage = genError
-            ? `Video engine error: ${genError}. Project saved at /content/video/library.`
-            : successCount > 0
-              ? `Video "${title}" is now generating! ${successCount} scene(s) sent to ${[...new Set(genResults.map((r) => r.provider))].join(', ')}. Use get_video_status to check progress.`
-              : `Video generation failed for all ${failedCount} scenes. Errors: ${genResults.map((r) => r.error).filter(Boolean).join('; ')}`;
-
-          content = JSON.stringify({
-            status: resultStatus,
-            projectId,
-            title,
-            sceneCount: scenes.length,
-            successCount,
-            failedCount,
-            generationError: genError,
-            engines: [...new Set(scenes.map((s) => s.engine))],
-            generatedBy: scriptResult.generatedBy,
-            delegations: {
-              scriptGeneration: scriptResult.generatedBy === 'ai' ? 'AI_COMPLETED' : 'TEMPLATE_FALLBACK',
-              videoEngines: genError ? [`ERROR: ${genError}`] : genResults.map((r) => `${r.provider}: ${r.status}`),
-            },
-            results: genResults.map((r) => ({
-              sceneId: r.sceneId,
-              provider: r.provider,
-              status: r.status,
-              providerVideoId: r.providerVideoId ?? null,
-              error: r.error ?? null,
-            })),
-            message: resultMessage,
-            reviewLink: `/content/video?load=${projectId}`,
-          });
-
-          trackMissionStep(context, 'create_video', genError ? 'FAILED' : 'COMPLETED', {
-            summary: genError
-              ? `Video "${title}" FAILED: ${genError}`
-              : `Video "${title}": ${successCount}/${genResults.length} scenes via Content→Video pipeline`,
-            durationMs: Date.now() - videoStart,
-            toolResult: content.slice(0, 2000),
-          });
-        }
         break;
       }
 
@@ -3382,147 +3197,32 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
         const genStart = Date.now();
         trackMissionStep(context, 'generate_video', 'RUNNING', { toolArgs: args });
 
-        const { getProject: fetchProject, updateProject: patchProject } = await import('@/lib/video/pipeline-project-service');
-        const { generateAllScenes } = await import('@/lib/video/scene-generator');
+        const { getVideoSpecialist: getVideoSpec } = await import('@/lib/agents/content/video/specialist');
+        const videoSpec = getVideoSpec();
+        await videoSpec.initialize();
 
-        const genProjectId = args.projectId as string;
-        if (!genProjectId) {
-          content = JSON.stringify({
-            status: 'error',
-            message: 'projectId is required. Call create_video first to get a projectId.',
-          });
-          trackMissionStep(context, 'generate_video', 'FAILED', {
-            summary: 'Missing projectId',
-            durationMs: Date.now() - genStart,
-          });
-          break;
-        }
-
-        // Fetch the project to get its scenes
-        const project = await fetchProject(genProjectId);
-        if (!project) {
-          content = JSON.stringify({
-            status: 'error',
-            message: `Project ${genProjectId} not found. It may have been deleted.`,
-          });
-          trackMissionStep(context, 'generate_video', 'FAILED', {
-            summary: 'Project not found',
-            durationMs: Date.now() - genStart,
-          });
-          break;
-        }
-
-        if (!project.scenes || project.scenes.length === 0) {
-          content = JSON.stringify({
-            status: 'error',
-            message: 'Project has no scenes. Call create_video first to prepare scenes.',
-          });
-          trackMissionStep(context, 'generate_video', 'FAILED', {
-            summary: 'No scenes in project',
-            durationMs: Date.now() - genStart,
-          });
-          break;
-        }
-
-        // Determine avatarId and voiceId
-        let genAvatarId = (args.avatarId as string) ?? project.avatarId ?? '';
-        let genVoiceId = (args.voiceId as string) ?? project.voiceId ?? '';
-
-        // If HeyGen scenes exist but no avatar/voice specified, try to auto-select
-        const hasHeygenScenes = project.scenes.some((s) => s.engine === 'heygen');
-        if (hasHeygenScenes && (!genAvatarId || !genVoiceId)) {
-          try {
-            const { listHeyGenAvatars, listHeyGenVoices } = await import('@/lib/video/video-service');
-
-            if (!genAvatarId) {
-              const avatarResult = await listHeyGenAvatars();
-              if ('avatars' in avatarResult && avatarResult.avatars && avatarResult.avatars.length > 0) {
-                genAvatarId = avatarResult.avatars[0].id;
-                logger.info('Auto-selected HeyGen avatar', {
-                  avatarId: genAvatarId,
-                  avatarName: avatarResult.avatars[0].name,
-                  file: 'jasper-tools.ts',
-                });
-              }
-            }
-
-            if (!genVoiceId) {
-              const voiceResult = await listHeyGenVoices();
-              if ('voices' in voiceResult && voiceResult.voices && voiceResult.voices.length > 0) {
-                genVoiceId = voiceResult.voices[0].id;
-                logger.info('Auto-selected HeyGen voice', {
-                  voiceId: genVoiceId,
-                  voiceName: voiceResult.voices[0].name,
-                  file: 'jasper-tools.ts',
-                });
-              }
-            }
-          } catch (avatarError) {
-            logger.warn('Failed to auto-select HeyGen avatar/voice', {
-              error: avatarError instanceof Error ? avatarError.message : String(avatarError),
-              file: 'jasper-tools.ts',
-            });
-          }
-        }
-
-        const genAspectRatio = (project.brief?.aspectRatio as '16:9' | '9:16' | '1:1' | '4:3') ?? '16:9';
-
-        // Update project status to generating
-        await patchProject(genProjectId, {
-          currentStep: 'generation',
-          status: 'approved',
-          avatarId: genAvatarId || null,
-          voiceId: genVoiceId || null,
+        const genResult = await videoSpec.execute({
+          id: `generate_video_${Date.now()}`,
+          timestamp: new Date(),
+          from: 'JASPER',
+          to: 'VIDEO_SPECIALIST',
+          type: 'COMMAND',
+          priority: 'NORMAL',
+          payload: {
+            action: 'render_scenes' as const,
+            projectId: args.projectId as string,
+            avatarId: args.avatarId as string | undefined,
+            voiceId: args.voiceId as string | undefined,
+          },
+          requiresResponse: true,
+          traceId: `trace_generate_video_${Date.now()}`,
         });
 
-        logger.info('Starting video generation for project', {
-          projectId: genProjectId,
-          sceneCount: project.scenes.length,
-          avatarId: genAvatarId,
-          voiceId: genVoiceId,
-          aspectRatio: genAspectRatio,
-          file: 'jasper-tools.ts',
-        });
+        const genResultData = genResult.data as Record<string, unknown> | null;
+        content = JSON.stringify({ ...genResultData, specialist: 'VIDEO_SPECIALIST' });
 
-        // Kick off actual scene generation with video provider APIs
-        const genResults = await generateAllScenes(
-          project.scenes,
-          genAvatarId,
-          genVoiceId,
-          genAspectRatio
-        );
-
-        const successCount = genResults.filter((r) => r.status !== 'failed').length;
-        const failedCount = genResults.filter((r) => r.status === 'failed').length;
-
-        // Save generation results back to the project
-        await patchProject(genProjectId, {
-          generatedScenes: genResults,
-          currentStep: failedCount === genResults.length ? 'generation' : 'assembly',
-          status: failedCount === 0 ? 'approved' : 'draft',
-        });
-
-        content = JSON.stringify({
-          status: successCount > 0 ? 'generating' : 'failed',
-          projectId: genProjectId,
-          totalScenes: genResults.length,
-          successCount,
-          failedCount,
-          results: genResults.map((r) => ({
-            sceneId: r.sceneId,
-            provider: r.provider,
-            status: r.status,
-            providerVideoId: r.providerVideoId ?? null,
-            error: r.error ?? null,
-          })),
-          message: successCount > 0
-            ? `Video generation started! ${successCount} scene(s) are now rendering. Use get_video_status to check progress.`
-            : `Video generation failed for all ${failedCount} scenes. Check the error details.`,
-          videoLibraryPath: '/content/video/library',
-        });
-
-        trackMissionStep(context, 'generate_video', 'COMPLETED', {
-          summary: `Video generation: ${successCount}/${genResults.length} scenes started`,
+        trackMissionStep(context, 'generate_video', genResult.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED', {
+          summary: `VIDEO_SPECIALIST: ${(genResultData?.message as string) ?? genResult.status}`,
           durationMs: Date.now() - genStart,
           toolResult: content.slice(0, 2000),
         });

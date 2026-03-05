@@ -101,11 +101,12 @@ async function generateWithRunway(
   scene: PipelineScene,
   aspectRatio: VideoAspectRatio
 ): Promise<SceneGenerationResult> {
-  const runwayAspectRatio = aspectRatio === '4:3' ? '16:9' : aspectRatio;
-  const prompt = `${scene.scriptText} [${runwayAspectRatio}]`;
+  const runwayAspectRatio: '16:9' | '9:16' | '1:1' =
+    aspectRatio === '4:3' ? '16:9' : aspectRatio;
 
-  const response = await generateRunwayVideo('text', prompt, {
+  const response = await generateRunwayVideo('text', scene.scriptText, {
     duration: Math.min(scene.duration, 10), // Runway max 10s
+    ratio: runwayAspectRatio,
   });
 
   if (!isVideoGenerationResponse(response)) {
@@ -147,7 +148,7 @@ async function generateWithSora(
     aspectRatio === '4:3' ? '16:9' : aspectRatio;
 
   const response = await generateSoraVideo(scene.scriptText, {
-    duration: Math.min(scene.duration, 60), // Sora max 60s
+    duration: Math.min(scene.duration, 16), // Sora max 16s (valid: 4, 8, 12, 16)
     aspectRatio: soraAspectRatio,
   });
 

@@ -61,6 +61,8 @@ export function StepDecompose() {
       const pipelineScenes = data.plan.scenes.map((scene) => ({
         id: crypto.randomUUID(),
         sceneNumber: scene.sceneNumber,
+        title: scene.title,
+        visualDescription: scene.visualDescription,
         scriptText: scene.scriptText,
         screenshotUrl: null,
         avatarId: null,
