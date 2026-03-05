@@ -238,7 +238,8 @@ export const useVideoPipelineStore = create<VideoPipelineState>()(
           case 'assembly':
             return (
               state.generatedScenes.length > 0 &&
-              state.generatedScenes.every((scene) => scene.status === 'completed')
+              state.generatedScenes.every((scene) => scene.status === 'completed' || scene.status === 'failed') &&
+              state.generatedScenes.some((scene) => scene.status === 'completed' && scene.videoUrl)
             );
 
           case 'post-production':

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { Puzzle, ArrowLeft, ArrowRight, Loader2, Play } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -28,15 +28,97 @@ export function StepAssembly() {
     setIsAssembling,
     setStep,
     advanceStep,
+    updateGeneratedScene,
   } = useVideoPipelineStore();
 
   const [error, setError] = useState<string | null>(null);
   const [activeSceneIndex, setActiveSceneIndex] = useState(0);
+  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const completedScenes = useMemo(
     () => generatedScenes.filter((s) => s.status === 'completed' && s.videoUrl),
     [generatedScenes],
   );
+
+  // Poll for any scenes still generating (in case user arrived before polling finished)
+  const generatingScenes = useMemo(
+    () => generatedScenes.filter((s) => s.status === 'generating' && s.providerVideoId),
+    [generatedScenes],
+  );
+
+  const pollStatus = useCallback(async () => {
+    const toPoll = generatedScenes.filter((s) => s.status === 'generating' && s.providerVideoId);
+    if (toPoll.length === 0) {
+      return;
+    }
+
+    try {
+      const response = await authFetch('/api/video/poll-scenes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          scenes: toPoll.map((s) => ({
+            sceneId: s.sceneId,
+            providerVideoId: s.providerVideoId,
+            provider: s.provider,
+          })),
+        }),
+      });
+
+      if (!response.ok) {
+        return;
+      }
+
+      const data = await response.json() as {
+        success: boolean;
+        results: Array<{
+          sceneId: string;
+          status: 'generating' | 'completed' | 'failed';
+          videoUrl: string | null;
+          thumbnailUrl: string | null;
+          error: string | null;
+        }>;
+      };
+
+      if (data.success && data.results) {
+        for (const result of data.results) {
+          if (result.status !== 'generating') {
+            updateGeneratedScene(result.sceneId, {
+              status: result.status,
+              videoUrl: result.videoUrl,
+              thumbnailUrl: result.thumbnailUrl,
+              error: result.error,
+              progress: result.status === 'completed' ? 100 : 0,
+            });
+          }
+        }
+      }
+    } catch {
+      // Polling failures are non-fatal
+    }
+  }, [generatedScenes, authFetch, updateGeneratedScene]);
+
+  useEffect(() => {
+    if (pollingRef.current) {
+      clearInterval(pollingRef.current);
+      pollingRef.current = null;
+    }
+
+    if (generatingScenes.length === 0) {
+      return;
+    }
+
+    // Poll immediately, then every 5s
+    void pollStatus();
+    pollingRef.current = setInterval(() => { void pollStatus(); }, 5000);
+
+    return () => {
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current);
+        pollingRef.current = null;
+      }
+    };
+  }, [generatingScenes.length, pollStatus]);
 
   const handleAssemble = async () => {
     setIsAssembling(true);
@@ -146,6 +228,28 @@ export function StepAssembly() {
                   </button>
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* Scene status summary when no completed scenes */}
+          {completedScenes.length === 0 && generatedScenes.length > 0 && !finalVideoUrl && (
+            <div className="p-3 bg-zinc-800/50 border border-zinc-700 rounded-lg space-y-1">
+              <p className="text-sm font-medium text-zinc-300">Scene Status</p>
+              {generatedScenes.map((s, i) => (
+                <p key={s.sceneId} className="text-xs text-zinc-400">
+                  Scene {i + 1}: {s.status}
+                  {s.status === 'generating' && ' (waiting for provider...)'}
+                  {s.status === 'completed' && !s.videoUrl && ' (no video URL returned)'}
+                  {s.status === 'completed' && s.videoUrl && ' ✓'}
+                  {s.status === 'failed' && s.error && ` — ${s.error}`}
+                </p>
+              ))}
+              {generatingScenes.length > 0 && (
+                <p className="text-xs text-amber-400 flex items-center gap-1 mt-2">
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  Polling for {generatingScenes.length} scene(s) still generating...
+                </p>
+              )}
             </div>
           )}
 
