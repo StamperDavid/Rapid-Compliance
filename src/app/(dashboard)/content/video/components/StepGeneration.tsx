@@ -28,6 +28,7 @@ export function StepGeneration() {
 
   const [error, setError] = useState<string | null>(null);
   const hasStarted = useRef(false);
+  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const allComplete = generatedScenes.length > 0 &&
     generatedScenes.every((s) => s.status === 'completed' || s.status === 'failed');
@@ -113,6 +114,79 @@ export function StepGeneration() {
       void startGeneration();
     }
   }, [generatedScenes.length, scenes.length, startGeneration]);
+
+  // Poll for scene status updates every 5 seconds
+  useEffect(() => {
+    // Clean up any existing interval
+    if (pollingRef.current) {
+      clearInterval(pollingRef.current);
+      pollingRef.current = null;
+    }
+
+    // Only poll if there are scenes still generating
+    const generatingScenes = generatedScenes.filter(
+      (s) => s.status === 'generating' && s.providerVideoId,
+    );
+    if (generatingScenes.length === 0) {
+      return;
+    }
+
+    const pollStatus = async () => {
+      try {
+        const response = await authFetch('/api/video/poll-scenes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            scenes: generatingScenes.map((s) => ({
+              sceneId: s.sceneId,
+              providerVideoId: s.providerVideoId,
+              provider: s.provider,
+            })),
+          }),
+        });
+
+        if (!response.ok) {
+          return;
+        }
+
+        const data = await response.json() as {
+          success: boolean;
+          results: Array<{
+            sceneId: string;
+            status: 'generating' | 'completed' | 'failed';
+            videoUrl: string | null;
+            thumbnailUrl: string | null;
+            error: string | null;
+          }>;
+        };
+
+        if (data.success && data.results) {
+          for (const result of data.results) {
+            if (result.status !== 'generating') {
+              updateGeneratedScene(result.sceneId, {
+                status: result.status,
+                videoUrl: result.videoUrl,
+                thumbnailUrl: result.thumbnailUrl,
+                error: result.error,
+                progress: result.status === 'completed' ? 100 : 0,
+              });
+            }
+          }
+        }
+      } catch {
+        // Polling failures are non-fatal — will retry on next interval
+      }
+    };
+
+    pollingRef.current = setInterval(() => { void pollStatus(); }, 5000);
+
+    return () => {
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current);
+        pollingRef.current = null;
+      }
+    };
+  }, [generatedScenes, authFetch, updateGeneratedScene]);
 
   const handleRetry = async (sceneId: string) => {
     const scene = scenes.find((s) => s.id === sceneId);
