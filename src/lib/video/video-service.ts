@@ -505,16 +505,62 @@ export async function listHeyGenTalkingPhotos(): Promise<HeyGenAvatar[]> {
 }
 
 /**
- * List ALL avatars — stock avatars + custom talking photos merged.
- * Custom avatars appear first.
+ * Load custom avatars from Firestore `custom_avatars` collection.
+ * These are avatars created via the upload flow — always available
+ * regardless of HeyGen plan or API status.
+ */
+async function listFirestoreCustomAvatars(): Promise<HeyGenAvatar[]> {
+  if (!adminDb) { return []; }
+
+  try {
+    const snap = await adminDb
+      .collection(`organizations/${PLATFORM_ID}/custom_avatars`)
+      .orderBy('createdAt', 'desc')
+      .limit(50)
+      .get();
+
+    return snap.docs.map(doc => {
+      const data = doc.data();
+      return {
+        id: data.id as string,
+        name: (data.name as string) ?? 'Custom Avatar',
+        thumbnailUrl: (data.thumbnailUrl as string) ?? '',
+        isCustom: true,
+        assignedVoiceId: (data.assignedVoiceId as string) ?? undefined,
+        assignedVoiceName: (data.assignedVoiceName as string) ?? undefined,
+      };
+    });
+  } catch (err) {
+    logger.warn('Failed to load Firestore custom avatars', {
+      error: err instanceof Error ? err.message : String(err),
+    });
+    return [];
+  }
+}
+
+/**
+ * List ALL avatars — custom avatars (Firestore + HeyGen talking photos) + stock.
+ * Custom avatars appear first, deduped by ID.
  */
 export async function listAllAvatars(): Promise<{ avatars: HeyGenAvatar[] }> {
-  const [stockResult, customAvatars] = await Promise.all([
+  const [stockResult, heygenCustom, firestoreCustom] = await Promise.all([
     listHeyGenAvatars(),
     listHeyGenTalkingPhotos(),
+    listFirestoreCustomAvatars(),
   ]);
 
-  // Custom avatars first, then stock
+  // Merge custom avatars (Firestore takes priority, then HeyGen talking photos)
+  const seenIds = new Set<string>();
+  const customAvatars: HeyGenAvatar[] = [];
+
+  for (const avatar of [...firestoreCustom, ...heygenCustom]) {
+    if (!seenIds.has(avatar.id)) {
+      seenIds.add(avatar.id);
+      customAvatars.push(avatar);
+    }
+  }
+
+  // Custom first, then stock
   return { avatars: [...customAvatars, ...stockResult.avatars] };
 }
 

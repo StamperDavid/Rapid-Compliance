@@ -2,9 +2,10 @@
  * Custom Avatar Creation API
  * POST /api/video/avatar/create
  *
- * Creates a HeyGen Photo Avatar from a previously uploaded photo.
- * Reads the photo base64 from Firestore and uploads directly to HeyGen,
- * avoiding localhost URL issues.
+ * Creates a custom avatar from a previously uploaded photo.
+ * Attempts HeyGen Instant Avatar creation, but always saves a local
+ * record in Firestore `custom_avatars` so the avatar is visible
+ * even if HeyGen's API doesn't support the plan or fails.
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
@@ -47,11 +48,12 @@ export async function POST(request: NextRequest) {
       file: 'avatar/create/route.ts',
     });
 
-    // Check if the URL points to our internal photo endpoint — extract photoId and read base64
+    // Extract photoId and read base64 from Firestore
     const photoIdMatch = photoUrl.match(/\/api\/video\/avatar\/photo\/([^/]+)$/);
+    let photoBase64: string | null = null;
+    let photoContentType: string | null = null;
 
     if (photoIdMatch?.[1] && adminDb) {
-      // Read the base64 directly from Firestore — avoids HeyGen needing to download from our URL
       const photoDoc = await adminDb
         .collection(`organizations/${PLATFORM_ID}/avatar_photos`)
         .doc(photoIdMatch[1])
@@ -59,32 +61,64 @@ export async function POST(request: NextRequest) {
 
       if (photoDoc.exists) {
         const photoData = photoDoc.data();
-        if (photoData?.base64 && photoData?.contentType) {
-          logger.info('Sending avatar photo data directly to HeyGen (base64)', {
-            file: 'avatar/create/route.ts',
-          });
-
-          const result = await createInstantAvatar(
-            { base64: photoData.base64 as string, contentType: photoData.contentType as string },
-            avatarName,
-          );
-
-          return NextResponse.json({
-            success: true,
-            avatarId: result.avatarId,
-            status: result.status,
-          });
-        }
+        photoBase64 = (photoData?.base64 as string) ?? null;
+        photoContentType = (photoData?.contentType as string) ?? null;
       }
     }
 
-    // Fallback: if it's an external URL, download and forward to HeyGen
-    const result = await createInstantAvatar({ url: photoUrl }, avatarName);
+    // Try HeyGen avatar creation (may fail on free plan — that's OK)
+    let heygenAvatarId: string | null = null;
+    let heygenStatus: string = 'local_only';
+
+    try {
+      const imageInput = photoBase64 && photoContentType
+        ? { base64: photoBase64, contentType: photoContentType }
+        : { url: photoUrl };
+
+      const result = await createInstantAvatar(imageInput, avatarName);
+      heygenAvatarId = result.avatarId;
+      heygenStatus = result.status;
+    } catch (heygenErr) {
+      logger.warn('HeyGen avatar creation failed — saving locally', {
+        error: heygenErr instanceof Error ? heygenErr.message : String(heygenErr),
+        file: 'avatar/create/route.ts',
+      });
+    }
+
+    // Always save a local custom_avatars record so it shows in the picker
+    const localAvatarId = heygenAvatarId ?? `local-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+    if (adminDb) {
+      // Build a small thumbnail data URL from the base64
+      const thumbnailDataUrl = photoBase64 && photoContentType
+        ? `data:${photoContentType};base64,${photoBase64}`
+        : '';
+
+      await adminDb
+        .collection(`organizations/${PLATFORM_ID}/custom_avatars`)
+        .doc(localAvatarId)
+        .set({
+          id: localAvatarId,
+          name: avatarName,
+          thumbnailUrl: thumbnailDataUrl,
+          isCustom: true,
+          heygenAvatarId: heygenAvatarId ?? null,
+          heygenStatus,
+          createdAt: new Date().toISOString(),
+          createdBy: typeof authResult === 'object' && 'uid' in authResult ? authResult.uid : 'system',
+        });
+
+      logger.info('Custom avatar saved to Firestore', {
+        localAvatarId,
+        heygenAvatarId,
+        file: 'avatar/create/route.ts',
+      });
+    }
 
     return NextResponse.json({
       success: true,
-      avatarId: result.avatarId,
-      status: result.status,
+      avatarId: localAvatarId,
+      status: heygenStatus,
     });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';

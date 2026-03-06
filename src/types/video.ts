@@ -105,6 +105,9 @@ export interface HeyGenAvatar {
   style?: string;
   isPremium?: boolean;
   isCustom?: boolean;
+  /** Voice assigned to this avatar (for display on avatar cards) */
+  assignedVoiceId?: string;
+  assignedVoiceName?: string;
 }
 
 export interface HeyGenVoice {

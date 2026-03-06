@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { motion } from 'framer-motion';
-import { User, Loader2, AlertCircle, Search, Check } from 'lucide-react';
+import { User, Loader2, AlertCircle, Search, Check, Mic, Sparkles } from 'lucide-react';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import type { HeyGenAvatar } from '@/types/video';
@@ -14,6 +14,99 @@ interface AvatarPickerProps {
 }
 
 const GENDER_FILTERS = ['all', 'male', 'female'] as const;
+
+function AvatarCard({
+  avatar,
+  isSelected,
+  onSelect,
+}: {
+  avatar: HeyGenAvatar;
+  isSelected: boolean;
+  onSelect: () => void;
+}) {
+  return (
+    <motion.button
+      onClick={onSelect}
+      className={cn(
+        'relative flex flex-col items-center gap-2 p-3 rounded-xl border transition-all',
+        isSelected
+          ? 'border-amber-500 bg-amber-500/10 ring-1 ring-amber-500/30'
+          : 'border-zinc-700 bg-zinc-800/50 hover:border-zinc-500 hover:bg-zinc-800',
+      )}
+      whileHover={{ scale: 1.02 }}
+      whileTap={{ scale: 0.97 }}
+    >
+      {/* Thumbnail */}
+      {avatar.thumbnailUrl ? (
+        <div className={cn(
+          'relative w-20 h-20 rounded-full overflow-hidden ring-2',
+          avatar.isCustom ? 'ring-green-500/40' : 'ring-zinc-700/50',
+        )}>
+          <Image
+            src={avatar.thumbnailUrl}
+            alt={avatar.name}
+            fill
+            className="object-cover"
+            sizes="80px"
+            unoptimized={avatar.thumbnailUrl.startsWith('data:')}
+          />
+        </div>
+      ) : (
+        <div className="w-20 h-20 rounded-full bg-zinc-700 flex items-center justify-center ring-2 ring-zinc-700/50">
+          <User className="w-8 h-8 text-zinc-400" />
+        </div>
+      )}
+
+      {/* Name */}
+      <span className="text-xs font-medium text-zinc-200 truncate w-full text-center">
+        {avatar.name}
+      </span>
+
+      {/* Metadata row */}
+      <div className="flex items-center gap-1 flex-wrap justify-center">
+        {avatar.gender && (
+          <span className="px-1.5 py-0.5 bg-zinc-700/50 rounded text-[10px] text-zinc-400">
+            {avatar.gender}
+          </span>
+        )}
+        {avatar.style && (
+          <span className="px-1.5 py-0.5 bg-zinc-700/50 rounded text-[10px] text-zinc-400">
+            {avatar.style}
+          </span>
+        )}
+      </div>
+
+      {/* Voice assignment indicator */}
+      {avatar.assignedVoiceName && (
+        <div className="flex items-center gap-1 px-1.5 py-0.5 bg-purple-500/10 border border-purple-500/20 rounded text-[10px] text-purple-300 w-full justify-center">
+          <Mic className="w-2.5 h-2.5 flex-shrink-0" />
+          <span className="truncate">{avatar.assignedVoiceName}</span>
+        </div>
+      )}
+
+      {/* Custom badge */}
+      {avatar.isCustom && (
+        <span className="absolute top-1.5 right-1.5 flex items-center gap-0.5 px-1.5 py-0.5 bg-green-500/20 border border-green-500/30 text-green-400 text-[9px] font-bold rounded">
+          <Sparkles className="w-2.5 h-2.5" />
+          CUSTOM
+        </span>
+      )}
+      {/* Premium badge */}
+      {!avatar.isCustom && avatar.isPremium && (
+        <span className="absolute top-1.5 right-1.5 px-1.5 py-0.5 bg-amber-500/20 text-amber-400 text-[9px] font-bold rounded">
+          PRO
+        </span>
+      )}
+
+      {/* Selected checkmark */}
+      {isSelected && (
+        <div className="absolute top-1.5 left-1.5 w-5 h-5 bg-amber-500 rounded-full flex items-center justify-center">
+          <Check className="w-3 h-3 text-black" />
+        </div>
+      )}
+    </motion.button>
+  );
+}
 
 export function AvatarPicker({ selectedAvatarId, onSelect }: AvatarPickerProps) {
   const authFetch = useAuthFetch();
@@ -42,25 +135,31 @@ export function AvatarPicker({ selectedAvatarId, onSelect }: AvatarPickerProps) 
     void fetchAvatars();
   }, [fetchAvatars]);
 
-  const filteredAvatars = useMemo(() => {
-    let result = avatars;
+  // Split into custom vs stock
+  const { customAvatars, stockAvatars } = useMemo(() => {
+    let custom = avatars.filter(a => a.isCustom);
+    let stock = avatars.filter(a => !a.isCustom);
 
     if (filterGender !== 'all') {
-      result = result.filter((a) => a.gender === filterGender);
+      custom = custom.filter(a => !a.gender || a.gender === filterGender);
+      stock = stock.filter(a => a.gender === filterGender);
     }
 
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
-      result = result.filter(
-        (a) =>
-          a.name.toLowerCase().includes(query) ||
-          (a.style?.toLowerCase().includes(query) ?? false) ||
-          (a.ethnicity?.toLowerCase().includes(query) ?? false),
-      );
+      const matchFn = (a: HeyGenAvatar) =>
+        a.name.toLowerCase().includes(query) ||
+        (a.style?.toLowerCase().includes(query) ?? false) ||
+        (a.ethnicity?.toLowerCase().includes(query) ?? false) ||
+        (a.assignedVoiceName?.toLowerCase().includes(query) ?? false);
+      custom = custom.filter(matchFn);
+      stock = stock.filter(matchFn);
     }
 
-    return result;
+    return { customAvatars: custom, stockAvatars: stock };
   }, [avatars, filterGender, searchQuery]);
+
+  const totalFiltered = customAvatars.length + stockAvatars.length;
 
   if (isLoading) {
     return (
@@ -116,88 +215,59 @@ export function AvatarPicker({ selectedAvatarId, onSelect }: AvatarPickerProps) 
 
       {/* Results count */}
       <p className="text-xs text-zinc-500">
-        {filteredAvatars.length} avatar{filteredAvatars.length !== 1 ? 's' : ''}
+        {totalFiltered} avatar{totalFiltered !== 1 ? 's' : ''}
         {searchQuery || filterGender !== 'all' ? ' matching filters' : ' available'}
+        {customAvatars.length > 0 ? ` (${customAvatars.length} custom)` : ''}
       </p>
 
-      {/* Avatar Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 max-h-[420px] overflow-y-auto pr-1">
-        {filteredAvatars.map((avatar) => {
-          const isSelected = selectedAvatarId === avatar.id;
-          return (
-            <motion.button
-              key={avatar.id}
-              onClick={() => onSelect(avatar.id, avatar.name)}
-              className={cn(
-                'relative flex flex-col items-center gap-2 p-3 rounded-xl border transition-all',
-                isSelected
-                  ? 'border-amber-500 bg-amber-500/10 ring-1 ring-amber-500/30'
-                  : 'border-zinc-700 bg-zinc-800/50 hover:border-zinc-500 hover:bg-zinc-800',
-              )}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.97 }}
-            >
-              {/* Thumbnail */}
-              {avatar.thumbnailUrl ? (
-                <div className="relative w-20 h-20 rounded-full overflow-hidden ring-2 ring-zinc-700/50">
-                  <Image
-                    src={avatar.thumbnailUrl}
-                    alt={avatar.name}
-                    fill
-                    className="object-cover"
-                    sizes="80px"
-                  />
-                </div>
-              ) : (
-                <div className="w-20 h-20 rounded-full bg-zinc-700 flex items-center justify-center ring-2 ring-zinc-700/50">
-                  <User className="w-8 h-8 text-zinc-400" />
-                </div>
-              )}
-
-              {/* Name */}
-              <span className="text-xs font-medium text-zinc-200 truncate w-full text-center">
-                {avatar.name}
-              </span>
-
-              {/* Metadata */}
-              <div className="flex items-center gap-1 flex-wrap justify-center">
-                {avatar.gender && (
-                  <span className="px-1.5 py-0.5 bg-zinc-700/50 rounded text-[10px] text-zinc-400">
-                    {avatar.gender}
-                  </span>
-                )}
-                {avatar.style && (
-                  <span className="px-1.5 py-0.5 bg-zinc-700/50 rounded text-[10px] text-zinc-400">
-                    {avatar.style}
-                  </span>
-                )}
+      <div className="max-h-[520px] overflow-y-auto pr-1 space-y-6">
+        {/* Custom Avatars Section */}
+        {customAvatars.length > 0 && (
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <div className="flex items-center gap-1.5 px-2.5 py-1 bg-green-500/10 border border-green-500/20 rounded-lg">
+                <Sparkles className="w-3.5 h-3.5 text-green-400" />
+                <span className="text-xs font-semibold text-green-400">Your Avatars</span>
               </div>
+              <div className="flex-1 h-px bg-zinc-700/50" />
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+              {customAvatars.map((avatar) => (
+                <AvatarCard
+                  key={avatar.id}
+                  avatar={avatar}
+                  isSelected={selectedAvatarId === avatar.id}
+                  onSelect={() => onSelect(avatar.id, avatar.name)}
+                />
+              ))}
+            </div>
+          </div>
+        )}
 
-              {/* Custom badge */}
-              {avatar.isCustom && (
-                <span className="absolute top-1.5 right-1.5 px-1.5 py-0.5 bg-green-500/20 text-green-400 text-[9px] font-bold rounded">
-                  CUSTOM
-                </span>
-              )}
-              {/* Premium badge */}
-              {!avatar.isCustom && avatar.isPremium && (
-                <span className="absolute top-1.5 right-1.5 px-1.5 py-0.5 bg-amber-500/20 text-amber-400 text-[9px] font-bold rounded">
-                  PRO
-                </span>
-              )}
-
-              {/* Selected checkmark */}
-              {isSelected && (
-                <div className="absolute top-1.5 left-1.5 w-5 h-5 bg-amber-500 rounded-full flex items-center justify-center">
-                  <Check className="w-3 h-3 text-black" />
-                </div>
-              )}
-            </motion.button>
-          );
-        })}
+        {/* Stock Avatars Section */}
+        {stockAvatars.length > 0 && (
+          <div>
+            {customAvatars.length > 0 && (
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-xs font-medium text-zinc-500 px-2.5 py-1">Stock Avatars</span>
+                <div className="flex-1 h-px bg-zinc-700/50" />
+              </div>
+            )}
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+              {stockAvatars.map((avatar) => (
+                <AvatarCard
+                  key={avatar.id}
+                  avatar={avatar}
+                  isSelected={selectedAvatarId === avatar.id}
+                  onSelect={() => onSelect(avatar.id, avatar.name)}
+                />
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
-      {filteredAvatars.length === 0 && (
+      {totalFiltered === 0 && (
         <div className="flex flex-col items-center justify-center py-8 gap-2">
           <Search className="w-6 h-6 text-zinc-600" />
           <p className="text-sm text-zinc-500">No avatars match your search.</p>
