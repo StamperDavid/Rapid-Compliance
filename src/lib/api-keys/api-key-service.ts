@@ -203,6 +203,8 @@ return keys.ai?.anthropicApiKey ?? keys.ai?.openrouterApiKey ?? null;
         return keys.enrichment?.rapidApiKey ?? null;
       case 'builtwith':
         return keys.enrichment?.builtWithApiKey ?? null;
+      case 'apollo':
+        return keys.enrichment?.apolloApiKey ?? null;
 
       // SEO Services
       case 'pagespeed':

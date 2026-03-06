@@ -89,23 +89,32 @@ async function generateWithHeyGen(
         const provider = new ElevenLabsProvider(apiKey);
         const ttsResult = await provider.synthesize(script, voiceId);
 
-        // Upload the base64 audio to Firebase Storage for HeyGen to access
-        const { adminStorage } = await import('@/lib/firebase/admin');
-        if (adminStorage) {
-          const audioBuffer = Buffer.from(ttsResult.audio.split(',')[1], 'base64');
-          const bucket = adminStorage.bucket();
-          const audioPath = `video/tts/${scene.id}-${Date.now()}.mp3`;
-          const file = bucket.file(audioPath);
-          await file.save(audioBuffer, { metadata: { contentType: 'audio/mpeg' } });
-          const [signedUrl] = await file.getSignedUrl({
-            action: 'read',
-            expires: Date.now() + 24 * 60 * 60 * 1000, // 24 hours
-          });
-          audioUrl = signedUrl;
+        // Store audio as base64 in Firestore, serve via public API endpoint
+        // (Firebase Storage bucket doesn't exist — no billing on the GCP project)
+        const { adminDb } = await import('@/lib/firebase/admin');
+        if (adminDb) {
+          const audioBase64 = ttsResult.audio.includes(',')
+            ? ttsResult.audio.split(',')[1]
+            : ttsResult.audio;
+          const audioId = `tts-${scene.id}-${Date.now()}`;
 
-          logger.info('ElevenLabs audio synthesized and uploaded', {
+          await adminDb
+            .collection(`organizations/${PLATFORM_ID}/tts_audio`)
+            .doc(audioId)
+            .set({
+              base64: audioBase64,
+              contentType: 'audio/mpeg',
+              createdAt: new Date(),
+              expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+            });
+
+          // Build a public URL — HeyGen will download from this endpoint
+          const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://rapidcompliance.us';
+          audioUrl = `${appUrl}/api/video/tts-audio/${audioId}`;
+
+          logger.info('ElevenLabs audio synthesized and stored', {
             sceneId: scene.id,
-            audioPath,
+            audioId,
             file: 'scene-generator.ts',
           });
         }

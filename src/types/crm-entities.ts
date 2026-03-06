@@ -192,7 +192,7 @@ export interface EnrichmentData {
 
   // Metadata
   lastEnriched?: FirestoreDate;
-  dataSource?: 'web-scrape' | 'search-api' | 'hybrid' | 'manual';
+  dataSource?: 'web-scrape' | 'search-api' | 'hybrid' | 'manual' | 'apollo';
   confidence?: number;
 
   // Allow additional enrichment fields without going full `any`

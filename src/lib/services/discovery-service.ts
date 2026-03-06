@@ -125,6 +125,16 @@ async function runDiscovery(
 
     const enrichmentResults = await enrichCompanies(enrichmentRequests, { maxConcurrent: 5 });
 
+    // Step 2b: Supplement with Apollo org enrichment if configured
+    let apolloConfigured = false;
+    let ApolloServiceModule: typeof import('@/lib/integrations/apollo/apollo-service') | null = null;
+    try {
+      ApolloServiceModule = await import('@/lib/integrations/apollo/apollo-service');
+      apolloConfigured = await ApolloServiceModule.apolloService.isConfigured();
+    } catch {
+      // Apollo not available — continue with scraper data only
+    }
+
     // Step 3: Score each against ICP and save results
     let scoredCount = 0;
 
@@ -141,6 +151,23 @@ async function runDiscovery(
       companyData.companyName ??= searchResult.name;
       companyData.domain ??= searchResult.domain;
       companyData.website ??= searchResult.website;
+
+      // Apollo enrichment: merge structured data from Apollo into scraper results
+      if (apolloConfigured && ApolloServiceModule && companyData.domain) {
+        try {
+          const apolloResult = await ApolloServiceModule.apolloService.enrichOrganization({ domain: companyData.domain });
+          if (apolloResult.success && apolloResult.data) {
+            const apolloEnrichment = ApolloServiceModule.toEnrichmentData(apolloResult.data);
+            const merged = ApolloServiceModule.mergeEnrichmentData(companyData, apolloEnrichment as EnrichmentData);
+            Object.assign(companyData, merged);
+          }
+        } catch (err) {
+          logger.warn('Apollo enrichment failed for domain, using scraper data only', {
+            domain: companyData.domain,
+            error: err instanceof Error ? err.message : String(err),
+          });
+        }
+      }
 
       const scoreResult = scoreCompanyAgainstIcp(companyData, profile);
 

@@ -49,6 +49,7 @@ export const UI_TO_CONFIG_MAP: Record<string, string> = {
   newsapi: 'enrichment.newsApiKey',
   rapidapi: 'enrichment.rapidApiKey',
   serper: 'enrichment.serperApiKey',
+  apollo: 'enrichment.apolloApiKey',
 
   // Video
   heygen: 'video.heygen.apiKey',

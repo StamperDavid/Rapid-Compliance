@@ -147,6 +147,7 @@ export interface APIKeysConfig {
     clearbitApiKey?: string;
     crunchbaseApiKey?: string;
     builtWithApiKey?: string;
+    apolloApiKey?: string;
     newsApiKey?: string;
     rapidApiKey?: string; // For LinkedIn and other APIs
     serperApiKey?: string; // Serper.dev Google Search API
@@ -283,6 +284,7 @@ export type APIServiceName =
   | 'clearbit'
   | 'crunchbase'
   | 'builtwith'
+  | 'apollo'      // Apollo.io People & Company Database
   | 'newsapi'
   | 'rapidapi'
   | 'twitter'      // Twitter/X API v2

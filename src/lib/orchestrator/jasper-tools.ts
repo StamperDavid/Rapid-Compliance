@@ -3012,26 +3012,162 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
       // LEAD GENERATION & CRM TOOLS
       // ═══════════════════════════════════════════════════════════════════════
       case 'scan_leads': {
-        content = JSON.stringify({
-          status: 'scanning',
-          industry: args.industry,
-          location: args.location ?? 'all',
-          companySize: args.companySize ?? 'all',
-          keywords: args.keywords ?? null,
-          limit: args.limit ?? 25,
-          message: `Lead scan initiated for ${args.industry} industry. Results will be available shortly.`,
-          estimatedResults: Math.floor(Math.random() * 50) + 10,
-        });
+        try {
+          const { apolloService } = await import('@/lib/integrations/apollo/apollo-service');
+          const configured = await apolloService.isConfigured();
+          if (!configured) {
+            content = JSON.stringify({
+              status: 'error',
+              message: 'Apollo API key not configured. Please add it in Settings > API Keys to enable lead scanning.',
+            });
+            break;
+          }
+
+          const limit = Math.min(Number(args.limit) || 25, 100);
+          const searchParams: Record<string, unknown> = {
+            per_page: limit,
+          };
+          if (args.industry) {
+            searchParams.q_keywords = args.industry;
+          }
+          if (args.keywords) {
+            searchParams.q_keywords = String(args.keywords) + (args.industry ? ` ${String(args.industry)}` : '');
+          }
+          if (args.location) {
+            searchParams.q_person_locations = [args.location];
+          }
+          if (args.companySize) {
+            const sizeMap: Record<string, string> = {
+              small: '1,50',
+              medium: '51,200',
+              large: '201,1000',
+              enterprise: '1001,10000',
+            };
+            const range = sizeMap[args.companySize as string];
+            if (range) {
+              searchParams.organization_num_employees_ranges = [range];
+            }
+          }
+
+          const result = await apolloService.searchPeople(searchParams as Parameters<typeof apolloService.searchPeople>[0]);
+          if (!result.success || !result.data) {
+            content = JSON.stringify({ status: 'error', message: result.error ?? 'Search failed' });
+            break;
+          }
+
+          const people = result.data.people.map(p => ({
+            name: p.name,
+            title: p.title,
+            email: p.email,
+            emailStatus: p.email_status,
+            company: p.organization?.name ?? null,
+            domain: p.organization?.website_url ?? null,
+            linkedin: p.linkedin_url,
+            seniority: p.seniority,
+            location: [p.city, p.state, p.country].filter(Boolean).join(', '),
+          }));
+
+          content = JSON.stringify({
+            status: 'completed',
+            source: 'apollo',
+            totalResults: result.data.pagination.total_entries,
+            returned: people.length,
+            creditsUsed: result.creditsUsed,
+            people,
+          });
+        } catch (err) {
+          content = JSON.stringify({
+            status: 'error',
+            message: err instanceof Error ? err.message : 'Lead scan failed',
+          });
+        }
         break;
       }
 
       case 'enrich_lead': {
-        content = JSON.stringify({
-          status: 'enriching',
-          leadId: args.leadId,
-          enrichmentLevel: args.enrichmentLevel ?? 'standard',
-          message: `Enrichment process started for lead ${args.leadId}`,
-        });
+        try {
+          const { apolloService, toEnrichmentData } = await import('@/lib/integrations/apollo/apollo-service');
+          const configured = await apolloService.isConfigured();
+          if (!configured) {
+            content = JSON.stringify({
+              status: 'error',
+              message: 'Apollo API key not configured. Add it in Settings > API Keys.',
+            });
+            break;
+          }
+
+          const leadId = args.leadId as string;
+          if (!leadId) {
+            content = JSON.stringify({ status: 'error', message: 'leadId is required' });
+            break;
+          }
+
+          // Load lead from Firestore
+          const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
+          const { getSubCollection } = await import('@/lib/firebase/collections');
+          const lead = await AdminFirestoreService.get(getSubCollection('leads'), leadId) as Record<string, unknown> | null;
+
+          if (!lead) {
+            content = JSON.stringify({ status: 'error', message: `Lead not found: ${leadId}` });
+            break;
+          }
+
+          const domain = (lead.company as string)?.replace(/^https?:\/\//, '').replace(/\/.*$/, '')
+            ?? (lead.email as string)?.split('@')[1]
+            ?? null;
+
+          let totalCredits = 0;
+          const enrichedFields: Record<string, unknown> = {};
+
+          // Org enrichment (free)
+          if (domain) {
+            const orgResult = await apolloService.enrichOrganization({ domain });
+            if (orgResult.success && orgResult.data) {
+              const orgData = toEnrichmentData(orgResult.data);
+              Object.assign(enrichedFields, orgData);
+              totalCredits += orgResult.creditsUsed;
+            }
+          }
+
+          // Person enrichment (1 credit)
+          const personResult = await apolloService.enrichPerson({
+            email: (lead.email as string) ?? undefined,
+            domain: domain ?? undefined,
+            first_name: (lead.firstName as string) ?? undefined,
+            last_name: (lead.lastName as string) ?? undefined,
+          });
+          if (personResult.success && personResult.data) {
+            const p = personResult.data;
+            enrichedFields.contactEmail = p.email;
+            enrichedFields.contactPhone = p.phone_numbers?.[0]?.sanitized_number ?? null;
+            enrichedFields.title = p.title;
+            enrichedFields.linkedInUrl = p.linkedin_url;
+            enrichedFields.seniority = p.seniority;
+            totalCredits += personResult.creditsUsed;
+          }
+
+          // Update lead in Firestore
+          if (Object.keys(enrichedFields).length > 0) {
+            await AdminFirestoreService.update(getSubCollection('leads'), leadId, {
+              enrichmentData: enrichedFields,
+              lastEnriched: new Date().toISOString(),
+              enrichmentSource: 'apollo',
+            });
+          }
+
+          content = JSON.stringify({
+            status: 'completed',
+            leadId,
+            source: 'apollo',
+            creditsUsed: totalCredits,
+            enrichedFields,
+          });
+        } catch (err) {
+          content = JSON.stringify({
+            status: 'error',
+            message: err instanceof Error ? err.message : 'Enrichment failed',
+          });
+        }
         break;
       }
 

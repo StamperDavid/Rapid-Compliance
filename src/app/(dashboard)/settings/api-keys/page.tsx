@@ -411,6 +411,23 @@ export default function APIKeysPage() {
       why: 'Integrate with any app Zapier supports.',
     },
     {
+      id: 'apollo',
+      name: 'Apollo.io',
+      icon: '🚀',
+      description: '275M+ person database — verified emails, phones, company data',
+      required: false,
+      placeholder: 'your-apollo-api-key',
+      setupUrl: 'https://app.apollo.io/#/settings/integrations/api',
+      setupSteps: [
+        'Go to app.apollo.io',
+        'Sign up or log in',
+        'Settings → Integrations → API',
+        'Copy your API key and paste here',
+      ],
+      cost: 'FREE: 10K people search/mo, enrichment 1 credit/person',
+      why: 'Powers lead discovery & enrichment — verified emails, phone numbers, company firmographics, funding data.',
+    },
+    {
       id: 'clearbit_api_key',
       name: 'Clearbit',
       icon: '🔍',

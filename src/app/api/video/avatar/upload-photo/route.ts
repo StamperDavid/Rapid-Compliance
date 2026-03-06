@@ -1,16 +1,21 @@
 /**
  * Avatar Photo Upload API
- * POST /api/video/avatar/upload-photo - Upload a photo to Firebase Storage for avatar creation
+ * POST /api/video/avatar/upload-photo
+ *
+ * Stores the photo as base64 in Firestore (not Firebase Storage — that requires
+ * a billing-enabled GCS bucket). The photo is served via a public GET endpoint
+ * at /api/video/avatar/photo/[id] which HeyGen can access to create the avatar.
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger/logger';
 import { requireAuth } from '@/lib/auth/api-auth';
-import { adminStorage } from '@/lib/firebase/admin';
+import { adminDb } from '@/lib/firebase/admin';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 export const dynamic = 'force-dynamic';
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB (Firestore doc limit is ~1MB, base64 adds ~33%)
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
 export async function POST(request: NextRequest) {
@@ -39,46 +44,45 @@ export async function POST(request: NextRequest) {
 
     if (file.size > MAX_FILE_SIZE) {
       return NextResponse.json(
-        { success: false, error: 'File too large. Maximum 10MB.' },
+        { success: false, error: 'File too large. Maximum 2MB for avatar photos.' },
         { status: 400 },
       );
     }
 
-    if (!adminStorage) {
+    if (!adminDb) {
       return NextResponse.json(
-        { success: false, error: 'Firebase Storage not configured. Check server environment.' },
+        { success: false, error: 'Database not available.' },
         { status: 500 },
       );
     }
 
-    const ext = file.type === 'image/jpeg' ? 'jpg' : file.type === 'image/png' ? 'png' : 'webp';
-    const fileName = `avatar-${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${ext}`;
-    const storagePath = `video/avatars/${fileName}`;
-
-    // Use the default bucket from Firebase Admin init (storageBucket config)
-    // Same approach as the video assemble route which works
-    const bucket = adminStorage.bucket();
-    const fileRef = bucket.file(storagePath);
+    // Convert to base64 and store in Firestore
     const buffer = Buffer.from(await file.arrayBuffer());
+    const base64Data = buffer.toString('base64');
+    const photoId = `avatar-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
 
-    await fileRef.save(buffer, {
-      metadata: {
+    await adminDb
+      .collection(`organizations/${PLATFORM_ID}/avatar_photos`)
+      .doc(photoId)
+      .set({
+        base64: base64Data,
         contentType: file.type,
-        metadata: {
-          purpose: 'avatar-photo',
-          uploadedAt: new Date().toISOString(),
-        },
-      },
-    });
+        sizeBytes: file.size,
+        createdAt: new Date(),
+        // Auto-expire after 30 days (cleanup can read this)
+        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      });
 
-    // Generate a signed URL (valid for 7 days) — avoids need for public bucket ACLs
-    const [signedUrl] = await fileRef.getSignedUrl({
-      action: 'read',
-      expires: Date.now() + 7 * 24 * 60 * 60 * 1000, // 7 days
-    });
+    // Build the public URL that serves this image (no auth required so HeyGen can access it)
+    const origin = request.headers.get('origin')
+      ?? request.headers.get('x-forwarded-host')
+      ?? 'https://rapidcompliance.us';
+    const protocol = request.headers.get('x-forwarded-proto') ?? 'https';
+    const host = request.headers.get('host') ?? origin.replace(/^https?:\/\//, '');
+    const publicUrl = `${protocol}://${host}/api/video/avatar/photo/${photoId}`;
 
-    logger.info('Avatar photo uploaded', {
-      fileName,
+    logger.info('Avatar photo stored in Firestore', {
+      photoId,
       sizeBytes: file.size,
       contentType: file.type,
       file: 'avatar/upload-photo/route.ts',
@@ -86,8 +90,8 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      url: signedUrl,
-      fileName,
+      url: publicUrl,
+      fileName: photoId,
     });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';

@@ -70,7 +70,7 @@ export interface CompanyEnrichmentData {
   
   // Metadata
   lastUpdated: Date;
-  dataSource: 'web-scrape' | 'search-api' | 'hybrid';
+  dataSource: 'web-scrape' | 'search-api' | 'hybrid' | 'apollo';
   confidence: number; // 0-100
 }
 

@@ -248,14 +248,6 @@ export async function enrichLead(
   leadId: string,
   sources: LeadEnrichment['sources']
 ): Promise<LeadEnrichment> {
-  // In production, this would:
-  // 1. Call Clearbit/Apollo/ZoomInfo APIs
-  // 2. Fetch LinkedIn data
-  // 3. Aggregate data from multiple sources
-  // 4. Store enriched data in database
-
-  // Return empty enrichment — real data requires external API integration
-  // (Clearbit, Apollo, ZoomInfo). Fields are undefined to avoid misleading users.
   const enrichment: LeadEnrichment = {
     leadId,
     sources,
@@ -264,6 +256,70 @@ export async function enrichLead(
     enrichmentSource: 'none',
     confidence: 0,
   };
+
+  // Try Apollo enrichment if configured and requested
+  if (sources.apollo !== false) {
+    try {
+      const { apolloService, toEnrichmentData } = await import('@/lib/integrations/apollo/apollo-service');
+      const configured = await apolloService.isConfigured();
+
+      if (configured) {
+        // Load the lead to get domain/email for enrichment
+        const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
+        const lead = await AdminFirestoreService.get(getSubCollection('leads'), leadId) as Record<string, unknown> | null;
+
+        const domain = (lead?.company as string)?.replace(/^https?:\/\//, '').replace(/\/.*$/, '')
+          ?? (lead?.email as string)?.split('@')[1]
+          ?? null;
+        const email = (lead?.email as string) ?? null;
+
+        // Org enrichment (free)
+        if (domain) {
+          const orgResult = await apolloService.enrichOrganization({ domain });
+          if (orgResult.success && orgResult.data) {
+            const orgData = toEnrichmentData(orgResult.data);
+            enrichment.enrichedData.companyInfo = {
+              industry: orgData.industry,
+              companySize: orgData.employeeCount,
+              revenue: orgData.revenue ? parseFloat(orgData.revenue.replace(/[^0-9.]/g, '')) || undefined : undefined,
+              headquarters: [orgData.city, orgData.state, orgData.country].filter(Boolean).join(', ') || undefined,
+              website: orgData.website,
+              description: orgData.description,
+              technologies: orgData.techStack,
+            };
+          }
+        }
+
+        // Person enrichment (1 credit)
+        if (email ?? domain) {
+          const personResult = await apolloService.enrichPerson({
+            email: email ?? undefined,
+            domain: domain ?? undefined,
+            first_name: (lead?.firstName as string) ?? undefined,
+            last_name: (lead?.lastName as string) ?? undefined,
+          });
+          if (personResult.success && personResult.data) {
+            const person = personResult.data;
+            enrichment.enrichedData.contactInfo = {
+              email: person.email ?? undefined,
+              phone: person.phone_numbers?.[0]?.sanitized_number ?? undefined,
+              linkedIn: person.linkedin_url ?? undefined,
+              jobTitle: person.title ?? undefined,
+            };
+          }
+        }
+
+        enrichment.enrichmentSource = 'apollo';
+        enrichment.confidence = 85;
+      }
+    } catch (error) {
+      logger.warn('Apollo enrichment failed, returning partial data', {
+        leadId,
+        error: error instanceof Error ? error.message : String(error),
+        file: 'lead-nurturing.ts',
+      });
+    }
+  }
 
   // Store enrichment in Firestore
   try {

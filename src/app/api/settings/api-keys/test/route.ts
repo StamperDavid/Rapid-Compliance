@@ -172,6 +172,9 @@ export async function GET(request: NextRequest) {
       case 'heygen':
         return await testHeyGen(apiKey);
 
+      case 'apollo':
+        return await testApollo(apiKey);
+
       case 'clearbit_api_key':
         return await testClearbit(apiKey);
 
@@ -827,6 +830,45 @@ async function testHeyGen(apiKey: string): Promise<NextResponse> {
       return NextResponse.json({
         success: false,
         error: 'Invalid HeyGen API key',
+      });
+    }
+  } catch (error: unknown) {
+    return NextResponse.json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+}
+
+/**
+ * Test Apollo.io API key — uses free People Search endpoint
+ */
+async function testApollo(apiKey: string): Promise<NextResponse> {
+  try {
+    const response = await fetch('https://api.apollo.io/api/v1/mixed_people/search', {
+      method: 'POST',
+      headers: {
+        'x-api-key': apiKey,
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-cache',
+      },
+      body: JSON.stringify({
+        q_organization_domains: ['apollo.io'],
+        per_page: 1,
+      }),
+    });
+
+    if (response.ok) {
+      return NextResponse.json({
+        success: true,
+        message: 'Apollo.io API key is valid and working!',
+      });
+    } else {
+      return NextResponse.json({
+        success: false,
+        error: response.status === 401 || response.status === 403
+          ? 'Invalid Apollo API key'
+          : `Apollo API error: ${response.status}`,
       });
     }
   } catch (error: unknown) {
