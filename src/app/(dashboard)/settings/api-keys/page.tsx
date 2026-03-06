@@ -428,6 +428,23 @@ export default function APIKeysPage() {
       why: 'Powers lead discovery & enrichment — verified emails, phone numbers, company firmographics, funding data.',
     },
     {
+      id: 'clay',
+      name: 'Clay.com',
+      icon: '🧱',
+      description: 'Waterfall enrichment — 75+ data providers in one API',
+      required: false,
+      placeholder: 'your-clay-api-key',
+      setupUrl: 'https://app.clay.com/settings/api',
+      setupSteps: [
+        'Go to app.clay.com',
+        'Sign up or log in',
+        'Settings → API Keys',
+        'Generate and copy your API key',
+      ],
+      cost: 'Plans start at $149/month',
+      why: 'Waterfall enrichment across 75+ providers. Find emails, phones, firmographics, and intent data with a single call.',
+    },
+    {
       id: 'clearbit_api_key',
       name: 'Clearbit',
       icon: '🔍',

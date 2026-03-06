@@ -50,6 +50,7 @@ export const UI_TO_CONFIG_MAP: Record<string, string> = {
   rapidapi: 'enrichment.rapidApiKey',
   serper: 'enrichment.serperApiKey',
   apollo: 'enrichment.apolloApiKey',
+  clay: 'enrichment.clayApiKey',
 
   // Video
   heygen: 'video.heygen.apiKey',

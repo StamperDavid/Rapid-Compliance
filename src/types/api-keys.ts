@@ -148,6 +148,7 @@ export interface APIKeysConfig {
     crunchbaseApiKey?: string;
     builtWithApiKey?: string;
     apolloApiKey?: string;
+    clayApiKey?: string; // Clay.com enrichment & waterfall API
     newsApiKey?: string;
     rapidApiKey?: string; // For LinkedIn and other APIs
     serperApiKey?: string; // Serper.dev Google Search API
@@ -285,6 +286,7 @@ export type APIServiceName =
   | 'crunchbase'
   | 'builtwith'
   | 'apollo'      // Apollo.io People & Company Database
+  | 'clay'        // Clay.com Enrichment & Waterfall API
   | 'newsapi'
   | 'rapidapi'
   | 'twitter'      // Twitter/X API v2
