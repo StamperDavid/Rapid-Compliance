@@ -76,21 +76,29 @@ async function generateWithHeyGen(
   const script = scene.scriptText.trim() || ' ';
 
   // If using ElevenLabs voice, pre-synthesize audio and pass to HeyGen
+  // Retries up to 3 times with backoff for rate limits / transient failures
   let audioUrl: string | null = null;
   if (voiceProvider === 'elevenlabs' && script.length > 1) {
-    try {
-      const { ElevenLabsProvider } = await import('@/lib/voice/tts/providers/elevenlabs-provider');
-      const { apiKeyService } = await import('@/lib/api-keys/api-key-service');
-      const { PLATFORM_ID } = await import('@/lib/constants/platform');
-      const rawKey = await apiKeyService.getServiceKey(PLATFORM_ID, 'elevenlabs');
-      const apiKey = typeof rawKey === 'string' ? rawKey : null;
+    const MAX_TTS_RETRIES = 3;
+    let lastTtsError: string | null = null;
 
-      if (apiKey) {
+    for (let attempt = 1; attempt <= MAX_TTS_RETRIES; attempt++) {
+      try {
+        const { ElevenLabsProvider } = await import('@/lib/voice/tts/providers/elevenlabs-provider');
+        const { apiKeyService } = await import('@/lib/api-keys/api-key-service');
+        const { PLATFORM_ID } = await import('@/lib/constants/platform');
+        const rawKey = await apiKeyService.getServiceKey(PLATFORM_ID, 'elevenlabs');
+        const apiKey = typeof rawKey === 'string' ? rawKey : null;
+
+        if (!apiKey) {
+          lastTtsError = 'ElevenLabs API key not configured';
+          break; // No point retrying without a key
+        }
+
         const provider = new ElevenLabsProvider(apiKey);
         const ttsResult = await provider.synthesize(script, voiceId);
 
         // Store audio as base64 in Firestore, serve via public API endpoint
-        // (Firebase Storage bucket doesn't exist — no billing on the GCP project)
         const { adminDb } = await import('@/lib/firebase/admin');
         if (adminDb) {
           const audioBase64 = ttsResult.audio.includes(',')
@@ -108,24 +116,53 @@ async function generateWithHeyGen(
               expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
             });
 
-          // Build a public URL — HeyGen will download from this endpoint
           const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://rapidcompliance.us';
           audioUrl = `${appUrl}/api/video/tts-audio/${audioId}`;
 
           logger.info('ElevenLabs audio synthesized and stored', {
             sceneId: scene.id,
             audioId,
+            attempt,
             file: 'scene-generator.ts',
           });
         }
+        break; // Success — exit retry loop
+      } catch (ttsError) {
+        lastTtsError = ttsError instanceof Error ? ttsError.message : String(ttsError);
+        logger.warn(`ElevenLabs TTS attempt ${attempt}/${MAX_TTS_RETRIES} failed`, {
+          sceneId: scene.id,
+          attempt,
+          error: lastTtsError,
+          file: 'scene-generator.ts',
+        });
+
+        if (attempt < MAX_TTS_RETRIES) {
+          // Exponential backoff: 1s, 2s, 4s
+          const delayMs = 1000 * Math.pow(2, attempt - 1);
+          await new Promise<void>(resolve => { setTimeout(resolve, delayMs); });
+        }
       }
-    } catch (ttsError) {
-      logger.warn('ElevenLabs TTS failed, falling back to HeyGen voice', {
+    }
+
+    // If ElevenLabs failed after all retries, fail the scene entirely.
+    // Never swap in a different voice — the user's custom voice is their identity.
+    if (!audioUrl) {
+      const errorDetail = lastTtsError ?? 'Unknown ElevenLabs error';
+      logger.error('ElevenLabs TTS failed after all retries — failing scene', new Error(errorDetail), {
         sceneId: scene.id,
-        error: ttsError instanceof Error ? ttsError.message : String(ttsError),
         file: 'scene-generator.ts',
       });
-      // Fall back to HeyGen's built-in TTS
+
+      return {
+        sceneId: scene.id,
+        providerVideoId: '',
+        provider: 'heygen',
+        status: 'failed',
+        videoUrl: null,
+        thumbnailUrl: null,
+        progress: 0,
+        error: `Voice synthesis failed: ${errorDetail}. Retry the scene or check your ElevenLabs API key.`,
+      };
     }
   }
 
@@ -553,8 +590,15 @@ export async function generateAllScenes(
         file: 'scene-generator.ts',
       });
 
+      // Stagger scene starts by 1.5s each to avoid ElevenLabs rate limits
+      // when multiple scenes need TTS simultaneously
       const batchResults = await Promise.all(
-        batch.map((scene) => generateScene(scene, avatarId, voiceId, aspectRatio, voiceProvider))
+        batch.map(async (scene, batchIndex) => {
+          if (batchIndex > 0 && voiceProvider === 'elevenlabs') {
+            await new Promise<void>(resolve => { setTimeout(resolve, batchIndex * 1500); });
+          }
+          return generateScene(scene, avatarId, voiceId, aspectRatio, voiceProvider);
+        })
       );
 
       for (const result of batchResults) {

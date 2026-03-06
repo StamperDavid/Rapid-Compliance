@@ -256,7 +256,7 @@ export async function getVideoStatus(
           throw new Error(`HeyGen API error: ${response.status}`);
         }
 
-        // HeyGen v1 status wraps response: { data: { status, video_url, ... } }
+        // HeyGen v1 status wraps response: { data: { status, video_url, error: { detail, message }, ... } }
         const raw = await response.json() as {
           data?: {
             status?: string;
@@ -264,14 +264,22 @@ export async function getVideoStatus(
             thumbnail_url?: string;
             duration?: number;
             error_message?: string;
+            error?: { detail?: string; message?: string; code?: string } | null;
           };
           status?: string;
           video_url?: string;
           thumbnail_url?: string;
           duration?: number;
           error_message?: string;
+          error?: { detail?: string; message?: string; code?: string } | null;
         };
         const statusData = raw.data ?? raw;
+
+        // Extract error message — HeyGen uses nested error object OR flat error_message
+        const heygenError = statusData.error?.detail
+          ?? statusData.error?.message
+          ?? statusData.error_message
+          ?? undefined;
 
         const statusMap: Record<string, VideoStatus> = {
           'pending': 'pending',
@@ -288,7 +296,7 @@ export async function getVideoStatus(
           videoUrl: statusData.video_url,
           thumbnailUrl: statusData.thumbnail_url,
           duration: statusData.duration,
-          errorMessage: statusData.error_message,
+          errorMessage: heygenError,
           createdAt: new Date(),
         };
       }
