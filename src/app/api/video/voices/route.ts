@@ -53,6 +53,60 @@ async function fetchElevenLabsVoices(): Promise<HeyGenVoice[]> {
   }
 }
 
+/**
+ * Fetch UnrealSpeech voices if API key is configured.
+ * UnrealSpeech has a fixed set of high-quality voices.
+ */
+async function fetchUnrealSpeechVoices(): Promise<HeyGenVoice[]> {
+  try {
+    const rawKey = await apiKeyService.getServiceKey(PLATFORM_ID, 'unrealSpeech');
+    if (!rawKey || typeof rawKey !== 'string') { return []; }
+
+    // UnrealSpeech has a fixed voice roster — no list endpoint needed
+    const voices: HeyGenVoice[] = [
+      { id: 'Scarlett', name: 'Scarlett', language: 'English', gender: 'female', provider: 'unrealspeech' },
+      { id: 'Dan', name: 'Dan', language: 'English', gender: 'male', provider: 'unrealspeech' },
+      { id: 'Liv', name: 'Liv', language: 'English', gender: 'female', provider: 'unrealspeech' },
+      { id: 'Will', name: 'Will', language: 'English', gender: 'male', provider: 'unrealspeech' },
+      { id: 'Amy', name: 'Amy', language: 'English', gender: 'female', provider: 'unrealspeech' },
+      { id: 'Melody', name: 'Melody', language: 'English', gender: 'female', provider: 'unrealspeech' },
+      { id: 'Sierra', name: 'Sierra', language: 'English', gender: 'female', provider: 'unrealspeech' },
+    ];
+
+    return voices;
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Fetch custom cloned voices from Firestore.
+ */
+async function fetchCustomVoices(): Promise<HeyGenVoice[]> {
+  try {
+    const { adminDb } = await import('@/lib/firebase/admin');
+    if (!adminDb) { return []; }
+
+    const snapshot = await adminDb
+      .collection(`organizations/${PLATFORM_ID}/custom_voices`)
+      .orderBy('createdAt', 'desc')
+      .limit(20)
+      .get();
+
+    return snapshot.docs.map((doc) => {
+      const data = doc.data();
+      return {
+        id: data.voiceId as string,
+        name: `${data.name as string} (Clone)`,
+        language: 'English',
+        provider: 'custom' as const,
+      };
+    });
+  } catch {
+    return [];
+  }
+}
+
 export async function GET(request: NextRequest) {
   try {
     const authResult = await requireAuth(request);
@@ -61,17 +115,19 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const language = searchParams.get('language') ?? undefined;
 
-    // Fetch HeyGen and ElevenLabs voices in parallel
-    const [heygenResult, elevenlabsVoices] = await Promise.all([
+    // Fetch ALL voice sources in parallel
+    const [heygenResult, elevenlabsVoices, unrealVoices, customVoices] = await Promise.all([
       listHeyGenVoices(language).catch(() => ({ voices: [] as HeyGenVoice[] })),
       fetchElevenLabsVoices(),
+      fetchUnrealSpeechVoices(),
+      fetchCustomVoices(),
     ]);
 
     const heygenVoices = ('voices' in heygenResult ? heygenResult.voices : [])
       .map((v) => ({ ...v, provider: 'heygen' as const }));
 
-    // ElevenLabs voices first (better quality + working previews), then HeyGen
-    const allVoices = [...elevenlabsVoices, ...heygenVoices];
+    // Order: Custom clones first, then ElevenLabs, UnrealSpeech, HeyGen
+    const allVoices = [...customVoices, ...elevenlabsVoices, ...unrealVoices, ...heygenVoices];
 
     return NextResponse.json({ success: true, voices: allVoices });
   } catch (error: unknown) {

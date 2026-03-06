@@ -116,7 +116,7 @@ export interface HeyGenVoice {
   previewUrl?: string;
   isPremium?: boolean;
   /** Which TTS provider this voice belongs to */
-  provider?: 'heygen' | 'elevenlabs';
+  provider?: 'heygen' | 'elevenlabs' | 'unrealspeech' | 'custom';
 }
 
 // ============================================================================

@@ -25,7 +25,7 @@ async function generateWithHeyGen(
   avatarId: string,
   voiceId: string,
   aspectRatio: VideoAspectRatio,
-  voiceProvider?: 'heygen' | 'elevenlabs'
+  voiceProvider?: 'heygen' | 'elevenlabs' | 'unrealspeech' | 'custom'
 ): Promise<SceneGenerationResult> {
   // Validate avatar ID — HeyGen returns 404 "avatar look not found" if empty
   if (!avatarId) {
@@ -381,7 +381,7 @@ export async function generateScene(
   avatarId: string,
   voiceId: string,
   aspectRatio: VideoAspectRatio,
-  voiceProvider?: 'heygen' | 'elevenlabs'
+  voiceProvider?: 'heygen' | 'elevenlabs' | 'unrealspeech' | 'custom'
 ): Promise<SceneGenerationResult> {
   // Entire function wrapped in try/catch so nothing can crash the batch
   try {
@@ -530,7 +530,7 @@ export async function generateAllScenes(
   voiceId: string,
   aspectRatio: VideoAspectRatio,
   onSceneUpdate?: (result: SceneGenerationResult) => void,
-  voiceProvider?: 'heygen' | 'elevenlabs'
+  voiceProvider?: 'heygen' | 'elevenlabs' | 'unrealspeech' | 'custom'
 ): Promise<SceneGenerationResult[]> {
   try {
     const CONCURRENCY = 3;

@@ -46,7 +46,7 @@ export interface VideoPipelineState {
   avatarName: string | null;
   voiceId: string | null;
   voiceName: string | null;
-  voiceProvider: 'heygen' | 'elevenlabs' | null;
+  voiceProvider: 'heygen' | 'elevenlabs' | 'unrealspeech' | 'custom' | null;
 
   // Step 5: Generation - Scene render results
   generatedScenes: SceneGenerationResult[];
@@ -71,7 +71,7 @@ export interface VideoPipelineState {
   removeScene: (sceneId: string) => void;
   reorderScenes: (fromIndex: number, toIndex: number) => void;
   setAvatar: (id: string, name: string) => void;
-  setVoice: (id: string, name: string, provider?: 'heygen' | 'elevenlabs') => void;
+  setVoice: (id: string, name: string, provider?: 'heygen' | 'elevenlabs' | 'unrealspeech' | 'custom') => void;
   setGeneratedScenes: (results: SceneGenerationResult[]) => void;
   updateGeneratedScene: (sceneId: string, updates: Partial<SceneGenerationResult>) => void;
   setFinalVideoUrl: (url: string) => void;

@@ -20,7 +20,7 @@ const GenerateScenesSchema = z.object({
   })),
   avatarId: z.string().default(''),
   voiceId: z.string().default(''),
-  voiceProvider: z.enum(['heygen', 'elevenlabs']).default('heygen'),
+  voiceProvider: z.enum(['heygen', 'elevenlabs', 'unrealspeech', 'custom']).default('heygen'),
   aspectRatio: z.enum(['16:9', '9:16', '1:1', '4:3']).default('16:9'),
 });
 

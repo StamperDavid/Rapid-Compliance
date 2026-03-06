@@ -9,11 +9,11 @@ import type { HeyGenVoice } from '@/types/video';
 
 interface VoicePickerProps {
   selectedVoiceId: string | null;
-  onSelect: (voiceId: string, voiceName: string, provider?: 'heygen' | 'elevenlabs') => void;
+  onSelect: (voiceId: string, voiceName: string, provider?: 'heygen' | 'elevenlabs' | 'unrealspeech' | 'custom') => void;
 }
 
 const GENDER_FILTERS = ['all', 'male', 'female'] as const;
-const PROVIDER_FILTERS = ['all', 'elevenlabs', 'heygen'] as const;
+const PROVIDER_FILTERS = ['all', 'custom', 'elevenlabs', 'unrealspeech', 'heygen'] as const;
 
 export function VoicePicker({ selectedVoiceId, onSelect }: VoicePickerProps) {
   const authFetch = useAuthFetch();
@@ -340,7 +340,11 @@ export function VoicePicker({ selectedVoiceId, onSelect }: VoicePickerProps) {
                     : 'bg-zinc-800 text-zinc-400 border border-zinc-700 hover:border-zinc-600',
                 )}
               >
-                {provider === 'all' ? 'All' : provider === 'elevenlabs' ? 'ElevenLabs' : 'HeyGen'}
+                {provider === 'all' ? 'All'
+                  : provider === 'custom' ? 'My Clones'
+                  : provider === 'elevenlabs' ? 'ElevenLabs'
+                  : provider === 'unrealspeech' ? 'UnrealSpeech'
+                  : 'HeyGen'}
               </button>
             ))}
           </div>
@@ -472,11 +476,15 @@ export function VoicePicker({ selectedVoiceId, onSelect }: VoicePickerProps) {
               {/* Provider badge */}
               <span className={cn(
                 'px-1.5 py-0.5 text-[9px] font-bold rounded flex-shrink-0',
-                voiceProvider === 'elevenlabs'
-                  ? 'bg-purple-500/20 text-purple-400'
+                voiceProvider === 'custom' ? 'bg-green-500/20 text-green-400'
+                  : voiceProvider === 'elevenlabs' ? 'bg-purple-500/20 text-purple-400'
+                  : voiceProvider === 'unrealspeech' ? 'bg-orange-500/20 text-orange-400'
                   : 'bg-blue-500/20 text-blue-400',
               )}>
-                {voiceProvider === 'elevenlabs' ? 'XI' : 'HG'}
+                {voiceProvider === 'custom' ? 'CLONE'
+                  : voiceProvider === 'elevenlabs' ? 'XI'
+                  : voiceProvider === 'unrealspeech' ? 'US'
+                  : 'HG'}
               </span>
             </div>
           );
