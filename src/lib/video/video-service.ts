@@ -1203,9 +1203,10 @@ interface InstantAvatarResponse {
 }
 
 /**
- * Create a HeyGen Photo Avatar by uploading image data directly.
- * Accepts either base64 image data or a publicly accessible URL.
- * HeyGen processes the photo and returns an avatar_id for use in video generation.
+ * Create a HeyGen Photo Avatar using the correct 3-step flow:
+ *   1. Upload image binary to upload.heygen.com/v1/asset → get image_key
+ *   2. Create avatar group at /v2/photo_avatar/avatar_group/create → get group_id
+ *   3. The group_id is the avatar ID (appears in talking_photo.list immediately)
  */
 export async function createInstantAvatar(
   imageInput: { base64: string; contentType: string } | { url: string },
@@ -1216,107 +1217,92 @@ export async function createInstantAvatar(
     throw new Error('HeyGen API key not configured. Add it in Settings > API Keys.');
   }
 
-  // Try the talking photo approach first (more widely supported)
-  // HeyGen v1 talking_photo accepts multipart form data with the actual file
-  const formData = new FormData();
+  // Resolve image to a Buffer + contentType
+  let imageBuffer: Buffer;
+  let contentType: string;
 
   if ('base64' in imageInput) {
-    // Convert base64 to a file-like Blob for upload
-    const buffer = Buffer.from(imageInput.base64, 'base64');
-    const extension = imageInput.contentType.split('/')[1] ?? 'png';
-    const blob = new Blob([buffer], { type: imageInput.contentType });
-    formData.append('file', blob, `avatar.${extension}`);
+    imageBuffer = Buffer.from(imageInput.base64, 'base64');
+    contentType = imageInput.contentType;
   } else {
-    // Download the image and upload it
     const imageResponse = await fetch(imageInput.url);
     if (!imageResponse.ok) {
       throw new Error(`Failed to download avatar image from URL: ${imageResponse.status}`);
     }
-    const imageBuffer = await imageResponse.arrayBuffer();
-    const contentType = imageResponse.headers.get('content-type') ?? 'image/png';
-    const extension = contentType.split('/')[1] ?? 'png';
-    const blob = new Blob([imageBuffer], { type: contentType });
-    formData.append('file', blob, `avatar.${extension}`);
+    const arrayBuf = await imageResponse.arrayBuffer();
+    imageBuffer = Buffer.from(arrayBuf);
+    contentType = imageResponse.headers.get('content-type') ?? 'image/png';
   }
 
-  // Use HeyGen's talking photo upload endpoint
-  const response = await fetch('https://api.heygen.com/v2/photo_avatar', {
+  // Step 1: Upload image to HeyGen's asset endpoint
+  logger.info('HeyGen avatar Step 1: Uploading image asset', {
+    size: imageBuffer.length,
+    contentType,
+    file: 'video-service.ts',
+  });
+
+  const uploadRes = await fetch('https://upload.heygen.com/v1/asset', {
     method: 'POST',
     headers: {
       'X-Api-Key': apiKey,
+      'Content-Type': contentType,
     },
-    body: formData,
+    body: new Uint8Array(imageBuffer),
   });
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    logger.error('HeyGen photo avatar creation failed', new Error(errorText), {
-      status: response.status,
-      file: 'video-service.ts',
-    });
-
-    // If v2 endpoint fails, try the v1 talking photo endpoint
-    const v1Response = await fetch('https://api.heygen.com/v1/talking_photo', {
-      method: 'POST',
-      headers: {
-        'X-Api-Key': apiKey,
-      },
-      body: formData,
-    });
-
-    if (!v1Response.ok) {
-      const v1ErrorText = await v1Response.text();
-      logger.error('HeyGen v1 talking photo also failed', new Error(v1ErrorText), {
-        status: v1Response.status,
-        file: 'video-service.ts',
-      });
-      throw new Error(`HeyGen avatar creation failed: ${response.status} / v1: ${v1Response.status}`);
-    }
-
-    const v1Result = await v1Response.json() as {
-      data?: { talking_photo_id?: string; status?: string };
-    };
-    const talkingPhotoId = v1Result.data?.talking_photo_id;
-
-    if (!talkingPhotoId) {
-      throw new Error('HeyGen v1 did not return a talking photo ID');
-    }
-
-    logger.info('HeyGen talking photo created (v1 fallback)', {
-      avatarId: talkingPhotoId,
-      avatarName,
-      file: 'video-service.ts',
-    });
-
-    return {
-      avatarId: talkingPhotoId,
-      status: 'pending',
-    };
+  if (!uploadRes.ok) {
+    const errorText = await uploadRes.text();
+    throw new Error(`HeyGen asset upload failed: ${uploadRes.status} - ${errorText}`);
   }
 
-  const result = await response.json() as {
-    data?: {
-      avatar_id?: string;
-      photo_avatar_id?: string;
-      talking_photo_id?: string;
-      status?: string;
-    };
+  const uploadData = await uploadRes.json() as {
+    data?: { image_key?: string; asset_id?: string; id?: string };
   };
-  const avatarId = result.data?.avatar_id ?? result.data?.photo_avatar_id ?? result.data?.talking_photo_id;
+  const imageKey = uploadData.data?.image_key ?? uploadData.data?.asset_id ?? uploadData.data?.id;
 
-  if (!avatarId) {
-    throw new Error('HeyGen did not return an avatar ID');
+  if (!imageKey) {
+    throw new Error(`HeyGen asset upload returned no image_key. Response: ${JSON.stringify(uploadData).slice(0, 300)}`);
   }
 
-  logger.info('HeyGen photo avatar created', {
-    avatarId,
+  logger.info('HeyGen avatar Step 1 complete: got image_key', {
+    imageKey,
+    file: 'video-service.ts',
+  });
+
+  // Step 2: Create avatar group
+  const groupRes = await fetch('https://api.heygen.com/v2/photo_avatar/avatar_group/create', {
+    method: 'POST',
+    headers: {
+      'X-Api-Key': apiKey,
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    },
+    body: JSON.stringify({ name: avatarName, image_key: imageKey }),
+  });
+
+  if (!groupRes.ok) {
+    const errorText = await groupRes.text();
+    throw new Error(`HeyGen avatar group creation failed: ${groupRes.status} - ${errorText}`);
+  }
+
+  const groupData = await groupRes.json() as {
+    data?: { group_id?: string; id?: string };
+  };
+  const groupId = groupData.data?.group_id ?? groupData.data?.id;
+
+  if (!groupId) {
+    throw new Error(`HeyGen avatar group returned no group_id. Response: ${JSON.stringify(groupData).slice(0, 300)}`);
+  }
+
+  logger.info('HeyGen avatar created successfully', {
+    avatarId: groupId,
     avatarName,
     file: 'video-service.ts',
   });
 
   return {
-    avatarId,
-    status: (result.data?.status as InstantAvatarResponse['status']) ?? 'pending',
+    avatarId: groupId,
+    status: 'pending',
   };
 }
 
