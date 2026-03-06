@@ -503,6 +503,9 @@ export async function listHeyGenVoices(
         accent?: string;
         gender?: string;
         preview_audio_url?: string;
+        preview_audio?: string;
+        preview_url?: string;
+        audio_sample_url?: string;
         is_premium?: boolean;
       }>;
     };
@@ -514,7 +517,7 @@ export async function listHeyGenVoices(
     language: voice.language,
     accent: voice.accent,
     gender: voice.gender as 'male' | 'female' | 'neutral' | undefined,
-    previewUrl: voice.preview_audio_url,
+    previewUrl: voice.preview_audio_url ?? voice.preview_audio ?? voice.preview_url ?? voice.audio_sample_url,
     isPremium: voice.is_premium,
   }));
 
@@ -1200,12 +1203,12 @@ interface InstantAvatarResponse {
 }
 
 /**
- * Create a HeyGen Instant Avatar from a photo.
- * The photo should be a clear, well-lit headshot.
+ * Create a HeyGen Photo Avatar by uploading image data directly.
+ * Accepts either base64 image data or a publicly accessible URL.
  * HeyGen processes the photo and returns an avatar_id for use in video generation.
  */
 export async function createInstantAvatar(
-  photoUrl: string,
+  imageInput: { base64: string; contentType: string } | { url: string },
   avatarName: string,
 ): Promise<InstantAvatarResponse> {
   const apiKey = await getVideoProviderKey('heygen');
@@ -1213,35 +1216,99 @@ export async function createInstantAvatar(
     throw new Error('HeyGen API key not configured. Add it in Settings > API Keys.');
   }
 
-  const response = await fetch('https://api.heygen.com/v2/avatars/instant', {
+  // Try the talking photo approach first (more widely supported)
+  // HeyGen v1 talking_photo accepts multipart form data with the actual file
+  const formData = new FormData();
+
+  if ('base64' in imageInput) {
+    // Convert base64 to a file-like Blob for upload
+    const buffer = Buffer.from(imageInput.base64, 'base64');
+    const extension = imageInput.contentType.split('/')[1] ?? 'png';
+    const blob = new Blob([buffer], { type: imageInput.contentType });
+    formData.append('file', blob, `avatar.${extension}`);
+  } else {
+    // Download the image and upload it
+    const imageResponse = await fetch(imageInput.url);
+    if (!imageResponse.ok) {
+      throw new Error(`Failed to download avatar image from URL: ${imageResponse.status}`);
+    }
+    const imageBuffer = await imageResponse.arrayBuffer();
+    const contentType = imageResponse.headers.get('content-type') ?? 'image/png';
+    const extension = contentType.split('/')[1] ?? 'png';
+    const blob = new Blob([imageBuffer], { type: contentType });
+    formData.append('file', blob, `avatar.${extension}`);
+  }
+
+  // Use HeyGen's talking photo upload endpoint
+  const response = await fetch('https://api.heygen.com/v2/photo_avatar', {
     method: 'POST',
     headers: {
       'X-Api-Key': apiKey,
-      'Content-Type': 'application/json',
     },
-    body: JSON.stringify({
-      image_url: photoUrl,
-      avatar_name: avatarName,
-    }),
+    body: formData,
   });
 
   if (!response.ok) {
     const errorText = await response.text();
-    logger.error('HeyGen instant avatar creation failed', new Error(errorText), {
+    logger.error('HeyGen photo avatar creation failed', new Error(errorText), {
       status: response.status,
       file: 'video-service.ts',
     });
-    throw new Error(`HeyGen avatar creation failed: ${response.status}`);
+
+    // If v2 endpoint fails, try the v1 talking photo endpoint
+    const v1Response = await fetch('https://api.heygen.com/v1/talking_photo', {
+      method: 'POST',
+      headers: {
+        'X-Api-Key': apiKey,
+      },
+      body: formData,
+    });
+
+    if (!v1Response.ok) {
+      const v1ErrorText = await v1Response.text();
+      logger.error('HeyGen v1 talking photo also failed', new Error(v1ErrorText), {
+        status: v1Response.status,
+        file: 'video-service.ts',
+      });
+      throw new Error(`HeyGen avatar creation failed: ${response.status} / v1: ${v1Response.status}`);
+    }
+
+    const v1Result = await v1Response.json() as {
+      data?: { talking_photo_id?: string; status?: string };
+    };
+    const talkingPhotoId = v1Result.data?.talking_photo_id;
+
+    if (!talkingPhotoId) {
+      throw new Error('HeyGen v1 did not return a talking photo ID');
+    }
+
+    logger.info('HeyGen talking photo created (v1 fallback)', {
+      avatarId: talkingPhotoId,
+      avatarName,
+      file: 'video-service.ts',
+    });
+
+    return {
+      avatarId: talkingPhotoId,
+      status: 'pending',
+    };
   }
 
-  const result = await response.json() as { data?: { avatar_id?: string; status?: string } };
-  const avatarId = result.data?.avatar_id;
+  const result = await response.json() as {
+    data?: {
+      avatar_id?: string;
+      photo_avatar_id?: string;
+      talking_photo_id?: string;
+      status?: string;
+    };
+  };
+  const avatarId = result.data?.avatar_id ?? result.data?.photo_avatar_id ?? result.data?.talking_photo_id;
 
   if (!avatarId) {
     throw new Error('HeyGen did not return an avatar ID');
   }
 
-  logger.info('HeyGen instant avatar created', {
+  logger.info('HeyGen photo avatar created', {
     avatarId,
     avatarName,
     file: 'video-service.ts',

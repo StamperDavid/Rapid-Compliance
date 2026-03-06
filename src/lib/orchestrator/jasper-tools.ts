@@ -1073,7 +1073,7 @@ export const JASPER_TOOLS: ToolDefinition[] = [
     function: {
       name: 'create_video',
       description:
-        'Create a video draft for review. Builds a storyboard with scenes and saves as a draft project. The user reviews scripts, picks avatar/voice, and approves in the Video Studio before any rendering happens (unless auto-execute is enabled). Supports HeyGen (avatar), Sora (text-to-video), and Runway (text/image-to-video). Use this when the user asks to create, generate, or make a video. ENABLED: TRUE.',
+        'Create a video draft for review. Builds a storyboard with scenes and saves as a draft project. Default avatar and voice are auto-selected from saved settings — the user only reviews the script and scenery before approving. Use this when the user asks to create, generate, or make a video. ENABLED: TRUE.',
       parameters: {
         type: 'object',
         properties: {
@@ -3333,6 +3333,20 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
         const genStart = Date.now();
         trackMissionStep(context, 'generate_video', 'RUNNING', { toolArgs: args });
 
+        // Auto-inject defaults if avatar/voice not specified
+        let genAvatarId = args.avatarId as string | undefined;
+        let genVoiceId = args.voiceId as string | undefined;
+        if (!genAvatarId || !genVoiceId) {
+          try {
+            const { getVideoDefaults } = await import('@/lib/video/video-defaults-service');
+            const defaults = await getVideoDefaults();
+            if (!genAvatarId && defaults.avatarId) { genAvatarId = defaults.avatarId; }
+            if (!genVoiceId && defaults.voiceId) { genVoiceId = defaults.voiceId; }
+          } catch {
+            // Defaults are optional
+          }
+        }
+
         const { getVideoSpecialist: getVideoSpec } = await import('@/lib/agents/content/video/specialist');
         const videoSpec = getVideoSpec();
         await videoSpec.initialize();
@@ -3347,8 +3361,8 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
           payload: {
             action: 'render_scenes' as const,
             projectId: args.projectId as string,
-            avatarId: args.avatarId as string | undefined,
-            voiceId: args.voiceId as string | undefined,
+            avatarId: genAvatarId,
+            voiceId: genVoiceId,
           },
           requiresResponse: true,
           traceId: `trace_generate_video_${Date.now()}`,

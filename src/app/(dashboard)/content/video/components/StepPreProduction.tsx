@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { motion } from 'framer-motion';
-import { Film, ArrowRight, ArrowLeft, Plus, CheckCircle2 } from 'lucide-react';
+import { Film, ArrowRight, ArrowLeft, Plus, CheckCircle2, Star, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { SceneEditor } from './SceneEditor';
@@ -12,13 +13,23 @@ import { VoicePicker } from './VoicePicker';
 import { useVideoPipelineStore } from '@/lib/stores/video-pipeline-store';
 import type { PipelineScene } from '@/types/video-pipeline';
 
+interface VideoDefaultsData {
+  avatarId: string | null;
+  avatarName: string | null;
+  voiceId: string | null;
+  voiceName: string | null;
+  voiceProvider: 'heygen' | 'elevenlabs' | null;
+}
+
 export function StepPreProduction() {
+  const authFetch = useAuthFetch();
   const {
     scenes,
     avatarId,
     avatarName,
     voiceId,
     voiceName,
+    voiceProvider,
     updateScene,
     removeScene,
     addScene,
@@ -30,6 +41,61 @@ export function StepPreProduction() {
   } = useVideoPipelineStore();
 
   const [activeTab, setActiveTab] = useState<'scenes' | 'avatar' | 'voice'>('scenes');
+  const [savingDefault, setSavingDefault] = useState(false);
+  const [defaultSaved, setDefaultSaved] = useState(false);
+
+  // Auto-load defaults when no avatar/voice is selected
+  const loadDefaults = useCallback(async () => {
+    if (avatarId || voiceId) { return; } // Already have selections
+
+    try {
+      const response = await authFetch('/api/video/defaults');
+      if (!response.ok) { return; }
+
+      const data = await response.json() as { success: boolean; defaults: VideoDefaultsData };
+      if (!data.success || !data.defaults) { return; }
+
+      const d = data.defaults;
+      if (d.avatarId && d.avatarName && !avatarId) {
+        setAvatar(d.avatarId, d.avatarName);
+      }
+      if (d.voiceId && d.voiceName && !voiceId) {
+        setVoice(d.voiceId, d.voiceName, d.voiceProvider ?? undefined);
+      }
+    } catch {
+      // Defaults are optional — don't break the flow
+    }
+  }, [avatarId, voiceId, authFetch, setAvatar, setVoice]);
+
+  useEffect(() => {
+    void loadDefaults();
+  }, [loadDefaults]);
+
+  const handleSaveDefaults = async () => {
+    setSavingDefault(true);
+    setDefaultSaved(false);
+    try {
+      const response = await authFetch('/api/video/defaults', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          avatarId,
+          avatarName,
+          voiceId,
+          voiceName,
+          voiceProvider,
+        }),
+      });
+      if (response.ok) {
+        setDefaultSaved(true);
+        setTimeout(() => setDefaultSaved(false), 3000);
+      }
+    } catch {
+      // Silent fail for defaults
+    } finally {
+      setSavingDefault(false);
+    }
+  };
 
   const handleAddScene = () => {
     const newScene: PipelineScene = {
@@ -175,19 +241,41 @@ export function StepPreProduction() {
       </Card>
 
       {/* Validation Summary */}
-      <div className="flex items-center gap-4 px-4 py-3 bg-zinc-800/30 rounded-lg border border-zinc-700/50">
-        <div className="flex items-center gap-2">
-          <div className={`w-2 h-2 rounded-full ${scenes.length > 0 ? 'bg-green-500' : 'bg-zinc-600'}`} />
-          <span className="text-xs text-zinc-400">{scenes.length} scenes</span>
+      <div className="flex items-center justify-between px-4 py-3 bg-zinc-800/30 rounded-lg border border-zinc-700/50">
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <div className={`w-2 h-2 rounded-full ${scenes.length > 0 ? 'bg-green-500' : 'bg-zinc-600'}`} />
+            <span className="text-xs text-zinc-400">{scenes.length} scenes</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className={`w-2 h-2 rounded-full ${avatarId ? 'bg-green-500' : 'bg-zinc-600'}`} />
+            <span className="text-xs text-zinc-400">{avatarId ? 'Avatar selected' : 'No avatar'}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className={`w-2 h-2 rounded-full ${voiceId ? 'bg-green-500' : 'bg-zinc-600'}`} />
+            <span className="text-xs text-zinc-400">{voiceId ? 'Voice selected' : 'No voice'}</span>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <div className={`w-2 h-2 rounded-full ${avatarId ? 'bg-green-500' : 'bg-zinc-600'}`} />
-          <span className="text-xs text-zinc-400">{avatarId ? 'Avatar selected' : 'No avatar'}</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className={`w-2 h-2 rounded-full ${voiceId ? 'bg-green-500' : 'bg-zinc-600'}`} />
-          <span className="text-xs text-zinc-400">{voiceId ? 'Voice selected' : 'No voice'}</span>
-        </div>
+
+        {/* Set as Default */}
+        {(avatarId ?? voiceId) && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => { void handleSaveDefaults(); }}
+            disabled={savingDefault}
+            className="gap-1.5 text-xs text-zinc-400 hover:text-amber-400"
+          >
+            {savingDefault ? (
+              <Loader2 className="w-3 h-3 animate-spin" />
+            ) : defaultSaved ? (
+              <CheckCircle2 className="w-3 h-3 text-green-400" />
+            ) : (
+              <Star className="w-3 h-3" />
+            )}
+            {defaultSaved ? 'Defaults saved!' : 'Set as Default'}
+          </Button>
+        )}
       </div>
 
       {/* Actions */}

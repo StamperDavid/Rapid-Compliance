@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
-import { Loader2, AlertCircle, Play, Pause, Mic, Search, Check, Volume2, AlertTriangle } from 'lucide-react';
+import { Loader2, AlertCircle, Play, Pause, Mic, Search, Check, Volume2, AlertTriangle, Upload, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import type { HeyGenVoice } from '@/types/video';
@@ -27,6 +27,16 @@ export function VoicePicker({ selectedVoiceId, onSelect }: VoicePickerProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterLanguage, setFilterLanguage] = useState<string>('all');
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [loadingPreviewId, setLoadingPreviewId] = useState<string | null>(null);
+
+  // Voice clone state
+  const [showCloneUI, setShowCloneUI] = useState(false);
+  const [cloneName, setCloneName] = useState('');
+  const [cloneFiles, setCloneFiles] = useState<File[]>([]);
+  const [cloneLoading, setCloneLoading] = useState(false);
+  const [cloneError, setCloneError] = useState<string | null>(null);
+  const [cloneSuccess, setCloneSuccess] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const fetchVoices = useCallback(async () => {
     try {
@@ -92,7 +102,28 @@ export function VoicePicker({ selectedVoiceId, onSelect }: VoicePickerProps) {
     return result;
   }, [voices, filterGender, filterProvider, filterLanguage, searchQuery]);
 
-  const handlePreview = (voice: HeyGenVoice) => {
+  const playAudioUrl = (voiceId: string, url: string, voiceName: string) => {
+    try {
+      const audio = new Audio(url);
+      audioRef.current = audio;
+      setPlayingId(voiceId);
+
+      audio.onended = () => setPlayingId(null);
+      audio.onerror = () => {
+        setPlayingId(null);
+        setPreviewError(`Failed to play preview for ${voiceName}`);
+      };
+
+      audio.play().catch(() => {
+        setPlayingId(null);
+        setPreviewError(`Browser blocked audio playback. Click again to retry.`);
+      });
+    } catch {
+      setPreviewError(`Failed to load preview for ${voiceName}`);
+    }
+  };
+
+  const handlePreview = async (voice: HeyGenVoice) => {
     setPreviewError(null);
 
     if (playingId === voice.id) {
@@ -101,32 +132,48 @@ export function VoicePicker({ selectedVoiceId, onSelect }: VoicePickerProps) {
       return;
     }
 
-    if (!voice.previewUrl) {
-      setPreviewError(`No preview available for ${voice.name}`);
-      return;
-    }
-
     if (audioRef.current) {
       audioRef.current.pause();
     }
 
+    // If the voice already has a preview URL, play it directly
+    if (voice.previewUrl) {
+      playAudioUrl(voice.id, voice.previewUrl, voice.name);
+      return;
+    }
+
+    const voiceProvider = voice.provider ?? 'heygen';
+
+    // HeyGen voices can't be previewed standalone
+    if (voiceProvider === 'heygen') {
+      setPreviewError(`HeyGen voices don't support preview. Use ElevenLabs filter for voices with preview support.`);
+      return;
+    }
+
+    // Generate preview on-demand via API
+    setLoadingPreviewId(voice.id);
     try {
-      const audio = new Audio(voice.previewUrl);
-      audioRef.current = audio;
-      setPlayingId(voice.id);
-
-      audio.onended = () => setPlayingId(null);
-      audio.onerror = () => {
-        setPlayingId(null);
-        setPreviewError(`Failed to play preview for ${voice.name}`);
-      };
-
-      audio.play().catch(() => {
-        setPlayingId(null);
-        setPreviewError(`Browser blocked audio playback. Click again to retry.`);
+      const response = await authFetch('/api/video/voice-preview', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          voiceId: voice.id,
+          voiceName: voice.name,
+          provider: voiceProvider,
+        }),
       });
+
+      const data = await response.json() as { success: boolean; audioUrl?: string; error?: string };
+      if (!data.success || !data.audioUrl) {
+        setPreviewError(data.error ?? `Failed to generate preview for ${voice.name}`);
+        return;
+      }
+
+      playAudioUrl(voice.id, data.audioUrl, voice.name);
     } catch {
-      setPreviewError(`Failed to load preview for ${voice.name}`);
+      setPreviewError(`Failed to generate preview for ${voice.name}`);
+    } finally {
+      setLoadingPreviewId(null);
     }
   };
 
@@ -150,8 +197,121 @@ export function VoicePicker({ selectedVoiceId, onSelect }: VoicePickerProps) {
     );
   }
 
+  const handleCloneSubmit = async () => {
+    if (!cloneName.trim() || cloneFiles.length === 0) { return; }
+    setCloneLoading(true);
+    setCloneError(null);
+    setCloneSuccess(null);
+
+    try {
+      const formData = new FormData();
+      formData.append('name', cloneName.trim());
+      for (const file of cloneFiles) {
+        formData.append('samples', file);
+      }
+
+      const response = await authFetch('/api/video/voice-clone', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await response.json() as { success: boolean; voiceId?: string; voiceName?: string; error?: string };
+      if (!data.success) {
+        setCloneError(data.error ?? 'Voice cloning failed');
+        return;
+      }
+
+      setCloneSuccess(`Voice "${data.voiceName}" created! It will appear in the ElevenLabs voices list.`);
+      setCloneName('');
+      setCloneFiles([]);
+      setShowCloneUI(false);
+
+      // Refresh voices list to include the new clone
+      void fetchVoices();
+
+      // Auto-select the new voice
+      if (data.voiceId && data.voiceName) {
+        onSelect(data.voiceId, data.voiceName, 'elevenlabs');
+      }
+    } catch {
+      setCloneError('Voice cloning failed. Try again.');
+    } finally {
+      setCloneLoading(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
+      {/* Clone My Voice Section */}
+      <div className="border border-purple-500/20 bg-purple-500/5 rounded-lg overflow-hidden">
+        <button
+          onClick={() => setShowCloneUI(!showCloneUI)}
+          className="w-full flex items-center gap-2 px-4 py-3 text-left hover:bg-purple-500/10 transition-colors"
+        >
+          <Sparkles className="w-4 h-4 text-purple-400" />
+          <span className="text-sm font-medium text-purple-300">Clone My Voice</span>
+          <span className="text-xs text-zinc-500 ml-1">Upload audio samples to create your own voice</span>
+        </button>
+        {showCloneUI && (
+          <div className="px-4 pb-4 space-y-3 border-t border-purple-500/10">
+            <p className="text-xs text-zinc-400 pt-3">
+              Record yourself speaking clearly for 30+ seconds. MP3, WAV, or M4A accepted. More samples = better quality.
+            </p>
+            <input
+              type="text"
+              value={cloneName}
+              onChange={(e) => setCloneName(e.target.value)}
+              placeholder="Voice name (e.g. David's Voice)"
+              className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
+            />
+            <div className="flex items-center gap-2">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="audio/*,.mp3,.wav,.m4a,.webm,.ogg"
+                multiple
+                className="hidden"
+                onChange={(e) => {
+                  if (e.target.files) {
+                    setCloneFiles(Array.from(e.target.files));
+                  }
+                }}
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => fileInputRef.current?.click()}
+                className="gap-1.5 text-xs border-zinc-700 text-zinc-300"
+              >
+                <Upload className="w-3.5 h-3.5" />
+                {cloneFiles.length > 0
+                  ? `${cloneFiles.length} file${cloneFiles.length !== 1 ? 's' : ''} selected`
+                  : 'Upload Audio Samples'}
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => { void handleCloneSubmit(); }}
+                disabled={cloneLoading || !cloneName.trim() || cloneFiles.length === 0}
+                className="gap-1.5 text-xs bg-purple-600 hover:bg-purple-700 text-white"
+              >
+                {cloneLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                Clone Voice
+              </Button>
+            </div>
+            {cloneError && (
+              <p className="text-xs text-red-400">{cloneError}</p>
+            )}
+          </div>
+        )}
+      </div>
+
+      {cloneSuccess && (
+        <div className="flex items-center gap-2 px-3 py-2 bg-green-500/10 border border-green-500/20 rounded-lg">
+          <Check className="w-3.5 h-3.5 text-green-400 flex-shrink-0" />
+          <p className="text-xs text-green-400">{cloneSuccess}</p>
+        </div>
+      )}
+
       {/* Search */}
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
@@ -286,23 +446,28 @@ export function VoicePicker({ selectedVoiceId, onSelect }: VoicePickerProps) {
                 </div>
               </div>
 
-              {/* Preview Button */}
-              {voice.previewUrl && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={(e) => { e.stopPropagation(); handlePreview(voice); }}
-                  className={cn(
-                    'h-9 w-9 p-0 rounded-full',
-                    isPlaying
-                      ? 'text-amber-400 bg-amber-500/10 hover:bg-amber-500/20'
-                      : 'text-zinc-400 hover:text-white hover:bg-zinc-700',
-                  )}
-                  title={isPlaying ? 'Stop preview' : 'Play voice sample'}
-                >
-                  {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-                </Button>
-              )}
+              {/* Preview Button — always shown */}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={(e) => { e.stopPropagation(); void handlePreview(voice); }}
+                disabled={loadingPreviewId === voice.id}
+                className={cn(
+                  'h-9 w-9 p-0 rounded-full',
+                  isPlaying
+                    ? 'text-amber-400 bg-amber-500/10 hover:bg-amber-500/20'
+                    : 'text-zinc-400 hover:text-white hover:bg-zinc-700',
+                )}
+                title={isPlaying ? 'Stop preview' : 'Play voice sample'}
+              >
+                {loadingPreviewId === voice.id ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : isPlaying ? (
+                  <Pause className="w-4 h-4" />
+                ) : (
+                  <Play className="w-4 h-4" />
+                )}
+              </Button>
 
               {/* Provider badge */}
               <span className={cn(
