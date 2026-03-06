@@ -484,6 +484,7 @@ export type NavigationCategory =
   | 'commerce'
   | 'website'
   | 'analytics'
+  | 'records'
   | 'system';
 
 /**
@@ -512,6 +513,9 @@ export interface NavigationItem {
 
   /** Feature module that controls this item's visibility */
   featureModuleId?: FeatureModuleId;
+
+  /** Entity ID — item hidden when this entity is disabled in entity config */
+  entityId?: string;
 }
 
 /**

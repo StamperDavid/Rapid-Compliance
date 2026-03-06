@@ -14,6 +14,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useUnifiedAuth } from '@/hooks/useUnifiedAuth';
 import { useFeatureModules } from '@/hooks/useFeatureModules';
+import { useEntityConfig } from '@/hooks/useEntityConfig';
 import {
   type NavigationSection,
   type NavigationItem,
@@ -56,6 +57,32 @@ import {
   Building2,
   TrendingUp,
   AudioWaveform,
+  // Entity page icons
+  ScrollText,
+  CheckSquare,
+  Clock,
+  MailOpen,
+  Receipt,
+  CreditCard,
+  UserCheck,
+  Warehouse,
+  Tag,
+  Repeat,
+  LayoutTemplate,
+  BookOpen,
+  Link2,
+  Truck,
+  Car,
+  FileCheck,
+  Briefcase,
+  Timer,
+  Home,
+  Key,
+  Scale,
+  DollarSign,
+  Heart,
+  Calendar,
+  Database,
 } from 'lucide-react';
 
 // ============================================================================
@@ -86,6 +113,11 @@ const NAV_SECTIONS: NavigationSection[] = [
       { id: 'companies', label: 'Companies', href: '/entities/companies', icon: Building2, iconColor: 'var(--color-secondary)', requiredPermission: 'canViewLeads', featureModuleId: 'crm_pipeline' },
       { id: 'deals', label: 'Deals', href: '/deals', icon: Handshake, iconColor: 'var(--color-warning)', requiredPermission: 'canViewDeals', featureModuleId: 'crm_pipeline' },
       { id: 'conversations', label: 'Conversations', href: '/conversations', icon: MessageSquare, iconColor: 'var(--color-success)', requiredPermission: 'canCreateRecords', featureModuleId: 'conversations' },
+      { id: 'quotes', label: 'Quotes', href: '/entities/quotes', icon: ScrollText, iconColor: 'var(--color-info)', featureModuleId: 'crm_pipeline', entityId: 'quotes' },
+      { id: 'invoices', label: 'Invoices', href: '/entities/invoices', icon: Receipt, iconColor: 'var(--color-info)', featureModuleId: 'crm_pipeline', entityId: 'invoices' },
+      { id: 'payments', label: 'Payments', href: '/entities/payments', icon: CreditCard, iconColor: 'var(--color-success)', featureModuleId: 'crm_pipeline', entityId: 'payments' },
+      { id: 'tasks', label: 'Tasks', href: '/entities/tasks', icon: CheckSquare, iconColor: 'var(--color-warning)' },
+      { id: 'activities', label: 'Activities', href: '/entities/activities', icon: Clock, iconColor: 'var(--color-secondary)', featureModuleId: 'crm_pipeline' },
     ],
   },
   // ── Outreach (4 items — Forms & Workflows moved to Marketing) ──────
@@ -99,6 +131,7 @@ const NAV_SECTIONS: NavigationSection[] = [
       { id: 'email-campaigns', label: 'Campaigns', href: '/email/campaigns', icon: Mail, iconColor: 'var(--color-cyan)', requiredPermission: 'canManageEmailCampaigns', featureModuleId: 'email_outreach' },
       { id: 'email-studio', label: 'Email Studio', href: '/email-writer', icon: PenLine, iconColor: 'var(--color-primary)', requiredPermission: 'canManageEmailCampaigns', featureModuleId: 'email_outreach' },
       { id: 'calls', label: 'Calls', href: '/calls', icon: PhoneCall, iconColor: 'var(--color-error)', requiredPermission: 'canAccessVoiceAgents', featureModuleId: 'email_outreach' },
+      { id: 'email-templates', label: 'Email Templates', href: '/entities/email_templates', icon: MailOpen, iconColor: 'var(--color-info)', featureModuleId: 'email_outreach' },
     ],
   },
   // ── Marketing (5 items — renamed from Content) ─────────────────────
@@ -126,6 +159,9 @@ const NAV_SECTIONS: NavigationSection[] = [
       { id: 'products', label: 'Products', href: '/products', icon: Package, iconColor: 'var(--color-primary)', requiredPermission: 'canManageProducts', featureModuleId: 'ecommerce' },
       { id: 'orders', label: 'Orders', href: '/orders', icon: ShoppingCart, iconColor: 'var(--color-secondary)', requiredPermission: 'canProcessOrders', featureModuleId: 'ecommerce' },
       { id: 'storefront', label: 'Storefront', href: '/settings/storefront', icon: Store, iconColor: 'var(--color-warning)', requiredPermission: 'canManageEcommerce', featureModuleId: 'ecommerce' },
+      { id: 'coupons', label: 'Coupons', href: '/entities/coupons', icon: Tag, iconColor: 'var(--color-accent)', featureModuleId: 'ecommerce' },
+      { id: 'subscriptions', label: 'Subscriptions', href: '/entities/subscriptions', icon: Repeat, iconColor: 'var(--color-cyan)', featureModuleId: 'ecommerce' },
+      { id: 'inventory', label: 'Inventory', href: '/entities/inventory', icon: Warehouse, iconColor: 'var(--color-secondary)', featureModuleId: 'ecommerce', entityId: 'inventory' },
     ],
   },
   // ── Website (1 item — SEO absorbed as Website tab) ─────────────────
@@ -136,6 +172,9 @@ const NAV_SECTIONS: NavigationSection[] = [
     allowedRoles: ['owner', 'admin', 'manager'],
     items: [
       { id: 'website', label: 'Website', href: '/website/editor', icon: Globe, iconColor: 'var(--color-primary)', requiredPermission: 'canManageWebsite', featureModuleId: 'website_builder' },
+      { id: 'pages', label: 'Pages', href: '/entities/pages', icon: LayoutTemplate, iconColor: 'var(--color-info)', featureModuleId: 'website_builder' },
+      { id: 'blog-posts', label: 'Blog Posts', href: '/entities/blog_posts', icon: BookOpen, iconColor: 'var(--color-secondary)', featureModuleId: 'website_builder' },
+      { id: 'domains', label: 'Domains', href: '/entities/domains', icon: Link2, iconColor: 'var(--color-cyan)', featureModuleId: 'website_builder' },
     ],
   },
   // ── AI Workforce (1 hub item — 5 items collapsed) ─────────────────
@@ -158,6 +197,27 @@ const NAV_SECTIONS: NavigationSection[] = [
       { id: 'analytics-overview', label: 'Overview', href: '/analytics', icon: PieChart, iconColor: 'var(--color-cyan)', requiredPermission: 'canViewReports' },
       { id: 'growth', label: 'Growth', href: '/growth/command-center', icon: TrendingUp, iconColor: 'var(--color-success)', requiredPermission: 'canViewReports' },
       { id: 'ab-testing', label: 'A/B Testing', href: '/ab-tests', icon: FlaskConical, iconColor: 'var(--color-success)', featureModuleId: 'advanced_analytics' },
+    ],
+  },
+  // ── Records (industry-specific entity schemas) ─────────────────────
+  {
+    id: 'records',
+    label: 'Records',
+    icon: Database,
+    allowedRoles: ['owner', 'admin', 'manager'],
+    items: [
+      { id: 'customers', label: 'Customers', href: '/entities/customers', icon: UserCheck, iconColor: 'var(--color-primary)', entityId: 'customers' },
+      { id: 'cases', label: 'Cases', href: '/entities/cases', icon: Scale, iconColor: 'var(--color-warning)', entityId: 'cases' },
+      { id: 'projects', label: 'Projects', href: '/entities/projects', icon: Briefcase, iconColor: 'var(--color-primary)', entityId: 'projects' },
+      { id: 'properties', label: 'Properties', href: '/entities/properties', icon: Home, iconColor: 'var(--color-success)', entityId: 'properties' },
+      { id: 'showings', label: 'Showings', href: '/entities/showings', icon: Key, iconColor: 'var(--color-info)', entityId: 'showings' },
+      { id: 'patients', label: 'Patients', href: '/entities/patients', icon: Heart, iconColor: 'var(--color-error)', entityId: 'patients' },
+      { id: 'appointments', label: 'Appointments', href: '/entities/appointments', icon: Calendar, iconColor: 'var(--color-cyan)', entityId: 'appointments' },
+      { id: 'drivers', label: 'Drivers', href: '/entities/drivers', icon: Truck, iconColor: 'var(--color-secondary)', entityId: 'drivers' },
+      { id: 'vehicles', label: 'Vehicles', href: '/entities/vehicles', icon: Car, iconColor: 'var(--color-info)', entityId: 'vehicles' },
+      { id: 'compliance-docs', label: 'Compliance Docs', href: '/entities/compliance_documents', icon: FileCheck, iconColor: 'var(--color-warning)', entityId: 'compliance_documents' },
+      { id: 'time-entries', label: 'Time Entries', href: '/entities/time_entries', icon: Timer, iconColor: 'var(--color-accent)', entityId: 'time_entries' },
+      { id: 'billing-entries', label: 'Billing Entries', href: '/entities/billing_entries', icon: DollarSign, iconColor: 'var(--color-success)', entityId: 'billing_entries' },
     ],
   },
   // ── System (1 hub item — owner only) ───────────────────────────────
@@ -183,6 +243,7 @@ export default function AdminSidebar() {
   const pathname = usePathname();
   const { user } = useUnifiedAuth();
   const { isModuleEnabled } = useFeatureModules();
+  const { isEntityEnabled } = useEntityConfig();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
@@ -194,18 +255,20 @@ export default function AdminSidebar() {
     }
     const roleSections = filterNavigationByRole(NAV_SECTIONS, user.role);
 
-    // Apply feature module filtering
+    // Apply feature module + entity config filtering
     return roleSections
       .map((section) => ({
         ...section,
         items: section.items.filter((item: NavigationItem) => {
-          // Items without a featureModuleId are always visible
-          if (!item.featureModuleId) { return true; }
-          return isModuleEnabled(item.featureModuleId);
+          // Feature module gate
+          if (item.featureModuleId && !isModuleEnabled(item.featureModuleId)) { return false; }
+          // Entity config gate
+          if (item.entityId && !isEntityEnabled(item.entityId)) { return false; }
+          return true;
         }),
       }))
       .filter((section) => section.items.length > 0);
-  }, [user?.role, isModuleEnabled]);
+  }, [user?.role, isModuleEnabled, isEntityEnabled]);
 
   const handleToggleCollapse = useCallback(() => {
     setIsCollapsed((prev) => !prev);

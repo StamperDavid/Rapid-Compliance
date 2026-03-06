@@ -21,7 +21,6 @@ import TwitterIntegration from '@/components/integrations/TwitterIntegration';
 import LinkedInIntegration from '@/components/integrations/LinkedInIntegration';
 import GoogleSearchConsoleIntegration from '@/components/integrations/GoogleSearchConsoleIntegration';
 import type { ConnectedIntegration } from '@/types/integrations';
-import { STANDARD_SCHEMAS } from '@/lib/schema/standard-schemas'
 import { logger } from '@/lib/logger/logger';
 import toast from 'react-hot-toast';
 import { useSearchParams } from 'next/navigation';
@@ -34,7 +33,6 @@ export default function IntegrationsPage() {
     searchParams.get('category') ?? null
   );
   const [integrations, setIntegrations] = useState<Record<string, ConnectedIntegration | null>>({});
-  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   // Handle success/error URL params from OAuth callbacks
   React.useEffect(() => {
@@ -233,84 +231,8 @@ export default function IntegrationsPage() {
   const connectedCount = Object.values(integrations).filter(i => i?.status === 'active').length;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: 'var(--color-bg-main)' }}>
-      <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
-        {/* Left Sidebar */}
-        <div style={{ 
-          width: sidebarOpen ? '260px' : '70px',
-          backgroundColor: 'var(--color-bg-main)',
-          borderRight: '1px solid var(--color-border-light)',
-          transition: 'width 0.3s',
-          display: 'flex',
-          flexDirection: 'column'
-        }}>
-          <nav style={{ flex: 1, padding: '1rem 0', overflowY: 'auto' }}>
-            <Link
-              href="/leads"
-              style={{
-                width: '100%',
-                padding: '0.875rem 1.25rem',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.75rem',
-                backgroundColor: 'transparent',
-                color: 'var(--color-text-secondary)',
-                borderLeft: '3px solid transparent',
-                fontSize: '0.875rem',
-                fontWeight: '400',
-                textDecoration: 'none'
-              }}
-            >
-              <span style={{ fontSize: '1.25rem' }}>🏠</span>
-              {sidebarOpen && <span>Back to CRM</span>}
-            </Link>
-
-            {Object.entries(STANDARD_SCHEMAS).map(([key, schema]) => (
-              <Link
-                key={key}
-                href={`/entities/${key}`}
-                style={{
-                  width: '100%',
-                  padding: '0.875rem 1.25rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.75rem',
-                  backgroundColor: 'transparent',
-                  color: 'var(--color-text-secondary)',
-                  borderLeft: '3px solid transparent',
-                  fontSize: '0.875rem',
-                  fontWeight: '400',
-                  textDecoration: 'none'
-                }}
-              >
-                <span style={{ fontSize: '1.25rem' }}>{schema.icon}</span>
-                {sidebarOpen && <span>{schema.pluralName}</span>}
-              </Link>
-            ))}
-          </nav>
-
-          <div style={{ padding: '1rem', borderTop: '1px solid var(--color-border-light)' }}>
-            <button
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              style={{
-                width: '100%',
-                padding: '0.5rem',
-                backgroundColor: 'var(--color-bg-paper)',
-                color: 'var(--color-text-secondary)',
-                border: 'none',
-                borderRadius: '0.375rem',
-                cursor: 'pointer',
-                fontSize: '0.875rem'
-              }}
-            >
-              {sidebarOpen ? '← Collapse' : '→'}
-            </button>
-          </div>
-        </div>
-
-        {/* Main Content */}
-        <div style={{ flex: 1, padding: '2rem', overflowY: 'auto' }}>
-          <div>
+    <div style={{ padding: '2rem' }}>
+      <div>
             {/* Header */}
             <div style={{ marginBottom: '2rem' }}>
               <Link 
@@ -434,8 +356,6 @@ export default function IntegrationsPage() {
                   </div>
                 </div>
               ))}
-          </div>
-        </div>
       </div>
     </div>
   );
