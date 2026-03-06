@@ -5,11 +5,20 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Mic, Square, Play, Pause, RotateCcw, Sparkles, Save,
   Trash2, MicOff, AlertCircle, CheckCircle2, Loader2,
-  Settings2, BookOpen, ChevronDown, ChevronUp,
+  Settings2, BookOpen, ChevronDown, ChevronUp, Download,
+  RotateCw,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { cn } from '@/lib/utils';
+import {
+  type VoiceEffectsSettings,
+  type EffectPreset,
+  DEFAULT_EFFECTS,
+  EFFECT_PRESETS,
+  VoiceEffectsPreview,
+  exportProcessed,
+} from '@/lib/audio/voice-effects-engine';
 
 // ─── Types & Constants ──────────────────────────────────────────────────────
 
@@ -44,6 +53,51 @@ function extractPeaks(buffer: AudioBuffer, numBars: number): number[] {
   return peaks;
 }
 
+// ─── Effects Slider Component ───────────────────────────────────────────────
+
+interface EffectSliderProps {
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  step: number;
+  unit?: string;
+  onChange: (value: number) => void;
+  leftLabel?: string;
+  rightLabel?: string;
+  formatValue?: (v: number) => string;
+}
+
+function EffectSlider({
+  label, value, min, max, step: stepVal, unit, onChange,
+  leftLabel, rightLabel, formatValue,
+}: EffectSliderProps) {
+  const displayValue = formatValue ? formatValue(value) : `${value}${unit ?? ''}`;
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-1">
+        <label className="text-xs text-zinc-400">{label}</label>
+        <span className="text-xs font-mono text-zinc-500">{displayValue}</span>
+      </div>
+      <input
+        type="range"
+        min={min}
+        max={max}
+        step={stepVal}
+        value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
+        className="w-full accent-purple-500 h-1.5"
+      />
+      {(leftLabel ?? rightLabel) && (
+        <div className="flex justify-between text-[10px] text-zinc-600 mt-0.5">
+          <span>{leftLabel ?? ''}</span>
+          <span>{rightLabel ?? ''}</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Component ──────────────────────────────────────────────────────────────
 
 export function VoiceRecorderStudio() {
@@ -63,8 +117,10 @@ export function VoiceRecorderStudio() {
   const [cloneStatus, setCloneStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [cloneMessage, setCloneMessage] = useState('');
   const [showEffects, setShowEffects] = useState(false);
-  const [pitchRate, setPitchRate] = useState(1.0);
-  const [reverbMix, setReverbMix] = useState(0);
+  const [effectSettings, setEffectSettings] = useState<VoiceEffectsSettings>({ ...DEFAULT_EFFECTS });
+  const [selectedPreset, setSelectedPreset] = useState('Natural');
+  const [isExporting, setIsExporting] = useState(false);
+  const [decodedBuffer, setDecodedBuffer] = useState<AudioBuffer | null>(null);
 
   // Refs
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -77,9 +133,9 @@ export function VoiceRecorderStudio() {
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const levelsRef = useRef<number[]>([]);
-  const audioElRef = useRef<HTMLAudioElement | null>(null);
   const playAnimRef = useRef(0);
   const countdownTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const effectsPreviewRef = useRef<VoiceEffectsPreview>(new VoiceEffectsPreview());
 
   // ── Cleanup ─────────────────────────────────────────────────────────────
 
@@ -89,6 +145,7 @@ export function VoiceRecorderStudio() {
     if (timerRef.current) { clearInterval(timerRef.current); }
     if (countdownTimerRef.current) { clearInterval(countdownTimerRef.current); }
     streamRef.current?.getTracks().forEach((t) => t.stop());
+    effectsPreviewRef.current.stop();
     mediaRecorderRef.current = null;
     streamRef.current = null;
   }, []);
@@ -136,10 +193,9 @@ export function VoiceRecorderStudio() {
 
       for (let i = 0; i < levels.length; i++) {
         const x = canvas.width - (levels.length - i) * totalBarWidth;
-        const amplitude = Math.max(levels[i] * 2, 0.02); // min height
+        const amplitude = Math.max(levels[i] * 2, 0.02);
         const barH = amplitude * centerY * 0.9;
 
-        // Gradient from red/orange center to darker edges
         const intensity = Math.min(amplitude * 3, 1);
         const r = Math.round(220 + intensity * 35);
         const g = Math.round(80 + intensity * 40);
@@ -182,8 +238,8 @@ export function VoiceRecorderStudio() {
 
       const isPast = x < progressX;
       if (isPast) {
-        ctx.fillStyle = 'rgba(168, 85, 247, 0.9)'; // purple-500
-      } else { ctx.fillStyle = 'rgba(113, 113, 122, 0.4)'; } // zinc-500
+        ctx.fillStyle = 'rgba(168, 85, 247, 0.9)';
+      } else { ctx.fillStyle = 'rgba(113, 113, 122, 0.4)'; }
 
       ctx.fillRect(x, centerY - barH, BAR_WIDTH, barH * 2);
     }
@@ -253,7 +309,7 @@ export function VoiceRecorderStudio() {
     } catch {
       setMicError('Microphone access denied. Please allow microphone access in your browser settings.');
     }
-  }, []);  // eslint-disable-line react-hooks/exhaustive-deps
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const beginRecording = useCallback((stream: MediaStream) => {
     chunksRef.current = [];
@@ -264,6 +320,7 @@ export function VoiceRecorderStudio() {
     setAudioUrl(null);
     setPeaks([]);
     setPlayProgress(0);
+    setDecodedBuffer(null);
 
     const recorder = new MediaRecorder(stream, {
       mimeType: MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
@@ -283,16 +340,19 @@ export function VoiceRecorderStudio() {
       setAudioUrl(url);
       setPhase('recorded');
 
-      // Extract peaks for static waveform
+      // Extract peaks and decode buffer for effects processing
       try {
         const arrBuf = await blob.arrayBuffer();
         const offlineCtx = new AudioContext();
         const audioBuffer = await offlineCtx.decodeAudioData(arrBuf);
+        setDecodedBuffer(audioBuffer);
+
         const canvas = staticCanvasRef.current;
         const numBars = canvas
           ? Math.floor(canvas.width / (BAR_WIDTH + BAR_GAP))
           : 200;
         setPeaks(extractPeaks(audioBuffer, numBars));
+        void offlineCtx.close();
       } catch {
         // Fallback: use recorded levels as peaks
         const numBars = 200;
@@ -319,7 +379,7 @@ export function VoiceRecorderStudio() {
 
     // Start live waveform
     drawLiveWaveform();
-  }, [drawLiveWaveform]);  // eslint-disable-line react-hooks/exhaustive-deps
+  }, [drawLiveWaveform]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Stop Recording ──────────────────────────────────────────────────────
 
@@ -331,44 +391,88 @@ export function VoiceRecorderStudio() {
     setLevel(0);
   }, []);
 
-  // ── Playback ────────────────────────────────────────────────────────────
+  // ── Playback with Effects ──────────────────────────────────────────────
 
   const startPlayback = useCallback(() => {
-    if (!audioUrl) { return; }
+    if (!decodedBuffer) {
+      // Fallback for if buffer wasn't decoded
+      if (!audioUrl) { return; }
+      const audio = new Audio(audioUrl);
+      const pitchRatio = Math.pow(2, effectSettings.pitchShift / 12);
+      audio.playbackRate = effectSettings.speed * pitchRatio;
+      setPhase('playing');
+      setPlayProgress(0);
 
-    const audio = new Audio(audioUrl);
-    audio.playbackRate = pitchRate;
-    audioElRef.current = audio;
+      const updateProgress = () => {
+        if (audio.duration) {
+          setPlayProgress(audio.currentTime / audio.duration);
+        }
+        if (!audio.paused && !audio.ended) {
+          playAnimRef.current = requestAnimationFrame(updateProgress);
+        }
+      };
+
+      audio.onended = () => {
+        setPhase('recorded');
+        setPlayProgress(0);
+      };
+
+      audio.play().then(() => {
+        playAnimRef.current = requestAnimationFrame(updateProgress);
+      }).catch(() => {
+        setPhase('recorded');
+      });
+      return;
+    }
+
+    // Use effects preview engine for real-time processed playback
     setPhase('playing');
     setPlayProgress(0);
 
+    effectsPreviewRef.current.play(decodedBuffer, effectSettings, () => {
+      setPhase('recorded');
+      setPlayProgress(0);
+    });
+
+    // Update progress via animation frame
     const updateProgress = () => {
-      if (audio.duration) {
-        setPlayProgress(audio.currentTime / audio.duration);
-      }
-      if (!audio.paused && !audio.ended) {
+      const preview = effectsPreviewRef.current;
+      if (preview.getIsPlaying() && decodedBuffer) {
+        setPlayProgress(preview.getProgress(decodedBuffer.duration, effectSettings));
         playAnimRef.current = requestAnimationFrame(updateProgress);
       }
     };
-
-    audio.onended = () => {
-      setPhase('recorded');
-      setPlayProgress(0);
-    };
-
-    audio.play().then(() => {
-      playAnimRef.current = requestAnimationFrame(updateProgress);
-    }).catch(() => {
-      setPhase('recorded');
-    });
-  }, [audioUrl, pitchRate]);
+    playAnimRef.current = requestAnimationFrame(updateProgress);
+  }, [audioUrl, decodedBuffer, effectSettings]);
 
   const stopPlayback = useCallback(() => {
-    audioElRef.current?.pause();
+    effectsPreviewRef.current.stop();
     if (playAnimRef.current) { cancelAnimationFrame(playAnimRef.current); }
     setPhase('recorded');
     setPlayProgress(0);
   }, []);
+
+  // ── Export with Effects ────────────────────────────────────────────────
+
+  const handleExportWithEffects = useCallback(async () => {
+    if (!decodedBuffer) { return; }
+    setIsExporting(true);
+    try {
+      const blob = await exportProcessed(decodedBuffer, effectSettings);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${cloneName.trim() || 'voice-recording'}-processed.wav`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch {
+      // Export error — user can retry
+    } finally {
+      setIsExporting(false);
+    }
+  }, [decodedBuffer, effectSettings, cloneName]);
 
   // ── Discard ─────────────────────────────────────────────────────────────
 
@@ -382,6 +486,7 @@ export function VoiceRecorderStudio() {
     setPlayProgress(0);
     setDuration(0);
     setLevel(0);
+    setDecodedBuffer(null);
     levelsRef.current = [];
   }, [audioUrl, cleanup]);
 
@@ -463,6 +568,58 @@ export function VoiceRecorderStudio() {
       setSaveStatus('idle');
     }
   }, [audioBlob, cloneName, duration, authFetch]);
+
+  // ── Effect Settings Updaters ──────────────────────────────────────────
+
+  const updateEffect = useCallback(<K extends keyof VoiceEffectsSettings>(
+    key: K,
+    value: VoiceEffectsSettings[K],
+  ) => {
+    setEffectSettings((prev) => ({ ...prev, [key]: value }));
+    setSelectedPreset(''); // Clear preset when manually adjusting
+  }, []);
+
+  const updateEq = useCallback((band: keyof VoiceEffectsSettings['equalizer'], value: number) => {
+    setEffectSettings((prev) => ({
+      ...prev,
+      equalizer: { ...prev.equalizer, [band]: value },
+    }));
+    setSelectedPreset('');
+  }, []);
+
+  const updateCompressor = useCallback((param: keyof VoiceEffectsSettings['compressor'], value: number) => {
+    setEffectSettings((prev) => ({
+      ...prev,
+      compressor: { ...prev.compressor, [param]: value },
+    }));
+    setSelectedPreset('');
+  }, []);
+
+  const updateReverb = useCallback((param: keyof VoiceEffectsSettings['reverb'], value: number) => {
+    setEffectSettings((prev) => ({
+      ...prev,
+      reverb: { ...prev.reverb, [param]: value },
+    }));
+    setSelectedPreset('');
+  }, []);
+
+  const updateDelay = useCallback((param: keyof VoiceEffectsSettings['delay'], value: number) => {
+    setEffectSettings((prev) => ({
+      ...prev,
+      delay: { ...prev.delay, [param]: value },
+    }));
+    setSelectedPreset('');
+  }, []);
+
+  const applyPreset = useCallback((preset: EffectPreset) => {
+    setEffectSettings({ ...preset.settings });
+    setSelectedPreset(preset.name);
+  }, []);
+
+  const resetAllEffects = useCallback(() => {
+    setEffectSettings({ ...DEFAULT_EFFECTS });
+    setSelectedPreset('Natural');
+  }, []);
 
   // ── Canvas Resize ───────────────────────────────────────────────────────
 
@@ -694,57 +851,210 @@ export function VoiceRecorderStudio() {
           <div className="rounded-2xl border border-zinc-800 bg-zinc-900/80 p-5">
             <button
               onClick={() => setShowEffects(!showEffects)}
-              className="flex items-center gap-2 text-sm font-medium text-zinc-300 mb-4 w-full text-left"
+              className="flex items-center gap-2 text-sm font-medium text-zinc-300 mb-2 w-full text-left"
             >
               <Settings2 className="w-4 h-4 text-purple-400" />
               Voice Effects
-              <span className="text-xs text-zinc-600 ml-1">(applied on playback)</span>
+              {showEffects ? (
+                <ChevronUp className="w-3.5 h-3.5 text-zinc-500 ml-auto" />
+              ) : (
+                <ChevronDown className="w-3.5 h-3.5 text-zinc-500 ml-auto" />
+              )}
             </button>
 
             {showEffects && (
-              <div className="space-y-4">
-                {/* Pitch / Speed */}
+              <div className="space-y-5 mt-4">
+                {/* Presets Row */}
                 <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <label className="text-xs text-zinc-400">Pitch / Speed</label>
-                    <span className="text-xs font-mono text-zinc-500">{pitchRate.toFixed(1)}x</span>
-                  </div>
-                  <input
-                    type="range"
-                    min={0.5}
-                    max={2.0}
-                    step={0.1}
-                    value={pitchRate}
-                    onChange={(e) => setPitchRate(Number(e.target.value))}
-                    className="w-full accent-purple-500"
-                  />
-                  <div className="flex justify-between text-[10px] text-zinc-600 mt-0.5">
-                    <span>Deep</span>
-                    <span>Normal</span>
-                    <span>High</span>
+                  <label className="block text-xs text-zinc-500 mb-1.5 uppercase tracking-wider">Presets</label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {EFFECT_PRESETS.map((preset) => (
+                      <button
+                        key={preset.name}
+                        onClick={() => applyPreset(preset)}
+                        title={preset.description}
+                        className={cn(
+                          'px-2.5 py-1 rounded-md text-xs font-medium transition-colors border',
+                          selectedPreset === preset.name
+                            ? 'bg-purple-500/20 text-purple-400 border-purple-500/30'
+                            : 'bg-zinc-800/50 text-zinc-400 border-zinc-700/50 hover:border-zinc-600',
+                        )}
+                      >
+                        {preset.name}
+                      </button>
+                    ))}
                   </div>
                 </div>
 
-                {/* Reverb (visual only for now — server-side processing needed for export) */}
+                {/* Equalizer */}
                 <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <label className="text-xs text-zinc-400">Reverb</label>
-                    <span className="text-xs font-mono text-zinc-500">{reverbMix}%</span>
+                  <label className="block text-xs text-zinc-500 mb-2 uppercase tracking-wider">Equalizer</label>
+                  <div className="grid grid-cols-3 gap-3">
+                    <EffectSlider
+                      label="Low (100Hz)"
+                      value={effectSettings.equalizer.low}
+                      min={-12} max={12} step={1} unit="dB"
+                      onChange={(v) => updateEq('low', v)}
+                    />
+                    <EffectSlider
+                      label="Mid (1kHz)"
+                      value={effectSettings.equalizer.mid}
+                      min={-12} max={12} step={1} unit="dB"
+                      onChange={(v) => updateEq('mid', v)}
+                    />
+                    <EffectSlider
+                      label="High (8kHz)"
+                      value={effectSettings.equalizer.high}
+                      min={-12} max={12} step={1} unit="dB"
+                      onChange={(v) => updateEq('high', v)}
+                    />
                   </div>
-                  <input
-                    type="range"
-                    min={0}
-                    max={100}
-                    step={5}
-                    value={reverbMix}
-                    onChange={(e) => setReverbMix(Number(e.target.value))}
-                    className="w-full accent-purple-500"
+                </div>
+
+                {/* Compressor */}
+                <div>
+                  <label className="block text-xs text-zinc-500 mb-2 uppercase tracking-wider">Compressor</label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <EffectSlider
+                      label="Threshold"
+                      value={effectSettings.compressor.threshold}
+                      min={-60} max={0} step={1} unit="dB"
+                      onChange={(v) => updateCompressor('threshold', v)}
+                    />
+                    <EffectSlider
+                      label="Ratio"
+                      value={effectSettings.compressor.ratio}
+                      min={1} max={20} step={0.5}
+                      formatValue={(v) => `${v}:1`}
+                      onChange={(v) => updateCompressor('ratio', v)}
+                    />
+                    <EffectSlider
+                      label="Attack"
+                      value={effectSettings.compressor.attack}
+                      min={0.001} max={1} step={0.001}
+                      formatValue={(v) => `${(v * 1000).toFixed(0)}ms`}
+                      onChange={(v) => updateCompressor('attack', v)}
+                    />
+                    <EffectSlider
+                      label="Release"
+                      value={effectSettings.compressor.release}
+                      min={0.01} max={1} step={0.01}
+                      formatValue={(v) => `${(v * 1000).toFixed(0)}ms`}
+                      onChange={(v) => updateCompressor('release', v)}
+                    />
+                  </div>
+                </div>
+
+                {/* Pitch & Speed */}
+                <div>
+                  <label className="block text-xs text-zinc-500 mb-2 uppercase tracking-wider">Pitch & Speed</label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <EffectSlider
+                      label="Pitch Shift"
+                      value={effectSettings.pitchShift}
+                      min={-12} max={12} step={1}
+                      formatValue={(v) => `${v > 0 ? '+' : ''}${v} st`}
+                      onChange={(v) => updateEffect('pitchShift', v)}
+                      leftLabel="-12" rightLabel="+12"
+                    />
+                    <EffectSlider
+                      label="Speed"
+                      value={effectSettings.speed}
+                      min={0.5} max={2.0} step={0.05}
+                      formatValue={(v) => `${v.toFixed(2)}x`}
+                      onChange={(v) => updateEffect('speed', v)}
+                      leftLabel="Slow" rightLabel="Fast"
+                    />
+                  </div>
+                </div>
+
+                {/* Reverb */}
+                <div>
+                  <label className="block text-xs text-zinc-500 mb-2 uppercase tracking-wider">Reverb</label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <EffectSlider
+                      label="Mix"
+                      value={effectSettings.reverb.mix}
+                      min={0} max={1} step={0.01}
+                      formatValue={(v) => `${Math.round(v * 100)}%`}
+                      onChange={(v) => updateReverb('mix', v)}
+                      leftLabel="Dry" rightLabel="Wet"
+                    />
+                    <EffectSlider
+                      label="Decay"
+                      value={effectSettings.reverb.decay}
+                      min={0.1} max={5} step={0.1}
+                      formatValue={(v) => `${v.toFixed(1)}s`}
+                      onChange={(v) => updateReverb('decay', v)}
+                      leftLabel="Short" rightLabel="Long"
+                    />
+                  </div>
+                </div>
+
+                {/* Delay */}
+                <div>
+                  <label className="block text-xs text-zinc-500 mb-2 uppercase tracking-wider">Delay</label>
+                  <div className="grid grid-cols-3 gap-3">
+                    <EffectSlider
+                      label="Time"
+                      value={effectSettings.delay.time}
+                      min={0} max={1000} step={10}
+                      formatValue={(v) => `${v}ms`}
+                      onChange={(v) => updateDelay('time', v)}
+                    />
+                    <EffectSlider
+                      label="Feedback"
+                      value={effectSettings.delay.feedback}
+                      min={0} max={0.9} step={0.05}
+                      formatValue={(v) => `${Math.round(v * 100)}%`}
+                      onChange={(v) => updateDelay('feedback', v)}
+                    />
+                    <EffectSlider
+                      label="Mix"
+                      value={effectSettings.delay.mix}
+                      min={0} max={1} step={0.01}
+                      formatValue={(v) => `${Math.round(v * 100)}%`}
+                      onChange={(v) => updateDelay('mix', v)}
+                    />
+                  </div>
+                </div>
+
+                {/* Noise Gate */}
+                <div>
+                  <label className="block text-xs text-zinc-500 mb-2 uppercase tracking-wider">Noise Gate</label>
+                  <EffectSlider
+                    label="Threshold"
+                    value={effectSettings.noiseGateThreshold}
+                    min={-100} max={0} step={1} unit="dB"
+                    onChange={(v) => updateEffect('noiseGateThreshold', v)}
+                    leftLabel="Off" rightLabel="Aggressive"
                   />
-                  <div className="flex justify-between text-[10px] text-zinc-600 mt-0.5">
-                    <span>Dry</span>
-                    <span>Room</span>
-                    <span>Hall</span>
-                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex gap-2 pt-2 border-t border-zinc-800/50">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={resetAllEffects}
+                    className="gap-1.5 border-zinc-700 text-zinc-400 text-xs"
+                  >
+                    <RotateCw className="w-3 h-3" />
+                    Reset All
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => { void handleExportWithEffects(); }}
+                    disabled={isExporting || !decodedBuffer}
+                    className="gap-1.5 bg-purple-600 hover:bg-purple-700 text-white text-xs flex-1"
+                  >
+                    {isExporting ? (
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                    ) : (
+                      <Download className="w-3 h-3" />
+                    )}
+                    {isExporting ? 'Exporting...' : 'Export with Effects'}
+                  </Button>
                 </div>
               </div>
             )}

@@ -163,10 +163,11 @@ export const DEALS_TABS: SubpageNavItem[] = [
   { label: 'Risk', href: '/risk' },
 ];
 
-// ── Video Hub (Studio + Library merged) ─────────────────────────────────────
+// ── Video Hub (Studio + Library + Voice Lab) ─────────────────────────────────
 export const VIDEO_TABS: SubpageNavItem[] = [
   { label: 'Studio', href: '/content/video' },
   { label: 'Library', href: '/content/video/library' },
+  { label: 'Voice Lab', href: '/content/voice-lab' },
 ];
 
 // ── AI Workforce Hub (all 5 AI items → 1 hub) ──────────────────────────────

@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import { Mic, Music, AudioWaveform } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import SubpageNav from '@/components/ui/SubpageNav';
+import { VIDEO_TABS } from '@/lib/constants/subpage-nav';
 import { VoiceRecorderStudio } from './components/VoiceRecorderStudio';
 import { VoiceLibrary } from './components/VoiceLibrary';
 import { AIMusicStudio } from './components/AIMusicStudio';
@@ -19,7 +21,10 @@ export default function VoiceLabPage() {
   const [activeTab, setActiveTab] = useState<VoiceLabTab>('studio');
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-zinc-950 via-zinc-950 to-zinc-900">
+    <div className="min-h-screen bg-gradient-to-b from-zinc-950 via-zinc-950 to-zinc-900 p-6">
+      {/* Video Hub Navigation */}
+      <SubpageNav items={VIDEO_TABS} />
+
       {/* Header */}
       <div className="border-b border-zinc-800/50 bg-zinc-950/80 backdrop-blur-xl sticky top-0 z-20">
         <div className="max-w-7xl mx-auto px-6 py-5">

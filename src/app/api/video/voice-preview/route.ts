@@ -23,7 +23,8 @@ export const dynamic = 'force-dynamic';
 const requestSchema = z.object({
   voiceId: z.string().min(1),
   voiceName: z.string().min(1),
-  provider: z.enum(['elevenlabs', 'heygen']),
+  provider: z.enum(['elevenlabs', 'heygen', 'unrealspeech', 'custom']),
+  text: z.string().min(1).max(1000).optional(),
 });
 
 const SAMPLE_TEXT = 'Hello! This is a preview of my voice. I can help you create professional videos with clear, natural-sounding narration for your business.';
@@ -44,7 +45,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { voiceId, voiceName, provider } = parsed.data;
+    const { voiceId, voiceName, provider, text: customText } = parsed.data;
+    const spokenText = customText ?? SAMPLE_TEXT;
 
     // HeyGen voices don't have a standalone TTS API
     if (provider === 'heygen') {
@@ -57,8 +59,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check cache first
-    if (adminDb) {
+    // Check cache first (only for default sample text, not custom)
+    if (!customText && adminDb) {
       const cacheDoc = await adminDb
         .collection(`organizations/${PLATFORM_ID}/voice_previews`)
         .doc(voiceId)
@@ -95,7 +97,7 @@ export async function POST(request: NextRequest) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          text: SAMPLE_TEXT,
+          text: spokenText,
           model_id: 'eleven_multilingual_v2',
           voice_settings: {
             stability: 0.5,
@@ -125,8 +127,8 @@ export async function POST(request: NextRequest) {
     const base64Audio = Buffer.from(audioBuffer).toString('base64');
     const contentType = 'audio/mpeg';
 
-    // Cache in Firestore for future requests
-    if (adminDb) {
+    // Cache in Firestore for future requests (only for default sample text)
+    if (!customText && adminDb) {
       await adminDb
         .collection(`organizations/${PLATFORM_ID}/voice_previews`)
         .doc(voiceId)

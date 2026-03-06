@@ -150,7 +150,7 @@ export default function WorkflowsPage() {
             </div>
           </div>
           <motion.button
-            onClick={() => router.push(`/workflows/new`)}
+            onClick={() => router.push(`/workflows/builder`)}
             className="px-6 py-3 bg-gradient-to-r from-primary to-secondary hover:from-primary-light hover:to-secondary-light text-white font-semibold rounded-xl shadow-lg shadow-primary/25 flex items-center gap-2 transition-all duration-300"
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
@@ -204,7 +204,7 @@ export default function WorkflowsPage() {
           <h3 className="text-xl font-semibold text-[var(--color-text-primary)] mb-2">No workflows yet</h3>
           <p className="text-[var(--color-text-secondary)] mb-6">Create your first automation to get started</p>
           <motion.button
-            onClick={() => router.push(`/workflows/new`)}
+            onClick={() => router.push(`/workflows/builder`)}
             className="px-8 py-3 bg-gradient-to-r from-primary to-secondary hover:from-primary-light hover:to-secondary-light text-white font-semibold rounded-xl shadow-lg shadow-primary/25 inline-flex items-center gap-2 transition-all duration-300"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
@@ -296,7 +296,7 @@ export default function WorkflowsPage() {
 
                     {/* Edit Button */}
                     <motion.button
-                      onClick={() => router.push(`/workflows/${workflow.id}`)}
+                      onClick={() => router.push(`/workflows/builder?id=${workflow.id}`)}
                       className="px-4 py-2 text-primary border border-border-strong rounded-xl text-sm font-semibold flex items-center gap-2 transition-all duration-300"
                       style={{ backgroundColor: 'rgba(var(--color-primary-rgb), 0.1)' }}
                       whileHover={{ scale: 1.05 }}
