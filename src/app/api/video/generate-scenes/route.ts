@@ -20,6 +20,7 @@ const GenerateScenesSchema = z.object({
   })),
   avatarId: z.string().default(''),
   voiceId: z.string().default(''),
+  voiceProvider: z.enum(['heygen', 'elevenlabs']).default('heygen'),
   aspectRatio: z.enum(['16:9', '9:16', '1:1', '4:3']).default('16:9'),
 });
 
@@ -45,13 +46,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { projectId, scenes, avatarId, voiceId, aspectRatio } = parseResult.data;
+    const { projectId, scenes, avatarId, voiceId, voiceProvider, aspectRatio } = parseResult.data;
 
     logger.info('Starting scene generation', {
       projectId,
       sceneCount: scenes.length,
       avatarId,
       voiceId,
+      voiceProvider,
       aspectRatio,
       file: 'generate-scenes/route.ts',
     });
@@ -70,8 +72,8 @@ export async function POST(request: NextRequest) {
       status: 'approved' as const,
     }));
 
-    // Generate all scenes
-    const results = await generateAllScenes(pipelineScenes, avatarId, voiceId, aspectRatio);
+    // Generate all scenes (passes voiceProvider for ElevenLabs pre-synthesis)
+    const results = await generateAllScenes(pipelineScenes, avatarId, voiceId, aspectRatio, undefined, voiceProvider);
 
     logger.info('Scene generation completed', {
       projectId,

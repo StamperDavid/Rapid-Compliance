@@ -167,7 +167,7 @@ export function StepPreProduction() {
               </p>
               <VoicePicker
                 selectedVoiceId={voiceId}
-                onSelect={(id, name) => setVoice(id, name)}
+                onSelect={(id, name, provider) => setVoice(id, name, provider)}
               />
             </div>
           )}

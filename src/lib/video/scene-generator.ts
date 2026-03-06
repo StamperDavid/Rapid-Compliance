@@ -12,6 +12,7 @@ import {
   getVideoStatus,
   getVideoProviderKey,
 } from '@/lib/video/video-service';
+import { generateImage } from '@/lib/ai/image-generation-service';
 import type { PipelineScene, SceneGenerationResult, VideoEngineId } from '@/types/video-pipeline';
 import type { VideoAspectRatio, VideoProvider } from '@/types/video';
 
@@ -23,7 +24,8 @@ async function generateWithHeyGen(
   scene: PipelineScene,
   avatarId: string,
   voiceId: string,
-  aspectRatio: VideoAspectRatio
+  aspectRatio: VideoAspectRatio,
+  voiceProvider?: 'heygen' | 'elevenlabs'
 ): Promise<SceneGenerationResult> {
   // Validate avatar ID — HeyGen returns 404 "avatar look not found" if empty
   if (!avatarId) {
@@ -34,22 +36,97 @@ async function generateWithHeyGen(
   const heygenAspectRatio: '16:9' | '9:16' | '1:1' =
     aspectRatio === '4:3' ? '16:9' : aspectRatio;
 
-  // Use existing screenshot if available. DALL-E background generation is deferred
-  // to avoid blocking scene submission (each DALL-E call takes 10-30s and would make
-  // the entire generate-scenes API call take minutes before any polling can start).
-  // Users can regenerate individual scenes with AI backgrounds in post-production.
-  const backgroundUrl = scene.screenshotUrl;
+  // Generate DALL-E background from backgroundPrompt if no screenshot provided
+  let backgroundUrl = scene.screenshotUrl;
+  if (!backgroundUrl && scene.backgroundPrompt?.trim()) {
+    try {
+      const dalleSize = heygenAspectRatio === '9:16' ? '1024x1792' as const
+        : heygenAspectRatio === '1:1' ? '1024x1024' as const
+        : '1792x1024' as const;
+
+      logger.info('Generating DALL-E background for scene', {
+        sceneId: scene.id,
+        size: dalleSize,
+        file: 'scene-generator.ts',
+      });
+
+      const result = await generateImage(scene.backgroundPrompt, {
+        size: dalleSize,
+        quality: 'standard',
+        style: 'natural',
+      });
+      backgroundUrl = result.url;
+
+      logger.info('DALL-E background generated', {
+        sceneId: scene.id,
+        file: 'scene-generator.ts',
+      });
+    } catch (bgError) {
+      logger.warn('DALL-E background generation failed, using solid color fallback', {
+        sceneId: scene.id,
+        error: bgError instanceof Error ? bgError.message : String(bgError),
+        file: 'scene-generator.ts',
+      });
+      // Continue without background — HeyGen will use solid color
+    }
+  }
 
   // Use scene-level script; if B-roll (empty script), send a minimal placeholder
   // so HeyGen doesn't error. The avatar will appear briefly with no speech.
   const script = scene.scriptText.trim() || ' ';
+
+  // If using ElevenLabs voice, pre-synthesize audio and pass to HeyGen
+  let audioUrl: string | null = null;
+  if (voiceProvider === 'elevenlabs' && script.length > 1) {
+    try {
+      const { ElevenLabsProvider } = await import('@/lib/voice/tts/providers/elevenlabs-provider');
+      const { apiKeyService } = await import('@/lib/api-keys/api-key-service');
+      const { PLATFORM_ID } = await import('@/lib/constants/platform');
+      const rawKey = await apiKeyService.getServiceKey(PLATFORM_ID, 'elevenlabs');
+      const apiKey = typeof rawKey === 'string' ? rawKey : null;
+
+      if (apiKey) {
+        const provider = new ElevenLabsProvider(apiKey);
+        const ttsResult = await provider.synthesize(script, voiceId);
+
+        // Upload the base64 audio to Firebase Storage for HeyGen to access
+        const { adminStorage } = await import('@/lib/firebase/admin');
+        if (adminStorage) {
+          const audioBuffer = Buffer.from(ttsResult.audio.split(',')[1], 'base64');
+          const bucket = adminStorage.bucket();
+          const audioPath = `video/tts/${scene.id}-${Date.now()}.mp3`;
+          const file = bucket.file(audioPath);
+          await file.save(audioBuffer, { metadata: { contentType: 'audio/mpeg' } });
+          const [signedUrl] = await file.getSignedUrl({
+            action: 'read',
+            expires: Date.now() + 24 * 60 * 60 * 1000, // 24 hours
+          });
+          audioUrl = signedUrl;
+
+          logger.info('ElevenLabs audio synthesized and uploaded', {
+            sceneId: scene.id,
+            audioPath,
+            file: 'scene-generator.ts',
+          });
+        }
+      }
+    } catch (ttsError) {
+      logger.warn('ElevenLabs TTS failed, falling back to HeyGen voice', {
+        sceneId: scene.id,
+        error: ttsError instanceof Error ? ttsError.message : String(ttsError),
+        file: 'scene-generator.ts',
+      });
+      // Fall back to HeyGen's built-in TTS
+    }
+  }
 
   const response = await generateHeyGenSceneVideo(
     script,
     avatarId,
     voiceId,
     backgroundUrl,
-    heygenAspectRatio
+    heygenAspectRatio,
+    audioUrl,
   );
 
   logger.info('HeyGen scene generation started', {
@@ -294,7 +371,8 @@ export async function generateScene(
   scene: PipelineScene,
   avatarId: string,
   voiceId: string,
-  aspectRatio: VideoAspectRatio
+  aspectRatio: VideoAspectRatio,
+  voiceProvider?: 'heygen' | 'elevenlabs'
 ): Promise<SceneGenerationResult> {
   // Entire function wrapped in try/catch so nothing can crash the batch
   try {
@@ -312,7 +390,7 @@ export async function generateScene(
 
     switch (engine) {
       case 'heygen':
-        return await generateWithHeyGen(scene, avatarId, voiceId, aspectRatio);
+        return await generateWithHeyGen(scene, avatarId, voiceId, aspectRatio, voiceProvider);
 
       case 'runway':
         return await generateWithRunway(scene, aspectRatio);
@@ -442,7 +520,8 @@ export async function generateAllScenes(
   avatarId: string,
   voiceId: string,
   aspectRatio: VideoAspectRatio,
-  onSceneUpdate?: (result: SceneGenerationResult) => void
+  onSceneUpdate?: (result: SceneGenerationResult) => void,
+  voiceProvider?: 'heygen' | 'elevenlabs'
 ): Promise<SceneGenerationResult[]> {
   try {
     const CONCURRENCY = 3;
@@ -466,7 +545,7 @@ export async function generateAllScenes(
       });
 
       const batchResults = await Promise.all(
-        batch.map((scene) => generateScene(scene, avatarId, voiceId, aspectRatio))
+        batch.map((scene) => generateScene(scene, avatarId, voiceId, aspectRatio, voiceProvider))
       );
 
       for (const result of batchResults) {

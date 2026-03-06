@@ -614,7 +614,8 @@ export async function generateHeyGenSceneVideo(
   avatarId: string,
   voiceId: string,
   backgroundImageUrl: string | null,
-  aspectRatio: '16:9' | '9:16' | '1:1'
+  aspectRatio: '16:9' | '9:16' | '1:1',
+  audioUrl?: string | null,
 ): Promise<VideoGenerationResponse> {
   const apiKey = await getVideoProviderKey('heygen');
   if (!apiKey) {
@@ -625,6 +626,11 @@ export async function generateHeyGenSceneVideo(
     const background = backgroundImageUrl
       ? { type: 'image' as const, url: backgroundImageUrl }
       : { type: 'color' as const, value: '#1a1a2e' };
+
+    // Use external audio if provided (ElevenLabs), otherwise HeyGen's built-in TTS
+    const voice = audioUrl
+      ? { type: 'audio' as const, audio_url: audioUrl }
+      : { type: 'text' as const, input_text: script, voice_id: voiceId };
 
     const response = await fetch('https://api.heygen.com/v2/video/generate', {
       method: 'POST',
@@ -638,11 +644,7 @@ export async function generateHeyGenSceneVideo(
             type: 'avatar',
             avatar_id: avatarId,
           },
-          voice: {
-            type: 'text',
-            input_text: script,
-            voice_id: voiceId,
-          },
+          voice,
           background,
         }],
         dimension: aspectRatio === '9:16'

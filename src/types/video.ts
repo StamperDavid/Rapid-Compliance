@@ -114,6 +114,8 @@ export interface HeyGenVoice {
   gender?: 'male' | 'female' | 'neutral';
   previewUrl?: string;
   isPremium?: boolean;
+  /** Which TTS provider this voice belongs to */
+  provider?: 'heygen' | 'elevenlabs';
 }
 
 // ============================================================================

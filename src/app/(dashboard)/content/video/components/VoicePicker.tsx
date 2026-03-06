@@ -2,17 +2,18 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
-import { Loader2, AlertCircle, Play, Pause, Mic, Search, Check, Volume2 } from 'lucide-react';
+import { Loader2, AlertCircle, Play, Pause, Mic, Search, Check, Volume2, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import type { HeyGenVoice } from '@/types/video';
 
 interface VoicePickerProps {
   selectedVoiceId: string | null;
-  onSelect: (voiceId: string, voiceName: string) => void;
+  onSelect: (voiceId: string, voiceName: string, provider?: 'heygen' | 'elevenlabs') => void;
 }
 
 const GENDER_FILTERS = ['all', 'male', 'female'] as const;
+const PROVIDER_FILTERS = ['all', 'elevenlabs', 'heygen'] as const;
 
 export function VoicePicker({ selectedVoiceId, onSelect }: VoicePickerProps) {
   const authFetch = useAuthFetch();
@@ -20,7 +21,9 @@ export function VoicePicker({ selectedVoiceId, onSelect }: VoicePickerProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [playingId, setPlayingId] = useState<string | null>(null);
+  const [previewError, setPreviewError] = useState<string | null>(null);
   const [filterGender, setFilterGender] = useState<string>('all');
+  const [filterProvider, setFilterProvider] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [filterLanguage, setFilterLanguage] = useState<string>('all');
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -55,11 +58,21 @@ export function VoicePicker({ selectedVoiceId, onSelect }: VoicePickerProps) {
     return Array.from(langs).sort();
   }, [voices]);
 
+  // Check if we have voices from multiple providers
+  const hasMultipleProviders = useMemo(() => {
+    const providers = new Set(voices.map((v) => v.provider ?? 'heygen'));
+    return providers.size > 1;
+  }, [voices]);
+
   const filteredVoices = useMemo(() => {
     let result = voices;
 
     if (filterGender !== 'all') {
       result = result.filter((v) => v.gender === filterGender);
+    }
+
+    if (filterProvider !== 'all') {
+      result = result.filter((v) => (v.provider ?? 'heygen') === filterProvider);
     }
 
     if (filterLanguage !== 'all') {
@@ -77,9 +90,11 @@ export function VoicePicker({ selectedVoiceId, onSelect }: VoicePickerProps) {
     }
 
     return result;
-  }, [voices, filterGender, filterLanguage, searchQuery]);
+  }, [voices, filterGender, filterProvider, filterLanguage, searchQuery]);
 
   const handlePreview = (voice: HeyGenVoice) => {
+    setPreviewError(null);
+
     if (playingId === voice.id) {
       audioRef.current?.pause();
       setPlayingId(null);
@@ -87,6 +102,7 @@ export function VoicePicker({ selectedVoiceId, onSelect }: VoicePickerProps) {
     }
 
     if (!voice.previewUrl) {
+      setPreviewError(`No preview available for ${voice.name}`);
       return;
     }
 
@@ -94,11 +110,24 @@ export function VoicePicker({ selectedVoiceId, onSelect }: VoicePickerProps) {
       audioRef.current.pause();
     }
 
-    const audio = new Audio(voice.previewUrl);
-    audioRef.current = audio;
-    void audio.play();
-    setPlayingId(voice.id);
-    audio.onended = () => setPlayingId(null);
+    try {
+      const audio = new Audio(voice.previewUrl);
+      audioRef.current = audio;
+      setPlayingId(voice.id);
+
+      audio.onended = () => setPlayingId(null);
+      audio.onerror = () => {
+        setPlayingId(null);
+        setPreviewError(`Failed to play preview for ${voice.name}`);
+      };
+
+      audio.play().catch(() => {
+        setPlayingId(null);
+        setPreviewError(`Browser blocked audio playback. Click again to retry.`);
+      });
+    } catch {
+      setPreviewError(`Failed to load preview for ${voice.name}`);
+    }
   };
 
   if (isLoading) {
@@ -115,7 +144,7 @@ export function VoicePicker({ selectedVoiceId, onSelect }: VoicePickerProps) {
       <div className="flex flex-col items-center justify-center py-12 gap-3">
         <AlertCircle className="w-8 h-8 text-zinc-500" />
         <p className="text-sm text-zinc-400">
-          {error ?? 'No voices available. Configure HeyGen API key in Settings.'}
+          {error ?? 'No voices available. Configure API keys in Settings.'}
         </p>
       </div>
     );
@@ -137,6 +166,26 @@ export function VoicePicker({ selectedVoiceId, onSelect }: VoicePickerProps) {
 
       {/* Filters Row */}
       <div className="flex flex-wrap gap-3">
+        {/* Provider filter */}
+        {hasMultipleProviders && (
+          <div className="flex gap-1.5">
+            {PROVIDER_FILTERS.map((provider) => (
+              <button
+                key={provider}
+                onClick={() => setFilterProvider(provider)}
+                className={cn(
+                  'px-3 py-1.5 rounded-lg text-xs font-medium transition-colors',
+                  filterProvider === provider
+                    ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                    : 'bg-zinc-800 text-zinc-400 border border-zinc-700 hover:border-zinc-600',
+                )}
+              >
+                {provider === 'all' ? 'All' : provider === 'elevenlabs' ? 'ElevenLabs' : 'HeyGen'}
+              </button>
+            ))}
+          </div>
+        )}
+
         {/* Gender */}
         <div className="flex gap-1.5">
           {GENDER_FILTERS.map((gender) => (
@@ -170,10 +219,18 @@ export function VoicePicker({ selectedVoiceId, onSelect }: VoicePickerProps) {
         )}
       </div>
 
+      {/* Preview error */}
+      {previewError && (
+        <div className="flex items-center gap-2 px-3 py-2 bg-amber-500/5 border border-amber-500/20 rounded-lg">
+          <AlertTriangle className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
+          <p className="text-xs text-amber-400">{previewError}</p>
+        </div>
+      )}
+
       {/* Results count */}
       <p className="text-xs text-zinc-500">
         {filteredVoices.length} voice{filteredVoices.length !== 1 ? 's' : ''}
-        {searchQuery || filterGender !== 'all' || filterLanguage !== 'all' ? ' matching filters' : ' available'}
+        {searchQuery || filterGender !== 'all' || filterLanguage !== 'all' || filterProvider !== 'all' ? ' matching filters' : ' available'}
       </p>
 
       {/* Voice List */}
@@ -181,6 +238,7 @@ export function VoicePicker({ selectedVoiceId, onSelect }: VoicePickerProps) {
         {filteredVoices.map((voice) => {
           const isSelected = selectedVoiceId === voice.id;
           const isPlaying = playingId === voice.id;
+          const voiceProvider = voice.provider ?? 'heygen';
 
           return (
             <div
@@ -191,7 +249,7 @@ export function VoicePicker({ selectedVoiceId, onSelect }: VoicePickerProps) {
                   ? 'border-amber-500 bg-amber-500/10 ring-1 ring-amber-500/30'
                   : 'border-zinc-700/50 bg-zinc-800/30 hover:border-zinc-500 hover:bg-zinc-800/60',
               )}
-              onClick={() => onSelect(voice.id, voice.name)}
+              onClick={() => onSelect(voice.id, voice.name, voiceProvider)}
             >
               {/* Icon */}
               <div className={cn(
@@ -246,12 +304,15 @@ export function VoicePicker({ selectedVoiceId, onSelect }: VoicePickerProps) {
                 </Button>
               )}
 
-              {/* Premium badge */}
-              {voice.isPremium && (
-                <span className="px-1.5 py-0.5 bg-amber-500/20 text-amber-400 text-[9px] font-bold rounded flex-shrink-0">
-                  PRO
-                </span>
-              )}
+              {/* Provider badge */}
+              <span className={cn(
+                'px-1.5 py-0.5 text-[9px] font-bold rounded flex-shrink-0',
+                voiceProvider === 'elevenlabs'
+                  ? 'bg-purple-500/20 text-purple-400'
+                  : 'bg-blue-500/20 text-blue-400',
+              )}>
+                {voiceProvider === 'elevenlabs' ? 'XI' : 'HG'}
+              </span>
             </div>
           );
         })}

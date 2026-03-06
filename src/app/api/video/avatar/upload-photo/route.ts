@@ -55,11 +55,9 @@ export async function POST(request: NextRequest) {
     const fileName = `avatar-${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${ext}`;
     const storagePath = `video/avatars/${fileName}`;
 
-    // Use the default bucket configured in Firebase Admin initialization
-    // Falls back to explicit bucket name from env if needed
-    const bucketName = process.env.FIREBASE_STORAGE_BUCKET
-      ?? process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
-    const bucket = bucketName ? adminStorage.bucket(bucketName) : adminStorage.bucket();
+    // Use the default bucket from Firebase Admin init (storageBucket config)
+    // Same approach as the video assemble route which works
+    const bucket = adminStorage.bucket();
     const fileRef = bucket.file(storagePath);
     const buffer = Buffer.from(await file.arrayBuffer());
 

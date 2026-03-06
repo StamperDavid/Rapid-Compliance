@@ -26,6 +26,7 @@ export function StepGeneration() {
     scenes,
     avatarId,
     voiceId,
+    voiceProvider,
     brief,
     generatedScenes,
     isGenerating,
@@ -127,6 +128,7 @@ export function StepGeneration() {
           })),
           avatarId: avatarId ?? '',
           voiceId: voiceId ?? '',
+          voiceProvider: voiceProvider ?? 'heygen',
           aspectRatio: brief.aspectRatio,
         }),
       });
@@ -161,7 +163,7 @@ export function StepGeneration() {
     } finally {
       setIsGenerating(false);
     }
-  }, [scenes, avatarId, voiceId, brief.aspectRatio, isGenerating, setGeneratedScenes, setIsGenerating, authFetch]);
+  }, [scenes, avatarId, voiceId, voiceProvider, brief.aspectRatio, isGenerating, setGeneratedScenes, setIsGenerating, authFetch]);
 
   // Auto-start generation on mount
   useEffect(() => {

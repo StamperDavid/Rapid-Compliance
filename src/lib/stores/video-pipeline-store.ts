@@ -46,6 +46,7 @@ export interface VideoPipelineState {
   avatarName: string | null;
   voiceId: string | null;
   voiceName: string | null;
+  voiceProvider: 'heygen' | 'elevenlabs' | null;
 
   // Step 5: Generation - Scene render results
   generatedScenes: SceneGenerationResult[];
@@ -70,7 +71,7 @@ export interface VideoPipelineState {
   removeScene: (sceneId: string) => void;
   reorderScenes: (fromIndex: number, toIndex: number) => void;
   setAvatar: (id: string, name: string) => void;
-  setVoice: (id: string, name: string) => void;
+  setVoice: (id: string, name: string, provider?: 'heygen' | 'elevenlabs') => void;
   setGeneratedScenes: (results: SceneGenerationResult[]) => void;
   updateGeneratedScene: (sceneId: string, updates: Partial<SceneGenerationResult>) => void;
   setFinalVideoUrl: (url: string) => void;
@@ -105,6 +106,7 @@ const initialState = {
   avatarName: null,
   voiceId: null,
   voiceName: null,
+  voiceProvider: null,
   generatedScenes: [],
   finalVideoUrl: null,
   transitionType: 'fade' as TransitionType,
@@ -184,10 +186,11 @@ export const useVideoPipelineStore = create<VideoPipelineState>()(
           avatarName: name,
         }),
 
-      setVoice: (id, name) =>
+      setVoice: (id, name, provider) =>
         set({
           voiceId: id,
           voiceName: name,
+          voiceProvider: provider ?? 'heygen',
         }),
 
       setGeneratedScenes: (results) => set({ generatedScenes: results }),
@@ -295,6 +298,7 @@ export const useVideoPipelineStore = create<VideoPipelineState>()(
         avatarName: state.avatarName,
         voiceId: state.voiceId,
         voiceName: state.voiceName,
+        voiceProvider: state.voiceProvider,
         generatedScenes: state.generatedScenes,
         finalVideoUrl: state.finalVideoUrl,
         transitionType: state.transitionType,
