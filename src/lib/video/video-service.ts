@@ -1321,7 +1321,7 @@ export function estimateVideoCost(
 
 interface InstantAvatarResponse {
   avatarId: string;
-  status: 'pending' | 'processing' | 'completed' | 'failed';
+  status: 'pending' | 'training' | 'processing' | 'completed' | 'failed';
 }
 
 /**
@@ -1416,15 +1416,44 @@ export async function createInstantAvatar(
     throw new Error(`HeyGen avatar group returned no group_id. Response: ${JSON.stringify(groupData).slice(0, 300)}`);
   }
 
-  logger.info('HeyGen avatar created successfully', {
-    avatarId: groupId,
-    avatarName,
+  logger.info('HeyGen avatar Step 2 complete: got group_id', {
+    groupId,
     file: 'video-service.ts',
   });
 
+  // Step 3: Train the avatar (required before it can be used in video generation)
+  logger.info('HeyGen avatar Step 3: Training avatar...', {
+    groupId,
+    file: 'video-service.ts',
+  });
+
+  const trainRes = await fetch('https://api.heygen.com/v2/photo_avatar/train', {
+    method: 'POST',
+    headers: {
+      'X-Api-Key': apiKey,
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    },
+    body: JSON.stringify({ group_id: groupId }),
+  });
+
+  if (!trainRes.ok) {
+    const errorText = await trainRes.text();
+    logger.warn('HeyGen avatar training request failed — avatar may not be usable', {
+      status: trainRes.status,
+      error: errorText.slice(0, 300),
+      file: 'video-service.ts',
+    });
+  } else {
+    logger.info('HeyGen avatar training started', {
+      groupId,
+      file: 'video-service.ts',
+    });
+  }
+
   return {
     avatarId: groupId,
-    status: 'pending',
+    status: trainRes.ok ? 'training' : 'pending',
   };
 }
 
