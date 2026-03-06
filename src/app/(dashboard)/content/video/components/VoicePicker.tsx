@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
-import { Loader2, AlertCircle, Play, Pause, Mic, Search, Check, Volume2, AlertTriangle, Upload, Sparkles } from 'lucide-react';
+import Link from 'next/link';
+import { Loader2, AlertCircle, Play, Pause, Mic, Search, Check, Volume2, AlertTriangle, Upload, Sparkles, AudioWaveform } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import type { HeyGenVoice } from '@/types/video';
@@ -303,6 +304,14 @@ export function VoicePicker({ selectedVoiceId, onSelect }: VoicePickerProps) {
             )}
           </div>
         )}
+        {/* Full Voice Lab link */}
+        <Link
+          href="/content/voice-lab"
+          className="flex items-center gap-2 px-4 py-2 text-xs text-purple-400 hover:text-purple-300 hover:bg-purple-500/5 transition-colors border-t border-purple-500/10"
+        >
+          <AudioWaveform className="w-3.5 h-3.5" />
+          Open Voice Lab — effects, collections, recording studio &amp; AI music
+        </Link>
       </div>
 
       {cloneSuccess && (
