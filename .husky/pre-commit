@@ -1,3 +1,4 @@
+#!/usr/bin/env sh
 # Atomic Quality Control: Only check staged files for ESLint
 # TypeScript check runs on full project (required for type resolution)
 # Note: husky runs this with `sh -e`, so every command must exit 0 or the hook aborts.
