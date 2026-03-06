@@ -56,7 +56,6 @@ import {
   Shield,
   Building2,
   TrendingUp,
-  AudioWaveform,
   // Entity page icons
   ScrollText,
   CheckSquare,
@@ -64,25 +63,12 @@ import {
   MailOpen,
   Receipt,
   CreditCard,
-  UserCheck,
   Warehouse,
   Tag,
   Repeat,
   LayoutTemplate,
   BookOpen,
   Link2,
-  Truck,
-  Car,
-  FileCheck,
-  Briefcase,
-  Timer,
-  Home,
-  Key,
-  Scale,
-  DollarSign,
-  Heart,
-  Calendar,
-  Database,
 } from 'lucide-react';
 
 // ============================================================================
@@ -118,6 +104,7 @@ const NAV_SECTIONS: NavigationSection[] = [
       { id: 'payments', label: 'Payments', href: '/entities/payments', icon: CreditCard, iconColor: 'var(--color-success)', featureModuleId: 'crm_pipeline', entityId: 'payments' },
       { id: 'tasks', label: 'Tasks', href: '/entities/tasks', icon: CheckSquare, iconColor: 'var(--color-warning)' },
       { id: 'activities', label: 'Activities', href: '/entities/activities', icon: Clock, iconColor: 'var(--color-secondary)', featureModuleId: 'crm_pipeline' },
+      { id: 'proposals', label: 'Proposals', href: '/proposals', icon: FileText, iconColor: 'var(--color-secondary)', featureModuleId: 'proposals_docs' },
     ],
   },
   // ── Outreach (4 items — Forms & Workflows moved to Marketing) ──────
@@ -143,8 +130,6 @@ const NAV_SECTIONS: NavigationSection[] = [
     items: [
       { id: 'social-hub', label: 'Social Hub', href: '/social/command-center', icon: Activity, iconColor: 'var(--color-success)', requiredPermission: 'canManageSocialMedia', featureModuleId: 'social_media' },
       { id: 'video', label: 'Video', href: '/content/video', icon: Video, iconColor: 'var(--color-primary)', requiredPermission: 'canManageSocialMedia', featureModuleId: 'video_production' },
-      { id: 'voice-lab', label: 'Voice Lab', href: '/content/voice-lab', icon: AudioWaveform, iconColor: 'var(--color-accent)', requiredPermission: 'canManageSocialMedia', featureModuleId: 'video_production' },
-      { id: 'proposals', label: 'Proposals', href: '/proposals', icon: FileText, iconColor: 'var(--color-secondary)', featureModuleId: 'proposals_docs' },
       { id: 'forms', label: 'Forms', href: '/forms', icon: ClipboardList, iconColor: 'var(--color-success)', featureModuleId: 'forms_surveys' },
       { id: 'workflows', label: 'Workflows', href: '/workflows', icon: Workflow, iconColor: 'var(--color-warning)', requiredPermission: 'canCreateWorkflows', featureModuleId: 'workflows' },
     ],
@@ -197,27 +182,6 @@ const NAV_SECTIONS: NavigationSection[] = [
       { id: 'analytics-overview', label: 'Overview', href: '/analytics', icon: PieChart, iconColor: 'var(--color-cyan)', requiredPermission: 'canViewReports' },
       { id: 'growth', label: 'Growth', href: '/growth/command-center', icon: TrendingUp, iconColor: 'var(--color-success)', requiredPermission: 'canViewReports' },
       { id: 'ab-testing', label: 'A/B Testing', href: '/ab-tests', icon: FlaskConical, iconColor: 'var(--color-success)', featureModuleId: 'advanced_analytics' },
-    ],
-  },
-  // ── Records (industry-specific entity schemas) ─────────────────────
-  {
-    id: 'records',
-    label: 'Records',
-    icon: Database,
-    allowedRoles: ['owner', 'admin', 'manager'],
-    items: [
-      { id: 'customers', label: 'Customers', href: '/entities/customers', icon: UserCheck, iconColor: 'var(--color-primary)', entityId: 'customers' },
-      { id: 'cases', label: 'Cases', href: '/entities/cases', icon: Scale, iconColor: 'var(--color-warning)', entityId: 'cases' },
-      { id: 'projects', label: 'Projects', href: '/entities/projects', icon: Briefcase, iconColor: 'var(--color-primary)', entityId: 'projects' },
-      { id: 'properties', label: 'Properties', href: '/entities/properties', icon: Home, iconColor: 'var(--color-success)', entityId: 'properties' },
-      { id: 'showings', label: 'Showings', href: '/entities/showings', icon: Key, iconColor: 'var(--color-info)', entityId: 'showings' },
-      { id: 'patients', label: 'Patients', href: '/entities/patients', icon: Heart, iconColor: 'var(--color-error)', entityId: 'patients' },
-      { id: 'appointments', label: 'Appointments', href: '/entities/appointments', icon: Calendar, iconColor: 'var(--color-cyan)', entityId: 'appointments' },
-      { id: 'drivers', label: 'Drivers', href: '/entities/drivers', icon: Truck, iconColor: 'var(--color-secondary)', entityId: 'drivers' },
-      { id: 'vehicles', label: 'Vehicles', href: '/entities/vehicles', icon: Car, iconColor: 'var(--color-info)', entityId: 'vehicles' },
-      { id: 'compliance-docs', label: 'Compliance Docs', href: '/entities/compliance_documents', icon: FileCheck, iconColor: 'var(--color-warning)', entityId: 'compliance_documents' },
-      { id: 'time-entries', label: 'Time Entries', href: '/entities/time_entries', icon: Timer, iconColor: 'var(--color-accent)', entityId: 'time_entries' },
-      { id: 'billing-entries', label: 'Billing Entries', href: '/entities/billing_entries', icon: DollarSign, iconColor: 'var(--color-success)', entityId: 'billing_entries' },
     ],
   },
   // ── System (1 hub item — owner only) ───────────────────────────────

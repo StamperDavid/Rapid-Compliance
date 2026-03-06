@@ -74,12 +74,12 @@ export const useEntityConfigStore = create<EntityConfigStoreState>((set, get) =>
     if (isAlwaysOnEntity(entityId)) { return true; }
 
     const { config, initialized } = get();
-    // Not yet initialized — show everything to prevent flash-of-hidden-content
-    if (!initialized) { return true; }
-    // No config exists — existing user, show everything
+    // Not yet initialized — hide non-always-on entities to prevent flash of wrong content
+    if (!initialized) { return false; }
+    // No config exists — existing user, show everything (backward compat)
     if (!config) { return true; }
-    // Config exists — respect the toggle (default true for unknown entities)
-    return config.entities[entityId] ?? true;
+    // Config exists — respect the toggle (default false for unknown entities)
+    return config.entities[entityId] ?? false;
   },
 
   updateEntity: (entityId: string, enabled: boolean) => {

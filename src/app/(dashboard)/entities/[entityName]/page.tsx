@@ -543,7 +543,7 @@ export default function EntityTablePage() {
 
       {/* Header */}
       <div style={{ backgroundColor: 'var(--color-bg-main)', borderBottom: '1px solid var(--color-border-light)' }}>
-        <div style={{ maxWidth: '80rem', margin: '0 auto', padding: '1rem 2rem' }}>
+        <div style={{ padding: '1rem 2rem' }}>
           {/* Notification */}
           {notification && (
             <div style={{ marginBottom: '1rem', padding: '0.75rem 1rem', backgroundColor: notification.type === 'success' ? 'var(--color-success-dark)' : 'var(--color-error-dark)', border: `1px solid ${notification.type === 'success' ? 'var(--color-success)' : 'var(--color-error)'}`, borderRadius: '0.5rem', color: notification.type === 'success' ? 'var(--color-success-light)' : 'var(--color-error-light)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -634,7 +634,7 @@ export default function EntityTablePage() {
       {/* Filter Bar */}
       {showFilters && filterableFields.length > 0 && (
         <div style={{ backgroundColor: 'var(--color-bg-paper)', borderBottom: '1px solid var(--color-border-light)' }}>
-          <div style={{ maxWidth: '80rem', margin: '0 auto', padding: '0.75rem 2rem', display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+          <div style={{ padding: '0.75rem 2rem', display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
             <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-text-secondary)', textTransform: 'uppercase' }}>Filter by:</span>
             {filterableFields.map(field => {
               const options = getPicklistOptions(field);
@@ -680,7 +680,7 @@ export default function EntityTablePage() {
         </div>
       )}
 
-      <div style={{ maxWidth: '80rem', margin: '0 auto', padding: '2rem' }}>
+      <div style={{ padding: '0 2rem 2rem' }}>
         {/* Loading State */}
         {loading && (
           <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--color-text-disabled)' }}>
