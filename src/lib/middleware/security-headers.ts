@@ -25,7 +25,7 @@ export function addSecurityHeaders(response: NextResponse): NextResponse {
   // Permissions Policy (formerly Feature Policy)
   response.headers.set(
     'Permissions-Policy',
-    'camera=(), microphone=(), geolocation=()'
+    'camera=(), microphone=(self), geolocation=()'
   );
   
   // Content Security Policy (CSP)
