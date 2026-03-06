@@ -1,7 +1,7 @@
 # SalesVelocity.ai - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** March 5, 2026 (Lead Research page consolidation — merged 4 tools into 1, fixed leads tab navigation, 13 new components, 5 new API routes)
+**Last Updated:** March 6, 2026 (Doc cleanup — trimmed CONTINUATION_PROMPT, updated integration status, added missing Firestore collections, added Voice Lab and Avatar features)
 **Branches:** `dev` (latest)
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Architecture:** Single-Tenant Penthouse Model (development strategy — multi-tenant SaaS product)
@@ -36,12 +36,12 @@
 
 | Metric | Count | Status |
 |--------|-------|--------|
-| Physical Routes (page.tsx) | 179 | Verified March 5, 2026 |
-| API Endpoints (route.ts) | 343 | Verified March 5, 2026 (+5 Lead Research API) |
-| AI Agents | 54 | **54 FUNCTIONAL (46 swarm + 6 standalone + 2 variants)** |
-| RBAC Roles | 4 | `owner` (level 3), `admin` (level 2), `manager` (level 1), `member` (level 0) — 4-role RBAC |
-| TypeScript Files | 1,512 | Verified March 5, 2026 |
-| Firestore Collections | 80+ | Active (+2 Lead Research collections) |
+| Physical Routes (page.tsx) | 180 | Verified March 6, 2026 |
+| API Endpoints (route.ts) | 355 | Verified March 6, 2026 |
+| AI Agents | 52 | **52 FUNCTIONAL (46 swarm + 6 standalone)** |
+| RBAC Roles | 4 | owner / admin / manager / member |
+| TypeScript Files | 1,531 | Verified March 6, 2026 |
+| Firestore Collections | 80+ | Active |
 
 **Architecture:** Single-tenant Penthouse Model (development strategy). SalesVelocity.ai is a multi-tenant SaaS product — clients will purchase their own deployment. Penthouse simplifies development; multi-tenancy will be re-enabled.
 
@@ -55,11 +55,11 @@
 - **Voice:** VoiceEngineFactory (ElevenLabs, Unreal Speech)
 - **Payments:** Stripe
 
-### Codebase Scale (March 5, 2026)
+### Codebase Scale (March 6, 2026)
 
 | Metric | Count |
 |--------|-------|
-| **TypeScript Files** | 1,512 |
+| **TypeScript Files** | 1,531 |
 | **Estimated Code Lines** | ~340,000 |
 | **Test Files (Jest + Playwright)** | 22 |
 
@@ -69,7 +69,7 @@
 |-----------|-------|---------|
 | `src/lib/` | ~490 | Core business logic, services, agents |
 | `src/components/` | ~200 | UI components (+13 lead-research) |
-| `src/app/api/` | ~343 | API routes |
+| `src/app/api/` | ~355 | API routes |
 | `src/app/(dashboard)/` | ~115 | Dashboard pages |
 | `src/types/` | ~42 | TypeScript definitions |
 | `src/hooks/` | ~22 | React hooks |
@@ -117,33 +117,33 @@ The Claude Code Governance Layer defines binding operational constraints for AI-
 ### Recent Major Milestones
 
 > All milestone details (Sessions 1-31) have been archived. Key achievements:
+> - **Voice Lab & Custom Avatars** — Recording studio, voice library, avatar photo upload to Firestore `custom_avatars`, voice assignment, CUSTOM badges (March 6)
+> - **Lead Research AI upgrade** — Apollo free-tier org search, 8-tool AI chat with comprehensive system prompt, 5 tool rounds (March 6)
+> - **Apollo integration fixed** — Free-tier `/api/v1/organizations/search` endpoint, enrichment with 403 fallback (March 6)
+> - **Clay.com API key support** — Added to API keys page, key-mapping, service layer (REST API deprecated — webhook-only) (March 6)
 > - **Lead Research consolidation** — 4 tools → 1 page, 13 components, 5 API routes, leads tab nav fixed (March 5)
 > - Growth Command Center — 6 pages, 11 API routes, 3 crons (March 2)
-> - Demo seed Part 4 — Growth, AI Workforce, Team, Playbooks (March 2)
-> - Golden Masters extended to swarm specialists (March 2)
 > - Production deployment to Vercel via main branch (Session 30)
-> - Stripe Checkout + Social OAuth + Website Auth (Session 6)
-> - Nav consolidation: 13 sections → 9 (Session 25-27)
+> - Nav consolidation: 13 sections → 9 (Sessions 25-27)
 > - All 36 features across 8 sprints built to production-ready (Sessions 20-24)
-> - Final code readiness audit: all 13 items resolved, 123 new tests (Session 31)
 
 ---
 
-## Current Status (March 5, 2026)
+## Current Status (March 6, 2026)
 
 ### Production Readiness: ~97%
 
 | Area | Status |
 |------|--------|
 | Single-tenant architecture | **COMPLETE** — Firebase kill-switch, PLATFORM_ID constant, workspace paths eradicated (53 files migrated) |
-| 4-role RBAC | **ENFORCED** — `requireRole()` on ~335/343 API routes (8 intentionally public), sidebar filtering, 47 permissions |
-| Agent hierarchy | **100% COMPLETE** — 54 agents (46 swarm + 6 standalone + 2 variants), all managers orchestrate all specialists |
-| Jasper delegation | **COMPLETE** — 53 tools (13 delegate_to_*, 40 utility). Mission Control SSE streaming live |
+| 4-role RBAC | **ENFORCED** — `requireRole()` on ~347/355 API routes (8 intentionally public), sidebar filtering, 47 permissions |
+| Agent hierarchy | **100% COMPLETE** — 52 agents (46 swarm + 6 standalone), all managers orchestrate all specialists |
+| Jasper delegation | **COMPLETE** — 47 tools (13 delegate_to_*, 34 utility). Mission Control SSE streaming live |
 | Lead Research | **COMPLETE** — Unified 3-column page with AI chat, results panel, URL sources. 5 API routes, 8-tool AI subset |
 | Type safety | **CLEAN** — `tsc --noEmit` passes, zero `any` types, zero `@ts-ignore`, zero `@ts-expect-error` |
 | Build pipeline | **CLEAN** — `npm run build` passes, `npm run lint` zero warnings, 17 eslint-disable (ratcheted) |
-| Dashboard UI | **179 pages** with 12-module feature toggle system |
-| Integrations | **26 real integrations** verified with actual API calls |
+| Dashboard UI | **180 pages** with 12-module feature toggle system |
+| Integrations | **28 real integrations** verified with actual API calls (added Apollo, Clay) |
 
 ### Open Items — Launch Punch List
 
@@ -173,6 +173,7 @@ The Claude Code Governance Layer defines binding operational constraints for AI-
 | 15 | **Video assembly** | Stitcher returns placeholder `video://...` URLs, no real processing | MEDIUM |
 | 16 | **Vertex AI tuning** | Fully simulated (fake job IDs, no API call) | LOW |
 | 17 | **Workflow triggers** | Firestore/schedule triggers never deploy Cloud Functions | LOW |
+| 18 | **score_leads tool** | Returns mock response — no actual scoring logic implemented | MEDIUM |
 
 #### Tier 3: External Blockers (Need credentials or third-party action)
 
@@ -255,7 +256,7 @@ All roadmaps fully complete. Details in git history and `docs/archive/`.
 
 ### Rule 2: Unified AI Workforce Registry
 
-**The 54 AI Agents are managed through a single global registry (src/lib/agents/agent-registry.ts), not per-user.**
+**The 52 AI Agents are managed through a single global registry (src/lib/agents/agent-registry.ts), not per-user.**
 
 | Aspect | Detail |
 |--------|--------|
@@ -283,7 +284,7 @@ Standalone: JASPER, VOICE_AGENT_HANDLER,
            AUTONOMOUS_POSTING_AGENT, CHAT_SESSION_SERVICE
 ```
 
-**Total: 46 Swarm (1 + 9 + 36) + 6 Standalone + 2 Variants = 54 Agents**
+**Total: 46 Swarm (1 + 9 + 36) + 6 Standalone = 52 Agents**
 
 **Governance:** Agents are deployed, trained, and configured at the **platform level**. The `AgentInstanceManager` (`src/lib/agent/instance-manager.ts`) creates ephemeral session instances from Golden Masters — these are temporary runtime objects, not persistent per-user registries.
 
@@ -447,7 +448,7 @@ SalesVelocity.ai is a **multi-tenant SaaS product** currently running on the Pen
 
 ## Verified Live Route Map
 
-### Route Distribution (March 5, 2026)
+### Route Distribution (March 6, 2026)
 
 | Area | Routes | Dynamic Params | Status |
 |------|--------|----------------|--------|
@@ -458,7 +459,7 @@ SalesVelocity.ai is a **multi-tenant SaaS product** currently running on the Pen
 | Onboarding (`/onboarding/*`) | 4 | 0 | 4-step onboarding: industry category, niche drill-down, account creation, API key setup |
 | Auth (`/(auth)/*`) | 1 | 0 | Admin login |
 | Other (`/preview`, `/profile`, `/sites`) | 3 | 2 | Preview tokens, user profile, site builder |
-| **TOTAL** | **179** | **~11** | **Verified March 5, 2026 (filesystem count)** |
+| **TOTAL** | **180** | **~11** | **Verified March 6, 2026 (filesystem count)** |
 
 **DELETED:** `src/app/workspace/` (95 pages) and `src/app/admin/*` (92 pages) - legacy routes removed/consolidated into `(dashboard)`
 
@@ -523,9 +524,12 @@ SalesVelocity.ai is a **multi-tenant SaaS product** currently running on the Pen
 - `/leads/discovery` → `/leads/research` (March 5 — consolidated into Lead Research)
 - `/scraper` → `/leads/research` (March 5 — consolidated into Lead Research)
 
-**Video:**
+**Video & Voice Lab:**
 - `/content/video` (Video Studio — 7-step production pipeline: Request → Decompose → Pre-Production → Approval → Generation → Assembly → Post-Production)
-- `/content/video/library` (NEW — Video Library gallery with grid view, filter tabs, detail expansion, edit/download/delete actions)
+- `/content/video/library` (Video Library gallery with grid view, filter tabs, detail expansion, edit/download/delete actions)
+- `/content/voice-lab` (Voice Lab — recording studio, voice library with ElevenLabs voices, AI music generation)
+- Custom avatar creation saves to Firestore `custom_avatars` with "Your Avatars" section in picker, CUSTOM badge, voice assignment indicator
+- Voice assignment to avatars via `/api/video/avatar/assign-voice`
 
 **Growth Command Center (NEW March 2):**
 - `/growth/command-center` — Overview dashboard: stat cards (competitors, keywords, AI visibility), competitive landscape, keyword movers, strategy status, activity feed
@@ -612,7 +616,7 @@ No open route issues. All previously identified stub pages and duplicate destina
 
 ### Agent Swarm Overview
 
-**Total Agents:** 54 (46 swarm + 6 standalone + 2 Growth Analyst variants)
+**Total Agents:** 52 (46 swarm + 6 standalone)
 - **Swarm Agents:** 46 (1 orchestrator + 9 managers + 36 specialists)
 - **Standalone Agents:** 6 (outside swarm hierarchy)
 - **Variants:** 2 (Growth Analyst sub-specializations)
@@ -1177,7 +1181,7 @@ This script:
 
 ## Tooling Inventory
 
-### API Routes (343 Total — Verified March 5, 2026)
+### API Routes (355 Total — Verified March 6, 2026)
 
 | Category | Count | Path Pattern | Status |
 |----------|-------|--------------|--------|
@@ -1252,9 +1256,24 @@ This script:
 
 | Endpoint | Method | Purpose | Status |
 |----------|--------|---------|--------|
-| `/api/voice/*` | Various | Voice agent operations | FUNCTIONAL |
+| `/api/voice/*` | Various | Voice agent operations (Twilio/Telnyx) | FUNCTIONAL |
 | `/api/agent/config` | GET/PUT | Agent configuration | FUNCTIONAL |
 | `/api/agent/knowledge/upload` | POST | Knowledge base upload | FUNCTIONAL |
+
+#### Video & Voice Lab (22 routes)
+
+| Endpoint | Method | Purpose | Status |
+|----------|--------|---------|--------|
+| `/api/video/avatars` | GET | List all avatars (Firestore custom + HeyGen stock) | FUNCTIONAL |
+| `/api/video/avatar/create` | POST | Create custom avatar (saves to Firestore `custom_avatars`) | FUNCTIONAL |
+| `/api/video/avatar/assign-voice` | POST | Assign voice to custom avatar | FUNCTIONAL |
+| `/api/video/voices` | GET | List ElevenLabs voices | FUNCTIONAL |
+| `/api/video/voice-clone` | POST | Clone voice via ElevenLabs | FUNCTIONAL |
+| `/api/video/voice-preview` | POST | Preview TTS audio | FUNCTIONAL |
+| `/api/video/defaults` | GET/PUT | Default avatar/voice settings | FUNCTIONAL |
+| `/api/video/generate-scenes` | POST | Generate video scenes | FUNCTIONAL |
+| `/api/video/decompose` | POST | Decompose script to scenes | FUNCTIONAL |
+| `/api/video/project/*` | Various | Video project CRUD (save, list, get) | FUNCTIONAL |
 
 #### Social Media Platform (NEW Feb 12)
 
@@ -1305,7 +1324,7 @@ This script:
 | `/api/leads/research/schedule/run` | POST | Manually trigger discovery batch using active ICP profile | FUNCTIONAL |
 | `/api/leads/research/export` | GET | CSV export of batch results with field selection and status filtering | FUNCTIONAL |
 
-**Lead Research Tools (8-tool subset):** `scan_leads`, `enrich_lead`, `score_leads`, `scrape_website`, `research_competitors`, `scan_tech_stack` (from Jasper) + `update_icp_profile`, `add_url_source` (new). Defined in `src/lib/orchestrator/lead-research-tools.ts`.
+**Lead Research Tools (8-tool subset):** `scan_leads` (Apollo free-tier org search), `enrich_lead`, `score_leads`, `scrape_website`, `research_competitors`, `scan_tech_stack` (from Jasper) + `update_icp_profile`, `add_url_source` (new). Defined in `src/lib/orchestrator/lead-research-tools.ts`. AI chat uses Claude 3.5 Sonnet via OpenRouter with 5 tool-calling rounds.
 
 **Components (13):** `LeadResearchPage`, `ResearchChatPanel`, `ChatMessageList`, `ChatMessage`, `ChatInput`, `IcpSummaryBadge`, `ResearchControls`, `ResultsPanel`, `ResultCard`, `ResultsBulkActionBar`, `UrlSourcesPanel`, `UrlSourceItem`, `IcpSettingsDrawer` — all in `src/components/lead-research/`.
 
@@ -1342,18 +1361,7 @@ The following endpoints have working infrastructure (rate limiting, caching, aut
 | `/api/webhooks/gmail` | Auto-meeting booking has TODO | LOW |
 | `/api/voice/twiml` | Audio fallback uses placeholder URL | LOW |
 
-**Resolved API Issues (Archived):** All previous API implementation gaps have been resolved across Sessions 7-37. Key resolutions include: social post persistence, video render pipeline (HeyGen/Sora/Runway), DALL-E 3 image generation, competitor SEO analysis endpoints (`/api/seo/domain-analysis`, `/api/seo/strategy`), social media 6-phase expansion, AI Social Media Command Center, 14 Critical QA issues, commerce pipeline (9 fixes), fake data removal (35+ methods), data integrity (125+ files), workflow infrastructure (6 fixes), and code quality hardening. See git history for commit-level details.
-
-**Latest API additions (Session 36-37, updated Feb 26):**
-- `/api/seo/domain-analysis` — POST, auth-gated, Zod validated. SEO Expert `domain_analysis` action with DataForSEO integration. Fire-and-forget persists to `seoResearch` collection.
-- `/api/seo/strategy` — POST, auth-gated, Zod validated. SEO Expert `30_day_strategy` action. Fire-and-forget persists to `seoResearch` collection.
-- `/api/seo/research` — GET/POST, auth-gated, Zod validated. List and save SEO research documents (domain_analysis, strategy, competitor_discovery, battlecard). NEW Feb 26.
-- `/api/battlecard/competitor/discover` — Fire-and-forget persists to `seoResearch` collection (updated Feb 26)
-- `/api/battlecard/generate` — Fire-and-forget persists to `seoResearch` collection (updated Feb 26)
-- `/api/battlecard/export` — Battlecard HTML export
-- `/api/commerce/brief` — CommerceBrief revenue metrics
-- `/api/reputation/brief` — ReputationBrief trust scores
-- `/api/risk/interventions` — Risk intervention CRUD
+**Resolved API Issues:** All previous gaps resolved across Sessions 7-37. See git history for details.
 
 **Onboarding Pipeline (February 27, 2026):**
 
@@ -1630,6 +1638,8 @@ All 64 API routes that were using the client-side `FirestoreService` have been m
 | **QuickBooks** | **REAL** | OAuth2, invoices, customers, company info |
 | **Zoom** | **REAL** | Meetings API — create, cancel, recording, waiting room |
 | **Twilio Verify** | **REAL** | OTP/2FA verification |
+| **Apollo.io** | **REAL** | Free-tier org search (`/api/v1/organizations/search`), company enrichment. Person enrichment requires paid plan. |
+| **Clay.com** | **KEY STORED** | API key configured. REST API deprecated by Clay — webhook-based integration only. |
 
 ### SEO Data Integrations (NEW: February 23, 2026)
 
@@ -1642,46 +1652,15 @@ All 64 API routes that were using the client-side `FirestoreService` have been m
 
 **Routing:** Jasper detects domain analysis requests via traffic/visitor/backlink keywords + domain extraction regex → Marketing Manager → SEO Expert `domain_analysis` action → 5 concurrent DataForSEO calls.
 
-### Jasper Mission Control (LIVE — Sprint 18, February 24, 2026)
+### Jasper Mission Control (LIVE — Sprint 18)
 
 **Routes:** `/mission-control` (live view), `/mission-control/history` (completed missions)
-**Purpose:** Live "Air Traffic Control" for Jasper's multi-step delegations — users watch steps execute in real-time, approve/reject at intervention gates, and auto-navigate from chat.
 
-**Architecture:**
-- **SSE streaming for selected mission** (Sprint 23) — Firestore `onSnapshot()` pushes sub-second updates via Server-Sent Events. Sidebar list still uses adaptive polling (5s active / 30s idle).
-- **Cancel capability** (Sprint 23) — `POST /api/orchestrator/missions/[missionId]/cancel` sets mission + RUNNING steps to FAILED. UI has confirmation dialog.
-- **Separate `missions` Firestore collection** — User-facing documents, simpler than internal `sagaState`.
-- **Fire-and-forget instrumentation** — Mission tracking in `executeToolCall` never breaks Jasper's chat response. All writes are void-ed with internal error handling.
-- **Tool args/results** (Sprint 23) — `MissionStep` carries `toolArgs` (input) and `toolResult` (truncated to 2000 chars). Visible in collapsible panels in step detail.
+Live "Air Traffic Control" for Jasper's multi-step delegations. SSE streaming via Firestore `onSnapshot()`, cancel capability, 3-panel layout (sidebar, timeline, step detail). 13 delegation tools instrumented with `toolArgs`/`toolResult` tracking. Fire-and-forget instrumentation never breaks chat response.
 
-**Files (15 new, 5 modified):**
-
-| File | Purpose |
-|------|---------|
-| `src/lib/orchestrator/mission-persistence.ts` | Types (`Mission`, `MissionStep`, statuses) + Firestore CRUD + `cancelMission()` |
-| `src/app/api/orchestrator/missions/route.ts` | POST create + GET list (paginated, status filter) |
-| `src/app/api/orchestrator/missions/[missionId]/route.ts` | GET single mission (polling endpoint) |
-| `src/app/api/orchestrator/missions/[missionId]/stream/route.ts` | GET SSE streaming endpoint (Firestore onSnapshot, 15s heartbeat, 5min max) |
-| `src/app/api/orchestrator/missions/[missionId]/cancel/route.ts` | POST cancel mission (sets FAILED + marks RUNNING steps) |
-| `src/hooks/useMissionStream.ts` | Client hook: fetch-based SSE streaming with auth headers, auto-reconnect |
-| `src/app/(dashboard)/mission-control/page.tsx` | 3-panel layout with SSE streaming, cancel button, LIVE badge, tool detail panels |
-| `src/app/(dashboard)/mission-control/history/page.tsx` | Paginated history table with click-to-replay |
-| `src/app/(dashboard)/mission-control/_components/MissionTimeline.tsx` | Vertical step timeline with live elapsed timers, auto-scroll |
-| `src/app/(dashboard)/mission-control/_components/MissionSidebar.tsx` | Left panel mission list with status badges |
-| `src/app/(dashboard)/mission-control/_components/AgentAvatar.tsx` | Colored circle chips per delegation target |
-| `src/app/(dashboard)/mission-control/_components/ApprovalCard.tsx` | Inline approval gate (calls existing `/api/orchestrator/approvals`) |
-| `src/lib/orchestrator/jasper-tools.ts` | `ToolCallContext` + fire-and-forget tracking in all 13 delegation tools with `toolArgs`/`toolResult` |
-| `src/app/api/orchestrator/chat/route.ts` | Threads `missionId` context, creates mission on delegation, adds `missionId` to response |
-| `src/components/orchestrator/OrchestratorBase.tsx` | "Watch Live" pill button on delegation messages |
-| `src/components/admin/AdminSidebar.tsx` | Mission Control nav item under AI Workforce (Radar icon) |
-| `src/lib/stores/orchestrator-store.ts` | `missionId` added to `ChatMessage.metadata` |
-
-**Delegation tools instrumented (all 13):** `delegate_to_builder`, `delegate_to_sales`, `delegate_to_marketing`, `delegate_to_trust`, `delegate_to_agent`, `delegate_to_content`, `delegate_to_architect`, `delegate_to_outreach`, `delegate_to_intelligence`, `delegate_to_commerce`, `save_blog_draft`, `research_trending_topics`, `migrate_website`
-
-**Firestore Path:** `organizations/{PLATFORM_ID}/missions/{missionId}` via `getSubCollection('missions')`
-
-**Mission Statuses:** `PENDING`, `IN_PROGRESS`, `AWAITING_APPROVAL`, `COMPLETED`, `FAILED`
-**Step Statuses:** `PENDING`, `RUNNING`, `COMPLETED`, `FAILED`, `AWAITING_APPROVAL`
+**Key files:** `src/lib/orchestrator/mission-persistence.ts` (types + CRUD), `src/hooks/useMissionStream.ts` (SSE client), `src/app/(dashboard)/mission-control/` (UI).
+**Firestore:** `organizations/{PLATFORM_ID}/missions/{missionId}`
+**Statuses:** Mission: PENDING → IN_PROGRESS → COMPLETED/FAILED. Steps: PENDING → RUNNING → COMPLETED/FAILED/AWAITING_APPROVAL.
 
 ### Previously Planned Integrations (NOW LIVE)
 
@@ -1766,6 +1745,8 @@ organizations/{PLATFORM_ID}/
 ├── growthActivityLog/        # Activity feed events for Growth Command Center (NEW March 2)
 ├── lead-research-url-sources/ # URL sources for Lead Research page (NEW March 5)
 ├── lead-research-config/     # Lead Research schedule config (NEW March 5)
+├── custom_avatars/           # Custom HeyGen avatars with voice assignments (NEW March 6)
+├── icp-profiles/             # Ideal Customer Profile definitions for lead research (NEW March 5)
 └── provisionerLogs/          # Provisioning logs
 ```
 
@@ -1804,7 +1785,7 @@ The build pipeline now enforces **mandatory TypeScript type-checking** as a non-
 - **One organization:** `rapid-compliance-root` is the only org in the system (Rule 1)
 - All Firestore data scoped to `organizations/rapid-compliance-root/` or flat root collections (Rule 5)
 - Feature visibility configurable at the platform level
-- All 54 AI agents operate under the single org identity (Rule 2)
+- All 52 AI agents operate under the single org identity (Rule 2)
 - `DEFAULT_ORG_ID` constant used by all service classes — no dynamic org resolution
 - All service classes use `PLATFORM_ID` constant directly — no dynamic org parameters
 
@@ -2049,6 +2030,6 @@ See `docs/archive/legacy/README.md` for full archive index.
 **END OF SINGLE SOURCE OF TRUTH**
 
 *Document generated by Claude Code multi-agent audit - January 26, 2026*
-*Last updated: March 5, 2026 — Lead Research consolidation (4 tools → 1 page), updated metrics (179 routes, 343 API, 1512 files, 54 agents), trimmed redundant navigation descriptions, updated sidebar/route/collection info*
+*Last updated: March 6, 2026 — Doc cleanup, added Voice Lab/Avatar features, Apollo/Clay integrations, missing Firestore collections, trimmed Mission Control verbosity and changelog noise*
 
 > Session changelogs, launch gap analysis, and completed roadmap details archived in `docs/archive/`.
