@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { motion } from 'framer-motion';
-import { User, Loader2, AlertCircle, Search, Check, Mic, Sparkles } from 'lucide-react';
+import { User, Loader2, AlertCircle, Search, Check, Mic, Sparkles, Trash2 } from 'lucide-react';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import type { HeyGenAvatar } from '@/types/video';
@@ -19,10 +19,18 @@ function AvatarCard({
   avatar,
   isSelected,
   onSelect,
+  onDelete,
+  isConfirmingDelete,
+  onConfirmDelete,
+  onCancelDelete,
 }: {
   avatar: HeyGenAvatar;
   isSelected: boolean;
   onSelect: () => void;
+  onDelete?: () => void;
+  isConfirmingDelete?: boolean;
+  onConfirmDelete?: () => void;
+  onCancelDelete?: () => void;
 }) {
   return (
     <motion.button
@@ -84,12 +92,55 @@ function AvatarCard({
         </div>
       )}
 
-      {/* Custom badge */}
-      {avatar.isCustom && (
-        <span className="absolute top-1.5 right-1.5 flex items-center gap-0.5 px-1.5 py-0.5 bg-green-500/20 border border-green-500/30 text-green-400 text-[9px] font-bold rounded">
-          <Sparkles className="w-2.5 h-2.5" />
-          CUSTOM
+      {/* Custom badge + delete */}
+      {avatar.isCustom && !isConfirmingDelete && (
+        <span className="absolute top-1.5 right-1.5 flex items-center gap-1">
+          <span className="flex items-center gap-0.5 px-1.5 py-0.5 bg-green-500/20 border border-green-500/30 text-green-400 text-[9px] font-bold rounded">
+            <Sparkles className="w-2.5 h-2.5" />
+            CUSTOM
+          </span>
+          {onDelete && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete();
+              }}
+              className="p-1 bg-red-500/20 border border-red-500/30 text-red-400 rounded hover:bg-red-500/40 transition-colors"
+              title="Delete avatar"
+            >
+              <Trash2 className="w-2.5 h-2.5" />
+            </button>
+          )}
         </span>
+      )}
+      {/* Confirm delete overlay */}
+      {isConfirmingDelete && (
+        <div
+          className="absolute inset-0 bg-black/70 rounded-xl flex flex-col items-center justify-center gap-2 z-10"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <p className="text-[10px] text-zinc-300 font-medium">Delete?</p>
+          <div className="flex gap-1.5">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onConfirmDelete?.();
+              }}
+              className="px-2.5 py-1 bg-red-600 text-white text-[10px] font-medium rounded hover:bg-red-500 transition-colors"
+            >
+              Yes
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onCancelDelete?.();
+              }}
+              className="px-2.5 py-1 bg-zinc-700 text-zinc-300 text-[10px] font-medium rounded hover:bg-zinc-600 transition-colors"
+            >
+              No
+            </button>
+          </div>
+        </div>
       )}
       {/* Premium badge */}
       {!avatar.isCustom && avatar.isPremium && (
@@ -115,6 +166,27 @@ export function AvatarPicker({ selectedAvatarId, onSelect }: AvatarPickerProps) 
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterGender, setFilterGender] = useState<string>('all');
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+
+  const executeDelete = useCallback(async (avatarId: string) => {
+    setConfirmDeleteId(null);
+    setDeletingId(avatarId);
+    try {
+      const response = await authFetch(`/api/video/avatar/${encodeURIComponent(avatarId)}`, {
+        method: 'DELETE',
+      });
+      if (!response.ok) {
+        const data = await response.json() as { error?: string };
+        throw new Error(data.error ?? 'Failed to delete avatar');
+      }
+      setAvatars(prev => prev.filter(a => a.id !== avatarId));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete avatar');
+    } finally {
+      setDeletingId(null);
+    }
+  }, [authFetch]);
 
   const fetchAvatars = useCallback(async () => {
     try {
@@ -238,6 +310,10 @@ export function AvatarPicker({ selectedAvatarId, onSelect }: AvatarPickerProps) 
                   avatar={avatar}
                   isSelected={selectedAvatarId === avatar.id}
                   onSelect={() => onSelect(avatar.id, avatar.name)}
+                  onDelete={deletingId === avatar.id ? undefined : () => setConfirmDeleteId(avatar.id)}
+                  isConfirmingDelete={confirmDeleteId === avatar.id}
+                  onConfirmDelete={() => void executeDelete(avatar.id)}
+                  onCancelDelete={() => setConfirmDeleteId(null)}
                 />
               ))}
             </div>

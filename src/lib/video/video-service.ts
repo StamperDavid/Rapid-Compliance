@@ -539,6 +539,29 @@ async function listFirestoreCustomAvatars(): Promise<HeyGenAvatar[]> {
 }
 
 /**
+ * Delete a custom avatar from Firestore.
+ * Also removes the associated avatar_photos doc if one exists.
+ */
+export async function deleteCustomAvatar(avatarId: string): Promise<void> {
+  if (!adminDb) {
+    throw new Error('Database not available');
+  }
+
+  const docRef = adminDb
+    .collection(`organizations/${PLATFORM_ID}/custom_avatars`)
+    .doc(avatarId);
+
+  const doc = await docRef.get();
+  if (!doc.exists) {
+    throw new Error('Avatar not found');
+  }
+
+  await docRef.delete();
+
+  logger.info('Custom avatar deleted from Firestore', { avatarId });
+}
+
+/**
  * List ALL avatars — custom avatars (Firestore + HeyGen talking photos) + stock.
  * Custom avatars appear first, deduped by ID.
  */
