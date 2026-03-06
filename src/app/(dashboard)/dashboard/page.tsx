@@ -114,6 +114,7 @@ interface TaskData {
   title?: string;
   name?: string;
   priority?: string;
+  status?: string;
   dueDate?: FirestoreTimestamp;
   completed?: boolean;
 }
@@ -231,11 +232,10 @@ export default function WorkspaceDashboardPage() {
           converted: convertedConvos,
         });
 
-        // Fetch tasks
+        // Fetch tasks from teamTasks collection
         const tasksQuery = query(
-          collection(db, getSubCollection('records')),
-          where('entityType', '==', 'tasks'),
-          where('completed', '==', false),
+          collection(db, getSubCollection('teamTasks')),
+          where('status', 'in', ['todo', 'in_progress', 'blocked']),
           limit(5)
         );
         let tasksData: TaskItem[] = [];
@@ -245,10 +245,10 @@ export default function WorkspaceDashboardPage() {
             const data = doc.data() as TaskData;
             return {
               id: doc.id,
-              title: (data.title !== '' && data.title != null) ? data.title : ((data.name !== '' && data.name != null) ? data.name : 'Untitled Task'),
+              title: (data.title !== '' && data.title != null) ? data.title : 'Untitled Task',
               priority: (data.priority !== '' && data.priority != null) ? data.priority : 'Normal',
               dueDate: data.dueDate ? new Date(data.dueDate.seconds * 1000).toLocaleDateString() : 'No due date',
-              completed: data.completed ?? false,
+              completed: data.status === 'completed',
             };
           });
         } catch (_e) {
