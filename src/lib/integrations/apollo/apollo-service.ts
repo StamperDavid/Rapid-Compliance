@@ -195,7 +195,7 @@ class ApolloService {
     if (params.q_keywords) {body.q_keywords = params.q_keywords;}
 
     this.searchLimiter.record();
-    const result = await this.request<ApolloOrgSearchResponse>('POST', '/api/v1/mixed_companies/search', body);
+    const result = await this.request<ApolloOrgSearchResponse>('POST', '/api/v1/organizations/search', body);
 
     if (!result.ok || !result.data) {
       return { success: false, data: null, error: result.error, creditsUsed: 0, cached: false };

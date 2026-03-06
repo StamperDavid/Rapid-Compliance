@@ -799,30 +799,30 @@ export const JASPER_TOOLS: ToolDefinition[] = [
     function: {
       name: 'scan_leads',
       description:
-        'Initiate a lead discovery scan for prospects matching specified criteria. Uses the Lead Hunter capability. ENABLED: TRUE.',
+        'Search for companies matching specified criteria using Apollo.io organization search. Returns company name, domain, industry, employee count, revenue, funding, tech stack, and location. ENABLED: TRUE.',
       parameters: {
         type: 'object',
         properties: {
           industry: {
             type: 'string',
-            description: 'Target industry vertical',
+            description: 'Target industry vertical (e.g. "Professional Services", "SaaS", "HVAC")',
           },
           location: {
             type: 'string',
-            description: 'Geographic location filter',
+            description: 'Geographic location filter (e.g. "United States", "Texas", "Austin, TX")',
           },
           companySize: {
             type: 'string',
-            description: 'Company size range',
+            description: 'Employee count range. Use named sizes or comma-separated min,max (e.g. "20,100")',
             enum: ['1-10', '11-50', '51-200', '201-500', '500+'],
           },
           keywords: {
             type: 'string',
-            description: 'Keywords to match in company descriptions',
+            description: 'Keywords to match in company profiles (e.g. "HubSpot GoHighLevel sales development")',
           },
           limit: {
             type: 'string',
-            description: 'Maximum leads to return (default: 25)',
+            description: 'Maximum companies to return (default: 25, max: 100)',
           },
         },
         required: ['industry'],
@@ -3027,53 +3027,64 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
           const searchParams: Record<string, unknown> = {
             per_page: limit,
           };
-          if (args.industry) {
-            searchParams.q_keywords = args.industry;
-          }
-          if (args.keywords) {
-            searchParams.q_keywords = String(args.keywords) + (args.industry ? ` ${String(args.industry)}` : '');
+          // Build keyword query from industry + keywords
+          const keywordParts: string[] = [];
+          if (args.keywords) { keywordParts.push(String(args.keywords)); }
+          if (args.industry) { keywordParts.push(String(args.industry)); }
+          if (keywordParts.length > 0) {
+            searchParams.q_keywords = keywordParts.join(' ');
           }
           if (args.location) {
-            searchParams.q_person_locations = [args.location];
+            searchParams.q_organization_locations = [String(args.location)];
           }
           if (args.companySize) {
-            const sizeMap: Record<string, string> = {
+            const sizeStr = String(args.companySize);
+            // Support both named sizes and numeric ranges like "20,100"
+            const namedSizeMap: Record<string, string> = {
+              '1-10': '1,10',
+              '11-50': '11,50',
+              '51-200': '51,200',
+              '201-500': '201,500',
+              '500+': '501,10000',
               small: '1,50',
               medium: '51,200',
               large: '201,1000',
               enterprise: '1001,10000',
             };
-            const range = sizeMap[args.companySize as string];
-            if (range) {
-              searchParams.organization_num_employees_ranges = [range];
-            }
+            const range = namedSizeMap[sizeStr] ?? sizeStr;
+            searchParams.organization_num_employees_ranges = [range];
           }
 
-          const result = await apolloService.searchPeople(searchParams as Parameters<typeof apolloService.searchPeople>[0]);
+          // Use organization search (free-tier compatible)
+          const result = await apolloService.searchOrganizations(searchParams as Parameters<typeof apolloService.searchOrganizations>[0]);
           if (!result.success || !result.data) {
             content = JSON.stringify({ status: 'error', message: result.error ?? 'Search failed' });
             break;
           }
 
-          const people = result.data.people.map(p => ({
-            name: p.name,
-            title: p.title,
-            email: p.email,
-            emailStatus: p.email_status,
-            company: p.organization?.name ?? null,
-            domain: p.organization?.website_url ?? null,
-            linkedin: p.linkedin_url,
-            seniority: p.seniority,
-            location: [p.city, p.state, p.country].filter(Boolean).join(', '),
+          const companies = result.data.organizations.map(org => ({
+            name: org.name,
+            domain: org.website_url ?? org.domain,
+            industry: org.industry,
+            employees: org.estimated_num_employees,
+            revenue: org.annual_revenue_printed,
+            location: [org.city, org.state, org.country].filter(Boolean).join(', '),
+            linkedin: org.linkedin_url,
+            twitter: org.twitter_url,
+            description: org.short_description,
+            foundedYear: org.founded_year,
+            totalFunding: org.total_funding,
+            latestFundingStage: org.latest_funding_stage,
+            technologies: org.technologies?.slice(0, 10) ?? [],
           }));
 
           content = JSON.stringify({
             status: 'completed',
             source: 'apollo',
             totalResults: result.data.pagination.total_entries,
-            returned: people.length,
-            creditsUsed: result.creditsUsed,
-            people,
+            returned: companies.length,
+            creditsUsed: 0,
+            companies,
           });
         } catch (err) {
           content = JSON.stringify({
@@ -3129,7 +3140,7 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
             }
           }
 
-          // Person enrichment (1 credit)
+          // Person enrichment (1 credit — requires paid Apollo plan, skip gracefully if unavailable)
           const personResult = await apolloService.enrichPerson({
             email: (lead.email as string) ?? undefined,
             domain: domain ?? undefined,
@@ -3144,6 +3155,8 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
             enrichedFields.linkedInUrl = p.linkedin_url;
             enrichedFields.seniority = p.seniority;
             totalCredits += personResult.creditsUsed;
+          } else if (personResult.error?.includes('not accessible') || personResult.error?.includes('403')) {
+            enrichedFields.personEnrichmentNote = 'Person enrichment requires Apollo paid plan — company data enriched successfully.';
           }
 
           // Update lead in Firestore
