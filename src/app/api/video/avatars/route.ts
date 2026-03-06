@@ -1,5 +1,5 @@
 import { type NextRequest, NextResponse } from 'next/server';
-import { listHeyGenAvatars } from '@/lib/video/video-service';
+import { listAllAvatars } from '@/lib/video/video-service';
 import { logger } from '@/lib/logger/logger';
 import { requireAuth } from '@/lib/auth/api-auth';
 
@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
     const authResult = await requireAuth(request);
     if (authResult instanceof NextResponse) { return authResult; }
 
-    const result = await listHeyGenAvatars();
+    const result = await listAllAvatars();
     const avatars = 'avatars' in result ? result.avatars : [];
 
     return NextResponse.json({ success: true, avatars: avatars ?? [] });

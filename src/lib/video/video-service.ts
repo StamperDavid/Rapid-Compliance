@@ -466,6 +466,59 @@ export async function listHeyGenAvatars(): Promise<{ avatars: HeyGenAvatar[] }> 
 }
 
 /**
+ * List custom talking photo avatars from HeyGen.
+ * These are the avatars created via the upload flow (photo → avatar).
+ */
+export async function listHeyGenTalkingPhotos(): Promise<HeyGenAvatar[]> {
+  const apiKey = await getVideoProviderKey('heygen');
+  if (!apiKey) { return []; }
+
+  try {
+    const response = await fetch('https://api.heygen.com/v1/talking_photo.list', {
+      method: 'GET',
+      headers: { 'X-Api-Key': apiKey },
+    });
+
+    if (!response.ok) { return []; }
+
+    const data = await response.json() as {
+      data?: {
+        talking_photos?: Array<{
+          talking_photo_id: string;
+          talking_photo_name?: string;
+          preview_image_url?: string;
+          preview_video_url?: string;
+        }>;
+      };
+    };
+
+    return (data.data?.talking_photos ?? []).map((tp) => ({
+      id: tp.talking_photo_id,
+      name: tp.talking_photo_name ?? 'Custom Avatar',
+      thumbnailUrl: tp.preview_image_url ?? '',
+      previewVideoUrl: tp.preview_video_url,
+      isCustom: true,
+    }));
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * List ALL avatars — stock avatars + custom talking photos merged.
+ * Custom avatars appear first.
+ */
+export async function listAllAvatars(): Promise<{ avatars: HeyGenAvatar[] }> {
+  const [stockResult, customAvatars] = await Promise.all([
+    listHeyGenAvatars(),
+    listHeyGenTalkingPhotos(),
+  ]);
+
+  // Custom avatars first, then stock
+  return { avatars: [...customAvatars, ...stockResult.avatars] };
+}
+
+/**
  * List available HeyGen voices
  */
 export async function listHeyGenVoices(

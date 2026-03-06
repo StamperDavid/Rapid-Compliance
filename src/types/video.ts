@@ -104,6 +104,7 @@ export interface HeyGenAvatar {
   ethnicity?: string;
   style?: string;
   isPremium?: boolean;
+  isCustom?: boolean;
 }
 
 export interface HeyGenVoice {

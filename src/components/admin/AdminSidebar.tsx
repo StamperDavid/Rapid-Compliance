@@ -55,6 +55,7 @@ import {
   Shield,
   Building2,
   TrendingUp,
+  AudioWaveform,
 } from 'lucide-react';
 
 // ============================================================================
@@ -109,6 +110,7 @@ const NAV_SECTIONS: NavigationSection[] = [
     items: [
       { id: 'social-hub', label: 'Social Hub', href: '/social/command-center', icon: Activity, iconColor: 'var(--color-success)', requiredPermission: 'canManageSocialMedia', featureModuleId: 'social_media' },
       { id: 'video', label: 'Video', href: '/content/video', icon: Video, iconColor: 'var(--color-primary)', requiredPermission: 'canManageSocialMedia', featureModuleId: 'video_production' },
+      { id: 'voice-lab', label: 'Voice Lab', href: '/content/voice-lab', icon: AudioWaveform, iconColor: 'var(--color-accent)', requiredPermission: 'canManageSocialMedia', featureModuleId: 'video_production' },
       { id: 'proposals', label: 'Proposals', href: '/proposals', icon: FileText, iconColor: 'var(--color-secondary)', featureModuleId: 'proposals_docs' },
       { id: 'forms', label: 'Forms', href: '/forms', icon: ClipboardList, iconColor: 'var(--color-success)', featureModuleId: 'forms_surveys' },
       { id: 'workflows', label: 'Workflows', href: '/workflows', icon: Workflow, iconColor: 'var(--color-warning)', requiredPermission: 'canCreateWorkflows', featureModuleId: 'workflows' },

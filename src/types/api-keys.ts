@@ -297,6 +297,7 @@ export type APIServiceName =
   | 'serper'        // Serper.dev Google Search API
   | 'pagespeed'     // Google PageSpeed Insights
   | 'dataforseo'   // DataForSEO (keyword data, SERP, domain metrics)
-  | 'later';       // Later.com social media scheduling
+  | 'later'        // Later.com social media scheduling
+  | 'suno';         // Suno AI Music Generation
 
 

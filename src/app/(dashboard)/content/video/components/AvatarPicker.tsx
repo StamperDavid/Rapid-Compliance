@@ -173,8 +173,14 @@ export function AvatarPicker({ selectedAvatarId, onSelect }: AvatarPickerProps) 
                 )}
               </div>
 
+              {/* Custom badge */}
+              {avatar.isCustom && (
+                <span className="absolute top-1.5 right-1.5 px-1.5 py-0.5 bg-green-500/20 text-green-400 text-[9px] font-bold rounded">
+                  CUSTOM
+                </span>
+              )}
               {/* Premium badge */}
-              {avatar.isPremium && (
+              {!avatar.isCustom && avatar.isPremium && (
                 <span className="absolute top-1.5 right-1.5 px-1.5 py-0.5 bg-amber-500/20 text-amber-400 text-[9px] font-bold rounded">
                   PRO
                 </span>
