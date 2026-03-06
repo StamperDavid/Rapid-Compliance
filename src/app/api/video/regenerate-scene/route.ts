@@ -18,6 +18,7 @@ const RegenerateSchema = z.object({
   duration: z.number().default(15),
   engine: z.enum(['heygen', 'runway', 'sora', 'kling', 'luma']).nullable().default(null),
   backgroundPrompt: z.string().nullable().default(null),
+  voiceProvider: z.enum(['heygen', 'elevenlabs', 'unrealspeech', 'custom']).default('heygen'),
 });
 
 export async function POST(request: NextRequest) {
@@ -44,13 +45,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { projectId, sceneId, scriptText, screenshotUrl, avatarId, voiceId, aspectRatio, duration, engine, backgroundPrompt } = parseResult.data;
+    const { projectId, sceneId, scriptText, screenshotUrl, avatarId, voiceId, aspectRatio, duration, engine, backgroundPrompt, voiceProvider } = parseResult.data;
 
     logger.info('Regenerating scene', {
       projectId,
       sceneId,
       avatarId: avatarId ? avatarId.slice(0, 8) : '(none)',
       voiceId: voiceId ? voiceId.slice(0, 8) : '(none)',
+      voiceProvider,
       engine,
       aspectRatio,
       file: 'regenerate-scene/route.ts',
@@ -71,7 +73,7 @@ export async function POST(request: NextRequest) {
     };
 
     // Generate the scene
-    const result = await generateScene(scene, avatarId, voiceId, aspectRatio);
+    const result = await generateScene(scene, avatarId, voiceId, aspectRatio, voiceProvider);
 
     logger.info('Scene regeneration completed', {
       projectId,

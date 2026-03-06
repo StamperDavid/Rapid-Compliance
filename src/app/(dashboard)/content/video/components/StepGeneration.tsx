@@ -278,6 +278,7 @@ export function StepGeneration() {
           screenshotUrl: scene.screenshotUrl,
           avatarId: avatarId ?? '',
           voiceId: voiceId ?? '',
+          voiceProvider: voiceProvider ?? 'heygen',
           aspectRatio: brief.aspectRatio,
           duration: scene.duration,
           engine: scene.engine,
