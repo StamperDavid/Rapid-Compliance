@@ -7,6 +7,7 @@
 import { logger } from '@/lib/logger/logger';
 import {
   generateHeyGenSceneVideo,
+  generateHeyGenGreenScreenVideo,
   generateRunwayVideo,
   generateSoraVideo,
   getVideoStatus,
@@ -166,6 +167,84 @@ async function generateWithHeyGen(
     }
   }
 
+  // === Green Screen Mode ===
+  // Two-track generation: avatar with green BG + AI-generated background video
+  if (scene.useGreenScreen && scene.backgroundPrompt?.trim()) {
+    const bgEngine = scene.backgroundEngine ?? 'runway';
+
+    logger.info('Green screen mode: launching two-track generation', {
+      sceneId: scene.id,
+      avatarEngine: 'heygen',
+      backgroundEngine: bgEngine,
+      file: 'scene-generator.ts',
+    });
+
+    // Track 1: HeyGen avatar with green screen background
+    const avatarResponse = await generateHeyGenGreenScreenVideo(
+      script,
+      avatarId,
+      voiceId,
+      heygenAspectRatio,
+      audioUrl,
+    );
+
+    // Track 2: AI background video from backgroundPrompt
+    let backgroundVideoId = '';
+    let backgroundProvider: VideoEngineId = bgEngine;
+
+    try {
+      if (bgEngine === 'sora') {
+        const bgResponse = await generateSoraVideo(scene.backgroundPrompt, {
+          duration: Math.min(scene.duration, 16),
+          aspectRatio: heygenAspectRatio,
+        });
+        backgroundVideoId = bgResponse.id;
+      } else {
+        // Default to Runway
+        backgroundProvider = 'runway';
+        const bgResponse = await generateRunwayVideo('text', scene.backgroundPrompt, {
+          duration: Math.min(scene.duration, 10),
+          ratio: heygenAspectRatio,
+        });
+        backgroundVideoId = bgResponse.id;
+      }
+    } catch (bgError) {
+      logger.warn('Background video generation failed in green screen mode', {
+        sceneId: scene.id,
+        bgEngine,
+        error: bgError instanceof Error ? bgError.message : String(bgError),
+        file: 'scene-generator.ts',
+      });
+      // Avatar video still generates — compositing can be retried later
+    }
+
+    logger.info('Green screen two-track generation started', {
+      sceneId: scene.id,
+      avatarVideoId: avatarResponse.id,
+      backgroundVideoId,
+      backgroundProvider,
+      file: 'scene-generator.ts',
+    });
+
+    return {
+      sceneId: scene.id,
+      providerVideoId: avatarResponse.id,
+      provider: 'heygen',
+      status: 'generating',
+      videoUrl: null,
+      thumbnailUrl: null,
+      progress: 0,
+      error: null,
+      backgroundVideoId: backgroundVideoId || null,
+      backgroundVideoUrl: null,
+      backgroundProvider,
+      compositedVideoUrl: null,
+      compositeStatus: backgroundVideoId ? 'pending' : null,
+    };
+  }
+
+  // === Standard Mode ===
+  // Single-track: avatar with image/color background
   const response = await generateHeyGenSceneVideo(
     script,
     avatarId,

@@ -99,6 +99,8 @@ export interface PipelineScene {
   engine: VideoEngineId | null; // null = default (heygen)
   backgroundPrompt: string | null; // DALL-E prompt for HeyGen scene backgrounds
   status: SceneStatus;
+  useGreenScreen?: boolean; // true = HeyGen green BG + AI background compositing
+  backgroundEngine?: VideoEngineId | null; // Engine to generate AI background (runway/sora)
 }
 
 export interface SceneGenerationResult {
@@ -110,6 +112,14 @@ export interface SceneGenerationResult {
   thumbnailUrl: string | null;
   progress: number; // 0-100
   error: string | null;
+
+  // Green screen compositing (avatar over AI-generated background)
+  backgroundVideoId?: string | null;
+  backgroundVideoUrl?: string | null;
+  backgroundProvider?: VideoEngineId | null;
+  compositedVideoUrl?: string | null;
+  compositeStatus?: 'pending' | 'compositing' | 'completed' | 'failed' | null;
+  compositeError?: string | null;
 }
 
 // ============================================================================
@@ -228,6 +238,52 @@ export interface AssembleResponse {
 
 // ============================================================================
 // Decomposition Plan (from AI)
+// ============================================================================
+
+// ============================================================================
+// Post-Production Types
+// ============================================================================
+
+export type ColorGradePreset =
+  | 'corporate-clean'
+  | 'golden-warmth'
+  | 'cinema-contrast'
+  | 'vibrant-pop'
+  | 'soft-pastel'
+  | 'tech-modern'
+  | 'none';
+
+export interface AudioMixConfig {
+  backgroundMusicUrl?: string | null;
+  musicVolume: number; // 0.0-1.0
+  voiceoverVolume: number; // 0.0-1.0
+  duckingEnabled: boolean; // auto-lower music when voice speaks
+  duckingAmount: number; // dB to reduce music (e.g., -14)
+  normalizeLUFS: number; // target LUFS (e.g., -14 for broadcast)
+}
+
+export interface TextOverlayConfig {
+  text: string;
+  position: 'top' | 'bottom' | 'center';
+  fontSize: number;
+  fontColor: string;
+  backgroundColor?: string;
+  startTime: number; // seconds
+  endTime: number; // seconds
+}
+
+export interface PostProductionConfig {
+  colorGrade: ColorGradePreset;
+  audioMix: AudioMixConfig;
+  textOverlays: TextOverlayConfig[];
+  watermarkUrl?: string | null;
+  watermarkPosition?: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
+  watermarkOpacity?: number; // 0.0-1.0
+  outputResolution: '720p' | '1080p' | '4k';
+}
+
+// ============================================================================
+// Decomposition Types
 // ============================================================================
 
 export interface DecompositionPlan {

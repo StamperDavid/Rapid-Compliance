@@ -19,6 +19,8 @@ import type {
   TransitionType,
   DecompositionPlan,
   PipelineProject,
+  PostProductionConfig,
+  ColorGradePreset,
 } from '@/types/video-pipeline';
 import type { VideoAspectRatio, VideoResolution } from '@/types/video';
 
@@ -55,6 +57,11 @@ export interface VideoPipelineState {
   finalVideoUrl: string | null;
   transitionType: TransitionType;
 
+  // Step 7: Post-Production config
+  postProductionConfig: PostProductionConfig;
+  postProductionVideoUrl: string | null;
+  isPostProcessing: boolean;
+
   // Processing flags
   isGenerating: boolean;
   isAssembling: boolean;
@@ -78,6 +85,9 @@ export interface VideoPipelineState {
   setTransitionType: (type: TransitionType) => void;
   setIsGenerating: (val: boolean) => void;
   setIsAssembling: (val: boolean) => void;
+  setPostProductionConfig: (config: Partial<PostProductionConfig>) => void;
+  setPostProductionVideoUrl: (url: string) => void;
+  setIsPostProcessing: (val: boolean) => void;
   canAdvanceTo: (step: PipelineStep) => boolean;
   advanceStep: () => void;
   reset: () => void;
@@ -110,6 +120,24 @@ const initialState = {
   generatedScenes: [],
   finalVideoUrl: null,
   transitionType: 'fade' as TransitionType,
+  postProductionConfig: {
+    colorGrade: 'none' as ColorGradePreset,
+    audioMix: {
+      backgroundMusicUrl: null,
+      musicVolume: 0.15,
+      voiceoverVolume: 1.0,
+      duckingEnabled: true,
+      duckingAmount: -14,
+      normalizeLUFS: -14,
+    },
+    textOverlays: [],
+    watermarkUrl: null,
+    watermarkPosition: 'bottom-right' as const,
+    watermarkOpacity: 0.7,
+    outputResolution: '1080p' as const,
+  },
+  postProductionVideoUrl: null,
+  isPostProcessing: false,
   isGenerating: false,
   isAssembling: false,
 };
@@ -212,6 +240,15 @@ export const useVideoPipelineStore = create<VideoPipelineState>()(
 
       setIsAssembling: (val) => set({ isAssembling: val }),
 
+      setPostProductionConfig: (config) =>
+        set({
+          postProductionConfig: { ...get().postProductionConfig, ...config },
+        }),
+
+      setPostProductionVideoUrl: (url) => set({ postProductionVideoUrl: url }),
+
+      setIsPostProcessing: (val) => set({ isPostProcessing: val }),
+
       canAdvanceTo: (step) => {
         const state = get();
 
@@ -302,6 +339,8 @@ export const useVideoPipelineStore = create<VideoPipelineState>()(
         generatedScenes: state.generatedScenes,
         finalVideoUrl: state.finalVideoUrl,
         transitionType: state.transitionType,
+        postProductionConfig: state.postProductionConfig,
+        postProductionVideoUrl: state.postProductionVideoUrl,
       }),
     }
   )

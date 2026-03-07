@@ -12,6 +12,9 @@ const PollScenesSchema = z.object({
     sceneId: z.string(),
     providerVideoId: z.string().min(1),
     provider: z.enum(['heygen', 'runway', 'sora', 'kling', 'luma']).nullable(),
+    // Green screen compositing: optional background video to poll
+    backgroundVideoId: z.string().optional(),
+    backgroundProvider: z.enum(['heygen', 'runway', 'sora', 'kling', 'luma']).nullable().optional(),
   })),
 });
 
@@ -36,15 +39,44 @@ export async function POST(request: NextRequest) {
 
     const results = await Promise.all(
       scenes.map(async (scene) => {
+        // Poll main avatar/scene video
         const status = await pollSceneStatus(
           scene.providerVideoId,
           scene.provider as VideoEngineId | null,
         );
+
+        // Poll background video if present (green screen compositing)
+        let backgroundStatus: {
+          backgroundVideoUrl: string | null;
+          backgroundReady: boolean;
+        } = { backgroundVideoUrl: null, backgroundReady: false };
+
+        if (scene.backgroundVideoId && scene.backgroundProvider) {
+          try {
+            const bgResult = await pollSceneStatus(
+              scene.backgroundVideoId,
+              scene.backgroundProvider as VideoEngineId | null,
+            );
+            backgroundStatus = {
+              backgroundVideoUrl: bgResult.videoUrl,
+              backgroundReady: bgResult.status === 'completed' && bgResult.videoUrl !== null,
+            };
+          } catch (bgErr) {
+            logger.warn('Background video poll failed', {
+              sceneId: scene.sceneId,
+              backgroundVideoId: scene.backgroundVideoId,
+              error: bgErr instanceof Error ? bgErr.message : String(bgErr),
+              file: 'poll-scenes/route.ts',
+            });
+          }
+        }
+
         return {
           sceneId: scene.sceneId,
           providerVideoId: scene.providerVideoId,
           provider: scene.provider,
           ...status,
+          ...backgroundStatus,
         };
       }),
     );

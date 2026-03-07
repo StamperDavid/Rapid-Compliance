@@ -201,6 +201,8 @@ export function StepGeneration() {
               sceneId: s.sceneId,
               providerVideoId: s.providerVideoId,
               provider: s.provider,
+              backgroundVideoId: s.backgroundVideoId ?? undefined,
+              backgroundProvider: s.backgroundProvider ?? undefined,
             })),
           }),
         });
@@ -223,6 +225,8 @@ export function StepGeneration() {
             videoUrl: string | null;
             thumbnailUrl: string | null;
             error: string | null;
+            backgroundVideoUrl?: string | null;
+            backgroundReady?: boolean;
           }>;
         };
 
@@ -230,13 +234,23 @@ export function StepGeneration() {
           for (const result of data.results) {
             if (result.status !== 'generating') {
               console.info(`[VideoGen] Scene ${result.sceneId.slice(0, 8)}... → ${result.status}`);
-              updateGeneratedScene(result.sceneId, {
+              const updates: Partial<SceneGenerationResult> = {
                 status: result.status,
                 videoUrl: result.videoUrl,
                 thumbnailUrl: result.thumbnailUrl,
                 error: result.error,
                 progress: result.status === 'completed' ? 100 : 0,
-              });
+              };
+
+              // Track background video readiness for green screen compositing
+              if (result.backgroundVideoUrl) {
+                updates.backgroundVideoUrl = result.backgroundVideoUrl;
+              }
+              if (result.backgroundReady && result.status === 'completed') {
+                updates.compositeStatus = 'pending';
+              }
+
+              updateGeneratedScene(result.sceneId, updates);
             }
           }
         }

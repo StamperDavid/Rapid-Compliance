@@ -825,6 +825,90 @@ export async function generateHeyGenSceneVideo(
 }
 
 /**
+ * Generate HeyGen avatar video with green screen (#00FF00) background.
+ * Used for compositing: the green background is chroma-keyed out
+ * and the avatar is overlaid on an AI-generated background (Sora/Runway).
+ */
+export async function generateHeyGenGreenScreenVideo(
+  script: string,
+  avatarId: string,
+  voiceId: string,
+  aspectRatio: '16:9' | '9:16' | '1:1',
+  audioUrl?: string | null,
+): Promise<VideoGenerationResponse> {
+  const apiKey = await getVideoProviderKey('heygen');
+  if (!apiKey) {
+    throw new Error('HeyGen API key not configured. Add it in Settings > API Keys.');
+  }
+
+  try {
+    // Always use green color background for chroma keying
+    const background = { type: 'color' as const, value: '#00FF00' };
+
+    // Use external audio if provided (ElevenLabs), otherwise HeyGen's built-in TTS
+    const voice = audioUrl
+      ? { type: 'audio' as const, audio_url: audioUrl }
+      : { type: 'text' as const, input_text: script, voice_id: voiceId };
+
+    const response = await fetch('https://api.heygen.com/v2/video/generate', {
+      method: 'POST',
+      headers: {
+        'X-Api-Key': apiKey,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        video_inputs: [{
+          character: {
+            type: 'avatar',
+            avatar_id: avatarId,
+          },
+          voice,
+          background,
+        }],
+        dimension: aspectRatio === '9:16'
+          ? { width: 1080, height: 1920 }
+          : aspectRatio === '1:1'
+            ? { width: 1080, height: 1080 }
+            : { width: 1920, height: 1080 },
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`HeyGen API error: ${response.status} - ${errorText}`);
+    }
+
+    const raw = await response.json() as {
+      data?: { video_id?: string };
+      video_id?: string;
+    };
+    const videoId = raw.data?.video_id ?? raw.video_id;
+
+    if (!videoId) {
+      throw new Error(`HeyGen API returned no video_id. Response: ${JSON.stringify(raw).slice(0, 500)}`);
+    }
+
+    logger.info('HeyGen green screen video generation started', {
+      videoId,
+      file: 'video-service.ts',
+    });
+
+    return {
+      id: videoId,
+      requestId: videoId,
+      status: 'processing',
+      provider: 'heygen',
+      createdAt: new Date(),
+    };
+  } catch (error) {
+    logger.error('Failed to generate HeyGen green screen video', error as Error, {
+      file: 'video-service.ts',
+    });
+    throw error;
+  }
+}
+
+/**
  * Generate video with HeyGen avatar
  */
 export async function generateHeyGenVideo(
