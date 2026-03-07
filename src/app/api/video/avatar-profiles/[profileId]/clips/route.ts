@@ -2,8 +2,10 @@
  * POST   /api/video/avatar-profiles/[profileId]/clips — Add a green screen clip
  * DELETE /api/video/avatar-profiles/[profileId]/clips — Remove a green screen clip
  *
- * Green screen clips are short video recordings of the user against a green background.
- * Each clip has a spoken script so the system learns speaking style and intonation.
+ * Green screen clips are AI training data — short video recordings of the user
+ * against a green background. The AI uses these to learn the person's appearance,
+ * movements, expressions, and speech patterns across different intonations.
+ * More clips = better digital clone quality.
  * Adding clips auto-upgrades the avatar profile to 'premium' tier.
  */
 

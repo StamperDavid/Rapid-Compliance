@@ -18,12 +18,17 @@ import crypto from 'crypto';
 // Types
 // ============================================================================
 
-/** A single green screen video clip with its spoken script */
+/**
+ * A green screen video clip used as AI training data for the digital avatar.
+ * Multiple clips with different scripts teach the AI how the person speaks,
+ * moves, and expresses different intonations — producing a much more realistic
+ * synthetic avatar than a single photo.
+ */
 export interface GreenScreenClip {
   id: string;
   videoUrl: string; // URL to the green screen video file
   thumbnailUrl: string | null; // Auto-generated or uploaded thumbnail
-  script: string; // The text spoken in this clip
+  script: string; // The text spoken in this clip (training reference)
   duration: number; // seconds
   createdAt: string; // ISO string
 }
@@ -44,8 +49,8 @@ export interface AvatarProfile {
   fullBodyImageUrl: string | null; // Full body reference
   upperBodyImageUrl: string | null; // Upper body reference
 
-  // Green screen video clips (premium tier)
-  greenScreenClips: GreenScreenClip[]; // Multiple short clips with different scripts
+  // Green screen video clips — AI training data for digital clone (premium tier)
+  greenScreenClips: GreenScreenClip[]; // Multiple clips = richer AI avatar generation
 
   // Voice identity (from Voice Lab — ElevenLabs, UnrealSpeech, custom clones)
   voiceId: string | null;
