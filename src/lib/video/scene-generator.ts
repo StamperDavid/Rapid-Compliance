@@ -41,41 +41,6 @@ async function generateWithHeyGen(
   const heygenAspectRatio: '16:9' | '9:16' | '1:1' =
     aspectRatio === '4:3' ? '16:9' : aspectRatio;
 
-  // Generate DALL-E background from backgroundPrompt if no screenshot provided
-  let backgroundUrl = scene.screenshotUrl;
-  if (!backgroundUrl && scene.backgroundPrompt?.trim()) {
-    try {
-      const dalleSize = heygenAspectRatio === '9:16' ? '1024x1792' as const
-        : heygenAspectRatio === '1:1' ? '1024x1024' as const
-        : '1792x1024' as const;
-
-      logger.info('Generating DALL-E background for scene', {
-        sceneId: scene.id,
-        size: dalleSize,
-        file: 'scene-generator.ts',
-      });
-
-      const result = await generateImage(scene.backgroundPrompt, {
-        size: dalleSize,
-        quality: 'standard',
-        style: 'natural',
-      });
-      backgroundUrl = result.url;
-
-      logger.info('DALL-E background generated', {
-        sceneId: scene.id,
-        file: 'scene-generator.ts',
-      });
-    } catch (bgError) {
-      logger.warn('DALL-E background generation failed, using solid color fallback', {
-        sceneId: scene.id,
-        error: bgError instanceof Error ? bgError.message : String(bgError),
-        file: 'scene-generator.ts',
-      });
-      // Continue without background — HeyGen will use solid color
-    }
-  }
-
   // Use scene-level script; if B-roll (empty script), send a minimal placeholder
   // so HeyGen doesn't error. The avatar will appear briefly with no speech.
   const script = scene.scriptText.trim() || ' ';
@@ -171,15 +136,23 @@ async function generateWithHeyGen(
     }
   }
 
-  // === Green Screen Mode ===
-  // Two-track generation: avatar with green BG + AI-generated background video
-  if (scene.useGreenScreen && scene.backgroundPrompt?.trim()) {
-    const bgEngine = scene.backgroundEngine ?? 'runway';
+  // === Cinematic Two-Track Compositing (default for avatar scenes) ===
+  // If a background description exists AND a video engine is available,
+  // generate the avatar on green screen + AI video background in parallel.
+  // This produces broadcast-quality composited video.
+  const backgroundDescription = scene.backgroundPrompt?.trim() ?? scene.visualDescription?.trim();
+  const providers = await getAvailableProviders();
+  const hasVideoBackgroundEngine = providers.runway || providers.sora || providers.kling;
 
-    logger.info('Green screen mode: launching two-track generation', {
+  if (backgroundDescription && hasVideoBackgroundEngine) {
+    // Select best available engine for background video generation
+    const bgEngine = selectBackgroundEngine(providers, scene);
+
+    logger.info('Cinematic two-track generation: green screen avatar + AI video background', {
       sceneId: scene.id,
       avatarEngine: 'heygen',
       backgroundEngine: bgEngine,
+      backgroundPrompt: backgroundDescription.slice(0, 80),
       file: 'scene-generator.ts',
     });
 
@@ -192,37 +165,47 @@ async function generateWithHeyGen(
       audioUrl,
     );
 
-    // Track 2: AI background video from backgroundPrompt
+    // Track 2: AI background video from scene description
     let backgroundVideoId = '';
     let backgroundProvider: VideoEngineId = bgEngine;
 
     try {
-      if (bgEngine === 'sora') {
-        const bgResponse = await generateSoraVideo(scene.backgroundPrompt, {
+      if (bgEngine === 'kling') {
+        const klingAspectRatio: '16:9' | '9:16' | '1:1' = heygenAspectRatio;
+        const klingDuration: '5' | '10' = scene.duration > 7 ? '10' : '5';
+        const bgResponse = await generateKlingTextToVideo(backgroundDescription, {
+          duration: klingDuration,
+          aspectRatio: klingAspectRatio,
+        });
+        backgroundVideoId = `${bgResponse.requestId}|${bgResponse.model}`;
+        backgroundProvider = 'kling';
+      } else if (bgEngine === 'sora') {
+        const bgResponse = await generateSoraVideo(backgroundDescription, {
           duration: Math.min(scene.duration, 16),
           aspectRatio: heygenAspectRatio,
         });
         backgroundVideoId = bgResponse.id;
+        backgroundProvider = 'sora';
       } else {
-        // Default to Runway
-        backgroundProvider = 'runway';
-        const bgResponse = await generateRunwayVideo('text', scene.backgroundPrompt, {
+        // Default to Runway (best cinematic quality)
+        const bgResponse = await generateRunwayVideo('text', backgroundDescription, {
           duration: Math.min(scene.duration, 10),
           ratio: heygenAspectRatio,
         });
         backgroundVideoId = bgResponse.id;
+        backgroundProvider = 'runway';
       }
     } catch (bgError) {
-      logger.warn('Background video generation failed in green screen mode', {
+      logger.warn('Background video generation failed — avatar will composite without video BG', {
         sceneId: scene.id,
         bgEngine,
         error: bgError instanceof Error ? bgError.message : String(bgError),
         file: 'scene-generator.ts',
       });
-      // Avatar video still generates — compositing can be retried later
+      // Avatar video still generates — compositing can use a fallback
     }
 
-    logger.info('Green screen two-track generation started', {
+    logger.info('Two-track generation started', {
       sceneId: scene.id,
       avatarVideoId: avatarResponse.id,
       backgroundVideoId,
@@ -247,8 +230,37 @@ async function generateWithHeyGen(
     };
   }
 
-  // === Standard Mode ===
-  // Single-track: avatar with image/color background
+  // === Fallback: Static Background ===
+  // Only used when no video engine is available for backgrounds.
+  // Generates a DALL-E still image behind the avatar.
+  let backgroundUrl = scene.screenshotUrl;
+  if (!backgroundUrl && backgroundDescription) {
+    try {
+      const dalleSize = heygenAspectRatio === '9:16' ? '1024x1792' as const
+        : heygenAspectRatio === '1:1' ? '1024x1024' as const
+        : '1792x1024' as const;
+
+      logger.info('No video engine available — generating DALL-E still background', {
+        sceneId: scene.id,
+        size: dalleSize,
+        file: 'scene-generator.ts',
+      });
+
+      const result = await generateImage(backgroundDescription, {
+        size: dalleSize,
+        quality: 'standard',
+        style: 'natural',
+      });
+      backgroundUrl = result.url;
+    } catch (bgError) {
+      logger.warn('DALL-E background generation failed, using solid color fallback', {
+        sceneId: scene.id,
+        error: bgError instanceof Error ? bgError.message : String(bgError),
+        file: 'scene-generator.ts',
+      });
+    }
+  }
+
   const response = await generateHeyGenSceneVideo(
     script,
     avatarId,
@@ -258,7 +270,7 @@ async function generateWithHeyGen(
     audioUrl,
   );
 
-  logger.info('HeyGen scene generation started', {
+  logger.info('HeyGen scene generation started (static background fallback)', {
     sceneId: scene.id,
     providerVideoId: response.id,
     file: 'scene-generator.ts',
@@ -459,8 +471,8 @@ async function getAvailableProviders(): Promise<Record<string, boolean>> {
 
 /**
  * Determine whether a scene needs a talking avatar or is purely visual.
- * Avatar scenes → HeyGen (avatar specialist)
- * Visual/B-roll scenes → Runway or Sora (cinematic generation)
+ * Avatar scenes → HeyGen (green screen avatar composited over AI video background)
+ * Visual/B-roll scenes → Runway, Kling, or Sora (cinematic generation, no avatar)
  */
 function isAvatarScene(scene: PipelineScene, hasAvatar: boolean): boolean {
   if (!hasAvatar) {
@@ -473,10 +485,20 @@ function isAvatarScene(scene: PipelineScene, hasAvatar: boolean): boolean {
     return true;
   }
 
-  // Scenes explicitly tagged as visual-only via keywords
-  const visualKeywords = ['b-roll', 'broll', 'transition', 'montage', 'aerial', 'landscape', 'cinematic', 'background'];
-  const titleLower = (scene.scriptText ?? '').toLowerCase();
-  if (visualKeywords.some((kw) => titleLower.includes(kw))) {
+  // Scenes explicitly tagged as visual-only via keywords in title or visual description
+  const visualKeywords = ['b-roll', 'broll', 'transition', 'montage', 'aerial', 'landscape', 'cinematic shot', 'establishing shot', 'close-up', 'product shot'];
+  const searchText = [
+    scene.title ?? '',
+    scene.visualDescription ?? '',
+    scene.scriptText ?? '',
+  ].join(' ').toLowerCase();
+
+  if (visualKeywords.some((kw) => searchText.includes(kw))) {
+    return false;
+  }
+
+  // Empty or very short script with no speech → visual scene
+  if (scriptLength === 0) {
     return false;
   }
 
@@ -484,11 +506,49 @@ function isAvatarScene(scene: PipelineScene, hasAvatar: boolean): boolean {
 }
 
 /**
+ * Select the best video engine for generating the BACKGROUND video
+ * in two-track compositing mode (avatar on green screen + AI video background).
+ *
+ * Priority: Runway (best cinematic quality) > Kling (character consistency) > Sora (fallback)
+ */
+function selectBackgroundEngine(
+  providers: Record<string, boolean>,
+  scene: PipelineScene,
+): VideoEngineId {
+  // If scene explicitly specifies a background engine, respect it
+  if (scene.backgroundEngine) {
+    return scene.backgroundEngine;
+  }
+
+  // Analyze scene description to pick best engine
+  const description = [
+    scene.backgroundPrompt ?? '',
+    scene.visualDescription ?? '',
+  ].join(' ').toLowerCase();
+
+  // Kling excels at character consistency and full-body motion
+  const klingKeywords = ['character', 'person walking', 'full body', 'people', 'crowd', 'action'];
+  const preferKling = klingKeywords.some((kw) => description.includes(kw));
+
+  if (preferKling && providers.kling) {
+    return 'kling';
+  }
+
+  // Default priority: Runway (best cinematic quality) > Kling > Sora
+  if (providers.runway) { return 'runway'; }
+  if (providers.kling) { return 'kling'; }
+  if (providers.sora) { return 'sora'; }
+
+  // Fallback — will be caught by the caller
+  return 'runway';
+}
+
+/**
  * Select the best engine for a scene based on content analysis and provider availability.
  *
  * Strategy:
- * - Avatar scenes (talking head with script) → HeyGen
- * - Visual/cinematic scenes → Runway (best quality) or Sora (fallback)
+ * - Avatar scenes (talking head with script) → HeyGen (green screen + compositing)
+ * - Visual/cinematic B-roll scenes → Runway (best quality) > Kling > Sora
  * - If the preferred provider isn't available, fall back to the next best
  */
 export async function selectEngineForScene(
@@ -504,18 +564,19 @@ export async function selectEngineForScene(
   const needsAvatar = isAvatarScene(scene, hasAvatar);
 
   if (needsAvatar) {
-    // Avatar scenes: HeyGen is the only provider that does talking avatars
+    // Avatar scenes: HeyGen handles the avatar (green screen),
+    // background engine is selected separately in generateWithHeyGen()
     if (providers.heygen) { return 'heygen'; }
     // No avatar provider available — fall back to text-to-video
     if (providers.runway) { return 'runway'; }
+    if (providers.kling) { return 'kling'; }
     if (providers.sora) { return 'sora'; }
     return 'heygen'; // Will fail with a clear "not configured" error
   }
 
-  // Visual/cinematic scenes: prefer Runway (Gen-4.5 quality), then HeyGen as fallback
-  // Sora is deprioritized due to reliability issues
+  // Visual/cinematic B-roll scenes: prefer Runway > Kling > Sora
   if (providers.runway) { return 'runway'; }
-  if (providers.heygen) { return 'heygen'; }
+  if (providers.kling) { return 'kling'; }
   if (providers.sora) { return 'sora'; }
   return 'runway'; // Will fail with a clear "not configured" error
 }

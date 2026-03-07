@@ -17,6 +17,8 @@ const GenerateScenesSchema = z.object({
     duration: z.number(),
     engine: z.enum(['heygen', 'runway', 'sora', 'kling', 'luma']).nullable().default(null),
     backgroundPrompt: z.string().nullable().default(null),
+    visualDescription: z.string().nullable().default(null),
+    title: z.string().nullable().default(null),
   })),
   avatarId: z.string().default(''),
   voiceId: z.string().default(''),
@@ -62,7 +64,9 @@ export async function POST(request: NextRequest) {
     const pipelineScenes: PipelineScene[] = scenes.map((scene) => ({
       id: scene.id,
       sceneNumber: scene.sceneNumber,
+      title: scene.title ?? undefined,
       scriptText: scene.scriptText,
+      visualDescription: scene.visualDescription ?? undefined,
       screenshotUrl: scene.screenshotUrl,
       duration: scene.duration,
       avatarId: null,

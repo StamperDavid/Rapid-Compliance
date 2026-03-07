@@ -18,6 +18,8 @@ const RegenerateSchema = z.object({
   duration: z.number().default(15),
   engine: z.enum(['heygen', 'runway', 'sora', 'kling', 'luma']).nullable().default(null),
   backgroundPrompt: z.string().nullable().default(null),
+  visualDescription: z.string().nullable().default(null),
+  title: z.string().nullable().default(null),
   voiceProvider: z.enum(['heygen', 'elevenlabs', 'unrealspeech', 'custom']).default('heygen'),
 });
 
@@ -45,7 +47,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { projectId, sceneId, scriptText, screenshotUrl, avatarId, voiceId, aspectRatio, duration, engine, backgroundPrompt, voiceProvider } = parseResult.data;
+    const { projectId, sceneId, scriptText, screenshotUrl, avatarId, voiceId, aspectRatio, duration, engine, backgroundPrompt, visualDescription, title, voiceProvider } = parseResult.data;
 
     logger.info('Regenerating scene', {
       projectId,
@@ -62,7 +64,9 @@ export async function POST(request: NextRequest) {
     const scene: PipelineScene = {
       id: sceneId,
       sceneNumber: 0, // Not used in generation
+      title: title ?? undefined,
       scriptText,
+      visualDescription: visualDescription ?? undefined,
       screenshotUrl,
       avatarId: null,
       voiceId: null,

@@ -125,6 +125,8 @@ export function StepGeneration() {
             duration: s.duration,
             engine: s.engine ?? null,
             backgroundPrompt: s.backgroundPrompt ?? null,
+            visualDescription: s.visualDescription ?? null,
+            title: s.title ?? null,
           })),
           avatarId: avatarId ?? '',
           voiceId: voiceId ?? '',
@@ -183,9 +185,10 @@ export function StepGeneration() {
       pollingRef.current = null;
     }
 
-    // Only poll if there are scenes still generating with a provider video ID
+    // Poll scenes that are still generating OR waiting for compositing
     const generatingScenes = generatedScenes.filter(
-      (s) => s.status === 'generating' && s.providerVideoId,
+      (s) => (s.status === 'generating' && s.providerVideoId) ||
+             (s.compositeStatus === 'pending' || s.compositeStatus === 'compositing'),
     );
     if (generatingScenes.length === 0) {
       return;
@@ -197,12 +200,14 @@ export function StepGeneration() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
+            projectId: 'local',
             scenes: generatingScenes.map((s) => ({
               sceneId: s.sceneId,
               providerVideoId: s.providerVideoId,
               provider: s.provider,
               backgroundVideoId: s.backgroundVideoId ?? undefined,
               backgroundProvider: s.backgroundProvider ?? undefined,
+              compositeStatus: s.compositeStatus ?? undefined,
             })),
           }),
         });
@@ -227,27 +232,43 @@ export function StepGeneration() {
             error: string | null;
             backgroundVideoUrl?: string | null;
             backgroundReady?: boolean;
+            compositedVideoUrl?: string | null;
+            compositeStatus?: 'pending' | 'compositing' | 'completed' | 'failed' | null;
+            compositeError?: string | null;
           }>;
         };
 
         if (data.success && data.results) {
           for (const result of data.results) {
-            if (result.status !== 'generating') {
-              console.info(`[VideoGen] Scene ${result.sceneId.slice(0, 8)}... → ${result.status}`);
+            // Update scene if status changed, or if compositing state changed
+            const hasCompositeUpdate = result.compositeStatus && result.compositeStatus !== 'pending';
+            if (result.status !== 'generating' || hasCompositeUpdate) {
+              const statusLabel = result.compositedVideoUrl
+                ? `${result.status} (composited)`
+                : result.status;
+              console.info(`[VideoGen] Scene ${result.sceneId.slice(0, 8)}... → ${statusLabel}`);
+
               const updates: Partial<SceneGenerationResult> = {
                 status: result.status,
                 videoUrl: result.videoUrl,
                 thumbnailUrl: result.thumbnailUrl,
-                error: result.error,
+                error: result.error ?? result.compositeError ?? null,
                 progress: result.status === 'completed' ? 100 : 0,
               };
 
-              // Track background video readiness for green screen compositing
+              // Track background video and compositing state
               if (result.backgroundVideoUrl) {
                 updates.backgroundVideoUrl = result.backgroundVideoUrl;
               }
-              if (result.backgroundReady && result.status === 'completed') {
-                updates.compositeStatus = 'pending';
+              if (result.compositedVideoUrl) {
+                updates.compositedVideoUrl = result.compositedVideoUrl;
+                updates.videoUrl = result.compositedVideoUrl; // Use composited as final
+              }
+              if (result.compositeStatus) {
+                updates.compositeStatus = result.compositeStatus;
+              }
+              if (result.compositeError) {
+                updates.compositeError = result.compositeError;
               }
 
               updateGeneratedScene(result.sceneId, updates);
@@ -297,6 +318,8 @@ export function StepGeneration() {
           duration: scene.duration,
           engine: scene.engine,
           backgroundPrompt: scene.backgroundPrompt ?? null,
+          visualDescription: scene.visualDescription ?? null,
+          title: scene.title ?? null,
         }),
       });
 
