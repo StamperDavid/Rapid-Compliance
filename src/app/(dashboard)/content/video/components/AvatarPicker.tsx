@@ -16,7 +16,14 @@ interface AvatarProfileItem {
   additionalImageUrls: string[];
   fullBodyImageUrl: string | null;
   upperBodyImageUrl: string | null;
-  greenScreenClips: Array<{ id: string; script: string; duration: number }>;
+  greenScreenClips: Array<{
+    id: string;
+    videoUrl: string;
+    thumbnailUrl: string | null;
+    script: string;
+    duration: number;
+    createdAt: string;
+  }>;
   voiceId: string | null;
   voiceProvider: 'elevenlabs' | 'unrealspeech' | 'custom' | null;
   description: string | null;
@@ -27,6 +34,7 @@ interface AvatarProfileItem {
 interface AvatarPickerProps {
   selectedAvatarId: string | null;
   onSelect: (avatarId: string, avatarName: string) => void;
+  onProfileLoaded?: (profile: AvatarProfileItem) => void;
 }
 
 function AvatarCard({
@@ -181,7 +189,7 @@ function AvatarCard({
   );
 }
 
-export function AvatarPicker({ selectedAvatarId, onSelect }: AvatarPickerProps) {
+export function AvatarPicker({ selectedAvatarId, onSelect, onProfileLoaded }: AvatarPickerProps) {
   const authFetch = useAuthFetch();
   const [profiles, setProfiles] = useState<AvatarProfileItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -286,7 +294,10 @@ export function AvatarPicker({ selectedAvatarId, onSelect }: AvatarPickerProps) 
               key={profile.id}
               profile={profile}
               isSelected={selectedAvatarId === profile.id}
-              onSelect={() => onSelect(profile.id, profile.name)}
+              onSelect={() => {
+                onSelect(profile.id, profile.name);
+                onProfileLoaded?.(profile);
+              }}
               onDelete={deletingId === profile.id ? undefined : () => setConfirmDeleteId(profile.id)}
               isConfirmingDelete={confirmDeleteId === profile.id}
               onConfirmDelete={() => void executeDelete(profile.id)}

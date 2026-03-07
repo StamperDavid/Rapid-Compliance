@@ -192,15 +192,18 @@ async function generateWithKlingAvatar(
 
   // Try to load profile — avatarId might be a profile ID or a legacy avatar ID
   let photoUrl: string | null = null;
+  let isPremium = false;
 
   // First check if there's a default avatar profile with a photo
   try {
     const profile = await getAvatarProfile(avatarId) ?? await getDefaultProfile(avatarId);
     if (profile?.frontalImageUrl) {
       photoUrl = profile.frontalImageUrl;
+      isPremium = profile.tier === 'premium' && profile.greenScreenClips.length > 0;
       logger.info('Loaded avatar profile photo for Kling Avatar', {
         sceneId: scene.id,
         profileId: profile.id,
+        tier: profile.tier,
         file: 'scene-generator.ts',
       });
     }
@@ -300,13 +303,16 @@ async function generateWithKlingAvatar(
     };
   }
 
-  // Submit to Kling Avatar v2
-  const response = await generateKlingAvatarVideo(photoUrl, audioUrl);
+  // Submit to Kling Avatar v2 — premium avatars use the pro model for higher quality
+  const response = await generateKlingAvatarVideo(photoUrl, audioUrl, {
+    pro: isPremium,
+  });
 
   logger.info('Kling Avatar generation started', {
     sceneId: scene.id,
     requestId: response.requestId,
     model: response.model,
+    tier: isPremium ? 'premium' : 'standard',
     photoUrl: photoUrl.slice(0, 60),
     file: 'scene-generator.ts',
   });
@@ -370,8 +376,13 @@ async function generateWithKlingAvatar(
  * Uses the avatar's reference images to maintain character consistency
  * while placing them in the described scene/action.
  *
+ * For premium avatars (with green screen clips), clip thumbnails are
+ * included as additional reference images — giving the AI richer training
+ * data about the person's appearance, expressions, and body language.
+ *
  * Unlike Kling Avatar (photo+audio → talking head), this generates the
  * character doing things: walking, presenting, exploring, etc.
+ * The digital clone is an ACTOR IN the scene, not overlaid on a background.
  */
 async function generateWithKlingReference(
   scene: PipelineScene,
@@ -419,12 +430,22 @@ async function generateWithKlingReference(
   const durationNum = Math.min(Math.max(Math.round(scene.duration), 3), 10);
   const duration = String(durationNum) as '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10';
 
-  // Collect all available reference images for maximum character consistency
+  // Collect all available reference images for maximum character consistency.
+  // For premium avatars, green screen clip thumbnails provide the AI with richer
+  // training data — different angles, expressions, and body positions.
   const additionalImageUrls = [
     ...(profile.additionalImageUrls ?? []),
     ...(profile.fullBodyImageUrl ? [profile.fullBodyImageUrl] : []),
     ...(profile.upperBodyImageUrl ? [profile.upperBodyImageUrl] : []),
   ];
+
+  // Premium tier: include green screen clip thumbnails as reference images
+  if (profile.tier === 'premium' && profile.greenScreenClips.length > 0) {
+    const clipThumbnails = profile.greenScreenClips
+      .map((clip) => clip.thumbnailUrl)
+      .filter((url): url is string => url !== null && url.length > 0);
+    additionalImageUrls.push(...clipThumbnails);
+  }
 
   const response = await generateKlingReferenceVideo(prompt, {
     frontalImageUrl: profile.frontalImageUrl,
@@ -439,7 +460,9 @@ async function generateWithKlingReference(
     requestId: response.requestId,
     model: response.model,
     profileId: profile.id,
+    tier: profile.tier,
     referenceImageCount: additionalImageUrls.length + 1,
+    clipCount: profile.greenScreenClips.length,
     file: 'scene-generator.ts',
   });
 
@@ -778,6 +801,23 @@ export async function generateScene(
         if (classification === 'talking-head' && hasAvatar) {
           // Avatar speaking to camera — use Kling Avatar (photo + audio → talking head)
           return await generateWithKlingAvatar(scene, avatarId, voiceId, aspectRatio, voiceProvider);
+        }
+
+        // For premium avatars with visual descriptions mentioning people/characters,
+        // use reference-to-video to keep the main character present in the scene
+        // even if it wasn't explicitly classified as character-in-action.
+        if (hasAvatar && (classification === 'cinematic-environment' || classification === 'stylized-creative')) {
+          const searchText = [
+            scene.visualDescription ?? '',
+            scene.backgroundPrompt ?? '',
+          ].join(' ').toLowerCase();
+          const presenceKeywords = [
+            'person', 'presenter', 'host', 'speaker', 'figure',
+            'man', 'woman', 'professional', 'expert', 'narrator',
+          ];
+          if (presenceKeywords.some((kw) => searchText.includes(kw))) {
+            return await generateWithKlingReference(scene, avatarId, aspectRatio);
+          }
         }
 
         // All other Kling scenes: text-to-video (B-roll, stylized, dynamic, etc.)

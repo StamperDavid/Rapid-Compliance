@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { SceneEditor } from './SceneEditor';
 import { AvatarPicker } from './AvatarPicker';
 import { AvatarUpload } from './AvatarUpload';
+import { GreenScreenClipManager } from './GreenScreenClipManager';
 import { VoicePicker } from './VoicePicker';
 import { useVideoPipelineStore } from '@/lib/stores/video-pipeline-store';
 import type { PipelineScene } from '@/types/video-pipeline';
@@ -44,6 +45,12 @@ export function StepPreProduction() {
   const [savingDefault, setSavingDefault] = useState(false);
   const [defaultSaved, setDefaultSaved] = useState(false);
 
+  // Track selected avatar profile's green screen clips for clip manager
+  const [selectedProfileClips, setSelectedProfileClips] = useState<
+    Array<{ id: string; videoUrl: string; thumbnailUrl: string | null; script: string; duration: number; createdAt: string }>
+  >([]);
+  const [selectedProfileTier, setSelectedProfileTier] = useState<'premium' | 'standard'>('standard');
+
   // Auto-load defaults when no avatar/voice is selected
   const loadDefaults = useCallback(async () => {
     if (avatarId || voiceId) { return; } // Already have selections
@@ -58,6 +65,23 @@ export function StepPreProduction() {
       const d = data.defaults;
       if (d.avatarId && d.avatarName && !avatarId) {
         setAvatar(d.avatarId, d.avatarName);
+
+        // Also load the profile data (clips, tier) for the default avatar
+        try {
+          const profileRes = await authFetch(`/api/video/avatar-profiles/${encodeURIComponent(d.avatarId)}`);
+          if (profileRes.ok) {
+            const profileData = await profileRes.json() as {
+              success: boolean;
+              profile?: { tier: 'premium' | 'standard'; greenScreenClips: typeof selectedProfileClips };
+            };
+            if (profileData.success && profileData.profile) {
+              setSelectedProfileClips(profileData.profile.greenScreenClips ?? []);
+              setSelectedProfileTier(profileData.profile.tier ?? 'standard');
+            }
+          }
+        } catch {
+          // Profile load is non-critical
+        }
       }
       if (d.voiceId && d.voiceName && !voiceId) {
         setVoice(d.voiceId, d.voiceName, d.voiceProvider ?? undefined);
@@ -206,14 +230,37 @@ export function StepPreProduction() {
           {activeTab === 'avatar' && (
             <div>
               <p className="text-sm text-zinc-400 mb-4">
-                Select an AI avatar to present your video. {avatarName && (
-                  <span className="text-amber-400">Selected: {avatarName}</span>
+                Select an AI avatar to present your video — this is your main character.
+                {avatarName && (
+                  <span className="text-amber-400"> Selected: {avatarName}</span>
+                )}
+                {selectedProfileTier === 'premium' && (
+                  <span className="ml-1 text-purple-400">(Premium)</span>
                 )}
               </p>
               <AvatarPicker
                 selectedAvatarId={avatarId}
                 onSelect={(id, name) => setAvatar(id, name)}
+                onProfileLoaded={(profile) => {
+                  setSelectedProfileClips(profile.greenScreenClips ?? []);
+                  setSelectedProfileTier(profile.tier ?? 'standard');
+                }}
               />
+
+              {/* Green Screen Clip Manager — shown when a profile is selected */}
+              {avatarId && (
+                <div className="mt-6">
+                  <GreenScreenClipManager
+                    profileId={avatarId}
+                    profileName={avatarName ?? 'Avatar'}
+                    clips={selectedProfileClips}
+                    onClipsChange={(newClips) => {
+                      setSelectedProfileClips(newClips);
+                      setSelectedProfileTier(newClips.length > 0 ? 'premium' : 'standard');
+                    }}
+                  />
+                </div>
+              )}
 
               <div className="mt-6">
                 <AvatarUpload
