@@ -27,6 +27,7 @@ const DecomposeSchema = z.object({
   talkingPoints: z.string().optional(),
   tone: z.enum(ToneValues).optional(),
   callToAction: z.string().optional(),
+  vibe: z.string().optional(),
 });
 
 export async function POST(request: NextRequest) {
@@ -47,12 +48,13 @@ export async function POST(request: NextRequest) {
     }
 
     const { description, videoType, platform, duration,
-            targetAudience, painPoints, talkingPoints, tone, callToAction } = parseResult.data;
+            targetAudience, painPoints, talkingPoints, tone, callToAction, vibe } = parseResult.data;
 
     logger.info('Video Decompose API: Generating scene breakdown', {
       videoType,
       platform,
       duration,
+      vibe,
     });
 
     const plan = await generateVideoScripts({
@@ -65,6 +67,7 @@ export async function POST(request: NextRequest) {
       talkingPoints,
       tone,
       callToAction,
+      vibe,
     });
 
     return NextResponse.json({

@@ -53,6 +53,11 @@ export interface ScriptGenerationParams {
   talkingPoints?: string;
   tone?: string;
   callToAction?: string;
+  /** Visual theme/vibe for consistent aesthetics across all scenes.
+   *  Examples: "warm corporate", "tech noir", "golden hour cinematic",
+   *  "bright minimalist", "industrial creative". Constrains all background
+   *  descriptions to maintain visual coherence throughout the video. */
+  vibe?: string;
 }
 
 // ============================================================================
@@ -136,7 +141,15 @@ Write cinematic VIDEO SCENE descriptions for the background behind the avatar. T
 - Example: "Smooth pan across a creative studio with exposed brick walls, warm pendant lights swaying gently, colorful sticky notes on a glass wall, afternoon golden hour light streaming in"
 - Example: "Aerial establishing shot of a city skyline at golden hour, slow zoom in, warm sunset glow reflecting off glass buildings, soft atmospheric haze"
 - Example: "Close-up dolly along a sleek desk setup with a laptop screen showing growth charts, ambient neon accent lighting, slight rack focus, tech-modern aesthetic"
-- Example: "Gentle handheld movement through a rooftop terrace, warm string lights, city skyline blurred in background, golden hour warmth, casual sophisticated atmosphere"`;
+- Example: "Gentle handheld movement through a rooftop terrace, warm string lights, city skyline blurred in background, golden hour warmth, casual sophisticated atmosphere"
+
+## VISUAL CONSISTENCY (CRITICAL)
+All scenes in a video MUST share the same visual DNA:
+- Same color temperature (warm or cool) across all backgrounds
+- Same lighting style (natural, studio, dramatic, ambient)
+- Same level of formality (casual spaces vs corporate offices)
+- Scene variety comes from DIFFERENT LOCATIONS with the SAME MOOD, not different moods
+- Think of it like a film: different shots, one cinematographer's vision`;
 
   if (brandContext) {
     prompt += `\n\n## BRAND CONTEXT\n${brandContext}`;
@@ -178,6 +191,7 @@ function buildUserPrompt(
   talkingPoints?: string,
   tone?: string,
   callToAction?: string,
+  vibe?: string,
 ): string {
   let prompt = `Create a ${sceneCount}-scene ${videoType.replace('-', ' ')} video script for ${platform}.
 
@@ -198,6 +212,9 @@ function buildUserPrompt(
   }
   if (callToAction) {
     prompt += `\n**Call to action:** ${callToAction}`;
+  }
+  if (vibe) {
+    prompt += `\n**Visual vibe/theme:** ${vibe} — ALL background descriptions must match this aesthetic consistently across every scene. Different locations, same cinematographic vision.`;
   }
 
   prompt += `\n\nWrite the complete scene breakdown as JSON.`;
@@ -386,6 +403,7 @@ async function generateAIScripts(
     const userPrompt = buildUserPrompt(
       params.description, params.videoType, params.platform, params.duration, sceneCount,
       params.targetAudience, params.painPoints, params.talkingPoints, params.tone, params.callToAction,
+      params.vibe,
     );
 
     const response = await provider.chat({

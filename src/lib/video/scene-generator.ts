@@ -15,6 +15,7 @@ import {
 } from '@/lib/video/video-service';
 import {
   generateKlingTextToVideo,
+  generateKlingAvatarVideo,
   getKlingVideoStatus,
 } from '@/lib/video/fal-kling-service';
 import { generateImage } from '@/lib/ai/image-generation-service';
@@ -434,6 +435,191 @@ async function generateWithKling(
   };
 }
 
+/**
+ * Generate a talking avatar scene using Kling Avatar v2 (via fal.ai).
+ * Used as a fallback when HeyGen is unavailable but the user has an Avatar Profile
+ * with a frontal photo. Takes: photo + TTS audio → talking head video.
+ *
+ * Also generates a video background from Runway/Kling and composites them if available.
+ */
+async function generateWithKlingAvatar(
+  scene: PipelineScene,
+  avatarId: string,
+  voiceId: string,
+  aspectRatio: VideoAspectRatio,
+  voiceProvider?: 'heygen' | 'elevenlabs' | 'unrealspeech' | 'custom'
+): Promise<SceneGenerationResult> {
+  const script = scene.scriptText.trim() || ' ';
+
+  // Load the avatar profile to get the frontal photo URL
+  const { getDefaultProfile, getAvatarProfile } = await import('@/lib/video/avatar-profile-service');
+  const { requireAuth: _skipAuth, ...rest } = { requireAuth: null }; void rest;
+
+  // Try to load profile — avatarId might be a profile ID or a HeyGen avatar ID
+  let photoUrl: string | null = null;
+
+  // First check if there's a default avatar profile with a photo
+  try {
+    // avatarId could be a Firebase user UID or a HeyGen avatar ID
+    // Try loading default profile for current context
+    const profile = await getAvatarProfile(avatarId) ?? await getDefaultProfile(avatarId);
+    if (profile?.frontalImageUrl) {
+      photoUrl = profile.frontalImageUrl;
+      logger.info('Loaded avatar profile photo for Kling Avatar', {
+        sceneId: scene.id,
+        profileId: profile.id,
+        file: 'scene-generator.ts',
+      });
+    }
+  } catch {
+    // Profile not found — that's OK, we'll check other sources
+  }
+
+  if (!photoUrl) {
+    return {
+      sceneId: scene.id,
+      providerVideoId: '',
+      provider: 'kling',
+      status: 'failed',
+      videoUrl: null,
+      thumbnailUrl: null,
+      progress: 0,
+      error: 'No avatar photo found. Create an Avatar Profile with a frontal photo to use Kling Avatar.',
+    };
+  }
+
+  // Synthesize TTS audio (same logic as HeyGen path)
+  let audioUrl: string | null = null;
+  if (script.length > 1) {
+    const ttsProvider = voiceProvider ?? 'elevenlabs';
+
+    if (ttsProvider === 'elevenlabs') {
+      try {
+        const { ElevenLabsProvider } = await import('@/lib/voice/tts/providers/elevenlabs-provider');
+        const { apiKeyService } = await import('@/lib/api-keys/api-key-service');
+        const { PLATFORM_ID } = await import('@/lib/constants/platform');
+        const rawKey = await apiKeyService.getServiceKey(PLATFORM_ID, 'elevenlabs');
+        const apiKey = typeof rawKey === 'string' ? rawKey : null;
+
+        if (!apiKey) {
+          return {
+            sceneId: scene.id,
+            providerVideoId: '',
+            provider: 'kling',
+            status: 'failed',
+            videoUrl: null,
+            thumbnailUrl: null,
+            progress: 0,
+            error: 'ElevenLabs API key not configured. Kling Avatar requires TTS audio.',
+          };
+        }
+
+        const provider = new ElevenLabsProvider(apiKey);
+        const ttsResult = await provider.synthesize(script, voiceId);
+
+        // Store audio in Firestore, serve via public endpoint
+        const { adminDb } = await import('@/lib/firebase/admin');
+        if (adminDb) {
+          const audioBase64 = ttsResult.audio.includes(',')
+            ? ttsResult.audio.split(',')[1]
+            : ttsResult.audio;
+          const audioId = `tts-kling-${scene.id}-${Date.now()}`;
+
+          await adminDb
+            .collection(`organizations/${PLATFORM_ID}/tts_audio`)
+            .doc(audioId)
+            .set({
+              base64: audioBase64,
+              contentType: 'audio/mpeg',
+              createdAt: new Date(),
+              expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+            });
+
+          const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://rapidcompliance.us';
+          audioUrl = `${appUrl}/api/video/tts-audio/${audioId}`;
+        }
+      } catch (ttsError) {
+        const errorMsg = ttsError instanceof Error ? ttsError.message : String(ttsError);
+        return {
+          sceneId: scene.id,
+          providerVideoId: '',
+          provider: 'kling',
+          status: 'failed',
+          videoUrl: null,
+          thumbnailUrl: null,
+          progress: 0,
+          error: `Voice synthesis failed: ${errorMsg}`,
+        };
+      }
+    }
+  }
+
+  if (!audioUrl) {
+    return {
+      sceneId: scene.id,
+      providerVideoId: '',
+      provider: 'kling',
+      status: 'failed',
+      videoUrl: null,
+      thumbnailUrl: null,
+      progress: 0,
+      error: 'Audio synthesis required for Kling Avatar but no audio was generated.',
+    };
+  }
+
+  // Submit to Kling Avatar v2
+  const response = await generateKlingAvatarVideo(photoUrl, audioUrl);
+
+  logger.info('Kling Avatar generation started', {
+    sceneId: scene.id,
+    requestId: response.requestId,
+    model: response.model,
+    photoUrl: photoUrl.slice(0, 60),
+    file: 'scene-generator.ts',
+  });
+
+  // Also generate a video background if available (same compositing approach)
+  const backgroundDescription = scene.backgroundPrompt?.trim() ?? scene.visualDescription?.trim();
+  const providers = await getAvailableProviders();
+  let backgroundVideoId: string | null = null;
+  let backgroundProvider: VideoEngineId | null = null;
+
+  if (backgroundDescription && providers.runway) {
+    try {
+      const klingAspectRatio: '16:9' | '9:16' | '1:1' =
+        aspectRatio === '4:3' ? '16:9' : aspectRatio;
+      const bgResponse = await generateRunwayVideo('text', backgroundDescription, {
+        duration: Math.min(scene.duration, 10),
+        ratio: klingAspectRatio,
+      });
+      backgroundVideoId = bgResponse.id;
+      backgroundProvider = 'runway';
+    } catch (bgError) {
+      logger.warn('Background video generation failed for Kling Avatar scene', {
+        sceneId: scene.id,
+        error: bgError instanceof Error ? bgError.message : String(bgError),
+        file: 'scene-generator.ts',
+      });
+    }
+  }
+
+  return {
+    sceneId: scene.id,
+    providerVideoId: `${response.requestId}|${response.model}`,
+    provider: 'kling',
+    status: 'generating',
+    videoUrl: null,
+    thumbnailUrl: null,
+    progress: 0,
+    error: null,
+    backgroundVideoId,
+    backgroundVideoUrl: null,
+    backgroundProvider,
+    compositedVideoUrl: null,
+    compositeStatus: backgroundVideoId ? 'pending' : null,
+  };
+}
+
 // ============================================================================
 // Intelligent Engine Selection
 // ============================================================================
@@ -564,12 +750,14 @@ export async function selectEngineForScene(
   const needsAvatar = isAvatarScene(scene, hasAvatar);
 
   if (needsAvatar) {
-    // Avatar scenes: HeyGen handles the avatar (green screen),
-    // background engine is selected separately in generateWithHeyGen()
+    // Avatar scenes: HeyGen handles the avatar (green screen compositing)
+    // Background engine is selected separately in generateWithHeyGen()
     if (providers.heygen) { return 'heygen'; }
-    // No avatar provider available — fall back to text-to-video
-    if (providers.runway) { return 'runway'; }
+    // Kling Avatar v2 as fallback: photo + TTS audio = talking head
+    // Uses the avatar profile's frontalImageUrl instead of HeyGen avatar ID
     if (providers.kling) { return 'kling'; }
+    // No avatar provider — fall back to text-to-video
+    if (providers.runway) { return 'runway'; }
     if (providers.sora) { return 'sora'; }
     return 'heygen'; // Will fail with a clear "not configured" error
   }
@@ -636,8 +824,15 @@ export async function generateScene(
         // generateWithSora has auto-fallback to Runway on failure
         return await generateWithSora(scene, aspectRatio);
 
-      case 'kling':
+      case 'kling': {
+        // If scene needs an avatar (has speaking script + avatar configured),
+        // use Kling Avatar (photo + audio = talking head) instead of text-to-video
+        const needsKlingAvatar = hasAvatar && isAvatarScene(scene, hasAvatar);
+        if (needsKlingAvatar) {
+          return await generateWithKlingAvatar(scene, avatarId, voiceId, aspectRatio, voiceProvider);
+        }
         return await generateWithKling(scene, aspectRatio);
+      }
 
       case 'luma':
         return {
