@@ -304,6 +304,7 @@ export type APIServiceName =
   | 'dataforseo'   // DataForSEO (keyword data, SERP, domain metrics)
   | 'later'        // Later.com social media scheduling
   | 'minimax'       // MiniMax AI Music Generation
-  | 'fal';          // fal.ai (Kling 3.0, character-consistent video)
+  | 'fal'           // fal.ai (Kling 3.0, character-consistent video)
+  | 'kling';        // Alias — routes to fal.ai key internally
 
 

@@ -7,7 +7,7 @@
 // Video Generation Request/Response Types
 // ============================================================================
 
-export type VideoProvider = 'heygen' | 'sora' | 'runway';
+export type VideoProvider = 'heygen' | 'sora' | 'runway' | 'kling' | 'fal';
 export type VideoStatus = 'pending' | 'processing' | 'completed' | 'failed';
 export type VideoAspectRatio = '16:9' | '9:16' | '1:1' | '4:3';
 export type VideoResolution = '720p' | '1080p' | '4k';

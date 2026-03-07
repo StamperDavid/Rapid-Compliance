@@ -13,6 +13,10 @@ import {
   getVideoStatus,
   getVideoProviderKey,
 } from '@/lib/video/video-service';
+import {
+  generateKlingTextToVideo,
+  getKlingVideoStatus,
+} from '@/lib/video/fal-kling-service';
 import { generateImage } from '@/lib/ai/image-generation-service';
 import type { PipelineScene, SceneGenerationResult, VideoEngineId } from '@/types/video-pipeline';
 import type { VideoAspectRatio, VideoProvider } from '@/types/video';
@@ -372,6 +376,52 @@ async function generateWithSora(
   }
 }
 
+async function generateWithKling(
+  scene: PipelineScene,
+  aspectRatio: VideoAspectRatio
+): Promise<SceneGenerationResult> {
+  const klingAspectRatio: '16:9' | '9:16' | '1:1' =
+    aspectRatio === '4:3' ? '16:9' : aspectRatio;
+
+  // Determine prompt from scene data
+  const prompt = ((): string => {
+    const script = scene.scriptText.trim();
+    if (script) { return script; }
+    const bg = scene.backgroundPrompt?.trim();
+    if (bg) { return bg; }
+    const vis = scene.visualDescription?.trim();
+    if (vis) { return vis; }
+    return 'Cinematic footage';
+  })();
+
+  // Kling supports 5s or 10s durations
+  const duration: '5' | '10' = scene.duration > 7 ? '10' : '5';
+
+  const response = await generateKlingTextToVideo(prompt, {
+    duration,
+    aspectRatio: klingAspectRatio,
+  });
+
+  logger.info('Kling scene generation started', {
+    sceneId: scene.id,
+    requestId: response.requestId,
+    model: response.model,
+    file: 'scene-generator.ts',
+  });
+
+  // Store the model in providerVideoId as "requestId|model" so polling knows which endpoint
+  return {
+    sceneId: scene.id,
+    providerVideoId: `${response.requestId}|${response.model}`,
+    provider: 'kling',
+    status: 'generating',
+    videoUrl: null,
+    thumbnailUrl: null,
+    progress: 0,
+    error: null,
+  };
+}
+
 // ============================================================================
 // Intelligent Engine Selection
 // ============================================================================
@@ -389,17 +439,18 @@ async function getAvailableProviders(): Promise<Record<string, boolean>> {
     return providerCache.data;
   }
 
-  const [heygen, sora, runway] = await Promise.all([
+  const [heygen, sora, runway, kling] = await Promise.all([
     getVideoProviderKey('heygen').then((k) => k !== null),
     getVideoProviderKey('sora').then((k) => k !== null),
     getVideoProviderKey('runway').then((k) => k !== null),
+    getVideoProviderKey('fal').then((k) => k !== null), // fal.ai key powers Kling
   ]);
 
-  const result = { heygen, sora, runway };
+  const result = { heygen, sora, runway, kling };
   Object.assign(providerCache, { data: result, timestamp: Date.now() });
 
   logger.info('Video provider availability check', {
-    heygen, sora, runway,
+    heygen, sora, runway, kling,
     file: 'scene-generator.ts',
   });
 
@@ -525,6 +576,8 @@ export async function generateScene(
         return await generateWithSora(scene, aspectRatio);
 
       case 'kling':
+        return await generateWithKling(scene, aspectRatio);
+
       case 'luma':
         return {
           sceneId: scene.id,
@@ -534,7 +587,7 @@ export async function generateScene(
           videoUrl: null,
           thumbnailUrl: null,
           progress: 0,
-          error: `${engine === 'kling' ? 'Kling' : 'Luma'} is not yet available. Please select another engine.`,
+          error: 'Luma is not yet available. Please select another engine.',
         };
     }
   } catch (error) {
@@ -577,7 +630,55 @@ export async function pollSceneStatus(
 }> {
   const resolvedProvider = provider ?? 'heygen';
 
-  // Only heygen, sora, runway are valid VideoProvider values for status polling
+  // Kling uses fal.ai queue API — providerVideoId format: "requestId|model"
+  if (resolvedProvider === 'kling') {
+    const [requestId, model] = providerVideoId.split('|');
+    if (!requestId || !model) {
+      return {
+        status: 'failed',
+        videoUrl: null,
+        thumbnailUrl: null,
+        error: 'Invalid Kling provider video ID format',
+      };
+    }
+
+    try {
+      const klingStatus = await getKlingVideoStatus(requestId, model);
+
+      if (klingStatus.status === 'completed') {
+        return {
+          status: 'completed',
+          videoUrl: klingStatus.videoUrl,
+          thumbnailUrl: null,
+          error: null,
+        };
+      } else if (klingStatus.status === 'failed') {
+        return {
+          status: 'failed',
+          videoUrl: null,
+          thumbnailUrl: null,
+          error: klingStatus.error ?? 'Kling video generation failed',
+        };
+      } else {
+        return {
+          status: 'generating',
+          videoUrl: null,
+          thumbnailUrl: null,
+          error: null,
+        };
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      logger.error('Failed to poll Kling scene status', error as Error, {
+        requestId,
+        model,
+        file: 'scene-generator.ts',
+      });
+      return { status: 'failed', videoUrl: null, thumbnailUrl: null, error: errorMessage };
+    }
+  }
+
+  // HeyGen, Sora, Runway use the standard video-service polling
   const validProviders: VideoProvider[] = ['heygen', 'sora', 'runway'];
   if (!validProviders.includes(resolvedProvider as VideoProvider)) {
     return {
@@ -591,7 +692,6 @@ export async function pollSceneStatus(
   try {
     const response = await getVideoStatus(providerVideoId, resolvedProvider as VideoProvider);
 
-    // Map provider status to our scene status
     if (response.status === 'completed') {
       return {
         status: 'completed',
@@ -607,7 +707,6 @@ export async function pollSceneStatus(
         error: response.errorMessage ?? 'Video generation failed',
       };
     } else {
-      // pending or processing
       return {
         status: 'generating',
         videoUrl: null,
