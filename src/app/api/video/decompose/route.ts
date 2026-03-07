@@ -57,6 +57,25 @@ export async function POST(request: NextRequest) {
       vibe,
     });
 
+    // Load default avatar profile for AI script context
+    let avatarContext: Parameters<typeof generateVideoScripts>[0]['avatar'];
+    try {
+      const { getDefaultProfile } = await import('@/lib/video/avatar-profile-service');
+      const profile = await getDefaultProfile(authResult.user.uid);
+      if (profile) {
+        avatarContext = {
+          name: profile.name,
+          description: profile.description,
+          hasReferenceImages: profile.additionalImageUrls.length > 0,
+          hasFullBodyImage: Boolean(profile.fullBodyImageUrl),
+          voiceProvider: profile.voiceProvider,
+          voiceName: null,
+        };
+      }
+    } catch {
+      // No profile — AI will generate without avatar context
+    }
+
     const plan = await generateVideoScripts({
       description,
       videoType: videoType as ScriptVideoType,
@@ -68,6 +87,7 @@ export async function POST(request: NextRequest) {
       tone,
       callToAction,
       vibe,
+      avatar: avatarContext,
     });
 
     return NextResponse.json({

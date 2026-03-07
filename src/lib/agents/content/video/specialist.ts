@@ -1671,7 +1671,19 @@ export class VideoSpecialist extends BaseSpecialist {
       this.log('WARN', `Failed to load marketing persona: ${personaErr instanceof Error ? personaErr.message : String(personaErr)}`);
     }
 
-    // ── Step 2: AI-powered script generation ──
+    // ── Step 1b: Load default Avatar Profile (needed for AI script context) ──
+    let avatarProfile: import('@/lib/video/avatar-profile-service').AvatarProfile | null = null;
+    try {
+      const { getDefaultProfile } = await import('@/lib/video/avatar-profile-service');
+      avatarProfile = await getDefaultProfile(userId ?? 'jasper');
+      if (avatarProfile) {
+        this.log('INFO', `Loaded default Avatar Profile: "${avatarProfile.name}" for script context`);
+      }
+    } catch (profileErr) {
+      this.log('WARN', `Avatar Profile load for script context failed: ${profileErr instanceof Error ? profileErr.message : String(profileErr)}`);
+    }
+
+    // ── Step 2: AI-powered script generation (with avatar context) ──
     const { generateVideoScripts } = await import('@/lib/video/script-generation-service');
 
     const scriptResult = await generateVideoScripts({
@@ -1683,6 +1695,14 @@ export class VideoSpecialist extends BaseSpecialist {
       painPoints: personaPainPoints,
       tone: personaTone,
       vibe,
+      avatar: avatarProfile ? {
+        name: avatarProfile.name,
+        description: avatarProfile.description,
+        hasReferenceImages: avatarProfile.additionalImageUrls.length > 0,
+        hasFullBodyImage: Boolean(avatarProfile.fullBodyImageUrl),
+        voiceProvider: avatarProfile.voiceProvider,
+        voiceName: null,
+      } : undefined,
     });
 
     this.log('INFO', `Scripts generated (${scriptResult.generatedBy}): ${scriptResult.scenes.length} scenes`);
@@ -1771,24 +1791,19 @@ export class VideoSpecialist extends BaseSpecialist {
     const hasAvatarScenes = scenes.some((s) => s.engine === 'heygen' || s.engine === 'kling');
 
     if (hasAvatarScenes) {
-      // Try 1: Load default Avatar Profile (preferred — user's chosen identity)
-      try {
-        const { getDefaultProfile } = await import('@/lib/video/avatar-profile-service');
-        const defaultProfile = await getDefaultProfile(userId ?? 'jasper');
-        if (defaultProfile) {
-          // Use HeyGen avatar if linked, otherwise profile ID triggers Kling Avatar fallback
-          videoAvatarId = defaultProfile.heygenAvatarId ?? defaultProfile.id;
-          if (defaultProfile.voiceId) {
-            videoVoiceId = defaultProfile.voiceId;
-            voiceProvider = defaultProfile.voiceProvider ?? 'elevenlabs';
-          }
-          this.log('INFO', `Auto-selected default Avatar Profile: "${defaultProfile.name}" (${defaultProfile.heygenAvatarId ? 'HeyGen' : 'Kling Avatar'})`);
+      // Reuse the avatarProfile already loaded in Step 1b (no duplicate Firestore read)
+      if (avatarProfile) {
+        // Profile ID is used for Kling Avatar (photo + audio → talking head)
+        // HeyGen avatar only used if explicitly linked
+        videoAvatarId = avatarProfile.heygenAvatarId ?? avatarProfile.id;
+        if (avatarProfile.voiceId) {
+          videoVoiceId = avatarProfile.voiceId;
+          voiceProvider = avatarProfile.voiceProvider ?? 'elevenlabs';
         }
-      } catch (profileError) {
-        this.log('WARN', `Avatar Profile auto-select failed: ${profileError instanceof Error ? profileError.message : String(profileError)}`);
+        this.log('INFO', `Using Avatar Profile: "${avatarProfile.name}" (${avatarProfile.heygenAvatarId ? 'HeyGen linked' : 'Kling Avatar'})`);
       }
 
-      // Try 2: Fall back to HeyGen avatar list if no profile found
+      // Fallback: HeyGen avatar list if no profile exists
       if (!videoAvatarId) {
         try {
           const { listHeyGenAvatars, listHeyGenVoices } = await import('@/lib/video/video-service');
@@ -1807,11 +1822,11 @@ export class VideoSpecialist extends BaseSpecialist {
         }
       }
 
-      // Try 3: If still no avatar, check if Kling is available for text-to-video fallback
+      // If still no avatar, switch avatar scenes to text-to-video engines
       if (!videoAvatarId || !videoVoiceId) {
         this.log('WARN', 'No avatar/voice available — scenes will use text-to-video engines');
         for (const scene of scenes) {
-          if (scene.engine === 'heygen') {
+          if (scene.engine === 'heygen' || scene.engine === 'kling') {
             scene.engine = 'runway';
           }
         }

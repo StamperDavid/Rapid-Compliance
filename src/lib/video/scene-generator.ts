@@ -655,47 +655,200 @@ async function getAvailableProviders(): Promise<Record<string, boolean>> {
   return result;
 }
 
+// ── Scene Classification ──
+
 /**
- * Determine whether a scene needs a talking avatar or is purely visual.
- * Avatar scenes → HeyGen (green screen avatar composited over AI video background)
- * Visual/B-roll scenes → Runway, Kling, or Sora (cinematic generation, no avatar)
+ * Classify what TYPE of content a scene represents by analyzing its
+ * script, title, visual description, and background prompt.
+ *
+ * Returns a classification that drives intelligent engine selection.
  */
-function isAvatarScene(scene: PipelineScene, hasAvatar: boolean): boolean {
-  if (!hasAvatar) {
-    return false;
-  }
+type SceneClassification =
+  | 'talking-head'          // Avatar speaking to camera (photo + audio → Kling Avatar)
+  | 'character-in-action'   // Avatar's likeness in a described scenario (reference images → Kling Reference)
+  | 'cinematic-environment' // Photorealistic environment/location footage (→ Runway)
+  | 'product-screenshot'    // Screen recording or UI screenshot overlay (→ static image, no video engine)
+  | 'stylized-creative'     // Sci-fi, fantasy, abstract, artistic scenes (→ Kling)
+  | 'dynamic-action'        // Fast motion, stunts, physical action (→ Kling)
+  | 'b-roll-atmospheric'    // Slow, moody, atmospheric footage (→ Runway)
+  | 'text-overlay-only';    // Title card, lower third — no video generation needed
 
-  // If the scene has a speaking script that's more than a brief overlay, it's avatar
-  const scriptLength = scene.scriptText?.trim().length ?? 0;
-  if (scriptLength > 30) {
-    return true;
-  }
-
-  // Scenes explicitly tagged as visual-only via keywords in title or visual description
-  const visualKeywords = ['b-roll', 'broll', 'transition', 'montage', 'aerial', 'landscape', 'cinematic shot', 'establishing shot', 'close-up', 'product shot'];
+function classifyScene(scene: PipelineScene, hasAvatar: boolean): SceneClassification {
   const searchText = [
     scene.title ?? '',
     scene.visualDescription ?? '',
+    scene.backgroundPrompt ?? '',
     scene.scriptText ?? '',
   ].join(' ').toLowerCase();
 
-  if (visualKeywords.some((kw) => searchText.includes(kw))) {
-    return false;
+  const scriptLength = scene.scriptText?.trim().length ?? 0;
+  const hasScript = scriptLength > 30;
+  const hasScreenshot = Boolean(scene.screenshotUrl);
+
+  // ── Title cards and text overlays ──
+  const titleKeywords = ['title card', 'lower third', 'text overlay', 'intro card', 'end card', 'credits'];
+  if (titleKeywords.some((kw) => searchText.includes(kw)) && !hasScript) {
+    return 'text-overlay-only';
   }
 
-  // Empty or very short script with no speech → visual scene
-  if (scriptLength === 0) {
-    return false;
+  // ── Product screenshots / screen recordings ──
+  const screenshotKeywords = ['screenshot', 'screen recording', 'ui demo', 'interface', 'dashboard view', 'page walkthrough', 'software demo'];
+  if (hasScreenshot || screenshotKeywords.some((kw) => searchText.includes(kw))) {
+    if (hasScript && hasAvatar) { return 'talking-head'; } // Avatar talks over screenshot
+    return 'product-screenshot';
   }
 
-  return true;
+  // ── Character-in-action (avatar doing things, not just talking) ──
+  const actionAvatarKeywords = [
+    'superhero', 'flying', 'running', 'walking through', 'exploring', 'fighting',
+    'dancing', 'standing in', 'sitting at', 'archeologist', 'explorer', 'detective',
+    'costume', 'disguise', 'transforms', 'appears as', 'dressed as', 'full body',
+    'character walks', 'character runs', 'person enters', 'avatar in',
+  ];
+  if (hasAvatar && actionAvatarKeywords.some((kw) => searchText.includes(kw))) {
+    return 'character-in-action';
+  }
+
+  // ── Stylized / creative / fantasy ──
+  const stylizedKeywords = [
+    'sci-fi', 'scifi', 'fantasy', 'alien', 'space', 'futuristic', 'neon',
+    'cyberpunk', 'cartoon', 'animated', 'abstract', 'surreal', 'magical',
+    'underwater', 'outer space', 'galaxy', 'dystopian', 'retro-futur',
+    'holographic', 'matrix', 'virtual reality', 'glitch',
+  ];
+  if (stylizedKeywords.some((kw) => searchText.includes(kw))) {
+    if (hasScript && hasAvatar) { return 'talking-head'; } // Avatar talks with stylized BG
+    return 'stylized-creative';
+  }
+
+  // ── Dynamic action / fast motion ──
+  const dynamicKeywords = [
+    'explosion', 'crash', 'chase', 'montage', 'fast cut', 'action sequence',
+    'rapid', 'intense', 'dramatic reveal', 'transformation', 'morph',
+  ];
+  if (dynamicKeywords.some((kw) => searchText.includes(kw))) {
+    return 'dynamic-action';
+  }
+
+  // ── Talking head (avatar speaking to camera) ──
+  if (hasScript && hasAvatar) {
+    return 'talking-head';
+  }
+
+  // ── B-roll / atmospheric (explicit visual-only keywords) ──
+  const brollKeywords = [
+    'b-roll', 'broll', 'establishing shot', 'aerial', 'drone shot', 'landscape',
+    'transition', 'time-lapse', 'slow motion', 'atmospheric', 'ambient',
+    'panning shot', 'dolly', 'tracking shot',
+  ];
+  if (brollKeywords.some((kw) => searchText.includes(kw))) {
+    return 'b-roll-atmospheric';
+  }
+
+  // ── Cinematic environment (default for visual scenes without avatar) ──
+  if (!hasScript) {
+    return 'cinematic-environment';
+  }
+
+  // ── Fallback: if there's a script but no avatar, treat as cinematic ──
+  return 'cinematic-environment';
+}
+
+// ── Intelligent Engine Selection ──
+
+/**
+ * Select the best engine for a scene based on content analysis.
+ *
+ * This is NOT a priority list — it analyzes what the scene actually needs
+ * and picks the engine whose strengths match.
+ *
+ * Engine strengths:
+ * - Kling Avatar:     Talking head from photo + audio (replaces HeyGen)
+ * - Kling Reference:  Character consistency — your face in any described scene
+ * - Kling Text2Video: Stylized, fantasy, action, character motion
+ * - Runway:           Photorealistic environments, cinematic quality, slow camera movements
+ * - HeyGen:           Talking head with hand gestures (optional premium, not required)
+ * - Sora:             Experimental only — used if explicitly configured, never auto-selected
+ */
+export async function selectEngineForScene(
+  scene: PipelineScene,
+  hasAvatar: boolean
+): Promise<VideoEngineId> {
+  // If the scene already has an engine explicitly set by the AI or user, respect it
+  if (scene.engine) {
+    return scene.engine;
+  }
+
+  const providers = await getAvailableProviders();
+  const classification = classifyScene(scene, hasAvatar);
+
+  logger.info('Scene classified for engine selection', {
+    sceneId: scene.id,
+    classification,
+    hasAvatar,
+    scriptLength: scene.scriptText?.trim().length ?? 0,
+    file: 'scene-generator.ts',
+  });
+
+  switch (classification) {
+    case 'talking-head':
+      // Avatar speaks to camera. Kling Avatar (photo+audio) is primary.
+      // HeyGen is optional premium — only used if scene explicitly requests it.
+      if (providers.kling) { return 'kling'; }
+      if (providers.heygen) { return 'heygen'; }
+      return 'kling'; // Will fail with clear error if not configured
+
+    case 'character-in-action':
+      // Avatar's likeness in an action scene. Only Kling Reference can do this.
+      if (providers.kling) { return 'kling'; }
+      // Fallback: can't do character-in-action without Kling, use talking head instead
+      if (providers.heygen) { return 'heygen'; }
+      return 'kling';
+
+    case 'cinematic-environment':
+      // Photorealistic environment footage. Runway excels here.
+      if (providers.runway) { return 'runway'; }
+      if (providers.kling) { return 'kling'; }
+      return 'runway';
+
+    case 'product-screenshot':
+      // Screenshot/UI demo — no video engine needed for the visual,
+      // just overlay the screenshot. Kling or Runway can add subtle motion.
+      if (providers.runway) { return 'runway'; }
+      if (providers.kling) { return 'kling'; }
+      return 'runway';
+
+    case 'stylized-creative':
+      // Sci-fi, fantasy, abstract. Kling handles stylized content better.
+      if (providers.kling) { return 'kling'; }
+      if (providers.runway) { return 'runway'; }
+      return 'kling';
+
+    case 'dynamic-action':
+      // Fast motion, action sequences. Kling's motion handling is superior.
+      if (providers.kling) { return 'kling'; }
+      if (providers.runway) { return 'runway'; }
+      return 'kling';
+
+    case 'b-roll-atmospheric':
+      // Slow, moody, atmospheric. Runway's cinematic quality shines here.
+      if (providers.runway) { return 'runway'; }
+      if (providers.kling) { return 'kling'; }
+      return 'runway';
+
+    case 'text-overlay-only':
+      // No video generation needed — just a text card.
+      // Use cheapest available engine for a simple background.
+      if (providers.kling) { return 'kling'; }
+      if (providers.runway) { return 'runway'; }
+      return 'kling';
+  }
 }
 
 /**
  * Select the best video engine for generating the BACKGROUND video
- * in two-track compositing mode (avatar on green screen + AI video background).
- *
- * Priority: Runway (best cinematic quality) > Kling (character consistency) > Sora (fallback)
+ * in two-track compositing mode (avatar over AI video background).
+ * Uses the same scene analysis as the main engine selector.
  */
 function selectBackgroundEngine(
   providers: Record<string, boolean>,
@@ -706,67 +859,38 @@ function selectBackgroundEngine(
     return scene.backgroundEngine;
   }
 
-  // Analyze scene description to pick best engine
-  const description = [
+  // Analyze the background description to pick the best engine
+  const bgText = [
     scene.backgroundPrompt ?? '',
     scene.visualDescription ?? '',
   ].join(' ').toLowerCase();
 
-  // Kling excels at character consistency and full-body motion
-  const klingKeywords = ['character', 'person walking', 'full body', 'people', 'crowd', 'action'];
-  const preferKling = klingKeywords.some((kw) => description.includes(kw));
-
-  if (preferKling && providers.kling) {
+  // Stylized / fantasy backgrounds → Kling
+  const stylizedKeywords = ['sci-fi', 'fantasy', 'neon', 'cyberpunk', 'futuristic', 'abstract', 'alien', 'space', 'holographic'];
+  if (stylizedKeywords.some((kw) => bgText.includes(kw)) && providers.kling) {
     return 'kling';
   }
 
-  // Default priority: Runway (best cinematic quality) > Kling > Sora
+  // Backgrounds with people or action → Kling (character consistency)
+  const peopleKeywords = ['person', 'people', 'crowd', 'walking', 'team', 'group'];
+  if (peopleKeywords.some((kw) => bgText.includes(kw)) && providers.kling) {
+    return 'kling';
+  }
+
+  // Cinematic / environment / atmospheric → Runway
   if (providers.runway) { return 'runway'; }
   if (providers.kling) { return 'kling'; }
-  if (providers.sora) { return 'sora'; }
 
-  // Fallback — will be caught by the caller
   return 'runway';
 }
 
 /**
- * Select the best engine for a scene based on content analysis and provider availability.
- *
- * Strategy:
- * - Avatar scenes (talking head with script) → HeyGen (green screen + compositing)
- * - Visual/cinematic B-roll scenes → Runway (best quality) > Kling > Sora
- * - If the preferred provider isn't available, fall back to the next best
+ * Determine whether a scene needs a talking avatar or is purely visual.
+ * Used by generateScene() to decide whether to route to avatar generation.
  */
-export async function selectEngineForScene(
-  scene: PipelineScene,
-  hasAvatar: boolean
-): Promise<VideoEngineId> {
-  // If the scene already has an engine explicitly set, respect it
-  if (scene.engine) {
-    return scene.engine;
-  }
-
-  const providers = await getAvailableProviders();
-  const needsAvatar = isAvatarScene(scene, hasAvatar);
-
-  if (needsAvatar) {
-    // Avatar scenes: HeyGen handles the avatar (green screen compositing)
-    // Background engine is selected separately in generateWithHeyGen()
-    if (providers.heygen) { return 'heygen'; }
-    // Kling Avatar v2 as fallback: photo + TTS audio = talking head
-    // Uses the avatar profile's frontalImageUrl instead of HeyGen avatar ID
-    if (providers.kling) { return 'kling'; }
-    // No avatar provider — fall back to text-to-video
-    if (providers.runway) { return 'runway'; }
-    if (providers.sora) { return 'sora'; }
-    return 'heygen'; // Will fail with a clear "not configured" error
-  }
-
-  // Visual/cinematic B-roll scenes: prefer Runway > Kling > Sora
-  if (providers.runway) { return 'runway'; }
-  if (providers.kling) { return 'kling'; }
-  if (providers.sora) { return 'sora'; }
-  return 'runway'; // Will fail with a clear "not configured" error
+function isAvatarScene(scene: PipelineScene, hasAvatar: boolean): boolean {
+  const classification = classifyScene(scene, hasAvatar);
+  return classification === 'talking-head' || classification === 'character-in-action';
 }
 
 /**
