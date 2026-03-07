@@ -28,17 +28,12 @@ export function getFfmpegPath(): string {
 }
 
 /**
- * Get the ffprobe binary path from @ffprobe-installer/ffprobe (if available)
- * Falls back to ffmpeg-based probing if not installed
+ * Get the ffprobe binary path (if available).
+ * Returns null on serverless environments where ffprobe isn't installed.
  */
 export function getFfprobePath(): string | null {
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const installer = require('@ffprobe-installer/ffprobe') as { path: string };
-    return installer.path;
-  } catch {
-    return null;
-  }
+  // ffprobe is not available on Vercel serverless — always use ffmpeg-based probing
+  return null;
 }
 
 // ============================================================================

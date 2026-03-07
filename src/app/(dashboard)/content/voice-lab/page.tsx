@@ -1,19 +1,21 @@
 'use client';
 
 import { useState } from 'react';
-import { Mic, Music, AudioWaveform } from 'lucide-react';
+import { Mic, Music, AudioWaveform, Wand2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import SubpageNav from '@/components/ui/SubpageNav';
 import { VIDEO_TABS } from '@/lib/constants/subpage-nav';
 import { VoiceRecorderStudio } from './components/VoiceRecorderStudio';
 import { VoiceLibrary } from './components/VoiceLibrary';
+import { VoiceDesigner } from './components/VoiceDesigner';
 import { AIMusicStudio } from './components/AIMusicStudio';
 
-type VoiceLabTab = 'studio' | 'voices' | 'music';
+type VoiceLabTab = 'studio' | 'voices' | 'designer' | 'music';
 
 const TABS: { key: VoiceLabTab; label: string; icon: React.ElementType; description: string }[] = [
   { key: 'studio', label: 'Studio', icon: Mic, description: 'Record & edit' },
   { key: 'voices', label: 'My Voices', icon: AudioWaveform, description: 'Voice library' },
+  { key: 'designer', label: 'Designer', icon: Wand2, description: 'Create voices' },
   { key: 'music', label: 'AI Music', icon: Music, description: 'Generate songs' },
 ];
 
@@ -34,7 +36,7 @@ export default function VoiceLabPage() {
             </div>
             <div>
               <h1 className="text-xl font-bold text-white">Voice Lab</h1>
-              <p className="text-xs text-zinc-500">Record, clone your voice, create AI music — all in one studio</p>
+              <p className="text-xs text-zinc-500">Record, clone, design custom voices, and create AI music — all in one studio</p>
             </div>
           </div>
 
@@ -86,6 +88,7 @@ export default function VoiceLabPage() {
           >
             {activeTab === 'studio' && <VoiceRecorderStudio />}
             {activeTab === 'voices' && <VoiceLibrary />}
+            {activeTab === 'designer' && <VoiceDesigner />}
             {activeTab === 'music' && <AIMusicStudio />}
           </motion.div>
         </AnimatePresence>

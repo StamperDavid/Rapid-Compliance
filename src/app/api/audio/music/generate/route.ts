@@ -1,6 +1,6 @@
 /**
  * AI Music Generation API
- * POST /api/audio/music/generate — Generate music using Suno AI
+ * POST /api/audio/music/generate — Generate music using MiniMax Music AI
  *
  * Supports both preview (short clip) and full-length generation.
  * Stores extended metadata including mood, tempo, vocals, and lyrics.
@@ -13,6 +13,7 @@ import { apiKeyService } from '@/lib/api-keys/api-key-service';
 import { adminDb } from '@/lib/firebase/admin';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import { logger } from '@/lib/logger/logger';
+import { randomUUID } from 'crypto';
 
 export const dynamic = 'force-dynamic';
 
@@ -37,13 +38,35 @@ const GenerateSchema = z.object({
   parentPreviewId: z.string().max(200).optional(),
 });
 
-type SunoTrackResponse = {
-  id: string;
-  title: string;
-  audio_url: string;
-  duration: number;
-  tags?: string;
-};
+// MiniMax API response types
+interface MiniMaxResponse {
+  data: {
+    status: number;
+    audio: string;
+  };
+  base_resp: {
+    status_code: number;
+    status_msg: string;
+  };
+  trace_id: string;
+  extra_info: {
+    music_duration: number;
+    music_sample_rate: number;
+    music_channel: number;
+    bitrate: number;
+    music_size: number;
+  };
+}
+
+function generateTitle(prompt: string, style: string): string {
+  // Take first meaningful phrase from prompt, max 60 chars
+  const clean = prompt.replace(/\.\s*Style:.*$/, '').trim();
+  const firstPhrase = clean.split(/[.,!?;]/)[0]?.trim() ?? style;
+  if (firstPhrase.length > 60) {
+    return `${firstPhrase.substring(0, 57)}...`;
+  }
+  return firstPhrase || style;
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -59,10 +82,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const sunoKey = await apiKeyService.getServiceKey(PLATFORM_ID, 'suno');
-    if (!sunoKey || typeof sunoKey !== 'string') {
+    const minimaxKey = await apiKeyService.getServiceKey(PLATFORM_ID, 'minimax');
+    if (!minimaxKey || typeof minimaxKey !== 'string') {
       return NextResponse.json(
-        { success: false, error: 'Suno API key not configured. Add it in Settings -> API Keys.' },
+        { success: false, error: 'MiniMax API key not configured. Add it in Settings -> API Keys.' },
         { status: 400 },
       );
     }
@@ -75,48 +98,65 @@ export async function POST(request: NextRequest) {
     // Build enriched prompt with all parameters
     const moodStr = mood && mood.length > 0 ? ` Mood: ${mood.join(', ')}.` : '';
     const tempoMap: Record<string, string> = {
-      'slow': '60-80 BPM',
-      'medium': '80-120 BPM',
-      'fast': '120-160 BPM',
-      'very-fast': '160+ BPM',
+      'slow': '60-80 BPM, slow tempo',
+      'medium': '80-120 BPM, moderate tempo',
+      'fast': '120-160 BPM, fast tempo',
+      'very-fast': '160+ BPM, very fast tempo',
     };
-    const tempoStr = tempo ? ` Tempo: ${tempoMap[tempo]}.` : '';
+    const tempoStr = tempo ? ` ${tempoMap[tempo]}.` : '';
     const vocalStr = voiceStyle && !instrumental ? ` Vocals: ${voiceStyle}.` : '';
-    const durationLabel = isPreview ? '~10 seconds preview' : `~${duration} seconds`;
+    const durationLabel = isPreview ? 'short clip' : `approximately ${duration} seconds`;
 
     const fullPrompt = `${prompt}. Style: ${style}.${moodStr}${tempoStr}${vocalStr} Duration: ${durationLabel}.`;
 
-    // Suno API payload
-    const sunoPayload: Record<string, string | boolean> = {
-      topic: fullPrompt,
-      tags: style,
-      make_instrumental: instrumental,
-    };
-
-    // If lyrics are provided and vocals enabled, include them
+    // Format lyrics with structural tags if provided
+    let formattedLyrics: string | undefined;
     if (!instrumental && lyrics && lyrics.trim().length > 0) {
-      sunoPayload.prompt = lyrics.trim();
+      // If lyrics don't already have structural tags, wrap in [Verse]
+      const hasStructuralTags = /\[(Verse|Chorus|Bridge|Intro|Outro|Hook|Pre-Chorus)\]/i.test(lyrics);
+      formattedLyrics = hasStructuralTags ? lyrics.trim() : `[Verse]\n${lyrics.trim()}`;
     }
 
-    const response = await fetch('https://studio-api.suno.ai/api/external/generate/', {
+    // MiniMax API payload
+    const minimaxPayload: Record<string, unknown> = {
+      model: 'music-2.5+',
+      prompt: fullPrompt,
+      is_instrumental: instrumental,
+      output_format: 'url',
+      audio_setting: {
+        sample_rate: 44100,
+        bitrate: 256000,
+        format: 'mp3',
+      },
+    };
+
+    // Include lyrics if provided
+    if (formattedLyrics) {
+      minimaxPayload.lyrics = formattedLyrics;
+    } else if (!instrumental) {
+      // Auto-generate lyrics from prompt when vocals are enabled but no lyrics provided
+      minimaxPayload.lyrics_optimizer = true;
+    }
+
+    const response = await fetch('https://api.minimax.io/v1/music_generation', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${sunoKey}`,
+        'Authorization': `Bearer ${minimaxKey}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(sunoPayload),
+      body: JSON.stringify(minimaxPayload),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      logger.error('Suno API error', new Error(errorText), {
+      logger.error('MiniMax API error', new Error(errorText), {
         status: response.status,
         file: 'audio/music/generate/route.ts',
       });
 
-      if (response.status === 401) {
+      if (response.status === 401 || response.status === 403) {
         return NextResponse.json(
-          { success: false, error: 'Suno API key is invalid. Update it in Settings -> API Keys.' },
+          { success: false, error: 'MiniMax API key is invalid. Update it in Settings -> API Keys.' },
           { status: 401 },
         );
       }
@@ -127,26 +167,57 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const data = await response.json() as SunoTrackResponse[];
+    const data = await response.json() as MiniMaxResponse;
 
-    if (!Array.isArray(data) || data.length === 0) {
+    // Check MiniMax response status
+    if (data.base_resp.status_code !== 0) {
+      const errorMsg = data.base_resp.status_msg || 'Unknown MiniMax error';
+      logger.error('MiniMax generation error', new Error(errorMsg), {
+        statusCode: data.base_resp.status_code,
+        file: 'audio/music/generate/route.ts',
+      });
+
+      if (data.base_resp.status_code === 1004) {
+        return NextResponse.json(
+          { success: false, error: 'MiniMax API key is invalid. Update it in Settings -> API Keys.' },
+          { status: 401 },
+        );
+      }
+
+      if (data.base_resp.status_code === 1008) {
+        return NextResponse.json(
+          { success: false, error: 'MiniMax account has insufficient balance. Top up your account.' },
+          { status: 402 },
+        );
+      }
+
       return NextResponse.json(
-        { success: false, error: 'No tracks generated. Try a different prompt.' },
+        { success: false, error: `Music generation failed: ${errorMsg}` },
         { status: 502 },
       );
     }
 
-    const track = data[0];
+    if (!data.data?.audio) {
+      return NextResponse.json(
+        { success: false, error: 'No audio generated. Try a different prompt.' },
+        { status: 502 },
+      );
+    }
+
+    const trackId = data.trace_id || randomUUID();
+    const audioUrl = data.data.audio;
+    const trackDuration = data.extra_info?.music_duration ?? duration;
+    const title = generateTitle(prompt, style);
 
     // Save to Firestore with extended metadata
     if (adminDb) {
       await adminDb
         .collection(`organizations/${PLATFORM_ID}/generated_music`)
-        .doc(track.id)
+        .doc(trackId)
         .set({
-          title: track.title,
-          audioUrl: track.audio_url,
-          duration: track.duration,
+          title,
+          audioUrl,
+          duration: trackDuration,
           style,
           prompt,
           instrumental,
@@ -158,6 +229,7 @@ export async function POST(request: NextRequest) {
           isFavorite: false,
           isPreview: isPreview ?? false,
           parentPreviewId: parentPreviewId ?? null,
+          provider: 'minimax',
           createdBy: authResult.user.uid,
           createdAt: new Date(),
           updatedAt: new Date(),
@@ -165,20 +237,21 @@ export async function POST(request: NextRequest) {
     }
 
     logger.info('AI music generated', {
-      trackId: track.id,
-      title: track.title,
-      duration: track.duration,
+      trackId,
+      title,
+      duration: trackDuration,
       isPreview: isPreview ?? false,
+      provider: 'minimax',
       file: 'audio/music/generate/route.ts',
     });
 
     return NextResponse.json({
       success: true,
       track: {
-        id: track.id,
-        title: track.title,
-        audioUrl: track.audio_url,
-        duration: track.duration,
+        id: trackId,
+        title,
+        audioUrl,
+        duration: trackDuration,
         style,
         mood: mood ?? [],
         tempo: tempo ?? 'medium',

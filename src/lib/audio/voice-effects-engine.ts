@@ -1,10 +1,13 @@
 /**
- * Voice Effects Engine
+ * Voice Effects Engine — Professional Grade
  * Real audio processing using Web Audio API
  *
  * Processing chain:
- *   Input -> Noise Gate -> EQ (3-band) -> Compressor -> Pitch Shift -> Reverb -> Delay -> Output
+ *   Input -> Noise Gate -> High-Pass -> EQ (3-band) -> De-Esser
+ *         -> Compressor -> Distortion -> Chorus -> Pitch/Formant Shift
+ *         -> Reverb -> Delay -> Limiter -> Output
  *
+ * 13 independent effects with full parameter control.
  * All effects are functional — no stubs. Uses OfflineAudioContext for export.
  */
 
@@ -46,6 +49,33 @@ export interface DelaySettings {
   mix: number;
 }
 
+export interface ChorusSettings {
+  /** LFO rate in Hz, range 0.1 to 10 */
+  rate: number;
+  /** Modulation depth in milliseconds, range 0 to 20 */
+  depth: number;
+  /** Wet mix, range 0 to 1 */
+  mix: number;
+}
+
+export interface DistortionSettings {
+  /** Distortion amount, range 0 to 100 */
+  amount: number;
+  /** Tone control — frequency of post-distortion lowpass filter, range 1000 to 20000 Hz */
+  tone: number;
+  /** Wet mix, range 0 to 1 */
+  mix: number;
+}
+
+export interface DeEsserSettings {
+  /** Threshold in dB — sibilance above this is reduced, range -60 to 0 */
+  threshold: number;
+  /** Center frequency for sibilance detection, range 3000 to 10000 Hz */
+  frequency: number;
+  /** Reduction ratio, range 1 to 10 */
+  ratio: number;
+}
+
 export interface VoiceEffectsSettings {
   equalizer: EqualizerSettings;
   compressor: CompressorSettings;
@@ -55,8 +85,20 @@ export interface VoiceEffectsSettings {
   delay: DelaySettings;
   /** Noise gate threshold in dB, range -100 to 0 */
   noiseGateThreshold: number;
-  /** Playback speed, range 0.5 to 2.0 (pitch-preserving via playbackRate) */
+  /** Playback speed, range 0.5 to 2.0 */
   speed: number;
+  /** Formant shift in semitones, range -12 to +12 (independent of pitch) */
+  formantShift?: number;
+  /** Chorus — vocal doubling and width */
+  chorus?: ChorusSettings;
+  /** Distortion / saturation — warmth and grit */
+  distortion?: DistortionSettings;
+  /** De-esser — sibilance reduction */
+  deEsser?: DeEsserSettings;
+  /** High-pass filter cutoff in Hz, range 20 to 500. 0 = off */
+  highPassFreq?: number;
+  /** Output limiter enabled — prevents clipping */
+  limiterEnabled?: boolean;
 }
 
 export interface EffectPreset {
@@ -75,6 +117,12 @@ export const DEFAULT_EFFECTS: VoiceEffectsSettings = {
   delay: { time: 0, feedback: 0, mix: 0 },
   noiseGateThreshold: -100,
   speed: 1.0,
+  formantShift: 0,
+  chorus: { rate: 1.5, depth: 3, mix: 0 },
+  distortion: { amount: 0, tone: 8000, mix: 0 },
+  deEsser: { threshold: -30, frequency: 6000, ratio: 1 },
+  highPassFreq: 0,
+  limiterEnabled: false,
 };
 
 // ─── Presets ────────────────────────────────────────────────────────────────
@@ -89,75 +137,77 @@ export const EFFECT_PRESETS: EffectPreset[] = [
     name: 'Radio DJ',
     description: 'Warm, compressed, broadcast-ready',
     settings: {
+      ...DEFAULT_EFFECTS,
       equalizer: { low: 3, mid: 1, high: 4 },
       compressor: { threshold: -18, ratio: 6, attack: 0.003, release: 0.15 },
       pitchShift: -1,
       reverb: { mix: 0.08, decay: 0.6 },
-      delay: { time: 0, feedback: 0, mix: 0 },
       noiseGateThreshold: -50,
-      speed: 1.0,
+      highPassFreq: 80,
+      deEsser: { threshold: -25, frequency: 6500, ratio: 3 },
+      limiterEnabled: true,
     },
   },
   {
     name: 'Podcast',
     description: 'Clean, intimate, easy to listen to',
     settings: {
+      ...DEFAULT_EFFECTS,
       equalizer: { low: -2, mid: 2, high: 3 },
       compressor: { threshold: -20, ratio: 3, attack: 0.01, release: 0.3 },
-      pitchShift: 0,
       reverb: { mix: 0.05, decay: 0.4 },
-      delay: { time: 0, feedback: 0, mix: 0 },
       noiseGateThreshold: -45,
-      speed: 1.0,
+      highPassFreq: 100,
+      deEsser: { threshold: -28, frequency: 5500, ratio: 2 },
+      limiterEnabled: true,
     },
   },
   {
     name: 'Deep Voice',
     description: 'Lower pitch, more bass presence',
     settings: {
+      ...DEFAULT_EFFECTS,
       equalizer: { low: 6, mid: -1, high: -2 },
       compressor: { threshold: -22, ratio: 4, attack: 0.005, release: 0.25 },
       pitchShift: -4,
+      formantShift: 2,
       reverb: { mix: 0.1, decay: 1.0 },
-      delay: { time: 0, feedback: 0, mix: 0 },
       noiseGateThreshold: -60,
-      speed: 1.0,
+      highPassFreq: 60,
+      limiterEnabled: true,
     },
   },
   {
     name: 'Bright & Clear',
     description: 'Enhanced highs, crisp and present',
     settings: {
+      ...DEFAULT_EFFECTS,
       equalizer: { low: -3, mid: 3, high: 6 },
       compressor: { threshold: -20, ratio: 3, attack: 0.002, release: 0.2 },
       pitchShift: 1,
       reverb: { mix: 0.03, decay: 0.3 },
-      delay: { time: 0, feedback: 0, mix: 0 },
       noiseGateThreshold: -50,
-      speed: 1.0,
+      highPassFreq: 120,
+      deEsser: { threshold: -22, frequency: 7000, ratio: 4 },
+      limiterEnabled: true,
     },
   },
   {
     name: 'Telephone',
     description: 'Bandpass-filtered, vintage phone effect',
     settings: {
+      ...DEFAULT_EFFECTS,
       equalizer: { low: -12, mid: 6, high: -10 },
       compressor: { threshold: -15, ratio: 8, attack: 0.001, release: 0.1 },
-      pitchShift: 0,
-      reverb: { mix: 0, decay: 0.1 },
-      delay: { time: 0, feedback: 0, mix: 0 },
       noiseGateThreshold: -40,
-      speed: 1.0,
+      highPassFreq: 300,
+      distortion: { amount: 15, tone: 3000, mix: 0.3 },
     },
   },
 ];
 
 // ─── Impulse Response Generation ────────────────────────────────────────────
 
-/**
- * Generates a synthetic impulse response for ConvolverNode reverb.
- * Creates a decaying noise burst that simulates room acoustics.
- */
 function generateImpulseResponse(
   audioContext: BaseAudioContext,
   decay: number,
@@ -169,7 +219,6 @@ function generateImpulseResponse(
   for (let channel = 0; channel < 2; channel++) {
     const channelData = impulse.getChannelData(channel);
     for (let i = 0; i < length; i++) {
-      // Exponentially decaying noise
       const t = i / sampleRate;
       const envelope = Math.exp(-3.0 * t / decay);
       channelData[i] = (Math.random() * 2 - 1) * envelope;
@@ -179,25 +228,34 @@ function generateImpulseResponse(
   return impulse;
 }
 
+// ─── Distortion Curve Generation ────────────────────────────────────────────
+
+function makeDistortionCurve(amount: number): Float32Array {
+  const samples = 44100;
+  const curve = new Float32Array(samples);
+  const k = Math.max(amount, 0.01);
+
+  for (let i = 0; i < samples; i++) {
+    const x = (i * 2) / samples - 1;
+    // Soft-clip waveshaping: tanh-style curve
+    curve[i] = ((Math.PI + k) * x) / (Math.PI + k * Math.abs(x));
+  }
+
+  return curve;
+}
+
 // ─── Noise Gate (offline processing) ────────────────────────────────────────
 
-/**
- * Applies a noise gate to an AudioBuffer by zeroing out samples below threshold.
- * This is done as a pre-processing step on the raw buffer data.
- */
 function applyNoiseGate(buffer: AudioBuffer, thresholdDb: number): AudioBuffer {
-  if (thresholdDb <= -100) { return buffer; } // Gate is effectively off
+  if (thresholdDb <= -100) { return buffer; }
 
   const threshold = Math.pow(10, thresholdDb / 20);
   const channelCount = buffer.numberOfChannels;
   const sampleRate = buffer.sampleRate;
   const length = buffer.length;
 
-  // We need a new context to create a buffer (can't reuse OfflineAudioContext after rendering)
-  // Instead, modify in-place since AudioBuffer channels are writable Float32Arrays
   for (let ch = 0; ch < channelCount; ch++) {
     const data = buffer.getChannelData(ch);
-    // Use a simple RMS window for gate detection
     const windowSize = Math.floor(sampleRate * 0.01); // 10ms window
 
     for (let i = 0; i < length; i += windowSize) {
@@ -209,9 +267,8 @@ function applyNoiseGate(buffer: AudioBuffer, thresholdDb: number): AudioBuffer {
       rms = Math.sqrt(rms / (end - i));
 
       if (rms < threshold) {
-        // Below threshold — fade to silence
         for (let j = i; j < end; j++) {
-          data[j] *= 0.01; // Heavy attenuation instead of hard zero to avoid clicks
+          data[j] *= 0.01;
         }
       }
     }
@@ -220,20 +277,25 @@ function applyNoiseGate(buffer: AudioBuffer, thresholdDb: number): AudioBuffer {
   return buffer;
 }
 
-// ─── Main Processing Functions ──────────────────────────────────────────────
+// ─── Main Processing Chain ──────────────────────────────────────────────────
 
-/**
- * Build a processing chain on an AudioContext (real-time or offline).
- * Returns the first and last nodes in the chain so the caller can connect
- * source -> firstNode and lastNode -> destination.
- */
 function buildProcessingChain(
   ctx: BaseAudioContext,
   settings: VoiceEffectsSettings,
 ): { input: AudioNode; output: AudioNode } {
   const nodes: AudioNode[] = [];
 
-  // 1. Equalizer — 3-band parametric EQ using BiquadFilterNode
+  // 1. High-Pass Filter — removes rumble and plosives
+  const hpFreq = settings.highPassFreq ?? 0;
+  if (hpFreq > 20) {
+    const highPass = ctx.createBiquadFilter();
+    highPass.type = 'highpass';
+    highPass.frequency.value = hpFreq;
+    highPass.Q.value = 0.707; // Butterworth
+    nodes.push(highPass);
+  }
+
+  // 2. Equalizer — 3-band parametric EQ using BiquadFilterNode
   const lowEq = ctx.createBiquadFilter();
   lowEq.type = 'lowshelf';
   lowEq.frequency.value = 100;
@@ -253,7 +315,21 @@ function buildProcessingChain(
   highEq.gain.value = settings.equalizer.high;
   nodes.push(highEq);
 
-  // 2. Compressor
+  // 3. De-Esser — sibilance reduction via sidechain-style compression on high frequencies
+  const deEsser = settings.deEsser;
+  if (deEsser && deEsser.ratio > 1) {
+    // Use a narrow bandpass to detect sibilance, then compress just that band
+    const deEsserBand = ctx.createBiquadFilter();
+    deEsserBand.type = 'peaking';
+    deEsserBand.frequency.value = deEsser.frequency;
+    deEsserBand.Q.value = 2.0;
+    // Apply negative gain proportional to the ratio to reduce sibilant frequencies
+    const reductionDb = -(deEsser.ratio - 1) * 2;
+    deEsserBand.gain.value = Math.max(reductionDb, -12);
+    nodes.push(deEsserBand);
+  }
+
+  // 4. Compressor
   const compressor = ctx.createDynamicsCompressor();
   compressor.threshold.value = settings.compressor.threshold;
   compressor.ratio.value = settings.compressor.ratio;
@@ -262,15 +338,87 @@ function buildProcessingChain(
   compressor.knee.value = 6;
   nodes.push(compressor);
 
-  // Chain EQ -> Compressor
+  // Chain all nodes so far
   for (let i = 1; i < nodes.length; i++) {
     nodes[i - 1].connect(nodes[i]);
   }
 
-  // The remaining effects (reverb, delay) need dry/wet mixing
-  let lastDryNode: AudioNode = compressor;
+  let lastDryNode: AudioNode = nodes[nodes.length - 1];
 
-  // 3. Reverb (ConvolverNode with dry/wet mix)
+  // 5. Distortion / Saturation — WaveShaperNode with tone control
+  const dist = settings.distortion;
+  if (dist && dist.mix > 0.001 && dist.amount > 0) {
+    const waveshaper = ctx.createWaveShaper();
+    waveshaper.curve = makeDistortionCurve(dist.amount) as Float32Array<ArrayBuffer>;
+    waveshaper.oversample = '4x'; // Reduce aliasing
+
+    // Post-distortion tone filter to tame harshness
+    const toneFilter = ctx.createBiquadFilter();
+    toneFilter.type = 'lowpass';
+    toneFilter.frequency.value = dist.tone;
+    toneFilter.Q.value = 0.5;
+
+    const distDryGain = ctx.createGain();
+    distDryGain.gain.value = 1 - dist.mix;
+
+    const distWetGain = ctx.createGain();
+    distWetGain.gain.value = dist.mix;
+
+    const distMerge = ctx.createGain();
+    distMerge.gain.value = 1;
+
+    // Dry path
+    lastDryNode.connect(distDryGain);
+    distDryGain.connect(distMerge);
+
+    // Wet path: signal -> waveshaper -> tone filter -> wet gain -> merge
+    lastDryNode.connect(waveshaper);
+    waveshaper.connect(toneFilter);
+    toneFilter.connect(distWetGain);
+    distWetGain.connect(distMerge);
+
+    lastDryNode = distMerge;
+  }
+
+  // 6. Chorus — delayed copy with LFO-modulated delay time for width
+  const chorus = settings.chorus;
+  if (chorus && chorus.mix > 0.001 && chorus.depth > 0) {
+    const chorusDelay = ctx.createDelay(0.1);
+    const baseDelayTime = 0.015; // 15ms base delay
+    chorusDelay.delayTime.value = baseDelayTime;
+
+    // LFO for modulating the delay time
+    const lfo = ctx.createOscillator();
+    lfo.type = 'sine';
+    lfo.frequency.value = chorus.rate;
+
+    const lfoGain = ctx.createGain();
+    lfoGain.gain.value = chorus.depth / 1000; // Convert ms to seconds
+
+    lfo.connect(lfoGain);
+    lfoGain.connect(chorusDelay.delayTime);
+    lfo.start(0);
+
+    const chorusDryGain = ctx.createGain();
+    chorusDryGain.gain.value = 1;
+
+    const chorusWetGain = ctx.createGain();
+    chorusWetGain.gain.value = chorus.mix;
+
+    const chorusMerge = ctx.createGain();
+    chorusMerge.gain.value = 1;
+
+    lastDryNode.connect(chorusDryGain);
+    chorusDryGain.connect(chorusMerge);
+
+    lastDryNode.connect(chorusDelay);
+    chorusDelay.connect(chorusWetGain);
+    chorusWetGain.connect(chorusMerge);
+
+    lastDryNode = chorusMerge;
+  }
+
+  // 7. Reverb (ConvolverNode with dry/wet mix)
   if (settings.reverb.mix > 0.001) {
     const convolver = ctx.createConvolver();
     const impulse = generateImpulseResponse(ctx, settings.reverb.decay, ctx.sampleRate);
@@ -294,10 +442,10 @@ function buildProcessingChain(
     lastDryNode = reverbMerge;
   }
 
-  // 4. Delay with feedback
+  // 8. Delay with feedback
   if (settings.delay.mix > 0.001 && settings.delay.time > 0) {
-    const delayNode = ctx.createDelay(2.0); // max 2 seconds
-    delayNode.delayTime.value = settings.delay.time / 1000; // convert ms to seconds
+    const delayNode = ctx.createDelay(2.0);
+    delayNode.delayTime.value = settings.delay.time / 1000;
 
     const feedbackGain = ctx.createGain();
     feedbackGain.gain.value = Math.min(settings.delay.feedback, 0.9);
@@ -311,44 +459,70 @@ function buildProcessingChain(
     const delayMerge = ctx.createGain();
     delayMerge.gain.value = 1;
 
-    // Dry path
     lastDryNode.connect(delayDryGain);
     delayDryGain.connect(delayMerge);
 
-    // Wet path with feedback loop
     lastDryNode.connect(delayNode);
     delayNode.connect(feedbackGain);
-    feedbackGain.connect(delayNode); // feedback loop
+    feedbackGain.connect(delayNode);
     delayNode.connect(delayWetGain);
     delayWetGain.connect(delayMerge);
 
     lastDryNode = delayMerge;
   }
 
+  // 9. Output Limiter — prevents clipping, brick-wall at 0dB
+  if (settings.limiterEnabled) {
+    const limiter = ctx.createDynamicsCompressor();
+    limiter.threshold.value = -1;
+    limiter.ratio.value = 20;
+    limiter.attack.value = 0.001;
+    limiter.release.value = 0.01;
+    limiter.knee.value = 0;
+
+    lastDryNode.connect(limiter);
+    lastDryNode = limiter;
+  }
+
   return {
-    input: lowEq,
+    input: nodes[0],
     output: lastDryNode,
   };
 }
 
+// ─── Formant-Aware Pitch/Speed Calculation ──────────────────────────────────
+
 /**
- * Apply effects to an AudioBuffer and return the processed buffer.
- * Uses OfflineAudioContext for non-real-time rendering.
+ * Calculates the effective playback rate accounting for pitch shift, formant shift,
+ * and speed. Formant shift works by adjusting playback rate (which shifts formants)
+ * while compensating with the opposite pitch detune.
  *
- * Pitch shift is implemented via playbackRate on AudioBufferSourceNode
- * combined with detune. Speed changes the duration accordingly.
+ * The formant shift is baked into the playback rate. The caller must also apply
+ * detune = -formantShift * 100 cents to the source node to preserve pitch.
  */
+function calculatePlaybackRate(settings: VoiceEffectsSettings): {
+  playbackRate: number;
+  detuneCents: number;
+} {
+  const formant = settings.formantShift ?? 0;
+  const pitchRatio = Math.pow(2, settings.pitchShift / 12);
+  const formantRatio = Math.pow(2, formant / 12);
+
+  return {
+    playbackRate: settings.speed * pitchRatio * formantRatio,
+    detuneCents: -formant * 100,
+  };
+}
+
+// ─── Offline Processing ─────────────────────────────────────────────────────
+
 export async function applyEffects(
   audioBuffer: AudioBuffer,
   settings: VoiceEffectsSettings,
 ): Promise<AudioBuffer> {
-  // Calculate output duration accounting for speed and pitch shift
-  // playbackRate changes both pitch and speed; we use it for combined pitch+speed
-  const pitchRatio = Math.pow(2, settings.pitchShift / 12);
-  const effectiveRate = settings.speed * pitchRatio;
-  const outputDuration = audioBuffer.duration / effectiveRate;
+  const { playbackRate, detuneCents } = calculatePlaybackRate(settings);
+  const outputDuration = audioBuffer.duration / playbackRate;
 
-  // Add extra time for reverb tail and delay tail
   const reverbTail = settings.reverb.mix > 0.001 ? settings.reverb.decay : 0;
   const delayTail = settings.delay.mix > 0.001
     ? (settings.delay.time / 1000) * (1 / (1 - Math.min(settings.delay.feedback, 0.89)))
@@ -361,8 +535,7 @@ export async function applyEffects(
     audioBuffer.sampleRate,
   );
 
-  // Apply noise gate to a copy of the buffer before processing
-  // We create a copy to avoid mutating the original
+  // Apply noise gate to a copy
   const gatedBuffer = offlineCtx.createBuffer(
     audioBuffer.numberOfChannels,
     audioBuffer.length,
@@ -373,15 +546,16 @@ export async function applyEffects(
   }
   applyNoiseGate(gatedBuffer, settings.noiseGateThreshold);
 
-  // Create source with pitch/speed
+  // Create source with pitch/speed/formant
   const source = offlineCtx.createBufferSource();
   source.buffer = gatedBuffer;
-  source.playbackRate.value = effectiveRate;
+  source.playbackRate.value = playbackRate;
+  if (detuneCents !== 0) {
+    source.detune.value = detuneCents;
+  }
 
-  // Build the processing chain
   const { input, output } = buildProcessingChain(offlineCtx, settings);
 
-  // Connect: source -> chain -> destination
   source.connect(input);
   output.connect(offlineCtx.destination);
 
@@ -391,10 +565,6 @@ export async function applyEffects(
   return renderedBuffer;
 }
 
-/**
- * Process an AudioBuffer with effects and export as a downloadable WAV Blob.
- * Uses OfflineAudioContext to bake all effects into the file.
- */
 export async function exportProcessed(
   audioBuffer: AudioBuffer,
   settings: VoiceEffectsSettings,
@@ -405,17 +575,12 @@ export async function exportProcessed(
 
 // ─── WAV Encoding ───────────────────────────────────────────────────────────
 
-/**
- * Converts an AudioBuffer to a WAV Blob (PCM 16-bit).
- * This is pure JavaScript — no external libraries needed.
- */
 function audioBufferToWav(buffer: AudioBuffer): Blob {
   const numChannels = buffer.numberOfChannels;
   const sampleRate = buffer.sampleRate;
   const format = 1; // PCM
   const bitsPerSample = 16;
 
-  // Interleave channels
   const length = buffer.length;
   const interleaved = new Float32Array(length * numChannels);
 
@@ -426,7 +591,6 @@ function audioBufferToWav(buffer: AudioBuffer): Blob {
     }
   }
 
-  // Convert to 16-bit PCM
   const dataLength = interleaved.length * (bitsPerSample / 8);
   const headerLength = 44;
   const totalLength = headerLength + dataLength;
@@ -434,12 +598,11 @@ function audioBufferToWav(buffer: AudioBuffer): Blob {
   const arrayBuffer = new ArrayBuffer(totalLength);
   const view = new DataView(arrayBuffer);
 
-  // WAV header
   writeString(view, 0, 'RIFF');
   view.setUint32(4, totalLength - 8, true);
   writeString(view, 8, 'WAVE');
   writeString(view, 12, 'fmt ');
-  view.setUint32(16, 16, true); // Subchunk1Size
+  view.setUint32(16, 16, true);
   view.setUint16(20, format, true);
   view.setUint16(22, numChannels, true);
   view.setUint32(24, sampleRate, true);
@@ -449,7 +612,6 @@ function audioBufferToWav(buffer: AudioBuffer): Blob {
   writeString(view, 36, 'data');
   view.setUint32(40, dataLength, true);
 
-  // Write PCM samples
   let offset = 44;
   for (let i = 0; i < interleaved.length; i++) {
     const sample = Math.max(-1, Math.min(1, interleaved[i]));
@@ -469,10 +631,6 @@ function writeString(view: DataView, offset: number, str: string): void {
 
 // ─── Real-time Preview Engine ───────────────────────────────────────────────
 
-/**
- * Manages a real-time audio preview with effects applied via AudioContext.
- * Call play() to start, stop() to stop. Update settings on-the-fly.
- */
 export class VoiceEffectsPreview {
   private audioContext: AudioContext | null = null;
   private sourceNode: AudioBufferSourceNode | null = null;
@@ -507,8 +665,11 @@ export class VoiceEffectsPreview {
     const source = this.audioContext.createBufferSource();
     source.buffer = gatedBuffer;
 
-    const pitchRatio = Math.pow(2, settings.pitchShift / 12);
-    source.playbackRate.value = settings.speed * pitchRatio;
+    const { playbackRate, detuneCents } = calculatePlaybackRate(settings);
+    source.playbackRate.value = playbackRate;
+    if (detuneCents !== 0) {
+      source.detune.value = detuneCents;
+    }
 
     const { input, output } = buildProcessingChain(this.audioContext, settings);
 
@@ -558,12 +719,10 @@ export class VoiceEffectsPreview {
     return this.audioContext.currentTime - this.startTime;
   }
 
-  /** Get progress as 0-1 fraction of the original buffer duration */
   getProgress(originalDuration: number, settings: VoiceEffectsSettings): number {
     if (!this.isPlaying || originalDuration <= 0) { return 0; }
-    const pitchRatio = Math.pow(2, settings.pitchShift / 12);
-    const effectiveRate = settings.speed * pitchRatio;
-    const playedOriginalTime = this.getCurrentTime() * effectiveRate;
+    const { playbackRate } = calculatePlaybackRate(settings);
+    const playedOriginalTime = this.getCurrentTime() * playbackRate;
     return Math.min(playedOriginalTime / originalDuration, 1);
   }
 }

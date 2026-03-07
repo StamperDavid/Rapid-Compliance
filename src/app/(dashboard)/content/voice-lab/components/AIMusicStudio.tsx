@@ -1247,8 +1247,8 @@ export function AIMusicStudio() {
           <div>
             <p className="text-sm font-medium text-amber-300">AI Music API not configured</p>
             <p className="text-xs text-zinc-400 mt-1">
-              Add a Suno API key in <span className="text-amber-400 font-medium">Settings &rarr; API Keys</span> to enable
-              AI music generation. Suno creates professional-quality songs, jingles, and background music.
+              Add a MiniMax API key in <span className="text-amber-400 font-medium">Settings &rarr; API Keys</span> to enable
+              AI music generation. MiniMax creates professional-quality songs, jingles, and background music with lyrics support.
             </p>
           </div>
         </div>
