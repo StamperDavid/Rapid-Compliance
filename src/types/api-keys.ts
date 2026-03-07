@@ -129,6 +129,9 @@ export interface APIKeysConfig {
     runway?: {
       apiKey: string;
     };
+    fal?: {
+      apiKey: string;
+    };
   };
   
   // Voice Generation Services
@@ -300,6 +303,7 @@ export type APIServiceName =
   | 'pagespeed'     // Google PageSpeed Insights
   | 'dataforseo'   // DataForSEO (keyword data, SERP, domain metrics)
   | 'later'        // Later.com social media scheduling
-  | 'suno';         // Suno AI Music Generation
+  | 'minimax'       // MiniMax AI Music Generation
+  | 'fal';          // fal.ai (Kling 3.0, character-consistent video)
 
 
