@@ -14,6 +14,7 @@ import {
 import {
   generateKlingTextToVideo,
   generateKlingAvatarVideo,
+  generateKlingReferenceVideo,
   getKlingVideoStatus,
 } from '@/lib/video/fal-kling-service';
 import type { PipelineScene, SceneGenerationResult, VideoEngineId } from '@/types/video-pipeline';
@@ -364,6 +365,96 @@ async function generateWithKlingAvatar(
   };
 }
 
+/**
+ * Generate a character-in-action scene using Kling Reference-to-Video.
+ * Uses the avatar's reference images to maintain character consistency
+ * while placing them in the described scene/action.
+ *
+ * Unlike Kling Avatar (photo+audio → talking head), this generates the
+ * character doing things: walking, presenting, exploring, etc.
+ */
+async function generateWithKlingReference(
+  scene: PipelineScene,
+  avatarId: string,
+  aspectRatio: VideoAspectRatio
+): Promise<SceneGenerationResult> {
+  // Load the avatar profile to get reference images
+  const { getDefaultProfile, getAvatarProfile } = await import('@/lib/video/avatar-profile-service');
+
+  let profile: Awaited<ReturnType<typeof getAvatarProfile>> = null;
+  try {
+    profile = await getAvatarProfile(avatarId) ?? await getDefaultProfile(avatarId);
+  } catch {
+    // Profile not found
+  }
+
+  if (!profile?.frontalImageUrl) {
+    return {
+      sceneId: scene.id,
+      providerVideoId: '',
+      provider: 'kling',
+      status: 'failed',
+      videoUrl: null,
+      thumbnailUrl: null,
+      progress: 0,
+      error: 'No avatar reference images found. Create an Avatar Profile with reference photos for character-in-action scenes.',
+    };
+  }
+
+  // Build prompt from visual description (what the character is doing / where they are)
+  const prompt = ((): string => {
+    const vis = scene.visualDescription?.trim();
+    if (vis) { return vis; }
+    const bg = scene.backgroundPrompt?.trim();
+    if (bg) { return bg; }
+    const script = scene.scriptText.trim();
+    if (script) { return script; }
+    return 'Person in a cinematic scene';
+  })();
+
+  const klingAspectRatio: '16:9' | '9:16' | '1:1' =
+    aspectRatio === '4:3' ? '16:9' : aspectRatio;
+
+  // Reference-to-video supports 3-10s durations
+  const durationNum = Math.min(Math.max(Math.round(scene.duration), 3), 10);
+  const duration = String(durationNum) as '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10';
+
+  // Collect all available reference images for maximum character consistency
+  const additionalImageUrls = [
+    ...(profile.additionalImageUrls ?? []),
+    ...(profile.fullBodyImageUrl ? [profile.fullBodyImageUrl] : []),
+    ...(profile.upperBodyImageUrl ? [profile.upperBodyImageUrl] : []),
+  ];
+
+  const response = await generateKlingReferenceVideo(prompt, {
+    frontalImageUrl: profile.frontalImageUrl,
+    additionalImageUrls: additionalImageUrls.length > 0 ? additionalImageUrls : undefined,
+  }, {
+    duration,
+    aspectRatio: klingAspectRatio,
+  });
+
+  logger.info('Kling reference-to-video started for character-in-action scene', {
+    sceneId: scene.id,
+    requestId: response.requestId,
+    model: response.model,
+    profileId: profile.id,
+    referenceImageCount: additionalImageUrls.length + 1,
+    file: 'scene-generator.ts',
+  });
+
+  return {
+    sceneId: scene.id,
+    providerVideoId: `${response.requestId}|${response.model}`,
+    provider: 'kling',
+    status: 'generating',
+    videoUrl: null,
+    thumbnailUrl: null,
+    progress: 0,
+    error: null,
+  };
+}
+
 // ============================================================================
 // Intelligent Engine Selection
 // ============================================================================
@@ -623,15 +714,6 @@ function selectBackgroundEngine(
 }
 
 /**
- * Determine whether a scene needs a talking avatar or is purely visual.
- * Used by generateScene() to decide whether to route to avatar generation.
- */
-function isAvatarScene(scene: PipelineScene, hasAvatar: boolean): boolean {
-  const classification = classifyScene(scene, hasAvatar);
-  return classification === 'talking-head' || classification === 'character-in-action';
-}
-
-/**
  * Select engines for all scenes in a batch. Returns a map of sceneId → engine.
  */
 export async function selectEnginesForScenes(
@@ -684,12 +766,21 @@ export async function generateScene(
         return await generateWithSora(scene, aspectRatio);
 
       case 'kling': {
-        // If scene needs an avatar (has speaking script + avatar configured),
-        // use Kling Avatar (photo + audio = talking head) instead of text-to-video
-        const needsKlingAvatar = hasAvatar && isAvatarScene(scene, hasAvatar);
-        if (needsKlingAvatar) {
+        // Classify the scene to pick the right Kling sub-engine
+        const classification = classifyScene(scene, hasAvatar);
+
+        if (classification === 'character-in-action' && hasAvatar) {
+          // Avatar's likeness in an action scenario — use Kling Reference-to-Video
+          // (reference images → character-consistent video of them doing things)
+          return await generateWithKlingReference(scene, avatarId, aspectRatio);
+        }
+
+        if (classification === 'talking-head' && hasAvatar) {
+          // Avatar speaking to camera — use Kling Avatar (photo + audio → talking head)
           return await generateWithKlingAvatar(scene, avatarId, voiceId, aspectRatio, voiceProvider);
         }
+
+        // All other Kling scenes: text-to-video (B-roll, stylized, dynamic, etc.)
         return await generateWithKling(scene, aspectRatio);
       }
 
