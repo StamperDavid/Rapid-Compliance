@@ -18,10 +18,25 @@ import crypto from 'crypto';
 // Types
 // ============================================================================
 
+/** A single green screen video clip with its spoken script */
+export interface GreenScreenClip {
+  id: string;
+  videoUrl: string; // URL to the green screen video file
+  thumbnailUrl: string | null; // Auto-generated or uploaded thumbnail
+  script: string; // The text spoken in this clip
+  duration: number; // seconds
+  createdAt: string; // ISO string
+}
+
+export type AvatarTier = 'premium' | 'standard';
+
 export interface AvatarProfile {
   id: string;
   userId: string;
   name: string; // e.g., "David - Professional"
+
+  // Avatar tier
+  tier: AvatarTier; // 'premium' = green screen video clips, 'standard' = photo-based
 
   // Reference images for character consistency
   frontalImageUrl: string; // Primary face photo (required)
@@ -29,8 +44,11 @@ export interface AvatarProfile {
   fullBodyImageUrl: string | null; // Full body reference
   upperBodyImageUrl: string | null; // Upper body reference
 
-  // Voice identity
-  voiceId: string | null; // ElevenLabs voice clone ID
+  // Green screen video clips (premium tier)
+  greenScreenClips: GreenScreenClip[]; // Multiple short clips with different scripts
+
+  // Voice identity (from Voice Lab — ElevenLabs, UnrealSpeech, custom clones)
+  voiceId: string | null;
   voiceProvider: 'elevenlabs' | 'unrealspeech' | 'custom' | null;
 
   // Metadata
@@ -45,9 +63,11 @@ type VoiceProvider = 'elevenlabs' | 'unrealspeech' | 'custom';
 export interface CreateAvatarProfileData {
   name: string;
   frontalImageUrl: string;
+  tier?: AvatarTier;
   additionalImageUrls?: string[];
   fullBodyImageUrl?: string | null;
   upperBodyImageUrl?: string | null;
+  greenScreenClips?: GreenScreenClip[];
   voiceId?: string | null;
   voiceProvider?: VoiceProvider | null;
   description?: string | null;
@@ -57,9 +77,11 @@ export interface CreateAvatarProfileData {
 export interface UpdateAvatarProfileData {
   name?: string;
   frontalImageUrl?: string;
+  tier?: AvatarTier;
   additionalImageUrls?: string[];
   fullBodyImageUrl?: string | null;
   upperBodyImageUrl?: string | null;
+  greenScreenClips?: GreenScreenClip[];
   voiceId?: string | null;
   voiceProvider?: VoiceProvider | null;
   description?: string | null;
@@ -73,10 +95,12 @@ export interface UpdateAvatarProfileData {
 interface FirestoreAvatarProfileDoc {
   userId: string;
   name: string;
+  tier: AvatarTier;
   frontalImageUrl: string;
   additionalImageUrls: string[];
   fullBodyImageUrl: string | null;
   upperBodyImageUrl: string | null;
+  greenScreenClips: GreenScreenClip[];
   voiceId: string | null;
   voiceProvider: VoiceProvider | null;
   description: string | null;
@@ -111,14 +135,17 @@ function timestampToISO(timestamp: unknown): string {
  */
 function docToProfile(id: string, raw: FirebaseFirestore.DocumentData): AvatarProfile {
   const data = raw as FirestoreAvatarProfileDoc;
+  const clips = data.greenScreenClips ?? [];
   return {
     id,
     userId: data.userId ?? '',
     name: data.name ?? '',
+    tier: data.tier ?? (clips.length > 0 ? 'premium' : 'standard'),
     frontalImageUrl: data.frontalImageUrl ?? '',
     additionalImageUrls: data.additionalImageUrls ?? [],
     fullBodyImageUrl: data.fullBodyImageUrl ?? null,
     upperBodyImageUrl: data.upperBodyImageUrl ?? null,
+    greenScreenClips: clips,
     voiceId: data.voiceId ?? null,
     voiceProvider: data.voiceProvider ?? null,
     description: data.description ?? null,
@@ -147,13 +174,18 @@ export async function createAvatarProfile(
 
     const profileId = crypto.randomUUID();
 
+    const greenScreenClips = data.greenScreenClips ?? [];
+    const tier = data.tier ?? (greenScreenClips.length > 0 ? 'premium' : 'standard');
+
     const profileData = {
       userId,
       name: data.name,
+      tier,
       frontalImageUrl: data.frontalImageUrl,
       additionalImageUrls: (data.additionalImageUrls ?? []).slice(0, MAX_ADDITIONAL_IMAGES),
       fullBodyImageUrl: data.fullBodyImageUrl ?? null,
       upperBodyImageUrl: data.upperBodyImageUrl ?? null,
+      greenScreenClips,
       voiceId: data.voiceId ?? null,
       voiceProvider: data.voiceProvider ?? null,
       description: data.description ?? null,
@@ -180,10 +212,12 @@ export async function createAvatarProfile(
       id: profileId,
       userId,
       name: data.name,
+      tier,
       frontalImageUrl: data.frontalImageUrl,
       additionalImageUrls: profileData.additionalImageUrls,
       fullBodyImageUrl: profileData.fullBodyImageUrl,
       upperBodyImageUrl: profileData.upperBodyImageUrl,
+      greenScreenClips,
       voiceId: profileData.voiceId,
       voiceProvider: profileData.voiceProvider,
       description: profileData.description,
@@ -287,6 +321,9 @@ export async function updateAvatarProfile(
     if (updates.name !== undefined) {
       updateData.name = updates.name;
     }
+    if (updates.tier !== undefined) {
+      updateData.tier = updates.tier;
+    }
     if (updates.frontalImageUrl !== undefined) {
       updateData.frontalImageUrl = updates.frontalImageUrl;
     }
@@ -298,6 +335,9 @@ export async function updateAvatarProfile(
     }
     if (updates.upperBodyImageUrl !== undefined) {
       updateData.upperBodyImageUrl = updates.upperBodyImageUrl;
+    }
+    if (updates.greenScreenClips !== undefined) {
+      updateData.greenScreenClips = updates.greenScreenClips;
     }
     if (updates.voiceId !== undefined) {
       updateData.voiceId = updates.voiceId;
@@ -537,6 +577,126 @@ export async function addReferenceImage(
       file: 'avatar-profile-service.ts',
     });
     return { success: false, error: 'Failed to add reference image' };
+  }
+}
+
+// ============================================================================
+// Green Screen Clip Management
+// ============================================================================
+
+const MAX_GREEN_SCREEN_CLIPS = 20;
+
+/**
+ * Add a green screen video clip to an avatar profile.
+ * Automatically upgrades the profile tier to 'premium'.
+ */
+export async function addGreenScreenClip(
+  profileId: string,
+  clip: Omit<GreenScreenClip, 'id' | 'createdAt'>
+): Promise<{ success: boolean; clipId?: string; error?: string }> {
+  try {
+    if (!adminDb) {
+      return { success: false, error: 'Database not available' };
+    }
+
+    const docSnap = await adminDb.collection(COLLECTION_PATH).doc(profileId).get();
+    if (!docSnap.exists) {
+      return { success: false, error: 'Profile not found' };
+    }
+
+    const data = docSnap.data() as FirestoreAvatarProfileDoc | undefined;
+    if (!data) {
+      return { success: false, error: 'Profile data is empty' };
+    }
+
+    const currentClips = data.greenScreenClips ?? [];
+    if (currentClips.length >= MAX_GREEN_SCREEN_CLIPS) {
+      return { success: false, error: `Maximum of ${MAX_GREEN_SCREEN_CLIPS} green screen clips allowed` };
+    }
+
+    const clipId = crypto.randomUUID();
+    const newClip: GreenScreenClip = {
+      id: clipId,
+      videoUrl: clip.videoUrl,
+      thumbnailUrl: clip.thumbnailUrl ?? null,
+      script: clip.script,
+      duration: clip.duration,
+      createdAt: new Date().toISOString(),
+    };
+
+    await adminDb.collection(COLLECTION_PATH).doc(profileId).update({
+      greenScreenClips: [...currentClips, newClip],
+      tier: 'premium', // Auto-upgrade to premium when clips are added
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+
+    logger.info('Green screen clip added to avatar profile', {
+      profileId,
+      clipId,
+      duration: clip.duration,
+      file: 'avatar-profile-service.ts',
+    });
+
+    return { success: true, clipId };
+  } catch (error) {
+    logger.error('Failed to add green screen clip', error as Error, {
+      profileId,
+      file: 'avatar-profile-service.ts',
+    });
+    return { success: false, error: 'Failed to add green screen clip' };
+  }
+}
+
+/**
+ * Remove a green screen video clip from an avatar profile.
+ * Downgrades tier to 'standard' if no clips remain.
+ */
+export async function removeGreenScreenClip(
+  profileId: string,
+  clipId: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    if (!adminDb) {
+      return { success: false, error: 'Database not available' };
+    }
+
+    const docSnap = await adminDb.collection(COLLECTION_PATH).doc(profileId).get();
+    if (!docSnap.exists) {
+      return { success: false, error: 'Profile not found' };
+    }
+
+    const data = docSnap.data() as FirestoreAvatarProfileDoc | undefined;
+    if (!data) {
+      return { success: false, error: 'Profile data is empty' };
+    }
+
+    const currentClips = data.greenScreenClips ?? [];
+    const updatedClips = currentClips.filter((c) => c.id !== clipId);
+
+    if (updatedClips.length === currentClips.length) {
+      return { success: false, error: 'Clip not found' };
+    }
+
+    await adminDb.collection(COLLECTION_PATH).doc(profileId).update({
+      greenScreenClips: updatedClips,
+      tier: updatedClips.length > 0 ? 'premium' : 'standard',
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+
+    logger.info('Green screen clip removed from avatar profile', {
+      profileId,
+      clipId,
+      remainingClips: updatedClips.length,
+      file: 'avatar-profile-service.ts',
+    });
+
+    return { success: true };
+  } catch (error) {
+    logger.error('Failed to remove green screen clip', error as Error, {
+      profileId,
+      file: 'avatar-profile-service.ts',
+    });
+    return { success: false, error: 'Failed to remove green screen clip' };
   }
 }
 

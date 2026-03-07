@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { motion } from 'framer-motion';
-import { User, Loader2, AlertCircle, Search, Check, Mic, Sparkles, Trash2, Star } from 'lucide-react';
+import { User, Loader2, AlertCircle, Search, Check, Mic, Sparkles, Trash2, Video, Crown } from 'lucide-react';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
 
@@ -11,10 +11,12 @@ import { cn } from '@/lib/utils';
 interface AvatarProfileItem {
   id: string;
   name: string;
+  tier: 'premium' | 'standard';
   frontalImageUrl: string;
   additionalImageUrls: string[];
   fullBodyImageUrl: string | null;
   upperBodyImageUrl: string | null;
+  greenScreenClips: Array<{ id: string; script: string; duration: number }>;
   voiceId: string | null;
   voiceProvider: 'elevenlabs' | 'unrealspeech' | 'custom' | null;
   description: string | null;
@@ -86,6 +88,12 @@ function AvatarCard({
 
       {/* Metadata row */}
       <div className="flex items-center gap-1 flex-wrap justify-center">
+        {profile.greenScreenClips?.length > 0 && (
+          <span className="flex items-center gap-0.5 px-1.5 py-0.5 bg-purple-500/10 rounded text-[10px] text-purple-300">
+            <Video className="w-2.5 h-2.5" />
+            {profile.greenScreenClips.length} clips
+          </span>
+        )}
         {referenceCount > 0 && (
           <span className="px-1.5 py-0.5 bg-zinc-700/50 rounded text-[10px] text-zinc-400">
             {referenceCount + 1} refs
@@ -106,18 +114,17 @@ function AvatarCard({
         </div>
       )}
 
-      {/* Default + delete badges */}
+      {/* Tier + default + delete badges */}
       <span className="absolute top-1.5 right-1.5 flex items-center gap-1">
-        {profile.isDefault && (
-          <span className="flex items-center gap-0.5 px-1.5 py-0.5 bg-amber-500/20 border border-amber-500/30 text-amber-400 text-[9px] font-bold rounded">
-            <Star className="w-2.5 h-2.5" />
-            DEFAULT
+        {profile.tier === 'premium' ? (
+          <span className="flex items-center gap-0.5 px-1.5 py-0.5 bg-purple-500/20 border border-purple-500/30 text-purple-400 text-[9px] font-bold rounded">
+            <Crown className="w-2.5 h-2.5" />
+            PREMIUM
           </span>
-        )}
-        {!profile.isDefault && (
+        ) : (
           <span className="flex items-center gap-0.5 px-1.5 py-0.5 bg-green-500/20 border border-green-500/30 text-green-400 text-[9px] font-bold rounded">
             <Sparkles className="w-2.5 h-2.5" />
-            PROFILE
+            STANDARD
           </span>
         )}
         {onDelete && !isConfirmingDelete && (

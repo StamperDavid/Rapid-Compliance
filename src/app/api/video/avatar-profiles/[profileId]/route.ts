@@ -20,12 +20,23 @@ export const dynamic = 'force-dynamic';
 // Validation Schema
 // ============================================================================
 
+const GreenScreenClipSchema = z.object({
+  id: z.string().min(1),
+  videoUrl: z.string().url(),
+  thumbnailUrl: z.string().url().nullable().default(null),
+  script: z.string().min(1),
+  duration: z.number().positive(),
+  createdAt: z.string(),
+});
+
 const UpdateProfileSchema = z.object({
   name: z.string().min(1).optional(),
   frontalImageUrl: z.string().url().optional(),
+  tier: z.enum(['premium', 'standard']).optional(),
   additionalImageUrls: z.array(z.string().url()).optional(),
   fullBodyImageUrl: z.string().url().nullable().optional(),
   upperBodyImageUrl: z.string().url().nullable().optional(),
+  greenScreenClips: z.array(GreenScreenClipSchema).optional(),
   voiceId: z.string().nullable().optional(),
   voiceProvider: z
     .enum(['elevenlabs', 'unrealspeech', 'custom'])

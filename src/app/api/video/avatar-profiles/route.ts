@@ -18,12 +18,23 @@ export const dynamic = 'force-dynamic';
 // Validation Schema
 // ============================================================================
 
+const GreenScreenClipSchema = z.object({
+  id: z.string().min(1),
+  videoUrl: z.string().url(),
+  thumbnailUrl: z.string().url().nullable().default(null),
+  script: z.string().min(1),
+  duration: z.number().positive(),
+  createdAt: z.string().default(() => new Date().toISOString()),
+});
+
 const CreateProfileSchema = z.object({
   name: z.string().min(1),
   frontalImageUrl: z.string().url(),
+  tier: z.enum(['premium', 'standard']).default('standard'),
   additionalImageUrls: z.array(z.string().url()).default([]),
   fullBodyImageUrl: z.string().url().nullable().default(null),
   upperBodyImageUrl: z.string().url().nullable().default(null),
+  greenScreenClips: z.array(GreenScreenClipSchema).default([]),
   voiceId: z.string().nullable().default(null),
   voiceProvider: z
     .enum(['elevenlabs', 'unrealspeech', 'custom'])
@@ -116,9 +127,11 @@ export async function POST(request: NextRequest) {
     const result = await createAvatarProfile(userId, {
       name: data.name,
       frontalImageUrl: data.frontalImageUrl,
+      tier: data.tier,
       additionalImageUrls: data.additionalImageUrls,
       fullBodyImageUrl: data.fullBodyImageUrl,
       upperBodyImageUrl: data.upperBodyImageUrl,
+      greenScreenClips: data.greenScreenClips,
       voiceId: data.voiceId,
       voiceProvider: data.voiceProvider,
       description: data.description,
