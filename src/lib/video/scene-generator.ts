@@ -172,7 +172,7 @@ async function generateWithKling(
 
 /**
  * Generate a talking avatar scene using Kling Avatar v2 (via fal.ai).
- * Primary avatar engine — replaces HeyGen entirely.
+ * Primary avatar engine (via fal.ai).
  * Takes: photo + TTS audio → talking head video.
  *
  * Also generates a video background from Runway/Kling and composites them if available.

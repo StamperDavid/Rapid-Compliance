@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { Loader2, AlertCircle, Play, Pause, Mic, Search, Check, Volume2, AlertTriangle, Upload, Sparkles, AudioWaveform } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import type { HeyGenVoice } from '@/types/video';
+import type { VideoVoice } from '@/types/video';
 
 interface VoicePickerProps {
   selectedVoiceId: string | null;
@@ -18,7 +18,7 @@ const PROVIDER_FILTERS = ['all', 'custom', 'elevenlabs', 'unrealspeech'] as cons
 
 export function VoicePicker({ selectedVoiceId, onSelect }: VoicePickerProps) {
   const authFetch = useAuthFetch();
-  const [voices, setVoices] = useState<HeyGenVoice[]>([]);
+  const [voices, setVoices] = useState<VideoVoice[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [playingId, setPlayingId] = useState<string | null>(null);
@@ -45,7 +45,7 @@ export function VoicePicker({ selectedVoiceId, onSelect }: VoicePickerProps) {
       if (!response.ok) {
         throw new Error('Failed to fetch voices');
       }
-      const data = await response.json() as { success: boolean; voices: HeyGenVoice[] };
+      const data = await response.json() as { success: boolean; voices: VideoVoice[] };
       setVoices(data.voices ?? []);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load voices');
@@ -124,7 +124,7 @@ export function VoicePicker({ selectedVoiceId, onSelect }: VoicePickerProps) {
     }
   };
 
-  const handlePreview = async (voice: HeyGenVoice) => {
+  const handlePreview = async (voice: VideoVoice) => {
     setPreviewError(null);
 
     if (playingId === voice.id) {

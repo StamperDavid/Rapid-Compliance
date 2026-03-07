@@ -64,7 +64,7 @@ export interface ScriptGenerationParams {
     description?: string | null;
     hasReferenceImages: boolean;   // true = character-in-action scenes possible (Kling Reference)
     hasFullBodyImage: boolean;     // true = full body shots possible
-    voiceProvider: string | null;  // 'elevenlabs' | 'heygen' | etc.
+    voiceProvider: string | null;  // 'elevenlabs' | 'unrealspeech' | 'custom' | etc.
     voiceName?: string | null;     // human-readable voice label
   };
 }

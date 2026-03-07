@@ -53,31 +53,32 @@ export function AvatarUpload({ onAvatarCreated }: AvatarUploadProps) {
         throw new Error(uploadData.error ?? 'Photo upload failed');
       }
 
-      // Step 2: Automatically create an avatar profile from the uploaded photo
+      // Step 2: Create an Avatar Profile with the uploaded photo
       setPhase('creating');
 
       const name = avatarName.trim() || 'My Avatar';
-      const createResponse = await authFetch('/api/video/avatar/create', {
+      const createResponse = await authFetch('/api/video/avatar-profiles', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          photoUrl: uploadData.url,
-          avatarName: name,
+          name,
+          frontalImageUrl: uploadData.url,
+          isDefault: true,
         }),
       });
 
       const createData = await createResponse.json() as {
         success: boolean;
-        avatarId?: string;
+        profile?: { id: string };
         error?: string;
       };
 
-      if (!createResponse.ok || !createData.success || !createData.avatarId) {
-        throw new Error(createData.error ?? 'Avatar creation failed');
+      if (!createResponse.ok || !createData.success || !createData.profile) {
+        throw new Error(createData.error ?? 'Avatar profile creation failed');
       }
 
       setPhase('done');
-      onAvatarCreated(createData.avatarId, name);
+      onAvatarCreated(createData.profile.id, name);
     } catch (err) {
       setPhase('error');
       setError(err instanceof Error ? err.message : 'Failed to create avatar');

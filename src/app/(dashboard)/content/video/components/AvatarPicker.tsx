@@ -3,20 +3,32 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { motion } from 'framer-motion';
-import { User, Loader2, AlertCircle, Search, Check, Mic, Sparkles, Trash2 } from 'lucide-react';
+import { User, Loader2, AlertCircle, Search, Check, Mic, Sparkles, Trash2, Star } from 'lucide-react';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
-import type { HeyGenAvatar } from '@/types/video';
+
+// Avatar Profile shape returned by GET /api/video/avatar-profiles
+interface AvatarProfileItem {
+  id: string;
+  name: string;
+  frontalImageUrl: string;
+  additionalImageUrls: string[];
+  fullBodyImageUrl: string | null;
+  upperBodyImageUrl: string | null;
+  voiceId: string | null;
+  voiceProvider: 'elevenlabs' | 'unrealspeech' | 'custom' | null;
+  description: string | null;
+  isDefault: boolean;
+  createdAt: string;
+}
 
 interface AvatarPickerProps {
   selectedAvatarId: string | null;
   onSelect: (avatarId: string, avatarName: string) => void;
 }
 
-const GENDER_FILTERS = ['all', 'male', 'female'] as const;
-
 function AvatarCard({
-  avatar,
+  profile,
   isSelected,
   onSelect,
   onDelete,
@@ -24,7 +36,7 @@ function AvatarCard({
   onConfirmDelete,
   onCancelDelete,
 }: {
-  avatar: HeyGenAvatar;
+  profile: AvatarProfileItem;
   isSelected: boolean;
   onSelect: () => void;
   onDelete?: () => void;
@@ -32,6 +44,11 @@ function AvatarCard({
   onConfirmDelete?: () => void;
   onCancelDelete?: () => void;
 }) {
+  const referenceCount =
+    (profile.additionalImageUrls?.length ?? 0) +
+    (profile.fullBodyImageUrl ? 1 : 0) +
+    (profile.upperBodyImageUrl ? 1 : 0);
+
   return (
     <motion.button
       onClick={onSelect}
@@ -45,18 +62,15 @@ function AvatarCard({
       whileTap={{ scale: 0.97 }}
     >
       {/* Thumbnail */}
-      {avatar.thumbnailUrl ? (
-        <div className={cn(
-          'relative w-20 h-20 rounded-full overflow-hidden ring-2',
-          avatar.isCustom ? 'ring-green-500/40' : 'ring-zinc-700/50',
-        )}>
+      {profile.frontalImageUrl ? (
+        <div className="relative w-20 h-20 rounded-full overflow-hidden ring-2 ring-green-500/40">
           <Image
-            src={avatar.thumbnailUrl}
-            alt={avatar.name}
+            src={profile.frontalImageUrl}
+            alt={profile.name}
             fill
             className="object-cover"
             sizes="80px"
-            unoptimized={avatar.thumbnailUrl.startsWith('data:')}
+            unoptimized={profile.frontalImageUrl.startsWith('data:')}
           />
         </div>
       ) : (
@@ -67,52 +81,59 @@ function AvatarCard({
 
       {/* Name */}
       <span className="text-xs font-medium text-zinc-200 truncate w-full text-center">
-        {avatar.name}
+        {profile.name}
       </span>
 
       {/* Metadata row */}
       <div className="flex items-center gap-1 flex-wrap justify-center">
-        {avatar.gender && (
+        {referenceCount > 0 && (
           <span className="px-1.5 py-0.5 bg-zinc-700/50 rounded text-[10px] text-zinc-400">
-            {avatar.gender}
+            {referenceCount + 1} refs
           </span>
         )}
-        {avatar.style && (
-          <span className="px-1.5 py-0.5 bg-zinc-700/50 rounded text-[10px] text-zinc-400">
-            {avatar.style}
+        {profile.description && (
+          <span className="px-1.5 py-0.5 bg-zinc-700/50 rounded text-[10px] text-zinc-400 truncate max-w-[80px]">
+            {profile.description}
           </span>
         )}
       </div>
 
       {/* Voice assignment indicator */}
-      {avatar.assignedVoiceName && (
+      {profile.voiceProvider && (
         <div className="flex items-center gap-1 px-1.5 py-0.5 bg-purple-500/10 border border-purple-500/20 rounded text-[10px] text-purple-300 w-full justify-center">
           <Mic className="w-2.5 h-2.5 flex-shrink-0" />
-          <span className="truncate">{avatar.assignedVoiceName}</span>
+          <span className="truncate">{profile.voiceProvider}</span>
         </div>
       )}
 
-      {/* Custom badge + delete */}
-      {avatar.isCustom && !isConfirmingDelete && (
-        <span className="absolute top-1.5 right-1.5 flex items-center gap-1">
+      {/* Default + delete badges */}
+      <span className="absolute top-1.5 right-1.5 flex items-center gap-1">
+        {profile.isDefault && (
+          <span className="flex items-center gap-0.5 px-1.5 py-0.5 bg-amber-500/20 border border-amber-500/30 text-amber-400 text-[9px] font-bold rounded">
+            <Star className="w-2.5 h-2.5" />
+            DEFAULT
+          </span>
+        )}
+        {!profile.isDefault && (
           <span className="flex items-center gap-0.5 px-1.5 py-0.5 bg-green-500/20 border border-green-500/30 text-green-400 text-[9px] font-bold rounded">
             <Sparkles className="w-2.5 h-2.5" />
-            CUSTOM
+            PROFILE
           </span>
-          {onDelete && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onDelete();
-              }}
-              className="p-1 bg-red-500/20 border border-red-500/30 text-red-400 rounded hover:bg-red-500/40 transition-colors"
-              title="Delete avatar"
-            >
-              <Trash2 className="w-2.5 h-2.5" />
-            </button>
-          )}
-        </span>
-      )}
+        )}
+        {onDelete && !isConfirmingDelete && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete();
+            }}
+            className="p-1 bg-red-500/20 border border-red-500/30 text-red-400 rounded hover:bg-red-500/40 transition-colors"
+            title="Delete profile"
+          >
+            <Trash2 className="w-2.5 h-2.5" />
+          </button>
+        )}
+      </span>
+
       {/* Confirm delete overlay */}
       {isConfirmingDelete && (
         <div
@@ -142,12 +163,6 @@ function AvatarCard({
           </div>
         </div>
       )}
-      {/* Premium badge */}
-      {!avatar.isCustom && avatar.isPremium && (
-        <span className="absolute top-1.5 right-1.5 px-1.5 py-0.5 bg-amber-500/20 text-amber-400 text-[9px] font-bold rounded">
-          PRO
-        </span>
-      )}
 
       {/* Selected checkmark */}
       {isSelected && (
@@ -161,93 +176,75 @@ function AvatarCard({
 
 export function AvatarPicker({ selectedAvatarId, onSelect }: AvatarPickerProps) {
   const authFetch = useAuthFetch();
-  const [avatars, setAvatars] = useState<HeyGenAvatar[]>([]);
+  const [profiles, setProfiles] = useState<AvatarProfileItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterGender, setFilterGender] = useState<string>('all');
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
-  const executeDelete = useCallback(async (avatarId: string) => {
+  const executeDelete = useCallback(async (profileId: string) => {
     setConfirmDeleteId(null);
-    setDeletingId(avatarId);
+    setDeletingId(profileId);
     try {
-      const response = await authFetch(`/api/video/avatar/${encodeURIComponent(avatarId)}`, {
+      const response = await authFetch(`/api/video/avatar-profiles/${encodeURIComponent(profileId)}`, {
         method: 'DELETE',
       });
       if (!response.ok) {
         const data = await response.json() as { error?: string };
-        throw new Error(data.error ?? 'Failed to delete avatar');
+        throw new Error(data.error ?? 'Failed to delete profile');
       }
-      setAvatars(prev => prev.filter(a => a.id !== avatarId));
+      setProfiles(prev => prev.filter(p => p.id !== profileId));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete avatar');
+      setError(err instanceof Error ? err.message : 'Failed to delete profile');
     } finally {
       setDeletingId(null);
     }
   }, [authFetch]);
 
-  const fetchAvatars = useCallback(async () => {
+  const fetchProfiles = useCallback(async () => {
     try {
-      const response = await authFetch('/api/video/avatars');
+      const response = await authFetch('/api/video/avatar-profiles');
       if (!response.ok) {
-        throw new Error('Failed to fetch avatars');
+        throw new Error('Failed to fetch avatar profiles');
       }
-      const data = await response.json() as { success: boolean; avatars: HeyGenAvatar[] };
-      setAvatars(data.avatars ?? []);
+      const data = await response.json() as { success: boolean; profiles: AvatarProfileItem[] };
+      setProfiles(data.profiles ?? []);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load avatars');
+      setError(err instanceof Error ? err.message : 'Failed to load avatar profiles');
     } finally {
       setIsLoading(false);
     }
   }, [authFetch]);
 
   useEffect(() => {
-    void fetchAvatars();
-  }, [fetchAvatars]);
+    void fetchProfiles();
+  }, [fetchProfiles]);
 
-  // Split into custom vs stock
-  const { customAvatars, stockAvatars } = useMemo(() => {
-    let custom = avatars.filter(a => a.isCustom);
-    let stock = avatars.filter(a => !a.isCustom);
-
-    if (filterGender !== 'all') {
-      custom = custom.filter(a => !a.gender || a.gender === filterGender);
-      stock = stock.filter(a => a.gender === filterGender);
-    }
-
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      const matchFn = (a: HeyGenAvatar) =>
-        a.name.toLowerCase().includes(query) ||
-        (a.style?.toLowerCase().includes(query) ?? false) ||
-        (a.ethnicity?.toLowerCase().includes(query) ?? false) ||
-        (a.assignedVoiceName?.toLowerCase().includes(query) ?? false);
-      custom = custom.filter(matchFn);
-      stock = stock.filter(matchFn);
-    }
-
-    return { customAvatars: custom, stockAvatars: stock };
-  }, [avatars, filterGender, searchQuery]);
-
-  const totalFiltered = customAvatars.length + stockAvatars.length;
+  const filteredProfiles = useMemo(() => {
+    if (!searchQuery.trim()) { return profiles; }
+    const query = searchQuery.toLowerCase();
+    return profiles.filter(p =>
+      p.name.toLowerCase().includes(query) ||
+      (p.description?.toLowerCase().includes(query) ?? false)
+    );
+  }, [profiles, searchQuery]);
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12 gap-2 text-zinc-400">
         <Loader2 className="w-5 h-5 animate-spin" />
-        <span className="text-sm">Loading avatars...</span>
+        <span className="text-sm">Loading avatar profiles...</span>
       </div>
     );
   }
 
-  if (error || avatars.length === 0) {
+  if (error || profiles.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-12 gap-3">
         <AlertCircle className="w-8 h-8 text-zinc-500" />
         <p className="text-sm text-zinc-400">
-          {error ?? 'No avatars available. Configure avatar profiles in Settings.'}
+          {error ?? 'No avatar profiles yet. Upload a headshot below to create one.'}
         </p>
       </div>
     );
@@ -255,98 +252,47 @@ export function AvatarPicker({ selectedAvatarId, onSelect }: AvatarPickerProps) 
 
   return (
     <div className="space-y-4">
-      {/* Search + Gender Filter */}
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1">
+      {/* Search */}
+      {profiles.length > 3 && (
+        <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search avatars..."
+            placeholder="Search profiles..."
             className="w-full pl-9 pr-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-500/50"
           />
         </div>
-        <div className="flex gap-1.5">
-          {GENDER_FILTERS.map((gender) => (
-            <button
-              key={gender}
-              onClick={() => setFilterGender(gender)}
-              className={cn(
-                'px-3 py-2 rounded-lg text-xs font-medium transition-colors',
-                filterGender === gender
-                  ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
-                  : 'bg-zinc-800 text-zinc-400 border border-zinc-700 hover:border-zinc-600',
-              )}
-            >
-              {gender.charAt(0).toUpperCase() + gender.slice(1)}
-            </button>
+      )}
+
+      {/* Results count */}
+      <p className="text-xs text-zinc-500">
+        {filteredProfiles.length} profile{filteredProfiles.length !== 1 ? 's' : ''}
+        {searchQuery ? ' matching search' : ' available'}
+      </p>
+
+      <div className="max-h-[520px] overflow-y-auto pr-1">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+          {filteredProfiles.map((profile) => (
+            <AvatarCard
+              key={profile.id}
+              profile={profile}
+              isSelected={selectedAvatarId === profile.id}
+              onSelect={() => onSelect(profile.id, profile.name)}
+              onDelete={deletingId === profile.id ? undefined : () => setConfirmDeleteId(profile.id)}
+              isConfirmingDelete={confirmDeleteId === profile.id}
+              onConfirmDelete={() => void executeDelete(profile.id)}
+              onCancelDelete={() => setConfirmDeleteId(null)}
+            />
           ))}
         </div>
       </div>
 
-      {/* Results count */}
-      <p className="text-xs text-zinc-500">
-        {totalFiltered} avatar{totalFiltered !== 1 ? 's' : ''}
-        {searchQuery || filterGender !== 'all' ? ' matching filters' : ' available'}
-        {customAvatars.length > 0 ? ` (${customAvatars.length} custom)` : ''}
-      </p>
-
-      <div className="max-h-[520px] overflow-y-auto pr-1 space-y-6">
-        {/* Custom Avatars Section */}
-        {customAvatars.length > 0 && (
-          <div>
-            <div className="flex items-center gap-2 mb-3">
-              <div className="flex items-center gap-1.5 px-2.5 py-1 bg-green-500/10 border border-green-500/20 rounded-lg">
-                <Sparkles className="w-3.5 h-3.5 text-green-400" />
-                <span className="text-xs font-semibold text-green-400">Your Avatars</span>
-              </div>
-              <div className="flex-1 h-px bg-zinc-700/50" />
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-              {customAvatars.map((avatar) => (
-                <AvatarCard
-                  key={avatar.id}
-                  avatar={avatar}
-                  isSelected={selectedAvatarId === avatar.id}
-                  onSelect={() => onSelect(avatar.id, avatar.name)}
-                  onDelete={deletingId === avatar.id ? undefined : () => setConfirmDeleteId(avatar.id)}
-                  isConfirmingDelete={confirmDeleteId === avatar.id}
-                  onConfirmDelete={() => void executeDelete(avatar.id)}
-                  onCancelDelete={() => setConfirmDeleteId(null)}
-                />
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Stock Avatars Section */}
-        {stockAvatars.length > 0 && (
-          <div>
-            {customAvatars.length > 0 && (
-              <div className="flex items-center gap-2 mb-3">
-                <span className="text-xs font-medium text-zinc-500 px-2.5 py-1">Stock Avatars</span>
-                <div className="flex-1 h-px bg-zinc-700/50" />
-              </div>
-            )}
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-              {stockAvatars.map((avatar) => (
-                <AvatarCard
-                  key={avatar.id}
-                  avatar={avatar}
-                  isSelected={selectedAvatarId === avatar.id}
-                  onSelect={() => onSelect(avatar.id, avatar.name)}
-                />
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-
-      {totalFiltered === 0 && (
+      {filteredProfiles.length === 0 && searchQuery && (
         <div className="flex flex-col items-center justify-center py-8 gap-2">
           <Search className="w-6 h-6 text-zinc-600" />
-          <p className="text-sm text-zinc-500">No avatars match your search.</p>
+          <p className="text-sm text-zinc-500">No profiles match your search.</p>
         </div>
       )}
     </div>

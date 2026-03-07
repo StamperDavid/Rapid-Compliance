@@ -4,7 +4,8 @@
  *
  * Generates a short TTS audio sample for any voice on demand.
  * - ElevenLabs voices: synthesized via ElevenLabs TTS API
- * - UnrealSpeech / custom voices: falls back to ElevenLabs synthesis
+ * - UnrealSpeech voices: synthesized via UnrealSpeech API
+ * - Custom voices: synthesized via ElevenLabs (custom clones are stored there)
  *
  * Caches generated previews in Firestore to avoid re-synthesizing.
  */
@@ -27,6 +28,107 @@ const requestSchema = z.object({
 });
 
 const SAMPLE_TEXT = 'Hello! This is a preview of my voice. I can help you create professional videos with clear, natural-sounding narration for your business.';
+
+// ── Provider-specific synthesis ──
+
+async function synthesizeElevenLabs(
+  voiceId: string,
+  text: string,
+): Promise<{ base64: string; contentType: string; sizeBytes: number }> {
+  const rawKey = await apiKeyService.getServiceKey(PLATFORM_ID, 'elevenlabs');
+  if (!rawKey || typeof rawKey !== 'string') {
+    throw new Error('ElevenLabs API key not configured. Add it in Settings → API Keys.');
+  }
+
+  const response = await fetch(
+    `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}?output_format=mp3_44100_64`,
+    {
+      method: 'POST',
+      headers: {
+        'xi-api-key': rawKey,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        text,
+        model_id: 'eleven_multilingual_v2',
+        voice_settings: {
+          stability: 0.5,
+          similarity_boost: 0.75,
+          style: 0,
+          use_speaker_boost: true,
+        },
+      }),
+    },
+  );
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`ElevenLabs synthesis failed (${response.status}): ${errorText.slice(0, 200)}`);
+  }
+
+  const audioBuffer = await response.arrayBuffer();
+  return {
+    base64: Buffer.from(audioBuffer).toString('base64'),
+    contentType: 'audio/mpeg',
+    sizeBytes: audioBuffer.byteLength,
+  };
+}
+
+async function synthesizeUnrealSpeech(
+  voiceId: string,
+  text: string,
+): Promise<{ base64: string; contentType: string; sizeBytes: number }> {
+  const rawKey = await apiKeyService.getServiceKey(PLATFORM_ID, 'unrealSpeech');
+  if (!rawKey || typeof rawKey !== 'string') {
+    throw new Error('UnrealSpeech API key not configured. Add it in Settings → API Keys.');
+  }
+
+  const response = await fetch('https://api.v7.unrealspeech.com/speech', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${rawKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      Text: text,
+      VoiceId: voiceId,
+      Bitrate: '192k',
+      Speed: 0,
+      Pitch: 1.0,
+      Codec: 'libmp3lame',
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`UnrealSpeech synthesis failed (${response.status}): ${errorText.slice(0, 200)}`);
+  }
+
+  const data = await response.json() as {
+    OutputUri?: string;
+    SynthesisTask?: { OutputUri?: string };
+  };
+
+  const audioUri = data.OutputUri ?? data.SynthesisTask?.OutputUri;
+  if (!audioUri) {
+    throw new Error('UnrealSpeech returned no audio URL');
+  }
+
+  // Download the audio file from the returned URI
+  const audioResponse = await fetch(audioUri);
+  if (!audioResponse.ok) {
+    throw new Error(`Failed to download UnrealSpeech audio: ${audioResponse.status}`);
+  }
+
+  const audioBuffer = await audioResponse.arrayBuffer();
+  return {
+    base64: Buffer.from(audioBuffer).toString('base64'),
+    contentType: 'audio/mpeg',
+    sizeBytes: audioBuffer.byteLength,
+  };
+}
+
+// ── Main handler ──
 
 export async function POST(request: NextRequest) {
   try {
@@ -66,54 +168,15 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Get ElevenLabs API key
-    const rawKey = await apiKeyService.getServiceKey(PLATFORM_ID, 'elevenlabs');
-    if (!rawKey || typeof rawKey !== 'string') {
-      return NextResponse.json(
-        { success: false, error: 'ElevenLabs API key not configured. Add it in Settings → API Keys.' },
-        { status: 400 },
-      );
+    // Synthesize using the correct provider
+    let result: { base64: string; contentType: string; sizeBytes: number };
+
+    if (provider === 'unrealspeech') {
+      result = await synthesizeUnrealSpeech(voiceId, spokenText);
+    } else {
+      // ElevenLabs handles both 'elevenlabs' and 'custom' (custom clones are stored in ElevenLabs)
+      result = await synthesizeElevenLabs(voiceId, spokenText);
     }
-
-    // Synthesize a short sample
-    const response = await fetch(
-      `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}?output_format=mp3_44100_64`,
-      {
-        method: 'POST',
-        headers: {
-          'xi-api-key': rawKey,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          text: spokenText,
-          model_id: 'eleven_multilingual_v2',
-          voice_settings: {
-            stability: 0.5,
-            similarity_boost: 0.75,
-            style: 0,
-            use_speaker_boost: true,
-          },
-        }),
-      },
-    );
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      logger.warn('ElevenLabs preview synthesis failed', {
-        status: response.status,
-        voiceId,
-        error: errorText.slice(0, 200),
-        file: 'voice-preview/route.ts',
-      });
-      return NextResponse.json(
-        { success: false, error: `Voice preview generation failed (${response.status})` },
-        { status: 502 },
-      );
-    }
-
-    const audioBuffer = await response.arrayBuffer();
-    const base64Audio = Buffer.from(audioBuffer).toString('base64');
-    const contentType = 'audio/mpeg';
 
     // Cache in Firestore for future requests (only for default sample text)
     if (!customText && adminDb) {
@@ -121,11 +184,11 @@ export async function POST(request: NextRequest) {
         .collection(`organizations/${PLATFORM_ID}/voice_previews`)
         .doc(voiceId)
         .set({
-          base64: base64Audio,
-          contentType,
+          base64: result.base64,
+          contentType: result.contentType,
           voiceName,
           provider,
-          sizeBytes: audioBuffer.byteLength,
+          sizeBytes: result.sizeBytes,
           createdAt: new Date(),
           expiresAt: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000), // 90 days
         });
@@ -134,13 +197,14 @@ export async function POST(request: NextRequest) {
     logger.info('Voice preview generated', {
       voiceId,
       voiceName,
-      sizeBytes: audioBuffer.byteLength,
+      provider,
+      sizeBytes: result.sizeBytes,
       file: 'voice-preview/route.ts',
     });
 
     return NextResponse.json({
       success: true,
-      audioUrl: `data:${contentType};base64,${base64Audio}`,
+      audioUrl: `data:${result.contentType};base64,${result.base64}`,
       cached: false,
     });
   } catch (error) {
@@ -148,9 +212,12 @@ export async function POST(request: NextRequest) {
     logger.error('Voice preview error', error instanceof Error ? error : new Error(String(error)), {
       file: 'voice-preview/route.ts',
     });
+
+    // Return 400 for missing API keys, 502 for upstream failures
+    const status = errorMessage.includes('not configured') ? 400 : 502;
     return NextResponse.json(
       { success: false, error: errorMessage },
-      { status: 500 },
+      { status },
     );
   }
 }

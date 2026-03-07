@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import type { HeyGenVoice } from '@/types/video';
+import type { VideoVoice } from '@/types/video';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -79,7 +79,7 @@ export function VoiceLibrary() {
     try {
       const res = await authFetch('/api/video/voices');
       if (!res.ok) { throw new Error('Failed to fetch voices'); }
-      const data = await res.json() as { success: boolean; voices: HeyGenVoice[] };
+      const data = await res.json() as { success: boolean; voices: VideoVoice[] };
       const items: VoiceItem[] = (data.voices ?? []).map((v) => ({
         id: v.id,
         name: v.name,

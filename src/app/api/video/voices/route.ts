@@ -3,7 +3,7 @@ import { logger } from '@/lib/logger/logger';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { apiKeyService } from '@/lib/api-keys/api-key-service';
 import { PLATFORM_ID } from '@/lib/constants/platform';
-import type { HeyGenVoice } from '@/types/video';
+import type { VideoVoice } from '@/types/video';
 
 export const dynamic = 'force-dynamic';
 
@@ -11,7 +11,7 @@ export const dynamic = 'force-dynamic';
  * Fetch ElevenLabs voices if API key is configured.
  * Returns voices with preview URLs that actually work.
  */
-async function fetchElevenLabsVoices(): Promise<HeyGenVoice[]> {
+async function fetchElevenLabsVoices(): Promise<VideoVoice[]> {
   try {
     const rawKey = await apiKeyService.getServiceKey(PLATFORM_ID, 'elevenlabs');
     if (!rawKey || typeof rawKey !== 'string') { return []; }
@@ -56,13 +56,13 @@ async function fetchElevenLabsVoices(): Promise<HeyGenVoice[]> {
  * Fetch UnrealSpeech voices if API key is configured.
  * UnrealSpeech has a fixed set of high-quality voices.
  */
-async function fetchUnrealSpeechVoices(): Promise<HeyGenVoice[]> {
+async function fetchUnrealSpeechVoices(): Promise<VideoVoice[]> {
   try {
     const rawKey = await apiKeyService.getServiceKey(PLATFORM_ID, 'unrealSpeech');
     if (!rawKey || typeof rawKey !== 'string') { return []; }
 
     // UnrealSpeech has a fixed voice roster — no list endpoint needed
-    const voices: HeyGenVoice[] = [
+    const voices: VideoVoice[] = [
       { id: 'Scarlett', name: 'Scarlett', language: 'English', gender: 'female', provider: 'unrealspeech' },
       { id: 'Dan', name: 'Dan', language: 'English', gender: 'male', provider: 'unrealspeech' },
       { id: 'Liv', name: 'Liv', language: 'English', gender: 'female', provider: 'unrealspeech' },
@@ -81,7 +81,7 @@ async function fetchUnrealSpeechVoices(): Promise<HeyGenVoice[]> {
 /**
  * Fetch custom cloned voices from Firestore.
  */
-async function fetchCustomVoices(): Promise<HeyGenVoice[]> {
+async function fetchCustomVoices(): Promise<VideoVoice[]> {
   try {
     const { adminDb } = await import('@/lib/firebase/admin');
     if (!adminDb) { return []; }
