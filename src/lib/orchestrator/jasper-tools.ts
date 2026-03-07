@@ -1104,6 +1104,10 @@ export const JASPER_TOOLS: ToolDefinition[] = [
             type: 'string',
             description: 'Title for the video project in the library',
           },
+          vibe: {
+            type: 'string',
+            description: 'Visual theme/vibe for consistent aesthetics across all scenes. Examples: "warm corporate", "tech noir", "golden hour cinematic", "bright minimalist", "dark dramatic", "playful colorful". All scene backgrounds will match this aesthetic.',
+          },
         },
         required: ['description'],
       },
@@ -3326,6 +3330,7 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
             duration: args.duration ? Number(args.duration) : undefined,
             aspectRatio: args.aspectRatio as '16:9' | '9:16' | '1:1' | undefined,
             userId: context?.userId,
+            vibe: args.vibe as string | undefined,
           },
           requiresResponse: true,
           traceId: `trace_create_video_${Date.now()}`,

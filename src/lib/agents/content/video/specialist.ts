@@ -85,6 +85,8 @@ interface CreateVideoProjectPayload {
   duration?: number;
   aspectRatio?: '16:9' | '9:16' | '1:1';
   userId?: string;
+  /** Visual theme for consistent aesthetics across all scenes */
+  vibe?: string;
 }
 
 interface RenderScenesPayload {
@@ -1628,6 +1630,7 @@ export class VideoSpecialist extends BaseSpecialist {
       duration = 30,
       aspectRatio = '16:9',
       userId,
+      vibe,
     } = payload;
 
     const title = rawTitle ?? `Video: ${description.slice(0, 50)}`;
@@ -1679,6 +1682,7 @@ export class VideoSpecialist extends BaseSpecialist {
       targetAudience: personaTargetAudience,
       painPoints: personaPainPoints,
       tone: personaTone,
+      vibe,
     });
 
     this.log('INFO', `Scripts generated (${scriptResult.generatedBy}): ${scriptResult.scenes.length} scenes`);
@@ -1760,32 +1764,55 @@ export class VideoSpecialist extends BaseSpecialist {
     }
 
     // ── AUTOMATE MODE: Full generation (avatar pick + render) ──
+    // Priority: Default Avatar Profile → HeyGen avatar list → Kling fallback
     let videoAvatarId = '';
     let videoVoiceId = '';
-    const hasHeygenScenes = scenes.some((s) => s.engine === 'heygen');
+    let voiceProvider: 'heygen' | 'elevenlabs' | 'unrealspeech' | 'custom' = 'heygen';
+    const hasAvatarScenes = scenes.some((s) => s.engine === 'heygen' || s.engine === 'kling');
 
-    if (hasHeygenScenes) {
+    if (hasAvatarScenes) {
+      // Try 1: Load default Avatar Profile (preferred — user's chosen identity)
       try {
-        const { listHeyGenAvatars, listHeyGenVoices } = await import('@/lib/video/video-service');
-
-        const avatarResult = await listHeyGenAvatars();
-        if ('avatars' in avatarResult && avatarResult.avatars && avatarResult.avatars.length > 0) {
-          videoAvatarId = avatarResult.avatars[0].id;
+        const { getDefaultProfile } = await import('@/lib/video/avatar-profile-service');
+        const defaultProfile = await getDefaultProfile(userId ?? 'jasper');
+        if (defaultProfile) {
+          // Use HeyGen avatar if linked, otherwise profile ID triggers Kling Avatar fallback
+          videoAvatarId = defaultProfile.heygenAvatarId ?? defaultProfile.id;
+          if (defaultProfile.voiceId) {
+            videoVoiceId = defaultProfile.voiceId;
+            voiceProvider = defaultProfile.voiceProvider ?? 'elevenlabs';
+          }
+          this.log('INFO', `Auto-selected default Avatar Profile: "${defaultProfile.name}" (${defaultProfile.heygenAvatarId ? 'HeyGen' : 'Kling Avatar'})`);
         }
-
-        const voiceResult = await listHeyGenVoices();
-        if ('voices' in voiceResult && voiceResult.voices && voiceResult.voices.length > 0) {
-          videoVoiceId = voiceResult.voices[0].id;
-        }
-      } catch (avatarError) {
-        this.log('WARN', `HeyGen avatar/voice auto-select failed: ${avatarError instanceof Error ? avatarError.message : String(avatarError)}`);
+      } catch (profileError) {
+        this.log('WARN', `Avatar Profile auto-select failed: ${profileError instanceof Error ? profileError.message : String(profileError)}`);
       }
 
+      // Try 2: Fall back to HeyGen avatar list if no profile found
+      if (!videoAvatarId) {
+        try {
+          const { listHeyGenAvatars, listHeyGenVoices } = await import('@/lib/video/video-service');
+
+          const avatarResult = await listHeyGenAvatars();
+          if ('avatars' in avatarResult && avatarResult.avatars && avatarResult.avatars.length > 0) {
+            videoAvatarId = avatarResult.avatars[0].id;
+          }
+
+          const voiceResult = await listHeyGenVoices();
+          if ('voices' in voiceResult && voiceResult.voices && voiceResult.voices.length > 0) {
+            videoVoiceId = voiceResult.voices[0].id;
+          }
+        } catch (avatarError) {
+          this.log('WARN', `HeyGen avatar/voice auto-select failed: ${avatarError instanceof Error ? avatarError.message : String(avatarError)}`);
+        }
+      }
+
+      // Try 3: If still no avatar, check if Kling is available for text-to-video fallback
       if (!videoAvatarId || !videoVoiceId) {
-        this.log('WARN', 'HeyGen avatar/voice unavailable — falling back to text-to-video engines');
+        this.log('WARN', 'No avatar/voice available — scenes will use text-to-video engines');
         for (const scene of scenes) {
           if (scene.engine === 'heygen') {
-            scene.engine = 'sora';
+            scene.engine = 'runway';
           }
         }
       }
@@ -1806,7 +1833,7 @@ export class VideoSpecialist extends BaseSpecialist {
     let genError: string | null = null;
 
     try {
-      genResults = await generateAllScenes(scenes, videoAvatarId, videoVoiceId, aspectRatio);
+      genResults = await generateAllScenes(scenes, videoAvatarId, videoVoiceId, aspectRatio, undefined, voiceProvider);
     } catch (genErr: unknown) {
       genError = genErr instanceof Error ? genErr.message : String(genErr);
       this.log('ERROR', `generateAllScenes failed: ${genError}`);
