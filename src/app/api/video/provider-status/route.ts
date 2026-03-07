@@ -16,9 +16,9 @@ type ProviderStatusMap = Record<VideoEngineId, ProviderStatusEntry>;
 
 /** Available engines that have real API integrations */
 const CHECKABLE_ENGINES: Array<{ id: VideoEngineId; service: APIServiceName }> = [
-  { id: 'heygen', service: 'heygen' },
   { id: 'runway', service: 'runway' },
   { id: 'sora', service: 'sora' },
+  { id: 'kling', service: 'kling' },
 ];
 
 export async function GET(request: NextRequest) {
@@ -41,7 +41,6 @@ export async function GET(request: NextRequest) {
     );
 
     const providers: ProviderStatusMap = {
-      heygen: { configured: false },
       runway: { configured: false },
       sora: { configured: false },
       kling: { configured: false },

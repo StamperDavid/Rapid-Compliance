@@ -3,8 +3,8 @@
  * GET /api/video/avatar/photo/[id]
  *
  * Serves avatar photos stored in Firestore as raw image bytes.
- * This endpoint is PUBLIC (no auth) so HeyGen can download the photo
- * to create an Instant Avatar.
+ * This endpoint is PUBLIC (no auth) so external video engines can
+ * download the photo when generating avatar videos.
  */
 
 import { type NextRequest, NextResponse } from 'next/server';

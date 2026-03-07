@@ -10,11 +10,11 @@ import type { HeyGenVoice } from '@/types/video';
 
 interface VoicePickerProps {
   selectedVoiceId: string | null;
-  onSelect: (voiceId: string, voiceName: string, provider?: 'heygen' | 'elevenlabs' | 'unrealspeech' | 'custom') => void;
+  onSelect: (voiceId: string, voiceName: string, provider?: 'elevenlabs' | 'unrealspeech' | 'custom') => void;
 }
 
 const GENDER_FILTERS = ['all', 'male', 'female'] as const;
-const PROVIDER_FILTERS = ['all', 'custom', 'elevenlabs', 'unrealspeech', 'heygen'] as const;
+const PROVIDER_FILTERS = ['all', 'custom', 'elevenlabs', 'unrealspeech'] as const;
 
 export function VoicePicker({ selectedVoiceId, onSelect }: VoicePickerProps) {
   const authFetch = useAuthFetch();
@@ -71,7 +71,7 @@ export function VoicePicker({ selectedVoiceId, onSelect }: VoicePickerProps) {
 
   // Check if we have voices from multiple providers
   const hasMultipleProviders = useMemo(() => {
-    const providers = new Set(voices.map((v) => v.provider ?? 'heygen'));
+    const providers = new Set(voices.map((v) => v.provider ?? 'elevenlabs'));
     return providers.size > 1;
   }, [voices]);
 
@@ -83,7 +83,7 @@ export function VoicePicker({ selectedVoiceId, onSelect }: VoicePickerProps) {
     }
 
     if (filterProvider !== 'all') {
-      result = result.filter((v) => (v.provider ?? 'heygen') === filterProvider);
+      result = result.filter((v) => (v.provider ?? 'elevenlabs') === filterProvider);
     }
 
     if (filterLanguage !== 'all') {
@@ -143,13 +143,7 @@ export function VoicePicker({ selectedVoiceId, onSelect }: VoicePickerProps) {
       return;
     }
 
-    const voiceProvider = voice.provider ?? 'heygen';
-
-    // HeyGen voices can't be previewed standalone
-    if (voiceProvider === 'heygen') {
-      setPreviewError(`HeyGen voices don't support preview. Use ElevenLabs filter for voices with preview support.`);
-      return;
-    }
+    const voiceProvider = voice.provider ?? 'elevenlabs';
 
     // Generate preview on-demand via API
     setLoadingPreviewId(voice.id);
@@ -352,8 +346,7 @@ export function VoicePicker({ selectedVoiceId, onSelect }: VoicePickerProps) {
                 {provider === 'all' ? 'All'
                   : provider === 'custom' ? 'My Clones'
                   : provider === 'elevenlabs' ? 'ElevenLabs'
-                  : provider === 'unrealspeech' ? 'UnrealSpeech'
-                  : 'HeyGen'}
+                  : 'UnrealSpeech'}
               </button>
             ))}
           </div>
@@ -411,7 +404,7 @@ export function VoicePicker({ selectedVoiceId, onSelect }: VoicePickerProps) {
         {filteredVoices.map((voice) => {
           const isSelected = selectedVoiceId === voice.id;
           const isPlaying = playingId === voice.id;
-          const voiceProvider = voice.provider ?? 'heygen';
+          const voiceProvider = voice.provider ?? 'elevenlabs';
 
           return (
             <div
@@ -487,13 +480,11 @@ export function VoicePicker({ selectedVoiceId, onSelect }: VoicePickerProps) {
                 'px-1.5 py-0.5 text-[9px] font-bold rounded flex-shrink-0',
                 voiceProvider === 'custom' ? 'bg-green-500/20 text-green-400'
                   : voiceProvider === 'elevenlabs' ? 'bg-purple-500/20 text-purple-400'
-                  : voiceProvider === 'unrealspeech' ? 'bg-orange-500/20 text-orange-400'
-                  : 'bg-blue-500/20 text-blue-400',
+                  : 'bg-orange-500/20 text-orange-400',
               )}>
                 {voiceProvider === 'custom' ? 'CLONE'
                   : voiceProvider === 'elevenlabs' ? 'XI'
-                  : voiceProvider === 'unrealspeech' ? 'US'
-                  : 'HG'}
+                  : 'US'}
               </span>
             </div>
           );

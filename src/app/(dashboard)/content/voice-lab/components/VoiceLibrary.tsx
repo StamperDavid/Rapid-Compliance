@@ -17,7 +17,7 @@ import type { HeyGenVoice } from '@/types/video';
 interface VoiceItem {
   id: string;
   name: string;
-  provider: 'elevenlabs' | 'heygen' | 'unrealspeech' | 'custom';
+  provider: 'elevenlabs' | 'unrealspeech' | 'custom';
   language?: string;
   gender?: string;
   previewUrl?: string;
@@ -42,7 +42,7 @@ export function VoiceLibrary() {
   const [error, setError] = useState<string | null>(null);
   const [playingId, setPlayingId] = useState<string | null>(null);
   const [loadingPreviewId, setLoadingPreviewId] = useState<string | null>(null);
-  const [filter, setFilter] = useState<'all' | 'custom' | 'elevenlabs' | 'unrealspeech' | 'heygen'>('all');
+  const [filter, setFilter] = useState<'all' | 'custom' | 'elevenlabs' | 'unrealspeech'>('all');
   const [settingDefault, setSettingDefault] = useState<string | null>(null);
   const [defaultVoiceId, setDefaultVoiceId] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -83,7 +83,7 @@ export function VoiceLibrary() {
       const items: VoiceItem[] = (data.voices ?? []).map((v) => ({
         id: v.id,
         name: v.name,
-        provider: v.provider ?? 'heygen',
+        provider: v.provider ?? 'elevenlabs',
         language: v.language,
         gender: v.gender,
         previewUrl: v.previewUrl,
@@ -143,8 +143,6 @@ export function VoiceLibrary() {
       playUrl(voice.id, voice.previewUrl);
       return;
     }
-
-    if (voice.provider === 'heygen') { return; }
 
     setLoadingPreviewId(voice.id);
     try {
@@ -659,7 +657,7 @@ export function VoiceLibrary() {
 
       {/* Filters */}
       <div className="flex gap-1.5">
-        {(['all', 'custom', 'elevenlabs', 'unrealspeech', 'heygen'] as const).map((f) => {
+        {(['all', 'custom', 'elevenlabs', 'unrealspeech'] as const).map((f) => {
           const count = f === 'all' ? voices.length
             : f === 'custom' ? voices.filter((v) => v.provider === 'custom').length
             : voices.filter((v) => v.provider === f).length;
@@ -667,8 +665,7 @@ export function VoiceLibrary() {
           const label = f === 'all' ? 'All'
             : f === 'custom' ? 'My Clones'
             : f === 'elevenlabs' ? 'ElevenLabs'
-            : f === 'unrealspeech' ? 'UnrealSpeech'
-            : 'HeyGen';
+            : 'UnrealSpeech';
           return (
             <button
               key={f}
@@ -745,13 +742,11 @@ export function VoiceLibrary() {
                       'px-1 py-0.5 text-[8px] font-bold rounded',
                       voice.provider === 'custom' ? 'bg-green-500/20 text-green-400'
                         : voice.provider === 'elevenlabs' ? 'bg-purple-500/20 text-purple-400'
-                        : voice.provider === 'unrealspeech' ? 'bg-orange-500/20 text-orange-400'
-                        : 'bg-blue-500/20 text-blue-400',
+                        : 'bg-orange-500/20 text-orange-400',
                     )}>
                       {voice.provider === 'custom' ? 'CLONE'
                         : voice.provider === 'elevenlabs' ? 'XI'
-                        : voice.provider === 'unrealspeech' ? 'US'
-                        : 'HG'}
+                        : 'US'}
                     </span>
                   </div>
                 </div>
@@ -895,8 +890,6 @@ function ComparePanel({ voices, authFetch, onSelectWinner, onClose }: ComparePan
       playCompareAudio(voice.id, voice.previewUrl);
       return;
     }
-
-    if (voice.provider === 'heygen') { return; }
 
     setCompareLoading(voice.id);
     try {

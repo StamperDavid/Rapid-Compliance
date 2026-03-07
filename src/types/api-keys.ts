@@ -294,7 +294,6 @@ export type APIServiceName =
   | 'rapidapi'
   | 'twitter'      // Twitter/X API v2
   | 'linkedin'     // LinkedIn API
-  | 'heygen'       // HeyGen AI Avatar Video
   | 'sora'         // OpenAI Sora Text-to-Video
   | 'runway'       // Runway Gen-3 Video Generation
   | 'elevenlabs'   // ElevenLabs Voice AI

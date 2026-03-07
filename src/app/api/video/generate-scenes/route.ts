@@ -15,14 +15,14 @@ const GenerateScenesSchema = z.object({
     scriptText: z.string(),
     screenshotUrl: z.string().nullable(),
     duration: z.number(),
-    engine: z.enum(['heygen', 'runway', 'sora', 'kling', 'luma']).nullable().default(null),
+    engine: z.enum(['runway', 'sora', 'kling', 'luma']).nullable().default(null),
     backgroundPrompt: z.string().nullable().default(null),
     visualDescription: z.string().nullable().default(null),
     title: z.string().nullable().default(null),
   })),
   avatarId: z.string().default(''),
   voiceId: z.string().default(''),
-  voiceProvider: z.enum(['heygen', 'elevenlabs', 'unrealspeech', 'custom']).default('heygen'),
+  voiceProvider: z.enum(['elevenlabs', 'unrealspeech', 'custom']).default('elevenlabs'),
   aspectRatio: z.enum(['16:9', '9:16', '1:1', '4:3']).default('16:9'),
 });
 

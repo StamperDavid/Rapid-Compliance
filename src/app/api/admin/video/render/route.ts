@@ -12,6 +12,7 @@ import { z } from 'zod';
 import { verifyAdminRequest, isAuthError } from '@/lib/api/admin-auth';
 import { createVideoJobService } from '@/lib/video/video-job-service';
 import { logger } from '@/lib/logger/logger';
+import type { VideoProvider } from '@/types/video';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,7 +22,7 @@ export const dynamic = 'force-dynamic';
 
 const VideoRenderRequestSchema = z.object({
   storyboardId: z.string().min(1, 'Storyboard ID is required'),
-  provider: z.enum(['heygen', 'sora', 'runway', 'veo', 'kling', 'pika']).optional(),
+  provider: z.enum(['sora', 'runway', 'kling', 'luma', 'pika']).optional(),
   aspectRatio: z.enum(['16:9', '9:16', '1:1', '4:3']).optional(),
   resolution: z.enum(['720p', '1080p', '4k']).optional(),
   maxDuration: z.number().positive().optional(),
@@ -86,7 +87,7 @@ export async function POST(request: NextRequest) {
     const job = await videoJobService.createJob({
       storyboardId,
       createdBy: authResult.user.uid,
-      provider: provider as 'heygen' | 'sora' | 'runway' | undefined,
+      provider: provider as VideoProvider | undefined,
       aspectRatio,
       resolution,
       maxDuration,

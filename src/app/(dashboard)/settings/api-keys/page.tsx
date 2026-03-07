@@ -461,23 +461,6 @@ export default function APIKeysPage() {
       why: 'Auto-enrich leads with company data, employee count, revenue, etc.',
     },
     {
-      id: 'heygen',
-      name: 'HeyGen',
-      icon: '🎬',
-      description: 'AI avatar video generation',
-      required: false,
-      placeholder: 'your-heygen-api-key',
-      setupUrl: 'https://app.heygen.com',
-      setupSteps: [
-        'Go to app.heygen.com',
-        'Sign up or log in',
-        'Settings → API → Generate API Key',
-        'Copy and paste here',
-      ],
-      cost: 'Plans start at $29/month',
-      why: 'Create AI-generated video content with realistic avatars for outreach and marketing.',
-    },
-    {
       id: 'runway',
       name: 'Runway',
       icon: '🎥',

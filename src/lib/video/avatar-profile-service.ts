@@ -31,10 +31,7 @@ export interface AvatarProfile {
 
   // Voice identity
   voiceId: string | null; // ElevenLabs voice clone ID
-  voiceProvider: 'elevenlabs' | 'heygen' | 'unrealspeech' | 'custom' | null;
-
-  // Avatar provider IDs (linked external avatars)
-  heygenAvatarId: string | null; // HeyGen Digital Twin ID (if created)
+  voiceProvider: 'elevenlabs' | 'unrealspeech' | 'custom' | null;
 
   // Metadata
   description: string | null; // "Professional look, navy suit"
@@ -43,7 +40,7 @@ export interface AvatarProfile {
   updatedAt: string; // ISO string
 }
 
-type VoiceProvider = 'elevenlabs' | 'heygen' | 'unrealspeech' | 'custom';
+type VoiceProvider = 'elevenlabs' | 'unrealspeech' | 'custom';
 
 export interface CreateAvatarProfileData {
   name: string;
@@ -53,7 +50,6 @@ export interface CreateAvatarProfileData {
   upperBodyImageUrl?: string | null;
   voiceId?: string | null;
   voiceProvider?: VoiceProvider | null;
-  heygenAvatarId?: string | null;
   description?: string | null;
   isDefault?: boolean;
 }
@@ -66,7 +62,6 @@ export interface UpdateAvatarProfileData {
   upperBodyImageUrl?: string | null;
   voiceId?: string | null;
   voiceProvider?: VoiceProvider | null;
-  heygenAvatarId?: string | null;
   description?: string | null;
   isDefault?: boolean;
 }
@@ -84,7 +79,6 @@ interface FirestoreAvatarProfileDoc {
   upperBodyImageUrl: string | null;
   voiceId: string | null;
   voiceProvider: VoiceProvider | null;
-  heygenAvatarId: string | null;
   description: string | null;
   isDefault: boolean;
   createdAt: FirebaseFirestore.Timestamp | null;
@@ -127,7 +121,6 @@ function docToProfile(id: string, raw: FirebaseFirestore.DocumentData): AvatarPr
     upperBodyImageUrl: data.upperBodyImageUrl ?? null,
     voiceId: data.voiceId ?? null,
     voiceProvider: data.voiceProvider ?? null,
-    heygenAvatarId: data.heygenAvatarId ?? null,
     description: data.description ?? null,
     isDefault: data.isDefault ?? false,
     createdAt: timestampToISO(data.createdAt),
@@ -163,7 +156,6 @@ export async function createAvatarProfile(
       upperBodyImageUrl: data.upperBodyImageUrl ?? null,
       voiceId: data.voiceId ?? null,
       voiceProvider: data.voiceProvider ?? null,
-      heygenAvatarId: data.heygenAvatarId ?? null,
       description: data.description ?? null,
       isDefault: data.isDefault ?? false,
       createdAt: FieldValue.serverTimestamp(),
@@ -194,7 +186,6 @@ export async function createAvatarProfile(
       upperBodyImageUrl: profileData.upperBodyImageUrl,
       voiceId: profileData.voiceId,
       voiceProvider: profileData.voiceProvider,
-      heygenAvatarId: profileData.heygenAvatarId,
       description: profileData.description,
       isDefault: profileData.isDefault,
       createdAt: new Date().toISOString(),
@@ -313,9 +304,6 @@ export async function updateAvatarProfile(
     }
     if (updates.voiceProvider !== undefined) {
       updateData.voiceProvider = updates.voiceProvider;
-    }
-    if (updates.heygenAvatarId !== undefined) {
-      updateData.heygenAvatarId = updates.heygenAvatarId;
     }
     if (updates.description !== undefined) {
       updateData.description = updates.description;

@@ -1784,49 +1784,28 @@ export class VideoSpecialist extends BaseSpecialist {
     }
 
     // ── AUTOMATE MODE: Full generation (avatar pick + render) ──
-    // Priority: Default Avatar Profile → HeyGen avatar list → Kling fallback
+    // Priority: Default Avatar Profile (Kling Avatar) → text-to-video fallback
     let videoAvatarId = '';
     let videoVoiceId = '';
-    let voiceProvider: 'heygen' | 'elevenlabs' | 'unrealspeech' | 'custom' = 'heygen';
-    const hasAvatarScenes = scenes.some((s) => s.engine === 'heygen' || s.engine === 'kling');
+    let voiceProvider: 'elevenlabs' | 'unrealspeech' | 'custom' = 'elevenlabs';
+    const hasAvatarScenes = scenes.some((s) => s.engine === 'kling');
 
     if (hasAvatarScenes) {
       // Reuse the avatarProfile already loaded in Step 1b (no duplicate Firestore read)
       if (avatarProfile) {
-        // Profile ID is used for Kling Avatar (photo + audio → talking head)
-        // HeyGen avatar only used if explicitly linked
-        videoAvatarId = avatarProfile.heygenAvatarId ?? avatarProfile.id;
+        videoAvatarId = avatarProfile.id;
         if (avatarProfile.voiceId) {
           videoVoiceId = avatarProfile.voiceId;
           voiceProvider = avatarProfile.voiceProvider ?? 'elevenlabs';
         }
-        this.log('INFO', `Using Avatar Profile: "${avatarProfile.name}" (${avatarProfile.heygenAvatarId ? 'HeyGen linked' : 'Kling Avatar'})`);
+        this.log('INFO', `Using Avatar Profile: "${avatarProfile.name}" (Kling Avatar)`);
       }
 
-      // Fallback: HeyGen avatar list if no profile exists
-      if (!videoAvatarId) {
-        try {
-          const { listHeyGenAvatars, listHeyGenVoices } = await import('@/lib/video/video-service');
-
-          const avatarResult = await listHeyGenAvatars();
-          if ('avatars' in avatarResult && avatarResult.avatars && avatarResult.avatars.length > 0) {
-            videoAvatarId = avatarResult.avatars[0].id;
-          }
-
-          const voiceResult = await listHeyGenVoices();
-          if ('voices' in voiceResult && voiceResult.voices && voiceResult.voices.length > 0) {
-            videoVoiceId = voiceResult.voices[0].id;
-          }
-        } catch (avatarError) {
-          this.log('WARN', `HeyGen avatar/voice auto-select failed: ${avatarError instanceof Error ? avatarError.message : String(avatarError)}`);
-        }
-      }
-
-      // If still no avatar, switch avatar scenes to text-to-video engines
+      // If no avatar profile, switch avatar scenes to text-to-video engines
       if (!videoAvatarId || !videoVoiceId) {
         this.log('WARN', 'No avatar/voice available — scenes will use text-to-video engines');
         for (const scene of scenes) {
-          if (scene.engine === 'heygen' || scene.engine === 'kling') {
+          if (scene.engine === 'kling') {
             scene.engine = 'runway';
           }
         }
@@ -1945,29 +1924,24 @@ export class VideoSpecialist extends BaseSpecialist {
     let genAvatarId = requestedAvatarId ?? project.avatarId ?? '';
     let genVoiceId = requestedVoiceId ?? project.voiceId ?? '';
 
-    // Auto-select if HeyGen scenes exist but no avatar/voice specified
-    const hasHeygenScenes = project.scenes.some((s) => s.engine === 'heygen');
-    if (hasHeygenScenes && (!genAvatarId || !genVoiceId)) {
+    // Auto-select avatar from Avatar Profile if not specified
+    const hasAvatarScenes = project.scenes.some((s) => s.engine === 'kling');
+    if (hasAvatarScenes && (!genAvatarId || !genVoiceId)) {
       try {
-        const { listHeyGenAvatars, listHeyGenVoices } = await import('@/lib/video/video-service');
-
-        if (!genAvatarId) {
-          const avatarResult = await listHeyGenAvatars();
-          if ('avatars' in avatarResult && avatarResult.avatars && avatarResult.avatars.length > 0) {
-            genAvatarId = avatarResult.avatars[0].id;
-            this.log('INFO', `Auto-selected HeyGen avatar: ${genAvatarId}`);
+        const { getDefaultProfile } = await import('@/lib/video/avatar-profile-service');
+        const profile = await getDefaultProfile(project.createdBy ?? 'jasper');
+        if (profile) {
+          if (!genAvatarId) {
+            genAvatarId = profile.id;
+            this.log('INFO', `Auto-selected Avatar Profile: "${profile.name}"`);
           }
-        }
-
-        if (!genVoiceId) {
-          const voiceResult = await listHeyGenVoices();
-          if ('voices' in voiceResult && voiceResult.voices && voiceResult.voices.length > 0) {
-            genVoiceId = voiceResult.voices[0].id;
-            this.log('INFO', `Auto-selected HeyGen voice: ${genVoiceId}`);
+          if (!genVoiceId && profile.voiceId) {
+            genVoiceId = profile.voiceId;
+            this.log('INFO', `Auto-selected voice from Avatar Profile: ${profile.voiceId}`);
           }
         }
       } catch (avatarError) {
-        this.log('WARN', `Failed to auto-select HeyGen avatar/voice: ${avatarError instanceof Error ? avatarError.message : String(avatarError)}`);
+        this.log('WARN', `Failed to auto-select Avatar Profile: ${avatarError instanceof Error ? avatarError.message : String(avatarError)}`);
       }
     }
 

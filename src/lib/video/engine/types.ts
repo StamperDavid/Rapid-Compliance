@@ -70,10 +70,9 @@ export type TransitionType =
 export type VideoGenerationProvider =
   | 'veo'                 // Google Veo - cinematic, high quality
   | 'runway'              // Runway ML Gen-3 - creative, stylized
-  | 'kling'               // Kling AI - fast, cost-effective
+  | 'kling'               // Kling AI - fast, cost-effective (primary avatar engine via fal.ai)
   | 'pika'                // Pika Labs - motion, animation
   | 'sora'                // OpenAI Sora (when available)
-  | 'heygen'              // HeyGen - avatar videos
   | 'stable-video';       // Stability AI SVD
 
 export interface ProviderCapabilities {

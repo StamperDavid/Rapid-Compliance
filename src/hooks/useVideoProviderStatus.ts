@@ -18,9 +18,8 @@ interface UseVideoProviderStatusReturn {
 }
 
 const DEFAULT_STATUS: ProviderStatusMap = {
-  heygen: { configured: false },
-  runway: { configured: false },
   sora: { configured: false },
+  runway: { configured: false },
   kling: { configured: false },
   luma: { configured: false },
 };

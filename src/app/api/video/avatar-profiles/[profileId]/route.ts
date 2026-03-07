@@ -28,10 +28,9 @@ const UpdateProfileSchema = z.object({
   upperBodyImageUrl: z.string().url().nullable().optional(),
   voiceId: z.string().nullable().optional(),
   voiceProvider: z
-    .enum(['elevenlabs', 'heygen', 'unrealspeech', 'custom'])
+    .enum(['elevenlabs', 'unrealspeech', 'custom'])
     .nullable()
     .optional(),
-  heygenAvatarId: z.string().nullable().optional(),
   description: z.string().nullable().optional(),
   isDefault: z.boolean().optional(),
 });

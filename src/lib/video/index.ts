@@ -2,7 +2,7 @@
  * Video Module
  *
  * Comprehensive video generation system featuring:
- * - Legacy video service (HeyGen, Sora, Runway stubs)
+ * - Legacy video service (Sora, Runway stubs)
  * - AI Video Generation Engine
  *   - Director Service: Brand DNA + Trends → Master Storyboard
  *   - Multi-Model Picker: Intelligent provider routing
@@ -31,11 +31,6 @@ export {
   getVideoStatus,
   cancelVideoGeneration,
 
-  // HeyGen stubs
-  listHeyGenAvatars,
-  listHeyGenVoices,
-  generateHeyGenVideo,
-
   // Sora stubs
   generateSoraVideo,
 
@@ -61,8 +56,6 @@ export type {
   VideoProvider,
   VideoTemplate,
   VideoProject,
-  HeyGenAvatar,
-  HeyGenVoice,
   VideoWaitlistEntry,
   VideoWaitlistInterest,
 } from './video-service';

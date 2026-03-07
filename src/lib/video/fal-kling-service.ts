@@ -292,7 +292,7 @@ export async function generateKlingReferenceVideo(
  * Generate an AI avatar video from a reference image and audio.
  * Best for: Talking head scenes using a person's photo + ElevenLabs audio.
  *
- * Alternative to HeyGen — uses Kling's AI Avatar model.
+ * Primary avatar engine — uses Kling's AI Avatar model via fal.ai.
  */
 export async function generateKlingAvatarVideo(
   imageUrl: string,

@@ -4,8 +4,7 @@
  *
  * Generates a short TTS audio sample for any voice on demand.
  * - ElevenLabs voices: synthesized via ElevenLabs TTS API
- * - HeyGen voices: not directly previewable (no standalone TTS endpoint),
- *   returns an error suggesting ElevenLabs voices instead
+ * - UnrealSpeech / custom voices: falls back to ElevenLabs synthesis
  *
  * Caches generated previews in Firestore to avoid re-synthesizing.
  */
@@ -23,7 +22,7 @@ export const dynamic = 'force-dynamic';
 const requestSchema = z.object({
   voiceId: z.string().min(1),
   voiceName: z.string().min(1),
-  provider: z.enum(['elevenlabs', 'heygen', 'unrealspeech', 'custom']),
+  provider: z.enum(['elevenlabs', 'unrealspeech', 'custom']),
   text: z.string().min(1).max(1000).optional(),
 });
 
@@ -47,17 +46,6 @@ export async function POST(request: NextRequest) {
 
     const { voiceId, voiceName, provider, text: customText } = parsed.data;
     const spokenText = customText ?? SAMPLE_TEXT;
-
-    // HeyGen voices don't have a standalone TTS API
-    if (provider === 'heygen') {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'HeyGen voices cannot be previewed standalone. Select an ElevenLabs voice for preview support and better audio quality.',
-        },
-        { status: 422 },
-      );
-    }
 
     // Check cache first (only for default sample text, not custom)
     if (!customText && adminDb) {

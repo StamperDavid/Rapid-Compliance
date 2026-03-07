@@ -196,10 +196,9 @@ export function StepDecompose() {
                           <span className="text-xs text-zinc-500">{scene.suggestedDuration}s</span>
                           {scene.engine && (
                             <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${
-                              scene.engine === 'heygen' ? 'bg-blue-500/20 text-blue-400' :
+                              scene.engine === 'kling' ? 'bg-orange-500/20 text-orange-400' :
                               scene.engine === 'runway' ? 'bg-purple-500/20 text-purple-400' :
                               scene.engine === 'sora' ? 'bg-green-500/20 text-green-400' :
-                              scene.engine === 'kling' ? 'bg-orange-500/20 text-orange-400' :
                               'bg-pink-500/20 text-pink-400'
                             }`}>
                               {scene.engine}

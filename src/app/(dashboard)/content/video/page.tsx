@@ -151,7 +151,7 @@ export default function VideoStudioPage() {
           <p className="text-sm text-zinc-400 mt-1">
             {projectId
               ? `Project: ${projectName || 'Untitled'}`
-              : '7-step video production pipeline powered by HeyGen'}
+              : '7-step video production pipeline powered by Kling Avatar'}
           </p>
         </div>
         <div className="flex gap-2">

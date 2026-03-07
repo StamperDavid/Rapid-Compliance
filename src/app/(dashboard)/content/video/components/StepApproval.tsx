@@ -37,7 +37,7 @@ export function StepApproval() {
 
   // Build engine summary for the warning text
   const engineCounts = scenes.reduce<Record<string, number>>((acc, s) => {
-    const engine = s.engine ?? 'heygen';
+    const engine = s.engine ?? 'kling';
     const label = VIDEO_ENGINE_REGISTRY[engine].label;
     acc[label] = (acc[label] ?? 0) + 1;
     return acc;

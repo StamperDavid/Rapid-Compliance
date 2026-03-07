@@ -1702,7 +1702,7 @@ export class ContentManager extends BaseManager {
   /**
    * Orchestrate personalized artifact generation for prospects.
    * Called by Event Router when a prospect replies with "needs_more_info".
-   * Generates HeyGen video + PDF proposal using scraped company data.
+   * Generates personalized video + PDF proposal using scraped company data.
    */
   async handleContextualArtifactGeneration(
     prospectContext: ProspectContext
@@ -1760,7 +1760,7 @@ export class ContentManager extends BaseManager {
   }
 
   /**
-   * Generate personalized HeyGen video using scraped company data
+   * Generate personalized video using scraped company data
    */
   private async generatePersonalizedVideo(
     context: ProspectContext
@@ -1797,7 +1797,7 @@ export class ContentManager extends BaseManager {
       if (report.status === 'COMPLETED' && report.data) {
         return {
           videoId: `video_${context.leadId}_${Date.now()}`,
-          platform: 'heygen',
+          platform: 'kling',
           status: 'GENERATED',
           script,
           storyboard: report.data,
@@ -2071,7 +2071,7 @@ The SalesVelocity Team`;
   }
 
   /**
-   * Handle PROPOSAL brief - generate proposal content + HeyGen video
+   * Handle PROPOSAL brief - generate proposal content + personalized video
    */
   private async handleProposalBrief(brief: ProductionBrief): Promise<ProductionBrief> {
     this.log('INFO', `Handling PROPOSAL brief: ${brief.briefId}`);

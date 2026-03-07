@@ -20,7 +20,7 @@ import { getMemoryVault, shareInsight } from '@/lib/agents/shared';
 // ============================================================================
 
 export type ScriptVideoType = 'tutorial' | 'explainer' | 'product-demo' | 'sales-pitch' | 'testimonial' | 'social-ad';
-export type ScriptEngine = 'heygen' | 'runway' | 'sora' | 'kling';
+export type ScriptEngine = 'runway' | 'sora' | 'kling';
 
 export interface ScriptScene {
   sceneNumber: number;
@@ -73,7 +73,7 @@ export interface ScriptGenerationParams {
 // Zod Schema for AI Response Validation
 // ============================================================================
 
-const EngineValues = ['heygen', 'runway', 'sora', 'kling'] as const;
+const EngineValues = ['runway', 'sora', 'kling'] as const;
 
 const AISceneSchema = z.object({
   sceneNumber: z.number(),
@@ -151,12 +151,10 @@ Our system uses **cinematic two-track compositing**: the avatar is rendered on a
   - Assign to B-roll that needs photorealistic cinematic quality
   - Assign to establishing shots, transitions, atmospheric footage
 
-- **heygen**: Optional premium talking head. Only use if explicitly requested by the user. Do NOT default to heygen.
-
 - **sora**: Currently unreliable — do NOT assign sora to any scene.
 
 ### Engine selection rules:
-- Avatar speaks to camera → **kling** (primary), heygen ONLY if user explicitly requested it
+- Avatar speaks to camera → **kling** (primary)
 - Avatar in a creative scenario (superhero, explorer, character role) → **kling** (character-in-action)
 - Photorealistic environment B-roll → **runway**
 - Stylized/fantasy/sci-fi B-roll → **kling**
@@ -229,7 +227,7 @@ Return ONLY valid JSON (no markdown, no code fences) matching this structure:
       "scriptText": "Spoken words for avatar scenes, empty string for B-roll",
       "visualDescription": "What the viewer sees — include character actions for character-in-action scenes",
       "suggestedDuration": 12,
-      "engine": "kling" | "runway" | "heygen",
+      "engine": "kling" | "runway",
       "backgroundPrompt": "Cinematic video background prompt for avatar scenes, null for B-roll"
     }
   ]

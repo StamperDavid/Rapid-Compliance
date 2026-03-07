@@ -403,7 +403,7 @@ ADDITIONAL SYSTEMS YOU CONTROL:
 - Analytics (revenue, pipeline, forecasting, attribution, e-commerce)
 - SEO Suite (Serper, Google Search Console, PageSpeed, DataForSEO)
 - Calendar (Google Calendar + Outlook integration)
-- Video Generation (HeyGen, Runway ML, Sora)
+- Video Generation (Kling Avatar, Runway ML)
 - Brand DNA (central identity feeding all AI agents)
 - A/B Testing, Proposals, Academy, Coaching
 

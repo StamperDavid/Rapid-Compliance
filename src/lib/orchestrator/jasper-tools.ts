@@ -1084,7 +1084,7 @@ export const JASPER_TOOLS: ToolDefinition[] = [
           provider: {
             type: 'string',
             description: 'AI video provider to use. Auto-selects best available if not specified.',
-            enum: ['heygen', 'sora', 'runway', 'auto'],
+            enum: ['kling', 'runway', 'auto'],
           },
           type: {
             type: 'string',
@@ -1118,7 +1118,7 @@ export const JASPER_TOOLS: ToolDefinition[] = [
     function: {
       name: 'generate_video',
       description:
-        'Start actual video generation for a prepared project. Takes a projectId from create_video and kicks off scene generation with HeyGen, Runway, or Sora APIs. Call this after create_video to begin rendering. ENABLED: TRUE.',
+        'Start actual video generation for a prepared project. Takes a projectId from create_video and kicks off scene generation with Kling Avatar and Runway APIs. Call this after create_video to begin rendering. ENABLED: TRUE.',
       parameters: {
         type: 'object',
         properties: {
@@ -1128,11 +1128,11 @@ export const JASPER_TOOLS: ToolDefinition[] = [
           },
           avatarId: {
             type: 'string',
-            description: 'HeyGen avatar ID (optional — auto-selects if not provided)',
+            description: 'Avatar Profile ID (optional — auto-selects default profile if not provided)',
           },
           voiceId: {
             type: 'string',
-            description: 'HeyGen voice ID (optional — auto-selects if not provided)',
+            description: 'ElevenLabs voice ID (optional — auto-selects from Avatar Profile if not provided)',
           },
         },
         required: ['projectId'],
@@ -1155,7 +1155,7 @@ export const JASPER_TOOLS: ToolDefinition[] = [
           provider: {
             type: 'string',
             description: 'The provider used for generation',
-            enum: ['heygen', 'sora', 'runway'],
+            enum: ['kling', 'runway'],
           },
         },
         required: ['videoId'],
@@ -2108,7 +2108,7 @@ function getHardcodedBlueprintSection(query: string, _section?: string): Bluepri
 5. E-Commerce & Payments — Stripe/PayPal/Square/Mollie, checkout, subscriptions (4 tiers), cart, coupons, tax/shipping (10+ routes)
 6. Website Builder — Pages, blog, templates, custom domains, navigation, sitemap, RSS, AI content generation (26 routes)
 7. Voice AI & TTS — Twilio calls, ElevenLabs/Unreal Speech TTS, Gemini conversation AI, prospector/closer modes (7 routes)
-8. Video Generation — HeyGen/Runway ML/Sora, storyboard pipeline, Brand DNA integration (13 routes)
+8. Video Generation — Kling Avatar/Runway ML, storyboard pipeline, Brand DNA integration (13 routes)
 9. SEO Suite — Serper, Google Search Console, PageSpeed, DataForSEO, AI strategy generation (5 routes)
 10. Workflow Engine — Visual builder, scheduled/webhook/entity triggers, 11 action types including AI agent invocation (6 routes)
 11. Forms — Builder, publishing, submissions with CRM lead creation (3 routes)
@@ -2152,7 +2152,7 @@ STACK:
 - Payments: Stripe (primary), PayPal, Square, Mollie, Authorize.net, 2Checkout
 - Email: SendGrid, Resend, SMTP
 - SMS: Twilio, Vonage
-- Video: HeyGen, Runway ML, Sora
+- Video: Kling Avatar (fal.ai), Runway ML
 - SEO: Serper, Google Search Console, PageSpeed Insights, DataForSEO
 
 PENTHOUSE MODEL (Single-Tenant):
@@ -3403,7 +3403,7 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
 
         const { getVideoStatus: checkVideoStatus } = await import('@/lib/video/video-service');
         const videoId = args.videoId as string;
-        const videoProvider = args.provider as 'heygen' | 'sora' | 'runway' | undefined;
+        const videoProvider = args.provider as 'kling' | 'sora' | 'runway' | undefined;
 
         const response = await checkVideoStatus(videoId, videoProvider);
 

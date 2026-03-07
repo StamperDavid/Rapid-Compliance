@@ -169,9 +169,6 @@ export async function GET(request: NextRequest) {
       case 'unreal_speech':
         return await testUnrealSpeech(apiKey);
 
-      case 'heygen':
-        return await testHeyGen(apiKey);
-
       case 'apollo':
         return await testApollo(apiKey);
 
@@ -802,34 +799,6 @@ async function testUnrealSpeech(apiKey: string): Promise<NextResponse> {
         error: response.status === 401 || response.status === 403
           ? 'Invalid Unreal Speech API key'
           : `Unreal Speech API error: ${response.status}`,
-      });
-    }
-  } catch (error: unknown) {
-    return NextResponse.json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    });
-  }
-}
-
-/**
- * Test HeyGen API key
- */
-async function testHeyGen(apiKey: string): Promise<NextResponse> {
-  try {
-    const response = await fetch('https://api.heygen.com/v2/user/remaining_quota', {
-      headers: { 'X-Api-Key': apiKey },
-    });
-
-    if (response.ok) {
-      return NextResponse.json({
-        success: true,
-        message: 'HeyGen API key is valid and working!',
-      });
-    } else {
-      return NextResponse.json({
-        success: false,
-        error: 'Invalid HeyGen API key',
       });
     }
   } catch (error: unknown) {

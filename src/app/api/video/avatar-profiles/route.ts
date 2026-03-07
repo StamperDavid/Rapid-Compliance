@@ -26,10 +26,9 @@ const CreateProfileSchema = z.object({
   upperBodyImageUrl: z.string().url().nullable().default(null),
   voiceId: z.string().nullable().default(null),
   voiceProvider: z
-    .enum(['elevenlabs', 'heygen', 'unrealspeech', 'custom'])
+    .enum(['elevenlabs', 'unrealspeech', 'custom'])
     .nullable()
     .default(null),
-  heygenAvatarId: z.string().nullable().default(null),
   description: z.string().nullable().default(null),
   isDefault: z.boolean().default(false),
 });
@@ -122,7 +121,6 @@ export async function POST(request: NextRequest) {
       upperBodyImageUrl: data.upperBodyImageUrl,
       voiceId: data.voiceId,
       voiceProvider: data.voiceProvider,
-      heygenAvatarId: data.heygenAvatarId,
       description: data.description,
       isDefault: data.isDefault,
     });

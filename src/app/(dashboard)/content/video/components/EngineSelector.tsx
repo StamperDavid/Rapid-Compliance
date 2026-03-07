@@ -41,7 +41,7 @@ export function EngineSelector({
 }: EngineSelectorProps) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-  const selectedEngineId = value ?? 'heygen';
+  const selectedEngineId = value ?? 'kling';
   const selectedEngine = VIDEO_ENGINE_REGISTRY[selectedEngineId];
   const SelectedIcon = ENGINE_ICONS[selectedEngine.icon] ?? Video;
 
@@ -100,7 +100,7 @@ export function EngineSelector({
                 )}
                 onClick={() => {
                   if (!isDisabled) {
-                    onChange(engineId === 'heygen' ? null : engineId);
+                    onChange(engineId === 'kling' ? null : engineId);
                     setOpen(false);
                   }
                 }}

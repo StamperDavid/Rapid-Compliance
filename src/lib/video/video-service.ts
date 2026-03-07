@@ -33,7 +33,10 @@ import type {
  * Keys are configured at Settings > API Keys in the dashboard.
  */
 export async function getVideoProviderKey(provider: VideoProvider): Promise<string | null> {
-  const key = await apiKeyService.getServiceKey(PLATFORM_ID, provider);
+  // 'heygen' is kept in VideoProvider for backward compat (existing videos in Firestore)
+  // but the API key is no longer configured — return null immediately
+  if (provider === 'heygen') { return null; }
+  const key = await apiKeyService.getServiceKey(PLATFORM_ID, provider as import('@/types/api-keys').APIServiceName);
   if (typeof key === 'string' && key.length > 0) { return key; }
   return null;
 }

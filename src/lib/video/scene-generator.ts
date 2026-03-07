@@ -1,13 +1,11 @@
 /**
  * Multi-Engine Scene Generator
- * Routes scene generation to the selected video engine (HeyGen, Runway, Sora)
+ * Routes scene generation to the selected video engine (Runway, Sora, Kling Avatar)
  * and handles polling and batch processing for the video pipeline
  */
 
 import { logger } from '@/lib/logger/logger';
 import {
-  generateHeyGenSceneVideo,
-  generateHeyGenGreenScreenVideo,
   generateRunwayVideo,
   generateSoraVideo,
   getVideoStatus,
@@ -18,276 +16,12 @@ import {
   generateKlingAvatarVideo,
   getKlingVideoStatus,
 } from '@/lib/video/fal-kling-service';
-import { generateImage } from '@/lib/ai/image-generation-service';
 import type { PipelineScene, SceneGenerationResult, VideoEngineId } from '@/types/video-pipeline';
 import type { VideoAspectRatio, VideoProvider } from '@/types/video';
 
 // ============================================================================
 // Engine-Specific Generators
 // ============================================================================
-
-async function generateWithHeyGen(
-  scene: PipelineScene,
-  avatarId: string,
-  voiceId: string,
-  aspectRatio: VideoAspectRatio,
-  voiceProvider?: 'heygen' | 'elevenlabs' | 'unrealspeech' | 'custom'
-): Promise<SceneGenerationResult> {
-  // Validate avatar ID — HeyGen returns 404 "avatar look not found" if empty
-  if (!avatarId) {
-    throw new Error('No avatar selected. Go back to Pre-Production and choose an avatar.');
-  }
-
-  // Convert 4:3 to 16:9 for HeyGen (HeyGen only supports 16:9, 9:16, 1:1)
-  const heygenAspectRatio: '16:9' | '9:16' | '1:1' =
-    aspectRatio === '4:3' ? '16:9' : aspectRatio;
-
-  // Use scene-level script; if B-roll (empty script), send a minimal placeholder
-  // so HeyGen doesn't error. The avatar will appear briefly with no speech.
-  const script = scene.scriptText.trim() || ' ';
-
-  // If using ElevenLabs voice, pre-synthesize audio and pass to HeyGen
-  // Retries up to 3 times with backoff for rate limits / transient failures
-  let audioUrl: string | null = null;
-  if (voiceProvider === 'elevenlabs' && script.length > 1) {
-    const MAX_TTS_RETRIES = 3;
-    let lastTtsError: string | null = null;
-
-    for (let attempt = 1; attempt <= MAX_TTS_RETRIES; attempt++) {
-      try {
-        const { ElevenLabsProvider } = await import('@/lib/voice/tts/providers/elevenlabs-provider');
-        const { apiKeyService } = await import('@/lib/api-keys/api-key-service');
-        const { PLATFORM_ID } = await import('@/lib/constants/platform');
-        const rawKey = await apiKeyService.getServiceKey(PLATFORM_ID, 'elevenlabs');
-        const apiKey = typeof rawKey === 'string' ? rawKey : null;
-
-        if (!apiKey) {
-          lastTtsError = 'ElevenLabs API key not configured';
-          break; // No point retrying without a key
-        }
-
-        const provider = new ElevenLabsProvider(apiKey);
-        const ttsResult = await provider.synthesize(script, voiceId);
-
-        // Store audio as base64 in Firestore, serve via public API endpoint
-        const { adminDb } = await import('@/lib/firebase/admin');
-        if (adminDb) {
-          const audioBase64 = ttsResult.audio.includes(',')
-            ? ttsResult.audio.split(',')[1]
-            : ttsResult.audio;
-          const audioId = `tts-${scene.id}-${Date.now()}`;
-
-          await adminDb
-            .collection(`organizations/${PLATFORM_ID}/tts_audio`)
-            .doc(audioId)
-            .set({
-              base64: audioBase64,
-              contentType: 'audio/mpeg',
-              createdAt: new Date(),
-              expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
-            });
-
-          const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://rapidcompliance.us';
-          audioUrl = `${appUrl}/api/video/tts-audio/${audioId}`;
-
-          logger.info('ElevenLabs audio synthesized and stored', {
-            sceneId: scene.id,
-            audioId,
-            attempt,
-            file: 'scene-generator.ts',
-          });
-        }
-        break; // Success — exit retry loop
-      } catch (ttsError) {
-        lastTtsError = ttsError instanceof Error ? ttsError.message : String(ttsError);
-        logger.warn(`ElevenLabs TTS attempt ${attempt}/${MAX_TTS_RETRIES} failed`, {
-          sceneId: scene.id,
-          attempt,
-          error: lastTtsError,
-          file: 'scene-generator.ts',
-        });
-
-        if (attempt < MAX_TTS_RETRIES) {
-          // Exponential backoff: 1s, 2s, 4s
-          const delayMs = 1000 * Math.pow(2, attempt - 1);
-          await new Promise<void>(resolve => { setTimeout(resolve, delayMs); });
-        }
-      }
-    }
-
-    // If ElevenLabs failed after all retries, fail the scene entirely.
-    // Never swap in a different voice — the user's custom voice is their identity.
-    if (!audioUrl) {
-      const errorDetail = lastTtsError ?? 'Unknown ElevenLabs error';
-      logger.error('ElevenLabs TTS failed after all retries — failing scene', new Error(errorDetail), {
-        sceneId: scene.id,
-        file: 'scene-generator.ts',
-      });
-
-      return {
-        sceneId: scene.id,
-        providerVideoId: '',
-        provider: 'heygen',
-        status: 'failed',
-        videoUrl: null,
-        thumbnailUrl: null,
-        progress: 0,
-        error: `Voice synthesis failed: ${errorDetail}. Retry the scene or check your ElevenLabs API key.`,
-      };
-    }
-  }
-
-  // === Cinematic Two-Track Compositing (default for avatar scenes) ===
-  // If a background description exists AND a video engine is available,
-  // generate the avatar on green screen + AI video background in parallel.
-  // This produces broadcast-quality composited video.
-  const backgroundDescription = scene.backgroundPrompt?.trim() ?? scene.visualDescription?.trim();
-  const providers = await getAvailableProviders();
-  const hasVideoBackgroundEngine = providers.runway || providers.sora || providers.kling;
-
-  if (backgroundDescription && hasVideoBackgroundEngine) {
-    // Select best available engine for background video generation
-    const bgEngine = selectBackgroundEngine(providers, scene);
-
-    logger.info('Cinematic two-track generation: green screen avatar + AI video background', {
-      sceneId: scene.id,
-      avatarEngine: 'heygen',
-      backgroundEngine: bgEngine,
-      backgroundPrompt: backgroundDescription.slice(0, 80),
-      file: 'scene-generator.ts',
-    });
-
-    // Track 1: HeyGen avatar with green screen background
-    const avatarResponse = await generateHeyGenGreenScreenVideo(
-      script,
-      avatarId,
-      voiceId,
-      heygenAspectRatio,
-      audioUrl,
-    );
-
-    // Track 2: AI background video from scene description
-    let backgroundVideoId = '';
-    let backgroundProvider: VideoEngineId = bgEngine;
-
-    try {
-      if (bgEngine === 'kling') {
-        const klingAspectRatio: '16:9' | '9:16' | '1:1' = heygenAspectRatio;
-        const klingDuration: '5' | '10' = scene.duration > 7 ? '10' : '5';
-        const bgResponse = await generateKlingTextToVideo(backgroundDescription, {
-          duration: klingDuration,
-          aspectRatio: klingAspectRatio,
-        });
-        backgroundVideoId = `${bgResponse.requestId}|${bgResponse.model}`;
-        backgroundProvider = 'kling';
-      } else if (bgEngine === 'sora') {
-        const bgResponse = await generateSoraVideo(backgroundDescription, {
-          duration: Math.min(scene.duration, 16),
-          aspectRatio: heygenAspectRatio,
-        });
-        backgroundVideoId = bgResponse.id;
-        backgroundProvider = 'sora';
-      } else {
-        // Default to Runway (best cinematic quality)
-        const bgResponse = await generateRunwayVideo('text', backgroundDescription, {
-          duration: Math.min(scene.duration, 10),
-          ratio: heygenAspectRatio,
-        });
-        backgroundVideoId = bgResponse.id;
-        backgroundProvider = 'runway';
-      }
-    } catch (bgError) {
-      logger.warn('Background video generation failed — avatar will composite without video BG', {
-        sceneId: scene.id,
-        bgEngine,
-        error: bgError instanceof Error ? bgError.message : String(bgError),
-        file: 'scene-generator.ts',
-      });
-      // Avatar video still generates — compositing can use a fallback
-    }
-
-    logger.info('Two-track generation started', {
-      sceneId: scene.id,
-      avatarVideoId: avatarResponse.id,
-      backgroundVideoId,
-      backgroundProvider,
-      file: 'scene-generator.ts',
-    });
-
-    return {
-      sceneId: scene.id,
-      providerVideoId: avatarResponse.id,
-      provider: 'heygen',
-      status: 'generating',
-      videoUrl: null,
-      thumbnailUrl: null,
-      progress: 0,
-      error: null,
-      backgroundVideoId: backgroundVideoId || null,
-      backgroundVideoUrl: null,
-      backgroundProvider,
-      compositedVideoUrl: null,
-      compositeStatus: backgroundVideoId ? 'pending' : null,
-    };
-  }
-
-  // === Fallback: Static Background ===
-  // Only used when no video engine is available for backgrounds.
-  // Generates a DALL-E still image behind the avatar.
-  let backgroundUrl = scene.screenshotUrl;
-  if (!backgroundUrl && backgroundDescription) {
-    try {
-      const dalleSize = heygenAspectRatio === '9:16' ? '1024x1792' as const
-        : heygenAspectRatio === '1:1' ? '1024x1024' as const
-        : '1792x1024' as const;
-
-      logger.info('No video engine available — generating DALL-E still background', {
-        sceneId: scene.id,
-        size: dalleSize,
-        file: 'scene-generator.ts',
-      });
-
-      const result = await generateImage(backgroundDescription, {
-        size: dalleSize,
-        quality: 'standard',
-        style: 'natural',
-      });
-      backgroundUrl = result.url;
-    } catch (bgError) {
-      logger.warn('DALL-E background generation failed, using solid color fallback', {
-        sceneId: scene.id,
-        error: bgError instanceof Error ? bgError.message : String(bgError),
-        file: 'scene-generator.ts',
-      });
-    }
-  }
-
-  const response = await generateHeyGenSceneVideo(
-    script,
-    avatarId,
-    voiceId,
-    backgroundUrl,
-    heygenAspectRatio,
-    audioUrl,
-  );
-
-  logger.info('HeyGen scene generation started (static background fallback)', {
-    sceneId: scene.id,
-    providerVideoId: response.id,
-    file: 'scene-generator.ts',
-  });
-
-  return {
-    sceneId: scene.id,
-    providerVideoId: response.id,
-    provider: 'heygen',
-    status: 'generating',
-    videoUrl: null,
-    thumbnailUrl: null,
-    progress: 0,
-    error: null,
-  };
-}
 
 async function generateWithRunway(
   scene: PipelineScene,
@@ -437,8 +171,8 @@ async function generateWithKling(
 
 /**
  * Generate a talking avatar scene using Kling Avatar v2 (via fal.ai).
- * Used as a fallback when HeyGen is unavailable but the user has an Avatar Profile
- * with a frontal photo. Takes: photo + TTS audio → talking head video.
+ * Primary avatar engine — replaces HeyGen entirely.
+ * Takes: photo + TTS audio → talking head video.
  *
  * Also generates a video background from Runway/Kling and composites them if available.
  */
@@ -447,7 +181,7 @@ async function generateWithKlingAvatar(
   avatarId: string,
   voiceId: string,
   aspectRatio: VideoAspectRatio,
-  voiceProvider?: 'heygen' | 'elevenlabs' | 'unrealspeech' | 'custom'
+  voiceProvider?: 'elevenlabs' | 'unrealspeech' | 'custom'
 ): Promise<SceneGenerationResult> {
   const script = scene.scriptText.trim() || ' ';
 
@@ -455,13 +189,11 @@ async function generateWithKlingAvatar(
   const { getDefaultProfile, getAvatarProfile } = await import('@/lib/video/avatar-profile-service');
   const { requireAuth: _skipAuth, ...rest } = { requireAuth: null }; void rest;
 
-  // Try to load profile — avatarId might be a profile ID or a HeyGen avatar ID
+  // Try to load profile — avatarId might be a profile ID or a legacy avatar ID
   let photoUrl: string | null = null;
 
   // First check if there's a default avatar profile with a photo
   try {
-    // avatarId could be a Firebase user UID or a HeyGen avatar ID
-    // Try loading default profile for current context
     const profile = await getAvatarProfile(avatarId) ?? await getDefaultProfile(avatarId);
     if (profile?.frontalImageUrl) {
       photoUrl = profile.frontalImageUrl;
@@ -488,7 +220,7 @@ async function generateWithKlingAvatar(
     };
   }
 
-  // Synthesize TTS audio (same logic as HeyGen path)
+  // Synthesize TTS audio
   let audioUrl: string | null = null;
   if (script.length > 1) {
     const ttsProvider = voiceProvider ?? 'elevenlabs';
@@ -583,20 +315,32 @@ async function generateWithKlingAvatar(
   const providers = await getAvailableProviders();
   let backgroundVideoId: string | null = null;
   let backgroundProvider: VideoEngineId | null = null;
+  const normalizedAspectRatio: '16:9' | '9:16' | '1:1' =
+    aspectRatio === '4:3' ? '16:9' : aspectRatio;
 
-  if (backgroundDescription && providers.runway) {
+  if (backgroundDescription && (providers.runway || providers.kling)) {
+    const bgEngine = selectBackgroundEngine(providers, scene);
     try {
-      const klingAspectRatio: '16:9' | '9:16' | '1:1' =
-        aspectRatio === '4:3' ? '16:9' : aspectRatio;
-      const bgResponse = await generateRunwayVideo('text', backgroundDescription, {
-        duration: Math.min(scene.duration, 10),
-        ratio: klingAspectRatio,
-      });
-      backgroundVideoId = bgResponse.id;
-      backgroundProvider = 'runway';
+      if (bgEngine === 'kling') {
+        const klingDuration: '5' | '10' = scene.duration > 7 ? '10' : '5';
+        const bgResponse = await generateKlingTextToVideo(backgroundDescription, {
+          duration: klingDuration,
+          aspectRatio: normalizedAspectRatio,
+        });
+        backgroundVideoId = `${bgResponse.requestId}|${bgResponse.model}`;
+        backgroundProvider = 'kling';
+      } else {
+        const bgResponse = await generateRunwayVideo('text', backgroundDescription, {
+          duration: Math.min(scene.duration, 10),
+          ratio: normalizedAspectRatio,
+        });
+        backgroundVideoId = bgResponse.id;
+        backgroundProvider = 'runway';
+      }
     } catch (bgError) {
       logger.warn('Background video generation failed for Kling Avatar scene', {
         sceneId: scene.id,
+        bgEngine,
         error: bgError instanceof Error ? bgError.message : String(bgError),
         file: 'scene-generator.ts',
       });
@@ -637,18 +381,17 @@ async function getAvailableProviders(): Promise<Record<string, boolean>> {
     return providerCache.data;
   }
 
-  const [heygen, sora, runway, kling] = await Promise.all([
-    getVideoProviderKey('heygen').then((k) => k !== null),
+  const [sora, runway, kling] = await Promise.all([
     getVideoProviderKey('sora').then((k) => k !== null),
     getVideoProviderKey('runway').then((k) => k !== null),
     getVideoProviderKey('fal').then((k) => k !== null), // fal.ai key powers Kling
   ]);
 
-  const result = { heygen, sora, runway, kling };
+  const result = { sora, runway, kling };
   Object.assign(providerCache, { data: result, timestamp: Date.now() });
 
   logger.info('Video provider availability check', {
-    heygen, sora, runway, kling,
+    sora, runway, kling,
     file: 'scene-generator.ts',
   });
 
@@ -763,11 +506,10 @@ function classifyScene(scene: PipelineScene, hasAvatar: boolean): SceneClassific
  * and picks the engine whose strengths match.
  *
  * Engine strengths:
- * - Kling Avatar:     Talking head from photo + audio (replaces HeyGen)
+ * - Kling Avatar:     Talking head from photo + audio (primary avatar engine)
  * - Kling Reference:  Character consistency — your face in any described scene
  * - Kling Text2Video: Stylized, fantasy, action, character motion
  * - Runway:           Photorealistic environments, cinematic quality, slow camera movements
- * - HeyGen:           Talking head with hand gestures (optional premium, not required)
  * - Sora:             Experimental only — used if explicitly configured, never auto-selected
  */
 export async function selectEngineForScene(
@@ -792,17 +534,13 @@ export async function selectEngineForScene(
 
   switch (classification) {
     case 'talking-head':
-      // Avatar speaks to camera. Kling Avatar (photo+audio) is primary.
-      // HeyGen is optional premium — only used if scene explicitly requests it.
+      // Avatar speaks to camera. Kling Avatar (photo+audio) is the primary engine.
       if (providers.kling) { return 'kling'; }
-      if (providers.heygen) { return 'heygen'; }
       return 'kling'; // Will fail with clear error if not configured
 
     case 'character-in-action':
       // Avatar's likeness in an action scene. Only Kling Reference can do this.
       if (providers.kling) { return 'kling'; }
-      // Fallback: can't do character-in-action without Kling, use talking head instead
-      if (providers.heygen) { return 'heygen'; }
       return 'kling';
 
     case 'cinematic-environment':
@@ -921,7 +659,7 @@ export async function generateScene(
   avatarId: string,
   voiceId: string,
   aspectRatio: VideoAspectRatio,
-  voiceProvider?: 'heygen' | 'elevenlabs' | 'unrealspeech' | 'custom'
+  voiceProvider?: 'elevenlabs' | 'unrealspeech' | 'custom'
 ): Promise<SceneGenerationResult> {
   // Entire function wrapped in try/catch so nothing can crash the batch
   try {
@@ -938,9 +676,6 @@ export async function generateScene(
     });
 
     switch (engine) {
-      case 'heygen':
-        return await generateWithHeyGen(scene, avatarId, voiceId, aspectRatio, voiceProvider);
-
       case 'runway':
         return await generateWithRunway(scene, aspectRatio);
 
@@ -981,7 +716,7 @@ export async function generateScene(
     return {
       sceneId: scene.id,
       providerVideoId: '',
-      provider: scene.engine ?? 'heygen',
+      provider: scene.engine ?? 'kling',
       status: 'failed',
       videoUrl: null,
       thumbnailUrl: null,
@@ -1001,14 +736,14 @@ export async function generateScene(
  */
 export async function pollSceneStatus(
   providerVideoId: string,
-  provider: VideoEngineId | null = 'heygen'
+  provider: VideoEngineId | null = 'kling'
 ): Promise<{
   status: 'generating' | 'completed' | 'failed';
   videoUrl: string | null;
   thumbnailUrl: string | null;
   error: string | null;
 }> {
-  const resolvedProvider = provider ?? 'heygen';
+  const resolvedProvider = provider ?? 'kling';
 
   // Kling uses fal.ai queue API — providerVideoId format: "requestId|model"
   if (resolvedProvider === 'kling') {
@@ -1058,8 +793,8 @@ export async function pollSceneStatus(
     }
   }
 
-  // HeyGen, Sora, Runway use the standard video-service polling
-  const validProviders: VideoProvider[] = ['heygen', 'sora', 'runway'];
+  // Sora and Runway use the standard video-service polling
+  const validProviders: VideoProvider[] = ['sora', 'runway'];
   if (!validProviders.includes(resolvedProvider as VideoProvider)) {
     return {
       status: 'failed',
@@ -1125,7 +860,7 @@ export async function generateAllScenes(
   voiceId: string,
   aspectRatio: VideoAspectRatio,
   onSceneUpdate?: (result: SceneGenerationResult) => void,
-  voiceProvider?: 'heygen' | 'elevenlabs' | 'unrealspeech' | 'custom'
+  voiceProvider?: 'elevenlabs' | 'unrealspeech' | 'custom'
 ): Promise<SceneGenerationResult[]> {
   try {
     const CONCURRENCY = 3;
@@ -1134,7 +869,7 @@ export async function generateAllScenes(
     logger.info('Starting batch scene generation', {
       totalScenes: scenes.length,
       concurrency: CONCURRENCY,
-      engines: scenes.map((s) => s.engine ?? 'heygen'),
+      engines: scenes.map((s) => s.engine ?? 'kling'),
       file: 'scene-generator.ts',
     });
 
@@ -1184,3 +919,7 @@ export async function generateAllScenes(
     throw error;
   }
 }
+
+// ── Internal helper used only by generateWithKlingAvatar background compositing ──
+// Kept here so it is co-located with the logic that uses it.
+void selectBackgroundEngine; // referenced internally — suppress unused-export lint

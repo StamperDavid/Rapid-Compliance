@@ -1,12 +1,13 @@
 /**
  * Video Generation Types
- * Types for AI Video Factory - HeyGen, Sora, Runway integrations
+ * Types for AI Video Factory - Kling Avatar, Runway, Sora integrations
  */
 
 // ============================================================================
 // Video Generation Request/Response Types
 // ============================================================================
 
+/** 'heygen' kept for backward compat — existing videos may have this provider stored in Firestore */
 export type VideoProvider = 'heygen' | 'sora' | 'runway' | 'kling' | 'fal';
 export type VideoStatus = 'pending' | 'processing' | 'completed' | 'failed';
 export type VideoAspectRatio = '16:9' | '9:16' | '1:1' | '4:3';
@@ -110,7 +111,10 @@ export interface HeyGenAvatar {
   assignedVoiceName?: string;
 }
 
-export interface HeyGenVoice {
+/** @deprecated Renamed — use VideoVoice instead */
+export type HeyGenVoice = VideoVoice;
+
+export interface VideoVoice {
   id: string;
   name: string;
   language: string;
@@ -119,7 +123,7 @@ export interface HeyGenVoice {
   previewUrl?: string;
   isPremium?: boolean;
   /** Which TTS provider this voice belongs to */
-  provider?: 'heygen' | 'elevenlabs' | 'unrealspeech' | 'custom';
+  provider?: 'elevenlabs' | 'unrealspeech' | 'custom';
 }
 
 // ============================================================================

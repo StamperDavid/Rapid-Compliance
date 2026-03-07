@@ -2,7 +2,7 @@
  * Custom Avatar Management API
  * DELETE /api/video/avatar/[avatarId]
  *
- * Deletes a custom avatar from Firestore (and optionally from HeyGen).
+ * Deletes a custom avatar record from Firestore.
  */
 
 import { type NextRequest, NextResponse } from 'next/server';

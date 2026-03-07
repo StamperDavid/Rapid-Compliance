@@ -40,7 +40,7 @@ export function SceneProgressCard({ sceneNumber, result, onRetry }: SceneProgres
         <div className="flex items-center gap-2">
           <span className={cn('text-sm font-medium', config.color)}>{config.label}</span>
           <span className="text-xs text-zinc-600">
-            {VIDEO_ENGINE_REGISTRY[result.provider ?? 'heygen'].label}
+            {VIDEO_ENGINE_REGISTRY[result.provider ?? 'kling'].label}
           </span>
         </div>
 

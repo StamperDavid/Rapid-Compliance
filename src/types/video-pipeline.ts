@@ -73,7 +73,7 @@ export const TARGET_PLATFORM_LABELS: Record<TargetPlatform, string> = {
 // Engine Types
 // ============================================================================
 
-export type VideoEngineId = 'heygen' | 'runway' | 'sora' | 'kling' | 'luma';
+export type VideoEngineId = 'runway' | 'sora' | 'kling' | 'luma';
 
 // ============================================================================
 // Scene Types
@@ -96,11 +96,11 @@ export interface PipelineScene {
   avatarId: string | null;
   voiceId: string | null;
   duration: number; // seconds
-  engine: VideoEngineId | null; // null = default (heygen)
-  backgroundPrompt: string | null; // DALL-E prompt for HeyGen scene backgrounds
+  engine: VideoEngineId | null; // null = auto-selected (defaults to kling)
+  backgroundPrompt: string | null; // Prompt for AI video background generation
   status: SceneStatus;
-  useGreenScreen?: boolean; // true = HeyGen green BG + AI background compositing
-  backgroundEngine?: VideoEngineId | null; // Engine to generate AI background (runway/sora)
+  useGreenScreen?: boolean; // true = avatar on transparent BG + AI background compositing
+  backgroundEngine?: VideoEngineId | null; // Engine to generate AI background (runway/kling)
 }
 
 export interface SceneGenerationResult {

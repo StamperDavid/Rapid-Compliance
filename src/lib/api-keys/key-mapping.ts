@@ -53,7 +53,6 @@ export const UI_TO_CONFIG_MAP: Record<string, string> = {
   clay: 'enrichment.clayApiKey',
 
   // Video
-  heygen: 'video.heygen.apiKey',
   runway: 'video.runway.apiKey',
   sora: 'video.sora.apiKey',
   fal: 'video.fal.apiKey',

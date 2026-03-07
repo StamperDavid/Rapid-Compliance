@@ -247,7 +247,7 @@ export function AvatarPicker({ selectedAvatarId, onSelect }: AvatarPickerProps) 
       <div className="flex flex-col items-center justify-center py-12 gap-3">
         <AlertCircle className="w-8 h-8 text-zinc-500" />
         <p className="text-sm text-zinc-400">
-          {error ?? 'No avatars available. Configure HeyGen API key in Settings.'}
+          {error ?? 'No avatars available. Configure avatar profiles in Settings.'}
         </p>
       </div>
     );

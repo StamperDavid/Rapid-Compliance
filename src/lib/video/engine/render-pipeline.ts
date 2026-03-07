@@ -21,7 +21,6 @@ import { VideoJobService } from '@/lib/video/video-job-service';
 import { multiModelPicker } from '@/lib/video/engine/multi-model-picker';
 import { stitcherService } from '@/lib/video/engine/stitcher-service';
 import {
-  generateHeyGenVideoInternal,
   generateSoraVideoInternal,
   generateRunwayVideoInternal,
   getVideoStatus,
@@ -342,12 +341,11 @@ export class RenderPipeline {
     const providerMap: Record<string, VideoProvider> = {
       'runway': 'runway',
       'sora': 'sora',
-      'heygen': 'heygen',
     };
 
     const videoProvider = providerMap[provider];
     if (!videoProvider) {
-      // Veo, Kling, Pika, Stable Video — not yet available
+      // Veo, Kling, Pika, Stable Video — not yet available via this pipeline
       return false;
     }
 
@@ -372,13 +370,11 @@ export class RenderPipeline {
         return this.callRunwayAPI(item);
       case 'sora':
         return this.callSoraAPI(item);
-      case 'heygen':
-        return this.callHeyGenAPI(item);
       case 'veo':
       case 'kling':
       case 'pika':
       case 'stable-video':
-        throw new Error(`Provider ${provider} is not yet available. Configure Runway, Sora, or HeyGen instead.`);
+        throw new Error(`Provider ${provider} is not yet available via the render pipeline. Use Runway or Sora instead.`);
       default:
         throw new Error(`Unknown provider: ${provider}`);
     }
@@ -424,28 +420,6 @@ export class RenderPipeline {
         style: item.visualPrompt.mood,
       }
     );
-
-    return {
-      jobId: result.id,
-      status: 'queued',
-    };
-  }
-
-  /**
-   * Call HeyGen API via video-service.ts
-   */
-  private async callHeyGenAPI(item: GenerationQueueItem): Promise<ProviderGenerationResponse> {
-    logger.info('RenderPipeline: Calling HeyGen API', { shotId: item.shotId });
-
-    // HeyGen requires an avatar ID — use a default if not specified in the visual prompt
-    const promptWithExtras = item.visualPrompt as unknown as Record<string, unknown>;
-    const avatarId = (typeof promptWithExtras.avatarId === 'string' ? promptWithExtras.avatarId : null)
-      ?? 'default';
-    const script = item.visualPrompt.compiledPrompt;
-
-    const result = await generateHeyGenVideoInternal(script, avatarId, {
-      aspectRatio: item.aspectRatio as '16:9' | '9:16' | '1:1',
-    });
 
     return {
       jobId: result.id,
@@ -513,7 +487,6 @@ export class RenderPipeline {
     const providerMap: Record<string, VideoProvider> = {
       'runway': 'runway',
       'sora': 'sora',
-      'heygen': 'heygen',
     };
 
     const videoProvider = providerMap[provider];

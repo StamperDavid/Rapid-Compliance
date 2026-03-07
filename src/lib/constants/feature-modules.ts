@@ -53,9 +53,9 @@ export const API_KEY_SETUP_LINKS: Record<string, { url: string; docsUrl: string 
     url: 'https://console.twilio.com',
     docsUrl: 'https://www.twilio.com/docs',
   },
-  heygen: {
-    url: 'https://app.heygen.com/settings',
-    docsUrl: 'https://docs.heygen.com',
+  fal: {
+    url: 'https://fal.ai/dashboard/keys',
+    docsUrl: 'https://fal.ai/docs',
   },
   elevenlabs: {
     url: 'https://elevenlabs.io/app/settings/api-keys',
@@ -265,11 +265,11 @@ export const FEATURE_MODULES: FeatureModuleDefinition[] = [
     sidebarItemIds: ['video'],
     requiredApiKeys: [
       {
-        serviceId: 'heygen',
-        label: 'HeyGen API Key',
-        description: 'Generate AI avatar videos.',
-        setupUrl: API_KEY_SETUP_LINKS.heygen.url,
-        docsUrl: API_KEY_SETUP_LINKS.heygen.docsUrl,
+        serviceId: 'fal',
+        label: 'fal.ai API Key (Kling Avatar)',
+        description: 'Generate AI avatar videos with Kling via fal.ai.',
+        setupUrl: API_KEY_SETUP_LINKS.fal.url,
+        docsUrl: API_KEY_SETUP_LINKS.fal.docsUrl,
         priority: 'required',
       },
       {

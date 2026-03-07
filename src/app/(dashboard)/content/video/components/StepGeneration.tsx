@@ -57,7 +57,7 @@ export function StepGeneration() {
 
   // Build engine summary for the generating description
   const engineCounts = scenes.reduce<Record<string, number>>((acc, s) => {
-    const engine = s.engine ?? 'heygen';
+    const engine = s.engine ?? 'kling';
     const label = VIDEO_ENGINE_REGISTRY[engine].label;
     acc[label] = (acc[label] ?? 0) + 1;
     return acc;
@@ -130,7 +130,7 @@ export function StepGeneration() {
           })),
           avatarId: avatarId ?? '',
           voiceId: voiceId ?? '',
-          voiceProvider: voiceProvider ?? 'heygen',
+          voiceProvider: voiceProvider ?? 'elevenlabs',
           aspectRatio: brief.aspectRatio,
         }),
       });
@@ -313,7 +313,7 @@ export function StepGeneration() {
           screenshotUrl: scene.screenshotUrl,
           avatarId: avatarId ?? '',
           voiceId: voiceId ?? '',
-          voiceProvider: voiceProvider ?? 'heygen',
+          voiceProvider: voiceProvider ?? 'elevenlabs',
           aspectRatio: brief.aspectRatio,
           duration: scene.duration,
           engine: scene.engine,
@@ -397,7 +397,7 @@ export function StepGeneration() {
                 </span>
               ) : (
                 <span className="text-zinc-400">
-                  Waiting for providers to render videos. HeyGen typically takes 2-5 minutes per scene.
+                  Waiting for providers to render videos. Kling typically takes 2-5 minutes per scene.
                   {pollCount > 0 && (
                     <span className="text-zinc-600"> (poll #{pollCount})</span>
                   )}

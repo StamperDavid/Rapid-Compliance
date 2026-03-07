@@ -4,7 +4,7 @@
  *
  * Stores the photo as base64 in Firestore (not Firebase Storage — that requires
  * a billing-enabled GCS bucket). The photo is served via a public GET endpoint
- * at /api/video/avatar/photo/[id] which HeyGen can access to create the avatar.
+ * at /api/video/avatar/photo/[id] for use by the Kling Avatar Profiles system.
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
         expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
       });
 
-    // Build the public URL that serves this image (no auth required so HeyGen can access it)
+    // Build the public URL that serves this image (no auth required so video engines can access it)
     const origin = request.headers.get('origin')
       ?? request.headers.get('x-forwarded-host')
       ?? 'https://rapidcompliance.us';

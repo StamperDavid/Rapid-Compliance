@@ -3,7 +3,7 @@
  * GET /api/video/tts-audio/[id]
  *
  * Serves pre-synthesized ElevenLabs audio stored in Firestore.
- * Public (no auth) so HeyGen can download it during video generation.
+ * Public (no auth) so video engines can download it during video generation.
  */
 
 import { type NextRequest, NextResponse } from 'next/server';

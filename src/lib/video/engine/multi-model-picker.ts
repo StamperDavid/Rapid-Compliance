@@ -130,24 +130,6 @@ export const PROVIDER_REGISTRY: Record<VideoGenerationProvider, ProviderCapabili
     quality: 'ultra',
     motionQuality: 'excellent',
   },
-  heygen: {
-    provider: 'heygen',
-    maxDuration: 300,
-    maxResolution: '1080p',
-    supportedAspectRatios: ['16:9', '9:16', '1:1'],
-    strengthAreas: [
-      'medium-close-up',
-      'medium',
-      'close-up',
-    ] as ShotType[],
-    averageGenerationTime: 60,
-    costPer10Seconds: 20,
-    supportsImageToVideo: false,
-    supportsVideoToVideo: false,
-    supportsAudio: true,
-    quality: 'high',
-    motionQuality: 'good',
-  },
   'stable-video': {
     provider: 'stable-video',
     maxDuration: 4,
@@ -180,13 +162,13 @@ export const PROVIDER_REGISTRY: Record<VideoGenerationProvider, ProviderCapabili
  */
 const SHOT_TYPE_PROVIDER_RANKING: Record<ShotType, VideoGenerationProvider[]> = {
   'extreme-close-up': ['runway', 'pika', 'stable-video', 'kling'],
-  'close-up': ['runway', 'kling', 'pika', 'heygen'],
-  'medium-close-up': ['runway', 'kling', 'heygen', 'veo'],
-  'medium': ['kling', 'runway', 'veo', 'heygen'],
+  'close-up': ['runway', 'kling', 'pika'],
+  'medium-close-up': ['runway', 'kling', 'veo'],
+  'medium': ['kling', 'runway', 'veo'],
   'medium-wide': ['veo', 'kling', 'runway', 'sora'],
   'wide': ['veo', 'sora', 'runway', 'kling'],
   'extreme-wide': ['veo', 'sora', 'runway'],
-  'over-the-shoulder': ['kling', 'runway', 'heygen'],
+  'over-the-shoulder': ['kling', 'runway'],
   'point-of-view': ['runway', 'veo', 'kling'],
   'aerial': ['veo', 'sora', 'runway'],
   'low-angle': ['runway', 'veo', 'stable-video'],
@@ -389,7 +371,6 @@ export class MultiModelPicker {
       kling: providerDistribution['kling'] ?? 0,
       pika: providerDistribution['pika'] ?? 0,
       sora: providerDistribution['sora'] ?? 0,
-      heygen: providerDistribution['heygen'] ?? 0,
       stableVideo: providerDistribution['stable-video'] ?? 0,
     });
 

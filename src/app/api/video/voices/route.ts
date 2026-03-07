@@ -1,5 +1,4 @@
 import { type NextRequest, NextResponse } from 'next/server';
-import { listHeyGenVoices } from '@/lib/video/video-service';
 import { logger } from '@/lib/logger/logger';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { apiKeyService } from '@/lib/api-keys/api-key-service';
@@ -10,7 +9,7 @@ export const dynamic = 'force-dynamic';
 
 /**
  * Fetch ElevenLabs voices if API key is configured.
- * Returns voices with preview URLs that actually work (unlike some HeyGen previews).
+ * Returns voices with preview URLs that actually work.
  */
 async function fetchElevenLabsVoices(): Promise<HeyGenVoice[]> {
   try {
@@ -112,22 +111,15 @@ export async function GET(request: NextRequest) {
     const authResult = await requireAuth(request);
     if (authResult instanceof NextResponse) { return authResult; }
 
-    const { searchParams } = new URL(request.url);
-    const language = searchParams.get('language') ?? undefined;
-
-    // Fetch ALL voice sources in parallel
-    const [heygenResult, elevenlabsVoices, unrealVoices, customVoices] = await Promise.all([
-      listHeyGenVoices(language).catch(() => ({ voices: [] as HeyGenVoice[] })),
+    // Fetch all voice sources in parallel — ElevenLabs, UnrealSpeech, custom clones
+    const [elevenlabsVoices, unrealVoices, customVoices] = await Promise.all([
       fetchElevenLabsVoices(),
       fetchUnrealSpeechVoices(),
       fetchCustomVoices(),
     ]);
 
-    const heygenVoices = ('voices' in heygenResult ? heygenResult.voices : [])
-      .map((v) => ({ ...v, provider: 'heygen' as const }));
-
-    // Order: Custom clones first, then ElevenLabs, UnrealSpeech, HeyGen
-    const allVoices = [...customVoices, ...elevenlabsVoices, ...unrealVoices, ...heygenVoices];
+    // Order: Custom clones first, then ElevenLabs, UnrealSpeech
+    const allVoices = [...customVoices, ...elevenlabsVoices, ...unrealVoices];
 
     return NextResponse.json({ success: true, voices: allVoices });
   } catch (error: unknown) {

@@ -12,15 +12,15 @@ const RegenerateSchema = z.object({
   sceneId: z.string().min(1),
   scriptText: z.string().default(''), // Empty for B-roll scenes
   screenshotUrl: z.string().nullable().default(null),
-  avatarId: z.string().default(''), // Empty for non-HeyGen scenes
-  voiceId: z.string().default(''), // Empty for non-HeyGen scenes
+  avatarId: z.string().default(''), // Empty for B-roll (avatar-profile-driven) scenes
+  voiceId: z.string().default(''), // Empty for B-roll (avatar-profile-driven) scenes
   aspectRatio: z.enum(['16:9', '9:16', '1:1', '4:3']).default('16:9'),
   duration: z.number().default(15),
-  engine: z.enum(['heygen', 'runway', 'sora', 'kling', 'luma']).nullable().default(null),
+  engine: z.enum(['runway', 'sora', 'kling', 'luma']).nullable().default(null),
   backgroundPrompt: z.string().nullable().default(null),
   visualDescription: z.string().nullable().default(null),
   title: z.string().nullable().default(null),
-  voiceProvider: z.enum(['heygen', 'elevenlabs', 'unrealspeech', 'custom']).default('heygen'),
+  voiceProvider: z.enum(['elevenlabs', 'unrealspeech', 'custom']).default('elevenlabs'),
 });
 
 export async function POST(request: NextRequest) {

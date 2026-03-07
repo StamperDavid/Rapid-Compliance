@@ -53,7 +53,7 @@ export function AvatarUpload({ onAvatarCreated }: AvatarUploadProps) {
         throw new Error(uploadData.error ?? 'Photo upload failed');
       }
 
-      // Step 2: Automatically create HeyGen avatar from the uploaded photo
+      // Step 2: Automatically create an avatar profile from the uploaded photo
       setPhase('creating');
 
       const name = avatarName.trim() || 'My Avatar';
@@ -111,7 +111,7 @@ export function AvatarUpload({ onAvatarCreated }: AvatarUploadProps) {
       </div>
 
       <p className="text-xs text-zinc-500">
-        Upload a clear, well-lit headshot. HeyGen will create an Instant Avatar automatically — one step.
+        Upload a clear, well-lit headshot. An avatar profile will be created automatically — one step.
       </p>
 
       {/* Avatar Name */}
@@ -148,7 +148,7 @@ export function AvatarUpload({ onAvatarCreated }: AvatarUploadProps) {
             {phase === 'creating' && (
               <div className="flex items-center gap-2">
                 <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-400" />
-                <p className="text-xs text-amber-300">Creating HeyGen avatar... This may take a moment.</p>
+                <p className="text-xs text-amber-300">Creating avatar... This may take a moment.</p>
               </div>
             )}
             {phase === 'done' && (

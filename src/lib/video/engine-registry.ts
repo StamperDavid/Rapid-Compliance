@@ -20,17 +20,6 @@ export interface VideoEngineConfig {
 }
 
 export const VIDEO_ENGINE_REGISTRY: Record<VideoEngineId, VideoEngineConfig> = {
-  heygen: {
-    id: 'heygen',
-    label: 'HeyGen',
-    icon: 'User',
-    description: 'AI avatar videos with lip-sync and voice cloning',
-    costPer5Seconds: 5, // $0.05 per 5s
-    quality: 'high',
-    bestFor: ['avatar', 'talking-head', 'explainer', 'sales-pitch'],
-    integrationStatus: 'available',
-    apiKeyServiceId: 'heygen',
-  },
   runway: {
     id: 'runway',
     label: 'Runway',
@@ -78,11 +67,11 @@ export const VIDEO_ENGINE_REGISTRY: Record<VideoEngineId, VideoEngineConfig> = {
 } as const;
 
 /** Ordered list of engine IDs for UI display */
-export const ENGINE_ORDER: VideoEngineId[] = ['heygen', 'runway', 'sora', 'kling', 'luma'];
+export const ENGINE_ORDER: VideoEngineId[] = ['kling', 'runway', 'sora', 'luma'];
 
 /** Calculate estimated cost in cents for a scene given engine and duration */
 export function estimateSceneCost(engineId: VideoEngineId | null, durationSeconds: number): number {
-  const engine = VIDEO_ENGINE_REGISTRY[engineId ?? 'heygen'];
+  const engine = VIDEO_ENGINE_REGISTRY[engineId ?? 'kling'];
   return Math.ceil(durationSeconds / 5) * engine.costPer5Seconds;
 }
 

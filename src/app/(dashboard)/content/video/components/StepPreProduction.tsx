@@ -18,7 +18,7 @@ interface VideoDefaultsData {
   avatarName: string | null;
   voiceId: string | null;
   voiceName: string | null;
-  voiceProvider: 'heygen' | 'elevenlabs' | 'unrealspeech' | 'custom' | null;
+  voiceProvider: 'elevenlabs' | 'unrealspeech' | 'custom' | null;
 }
 
 export function StepPreProduction() {

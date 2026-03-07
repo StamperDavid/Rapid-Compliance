@@ -48,7 +48,7 @@ export interface VideoPipelineState {
   avatarName: string | null;
   voiceId: string | null;
   voiceName: string | null;
-  voiceProvider: 'heygen' | 'elevenlabs' | 'unrealspeech' | 'custom' | null;
+  voiceProvider: 'elevenlabs' | 'unrealspeech' | 'custom' | null;
 
   // Step 5: Generation - Scene render results
   generatedScenes: SceneGenerationResult[];
@@ -78,7 +78,7 @@ export interface VideoPipelineState {
   removeScene: (sceneId: string) => void;
   reorderScenes: (fromIndex: number, toIndex: number) => void;
   setAvatar: (id: string, name: string) => void;
-  setVoice: (id: string, name: string, provider?: 'heygen' | 'elevenlabs' | 'unrealspeech' | 'custom') => void;
+  setVoice: (id: string, name: string, provider?: 'elevenlabs' | 'unrealspeech' | 'custom') => void;
   setGeneratedScenes: (results: SceneGenerationResult[]) => void;
   updateGeneratedScene: (sceneId: string, updates: Partial<SceneGenerationResult>) => void;
   setFinalVideoUrl: (url: string) => void;
@@ -218,7 +218,7 @@ export const useVideoPipelineStore = create<VideoPipelineState>()(
         set({
           voiceId: id,
           voiceName: name,
-          voiceProvider: provider ?? 'heygen',
+          voiceProvider: provider ?? 'elevenlabs',
         }),
 
       setGeneratedScenes: (results) => set({ generatedScenes: results }),
@@ -270,7 +270,7 @@ export const useVideoPipelineStore = create<VideoPipelineState>()(
             );
 
           case 'generation':
-            // B-roll scenes (runway/sora) don't need scriptText — only heygen scenes do
+            // B-roll scenes (runway/sora) don't need scriptText — only avatar scenes do
             return state.scenes.every((scene) =>
               scene.engine === 'runway' || scene.engine === 'sora' || scene.scriptText.trim().length > 0
             );
