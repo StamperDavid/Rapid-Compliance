@@ -307,14 +307,13 @@ export async function listAvatarProfiles(userId: string): Promise<AvatarProfile[
       return [];
     }
 
-    // Fetch user's personal avatars + stock avatars in parallel
-    // Stock query uses no orderBy to avoid requiring a Firestore composite index
-    // (only a handful of stock avatars exist, so in-memory sort is fine)
+    // Fetch user's personal avatars + stock avatars in parallel.
+    // Neither query uses orderBy to avoid requiring a Firestore composite index
+    // on (userId, createdAt). Results are sorted in-memory instead.
     const [userSnapshot, stockSnapshot] = await Promise.all([
       adminDb
         .collection(COLLECTION_PATH)
         .where('userId', '==', userId)
-        .orderBy('createdAt', 'desc')
         .get(),
       adminDb
         .collection(COLLECTION_PATH)
@@ -322,10 +321,15 @@ export async function listAvatarProfiles(userId: string): Promise<AvatarProfile[
         .get(),
     ]);
 
-    const userProfiles = userSnapshot.docs.map((docSnap) => docToProfile(docSnap.id, docSnap.data()));
+    const sortDesc = (a: AvatarProfile, b: AvatarProfile) =>
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+
+    const userProfiles = userSnapshot.docs
+      .map((docSnap) => docToProfile(docSnap.id, docSnap.data()))
+      .sort(sortDesc);
     const stockProfiles = stockSnapshot.docs
       .map((docSnap) => docToProfile(docSnap.id, docSnap.data()))
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      .sort(sortDesc);
 
     // User avatars first, then stock avatars
     return [...userProfiles, ...stockProfiles];
@@ -522,17 +526,16 @@ export async function getDefaultProfile(userId: string): Promise<AvatarProfile |
       return docToProfile(docSnap.id, docSnap.data());
     }
 
-    // Fallback: return the most recently created profile
+    // Fallback: return the most recently created profile (no orderBy to avoid composite index)
     const recentSnapshot = await adminDb
       .collection(COLLECTION_PATH)
       .where('userId', '==', userId)
-      .orderBy('createdAt', 'desc')
-      .limit(1)
       .get();
 
     if (!recentSnapshot.empty) {
-      const docSnap = recentSnapshot.docs[0];
-      return docToProfile(docSnap.id, docSnap.data());
+      const allProfiles = recentSnapshot.docs.map((d) => docToProfile(d.id, d.data()));
+      allProfiles.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      return allProfiles[0];
     }
 
     return null;
