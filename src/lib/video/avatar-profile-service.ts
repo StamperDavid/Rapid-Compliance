@@ -308,6 +308,8 @@ export async function listAvatarProfiles(userId: string): Promise<AvatarProfile[
     }
 
     // Fetch user's personal avatars + stock avatars in parallel
+    // Stock query uses no orderBy to avoid requiring a Firestore composite index
+    // (only a handful of stock avatars exist, so in-memory sort is fine)
     const [userSnapshot, stockSnapshot] = await Promise.all([
       adminDb
         .collection(COLLECTION_PATH)
@@ -317,12 +319,13 @@ export async function listAvatarProfiles(userId: string): Promise<AvatarProfile[
       adminDb
         .collection(COLLECTION_PATH)
         .where('userId', '==', 'system')
-        .orderBy('createdAt', 'desc')
         .get(),
     ]);
 
     const userProfiles = userSnapshot.docs.map((docSnap) => docToProfile(docSnap.id, docSnap.data()));
-    const stockProfiles = stockSnapshot.docs.map((docSnap) => docToProfile(docSnap.id, docSnap.data()));
+    const stockProfiles = stockSnapshot.docs
+      .map((docSnap) => docToProfile(docSnap.id, docSnap.data()))
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
     // User avatars first, then stock avatars
     return [...userProfiles, ...stockProfiles];
