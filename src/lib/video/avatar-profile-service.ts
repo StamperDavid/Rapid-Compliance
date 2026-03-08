@@ -296,6 +296,7 @@ export async function getAvatarProfile(profileId: string): Promise<AvatarProfile
 
 /**
  * List all avatar profiles for a user, ordered by createdAt desc.
+ * Also includes stock/system avatars (userId === 'system') available to all users.
  */
 export async function listAvatarProfiles(userId: string): Promise<AvatarProfile[]> {
   try {
@@ -306,13 +307,25 @@ export async function listAvatarProfiles(userId: string): Promise<AvatarProfile[
       return [];
     }
 
-    const snapshot = await adminDb
-      .collection(COLLECTION_PATH)
-      .where('userId', '==', userId)
-      .orderBy('createdAt', 'desc')
-      .get();
+    // Fetch user's personal avatars + stock avatars in parallel
+    const [userSnapshot, stockSnapshot] = await Promise.all([
+      adminDb
+        .collection(COLLECTION_PATH)
+        .where('userId', '==', userId)
+        .orderBy('createdAt', 'desc')
+        .get(),
+      adminDb
+        .collection(COLLECTION_PATH)
+        .where('userId', '==', 'system')
+        .orderBy('createdAt', 'desc')
+        .get(),
+    ]);
 
-    return snapshot.docs.map((docSnap) => docToProfile(docSnap.id, docSnap.data()));
+    const userProfiles = userSnapshot.docs.map((docSnap) => docToProfile(docSnap.id, docSnap.data()));
+    const stockProfiles = stockSnapshot.docs.map((docSnap) => docToProfile(docSnap.id, docSnap.data()));
+
+    // User avatars first, then stock avatars
+    return [...userProfiles, ...stockProfiles];
   } catch (error) {
     logger.error('Failed to list avatar profiles', error as Error, {
       userId,
