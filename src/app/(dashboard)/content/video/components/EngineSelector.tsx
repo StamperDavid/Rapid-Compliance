@@ -42,7 +42,7 @@ export function EngineSelector({
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const selectedEngineId = value ?? 'kling';
-  const selectedEngine = VIDEO_ENGINE_REGISTRY[selectedEngineId];
+  const selectedEngine = VIDEO_ENGINE_REGISTRY[selectedEngineId] ?? VIDEO_ENGINE_REGISTRY.kling;
   const SelectedIcon = ENGINE_ICONS[selectedEngine.icon] ?? Video;
 
   // Close dropdown when clicking outside

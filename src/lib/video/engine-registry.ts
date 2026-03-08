@@ -82,7 +82,7 @@ export const ENGINE_ORDER: VideoEngineId[] = ['kling', 'hedra', 'runway', 'sora'
 
 /** Calculate estimated cost in cents for a scene given engine and duration */
 export function estimateSceneCost(engineId: VideoEngineId | null, durationSeconds: number): number {
-  const engine = VIDEO_ENGINE_REGISTRY[engineId ?? 'kling'];
+  const engine = VIDEO_ENGINE_REGISTRY[engineId ?? 'kling'] ?? VIDEO_ENGINE_REGISTRY.kling;
   return Math.ceil(durationSeconds / 5) * engine.costPer5Seconds;
 }
 
