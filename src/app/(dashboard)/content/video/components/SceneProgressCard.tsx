@@ -3,7 +3,7 @@
 import { Loader2, CheckCircle2, XCircle, RefreshCw, Play } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { VIDEO_ENGINE_REGISTRY } from '@/lib/video/engine-registry';
+import { getEngineConfig } from '@/lib/video/engine-registry';
 import type { SceneGenerationResult } from '@/types/video-pipeline';
 
 interface SceneProgressCardProps {
@@ -40,7 +40,7 @@ export function SceneProgressCard({ sceneNumber, result, onRetry }: SceneProgres
         <div className="flex items-center gap-2">
           <span className={cn('text-sm font-medium', config.color)}>{config.label}</span>
           <span className="text-xs text-zinc-600">
-            {VIDEO_ENGINE_REGISTRY[result.provider ?? 'kling'].label}
+            {getEngineConfig(result.provider).label}
           </span>
         </div>
 

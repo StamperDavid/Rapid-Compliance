@@ -9,6 +9,7 @@ import {
   ENGINE_ORDER,
   estimateSceneCost,
   formatCostUSD,
+  getEngineConfig,
 } from '@/lib/video/engine-registry';
 import type { VideoEngineId } from '@/types/video-pipeline';
 
@@ -42,7 +43,7 @@ export function EngineSelector({
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const selectedEngineId = value ?? 'kling';
-  const selectedEngine = VIDEO_ENGINE_REGISTRY[selectedEngineId] ?? VIDEO_ENGINE_REGISTRY.kling;
+  const selectedEngine = getEngineConfig(selectedEngineId);
   const SelectedIcon = ENGINE_ICONS[selectedEngine.icon] ?? Video;
 
   // Close dropdown when clicking outside

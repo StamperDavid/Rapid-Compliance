@@ -80,9 +80,14 @@ export const VIDEO_ENGINE_REGISTRY: Record<VideoEngineId, VideoEngineConfig> = {
 /** Ordered list of engine IDs for UI display */
 export const ENGINE_ORDER: VideoEngineId[] = ['kling', 'hedra', 'runway', 'sora', 'luma'];
 
+/** Safe lookup — always returns a valid config, falling back to kling for unknown IDs */
+export function getEngineConfig(engineId: string | null | undefined): VideoEngineConfig {
+  return VIDEO_ENGINE_REGISTRY[engineId as VideoEngineId] ?? VIDEO_ENGINE_REGISTRY.kling;
+}
+
 /** Calculate estimated cost in cents for a scene given engine and duration */
 export function estimateSceneCost(engineId: VideoEngineId | null, durationSeconds: number): number {
-  const engine = VIDEO_ENGINE_REGISTRY[engineId ?? 'kling'] ?? VIDEO_ENGINE_REGISTRY.kling;
+  const engine = getEngineConfig(engineId);
   return Math.ceil(durationSeconds / 5) * engine.costPer5Seconds;
 }
 

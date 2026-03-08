@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { useVideoPipelineStore } from '@/lib/stores/video-pipeline-store';
 import { useVideoProviderStatus } from '@/hooks/useVideoProviderStatus';
 import { EngineSelector } from './EngineSelector';
-import { estimateSceneCost, formatCostUSD, VIDEO_ENGINE_REGISTRY } from '@/lib/video/engine-registry';
+import { estimateSceneCost, formatCostUSD, getEngineConfig } from '@/lib/video/engine-registry';
 
 export function StepApproval() {
   const {
@@ -38,7 +38,7 @@ export function StepApproval() {
   // Build engine summary for the warning text
   const engineCounts = scenes.reduce<Record<string, number>>((acc, s) => {
     const engine = s.engine ?? 'kling';
-    const label = (VIDEO_ENGINE_REGISTRY[engine] ?? VIDEO_ENGINE_REGISTRY.kling).label;
+    const label = getEngineConfig(engine).label;
     acc[label] = (acc[label] ?? 0) + 1;
     return acc;
   }, {});

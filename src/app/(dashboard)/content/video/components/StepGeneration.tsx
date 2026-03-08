@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { SceneProgressCard } from './SceneProgressCard';
 import { useVideoPipelineStore } from '@/lib/stores/video-pipeline-store';
-import { VIDEO_ENGINE_REGISTRY } from '@/lib/video/engine-registry';
+import { getEngineConfig } from '@/lib/video/engine-registry';
 import type { SceneGenerationResult } from '@/types/video-pipeline';
 
 type GenerationPhase = 'submitting' | 'rendering' | 'complete';
@@ -58,7 +58,7 @@ export function StepGeneration() {
   // Build engine summary for the generating description
   const engineCounts = scenes.reduce<Record<string, number>>((acc, s) => {
     const engine = s.engine ?? 'kling';
-    const label = VIDEO_ENGINE_REGISTRY[engine].label;
+    const label = getEngineConfig(engine).label;
     acc[label] = (acc[label] ?? 0) + 1;
     return acc;
   }, {});
