@@ -299,47 +299,62 @@ export async function getAvatarProfile(profileId: string): Promise<AvatarProfile
  * Also includes stock/system avatars (userId === 'system') available to all users.
  */
 export async function listAvatarProfiles(userId: string): Promise<AvatarProfile[]> {
-  try {
-    if (!adminDb) {
-      logger.warn('Database not available for listing avatar profiles', {
-        file: 'avatar-profile-service.ts',
-      });
-      return [];
-    }
-
-    // Fetch user's personal avatars + stock avatars in parallel.
-    // Neither query uses orderBy to avoid requiring a Firestore composite index
-    // on (userId, createdAt). Results are sorted in-memory instead.
-    const [userSnapshot, stockSnapshot] = await Promise.all([
-      adminDb
-        .collection(COLLECTION_PATH)
-        .where('userId', '==', userId)
-        .get(),
-      adminDb
-        .collection(COLLECTION_PATH)
-        .where('userId', '==', 'system')
-        .get(),
-    ]);
-
-    const sortDesc = (a: AvatarProfile, b: AvatarProfile) =>
-      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-
-    const userProfiles = userSnapshot.docs
-      .map((docSnap) => docToProfile(docSnap.id, docSnap.data()))
-      .sort(sortDesc);
-    const stockProfiles = stockSnapshot.docs
-      .map((docSnap) => docToProfile(docSnap.id, docSnap.data()))
-      .sort(sortDesc);
-
-    // User avatars first, then stock avatars
-    return [...userProfiles, ...stockProfiles];
-  } catch (error) {
-    logger.error('Failed to list avatar profiles', error as Error, {
-      userId,
+  if (!adminDb) {
+    logger.warn('Database not available for listing avatar profiles', {
       file: 'avatar-profile-service.ts',
     });
     return [];
   }
+
+  const sortDesc = (a: AvatarProfile, b: AvatarProfile) =>
+    new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+
+  // Fetch user's personal avatars and stock avatars independently.
+  // Each query is wrapped in its own try/catch so a failure in one
+  // does not prevent the other from returning results.
+  let userProfiles: AvatarProfile[] = [];
+  let stockProfiles: AvatarProfile[] = [];
+
+  try {
+    const userSnapshot = await adminDb
+      .collection(COLLECTION_PATH)
+      .where('userId', '==', userId)
+      .get();
+    userProfiles = userSnapshot.docs
+      .map((docSnap) => docToProfile(docSnap.id, docSnap.data()))
+      .sort(sortDesc);
+  } catch (error) {
+    logger.error('Failed to fetch user avatar profiles', error as Error, {
+      userId,
+      collectionPath: COLLECTION_PATH,
+      file: 'avatar-profile-service.ts',
+    });
+  }
+
+  try {
+    const stockSnapshot = await adminDb
+      .collection(COLLECTION_PATH)
+      .where('userId', '==', 'system')
+      .get();
+    stockProfiles = stockSnapshot.docs
+      .map((docSnap) => docToProfile(docSnap.id, docSnap.data()))
+      .sort(sortDesc);
+
+    logger.info('Stock avatar profiles loaded', {
+      count: stockProfiles.length,
+      ids: stockProfiles.map((p) => p.id).join(', '),
+      collectionPath: COLLECTION_PATH,
+      file: 'avatar-profile-service.ts',
+    });
+  } catch (error) {
+    logger.error('Failed to fetch stock avatar profiles', error as Error, {
+      collectionPath: COLLECTION_PATH,
+      file: 'avatar-profile-service.ts',
+    });
+  }
+
+  // User avatars first, then stock avatars
+  return [...userProfiles, ...stockProfiles];
 }
 
 /**
