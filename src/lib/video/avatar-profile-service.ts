@@ -60,6 +60,9 @@ export interface AvatarProfile {
   // Preferred video engine for this avatar (null = auto-select)
   preferredEngine: 'kling' | 'hedra' | null;
 
+  // External provider asset IDs (for dedup during sync)
+  hedraAssetId: string | null; // Hedra image asset ID
+
   // Metadata
   description: string | null; // "Professional look, navy suit"
   isDefault: boolean; // Auto-select this profile
@@ -81,6 +84,7 @@ export interface CreateAvatarProfileData {
   voiceName?: string | null;
   voiceProvider?: VoiceProvider | null;
   preferredEngine?: 'kling' | 'hedra' | null;
+  hedraAssetId?: string | null;
   description?: string | null;
   isDefault?: boolean;
 }
@@ -97,6 +101,7 @@ export interface UpdateAvatarProfileData {
   voiceName?: string | null;
   voiceProvider?: VoiceProvider | null;
   preferredEngine?: 'kling' | 'hedra' | null;
+  hedraAssetId?: string | null;
   description?: string | null;
   isDefault?: boolean;
 }
@@ -118,6 +123,7 @@ interface FirestoreAvatarProfileDoc {
   voiceName: string | null;
   voiceProvider: VoiceProvider | null;
   preferredEngine: 'kling' | 'hedra' | null;
+  hedraAssetId: string | null;
   description: string | null;
   isDefault: boolean;
   createdAt: FirebaseFirestore.Timestamp | null;
@@ -165,6 +171,7 @@ function docToProfile(id: string, raw: FirebaseFirestore.DocumentData): AvatarPr
     voiceName: data.voiceName ?? null,
     voiceProvider: data.voiceProvider ?? null,
     preferredEngine: data.preferredEngine ?? null,
+    hedraAssetId: data.hedraAssetId ?? null,
     description: data.description ?? null,
     isDefault: data.isDefault ?? false,
     createdAt: timestampToISO(data.createdAt),
@@ -207,6 +214,7 @@ export async function createAvatarProfile(
       voiceName: data.voiceName ?? null,
       voiceProvider: data.voiceProvider ?? null,
       preferredEngine: data.preferredEngine ?? null,
+      hedraAssetId: data.hedraAssetId ?? null,
       description: data.description ?? null,
       isDefault: data.isDefault ?? false,
       createdAt: FieldValue.serverTimestamp(),
@@ -241,6 +249,7 @@ export async function createAvatarProfile(
       voiceName: profileData.voiceName,
       voiceProvider: profileData.voiceProvider,
       preferredEngine: profileData.preferredEngine,
+      hedraAssetId: profileData.hedraAssetId,
       description: profileData.description,
       isDefault: profileData.isDefault,
       createdAt: new Date().toISOString(),
@@ -406,6 +415,9 @@ export async function updateAvatarProfile(
     }
     if (updates.preferredEngine !== undefined) {
       updateData.preferredEngine = updates.preferredEngine;
+    }
+    if (updates.hedraAssetId !== undefined) {
+      updateData.hedraAssetId = updates.hedraAssetId;
     }
     if (updates.description !== undefined) {
       updateData.description = updates.description;

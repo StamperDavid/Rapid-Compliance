@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { motion } from 'framer-motion';
-import { User, Loader2, AlertCircle, Search, Check, Mic, Sparkles, Trash2, Video, Crown } from 'lucide-react';
+import { User, Loader2, AlertCircle, Search, Check, Mic, Sparkles, Trash2, Video, Crown, RefreshCw } from 'lucide-react';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
 
@@ -80,7 +80,7 @@ function AvatarCard({
             fill
             className="object-cover"
             sizes="80px"
-            unoptimized={profile.frontalImageUrl.startsWith('data:')}
+            unoptimized={profile.frontalImageUrl.startsWith('data:') || profile.frontalImageUrl.includes('imagedelivery.net')}
           />
         </div>
       ) : (
@@ -197,6 +197,8 @@ export function AvatarPicker({ selectedAvatarId, onSelect, onProfileLoaded }: Av
   const [searchQuery, setSearchQuery] = useState('');
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [isSyncingHedra, setIsSyncingHedra] = useState(false);
+  const [syncResult, setSyncResult] = useState<string | null>(null);
 
   const executeDelete = useCallback(async (profileId: string) => {
     setConfirmDeleteId(null);
@@ -232,6 +234,31 @@ export function AvatarPicker({ selectedAvatarId, onSelect, onProfileLoaded }: Av
     }
   }, [authFetch]);
 
+  const syncFromHedra = useCallback(async () => {
+    setIsSyncingHedra(true);
+    setSyncResult(null);
+    try {
+      const response = await authFetch('/api/video/avatar-profiles/sync-hedra', {
+        method: 'POST',
+      });
+      const data = await response.json() as { success: boolean; imported?: number; skipped?: number; total?: number; error?: string };
+      if (!data.success) {
+        setSyncResult(data.error ?? 'Sync failed');
+        return;
+      }
+      if (data.imported === 0) {
+        setSyncResult(`All ${data.total ?? 0} Hedra avatars already synced`);
+      } else {
+        setSyncResult(`Imported ${data.imported} new avatar${data.imported !== 1 ? 's' : ''} from Hedra`);
+        await fetchProfiles();
+      }
+    } catch (err) {
+      setSyncResult(err instanceof Error ? err.message : 'Failed to sync from Hedra');
+    } finally {
+      setIsSyncingHedra(false);
+    }
+  }, [authFetch, fetchProfiles]);
+
   useEffect(() => {
     void fetchProfiles();
   }, [fetchProfiles]);
@@ -259,26 +286,61 @@ export function AvatarPicker({ selectedAvatarId, onSelect, onProfileLoaded }: Av
       <div className="flex flex-col items-center justify-center py-12 gap-3">
         <AlertCircle className="w-8 h-8 text-zinc-500" />
         <p className="text-sm text-zinc-400">
-          {error ?? 'No avatar profiles yet. Upload a headshot below to create one.'}
+          {error ?? 'No avatar profiles yet. Upload a headshot or sync from Hedra.'}
         </p>
+        <button
+          onClick={() => void syncFromHedra()}
+          disabled={isSyncingHedra}
+          className="flex items-center gap-2 px-4 py-2 bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors"
+        >
+          {isSyncingHedra ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <RefreshCw className="w-4 h-4" />
+          )}
+          {isSyncingHedra ? 'Syncing...' : 'Sync from Hedra'}
+        </button>
+        {syncResult && (
+          <p className="text-xs text-zinc-400">{syncResult}</p>
+        )}
       </div>
     );
   }
 
   return (
     <div className="space-y-4">
-      {/* Search */}
-      {profiles.length > 3 && (
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search profiles..."
-            className="w-full pl-9 pr-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-500/50"
-          />
-        </div>
+      {/* Search + Sync row */}
+      <div className="flex items-center gap-2">
+        {profiles.length > 3 && (
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search profiles..."
+              className="w-full pl-9 pr-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+            />
+          </div>
+        )}
+        <button
+          onClick={() => void syncFromHedra()}
+          disabled={isSyncingHedra}
+          className="flex items-center gap-1.5 px-3 py-2 bg-zinc-800 border border-zinc-700 hover:border-amber-500/50 hover:bg-zinc-700 disabled:opacity-50 text-zinc-300 hover:text-amber-400 text-xs font-medium rounded-lg transition-colors whitespace-nowrap"
+          title="Import new avatars from your Hedra account"
+        >
+          {isSyncingHedra ? (
+            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+          ) : (
+            <RefreshCw className="w-3.5 h-3.5" />
+          )}
+          {isSyncingHedra ? 'Syncing...' : 'Sync Hedra'}
+        </button>
+      </div>
+
+      {/* Sync result message */}
+      {syncResult && (
+        <p className="text-xs text-amber-400/80">{syncResult}</p>
       )}
 
       {/* Results count */}
