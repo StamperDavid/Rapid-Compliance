@@ -514,6 +514,23 @@ export default function APIKeysPage() {
       why: 'Full-body avatar videos with character consistency. Powers walking, sitting, standing scenes via Kling 3.0.',
     },
     {
+      id: 'hedra',
+      name: 'Hedra (Character-3)',
+      icon: '🎭',
+      description: 'AI talking head avatars — image + audio to realistic video (Character-3)',
+      required: false,
+      placeholder: 'sk_hedra_...',
+      setupUrl: 'https://www.hedra.com/api-profile',
+      setupSteps: [
+        'Go to hedra.com and sign up',
+        'Go to API Profile page',
+        'Upgrade to Creator plan or higher (API access required)',
+        'Copy your API key and paste here',
+      ],
+      cost: 'Creator: $24/month (3,600 credits), Professional: $60/month (11,000 credits)',
+      why: 'Generate realistic talking head avatar videos from a single photo + audio. Alternative to Kling Avatar with superior lip-sync quality.',
+    },
+    {
       id: 'elevenlabs',
       name: 'ElevenLabs',
       icon: '🔊',

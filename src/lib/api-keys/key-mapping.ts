@@ -56,6 +56,7 @@ export const UI_TO_CONFIG_MAP: Record<string, string> = {
   runway: 'video.runway.apiKey',
   sora: 'video.sora.apiKey',
   fal: 'video.fal.apiKey',
+  hedra: 'video.hedra.apiKey',
 
   // Voice
   elevenlabs: 'voice.elevenlabs.apiKey',

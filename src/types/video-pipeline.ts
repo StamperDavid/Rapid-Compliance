@@ -73,7 +73,7 @@ export const TARGET_PLATFORM_LABELS: Record<TargetPlatform, string> = {
 // Engine Types
 // ============================================================================
 
-export type VideoEngineId = 'runway' | 'sora' | 'kling' | 'luma';
+export type VideoEngineId = 'runway' | 'sora' | 'kling' | 'luma' | 'hedra';
 
 // ============================================================================
 // Scene Types

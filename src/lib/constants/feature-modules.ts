@@ -81,6 +81,10 @@ export const API_KEY_SETUP_LINKS: Record<string, { url: string; docsUrl: string 
     url: 'https://app.dataforseo.com/api-dashboard',
     docsUrl: 'https://docs.dataforseo.com',
   },
+  hedra: {
+    url: 'https://www.hedra.com/api-profile',
+    docsUrl: 'https://www.hedra.com/docs/api-reference/public/list-models',
+  },
   serper: {
     url: 'https://serper.dev/api-key',
     docsUrl: 'https://serper.dev/docs',
@@ -279,6 +283,14 @@ export const FEATURE_MODULES: FeatureModuleDefinition[] = [
         setupUrl: API_KEY_SETUP_LINKS.elevenlabs.url,
         docsUrl: API_KEY_SETUP_LINKS.elevenlabs.docsUrl,
         priority: 'recommended',
+      },
+      {
+        serviceId: 'hedra',
+        label: 'Hedra API Key (Character-3)',
+        description: 'Generate talking head avatar videos with Hedra Character-3.',
+        setupUrl: API_KEY_SETUP_LINKS.hedra.url,
+        docsUrl: API_KEY_SETUP_LINKS.hedra.docsUrl,
+        priority: 'optional',
       },
     ],
   },

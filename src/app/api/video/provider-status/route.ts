@@ -19,6 +19,7 @@ const CHECKABLE_ENGINES: Array<{ id: VideoEngineId; service: APIServiceName }> =
   { id: 'runway', service: 'runway' },
   { id: 'sora', service: 'sora' },
   { id: 'kling', service: 'kling' },
+  { id: 'hedra', service: 'hedra' },
 ];
 
 export async function GET(request: NextRequest) {
@@ -45,6 +46,7 @@ export async function GET(request: NextRequest) {
       sora: { configured: false },
       kling: { configured: false },
       luma: { configured: false },
+      hedra: { configured: false },
     };
 
     for (const [id, status] of statusEntries) {

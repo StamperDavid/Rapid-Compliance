@@ -64,10 +64,21 @@ export const VIDEO_ENGINE_REGISTRY: Record<VideoEngineId, VideoEngineConfig> = {
     integrationStatus: 'coming-soon',
     apiKeyServiceId: null,
   },
+  hedra: {
+    id: 'hedra',
+    label: 'Hedra',
+    icon: 'Theater',
+    description: 'Talking head avatars with superior lip-sync (Character-3)',
+    costPer5Seconds: 8,
+    quality: 'high',
+    bestFor: ['talking-head', 'lip-sync', 'avatar', 'presentation'],
+    integrationStatus: 'available',
+    apiKeyServiceId: 'hedra',
+  },
 } as const;
 
 /** Ordered list of engine IDs for UI display */
-export const ENGINE_ORDER: VideoEngineId[] = ['kling', 'runway', 'sora', 'luma'];
+export const ENGINE_ORDER: VideoEngineId[] = ['kling', 'hedra', 'runway', 'sora', 'luma'];
 
 /** Calculate estimated cost in cents for a scene given engine and duration */
 export function estimateSceneCost(engineId: VideoEngineId | null, durationSeconds: number): number {

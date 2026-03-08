@@ -184,6 +184,8 @@ return keys.ai?.anthropicApiKey ?? keys.ai?.openrouterApiKey ?? null;
       case 'fal':
       case 'kling':
         return keys.video?.fal?.apiKey ?? null;
+      case 'hedra':
+        return keys.video?.hedra?.apiKey ?? null;
 
       // Voice Services
       case 'elevenlabs':

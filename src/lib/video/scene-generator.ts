@@ -17,6 +17,10 @@ import {
   generateKlingReferenceVideo,
   getKlingVideoStatus,
 } from '@/lib/video/fal-kling-service';
+import {
+  generateHedraAvatarVideo,
+  getHedraVideoStatus,
+} from '@/lib/video/hedra-service';
 import type { PipelineScene, SceneGenerationResult, VideoEngineId } from '@/types/video-pipeline';
 import type { VideoAspectRatio, VideoProvider } from '@/types/video';
 
@@ -478,6 +482,159 @@ async function generateWithKlingReference(
   };
 }
 
+/**
+ * Generate a talking-head avatar scene using Hedra Character-3.
+ * Alternative avatar engine with superior lip-sync quality.
+ * Takes: photo + TTS audio → talking head video.
+ */
+async function generateWithHedra(
+  scene: PipelineScene,
+  avatarId: string,
+  voiceId: string,
+  aspectRatio: VideoAspectRatio,
+  voiceProvider?: 'elevenlabs' | 'unrealspeech' | 'custom'
+): Promise<SceneGenerationResult> {
+  const script = scene.scriptText.trim() || ' ';
+
+  // Load avatar profile for the frontal photo
+  const { getDefaultProfile, getAvatarProfile } = await import('@/lib/video/avatar-profile-service');
+
+  let photoUrl: string | null = null;
+  try {
+    const profile = await getAvatarProfile(avatarId) ?? await getDefaultProfile(avatarId);
+    if (profile?.frontalImageUrl) {
+      photoUrl = profile.frontalImageUrl;
+      logger.info('Loaded avatar profile photo for Hedra', {
+        sceneId: scene.id,
+        profileId: profile.id,
+        file: 'scene-generator.ts',
+      });
+    }
+  } catch {
+    // Profile not found
+  }
+
+  if (!photoUrl) {
+    return {
+      sceneId: scene.id,
+      providerVideoId: '',
+      provider: 'hedra',
+      status: 'failed',
+      videoUrl: null,
+      thumbnailUrl: null,
+      progress: 0,
+      error: 'No avatar photo found. Create an Avatar Profile with a frontal photo to use Hedra.',
+    };
+  }
+
+  // Synthesize TTS audio (same pattern as Kling Avatar)
+  let audioUrl: string | null = null;
+  if (script.length > 1) {
+    const ttsProvider = voiceProvider ?? 'elevenlabs';
+
+    if (ttsProvider === 'elevenlabs') {
+      try {
+        const { ElevenLabsProvider } = await import('@/lib/voice/tts/providers/elevenlabs-provider');
+        const { apiKeyService } = await import('@/lib/api-keys/api-key-service');
+        const { PLATFORM_ID } = await import('@/lib/constants/platform');
+        const rawKey = await apiKeyService.getServiceKey(PLATFORM_ID, 'elevenlabs');
+        const apiKey = typeof rawKey === 'string' ? rawKey : null;
+
+        if (!apiKey) {
+          return {
+            sceneId: scene.id,
+            providerVideoId: '',
+            provider: 'hedra',
+            status: 'failed',
+            videoUrl: null,
+            thumbnailUrl: null,
+            progress: 0,
+            error: 'ElevenLabs API key not configured. Hedra requires TTS audio.',
+          };
+        }
+
+        const provider = new ElevenLabsProvider(apiKey);
+        const ttsResult = await provider.synthesize(script, voiceId);
+
+        // Store audio in Firestore, serve via public endpoint
+        const { adminDb } = await import('@/lib/firebase/admin');
+        if (adminDb) {
+          const audioBase64 = ttsResult.audio.includes(',')
+            ? ttsResult.audio.split(',')[1]
+            : ttsResult.audio;
+          const audioId = `tts-hedra-${scene.id}-${Date.now()}`;
+
+          await adminDb
+            .collection(`organizations/${PLATFORM_ID}/tts_audio`)
+            .doc(audioId)
+            .set({
+              base64: audioBase64,
+              contentType: 'audio/mpeg',
+              createdAt: new Date(),
+              expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+            });
+
+          const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://rapidcompliance.us';
+          audioUrl = `${appUrl}/api/video/tts-audio/${audioId}`;
+        }
+      } catch (ttsError) {
+        const errorMsg = ttsError instanceof Error ? ttsError.message : String(ttsError);
+        return {
+          sceneId: scene.id,
+          providerVideoId: '',
+          provider: 'hedra',
+          status: 'failed',
+          videoUrl: null,
+          thumbnailUrl: null,
+          progress: 0,
+          error: `Voice synthesis failed: ${errorMsg}`,
+        };
+      }
+    }
+  }
+
+  if (!audioUrl) {
+    return {
+      sceneId: scene.id,
+      providerVideoId: '',
+      provider: 'hedra',
+      status: 'failed',
+      videoUrl: null,
+      thumbnailUrl: null,
+      progress: 0,
+      error: 'Audio synthesis required for Hedra but no audio was generated.',
+    };
+  }
+
+  // Map aspect ratio
+  const hedraAspectRatio = aspectRatio === '4:3' ? '16:9' : aspectRatio;
+
+  // Submit to Hedra Character-3
+  const response = await generateHedraAvatarVideo(photoUrl, audioUrl, {
+    textPrompt: scene.visualDescription?.trim() ?? '',
+    aspectRatio: hedraAspectRatio,
+    durationMs: scene.duration * 1000,
+  });
+
+  logger.info('Hedra avatar generation started', {
+    sceneId: scene.id,
+    generationId: response.generationId,
+    modelId: response.modelId,
+    file: 'scene-generator.ts',
+  });
+
+  return {
+    sceneId: scene.id,
+    providerVideoId: response.generationId,
+    provider: 'hedra',
+    status: 'generating',
+    videoUrl: null,
+    thumbnailUrl: null,
+    progress: 0,
+    error: null,
+  };
+}
+
 // ============================================================================
 // Intelligent Engine Selection
 // ============================================================================
@@ -495,17 +652,18 @@ async function getAvailableProviders(): Promise<Record<string, boolean>> {
     return providerCache.data;
   }
 
-  const [sora, runway, kling] = await Promise.all([
+  const [sora, runway, kling, hedra] = await Promise.all([
     getVideoProviderKey('sora').then((k) => k !== null),
     getVideoProviderKey('runway').then((k) => k !== null),
     getVideoProviderKey('fal').then((k) => k !== null), // fal.ai key powers Kling
+    getVideoProviderKey('hedra').then((k) => k !== null),
   ]);
 
-  const result = { sora, runway, kling };
+  const result = { sora, runway, kling, hedra };
   Object.assign(providerCache, { data: result, timestamp: Date.now() });
 
   logger.info('Video provider availability check', {
-    sora, runway, kling,
+    sora, runway, kling, hedra,
     file: 'scene-generator.ts',
   });
 
@@ -649,7 +807,9 @@ export async function selectEngineForScene(
   switch (classification) {
     case 'talking-head':
       // Avatar speaks to camera. Kling Avatar (photo+audio) is the primary engine.
+      // Hedra is an alternative with superior lip-sync.
       if (providers.kling) { return 'kling'; }
+      if (providers.hedra) { return 'hedra'; }
       return 'kling'; // Will fail with clear error if not configured
 
     case 'character-in-action':
@@ -769,7 +929,41 @@ export async function generateScene(
   // Entire function wrapped in try/catch so nothing can crash the batch
   try {
     const hasAvatar = Boolean(avatarId);
-    const engine: VideoEngineId = await selectEngineForScene(scene, hasAvatar);
+
+    // Load avatar profile to get bundled voice + engine preference
+    let resolvedVoiceId = voiceId;
+    let resolvedVoiceProvider = voiceProvider;
+    let profileEngine: VideoEngineId | null = null;
+
+    if (hasAvatar) {
+      try {
+        const { getAvatarProfile, getDefaultProfile } = await import('@/lib/video/avatar-profile-service');
+        const profile = await getAvatarProfile(avatarId) ?? await getDefaultProfile(avatarId);
+        if (profile) {
+          // Use the avatar's bundled voice if no explicit voice was passed
+          if (!resolvedVoiceId && profile.voiceId) {
+            resolvedVoiceId = profile.voiceId;
+            resolvedVoiceProvider = profile.voiceProvider ?? resolvedVoiceProvider;
+            logger.info('Using avatar profile bundled voice', {
+              sceneId: scene.id,
+              profileId: profile.id,
+              voiceId: profile.voiceId,
+              voiceProvider: profile.voiceProvider,
+              file: 'scene-generator.ts',
+            });
+          }
+          // Use the avatar's preferred engine if set
+          if (profile.preferredEngine) {
+            profileEngine = profile.preferredEngine;
+          }
+        }
+      } catch {
+        // Profile load failed — continue with passed-in params
+      }
+    }
+
+    // Engine selection: profile preference > scene explicit > auto-select
+    const engine: VideoEngineId = profileEngine ?? await selectEngineForScene(scene, hasAvatar);
 
     logger.info('Engine selected for scene', {
       sceneId: scene.id,
@@ -800,7 +994,7 @@ export async function generateScene(
 
         if (classification === 'talking-head' && hasAvatar) {
           // Avatar speaking to camera — use Kling Avatar (photo + audio → talking head)
-          return await generateWithKlingAvatar(scene, avatarId, voiceId, aspectRatio, voiceProvider);
+          return await generateWithKlingAvatar(scene, avatarId, resolvedVoiceId, aspectRatio, resolvedVoiceProvider);
         }
 
         // For premium avatars with visual descriptions mentioning people/characters,
@@ -821,6 +1015,15 @@ export async function generateScene(
         }
 
         // All other Kling scenes: text-to-video (B-roll, stylized, dynamic, etc.)
+        return await generateWithKling(scene, aspectRatio);
+      }
+
+      case 'hedra': {
+        // Hedra only does talking-head avatars
+        if (hasAvatar) {
+          return await generateWithHedra(scene, avatarId, resolvedVoiceId, aspectRatio, resolvedVoiceProvider);
+        }
+        // If no avatar, fall back to Kling text-to-video
         return await generateWithKling(scene, aspectRatio);
       }
 
@@ -875,6 +1078,43 @@ export async function pollSceneStatus(
   error: string | null;
 }> {
   const resolvedProvider = provider ?? 'kling';
+
+  // Hedra uses its own REST API
+  if (resolvedProvider === 'hedra') {
+    try {
+      const hedraStatus = await getHedraVideoStatus(providerVideoId);
+
+      if (hedraStatus.status === 'completed') {
+        return {
+          status: 'completed',
+          videoUrl: hedraStatus.videoUrl,
+          thumbnailUrl: null,
+          error: null,
+        };
+      } else if (hedraStatus.status === 'failed') {
+        return {
+          status: 'failed',
+          videoUrl: null,
+          thumbnailUrl: null,
+          error: hedraStatus.error ?? 'Hedra video generation failed',
+        };
+      } else {
+        return {
+          status: 'generating',
+          videoUrl: null,
+          thumbnailUrl: null,
+          error: null,
+        };
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      logger.error('Failed to poll Hedra scene status', error as Error, {
+        generationId: providerVideoId,
+        file: 'scene-generator.ts',
+      });
+      return { status: 'failed', videoUrl: null, thumbnailUrl: null, error: errorMessage };
+    }
+  }
 
   // Kling uses fal.ai queue API — providerVideoId format: "requestId|model"
   if (resolvedProvider === 'kling') {

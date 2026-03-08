@@ -22,6 +22,7 @@ const DEFAULT_STATUS: ProviderStatusMap = {
   runway: { configured: false },
   kling: { configured: false },
   luma: { configured: false },
+  hedra: { configured: false },
 };
 
 export function useVideoProviderStatus(): UseVideoProviderStatusReturn {

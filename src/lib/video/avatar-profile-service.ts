@@ -54,7 +54,11 @@ export interface AvatarProfile {
 
   // Voice identity (from Voice Lab — ElevenLabs, UnrealSpeech, custom clones)
   voiceId: string | null;
+  voiceName: string | null; // Display name (e.g., "Rachel", "Custom Clone - David")
   voiceProvider: 'elevenlabs' | 'unrealspeech' | 'custom' | null;
+
+  // Preferred video engine for this avatar (null = auto-select)
+  preferredEngine: 'kling' | 'hedra' | null;
 
   // Metadata
   description: string | null; // "Professional look, navy suit"
@@ -74,7 +78,9 @@ export interface CreateAvatarProfileData {
   upperBodyImageUrl?: string | null;
   greenScreenClips?: GreenScreenClip[];
   voiceId?: string | null;
+  voiceName?: string | null;
   voiceProvider?: VoiceProvider | null;
+  preferredEngine?: 'kling' | 'hedra' | null;
   description?: string | null;
   isDefault?: boolean;
 }
@@ -88,7 +94,9 @@ export interface UpdateAvatarProfileData {
   upperBodyImageUrl?: string | null;
   greenScreenClips?: GreenScreenClip[];
   voiceId?: string | null;
+  voiceName?: string | null;
   voiceProvider?: VoiceProvider | null;
+  preferredEngine?: 'kling' | 'hedra' | null;
   description?: string | null;
   isDefault?: boolean;
 }
@@ -107,7 +115,9 @@ interface FirestoreAvatarProfileDoc {
   upperBodyImageUrl: string | null;
   greenScreenClips: GreenScreenClip[];
   voiceId: string | null;
+  voiceName: string | null;
   voiceProvider: VoiceProvider | null;
+  preferredEngine: 'kling' | 'hedra' | null;
   description: string | null;
   isDefault: boolean;
   createdAt: FirebaseFirestore.Timestamp | null;
@@ -152,7 +162,9 @@ function docToProfile(id: string, raw: FirebaseFirestore.DocumentData): AvatarPr
     upperBodyImageUrl: data.upperBodyImageUrl ?? null,
     greenScreenClips: clips,
     voiceId: data.voiceId ?? null,
+    voiceName: data.voiceName ?? null,
     voiceProvider: data.voiceProvider ?? null,
+    preferredEngine: data.preferredEngine ?? null,
     description: data.description ?? null,
     isDefault: data.isDefault ?? false,
     createdAt: timestampToISO(data.createdAt),
@@ -192,7 +204,9 @@ export async function createAvatarProfile(
       upperBodyImageUrl: data.upperBodyImageUrl ?? null,
       greenScreenClips,
       voiceId: data.voiceId ?? null,
+      voiceName: data.voiceName ?? null,
       voiceProvider: data.voiceProvider ?? null,
+      preferredEngine: data.preferredEngine ?? null,
       description: data.description ?? null,
       isDefault: data.isDefault ?? false,
       createdAt: FieldValue.serverTimestamp(),
@@ -224,7 +238,9 @@ export async function createAvatarProfile(
       upperBodyImageUrl: profileData.upperBodyImageUrl,
       greenScreenClips,
       voiceId: profileData.voiceId,
+      voiceName: profileData.voiceName,
       voiceProvider: profileData.voiceProvider,
+      preferredEngine: profileData.preferredEngine,
       description: profileData.description,
       isDefault: profileData.isDefault,
       createdAt: new Date().toISOString(),
@@ -347,8 +363,14 @@ export async function updateAvatarProfile(
     if (updates.voiceId !== undefined) {
       updateData.voiceId = updates.voiceId;
     }
+    if (updates.voiceName !== undefined) {
+      updateData.voiceName = updates.voiceName;
+    }
     if (updates.voiceProvider !== undefined) {
       updateData.voiceProvider = updates.voiceProvider;
+    }
+    if (updates.preferredEngine !== undefined) {
+      updateData.preferredEngine = updates.preferredEngine;
     }
     if (updates.description !== undefined) {
       updateData.description = updates.description;
