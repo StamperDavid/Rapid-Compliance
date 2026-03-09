@@ -1203,6 +1203,39 @@ export const JASPER_TOOLS: ToolDefinition[] = [
     },
   },
 
+  {
+    type: 'function',
+    function: {
+      name: 'assemble_video',
+      description:
+        'Assemble completed video scenes into a single final video using FFmpeg. Takes the scene video URLs from a project and concatenates them with a transition type (cut, fade, or dissolve). Use this after all scenes have finished rendering via produce_video or generate_video. Returns the assembled video URL. ENABLED: TRUE.',
+      parameters: {
+        type: 'object',
+        properties: {
+          projectId: {
+            type: 'string',
+            description: 'The video project ID to assemble scenes from. If omitted, pass sceneUrls directly.',
+          },
+          sceneUrls: {
+            type: 'string',
+            description: 'JSON array of scene video URLs to assemble, in order. Example: ["https://...scene1.mp4", "https://...scene2.mp4"]. Required if projectId is not provided.',
+          },
+          transitionType: {
+            type: 'string',
+            description: 'Transition between scenes',
+            enum: ['cut', 'fade', 'dissolve'],
+          },
+          outputResolution: {
+            type: 'string',
+            description: 'Output video resolution',
+            enum: ['720p', '1080p', '4k'],
+          },
+        },
+        required: [],
+      },
+    },
+  },
+
   // ═══════════════════════════════════════════════════════════════════════════
   // ANALYTICS & REPORTING TOOLS
   // ═══════════════════════════════════════════════════════════════════════════
@@ -3718,6 +3751,125 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
           trackMissionStep(context, 'produce_video', 'FAILED', {
             summary: `VIDEO_DIRECTOR: ${errMsg}`,
             durationMs: Date.now() - produceStart,
+            toolResult: content.slice(0, 2000),
+          });
+        }
+        break;
+      }
+
+      case 'assemble_video': {
+        const assembleStart = Date.now();
+        try {
+          let sceneUrls: string[] = [];
+          const assembleProjectId = (args.projectId as string) ?? '';
+          const assembleTransition = (args.transitionType as string) ?? 'fade';
+          const assembleResolution = (args.outputResolution as string) ?? '1080p';
+
+          // If sceneUrls provided directly, parse them
+          if (typeof args.sceneUrls === 'string' && args.sceneUrls.trim().startsWith('[')) {
+            try {
+              sceneUrls = JSON.parse(args.sceneUrls) as string[];
+            } catch {
+              // Invalid JSON
+            }
+          }
+
+          // If no URLs provided but projectId given, load from project
+          if (sceneUrls.length === 0 && assembleProjectId) {
+            const { getProject } = await import('@/lib/video/pipeline-project-service');
+            const project = await getProject(assembleProjectId);
+            if (project?.generatedScenes) {
+              sceneUrls = project.generatedScenes
+                .filter((s) => s.status === 'completed' && s.videoUrl)
+                .map((s) => s.videoUrl as string);
+            }
+          }
+
+          if (sceneUrls.length === 0) {
+            content = JSON.stringify({
+              status: 'error',
+              message: 'No scene URLs found. Either provide sceneUrls or a projectId with completed scenes.',
+              specialist: 'VIDEO_DIRECTOR',
+            });
+            trackMissionStep(context, 'assemble_video', 'FAILED', {
+              summary: 'VIDEO_DIRECTOR: No scene URLs for assembly',
+              durationMs: Date.now() - assembleStart,
+              toolResult: content,
+            });
+            break;
+          }
+
+          // Call the assemble API internally
+          const assembleBaseUrl = process.env.NEXT_PUBLIC_APP_URL ?? process.env.VERCEL_URL ?? 'http://localhost:3000';
+          const assembleResponse = await fetch(`${assembleBaseUrl}/api/video/assemble`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              projectId: assembleProjectId || 'jasper-assembly',
+              sceneUrls,
+              transitionType: assembleTransition,
+              outputResolution: assembleResolution,
+            }),
+          });
+
+          if (!assembleResponse.ok) {
+            const errData = await assembleResponse.json() as { error?: string };
+            throw new Error(errData.error ?? `Assembly failed (${assembleResponse.status})`);
+          }
+
+          const assembleData = await assembleResponse.json() as {
+            success: boolean;
+            videoUrl: string;
+            sceneCount: number;
+            fileSizeBytes: number;
+          };
+
+          if (!assembleData.success) {
+            throw new Error('Assembly returned success=false');
+          }
+
+          // If projectId was given, save the final URL to the project
+          if (assembleProjectId) {
+            try {
+              const { updateProject } = await import('@/lib/video/pipeline-project-service');
+              await updateProject(assembleProjectId, {
+                finalVideoUrl: assembleData.videoUrl,
+                currentStep: 'assembly',
+                status: 'assembled',
+              });
+            } catch {
+              // Non-critical — assembly still succeeded
+            }
+          }
+
+          content = JSON.stringify({
+            status: 'completed',
+            videoUrl: assembleData.videoUrl,
+            sceneCount: assembleData.sceneCount,
+            fileSizeBytes: assembleData.fileSizeBytes,
+            transitionType: assembleTransition,
+            outputResolution: assembleResolution,
+            projectId: assembleProjectId || null,
+            message: `Video assembled successfully! ${assembleData.sceneCount} scenes stitched with ${assembleTransition} transitions at ${assembleResolution}.`,
+            videoStudioPath: assembleProjectId ? `/content/video?load=${assembleProjectId}` : null,
+            specialist: 'VIDEO_DIRECTOR',
+          });
+
+          trackMissionStep(context, 'assemble_video', 'COMPLETED', {
+            summary: `VIDEO_DIRECTOR: Assembled ${assembleData.sceneCount} scenes → ${assembleData.videoUrl.slice(0, 80)}...`,
+            durationMs: Date.now() - assembleStart,
+            toolResult: content.slice(0, 2000),
+          });
+        } catch (assembleErr) {
+          const errMsg = assembleErr instanceof Error ? assembleErr.message : String(assembleErr);
+          content = JSON.stringify({
+            status: 'error',
+            message: `Video assembly failed: ${errMsg}`,
+            specialist: 'VIDEO_DIRECTOR',
+          });
+          trackMissionStep(context, 'assemble_video', 'FAILED', {
+            summary: `VIDEO_DIRECTOR: Assembly failed — ${errMsg}`,
+            durationMs: Date.now() - assembleStart,
             toolResult: content.slice(0, 2000),
           });
         }

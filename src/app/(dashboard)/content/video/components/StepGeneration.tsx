@@ -318,8 +318,38 @@ export function StepGeneration() {
   }, [regenerateScene]);
 
   const handleRegenerate = useCallback((sceneId: string, feedback: string) => {
+    // Record the feedback as a style correction in brand preference memory
+    void authFetch('/api/video/brand-preferences', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        category: 'style_correction',
+        promptPattern: scenes.find((s) => s.id === sceneId)?.visualDescription ?? '',
+        feedback,
+        sceneType: brief.videoType,
+        sourceSceneId: sceneId,
+      }),
+    }).catch(() => { /* non-critical */ });
+
     void regenerateScene(sceneId, feedback);
-  }, [regenerateScene]);
+  }, [regenerateScene, authFetch, scenes, brief.videoType]);
+
+  const handleApprove = useCallback((sceneId: string) => {
+    const scene = scenes.find((s) => s.id === sceneId);
+    if (!scene?.visualDescription) { return; }
+
+    // Record approved prompt pattern in brand preference memory
+    void authFetch('/api/video/brand-preferences', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        category: 'approved_prompt',
+        promptPattern: scene.visualDescription,
+        sceneType: brief.videoType,
+        sourceSceneId: sceneId,
+      }),
+    }).catch(() => { /* non-critical */ });
+  }, [authFetch, scenes, brief.videoType]);
 
   const handleContinue = () => {
     advanceStep();
@@ -400,6 +430,7 @@ export function StepGeneration() {
                 result={result}
                 onRetry={handleRetry}
                 onRegenerate={handleRegenerate}
+                onApprove={handleApprove}
               />
             ))}
           </div>

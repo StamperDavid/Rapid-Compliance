@@ -13,9 +13,10 @@ interface SceneProgressCardProps {
   result: SceneGenerationResult;
   onRetry?: (sceneId: string) => void;
   onRegenerate?: (sceneId: string, feedback: string) => void;
+  onApprove?: (sceneId: string) => void;
 }
 
-export function SceneProgressCard({ sceneNumber, result, onRetry, onRegenerate }: SceneProgressCardProps) {
+export function SceneProgressCard({ sceneNumber, result, onRetry, onRegenerate, onApprove }: SceneProgressCardProps) {
   const [reviewStatus, setReviewStatus] = useState<ReviewStatus>('pending');
   const [showFeedback, setShowFeedback] = useState(false);
   const [feedback, setFeedback] = useState('');
@@ -38,6 +39,9 @@ export function SceneProgressCard({ sceneNumber, result, onRetry, onRegenerate }
     setReviewStatus('approved');
     setShowFeedback(false);
     setFeedback('');
+    if (onApprove) {
+      onApprove(result.sceneId);
+    }
   };
 
   const handleReject = () => {

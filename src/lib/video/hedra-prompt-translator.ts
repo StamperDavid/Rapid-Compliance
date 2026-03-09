@@ -99,6 +99,38 @@ export function translatePromptForHedra(
 }
 
 /**
+ * Async version of translatePromptForHedra that also incorporates
+ * learned brand preferences from the preference memory store.
+ *
+ * Falls back to the sync version if brand preferences fail to load.
+ */
+export async function translatePromptWithBrandMemory(
+  rawDescription: string,
+  character: CharacterContext,
+  sceneType?: string
+): Promise<string> {
+  // Start with the base translation
+  const basePrompt = translatePromptForHedra(rawDescription, character);
+
+  try {
+    const { buildBrandStyleHints } = await import('@/lib/video/brand-preference-service');
+    const brandHints = await buildBrandStyleHints({
+      sceneType,
+      characterRole: character.role,
+      characterStyle: character.styleTag,
+    });
+
+    if (brandHints) {
+      return `${basePrompt}. ${brandHints}`;
+    }
+  } catch {
+    // Brand preferences are optional — fall back to base prompt
+  }
+
+  return basePrompt;
+}
+
+/**
  * Build a concise character identity string for logging and debugging.
  */
 export function describeCharacter(character: CharacterContext): string {

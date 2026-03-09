@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
-import { Puzzle, ArrowLeft, ArrowRight, Loader2, Play } from 'lucide-react';
+import { Puzzle, ArrowLeft, ArrowRight, Loader2, Play, Save, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { VideoPlayer } from './VideoPlayer';
@@ -19,10 +19,18 @@ export function StepAssembly() {
   const authFetch = useAuthFetch();
   const {
     projectId,
+    projectName,
+    brief,
+    scenes,
+    avatarId,
+    avatarName,
+    voiceId,
+    voiceName,
     generatedScenes,
     finalVideoUrl,
     transitionType,
     isAssembling,
+    setProjectId,
     setFinalVideoUrl,
     setTransitionType,
     setIsAssembling,
@@ -33,7 +41,10 @@ export function StepAssembly() {
 
   const [error, setError] = useState<string | null>(null);
   const [activeSceneIndex, setActiveSceneIndex] = useState(0);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const autoSavedRef = useRef(false);
 
   const completedScenes = useMemo(
     () => generatedScenes.filter((s) => s.status === 'completed' && s.videoUrl),
@@ -155,6 +166,74 @@ export function StepAssembly() {
     }
   };
 
+  // Auto-save project to Firestore when assembly completes
+  const saveProject = useCallback(async (videoUrl: string) => {
+    setIsSaving(true);
+    try {
+      const response = await authFetch('/api/video/project/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          projectId: projectId ?? undefined,
+          name: projectName || brief.description.slice(0, 50) || 'Untitled Video',
+          brief,
+          currentStep: 'assembly' as const,
+          scenes: scenes.map((s) => ({
+            id: s.id,
+            sceneNumber: s.sceneNumber,
+            scriptText: s.scriptText,
+            screenshotUrl: s.screenshotUrl ?? null,
+            avatarId: s.avatarId ?? null,
+            voiceId: s.voiceId ?? null,
+            voiceProvider: s.voiceProvider ?? null,
+            duration: s.duration,
+            engine: s.engine ?? null,
+            backgroundPrompt: s.backgroundPrompt ?? null,
+            status: s.status,
+          })),
+          avatarId: avatarId ?? null,
+          avatarName: avatarName ?? null,
+          voiceId: voiceId ?? null,
+          voiceName: voiceName ?? null,
+          generatedScenes: generatedScenes.map((gs) => ({
+            sceneId: gs.sceneId,
+            providerVideoId: gs.providerVideoId,
+            provider: gs.provider,
+            status: gs.status,
+            videoUrl: gs.videoUrl,
+            thumbnailUrl: gs.thumbnailUrl,
+            progress: gs.progress ?? 100,
+            error: gs.error,
+          })),
+          finalVideoUrl: videoUrl,
+          transitionType,
+          status: 'assembled' as const,
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json() as { success: boolean; projectId?: string };
+        if (data.success && data.projectId && !projectId) {
+          setProjectId(data.projectId);
+        }
+        setSaved(true);
+      }
+    } catch {
+      // Save failure is non-critical — video is still assembled
+      console.warn('[StepAssembly] Auto-save failed');
+    } finally {
+      setIsSaving(false);
+    }
+  }, [authFetch, projectId, projectName, brief, scenes, avatarId, avatarName, voiceId, voiceName, generatedScenes, transitionType, setProjectId]);
+
+  // Auto-save when finalVideoUrl is first set
+  useEffect(() => {
+    if (finalVideoUrl && !autoSavedRef.current) {
+      autoSavedRef.current = true;
+      void saveProject(finalVideoUrl);
+    }
+  }, [finalVideoUrl, saveProject]);
+
   const currentVideoUrl = finalVideoUrl ?? completedScenes[activeSceneIndex]?.videoUrl;
 
   return (
@@ -167,7 +246,13 @@ export function StepAssembly() {
           </CardTitle>
           <CardDescription>
             {finalVideoUrl
-              ? 'Your video is assembled! Preview below.'
+              ? (
+                <span className="flex items-center gap-2">
+                  Your video is assembled! Preview below.
+                  {isSaving && <span className="text-amber-400 text-xs flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" />Saving...</span>}
+                  {saved && !isSaving && <span className="text-green-400 text-xs flex items-center gap-1"><CheckCircle2 className="w-3 h-3" />Saved to library</span>}
+                </span>
+              )
               : 'Assemble your generated scenes into a final video.'}
           </CardDescription>
         </CardHeader>
@@ -279,6 +364,16 @@ export function StepAssembly() {
               ) : (
                 <><Puzzle className="w-4 h-4" /> Assemble Video</>
               )}
+            </Button>
+          )}
+          {finalVideoUrl && !saved && !isSaving && (
+            <Button
+              variant="outline"
+              onClick={() => { void saveProject(finalVideoUrl); }}
+              className="gap-2"
+            >
+              <Save className="w-4 h-4" />
+              Save to Library
             </Button>
           )}
           {finalVideoUrl && (
