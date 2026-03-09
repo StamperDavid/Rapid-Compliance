@@ -79,6 +79,62 @@ async function fetchUnrealSpeechVoices(): Promise<VideoVoice[]> {
 }
 
 /**
+ * Fetch Hedra voice library if API key is configured.
+ * Hedra exposes voices from minimax and elevenlabs sources.
+ */
+async function fetchHedraVoices(): Promise<VideoVoice[]> {
+  try {
+    const rawKey = await apiKeyService.getServiceKey(PLATFORM_ID, 'hedra');
+    if (!rawKey || typeof rawKey !== 'string') { return []; }
+
+    const response = await fetch('https://api.hedra.com/web-app/public/voices', {
+      headers: { 'x-api-key': rawKey, 'Accept': 'application/json' },
+    });
+
+    if (!response.ok) { return []; }
+
+    const voices = await response.json() as Array<{
+      id: string;
+      name: string;
+      description?: string;
+      asset?: {
+        source?: string;
+        preview_url?: string | null;
+        labels?: Array<{ name: string; value: string }>;
+      };
+    }>;
+
+    if (!Array.isArray(voices)) { return []; }
+
+    return voices.map((v) => {
+      const labels = v.asset?.labels ?? [];
+      const getLabel = (key: string): string | undefined =>
+        labels.find((l) => l.name === key)?.value;
+
+      const rawGender = getLabel('gender');
+      const gender: 'male' | 'female' | 'neutral' | undefined =
+        rawGender === 'male' || rawGender === 'female' ? rawGender : undefined;
+
+      return {
+        id: v.id,
+        name: v.name,
+        language: getLabel('language') ?? 'English',
+        accent: getLabel('accent'),
+        gender,
+        previewUrl: v.asset?.preview_url ?? undefined,
+        provider: 'hedra' as const,
+      };
+    });
+  } catch (error) {
+    logger.warn('Failed to fetch Hedra voices', {
+      error: error instanceof Error ? error.message : String(error),
+      file: 'video/voices/route.ts',
+    });
+    return [];
+  }
+}
+
+/**
  * Fetch custom cloned voices from Firestore.
  */
 async function fetchCustomVoices(): Promise<VideoVoice[]> {
@@ -111,15 +167,16 @@ export async function GET(request: NextRequest) {
     const authResult = await requireAuth(request);
     if (authResult instanceof NextResponse) { return authResult; }
 
-    // Fetch all voice sources in parallel — ElevenLabs, UnrealSpeech, custom clones
-    const [elevenlabsVoices, unrealVoices, customVoices] = await Promise.all([
+    // Fetch all voice sources in parallel
+    const [elevenlabsVoices, unrealVoices, customVoices, hedraVoices] = await Promise.all([
       fetchElevenLabsVoices(),
       fetchUnrealSpeechVoices(),
       fetchCustomVoices(),
+      fetchHedraVoices(),
     ]);
 
-    // Order: Custom clones first, then ElevenLabs, UnrealSpeech
-    const allVoices = [...customVoices, ...elevenlabsVoices, ...unrealVoices];
+    // Order: Custom clones first, then Hedra, ElevenLabs, UnrealSpeech
+    const allVoices = [...customVoices, ...hedraVoices, ...elevenlabsVoices, ...unrealVoices];
 
     return NextResponse.json({ success: true, voices: allVoices });
   } catch (error: unknown) {

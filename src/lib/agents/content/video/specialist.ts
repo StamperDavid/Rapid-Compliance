@@ -1787,7 +1787,7 @@ export class VideoSpecialist extends BaseSpecialist {
     // Priority: Default Avatar Profile (Kling Avatar) → text-to-video fallback
     let videoAvatarId = '';
     let videoVoiceId = '';
-    let voiceProvider: 'elevenlabs' | 'unrealspeech' | 'custom' = 'elevenlabs';
+    let voiceProvider: 'elevenlabs' | 'unrealspeech' | 'custom' | 'hedra' = 'elevenlabs';
     const hasAvatarScenes = scenes.some((s) => s.engine === 'kling');
 
     if (hasAvatarScenes) {

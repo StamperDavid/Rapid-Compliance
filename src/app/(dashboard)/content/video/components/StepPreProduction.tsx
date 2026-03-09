@@ -19,7 +19,7 @@ interface VideoDefaultsData {
   avatarName: string | null;
   voiceId: string | null;
   voiceName: string | null;
-  voiceProvider: 'elevenlabs' | 'unrealspeech' | 'custom' | null;
+  voiceProvider: 'elevenlabs' | 'unrealspeech' | 'custom' | 'hedra' | null;
 }
 
 export function StepPreProduction() {

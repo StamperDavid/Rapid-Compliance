@@ -10,11 +10,11 @@ import type { VideoVoice } from '@/types/video';
 
 interface VoicePickerProps {
   selectedVoiceId: string | null;
-  onSelect: (voiceId: string, voiceName: string, provider?: 'elevenlabs' | 'unrealspeech' | 'custom') => void;
+  onSelect: (voiceId: string, voiceName: string, provider?: 'elevenlabs' | 'unrealspeech' | 'custom' | 'hedra') => void;
 }
 
 const GENDER_FILTERS = ['all', 'male', 'female'] as const;
-const PROVIDER_FILTERS = ['all', 'custom', 'elevenlabs', 'unrealspeech'] as const;
+const PROVIDER_FILTERS = ['all', 'custom', 'hedra', 'elevenlabs', 'unrealspeech'] as const;
 
 export function VoicePicker({ selectedVoiceId, onSelect }: VoicePickerProps) {
   const authFetch = useAuthFetch();
@@ -345,6 +345,7 @@ export function VoicePicker({ selectedVoiceId, onSelect }: VoicePickerProps) {
               >
                 {provider === 'all' ? 'All'
                   : provider === 'custom' ? 'My Clones'
+                  : provider === 'hedra' ? 'Hedra'
                   : provider === 'elevenlabs' ? 'ElevenLabs'
                   : 'UnrealSpeech'}
               </button>
@@ -479,10 +480,12 @@ export function VoicePicker({ selectedVoiceId, onSelect }: VoicePickerProps) {
               <span className={cn(
                 'px-1.5 py-0.5 text-[9px] font-bold rounded flex-shrink-0',
                 voiceProvider === 'custom' ? 'bg-green-500/20 text-green-400'
+                  : voiceProvider === 'hedra' ? 'bg-cyan-500/20 text-cyan-400'
                   : voiceProvider === 'elevenlabs' ? 'bg-purple-500/20 text-purple-400'
                   : 'bg-orange-500/20 text-orange-400',
               )}>
                 {voiceProvider === 'custom' ? 'CLONE'
+                  : voiceProvider === 'hedra' ? 'HEDRA'
                   : voiceProvider === 'elevenlabs' ? 'XI'
                   : 'US'}
               </span>

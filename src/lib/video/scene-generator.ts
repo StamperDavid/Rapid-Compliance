@@ -186,7 +186,7 @@ async function generateWithKlingAvatar(
   avatarId: string,
   voiceId: string,
   aspectRatio: VideoAspectRatio,
-  voiceProvider?: 'elevenlabs' | 'unrealspeech' | 'custom'
+  voiceProvider?: 'elevenlabs' | 'unrealspeech' | 'custom' | 'hedra'
 ): Promise<SceneGenerationResult> {
   const script = scene.scriptText.trim() || ' ';
 
@@ -492,7 +492,7 @@ async function generateWithHedra(
   avatarId: string,
   voiceId: string,
   aspectRatio: VideoAspectRatio,
-  voiceProvider?: 'elevenlabs' | 'unrealspeech' | 'custom'
+  voiceProvider?: 'elevenlabs' | 'unrealspeech' | 'custom' | 'hedra'
 ): Promise<SceneGenerationResult> {
   const script = scene.scriptText.trim() || ' ';
 
@@ -924,7 +924,7 @@ export async function generateScene(
   avatarId: string,
   voiceId: string,
   aspectRatio: VideoAspectRatio,
-  voiceProvider?: 'elevenlabs' | 'unrealspeech' | 'custom'
+  voiceProvider?: 'elevenlabs' | 'unrealspeech' | 'custom' | 'hedra'
 ): Promise<SceneGenerationResult> {
   // Entire function wrapped in try/catch so nothing can crash the batch
   try {
@@ -1231,7 +1231,7 @@ export async function generateAllScenes(
   voiceId: string,
   aspectRatio: VideoAspectRatio,
   onSceneUpdate?: (result: SceneGenerationResult) => void,
-  voiceProvider?: 'elevenlabs' | 'unrealspeech' | 'custom'
+  voiceProvider?: 'elevenlabs' | 'unrealspeech' | 'custom' | 'hedra'
 ): Promise<SceneGenerationResult[]> {
   try {
     const CONCURRENCY = 3;

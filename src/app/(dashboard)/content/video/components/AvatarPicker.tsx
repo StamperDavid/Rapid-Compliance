@@ -25,7 +25,7 @@ interface AvatarProfileItem {
     createdAt: string;
   }>;
   voiceId: string | null;
-  voiceProvider: 'elevenlabs' | 'unrealspeech' | 'custom' | null;
+  voiceProvider: 'elevenlabs' | 'unrealspeech' | 'custom' | 'hedra' | null;
   description: string | null;
   isDefault: boolean;
   createdAt: string;

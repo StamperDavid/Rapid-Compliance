@@ -17,7 +17,7 @@ import type { VideoVoice } from '@/types/video';
 interface VoiceItem {
   id: string;
   name: string;
-  provider: 'elevenlabs' | 'unrealspeech' | 'custom';
+  provider: 'elevenlabs' | 'unrealspeech' | 'custom' | 'hedra';
   language?: string;
   gender?: string;
   previewUrl?: string;

@@ -55,7 +55,7 @@ export interface AvatarProfile {
   // Voice identity (from Voice Lab — ElevenLabs, UnrealSpeech, custom clones)
   voiceId: string | null;
   voiceName: string | null; // Display name (e.g., "Rachel", "Custom Clone - David")
-  voiceProvider: 'elevenlabs' | 'unrealspeech' | 'custom' | null;
+  voiceProvider: VoiceProvider | null;
 
   // Preferred video engine for this avatar (null = auto-select)
   preferredEngine: 'kling' | 'hedra' | null;
@@ -70,7 +70,7 @@ export interface AvatarProfile {
   updatedAt: string; // ISO string
 }
 
-type VoiceProvider = 'elevenlabs' | 'unrealspeech' | 'custom';
+type VoiceProvider = 'elevenlabs' | 'unrealspeech' | 'custom' | 'hedra';
 
 export interface CreateAvatarProfileData {
   name: string;

@@ -114,6 +114,9 @@ export interface HeyGenAvatar {
 /** @deprecated Renamed — use VideoVoice instead */
 export type HeyGenVoice = VideoVoice;
 
+/** TTS / voice provider identifier */
+export type VoiceProvider = 'elevenlabs' | 'unrealspeech' | 'custom' | 'hedra';
+
 export interface VideoVoice {
   id: string;
   name: string;
@@ -123,7 +126,7 @@ export interface VideoVoice {
   previewUrl?: string;
   isPremium?: boolean;
   /** Which TTS provider this voice belongs to */
-  provider?: 'elevenlabs' | 'unrealspeech' | 'custom';
+  provider?: VoiceProvider;
 }
 
 // ============================================================================

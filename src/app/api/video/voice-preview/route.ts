@@ -23,7 +23,7 @@ export const dynamic = 'force-dynamic';
 const requestSchema = z.object({
   voiceId: z.string().min(1),
   voiceName: z.string().min(1),
-  provider: z.enum(['elevenlabs', 'unrealspeech', 'custom']),
+  provider: z.enum(['elevenlabs', 'unrealspeech', 'custom', 'hedra']),
   text: z.string().min(1).max(1000).optional(),
 });
 
@@ -166,6 +166,14 @@ export async function POST(request: NextRequest) {
           });
         }
       }
+    }
+
+    // Hedra voices can't be synthesized from our side — they live inside Hedra's system
+    if (provider === 'hedra') {
+      return NextResponse.json(
+        { success: false, error: 'Hedra voice previews are only available from the Hedra platform. Select a voice with a preview URL.' },
+        { status: 400 },
+      );
     }
 
     // Synthesize using the correct provider
