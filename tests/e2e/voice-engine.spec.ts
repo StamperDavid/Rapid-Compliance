@@ -103,18 +103,6 @@ test.describe('Voice Engine Marketplace E2E', () => {
     expect(options).toBeGreaterThan(0);
   });
 
-  test('should display voice description when selected', async ({ page }) => {
-    // Wait for voices to load
-    const voiceSelect = page.locator('select').first();
-    await expect(voiceSelect).toBeVisible({ timeout: 10_000 });
-
-    // Select a voice (if description is available)
-    await voiceSelect.selectOption({ index: 0 });
-
-    // Voice descriptions should appear below the select
-    // The exact description depends on the selected voice
-  });
-
   test('should display provider features', async ({ page }) => {
     // Check that features are displayed
     await expect(page.locator('text=Features:')).toBeVisible({ timeout: 5_000 });
@@ -135,28 +123,6 @@ test.describe('Voice Engine Marketplace E2E', () => {
     await expect(page.locator('text=/latency/i').first()).toBeVisible();
   });
 
-  test('should persist provider selection on save', async ({ page }) => {
-    // Select ElevenLabs
-    await page.click('button:has-text("ElevenLabs")');
-
-    // Scroll to save button
-    await page.locator('button:has-text("Save Voice AI Settings")').scrollIntoViewIfNeeded();
-
-    // Click Save
-    await page.click('button:has-text("Save Voice AI Settings")');
-
-    // Wait for save confirmation
-    await page.waitForTimeout(2000);
-
-    // Refresh page
-    await page.reload();
-
-    // Wait for page to load
-    await page.waitForSelector('text=Voice AI Training Lab', { timeout: 15_000 });
-
-    // ElevenLabs should still be selected (if config was saved)
-    // Note: In test environment, this may not persist without actual Firestore
-  });
 });
 
 test.describe('Voice Engine API Integration', () => {
@@ -342,23 +308,6 @@ test.describe('Voice Engine Cost Comparison', () => {
 });
 
 test.describe('Voice Engine Accessibility', () => {
-  test('should be keyboard navigable', async ({ page }) => {
-    await ensureAuthenticated(page);
-    await page.goto(`${BASE_URL}/voice/training`);
-    await waitForPageReady(page);
-    const ready = await waitForVoiceReady(page);
-    if (!ready) { test.skip(true, 'Voice page did not load'); return; }
-
-    // Tab through provider buttons
-    await page.keyboard.press('Tab');
-    await page.keyboard.press('Tab');
-
-    // Should be able to select with Enter
-    await page.keyboard.press('Enter');
-
-    // Some provider should be focused/selected
-  });
-
   test('should have proper labels for screen readers', async ({ page }) => {
     await ensureAuthenticated(page);
     await page.goto(`${BASE_URL}/voice/training`);

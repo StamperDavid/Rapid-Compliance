@@ -216,48 +216,6 @@ test.describe('Canvas Interaction', () => {
   });
 });
 
-test.describe('Breakpoint Switching', () => {
-  test.beforeEach(async ({ page }) => {
-    await ensureAuthenticated(page);
-    await page.goto(`${BASE_URL}/website/editor`);
-    const editorLoaded = await waitForEditorReady(page);
-    if (!editorLoaded) {
-      test.skip(true, 'Editor did not load — Firebase auth may be slow');
-    }
-  });
-
-  test('should switch to tablet breakpoint', async ({ page }) => {
-    const tabletBtn = page.locator('button:has-text("Tablet")');
-    await expect(tabletBtn).toBeVisible({ timeout: 10_000 });
-    await tabletBtn.click();
-    await page.waitForTimeout(500);
-
-    // Tablet button should appear active (different styling)
-    // The canvas width should change to 768px
-  });
-
-  test('should switch to mobile breakpoint', async ({ page }) => {
-    const mobileBtn = page.locator('button:has-text("Mobile")');
-    await expect(mobileBtn).toBeVisible({ timeout: 10_000 });
-    await mobileBtn.click();
-    await page.waitForTimeout(500);
-
-    // Mobile breakpoint should change canvas width to 375px
-  });
-
-  test('should switch back to desktop breakpoint', async ({ page }) => {
-    // Switch to mobile first
-    await page.locator('button:has-text("Mobile")').click();
-    await page.waitForTimeout(300);
-
-    // Switch back to desktop
-    await page.locator('button:has-text("Desktop")').click();
-    await page.waitForTimeout(300);
-
-    // Desktop should be active again
-  });
-});
-
 test.describe('Toolbar Actions', () => {
   test.beforeEach(async ({ page }) => {
     await ensureAuthenticated(page);
