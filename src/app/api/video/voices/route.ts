@@ -79,8 +79,9 @@ async function fetchUnrealSpeechVoices(): Promise<VideoVoice[]> {
 }
 
 /**
- * Fetch Hedra voice library if API key is configured.
- * Hedra exposes voices from minimax and elevenlabs sources.
+ * Fetch Hedra character voices — only voices the user has personally
+ * configured (renamed from their stock originals). Hedra's description
+ * includes "(Original name: X)" when a voice has been customized.
  */
 async function fetchHedraVoices(): Promise<VideoVoice[]> {
   try {
@@ -106,7 +107,15 @@ async function fetchHedraVoices(): Promise<VideoVoice[]> {
 
     if (!Array.isArray(voices)) { return []; }
 
-    return voices.map((v) => {
+    // Only include voices the user has renamed — these are their characters.
+    // Hedra appends "(Original name: X)" to the description when renamed.
+    const userVoices = voices.filter((v) => {
+      const desc = v.description ?? '';
+      const match = desc.match(/\(Original name: (.+?)\)/);
+      return match !== null && match[1] !== v.name;
+    });
+
+    return userVoices.map((v) => {
       const labels = v.asset?.labels ?? [];
       const getLabel = (key: string): string | undefined =>
         labels.find((l) => l.name === key)?.value;
