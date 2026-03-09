@@ -1,7 +1,7 @@
 # SalesVelocity.ai - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** March 9, 2026 (Video Overhaul Phases 1-3 complete: Hedra-only engine, Character Studio, AI Video Director with per-scene characters, prompt translator, produce_video Jasper tool)
+**Last Updated:** March 9, 2026 (Video Overhaul Phases 1-3 complete: Hedra-only engine, Character Studio, AI Video Director with produce_video + assemble_video Jasper tools, brand preference memory, auto-save assembly)
 **Branches:** `dev` (latest)
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Architecture:** Single-Tenant Penthouse Model (development strategy — multi-tenant SaaS product)

@@ -123,9 +123,10 @@ Stored per-project or globally, referenced during prompt generation.
 | **Video Production Agent** | `produce_video` Jasper tool — creates project, assigns characters, generates, stitches | DONE — full dispatch in `jasper-tools.ts` |
 | **Hedra Prompt Translator** | Enhances visual descriptions with character role/style metadata | DONE — `hedra-prompt-translator.ts` integrated into scene-generator |
 | **Per-Scene Character Assignment** | Each scene can override project-level character/voice | DONE — PipelineScene has voiceProvider, SceneEditor has picker |
-| **FFmpeg Stitching Service** | Server-side clip assembly — trim, order, transitions, output final video | PARTIALLY EXISTS — `/api/video/composite` has FFmpeg, needs enhancement |
-| **Review/Approval UI** | Scene-by-scene review with feedback input, per-scene regeneration, approve/reject | NEEDS REWORK — StepGeneration.tsx has progress tracking but no review workflow |
-| **Brand Preference Store** | Firestore collection for learned video style preferences | FUTURE |
+| **FFmpeg Stitching Service** | Server-side clip assembly — trim, order, transitions, output final video | DONE — `/api/video/assemble` with xfade transitions, `assemble_video` Jasper tool |
+| **Review/Approval UI** | Scene-by-scene review with feedback input, per-scene regeneration, approve/reject | DONE — SceneProgressCard with approve/reject/feedback/regenerate, auto-records preferences |
+| **Brand Preference Store** | Firestore collection for learned video style preferences | DONE — `brand-preference-service.ts`, API route, integrated into prompt translator |
+| **Auto-Save Assembly** | Save project to Firestore when assembly completes | DONE — StepAssembly auto-saves + manual fallback button |
 
 #### What Gets Removed
 
@@ -166,14 +167,14 @@ Stored per-project or globally, referenced during prompt generation.
 3. ~~Dual TTS paths (Hedra native + ElevenLabs upload)~~ DONE
 4. ~~Hedra character browser stays for stock extras~~ DONE
 
-**Phase 3: AI Video Director** — COMPLETE (core), remaining: stitching enhancement + review UI
+**Phase 3: AI Video Director** — COMPLETE
 1. ~~Per-scene character assignment (scene-level avatarId/voiceId/voiceProvider)~~ DONE
 2. ~~Hedra prompt translator (character metadata → enhanced Hedra prompts)~~ DONE
 3. ~~produce_video Jasper tool (full pipeline: create → cast → generate)~~ DONE
 4. ~~Updated create_video/generate_video/get_video_status descriptions~~ DONE
-5. FFmpeg stitching service enhancement — NEXT
-6. Review/approval workflow UI — NEXT
-7. Brand preference memory — FUTURE
+5. ~~FFmpeg stitching — `assemble_video` Jasper tool + auto-save assembly~~ DONE
+6. ~~Review/approval workflow UI — approve/reject/feedback/regenerate~~ DONE
+7. ~~Brand preference memory — Firestore CRUD + prompt translator integration~~ DONE
 
 **Phase 4: Polish**
 1. Video library integration (save completed projects)
@@ -211,4 +212,6 @@ See `docs/single_source_of_truth.md` "Open Items" section for the full punch lis
 | `src/lib/video/scene-generator.ts` | Scene generation — per-scene character overrides, prompt translation |
 | `src/lib/video/avatar-profile-service.ts` | Character Studio — source, role, styleTag, dual TTS metadata |
 | `src/lib/video/hedra-prompt-translator.ts` | Enhances visual descriptions with character metadata for Hedra |
+| `src/lib/video/brand-preference-service.ts` | Brand preference memory — approved/rejected prompts, style corrections |
+| `src/app/api/video/brand-preferences/route.ts` | Brand preference API (POST record, GET list) |
 | `src/types/video-pipeline.ts` | PipelineScene with per-scene voiceProvider field |
