@@ -20,7 +20,7 @@ const RegenerateSchema = z.object({
   backgroundPrompt: z.string().nullable().default(null),
   visualDescription: z.string().nullable().default(null),
   title: z.string().nullable().default(null),
-  voiceProvider: z.enum(['elevenlabs', 'unrealspeech', 'custom']).default('elevenlabs'),
+  voiceProvider: z.enum(['elevenlabs', 'unrealspeech', 'custom', 'hedra']).default('elevenlabs'),
 });
 
 export async function POST(request: NextRequest) {

@@ -22,7 +22,7 @@ const GenerateScenesSchema = z.object({
   })),
   avatarId: z.string().default(''),
   voiceId: z.string().default(''),
-  voiceProvider: z.enum(['elevenlabs', 'unrealspeech', 'custom']).default('elevenlabs'),
+  voiceProvider: z.enum(['elevenlabs', 'unrealspeech', 'custom', 'hedra']).default('elevenlabs'),
   aspectRatio: z.enum(['16:9', '9:16', '1:1', '4:3']).default('16:9'),
 });
 

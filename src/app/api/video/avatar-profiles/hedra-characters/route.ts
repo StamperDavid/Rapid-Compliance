@@ -139,15 +139,17 @@ export async function GET(request: NextRequest) {
 
       for (let i = 0; i < allIds.length; i += FIRESTORE_IN_LIMIT) {
         const chunk = allIds.slice(i, i + FIRESTORE_IN_LIMIT);
-        const snapshot = await adminDb
-          .collection(COLLECTION_PATH)
-          .where('hedraAssetId', 'in', chunk)
-          .get();
+        // Check both hedraCharacterId (new) and hedraAssetId (legacy)
+        const [newSnap, legacySnap] = await Promise.all([
+          adminDb.collection(COLLECTION_PATH).where('hedraCharacterId', 'in', chunk).get(),
+          adminDb.collection(COLLECTION_PATH).where('hedraAssetId', 'in', chunk).get(),
+        ]);
 
-        for (const doc of snapshot.docs) {
-          const docData = doc.data() as { hedraAssetId?: unknown };
-          if (typeof docData.hedraAssetId === 'string') {
-            alreadyImportedIds.add(docData.hedraAssetId);
+        for (const doc of [...newSnap.docs, ...legacySnap.docs]) {
+          const docData = doc.data() as Record<string, unknown>;
+          const existingId = (docData.hedraCharacterId ?? docData.hedraAssetId) as string | undefined;
+          if (typeof existingId === 'string') {
+            alreadyImportedIds.add(existingId);
           }
         }
       }
@@ -158,6 +160,7 @@ export async function GET(request: NextRequest) {
     // -----------------------------------------------------------------------
     const characters = allCharacters.map((c) => {
       const imageAsset = c.assets.find((a) => a.asset_type === 'image');
+      const voiceAsset = c.assets.find((a) => a.asset_type === 'voice');
       return {
         id: c.id,
         name: c.name
@@ -168,6 +171,9 @@ export async function GET(request: NextRequest) {
         description: c.description ?? null,
         imageUrl: imageAsset?.media_url ?? null,
         thumbnailUrl: imageAsset?.thumbnail_url ?? null,
+        hasVoice: Boolean(voiceAsset),
+        voiceId: voiceAsset?.id ?? null,
+        voiceName: voiceAsset?.description ?? null,
         alreadyImported: alreadyImportedIds.has(c.id),
       };
     });

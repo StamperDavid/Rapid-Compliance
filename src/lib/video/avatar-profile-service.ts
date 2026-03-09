@@ -1,7 +1,15 @@
 /**
- * Avatar Profile Service
- * Firestore CRUD for multi-angle reference images and metadata
- * used by Kling's character consistency feature and other avatar providers.
+ * Character Studio — Avatar Profile Service
+ * Firestore CRUD for character profiles with multi-angle reference images,
+ * green screen clips, voice assignment, and Character Studio metadata.
+ *
+ * Supports two character sources:
+ *   - 'custom'  — user-created premium characters with full identity control
+ *   - 'hedra'   — imported from Hedra's character library (stock extras)
+ *
+ * Voice assignment is decoupled from character image. Two TTS paths:
+ *   - Hedra voice → Hedra native TTS (audio_generation with voice_id + text)
+ *   - ElevenLabs/UnrealSpeech → synthesize audio ourselves, upload to Hedra
  *
  * Collection path: organizations/{PLATFORM_ID}/avatar_profiles/{profileId}
  *
@@ -35,10 +43,24 @@ export interface GreenScreenClip {
 
 export type AvatarTier = 'premium' | 'standard';
 
+/** Character source — 'custom' = user-created in Character Studio, 'hedra' = imported from Hedra library */
+export type CharacterSource = 'custom' | 'hedra';
+
+/** Character role in productions */
+export type CharacterRole = 'hero' | 'villain' | 'extra' | 'narrator' | 'presenter' | 'custom';
+
+/** Visual style tag for prompt optimization */
+export type CharacterStyleTag = 'real' | 'anime' | 'stylized';
+
 export interface AvatarProfile {
   id: string;
   userId: string;
   name: string; // e.g., "David - Professional"
+
+  // Character Studio fields
+  source: CharacterSource; // 'custom' = user-created, 'hedra' = from Hedra library
+  role: CharacterRole; // Character's role in productions
+  styleTag: CharacterStyleTag; // Visual style for prompt optimization
 
   // Avatar tier
   tier: AvatarTier; // 'premium' = green screen video clips, 'standard' = photo-based
@@ -52,16 +74,14 @@ export interface AvatarProfile {
   // Green screen video clips — AI training data for digital clone (premium tier)
   greenScreenClips: GreenScreenClip[]; // Multiple clips = richer AI avatar generation
 
-  // Voice identity (from Voice Lab — ElevenLabs, UnrealSpeech, custom clones)
+  // Voice identity — decoupled from character image, always changeable
+  // Hedra voices use native TTS (audio_generation); ElevenLabs/UnrealSpeech use audio upload
   voiceId: string | null;
   voiceName: string | null; // Display name (e.g., "Rachel", "Custom Clone - David")
   voiceProvider: VoiceProvider | null;
 
-  // Preferred video engine for this avatar (null = auto-select)
-  preferredEngine: 'kling' | 'hedra' | null;
-
-  // External provider asset IDs (for dedup during sync)
-  hedraAssetId: string | null; // Hedra image asset ID
+  // Hedra integration — used for Hedra library characters and dedup during import
+  hedraCharacterId: string | null; // Hedra CHARACTER element ID (for library imports)
 
   // Metadata
   description: string | null; // "Professional look, navy suit"
@@ -76,6 +96,9 @@ type VoiceProvider = 'elevenlabs' | 'unrealspeech' | 'custom' | 'hedra';
 export interface CreateAvatarProfileData {
   name: string;
   frontalImageUrl: string;
+  source?: CharacterSource;
+  role?: CharacterRole;
+  styleTag?: CharacterStyleTag;
   tier?: AvatarTier;
   additionalImageUrls?: string[];
   fullBodyImageUrl?: string | null;
@@ -84,8 +107,7 @@ export interface CreateAvatarProfileData {
   voiceId?: string | null;
   voiceName?: string | null;
   voiceProvider?: VoiceProvider | null;
-  preferredEngine?: 'kling' | 'hedra' | null;
-  hedraAssetId?: string | null;
+  hedraCharacterId?: string | null;
   description?: string | null;
   isDefault?: boolean;
 }
@@ -93,6 +115,9 @@ export interface CreateAvatarProfileData {
 export interface UpdateAvatarProfileData {
   name?: string;
   frontalImageUrl?: string;
+  source?: CharacterSource;
+  role?: CharacterRole;
+  styleTag?: CharacterStyleTag;
   tier?: AvatarTier;
   additionalImageUrls?: string[];
   fullBodyImageUrl?: string | null;
@@ -101,8 +126,7 @@ export interface UpdateAvatarProfileData {
   voiceId?: string | null;
   voiceName?: string | null;
   voiceProvider?: VoiceProvider | null;
-  preferredEngine?: 'kling' | 'hedra' | null;
-  hedraAssetId?: string | null;
+  hedraCharacterId?: string | null;
   description?: string | null;
   isDefault?: boolean;
   isFavorite?: boolean;
@@ -115,6 +139,9 @@ export interface UpdateAvatarProfileData {
 interface FirestoreAvatarProfileDoc {
   userId: string;
   name: string;
+  source: CharacterSource;
+  role: CharacterRole;
+  styleTag: CharacterStyleTag;
   tier: AvatarTier;
   frontalImageUrl: string;
   additionalImageUrls: string[];
@@ -124,8 +151,7 @@ interface FirestoreAvatarProfileDoc {
   voiceId: string | null;
   voiceName: string | null;
   voiceProvider: VoiceProvider | null;
-  preferredEngine: 'kling' | 'hedra' | null;
-  hedraAssetId: string | null;
+  hedraCharacterId: string | null;
   description: string | null;
   isDefault: boolean;
   isFavorite: boolean;
@@ -160,10 +186,17 @@ function timestampToISO(timestamp: unknown): string {
 function docToProfile(id: string, raw: FirebaseFirestore.DocumentData): AvatarProfile {
   const data = raw as FirestoreAvatarProfileDoc;
   const clips = data.greenScreenClips ?? [];
+  // Backward compat: existing docs may have hedraAssetId instead of hedraCharacterId
+  const hedraId = data.hedraCharacterId
+    ?? (raw as Record<string, unknown>).hedraAssetId as string | null
+    ?? null;
   return {
     id,
     userId: data.userId ?? '',
     name: data.name ?? '',
+    source: data.source ?? (hedraId ? 'hedra' : 'custom'),
+    role: data.role ?? 'presenter',
+    styleTag: data.styleTag ?? 'real',
     tier: data.tier ?? (clips.length > 0 ? 'premium' : 'standard'),
     frontalImageUrl: data.frontalImageUrl ?? '',
     additionalImageUrls: data.additionalImageUrls ?? [],
@@ -173,8 +206,7 @@ function docToProfile(id: string, raw: FirebaseFirestore.DocumentData): AvatarPr
     voiceId: data.voiceId ?? null,
     voiceName: data.voiceName ?? null,
     voiceProvider: data.voiceProvider ?? null,
-    preferredEngine: data.preferredEngine ?? null,
-    hedraAssetId: data.hedraAssetId ?? null,
+    hedraCharacterId: hedraId,
     description: data.description ?? null,
     isDefault: data.isDefault ?? false,
     isFavorite: data.isFavorite ?? false,
@@ -208,6 +240,9 @@ export async function createAvatarProfile(
     const profileData = {
       userId,
       name: data.name,
+      source: data.source ?? 'custom',
+      role: data.role ?? 'presenter',
+      styleTag: data.styleTag ?? 'real',
       tier,
       frontalImageUrl: data.frontalImageUrl,
       additionalImageUrls: (data.additionalImageUrls ?? []).slice(0, MAX_ADDITIONAL_IMAGES),
@@ -217,8 +252,7 @@ export async function createAvatarProfile(
       voiceId: data.voiceId ?? null,
       voiceName: data.voiceName ?? null,
       voiceProvider: data.voiceProvider ?? null,
-      preferredEngine: data.preferredEngine ?? null,
-      hedraAssetId: data.hedraAssetId ?? null,
+      hedraCharacterId: data.hedraCharacterId ?? null,
       description: data.description ?? null,
       isDefault: data.isDefault ?? false,
       isFavorite: false,
@@ -244,6 +278,9 @@ export async function createAvatarProfile(
       id: profileId,
       userId,
       name: data.name,
+      source: profileData.source,
+      role: profileData.role,
+      styleTag: profileData.styleTag,
       tier,
       frontalImageUrl: data.frontalImageUrl,
       additionalImageUrls: profileData.additionalImageUrls,
@@ -253,8 +290,7 @@ export async function createAvatarProfile(
       voiceId: profileData.voiceId,
       voiceName: profileData.voiceName,
       voiceProvider: profileData.voiceProvider,
-      preferredEngine: profileData.preferredEngine,
-      hedraAssetId: profileData.hedraAssetId,
+      hedraCharacterId: profileData.hedraCharacterId,
       description: profileData.description,
       isDefault: profileData.isDefault,
       isFavorite: false,
@@ -392,6 +428,15 @@ export async function updateAvatarProfile(
     if (updates.name !== undefined) {
       updateData.name = updates.name;
     }
+    if (updates.source !== undefined) {
+      updateData.source = updates.source;
+    }
+    if (updates.role !== undefined) {
+      updateData.role = updates.role;
+    }
+    if (updates.styleTag !== undefined) {
+      updateData.styleTag = updates.styleTag;
+    }
     if (updates.tier !== undefined) {
       updateData.tier = updates.tier;
     }
@@ -419,11 +464,8 @@ export async function updateAvatarProfile(
     if (updates.voiceProvider !== undefined) {
       updateData.voiceProvider = updates.voiceProvider;
     }
-    if (updates.preferredEngine !== undefined) {
-      updateData.preferredEngine = updates.preferredEngine;
-    }
-    if (updates.hedraAssetId !== undefined) {
-      updateData.hedraAssetId = updates.hedraAssetId;
+    if (updates.hedraCharacterId !== undefined) {
+      updateData.hedraCharacterId = updates.hedraCharacterId;
     }
     if (updates.description !== undefined) {
       updateData.description = updates.description;

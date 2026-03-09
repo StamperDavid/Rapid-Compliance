@@ -199,7 +199,7 @@ export async function POST(request: NextRequest) {
     });
 
     // -----------------------------------------------------------------------
-    // 3. Check for existing profiles with matching hedraAssetIds
+    // 3. Check for existing profiles with matching hedraCharacterId
     // -----------------------------------------------------------------------
     if (!adminDb) {
       return NextResponse.json(
@@ -217,14 +217,16 @@ export async function POST(request: NextRequest) {
 
     for (let i = 0; i < hedraElementIds.length; i += FIRESTORE_IN_LIMIT) {
       const chunk = hedraElementIds.slice(i, i + FIRESTORE_IN_LIMIT);
-      const snapshot = await adminDb
-        .collection(COLLECTION_PATH)
-        .where('hedraAssetId', 'in', chunk)
-        .get();
 
-      for (const doc of snapshot.docs) {
-        const docData = doc.data() as { hedraAssetId?: unknown };
-        const existingId = docData.hedraAssetId;
+      // Check both hedraCharacterId (new) and hedraAssetId (legacy) for backward compat
+      const [newSnap, legacySnap] = await Promise.all([
+        adminDb.collection(COLLECTION_PATH).where('hedraCharacterId', 'in', chunk).get(),
+        adminDb.collection(COLLECTION_PATH).where('hedraAssetId', 'in', chunk).get(),
+      ]);
+
+      for (const doc of [...newSnap.docs, ...legacySnap.docs]) {
+        const docData = doc.data() as Record<string, unknown>;
+        const existingId = (docData.hedraCharacterId ?? docData.hedraAssetId) as string | undefined;
         if (typeof existingId === 'string') {
           existingAssetIds.add(existingId);
         }
@@ -261,10 +263,19 @@ export async function POST(request: NextRequest) {
         .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
         .join(' ');
 
+      // Extract voice asset if present (Hedra characters may have built-in voices)
+      const voiceAsset = character.assets.find((a) => a.asset_type === 'voice');
+
       const result = await createAvatarProfile(userId, {
         name: profileName,
         frontalImageUrl: imageAsset.media_url,
-        hedraAssetId: character.id,
+        source: 'hedra',
+        role: 'extra',
+        styleTag: 'real',
+        hedraCharacterId: character.id,
+        voiceId: voiceAsset?.id ?? null,
+        voiceName: voiceAsset?.description ?? null,
+        voiceProvider: voiceAsset ? 'hedra' : null,
         description: character.description ?? null,
       });
 
@@ -272,9 +283,10 @@ export async function POST(request: NextRequest) {
         imported++;
         logger.info('Imported Hedra character as avatar profile', {
           file: 'api/video/avatar-profiles/sync-hedra/route.ts',
-          hedraAssetId: character.id,
+          hedraCharacterId: character.id,
           profileId: result.profile?.id,
           profileName,
+          hasVoice: Boolean(voiceAsset),
         });
       } else {
         logger.error(
@@ -282,7 +294,7 @@ export async function POST(request: NextRequest) {
           new Error(result.error ?? 'Unknown error'),
           {
             file: 'api/video/avatar-profiles/sync-hedra/route.ts',
-            hedraAssetId: character.id,
+            hedraCharacterId: character.id,
           }
         );
       }

@@ -30,6 +30,11 @@ const GreenScreenClipSchema = z.object({
 const CreateProfileSchema = z.object({
   name: z.string().min(1),
   frontalImageUrl: z.string().url(),
+  source: z.enum(['custom', 'hedra']).optional(),
+  role: z
+    .enum(['hero', 'villain', 'extra', 'narrator', 'presenter', 'custom'])
+    .optional(),
+  styleTag: z.enum(['real', 'anime', 'stylized']).optional(),
   tier: z.enum(['premium', 'standard']).default('standard'),
   additionalImageUrls: z.array(z.string().url()).default([]),
   fullBodyImageUrl: z.string().url().nullable().default(null),
@@ -37,9 +42,10 @@ const CreateProfileSchema = z.object({
   greenScreenClips: z.array(GreenScreenClipSchema).default([]),
   voiceId: z.string().nullable().default(null),
   voiceProvider: z
-    .enum(['elevenlabs', 'unrealspeech', 'custom'])
+    .enum(['elevenlabs', 'unrealspeech', 'custom', 'hedra'])
     .nullable()
     .default(null),
+  hedraCharacterId: z.string().nullable().default(null),
   description: z.string().nullable().default(null),
   isDefault: z.boolean().default(false),
 });
@@ -127,6 +133,9 @@ export async function POST(request: NextRequest) {
     const result = await createAvatarProfile(userId, {
       name: data.name,
       frontalImageUrl: data.frontalImageUrl,
+      source: data.source,
+      role: data.role,
+      styleTag: data.styleTag,
       tier: data.tier,
       additionalImageUrls: data.additionalImageUrls,
       fullBodyImageUrl: data.fullBodyImageUrl,
@@ -134,6 +143,7 @@ export async function POST(request: NextRequest) {
       greenScreenClips: data.greenScreenClips,
       voiceId: data.voiceId,
       voiceProvider: data.voiceProvider,
+      hedraCharacterId: data.hedraCharacterId,
       description: data.description,
       isDefault: data.isDefault,
     });

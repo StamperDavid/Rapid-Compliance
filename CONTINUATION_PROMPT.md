@@ -60,17 +60,37 @@ The video system was reworked to support multiple engines (HeyGen → Kling, Hed
 ### New Architecture: Hedra + Character Studio + AI Video Director
 
 #### Character Studio
-A character library where reusable characters are defined with persistent identity:
+A character library with two character sources and persistent identity:
 
-- **Character Profile** — name, role, description, style tag (real/anime/stylized)
-- **Reference Images** — frontal, side angles, full body, action poses (uploaded directly to our system, NOT pulled from Hedra)
-- **Full-Body Chroma Key Video Clips** — 360° green screen footage uploaded to the platform, used as source material for character consistency
-- **Voice Assignment** — ElevenLabs voice locked to the character (consistent across all scenes)
-- **No Hedra character browser/sync** — characters are created and managed entirely within SalesVelocity.ai
+**Premium Characters (user-created):**
+- Created in Character Studio — upload reference images, green screen clips, full identity control
+- **Voice Assignment** — ElevenLabs voice clone or custom voice (premium experience)
+- If no voice assigned, Hedra assigns a default voice — always changeable later
+- Used as branded characters: "SalesVelocity Hero", "PipeDrive Bully", etc.
+
+**Hedra Library Characters (stock extras):**
+- Pre-built characters from Hedra's character library with built-in voices
+- Used as extras, talking heads, background actors in commercials
+- Come ready to use — just give them a script and go
+- Voice comes from Hedra's catalog, used via native TTS (no ElevenLabs needed)
+- Voice can be swapped to any other Hedra voice or overridden with ElevenLabs
+
+**Two TTS Generation Paths:**
+- **Hedra voice** → `audio_generation: { type: "text_to_speech", voice_id, text }` — Hedra handles TTS internally
+- **ElevenLabs/UnrealSpeech voice** → synthesize audio ourselves → upload as asset → `audio_id`
+- Voice is fully decoupled from character image at the API level — any voice works with any character
+
+**Character Profile Fields:**
+- Name, role (hero/villain/extra/narrator), style tag (real/anime/stylized)
+- Reference images — frontal, side angles, full body, action poses
+- Full-body chroma key video clips — green screen footage for character consistency
+- Voice assignment — ElevenLabs, Hedra, or UnrealSpeech (always changeable)
+- Source — 'custom' (user-created) or 'hedra' (imported from Hedra library)
 
 Characters are reusable across any video project. Examples:
-- "SalesVelocity Hero" — anime version of David, assigned a specific ElevenLabs voice
+- "SalesVelocity Hero" — anime version of David, assigned a custom ElevenLabs voice clone
 - "PipeDrive Bully" — fat sweaty antagonist character, different voice
+- Stock Hedra extras — background actors with Hedra built-in voices
 - Future: full library of actors for various commercial/narrative projects
 
 #### Video Production Agent (New Jasper Tool/Agent)
@@ -118,15 +138,14 @@ Stored per-project or globally, referenced during prompt generation.
 | Multi-engine scene classifier (`selectEngineForScene`, `classifyScene`) | Single engine, no routing needed |
 | Engine registry (`engine-registry.ts`) | Single engine |
 | Engine selector UI (`EngineSelector.tsx`) | Single engine |
-| Hedra character browser/sync (`sync-hedra/`, `hedra-characters/`) | Characters managed locally |
-| Stock avatar seed script (`seed-hedra-avatars.ts`) | Characters created by user |
+| Stock avatar seed script (`seed-hedra-avatars.ts`) | Characters created by user or imported from Hedra |
 
 #### What Gets Kept & Fixed
 
 | Component | Action |
 |---|---|
 | `hedra-service.ts` | Keep — this IS the video engine now |
-| TTS synthesis | Fix — must handle ElevenLabs (primary) and UnrealSpeech; remove Hedra voice provider concept |
+| TTS synthesis | Two paths — Hedra native TTS (voice_id + text) for Hedra voices; ElevenLabs/UnrealSpeech upload for custom voices |
 | Avatar/Character profiles in Firestore | Rework — expand for character studio (role, style, multi-character projects) |
 | Video pipeline store (Zustand) | Keep — update for new workflow |
 | Poll/status tracking | Keep — simplify for Hedra-only |

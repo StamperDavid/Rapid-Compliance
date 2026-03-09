@@ -100,7 +100,10 @@ async function synthesizeTTSAudio(
 
 /**
  * Generate a talking-head avatar scene using Hedra Character-3.
- * Synthesizes TTS audio via ElevenLabs (or UnrealSpeech), then submits to Hedra.
+ *
+ * Two audio paths:
+ *   - **Hedra voice** (voiceProvider === 'hedra') → Hedra native TTS via `audio_generation`
+ *   - **ElevenLabs/UnrealSpeech** → synthesize audio ourselves, upload via `audio_id`
  */
 async function generateWithHedra(
   scene: PipelineScene,
@@ -110,6 +113,7 @@ async function generateWithHedra(
   voiceProvider?: 'elevenlabs' | 'unrealspeech' | 'custom' | 'hedra'
 ): Promise<SceneGenerationResult> {
   const script = scene.scriptText.trim() || ' ';
+  const useHedraTTS = voiceProvider === 'hedra' && Boolean(voiceId);
 
   // Load avatar profile for the frontal photo
   const { getDefaultProfile, getAvatarProfile } = await import('@/lib/video/avatar-profile-service');
@@ -122,6 +126,7 @@ async function generateWithHedra(
       logger.info('Loaded avatar profile photo for Hedra', {
         sceneId: scene.id,
         profileId: profile.id,
+        source: profile.source,
         file: 'scene-generator.ts',
       });
     }
@@ -138,12 +143,49 @@ async function generateWithHedra(
       videoUrl: null,
       thumbnailUrl: null,
       progress: 0,
-      error: 'No avatar photo found. Create an Avatar Profile with a frontal photo to use Hedra.',
+      error: 'No avatar photo found. Create a character with a frontal photo to use Hedra.',
     };
   }
 
-  // Always synthesize TTS — ElevenLabs is the universal engine; UnrealSpeech is
-  // supported via a separate code path inside synthesizeTTSAudio.
+  // Map aspect ratio — Hedra does not support 4:3
+  const hedraAspectRatio = aspectRatio === '4:3' ? '16:9' : aspectRatio;
+
+  // Path A: Hedra native TTS — pass voice_id + text directly, no audio upload needed
+  if (useHedraTTS && script.length > 1) {
+    logger.info('Using Hedra native TTS for scene', {
+      sceneId: scene.id,
+      voiceId,
+      scriptLength: script.length,
+      file: 'scene-generator.ts',
+    });
+
+    const response = await generateHedraAvatarVideo(photoUrl, null, {
+      textPrompt: scene.visualDescription?.trim() ?? '',
+      aspectRatio: hedraAspectRatio,
+      durationMs: scene.duration * 1000,
+      hedraVoiceId: voiceId,
+      speechText: script,
+    });
+
+    logger.info('Hedra generation started (native TTS)', {
+      sceneId: scene.id,
+      generationId: response.generationId,
+      file: 'scene-generator.ts',
+    });
+
+    return {
+      sceneId: scene.id,
+      providerVideoId: response.generationId,
+      provider: 'hedra',
+      status: 'generating',
+      videoUrl: null,
+      thumbnailUrl: null,
+      progress: 0,
+      error: null,
+    };
+  }
+
+  // Path B: External TTS (ElevenLabs/UnrealSpeech) — synthesize audio, upload to Hedra
   let audioUrl: string | null = null;
   if (script.length > 1) {
     try {
@@ -181,17 +223,14 @@ async function generateWithHedra(
     };
   }
 
-  // Map aspect ratio — Hedra does not support 4:3
-  const hedraAspectRatio = aspectRatio === '4:3' ? '16:9' : aspectRatio;
-
-  // Submit to Hedra Character-3
+  // Submit to Hedra Character-3 with uploaded audio
   const response = await generateHedraAvatarVideo(photoUrl, audioUrl, {
     textPrompt: scene.visualDescription?.trim() ?? '',
     aspectRatio: hedraAspectRatio,
     durationMs: scene.duration * 1000,
   });
 
-  logger.info('Hedra avatar generation started', {
+  logger.info('Hedra generation started (uploaded audio)', {
     sceneId: scene.id,
     generationId: response.generationId,
     modelId: response.modelId,

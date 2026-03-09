@@ -32,6 +32,11 @@ const GreenScreenClipSchema = z.object({
 const UpdateProfileSchema = z.object({
   name: z.string().min(1).optional(),
   frontalImageUrl: z.string().url().optional(),
+  source: z.enum(['custom', 'hedra']).optional(),
+  role: z
+    .enum(['hero', 'villain', 'extra', 'narrator', 'presenter', 'custom'])
+    .optional(),
+  styleTag: z.enum(['real', 'anime', 'stylized']).optional(),
   tier: z.enum(['premium', 'standard']).optional(),
   additionalImageUrls: z.array(z.string().url()).optional(),
   fullBodyImageUrl: z.string().url().nullable().optional(),
@@ -42,6 +47,7 @@ const UpdateProfileSchema = z.object({
     .enum(['elevenlabs', 'unrealspeech', 'custom', 'hedra'])
     .nullable()
     .optional(),
+  hedraCharacterId: z.string().nullable().optional(),
   isFavorite: z.boolean().optional(),
   description: z.string().nullable().optional(),
   isDefault: z.boolean().optional(),
