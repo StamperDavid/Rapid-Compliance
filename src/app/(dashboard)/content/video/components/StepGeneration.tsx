@@ -262,13 +262,22 @@ export function StepGeneration() {
     };
   }, [generatedScenes, authFetch, updateGeneratedScene]);
 
-  const handleRetry = async (sceneId: string) => {
+  const regenerateScene = useCallback(async (sceneId: string, feedbackText?: string) => {
     const scene = scenes.find((s) => s.id === sceneId);
     if (!scene) {
       return;
     }
 
     updateGeneratedScene(sceneId, { status: 'generating', progress: 0, error: null });
+
+    // If user provided feedback, append it to the visual description so the
+    // prompt translator and Hedra get the corrected direction
+    let visualDescription = scene.visualDescription ?? null;
+    if (feedbackText) {
+      visualDescription = visualDescription
+        ? `${visualDescription}. REVISION DIRECTION: ${feedbackText}`
+        : `REVISION DIRECTION: ${feedbackText}`;
+    }
 
     try {
       const response = await authFetch('/api/video/regenerate-scene', {
@@ -279,20 +288,20 @@ export function StepGeneration() {
           sceneId,
           scriptText: scene.scriptText,
           screenshotUrl: scene.screenshotUrl,
-          avatarId: avatarId ?? '',
-          voiceId: voiceId ?? '',
-          voiceProvider: voiceProvider ?? 'elevenlabs',
+          avatarId: scene.avatarId ?? avatarId ?? '',
+          voiceId: scene.voiceId ?? voiceId ?? '',
+          voiceProvider: scene.voiceProvider ?? voiceProvider ?? 'elevenlabs',
           aspectRatio: brief.aspectRatio,
           duration: scene.duration,
           engine: scene.engine,
           backgroundPrompt: scene.backgroundPrompt ?? null,
-          visualDescription: scene.visualDescription ?? null,
+          visualDescription,
           title: scene.title ?? null,
         }),
       });
 
       if (!response.ok) {
-        throw new Error('Retry failed');
+        throw new Error('Regeneration failed');
       }
 
       const data = await response.json() as { success: boolean; result: SceneGenerationResult };
@@ -300,9 +309,17 @@ export function StepGeneration() {
         updateGeneratedScene(sceneId, data.result);
       }
     } catch {
-      updateGeneratedScene(sceneId, { status: 'failed', error: 'Retry failed' });
+      updateGeneratedScene(sceneId, { status: 'failed', error: 'Regeneration failed' });
     }
-  };
+  }, [scenes, avatarId, voiceId, voiceProvider, brief.aspectRatio, authFetch, updateGeneratedScene]);
+
+  const handleRetry = useCallback((sceneId: string) => {
+    void regenerateScene(sceneId);
+  }, [regenerateScene]);
+
+  const handleRegenerate = useCallback((sceneId: string, feedback: string) => {
+    void regenerateScene(sceneId, feedback);
+  }, [regenerateScene]);
 
   const handleContinue = () => {
     advanceStep();
@@ -381,7 +398,8 @@ export function StepGeneration() {
                 key={result.sceneId}
                 sceneNumber={index + 1}
                 result={result}
-                onRetry={(sceneId) => { void handleRetry(sceneId); }}
+                onRetry={handleRetry}
+                onRegenerate={handleRegenerate}
               />
             ))}
           </div>
