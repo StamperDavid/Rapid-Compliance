@@ -3760,103 +3760,48 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
       case 'assemble_video': {
         const assembleStart = Date.now();
         try {
-          let sceneUrls: string[] = [];
-          const assembleProjectId = (args.projectId as string) ?? '';
-          const assembleTransition = (args.transitionType as string) ?? 'fade';
-          const assembleResolution = (args.outputResolution as string) ?? '1080p';
-
-          // If sceneUrls provided directly, parse them
+          // Parse sceneUrls if provided as JSON string
+          let parsedSceneUrls: string[] | undefined;
           if (typeof args.sceneUrls === 'string' && args.sceneUrls.trim().startsWith('[')) {
             try {
-              sceneUrls = JSON.parse(args.sceneUrls) as string[];
+              parsedSceneUrls = JSON.parse(args.sceneUrls) as string[];
             } catch {
-              // Invalid JSON
+              // Invalid JSON — specialist will load from project instead
             }
           }
 
-          // If no URLs provided but projectId given, load from project
-          if (sceneUrls.length === 0 && assembleProjectId) {
-            const { getProject } = await import('@/lib/video/pipeline-project-service');
-            const project = await getProject(assembleProjectId);
-            if (project?.generatedScenes) {
-              sceneUrls = project.generatedScenes
-                .filter((s) => s.status === 'completed' && s.videoUrl)
-                .map((s) => s.videoUrl as string);
-            }
-          }
+          // Delegate to Video Specialist
+          const { getVideoSpecialist: getAssembleSpec } = await import('@/lib/agents/content/video/specialist');
+          const assembleSpec = getAssembleSpec();
+          await assembleSpec.initialize();
 
-          if (sceneUrls.length === 0) {
-            content = JSON.stringify({
-              status: 'error',
-              message: 'No scene URLs found. Either provide sceneUrls or a projectId with completed scenes.',
-              specialist: 'VIDEO_DIRECTOR',
-            });
-            trackMissionStep(context, 'assemble_video', 'FAILED', {
-              summary: 'VIDEO_DIRECTOR: No scene URLs for assembly',
-              durationMs: Date.now() - assembleStart,
-              toolResult: content,
-            });
-            break;
-          }
-
-          // Call the assemble API internally
-          const assembleBaseUrl = process.env.NEXT_PUBLIC_APP_URL ?? process.env.VERCEL_URL ?? 'http://localhost:3000';
-          const assembleResponse = await fetch(`${assembleBaseUrl}/api/video/assemble`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              projectId: assembleProjectId || 'jasper-assembly',
-              sceneUrls,
-              transitionType: assembleTransition,
-              outputResolution: assembleResolution,
-            }),
+          const assembleResult = await assembleSpec.execute({
+            id: `assemble_video_${Date.now()}`,
+            timestamp: new Date(),
+            from: 'JASPER',
+            to: 'VIDEO_SPECIALIST',
+            type: 'COMMAND',
+            priority: 'HIGH',
+            payload: {
+              action: 'assemble_scenes' as const,
+              projectId: (args.projectId as string) ?? undefined,
+              sceneUrls: parsedSceneUrls,
+              transitionType: (args.transitionType as 'cut' | 'fade' | 'dissolve') ?? 'fade',
+              outputResolution: (args.outputResolution as '720p' | '1080p' | '4k') ?? '1080p',
+            },
+            requiresResponse: true,
+            traceId: `trace_assemble_video_${Date.now()}`,
           });
 
-          if (!assembleResponse.ok) {
-            const errData = await assembleResponse.json() as { error?: string };
-            throw new Error(errData.error ?? `Assembly failed (${assembleResponse.status})`);
-          }
-
-          const assembleData = await assembleResponse.json() as {
-            success: boolean;
-            videoUrl: string;
-            sceneCount: number;
-            fileSizeBytes: number;
-          };
-
-          if (!assembleData.success) {
-            throw new Error('Assembly returned success=false');
-          }
-
-          // If projectId was given, save the final URL to the project
-          if (assembleProjectId) {
-            try {
-              const { updateProject } = await import('@/lib/video/pipeline-project-service');
-              await updateProject(assembleProjectId, {
-                finalVideoUrl: assembleData.videoUrl,
-                currentStep: 'assembly',
-                status: 'assembled',
-              });
-            } catch {
-              // Non-critical — assembly still succeeded
-            }
-          }
+          const assembleData = assembleResult.data as Record<string, unknown> | null;
 
           content = JSON.stringify({
-            status: 'completed',
-            videoUrl: assembleData.videoUrl,
-            sceneCount: assembleData.sceneCount,
-            fileSizeBytes: assembleData.fileSizeBytes,
-            transitionType: assembleTransition,
-            outputResolution: assembleResolution,
-            projectId: assembleProjectId || null,
-            message: `Video assembled successfully! ${assembleData.sceneCount} scenes stitched with ${assembleTransition} transitions at ${assembleResolution}.`,
-            videoStudioPath: assembleProjectId ? `/content/video?load=${assembleProjectId}` : null,
-            specialist: 'VIDEO_DIRECTOR',
+            ...assembleData,
+            specialist: 'VIDEO_SPECIALIST',
           });
 
-          trackMissionStep(context, 'assemble_video', 'COMPLETED', {
-            summary: `VIDEO_DIRECTOR: Assembled ${assembleData.sceneCount} scenes → ${assembleData.videoUrl.slice(0, 80)}...`,
+          trackMissionStep(context, 'assemble_video', assembleResult.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED', {
+            summary: `VIDEO_SPECIALIST: ${(assembleData?.message as string) ?? assembleResult.status}`,
             durationMs: Date.now() - assembleStart,
             toolResult: content.slice(0, 2000),
           });
@@ -3865,10 +3810,10 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
           content = JSON.stringify({
             status: 'error',
             message: `Video assembly failed: ${errMsg}`,
-            specialist: 'VIDEO_DIRECTOR',
+            specialist: 'VIDEO_SPECIALIST',
           });
           trackMissionStep(context, 'assemble_video', 'FAILED', {
-            summary: `VIDEO_DIRECTOR: Assembly failed — ${errMsg}`,
+            summary: `VIDEO_SPECIALIST: ${errMsg}`,
             durationMs: Date.now() - assembleStart,
             toolResult: content.slice(0, 2000),
           });

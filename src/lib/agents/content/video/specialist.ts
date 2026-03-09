@@ -96,6 +96,16 @@ interface RenderScenesPayload {
   voiceId?: string;
 }
 
+interface AssembleScenesPayload {
+  action: 'assemble_scenes';
+  /** Project ID — loads completed scene URLs from Firestore */
+  projectId?: string;
+  /** Direct scene video URLs (alternative to projectId) */
+  sceneUrls?: string[];
+  transitionType?: 'cut' | 'fade' | 'dissolve';
+  outputResolution?: '720p' | '1080p' | '4k';
+}
+
 type VideoPayload =
   | ScriptToStoryboardPayload
   | AudioCuePayload
@@ -104,7 +114,8 @@ type VideoPayload =
   | VideoSEOPayload
   | BRollSuggestionPayload
   | CreateVideoProjectPayload
-  | RenderScenesPayload;
+  | RenderScenesPayload
+  | AssembleScenesPayload;
 
 // ============================================================================
 // RESULT TYPES
@@ -385,6 +396,9 @@ export class VideoSpecialist extends BaseSpecialist {
 
         case 'render_scenes':
           return await this.handleRenderScenes(taskId, payload);
+
+        case 'assemble_scenes':
+          return await this.handleAssembleScenes(taskId, payload);
 
         default:
           return this.createReport(taskId, 'FAILED', null, [`Unknown action: ${(payload as { action: string }).action}`]);
@@ -1993,6 +2007,123 @@ export class VideoSpecialist extends BaseSpecialist {
       resultData,
       failedCount > 0 ? genResults.filter((r) => r.status === 'failed').map((r) => r.error).filter((e): e is string => e !== null) : undefined,
     );
+  }
+
+  // ==========================================================================
+  // ASSEMBLE SCENES
+  // ==========================================================================
+
+  private async handleAssembleScenes(
+    taskId: string,
+    payload: AssembleScenesPayload,
+  ): Promise<AgentReport> {
+    const {
+      projectId,
+      sceneUrls: directUrls,
+      transitionType = 'fade',
+      outputResolution = '1080p',
+    } = payload;
+
+    let sceneUrls: string[] = directUrls ?? [];
+
+    // If no URLs provided but projectId given, load completed scenes from project
+    if (sceneUrls.length === 0 && projectId) {
+      this.log('INFO', `Loading scene URLs from project: ${projectId}`);
+      const { getProject } = await import('@/lib/video/pipeline-project-service');
+      const project = await getProject(projectId);
+
+      if (!project) {
+        return this.createReport(taskId, 'FAILED', {
+          status: 'error',
+          message: `Project ${projectId} not found.`,
+        }, ['Project not found']);
+      }
+
+      if (!project.generatedScenes || project.generatedScenes.length === 0) {
+        return this.createReport(taskId, 'FAILED', {
+          status: 'error',
+          message: 'Project has no generated scenes. Run render_scenes first.',
+        }, ['No generated scenes']);
+      }
+
+      sceneUrls = project.generatedScenes
+        .filter((s) => s.status === 'completed' && s.videoUrl)
+        .map((s) => s.videoUrl as string);
+    }
+
+    if (sceneUrls.length === 0) {
+      return this.createReport(taskId, 'FAILED', {
+        status: 'error',
+        message: 'No completed scene URLs available for assembly. Either provide sceneUrls or a projectId with completed scenes.',
+      }, ['No scene URLs']);
+    }
+
+    this.log('INFO', `Assembling ${sceneUrls.length} scenes (${transitionType}, ${outputResolution})`);
+
+    // Call the assemble API
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? process.env.VERCEL_URL ?? 'http://localhost:3000';
+    const response = await fetch(`${baseUrl}/api/video/assemble`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        projectId: projectId ?? 'agent-assembly',
+        sceneUrls,
+        transitionType,
+        outputResolution,
+      }),
+    });
+
+    if (!response.ok) {
+      const errData = await response.json() as { error?: string };
+      const errMsg = errData.error ?? `Assembly API returned ${response.status}`;
+      this.log('ERROR', `Assembly failed: ${errMsg}`);
+      return this.createReport(taskId, 'FAILED', {
+        status: 'error',
+        message: errMsg,
+      }, [errMsg]);
+    }
+
+    const data = await response.json() as {
+      success: boolean;
+      videoUrl: string;
+      sceneCount: number;
+      fileSizeBytes: number;
+    };
+
+    if (!data.success) {
+      return this.createReport(taskId, 'FAILED', {
+        status: 'error',
+        message: 'Assembly returned success=false',
+      }, ['Assembly failed']);
+    }
+
+    // Save final URL back to project
+    if (projectId) {
+      try {
+        const { updateProject } = await import('@/lib/video/pipeline-project-service');
+        await updateProject(projectId, {
+          finalVideoUrl: data.videoUrl,
+          transitionType,
+          currentStep: 'assembly',
+          status: 'assembled',
+        });
+        this.log('INFO', `Saved assembled video URL to project ${projectId}`);
+      } catch (saveErr) {
+        this.log('WARN', `Failed to save assembled URL to project: ${saveErr instanceof Error ? saveErr.message : String(saveErr)}`);
+      }
+    }
+
+    return this.createReport(taskId, 'COMPLETED', {
+      status: 'completed',
+      videoUrl: data.videoUrl,
+      sceneCount: data.sceneCount,
+      fileSizeBytes: data.fileSizeBytes,
+      transitionType,
+      outputResolution,
+      projectId: projectId ?? null,
+      message: `Video assembled: ${data.sceneCount} scenes with ${transitionType} transitions at ${outputResolution}.`,
+      videoStudioPath: projectId ? `/content/video?load=${projectId}` : null,
+    });
   }
 
   // ==========================================================================
