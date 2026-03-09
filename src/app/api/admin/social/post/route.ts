@@ -118,26 +118,12 @@ export async function POST(request: NextRequest) {
           file: 'admin/social/post/route.ts',
         });
 
-        // For development/demo, return success with mock data
-        if (process.env.NODE_ENV === 'development') {
-          return NextResponse.json({
-            success: true,
-            postId: `mock_tweet_${Date.now()}`,
-            platform: 'twitter',
-            content,
-            scheduledAt: scheduledAt ?? null,
-            postedAt: scheduledAt ? null : new Date().toISOString(),
-            message: '[DEV MODE] Platform Twitter credentials not configured. Mock post created.',
-          });
-        }
-
         return NextResponse.json(
           {
             success: false,
-            error: 'Platform Twitter credentials not configured',
-            message: 'Please configure PLATFORM_TWITTER_* environment variables.',
+            error: 'Twitter credentials not configured. Connect your Twitter account in Settings > Integrations.',
           },
-          { status: 500 }
+          { status: 503 }
         );
       }
 
@@ -269,26 +255,12 @@ export async function POST(request: NextRequest) {
           file: 'admin/social/post/route.ts',
         });
 
-        // For development/demo, return success with mock data
-        if (process.env.NODE_ENV === 'development') {
-          return NextResponse.json({
-            success: true,
-            postId: `mock_linkedin_${Date.now()}`,
-            platform: 'linkedin',
-            content,
-            scheduledAt: scheduledAt ?? null,
-            postedAt: scheduledAt ? null : new Date().toISOString(),
-            message: '[DEV MODE] Platform LinkedIn credentials not configured. Mock post created.',
-          });
-        }
-
         return NextResponse.json(
           {
             success: false,
-            error: 'Platform LinkedIn credentials not configured',
-            message: 'Please configure PLATFORM_LINKEDIN_* environment variables.',
+            error: 'LinkedIn credentials not configured. Connect your LinkedIn account in Settings > Integrations.',
           },
-          { status: 500 }
+          { status: 503 }
         );
       }
 

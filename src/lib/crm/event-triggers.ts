@@ -4,7 +4,12 @@
  */
 
 import { logger } from '@/lib/logger/logger';
+import { adminDb } from '@/lib/firebase/admin';
+import { PLATFORM_ID } from '@/lib/constants/platform';
+import type { Workflow } from '@/types/workflow';
 import type { RelatedEntityType } from '@/types/activity';
+
+const platformPath = `organizations/${PLATFORM_ID}`;
 
 export type CRMEventType = 
   | 'lead_created'
@@ -170,24 +175,39 @@ function evaluateWorkflowConditions(
  */
 async function getApplicableWorkflows(event: CRMEvent): Promise<WorkflowTriggerRule[]> {
   try {
-    const { getWorkflows } = await import('@/lib/workflows/workflow-service');
-
     // Map CRM event type to workflow trigger type
     const triggerType = mapCrmEventToTriggerType(event.eventType);
     if (!triggerType) {
       return [];
     }
 
-    // Query active workflows with matching trigger type
-    const result = await getWorkflows({ status: 'active', triggerType });
-    if (!result.data.length) {
+    if (!adminDb) {
+      logger.error('[CRM Event Triggers] adminDb is not initialized', undefined, {
+        eventType: event.eventType,
+      });
       return [];
     }
+
+    // Query active workflows with matching trigger type via admin SDK
+    const snapshot = await adminDb
+      .collection(`${platformPath}/workflows`)
+      .where('status', '==', 'active')
+      .where('trigger.type', '==', triggerType)
+      .get();
+
+    if (snapshot.empty) {
+      return [];
+    }
+
+    const workflows = snapshot.docs.map(docSnap => ({
+      id: docSnap.id,
+      ...docSnap.data(),
+    })) as Workflow[];
 
     const entityKey = getEntitySchemaKey(event.eventType);
     const matching: WorkflowTriggerRule[] = [];
 
-    for (const workflow of result.data) {
+    for (const workflow of workflows) {
       const trigger = workflow.trigger as {
         type: string;
         schemaId?: string;
@@ -311,17 +331,26 @@ async function executeTriggeredWorkflow(
       eventType: event.eventType,
     });
 
-    // Import workflow execution service and get workflow
+    // Import workflow execution service
     const { executeWorkflow } = await import('@/lib/workflows/workflow-executor');
-    const { getWorkflow } = await import('@/lib/workflows/workflow-service');
 
-    // Load the workflow
-    const workflow = await getWorkflow(rule.workflowId);
+    // Load the workflow via admin SDK
+    if (!adminDb) {
+      logger.error('[CRM Event Triggers] adminDb is not initialized', undefined, { workflowId: rule.workflowId });
+      return;
+    }
 
-    if (!workflow) {
+    const workflowSnap = await adminDb
+      .collection(`${platformPath}/workflows`)
+      .doc(rule.workflowId)
+      .get();
+
+    if (!workflowSnap.exists) {
       logger.error('Workflow not found for trigger', undefined, { workflowId: rule.workflowId });
       return;
     }
+
+    const workflow = { id: workflowSnap.id, ...workflowSnap.data() } as Workflow;
     
     // Execute the workflow with event context
     await executeWorkflow(

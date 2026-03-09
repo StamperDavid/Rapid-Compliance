@@ -292,11 +292,13 @@ export class ActionHandler {
             };
           }
 
-          // In a real implementation, this would trigger the specialist
+          // Specialist dispatch is not yet wired to the agent swarm from this path.
+          // Use Jasper chat to delegate directly to a specialist.
           return {
-            success: true,
+            success: false,
             action,
-            message: `Deploying ${specialist.icon} ${specialist.name}`,
+            message: `Specialist deployment via action markers is not yet connected to agent dispatch. Use Jasper chat to delegate to ${specialist.name}.`,
+            error: 'Specialist deployment not yet wired to agent dispatch.',
           };
         }
 

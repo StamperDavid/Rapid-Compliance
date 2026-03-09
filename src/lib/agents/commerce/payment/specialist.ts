@@ -398,45 +398,12 @@ export class PaymentSpecialist extends BaseSpecialist {
         };
       }
 
-      // Fallback: Stripe not configured — create local session for development
-      this.log('WARN', 'Stripe API key not configured — creating local checkout session');
-      const sessionId = `cs_local_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
-
-      const sessionData = {
-        id: sessionId,
-        customer: payload.customer,
-        lineItems,
-        total,
-        currency: payload.currency ?? 'usd',
-        status: 'pending' as const,
-        billingAddress: payload.billingAddress,
-        shippingAddress: payload.shippingAddress,
-        successUrl: payload.successUrl,
-        cancelUrl: payload.cancelUrl,
-        metadata: payload.metadata,
-        stripeConfigured: false,
-        createdAt: new Date().toISOString(),
-        expiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
-      };
-
-      await FirestoreService.set(
-        getSubCollection('checkout_sessions'),
-        sessionId,
-        sessionData,
-        false
-      );
-
-      this.log('INFO', `Local checkout session created: ${sessionId} for $${total.toFixed(2)}`);
-
+      // Stripe not configured — refuse checkout rather than create a fake session
+      this.log('WARN', 'Stripe API key not configured — checkout cannot proceed');
       return {
-        success: true,
+        success: false,
         action: 'initialize_checkout',
-        sessionId,
-        sessionUrl: `/store/checkout?session_id=${sessionId}`,
-        amount: total,
-        currency: payload.currency ?? 'usd',
-        status: 'pending',
-        metadata: { itemCount: payload.items.length, stripeConfigured: false },
+        error: 'Stripe is not configured. Add your Stripe API key in Settings > API Keys to enable checkout.',
       };
     } catch (error) {
       const err = error instanceof Error ? error : new Error(String(error));
@@ -513,38 +480,12 @@ export class PaymentSpecialist extends BaseSpecialist {
         };
       }
 
-      // Fallback: Stripe not configured
-      this.log('WARN', 'Stripe API key not configured — creating local payment intent');
-      const paymentIntentId = `pi_local_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
-
-      const intentData = {
-        id: paymentIntentId,
-        amount: payload.amount,
-        currency: payload.currency ?? 'usd',
-        customerId: payload.customerId,
-        status: 'requires_payment_method' as const,
-        metadata: payload.metadata,
-        stripeConfigured: false,
-        createdAt: new Date().toISOString(),
-      };
-
-      await FirestoreService.set(
-        getSubCollection('payment_intents'),
-        paymentIntentId,
-        intentData,
-        false
-      );
-
-      this.log('INFO', `Local payment intent created: ${paymentIntentId} for ${payload.amount} ${payload.currency}`);
-
+      // Stripe not configured — refuse rather than create a fake payment intent
+      this.log('WARN', 'Stripe API key not configured — payment intent cannot be created');
       return {
-        success: true,
+        success: false,
         action: 'create_payment_intent',
-        paymentIntentId,
-        amount: payload.amount,
-        currency: payload.currency ?? 'usd',
-        status: 'pending',
-        metadata: { stripeConfigured: false },
+        error: 'Stripe is not configured. Add your Stripe API key in Settings > API Keys to enable payments.',
       };
     } catch (error) {
       const err = error instanceof Error ? error : new Error(String(error));

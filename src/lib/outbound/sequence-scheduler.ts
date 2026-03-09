@@ -5,10 +5,13 @@
  */
 
 import { SequenceEngine } from './sequence-engine';
-import { FirestoreService } from '@/lib/db/firestore-service';
+import { adminDb } from '@/lib/firebase/admin';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 import type { ProspectEnrollment } from '@/types/outbound-sequence'
 import { logger } from '@/lib/logger/logger';
-import { getSubCollection } from '@/lib/firebase/collections';
+
+// Base Firestore collection path for platform sub-collections
+const platformPath = `organizations/${PLATFORM_ID}`;
 
 /**
  * Process all due sequence steps
@@ -60,17 +63,20 @@ export async function processSequences(): Promise<{
  */
 async function getActiveEnrollments(): Promise<ProspectEnrollment[]> {
   try {
-    const { where } = await import('firebase/firestore');
+    if (!adminDb) {
+      logger.error('[Sequence Scheduler] adminDb is not initialized', undefined, { file: 'sequence-scheduler.ts' });
+      return [];
+    }
 
-    // Query active enrollments
-    const enrollments = await FirestoreService.getAll(
-      getSubCollection('enrollments'),
-      [
-        where('status', '==', 'active'),
-      ]
-    );
+    const snapshot = await adminDb
+      .collection(`${platformPath}/enrollments`)
+      .where('status', '==', 'active')
+      .get();
 
-    return enrollments as ProspectEnrollment[];
+    return snapshot.docs.map(docSnap => ({
+      id: docSnap.id,
+      ...docSnap.data(),
+    })) as ProspectEnrollment[];
   } catch (error) {
     logger.error('[Sequence Scheduler] Error getting enrollments:', error instanceof Error ? error : undefined, { file: 'sequence-scheduler.ts' });
     return [];
@@ -85,19 +91,26 @@ export async function handleEmailBounce(
   stepId: string,
   reason?: string
 ): Promise<void> {
-  logger.info('Sequence Scheduler Handling bounce for enrollment', { 
-    enrollmentId, 
+  logger.info('Sequence Scheduler Handling bounce for enrollment', {
+    enrollmentId,
     reason:(reason !== '' && reason != null) ? reason : 'unknown',
-    file: 'sequence-scheduler.ts' 
+    file: 'sequence-scheduler.ts'
   });
 
-  // Get enrollment
-  const enrollment = await FirestoreService.get(
-    getSubCollection('enrollments'),
-    enrollmentId
-  ) as ProspectEnrollment;
+  if (!adminDb) {
+    logger.error('[Sequence Scheduler] adminDb is not initialized', undefined, { file: 'sequence-scheduler.ts' });
+    return;
+  }
 
-  if (!enrollment) {return;}
+  // Get enrollment
+  const docSnap = await adminDb
+    .collection(`${platformPath}/enrollments`)
+    .doc(enrollmentId)
+    .get();
+
+  if (!docSnap.exists) {return;}
+
+  const enrollment = { id: docSnap.id, ...docSnap.data() } as ProspectEnrollment;
 
   // Find step action
   const action = enrollment.stepActions.find(a => a.stepId === stepId);
@@ -132,13 +145,20 @@ export async function handleEmailReply(
 ): Promise<void> {
   logger.info('Sequence Scheduler Handling reply for enrollment enrollmentId}', { file: 'sequence-scheduler.ts' });
 
-  // Get enrollment
-  const enrollment = await FirestoreService.get(
-    getSubCollection('enrollments'),
-    enrollmentId
-  ) as ProspectEnrollment;
+  if (!adminDb) {
+    logger.error('[Sequence Scheduler] adminDb is not initialized', undefined, { file: 'sequence-scheduler.ts' });
+    return;
+  }
 
-  if (!enrollment) {return;}
+  // Get enrollment
+  const enrollmentSnap = await adminDb
+    .collection(`${platformPath}/enrollments`)
+    .doc(enrollmentId)
+    .get();
+
+  if (!enrollmentSnap.exists) {return;}
+
+  const enrollment = { id: enrollmentSnap.id, ...enrollmentSnap.data() } as ProspectEnrollment;
 
   // Find step action
   const action = enrollment.stepActions.find(a => a.stepId === stepId);
@@ -153,10 +173,14 @@ export async function handleEmailReply(
   }
 
   // Get sequence
-  const sequence = await FirestoreService.get(
-    getSubCollection('sequences'),
-    enrollment.sequenceId
-  ) as SequenceDoc;
+  const sequenceSnap = await adminDb
+    .collection(`${platformPath}/sequences`)
+    .doc(enrollment.sequenceId)
+    .get();
+
+  const sequence = sequenceSnap.exists
+    ? (sequenceSnap.data() as SequenceDoc)
+    : null;
 
   // If sequence is set to stop on response, pause enrollment
   if (sequence?.stopOnResponse) {
@@ -168,12 +192,10 @@ export async function handleEmailReply(
 
   enrollment.updatedAt = new Date().toISOString();
 
-  await FirestoreService.set(
-    getSubCollection('enrollments'),
-    enrollmentId,
-    enrollment,
-    false
-  );
+  await adminDb
+    .collection(`${platformPath}/enrollments`)
+    .doc(enrollmentId)
+    .set(enrollment);
 }
 
 /**
@@ -183,12 +205,19 @@ export async function handleEmailOpen(
   enrollmentId: string,
   stepId: string
 ): Promise<void> {
-  const enrollment = await FirestoreService.get(
-    getSubCollection('enrollments'),
-    enrollmentId
-  ) as ProspectEnrollment;
+  if (!adminDb) {
+    logger.error('[Sequence Scheduler] adminDb is not initialized', undefined, { file: 'sequence-scheduler.ts' });
+    return;
+  }
 
-  if (!enrollment) {return;}
+  const docSnap = await adminDb
+    .collection(`${platformPath}/enrollments`)
+    .doc(enrollmentId)
+    .get();
+
+  if (!docSnap.exists) {return;}
+
+  const enrollment = { id: docSnap.id, ...docSnap.data() } as ProspectEnrollment;
 
   const action = enrollment.stepActions.find(a => a.stepId === stepId);
   if (action && !action.openedAt) {
@@ -197,12 +226,10 @@ export async function handleEmailOpen(
     action.firstOpenedAt =action.firstOpenedAt ?? new Date().toISOString();
     action.updatedAt = new Date().toISOString();
 
-    await FirestoreService.set(
-      getSubCollection('enrollments'),
-      enrollmentId,
-      enrollment,
-      false
-    );
+    await adminDb
+      .collection(`${platformPath}/enrollments`)
+      .doc(enrollmentId)
+      .set(enrollment);
   }
 }
 
@@ -213,12 +240,19 @@ export async function handleEmailClick(
   enrollmentId: string,
   stepId: string
 ): Promise<void> {
-  const enrollment = await FirestoreService.get(
-    getSubCollection('enrollments'),
-    enrollmentId
-  ) as ProspectEnrollment;
+  if (!adminDb) {
+    logger.error('[Sequence Scheduler] adminDb is not initialized', undefined, { file: 'sequence-scheduler.ts' });
+    return;
+  }
 
-  if (!enrollment) {return;}
+  const docSnap = await adminDb
+    .collection(`${platformPath}/enrollments`)
+    .doc(enrollmentId)
+    .get();
+
+  if (!docSnap.exists) {return;}
+
+  const enrollment = { id: docSnap.id, ...docSnap.data() } as ProspectEnrollment;
 
   const action = enrollment.stepActions.find(a => a.stepId === stepId);
   if (action && !action.clickedAt) {
@@ -226,12 +260,9 @@ export async function handleEmailClick(
     action.clickedAt = new Date().toISOString();
     action.updatedAt = new Date().toISOString();
 
-    await FirestoreService.set(
-      getSubCollection('enrollments'),
-      enrollmentId,
-      enrollment,
-      false
-    );
+    await adminDb
+      .collection(`${platformPath}/enrollments`)
+      .doc(enrollmentId)
+      .set(enrollment);
   }
 }
-

@@ -19,6 +19,7 @@ import { BaseSpecialist } from '../../base-specialist';
 import type { AgentMessage, AgentReport, SpecialistConfig, Signal } from '../../types';
 import { logger as _logger } from '@/lib/logger/logger';
 import { shareInsight } from '../../shared/memory-vault';
+import { createTwitterService } from '@/lib/integrations/twitter-service';
 
 // ============================================================================
 // THREAD TEMPLATES - Core content structures
@@ -774,13 +775,13 @@ export class TwitterExpert extends BaseSpecialist {
 
         // LISTEN tasks
         case 'FETCH_POST_METRICS':
-          result = await this.fetchPostMetrics(request.params);
+          result = this.fetchPostMetrics(request.params);
           break;
         case 'FETCH_MENTIONS':
           result = await this.fetchMentions(request.params);
           break;
         case 'FETCH_TRENDING':
-          result = await this.fetchTrending(request.params);
+          result = this.fetchTrending(request.params);
           break;
         case 'FETCH_AUDIENCE':
           result = await this.fetchAudience(request.params);
@@ -977,151 +978,136 @@ export class TwitterExpert extends BaseSpecialist {
   /**
    * Fetch post metrics and write to MemoryVault
    */
-  async fetchPostMetrics(params: FetchPostMetricsRequest['params']): Promise<PostMetricsResult> {
+  fetchPostMetrics(params: FetchPostMetricsRequest['params']): PostMetricsResult {
     const { postIds, timeframe = '7d' } = params;
 
     this.log('INFO', `Fetching metrics for ${postIds.length} posts (timeframe: ${timeframe})`);
 
-    // Real data requires Twitter API integration
-    const metrics = postIds.map(postId => ({
-      postId,
-      impressions: 0, // Real data requires Twitter API integration
-      engagements: 0, // Real data requires Twitter API integration
-      likes: 0, // Real data requires Twitter API integration
-      retweets: 0, // Real data requires Twitter API integration
-      replies: 0, // Real data requires Twitter API integration
-      clicks: 0, // Real data requires Twitter API integration
-      engagementRate: 0, // Real data requires Twitter API integration
-    }));
+    // Twitter API v2 tweet-level metrics (impression_count, engagement) require
+    // OAuth 2.0 with elevated access and are not exposed via the read endpoint
+    // in the Basic tier. This requires a dedicated per-tweet lookup implementation.
+    this.log('INFO', 'Per-tweet metrics not yet implemented — Twitter API v2 tweet lookup with metrics fields required');
 
-    const summary = {
-      totalImpressions: 0, // Real data requires Twitter API integration
-      totalEngagements: 0, // Real data requires Twitter API integration
-      avgEngagementRate: 0, // Real data requires Twitter API integration
+    return {
+      metrics: postIds.map(postId => ({
+        postId,
+        impressions: 0,
+        engagements: 0,
+        likes: 0,
+        retweets: 0,
+        replies: 0,
+        clicks: 0,
+        engagementRate: 0,
+      })),
+      summary: {
+        totalImpressions: 0,
+        totalEngagements: 0,
+        avgEngagementRate: 0,
+      },
     };
-
-    // Write to MemoryVault
-    await shareInsight(
-      'TWITTER_X_EXPERT',
-      'PERFORMANCE',
-      'Twitter Post Metrics Analysis',
-      'No data available - Twitter API integration required',
-      {
-        confidence: 0,
-        sources: ['Twitter API', 'TWITTER_X_EXPERT'],
-        tags: ['twitter', 'metrics', 'performance'],
-      }
-    );
-
-    this.log('INFO', 'Post metrics not available - Twitter API integration required');
-
-    return { metrics, summary };
   }
 
   /**
    * Fetch brand mentions and write to MemoryVault
    */
   async fetchMentions(params: FetchMentionsRequest['params']): Promise<MentionsResult> {
-    const { keywords = [], since: _since } = params;
+    const { keywords = [], since } = params;
 
     this.log('INFO', `Fetching mentions for keywords: ${keywords.join(', ')}`);
 
-    // In production, this would call Twitter API
-    // For now, generating realistic test data
-    const mentions = [
-      {
-        id: 'mention_1',
-        author: '@user123',
-        text: 'Really impressed with @SalesVelocity - the automation is incredible!',
-        timestamp: new Date(),
-        sentiment: 'positive' as const,
-        engagementLevel: 85,
-      },
-      {
-        id: 'mention_2',
-        author: '@user456',
-        text: '@SalesVelocity how do I integrate with my CRM?',
-        timestamp: new Date(),
-        sentiment: 'neutral' as const,
-        engagementLevel: 60,
-      },
-      {
-        id: 'mention_3',
-        author: '@user789',
-        text: '@SalesVelocity support is slow to respond',
-        timestamp: new Date(),
-        sentiment: 'negative' as const,
-        engagementLevel: 40,
-      },
-    ];
+    try {
+      const twitterService = await createTwitterService();
 
-    const summary = {
-      total: mentions.length,
-      positive: mentions.filter(m => m.sentiment === 'positive').length,
-      neutral: mentions.filter(m => m.sentiment === 'neutral').length,
-      negative: mentions.filter(m => m.sentiment === 'negative').length,
-    };
-
-    // Write to MemoryVault
-    await shareInsight(
-      'TWITTER_X_EXPERT',
-      'PERFORMANCE',
-      'Brand Mentions Analysis',
-      `Found ${mentions.length} mentions. Sentiment: ${summary.positive} positive, ${summary.neutral} neutral, ${summary.negative} negative.`,
-      {
-        confidence: 85,
-        sources: ['Twitter API', 'TWITTER_X_EXPERT'],
-        tags: ['twitter', 'mentions', 'sentiment'],
-        actions: summary.negative > 0 ? ['Address negative mentions within 1 hour'] : undefined,
+      if (!twitterService) {
+        this.log('WARN', 'Twitter API not configured — cannot fetch mentions');
+        return {
+          mentions: [],
+          summary: { total: 0, positive: 0, neutral: 0, negative: 0 },
+        };
       }
-    );
 
-    this.log('INFO', `Mentions written to MemoryVault: ${mentions.length} found`);
+      // Build a search query from keywords; fall back to searching for mentions
+      const query = keywords.length > 0
+        ? keywords.map(k => `"${k}"`).join(' OR ')
+        : '@SalesVelocity';
 
-    return { mentions, summary };
+      const { tweets, error } = await twitterService.searchRecentTweets(query, {
+        maxResults: 20,
+        startTime: since,
+      });
+
+      if (error) {
+        this.log('WARN', `Twitter API error fetching mentions: ${error}`);
+        return {
+          mentions: [],
+          summary: { total: 0, positive: 0, neutral: 0, negative: 0 },
+        };
+      }
+
+      const mentions = tweets.map(tweet => {
+        const totalEngagement =
+          (tweet.publicMetrics?.likeCount ?? 0) +
+          (tweet.publicMetrics?.retweetCount ?? 0) +
+          (tweet.publicMetrics?.replyCount ?? 0);
+
+        return {
+          id: tweet.id,
+          author: tweet.authorId,
+          text: tweet.text,
+          timestamp: tweet.createdAt ? new Date(tweet.createdAt) : new Date(),
+          // Sentiment analysis requires a separate NLP service; default to neutral
+          sentiment: 'neutral' as const,
+          engagementLevel: totalEngagement,
+        };
+      });
+
+      const summary = {
+        total: mentions.length,
+        positive: 0,
+        neutral: mentions.length,
+        negative: 0,
+      };
+
+      if (mentions.length > 0) {
+        await shareInsight(
+          'TWITTER_X_EXPERT',
+          'PERFORMANCE',
+          'Brand Mentions Analysis',
+          `Found ${mentions.length} mentions via Twitter API. Sentiment analysis requires an NLP service to classify.`,
+          {
+            confidence: 90,
+            sources: ['Twitter API v2'],
+            tags: ['twitter', 'mentions', ...keywords],
+          }
+        );
+      }
+
+      this.log('INFO', `Fetched ${mentions.length} real mentions from Twitter API`);
+      return { mentions, summary };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      this.log('ERROR', `Twitter API error: ${message}`);
+      return {
+        mentions: [],
+        summary: { total: 0, positive: 0, neutral: 0, negative: 0 },
+      };
+    }
   }
 
   /**
    * Fetch trending topics and write to MemoryVault
    */
-  async fetchTrending(params: FetchTrendingRequest['params']): Promise<TrendingResult> {
+  fetchTrending(params: FetchTrendingRequest['params']): TrendingResult {
     const { location = 'US', category = 'tech' } = params;
 
     this.log('INFO', `Fetching trending topics for ${location} / ${category}`);
 
-    // In production, this would call Twitter API
-    // For now, generating realistic test data
-    const trends = [
-      { topic: '#AI', volume: 125000, category: 'tech', relevance: 'high' as const },
-      { topic: '#SaaS', volume: 85000, category: 'tech', relevance: 'high' as const },
-      { topic: '#Automation', volume: 45000, category: 'tech', relevance: 'medium' as const },
-      { topic: '#CRM', volume: 32000, category: 'business', relevance: 'medium' as const },
-      { topic: '#Sales', volume: 28000, category: 'business', relevance: 'low' as const },
-    ];
+    // Twitter API v2 does not expose a trending-topics endpoint on the Basic
+    // or Free tier. The v1.1 trends/place endpoint is deprecated. A dedicated
+    // implementation using third-party data or elevated API access is required.
+    this.log('INFO', 'Trending topics not yet implemented — Twitter API v2 trending endpoint not available on Basic tier');
 
-    const recommendations = [
-      'Create thread on AI automation in sales - high relevance, high volume',
-      'Engage with #SaaS conversations - our core audience',
-      'Monitor #CRM discussions for partnership opportunities',
-    ];
-
-    // Write to MemoryVault
-    await shareInsight(
-      'TWITTER_X_EXPERT',
-      'PERFORMANCE',
-      'Twitter Trending Topics',
-      `Top trends: ${trends.slice(0, 3).map(t => t.topic).join(', ')}. ${recommendations.length} content opportunities identified.`,
-      {
-        confidence: 80,
-        sources: ['Twitter Trends API', 'TWITTER_X_EXPERT'],
-        tags: ['twitter', 'trends', 'content-opportunities'],
-        actions: recommendations,
-      }
-    );
-
-    this.log('INFO', `Trends written to MemoryVault: ${trends.length} topics analyzed`);
-
-    return { trends, recommendations };
+    return { trends: [], recommendations: [] };
   }
 
   /**
@@ -1132,41 +1118,67 @@ export class TwitterExpert extends BaseSpecialist {
 
     this.log('INFO', `Fetching audience metrics: ${metrics.join(', ')}`);
 
-    // In production, this would call Twitter API
-    // For now, generating realistic test data
-    const audienceData: AudienceResult = {
-      followers: 12450,
-      growthRate: 3.2, // 3.2% weekly growth
-      demographics: {
-        topLocations: ['San Francisco', 'New York', 'Austin', 'Seattle'],
-        topInterests: ['SaaS', 'Sales', 'Marketing Automation', 'AI'],
-      },
-      engagement: {
-        avgEngagementRate: 2.8,
-        mostActiveHours: ['9-11 AM EST', '2-4 PM EST', '7-9 PM EST'],
-      },
-    };
+    try {
+      const twitterService = await createTwitterService();
 
-    // Write to MemoryVault
-    await shareInsight(
-      'TWITTER_X_EXPERT',
-      'PERFORMANCE',
-      'Audience Growth & Engagement',
-      `Followers: ${audienceData.followers.toLocaleString()} (+${audienceData.growthRate}% weekly). Avg engagement: ${audienceData.engagement.avgEngagementRate}%. Best posting times: ${audienceData.engagement.mostActiveHours.join(', ')}.`,
-      {
-        confidence: 95,
-        sources: ['Twitter Analytics API', 'TWITTER_X_EXPERT'],
-        tags: ['twitter', 'audience', 'growth'],
-        actions: [
-          `Schedule posts for peak hours: ${audienceData.engagement.mostActiveHours.join(', ')}`,
-          'Target SaaS and Sales topics for maximum relevance',
-        ],
+      if (!twitterService) {
+        this.log('WARN', 'Twitter API not configured — cannot fetch audience data');
+        return {
+          followers: 0,
+          growthRate: 0,
+          demographics: { topLocations: [], topInterests: [] },
+          engagement: { avgEngagementRate: 0, mostActiveHours: [] },
+        };
       }
-    );
 
-    this.log('INFO', `Audience metrics written to MemoryVault`);
+      const { user, error } = await twitterService.getMe();
 
-    return audienceData;
+      if (error || !user) {
+        this.log('WARN', `Twitter API error fetching user profile: ${error ?? 'no user returned'}`);
+        return {
+          followers: 0,
+          growthRate: 0,
+          demographics: { topLocations: [], topInterests: [] },
+          engagement: { avgEngagementRate: 0, mostActiveHours: [] },
+        };
+      }
+
+      const followersCount = user.publicMetrics?.followersCount ?? 0;
+
+      // Growth rate, audience demographics, and peak-hours data are not
+      // available from Twitter API v2 on the Basic tier. A time-series
+      // snapshot approach or Twitter Analytics export would be required.
+      const audienceData: AudienceResult = {
+        followers: followersCount,
+        growthRate: 0,
+        demographics: { topLocations: [], topInterests: [] },
+        engagement: { avgEngagementRate: 0, mostActiveHours: [] },
+      };
+
+      await shareInsight(
+        'TWITTER_X_EXPERT',
+        'PERFORMANCE',
+        'Audience Follower Count',
+        `Live follower count from Twitter API: ${followersCount.toLocaleString()}. Growth rate, demographics, and engagement timing require additional API access.`,
+        {
+          confidence: 90,
+          sources: ['Twitter API v2 — /users/me'],
+          tags: ['twitter', 'audience', 'followers'],
+        }
+      );
+
+      this.log('INFO', `Fetched real audience data from Twitter API: ${followersCount} followers`);
+      return audienceData;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      this.log('ERROR', `Twitter API error: ${message}`);
+      return {
+        followers: 0,
+        growthRate: 0,
+        demographics: { topLocations: [], topInterests: [] },
+        engagement: { avgEngagementRate: 0, mostActiveHours: [] },
+      };
+    }
   }
 
   /**
