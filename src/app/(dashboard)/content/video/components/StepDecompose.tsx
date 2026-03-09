@@ -67,6 +67,7 @@ export function StepDecompose() {
         screenshotUrl: null,
         avatarId: null,
         voiceId: null,
+        voiceProvider: null,
         duration: scene.suggestedDuration,
         engine: scene.engine ?? null,
         backgroundPrompt: scene.backgroundPrompt ?? null,

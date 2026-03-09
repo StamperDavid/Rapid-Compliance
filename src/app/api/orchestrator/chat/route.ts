@@ -361,7 +361,7 @@ export async function POST(request: NextRequest) {
       'delegate_to_builder', 'delegate_to_sales', 'delegate_to_marketing',
       'delegate_to_agent', 'delegate_to_trust', 'delegate_to_content',
       'delegate_to_architect', 'delegate_to_outreach', 'delegate_to_intelligence',
-      'delegate_to_commerce', 'create_video', 'generate_content',
+      'delegate_to_commerce', 'create_video', 'generate_video', 'produce_video', 'generate_content',
       'scan_leads', 'enrich_lead', 'draft_outreach_email',
       'voice_agent', 'social_post',
     ];

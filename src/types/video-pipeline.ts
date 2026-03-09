@@ -86,6 +86,8 @@ export type SceneStatus =
   | 'completed'
   | 'failed';
 
+export type VoiceProviderId = 'elevenlabs' | 'unrealspeech' | 'custom' | 'hedra';
+
 export interface PipelineScene {
   id: string;
   sceneNumber: number;
@@ -93,8 +95,9 @@ export interface PipelineScene {
   visualDescription?: string; // "Modern office with sales dashboards on monitors"
   scriptText: string;
   screenshotUrl: string | null;
-  avatarId: string | null;
-  voiceId: string | null;
+  avatarId: string | null; // Per-scene character override (null = use project default)
+  voiceId: string | null; // Per-scene voice override (null = use project default)
+  voiceProvider: VoiceProviderId | null; // Per-scene voice provider (null = use project default)
   duration: number; // seconds
   engine: VideoEngineId | null; // null = defaults to hedra
   backgroundPrompt: string | null; // Prompt for AI video background generation

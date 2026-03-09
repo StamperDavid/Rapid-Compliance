@@ -50,6 +50,7 @@ const SaveProjectSchema = z.object({
       screenshotUrl: z.string().nullable(),
       avatarId: z.string().nullable(),
       voiceId: z.string().nullable(),
+      voiceProvider: z.enum(['elevenlabs', 'unrealspeech', 'custom', 'hedra']).nullable().default(null),
       duration: z.number(),
       engine: z.enum(['hedra']).nullable().default(null),
       backgroundPrompt: z.string().nullable().default(null),

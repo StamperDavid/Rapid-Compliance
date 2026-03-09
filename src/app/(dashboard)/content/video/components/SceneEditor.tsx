@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
-import { GripVertical, Trash2, Copy, Image as ImageIcon, ChevronDown, ChevronUp, Eye, Palette } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { useAuthFetch } from '@/hooks/useAuthFetch';
+import { GripVertical, Trash2, Copy, Image as ImageIcon, ChevronDown, ChevronUp, Eye, Palette, X } from 'lucide-react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
-import type { PipelineScene } from '@/types/video-pipeline';
+import type { PipelineScene, VoiceProviderId } from '@/types/video-pipeline';
 
 interface SceneEditorProps {
   scene: PipelineScene;
@@ -13,8 +14,69 @@ interface SceneEditorProps {
   onDuplicate: (scene: PipelineScene) => void;
 }
 
+/** Minimal avatar profile shape for the per-scene picker */
+interface MiniProfile {
+  id: string;
+  name: string;
+  frontalImageUrl: string;
+  voiceId: string | null;
+  voiceName: string | null;
+  voiceProvider: VoiceProviderId | null;
+  source: 'custom' | 'hedra';
+}
+
 export function SceneEditor({ scene, onUpdate, onDelete, onDuplicate }: SceneEditorProps) {
+  const authFetch = useAuthFetch();
   const [expanded, setExpanded] = useState(false);
+  const [profiles, setProfiles] = useState<MiniProfile[]>([]);
+  const [profilesLoaded, setProfilesLoaded] = useState(false);
+
+  // Lazy-load avatar profiles only when the panel is expanded
+  const loadProfiles = useCallback(async () => {
+    if (profilesLoaded) { return; }
+    try {
+      const response = await authFetch('/api/video/avatar-profiles');
+      if (!response.ok) { return; }
+      const data = await response.json() as {
+        success: boolean;
+        profiles: MiniProfile[];
+      };
+      if (data.success && data.profiles) {
+        setProfiles(data.profiles);
+      }
+    } catch {
+      // Non-critical — user can still edit other fields
+    } finally {
+      setProfilesLoaded(true);
+    }
+  }, [authFetch, profilesLoaded]);
+
+  useEffect(() => {
+    if (expanded && !profilesLoaded) {
+      void loadProfiles();
+    }
+  }, [expanded, profilesLoaded, loadProfiles]);
+
+  const assignedProfile = scene.avatarId
+    ? profiles.find((p) => p.id === scene.avatarId)
+    : null;
+
+  const handleAssignCharacter = (profile: MiniProfile) => {
+    onUpdate(scene.id, {
+      avatarId: profile.id,
+      // Also set voice from profile if the scene doesn't have one yet
+      voiceId: scene.voiceId ?? profile.voiceId,
+      voiceProvider: scene.voiceProvider ?? profile.voiceProvider,
+    });
+  };
+
+  const handleClearCharacter = () => {
+    onUpdate(scene.id, {
+      avatarId: null,
+      voiceId: null,
+      voiceProvider: null,
+    });
+  };
 
   return (
     <div className="p-4 bg-zinc-800/30 rounded-xl border border-zinc-700/50 group space-y-3">
@@ -40,6 +102,25 @@ export function SceneEditor({ scene, onUpdate, onDelete, onDuplicate }: SceneEdi
             className="w-full px-2 py-1 bg-transparent border-b border-zinc-700/50 text-sm font-semibold text-amber-400 placeholder-zinc-600 focus:outline-none focus:border-amber-500/50 truncate"
           />
         </div>
+
+        {/* Per-scene character badge (compact, always visible) */}
+        {assignedProfile && (
+          <div className="flex items-center gap-1.5 px-2 py-1 bg-cyan-500/10 border border-cyan-500/20 rounded-lg">
+            <div className="relative w-5 h-5 rounded-full overflow-hidden flex-shrink-0">
+              <Image
+                src={assignedProfile.frontalImageUrl}
+                alt={assignedProfile.name}
+                fill
+                className="object-cover"
+                sizes="20px"
+                unoptimized
+              />
+            </div>
+            <span className="text-[10px] text-cyan-300 font-medium truncate max-w-[80px]">
+              {assignedProfile.name}
+            </span>
+          </div>
+        )}
 
         {/* Expand/Collapse */}
         <Button
@@ -88,6 +169,78 @@ export function SceneEditor({ scene, onUpdate, onDelete, onDuplicate }: SceneEdi
       {/* Expanded Details */}
       {expanded && (
         <div className="ml-16 space-y-3 pt-1">
+          {/* Per-Scene Character Assignment */}
+          <div>
+            <label className="block text-[10px] uppercase tracking-wider text-zinc-500 font-medium mb-1.5">
+              Scene Character Override
+            </label>
+            {scene.avatarId ? (
+              <div className="flex items-center gap-2 p-2 bg-cyan-500/5 border border-cyan-500/20 rounded-lg">
+                {assignedProfile && (
+                  <div className="relative w-8 h-8 rounded-lg overflow-hidden flex-shrink-0">
+                    <Image
+                      src={assignedProfile.frontalImageUrl}
+                      alt={assignedProfile.name}
+                      fill
+                      className="object-cover"
+                      sizes="32px"
+                      unoptimized
+                    />
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-white font-medium truncate">
+                    {assignedProfile?.name ?? 'Custom character'}
+                  </p>
+                  <p className="text-[10px] text-zinc-400">
+                    {assignedProfile?.voiceName ? `Voice: ${assignedProfile.voiceName}` : 'No voice assigned'}
+                  </p>
+                </div>
+                <button
+                  onClick={handleClearCharacter}
+                  className="p-1 text-zinc-500 hover:text-zinc-300 transition-colors"
+                  title="Use project default character"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-1.5">
+                <p className="text-[10px] text-zinc-500 italic">Using project default character. Assign a different character below:</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {profiles.map((profile) => (
+                    <button
+                      key={profile.id}
+                      onClick={() => handleAssignCharacter(profile)}
+                      className="flex items-center gap-1.5 px-2 py-1 bg-zinc-800 border border-zinc-700 rounded-lg hover:border-cyan-500/30 hover:bg-cyan-500/5 transition-colors"
+                    >
+                      <div className="relative w-5 h-5 rounded-full overflow-hidden flex-shrink-0">
+                        <Image
+                          src={profile.frontalImageUrl}
+                          alt={profile.name}
+                          fill
+                          className="object-cover"
+                          sizes="20px"
+                          unoptimized
+                        />
+                      </div>
+                      <span className="text-[10px] text-zinc-300">{profile.name}</span>
+                      {profile.source === 'hedra' && (
+                        <span className="text-[8px] text-cyan-400 font-bold">HEDRA</span>
+                      )}
+                    </button>
+                  ))}
+                  {!profilesLoaded && (
+                    <span className="text-[10px] text-zinc-500 py-1">Loading characters...</span>
+                  )}
+                  {profilesLoaded && profiles.length === 0 && (
+                    <span className="text-[10px] text-zinc-500 py-1">No characters available</span>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* Visual Description Edit */}
           <div>
             <label className="block text-[10px] uppercase tracking-wider text-zinc-500 font-medium mb-1">
@@ -129,7 +282,7 @@ export function SceneEditor({ scene, onUpdate, onDelete, onDuplicate }: SceneEdi
                 onClick={() => onUpdate(scene.id, { screenshotUrl: null })}
                 className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center"
               >
-                <span className="text-[8px] text-white">✕</span>
+                <span className="text-[8px] text-white">&times;</span>
               </button>
             </div>
           ) : (

@@ -129,6 +129,7 @@ export function StepPreProduction() {
       screenshotUrl: null,
       avatarId: null,
       voiceId: null,
+      voiceProvider: null,
       duration: 15,
       engine: null,
       backgroundPrompt: null,

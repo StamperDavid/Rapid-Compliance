@@ -1081,16 +1081,6 @@ export const JASPER_TOOLS: ToolDefinition[] = [
             type: 'string',
             description: 'Detailed description of the video to create. Include the topic, style, tone, and any specific requirements.',
           },
-          provider: {
-            type: 'string',
-            description: 'AI video provider to use. Auto-selects best available if not specified.',
-            enum: ['kling', 'runway', 'auto'],
-          },
-          type: {
-            type: 'string',
-            description: 'Type of video generation',
-            enum: ['text-to-video', 'avatar', 'image-to-video'],
-          },
           duration: {
             type: 'number',
             description: 'Target video duration in seconds (default: 30)',
@@ -1103,6 +1093,16 @@ export const JASPER_TOOLS: ToolDefinition[] = [
           title: {
             type: 'string',
             description: 'Title for the video project in the library',
+          },
+          videoType: {
+            type: 'string',
+            description: 'Type of video content',
+            enum: ['tutorial', 'explainer', 'product-demo', 'sales-pitch', 'testimonial', 'social-ad'],
+          },
+          platform: {
+            type: 'string',
+            description: 'Target platform for the video',
+            enum: ['youtube', 'tiktok', 'instagram', 'linkedin', 'website'],
           },
           vibe: {
             type: 'string',
@@ -1118,7 +1118,7 @@ export const JASPER_TOOLS: ToolDefinition[] = [
     function: {
       name: 'generate_video',
       description:
-        'Start actual video generation for a prepared project. Takes a projectId from create_video and kicks off scene generation with Kling Avatar and Runway APIs. Call this after create_video to begin rendering. ENABLED: TRUE.',
+        'Start actual video generation for a prepared project. Takes a projectId from create_video and kicks off Hedra scene generation. Call this after create_video to begin rendering. ENABLED: TRUE.',
       parameters: {
         type: 'object',
         properties: {
@@ -1132,7 +1132,7 @@ export const JASPER_TOOLS: ToolDefinition[] = [
           },
           voiceId: {
             type: 'string',
-            description: 'ElevenLabs voice ID (optional — auto-selects from Avatar Profile if not provided)',
+            description: 'Voice ID for TTS (optional — auto-selects from Avatar Profile if not provided)',
           },
         },
         required: ['projectId'],
@@ -1144,21 +1144,61 @@ export const JASPER_TOOLS: ToolDefinition[] = [
     function: {
       name: 'get_video_status',
       description:
-        'Check the status of a video being generated. Returns progress, completion status, and the video URL when ready. ENABLED: TRUE.',
+        'Check the status of a video being generated via Hedra. Returns progress, completion status, and the video URL when ready. ENABLED: TRUE.',
       parameters: {
         type: 'object',
         properties: {
           videoId: {
             type: 'string',
-            description: 'The video ID returned from create_video',
-          },
-          provider: {
-            type: 'string',
-            description: 'The provider used for generation',
-            enum: ['kling', 'runway'],
+            description: 'The Hedra generation ID returned from generate_video',
           },
         },
         required: ['videoId'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'produce_video',
+      description:
+        'AI Video Director — full production pipeline. Creates a project, assigns characters to scenes, translates prompts for Hedra, generates all scenes, and stitches clips. Handles the entire flow from brief to finished video. Use this when the user wants an end-to-end video production with multiple characters or scenes. ENABLED: TRUE.',
+      parameters: {
+        type: 'object',
+        properties: {
+          description: {
+            type: 'string',
+            description: 'Detailed description of the video to produce. Include topic, style, tone, target audience, and any character requirements.',
+          },
+          title: {
+            type: 'string',
+            description: 'Title for the video project',
+          },
+          duration: {
+            type: 'number',
+            description: 'Target video duration in seconds (default: 30)',
+          },
+          aspectRatio: {
+            type: 'string',
+            description: 'Video aspect ratio',
+            enum: ['16:9', '9:16', '1:1'],
+          },
+          videoType: {
+            type: 'string',
+            description: 'Type of video content',
+            enum: ['tutorial', 'explainer', 'product-demo', 'sales-pitch', 'testimonial', 'social-ad'],
+          },
+          platform: {
+            type: 'string',
+            description: 'Target platform',
+            enum: ['youtube', 'tiktok', 'instagram', 'linkedin', 'website'],
+          },
+          characters: {
+            type: 'string',
+            description: 'JSON array of character assignments. Each entry: { "avatarId": "<profile-id>", "sceneNumbers": [1, 2, 3] }. sceneNumbers is optional (omit to assign to all scenes). Example: [{"avatarId": "abc123", "sceneNumbers": [1,3]}, {"avatarId": "def456", "sceneNumbers": [2]}]',
+          },
+        },
+        required: ['description'],
       },
     },
   },
@@ -3522,6 +3562,165 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
           durationMs: Date.now() - videoStatusStart,
           toolResult: content.slice(0, 2000),
         });
+        break;
+      }
+
+      case 'produce_video': {
+        const produceStart = Date.now();
+        trackMissionStep(context, 'produce_video', 'RUNNING', { toolArgs: args });
+
+        try {
+          // Step 1: Create the project via Video Specialist
+          const { getVideoSpecialist: getProduceSpec } = await import('@/lib/agents/content/video/specialist');
+          const produceSpec = getProduceSpec();
+          await produceSpec.initialize();
+
+          const createResult = await produceSpec.execute({
+            id: `produce_video_create_${Date.now()}`,
+            timestamp: new Date(),
+            from: 'JASPER',
+            to: 'VIDEO_SPECIALIST',
+            type: 'COMMAND',
+            priority: 'HIGH',
+            payload: {
+              action: 'create_video_project' as const,
+              description: args.description as string,
+              title: args.title as string | undefined,
+              videoType: args.videoType as 'tutorial' | 'explainer' | 'product-demo' | 'sales-pitch' | 'testimonial' | 'social-ad' | undefined,
+              platform: args.platform as 'youtube' | 'tiktok' | 'instagram' | 'linkedin' | 'website' | undefined,
+              duration: args.duration ? Number(args.duration) : undefined,
+              aspectRatio: args.aspectRatio as '16:9' | '9:16' | '1:1' | undefined,
+              userId: context?.userId,
+            },
+            requiresResponse: true,
+            traceId: `trace_produce_video_${Date.now()}`,
+          });
+
+          const createData = createResult.data as Record<string, unknown> | null;
+          const projectId = createData?.projectId as string | undefined;
+
+          if (!projectId || createResult.status !== 'COMPLETED') {
+            content = JSON.stringify({
+              status: 'error',
+              message: `Failed to create video project: ${(createData?.message as string) ?? 'Unknown error'}`,
+              specialist: 'VIDEO_DIRECTOR',
+            });
+            trackMissionStep(context, 'produce_video', 'FAILED', {
+              summary: `VIDEO_DIRECTOR: Project creation failed`,
+              durationMs: Date.now() - produceStart,
+              toolResult: content.slice(0, 2000),
+            });
+            break;
+          }
+
+          // Step 2: Assign per-scene characters if provided
+          let characterAssignments: Array<{ avatarId: string; sceneNumbers?: number[] }> | undefined;
+          if (typeof args.characters === 'string' && args.characters.trim().startsWith('[')) {
+            try {
+              characterAssignments = JSON.parse(args.characters) as Array<{ avatarId: string; sceneNumbers?: number[] }>;
+            } catch {
+              // Invalid JSON — skip character assignments
+            }
+          }
+          if (characterAssignments && characterAssignments.length > 0) {
+            try {
+              const { getProject, updateProject } = await import('@/lib/video/pipeline-project-service');
+              const project = await getProject(projectId);
+              if (project?.scenes) {
+                const { getAvatarProfile } = await import('@/lib/video/avatar-profile-service');
+
+                const updatedScenes = await Promise.all(
+                  project.scenes.map(async (scene) => {
+                    const assignment = characterAssignments.find((c) =>
+                      !c.sceneNumbers || c.sceneNumbers.includes(scene.sceneNumber)
+                    );
+                    if (!assignment) { return scene; }
+
+                    // Load profile to get voice data
+                    const profile = await getAvatarProfile(assignment.avatarId);
+                    return {
+                      ...scene,
+                      avatarId: assignment.avatarId,
+                      voiceId: profile?.voiceId ?? null,
+                      voiceProvider: profile?.voiceProvider ?? null,
+                    };
+                  })
+                );
+
+                await updateProject(projectId, { scenes: updatedScenes });
+              }
+            } catch {
+              // Character assignment is non-critical — project still usable with defaults
+            }
+          }
+
+          // Step 3: Auto-inject avatar/voice defaults
+          let produceAvatarId = '';
+          let produceVoiceId = '';
+          try {
+            const { getVideoDefaults } = await import('@/lib/video/video-defaults-service');
+            const defaults = await getVideoDefaults();
+            if (defaults.avatarId) { produceAvatarId = defaults.avatarId; }
+            if (defaults.voiceId) { produceVoiceId = defaults.voiceId; }
+          } catch {
+            // Defaults are optional
+          }
+
+          // Step 4: Start generation
+          const genSpec = getProduceSpec();
+          await genSpec.initialize();
+
+          const renderResult = await genSpec.execute({
+            id: `produce_video_render_${Date.now()}`,
+            timestamp: new Date(),
+            from: 'JASPER',
+            to: 'VIDEO_SPECIALIST',
+            type: 'COMMAND',
+            priority: 'HIGH',
+            payload: {
+              action: 'render_scenes' as const,
+              projectId,
+              avatarId: produceAvatarId,
+              voiceId: produceVoiceId,
+            },
+            requiresResponse: true,
+            traceId: `trace_produce_video_render_${Date.now()}`,
+          });
+
+          const renderData = renderResult.data as Record<string, unknown> | null;
+
+          content = JSON.stringify({
+            status: renderResult.status === 'COMPLETED' ? 'generating' : 'error',
+            projectId,
+            title: createData?.title ?? args.title ?? 'Video Production',
+            sceneCount: createData?.sceneCount ?? 0,
+            characterAssignments: characterAssignments?.length ?? 0,
+            renderMessage: (renderData?.message as string) ?? renderResult.status,
+            videoStudioPath: `/content/video?load=${projectId}`,
+            message: renderResult.status === 'COMPLETED'
+              ? `Video production started! ${(createData?.sceneCount as number) ?? 0} scenes are now rendering via Hedra. Check the Video Studio for live progress.`
+              : `Project created but rendering failed: ${(renderData?.message as string) ?? 'Unknown error'}`,
+            specialist: 'VIDEO_DIRECTOR',
+          });
+
+          trackMissionStep(context, 'produce_video', renderResult.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED', {
+            summary: `VIDEO_DIRECTOR: ${renderResult.status === 'COMPLETED' ? 'Production started' : 'Render failed'} — ${projectId}`,
+            durationMs: Date.now() - produceStart,
+            toolResult: content.slice(0, 2000),
+          });
+        } catch (produceError) {
+          const errMsg = produceError instanceof Error ? produceError.message : String(produceError);
+          content = JSON.stringify({
+            status: 'error',
+            message: `Video production failed: ${errMsg}`,
+            specialist: 'VIDEO_DIRECTOR',
+          });
+          trackMissionStep(context, 'produce_video', 'FAILED', {
+            summary: `VIDEO_DIRECTOR: ${errMsg}`,
+            durationMs: Date.now() - produceStart,
+            toolResult: content.slice(0, 2000),
+          });
+        }
         break;
       }
 

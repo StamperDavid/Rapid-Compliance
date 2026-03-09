@@ -7,6 +7,8 @@ import type { PipelineScene } from '@/types/video-pipeline';
 
 export const dynamic = 'force-dynamic';
 
+const VoiceProviderEnum = z.enum(['elevenlabs', 'unrealspeech', 'custom', 'hedra']);
+
 const GenerateScenesSchema = z.object({
   projectId: z.string().min(1, 'Project ID required'),
   scenes: z.array(z.object({
@@ -19,10 +21,14 @@ const GenerateScenesSchema = z.object({
     backgroundPrompt: z.string().nullable().default(null),
     visualDescription: z.string().nullable().default(null),
     title: z.string().nullable().default(null),
+    // Per-scene character overrides (null = use project-level defaults)
+    avatarId: z.string().nullable().default(null),
+    voiceId: z.string().nullable().default(null),
+    voiceProvider: VoiceProviderEnum.nullable().default(null),
   })),
   avatarId: z.string().default(''),
   voiceId: z.string().default(''),
-  voiceProvider: z.enum(['elevenlabs', 'unrealspeech', 'custom', 'hedra']).default('elevenlabs'),
+  voiceProvider: VoiceProviderEnum.default('elevenlabs'),
   aspectRatio: z.enum(['16:9', '9:16', '1:1', '4:3']).default('16:9'),
 });
 
@@ -61,6 +67,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Map input scenes to PipelineScene format
+    // Per-scene avatarId/voiceId/voiceProvider override project-level defaults
     const pipelineScenes: PipelineScene[] = scenes.map((scene) => ({
       id: scene.id,
       sceneNumber: scene.sceneNumber,
@@ -69,8 +76,9 @@ export async function POST(request: NextRequest) {
       visualDescription: scene.visualDescription ?? undefined,
       screenshotUrl: scene.screenshotUrl,
       duration: scene.duration,
-      avatarId: null,
-      voiceId: null,
+      avatarId: scene.avatarId ?? null,
+      voiceId: scene.voiceId ?? null,
+      voiceProvider: scene.voiceProvider ?? null,
       engine: scene.engine ?? null,
       backgroundPrompt: scene.backgroundPrompt ?? null,
       status: 'approved' as const,

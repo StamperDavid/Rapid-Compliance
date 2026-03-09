@@ -120,6 +120,10 @@ export function StepGeneration() {
             backgroundPrompt: s.backgroundPrompt ?? null,
             visualDescription: s.visualDescription ?? null,
             title: s.title ?? null,
+            // Per-scene character overrides (null = use project defaults)
+            avatarId: s.avatarId ?? null,
+            voiceId: s.voiceId ?? null,
+            voiceProvider: s.voiceProvider ?? null,
           })),
           avatarId: avatarId ?? '',
           voiceId: voiceId ?? '',

@@ -70,6 +70,7 @@ export async function POST(request: NextRequest) {
       screenshotUrl,
       avatarId: null,
       voiceId: null,
+      voiceProvider: null,
       duration,
       engine: engine ?? null,
       backgroundPrompt,

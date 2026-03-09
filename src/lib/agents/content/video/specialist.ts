@@ -1740,6 +1740,7 @@ export class VideoSpecialist extends BaseSpecialist {
       screenshotUrl: null,
       avatarId: null,
       voiceId: null,
+      voiceProvider: null,
       duration: s.suggestedDuration,
       engine: s.engine,
       backgroundPrompt: s.backgroundPrompt,

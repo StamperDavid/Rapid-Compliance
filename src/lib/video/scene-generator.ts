@@ -256,17 +256,26 @@ async function generateWithHedra(
 /**
  * Generate a single scene via Hedra.
  * If the scene has no avatar, returns a failed result with a clear message.
- * Loads the avatar profile to resolve a bundled voice when none was passed.
+ *
+ * Per-scene character assignment:
+ *   - scene.avatarId / scene.voiceId / scene.voiceProvider override project-level defaults
+ *   - Falls back to project-level avatarId/voiceId/voiceProvider when scene-level is null
+ *   - Loads the avatar profile to resolve a bundled voice when none was passed
  */
 export async function generateScene(
   scene: PipelineScene,
-  avatarId: string,
-  voiceId: string,
+  projectAvatarId: string,
+  projectVoiceId: string,
   aspectRatio: VideoAspectRatio,
-  voiceProvider?: 'elevenlabs' | 'unrealspeech' | 'custom' | 'hedra'
+  projectVoiceProvider?: 'elevenlabs' | 'unrealspeech' | 'custom' | 'hedra'
 ): Promise<SceneGenerationResult> {
   try {
-    const hasAvatar = Boolean(avatarId);
+    // Per-scene overrides take priority over project-level defaults
+    const effectiveAvatarId = scene.avatarId ?? projectAvatarId;
+    const effectiveVoiceId = scene.voiceId ?? projectVoiceId;
+    const effectiveVoiceProvider = scene.voiceProvider ?? projectVoiceProvider;
+
+    const hasAvatar = Boolean(effectiveAvatarId);
 
     if (!hasAvatar) {
       return {
@@ -281,14 +290,15 @@ export async function generateScene(
       };
     }
 
-    // Load avatar profile to get bundled voice + preferred engine
-    let resolvedVoiceId = voiceId;
-    let resolvedVoiceProvider = voiceProvider;
+    // Load avatar profile to get bundled voice + Character Studio metadata for prompt translation
+    let resolvedVoiceId = effectiveVoiceId;
+    let resolvedVoiceProvider = effectiveVoiceProvider;
 
     try {
       const { getAvatarProfile, getDefaultProfile } = await import('@/lib/video/avatar-profile-service');
-      const profile = await getAvatarProfile(avatarId) ?? await getDefaultProfile(avatarId);
+      const profile = await getAvatarProfile(effectiveAvatarId) ?? await getDefaultProfile(effectiveAvatarId);
       if (profile) {
+        // Resolve voice from profile if not explicitly set
         if (!resolvedVoiceId && profile.voiceId) {
           resolvedVoiceId = profile.voiceId;
           resolvedVoiceProvider = profile.voiceProvider ?? resolvedVoiceProvider;
@@ -300,6 +310,24 @@ export async function generateScene(
             file: 'scene-generator.ts',
           });
         }
+
+        // Enhance visual description with character metadata via prompt translator
+        try {
+          const { translatePromptForHedra } = await import('@/lib/video/hedra-prompt-translator');
+          const enhancedDescription = translatePromptForHedra(
+            scene.visualDescription ?? '',
+            {
+              characterName: profile.name,
+              role: profile.role,
+              styleTag: profile.styleTag,
+              source: profile.source,
+            }
+          );
+          // Mutate the scene's visual description for this generation pass
+          scene = { ...scene, visualDescription: enhancedDescription };
+        } catch {
+          // Prompt translator is non-critical — continue with raw description
+        }
       }
     } catch {
       // Profile load failed — continue with passed-in params
@@ -307,13 +335,14 @@ export async function generateScene(
 
     logger.info('Generating scene with Hedra', {
       sceneId: scene.id,
-      avatarId,
+      avatarId: effectiveAvatarId,
+      sceneOverride: Boolean(scene.avatarId),
       voiceProvider: resolvedVoiceProvider ?? 'elevenlabs',
       scriptLength: scene.scriptText?.length ?? 0,
       file: 'scene-generator.ts',
     });
 
-    return await generateWithHedra(scene, avatarId, resolvedVoiceId, aspectRatio, resolvedVoiceProvider);
+    return await generateWithHedra(scene, effectiveAvatarId, resolvedVoiceId, aspectRatio, resolvedVoiceProvider);
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     logger.error('Scene generation failed', error as Error, {
