@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import Link from 'next/link';
-import { Loader2, AlertCircle, Play, Pause, Mic, Search, Check, Volume2, AlertTriangle, Upload, Sparkles, AudioWaveform } from 'lucide-react';
+import { Loader2, AlertCircle, Play, Pause, Mic, Search, Check, Volume2, AlertTriangle, Upload, Sparkles, AudioWaveform, Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import type { VideoVoice } from '@/types/video';
@@ -14,7 +14,7 @@ interface VoicePickerProps {
 }
 
 const GENDER_FILTERS = ['all', 'male', 'female'] as const;
-const PROVIDER_FILTERS = ['all', 'custom', 'elevenlabs', 'unrealspeech'] as const;
+const PROVIDER_FILTERS = ['all', 'custom', 'hedra', 'elevenlabs', 'unrealspeech'] as const;
 
 export function VoicePicker({ selectedVoiceId, onSelect }: VoicePickerProps) {
   const authFetch = useAuthFetch();
@@ -29,6 +29,10 @@ export function VoicePicker({ selectedVoiceId, onSelect }: VoicePickerProps) {
   const [filterLanguage, setFilterLanguage] = useState<string>('all');
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [loadingPreviewId, setLoadingPreviewId] = useState<string | null>(null);
+
+  // Favorites
+  const [favoriteVoiceIds, setFavoriteVoiceIds] = useState<Set<string>>(new Set());
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
 
   // Voice clone state
   const [showCloneUI, setShowCloneUI] = useState(false);
@@ -54,9 +58,57 @@ export function VoicePicker({ selectedVoiceId, onSelect }: VoicePickerProps) {
     }
   }, [authFetch]);
 
+  const fetchFavorites = useCallback(async () => {
+    try {
+      const response = await authFetch('/api/video/voice-favorites');
+      if (!response.ok) { return; }
+      const data = await response.json() as { success: boolean; favoriteIds: string[] };
+      if (data.success) {
+        setFavoriteVoiceIds(new Set(data.favoriteIds));
+      }
+    } catch {
+      // Non-critical — favorites just won't show
+    }
+  }, [authFetch]);
+
+  const toggleVoiceFavorite = useCallback(async (voiceId: string) => {
+    const isFav = favoriteVoiceIds.has(voiceId);
+
+    // Optimistic update
+    setFavoriteVoiceIds((prev) => {
+      const next = new Set(prev);
+      if (isFav) {
+        next.delete(voiceId);
+      } else {
+        next.add(voiceId);
+      }
+      return next;
+    });
+
+    try {
+      await authFetch('/api/video/voice-favorites', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ voiceId, isFavorite: !isFav }),
+      });
+    } catch {
+      // Revert on failure
+      setFavoriteVoiceIds((prev) => {
+        const next = new Set(prev);
+        if (isFav) {
+          next.add(voiceId);
+        } else {
+          next.delete(voiceId);
+        }
+        return next;
+      });
+    }
+  }, [favoriteVoiceIds, authFetch]);
+
   useEffect(() => {
     void fetchVoices();
-  }, [fetchVoices]);
+    void fetchFavorites();
+  }, [fetchVoices, fetchFavorites]);
 
   // Build unique language list
   const languages = useMemo(() => {
@@ -77,6 +129,10 @@ export function VoicePicker({ selectedVoiceId, onSelect }: VoicePickerProps) {
 
   const filteredVoices = useMemo(() => {
     let result = voices;
+
+    if (showFavoritesOnly) {
+      result = result.filter((v) => favoriteVoiceIds.has(v.id));
+    }
 
     if (filterGender !== 'all') {
       result = result.filter((v) => v.gender === filterGender);
@@ -101,7 +157,7 @@ export function VoicePicker({ selectedVoiceId, onSelect }: VoicePickerProps) {
     }
 
     return result;
-  }, [voices, filterGender, filterProvider, filterLanguage, searchQuery]);
+  }, [voices, showFavoritesOnly, favoriteVoiceIds, filterGender, filterProvider, filterLanguage, searchQuery]);
 
   const playAudioUrl = (voiceId: string, url: string, voiceName: string) => {
     try {
@@ -315,16 +371,33 @@ export function VoicePicker({ selectedVoiceId, onSelect }: VoicePickerProps) {
         </div>
       )}
 
-      {/* Search */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
-        <input
-          type="text"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search voices by name, language, or accent..."
-          className="w-full pl-9 pr-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-500/50"
-        />
+      {/* Search + Favorites */}
+      <div className="flex items-center gap-2">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search voices by name, language, or accent..."
+            className="w-full pl-9 pr-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+          />
+        </div>
+        {favoriteVoiceIds.size > 0 && (
+          <button
+            onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
+            className={cn(
+              'flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg transition-colors whitespace-nowrap',
+              showFavoritesOnly
+                ? 'bg-amber-500/20 border border-amber-500/30 text-amber-400'
+                : 'bg-zinc-800 border border-zinc-700 text-zinc-300 hover:border-amber-500/50 hover:text-amber-400',
+            )}
+            title={showFavoritesOnly ? 'Show all voices' : 'Show favorites only'}
+          >
+            <Star className={cn('w-3.5 h-3.5', showFavoritesOnly && 'fill-current')} />
+            {favoriteVoiceIds.size}
+          </button>
+        )}
       </div>
 
       {/* Filters Row */}
@@ -345,6 +418,7 @@ export function VoicePicker({ selectedVoiceId, onSelect }: VoicePickerProps) {
               >
                 {provider === 'all' ? 'All'
                   : provider === 'custom' ? 'My Clones'
+                  : provider === 'hedra' ? 'Hedra'
                   : provider === 'elevenlabs' ? 'ElevenLabs'
                   : 'UnrealSpeech'}
               </button>
@@ -475,14 +549,30 @@ export function VoicePicker({ selectedVoiceId, onSelect }: VoicePickerProps) {
                 )}
               </Button>
 
+              {/* Favorite star */}
+              <button
+                onClick={(e) => { e.stopPropagation(); void toggleVoiceFavorite(voice.id); }}
+                className={cn(
+                  'p-1.5 rounded-full transition-colors flex-shrink-0',
+                  favoriteVoiceIds.has(voice.id)
+                    ? 'text-amber-400 hover:text-amber-300'
+                    : 'text-zinc-600 hover:text-amber-400',
+                )}
+                title={favoriteVoiceIds.has(voice.id) ? 'Remove from favorites' : 'Add to favorites'}
+              >
+                <Star className={cn('w-3.5 h-3.5', favoriteVoiceIds.has(voice.id) && 'fill-current')} />
+              </button>
+
               {/* Provider badge */}
               <span className={cn(
                 'px-1.5 py-0.5 text-[9px] font-bold rounded flex-shrink-0',
                 voiceProvider === 'custom' ? 'bg-green-500/20 text-green-400'
+                  : voiceProvider === 'hedra' ? 'bg-cyan-500/20 text-cyan-400'
                   : voiceProvider === 'elevenlabs' ? 'bg-purple-500/20 text-purple-400'
                   : 'bg-orange-500/20 text-orange-400',
               )}>
                 {voiceProvider === 'custom' ? 'CLONE'
+                  : voiceProvider === 'hedra' ? 'HEDRA'
                   : voiceProvider === 'elevenlabs' ? 'XI'
                   : 'US'}
               </span>

@@ -66,6 +66,7 @@ export interface AvatarProfile {
   // Metadata
   description: string | null; // "Professional look, navy suit"
   isDefault: boolean; // Auto-select this profile
+  isFavorite: boolean; // Quick-access favorite
   createdAt: string; // ISO string
   updatedAt: string; // ISO string
 }
@@ -104,6 +105,7 @@ export interface UpdateAvatarProfileData {
   hedraAssetId?: string | null;
   description?: string | null;
   isDefault?: boolean;
+  isFavorite?: boolean;
 }
 
 // ============================================================================
@@ -126,6 +128,7 @@ interface FirestoreAvatarProfileDoc {
   hedraAssetId: string | null;
   description: string | null;
   isDefault: boolean;
+  isFavorite: boolean;
   createdAt: FirebaseFirestore.Timestamp | null;
   updatedAt: FirebaseFirestore.Timestamp | null;
 }
@@ -174,6 +177,7 @@ function docToProfile(id: string, raw: FirebaseFirestore.DocumentData): AvatarPr
     hedraAssetId: data.hedraAssetId ?? null,
     description: data.description ?? null,
     isDefault: data.isDefault ?? false,
+    isFavorite: data.isFavorite ?? false,
     createdAt: timestampToISO(data.createdAt),
     updatedAt: timestampToISO(data.updatedAt),
   };
@@ -217,6 +221,7 @@ export async function createAvatarProfile(
       hedraAssetId: data.hedraAssetId ?? null,
       description: data.description ?? null,
       isDefault: data.isDefault ?? false,
+      isFavorite: false,
       createdAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
     };
@@ -252,6 +257,7 @@ export async function createAvatarProfile(
       hedraAssetId: profileData.hedraAssetId,
       description: profileData.description,
       isDefault: profileData.isDefault,
+      isFavorite: false,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };

@@ -39,9 +39,10 @@ const UpdateProfileSchema = z.object({
   greenScreenClips: z.array(GreenScreenClipSchema).optional(),
   voiceId: z.string().nullable().optional(),
   voiceProvider: z
-    .enum(['elevenlabs', 'unrealspeech', 'custom'])
+    .enum(['elevenlabs', 'unrealspeech', 'custom', 'hedra'])
     .nullable()
     .optional(),
+  isFavorite: z.boolean().optional(),
   description: z.string().nullable().optional(),
   isDefault: z.boolean().optional(),
 });

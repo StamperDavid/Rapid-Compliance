@@ -139,6 +139,13 @@ const nextConfig = {
         'playwright-core': false,
       };
     }
+
+    // Skip locked temp file that crashes webpack glob scanner
+    config.watchOptions = {
+      ...config.watchOptions,
+      ignored: ['**/UTLB7F9.tmp.dir/**'],
+    };
+
     return config;
   },
 };

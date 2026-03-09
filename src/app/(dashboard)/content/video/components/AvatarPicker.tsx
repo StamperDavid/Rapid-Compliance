@@ -3,9 +3,10 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { motion } from 'framer-motion';
-import { User, Loader2, AlertCircle, Search, Check, Mic, Sparkles, Trash2, Video, Crown, RefreshCw } from 'lucide-react';
+import { User, Loader2, AlertCircle, Search, Check, Mic, Sparkles, Trash2, Video, Crown, Library, Star } from 'lucide-react';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
+import { HedraCharacterBrowser } from './HedraCharacterBrowser';
 
 // Avatar Profile shape returned by GET /api/video/avatar-profiles
 interface AvatarProfileItem {
@@ -28,6 +29,7 @@ interface AvatarProfileItem {
   voiceProvider: 'elevenlabs' | 'unrealspeech' | 'custom' | 'hedra' | null;
   description: string | null;
   isDefault: boolean;
+  isFavorite: boolean;
   createdAt: string;
 }
 
@@ -42,6 +44,7 @@ function AvatarCard({
   isSelected,
   onSelect,
   onDelete,
+  onToggleFavorite,
   isConfirmingDelete,
   onConfirmDelete,
   onCancelDelete,
@@ -50,6 +53,7 @@ function AvatarCard({
   isSelected: boolean;
   onSelect: () => void;
   onDelete?: () => void;
+  onToggleFavorite?: () => void;
   isConfirmingDelete?: boolean;
   onConfirmDelete?: () => void;
   onCancelDelete?: () => void;
@@ -135,6 +139,23 @@ function AvatarCard({
             STANDARD
           </span>
         )}
+        {onToggleFavorite && !isConfirmingDelete && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleFavorite();
+            }}
+            className={cn(
+              'p-1 rounded transition-colors',
+              profile.isFavorite
+                ? 'bg-amber-500/20 border border-amber-500/30 text-amber-400'
+                : 'bg-zinc-700/50 border border-zinc-600/30 text-zinc-500 hover:text-amber-400 hover:bg-amber-500/10',
+            )}
+            title={profile.isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+          >
+            <Star className={cn('w-2.5 h-2.5', profile.isFavorite && 'fill-current')} />
+          </button>
+        )}
         {onDelete && !isConfirmingDelete && (
           <button
             onClick={(e) => {
@@ -197,8 +218,39 @@ export function AvatarPicker({ selectedAvatarId, onSelect, onProfileLoaded }: Av
   const [searchQuery, setSearchQuery] = useState('');
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
-  const [isSyncingHedra, setIsSyncingHedra] = useState(false);
-  const [syncResult, setSyncResult] = useState<string | null>(null);
+  const [isHedraBrowserOpen, setIsHedraBrowserOpen] = useState(false);
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+
+  const toggleFavorite = useCallback(async (profileId: string) => {
+    const profile = profiles.find((p) => p.id === profileId);
+    if (!profile) { return; }
+
+    const newValue = !profile.isFavorite;
+
+    // Optimistic update
+    setProfiles((prev) =>
+      prev.map((p) => (p.id === profileId ? { ...p, isFavorite: newValue } : p))
+    );
+
+    try {
+      const response = await authFetch(`/api/video/avatar-profiles/${encodeURIComponent(profileId)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isFavorite: newValue }),
+      });
+      if (!response.ok) {
+        // Revert on failure
+        setProfiles((prev) =>
+          prev.map((p) => (p.id === profileId ? { ...p, isFavorite: !newValue } : p))
+        );
+      }
+    } catch {
+      // Revert on failure
+      setProfiles((prev) =>
+        prev.map((p) => (p.id === profileId ? { ...p, isFavorite: !newValue } : p))
+      );
+    }
+  }, [profiles, authFetch]);
 
   const executeDelete = useCallback(async (profileId: string) => {
     setConfirmDeleteId(null);
@@ -234,43 +286,29 @@ export function AvatarPicker({ selectedAvatarId, onSelect, onProfileLoaded }: Av
     }
   }, [authFetch]);
 
-  const syncFromHedra = useCallback(async () => {
-    setIsSyncingHedra(true);
-    setSyncResult(null);
-    try {
-      const response = await authFetch('/api/video/avatar-profiles/sync-hedra', {
-        method: 'POST',
-      });
-      const data = await response.json() as { success: boolean; imported?: number; skipped?: number; total?: number; error?: string };
-      if (!data.success) {
-        setSyncResult(data.error ?? 'Sync failed');
-        return;
-      }
-      if (data.imported === 0) {
-        setSyncResult(`All ${data.total ?? 0} Hedra avatars already synced`);
-      } else {
-        setSyncResult(`Imported ${data.imported} new avatar${data.imported !== 1 ? 's' : ''} from Hedra`);
-        await fetchProfiles();
-      }
-    } catch (err) {
-      setSyncResult(err instanceof Error ? err.message : 'Failed to sync from Hedra');
-    } finally {
-      setIsSyncingHedra(false);
-    }
-  }, [authFetch, fetchProfiles]);
-
   useEffect(() => {
     void fetchProfiles();
   }, [fetchProfiles]);
 
   const filteredProfiles = useMemo(() => {
-    if (!searchQuery.trim()) { return profiles; }
-    const query = searchQuery.toLowerCase();
-    return profiles.filter(p =>
-      p.name.toLowerCase().includes(query) ||
-      (p.description?.toLowerCase().includes(query) ?? false)
-    );
-  }, [profiles, searchQuery]);
+    let result = profiles;
+
+    if (showFavoritesOnly) {
+      result = result.filter((p) => p.isFavorite);
+    }
+
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter((p) =>
+        p.name.toLowerCase().includes(query) ||
+        (p.description?.toLowerCase().includes(query) ?? false)
+      );
+    }
+
+    return result;
+  }, [profiles, searchQuery, showFavoritesOnly]);
+
+  const favoritesCount = useMemo(() => profiles.filter((p) => p.isFavorite).length, [profiles]);
 
   if (isLoading) {
     return (
@@ -283,33 +321,32 @@ export function AvatarPicker({ selectedAvatarId, onSelect, onProfileLoaded }: Av
 
   if (error || profiles.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-12 gap-3">
-        <AlertCircle className="w-8 h-8 text-zinc-500" />
-        <p className="text-sm text-zinc-400">
-          {error ?? 'No avatar profiles yet. Upload a headshot or sync from Hedra.'}
-        </p>
-        <button
-          onClick={() => void syncFromHedra()}
-          disabled={isSyncingHedra}
-          className="flex items-center gap-2 px-4 py-2 bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors"
-        >
-          {isSyncingHedra ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : (
-            <RefreshCw className="w-4 h-4" />
-          )}
-          {isSyncingHedra ? 'Syncing...' : 'Sync from Hedra'}
-        </button>
-        {syncResult && (
-          <p className="text-xs text-zinc-400">{syncResult}</p>
-        )}
-      </div>
+      <>
+        <div className="flex flex-col items-center justify-center py-12 gap-3">
+          <AlertCircle className="w-8 h-8 text-zinc-500" />
+          <p className="text-sm text-zinc-400">
+            {error ?? 'No avatar profiles yet. Upload a headshot or browse Hedra characters.'}
+          </p>
+          <button
+            onClick={() => setIsHedraBrowserOpen(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white text-sm font-medium rounded-lg transition-colors"
+          >
+            <Library className="w-4 h-4" />
+            Browse Hedra Characters
+          </button>
+        </div>
+        <HedraCharacterBrowser
+          isOpen={isHedraBrowserOpen}
+          onClose={() => setIsHedraBrowserOpen(false)}
+          onImportComplete={() => void fetchProfiles()}
+        />
+      </>
     );
   }
 
   return (
     <div className="space-y-4">
-      {/* Search + Sync row */}
+      {/* Search + Favorites + Hedra row */}
       <div className="flex items-center gap-2">
         {profiles.length > 3 && (
           <div className="relative flex-1">
@@ -323,25 +360,30 @@ export function AvatarPicker({ selectedAvatarId, onSelect, onProfileLoaded }: Av
             />
           </div>
         )}
+        {favoritesCount > 0 && (
+          <button
+            onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
+            className={cn(
+              'flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg transition-colors whitespace-nowrap',
+              showFavoritesOnly
+                ? 'bg-amber-500/20 border border-amber-500/30 text-amber-400'
+                : 'bg-zinc-800 border border-zinc-700 text-zinc-300 hover:border-amber-500/50 hover:text-amber-400',
+            )}
+            title={showFavoritesOnly ? 'Show all profiles' : 'Show favorites only'}
+          >
+            <Star className={cn('w-3.5 h-3.5', showFavoritesOnly && 'fill-current')} />
+            {favoritesCount}
+          </button>
+        )}
         <button
-          onClick={() => void syncFromHedra()}
-          disabled={isSyncingHedra}
-          className="flex items-center gap-1.5 px-3 py-2 bg-zinc-800 border border-zinc-700 hover:border-amber-500/50 hover:bg-zinc-700 disabled:opacity-50 text-zinc-300 hover:text-amber-400 text-xs font-medium rounded-lg transition-colors whitespace-nowrap"
-          title="Import new avatars from your Hedra account"
+          onClick={() => setIsHedraBrowserOpen(true)}
+          className="flex items-center gap-1.5 px-3 py-2 bg-zinc-800 border border-zinc-700 hover:border-amber-500/50 hover:bg-zinc-700 text-zinc-300 hover:text-amber-400 text-xs font-medium rounded-lg transition-colors whitespace-nowrap"
+          title="Browse and import characters from Hedra"
         >
-          {isSyncingHedra ? (
-            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-          ) : (
-            <RefreshCw className="w-3.5 h-3.5" />
-          )}
-          {isSyncingHedra ? 'Syncing...' : 'Sync Hedra'}
+          <Library className="w-3.5 h-3.5" />
+          Browse Hedra
         </button>
       </div>
-
-      {/* Sync result message */}
-      {syncResult && (
-        <p className="text-xs text-amber-400/80">{syncResult}</p>
-      )}
 
       {/* Results count */}
       <p className="text-xs text-zinc-500">
@@ -360,6 +402,7 @@ export function AvatarPicker({ selectedAvatarId, onSelect, onProfileLoaded }: Av
                 onSelect(profile.id, profile.name);
                 onProfileLoaded?.(profile);
               }}
+              onToggleFavorite={() => void toggleFavorite(profile.id)}
               onDelete={deletingId === profile.id ? undefined : () => setConfirmDeleteId(profile.id)}
               isConfirmingDelete={confirmDeleteId === profile.id}
               onConfirmDelete={() => void executeDelete(profile.id)}
@@ -375,6 +418,12 @@ export function AvatarPicker({ selectedAvatarId, onSelect, onProfileLoaded }: Av
           <p className="text-sm text-zinc-500">No profiles match your search.</p>
         </div>
       )}
+
+      <HedraCharacterBrowser
+        isOpen={isHedraBrowserOpen}
+        onClose={() => setIsHedraBrowserOpen(false)}
+        onImportComplete={() => void fetchProfiles()}
+      />
     </div>
   );
 }

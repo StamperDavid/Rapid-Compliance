@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { logger } from '@/lib/logger/logger';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { apiKeyService } from '@/lib/api-keys/api-key-service';
@@ -6,6 +7,25 @@ import { PLATFORM_ID } from '@/lib/constants/platform';
 import type { VideoVoice } from '@/types/video';
 
 export const dynamic = 'force-dynamic';
+
+// ============================================================================
+// Hedra Voice Response Schema
+// ============================================================================
+
+const HedraVoiceLabelSchema = z.object({
+  name: z.string(),
+  value: z.string(),
+});
+
+const HedraVoiceSchema = z.object({
+  id: z.string().min(1),
+  name: z.string(),
+  description: z.string().nullable().optional(),
+  asset: z.object({
+    labels: z.array(HedraVoiceLabelSchema).optional(),
+    preview_url: z.string().url().nullable().optional(),
+  }).optional(),
+});
 
 /**
  * Fetch ElevenLabs voices if API key is configured.
@@ -79,6 +99,61 @@ async function fetchUnrealSpeechVoices(): Promise<VideoVoice[]> {
 }
 
 /**
+ * Fetch Hedra voices from the public voice catalog.
+ * Extracts gender, language, and accent from the nested labels array.
+ */
+async function fetchHedraVoices(): Promise<VideoVoice[]> {
+  try {
+    const rawKey = await apiKeyService.getServiceKey(PLATFORM_ID, 'hedra');
+    if (!rawKey || typeof rawKey !== 'string') { return []; }
+
+    const response = await fetch('https://api.hedra.com/web-app/public/voices', {
+      headers: {
+        'x-api-key': rawKey,
+        'Accept': 'application/json',
+      },
+    });
+
+    if (!response.ok) { return []; }
+
+    const rawData: unknown = await response.json();
+    const voicesArray = z.array(HedraVoiceSchema).safeParse(rawData);
+    if (!voicesArray.success) { return []; }
+
+    return voicesArray.data.map((v) => {
+      const labels = v.asset?.labels ?? [];
+      const getLabel = (name: string): string | undefined =>
+        labels.find((l) => l.name === name)?.value;
+
+      const genderRaw = getLabel('gender');
+      const gender: 'male' | 'female' | 'neutral' =
+        genderRaw === 'male' ? 'male'
+          : genderRaw === 'female' ? 'female'
+            : 'neutral';
+
+      const language = getLabel('language') ?? 'English';
+      const accent = getLabel('accent');
+
+      return {
+        id: v.id,
+        name: v.name,
+        language: language.charAt(0).toUpperCase() + language.slice(1),
+        accent: accent ? accent.charAt(0).toUpperCase() + accent.slice(1) : undefined,
+        gender,
+        previewUrl: v.asset?.preview_url ?? undefined,
+        provider: 'hedra' as const,
+      };
+    });
+  } catch (error) {
+    logger.warn('Failed to fetch Hedra voices', {
+      error: error instanceof Error ? error.message : String(error),
+      file: 'video/voices/route.ts',
+    });
+    return [];
+  }
+}
+
+/**
  * Fetch custom cloned voices from Firestore.
  */
 async function fetchCustomVoices(): Promise<VideoVoice[]> {
@@ -112,14 +187,15 @@ export async function GET(request: NextRequest) {
     if (authResult instanceof NextResponse) { return authResult; }
 
     // Fetch all voice sources in parallel
-    const [elevenlabsVoices, unrealVoices, customVoices] = await Promise.all([
+    const [elevenlabsVoices, unrealVoices, customVoices, hedraVoices] = await Promise.all([
       fetchElevenLabsVoices(),
       fetchUnrealSpeechVoices(),
       fetchCustomVoices(),
+      fetchHedraVoices(),
     ]);
 
-    // Order: Custom clones first, then ElevenLabs, UnrealSpeech
-    const allVoices = [...customVoices, ...elevenlabsVoices, ...unrealVoices];
+    // Order: Custom clones first, then Hedra, ElevenLabs, UnrealSpeech
+    const allVoices = [...customVoices, ...hedraVoices, ...elevenlabsVoices, ...unrealVoices];
 
     return NextResponse.json({ success: true, voices: allVoices });
   } catch (error: unknown) {
