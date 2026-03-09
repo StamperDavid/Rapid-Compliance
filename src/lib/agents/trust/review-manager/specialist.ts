@@ -19,6 +19,7 @@
 import { BaseSpecialist } from '../../base-specialist';
 import type { AgentMessage, AgentReport, SpecialistConfig, Signal } from '../../types';
 import { PLATFORM_ID } from '@/lib/constants/platform';
+import { adminDal } from '@/lib/firebase/admin-dal';
 
 // ============================================================================
 // CORE TYPES & INTERFACES
@@ -1226,26 +1227,104 @@ export class ReviewManagerSpecialist extends BaseSpecialist {
     dateRange: { start: Date; end: Date },
     _businessContext: BusinessContext
   ): Promise<TrendReport> {
-    await Promise.resolve(); // Async boundary for interface compliance
-    // In production, this would query actual review data
-    // For now, return a structured template
+    interface ReviewDocument {
+      rating?: number;
+      reviewDate?: { toDate?: () => Date } | string | number;
+      createdAt?: { toDate?: () => Date } | string | number;
+      respondedAt?: { toDate?: () => Date } | string | number;
+      responseTime?: number;
+    }
+
+    const toReviewDate = (
+      value: { toDate?: () => Date } | string | number | undefined
+    ): Date | null => {
+      if (!value) { return null; }
+      if (typeof value === 'object' && 'toDate' in value && typeof value.toDate === 'function') {
+        return value.toDate();
+      }
+      const d = new Date(value as string | number);
+      return isNaN(d.getTime()) ? null : d;
+    };
+
+    if (!adminDal) {
+      return {
+        dateRange,
+        generatedAt: new Date(),
+        metrics: { totalReviews: 0, averageRating: 0, responseRate: 0, averageResponseTime: 0 },
+        sentimentTrend: [],
+        topTopics: [],
+        recommendations: ['No reviews found. Connect a review source in Settings.'],
+      };
+    }
+
+    let reviews: ReviewDocument[] = [];
+    try {
+      const colRef = adminDal.getPlatformCollection('reviews');
+      const snapshot = await colRef
+        .where('reviewDate', '>=', dateRange.start)
+        .where('reviewDate', '<=', dateRange.end)
+        .get();
+      reviews = snapshot.docs.map((doc) => doc.data() as ReviewDocument);
+    } catch {
+      // Collection may not exist yet — fall through to zero-metrics response
+    }
+
+    if (reviews.length === 0) {
+      return {
+        dateRange,
+        generatedAt: new Date(),
+        metrics: { totalReviews: 0, averageRating: 0, responseRate: 0, averageResponseTime: 0 },
+        sentimentTrend: [],
+        topTopics: [],
+        recommendations: ['No reviews found. Connect a review source in Settings.'],
+      };
+    }
+
+    const totalReviews = reviews.length;
+    const ratingSum = reviews.reduce((sum, r) => sum + (r.rating ?? 0), 0);
+    const averageRating = totalReviews > 0 ? ratingSum / totalReviews : 0;
+
+    const respondedCount = reviews.filter((r) => r.respondedAt != null).length;
+    const responseRate = totalReviews > 0 ? (respondedCount / totalReviews) * 100 : 0;
+
+    const responseTimes = reviews
+      .filter((r) => r.responseTime != null)
+      .map((r) => r.responseTime as number);
+    const averageResponseTime =
+      responseTimes.length > 0
+        ? responseTimes.reduce((sum, t) => sum + t, 0) / responseTimes.length
+        : 0;
+
+    // Build daily sentiment trend from ratings (5-point scale mapped to -1..+1)
+    const dayMap = new Map<string, { scoreSum: number; count: number }>();
+    reviews.forEach((r) => {
+      const dateVal = r.reviewDate ?? r.createdAt;
+      const d = toReviewDate(dateVal);
+      if (!d) { return; }
+      const key = d.toISOString().split('T')[0];
+      const normalizedScore = ((r.rating ?? 3) - 3) / 2; // maps 1–5 → -1..+1
+      const existing = dayMap.get(key) ?? { scoreSum: 0, count: 0 };
+      dayMap.set(key, { scoreSum: existing.scoreSum + normalizedScore, count: existing.count + 1 });
+    });
+    const sentimentTrend = Array.from(dayMap.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([date, { scoreSum, count }]) => ({ date, score: count > 0 ? scoreSum / count : 0 }));
 
     return {
       dateRange,
       generatedAt: new Date(),
       metrics: {
-        totalReviews: 0,
-        averageRating: 0,
-        responseRate: 0,
-        averageResponseTime: 0,
+        totalReviews,
+        averageRating: Math.round(averageRating * 100) / 100,
+        responseRate: Math.round(responseRate * 100) / 100,
+        averageResponseTime: Math.round(averageResponseTime),
       },
-      sentimentTrend: [],
+      sentimentTrend,
       topTopics: [],
-      recommendations: [
-        'Continue monitoring sentiment trends',
-        'Maintain response rate above 90%',
-        'Focus on addressing recurring concerns',
-      ],
+      recommendations:
+        responseRate < 90
+          ? ['Response rate is below 90%. Prioritize responding to unanswered reviews.']
+          : ['Continue monitoring sentiment trends', 'Maintain response rate above 90%'],
     };
   }
 }

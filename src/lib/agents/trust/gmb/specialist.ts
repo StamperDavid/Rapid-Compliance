@@ -1346,38 +1346,10 @@ export class GMBSpecialist extends BaseSpecialist {
     });
   }
 
-  private analyzeCompetitors(business: Business): CompetitorInsight[] {
-    // In production, this would fetch real competitor data
-    // For now, generate representative insights
-    return [
-      {
-        businessName: `Top ${business.category} Competitor`,
-        category: business.category,
-        distance: 0.5,
-        currentRank: 1,
-        reviewCount: 250,
-        averageRating: 4.7,
-        postingFrequency: '3x per week',
-        photoCount: 180,
-        strengthsWeaknessesGap: {
-          theyDoWell: [
-            'High review velocity (10+ per month)',
-            'Consistent posting schedule',
-            'Professional photo quality',
-          ],
-          weCanBeat: [
-            'Limited post variety (mostly photos)',
-            'Slow review responses (2-3 days)',
-            'Incomplete business description',
-          ],
-          actionable: [
-            'Match their posting frequency',
-            'Exceed their review response time',
-            'Diversify post types (updates, offers, events)',
-          ],
-        },
-      },
-    ];
+  private analyzeCompetitors(_business: Business): CompetitorInsight[] {
+    // Google Places API is required for real competitor data — not configured.
+    this.log('WARN', 'analyzeCompetitors: Google Places API not configured — returning empty competitor list');
+    return [];
   }
 
   private estimateOptimizationImpact(actions: ActionItem[]): MapPackOptimization['estimatedImpact'] {
@@ -1513,58 +1485,10 @@ export class GMBSpecialist extends BaseSpecialist {
     }));
   }
 
-  analyzeLocalCompetitors(business: Business, category: string, _radius: number): CompetitorInsight[] {
-    // In production, this would query real GMB data
-    // Generate representative competitor data
-    return [
-      {
-        businessName: `${category} Leader`,
-        category,
-        distance: 0.3,
-        currentRank: 1,
-        reviewCount: 300,
-        averageRating: 4.8,
-        postingFrequency: '4x per week',
-        photoCount: 220,
-        strengthsWeaknessesGap: {
-          theyDoWell: [
-            'Exceptional review count and velocity',
-            'Very active posting',
-            'Professional photography',
-            'Quick review responses',
-          ],
-          weCanBeat: [
-            'Generic post content',
-            'Limited community engagement',
-            'No events or offers',
-          ],
-          actionable: [
-            'Create more personalized, community-focused content',
-            'Host monthly community events',
-            'Launch quarterly promotions',
-          ],
-        },
-      },
-      {
-        businessName: `${category} Challenger`,
-        category,
-        distance: 1.2,
-        currentRank: 2,
-        reviewCount: 180,
-        averageRating: 4.5,
-        postingFrequency: '2x per week',
-        photoCount: 145,
-        strengthsWeaknessesGap: {
-          theyDoWell: ['Good photo variety', 'Regular updates', 'Complete profile'],
-          weCanBeat: ['Lower review count', 'Inconsistent posting schedule', 'Generic descriptions'],
-          actionable: [
-            'Maintain higher posting consistency',
-            'Focus on review generation',
-            'Craft unique, personality-driven content',
-          ],
-        },
-      },
-    ];
+  analyzeLocalCompetitors(_business: Business, _category: string, _radius: number): CompetitorInsight[] {
+    // Google Places API is required for local competitor data — not configured.
+    this.log('WARN', 'analyzeLocalCompetitors: Google Places API not configured — returning empty competitor list');
+    return [];
   }
 
   // ============================================================================

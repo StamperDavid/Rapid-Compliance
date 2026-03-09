@@ -226,12 +226,22 @@ export async function enrollLeadInSequence(
     // For now, assume it matches
   }
 
-  // Schedule first email
-  const firstEmail = sequence.emails[0];
-  if (firstEmail) {
-    // In production, would schedule email via job queue
-    // For now, just mark as enrolled
-    logger.info(`Lead ${leadId} enrolled in sequence ${sequenceId}, first email scheduled`, { file: 'lead-nurturing.ts' });
+  // Enroll via SequenceEngine which writes the enrollment document and
+  // schedules the first step via adminDb so the processSequences cron can
+  // find it. The engine handles duplicate-enrollment guard internally.
+  try {
+    const { SequenceEngine } = await import('@/lib/outbound/sequence-engine');
+    await SequenceEngine.enrollProspect(leadId, sequenceId);
+    logger.info(`Lead ${leadId} enrolled in sequence ${sequenceId} — first step scheduled`, { file: 'lead-nurturing.ts' });
+  } catch (enrollError) {
+    const msg = enrollError instanceof Error ? enrollError.message : String(enrollError);
+    // "already enrolled" is not a fatal error — treat it as a no-op
+    if (msg.includes('already enrolled')) {
+      logger.info(`Lead ${leadId} is already enrolled in sequence ${sequenceId}`, { file: 'lead-nurturing.ts' });
+    } else {
+      logger.error('Failed to enroll lead in sequence via SequenceEngine', enrollError instanceof Error ? enrollError : new Error(msg), { file: 'lead-nurturing.ts' });
+      return { success: false, error: msg };
+    }
   }
 
   // Update sequence stats

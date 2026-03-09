@@ -3189,12 +3189,102 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
       }
 
       case 'score_leads': {
-        content = JSON.stringify({
-          status: 'scoring',
-          PLATFORM_ID: args.PLATFORM_ID ?? 'default',
-          leadIds: args.leadIds ?? 'all',
-          message: 'Lead scoring model applied',
-        });
+        try {
+          const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
+          const { getSubCollection } = await import('@/lib/firebase/collections');
+
+          interface LeadDocument {
+            id: string;
+            email?: string;
+            phone?: string;
+            company?: string;
+            title?: string;
+            updatedAt?: string;
+            lastActivity?: string;
+            engagementEvents?: unknown[];
+            dealId?: string;
+            score?: number;
+            firstName?: string;
+            lastName?: string;
+            [key: string]: unknown;
+          }
+
+          // Resolve which leads to score
+          let leadsToScore: LeadDocument[];
+          const rawLeadIds = args.leadIds as string | undefined;
+          if (rawLeadIds && rawLeadIds !== 'all') {
+            let ids: string[] = [];
+            try {
+              ids = JSON.parse(rawLeadIds) as string[];
+            } catch {
+              ids = [rawLeadIds];
+            }
+            const fetched = await Promise.all(
+              ids.map((id) =>
+                AdminFirestoreService.get(getSubCollection('leads'), id)
+              )
+            );
+            leadsToScore = fetched.filter((l): l is LeadDocument => l !== null);
+          } else {
+            const all = await AdminFirestoreService.getAll(getSubCollection('leads'), []);
+            leadsToScore = (all as LeadDocument[]).slice(0, 50);
+          }
+
+          if (leadsToScore.length === 0) {
+            content = JSON.stringify({
+              status: 'completed',
+              scoredCount: 0,
+              averageScore: 0,
+              topLeads: [],
+              message: 'No leads found to score.',
+            });
+            break;
+          }
+
+          const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+
+          const scored = leadsToScore.map((lead) => {
+            let score = 0;
+            if (lead.email) { score += 10; }
+            if (lead.phone) { score += 10; }
+            if (lead.company) { score += 15; }
+            if (lead.title) { score += 10; }
+            const lastTouched = lead.lastActivity ?? lead.updatedAt;
+            if (lastTouched && lastTouched >= sevenDaysAgo) { score += 20; }
+            if (Array.isArray(lead.engagementEvents) && lead.engagementEvents.length > 0) { score += 15; }
+            if (lead.dealId) { score += 20; }
+            return { id: lead.id, score };
+          });
+
+          // Persist updated scores
+          await Promise.all(
+            scored.map(({ id, score }) =>
+              AdminFirestoreService.update(getSubCollection('leads'), id, {
+                score,
+                scoredAt: new Date().toISOString(),
+              })
+            )
+          );
+
+          const totalScore = scored.reduce((sum, l) => sum + l.score, 0);
+          const averageScore = scored.length > 0 ? Math.round(totalScore / scored.length) : 0;
+          const topLeads = [...scored]
+            .sort((a, b) => b.score - a.score)
+            .slice(0, 10)
+            .map(({ id, score }) => ({ leadId: id, score }));
+
+          content = JSON.stringify({
+            status: 'completed',
+            scoredCount: scored.length,
+            averageScore,
+            topLeads,
+          });
+        } catch (err) {
+          content = JSON.stringify({
+            status: 'error',
+            message: err instanceof Error ? err.message : 'Lead scoring failed',
+          });
+        }
         break;
       }
 

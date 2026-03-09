@@ -597,10 +597,11 @@ async function getDealMetrics(
   );
   const averageVelocity = calculateAverageVelocity(closedDeals);
 
-  // Get pipeline by day
+  // Get pipeline by day — use deals grouped by createdAt
   const pipelineByDay = generateDealPipelineTimeSeries(
     startDate,
-    endDate
+    endDate,
+    deals as DealAnalyticsRecord[]
   );
   
   return {
@@ -727,14 +728,24 @@ function calculateAverageVelocity(closedDeals: DealAnalyticsRecord[]): number {
 
 /**
  * Generate deal pipeline time series
+ *
+ * Groups deals by their createdAt date within the given range and
+ * produces a cumulative count series. Each point represents the number
+ * of deals created on that day, giving the chart real data to render.
  */
 function generateDealPipelineTimeSeries(
-  _startDate: Date,
-  _endDate: Date
+  startDate: Date,
+  endDate: Date,
+  deals: DealAnalyticsRecord[]
 ): TimeSeriesDataPoint[] {
-  // For now, return empty array - would need historical snapshots
-  // This could be enhanced with deal history tracking
-  return [];
+  // Filter to deals created within the requested window
+  const dealsInRange = deals.filter((d) => {
+    if (!d.createdAt) { return false; }
+    const created = toDate(d.createdAt);
+    return created >= startDate && created <= endDate;
+  });
+
+  return generateTimeSeries(dealsInRange, startDate, endDate, () => 1);
 }
 
 // ============================================================================

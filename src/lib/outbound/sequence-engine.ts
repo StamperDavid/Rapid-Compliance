@@ -10,6 +10,7 @@ import type {
   StepAction
 } from '@/types/outbound-sequence';
 import { FirestoreService } from '@/lib/db/firestore-service'
+import { adminDb } from '@/lib/firebase/admin';
 import { logger } from '@/lib/logger/logger';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import { getSubCollection } from '@/lib/firebase/collections';
@@ -890,14 +891,42 @@ export class SequenceEngine {
   }
 
   /**
-   * Schedule a step for execution
+   * Schedule a step for execution.
+   *
+   * Writes the enrollment's nextStepAt and currentStep fields to Firestore via
+   * the Admin SDK so the processSequences cron can pick them up. The cron
+   * queries organizations/{PLATFORM_ID}/enrollments where status == 'active'
+   * and fires processNextStep when now >= nextStepAt.
    */
   private static async scheduleStep(
-    _enrollment: ProspectEnrollment,
-    _step: SequenceStep
+    enrollment: ProspectEnrollment,
+    step: SequenceStep
   ): Promise<void> {
-    // In production, this would add to a job queue
-    await Promise.resolve();
+    if (!adminDb) {
+      logger.error('[Sequence Engine] adminDb not initialized — cannot schedule step', undefined, { file: 'sequence-engine.ts' });
+      return;
+    }
+
+    const enrollmentPath = `organizations/${PLATFORM_ID}/enrollments`;
+    const scheduledAt = enrollment.nextStepAt ?? this.calculateNextStepTime(step);
+
+    await adminDb
+      .collection(enrollmentPath)
+      .doc(enrollment.id)
+      .update({
+        nextStepAt: scheduledAt,
+        currentStep: enrollment.currentStep,
+        status: 'active',
+        updatedAt: new Date().toISOString(),
+      });
+
+    logger.info('[Sequence Engine] Step scheduled', {
+      enrollmentId: enrollment.id,
+      stepId: step.id,
+      stepOrder: step.order,
+      scheduledAt,
+      file: 'sequence-engine.ts',
+    });
   }
 }
 

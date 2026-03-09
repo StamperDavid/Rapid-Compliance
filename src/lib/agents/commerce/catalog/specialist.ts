@@ -635,17 +635,14 @@ export class CatalogManagerSpecialist extends BaseSpecialist {
   /**
    * Sync catalog from external source
    */
-  private async handleSyncCatalog(payload: SyncCatalogPayload): Promise<CatalogResult> {
-    // This would integrate with Stripe Products, Shopify, WooCommerce, etc.
-    this.log('INFO', `Catalog sync requested from ${payload.source}`);
-
-    // Placeholder - in production would call respective APIs
-    await Promise.resolve();
-    return {
-      success: true,
+  private handleSyncCatalog(payload: SyncCatalogPayload): Promise<CatalogResult> {
+    this.log('WARN', `Catalog sync requested from "${payload.source}" but no sync integration is implemented`);
+    return Promise.resolve({
+      success: false,
       action: 'sync_catalog',
       syncedCount: 0,
-    };
+      error: `Catalog sync for "${payload.source}" is not yet implemented. Supported integrations coming soon.`,
+    });
   }
 
   /**

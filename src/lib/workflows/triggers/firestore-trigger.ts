@@ -36,7 +36,13 @@ export async function registerFirestoreTrigger(
     false
   );
 
-  logger.info('Firestore Trigger Registered trigger for workflow workflow.id}', { file: 'firestore-trigger.ts' });
+  logger.info(`[Firestore Trigger] Registered trigger config for workflow ${workflow.id}`, { file: 'firestore-trigger.ts' });
+  logger.warn(
+    `[Firestore Trigger] Trigger for workflow ${workflow.id} is registered in Firestore config only — ` +
+    'Cloud Functions deployment is not yet implemented. The trigger will not fire automatically until ' +
+    'a Cloud Function is deployed to call handleEntityChange() on entity changes.',
+    { file: 'firestore-trigger.ts', workflowId: workflow.id }
+  );
 }
 
 /**
@@ -153,7 +159,7 @@ export async function unregisterFirestoreTrigger(
     workflowId
   );
 
-  logger.info('Firestore Trigger Unregistered trigger for workflow workflowId}', { file: 'firestore-trigger.ts' });
+  logger.info(`[Firestore Trigger] Unregistered trigger config for workflow ${workflowId}`, { file: 'firestore-trigger.ts' });
 }
 
 

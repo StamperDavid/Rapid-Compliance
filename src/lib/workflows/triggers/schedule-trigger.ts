@@ -36,7 +36,13 @@ export async function registerScheduleTrigger(
     false
   );
 
-  logger.info('Schedule Trigger Registered schedule for workflow workflow.id}', { file: 'schedule-trigger.ts' });
+  logger.info(`[Schedule Trigger] Registered schedule config for workflow ${workflow.id}`, { file: 'schedule-trigger.ts' });
+  logger.warn(
+    `[Schedule Trigger] Schedule for workflow ${workflow.id} is registered in Firestore config only — ` +
+    'Cloud Functions / Cloud Scheduler deployment is not yet implemented. The schedule will not execute ' +
+    'automatically until a Cloud Scheduler job is deployed to call executeScheduledWorkflows().',
+    { file: 'schedule-trigger.ts', workflowId: workflow.id }
+  );
 }
 
 /**
@@ -213,7 +219,7 @@ export async function unregisterScheduleTrigger(
     workflowId
   );
 
-  logger.info('Schedule Trigger Unregistered schedule for workflow workflowId}', { file: 'schedule-trigger.ts' });
+  logger.info(`[Schedule Trigger] Unregistered schedule config for workflow ${workflowId}`, { file: 'schedule-trigger.ts' });
 }
 
 /**
