@@ -5,7 +5,7 @@
 ## Context
 Repository: https://github.com/StamperDavid/Rapid-Compliance
 Branch: dev
-Last Updated: March 8, 2026
+Last Updated: March 9, 2026
 
 ## Current State
 
@@ -30,7 +30,7 @@ Last Updated: March 8, 2026
 | **Stripe** | REAL — PaymentElement, 3DS, webhooks |
 | **Email** | REAL — SendGrid/Resend/SMTP, CAN-SPAM |
 | **Voice** | REAL — Twilio/Telnyx, ElevenLabs TTS |
-| **Video** | BROKEN — See Video System Overhaul below |
+| **Video** | FUNCTIONAL — Hedra-only, Character Studio, AI Video Director |
 | **AI Gateway** | REAL — OpenRouter (100+ models) |
 | **Apollo** | REAL — Free-tier org search, enrichment |
 | **SEO/Growth** | REAL — DataForSEO, Serper, keyword tracking, competitor monitoring |
@@ -118,14 +118,14 @@ Stored per-project or globally, referenced during prompt generation.
 
 | Component | Description | Status |
 |---|---|---|
-| **Character Profile Service** | Firestore CRUD for character profiles (replaces avatar-profile-service.ts) | NEEDS REWORK — existing avatar profile service is close but needs character-specific fields (role, style tag, multi-character support) |
-| **Character Studio UI** | Upload reference images, green screen clips, assign voice, tag style | NEEDS REWORK — existing AvatarPicker needs to become a full character management UI |
-| **Video Production Agent** | New Jasper agent — receives script, casts characters, prompts Hedra, stitches, manages review cycle | NEW |
-| **Hedra Prompt Translator** | Converts rich scene descriptions (environment, lighting, mood, action) into optimized Hedra API prompts | NEW |
-| **FFmpeg Stitching Service** | Server-side clip assembly — trim, order, transitions, output final video | PARTIALLY EXISTS — `/api/video/composite` has FFmpeg, but needs real stitching logic |
+| **Character Profile Service** | Firestore CRUD with source, role, styleTag, dual TTS paths | DONE — `avatar-profile-service.ts` fully reworked |
+| **Character Studio UI** | Source badges, role/style selectors, Hedra character browser, voice indicators | DONE — AvatarPicker, AvatarUpload, HedraCharacterBrowser updated |
+| **Video Production Agent** | `produce_video` Jasper tool — creates project, assigns characters, generates, stitches | DONE — full dispatch in `jasper-tools.ts` |
+| **Hedra Prompt Translator** | Enhances visual descriptions with character role/style metadata | DONE — `hedra-prompt-translator.ts` integrated into scene-generator |
+| **Per-Scene Character Assignment** | Each scene can override project-level character/voice | DONE — PipelineScene has voiceProvider, SceneEditor has picker |
+| **FFmpeg Stitching Service** | Server-side clip assembly — trim, order, transitions, output final video | PARTIALLY EXISTS — `/api/video/composite` has FFmpeg, needs enhancement |
 | **Review/Approval UI** | Scene-by-scene review with feedback input, per-scene regeneration, approve/reject | NEEDS REWORK — StepGeneration.tsx has progress tracking but no review workflow |
-| **Brand Preference Store** | Firestore collection for learned video style preferences | NEW |
-| **Jasper Video Tools** | New tool definitions in jasper-tools.ts for video production delegation | NEW |
+| **Brand Preference Store** | Firestore collection for learned video style preferences | FUTURE |
 
 #### What Gets Removed
 
@@ -154,25 +154,26 @@ Stored per-project or globally, referenced during prompt generation.
 
 ### Implementation Order
 
-**Phase 1: Stabilize (get videos generating again)**
-1. Fix TTS to handle all voice providers (ElevenLabs as universal TTS engine)
-2. Simplify scene generator to Hedra-only (remove dead engine code)
-3. Fix character profile image URLs
-4. Verify end-to-end: script → Hedra generation → poll → video URL returned
+**Phase 1: Stabilize (get videos generating again)** — COMPLETE
+1. ~~Fix TTS to handle all voice providers~~ DONE
+2. ~~Simplify scene generator to Hedra-only~~ DONE
+3. ~~Fix character profile image URLs~~ DONE
+4. ~~Verify end-to-end: script → Hedra generation → poll → video URL returned~~ DONE
 
-**Phase 2: Character Studio**
-1. Expand character profile schema (role, style tag, project assignments)
-2. Build character management UI (upload images, clips, assign voice)
-3. Multi-character per project support
-4. Character consistency validation
+**Phase 2: Character Studio** — COMPLETE
+1. ~~Expand character profile schema (source, role, styleTag, hedraCharacterId)~~ DONE
+2. ~~Build character management UI (source badges, role/style selectors)~~ DONE
+3. ~~Dual TTS paths (Hedra native + ElevenLabs upload)~~ DONE
+4. ~~Hedra character browser stays for stock extras~~ DONE
 
-**Phase 3: AI Video Director**
-1. Video Production Agent (new Jasper agent)
-2. Hedra prompt translator (script scene → optimized Hedra prompt)
-3. FFmpeg stitching service (clip assembly with transitions)
-4. Review/approval workflow UI
-5. Per-scene feedback and regeneration
-6. Brand preference memory
+**Phase 3: AI Video Director** — COMPLETE (core), remaining: stitching enhancement + review UI
+1. ~~Per-scene character assignment (scene-level avatarId/voiceId/voiceProvider)~~ DONE
+2. ~~Hedra prompt translator (character metadata → enhanced Hedra prompts)~~ DONE
+3. ~~produce_video Jasper tool (full pipeline: create → cast → generate)~~ DONE
+4. ~~Updated create_video/generate_video/get_video_status descriptions~~ DONE
+5. FFmpeg stitching service enhancement — NEXT
+6. Review/approval workflow UI — NEXT
+7. Brand preference memory — FUTURE
 
 **Phase 4: Polish**
 1. Video library integration (save completed projects)
@@ -206,6 +207,8 @@ See `docs/single_source_of_truth.md` "Open Items" section for the full punch lis
 | `AGENT_REGISTRY.json` | AI agent configurations (52 agents) |
 | `src/lib/constants/platform.ts` | PLATFORM_ID and platform identity |
 | `src/lib/orchestrator/jasper-tools.ts` | Jasper's 47 function-calling tools |
-| `src/lib/video/hedra-service.ts` | Hedra Character-3 API — sole video generation engine |
-| `src/lib/video/scene-generator.ts` | Scene generation router — NEEDS REWORK for Hedra-only |
-| `src/lib/video/avatar-profile-service.ts` | Character profiles — NEEDS REWORK for Character Studio |
+| `src/lib/video/hedra-service.ts` | Hedra Character-3 API — sole video generation engine, dual TTS paths |
+| `src/lib/video/scene-generator.ts` | Scene generation — per-scene character overrides, prompt translation |
+| `src/lib/video/avatar-profile-service.ts` | Character Studio — source, role, styleTag, dual TTS metadata |
+| `src/lib/video/hedra-prompt-translator.ts` | Enhances visual descriptions with character metadata for Hedra |
+| `src/types/video-pipeline.ts` | PipelineScene with per-scene voiceProvider field |
