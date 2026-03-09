@@ -5,7 +5,7 @@
  * Features:
  * - Loads storyboard from Firestore
  * - Routes shots to optimal providers via MultiModelPicker
- * - Manages video generation API calls to Runway ML, Google Veo, etc.
+ * - Manages video generation API calls (Hedra is the sole engine)
  * - Polls for generation status with exponential backoff
  * - Triggers Stitcher for post-production
  * - Uploads final video to Firebase Storage
@@ -20,13 +20,6 @@ import { getSignalBus } from '@/lib/orchestrator/signal-bus';
 import { VideoJobService } from '@/lib/video/video-job-service';
 import { multiModelPicker } from '@/lib/video/engine/multi-model-picker';
 import { stitcherService } from '@/lib/video/engine/stitcher-service';
-import {
-  generateSoraVideoInternal,
-  generateRunwayVideoInternal,
-  getVideoStatus,
-  getVideoProviderKey,
-} from '@/lib/video/video-service';
-import type { VideoProvider } from '@/types/video';
 import type {
   MasterStoryboard,
   GeneratedClip,
@@ -334,29 +327,20 @@ export class RenderPipeline {
   }
 
   /**
-   * Check if provider is configured with API key (reads from Firestore via apiKeyService)
+   * Check if a provider is supported by this pipeline.
+   * Hedra clips are generated via scene-generator.ts / the API routes, not here.
+   * This pipeline does not support any legacy providers (Sora, Runway have been removed).
    */
-  private async isProviderConfigured(provider: VideoGenerationProvider): Promise<boolean> {
-    // Map render pipeline provider names to video-service provider names
-    const providerMap: Record<string, VideoProvider> = {
-      'runway': 'runway',
-      'sora': 'sora',
-    };
-
-    const videoProvider = providerMap[provider];
-    if (!videoProvider) {
-      // Veo, Kling, Pika, Stable Video — not yet available via this pipeline
-      return false;
-    }
-
-    const key = await getVideoProviderKey(videoProvider);
-    return key !== null;
+  private isProviderConfigured(_provider: VideoGenerationProvider): Promise<boolean> {
+    return Promise.resolve(false);
   }
 
   /**
-   * Call provider API to start generation — delegates to real implementations in video-service.ts
+   * Call provider API to start generation.
+   * All legacy providers (Sora, Runway) have been removed.
+   * Hedra generation is handled via scene-generator.ts.
    */
-  private async callProviderAPI(
+  private callProviderAPI(
     provider: VideoGenerationProvider,
     item: GenerationQueueItem
   ): Promise<ProviderGenerationResponse> {
@@ -365,66 +349,12 @@ export class RenderPipeline {
       shotId: item.shotId,
     });
 
-    switch (provider) {
-      case 'runway':
-        return this.callRunwayAPI(item);
-      case 'sora':
-        return this.callSoraAPI(item);
-      case 'veo':
-      case 'kling':
-      case 'pika':
-      case 'stable-video':
-        throw new Error(`Provider ${provider} is not yet available via the render pipeline. Use Runway or Sora instead.`);
-      default:
-        throw new Error(`Unknown provider: ${provider}`);
-    }
-  }
-
-  /**
-   * Call Runway ML API via video-service.ts
-   */
-  private async callRunwayAPI(item: GenerationQueueItem): Promise<ProviderGenerationResponse> {
-    logger.info('RenderPipeline: Calling Runway ML API', { shotId: item.shotId });
-
-    const prompt = item.visualPrompt.compiledPrompt;
-    const referenceImages = item.visualPrompt.referenceImageUrls;
-    const firstRefImage = referenceImages && referenceImages.length > 0 ? referenceImages[0] : null;
-
-    const result = firstRefImage
-      ? await generateRunwayVideoInternal('image', firstRefImage, {
-          duration: Math.ceil(item.duration / 1000),
-          ratio: item.aspectRatio as '16:9' | '9:16' | '1:1',
-        })
-      : await generateRunwayVideoInternal('text', prompt, {
-          duration: Math.ceil(item.duration / 1000),
-          ratio: item.aspectRatio as '16:9' | '9:16' | '1:1',
-        });
-
-    return {
-      jobId: result.id,
-      status: 'queued',
-    };
-  }
-
-  /**
-   * Call OpenAI Sora API via video-service.ts
-   */
-  private async callSoraAPI(item: GenerationQueueItem): Promise<ProviderGenerationResponse> {
-    logger.info('RenderPipeline: Calling Sora API', { shotId: item.shotId });
-
-    const result = await generateSoraVideoInternal(
-      item.visualPrompt.compiledPrompt,
-      {
-        duration: Math.ceil(item.duration / 1000),
-        aspectRatio: item.aspectRatio as '16:9' | '9:16' | '1:1',
-        style: item.visualPrompt.mood,
-      }
+    return Promise.reject(
+      new Error(
+        `Provider "${provider}" is not available via the render pipeline. ` +
+        `Video generation is handled by Hedra via the scene-generator.`,
+      ),
     );
-
-    return {
-      jobId: result.id,
-      status: 'queued',
-    };
   }
 
   /**
@@ -447,7 +377,7 @@ export class RenderPipeline {
         attempt,
       });
 
-      // Check status (would be actual API call in production)
+      // Check status
       const status = await this.checkProviderStatus(provider, providerJobId);
 
       if (status.status === 'completed' && status.videoUrl) {
@@ -472,9 +402,10 @@ export class RenderPipeline {
   }
 
   /**
-   * Check provider generation status via video-service.ts
+   * Check provider generation status.
+   * All legacy providers (Sora, Runway) have been removed.
    */
-  private async checkProviderStatus(
+  private checkProviderStatus(
     provider: VideoGenerationProvider,
     providerJobId: string
   ): Promise<ProviderGenerationResponse> {
@@ -483,38 +414,7 @@ export class RenderPipeline {
       providerJobId,
     });
 
-    // Map render-pipeline provider names to video-service provider names
-    const providerMap: Record<string, VideoProvider> = {
-      'runway': 'runway',
-      'sora': 'sora',
-    };
-
-    const videoProvider = providerMap[provider];
-    if (!videoProvider) {
-      throw new Error(`Cannot check status for unsupported provider: ${provider}`);
-    }
-
-    const statusResult = await getVideoStatus(providerJobId, videoProvider);
-
-    // Check if we got a "coming soon" response (provider not configured)
-    if (!('id' in statusResult)) {
-      throw new Error(`Provider ${provider} is not configured`);
-    }
-
-    // Map video-service response to ProviderGenerationResponse
-    const statusMap: Record<string, 'queued' | 'processing' | 'completed' | 'failed'> = {
-      'pending': 'queued',
-      'processing': 'processing',
-      'completed': 'completed',
-      'failed': 'failed',
-    };
-
-    return {
-      jobId: providerJobId,
-      status: statusMap[statusResult.status] ?? 'processing',
-      videoUrl: statusResult.videoUrl,
-      errorMessage: statusResult.errorMessage,
-    };
+    return Promise.reject(new Error(`Status polling not supported for provider "${provider}" in this pipeline.`));
   }
 
   /**

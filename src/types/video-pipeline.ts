@@ -73,7 +73,7 @@ export const TARGET_PLATFORM_LABELS: Record<TargetPlatform, string> = {
 // Engine Types
 // ============================================================================
 
-export type VideoEngineId = 'runway' | 'sora' | 'kling' | 'luma' | 'hedra';
+export type VideoEngineId = 'hedra';
 
 // ============================================================================
 // Scene Types
@@ -96,11 +96,10 @@ export interface PipelineScene {
   avatarId: string | null;
   voiceId: string | null;
   duration: number; // seconds
-  engine: VideoEngineId | null; // null = auto-selected (defaults to kling)
+  engine: VideoEngineId | null; // null = defaults to hedra
   backgroundPrompt: string | null; // Prompt for AI video background generation
   status: SceneStatus;
   useGreenScreen?: boolean; // true = avatar on transparent BG + AI background compositing
-  backgroundEngine?: VideoEngineId | null; // Engine to generate AI background (runway/kling)
 }
 
 export interface SceneGenerationResult {

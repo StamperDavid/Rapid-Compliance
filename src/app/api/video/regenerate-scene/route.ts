@@ -16,7 +16,7 @@ const RegenerateSchema = z.object({
   voiceId: z.string().default(''), // Empty for B-roll (avatar-profile-driven) scenes
   aspectRatio: z.enum(['16:9', '9:16', '1:1', '4:3']).default('16:9'),
   duration: z.number().default(15),
-  engine: z.enum(['runway', 'sora', 'kling', 'luma']).nullable().default(null),
+  engine: z.enum(['hedra']).nullable().default(null),
   backgroundPrompt: z.string().nullable().default(null),
   visualDescription: z.string().nullable().default(null),
   title: z.string().nullable().default(null),

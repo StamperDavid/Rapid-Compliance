@@ -1,11 +1,10 @@
 /**
  * Video Module
  *
- * Comprehensive video generation system featuring:
- * - Legacy video service (Sora, Runway stubs)
+ * Hedra-powered video generation system featuring:
+ * - Hedra Character-3 API integration (sole video engine)
  * - AI Video Generation Engine
  *   - Director Service: Brand DNA + Trends → Master Storyboard
- *   - Multi-Model Picker: Intelligent provider routing
  *   - Stitcher Service: Post-production pipeline
  *   - Style Guide Integrator: Site-mimicry visual consistency
  *
@@ -13,7 +12,7 @@
  */
 
 // ============================================================================
-// LEGACY VIDEO SERVICE
+// VIDEO SERVICE
 // ============================================================================
 
 export {
@@ -26,17 +25,6 @@ export {
   joinVideoWaitlist,
   logVideoInterest,
 
-  // Generation stubs
-  generateVideo as generateLegacyVideo,
-  getVideoStatus,
-  cancelVideoGeneration,
-
-  // Sora stubs
-  generateSoraVideo,
-
-  // Runway stubs
-  generateRunwayVideo,
-
   // Templates
   listVideoTemplates,
   createVideoTemplate,
@@ -47,11 +35,9 @@ export {
 
   // Utilities
   isProviderConfigured,
-  estimateVideoCost,
 } from './video-service';
 
 export type {
-  VideoGenerationRequest,
   VideoGenerationResponse,
   VideoProvider,
   VideoTemplate,

@@ -15,7 +15,7 @@ const GenerateScenesSchema = z.object({
     scriptText: z.string(),
     screenshotUrl: z.string().nullable(),
     duration: z.number(),
-    engine: z.enum(['runway', 'sora', 'kling', 'luma']).nullable().default(null),
+    engine: z.enum(['hedra']).nullable().default(null),
     backgroundPrompt: z.string().nullable().default(null),
     visualDescription: z.string().nullable().default(null),
     title: z.string().nullable().default(null),

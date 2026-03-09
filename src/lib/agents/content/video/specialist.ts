@@ -1784,32 +1784,23 @@ export class VideoSpecialist extends BaseSpecialist {
     }
 
     // ── AUTOMATE MODE: Full generation (avatar pick + render) ──
-    // Priority: Default Avatar Profile (Kling Avatar) → text-to-video fallback
+    // All scenes use Hedra — an avatar profile (with photo + voice) is required.
     let videoAvatarId = '';
     let videoVoiceId = '';
     let voiceProvider: 'elevenlabs' | 'unrealspeech' | 'custom' | 'hedra' = 'elevenlabs';
-    const hasAvatarScenes = scenes.some((s) => s.engine === 'kling');
 
-    if (hasAvatarScenes) {
-      // Reuse the avatarProfile already loaded in Step 1b (no duplicate Firestore read)
-      if (avatarProfile) {
-        videoAvatarId = avatarProfile.id;
-        if (avatarProfile.voiceId) {
-          videoVoiceId = avatarProfile.voiceId;
-          voiceProvider = avatarProfile.voiceProvider ?? 'elevenlabs';
-        }
-        this.log('INFO', `Using Avatar Profile: "${avatarProfile.name}" (Kling Avatar)`);
+    // Reuse the avatarProfile already loaded in Step 1b (no duplicate Firestore read)
+    if (avatarProfile) {
+      videoAvatarId = avatarProfile.id;
+      if (avatarProfile.voiceId) {
+        videoVoiceId = avatarProfile.voiceId;
+        voiceProvider = avatarProfile.voiceProvider ?? 'elevenlabs';
       }
+      this.log('INFO', `Using Avatar Profile: "${avatarProfile.name}" (Hedra)`);
+    }
 
-      // If no avatar profile, switch avatar scenes to text-to-video engines
-      if (!videoAvatarId || !videoVoiceId) {
-        this.log('WARN', 'No avatar/voice available — scenes will use text-to-video engines');
-        for (const scene of scenes) {
-          if (scene.engine === 'kling') {
-            scene.engine = 'runway';
-          }
-        }
-      }
+    if (!videoAvatarId || !videoVoiceId) {
+      this.log('WARN', 'No avatar/voice available — Hedra requires an avatar profile with a frontal photo and voice');
     }
 
     await updateProject(projectId, {
@@ -1924,8 +1915,8 @@ export class VideoSpecialist extends BaseSpecialist {
     let genAvatarId = requestedAvatarId ?? project.avatarId ?? '';
     let genVoiceId = requestedVoiceId ?? project.voiceId ?? '';
 
-    // Auto-select avatar from Avatar Profile if not specified
-    const hasAvatarScenes = project.scenes.some((s) => s.engine === 'kling');
+    // Auto-select avatar from Avatar Profile if not specified — all scenes are Hedra
+    const hasAvatarScenes = project.scenes.length > 0;
     if (hasAvatarScenes && (!genAvatarId || !genVoiceId)) {
       try {
         const { getDefaultProfile } = await import('@/lib/video/avatar-profile-service');

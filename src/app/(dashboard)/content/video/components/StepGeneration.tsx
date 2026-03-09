@@ -8,7 +8,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { SceneProgressCard } from './SceneProgressCard';
 import { useVideoPipelineStore } from '@/lib/stores/video-pipeline-store';
-import { getEngineConfig } from '@/lib/video/engine-registry';
 import type { SceneGenerationResult } from '@/types/video-pipeline';
 
 type GenerationPhase = 'submitting' | 'rendering' | 'complete';
@@ -51,18 +50,12 @@ export function StepGeneration() {
   const completedCount = generatedScenes.filter((s) => s.status === 'completed').length;
   const failedCount = generatedScenes.filter((s) => s.status === 'failed').length;
   const generatingCount = generatedScenes.filter((s) => s.status === 'generating').length;
+  // Average progress across all scenes (each scene reports 0-100)
   const overallProgress = generatedScenes.length > 0
-    ? Math.round((completedCount / generatedScenes.length) * 100)
+    ? Math.round(generatedScenes.reduce((sum, s) => sum + (s.progress ?? 0), 0) / generatedScenes.length)
     : 0;
 
-  // Build engine summary for the generating description
-  const engineCounts = scenes.reduce<Record<string, number>>((acc, s) => {
-    const engine = s.engine ?? 'kling';
-    const label = getEngineConfig(engine).label;
-    acc[label] = (acc[label] ?? 0) + 1;
-    return acc;
-  }, {});
-  const engineList = Object.keys(engineCounts).join(', ');
+  const engineList = 'Hedra';
 
   // Elapsed time timer
   useEffect(() => {
@@ -185,10 +178,9 @@ export function StepGeneration() {
       pollingRef.current = null;
     }
 
-    // Poll scenes that are still generating OR waiting for compositing
+    // Poll scenes that are still generating
     const generatingScenes = generatedScenes.filter(
-      (s) => (s.status === 'generating' && s.providerVideoId) ||
-             (s.compositeStatus === 'pending' || s.compositeStatus === 'compositing'),
+      (s) => s.status === 'generating' && s.providerVideoId,
     );
     if (generatingScenes.length === 0) {
       return;
@@ -205,9 +197,6 @@ export function StepGeneration() {
               sceneId: s.sceneId,
               providerVideoId: s.providerVideoId,
               provider: s.provider,
-              backgroundVideoId: s.backgroundVideoId ?? undefined,
-              backgroundProvider: s.backgroundProvider ?? undefined,
-              compositeStatus: s.compositeStatus ?? undefined,
             })),
           }),
         });
@@ -230,49 +219,24 @@ export function StepGeneration() {
             videoUrl: string | null;
             thumbnailUrl: string | null;
             error: string | null;
-            backgroundVideoUrl?: string | null;
-            backgroundReady?: boolean;
-            compositedVideoUrl?: string | null;
-            compositeStatus?: 'pending' | 'compositing' | 'completed' | 'failed' | null;
-            compositeError?: string | null;
+            progress?: number;
           }>;
         };
 
         if (data.success && data.results) {
           for (const result of data.results) {
-            // Update scene if status changed, or if compositing state changed
-            const hasCompositeUpdate = result.compositeStatus && result.compositeStatus !== 'pending';
-            if (result.status !== 'generating' || hasCompositeUpdate) {
-              const statusLabel = result.compositedVideoUrl
-                ? `${result.status} (composited)`
-                : result.status;
-              console.info(`[VideoGen] Scene ${result.sceneId.slice(0, 8)}... → ${statusLabel}`);
+            const statusLabel = `${result.status} ${result.progress ?? 0}%`;
+            console.info(`[VideoGen] Scene ${result.sceneId.slice(0, 8)}... → ${statusLabel}`);
 
-              const updates: Partial<SceneGenerationResult> = {
-                status: result.status,
-                videoUrl: result.videoUrl,
-                thumbnailUrl: result.thumbnailUrl,
-                error: result.error ?? result.compositeError ?? null,
-                progress: result.status === 'completed' ? 100 : 0,
-              };
+            const updates: Partial<SceneGenerationResult> = {
+              status: result.status,
+              videoUrl: result.videoUrl,
+              thumbnailUrl: result.thumbnailUrl,
+              error: result.error ?? null,
+              progress: result.progress ?? (result.status === 'completed' ? 100 : 0),
+            };
 
-              // Track background video and compositing state
-              if (result.backgroundVideoUrl) {
-                updates.backgroundVideoUrl = result.backgroundVideoUrl;
-              }
-              if (result.compositedVideoUrl) {
-                updates.compositedVideoUrl = result.compositedVideoUrl;
-                updates.videoUrl = result.compositedVideoUrl; // Use composited as final
-              }
-              if (result.compositeStatus) {
-                updates.compositeStatus = result.compositeStatus;
-              }
-              if (result.compositeError) {
-                updates.compositeError = result.compositeError;
-              }
-
-              updateGeneratedScene(result.sceneId, updates);
-            }
+            updateGeneratedScene(result.sceneId, updates);
           }
         }
       } catch (err) {
@@ -397,7 +361,7 @@ export function StepGeneration() {
                 </span>
               ) : (
                 <span className="text-zinc-400">
-                  Waiting for providers to render videos. Kling typically takes 2-5 minutes per scene.
+                  Waiting for Hedra to render videos. Generation typically takes 2-5 minutes per scene.
                   {pollCount > 0 && (
                     <span className="text-zinc-600"> (poll #{pollCount})</span>
                   )}

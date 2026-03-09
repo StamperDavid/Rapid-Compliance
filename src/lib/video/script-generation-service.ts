@@ -20,7 +20,7 @@ import { getMemoryVault, shareInsight } from '@/lib/agents/shared';
 // ============================================================================
 
 export type ScriptVideoType = 'tutorial' | 'explainer' | 'product-demo' | 'sales-pitch' | 'testimonial' | 'social-ad';
-export type ScriptEngine = 'runway' | 'sora' | 'kling';
+export type ScriptEngine = 'hedra';
 
 export interface ScriptScene {
   sceneNumber: number;
@@ -73,15 +73,13 @@ export interface ScriptGenerationParams {
 // Zod Schema for AI Response Validation
 // ============================================================================
 
-const EngineValues = ['runway', 'sora', 'kling'] as const;
-
 const AISceneSchema = z.object({
   sceneNumber: z.number(),
   title: z.string(),
   scriptText: z.string(),
   visualDescription: z.string(),
   suggestedDuration: z.number(),
-  engine: z.enum(EngineValues),
+  engine: z.enum(['hedra']),
   backgroundPrompt: z.string().nullable(),
 });
 
@@ -109,7 +107,7 @@ function buildSystemPrompt(
 - Start strong. The first 3 seconds determine if someone keeps watching. Open with a bold statement, a surprising fact, or a direct address to a pain point.
 - End each scene with a transition hook — a reason to keep watching the next scene.
 - Write a COMPLETE thought per scene. Don't split ideas awkwardly across scenes.
-- For B-roll scenes (runway/sora), scriptText MUST be empty string "".
+- Every scene uses Hedra and requires a spoken script — do not leave scriptText empty.
 
 ## WHAT TO AVOID
 - Corporate jargon: "leverage", "synergize", "paradigm shift", "ecosystem", "streamline", "optimize your workflow"
@@ -224,11 +222,11 @@ Return ONLY valid JSON (no markdown, no code fences) matching this structure:
     {
       "sceneNumber": 1,
       "title": "Scene Title",
-      "scriptText": "Spoken words for avatar scenes, empty string for B-roll",
-      "visualDescription": "What the viewer sees — include character actions for character-in-action scenes",
+      "scriptText": "Spoken script for the avatar to deliver",
+      "visualDescription": "What the viewer sees — include character actions, environment, mood",
       "suggestedDuration": 12,
-      "engine": "kling" | "runway",
-      "backgroundPrompt": "Cinematic video background prompt for avatar scenes, null for B-roll"
+      "engine": "hedra",
+      "backgroundPrompt": "Cinematic background environment prompt (e.g. Modern office with city view)"
     }
   ]
 }`;
@@ -552,7 +550,7 @@ function generateFallbackScripts(
         scriptText: `Hey, welcome! Today I'm going to walk you through ${topic}. By the end, you'll know exactly how to do this yourself.`,
         visualDescription: 'Title card with tutorial topic, professional background',
         suggestedDuration: durationPerScene,
-        engine: 'kling',
+        engine: 'hedra',
         backgroundPrompt: 'Modern bright office with large monitor showing tutorial interface, indoor plants, warm lighting, clean desk',
       });
 
@@ -563,7 +561,7 @@ function generateFallbackScripts(
           scriptText: `Now let me show you step ${i - 1}. This is where things get interesting.`,
           visualDescription: `Screen recording showing step ${i - 1} in action`,
           suggestedDuration: durationPerScene,
-          engine: 'kling',
+          engine: 'hedra',
           backgroundPrompt: 'Clean workspace with soft ambient lighting, monitor displaying software interface, shallow depth of field',
         });
       }
@@ -574,7 +572,7 @@ function generateFallbackScripts(
         scriptText: `And that's it! You've got everything you need to get started. Try it out and let me know how it goes.`,
         visualDescription: 'Summary slide with key takeaways',
         suggestedDuration: durationPerScene,
-        engine: 'kling',
+        engine: 'hedra',
         backgroundPrompt: 'Bright creative studio with motivational backdrop, warm tones, professional lighting',
       });
       break;
@@ -587,7 +585,7 @@ function generateFallbackScripts(
         scriptText: `Here's something that might surprise you about ${topic}. Let me break it down.`,
         visualDescription: 'Presenter opens with a bold statement, direct to camera',
         suggestedDuration: durationPerScene,
-        engine: 'kling',
+        engine: 'hedra',
         backgroundPrompt: 'Sleek modern conference room with glass walls, city skyline visible, dramatic lighting, shallow depth of field',
       });
 
@@ -597,7 +595,7 @@ function generateFallbackScripts(
         scriptText: `Most teams waste hours on this. The old way of doing things just doesn't cut it anymore.`,
         visualDescription: 'Presenter explains the pain point with empathy',
         suggestedDuration: durationPerScene,
-        engine: 'kling',
+        engine: 'hedra',
         backgroundPrompt: 'Creative studio with exposed brick walls, warm pendant lighting, comfortable setting with plants and books',
       });
 
@@ -607,7 +605,7 @@ function generateFallbackScripts(
         scriptText: `That's exactly why we built this. It takes what used to be a headache and makes it automatic.`,
         visualDescription: 'Presenter introduces the solution with enthusiasm',
         suggestedDuration: durationPerScene,
-        engine: 'kling',
+        engine: 'hedra',
         backgroundPrompt: 'Modern tech office with large displays showing dashboards and analytics, blue accent lighting, clean aesthetic',
       });
 
@@ -618,7 +616,7 @@ function generateFallbackScripts(
           scriptText: `The results speak for themselves. Teams are saving hours every week and getting better outcomes.`,
           visualDescription: 'Presenter highlights key metrics and results',
           suggestedDuration: durationPerScene,
-          engine: 'kling',
+          engine: 'hedra',
           backgroundPrompt: 'Bright co-working space with whiteboard showing growth charts, natural window light, green plants, energetic atmosphere',
         });
       }
@@ -629,7 +627,7 @@ function generateFallbackScripts(
         scriptText: `Ready to see this in action? Head over to the link below and try it free.`,
         visualDescription: 'Presenter delivers CTA with confident smile',
         suggestedDuration: durationPerScene,
-        engine: 'kling',
+        engine: 'hedra',
         backgroundPrompt: 'Bright professional studio with branded backdrop, warm inviting lighting, casual setting',
       });
       break;
@@ -642,7 +640,7 @@ function generateFallbackScripts(
         scriptText: `If you're dealing with ${topic}, I get it. It's frustrating, and you're not alone.`,
         visualDescription: 'Presenter connects empathetically with the viewer',
         suggestedDuration: durationPerScene,
-        engine: 'kling',
+        engine: 'hedra',
         backgroundPrompt: 'Warm cozy office with bookshelves, soft lighting, plants, inviting atmosphere',
       });
 
@@ -652,7 +650,7 @@ function generateFallbackScripts(
         scriptText: `What if this whole process could run on autopilot? That's exactly what we built.`,
         visualDescription: 'Presenter introduces the product with excitement',
         suggestedDuration: durationPerScene,
-        engine: 'kling',
+        engine: 'hedra',
         backgroundPrompt: 'Modern tech lab with holographic displays, cool blue ambient lighting, futuristic minimal design',
       });
 
@@ -662,7 +660,7 @@ function generateFallbackScripts(
         scriptText: `Unlike anything else out there, this actually delivers. It's fast, simple, and the results are real.`,
         visualDescription: 'Presenter walks through key differentiators',
         suggestedDuration: durationPerScene,
-        engine: 'kling',
+        engine: 'hedra',
         backgroundPrompt: 'Modern creative workspace with whiteboard showing strategy diagrams, bright natural light',
       });
 
@@ -673,7 +671,7 @@ function generateFallbackScripts(
           scriptText: `Our customers are seeing real results. One team cut their prospecting time by 80% in the first week. Another closed three new deals in their first month.`,
           visualDescription: 'Presenter shares testimonials with conviction',
           suggestedDuration: durationPerScene,
-          engine: 'kling',
+          engine: 'hedra',
           backgroundPrompt: 'Bright open-plan office with team celebration in background, motivational wall art, warm afternoon light',
         });
       }
@@ -684,7 +682,7 @@ function generateFallbackScripts(
         scriptText: `Want to see these results yourself? Click below and let's get you started. Seriously, you'll thank yourself later.`,
         visualDescription: 'Presenter delivers confident CTA',
         suggestedDuration: durationPerScene,
-        engine: 'kling',
+        engine: 'hedra',
         backgroundPrompt: 'Professional studio with clean branded backdrop, confident warm lighting, inviting atmosphere',
       });
       break;
@@ -697,7 +695,7 @@ function generateFallbackScripts(
         scriptText: `Hey! I want to show you something that's going to change how you think about ${topic}.`,
         visualDescription: 'Opening title with eye-catching visual',
         suggestedDuration: durationPerScene,
-        engine: 'kling',
+        engine: 'hedra',
         backgroundPrompt: 'Modern bright office with clean desk, large monitor, indoor plants, warm professional lighting',
       });
 
@@ -715,7 +713,7 @@ function generateFallbackScripts(
           scriptText: `Let me show you how this works in practice. It's simpler than you'd think.`,
           visualDescription: `Presenter demonstrates key feature ${i - 1}`,
           suggestedDuration: durationPerScene,
-          engine: 'kling',
+          engine: 'hedra',
           backgroundPrompt: bgPrompts[(i - 2) % bgPrompts.length],
         });
       }
@@ -726,7 +724,7 @@ function generateFallbackScripts(
         scriptText: `That's a wrap! If any of this clicked for you, check out the link below. Let's make it happen.`,
         visualDescription: 'CTA with contact info',
         suggestedDuration: durationPerScene,
-        engine: 'kling',
+        engine: 'hedra',
         backgroundPrompt: 'Bright creative studio space with branded elements, warm inviting lighting',
       });
       break;

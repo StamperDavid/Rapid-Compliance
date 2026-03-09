@@ -264,7 +264,6 @@ export async function POST(request: NextRequest) {
       const result = await createAvatarProfile(userId, {
         name: profileName,
         frontalImageUrl: imageAsset.media_url,
-        preferredEngine: 'hedra',
         hedraAssetId: character.id,
         description: character.description ?? null,
       });

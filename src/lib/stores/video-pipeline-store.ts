@@ -270,10 +270,8 @@ export const useVideoPipelineStore = create<VideoPipelineState>()(
             );
 
           case 'generation':
-            // B-roll scenes (runway/sora) don't need scriptText — only avatar scenes do
-            return state.scenes.every((scene) =>
-              scene.engine === 'runway' || scene.engine === 'sora' || scene.scriptText.trim().length > 0
-            );
+            // All scenes use Hedra — every scene needs a script
+            return state.scenes.every((scene) => scene.scriptText.trim().length > 0);
 
           case 'assembly':
             return (

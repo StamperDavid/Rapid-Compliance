@@ -2,14 +2,12 @@
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { CheckCircle, ArrowLeft, Zap, DollarSign, AlertTriangle, Edit3, Eye, Palette } from 'lucide-react';
+import { CheckCircle, ArrowLeft, Zap, DollarSign, AlertTriangle, Edit3, Eye, Palette, Video } from 'lucide-react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useVideoPipelineStore } from '@/lib/stores/video-pipeline-store';
-import { useVideoProviderStatus } from '@/hooks/useVideoProviderStatus';
-import { EngineSelector } from './EngineSelector';
-import { estimateSceneCost, formatCostUSD, getEngineConfig } from '@/lib/video/engine-registry';
+import { estimateSceneCost, formatCostUSD } from '@/lib/video/engine-registry';
 
 export function StepApproval() {
   const {
@@ -23,28 +21,16 @@ export function StepApproval() {
     updateScene,
   } = useVideoPipelineStore();
 
-  const { providerStatus, isLoading: isLoadingProviders } = useVideoProviderStatus();
   const [editingSceneId, setEditingSceneId] = useState<string | null>(null);
 
   const totalDuration = scenes.reduce((sum, s) => sum + s.duration, 0);
 
-  // Dynamic per-engine cost calculation
+  // Cost calculation — all scenes use Hedra
   const totalCostCents = scenes.reduce(
     (sum, s) => sum + estimateSceneCost(s.engine, s.duration),
-    0
+    0,
   );
   const estimatedCost = formatCostUSD(totalCostCents);
-
-  // Build engine summary for the warning text
-  const engineCounts = scenes.reduce<Record<string, number>>((acc, s) => {
-    const engine = s.engine ?? 'kling';
-    const label = getEngineConfig(engine).label;
-    acc[label] = (acc[label] ?? 0) + 1;
-    return acc;
-  }, {});
-  const engineSummary = Object.entries(engineCounts)
-    .map(([label, count]) => `${count} via ${label}`)
-    .join(', ');
 
   const missingRequirements: string[] = [];
   if (!avatarId) { missingRequirements.push('avatar'); }
@@ -81,7 +67,7 @@ export function StepApproval() {
         <div className="p-4 bg-amber-500/10 rounded-lg border border-amber-500/30">
           <p className="text-xs text-amber-400 flex items-center gap-1"><DollarSign className="w-3 h-3" />Estimated Cost</p>
           <p className="text-xl font-bold text-amber-400">{estimatedCost}</p>
-          <p className="text-[10px] text-amber-400/70">{engineSummary}</p>
+          <p className="text-[10px] text-amber-400/70">via Hedra</p>
         </div>
       </div>
 
@@ -93,7 +79,7 @@ export function StepApproval() {
             Storyboard Review
           </CardTitle>
           <CardDescription>
-            Review every scene before generation. Choose a video engine per scene and click any script to edit inline.
+            Review every scene before generation. Click any script to edit inline.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -120,6 +106,12 @@ export function StepApproval() {
                   <span className="text-xs text-zinc-500">{scene.duration}s</span>
                   <span className="text-xs text-zinc-600">·</span>
                   <span className="text-xs text-zinc-500">Voice: {voiceName ?? 'Default'}</span>
+                  <span className="text-xs text-zinc-600">·</span>
+                  {/* Static engine label — Hedra is the sole engine */}
+                  <span className="flex items-center gap-1 text-xs text-zinc-500">
+                    <Video className="w-3 h-3" />
+                    Hedra
+                  </span>
                 </div>
 
                 {/* Script Text */}
@@ -162,15 +154,6 @@ export function StepApproval() {
                     </div>
                   </div>
                 )}
-
-                {/* Engine Selector */}
-                <EngineSelector
-                  value={scene.engine}
-                  onChange={(engine) => updateScene(scene.id, { engine })}
-                  durationSeconds={scene.duration}
-                  providerStatus={providerStatus}
-                  isLoadingStatus={isLoadingProviders}
-                />
               </div>
 
               {/* Screenshot Thumbnail */}
@@ -190,8 +173,8 @@ export function StepApproval() {
         <div>
           <p className="text-sm font-medium text-amber-400">Ready to generate?</p>
           <p className="text-xs text-zinc-400 mt-1">
-            {scenes.length} scene{scenes.length !== 1 ? 's' : ''} will be generated ({engineSummary}).
-            This will use your video API credits.
+            {scenes.length} scene{scenes.length !== 1 ? 's' : ''} will be generated via Hedra.
+            This will use your Hedra API credits.
             Estimated cost: {estimatedCost} for {totalDuration} seconds of video.
           </p>
         </div>

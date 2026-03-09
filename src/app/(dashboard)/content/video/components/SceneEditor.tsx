@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { GripVertical, Trash2, Copy, Image as ImageIcon, ChevronDown, ChevronUp, Eye, Palette } from 'lucide-react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
-import { VIDEO_ENGINE_REGISTRY } from '@/lib/video/engine-registry';
 import type { PipelineScene } from '@/types/video-pipeline';
 
 interface SceneEditorProps {
@@ -16,7 +15,6 @@ interface SceneEditorProps {
 
 export function SceneEditor({ scene, onUpdate, onDelete, onDuplicate }: SceneEditorProps) {
   const [expanded, setExpanded] = useState(false);
-  const engineConfig = scene.engine ? VIDEO_ENGINE_REGISTRY[scene.engine] : null;
 
   return (
     <div className="p-4 bg-zinc-800/30 rounded-xl border border-zinc-700/50 group space-y-3">
@@ -32,27 +30,15 @@ export function SceneEditor({ scene, onUpdate, onDelete, onDuplicate }: SceneEdi
           {scene.sceneNumber}
         </div>
 
-        {/* Title + Engine Row */}
+        {/* Title Row */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <input
-              type="text"
-              value={scene.title ?? ''}
-              onChange={(e) => onUpdate(scene.id, { title: e.target.value || undefined })}
-              placeholder="Scene title (e.g., The Hook, CTA)"
-              className="flex-1 px-2 py-1 bg-transparent border-b border-zinc-700/50 text-sm font-semibold text-amber-400 placeholder-zinc-600 focus:outline-none focus:border-amber-500/50 truncate"
-            />
-            {engineConfig && (
-              <span className={`flex-shrink-0 px-2 py-0.5 rounded text-[10px] font-medium ${
-                scene.engine === 'kling' ? 'bg-orange-500/20 text-orange-400' :
-                scene.engine === 'runway' ? 'bg-purple-500/20 text-purple-400' :
-                scene.engine === 'sora' ? 'bg-green-500/20 text-green-400' :
-                'bg-pink-500/20 text-pink-400'
-              }`}>
-                {engineConfig.label}
-              </span>
-            )}
-          </div>
+          <input
+            type="text"
+            value={scene.title ?? ''}
+            onChange={(e) => onUpdate(scene.id, { title: e.target.value || undefined })}
+            placeholder="Scene title (e.g., The Hook, CTA)"
+            className="w-full px-2 py-1 bg-transparent border-b border-zinc-700/50 text-sm font-semibold text-amber-400 placeholder-zinc-600 focus:outline-none focus:border-amber-500/50 truncate"
+          />
         </div>
 
         {/* Expand/Collapse */}
@@ -72,9 +58,7 @@ export function SceneEditor({ scene, onUpdate, onDelete, onDuplicate }: SceneEdi
         <textarea
           value={scene.scriptText}
           onChange={(e) => onUpdate(scene.id, { scriptText: e.target.value })}
-          placeholder={scene.engine === 'runway' || scene.engine === 'sora' || scene.engine === 'luma'
-            ? 'B-roll scene — no script needed (uses background prompt below)'
-            : 'Enter scene script...'}
+          placeholder="Enter scene script..."
           className="w-full h-20 px-3 py-2 bg-zinc-900/50 border border-zinc-700 rounded-lg text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-500/50 resize-none"
         />
       </div>

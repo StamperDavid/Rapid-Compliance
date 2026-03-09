@@ -1,14 +1,13 @@
 /**
  * Video Generation Types
- * Types for AI Video Factory - Kling Avatar, Runway, Sora integrations
+ * Types for AI Video Factory - Hedra Character-3 integration
  */
 
 // ============================================================================
 // Video Generation Request/Response Types
 // ============================================================================
 
-/** 'heygen' kept for backward compat — existing videos may have this provider stored in Firestore */
-export type VideoProvider = 'heygen' | 'sora' | 'runway' | 'kling' | 'fal' | 'hedra';
+export type VideoProvider = 'hedra';
 export type VideoStatus = 'pending' | 'processing' | 'completed' | 'failed';
 export type VideoAspectRatio = '16:9' | '9:16' | '1:1' | '4:3';
 export type VideoResolution = '720p' | '1080p' | '4k';
@@ -28,9 +27,6 @@ export interface VideoGenerationRequest {
   duration?: number; // seconds
   aspectRatio?: VideoAspectRatio;
   resolution?: VideoResolution;
-
-  // Avatar-specific (HeyGen)
-  avatarConfig?: AvatarConfig;
 
   // Template reference
   templateId?: string;
@@ -71,50 +67,7 @@ export interface VideoGenerationResponse {
   creditsUsed?: number;
 }
 
-// ============================================================================
-// HeyGen Avatar Configuration
-// ============================================================================
-
-export interface AvatarConfig {
-  avatarId: string;
-  avatarName?: string;
-
-  // Voice settings
-  voiceId?: string;
-  voiceName?: string;
-  voiceLanguage?: string;
-  voiceSpeed?: number; // 0.5 - 2.0
-  voicePitch?: number; // -20 to 20
-
-  // Avatar appearance
-  backgroundColor?: string;
-  backgroundImageUrl?: string;
-  avatarStyle?: 'professional' | 'casual' | 'formal';
-
-  // Animation
-  avatarGestures?: boolean;
-  lookAtCamera?: boolean;
-}
-
-export interface HeyGenAvatar {
-  id: string;
-  name: string;
-  thumbnailUrl: string;
-  previewVideoUrl?: string;
-  gender?: 'male' | 'female' | 'neutral';
-  ethnicity?: string;
-  style?: string;
-  isPremium?: boolean;
-  isCustom?: boolean;
-  /** Voice assigned to this avatar (for display on avatar cards) */
-  assignedVoiceId?: string;
-  assignedVoiceName?: string;
-}
-
-/** @deprecated Renamed — use VideoVoice instead */
-export type HeyGenVoice = VideoVoice;
-
-/** TTS / voice provider identifier */
+/** TTS / voice provider identifier — includes 'hedra' for voice catalog display */
 export type VoiceProvider = 'elevenlabs' | 'unrealspeech' | 'custom' | 'hedra';
 
 export interface VideoVoice {
@@ -145,7 +98,6 @@ export interface VideoTemplate {
   type: 'avatar' | 'text-to-video' | 'image-to-video';
 
   // Default settings
-  defaultAvatarConfig?: AvatarConfig;
   defaultPromptTemplate?: string;
   defaultDuration?: number;
   defaultAspectRatio?: VideoAspectRatio;

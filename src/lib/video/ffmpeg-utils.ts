@@ -12,7 +12,6 @@ import { randomUUID } from 'crypto';
 import { logger } from '@/lib/logger/logger';
 import { adminStorage } from '@/lib/firebase/admin';
 import { PLATFORM_ID } from '@/lib/constants/platform';
-import { getVideoProviderKey } from '@/lib/video/video-service';
 
 // ============================================================================
 // FFmpeg Binary
@@ -226,17 +225,7 @@ export async function createWorkDir(prefix = 'video'): Promise<string> {
  * Download a video file, handling auth headers for provider-specific URLs
  */
 export async function downloadVideo(url: string, destPath: string): Promise<void> {
-  const headers: Record<string, string> = {};
-
-  // Sora content URLs require OpenAI auth
-  if (url.includes('api.openai.com/v1/videos/')) {
-    const apiKey = await getVideoProviderKey('sora');
-    if (apiKey) {
-      headers['Authorization'] = `Bearer ${apiKey}`;
-    }
-  }
-
-  const response = await fetch(url, { headers, redirect: 'follow' });
+  const response = await fetch(url, { redirect: 'follow' });
 
   if (!response.ok) {
     throw new Error(`Failed to download ${url}: ${response.status} ${response.statusText}`);

@@ -1,6 +1,8 @@
 /**
  * Video Engine Registry
  * Client-safe constants — no server imports
+ *
+ * Hedra is the sole video generation engine.
  */
 
 import type { VideoEngineId } from '@/types/video-pipeline';
@@ -19,76 +21,33 @@ export interface VideoEngineConfig {
   apiKeyServiceId: string | null; // null = not yet integrated
 }
 
+export const HEDRA_ENGINE_CONFIG: VideoEngineConfig = {
+  id: 'hedra',
+  label: 'Hedra',
+  icon: 'Theater',
+  description: 'AI video generation with superior lip-sync and character acting (Character-3)',
+  costPer5Seconds: 8,
+  quality: 'high',
+  bestFor: ['talking-head', 'lip-sync', 'avatar', 'presentation', 'character-in-action'],
+  integrationStatus: 'available',
+  apiKeyServiceId: 'hedra',
+};
+
 export const VIDEO_ENGINE_REGISTRY: Record<VideoEngineId, VideoEngineConfig> = {
-  runway: {
-    id: 'runway',
-    label: 'Runway',
-    icon: 'Film',
-    description: 'Cinematic AI video from text or image prompts',
-    costPer5Seconds: 10, // $0.10 per 5s
-    quality: 'ultra',
-    bestFor: ['cinematic', 'b-roll', 'product-demo', 'social-ad'],
-    integrationStatus: 'available',
-    apiKeyServiceId: 'runway',
-  },
-  sora: {
-    id: 'sora',
-    label: 'Sora',
-    icon: 'Sparkles',
-    description: 'OpenAI video generation with realistic motion',
-    costPer5Seconds: 8, // $0.08 per 5s
-    quality: 'ultra',
-    bestFor: ['storytelling', 'cinematic', 'wide-shot', 'aerial'],
-    integrationStatus: 'available',
-    apiKeyServiceId: 'sora',
-  },
-  kling: {
-    id: 'kling',
-    label: 'Kling',
-    icon: 'Video',
-    description: 'Full-body avatar video with character consistency (via fal.ai)',
-    costPer5Seconds: 6,
-    quality: 'ultra',
-    bestFor: ['full-body', 'character-consistency', 'motion', 'action', 'product-demo'],
-    integrationStatus: 'available',
-    apiKeyServiceId: 'fal',
-  },
-  luma: {
-    id: 'luma',
-    label: 'Luma Dream Machine',
-    icon: 'Clapperboard',
-    description: 'Fast, high-quality video generation with great consistency',
-    costPer5Seconds: 7,
-    quality: 'high',
-    bestFor: ['fast-turnaround', 'social-ad', 'b-roll'],
-    integrationStatus: 'coming-soon',
-    apiKeyServiceId: null,
-  },
-  hedra: {
-    id: 'hedra',
-    label: 'Hedra',
-    icon: 'Theater',
-    description: 'Talking head avatars with superior lip-sync (Character-3)',
-    costPer5Seconds: 8,
-    quality: 'high',
-    bestFor: ['talking-head', 'lip-sync', 'avatar', 'presentation'],
-    integrationStatus: 'available',
-    apiKeyServiceId: 'hedra',
-  },
+  hedra: HEDRA_ENGINE_CONFIG,
 } as const;
 
 /** Ordered list of engine IDs for UI display */
-export const ENGINE_ORDER: VideoEngineId[] = ['kling', 'hedra', 'runway', 'sora', 'luma'];
+export const ENGINE_ORDER: VideoEngineId[] = ['hedra'];
 
-/** Safe lookup — always returns a valid config, falling back to kling for unknown IDs */
-export function getEngineConfig(engineId: string | null | undefined): VideoEngineConfig {
-  return VIDEO_ENGINE_REGISTRY[engineId as VideoEngineId] ?? VIDEO_ENGINE_REGISTRY.kling;
+/** Returns the Hedra engine config — engineId parameter retained for call-site compatibility */
+export function getEngineConfig(_engineId?: string | null): VideoEngineConfig {
+  return HEDRA_ENGINE_CONFIG;
 }
 
-/** Calculate estimated cost in cents for a scene given engine and duration */
-export function estimateSceneCost(engineId: VideoEngineId | null, durationSeconds: number): number {
-  const engine = getEngineConfig(engineId);
-  return Math.ceil(durationSeconds / 5) * engine.costPer5Seconds;
+/** Calculate estimated cost in cents for a scene given duration */
+export function estimateSceneCost(_engineId: VideoEngineId | null, durationSeconds: number): number {
+  return Math.ceil(durationSeconds / 5) * HEDRA_ENGINE_CONFIG.costPer5Seconds;
 }
 
 /** Format cents as USD string */

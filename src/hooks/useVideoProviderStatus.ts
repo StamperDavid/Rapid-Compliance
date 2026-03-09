@@ -18,10 +18,6 @@ interface UseVideoProviderStatusReturn {
 }
 
 const DEFAULT_STATUS: ProviderStatusMap = {
-  sora: { configured: false },
-  runway: { configured: false },
-  kling: { configured: false },
-  luma: { configured: false },
   hedra: { configured: false },
 };
 

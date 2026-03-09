@@ -1,7 +1,7 @@
 # SalesVelocity.ai - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** March 6, 2026 (Doc cleanup — trimmed CONTINUATION_PROMPT, updated integration status, added missing Firestore collections, added Voice Lab and Avatar features)
+**Last Updated:** March 8, 2026 (Video system overhaul plan — Hedra-only engine, Character Studio, AI Video Director architecture decision)
 **Branches:** `dev` (latest)
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Architecture:** Single-Tenant Penthouse Model (development strategy — multi-tenant SaaS product)
@@ -170,7 +170,7 @@ The Claude Code Governance Layer defines binding operational constraints for AI-
 | 12 | **GMB agent** | Competitor analysis returns hardcoded fake data | MEDIUM |
 | 13 | **Review manager** | Trend report always returns all zeros | MEDIUM |
 | 14 | **Catalog sync** | Returns `syncedCount: 0` placeholder | MEDIUM |
-| 15 | **Video assembly** | Stitcher returns placeholder `video://...` URLs, no real processing | MEDIUM |
+| 15 | **Video system** | BROKEN — multi-engine overhaul failed. Hedra-only rebuild planned (see CONTINUATION_PROMPT.md) | **CRITICAL** |
 | 16 | **Vertex AI tuning** | Fully simulated (fake job IDs, no API call) | LOW |
 | 17 | **Workflow triggers** | Firestore/schedule triggers never deploy Cloud Functions | LOW |
 | 18 | **score_leads tool** | Returns mock response — no actual scoring logic implemented | MEDIUM |
@@ -525,11 +525,12 @@ SalesVelocity.ai is a **multi-tenant SaaS product** currently running on the Pen
 - `/scraper` → `/leads/research` (March 5 — consolidated into Lead Research)
 
 **Video & Voice Lab:**
-- `/content/video` (Video Studio — 7-step production pipeline: Request → Decompose → Pre-Production → Approval → Generation → Assembly → Post-Production)
+- `/content/video` (Video Studio — OVERHAUL PLANNED: Hedra-only engine + Character Studio + AI Video Director)
 - `/content/video/library` (Video Library gallery with grid view, filter tabs, detail expansion, edit/download/delete actions)
 - `/content/voice-lab` (Voice Lab — recording studio, voice library with ElevenLabs voices, AI music generation)
-- Custom avatar creation saves to Firestore `custom_avatars` with "Your Avatars" section in picker, CUSTOM badge, voice assignment indicator
-- Voice assignment to avatars via `/api/video/avatar/assign-voice`
+- **Character Studio** (PLANNED) — reusable character library with persistent identity, reference images, green screen clips, voice assignment, style tags
+- **Video Production Agent** (PLANNED) — Jasper-delegated agent: script → Hedra prompts → generate → stitch → review/approve cycle
+- **Current Status: BROKEN** — multi-engine TTS routing fails, stock avatar URLs expired, engine selection bypassed. See CONTINUATION_PROMPT.md for overhaul plan.
 
 **Growth Command Center (NEW March 2):**
 - `/growth/command-center` — Overview dashboard: stat cards (competitors, keywords, AI visibility), competitive landscape, keyword movers, strategy status, activity feed
@@ -1260,20 +1261,30 @@ This script:
 | `/api/agent/config` | GET/PUT | Agent configuration | FUNCTIONAL |
 | `/api/agent/knowledge/upload` | POST | Knowledge base upload | FUNCTIONAL |
 
-#### Video & Voice Lab (22 routes)
+#### Video & Voice Lab (22 routes) — OVERHAUL PLANNED
+
+**Current Status: BROKEN** — Multi-engine rework introduced 3 critical bugs. Full Hedra-only rebuild planned.
 
 | Endpoint | Method | Purpose | Status |
 |----------|--------|---------|--------|
-| `/api/video/avatars` | GET | List all avatars (Firestore custom + HeyGen stock) | FUNCTIONAL |
-| `/api/video/avatar/create` | POST | Create custom avatar (saves to Firestore `custom_avatars`) | FUNCTIONAL |
-| `/api/video/avatar/assign-voice` | POST | Assign voice to custom avatar | FUNCTIONAL |
+| `/api/video/avatars` | GET | List all avatars (legacy) | BROKEN — references expired URLs |
+| `/api/video/avatar-profiles` | GET/POST | Character profile CRUD | BROKEN — TTS routing fails for non-ElevenLabs voices |
+| `/api/video/avatar-profiles/[profileId]` | GET/PATCH/DELETE | Single profile ops | FUNCTIONAL |
+| `/api/video/avatar-profiles/sync-hedra` | POST | Import Hedra characters | REMOVING — characters will be managed locally |
+| `/api/video/avatar-profiles/hedra-characters` | GET | Browse Hedra library | REMOVING — characters will be managed locally |
 | `/api/video/voices` | GET | List ElevenLabs voices | FUNCTIONAL |
 | `/api/video/voice-clone` | POST | Clone voice via ElevenLabs | FUNCTIONAL |
 | `/api/video/voice-preview` | POST | Preview TTS audio | FUNCTIONAL |
 | `/api/video/defaults` | GET/PUT | Default avatar/voice settings | FUNCTIONAL |
-| `/api/video/generate-scenes` | POST | Generate video scenes | FUNCTIONAL |
+| `/api/video/generate-scenes` | POST | Generate video scenes | BROKEN — multi-engine TTS failure |
+| `/api/video/poll-scenes` | POST | Poll generation status | BROKEN — references removed engines |
 | `/api/video/decompose` | POST | Decompose script to scenes | FUNCTIONAL |
 | `/api/video/project/*` | Various | Video project CRUD (save, list, get) | FUNCTIONAL |
+
+**Planned new routes (Phase 2-3):**
+- `/api/video/characters` — Character Studio CRUD (replaces avatar-profiles)
+- `/api/video/stitch` — FFmpeg clip assembly
+- `/api/video/review` — Review/approval workflow
 
 #### Social Media Platform (NEW Feb 12)
 
@@ -1616,7 +1627,7 @@ All 64 API routes that were using the client-side `FirestoreService` have been m
 | **Voice (Telnyx)** | **REAL** | Direct API — 60-70% cheaper than Twilio. |
 | **TTS (ElevenLabs)** | **REAL** | `api.elevenlabs.io/v1`, 20+ premium voices. |
 | **TTS (Unreal Speech)** | **REAL** | Alternative cost-effective TTS. |
-| **Video (HeyGen/Sora/Runway)** | **CONDITIONAL** | Real API calls if provider keys configured; returns "Coming Soon" otherwise. |
+| **Video (Hedra)** | **BROKEN — OVERHAUL PLANNED** | Multi-engine approach (HeyGen/Kling/Runway/Sora/Hedra) is broken. Decision: strip to Hedra-only + Character Studio + AI Video Director. See CONTINUATION_PROMPT.md for full plan. |
 | **Firebase** | **REAL** | Auth + Firestore, single-tenant `rapid-compliance-65f87`. |
 | **OpenRouter** | **REAL** | AI gateway, 100+ models. |
 | **Google OAuth** | **REAL** | Calendar, Gmail integration. |
@@ -1745,7 +1756,9 @@ organizations/{PLATFORM_ID}/
 ├── growthActivityLog/        # Activity feed events for Growth Command Center (NEW March 2)
 ├── lead-research-url-sources/ # URL sources for Lead Research page (NEW March 5)
 ├── lead-research-config/     # Lead Research schedule config (NEW March 5)
-├── custom_avatars/           # Custom HeyGen avatars with voice assignments (NEW March 6)
+├── avatar_profiles/          # Character profiles — reference images, green screen clips, voice assignment (REWORKING → Character Studio)
+├── custom_avatars/           # Legacy custom avatars (DEPRECATED — migrating to avatar_profiles)
+├── tts_audio/                # Synthesized TTS audio clips served via /api/video/tts-audio (24hr expiry)
 ├── icp-profiles/             # Ideal Customer Profile definitions for lead research (NEW March 5)
 └── provisionerLogs/          # Provisioning logs
 ```
@@ -2030,6 +2043,6 @@ See `docs/archive/legacy/README.md` for full archive index.
 **END OF SINGLE SOURCE OF TRUTH**
 
 *Document generated by Claude Code multi-agent audit - January 26, 2026*
-*Last updated: March 6, 2026 — Doc cleanup, added Voice Lab/Avatar features, Apollo/Clay integrations, missing Firestore collections, trimmed Mission Control verbosity and changelog noise*
+*Last updated: March 8, 2026 — Video system overhaul plan: Hedra-only engine + Character Studio + AI Video Director. Multi-engine approach (Kling/Runway/Sora) marked for removal. Updated integration status, route map, Firestore collections.*
 
 > Session changelogs, launch gap analysis, and completed roadmap details archived in `docs/archive/`.

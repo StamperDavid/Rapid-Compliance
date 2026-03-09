@@ -3401,24 +3401,29 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
         const videoStatusStart = Date.now();
         trackMissionStep(context, 'get_video_status', 'RUNNING', { toolArgs: args });
 
-        const { getVideoStatus: checkVideoStatus } = await import('@/lib/video/video-service');
+        const { getHedraVideoStatus } = await import('@/lib/video/hedra-service');
         const videoId = args.videoId as string;
-        const videoProvider = args.provider as 'kling' | 'sora' | 'runway' | undefined;
 
-        const response = await checkVideoStatus(videoId, videoProvider);
+        const hedraStatus = await getHedraVideoStatus(videoId);
+
+        const statusMessage = hedraStatus.status === 'completed'
+          ? 'Video is ready! You can view it in the video library.'
+          : hedraStatus.status === 'failed'
+            ? `Video generation failed: ${hedraStatus.error ?? 'Unknown error'}`
+            : 'Video is still being generated. Check back in a few minutes.';
 
         content = JSON.stringify({
-          status: response.status,
-          videoId: response.id,
-          videoUrl: response.videoUrl ?? null,
-          thumbnailUrl: response.thumbnailUrl ?? null,
-          provider: response.provider,
-          errorMessage: response.errorMessage ?? null,
-          message: response.status === 'completed'
-            ? `Video is ready! You can view it in the video library.`
-            : response.status === 'failed'
-              ? `Video generation failed: ${response.errorMessage ?? 'Unknown error'}`
-              : 'Video is still being generated. Check back in a few minutes.',
+          status: hedraStatus.status === 'completed'
+            ? 'completed'
+            : hedraStatus.status === 'failed'
+              ? 'failed'
+              : 'processing',
+          videoId,
+          videoUrl: hedraStatus.videoUrl ?? null,
+          thumbnailUrl: null,
+          provider: 'hedra',
+          errorMessage: hedraStatus.error ?? null,
+          message: statusMessage,
           videoLibraryPath: '/content/video',
         });
 

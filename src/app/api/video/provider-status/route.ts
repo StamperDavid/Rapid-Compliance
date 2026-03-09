@@ -14,11 +14,8 @@ interface ProviderStatusEntry {
 
 type ProviderStatusMap = Record<VideoEngineId, ProviderStatusEntry>;
 
-/** Available engines that have real API integrations */
+/** Hedra is the sole video engine — check its API key configuration */
 const CHECKABLE_ENGINES: Array<{ id: VideoEngineId; service: APIServiceName }> = [
-  { id: 'runway', service: 'runway' },
-  { id: 'sora', service: 'sora' },
-  { id: 'kling', service: 'kling' },
   { id: 'hedra', service: 'hedra' },
 ];
 
@@ -42,10 +39,6 @@ export async function GET(request: NextRequest) {
     );
 
     const providers: ProviderStatusMap = {
-      runway: { configured: false },
-      sora: { configured: false },
-      kling: { configured: false },
-      luma: { configured: false },
       hedra: { configured: false },
     };
 
@@ -61,7 +54,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(
       { success: false, error: 'Failed to check provider status' },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

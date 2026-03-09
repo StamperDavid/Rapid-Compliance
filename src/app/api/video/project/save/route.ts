@@ -51,7 +51,7 @@ const SaveProjectSchema = z.object({
       avatarId: z.string().nullable(),
       voiceId: z.string().nullable(),
       duration: z.number(),
-      engine: z.enum(['runway', 'sora', 'kling', 'luma']).nullable().default(null),
+      engine: z.enum(['hedra']).nullable().default(null),
       backgroundPrompt: z.string().nullable().default(null),
       status: z.enum(['draft', 'approved', 'generating', 'completed', 'failed']),
     })
@@ -64,7 +64,7 @@ const SaveProjectSchema = z.object({
     z.object({
       sceneId: z.string(),
       providerVideoId: z.string(),
-      provider: z.enum(['runway', 'sora', 'kling', 'luma']).nullable(),
+      provider: z.enum(['hedra']).nullable(),
       status: z.enum(['draft', 'approved', 'generating', 'completed', 'failed']),
       videoUrl: z.string().nullable(),
       thumbnailUrl: z.string().nullable(),
