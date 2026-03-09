@@ -79,71 +79,6 @@ async function fetchUnrealSpeechVoices(): Promise<VideoVoice[]> {
 }
 
 /**
- * Fetch Hedra character voices — only voices the user has personally
- * configured (renamed from their stock originals). Hedra's description
- * includes "(Original name: X)" when a voice has been customized.
- */
-async function fetchHedraVoices(): Promise<VideoVoice[]> {
-  try {
-    const rawKey = await apiKeyService.getServiceKey(PLATFORM_ID, 'hedra');
-    if (!rawKey || typeof rawKey !== 'string') { return []; }
-
-    const response = await fetch('https://api.hedra.com/web-app/public/voices', {
-      headers: { 'x-api-key': rawKey, 'Accept': 'application/json' },
-    });
-
-    if (!response.ok) { return []; }
-
-    const voices = await response.json() as Array<{
-      id: string;
-      name: string;
-      description?: string;
-      asset?: {
-        source?: string;
-        preview_url?: string | null;
-        labels?: Array<{ name: string; value: string }>;
-      };
-    }>;
-
-    if (!Array.isArray(voices)) { return []; }
-
-    // Only include voices the user has renamed — these are their characters.
-    // Hedra appends "(Original name: X)" to the description when renamed.
-    const userVoices = voices.filter((v) => {
-      const desc = v.description ?? '';
-      const match = desc.match(/\(Original name: (.+?)\)/);
-      return match !== null && match[1] !== v.name;
-    });
-
-    return userVoices.map((v) => {
-      const labels = v.asset?.labels ?? [];
-      const getLabel = (key: string): string | undefined =>
-        labels.find((l) => l.name === key)?.value;
-
-      const rawGender = getLabel('gender');
-      const gender: 'male' | 'female' | 'neutral' | undefined =
-        rawGender === 'male' || rawGender === 'female' ? rawGender : undefined;
-
-      return {
-        id: v.id,
-        name: v.name,
-        language: getLabel('language') ?? 'English',
-        accent: getLabel('accent'),
-        gender,
-        previewUrl: v.asset?.preview_url ?? undefined,
-        provider: 'hedra' as const,
-      };
-    });
-  } catch (error) {
-    logger.warn('Failed to fetch Hedra voices', {
-      error: error instanceof Error ? error.message : String(error),
-      file: 'video/voices/route.ts',
-    });
-    return [];
-  }
-}
-
-/**
  * Fetch custom cloned voices from Firestore.
  */
 async function fetchCustomVoices(): Promise<VideoVoice[]> {
@@ -177,15 +112,14 @@ export async function GET(request: NextRequest) {
     if (authResult instanceof NextResponse) { return authResult; }
 
     // Fetch all voice sources in parallel
-    const [elevenlabsVoices, unrealVoices, customVoices, hedraVoices] = await Promise.all([
+    const [elevenlabsVoices, unrealVoices, customVoices] = await Promise.all([
       fetchElevenLabsVoices(),
       fetchUnrealSpeechVoices(),
       fetchCustomVoices(),
-      fetchHedraVoices(),
     ]);
 
-    // Order: Custom clones first, then Hedra, ElevenLabs, UnrealSpeech
-    const allVoices = [...customVoices, ...hedraVoices, ...elevenlabsVoices, ...unrealVoices];
+    // Order: Custom clones first, then ElevenLabs, UnrealSpeech
+    const allVoices = [...customVoices, ...elevenlabsVoices, ...unrealVoices];
 
     return NextResponse.json({ success: true, voices: allVoices });
   } catch (error: unknown) {
