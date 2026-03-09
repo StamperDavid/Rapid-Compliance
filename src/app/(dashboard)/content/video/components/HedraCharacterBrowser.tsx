@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { motion } from 'framer-motion';
-import { X, Loader2, Search, Check, Download, AlertCircle } from 'lucide-react';
+import { X, Loader2, Search, Check, Download, AlertCircle, Mic } from 'lucide-react';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
 
@@ -14,6 +14,9 @@ interface HedraCharacter {
   description: string | null;
   imageUrl: string | null;
   thumbnailUrl: string | null;
+  hasVoice: boolean;
+  voiceId: string | null;
+  voiceName: string | null;
   alreadyImported: boolean;
 }
 
@@ -169,6 +172,7 @@ export function HedraCharacterBrowser({ isOpen, onClose, onImportComplete }: Hed
             <p className="text-xs text-zinc-400 mt-0.5">
               {characters.length} characters available
               {availableCount < characters.length && ` · ${characters.length - availableCount} already imported`}
+              {' · '}Stock extras with built-in voices
             </p>
           </div>
           <button
@@ -267,6 +271,14 @@ export function HedraCharacterBrowser({ isOpen, onClose, onImportComplete }: Hed
                     <span className="text-[10px] font-medium text-zinc-300 truncate w-full text-center leading-tight">
                       {character.name}
                     </span>
+
+                    {/* Voice indicator */}
+                    {character.hasVoice && (
+                      <span className="flex items-center gap-0.5 px-1.5 py-0.5 bg-cyan-500/10 rounded text-[9px] text-cyan-300" title={character.voiceName ?? 'Built-in voice'}>
+                        <Mic className="w-2 h-2" />
+                        Voice
+                      </span>
+                    )}
 
                     {/* Already imported badge */}
                     {character.alreadyImported && (

@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { motion } from 'framer-motion';
-import { User, Loader2, AlertCircle, Search, Check, Mic, Sparkles, Trash2, Video, Crown, Library, Star } from 'lucide-react';
+import { User, Loader2, AlertCircle, Search, Check, Mic, Sparkles, Trash2, Video, Crown, Library, Star, Theater } from 'lucide-react';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import { HedraCharacterBrowser } from './HedraCharacterBrowser';
@@ -12,6 +12,9 @@ import { HedraCharacterBrowser } from './HedraCharacterBrowser';
 interface AvatarProfileItem {
   id: string;
   name: string;
+  source: 'custom' | 'hedra';
+  role: 'hero' | 'villain' | 'extra' | 'narrator' | 'presenter' | 'custom';
+  styleTag: 'real' | 'anime' | 'stylized';
   tier: 'premium' | 'standard';
   frontalImageUrl: string;
   additionalImageUrls: string[];
@@ -98,8 +101,18 @@ function AvatarCard({
         {profile.name}
       </span>
 
-      {/* Metadata row */}
+      {/* Role + style + metadata row */}
       <div className="flex items-center gap-1 flex-wrap justify-center">
+        {profile.role && profile.role !== 'presenter' && (
+          <span className="px-1.5 py-0.5 bg-amber-500/10 rounded text-[10px] text-amber-300 capitalize">
+            {profile.role}
+          </span>
+        )}
+        {profile.styleTag && profile.styleTag !== 'real' && (
+          <span className="px-1.5 py-0.5 bg-blue-500/10 rounded text-[10px] text-blue-300 capitalize">
+            {profile.styleTag}
+          </span>
+        )}
         {profile.greenScreenClips?.length > 0 && (
           <span className="flex items-center gap-0.5 px-1.5 py-0.5 bg-purple-500/10 rounded text-[10px] text-purple-300">
             <Video className="w-2.5 h-2.5" />
@@ -126,9 +139,14 @@ function AvatarCard({
         </div>
       )}
 
-      {/* Tier + default + delete badges */}
+      {/* Source + tier + action badges */}
       <span className="absolute top-1.5 right-1.5 flex items-center gap-1">
-        {profile.tier === 'premium' ? (
+        {profile.source === 'hedra' ? (
+          <span className="flex items-center gap-0.5 px-1.5 py-0.5 bg-cyan-500/20 border border-cyan-500/30 text-cyan-400 text-[9px] font-bold rounded">
+            <Theater className="w-2.5 h-2.5" />
+            HEDRA
+          </span>
+        ) : profile.tier === 'premium' ? (
           <span className="flex items-center gap-0.5 px-1.5 py-0.5 bg-purple-500/20 border border-purple-500/30 text-purple-400 text-[9px] font-bold rounded">
             <Crown className="w-2.5 h-2.5" />
             PREMIUM
@@ -136,7 +154,7 @@ function AvatarCard({
         ) : (
           <span className="flex items-center gap-0.5 px-1.5 py-0.5 bg-green-500/20 border border-green-500/30 text-green-400 text-[9px] font-bold rounded">
             <Sparkles className="w-2.5 h-2.5" />
-            STANDARD
+            CUSTOM
           </span>
         )}
         {onToggleFavorite && !isConfirmingDelete && (

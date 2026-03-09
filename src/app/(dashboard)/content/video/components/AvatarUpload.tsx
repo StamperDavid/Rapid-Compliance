@@ -11,13 +11,18 @@ interface AvatarUploadProps {
 
 type UploadPhase = 'idle' | 'uploading' | 'creating' | 'done' | 'error';
 
+type CharacterRole = 'hero' | 'villain' | 'extra' | 'narrator' | 'presenter' | 'custom';
+type CharacterStyleTag = 'real' | 'anime' | 'stylized';
+
 export function AvatarUpload({ onAvatarCreated }: AvatarUploadProps) {
   const authFetch = useAuthFetch();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [phase, setPhase] = useState<UploadPhase>('idle');
   const [error, setError] = useState<string | null>(null);
-  const [avatarName, setAvatarName] = useState('My Avatar');
+  const [avatarName, setAvatarName] = useState('My Character');
+  const [role, setRole] = useState<CharacterRole>('presenter');
+  const [styleTag, setStyleTag] = useState<CharacterStyleTag>('real');
 
   const handleFileSelect = useCallback(async (file: File) => {
     if (!file.type.startsWith('image/')) {
@@ -56,13 +61,16 @@ export function AvatarUpload({ onAvatarCreated }: AvatarUploadProps) {
       // Step 2: Create an Avatar Profile with the uploaded photo
       setPhase('creating');
 
-      const name = avatarName.trim() || 'My Avatar';
+      const name = avatarName.trim() || 'My Character';
       const createResponse = await authFetch('/api/video/avatar-profiles', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name,
           frontalImageUrl: uploadData.url,
+          source: 'custom',
+          role,
+          styleTag,
           isDefault: true,
         }),
       });
@@ -83,7 +91,7 @@ export function AvatarUpload({ onAvatarCreated }: AvatarUploadProps) {
       setPhase('error');
       setError(err instanceof Error ? err.message : 'Failed to create avatar');
     }
-  }, [authFetch, avatarName, onAvatarCreated]);
+  }, [authFetch, avatarName, role, styleTag, onAvatarCreated]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -108,24 +116,57 @@ export function AvatarUpload({ onAvatarCreated }: AvatarUploadProps) {
     <div className="p-5 bg-zinc-800/30 rounded-xl border border-zinc-700/50 space-y-4">
       <div className="flex items-center gap-2 text-sm font-medium text-zinc-300">
         <Upload className="w-4 h-4 text-amber-500" />
-        Create Custom Avatar
+        Create Character
       </div>
 
       <p className="text-xs text-zinc-500">
-        Upload a clear, well-lit headshot. An avatar profile will be created automatically — one step.
+        Upload a reference photo for your character. Set their role and style, then assign a voice in the Voice tab.
       </p>
 
-      {/* Avatar Name */}
+      {/* Character Name */}
       <div>
-        <label className="block text-xs text-zinc-400 mb-1">Avatar Name</label>
+        <label className="block text-xs text-zinc-400 mb-1">Character Name</label>
         <input
           type="text"
           value={avatarName}
           onChange={(e) => setAvatarName(e.target.value)}
-          placeholder="e.g., David - Casual"
+          placeholder="e.g., SalesVelocity Hero"
           className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white text-sm placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-500/50"
           disabled={isProcessing}
         />
+      </div>
+
+      {/* Role + Style Tag */}
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="block text-xs text-zinc-400 mb-1">Role</label>
+          <select
+            value={role}
+            onChange={(e) => setRole(e.target.value as CharacterRole)}
+            className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+            disabled={isProcessing}
+          >
+            <option value="presenter">Presenter</option>
+            <option value="hero">Hero</option>
+            <option value="villain">Villain</option>
+            <option value="narrator">Narrator</option>
+            <option value="extra">Extra</option>
+            <option value="custom">Custom</option>
+          </select>
+        </div>
+        <div>
+          <label className="block text-xs text-zinc-400 mb-1">Style</label>
+          <select
+            value={styleTag}
+            onChange={(e) => setStyleTag(e.target.value as CharacterStyleTag)}
+            className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/50"
+            disabled={isProcessing}
+          >
+            <option value="real">Real / Photorealistic</option>
+            <option value="anime">Anime</option>
+            <option value="stylized">Stylized</option>
+          </select>
+        </div>
       </div>
 
       {/* Photo Drop Zone or Preview */}
