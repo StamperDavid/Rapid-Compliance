@@ -5,6 +5,7 @@
  */
 
 import { NextResponse, type NextRequest } from 'next/server';
+import { z } from 'zod';
 import { getEmail, parseEmailHeaders, getEmailBody, type GmailMessage } from '@/lib/integrations/gmail-service';
 import { classifyReply, sendReplyEmail, type ReplyClassification } from '@/lib/outbound/reply-handler';
 import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
@@ -14,20 +15,25 @@ import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { emitBusinessEvent } from '@/lib/orchestration/event-router';
 
+/**
+ * Lenient Zod schema for a Gmail Pub/Sub push notification.
+ * We validate only the fields this route consumes; Google may send
+ * additional metadata fields which are preserved via .passthrough().
+ */
+const GmailPushMessageSchema = z.object({
+  data: z.string(),
+  messageId: z.string().optional(),
+  publishTime: z.string().optional(),
+}).passthrough();
+
+const GmailPushNotificationSchema = z.object({
+  message: GmailPushMessageSchema,
+  subscription: z.string().optional(),
+}).passthrough();
+
 export const dynamic = 'force-dynamic';
 
 // Type definitions for Gmail webhook payload
-interface GmailPushMessage {
-  data: string;
-  messageId?: string;
-  publishTime?: string;
-}
-
-interface GmailPushNotification {
-  message: GmailPushMessage;
-  subscription?: string;
-}
-
 interface GmailPushData {
   emailAddress: string;
   historyId: string;
@@ -101,14 +107,15 @@ export async function POST(request: NextRequest) {
     }
 
     // Gmail sends push notifications as JSON
-    const body: unknown = await request.json();
+    const rawBody: unknown = await request.json();
 
-    // Type guard for notification structure
-    if (!isGmailPushNotification(body)) {
-      logger.info('Invalid Gmail webhook payload', { route: '/api/webhooks/gmail', notification: JSON.stringify(body) });
-      return NextResponse.json({ success: true }); // Acknowledge but skip
+    const parsed = GmailPushNotificationSchema.safeParse(rawBody);
+    if (!parsed.success) {
+      logger.info('Invalid Gmail webhook payload', { route: '/api/webhooks/gmail', details: JSON.stringify(parsed.error.flatten().fieldErrors) });
+      return NextResponse.json({ success: true }); // Acknowledge but skip per Google Pub/Sub contract
     }
 
+    const body = parsed.data;
     logger.info('Gmail webhook received', { route: '/api/webhooks/gmail', notification: JSON.stringify(body) });
 
     // Decode the message
@@ -184,16 +191,6 @@ export async function POST(request: NextRequest) {
 }
 
 // Type guard functions
-function isGmailPushNotification(value: unknown): value is GmailPushNotification {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    'message' in value &&
-    typeof (value as { message: unknown }).message === 'object' &&
-    (value as { message: unknown }).message !== null
-  );
-}
-
 function isGmailPushData(value: unknown): value is GmailPushData {
   return (
     typeof value === 'object' &&

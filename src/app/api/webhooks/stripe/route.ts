@@ -8,12 +8,29 @@
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { verifyStripeSignature } from '@/lib/security/webhook-verification';
 import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { getSubCollection, getOrdersCollection } from '@/lib/firebase/collections';
+
+/**
+ * Lenient Zod schema for a Stripe webhook event.
+ * We validate only the envelope fields; the data.object payload
+ * varies per event type and is preserved via .passthrough().
+ */
+const StripeEventDataSchema = z.object({
+  object: z.record(z.unknown()),
+}).passthrough();
+
+const StripeWebhookEventSchema = z.object({
+  id: z.string(),
+  type: z.string(),
+  created: z.number(),
+  data: StripeEventDataSchema,
+}).passthrough();
 
 export const dynamic = 'force-dynamic';
 
@@ -31,26 +48,6 @@ interface StripeWebhookEvent {
     object: Record<string, unknown>;
   };
   created: number;
-}
-
-/**
- * Type guard to validate Stripe event structure
- */
-function isStripeEvent(value: unknown): value is StripeWebhookEvent {
-  if (typeof value !== 'object' || value === null) {
-    return false;
-  }
-
-  const event = value as Record<string, unknown>;
-
-  return (
-    typeof event.id === 'string' &&
-    typeof event.type === 'string' &&
-    typeof event.created === 'number' &&
-    typeof event.data === 'object' &&
-    event.data !== null &&
-    typeof (event.data as Record<string, unknown>).object === 'object'
-  );
 }
 
 /**
@@ -129,17 +126,21 @@ export async function POST(request: NextRequest) {
     }
 
     // Parse the verified payload
-    const body: unknown = JSON.parse(rawBody);
+    const rawParsed: unknown = JSON.parse(rawBody);
 
-    if (!isStripeEvent(body)) {
+    const parsedEvent = StripeWebhookEventSchema.safeParse(rawParsed);
+    if (!parsedEvent.success) {
       logger.warn('Invalid Stripe event structure', {
         route: '/api/webhooks/stripe',
-        receivedData: JSON.stringify(body),
+        details: JSON.stringify(parsedEvent.error.flatten().fieldErrors),
       });
-      return errors.badRequest('Invalid Stripe event structure');
+      return NextResponse.json(
+        { error: 'Invalid request', details: parsedEvent.error.flatten().fieldErrors },
+        { status: 400 },
+      );
     }
 
-    const event: StripeWebhookEvent = body;
+    const event: StripeWebhookEvent = parsedEvent.data;
 
     logger.info('Stripe webhook received', {
       route: '/api/webhooks/stripe',

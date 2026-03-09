@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: false,
       error: 'Failed to generate revenue forecast',
-      message: (error as Error).message
+      message: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
   }
 }

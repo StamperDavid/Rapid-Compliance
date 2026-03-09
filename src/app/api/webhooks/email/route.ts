@@ -4,6 +4,7 @@
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import {
   handleEmailBounce,
   handleEmailOpen,
@@ -14,6 +15,27 @@ import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { verifySendGridSignature } from '@/lib/security/webhook-verification';
+
+/**
+ * Lenient Zod schema for a single SendGrid event object.
+ * We validate only the fields this route consumes; all other
+ * SendGrid fields are preserved via .passthrough().
+ */
+const SendGridEventSchema = z.object({
+  email: z.string(),
+  timestamp: z.number(),
+  event: z.string(),
+  sg_event_id: z.string(),
+  sg_message_id: z.string(),
+  url: z.string().optional(),
+  reason: z.string().optional(),
+  type: z.string().optional(),
+  status: z.string().optional(),
+  enrollmentId: z.string().optional(),
+  stepId: z.string().optional(),
+}).passthrough();
+
+const SendGridWebhookPayloadSchema = z.array(SendGridEventSchema);
 
 export const dynamic = 'force-dynamic';
 
@@ -157,14 +179,18 @@ export async function POST(request: NextRequest) {
     // Parse the verified payload
     const body: unknown = JSON.parse(rawBody);
 
-    if (!Array.isArray(body)) {
-      return errors.badRequest('Invalid webhook format');
+    const parsed = SendGridWebhookPayloadSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: 'Invalid request', details: parsed.error.flatten().fieldErrors },
+        { status: 400 },
+      );
     }
 
-    logger.info('Email webhook received', { route: '/api/webhooks/email', eventCount: body.length });
+    logger.info('Email webhook received', { route: '/api/webhooks/email', eventCount: parsed.data.length });
 
     // Validate and type-narrow the incoming payload
-    const validatedEvents = validateSendGridWebhookPayload(body);
+    const validatedEvents = validateSendGridWebhookPayload(parsed.data);
 
     if (validatedEvents.length === 0) {
       logger.warn('No valid SendGrid events found in webhook payload', { route: '/api/webhooks/email' });

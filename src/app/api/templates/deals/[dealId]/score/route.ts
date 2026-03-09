@@ -79,7 +79,7 @@ export async function POST(
     return NextResponse.json({
       success: false,
       error: 'Failed to calculate deal score',
-      message: (error as Error).message
+      message: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
   }
 }

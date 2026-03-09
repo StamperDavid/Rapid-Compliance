@@ -20,7 +20,7 @@ import { logger } from '@/lib/logger/logger';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import {
   generatePerformanceAnalytics,
-  validatePerformanceAnalyticsRequest,
+  PerformanceAnalyticsRequestSchema,
   type PerformanceAnalyticsRequest,
   type TeamPerformanceAnalytics,
 } from '@/lib/performance';
@@ -145,21 +145,20 @@ export async function POST(request: NextRequest) {
 
     // 1. Parse and validate request
     const body: unknown = await request.json();
-    
-    let validatedRequest: PerformanceAnalyticsRequest;
-    try {
-      validatedRequest = validatePerformanceAnalyticsRequest(body) as PerformanceAnalyticsRequest;
-    } catch (error) {
-      logger.warn('Invalid performance analytics request', { error: error instanceof Error ? error.message : String(error) });
+
+    const parsed = PerformanceAnalyticsRequestSchema.safeParse(body);
+    if (!parsed.success) {
+      logger.warn('Invalid performance analytics request', { error: parsed.error.message });
       return NextResponse.json(
         {
           success: false,
           error: 'INVALID_REQUEST',
-          message: error instanceof Error ? error.message : 'Invalid request data',
+          details: parsed.error.flatten().fieldErrors,
         },
         { status: 400 }
       );
     }
+    const validatedRequest: PerformanceAnalyticsRequest = parsed.data;
     
     // 2. Check rate limit
     const rateLimit = checkRateLimit();

@@ -7,6 +7,7 @@
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
 import { logger } from '@/lib/logger/logger';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
@@ -22,7 +23,12 @@ import { getSlackWorkspacesCollection } from '@/lib/firebase/collections';
 
 export const dynamic = 'force-dynamic';
 
-// Type-safe interfaces for request bodies
+const updateMappingBodySchema = z.object({
+  mappingId: z.string().min(1, 'mappingId is required'),
+  updates: updateChannelMappingSchema,
+});
+
+// Type-safe interface for POST request body
 interface CreateMappingRequestBody {
   workspaceId: string;
   category: string;
@@ -31,16 +37,6 @@ interface CreateMappingRequestBody {
   minPriority?: string;
   enabled?: boolean;
   userId?: string;
-}
-
-interface UpdateMappingRequestBody {
-  mappingId: string;
-  updates: {
-    channelId?: string;
-    channelName?: string;
-    minPriority?: string;
-    enabled?: boolean;
-  };
 }
 
 // Type guard for Error objects
@@ -267,29 +263,21 @@ export async function PUT(request: NextRequest) {
       return rateLimitResponse;
     }
 
-    // Parse request body
-    const body = (await request.json()) as UpdateMappingRequestBody;
-    const mappingId = body.mappingId;
+    // Parse and validate request body
+    const rawBody: unknown = await request.json();
+    const validation = updateMappingBodySchema.safeParse(rawBody);
 
-    if (!mappingId) {
-      return NextResponse.json(
-        { error: 'Missing mappingId' },
-        { status: 400 }
-      );
-    }
-
-    // Validate updates
-    const validation = updateChannelMappingSchema.safeParse(body.updates);
-    
     if (!validation.success) {
       return NextResponse.json(
         {
-          error: 'Validation failed',
-          details: validation.error.errors,
+          error: 'Invalid request',
+          details: validation.error.flatten().fieldErrors,
         },
         { status: 400 }
       );
     }
+
+    const { mappingId, updates: validatedUpdates } = validation.data;
     
     // Find mapping (we need to search since we don't know the org ID)
     const orgsSnapshot = await db.collection('organizations').get();
@@ -321,13 +309,13 @@ export async function PUT(request: NextRequest) {
     
     // Update mapping
     await db.doc(`${mappingsPath}/${mappingId}`).update({
-      ...validation.data,
+      ...validatedUpdates,
       updatedAt: Timestamp.now(),
     });
-    
+
     logger.info('Updated Slack channel mapping', {
       mappingId,
-      updates: Object.keys(validation.data),
+      updates: Object.keys(validatedUpdates),
     });
 
     return NextResponse.json({
