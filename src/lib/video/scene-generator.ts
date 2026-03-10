@@ -11,97 +11,50 @@ import type { PipelineScene, SceneGenerationResult, VideoEngineId } from '@/type
 import type { VideoAspectRatio } from '@/types/video';
 
 // ============================================================================
-// TTS Audio Synthesis
+// Default Hedra Voice Fallback
 // ============================================================================
 
 /**
- * Synthesize TTS audio for a script and store it in Firestore so it can be
- * served via a public URL.  ElevenLabs is the universal TTS engine; UnrealSpeech
- * is supported as an alternative when voiceProvider is 'unrealspeech'.
- *
- * Returns a public URL (`/api/video/tts-audio/<id>`) or throws on failure.
+ * Fetch the first available Hedra voice from their public catalog.
+ * Used as a fallback when no voice is explicitly set on the project or avatar.
+ * Since Hedra is the only engine, every generation must have a voice.
+ * Caches the result in a singleton promise so concurrent calls don't race.
  */
-async function synthesizeTTSAudio(
-  script: string,
-  voiceId: string,
-  voiceProvider: 'elevenlabs' | 'unrealspeech' | 'custom' | 'hedra' | undefined,
-  sceneId: string
-): Promise<string> {
-  const { apiKeyService } = await import('@/lib/api-keys/api-key-service');
-  const { PLATFORM_ID } = await import('@/lib/constants/platform');
-  const { adminDb } = await import('@/lib/firebase/admin');
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://rapidcompliance.us';
+let defaultHedraVoicePromise: Promise<{ id: string; name: string } | null> | null = null;
 
-  // UnrealSpeech path — returns a public OutputUri directly, no Firestore storage needed
-  if (voiceProvider === 'unrealspeech') {
-    const { UnrealProvider } = await import('@/lib/voice/tts/providers/unreal-provider');
-    const rawKey = await apiKeyService.getServiceKey(PLATFORM_ID, 'unrealSpeech');
-    const apiKey = typeof rawKey === 'string' ? rawKey : undefined;
-    const provider = new UnrealProvider(apiKey);
-    const ttsResult = await provider.synthesize(script, voiceId);
+function getDefaultHedraVoice(): Promise<{ id: string; name: string } | null> {
+  defaultHedraVoicePromise ??= fetchDefaultHedraVoice();
+  return defaultHedraVoicePromise;
+}
 
-    // UnrealSpeech returns an OutputUri — store it in Firestore so we have a
-    // consistent /api/video/tts-audio/<id> URL shape for all providers.
-    if (!adminDb) {
-      throw new Error('Firestore adminDb not available');
-    }
-    const audioId = `tts-unrealspeech-${sceneId}-${Date.now()}`;
-    await adminDb
-      .collection(`organizations/${PLATFORM_ID}/tts_audio`)
-      .doc(audioId)
-      .set({
-        outputUri: ttsResult.audio, // public URL returned by Unreal
-        contentType: 'audio/mpeg',
-        createdAt: new Date(),
-        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
-      });
+async function fetchDefaultHedraVoice(): Promise<{ id: string; name: string } | null> {
+  try {
+    const { apiKeyService } = await import('@/lib/api-keys/api-key-service');
+    const { PLATFORM_ID } = await import('@/lib/constants/platform');
+    const rawKey = await apiKeyService.getServiceKey(PLATFORM_ID, 'hedra');
+    if (!rawKey || typeof rawKey !== 'string') { return null; }
 
-    return `${appUrl}/api/video/tts-audio/${audioId}`;
-  }
-
-  // Guard: Hedra voice IDs cannot be synthesized via ElevenLabs
-  if (voiceProvider === 'hedra') {
-    throw new Error('Hedra voices use native TTS — they cannot be synthesized via external providers. Check voiceProvider configuration.');
-  }
-
-  // Guard: voice ID is required for external TTS
-  if (!voiceId) {
-    throw new Error('No voice ID provided for TTS synthesis. Please select a voice.');
-  }
-
-  // ElevenLabs path (also used for 'custom' and undefined — ElevenLabs is universal)
-  const { ElevenLabsProvider } = await import('@/lib/voice/tts/providers/elevenlabs-provider');
-  const rawKey = await apiKeyService.getServiceKey(PLATFORM_ID, 'elevenlabs');
-  const apiKey = typeof rawKey === 'string' ? rawKey : null;
-
-  if (!apiKey) {
-    throw new Error('ElevenLabs API key not configured. Hedra requires TTS audio.');
-  }
-
-  const provider = new ElevenLabsProvider(apiKey);
-  const ttsResult = await provider.synthesize(script, voiceId);
-
-  // ElevenLabs returns data URI — strip the header to get raw base64
-  const audioBase64 = ttsResult.audio.includes(',')
-    ? ttsResult.audio.split(',')[1]
-    : ttsResult.audio;
-
-  if (!adminDb) {
-    throw new Error('Firestore adminDb not available');
-  }
-
-  const audioId = `tts-hedra-${sceneId}-${Date.now()}`;
-  await adminDb
-    .collection(`organizations/${PLATFORM_ID}/tts_audio`)
-    .doc(audioId)
-    .set({
-      base64: audioBase64,
-      contentType: 'audio/mpeg',
-      createdAt: new Date(),
-      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+    const response = await fetch('https://api.hedra.com/web-app/public/voices', {
+      headers: { 'x-api-key': rawKey, 'Accept': 'application/json' },
     });
 
-  return `${appUrl}/api/video/tts-audio/${audioId}`;
+    if (!response.ok) { return null; }
+
+    const voices = (await response.json()) as { id: string; name: string }[];
+    if (!Array.isArray(voices) || voices.length === 0) { return null; }
+
+    const defaultVoice = { id: voices[0].id, name: voices[0].name };
+    logger.info('Cached default Hedra voice for fallback', {
+      voiceId: defaultVoice.id,
+      voiceName: defaultVoice.name,
+      file: 'scene-generator.ts',
+    });
+    return defaultVoice;
+  } catch {
+    // Reset so next call retries
+    defaultHedraVoicePromise = null;
+    return null;
+  }
 }
 
 // ============================================================================
@@ -111,19 +64,17 @@ async function synthesizeTTSAudio(
 /**
  * Generate a talking-head avatar scene using Hedra Character-3.
  *
- * Two audio paths:
- *   - **Hedra voice** (voiceProvider === 'hedra') → Hedra native TTS via `audio_generation`
- *   - **ElevenLabs/UnrealSpeech** → synthesize audio ourselves, upload via `audio_id`
+ * Hedra is the sole video engine. All TTS is handled natively by Hedra —
+ * pass voice_id + text directly, no external TTS (ElevenLabs/UnrealSpeech) needed.
+ * Custom characters get their voice from the voice sample uploaded during creation.
  */
 async function generateWithHedra(
   scene: PipelineScene,
   avatarId: string,
   voiceId: string,
   aspectRatio: VideoAspectRatio,
-  voiceProvider?: 'elevenlabs' | 'unrealspeech' | 'custom' | 'hedra'
 ): Promise<SceneGenerationResult> {
   const script = scene.scriptText.trim() || ' ';
-  const useHedraTTS = voiceProvider === 'hedra' && Boolean(voiceId);
 
   // Load avatar profile for the frontal photo
   const { getDefaultProfile, getAvatarProfile } = await import('@/lib/video/avatar-profile-service');
@@ -157,98 +108,7 @@ async function generateWithHedra(
     };
   }
 
-  // Map aspect ratio — Hedra does not support 4:3
-  const hedraAspectRatio = aspectRatio === '4:3' ? '16:9' : aspectRatio;
-
-  // Path A: Hedra native TTS — pass voice_id + text directly, no audio upload needed
-  if (useHedraTTS && script.length > 1) {
-    logger.info('Using Hedra native TTS for scene', {
-      sceneId: scene.id,
-      voiceId,
-      scriptLength: script.length,
-      file: 'scene-generator.ts',
-    });
-
-    const response = await generateHedraAvatarVideo(photoUrl, null, {
-      textPrompt: scene.visualDescription?.trim() ?? '',
-      aspectRatio: hedraAspectRatio,
-      durationMs: scene.duration * 1000,
-      hedraVoiceId: voiceId,
-      speechText: script,
-    });
-
-    logger.info('Hedra generation started (native TTS)', {
-      sceneId: scene.id,
-      generationId: response.generationId,
-      file: 'scene-generator.ts',
-    });
-
-    return {
-      sceneId: scene.id,
-      providerVideoId: response.generationId,
-      provider: 'hedra',
-      status: 'generating',
-      videoUrl: null,
-      thumbnailUrl: null,
-      progress: 0,
-      error: null,
-    };
-  }
-
-  // Path B: External TTS (ElevenLabs/UnrealSpeech) — synthesize audio, upload to Hedra
-  let audioUrl: string | null = null;
-  if (script.length > 1) {
-    // Guard: cannot use ElevenLabs/UnrealSpeech without a valid voice ID
-    if (!voiceId) {
-      return {
-        sceneId: scene.id,
-        providerVideoId: '',
-        provider: 'hedra',
-        status: 'failed',
-        videoUrl: null,
-        thumbnailUrl: null,
-        progress: 0,
-        error: 'No voice selected. Please choose a voice in Pre-Production before generating.',
-      };
-    }
-
-    // Guard: Hedra voice IDs cannot be used with external TTS providers
-    if (voiceProvider === 'hedra') {
-      return {
-        sceneId: scene.id,
-        providerVideoId: '',
-        provider: 'hedra',
-        status: 'failed',
-        videoUrl: null,
-        thumbnailUrl: null,
-        progress: 0,
-        error: 'Hedra voice selected but native TTS path was not used. Check voice configuration.',
-      };
-    }
-
-    try {
-      audioUrl = await synthesizeTTSAudio(script, voiceId, voiceProvider, scene.id);
-    } catch (ttsError) {
-      const errorMsg = ttsError instanceof Error ? ttsError.message : String(ttsError);
-      logger.error('TTS synthesis failed for Hedra scene', ttsError instanceof Error ? ttsError : new Error(errorMsg), {
-        sceneId: scene.id,
-        voiceProvider: voiceProvider ?? 'elevenlabs',
-        file: 'scene-generator.ts',
-      });
-      return {
-        sceneId: scene.id,
-        providerVideoId: '',
-        provider: 'hedra',
-        status: 'failed',
-        videoUrl: null,
-        thumbnailUrl: null,
-        progress: 0,
-        error: `Voice synthesis failed: ${errorMsg}`,
-      };
-    }
-  }
-
-  if (!audioUrl) {
+  if (!voiceId) {
     return {
       sceneId: scene.id,
       providerVideoId: '',
@@ -257,21 +117,31 @@ async function generateWithHedra(
       videoUrl: null,
       thumbnailUrl: null,
       progress: 0,
-      error: 'Audio synthesis required for Hedra but no audio was generated.',
+      error: 'No Hedra voice resolved. The character may be missing a voice — re-sync or choose a voice.',
     };
   }
 
-  // Submit to Hedra Character-3 with uploaded audio
-  const response = await generateHedraAvatarVideo(photoUrl, audioUrl, {
+  // Map aspect ratio — Hedra does not support 4:3
+  const hedraAspectRatio = aspectRatio === '4:3' ? '16:9' : aspectRatio;
+
+  logger.info('Using Hedra native TTS for scene', {
+    sceneId: scene.id,
+    voiceId,
+    scriptLength: script.length,
+    file: 'scene-generator.ts',
+  });
+
+  const response = await generateHedraAvatarVideo(photoUrl, null, {
     textPrompt: scene.visualDescription?.trim() ?? '',
     aspectRatio: hedraAspectRatio,
     durationMs: scene.duration * 1000,
+    hedraVoiceId: voiceId,
+    speechText: script,
   });
 
-  logger.info('Hedra generation started (uploaded audio)', {
+  logger.info('Hedra generation started', {
     sceneId: scene.id,
     generationId: response.generationId,
-    modelId: response.modelId,
     file: 'scene-generator.ts',
   });
 
@@ -378,16 +248,39 @@ export async function generateScene(
       // Profile load failed — continue with passed-in params
     }
 
+    // ── Hedra voice fallback ──────────────────────────────────────────────
+    // Hedra is the only engine. If we still have no voice after checking
+    // project-level, scene-level, AND avatar profile, fetch a default
+    // Hedra voice from their catalog so generation never fails silently.
+    if (!resolvedVoiceId) {
+      const fallback = await getDefaultHedraVoice();
+      if (fallback) {
+        resolvedVoiceId = fallback.id;
+        resolvedVoiceProvider = 'hedra';
+        logger.info('Using default Hedra voice fallback (no voice configured)', {
+          sceneId: scene.id,
+          voiceId: fallback.id,
+          voiceName: fallback.name,
+          file: 'scene-generator.ts',
+        });
+      }
+    }
+
+    // If voice provider is still not set but we have a voice, default to hedra
+    if (resolvedVoiceId && !resolvedVoiceProvider) {
+      resolvedVoiceProvider = 'hedra';
+    }
+
     logger.info('Generating scene with Hedra', {
       sceneId: scene.id,
       avatarId: effectiveAvatarId,
       sceneOverride: Boolean(scene.avatarId),
-      voiceProvider: resolvedVoiceProvider ?? 'elevenlabs',
+      voiceProvider: resolvedVoiceProvider ?? 'hedra',
       scriptLength: scene.scriptText?.length ?? 0,
       file: 'scene-generator.ts',
     });
 
-    return await generateWithHedra(scene, effectiveAvatarId, resolvedVoiceId, aspectRatio, resolvedVoiceProvider);
+    return await generateWithHedra(scene, effectiveAvatarId, resolvedVoiceId, aspectRatio);
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     logger.error('Scene generation failed', error as Error, {
@@ -472,7 +365,7 @@ export async function pollSceneStatus(
 
 /**
  * Generate all scenes with a concurrency limit of 3.
- * All scenes are staggered by 1.5 s to avoid ElevenLabs rate limits.
+ * All scenes are staggered by 1.5 s to avoid Hedra rate limits.
  */
 export async function generateAllScenes(
   scenes: PipelineScene[],
