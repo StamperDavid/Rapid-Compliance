@@ -158,7 +158,9 @@ export function MerchantOrchestrator() {
   const getWelcomeMessage = (): string => {
     const displayName = ownerName ?? 'there';
     const businessName = profile?.name ?? COMPANY_CONFIG.name;
-    const industryContext = industryPersona.industryDisplayName;
+    // Prefer stored blueprint industry name (more specific, e.g., "Dental Practices") over hardcoded persona
+    const industryContext = storedPersona?.industryBlueprint?.industryDisplayName
+      ?? industryPersona.industryDisplayName;
 
     // Build system status naturally
     const buildSystemContext = (): string => {
@@ -205,7 +207,7 @@ ${recommendation} What would you like to focus on?`;
 
     return Promise.resolve(`Here's where things stand for ${businessName}:
 
-Lead scanning is active and I'm tracking prospects in the ${industryPersona.industryDisplayName.toLowerCase()} vertical. ${emailConnected ? 'Email is connected and ready for outreach.' : "Email isn't connected yet - we can set that up when you're ready to start outreach campaigns."}
+Lead scanning is active and I'm tracking prospects in the ${(storedPersona?.industryBlueprint?.industryDisplayName ?? industryPersona.industryDisplayName).toLowerCase()} vertical. ${emailConnected ? 'Email is connected and ready for outreach.' : "Email isn't connected yet - we can set that up when you're ready to start outreach campaigns."}
 
 Based on your setup, ${recommendation.toLowerCase()} looks like the next high-impact move. Want me to get started on that?`);
   };
