@@ -34,10 +34,40 @@ interface MerchantProfile {
   hasSeenWelcome?: boolean;
 }
 
+interface IndustryBlueprintData {
+  id?: string;
+  industryDisplayName?: string;
+  partnerTitle?: string;
+  traits?: {
+    tone: string;
+    decisionStyle: string;
+    primary: string;
+    secondary: string;
+  };
+  communicationStyle?: {
+    sentenceStyle: string;
+    jargonLevel: string;
+    urgencyLevel: string;
+    focusArea: string;
+    keyPhrases: string[];
+  };
+  greetingVariants?: string[];
+  specialistTriggers?: Record<string, string[]>;
+}
+
+interface StoredPersona {
+  industryBlueprint?: IndustryBlueprintData;
+  industryCategory?: string;
+  tone?: string;
+  greeting?: string;
+  [key: string]: unknown;
+}
+
 export function MerchantOrchestrator() {
   const { user } = useAuth();
   const { setContext, hasSeenWelcome } = useOrchestratorStore();
   const [profile, setProfile] = useState<MerchantProfile | null>(null);
+  const [storedPersona, setStoredPersona] = useState<StoredPersona | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [healthReport, setHealthReport] = useState<SystemHealthReport | null>(null);
   const [implSystemPrompt, setImplSystemPrompt] = useState<string | null>(null);
@@ -89,7 +119,12 @@ export function MerchantOrchestrator() {
       }
 
       try {
-        const orgDoc = await getDoc(doc(db, 'organizations', PLATFORM_ID));
+        // Load org profile and persona in parallel
+        const [orgDoc, personaDoc] = await Promise.all([
+          getDoc(doc(db, 'organizations', PLATFORM_ID)),
+          getDoc(doc(db, 'organizations', PLATFORM_ID, 'agentPersona', 'current')).catch(() => null),
+        ]);
+
         if (orgDoc.exists()) {
           const data = orgDoc.data() as MerchantProfile;
           setProfile({
@@ -100,6 +135,10 @@ export function MerchantOrchestrator() {
             ownerName: data.ownerName,
             hasSeenWelcome: data.hasSeenWelcome,
           });
+        }
+
+        if (personaDoc?.exists()) {
+          setStoredPersona(personaDoc.data() as StoredPersona);
         }
       } catch (error) {
         logger.error('Error fetching merchant profile', error instanceof Error ? error : new Error(String(error)));
@@ -181,6 +220,31 @@ Based on your setup, ${recommendation.toLowerCase()} looks like the next high-im
 
     // Add industry persona
     prompt += `\n\n${buildPersonaSystemPrompt(ASSISTANT_NAME, ownerName, (profile?.industry as IndustryType) ?? 'custom', 'client')}`;
+
+    // Overlay Firestore-stored persona blueprint (from onboarding) on top of hardcoded persona
+    const blueprint = storedPersona?.industryBlueprint;
+    if (blueprint) {
+      const parts: string[] = ['INDUSTRY PERSONA ENRICHMENT (from onboarding):'];
+      if (blueprint.traits) {
+        parts.push(`Tone: ${blueprint.traits.tone}`);
+        parts.push(`Decision Style: ${blueprint.traits.decisionStyle}`);
+        parts.push(`Primary Trait: ${blueprint.traits.primary}`);
+        parts.push(`Secondary Trait: ${blueprint.traits.secondary}`);
+      }
+      if (blueprint.communicationStyle) {
+        parts.push(`Sentence Style: ${blueprint.communicationStyle.sentenceStyle}`);
+        parts.push(`Jargon Level: ${blueprint.communicationStyle.jargonLevel}`);
+        parts.push(`Urgency Level: ${blueprint.communicationStyle.urgencyLevel}`);
+        parts.push(`Focus Area: ${blueprint.communicationStyle.focusArea}`);
+        if (blueprint.communicationStyle.keyPhrases.length > 0) {
+          parts.push(`Key Phrases to Use: ${blueprint.communicationStyle.keyPhrases.join(', ')}`);
+        }
+      }
+      if (blueprint.partnerTitle) {
+        parts.push(`Your Role Title: ${blueprint.partnerTitle}`);
+      }
+      prompt += `\n\n${parts.join('\n')}`;
+    }
 
     // Add Implementation Guide context if available (pre-built server-side)
     if (implSystemPrompt) {
