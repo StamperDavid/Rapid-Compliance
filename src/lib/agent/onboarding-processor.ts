@@ -13,6 +13,31 @@ import { processKnowledgeBase, type KnowledgeProcessorOptions } from './knowledg
 import { buildBaseModel, saveBaseModel } from './base-model-builder';
 import { logger } from '@/lib/logger/logger';
 import { getSubCollection } from '@/lib/firebase/collections';
+import { getIndustryPersonaBlueprint } from '@/lib/db/provisioner/blueprints';
+
+// =============================================================================
+// ONBOARDING CATEGORY → PERSONA BLUEPRINT MAPPING
+// =============================================================================
+// Maps the 15 onboarding industry categories to the 12 persona blueprint IDs.
+// This connects the user's industry selection to the pre-built personality profiles.
+
+const CATEGORY_TO_BLUEPRINT: Record<string, string> = {
+  real_estate: 'real_estate',
+  design_construction: 'service',
+  healthcare_medical: 'service',
+  fitness_wellness: 'service',
+  home_services: 'service',
+  technology_saas: 'sales',
+  ecommerce_retail: 'ecommerce',
+  marketing_agencies: 'sales',
+  legal_services: 'legal',
+  financial_services: 'finance',
+  business_services: 'sales',
+  hospitality_food: 'hospitality',
+  nonprofit: 'nonprofit',
+  automotive: 'manufacturing',
+  social_media: 'ecommerce',
+};
 
 // Dynamic import of AdminFirestoreService to prevent client-side bundling
 
@@ -40,7 +65,21 @@ export async function processOnboarding(
   try {
     const { onboardingData, userId } = options;
 
-    // Step 1: Build persona from onboarding data
+    // Step 0: Resolve industry persona blueprint
+    const categoryId = onboardingData.industryCategory ?? onboardingData.industry ?? 'other';
+    const blueprintId = CATEGORY_TO_BLUEPRINT[categoryId] ?? 'custom';
+    const blueprint = getIndustryPersonaBlueprint(blueprintId);
+
+    if (blueprint) {
+      logger.info('[Onboarding] Industry blueprint loaded', {
+        categoryId,
+        blueprintId,
+        displayName: blueprint.industryDisplayName,
+        file: 'onboarding-processor.ts',
+      });
+    }
+
+    // Step 1: Build persona from onboarding data + industry blueprint
     const persona = buildPersonaFromOnboarding(onboardingData);
 
     // Step 2: Process knowledge base
@@ -71,15 +110,41 @@ export async function processOnboarding(
       industryTemplateId: onboardingData.industryTemplateId, // Now properly wired!
     });
     
+    // Step 3b: Enrich persona with industry blueprint
+    if (blueprint) {
+      // Use blueprint tone if user didn't specify one
+      if (!onboardingData.communicationStyle) {
+        persona.tone = blueprint.traits.tone;
+      }
+
+      // Use blueprint greeting if user didn't provide one
+      if (!onboardingData.greetingMessage && blueprint.greetingVariants.length > 0) {
+        persona.greeting = blueprint.greetingVariants[0];
+      }
+    }
+
     // Step 4: Save everything to Firestore using Admin SDK (bypasses security rules)
     const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
     
-    // Save persona
+    // Save persona (enriched with blueprint traits)
     await AdminFirestoreService.set(
       getSubCollection('agentPersona'),
       'current',
       {
         ...persona,
+        // Industry blueprint metadata for agent runtime
+        ...(blueprint && {
+          industryBlueprint: {
+            id: blueprint.id,
+            industryDisplayName: blueprint.industryDisplayName,
+            partnerTitle: blueprint.partnerTitle,
+            traits: blueprint.traits,
+            communicationStyle: blueprint.communicationStyle,
+            greetingVariants: blueprint.greetingVariants,
+            statusUpdates: blueprint.statusUpdates,
+            specialistTriggers: blueprint.specialistTriggers,
+          },
+        }),
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       },
