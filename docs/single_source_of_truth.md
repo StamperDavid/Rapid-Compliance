@@ -1,7 +1,7 @@
 # SalesVelocity.ai - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** March 10, 2026 (Onboarding overhaul: industry persona blueprints, auto-resolve templates, 15-category wizard, feature module defaults)
+**Last Updated:** March 10, 2026 (Video retry fix, auto-sync Hedra avatars, avatar image fallback, onboarding overhaul)
 **Branches:** `dev` (latest)
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Architecture:** Single-Tenant Penthouse Model (development strategy — multi-tenant SaaS product)
@@ -138,7 +138,7 @@ The Claude Code Governance Layer defines binding operational constraints for AI-
 | Single-tenant architecture | **COMPLETE** — Firebase kill-switch, PLATFORM_ID constant, workspace paths eradicated (53 files migrated) |
 | 4-role RBAC | **ENFORCED** — `requireRole()` on ~347/355 API routes (8 intentionally public), sidebar filtering, 47 permissions |
 | Agent hierarchy | **100% COMPLETE** — 52 agents (46 swarm + 6 standalone), all managers orchestrate all specialists |
-| Jasper delegation | **COMPLETE** — 47 tools (13 delegate_to_*, 34 utility). Mission Control SSE streaming live |
+| Jasper delegation | **COMPLETE** — 48 tools (13 delegate_to_*, 35 utility incl. assemble_video). Mission Control SSE streaming live |
 | Lead Research | **COMPLETE** — Unified 3-column page with AI chat, results panel, URL sources. 5 API routes, 8-tool AI subset |
 | Type safety | **CLEAN** — `tsc --noEmit` passes, zero `any` types, zero `@ts-ignore`, zero `@ts-expect-error` |
 | Build pipeline | **CLEAN** — `npm run build` passes, `npm run lint` zero warnings, 17 eslint-disable (ratcheted) |
@@ -526,12 +526,12 @@ SalesVelocity.ai is a **multi-tenant SaaS product** currently running on the Pen
 - `/scraper` → `/leads/research` (March 5 — consolidated into Lead Research)
 
 **Video & Voice Lab:**
-- `/content/video` (Video Studio — OVERHAUL PLANNED: Hedra-only engine + Character Studio + AI Video Director)
+- `/content/video` (Video Studio — Hedra-only engine + Character Studio + AI Video Director)
 - `/content/video/library` (Video Library gallery with grid view, filter tabs, detail expansion, edit/download/delete actions)
 - `/content/voice-lab` (Voice Lab — recording studio, voice library with ElevenLabs voices, AI music generation)
-- **Character Studio** (PLANNED) — reusable character library with persistent identity, reference images, green screen clips, voice assignment, style tags
-- **Video Production Agent** (PLANNED) — Jasper-delegated agent: script → Hedra prompts → generate → stitch → review/approve cycle
-- **Current Status: BROKEN** — multi-engine TTS routing fails, stock avatar URLs expired, engine selection bypassed. See CONTINUATION_PROMPT.md for overhaul plan.
+- **Character Studio** — reusable character library: custom + Hedra stock characters, reference images, green screen clips, voice assignment, role/style tags. Auto-syncs all Hedra characters into avatar picker on mount.
+- **AI Video Director** — `produce_video` and `assemble_video` Jasper tools, per-scene character assignment, Hedra prompt translator, scene review workflow (approve/reject/feedback/regenerate), brand preference memory.
+- **Current Status: FUNCTIONAL** — Hedra sole engine. Phases 1-3 complete (March 9). Phase 4 (polish) remaining.
 
 **Growth Command Center (NEW March 2):**
 - `/growth/command-center` — Overview dashboard: stat cards (competitors, keywords, AI visibility), competitive landscape, keyword movers, strategy status, activity feed
@@ -750,7 +750,7 @@ These agents operate independently of the L1/L2/L3 swarm hierarchy:
 
 | Agent | Type | Path | Status | Description |
 |-------|------|------|--------|-------------|
-| Jasper | Internal AI Assistant & Swarm Commander | Firestore `goldenMasters/` + `src/lib/orchestrator/jasper-tools.ts` | FUNCTIONAL | Jasper — the founder's internal AI assistant and swarm commander. **53 tools** across delegation, intelligence, content, and platform categories. Delegates to all 9 domain managers via `delegate_to_*` tools. Does NOT handle customer-facing sales (that's the AI Chat Sales Agent). Relays Growth Strategist briefings. |
+| Jasper | Internal AI Assistant & Swarm Commander | Firestore `goldenMasters/` + `src/lib/orchestrator/jasper-tools.ts` | FUNCTIONAL | Jasper — the founder's internal AI assistant and swarm commander. **48 tools** across delegation, intelligence, content, video, and platform categories. Delegates to all 9 domain managers via `delegate_to_*` tools. Video: `produce_video` + `assemble_video`. Does NOT handle customer-facing sales (that's the AI Chat Sales Agent). Relays Growth Strategist briefings. |
 | AI Chat Sales Agent | Customer-Facing Sales Agent | `src/lib/agents/sales-chat/specialist.ts` | FUNCTIONAL | Customer-facing AI sales agent for website chat widget and Facebook Messenger. Sells SalesVelocity.ai as a **multi-tenant SaaS subscription**. Uses its own Golden Master separate from Jasper. Setup: `scripts/setup-sales-agent-golden-master.js`. Routes: `/api/chat/public`, `/api/chat/facebook`. |
 | Growth Strategist | Chief Growth Officer | `src/lib/agents/growth-strategist/specialist.ts` | FUNCTIONAL | Cross-domain business intelligence agent. Aggregates data from all analytics sources (revenue, SEO, social, email, pipeline). Produces strategic directives for domain managers. Briefings accessible through Jasper. Data aggregator: `src/lib/agents/growth-strategist/data-aggregator.ts`. |
 | Voice Agent Handler | Voice AI Agent | `src/lib/voice/voice-agent-handler.ts` | FUNCTIONAL | Hybrid AI/human voice agent with two modes: **Prospector** (lead qualification) and **Closer** (deal closing with warm transfer). API routes: `src/app/api/voice/ai-agent/` |
@@ -1206,7 +1206,7 @@ This script:
 | Lead Research | 6 | `/api/leads/research/*` (chat, url-sources, schedule, schedule/run, export, root) | Functional (NEW March 5) |
 | Learning | 2 | `/api/learning/*` | Partial |
 | Meetings | 1 | `/api/meetings/*` | Functional |
-| Onboarding | 1 | `/api/onboarding/*` | Functional |
+| Onboarding | 3 | `/api/onboarding/*` | Functional (data prefill, status checklist) |
 | Orchestrator | 7 | `/api/orchestrator/*` | Functional (Sprint 18: +missions, +missions/[missionId]; Sprint 23: +stream, +cancel) |
 | Outbound | 3 | `/api/outbound/*` | Functional |
 | Performance | 1 | `/api/performance/*` | Functional |
@@ -1262,30 +1262,28 @@ This script:
 | `/api/agent/config` | GET/PUT | Agent configuration | FUNCTIONAL |
 | `/api/agent/knowledge/upload` | POST | Knowledge base upload | FUNCTIONAL |
 
-#### Video & Voice Lab (22 routes) — OVERHAUL PLANNED
+#### Video & Voice Lab (25+ routes) — Hedra-Only, Phases 1-3 COMPLETE
 
-**Current Status: BROKEN** — Multi-engine rework introduced 3 critical bugs. Full Hedra-only rebuild planned.
+**Current Status: FUNCTIONAL** — Hedra sole engine. Character Studio, AI Video Director, brand preference memory all operational.
 
 | Endpoint | Method | Purpose | Status |
 |----------|--------|---------|--------|
-| `/api/video/avatars` | GET | List all avatars (legacy) | BROKEN — references expired URLs |
-| `/api/video/avatar-profiles` | GET/POST | Character profile CRUD | BROKEN — TTS routing fails for non-ElevenLabs voices |
+| `/api/video/avatar-profiles` | GET/POST | Character profile CRUD (lists user + stock Hedra profiles) | FUNCTIONAL |
 | `/api/video/avatar-profiles/[profileId]` | GET/PATCH/DELETE | Single profile ops | FUNCTIONAL |
-| `/api/video/avatar-profiles/sync-hedra` | POST | Import Hedra characters | REMOVING — characters will be managed locally |
-| `/api/video/avatar-profiles/hedra-characters` | GET | Browse Hedra library | REMOVING — characters will be managed locally |
+| `/api/video/avatar-profiles/sync-hedra` | POST | Import Hedra characters (auto-synced on picker mount) | FUNCTIONAL |
+| `/api/video/avatar-profiles/hedra-characters` | GET | Browse Hedra character library | FUNCTIONAL |
 | `/api/video/voices` | GET | List ElevenLabs voices | FUNCTIONAL |
 | `/api/video/voice-clone` | POST | Clone voice via ElevenLabs | FUNCTIONAL |
 | `/api/video/voice-preview` | POST | Preview TTS audio | FUNCTIONAL |
 | `/api/video/defaults` | GET/PUT | Default avatar/voice settings | FUNCTIONAL |
-| `/api/video/generate-scenes` | POST | Generate video scenes | BROKEN — multi-engine TTS failure |
-| `/api/video/poll-scenes` | POST | Poll generation status | BROKEN — references removed engines |
+| `/api/video/generate-scenes` | POST | Generate video scenes (Hedra-only, dual TTS paths) | FUNCTIONAL |
+| `/api/video/regenerate-scene` | POST | Regenerate a single failed/rejected scene | FUNCTIONAL |
+| `/api/video/poll-scenes` | POST | Poll generation status | FUNCTIONAL |
 | `/api/video/decompose` | POST | Decompose script to scenes | FUNCTIONAL |
+| `/api/video/assemble` | POST | FFmpeg clip assembly with xfade transitions | FUNCTIONAL |
+| `/api/video/brand-preferences` | GET/POST | Brand preference memory (approved/rejected prompts, style corrections) | FUNCTIONAL |
+| `/api/video/tts-audio` | POST | Synthesize TTS audio (ElevenLabs/UnrealSpeech) | FUNCTIONAL |
 | `/api/video/project/*` | Various | Video project CRUD (save, list, get) | FUNCTIONAL |
-
-**Planned new routes (Phase 2-3):**
-- `/api/video/characters` — Character Studio CRUD (replaces avatar-profiles)
-- `/api/video/stitch` — FFmpeg clip assembly
-- `/api/video/review` — Review/approval workflow
 
 #### Social Media Platform (NEW Feb 12)
 
@@ -1639,12 +1637,12 @@ All 64 API routes that were using the client-side `FirestoreService` have been m
 | **Stripe** | **REAL** | Full API — `checkout.sessions.create()`, `products.create()`, `prices.create()`, `paymentLinks.create()`, PaymentElement checkout (3DS), payment intents, webhook `payment_intent.succeeded`. Production-ready. |
 | **Email (SendGrid)** | **REAL** | Primary provider. `@sendgrid/mail` SDK, tracking pixels, click tracking. |
 | **Email (Resend)** | **STUB** | Type definitions exist but no implementation file |
-| **Email (SMTP)** | **STUB** | Type definitions exist but no implementation file |
+| **Email (SMTP)** | **REAL** | Nodemailer — real SMTP transport (fixed Mar 10) |
 | **Voice (Twilio)** | **REAL** | Twilio SDK — call initiation, control, conferencing. |
 | **Voice (Telnyx)** | **REAL** | Direct API — 60-70% cheaper than Twilio. |
 | **TTS (ElevenLabs)** | **REAL** | `api.elevenlabs.io/v1`, 20+ premium voices. |
 | **TTS (Unreal Speech)** | **REAL** | Alternative cost-effective TTS. |
-| **Video (Hedra)** | **BROKEN — OVERHAUL PLANNED** | Multi-engine approach (HeyGen/Kling/Runway/Sora/Hedra) is broken. Decision: strip to Hedra-only + Character Studio + AI Video Director. See CONTINUATION_PROMPT.md for full plan. |
+| **Video (Hedra)** | **REAL** | Hedra Character-3 API — sole video engine. Character Studio (custom + stock), dual TTS (Hedra native + ElevenLabs), AI Video Director (produce/assemble), per-scene characters, brand preference memory, scene review workflow. Phases 1-3 complete. |
 | **Firebase** | **REAL** | Auth + Firestore, single-tenant `rapid-compliance-65f87`. |
 | **OpenRouter** | **REAL** | AI gateway, 100+ models. |
 | **Google OAuth** | **REAL** | Calendar, Gmail integration. |
@@ -2060,6 +2058,6 @@ See `docs/archive/legacy/README.md` for full archive index.
 **END OF SINGLE SOURCE OF TRUTH**
 
 *Document generated by Claude Code multi-agent audit - January 26, 2026*
-*Last updated: March 8, 2026 — Video system overhaul plan: Hedra-only engine + Character Studio + AI Video Director. Multi-engine approach (Kling/Runway/Sora) marked for removal. Updated integration status, route map, Firestore collections.*
+*Last updated: March 10, 2026 — Video system Phases 1-3 complete (Hedra-only engine, Character Studio, AI Video Director). Auto-sync Hedra avatars, retry race condition fix, image error fallback. Onboarding overhaul (industry persona blueprints, 15-category wizard, feature module defaults, Jasper task reminder). All video routes now FUNCTIONAL.*
 
 > Session changelogs, launch gap analysis, and completed roadmap details archived in `docs/archive/`.
