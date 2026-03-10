@@ -265,6 +265,8 @@ export function StepGeneration() {
   const regenerateScene = useCallback(async (sceneId: string, feedbackText?: string) => {
     const scene = scenes.find((s) => s.id === sceneId);
     if (!scene) {
+      console.warn(`[VideoGen] Retry: scene ${sceneId} not found in ${scenes.length} pipeline scenes`);
+      updateGeneratedScene(sceneId, { status: 'failed', error: 'Scene data not found. Try regenerating all scenes.' });
       return;
     }
 
@@ -311,12 +313,17 @@ export function StepGeneration() {
         throw new Error('Regeneration failed');
       }
 
-      const data = await response.json() as { success: boolean; result: SceneGenerationResult };
+      const data = await response.json() as { success: boolean; result: SceneGenerationResult; error?: string };
       if (data.success && data.result) {
         updateGeneratedScene(sceneId, data.result);
+      } else {
+        updateGeneratedScene(sceneId, {
+          status: 'failed',
+          error: data.error ?? 'Regeneration returned no result',
+        });
       }
     } catch {
-      updateGeneratedScene(sceneId, { status: 'failed', error: 'Regeneration failed' });
+      updateGeneratedScene(sceneId, { status: 'failed', error: 'Regeneration failed — check network connection' });
     }
   }, [scenes, avatarId, voiceId, voiceProvider, brief.aspectRatio, authFetch, updateGeneratedScene]);
 

@@ -59,7 +59,17 @@ async function synthesizeTTSAudio(
     return `${appUrl}/api/video/tts-audio/${audioId}`;
   }
 
-  // ElevenLabs path (also used for 'hedra', 'custom', and undefined — ElevenLabs is universal)
+  // Guard: Hedra voice IDs cannot be synthesized via ElevenLabs
+  if (voiceProvider === 'hedra') {
+    throw new Error('Hedra voices use native TTS — they cannot be synthesized via external providers. Check voiceProvider configuration.');
+  }
+
+  // Guard: voice ID is required for external TTS
+  if (!voiceId) {
+    throw new Error('No voice ID provided for TTS synthesis. Please select a voice.');
+  }
+
+  // ElevenLabs path (also used for 'custom' and undefined — ElevenLabs is universal)
   const { ElevenLabsProvider } = await import('@/lib/voice/tts/providers/elevenlabs-provider');
   const rawKey = await apiKeyService.getServiceKey(PLATFORM_ID, 'elevenlabs');
   const apiKey = typeof rawKey === 'string' ? rawKey : null;
@@ -188,6 +198,34 @@ async function generateWithHedra(
   // Path B: External TTS (ElevenLabs/UnrealSpeech) — synthesize audio, upload to Hedra
   let audioUrl: string | null = null;
   if (script.length > 1) {
+    // Guard: cannot use ElevenLabs/UnrealSpeech without a valid voice ID
+    if (!voiceId) {
+      return {
+        sceneId: scene.id,
+        providerVideoId: '',
+        provider: 'hedra',
+        status: 'failed',
+        videoUrl: null,
+        thumbnailUrl: null,
+        progress: 0,
+        error: 'No voice selected. Please choose a voice in Pre-Production before generating.',
+      };
+    }
+
+    // Guard: Hedra voice IDs cannot be used with external TTS providers
+    if (voiceProvider === 'hedra') {
+      return {
+        sceneId: scene.id,
+        providerVideoId: '',
+        provider: 'hedra',
+        status: 'failed',
+        videoUrl: null,
+        thumbnailUrl: null,
+        progress: 0,
+        error: 'Hedra voice selected but native TTS path was not used. Check voice configuration.',
+      };
+    }
+
     try {
       audioUrl = await synthesizeTTSAudio(script, voiceId, voiceProvider, scene.id);
     } catch (ttsError) {
@@ -301,12 +339,19 @@ export async function generateScene(
         // Resolve voice from profile if not explicitly set
         if (!resolvedVoiceId && profile.voiceId) {
           resolvedVoiceId = profile.voiceId;
-          resolvedVoiceProvider = profile.voiceProvider ?? resolvedVoiceProvider;
+          // Use the profile's voice provider. If the profile doesn't specify one
+          // but was imported from Hedra, default to 'hedra' so we don't accidentally
+          // send a Hedra voice ID to ElevenLabs.
+          if (profile.voiceProvider) {
+            resolvedVoiceProvider = profile.voiceProvider;
+          } else if (profile.source === 'hedra') {
+            resolvedVoiceProvider = 'hedra';
+          }
           logger.info('Using avatar profile bundled voice', {
             sceneId: scene.id,
             profileId: profile.id,
             voiceId: profile.voiceId,
-            voiceProvider: profile.voiceProvider,
+            voiceProvider: resolvedVoiceProvider,
             file: 'scene-generator.ts',
           });
         }
