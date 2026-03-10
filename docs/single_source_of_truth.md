@@ -1,7 +1,7 @@
 # SalesVelocity.ai - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** March 10, 2026 (Punch list sweep: SMTP real via nodemailer, signal persistence durable, search optimized, dead code removed, SSOT corrected)
+**Last Updated:** March 10, 2026 (Onboarding overhaul: industry persona blueprints, auto-resolve templates, 15-category wizard, feature module defaults)
 **Branches:** `dev` (latest)
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Architecture:** Single-Tenant Penthouse Model (development strategy — multi-tenant SaaS product)
@@ -1379,13 +1379,29 @@ The following endpoints have working infrastructure (rate limiting, caching, aut
 
 The onboarding flow now calls `POST /api/agent/process-onboarding` on Step 4 (API key setup) with enriched data:
 - `industryCategory`, `industryCategoryName` — from 15-category selection
-- `industryTemplateId`, `industryTemplateName` — from 49 niche template drill-down
+- `industryTemplateId`, `industryTemplateName` — from 50 niche template drill-down
 - `injectionAnswer`, `injectionVariable` — from industry-specific injection question
 - `customNiche` — freeform text for categories with no templates (e.g., Automotive)
 - The route forwards these to `processOnboarding()` → `buildBaseModel()` → system prompt generation
 - Injection answers are interpolated into the system prompt under "Industry-Specific Context"
-- New mapping file: `src/lib/persona/category-template-map.ts` (15 categories, 49 template IDs)
+- New mapping file: `src/lib/persona/category-template-map.ts` (15 categories, 50 template IDs)
 - `OnboardingCategory` interface now includes `defaultEntities?: string[]` for entity config during onboarding
+
+**Industry-Driven Configuration (March 10, 2026):**
+
+Industry selection now drives 5 system layers automatically:
+1. **Feature Modules** — `getIndustryFeatureConfig(categoryId)` enables industry-relevant modules (e.g., video for real estate, e-commerce for retail). All modules default ON; 3 always-on (CRM, conversations, workflows).
+2. **Entity Config** — `buildEntityConfigForCategory(categoryId)` enables industry-specific CRM entities (e.g., `properties`/`showings` for real estate, `cases`/`billing_entries` for legal).
+3. **Persona Blueprints** — `CATEGORY_TO_BLUEPRINT` mapping (15 categories → 12 blueprint IDs) enriches agent personality with industry tone, greeting variants, specialist triggers, and communication style.
+4. **Industry Templates** — Auto-resolved from category when not explicitly set. 50 templates across 7 files with cognitiveLogic, tacticalExecution, knowledgeRAG, and research intelligence. MutationEngine applies conditional transformations based on onboarding answers.
+5. **Dashboard Wizard** — Now uses `ONBOARDING_CATEGORIES` (15 categories) instead of 13 hardcoded options with mismatched IDs.
+
+Key files:
+- `src/lib/constants/feature-modules.ts` — `INDUSTRY_FEATURE_DEFAULTS`, `getIndustryFeatureConfig()`
+- `src/lib/constants/entity-config.ts` — `CATEGORY_ENTITY_DEFAULTS`, `buildEntityConfigForCategory()`
+- `src/lib/agent/onboarding-processor.ts` — `CATEGORY_TO_BLUEPRINT`, auto-resolve templateId, blueprint enrichment
+- `src/lib/db/provisioner/blueprints/industry-personas.ts` — 12 persona blueprints
+- `src/lib/persona/category-template-map.ts` — 15 categories, 50 template ID mappings
 
 **Entity Configuration System (February 28, 2026):**
 
