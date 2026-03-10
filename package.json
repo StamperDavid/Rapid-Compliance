@@ -47,6 +47,9 @@
     "prepare": "husky || true"
   },
   "dependencies": {
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
     "@ffmpeg-installer/ffmpeg": "^1.1.0",
     "@google-cloud/firestore": "^7.1.0",
     "@google-cloud/secret-manager": "^5.0.0",

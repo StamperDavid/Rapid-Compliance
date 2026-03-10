@@ -1236,6 +1236,66 @@ export const JASPER_TOOLS: ToolDefinition[] = [
     },
   },
 
+  {
+    type: 'function',
+    function: {
+      name: 'edit_video',
+      description:
+        'Open the standalone Video Editor for the user, optionally pre-loading clips from an existing video project. The editor supports drag-and-drop timeline, clip splitting/trimming, text overlays, background audio mixing, and FFmpeg assembly. Use this when the user wants to manually edit, rearrange, or stitch video clips together — as opposed to the full AI-driven produce_video pipeline. Returns a direct link to the editor. ENABLED: TRUE.',
+      parameters: {
+        type: 'object',
+        properties: {
+          projectId: {
+            type: 'string',
+            description: 'Optional video project ID to pre-load clips from. The editor will auto-import all completed scene clips from this project.',
+          },
+          clipUrls: {
+            type: 'string',
+            description: 'Optional JSON array of video clip URLs to pre-load into the editor timeline. Example: ["https://...clip1.mp4", "https://...clip2.mp4"]',
+          },
+          instruction: {
+            type: 'string',
+            description: 'Optional instruction to display to the user about what to do in the editor. Example: "Rearrange the intro scenes and add a fade transition"',
+          },
+        },
+        required: [],
+      },
+    },
+  },
+
+  {
+    type: 'function',
+    function: {
+      name: 'manage_media_library',
+      description:
+        'Manage the Media Library — list, add, or describe available media assets (videos, images, audio). Audio sub-categories: sounds, voices, music. Use this when the user asks about their media files, wants to organize assets, or needs to find specific clips/audio/images. ENABLED: TRUE.',
+      parameters: {
+        type: 'object',
+        properties: {
+          action: {
+            type: 'string',
+            description: 'Action to perform',
+            enum: ['list', 'add', 'search'],
+          },
+          mediaType: {
+            type: 'string',
+            description: 'Filter by media type',
+            enum: ['video', 'image', 'audio'],
+          },
+          category: {
+            type: 'string',
+            description: 'Filter by category (audio: sound/voice/music, image: photo/graphic/screenshot/thumbnail, video: clip/final/scene)',
+          },
+          query: {
+            type: 'string',
+            description: 'Search query for finding specific media by name',
+          },
+        },
+        required: ['action'],
+      },
+    },
+  },
+
   // ═══════════════════════════════════════════════════════════════════════════
   // ANALYTICS & REPORTING TOOLS
   // ═══════════════════════════════════════════════════════════════════════════
@@ -3815,6 +3875,131 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
           trackMissionStep(context, 'assemble_video', 'FAILED', {
             summary: `VIDEO_SPECIALIST: ${errMsg}`,
             durationMs: Date.now() - assembleStart,
+            toolResult: content.slice(0, 2000),
+          });
+        }
+        break;
+      }
+
+      case 'edit_video': {
+        try {
+          let editorUrl = '/content/video/editor';
+          const params = new URLSearchParams();
+
+          if (args.projectId) {
+            params.set('project', args.projectId as string);
+          }
+
+          if (typeof args.clipUrls === 'string' && args.clipUrls.trim().startsWith('[')) {
+            params.set('clips', args.clipUrls);
+          }
+
+          if (params.toString()) {
+            editorUrl += `?${params.toString()}`;
+          }
+
+          content = JSON.stringify({
+            status: 'success',
+            editorUrl,
+            instruction: (args.instruction as string) ?? 'Open the Video Editor to arrange and assemble your clips.',
+            message: `Video Editor ready! Open it here: ${editorUrl}`,
+            reviewLink: editorUrl,
+          });
+
+          trackMissionStep(context, 'edit_video', 'COMPLETED', {
+            summary: `Opened Video Editor${args.projectId ? ` with project ${args.projectId as string}` : ''}`,
+            toolResult: content.slice(0, 2000),
+          });
+        } catch (editErr) {
+          const errMsg = editErr instanceof Error ? editErr.message : String(editErr);
+          content = JSON.stringify({
+            status: 'error',
+            message: `Failed to open Video Editor: ${errMsg}`,
+          });
+          trackMissionStep(context, 'edit_video', 'FAILED', {
+            summary: `edit_video: ${errMsg}`,
+            toolResult: content.slice(0, 2000),
+          });
+        }
+        break;
+      }
+
+      case 'manage_media_library': {
+        const mediaStart = Date.now();
+        try {
+          const action = (args.action as string) ?? 'list';
+          const mediaType = args.mediaType as string | undefined;
+          const category = args.category as string | undefined;
+
+          const { adminDb: mediaAdminDb } = await import('@/lib/firebase/admin');
+          if (!mediaAdminDb) {
+            throw new Error('Database not available');
+          }
+
+          const mediaCollection = `organizations/${PLATFORM_ID}/media`;
+
+          if (action === 'list' || action === 'search') {
+            let query: FirebaseFirestore.Query = mediaAdminDb.collection(mediaCollection);
+            if (mediaType) {
+              query = query.where('type', '==', mediaType);
+            }
+            if (category) {
+              query = query.where('category', '==', category);
+            }
+            query = query.orderBy('createdAt', 'desc').limit(50);
+
+            const snapshot = await query.get();
+            const items = snapshot.docs.map((doc) => {
+              const d = doc.data() as Record<string, unknown>;
+              return {
+                id: doc.id,
+                type: d.type,
+                category: d.category,
+                name: d.name,
+                url: d.url,
+              };
+            });
+
+            // If search, filter by query
+            let filtered = items;
+            if (action === 'search' && args.query) {
+              const q = (args.query as string).toLowerCase();
+              filtered = items.filter((item) =>
+                (item.name as string).toLowerCase().includes(q),
+              );
+            }
+
+            content = JSON.stringify({
+              status: 'success',
+              action,
+              itemCount: filtered.length,
+              items: filtered,
+              libraryUrl: '/content/video/library',
+              message: `Found ${filtered.length} media item(s)${mediaType ? ` of type "${mediaType}"` : ''}${category ? ` in category "${category}"` : ''}.`,
+            });
+          } else {
+            content = JSON.stringify({
+              status: 'success',
+              message: 'To add media, direct users to the Media Library upload page or the Video Editor upload panel.',
+              libraryUrl: '/content/video/library',
+              editorUrl: '/content/video/editor',
+            });
+          }
+
+          trackMissionStep(context, 'manage_media_library', 'COMPLETED', {
+            summary: `Media Library: ${action} — ${mediaType ?? 'all'} ${category ?? ''}`,
+            durationMs: Date.now() - mediaStart,
+            toolResult: content.slice(0, 2000),
+          });
+        } catch (mediaErr) {
+          const errMsg = mediaErr instanceof Error ? mediaErr.message : String(mediaErr);
+          content = JSON.stringify({
+            status: 'error',
+            message: `Media library operation failed: ${errMsg}`,
+          });
+          trackMissionStep(context, 'manage_media_library', 'FAILED', {
+            summary: `manage_media_library: ${errMsg}`,
+            durationMs: Date.now() - mediaStart,
             toolResult: content.slice(0, 2000),
           });
         }

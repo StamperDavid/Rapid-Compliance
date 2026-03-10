@@ -163,9 +163,10 @@ export const DEALS_TABS: SubpageNavItem[] = [
   { label: 'Risk', href: '/risk' },
 ];
 
-// ── Video Hub (Studio + Library + Voice Lab) ─────────────────────────────────
+// ── Video Hub (Studio + Editor + Library + Voice Lab) ────────────────────────
 export const VIDEO_TABS: SubpageNavItem[] = [
   { label: 'Studio', href: '/content/video' },
+  { label: 'Editor', href: '/content/video/editor' },
   { label: 'Library', href: '/content/video/library' },
   { label: 'Voice Lab', href: '/content/voice-lab' },
 ];
