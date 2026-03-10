@@ -127,7 +127,7 @@ export function StepGeneration() {
           })),
           avatarId: avatarId ?? '',
           voiceId: voiceId ?? '',
-          voiceProvider: voiceProvider ?? 'elevenlabs',
+          voiceProvider: voiceProvider ?? 'hedra',
           aspectRatio: brief.aspectRatio,
         }),
       });
@@ -299,7 +299,7 @@ export function StepGeneration() {
           screenshotUrl: scene.screenshotUrl,
           avatarId: scene.avatarId ?? avatarId ?? '',
           voiceId: scene.voiceId ?? voiceId ?? '',
-          voiceProvider: scene.voiceProvider ?? voiceProvider ?? 'elevenlabs',
+          voiceProvider: scene.voiceProvider ?? voiceProvider ?? 'hedra',
           aspectRatio: brief.aspectRatio,
           duration: scene.duration,
           engine: scene.engine,

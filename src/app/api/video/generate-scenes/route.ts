@@ -28,7 +28,7 @@ const GenerateScenesSchema = z.object({
   })),
   avatarId: z.string().default(''),
   voiceId: z.string().default(''),
-  voiceProvider: VoiceProviderEnum.default('elevenlabs'),
+  voiceProvider: VoiceProviderEnum.default('hedra'),
   aspectRatio: z.enum(['16:9', '9:16', '1:1', '4:3']).default('16:9'),
 });
 
@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
       status: 'approved' as const,
     }));
 
-    // Generate all scenes (passes voiceProvider for ElevenLabs pre-synthesis)
+    // Generate all scenes via Hedra native TTS
     const results = await generateAllScenes(pipelineScenes, avatarId, voiceId, aspectRatio, undefined, voiceProvider);
 
     logger.info('Scene generation completed', {
