@@ -491,10 +491,9 @@ export function StepStoryboard() {
   }, [scenes, projectMood, authFetch, updateScene]);
 
   // ── Readiness checks ───────────────────────────────────────────────────
+  // Avatar and voice are optional — the generation system auto-selects defaults
   const missingRequirements: string[] = [];
   if (scenes.length === 0) { missingRequirements.push('Add at least one scene'); }
-  if (!avatarId) { missingRequirements.push('Select a character'); }
-  if (!voiceId) { missingRequirements.push('Select a voice'); }
   if (scenes.some((s) => !s.scriptText.trim())) { missingRequirements.push('All scenes need scripts'); }
 
   const totalDuration = scenes.reduce((sum, s) => sum + s.duration, 0);

@@ -262,11 +262,9 @@ export const useVideoPipelineStore = create<VideoPipelineState>()(
             return state.brief.description.trim().length > 0;
 
           case 'generation':
-            // Need scenes with scripts, an avatar, and a voice to generate
+            // Need scenes with scripts to generate — avatar/voice auto-resolve if not set
             return (
               state.scenes.length > 0 &&
-              state.avatarId !== null &&
-              state.voiceId !== null &&
               state.scenes.every((scene) => scene.scriptText.trim().length > 0)
             );
 

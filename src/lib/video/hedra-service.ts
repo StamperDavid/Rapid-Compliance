@@ -154,13 +154,18 @@ async function getHedraApiKey(): Promise<string> {
 
 /**
  * Build standard Hedra request headers.
+ * Guards against null/undefined values that cause "Cannot read properties of null (reading 'toString')"
+ * inside Node.js fetch (undici) when it processes header values.
  */
 function hedraHeaders(apiKey: string, contentType?: string): Record<string, string> {
+  if (!apiKey) {
+    throw new Error('hedraHeaders called with empty API key');
+  }
   const headers: Record<string, string> = {
-    'x-api-key': apiKey,
+    'x-api-key': String(apiKey),
   };
   if (contentType) {
-    headers['Content-Type'] = contentType;
+    headers['Content-Type'] = String(contentType);
   }
   return headers;
 }
@@ -182,6 +187,10 @@ async function parseHedraError(response: Response): Promise<string> {
  * Download a file from a URL and return its Buffer and inferred content type.
  */
 async function downloadFile(url: string): Promise<{ arrayBuffer: ArrayBuffer; contentType: string }> {
+  if (!url || typeof url !== 'string') {
+    throw new Error(`downloadFile called with invalid URL: ${JSON.stringify(url)}`);
+  }
+
   const response = await fetch(url);
   if (!response.ok) {
     throw new Error(`Failed to download file from ${url}: ${response.status} ${response.statusText}`);
@@ -242,10 +251,13 @@ async function uploadAssetFromUrl(
   });
 
   // Step 3: Upload binary data to the pre-signed URL
+  if (!asset.upload_url || typeof asset.upload_url !== 'string') {
+    throw new Error(`Hedra asset upload_url is invalid: ${JSON.stringify(asset.upload_url)}`);
+  }
   const uploadResponse = await fetch(asset.upload_url, {
     method: 'PUT',
     headers: {
-      'Content-Type': contentType,
+      'Content-Type': String(contentType),
       'Content-Length': String(arrayBuffer.byteLength),
     },
     body: arrayBuffer,

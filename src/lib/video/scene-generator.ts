@@ -179,13 +179,30 @@ export async function generateScene(
 ): Promise<SceneGenerationResult> {
   try {
     // Per-scene overrides take priority over project-level defaults
-    const effectiveAvatarId = scene.avatarId ?? projectAvatarId;
+    let effectiveAvatarId = scene.avatarId ?? projectAvatarId;
     const effectiveVoiceId = scene.voiceId ?? projectVoiceId;
     const effectiveVoiceProvider = scene.voiceProvider ?? projectVoiceProvider;
 
-    const hasAvatar = Boolean(effectiveAvatarId);
+    // Auto-resolve avatar if none specified — use the user's default profile
+    if (!effectiveAvatarId) {
+      try {
+        const { getDefaultProfile } = await import('@/lib/video/avatar-profile-service');
+        const defaultProfile = await getDefaultProfile('jasper');
+        if (defaultProfile) {
+          effectiveAvatarId = defaultProfile.id;
+          logger.info('Auto-selected default avatar for scene (none specified)', {
+            sceneId: scene.id,
+            profileId: defaultProfile.id,
+            profileName: defaultProfile.name,
+            file: 'scene-generator.ts',
+          });
+        }
+      } catch {
+        // Continue — will fail below with clear error
+      }
+    }
 
-    if (!hasAvatar) {
+    if (!effectiveAvatarId) {
       return {
         sceneId: scene.id,
         providerVideoId: '',
@@ -194,7 +211,7 @@ export async function generateScene(
         videoUrl: null,
         thumbnailUrl: null,
         progress: 0,
-        error: 'Hedra requires an avatar profile. Please select a character.',
+        error: 'No avatar profile found. Create a character in the Character Studio first.',
       };
     }
 
