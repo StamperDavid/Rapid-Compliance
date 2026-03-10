@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { motion } from 'framer-motion';
 import { User, Loader2, AlertCircle, Search, Check, Mic, Sparkles, Trash2, Video, Crown, Library, Star, Theater } from 'lucide-react';
@@ -61,6 +61,8 @@ function AvatarCard({
   onConfirmDelete?: () => void;
   onCancelDelete?: () => void;
 }) {
+  const [imgError, setImgError] = useState(false);
+
   const referenceCount =
     (profile.additionalImageUrls?.length ?? 0) +
     (profile.fullBodyImageUrl ? 1 : 0) +
@@ -79,7 +81,7 @@ function AvatarCard({
       whileTap={{ scale: 0.97 }}
     >
       {/* Thumbnail */}
-      {profile.frontalImageUrl ? (
+      {profile.frontalImageUrl && !imgError ? (
         <div className="relative w-20 h-20 rounded-full overflow-hidden ring-2 ring-green-500/40">
           <Image
             src={profile.frontalImageUrl}
@@ -88,6 +90,7 @@ function AvatarCard({
             className="object-cover"
             sizes="80px"
             unoptimized={profile.frontalImageUrl.startsWith('data:') || profile.frontalImageUrl.includes('imagedelivery.net')}
+            onError={() => setImgError(true)}
           />
         </div>
       ) : (
@@ -238,6 +241,8 @@ export function AvatarPicker({ selectedAvatarId, onSelect, onProfileLoaded }: Av
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [isHedraBrowserOpen, setIsHedraBrowserOpen] = useState(false);
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+  const [syncingHedra, setSyncingHedra] = useState(false);
+  const hedraAutoSyncedRef = useRef(false);
 
   const toggleFavorite = useCallback(async (profileId: string) => {
     const profile = profiles.find((p) => p.id === profileId);
@@ -308,6 +313,47 @@ export function AvatarPicker({ selectedAvatarId, onSelect, onProfileLoaded }: Av
     void fetchProfiles();
   }, [fetchProfiles]);
 
+  // Auto-sync all Hedra characters into avatar profiles on mount.
+  // Runs once after the initial profile load completes. Any un-imported
+  // Hedra characters get created as avatar profiles automatically.
+  useEffect(() => {
+    if (hedraAutoSyncedRef.current || isLoading) { return; }
+    hedraAutoSyncedRef.current = true;
+
+    void (async () => {
+      try {
+        setSyncingHedra(true);
+
+        const response = await authFetch('/api/video/avatar-profiles/hedra-characters');
+        if (!response.ok) { return; }
+
+        const data = await response.json() as {
+          success: boolean;
+          characters: Array<{ id: string; alreadyImported: boolean; imageUrl: string | null }>;
+        };
+        if (!data.success) { return; }
+
+        const unimported = data.characters.filter((c) => !c.alreadyImported && c.imageUrl);
+        if (unimported.length === 0) { return; }
+
+        const syncResponse = await authFetch('/api/video/avatar-profiles/sync-hedra', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ characterIds: unimported.map((c) => c.id) }),
+        });
+        const syncData = await syncResponse.json() as { success: boolean; imported?: number };
+
+        if (syncData.success && syncData.imported && syncData.imported > 0) {
+          await fetchProfiles();
+        }
+      } catch {
+        // Silent — don't block the picker if Hedra sync fails
+      } finally {
+        setSyncingHedra(false);
+      }
+    })();
+  }, [isLoading, authFetch, fetchProfiles]);
+
   const filteredProfiles = useMemo(() => {
     let result = profiles;
 
@@ -328,11 +374,13 @@ export function AvatarPicker({ selectedAvatarId, onSelect, onProfileLoaded }: Av
 
   const favoritesCount = useMemo(() => profiles.filter((p) => p.isFavorite).length, [profiles]);
 
-  if (isLoading) {
+  if (isLoading || (syncingHedra && profiles.length === 0)) {
     return (
       <div className="flex items-center justify-center py-12 gap-2 text-zinc-400">
         <Loader2 className="w-5 h-5 animate-spin" />
-        <span className="text-sm">Loading avatar profiles...</span>
+        <span className="text-sm">
+          {syncingHedra ? 'Syncing Hedra characters...' : 'Loading avatar profiles...'}
+        </span>
       </div>
     );
   }
@@ -407,6 +455,12 @@ export function AvatarPicker({ selectedAvatarId, onSelect, onProfileLoaded }: Av
       <p className="text-xs text-zinc-500">
         {filteredProfiles.length} profile{filteredProfiles.length !== 1 ? 's' : ''}
         {searchQuery ? ' matching search' : ' available'}
+        {syncingHedra && (
+          <span className="inline-flex items-center gap-1 ml-2 text-amber-400">
+            <Loader2 className="w-3 h-3 animate-spin" />
+            Syncing Hedra characters...
+          </span>
+        )}
       </p>
 
       <div className="max-h-[520px] overflow-y-auto pr-1">

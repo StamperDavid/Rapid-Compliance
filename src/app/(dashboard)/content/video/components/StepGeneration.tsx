@@ -268,7 +268,14 @@ export function StepGeneration() {
       return;
     }
 
-    updateGeneratedScene(sceneId, { status: 'generating', progress: 0, error: null });
+    updateGeneratedScene(sceneId, {
+      status: 'generating',
+      progress: 0,
+      error: null,
+      providerVideoId: '',
+      videoUrl: null,
+      thumbnailUrl: null,
+    });
 
     // If user provided feedback, append it to the visual description so the
     // prompt translator and Hedra get the corrected direction
