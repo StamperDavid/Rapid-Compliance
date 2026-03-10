@@ -39,6 +39,8 @@ interface HedraModelEntry {
   resolutions: string[];
   max_duration_ms: number;
   min_duration_ms: number;
+  requires_audio_input?: boolean;
+  tags?: string[];
 }
 
 interface HedraAssetResponse {
@@ -372,11 +374,19 @@ export async function generateHedraAvatarVideo(
     throw new Error('Either audioUrl or hedraVoiceId + speechText must be provided.');
   }
 
-  // 1. Auto-select the first video model
+  // 1. Select the right Hedra model for talking-head generation
+  //    Hedra's marketplace now has 80+ models (Kling, Veo, Sora, etc.)
+  //    We need a Hedra-native model that supports audio/TTS.
   const models = await getHedraModels();
-  const videoModel = models.find((m) => m.type === 'video') ?? models[0];
+  const videoModel =
+    // Prefer "Hedra Character 3" — the proven talking-head model
+    models.find((m) => m.name === 'Hedra Character 3') ??
+    // Fallback: any Hedra model that requires audio input (supports TTS)
+    models.find((m) => m.type === 'video' && m.name.toLowerCase().startsWith('hedra') && m.requires_audio_input) ??
+    // Last resort: any video model with audio support
+    models.find((m) => m.type === 'video' && m.requires_audio_input);
   if (!videoModel) {
-    throw new Error('No Hedra models available. Check your API key and account status.');
+    throw new Error('No Hedra TTS-capable model found. Available models may have changed — check API key and account status.');
   }
 
   logger.info('Hedra generation starting', {
