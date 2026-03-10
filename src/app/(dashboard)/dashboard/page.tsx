@@ -8,6 +8,7 @@ import { db, auth } from '@/lib/firebase/config';
 import { logger } from '@/lib/logger/logger';
 import SubpageNav from '@/components/ui/SubpageNav';
 import { DASHBOARD_TABS } from '@/lib/constants/subpage-nav';
+import { JasperTaskReminder } from '@/components/dashboard/JasperTaskReminder';
 import {
   Target,
   Briefcase,
@@ -363,6 +364,9 @@ export default function WorkspaceDashboardPage() {
           Platform overview — everything at a glance.
         </p>
       </div>
+
+      {/* Jasper setup task reminder — shows pending onboarding/config tasks */}
+      <JasperTaskReminder />
 
       <SubpageNav items={DASHBOARD_TABS} />
 
