@@ -19,7 +19,7 @@ import { auth, db } from '@/lib/firebase/config';
 import { doc, writeBatch, arrayUnion, serverTimestamp } from 'firebase/firestore';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import { COLLECTIONS } from '@/lib/firebase/collections';
-import { DEFAULT_FEATURE_CONFIG } from '@/lib/constants/feature-modules';
+import { getIndustryFeatureConfig } from '@/lib/constants/feature-modules';
 import { Building2, Lock, Eye, EyeOff } from 'lucide-react';
 
 export default function AccountCreationPage() {
@@ -155,7 +155,9 @@ export default function AccountCreationPage() {
           updatedAt: serverTimestamp(),
         });
 
-        // Write default feature config
+        // Write industry-aware feature config
+        const industryId = selectedCategory?.id ?? selectedIndustry?.id ?? 'other';
+        const featureConfig = getIndustryFeatureConfig(industryId);
         const featureConfigRef = doc(
           db,
           COLLECTIONS.ORGANIZATIONS,
@@ -164,7 +166,7 @@ export default function AccountCreationPage() {
           'feature_config',
         );
         batch.set(featureConfigRef, {
-          ...DEFAULT_FEATURE_CONFIG,
+          ...featureConfig,
           updatedAt: new Date().toISOString(),
           updatedBy: userId,
         });

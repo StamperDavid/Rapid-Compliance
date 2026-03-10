@@ -130,7 +130,7 @@ export const FEATURE_MODULES: FeatureModuleDefinition[] = [
     id: 'conversations',
     label: 'Conversations',
     icon: 'MessageSquare',
-    defaultEnabled: false,
+    defaultEnabled: true,
     description: 'AI-powered chat for engaging with leads and customers.',
     whyItMatters: 'Let Jasper handle initial conversations and qualify leads 24/7.',
     features: ['AI chat', 'Lead qualification', 'Smart routing', 'Conversation history'],
@@ -143,7 +143,7 @@ export const FEATURE_MODULES: FeatureModuleDefinition[] = [
     id: 'sales_automation',
     label: 'Sales Automation',
     icon: 'GraduationCap',
-    defaultEnabled: false,
+    defaultEnabled: true,
     description: 'AI coaching, playbooks, and risk detection for your sales team.',
     whyItMatters: 'Helps your team close more deals with AI-driven insights and coaching.',
     features: ['Sales coaching', 'Playbook builder', 'Risk alerts', 'Performance tips'],
@@ -165,7 +165,7 @@ export const FEATURE_MODULES: FeatureModuleDefinition[] = [
     id: 'email_outreach',
     label: 'Email & Outreach',
     icon: 'Send',
-    defaultEnabled: false,
+    defaultEnabled: true,
     description: 'Send campaigns, sequences, and manage outbound sales.',
     whyItMatters: 'Automate your email outreach to reach more prospects with less effort.',
     features: ['Email campaigns', 'Drip sequences', 'Outbound tools', 'Call tracking', 'Email studio'],
@@ -195,7 +195,7 @@ export const FEATURE_MODULES: FeatureModuleDefinition[] = [
     id: 'forms_surveys',
     label: 'Forms & Surveys',
     icon: 'ClipboardList',
-    defaultEnabled: false,
+    defaultEnabled: true,
     description: 'Create lead capture forms, surveys, and feedback forms.',
     whyItMatters: 'Capture leads directly from your website or share standalone form links.',
     features: ['Form builder', 'Lead capture', 'Survey creation', 'Auto-notifications'],
@@ -217,7 +217,7 @@ export const FEATURE_MODULES: FeatureModuleDefinition[] = [
     id: 'workflows',
     label: 'Workflows',
     icon: 'Workflow',
-    defaultEnabled: false,
+    defaultEnabled: true,
     description: 'Build automated workflows to connect your business processes.',
     whyItMatters: 'Automate repetitive tasks and create multi-step business processes.',
     features: ['Visual workflow builder', 'Trigger automation', 'Multi-step actions', 'Conditional logic'],
@@ -230,7 +230,7 @@ export const FEATURE_MODULES: FeatureModuleDefinition[] = [
     id: 'social_media',
     label: 'Social Media',
     icon: 'Share2',
-    defaultEnabled: false,
+    defaultEnabled: true,
     description: 'Schedule posts, track engagement, and manage your social presence.',
     whyItMatters: 'Manage all your social channels from one dashboard.',
     features: ['Post scheduling', 'Social analytics', 'Multi-platform posting', 'Content calendar'],
@@ -260,7 +260,7 @@ export const FEATURE_MODULES: FeatureModuleDefinition[] = [
     id: 'video_production',
     label: 'Video Production',
     icon: 'Video',
-    defaultEnabled: false,
+    defaultEnabled: true,
     description: 'Create AI-generated videos and manage your video library.',
     whyItMatters: 'Produce professional videos at scale without a production team.',
     features: ['AI video creation', 'Video library', 'Template system', 'Avatar videos'],
@@ -269,28 +269,20 @@ export const FEATURE_MODULES: FeatureModuleDefinition[] = [
     sidebarItemIds: ['video'],
     requiredApiKeys: [
       {
-        serviceId: 'fal',
-        label: 'fal.ai API Key (Kling Avatar)',
-        description: 'Generate AI avatar videos with Kling via fal.ai.',
-        setupUrl: API_KEY_SETUP_LINKS.fal.url,
-        docsUrl: API_KEY_SETUP_LINKS.fal.docsUrl,
+        serviceId: 'hedra',
+        label: 'Hedra API Key (Character-3)',
+        description: 'Generate AI videos with Hedra Character-3 — the sole video engine.',
+        setupUrl: API_KEY_SETUP_LINKS.hedra.url,
+        docsUrl: API_KEY_SETUP_LINKS.hedra.docsUrl,
         priority: 'required',
       },
       {
         serviceId: 'elevenlabs',
         label: 'ElevenLabs API Key',
-        description: 'Generate natural-sounding voiceovers.',
+        description: 'Premium voice cloning for custom characters. Hedra built-in voices work without this.',
         setupUrl: API_KEY_SETUP_LINKS.elevenlabs.url,
         docsUrl: API_KEY_SETUP_LINKS.elevenlabs.docsUrl,
         priority: 'recommended',
-      },
-      {
-        serviceId: 'hedra',
-        label: 'Hedra API Key (Character-3)',
-        description: 'Generate talking head avatar videos with Hedra Character-3.',
-        setupUrl: API_KEY_SETUP_LINKS.hedra.url,
-        docsUrl: API_KEY_SETUP_LINKS.hedra.docsUrl,
-        priority: 'optional',
       },
     ],
   },
@@ -298,7 +290,7 @@ export const FEATURE_MODULES: FeatureModuleDefinition[] = [
     id: 'proposals_docs',
     label: 'Proposals & Docs',
     icon: 'FileText',
-    defaultEnabled: false,
+    defaultEnabled: true,
     description: 'Create professional proposals and documents with AI assistance.',
     whyItMatters: 'Win more deals with polished, AI-generated proposals.',
     features: ['Proposal builder', 'Template library', 'AI writing', 'E-signatures'],
@@ -311,7 +303,7 @@ export const FEATURE_MODULES: FeatureModuleDefinition[] = [
     id: 'ecommerce',
     label: 'E-Commerce',
     icon: 'ShoppingCart',
-    defaultEnabled: false,
+    defaultEnabled: true,
     description: 'Sell products and services with a built-in storefront.',
     whyItMatters: 'Accept payments and manage orders without a separate e-commerce platform.',
     features: ['Product catalog', 'Order management', 'Online storefront', 'Payment processing'],
@@ -349,7 +341,7 @@ export const FEATURE_MODULES: FeatureModuleDefinition[] = [
     id: 'website_builder',
     label: 'Website & SEO',
     icon: 'Globe',
-    defaultEnabled: false,
+    defaultEnabled: true,
     description: 'Build your website and optimize for search engines.',
     whyItMatters: 'Get found online with a professional website and SEO tools.',
     features: ['Page builder', 'Blog', 'SEO analysis', 'Performance tracking'],
@@ -379,7 +371,7 @@ export const FEATURE_MODULES: FeatureModuleDefinition[] = [
     id: 'advanced_analytics',
     label: 'Advanced Analytics',
     icon: 'FlaskConical',
-    defaultEnabled: false,
+    defaultEnabled: true,
     description: 'A/B testing and advanced analytics for data-driven decisions.',
     whyItMatters: 'Test what works and make decisions backed by data.',
     features: ['A/B testing', 'Experiment tracking', 'Statistical analysis', 'Winner detection'],
@@ -403,32 +395,98 @@ export const FEATURE_MODULES: FeatureModuleDefinition[] = [
 // DEFAULT FEATURE CONFIG
 // =============================================================================
 
-const allModulesOff: Record<FeatureModuleId, boolean> = {
-  crm_pipeline: false,
-  sales_automation: false,
-  email_outreach: false,
-  social_media: false,
-  ecommerce: false,
-  website_builder: false,
-  video_production: false,
-  forms_surveys: false,
-  proposals_docs: false,
-  advanced_analytics: false,
-  workflows: false,
-  conversations: false,
+const allModulesOn: Record<FeatureModuleId, boolean> = {
+  crm_pipeline: true,
+  sales_automation: true,
+  email_outreach: true,
+  social_media: true,
+  ecommerce: true,
+  website_builder: true,
+  video_production: true,
+  forms_surveys: true,
+  proposals_docs: true,
+  advanced_analytics: true,
+  workflows: true,
+  conversations: true,
 };
 
 /**
- * Default feature config for new users — only CRM is enabled
+ * Default feature config — all modules ON.
+ * Industry-specific defaults may disable modules not relevant to the client's business.
+ * Clients can always re-enable any module from Settings > Features.
  */
 export const DEFAULT_FEATURE_CONFIG: FeatureConfig = {
-  modules: {
-    ...allModulesOff,
-    crm_pipeline: true,
-  },
+  modules: { ...allModulesOn },
   updatedAt: new Date().toISOString(),
   updatedBy: 'system',
 };
+
+// =============================================================================
+// INDUSTRY → FEATURE DEFAULTS
+// =============================================================================
+
+/**
+ * Industry-specific feature recommendations.
+ * Modules listed here are enabled; unlisted modules are disabled.
+ * CRM is always on. Clients can override in Settings.
+ */
+const ALWAYS_ON: FeatureModuleId[] = ['crm_pipeline', 'conversations', 'workflows'];
+
+export const INDUSTRY_FEATURE_DEFAULTS: Record<string, FeatureModuleId[]> = {
+  real_estate: [...ALWAYS_ON, 'email_outreach', 'social_media', 'forms_surveys', 'website_builder', 'video_production', 'proposals_docs'],
+  design_construction: [...ALWAYS_ON, 'email_outreach', 'social_media', 'forms_surveys', 'website_builder', 'proposals_docs', 'video_production'],
+  healthcare_medical: [...ALWAYS_ON, 'email_outreach', 'forms_surveys', 'website_builder', 'social_media'],
+  fitness_wellness: [...ALWAYS_ON, 'email_outreach', 'social_media', 'forms_surveys', 'website_builder', 'video_production'],
+  home_services: [...ALWAYS_ON, 'email_outreach', 'forms_surveys', 'website_builder', 'social_media'],
+  technology_saas: [...ALWAYS_ON, 'email_outreach', 'sales_automation', 'website_builder', 'advanced_analytics', 'social_media', 'proposals_docs'],
+  ecommerce_retail: [...ALWAYS_ON, 'ecommerce', 'email_outreach', 'social_media', 'website_builder', 'advanced_analytics', 'video_production'],
+  marketing_agencies: [...ALWAYS_ON, 'email_outreach', 'social_media', 'website_builder', 'video_production', 'proposals_docs', 'advanced_analytics', 'sales_automation'],
+  legal_services: [...ALWAYS_ON, 'email_outreach', 'forms_surveys', 'website_builder', 'proposals_docs'],
+  financial_services: [...ALWAYS_ON, 'email_outreach', 'forms_surveys', 'website_builder', 'proposals_docs', 'sales_automation'],
+  business_services: [...ALWAYS_ON, 'email_outreach', 'social_media', 'forms_surveys', 'website_builder', 'proposals_docs', 'sales_automation'],
+  hospitality_food: [...ALWAYS_ON, 'email_outreach', 'social_media', 'forms_surveys', 'website_builder', 'ecommerce', 'video_production'],
+  nonprofit: [...ALWAYS_ON, 'email_outreach', 'social_media', 'forms_surveys', 'website_builder'],
+  automotive: [...ALWAYS_ON, 'email_outreach', 'social_media', 'forms_surveys', 'website_builder', 'video_production'],
+  social_media: [...ALWAYS_ON, 'social_media', 'email_outreach', 'website_builder', 'video_production', 'advanced_analytics'],
+};
+
+/**
+ * Build a feature config based on industry selection.
+ * Returns all-on if industry not found (safe default — show everything).
+ */
+export function getIndustryFeatureConfig(industryCategory: string): FeatureConfig {
+  const featureIds = INDUSTRY_FEATURE_DEFAULTS[industryCategory];
+
+  if (!featureIds) {
+    // Unknown industry — enable everything, let the client pare down
+    return { ...DEFAULT_FEATURE_CONFIG };
+  }
+
+  const modules: Record<FeatureModuleId, boolean> = {
+    crm_pipeline: false,
+    sales_automation: false,
+    email_outreach: false,
+    social_media: false,
+    ecommerce: false,
+    website_builder: false,
+    video_production: false,
+    forms_surveys: false,
+    proposals_docs: false,
+    advanced_analytics: false,
+    workflows: false,
+    conversations: false,
+  };
+
+  for (const id of featureIds) {
+    modules[id] = true;
+  }
+
+  return {
+    modules,
+    updatedAt: new Date().toISOString(),
+    updatedBy: 'system',
+  };
+}
 
 // =============================================================================
 // HELPERS
