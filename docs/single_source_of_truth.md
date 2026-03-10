@@ -1,7 +1,7 @@
 # SalesVelocity.ai - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** March 10, 2026 (Video retry fix, auto-sync Hedra avatars, avatar image fallback, onboarding overhaul)
+**Last Updated:** March 10, 2026 (Video Editor + Media Library + Jasper integration)
 **Branches:** `dev` (latest)
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Architecture:** Single-Tenant Penthouse Model (development strategy — multi-tenant SaaS product)
@@ -36,8 +36,8 @@
 
 | Metric | Count | Status |
 |--------|-------|--------|
-| Physical Routes (page.tsx) | 180 | Verified March 6, 2026 |
-| API Endpoints (route.ts) | 355 | Verified March 6, 2026 |
+| Physical Routes (page.tsx) | 181 | Updated March 10, 2026 (+1 Video Editor) |
+| API Endpoints (route.ts) | 357 | Updated March 10, 2026 (+2 Media Library) |
 | AI Agents | 52 | **52 FUNCTIONAL (46 swarm + 6 standalone)** |
 | RBAC Roles | 4 | owner / admin / manager / member |
 | TypeScript Files | 1,531 | Verified March 6, 2026 |
@@ -69,8 +69,8 @@
 |-----------|-------|---------|
 | `src/lib/` | ~490 | Core business logic, services, agents |
 | `src/components/` | ~200 | UI components (+13 lead-research) |
-| `src/app/api/` | ~355 | API routes |
-| `src/app/(dashboard)/` | ~115 | Dashboard pages |
+| `src/app/api/` | ~357 | API routes |
+| `src/app/(dashboard)/` | ~116 | Dashboard pages |
 | `src/types/` | ~42 | TypeScript definitions |
 | `src/hooks/` | ~22 | React hooks |
 
@@ -138,7 +138,7 @@ The Claude Code Governance Layer defines binding operational constraints for AI-
 | Single-tenant architecture | **COMPLETE** — Firebase kill-switch, PLATFORM_ID constant, workspace paths eradicated (53 files migrated) |
 | 4-role RBAC | **ENFORCED** — `requireRole()` on ~347/355 API routes (8 intentionally public), sidebar filtering, 47 permissions |
 | Agent hierarchy | **100% COMPLETE** — 52 agents (46 swarm + 6 standalone), all managers orchestrate all specialists |
-| Jasper delegation | **COMPLETE** — 48 tools (13 delegate_to_*, 35 utility incl. assemble_video). Mission Control SSE streaming live |
+| Jasper delegation | **COMPLETE** — 50 tools (13 delegate_to_*, 37 utility incl. assemble_video, edit_video, manage_media_library). Mission Control SSE streaming live |
 | Lead Research | **COMPLETE** — Unified 3-column page with AI chat, results panel, URL sources. 5 API routes, 8-tool AI subset |
 | Type safety | **CLEAN** — `tsc --noEmit` passes, zero `any` types, zero `@ts-ignore`, zero `@ts-expect-error` |
 | Build pipeline | **CLEAN** — `npm run build` passes, `npm run lint` zero warnings, 17 eslint-disable (ratcheted) |
@@ -207,6 +207,7 @@ The Claude Code Governance Layer defines binding operational constraints for AI-
 | **Tier 4 debt** | Search, SMTP, dead code, Zod, tests — all resolved or documented | ✅ DONE |
 | **Video Phase 2** | Character Studio — source badges, role/style, dual TTS, Hedra browser | ✅ DONE |
 | **Video Phase 3** | AI Video Director — produce_video, assemble_video, brand memory, review UI | ✅ DONE |
+| **Video Phase 4** | Video Editor (CapCut-style timeline), Media Library, edit_video + manage_media_library Jasper tools | ✅ DONE |
 | **Facebook/Instagram** | Implement when Meta Developer Portal approval obtained | BLOCKED |
 | **LinkedIn official** | Replace RapidAPI wrapper when Marketing Developer Platform approved | BLOCKED |
 | **Stripe go-live** | Switch from test to live keys when bank account setup complete | BLOCKED |
@@ -453,14 +454,14 @@ SalesVelocity.ai is a **multi-tenant SaaS product** currently running on the Pen
 
 | Area | Routes | Dynamic Params | Status |
 |------|--------|----------------|--------|
-| Dashboard (`/(dashboard)/*`) | ~115 | 8 | **Flattened** single-tenant (incl. social, mission-control, video, settings; 12 redirects included) |
+| Dashboard (`/(dashboard)/*`) | ~116 | 8 | **Flattened** single-tenant (incl. social, mission-control, video, settings; 12 redirects included) |
 | Public (`/(public)/*`) | ~20 | 1 (`[formId]`) | Marketing + auth pages |
 | Dashboard sub-routes (`/dashboard/*`) | 16 | 0 | Analytics, coaching, marketing, performance |
 | Store (`/store/*`) | ~5 | 1 (`[productId]`) | E-commerce storefront |
 | Onboarding (`/onboarding/*`) | 4 | 0 | 4-step onboarding: industry category, niche drill-down, account creation, API key setup |
 | Auth (`/(auth)/*`) | 1 | 0 | Admin login |
 | Other (`/preview`, `/profile`, `/sites`) | 3 | 2 | Preview tokens, user profile, site builder |
-| **TOTAL** | **180** | **~11** | **Verified March 6, 2026 (filesystem count)** |
+| **TOTAL** | **181** | **~11** | **Updated March 10, 2026 (+1 Video Editor)** |
 
 **DELETED:** `src/app/workspace/` (95 pages) and `src/app/admin/*` (92 pages) - legacy routes removed/consolidated into `(dashboard)`
 
@@ -528,10 +529,11 @@ SalesVelocity.ai is a **multi-tenant SaaS product** currently running on the Pen
 **Video & Voice Lab:**
 - `/content/video` (Video Studio — Hedra-only engine + Character Studio + AI Video Director)
 - `/content/video/library` (Video Library gallery with grid view, filter tabs, detail expansion, edit/download/delete actions)
+- `/content/video/editor` (Standalone Video Editor — CapCut-style timeline, clip stitching, audio mixing, text overlays; accepts project clips or direct URL list)
 - `/content/voice-lab` (Voice Lab — recording studio, voice library with ElevenLabs voices, AI music generation)
 - **Character Studio** — reusable character library: custom + Hedra stock characters, reference images, green screen clips, voice assignment, role/style tags. Auto-syncs all Hedra characters into avatar picker on mount.
-- **AI Video Director** — `produce_video` and `assemble_video` Jasper tools, per-scene character assignment, Hedra prompt translator, scene review workflow (approve/reject/feedback/regenerate), brand preference memory.
-- **Current Status: FUNCTIONAL** — Hedra sole engine. Phases 1-3 complete (March 9). Phase 4 (polish) remaining.
+- **AI Video Director** — `produce_video`, `assemble_video`, `edit_video`, and `manage_media_library` Jasper tools, per-scene character assignment, Hedra prompt translator, scene review workflow (approve/reject/feedback/regenerate), brand preference memory.
+- **Current Status: FUNCTIONAL** — Hedra sole engine. Phases 1-4 complete (March 10). Video Editor, Media Library, and 2 new Jasper tools operational.
 
 **Growth Command Center (NEW March 2):**
 - `/growth/command-center` — Overview dashboard: stat cards (competitors, keywords, AI visibility), competitive landscape, keyword movers, strategy status, activity feed
@@ -750,7 +752,7 @@ These agents operate independently of the L1/L2/L3 swarm hierarchy:
 
 | Agent | Type | Path | Status | Description |
 |-------|------|------|--------|-------------|
-| Jasper | Internal AI Assistant & Swarm Commander | Firestore `goldenMasters/` + `src/lib/orchestrator/jasper-tools.ts` | FUNCTIONAL | Jasper — the founder's internal AI assistant and swarm commander. **48 tools** across delegation, intelligence, content, video, and platform categories. Delegates to all 9 domain managers via `delegate_to_*` tools. Video: `produce_video` + `assemble_video`. Does NOT handle customer-facing sales (that's the AI Chat Sales Agent). Relays Growth Strategist briefings. |
+| Jasper | Internal AI Assistant & Swarm Commander | Firestore `goldenMasters/` + `src/lib/orchestrator/jasper-tools.ts` | FUNCTIONAL | Jasper — the founder's internal AI assistant and swarm commander. **50 tools** across delegation, intelligence, content, video, and platform categories. Delegates to all 9 domain managers via `delegate_to_*` tools. Video: `produce_video`, `assemble_video`, `edit_video` (opens Standalone Video Editor, pre-loads clips), `manage_media_library` (list/search/add media assets with type/category filters). Does NOT handle customer-facing sales (that's the AI Chat Sales Agent). Relays Growth Strategist briefings. |
 | AI Chat Sales Agent | Customer-Facing Sales Agent | `src/lib/agents/sales-chat/specialist.ts` | FUNCTIONAL | Customer-facing AI sales agent for website chat widget and Facebook Messenger. Sells SalesVelocity.ai as a **multi-tenant SaaS subscription**. Uses its own Golden Master separate from Jasper. Setup: `scripts/setup-sales-agent-golden-master.js`. Routes: `/api/chat/public`, `/api/chat/facebook`. |
 | Growth Strategist | Chief Growth Officer | `src/lib/agents/growth-strategist/specialist.ts` | FUNCTIONAL | Cross-domain business intelligence agent. Aggregates data from all analytics sources (revenue, SEO, social, email, pipeline). Produces strategic directives for domain managers. Briefings accessible through Jasper. Data aggregator: `src/lib/agents/growth-strategist/data-aggregator.ts`. |
 | Voice Agent Handler | Voice AI Agent | `src/lib/voice/voice-agent-handler.ts` | FUNCTIONAL | Hybrid AI/human voice agent with two modes: **Prospector** (lead qualification) and **Closer** (deal closing with warm transfer). API routes: `src/app/api/voice/ai-agent/` |
@@ -1264,7 +1266,7 @@ This script:
 
 #### Video & Voice Lab (25+ routes) — Hedra-Only, Phases 1-3 COMPLETE
 
-**Current Status: FUNCTIONAL** — Hedra sole engine. Character Studio, AI Video Director, brand preference memory all operational.
+**Current Status: FUNCTIONAL** — Hedra sole engine. Character Studio, AI Video Director, brand preference memory, Standalone Video Editor, and Media Library all operational.
 
 | Endpoint | Method | Purpose | Status |
 |----------|--------|---------|--------|
@@ -1284,6 +1286,15 @@ This script:
 | `/api/video/brand-preferences` | GET/POST | Brand preference memory (approved/rejected prompts, style corrections) | FUNCTIONAL |
 | `/api/video/tts-audio` | POST | Synthesize TTS audio (ElevenLabs/UnrealSpeech) | FUNCTIONAL |
 | `/api/video/project/*` | Various | Video project CRUD (save, list, get) | FUNCTIONAL |
+
+#### Media Library (NEW March 10)
+
+| Endpoint | Method | Purpose | Status |
+|----------|--------|---------|--------|
+| `/api/media` | GET | List/search media assets with type and category filters (videos, images, audio with subcategories) | FUNCTIONAL |
+| `/api/media` | POST | Upload and register a new media asset | FUNCTIONAL |
+| `/api/media/[mediaId]` | GET | Retrieve a single media item by ID | FUNCTIONAL |
+| `/api/media/[mediaId]` | DELETE | Delete a media item and its associated storage object | FUNCTIONAL |
 
 #### Social Media Platform (NEW Feb 12)
 
