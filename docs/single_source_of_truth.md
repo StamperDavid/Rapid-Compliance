@@ -1,7 +1,7 @@
 # SalesVelocity.ai - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** March 9, 2026 (Video Overhaul Phases 1-3 complete: Hedra-only engine, Character Studio, AI Video Director with produce_video + assemble_video Jasper tools, brand preference memory, auto-save assembly)
+**Last Updated:** March 10, 2026 (Punch list sweep: SMTP real via nodemailer, signal persistence durable, search optimized, dead code removed, SSOT corrected)
 **Branches:** `dev` (latest)
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Architecture:** Single-Tenant Penthouse Model (development strategy — multi-tenant SaaS product)
@@ -155,7 +155,7 @@ The Claude Code Governance Layer defines binding operational constraints for AI-
 | 2 | **Twitter agent fake data** | Wired real TwitterService; shareInsight only with real API data | ✅ FIXED Mar 9 |
 | 3 | **CRM event triggers disabled** | Replaced client SDK with admin SDK; triggers now query Firestore correctly | ✅ FIXED Mar 9 |
 | 4 | **Email tracking not recorded** | Replaced client SDK with admin SDK; opens/clicks now persist | ✅ FIXED Mar 9 |
-| 5 | **Signal persistence now durable** | Signal persistence now durable — writeSignal awaits Firestore confirmation. Workflow execution was already tracked. | ✅ FIXED Mar 9 |
+| 5 | **Signal persistence now durable** | Signal persistence now durable — writeSignal awaits Firestore confirmation. Workflow execution was already tracked. | ✅ FIXED Mar 10 |
 | 6 | **Cross-manager routing fake** | Returns honest "not yet wired" instead of fake success | ✅ FIXED Mar 9 |
 | 7 | **Social posting DEV MODE** | Returns 503 error when credentials missing (was fake 200) | ✅ FIXED Mar 9 |
 | 8 | **Commerce payment fake** | Returns error when Stripe unconfigured (was fake checkout session) | ✅ FIXED Mar 9 |
@@ -195,19 +195,18 @@ The Claude Code Governance Layer defines binding operational constraints for AI-
 | 26 | Zod validation coverage | ✅ FIXED Mar 9 — 100% of mutation routes validated (was ~74%, not 49%) |
 | 27 | 37 skipped tests (need external services) | 34 skipped tests — 16 E2E timing (Firebase auth slow), 13 need API keys (external), 1 Jest limitation. All have proper conditional skip logic. \| DOCUMENTED |
 | 28 | Search uses Firestore full-scan (no Algolia) | ✅ FIXED Mar 10 — admin SDK, parallel queries, per-schema caps (200), relevance scoring, early termination |
-| 29 | Admin DAL `verifyAccess()` is a no-op | ✅ FIXED Mar 9 — dead code removed |
-| 30 | SMTP was a stub — now real via nodemailer | ✅ FIXED Mar 9 — only SMTP was a stub; now real via nodemailer. Square, Vonage, Resend, and Calendly were already real implementations. |
+| 29 | Admin DAL `verifyAccess()` is a no-op | ✅ FIXED Mar 10 — dead code removed |
+| 30 | SMTP was a stub — now real via nodemailer | ✅ FIXED Mar 10 — only SMTP was a stub; now real via nodemailer. Square, Vonage, Resend, and Calendly were already real implementations. |
 
 ### Active Roadmap
 
 | Priority | Focus | Status |
 |----------|-------|--------|
-| **Tier 1 punch list** | 7/9 fixed, 2 known architectural gaps | ✅ DONE |
+| **Tier 1 punch list** | 8/9 fixed, 1 known (voice blocked on Twilio) | ✅ DONE |
 | **Tier 2 gaps** | All 9 items resolved | ✅ DONE |
-| **Zod coverage** | 100% of mutation routes have Zod schemas | ✅ DONE |
-| **Test quality** | Placeholder tests cleaned (6 removed, not 115) | ✅ DONE |
-| **Video Phase 2** | Character Studio — expand profiles, management UI | NEXT |
-| **Video Phase 3** | AI Video Director agent | PENDING |
+| **Tier 4 debt** | Search, SMTP, dead code, Zod, tests — all resolved or documented | ✅ DONE |
+| **Video Phase 2** | Character Studio — source badges, role/style, dual TTS, Hedra browser | ✅ DONE |
+| **Video Phase 3** | AI Video Director — produce_video, assemble_video, brand memory, review UI | ✅ DONE |
 | **Facebook/Instagram** | Implement when Meta Developer Portal approval obtained | BLOCKED |
 | **LinkedIn official** | Replace RapidAPI wrapper when Marketing Developer Platform approved | BLOCKED |
 | **Stripe go-live** | Switch from test to live keys when bank account setup complete | BLOCKED |
