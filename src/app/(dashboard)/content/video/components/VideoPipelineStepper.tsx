@@ -5,7 +5,6 @@ import { cn } from '@/lib/utils';
 import {
   MessageSquare,
   Layers,
-  Film,
   CheckCircle,
   Zap,
   Puzzle,
@@ -13,11 +12,9 @@ import {
 } from 'lucide-react';
 import { PIPELINE_STEPS, PIPELINE_STEP_LABELS, type PipelineStep } from '@/types/video-pipeline';
 
-const STEP_ICONS: Record<PipelineStep, React.ElementType> = {
+const STEP_ICONS: Partial<Record<PipelineStep, React.ElementType>> = {
   'request': MessageSquare,
-  'decompose': Layers,
-  'pre-production': Film,
-  'approval': CheckCircle,
+  'storyboard': Layers,
   'generation': Zap,
   'assembly': Puzzle,
   'post-production': Wand2,
@@ -40,7 +37,7 @@ export function VideoPipelineStepper({
     <div className="w-full py-4">
       <div className="flex items-center justify-between">
         {PIPELINE_STEPS.map((step, index) => {
-          const Icon = STEP_ICONS[step];
+          const Icon = STEP_ICONS[step] ?? Layers;
           const isCompleted = completedSteps.includes(step);
           const isCurrent = step === currentStep;
           const isClickable = isCompleted || isCurrent;

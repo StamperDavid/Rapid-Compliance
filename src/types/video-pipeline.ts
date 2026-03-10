@@ -1,6 +1,9 @@
 /**
  * Video Production Pipeline Types
- * 7-step flow: Request → Decompose → Pre-Production → Approval → Generation → Assembly → Post-Production
+ * 5-step flow: Request → Storyboard → Generation → Assembly → Post-Production
+ *
+ * Legacy steps (decompose, pre-production, approval) are kept in the type
+ * for backward compat with Firestore projects — they map to 'storyboard'.
  */
 
 import type { VideoAspectRatio, VideoResolution } from './video';
@@ -11,31 +14,42 @@ import type { VideoAspectRatio, VideoResolution } from './video';
 
 export type PipelineStep =
   | 'request'
-  | 'decompose'
-  | 'pre-production'
-  | 'approval'
+  | 'storyboard'
   | 'generation'
   | 'assembly'
-  | 'post-production';
+  | 'post-production'
+  // Legacy steps — map to 'storyboard' in loadProject()
+  | 'decompose'
+  | 'pre-production'
+  | 'approval';
 
+/** Active pipeline steps (what the UI renders). Legacy steps are NOT included. */
 export const PIPELINE_STEPS: readonly PipelineStep[] = [
   'request',
-  'decompose',
-  'pre-production',
-  'approval',
+  'storyboard',
   'generation',
   'assembly',
   'post-production',
 ] as const;
 
+/** Maps legacy step names to their new equivalent */
+export function normalizePipelineStep(step: PipelineStep): PipelineStep {
+  if (step === 'decompose' || step === 'pre-production' || step === 'approval') {
+    return 'storyboard';
+  }
+  return step;
+}
+
 export const PIPELINE_STEP_LABELS: Record<PipelineStep, string> = {
-  'request': 'Request',
-  'decompose': 'Decompose',
-  'pre-production': 'Pre-Production',
-  'approval': 'Approval',
-  'generation': 'Generation',
+  'request': 'Brief',
+  'storyboard': 'Storyboard',
+  'generation': 'Generate',
   'assembly': 'Assembly',
   'post-production': 'Post-Production',
+  // Legacy labels (not displayed but keeps TypeScript happy)
+  'decompose': 'Storyboard',
+  'pre-production': 'Storyboard',
+  'approval': 'Storyboard',
 } as const;
 
 // ============================================================================

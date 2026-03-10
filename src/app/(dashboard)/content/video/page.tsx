@@ -11,9 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { VideoPipelineStepper } from './components/VideoPipelineStepper';
 import { StepRequest } from './components/StepRequest';
-import { StepDecompose } from './components/StepDecompose';
-import { StepPreProduction } from './components/StepPreProduction';
-import { StepApproval } from './components/StepApproval';
+import { StepStoryboard } from './components/StepStoryboard';
 import { StepGeneration } from './components/StepGeneration';
 import { StepAssembly } from './components/StepAssembly';
 import { StepPostProduction } from './components/StepPostProduction';
@@ -122,12 +120,11 @@ export default function VideoStudioPage() {
     switch (currentStep) {
       case 'request':
         return <StepRequest />;
+      case 'storyboard':
       case 'decompose':
-        return <StepDecompose />;
       case 'pre-production':
-        return <StepPreProduction />;
       case 'approval':
-        return <StepApproval />;
+        return <StepStoryboard />;
       case 'generation':
         return <StepGeneration />;
       case 'assembly':
@@ -151,7 +148,7 @@ export default function VideoStudioPage() {
           <p className="text-sm text-zinc-400 mt-1">
             {projectId
               ? `Project: ${projectName || 'Untitled'}`
-              : '7-step video production pipeline powered by Kling Avatar'}
+              : 'AI video production pipeline powered by Hedra'}
           </p>
         </div>
         <div className="flex gap-2">

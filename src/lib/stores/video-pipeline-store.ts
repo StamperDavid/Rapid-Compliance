@@ -1,26 +1,27 @@
 /**
  * Video Pipeline State Store
  *
- * Manages the 7-step video production pipeline:
- * Request → Decompose → Pre-Production → Approval → Generation → Assembly → Post-Production
+ * Manages the 5-step video production pipeline:
+ * Request → Storyboard → Generation → Assembly → Post-Production
  *
  * Uses Zustand with localStorage persistence for cross-page state.
  */
 
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import type {
-  PipelineStep,
-  PipelineScene,
-  PipelineBrief,
-  SceneGenerationResult,
-  VideoType,
-  TargetPlatform,
-  TransitionType,
-  DecompositionPlan,
-  PipelineProject,
-  PostProductionConfig,
-  ColorGradePreset,
+import {
+  normalizePipelineStep,
+  type PipelineStep,
+  type PipelineScene,
+  type PipelineBrief,
+  type SceneGenerationResult,
+  type VideoType,
+  type TargetPlatform,
+  type TransitionType,
+  type DecompositionPlan,
+  type PipelineProject,
+  type PostProductionConfig,
+  type ColorGradePreset,
 } from '@/types/video-pipeline';
 import type { VideoAspectRatio, VideoResolution } from '@/types/video';
 
@@ -218,7 +219,7 @@ export const useVideoPipelineStore = create<VideoPipelineState>()(
         set({
           voiceId: id,
           voiceName: name,
-          voiceProvider: provider ?? 'elevenlabs',
+          voiceProvider: provider ?? 'hedra',
         }),
 
       setGeneratedScenes: (results) => set({ generatedScenes: results }),
@@ -251,27 +252,23 @@ export const useVideoPipelineStore = create<VideoPipelineState>()(
 
       canAdvanceTo: (step) => {
         const state = get();
+        const normalized = normalizePipelineStep(step);
 
-        switch (step) {
+        switch (normalized) {
           case 'request':
-            return true; // Can always go to request
+            return true;
 
-          case 'decompose':
+          case 'storyboard':
             return state.brief.description.trim().length > 0;
 
-          case 'pre-production':
-            return state.decompositionPlan !== null;
-
-          case 'approval':
+          case 'generation':
+            // Need scenes with scripts, an avatar, and a voice to generate
             return (
               state.scenes.length > 0 &&
               state.avatarId !== null &&
-              state.voiceId !== null
+              state.voiceId !== null &&
+              state.scenes.every((scene) => scene.scriptText.trim().length > 0)
             );
-
-          case 'generation':
-            // All scenes use Hedra — every scene needs a script
-            return state.scenes.every((scene) => scene.scriptText.trim().length > 0);
 
           case 'assembly':
             return (
@@ -305,7 +302,7 @@ export const useVideoPipelineStore = create<VideoPipelineState>()(
         set({
           projectId: project.id,
           projectName: project.name,
-          currentStep: project.currentStep,
+          currentStep: normalizePipelineStep(project.currentStep),
           brief: project.brief,
           scenes: project.scenes,
           avatarId: project.avatarId,
@@ -350,9 +347,7 @@ export const useVideoPipelineStore = create<VideoPipelineState>()(
 
 const PIPELINE_STEPS: readonly PipelineStep[] = [
   'request',
-  'decompose',
-  'pre-production',
-  'approval',
+  'storyboard',
   'generation',
   'assembly',
   'post-production',
