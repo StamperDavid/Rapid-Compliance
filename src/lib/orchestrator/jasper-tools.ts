@@ -1073,7 +1073,7 @@ export const JASPER_TOOLS: ToolDefinition[] = [
     function: {
       name: 'create_video',
       description:
-        'Create a video draft for review. Builds a storyboard with scenes and saves as a draft project. Default avatar and voice are auto-selected from saved settings — the user only reviews the script and scenery before approving. Use this when the user asks to create, generate, or make a video. ENABLED: TRUE.',
+        'Create a video draft for review. Builds a storyboard with scenes and saves as a draft project. Default avatar and voice are auto-selected from saved settings — the user only reviews the script and scenery before approving. ONLY call this when the user explicitly asks to CREATE, GENERATE, or MAKE a specific video. Do NOT call this for brainstorming, ideation, exploring ideas, discussing concepts, or planning — respond conversationally instead and wait for explicit go-ahead. ENABLED: TRUE.',
       parameters: {
         type: 'object',
         properties: {
@@ -1162,7 +1162,7 @@ export const JASPER_TOOLS: ToolDefinition[] = [
     function: {
       name: 'produce_video',
       description:
-        'AI Video Director — full production pipeline. Creates a project, assigns characters to scenes, translates prompts for Hedra, generates all scenes, and stitches clips. Handles the entire flow from brief to finished video. Use this when the user wants an end-to-end video production with multiple characters or scenes. ENABLED: TRUE.',
+        'AI Video Director — full production pipeline. Creates a project, assigns characters to scenes, translates prompts for Hedra, generates all scenes, and stitches clips. Handles the entire flow from brief to finished video. ONLY call this when the user explicitly asks to produce or render a specific video. Do NOT call this for brainstorming, ideation, or discussion — respond conversationally instead. ENABLED: TRUE.',
       parameters: {
         type: 'object',
         properties: {
