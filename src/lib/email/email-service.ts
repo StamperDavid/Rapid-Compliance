@@ -345,37 +345,97 @@ async function sendViaResend(options: EmailOptions, credentials: Record<string, 
 }
 
 /**
- * Send email via SMTP
+ * Send email via SMTP using nodemailer
+ * REAL: Connects to configured SMTP server and sends email
  */
 async function sendViaSMTP(options: EmailOptions, credentials: Record<string, unknown>): Promise<EmailResult> {
-  // For SMTP, we need to use a server-side implementation
-  // This would typically use nodemailer or similar
-  // For now, we'll make a call to an API route that handles SMTP
-  
-  const response = await fetch('/api/email/send-smtp', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      ...options,
-      smtpConfig: credentials,
-    }),
-  });
+  const nodemailer = await import('nodemailer');
 
-  if (!response.ok) {
-    const error = await response.json() as { error?: string };
+  const host = typeof credentials.host === 'string' ? credentials.host : '';
+  const port = typeof credentials.port === 'number' ? credentials.port : 587;
+  const username = typeof credentials.username === 'string' ? credentials.username : '';
+  const password = typeof credentials.password === 'string' ? credentials.password : '';
+  const secure = typeof credentials.secure === 'boolean' ? credentials.secure : port === 465;
+
+  if (!host || !username || !password) {
     return {
       success: false,
-      error: error.error ?? 'SMTP send failed',
+      error: 'SMTP credentials incomplete. Required: host, username, password.',
       provider: 'smtp',
     };
   }
 
-  const data = await response.json() as { messageId?: string };
+  const transporter = nodemailer.default.createTransport({
+    host,
+    port,
+    secure,
+    auth: {
+      user: username,
+      pass: password,
+    },
+  });
+
+  const fromEmail = options.from ?? (typeof credentials.fromEmail === 'string' ? credentials.fromEmail : username);
+  const fromName = options.fromName ?? (typeof credentials.fromName === 'string' ? credentials.fromName : 'SalesVelocity');
+
+  let html = options.html;
+  if (html && options.tracking?.trackOpens) {
+    const result = addTrackingPixel(html, true, undefined);
+    html = result.html;
+  }
+
+  interface SmtpMailOptions {
+    from: string;
+    to: string;
+    subject: string;
+    html?: string;
+    text?: string;
+    cc?: string;
+    bcc?: string;
+    replyTo?: string;
+    attachments?: Array<{ filename: string; content: string | Buffer; contentType?: string }>;
+  }
+
+  const mailOptions: SmtpMailOptions = {
+    from: `"${fromName}" <${fromEmail}>`,
+    to: Array.isArray(options.to) ? options.to.join(', ') : options.to,
+    subject: options.subject,
+    html,
+    text: options.text,
+    ...(options.cc && { cc: Array.isArray(options.cc) ? options.cc.join(', ') : options.cc }),
+    ...(options.bcc && { bcc: Array.isArray(options.bcc) ? options.bcc.join(', ') : options.bcc }),
+    ...(options.replyTo && { replyTo: options.replyTo }),
+    ...(options.attachments && {
+      attachments: options.attachments.map(att => ({
+        filename: att.filename,
+        content: att.content,
+        contentType: att.contentType,
+      })),
+    }),
+  };
+
+  const info = await transporter.sendMail(mailOptions);
+  const messageId = typeof info.messageId === 'string' ? info.messageId : `smtp_${Date.now()}`;
+
+  if (options.tracking?.trackOpens) {
+    void import('@/lib/db/firestore-service').then(({ FirestoreService }) => {
+      void FirestoreService.set(
+        getSubCollection('emailTrackingMappings'),
+        messageId,
+        {
+          messageId,
+          createdAt: new Date().toISOString(),
+        },
+        false
+      ).catch(() => {
+        // Tracking storage is best-effort
+      });
+    });
+  }
+
   return {
     success: true,
-    messageId: data.messageId,
+    messageId,
     provider: 'smtp',
   };
 }

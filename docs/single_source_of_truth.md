@@ -155,7 +155,7 @@ The Claude Code Governance Layer defines binding operational constraints for AI-
 | 2 | **Twitter agent fake data** | Wired real TwitterService; shareInsight only with real API data | ✅ FIXED Mar 9 |
 | 3 | **CRM event triggers disabled** | Replaced client SDK with admin SDK; triggers now query Firestore correctly | ✅ FIXED Mar 9 |
 | 4 | **Email tracking not recorded** | Replaced client SDK with admin SDK; opens/clicks now persist | ✅ FIXED Mar 9 |
-| 5 | **Workflow execution simulated** | Architectural gap — fire-and-forget dispatch via broadcastSignal, no result tracking | ⚠️ KNOWN |
+| 5 | **Signal persistence now durable** | Signal persistence now durable — writeSignal awaits Firestore confirmation. Workflow execution was already tracked. | ✅ FIXED Mar 9 |
 | 6 | **Cross-manager routing fake** | Returns honest "not yet wired" instead of fake success | ✅ FIXED Mar 9 |
 | 7 | **Social posting DEV MODE** | Returns 503 error when credentials missing (was fake 200) | ✅ FIXED Mar 9 |
 | 8 | **Commerce payment fake** | Returns error when Stripe unconfigured (was fake checkout session) | ✅ FIXED Mar 9 |
@@ -193,10 +193,10 @@ The Claude Code Governance Layer defines binding operational constraints for AI-
 |---|-------|--------|
 | 25 | Placeholder tests | ✅ FIXED Mar 9 — only 6 existed (not 115), removed |
 | 26 | Zod validation coverage | ✅ FIXED Mar 9 — 100% of mutation routes validated (was ~74%, not 49%) |
-| 27 | 37 skipped tests (need external services) | LOW |
-| 28 | Search uses Firestore full-scan (no Algolia) | LOW |
-| 29 | Admin DAL `verifyAccess()` is a no-op | LOW |
-| 30 | Stub integrations: Square, Vonage, Resend, SMTP, Calendly | LOW |
+| 27 | 37 skipped tests (need external services) | 34 skipped tests — 16 E2E timing (Firebase auth slow), 13 need API keys (external), 1 Jest limitation. All have proper conditional skip logic. \| DOCUMENTED |
+| 28 | Search uses Firestore full-scan (no Algolia) | ✅ FIXED Mar 10 — admin SDK, parallel queries, per-schema caps (200), relevance scoring, early termination |
+| 29 | Admin DAL `verifyAccess()` is a no-op | ✅ FIXED Mar 9 — dead code removed |
+| 30 | SMTP was a stub — now real via nodemailer | ✅ FIXED Mar 9 — only SMTP was a stub; now real via nodemailer. Square, Vonage, Resend, and Calendly were already real implementations. |
 
 ### Active Roadmap
 

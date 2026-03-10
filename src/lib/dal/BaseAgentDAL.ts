@@ -400,22 +400,6 @@ export class BaseAgentDAL {
   }
 
   // ========================================
-  // ACCESS CONTROL
-  // ========================================
-
-  /**
-   * Verify that a user has access
-   * @deprecated Single-tenant system — access verified at auth layer
-   */
-  private verifyAccess(
-    userId: string | undefined,
-  ): void {
-    logger.debug('🔒 Verifying access', {
-      userId,
-      file: 'BaseAgentDAL.ts'
-    });
-  }
-  
   /**
    * Get current environment prefix for debugging
    */

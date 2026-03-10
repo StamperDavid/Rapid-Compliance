@@ -468,22 +468,6 @@ export class FirestoreAdminDAL {
   }
 
   // ========================================
-  // ACCESS CONTROL (Coming Soon)
-  // ========================================
-
-  /**
-   * Verify user access to platform
-   */
-  private verifyAccess(
-    _userId: string | undefined
-  ): void {
-    logger.debug('Verifying platform access (Admin)', {
-      userId: _userId,
-      file: 'admin-dal.ts'
-    });
-  }
-
-  // ========================================
   // ANALYTICS QUERY METHODS
   // ========================================
 

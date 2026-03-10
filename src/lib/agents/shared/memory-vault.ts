@@ -225,6 +225,9 @@ export class MemoryVault {
   private hydrated = false;
   private hydrationPromise: Promise<void> | null = null;
 
+  // Track pending Firestore writes so signals can await durable persistence
+  private pendingPersists: Map<string, Promise<void>> = new Map();
+
   private constructor() {
     logger.info('[MemoryVault] Initialized - Cross-agent memory active');
     this.startHydration();
@@ -324,8 +327,9 @@ export class MemoryVault {
   }
 
   /**
-   * Persist a single entry to Firestore (fire-and-forget).
+   * Persist a single entry to Firestore.
    * Called after every write() to keep Firestore in sync.
+   * Non-signal writes are fire-and-forget; signal writes can be awaited via pendingPersists.
    */
   private persistToFirestore(mapKey: string, entry: MemoryEntry): void {
     if (!adminDb) {return;}
@@ -333,7 +337,8 @@ export class MemoryVault {
     const docId = this.sanitizeDocId(mapKey);
     const data = this.serializeForFirestore(entry);
 
-    void adminDb.collection(this.getCollectionPath()).doc(docId).set(data)
+    const promise = adminDb.collection(this.getCollectionPath()).doc(docId).set(data)
+      .then(() => { /* resolve to void */ })
       .catch((error: unknown) => {
         logger.error(
           '[MemoryVault] Firestore persist failed',
@@ -341,6 +346,20 @@ export class MemoryVault {
           { mapKey }
         );
       });
+
+    this.pendingPersists.set(mapKey, promise);
+  }
+
+  /**
+   * Await durable persistence for a specific entry.
+   * Used by writeSignal to ensure cross-agent signals survive restarts.
+   */
+  async awaitPersistence(mapKey: string): Promise<void> {
+    const promise = this.pendingPersists.get(mapKey);
+    if (promise) {
+      await promise;
+      this.pendingPersists.delete(mapKey);
+    }
   }
 
   /**
@@ -527,7 +546,7 @@ export class MemoryVault {
     options: WriteOptions = {}
   ): Promise<SignalEntry> {
     await this.ensureHydrated();
-    return this.write<SignalData>(
+    const entry = this.write<SignalData>(
       'SIGNAL',
       key,
       signal,
@@ -538,6 +557,11 @@ export class MemoryVault {
         tags: [...(options.tags ?? []), signal.signalType],
       }
     ) as SignalEntry;
+
+    // Signals are cross-agent communication — ensure durable persistence
+    await this.awaitPersistence(`SIGNAL:${key}`);
+
+    return entry;
   }
 
   /**

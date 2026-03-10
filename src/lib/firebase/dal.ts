@@ -343,23 +343,6 @@ export class FirestoreDAL {
     // await addDoc(collection(this.db, COLLECTIONS.AUDIT_LOGS), auditEntry);
   }
 
-  // ========================================
-  // ACCESS CONTROL
-  // ========================================
-
-  /**
-   * Verify that a user has access
-   * @deprecated Single-tenant system — access verified at auth layer
-   */
-  private verifyAccess(
-    _userId: string | undefined
-  ): void {
-    // Single-tenant system — all data scoped to PLATFORM_ID
-    logger.debug('🔒 Verifying access', {
-      userId: _userId,
-      file: 'dal.ts'
-    });
-  }
 }
 
 // ========================================
