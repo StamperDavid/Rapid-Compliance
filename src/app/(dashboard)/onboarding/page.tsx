@@ -12,6 +12,7 @@ import {
   PrefilledFieldWrapper
 } from '@/components/onboarding/PrefillIndicator';
 import { useToast } from '@/hooks/useToast';
+import { ONBOARDING_CATEGORIES } from '@/lib/persona/category-template-map';
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -731,18 +732,9 @@ export default function OnboardingWizard() {
                           }}
                         >
                           <option value="">Select your industry...</option>
-                          <option value="retail">Retail / E-commerce</option>
-                          <option value="services">Professional Services</option>
-                          <option value="manufacturing">Manufacturing / Wholesale</option>
-                          <option value="realestate">Real Estate</option>
-                          <option value="hospitality">Hospitality / Tourism</option>
-                          <option value="automotive">Automotive</option>
-                          <option value="finance">Financial Services / Insurance</option>
-                          <option value="education">Education / Training</option>
-                          <option value="construction">Construction / Contracting</option>
-                          <option value="legal">Legal Services</option>
-                          <option value="fitness">Fitness / Wellness</option>
-                          <option value="home_services">Home Services</option>
+                          {ONBOARDING_CATEGORIES.map((cat) => (
+                            <option key={cat.id} value={cat.id}>{cat.icon} {cat.name}</option>
+                          ))}
                           <option value="other">Other</option>
                         </select>
                       </div>
@@ -768,18 +760,9 @@ export default function OnboardingWizard() {
                         }}
                       >
                         <option value="">Select your industry...</option>
-                        <option value="retail">Retail / E-commerce</option>
-                        <option value="services">Professional Services</option>
-                        <option value="manufacturing">Manufacturing / Wholesale</option>
-                        <option value="realestate">Real Estate</option>
-                        <option value="hospitality">Hospitality / Tourism</option>
-                        <option value="automotive">Automotive</option>
-                        <option value="finance">Financial Services / Insurance</option>
-                        <option value="education">Education / Training</option>
-                        <option value="construction">Construction / Contracting</option>
-                        <option value="legal">Legal Services</option>
-                        <option value="fitness">Fitness / Wellness</option>
-                        <option value="home_services">Home Services</option>
+                        {ONBOARDING_CATEGORIES.map((cat) => (
+                          <option key={cat.id} value={cat.id}>{cat.icon} {cat.name}</option>
+                        ))}
                         <option value="other">Other</option>
                       </select>
                     </div>
