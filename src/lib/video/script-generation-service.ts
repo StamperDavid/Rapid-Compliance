@@ -79,7 +79,8 @@ const AISceneSchema = z.object({
   scriptText: z.string(),
   visualDescription: z.string(),
   suggestedDuration: z.number(),
-  engine: z.enum(['hedra']),
+  // Accept any engine string from the AI but normalize to 'hedra' (sole engine)
+  engine: z.string().nullable().transform(() => 'hedra' as const),
   backgroundPrompt: z.string().nullable(),
 });
 
@@ -455,93 +456,159 @@ async function generateAIScripts(
   params: ScriptGenerationParams,
   sceneCount: number,
 ): Promise<ScriptGenerationResult | null> {
+  // Step 1: Load context in parallel
+  let brandContext: string | null = null;
+  let productContext: string | null = null;
+  let personaResult: Awaited<ReturnType<typeof loadMarketingPersona>> = null;
+
   try {
-    const [brandContext, productContext, personaResult] = await Promise.all([
+    [brandContext, productContext, personaResult] = await Promise.all([
       loadBrandContext(),
       loadProductContext(),
       loadMarketingPersona(),
     ]);
+    logger.info('Script generation context loaded', {
+      hasBrand: Boolean(brandContext),
+      hasProducts: Boolean(productContext),
+      hasPersona: Boolean(personaResult),
+      file: 'script-generation-service.ts',
+    });
+  } catch (ctxError) {
+    logger.warn('Failed to load script generation context (continuing without)', {
+      error: ctxError instanceof Error ? ctxError.message : String(ctxError),
+      file: 'script-generation-service.ts',
+    });
+  }
 
-    const provider = new OpenRouterProvider(PLATFORM_ID);
+  // Step 2: Build prompts
+  const provider = new OpenRouterProvider(PLATFORM_ID);
 
-    let systemPrompt = buildSystemPrompt(brandContext, productContext, params.avatar);
-    if (personaResult) {
-      systemPrompt += `\n\n## MARKETING PERSONA (from Growth Strategist analysis)\nUse this audience intelligence to tailor tone, pain points, and messaging:\n${personaResult.contextBlock}`;
-    }
-    const userPrompt = buildUserPrompt(
-      params.description, params.videoType, params.platform, params.duration, sceneCount,
-      params.targetAudience, params.painPoints, params.talkingPoints, params.tone, params.callToAction,
-      params.vibe,
-    );
+  let systemPrompt = buildSystemPrompt(brandContext, productContext, params.avatar);
+  if (personaResult) {
+    systemPrompt += `\n\n## MARKETING PERSONA (from Growth Strategist analysis)\nUse this audience intelligence to tailor tone, pain points, and messaging:\n${personaResult.contextBlock}`;
+  }
+  const userPrompt = buildUserPrompt(
+    params.description, params.videoType, params.platform, params.duration, sceneCount,
+    params.targetAudience, params.painPoints, params.talkingPoints, params.tone, params.callToAction,
+    params.vibe,
+  );
 
-    const response = await provider.chat({
+  // Step 3: Call AI model
+  let response: { content: string };
+  try {
+    response = await provider.chat({
       model: 'claude-3-5-sonnet',
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt },
       ],
       temperature: 0.7,
-      maxTokens: 4000,
+      maxTokens: 6000,
     });
-
-    if (!response.content) {
-      logger.warn('AI scene generation returned empty content');
-      return null;
-    }
-
-    // Strip markdown code fences if present
-    let jsonStr = response.content.trim();
-    if (jsonStr.startsWith('```')) {
-      jsonStr = jsonStr.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
-    }
-
-    const parsed = JSON.parse(jsonStr) as unknown;
-    const validated = AIResponseSchema.parse(parsed);
-
-    const totalDuration = validated.scenes.reduce((sum, s) => sum + s.suggestedDuration, 0);
-
-    const result: ScriptGenerationResult = {
-      videoType: params.videoType,
-      targetAudience: validated.targetAudience,
-      keyMessages: validated.keyMessages,
-      scenes: validated.scenes.map((s) => ({
-        ...s,
-        engine: s.engine,
-        backgroundPrompt: s.backgroundPrompt,
-      })),
-      assetsNeeded: determineAssetsNeeded(params.videoType, params.platform),
-      avatarRecommendation: null,
-      estimatedTotalDuration: totalDuration,
-      generatedBy: 'ai',
-    };
-
-    // Share storyboard to MemoryVault for cross-agent access
-    try {
-      await shareInsight(
-        'SCRIPT_GENERATOR',
-        'CONTENT',
-        `Video Script: ${params.description.slice(0, 50)}`,
-        `Generated ${validated.scenes.length} scenes for ${params.videoType} video targeting ${validated.targetAudience}`,
-        {
-          confidence: 85,
-          tags: ['video-script', 'storyboard'],
-        },
-      );
-    } catch (vaultError) {
-      logger.warn('Failed to share script insight to MemoryVault', {
-        error: vaultError instanceof Error ? vaultError.message : String(vaultError),
-      });
-    }
-
-    return result;
-  } catch (error) {
-    const errMsg = error instanceof Error ? error.message : String(error);
-    logger.error('AI scene generation FAILED — falling back to templates',
-      error instanceof Error ? error : new Error(errMsg),
-      { file: 'script-generation-service.ts' },
+  } catch (aiError) {
+    logger.error('OpenRouter API call failed for script generation',
+      aiError instanceof Error ? aiError : new Error(String(aiError)),
+      { file: 'script-generation-service.ts', model: 'claude-3-5-sonnet' },
     );
     return null;
   }
+
+  if (!response.content) {
+    logger.warn('AI scene generation returned empty content', { file: 'script-generation-service.ts' });
+    return null;
+  }
+
+  // Step 4: Extract JSON — robust extraction that handles text before/after the JSON
+  let jsonStr = response.content.trim();
+
+  // Try 1: Strip code fences (```json ... ```)
+  const fenceMatch = jsonStr.match(/```(?:json)?\s*\n?([\s\S]*?)\n?\s*```/);
+  if (fenceMatch) {
+    jsonStr = fenceMatch[1].trim();
+  }
+
+  // Try 2: If no code fences, find the first { ... } block
+  if (!jsonStr.startsWith('{')) {
+    const braceStart = jsonStr.indexOf('{');
+    const braceEnd = jsonStr.lastIndexOf('}');
+    if (braceStart !== -1 && braceEnd > braceStart) {
+      jsonStr = jsonStr.substring(braceStart, braceEnd + 1);
+    }
+  }
+
+  // Step 5: Parse and validate
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(jsonStr);
+  } catch (parseError) {
+    logger.error('JSON parse failed for AI script response',
+      parseError instanceof Error ? parseError : new Error(String(parseError)),
+      {
+        file: 'script-generation-service.ts',
+        responsePreview: response.content.substring(0, 300),
+        extractedPreview: jsonStr.substring(0, 300),
+      },
+    );
+    return null;
+  }
+
+  let validated: { targetAudience: string; keyMessages: string[]; scenes: Array<{ sceneNumber: number; title: string; scriptText: string; visualDescription: string; suggestedDuration: number; engine: 'hedra'; backgroundPrompt: string | null }> };
+  try {
+    validated = AIResponseSchema.parse(parsed);
+  } catch (zodError) {
+    logger.error('Zod validation failed for AI script response',
+      zodError instanceof Error ? zodError : new Error(String(zodError)),
+      {
+        file: 'script-generation-service.ts',
+        parsedKeys: typeof parsed === 'object' && parsed !== null ? Object.keys(parsed) : [],
+        sceneCount: typeof parsed === 'object' && parsed !== null && 'scenes' in parsed && Array.isArray((parsed as Record<string, unknown>).scenes) ? (parsed as Record<string, unknown[]>).scenes.length : 0,
+      },
+    );
+    return null;
+  }
+
+  const totalDuration = validated.scenes.reduce((sum, s) => sum + s.suggestedDuration, 0);
+
+  const result: ScriptGenerationResult = {
+    videoType: params.videoType,
+    targetAudience: validated.targetAudience,
+    keyMessages: validated.keyMessages,
+    scenes: validated.scenes.map((s) => ({
+      ...s,
+      engine: s.engine,
+      backgroundPrompt: s.backgroundPrompt,
+    })),
+    assetsNeeded: determineAssetsNeeded(params.videoType, params.platform),
+    avatarRecommendation: null,
+    estimatedTotalDuration: totalDuration,
+    generatedBy: 'ai',
+  };
+
+  logger.info('AI scripts generated successfully', {
+    sceneCount: validated.scenes.length,
+    totalDuration,
+    file: 'script-generation-service.ts',
+  });
+
+  // Share storyboard to MemoryVault for cross-agent access
+  try {
+    await shareInsight(
+      'SCRIPT_GENERATOR',
+      'CONTENT',
+      `Video Script: ${params.description.slice(0, 50)}`,
+      `Generated ${validated.scenes.length} scenes for ${params.videoType} video targeting ${validated.targetAudience}`,
+      {
+        confidence: 85,
+        tags: ['video-script', 'storyboard'],
+      },
+    );
+  } catch (vaultError) {
+    logger.warn('Failed to share script insight to MemoryVault', {
+      error: vaultError instanceof Error ? vaultError.message : String(vaultError),
+    });
+  }
+
+  return result;
 }
 
 // ============================================================================
@@ -819,7 +886,8 @@ function determineAssetsNeeded(videoType: ScriptVideoType, _platform: string): s
 export async function generateVideoScripts(
   params: ScriptGenerationParams,
 ): Promise<ScriptGenerationResult> {
-  const sceneCount = Math.max(2, Math.min(8, Math.ceil(params.duration / 15)));
+  // Target ~8 seconds per scene for dynamic pacing (min 3, max 8 scenes)
+  const sceneCount = Math.max(3, Math.min(8, Math.ceil(params.duration / 8)));
 
   const aiResult = await generateAIScripts(params, sceneCount);
 

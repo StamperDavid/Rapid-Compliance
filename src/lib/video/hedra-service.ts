@@ -231,6 +231,10 @@ async function uploadAssetFromUrl(
 
   const asset = (await createResponse.json()) as HedraAssetResponse;
 
+  if (!asset?.id || !asset?.upload_url) {
+    throw new Error(`Hedra asset create returned invalid response: missing ${!asset?.id ? 'id' : 'upload_url'}. Response: ${JSON.stringify(asset).slice(0, 200)}`);
+  }
+
   logger.info('Hedra asset placeholder created', {
     assetId: asset.id,
     assetType,
@@ -289,13 +293,31 @@ export async function getHedraModels(): Promise<HedraModelEntry[]> {
     throw new Error(`Hedra models fetch failed (${response.status}): ${detail}`);
   }
 
-  const models = (await response.json()) as HedraModelEntry[];
+  const raw: unknown = await response.json();
+
+  // Hedra may wrap models in an object or return an array directly
+  let models: HedraModelEntry[];
+  if (Array.isArray(raw)) {
+    models = raw as HedraModelEntry[];
+  } else if (raw && typeof raw === 'object' && 'models' in raw && Array.isArray((raw as Record<string, unknown>).models)) {
+    models = (raw as Record<string, unknown>).models as HedraModelEntry[];
+  } else if (raw && typeof raw === 'object' && 'data' in raw && Array.isArray((raw as Record<string, unknown>).data)) {
+    models = (raw as Record<string, unknown>).data as HedraModelEntry[];
+  } else {
+    logger.error('Unexpected Hedra models response format', new Error('Invalid models response'), {
+      responseType: typeof raw,
+      isArray: Array.isArray(raw),
+      keys: raw && typeof raw === 'object' ? Object.keys(raw) : [],
+      file: 'hedra-service.ts',
+    });
+    throw new Error('Hedra models API returned unexpected format. Check API key and account status.');
+  }
 
   Object.assign(modelCache, { models, timestamp: Date.now() });
 
   logger.info('Hedra models fetched and cached', {
     count: models.length,
-    modelNames: models.map((m) => m.name).join(', '),
+    modelNames: models.map((m) => m?.name ?? 'unnamed').join(', '),
     file: 'hedra-service.ts',
   });
 
@@ -403,6 +425,10 @@ export async function generateHedraAvatarVideo(
   }
 
   const generation = (await genResponse.json()) as HedraGenerationResponse;
+
+  if (!generation?.id) {
+    throw new Error(`Hedra generation returned invalid response: missing id. Response: ${JSON.stringify(generation).slice(0, 200)}`);
+  }
 
   logger.info('Hedra generation submitted', {
     generationId: generation.id,
