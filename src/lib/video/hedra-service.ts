@@ -5,11 +5,11 @@
  * generation from a portrait image + audio file.
  *
  * Flow:
- *   1. GET  /public/models              — discover available models
- *   2. POST /public/assets              — create asset placeholder (image or audio)
- *   3. PUT  <upload_url>                — upload binary to the pre-signed URL
- *   4. POST /public/generations          — submit generation job
- *   5. GET  /public/generations/{id}/status — poll until complete
+ *   1. GET  /public/models                    — discover available models
+ *   2. POST /public/assets                    — create asset placeholder (image or audio)
+ *   3. POST /public/assets/{id}/upload        — multipart upload binary to the asset
+ *   4. POST /public/generations               — submit generation job
+ *   5. GET  /public/generations/{id}/status   — poll until complete
  *
  * Authentication: Header `x-api-key: <key>` (key stored in Firestore via Settings > API Keys)
  */
@@ -43,7 +43,8 @@ interface HedraModelEntry {
 
 interface HedraAssetResponse {
   id: string;
-  upload_url: string;
+  /** @deprecated Hedra no longer returns upload_url — use POST /assets/{id}/upload instead */
+  upload_url?: string | null;
   name: string;
   type: string;
 }
@@ -209,6 +210,10 @@ async function downloadFile(url: string): Promise<{ arrayBuffer: ArrayBuffer; co
 /**
  * Create an asset placeholder on Hedra and upload binary data to it.
  * Returns the asset ID.
+ *
+ * Hedra's current flow (2026):
+ *   1. POST /assets        → creates placeholder, returns { id, name, type }
+ *   2. POST /assets/{id}/upload  → multipart/form-data with "file" field
  */
 async function uploadAssetFromUrl(
   apiKey: string,
@@ -240,8 +245,8 @@ async function uploadAssetFromUrl(
 
   const asset = (await createResponse.json()) as HedraAssetResponse;
 
-  if (!asset?.id || !asset?.upload_url) {
-    throw new Error(`Hedra asset create returned invalid response: missing ${!asset?.id ? 'id' : 'upload_url'}. Response: ${JSON.stringify(asset).slice(0, 200)}`);
+  if (!asset?.id) {
+    throw new Error(`Hedra asset create returned invalid response: missing id. Response: ${JSON.stringify(asset).slice(0, 200)}`);
   }
 
   logger.info('Hedra asset placeholder created', {
@@ -250,17 +255,15 @@ async function uploadAssetFromUrl(
     file: 'hedra-service.ts',
   });
 
-  // Step 3: Upload binary data to the pre-signed URL
-  if (!asset.upload_url || typeof asset.upload_url !== 'string') {
-    throw new Error(`Hedra asset upload_url is invalid: ${JSON.stringify(asset.upload_url)}`);
-  }
-  const uploadResponse = await fetch(asset.upload_url, {
-    method: 'PUT',
-    headers: {
-      'Content-Type': String(contentType),
-      'Content-Length': String(arrayBuffer.byteLength),
-    },
-    body: arrayBuffer,
+  // Step 3: Upload binary data via multipart POST to /assets/{id}/upload
+  const fileName = assetType === 'image' ? `${name}.png` : `${name}.mp3`;
+  const formData = new FormData();
+  formData.append('file', new Blob([arrayBuffer], { type: contentType }), fileName);
+
+  const uploadResponse = await fetch(`${HEDRA_BASE_URL}/assets/${asset.id}/upload`, {
+    method: 'POST',
+    headers: { 'x-api-key': String(apiKey) },
+    body: formData,
   });
 
   if (!uploadResponse.ok) {
@@ -270,7 +273,7 @@ async function uploadAssetFromUrl(
     );
   }
 
-  logger.info('Hedra asset uploaded', {
+  logger.info('Hedra asset uploaded via multipart', {
     assetId: asset.id,
     assetType,
     file: 'hedra-service.ts',
