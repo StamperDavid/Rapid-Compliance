@@ -1881,32 +1881,15 @@ export default function OnboardingWizard() {
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-                {/* Industry Template Selection */}
-                <div>
-                  <label style={{ display: 'block', color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
-                    Start with an Industry Template (Optional)
-                  </label>
-                  <select
-                    value={formData.industryTemplate}
-                    onChange={(e) => updateField('industryTemplate', e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      backgroundColor: 'var(--color-bg-main)',
-                      border: '1px solid var(--color-border-strong)',
-                      borderRadius: '0.5rem',
-                      color: 'var(--color-text-primary)',
-                      fontSize: '1rem'
-                    }}
-                  >
-                    <option value="">None - Use my custom configuration</option>
-                    <option value="b2b_highticket">High-Ticket B2B Sales</option>
-                    <option value="ecommerce_complex">E-commerce with Complex Shipping Rules</option>
-                    <option value="appointments">Appointment-Based Service Business</option>
-                    <option value="retail_inventory">Retail with Inventory Management</option>
-                  </select>
-                  <div style={{ color: 'var(--color-text-disabled)', fontSize: '0.75rem', marginTop: '0.5rem' }}>
-                    Templates provide pre-configured settings you can customize
+                {/* Industry Template — auto-resolved from industry selection in Step 1 */}
+                <div style={{
+                  padding: '1rem',
+                  backgroundColor: 'var(--color-bg-elevated)',
+                  border: '1px solid var(--color-border-light)',
+                  borderRadius: '0.5rem',
+                }}>
+                  <div style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem' }}>
+                    Industry template is automatically selected based on your industry choice in Step 1. Your AI agent will be pre-configured with industry-specific strategies, tone, and conversion tactics.
                   </div>
                 </div>
 

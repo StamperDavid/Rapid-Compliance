@@ -14,6 +14,7 @@ import { buildBaseModel, saveBaseModel } from './base-model-builder';
 import { logger } from '@/lib/logger/logger';
 import { getSubCollection } from '@/lib/firebase/collections';
 import { getIndustryPersonaBlueprint } from '@/lib/db/provisioner/blueprints';
+import { getCategoryById } from '@/lib/persona/category-template-map';
 
 // =============================================================================
 // ONBOARDING CATEGORY → PERSONA BLUEPRINT MAPPING
@@ -79,6 +80,22 @@ export async function processOnboarding(
       });
     }
 
+    // Step 0b: Auto-resolve industryTemplateId if not explicitly set
+    // When the dashboard wizard submits without niche selection, pick the best template
+    let resolvedTemplateId = onboardingData.industryTemplateId;
+    if (!resolvedTemplateId && categoryId !== 'other') {
+      const category = getCategoryById(categoryId);
+      if (category && category.templateIds.length > 0) {
+        // Use the first template in the category as the default
+        resolvedTemplateId = category.templateIds[0];
+        logger.info('[Onboarding] Auto-resolved industry template', {
+          categoryId,
+          templateId: resolvedTemplateId,
+          file: 'onboarding-processor.ts',
+        });
+      }
+    }
+
     // Step 1: Build persona from onboarding data + industry blueprint
     const persona = buildPersonaFromOnboarding(onboardingData);
 
@@ -107,7 +124,7 @@ export async function processOnboarding(
       onboardingData,
       knowledgeBase,
       userId,
-      industryTemplateId: onboardingData.industryTemplateId, // Now properly wired!
+      industryTemplateId: resolvedTemplateId, // Auto-resolved if not explicitly set
     });
     
     // Step 3b: Enrich persona with industry blueprint
@@ -132,6 +149,9 @@ export async function processOnboarding(
       'current',
       {
         ...persona,
+        // Industry context for system-wide reference
+        industryCategory: categoryId,
+        industryTemplateId: resolvedTemplateId,
         // Industry blueprint metadata for agent runtime
         ...(blueprint && {
           industryBlueprint: {
