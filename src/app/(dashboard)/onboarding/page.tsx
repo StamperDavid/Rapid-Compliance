@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth'
 import { useAuthFetch } from '@/hooks/useAuthFetch';
@@ -324,9 +324,47 @@ export default function OnboardingWizard() {
     }
   };
 
+  // Load existing onboarding data from Firestore to pre-fill fields
+  const [dataLoaded, setDataLoaded] = useState(false);
+  const [prefillDismissed, setPrefillDismissed] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const response = await authFetch('/api/onboarding/data');
+        if (cancelled || !response.ok) { return; }
+        const result = (await response.json()) as { data: Record<string, unknown> | null };
+        if (cancelled || !result.data) { return; }
+
+        const stored = result.data;
+        setFormData((prev) => {
+          const updated = { ...prev };
+          for (const [key, value] of Object.entries(stored)) {
+            if (key in updated && value != null && value !== '') {
+              if (typeof value === 'string' && isStringField(key)) {
+                (updated as Record<string, unknown>)[key] = value;
+              } else if (Array.isArray(value) && isStringArrayField(key)) {
+                (updated as Record<string, unknown>)[key] = value;
+              } else if (typeof value === 'number' && typeof (updated as Record<string, unknown>)[key] === 'number') {
+                (updated as Record<string, unknown>)[key] = value;
+              } else if (typeof value === 'boolean' && typeof (updated as Record<string, unknown>)[key] === 'boolean') {
+                (updated as Record<string, unknown>)[key] = value;
+              }
+            }
+          }
+          return updated;
+        });
+        setDataLoaded(true);
+      } catch {
+        // Silently fail — wizard works fine without prefill
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [authFetch]);
+
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisProgress, setAnalysisProgress] = useState('');
-  
+
   // Prefill state
   const [isPrefilling, setIsPrefilling] = useState(false);
   const [prefillResult, setPrefillResult] = useState<PrefillResult | null>(null);
@@ -592,6 +630,40 @@ export default function OnboardingWizard() {
             The more detail you provide, the smarter your agent will be
           </p>
         </div>
+
+        {/* Pre-fill notice */}
+        {dataLoaded && !prefillDismissed && (
+          <div style={{
+            padding: '0.75rem 1rem',
+            marginBottom: '1.5rem',
+            borderRadius: '0.5rem',
+            backgroundColor: 'rgba(99, 102, 241, 0.1)',
+            border: '1px solid rgba(99, 102, 241, 0.2)',
+            color: 'var(--color-text-secondary)',
+            fontSize: '0.875rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}>
+            <span>Some fields have been pre-filled from your initial setup. Review and update as needed.</span>
+            <button
+              onClick={() => setPrefillDismissed(true)}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'var(--color-text-disabled)',
+                cursor: 'pointer',
+                padding: '0.25rem',
+                marginLeft: '0.75rem',
+                fontSize: '1.125rem',
+                lineHeight: 1,
+              }}
+              aria-label="Dismiss"
+            >
+              &times;
+            </button>
+          </div>
+        )}
 
         {/* Progress Bar */}
         <div style={{ marginBottom: '3rem' }}>
