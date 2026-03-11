@@ -67,28 +67,8 @@ export type TransitionType =
 // VIDEO GENERATION PROVIDERS
 // ============================================================================
 
-export type VideoGenerationProvider =
-  | 'veo'                 // Google Veo - cinematic, high quality
-  | 'runway'              // Runway ML Gen-3 - creative, stylized
-  | 'kling'               // Kling AI - fast, cost-effective (primary avatar engine via fal.ai)
-  | 'pika'                // Pika Labs - motion, animation
-  | 'sora'                // OpenAI Sora (when available)
-  | 'stable-video';       // Stability AI SVD
-
-export interface ProviderCapabilities {
-  provider: VideoGenerationProvider;
-  maxDuration: number;              // Max seconds per clip
-  maxResolution: '720p' | '1080p' | '4k';
-  supportedAspectRatios: Array<'16:9' | '9:16' | '1:1' | '4:3'>;
-  strengthAreas: ShotType[];        // What this provider excels at
-  averageGenerationTime: number;    // Seconds per clip
-  costPer10Seconds: number;         // Credits or cents
-  supportsImageToVideo: boolean;
-  supportsVideoToVideo: boolean;
-  supportsAudio: boolean;
-  quality: 'standard' | 'high' | 'ultra';
-  motionQuality: 'basic' | 'good' | 'excellent';
-}
+/** Hedra is the sole video generation provider. */
+export type VideoGenerationProvider = 'hedra';
 
 // ============================================================================
 // MASTER STORYBOARD
@@ -190,9 +170,8 @@ export interface StoryboardShot {
   // Visual prompt for AI generation
   visualPrompt: VisualPrompt;
 
-  // Provider routing
+  // Provider (Hedra is the sole engine)
   preferredProvider?: VideoGenerationProvider;
-  providerOverrides?: Partial<ProviderCapabilities>;
 
   // Timing
   startTime: number;                // Milliseconds from scene start

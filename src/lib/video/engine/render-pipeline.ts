@@ -1,16 +1,12 @@
 /**
  * Video Render Pipeline
- * Orchestrates end-to-end video generation from storyboard to final output
  *
- * Features:
- * - Loads storyboard from Firestore
- * - Routes shots to optimal providers via MultiModelPicker
- * - Manages video generation API calls (Hedra is the sole engine)
- * - Polls for generation status with exponential backoff
- * - Triggers Stitcher for post-production
- * - Uploads final video to Firebase Storage
- * - Updates VideoJob status throughout process
- * - Emits signals via Signal Bus on completion/failure
+ * Legacy render pipeline retained for the /api/video/generate endpoint.
+ * Actual video generation is now handled by Hedra via scene-generator.ts
+ * and the /api/video/generate-scenes + /api/video/poll-scenes routes.
+ *
+ * This pipeline loads a storyboard from Firestore, creates a VideoJob,
+ * and triggers post-production (stitching) once clips are available.
  */
 
 import { logger } from '@/lib/logger/logger';
@@ -18,23 +14,8 @@ import { FirestoreService } from '@/lib/db/firestore-service';
 import { getSubCollection } from '@/lib/firebase/collections';
 import { getSignalBus } from '@/lib/orchestrator/signal-bus';
 import { VideoJobService } from '@/lib/video/video-job-service';
-import { multiModelPicker } from '@/lib/video/engine/multi-model-picker';
 import { stitcherService } from '@/lib/video/engine/stitcher-service';
-import type {
-  MasterStoryboard,
-  GeneratedClip,
-  VideoGenerationProvider,
-  GenerationQueueItem,
-} from './types';
-
-// Provider API response types
-interface ProviderGenerationResponse {
-  jobId: string;
-  status: 'queued' | 'processing' | 'completed' | 'failed';
-  videoUrl?: string;
-  progress?: number;
-  errorMessage?: string;
-}
+import type { MasterStoryboard, GeneratedClip } from './types';
 
 /**
  * Video Render Pipeline
@@ -51,25 +32,20 @@ export class RenderPipeline {
    * Execute the render pipeline for a storyboard
    */
   async execute(storyboardId: string): Promise<{ jobId: string; status: string }> {
-    logger.info('RenderPipeline: Starting execution', {
-      storyboardId,
-    });
+    logger.info('RenderPipeline: Starting execution', { storyboardId });
 
     try {
-      // Step 1: Load the storyboard from Firestore
       const storyboard = await this.loadStoryboard(storyboardId);
-
       if (!storyboard) {
         throw new Error(`Storyboard not found: ${storyboardId}`);
       }
 
-      // Step 2: Create a VideoJob
       const videoJob = await this.videoJobService.createJob({
         storyboardId,
         createdBy: storyboard.createdBy,
         aspectRatio: storyboard.aspectRatio,
         resolution: storyboard.resolution,
-        maxDuration: storyboard.totalDuration / 1000, // Convert ms to seconds
+        maxDuration: storyboard.totalDuration / 1000,
       });
 
       logger.info('RenderPipeline: VideoJob created', {
@@ -77,7 +53,6 @@ export class RenderPipeline {
         storyboardId,
       });
 
-      // Step 3: Start async rendering process (don't block)
       this.renderAsync(videoJob.id, storyboard).catch((error) => {
         logger.error(
           'RenderPipeline: Async render failed',
@@ -86,10 +61,7 @@ export class RenderPipeline {
         );
       });
 
-      return {
-        jobId: videoJob.id,
-        status: 'processing',
-      };
+      return { jobId: videoJob.id, status: 'processing' };
     } catch (error) {
       logger.error(
         'RenderPipeline: Execution failed',
@@ -100,16 +72,12 @@ export class RenderPipeline {
     }
   }
 
-  /**
-   * Load storyboard from Firestore
-   */
   private async loadStoryboard(storyboardId: string): Promise<MasterStoryboard | null> {
     try {
-      const storyboard = await FirestoreService.get<MasterStoryboard>(
+      return await FirestoreService.get<MasterStoryboard>(
         getSubCollection('storyboards'),
         storyboardId
       );
-      return storyboard;
     } catch (error) {
       logger.error(
         'RenderPipeline: Failed to load storyboard',
@@ -120,9 +88,6 @@ export class RenderPipeline {
     }
   }
 
-  /**
-   * Async rendering process
-   */
   private async renderAsync(jobId: string, storyboard: MasterStoryboard): Promise<void> {
     logger.info('RenderPipeline: Starting async render', {
       jobId,
@@ -130,53 +95,26 @@ export class RenderPipeline {
     });
 
     try {
-      // Update job status
       await this.videoJobService.updateJob(jobId, {
         status: 'processing',
-        progress: 5,
-        currentStep: 'Routing shots to providers',
-      });
-
-      // Step 1: Route all shots to optimal providers
-      const queueItems = this.routeShots(storyboard);
-
-      logger.info('RenderPipeline: Shots routed', {
-        jobId,
-        totalShots: queueItems.length,
-      });
-
-      // Step 2: Generate all clips
-      await this.videoJobService.updateJob(jobId, {
         progress: 10,
-        currentStep: 'Generating video clips',
+        currentStep: 'Generating video clips via Hedra',
       });
 
-      const generatedClips = await this.generateAllClips(jobId, queueItems);
+      // Hedra generation is handled by scene-generator.ts and the API routes.
+      // This pipeline currently has no clips to stitch — it serves as the
+      // job creation + signal emission layer for the /api/video/generate endpoint.
+      const generatedClips: GeneratedClip[] = [];
 
-      logger.info('RenderPipeline: Clips generated', {
-        jobId,
-        successfulClips: generatedClips.length,
-        totalShots: queueItems.length,
-      });
-
-      // Step 3: Trigger post-production (Stitcher)
       await this.videoJobService.updateJob(jobId, {
         progress: 70,
         currentStep: 'Starting post-production',
       });
 
       const postProductionJob = stitcherService.createJob(storyboard, generatedClips);
-
-      logger.info('RenderPipeline: Post-production job created', {
-        jobId,
-        postProductionJobId: postProductionJob.id,
-      });
-
-      // Process post-production
       const completedJob = await stitcherService.processJob(postProductionJob, storyboard);
 
       if (completedJob.status === 'completed' && completedJob.outputUrl) {
-        // Step 4: Mark VideoJob as completed
         await this.videoJobService.completeJob(jobId, {
           outputUrl: completedJob.outputUrl,
           thumbnailUrl: completedJob.outputThumbnailUrl,
@@ -189,7 +127,6 @@ export class RenderPipeline {
           outputUrl: completedJob.outputUrl,
         });
 
-        // Step 5: Emit success signal via Signal Bus
         this.emitCompletionSignal(jobId, storyboard.id, completedJob.outputUrl);
       } else {
         throw new Error('Post-production failed');
@@ -202,284 +139,14 @@ export class RenderPipeline {
         { jobId }
       );
 
-      // Mark job as failed
       await this.videoJobService.failJob(jobId, errorMessage, 'RENDER_FAILED');
-
-      // Emit failure signal
       this.emitFailureSignal(jobId, storyboard.id, errorMessage);
     }
   }
 
-  /**
-   * Route all shots to optimal providers using MultiModelPicker
-   */
-  private routeShots(storyboard: MasterStoryboard): GenerationQueueItem[] {
-    const allShots = storyboard.scenes.flatMap((scene) => scene.shots);
-
-    const queueItems = multiModelPicker.routeStoryboard(
-      storyboard.id,
-      allShots,
-      storyboard.aspectRatio,
-      storyboard.resolution,
-      {
-        // Configuration options
-        preferQualityOverCost: true,
-        minQuality: 'high',
-      }
-    );
-
-    return queueItems;
-  }
-
-  /**
-   * Generate all clips from queue items
-   */
-  private async generateAllClips(
-    jobId: string,
-    queueItems: GenerationQueueItem[]
-  ): Promise<GeneratedClip[]> {
-    const generatedClips: GeneratedClip[] = [];
-    const totalShots = queueItems.length;
-
-    for (let i = 0; i < queueItems.length; i++) {
-      const item = queueItems[i];
-
-      logger.info('RenderPipeline: Generating clip', {
-        jobId,
-        shotId: item.shotId,
-        provider: item.targetProvider,
-        progress: `${i + 1}/${totalShots}`,
-      });
-
-      try {
-        const clip = await this.generateClip(item);
-        generatedClips.push(clip);
-
-        // Update progress
-        const progress = 10 + Math.floor((i + 1) / totalShots * 60);
-        await this.videoJobService.updateJob(jobId, {
-          progress,
-          currentStep: `Generated ${i + 1}/${totalShots} clips`,
-        });
-      } catch (error) {
-        logger.error(
-          'RenderPipeline: Clip generation failed',
-          error instanceof Error ? error : new Error(String(error)),
-          { jobId, shotId: item.shotId, provider: item.targetProvider }
-        );
-
-        // Try fallback providers
-        const fallbackClip = await this.tryFallbackProviders(item);
-        if (fallbackClip) {
-          generatedClips.push(fallbackClip);
-        } else {
-          // If all providers fail, use a placeholder
-          logger.warn('RenderPipeline: All providers failed, using placeholder', {
-            jobId,
-            shotId: item.shotId,
-          });
-          generatedClips.push(this.createPlaceholderClip(item));
-        }
-      }
-    }
-
-    return generatedClips;
-  }
-
-  /**
-   * Generate a single clip from a provider
-   */
-  private async generateClip(item: GenerationQueueItem): Promise<GeneratedClip> {
-    const provider = item.targetProvider;
-
-    logger.info('RenderPipeline: Calling provider', {
-      provider,
-      shotId: item.shotId,
-      duration: item.duration,
-    });
-
-    // Check if provider has API key configured
-    if (!(await this.isProviderConfigured(provider))) {
-      logger.warn('RenderPipeline: Provider not configured, skipping', {
-        provider,
-        shotId: item.shotId,
-      });
-      throw new Error(`Provider not configured: ${provider}`);
-    }
-
-    // Call the provider API
-    const response = await this.callProviderAPI(provider, item);
-
-    // Poll for completion
-    const videoUrl = await this.pollForCompletion(provider, response.jobId);
-
-    // Report success to MultiModelPicker for health tracking
-    multiModelPicker.reportProviderResult(provider, true);
-
-    return {
-      shotId: item.shotId,
-      url: videoUrl,
-      duration: item.duration * 1000, // Convert seconds to ms
-      provider,
-      resolution: item.resolution,
-      fps: 30,
-    };
-  }
-
-  /**
-   * Check if a provider is supported by this pipeline.
-   * Hedra clips are generated via scene-generator.ts / the API routes, not here.
-   * This pipeline does not support any legacy providers (Sora, Runway have been removed).
-   */
-  private isProviderConfigured(_provider: VideoGenerationProvider): Promise<boolean> {
-    return Promise.resolve(false);
-  }
-
-  /**
-   * Call provider API to start generation.
-   * All legacy providers (Sora, Runway) have been removed.
-   * Hedra generation is handled via scene-generator.ts.
-   */
-  private callProviderAPI(
-    provider: VideoGenerationProvider,
-    item: GenerationQueueItem
-  ): Promise<ProviderGenerationResponse> {
-    logger.info('RenderPipeline: Calling provider API', {
-      provider,
-      shotId: item.shotId,
-    });
-
-    return Promise.reject(
-      new Error(
-        `Provider "${provider}" is not available via the render pipeline. ` +
-        `Video generation is handled by Hedra via the scene-generator.`,
-      ),
-    );
-  }
-
-  /**
-   * Poll for generation completion with exponential backoff
-   */
-  private async pollForCompletion(
-    provider: VideoGenerationProvider,
-    providerJobId: string
-  ): Promise<string> {
-    const maxAttempts = 120; // 10 minutes with 5-second intervals
-    let attempt = 0;
-    let backoffMs = 5000; // Start with 5 seconds
-
-    while (attempt < maxAttempts) {
-      attempt++;
-
-      logger.debug('RenderPipeline: Polling for completion', {
-        provider,
-        providerJobId,
-        attempt,
-      });
-
-      // Check status
-      const status = await this.checkProviderStatus(provider, providerJobId);
-
-      if (status.status === 'completed' && status.videoUrl) {
-        logger.info('RenderPipeline: Generation completed', {
-          provider,
-          providerJobId,
-          videoUrl: status.videoUrl,
-        });
-        return status.videoUrl;
-      }
-
-      if (status.status === 'failed') {
-        throw new Error(`Provider generation failed: ${status.errorMessage ?? 'Unknown error'}`);
-      }
-
-      // Wait with exponential backoff
-      await this.sleep(backoffMs);
-      backoffMs = Math.min(backoffMs * 1.5, 30000); // Max 30 seconds
-    }
-
-    throw new Error('Generation timeout - exceeded maximum polling attempts');
-  }
-
-  /**
-   * Check provider generation status.
-   * All legacy providers (Sora, Runway) have been removed.
-   */
-  private checkProviderStatus(
-    provider: VideoGenerationProvider,
-    providerJobId: string
-  ): Promise<ProviderGenerationResponse> {
-    logger.debug('RenderPipeline: Checking provider status', {
-      provider,
-      providerJobId,
-    });
-
-    return Promise.reject(new Error(`Status polling not supported for provider "${provider}" in this pipeline.`));
-  }
-
-  /**
-   * Try fallback providers if primary fails
-   */
-  private async tryFallbackProviders(item: GenerationQueueItem): Promise<GeneratedClip | null> {
-    for (const fallbackProvider of item.fallbackProviders) {
-      logger.info('RenderPipeline: Trying fallback provider', {
-        shotId: item.shotId,
-        fallbackProvider,
-      });
-
-      try {
-        if (!(await this.isProviderConfigured(fallbackProvider))) {
-          logger.warn('RenderPipeline: Fallback provider not configured', {
-            fallbackProvider,
-          });
-          continue;
-        }
-
-        const fallbackItem: GenerationQueueItem = {
-          ...item,
-          targetProvider: fallbackProvider,
-        };
-
-        return await this.generateClip(fallbackItem);
-      } catch (error) {
-        logger.error(
-          'RenderPipeline: Fallback provider failed',
-          error instanceof Error ? error : new Error(String(error)),
-          { fallbackProvider }
-        );
-        // Continue to next fallback
-      }
-    }
-
-    return null;
-  }
-
-  /**
-   * Create a placeholder clip when all providers fail.
-   * Returns a clearly-marked placeholder — no fake video URL.
-   */
-  private createPlaceholderClip(item: GenerationQueueItem): GeneratedClip {
-    logger.warn('RenderPipeline: All video providers failed — no API keys configured or quota exhausted. Returning placeholder.', {
-      shotId: item.shotId,
-    });
-
-    return {
-      shotId: item.shotId,
-      url: '', // Empty — no real video was generated
-      duration: item.duration * 1000,
-      provider: 'stable-video',
-      resolution: item.resolution,
-      fps: 30,
-    };
-  }
-
-  /**
-   * Emit completion signal via Signal Bus
-   */
   private emitCompletionSignal(jobId: string, storyboardId: string, outputUrl: string): void {
     try {
       const signalBus = getSignalBus();
-
       const signal = signalBus.createSignal(
         'BROADCAST',
         'VIDEO_RENDER_PIPELINE',
@@ -519,13 +186,9 @@ export class RenderPipeline {
     }
   }
 
-  /**
-   * Emit failure signal via Signal Bus
-   */
   private emitFailureSignal(jobId: string, storyboardId: string, errorMessage: string): void {
     try {
       const signalBus = getSignalBus();
-
       const signal = signalBus.createSignal(
         'BROADCAST',
         'VIDEO_RENDER_PIPELINE',
@@ -564,25 +227,10 @@ export class RenderPipeline {
       );
     }
   }
-
-  /**
-   * Sleep utility for polling delays
-   */
-  private sleep(ms: number): Promise<void> {
-    return new Promise((resolve) => {
-      setTimeout(resolve, ms);
-    });
-  }
 }
 
-/**
- * Create and export singleton instance
- */
 export const renderPipeline = new RenderPipeline();
 
-/**
- * Execute the render pipeline for a storyboard
- */
 export async function executeRenderPipeline(
   storyboardId: string
 ): Promise<{ jobId: string; status: string }> {

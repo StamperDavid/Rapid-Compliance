@@ -27,24 +27,9 @@ const HEDRA_BASE_URL = 'https://api.hedra.com/web-app/public';
 /** Hedra Character 3 — the proven talking-head model with native TTS support. */
 const HEDRA_CHARACTER_3_MODEL_ID = 'd1dd37a3-e39a-4854-a298-6510289f9cf2';
 
-/** Model list cache TTL in milliseconds (5 minutes). */
-const MODEL_CACHE_TTL_MS = 5 * 60 * 1000;
-
 // ============================================================================
 // API Response Types
 // ============================================================================
-
-interface HedraModelEntry {
-  id: string;
-  name: string;
-  type: string;
-  aspect_ratios: string[];
-  resolutions: string[];
-  max_duration_ms: number;
-  min_duration_ms: number;
-  requires_audio_input?: boolean;
-  tags?: string[];
-}
 
 interface HedraAssetResponse {
   id: string;
@@ -132,15 +117,6 @@ export interface HedraGenerateOptions {
   /** Script text for Hedra native TTS. Required when hedraVoiceId is set. */
   speechText?: string;
 }
-
-// ============================================================================
-// Model Cache
-// ============================================================================
-
-const modelCache: { models: HedraModelEntry[] | null; timestamp: number } = {
-  models: null,
-  timestamp: 0,
-};
 
 // ============================================================================
 // API Key Retrieval
@@ -288,63 +264,6 @@ async function uploadAssetFromUrl(
 }
 
 // ============================================================================
-// Public API — Models
-// ============================================================================
-
-/**
- * Fetch the list of available Hedra models.
- * Results are cached for 5 minutes.
- */
-export async function getHedraModels(): Promise<HedraModelEntry[]> {
-  const now = Date.now();
-  if (modelCache.models && now - modelCache.timestamp < MODEL_CACHE_TTL_MS) {
-    return modelCache.models;
-  }
-
-  const apiKey = await getHedraApiKey();
-
-  const response = await fetch(`${HEDRA_BASE_URL}/models`, {
-    method: 'GET',
-    headers: hedraHeaders(apiKey),
-  });
-
-  if (!response.ok) {
-    const detail = await parseHedraError(response);
-    throw new Error(`Hedra models fetch failed (${response.status}): ${detail}`);
-  }
-
-  const raw: unknown = await response.json();
-
-  // Hedra may wrap models in an object or return an array directly
-  let models: HedraModelEntry[];
-  if (Array.isArray(raw)) {
-    models = raw as HedraModelEntry[];
-  } else if (raw && typeof raw === 'object' && 'models' in raw && Array.isArray((raw as Record<string, unknown>).models)) {
-    models = (raw as Record<string, unknown>).models as HedraModelEntry[];
-  } else if (raw && typeof raw === 'object' && 'data' in raw && Array.isArray((raw as Record<string, unknown>).data)) {
-    models = (raw as Record<string, unknown>).data as HedraModelEntry[];
-  } else {
-    logger.error('Unexpected Hedra models response format', new Error('Invalid models response'), {
-      responseType: typeof raw,
-      isArray: Array.isArray(raw),
-      keys: raw && typeof raw === 'object' ? Object.keys(raw) : [],
-      file: 'hedra-service.ts',
-    });
-    throw new Error('Hedra models API returned unexpected format. Check API key and account status.');
-  }
-
-  Object.assign(modelCache, { models, timestamp: Date.now() });
-
-  logger.info('Hedra models fetched and cached', {
-    count: models.length,
-    modelNames: models.map((m) => m?.name ?? 'unnamed').join(', '),
-    file: 'hedra-service.ts',
-  });
-
-  return models;
-}
-
-// ============================================================================
 // Public API — Generation
 // ============================================================================
 
@@ -356,10 +275,9 @@ export async function getHedraModels(): Promise<HedraModelEntry[]> {
  *   2. **Hedra native TTS** — set `options.hedraVoiceId` + `options.speechText` to let Hedra synthesize
  *
  * Flow:
- *   1. Fetches available models and auto-selects the first video model.
- *   2. Uploads image (and audio if using upload mode) as Hedra assets.
- *   3. Submits a generation job with either `audio_id` or `audio_generation`.
- *   4. Returns the generation result with the job ID for status polling.
+ *   1. Uploads image (and audio if using upload mode) as Hedra assets.
+ *   2. Submits a generation job with Hedra Character 3 model.
+ *   3. Returns the generation result with the job ID for status polling.
  *
  * @param imageUrl  Public URL to a portrait image of the person.
  * @param audioUrl  Public URL to the audio file. Pass `null` when using Hedra native TTS.

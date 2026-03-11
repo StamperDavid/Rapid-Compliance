@@ -118,20 +118,8 @@ export interface APIKeysConfig {
     };
   };
 
-  // Video Generation Services
+  // Video Generation Services (Hedra only)
   video?: {
-    heygen?: {
-      apiKey: string;
-    };
-    sora?: {
-      apiKey: string;
-    };
-    runway?: {
-      apiKey: string;
-    };
-    fal?: {
-      apiKey: string;
-    };
     hedra?: {
       apiKey: string;
     };
@@ -297,8 +285,6 @@ export type APIServiceName =
   | 'rapidapi'
   | 'twitter'      // Twitter/X API v2
   | 'linkedin'     // LinkedIn API
-  | 'sora'         // OpenAI Sora Text-to-Video
-  | 'runway'       // Runway Gen-3 Video Generation
   | 'elevenlabs'   // ElevenLabs Voice AI
   | 'unrealSpeech' // Unreal Speech TTS
   | 'serper'        // Serper.dev Google Search API
@@ -306,8 +292,6 @@ export type APIServiceName =
   | 'dataforseo'   // DataForSEO (keyword data, SERP, domain metrics)
   | 'later'        // Later.com social media scheduling
   | 'minimax'       // MiniMax AI Music Generation
-  | 'fal'           // fal.ai (Kling 3.0, character-consistent video)
-  | 'kling'         // Alias — routes to fal.ai key internally
   | 'hedra';        // Hedra Character-3 talking head avatars
 
 

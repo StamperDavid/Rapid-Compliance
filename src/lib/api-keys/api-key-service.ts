@@ -176,14 +176,7 @@ return keys.ai?.anthropicApiKey ?? keys.ai?.openrouterApiKey ?? null;
       case 'zapier':
         return keys.integrations?.zapier ?? null;
 
-      // Video Services
-      case 'sora':
-        return keys.video?.sora?.apiKey ?? keys.ai?.openaiApiKey ?? null;
-      case 'runway':
-        return keys.video?.runway?.apiKey ?? null;
-      case 'fal':
-      case 'kling':
-        return keys.video?.fal?.apiKey ?? null;
+      // Video Services (Hedra only)
       case 'hedra':
         return keys.video?.hedra?.apiKey ?? null;
 
