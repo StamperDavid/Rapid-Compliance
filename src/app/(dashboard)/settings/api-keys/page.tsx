@@ -38,11 +38,19 @@ export default function APIKeysPage() {
   const { theme } = useOrgTheme();
 
   const [keys, setKeys] = useState<Record<string, string>>({});
+  const [originalKeys, setOriginalKeys] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState<string | null>(null);
   const [testing, setTesting] = useState<string | null>(null);
   const [testResults, setTestResults] = useState<Record<string, APIKeyTestResponse>>({});
   const [saveResults, setSaveResults] = useState<Record<string, 'success' | 'error'>>({});
   const toast = useToast();
+
+  /** Returns true when the user has typed a new value different from the masked original */
+  const isKeyDirty = (serviceId: string): boolean => {
+    const current = keys[serviceId] ?? '';
+    const original = originalKeys[serviceId] ?? '';
+    return current !== original && current.length > 0;
+  };
 
   const loadKeys = useCallback(async () => {
     try {
@@ -53,6 +61,7 @@ export default function APIKeysPage() {
       const data = await response.json() as APIKeyLoadResponse;
       if (data.success) {
         setKeys(data.keys ?? {});
+        setOriginalKeys(data.keys ?? {});
       }
     } catch (_error) {
       logger.error('Failed to load API keys:', _error instanceof Error ? _error : new Error(String(_error)), { file: 'page.tsx' });
@@ -64,6 +73,11 @@ export default function APIKeysPage() {
   }, [loadKeys]);
 
   const saveKey = async (service: string, value: string) => {
+    // Prevent saving masked bullet-point values back to Firestore
+    if (/\u2022/.test(value)) {
+      toast.error('Please enter the actual API key, not the masked display value.');
+      return;
+    }
     setSaving(service);
     setSaveResults(prev => { const next = { ...prev }; delete next[service]; return next; });
     try {
@@ -77,6 +91,7 @@ export default function APIKeysPage() {
       const data = await response.json() as APIKeySaveResponse;
       if (data.success) {
         setKeys({ ...keys, [service]: value });
+        setOriginalKeys(prev => ({ ...prev, [service]: value }));
         setSaveResults(prev => ({ ...prev, [service]: 'success' }));
         toast.success('API key saved successfully!');
       } else {
@@ -868,14 +883,14 @@ export default function APIKeysPage() {
                       />
                       <button
                         onClick={() => void saveKey(service.id, keys[service.id] || '')}
-                        disabled={!keys[service.id] || saving === service.id}
+                        disabled={!isKeyDirty(service.id) || saving === service.id}
                         style={{
                           padding: '0.75rem 1.5rem',
-                          backgroundColor: saveResults[service.id] === 'success' ? 'var(--color-success, #22c55e)' : keys[service.id] ? primaryColor : 'var(--color-border-strong)',
+                          backgroundColor: saveResults[service.id] === 'success' ? 'var(--color-success, #22c55e)' : isKeyDirty(service.id) ? primaryColor : 'var(--color-border-strong)',
                           color: 'var(--color-text-primary)',
                           border: 'none',
                           borderRadius: '0.5rem',
-                          cursor: keys[service.id] && saving !== service.id ? 'pointer' : 'not-allowed',
+                          cursor: isKeyDirty(service.id) && saving !== service.id ? 'pointer' : 'not-allowed',
                           fontSize: '0.875rem',
                           fontWeight: '600',
                           minWidth: '5rem',

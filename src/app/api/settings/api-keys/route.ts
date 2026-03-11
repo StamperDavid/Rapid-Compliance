@@ -106,6 +106,15 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     const { service, key } = parsed.data;
 
+    // Reject masked values (bullet-point characters) being saved back.
+    // The GET endpoint masks keys with \u2022 for display; saving those
+    // back corrupts the actual keys in Firestore.
+    if (/\u2022/.test(key)) {
+      return handleAPIError(
+        errors.badRequest('Cannot save a masked key value. Please enter the actual API key.')
+      );
+    }
+
     // Reject unknown service IDs
     if (!UI_TO_CONFIG_MAP[service]) {
       return handleAPIError(errors.badRequest(`Unknown service: ${service}`));
