@@ -24,6 +24,9 @@ import { PLATFORM_ID } from '@/lib/constants/platform';
 
 const HEDRA_BASE_URL = 'https://api.hedra.com/web-app/public';
 
+/** Hedra Character 3 — the proven talking-head model with native TTS support. */
+const HEDRA_CHARACTER_3_MODEL_ID = 'd1dd37a3-e39a-4854-a298-6510289f9cf2';
+
 /** Model list cache TTL in milliseconds (5 minutes). */
 const MODEL_CACHE_TTL_MS = 5 * 60 * 1000;
 
@@ -374,24 +377,13 @@ export async function generateHedraAvatarVideo(
     throw new Error('Either audioUrl or hedraVoiceId + speechText must be provided.');
   }
 
-  // 1. Select the right Hedra model for talking-head generation
-  //    Hedra's marketplace now has 80+ models (Kling, Veo, Sora, etc.)
-  //    We need a Hedra-native model that supports audio/TTS.
-  const models = await getHedraModels();
-  const videoModel =
-    // Prefer "Hedra Character 3" — the proven talking-head model
-    models.find((m) => m.name === 'Hedra Character 3') ??
-    // Fallback: any Hedra model that requires audio input (supports TTS)
-    models.find((m) => m.type === 'video' && m.name.toLowerCase().startsWith('hedra') && m.requires_audio_input) ??
-    // Last resort: any video model with audio support
-    models.find((m) => m.type === 'video' && m.requires_audio_input);
-  if (!videoModel) {
-    throw new Error('No Hedra TTS-capable model found. Available models may have changed — check API key and account status.');
-  }
+  // 1. Use hardcoded Hedra Character 3 model ID for TTS generation.
+  //    Hedra's marketplace has 80+ models; dynamic lookup previously picked
+  //    the wrong model (Kling) which doesn't support TTS.
+  const modelId = HEDRA_CHARACTER_3_MODEL_ID;
 
   logger.info('Hedra generation starting', {
-    model: videoModel.name,
-    modelId: videoModel.id,
+    modelId,
     ttsMode: useNativeTTS ? 'hedra-native' : 'audio-upload',
     file: 'hedra-service.ts',
   });
@@ -412,7 +404,7 @@ export async function generateHedraAvatarVideo(
   // 3. Build generation payload — audio_id for upload mode, audio_generation for native TTS
   const generationPayload: HedraGenerationRequest = {
     type: 'video',
-    ai_model_id: videoModel.id,
+    ai_model_id: modelId,
     start_keyframe_id: imageAssetId,
     generated_video_inputs: {
       text_prompt: options?.textPrompt ?? '',
@@ -457,8 +449,7 @@ export async function generateHedraAvatarVideo(
 
   logger.info('Hedra generation submitted', {
     generationId: generation.id,
-    modelId: videoModel.id,
-    modelName: videoModel.name,
+    modelId,
     imageAssetId,
     audioAssetId: audioAssetId ?? 'native-tts',
     ttsMode: useNativeTTS ? 'hedra-native' : 'audio-upload',
@@ -467,7 +458,7 @@ export async function generateHedraAvatarVideo(
 
   return {
     generationId: generation.id,
-    modelId: videoModel.id,
+    modelId,
     status: generation.status,
     createdAt: generation.created_at,
   };
