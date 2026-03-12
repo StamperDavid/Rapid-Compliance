@@ -195,11 +195,11 @@ All scenes in a video MUST share the same visual DNA:
   if (!avatarContext) {
     prompt += `\n\n## CHARACTER / PRESENTER (NO AVATAR SELECTED)
 No specific avatar has been chosen — the video AI will generate the character automatically from your descriptions.
+- **DERIVE the character from the user's prompt.** If the user says "male sales rep in his 30s", write a male character in his 30s. If the user says "female CEO", write a female CEO. NEVER override the user's character description.
 - You MUST describe the presenter/character in the visualDescription of EVERY scene.
-- Pick ONE consistent character and describe them the same way each time: age, gender, clothing, grooming, presence.
-- Example: "A confident woman in her early 30s, dark hair pulled back, wearing a tailored charcoal blazer over a white crew-neck tee"
-- Use that SAME description (or close variations) in every scene so the AI generates a visually consistent person.
+- Keep the SAME character description consistent across all scenes: same age, gender, clothing, grooming, presence.
 - Vary only their emotional energy, body language, and camera angle — NOT their appearance.
+- If the user's prompt does not specify a character, invent one that fits the video's tone and audience.
 - If the video concept has NO on-screen presenter (e.g. product demo, cinematic B-roll), describe the subjects and actions instead.`;
   }
 
