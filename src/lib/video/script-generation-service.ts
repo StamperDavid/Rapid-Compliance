@@ -199,12 +199,12 @@ No specific avatar has been chosen — the video AI will generate the characters
 
 **ABSOLUTE RULES — VIOLATION MEANS FAILURE:**
 1. The characters described in the user's Topic are the ON-SCREEN characters. They are IN the scene performing actions. They do NOT speak or lip-sync — the script is voiceover narration that plays over the video.
-2. If the user says "a tall bald man in his 40s wearing a black henley", your visualDescription MUST describe that exact person. NOT a woman. NOT a different person.
+2. If the user says "a tall bald man in his 40s wearing a black henley", your visualDescription MUST describe that exact person in EVERY SCENE. NOT a woman. NOT a different person. NOT a "team member". The user's character is the protagonist of EVERY scene.
 3. Copy the user's character descriptions EXACTLY into every visualDescription — same age, gender, ethnicity, clothing, grooming, physical features.
 4. **CHARACTER CONTINUITY (CRITICAL):** When the same character appears in multiple scenes, you MUST explicitly state "the same [character description] from scene X" in the visualDescription. Hedra generates each scene independently — if you don't reference back, it will create a different person. Example: Scene 1 says "A tall bald white man in his 40s wearing a black henley" → Scene 4 MUST say "The same tall bald white man in his 40s wearing a black henley from scene 1".
 5. If the user describes multiple characters for different scenes, use exactly those characters in those scenes.
-6. If the user's prompt does not specify a character, invent one that fits the video's tone and audience.
-7. NEVER invent a different on-screen character than what the user described.`;
+6. **NEVER introduce characters the user did not mention.** If the user describes one character, that character appears in ALL scenes — do not swap in a different person for any scene. Only invent a character if the user's prompt contains NO character description at all.
+7. NEVER invent a different on-screen character than what the user described. If scene 3 shows a "team meeting", the user's protagonist is the one presenting — do not replace them with a random colleague.`;
   }
 
   if (avatarContext) {
@@ -285,7 +285,7 @@ function buildUserPrompt(
 **Total duration:** ${duration} seconds (distribute across scenes — vary durations for pacing, not all equal)
 **Scenes:** EXACTLY ${sceneCount} scenes — no more, no less. Each stitched from short Hedra clips.
 
-CRITICAL: The Topic above contains the user's creative direction. If they describe specific characters (age, gender, ethnicity, clothing, setting), you MUST use those EXACT descriptions in your visualDescription fields. Do NOT substitute a different character.
+CRITICAL: The Topic above contains the user's creative direction. If they describe specific characters (age, gender, ethnicity, clothing, setting), you MUST use those EXACT descriptions in your visualDescription fields. Do NOT substitute a different character. If only ONE character is described, that SAME character must appear in EVERY scene — never introduce a different person.
 
 Remember: This video must feel like a SHORT FILM, not a corporate slide deck. Build an emotional arc. Vary the energy between scenes. Make every word count.`;
 

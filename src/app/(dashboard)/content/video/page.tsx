@@ -48,6 +48,7 @@ export default function VideoStudioPage() {
   const [loadingProjects, setLoadingProjects] = useState(false);
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
   const [loadingProjectId, setLoadingProjectId] = useState<string | null>(null);
+  const [autoLoading, setAutoLoading] = useState(false);
 
   const completedSteps = useMemo(() => {
     const currentIndex = PIPELINE_STEPS.indexOf(currentStep);
@@ -108,13 +109,15 @@ export default function VideoStudioPage() {
   }, [loadProject, authFetch]);
 
   // Auto-load project from ?load={projectId} URL parameter
+  // Always load when ?load= is present, even if localStorage has a stale project
   useEffect(() => {
     const loadId = searchParams.get('load');
-    if (loadId && !autoLoadAttempted.current && !projectId) {
+    if (loadId && !autoLoadAttempted.current) {
       autoLoadAttempted.current = true;
-      void handleLoadProject(loadId);
+      setAutoLoading(true);
+      void handleLoadProject(loadId).finally(() => setAutoLoading(false));
     }
-  }, [searchParams, handleLoadProject, projectId]);
+  }, [searchParams, handleLoadProject]);
 
   const renderCurrentStep = () => {
     switch (currentStep) {
@@ -185,17 +188,24 @@ export default function VideoStudioPage() {
       </Card>
 
       {/* Current Step Panel */}
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={currentStep}
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -20 }}
-          transition={{ duration: 0.2 }}
-        >
-          {renderCurrentStep()}
-        </motion.div>
-      </AnimatePresence>
+      {autoLoading ? (
+        <div className="flex items-center justify-center py-24">
+          <Loader2 className="w-6 h-6 animate-spin text-amber-500" />
+          <span className="ml-3 text-zinc-400">Loading project...</span>
+        </div>
+      ) : (
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={currentStep}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.2 }}
+          >
+            {renderCurrentStep()}
+          </motion.div>
+        </AnimatePresence>
+      )}
 
       {/* Load Project Modal */}
       {showLoadModal && (
