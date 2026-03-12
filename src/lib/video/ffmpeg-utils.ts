@@ -1,13 +1,19 @@
 /**
  * FFmpeg Utilities
  * Shared helpers for video processing: compositing, color grading, audio mixing.
- * All functions use @ffmpeg-installer/ffmpeg for the static binary.
+ *
+ * FFmpeg binary resolution strategy:
+ *   1. Local dev: @ffmpeg-installer/ffmpeg or ffmpeg-static (npm packages)
+ *   2. Vercel serverless: downloads static ffmpeg binary to /tmp on cold start
  */
 
 import { spawn } from 'child_process';
-import { writeFile, unlink, mkdir } from 'fs/promises';
+import { writeFile, unlink, mkdir, chmod } from 'fs/promises';
+import { existsSync, createWriteStream } from 'fs';
 import { join } from 'path';
 import { tmpdir } from 'os';
+import { pipeline } from 'stream/promises';
+import { Readable } from 'stream';
 import { randomUUID } from 'crypto';
 import { logger } from '@/lib/logger/logger';
 import { adminStorage } from '@/lib/firebase/admin';
@@ -18,37 +24,131 @@ import { PLATFORM_ID } from '@/lib/constants/platform';
 // ============================================================================
 
 /**
- * Get the ffmpeg binary path.
- * Tries ffmpeg-static first (works on Vercel serverless),
- * falls back to @ffmpeg-installer/ffmpeg (works locally on Windows/Mac).
+ * Static Linux x64 ffmpeg binary hosted on GitHub releases (John Van Sickle builds).
+ * This is the standard community source for static ffmpeg binaries on Linux.
+ * ~80 MB download, cached in /tmp between invocations on the same Vercel instance.
  */
-export function getFfmpegPath(): string {
-  // Try ffmpeg-static first — designed for serverless environments
+const FFMPEG_STATIC_URL = 'https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz';
+const FFMPEG_TMP_PATH = '/tmp/ffmpeg';
+
+/** Promise-based lock to prevent concurrent downloads of the same binary. */
+let downloadPromise: Promise<string> | null = null;
+
+/**
+ * Ensure ffmpeg binary is available and return its path.
+ *
+ * On local dev (Windows/Mac), uses npm packages.
+ * On Vercel serverless (Linux), downloads a static binary to /tmp and caches it.
+ */
+export async function ensureFfmpeg(): Promise<string> {
+  // Try npm packages first (works on local dev)
+  const localPath = tryLocalFfmpeg();
+  if (localPath) { return localPath; }
+
+  // On Vercel / Linux serverless — check /tmp cache
+  if (existsSync(FFMPEG_TMP_PATH)) {
+    logger.info('FFmpeg binary found in /tmp cache', { path: FFMPEG_TMP_PATH, file: 'ffmpeg-utils.ts' });
+    return FFMPEG_TMP_PATH;
+  }
+
+  // Download to /tmp (with concurrency guard)
+  downloadPromise ??= downloadFfmpegBinary();
+  return downloadPromise;
+}
+
+/**
+ * Synchronous attempt to find ffmpeg via npm packages.
+ * Returns the path if found, null otherwise.
+ */
+function tryLocalFfmpeg(): string | null {
+  // Try ffmpeg-static
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const staticPath = require('ffmpeg-static') as string;
-    if (staticPath) {
-      logger.info('FFmpeg binary resolved via ffmpeg-static', { path: staticPath, file: 'ffmpeg-utils.ts' });
+    if (staticPath && existsSync(staticPath)) {
+      logger.info('FFmpeg resolved via ffmpeg-static', { path: staticPath, file: 'ffmpeg-utils.ts' });
       return staticPath;
     }
-  } catch {
-    // ffmpeg-static not available, try fallback
-  }
+  } catch { /* not available */ }
 
-  // Fallback to @ffmpeg-installer/ffmpeg (works locally)
+  // Try @ffmpeg-installer/ffmpeg
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const installer = require('@ffmpeg-installer/ffmpeg') as { path: string };
-    if (installer.path) {
-      logger.info('FFmpeg binary resolved via @ffmpeg-installer', { path: installer.path, file: 'ffmpeg-utils.ts' });
+    if (installer.path && existsSync(installer.path)) {
+      logger.info('FFmpeg resolved via @ffmpeg-installer', { path: installer.path, file: 'ffmpeg-utils.ts' });
       return installer.path;
     }
-  } catch {
-    // Neither package available
+  } catch { /* not available */ }
+
+  return null;
+}
+
+/**
+ * Download a static ffmpeg binary to /tmp.
+ * Uses John Van Sickle's static builds (industry standard for serverless).
+ */
+async function downloadFfmpegBinary(): Promise<string> {
+  logger.info('Downloading static ffmpeg binary to /tmp...', { url: FFMPEG_STATIC_URL, file: 'ffmpeg-utils.ts' });
+  const startMs = Date.now();
+
+  try {
+    // Download the tarball
+    const tarPath = '/tmp/ffmpeg-download.tar.xz';
+    const response = await fetch(FFMPEG_STATIC_URL);
+    if (!response.ok || !response.body) {
+      throw new Error(`Failed to download ffmpeg: ${response.status} ${response.statusText}`);
+    }
+
+    const fileStream = createWriteStream(tarPath);
+    await pipeline(Readable.fromWeb(response.body as Parameters<typeof Readable.fromWeb>[0]), fileStream);
+
+    // Extract just the ffmpeg binary from the tarball
+    const { execSync } = await import('child_process');
+    execSync(`tar -xf ${tarPath} --wildcards '*/ffmpeg' --strip-components=1 -C /tmp`, {
+      timeout: 60000,
+    });
+
+    // Make executable
+    await chmod(FFMPEG_TMP_PATH, 0o755);
+
+    // Cleanup tarball
+    await unlink(tarPath).catch(() => { /* ignore */ });
+
+    const elapsed = Date.now() - startMs;
+    logger.info('FFmpeg binary downloaded and ready', {
+      path: FFMPEG_TMP_PATH,
+      elapsedMs: elapsed,
+      file: 'ffmpeg-utils.ts',
+    });
+
+    return FFMPEG_TMP_PATH;
+  } catch (error) {
+    downloadPromise = null; // Allow retry on next call
+    const msg = error instanceof Error ? error.message : String(error);
+    logger.error('Failed to download ffmpeg binary', error instanceof Error ? error : new Error(msg), {
+      file: 'ffmpeg-utils.ts',
+    });
+    throw new Error(`Could not obtain ffmpeg binary: ${msg}`);
+  }
+}
+
+/**
+ * Synchronous path getter for backward compatibility.
+ * Checks /tmp cache and local npm packages. Throws if not found.
+ * Use ensureFfmpeg() for the async version that can download.
+ */
+export function getFfmpegPath(): string {
+  // Check /tmp cache first (set by ensureFfmpeg)
+  if (existsSync(FFMPEG_TMP_PATH)) {
+    return FFMPEG_TMP_PATH;
   }
 
+  const localPath = tryLocalFfmpeg();
+  if (localPath) { return localPath; }
+
   throw new Error(
-    'Could not find ffmpeg executable. Install ffmpeg-static or @ffmpeg-installer/ffmpeg.'
+    'FFmpeg binary not found. Call ensureFfmpeg() first to download it, or install ffmpeg-static locally.'
   );
 }
 
@@ -70,13 +170,8 @@ export function getFfprobePath(): string | null {
  * Captures full stderr and includes the last 1 000 chars in the error message
  * so Vercel logs always show what went wrong without needing a separate debug run.
  */
-export function runFfmpeg(args: string[], timeoutMs = 300_000): Promise<string> {
-  let ffmpegPath: string;
-  try {
-    ffmpegPath = getFfmpegPath();
-  } catch (err) {
-    return Promise.reject(err instanceof Error ? err : new Error(String(err)));
-  }
+export async function runFfmpeg(args: string[], timeoutMs = 300_000): Promise<string> {
+  const ffmpegPath = await ensureFfmpeg();
 
   logger.info('Spawning FFmpeg', {
     binary: ffmpegPath,
@@ -213,9 +308,10 @@ async function probeWithFfprobe(ffprobePath: string, filePath: string): Promise<
 
 async function probeWithFfmpeg(filePath: string): Promise<VideoProbeResult> {
   try {
+    const ffmpegBin = await ensureFfmpeg();
     // Run ffmpeg with -i to get media info (exits with code 1 but outputs info to stderr)
     const stderr = await new Promise<string>((resolve) => {
-      const ffmpegPath = getFfmpegPath();
+      const ffmpegPath = ffmpegBin;
       const proc = spawn(ffmpegPath, ['-i', filePath, '-f', 'null', '-'], {
         stdio: ['pipe', 'pipe', 'pipe'],
       });
