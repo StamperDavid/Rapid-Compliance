@@ -275,6 +275,8 @@ function SceneCard({
 export function StepStoryboard() {
   const authFetch = useAuthFetch();
   const {
+    projectId,
+    projectName,
     brief,
     scenes,
     decompositionPlan,
@@ -297,6 +299,7 @@ export function StepStoryboard() {
   const [decompositionError, setDecompositionError] = useState<string | null>(null);
   const [generatingPreviews, setGeneratingPreviews] = useState<Set<string>>(new Set());
   const [activeTab, setActiveTab] = useState<'scenes' | 'avatar' | 'voice'>('scenes');
+  const [isSaving, setIsSaving] = useState(false);
   const [projectMood, setProjectMood] = useState<string>('');
   const hasAutoDecomposed = useRef(false);
 
@@ -492,6 +495,48 @@ export function StepStoryboard() {
 
   const totalDuration = scenes.reduce((sum, s) => sum + s.duration, 0);
   const isReady = missingRequirements.length === 0;
+
+  // ── Save storyboard to Firestore and advance ───────────────────────────
+  const handleApproveAndGenerate = useCallback(async () => {
+    if (!isReady) { return; }
+    setIsSaving(true);
+    try {
+      // Save current storyboard state to Firestore so edits persist
+      await authFetch('/api/video/project/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          projectId: projectId ?? undefined,
+          name: projectName || brief.description.slice(0, 50) || 'Untitled Video',
+          brief,
+          currentStep: 'approval',
+          scenes: scenes.map((s) => ({
+            id: s.id,
+            sceneNumber: s.sceneNumber,
+            scriptText: s.scriptText,
+            screenshotUrl: s.screenshotUrl ?? null,
+            avatarId: s.avatarId ?? null,
+            voiceId: s.voiceId ?? null,
+            voiceProvider: s.voiceProvider ?? null,
+            duration: s.duration,
+            engine: s.engine ?? 'hedra',
+            backgroundPrompt: s.backgroundPrompt ?? null,
+            status: s.status,
+          })),
+          avatarId: avatarId ?? null,
+          avatarName: avatarName ?? null,
+          voiceId: voiceId ?? null,
+          voiceName: voiceName ?? null,
+          status: 'approved',
+        }),
+      });
+    } catch {
+      // Non-critical — continue to generation even if save fails
+    } finally {
+      setIsSaving(false);
+    }
+    advanceStep();
+  }, [isReady, authFetch, projectId, projectName, brief, scenes, avatarId, avatarName, voiceId, voiceName, advanceStep]);
 
   // ════════════════════════════════════════════════════════════════════════
   // Render
@@ -737,11 +782,15 @@ export function StepStoryboard() {
           <Button
             size="sm"
             className="gap-2 bg-amber-600 hover:bg-amber-700 text-white"
-            disabled={!isReady}
-            onClick={() => advanceStep()}
+            disabled={!isReady || isSaving}
+            onClick={() => { void handleApproveAndGenerate(); }}
           >
-            <CheckCircle2 className="w-4 h-4" />
-            Approve &amp; Generate
+            {isSaving ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <CheckCircle2 className="w-4 h-4" />
+            )}
+            {isSaving ? 'Saving...' : 'Approve & Generate'}
             <ArrowRight className="w-3.5 h-3.5" />
           </Button>
         </div>
