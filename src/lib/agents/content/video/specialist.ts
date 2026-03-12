@@ -1866,30 +1866,11 @@ export class VideoSpecialist extends BaseSpecialist {
       }, ['No scenes in project']);
     }
 
-    // Determine avatarId and voiceId
-    let genAvatarId = requestedAvatarId ?? project.avatarId ?? '';
-    let genVoiceId = requestedVoiceId ?? project.voiceId ?? '';
-
-    // Auto-select avatar from Avatar Profile if not specified — all scenes are Hedra
-    const hasAvatarScenes = project.scenes.length > 0;
-    if (hasAvatarScenes && (!genAvatarId || !genVoiceId)) {
-      try {
-        const { getDefaultProfile } = await import('@/lib/video/avatar-profile-service');
-        const profile = await getDefaultProfile(project.createdBy ?? 'jasper');
-        if (profile) {
-          if (!genAvatarId) {
-            genAvatarId = profile.id;
-            this.log('INFO', `Auto-selected Avatar Profile: "${profile.name}"`);
-          }
-          if (!genVoiceId && profile.voiceId) {
-            genVoiceId = profile.voiceId;
-            this.log('INFO', `Auto-selected voice from Avatar Profile: ${profile.voiceId}`);
-          }
-        }
-      } catch (avatarError) {
-        this.log('WARN', `Failed to auto-select Avatar Profile: ${avatarError instanceof Error ? avatarError.message : String(avatarError)}`);
-      }
-    }
+    // Use only explicitly-selected avatar/voice — never auto-inject defaults.
+    // When no avatar is selected, Hedra runs in prompt-only mode and generates
+    // characters from the text descriptions (no Character 3 model).
+    const genAvatarId = requestedAvatarId ?? project.avatarId ?? '';
+    const genVoiceId = requestedVoiceId ?? project.voiceId ?? '';
 
     const genAspectRatio = (project.brief?.aspectRatio as '16:9' | '9:16' | '1:1' | '4:3') ?? '16:9';
 

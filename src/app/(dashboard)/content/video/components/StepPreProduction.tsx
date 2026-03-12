@@ -62,34 +62,14 @@ export function StepPreProduction() {
       const data = await response.json() as { success: boolean; defaults: VideoDefaultsData };
       if (!data.success || !data.defaults) { return; }
 
-      const d = data.defaults;
-      if (d.avatarId && d.avatarName && !avatarId) {
-        setAvatar(d.avatarId, d.avatarName);
-
-        // Also load the profile data (clips, tier) for the default avatar
-        try {
-          const profileRes = await authFetch(`/api/video/avatar-profiles/${encodeURIComponent(d.avatarId)}`);
-          if (profileRes.ok) {
-            const profileData = await profileRes.json() as {
-              success: boolean;
-              profile?: { tier: 'premium' | 'standard'; greenScreenClips: typeof selectedProfileClips };
-            };
-            if (profileData.success && profileData.profile) {
-              setSelectedProfileClips(profileData.profile.greenScreenClips ?? []);
-              setSelectedProfileTier(profileData.profile.tier ?? 'standard');
-            }
-          }
-        } catch {
-          // Profile load is non-critical
-        }
-      }
-      if (d.voiceId && d.voiceName && !voiceId) {
-        setVoice(d.voiceId, d.voiceName, d.voiceProvider ?? undefined);
-      }
+      // Do NOT auto-select avatar or voice. Prompt-only mode (no avatar) lets
+      // Hedra generate characters from the text descriptions. The user must
+      // explicitly pick an avatar/voice if they want Character 3 mode.
+      const _d = data.defaults; // Defaults available but not auto-applied
     } catch {
       // Defaults are optional — don't break the flow
     }
-  }, [avatarId, voiceId, authFetch, setAvatar, setVoice]);
+  }, [avatarId, voiceId, authFetch]);
 
   useEffect(() => {
     void loadDefaults();

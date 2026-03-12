@@ -15,60 +15,9 @@ import {
 import type { PipelineScene, SceneGenerationResult, VideoEngineId } from '@/types/video-pipeline';
 import type { VideoAspectRatio } from '@/types/video';
 
-// ============================================================================
-// Hedra API Key Helper
-// ============================================================================
-
-async function getHedraApiKey(): Promise<string | null> {
-  try {
-    const { apiKeyService } = await import('@/lib/api-keys/api-key-service');
-    const { PLATFORM_ID } = await import('@/lib/constants/platform');
-    const rawKey = await apiKeyService.getServiceKey(PLATFORM_ID, 'hedra');
-    return (rawKey && typeof rawKey === 'string') ? rawKey : null;
-  } catch {
-    return null;
-  }
-}
-
-// ============================================================================
-// Default Hedra Voice Fallback
-// ============================================================================
-
-interface HedraVoiceFallback { id: string; name: string }
-
-let defaultHedraVoicePromise: Promise<HedraVoiceFallback | null> | null = null;
-
-function getDefaultHedraVoice(): Promise<HedraVoiceFallback | null> {
-  defaultHedraVoicePromise ??= fetchDefaultHedraVoice();
-  return defaultHedraVoicePromise;
-}
-
-async function fetchDefaultHedraVoice(): Promise<HedraVoiceFallback | null> {
-  try {
-    const apiKey = await getHedraApiKey();
-    if (!apiKey) { return null; }
-
-    const response = await fetch('https://api.hedra.com/web-app/public/voices', {
-      headers: { 'x-api-key': apiKey, 'Accept': 'application/json' },
-    });
-
-    if (!response.ok) { return null; }
-
-    const voices = (await response.json()) as { id: string; name: string }[];
-    if (!Array.isArray(voices) || voices.length === 0) { return null; }
-
-    const defaultVoice = { id: voices[0].id, name: voices[0].name };
-    logger.info('Cached default Hedra voice for fallback', {
-      voiceId: defaultVoice.id,
-      voiceName: defaultVoice.name,
-      file: 'scene-generator.ts',
-    });
-    return defaultVoice;
-  } catch {
-    defaultHedraVoicePromise = null;
-    return null;
-  }
-}
+// NOTE: Default avatar/voice auto-selection was removed. Avatar and voice are
+// only used when the user explicitly selects them. In prompt-only mode (no
+// avatar, no voice), Hedra generates fully AI-directed scenes from text only.
 
 
 // ============================================================================
@@ -236,19 +185,10 @@ export async function generateScene(
     const effectiveAvatarId = scene.avatarId ?? projectAvatarId;
     let resolvedVoiceId = scene.voiceId ?? projectVoiceId;
 
-    // ── Resolve voice (needed for both modes — TTS narration) ────────────
-    if (!resolvedVoiceId) {
-      const fallback = await getDefaultHedraVoice();
-      if (fallback) {
-        resolvedVoiceId = fallback.id;
-        logger.info('Auto-selected Hedra voice', {
-          sceneId: scene.id,
-          voiceId: fallback.id,
-          voiceName: fallback.name,
-          file: 'scene-generator.ts',
-        });
-      }
-    }
+    // Voice is optional — only used if the user explicitly selected one.
+    // In prompt-only mode (no avatar, no voice), Hedra generates a fully
+    // AI-directed scene from just the text_prompt, no TTS narration.
+    // This avoids always picking the same default male voice.
 
     // ── AVATAR MODE: user selected a premium character ───────────────────
     if (effectiveAvatarId) {

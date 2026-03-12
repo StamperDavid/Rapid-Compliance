@@ -326,16 +326,10 @@ export function StepStoryboard() {
               defaults: { avatarId?: string; avatarName?: string; voiceId?: string; voiceName?: string; voiceProvider?: string };
             };
             if (data.success && data.defaults) {
-              // Do NOT auto-select an avatar — prompt-only mode (no avatar) lets Hedra
-              // generate characters from the text description. Only set an avatar when
-              // the user explicitly picks one in the Character Studio.
-              if (!voiceId && data.defaults.voiceId && data.defaults.voiceName) {
-                setVoice(
-                  data.defaults.voiceId,
-                  data.defaults.voiceName,
-                  (data.defaults.voiceProvider as 'elevenlabs' | 'unrealspeech' | 'custom' | 'hedra') ?? 'hedra',
-                );
-              }
+              // Do NOT auto-select avatar or voice. Prompt-only mode (no avatar) lets
+              // Hedra generate characters from the text descriptions. The user must
+              // explicitly pick an avatar/voice if they want Character 3 mode.
+              const _d = data.defaults; // Defaults available but not auto-applied
             }
           }
         } catch {

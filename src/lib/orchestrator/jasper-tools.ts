@@ -3574,19 +3574,10 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
         const genStart = Date.now();
         trackMissionStep(context, 'generate_video', 'RUNNING', { toolArgs: args });
 
-        // Auto-inject defaults if avatar/voice not specified
-        let genAvatarId = args.avatarId as string | undefined;
-        let genVoiceId = args.voiceId as string | undefined;
-        if (!genAvatarId || !genVoiceId) {
-          try {
-            const { getVideoDefaults } = await import('@/lib/video/video-defaults-service');
-            const defaults = await getVideoDefaults();
-            if (!genAvatarId && defaults.avatarId) { genAvatarId = defaults.avatarId; }
-            if (!genVoiceId && defaults.voiceId) { genVoiceId = defaults.voiceId; }
-          } catch {
-            // Defaults are optional
-          }
-        }
+        // Only use avatar/voice if explicitly provided — never auto-inject defaults.
+        // When no avatar is selected, Hedra runs in prompt-only mode (text descriptions only).
+        const genAvatarId = args.avatarId as string | undefined;
+        const genVoiceId = args.voiceId as string | undefined;
 
         const { getVideoSpecialist: getVideoSpec } = await import('@/lib/agents/content/video/specialist');
         const videoSpec = getVideoSpec();
