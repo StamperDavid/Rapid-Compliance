@@ -72,6 +72,36 @@ async function fetchDefaultHedraVoice(): Promise<HedraVoiceFallback | null> {
 
 
 // ============================================================================
+// Prompt Builder — combines all scene fields into one Hedra text_prompt
+// ============================================================================
+
+/**
+ * Hedra only has a single `text_prompt` field for visual direction.
+ * This combines the scene's visual description, background/environment,
+ * and title context into one rich cinematic prompt.
+ */
+function buildHedraTextPrompt(scene: PipelineScene): string {
+  const parts: string[] = [];
+
+  // Background/environment is the most important visual context
+  if (scene.backgroundPrompt?.trim()) {
+    parts.push(scene.backgroundPrompt.trim());
+  }
+
+  // Visual description adds shot framing, character demeanor, mood
+  if (scene.visualDescription?.trim()) {
+    parts.push(scene.visualDescription.trim());
+  }
+
+  // If neither exists, fall back to the script text as a last resort
+  if (parts.length === 0 && scene.scriptText?.trim()) {
+    parts.push(scene.scriptText.trim());
+  }
+
+  return parts.join('. ') || '';
+}
+
+// ============================================================================
 // Hedra Scene Generators
 // ============================================================================
 
@@ -87,17 +117,20 @@ async function generatePromptScene(
 ): Promise<SceneGenerationResult> {
   const script = scene.scriptText?.trim() || '';
   const hedraAspectRatio = aspectRatio === '4:3' ? '16:9' : aspectRatio;
+  const textPrompt = buildHedraTextPrompt(scene);
 
   logger.info('Submitting prompt-only Hedra generation', {
     sceneId: scene.id,
     hasNarration: Boolean(voiceId && script),
-    promptLength: scene.visualDescription?.length ?? 0,
+    promptLength: textPrompt.length,
+    textPromptPreview: textPrompt.slice(0, 200),
     file: 'scene-generator.ts',
   });
 
   const response = await generateHedraPromptVideo({
-    textPrompt: scene.visualDescription?.trim() ?? scene.scriptText?.trim() ?? '',
+    textPrompt,
     aspectRatio: hedraAspectRatio,
+    resolution: '1080p',
     durationMs: scene.duration * 1000,
     hedraVoiceId: voiceId ?? undefined,
     speechText: (voiceId && script) ? script : undefined,
@@ -127,17 +160,20 @@ async function generateAvatarScene(
 ): Promise<SceneGenerationResult> {
   const script = scene.scriptText.trim() || ' ';
   const hedraAspectRatio = aspectRatio === '4:3' ? '16:9' : aspectRatio;
+  const textPrompt = buildHedraTextPrompt(scene);
 
   logger.info('Submitting avatar Hedra generation (Character 3)', {
     sceneId: scene.id,
     voiceId,
     scriptLength: script.length,
+    textPromptPreview: textPrompt.slice(0, 200),
     file: 'scene-generator.ts',
   });
 
   const response = await generateHedraAvatarVideo(photoUrl, null, {
-    textPrompt: scene.visualDescription?.trim() ?? '',
+    textPrompt,
     aspectRatio: hedraAspectRatio,
+    resolution: '1080p',
     durationMs: scene.duration * 1000,
     hedraVoiceId: voiceId,
     speechText: script,

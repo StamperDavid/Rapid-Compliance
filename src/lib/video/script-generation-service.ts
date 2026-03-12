@@ -146,9 +146,11 @@ For EVERY scene, write the script with a specific emotional tone in mind:
 Vary the emotional register. A video where every scene sounds the same is boring. A video with emotional dynamics is compelling.
 
 ### Visual Descriptions (visualDescription field)
-This describes what the VIEWER SEES — the character's demeanor, energy, and the overall composition:
-- Include the character's emotional state and body language: "leaning forward with excitement", "nodding knowingly", "gesturing with hands for emphasis", "direct eye contact, serious tone"
-- Describe the shot composition: "close-up framing, warm tones", "medium shot with clean background", "slightly off-center framing for editorial feel"
+This describes what the VIEWER SEES — the full cinematic scene description that will be sent to the video AI:
+- **CHARACTER APPEARANCE**: Describe who is on screen — age range, gender, clothing, grooming, and presence. E.g. "A confident man in his 30s wearing a fitted navy blazer and open-collar white shirt" or "A sharp-dressed woman in a sleek black turtleneck with minimal gold jewelry". Be specific enough that the AI generates a consistent character.
+- **CHARACTER PERFORMANCE**: Body language, emotional state, energy. E.g. "leaning forward with excitement", "gesturing with hands for emphasis", "direct eye contact, serious tone"
+- **SHOT COMPOSITION**: Camera framing and feel. E.g. "close-up framing, warm tones", "medium shot, shallow depth of field", "slightly off-center framing for editorial feel"
+- **IMPORTANT**: The character description should be CONSISTENT across all scenes — same person, same wardrobe, same look. Only vary their emotional energy and body language per scene.
 - Match the visual energy to the script's emotional tone
 
 ## WHAT TO AVOID
@@ -168,24 +170,36 @@ SalesVelocity.ai is a SaaS platform with a BUILT-IN CRM. Pricing is CRM slot-bas
 - The platform REPLACES external CRMs — it doesn't connect to them. Clients get their own AI-powered CRM with a 52-agent AI swarm managing it.
 
 ## BACKGROUND PROMPTS (REQUIRED for every scene)
-Write cinematic descriptions for the environment BEHIND the avatar character. These drive AI-generated backgrounds that the character is composited over.
-- Each scene MUST have a DIFFERENT environment to maintain visual variety.
+Write cinematic descriptions for the environment/setting of each scene.
+- Think like a FILM DIRECTOR choosing locations for a commercial — the setting should feel like one continuous world.
+- Most scenes should share the SAME primary location (e.g. the same office, the same studio). Only introduce a new location when the story demands it (e.g. a flashback, a contrast shot, or a dramatic reveal).
+- Even within the same location, vary the CAMERA ANGLE and FRAMING — wide establishing shot, then close-up at the desk, then over-the-shoulder at the whiteboard. Same room, different perspectives.
 - Describe the setting, lighting quality, color palette, and atmosphere.
 - Include subtle detail: "warm golden hour light", "soft bokeh in background", "cool blue ambient glow", "dramatic side lighting".
-- Match the background mood to the script's emotional tone — warm scripts get warm environments, intense scripts get dramatic lighting.
+- Match the background mood to the script's emotional tone.
 - Think CINEMATIC — these are film set descriptions.
-- Example: "Modern office with floor-to-ceiling windows, morning light casting long shadows, monitors glowing softly, shallow depth of field, warm amber tones"
-- Example: "Creative studio with exposed brick walls, warm pendant lights, colorful sticky notes on glass wall, afternoon golden hour light"
-- Example: "Sleek desk setup with laptop showing growth charts, ambient neon accent lighting, tech-modern aesthetic, cool blue palette"
-- Example: "Rooftop terrace with warm string lights, city skyline blurred in background, golden hour warmth, casual sophisticated atmosphere"
+- Example (same location, different angles): Scene 1: "Modern office with floor-to-ceiling windows, wide establishing shot, morning light casting long shadows, warm amber tones" → Scene 2: "Same modern office, close-up at a standing desk, monitors glowing with dashboards, shallow depth of field" → Scene 3: "Same office, glass conference room, team gathered around a screen, natural light from windows"
+- Only change location for NARRATIVE reasons: "Rooftop terrace at sunset — the tone shifts to personal reflection, warm string lights, city skyline blurred in background"
 
 ## VISUAL CONSISTENCY (CRITICAL)
 All scenes in a video MUST share the same visual DNA:
+- Same PRIMARY LOCATION for most scenes — only change when the story requires it
 - Same color temperature (warm or cool) across all backgrounds
 - Same lighting style (natural, studio, dramatic, ambient)
 - Same level of formality (casual spaces vs corporate offices)
-- Scene variety comes from DIFFERENT LOCATIONS with the SAME MOOD, not different moods
-- Think of it like a film: different shots, one cinematographer's vision`;
+- Think of it like a film: different shots of the SAME WORLD, one cinematographer's vision
+- A location change is a DELIBERATE storytelling choice, not a default`;
+
+  if (!avatarContext) {
+    prompt += `\n\n## CHARACTER / PRESENTER (NO AVATAR SELECTED)
+No specific avatar has been chosen — the video AI will generate the character automatically from your descriptions.
+- You MUST describe the presenter/character in the visualDescription of EVERY scene.
+- Pick ONE consistent character and describe them the same way each time: age, gender, clothing, grooming, presence.
+- Example: "A confident woman in her early 30s, dark hair pulled back, wearing a tailored charcoal blazer over a white crew-neck tee"
+- Use that SAME description (or close variations) in every scene so the AI generates a visually consistent person.
+- Vary only their emotional energy, body language, and camera angle — NOT their appearance.
+- If the video concept has NO on-screen presenter (e.g. product demo, cinematic B-roll), describe the subjects and actions instead.`;
+  }
 
   if (avatarContext) {
     let avatarBlock = `\n\n## AVATAR / PRESENTER
@@ -227,7 +241,7 @@ Return ONLY valid JSON (no markdown, no code fences) matching this structure:
       "sceneNumber": 1,
       "title": "Scene Title — also conveys the emotional beat (e.g. 'The Wake-Up Call', 'The Breakthrough')",
       "scriptText": "Natural spoken script with emotional direction. Write EXACTLY what the avatar says — conversational, specific, compelling. 15-25 words per 5 seconds of duration.",
-      "visualDescription": "What the viewer SEES: character demeanor (leaning in, gesturing, serious gaze), shot framing (close-up, medium), mood (warm, tense, excited)",
+      "visualDescription": "Full scene description: character appearance (age, gender, clothing, grooming), their demeanor (leaning in, gesturing, serious gaze), shot framing (close-up, medium), mood (warm, tense, excited). Keep character appearance CONSISTENT across all scenes.",
       "suggestedDuration": 12,
       "engine": "hedra",
       "backgroundPrompt": "Cinematic background: setting + lighting + color palette + atmosphere. Must match the script's emotional tone."
