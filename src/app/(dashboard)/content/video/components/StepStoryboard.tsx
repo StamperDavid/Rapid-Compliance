@@ -326,9 +326,9 @@ export function StepStoryboard() {
               defaults: { avatarId?: string; avatarName?: string; voiceId?: string; voiceName?: string; voiceProvider?: string };
             };
             if (data.success && data.defaults) {
-              if (!avatarId && data.defaults.avatarId && data.defaults.avatarName) {
-                setAvatar(data.defaults.avatarId, data.defaults.avatarName);
-              }
+              // Do NOT auto-select an avatar — prompt-only mode (no avatar) lets Hedra
+              // generate characters from the text description. Only set an avatar when
+              // the user explicitly picks one in the Character Studio.
               if (!voiceId && data.defaults.voiceId && data.defaults.voiceName) {
                 setVoice(
                   data.defaults.voiceId,
