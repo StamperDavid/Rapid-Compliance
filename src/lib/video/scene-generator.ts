@@ -72,33 +72,54 @@ async function fetchDefaultHedraVoice(): Promise<HedraVoiceFallback | null> {
 
 
 // ============================================================================
-// Prompt Builder — combines all scene fields into one Hedra text_prompt
+// Scene-to-Prompt Translator — converts storyboard data into a Hedra prompt
 // ============================================================================
 
 /**
- * Hedra only has a single `text_prompt` field for visual direction.
- * This combines the scene's visual description, background/environment,
- * and title context into one rich cinematic prompt.
+ * Hedra has a single `text_prompt` field. This function acts as the director,
+ * translating storyboard scene data into a coherent cinematic scene description
+ * that a text-to-video AI can execute.
+ *
+ * The prompt is structured as a film direction note:
+ *   SETTING → CHARACTER → ACTION → CAMERA/MOOD
+ *
+ * This produces far better results than raw field concatenation because
+ * Hedra interprets the prompt as a single scene description, not fragments.
  */
 function buildHedraTextPrompt(scene: PipelineScene): string {
-  const parts: string[] = [];
+  const background = scene.backgroundPrompt?.trim() ?? '';
+  const visual = scene.visualDescription?.trim() ?? '';
+  const script = scene.scriptText?.trim() ?? '';
+  const title = scene.title?.trim() ?? '';
 
-  // Background/environment is the most important visual context
-  if (scene.backgroundPrompt?.trim()) {
-    parts.push(scene.backgroundPrompt.trim());
+  // If we have nothing to work with, return whatever exists
+  if (!background && !visual && !script) {
+    return title || '';
   }
 
-  // Visual description adds shot framing, character demeanor, mood
-  if (scene.visualDescription?.trim()) {
-    parts.push(scene.visualDescription.trim());
+  // Build a structured cinematic prompt for Hedra
+  const prompt: string[] = [];
+
+  // SETTING: environment, lighting, atmosphere
+  if (background) {
+    prompt.push(background);
   }
 
-  // If neither exists, fall back to the script text as a last resort
-  if (parts.length === 0 && scene.scriptText?.trim()) {
-    parts.push(scene.scriptText.trim());
+  // CHARACTER + ACTION + CAMERA: who is on screen, what they're doing, how it's shot
+  if (visual) {
+    prompt.push(visual);
   }
 
-  return parts.join('. ') || '';
+  // If we have a script but no visual description, derive context from the script
+  // so Hedra has SOMETHING about who is speaking and what's happening
+  if (!visual && script) {
+    prompt.push(`A person speaking to camera: "${script.slice(0, 150)}"`);
+  }
+
+  // Production quality markers — tells Hedra to aim high
+  prompt.push('Cinematic quality, professional lighting, 4K film look');
+
+  return prompt.join('. ');
 }
 
 // ============================================================================
