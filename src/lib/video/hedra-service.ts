@@ -459,8 +459,14 @@ export async function generateHedraPromptVideo(
     logger.info('TTS audio ready for prompt video', { audioAssetId, file: 'hedra-service.ts' });
   }
 
+  // Hedra requires ai_model_id on every request. For prompt-only (text-to-video),
+  // use a model with "character" + "motion" tags for best results from text descriptions.
+  // Kling O3 Standard T2V — good character generation from text, motion support, reasonable cost.
+  const PROMPT_T2V_MODEL_ID = 'b0e156da-da25-40b2-8386-937da7f47cc3';
+
   const payload: HedraGenerationPayload = {
     type: 'video',
+    ai_model_id: PROMPT_T2V_MODEL_ID,
     generated_video_inputs: {
       text_prompt: options.textPrompt ?? '',
       resolution: options.resolution ?? '720p',
