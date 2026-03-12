@@ -2063,6 +2063,7 @@ export class VideoSpecialist extends BaseSpecialist {
       projectId: projectId ?? null,
       message: `Video assembled: ${data.sceneCount} scenes with ${transitionType} transitions at ${outputResolution}.`,
       videoStudioPath: projectId ? `/content/video?load=${projectId}` : null,
+      reviewLink: projectId ? `/content/video?load=${projectId}` : null,
     });
   }
 
