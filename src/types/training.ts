@@ -9,7 +9,7 @@ import type { Timestamp } from 'firebase/firestore';
  * Training Session
  * A single training conversation with feedback
  */
-export type AgentDomain = 'chat' | 'social' | 'email' | 'voice' | 'seo';
+export type AgentDomain = 'chat' | 'social' | 'email' | 'voice' | 'seo' | 'video';
 
 export interface TrainingSession {
   id: string;

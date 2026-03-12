@@ -89,6 +89,18 @@ function getDefaultPersonaForType(agentType: AgentDomain): AgentPersona {
           'Produce comprehensive, well-structured content',
         ],
       };
+    case 'video':
+      return {
+        ...base,
+        name: 'Video Screenwriter Agent',
+        tone: 'cinematic and descriptive',
+        objectives: [
+          'Generate storyboards that match user intent exactly — correct character, scene count, tone',
+          'Maintain character consistency across all scenes with explicit same-character references',
+          'Write narration as voiceover, never as character dialogue or lip-sync',
+          'Produce rich visual descriptions optimized for Hedra video generation',
+        ],
+      };
   }
 }
 
@@ -133,6 +145,14 @@ function getDefaultBehaviorConfig(agentType: AgentDomain): BehaviorConfig {
         responseLength: 'detailed',
         proactiveLevel: 3,
         idleTimeoutMinutes: 120,
+      };
+    case 'video':
+      return {
+        closingAggressiveness: 0,
+        questionFrequency: 0,
+        responseLength: 'detailed',
+        proactiveLevel: 5,
+        idleTimeoutMinutes: 60,
       };
   }
 }

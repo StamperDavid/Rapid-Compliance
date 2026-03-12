@@ -150,6 +150,7 @@ async function markSessionFlagged(
     email: 'emailCampaigns',
     social: 'socialPosts',
     seo: 'blogPosts',
+    video: 'trainingSessions',
   };
 
   const collectionPath = getSubCollection(collectionMap[agentType]);

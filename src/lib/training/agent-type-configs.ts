@@ -155,6 +155,34 @@ const SEO_CONFIG: AgentTypeTrainingConfig = {
 };
 
 // ============================================================================
+// VIDEO AGENT — AI screenwriter & video generation
+// ============================================================================
+
+const VIDEO_CONFIG: AgentTypeTrainingConfig = {
+  agentType: 'video',
+  scoringCriteria: [
+    { id: 'video_user_intent', label: 'User Intent Adherence', description: 'How accurately the screenwriter followed the user prompt — correct character, tone, topic, and scene count', weight: 0.22 },
+    { id: 'video_character_consistency', label: 'Character Consistency', description: 'Same character descriptions used across scenes, explicit same-character references, no unexplained character changes', weight: 0.20 },
+    { id: 'video_visual_description', label: 'Visual Description Quality', description: 'Rich, specific visual directions that translate well to video generation — setting, lighting, action, camera', weight: 0.18 },
+    { id: 'video_narration_handling', label: 'Narration Handling', description: 'Narration written as voiceover, NOT as character speech. On-screen characters perform actions, not talk.', weight: 0.16 },
+    { id: 'video_scene_structure', label: 'Scene Structure', description: 'Logical scene progression, appropriate scene count, good pacing and duration distribution', weight: 0.12 },
+    { id: 'video_prompt_quality', label: 'Hedra Prompt Quality', description: 'Final prompts optimized for Hedra — correct structure, no forbidden elements, cinematic language', weight: 0.12 },
+  ],
+  scenarioTypes: [
+    { id: 'video_product_demo', label: 'Product Demo', description: 'Showcasing a product or service with a presenter character', examples: ['Show our SaaS dashboard in action', 'Demonstrate the mobile app onboarding'] },
+    { id: 'video_brand_story', label: 'Brand Story', description: 'Narrative-driven brand storytelling with emotional arc', examples: ['Tell our founding story in 4 scenes', 'Show a day in the life of our customer'] },
+    { id: 'video_explainer', label: 'Explainer Video', description: 'Educational content explaining a concept or process', examples: ['Explain how our AI works', 'Break down the 3-step process'] },
+    { id: 'video_testimonial', label: 'Testimonial Style', description: 'Customer success story or case study format', examples: ['Before/after transformation story', 'Customer journey from problem to solution'] },
+    { id: 'video_social_ad', label: 'Social Media Ad', description: 'Short, punchy content for social platforms', examples: ['30-second Instagram reel', 'TikTok-style attention grabber'] },
+  ],
+  performanceThresholds: {
+    flagForTrainingBelow: 60,
+    excellentAbove: 85,
+    minSamplesForTrend: 3,
+  },
+};
+
+// ============================================================================
 // REGISTRY
 // ============================================================================
 
@@ -168,6 +196,7 @@ export const AGENT_TYPE_CONFIGS: Record<AgentDomain, AgentTypeTrainingConfig> = 
   email: EMAIL_CONFIG,
   social: SOCIAL_CONFIG,
   seo: SEO_CONFIG,
+  video: VIDEO_CONFIG,
 };
 
 /**

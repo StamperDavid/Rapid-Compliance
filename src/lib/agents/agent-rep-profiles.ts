@@ -194,6 +194,7 @@ function getAgentDisplayName(agentType: AgentDomain): string {
     email: 'Email Agent',
     social: 'Social Media Agent',
     seo: 'SEO Content Agent',
+    video: 'Video Screenwriter Agent',
   };
   return names[agentType];
 }
@@ -205,6 +206,7 @@ function getDefaultFlagThreshold(agentType: AgentDomain): number {
     email: 60,
     social: 60,
     seo: 55,
+    video: 60,
   };
   return thresholds[agentType];
 }
@@ -216,6 +218,7 @@ function getDefaultExcellentThreshold(agentType: AgentDomain): number {
     email: 85,
     social: 85,
     seo: 85,
+    video: 85,
   };
   return thresholds[agentType];
 }

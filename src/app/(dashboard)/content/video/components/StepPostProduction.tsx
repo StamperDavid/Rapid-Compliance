@@ -7,6 +7,7 @@ import { Wand2, Download, Film, Save, RefreshCw, Play, Edit3, Loader2, CheckCirc
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { VideoPlayer } from './VideoPlayer';
+import { ScreenwriterRating } from './ScreenwriterRating';
 import { useVideoPipelineStore } from '@/lib/stores/video-pipeline-store';
 
 export function StepPostProduction() {
@@ -269,6 +270,14 @@ export function StepPostProduction() {
           })}
         </CardContent>
       </Card>
+
+      {/* Screenwriter Rating */}
+      <ScreenwriterRating
+        projectId={projectId}
+        projectDescription={brief.description}
+        sceneCount={scenes.length}
+        videoType={brief.videoType}
+      />
 
       {/* Actions */}
       <div className="flex justify-between">

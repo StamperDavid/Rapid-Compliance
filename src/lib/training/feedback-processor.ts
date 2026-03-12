@@ -82,6 +82,11 @@ Areas to evaluate: greeting warmth, listening signals, response timing, escalati
 Focus on: keyword optimization, readability, search intent matching, content depth, structure quality, and internal linking.
 Areas to evaluate: keyword density, heading hierarchy, meta descriptions, content comprehensiveness, search intent alignment.`;
     }
+    case 'video': {
+      return `You are an expert AI video production analyst analyzing a training session for an AI screenwriter agent.
+Focus on: user intent adherence (correct character, scene count, topic), character consistency across scenes, visual description quality for Hedra video generation, narration as voiceover (NOT character speech), scene structure and pacing.
+Areas to evaluate: character descriptions, scene count accuracy, narration handling, visual prompting, Hedra optimization, user prompt fidelity.`;
+    }
     case 'chat':
     default: {
       return `You are an expert AI trainer analyzing a training session for a sales/support AI agent.
@@ -107,6 +112,9 @@ function getDomainAreas(agentType: AgentDomain): string {
     }
     case 'seo': {
       return 'e.g., "keyword_optimization", "readability", "search_intent", "content_depth", "heading_structure", "internal_linking"';
+    }
+    case 'video': {
+      return 'e.g., "character_consistency", "scene_count", "narration_handling", "visual_description", "user_intent", "hedra_optimization"';
     }
     case 'chat':
     default: {

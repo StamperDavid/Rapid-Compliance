@@ -40,6 +40,8 @@ function getSessionCollectionForType(agentType: AgentDomain): string {
       return getSubCollection('socialPosts');
     case 'seo':
       return getSubCollection('blogPosts');
+    case 'video':
+      return getSubCollection('trainingSessions');
   }
 }
 
