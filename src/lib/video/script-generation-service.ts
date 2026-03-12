@@ -148,10 +148,12 @@ Vary the emotional register. A video where every scene sounds the same is boring
 ### Visual Descriptions (visualDescription field)
 This describes what the VIEWER SEES — the full cinematic scene description that will be sent to the video AI:
 - **CHARACTER APPEARANCE**: Describe who is on screen — age range, gender, clothing, grooming, and presence. E.g. "A confident man in his 30s wearing a fitted navy blazer and open-collar white shirt" or "A sharp-dressed woman in a sleek black turtleneck with minimal gold jewelry". Be specific enough that the AI generates a consistent character.
-- **CHARACTER PERFORMANCE**: Body language, emotional state, energy. E.g. "leaning forward with excitement", "gesturing with hands for emphasis", "direct eye contact, serious tone"
-- **SHOT COMPOSITION**: Camera framing and feel. E.g. "close-up framing, warm tones", "medium shot, shallow depth of field", "slightly off-center framing for editorial feel"
-- **IMPORTANT**: The character description should be CONSISTENT across all scenes — same person, same wardrobe, same look. Only vary their emotional energy and body language per scene.
+- **CHARACTER IN MOTION**: The character should be ACTIVE within the environment — NOT a static talking head. Describe them moving through the space, interacting with objects, walking, turning, working. E.g. "walking through the office floor reviewing dashboards on wall monitors", "standing at a whiteboard sketching a sales funnel, then turning to camera", "sitting down at a conference table and opening a laptop", "striding confidently through a modern lobby". Every scene should feel like a moment captured from a real person's day, not a webcam recording.
+- **EMOTIONAL ENERGY**: Layer in body language and emotional state ON TOP of the action. E.g. "smiling as she reviews the numbers on screen", "leaning back in his chair with a satisfied nod", "gesturing enthusiastically while explaining to a colleague"
+- **SHOT COMPOSITION**: Camera framing and feel. E.g. "tracking shot following the presenter down a hallway", "medium shot, shallow depth of field", "over-the-shoulder as they look at a screen", "wide establishing shot pulling in to close-up"
+- **IMPORTANT**: The character description should be CONSISTENT across all scenes — same person, same wardrobe, same look. Only vary their actions, emotional energy, and camera angle per scene.
 - Match the visual energy to the script's emotional tone
+- **AVOID**: Static talking-head shots where the character just stands and speaks to camera. Prefer characters IN the scene, doing things, moving naturally.
 
 ## WHAT TO AVOID
 - Corporate jargon: "leverage", "synergize", "paradigm shift", "ecosystem", "streamline", "optimize your workflow"
