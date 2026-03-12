@@ -18,18 +18,38 @@ import { PLATFORM_ID } from '@/lib/constants/platform';
 // ============================================================================
 
 /**
- * Get the ffmpeg binary path from @ffmpeg-installer/ffmpeg.
- * Logs the resolved path so Vercel logs confirm the binary is present.
+ * Get the ffmpeg binary path.
+ * Tries ffmpeg-static first (works on Vercel serverless),
+ * falls back to @ffmpeg-installer/ffmpeg (works locally on Windows/Mac).
  */
 export function getFfmpegPath(): string {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const installer = require('@ffmpeg-installer/ffmpeg') as { path: string };
-  const resolvedPath = installer.path;
-  if (!resolvedPath) {
-    throw new Error('ffmpeg binary path is empty — @ffmpeg-installer/ffmpeg may not be installed correctly');
+  // Try ffmpeg-static first — designed for serverless environments
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const staticPath = require('ffmpeg-static') as string;
+    if (staticPath) {
+      logger.info('FFmpeg binary resolved via ffmpeg-static', { path: staticPath, file: 'ffmpeg-utils.ts' });
+      return staticPath;
+    }
+  } catch {
+    // ffmpeg-static not available, try fallback
   }
-  logger.info('FFmpeg binary resolved', { path: resolvedPath, file: 'ffmpeg-utils.ts' });
-  return resolvedPath;
+
+  // Fallback to @ffmpeg-installer/ffmpeg (works locally)
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const installer = require('@ffmpeg-installer/ffmpeg') as { path: string };
+    if (installer.path) {
+      logger.info('FFmpeg binary resolved via @ffmpeg-installer', { path: installer.path, file: 'ffmpeg-utils.ts' });
+      return installer.path;
+    }
+  } catch {
+    // Neither package available
+  }
+
+  throw new Error(
+    'Could not find ffmpeg executable. Install ffmpeg-static or @ffmpeg-installer/ffmpeg.'
+  );
 }
 
 /**

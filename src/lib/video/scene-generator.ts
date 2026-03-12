@@ -16,67 +16,9 @@ import type { PipelineScene, SceneGenerationResult, VideoEngineId } from '@/type
 import type { VideoAspectRatio } from '@/types/video';
 
 // Avatar is never auto-selected — only used when the user explicitly picks one.
-// Voice IS auto-selected from Hedra's catalog when the scene has narration text
-// but no explicit voice. Gender is inferred from the visual description.
-
-interface HedraVoiceOption { id: string; name: string; gender?: string }
-let voicePromise: Promise<HedraVoiceOption[]> | null = null;
-
-function fetchHedraVoices(): Promise<HedraVoiceOption[]> {
-  voicePromise ??= doFetchHedraVoices();
-  return voicePromise;
-}
-
-async function doFetchHedraVoices(): Promise<HedraVoiceOption[]> {
-  try {
-    const { apiKeyService } = await import('@/lib/api-keys/api-key-service');
-    const { PLATFORM_ID } = await import('@/lib/constants/platform');
-    const apiKey = await apiKeyService.getServiceKey(PLATFORM_ID, 'hedra');
-    if (!apiKey || typeof apiKey !== 'string') { return []; }
-    const res = await fetch('https://api.hedra.com/web-app/public/voices', {
-      headers: { 'x-api-key': apiKey, 'Accept': 'application/json' },
-    });
-    if (!res.ok) { return []; }
-    const voices = (await res.json()) as HedraVoiceOption[];
-    return Array.isArray(voices) ? voices : [];
-  } catch {
-    voicePromise = null;
-    return [];
-  }
-}
-
-function inferGenderFromDescription(description: string): 'male' | 'female' | null {
-  const lower = description.toLowerCase();
-  const maleWords = /\b(man|male|he |his |him |guy|gentleman|bald man|boy)\b/;
-  const femaleWords = /\b(woman|female|she |her |lady|girl|redheaded woman)\b/;
-  const hasMale = maleWords.test(lower);
-  const hasFemale = femaleWords.test(lower);
-  if (hasMale && !hasFemale) { return 'male'; }
-  if (hasFemale && !hasMale) { return 'female'; }
-  return null;
-}
-
-async function autoSelectVoice(scene: PipelineScene): Promise<string | null> {
-  const voices = await fetchHedraVoices();
-  if (voices.length === 0) { return null; }
-  const gender = inferGenderFromDescription(scene.visualDescription ?? '');
-  if (gender) {
-    const match = voices.find((v) => v.gender === gender);
-    if (match) {
-      logger.info('Auto-selected Hedra voice by gender', {
-        sceneId: scene.id, voiceId: match.id, voiceName: match.name, gender,
-        file: 'scene-generator.ts',
-      });
-      return match.id;
-    }
-  }
-  // Fallback: pick first available voice
-  logger.info('Auto-selected first Hedra voice (no gender match)', {
-    sceneId: scene.id, voiceId: voices[0].id, voiceName: voices[0].name,
-    file: 'scene-generator.ts',
-  });
-  return voices[0].id;
-}
+// Voice is ONLY used in Avatar mode (Character 3 with portrait + TTS).
+// In prompt-only mode (text-to-video), NO voice/TTS is sent to Hedra.
+// Narration audio is generated separately and mixed during assembly via FFmpeg.
 
 
 // ============================================================================
@@ -123,10 +65,10 @@ function buildHedraTextPrompt(scene: PipelineScene & { _hedraOptimizedPrompt?: s
     prompt.push(visual);
   }
 
-  // If we have a script but no visual description, derive context from the script
-  // so Hedra has SOMETHING about who is speaking and what's happening
+  // If we have a script but no visual description, use the script topic as context.
+  // Do NOT describe anyone "speaking" — narration is voiceover, not character speech.
   if (!visual && script) {
-    prompt.push(`A person speaking to camera: "${script.slice(0, 150)}"`);
+    prompt.push(`A cinematic scene illustrating the concept: "${script.slice(0, 150)}"`);
   }
 
   // Production quality markers — tells Hedra to aim high
@@ -249,15 +191,6 @@ export async function generateScene(
     const effectiveAvatarId = scene.avatarId ?? projectAvatarId;
     let resolvedVoiceId = scene.voiceId ?? projectVoiceId;
 
-    // Auto-select a Hedra voice when the scene has narration but no voice chosen.
-    // Matches gender from the visual description so a male character gets a male voice.
-    if (!resolvedVoiceId && scene.scriptText?.trim()) {
-      const autoVoice = await autoSelectVoice(scene);
-      if (autoVoice) {
-        resolvedVoiceId = autoVoice;
-      }
-    }
-
     // ── AVATAR MODE: user selected a premium character ───────────────────
     if (effectiveAvatarId) {
       let photoUrl: string | null = null;
@@ -305,14 +238,16 @@ export async function generateScene(
       });
     }
 
-    // ── PROMPT MODE: no avatar — just send the prompt, Hedra picks the model ─
-    logger.info('Generating prompt-only scene (Hedra auto-selects model)', {
+    // ── PROMPT MODE: no avatar — pure text-to-video, NO voice/TTS ─────────
+    // Narration audio is mixed separately during assembly. Sending TTS to
+    // Hedra in prompt-only mode makes the generated character lip-sync,
+    // which is NOT what we want (narration = voiceover, not character speech).
+    logger.info('Generating prompt-only scene (no audio — narration mixed during assembly)', {
       sceneId: scene.id,
-      hasNarration: Boolean(resolvedVoiceId && scene.scriptText),
       file: 'scene-generator.ts',
     });
 
-    return await generatePromptScene(scene, resolvedVoiceId, aspectRatio);
+    return await generatePromptScene(scene, null, aspectRatio);
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     logger.error('Scene generation failed', error as Error, {

@@ -29,12 +29,16 @@ const nextConfig = {
     optimizePackageImports: ['lucide-react', 'recharts'], // Tree-shake large packages
   },
 
-  // Ensure @ffmpeg-installer/ffmpeg binary is included in serverless bundles
-  serverExternalPackages: ['@ffmpeg-installer/ffmpeg'],
+  // Ensure ffmpeg binaries are included in serverless bundles
+  serverExternalPackages: ['ffmpeg-static', '@ffmpeg-installer/ffmpeg'],
 
   // Include ffmpeg binary in serverless function file tracing
   outputFileTracingIncludes: {
-    '/api/video/*': ['./node_modules/@ffmpeg-installer/linux-x64/**/*'],
+    '/api/video/*': [
+      './node_modules/ffmpeg-static/ffmpeg',
+      './node_modules/ffmpeg-static/**/*',
+      './node_modules/@ffmpeg-installer/linux-x64/**/*',
+    ],
   },
   
   // Skip pre-rendering for API routes (all are dynamic)
