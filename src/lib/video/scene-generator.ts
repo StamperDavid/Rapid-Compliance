@@ -1,10 +1,15 @@
 /**
- * Hedra Scene Generator — Generates avatar video scenes via Hedra Character-3 API
+ * Hedra Scene Generator
+ *
+ * Two modes:
+ *   1. **Prompt-only** (no avatar) — Hedra picks the model and generates from text prompt.
+ *   2. **Avatar mode** (user selected a premium character) — uses Character 3 with portrait + TTS.
  */
 
 import { logger } from '@/lib/logger/logger';
 import {
   generateHedraAvatarVideo,
+  generateHedraPromptVideo,
   getHedraVideoStatus,
 } from '@/lib/video/hedra-service';
 import type { PipelineScene, SceneGenerationResult, VideoEngineId } from '@/types/video-pipeline';
@@ -65,110 +70,65 @@ async function fetchDefaultHedraVoice(): Promise<HedraVoiceFallback | null> {
   }
 }
 
-// ============================================================================
-// Default Hedra Stock Character Fallback
-// ============================================================================
-
-interface HedraCharacterFallback { name: string; imageUrl: string }
-
-let defaultHedraCharacterPromise: Promise<HedraCharacterFallback | null> | null = null;
-
-function getDefaultHedraCharacter(): Promise<HedraCharacterFallback | null> {
-  defaultHedraCharacterPromise ??= fetchDefaultHedraCharacter();
-  return defaultHedraCharacterPromise;
-}
-
-/**
- * Fetch a solo stock character from Hedra's public character library.
- * Filters out duo/group characters (names starting with "duo-") and
- * picks a professional-looking single presenter.
- * Cached as a singleton so concurrent scenes reuse the same character.
- */
-async function fetchDefaultHedraCharacter(): Promise<HedraCharacterFallback | null> {
-  try {
-    const apiKey = await getHedraApiKey();
-    if (!apiKey) { return null; }
-
-    const response = await fetch(
-      'https://api.hedra.com/web-app/elements?type=CHARACTER&limit=50',
-      { headers: { 'x-api-key': apiKey, 'Accept': 'application/json' } },
-    );
-
-    if (!response.ok) { return null; }
-
-    interface HedraCharacterElement {
-      id: string;
-      name: string;
-      description: string;
-      assets: { asset_type: string; media_url: string }[];
-    }
-
-    const data = (await response.json()) as { data?: HedraCharacterElement[] };
-    const characters = data.data;
-    if (!Array.isArray(characters) || characters.length === 0) { return null; }
-
-    // Pick first solo character (skip duo/group names)
-    const soloCharacter = characters.find(c =>
-      !c.name.startsWith('duo-') &&
-      c.assets?.length > 0 &&
-      c.assets[0]?.media_url
-    );
-
-    if (!soloCharacter) { return null; }
-
-    const imageUrl = soloCharacter.assets[0].media_url;
-    const result = { name: soloCharacter.name, imageUrl };
-
-    logger.info('Cached default Hedra stock character for fallback', {
-      characterName: result.name,
-      file: 'scene-generator.ts',
-    });
-
-    return result;
-  } catch {
-    defaultHedraCharacterPromise = null;
-    return null;
-  }
-}
 
 // ============================================================================
-// Hedra Avatar Generator
+// Hedra Scene Generators
 // ============================================================================
 
 /**
- * Generate a talking-head avatar scene using Hedra Character-3.
- *
- * Hedra is the sole video engine. TTS is generated as a separate step,
- * then the audio asset is used in the video generation.
- *
- * @param photoUrl  Direct image URL — either from a Firestore avatar profile
- *                  or from a Hedra stock character. Caller resolves this.
+ * Generate a scene using just a text prompt — Hedra picks the model.
+ * Used when no avatar is selected. Narration audio is generated via TTS
+ * and attached to the video if a voice is available.
  */
-async function generateWithHedra(
+async function generatePromptScene(
+  scene: PipelineScene,
+  voiceId: string | null,
+  aspectRatio: VideoAspectRatio,
+): Promise<SceneGenerationResult> {
+  const script = scene.scriptText?.trim() || '';
+  const hedraAspectRatio = aspectRatio === '4:3' ? '16:9' : aspectRatio;
+
+  logger.info('Submitting prompt-only Hedra generation', {
+    sceneId: scene.id,
+    hasNarration: Boolean(voiceId && script),
+    promptLength: scene.visualDescription?.length ?? 0,
+    file: 'scene-generator.ts',
+  });
+
+  const response = await generateHedraPromptVideo({
+    textPrompt: scene.visualDescription?.trim() ?? scene.scriptText?.trim() ?? '',
+    aspectRatio: hedraAspectRatio,
+    durationMs: scene.duration * 1000,
+    hedraVoiceId: voiceId ?? undefined,
+    speechText: (voiceId && script) ? script : undefined,
+  });
+
+  return {
+    sceneId: scene.id,
+    providerVideoId: response.generationId,
+    provider: 'hedra',
+    status: 'generating',
+    videoUrl: null,
+    thumbnailUrl: null,
+    progress: 0,
+    error: null,
+  };
+}
+
+/**
+ * Generate a talking-head scene using Character 3 with a portrait image.
+ * Used when the user explicitly selected a premium avatar.
+ */
+async function generateAvatarScene(
   scene: PipelineScene,
   photoUrl: string,
   voiceId: string,
   aspectRatio: VideoAspectRatio,
 ): Promise<SceneGenerationResult> {
   const script = scene.scriptText.trim() || ' ';
-
-  if (!voiceId) {
-    return {
-      sceneId: scene.id,
-      providerVideoId: '',
-      provider: 'hedra',
-      status: 'failed',
-      videoUrl: null,
-      thumbnailUrl: null,
-      progress: 0,
-      error: 'No Hedra voice resolved. The character may be missing a voice — re-sync or choose a voice.',
-    };
-  }
-
-  // Map aspect ratio — Hedra does not support 4:3
   const hedraAspectRatio = aspectRatio === '4:3' ? '16:9' : aspectRatio;
 
-  logger.info('Submitting Hedra generation for scene', {
+  logger.info('Submitting avatar Hedra generation (Character 3)', {
     sceneId: scene.id,
     voiceId,
     scriptLength: script.length,
@@ -181,12 +141,6 @@ async function generateWithHedra(
     durationMs: scene.duration * 1000,
     hedraVoiceId: voiceId,
     speechText: script,
-  });
-
-  logger.info('Hedra generation started', {
-    sceneId: scene.id,
-    generationId: response.generationId,
-    file: 'scene-generator.ts',
   });
 
   return {
@@ -208,119 +162,29 @@ async function generateWithHedra(
 /**
  * Generate a single scene via Hedra.
  *
- * Resolution chain for the character image:
- *   1. Per-scene avatarId → load Firestore profile → get frontalImageUrl
- *   2. Project-level avatarId → load Firestore profile → get frontalImageUrl
- *   3. **Auto-fallback** → pick a Hedra stock character from their public library
+ * Two modes:
+ *   - **Avatar selected** → Character 3 with portrait + TTS (talking head)
+ *   - **No avatar** → prompt-only, Hedra picks the model (cinematic video)
  *
- * Resolution chain for voice:
- *   1. Per-scene voiceId
- *   2. Project-level voiceId
- *   3. Avatar profile's bundled voice
- *   4. **Auto-fallback** → first voice from Hedra's public catalog
+ * Voice is auto-resolved from Hedra's catalog when not explicitly set.
  */
 export async function generateScene(
   scene: PipelineScene,
   projectAvatarId: string,
   projectVoiceId: string,
   aspectRatio: VideoAspectRatio,
-  projectVoiceProvider?: 'elevenlabs' | 'unrealspeech' | 'custom' | 'hedra'
+  _projectVoiceProvider?: 'elevenlabs' | 'unrealspeech' | 'custom' | 'hedra'
 ): Promise<SceneGenerationResult> {
   try {
-    // Per-scene overrides take priority over project-level defaults
     const effectiveAvatarId = scene.avatarId ?? projectAvatarId;
     let resolvedVoiceId = scene.voiceId ?? projectVoiceId;
-    let resolvedVoiceProvider = scene.voiceProvider ?? projectVoiceProvider;
 
-    // ── Resolve character photo URL ──────────────────────────────────────
-    let photoUrl: string | null = null;
-
-    // Try loading from Firestore avatar profile first
-    if (effectiveAvatarId) {
-      try {
-        const { getAvatarProfile, getDefaultProfile } = await import('@/lib/video/avatar-profile-service');
-        const profile = await getAvatarProfile(effectiveAvatarId) ?? await getDefaultProfile(effectiveAvatarId);
-        if (profile) {
-          photoUrl = profile.frontalImageUrl ?? null;
-
-          // Resolve voice from profile if not explicitly set
-          if (!resolvedVoiceId && profile.voiceId) {
-            resolvedVoiceId = profile.voiceId;
-            if (profile.voiceProvider) {
-              resolvedVoiceProvider = profile.voiceProvider;
-            } else if (profile.source === 'hedra') {
-              resolvedVoiceProvider = 'hedra';
-            }
-            logger.info('Using avatar profile bundled voice', {
-              sceneId: scene.id,
-              profileId: profile.id,
-              voiceId: profile.voiceId,
-              file: 'scene-generator.ts',
-            });
-          }
-
-          // Enhance visual description with character metadata via prompt translator
-          try {
-            const { translatePromptForHedra } = await import('@/lib/video/hedra-prompt-translator');
-            const enhancedDescription = translatePromptForHedra(
-              scene.visualDescription ?? '',
-              {
-                characterName: profile.name,
-                role: profile.role,
-                styleTag: profile.styleTag,
-                source: profile.source,
-              }
-            );
-            scene = { ...scene, visualDescription: enhancedDescription };
-          } catch {
-            // Prompt translator is non-critical
-          }
-
-          logger.info('Loaded avatar profile for scene', {
-            sceneId: scene.id,
-            profileId: profile.id,
-            hasPhoto: Boolean(photoUrl),
-            file: 'scene-generator.ts',
-          });
-        }
-      } catch {
-        // Profile load failed — continue to fallback
-      }
-    }
-
-    // Fallback: auto-select a Hedra stock character if no avatar photo resolved
-    if (!photoUrl) {
-      const stockCharacter = await getDefaultHedraCharacter();
-      if (stockCharacter) {
-        photoUrl = stockCharacter.imageUrl;
-        logger.info('Auto-selected Hedra stock character (no avatar configured)', {
-          sceneId: scene.id,
-          characterName: stockCharacter.name,
-          file: 'scene-generator.ts',
-        });
-      }
-    }
-
-    if (!photoUrl) {
-      return {
-        sceneId: scene.id,
-        providerVideoId: '',
-        provider: 'hedra',
-        status: 'failed',
-        videoUrl: null,
-        thumbnailUrl: null,
-        progress: 0,
-        error: 'No character image available. Check your Hedra API key in Settings > API Keys.',
-      };
-    }
-
-    // ── Resolve voice ────────────────────────────────────────────────────
+    // ── Resolve voice (needed for both modes — TTS narration) ────────────
     if (!resolvedVoiceId) {
       const fallback = await getDefaultHedraVoice();
       if (fallback) {
         resolvedVoiceId = fallback.id;
-        resolvedVoiceProvider = 'hedra';
-        logger.info('Auto-selected Hedra voice (none configured)', {
+        logger.info('Auto-selected Hedra voice', {
           sceneId: scene.id,
           voiceId: fallback.id,
           voiceName: fallback.name,
@@ -329,20 +193,61 @@ export async function generateScene(
       }
     }
 
-    if (resolvedVoiceId && !resolvedVoiceProvider) {
-      resolvedVoiceProvider = 'hedra';
+    // ── AVATAR MODE: user selected a premium character ───────────────────
+    if (effectiveAvatarId) {
+      let photoUrl: string | null = null;
+
+      try {
+        const { getAvatarProfile, getDefaultProfile } = await import('@/lib/video/avatar-profile-service');
+        const profile = await getAvatarProfile(effectiveAvatarId) ?? await getDefaultProfile(effectiveAvatarId);
+        if (profile) {
+          photoUrl = profile.frontalImageUrl ?? null;
+
+          if (!resolvedVoiceId && profile.voiceId) {
+            resolvedVoiceId = profile.voiceId;
+          }
+
+          // Enhance visual description with character metadata
+          try {
+            const { translatePromptForHedra } = await import('@/lib/video/hedra-prompt-translator');
+            scene = {
+              ...scene,
+              visualDescription: translatePromptForHedra(
+                scene.visualDescription ?? '',
+                { characterName: profile.name, role: profile.role, styleTag: profile.styleTag, source: profile.source }
+              ),
+            };
+          } catch { /* non-critical */ }
+        }
+      } catch { /* profile load failed */ }
+
+      if (photoUrl && resolvedVoiceId) {
+        logger.info('Generating avatar scene (Character 3)', {
+          sceneId: scene.id,
+          avatarId: effectiveAvatarId,
+          file: 'scene-generator.ts',
+        });
+        return await generateAvatarScene(scene, photoUrl, resolvedVoiceId, aspectRatio);
+      }
+
+      // Avatar was selected but profile missing/incomplete — fall through to prompt mode
+      logger.warn('Avatar profile incomplete, falling back to prompt-only mode', {
+        sceneId: scene.id,
+        avatarId: effectiveAvatarId,
+        hasPhoto: Boolean(photoUrl),
+        hasVoice: Boolean(resolvedVoiceId),
+        file: 'scene-generator.ts',
+      });
     }
 
-    logger.info('Generating scene with Hedra', {
+    // ── PROMPT MODE: no avatar — just send the prompt, Hedra picks the model ─
+    logger.info('Generating prompt-only scene (Hedra auto-selects model)', {
       sceneId: scene.id,
-      hasAvatarProfile: Boolean(effectiveAvatarId),
-      usingStockCharacter: !effectiveAvatarId,
-      voiceProvider: resolvedVoiceProvider ?? 'hedra',
-      scriptLength: scene.scriptText?.length ?? 0,
+      hasNarration: Boolean(resolvedVoiceId && scene.scriptText),
       file: 'scene-generator.ts',
     });
 
-    return await generateWithHedra(scene, photoUrl, resolvedVoiceId, aspectRatio);
+    return await generatePromptScene(scene, resolvedVoiceId, aspectRatio);
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     logger.error('Scene generation failed', error as Error, {

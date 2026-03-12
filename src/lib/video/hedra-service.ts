@@ -39,10 +39,10 @@ interface HedraAssetResponse {
   type: string;
 }
 
-interface HedraGenerationRequest {
+interface HedraGenerationPayload {
   type: 'video';
-  ai_model_id: string;
-  start_keyframe_id: string;
+  ai_model_id?: string;
+  start_keyframe_id?: string;
   generated_video_inputs: {
     text_prompt: string;
     resolution: string;
@@ -395,16 +395,95 @@ async function waitForTTSCompletion(
 // ============================================================================
 
 /**
+ * Submit a generation payload to Hedra and return the generation result.
+ * Shared by both prompt-only and avatar flows.
+ */
+async function submitHedraGeneration(
+  apiKey: string,
+  payload: HedraGenerationPayload,
+  context: Record<string, unknown>,
+): Promise<HedraGenerationResult> {
+  const genResponse = await fetch(`${HEDRA_BASE_URL}/generations`, {
+    method: 'POST',
+    headers: hedraHeaders(apiKey, 'application/json'),
+    body: JSON.stringify(payload),
+  });
+
+  if (!genResponse.ok) {
+    const detail = await parseHedraError(genResponse);
+    throw new Error(`Hedra generation submit failed (${genResponse.status}): ${detail}`);
+  }
+
+  const generation = (await genResponse.json()) as HedraGenerationResponse;
+
+  if (!generation?.id) {
+    throw new Error(`Hedra generation returned invalid response: missing id. Response: ${JSON.stringify(generation).slice(0, 200)}`);
+  }
+
+  logger.info('Hedra generation submitted', {
+    generationId: generation.id,
+    ...context,
+    file: 'hedra-service.ts',
+  });
+
+  return {
+    generationId: generation.id,
+    modelId: payload.ai_model_id ?? 'hedra-auto',
+    status: generation.status,
+    createdAt: generation.created_at,
+  };
+}
+
+/**
+ * Generate a video from just a text prompt — no avatar, no image required.
+ *
+ * Hedra picks the model automatically. If the scene has narration (speechText),
+ * TTS audio is generated first and attached so the video includes voiceover.
+ */
+export async function generateHedraPromptVideo(
+  options: HedraGenerateOptions,
+): Promise<HedraGenerationResult> {
+  const apiKey = await getHedraApiKey();
+
+  logger.info('Hedra prompt-only generation starting', {
+    hasNarration: Boolean(options.hedraVoiceId && options.speechText),
+    promptLength: options.textPrompt?.length ?? 0,
+    file: 'hedra-service.ts',
+  });
+
+  // If narration text + voice are provided, generate TTS audio first
+  let audioAssetId: string | undefined;
+  if (options.hedraVoiceId && options.speechText) {
+    const ttsResult = await generateHedraTTS(apiKey, options.hedraVoiceId, options.speechText);
+    audioAssetId = await waitForTTSCompletion(apiKey, ttsResult.generationId);
+    logger.info('TTS audio ready for prompt video', { audioAssetId, file: 'hedra-service.ts' });
+  }
+
+  const payload: HedraGenerationPayload = {
+    type: 'video',
+    generated_video_inputs: {
+      text_prompt: options.textPrompt ?? '',
+      resolution: options.resolution ?? '720p',
+      aspect_ratio: options.aspectRatio ?? '16:9',
+      duration_ms: options.durationMs ?? 10000,
+    },
+  };
+
+  if (audioAssetId) {
+    payload.audio_id = audioAssetId;
+  }
+
+  return submitHedraGeneration(apiKey, payload, {
+    mode: 'prompt-only',
+    hasAudio: Boolean(audioAssetId),
+  });
+}
+
+/**
  * Generate a talking-head avatar video using Hedra Character-3.
  *
- * Supports two audio modes:
- *   1. **Audio upload** — provide `audioUrl` with pre-synthesized audio (ElevenLabs/UnrealSpeech)
- *   2. **Hedra native TTS** — set `options.hedraVoiceId` + `options.speechText` to let Hedra synthesize
- *
- * Flow:
- *   1. Uploads image (and audio if using upload mode) as Hedra assets.
- *   2. Submits a generation job with Hedra Character 3 model.
- *   3. Returns the generation result with the job ID for status polling.
+ * This is for when the user explicitly selects a premium avatar with a portrait.
+ * Character 3 requires both a portrait image and audio (TTS or uploaded).
  *
  * @param imageUrl  Public URL to a portrait image of the person.
  * @param audioUrl  Public URL to the audio file. Pass `null` when using Hedra native TTS.
@@ -422,37 +501,24 @@ export async function generateHedraAvatarVideo(
     throw new Error('Either audioUrl or hedraVoiceId + speechText must be provided.');
   }
 
-  // 1. Use hardcoded Hedra Character 3 model ID for TTS generation.
-  //    Hedra's marketplace has 80+ models; dynamic lookup previously picked
-  //    the wrong model (Kling) which doesn't support TTS.
   const modelId = HEDRA_CHARACTER_3_MODEL_ID;
 
-  logger.info('Hedra generation starting', {
+  logger.info('Hedra avatar generation starting', {
     modelId,
     ttsMode: useNativeTTS ? 'hedra-native' : 'audio-upload',
     file: 'hedra-service.ts',
   });
 
-  // 2. Upload image asset (and audio asset if using upload mode)
   let imageAssetId: string;
   let audioAssetId: string | null = null;
 
   if (useNativeTTS && options?.hedraVoiceId && options?.speechText) {
-    // Native TTS: generate TTS audio as separate step, then upload image in parallel
     const [ttsResult, imgId] = await Promise.all([
       generateHedraTTS(apiKey, options.hedraVoiceId, options.speechText),
       uploadAssetFromUrl(apiKey, imageUrl, 'image', 'avatar-portrait'),
     ]);
     imageAssetId = imgId;
-
-    // Wait for TTS audio to finish generating (typically 3–8s)
     audioAssetId = await waitForTTSCompletion(apiKey, ttsResult.generationId);
-
-    logger.info('Hedra TTS audio ready, proceeding to video generation', {
-      ttsGenerationId: ttsResult.generationId,
-      audioAssetId,
-      file: 'hedra-service.ts',
-    });
   } else if (audioUrl) {
     [imageAssetId, audioAssetId] = await Promise.all([
       uploadAssetFromUrl(apiKey, imageUrl, 'image', 'avatar-portrait'),
@@ -462,8 +528,7 @@ export async function generateHedraAvatarVideo(
     imageAssetId = await uploadAssetFromUrl(apiKey, imageUrl, 'image', 'avatar-portrait');
   }
 
-  // 3. Build generation payload — audio_id is required for Character 3
-  const generationPayload: HedraGenerationRequest = {
+  const payload: HedraGenerationPayload = {
     type: 'video',
     ai_model_id: modelId,
     start_keyframe_id: imageAssetId,
@@ -476,42 +541,15 @@ export async function generateHedraAvatarVideo(
   };
 
   if (audioAssetId) {
-    generationPayload.audio_id = audioAssetId;
+    payload.audio_id = audioAssetId;
   }
 
-  // 4. Submit generation
-  const genResponse = await fetch(`${HEDRA_BASE_URL}/generations`, {
-    method: 'POST',
-    headers: hedraHeaders(apiKey, 'application/json'),
-    body: JSON.stringify(generationPayload),
-  });
-
-  if (!genResponse.ok) {
-    const detail = await parseHedraError(genResponse);
-    throw new Error(`Hedra generation submit failed (${genResponse.status}): ${detail}`);
-  }
-
-  const generation = (await genResponse.json()) as HedraGenerationResponse;
-
-  if (!generation?.id) {
-    throw new Error(`Hedra generation returned invalid response: missing id. Response: ${JSON.stringify(generation).slice(0, 200)}`);
-  }
-
-  logger.info('Hedra generation submitted', {
-    generationId: generation.id,
+  return submitHedraGeneration(apiKey, payload, {
+    mode: 'avatar',
     modelId,
     imageAssetId,
-    audioAssetId: audioAssetId ?? 'native-tts',
-    ttsMode: useNativeTTS ? 'hedra-native' : 'audio-upload',
-    file: 'hedra-service.ts',
+    audioAssetId: audioAssetId ?? 'none',
   });
-
-  return {
-    generationId: generation.id,
-    modelId,
-    status: generation.status,
-    createdAt: generation.created_at,
-  };
 }
 
 // ============================================================================
