@@ -925,9 +925,11 @@ function MessageBubble({ message }: { message: ChatMessage }) {
     let key = 0;
 
     const patterns = [
-      { regex: /`([^`]+)`/g, render: (match: string) => <code key={key++} className="px-1 py-0.5 bg-surface-main rounded text-xs font-mono">{match}</code> },
-      { regex: /\*\*([^*]+)\*\*/g, render: (match: string) => <strong key={key++} className="font-semibold">{match}</strong> },
-      { regex: /\*([^*]+)\*/g, render: (match: string) => <em key={key++} className="italic">{match}</em> },
+      { regex: /\[([^\]]+)\]\(([^)]+)\)/g, render: (captures: string[]) => <a key={key++} href={captures[2]} target="_blank" rel="noopener noreferrer" className="underline text-cyan-400 hover:text-cyan-300">{captures[1]}</a> },
+      { regex: /(?<!\()(https?:\/\/[^\s<]+)/g, render: (captures: string[]) => <a key={key++} href={captures[1]} target="_blank" rel="noopener noreferrer" className="underline text-cyan-400 hover:text-cyan-300">{captures[1]}</a> },
+      { regex: /`([^`]+)`/g, render: (captures: string[]) => <code key={key++} className="px-1 py-0.5 bg-surface-main rounded text-xs font-mono">{captures[1]}</code> },
+      { regex: /\*\*([^*]+)\*\*/g, render: (captures: string[]) => <strong key={key++} className="font-semibold">{captures[1]}</strong> },
+      { regex: /\*([^*]+)\*/g, render: (captures: string[]) => <em key={key++} className="italic">{captures[1]}</em> },
     ];
 
     for (const { regex, render } of patterns) {
@@ -941,7 +943,7 @@ function MessageBubble({ message }: { message: ChatMessage }) {
           if (match.index > lastIndex) {
             newParts.push(remaining.slice(lastIndex, match.index));
           }
-          newParts.push(render(match[1]));
+          newParts.push(render(match));
           lastIndex = match.index + match[0].length;
         }
 
@@ -982,6 +984,8 @@ function MessageBubble({ message }: { message: ChatMessage }) {
         {(message.metadata?.reviewLink ?? message.metadata?.missionId) && (
           <a
             href={message.metadata.reviewLink ?? `/dashboard`}
+            target="_blank"
+            rel="noopener noreferrer"
             style={{
               display: 'inline-flex',
               alignItems: 'center',
