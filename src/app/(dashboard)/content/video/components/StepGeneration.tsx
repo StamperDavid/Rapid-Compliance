@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { motion } from 'framer-motion';
-import { Zap, ArrowRight, Loader2, CheckCircle2, Clock, AlertTriangle } from 'lucide-react';
+import { Zap, ArrowLeft, ArrowRight, Loader2, CheckCircle2, Clock, AlertTriangle, Play } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { SceneProgressCard } from './SceneProgressCard';
@@ -32,6 +32,7 @@ export function StepGeneration() {
     setGeneratedScenes,
     updateGeneratedScene,
     setIsGenerating,
+    setStep,
     advanceStep,
   } = useVideoPipelineStore();
 
@@ -165,15 +166,12 @@ export function StepGeneration() {
     }
   }, [scenes, avatarId, voiceId, voiceProvider, brief.aspectRatio, isGenerating, setGeneratedScenes, setIsGenerating, authFetch]);
 
-  // Auto-start generation on mount
+  // Resume polling if returning to a page with in-progress generations
   useEffect(() => {
-    if (generatedScenes.length === 0 && scenes.length > 0) {
-      void startGeneration();
-    } else if (generatedScenes.some((s) => s.status === 'generating' && s.providerVideoId)) {
-      // Resuming — scenes already have providerVideoIds, go straight to rendering phase
+    if (generatedScenes.some((s) => s.status === 'generating' && s.providerVideoId)) {
       setPhase('rendering');
     }
-  }, [generatedScenes.length, scenes.length, startGeneration, generatedScenes]);
+  }, [generatedScenes]);
 
   // Poll for scene status updates every 5 seconds
   useEffect(() => {
@@ -498,29 +496,52 @@ export function StepGeneration() {
       </Card>
 
       {/* Actions */}
-      <div className="flex justify-end">
-        {allComplete && completedCount > 0 && (
-          <Button
-            onClick={handleContinue}
-            className="gap-2 bg-amber-600 hover:bg-amber-700 text-white"
-          >
-            <CheckCircle2 className="w-4 h-4" />
-            Continue to Assembly
-            <ArrowRight className="w-4 h-4" />
-          </Button>
-        )}
-        {!allComplete && phase === 'submitting' && (
-          <div className="flex items-center gap-2 text-zinc-400">
-            <Loader2 className="w-4 h-4 animate-spin" />
-            <span className="text-sm">Submitting to providers...</span>
-          </div>
-        )}
-        {!allComplete && phase === 'rendering' && (
-          <div className="flex items-center gap-2 text-zinc-400">
-            <Loader2 className="w-4 h-4 animate-spin" />
-            <span className="text-sm">Rendering {generatingCount} scene{generatingCount !== 1 ? 's' : ''}...</span>
-          </div>
-        )}
+      <div className="flex justify-between">
+        <Button
+          variant="outline"
+          onClick={() => { setStep('decompose'); }}
+          disabled={isGenerating}
+          className="gap-2"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back to Storyboard
+        </Button>
+
+        <div className="flex items-center gap-3">
+          {/* Not started yet — show Start button */}
+          {generatedScenes.length === 0 && !isGenerating && (
+            <Button
+              onClick={() => { void startGeneration(); }}
+              className="gap-2 bg-amber-600 hover:bg-amber-700 text-white"
+            >
+              <Play className="w-4 h-4" />
+              Start Generation ({scenes.length} scene{scenes.length !== 1 ? 's' : ''})
+            </Button>
+          )}
+
+          {allComplete && completedCount > 0 && (
+            <Button
+              onClick={handleContinue}
+              className="gap-2 bg-amber-600 hover:bg-amber-700 text-white"
+            >
+              <CheckCircle2 className="w-4 h-4" />
+              Continue to Assembly
+              <ArrowRight className="w-4 h-4" />
+            </Button>
+          )}
+          {!allComplete && phase === 'submitting' && (
+            <div className="flex items-center gap-2 text-zinc-400">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <span className="text-sm">Submitting to providers...</span>
+            </div>
+          )}
+          {!allComplete && phase === 'rendering' && (
+            <div className="flex items-center gap-2 text-zinc-400">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <span className="text-sm">Rendering {generatingCount} scene{generatingCount !== 1 ? 's' : ''}...</span>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
