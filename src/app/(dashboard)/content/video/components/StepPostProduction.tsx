@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
-import { Wand2, Download, Save, RefreshCw, Play, Edit3, Loader2, CheckCircle, Library } from 'lucide-react';
+import { Wand2, Download, Film, Save, RefreshCw, Play, Edit3, Loader2, CheckCircle, Library } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { VideoPlayer } from './VideoPlayer';
@@ -276,6 +276,13 @@ export function StepPostProduction() {
           Back to Assembly
         </Button>
         <div className="flex gap-2">
+          <Button
+            onClick={() => router.push(`/content/video/editor?project=${projectId ?? ''}`)}
+            className="gap-2 bg-amber-600 hover:bg-amber-700 text-white"
+          >
+            <Film className="w-4 h-4" />
+            Open in Video Editor
+          </Button>
           <Button
             onClick={() => { void handleReassemble(); }}
             disabled={reassembling}

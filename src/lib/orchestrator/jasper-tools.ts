@@ -3747,57 +3747,25 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
             }
           }
 
-          // Step 3: Auto-inject avatar/voice defaults
-          let produceAvatarId = '';
-          let produceVoiceId = '';
-          try {
-            const { getVideoDefaults } = await import('@/lib/video/video-defaults-service');
-            const defaults = await getVideoDefaults();
-            if (defaults.avatarId) { produceAvatarId = defaults.avatarId; }
-            if (defaults.voiceId) { produceVoiceId = defaults.voiceId; }
-          } catch {
-            // Defaults are optional
-          }
-
-          // Step 4: Start generation
-          const genSpec = getProduceSpec();
-          await genSpec.initialize();
-
-          const renderResult = await genSpec.execute({
-            id: `produce_video_render_${Date.now()}`,
-            timestamp: new Date(),
-            from: 'JASPER',
-            to: 'VIDEO_SPECIALIST',
-            type: 'COMMAND',
-            priority: 'HIGH',
-            payload: {
-              action: 'render_scenes' as const,
-              projectId,
-              avatarId: produceAvatarId,
-              voiceId: produceVoiceId,
-            },
-            requiresResponse: true,
-            traceId: `trace_produce_video_render_${Date.now()}`,
-          });
-
-          const renderData = renderResult.data as Record<string, unknown> | null;
+          // Step 3: Return storyboard for user review — do NOT auto-render.
+          // The user must review the storyboard in the Video Studio and approve it
+          // before generation starts. Jasper never triggers rendering automatically.
+          const reviewLink = `/content/video?load=${projectId}`;
 
           content = JSON.stringify({
-            status: renderResult.status === 'COMPLETED' ? 'generating' : 'error',
+            status: 'draft',
             projectId,
             title: createData?.title ?? args.title ?? 'Video Production',
             sceneCount: createData?.sceneCount ?? 0,
             characterAssignments: characterAssignments?.length ?? 0,
-            renderMessage: (renderData?.message as string) ?? renderResult.status,
-            videoStudioPath: `/content/video?load=${projectId}`,
-            message: renderResult.status === 'COMPLETED'
-              ? `Video production started! ${(createData?.sceneCount as number) ?? 0} scenes are now rendering via Hedra. Check the Video Studio for live progress.`
-              : `Project created but rendering failed: ${(renderData?.message as string) ?? 'Unknown error'}`,
+            videoStudioPath: reviewLink,
+            reviewLink,
+            message: `Storyboard ready for "${createData?.title ?? args.title ?? 'Video Production'}" — ${(createData?.sceneCount as number) ?? 0} scene(s) with scripts and visual descriptions. Open the Video Studio to review and edit the storyboard, then approve to start generation.`,
             specialist: 'VIDEO_DIRECTOR',
           });
 
-          trackMissionStep(context, 'produce_video', renderResult.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED', {
-            summary: `VIDEO_DIRECTOR: ${renderResult.status === 'COMPLETED' ? 'Production started' : 'Render failed'} — ${projectId}`,
+          trackMissionStep(context, 'produce_video', 'COMPLETED', {
+            summary: `VIDEO_DIRECTOR: Storyboard created — ${projectId}`,
             durationMs: Date.now() - produceStart,
             toolResult: content.slice(0, 2000),
           });

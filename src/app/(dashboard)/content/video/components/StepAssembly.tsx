@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
-import { Puzzle, ArrowLeft, ArrowRight, Loader2, Play, Save, CheckCircle2 } from 'lucide-react';
+import { Puzzle, ArrowLeft, ArrowRight, Film, Loader2, Play, Save, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { VideoPlayer } from './VideoPlayer';
@@ -16,6 +17,7 @@ const TRANSITIONS: { value: TransitionType; label: string }[] = [
 ];
 
 export function StepAssembly() {
+  const router = useRouter();
   const authFetch = useAuthFetch();
   const {
     projectId,
@@ -374,6 +376,16 @@ export function StepAssembly() {
             >
               <Save className="w-4 h-4" />
               Save to Library
+            </Button>
+          )}
+          {finalVideoUrl && (
+            <Button
+              variant="outline"
+              onClick={() => router.push(`/content/video/editor?project=${projectId ?? ''}`)}
+              className="gap-2"
+            >
+              <Film className="w-4 h-4" />
+              Edit in Video Editor
             </Button>
           )}
           {finalVideoUrl && (

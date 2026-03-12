@@ -12,6 +12,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { logger } from '@/lib/logger/logger';
 import { requireAuth } from '@/lib/auth/api-auth';
+import { adminStorage } from '@/lib/firebase/admin';
 import { readFile } from 'fs/promises';
 import { join } from 'path';
 import { randomUUID } from 'crypto';
@@ -54,6 +55,24 @@ export async function POST(request: NextRequest) {
   let workDir = '';
 
   try {
+    // Guard: Firebase Storage must be available before doing any CPU/network work.
+    // If it is null the upload step will fail after minutes of ffmpeg work — fail fast instead.
+    if (!adminStorage) {
+      logger.error(
+        'Video assembly aborted: Firebase Storage is not initialized',
+        new Error('adminStorage is null'),
+        { jobId, file: 'api/video/assemble/route.ts' },
+      );
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            'Storage service unavailable. Check FIREBASE_SERVICE_ACCOUNT_KEY or FIREBASE_ADMIN_* env vars in Vercel.',
+        },
+        { status: 503 },
+      );
+    }
+
     // Auth check
     const authResult = await requireAuth(request);
     if (authResult instanceof NextResponse) {
@@ -117,6 +136,13 @@ export async function POST(request: NextRequest) {
     });
 
     // Build smart concat args with dynamic xfade offsets (probes actual clip durations)
+    logger.info('Building FFmpeg args (probing clip durations)...', {
+      jobId,
+      transitionType,
+      outputResolution,
+      file: 'api/video/assemble/route.ts',
+    });
+
     const outputPath = join(workDir, 'assembled.mp4');
     const ffmpegArgs = await buildSmartConcatArgs(
       inputPaths,
@@ -126,6 +152,12 @@ export async function POST(request: NextRequest) {
       height,
       18, // CRF 18 for high quality
     );
+
+    logger.info('Running FFmpeg concatenation...', {
+      jobId,
+      argCount: ffmpegArgs.length,
+      file: 'api/video/assemble/route.ts',
+    });
 
     const concatStart = Date.now();
     await runFfmpeg(ffmpegArgs);
@@ -143,6 +175,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Upload to Firebase Storage
+    logger.info('Uploading assembled video to Firebase Storage...', {
+      jobId,
+      fileSizeBytes: outputBuffer.length,
+      file: 'api/video/assemble/route.ts',
+    });
+
     const uploadStart = Date.now();
     const storagePath = getStoragePath(projectId, 'assembled');
     const videoUrl = await uploadToStorage(outputPath, storagePath);

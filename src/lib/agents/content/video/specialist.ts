@@ -1798,89 +1798,29 @@ export class VideoSpecialist extends BaseSpecialist {
       return this.createReport(taskId, 'COMPLETED', resultData);
     }
 
-    // ── AUTOMATE MODE: Full generation (avatar pick + render) ──
-    // All scenes use Hedra — an avatar profile (with photo + voice) is required.
-    let videoAvatarId = '';
-    let videoVoiceId = '';
-    let voiceProvider: 'elevenlabs' | 'unrealspeech' | 'custom' | 'hedra' = 'elevenlabs';
-
-    // Reuse the avatarProfile already loaded in Step 1b (no duplicate Firestore read)
-    if (avatarProfile) {
-      videoAvatarId = avatarProfile.id;
-      if (avatarProfile.voiceId) {
-        videoVoiceId = avatarProfile.voiceId;
-        voiceProvider = avatarProfile.voiceProvider ?? 'elevenlabs';
-      }
-      this.log('INFO', `Using Avatar Profile: "${avatarProfile.name}" (Hedra)`);
-    }
-
-    if (!videoAvatarId || !videoVoiceId) {
-      this.log('WARN', 'No avatar/voice available — Hedra requires an avatar profile with a frontal photo and voice');
-    }
-
+    // ── AUTOMATE MODE: Save storyboard as draft — user must approve before generation ──
+    // Generation is never triggered automatically. The user reviews the storyboard in the
+    // Video Studio and clicks Approve to start rendering.
     await updateProject(projectId, {
       name: title,
-      currentStep: 'generation',
+      currentStep: 'storyboard',
       scenes,
-      status: 'approved',
-      avatarId: videoAvatarId || null,
-      voiceId: videoVoiceId || null,
+      status: 'draft',
     });
 
-    const { generateAllScenes } = await import('@/lib/video/scene-generator');
-
-    let genResults: import('@/types/video-pipeline').SceneGenerationResult[] = [];
-    let genError: string | null = null;
-
-    try {
-      genResults = await generateAllScenes(scenes, videoAvatarId, videoVoiceId, aspectRatio, undefined, voiceProvider);
-    } catch (genErr: unknown) {
-      genError = genErr instanceof Error ? genErr.message : String(genErr);
-      this.log('ERROR', `generateAllScenes failed: ${genError}`);
-    }
-
-    const successCount = genResults.filter((r) => r.status !== 'failed').length;
-    const failedCount = genResults.filter((r) => r.status === 'failed').length;
-
-    await updateProject(projectId, {
-      generatedScenes: genResults,
-      currentStep: successCount > 0 ? 'assembly' : 'generation',
-      status: successCount > 0 ? 'approved' : 'draft',
-    });
-
-    const resultStatus = genError ? 'error' : successCount > 0 ? 'generating' : 'failed';
-    const resultMessage = genError
-      ? `Video engine error: ${genError}. Project saved at /content/video/library.`
-      : successCount > 0
-        ? `Video "${title}" is now generating! ${successCount} scene(s) sent to ${[...new Set(genResults.map((r) => r.provider))].join(', ')}. Use get_video_status to check progress.`
-        : `Video generation failed for all ${failedCount} scenes. Errors: ${genResults.map((r) => r.error).filter(Boolean).join('; ')}`;
-
+    const autoReviewUrl = `/content/video?load=${projectId}`;
     const resultData = {
-      status: resultStatus,
+      status: 'draft',
       projectId,
       title,
       sceneCount: scenes.length,
-      successCount,
-      failedCount,
-      generationError: genError,
       engines: [...new Set(scenes.map((s) => s.engine))],
       generatedBy: scriptResult.generatedBy,
-      delegations: {
-        scriptGeneration: scriptResult.generatedBy === 'ai' ? 'AI_COMPLETED' : 'TEMPLATE_FALLBACK',
-        videoEngines: genError ? [`ERROR: ${genError}`] : genResults.map((r) => `${r.provider}: ${r.status}`),
-      },
-      results: genResults.map((r) => ({
-        sceneId: r.sceneId,
-        provider: r.provider,
-        status: r.status,
-        providerVideoId: r.providerVideoId ?? null,
-        error: r.error ?? null,
-      })),
-      message: resultMessage,
-      reviewLink: `/content/video?load=${projectId}`,
+      message: `Storyboard for "${title}" is ready — ${scenes.length} scene(s) with ${scriptResult.generatedBy === 'ai' ? 'AI-written scripts' : 'template scripts'}. Review the scripts and visual descriptions in the Video Studio, then approve to start generation.`,
+      reviewLink: autoReviewUrl,
     };
 
-    // Share storyboard to vault
+    // Share storyboard to vault for cross-agent access
     await this.shareStoryboardToVault({
       videoId: projectId,
       title,
@@ -1888,7 +1828,7 @@ export class VideoSpecialist extends BaseSpecialist {
       scenes,
     });
 
-    return this.createReport(taskId, genError ? 'FAILED' : 'COMPLETED', resultData, genError ? [genError] : undefined);
+    return this.createReport(taskId, 'COMPLETED', resultData);
   }
 
   /**

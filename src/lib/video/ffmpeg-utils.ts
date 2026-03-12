@@ -18,12 +18,18 @@ import { PLATFORM_ID } from '@/lib/constants/platform';
 // ============================================================================
 
 /**
- * Get the ffmpeg binary path from @ffmpeg-installer/ffmpeg
+ * Get the ffmpeg binary path from @ffmpeg-installer/ffmpeg.
+ * Logs the resolved path so Vercel logs confirm the binary is present.
  */
 export function getFfmpegPath(): string {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const installer = require('@ffmpeg-installer/ffmpeg') as { path: string };
-  return installer.path;
+  const resolvedPath = installer.path;
+  if (!resolvedPath) {
+    throw new Error('ffmpeg binary path is empty — @ffmpeg-installer/ffmpeg may not be installed correctly');
+  }
+  logger.info('FFmpeg binary resolved', { path: resolvedPath, file: 'ffmpeg-utils.ts' });
+  return resolvedPath;
 }
 
 /**
@@ -40,10 +46,24 @@ export function getFfprobePath(): string | null {
 // ============================================================================
 
 /**
- * Run ffmpeg with the given arguments, returning stderr output
+ * Run ffmpeg with the given arguments, returning stderr output.
+ * Captures full stderr and includes the last 1 000 chars in the error message
+ * so Vercel logs always show what went wrong without needing a separate debug run.
  */
 export function runFfmpeg(args: string[], timeoutMs = 300_000): Promise<string> {
-  const ffmpegPath = getFfmpegPath();
+  let ffmpegPath: string;
+  try {
+    ffmpegPath = getFfmpegPath();
+  } catch (err) {
+    return Promise.reject(err instanceof Error ? err : new Error(String(err)));
+  }
+
+  logger.info('Spawning FFmpeg', {
+    binary: ffmpegPath,
+    argCount: args.length,
+    timeoutMs,
+    file: 'ffmpeg-utils.ts',
+  });
 
   return new Promise((resolve, reject) => {
     const proc = spawn(ffmpegPath, args, { stdio: ['pipe', 'pipe', 'pipe'] });
@@ -55,21 +75,29 @@ export function runFfmpeg(args: string[], timeoutMs = 300_000): Promise<string> 
 
     const timer = setTimeout(() => {
       proc.kill('SIGKILL');
-      reject(new Error(`ffmpeg timed out after ${timeoutMs}ms`));
+      reject(new Error(`ffmpeg timed out after ${timeoutMs}ms. Last stderr: ${stderr.slice(-500)}`));
     }, timeoutMs);
 
     proc.on('close', (code) => {
       clearTimeout(timer);
       if (code === 0) {
+        logger.info('FFmpeg finished successfully', { file: 'ffmpeg-utils.ts' });
         resolve(stderr);
       } else {
-        reject(new Error(`ffmpeg exited with code ${code}: ${stderr.slice(-500)}`));
+        const tail = stderr.slice(-1000);
+        logger.error('FFmpeg exited with non-zero code', new Error(`code ${String(code)}`), {
+          code,
+          stderrTail: tail,
+          file: 'ffmpeg-utils.ts',
+        });
+        reject(new Error(`ffmpeg exited with code ${String(code)}: ${tail}`));
       }
     });
 
     proc.on('error', (err) => {
       clearTimeout(timer);
-      reject(new Error(`ffmpeg spawn error: ${err.message}`));
+      logger.error('FFmpeg spawn error', err, { binary: ffmpegPath, file: 'ffmpeg-utils.ts' });
+      reject(new Error(`ffmpeg spawn error (binary: ${ffmpegPath}): ${err.message}`));
     });
   });
 }
@@ -222,10 +250,27 @@ export async function createWorkDir(prefix = 'video'): Promise<string> {
 }
 
 /**
- * Download a video file, handling auth headers for provider-specific URLs
+ * Download a video file, handling auth headers for provider-specific URLs.
+ * Enforces a 30-second timeout via AbortController so a stalled Hedra URL
+ * does not silently block the entire assembly job.
  */
-export async function downloadVideo(url: string, destPath: string): Promise<void> {
-  const response = await fetch(url, { redirect: 'follow' });
+export async function downloadVideo(
+  url: string,
+  destPath: string,
+  timeoutMs = 30_000,
+): Promise<void> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+  let response: Response;
+  try {
+    response = await fetch(url, { redirect: 'follow', signal: controller.signal });
+  } catch (err) {
+    clearTimeout(timer);
+    const message = err instanceof Error ? err.message : String(err);
+    throw new Error(`Download timed out or failed for ${url}: ${message}`);
+  }
+  clearTimeout(timer);
 
   if (!response.ok) {
     throw new Error(`Failed to download ${url}: ${response.status} ${response.statusText}`);
@@ -245,7 +290,11 @@ export async function uploadToStorage(
   expiryDays = 7,
 ): Promise<string> {
   if (!adminStorage) {
-    throw new Error('Firebase Storage not initialized');
+    throw new Error(
+      'Firebase Storage is not initialized. ' +
+      'Check that FIREBASE_SERVICE_ACCOUNT_KEY (or FIREBASE_ADMIN_CLIENT_EMAIL + FIREBASE_ADMIN_PRIVATE_KEY) ' +
+      'are set in Vercel environment variables and that the Firebase Admin SDK initialized without errors.',
+    );
   }
 
   const bucket = adminStorage.bucket();
