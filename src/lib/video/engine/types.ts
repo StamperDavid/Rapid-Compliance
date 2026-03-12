@@ -1,7 +1,7 @@
 /**
  * AI Video Generation Engine Types
  *
- * Comprehensive type definitions for the Director Service, Multi-Model Picker,
+ * Comprehensive type definitions for the Director Service, Hedra generation engine,
  * and Automated Post-Production (Stitcher) system.
  */
 

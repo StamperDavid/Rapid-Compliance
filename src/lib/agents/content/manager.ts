@@ -1797,7 +1797,7 @@ export class ContentManager extends BaseManager {
       if (report.status === 'COMPLETED' && report.data) {
         return {
           videoId: `video_${context.leadId}_${Date.now()}`,
-          platform: 'kling',
+          platform: 'hedra',
           status: 'GENERATED',
           script,
           storyboard: report.data,

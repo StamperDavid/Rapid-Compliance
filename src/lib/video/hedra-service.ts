@@ -24,7 +24,7 @@ import { PLATFORM_ID } from '@/lib/constants/platform';
 
 const HEDRA_BASE_URL = 'https://api.hedra.com/web-app/public';
 
-/** Hedra Character 3 — the proven talking-head model with native TTS support. */
+/** Hedra Character 3 — talking-head model. Requires audio_id (TTS generated separately). */
 const HEDRA_CHARACTER_3_MODEL_ID = 'd1dd37a3-e39a-4854-a298-6510289f9cf2';
 
 // ============================================================================
@@ -39,12 +39,6 @@ interface HedraAssetResponse {
   type: string;
 }
 
-interface HedraAudioGeneration {
-  type: 'text_to_speech';
-  voice_id: string;
-  text: string;
-}
-
 interface HedraGenerationRequest {
   type: 'video';
   ai_model_id: string;
@@ -56,23 +50,34 @@ interface HedraGenerationRequest {
     duration_ms: number;
   };
   audio_id?: string;
-  audio_generation?: HedraAudioGeneration;
+}
+
+interface HedraStatusData {
+  id: string;
+  asset_id?: string;
+  status: string;
+  url?: string;
+  video_url?: string;
+  download_url?: string;
+  progress?: number;
+  error?: string;
+  error_message?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+interface HedraTTSResponse {
+  id: string;
+  asset_id: string;
+  status: string;
+  progress: number;
+  eta_sec: number | null;
 }
 
 interface HedraGenerationResponse {
   id: string;
   status: string;
   created_at: string;
-}
-
-interface HedraStatusResponse {
-  id: string;
-  status: 'pending' | 'processing' | 'completed' | 'failed';
-  video_url?: string;
-  error_message?: string;
-  progress?: number;
-  created_at: string;
-  updated_at: string;
 }
 
 interface HedraErrorBody {
@@ -264,6 +269,128 @@ async function uploadAssetFromUrl(
 }
 
 // ============================================================================
+// TTS Generation (Separate Step)
+// ============================================================================
+
+/**
+ * Generate TTS audio via Hedra's text-to-speech generation type.
+ *
+ * Hedra's TTS is a SEPARATE generation (type: "text_to_speech"), NOT a parameter
+ * on the video generation. This returns a generation ID and an asset ID.
+ * The asset ID is used as `audio_id` in the subsequent video generation.
+ *
+ * POST /generations { type: "text_to_speech", voice_id, text }
+ */
+async function generateHedraTTS(
+  apiKey: string,
+  voiceId: string,
+  text: string,
+): Promise<{ generationId: string; assetId: string }> {
+  const payload = {
+    type: 'text_to_speech',
+    voice_id: voiceId,
+    text,
+  };
+
+  logger.info('Hedra TTS generation starting', {
+    voiceId,
+    textLength: text.length,
+    file: 'hedra-service.ts',
+  });
+
+  const response = await fetch(`${HEDRA_BASE_URL}/generations`, {
+    method: 'POST',
+    headers: hedraHeaders(apiKey, 'application/json'),
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const detail = await parseHedraError(response);
+    throw new Error(`Hedra TTS generation failed (${response.status}): ${detail}`);
+  }
+
+  const result = (await response.json()) as HedraTTSResponse;
+
+  if (!result?.id) {
+    throw new Error(`Hedra TTS returned invalid response: missing id. Response: ${JSON.stringify(result).slice(0, 200)}`);
+  }
+  if (!result?.asset_id) {
+    throw new Error(`Hedra TTS returned invalid response: missing asset_id. Response: ${JSON.stringify(result).slice(0, 200)}`);
+  }
+
+  logger.info('Hedra TTS generation submitted', {
+    generationId: result.id,
+    assetId: result.asset_id,
+    file: 'hedra-service.ts',
+  });
+
+  return {
+    generationId: result.id,
+    assetId: result.asset_id,
+  };
+}
+
+/**
+ * Poll a Hedra TTS generation until it completes.
+ * Returns the asset_id to use as audio_id in video generation.
+ *
+ * Hedra TTS typically completes in 3–8 seconds.
+ */
+async function waitForTTSCompletion(
+  apiKey: string,
+  generationId: string,
+  maxWaitMs: number = 60000,
+  pollIntervalMs: number = 2000,
+): Promise<string> {
+  const startTime = Date.now();
+
+  while (Date.now() - startTime < maxWaitMs) {
+    const response = await fetch(
+      `${HEDRA_BASE_URL}/generations/${generationId}/status`,
+      { headers: hedraHeaders(apiKey) },
+    );
+
+    if (!response.ok) {
+      const detail = await parseHedraError(response);
+      throw new Error(`Hedra TTS status check failed (${response.status}): ${detail}`);
+    }
+
+    const data = (await response.json()) as HedraStatusData;
+
+    // Hedra returns "complete" (not "completed")
+    if (data.status === 'complete' || data.status === 'completed') {
+      const assetId = data.asset_id;
+      if (!assetId) {
+        throw new Error('Hedra TTS completed but no asset_id returned');
+      }
+      logger.info('Hedra TTS generation completed', {
+        generationId,
+        assetId,
+        elapsedMs: Date.now() - startTime,
+        file: 'hedra-service.ts',
+      });
+      return assetId;
+    }
+
+    if (data.status === 'failed') {
+      throw new Error(`Hedra TTS generation failed: ${data.error_message ?? data.error ?? 'Unknown error'}`);
+    }
+
+    logger.info('Hedra TTS still processing', {
+      generationId,
+      status: data.status,
+      progress: data.progress,
+      elapsedMs: Date.now() - startTime,
+      file: 'hedra-service.ts',
+    });
+
+    await new Promise<void>(resolve => { setTimeout(resolve, pollIntervalMs); });
+  }
+
+  throw new Error(`Hedra TTS generation timed out after ${maxWaitMs}ms`);
+}
+
+// ============================================================================
 // Public API — Generation
 // ============================================================================
 
@@ -310,7 +437,23 @@ export async function generateHedraAvatarVideo(
   let imageAssetId: string;
   let audioAssetId: string | null = null;
 
-  if (audioUrl) {
+  if (useNativeTTS && options?.hedraVoiceId && options?.speechText) {
+    // Native TTS: generate TTS audio as separate step, then upload image in parallel
+    const [ttsResult, imgId] = await Promise.all([
+      generateHedraTTS(apiKey, options.hedraVoiceId, options.speechText),
+      uploadAssetFromUrl(apiKey, imageUrl, 'image', 'avatar-portrait'),
+    ]);
+    imageAssetId = imgId;
+
+    // Wait for TTS audio to finish generating (typically 3–8s)
+    audioAssetId = await waitForTTSCompletion(apiKey, ttsResult.generationId);
+
+    logger.info('Hedra TTS audio ready, proceeding to video generation', {
+      ttsGenerationId: ttsResult.generationId,
+      audioAssetId,
+      file: 'hedra-service.ts',
+    });
+  } else if (audioUrl) {
     [imageAssetId, audioAssetId] = await Promise.all([
       uploadAssetFromUrl(apiKey, imageUrl, 'image', 'avatar-portrait'),
       uploadAssetFromUrl(apiKey, audioUrl, 'audio', 'avatar-audio'),
@@ -319,7 +462,7 @@ export async function generateHedraAvatarVideo(
     imageAssetId = await uploadAssetFromUrl(apiKey, imageUrl, 'image', 'avatar-portrait');
   }
 
-  // 3. Build generation payload — audio_id for upload mode, audio_generation for native TTS
+  // 3. Build generation payload — audio_id is required for Character 3
   const generationPayload: HedraGenerationRequest = {
     type: 'video',
     ai_model_id: modelId,
@@ -332,18 +475,7 @@ export async function generateHedraAvatarVideo(
     },
   };
 
-  if (useNativeTTS && options?.hedraVoiceId && options?.speechText) {
-    generationPayload.audio_generation = {
-      type: 'text_to_speech',
-      voice_id: options.hedraVoiceId,
-      text: options.speechText,
-    };
-    logger.info('Using Hedra native TTS', {
-      voiceId: options.hedraVoiceId,
-      textLength: options.speechText.length,
-      file: 'hedra-service.ts',
-    });
-  } else if (audioAssetId) {
+  if (audioAssetId) {
     generationPayload.audio_id = audioAssetId;
   }
 
@@ -404,42 +536,47 @@ export async function getHedraVideoStatus(generationId: string): Promise<HedraVi
       throw new Error(`Hedra status check failed (${response.status}): ${detail}`);
     }
 
-    const data = (await response.json()) as HedraStatusResponse;
+    const data = (await response.json()) as HedraStatusData;
 
-    switch (data.status) {
-      case 'completed':
-        return {
-          status: 'completed',
-          videoUrl: data.video_url ?? null,
-          progress: 100,
-          error: null,
-        };
+    // Hedra returns "complete" (not "completed") — handle both for safety
+    const status = data.status;
+    // Hedra returns video URL as "url" or "video_url" depending on version
+    const videoUrl = data.url ?? data.video_url ?? null;
 
-      case 'failed':
-        return {
-          status: 'failed',
-          videoUrl: null,
-          progress: null,
-          error: data.error_message ?? 'Generation failed without details',
-        };
-
-      case 'processing':
-        return {
-          status: 'processing',
-          videoUrl: null,
-          progress: data.progress ?? null,
-          error: null,
-        };
-
-      case 'pending':
-      default:
-        return {
-          status: 'pending',
-          videoUrl: null,
-          progress: data.progress ?? null,
-          error: null,
-        };
+    if (status === 'complete' || status === 'completed') {
+      return {
+        status: 'completed',
+        videoUrl,
+        progress: 100,
+        error: null,
+      };
     }
+
+    if (status === 'failed') {
+      return {
+        status: 'failed',
+        videoUrl: null,
+        progress: null,
+        error: data.error_message ?? data.error ?? 'Generation failed without details',
+      };
+    }
+
+    if (status === 'processing') {
+      return {
+        status: 'processing',
+        videoUrl: null,
+        progress: data.progress ?? null,
+        error: null,
+      };
+    }
+
+    // pending or any other status
+    return {
+      status: 'pending',
+      videoUrl: null,
+      progress: data.progress ?? null,
+      error: null,
+    };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     logger.error('Hedra status check failed', error instanceof Error ? error : undefined, {
