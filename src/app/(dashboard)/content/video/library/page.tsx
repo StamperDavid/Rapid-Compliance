@@ -192,9 +192,12 @@ export default function MediaLibraryPage() {
     }
   }, [authFetch]);
 
+  // Refetch projects on mount and when filter changes
+  const mountRef = useRef(false);
   useEffect(() => {
     if (activeMediaTab === 'videos') {
       void fetchProjects(videoFilter);
+      mountRef.current = true;
     }
   }, [videoFilter, fetchProjects, activeMediaTab]);
 
@@ -272,13 +275,15 @@ export default function MediaLibraryPage() {
           setExpandedId(null);
           setExpandedProject(null);
         }
+        // Refetch to confirm deletion from Firestore
+        void fetchProjects(videoFilter);
       }
     } catch {
       // Handled silently
     } finally {
       setDeleting(null);
     }
-  }, [authFetch, expandedId]);
+  }, [authFetch, expandedId, fetchProjects, videoFilter]);
 
   const handleCreateNew = useCallback(() => {
     reset();

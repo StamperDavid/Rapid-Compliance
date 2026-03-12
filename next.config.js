@@ -28,6 +28,14 @@ const nextConfig = {
     // optimizeCss: true, // Disabled - requires critters package
     optimizePackageImports: ['lucide-react', 'recharts'], // Tree-shake large packages
   },
+
+  // Ensure @ffmpeg-installer/ffmpeg binary is included in serverless bundles
+  serverExternalPackages: ['@ffmpeg-installer/ffmpeg'],
+
+  // Include ffmpeg binary in serverless function file tracing
+  outputFileTracingIncludes: {
+    '/api/video/*': ['./node_modules/@ffmpeg-installer/linux-x64/**/*'],
+  },
   
   // Skip pre-rendering for API routes (all are dynamic)
   skipTrailingSlashRedirect: true,

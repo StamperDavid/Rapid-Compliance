@@ -15,9 +15,68 @@ import {
 import type { PipelineScene, SceneGenerationResult, VideoEngineId } from '@/types/video-pipeline';
 import type { VideoAspectRatio } from '@/types/video';
 
-// NOTE: Default avatar/voice auto-selection was removed. Avatar and voice are
-// only used when the user explicitly selects them. In prompt-only mode (no
-// avatar, no voice), Hedra generates fully AI-directed scenes from text only.
+// Avatar is never auto-selected — only used when the user explicitly picks one.
+// Voice IS auto-selected from Hedra's catalog when the scene has narration text
+// but no explicit voice. Gender is inferred from the visual description.
+
+interface HedraVoiceOption { id: string; name: string; gender?: string }
+let voicePromise: Promise<HedraVoiceOption[]> | null = null;
+
+function fetchHedraVoices(): Promise<HedraVoiceOption[]> {
+  voicePromise ??= doFetchHedraVoices();
+  return voicePromise;
+}
+
+async function doFetchHedraVoices(): Promise<HedraVoiceOption[]> {
+  try {
+    const { apiKeyService } = await import('@/lib/api-keys/api-key-service');
+    const { PLATFORM_ID } = await import('@/lib/constants/platform');
+    const apiKey = await apiKeyService.getServiceKey(PLATFORM_ID, 'hedra');
+    if (!apiKey || typeof apiKey !== 'string') { return []; }
+    const res = await fetch('https://api.hedra.com/web-app/public/voices', {
+      headers: { 'x-api-key': apiKey, 'Accept': 'application/json' },
+    });
+    if (!res.ok) { return []; }
+    const voices = (await res.json()) as HedraVoiceOption[];
+    return Array.isArray(voices) ? voices : [];
+  } catch {
+    voicePromise = null;
+    return [];
+  }
+}
+
+function inferGenderFromDescription(description: string): 'male' | 'female' | null {
+  const lower = description.toLowerCase();
+  const maleWords = /\b(man|male|he |his |him |guy|gentleman|bald man|boy)\b/;
+  const femaleWords = /\b(woman|female|she |her |lady|girl|redheaded woman)\b/;
+  const hasMale = maleWords.test(lower);
+  const hasFemale = femaleWords.test(lower);
+  if (hasMale && !hasFemale) { return 'male'; }
+  if (hasFemale && !hasMale) { return 'female'; }
+  return null;
+}
+
+async function autoSelectVoice(scene: PipelineScene): Promise<string | null> {
+  const voices = await fetchHedraVoices();
+  if (voices.length === 0) { return null; }
+  const gender = inferGenderFromDescription(scene.visualDescription ?? '');
+  if (gender) {
+    const match = voices.find((v) => v.gender === gender);
+    if (match) {
+      logger.info('Auto-selected Hedra voice by gender', {
+        sceneId: scene.id, voiceId: match.id, voiceName: match.name, gender,
+        file: 'scene-generator.ts',
+      });
+      return match.id;
+    }
+  }
+  // Fallback: pick first available voice
+  logger.info('Auto-selected first Hedra voice (no gender match)', {
+    sceneId: scene.id, voiceId: voices[0].id, voiceName: voices[0].name,
+    file: 'scene-generator.ts',
+  });
+  return voices[0].id;
+}
 
 
 // ============================================================================
@@ -35,7 +94,12 @@ import type { VideoAspectRatio } from '@/types/video';
  * This produces far better results than raw field concatenation because
  * Hedra interprets the prompt as a single scene description, not fragments.
  */
-function buildHedraTextPrompt(scene: PipelineScene): string {
+function buildHedraTextPrompt(scene: PipelineScene & { _hedraOptimizedPrompt?: string }): string {
+  // Use the Hedra Prompt Agent's optimized prompt if available
+  if (scene._hedraOptimizedPrompt) {
+    return scene._hedraOptimizedPrompt;
+  }
+
   const background = scene.backgroundPrompt?.trim() ?? '';
   const visual = scene.visualDescription?.trim() ?? '';
   const script = scene.scriptText?.trim() ?? '';
@@ -185,10 +249,14 @@ export async function generateScene(
     const effectiveAvatarId = scene.avatarId ?? projectAvatarId;
     let resolvedVoiceId = scene.voiceId ?? projectVoiceId;
 
-    // Voice is optional — only used if the user explicitly selected one.
-    // In prompt-only mode (no avatar, no voice), Hedra generates a fully
-    // AI-directed scene from just the text_prompt, no TTS narration.
-    // This avoids always picking the same default male voice.
+    // Auto-select a Hedra voice when the scene has narration but no voice chosen.
+    // Matches gender from the visual description so a male character gets a male voice.
+    if (!resolvedVoiceId && scene.scriptText?.trim()) {
+      const autoVoice = await autoSelectVoice(scene);
+      if (autoVoice) {
+        resolvedVoiceId = autoVoice;
+      }
+    }
 
     // ── AVATAR MODE: user selected a premium character ───────────────────
     if (effectiveAvatarId) {
@@ -343,15 +411,47 @@ export async function generateAllScenes(
     const CONCURRENCY = 3;
     const results: SceneGenerationResult[] = [];
 
+    // ── Hedra Prompt Agent: translate storyboard into optimized prompts ──
+    // Runs ONCE for all scenes so it can see the full storyboard and ensure
+    // character consistency across scenes.
+    const optimizedPrompts: Map<string, string> = new Map();
+    try {
+      const { translateStoryboardToHedraPrompts } = await import('@/lib/video/hedra-prompt-agent');
+      const hedraPrompts = await translateStoryboardToHedraPrompts(scenes);
+      for (const hp of hedraPrompts) {
+        optimizedPrompts.set(hp.sceneId, hp.textPrompt);
+      }
+      logger.info('Hedra Prompt Agent produced optimized prompts', {
+        promptCount: optimizedPrompts.size,
+        file: 'scene-generator.ts',
+      });
+    } catch (agentError) {
+      logger.warn('Hedra Prompt Agent failed — using fallback prompts', {
+        error: agentError instanceof Error ? agentError.message : String(agentError),
+        file: 'scene-generator.ts',
+      });
+      // optimizedPrompts stays empty — generateScene will use buildHedraTextPrompt
+    }
+
+    // Inject optimized prompts into scenes so generateScene uses them
+    const enhancedScenes = scenes.map((scene) => {
+      const optimized = optimizedPrompts.get(scene.id);
+      if (optimized) {
+        return { ...scene, _hedraOptimizedPrompt: optimized };
+      }
+      return scene;
+    });
+
     logger.info('Starting batch scene generation', {
       totalScenes: scenes.length,
       concurrency: CONCURRENCY,
+      hasOptimizedPrompts: optimizedPrompts.size > 0,
       engines: scenes.map(() => 'hedra'),
       file: 'scene-generator.ts',
     });
 
-    for (let i = 0; i < scenes.length; i += CONCURRENCY) {
-      const batch = scenes.slice(i, i + CONCURRENCY);
+    for (let i = 0; i < enhancedScenes.length; i += CONCURRENCY) {
+      const batch = enhancedScenes.slice(i, i + CONCURRENCY);
 
       logger.info('Processing scene batch', {
         batchNumber: Math.floor(i / CONCURRENCY) + 1,
