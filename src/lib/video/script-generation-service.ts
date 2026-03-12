@@ -147,10 +147,10 @@ Vary the emotional register. A video where every scene sounds the same is boring
 
 ### Visual Descriptions (visualDescription field)
 This describes what the VIEWER SEES — the full cinematic scene description that will be sent to the video AI:
-- **CHARACTER APPEARANCE**: Describe who is on screen — age range, gender, clothing, grooming, and presence. E.g. "A confident man in his 30s wearing a fitted navy blazer and open-collar white shirt" or "A sharp-dressed woman in a sleek black turtleneck with minimal gold jewelry". Be specific enough that the AI generates a consistent character.
-- **CHARACTER IN MOTION**: The character should be ACTIVE within the environment — NOT a static talking head. Describe them moving through the space, interacting with objects, walking, turning, working. E.g. "walking through the office floor reviewing dashboards on wall monitors", "standing at a whiteboard sketching a sales funnel, then turning to camera", "sitting down at a conference table and opening a laptop", "striding confidently through a modern lobby". Every scene should feel like a moment captured from a real person's day, not a webcam recording.
-- **EMOTIONAL ENERGY**: Layer in body language and emotional state ON TOP of the action. E.g. "smiling as she reviews the numbers on screen", "leaning back in his chair with a satisfied nod", "gesturing enthusiastically while explaining to a colleague"
-- **SHOT COMPOSITION**: Camera framing and feel. E.g. "tracking shot following the presenter down a hallway", "medium shot, shallow depth of field", "over-the-shoulder as they look at a screen", "wide establishing shot pulling in to close-up"
+- **CHARACTER APPEARANCE (MANDATORY — COPY FROM USER PROMPT)**: The user's Topic field contains the character descriptions. You MUST use EXACTLY the character details the user provided — their specified age, gender, ethnicity, clothing, and physical features. DO NOT invent a different character. DO NOT default to any generic character. If the user says "older Black man in his 50s with gray temples wearing a rumpled polo shirt", that is EXACTLY who appears in every scene — not a woman, not a younger person, not different clothing. Copy their character description faithfully.
+- **CHARACTER IN MOTION**: The character should be ACTIVE within the environment — NOT a static talking head. Describe them moving through the space, interacting with objects, walking, turning, working. Every scene should feel like a moment captured from a real person's day, not a webcam recording.
+- **EMOTIONAL ENERGY**: Layer in body language and emotional state ON TOP of the action.
+- **SHOT COMPOSITION**: Camera framing and feel — tracking shots, medium shots, over-the-shoulder, wide establishing shots, etc.
 - **IMPORTANT**: The character description should be CONSISTENT across all scenes — same person, same wardrobe, same look. Only vary their actions, emotional energy, and camera angle per scene.
 - Match the visual energy to the script's emotional tone
 - **AVOID**: Static talking-head shots where the character just stands and speaks to camera. Prefer characters IN the scene, doing things, moving naturally.
@@ -279,7 +279,9 @@ function buildUserPrompt(
 
 **Topic:** ${description}
 **Total duration:** ${duration} seconds (distribute across scenes — vary durations for pacing, not all equal)
-**Scenes:** ${sceneCount} scenes, each stitched from short Hedra clips
+**Scenes:** EXACTLY ${sceneCount} scenes — no more, no less. Each stitched from short Hedra clips.
+
+CRITICAL: The Topic above contains the user's creative direction. If they describe specific characters (age, gender, ethnicity, clothing, setting), you MUST use those EXACT descriptions in your visualDescription fields. Do NOT substitute a different character.
 
 Remember: This video must feel like a SHORT FILM, not a corporate slide deck. Build an emotional arc. Vary the energy between scenes. Make every word count.`;
 
@@ -902,8 +904,13 @@ function determineAssetsNeeded(videoType: ScriptVideoType, _platform: string): s
 export async function generateVideoScripts(
   params: ScriptGenerationParams,
 ): Promise<ScriptGenerationResult> {
-  // Target ~8 seconds per scene for dynamic pacing (min 3, max 8 scenes)
-  const sceneCount = Math.max(3, Math.min(8, Math.ceil(params.duration / 8)));
+  // If the user's description explicitly requests a scene count, respect it.
+  // E.g. "Create a 4-scene video..." → use 4 scenes.
+  const userSceneMatch = params.description.match(/(\d+)[- ]scene/i);
+  const userSceneCount = userSceneMatch ? parseInt(userSceneMatch[1], 10) : null;
+  const sceneCount = userSceneCount
+    ? Math.max(2, Math.min(12, userSceneCount))
+    : Math.max(3, Math.min(8, Math.ceil(params.duration / 8)));
 
   const aiResult = await generateAIScripts(params, sceneCount);
 
