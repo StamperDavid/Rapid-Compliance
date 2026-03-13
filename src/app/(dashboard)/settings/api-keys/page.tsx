@@ -493,6 +493,23 @@ export default function APIKeysPage() {
       why: 'Generate realistic talking head avatar videos from a single photo + audio. Alternative to Kling Avatar with superior lip-sync quality.',
     },
     {
+      id: 'minimax',
+      name: 'MiniMax (Music AI)',
+      icon: '🎵',
+      description: 'AI music generation — full songs with vocals, instrumentals, and lyrics',
+      required: false,
+      placeholder: 'eyJhbGci...',
+      setupUrl: 'https://platform.minimax.io',
+      setupSteps: [
+        'Go to platform.minimax.io',
+        'Sign up or log in',
+        'Go to API Keys page',
+        'Create an API key and paste here',
+      ],
+      cost: '$0.15 per generation (up to 5 min per song)',
+      why: 'Generate AI music tracks with vocals, instrumentals, mood control, and lyrics in the Voice Lab.',
+    },
+    {
       id: 'elevenlabs',
       name: 'ElevenLabs',
       icon: '🔊',

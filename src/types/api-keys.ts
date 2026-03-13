@@ -118,6 +118,13 @@ export interface APIKeysConfig {
     };
   };
 
+  // Audio / Music Generation
+  audio?: {
+    minimax?: {
+      apiKey: string;
+    };
+  };
+
   // Video Generation Services (Hedra only)
   video?: {
     hedra?: {

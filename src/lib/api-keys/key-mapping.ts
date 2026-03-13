@@ -52,6 +52,9 @@ export const UI_TO_CONFIG_MAP: Record<string, string> = {
   apollo: 'enrichment.apolloApiKey',
   clay: 'enrichment.clayApiKey',
 
+  // Audio / Music
+  minimax: 'audio.minimax.apiKey',
+
   // Video (Hedra only)
   hedra: 'video.hedra.apiKey',
 

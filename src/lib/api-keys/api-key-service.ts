@@ -176,6 +176,10 @@ return keys.ai?.anthropicApiKey ?? keys.ai?.openrouterApiKey ?? null;
       case 'zapier':
         return keys.integrations?.zapier ?? null;
 
+      // Audio / Music Services
+      case 'minimax':
+        return keys.audio?.minimax?.apiKey ?? null;
+
       // Video Services (Hedra only)
       case 'hedra':
         return keys.video?.hedra?.apiKey ?? null;
