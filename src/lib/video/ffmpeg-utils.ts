@@ -24,11 +24,11 @@ import { PLATFORM_ID } from '@/lib/constants/platform';
 // ============================================================================
 
 /**
- * Static Linux x64 ffmpeg binary hosted on GitHub releases (John Van Sickle builds).
- * This is the standard community source for static ffmpeg binaries on Linux.
- * ~80 MB download, cached in /tmp between invocations on the same Vercel instance.
+ * Static Linux x64 ffmpeg binary — raw binary, no extraction needed.
+ * The eugeneware/ffmpeg-static GitHub releases provide platform-specific binaries
+ * as direct downloads. ~80 MB, cached in /tmp between Vercel invocations.
  */
-const FFMPEG_STATIC_URL = 'https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz';
+const FFMPEG_STATIC_URL = 'https://github.com/eugeneware/ffmpeg-static/releases/download/b6.0/ffmpeg-linux-x64';
 const FFMPEG_TMP_PATH = '/tmp/ffmpeg';
 
 /** Promise-based lock to prevent concurrent downloads of the same binary. */
@@ -86,34 +86,24 @@ function tryLocalFfmpeg(): string | null {
 
 /**
  * Download a static ffmpeg binary to /tmp.
- * Uses John Van Sickle's static builds (industry standard for serverless).
+ * Downloads a raw binary file (no tar/extraction needed) from GitHub releases.
  */
 async function downloadFfmpegBinary(): Promise<string> {
   logger.info('Downloading static ffmpeg binary to /tmp...', { url: FFMPEG_STATIC_URL, file: 'ffmpeg-utils.ts' });
   const startMs = Date.now();
 
   try {
-    // Download the tarball
-    const tarPath = '/tmp/ffmpeg-download.tar.xz';
-    const response = await fetch(FFMPEG_STATIC_URL);
+    const response = await fetch(FFMPEG_STATIC_URL, { redirect: 'follow' });
     if (!response.ok || !response.body) {
       throw new Error(`Failed to download ffmpeg: ${response.status} ${response.statusText}`);
     }
 
-    const fileStream = createWriteStream(tarPath);
+    // Write the raw binary directly to /tmp/ffmpeg — no extraction needed
+    const fileStream = createWriteStream(FFMPEG_TMP_PATH);
     await pipeline(Readable.fromWeb(response.body as Parameters<typeof Readable.fromWeb>[0]), fileStream);
-
-    // Extract just the ffmpeg binary from the tarball
-    const { execSync } = await import('child_process');
-    execSync(`tar -xf ${tarPath} --wildcards '*/ffmpeg' --strip-components=1 -C /tmp`, {
-      timeout: 60000,
-    });
 
     // Make executable
     await chmod(FFMPEG_TMP_PATH, 0o755);
-
-    // Cleanup tarball
-    await unlink(tarPath).catch(() => { /* ignore */ });
 
     const elapsed = Date.now() - startMs;
     logger.info('FFmpeg binary downloaded and ready', {
