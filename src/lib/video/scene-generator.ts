@@ -16,9 +16,11 @@ import type { PipelineScene, SceneGenerationResult, VideoEngineId } from '@/type
 import type { VideoAspectRatio } from '@/types/video';
 
 // Avatar is never auto-selected — only used when the user explicitly picks one.
-// Voice is ONLY used in Avatar mode (Character 3 with portrait + TTS).
-// In prompt-only mode (text-to-video), NO voice/TTS is sent to Hedra.
-// Narration audio is generated separately and mixed during assembly via FFmpeg.
+// Voice is used in BOTH modes:
+//   - Avatar mode: Character 3 with portrait + TTS (talking head lip-sync)
+//   - Prompt-only mode: Hedra generates the character from text + TTS (character speaks)
+// If no voice is explicitly selected, a default Hedra voice is auto-resolved so
+// the generated character speaks the script instead of being silent.
 
 
 // ============================================================================
@@ -65,10 +67,10 @@ function buildHedraTextPrompt(scene: PipelineScene & { _hedraOptimizedPrompt?: s
     prompt.push(visual);
   }
 
-  // If we have a script but no visual description, use the script topic as context.
-  // Do NOT describe anyone "speaking" — narration is voiceover, not character speech.
+  // If we have a script but no visual description, use the script as scene context.
+  // The character in the video should be presenting/delivering this content.
   if (!visual && script) {
-    prompt.push(`A cinematic scene illustrating the concept: "${script.slice(0, 150)}"`);
+    prompt.push(`A professional presenter confidently delivering a message on camera. Topic: "${script.slice(0, 150)}"`);
   }
 
   // Production quality markers — tells Hedra to aim high
@@ -238,16 +240,67 @@ export async function generateScene(
       });
     }
 
-    // ── PROMPT MODE: no avatar — pure text-to-video, NO voice/TTS ─────────
-    // Narration audio is mixed separately during assembly. Sending TTS to
-    // Hedra in prompt-only mode makes the generated character lip-sync,
-    // which is NOT what we want (narration = voiceover, not character speech).
-    logger.info('Generating prompt-only scene (no audio — narration mixed during assembly)', {
+    // ── PROMPT MODE: no avatar — text-to-video with TTS ──────────────────
+    // Hedra generates the character from the text prompt. If script text exists,
+    // we generate TTS audio so the character speaks the script on camera.
+    // If no voice is set, auto-resolve a default Hedra voice.
+    let promptVoiceId = scene.voiceId ?? projectVoiceId;
+
+    if (!promptVoiceId && scene.scriptText?.trim()) {
+      // Auto-resolve default voice from video settings or Hedra catalog
+      try {
+        const { getVideoDefaults } = await import('@/lib/video/video-defaults-service');
+        const defaults = await getVideoDefaults();
+        if (defaults.voiceId && defaults.voiceProvider === 'hedra') {
+          promptVoiceId = defaults.voiceId;
+          logger.info('Auto-resolved default Hedra voice for prompt-only scene', {
+            sceneId: scene.id,
+            voiceId: defaults.voiceId,
+            voiceName: defaults.voiceName,
+            file: 'scene-generator.ts',
+          });
+        }
+      } catch { /* defaults unavailable */ }
+    }
+
+    // If we still have no voice but there IS a Hedra voice catalog, fetch the first male voice
+    if (!promptVoiceId && scene.scriptText?.trim()) {
+      try {
+        const { apiKeyService } = await import('@/lib/api-keys/api-key-service');
+        const { PLATFORM_ID: platId } = await import('@/lib/constants/platform');
+        const hedraKey = await apiKeyService.getServiceKey(platId, 'hedra');
+        if (typeof hedraKey === 'string' && hedraKey.length > 0) {
+          const voicesRes = await fetch('https://api.hedra.com/web-app/public/voices', {
+            headers: { 'x-api-key': hedraKey, 'Accept': 'application/json' },
+          });
+          if (voicesRes.ok) {
+            const voices = (await voicesRes.json()) as Array<{ id: string; name: string; asset?: { labels?: Array<{ name: string; value: string }> } }>;
+            // Prefer a male English voice for default
+            const maleVoice = voices.find((v) =>
+              v.asset?.labels?.some((l) => l.name === 'gender' && l.value === 'male') &&
+              v.asset?.labels?.some((l) => l.name === 'language' && l.value.toLowerCase().includes('english'))
+            );
+            promptVoiceId = maleVoice?.id ?? voices[0]?.id ?? null;
+            if (promptVoiceId) {
+              logger.info('Auto-resolved Hedra catalog voice for prompt-only scene', {
+                sceneId: scene.id,
+                voiceId: promptVoiceId,
+                voiceName: maleVoice?.name ?? voices[0]?.name,
+                file: 'scene-generator.ts',
+              });
+            }
+          }
+        }
+      } catch { /* voice catalog unavailable — proceed without TTS */ }
+    }
+
+    logger.info(`Generating prompt-only scene ${promptVoiceId ? '(with TTS — character speaks)' : '(no TTS — silent)'}`, {
       sceneId: scene.id,
+      hasVoice: Boolean(promptVoiceId),
       file: 'scene-generator.ts',
     });
 
-    return await generatePromptScene(scene, null, aspectRatio);
+    return await generatePromptScene(scene, promptVoiceId, aspectRatio);
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     logger.error('Scene generation failed', error as Error, {

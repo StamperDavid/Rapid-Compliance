@@ -1118,7 +1118,7 @@ export const JASPER_TOOLS: ToolDefinition[] = [
     function: {
       name: 'generate_video',
       description:
-        'Start actual video generation for a prepared project. Takes a projectId from create_video and kicks off Hedra scene generation. Call this after create_video to begin rendering. ENABLED: TRUE.',
+        'Start actual video generation for a prepared project. REQUIRES USER APPROVAL FIRST — the user MUST have reviewed and approved the storyboard in the Video Studio before this tool is called. NEVER call this automatically after create_video or produce_video. Only call this when the user explicitly says to start rendering or generation. ENABLED: TRUE.',
       parameters: {
         type: 'object',
         properties: {
@@ -1162,7 +1162,7 @@ export const JASPER_TOOLS: ToolDefinition[] = [
     function: {
       name: 'produce_video',
       description:
-        'AI Video Director — full production pipeline. Creates a project, assigns characters to scenes, translates prompts for Hedra, generates all scenes, and stitches clips. Handles the entire flow from brief to finished video. ONLY call this when the user explicitly asks to produce or render a specific video. Do NOT call this for brainstorming, ideation, or discussion — respond conversationally instead. ENABLED: TRUE.',
+        'AI Video Director — creates a STORYBOARD DRAFT only. Creates a project with scenes, scripts, and visual descriptions, then returns a link for the user to review in the Video Studio. Does NOT generate or render any video — the user must review and approve the storyboard first. NEVER call generate_video or assemble_video after this tool. ONLY call this when the user explicitly asks to produce or create a video. Do NOT call this for brainstorming, ideation, or discussion. ENABLED: TRUE.',
       parameters: {
         type: 'object',
         properties: {
@@ -1208,7 +1208,7 @@ export const JASPER_TOOLS: ToolDefinition[] = [
     function: {
       name: 'assemble_video',
       description:
-        'Assemble completed video scenes into a single final video using FFmpeg. Takes the scene video URLs from a project and concatenates them with a transition type (cut, fade, or dissolve). Use this after all scenes have finished rendering via produce_video or generate_video. Returns the assembled video URL. ENABLED: TRUE.',
+        'Assemble completed video scenes into a single final video using FFmpeg. Takes the scene video URLs from a project and concatenates them with a transition type (cut, fade, or dissolve). REQUIRES USER APPROVAL — only call this when the user explicitly asks to assemble or stitch their video. NEVER call this automatically after produce_video or generate_video. The user must review rendered scenes and approve before assembly. ENABLED: TRUE.',
       parameters: {
         type: 'object',
         properties: {
@@ -3574,6 +3574,32 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
         const genStart = Date.now();
         trackMissionStep(context, 'generate_video', 'RUNNING', { toolArgs: args });
 
+        // ── APPROVAL GATE: Refuse to render unless the project has been explicitly approved ──
+        // This prevents Jasper from auto-chaining create → generate without user review.
+        const genProjectId = args.projectId as string;
+        if (genProjectId) {
+          try {
+            const { getProject } = await import('@/lib/video/pipeline-project-service');
+            const genProject = await getProject(genProjectId);
+            if (genProject && genProject.status !== 'approved') {
+              content = JSON.stringify({
+                status: 'blocked',
+                message: `Cannot generate video — project "${genProject.name}" has not been approved yet (current status: ${genProject.status}). The user must review the storyboard in the Video Studio and click Approve before generation can start. Send them the review link: /content/video?load=${genProjectId}`,
+                reviewLink: `/content/video?load=${genProjectId}`,
+                specialist: 'VIDEO_SPECIALIST',
+              });
+              trackMissionStep(context, 'generate_video', 'FAILED', {
+                summary: `VIDEO_SPECIALIST: Blocked — project not approved (status: ${genProject.status})`,
+                durationMs: Date.now() - genStart,
+                toolResult: content.slice(0, 2000),
+              });
+              break;
+            }
+          } catch {
+            // If we can't check the project, proceed but log the issue
+          }
+        }
+
         // Only use avatar/voice if explicitly provided — never auto-inject defaults.
         // When no avatar is selected, Hedra runs in prompt-only mode (text descriptions only).
         const genAvatarId = args.avatarId as string | undefined;
@@ -3592,7 +3618,7 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
           priority: 'NORMAL',
           payload: {
             action: 'render_scenes' as const,
-            projectId: args.projectId as string,
+            projectId: genProjectId,
             avatarId: genAvatarId,
             voiceId: genVoiceId,
           },
@@ -3779,6 +3805,27 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
       case 'assemble_video': {
         const assembleStart = Date.now();
         try {
+          // ── APPROVAL GATE: Refuse to assemble unless scenes were generated with approval ──
+          const assembleProjectId = args.projectId as string | undefined;
+          if (assembleProjectId) {
+            const { getProject: getAssembleProject } = await import('@/lib/video/pipeline-project-service');
+            const asmProject = await getAssembleProject(assembleProjectId);
+            if (asmProject && !asmProject.generatedScenes?.some((s: { status: string }) => s.status === 'completed')) {
+              content = JSON.stringify({
+                status: 'blocked',
+                message: `Cannot assemble video — project "${asmProject.name}" has no completed scenes. The user must review and approve the storyboard, then generate scenes in the Video Studio first.`,
+                reviewLink: `/content/video?load=${assembleProjectId}`,
+                specialist: 'VIDEO_SPECIALIST',
+              });
+              trackMissionStep(context, 'assemble_video', 'FAILED', {
+                summary: 'VIDEO_SPECIALIST: Blocked — no completed scenes to assemble',
+                durationMs: Date.now() - assembleStart,
+                toolResult: content.slice(0, 2000),
+              });
+              break;
+            }
+          }
+
           // Parse sceneUrls if provided as JSON string
           let parsedSceneUrls: string[] | undefined;
           if (typeof args.sceneUrls === 'string' && args.sceneUrls.trim().startsWith('[')) {

@@ -1866,6 +1866,18 @@ export class VideoSpecialist extends BaseSpecialist {
       }, ['No scenes in project']);
     }
 
+    // ── APPROVAL GATE: Block rendering if project hasn't been approved ──
+    // Projects created by produce_video start as 'draft'. The user must approve
+    // the storyboard in the Video Studio UI before generation is allowed.
+    if (project.status === 'draft') {
+      this.log('WARN', `Blocked render attempt — project ${projectId} is still a draft (not approved)`);
+      return this.createReport(taskId, 'FAILED', {
+        status: 'blocked',
+        message: `Cannot render — project "${project.name}" is still a draft. The user must review the storyboard in the Video Studio and approve it before generation can start.`,
+        reviewLink: `/content/video?load=${projectId}`,
+      }, ['Project not approved — user must review storyboard first']);
+    }
+
     // Use only explicitly-selected avatar/voice — never auto-inject defaults.
     // When no avatar is selected, Hedra runs in prompt-only mode and generates
     // characters from the text descriptions (no Character 3 model).
