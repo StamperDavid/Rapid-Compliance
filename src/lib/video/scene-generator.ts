@@ -22,6 +22,11 @@ import type { VideoAspectRatio } from '@/types/video';
 // If no voice is explicitly selected, a default Hedra voice is auto-resolved so
 // the generated character speaks the script instead of being silent.
 
+/** Treat empty/whitespace-only strings as null (no value selected). */
+function nonEmpty(val: string | null | undefined): string | null {
+  return val != null && val.trim().length > 0 ? val : null;
+}
+
 
 // ============================================================================
 // Scene-to-Prompt Translator — converts storyboard data into a Hedra prompt
@@ -97,9 +102,15 @@ async function generatePromptScene(
   const hedraAspectRatio = aspectRatio === '4:3' ? '16:9' : aspectRatio;
   const textPrompt = buildHedraTextPrompt(scene);
 
+  // Normalize empty string to undefined — '' is "no voice", not a valid ID
+  const effectiveVoice = voiceId && voiceId.trim().length > 0 ? voiceId : undefined;
+
   logger.info('Submitting prompt-only Hedra generation', {
     sceneId: scene.id,
-    hasNarration: Boolean(voiceId && script),
+    hasVoice: Boolean(effectiveVoice),
+    hasScript: Boolean(script),
+    willGenerateTTS: Boolean(effectiveVoice && script),
+    voiceId: effectiveVoice ?? 'none',
     promptLength: textPrompt.length,
     textPromptPreview: textPrompt.slice(0, 200),
     file: 'scene-generator.ts',
@@ -110,8 +121,8 @@ async function generatePromptScene(
     aspectRatio: hedraAspectRatio,
     resolution: '1080p',
     durationMs: scene.duration * 1000,
-    hedraVoiceId: voiceId ?? undefined,
-    speechText: (voiceId && script) ? script : undefined,
+    hedraVoiceId: effectiveVoice,
+    speechText: (effectiveVoice && script) ? script : undefined,
   });
 
   return {
@@ -190,8 +201,9 @@ export async function generateScene(
   _projectVoiceProvider?: 'elevenlabs' | 'unrealspeech' | 'custom' | 'hedra'
 ): Promise<SceneGenerationResult> {
   try {
-    const effectiveAvatarId = scene.avatarId ?? projectAvatarId;
-    let resolvedVoiceId = scene.voiceId ?? projectVoiceId;
+    // Normalize empty strings to null — '' means "no selection", not a valid ID
+    const effectiveAvatarId = nonEmpty(scene.avatarId) ?? nonEmpty(projectAvatarId);
+    let resolvedVoiceId = nonEmpty(scene.voiceId) ?? nonEmpty(projectVoiceId);
 
     // ── AVATAR MODE: user selected a premium character ───────────────────
     if (effectiveAvatarId) {
@@ -244,7 +256,7 @@ export async function generateScene(
     // Hedra generates the character from the text prompt. If script text exists,
     // we generate TTS audio so the character speaks the script on camera.
     // If no voice is set, auto-resolve a default Hedra voice.
-    let promptVoiceId = scene.voiceId ?? projectVoiceId;
+    let promptVoiceId = nonEmpty(scene.voiceId) ?? nonEmpty(projectVoiceId);
 
     if (!promptVoiceId && scene.scriptText?.trim()) {
       // Auto-resolve default voice from video settings or Hedra catalog

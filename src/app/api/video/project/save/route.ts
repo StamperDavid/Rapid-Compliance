@@ -61,6 +61,7 @@ const SaveProjectSchema = z.object({
   avatarName: z.string().nullable(),
   voiceId: z.string().nullable(),
   voiceName: z.string().nullable(),
+  voiceProvider: z.enum(['elevenlabs', 'unrealspeech', 'custom', 'hedra']).nullable().default(null),
   generatedScenes: z.array(
     z.object({
       sceneId: z.string(),
@@ -128,6 +129,7 @@ export async function POST(request: NextRequest) {
         avatarName: data.avatarName,
         voiceId: data.voiceId,
         voiceName: data.voiceName,
+        voiceProvider: data.voiceProvider,
         generatedScenes: data.generatedScenes,
         finalVideoUrl: data.finalVideoUrl,
         transitionType: data.transitionType,

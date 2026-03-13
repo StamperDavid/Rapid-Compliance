@@ -59,8 +59,8 @@ export async function POST(request: NextRequest) {
     logger.info('Starting scene generation', {
       projectId,
       sceneCount: scenes.length,
-      avatarId,
-      voiceId,
+      avatarId: avatarId || '(none)',
+      voiceId: voiceId || '(none — will auto-resolve)',
       voiceProvider,
       aspectRatio,
       file: 'generate-scenes/route.ts',

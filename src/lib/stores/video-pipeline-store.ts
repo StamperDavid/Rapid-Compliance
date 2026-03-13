@@ -307,6 +307,7 @@ export const useVideoPipelineStore = create<VideoPipelineState>()(
           avatarName: project.avatarName,
           voiceId: project.voiceId,
           voiceName: project.voiceName,
+          voiceProvider: project.voiceProvider ?? null,
           generatedScenes: project.generatedScenes,
           finalVideoUrl: project.finalVideoUrl,
           transitionType: project.transitionType,

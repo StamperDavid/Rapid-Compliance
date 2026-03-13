@@ -185,6 +185,7 @@ export interface PipelineProject {
   avatarName: string | null;
   voiceId: string | null;
   voiceName: string | null;
+  voiceProvider: VoiceProviderId | null;
   generatedScenes: SceneGenerationResult[];
   finalVideoUrl: string | null;
   transitionType: TransitionType;

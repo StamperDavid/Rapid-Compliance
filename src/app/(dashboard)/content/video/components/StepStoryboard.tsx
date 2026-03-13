@@ -284,6 +284,7 @@ export function StepStoryboard() {
     avatarName,
     voiceId,
     voiceName,
+    voiceProvider,
     setDecompositionPlan,
     setScenes,
     addScene,
@@ -527,6 +528,7 @@ export function StepStoryboard() {
           avatarName: avatarName ?? null,
           voiceId: voiceId ?? null,
           voiceName: voiceName ?? null,
+          voiceProvider: voiceProvider ?? null,
           status: 'approved',
         }),
       });
@@ -536,7 +538,7 @@ export function StepStoryboard() {
       setIsSaving(false);
     }
     advanceStep();
-  }, [isReady, authFetch, projectId, projectName, brief, scenes, avatarId, avatarName, voiceId, voiceName, advanceStep]);
+  }, [isReady, authFetch, projectId, projectName, brief, scenes, avatarId, avatarName, voiceId, voiceName, voiceProvider, advanceStep]);
 
   // ════════════════════════════════════════════════════════════════════════
   // Render

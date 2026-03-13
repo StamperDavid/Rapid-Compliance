@@ -1881,8 +1881,8 @@ export class VideoSpecialist extends BaseSpecialist {
     // Use only explicitly-selected avatar/voice — never auto-inject defaults.
     // When no avatar is selected, Hedra runs in prompt-only mode and generates
     // characters from the text descriptions (no Character 3 model).
-    const genAvatarId = requestedAvatarId ?? project.avatarId ?? '';
-    const genVoiceId = requestedVoiceId ?? project.voiceId ?? '';
+    const genAvatarId = (requestedAvatarId?.trim() ? requestedAvatarId : null) ?? (project.avatarId?.trim() ? project.avatarId : null) ?? '';
+    const genVoiceId = (requestedVoiceId?.trim() ? requestedVoiceId : null) ?? (project.voiceId?.trim() ? project.voiceId : null) ?? '';
 
     const genAspectRatio = (project.brief?.aspectRatio as '16:9' | '9:16' | '1:1' | '4:3') ?? '16:9';
 

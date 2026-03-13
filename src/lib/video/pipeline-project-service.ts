@@ -36,6 +36,7 @@ interface FirestorePipelineDoc {
   avatarName: string | null;
   voiceId: string | null;
   voiceName: string | null;
+  voiceProvider: string | null;
   generatedScenes: SceneGenerationResult[];
   finalVideoUrl: string | null;
   transitionType: TransitionType;
@@ -92,6 +93,7 @@ function docToProject(id: string, raw: FirebaseFirestore.DocumentData): Pipeline
     avatarName: data.avatarName ?? null,
     voiceId: data.voiceId ?? null,
     voiceName: data.voiceName ?? null,
+    voiceProvider: (data.voiceProvider as PipelineProject['voiceProvider']) ?? null,
     generatedScenes: data.generatedScenes ?? [],
     finalVideoUrl: data.finalVideoUrl ?? null,
     transitionType: data.transitionType ?? 'cut',
@@ -130,6 +132,7 @@ export async function createProject(
       avatarName: null,
       voiceId: null,
       voiceName: null,
+      voiceProvider: null,
       generatedScenes: [],
       finalVideoUrl: null,
       transitionType: 'cut' as const,
