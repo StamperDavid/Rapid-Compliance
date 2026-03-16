@@ -187,6 +187,9 @@ export const getCustomToolsCollection = (): string => getSubCollection('customTo
 export const getGlobalTemplatesSubCollection = (): string => getSubCollection('globalTemplates');
 export const getPagesCollection = (): string => getSubCollection('pages');
 
+// ── Campaign Orchestration ──────────────────────────────────────────────────
+export const getCampaignsCollection = (): string => getSubCollection('campaigns');
+
 // ── Growth Command Center ──────────────────────────────────────────────────
 export const getGrowthCompetitorsCollection = (): string => getSubCollection('growthCompetitorProfiles');
 export const getGrowthCompetitorSnapshotsCollection = (): string => getSubCollection('growthCompetitorSnapshots');

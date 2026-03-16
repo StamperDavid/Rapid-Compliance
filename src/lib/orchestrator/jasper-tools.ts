@@ -26,6 +26,10 @@ import {
   updateMissionStep,
   type MissionStepStatus,
 } from './mission-persistence';
+import {
+  createCampaign,
+  trackDeliverableAsync,
+} from '@/lib/campaign/campaign-service';
 
 // ============================================================================
 // MISSION TRACKING CONTEXT
@@ -36,6 +40,7 @@ export interface ToolCallContext {
   missionId?: string;
   userPrompt?: string;
   userId?: string;
+  campaignId?: string;
 }
 
 /**
@@ -458,6 +463,7 @@ const REVIEW_LINK_MAP: Record<string, string> = {
   social_post: '/social',
   migrate_website: '/website',
   voice_agent: '/voice',
+  create_campaign: '/mission-control',
 };
 
 /**
@@ -1197,6 +1203,10 @@ export const JASPER_TOOLS: ToolDefinition[] = [
             type: 'string',
             description: 'JSON array of character assignments. Each entry: { "avatarId": "<profile-id>", "sceneNumbers": [1, 2, 3] }. sceneNumbers is optional (omit to assign to all scenes). Example: [{"avatarId": "abc123", "sceneNumbers": [1,3]}, {"avatarId": "def456", "sceneNumbers": [2]}]',
           },
+          campaignId: {
+            type: 'string',
+            description: 'Optional: Campaign ID to register this video as a campaign deliverable. Get this from create_campaign.',
+          },
         },
         required: ['description'],
       },
@@ -1922,6 +1932,10 @@ export const JASPER_TOOLS: ToolDefinition[] = [
             type: 'string',
             description: 'Optional: Author name (defaults to "Jasper AI")',
           },
+          campaignId: {
+            type: 'string',
+            description: 'Optional: Campaign ID to register this blog post as a campaign deliverable. Get this from create_campaign.',
+          },
         },
         required: ['title', 'content'],
       },
@@ -2135,8 +2149,46 @@ export const JASPER_TOOLS: ToolDefinition[] = [
             type: 'string',
             description: 'JSON-encoded array of hashtags to include (e.g., \'["#AI", "#SaaS"]\')',
           },
+          campaignId: {
+            type: 'string',
+            description: 'Optional: Campaign ID to register this social post as a campaign deliverable. Get this from create_campaign.',
+          },
         },
         required: ['action'],
+      },
+    },
+  },
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // CAMPAIGN ORCHESTRATION
+  // ═══════════════════════════════════════════════════════════════════════════
+  {
+    type: 'function',
+    function: {
+      name: 'create_campaign',
+      description:
+        'Create a new Campaign to group multiple deliverables (blog, video, social posts, images, email) under one brief. Use this when the user requests a complex, multi-content campaign. After creating the campaign, produce each deliverable (produce_video, save_blog_draft, social_post, etc.) passing the campaignId so they appear in Campaign Review. Direct the user to /mission-control?campaign={campaignId} to review all deliverables. ENABLED: TRUE.',
+      parameters: {
+        type: 'object',
+        properties: {
+          brief: {
+            type: 'string',
+            description: 'The original client request or campaign brief describing what content to produce.',
+          },
+          missionId: {
+            type: 'string',
+            description: 'The mission ID this campaign belongs to (from the current conversation context).',
+          },
+          research: {
+            type: 'string',
+            description: 'Optional: JSON-encoded research findings (competitor analysis, market data).',
+          },
+          strategy: {
+            type: 'string',
+            description: 'Optional: JSON-encoded strategy (positioning, messaging, target audience).',
+          },
+        },
+        required: ['brief', 'missionId'],
       },
     },
   },
@@ -3768,16 +3820,37 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
           // The user must review the storyboard in the Video Studio and approve it
           // before generation starts. Jasper never triggers rendering automatically.
           const reviewLink = `/content/video?load=${projectId}`;
+          const videoTitle = (createData?.title as string) ?? (args.title as string) ?? 'Video Production';
+
+          // Track as campaign deliverable if campaignId is available
+          const videoCampaignId = (args.campaignId as string) || context?.campaignId;
+          if (videoCampaignId) {
+            trackDeliverableAsync(videoCampaignId, {
+              missionId: context?.missionId ?? `mission_${Date.now()}`,
+              type: 'video',
+              title: videoTitle,
+              status: 'pending_review',
+              previewData: {
+                projectId,
+                sceneCount: createData?.sceneCount ?? 0,
+                characterAssignments: characterAssignments?.length ?? 0,
+              },
+              reviewLink,
+            });
+          }
 
           content = JSON.stringify({
             status: 'draft',
             projectId,
-            title: createData?.title ?? args.title ?? 'Video Production',
+            campaignId: videoCampaignId ?? null,
+            title: videoTitle,
             sceneCount: createData?.sceneCount ?? 0,
             characterAssignments: characterAssignments?.length ?? 0,
             videoStudioPath: reviewLink,
-            reviewLink,
-            message: `Storyboard ready for "${createData?.title ?? args.title ?? 'Video Production'}" — ${(createData?.sceneCount as number) ?? 0} scene(s) with scripts and visual descriptions. Open the Video Studio to review and edit the storyboard, then approve to start generation.`,
+            reviewLink: videoCampaignId
+              ? `/mission-control?campaign=${videoCampaignId}`
+              : reviewLink,
+            message: `Storyboard ready for "${videoTitle}" — ${(createData?.sceneCount as number) ?? 0} scene(s) with scripts and visual descriptions. ${videoCampaignId ? `Review all deliverables at /mission-control?campaign=${videoCampaignId}` : 'Open the Video Studio to review and edit the storyboard, then approve to start generation.'}`,
             specialist: 'VIDEO_DIRECTOR',
           });
 
@@ -4756,14 +4829,40 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
             toolResult: JSON.stringify({ draftId: postId, slug, title: args.title }).slice(0, 2000),
           });
 
+          // Track as campaign deliverable if campaignId is available
+          const blogCampaignId = (args.campaignId as string) || context?.campaignId;
+          const blogEditorLink = `/website/blog/posts/${postId}`;
+          if (blogCampaignId) {
+            trackDeliverableAsync(blogCampaignId, {
+              missionId: context?.missionId ?? `mission_${Date.now()}`,
+              type: 'blog',
+              title: args.title as string,
+              status: 'pending_review',
+              previewData: {
+                draftId: postId,
+                slug,
+                excerpt: (args.excerpt as string) || '',
+                wordCount: (args.content as string).split(/\s+/).length,
+                readTime: blogPost.readTime,
+              },
+              reviewLink: blogEditorLink,
+            });
+          }
+
           content = JSON.stringify({
             status: 'SAVED',
             draftId: postId,
             slug,
+            campaignId: blogCampaignId ?? null,
             title: args.title,
             readTime: blogPost.readTime,
-            editorLink: `/website/blog/posts/${postId}`,
-            message: `Blog draft "${args.title}" saved successfully. Edit it at /website/blog/posts/${postId}`,
+            editorLink: blogEditorLink,
+            reviewLink: blogCampaignId
+              ? `/mission-control?campaign=${blogCampaignId}`
+              : blogEditorLink,
+            message: blogCampaignId
+              ? `Blog draft "${args.title}" saved. Review all deliverables at /mission-control?campaign=${blogCampaignId}`
+              : `Blog draft "${args.title}" saved successfully. Edit it at ${blogEditorLink}`,
           });
         } catch (blogError: unknown) {
           const blogDuration = Date.now() - blogStart;
@@ -5245,8 +5344,27 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
               hashtags: socialArgs.hashtags,
             });
 
+            // Track as campaign deliverable for POST actions
+            const socialCampaignId = (args.campaignId as string) || context?.campaignId;
+            if (socialCampaignId && socialArgs.action === 'POST' && actionResult.success) {
+              trackDeliverableAsync(socialCampaignId, {
+                missionId: context?.missionId ?? `mission_${Date.now()}`,
+                type: 'social_post',
+                title: `${platform.charAt(0).toUpperCase() + platform.slice(1)} Post`,
+                status: 'pending_review',
+                previewData: {
+                  platform,
+                  copy: socialArgs.content ?? '',
+                  actionId: actionResult.actionId ?? null,
+                  imageUrl: socialArgs.mediaUrls?.[0] ?? null,
+                },
+                reviewLink: `/social`,
+              });
+            }
+
             content = JSON.stringify({
               status: actionResult.success ? 'completed' : 'failed',
+              campaignId: socialCampaignId ?? null,
               actionType: actionResult.actionType,
               platform: actionResult.platform,
               actionId: actionResult.actionId ?? null,
@@ -5255,6 +5373,9 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
               error: actionResult.error ?? null,
               complianceBlocked: actionResult.complianceBlocked ?? false,
               complianceReason: actionResult.complianceReason ?? null,
+              reviewLink: socialCampaignId
+                ? `/mission-control?campaign=${socialCampaignId}`
+                : null,
             });
           }
 
@@ -5271,6 +5392,61 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
             durationMs: Date.now() - socialStart,
           });
           content = JSON.stringify({ error: socialErrorMsg });
+        }
+        break;
+      }
+
+      // ═══════════════════════════════════════════════════════════════════════
+      // CAMPAIGN ORCHESTRATION EXECUTION
+      // ═══════════════════════════════════════════════════════════════════════
+      case 'create_campaign': {
+        const campaignStart = Date.now();
+        trackMissionStep(context, 'create_campaign', 'RUNNING', { toolArgs: args });
+
+        try {
+          const brief = args.brief as string;
+          const missionId = (args.missionId as string) ?? context?.missionId ?? `mission_${Date.now()}`;
+
+          let research: Record<string, unknown> | undefined;
+          if (typeof args.research === 'string') {
+            try { research = JSON.parse(args.research) as Record<string, unknown>; } catch { /* skip */ }
+          }
+
+          let strategy: Record<string, unknown> | undefined;
+          if (typeof args.strategy === 'string') {
+            try { strategy = JSON.parse(args.strategy) as Record<string, unknown>; } catch { /* skip */ }
+          }
+
+          const campaignId = await createCampaign({
+            missionId,
+            brief,
+            research,
+            strategy,
+            status: 'producing',
+          });
+
+          const reviewLink = `/mission-control?campaign=${campaignId}`;
+
+          content = JSON.stringify({
+            status: 'created',
+            campaignId,
+            missionId,
+            reviewLink,
+            message: `Campaign created. All deliverables will be tracked at: ${reviewLink}. Pass campaignId="${campaignId}" to subsequent tools (produce_video, save_blog_draft, social_post) so they register as campaign deliverables.`,
+          });
+
+          trackMissionStep(context, 'create_campaign', 'COMPLETED', {
+            summary: `Campaign created: ${campaignId}`,
+            durationMs: Date.now() - campaignStart,
+            toolResult: content.slice(0, 2000),
+          });
+        } catch (campaignError: unknown) {
+          const errMsg = campaignError instanceof Error ? campaignError.message : String(campaignError);
+          content = JSON.stringify({ status: 'error', message: `Campaign creation failed: ${errMsg}` });
+          trackMissionStep(context, 'create_campaign', 'FAILED', {
+            error: errMsg,
+            durationMs: Date.now() - campaignStart,
+          });
         }
         break;
       }

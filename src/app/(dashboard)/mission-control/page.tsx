@@ -19,6 +19,7 @@ import MissionSidebar from './_components/MissionSidebar';
 import MissionTimeline from './_components/MissionTimeline';
 import ApprovalCard from './_components/ApprovalCard';
 import AgentAvatar from './_components/AgentAvatar';
+import CampaignReview from './_components/CampaignReview';
 import { getDashboardLink, formatToolName } from './_components/dashboard-links';
 import type { Mission, MissionStep } from '@/lib/orchestrator/mission-persistence';
 
@@ -353,10 +354,8 @@ function getStepStatusLabel(status: MissionStep['status']): string {
 // PAGE
 // ============================================================================
 
-export default function MissionControlPage() {
+function MissionControlView({ deepLinkedMission }: { deepLinkedMission: string | null }) {
   const authFetch = useAuthFetch();
-  const searchParams = useSearchParams();
-  const deepLinkedMission = searchParams.get('mission');
 
   const [missions, setMissions] = useState<Mission[]>([]);
   const [selectedMissionId, setSelectedMissionId] = useState<string | null>(deepLinkedMission);
@@ -698,4 +697,16 @@ export default function MissionControlPage() {
       </div>
     </div>
   );
+}
+
+export default function MissionControlPage() {
+  const searchParams = useSearchParams();
+  const deepLinkedMission = searchParams.get('mission');
+  const campaignParam = searchParams.get('campaign');
+
+  if (campaignParam) {
+    return <CampaignReview campaignId={campaignParam} />;
+  }
+
+  return <MissionControlView deepLinkedMission={deepLinkedMission} />;
 }
