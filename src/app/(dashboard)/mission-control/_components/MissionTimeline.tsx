@@ -20,6 +20,7 @@
  */
 
 import { useEffect, useRef, useState, useCallback } from 'react';
+import Image from 'next/image';
 import AgentAvatar from './AgentAvatar';
 import { getDashboardLink, formatToolName } from './dashboard-links';
 import type { Mission, MissionStep, MissionStepStatus } from '@/lib/orchestrator/mission-persistence';
@@ -204,6 +205,207 @@ function StepProgressBar({ status }: { status: MissionStepStatus }) {
 }
 
 // ============================================================================
+// STEP OUTPUT HELPERS
+// ============================================================================
+
+interface ParsedStepOutput {
+  type: 'research' | 'strategy' | 'cinematic' | 'thumbnails' | 'draft' | 'unknown';
+  raw: string;
+  data: Record<string, unknown>;
+}
+
+function parseStepOutput(toolResult: string | undefined): ParsedStepOutput | null {
+  if (!toolResult) { return null; }
+
+  try {
+    const data = JSON.parse(toolResult) as Record<string, unknown>;
+    const type = (data.type as string) ?? (data.status === 'draft' ? 'draft' : undefined);
+
+    if (type === 'research' || type === 'strategy' || type === 'cinematic'
+        || type === 'thumbnails' || type === 'draft') {
+      return { type, raw: toolResult, data };
+    }
+
+    return { type: 'unknown', raw: toolResult, data };
+  } catch {
+    return { type: 'unknown', raw: toolResult, data: {} };
+  }
+}
+
+/**
+ * Compact inline preview of step output — shown in the card body.
+ */
+function StepOutputPreview({ output }: { output: ParsedStepOutput }) {
+  const chipStyle: React.CSSProperties = {
+    display: 'inline-block',
+    fontSize: '0.625rem',
+    fontWeight: 600,
+    padding: '0.125rem 0.5rem',
+    borderRadius: '9999px',
+    marginRight: '0.25rem',
+    marginTop: '0.25rem',
+  };
+
+  switch (output.type) {
+    case 'research': {
+      const insights = output.data.keyInsights as string[] | undefined;
+      if (!insights || insights.length === 0) { return null; }
+      return (
+        <div style={{ marginTop: '0.375rem', display: 'flex', flexWrap: 'wrap', gap: '0.125rem' }}>
+          {insights.slice(0, 3).map((insight, i) => (
+            <span key={i} style={{
+              ...chipStyle,
+              color: '#7c3aed',
+              backgroundColor: 'rgba(124,58,237,0.1)',
+            }}>
+              {insight.length > 50 ? `${insight.slice(0, 50)}...` : insight}
+            </span>
+          ))}
+          {insights.length > 3 && (
+            <span style={{ ...chipStyle, color: 'var(--color-text-disabled)', backgroundColor: 'transparent' }}>
+              +{insights.length - 3} more
+            </span>
+          )}
+        </div>
+      );
+    }
+
+    case 'strategy': {
+      const messages = output.data.keyMessages as string[] | undefined;
+      const angle = output.data.narrativeAngle as string | undefined;
+      return (
+        <div style={{ marginTop: '0.375rem' }}>
+          {angle && (
+            <div style={{
+              fontSize: '0.6875rem',
+              color: 'var(--color-text-primary)',
+              fontWeight: 500,
+              fontStyle: 'italic',
+              marginBottom: '0.25rem',
+            }}>
+              Angle: {angle}
+            </div>
+          )}
+          {messages && messages.length > 0 && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.125rem' }}>
+              {messages.slice(0, 3).map((msg, i) => (
+                <span key={i} style={{
+                  ...chipStyle,
+                  color: '#0ea5e9',
+                  backgroundColor: 'rgba(14,165,233,0.1)',
+                }}>
+                  {msg.length > 40 ? `${msg.slice(0, 40)}...` : msg}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    case 'thumbnails': {
+      const thumbnails = output.data.thumbnails as Array<{ url: string }> | undefined;
+      if (!thumbnails || thumbnails.length === 0) { return null; }
+      return (
+        <div style={{
+          marginTop: '0.375rem',
+          display: 'flex',
+          gap: '0.375rem',
+          overflowX: 'auto',
+        }}>
+          {thumbnails.slice(0, 4).map((thumb, i) => (
+            <Image
+              key={i}
+              src={thumb.url}
+              alt={`Scene ${i + 1} thumbnail`}
+              width={56}
+              height={32}
+              unoptimized
+              style={{
+                borderRadius: '0.25rem',
+                objectFit: 'cover',
+                border: '1px solid var(--color-border-light)',
+                flexShrink: 0,
+              }}
+            />
+          ))}
+          {thumbnails.length > 4 && (
+            <div style={{
+              width: 56,
+              height: 32,
+              borderRadius: '0.25rem',
+              backgroundColor: 'var(--color-bg-elevated)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '0.625rem',
+              color: 'var(--color-text-secondary)',
+              flexShrink: 0,
+            }}>
+              +{thumbnails.length - 4}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    case 'draft': {
+      const sceneCount = output.data.sceneCount as number | undefined;
+      return (
+        <div style={{ marginTop: '0.375rem', display: 'flex', gap: '0.375rem', alignItems: 'center' }}>
+          {sceneCount !== undefined && (
+            <span style={{
+              ...chipStyle,
+              color: '#059669',
+              backgroundColor: 'rgba(5,150,105,0.1)',
+            }}>
+              {sceneCount} scene{sceneCount !== 1 ? 's' : ''}
+            </span>
+          )}
+          <span style={{
+            ...chipStyle,
+            color: 'var(--color-primary)',
+            backgroundColor: 'rgba(var(--color-primary-rgb, 99,102,241), 0.1)',
+          }}>
+            Ready for review
+          </span>
+        </div>
+      );
+    }
+
+    case 'cinematic': {
+      const count = output.data.scenesConfigured as number | undefined;
+      const style = output.data.globalStyle as string | undefined;
+      return (
+        <div style={{ marginTop: '0.375rem', display: 'flex', gap: '0.375rem', flexWrap: 'wrap' }}>
+          {style && (
+            <span style={{
+              ...chipStyle,
+              color: '#e11d48',
+              backgroundColor: 'rgba(225,29,72,0.1)',
+            }}>
+              {style}
+            </span>
+          )}
+          {count !== undefined && (
+            <span style={{
+              ...chipStyle,
+              color: 'var(--color-text-secondary)',
+              backgroundColor: 'var(--color-bg-elevated)',
+            }}>
+              {count} scene{count !== 1 ? 's' : ''} configured
+            </span>
+          )}
+        </div>
+      );
+    }
+
+    default:
+      return null;
+  }
+}
+
+// ============================================================================
 // STEP CARD
 // ============================================================================
 
@@ -219,7 +421,8 @@ function StepCard({
   onSelect: () => void;
 }) {
   const [expanded, setExpanded] = useState(false);
-  const dashboardLink = getDashboardLink(step.toolName);
+  const dashboardLink = getDashboardLink(step.toolName, step.toolResult);
+  const parsedOutput = parseStepOutput(step.toolResult);
 
   const handleToggleExpand = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
@@ -363,6 +566,11 @@ function StepCard({
         </div>
       )}
 
+      {/* Rich output preview (inline chips/thumbnails) */}
+      {parsedOutput && step.status === 'COMPLETED' && (
+        <StepOutputPreview output={parsedOutput} />
+      )}
+
       {/* Error message */}
       {isFailed && step.error && (
         <div style={{
@@ -467,38 +675,213 @@ function StepCard({
           )}
 
           {step.toolResult && (
-            <div>
-              <div style={{
-                fontSize: '0.625rem',
-                fontWeight: 700,
-                textTransform: 'uppercase',
-                letterSpacing: '0.05em',
-                color: 'var(--color-text-disabled)',
-                marginBottom: '0.25rem',
-              }}>
-                Output
-              </div>
-              <div style={{
-                padding: '0.5rem',
-                backgroundColor: 'var(--color-bg-elevated)',
-                borderRadius: '0.375rem',
-                fontSize: '0.6875rem',
-                fontFamily: 'monospace',
-                color: 'var(--color-text-primary)',
-                lineHeight: 1.5,
-                whiteSpace: 'pre-wrap',
-                wordBreak: 'break-word',
-                maxHeight: '200px',
-                overflowY: 'auto',
-              }}>
-                {step.toolResult}
-              </div>
-            </div>
+            <ExpandedOutputRenderer raw={step.toolResult} parsed={parsedOutput} />
           )}
         </div>
       )}
     </div>
   );
+}
+
+/**
+ * Renders the expanded output section with type-specific formatting.
+ */
+function ExpandedOutputRenderer({ raw, parsed }: { raw: string; parsed: ParsedStepOutput | null }) {
+  const labelStyle: React.CSSProperties = {
+    fontSize: '0.625rem',
+    fontWeight: 700,
+    textTransform: 'uppercase',
+    letterSpacing: '0.05em',
+    color: 'var(--color-text-disabled)',
+    marginBottom: '0.25rem',
+  };
+
+  const containerStyle: React.CSSProperties = {
+    padding: '0.5rem',
+    backgroundColor: 'var(--color-bg-elevated)',
+    borderRadius: '0.375rem',
+    fontSize: '0.6875rem',
+    color: 'var(--color-text-primary)',
+    lineHeight: 1.5,
+    maxHeight: '280px',
+    overflowY: 'auto',
+  };
+
+  if (!parsed || parsed.type === 'unknown') {
+    return (
+      <div>
+        <div style={labelStyle}>Output</div>
+        <div style={{ ...containerStyle, fontFamily: 'monospace', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+          {raw}
+        </div>
+      </div>
+    );
+  }
+
+  switch (parsed.type) {
+    case 'research': {
+      const findings = parsed.data.findings as string | undefined;
+      const insights = parsed.data.keyInsights as string[] | undefined;
+      return (
+        <div>
+          <div style={labelStyle}>Research Findings</div>
+          {findings && (
+            <div style={{ ...containerStyle, whiteSpace: 'pre-wrap' }}>
+              {findings}
+            </div>
+          )}
+          {insights && insights.length > 0 && (
+            <div style={{ marginTop: '0.5rem' }}>
+              <div style={labelStyle}>Key Insights</div>
+              <ul style={{ ...containerStyle, margin: 0, paddingLeft: '1.25rem' }}>
+                {insights.map((insight, i) => (
+                  <li key={i} style={{ marginBottom: '0.25rem' }}>{insight}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    case 'strategy': {
+      const angle = parsed.data.narrativeAngle as string | undefined;
+      const audience = parsed.data.targetAudience as string | undefined;
+      const messages = parsed.data.keyMessages as string[] | undefined;
+      const tone = parsed.data.tone as string | undefined;
+      const cta = parsed.data.callToAction as string | undefined;
+      return (
+        <div>
+          <div style={labelStyle}>Messaging Strategy</div>
+          <div style={containerStyle}>
+            {angle && <div style={{ marginBottom: '0.375rem' }}><strong>Narrative Angle:</strong> {angle}</div>}
+            {audience && <div style={{ marginBottom: '0.375rem' }}><strong>Audience:</strong> {audience}</div>}
+            {tone && <div style={{ marginBottom: '0.375rem' }}><strong>Tone:</strong> {tone}</div>}
+            {cta && <div style={{ marginBottom: '0.375rem' }}><strong>CTA:</strong> {cta}</div>}
+            {messages && messages.length > 0 && (
+              <div style={{ marginTop: '0.25rem' }}>
+                <strong>Key Messages:</strong>
+                <ul style={{ margin: '0.25rem 0 0', paddingLeft: '1rem' }}>
+                  {messages.map((msg, i) => <li key={i}>{msg}</li>)}
+                </ul>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    case 'cinematic': {
+      const configs = parsed.data.configs as Array<Record<string, unknown>> | undefined;
+      return (
+        <div>
+          <div style={labelStyle}>Cinematic Configuration</div>
+          <div style={containerStyle}>
+            {configs?.map((cfg, i) => (
+              <div key={i} style={{
+                padding: '0.375rem',
+                borderBottom: i < configs.length - 1 ? '1px solid var(--color-border-light)' : undefined,
+              }}>
+                <div style={{ fontWeight: 600, marginBottom: '0.125rem' }}>
+                  Scene {cfg.sceneNumber as number}
+                </div>
+                <div style={{ fontSize: '0.625rem', color: 'var(--color-text-secondary)' }}>
+                  {[cfg.shotType, cfg.lighting, cfg.camera, cfg.artStyle, cfg.filmStock]
+                    .filter((v): v is string => typeof v === 'string')
+                    .join(' · ')}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    case 'thumbnails': {
+      const thumbnails = parsed.data.thumbnails as Array<{ sceneNumber: number; url: string }> | undefined;
+      return (
+        <div>
+          <div style={labelStyle}>Scene Thumbnails</div>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))',
+            gap: '0.5rem',
+            padding: '0.5rem',
+            backgroundColor: 'var(--color-bg-elevated)',
+            borderRadius: '0.375rem',
+          }}>
+            {thumbnails?.map((thumb, i) => (
+              <div key={i} style={{ textAlign: 'center' }}>
+                <Image
+                  src={thumb.url}
+                  alt={`Scene ${thumb.sceneNumber}`}
+                  width={200}
+                  height={112}
+                  unoptimized
+                  style={{
+                    width: '100%',
+                    height: 'auto',
+                    aspectRatio: '16/9',
+                    objectFit: 'cover',
+                    borderRadius: '0.25rem',
+                    border: '1px solid var(--color-border-light)',
+                  }}
+                />
+                <div style={{ fontSize: '0.5625rem', color: 'var(--color-text-disabled)', marginTop: '0.125rem' }}>
+                  Scene {thumb.sceneNumber}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    case 'draft': {
+      const title = parsed.data.title as string | undefined;
+      const sceneCount = parsed.data.sceneCount as number | undefined;
+      const reviewLink = parsed.data.reviewLink as string | undefined;
+      return (
+        <div>
+          <div style={labelStyle}>Storyboard Ready</div>
+          <div style={containerStyle}>
+            {title && <div style={{ fontWeight: 600, marginBottom: '0.25rem' }}>{title}</div>}
+            {sceneCount !== undefined && <div>{sceneCount} scene{sceneCount !== 1 ? 's' : ''} with scripts, cinematic settings, and thumbnails</div>}
+            {reviewLink && (
+              <a
+                href={reviewLink}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.25rem',
+                  marginTop: '0.5rem',
+                  padding: '0.375rem 0.75rem',
+                  borderRadius: '0.375rem',
+                  backgroundColor: 'var(--color-primary)',
+                  color: '#fff',
+                  fontSize: '0.6875rem',
+                  fontWeight: 600,
+                  textDecoration: 'none',
+                }}
+              >
+                Open Storyboard &rarr;
+              </a>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    default:
+      return (
+        <div>
+          <div style={labelStyle}>Output</div>
+          <div style={{ ...containerStyle, fontFamily: 'monospace', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+            {raw}
+          </div>
+        </div>
+      );
+  }
 }
 
 // ============================================================================

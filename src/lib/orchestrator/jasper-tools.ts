@@ -44,7 +44,16 @@ export interface ToolCallContext {
 }
 
 /**
+ * Maps `${missionId}:${toolName}` → stepId so COMPLETED/FAILED updates
+ * can find the step that was created during the RUNNING call.
+ */
+const activeStepIds = new Map<string, string>();
+
+/**
  * Fire-and-forget mission step tracking. Never throws, never blocks Jasper.
+ *
+ * When status='RUNNING', creates a new step and stores the stepId.
+ * When status='COMPLETED'/'FAILED'/etc., looks up the stored stepId to update.
  */
 function trackMissionStep(
   context: ToolCallContext | undefined,
@@ -60,9 +69,12 @@ function trackMissionStep(
 ): void {
   if (!context?.missionId) { return; }
 
-  const stepId = `step_${toolName}_${Date.now()}`;
+  const mapKey = `${context.missionId}:${toolName}`;
 
   if (status === 'RUNNING') {
+    const stepId = `step_${toolName}_${Date.now()}`;
+    activeStepIds.set(mapKey, stepId);
+
     void addMissionStep(context.missionId, {
       stepId,
       toolName,
@@ -77,6 +89,9 @@ function trackMissionStep(
       });
     });
   } else {
+    const stepId = activeStepIds.get(mapKey) ?? `step_${toolName}_${Date.now()}`;
+    activeStepIds.delete(mapKey);
+
     void updateMissionStep(context.missionId, stepId, {
       status,
       completedAt: new Date().toISOString(),
@@ -3728,11 +3743,199 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
       }
 
       case 'produce_video': {
+        // ════════════════════════════════════════════════════════════════════
+        // ORCHESTRATION CHAIN: Research → Strategy → Script → Cinematic →
+        //   Thumbnails → Ready for Review
+        //
+        // Each step is tracked individually in Mission Control. The user sees
+        // 6 discrete steps with agent attribution, output previews, and links.
+        // ════════════════════════════════════════════════════════════════════
+
         const produceStart = Date.now();
-        trackMissionStep(context, 'produce_video', 'RUNNING', { toolArgs: args });
+        const description = args.description as string;
+        const videoTitle = (args.title as string) || 'Video Production';
+        const videoType = args.videoType as 'tutorial' | 'explainer' | 'product-demo' | 'sales-pitch' | 'testimonial' | 'social-ad' | undefined;
+        const platform = args.platform as 'youtube' | 'tiktok' | 'instagram' | 'linkedin' | 'website' | undefined;
+        const duration = args.duration ? Number(args.duration) : undefined;
+        const aspectRatio = args.aspectRatio as '16:9' | '9:16' | '1:1' | undefined;
 
         try {
-          // Step 1: Create the project via Video Specialist
+          // ─── Step 1: Research ─────────────────────────────────────────
+          trackMissionStep(context, 'video_research', 'RUNNING', {
+            toolArgs: { description, title: videoTitle },
+          });
+
+          let researchFindings = '';
+          let keyInsights: string[] = [];
+          const researchStart = Date.now();
+
+          try {
+            const { OpenRouterProvider } = await import('@/lib/ai/openrouter-provider');
+            const llm = new OpenRouterProvider({});
+            const researchResponse = await llm.chat({
+              model: 'claude-3-5-sonnet',
+              messages: [
+                {
+                  role: 'system',
+                  content: `You are a Research Agent specializing in content research for video production.
+Your job is to research topics and provide comprehensive findings that will inform video script creation.
+Always respond with valid JSON (no markdown fences) in this exact format:
+{
+  "findings": "detailed research text with value propositions, pain points, and competitive angles",
+  "keyInsights": ["insight 1", "insight 2", "insight 3", "insight 4", "insight 5"]
+}`,
+                },
+                {
+                  role: 'user',
+                  content: `Research the following topic for a ${videoType ?? 'commercial'} video: "${description}"
+
+Include:
+- Key value propositions and benefits of the subject
+- Target audience pain points this addresses
+- Competitive advantages and differentiators
+- Emotional hooks for compelling storytelling
+- Any statistics, facts, or proof points that strengthen the message
+${platform ? `\nThis video is for ${platform} — consider platform-specific audience expectations.` : ''}`,
+                },
+              ],
+              temperature: 0.7,
+              maxTokens: 2000,
+            });
+
+            try {
+              const cleanContent = researchResponse.content.replace(/```json\n?|```\n?/g, '').trim();
+              const researchData = JSON.parse(cleanContent) as { findings: string; keyInsights: string[] };
+              researchFindings = researchData.findings;
+              keyInsights = researchData.keyInsights ?? [];
+            } catch {
+              researchFindings = researchResponse.content;
+            }
+
+            trackMissionStep(context, 'video_research', 'COMPLETED', {
+              summary: `Research completed — ${keyInsights.length} key insights identified`,
+              durationMs: Date.now() - researchStart,
+              toolResult: JSON.stringify({
+                type: 'research',
+                topic: description,
+                findings: researchFindings.slice(0, 1500),
+                keyInsights,
+              }),
+            });
+          } catch (researchErr) {
+            const errMsg = researchErr instanceof Error ? researchErr.message : String(researchErr);
+            trackMissionStep(context, 'video_research', 'FAILED', {
+              error: errMsg,
+              durationMs: Date.now() - researchStart,
+            });
+            researchFindings = description;
+          }
+
+          // ─── Step 2: Strategy ─────────────────────────────────────────
+          trackMissionStep(context, 'video_strategy', 'RUNNING', {
+            toolArgs: { insightCount: keyInsights.length },
+          });
+
+          let narrativeAngle = '';
+          let keyMessages: string[] = [];
+          let targetAudience = '';
+          let tone = 'professional but approachable';
+          let callToAction = '';
+          const strategyStart = Date.now();
+
+          try {
+            const { OpenRouterProvider } = await import('@/lib/ai/openrouter-provider');
+            const llm = new OpenRouterProvider({});
+            const strategyResponse = await llm.chat({
+              model: 'claude-3-5-sonnet',
+              messages: [
+                {
+                  role: 'system',
+                  content: `You are a Strategy Agent specializing in video messaging strategy.
+Given research findings, you determine the strongest narrative angle and key messages for a video.
+Always respond with valid JSON (no markdown fences) in this exact format:
+{
+  "narrativeAngle": "the central theme or story angle",
+  "targetAudience": "specific audience description",
+  "keyMessages": ["message 1", "message 2", "message 3"],
+  "tone": "tone description",
+  "callToAction": "what the viewer should do"
+}`,
+                },
+                {
+                  role: 'user',
+                  content: `Based on these research findings, create a messaging strategy for a ${videoType ?? 'commercial'} video:
+
+RESEARCH FINDINGS:
+${researchFindings}
+
+KEY INSIGHTS:
+${keyInsights.map((i, idx) => `${idx + 1}. ${i}`).join('\n')}
+
+Determine the top 3-5 key messages, the strongest narrative angle, target audience, tone, and a clear call to action.
+${platform ? `Platform: ${platform}` : ''}
+${duration ? `Target duration: ${duration} seconds` : ''}`,
+                },
+              ],
+              temperature: 0.7,
+              maxTokens: 1500,
+            });
+
+            try {
+              const cleanContent = strategyResponse.content.replace(/```json\n?|```\n?/g, '').trim();
+              const strategyData = JSON.parse(cleanContent) as {
+                narrativeAngle: string;
+                targetAudience: string;
+                keyMessages: string[];
+                tone: string;
+                callToAction: string;
+              };
+              narrativeAngle = strategyData.narrativeAngle;
+              targetAudience = strategyData.targetAudience;
+              keyMessages = strategyData.keyMessages ?? [];
+              tone = strategyData.tone ?? tone;
+              callToAction = strategyData.callToAction ?? '';
+            } catch {
+              narrativeAngle = 'Direct value proposition';
+              keyMessages = keyInsights.slice(0, 3);
+            }
+
+            trackMissionStep(context, 'video_strategy', 'COMPLETED', {
+              summary: `Strategy defined — "${narrativeAngle}" with ${keyMessages.length} key messages`,
+              durationMs: Date.now() - strategyStart,
+              toolResult: JSON.stringify({
+                type: 'strategy',
+                narrativeAngle,
+                targetAudience,
+                keyMessages,
+                tone,
+                callToAction,
+              }),
+            });
+          } catch (strategyErr) {
+            const errMsg = strategyErr instanceof Error ? strategyErr.message : String(strategyErr);
+            trackMissionStep(context, 'video_strategy', 'FAILED', {
+              error: errMsg,
+              durationMs: Date.now() - strategyStart,
+            });
+            narrativeAngle = 'Direct value proposition';
+            keyMessages = keyInsights.slice(0, 3);
+          }
+
+          // ─── Step 3: Script Writing ───────────────────────────────────
+          trackMissionStep(context, 'video_script', 'RUNNING', {
+            toolArgs: { narrativeAngle, messageCount: keyMessages.length },
+          });
+
+          const scriptStart = Date.now();
+          const enrichedDescription = [
+            description,
+            `\n\nNARRATIVE ANGLE: ${narrativeAngle}`,
+            `TARGET AUDIENCE: ${targetAudience}`,
+            `KEY MESSAGES:\n${keyMessages.map((m, i) => `${i + 1}. ${m}`).join('\n')}`,
+            `TONE: ${tone}`,
+            callToAction ? `CALL TO ACTION: ${callToAction}` : '',
+          ].filter(Boolean).join('\n');
+
           const { getVideoSpecialist: getProduceSpec } = await import('@/lib/agents/content/video/specialist');
           const produceSpec = getProduceSpec();
           await produceSpec.initialize();
@@ -3746,12 +3949,12 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
             priority: 'HIGH',
             payload: {
               action: 'create_video_project' as const,
-              description: args.description as string,
-              title: args.title as string | undefined,
-              videoType: args.videoType as 'tutorial' | 'explainer' | 'product-demo' | 'sales-pitch' | 'testimonial' | 'social-ad' | undefined,
-              platform: args.platform as 'youtube' | 'tiktok' | 'instagram' | 'linkedin' | 'website' | undefined,
-              duration: args.duration ? Number(args.duration) : undefined,
-              aspectRatio: args.aspectRatio as '16:9' | '9:16' | '1:1' | undefined,
+              description: enrichedDescription,
+              title: videoTitle,
+              videoType,
+              platform,
+              duration,
+              aspectRatio,
               userId: context?.userId,
             },
             requiresResponse: true,
@@ -3762,43 +3965,55 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
           const projectId = createData?.projectId as string | undefined;
 
           if (!projectId || createResult.status !== 'COMPLETED') {
+            const failMsg = `Script generation failed: ${(createData?.message as string) ?? 'Unknown error'}`;
+            trackMissionStep(context, 'video_script', 'FAILED', {
+              error: failMsg,
+              durationMs: Date.now() - scriptStart,
+            });
             content = JSON.stringify({
               status: 'error',
-              message: `Failed to create video project: ${(createData?.message as string) ?? 'Unknown error'}`,
+              message: failMsg,
               specialist: 'VIDEO_DIRECTOR',
-            });
-            trackMissionStep(context, 'produce_video', 'FAILED', {
-              summary: `VIDEO_DIRECTOR: Project creation failed`,
-              durationMs: Date.now() - produceStart,
-              toolResult: content.slice(0, 2000),
             });
             break;
           }
 
-          // Step 2: Assign per-scene characters if provided
+          const sceneCount = ((createData?.sceneCount as number) ?? 0);
+
+          trackMissionStep(context, 'video_script', 'COMPLETED', {
+            summary: `Script written — ${sceneCount} scene(s) with dialogue and visual descriptions`,
+            durationMs: Date.now() - scriptStart,
+            toolResult: JSON.stringify({
+              status: 'draft',
+              projectId,
+              sceneCount,
+              title: videoTitle,
+            }),
+          });
+
+          // ─── Step 3b: Character Assignment (if provided) ──────────────
           let characterAssignments: Array<{ avatarId: string; sceneNumbers?: number[] }> | undefined;
           if (typeof args.characters === 'string' && args.characters.trim().startsWith('[')) {
             try {
               characterAssignments = JSON.parse(args.characters) as Array<{ avatarId: string; sceneNumbers?: number[] }>;
             } catch {
-              // Invalid JSON — skip character assignments
+              // Invalid JSON — skip
             }
           }
+
+          const { getProject, updateProject } = await import('@/lib/video/pipeline-project-service');
+
           if (characterAssignments && characterAssignments.length > 0) {
             try {
-              const { getProject, updateProject } = await import('@/lib/video/pipeline-project-service');
               const project = await getProject(projectId);
               if (project?.scenes) {
                 const { getAvatarProfile } = await import('@/lib/video/avatar-profile-service');
-
                 const updatedScenes = await Promise.all(
                   project.scenes.map(async (scene) => {
                     const assignment = characterAssignments.find((c) =>
                       !c.sceneNumbers || c.sceneNumbers.includes(scene.sceneNumber)
                     );
                     if (!assignment) { return scene; }
-
-                    // Load profile to get voice data
                     const profile = await getAvatarProfile(assignment.avatarId);
                     return {
                       ...scene,
@@ -3808,19 +4023,233 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
                     };
                   })
                 );
-
                 await updateProject(projectId, { scenes: updatedScenes });
               }
             } catch {
-              // Character assignment is non-critical — project still usable with defaults
+              // Non-critical — project still usable with defaults
             }
           }
 
-          // Step 3: Return storyboard for user review — do NOT auto-render.
-          // The user must review the storyboard in the Video Studio and approve it
-          // before generation starts. Jasper never triggers rendering automatically.
+          // ─── Step 4: Cinematic Design ─────────────────────────────────
+          trackMissionStep(context, 'video_cinematic', 'RUNNING', {
+            toolArgs: { sceneCount },
+          });
+
+          const cinematicStart = Date.now();
+          let scenesConfigured = 0;
+
+          try {
+            const project = await getProject(projectId);
+            if (project?.scenes && project.scenes.length > 0) {
+              const { OpenRouterProvider } = await import('@/lib/ai/openrouter-provider');
+              const llm = new OpenRouterProvider({});
+
+              const sceneDescriptions = project.scenes.map((s) => ({
+                sceneNumber: s.sceneNumber,
+                title: s.title ?? `Scene ${s.sceneNumber}`,
+                visual: s.visualDescription ?? '',
+                script: s.scriptText?.slice(0, 200) ?? '',
+              }));
+
+              const cinematicResponse = await llm.chat({
+                model: 'claude-3-5-sonnet',
+                messages: [
+                  {
+                    role: 'system',
+                    content: `You are a Cinematic Director. For each scene, select the best cinematography settings.
+Available options:
+- shotType: close-up, medium, wide, extreme-close-up, full-body, cowboy, dutch-angle, birds-eye, worms-eye, over-the-shoulder, pov, tracking, establishing, rack-focus, split-screen
+- lighting: golden-hour, blue-hour, studio-three-point, rembrandt, split-lighting, neon, candlelight, natural-window, overcast-soft, high-key, low-key, backlit-silhouette, chiaroscuro, volumetric-fog, stage-spotlight
+- camera: arri-alexa-mini, red-v-raptor, sony-venice-2, blackmagic-ursa, canon-c500, hasselblad-x2d
+- filmStock: kodak-portra-400, fuji-velvia-50, kodak-vision3-500t, cinestill-800t, ilford-hp5, kodachrome-64
+- artStyle: photorealistic, cinematic, anime, watercolor, oil-painting, noir, fantasy, cyberpunk, pixar-3d, comic
+- focalLength: 24mm-wide, 35mm-standard, 50mm-natural, 85mm-portrait, 135mm-telephoto
+- composition: rule-of-thirds, center-frame, golden-ratio, leading-lines, symmetrical
+
+Respond with valid JSON (no markdown fences):
+{
+  "globalStyle": "overall visual style name",
+  "configs": [
+    {
+      "sceneNumber": 1,
+      "shotType": "...",
+      "lighting": "...",
+      "camera": "...",
+      "filmStock": "...",
+      "artStyle": "...",
+      "focalLength": "...",
+      "composition": "..."
+    }
+  ]
+}`,
+                  },
+                  {
+                    role: 'user',
+                    content: `Design cinematic settings for a ${videoType ?? 'commercial'} video titled "${videoTitle}".
+Narrative angle: ${narrativeAngle}
+Tone: ${tone}
+
+Scenes:
+${sceneDescriptions.map((s) => `Scene ${s.sceneNumber} "${s.title}": ${s.visual} | Script: ${s.script}`).join('\n')}
+
+Select cohesive settings that create a professional, unified visual language across all scenes.`,
+                  },
+                ],
+                temperature: 0.6,
+                maxTokens: 2000,
+              });
+
+              try {
+                const cleanContent = cinematicResponse.content.replace(/```json\n?|```\n?/g, '').trim();
+                const cinematicData = JSON.parse(cleanContent) as {
+                  globalStyle?: string;
+                  configs: Array<{
+                    sceneNumber: number;
+                    shotType?: string;
+                    lighting?: string;
+                    camera?: string;
+                    filmStock?: string;
+                    artStyle?: string;
+                    focalLength?: string;
+                    composition?: string;
+                  }>;
+                };
+
+                const updatedScenes = project.scenes.map((scene) => {
+                  const cfg = cinematicData.configs.find((c) => c.sceneNumber === scene.sceneNumber);
+                  if (!cfg) { return scene; }
+                  return {
+                    ...scene,
+                    cinematicConfig: {
+                      shotType: cfg.shotType,
+                      lighting: cfg.lighting,
+                      camera: cfg.camera,
+                      filmStock: cfg.filmStock,
+                      artStyle: cfg.artStyle,
+                      focalLength: cfg.focalLength,
+                      composition: cfg.composition,
+                    },
+                  };
+                });
+
+                await updateProject(projectId, { scenes: updatedScenes });
+                scenesConfigured = cinematicData.configs.length;
+
+                trackMissionStep(context, 'video_cinematic', 'COMPLETED', {
+                  summary: `Cinematic design applied — ${cinematicData.globalStyle ?? 'Custom'} style across ${scenesConfigured} scene(s)`,
+                  durationMs: Date.now() - cinematicStart,
+                  toolResult: JSON.stringify({
+                    type: 'cinematic',
+                    globalStyle: cinematicData.globalStyle ?? 'Custom',
+                    scenesConfigured,
+                    configs: cinematicData.configs,
+                  }),
+                });
+              } catch {
+                trackMissionStep(context, 'video_cinematic', 'COMPLETED', {
+                  summary: 'Cinematic design applied with default settings',
+                  durationMs: Date.now() - cinematicStart,
+                  toolResult: JSON.stringify({ type: 'cinematic', globalStyle: 'Default', scenesConfigured: 0, configs: [] }),
+                });
+              }
+            } else {
+              trackMissionStep(context, 'video_cinematic', 'COMPLETED', {
+                summary: 'No scenes to configure',
+                durationMs: Date.now() - cinematicStart,
+                toolResult: JSON.stringify({ type: 'cinematic', globalStyle: 'N/A', scenesConfigured: 0, configs: [] }),
+              });
+            }
+          } catch (cinematicErr) {
+            const errMsg = cinematicErr instanceof Error ? cinematicErr.message : String(cinematicErr);
+            trackMissionStep(context, 'video_cinematic', 'FAILED', {
+              error: errMsg,
+              durationMs: Date.now() - cinematicStart,
+            });
+          }
+
+          // ─── Step 5: Thumbnail Generation ─────────────────────────────
+          trackMissionStep(context, 'video_thumbnails', 'RUNNING', {
+            toolArgs: { sceneCount },
+          });
+
+          const thumbStart = Date.now();
+          const thumbnailResults: Array<{ sceneNumber: number; url: string }> = [];
+
+          try {
+            const project = await getProject(projectId);
+            if (project?.scenes && project.scenes.length > 0) {
+              const { routeGeneration } = await import('@/lib/ai/provider-router');
+              const { buildPromptFromPresets } = await import('@/lib/ai/cinematic-presets');
+
+              // Generate thumbnails in parallel (max 6 concurrent)
+              const sceneBatches: typeof project.scenes[] = [];
+              const batchSize = 6;
+              for (let i = 0; i < project.scenes.length; i += batchSize) {
+                sceneBatches.push(project.scenes.slice(i, i + batchSize));
+              }
+
+              for (const batch of sceneBatches) {
+                const batchResults = await Promise.allSettled(
+                  batch.map(async (scene) => {
+                    const basePrompt = scene.visualDescription ?? scene.scriptText ?? `Scene ${scene.sceneNumber}`;
+                    const prompt = scene.cinematicConfig
+                      ? buildPromptFromPresets(basePrompt, scene.cinematicConfig)
+                      : basePrompt;
+
+                    const result = await routeGeneration({
+                      prompt,
+                      type: 'image',
+                      presets: scene.cinematicConfig ?? {},
+                      size: '1024x576',
+                      quality: 'standard',
+                      projectId,
+                    });
+
+                    return { sceneNumber: scene.sceneNumber, url: result.url };
+                  })
+                );
+
+                for (const result of batchResults) {
+                  if (result.status === 'fulfilled') {
+                    thumbnailResults.push(result.value);
+                  }
+                }
+              }
+
+              // Save thumbnail URLs to project scenes
+              if (thumbnailResults.length > 0) {
+                const updatedProject = await getProject(projectId);
+                if (updatedProject?.scenes) {
+                  const scenesWithThumbs = updatedProject.scenes.map((scene) => {
+                    const thumb = thumbnailResults.find((t) => t.sceneNumber === scene.sceneNumber);
+                    if (!thumb) { return scene; }
+                    return { ...scene, screenshotUrl: thumb.url };
+                  });
+                  await updateProject(projectId, { scenes: scenesWithThumbs });
+                }
+              }
+            }
+
+            trackMissionStep(context, 'video_thumbnails', 'COMPLETED', {
+              summary: `Generated ${thumbnailResults.length} preview thumbnail(s)`,
+              durationMs: Date.now() - thumbStart,
+              toolResult: JSON.stringify({
+                type: 'thumbnails',
+                generated: thumbnailResults.length,
+                thumbnails: thumbnailResults,
+              }),
+            });
+          } catch (thumbErr) {
+            const errMsg = thumbErr instanceof Error ? thumbErr.message : String(thumbErr);
+            trackMissionStep(context, 'video_thumbnails', 'FAILED', {
+              error: errMsg,
+              durationMs: Date.now() - thumbStart,
+            });
+            // Non-fatal — storyboard is still usable without thumbnails
+          }
+
+          // ─── Step 6: Ready for Review ─────────────────────────────────
           const reviewLink = `/content/video?load=${projectId}`;
-          const videoTitle = (createData?.title as string) ?? (args.title as string) ?? 'Video Production';
 
           // Track as campaign deliverable if campaignId is available
           const videoCampaignId = (args.campaignId as string) || context?.campaignId;
@@ -3832,8 +4261,10 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
               status: 'pending_review',
               previewData: {
                 projectId,
-                sceneCount: createData?.sceneCount ?? 0,
+                sceneCount,
                 characterAssignments: characterAssignments?.length ?? 0,
+                thumbnailCount: thumbnailResults.length,
+                cinematicStyleApplied: scenesConfigured > 0,
               },
               reviewLink,
             });
@@ -3844,18 +4275,21 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
             projectId,
             campaignId: videoCampaignId ?? null,
             title: videoTitle,
-            sceneCount: createData?.sceneCount ?? 0,
+            sceneCount,
             characterAssignments: characterAssignments?.length ?? 0,
+            thumbnailCount: thumbnailResults.length,
+            cinematicStyleApplied: scenesConfigured > 0,
             videoStudioPath: reviewLink,
             reviewLink: videoCampaignId
               ? `/mission-control?campaign=${videoCampaignId}`
               : reviewLink,
-            message: `Storyboard ready for "${videoTitle}" — ${(createData?.sceneCount as number) ?? 0} scene(s) with scripts and visual descriptions. ${videoCampaignId ? `Review all deliverables at /mission-control?campaign=${videoCampaignId}` : 'Open the Video Studio to review and edit the storyboard, then approve to start generation.'}`,
+            message: `Storyboard complete for "${videoTitle}" — ${sceneCount} scene(s) with scripts, cinematic settings, and ${thumbnailResults.length} preview thumbnail(s). Open the Video Studio to review and approve.`,
             specialist: 'VIDEO_DIRECTOR',
+            orchestrationDurationMs: Date.now() - produceStart,
           });
 
           trackMissionStep(context, 'produce_video', 'COMPLETED', {
-            summary: `VIDEO_DIRECTOR: Storyboard created — ${projectId}`,
+            summary: `Storyboard complete — ${sceneCount} scenes, ${thumbnailResults.length} thumbnails, cinematic settings applied`,
             durationMs: Date.now() - produceStart,
             toolResult: content.slice(0, 2000),
           });

@@ -12,6 +12,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import Image from 'next/image';
 import { useSearchParams } from 'next/navigation';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { useMissionStream } from '@/hooks/useMissionStream';
@@ -129,6 +130,318 @@ function LiveBadge() {
 // STEP DETAIL PANEL (RIGHT)
 // ============================================================================
 
+// ============================================================================
+// DETAIL PANEL OUTPUT RENDERER
+// ============================================================================
+
+function DetailOutputRenderer({ toolResult }: { toolResult: string }) {
+  const sectionLabel: React.CSSProperties = {
+    fontSize: '0.6875rem',
+    fontWeight: 700,
+    textTransform: 'uppercase',
+    letterSpacing: '0.05em',
+    color: 'var(--color-text-disabled)',
+    marginBottom: '0.375rem',
+  };
+
+  const contentBox: React.CSSProperties = {
+    padding: '0.75rem',
+    backgroundColor: 'var(--color-bg-elevated)',
+    borderRadius: '0.5rem',
+    fontSize: '0.8125rem',
+    color: 'var(--color-text-primary)',
+    lineHeight: 1.6,
+    maxHeight: '400px',
+    overflowY: 'auto',
+  };
+
+  let parsed: Record<string, unknown> | null = null;
+  try {
+    parsed = JSON.parse(toolResult) as Record<string, unknown>;
+  } catch {
+    // Not JSON
+  }
+
+  if (!parsed) {
+    return (
+      <CollapsibleSection title="Output (Result)">
+        {toolResult}
+      </CollapsibleSection>
+    );
+  }
+
+  const outputType = (parsed.type as string) ?? (parsed.status === 'draft' ? 'draft' : null);
+
+  switch (outputType) {
+    case 'research': {
+      const findings = parsed.findings as string | undefined;
+      const insights = parsed.keyInsights as string[] | undefined;
+      const topic = parsed.topic as string | undefined;
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          {topic && (
+            <div>
+              <div style={sectionLabel}>Topic</div>
+              <div style={{ ...contentBox, padding: '0.5rem 0.75rem', fontWeight: 500 }}>{topic}</div>
+            </div>
+          )}
+          {findings && (
+            <div>
+              <div style={sectionLabel}>Research Findings</div>
+              <div style={{ ...contentBox, whiteSpace: 'pre-wrap' }}>{findings}</div>
+            </div>
+          )}
+          {insights && insights.length > 0 && (
+            <div>
+              <div style={sectionLabel}>Key Insights ({insights.length})</div>
+              <div style={contentBox}>
+                {insights.map((insight, i) => (
+                  <div key={i} style={{
+                    display: 'flex',
+                    gap: '0.5rem',
+                    alignItems: 'flex-start',
+                    marginBottom: i < insights.length - 1 ? '0.5rem' : 0,
+                  }}>
+                    <span style={{
+                      width: 20,
+                      height: 20,
+                      borderRadius: '50%',
+                      backgroundColor: 'rgba(124,58,237,0.15)',
+                      color: '#7c3aed',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: '0.625rem',
+                      fontWeight: 700,
+                      flexShrink: 0,
+                    }}>
+                      {i + 1}
+                    </span>
+                    <span>{insight}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    case 'strategy': {
+      const angle = parsed.narrativeAngle as string | undefined;
+      const audience = parsed.targetAudience as string | undefined;
+      const messages = parsed.keyMessages as string[] | undefined;
+      const tone = parsed.tone as string | undefined;
+      const cta = parsed.callToAction as string | undefined;
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          <div style={sectionLabel}>Messaging Strategy</div>
+          <div style={contentBox}>
+            {angle && (
+              <div style={{ marginBottom: '0.625rem' }}>
+                <div style={{ fontSize: '0.6875rem', color: 'var(--color-text-disabled)', fontWeight: 600 }}>Narrative Angle</div>
+                <div style={{ fontWeight: 600, fontSize: '0.875rem' }}>{angle}</div>
+              </div>
+            )}
+            {audience && (
+              <div style={{ marginBottom: '0.625rem' }}>
+                <div style={{ fontSize: '0.6875rem', color: 'var(--color-text-disabled)', fontWeight: 600 }}>Target Audience</div>
+                <div>{audience}</div>
+              </div>
+            )}
+            {tone && (
+              <div style={{ marginBottom: '0.625rem' }}>
+                <div style={{ fontSize: '0.6875rem', color: 'var(--color-text-disabled)', fontWeight: 600 }}>Tone</div>
+                <div style={{ textTransform: 'capitalize' }}>{tone}</div>
+              </div>
+            )}
+            {messages && messages.length > 0 && (
+              <div style={{ marginBottom: '0.625rem' }}>
+                <div style={{ fontSize: '0.6875rem', color: 'var(--color-text-disabled)', fontWeight: 600, marginBottom: '0.25rem' }}>
+                  Key Messages
+                </div>
+                {messages.map((msg, i) => (
+                  <div key={i} style={{
+                    padding: '0.375rem 0.625rem',
+                    backgroundColor: 'rgba(14,165,233,0.08)',
+                    borderRadius: '0.375rem',
+                    marginBottom: '0.25rem',
+                    fontSize: '0.8125rem',
+                  }}>
+                    {msg}
+                  </div>
+                ))}
+              </div>
+            )}
+            {cta && (
+              <div>
+                <div style={{ fontSize: '0.6875rem', color: 'var(--color-text-disabled)', fontWeight: 600 }}>Call to Action</div>
+                <div style={{ fontWeight: 600, color: 'var(--color-primary)' }}>{cta}</div>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    case 'cinematic': {
+      const configs = parsed.configs as Array<Record<string, unknown>> | undefined;
+      const globalStyle = parsed.globalStyle as string | undefined;
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          <div style={sectionLabel}>Cinematic Design</div>
+          {globalStyle && (
+            <div style={{
+              ...contentBox,
+              padding: '0.5rem 0.75rem',
+              fontWeight: 600,
+              fontSize: '0.875rem',
+            }}>
+              Overall Style: {globalStyle}
+            </div>
+          )}
+          {configs?.map((cfg, i) => (
+            <div key={i} style={{
+              ...contentBox,
+              padding: '0.625rem 0.75rem',
+            }}>
+              <div style={{ fontWeight: 600, marginBottom: '0.375rem' }}>
+                Scene {cfg.sceneNumber as number}
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.25rem 0.75rem', fontSize: '0.75rem' }}>
+                {typeof cfg.shotType === 'string' && <><span style={{ color: 'var(--color-text-disabled)' }}>Shot</span><span>{cfg.shotType}</span></>}
+                {typeof cfg.lighting === 'string' && <><span style={{ color: 'var(--color-text-disabled)' }}>Lighting</span><span>{cfg.lighting}</span></>}
+                {typeof cfg.camera === 'string' && <><span style={{ color: 'var(--color-text-disabled)' }}>Camera</span><span>{cfg.camera}</span></>}
+                {typeof cfg.artStyle === 'string' && <><span style={{ color: 'var(--color-text-disabled)' }}>Style</span><span>{cfg.artStyle}</span></>}
+                {typeof cfg.filmStock === 'string' && <><span style={{ color: 'var(--color-text-disabled)' }}>Film Stock</span><span>{cfg.filmStock}</span></>}
+                {typeof cfg.focalLength === 'string' && <><span style={{ color: 'var(--color-text-disabled)' }}>Focal</span><span>{cfg.focalLength}</span></>}
+              </div>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    case 'thumbnails': {
+      const thumbnails = parsed.thumbnails as Array<{ sceneNumber: number; url: string }> | undefined;
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          <div style={sectionLabel}>Scene Thumbnails ({thumbnails?.length ?? 0})</div>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))',
+            gap: '0.625rem',
+          }}>
+            {thumbnails?.map((thumb, i) => (
+              <div key={i} style={{
+                borderRadius: '0.5rem',
+                overflow: 'hidden',
+                border: '1px solid var(--color-border-light)',
+              }}>
+                <Image
+                  src={thumb.url}
+                  alt={`Scene ${thumb.sceneNumber}`}
+                  width={260}
+                  height={146}
+                  unoptimized
+                  style={{
+                    width: '100%',
+                    height: 'auto',
+                    aspectRatio: '16/9',
+                    objectFit: 'cover',
+                    display: 'block',
+                  }}
+                />
+                <div style={{
+                  padding: '0.25rem 0.5rem',
+                  fontSize: '0.625rem',
+                  fontWeight: 600,
+                  color: 'var(--color-text-secondary)',
+                  backgroundColor: 'var(--color-bg-elevated)',
+                  textAlign: 'center',
+                }}>
+                  Scene {thumb.sceneNumber}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    case 'draft': {
+      const title = parsed.title as string | undefined;
+      const sceneCount = parsed.sceneCount as number | undefined;
+      const reviewLink = parsed.reviewLink as string | undefined;
+      const characterAssignments = parsed.characterAssignments as number | undefined;
+      return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          <div style={sectionLabel}>Storyboard Complete</div>
+          <div style={contentBox}>
+            {title && <div style={{ fontWeight: 600, fontSize: '0.9375rem', marginBottom: '0.5rem' }}>{title}</div>}
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
+              {sceneCount !== undefined && (
+                <span style={{
+                  fontSize: '0.6875rem',
+                  fontWeight: 600,
+                  padding: '0.1875rem 0.625rem',
+                  borderRadius: '9999px',
+                  color: '#059669',
+                  backgroundColor: 'rgba(5,150,105,0.1)',
+                }}>
+                  {sceneCount} scene{sceneCount !== 1 ? 's' : ''}
+                </span>
+              )}
+              {characterAssignments !== undefined && characterAssignments > 0 && (
+                <span style={{
+                  fontSize: '0.6875rem',
+                  fontWeight: 600,
+                  padding: '0.1875rem 0.625rem',
+                  borderRadius: '9999px',
+                  color: '#7c3aed',
+                  backgroundColor: 'rgba(124,58,237,0.1)',
+                }}>
+                  {characterAssignments} character{characterAssignments !== 1 ? 's' : ''}
+                </span>
+              )}
+            </div>
+            {reviewLink && (
+              <a
+                href={reviewLink}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '0.375rem',
+                  padding: '0.625rem 1rem',
+                  borderRadius: '0.5rem',
+                  backgroundColor: 'var(--color-primary)',
+                  color: '#fff',
+                  fontSize: '0.8125rem',
+                  fontWeight: 600,
+                  textDecoration: 'none',
+                }}
+              >
+                Open Storyboard &rarr;
+              </a>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    default:
+      return (
+        <CollapsibleSection title="Output (Result)">
+          {JSON.stringify(parsed, null, 2)}
+        </CollapsibleSection>
+      );
+  }
+}
+
+// ============================================================================
+// STEP DETAIL PANEL (RIGHT)
+// ============================================================================
+
 function StepDetailPanel({
   step,
   approvalStep,
@@ -158,7 +471,7 @@ function StepDetailPanel({
     );
   }
 
-  const dashboardLink = displayStep ? getDashboardLink(displayStep.toolName) : null;
+  const dashboardLink = displayStep ? getDashboardLink(displayStep.toolName, displayStep.toolResult) : null;
   const statusColor = displayStep ? getStepStatusColor(displayStep.status) : 'var(--color-text-disabled)';
 
   return (
@@ -306,16 +619,15 @@ function StepDetailPanel({
             </a>
           )}
 
-          {/* Collapsible input/output */}
+          {/* Rich output rendering */}
+          {displayStep.toolResult && (
+            <DetailOutputRenderer toolResult={displayStep.toolResult} />
+          )}
+
+          {/* Collapsible input */}
           {displayStep.toolArgs && Object.keys(displayStep.toolArgs).length > 0 && (
             <CollapsibleSection title="Input (Tool Args)">
               {JSON.stringify(displayStep.toolArgs, null, 2)}
-            </CollapsibleSection>
-          )}
-
-          {displayStep.toolResult && (
-            <CollapsibleSection title="Output (Result)">
-              {displayStep.toolResult}
             </CollapsibleSection>
           )}
         </div>
