@@ -1,7 +1,7 @@
 # SalesVelocity.ai - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** March 10, 2026 (Video Editor + Media Library + Jasper integration)
+**Last Updated:** March 15, 2026 (Hedra inline TTS fix + Campaign Orchestration Pipeline plan)
 **Branches:** `dev` (latest)
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Architecture:** Single-Tenant Penthouse Model (development strategy — multi-tenant SaaS product)
@@ -36,11 +36,11 @@
 
 | Metric | Count | Status |
 |--------|-------|--------|
-| Physical Routes (page.tsx) | 181 | Updated March 10, 2026 (+1 Video Editor) |
-| API Endpoints (route.ts) | 357 | Updated March 10, 2026 (+2 Media Library) |
+| Physical Routes (page.tsx) | 181 | Updated March 15, 2026 |
+| API Endpoints (route.ts) | 376 | Updated March 15, 2026 (verified by audit) |
 | AI Agents | 52 | **52 FUNCTIONAL (46 swarm + 6 standalone)** |
 | RBAC Roles | 4 | owner / admin / manager / member |
-| TypeScript Files | 1,531 | Verified March 6, 2026 |
+| TypeScript Files | 1,582 | Verified March 15, 2026 |
 | Firestore Collections | 80+ | Active |
 
 **Architecture:** Single-tenant Penthouse Model (development strategy). SalesVelocity.ai is a multi-tenant SaaS product — clients will purchase their own deployment. Penthouse simplifies development; multi-tenancy will be re-enabled.
@@ -59,7 +59,7 @@
 
 | Metric | Count |
 |--------|-------|
-| **TypeScript Files** | 1,531 |
+| **TypeScript Files** | 1,582 |
 | **Estimated Code Lines** | ~340,000 |
 | **Test Files (Jest + Playwright)** | 22 |
 
@@ -117,15 +117,43 @@ The Claude Code Governance Layer defines binding operational constraints for AI-
 ### Recent Major Milestones
 
 > All milestone details (Sessions 1-31) have been archived. Key achievements:
+> - **Hedra Video Fix** — Replaced 3-step TTS dance with inline `audio_generation`. Confirmed Kling O3 T2V produces speaking characters. hedra-node SDK rejected as outdated. Full system review completed. (March 15)
+> - **Campaign Orchestration Pipeline planned** — 4-layer plan for unified content orchestration: Jasper researches → strategizes → produces all content types → presents for review in Mission Control. CampaignDeliverable model designed. (March 15)
+> - **System-wide audit** — 1,582 files, 376 API routes, 0 `any` types, 0 TODOs, 0 security issues. Code quality rated excellent. (March 15)
 > - **Voice Lab & Custom Avatars** — Recording studio, voice library, avatar photo upload to Firestore `custom_avatars`, voice assignment, CUSTOM badges (March 6)
 > - **Lead Research AI upgrade** — Apollo free-tier org search, 8-tool AI chat with comprehensive system prompt, 5 tool rounds (March 6)
-> - **Apollo integration fixed** — Free-tier `/api/v1/organizations/search` endpoint, enrichment with 403 fallback (March 6)
-> - **Clay.com API key support** — Added to API keys page, key-mapping, service layer (REST API deprecated — webhook-only) (March 6)
-> - **Lead Research consolidation** — 4 tools → 1 page, 13 components, 5 API routes, leads tab nav fixed (March 5)
 > - Growth Command Center — 6 pages, 11 API routes, 3 crons (March 2)
 > - Production deployment to Vercel via main branch (Session 30)
 > - Nav consolidation: 13 sections → 9 (Sessions 25-27)
 > - All 36 features across 8 sprints built to production-ready (Sessions 20-24)
+
+### Video System Architecture (Updated March 15, 2026)
+
+- **Hedra is the sole video engine.** Two generation modes:
+  - **Prompt-only:** Kling O3 Standard T2V — generates speaking characters with native audio from text prompt. No portrait needed.
+  - **Avatar mode:** Character 3 — portrait + inline `audio_generation` for controlled lip-sync with exact script and voice.
+- **Inline TTS** replaces separate 3-step TTS dance. Single API call to Hedra.
+- **87 models available** (58 video, 29 image). Key lip-sync models: Character 3 (auto duration), Omnia (8s), Avatar (10min), VEED Fabric (5min).
+- **69 voices** including ElevenLabs, MiniMax, and custom clones via `type: "voice_clone"`.
+- **Character Studio** stores client characters in Firestore (portraits, voices, metadata). Hedra's element API is read-only via API key — custom characters must live in our system.
+- **Core business value:** Clients clone themselves (face + voice) to automate daily video content. Cinema-quality enterprise ads at a fraction of traditional cost.
+
+### Campaign Orchestration Pipeline (Planned — March 15, 2026)
+
+Next major feature. Jasper orchestrates full marketing campaigns:
+1. **Research** → competitor analysis, market data
+2. **Strategy** → positioning, messaging, audience
+3. **Content production** → blog, video (using client's AI clone), social posts, images, email
+4. **Unified review** → all deliverables in Mission Control with approve/reject/feedback per item
+5. **Auto-publish** → approved items schedule via existing social, blog, email integrations
+
+Implementation in 4 layers:
+- **Layer 1 (MVP):** CampaignDeliverable model + unified Mission Review page
+- **Layer 2:** Campaign model tying deliverables to shared brief/strategy
+- **Layer 3:** Auto-publish pipeline for approved content
+- **Layer 4:** Feedback loop — rejected items auto-return to Jasper for revision
+
+Full plan in `CONTINUATION_PROMPT.md`.
 
 ---
 

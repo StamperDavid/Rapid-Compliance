@@ -5,7 +5,7 @@
 ## Context
 Repository: https://github.com/StamperDavid/Rapid-Compliance
 Branch: dev
-Last Updated: March 13, 2026
+Last Updated: March 15, 2026
 
 ## Current State
 
@@ -30,7 +30,7 @@ Last Updated: March 13, 2026
 | **Stripe** | REAL — PaymentElement, 3DS, webhooks |
 | **Email** | REAL — SendGrid/Resend/SMTP (nodemailer), CAN-SPAM |
 | **Voice** | REAL — Twilio/Telnyx, ElevenLabs TTS |
-| **Video** | BROKEN — Hedra integration uses wrong models, characters don't speak (see Content Generator Rebuild below) |
+| **Video** | FIXED (March 15) — Inline `audio_generation` replaces 3-step TTS. Kling O3 T2V confirmed producing speaking characters. Character 3 for avatar mode with inline TTS. See Campaign Orchestration Pipeline below. |
 | **AI Gateway** | REAL — OpenRouter (100+ models) |
 | **Apollo** | REAL — Free-tier org search, enrichment |
 | **SEO/Growth** | REAL — DataForSEO, Serper, keyword tracking, competitor monitoring |
@@ -38,111 +38,173 @@ Last Updated: March 13, 2026
 
 ---
 
-## CONTENT GENERATOR REBUILD PLAN
+## VIDEO SYSTEM — FIXED (March 15, 2026)
 
-### Why This Is Needed
+### What Was Fixed
+- **hedra-service.ts**: Replaced 3-step TTS dance (generate → poll → attach `audio_id`) with inline `audio_generation` parameter. Single API call, Hedra handles TTS server-side.
+- **Kling O3 T2V confirmed working**: Produces speaking characters from prompt alone (verified by owner). No portrait needed for prompt-only mode.
+- **Character 3 avatar mode**: Uses portrait + inline TTS for controlled lip-sync with exact script.
+- **hedra-node SDK rejected**: Outdated (v0.1.2), points at legacy `mercury.dev.dream-ai.com`, missing model/resolution/duration control. Direct API is superior.
+- **Removed ~100 lines** of dead TTS polling code (`generateHedraTTS`, `waitForTTSCompletion`).
 
-The video generation integration was built on wrong assumptions about Hedra's API. The current system uses a third-party text-to-video model (Kling O3 T2V) for "prompt-only" mode, which does NOT do lip-sync — characters appear on screen but don't speak. Audio plays as background narration. The user has spent weeks and significant API credits debugging this.
+### Hedra API — Corrected Understanding
+- **Base URL:** `https://api.hedra.com/web-app/public` (generation, assets, models, voices)
+- **Elements API:** `https://api.hedra.com/web-app/elements` (read-only via API key — returns 156 stock characters/styles/environments/outfits)
+- **Element creation:** Requires JWT session auth, NOT available via API key. Custom characters must be stored in our Firestore.
+- **Voice cloning:** Available via `POST /generations { type: "voice_clone", voice_clone: { audio_id, name } }`
+- **87 models available:** 58 video, 29 image. Key lip-sync models: Character 3 (auto duration), Hedra Omnia (8s), Hedra Avatar (600s/10min), VEED Fabric (300s/5min), Omnihuman 1.5 (60s), Kling AI Avatar v2 (60s)
+- **69 voices** including ElevenLabs, MiniMax, and custom clones
+- **Inline TTS:** `audio_generation: { type: "text_to_speech", voice_id, text }` on video generation payload — confirmed working from Hedra's official starter code
+- **Two generation modes:** Prompt-only (Kling O3 T2V, native audio) and Character mode (Character 3 + portrait + inline TTS)
 
-Additionally, the content generator is incomplete compared to industry leaders (CapCut, Canva, Descript, InVideo). Missing: image generation UI, media library collections, CapCut-level video editor, auto-captions, brand kit, templates, and more.
-
-### What's Salvageable
-
-These systems are provider-agnostic and remain intact:
-- Pipeline UI (Request → Storyboard → Generation → Assembly → Post-Production)
-- Zustand pipeline store + localStorage persistence
-- Firestore project schema (PipelineProject, PipelineScene types)
-- FFmpeg assembly and post-production
-- Scene review workflow (approve/reject/feedback/regenerate)
-- Brand preference memory service
-- Avatar profile service (Firestore CRUD for character identities)
-- Video editor core (timeline, clips, undo/redo, DnD)
-- Media library base (Firestore CRUD, type/category system)
-- Voice Lab (AIMusicStudio, VoiceDesigner, VoiceLibrary, VoiceRecorderStudio)
-
-### What's Contaminated (18 files)
-
-**Complete rewrite (4 files):**
-- `src/lib/video/hedra-service.ts` — Wrong API, wrong models, wrong TTS flow
-- `src/lib/video/scene-generator.ts` — Prompt-only vs avatar branching is wrong
-- `src/lib/video/hedra-prompt-agent.ts` — System prompt says "characters don't speak"
-- `src/lib/video/hedra-prompt-translator.ts` — Prompt formatting built for Kling T2V
-
-**Significant refactor (6 files):**
-- `src/app/api/video/generate-scenes/route.ts` — Engine enum, default provider
-- `src/app/api/video/regenerate-scene/route.ts` — Same
-- `src/app/api/video/poll-scenes/route.ts` — Provider enum
-- `src/app/api/video/avatar-profiles/hedra-characters/route.ts` — Legacy `/elements` endpoint
-- `src/app/api/video/avatar-profiles/sync-hedra/route.ts` — Legacy character import
-- `src/lib/agents/content/video/specialist.ts` — handleRenderScenes passes wrong params
-
-**Minor type/enum fixes (8 files):**
-- `src/types/video-pipeline.ts` — VideoEngineId, VoiceProviderId enums
-- `src/lib/stores/video-pipeline-store.ts` — voiceProvider type
-- `src/app/(dashboard)/content/video/components/StepGeneration.tsx` — Engine display
-- `src/app/(dashboard)/content/video/components/AvatarPicker.tsx` — Source badges
-- `src/app/(dashboard)/content/video/components/VoicePicker.tsx` — Provider filter
-- `src/app/(dashboard)/content/video/components/HedraCharacterBrowser.tsx` — Legacy API
-- `src/lib/orchestrator/jasper-tools.ts` — Tool descriptions
-- `src/app/api/video/defaults/route.ts` — voiceProvider enum
+### What Still Needs Work
+- **hedra-prompt-agent.ts** — System prompt references "characters don't speak" (wrong — they do)
+- **hedra-prompt-translator.ts** — Prompt formatting could be improved for cinema-quality output
+- **Hedra prompting expertise** — Research best practices for Hedra prompt engineering, train the prompt agent to be an expert
+- **Voice cloning integration** — Wire `type: "voice_clone"` into Voice Lab so cloned voices are usable in video generation
+- **Test end-to-end** — Verify inline TTS works through the full pipeline (UI → API → Hedra → poll → display)
 
 ---
 
-### Phase 0: Hedra V1 SDK Validation (DO THIS FIRST)
+## CAMPAIGN ORCHESTRATION PIPELINE (Next Major Feature)
 
-**Purpose:** Determine whether to rebuild on the Hedra V1 SDK (`hedra-node` npm package) or fix the legacy API usage. This must be answered before any code is written.
+### Why This Is The Next Priority
 
-**The V1 SDK (`hedra-node` v0.1.2) offers:**
-- 1-call character generation (replaces 5-step asset upload + generation dance)
-- Inline TTS (`audioSource: 'tts'` + `text` + `voiceId` — no separate TTS generation step)
-- Text-to-character (`avatarImageInput: { prompt: "description" }` — no portrait upload needed)
-- Full TypeScript types
-- Auto-retry on rate limits
+Video generation is a **core revenue feature**. Clients create AI clones of themselves (face + voice) to automate daily video content at a fraction of traditional ad costs. They want cinema-quality enterprise ads without ever stepping in front of a camera after initial clone setup.
 
-**The V1 SDK risks:**
-- Uses different server: `mercury.dev.dream-ai.com` instead of `api.hedra.com` — API key may not work
-- No model selection (can't pick Character 3 vs Omnia vs Avatar)
-- No duration control (`duration_ms` not exposed)
-- No resolution control (`720p`/`1080p` not exposed)
-- Young package (v0.1.2, only 2 versions published)
+But video alone isn't enough. The real value is **full campaign orchestration**: Jasper researches a topic, builds a marketing strategy, then produces ALL content types (blog, video, social posts, images, email) — all prepared for review and approval in one place.
 
-**Validation steps:**
-1. `npm install hedra-node` in a test script (NOT in the main project yet)
-2. Test `client.voices.list()` — confirms API key works against V1 endpoint
-3. Test `client.characters.create()` with `audioSource: 'tts'` + text + voiceId — confirms character speaks
-4. Test `client.characters.create()` with `avatarImageInput: { prompt: "..." }` — confirms text-to-character works
-5. Test `client.projects.retrieve(jobId)` — confirms status polling + video URL retrieval
-6. Check output: Does the character actually lip-sync? What duration/resolution is the output?
-7. Compare quality/speed vs legacy API Character 3
+### The Vision
 
-**Decision gate:**
-- If SDK works and character speaks → **Rebuild on V1 SDK** (simpler, fewer moving parts)
-- If SDK fails or quality is worse → **Fix legacy API** (stop using Kling T2V, use Character 3 + `audio_generation` inline parameter for everything, test Omnia and Avatar models)
+```
+Client: "Research competitor X, then build a campaign around our advantages"
+         ↓
+    Jasper decomposes into a Campaign:
+         ↓
+    ┌─ Research (competitor analysis, market data)
+    ├─ Strategy (positioning, messaging, target audience)
+    ├─ Blog post (long-form thought leadership)
+    ├─ Video (character-driven ad using their AI clone)
+    ├─ Social posts (platform-specific variants)
+    ├─ Images (ad creatives, thumbnails)
+    └─ Email sequence (nurture campaign)
+         ↓
+    ALL land in Mission Review for approval
+         ↓
+    Client reviews each piece → approve / reject / feedback
+         ↓
+    Approved items auto-publish or schedule
+```
 
-**Alternative legacy API fix (if SDK doesn't work):**
-- Replace `PROMPT_T2V_MODEL_ID` (Kling O3) with Character 3 for ALL generations
-- Use `audio_generation` inline parameter instead of separate TTS step
-- For "no portrait" mode: use Hedra's image generation to create a portrait first, then pass to Character 3
-- Test Omnia model (full body, camera control, lip-sync, 8 sec) and Avatar model (up to 5 min)
+### What Exists Today
 
----
+| Component | Status | Location |
+|-----------|--------|----------|
+| Jasper delegation to agent teams | ✓ Working | `jasper-tools.ts` (73 tools) |
+| Mission persistence | ✓ Working | `mission-persistence.ts`, Firestore `missions/` |
+| Mission Control page | ✓ Working | `/mission-control` (3-panel: sidebar, timeline, detail) |
+| Mission step tracking | ✓ Working | `MissionStep` with status, toolName, delegatedTo |
+| Approval system (in-memory) | ✓ Working | `jasper-command-authority.ts` (PendingApproval) |
+| Social media approvals | ✓ Working | `approval-service.ts`, `/social/approvals` page |
+| Video storyboard review | ✓ Working | SceneProgressCard with approve/reject/feedback |
+| Review link routing | ✓ Working | `REVIEW_LINK_MAP` (16 tool→page mappings) |
+| Campaign ID on video projects | ✓ Partial | `VideoProject.campaignId` field exists, no lifecycle |
 
-### Phase 1: Fix Video Generator
+### What's Missing
 
-**Goal:** Characters speak their scripts. Every generated video has lip-synced speech.
+1. **Unified Campaign model** — No entity ties blog + video + social + email together as one campaign
+2. **Campaign Review page** — Each content type has isolated review. No single page to see all deliverables
+3. **Deliverable status tracking** — Mission steps track tool execution, not content review states
+4. **Cross-content approval gates** — Video has approve/reject, but blog/social/email don't have the same gate
+5. **Auto-publish pipeline** — Approved items don't automatically schedule/post
+6. **Feedback loop** — Rejected items don't go back to Jasper for revision automatically
 
-**Based on Phase 0 decision:**
+### Implementation Plan — 4 Layers
 
-**If V1 SDK:** Rewrite `hedra-service.ts` as thin wrapper around `hedra-node` client. Simplify `scene-generator.ts` to always use `client.characters.create()`. Remove prompt-only vs avatar branching (V1 API handles both). Update all 18 contaminated files.
+#### Layer 1: Unified Mission Review (MVP)
 
-**If Legacy API fix:** Replace Kling T2V with Character 3/Omnia/Avatar for all generations. Use `audio_generation` inline parameter. Generate portrait images from text when no avatar is selected (use Hedra's image generation models or DALL-E 3). Update prompt agent to describe characters that SPEAK. Update all 18 contaminated files.
+**Goal:** Single page where the client reviews ALL deliverables from a Jasper mission.
 
-**Verification:** Generate 3 test videos with different configurations:
-1. With a selected avatar (portrait + voice)
-2. Without an avatar (text prompt only — character must still speak)
-3. Multi-scene project (verify character consistency + all scenes have speech)
+**Data Model:**
+```typescript
+interface CampaignDeliverable {
+  id: string;
+  campaignId: string;
+  missionId: string;
+  type: 'blog' | 'video' | 'social_post' | 'image' | 'email' | 'research' | 'strategy';
+  title: string;
+  status: 'drafting' | 'pending_review' | 'approved' | 'rejected' | 'revision_requested' | 'published';
+  previewData: Record<string, unknown>;  // Type-specific preview content
+  reviewLink: string;                     // Deep link to full editor/viewer
+  feedback?: string;                      // Client's rejection notes
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+  approvedAt?: Timestamp;
+  approvedBy?: string;
+}
+```
 
-All 3 must produce lip-synced characters speaking the script text.
+**Firestore:** `organizations/{PLATFORM_ID}/campaigns/{campaignId}/deliverables/{deliverableId}`
+
+**UI Changes:**
+- Redesign Mission Control into a Campaign Review dashboard
+- Each deliverable = a card with inline preview + approve/reject/feedback buttons
+- Video card shows scene thumbnails, blog card shows title + excerpt, social shows post preview
+- "Approve All" button for when everything looks good
+- Review button in Jasper's chat navigates to Campaign Review (not video storyboard directly)
+
+**Jasper Changes:**
+- When Jasper delegates work, each tool result creates a `CampaignDeliverable` record
+- `produce_video` → creates video deliverable with `previewData: { projectId, sceneCount, scenes }`
+- `save_blog_draft` → creates blog deliverable with `previewData: { title, excerpt, wordCount }`
+- `social_post` → creates social deliverable with `previewData: { platform, copy, imageUrl }`
+- Jasper's response includes link to Campaign Review page, not individual tool pages
+
+#### Layer 2: Campaign Model
+
+**Goal:** Tie multiple deliverables together under one brief with shared strategy context.
+
+**Data Model:**
+```typescript
+interface Campaign {
+  id: string;
+  missionId: string;
+  brief: string;                    // Original client request
+  research?: Record<string, unknown>;  // Findings from research phase
+  strategy?: Record<string, unknown>;  // Positioning, messaging, audience
+  deliverables: string[];           // Deliverable IDs
+  status: 'researching' | 'strategizing' | 'producing' | 'pending_review' | 'approved' | 'published';
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+}
+```
+
+**Firestore:** `organizations/{PLATFORM_ID}/campaigns/{campaignId}`
+
+**Jasper Changes:**
+- Complex requests create a Campaign first, then populate deliverables
+- Research results stored on the Campaign, shared across all content generation
+- Strategy decisions (messaging, audience, tone) passed to every content tool
+
+#### Layer 3: Auto-Publish Pipeline
+
+**Goal:** Approved deliverables automatically schedule/post via existing integrations.
+
+- Blog approved → auto-publish to website builder or WordPress
+- Social approved → schedule via social posting system (Twitter/X, LinkedIn, etc.)
+- Email approved → queue in email sequence system
+- Video approved → upload to media library, generate platform-specific variants
+- Images approved → save to media library, attach to social posts
+
+#### Layer 4: Feedback Loop & Iteration
+
+**Goal:** Rejected items return to Jasper with notes for automatic revision.
+
+- Client rejects a deliverable with feedback text
+- System creates a new Jasper mission: "Revise [deliverable type] based on feedback: [notes]"
+- Jasper regenerates with the client's direction
+- New version appears in Campaign Review for re-approval
+- History of versions preserved (v1 rejected → v2 approved)
 
 ---
 
@@ -322,10 +384,12 @@ See `docs/single_source_of_truth.md` "Open Items" section for the full punch lis
 | `AGENT_REGISTRY.json` | AI agent configurations (52 agents) |
 | `src/lib/constants/platform.ts` | PLATFORM_ID and platform identity |
 | `src/lib/orchestrator/jasper-tools.ts` | Jasper's 50 function-calling tools |
-| `src/lib/video/hedra-service.ts` | **NEEDS REBUILD** — Hedra API integration (uses wrong models) |
-| `src/lib/video/scene-generator.ts` | **NEEDS REBUILD** — Scene generation orchestration |
-| `src/lib/video/hedra-prompt-agent.ts` | **NEEDS REBUILD** — AI prompt translation for Hedra |
-| `src/lib/video/hedra-prompt-translator.ts` | **NEEDS REBUILD** — Character metadata prompt injection |
+| `src/lib/video/hedra-service.ts` | **FIXED** — Inline `audio_generation`, removed 3-step TTS |
+| `src/lib/video/scene-generator.ts` | Working — prompt-only (Kling T2V) + avatar (Character 3) |
+| `src/lib/video/hedra-prompt-agent.ts` | Needs update — system prompt references wrong assumptions |
+| `src/lib/video/hedra-prompt-translator.ts` | Needs update — improve for cinema-quality prompts |
+| `src/lib/orchestrator/mission-persistence.ts` | Mission tracking — Campaign Orchestration Pipeline builds on this |
+| `src/lib/orchestrator/jasper-command-authority.ts` | Approval system — will be extended for Campaign deliverables |
 | `src/lib/video/avatar-profile-service.ts` | Character Studio — source, role, styleTag, dual TTS metadata |
 | `src/lib/video/brand-preference-service.ts` | Brand preference memory — approved/rejected prompts, style corrections |
 | `src/lib/ai/image-generation-service.ts` | DALL-E 3 service — exists but no UI, needs OpenRouter routing |
@@ -341,26 +405,26 @@ See `docs/single_source_of_truth.md` "Open Items" section for the full punch lis
 
 ---
 
-## Hedra API Reference (for rebuild)
+## Hedra API Reference (Corrected March 15, 2026)
 
-### Legacy API (current — broken)
+### Public API (current — working)
 - **Base URL:** `https://api.hedra.com/web-app/public`
 - **Auth:** `x-api-key` header
-- **Models used:** Character 3 (`d1dd37a3-e39a-4854-a298-6510289f9cf2`) for avatar mode, Kling O3 T2V (`b0e156da-da25-40b2-8386-937da7f47cc3`) for prompt-only — Kling does NOT lip-sync
-- **Available models that DO lip-sync:** Character 3 (5 sec clips), Omnia (8 sec, camera control, body motion), Avatar (up to 5 min uncut)
-- **TTS:** Currently separate 3-step process. Legacy API supports `audio_generation` inline parameter (not used).
-- **Generation type `video_with_audio`:** Exists but not used — designed for single-call speech + video.
+- **Models used:**
+  - **Prompt-only:** Kling O3 Standard T2V (`b0e156da...`) — generates speaking characters with native audio from text prompt. Up to 15s, 720p.
+  - **Avatar mode:** Character 3 (`d1dd37a3...`) — lip-synced talking head from portrait + inline TTS. Up to 1080p, auto duration.
+- **Inline TTS:** `audio_generation: { type: "text_to_speech", voice_id, text }` on video generation payload. Single API call — Hedra handles TTS server-side. Confirmed working from official starter code.
+- **Voice cloning:** `POST /generations { type: "voice_clone", voice_clone: { audio_id, name } }`
+- **Image generation:** `POST /generations { type: "image", ai_model_id, text_prompt }` — 29 image models available for portrait generation
+- **87 total models:** 58 video, 29 image. Key lip-sync models: Character 3 (auto), Omnia (8s), Avatar (10min), VEED Fabric (5min), Omnihuman 1.5 (60s)
+- **69 voices** including ElevenLabs, MiniMax, and custom clones
 
-### V1 SDK (`hedra-node` v0.1.2)
-- **Base URL:** `https://mercury.dev.dream-ai.com/api`
-- **Auth:** `X-API-Key` header (same key — needs validation)
-- **npm:** `hedra-node`
-- **Key methods:**
-  - `client.characters.create({ audioSource, voiceId, text, avatarImage?, avatarImageInput?, aspectRatio })` → `{ jobId }`
-  - `client.projects.retrieve(jobId)` → `{ status, videoUrl, progress, errorMessage }`
-  - `client.portraits.create({ file })` → `{ url }`
-  - `client.audio.create({ file })` → `{ url }`
-  - `client.voices.list()` → `{ supported_voices: [...] }`
-- **Voices:** Provider is `eleven` (ElevenLabs) or `cartesia` — not "hedra" branded
-- **Text-to-character:** `avatarImageInput: { prompt: "description", seed?: number }` — generates portrait from text
-- **Limitations:** No model selection, no duration control, no resolution control
+### Elements API (read-only via API key)
+- **Base URL:** `https://api.hedra.com/web-app/elements`
+- **Auth:** `x-api-key` header (read-only — returns PUBLIC stock elements only)
+- **156 stock elements:** 100+ characters, styles, environments, outfits
+- **Element creation:** Requires JWT session auth (web app login). NOT available via API key. This means custom characters must be stored in our Firestore Character Studio.
+- **Client character library is ours to own** — Hedra is the rendering engine, SalesVelocity is the character library.
+
+### V1 SDK — REJECTED
+- `hedra-node` v0.1.2 is outdated (last update July 2025), points at legacy `mercury.dev.dream-ai.com`, missing model/resolution/duration control, 104 downloads/month. Direct API integration is superior.
