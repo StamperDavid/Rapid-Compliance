@@ -43,8 +43,6 @@ Last Updated: March 15, 2026
 Hedra is the sole video engine. Inline `audio_generation` replaces 3-step TTS. Two modes: prompt-only (Kling O3 T2V) and avatar (Character 3 + portrait + inline TTS). 87 models, 69 voices. See `docs/single_source_of_truth.md` for full Hedra API reference.
 
 **Still needs work:**
-- `hedra-prompt-agent.ts` — system prompt references "characters don't speak" (wrong)
-- `hedra-prompt-translator.ts` — improve for cinema-quality prompts
 - Voice cloning integration — wire `type: "voice_clone"` into Voice Lab
 - End-to-end pipeline test (UI → API → Hedra → poll → display)
 
@@ -52,41 +50,34 @@ Hedra is the sole video engine. Inline `audio_generation` replaces 3-step TTS. T
 
 ## Campaign Orchestration Pipeline
 
-### Completed: Layers 1 + 2 (March 15, 2026)
+### Completed: Layers 1–4 (March 15, 2026)
 
-Campaign + CampaignDeliverable models built with full CRUD, API routes, Jasper integration, and Mission Control UI.
+Campaign + CampaignDeliverable models built with full CRUD, API routes, Jasper integration, Mission Control UI, auto-publish pipeline, and feedback loop.
 
 **What's built:**
-- `src/types/campaign.ts` — Campaign + CampaignDeliverable types with Zod schemas
-- `src/lib/campaign/campaign-service.ts` — Full Firestore CRUD (Admin SDK), auto-status promotion
+- `src/types/campaign.ts` — Campaign + CampaignDeliverable types with Zod schemas (incl. `publishedAt`, `revisionMissionId`)
+- `src/lib/campaign/campaign-service.ts` — Full Firestore CRUD (Admin SDK), auto-status promotion, auto-publish pipeline, feedback loop
 - 4 API routes: `/api/campaigns`, `/api/campaigns/[campaignId]`, `/api/campaigns/[campaignId]/deliverables`, `/api/campaigns/[campaignId]/deliverables/[deliverableId]`
 - `create_campaign` Jasper tool — creates campaigns for multi-content requests
 - `produce_video`, `save_blog_draft`, `social_post` accept `campaignId` and auto-register deliverables
 - Campaign Review UI at `/mission-control?campaign={id}` — deliverable cards with approve/reject/feedback, "Approve All", progress bar
 - Jasper system prompt updated with campaign orchestration instructions
 
+**Layer 3 — Auto-Publish Pipeline (wired into `updateDeliverable()`):**
+- Blog approved → blog post status updated from 'draft' to 'published' in Firestore
+- Social post approved → posted via `AutonomousPostingAgent` (skips if already posted via actionId)
+- Video approved → saved to media library if `videoUrl` in previewData
+- Image approved → saved to media library
+- Deliverable status auto-promoted to 'published'; campaign to 'published' when all deliverables published
+
+**Layer 4 — Feedback Loop (wired into `updateDeliverable()`):**
+- Rejected/revision_requested with feedback → auto-creates Jasper revision mission via `mission-persistence.ts`
+- Mission includes original previewData + client feedback + campaignId for same-campaign delivery
+- `revisionMissionId` linked back to the rejected deliverable
+
 **Firestore:**
 - `organizations/{PLATFORM_ID}/campaigns/{campaignId}` — Campaign docs
 - `organizations/{PLATFORM_ID}/campaigns/{campaignId}/deliverables/{deliverableId}` — Deliverable docs
-
-### Next: Layer 3 — Auto-Publish Pipeline
-
-**Goal:** Approved deliverables automatically schedule/post via existing integrations.
-
-- Blog approved → auto-publish to website builder
-- Social approved → schedule via social posting system (Twitter/X, LinkedIn)
-- Email approved → queue in email sequence system
-- Video approved → upload to media library
-- Images approved → save to media library, attach to social posts
-
-### Next: Layer 4 — Feedback Loop & Iteration
-
-**Goal:** Rejected items return to Jasper with notes for automatic revision.
-
-- Client rejects a deliverable with feedback text
-- System creates a new Jasper mission: "Revise [deliverable type] based on feedback: [notes]"
-- Jasper regenerates, new version appears in Campaign Review
-- Version history preserved (v1 rejected → v2 approved)
 
 ---
 

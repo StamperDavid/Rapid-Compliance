@@ -1,7 +1,7 @@
 # SalesVelocity.ai - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** March 15, 2026 (Campaign Orchestration Pipeline Layer 1+2 implemented)
+**Last Updated:** March 15, 2026 (Campaign Pipeline Layers 3+4 complete, video prompt fixes)
 **Branches:** `dev` (latest)
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Architecture:** Single-Tenant Penthouse Model (development strategy — multi-tenant SaaS product)
@@ -136,9 +136,10 @@ The Claude Code Governance Layer defines binding operational constraints for AI-
 - **87 models available** (58 video, 29 image). Key lip-sync models: Character 3 (auto duration), Omnia (8s), Avatar (10min), VEED Fabric (5min).
 - **69 voices** including ElevenLabs, MiniMax, and custom clones via `type: "voice_clone"`.
 - **Character Studio** stores client characters in Firestore (portraits, voices, metadata). Hedra's element API is read-only via API key — custom characters must live in our system.
+- **Prompt pipeline:** `hedra-prompt-agent.ts` and `hedra-prompt-translator.ts` updated March 15 — correct inline TTS field structure enforced, cinema-quality prompt generation for both avatar and T2V modes.
 - **Core business value:** Clients clone themselves (face + voice) to automate daily video content. Cinema-quality enterprise ads at a fraction of traditional cost.
 
-### Campaign Orchestration Pipeline (Layers 1+2 DONE — March 15, 2026)
+### Campaign Orchestration Pipeline (Layers 1–4 DONE — March 15, 2026)
 
 Jasper orchestrates full marketing campaigns: research → strategy → produce all content → unified review.
 
@@ -150,9 +151,9 @@ Jasper orchestrates full marketing campaigns: research → strategy → produce 
 - Campaign Review UI at `/mission-control?campaign={id}` — deliverable cards, approve/reject/feedback, "Approve All", progress bar
 - Firestore: `organizations/{PLATFORM_ID}/campaigns/{campaignId}` + `.../deliverables/{deliverableId}`
 
-**Remaining:**
-- **Layer 3:** Auto-publish pipeline (approved items auto-post via social, blog, email integrations)
-- **Layer 4:** Feedback loop (rejected items return to Jasper for revision with version history)
+**Built (Layers 3+4):**
+- **Layer 3 — Auto-Publish Pipeline:** Approved deliverables auto-publish: blog drafts → published post, social → posted via social agent, video/image → saved to media library. Zero manual steps after approval.
+- **Layer 4 — Feedback Loop:** Rejected deliverables with reviewer feedback auto-create revision missions via `mission-persistence.ts`. Each rejection spawns a new tracked mission so Jasper iterates until approval.
 
 ---
 
