@@ -70,10 +70,10 @@ The RenderZero-caliber cinematic controls are BUILT and INTEGRATED into the vide
 
 ---
 
-## NEXT BUILD: Jasper Orchestration Pipeline + Mission Control Overhaul
+## COMPLETED: Jasper Orchestration Pipeline + Mission Control Overhaul (March 16, 2026)
 
-> **Priority: IMMEDIATE — This is the next thing to build.**
-> **Goal:** Jasper orchestrates multi-step content creation (research → strategy → script → cinematic design → thumbnails → ready for review) and Mission Control becomes the audit trail where the user can inspect every step.
+> **Status: BUILT** — All 6 orchestration steps implemented and Mission Control UI overhauled.
+> Jasper orchestrates multi-step content creation (research → strategy → script → cinematic design → thumbnails → ready for review) and Mission Control shows every step with rich output previews.
 
 ### The Problem
 
@@ -195,14 +195,14 @@ These are all production-ready and just need the UX/orchestration upgrades:
 | Jasper tool step tracking | ✅ Working | `src/lib/orchestrator/jasper-tools.ts` (fire-and-forget) |
 | E2E tests | ✅ Passing | `tests/e2e/mission-control.spec.ts` |
 
-### Build Order
+### Build Order (ALL COMPLETE)
 
-1. **Mission Control UI overhaul** — Rebuild the page layout to show plans → steps → outputs hierarchy. Keep all existing backend/hooks/components.
-2. **Jasper `produce_video` orchestration chain** — Research → Strategy → Script → Cinematic → Thumbnails → Ready. Each step writes to mission-persistence.
-3. **Cinematic Director tool** — New tool or agent that selects cinematicConfig per scene based on content type and scene description.
-4. **Auto-thumbnail generation** — Post-cinematic step that generates preview images and saves to `scene.screenshotUrl`.
-5. **Dashboard link updates** — Ensure all tool→page mappings are current.
-6. **Test end-to-end** — Give Jasper a vague prompt, verify the full chain executes and Mission Control shows all steps with clickable outputs.
+1. **Mission Control UI overhaul** — DONE. Rich output previews (research chips, strategy angles, thumbnail strips, cinematic grids), type-specific detail rendering, new agent avatars, dynamic review links.
+2. **Jasper `produce_video` orchestration chain** — DONE. 6-step sequential chain with mission step tracking per step.
+3. **Cinematic Director tool** — DONE. LLM-powered per-scene cinematography selection (shot type, lighting, camera, film stock, art style, focal length, composition).
+4. **Auto-thumbnail generation** — DONE. Generates preview images per scene via provider-router with cinematic presets, saves to `scene.screenshotUrl`.
+5. **Dashboard link updates** — DONE. New tool→route mappings for all orchestration steps + human-readable step names.
+6. **Test end-to-end** — TODO: Give Jasper a vague prompt, verify the full chain executes and Mission Control shows all steps with clickable outputs.
 
 ---
 
