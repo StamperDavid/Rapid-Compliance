@@ -84,337 +84,233 @@ Campaign + CampaignDeliverable models built with full CRUD, API routes, Jasper i
 
 ---
 
-## NEXT BUILD: AI Creative Studio (RenderZero-Caliber)
+## NEXT BUILD: Cinematic Content Engine (RenderZero-Caliber)
 
 > **Priority: IMMEDIATE — This is the next thing to build.**
 > **Inspiration:** RenderZero AI Studio — professional cinematic AI image/video generation with deep creative controls.
-> **Goal:** Web-native equivalent inside SalesVelocity.ai that matches or exceeds RenderZero's desktop app.
+> **Goal:** Integrate RenderZero-caliber cinematic controls INTO the existing SalesVelocity.ai content system — not as a bolt-on, but woven into Video Studio, Jasper, campaigns, and the media library.
 
 ### Why This Matters
 
-The current Video Studio is prompt-only — users type text and hope. RenderZero gives creators actual cinematic controls: camera bodies, lighting setups, film stocks, movie looks, consistent characters, multi-angle generation. We need this level of creative control built into our platform as a web-native experience.
+The current content system is prompt-only — users type text and hope. RenderZero gives creators actual cinematic controls: camera bodies, lighting setups, film stocks, movie looks, consistent characters, multi-angle generation. We need this level of creative control integrated directly into the tools our users already use.
 
 **Style capabilities required:** Photorealistic cinema, Pixar/3D animation, anime/manga, stylized illustration, comic book, watercolor, oil painting, low-poly, isometric, retro/vintage, cyberpunk, fantasy, noir — the full spectrum. Users pick a style and the system handles the prompt engineering.
 
-### Architecture Overview
+### Architecture Overview — INTEGRATION-FIRST
 
-**Route:** `/content/studio` — The AI Creative Studio
-**Relationship to Video Studio:** The Creative Studio is the **generation engine** (images + video with cinematic controls). The existing Video Studio (`/content/video`) remains for the 5-step storyboard pipeline but will use the Creative Studio's generation backend instead of raw Hedra calls.
+This is NOT a separate app. The cinematic engine is a **shared service layer** consumed by multiple existing features:
+
+| Consumer | How It Uses the Cinematic Engine |
+|----------|--------------------------------|
+| **Video Studio** (`/content/video`) | Per-scene cinematic controls in the storyboard. Scene generation uses `buildPromptFromPresets()` instead of raw text. |
+| **Image Generation** (`/content/studio`) | New page — the standalone image generation UI that was missing. Uses full cinematic controls. |
+| **Jasper** (`produce_video`, `create_image`) | Jasper selects cinematic presets programmatically when creating content. Asks clarifying questions before generating. |
+| **Campaign deliverables** | Images and videos created with cinematic controls auto-register as campaign deliverables. |
+| **Media Library** | All generated content saves to existing media library. |
+| **Character Studio** | Upgrades the existing Hedra avatar/character system — not a parallel system. |
+| **Script Generation** (`script-generation-service.ts`) | AI script writer outputs per-scene cinematic recommendations, not just dialogue. |
+
+**Shared Components (reusable across pages):**
+- `CinematicControlsPanel` — The numbered sections UI (Subject, Lighting, Camera, Style, Elements). Embeddable in any page.
+- `VisualPresetPicker` — The visual grid modal with preview thumbnails + search. Used by all preset selectors.
+- `ConstructedPromptDisplay` — Live-updating prompt preview. Shows exactly what will be sent.
+- `RenderQueuePanel` — Background generation queue with status tracking.
+- `CharacterPicker` — Character selection with face/outfit/object/scene slots.
 
 ### Phase 1: Cinematic Preset Engine + Types
 
-**Goal:** Build the data layer — all 200+ presets with prompt mappings, plus TypeScript types.
+**Goal:** Build the data layer — all 200+ presets with prompt mappings, plus TypeScript types. This is the foundation that everything else consumes.
 
 **Files to create:**
 - `src/types/creative-studio.ts` — All types:
   ```typescript
-  // Core types needed:
   CinematicPreset        // { id, name, category, promptFragment, thumbnail, tags }
-  PresetCategory         // 'camera' | 'lighting' | 'filmStock' | 'movieLook' | 'style' | 'composition'
+  PresetCategory         // 'camera' | 'lighting' | 'filmStock' | 'movieLook' | 'style' | 'composition' | 'shotType' | 'focalLength' | 'lensType' | 'filter'
+  ShotType               // { id, name, promptFragment, thumbnail } — 25 options
+  ViewingDirection       // 'front' | 'back' | 'left' | 'right'
   StudioGeneration       // { id, prompt, presets, provider, model, result, cost, createdAt }
-  CharacterProfile       // { id, name, faceRefs[], clothingDesc, personality, voice, style }
+  CharacterProfile       // { id, name, faceRefs[], outfitRefs[], objectRef?, sceneRef?, physicalDesc, voice, style }
   ProviderConfig         // { provider, apiKey, models[], capabilities, costPerUnit }
-  GenerationRequest      // { prompt, presets, provider, model, size, quality, style, character? }
+  GenerationRequest      // { prompt, presets, provider, model, size, quality, style, characters?, referenceImages? }
   GenerationResult       // { id, url, revisedPrompt, provider, model, cost, metadata }
-  StylePreset            // { id, name, category, promptModifier, exampleThumbnail }
+  CinematicConfig        // { shotType?, viewingDirection?, lighting?, camera?, focalLength?, lensType?, filmStock?, movieLook?, photographerStyle?, filters?, aspectRatio?, temperature?, atmosphere? }
+  SceneGenerationConfig  // extends CinematicConfig — adds scriptText, avatarId, voiceId (used by Video Studio per-scene)
   ```
 
-- `src/lib/ai/cinematic-presets.ts` — The preset library:
-  - **49 Camera Bodies:** ARRI Alexa 65, RED V-Raptor, Sony Venice, Panavision Millennium, Canon C500, Blackmagic URSA, IMAX 70mm, Aaton Penelope, etc. Each maps to prompt language (e.g., "shot on ARRI Alexa 65, shallow depth of field, organic highlight rolloff")
-  - **43 Lighting Setups:** Chiaroscuro, Rembrandt, butterfly, split, loop, broad, short, golden hour, blue hour, neon noir, studio 3-point, moonlight, candlelight, overcast soft, backlit silhouette, ring light, Fresnel spot, etc.
-  - **30 Film Stocks:** Kodak Portra 400, Kodak Ektar 100, Fuji Velvia 50, Fuji Pro 400H, CineStill 800T, Kodak Vision3 500T, Kodak Tri-X 400, Ilford HP5, Kodak Gold 200, etc.
-  - **100+ Movie Looks:** "Blade Runner 2049", "Wes Anderson Grand Budapest", "Christopher Nolan IMAX", "Roger Deakins naturalistic", "Spielberg warm", "Kubrick symmetry", "Denis Villeneuve sci-fi", "Coen Brothers midwest", "Tarantino grindhouse", etc.
+- `src/lib/ai/cinematic-presets.ts` — The preset library (RenderZero's exact preset catalog + our additions):
+  - **25 Shot Types:** Bird's Eye, Close Up, Cutaway, Dutch Angle, Establishing Shot, Extreme Close Up, Group Shot, High Angle, Low Angle, Medium Shot, Over The Shoulder, Overhead, Sniper Shot, Three Quarter Body, Tight Headshot, Wide Shot, Worm's Eye View, etc.
+  - **49 Camera Bodies:** ARRI Alexa 65, Sony Venice, RED Digital Cinema, Canon C300, Hasselblad X1D, Panavision Panaflex, 8mm/16mm/35mm Film Camera, Aaton ATX, Canon EOS 5D, Fujifilm X-T4, GoPro Hero, iPhone Pro, Kodak Brownie, Leica M3, Nikon F2, Polaroid 600, Rolleiflex, VHS Camera, Webcam, Security Camera, Doorbell Cam, Old Android Phone, Compact Camera, etc.
+  - **9 Focal Lengths:** 8mm Fisheye, 14mm Ultra Wide, 24mm Wide Angle, 35mm Wide, 50mm Standard, 85mm Portrait, 100mm Macro, 200mm Super Telephoto, 300mm Extreme Telephoto
+  - **12 Lens Types:** Anamorphic Cinema, Dioptic (Infrared), Fisheye, Helios 44-2 Swirly Bokeh, Holga Style, Lensbaby/Selective Focus, Macro, Petzval Portrait, Soft Focus Portrait, Tilt-Shift, Toy Plastic, Voigtlander Nokton 50mm
+  - **43 Lighting Setups:** Backlighting/Rim Light, Blue Hour, Bounce, Broad, Candlelight, Chiaroscuro, Color Gels, Direct Flash, Diffuse (UGC), Golden Hour, Hard Lighting, Low Key, Neon, Product Side Key, Ring Light, Rim and Soft Fill, Softbox Key, Top Down Flat Lay, etc.
+  - **30 Film Stocks:** Agfa Vista, CineStill 100, CineStill 800T, Ektachrome E100, Ektar 100, Fuji Acros 100, Fuji Pro 400H, Fuji Superia 400, Fujicolor Pro, Ilford Delta, Ilford HP5 Plus, Ilford XP2 Super, Kodachrome 64, Kodak Gold 200, Kodak Portra 400, Kodak Tri-X 400, Kodak Ultramax 400, Kodak Vision3 500T, etc.
+  - **19 Photographer Styles:** 7th Era, Alberto Seveso, Alec Soth, Alin Palander, Alex Strohl, Alex Webb, Alfred Stieglitz, Ando Fuchs, North Borders, etc.
+  - **100+ Movie Looks:** Annihilation, Apocalypse Now, Arrival, Ash vs Evil Dead, Avatar, Back to the Future, Beetlejuice, Ben-Hur, Black Hawk Down, Blade Runner, Blade Runner 2049, Casablanca, Children of Men, Chinatown, City of God, Cleopatra, Collateral, Conan the Barbarian, Crouching Tiger, etc.
+  - **40+ Filters/Effects (stackable):** Black and White, Ice Mist Filter, Bloom Glow, Bokeh, Chromatic Aberration, Collage Cutout, Color Filter, Cross-Processed, CRT Scanlines, Cyanotype, Datamosh Glitch, Desaturated Grunge, Dreamy Haze, Duotone, Film Grain, Glitch Style, HDR Tone Mapping, etc.
   - **20+ Art Styles:** Photorealistic, Pixar/3D animation, anime (Ghibli, Makoto Shinkai, shonen), comic book (Marvel, manga), watercolor, oil painting, digital illustration, low-poly, isometric, cyberpunk, fantasy concept art, noir, retro pixel art, art nouveau, pop art, etc.
-  - **15+ Composition Presets:** Rule of thirds, golden ratio, symmetrical, Dutch angle, bird's eye, worm's eye, leading lines, frame within frame, negative space, etc.
+  - **15+ Compositions:** Rule of thirds, golden ratio, symmetrical, Dutch angle, bird's eye, worm's eye, leading lines, frame within frame, negative space, etc.
+  - **Genre Presets (full configs):** Post-Apocalyptic Film, War Film, Romantic Comedy, Found Footage (Cell Phone), Found Footage (VHS), Dark Fantasy, 80s Teen Drama, 70s Gritty Crime Drama, 60s New Wave Romance, YouTube Documentary, Hollywood Blockbuster, Spaghetti Western, 60s Historical Epic, Technicolor Movie, Modern Crime Drama, Modern Sci-Fi Film, Luxury Video
 
 - `src/lib/ai/cinematic-presets.ts` — Export functions:
   ```typescript
   getPresetsByCategory(category: PresetCategory): CinematicPreset[]
   getPresetById(id: string): CinematicPreset | null
-  buildPromptFromPresets(basePrompt: string, presets: CinematicPreset[]): string
-  getStylePresets(): StylePreset[]
+  buildPromptFromPresets(basePrompt: string, config: CinematicConfig): string
+  buildPromptFromConfig(config: SceneGenerationConfig): string  // For Video Studio scenes
+  getGenrePresets(): GenrePreset[]  // Full config combos (War Film, Noir, etc.)
   searchPresets(query: string): CinematicPreset[]
+  getRecommendedPresets(context: { videoType?: string, platform?: string, audience?: string }): CinematicConfig  // AI agent uses this
   ```
 
-**Validation:** Each preset has a `promptFragment` that gets injected into the generation prompt. `buildPromptFromPresets()` combines base prompt + camera + lighting + film stock + look + style + composition into a single optimized prompt.
+**Validation:** Each preset has a `promptFragment` that gets injected into the generation prompt. `buildPromptFromPresets()` combines base prompt + all selected presets into a single optimized prompt. Handles conflicts (e.g., digital camera + film stock → warns or auto-resolves).
 
-### Phase 2: Multi-Provider Backend
+### Phase 2: Multi-Provider Backend + Shared Components
 
-**Goal:** Provider router that sends generation requests to the right API based on user selection or auto-routing.
+**Goal:** Provider router + reusable UI components that every content page can embed.
 
-**Files to create:**
-- `src/lib/ai/provider-router.ts` — Provider orchestration:
+**Provider Services:**
+- `src/lib/ai/provider-router.ts` — Routes generation requests to the right API:
   ```typescript
-  // Supported providers:
   type StudioProvider = 'fal' | 'google' | 'openai' | 'hedra' | 'kling'
-
-  // Router functions:
   routeGeneration(request: GenerationRequest): Promise<GenerationResult>
   getAvailableProviders(): Promise<ProviderConfig[]>
-  getProviderStatus(provider: StudioProvider): Promise<{ available: boolean, latency?: number }>
-  autoSelectProvider(request: GenerationRequest): StudioProvider
+  autoSelectProvider(request: GenerationRequest): StudioProvider  // Expert engine selection
+  getProviderCostEstimate(provider: StudioProvider, model: string, resolution: string): number
   ```
 
-- `src/lib/ai/providers/fal-provider.ts` — Fal.ai integration:
-  - Flux Pro, Flux Schnell (fast), SDXL, Stable Diffusion 3
-  - Text-to-image + image-to-image
-  - REST API with queue-based async generation
-  - Docs: https://fal.ai/docs
+- `src/lib/ai/providers/fal-provider.ts` — Fal.ai (Flux, SDXL): fast iteration, stylized, anime, concept art
+- `src/lib/ai/providers/google-ai-provider.ts` — Google AI Studio (Imagen 3): photorealistic, natural
+- `src/lib/ai/providers/kling-provider.ts` — Kling 3.0: cinematic video, complex camera movements
+- Refactor `src/lib/ai/image-generation-service.ts` — Existing DALL-E 3 becomes one provider in the router
+- `src/lib/ai/cost-tracker.ts` — Per-generation cost logging to Firestore
 
-- `src/lib/ai/providers/google-ai-provider.ts` — Google AI Studio:
-  - Gemini image generation (Imagen 3)
-  - Text-to-image
-  - REST API
-  - Docs: https://ai.google.dev/docs
+**Shared UI Components** (reusable across pages):
+- `src/components/studio/CinematicControlsPanel.tsx` — The numbered sections form (01–05). Accepts `onChange(config: CinematicConfig)` callback. Embeddable in Video Studio scene editor, image generation page, or anywhere.
+- `src/components/studio/VisualPresetPicker.tsx` — Visual grid modal with preview thumbnails + search/filter. Used for ALL preset categories. Takes `category`, `onSelect`, `selected` props.
+- `src/components/studio/ConstructedPromptDisplay.tsx` — Live-updating prompt preview box. Shows assembled prompt + Save Preset / Edit / Copy / Reset buttons.
+- `src/components/studio/RenderQueuePanel.tsx` — Background generation queue showing pending/processing/completed jobs.
+- `src/components/studio/CharacterElementsTool.tsx` — Character slots (up to 4) with Face/Outfit/Object/Scene drop zones, Single/Stitch mode, Character Library button, Global Reference, Additional Reference Images (up to 14).
+- `src/components/studio/GenerateEditToggle.tsx` — Generate vs Edit (Inpaint) mode toggle with Narrative Angle Prompting option.
 
-- `src/lib/ai/providers/kling-provider.ts` — Kling 3.0 direct:
-  - Text-to-video, image-to-video
-  - High-quality cinematic video
-  - REST API (via kie.ai or direct)
-
-- Update `src/lib/ai/image-generation-service.ts` — Refactor existing DALL-E 3 service to use provider router
-
-- `src/lib/ai/cost-tracker.ts` — Cost logging:
-  ```typescript
-  logGeneration(generation: StudioGeneration): Promise<void>
-  getCostSummary(period: 'day' | 'week' | 'month'): Promise<CostSummary>
-  getProjectCost(projectId: string): Promise<number>
-  getBudgetStatus(): Promise<{ spent: number, budget: number, remaining: number }>
-  ```
-
-**API routes to create:**
+**API routes:**
 - `POST /api/studio/generate` — Submit generation request (routes to provider)
 - `GET /api/studio/generate/[generationId]` — Poll generation status
 - `GET /api/studio/providers` — List available providers + status
 - `POST /api/studio/providers/validate` — Test a provider API key
 - `GET /api/studio/cost` — Cost dashboard data
-- `GET /api/studio/presets` — List all presets (with category filter)
-- `GET /api/studio/presets/search` — Search presets
+- `GET /api/studio/presets` — List presets (with category filter + search)
+- `POST /api/studio/presets` — Save custom user preset to Firestore
+- `GET /api/studio/characters` — List characters
+- `POST /api/studio/characters` — Create/update character
 
 **BYOK Key Management:**
 - Keys stored in existing Firestore `settings/api-keys` system
 - New key slots: `fal`, `google-ai-studio`, `kling`
 - Settings UI at `/settings/api-keys` already exists — just add new provider cards
 
-### Phase 3: Studio UI — Image Generation
+### Phase 3: Integration Points — Where Cinematic Controls Appear
 
-**Goal:** The main creative workspace UI. This is the flagship experience.
+**This is where it all comes together.** The cinematic engine is NOT a standalone page — it surfaces in multiple existing features:
 
-**File to create:** `src/app/(dashboard)/content/studio/page.tsx`
+#### 3A. Image Generation Page (`/content/studio`)
+New page — fills the gap where image generation UI was missing. This is the closest to RenderZero's layout:
 
-**Layout (3-panel):**
+**Layout:** Left panel (CinematicControlsPanel) + Right panel (ConstructedPromptDisplay + model/resolution/cost + Queue buttons + Primary Render + Scene Variations grid)
 
-```
-┌─────────────────────────────────────────────────────────┐
-│  TOOLBAR: Style selector, Provider picker, Manual mode  │
-├──────────────┬──────────────────────┬───────────────────┤
-│              │                      │                   │
-│  CONTROLS    │    CANVAS/PREVIEW    │    HISTORY        │
-│              │                      │                   │
-│  • Prompt    │  [Generated Image]   │  • Recent gens    │
-│  • Camera    │                      │  • Thumbnails     │
-│  • Lighting  │  [Compare / Zoom]    │  • Re-use params  │
-│  • Film Stock│                      │  • Favorites      │
-│  • Movie Look│  [Animate button]    │  • Cost per gen   │
-│  • Style     │                      │                   │
-│  • Character │                      │                   │
-│  • Size/Res  │                      │                   │
-│              │                      │                   │
-├──────────────┴──────────────────────┴───────────────────┤
-│  BATCH BAR: Queue multiple variations, multi-angle gen  │
-└─────────────────────────────────────────────────────────┘
-```
+Uses ALL shared components. Saves generated images to existing Media Library. "Send to Campaign" registers as campaign deliverable. "Send to Storyboard" creates Video Studio project.
 
-**Left Panel — Controls:**
-- **Prompt textarea** — Main creative input (with token count)
-- **Style Picker** — Visual grid of art styles (photorealistic, Pixar, anime, etc.) with preview thumbnails
-- **Camera dropdown** — 49 camera bodies, grouped by manufacturer
-- **Lighting dropdown** — 43 setups, grouped by type (dramatic, natural, studio, creative)
-- **Film Stock dropdown** — 30 stocks, grouped by brand (Kodak, Fuji, Ilford, CineStill, digital)
-- **Movie Look dropdown** — 100+ looks, searchable, with director/film reference
-- **Composition dropdown** — 15+ composition rules
-- **Character selector** — Pick from Character Library or create new
-- **Size/Resolution** — Aspect ratio (16:9, 9:16, 1:1, 4:3, 21:9) + resolution
-- **Quality** — Standard / HD / Ultra
-- **Provider** — Auto (best for style) or manual selection
-- **Negative prompt** — What to exclude (collapsible)
+#### 3B. Video Studio Scene Editor (upgrade `/content/video`)
+Each scene in the existing storyboard gets a **collapsible "Cinematic Settings" panel** using `CinematicControlsPanel`. When the user edits a scene, they see:
+- The existing script text + visual description fields
+- NEW: Cinematic controls (shot type, lighting, camera, style) embedded right there
+- The `SceneGenerationConfig` includes both the script AND cinematic selections
+- `buildPromptFromConfig()` assembles the full prompt for Hedra/Kling
 
-**Center Panel — Canvas:**
-- Large preview of generated image
-- Zoom / pan controls
-- Before/after comparison (for iterations)
-- "Animate This" button → sends to video generation (Phase 5)
-- "Send to Campaign" button → creates deliverable
-- "Save to Media Library" button
-- Download button (original resolution)
+This replaces the current raw-prompt approach in `scene-generator.ts` and `hedra-prompt-agent.ts`.
 
-**Right Panel — History:**
-- Scrollable grid of all generations (this session + past)
-- Each thumbnail shows: preview, provider icon, cost badge
-- Click to re-load parameters (prompt + all presets)
-- Favorite / unfavorite
-- Delete
-- "Use as reference" (for img2img / character consistency)
+#### 3C. Jasper Tool Integration
+Update existing Jasper tools + add new ones:
+- **Update `produce_video`** — Jasper selects cinematic presets per-scene when creating storyboards. Uses `getRecommendedPresets()` to pick appropriate settings based on video type, platform, and audience.
+- **New `create_image`** — Generate image with full cinematic config. Accepts cinematicConfig param.
+- **Update script generation** — `script-generation-service.ts` outputs per-scene cinematic recommendations (not just dialogue/visuals).
 
-**Toolbar:**
-- **Easy Mode / Pro Mode toggle** — Easy mode shows curated presets as visual cards; Pro mode shows all dropdowns + raw prompt editor
-- **Style quick-switch** — Top-level style tabs (Photorealistic, 3D/Pixar, Anime, Illustration, Cinema)
-- **Provider indicator** — Shows which provider will be used + estimated cost
-- **Manual Mode** — All AI-assisted features disabled; pure dropdown → prompt builder
+**Agent Intelligence — Prompt Refinement Loop:**
+Before generating, Jasper checks if the request has enough detail. If vague:
+1. Asks clarifying questions through chat (tone? audience? style? platform? characters?)
+2. Presents a creative brief summary with selected presets
+3. User confirms → THEN generates
+4. Jasper knows which engine is best for what (Fal for anime/concept, Google for photorealistic, Hedra for avatar lip-sync, Kling for cinematic video)
+5. Zero wasted generations on half-baked prompts
 
-**Batch Bar (bottom):**
-- "Generate 4 variations" button — same prompt, slight randomization
-- "Multi-angle" button — same scene, different camera presets simultaneously
-- Queue indicator showing pending/processing/completed count
+#### 3D. Character System (upgrade existing)
+Upgrades the existing Character Studio in Firestore — NOT a separate system:
+- Existing Hedra avatar profiles get extended with the RenderZero-style fields (Face, Outfit, Object, Scene references with Single/Stitch mode)
+- Character Library modal accessible from CinematicControlsPanel AND from Video Studio scene editor
+- Characters saved to `organizations/{PLATFORM_ID}/studio/characters/{characterId}` (or extend existing avatar profiles collection)
+- Import existing Hedra avatars into the upgraded system
 
-### Phase 4: Character System (Upgraded)
+#### 3E. Campaign Integration
+- Images/videos generated through cinematic controls can be registered as campaign deliverables
+- Campaign Review shows cinematic settings used (for revision context)
+- Feedback loop includes the CinematicConfig so revisions maintain the same look
 
-**Goal:** Full character profiles with face consistency across unlimited generations.
+### Phase 4: Video-Specific Cinematic Controls
 
-**Files to create:**
-- `src/app/(dashboard)/content/studio/characters/page.tsx` — Character library page
-- `src/lib/ai/character-service.ts` — Character CRUD + consistency engine
+**Goal:** Camera MOVEMENT presets for video (separate from still-image camera presets).
 
-**Character Profile structure:**
-```typescript
-interface CharacterProfile {
-  id: string
-  name: string
-  faceReferences: string[]       // Multiple angles of the same face
-  bodyReference?: string         // Full-body shot for proportions
-  clothingDescriptions: {        // Wardrobe system
-    id: string
-    name: string                 // "Business suit", "Casual Friday", "Workout"
-    description: string          // Detailed clothing prompt fragment
-    referenceImage?: string
-  }[]
-  physicalDescription: string    // Hair color, eye color, build, distinguishing features
-  personality?: string           // For AI-driven expressions/poses
-  defaultVoice?: string          // Voice ID for video generation
-  defaultStyle?: string          // Preferred art style (photorealistic, anime, etc.)
-  tags: string[]
-  createdAt: string
-  updatedAt: string
-}
-```
+- Camera movement presets: dolly in, truck left, crane up, handheld shake, steadicam, orbit, push-in, pull-out, whip pan, rack focus
+- These apply to video generation only (Kling 3.0, Hedra)
+- Integrated into Video Studio storyboard per-scene AND into `/content/studio` video tab
+- Video tab in Studio: Text to Video, Image to Video, Audio Driven Video, Reference to Video, Start + End Frame
 
-**Character Library UI:**
-- Grid of character cards with face preview
-- Create new character:
-  1. Upload face photo(s) — multiple angles encouraged
-  2. AI extracts physical description automatically
-  3. Add wardrobe items with descriptions
-  4. Set default voice (for video)
-  5. Set default art style
-- Edit existing characters
-- "Use in Studio" button → pre-loads character into generation controls
-- Import from existing Hedra avatars
+### Phase 5: Cost Tracking + Manual Fallback
 
-**Face Consistency Engine:**
-- When a character is selected in the Studio, the face reference images + physical description are injected into the prompt
-- For providers that support img2img / IP-adapter (Fal.ai), the face reference is passed as a control image
-- The prompt includes "consistent character: [physical description], maintaining exact facial features from reference"
+**Cost Dashboard:**
+- Tab within `/content/studio` or `/settings/usage`
+- Total spend, spend by provider, spend by content type, per-project/campaign cost
+- Budget setting + alerts
+- Individual generation log
+- Firestore: `organizations/{PLATFORM_ID}/studio/cost-log/{entryId}`
 
-**Firestore:** `organizations/{PLATFORM_ID}/studio/characters/{characterId}`
-
-### Phase 5: Image → Video Bridge
-
-**Goal:** Seamless transition from generated still image to animated video.
-
-**Workflow:**
-1. User generates image in Studio
-2. Clicks "Animate This"
-3. Modal opens with video options:
-   - Duration (5s, 10s, 15s, 30s)
-   - Motion type (camera pan, zoom, character animation, full scene animation)
-   - Audio (TTS script, background music, or silent)
-   - Provider (Kling 3.0, Hedra)
-4. Video generates asynchronously
-5. Result appears in History panel
-
-**Multi-Angle Generation:**
-- User clicks "Multi-Angle" in batch bar
-- System generates same scene with 3-4 different camera presets simultaneously
-- Results displayed as a comparison grid
-- User picks the best angle
-- Remaining angles saved to history
-
-**Integration with Video Studio:**
-- "Send to Storyboard" button → creates a new Video Studio project with the image as scene 1
-- Character + style settings carry over automatically
-- Scene-level cinematic presets from Studio apply to video generation
-
-### Phase 6: Studio UI — Video Controls
-
-**Goal:** Apply cinematic controls to video generation, not just images.
-
-- Video generation tab in Studio (alongside image tab)
-- Camera **movement** presets (dolly in, truck left, crane up, handheld shake, steadicam)
-- Scene-level cinematic controls in the existing Video Studio storyboard
-- Each storyboard scene gets a "Cinematic Settings" panel with camera/lighting/style dropdowns
-- The script-generation AI (`script-generation-service.ts`) incorporates selected presets
-
-### Phase 7: Cost Tracking Dashboard
-
-**Goal:** Transparent spend tracking across all providers.
-
-**Route:** `/content/studio/costs` (tab within Studio, or standalone)
-
-**Dashboard shows:**
-- Total spend (today / this week / this month / all time)
-- Spend by provider (pie chart)
-- Spend by content type (image vs video)
-- Spend per project/campaign
-- Generation count + average cost
-- Budget setting + alerts (Firestore-persisted)
-- Individual generation log (sortable table): timestamp, prompt preview, provider, model, resolution, cost
-
-**Firestore:** `organizations/{PLATFORM_ID}/studio/cost-log/{entryId}`
-
-### Phase 8: Manual Fallback Mode
-
-**Goal:** System works even when AI providers are down.
-
-**Manual Mode features:**
-- All cinematic presets browsable offline (they're local data, not API-dependent)
-- Prompt Builder constructs the full prompt from dropdown selections without any AI call
-- "Copy Prompt" button — copies the constructed prompt for use in external tools
-- Generation queue with auto-retry — if a provider returns 503, queue the job and poll
-- Provider health indicators (green/yellow/red) on the toolbar
-- Graceful degradation — if selected provider is down, offer alternatives
-
-**Pro Mode (for power users):**
-- Raw JSON view of generation parameters
-- Direct prompt editing with all preset fragments visible and editable
-- API response inspector (see exactly what the provider returned)
-- Custom preset creation — user defines their own camera/lighting/style presets
+**Manual Fallback:**
+- All cinematic presets browsable without any API call (they're local TypeScript data)
+- Prompt Builder constructs full prompt from selections without AI
+- "Copy Prompt" button for use in external tools
+- Generation queue with auto-retry when providers are down
+- Provider health indicators (green/yellow/red)
+- Pro Mode: raw JSON view, direct prompt editing, custom preset creation
 
 ---
 
 ## Build Order Summary
 
-| Phase | Name | Dependencies | Estimated Scope |
-|-------|------|-------------|----------------|
-| 1 | Cinematic Preset Engine + Types | None | Types file + preset data library (~2,000 lines of preset data) |
-| 2 | Multi-Provider Backend | Phase 1 types | Provider services + router + cost tracker + 7 API routes |
-| 3 | Studio UI — Image Gen | Phases 1+2 | Main studio page + all UI panels |
-| 4 | Character System | Phases 1+2 | Character service + library page + face consistency |
-| 5 | Image → Video Bridge | Phases 1-3 | Animate button + multi-angle + storyboard integration |
-| 6 | Video Controls | Phases 1-5 | Camera movement presets + storyboard cinematic panel |
-| 7 | Cost Dashboard | Phase 2 (cost tracker) | Cost UI page + charts |
-| 8 | Manual Fallback | Phases 1-3 | Offline presets + prompt builder + queue + retry |
+| Phase | Name | Dependencies | What Changes |
+|-------|------|-------------|-------------|
+| 1 | Cinematic Preset Engine + Types | None | New types file + preset data library. Foundation for everything. |
+| 2 | Multi-Provider Backend + Shared Components | Phase 1 | Provider services, router, cost tracker, 8 API routes, 6 shared UI components |
+| 3A | Image Generation Page | Phases 1+2 | New `/content/studio` page using shared components. Fills the missing image gen UI gap. |
+| 3B | Video Studio Upgrade | Phases 1+2 | Per-scene cinematic controls embedded in existing storyboard. Replaces raw prompts. |
+| 3C | Jasper Integration | Phases 1+2 | Update `produce_video`, new `create_image`, prompt refinement loop, expert engine selection |
+| 3D | Character System Upgrade | Phases 1+2 | Extend existing avatars with RenderZero-style Face/Outfit/Object/Scene + Library |
+| 3E | Campaign Integration | Phase 3A | Cinematic config flows into campaign deliverables + revision context |
+| 4 | Video Movement Controls | Phase 3B | Camera movement presets for video generation, video tab in Studio |
+| 5 | Cost Tracking + Manual Fallback | Phase 2 | Cost dashboard UI, prompt builder, queue/retry, provider health |
 
-**Start with Phase 1 + Phase 2 in parallel** (types/presets have no dependency on providers). Then Phase 3 (the UI). Phases 4-8 can be built incrementally.
+**Start with Phase 1 + Phase 2 in parallel.** Then Phase 3A-3E can be built incrementally — each one is independently valuable. Phases 4-5 are polish.
 
 ---
 
-## Jasper Integration (After Phase 3)
+## Jasper Cinematography Intelligence (Built into Phase 3C)
 
-New Jasper tools to add to `jasper-tools.ts`:
-- `create_image` — Generate image via Studio with cinematic presets
-- `create_cinematic_video` — Generate video with full cinematic controls
-- `manage_characters` — CRUD operations on character profiles
-- Update `produce_video` to use Studio's cinematic preset engine instead of raw prompts
+Jasper's system prompt must include deep cinematographic knowledge:
+- **WHY** Rembrandt lighting works for testimonials but not product demos
+- **WHY** Kodak Portra 400 for warm skin tones but CineStill 800T for night scenes
+- **WHY** 35mm creates intimacy but 85mm creates authority
+- **WHY** handheld sells authenticity but dolly sells production value
+- **WHICH** engine for what: Fal.ai for anime/concept art, Google for photorealistic, Hedra for avatar lip-sync, Kling for cinematic video
+- **WHEN** to push back: "You asked for anime targeting Fortune 500 CFOs — photorealistic would land better. Want both?"
+- **WHEN** to ask for more info vs just generate: confidence threshold based on prompt detail level
+- **ALWAYS** recommend presets based on content type + platform + audience — not just pass through raw text
 
 ---
 
@@ -470,7 +366,12 @@ Two flows: 4-step signup + 24-step dashboard wizard. Industry-driven 5-layer con
 | `src/types/creative-studio.ts` | **NEW** — Creative Studio types (presets, generations, characters, providers) |
 | `src/lib/ai/cinematic-presets.ts` | **NEW** — 200+ cinematic preset library |
 | `src/lib/ai/provider-router.ts` | **NEW** — Multi-provider generation router |
-| `src/app/(dashboard)/content/studio/page.tsx` | **NEW** — AI Creative Studio UI |
+| `src/app/(dashboard)/content/studio/page.tsx` | **NEW** — Image generation page (fills missing UI gap) |
+| `src/components/studio/CinematicControlsPanel.tsx` | **NEW** — Reusable cinematic controls (embeddable in Video Studio + Studio page) |
+| `src/components/studio/VisualPresetPicker.tsx` | **NEW** — Visual grid modal for preset selection (used everywhere) |
+| `src/components/studio/ConstructedPromptDisplay.tsx` | **NEW** — Live prompt preview panel |
+| `src/lib/video/scene-generator.ts` | **UPGRADE** — Uses cinematic presets instead of raw prompts |
+| `src/lib/video/script-generation-service.ts` | **UPGRADE** — Outputs per-scene cinematic recommendations |
 
 ---
 
