@@ -185,7 +185,7 @@ function DropZone({
       <input
         ref={fileInputRef}
         type="file"
-        accept="image/*"
+        accept="image/*,video/*"
         onChange={handleFileChange}
         className="hidden"
         aria-label={`Upload ${label} image`}
@@ -261,7 +261,7 @@ function ImageUploadSlot({ imageUrl, label, onUpload, onRemove }: ImageUploadSlo
       <input
         ref={fileInputRef}
         type="file"
-        accept="image/*"
+        accept="image/*,video/*"
         onChange={handleFileChange}
         className="hidden"
         aria-label={`Upload ${label}`}
@@ -534,7 +534,7 @@ export function CharacterElementsTool({
         <div className="space-y-2">
           <Label className="text-xs font-semibold text-zinc-300">Global Reference</Label>
           <p className="text-[10px] text-zinc-600">
-            A single reference image applied to the entire generation
+            A reference image or video applied to the entire generation
           </p>
           <div className="w-24">
             <ImageUploadSlot

@@ -354,13 +354,13 @@ export function VoicePicker({ selectedVoiceId, onSelect }: VoicePickerProps) {
             )}
           </div>
         )}
-        {/* Full Voice Lab link */}
+        {/* Full Audio Lab link */}
         <Link
           href="/content/voice-lab"
           className="flex items-center gap-2 px-4 py-2 text-xs text-purple-400 hover:text-purple-300 hover:bg-purple-500/5 transition-colors border-t border-purple-500/10"
         >
           <AudioWaveform className="w-3.5 h-3.5" />
-          Open Voice Lab — effects, collections, recording studio &amp; AI music
+          Open Audio Lab — effects, collections, voice studio &amp; AI music
         </Link>
       </div>
 

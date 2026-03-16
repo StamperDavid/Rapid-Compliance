@@ -507,7 +507,7 @@ export default function APIKeysPage() {
         'Create an API key and paste here',
       ],
       cost: '$0.15 per generation (up to 5 min per song)',
-      why: 'Generate AI music tracks with vocals, instrumentals, mood control, and lyrics in the Voice Lab.',
+      why: 'Generate AI music tracks with vocals, instrumentals, mood control, and lyrics in the Audio Lab.',
     },
     {
       id: 'elevenlabs',

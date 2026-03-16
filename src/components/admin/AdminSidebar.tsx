@@ -129,7 +129,7 @@ const NAV_SECTIONS: NavigationSection[] = [
     allowedRoles: ['owner', 'admin', 'manager'],
     items: [
       { id: 'social-hub', label: 'Social Hub', href: '/social/command-center', icon: Activity, iconColor: 'var(--color-success)', requiredPermission: 'canManageSocialMedia', featureModuleId: 'social_media' },
-      { id: 'video', label: 'Video', href: '/content/video', icon: Video, iconColor: 'var(--color-primary)', requiredPermission: 'canManageSocialMedia', featureModuleId: 'video_production' },
+      { id: 'video', label: 'Content Generator', href: '/content/video', icon: Video, iconColor: 'var(--color-primary)', requiredPermission: 'canManageSocialMedia', featureModuleId: 'video_production' },
       { id: 'forms', label: 'Forms', href: '/forms', icon: ClipboardList, iconColor: 'var(--color-success)', featureModuleId: 'forms_surveys' },
       { id: 'workflows', label: 'Workflows', href: '/workflows', icon: Workflow, iconColor: 'var(--color-warning)', requiredPermission: 'canCreateWorkflows', featureModuleId: 'workflows' },
     ],
@@ -306,9 +306,9 @@ export default function AdminSidebar() {
       return pathname.startsWith('/social/') && !pathname.startsWith('/social/training');
     }
 
-    // Video hub — studio + library
+    // Content Generator hub — video, image, editor, library, voice lab
     if (href === '/content/video') {
-      return pathname.startsWith('/content/video');
+      return pathname.startsWith('/content/');
     }
 
     // Proposals hub — list + builder

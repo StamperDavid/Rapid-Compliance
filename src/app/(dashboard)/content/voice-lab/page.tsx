@@ -13,7 +13,7 @@ import { AIMusicStudio } from './components/AIMusicStudio';
 type VoiceLabTab = 'studio' | 'voices' | 'designer' | 'music';
 
 const TABS: { key: VoiceLabTab; label: string; icon: React.ElementType; description: string }[] = [
-  { key: 'studio', label: 'Studio', icon: Mic, description: 'Record & edit' },
+  { key: 'studio', label: 'Voice Studio', icon: Mic, description: 'Record & edit' },
   { key: 'voices', label: 'My Voices', icon: AudioWaveform, description: 'Voice library' },
   { key: 'designer', label: 'Designer', icon: Wand2, description: 'Create voices' },
   { key: 'music', label: 'AI Music', icon: Music, description: 'Generate songs' },
@@ -35,7 +35,7 @@ export default function VoiceLabPage() {
               <AudioWaveform className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-white">Voice Lab</h1>
+              <h1 className="text-xl font-bold text-white">Audio Lab</h1>
               <p className="text-xs text-zinc-500">Record, clone, design custom voices, and create AI music — all in one studio</p>
             </div>
           </div>

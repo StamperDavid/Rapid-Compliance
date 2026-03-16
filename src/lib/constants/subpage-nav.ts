@@ -163,13 +163,13 @@ export const DEALS_TABS: SubpageNavItem[] = [
   { label: 'Risk', href: '/risk' },
 ];
 
-// ── Content Generator Hub (Video + Image Generator + Editor + Library + Voice Lab) ───
+// ── Content Generator Hub (Video + Image + Editor + Library + Audio Lab) ─────
 export const CONTENT_GENERATOR_TABS: SubpageNavItem[] = [
   { label: 'Video', href: '/content/video' },
-  { label: 'Image Generator', href: '/content/image-generator' },
+  { label: 'Image', href: '/content/image-generator' },
   { label: 'Editor', href: '/content/video/editor' },
   { label: 'Library', href: '/content/video/library' },
-  { label: 'Voice Lab', href: '/content/voice-lab' },
+  { label: 'Audio Lab', href: '/content/voice-lab' },
 ];
 
 // ── AI Workforce Hub (all 5 AI items → 1 hub) ──────────────────────────────
