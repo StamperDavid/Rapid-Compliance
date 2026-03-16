@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { logger } from '@/lib/logger/logger';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { generateScene } from '@/lib/video/scene-generator';
+import { CinematicConfigSchema } from '@/types/creative-studio';
 import type { PipelineScene } from '@/types/video-pipeline';
 
 export const dynamic = 'force-dynamic';
@@ -21,6 +22,7 @@ const RegenerateSchema = z.object({
   visualDescription: z.string().nullable().default(null),
   title: z.string().nullable().default(null),
   voiceProvider: z.enum(['elevenlabs', 'unrealspeech', 'custom', 'hedra']).default('hedra'),
+  cinematicConfig: CinematicConfigSchema.optional(),
 });
 
 export async function POST(request: NextRequest) {
@@ -47,7 +49,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { projectId, sceneId, scriptText, screenshotUrl, avatarId, voiceId, aspectRatio, duration, engine, backgroundPrompt, visualDescription, title, voiceProvider } = parseResult.data;
+    const { projectId, sceneId, scriptText, screenshotUrl, avatarId, voiceId, aspectRatio, duration, engine, backgroundPrompt, visualDescription, title, voiceProvider, cinematicConfig } = parseResult.data;
 
     logger.info('Regenerating scene', {
       projectId,
@@ -74,6 +76,7 @@ export async function POST(request: NextRequest) {
       duration,
       engine: engine ?? null,
       backgroundPrompt,
+      cinematicConfig,
       status: 'approved' as const,
     };
 

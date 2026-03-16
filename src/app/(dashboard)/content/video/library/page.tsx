@@ -6,7 +6,7 @@ import Image from 'next/image';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { useVideoPipelineStore } from '@/lib/stores/video-pipeline-store';
 import SubpageNav from '@/components/ui/SubpageNav';
-import { VIDEO_TABS } from '@/lib/constants/subpage-nav';
+import { CONTENT_GENERATOR_TABS } from '@/lib/constants/subpage-nav';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Play,
@@ -383,7 +383,7 @@ export default function MediaLibraryPage() {
 
   return (
     <div className="space-y-6 p-6">
-      <SubpageNav items={VIDEO_TABS} />
+      <SubpageNav items={CONTENT_GENERATOR_TABS} />
 
       {/* Header */}
       <div className="flex items-center justify-between">

@@ -4,7 +4,7 @@ import { useReducer, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import SubpageNav from '@/components/ui/SubpageNav';
-import { VIDEO_TABS } from '@/lib/constants/subpage-nav';
+import { CONTENT_GENERATOR_TABS } from '@/lib/constants/subpage-nav';
 import {
   Scissors,
   Loader2,
@@ -385,7 +385,7 @@ export default function VideoEditorPage() {
 
   return (
     <div className="min-h-screen p-6 space-y-4">
-      <SubpageNav items={VIDEO_TABS} />
+      <SubpageNav items={CONTENT_GENERATOR_TABS} />
 
       {/* Header */}
       <div className="flex items-center justify-between">

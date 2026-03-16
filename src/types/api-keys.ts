@@ -125,9 +125,20 @@ export interface APIKeysConfig {
     };
   };
 
-  // Video Generation Services (Hedra only)
+  // Video Generation Services
   video?: {
     hedra?: {
+      apiKey: string;
+    };
+    kling?: {
+      accessKey: string;
+      secretKey: string;
+    };
+  };
+
+  // Image Generation Services (beyond OpenAI DALL-E)
+  imageGen?: {
+    fal?: {
       apiKey: string;
     };
   };
@@ -299,6 +310,9 @@ export type APIServiceName =
   | 'dataforseo'   // DataForSEO (keyword data, SERP, domain metrics)
   | 'later'        // Later.com social media scheduling
   | 'minimax'       // MiniMax AI Music Generation
-  | 'hedra';        // Hedra Character-3 talking head avatars
+  | 'hedra'         // Hedra Character-3 talking head avatars
+  | 'fal'           // Fal.ai — Flux, SDXL, Stable Diffusion image generation
+  | 'google-ai-studio'  // Google AI Studio (Imagen 3) — photorealistic image generation
+  | 'kling';        // Kling 3.0 — cinematic video + image generation
 
 

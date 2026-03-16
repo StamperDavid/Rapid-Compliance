@@ -4,19 +4,20 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import SubpageNav from '@/components/ui/SubpageNav';
-import { VIDEO_TABS } from '@/lib/constants/subpage-nav';
+import { CONTENT_GENERATOR_TABS } from '@/lib/constants/subpage-nav';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, FolderOpen, Loader2, Clock, Film, X, Video } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { VideoPipelineStepper } from './components/VideoPipelineStepper';
-import { StepRequest } from './components/StepRequest';
+import { StudioModePanel } from './components/StudioModePanel';
 import { StepStoryboard } from './components/StepStoryboard';
 import { StepGeneration } from './components/StepGeneration';
 import { StepAssembly } from './components/StepAssembly';
 import { StepPostProduction } from './components/StepPostProduction';
 import { useVideoPipelineStore } from '@/lib/stores/video-pipeline-store';
 import { PIPELINE_STEPS, type PipelineStep, type PipelineProject } from '@/types/video-pipeline';
+
+// ─── Types ────────────────────────────────────────────────────────────
 
 interface ProjectSummary {
   id: string;
@@ -29,6 +30,8 @@ interface ProjectSummary {
   createdAt: string;
   updatedAt: string;
 }
+
+// ─── Page ─────────────────────────────────────────────────────────────
 
 export default function VideoStudioPage() {
   const authFetch = useAuthFetch();
@@ -109,7 +112,6 @@ export default function VideoStudioPage() {
   }, [loadProject, authFetch]);
 
   // Auto-load project from ?load={projectId} URL parameter
-  // Always load when ?load= is present, even if localStorage has a stale project
   useEffect(() => {
     const loadId = searchParams.get('load');
     if (loadId && !autoLoadAttempted.current) {
@@ -119,10 +121,12 @@ export default function VideoStudioPage() {
     }
   }, [searchParams, handleLoadProject]);
 
+  // Step 1 (Studio) renders the full RenderZero cinematic UI.
+  // Steps 2-5 render the pipeline step components.
   const renderCurrentStep = () => {
     switch (currentStep) {
       case 'request':
-        return <StepRequest />;
+        return <StudioModePanel />;
       case 'storyboard':
       case 'decompose':
       case 'pre-production':
@@ -135,59 +139,68 @@ export default function VideoStudioPage() {
       case 'post-production':
         return <StepPostProduction />;
       default:
-        return <StepRequest />;
+        return <StudioModePanel />;
     }
   };
 
-  return (
-    <div className="min-h-screen p-6 space-y-6">
-      <SubpageNav items={VIDEO_TABS} />
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-white">
-            AI Video Studio
-          </h1>
-          <p className="text-sm text-zinc-400 mt-1">
-            {projectId
-              ? `Project: ${projectName || 'Untitled'}`
-              : 'AI video production pipeline powered by Hedra'}
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleNewProject}
-            className="gap-2"
-          >
-            <Plus className="w-4 h-4" />
-            New Project
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-2"
-            onClick={() => { void handleOpenLoadModal(); }}
-          >
-            <FolderOpen className="w-4 h-4" />
-            Load Project
-          </Button>
-        </div>
-      </div>
+  // The Studio step renders full-bleed (no padding wrapper).
+  // Pipeline steps get the standard padded container.
+  const isStudioStep = currentStep === 'request';
 
-      {/* Stepper */}
-      <Card className="bg-zinc-900/50 border-zinc-800">
-        <CardContent className="pt-4 pb-2">
+  return (
+    <div className="min-h-screen bg-zinc-950">
+      {/* ── Top Navigation ──────────────────────────────────────── */}
+      <div className="sticky top-0 z-40 border-b border-zinc-800 bg-zinc-950/95 backdrop-blur-sm">
+        <div className="px-6 pt-4 pb-0">
+          <SubpageNav items={CONTENT_GENERATOR_TABS} />
+        </div>
+
+        {/* ── Header + Project Controls ────────────────────────── */}
+        <div className="flex items-center justify-between px-6 py-3">
+          <div>
+            <h1 className="text-xl font-bold text-white">
+              AI Video <span className="text-amber-500">Studio</span>
+            </h1>
+            <p className="text-xs text-zinc-500 mt-0.5">
+              {projectId
+                ? `Project: ${projectName || 'Untitled'}`
+                : 'Cinematic video production powered by AI'}
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleNewProject}
+              className="gap-2 border-zinc-700"
+            >
+              <Plus className="w-4 h-4" />
+              New Project
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2 border-zinc-700"
+              onClick={() => { void handleOpenLoadModal(); }}
+            >
+              <FolderOpen className="w-4 h-4" />
+              Load Project
+            </Button>
+          </div>
+        </div>
+
+        {/* ── Pipeline Stepper (always visible) ────────────────── */}
+        <div className="px-6 pb-2">
           <VideoPipelineStepper
             currentStep={currentStep}
             onStepClick={handleStepClick}
             completedSteps={completedSteps}
           />
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
-      {/* Current Step Panel */}
+      {/* ── Main Content ────────────────────────────────────────── */}
       {autoLoading ? (
         <div className="flex items-center justify-center py-24">
           <Loader2 className="w-6 h-6 animate-spin text-amber-500" />
@@ -197,21 +210,26 @@ export default function VideoStudioPage() {
         <AnimatePresence mode="wait">
           <motion.div
             key={currentStep}
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            transition={{ duration: 0.2 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.15 }}
           >
-            {renderCurrentStep()}
+            {isStudioStep ? (
+              renderCurrentStep()
+            ) : (
+              <div className="p-6 space-y-6">
+                {renderCurrentStep()}
+              </div>
+            )}
           </motion.div>
         </AnimatePresence>
       )}
 
-      {/* Load Project Modal */}
+      {/* ── Load Project Modal ────────────────────────────────── */}
       {showLoadModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
           <div className="bg-zinc-900 border border-zinc-700 rounded-xl w-full max-w-lg mx-4 shadow-2xl">
-            {/* Header */}
             <div className="flex items-center justify-between p-4 border-b border-zinc-800">
               <h2 className="text-lg font-semibold text-white flex items-center gap-2">
                 <FolderOpen className="w-5 h-5 text-amber-500" />
@@ -227,7 +245,6 @@ export default function VideoStudioPage() {
               </Button>
             </div>
 
-            {/* Content */}
             <div className="p-4 max-h-[60vh] overflow-y-auto">
               {loadingProjects ? (
                 <div className="flex items-center justify-center py-12">

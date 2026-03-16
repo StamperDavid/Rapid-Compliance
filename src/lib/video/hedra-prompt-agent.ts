@@ -102,6 +102,9 @@ export async function translateStoryboardToHedraPrompts(
     visualDescription: scene.visualDescription ?? '',
     backgroundPrompt: scene.backgroundPrompt ?? '',
     duration: scene.duration,
+    ...(scene.cinematicConfig && Object.keys(scene.cinematicConfig).length > 0
+      ? { cinematicConfig: scene.cinematicConfig }
+      : {}),
   }));
 
   const userPrompt = `Here is the approved storyboard with ${scenes.length} scenes. Translate each scene into an optimized Hedra text_prompt.

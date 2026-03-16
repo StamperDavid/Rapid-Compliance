@@ -460,32 +460,28 @@ export default function WorkspaceDashboardPage() {
         </Link>
 
         {/* Marketing & Outreach */}
-        <Link href="/social/command-center" style={{ textDecoration: 'none' }}>
-          <SectionCard>
-            <SectionHeader title="Marketing & Outreach" icon={<Share2 size={16} />} />
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.75rem' }}>
-              <NavRow icon={<Mail size={14} />} label="Email Campaigns" href="/email/campaigns" />
-              <NavRow icon={<Send size={14} />} label="Sequences" href="/outbound/sequences" />
-              <NavRow icon={<Share2 size={14} />} label="Social Hub" href="/social/command-center" />
-              <NavRow icon={<FileText size={14} />} label="Forms" href="/forms" />
-            </div>
-            <SectionFooter text="View outreach" />
-          </SectionCard>
-        </Link>
+        <SectionCard>
+          <SectionHeader title="Marketing & Outreach" icon={<Share2 size={16} />} />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.75rem' }}>
+            <NavRow icon={<Mail size={14} />} label="Email Campaigns" href="/email/campaigns" />
+            <NavRow icon={<Send size={14} />} label="Sequences" href="/outbound/sequences" />
+            <NavRow icon={<Share2 size={14} />} label="Social Hub" href="/social/command-center" />
+            <NavRow icon={<FileText size={14} />} label="Forms" href="/forms" />
+          </div>
+          <SectionFooter text="View outreach" />
+        </SectionCard>
 
         {/* Content & Website */}
-        <Link href="/website/editor" style={{ textDecoration: 'none' }}>
-          <SectionCard>
-            <SectionHeader title="Content & Website" icon={<Globe size={16} />} />
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.75rem' }}>
-              <NavRow icon={<Globe size={14} />} label="Website Editor" href="/website/editor" />
-              <NavRow icon={<BarChart3 size={14} />} label="SEO" href="/website/seo" />
-              <NavRow icon={<FileText size={14} />} label="Proposals" href="/proposals" />
-              <NavRow icon={<Share2 size={14} />} label="Social Analytics" href="/social/analytics" />
-            </div>
-            <SectionFooter text="View content" />
-          </SectionCard>
-        </Link>
+        <SectionCard>
+          <SectionHeader title="Content & Website" icon={<Globe size={16} />} />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.75rem' }}>
+            <NavRow icon={<Globe size={14} />} label="Website Editor" href="/website/editor" />
+            <NavRow icon={<BarChart3 size={14} />} label="SEO" href="/website/seo" />
+            <NavRow icon={<FileText size={14} />} label="Proposals" href="/proposals" />
+            <NavRow icon={<Share2 size={14} />} label="Social Analytics" href="/social/analytics" />
+          </div>
+          <SectionFooter text="View content" />
+        </SectionCard>
       </div>
 
       {/* Row 4: Activity Feed + Tasks */}

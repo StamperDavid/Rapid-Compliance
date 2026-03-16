@@ -180,9 +180,20 @@ return keys.ai?.anthropicApiKey ?? keys.ai?.openrouterApiKey ?? null;
       case 'minimax':
         return keys.audio?.minimax?.apiKey ?? null;
 
-      // Video Services (Hedra only)
+      // Video Services
       case 'hedra':
         return keys.video?.hedra?.apiKey ?? null;
+      case 'kling':
+        if (keys.video?.kling) {
+          return `${keys.video.kling.accessKey}:${keys.video.kling.secretKey}`;
+        }
+        return null;
+
+      // Image Generation Services
+      case 'fal':
+        return keys.imageGen?.fal?.apiKey ?? null;
+      case 'google-ai-studio':
+        return keys.ai?.geminiApiKey ?? null;
 
       // Voice Services
       case 'elevenlabs':

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Mic, Music, AudioWaveform, Wand2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import SubpageNav from '@/components/ui/SubpageNav';
-import { VIDEO_TABS } from '@/lib/constants/subpage-nav';
+import { CONTENT_GENERATOR_TABS } from '@/lib/constants/subpage-nav';
 import { VoiceRecorderStudio } from './components/VoiceRecorderStudio';
 import { VoiceLibrary } from './components/VoiceLibrary';
 import { VoiceDesigner } from './components/VoiceDesigner';
@@ -25,7 +25,7 @@ export default function VoiceLabPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-zinc-950 via-zinc-950 to-zinc-900 p-6">
       {/* Video Hub Navigation */}
-      <SubpageNav items={VIDEO_TABS} />
+      <SubpageNav items={CONTENT_GENERATOR_TABS} />
 
       {/* Header */}
       <div className="border-b border-zinc-800/50 bg-zinc-950/80 backdrop-blur-xl sticky top-0 z-20">

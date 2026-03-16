@@ -3,7 +3,7 @@
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import {
-  MessageSquare,
+  Clapperboard,
   Layers,
   CheckCircle,
   Zap,
@@ -13,7 +13,7 @@ import {
 import { PIPELINE_STEPS, PIPELINE_STEP_LABELS, type PipelineStep } from '@/types/video-pipeline';
 
 const STEP_ICONS: Partial<Record<PipelineStep, React.ElementType>> = {
-  'request': MessageSquare,
+  'request': Clapperboard,
   'storyboard': Layers,
   'generation': Zap,
   'assembly': Puzzle,

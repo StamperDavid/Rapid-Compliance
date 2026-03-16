@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { logger } from '@/lib/logger/logger';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { generateAllScenes } from '@/lib/video/scene-generator';
+import { CinematicConfigSchema } from '@/types/creative-studio';
 import type { PipelineScene } from '@/types/video-pipeline';
 
 export const dynamic = 'force-dynamic';
@@ -25,6 +26,7 @@ const GenerateScenesSchema = z.object({
     avatarId: z.string().nullable().default(null),
     voiceId: z.string().nullable().default(null),
     voiceProvider: VoiceProviderEnum.nullable().default(null),
+    cinematicConfig: CinematicConfigSchema.optional(),
   })),
   avatarId: z.string().default(''),
   voiceId: z.string().default(''),
@@ -81,6 +83,7 @@ export async function POST(request: NextRequest) {
       voiceProvider: scene.voiceProvider ?? null,
       engine: scene.engine ?? null,
       backgroundPrompt: scene.backgroundPrompt ?? null,
+      cinematicConfig: scene.cinematicConfig,
       status: 'approved' as const,
     }));
 

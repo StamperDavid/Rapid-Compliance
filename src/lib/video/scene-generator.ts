@@ -12,6 +12,7 @@ import {
   generateHedraPromptVideo,
   getHedraVideoStatus,
 } from '@/lib/video/hedra-service';
+import { buildPromptFromPresets } from '@/lib/ai/cinematic-presets';
 import type { PipelineScene, SceneGenerationResult, VideoEngineId } from '@/types/video-pipeline';
 import type { VideoAspectRatio } from '@/types/video';
 
@@ -81,7 +82,15 @@ function buildHedraTextPrompt(scene: PipelineScene & { _hedraOptimizedPrompt?: s
   // Production quality markers — tells Hedra to aim high
   prompt.push('Cinematic quality, professional lighting, 4K film look');
 
-  return prompt.join('. ');
+  const basePrompt = prompt.join('. ');
+
+  // If the scene has cinematic presets (shot type, camera, lighting, film stock, etc.),
+  // layer them onto the prompt using the Creative Studio's preset assembly engine.
+  if (scene.cinematicConfig && Object.keys(scene.cinematicConfig).length > 0) {
+    return buildPromptFromPresets(basePrompt, scene.cinematicConfig);
+  }
+
+  return basePrompt;
 }
 
 // ============================================================================

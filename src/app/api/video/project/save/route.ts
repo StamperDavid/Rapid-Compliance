@@ -8,6 +8,7 @@ import { z } from 'zod';
 import { logger } from '@/lib/logger/logger';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { createProject, updateProject } from '@/lib/video/pipeline-project-service';
+import { CinematicConfigSchema } from '@/types/creative-studio';
 
 export const dynamic = 'force-dynamic';
 
@@ -54,6 +55,7 @@ const SaveProjectSchema = z.object({
       duration: z.number(),
       engine: z.enum(['hedra']).nullable().default(null),
       backgroundPrompt: z.string().nullable().default(null),
+      cinematicConfig: CinematicConfigSchema.optional(),
       status: z.enum(['draft', 'approved', 'generating', 'completed', 'failed']),
     })
   ),

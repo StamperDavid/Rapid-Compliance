@@ -7,6 +7,7 @@
  */
 
 import type { VideoAspectRatio, VideoResolution } from './video';
+import type { CinematicConfig } from './creative-studio';
 
 // ============================================================================
 // Pipeline Step Definitions
@@ -41,7 +42,7 @@ export function normalizePipelineStep(step: PipelineStep): PipelineStep {
 }
 
 export const PIPELINE_STEP_LABELS: Record<PipelineStep, string> = {
-  'request': 'Brief',
+  'request': 'Studio',
   'storyboard': 'Storyboard',
   'generation': 'Generate',
   'assembly': 'Assembly',
@@ -115,6 +116,7 @@ export interface PipelineScene {
   duration: number; // seconds
   engine: VideoEngineId | null; // null = defaults to hedra
   backgroundPrompt: string | null; // Prompt for AI video background generation
+  cinematicConfig?: CinematicConfig; // Cinematic presets from Creative Studio
   status: SceneStatus;
   useGreenScreen?: boolean; // true = avatar on transparent BG + AI background compositing
 }

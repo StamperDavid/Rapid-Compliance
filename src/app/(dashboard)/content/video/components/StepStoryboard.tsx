@@ -1,12 +1,11 @@
 'use client';
 
 /**
- * StepStoryboard — Visual storyboard builder
+ * StepStoryboard — Visual storyboard builder with per-scene cinematic controls
  *
- * Merges the old Decompose + Pre-Production + Approval steps into one.
- * Shows a visual grid of scene cards with AI-generated preview images,
- * guided dropdowns (visual direction, background, mood), inline script
- * editing, avatar/voice selection, and cost estimation.
+ * Each scene shows a compact card in a grid. Clicking a scene opens the full
+ * CinematicControlsPanel for that scene, plus script editing, character/voice
+ * assignment, and preview generation.
  */
 
 import { useState, useCallback, useEffect, useRef } from 'react';
@@ -30,93 +29,30 @@ import {
   Clock,
   Wand2,
   RefreshCw,
+  X,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { useVideoPipelineStore } from '@/lib/stores/video-pipeline-store';
+import { CinematicControlsPanel } from '@/components/studio/CinematicControlsPanel';
 import { AvatarPicker } from './AvatarPicker';
 import { VoicePicker } from './VoicePicker';
-import {
-  VISUAL_DIRECTION_PRESETS,
-  BACKGROUND_PRESETS,
-  MOOD_PRESETS,
-  type PresetOption,
-} from './storyboard-presets';
 import type { PipelineScene } from '@/types/video-pipeline';
+import type { CinematicConfig } from '@/types/creative-studio';
 
 // ============================================================================
-// Preset Select Component
-// ============================================================================
-
-interface PresetSelectProps {
-  label: string;
-  value: string;
-  presets: PresetOption[];
-  onChange: (value: string) => void;
-  placeholder?: string;
-}
-
-function PresetSelect({ label, value, presets, onChange, placeholder }: PresetSelectProps) {
-  const isCustom = value !== '' && !presets.some((p) => p.value === value && p.value !== 'other');
-  const [showCustom, setShowCustom] = useState(isCustom);
-  const [customText, setCustomText] = useState(isCustom ? value : '');
-
-  const handleSelectChange = (selected: string) => {
-    if (selected === 'other') {
-      setShowCustom(true);
-      // Don't change value yet — wait for custom input
-    } else {
-      setShowCustom(false);
-      setCustomText('');
-      onChange(selected);
-    }
-  };
-
-  const handleCustomBlur = () => {
-    if (customText.trim()) {
-      onChange(customText.trim());
-    }
-  };
-
-  return (
-    <div className="space-y-1">
-      <label className="text-[10px] font-medium text-zinc-500 uppercase tracking-wider">{label}</label>
-      <select
-        value={showCustom ? 'other' : value}
-        onChange={(e) => handleSelectChange(e.target.value)}
-        className="w-full bg-zinc-800 border border-zinc-700 rounded px-2 py-1.5 text-xs text-white focus:border-amber-500 focus:outline-none"
-      >
-        <option value="">{placeholder ?? `Select ${label.toLowerCase()}...`}</option>
-        {presets.map((p) => (
-          <option key={p.value} value={p.value}>{p.label}</option>
-        ))}
-      </select>
-      {showCustom && (
-        <input
-          type="text"
-          value={customText}
-          onChange={(e) => setCustomText(e.target.value)}
-          onBlur={handleCustomBlur}
-          onKeyDown={(e) => { if (e.key === 'Enter') { handleCustomBlur(); } }}
-          placeholder={`Describe ${label.toLowerCase()}...`}
-          className="w-full bg-zinc-800 border border-zinc-700 rounded px-2 py-1.5 text-xs text-white placeholder:text-zinc-600 focus:border-amber-500 focus:outline-none"
-          autoFocus
-        />
-      )}
-    </div>
-  );
-}
-
-// ============================================================================
-// Scene Card Component
+// Scene Card (compact grid view)
 // ============================================================================
 
 interface SceneCardProps {
   scene: PipelineScene;
   index: number;
-  onUpdate: (updates: Partial<PipelineScene>) => void;
+  isSelected: boolean;
+  onSelect: () => void;
   onDelete: () => void;
   onDuplicate: () => void;
   onGeneratePreview: () => void;
@@ -126,21 +62,25 @@ interface SceneCardProps {
 function SceneCard({
   scene,
   index,
-  onUpdate,
+  isSelected,
+  onSelect,
   onDelete,
   onDuplicate,
   onGeneratePreview,
   isGeneratingPreview,
 }: SceneCardProps) {
-  const [editingScript, setEditingScript] = useState(false);
-
   return (
     <motion.div
       layout
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.95 }}
-      className="bg-zinc-900/80 border border-zinc-800 rounded-lg overflow-hidden"
+      onClick={onSelect}
+      className={`bg-zinc-900/80 border rounded-lg overflow-hidden cursor-pointer transition-all ${
+        isSelected
+          ? 'border-amber-500 ring-2 ring-amber-500/30'
+          : 'border-zinc-800 hover:border-zinc-600'
+      }`}
     >
       {/* Preview Image */}
       <div className="relative aspect-video bg-zinc-800/50 group">
@@ -167,7 +107,8 @@ function SceneCard({
         {/* Action buttons overlay */}
         <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
           <button
-            onClick={onGeneratePreview}
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onGeneratePreview(); }}
             disabled={isGeneratingPreview}
             className="bg-black/70 hover:bg-amber-600 text-white p-1.5 rounded transition-colors"
             title="Generate preview image"
@@ -179,14 +120,16 @@ function SceneCard({
             )}
           </button>
           <button
-            onClick={onDuplicate}
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onDuplicate(); }}
             className="bg-black/70 hover:bg-zinc-600 text-white p-1.5 rounded transition-colors"
             title="Duplicate scene"
           >
             <Copy className="w-3.5 h-3.5" />
           </button>
           <button
-            onClick={onDelete}
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onDelete(); }}
             className="bg-black/70 hover:bg-red-600 text-white p-1.5 rounded transition-colors"
             title="Delete scene"
           >
@@ -198,72 +141,168 @@ function SceneCard({
         <div className="absolute bottom-2 left-2 opacity-0 group-hover:opacity-60 transition-opacity cursor-grab">
           <GripVertical className="w-4 h-4 text-white" />
         </div>
+
+        {/* Duration badge */}
+        <div className="absolute bottom-2 right-2 bg-black/70 text-zinc-300 text-[10px] px-1.5 py-0.5 rounded flex items-center gap-1">
+          <Clock className="w-2.5 h-2.5" />
+          {scene.duration}s
+        </div>
       </div>
 
-      {/* Scene Details */}
-      <div className="p-3 space-y-2">
-        {/* Title */}
-        <input
-          type="text"
-          value={scene.title ?? ''}
-          onChange={(e) => onUpdate({ title: e.target.value || undefined })}
-          placeholder={`Scene ${index + 1} title...`}
-          className="w-full bg-transparent text-sm font-semibold text-white placeholder:text-zinc-600 focus:outline-none border-b border-transparent focus:border-amber-500/50 pb-0.5"
-        />
+      {/* Scene summary */}
+      <div className="p-2.5 space-y-1">
+        <p className="text-xs font-semibold text-white truncate">
+          {scene.title ?? `Scene ${index + 1}`}
+        </p>
+        <p className="text-[10px] text-zinc-500 line-clamp-2">
+          {scene.scriptText || 'No script yet'}
+        </p>
+        {scene.cinematicConfig && Object.keys(scene.cinematicConfig).length > 0 && (
+          <div className="flex items-center gap-1 mt-1">
+            <Sparkles className="w-2.5 h-2.5 text-amber-500" />
+            <span className="text-[9px] text-amber-500/70">Cinematic configured</span>
+          </div>
+        )}
+      </div>
+    </motion.div>
+  );
+}
 
-        {/* Script */}
-        <div>
-          <label className="text-[10px] font-medium text-zinc-500 uppercase tracking-wider">Script</label>
-          {editingScript ? (
-            <textarea
-              value={scene.scriptText}
-              onChange={(e) => onUpdate({ scriptText: e.target.value })}
-              onBlur={() => setEditingScript(false)}
-              rows={3}
-              className="w-full bg-zinc-800 border border-zinc-700 rounded px-2 py-1.5 text-xs text-white mt-1 focus:border-amber-500 focus:outline-none resize-none"
-              autoFocus
-            />
-          ) : (
-            <p
-              onClick={() => setEditingScript(true)}
-              className="text-xs text-zinc-300 mt-1 cursor-text hover:bg-zinc-800/50 rounded px-1 py-0.5 min-h-[3em] line-clamp-3"
+// ============================================================================
+// Scene Detail Editor (expanded view below grid)
+// ============================================================================
+
+interface SceneDetailEditorProps {
+  scene: PipelineScene;
+  index: number;
+  onUpdate: (updates: Partial<PipelineScene>) => void;
+  onClose: () => void;
+}
+
+function SceneDetailEditor({ scene, index, onUpdate, onClose }: SceneDetailEditorProps) {
+  const config = scene.cinematicConfig ?? {};
+
+  const handleConfigChange = useCallback((newConfig: CinematicConfig) => {
+    onUpdate({ cinematicConfig: newConfig });
+  }, [onUpdate]);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, height: 0 }}
+      animate={{ opacity: 1, height: 'auto' }}
+      exit={{ opacity: 0, height: 0 }}
+      transition={{ duration: 0.2 }}
+      className="overflow-hidden"
+    >
+      <Card className="bg-zinc-900/80 border-amber-500/30 border">
+        <CardContent className="p-0">
+          {/* Editor Header */}
+          <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800">
+            <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-amber-500" />
+              Editing Scene {index + 1}: {scene.title ?? 'Untitled'}
+            </h3>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onClose}
+              className="h-7 w-7 text-zinc-500 hover:text-white"
             >
-              {scene.scriptText || <span className="italic text-zinc-600">Click to add script...</span>}
-            </p>
-          )}
-        </div>
+              <X className="w-4 h-4" />
+            </Button>
+          </div>
 
-        {/* Dropdowns */}
-        <PresetSelect
-          label="Visual Direction"
-          value={scene.visualDescription ?? ''}
-          presets={VISUAL_DIRECTION_PRESETS}
-          onChange={(val) => onUpdate({ visualDescription: val })}
-          placeholder="Select shot type..."
-        />
+          {/* Two-column layout: Script + Details on left, Cinematic Controls on right */}
+          <div className="flex">
+            {/* Left: Script + Scene Details */}
+            <div className="w-1/2 border-r border-zinc-800 p-4 space-y-4">
+              {/* Title */}
+              <div className="space-y-1.5">
+                <Label className="text-xs text-amber-500/80 uppercase tracking-wider font-semibold">
+                  Scene Title
+                </Label>
+                <input
+                  type="text"
+                  value={scene.title ?? ''}
+                  onChange={(e) => onUpdate({ title: e.target.value || undefined })}
+                  placeholder={`Scene ${String(index + 1)} title...`}
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded px-3 py-2 text-sm text-white placeholder:text-zinc-600 focus:border-amber-500 focus:outline-none"
+                />
+              </div>
 
-        <PresetSelect
-          label="Background"
-          value={scene.backgroundPrompt ?? ''}
-          presets={BACKGROUND_PRESETS}
-          onChange={(val) => onUpdate({ backgroundPrompt: val })}
-          placeholder="Select background..."
-        />
+              {/* Script */}
+              <div className="space-y-1.5">
+                <Label className="text-xs text-amber-500/80 uppercase tracking-wider font-semibold">
+                  Script / Dialogue
+                </Label>
+                <Textarea
+                  value={scene.scriptText}
+                  onChange={(e) => onUpdate({ scriptText: e.target.value })}
+                  rows={6}
+                  placeholder="NARRATOR: Welcome to SalesVelocity...&#10;SARAH (to camera): I used to spend hours on spreadsheets.&#10;(Sarah turns to laptop, dashboard glows)"
+                  className="bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-600 text-sm resize-y font-mono"
+                />
+                <p className="text-[10px] text-zinc-600">
+                  Use screenplay format — CHARACTER: dialogue. Parentheses for stage directions.
+                </p>
+              </div>
 
-        {/* Duration */}
-        <div className="flex items-center gap-2">
-          <label className="text-[10px] font-medium text-zinc-500 uppercase tracking-wider">Duration</label>
-          <input
-            type="number"
-            value={scene.duration}
-            onChange={(e) => onUpdate({ duration: Math.max(1, Number(e.target.value)) })}
-            min={1}
-            max={60}
-            className="w-16 bg-zinc-800 border border-zinc-700 rounded px-2 py-1 text-xs text-white text-center focus:border-amber-500 focus:outline-none"
-          />
-          <span className="text-[10px] text-zinc-500">sec</span>
-        </div>
-      </div>
+              {/* Visual Description */}
+              <div className="space-y-1.5">
+                <Label className="text-xs text-amber-500/80 uppercase tracking-wider font-semibold">
+                  Visual Description
+                </Label>
+                <Textarea
+                  value={scene.visualDescription ?? ''}
+                  onChange={(e) => onUpdate({ visualDescription: e.target.value || undefined })}
+                  rows={2}
+                  placeholder="Modern office with sales dashboards on monitors, warm afternoon light..."
+                  className="bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-600 text-sm resize-y"
+                />
+              </div>
+
+              {/* Background Prompt */}
+              <div className="space-y-1.5">
+                <Label className="text-xs text-amber-500/80 uppercase tracking-wider font-semibold">
+                  Background / Environment
+                </Label>
+                <input
+                  type="text"
+                  value={scene.backgroundPrompt ?? ''}
+                  onChange={(e) => onUpdate({ backgroundPrompt: e.target.value || null })}
+                  placeholder="Clean corporate office, glass walls, city skyline..."
+                  className="w-full bg-zinc-800 border border-zinc-700 rounded px-3 py-2 text-sm text-white placeholder:text-zinc-600 focus:border-amber-500 focus:outline-none"
+                />
+              </div>
+
+              {/* Duration */}
+              <div className="flex items-center gap-3">
+                <Label className="text-xs text-amber-500/80 uppercase tracking-wider font-semibold">
+                  Duration
+                </Label>
+                <input
+                  type="number"
+                  value={scene.duration}
+                  onChange={(e) => onUpdate({ duration: Math.max(1, Number(e.target.value)) })}
+                  min={1}
+                  max={120}
+                  className="w-20 bg-zinc-800 border border-zinc-700 rounded px-3 py-1.5 text-sm text-white text-center focus:border-amber-500 focus:outline-none"
+                />
+                <span className="text-xs text-zinc-500">seconds</span>
+              </div>
+            </div>
+
+            {/* Right: Cinematic Controls */}
+            <div className="w-1/2 p-4 max-h-[600px] overflow-y-auto">
+              <CinematicControlsPanel
+                config={config}
+                onChange={handleConfigChange}
+                compact
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </motion.div>
   );
 }
@@ -301,7 +340,7 @@ export function StepStoryboard() {
   const [generatingPreviews, setGeneratingPreviews] = useState<Set<string>>(new Set());
   const [activeTab, setActiveTab] = useState<'scenes' | 'avatar' | 'voice'>('scenes');
   const [isSaving, setIsSaving] = useState(false);
-  const [projectMood, setProjectMood] = useState<string>('');
+  const [selectedSceneId, setSelectedSceneId] = useState<string | null>(null);
   const hasAutoDecomposed = useRef(false);
 
   // ── Auto-decompose on mount if no scenes yet ────────────────────────────
@@ -325,16 +364,7 @@ export function StepStoryboard() {
         try {
           const res = await authFetch('/api/video/defaults');
           if (res.ok) {
-            const data = (await res.json()) as {
-              success: boolean;
-              defaults: { avatarId?: string; avatarName?: string; voiceId?: string; voiceName?: string; voiceProvider?: string };
-            };
-            if (data.success && data.defaults) {
-              // Do NOT auto-select avatar or voice. Prompt-only mode (no avatar) lets
-              // Hedra generate characters from the text descriptions. The user must
-              // explicitly pick an avatar/voice if they want Character 3 mode.
-              const _d = data.defaults; // Defaults available but not auto-applied
-            }
+            // Defaults available but not auto-applied — user must explicitly pick
           }
         } catch {
           // Non-critical
@@ -388,7 +418,6 @@ export function StepStoryboard() {
       };
 
       if (data.success && data.plan) {
-        // API may return a partial plan — fill required DecompositionPlan fields
         setDecompositionPlan({
           videoType: brief.videoType,
           targetAudience: brief.targetAudience ?? '',
@@ -400,8 +429,8 @@ export function StepStoryboard() {
           generatedBy: 'ai',
         });
 
-        // Convert to PipelineScenes
-        const pipelineScenes: Omit<PipelineScene, 'id'>[] = data.plan.scenes.map((scene) => ({
+        const pipelineScenes: PipelineScene[] = data.plan.scenes.map((scene) => ({
+          id: crypto.randomUUID(),
           sceneNumber: scene.sceneNumber,
           title: scene.title,
           visualDescription: scene.visualDescription,
@@ -416,7 +445,8 @@ export function StepStoryboard() {
           status: 'draft' as const,
         }));
 
-        setScenes(pipelineScenes.map((s) => ({ ...s, id: crypto.randomUUID() })));
+        setScenes(pipelineScenes);
+        setSelectedSceneId(null);
       }
     } catch (err) {
       setDecompositionError(err instanceof Error ? err.message : 'Decomposition failed');
@@ -441,40 +471,57 @@ export function StepStoryboard() {
       backgroundPrompt: null,
       status: 'draft',
     });
+    // Auto-select the new scene for editing
+    // The addScene creates with randomUUID internally, so we select after a tick
+    setTimeout(() => {
+      const store = useVideoPipelineStore.getState();
+      const lastScene = store.scenes[store.scenes.length - 1];
+      if (lastScene) {
+        setSelectedSceneId(lastScene.id);
+      }
+    }, 50);
   }, [addScene, scenes.length]);
 
   // ── Generate preview image for a scene ─────────────────────────────────
   const handleGeneratePreview = useCallback(async (sceneId: string) => {
     const scene = scenes.find((s) => s.id === sceneId);
-    if (!scene) { return; }
+    if (!scene) {
+      return;
+    }
 
     setGeneratingPreviews((prev) => new Set(prev).add(sceneId));
 
     try {
+      const cinematicDetails = scene.cinematicConfig
+        ? Object.entries(scene.cinematicConfig)
+            .filter(([key, val]) => val !== undefined && key !== 'temperature')
+            .map(([, val]) => String(val))
+            .join(', ')
+        : '';
+
       const prompt = [
         'Cinematic storyboard frame, 16:9 aspect ratio.',
         scene.visualDescription ? `Shot type: ${scene.visualDescription}.` : '',
         scene.backgroundPrompt ? `Setting: ${scene.backgroundPrompt}.` : '',
         scene.title ? `Scene: ${scene.title}.` : '',
-        projectMood ? `Mood: ${projectMood}.` : '',
+        cinematicDetails ? `Style: ${cinematicDetails}.` : '',
         'Professional video production style, photorealistic.',
       ].filter(Boolean).join(' ');
 
-      const response = await authFetch('/api/ai/generate-image', {
+      const response = await authFetch('/api/studio/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           prompt,
-          size: '1792x1024',
-          quality: 'standard',
-          style: 'vivid',
+          type: 'image',
+          presets: scene.cinematicConfig ?? {},
         }),
       });
 
       if (response.ok) {
-        const data = (await response.json()) as { success: boolean; imageUrl?: string };
-        if (data.success && data.imageUrl) {
-          updateScene(sceneId, { screenshotUrl: data.imageUrl });
+        const data = (await response.json()) as { success: boolean; data?: { url?: string } };
+        if (data.success && data.data?.url) {
+          updateScene(sceneId, { screenshotUrl: data.data.url });
         }
       }
     } catch {
@@ -486,23 +533,36 @@ export function StepStoryboard() {
         return next;
       });
     }
-  }, [scenes, projectMood, authFetch, updateScene]);
+  }, [scenes, authFetch, updateScene]);
+
+  // ── Generate all previews ─────────────────────────────────────────────
+  const handleGenerateAllPreviews = useCallback(async () => {
+    for (const scene of scenes) {
+      if (!scene.screenshotUrl) {
+        await handleGeneratePreview(scene.id);
+      }
+    }
+  }, [scenes, handleGeneratePreview]);
 
   // ── Readiness checks ───────────────────────────────────────────────────
-  // Avatar and voice are optional — the generation system auto-selects defaults
   const missingRequirements: string[] = [];
-  if (scenes.length === 0) { missingRequirements.push('Add at least one scene'); }
-  if (scenes.some((s) => !s.scriptText.trim())) { missingRequirements.push('All scenes need scripts'); }
+  if (scenes.length === 0) {
+    missingRequirements.push('Add at least one scene');
+  }
+  if (scenes.some((s) => !s.scriptText.trim())) {
+    missingRequirements.push('All scenes need scripts');
+  }
 
   const totalDuration = scenes.reduce((sum, s) => sum + s.duration, 0);
   const isReady = missingRequirements.length === 0;
 
   // ── Save storyboard to Firestore and advance ───────────────────────────
   const handleApproveAndGenerate = useCallback(async () => {
-    if (!isReady) { return; }
+    if (!isReady) {
+      return;
+    }
     setIsSaving(true);
     try {
-      // Save current storyboard state to Firestore so edits persist
       await authFetch('/api/video/project/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -514,6 +574,8 @@ export function StepStoryboard() {
           scenes: scenes.map((s) => ({
             id: s.id,
             sceneNumber: s.sceneNumber,
+            title: s.title,
+            visualDescription: s.visualDescription,
             scriptText: s.scriptText,
             screenshotUrl: s.screenshotUrl ?? null,
             avatarId: s.avatarId ?? null,
@@ -522,6 +584,7 @@ export function StepStoryboard() {
             duration: s.duration,
             engine: s.engine ?? 'hedra',
             backgroundPrompt: s.backgroundPrompt ?? null,
+            cinematicConfig: s.cinematicConfig,
             status: s.status,
           })),
           avatarId: avatarId ?? null,
@@ -540,6 +603,9 @@ export function StepStoryboard() {
     advanceStep();
   }, [isReady, authFetch, projectId, projectName, brief, scenes, avatarId, avatarName, voiceId, voiceName, voiceProvider, advanceStep]);
 
+  const selectedScene = selectedSceneId ? scenes.find((s) => s.id === selectedSceneId) : null;
+  const selectedSceneIndex = selectedScene ? scenes.indexOf(selectedScene) : -1;
+
   // ════════════════════════════════════════════════════════════════════════
   // Render
   // ════════════════════════════════════════════════════════════════════════
@@ -554,21 +620,33 @@ export function StepStoryboard() {
             Storyboard
           </h2>
           <p className="text-xs text-zinc-400 mt-0.5">
-            Build your visual storyboard — add scenes, set directions, preview shots
+            Review scenes, edit scripts &amp; cinematic settings, generate preview thumbnails
           </p>
         </div>
         <div className="flex items-center gap-2">
           {scenes.length > 0 && (
-            <Button
-              size="sm"
-              variant="outline"
-              className="gap-1.5 text-xs"
-              onClick={() => { void handleDecompose(); }}
-              disabled={isDecomposing}
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${isDecomposing ? 'animate-spin' : ''}`} />
-              Regenerate
-            </Button>
+            <>
+              <Button
+                size="sm"
+                variant="outline"
+                className="gap-1.5 text-xs"
+                onClick={() => { void handleGenerateAllPreviews(); }}
+                disabled={generatingPreviews.size > 0}
+              >
+                <Wand2 className={`w-3.5 h-3.5 ${generatingPreviews.size > 0 ? 'animate-spin' : ''}`} />
+                Generate All Previews
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="gap-1.5 text-xs"
+                onClick={() => { void handleDecompose(); }}
+                disabled={isDecomposing}
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isDecomposing ? 'animate-spin' : ''}`} />
+                Regenerate
+              </Button>
+            </>
           )}
           <Button
             size="sm"
@@ -582,29 +660,31 @@ export function StepStoryboard() {
         </div>
       </div>
 
-      {/* Project-wide Mood Selector */}
+      {/* Summary Bar */}
       <Card className="bg-zinc-900/50 border-zinc-800">
         <CardContent className="p-3">
-          <div className="grid grid-cols-3 gap-3">
-            <PresetSelect
-              label="Project Mood"
-              value={projectMood}
-              presets={MOOD_PRESETS}
-              onChange={setProjectMood}
-              placeholder="Select overall mood..."
-            />
-            <div className="space-y-1">
-              <label className="text-[10px] font-medium text-zinc-500 uppercase tracking-wider">Scenes</label>
-              <p className="text-sm text-white font-medium">{scenes.length} scenes · {Math.floor(totalDuration / 60)}:{String(Math.floor(totalDuration % 60)).padStart(2, '0')}</p>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-6 text-xs text-zinc-400">
+              <span className="flex items-center gap-1.5">
+                <Layers className="w-3.5 h-3.5" />
+                {scenes.length} scenes
+              </span>
+              <span className="flex items-center gap-1.5">
+                <Clock className="w-3.5 h-3.5" />
+                {Math.floor(totalDuration / 60)}:{String(Math.floor(totalDuration % 60)).padStart(2, '0')}
+              </span>
+              <span className="flex items-center gap-1.5">
+                <Users className="w-3.5 h-3.5" />
+                {avatarName ?? <span className="text-zinc-600">No character</span>}
+              </span>
+              <span className="flex items-center gap-1.5">
+                <Mic className="w-3.5 h-3.5" />
+                {voiceName ?? <span className="text-zinc-600">No voice</span>}
+              </span>
             </div>
-            <div className="space-y-1">
-              <label className="text-[10px] font-medium text-zinc-500 uppercase tracking-wider">Cast</label>
-              <p className="text-sm text-white font-medium">
-                {avatarName ?? <span className="text-zinc-500">No character</span>}
-                {' · '}
-                {voiceName ?? <span className="text-zinc-500">No voice</span>}
-              </p>
-            </div>
+            <p className="text-[10px] text-zinc-600">
+              Click a scene to edit its cinematic settings
+            </p>
           </div>
         </CardContent>
       </Card>
@@ -614,7 +694,7 @@ export function StepStoryboard() {
         <Card className="bg-zinc-900/50 border-zinc-800">
           <CardContent className="p-8 flex flex-col items-center">
             <Loader2 className="w-8 h-8 animate-spin text-amber-500 mb-3" />
-            <p className="text-sm text-zinc-300">AI is breaking down your brief into scenes...</p>
+            <p className="text-sm text-zinc-300">AI is breaking down your concept into scenes...</p>
           </CardContent>
         </Card>
       )}
@@ -638,6 +718,7 @@ export function StepStoryboard() {
         ].map((tab) => (
           <button
             key={tab.id}
+            type="button"
             onClick={() => setActiveTab(tab.id)}
             className={`flex items-center gap-1.5 px-4 py-2 text-xs font-medium border-b-2 transition-colors ${
               activeTab === tab.id
@@ -666,55 +747,78 @@ export function StepStoryboard() {
                 <Layers className="w-12 h-12 text-zinc-700 mb-3" />
                 <p className="text-zinc-400 text-sm mb-1">No scenes yet</p>
                 <p className="text-zinc-600 text-xs mb-4">
-                  Add scenes manually or let AI decompose your brief
+                  Add scenes manually or go back to Studio to describe your concept for AI decomposition
                 </p>
                 <div className="flex gap-2">
                   <Button size="sm" variant="outline" className="gap-1.5" onClick={handleAddScene}>
                     <Plus className="w-3.5 h-3.5" />
                     Add Scene
                   </Button>
-                  {brief.description.trim().length > 0 && (
-                    <Button size="sm" className="gap-1.5 bg-amber-600 hover:bg-amber-700" onClick={() => { void handleDecompose(); }}>
-                      <Sparkles className="w-3.5 h-3.5" />
-                      AI Decompose
-                    </Button>
-                  )}
+                  <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setStep('request')}>
+                    <ArrowLeft className="w-3.5 h-3.5" />
+                    Back to Studio
+                  </Button>
                 </div>
               </CardContent>
             </Card>
           ) : (
-            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              <AnimatePresence mode="popLayout">
-                {scenes.map((scene, idx) => (
-                  <SceneCard
-                    key={scene.id}
-                    scene={scene}
-                    index={idx}
-                    onUpdate={(updates) => updateScene(scene.id, updates)}
-                    onDelete={() => removeScene(scene.id)}
-                    onDuplicate={() => {
-                      addScene({
-                        ...scene,
-                        sceneNumber: scenes.length + 1,
-                        title: `${scene.title ?? `Scene ${idx + 1}`} (copy)`,
-                        screenshotUrl: null,
-                      });
-                    }}
-                    onGeneratePreview={() => { void handleGeneratePreview(scene.id); }}
-                    isGeneratingPreview={generatingPreviews.has(scene.id)}
-                  />
-                ))}
-              </AnimatePresence>
+            <>
+              {/* Scene grid */}
+              <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                <AnimatePresence mode="popLayout">
+                  {scenes.map((scene, idx) => (
+                    <SceneCard
+                      key={scene.id}
+                      scene={scene}
+                      index={idx}
+                      isSelected={selectedSceneId === scene.id}
+                      onSelect={() => setSelectedSceneId(
+                        selectedSceneId === scene.id ? null : scene.id,
+                      )}
+                      onDelete={() => {
+                        removeScene(scene.id);
+                        if (selectedSceneId === scene.id) {
+                          setSelectedSceneId(null);
+                        }
+                      }}
+                      onDuplicate={() => {
+                        addScene({
+                          ...scene,
+                          sceneNumber: scenes.length + 1,
+                          title: `${scene.title ?? `Scene ${idx + 1}`} (copy)`,
+                          screenshotUrl: null,
+                        });
+                      }}
+                      onGeneratePreview={() => { void handleGeneratePreview(scene.id); }}
+                      isGeneratingPreview={generatingPreviews.has(scene.id)}
+                    />
+                  ))}
+                </AnimatePresence>
 
-              {/* Add scene card */}
-              <button
-                onClick={handleAddScene}
-                className="aspect-video bg-zinc-900/30 border-2 border-dashed border-zinc-700 rounded-lg flex flex-col items-center justify-center text-zinc-600 hover:text-amber-500 hover:border-amber-500/50 transition-colors"
-              >
-                <Plus className="w-8 h-8 mb-1" />
-                <span className="text-xs font-medium">Add Scene</span>
-              </button>
-            </div>
+                {/* Add scene card */}
+                <button
+                  type="button"
+                  onClick={handleAddScene}
+                  className="aspect-video bg-zinc-900/30 border-2 border-dashed border-zinc-700 rounded-lg flex flex-col items-center justify-center text-zinc-600 hover:text-amber-500 hover:border-amber-500/50 transition-colors"
+                >
+                  <Plus className="w-8 h-8 mb-1" />
+                  <span className="text-xs font-medium">Add Scene</span>
+                </button>
+              </div>
+
+              {/* Expanded Scene Editor */}
+              <AnimatePresence>
+                {selectedScene && (
+                  <SceneDetailEditor
+                    key={selectedScene.id}
+                    scene={selectedScene}
+                    index={selectedSceneIndex}
+                    onUpdate={(updates) => updateScene(selectedScene.id, updates)}
+                    onClose={() => setSelectedSceneId(null)}
+                  />
+                )}
+              </AnimatePresence>
+            </>
           )}
         </>
       )}
@@ -765,11 +869,10 @@ export function StepStoryboard() {
           onClick={() => setStep('request')}
         >
           <ArrowLeft className="w-3.5 h-3.5" />
-          Edit Brief
+          Back to Studio
         </Button>
 
         <div className="flex items-center gap-3">
-          {/* Summary badges */}
           <div className="flex items-center gap-2 text-[10px] text-zinc-500">
             <span className="flex items-center gap-1">
               <Layers className="w-3 h-3" />
