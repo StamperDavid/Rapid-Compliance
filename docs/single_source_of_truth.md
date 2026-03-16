@@ -1,7 +1,7 @@
 # SalesVelocity.ai - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** March 15, 2026 (Hedra inline TTS fix + Campaign Orchestration Pipeline plan)
+**Last Updated:** March 15, 2026 (Campaign Orchestration Pipeline Layer 1+2 implemented)
 **Branches:** `dev` (latest)
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Architecture:** Single-Tenant Penthouse Model (development strategy — multi-tenant SaaS product)
@@ -37,7 +37,7 @@
 | Metric | Count | Status |
 |--------|-------|--------|
 | Physical Routes (page.tsx) | 181 | Updated March 15, 2026 |
-| API Endpoints (route.ts) | 376 | Updated March 15, 2026 (verified by audit) |
+| API Endpoints (route.ts) | 380 | Updated March 15, 2026 (+4 campaign API routes) |
 | AI Agents | 52 | **52 FUNCTIONAL (46 swarm + 6 standalone)** |
 | RBAC Roles | 4 | owner / admin / manager / member |
 | TypeScript Files | 1,582 | Verified March 15, 2026 |
@@ -118,7 +118,7 @@ The Claude Code Governance Layer defines binding operational constraints for AI-
 
 > All milestone details (Sessions 1-31) have been archived. Key achievements:
 > - **Hedra Video Fix** — Replaced 3-step TTS dance with inline `audio_generation`. Confirmed Kling O3 T2V produces speaking characters. hedra-node SDK rejected as outdated. Full system review completed. (March 15)
-> - **Campaign Orchestration Pipeline planned** — 4-layer plan for unified content orchestration: Jasper researches → strategizes → produces all content types → presents for review in Mission Control. CampaignDeliverable model designed. (March 15)
+> - **Campaign Orchestration Pipeline Layer 1+2 DONE** — Campaign + CampaignDeliverable models, 4 API routes, `create_campaign` Jasper tool, deliverable auto-tracking on produce_video/save_blog_draft/social_post, Campaign Review UI at `/mission-control?campaign={id}`. (March 15)
 > - **System-wide audit** — 1,582 files, 376 API routes, 0 `any` types, 0 TODOs, 0 security issues. Code quality rated excellent. (March 15)
 > - **Voice Lab & Custom Avatars** — Recording studio, voice library, avatar photo upload to Firestore `custom_avatars`, voice assignment, CUSTOM badges (March 6)
 > - **Lead Research AI upgrade** — Apollo free-tier org search, 8-tool AI chat with comprehensive system prompt, 5 tool rounds (March 6)
@@ -138,22 +138,21 @@ The Claude Code Governance Layer defines binding operational constraints for AI-
 - **Character Studio** stores client characters in Firestore (portraits, voices, metadata). Hedra's element API is read-only via API key — custom characters must live in our system.
 - **Core business value:** Clients clone themselves (face + voice) to automate daily video content. Cinema-quality enterprise ads at a fraction of traditional cost.
 
-### Campaign Orchestration Pipeline (Planned — March 15, 2026)
+### Campaign Orchestration Pipeline (Layers 1+2 DONE — March 15, 2026)
 
-Next major feature. Jasper orchestrates full marketing campaigns:
-1. **Research** → competitor analysis, market data
-2. **Strategy** → positioning, messaging, audience
-3. **Content production** → blog, video (using client's AI clone), social posts, images, email
-4. **Unified review** → all deliverables in Mission Control with approve/reject/feedback per item
-5. **Auto-publish** → approved items schedule via existing social, blog, email integrations
+Jasper orchestrates full marketing campaigns: research → strategy → produce all content → unified review.
 
-Implementation in 4 layers:
-- **Layer 1 (MVP):** CampaignDeliverable model + unified Mission Review page
-- **Layer 2:** Campaign model tying deliverables to shared brief/strategy
-- **Layer 3:** Auto-publish pipeline for approved content
-- **Layer 4:** Feedback loop — rejected items auto-return to Jasper for revision
+**Built (Layers 1+2):**
+- `Campaign` + `CampaignDeliverable` types with Zod schemas (`src/types/campaign.ts`)
+- Full Firestore CRUD service with auto-status promotion (`src/lib/campaign/campaign-service.ts`)
+- 4 API routes: `POST/GET /api/campaigns`, `GET/PATCH /api/campaigns/[campaignId]`, `POST/GET .../deliverables`, `PATCH .../deliverables/[deliverableId]`
+- `create_campaign` Jasper tool + `campaignId` param on `produce_video`, `save_blog_draft`, `social_post`
+- Campaign Review UI at `/mission-control?campaign={id}` — deliverable cards, approve/reject/feedback, "Approve All", progress bar
+- Firestore: `organizations/{PLATFORM_ID}/campaigns/{campaignId}` + `.../deliverables/{deliverableId}`
 
-Full plan in `CONTINUATION_PROMPT.md`.
+**Remaining:**
+- **Layer 3:** Auto-publish pipeline (approved items auto-post via social, blog, email integrations)
+- **Layer 4:** Feedback loop (rejected items return to Jasper for revision with version history)
 
 ---
 
@@ -166,7 +165,7 @@ Full plan in `CONTINUATION_PROMPT.md`.
 | Single-tenant architecture | **COMPLETE** — Firebase kill-switch, PLATFORM_ID constant, workspace paths eradicated (53 files migrated) |
 | 4-role RBAC | **ENFORCED** — `requireRole()` on ~347/355 API routes (8 intentionally public), sidebar filtering, 47 permissions |
 | Agent hierarchy | **100% COMPLETE** — 52 agents (46 swarm + 6 standalone), all managers orchestrate all specialists |
-| Jasper delegation | **COMPLETE** — 50 tools (13 delegate_to_*, 37 utility incl. assemble_video, edit_video, manage_media_library). Mission Control SSE streaming live |
+| Jasper delegation | **COMPLETE** — 51 tools (13 delegate_to_*, 38 utility incl. create_campaign, assemble_video, edit_video, manage_media_library). Mission Control SSE streaming + Campaign Review live |
 | Lead Research | **COMPLETE** — Unified 3-column page with AI chat, results panel, URL sources. 5 API routes, 8-tool AI subset |
 | Type safety | **CLEAN** — `tsc --noEmit` passes, zero `any` types, zero `@ts-ignore`, zero `@ts-expect-error` |
 | Build pipeline | **CLEAN** — `npm run build` passes, `npm run lint` zero warnings, 17 eslint-disable (ratcheted) |
@@ -1213,7 +1212,7 @@ This script:
 
 ## Tooling Inventory
 
-### API Routes (355 Total — Verified March 6, 2026)
+### API Routes (359 Total — Updated March 15, 2026)
 
 | Category | Count | Path Pattern | Status |
 |----------|-------|--------------|--------|
@@ -1222,6 +1221,7 @@ This script:
 | Agent | 4 | `/api/agent/*` | Partial |
 | Battlecard | 4 | `/api/battlecard/*` | Functional |
 | Billing | 3 | `/api/billing/*` | Functional |
+| Campaigns | 4 | `/api/campaigns/*` | Functional (NEW March 15 — Campaign Orchestration Pipeline) |
 | Coaching | 2 | `/api/coaching/*` | Functional |
 | CRM | 9 | `/api/crm/*` | Functional |
 | Cron | 4 | `/api/cron/*` | Functional (+3 Growth crons March 2) |
@@ -1717,15 +1717,17 @@ All 64 API routes that were using the client-side `FirestoreService` have been m
 
 **Routing:** Jasper detects domain analysis requests via traffic/visitor/backlink keywords + domain extraction regex → Marketing Manager → SEO Expert `domain_analysis` action → 5 concurrent DataForSEO calls.
 
-### Jasper Mission Control (LIVE — Sprint 18)
+### Jasper Mission Control (LIVE — Sprint 18 + Campaign Review)
 
-**Routes:** `/mission-control` (live view), `/mission-control/history` (completed missions)
+**Routes:** `/mission-control` (live view), `/mission-control?campaign={id}` (Campaign Review), `/mission-control/history` (completed missions)
 
 Live "Air Traffic Control" for Jasper's multi-step delegations. SSE streaming via Firestore `onSnapshot()`, cancel capability, 3-panel layout (sidebar, timeline, step detail). 13 delegation tools instrumented with `toolArgs`/`toolResult` tracking. Fire-and-forget instrumentation never breaks chat response.
 
-**Key files:** `src/lib/orchestrator/mission-persistence.ts` (types + CRUD), `src/hooks/useMissionStream.ts` (SSE client), `src/app/(dashboard)/mission-control/` (UI).
-**Firestore:** `organizations/{PLATFORM_ID}/missions/{missionId}`
-**Statuses:** Mission: PENDING → IN_PROGRESS → COMPLETED/FAILED. Steps: PENDING → RUNNING → COMPLETED/FAILED/AWAITING_APPROVAL.
+**Campaign Review (NEW):** When `?campaign=` URL param is present, renders CampaignReview component showing all deliverables as cards with inline preview, approve/reject/feedback buttons, "Approve All", and progress bar. Polls for real-time updates.
+
+**Key files:** `src/lib/orchestrator/mission-persistence.ts` (types + CRUD), `src/lib/campaign/campaign-service.ts` (campaign + deliverable CRUD), `src/hooks/useMissionStream.ts` (SSE client), `src/app/(dashboard)/mission-control/` (UI + CampaignReview).
+**Firestore:** `organizations/{PLATFORM_ID}/missions/{missionId}`, `organizations/{PLATFORM_ID}/campaigns/{campaignId}` + `.../deliverables/{deliverableId}`
+**Statuses:** Mission: PENDING → IN_PROGRESS → COMPLETED/FAILED. Steps: PENDING → RUNNING → COMPLETED/FAILED/AWAITING_APPROVAL. Deliverables: drafting → pending_review → approved/rejected/revision_requested → published.
 
 ### Previously Planned Integrations (NOW LIVE)
 
