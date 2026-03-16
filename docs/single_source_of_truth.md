@@ -1,7 +1,7 @@
 # SalesVelocity.ai - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** March 15, 2026 (Campaign Pipeline Layers 3+4 complete, video prompt fixes)
+**Last Updated:** March 16, 2026 (AI Creative Studio planned — RenderZero-caliber cinematic content generation)
 **Branches:** `dev` (latest)
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Architecture:** Single-Tenant Penthouse Model (development strategy — multi-tenant SaaS product)
@@ -138,6 +138,56 @@ The Claude Code Governance Layer defines binding operational constraints for AI-
 - **Character Studio** stores client characters in Firestore (portraits, voices, metadata). Hedra's element API is read-only via API key — custom characters must live in our system.
 - **Prompt pipeline:** `hedra-prompt-agent.ts` and `hedra-prompt-translator.ts` updated March 15 — correct inline TTS field structure enforced, cinema-quality prompt generation for both avatar and T2V modes.
 - **Core business value:** Clients clone themselves (face + voice) to automate daily video content. Cinema-quality enterprise ads at a fraction of traditional cost.
+
+### AI Creative Studio (Planned — March 16, 2026)
+
+**Inspiration:** RenderZero AI Studio — professional-grade cinematic AI image/video generation with deep creative controls.
+**Goal:** Build a web-native equivalent directly into SalesVelocity.ai at `/content/studio`, surpassing RenderZero's desktop app with SaaS convenience + campaign integration.
+
+**Core Architecture (8 Phases):**
+
+| Phase | Name | What It Delivers |
+|-------|------|-----------------|
+| 1 | Cinematic Preset Engine | 200+ presets: 49 camera bodies, 43 lighting setups, 30 film stocks, 100+ movie looks, 20+ art styles (photorealistic, Pixar/3D, anime, comic, watercolor, oil painting, cyberpunk, fantasy, noir, retro, etc.), 15+ compositions. Data layer + prompt injection system. |
+| 2 | Multi-Provider Backend | Fal.ai (Flux/SDXL), Google AI Studio (Gemini), Kling 3.0, Hedra (avatar), DALL-E 3. Provider router with BYOK key management. |
+| 3 | Studio UI — Image Generation | Full creative workspace: prompt + cinematic controls panel, live preview, generation history/gallery, batch generation. Manual mode with direct parameter editing. |
+| 4 | Character System (Upgraded) | Full character profiles: face refs, clothing, personality, voice. Face-lock consistency across generations. Wardrobe system. Import from photo. Character library with search/organize. |
+| 5 | Image → Video Bridge | Generate still → click "animate" → routes to Kling/Hedra. Multi-angle generation (same scene, 3-4 camera positions). Seamless hybrid workflow. |
+| 6 | Studio UI — Video Controls | Cinematic controls applied to video generation. Scene-level camera/lighting/style. Storyboard integration with visual presets. |
+| 7 | Cost Tracking Dashboard | Per-generation cost logging by provider/model/resolution. Daily/weekly/monthly spend. Per-project rollup. Budget alerts. |
+| 8 | Manual Fallback Mode | Full offline-capable preset browsing. Prompt builder from dropdowns (no AI call needed). Queue-and-retry when providers are down. Pro mode vs Easy mode toggle. |
+
+**Key Design Decisions:**
+- Web-native (not desktop) — runs inside SalesVelocity dashboard, no separate app
+- BYOK model — clients use their own API keys (already in Firestore via `/settings/api-keys`)
+- Campaign-integrated — studio generations can feed directly into campaign deliverables
+- Jasper-aware — `create_image`, `create_cinematic_video` tools will use studio presets
+- Manual fallback — all controls work without AI; prompt builder constructs from dropdowns
+
+**New Files (Planned):**
+- `src/app/(dashboard)/content/studio/page.tsx` — Main creative studio UI
+- `src/lib/ai/creative-studio-service.ts` — Multi-provider orchestration
+- `src/lib/ai/cinematic-presets.ts` — 200+ preset library with prompt mappings
+- `src/lib/ai/provider-router.ts` — BYOK provider selection and routing
+- `src/lib/ai/cost-tracker.ts` — Per-generation cost logging
+- `src/types/creative-studio.ts` — CinematicPreset, StudioGeneration, CharacterProfile, ProviderConfig types
+- API routes: `/api/studio/generate`, `/api/studio/providers`, `/api/studio/presets`, `/api/studio/characters`, `/api/studio/cost`
+
+**Firestore (Planned):**
+- `organizations/{PLATFORM_ID}/studio/presets` — Custom presets (user-created)
+- `organizations/{PLATFORM_ID}/studio/characters` — Enhanced character profiles
+- `organizations/{PLATFORM_ID}/studio/generations` — Generation history with cost tracking
+- `organizations/{PLATFORM_ID}/studio/cost-log` — Per-generation cost records
+
+**Provider Matrix:**
+
+| Provider | Capability | Models | Cost Range |
+|----------|-----------|--------|------------|
+| Fal.ai | Image gen (fast) | Flux, SDXL, Stable Diffusion | $0.01–$0.05/image |
+| Google AI Studio | Image gen | Gemini image models | $0.01–$0.04/image |
+| DALL-E 3 | Image gen (quality) | DALL-E 3 | $0.04–$0.12/image |
+| Hedra | Avatar video | Character 3, Kling O3 | $0.05–$0.15/video |
+| Kling 3.0 | Video gen | Kling 3.0 | $0.03–$0.10/video |
 
 ### Campaign Orchestration Pipeline (Layers 1–4 DONE — March 15, 2026)
 
@@ -1706,6 +1756,9 @@ All 64 API routes that were using the client-side `FirestoreService` have been m
 | **Twilio Verify** | **REAL** | OTP/2FA verification |
 | **Apollo.io** | **REAL** | Free-tier org search (`/api/v1/organizations/search`), company enrichment. Person enrichment requires paid plan. |
 | **Clay.com** | **KEY STORED** | API key configured. REST API deprecated by Clay — webhook-based integration only. |
+| **Fal.ai** | **PLANNED** | AI Creative Studio — Flux, SDXL, Stable Diffusion image generation. BYOK. |
+| **Google AI Studio** | **PLANNED** | AI Creative Studio — Gemini image models. BYOK. |
+| **Kling 3.0 (Direct)** | **PLANNED** | AI Creative Studio — Direct video generation API (separate from Hedra's Kling O3 access). BYOK. |
 
 ### SEO Data Integrations (NEW: February 23, 2026)
 
@@ -2100,6 +2153,6 @@ See `docs/archive/legacy/README.md` for full archive index.
 **END OF SINGLE SOURCE OF TRUTH**
 
 *Document generated by Claude Code multi-agent audit - January 26, 2026*
-*Last updated: March 10, 2026 — Video system Phases 1-3 complete (Hedra-only engine, Character Studio, AI Video Director). Auto-sync Hedra avatars, retry race condition fix, image error fallback. Onboarding overhaul (industry persona blueprints, 15-category wizard, feature module defaults, Jasper task reminder). All video routes now FUNCTIONAL.*
+*Last updated: March 16, 2026 — AI Creative Studio planned (RenderZero-caliber cinematic content generation with multi-provider BYOK, 200+ cinematic presets, character system, image→video bridge, cost tracking, manual fallback). Style support: photorealistic, Pixar/3D animation, anime, cinematic film, stylized illustration.*
 
 > Session changelogs, launch gap analysis, and completed roadmap details archived in `docs/archive/`.
