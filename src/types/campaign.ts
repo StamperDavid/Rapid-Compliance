@@ -57,6 +57,9 @@ export interface CampaignDeliverable {
   updatedAt: string;
   approvedAt?: string;
   approvedBy?: string;
+  publishedAt?: string;
+  /** Mission ID created for revising this deliverable */
+  revisionMissionId?: string;
 }
 
 // ============================================================================

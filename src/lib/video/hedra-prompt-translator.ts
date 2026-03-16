@@ -31,11 +31,11 @@ export interface CharacterContext {
 // ============================================================================
 
 const ROLE_PROMPT_HINTS: Record<CharacterRole, string> = {
-  hero: 'confident, determined expression, strong posture, heroic presence',
-  villain: 'intense gaze, commanding presence, dramatic lighting',
-  extra: 'natural, casual, background character energy',
-  narrator: 'composed, authoritative, direct eye contact with camera',
-  presenter: 'friendly, professional, engaging the viewer, clear enunciation',
+  hero: 'confident, determined expression, strong posture, heroic presence, cinematic close-up, warm key light',
+  villain: 'intense gaze, commanding presence, dramatic chiaroscuro lighting, sharp shadows, low-angle shot',
+  extra: 'natural, casual, background character energy, shallow depth of field',
+  narrator: 'composed, authoritative, direct eye contact with camera, centered framing, clean background',
+  presenter: 'friendly, professional, engaging the viewer, well-lit face, medium shot, studio lighting',
   custom: '',
 };
 
@@ -44,9 +44,9 @@ const ROLE_PROMPT_HINTS: Record<CharacterRole, string> = {
 // ============================================================================
 
 const STYLE_PROMPT_HINTS: Record<CharacterStyleTag, string> = {
-  real: 'photorealistic, natural lighting, real-world environment',
-  anime: 'anime art style, vibrant colors, expressive features, cel-shaded',
-  stylized: 'stylized rendering, artistic, enhanced features, creative lighting',
+  real: 'photorealistic, cinematic film grain, natural lighting, real-world environment, 4K quality',
+  anime: 'anime art style, vibrant saturated colors, expressive features, cel-shaded, dynamic composition',
+  stylized: 'stylized rendering, artistic, enhanced features, creative lighting, bold color grading',
 };
 
 // ============================================================================
@@ -88,6 +88,11 @@ export function translatePromptForHedra(
     if (character.source !== 'hedra' || character.role !== 'extra') {
       parts.push(roleHint);
     }
+  }
+
+  // Add cinematic quality baseline
+  if (parts.length > 0) {
+    parts.push('cinematic quality, professional lighting, sharp focus');
   }
 
   // If nothing was assembled, return the raw description unchanged
