@@ -5,7 +5,7 @@
 ## Context
 Repository: https://github.com/StamperDavid/Rapid-Compliance
 Branch: dev
-Last Updated: March 16, 2026
+Last Updated: March 16, 2026 (Session 2)
 
 ## Current State
 
@@ -59,7 +59,8 @@ The RenderZero-caliber cinematic controls are BUILT and INTEGRATED into the vide
 - Same cinematic controls, provider selection, render queue
 
 **Navigation** (`src/lib/constants/subpage-nav.ts`):
-- "Content Generator Hub" with tabs: Video | Image Generator | Editor | Library | Voice Lab
+- "Content Generator Hub" with tabs: Video | Image | Editor | Library | Audio Lab
+- Sidebar label: "Content Generator" (under Marketing) — isActive covers all `/content/` paths
 - Constant renamed from `VIDEO_TABS` to `CONTENT_GENERATOR_TABS`
 
 **Backend**:
@@ -151,82 +152,80 @@ Mission Control
 5. Real-time updates via existing SSE streaming
 6. This is where Jasper sends users for ALL review — not directly to product pages
 
-### What Needs to Change
+### What Was Built (March 16, 2026 — Session 2)
 
-**Mission Control UI** (`src/app/(dashboard)/mission-control/`):
-- Rebuild the layout to match the plan → steps → outputs hierarchy
-- Each step must show: delegated agent name, task description, status, output preview, link to full output
-- Clicking a mission expands to show all steps
-- Clicking a step navigates to the output (storyboard page, blog editor, etc.)
-- The existing 3-panel layout, SSE streaming, approval gates, and agent avatars are KEPT
+**Mission Control UI Overhaul:**
+- Fixed `trackMissionStep` stepId bug — RUNNING/COMPLETED now share same stepId via Map
+- Rich output previews in step cards (research chips, strategy angles, thumbnail strips, cinematic badges)
+- Type-specific detail rendering in right panel (formatted research, strategy docs, cinematic grids, thumbnail galleries, storyboard review buttons)
+- 8 new agent avatars for orchestration chain (Research, Strategy, Script Writer, Cinematic Director, Image Generator, Video Director, Content, Commerce, Outreach, Intelligence)
+- Dashboard-links with orchestration step mappings, human-readable step names, dynamic review links from toolResult
 
-**Jasper Tools** (`src/lib/orchestrator/jasper-tools.ts`):
-- `produce_video` needs to orchestrate the full chain (research → strategy → script → cinematic → thumbnails) instead of jumping straight to decompose
-- Each delegation step must write to mission-persistence so Mission Control tracks it
-- The final step should link to the storyboard page, not navigate directly
+**Jasper 6-Step Orchestration Chain (produce_video):**
+- Step 1: Research Agent — LLM-powered topic research with key insights extraction
+- Step 2: Strategy Agent — Narrative angle, key messages, audience, tone, CTA
+- Step 3: Script Writing — Video Specialist creates enriched storyboard using strategy context
+- Step 4: Cinematic Director — LLM selects per-scene cinematography (shot type, lighting, camera, film stock, art style)
+- Step 5: Thumbnails — Auto-generates preview images per scene via provider-router with cinematic presets
+- Step 6: Ready for Review — Complete storyboard link with full orchestration metadata
+- Each step writes independently to mission-persistence for real-time SSE streaming
+- Non-fatal steps (research/strategy/cinematic/thumbnails) fail gracefully — chain continues
 
-**New: Cinematic Director delegation** — After script generation, Jasper delegates cinematic config selection per scene. This could be a tool call that uses `getRecommendedPresets()` or an AI agent that picks settings based on scene content.
-
-**New: Auto-thumbnail generation** — After cinematic configs are set, automatically generate preview images for each scene via `/api/studio/generate` and save URLs to `scene.screenshotUrl`.
-
-**Dashboard Links** (`mission-control/_components/dashboard-links.ts`):
-- Update mappings to include the new routes:
-  - `produce_video` / `create_video` → `/content/video` (storyboard step)
-  - `create_image` → `/content/image-generator`
-  - All existing mappings stay
-
-### Existing Infrastructure (DO NOT REBUILD)
-
-These are all production-ready and just need the UX/orchestration upgrades:
-
-| Component | Status | File |
-|-----------|--------|------|
-| Mission Firestore persistence | ✅ Working | `src/lib/orchestrator/mission-persistence.ts` |
-| Mission CRUD API (create, list, get) | ✅ Working | `src/app/api/orchestrator/missions/` |
-| SSE streaming for real-time updates | ✅ Working | `src/app/api/orchestrator/missions/[id]/stream/` |
-| Mission cancellation | ✅ Working | `src/app/api/orchestrator/missions/[id]/cancel/` |
-| Approval gates | ✅ Working | `src/app/api/orchestrator/approvals/` |
-| `useMissionStream` SSE hook | ✅ Working | `src/hooks/useMissionStream.ts` |
-| MissionTimeline component | ✅ Working | `mission-control/_components/MissionTimeline.tsx` |
-| MissionSidebar component | ✅ Working | `mission-control/_components/MissionSidebar.tsx` |
-| ApprovalCard component | ✅ Working | `mission-control/_components/ApprovalCard.tsx` |
-| AgentAvatar component | ✅ Working | `mission-control/_components/AgentAvatar.tsx` |
-| Dashboard link mappings | ✅ Working | `mission-control/_components/dashboard-links.ts` |
-| Jasper tool step tracking | ✅ Working | `src/lib/orchestrator/jasper-tools.ts` (fire-and-forget) |
-| E2E tests | ✅ Passing | `tests/e2e/mission-control.spec.ts` |
-
-### Build Order (ALL COMPLETE)
-
-1. **Mission Control UI overhaul** — DONE. Rich output previews (research chips, strategy angles, thumbnail strips, cinematic grids), type-specific detail rendering, new agent avatars, dynamic review links.
-2. **Jasper `produce_video` orchestration chain** — DONE. 6-step sequential chain with mission step tracking per step.
-3. **Cinematic Director tool** — DONE. LLM-powered per-scene cinematography selection (shot type, lighting, camera, film stock, art style, focal length, composition).
-4. **Auto-thumbnail generation** — DONE. Generates preview images per scene via provider-router with cinematic presets, saves to `scene.screenshotUrl`.
-5. **Dashboard link updates** — DONE. New tool→route mappings for all orchestration steps + human-readable step names.
-6. **Test end-to-end** — TODO: Give Jasper a vague prompt, verify the full chain executes and Mission Control shows all steps with clickable outputs.
+**UI/Navigation Fixes:**
+- Sidebar: "Video" → "Content Generator" (isActive covers all `/content/` paths)
+- Tab: "Image Generator" → "Image"
+- Tab: "Voice Lab" → "Audio Lab", page heading updated, inner tab "Studio" → "Voice Studio"
+- Upload slots accept `image/*,video/*` instead of image-only
 
 ---
 
-## Key Files
+## NEXT BUILD: Per-Scene Audio Cues + Pipeline Audio Integration
+
+> **Priority: NEXT**
+> **Goal:** Video scripts can include diegetic audio direction (music characters hear, radio, sound design) per scene. MiniMax generates matching tracks. Multi-scene continuous audio is handled in the Video Editor post-production.
+
+### Architecture Decision
+
+**Per-scene audio (automated in pipeline):**
+- `audioCue` text field on `PipelineScene` — describes what audio plays in that scene
+- AI script writer naturally writes audio cues when the story calls for it (not forced)
+- Examples: "80s hip-hop blasting from car stereo", "soft piano underscore", "radio newscast interrupts"
+- MiniMax generates a matching track per scene during orchestration
+- Single-scene only — audio starts and ends with the scene
+
+**Multi-scene continuous audio (manual in editor):**
+- Background music spanning multiple scenes is handled in Video Editor post-production
+- User lays a continuous track over the assembled timeline
+- No per-scene restart — proper timeline-based audio mixing
+- This already has infrastructure: `EditorAudioTrack` type, FFmpeg audio-mix API
+
+### Build Order
+
+1. **Add `audioCue` field to `PipelineScene` type** — optional string field for audio direction
+2. **Update Video Specialist prompt** — teach it that audio cues are available; let it decide when to include them
+3. **Update scene generation** — parse and save `audioCue` from AI script output
+4. **Add MiniMax generation step to orchestration chain** — after scripts, generate audio for scenes with cues
+5. **Add audio cue UI to storyboard scene cards** — text field to edit/add/clear audio direction, audio player for generated track
+6. **Wire per-scene audio into assembly** — FFmpeg mixes individual scene audio during stitching
+7. **Test end-to-end** — Script with audio cues → MiniMax generation → preview in storyboard → assembly with audio
+
+### Key Files
 
 | File | Purpose |
 |------|---------|
 | `CLAUDE.md` | Binding governance for all Claude Code sessions |
 | `docs/single_source_of_truth.md` | Authoritative architecture doc |
-| `ENGINEERING_STANDARDS.md` | Code quality requirements |
-| `src/lib/constants/platform.ts` | PLATFORM_ID and platform identity |
-| `src/lib/orchestrator/jasper-tools.ts` | Jasper's 51 function-calling tools |
+| `src/lib/orchestrator/jasper-tools.ts` | Jasper's 51 tools + orchestration chain |
 | `src/lib/orchestrator/mission-persistence.ts` | Mission tracking (Firestore) |
-| `src/lib/video/scene-generator.ts` | Hedra scene generation (uses cinematicConfig) |
-| `src/lib/video/hedra-prompt-agent.ts` | AI prompt optimizer (includes cinematicConfig) |
+| `src/types/video-pipeline.ts` | PipelineScene type (add audioCue here) |
+| `src/lib/video/scene-generator.ts` | Scene generation (parse audioCue) |
+| `src/lib/agents/content/video/specialist.ts` | Video Specialist (update prompt) |
+| `src/app/api/audio/music/generate/route.ts` | MiniMax music generation API |
+| `src/app/(dashboard)/content/video/components/StepStoryboard.tsx` | Storyboard UI (add audio field) |
 | `src/lib/ai/cinematic-presets.ts` | 250+ cinematic preset library |
 | `src/lib/ai/provider-router.ts` | Multi-provider generation router |
-| `src/types/creative-studio.ts` | Creative Studio types (presets, generations, characters) |
-| `src/types/video-pipeline.ts` | Video pipeline types (includes CinematicConfig per scene) |
-| `src/components/studio/CinematicControlsPanel.tsx` | Reusable cinematic controls |
-| `src/app/(dashboard)/content/video/components/StudioModePanel.tsx` | Full RenderZero UI (step 1 of pipeline) |
-| `src/app/(dashboard)/content/video/components/StepStoryboard.tsx` | Storyboard with per-scene cinematic controls |
 | `src/app/(dashboard)/mission-control/page.tsx` | Mission Control dashboard |
-| `src/hooks/useMissionStream.ts` | SSE streaming hook for real-time mission updates |
+| `src/hooks/useMissionStream.ts` | SSE streaming hook |
 
 ---
 
