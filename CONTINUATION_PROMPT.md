@@ -5,7 +5,7 @@
 ## Context
 Repository: https://github.com/StamperDavid/Rapid-Compliance
 Branch: dev
-Last Updated: March 16, 2026 (Session 2)
+Last Updated: March 17, 2026 (Session 3)
 
 ## Current State
 
@@ -13,7 +13,7 @@ Last Updated: March 16, 2026 (Session 2)
 - **Single-tenant penthouse model** — org ID `rapid-compliance-root`, Firebase `rapid-compliance-65f87`
 - **54 AI agents** (46 swarm + 6 standalone + 2 variants) with hierarchical orchestration
 - **4-role RBAC** (owner/admin/manager/member) with 47 permissions
-- **180 physical routes**, **359 API endpoints**, **~340K lines of TypeScript**
+- **182 physical routes**, **380 API endpoints**, **~340K lines of TypeScript**
 - **Deployed via Vercel** — dev → main → Vercel auto-deploy
 
 ### Build Health
@@ -65,8 +65,9 @@ The RenderZero-caliber cinematic controls are BUILT and INTEGRATED into the vide
 
 **Backend**:
 - 7 API routes at `/api/studio/*` (generate, status polling, providers, presets CRUD, characters CRUD, cost)
-- Provider router: Fal.ai (Flux), Google Imagen 3, OpenAI DALL-E 3, Kling 3.0 — auto-selection based on style
-- Cost tracker logging to Firestore per generation
+- Provider router: **Hedra (primary for images)**, Fal.ai (Flux), Google Imagen 3, OpenAI DALL-E 3, Kling 3.0 — fallback chain with retry-on-auth-failure
+- Generated images auto-added to media library (`organizations/{id}/media`) with projectId/campaignId metadata
+- Cost tracker logging to Firestore per generation (fire-and-forget — never crashes the response)
 - 250+ cinematic presets with prompt fragment assembly
 
 ---
@@ -179,6 +180,54 @@ Mission Control
 
 ---
 
+## COMPLETED: Hedra Integration + Pipeline Hardening + Media Library (March 17, 2026 — Session 3)
+
+### Hedra as Primary Image Provider
+- `generateHedraImage()` added to `hedra-service.ts` — same `/generations` endpoint, `type: 'image'`, auto-discovers image model from `/models` API
+- Hedra is now the DEFAULT image provider for all generation (no additional API keys needed)
+- Image fallback chain: hedra → google → fal → openai (with retry-on-auth-failure)
+- Hedra image results are stored as assets — polling fetches asset URL from `/assets?type=image` list
+- Image model ID cached for 10 minutes to avoid repeated `/models` calls
+
+### Hedra Video Generation — Two Modes Documented
+- **Kling O3 T2V (prompt-only, no avatar):** Generates everything from text. Audio is NATIVE — no inline TTS. Speech text appended as dialogue in prompt.
+- **Character 3 (avatar mode):** Portrait + voice + script → lip-synced video. Uses inline `audio_generation` for TTS.
+- Script generation service updated with full Hedra expertise — agent understands both modes and writes scripts accordingly
+
+### Mission Control Review Page
+- New route: `/mission-control/review?mission=xxx&step=yyy`
+- Type-specific renderers: research findings, strategy docs, cinematic configs, thumbnail galleries, draft summaries
+- "Review Details" links on both step cards and detail panel for all completed steps
+
+### Pipeline Fixes (All Were Silent Failures)
+- **Truncation removed:** All 31 `.slice(0, 2000)` on `toolResult` removed — full output stored
+- **Cinematic design (Step 4):** Fixed JSON parsing (robust fence stripping + regex fallback), sceneNumber type mismatch (Number() conversion), undefined values filtered before Firestore write, actual errors reported instead of silent "default settings"
+- **Cinematic preset IDs:** Step 4 prompt now outputs exact preset IDs matching the catalog (e.g., `shot-tracking`, `cam-sony-venice`)
+- **PresetSelector fallback:** Displays raw value title-cased when no exact preset ID match exists
+- **Thumbnail failures:** Per-scene errors captured and reported in mission step + Jasper response
+- **Cost logging:** Made fire-and-forget — `undefined` campaignId no longer crashes the route
+- **Character consistency:** Script agent rule 8 — when no character described, invent ONE specific protagonist for all scenes
+
+### Media Library Integration
+- Every image generated via `/api/studio/generate` auto-creates a media library record
+- Metadata includes: provider, model, generationId, projectId, campaignId
+- Media API fallback for missing composite index (queries without orderBy when index not built)
+- Backfilled 8 existing storyboard images into media library
+
+### Storyboard UX
+- Preview error banner (dismissible) shows actual error message instead of silent swallow
+- SceneCard `forwardRef` fix for framer-motion AnimatePresence warning
+- Auto-refresh project data on tab focus (picks up background changes)
+- `?load=` URL param always works (removed stale `autoLoadAttempted` ref)
+
+### Known Issues for Next Session
+- **Preview images not sticking in storyboard UI** — `screenshotUrl` values are in Firestore but the Zustand store doesn't reflect them after page load. Needs investigation into how `loadProject` populates scenes.
+- **Hedra credits exhausted** — 4/8 video scenes generated successfully, remaining 4 need credits top-up
+- **Hedra CDN URL expiration** — signed URLs expire (~1hr). Need to either refresh on access or persist images to our own storage.
+- **Media library composite index** — `type + createdAt` index needed in Firebase Console for sorted queries (fallback works but unsorted)
+
+---
+
 ## NEXT BUILD: Per-Scene Audio Cues + Pipeline Audio Integration
 
 > **Priority: NEXT**
@@ -232,11 +281,14 @@ Mission Control
 ## Hedra API Reference
 
 - **Base URL:** `https://api.hedra.com/web-app/public` (auth: `x-api-key`)
-- **Prompt-only:** Kling O3 Standard T2V — speaking characters from text prompt, up to 15s 720p
-- **Avatar:** Character 3 — portrait + inline TTS, up to 1080p auto duration
-- **Inline TTS:** `audio_generation: { type: "text_to_speech", voice_id, text }`
+- **Image generation:** `POST /generations { type: "image", ai_model_id, text_prompt, aspect_ratio }` — model auto-discovered from `GET /models` (type=image). Result stored as asset — fetch URL from `GET /assets?type=image`.
+- **Prompt-only video:** Kling O3 Standard T2V (`b0e156da...`) — generates characters + audio natively from text prompt. Does NOT support `audio_generation` (inline TTS). Up to 15s 720p.
+- **Avatar video:** Character 3 (`d1dd37a3...`) — portrait + inline TTS, up to 1080p auto duration.
+- **Inline TTS (Character 3 ONLY):** `audio_generation: { type: "text_to_speech", voice_id, text }`
 - **Voice cloning:** `POST /generations { type: "voice_clone", voice_clone: { audio_id, name } }`
 - **87 models** (58 video, 29 image), **69 voices**
+- **Image model:** `Nano Banana Pro T2I` (`96d9d17d...`) — discovered dynamically, cached 10min
+- **CDN:** `imagedelivery.net` — signed URLs with `exp=` parameter (expire ~1hr)
 
 ---
 

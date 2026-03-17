@@ -1,7 +1,7 @@
 # SalesVelocity.ai - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** March 16, 2026 (Mission Control UI overhaul + Jasper 6-step orchestration pipeline + Content Generator nav rename + Audio Lab rename)
+**Last Updated:** March 17, 2026 (Hedra image/video provider integration, Mission Control review page, media library auto-integration, cinematic pipeline fixes, script agent Hedra expertise)
 **Branches:** `dev` (latest)
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Architecture:** Single-Tenant Penthouse Model (development strategy — multi-tenant SaaS product)
@@ -36,7 +36,7 @@
 
 | Metric | Count | Status |
 |--------|-------|--------|
-| Physical Routes (page.tsx) | 181 | Updated March 15, 2026 |
+| Physical Routes (page.tsx) | 182 | Updated March 17, 2026 (+1 mission-control/review) |
 | API Endpoints (route.ts) | 380 | Updated March 15, 2026 (+4 campaign API routes) |
 | AI Agents | 52 | **52 FUNCTIONAL (46 swarm + 6 standalone)** |
 | RBAC Roles | 4 | owner / admin / manager / member |
