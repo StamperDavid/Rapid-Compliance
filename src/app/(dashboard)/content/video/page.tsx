@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import SubpageNav from '@/components/ui/SubpageNav';
@@ -45,7 +45,6 @@ export default function VideoStudioPage() {
   } = useVideoPipelineStore();
 
   const searchParams = useSearchParams();
-  const autoLoadAttempted = useRef(false);
 
   const [showLoadModal, setShowLoadModal] = useState(false);
   const [loadingProjects, setLoadingProjects] = useState(false);
@@ -114,12 +113,22 @@ export default function VideoStudioPage() {
   // Auto-load project from ?load={projectId} URL parameter
   useEffect(() => {
     const loadId = searchParams.get('load');
-    if (loadId && !autoLoadAttempted.current) {
-      autoLoadAttempted.current = true;
+    if (loadId && loadId !== projectId) {
       setAutoLoading(true);
       void handleLoadProject(loadId).finally(() => setAutoLoading(false));
     }
-  }, [searchParams, handleLoadProject]);
+  }, [searchParams, handleLoadProject, projectId]);
+
+  // Re-fetch project data when the tab gets focus (picks up background changes)
+  useEffect(() => {
+    const handleFocus = () => {
+      if (projectId) {
+        void handleLoadProject(projectId);
+      }
+    };
+    window.addEventListener('focus', handleFocus);
+    return () => { window.removeEventListener('focus', handleFocus); };
+  }, [projectId, handleLoadProject]);
 
   // Step 1 (Studio) renders the full RenderZero cinematic UI.
   // Steps 2-5 render the pipeline step components.
