@@ -44,48 +44,6 @@ const PROVIDER_TO_SERVICE: Record<StudioProvider, APIServiceName> = {
   kling: 'kling',
 };
 
-// ─── Style Classification Sets ───────────────────────────────────────
-
-/** Art styles where Flux/SDXL on Fal.ai excel */
-const STYLIZED_ART_STYLES = new Set([
-  'anime',
-  'manga',
-  'comic',
-  'pixar-3d',
-  'concept-art',
-  'digital-art',
-  'watercolor',
-  'oil-painting',
-  'pop-art',
-  'art-nouveau',
-  'ukiyo-e',
-  'low-poly',
-  'isometric',
-  'vaporwave',
-  'steampunk',
-  'fantasy',
-]);
-
-/** Art styles where Google Imagen excels */
-const PHOTOREALISTIC_ART_STYLES = new Set([
-  'photorealistic',
-  'hyperrealistic',
-]);
-
-/** Prompt keywords that hint at photorealistic intent */
-const PHOTOREALISTIC_KEYWORDS = [
-  'photo',
-  'photograph',
-  'realistic',
-  'real life',
-  'product shot',
-  'headshot',
-  'portrait photo',
-  'professional photo',
-  'dslr',
-  '8k photo',
-];
-
 // ─── Provider Availability Check ─────────────────────────────────────
 
 async function isProviderAvailable(provider: StudioProvider): Promise<boolean> {
@@ -105,56 +63,23 @@ async function isProviderAvailable(provider: StudioProvider): Promise<boolean> {
  * based on art style, generation type, and prompt content.
  *
  * Decision tree:
- * 1. User-specified provider → use that
+ * 1. User-specified provider → use that exactly
  * 2. Video → kling (only text-to-video provider in this router)
- * 3. Anime/manga/comic/stylized art → fal (Flux excels here)
- * 4. Photorealistic or no style → google (Imagen best for natural)
- * 5. Movie look + no art style → google
- * 6. Heavy filters/effects → fal (most flexible)
- * 7. Default → google
+ * 3. Image → hedra (primary — uses existing API key, no additional keys)
+ *    Style-specific routing only applies when user explicitly picks a provider.
  */
 export function autoSelectProvider(request: GenerationRequest): StudioProvider {
+  // User explicitly chose a provider — respect that
   if (request.provider) {
     return request.provider;
   }
-
-  const artStyle = request.presets.artStyle ?? '';
-  const promptLower = request.prompt.toLowerCase();
-  const hasMovieLook = Boolean(request.presets.movieLook);
-  const hasFilters = Boolean(request.presets.filters && request.presets.filters.length > 0);
 
   // Video generation → kling
   if (request.type === 'video') {
     return 'kling';
   }
 
-  // Anime, manga, comic, and stylized art → fal
-  if (artStyle && STYLIZED_ART_STYLES.has(artStyle)) {
-    return 'fal';
-  }
-
-  // Explicitly photorealistic art style → google
-  if (artStyle && PHOTOREALISTIC_ART_STYLES.has(artStyle)) {
-    return 'google';
-  }
-
-  // Prompt contains photorealistic keywords → google
-  const hasPhotoKeywords = PHOTOREALISTIC_KEYWORDS.some(kw => promptLower.includes(kw));
-  if (hasPhotoKeywords) {
-    return 'google';
-  }
-
-  // Movie look with no specific art style → google
-  if (hasMovieLook && !artStyle) {
-    return 'google';
-  }
-
-  // Heavy filters/effects → fal
-  if (hasFilters) {
-    return 'fal';
-  }
-
-  // Default → hedra (uses existing API key, no additional keys needed)
+  // All image generation → hedra (single key covers all models)
   return 'hedra';
 }
 

@@ -517,8 +517,43 @@ async function getHedraImageModelId(apiKey: string): Promise<{ id: string; name:
 }
 
 /**
+ * Fetch an image asset URL from Hedra by its asset ID.
+ * Image generations store results as assets — the status endpoint returns
+ * url:null for images, so we need to find the asset in the list.
+ */
+async function fetchHedraAssetUrl(apiKey: string, assetId: string): Promise<string> {
+  const response = await fetch(
+    `${HEDRA_BASE_URL}/assets?type=image&limit=50&recent=true`,
+    { headers: hedraHeaders(apiKey) },
+  );
+
+  if (!response.ok) {
+    throw new Error(`Hedra asset list failed (${response.status})`);
+  }
+
+  interface HedraAsset {
+    id: string;
+    asset?: { url?: string };
+    thumbnail_url?: string;
+  }
+
+  const assets = (await response.json()) as HedraAsset[];
+  const match = assets.find((a) => a.id === assetId);
+
+  if (match?.asset?.url) {
+    return match.asset.url;
+  }
+  if (match?.thumbnail_url) {
+    return match.thumbnail_url;
+  }
+
+  throw new Error(`Hedra image asset ${assetId} not found in asset list`);
+}
+
+/**
  * Poll a Hedra generation until it completes or fails.
  * Images are typically faster than video (5-30 seconds).
+ * For image generations, the URL comes from the asset (not the status endpoint).
  */
 async function pollHedraGeneration(
   apiKey: string,
@@ -541,11 +576,19 @@ async function pollHedraGeneration(
     const data = (await response.json()) as HedraStatusData;
 
     if (data.status === 'complete' || data.status === 'completed') {
-      const url = data.url ?? data.download_url;
-      if (!url) {
-        throw new Error('Hedra image generation completed but returned no URL');
+      // Video generations return url directly; image generations store as asset
+      const directUrl = data.url ?? data.download_url;
+      if (directUrl) {
+        return { url: directUrl };
       }
-      return { url };
+
+      // Image generation — fetch the asset URL
+      if (data.asset_id) {
+        const assetUrl = await fetchHedraAssetUrl(apiKey, data.asset_id);
+        return { url: assetUrl };
+      }
+
+      throw new Error('Hedra generation completed but returned no URL or asset_id');
     }
 
     if (data.status === 'failed' || data.status === 'error') {
