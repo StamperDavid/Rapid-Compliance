@@ -73,7 +73,28 @@ export async function GET(request: NextRequest) {
 
     query = query.orderBy('createdAt', 'desc').limit(limit);
 
-    const snapshot = await query.get();
+    let snapshot;
+    try {
+      snapshot = await query.get();
+    } catch (indexErr: unknown) {
+      // Fallback: if composite index is missing, query without orderBy
+      const errMsg = indexErr instanceof Error ? indexErr.message : '';
+      if (errMsg.includes('FAILED_PRECONDITION') || errMsg.includes('requires an index')) {
+        logger.warn('Media query missing composite index, falling back to unordered query', {
+          file: 'api/media/route.ts',
+        });
+        let fallbackQuery: FirebaseFirestore.Query = adminDb.collection(COLLECTION);
+        if (typeFilter && VALID_TYPES.includes(typeFilter)) {
+          fallbackQuery = fallbackQuery.where('type', '==', typeFilter);
+        }
+        if (categoryFilter) {
+          fallbackQuery = fallbackQuery.where('category', '==', categoryFilter);
+        }
+        snapshot = await fallbackQuery.limit(limit).get();
+      } else {
+        throw indexErr;
+      }
+    }
     const items: MediaItem[] = snapshot.docs.map((doc) => {
       const data = doc.data() as MediaDocData;
       return {
