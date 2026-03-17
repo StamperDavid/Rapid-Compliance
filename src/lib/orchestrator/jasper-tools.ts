@@ -4100,11 +4100,17 @@ Select cohesive settings that create a professional, unified visual language acr
               });
 
               try {
-                const cleanContent = cinematicResponse.content.replace(/```json\n?|```\n?/g, '').trim();
-                const cinematicData = JSON.parse(cleanContent) as {
+                // Strip markdown fences robustly (handles \r\n, whitespace, backtick variations)
+                const cleanContent = cinematicResponse.content
+                  .replace(/^[\s\S]*?```(?:json)?\s*\n?/i, '')
+                  .replace(/\n?\s*```[\s\S]*$/, '')
+                  .trim();
+
+                // Try parsing the cleaned content, fall back to extracting JSON from raw content
+                let cinematicData: {
                   globalStyle?: string;
                   configs: Array<{
-                    sceneNumber: number;
+                    sceneNumber: number | string;
                     shotType?: string;
                     lighting?: string;
                     camera?: string;
@@ -4115,21 +4121,40 @@ Select cohesive settings that create a professional, unified visual language acr
                   }>;
                 };
 
+                try {
+                  cinematicData = JSON.parse(cleanContent) as typeof cinematicData;
+                } catch {
+                  // Fallback: extract first JSON object from raw response
+                  const jsonMatch = cinematicResponse.content.match(/\{[\s\S]*\}/);
+                  if (!jsonMatch) {
+                    throw new Error('No valid JSON found in cinematic response');
+                  }
+                  cinematicData = JSON.parse(jsonMatch[0]) as typeof cinematicData;
+                }
+
                 const updatedScenes = project.scenes.map((scene) => {
-                  const cfg = cinematicData.configs.find((c) => c.sceneNumber === scene.sceneNumber);
+                  // Loose match: handle sceneNumber as string or number
+                  const cfg = cinematicData.configs.find((c) => Number(c.sceneNumber) === scene.sceneNumber);
                   if (!cfg) { return scene; }
-                  return {
-                    ...scene,
-                    cinematicConfig: {
-                      shotType: cfg.shotType,
-                      lighting: cfg.lighting,
-                      camera: cfg.camera,
-                      filmStock: cfg.filmStock,
-                      artStyle: cfg.artStyle,
-                      focalLength: cfg.focalLength,
-                      composition: cfg.composition,
-                    },
+
+                  // Build cinematicConfig, filtering out undefined values to prevent Firestore errors
+                  const rawConfig: Record<string, string | undefined> = {
+                    shotType: cfg.shotType,
+                    lighting: cfg.lighting,
+                    camera: cfg.camera,
+                    filmStock: cfg.filmStock,
+                    artStyle: cfg.artStyle,
+                    focalLength: cfg.focalLength,
+                    composition: cfg.composition,
                   };
+                  const cinematicConfig: Record<string, string> = {};
+                  for (const [key, val] of Object.entries(rawConfig)) {
+                    if (typeof val === 'string' && val.length > 0) {
+                      cinematicConfig[key] = val;
+                    }
+                  }
+
+                  return { ...scene, cinematicConfig };
                 });
 
                 await updateProject(projectId, { scenes: updatedScenes });
@@ -4145,11 +4170,14 @@ Select cohesive settings that create a professional, unified visual language acr
                     configs: cinematicData.configs,
                   }),
                 });
-              } catch {
-                trackMissionStep(context, 'video_cinematic', 'COMPLETED', {
-                  summary: 'Cinematic design applied with default settings',
+              } catch (parseErr) {
+                const parseMsg = parseErr instanceof Error ? parseErr.message : String(parseErr);
+                logger.error('Cinematic design parse/write failed', parseErr instanceof Error ? parseErr : undefined, {
+                  file: 'jasper-tools.ts',
+                });
+                trackMissionStep(context, 'video_cinematic', 'FAILED', {
+                  error: `Cinematic design failed: ${parseMsg}`,
                   durationMs: Date.now() - cinematicStart,
-                  toolResult: JSON.stringify({ type: 'cinematic', globalStyle: 'Default', scenesConfigured: 0, configs: [] }),
                 });
               }
             } else {
