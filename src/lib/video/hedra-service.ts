@@ -367,31 +367,30 @@ export async function generateHedraPromptVideo(
 
   // Kling O3 Standard T2V — generates characters with native audio from text,
   // supports up to 15s, produces speaking characters directly from prompt.
+  // NOTE: Kling O3 does NOT support audio_generation (inline TTS) — it generates
+  // audio natively from the text prompt. Only Character 3 (avatar mode) uses TTS.
   const PROMPT_T2V_MODEL_ID = 'b0e156da-da25-40b2-8386-937da7f47cc3';
+
+  // If speech text is provided, append it to the text prompt so Kling O3
+  // incorporates the dialogue into the video's native audio generation.
+  let textPrompt = options.textPrompt ?? '';
+  if (options.speechText) {
+    textPrompt += `\n\nDialogue: "${options.speechText}"`;
+  }
 
   const payload: HedraGenerationPayload = {
     type: 'video',
     ai_model_id: PROMPT_T2V_MODEL_ID,
     generated_video_inputs: {
-      text_prompt: options.textPrompt ?? '',
+      text_prompt: textPrompt,
       resolution: options.resolution ?? '720p',
       aspect_ratio: options.aspectRatio ?? '16:9',
       duration_ms: options.durationMs ?? 10000,
     },
   };
 
-  // Use inline audio_generation for controlled TTS (single API call, no polling)
-  if (hasInlineTTS && options.hedraVoiceId && options.speechText) {
-    payload.audio_generation = {
-      type: 'text_to_speech',
-      voice_id: options.hedraVoiceId,
-      text: options.speechText,
-    };
-  }
-
   return submitHedraGeneration(apiKey, payload, {
     mode: 'prompt-only',
-    hasInlineTTS,
   });
 }
 
