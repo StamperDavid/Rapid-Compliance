@@ -27,6 +27,13 @@ const HEDRA_BASE_URL = 'https://api.hedra.com/web-app/public';
 /** Hedra Character 3 — talking-head model. Requires audio_id (TTS generated separately). */
 const HEDRA_CHARACTER_3_MODEL_ID = 'd1dd37a3-e39a-4854-a298-6510289f9cf2';
 
+/** Cached image model — discovered once from /models, then reused for 10 min. */
+let imageModelCache: { id: string; expiresAt: number } | null = null;
+
+function setImageModelCache(id: string): void {
+  imageModelCache = { id, expiresAt: Date.now() + 10 * 60 * 1000 };
+}
+
 // ============================================================================
 // API Response Types
 // ============================================================================
@@ -121,6 +128,23 @@ export interface HedraGenerateOptions {
   hedraVoiceId?: string;
   /** Script text for Hedra native TTS. Required when hedraVoiceId is set. */
   speechText?: string;
+}
+
+export interface HedraImageResult {
+  url: string;
+  generationId: string;
+  modelId: string;
+  modelName: string;
+}
+
+interface HedraModel {
+  id: string;
+  name: string;
+  type: string;
+  resolutions?: string[];
+  aspect_ratios?: string[];
+  tags?: string[];
+  premium?: boolean;
 }
 
 // ============================================================================
@@ -448,6 +472,169 @@ export async function generateHedraAvatarVideo(
     imageAssetId,
     audioMode: audioAssetId ? 'uploaded' : 'inline-tts',
   });
+}
+
+// ============================================================================
+// Public API — Image Generation
+// ============================================================================
+
+/**
+ * Discover the first available image model from Hedra's /models endpoint.
+ * Caches the result for 10 minutes to avoid repeated API calls.
+ */
+async function getHedraImageModelId(apiKey: string): Promise<{ id: string; name: string; resolutions?: string[] }> {
+  if (imageModelCache && Date.now() < imageModelCache.expiresAt) {
+    return { id: imageModelCache.id, name: 'hedra-image (cached)' };
+  }
+
+  const response = await fetch(`${HEDRA_BASE_URL}/models`, {
+    headers: hedraHeaders(apiKey),
+  });
+
+  if (!response.ok) {
+    const detail = await parseHedraError(response);
+    throw new Error(`Hedra GET /models failed (${response.status}): ${detail}`);
+  }
+
+  const models = (await response.json()) as HedraModel[];
+  const imageModels = models.filter((m) => m.type === 'image');
+
+  if (imageModels.length === 0) {
+    throw new Error('Hedra has no image generation models available');
+  }
+
+  const selected = imageModels[0];
+  setImageModelCache(selected.id);
+
+  logger.info('Hedra image model discovered', {
+    modelId: selected.id,
+    modelName: selected.name,
+    totalImageModels: imageModels.length,
+    file: 'hedra-service.ts',
+  });
+
+  return { id: selected.id, name: selected.name, resolutions: selected.resolutions };
+}
+
+/**
+ * Poll a Hedra generation until it completes or fails.
+ * Images are typically faster than video (5-30 seconds).
+ */
+async function pollHedraGeneration(
+  apiKey: string,
+  generationId: string,
+  maxWaitMs = 120000,
+): Promise<{ url: string }> {
+  const start = Date.now();
+  const interval = 3000;
+
+  while (Date.now() - start < maxWaitMs) {
+    const response = await fetch(`${HEDRA_BASE_URL}/generations/${generationId}/status`, {
+      headers: hedraHeaders(apiKey),
+    });
+
+    if (!response.ok) {
+      const detail = await parseHedraError(response);
+      throw new Error(`Hedra status poll failed (${response.status}): ${detail}`);
+    }
+
+    const data = (await response.json()) as HedraStatusData;
+
+    if (data.status === 'complete' || data.status === 'completed') {
+      const url = data.url ?? data.download_url;
+      if (!url) {
+        throw new Error('Hedra image generation completed but returned no URL');
+      }
+      return { url };
+    }
+
+    if (data.status === 'failed' || data.status === 'error') {
+      throw new Error(`Hedra image generation failed: ${data.error_message ?? data.error ?? 'Unknown error'}`);
+    }
+
+    await new Promise<void>((resolve) => { setTimeout(resolve, interval); });
+  }
+
+  throw new Error(`Hedra image generation timed out after ${maxWaitMs / 1000}s`);
+}
+
+/**
+ * Generate an image using Hedra's image generation models.
+ *
+ * Uses the same /generations endpoint as video, but with type: 'image'.
+ * Model is auto-discovered from Hedra's /models API.
+ * Polls until complete and returns the image URL.
+ */
+export async function generateHedraImage(
+  prompt: string,
+  options?: { aspectRatio?: string; resolution?: string },
+): Promise<HedraImageResult> {
+  const apiKey = await getHedraApiKey();
+  const model = await getHedraImageModelId(apiKey);
+
+  logger.info('Hedra image generation starting', {
+    modelId: model.id,
+    modelName: model.name,
+    promptLength: prompt.length,
+    file: 'hedra-service.ts',
+  });
+
+  // Build payload — same endpoint as video, different type
+  const payload: Record<string, unknown> = {
+    type: 'image',
+    ai_model_id: model.id,
+    text_prompt: prompt,
+    aspect_ratio: options?.aspectRatio ?? '1:1',
+  };
+
+  // Add resolution if the model supports it
+  if (options?.resolution ?? (model.resolutions && model.resolutions.length > 0)) {
+    const preferred = ['1080p', '1440p (2K QHD)', '720p'];
+    const res = options?.resolution
+      ?? preferred.find((r) => model.resolutions?.includes(r))
+      ?? model.resolutions?.[0];
+    if (res) {
+      payload.resolution = res;
+    }
+  }
+
+  // Submit generation
+  const genResponse = await fetch(`${HEDRA_BASE_URL}/generations`, {
+    method: 'POST',
+    headers: hedraHeaders(apiKey, 'application/json'),
+    body: JSON.stringify(payload),
+  });
+
+  if (!genResponse.ok) {
+    const detail = await parseHedraError(genResponse);
+    throw new Error(`Hedra image generation submit failed (${genResponse.status}): ${detail}`);
+  }
+
+  const generation = (await genResponse.json()) as HedraGenerationResponse;
+
+  if (!generation?.id) {
+    throw new Error('Hedra image generation returned no generation ID');
+  }
+
+  logger.info('Hedra image generation submitted, polling...', {
+    generationId: generation.id,
+    file: 'hedra-service.ts',
+  });
+
+  // Poll until complete
+  const result = await pollHedraGeneration(apiKey, generation.id);
+
+  logger.info('Hedra image generation complete', {
+    generationId: generation.id,
+    file: 'hedra-service.ts',
+  });
+
+  return {
+    url: result.url,
+    generationId: generation.id,
+    modelId: model.id,
+    modelName: model.name,
+  };
 }
 
 // ============================================================================

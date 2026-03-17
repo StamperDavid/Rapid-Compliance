@@ -20,6 +20,7 @@ import {
   getKlingCapabilities,
 } from './providers/kling-provider';
 import { generateImage as generateWithOpenAIDalle } from './image-generation-service';
+import { generateHedraImage } from '@/lib/video/hedra-service';
 import { apiKeyService } from '@/lib/api-keys/api-key-service';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import { logger } from '@/lib/logger/logger';
@@ -153,8 +154,8 @@ export function autoSelectProvider(request: GenerationRequest): StudioProvider {
     return 'fal';
   }
 
-  // Default → google for natural photorealism
-  return 'google';
+  // Default → hedra (uses existing API key, no additional keys needed)
+  return 'hedra';
 }
 
 // ─── Fallback Provider Selection ─────────────────────────────────────
@@ -172,8 +173,8 @@ async function findFallbackProvider(
     );
   }
 
-  // Image fallback chain: google → fal → openai
-  const imageFallbackOrder: StudioProvider[] = ['google', 'fal', 'openai'];
+  // Image fallback chain: hedra → google → fal → openai
+  const imageFallbackOrder: StudioProvider[] = ['hedra', 'google', 'fal', 'openai'];
 
   for (const provider of imageFallbackOrder) {
     if (provider !== excludeProvider && await isProviderAvailable(provider)) {
@@ -233,84 +234,125 @@ export async function routeGeneration(
   const startTime = Date.now();
   let result: GenerationResult;
 
-  // Route to the correct provider implementation
-  switch (selectedProvider) {
-    case 'fal':
-      result = await generateWithFal(assembledPrompt, {
-        model: request.model,
-        negativePrompt: request.negativePrompt,
-        aspectRatio: request.presets.aspectRatio,
-      });
-      break;
-
-    case 'google':
-      result = await generateWithGoogle(assembledPrompt, {
-        model: request.model,
-        aspectRatio: request.presets.aspectRatio,
-      });
-      break;
-
-    case 'kling':
-      if (request.type === 'video') {
-        result = await generateVideoWithKling(assembledPrompt, {
+  // Try the selected provider; on auth/availability errors, attempt fallback
+  const tryProvider = async (provider: StudioProvider): Promise<GenerationResult> => {
+    switch (provider) {
+      case 'fal':
+        return generateWithFal(assembledPrompt, {
           model: request.model,
           negativePrompt: request.negativePrompt,
           aspectRatio: request.presets.aspectRatio,
         });
-      } else {
-        result = await generateWithKling(assembledPrompt, {
+
+      case 'google':
+        return generateWithGoogle(assembledPrompt, {
+          model: request.model,
+          aspectRatio: request.presets.aspectRatio,
+        });
+
+      case 'kling':
+        if (request.type === 'video') {
+          return generateVideoWithKling(assembledPrompt, {
+            model: request.model,
+            negativePrompt: request.negativePrompt,
+            aspectRatio: request.presets.aspectRatio,
+          });
+        }
+        return generateWithKling(assembledPrompt, {
           model: request.model,
           negativePrompt: request.negativePrompt,
           aspectRatio: request.presets.aspectRatio,
         });
+
+      case 'openai': {
+        const sizeMap: Record<string, '1024x1024' | '1792x1024' | '1024x1792'> = {
+          '1:1': '1024x1024',
+          '16:9': '1792x1024',
+          '9:16': '1024x1792',
+          '21:9': '1792x1024',
+          '4:3': '1024x1024',
+          '3:2': '1792x1024',
+        };
+        const dalleSize = sizeMap[request.presets.aspectRatio ?? '1:1'] ?? '1024x1024';
+        const quality = request.quality === 'hd' ? 'hd' : 'standard';
+
+        const openaiResult = await generateWithOpenAIDalle(assembledPrompt, {
+          size: dalleSize,
+          quality,
+        });
+
+        const widthHeight = dalleSize.split('x').map(Number);
+
+        return {
+          id: `openai-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+          url: openaiResult.url,
+          revisedPrompt: openaiResult.revisedPrompt,
+          provider: 'openai',
+          model: 'dall-e-3',
+          cost: quality === 'hd' ? 0.08 : 0.04,
+          metadata: {
+            width: widthHeight[0],
+            height: widthHeight[1],
+            format: 'image/png',
+          },
+          createdAt: new Date().toISOString(),
+        };
       }
-      break;
 
-    case 'openai': {
-      // Map aspect ratio to DALL-E 3 size
-      const sizeMap: Record<string, '1024x1024' | '1792x1024' | '1024x1792'> = {
-        '1:1': '1024x1024',
-        '16:9': '1792x1024',
-        '9:16': '1024x1792',
-        '21:9': '1792x1024',
-        '4:3': '1024x1024',
-        '3:2': '1792x1024',
-      };
-      const dalleSize = sizeMap[request.presets.aspectRatio ?? '1:1'] ?? '1024x1024';
-      const quality = request.quality === 'hd' ? 'hd' : 'standard';
+      case 'hedra': {
+        if (request.type === 'video') {
+          throw new Error(
+            'Hedra video generation is handled by the Video Pipeline, not the Creative Studio router. ' +
+            'Use the /api/video endpoints for talking head videos.'
+          );
+        }
 
-      const openaiResult = await generateWithOpenAIDalle(assembledPrompt, {
-        size: dalleSize,
-        quality,
-      });
+        const hedraResult = await generateHedraImage(assembledPrompt, {
+          aspectRatio: request.presets.aspectRatio,
+        });
 
-      const widthHeight = dalleSize.split('x').map(Number);
+        return {
+          id: hedraResult.generationId,
+          url: hedraResult.url,
+          provider: 'hedra',
+          model: hedraResult.modelName,
+          cost: 0.04,
+          metadata: {
+            width: 1024,
+            height: 1024,
+            format: 'image/png',
+          },
+          createdAt: new Date().toISOString(),
+        };
+      }
 
-      result = {
-        id: `openai-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
-        url: openaiResult.url,
-        revisedPrompt: openaiResult.revisedPrompt,
-        provider: 'openai',
-        model: 'dall-e-3',
-        cost: quality === 'hd' ? 0.08 : 0.04,
-        metadata: {
-          width: widthHeight[0],
-          height: widthHeight[1],
-          format: 'image/png',
-        },
-        createdAt: new Date().toISOString(),
-      };
-      break;
+      default:
+        throw new Error(`Unsupported provider: ${provider}`);
     }
+  };
 
-    case 'hedra':
-      throw new Error(
-        'Hedra avatar generation is handled by the Video Pipeline, not the Creative Studio router. ' +
-        'Use the /api/video endpoints for talking head videos.'
-      );
+  // Attempt selected provider, fall back on auth/API errors
+  try {
+    result = await tryProvider(selectedProvider);
+  } catch (providerError) {
+    const errMsg = providerError instanceof Error ? providerError.message : String(providerError);
+    const isAuthError = /invalid.*key|key.*invalid|unauthorized|forbidden|API_KEY_INVALID/i.test(errMsg);
+    const isProviderDown = /failed|error|unavailable|timeout/i.test(errMsg);
 
-    default:
-      throw new Error(`Unsupported provider: ${selectedProvider}`);
+    if ((isAuthError || isProviderDown) && request.type === 'image') {
+      logger.warn(`[Router] Provider ${selectedProvider} failed (${errMsg.slice(0, 100)}), trying fallback`, {
+        file: 'provider-router.ts',
+      });
+      try {
+        const fallback = await findFallbackProvider(request.type, selectedProvider);
+        result = await tryProvider(fallback);
+      } catch (_fallbackError) {
+        // Fallback also failed — throw the original error
+        throw providerError;
+      }
+    } else {
+      throw providerError;
+    }
   }
 
   const durationMs = Date.now() - startTime;
