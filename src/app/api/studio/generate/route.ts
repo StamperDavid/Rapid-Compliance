@@ -119,8 +119,8 @@ export async function POST(request: NextRequest) {
       completedAt,
     });
 
-    // 9. Log cost
-    await logGenerationCost({
+    // 9. Log cost (fire-and-forget — never block or crash the image response)
+    logGenerationCost({
       generationId: docRef.id,
       userId: user.uid,
       provider: result.provider,
@@ -128,6 +128,10 @@ export async function POST(request: NextRequest) {
       type: validated.type,
       cost: result.cost,
       ...(validated.campaignId ? { campaignId: validated.campaignId } : {}),
+    }).catch((costErr) => {
+      logger.error('Studio generate: cost logging failed (non-fatal)', costErr instanceof Error ? costErr : undefined, {
+        generationId: docRef.id,
+      });
     });
 
     logger.info('Studio generate: generation complete', {
