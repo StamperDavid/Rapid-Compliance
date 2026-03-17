@@ -535,6 +535,14 @@ export function StepStoryboard() {
         const data = (await response.json()) as { success: boolean; data?: { url?: string } };
         if (data.success && data.data?.url) {
           updateScene(sceneId, { screenshotUrl: data.data.url });
+          // Persist to Firestore so the URL survives project reloads
+          if (projectId) {
+            authFetch(`/api/video/project/${projectId}`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ sceneId, updates: { screenshotUrl: data.data.url } }),
+            }).catch(() => { /* fire-and-forget */ });
+          }
           setPreviewError(null);
         } else {
           setPreviewError(`Scene ${scene.sceneNumber}: Preview generation returned no image`);
@@ -553,7 +561,7 @@ export function StepStoryboard() {
         return next;
       });
     }
-  }, [scenes, authFetch, updateScene]);
+  }, [scenes, authFetch, updateScene, projectId]);
 
   // ── Generate all previews ─────────────────────────────────────────────
   const handleGenerateAllPreviews = useCallback(async () => {
