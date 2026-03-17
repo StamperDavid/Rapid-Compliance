@@ -69,6 +69,23 @@ export function getDashboardLink(toolName: string, toolResult?: string): Dashboa
 }
 
 /**
+ * Build a link to the step review page for a given mission step.
+ * Returns null if missionId or stepId are missing.
+ */
+export function getStepReviewLink(
+  missionId: string | undefined,
+  stepId: string | undefined,
+): DashboardLink | null {
+  if (!missionId || !stepId) {
+    return null;
+  }
+  return {
+    route: `/mission-control/review?mission=${encodeURIComponent(missionId)}&step=${encodeURIComponent(stepId)}`,
+    label: 'Review Details',
+  };
+}
+
+/**
  * Human-readable names for orchestration step tools.
  */
 const STEP_DISPLAY_NAMES: Record<string, string> = {

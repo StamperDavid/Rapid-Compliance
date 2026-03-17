@@ -22,7 +22,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import Image from 'next/image';
 import AgentAvatar from './AgentAvatar';
-import { getDashboardLink, formatToolName } from './dashboard-links';
+import { getDashboardLink, getStepReviewLink, formatToolName } from './dashboard-links';
 import type { Mission, MissionStep, MissionStepStatus } from '@/lib/orchestrator/mission-persistence';
 
 interface MissionTimelineProps {
@@ -414,14 +414,17 @@ function StepCard({
   stepNumber,
   isSelected,
   onSelect,
+  missionId,
 }: {
   step: MissionStep;
   stepNumber: number;
   isSelected: boolean;
   onSelect: () => void;
+  missionId: string;
 }) {
   const [expanded, setExpanded] = useState(false);
   const dashboardLink = getDashboardLink(step.toolName, step.toolResult);
+  const reviewLink = getStepReviewLink(missionId, step.stepId);
   const parsedOutput = parseStepOutput(step.toolResult);
 
   const handleToggleExpand = useCallback((e: React.MouseEvent) => {
@@ -594,26 +597,44 @@ function StepCard({
         marginTop: '0.5rem',
         gap: '0.5rem',
       }}>
-        {/* Dashboard link */}
-        {dashboardLink && step.status === 'COMPLETED' ? (
-          <a
-            href={dashboardLink.route}
-            onClick={handleLinkClick}
-            style={{
-              fontSize: '0.6875rem',
-              fontWeight: 600,
-              color: 'var(--color-primary)',
-              textDecoration: 'none',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.25rem',
-            }}
-          >
-            View in {dashboardLink.label} &rarr;
-          </a>
-        ) : (
-          <span />
-        )}
+        {/* Dashboard link + Review link */}
+        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+          {dashboardLink && step.status === 'COMPLETED' && (
+            <a
+              href={dashboardLink.route}
+              onClick={handleLinkClick}
+              style={{
+                fontSize: '0.6875rem',
+                fontWeight: 600,
+                color: 'var(--color-primary)',
+                textDecoration: 'none',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.25rem',
+              }}
+            >
+              View in {dashboardLink.label} &rarr;
+            </a>
+          )}
+          {reviewLink && step.status === 'COMPLETED' && step.toolResult && (
+            <a
+              href={reviewLink.route}
+              onClick={handleLinkClick}
+              style={{
+                fontSize: '0.6875rem',
+                fontWeight: 600,
+                color: 'var(--color-text-secondary)',
+                textDecoration: 'none',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.25rem',
+              }}
+            >
+              Review Details &rarr;
+            </a>
+          )}
+          {step.status !== 'COMPLETED' && <span />}
+        </div>
 
         {/* Expand/collapse toggle */}
         {(Boolean(step.summary) || Boolean(step.toolResult) || (step.toolArgs != null && Object.keys(step.toolArgs).length > 0)) && (
@@ -1049,6 +1070,7 @@ export default function MissionTimeline({ mission, onStepSelect, selectedStepId 
               stepNumber={index + 1}
               isSelected={selectedStepId === step.stepId}
               onSelect={() => onStepSelect?.(step.stepId)}
+              missionId={mission.missionId}
             />
           ))}
 

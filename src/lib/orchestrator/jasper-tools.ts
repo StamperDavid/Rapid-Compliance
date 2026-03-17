@@ -2262,7 +2262,7 @@ export function executeQueryDocs(
       ) {
         results.push({
           section: sectionTitle,
-          content: sectionBody.trim().slice(0, 2000), // Limit content size
+          content: sectionBody.trim(), // Limit content size
         });
       }
     }
@@ -3571,7 +3571,7 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
         trackMissionStep(context, 'delegate_to_agent', agentStatus as MissionStepStatus, {
           summary: `Agent ${parsedArgs.agentId}: ${agentStatus}`,
           durationMs: agentDuration,
-          toolResult: JSON.stringify(delegation).slice(0, 2000),
+          toolResult: JSON.stringify(delegation),
         });
 
         content = JSON.stringify(delegation);
@@ -3632,7 +3632,7 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
         trackMissionStep(context, 'create_video', result.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED', {
           summary: `VIDEO_SPECIALIST: ${(resultData?.message as string) ?? result.status}`,
           durationMs: Date.now() - videoStart,
-          toolResult: content.slice(0, 2000),
+          toolResult: content,
         });
         break;
       }
@@ -3658,7 +3658,7 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
               trackMissionStep(context, 'generate_video', 'FAILED', {
                 summary: `VIDEO_SPECIALIST: Blocked — project not approved (status: ${genProject.status})`,
                 durationMs: Date.now() - genStart,
-                toolResult: content.slice(0, 2000),
+                toolResult: content,
               });
               break;
             }
@@ -3699,7 +3699,7 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
         trackMissionStep(context, 'generate_video', genResult.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED', {
           summary: `VIDEO_SPECIALIST: ${(genResultData?.message as string) ?? genResult.status}`,
           durationMs: Date.now() - genStart,
-          toolResult: content.slice(0, 2000),
+          toolResult: content,
         });
         break;
       }
@@ -3737,7 +3737,7 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
         trackMissionStep(context, 'get_video_status', 'COMPLETED', {
           summary: `Video status check: ${videoId}`,
           durationMs: Date.now() - videoStatusStart,
-          toolResult: content.slice(0, 2000),
+          toolResult: content,
         });
         break;
       }
@@ -4174,6 +4174,7 @@ Select cohesive settings that create a professional, unified visual language acr
 
           const thumbStart = Date.now();
           const thumbnailResults: Array<{ sceneNumber: number; url: string }> = [];
+          const thumbnailFailures: Array<{ sceneNumber: number; error: string }> = [];
 
           try {
             const project = await getProject(projectId);
@@ -4209,10 +4210,21 @@ Select cohesive settings that create a professional, unified visual language acr
                   })
                 );
 
-                for (const result of batchResults) {
+                const failedScenes: Array<{ sceneNumber: number; error: string }> = [];
+                for (let idx = 0; idx < batchResults.length; idx++) {
+                  const result = batchResults[idx];
                   if (result.status === 'fulfilled') {
                     thumbnailResults.push(result.value);
+                  } else {
+                    const sceneNum = batch[idx]?.sceneNumber ?? idx + 1;
+                    failedScenes.push({
+                      sceneNumber: sceneNum,
+                      error: result.reason instanceof Error ? result.reason.message : String(result.reason),
+                    });
                   }
+                }
+                if (failedScenes.length > 0) {
+                  thumbnailFailures.push(...failedScenes);
                 }
               }
 
@@ -4230,13 +4242,18 @@ Select cohesive settings that create a professional, unified visual language acr
               }
             }
 
+            const failureSummary = thumbnailFailures.length > 0
+              ? ` (${thumbnailFailures.length} scene(s) failed: ${thumbnailFailures.map((f) => `Scene ${f.sceneNumber}: ${f.error}`).join('; ')})`
+              : '';
+
             trackMissionStep(context, 'video_thumbnails', 'COMPLETED', {
-              summary: `Generated ${thumbnailResults.length} preview thumbnail(s)`,
+              summary: `Generated ${thumbnailResults.length} preview thumbnail(s)${failureSummary}`,
               durationMs: Date.now() - thumbStart,
               toolResult: JSON.stringify({
                 type: 'thumbnails',
                 generated: thumbnailResults.length,
                 thumbnails: thumbnailResults,
+                ...(thumbnailFailures.length > 0 ? { failures: thumbnailFailures } : {}),
               }),
             });
           } catch (thumbErr) {
@@ -4276,6 +4293,10 @@ Select cohesive settings that create a professional, unified visual language acr
               ? `/mission-control?campaign=${videoCampaignId}`
               : `/mission-control`;
 
+          const thumbFailureNote = thumbnailFailures.length > 0
+            ? ` WARNING: ${thumbnailFailures.length} thumbnail(s) failed to generate — ${thumbnailFailures.map((f) => `Scene ${f.sceneNumber}: ${f.error}`).join('; ')}.`
+            : '';
+
           content = JSON.stringify({
             status: 'draft',
             projectId,
@@ -4284,10 +4305,11 @@ Select cohesive settings that create a professional, unified visual language acr
             sceneCount,
             characterAssignments: characterAssignments?.length ?? 0,
             thumbnailCount: thumbnailResults.length,
+            thumbnailFailures: thumbnailFailures.length,
             cinematicStyleApplied: scenesConfigured > 0,
             videoStudioPath: reviewLink,
             reviewLink: missionReviewLink,
-            message: `Storyboard complete for "${videoTitle}" — ${sceneCount} scene(s) with scripts, cinematic settings, and ${thumbnailResults.length} preview thumbnail(s). Review all steps in Mission Control.`,
+            message: `Storyboard complete for "${videoTitle}" — ${sceneCount} scene(s) with scripts, cinematic settings, and ${thumbnailResults.length} preview thumbnail(s).${thumbFailureNote} Review all steps in Mission Control.`,
             specialist: 'VIDEO_DIRECTOR',
             orchestrationDurationMs: Date.now() - produceStart,
           });
@@ -4295,7 +4317,7 @@ Select cohesive settings that create a professional, unified visual language acr
           trackMissionStep(context, 'produce_video', 'COMPLETED', {
             summary: `Storyboard complete — ${sceneCount} scenes, ${thumbnailResults.length} thumbnails, cinematic settings applied`,
             durationMs: Date.now() - produceStart,
-            toolResult: content.slice(0, 2000),
+            toolResult: content,
           });
         } catch (produceError) {
           const errMsg = produceError instanceof Error ? produceError.message : String(produceError);
@@ -4307,7 +4329,7 @@ Select cohesive settings that create a professional, unified visual language acr
           trackMissionStep(context, 'produce_video', 'FAILED', {
             summary: `VIDEO_DIRECTOR: ${errMsg}`,
             durationMs: Date.now() - produceStart,
-            toolResult: content.slice(0, 2000),
+            toolResult: content,
           });
         }
         break;
@@ -4331,7 +4353,7 @@ Select cohesive settings that create a professional, unified visual language acr
               trackMissionStep(context, 'assemble_video', 'FAILED', {
                 summary: 'VIDEO_SPECIALIST: Blocked — no completed scenes to assemble',
                 durationMs: Date.now() - assembleStart,
-                toolResult: content.slice(0, 2000),
+                toolResult: content,
               });
               break;
             }
@@ -4380,7 +4402,7 @@ Select cohesive settings that create a professional, unified visual language acr
           trackMissionStep(context, 'assemble_video', assembleResult.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED', {
             summary: `VIDEO_SPECIALIST: ${(assembleData?.message as string) ?? assembleResult.status}`,
             durationMs: Date.now() - assembleStart,
-            toolResult: content.slice(0, 2000),
+            toolResult: content,
           });
         } catch (assembleErr) {
           const errMsg = assembleErr instanceof Error ? assembleErr.message : String(assembleErr);
@@ -4392,7 +4414,7 @@ Select cohesive settings that create a professional, unified visual language acr
           trackMissionStep(context, 'assemble_video', 'FAILED', {
             summary: `VIDEO_SPECIALIST: ${errMsg}`,
             durationMs: Date.now() - assembleStart,
-            toolResult: content.slice(0, 2000),
+            toolResult: content,
           });
         }
         break;
@@ -4425,7 +4447,7 @@ Select cohesive settings that create a professional, unified visual language acr
 
           trackMissionStep(context, 'edit_video', 'COMPLETED', {
             summary: `Opened Video Editor${args.projectId ? ` with project ${args.projectId as string}` : ''}`,
-            toolResult: content.slice(0, 2000),
+            toolResult: content,
           });
         } catch (editErr) {
           const errMsg = editErr instanceof Error ? editErr.message : String(editErr);
@@ -4435,7 +4457,7 @@ Select cohesive settings that create a professional, unified visual language acr
           });
           trackMissionStep(context, 'edit_video', 'FAILED', {
             summary: `edit_video: ${errMsg}`,
-            toolResult: content.slice(0, 2000),
+            toolResult: content,
           });
         }
         break;
@@ -4506,7 +4528,7 @@ Select cohesive settings that create a professional, unified visual language acr
           trackMissionStep(context, 'manage_media_library', 'COMPLETED', {
             summary: `Media Library: ${action} — ${mediaType ?? 'all'} ${category ?? ''}`,
             durationMs: Date.now() - mediaStart,
-            toolResult: content.slice(0, 2000),
+            toolResult: content,
           });
         } catch (mediaErr) {
           const errMsg = mediaErr instanceof Error ? mediaErr.message : String(mediaErr);
@@ -4517,7 +4539,7 @@ Select cohesive settings that create a professional, unified visual language acr
           trackMissionStep(context, 'manage_media_library', 'FAILED', {
             summary: `manage_media_library: ${errMsg}`,
             durationMs: Date.now() - mediaStart,
-            toolResult: content.slice(0, 2000),
+            toolResult: content,
           });
         }
         break;
@@ -4700,7 +4722,7 @@ Select cohesive settings that create a professional, unified visual language acr
         const builderDuration = Date.now() - builderStart;
         trackMissionStep(context, 'delegate_to_builder',
           result.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED',
-          { summary: `Architect: ${result.status}`, durationMs: builderDuration, toolResult: JSON.stringify(result.data).slice(0, 2000) }
+          { summary: `Architect: ${result.status}`, durationMs: builderDuration, toolResult: JSON.stringify(result.data) }
         );
 
         content = JSON.stringify({
@@ -4780,7 +4802,7 @@ Select cohesive settings that create a professional, unified visual language acr
         const salesDuration = Date.now() - salesStart;
         trackMissionStep(context, 'delegate_to_sales',
           result.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED',
-          { summary: `Sales: ${result.status}`, durationMs: salesDuration, toolResult: JSON.stringify(result.data).slice(0, 2000) }
+          { summary: `Sales: ${result.status}`, durationMs: salesDuration, toolResult: JSON.stringify(result.data) }
         );
 
         content = JSON.stringify({
@@ -4834,7 +4856,7 @@ Select cohesive settings that create a professional, unified visual language acr
         const marketingDuration = Date.now() - marketingStart;
         trackMissionStep(context, 'delegate_to_marketing',
           result.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED',
-          { summary: `Marketing: ${result.status}`, durationMs: marketingDuration, toolResult: JSON.stringify(result.data).slice(0, 2000) }
+          { summary: `Marketing: ${result.status}`, durationMs: marketingDuration, toolResult: JSON.stringify(result.data) }
         );
 
         content = JSON.stringify({
@@ -4882,7 +4904,7 @@ Select cohesive settings that create a professional, unified visual language acr
         const trustDuration = Date.now() - trustStart;
         trackMissionStep(context, 'delegate_to_trust',
           trustResult.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED',
-          { summary: `Trust: ${trustResult.status}`, durationMs: trustDuration, toolResult: JSON.stringify(trustResult.data).slice(0, 2000) }
+          { summary: `Trust: ${trustResult.status}`, durationMs: trustDuration, toolResult: JSON.stringify(trustResult.data) }
         );
 
         content = JSON.stringify({
@@ -4934,7 +4956,7 @@ Select cohesive settings that create a professional, unified visual language acr
         const contentDuration = Date.now() - contentStart;
         trackMissionStep(context, 'delegate_to_content',
           contentResult.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED',
-          { summary: `Content: ${contentResult.status}`, durationMs: contentDuration, toolResult: JSON.stringify(contentResult.data).slice(0, 2000) }
+          { summary: `Content: ${contentResult.status}`, durationMs: contentDuration, toolResult: JSON.stringify(contentResult.data) }
         );
 
         content = JSON.stringify({
@@ -4988,7 +5010,7 @@ Select cohesive settings that create a professional, unified visual language acr
         const architectDuration = Date.now() - architectStart;
         trackMissionStep(context, 'delegate_to_architect',
           architectResult.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED',
-          { summary: `Architect: ${architectResult.status}`, durationMs: architectDuration, toolResult: JSON.stringify(architectResult.data).slice(0, 2000) }
+          { summary: `Architect: ${architectResult.status}`, durationMs: architectDuration, toolResult: JSON.stringify(architectResult.data) }
         );
 
         content = JSON.stringify({
@@ -5049,7 +5071,7 @@ Select cohesive settings that create a professional, unified visual language acr
         const outreachDuration = Date.now() - outreachStart;
         trackMissionStep(context, 'delegate_to_outreach',
           outreachResult.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED',
-          { summary: `Outreach: ${outreachResult.status}`, durationMs: outreachDuration, toolResult: JSON.stringify(outreachResult.data).slice(0, 2000) }
+          { summary: `Outreach: ${outreachResult.status}`, durationMs: outreachDuration, toolResult: JSON.stringify(outreachResult.data) }
         );
 
         content = JSON.stringify({
@@ -5104,7 +5126,7 @@ Select cohesive settings that create a professional, unified visual language acr
         const intelDuration = Date.now() - intelStart;
         trackMissionStep(context, 'delegate_to_intelligence',
           intelResult.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED',
-          { summary: `Intelligence: ${intelResult.status}`, durationMs: intelDuration, toolResult: JSON.stringify(intelResult.data).slice(0, 2000) }
+          { summary: `Intelligence: ${intelResult.status}`, durationMs: intelDuration, toolResult: JSON.stringify(intelResult.data) }
         );
 
         content = JSON.stringify({
@@ -5171,7 +5193,7 @@ Select cohesive settings that create a professional, unified visual language acr
         const commerceDuration = Date.now() - commerceStart;
         trackMissionStep(context, 'delegate_to_commerce',
           commerceResult.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED',
-          { summary: `Commerce: ${commerceResult.status}`, durationMs: commerceDuration, toolResult: JSON.stringify(commerceResult.data).slice(0, 2000) }
+          { summary: `Commerce: ${commerceResult.status}`, durationMs: commerceDuration, toolResult: JSON.stringify(commerceResult.data) }
         );
 
         content = JSON.stringify({
@@ -5264,7 +5286,7 @@ Select cohesive settings that create a professional, unified visual language acr
           trackMissionStep(context, 'save_blog_draft', 'COMPLETED', {
             summary: `Blog draft saved: ${postId}`,
             durationMs: blogDuration,
-            toolResult: JSON.stringify({ draftId: postId, slug, title: args.title }).slice(0, 2000),
+            toolResult: JSON.stringify({ draftId: postId, slug, title: args.title }),
           });
 
           // Track as campaign deliverable if campaignId is available
@@ -5413,7 +5435,7 @@ Select cohesive settings that create a professional, unified visual language acr
           trackMissionStep(context, 'get_seo_config', 'COMPLETED', {
             summary: `SEO config loaded: ${keywordCount} keywords`,
             durationMs: seoDuration,
-            toolResult: JSON.stringify({ keywordCount, title: seo.title }).slice(0, 2000),
+            toolResult: JSON.stringify({ keywordCount, title: seo.title }),
           });
 
           content = JSON.stringify(response);
@@ -5507,7 +5529,7 @@ Select cohesive settings that create a professional, unified visual language acr
           trackMissionStep(context, 'research_trending_topics', 'COMPLETED', {
             summary: `Found ${trendingTopics.length} seed topics, ${allRelated.length} related trends`,
             durationMs: trendDuration,
-            toolResult: JSON.stringify({ seedTopics: trendingTopics.length, relatedTrending: allRelated.length }).slice(0, 2000),
+            toolResult: JSON.stringify({ seedTopics: trendingTopics.length, relatedTrending: allRelated.length }),
           });
 
           content = JSON.stringify({
@@ -5554,7 +5576,7 @@ Select cohesive settings that create a professional, unified visual language acr
             {
               summary: `Migration ${migrationResult.status}: ${migrationResult.successCount}/${migrationResult.totalPages} pages`,
               durationMs: migrateDuration,
-              toolResult: JSON.stringify({ status: migrationResult.status, successCount: migrationResult.successCount, totalPages: migrationResult.totalPages }).slice(0, 2000),
+              toolResult: JSON.stringify({ status: migrationResult.status, successCount: migrationResult.successCount, totalPages: migrationResult.totalPages }),
             }
           );
 
@@ -5729,7 +5751,7 @@ Select cohesive settings that create a professional, unified visual language acr
           trackMissionStep(context, 'voice_agent', 'COMPLETED', {
             summary: `Voice agent: ${voiceArgs.action}`,
             durationMs: voiceDuration,
-            toolResult: content.slice(0, 2000),
+            toolResult: content,
           });
         } catch (voiceError: unknown) {
           const voiceErrorMsg = voiceError instanceof Error ? voiceError.message : 'Unknown error';
@@ -5821,7 +5843,7 @@ Select cohesive settings that create a professional, unified visual language acr
           trackMissionStep(context, 'social_post', 'COMPLETED', {
             summary: `Social ${socialArgs.action}: ${socialArgs.platform ?? 'twitter'}`,
             durationMs: socialDuration,
-            toolResult: content.slice(0, 2000),
+            toolResult: content,
           });
         } catch (socialError: unknown) {
           const socialErrorMsg = socialError instanceof Error ? socialError.message : 'Unknown error';
@@ -5876,7 +5898,7 @@ Select cohesive settings that create a professional, unified visual language acr
           trackMissionStep(context, 'create_campaign', 'COMPLETED', {
             summary: `Campaign created: ${campaignId}`,
             durationMs: Date.now() - campaignStart,
-            toolResult: content.slice(0, 2000),
+            toolResult: content,
           });
         } catch (campaignError: unknown) {
           const errMsg = campaignError instanceof Error ? campaignError.message : String(campaignError);

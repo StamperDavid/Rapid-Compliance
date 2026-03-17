@@ -21,7 +21,7 @@ import MissionTimeline from './_components/MissionTimeline';
 import ApprovalCard from './_components/ApprovalCard';
 import AgentAvatar from './_components/AgentAvatar';
 import CampaignReview from './_components/CampaignReview';
-import { getDashboardLink, formatToolName } from './_components/dashboard-links';
+import { getDashboardLink, getStepReviewLink, formatToolName } from './_components/dashboard-links';
 import type { Mission, MissionStep } from '@/lib/orchestrator/mission-persistence';
 
 // ============================================================================
@@ -447,11 +447,13 @@ function StepDetailPanel({
   approvalStep,
   approvalId,
   onApprovalDecision,
+  missionId,
 }: {
   step: MissionStep | null;
   approvalStep: MissionStep | null;
   approvalId: string | undefined;
   onApprovalDecision: () => void;
+  missionId: string | undefined;
 }) {
   // If the selected step is the approval step, show the approval card prominently
   const showingApproval = approvalStep && (!step || step.stepId === approvalStep.stepId);
@@ -472,6 +474,7 @@ function StepDetailPanel({
   }
 
   const dashboardLink = displayStep ? getDashboardLink(displayStep.toolName, displayStep.toolResult) : null;
+  const reviewLink = displayStep ? getStepReviewLink(missionId, displayStep.stepId) : null;
   const statusColor = displayStep ? getStepStatusColor(displayStep.status) : 'var(--color-text-disabled)';
 
   return (
@@ -596,27 +599,51 @@ function StepDetailPanel({
             </div>
           )}
 
-          {/* Dashboard link button */}
-          {dashboardLink && displayStep.status === 'COMPLETED' && (
-            <a
-              href={dashboardLink.route}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '0.375rem',
-                padding: '0.5rem 0.875rem',
-                borderRadius: '0.5rem',
-                backgroundColor: 'var(--color-primary)',
-                color: '#fff',
-                fontSize: '0.8125rem',
-                fontWeight: 600,
-                textDecoration: 'none',
-                transition: 'opacity 0.15s',
-                marginBottom: '0.75rem',
-              }}
-            >
-              View in {dashboardLink.label} &rarr;
-            </a>
+          {/* Dashboard link + Review link */}
+          {displayStep.status === 'COMPLETED' && (dashboardLink ?? reviewLink) && (
+            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.75rem', flexWrap: 'wrap' }}>
+              {dashboardLink && (
+                <a
+                  href={dashboardLink.route}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.375rem',
+                    padding: '0.5rem 0.875rem',
+                    borderRadius: '0.5rem',
+                    backgroundColor: 'var(--color-primary)',
+                    color: '#fff',
+                    fontSize: '0.8125rem',
+                    fontWeight: 600,
+                    textDecoration: 'none',
+                    transition: 'opacity 0.15s',
+                  }}
+                >
+                  View in {dashboardLink.label} &rarr;
+                </a>
+              )}
+              {reviewLink && displayStep.toolResult && (
+                <a
+                  href={reviewLink.route}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.375rem',
+                    padding: '0.5rem 0.875rem',
+                    borderRadius: '0.5rem',
+                    backgroundColor: 'var(--color-bg-elevated)',
+                    border: '1px solid var(--color-border-light)',
+                    color: 'var(--color-text-primary)',
+                    fontSize: '0.8125rem',
+                    fontWeight: 600,
+                    textDecoration: 'none',
+                    transition: 'opacity 0.15s',
+                  }}
+                >
+                  Review Details &rarr;
+                </a>
+              )}
+            </div>
           )}
 
           {/* Rich output rendering */}
@@ -994,6 +1021,7 @@ function MissionControlView({ deepLinkedMission }: { deepLinkedMission: string |
               onApprovalDecision={() => {
                 void fetchMissions();
               }}
+              missionId={selectedMission.missionId}
             />
           ) : (
             <div style={{

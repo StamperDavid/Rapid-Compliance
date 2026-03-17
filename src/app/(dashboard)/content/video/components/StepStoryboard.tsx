@@ -8,7 +8,7 @@
  * assignment, and preview generation.
  */
 
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef, forwardRef } from 'react';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -59,7 +59,7 @@ interface SceneCardProps {
   isGeneratingPreview: boolean;
 }
 
-function SceneCard({
+const SceneCard = forwardRef<HTMLDivElement, SceneCardProps>(function SceneCard({
   scene,
   index,
   isSelected,
@@ -68,9 +68,10 @@ function SceneCard({
   onDuplicate,
   onGeneratePreview,
   isGeneratingPreview,
-}: SceneCardProps) {
+}, ref) {
   return (
     <motion.div
+      ref={ref}
       layout
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
@@ -166,7 +167,7 @@ function SceneCard({
       </div>
     </motion.div>
   );
-}
+});
 
 // ============================================================================
 // Scene Detail Editor (expanded view below grid)
@@ -338,6 +339,7 @@ export function StepStoryboard() {
   const [isDecomposing, setIsDecomposing] = useState(false);
   const [decompositionError, setDecompositionError] = useState<string | null>(null);
   const [generatingPreviews, setGeneratingPreviews] = useState<Set<string>>(new Set());
+  const [previewError, setPreviewError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'scenes' | 'avatar' | 'voice'>('scenes');
   const [isSaving, setIsSaving] = useState(false);
   const [selectedSceneId, setSelectedSceneId] = useState<string | null>(null);
@@ -522,10 +524,17 @@ export function StepStoryboard() {
         const data = (await response.json()) as { success: boolean; data?: { url?: string } };
         if (data.success && data.data?.url) {
           updateScene(sceneId, { screenshotUrl: data.data.url });
+          setPreviewError(null);
+        } else {
+          setPreviewError(`Scene ${scene.sceneNumber}: Preview generation returned no image`);
         }
+      } else {
+        const errorData = (await response.json().catch(() => null)) as { error?: string } | null;
+        const msg = errorData?.error ?? `Preview generation failed (${response.status})`;
+        setPreviewError(`Scene ${scene.sceneNumber}: ${msg}`);
       }
-    } catch {
-      // Non-critical — preview generation failure doesn't block workflow
+    } catch (err) {
+      setPreviewError(`Scene ${scene.sceneNumber}: ${err instanceof Error ? err.message : 'Preview generation failed'}`);
     } finally {
       setGeneratingPreviews((prev) => {
         const next = new Set(prev);
@@ -659,6 +668,23 @@ export function StepStoryboard() {
           </Button>
         </div>
       </div>
+
+      {/* Preview Error Banner */}
+      {previewError && (
+        <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-red-500/10 border border-red-500/20">
+          <div className="flex items-center gap-2 text-xs text-red-400">
+            <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+            {previewError}
+          </div>
+          <button
+            type="button"
+            className="text-red-400/60 hover:text-red-400 text-xs"
+            onClick={() => setPreviewError(null)}
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
 
       {/* Summary Bar */}
       <Card className="bg-zinc-900/50 border-zinc-800">
