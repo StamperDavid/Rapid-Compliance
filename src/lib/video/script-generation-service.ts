@@ -203,8 +203,9 @@ No specific avatar has been chosen — the video AI will generate the characters
 3. Copy the user's character descriptions EXACTLY into every visualDescription — same age, gender, ethnicity, clothing, grooming, physical features.
 4. **CHARACTER CONTINUITY (CRITICAL):** When the same character appears in multiple scenes, you MUST explicitly state "the same [character description] from scene X" in the visualDescription. Hedra generates each scene independently — if you don't reference back, it will create a different person. Example: Scene 1 says "A tall bald white man in his 40s wearing a black henley" → Scene 4 MUST say "The same tall bald white man in his 40s wearing a black henley from scene 1".
 5. If the user describes multiple characters for different scenes, use exactly those characters in those scenes.
-6. **NEVER introduce characters the user did not mention.** If the user describes one character, that character appears in ALL scenes — do not swap in a different person for any scene. Only invent a character if the user's prompt contains NO character description at all.
-7. NEVER invent a different on-screen character than what the user described. If scene 3 shows a "team meeting", the user's protagonist is the one presenting — do not replace them with a random colleague.`;
+6. **NEVER introduce characters the user did not mention.** If the user describes one character, that character appears in ALL scenes — do not swap in a different person for any scene.
+7. NEVER invent a different on-screen character than what the user described. If scene 3 shows a "team meeting", the user's protagonist is the one presenting — do not replace them with a random colleague.
+8. **DEFAULT PROTAGONIST (when the user provides NO character description):** If the topic/brief does NOT describe any specific person, you MUST invent ONE detailed protagonist and use them in EVERY scene. Do NOT use generic terms like "a professional" or "a person". Instead, create a specific character: e.g. "A confident man in his mid-30s with short dark hair, clean-shaven, wearing a charcoal tailored suit and white dress shirt." Then reference "the same man from Scene 1" in every subsequent scene. ONE protagonist, described in full detail, consistent throughout.`;
   }
 
   if (avatarContext) {
