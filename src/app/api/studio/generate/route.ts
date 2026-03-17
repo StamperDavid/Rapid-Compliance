@@ -16,12 +16,14 @@ import { logGenerationCost } from '@/lib/ai/cost-tracker';
 import { buildPromptFromPresets } from '@/lib/ai/cinematic-presets';
 import { adminDb } from '@/lib/firebase/admin';
 import { getSubCollection } from '@/lib/firebase/collections';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 import { logger } from '@/lib/logger/logger';
 import { ZodError } from 'zod';
 
 export const dynamic = 'force-dynamic';
 
 const GENERATIONS_COLLECTION = getSubCollection('studio-generations');
+const MEDIA_COLLECTION = `organizations/${PLATFORM_ID}/media`;
 
 export async function POST(request: NextRequest) {
   try {
@@ -119,7 +121,37 @@ export async function POST(request: NextRequest) {
       completedAt,
     });
 
-    // 9. Log cost (fire-and-forget — never block or crash the image response)
+    // 9. Add to media library (fire-and-forget)
+    if (adminDb && result.url) {
+      const now = new Date();
+      const mediaName = validated.prompt.slice(0, 80) || `${validated.type} generation`;
+      adminDb.collection(MEDIA_COLLECTION).doc().set({
+        type: validated.type === 'video' ? 'video' : 'image',
+        category: validated.type === 'video' ? 'clip' : 'graphic',
+        name: mediaName,
+        url: result.url,
+        thumbnailUrl: null,
+        mimeType: validated.type === 'video' ? 'video/mp4' : 'image/png',
+        fileSize: 0,
+        duration: null,
+        metadata: {
+          provider: result.provider,
+          model: result.model,
+          generationId: docRef.id,
+          ...(validated.projectId ? { projectId: validated.projectId } : {}),
+          ...(validated.campaignId ? { campaignId: validated.campaignId } : {}),
+        },
+        createdAt: now,
+        updatedAt: now,
+        createdBy: user.uid,
+      }).catch((mediaErr) => {
+        logger.error('Studio generate: media library write failed (non-fatal)', mediaErr instanceof Error ? mediaErr : undefined, {
+          generationId: docRef.id,
+        });
+      });
+    }
+
+    // 10. Log cost (fire-and-forget — never block or crash the image response)
     logGenerationCost({
       generationId: docRef.id,
       userId: user.uid,
