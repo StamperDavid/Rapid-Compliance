@@ -127,7 +127,7 @@ export async function POST(request: NextRequest) {
       model: result.model,
       type: validated.type,
       cost: result.cost,
-      campaignId: validated.campaignId,
+      ...(validated.campaignId ? { campaignId: validated.campaignId } : {}),
     });
 
     logger.info('Studio generate: generation complete', {

@@ -42,11 +42,15 @@ export async function logGenerationCost(
   }
 
   const docRef = adminDb.collection(COST_COLLECTION).doc();
-  const costEntry: CostEntry = {
-    id: docRef.id,
-    ...entry,
-    createdAt: new Date().toISOString(),
-  };
+
+  // Filter out undefined values to prevent Firestore errors
+  const cleanEntry: Record<string, unknown> = { id: docRef.id, createdAt: new Date().toISOString() };
+  for (const [key, val] of Object.entries(entry)) {
+    if (val !== undefined) {
+      cleanEntry[key] = val;
+    }
+  }
+  const costEntry = cleanEntry as unknown as CostEntry;
 
   try {
     await docRef.set(costEntry);
