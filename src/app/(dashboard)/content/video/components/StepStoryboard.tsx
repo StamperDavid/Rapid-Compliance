@@ -38,7 +38,6 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { useVideoPipelineStore } from '@/lib/stores/video-pipeline-store';
-import { isPersistedUrl } from '@/lib/firebase/storage-utils';
 import { CinematicControlsPanel } from '@/components/studio/CinematicControlsPanel';
 import { AvatarPicker } from './AvatarPicker';
 import { VoicePicker } from './VoicePicker';
@@ -385,25 +384,7 @@ export function StepStoryboard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ── Auto-recover stale provider URLs ─────────────────────────────────────
-  // Provider CDN URLs (DALL-E, Hedra, fal) expire within hours. Once scenes
-  // are hydrated from Zustand, automatically try to persist any stale URLs
-  // to Firebase Storage (or regenerate if the provider URL is already dead).
-  const hasRecoveredStaleUrls = useRef(false);
-  useEffect(() => {
-    if (hasRecoveredStaleUrls.current || scenes.length === 0) {
-      return;
-    }
-    const hasStale = scenes.some(
-      (s) => s.screenshotUrl && !isPersistedUrl(s.screenshotUrl),
-    );
-    if (!hasStale) {
-      return;
-    }
-    hasRecoveredStaleUrls.current = true;
-    void handleGenerateAllPreviews();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scenes]);
+
 
   // ── Decompose ───────────────────────────────────────────────────────────
   const handleDecompose = useCallback(async () => {
@@ -513,27 +494,6 @@ export function StepStoryboard() {
     }, 50);
   }, [addScene, scenes.length]);
 
-  // ── Try to persist an existing (possibly stale) URL to Firebase Storage ──
-  const tryPersistExisting = useCallback(async (sceneId: string, existingUrl: string): Promise<boolean> => {
-    try {
-      const res = await authFetch('/api/media/persist', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: existingUrl }),
-      });
-      if (res.ok) {
-        const data = (await res.json()) as { success: boolean; url?: string };
-        if (data.success && data.url) {
-          updateScene(sceneId, { screenshotUrl: data.url });
-          return true;
-        }
-      }
-    } catch {
-      // URL is dead — fall through to regeneration
-    }
-    return false;
-  }, [authFetch, updateScene]);
-
   // ── Generate preview image for a scene ─────────────────────────────────
   const handleGeneratePreview = useCallback(async (sceneId: string) => {
     const scene = scenes.find((s) => s.id === sceneId);
@@ -544,17 +504,6 @@ export function StepStoryboard() {
     setGeneratingPreviews((prev) => new Set(prev).add(sceneId));
 
     try {
-      // If the scene already has a URL that isn't persisted, try to save it
-      // to Firebase Storage first (recovers images still alive on provider CDN)
-      if (scene.screenshotUrl && !isPersistedUrl(scene.screenshotUrl)) {
-        const recovered = await tryPersistExisting(sceneId, scene.screenshotUrl);
-        if (recovered) {
-          setPreviewError(null);
-          return;
-        }
-      }
-
-      // No existing URL or recovery failed — generate a new preview
       const cinematicDetails = scene.cinematicConfig
         ? Object.entries(scene.cinematicConfig)
             .filter(([key, val]) => val !== undefined && key !== 'temperature')
@@ -604,13 +553,12 @@ export function StepStoryboard() {
         return next;
       });
     }
-  }, [scenes, authFetch, updateScene, tryPersistExisting]);
+  }, [scenes, authFetch, updateScene]);
 
   // ── Generate all previews ─────────────────────────────────────────────
   const handleGenerateAllPreviews = useCallback(async () => {
     for (const scene of scenes) {
-      const needsPreview = !scene.screenshotUrl || !isPersistedUrl(scene.screenshotUrl);
-      if (needsPreview) {
+      if (!scene.screenshotUrl) {
         await handleGeneratePreview(scene.id);
       }
     }
