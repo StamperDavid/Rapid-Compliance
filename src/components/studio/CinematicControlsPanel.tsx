@@ -130,7 +130,10 @@ interface PresetSelectorProps {
 }
 
 function PresetSelector({ label, presetId, onOpen }: PresetSelectorProps) {
-  const presetName = presetId ? getPresetById(presetId)?.name : undefined;
+  // Try exact preset ID match first, then display raw value as fallback
+  const preset = presetId ? getPresetById(presetId) : undefined;
+  const displayName = preset?.name
+    ?? (presetId ? presetId.replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) : undefined);
 
   return (
     <div className="space-y-1.5">
@@ -143,10 +146,10 @@ function PresetSelector({ label, presetId, onOpen }: PresetSelectorProps) {
         className={cn(
           'w-full justify-start text-left font-normal',
           'border-zinc-700 bg-zinc-800 hover:bg-zinc-700',
-          presetName ? 'text-white' : 'text-zinc-500',
+          displayName ? 'text-white' : 'text-zinc-500',
         )}
       >
-        {presetName ?? 'Select...'}
+        {displayName ?? 'Select...'}
       </Button>
     </div>
   );

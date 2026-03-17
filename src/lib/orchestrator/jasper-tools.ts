@@ -4056,29 +4056,29 @@ ${duration ? `Target duration: ${duration} seconds` : ''}`,
                 messages: [
                   {
                     role: 'system',
-                    content: `You are a Cinematic Director. For each scene, select the best cinematography settings.
-Available options:
-- shotType: close-up, medium, wide, extreme-close-up, full-body, cowboy, dutch-angle, birds-eye, worms-eye, over-the-shoulder, pov, tracking, establishing, rack-focus, split-screen
-- lighting: golden-hour, blue-hour, studio-three-point, rembrandt, split-lighting, neon, candlelight, natural-window, overcast-soft, high-key, low-key, backlit-silhouette, chiaroscuro, volumetric-fog, stage-spotlight
-- camera: arri-alexa-mini, red-v-raptor, sony-venice-2, blackmagic-ursa, canon-c500, hasselblad-x2d
-- filmStock: kodak-portra-400, fuji-velvia-50, kodak-vision3-500t, cinestill-800t, ilford-hp5, kodachrome-64
-- artStyle: photorealistic, cinematic, anime, watercolor, oil-painting, noir, fantasy, cyberpunk, pixar-3d, comic
-- focalLength: 24mm-wide, 35mm-standard, 50mm-natural, 85mm-portrait, 135mm-telephoto
-- composition: rule-of-thirds, center-frame, golden-ratio, leading-lines, symmetrical
+                    content: `You are a Cinematic Director. For each scene, select the best cinematography settings using EXACTLY these preset IDs:
 
-Respond with valid JSON (no markdown fences):
+shotType (use these exact IDs): shot-extreme-close-up, shot-close-up, shot-medium-close, shot-medium, shot-medium-wide, shot-wide, shot-extreme-wide, shot-over-shoulder, shot-dutch-angle, shot-birds-eye, shot-low-angle, shot-high-angle, shot-pov, shot-tracking, shot-steadicam, shot-establishing, shot-rack-focus, shot-split-screen, shot-full-body, shot-insert, shot-overhead
+lighting: light-golden-hour, light-blue-hour, light-three-point, light-rembrandt, light-split, light-neon, light-candlelight, light-natural-window, light-overcast, light-high-key, light-low-key, light-backlit, light-chiaroscuro, light-volumetric, light-spotlight
+camera: cam-arri-alexa, cam-red-v-raptor, cam-sony-venice, cam-canon-c500, cam-hasselblad, cam-leica-m11, cam-iphone, cam-8mm-film, cam-16mm-film, cam-35mm-film
+filmStock: film-portra-400, film-velvia-50, film-vision3-500t, film-cinestill-800t, film-hp5, film-kodachrome-64, film-ektar-100, film-pro-400h, film-gold-200, film-provia-100f
+artStyle: style-photorealistic, style-cinematic, style-anime, style-watercolor, style-oil-painting, style-noir, style-fantasy, style-cyberpunk, style-pixar-3d, style-comic, style-hyperrealistic
+focalLength: focal-14mm, focal-24mm, focal-35mm, focal-50mm, focal-85mm, focal-135mm, focal-200mm
+composition: comp-rule-thirds, comp-center, comp-golden-ratio, comp-leading-lines, comp-symmetrical, comp-diagonal, comp-negative-space, comp-frame-in-frame
+
+Respond with valid JSON only (NO markdown fences, NO backticks):
 {
   "globalStyle": "overall visual style name",
   "configs": [
     {
       "sceneNumber": 1,
-      "shotType": "...",
-      "lighting": "...",
-      "camera": "...",
-      "filmStock": "...",
-      "artStyle": "...",
-      "focalLength": "...",
-      "composition": "..."
+      "shotType": "shot-medium",
+      "lighting": "light-three-point",
+      "camera": "cam-sony-venice",
+      "filmStock": "film-vision3-500t",
+      "artStyle": "style-cinematic",
+      "focalLength": "focal-35mm",
+      "composition": "comp-rule-thirds"
     }
   ]
 }`,
