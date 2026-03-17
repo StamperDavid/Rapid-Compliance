@@ -16,6 +16,7 @@ import { logGenerationCost } from '@/lib/ai/cost-tracker';
 import { buildPromptFromPresets } from '@/lib/ai/cinematic-presets';
 import { adminDb } from '@/lib/firebase/admin';
 import { getSubCollection } from '@/lib/firebase/collections';
+import { persistUrlToStorage, studioImagePath } from '@/lib/firebase/storage-utils';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import { logger } from '@/lib/logger/logger';
 import { ZodError } from 'zod';
@@ -109,7 +110,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 8. Update Firestore doc with completed result
+    // 8. Persist generated images to Firebase Storage so URLs survive
+    //    provider CDN expiry (DALL-E ~1hr, Hedra/fal variable).
+    if (validated.type === 'image' && result.url) {
+      try {
+        const storagePath = studioImagePath(docRef.id);
+        const permanentUrl = await persistUrlToStorage(result.url, storagePath, 'image/png');
+        result = { ...result, url: permanentUrl };
+        logger.info('Studio generate: image persisted to Firebase Storage', {
+          generationId: docRef.id,
+        });
+      } catch (persistErr) {
+        logger.warn('Studio generate: image persistence failed, using provider URL', {
+          error: persistErr instanceof Error ? persistErr.message : String(persistErr),
+          generationId: docRef.id,
+        });
+      }
+    }
+
+    // 9. Update Firestore doc with completed result
     const completedAt = new Date().toISOString();
     await docRef.update({
       status: 'completed',
@@ -121,7 +140,7 @@ export async function POST(request: NextRequest) {
       completedAt,
     });
 
-    // 9. Add to media library (fire-and-forget)
+    // 10. Add to media library (fire-and-forget)
     if (adminDb && result.url) {
       const now = new Date();
       const mediaName = validated.prompt.slice(0, 80) || `${validated.type} generation`;
@@ -151,7 +170,7 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // 10. Log cost (fire-and-forget — never block or crash the image response)
+    // 11. Log cost (fire-and-forget — never block or crash the image response)
     logGenerationCost({
       generationId: docRef.id,
       userId: user.uid,
@@ -173,7 +192,7 @@ export async function POST(request: NextRequest) {
       cost: result.cost,
     });
 
-    // 10. Return the result
+    // 12. Return the result
     return NextResponse.json({
       success: true,
       data: {
