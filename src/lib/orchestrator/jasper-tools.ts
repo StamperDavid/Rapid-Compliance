@@ -4270,6 +4270,12 @@ Select cohesive settings that create a professional, unified visual language acr
             });
           }
 
+          const missionReviewLink = context?.missionId
+            ? `/mission-control?mission=${context.missionId}`
+            : videoCampaignId
+              ? `/mission-control?campaign=${videoCampaignId}`
+              : `/mission-control`;
+
           content = JSON.stringify({
             status: 'draft',
             projectId,
@@ -4280,10 +4286,8 @@ Select cohesive settings that create a professional, unified visual language acr
             thumbnailCount: thumbnailResults.length,
             cinematicStyleApplied: scenesConfigured > 0,
             videoStudioPath: reviewLink,
-            reviewLink: videoCampaignId
-              ? `/mission-control?campaign=${videoCampaignId}`
-              : reviewLink,
-            message: `Storyboard complete for "${videoTitle}" — ${sceneCount} scene(s) with scripts, cinematic settings, and ${thumbnailResults.length} preview thumbnail(s). Open the Video Studio to review and approve.`,
+            reviewLink: missionReviewLink,
+            message: `Storyboard complete for "${videoTitle}" — ${sceneCount} scene(s) with scripts, cinematic settings, and ${thumbnailResults.length} preview thumbnail(s). Review all steps in Mission Control.`,
             specialist: 'VIDEO_DIRECTOR',
             orchestrationDurationMs: Date.now() - produceStart,
           });
