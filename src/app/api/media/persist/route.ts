@@ -76,6 +76,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true, url: permanentUrl });
   } catch (error) {
     const msg = error instanceof Error ? error.message : 'Persist failed';
+    const isDownloadFailure = msg.includes('Failed to download');
+    if (isDownloadFailure) {
+      // Expected when provider CDN URL has expired — not a server error
+      logger.info('Media persist: provider URL expired, regeneration required', {
+        file: 'api/media/persist/route.ts',
+      });
+      return NextResponse.json({ success: false, error: 'expired' }, { status: 410 });
+    }
     logger.error('Media persist failed', error instanceof Error ? error : new Error(msg), {
       file: 'api/media/persist/route.ts',
     });
