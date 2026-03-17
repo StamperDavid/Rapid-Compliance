@@ -577,7 +577,8 @@ export function StepStoryboard() {
         body: JSON.stringify({
           prompt,
           type: 'image',
-          presets: scene.cinematicConfig ?? {},
+          size: '1920x1080',
+          presets: { aspectRatio: '16:9', ...scene.cinematicConfig },
         }),
       });
 
