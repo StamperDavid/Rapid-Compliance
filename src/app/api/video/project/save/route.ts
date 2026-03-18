@@ -36,6 +36,7 @@ const SaveProjectSchema = z.object({
   }),
   currentStep: z.enum([
     'request',
+    'storyboard',
     'decompose',
     'pre-production',
     'approval',

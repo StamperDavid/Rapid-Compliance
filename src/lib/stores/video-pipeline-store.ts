@@ -285,8 +285,11 @@ export const useVideoPipelineStore = create<VideoPipelineState>()(
 
       advanceStep: () => {
         const state = get();
-        const currentIndex = PIPELINE_STEPS.indexOf(state.currentStep);
-        if (currentIndex < PIPELINE_STEPS.length - 1) {
+        // Normalize legacy steps (decompose/approval/pre-production → storyboard)
+        // so indexOf doesn't return -1
+        const normalized = normalizePipelineStep(state.currentStep);
+        const currentIndex = PIPELINE_STEPS.indexOf(normalized);
+        if (currentIndex >= 0 && currentIndex < PIPELINE_STEPS.length - 1) {
           const nextStep = PIPELINE_STEPS[currentIndex + 1];
           if (state.canAdvanceTo(nextStep)) {
             set({ currentStep: nextStep });

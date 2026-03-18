@@ -47,6 +47,13 @@ export function StepGeneration() {
   const startTimeRef = useRef<number>(Date.now());
   const autoRetryRef = useRef<Set<string>>(new Set()); // Track which scenes have been auto-retried
 
+  const {
+    projectId,
+    projectName,
+    avatarName,
+    voiceName,
+  } = useVideoPipelineStore();
+
   const allComplete = generatedScenes.length > 0 &&
     generatedScenes.every((s) => s.status === 'completed' || s.status === 'failed');
   const completedCount = generatedScenes.filter((s) => s.status === 'completed').length;
@@ -58,6 +65,55 @@ export function StepGeneration() {
     : 0;
 
   const engineList = 'Hedra';
+  const hasSavedResults = useRef(false);
+
+  // Persist generatedScenes to Firestore when all complete so they survive full reloads
+  useEffect(() => {
+    if (!allComplete || completedCount === 0 || hasSavedResults.current) { return; }
+    if (!projectId) { return; }
+    hasSavedResults.current = true;
+
+    void authFetch('/api/video/project/save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        projectId,
+        name: projectName || 'Untitled Video',
+        brief,
+        currentStep: 'generation',
+        scenes: scenes.map((s) => ({
+          id: s.id,
+          sceneNumber: s.sceneNumber,
+          scriptText: s.scriptText,
+          screenshotUrl: s.screenshotUrl ?? null,
+          avatarId: s.avatarId ?? null,
+          voiceId: s.voiceId ?? null,
+          voiceProvider: s.voiceProvider ?? null,
+          duration: s.duration,
+          engine: s.engine ?? 'hedra',
+          backgroundPrompt: s.backgroundPrompt ?? null,
+          cinematicConfig: s.cinematicConfig,
+          status: s.status,
+        })),
+        avatarId: avatarId ?? null,
+        avatarName: avatarName ?? null,
+        voiceId: voiceId ?? null,
+        voiceName: voiceName ?? null,
+        voiceProvider: voiceProvider ?? null,
+        generatedScenes: generatedScenes.map((g) => ({
+          sceneId: g.sceneId,
+          providerVideoId: g.providerVideoId,
+          provider: g.provider,
+          status: g.status,
+          videoUrl: g.videoUrl,
+          thumbnailUrl: g.thumbnailUrl,
+          progress: g.progress ?? 100,
+          error: g.error ?? null,
+        })),
+        status: completedCount === generatedScenes.length ? 'assembled' : 'generating',
+      }),
+    }).catch(() => { /* non-critical — localStorage has the data */ });
+  }, [allComplete, completedCount, projectId, projectName, brief, scenes, avatarId, avatarName, voiceId, voiceName, voiceProvider, generatedScenes, authFetch]);
 
   // Elapsed time timer
   useEffect(() => {

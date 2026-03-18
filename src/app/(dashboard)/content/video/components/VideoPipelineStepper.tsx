@@ -24,12 +24,15 @@ interface VideoPipelineStepperProps {
   currentStep: PipelineStep;
   onStepClick: (step: PipelineStep) => void;
   completedSteps: PipelineStep[];
+  /** Steps the user can advance to (forward navigation) */
+  reachableSteps?: PipelineStep[];
 }
 
 export function VideoPipelineStepper({
   currentStep,
   onStepClick,
   completedSteps,
+  reachableSteps = [],
 }: VideoPipelineStepperProps) {
   const currentIndex = PIPELINE_STEPS.indexOf(currentStep);
 
@@ -40,7 +43,8 @@ export function VideoPipelineStepper({
           const Icon = STEP_ICONS[step] ?? Layers;
           const isCompleted = completedSteps.includes(step);
           const isCurrent = step === currentStep;
-          const isClickable = isCompleted || isCurrent;
+          const isReachable = reachableSteps.includes(step);
+          const isClickable = isCompleted || isCurrent || isReachable;
           const isPast = index < currentIndex;
 
           return (

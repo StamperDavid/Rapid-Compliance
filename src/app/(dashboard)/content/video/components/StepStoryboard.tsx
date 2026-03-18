@@ -306,6 +306,10 @@ function SceneDetailEditor({ scene, index, onUpdate, onClose }: SceneDetailEdito
                 config={config}
                 onChange={handleConfigChange}
                 compact
+                subject={scene.visualDescription ?? ''}
+                onSubjectChange={(value) => onUpdate({ visualDescription: value || undefined })}
+                environment={scene.backgroundPrompt ?? ''}
+                onEnvironmentChange={(value) => onUpdate({ backgroundPrompt: value || null })}
               />
             </div>
           </div>
@@ -340,7 +344,6 @@ export function StepStoryboard() {
     setAvatar,
     setVoice,
     setStep,
-    advanceStep,
   } = useVideoPipelineStore();
 
   const [isDecomposing, setIsDecomposing] = useState(false);
@@ -632,7 +635,7 @@ export function StepStoryboard() {
           projectId: projectId ?? undefined,
           name: projectName || brief.description.slice(0, 50) || 'Untitled Video',
           brief,
-          currentStep: 'approval',
+          currentStep: 'generation',
           scenes: scenes.map((s) => ({
             id: s.id,
             sceneNumber: s.sceneNumber,
@@ -662,8 +665,10 @@ export function StepStoryboard() {
     } finally {
       setIsSaving(false);
     }
-    advanceStep();
-  }, [isReady, authFetch, projectId, projectName, brief, scenes, avatarId, avatarName, voiceId, voiceName, voiceProvider, advanceStep]);
+    // Set step directly — advanceStep() fails if currentStep is a legacy value
+    // (e.g. 'decompose', 'approval') because PIPELINE_STEPS.indexOf returns -1
+    setStep('generation');
+  }, [isReady, authFetch, projectId, projectName, brief, scenes, avatarId, avatarName, voiceId, voiceName, voiceProvider, setStep]);
 
   const selectedScene = selectedSceneId ? scenes.find((s) => s.id === selectedSceneId) : null;
   const selectedSceneIndex = selectedScene ? scenes.indexOf(selectedScene) : -1;

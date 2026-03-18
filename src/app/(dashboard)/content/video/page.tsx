@@ -52,20 +52,60 @@ export default function VideoStudioPage() {
   const [loadingProjectId, setLoadingProjectId] = useState<string | null>(null);
   const [autoLoading, setAutoLoading] = useState(false);
 
+  // Subscribe to the reactive data that canAdvanceTo depends on
+  const scenes = useVideoPipelineStore((s) => s.scenes);
+  const generatedScenes = useVideoPipelineStore((s) => s.generatedScenes);
+  const brief = useVideoPipelineStore((s) => s.brief);
+  const finalVideoUrl = useVideoPipelineStore((s) => s.finalVideoUrl);
+
+  // Compute which steps are reachable based on actual store data
+  const reachableSteps = useMemo(() => {
+    const reachable: PipelineStep[] = [];
+    // Check each step's prerequisites directly
+    if (brief.description.trim().length > 0) {
+      reachable.push('storyboard');
+    }
+    if (scenes.length > 0 && scenes.every((s) => s.scriptText.trim().length > 0)) {
+      reachable.push('generation');
+    }
+    if (
+      generatedScenes.length > 0 &&
+      generatedScenes.every((s) => s.status === 'completed' || s.status === 'failed') &&
+      generatedScenes.some((s) => s.status === 'completed' && s.videoUrl)
+    ) {
+      reachable.push('assembly');
+    }
+    if (finalVideoUrl) {
+      reachable.push('post-production');
+    }
+    return reachable;
+  }, [brief, scenes, generatedScenes, finalVideoUrl]);
+
   const completedSteps = useMemo(() => {
+    // Steps before current are completed, plus all steps before any reachable step
+    const completed = new Set<PipelineStep>();
     const currentIndex = PIPELINE_STEPS.indexOf(currentStep);
-    return PIPELINE_STEPS.slice(0, currentIndex);
-  }, [currentStep]);
+    for (let i = 0; i < currentIndex; i++) {
+      completed.add(PIPELINE_STEPS[i]);
+    }
+    for (const step of reachableSteps) {
+      const stepIndex = PIPELINE_STEPS.indexOf(step);
+      for (let i = 0; i < stepIndex; i++) {
+        completed.add(PIPELINE_STEPS[i]);
+      }
+    }
+    return [...completed];
+  }, [currentStep, reachableSteps]);
 
   const handleStepClick = useCallback(
     (step: PipelineStep) => {
       const targetIndex = PIPELINE_STEPS.indexOf(step);
       const currentIndex = PIPELINE_STEPS.indexOf(currentStep);
-      if (targetIndex <= currentIndex) {
+      if (targetIndex <= currentIndex || reachableSteps.includes(step)) {
         setStep(step);
       }
     },
-    [currentStep, setStep],
+    [currentStep, setStep, reachableSteps],
   );
 
   const handleNewProject = useCallback(() => {
@@ -119,16 +159,11 @@ export default function VideoStudioPage() {
     }
   }, [searchParams, handleLoadProject, projectId]);
 
-  // Re-fetch project data when the tab gets focus (picks up background changes)
-  useEffect(() => {
-    const handleFocus = () => {
-      if (projectId) {
-        void handleLoadProject(projectId);
-      }
-    };
-    window.addEventListener('focus', handleFocus);
-    return () => { window.removeEventListener('focus', handleFocus); };
-  }, [projectId, handleLoadProject]);
+  // NOTE: Focus handler removed — it was reloading the project from Firestore
+  // on every tab focus, which clobbered in-session navigation state (currentStep,
+  // generatedScenes). In a single-user workflow, the Zustand store + localStorage
+  // persistence is the source of truth. Full reload or Load Project modal can be
+  // used to re-fetch from Firestore when needed.
 
   // Step 1 (Studio) renders the full RenderZero cinematic UI.
   // Steps 2-5 render the pipeline step components.
@@ -205,6 +240,7 @@ export default function VideoStudioPage() {
             currentStep={currentStep}
             onStepClick={handleStepClick}
             completedSteps={completedSteps}
+            reachableSteps={reachableSteps}
           />
         </div>
       </div>
