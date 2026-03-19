@@ -11,7 +11,7 @@ import type { ProjectStatus } from '@/types/video-pipeline';
 
 export const dynamic = 'force-dynamic';
 
-const VALID_STATUSES: ProjectStatus[] = ['draft', 'approved', 'generating', 'assembled', 'completed'];
+const VALID_STATUSES: ProjectStatus[] = ['draft', 'approved', 'generating', 'generated', 'assembled', 'completed'];
 
 // ============================================================================
 // Route Handler

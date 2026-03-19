@@ -79,7 +79,7 @@ const SaveProjectSchema = z.object({
   ).default([]),
   finalVideoUrl: z.string().nullable().default(null),
   transitionType: z.enum(['cut', 'fade', 'dissolve']).default('fade'),
-  status: z.enum(['draft', 'approved', 'generating', 'assembled', 'completed']).default('draft'),
+  status: z.enum(['draft', 'approved', 'generating', 'generated', 'assembled', 'completed']).default('draft'),
 });
 
 // ============================================================================

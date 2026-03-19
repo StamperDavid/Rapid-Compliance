@@ -83,6 +83,7 @@ const AUDIO_FILTERS: { id: AudioFilter; label: string; icon: React.ElementType }
 const STATUS_CONFIG: Record<ProjectStatus, { label: string; color: string; icon: typeof CheckCircle }> = {
   completed: { label: 'Completed', color: 'bg-green-500/20 text-green-400 border-green-500/30', icon: CheckCircle },
   assembled: { label: 'Assembled', color: 'bg-blue-500/20 text-blue-400 border-blue-500/30', icon: Film },
+  generated: { label: 'Generated', color: 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30', icon: CheckCircle },
   generating: { label: 'Generating', color: 'bg-amber-500/20 text-amber-400 border-amber-500/30', icon: Loader2 },
   approved: { label: 'Approved', color: 'bg-purple-500/20 text-purple-400 border-purple-500/30', icon: CheckCircle },
   draft: { label: 'Draft', color: 'bg-zinc-500/20 text-zinc-400 border-zinc-500/30', icon: Edit3 },
@@ -106,7 +107,7 @@ function filterToStatuses(tab: VideoFilter): ProjectStatus[] | undefined {
     case 'completed':
       return ['completed'];
     case 'in-progress':
-      return ['approved', 'generating', 'assembled'];
+      return ['approved', 'generating', 'generated', 'assembled'];
     case 'draft':
       return ['draft'];
     default:

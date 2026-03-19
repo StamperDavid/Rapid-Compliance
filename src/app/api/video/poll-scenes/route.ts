@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { logger } from '@/lib/logger/logger';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { pollSceneStatus } from '@/lib/video/scene-generator';
+import { persistVideoToStorage } from '@/lib/video/video-persistence';
 
 export const dynamic = 'force-dynamic';
 
@@ -33,7 +34,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { scenes } = parseResult.data;
+    const { scenes, projectId } = parseResult.data;
 
     const results = await Promise.all(
       scenes.map(async (scene) => {
@@ -49,11 +50,42 @@ export async function POST(request: NextRequest) {
           file: 'poll-scenes/route.ts',
         });
 
+        // When a scene completes, immediately download from Hedra and persist
+        // to Firebase Storage so the URL never expires.
+        let persistedVideoUrl = status.videoUrl;
+
+        if (status.status === 'completed' && status.videoUrl) {
+          try {
+            const permanentUrl = await persistVideoToStorage(
+              scene.providerVideoId,
+              status.videoUrl,
+              projectId,
+              scene.sceneId,
+            );
+            if (permanentUrl) {
+              persistedVideoUrl = permanentUrl;
+              logger.info('Scene video persisted to Firebase Storage', {
+                sceneId: scene.sceneId.slice(0, 8),
+                file: 'poll-scenes/route.ts',
+              });
+            }
+          } catch (persistError) {
+            // Persistence failed — return the Hedra URL as fallback.
+            // The proxy endpoint (/api/video/stream/) will handle re-resolution.
+            logger.warn('Scene video persistence failed, using Hedra URL as fallback', {
+              sceneId: scene.sceneId.slice(0, 8),
+              error: persistError instanceof Error ? persistError.message : String(persistError),
+              file: 'poll-scenes/route.ts',
+            });
+          }
+        }
+
         return {
           sceneId: scene.sceneId,
           providerVideoId: scene.providerVideoId,
           provider: scene.provider,
           ...status,
+          videoUrl: persistedVideoUrl,
         };
       }),
     );

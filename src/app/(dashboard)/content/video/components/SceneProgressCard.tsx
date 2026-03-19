@@ -173,11 +173,11 @@ export function SceneProgressCard({ sceneNumber, result, onRetry, onRegenerate, 
         </div>
       </div>
 
-      {/* Inline Video Preview */}
+      {/* Inline Video Preview — use proxy URL so expired Hedra CDN links are re-resolved */}
       {isComplete && showPreview && (
         <div className="px-4 pb-3">
           <video
-            src={result.videoUrl ?? undefined}
+            src={result.providerVideoId ? `/api/video/stream/${result.providerVideoId}` : (result.videoUrl ?? undefined)}
             controls
             className="w-full max-h-64 rounded-lg bg-black"
             preload="metadata"

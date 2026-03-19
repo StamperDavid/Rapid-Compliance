@@ -148,6 +148,7 @@ export type ProjectStatus =
   | 'draft'
   | 'approved'
   | 'generating'
+  | 'generated'
   | 'assembled'
   | 'completed';
 

@@ -45,7 +45,6 @@ export function StepGeneration() {
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const startTimeRef = useRef<number>(Date.now());
-  const autoRetryRef = useRef<Set<string>>(new Set()); // Track which scenes have been auto-retried
 
   const {
     projectId,
@@ -110,7 +109,7 @@ export function StepGeneration() {
           progress: g.progress ?? 100,
           error: g.error ?? null,
         })),
-        status: completedCount === generatedScenes.length ? 'assembled' : 'generating',
+        status: completedCount === generatedScenes.length ? 'generated' : 'generating',
       }),
     }).catch(() => { /* non-critical — localStorage has the data */ });
   }, [allComplete, completedCount, projectId, projectName, brief, scenes, avatarId, avatarName, voiceId, voiceName, voiceProvider, generatedScenes, authFetch]);
@@ -317,26 +316,8 @@ export function StepGeneration() {
     };
   }, [generatedScenes, authFetch, updateGeneratedScene]);
 
-  // Auto-retry failed scenes once after 60 seconds
-  useEffect(() => {
-    const failedScenes = generatedScenes.filter(
-      (s) => s.status === 'failed' && !autoRetryRef.current.has(s.sceneId),
-    );
-    if (failedScenes.length === 0) { return; }
-
-    const timer = setTimeout(() => {
-      for (const scene of failedScenes) {
-        autoRetryRef.current.add(scene.sceneId);
-        console.info(`[VideoGen] Auto-retrying failed scene ${scene.sceneId.slice(0, 8)}...`);
-      }
-      // Trigger retry by calling regenerateScene for each
-      for (const scene of failedScenes) {
-        void regenerateSceneRef.current?.(scene.sceneId);
-      }
-    }, 60000);
-
-    return () => { clearTimeout(timer); };
-  }, [generatedScenes]);
+  // Auto-retry removed — video generation should ONLY happen on explicit user action.
+  // Failed scenes show a manual "Retry" button in their SceneProgressCard.
 
   // Stable ref for regenerateScene so auto-retry can call it without circular deps
   const regenerateSceneRef = useRef<((sceneId: string, feedback?: string) => Promise<void>) | null>(null);

@@ -138,16 +138,18 @@ export function StepAssembly() {
     setError(null);
 
     try {
-      const sceneUrls = completedScenes
-        .map((s) => s.videoUrl)
-        .filter((url): url is string => url !== null);
+      // Send providerVideoIds so the server resolves fresh Hedra URLs
+      // (raw videoUrl values expire after ~1 hour on Hedra's CDN)
+      const providerVideoIds = completedScenes
+        .map((s) => s.providerVideoId)
+        .filter((id): id is string => Boolean(id));
 
       const response = await authFetch('/api/video/assemble', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           projectId: projectId ?? 'local',
-          sceneUrls,
+          providerVideoIds,
           transitionType,
         }),
       });
@@ -236,7 +238,13 @@ export function StepAssembly() {
     }
   }, [finalVideoUrl, saveProject]);
 
-  const currentVideoUrl = finalVideoUrl ?? completedScenes[activeSceneIndex]?.videoUrl;
+  // Use proxy URL for individual scene playback so expired Hedra CDN URLs are re-resolved.
+  // finalVideoUrl (from Firebase Storage after assembly) is permanent and used as-is.
+  const activeScene = completedScenes[activeSceneIndex];
+  const activeSceneStreamUrl = activeScene?.providerVideoId
+    ? `/api/video/stream/${activeScene.providerVideoId}`
+    : activeScene?.videoUrl;
+  const currentVideoUrl = finalVideoUrl ?? activeSceneStreamUrl;
 
   return (
     <div className="space-y-6">

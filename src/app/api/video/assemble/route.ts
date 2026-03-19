@@ -25,6 +25,7 @@ import {
   runFfmpeg,
   getStoragePath,
 } from '@/lib/video/ffmpeg-utils';
+import { getHedraVideoStatus } from '@/lib/video/hedra-service';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 300; // 5 minutes for Pro, 60s for Hobby
@@ -35,10 +36,19 @@ export const maxDuration = 300; // 5 minutes for Pro, 60s for Hobby
 
 const AssembleSchema = z.object({
   projectId: z.string().min(1, 'Project ID required'),
-  sceneUrls: z.array(z.string().url()).min(1, 'At least one scene URL required'),
+  // Accept either direct URLs or Hedra generation IDs (preferred — resolves fresh URLs)
+  sceneUrls: z.array(z.string().url()).optional(),
+  providerVideoIds: z.array(z.string().min(1)).optional(),
   transitionType: z.enum(['cut', 'fade', 'dissolve']).default('fade'),
   outputResolution: z.enum(['720p', '1080p', '4k']).default('1080p'),
-});
+}).refine(
+  (data) => {
+    const hasUrls = (data.sceneUrls?.length ?? 0) > 0;
+    const hasIds = (data.providerVideoIds?.length ?? 0) > 0;
+    return hasUrls || hasIds;
+  },
+  { message: 'Either sceneUrls or providerVideoIds required' },
+);
 
 const RESOLUTION_MAP: Record<string, { width: number; height: number }> = {
   '720p': { width: 1280, height: 720 },
@@ -95,8 +105,32 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { projectId, sceneUrls, transitionType, outputResolution } = parseResult.data;
+    const { projectId, transitionType, outputResolution } = parseResult.data;
     const { width, height } = RESOLUTION_MAP[outputResolution];
+
+    // Resolve scene URLs — prefer providerVideoIds (always-fresh Hedra URLs)
+    let sceneUrls: string[];
+
+    if (parseResult.data.providerVideoIds && parseResult.data.providerVideoIds.length > 0) {
+      logger.info('Resolving fresh Hedra URLs from providerVideoIds', {
+        count: parseResult.data.providerVideoIds.length,
+        jobId,
+        file: 'api/video/assemble/route.ts',
+      });
+
+      const resolved = await Promise.all(
+        parseResult.data.providerVideoIds.map(async (genId) => {
+          const status = await getHedraVideoStatus(genId);
+          if (status.status !== 'completed' || !status.videoUrl) {
+            throw new Error(`Video ${genId.slice(0, 8)}... is not ready (status: ${status.status})`);
+          }
+          return status.videoUrl;
+        }),
+      );
+      sceneUrls = resolved;
+    } else {
+      sceneUrls = parseResult.data.sceneUrls ?? [];
+    }
 
     logger.info('Starting video assembly', {
       projectId,
