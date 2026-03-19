@@ -27,18 +27,15 @@ const nextConfig = {
     missingSuspenseWithCSRBailout: false,
     // optimizeCss: true, // Disabled - requires critters package
     optimizePackageImports: ['lucide-react', 'recharts'], // Tree-shake large packages
-  },
-
-  // Ensure ffmpeg binaries are included in serverless bundles
-  serverExternalPackages: ['ffmpeg-static', '@ffmpeg-installer/ffmpeg'],
-
-  // Include ffmpeg binary in serverless function file tracing
-  outputFileTracingIncludes: {
-    '/api/video/*': [
-      './node_modules/ffmpeg-static/ffmpeg',
-      './node_modules/ffmpeg-static/**/*',
-      './node_modules/@ffmpeg-installer/linux-x64/**/*',
-    ],
+    // Next.js 14 requires these under experimental (promoted to top-level in 15)
+    serverComponentsExternalPackages: ['ffmpeg-static', '@ffmpeg-installer/ffmpeg'],
+    outputFileTracingIncludes: {
+      '/api/video/*': [
+        './node_modules/ffmpeg-static/ffmpeg',
+        './node_modules/ffmpeg-static/**/*',
+        './node_modules/@ffmpeg-installer/linux-x64/**/*',
+      ],
+    },
   },
   
   // Skip pre-rendering for API routes (all are dynamic)
