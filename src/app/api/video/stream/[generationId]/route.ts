@@ -9,14 +9,17 @@
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
-import { requireAuth } from '@/lib/auth/api-auth';
 import { getHedraVideoStatus } from '@/lib/video/hedra-service';
 import { logger } from '@/lib/logger/logger';
 
 export const dynamic = 'force-dynamic';
 
+// No auth required — this endpoint is called by <video> elements which
+// cannot send Authorization headers. The generationId is an unguessable
+// UUID that acts as a capability token.
+
 export async function GET(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: Promise<{ generationId: string }> }
 ) {
   const { generationId } = await params;
@@ -26,12 +29,6 @@ export async function GET(
       { error: 'Missing generationId' },
       { status: 400 },
     );
-  }
-
-  // Auth check — only authenticated users can stream videos
-  const authResult = await requireAuth(request);
-  if (authResult instanceof NextResponse) {
-    return authResult;
   }
 
   try {

@@ -65,6 +65,25 @@ export function StepGeneration() {
 
   const engineList = 'Hedra';
   const hasSavedResults = useRef(false);
+  const hasRefreshedFromFirestore = useRef(false);
+
+  // On mount: if we have completed scenes from localStorage, refresh from Firestore
+  // to pick up permanent Firebase Storage URLs (localStorage may have expired Hedra CDN URLs)
+  useEffect(() => {
+    if (hasRefreshedFromFirestore.current) {return;}
+    if (!projectId || generatedScenes.length === 0) {return;}
+    if (!allComplete) {return;} // Still generating — don't clobber live data
+
+    hasRefreshedFromFirestore.current = true;
+
+    void authFetch(`/api/video/project/${projectId}`).then(async (res) => {
+      if (!res.ok) {return;}
+      const data = await res.json() as { success: boolean; project?: { generatedScenes?: SceneGenerationResult[] } };
+      if (data.success && data.project?.generatedScenes?.length) {
+        setGeneratedScenes(data.project.generatedScenes);
+      }
+    }).catch(() => { /* non-critical */ });
+  }, [projectId, generatedScenes.length, allComplete, authFetch, setGeneratedScenes]);
 
   // Persist generatedScenes to Firestore when all complete so they survive full reloads
   useEffect(() => {
