@@ -486,10 +486,54 @@ export async function generateAllScenes(
       }
     }
 
+    // Detect duplicate providerVideoIds — Hedra can return the same generation ID
+    // for two different API calls made close together. Re-submit any duplicates.
+    const seenIds = new Map<string, number>(); // providerVideoId → first index
+    const duplicateIndices: number[] = [];
+
+    for (let idx = 0; idx < results.length; idx++) {
+      const id = results[idx].providerVideoId;
+      if (!id || results[idx].status === 'failed') {continue;}
+
+      const firstIdx = seenIds.get(id);
+      if (firstIdx !== undefined) {
+        logger.warn('Duplicate Hedra generation ID detected — will re-submit', {
+          duplicateId: id,
+          sceneId: results[idx].sceneId,
+          firstSceneId: results[firstIdx].sceneId,
+          file: 'scene-generator.ts',
+        });
+        duplicateIndices.push(idx);
+      } else {
+        seenIds.set(id, idx);
+      }
+    }
+
+    // Re-submit duplicates one at a time with a 3-second gap
+    for (const idx of duplicateIndices) {
+      const originalScene = enhancedScenes[idx];
+      if (!originalScene) {continue;}
+
+      await new Promise<void>((resolve) => { setTimeout(resolve, 3000); });
+
+      logger.info('Re-submitting scene with duplicate generation ID', {
+        sceneId: originalScene.id,
+        file: 'scene-generator.ts',
+      });
+
+      const retryResult = await generateScene(originalScene, avatarId, voiceId, aspectRatio, voiceProvider);
+      results[idx] = retryResult;
+
+      if (onSceneUpdate) {
+        onSceneUpdate(retryResult);
+      }
+    }
+
     logger.info('Batch scene generation completed', {
       totalScenes: scenes.length,
       successfulScenes: results.filter((r) => r.status !== 'failed').length,
       failedScenes: results.filter((r) => r.status === 'failed').length,
+      duplicatesResubmitted: duplicateIndices.length,
       file: 'scene-generator.ts',
     });
 
