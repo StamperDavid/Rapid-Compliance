@@ -403,6 +403,10 @@ export function StepGeneration() {
       return;
     }
 
+    // Get auto-grade data for structured revision notes
+    const gen = generatedScenes.find((g) => g.sceneId === sceneId);
+    const autoGrade = gen?.autoGrade ?? null;
+
     updateGeneratedScene(sceneId, {
       status: 'generating',
       progress: 0,
@@ -410,7 +414,12 @@ export function StepGeneration() {
       providerVideoId: '',
       videoUrl: null,
       thumbnailUrl: null,
+      autoGrade: null,
+      autoGradeStatus: null,
     });
+
+    // Remove from graded set so it gets re-graded after regeneration
+    gradedScenesRef.current.delete(sceneId);
 
     // If user provided feedback, append it to the visual description so the
     // prompt translator and Hedra get the corrected direction
@@ -422,6 +431,17 @@ export function StepGeneration() {
     }
 
     try {
+      // Build auto-grade payload for structured revision notes (Phase 8)
+      const autoGradePayload = autoGrade ? {
+        scriptAccuracy: autoGrade.scriptAccuracy,
+        actualWpm: autoGrade.actualWpm,
+        targetWpm: autoGrade.targetWpm,
+        pacingScore: autoGrade.pacingScore,
+        wordsDropped: autoGrade.wordsDropped,
+        wordsAdded: autoGrade.wordsAdded,
+        overallScore: autoGrade.overallScore,
+      } : undefined;
+
       const response = await authFetch('/api/video/regenerate-scene', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -439,6 +459,8 @@ export function StepGeneration() {
           backgroundPrompt: scene.backgroundPrompt ?? null,
           visualDescription,
           title: scene.title ?? null,
+          feedback: feedbackText,
+          autoGradeData: autoGradePayload,
         }),
       });
 
@@ -458,7 +480,7 @@ export function StepGeneration() {
     } catch {
       updateGeneratedScene(sceneId, { status: 'failed', error: 'Regeneration failed — check network connection' });
     }
-  }, [scenes, avatarId, voiceId, voiceProvider, brief.aspectRatio, authFetch, updateGeneratedScene]);
+  }, [scenes, generatedScenes, avatarId, voiceId, voiceProvider, brief.aspectRatio, authFetch, updateGeneratedScene]);
 
   // Keep the ref in sync so auto-retry can use it
   regenerateSceneRef.current = regenerateScene;
