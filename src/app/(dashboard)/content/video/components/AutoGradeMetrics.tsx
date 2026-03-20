@@ -44,35 +44,59 @@ export function AutoGradeMetrics({ autoGrade, status }: AutoGradeMetricsProps) {
 
   return (
     <div className="space-y-1">
+      {/* Label */}
+      <div className="flex items-center gap-1.5 text-[10px] text-zinc-600">
+        <span>AI Scene Grade</span>
+        <span>—</span>
+        <span>How well the generated video matches the original script</span>
+      </div>
+
       {/* Compact metrics row */}
       <div className="flex items-center gap-3 text-xs">
         {/* Overall score */}
-        <div className={cn('flex items-center gap-1 px-2 py-0.5 rounded', scoreBg(overallScore))}>
+        <div
+          className={cn('flex items-center gap-1 px-2 py-0.5 rounded', scoreBg(overallScore))}
+          title="Overall quality score (60% script accuracy + 20% pacing + 20% audio clarity)"
+        >
           <Gauge className="w-3 h-3" />
           <span className={cn('font-medium', scoreColor(overallScore))}>{overallScore}%</span>
+          <span className="text-zinc-600">overall</span>
         </div>
 
         {/* Script accuracy */}
-        <div className="flex items-center gap-1 text-zinc-400">
+        <div
+          className="flex items-center gap-1 text-zinc-400"
+          title="How much of the original script the actor actually spoke (word-for-word match)"
+        >
           <FileText className="w-3 h-3" />
           <span className={scoreColor(scriptAccuracy)}>{scriptAccuracy}%</span>
-          <span className="text-zinc-600">accuracy</span>
+          <span className="text-zinc-600">script match</span>
         </div>
 
         {/* WPM */}
-        <div className="flex items-center gap-1 text-zinc-400">
+        <div
+          className="flex items-center gap-1 text-zinc-400"
+          title={`Speaking speed: ${actualWpm} words/min actual vs ${targetWpm} words/min expected`}
+        >
           <Timer className="w-3 h-3" />
           <span>{actualWpm}</span>
           <span className="text-zinc-600">/ {targetWpm} wpm</span>
         </div>
 
         {/* Pacing indicator */}
-        <span className={cn(
-          'px-1.5 py-0.5 rounded text-[10px] font-medium',
-          pacingScore === 'good' ? 'bg-green-500/10 text-green-400' :
-          pacingScore === 'too_fast' ? 'bg-red-500/10 text-red-400' :
-          'bg-amber-500/10 text-amber-400',
-        )}>
+        <span
+          className={cn(
+            'px-1.5 py-0.5 rounded text-[10px] font-medium',
+            pacingScore === 'good' ? 'bg-green-500/10 text-green-400' :
+            pacingScore === 'too_fast' ? 'bg-red-500/10 text-red-400' :
+            'bg-amber-500/10 text-amber-400',
+          )}
+          title={
+            pacingScore === 'good' ? 'Speaking speed is within 30% of target' :
+            pacingScore === 'too_fast' ? 'Speaking too fast — over 130% of target speed' :
+            'Speaking too slow — under 70% of target speed'
+          }
+        >
           {pacingScore === 'good' ? 'Good pace' :
            pacingScore === 'too_fast' ? 'Too fast' : 'Too slow'}
         </span>
@@ -82,8 +106,10 @@ export function AutoGradeMetrics({ autoGrade, status }: AutoGradeMetricsProps) {
           <button
             type="button"
             onClick={() => setExpanded(!expanded)}
-            className="ml-auto text-zinc-600 hover:text-zinc-400 transition-colors"
+            className="ml-auto flex items-center gap-1 text-zinc-600 hover:text-zinc-400 transition-colors"
+            title="Show which words were dropped or added"
           >
+            <span className="text-[10px]">Details</span>
             {expanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
           </button>
         )}

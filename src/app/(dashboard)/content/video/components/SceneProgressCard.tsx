@@ -205,24 +205,78 @@ export function SceneProgressCard({ sceneNumber, result, shotGroupLabel, onRetry
         </div>
       )}
 
-      {/* Star Rating — shown for completed scenes */}
+      {/* Star Rating + Feedback — shown for completed scenes */}
       {isComplete && reviewStatus === 'pending' && (
-        <div className="px-4 pb-2 flex items-center gap-2">
-          <StarRating
-            value={humanGrade}
-            onChange={(grade) => {
-              setHumanGrade(grade);
-              if (onStarRate) { onStarRate(result.sceneId, grade); }
-            }}
-          />
-          {humanGrade > 0 && (
-            <span className="text-xs text-zinc-500">{humanGrade}/5</span>
+        <div className="px-4 pb-2 space-y-2">
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-zinc-500">Rate this scene:</span>
+            <StarRating
+              value={humanGrade}
+              onChange={(grade) => {
+                setHumanGrade(grade);
+                // Show feedback field for ratings below 4 stars
+                if (grade < 4) {
+                  setShowFeedback(true);
+                } else {
+                  // Good rating — submit immediately
+                  if (onStarRate) { onStarRate(result.sceneId, grade); }
+                }
+              }}
+            />
+            {humanGrade > 0 && (
+              <span className="text-xs text-zinc-500">{humanGrade}/5</span>
+            )}
+          </div>
+
+          {/* Feedback input appears for low ratings */}
+          {showFeedback && humanGrade > 0 && humanGrade < 4 && (
+            <div className="space-y-2">
+              <textarea
+                value={feedback}
+                onChange={(e) => setFeedback(e.target.value)}
+                placeholder="What's wrong with this scene? (e.g., 'actor speaks too fast', 'wrong background', 'words are cut off at the end')..."
+                rows={2}
+                className="w-full px-3 py-2 bg-zinc-900/80 border border-amber-500/20 rounded-lg text-xs text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-amber-500/30 resize-none"
+                autoFocus
+              />
+              <div className="flex items-center justify-end gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setShowFeedback(false);
+                    setHumanGrade(0);
+                    setFeedback('');
+                  }}
+                  className="h-7 text-xs text-zinc-400 hover:text-zinc-300"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    if (onStarRate) { onStarRate(result.sceneId, humanGrade); }
+                    if (feedback.trim() && onRegenerate) {
+                      onRegenerate(result.sceneId, feedback.trim());
+                      setReviewStatus('pending');
+                    }
+                    setShowFeedback(false);
+                    setFeedback('');
+                  }}
+                  className="h-7 gap-1 text-xs text-amber-400 hover:text-amber-300"
+                >
+                  <Send className="w-3 h-3" />
+                  {feedback.trim() ? 'Submit & Regenerate' : 'Submit Rating'}
+                </Button>
+              </div>
+            </div>
           )}
         </div>
       )}
 
-      {/* Feedback Input (when rejected) */}
-      {showFeedback && (
+      {/* Feedback Input (when rejected via thumbs-down) */}
+      {showFeedback && reviewStatus === 'rejected' && (
         <div className="px-4 pb-3 space-y-2">
           <div className="flex items-start gap-2">
             <MessageSquare className="w-4 h-4 text-red-400 flex-shrink-0 mt-1.5" />
