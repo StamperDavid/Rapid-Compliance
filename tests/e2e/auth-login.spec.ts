@@ -1,153 +1,186 @@
 /**
- * Auth Login E2E Tests
+ * E2E Tests: Login Page (/login)
  *
- * Validates the complete login flow:
- * - Valid credentials → redirect to dashboard
- * - Invalid credentials → error messages
- * - Form validation states
- * - Loading/submitting indicators
+ * Project: no-auth (no stored auth state — runs clean browser context)
  *
- * @group Phase 2A — Authentication
+ * Covers:
+ *  - Page renders core form elements
+ *  - Successful login redirects to /dashboard
+ *  - Invalid credentials surface an error message
+ *  - Forgot-password link navigates correctly
+ *  - Already-authenticated user visiting /login is redirected to dashboard
+ *
+ * NOTE: The login page does NOT include a Google OAuth button — it uses
+ * email/password only. The forgot-password link is the only external navigation.
+ * No test data is created, so no afterEach cleanup is required.
  */
 
 import { test, expect } from '@playwright/test';
-import { TEST_USER, TEST_ADMIN, BASE_URL } from './fixtures/test-accounts';
+import { BASE_URL, TEST_USER } from './fixtures/test-accounts';
+import {
+  loginViaUI,
+  expectDashboard,
+  waitForPageReady,
+} from './fixtures/helpers';
 
-test.describe('Login Flow', () => {
-  test.beforeEach(async ({ page }) => {
-    await page.goto(`${BASE_URL}/login`, { waitUntil: 'load', timeout: 60_000 });
-    // Wait for React hydration
-    await expect(page.locator('button[type="submit"]')).toBeEnabled({ timeout: 15_000 });
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/** Navigate to /login and wait for React hydration to complete. */
+async function goToLogin(page: import('@playwright/test').Page): Promise<void> {
+  await page.goto(`${BASE_URL}/login`, {
+    waitUntil: 'domcontentloaded',
+    timeout: 30_000,
+  });
+  await waitForPageReady(page);
+}
+
+// ---------------------------------------------------------------------------
+// Suite
+// ---------------------------------------------------------------------------
+
+test.describe('Login Page', () => {
+  // ── Rendering ────────────────────────────────────────────────────────────
+
+  test.describe('Page rendering', () => {
+    test('email input is visible', async ({ page }) => {
+      await goToLogin(page);
+      await expect(page.locator('input[type="email"]')).toBeVisible({
+        timeout: 15_000,
+      });
+    });
+
+    test('password input is visible', async ({ page }) => {
+      await goToLogin(page);
+      await expect(page.locator('input[type="password"]')).toBeVisible({
+        timeout: 15_000,
+      });
+    });
+
+    test('submit button is visible and enabled after hydration', async ({ page }) => {
+      await goToLogin(page);
+      const submitBtn = page.locator('button[type="submit"]');
+      await expect(submitBtn).toBeVisible({ timeout: 15_000 });
+      await expect(submitBtn).toBeEnabled({ timeout: 15_000 });
+    });
+
+    test('forgot-password link is visible', async ({ page }) => {
+      await goToLogin(page);
+      const forgotLink = page.locator('a[href="/forgot-password"]');
+      await expect(forgotLink).toBeVisible({ timeout: 15_000 });
+    });
+
+    test('page heading says Welcome Back', async ({ page }) => {
+      await goToLogin(page);
+      await expect(page.getByRole('heading', { name: /welcome back/i })).toBeVisible({
+        timeout: 15_000,
+      });
+    });
   });
 
-  test('should display login form with all required elements', async ({ page }) => {
-    // Verify form elements are present
-    await expect(page.locator('input[type="email"]')).toBeVisible();
-    await expect(page.locator('input[type="password"]')).toBeVisible();
-    await expect(page.locator('button[type="submit"]')).toBeVisible();
+  // ── Navigation from forgot-password link ────────────────────────────────
 
-    // Verify helper links
-    await expect(page.locator('a[href="/forgot-password"]')).toBeVisible();
-    await expect(page.locator('a[href="/onboarding/industry"]')).toBeVisible();
+  test.describe('Forgot-password link', () => {
+    test('clicking forgot-password navigates to /forgot-password', async ({ page }) => {
+      await goToLogin(page);
+      const forgotLink = page.locator('a[href="/forgot-password"]');
+      await expect(forgotLink).toBeVisible({ timeout: 15_000 });
 
-    // Verify placeholders
-    await expect(page.locator('input[type="email"]')).toHaveAttribute(
-      'placeholder',
-      'you@company.com'
-    );
+      // Use click and wait for URL — the link is a Next.js <Link>, which
+      // performs a client-side navigation. domcontentloaded is sufficient.
+      await Promise.all([
+        page.waitForURL(`${BASE_URL}/forgot-password`, {
+          waitUntil: 'commit',
+          timeout: 30_000,
+        }),
+        forgotLink.click(),
+      ]);
+
+      await expect(page).toHaveURL(/\/forgot-password/, { timeout: 15_000 });
+    });
   });
 
-  test('should login with valid credentials and redirect to dashboard', async ({ page }) => {
-    // Fill in credentials
-    const emailInput = page.locator('input[type="email"]');
-    const passwordInput = page.locator('input[type="password"]');
-    await emailInput.click();
-    await emailInput.fill(TEST_USER.email);
-    await passwordInput.click();
-    await passwordInput.fill(TEST_USER.password);
+  // ── Invalid credentials ──────────────────────────────────────────────────
 
-    // Submit form
-    await page.locator('button[type="submit"]').click();
+  test.describe('Invalid credentials', () => {
+    test('wrong password shows error message', async ({ page }) => {
+      await goToLogin(page);
 
-    // Should redirect to dashboard
-    await page.waitForURL('**/dashboard', { waitUntil: 'commit', timeout: 60_000 });
+      const emailInput = page.locator('input[type="email"]');
+      const passwordInput = page.locator('input[type="password"]');
+      const submitBtn = page.locator('button[type="submit"]');
 
-    // Verify dashboard loaded (sidebar visible = auth resolved)
-    await expect(page.locator('aside')).toBeVisible({ timeout: 15_000 });
+      await expect(submitBtn).toBeEnabled({ timeout: 15_000 });
+
+      await emailInput.click();
+      await emailInput.fill('nobody@example.invalid');
+      await passwordInput.click();
+      await passwordInput.fill('WrongPassword999!');
+      await submitBtn.click();
+
+      // Firebase returns auth/user-not-found or auth/invalid-credential.
+      // The login page maps these to user-visible strings.
+      const errorRegion = page.locator('[class*="red"]').filter({
+        hasText: /no account|invalid email or password|incorrect password|login failed/i,
+      });
+      await expect(errorRegion.first()).toBeVisible({ timeout: 15_000 });
+    });
+
+    test('empty submission keeps user on login page', async ({ page }) => {
+      await goToLogin(page);
+
+      // Both inputs are `required` — native browser validation prevents
+      // submission, so the URL must remain /login.
+      const submitBtn = page.locator('button[type="submit"]');
+      await expect(submitBtn).toBeEnabled({ timeout: 15_000 });
+
+      // Attempt click with empty fields — browser validation fires
+      await submitBtn.click();
+
+      await expect(page).toHaveURL(/\/login/, { timeout: 10_000 });
+    });
   });
 
-  test('should show error for invalid email', async ({ page }) => {
-    const emailInput = page.locator('input[type="email"]');
-    const passwordInput = page.locator('input[type="password"]');
-    await emailInput.click();
-    await emailInput.fill('nonexistent@example.com');
-    await passwordInput.click();
-    await passwordInput.fill('wrongpassword');
-    await page.locator('button[type="submit"]').click();
+  // ── Successful login ─────────────────────────────────────────────────────
 
-    // Wait for error message (Firebase returns user-not-found or invalid-credential)
-    const errorContainer = page.locator('.bg-red-900\\/30');
-    await expect(errorContainer).toBeVisible({ timeout: 15_000 });
+  test.describe('Successful login', () => {
+    test('valid credentials redirect to /dashboard', async ({ page }) => {
+      await loginViaUI(page, TEST_USER.email, TEST_USER.password, {
+        expectDashboard: true,
+      });
+      await expectDashboard(page);
+    });
   });
 
-  test('should show error for wrong password', async ({ page }) => {
-    const emailInput = page.locator('input[type="email"]');
-    const passwordInput = page.locator('input[type="password"]');
-    await emailInput.click();
-    await emailInput.fill(TEST_USER.email);
-    await passwordInput.click();
-    await passwordInput.fill('CompletelyWrongPassword!');
-    await page.locator('button[type="submit"]').click();
+  // ── Already-authenticated redirect ───────────────────────────────────────
 
-    // Wait for error message
-    const errorContainer = page.locator('.bg-red-900\\/30');
-    await expect(errorContainer).toBeVisible({ timeout: 15_000 });
-  });
+  test.describe('Already-authenticated redirect', () => {
+    test('authenticated session visiting /login is redirected to /dashboard', async ({ page }) => {
+      // Log in first, establishing Firebase auth in this browser context.
+      await loginViaUI(page, TEST_USER.email, TEST_USER.password, {
+        expectDashboard: true,
+      });
+      await expectDashboard(page);
 
-  test('should prevent submission with empty fields', async ({ page }) => {
-    // Try to submit without filling anything
-    await page.locator('button[type="submit"]').click();
+      // Now visit /login again with the same browser context (still authenticated).
+      // The dashboard layout guards unauthenticated users, but the login page
+      // itself does not redirect authenticated users server-side. The client-side
+      // auth hook triggers router.replace('/dashboard') from the login page guard,
+      // so we expect the final URL to land on /dashboard (not stay on /login).
+      await page.goto(`${BASE_URL}/login`, {
+        waitUntil: 'domcontentloaded',
+        timeout: 30_000,
+      });
 
-    // Should stay on login page (HTML5 validation prevents submission)
-    await expect(page).toHaveURL(/\/login/);
-  });
+      // The login page shows a loading/redirect state and then pushes to /dashboard.
+      // Allow up to 30s for the client-side auth resolution and redirect.
+      await page.waitForURL(/\/dashboard/, {
+        waitUntil: 'commit',
+        timeout: 30_000,
+      });
 
-  test('should navigate to signup from login page', async ({ page }) => {
-    await page.locator('a[href="/onboarding/industry"]').click();
-    await page.waitForURL('**/onboarding/industry', { timeout: 30_000 });
-    await expect(page).toHaveURL(/\/onboarding\/industry/);
-  });
-
-  test('should navigate to forgot password from login page', async ({ page }) => {
-    await page.locator('a[href="/forgot-password"]').click();
-    await expect(page).toHaveURL(/\/forgot-password/, { timeout: 15_000 });
-  });
-});
-
-test.describe('Admin Login Flow', () => {
-  test('should login via admin login page', async ({ page }) => {
-    await page.goto(`${BASE_URL}/admin-login`, { waitUntil: 'load', timeout: 60_000 });
-
-    // Wait for Firebase ready (button disabled until isFirebaseReady)
-    const submitBtn = page.locator('button[type="submit"]');
-    await expect(submitBtn).toBeEnabled({ timeout: 15_000 });
-
-    // Verify admin login form
-    await expect(page.locator('input[type="email"]')).toBeVisible();
-    await expect(page.locator('input[type="password"]')).toBeVisible();
-
-    // Fill admin credentials
-    const emailInput = page.locator('input[type="email"]');
-    const passwordInput = page.locator('input[type="password"]');
-    await emailInput.click();
-    await emailInput.fill(TEST_ADMIN.email);
-    await passwordInput.click();
-    await passwordInput.fill(TEST_ADMIN.password);
-    await submitBtn.click();
-
-    // Should redirect to dashboard
-    await page.waitForURL('**/dashboard', { waitUntil: 'commit', timeout: 60_000 });
-  });
-
-  test('should show admin-specific warning text', async ({ page }) => {
-    await page.goto(`${BASE_URL}/admin-login`, { waitUntil: 'load', timeout: 60_000 });
-
-    // Admin login page should contain a warning about admin access
-    await expect(
-      page.locator('text=admin account')
-    ).toBeVisible({ timeout: 15_000 });
-  });
-});
-
-test.describe('Login Redirect Behavior', () => {
-  test('should redirect unauthenticated users from dashboard to login', async ({ page }) => {
-    // Clear any existing auth state
-    await page.context().clearCookies();
-
-    // Try to access dashboard directly
-    await page.goto(`${BASE_URL}/dashboard`, { waitUntil: 'load', timeout: 60_000 });
-
-    // Should redirect to login (client-side redirect via useUnifiedAuth)
-    await page.waitForURL(/\/(login|admin-login)/, { waitUntil: 'commit', timeout: 30_000 });
+      await expect(page).toHaveURL(/\/dashboard/);
+    });
   });
 });

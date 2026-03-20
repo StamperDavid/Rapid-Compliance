@@ -9,11 +9,25 @@ import { logger } from '@/lib/logger/logger';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { adminDb } from '@/lib/firebase/admin';
 import { PLATFORM_ID } from '@/lib/constants/platform';
+import { z } from 'zod';
 import type { MediaType, MediaCategory, MediaItem } from '@/types/media-library';
 
 export const dynamic = 'force-dynamic';
 
 const VALID_TYPES: MediaType[] = ['video', 'image', 'audio'];
+
+const MediaJsonBodySchema = z.object({
+  type: z.enum(['video', 'image', 'audio']),
+  category: z.enum(['sound', 'voice', 'music', 'photo', 'graphic', 'screenshot', 'thumbnail', 'clip', 'final', 'scene']).optional(),
+  name: z.string().min(1),
+  url: z.string().url(),
+  thumbnailUrl: z.string().optional(),
+  mimeType: z.string().optional(),
+  fileSize: z.number().optional(),
+  duration: z.number().optional(),
+  metadata: z.record(z.string()).optional(),
+});
+
 const COLLECTION = `organizations/${PLATFORM_ID}/media`;
 
 // ============================================================================
@@ -199,25 +213,23 @@ export async function POST(request: NextRequest) {
       };
     } else {
       // JSON body — external URL
-      const body = await request.json() as {
-        type?: MediaType;
-        category?: MediaCategory;
-        name?: string;
-        url?: string;
-        thumbnailUrl?: string;
-        mimeType?: string;
-        fileSize?: number;
-        duration?: number;
-        metadata?: Record<string, string>;
-      };
-
-      if (!body.type || !body.url || !body.name) {
+      const rawBody: unknown = await request.json();
+      const result = MediaJsonBodySchema.safeParse(rawBody);
+      if (!result.success) {
         return NextResponse.json(
-          { success: false, error: 'Missing required fields: type, url, name' },
+          {
+            success: false,
+            error: 'Validation failed',
+            details: result.error.errors.map((e) => ({
+              path: e.path.join('.') || 'unknown',
+              message: e.message || 'Validation error',
+            })),
+          },
           { status: 400 },
         );
       }
 
+      const body = result.data;
       mediaData = {
         type: body.type,
         category: body.category ?? (body.type === 'audio' ? 'sound' : body.type === 'image' ? 'photo' : 'clip'),

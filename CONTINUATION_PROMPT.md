@@ -5,20 +5,27 @@
 ## Context
 Repository: https://github.com/StamperDavid/Rapid-Compliance
 Branch: dev
-Last Updated: March 19, 2026 (Session 4)
+Last Updated: March 20, 2026 (Post full system audit)
 
 ## Current State
 
 ### Architecture
 - **Single-tenant penthouse model** — org ID `rapid-compliance-root`, Firebase `rapid-compliance-65f87`
-- **54 AI agents** (46 swarm + 6 standalone + 2 variants) with hierarchical orchestration
+- **52 AI agents** (46 swarm + 6 standalone) with hierarchical orchestration
 - **4-role RBAC** (owner/admin/manager/member) with 47 permissions
-- **182 physical routes**, **382 API endpoints**, **~340K lines of TypeScript**
+- **184 physical routes**, **393 API endpoints**, **1,628 TypeScript files**, **~350K+ lines**
+- **212+ React components**, **54 type definition files** (831 interfaces/types)
 - **Deployed via Vercel** — dev → main → Vercel auto-deploy
+
+### Production Readiness: ~85%
+- **Ready:** Core platform, payments (6 providers), video (Hedra/Kling), AI orchestration (50+ tools), CRM, e-commerce, email/SMS, website builder, analytics, growth
+- **Gaps:** Billing portal UI (APIs exist, no pages), unit tests (~0.2% coverage), social beyond Twitter (FB/IG/TikTok stubs)
 
 ### Build Health
 - `tsc --noEmit` — **PASSES**
 - `npm run lint` — **PASSES (zero errors, zero warnings)**
+- 24 eslint-disable comments (ratcheted via budget system)
+- Zero actual `any` type annotations — Zero-Any Policy enforced (audit false positive: word "any" in comments was miscounted)
 
 ---
 
@@ -317,6 +324,71 @@ When Hedra generates video scenes, there's no feedback loop — the AI doesn't l
 | `src/lib/video/script-generation-service.ts` | Shot groups + phonetic speech rules |
 | `src/lib/video/hedra-prompt-agent.ts` | Shot group awareness |
 | `src/lib/video/scene-generator.ts` | Continuation cues |
+
+---
+
+## LAUNCH GAPS (Identified March 20, 2026 — Full System Audit)
+
+### Domain Readiness Scorecard
+
+| Domain | Score | Status |
+|--------|-------|--------|
+| Authentication & RBAC | 9/10 | READY |
+| Payments & Commerce | 8.5/10 | READY (billing UI needed) |
+| CRM & Sales | 9.5/10 | READY |
+| AI Orchestration (Jasper) | 9.5/10 | READY |
+| Video System | 9/10 | READY |
+| Email & SMS | 9/10 | READY |
+| Social Media | 6/10 | PARTIAL (Twitter only, FB/IG/TikTok stub) |
+| Website Builder | 9/10 | READY |
+| Analytics & Growth | 9/10 | READY |
+| UI Components | 8/10 | READY |
+| API Validation (Zod) | 9.5/10 | READY (was falsely reported as 4/10 — 173/175 routes validated) |
+| Testing | 3/10 | NEEDS WORK |
+| Security | 8/10 | READY (remove creds from repo) |
+| CI/CD & DevOps | 8.5/10 | READY |
+| Performance | 7/10 | NEEDS WORK |
+
+### Critical (Must Fix Before Launch)
+| Gap | Details |
+|-----|---------|
+| **Billing portal UI** | Subscription APIs exist but no user-facing pages (view/manage subscription, invoice history, payment methods) |
+| **Unit test coverage** | Only 4 unit test files for 1,628 source files. E2E good (91 specs) but service layer untested |
+| ~~135+ API routes lack Zod validation~~ | **FALSE POSITIVE (March 20)** — Full sweep of 175 routes found 173 already validated with inline Zod schemas. Only 2 fixes needed (scene-preview/save .parse→.safeParse, media POST raw cast→Zod). Actual coverage: ~99%. |
+
+### High Priority (Pre-Launch)
+| Gap | Details |
+|-----|---------|
+| **Facebook/Instagram/TikTok** | Stubs only — blocked on Meta Developer Portal approval |
+| **No usage metering/credits** | Can't do usage-based billing |
+| **No in-app password change** | Only reset via email — need `POST /api/user/password-change` |
+| **No account deletion** | GDPR concern — need self-service deletion with confirmation |
+| **No MFA/2FA** | `mfaEnabled` field exists in UnifiedUser but no setup flow |
+| **No email-based user invites** | Invite modal exists in UI but no transactional email is sent |
+| **LinkedIn** | Messaging only, no full posting API |
+| **QuickBooks** | OAuth framework only — payment execution incomplete |
+
+### Medium Priority (Can Ship Without, Fix Soon After)
+| Gap | Details |
+|-----|---------|
+| **Rate limiting in-memory only** | Won't scale multi-instance — wire up Redis (REDIS_URL already in env) |
+| **npm audit non-blocking in CI** | `npm audit --audit-level=high` should fail builds |
+| **No bundle size tracking** | 4.4 GB .next build — need webpack-bundle-analyzer in CI |
+| **Missing UI components** | Popover, Combobox, Breadcrumb — standard SaaS patterns absent |
+| **Data fetching not standardized** | Direct `fetch()` at component level — React Query installed but not adopted |
+| **No Firestore indexes documented** | Composite indexes needed for sorted queries at scale |
+| **Seed scripts lack validation** | No Zod validation, no idempotency checks, part-based dependency chain |
+
+### Low Priority (Post-Launch Polish)
+| Gap | Details |
+|-----|---------|
+| Calendly integration | Stub only — meeting scheduling workaround exists |
+| Razorpay payment provider | Stub — 6 other providers work |
+| Telnyx voice provider | Stub — Twilio works |
+| Light mode support | Dark-only by design currently |
+| Component documentation (Storybook) | 212 components undocumented visually |
+| Login history / session management | lastLoginAt field exists, not queried |
+| Audit logging gaps | Some routes log, not comprehensive |
 
 ---
 

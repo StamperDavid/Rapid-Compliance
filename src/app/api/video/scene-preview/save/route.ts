@@ -41,7 +41,21 @@ export async function POST(request: NextRequest) {
     }
 
     const body: unknown = await request.json();
-    const { sceneId, projectId, imageUrl } = SaveSchema.parse(body);
+    const parseResult = SaveSchema.safeParse(body);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Validation failed',
+          details: parseResult.error.errors.map((e) => ({
+            path: e.path.join('.') || 'unknown',
+            message: e.message || 'Validation error',
+          })),
+        },
+        { status: 400 },
+      );
+    }
+    const { sceneId, projectId, imageUrl } = parseResult.data;
 
     // Download the image from the provider
     const imgResponse = await fetch(imageUrl, { redirect: 'follow' });
