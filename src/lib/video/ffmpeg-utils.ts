@@ -829,6 +829,44 @@ export async function buildSmartConcatArgs(
   return args;
 }
 
+// ============================================================================
+// Audio Extraction
+// ============================================================================
+
+/**
+ * Extract audio from a video file as 16kHz mono WAV.
+ * Optimal format for Deepgram speech-to-text transcription.
+ *
+ * @param videoPath - Path to the input video file
+ * @returns Path to the extracted WAV file (caller must clean up)
+ */
+export async function extractAudioFromVideo(videoPath: string): Promise<string> {
+  const outputPath = videoPath.replace(/\.[^.]+$/, '.wav');
+
+  logger.info('Extracting audio from video', {
+    videoPath,
+    outputPath,
+    file: 'ffmpeg-utils.ts',
+  });
+
+  await runFfmpeg([
+    '-i', videoPath,
+    '-vn',                // Strip video
+    '-codec:a', 'pcm_s16le', // 16-bit PCM
+    '-ar', '16000',       // 16kHz sample rate
+    '-ac', '1',           // Mono
+    '-y',                 // Overwrite
+    outputPath,
+  ]);
+
+  logger.info('Audio extraction complete', {
+    outputPath,
+    file: 'ffmpeg-utils.ts',
+  });
+
+  return outputPath;
+}
+
 /**
  * Get Firebase Storage path for a processed video
  */

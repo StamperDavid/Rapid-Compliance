@@ -189,6 +189,10 @@ return keys.ai?.anthropicApiKey ?? keys.ai?.openrouterApiKey ?? null;
         }
         return null;
 
+      // Transcription Services
+      case 'deepgram':
+        return keys.transcription?.deepgram?.apiKey ?? null;
+
       // Image Generation Services
       case 'fal':
         return keys.imageGen?.fal?.apiKey ?? null;

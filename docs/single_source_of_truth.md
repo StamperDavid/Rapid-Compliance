@@ -1,7 +1,7 @@
 # SalesVelocity.ai - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** March 17, 2026 (Hedra image/video provider integration, Mission Control review page, media library auto-integration, cinematic pipeline fixes, script agent Hedra expertise)
+**Last Updated:** March 19, 2026 (Scene grading & review system, shot continuity, Deepgram transcription integration, storyboard illustration style)
 **Branches:** `dev` (latest)
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Architecture:** Single-Tenant Penthouse Model (development strategy — multi-tenant SaaS product)
@@ -37,7 +37,7 @@
 | Metric | Count | Status |
 |--------|-------|--------|
 | Physical Routes (page.tsx) | 182 | Updated March 17, 2026 (+1 mission-control/review) |
-| API Endpoints (route.ts) | 380 | Updated March 15, 2026 (+4 campaign API routes) |
+| API Endpoints (route.ts) | 382 | Updated March 19, 2026 (+2 scene grading/review routes) |
 | AI Agents | 52 | **52 FUNCTIONAL (46 swarm + 6 standalone)** |
 | RBAC Roles | 4 | owner / admin / manager / member |
 | TypeScript Files | 1,582 | Verified March 15, 2026 |
@@ -1364,6 +1364,8 @@ This script:
 | `/api/video/assemble` | POST | FFmpeg clip assembly with xfade transitions | FUNCTIONAL |
 | `/api/video/brand-preferences` | GET/POST | Brand preference memory (approved/rejected prompts, style corrections) | FUNCTIONAL |
 | `/api/video/tts-audio` | POST | Synthesize TTS audio (ElevenLabs/UnrealSpeech) | FUNCTIONAL |
+| `/api/video/grade-scene` | POST | Auto-grade a completed scene (download → ffmpeg audio → Deepgram transcription → LCS diff) | FUNCTIONAL |
+| `/api/video/scene-review` | POST | Submit human review (1-5 stars + feedback) → Training Center pipeline | FUNCTIONAL |
 | `/api/video/project/*` | Various | Video project CRUD (save, list, get) | FUNCTIONAL |
 
 #### Media Library (NEW March 10)

@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { SceneProgressCard } from './SceneProgressCard';
 import { useVideoPipelineStore } from '@/lib/stores/video-pipeline-store';
 import type { SceneGenerationResult } from '@/types/video-pipeline';
+import type { SceneAutoGrade } from '@/types/scene-grading';
 
 type GenerationPhase = 'submitting' | 'rendering' | 'complete';
 
@@ -335,6 +336,59 @@ export function StepGeneration() {
     };
   }, [generatedScenes, authFetch, updateGeneratedScene]);
 
+  // Track scenes that have been submitted for auto-grading
+  const gradedScenesRef = useRef<Set<string>>(new Set());
+
+  // Auto-grade: fire non-blocking POST to grade-scene when a scene completes
+  useEffect(() => {
+    for (const gen of generatedScenes) {
+      if (
+        gen.status === 'completed' &&
+        gen.videoUrl &&
+        gen.providerVideoId &&
+        !gradedScenesRef.current.has(gen.sceneId)
+      ) {
+        gradedScenesRef.current.add(gen.sceneId);
+
+        const scene = scenes.find((s) => s.id === gen.sceneId);
+        if (!scene) { continue; }
+
+        // Mark as grading
+        updateGeneratedScene(gen.sceneId, { autoGradeStatus: 'grading' });
+
+        // Fire and forget — do NOT await, do NOT block anything
+        void authFetch('/api/video/grade-scene', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sceneId: gen.sceneId,
+            projectId: projectId ?? 'local',
+            providerVideoId: gen.providerVideoId,
+            videoUrl: gen.videoUrl,
+            originalScript: scene.scriptText || '',
+            videoDuration: scene.duration || 15,
+          }),
+        }).then(async (res) => {
+          if (!res.ok) {
+            updateGeneratedScene(gen.sceneId, { autoGradeStatus: 'failed' });
+            return;
+          }
+          const data = await res.json() as { success: boolean; autoGrade?: SceneAutoGrade | null };
+          if (data.success && data.autoGrade) {
+            updateGeneratedScene(gen.sceneId, {
+              autoGrade: data.autoGrade,
+              autoGradeStatus: 'completed',
+            });
+          } else {
+            updateGeneratedScene(gen.sceneId, { autoGradeStatus: 'failed' });
+          }
+        }).catch(() => {
+          updateGeneratedScene(gen.sceneId, { autoGradeStatus: 'failed' });
+        });
+      }
+    }
+  }, [generatedScenes, scenes, projectId, authFetch, updateGeneratedScene]);
+
   // Auto-retry removed — video generation should ONLY happen on explicit user action.
   // Failed scenes show a manual "Retry" button in their SceneProgressCard.
 
@@ -414,6 +468,27 @@ export function StepGeneration() {
   }, [regenerateScene]);
 
   const handleRegenerate = useCallback((sceneId: string, feedback: string) => {
+    // Submit review to training center
+    const gen = generatedScenes.find((g) => g.sceneId === sceneId);
+    void authFetch('/api/video/scene-review', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sceneId,
+        projectId: projectId ?? 'local',
+        humanGrade: 2,  // Regeneration implies poor quality
+        feedback,
+        autoGrade: gen?.autoGrade ?? null,
+        action: 'regenerate',
+        sceneContext: {
+          sceneNumber: scenes.find((s) => s.id === sceneId)?.sceneNumber,
+          scriptText: scenes.find((s) => s.id === sceneId)?.scriptText,
+          visualDescription: scenes.find((s) => s.id === sceneId)?.visualDescription,
+          backgroundPrompt: scenes.find((s) => s.id === sceneId)?.backgroundPrompt,
+        },
+      }),
+    }).catch(() => { /* non-critical */ });
+
     // Record the feedback as a style correction in brand preference memory
     void authFetch('/api/video/brand-preferences', {
       method: 'POST',
@@ -428,11 +503,32 @@ export function StepGeneration() {
     }).catch(() => { /* non-critical */ });
 
     void regenerateScene(sceneId, feedback);
-  }, [regenerateScene, authFetch, scenes, brief.videoType]);
+  }, [regenerateScene, authFetch, scenes, generatedScenes, projectId, brief.videoType]);
 
   const handleApprove = useCallback((sceneId: string) => {
     const scene = scenes.find((s) => s.id === sceneId);
     if (!scene?.visualDescription) { return; }
+
+    // Submit review to training center
+    const gen = generatedScenes.find((g) => g.sceneId === sceneId);
+    void authFetch('/api/video/scene-review', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sceneId,
+        projectId: projectId ?? 'local',
+        humanGrade: 5,  // Approval implies good quality
+        feedback: 'Scene approved',
+        autoGrade: gen?.autoGrade ?? null,
+        action: 'accept',
+        sceneContext: {
+          sceneNumber: scene.sceneNumber,
+          scriptText: scene.scriptText,
+          visualDescription: scene.visualDescription,
+          backgroundPrompt: scene.backgroundPrompt,
+        },
+      }),
+    }).catch(() => { /* non-critical */ });
 
     // Record approved prompt pattern in brand preference memory
     void authFetch('/api/video/brand-preferences', {
@@ -445,7 +541,32 @@ export function StepGeneration() {
         sourceSceneId: sceneId,
       }),
     }).catch(() => { /* non-critical */ });
-  }, [authFetch, scenes, brief.videoType]);
+  }, [authFetch, scenes, generatedScenes, projectId, brief.videoType]);
+
+  const handleStarRate = useCallback((sceneId: string, grade: number) => {
+    // Non-blocking review submission — just records the rating
+    const scene = scenes.find((s) => s.id === sceneId);
+    const gen = generatedScenes.find((g) => g.sceneId === sceneId);
+
+    void authFetch('/api/video/scene-review', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sceneId,
+        projectId: projectId ?? 'local',
+        humanGrade: grade,
+        feedback: '',
+        autoGrade: gen?.autoGrade ?? null,
+        action: 'accept',
+        sceneContext: {
+          sceneNumber: scene?.sceneNumber,
+          scriptText: scene?.scriptText,
+          visualDescription: scene?.visualDescription,
+          backgroundPrompt: scene?.backgroundPrompt,
+        },
+      }),
+    }).catch(() => { /* non-critical */ });
+  }, [scenes, generatedScenes, projectId, authFetch]);
 
   const handleContinue = () => {
     advanceStep();
@@ -527,6 +648,7 @@ export function StepGeneration() {
                 onRetry={handleRetry}
                 onRegenerate={handleRegenerate}
                 onApprove={handleApprove}
+                onStarRate={handleStarRate}
               />
             ))}
           </div>

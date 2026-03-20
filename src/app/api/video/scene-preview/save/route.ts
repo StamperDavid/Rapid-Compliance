@@ -84,15 +84,24 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Save to Firestore
+    // Firestore document limit is ~1MB. If still too large after resize, warn but proceed.
     const base64 = buffer.toString('base64');
+    if (base64.length > 1_000_000) {
+      logger.warn('Scene preview base64 exceeds 1MB — Firestore write may fail', {
+        sceneId,
+        base64Length: base64.length,
+        bufferSize: buffer.length,
+        file: 'api/video/scene-preview/save/route.ts',
+      });
+    }
+
     await adminDb.collection(PREVIEW_COLLECTION).doc(sceneId).set({
       base64,
       contentType,
       sizeBytes: buffer.length,
       sceneId,
       projectId,
-      createdAt: new Date(),
+      createdAt: new Date().toISOString(),
     });
 
     const permanentUrl = `/api/video/scene-preview/${sceneId}`;

@@ -57,6 +57,13 @@ Build the prompt in this order:
 - Example canonical description: "A tall bald Caucasian man in his early 40s with light skin, clean-shaven face, strong jawline, athletic build, wearing a fitted black henley shirt"
 - That EXACT string appears in every scene featuring that character. No paraphrasing.
 
+## SHOT GROUP CONTINUITY
+When multiple scenes share the same "shotGroupId", they are parts of one continuous shot:
+- Use WORD-FOR-WORD IDENTICAL setting/environment descriptions for all scenes in the group
+- For the FIRST scene in a group: write the full setting + character + action as normal
+- For CONTINUATION scenes (2nd, 3rd, etc. in the group): prepend "CONTINUATION SHOT — Same exact setting, lighting, and character position as the preceding scene. The character continues speaking without moving or changing position." before the regular prompt
+- The goal is that when these clips are stitched together, the character appears to never move — only the audio changes
+
 ## WHAT TO AVOID
 - Do NOT mention "lip-syncing", "TTS", or "audio generation" in prompts — Hedra handles audio synchronization internally
 - Do NOT use vague character references like "the man" or "a presenter" — always use the full canonical description
@@ -107,7 +114,26 @@ export async function translateStoryboardToHedraPrompts(
       : {}),
   }));
 
-  const userPrompt = `Here is the approved storyboard with ${scenes.length} scenes. Translate each scene into an optimized Hedra text_prompt.
+  // Detect shot groups for continuity instructions
+  const shotGroups = new Map<string, number[]>();
+  for (const scene of scenes) {
+    const groupId = scene.shotGroupId;
+    if (groupId) {
+      const existing = shotGroups.get(groupId) ?? [];
+      existing.push(scene.sceneNumber);
+      shotGroups.set(groupId, existing);
+    }
+  }
+
+  let shotGroupContext = '';
+  if (shotGroups.size > 0) {
+    const groupDescriptions = Array.from(shotGroups.entries())
+      .map(([groupId, sceneNumbers]) => `  - ${groupId}: scenes ${sceneNumbers.join(', ')}`)
+      .join('\n');
+    shotGroupContext = `\n\nSHOT GROUPS (scenes that must share identical visual prompts):\n${groupDescriptions}\nFor continuation scenes in each group, prepend "CONTINUATION SHOT" as described in the system prompt.`;
+  }
+
+  const userPrompt = `Here is the approved storyboard with ${scenes.length} scenes. Translate each scene into an optimized Hedra text_prompt.${shotGroupContext}
 
 STORYBOARD:
 ${JSON.stringify(storyboardContext, null, 2)}

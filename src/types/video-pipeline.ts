@@ -8,6 +8,7 @@
 
 import type { VideoAspectRatio, VideoResolution } from './video';
 import type { CinematicConfig } from './creative-studio';
+import type { SceneAutoGrade } from './scene-grading';
 
 // ============================================================================
 // Pipeline Step Definitions
@@ -119,6 +120,7 @@ export interface PipelineScene {
   cinematicConfig?: CinematicConfig; // Cinematic presets from Creative Studio
   status: SceneStatus;
   useGreenScreen?: boolean; // true = avatar on transparent BG + AI background compositing
+  shotGroupId?: string | null;  // Links scenes that are part of the same continuous shot
 }
 
 export interface SceneGenerationResult {
@@ -138,6 +140,10 @@ export interface SceneGenerationResult {
   compositedVideoUrl?: string | null;
   compositeStatus?: 'pending' | 'compositing' | 'completed' | 'failed' | null;
   compositeError?: string | null;
+
+  // Auto-grading (populated after scene completes)
+  autoGrade?: SceneAutoGrade | null;
+  autoGradeStatus?: 'pending' | 'grading' | 'completed' | 'failed' | null;
 }
 
 // ============================================================================

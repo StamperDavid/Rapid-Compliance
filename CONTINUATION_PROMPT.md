@@ -5,7 +5,7 @@
 ## Context
 Repository: https://github.com/StamperDavid/Rapid-Compliance
 Branch: dev
-Last Updated: March 17, 2026 (Session 3)
+Last Updated: March 19, 2026 (Session 4)
 
 ## Current State
 
@@ -13,7 +13,7 @@ Last Updated: March 17, 2026 (Session 3)
 - **Single-tenant penthouse model** — org ID `rapid-compliance-root`, Firebase `rapid-compliance-65f87`
 - **54 AI agents** (46 swarm + 6 standalone + 2 variants) with hierarchical orchestration
 - **4-role RBAC** (owner/admin/manager/member) with 47 permissions
-- **182 physical routes**, **380 API endpoints**, **~340K lines of TypeScript**
+- **182 physical routes**, **382 API endpoints**, **~340K lines of TypeScript**
 - **Deployed via Vercel** — dev → main → Vercel auto-deploy
 
 ### Build Health
@@ -225,6 +225,98 @@ Mission Control
 - **Hedra credits exhausted** — 4/8 video scenes generated successfully, remaining 4 need credits top-up
 - **Hedra CDN URL expiration** — signed URLs expire (~1hr). Need to either refresh on access or persist images to our own storage.
 - **Media library composite index** — `type + createdAt` index needed in Firebase Console for sorted queries (fallback works but unsorted)
+
+---
+
+## COMPLETED: Scene Review, Grading & Shot Continuity (March 19, 2026 — Session 4)
+
+### The Problem
+When Hedra generates video scenes, there's no feedback loop — the AI doesn't learn from failures. Actors sometimes speak too fast, drop words, or miss the full script. Additionally, when scripts are too long and split across multiple scenes, each scene gets an independently written background, making assembled video look like disconnected clips.
+
+### What Was Built
+
+**Auto-Grading Pipeline (Deepgram + LCS Diff):**
+- `@deepgram/sdk` integrated — API key stored in Firestore via existing `apiKeyService` pattern
+- `transcription-service.ts` — Deepgram Nova-3 speech-to-text with per-word timestamps and confidence
+- `scene-grading-service.ts` — Word-level Longest Common Subsequence diff engine:
+  - `scriptAccuracy` = (LCS length / original word count) × 100
+  - `actualWpm` vs `targetWpm` with pacing detection (good / too_fast / too_slow)
+  - `wordsDropped` and `wordsAdded` arrays for granular feedback
+  - `overallScore` = weighted 60% accuracy + 20% pacing + 20% confidence
+  - B-roll handling: empty scripts return perfect grade
+- `extractAudioFromVideo()` in `ffmpeg-utils.ts` — strips video, outputs 16kHz mono WAV
+- `POST /api/video/grade-scene` — downloads video → ffmpeg audio → Deepgram → grade → return
+- Auto-grading fires non-blocking after poll detects scene completion (no UI blocking)
+
+**Human Review + Training Center:**
+- `POST /api/video/scene-review` — mirrors `screenwriter-feedback` pattern exactly
+- 1-5 star rating → 0-100 score → Training Center pipeline
+- Auto-flags sessions scoring < 60 (3/5 stars) for improvement
+- `goldenMasterId: 'video-scene-generator'` links feedback to the correct Golden Master
+- Reviews submitted on approve, reject, and star-rate actions
+
+**UI Enhancements:**
+- `StarRating.tsx` — 5 clickable stars (lucide `Star`), controlled component
+- `AutoGradeMetrics.tsx` — Compact metrics: overall %, accuracy %, WPM, pacing badge. Expandable dropped/added words. Color-coded thresholds.
+- `SceneProgressCard.tsx` — Added star rating, auto-grade metrics, shot group label
+- `StepGeneration.tsx` — Auto-grade trigger on scene complete, training center integration on approve/reject/rate
+
+**Enhanced Regeneration:**
+- `regenerate-scene/route.ts` accepts optional `autoGradeData` + `feedback`
+- Builds structured revision notes: `REVISION DIRECTION`, `TECHNICAL ISSUES`, `CORRECTIVE ACTION`
+- Example: if too_fast → "Slow down delivery"; if words dropped → "Ensure these words are spoken: [list]"
+
+**Shot Continuity System:**
+- `shotGroupId` field on `PipelineScene` and `ScriptScene` — links scenes that are part of the same continuous shot
+- Script generation AI instructed to split long dialogues across scenes with same `shotGroupId`
+- Continuation scenes use IDENTICAL `visualDescription` + `backgroundPrompt` (word-for-word copy)
+- Hedra Prompt Agent detects shot groups and prepends "CONTINUATION SHOT" cue
+- Scene generator tracks establishing prompts per group and injects continuation context
+
+**Phonetic Speech Rules (Hedra TTS):**
+- Script AI now writes URLs phonetically: "salesvelocity.ai" → "sales velocity dot A I"
+- Abbreviations spelled out: "CRM" → "C-R-M"
+- Dollar amounts: "$1,500" → "fifteen hundred dollars"
+- Percentages: "50%" → "fifty percent"
+
+**Storyboard Preview Fix:**
+- Changed from photorealistic to illustration/storyboard concept art style
+- Silhouettes/faceless figures instead of specific character faces
+- Muted warm tones, sketch-like quality, directorial annotations
+- Scene preview GET endpoint: added error handling, logging, data validation
+
+### New Types
+- `TranscriptionWord`, `TranscriptionResult`, `PacingScore`, `SceneAutoGrade`, `SceneReview` — `src/types/scene-grading.ts`
+- `autoGrade?`, `autoGradeStatus?` on `SceneGenerationResult`
+- `shotGroupId?` on `PipelineScene`
+- `'deepgram'` added to `APIServiceName`, `transcription.deepgram.apiKey` in `APIKeysConfig`
+
+### New Files (8)
+| File | Purpose |
+|------|---------|
+| `src/types/scene-grading.ts` | Transcription, grading, review types |
+| `src/lib/video/transcription-service.ts` | Deepgram Nova-3 transcription wrapper |
+| `src/lib/video/scene-grading-service.ts` | LCS diff + WPM + pacing grading engine |
+| `src/app/api/video/grade-scene/route.ts` | Auto-grade API endpoint |
+| `src/app/api/video/scene-review/route.ts` | Training center review submission |
+| `src/app/(dashboard)/content/video/components/StarRating.tsx` | Star rating UI |
+| `src/app/(dashboard)/content/video/components/AutoGradeMetrics.tsx` | Auto-grade metrics display |
+
+### Modified Files (11)
+| File | Changes |
+|------|---------|
+| `src/types/video-pipeline.ts` | Added `autoGrade?`, `autoGradeStatus?`, `shotGroupId?` |
+| `src/types/api-keys.ts` | Added `transcription.deepgram`, `'deepgram'` to `APIServiceName` |
+| `src/lib/api-keys/key-mapping.ts` | Added `deepgram` mapping |
+| `src/lib/api-keys/api-key-service.ts` | Added `deepgram` case |
+| `src/lib/video/ffmpeg-utils.ts` | Added `extractAudioFromVideo()` |
+| `src/app/(dashboard)/content/video/components/SceneProgressCard.tsx` | Star rating, auto-grade, shot group |
+| `src/app/(dashboard)/content/video/components/StepGeneration.tsx` | Auto-grade trigger, training center |
+| `src/app/(dashboard)/content/video/components/StepStoryboard.tsx` | Illustration style previews |
+| `src/app/api/video/regenerate-scene/route.ts` | Auto-grade data + structured revision notes |
+| `src/lib/video/script-generation-service.ts` | Shot groups + phonetic speech rules |
+| `src/lib/video/hedra-prompt-agent.ts` | Shot group awareness |
+| `src/lib/video/scene-generator.ts` | Continuation cues |
 
 ---
 

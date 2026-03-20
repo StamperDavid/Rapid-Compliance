@@ -153,6 +153,13 @@ export interface APIKeysConfig {
     };
   };
 
+  // Transcription Services
+  transcription?: {
+    deepgram?: {
+      apiKey: string;
+    };
+  };
+
   // Prospect Research & Enrichment
   enrichment?: {
     /** @deprecated Use native discovery-engine.ts instead. Will be removed in future release. */
@@ -313,6 +320,7 @@ export type APIServiceName =
   | 'hedra'         // Hedra Character-3 talking head avatars
   | 'fal'           // Fal.ai — Flux, SDXL, Stable Diffusion image generation
   | 'google-ai-studio'  // Google AI Studio (Imagen 3) — photorealistic image generation
-  | 'kling';        // Kling 3.0 — cinematic video + image generation
+  | 'kling'         // Kling 3.0 — cinematic video + image generation
+  | 'deepgram';     // Deepgram — speech-to-text transcription
 
 

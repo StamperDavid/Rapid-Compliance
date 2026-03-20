@@ -514,12 +514,11 @@ export function StepStoryboard() {
         : '';
 
       const prompt = [
-        'Cinematic storyboard frame, 16:9 aspect ratio.',
-        scene.visualDescription ? `Shot type: ${scene.visualDescription}.` : '',
+        'Film storyboard illustration, 16:9 aspect ratio, hand-drawn concept art style.',
         scene.backgroundPrompt ? `Setting: ${scene.backgroundPrompt}.` : '',
         scene.title ? `Scene: ${scene.title}.` : '',
-        cinematicDetails ? `Style: ${cinematicDetails}.` : '',
-        'Professional video production style, photorealistic.',
+        cinematicDetails ? `Camera/style notes: ${cinematicDetails}.` : '',
+        'Stylized illustration with muted warm tones, sketch-like quality with soft watercolor shading. NO photorealistic rendering, NO specific character faces or identities. Use silhouettes or faceless figure outlines for any people. Include subtle directorial annotations like camera movement arrows and shot type labels in handwritten font. Storyboard concept art aesthetic, film pre-production look.',
       ].filter(Boolean).join(' ');
 
       // 1. Generate the image

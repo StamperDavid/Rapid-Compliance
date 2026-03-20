@@ -44,10 +44,19 @@ function nonEmpty(val: string | null | undefined): string | null {
  * This produces far better results than raw field concatenation because
  * Hedra interprets the prompt as a single scene description, not fragments.
  */
-function buildHedraTextPrompt(scene: PipelineScene & { _hedraOptimizedPrompt?: string }): string {
+function buildHedraTextPrompt(
+  scene: PipelineScene & { _hedraOptimizedPrompt?: string },
+  previousScenePrompt?: string,
+): string {
   // Use the Hedra Prompt Agent's optimized prompt if available
   if (scene._hedraOptimizedPrompt) {
     return scene._hedraOptimizedPrompt;
+  }
+
+  // Shot group continuation: if this scene is part of a shot group and
+  // has a previous scene's prompt, use it as the base with continuation cue
+  if (previousScenePrompt && scene.shotGroupId) {
+    return `CONTINUATION: Character continues speaking in the same exact location and position. ${previousScenePrompt}`;
   }
 
   const background = scene.backgroundPrompt?.trim() ?? '';
@@ -450,6 +459,28 @@ export async function generateAllScenes(
       }
       return scene;
     });
+
+    // Track establishing scene prompts for shot group continuity
+    const shotGroupPrompts = new Map<string, string>();
+    for (const scene of enhancedScenes) {
+      if (scene.shotGroupId) {
+        if (!shotGroupPrompts.has(scene.shotGroupId)) {
+          // First scene in the group — record its prompt as the establishing prompt
+          const sceneWithOptimized = scene as typeof scene & { _hedraOptimizedPrompt?: string };
+          const prompt = sceneWithOptimized._hedraOptimizedPrompt
+            ?? [scene.backgroundPrompt, scene.visualDescription].filter(Boolean).join('. ');
+          shotGroupPrompts.set(scene.shotGroupId, prompt);
+        } else {
+          // Continuation scene — inject the establishing scene's prompt
+          const establishingPrompt = shotGroupPrompts.get(scene.shotGroupId);
+          const sceneWithOptimized = scene as typeof scene & { _hedraOptimizedPrompt?: string };
+          if (establishingPrompt && !sceneWithOptimized._hedraOptimizedPrompt) {
+            sceneWithOptimized._hedraOptimizedPrompt =
+              `CONTINUATION: Character continues speaking in the same exact location and position. ${establishingPrompt}`;
+          }
+        }
+      }
+    }
 
     logger.info('Starting batch scene generation', {
       totalScenes: scenes.length,

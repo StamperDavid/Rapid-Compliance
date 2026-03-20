@@ -5,22 +5,27 @@ import { Loader2, CheckCircle2, XCircle, RefreshCw, Play, ThumbsUp, ThumbsDown, 
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { SceneGenerationResult } from '@/types/video-pipeline';
+import { StarRating } from './StarRating';
+import { AutoGradeMetrics } from './AutoGradeMetrics';
 
 type ReviewStatus = 'pending' | 'approved' | 'rejected';
 
 interface SceneProgressCardProps {
   sceneNumber: number;
   result: SceneGenerationResult;
+  shotGroupLabel?: string | null;  // e.g., "Shot 1, Part 2 of 3"
   onRetry?: (sceneId: string) => void;
   onRegenerate?: (sceneId: string, feedback: string) => void;
   onApprove?: (sceneId: string) => void;
+  onStarRate?: (sceneId: string, grade: number) => void;
 }
 
-export function SceneProgressCard({ sceneNumber, result, onRetry, onRegenerate, onApprove }: SceneProgressCardProps) {
+export function SceneProgressCard({ sceneNumber, result, shotGroupLabel, onRetry, onRegenerate, onApprove, onStarRate }: SceneProgressCardProps) {
   const [reviewStatus, setReviewStatus] = useState<ReviewStatus>('pending');
   const [showFeedback, setShowFeedback] = useState(false);
   const [feedback, setFeedback] = useState('');
   const [showPreview, setShowPreview] = useState(false);
+  const [humanGrade, setHumanGrade] = useState(0);
 
   const statusConfig = {
     draft: { icon: Loader2, color: 'text-zinc-400', bg: 'bg-zinc-800/50', label: 'Pending' },
@@ -85,6 +90,11 @@ export function SceneProgressCard({ sceneNumber, result, onRetry, onRegenerate, 
             )}
             {reviewStatus === 'rejected' && isComplete && (
               <span className="px-1.5 py-0.5 bg-red-500/20 text-red-400 text-[9px] font-bold rounded">NEEDS REVISION</span>
+            )}
+            {shotGroupLabel && (
+              <span className="px-1.5 py-0.5 bg-blue-500/20 text-blue-400 text-[9px] font-bold rounded">
+                {shotGroupLabel}
+              </span>
             )}
           </div>
 
@@ -182,6 +192,32 @@ export function SceneProgressCard({ sceneNumber, result, onRetry, onRegenerate, 
             className="w-full max-h-64 rounded-lg bg-black"
             preload="metadata"
           />
+        </div>
+      )}
+
+      {/* Auto-Grade Metrics — shown when auto-grade data available */}
+      {isComplete && (
+        <div className="px-4 pb-2">
+          <AutoGradeMetrics
+            autoGrade={result.autoGrade ?? null}
+            status={result.autoGradeStatus ?? null}
+          />
+        </div>
+      )}
+
+      {/* Star Rating — shown for completed scenes */}
+      {isComplete && reviewStatus === 'pending' && (
+        <div className="px-4 pb-2 flex items-center gap-2">
+          <StarRating
+            value={humanGrade}
+            onChange={(grade) => {
+              setHumanGrade(grade);
+              if (onStarRate) { onStarRate(result.sceneId, grade); }
+            }}
+          />
+          {humanGrade > 0 && (
+            <span className="text-xs text-zinc-500">{humanGrade}/5</span>
+          )}
         </div>
       )}
 

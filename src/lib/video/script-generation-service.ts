@@ -30,6 +30,7 @@ export interface ScriptScene {
   suggestedDuration: number;
   engine: ScriptEngine | null;
   backgroundPrompt: string | null;
+  shotGroupId: string | null;
 }
 
 export interface ScriptGenerationResult {
@@ -82,6 +83,7 @@ const AISceneSchema = z.object({
   // Accept any engine string from the AI but normalize to 'hedra' (sole engine)
   engine: z.string().nullable().transform(() => 'hedra' as const),
   backgroundPrompt: z.string().nullable(),
+  shotGroupId: z.string().nullable().default(null),
 });
 
 const AIResponseSchema = z.object({
@@ -207,7 +209,27 @@ All scenes in a video MUST share the same visual DNA:
 - Same lighting style (natural, studio, dramatic, ambient)
 - Same level of formality (casual spaces vs corporate offices)
 - Think of it like a film: different shots of the SAME WORLD, one cinematographer's vision
-- A location change is a DELIBERATE storytelling choice, not a default`;
+- A location change is a DELIBERATE storytelling choice, not a default
+
+## SHOT CONTINUITY RULES
+When a character's dialogue is too long for one scene (more than ~25 words per 5 seconds), you MUST split it across consecutive scenes with the SAME shotGroupId:
+- Assign the same "shotGroupId" string (e.g. "shot-1", "shot-2") to all scenes that are part of the same continuous shot
+- The FIRST scene in a shot group gets the full visualDescription + backgroundPrompt
+- CONTINUATION scenes MUST use IDENTICAL visualDescription and backgroundPrompt as the establishing scene — copy them word-for-word
+- The character should appear to continue naturally — same position, same framing, same emotional state
+- Each continuation scene picks up EXACTLY where the previous scene's script left off — no repeated words, no gaps
+- Never start a continuation scene with the character in a different location or pose
+- Scenes that are NOT part of a multi-part split should have shotGroupId set to null
+
+## HEDRA SPEECH RULES (TTS Pronunciation)
+When writing scriptText that will be spoken by Hedra's TTS engine:
+- URLs must be written phonetically: "salesvelocity.ai" → "sales velocity dot A I"
+- Abbreviations should be spelled out: "CRM" → "C-R-M" or "customer relationship management"
+- Dollar amounts: "$1,500" → "fifteen hundred dollars"
+- Percentages: "50%" → "fifty percent"
+- Email addresses: "info@company.com" → "info at company dot com"
+- Technical terms: "API" → "A-P-I", "SaaS" → "sass" or "software as a service"
+These rules ensure Hedra's text-to-speech pronounces everything correctly and naturally.`;
 
   if (!avatarContext) {
     prompt += `\n\n## CHARACTER / PRESENTER (NO AVATAR SELECTED)
@@ -267,7 +289,8 @@ Return ONLY valid JSON (no markdown, no code fences) matching this structure:
       "visualDescription": "Full scene description: character appearance (age, gender, clothing, grooming), their demeanor (leaning in, gesturing, serious gaze), shot framing (close-up, medium), mood (warm, tense, excited). Keep character appearance CONSISTENT across all scenes.",
       "suggestedDuration": 12,
       "engine": "hedra",
-      "backgroundPrompt": "Cinematic background: setting + lighting + color palette + atmosphere. Must match the script's emotional tone."
+      "backgroundPrompt": "Cinematic background: setting + lighting + color palette + atmosphere. Must match the script's emotional tone.",
+      "shotGroupId": null
     }
   ]
 }
@@ -591,7 +614,7 @@ async function generateAIScripts(
     return null;
   }
 
-  let validated: { targetAudience: string; keyMessages: string[]; scenes: Array<{ sceneNumber: number; title: string; scriptText: string; visualDescription: string; suggestedDuration: number; engine: 'hedra'; backgroundPrompt: string | null }> };
+  let validated: { targetAudience: string; keyMessages: string[]; scenes: Array<{ sceneNumber: number; title: string; scriptText: string; visualDescription: string; suggestedDuration: number; engine: 'hedra'; backgroundPrompt: string | null; shotGroupId: string | null }> };
   try {
     validated = AIResponseSchema.parse(parsed);
   } catch (zodError) {
@@ -672,6 +695,7 @@ function generateFallbackScripts(
         suggestedDuration: durationPerScene,
         engine: 'hedra',
         backgroundPrompt: 'Modern bright office with large monitor showing tutorial interface, indoor plants, warm lighting, clean desk',
+        shotGroupId: null,
       });
 
       for (let i = 2; i < sceneCount; i++) {
@@ -683,6 +707,7 @@ function generateFallbackScripts(
           suggestedDuration: durationPerScene,
           engine: 'hedra',
           backgroundPrompt: 'Clean workspace with soft ambient lighting, monitor displaying software interface, shallow depth of field',
+          shotGroupId: null,
         });
       }
 
@@ -694,6 +719,7 @@ function generateFallbackScripts(
         suggestedDuration: durationPerScene,
         engine: 'hedra',
         backgroundPrompt: 'Bright creative studio with motivational backdrop, warm tones, professional lighting',
+        shotGroupId: null,
       });
       break;
     }
@@ -707,6 +733,7 @@ function generateFallbackScripts(
         suggestedDuration: durationPerScene,
         engine: 'hedra',
         backgroundPrompt: 'Sleek modern conference room with glass walls, city skyline visible, dramatic lighting, shallow depth of field',
+        shotGroupId: null,
       });
 
       scenes.push({
@@ -717,6 +744,7 @@ function generateFallbackScripts(
         suggestedDuration: durationPerScene,
         engine: 'hedra',
         backgroundPrompt: 'Creative studio with exposed brick walls, warm pendant lighting, comfortable setting with plants and books',
+        shotGroupId: null,
       });
 
       scenes.push({
@@ -727,6 +755,7 @@ function generateFallbackScripts(
         suggestedDuration: durationPerScene,
         engine: 'hedra',
         backgroundPrompt: 'Modern tech office with large displays showing dashboards and analytics, blue accent lighting, clean aesthetic',
+        shotGroupId: null,
       });
 
       if (sceneCount > 4) {
@@ -738,6 +767,7 @@ function generateFallbackScripts(
           suggestedDuration: durationPerScene,
           engine: 'hedra',
           backgroundPrompt: 'Bright co-working space with whiteboard showing growth charts, natural window light, green plants, energetic atmosphere',
+          shotGroupId: null,
         });
       }
 
@@ -749,6 +779,7 @@ function generateFallbackScripts(
         suggestedDuration: durationPerScene,
         engine: 'hedra',
         backgroundPrompt: 'Bright professional studio with branded backdrop, warm inviting lighting, casual setting',
+        shotGroupId: null,
       });
       break;
     }
@@ -762,6 +793,7 @@ function generateFallbackScripts(
         suggestedDuration: durationPerScene,
         engine: 'hedra',
         backgroundPrompt: 'Warm cozy office with bookshelves, soft lighting, plants, inviting atmosphere',
+        shotGroupId: null,
       });
 
       scenes.push({
@@ -772,6 +804,7 @@ function generateFallbackScripts(
         suggestedDuration: durationPerScene,
         engine: 'hedra',
         backgroundPrompt: 'Modern tech lab with holographic displays, cool blue ambient lighting, futuristic minimal design',
+        shotGroupId: null,
       });
 
       scenes.push({
@@ -782,6 +815,7 @@ function generateFallbackScripts(
         suggestedDuration: durationPerScene,
         engine: 'hedra',
         backgroundPrompt: 'Modern creative workspace with whiteboard showing strategy diagrams, bright natural light',
+        shotGroupId: null,
       });
 
       if (sceneCount > 4) {
@@ -793,6 +827,7 @@ function generateFallbackScripts(
           suggestedDuration: durationPerScene,
           engine: 'hedra',
           backgroundPrompt: 'Bright open-plan office with team celebration in background, motivational wall art, warm afternoon light',
+          shotGroupId: null,
         });
       }
 
@@ -804,6 +839,7 @@ function generateFallbackScripts(
         suggestedDuration: durationPerScene,
         engine: 'hedra',
         backgroundPrompt: 'Professional studio with clean branded backdrop, confident warm lighting, inviting atmosphere',
+        shotGroupId: null,
       });
       break;
     }
@@ -817,6 +853,7 @@ function generateFallbackScripts(
         suggestedDuration: durationPerScene,
         engine: 'hedra',
         backgroundPrompt: 'Modern bright office with clean desk, large monitor, indoor plants, warm professional lighting',
+        shotGroupId: null,
       });
 
       const bgPrompts = [
@@ -835,6 +872,7 @@ function generateFallbackScripts(
           suggestedDuration: durationPerScene,
           engine: 'hedra',
           backgroundPrompt: bgPrompts[(i - 2) % bgPrompts.length],
+          shotGroupId: null,
         });
       }
 
@@ -846,6 +884,7 @@ function generateFallbackScripts(
         suggestedDuration: durationPerScene,
         engine: 'hedra',
         backgroundPrompt: 'Bright creative studio space with branded elements, warm inviting lighting',
+        shotGroupId: null,
       });
       break;
     }

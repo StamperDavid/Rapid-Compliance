@@ -62,6 +62,9 @@ export const UI_TO_CONFIG_MAP: Record<string, string> = {
   elevenlabs: 'voice.elevenlabs.apiKey',
   unreal_speech: 'voice.unrealSpeech.apiKey',
 
+  // Transcription
+  deepgram: 'transcription.deepgram.apiKey',
+
   // SEO
   pagespeed: 'seo.pagespeedApiKey',
   dataforseo_login: 'seo.dataforseoLogin',
