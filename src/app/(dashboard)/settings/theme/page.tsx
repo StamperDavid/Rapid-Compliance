@@ -1,8 +1,7 @@
 'use client';
 
-/* eslint-disable @next/next/no-img-element -- User uploaded images displayed in preview */
-
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
 import Link from 'next/link'
 import { logger } from '@/lib/logger/logger';
 
@@ -681,10 +680,13 @@ export default function ThemeEditorPage() {
                           minHeight: '150px'
                         }}>
                           {(logoPreview || theme.branding.logoUrl) ? (
-                            <img 
-                              src={logoPreview || theme.branding.logoUrl} 
-                              alt="Logo preview" 
-                              style={{ maxWidth: '100%', maxHeight: '120px', objectFit: 'contain' }}
+                            <Image
+                              src={logoPreview || theme.branding.logoUrl}
+                              alt="Logo preview"
+                              width={200}
+                              height={120}
+                              unoptimized
+                              style={{ maxWidth: '100%', maxHeight: '120px', objectFit: 'contain', width: 'auto', height: 'auto' }}
                             />
                           ) : (
                             <div style={{ textAlign: 'center', color: '#666' }}>
@@ -781,10 +783,13 @@ export default function ThemeEditorPage() {
                           minHeight: '100px'
                         }}>
                           {(faviconPreview || theme.branding.favicon) ? (
-                            <img 
-                              src={faviconPreview || theme.branding.favicon} 
-                              alt="Favicon preview" 
-                              style={{ width: '48px', height: '48px', objectFit: 'contain' }}
+                            <Image
+                              src={faviconPreview || theme.branding.favicon}
+                              alt="Favicon preview"
+                              width={48}
+                              height={48}
+                              unoptimized
+                              style={{ objectFit: 'contain' }}
                             />
                           ) : (
                             <div style={{ textAlign: 'center', color: '#666' }}>
@@ -922,10 +927,13 @@ export default function ThemeEditorPage() {
                   {/* Brand Preview */}
                   <div style={{ marginBottom: '1.5rem', padding: '1.5rem', borderRadius: '0.5rem', background: `linear-gradient(135deg, ${theme.colors.primary.main}, ${theme.colors.secondary.main})` }}>
                     {(logoPreview || theme.branding.logoUrl) ? (
-                      <img 
-                        src={logoPreview || theme.branding.logoUrl} 
-                        alt="Logo" 
-                        style={{ maxHeight: '40px', marginBottom: '0.75rem' }}
+                      <Image
+                        src={logoPreview || theme.branding.logoUrl}
+                        alt="Logo"
+                        width={120}
+                        height={40}
+                        unoptimized
+                        style={{ maxHeight: '40px', marginBottom: '0.75rem', width: 'auto', height: 'auto' }}
                       />
                     ) : (
                       <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'white', marginBottom: '0.5rem', fontFamily: theme.typography.fontFamily.heading }}>{theme.branding.companyName}</h2>

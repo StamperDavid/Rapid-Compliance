@@ -300,8 +300,7 @@ export default function PageEditorPage() {
   useEffect(() => {
     if (authLoading) {return;}
     void loadConfig();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authLoading]);
+  }, [authLoading, loadConfig]);
 
   // ============================================================================
   // Switch page

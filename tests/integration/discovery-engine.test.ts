@@ -8,8 +8,8 @@ import { discoverCompany, discoverCompaniesBatch } from '@/lib/services/discover
 import { deleteFlaggedArchiveEntries, deleteExpiredArchiveEntries } from '@/lib/scraper-intelligence/discovery-archive-service';
 import { db } from '@/lib/firebase-admin';
 
-// Set timeout for real Firestore operations
-jest.setTimeout(60000);
+// Set timeout for real Firestore operations and resource contention in full suite
+jest.setTimeout(120000);
 
 describe('Discovery Engine Integration Tests', () => {
   // Clean up all discoveryArchive entries for test domains before tests run

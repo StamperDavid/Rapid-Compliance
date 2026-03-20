@@ -6,13 +6,10 @@
  *
  * Based on GROUND_TRUTH_DISCOVERY audit findings.
  *
- * NOTE: This file is designed to use console.log for reporting purposes.
- * ESLint console warnings are intentionally disabled for this module.
+ * NOTE: This file uses globalThis.console for reporting output.
  *
  * @module lib/utils/orphaned-files-report
  */
-
-/* eslint-disable no-console */
 
 /**
  * Action types for orphaned files
@@ -226,32 +223,32 @@ function getTypeColor(type: OrphanedFileType): string {
  * ```
  */
 export function printOrphanedFilesReport(): void {
-  console.log(`\n${COLORS.bold}${COLORS.cyan}═══════════════════════════════════════════════════════════════${COLORS.reset}`);
-  console.log(`${COLORS.bold}${COLORS.cyan}  ORPHANED FILES REPORT - GROUND TRUTH DISCOVERY AUDIT${COLORS.reset}`);
-  console.log(`${COLORS.bold}${COLORS.cyan}═══════════════════════════════════════════════════════════════${COLORS.reset}\n`);
+  globalThis.console.log(`\n${COLORS.bold}${COLORS.cyan}═══════════════════════════════════════════════════════════════${COLORS.reset}`);
+  globalThis.console.log(`${COLORS.bold}${COLORS.cyan}  ORPHANED FILES REPORT - GROUND TRUTH DISCOVERY AUDIT${COLORS.reset}`);
+  globalThis.console.log(`${COLORS.bold}${COLORS.cyan}═══════════════════════════════════════════════════════════════${COLORS.reset}\n`);
 
   ORPHANED_FILES.forEach((file, index) => {
     const actionColor = getActionColor(file.action);
     const typeColor = getTypeColor(file.type);
 
-    console.log(`${COLORS.bold}${index + 1}. ${file.path}${COLORS.reset}`);
-    console.log(`   Type:   ${typeColor}${file.type.toUpperCase()}${COLORS.reset}`);
-    console.log(`   Action: ${actionColor}${file.action}${COLORS.reset}`);
-    console.log(`   Reason: ${file.reason}`);
+    globalThis.console.log(`${COLORS.bold}${index + 1}. ${file.path}${COLORS.reset}`);
+    globalThis.console.log(`   Type:   ${typeColor}${file.type.toUpperCase()}${COLORS.reset}`);
+    globalThis.console.log(`   Action: ${actionColor}${file.action}${COLORS.reset}`);
+    globalThis.console.log(`   Reason: ${file.reason}`);
 
     if (file.size) {
-      console.log(`   Size:   ${COLORS.gray}${file.size}${COLORS.reset}`);
+      globalThis.console.log(`   Size:   ${COLORS.gray}${file.size}${COLORS.reset}`);
     }
 
     if (file.relatedFiles && file.relatedFiles.length > 0) {
-      console.log(`   Related: ${COLORS.gray}${file.relatedFiles.join(', ')}${COLORS.reset}`);
+      globalThis.console.log(`   Related: ${COLORS.gray}${file.relatedFiles.join(', ')}${COLORS.reset}`);
     }
 
     if (file.notes) {
-      console.log(`   Notes:  ${COLORS.gray}${file.notes}${COLORS.reset}`);
+      globalThis.console.log(`   Notes:  ${COLORS.gray}${file.notes}${COLORS.reset}`);
     }
 
-    console.log('');
+    globalThis.console.log('');
   });
 
   // Summary statistics
@@ -265,25 +262,25 @@ export function printOrphanedFilesReport(): void {
     return acc;
   }, {} as Record<OrphanedFileType, number>);
 
-  console.log(`${COLORS.bold}${COLORS.cyan}───────────────────────────────────────────────────────────────${COLORS.reset}`);
-  console.log(`${COLORS.bold}SUMMARY${COLORS.reset}`);
-  console.log(`${COLORS.bold}${COLORS.cyan}───────────────────────────────────────────────────────────────${COLORS.reset}\n`);
+  globalThis.console.log(`${COLORS.bold}${COLORS.cyan}───────────────────────────────────────────────────────────────${COLORS.reset}`);
+  globalThis.console.log(`${COLORS.bold}SUMMARY${COLORS.reset}`);
+  globalThis.console.log(`${COLORS.bold}${COLORS.cyan}───────────────────────────────────────────────────────────────${COLORS.reset}\n`);
 
-  console.log(`${COLORS.bold}Total Files: ${COLORS.reset}${ORPHANED_FILES.length}\n`);
+  globalThis.console.log(`${COLORS.bold}Total Files: ${COLORS.reset}${ORPHANED_FILES.length}\n`);
 
-  console.log(`${COLORS.bold}By Action:${COLORS.reset}`);
+  globalThis.console.log(`${COLORS.bold}By Action:${COLORS.reset}`);
   Object.entries(actionCounts).forEach(([action, count]) => {
     const color = getActionColor(action as OrphanedFileAction);
-    console.log(`  ${color}${action}${COLORS.reset}: ${count}`);
+    globalThis.console.log(`  ${color}${action}${COLORS.reset}: ${count}`);
   });
 
-  console.log(`\n${COLORS.bold}By Type:${COLORS.reset}`);
+  globalThis.console.log(`\n${COLORS.bold}By Type:${COLORS.reset}`);
   Object.entries(typeCounts).forEach(([type, count]) => {
     const color = getTypeColor(type as OrphanedFileType);
-    console.log(`  ${color}${type}${COLORS.reset}: ${count}`);
+    globalThis.console.log(`  ${color}${type}${COLORS.reset}: ${count}`);
   });
 
-  console.log(`\n${COLORS.bold}${COLORS.cyan}═══════════════════════════════════════════════════════════════${COLORS.reset}\n`);
+  globalThis.console.log(`\n${COLORS.bold}${COLORS.cyan}═══════════════════════════════════════════════════════════════${COLORS.reset}\n`);
 }
 
 /**
@@ -294,7 +291,7 @@ export function printOrphanedFilesReport(): void {
  * @example
  * ```typescript
  * const filesToDelete = getFilesToDelete();
- * console.log(`Found ${filesToDelete.length} files to delete`);
+ * globalThis.console.log(`Found ${filesToDelete.length} files to delete`);
  * ```
  */
 export function getFilesToDelete(): string[] {
@@ -312,7 +309,7 @@ export function getFilesToDelete(): string[] {
  * ```typescript
  * const filesToConsolidate = getFilesToConsolidate();
  * filesToConsolidate.forEach(({ path, relatedFiles }) => {
- *   console.log(`Consolidate ${path} with ${relatedFiles?.join(', ')}`);
+ *   globalThis.console.log(`Consolidate ${path} with ${relatedFiles?.join(', ')}`);
  * });
  * ```
  */

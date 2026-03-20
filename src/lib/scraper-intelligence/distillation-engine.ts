@@ -26,6 +26,7 @@ import {
 } from '../../types/scraper-intelligence';
 import { logger } from '../logger/logger';
 import { saveTemporaryScrape } from './discovery-archive-service';
+import { evaluateExpression } from '../utils/expr-eval';
 
 /**
  * Context data for scoring rule evaluation
@@ -451,17 +452,9 @@ function evaluateCondition(
   // Supports: &&, ||, >, <, >=, <=, ==, !=
 
   try {
-    // Replace variables with values from context
-    let expression = condition;
-
-    for (const [key, value] of Object.entries(context)) {
-      const regex = new RegExp(`\\b${key}\\b`, 'g');
-      expression = expression.replace(regex, JSON.stringify(value));
-    }
-
-    // Block dangerous patterns that could escape the formula sandbox
+    // Block dangerous patterns before evaluating
     const dangerousPatterns = /\b(fetch|import|require|eval|Function|process|globalThis|window|document|__proto__|constructor)\b/;
-    if (dangerousPatterns.test(expression)) {
+    if (dangerousPatterns.test(condition)) {
       logger.warn('Blocked potentially dangerous condition expression', {
         condition,
         contextKeys: Object.keys(context),
@@ -469,10 +462,8 @@ function evaluateCondition(
       return false;
     }
 
-    // Use Function constructor (safer than eval) for dynamic condition evaluation
-    // eslint-disable-next-line @typescript-eslint/no-implied-eval -- Intentional for formula evaluation
-    const fn = new Function(`"use strict"; return (${expression})`) as () => unknown;
-    return Boolean(fn());
+    // Variables are resolved from context by the evaluator directly — no string substitution needed
+    return Boolean(evaluateExpression(condition, context as Record<string, unknown>));
   } catch (error) {
     const err = error instanceof Error ? error : new Error(String(error));
     logger.error('Failed to evaluate condition', err, {

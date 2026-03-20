@@ -354,8 +354,11 @@ export function StepStoryboard() {
   const [isSaving, setIsSaving] = useState(false);
   const [selectedSceneId, setSelectedSceneId] = useState<string | null>(null);
   const hasAutoDecomposed = useRef(false);
+  const handleDecomposeRef = useRef<(() => Promise<void>) | null>(null);
 
   // ── Auto-decompose on mount if no scenes yet ────────────────────────────
+  // handleDecomposeRef avoids a forward-reference TS error (handleDecompose defined below)
+  // hasAutoDecomposed ref ensures this fires at most once even as deps change
   useEffect(() => {
     if (
       !hasAutoDecomposed.current &&
@@ -364,10 +367,9 @@ export function StepStoryboard() {
       brief.description.trim().length > 0
     ) {
       hasAutoDecomposed.current = true;
-      void handleDecompose();
+      void handleDecomposeRef.current?.();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [scenes.length, decompositionPlan, brief.description]);
 
   // ── Auto-load defaults ──────────────────────────────────────────────────
   useEffect(() => {
@@ -383,8 +385,7 @@ export function StepStoryboard() {
         }
       })();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [avatarId, voiceId, authFetch]);
 
 
 
@@ -468,6 +469,11 @@ export function StepStoryboard() {
       setIsDecomposing(false);
     }
   }, [brief, authFetch, setDecompositionPlan, setScenes]);
+
+  // Keep handleDecomposeRef in sync so the auto-decompose effect can call it
+  useEffect(() => {
+    handleDecomposeRef.current = handleDecompose;
+  }, [handleDecompose]);
 
   // ── Add scene manually ──────────────────────────────────────────────────
   const handleAddScene = useCallback(() => {
@@ -605,8 +611,7 @@ export function StepStoryboard() {
         await handleGeneratePreview(scene.id);
       }
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scenes]);
+  }, [scenes, handleGeneratePreview]);
 
   // ── Readiness checks ───────────────────────────────────────────────────
   const missingRequirements: string[] = [];

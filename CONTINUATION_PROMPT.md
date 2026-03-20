@@ -5,454 +5,259 @@
 ## Context
 Repository: https://github.com/StamperDavid/Rapid-Compliance
 Branch: dev
-Last Updated: March 20, 2026 (Post full system audit)
+Last Updated: March 20, 2026 (Post real code review — every finding verified by reading source)
 
 ## Current State
 
 ### Architecture
 - **Single-tenant penthouse model** — org ID `rapid-compliance-root`, Firebase `rapid-compliance-65f87`
 - **52 AI agents** (46 swarm + 6 standalone) with hierarchical orchestration
-- **4-role RBAC** (owner/admin/manager/member) with 47 permissions
-- **184 physical routes**, **393 API endpoints**, **1,628 TypeScript files**, **~350K+ lines**
-- **212+ React components**, **54 type definition files** (831 interfaces/types)
+- **4-role RBAC** (owner/admin/manager/member) with 47 permissions defined (enforcement is binary — see Remediation)
+- **184 pages**, **393 API routes**, **1,628 TypeScript files**, **~350K+ lines**
+- **212 React components**, **54 type definition files**
 - **Deployed via Vercel** — dev → main → Vercel auto-deploy
 
-### Production Readiness: ~85%
-- **Ready:** Core platform, payments (6 providers), video (Hedra/Kling), AI orchestration (50+ tools), CRM, e-commerce, email/SMS, website builder, analytics, growth
-- **Gaps:** Billing portal UI (APIs exist, no pages), unit tests (~0.2% coverage), social beyond Twitter (FB/IG/TikTok stubs)
-
-### Build Health
+### Build Health (Verified March 20, 2026)
 - `tsc --noEmit` — **PASSES**
 - `npm run lint` — **PASSES (zero errors, zero warnings)**
-- 24 eslint-disable comments (ratcheted via budget system)
-- Zero actual `any` type annotations — Zero-Any Policy enforced (audit false positive: word "any" in comments was miscounted)
+- `npm run test:ci` — **69/74 suites pass, 1,483/1,506 tests pass** (5 failing suites, 18 failing tests)
+- 24 `eslint-disable` comments across 19 files (ratcheted — zero-tolerance policy requires removal)
+- 11 `Promise.resolve(null/[])` stubs in production code (violates NO STUBS policy)
+- Zero `any` type annotations — Zero-Any Policy enforced
+- Zero `@ts-ignore` / `@ts-expect-error` — clean
+- Zero `TODO` / `FIXME` comments in source
+
+### Production Readiness (Honest Assessment)
+
+| Domain | Score | Verified Status |
+|--------|-------|-----------------|
+| Video System (Hedra) | 9.5/10 | Real API calls, scene grading, editor, avatars — cleanest code in codebase |
+| AI Orchestration (Jasper) | 9.5/10 | 50 real tools, OpenRouter calls, 3-layer prompt, mission tracking |
+| API Routes (393 total) | 9/10 | 100% auth, 100% Zod, 100% try/catch — Mollie webhook + a few admin routes need fixes |
+| CRM & Sales | 9/10 | Contacts, deals, leads, pipeline — fully implemented |
+| Website Builder | 9/10 | Editor, pages, blog, domains, SEO, navigation — all real |
+| Email & SMS | 8.5/10 | CAN-SPAM/TCPA compliant — delivery tests skipped (need API keys) |
+| Public Pages & Onboarding | 9/10 | 4-step onboarding, Stripe checkout, live AI demo — all working |
+| Analytics & Growth | 8.5/10 | Dashboard, pipeline, growth strategy — all real implementations |
+| Payments & Commerce | 8.5/10 | Stripe integrated, cart/checkout real — billing portal UI missing |
+| Authentication | 8/10 | Firebase Admin SDK verified, secure — RBAC enforcement is binary not granular |
+| Social Media | 6/10 | Twitter works, Facebook/Instagram/TikTok/LinkedIn are stubs |
+| **E2E Testing** | **2/10** | **14 spec files, ~130 shallow page-load tests, ~5% effective coverage, 0 user journeys** |
+| **Unit/Integration Testing** | **6/10** | **74 files, 1,483 passing — but zero coverage on video, Jasper, payments, agents** |
 
 ---
 
-## COMPLETED: Cinematic Content Engine (March 16, 2026)
+## System Health Report (Code Review — March 20, 2026)
 
-The RenderZero-caliber cinematic controls are BUILT and INTEGRATED into the video pipeline. This is NOT a bolt-on — it IS the video system now.
+This section documents every real issue found by reading actual source code. No claims from docs.
 
-### What Was Built
+### Critical Issues
 
-**Shared Components** (`src/components/studio/`):
-- `CinematicControlsPanel` — 5 numbered sections (Subject & Framing, Lighting & Mood, Camera Gear, Style & Aesthetics, Elements Tool). Accepts subject/environment/renderElements props. Compact mode for embedding.
-- `VisualPresetPicker` — Visual grid modal with search for all 250+ presets
-- `ConstructedPromptDisplay` — Live prompt preview with edit/copy/save/reset
-- `CharacterElementsTool` — Up to 4 characters with Face/Outfit/Object/Scene slots, Single/Stitch mode, Character Library (wired to Firestore), Global Reference, Additional References (14 slots)
-- `GenerateEditToggle` — Generate vs Edit (Inpaint) mode + Narrative Angle Prompting
-- `RenderQueuePanel` — Queue with status tracking, cancel/retry/select
-- `CharacterLibraryModal` — Save/load characters from `/api/studio/characters`
-- `PresetLibraryModal` — Save/load custom presets from `/api/studio/presets`
+#### 1. E2E Tests — Page-Load Verification Only (~5% Coverage)
 
-**Video Pipeline Integration** (`/content/video`):
-- Pipeline stepper: **Studio → Storyboard → Generate → Assembly → Post-Production**
-- Studio step (step 1) = full RenderZero UI (StudioModePanel) — describe concept, set cinematic style
-- Storyboard step (step 2) = scene grid with per-scene cinematic controls:
-  - Each scene card is clickable → opens detail editor below
-  - Left: title, script/dialogue (screenplay format), visual description, background, duration
-  - Right: full CinematicControlsPanel in compact mode (per-scene overrides)
-  - "Generate All Previews" button batch-generates thumbnails via `/api/studio/generate`
-- CinematicConfig flows end-to-end:
-  - `PipelineScene.cinematicConfig` field (src/types/video-pipeline.ts)
-  - `/api/video/generate-scenes` accepts cinematicConfig per scene (Zod validated)
-  - `/api/video/regenerate-scene` same
-  - `/api/video/project/save` persists cinematicConfig to Firestore
-  - `scene-generator.ts:buildHedraTextPrompt` calls `buildPromptFromPresets()` when cinematicConfig present
-  - `hedra-prompt-agent.ts` includes cinematicConfig in storyboard context for AI prompt optimization
+14 spec files exist but every test follows the same pattern: navigate to page → assert element exists → done. Zero complete user workflows tested.
 
-**Image Generator** (`/content/image-generator`):
-- Standalone page using StudioModePanel for single-shot image/video generation
-- Same cinematic controls, provider selection, render queue
+**What's covered (shallow):** Login form elements, signup first 2 steps, dashboard layout, CRM table structure, social page loads, video stepper presence, analytics card presence, commerce page structure, website builder panels, settings cards, forms page, outreach page.
 
-**Navigation** (`src/lib/constants/subpage-nav.ts`):
-- "Content Generator Hub" with tabs: Video | Image | Editor | Library | Audio Lab
-- Sidebar label: "Content Generator" (under Marketing) — isActive covers all `/content/` paths
-- Constant renamed from `VIDEO_TABS` to `CONTENT_GENERATOR_TABS`
+**What has ZERO coverage (170+ pages):** Content studio, voice lab, image generator, lead discovery/research/ICP, deal detail/edit, contact detail/edit, mission control execution, workflows execution, email campaigns, social posting, website editing, growth strategy, coaching, schemas, onboarding completion, checkout payment flow, video generation end-to-end.
 
-**Backend**:
-- 7 API routes at `/api/studio/*` (generate, status polling, providers, presets CRUD, characters CRUD, cost)
-- Provider router: **Hedra (primary for images)**, Fal.ai (Flux), Google Imagen 3, OpenAI DALL-E 3, Kling 3.0 — fallback chain with retry-on-auth-failure
-- Generated images auto-added to media library (`organizations/{id}/media`) with projectId/campaignId metadata
-- Cost tracker logging to Firestore per generation (fire-and-forget — never crashes the response)
-- 250+ cinematic presets with prompt fragment assembly
+**Auth setup depends on** `seed-e2e-users.mjs` which is NOT in git.
 
----
+#### 2. eslint-disable Comments (24 across 19 files)
 
-## COMPLETED: Jasper Orchestration Pipeline + Mission Control Overhaul (March 16, 2026)
+Per CLAUDE.md zero-tolerance rule, these must be removed. Breakdown by type:
+- `react-hooks/exhaustive-deps` — 7 occurrences (StepStoryboard ×3, VoiceRecorderStudio ×2, EditorMediaPanel, website editor, subscription, training)
+- `@next/next/no-img-element` — 3 occurrences (OptimizedImage, theme, email-templates)
+- `@typescript-eslint/no-require-imports` — 2 occurrences (ffmpeg-utils)
+- `@typescript-eslint/no-implied-eval` — 2 occurrences (formula-engine, distillation-engine)
+- `no-console` — 2 occurrences (logger, orphaned-files-report)
+- `no-template-curly-in-string` — 3 occurrences (notifications/templates ×2, translations)
+- `require-atomic-updates` — 2 occurrences (gemini-service, ai-agent-action)
+- `@next/next/no-html-link-for-pages` — 1 occurrence (public form)
 
-> **Status: BUILT** — All 6 orchestration steps implemented and Mission Control UI overhauled.
-> Jasper orchestrates multi-step content creation (research → strategy → script → cinematic design → thumbnails → ready for review) and Mission Control shows every step with rich output previews.
+#### 3. Promise.resolve(null/[]) Stubs (11 in production code)
 
-### The Problem
+| File | Count | Impact |
+|------|-------|--------|
+| `src/lib/agent/instance-manager.ts` | 2 | `getActiveInstance()` + `removeActiveInstance()` are NOPs — agent lifecycle broken |
+| `src/lib/enrichment/enrichment-service.ts` | 3 | Conditional fallbacks when features disabled — acceptable pattern |
+| `src/lib/agents/marketing/facebook/specialist.ts` | 1 | Returns null on persona miss → caller throws |
+| `src/lib/scraper-intelligence/scraper-queue.ts` | 3 | Dequeue edge cases return null — callers can't distinguish empty vs error |
+| `src/lib/scraper-intelligence/scraper-cache.ts` | 2 | Cache miss returns — arguably correct behavior |
 
-Jasper currently passes user prompts straight to the script generator without research or enrichment. The user should be able to say something as simple as *"Build a video about how SalesVelocity.ai helps small business owners"* and receive a fully researched, scripted, cinematically designed, thumbnail-previewed storyboard ready for review and approval.
+**Verdict:** instance-manager.ts and facebook/specialist.ts are real violations. enrichment-service.ts and scraper-cache.ts are defensible patterns.
 
-Mission Control exists (full backend + UI) but doesn't match the user's vision: a project dashboard where each request shows its delegation steps, which agent did what, and clicking a step takes you to its completed output.
+#### 4. RBAC Enforcement Gap
 
-### Jasper's Orchestration Chain (for video creation)
+47 granular permissions defined in `src/types/unified-rbac.ts` with role-to-permission mappings. But API routes use:
+- `requireAuth()` — any authenticated user (most routes)
+- `verifyAdminRequest()` — binary admin/not-admin check (admin routes)
 
-Jasper is the CONDUCTOR. He delegates ALL work to specialists. He never writes scripts, picks camera angles, or generates images. He routes and waits.
+The `hasUnifiedPermission()` function exists but is barely called. Result: manager and member roles have effectively identical API access.
 
-```
-User: "Build a video about how SalesVelocity.ai helps small business owners"
+Also: `POST /api/admin/set-claims` only accepts `z.literal('admin')` — can't set owner/manager/member via API.
 
-Step 1: Jasper → Research Agent
-  "Research SalesVelocity.ai features and how they help small business owners.
-   Include pain points, competitive advantages, key value propositions."
-  Agent returns: research findings document
+#### 5. Six Failing Test Suites (18 tests)
 
-Step 2: Jasper → Strategy Agent (uses research output)
-  "Using this research, determine the top 3-5 ways SalesVelocity.ai helps
-   small business owners. Identify the strongest narrative angle for a video."
-  Agent returns: messaging strategy + narrative angle
+| Suite | Path |
+|-------|------|
+| BrowserController | `tests/integration/BrowserController.test.ts` |
+| Discovery Engine | `tests/integration/discovery-engine.test.ts` |
+| Team Coaching Engine | `tests/lib/coaching/team-coaching-engine.test.ts` |
+| Phase 5 Backward Compat | `tests/integration/phase5-backward-compatibility.test.ts` |
+| Training Manager | `tests/integration/scraper-intelligence/training-manager-integration.test.ts` |
+| Temporary Scrapes | `tests/integration/scraper-intelligence/temporary-scrapes-integration.test.ts` |
 
-Step 3: Jasper → Video Specialist (uses strategy output)
-  "Create a 30-second commercial script targeting small business owners.
-   Key messages: [from strategy]. Tone: professional but approachable."
-  Agent returns: scenes with scripts, visual descriptions, backgrounds
+These need immediate diagnosis and fix.
 
-Step 4: Jasper → Cinematic Director (NEW — uses scenes)
-  "For each scene, select appropriate shot type, camera body, lighting,
-   film stock, and style to create a cohesive commercial feel."
-  Agent returns: cinematicConfig per scene
+### Medium Issues
 
-Step 5: Jasper → Image Generator (uses scenes + cinematic configs)
-  "Generate preview thumbnails for each scene using the cinematic settings."
-  Thumbnails generated via /api/studio/generate
-
-Step 6: Jasper → User
-  "Your video storyboard is ready for review: [link to Mission Control]"
-  Storyboard is COMPLETE — scripts, cinematic settings, AND thumbnails already generated.
-```
-
-**CRITICAL:** Thumbnails MUST be generated BEFORE the user sees the storyboard. They are part of the deliverable, not an afterthought. The user needs visual previews to make informed approve/reject decisions.
-
-### Mission Control Overhaul
-
-**Current state:** Mission Control exists with full backend (Firestore persistence, SSE streaming, approval gates, mission CRUD) and UI (3-panel layout, timeline, step cards, agent avatars). But the UX doesn't match what's needed.
-
-**Target UX:**
-```
-Mission Control
-├─ Request: "Video — SalesVelocity for Small Business"
-│  Status: Complete · 6/6 steps
-│  ├─ ✅ Step 1: Research (Research Agent)         → click → research findings
-│  ├─ ✅ Step 2: Strategy (Strategy Agent)          → click → messaging doc
-│  ├─ ✅ Step 3: Script Writing (Video Specialist) → click → scripts per scene
-│  ├─ ✅ Step 4: Cinematic Design (Cinematic Dir)  → click → settings summary
-│  ├─ ✅ Step 5: Thumbnail Gen (Image Generator)   → click → preview gallery
-│  └─ ✅ Step 6: Ready for Review                  → click → /content/video (storyboard)
-│
-├─ Request: "Blog post about AI in sales"
-│  Status: In Progress · 2/4 steps
-│  ├─ ✅ Step 1: Research (Research Agent)          → click → research findings
-│  ├─ 🔄 Step 2: Writing (Content Agent)           → in progress...
-│  ├─ ⏳ Step 3: SEO Optimization                   → pending
-│  └─ ⏳ Step 4: Ready for Review                   → pending
-```
-
-**Key requirements:**
-1. Each mission (request) shows ALL steps with agent attribution
-2. Clicking a step shows the agent's actual output (not just a summary)
-3. Clicking "Ready for Review" navigates to the completed product's page
-4. Works for ANY task type (video, blog, campaign, social, email — not just video)
-5. Real-time updates via existing SSE streaming
-6. This is where Jasper sends users for ALL review — not directly to product pages
-
-### What Was Built (March 16, 2026 — Session 2)
-
-**Mission Control UI Overhaul:**
-- Fixed `trackMissionStep` stepId bug — RUNNING/COMPLETED now share same stepId via Map
-- Rich output previews in step cards (research chips, strategy angles, thumbnail strips, cinematic badges)
-- Type-specific detail rendering in right panel (formatted research, strategy docs, cinematic grids, thumbnail galleries, storyboard review buttons)
-- 8 new agent avatars for orchestration chain (Research, Strategy, Script Writer, Cinematic Director, Image Generator, Video Director, Content, Commerce, Outreach, Intelligence)
-- Dashboard-links with orchestration step mappings, human-readable step names, dynamic review links from toolResult
-
-**Jasper 6-Step Orchestration Chain (produce_video):**
-- Step 1: Research Agent — LLM-powered topic research with key insights extraction
-- Step 2: Strategy Agent — Narrative angle, key messages, audience, tone, CTA
-- Step 3: Script Writing — Video Specialist creates enriched storyboard using strategy context
-- Step 4: Cinematic Director — LLM selects per-scene cinematography (shot type, lighting, camera, film stock, art style)
-- Step 5: Thumbnails — Auto-generates preview images per scene via provider-router with cinematic presets
-- Step 6: Ready for Review — Complete storyboard link with full orchestration metadata
-- Each step writes independently to mission-persistence for real-time SSE streaming
-- Non-fatal steps (research/strategy/cinematic/thumbnails) fail gracefully — chain continues
-
-**UI/Navigation Fixes:**
-- Sidebar: "Video" → "Content Generator" (isActive covers all `/content/` paths)
-- Tab: "Image Generator" → "Image"
-- Tab: "Voice Lab" → "Audio Lab", page heading updated, inner tab "Studio" → "Voice Studio"
-- Upload slots accept `image/*,video/*` instead of image-only
+| Issue | File | Fix |
+|-------|------|-----|
+| Mollie webhook — no signature verification | `src/app/api/webhooks/mollie/route.ts` | Add `x-mollie-signature` HMAC check |
+| Admin templates inconsistent auth | `src/app/api/admin/templates/route.ts` | Replace `requireUserRole()` with `verifyAdminRequest()` |
+| Scraper start missing rate limiting | `src/app/api/admin/growth/scraper/start/route.ts` | Add `rateLimitMiddleware()` |
+| Workflow schemas too loose | `src/app/api/workflows/route.ts` | Replace `z.record(z.unknown())` with strict action/trigger schemas |
+| `as unknown as Firestore` casts | `src/lib/workflow/workflow-service.ts` | Type the DAL correctly for Admin SDK |
+| IP-based rate limiting | `src/lib/auth/` | Switch to user-ID-based (Redis when wired) |
+| Email sender `from` not validated | `src/app/api/email/send/route.ts` | Verify `from` is org-owned address |
 
 ---
 
-## COMPLETED: Hedra Integration + Pipeline Hardening + Media Library (March 17, 2026 — Session 3)
+## Remediation Plan
 
-### Hedra as Primary Image Provider
-- `generateHedraImage()` added to `hedra-service.ts` — same `/generations` endpoint, `type: 'image'`, auto-discovers image model from `/models` API
-- Hedra is now the DEFAULT image provider for all generation (no additional API keys needed)
-- Image fallback chain: hedra → google → fal → openai (with retry-on-auth-failure)
-- Hedra image results are stored as assets — polling fetches asset URL from `/assets?type=image` list
-- Image model ID cached for 10 minutes to avoid repeated `/models` calls
+### Phase 1: Fix Broken Things (Immediate)
 
-### Hedra Video Generation — Two Modes Documented
-- **Kling O3 T2V (prompt-only, no avatar):** Generates everything from text. Audio is NATIVE — no inline TTS. Speech text appended as dialogue in prompt.
-- **Character 3 (avatar mode):** Portrait + voice + script → lip-synced video. Uses inline `audio_generation` for TTS.
-- Script generation service updated with full Hedra expertise — agent understands both modes and writes scripts accordingly
+**Goal:** Green test suite, zero eslint-disable violations, no stub functions.
 
-### Mission Control Review Page
-- New route: `/mission-control/review?mission=xxx&step=yyy`
-- Type-specific renderers: research findings, strategy docs, cinematic configs, thumbnail galleries, draft summaries
-- "Review Details" links on both step cards and detail panel for all completed steps
+#### 1A. Fix 6 Failing Test Suites
+- `BrowserController.test.ts` — extractTechStack eval error
+- `discovery-engine.test.ts` — likely stale mock or API change
+- `team-coaching-engine.test.ts` — likely stale mock or signature mismatch
+- `phase5-backward-compatibility.test.ts` — 66s timeout, likely integration dependency
+- `training-manager-integration.test.ts` — scraper intelligence service change
+- `temporary-scrapes-integration.test.ts` — scraper intelligence service change
+- Target: 74/74 suites passing, 0 failures
 
-### Pipeline Fixes (All Were Silent Failures)
-- **Truncation removed:** All 31 `.slice(0, 2000)` on `toolResult` removed — full output stored
-- **Cinematic design (Step 4):** Fixed JSON parsing (robust fence stripping + regex fallback), sceneNumber type mismatch (Number() conversion), undefined values filtered before Firestore write, actual errors reported instead of silent "default settings"
-- **Cinematic preset IDs:** Step 4 prompt now outputs exact preset IDs matching the catalog (e.g., `shot-tracking`, `cam-sony-venice`)
-- **PresetSelector fallback:** Displays raw value title-cased when no exact preset ID match exists
-- **Thumbnail failures:** Per-scene errors captured and reported in mission step + Jasper response
-- **Cost logging:** Made fire-and-forget — `undefined` campaignId no longer crashes the route
-- **Character consistency:** Script agent rule 8 — when no character described, invent ONE specific protagonist for all scenes
+#### 1B. Remove All 24 eslint-disable Comments
+Work through each file, fix the underlying code:
+- **react-hooks/exhaustive-deps (7):** Add proper dependency arrays or extract stable refs with useCallback/useRef
+- **@next/next/no-img-element (3):** Replace `<img>` with `next/image` or document legitimate exception with comment justification (user-uploaded blob URLs)
+- **@typescript-eslint/no-require-imports (2):** Convert to dynamic `import()` in ffmpeg-utils
+- **@typescript-eslint/no-implied-eval (2):** Use `Function` constructor with explicit typing or restructure formula evaluation
+- **no-console (2):** Replace with logger utility (logger.ts is the logger itself — restructure to avoid circular dep)
+- **no-template-curly-in-string (3):** Use string concatenation or template tag functions
+- **require-atomic-updates (2):** Add explicit variable scoping or mutex
+- **@next/next/no-html-link-for-pages (1):** Replace with Next.js `Link` component
 
-### Media Library Integration
-- Every image generated via `/api/studio/generate` auto-creates a media library record
-- Metadata includes: provider, model, generationId, projectId, campaignId
-- Media API fallback for missing composite index (queries without orderBy when index not built)
-- Backfilled 8 existing storyboard images into media library
+#### 1C. Fix Promise.resolve Stubs
+- **instance-manager.ts:** Implement real Firestore-backed instance tracking (or Redis if available)
+- **facebook/specialist.ts:** Return a sensible default persona instead of null (prevent downstream crash)
+- Leave enrichment-service.ts and scraper-cache.ts as-is (defensible conditional patterns)
 
-### Storyboard UX
-- Preview error banner (dismissible) shows actual error message instead of silent swallow
-- SceneCard `forwardRef` fix for framer-motion AnimatePresence warning
-- Auto-refresh project data on tab focus (picks up background changes)
-- `?load=` URL param always works (removed stale `autoLoadAttempted` ref)
+### Phase 2: Security & Auth Hardening (Pre-Launch)
 
-### Known Issues for Next Session
-- **Preview images not sticking in storyboard UI** — `screenshotUrl` values are in Firestore but the Zustand store doesn't reflect them after page load. Needs investigation into how `loadProject` populates scenes.
-- **Hedra credits exhausted** — 4/8 video scenes generated successfully, remaining 4 need credits top-up
-- **Hedra CDN URL expiration** — signed URLs expire (~1hr). Need to either refresh on access or persist images to our own storage.
-- **Media library composite index** — `type + createdAt` index needed in Firebase Console for sorted queries (fallback works but unsorted)
+#### 2A. Enforce Granular RBAC
+- Audit all 393 API routes for which role should have access
+- Replace bare `requireAuth()` with `requireRole(request, [...allowedRoles])` where appropriate
+- Wire `hasUnifiedPermission()` checks into sensitive operations (billing, user management, data export)
+- Fix `set-claims` endpoint to accept all 4 roles: owner, admin, manager, member
 
----
+#### 2B. Webhook & API Security
+- Add Mollie webhook signature verification (`x-mollie-signature`)
+- Validate email `from` address is org-owned before sending
+- Add rate limiting to unprotected admin routes (scraper/start, test-api-connection, promotions, pricing-tiers)
+- Fix admin/templates auth pattern (use `verifyAdminRequest()`)
 
-## COMPLETED: Scene Review, Grading & Shot Continuity (March 19, 2026 — Session 4)
+#### 2C. Strengthen Loose Schemas
+- Replace `z.record(z.unknown())` in workflow routes with strict trigger/action schemas
+- Fix `as unknown as Firestore` type casts in workflow-service.ts
 
-### The Problem
-When Hedra generates video scenes, there's no feedback loop — the AI doesn't learn from failures. Actors sometimes speak too fast, drop words, or miss the full script. Additionally, when scripts are too long and split across multiple scenes, each scene gets an independently written background, making assembled video look like disconnected clips.
+### Phase 3: Test Coverage (Critical Gaps)
 
-### What Was Built
+#### 3A. E2E Test Rewrite — Real User Journeys
+Priority user flows that need end-to-end Playwright tests:
 
-**Auto-Grading Pipeline (Deepgram + LCS Diff):**
-- `@deepgram/sdk` integrated — API key stored in Firestore via existing `apiKeyService` pattern
-- `transcription-service.ts` — Deepgram Nova-3 speech-to-text with per-word timestamps and confidence
-- `scene-grading-service.ts` — Word-level Longest Common Subsequence diff engine:
-  - `scriptAccuracy` = (LCS length / original word count) × 100
-  - `actualWpm` vs `targetWpm` with pacing detection (good / too_fast / too_slow)
-  - `wordsDropped` and `wordsAdded` arrays for granular feedback
-  - `overallScore` = weighted 60% accuracy + 20% pacing + 20% confidence
-  - B-roll handling: empty scripts return perfect grade
-- `extractAudioFromVideo()` in `ffmpeg-utils.ts` — strips video, outputs 16kHz mono WAV
-- `POST /api/video/grade-scene` — downloads video → ffmpeg audio → Deepgram → grade → return
-- Auto-grading fires non-blocking after poll detects scene completion (no UI blocking)
+| Flow | What to Test |
+|------|-------------|
+| **Complete signup** | Industry → niche → account creation → API key → dashboard |
+| **Lead CRUD** | Create lead → edit → view detail → delete |
+| **Deal pipeline** | Create deal → drag between stages → verify persistence |
+| **Video generation** | Create project → storyboard → generate (mock Hedra) → review |
+| **E-commerce checkout** | Add to cart → checkout → Stripe payment (test mode) → order confirmation |
+| **Email sequence** | Create sequence → enroll lead → verify sends |
+| **Social posting** | Compose → schedule → verify in queue |
+| **Website builder** | Create page → edit content → publish → verify public |
+| **Workflow execution** | Create workflow → trigger → verify actions fire |
+| **Settings changes** | Change API key → verify persistence |
 
-**Human Review + Training Center:**
-- `POST /api/video/scene-review` — mirrors `screenwriter-feedback` pattern exactly
-- 1-5 star rating → 0-100 score → Training Center pipeline
-- Auto-flags sessions scoring < 60 (3/5 stars) for improvement
-- `goldenMasterId: 'video-scene-generator'` links feedback to the correct Golden Master
-- Reviews submitted on approve, reject, and star-rate actions
+Also: commit `seed-e2e-users.mjs` to git or replace with programmatic user creation in auth.setup.ts.
 
-**UI Enhancements:**
-- `StarRating.tsx` — 5 clickable stars (lucide `Star`), controlled component
-- `AutoGradeMetrics.tsx` — Compact metrics: overall %, accuracy %, WPM, pacing badge. Expandable dropped/added words. Color-coded thresholds.
-- `SceneProgressCard.tsx` — Added star rating, auto-grade metrics, shot group label
-- `StepGeneration.tsx` — Auto-grade trigger on scene complete, training center integration on approve/reject/rate
+#### 3B. Unit Tests for Untested Critical Systems
 
-**Enhanced Regeneration:**
-- `regenerate-scene/route.ts` accepts optional `autoGradeData` + `feedback`
-- Builds structured revision notes: `REVISION DIRECTION`, `TECHNICAL ISSUES`, `CORRECTIVE ACTION`
-- Example: if too_fast → "Slow down delivery"; if words dropped → "Ensure these words are spoken: [list]"
+| System | Files to Test | Priority |
+|--------|---------------|----------|
+| Hedra video generation | `hedra-service.ts`, `scene-generator.ts` | CRITICAL |
+| Jasper tool execution | `jasper-tools.ts` (mock OpenRouter, test each tool) | CRITICAL |
+| Scene grading | `scene-grading-service.ts`, `transcription-service.ts` | HIGH |
+| Avatar profiles | `avatar-profile-service.ts` | HIGH |
+| Stripe checkout flow | `payment-service.ts`, webhook handler | HIGH |
+| Email/SMS delivery | Un-skip existing tests, add API key to test env | HIGH |
+| Agent swarm coordination | `base-manager.ts`, signal routing | MEDIUM |
 
-**Shot Continuity System:**
-- `shotGroupId` field on `PipelineScene` and `ScriptScene` — links scenes that are part of the same continuous shot
-- Script generation AI instructed to split long dialogues across scenes with same `shotGroupId`
-- Continuation scenes use IDENTICAL `visualDescription` + `backgroundPrompt` (word-for-word copy)
-- Hedra Prompt Agent detects shot groups and prepends "CONTINUATION SHOT" cue
-- Scene generator tracks establishing prompts per group and injects continuation context
+### Phase 4: Launch Gaps (Pre-Launch Must-Haves)
 
-**Phonetic Speech Rules (Hedra TTS):**
-- Script AI now writes URLs phonetically: "salesvelocity.ai" → "sales velocity dot A I"
-- Abbreviations spelled out: "CRM" → "C-R-M"
-- Dollar amounts: "$1,500" → "fifteen hundred dollars"
-- Percentages: "50%" → "fifty percent"
+| Gap | Details | Effort |
+|-----|---------|--------|
+| **Billing portal UI** | Subscription APIs exist but no pages (view/manage subscription, invoices, payment methods) | Medium |
+| **Facebook/Instagram/TikTok** | Stubs only — blocked on Meta Developer Portal approval | Blocked |
+| **No in-app password change** | Only reset via email — need POST /api/user/password-change | Small |
+| **No account deletion** | GDPR concern — need self-service deletion flow | Medium |
+| **No MFA/2FA** | `mfaEnabled` field exists but no setup flow | Medium |
+| **No email-based user invites** | Invite modal exists in UI but no transactional email sent | Small |
 
-**Storyboard Preview Fix:**
-- Changed from photorealistic to illustration/storyboard concept art style
-- Silhouettes/faceless figures instead of specific character faces
-- Muted warm tones, sketch-like quality, directorial annotations
-- Scene preview GET endpoint: added error handling, logging, data validation
+### Phase 5: Polish (Post-Launch)
 
-### New Types
-- `TranscriptionWord`, `TranscriptionResult`, `PacingScore`, `SceneAutoGrade`, `SceneReview` — `src/types/scene-grading.ts`
-- `autoGrade?`, `autoGradeStatus?` on `SceneGenerationResult`
-- `shotGroupId?` on `PipelineScene`
-- `'deepgram'` added to `APIServiceName`, `transcription.deepgram.apiKey` in `APIKeysConfig`
-
-### New Files (8)
-| File | Purpose |
+| Item | Details |
 |------|---------|
-| `src/types/scene-grading.ts` | Transcription, grading, review types |
-| `src/lib/video/transcription-service.ts` | Deepgram Nova-3 transcription wrapper |
-| `src/lib/video/scene-grading-service.ts` | LCS diff + WPM + pacing grading engine |
-| `src/app/api/video/grade-scene/route.ts` | Auto-grade API endpoint |
-| `src/app/api/video/scene-review/route.ts` | Training center review submission |
-| `src/app/(dashboard)/content/video/components/StarRating.tsx` | Star rating UI |
-| `src/app/(dashboard)/content/video/components/AutoGradeMetrics.tsx` | Auto-grade metrics display |
-
-### Modified Files (11)
-| File | Changes |
-|------|---------|
-| `src/types/video-pipeline.ts` | Added `autoGrade?`, `autoGradeStatus?`, `shotGroupId?` |
-| `src/types/api-keys.ts` | Added `transcription.deepgram`, `'deepgram'` to `APIServiceName` |
-| `src/lib/api-keys/key-mapping.ts` | Added `deepgram` mapping |
-| `src/lib/api-keys/api-key-service.ts` | Added `deepgram` case |
-| `src/lib/video/ffmpeg-utils.ts` | Added `extractAudioFromVideo()` |
-| `src/app/(dashboard)/content/video/components/SceneProgressCard.tsx` | Star rating, auto-grade, shot group |
-| `src/app/(dashboard)/content/video/components/StepGeneration.tsx` | Auto-grade trigger, training center |
-| `src/app/(dashboard)/content/video/components/StepStoryboard.tsx` | Illustration style previews |
-| `src/app/api/video/regenerate-scene/route.ts` | Auto-grade data + structured revision notes |
-| `src/lib/video/script-generation-service.ts` | Shot groups + phonetic speech rules |
-| `src/lib/video/hedra-prompt-agent.ts` | Shot group awareness |
-| `src/lib/video/scene-generator.ts` | Continuation cues |
-
----
-
-## LAUNCH GAPS (Identified March 20, 2026 — Full System Audit)
-
-### Domain Readiness Scorecard
-
-| Domain | Score | Status |
-|--------|-------|--------|
-| Authentication & RBAC | 9/10 | READY |
-| Payments & Commerce | 8.5/10 | READY (billing UI needed) |
-| CRM & Sales | 9.5/10 | READY |
-| AI Orchestration (Jasper) | 9.5/10 | READY |
-| Video System | 9/10 | READY |
-| Email & SMS | 9/10 | READY |
-| Social Media | 6/10 | PARTIAL (Twitter only, FB/IG/TikTok stub) |
-| Website Builder | 9/10 | READY |
-| Analytics & Growth | 9/10 | READY |
-| UI Components | 8/10 | READY |
-| API Validation (Zod) | 9.5/10 | READY (was falsely reported as 4/10 — 173/175 routes validated) |
-| Testing | 3/10 | NEEDS WORK |
-| Security | 8/10 | READY (remove creds from repo) |
-| CI/CD & DevOps | 8.5/10 | READY |
-| Performance | 7/10 | NEEDS WORK |
-
-### Critical (Must Fix Before Launch)
-| Gap | Details |
-|-----|---------|
-| **Billing portal UI** | Subscription APIs exist but no user-facing pages (view/manage subscription, invoice history, payment methods) |
-| **Unit test coverage** | Only 4 unit test files for 1,628 source files. E2E good (91 specs) but service layer untested |
-| ~~135+ API routes lack Zod validation~~ | **FALSE POSITIVE (March 20)** — Full sweep of 175 routes found 173 already validated with inline Zod schemas. Only 2 fixes needed (scene-preview/save .parse→.safeParse, media POST raw cast→Zod). Actual coverage: ~99%. |
-
-### High Priority (Pre-Launch)
-| Gap | Details |
-|-----|---------|
-| **Facebook/Instagram/TikTok** | Stubs only — blocked on Meta Developer Portal approval |
-| **No usage metering/credits** | Can't do usage-based billing |
-| **No in-app password change** | Only reset via email — need `POST /api/user/password-change` |
-| **No account deletion** | GDPR concern — need self-service deletion with confirmation |
-| **No MFA/2FA** | `mfaEnabled` field exists in UnifiedUser but no setup flow |
-| **No email-based user invites** | Invite modal exists in UI but no transactional email is sent |
-| **LinkedIn** | Messaging only, no full posting API |
-| **QuickBooks** | OAuth framework only — payment execution incomplete |
-
-### Medium Priority (Can Ship Without, Fix Soon After)
-| Gap | Details |
-|-----|---------|
-| **Rate limiting in-memory only** | Won't scale multi-instance — wire up Redis (REDIS_URL already in env) |
-| **npm audit non-blocking in CI** | `npm audit --audit-level=high` should fail builds |
-| **No bundle size tracking** | 4.4 GB .next build — need webpack-bundle-analyzer in CI |
-| **Missing UI components** | Popover, Combobox, Breadcrumb — standard SaaS patterns absent |
-| **Data fetching not standardized** | Direct `fetch()` at component level — React Query installed but not adopted |
-| **No Firestore indexes documented** | Composite indexes needed for sorted queries at scale |
-| **Seed scripts lack validation** | No Zod validation, no idempotency checks, part-based dependency chain |
-
-### Low Priority (Post-Launch Polish)
-| Gap | Details |
-|-----|---------|
-| Calendly integration | Stub only — meeting scheduling workaround exists |
-| Razorpay payment provider | Stub — 6 other providers work |
-| Telnyx voice provider | Stub — Twilio works |
+| Redis-backed rate limiting | Wire up REDIS_URL (exists in env) for multi-instance scaling |
+| Bundle size tracking | 4.4 GB .next build — add webpack-bundle-analyzer to CI |
+| React Query adoption | Direct fetch() at component level — React Query installed but not adopted |
+| Firestore composite indexes | Document all needed indexes for sorted queries at scale |
 | Light mode support | Dark-only by design currently |
-| Component documentation (Storybook) | 212 components undocumented visually |
 | Login history / session management | lastLoginAt field exists, not queried |
-| Audit logging gaps | Some routes log, not comprehensive |
 
 ---
 
-## NEXT BUILD: Per-Scene Audio Cues + Pipeline Audio Integration
+## Completed Work (Summary)
 
-> **Priority: NEXT**
-> **Goal:** Video scripts can include diegetic audio direction (music characters hear, radio, sound design) per scene. MiniMax generates matching tracks. Multi-scene continuous audio is handled in the Video Editor post-production.
+These features are BUILT and VERIFIED by code review. Condensed from full build logs.
 
-### Architecture Decision
+### Cinematic Content Engine (March 16, 2026)
+RenderZero-caliber cinematic controls integrated into video pipeline. 250+ presets, 5-section control panel, character elements tool, visual preset picker, render queue. Pipeline: Studio → Storyboard → Generate → Assembly → Post-Production. 7 API routes at `/api/studio/*`. Provider chain: Hedra → Fal.ai → Google Imagen → OpenAI DALL-E → Kling.
 
-**Per-scene audio (automated in pipeline):**
-- `audioCue` text field on `PipelineScene` — describes what audio plays in that scene
-- AI script writer naturally writes audio cues when the story calls for it (not forced)
-- Examples: "80s hip-hop blasting from car stereo", "soft piano underscore", "radio newscast interrupts"
-- MiniMax generates a matching track per scene during orchestration
-- Single-scene only — audio starts and ends with the scene
+### Jasper Orchestration Pipeline (March 16, 2026)
+6-step orchestration chain: Research → Strategy → Script → Cinematic Design → Thumbnails → Review. Mission Control UI with step-level tracking, rich output previews, SSE streaming, 8 agent avatars. Each step writes independently for real-time progress.
 
-**Multi-scene continuous audio (manual in editor):**
-- Background music spanning multiple scenes is handled in Video Editor post-production
-- User lays a continuous track over the assembled timeline
-- No per-scene restart — proper timeline-based audio mixing
-- This already has infrastructure: `EditorAudioTrack` type, FFmpeg audio-mix API
+### Hedra Integration (March 17, 2026)
+Hedra as sole video engine. Two modes: Kling O3 T2V (prompt-only, native audio) + Character 3 (avatar + inline TTS). Image generation via same API. CDN URL handling, model caching, asset polling. Media library auto-integration.
 
-### Build Order
-
-1. **Add `audioCue` field to `PipelineScene` type** — optional string field for audio direction
-2. **Update Video Specialist prompt** — teach it that audio cues are available; let it decide when to include them
-3. **Update scene generation** — parse and save `audioCue` from AI script output
-4. **Add MiniMax generation step to orchestration chain** — after scripts, generate audio for scenes with cues
-5. **Add audio cue UI to storyboard scene cards** — text field to edit/add/clear audio direction, audio player for generated track
-6. **Wire per-scene audio into assembly** — FFmpeg mixes individual scene audio during stitching
-7. **Test end-to-end** — Script with audio cues → MiniMax generation → preview in storyboard → assembly with audio
-
-### Key Files
-
-| File | Purpose |
-|------|---------|
-| `CLAUDE.md` | Binding governance for all Claude Code sessions |
-| `docs/single_source_of_truth.md` | Authoritative architecture doc |
-| `src/lib/orchestrator/jasper-tools.ts` | Jasper's 51 tools + orchestration chain |
-| `src/lib/orchestrator/mission-persistence.ts` | Mission tracking (Firestore) |
-| `src/types/video-pipeline.ts` | PipelineScene type (add audioCue here) |
-| `src/lib/video/scene-generator.ts` | Scene generation (parse audioCue) |
-| `src/lib/agents/content/video/specialist.ts` | Video Specialist (update prompt) |
-| `src/app/api/audio/music/generate/route.ts` | MiniMax music generation API |
-| `src/app/(dashboard)/content/video/components/StepStoryboard.tsx` | Storyboard UI (add audio field) |
-| `src/lib/ai/cinematic-presets.ts` | 250+ cinematic preset library |
-| `src/lib/ai/provider-router.ts` | Multi-provider generation router |
-| `src/app/(dashboard)/mission-control/page.tsx` | Mission Control dashboard |
-| `src/hooks/useMissionStream.ts` | SSE streaming hook |
+### Scene Grading & Review (March 19, 2026)
+Deepgram Nova-3 transcription → word-level LCS diff → accuracy/pacing/confidence scoring. Training Center integration. Shot continuity system (shotGroupId). Phonetic speech rules for TTS. Structured revision notes for regeneration.
 
 ---
 
 ## Hedra API Reference
 
 - **Base URL:** `https://api.hedra.com/web-app/public` (auth: `x-api-key`)
-- **Image generation:** `POST /generations { type: "image", ai_model_id, text_prompt, aspect_ratio }` — model auto-discovered from `GET /models` (type=image). Result stored as asset — fetch URL from `GET /assets?type=image`.
-- **Prompt-only video:** Kling O3 Standard T2V (`b0e156da...`) — generates characters + audio natively from text prompt. Does NOT support `audio_generation` (inline TTS). Up to 15s 720p.
-- **Avatar video:** Character 3 (`d1dd37a3...`) — portrait + inline TTS, up to 1080p auto duration.
+- **Image generation:** `POST /generations { type: "image", ai_model_id, text_prompt, aspect_ratio }` — model from `GET /models` (type=image). Result as asset via `GET /assets?type=image`.
+- **Prompt-only video:** Kling O3 Standard T2V (`b0e156da...`) — characters + audio natively. No `audio_generation`. Up to 15s 720p.
+- **Avatar video:** Character 3 (`d1dd37a3...`) — portrait + inline TTS, up to 1080p.
 - **Inline TTS (Character 3 ONLY):** `audio_generation: { type: "text_to_speech", voice_id, text }`
 - **Voice cloning:** `POST /generations { type: "voice_clone", voice_clone: { audio_id, name } }`
 - **87 models** (58 video, 29 image), **69 voices**
-- **Image model:** `Nano Banana Pro T2I` (`96d9d17d...`) — discovered dynamically, cached 10min
-- **CDN:** `imagedelivery.net` — signed URLs with `exp=` parameter (expire ~1hr)
+- **Image model:** `Nano Banana Pro T2I` (`96d9d17d...`) — cached 10min
+- **CDN:** `imagedelivery.net` — signed URLs with `exp=` (expire ~1hr)
 
 ---
 
@@ -463,3 +268,488 @@ When Hedra generates video scenes, there's no feedback loop — the AI doesn't l
 | Facebook/Instagram | Meta Developer Portal approval |
 | LinkedIn official | Marketing Developer Platform approval |
 | Stripe go-live | Production API keys (bank account setup) |
+
+---
+
+## VIDEO PIPELINE: BULLETPROOF END-TO-END PLAN
+
+> **Priority: HIGH — This is the product's core value proposition**
+> **Created: March 20, 2026**
+> **Goal:** Transform the video pipeline from "technically impressive engine" into "a paying customer's first video in under 5 minutes, every time, no confusion."
+>
+> The core promise: **"Clone your face, clone your voice, push a button, get daily video content at 1/10th the cost."** Every item below is judged by how directly it serves that promise.
+
+### Assessment Summary
+
+The video pipeline engineering is solid — Hedra integration, dual-mode generation, auto-grading, Jasper orchestration with approval gates. The gaps are in **user experience, missing table-stakes features, dead code, and disconnected tools.** The system was built inside-out (engine first, experience second). This plan works backwards from the first-time user.
+
+---
+
+### Phase V1: First Video in 5 Minutes (P0 — Do First)
+
+These items block the core value proposition. Without them, no user gets to the "holy shit that's me talking" moment fast enough.
+
+#### V1A. "Clone Yourself" Onboarding Flow
+
+**Problem:** Creating an AI clone requires navigating to Character Studio, understanding avatars, uploading reference images in the right format, configuring a voice separately, then navigating back to Video Studio. Too many steps, too much domain knowledge required.
+
+**Solution:** A single guided flow triggered on first login (or from a "Create Your AI Clone" CTA on the dashboard):
+
+1. **Welcome screen** — "Let's create your AI clone in 2 minutes"
+2. **Face capture** — Webcam snapshot OR file upload. Crop to portrait. Upload as Hedra asset → create avatar profile with `frontalImageUrl`
+3. **Voice capture** — Record 30-second script reading (browser MediaRecorder API) OR upload audio file. Submit to Hedra voice clone endpoint (`POST /generations { type: "voice_clone", voice_clone: { audio_id, name } }`)
+4. **Processing screen** — Animated progress while voice clone processes (poll Hedra status)
+5. **Preview** — Show the user their avatar card with voice preview player. "This is your AI clone."
+6. **Set as default** — Auto-set this avatar as the user's default `avatarId` and `voiceId` on their profile
+7. **CTA** — "Make your first video" → navigates to `/content/video` with avatar pre-selected
+
+**Key Files to Create/Modify:**
+| File | Action |
+|------|--------|
+| `src/app/(dashboard)/onboarding/clone/page.tsx` | NEW — Clone Yourself wizard page |
+| `src/components/onboarding/CloneWizard.tsx` | NEW — Multi-step wizard component |
+| `src/app/api/video/voice-clone/route.ts` | NEW — Proxy to Hedra voice clone endpoint |
+| `src/lib/video/avatar-profile-service.ts` | MODIFY — Add `createFromOnboarding()` method |
+| `src/lib/video/hedra-service.ts` | MODIFY — Add `cloneVoice()` method (endpoint already documented) |
+| `src/app/(dashboard)/layout.tsx` or dashboard page | MODIFY — Add "Create Your AI Clone" CTA if no default avatar exists |
+
+**Acceptance Criteria:**
+- [ ] User goes from zero to having a working avatar + cloned voice in under 2 minutes
+- [ ] Default avatar auto-selected in all future video projects
+- [ ] Flow works with webcam OR file upload (not everyone has a webcam)
+- [ ] Voice clone polling handles the full Hedra lifecycle
+- [ ] Skippable for users who want to use stock characters first
+
+---
+
+#### V1B. Fix Video URL Permanence
+
+**Problem:** Hedra CDN URLs expire after ~1 hour. The persistence layer uploads to Firebase Storage with 365-day signed URLs, but it's fallback logic — if Firebase Storage is unavailable (common in Vercel serverless cold starts), the user gets a dead link the next morning. For a paying customer, this is a deal-breaker.
+
+**Solution:** Make Firebase Storage persistence the **primary** path, not a fallback. Fail the generation step if persistence fails (don't silently degrade to expiring URLs).
+
+**Changes:**
+1. In `video-persistence.ts` — Remove fallback-to-CDN logic. If Firebase Storage upload fails, retry up to 3 times with exponential backoff. Only then mark the scene as `failed` with a clear error message ("Video generated but could not be saved — click Retry").
+2. In `poll-scenes/route.ts` — Don't return a scene as `completed` until the permanent URL is confirmed. Add a new composite status: `persisting` (between Hedra `completed` and our `completed`).
+3. In `StepGeneration.tsx` — Show "Saving..." status during persistence phase so user knows it's not stuck.
+4. Add a **video proxy endpoint** `GET /api/video/stream/[generationId]` that re-fetches from Hedra if the permanent URL is somehow broken (defense in depth, not primary path).
+
+**Key Files:**
+| File | Action |
+|------|--------|
+| `src/lib/video/video-persistence.ts` | MODIFY — Make persistence primary, add retry logic |
+| `src/app/api/video/poll-scenes/route.ts` | MODIFY — Add `persisting` status, block `completed` until permanent URL confirmed |
+| `src/types/video-pipeline.ts` | MODIFY — Add `'persisting'` to `SceneStatus` |
+| `src/app/(dashboard)/content/video/components/StepGeneration.tsx` | MODIFY — Show "Saving..." during persistence |
+
+**Acceptance Criteria:**
+- [ ] Every completed video has a permanent URL that works 24 hours, 7 days, 365 days later
+- [ ] No silent degradation to expiring CDN URLs
+- [ ] User sees clear status during persistence phase
+- [ ] Retry logic handles transient Firebase Storage failures
+
+---
+
+#### V1C. Starter Templates (5 Templates)
+
+**Problem:** When a user opens Video Studio for the first time, they face a blank brief with no guidance. Blank-page paralysis kills conversion. Every competitor has templates.
+
+**Solution:** Ship 5 starter templates that pre-populate the brief, scene structure, and cinematic presets:
+
+| Template | Scenes | Duration | Use Case |
+|----------|--------|----------|----------|
+| **Weekly Sales Update** | 3 (hook → metrics → CTA) | 45s | Sales teams, weekly cadence |
+| **Product Demo** | 4 (problem → solution → demo → CTA) | 60s | Product marketing |
+| **Testimonial/Case Study** | 3 (challenge → solution → results) | 45s | Social proof |
+| **Social Media Ad (Short)** | 2 (hook → CTA) | 15s | TikTok/Reels/Shorts |
+| **Company Announcement** | 3 (news → details → next steps) | 30s | Internal/external comms |
+
+Each template includes:
+- Pre-written brief description
+- Scene structure with placeholder scripts (user replaces specifics)
+- Suggested cinematic preset (e.g., "corporate-clean" for sales update, "vibrant-pop" for social ad)
+- Recommended aspect ratio and platform
+- Default duration per scene
+
+**Key Files:**
+| File | Action |
+|------|--------|
+| `src/lib/video/templates.ts` | NEW — Template definitions with scene structures |
+| `src/app/(dashboard)/content/video/components/TemplatePickerModal.tsx` | NEW — Template selection modal |
+| `src/app/(dashboard)/content/video/page.tsx` | MODIFY — Show template picker on empty state / new project |
+| `src/lib/stores/video-pipeline-store.ts` | MODIFY — Add `loadTemplate(templateId)` action |
+
+**Acceptance Criteria:**
+- [ ] Templates visible on first visit and via "New Project" flow
+- [ ] Selecting a template pre-populates brief, scenes, presets, and aspect ratio
+- [ ] User can customize everything after template loads (not locked in)
+- [ ] Templates are data-driven (easy to add more later without code changes)
+
+---
+
+### Phase V2: Table-Stakes Features (P1 — Do Next)
+
+These features are expected by anyone who has used any video tool in the last 2 years. Missing them makes the product feel incomplete.
+
+#### V2A. Auto-Captions / Subtitles from Deepgram Data
+
+**Problem:** Auto-captions are the #1 expected feature in short-form video. The system already has Deepgram transcription with word-level timestamps from auto-grading. The data exists — it's just not rendered as subtitles.
+
+**Solution:** After scene generation and auto-grading, offer "Add Captions" toggle. When enabled, burn captions into the assembled video via FFmpeg `drawtext` filter using the word-level timestamps from Deepgram.
+
+**Implementation:**
+1. Store `TranscriptionResult` (with word-level timestamps) alongside auto-grade data per scene
+2. Add "Captions" toggle in Assembly step and Post-Production step
+3. When assembly runs with captions enabled:
+   - For each scene, generate SRT/ASS subtitle track from word timestamps
+   - FFmpeg `drawtext` or `subtitles` filter burns text into video
+   - Support 3 caption styles: "Bold Center" (TikTok-style), "Bottom Bar" (YouTube), "Karaoke" (word-by-word highlight)
+4. Caption font/color should pull from Brand Kit (Phase V3) when available, otherwise use sensible defaults (white text, black outline, sans-serif)
+
+**Key Files:**
+| File | Action |
+|------|--------|
+| `src/lib/video/caption-service.ts` | NEW — Generate SRT/ASS from Deepgram word timestamps |
+| `src/lib/video/ffmpeg-utils.ts` | MODIFY — Add `burnCaptions()` function using drawtext/subtitles filter |
+| `src/app/api/video/assemble/route.ts` | MODIFY — Accept `captionStyle` param, integrate caption burn |
+| `src/app/(dashboard)/content/video/components/StepAssembly.tsx` | MODIFY — Add captions toggle + style picker |
+| `src/types/video-pipeline.ts` | MODIFY — Add `captionStyle` to assembly config |
+
+**Acceptance Criteria:**
+- [ ] Captions auto-generated from existing Deepgram transcription data (no additional API cost)
+- [ ] 3 caption styles available
+- [ ] Captions toggle is off by default (opt-in)
+- [ ] Caption timing matches actual speech (word-level precision)
+- [ ] Works with both avatar and prompt-only generation modes
+
+---
+
+#### V2B. Jasper `list_avatars` Tool
+
+**Problem:** Jasper can assign avatars to scenes but has no tool to list available avatars. When a user says "use my avatar" or "what characters do I have?", Jasper is blind. This breaks the conversational flow at the most critical moment.
+
+**Solution:** Add a `list_avatars` tool to Jasper that queries the avatar_profiles Firestore collection.
+
+**Implementation:**
+1. Add tool definition to `jasper-tools.ts`:
+   - Name: `list_avatars`
+   - Parameters: `{ filter?: 'custom' | 'hedra' | 'all', includeVoiceInfo?: boolean }`
+   - Returns: Array of `{ id, name, source, role, styleTag, voiceId, voiceName, voiceProvider, thumbnailUrl, isDefault, isFavorite }`
+2. Add handler in `executeToolCall()`:
+   - Query `organizations/${PLATFORM_ID}/avatar_profiles` via Admin SDK
+   - Filter by source if specified
+   - Return formatted list with enough info for Jasper to recommend characters
+3. Update Jasper's system prompt to know about this tool:
+   - "When a user asks about available characters, avatars, or who they can use in a video, call `list_avatars` first"
+   - "Recommend the user's default avatar for personal videos, stock characters for variety"
+
+**Key Files:**
+| File | Action |
+|------|--------|
+| `src/lib/orchestrator/jasper-tools.ts` | MODIFY — Add `list_avatars` tool definition + handler |
+| `src/lib/orchestrator/jasper-thought-partner.ts` | MODIFY — Add guidance on when to use list_avatars |
+| `src/lib/orchestrator/feature-manifest.ts` | MODIFY — Document avatar browsing capability |
+
+**Acceptance Criteria:**
+- [ ] Jasper can list all available avatars when asked
+- [ ] Jasper can filter by custom vs stock characters
+- [ ] Jasper recommends the user's default avatar for personal videos
+- [ ] Works in conversational flow: "Who can star in my video?" → avatar list → user picks → Jasper assigns
+
+---
+
+#### V2C. Simple / Advanced Mode Toggle for Cinematic Controls
+
+**Problem:** `CinematicControlsPanel` has 6 sections with camera models, film stocks, aperture settings, focal lengths, composition rules (97 preset IDs across 7 dimensions). Incredible for power users, overwhelming for someone who just wants "make me a product video."
+
+**Solution:** Two modes:
+
+**Simple Mode (default for new users):**
+- Single dropdown: "Visual Style" → shows 8-10 presets with preview thumbnails (Photorealistic, Cinematic, Anime, Corporate Clean, etc.)
+- Selecting a preset auto-fills ALL cinematic fields behind the scenes
+- No camera model, no film stock, no focal length visible
+- Just: style + aspect ratio + duration
+
+**Advanced Mode (opt-in):**
+- Full 6-section panel as currently implemented
+- All 97 preset options visible
+- Manual control over every parameter
+
+**Implementation:**
+1. Add `studioMode: 'simple' | 'advanced'` to user preferences (or localStorage)
+2. Create `SimpleStylePicker.tsx` — grid of 8-10 style cards with thumbnails and one-line descriptions
+3. Each style card maps to a complete `CinematicConfig` preset (shot type, lighting, camera, film stock, art style, focal length, composition)
+4. Wrap `CinematicControlsPanel` — if `studioMode === 'simple'`, render `SimpleStylePicker` instead
+5. "Advanced Controls" link at bottom of simple picker toggles to full panel
+6. Remember user's preference across sessions
+
+**Key Files:**
+| File | Action |
+|------|--------|
+| `src/components/studio/SimpleStylePicker.tsx` | NEW — Grid of style preset cards |
+| `src/components/studio/CinematicControlsPanel.tsx` | MODIFY — Wrap with mode check |
+| `src/app/(dashboard)/content/video/components/StepStoryboard.tsx` | MODIFY — Pass mode prop |
+| `src/lib/ai/cinematic-presets.ts` | MODIFY — Export "simple preset bundles" (complete configs per style) |
+
+**Acceptance Criteria:**
+- [ ] New users see simple mode by default
+- [ ] Simple mode has 8-10 visual style options with clear thumbnails
+- [ ] Selecting a simple style fills all cinematic fields automatically
+- [ ] Users can switch to advanced mode at any time without losing selections
+- [ ] Preference persists across sessions
+
+---
+
+#### V2D. Background Music + Auto-Duck
+
+**Problem:** The pipeline generates video with speech but no background music. Output feels raw compared to competitors. The editor has `EditorAudioTrack` support, but it's disconnected from the pipeline. Even a simple "add background music" option would transform output quality.
+
+**Solution:** Integrate background music selection into the Assembly step with auto-ducking (music volume drops when speech is playing).
+
+**Implementation:**
+1. **Music Library:** Curate 10-15 royalty-free background tracks, stored in Firebase Storage, categorized:
+   - Upbeat / Corporate / Chill / Dramatic / Inspirational / Ambient
+   - Each track: 60-second loop, stems optional
+2. **UI in StepAssembly:** "Background Music" section with:
+   - Track selector (card grid with play preview)
+   - Volume slider (default 20%)
+   - "Auto-duck" toggle (default ON) — drops music to 10% during speech
+3. **FFmpeg Assembly:** When music is selected:
+   - Mix speech track + music track
+   - If auto-duck enabled: use `sidechaincompress` or volume keyframes timed to Deepgram word timestamps
+   - Output mixed audio in final video
+4. **MiniMax Integration (optional/future):** If `audioCue` per-scene is set (per the existing NEXT BUILD plan), use MiniMax-generated audio instead of library tracks
+
+**Key Files:**
+| File | Action |
+|------|--------|
+| `src/lib/video/audio-mixing-service.ts` | NEW — Audio mix with ducking logic |
+| `src/lib/video/ffmpeg-utils.ts` | MODIFY — Add `mixAudioWithDucking()` |
+| `src/app/(dashboard)/content/video/components/StepAssembly.tsx` | MODIFY — Add music picker + volume + duck toggle |
+| `src/app/api/video/assemble/route.ts` | MODIFY — Accept music params, call audio mixing |
+| `src/lib/video/music-library.ts` | NEW — Track metadata + Firebase Storage URLs |
+
+**Acceptance Criteria:**
+- [ ] 10-15 royalty-free tracks available in Assembly step
+- [ ] Auto-duck reduces music volume during speech segments
+- [ ] Volume slider gives manual control
+- [ ] Music is optional (off by default, opt-in)
+- [ ] Final assembled video has professional-sounding audio mix
+
+---
+
+#### V2E. Assembly Progress Feedback
+
+**Problem:** FFmpeg assembly (downloading N scenes, probing durations, stitching with transitions, uploading) can take 30-60 seconds. The UI shows "Assembling..." with no progress bar, no percentage. User thinks it's frozen.
+
+**Solution:** Server-Sent Events (SSE) or polling-based progress updates during assembly.
+
+**Implementation:**
+1. Break assembly into trackable steps: "Downloading scenes (2/5)" → "Probing durations" → "Stitching video" → "Uploading final" → "Complete"
+2. Store assembly progress in Firestore (or return via SSE from the assembly endpoint)
+3. `StepAssembly.tsx` shows a multi-step progress indicator with the current phase + percentage
+4. If SSE is too complex for the Vercel serverless environment, use polling (every 2 seconds to a `/api/video/assembly-status/[projectId]` endpoint)
+
+**Key Files:**
+| File | Action |
+|------|--------|
+| `src/app/api/video/assemble/route.ts` | MODIFY — Write progress to Firestore at each phase |
+| `src/app/api/video/assembly-status/[projectId]/route.ts` | NEW — Return current assembly progress |
+| `src/app/(dashboard)/content/video/components/StepAssembly.tsx` | MODIFY — Poll and display multi-step progress |
+
+**Acceptance Criteria:**
+- [ ] User sees which phase assembly is in (downloading, stitching, uploading)
+- [ ] Progress updates at least every 5 seconds
+- [ ] Errors at any phase show clear message with retry option
+
+---
+
+### Phase V3: Professional Output Quality (P2 — Differentiators)
+
+These features move output from "AI-generated video" to "professional content I'd post under my brand."
+
+#### V3A. Brand Kit (Logo, Colors, Fonts, Intro/Outro)
+
+**Problem:** Every video looks like a one-off. No logo watermark, no consistent colors for captions, no intro/outro. Professional content creators need brand consistency across all output.
+
+**Solution:** A Brand Kit settings page where users configure their visual identity once, and it's automatically applied to every video.
+
+**Brand Kit Contents:**
+- **Logo** — PNG/SVG upload, position picker (corner placement), opacity slider
+- **Colors** — Primary, secondary, accent (used for caption text, backgrounds, overlays)
+- **Fonts** — Select from 10 web-safe fonts (used for captions and text overlays)
+- **Intro template** — 3-5 second branded intro (logo animation). Choose from 3-5 templates or upload custom.
+- **Outro template** — 3-5 second branded outro (CTA + logo). Choose from 3-5 templates or upload custom.
+
+**Application:**
+- Assembly step auto-applies brand kit if configured
+- Logo watermark burned in via FFmpeg `overlay` filter
+- Caption colors/fonts pulled from brand kit
+- Intro/outro prepended/appended during assembly
+
+**Key Files:**
+| File | Action |
+|------|--------|
+| `src/app/(dashboard)/settings/brand-kit/page.tsx` | NEW — Brand Kit configuration page |
+| `src/lib/video/brand-kit-service.ts` | NEW — CRUD for brand kit in Firestore |
+| `src/lib/video/ffmpeg-utils.ts` | MODIFY — Add logo overlay, intro/outro concat |
+| `src/app/api/video/assemble/route.ts` | MODIFY — Load and apply brand kit during assembly |
+| `src/app/api/settings/brand-kit/route.ts` | NEW — API route for brand kit CRUD |
+| `src/types/brand-kit.ts` | NEW — BrandKit type definition |
+
+---
+
+#### V3B. Wire Editor into Pipeline (Two-Way)
+
+**Problem:** The standalone editor at `/content/video/editor` is well-built but completely disconnected from the pipeline. User finishes generation, assembles, then can't send it to the editor for fine-tuning. Edits don't flow back.
+
+**Solution:** Two integration points:
+
+1. **Pipeline → Editor:** Add "Open in Editor" button in Post-Production step. Pre-loads all scene clips + assembled video into the editor timeline. URL: `/content/video/editor?project={projectId}`.
+2. **Editor → Pipeline:** When editor exports a final video, offer "Save back to project" which updates the pipeline project's `finalVideoUrl` and `postProductionVideoUrl`. The project then reflects the edited version.
+
+**Key Files:**
+| File | Action |
+|------|--------|
+| `src/app/(dashboard)/content/video/components/StepPostProduction.tsx` | MODIFY — Add "Open in Editor" button |
+| `src/app/(dashboard)/content/video/editor/page.tsx` | MODIFY — Add "Save to Project" action when loaded from project |
+| `src/app/api/video/project/save/route.ts` | MODIFY — Accept `postProductionVideoUrl` update |
+| `src/lib/stores/video-pipeline-store.ts` | MODIFY — Add `setPostProductionVideoUrl()` |
+
+---
+
+#### V3C. Cost Estimation Before Generation
+
+**Problem:** Each Hedra generation costs real money. Nowhere does the system say "this will cost approximately $X." Users burn credits without understanding cost implications.
+
+**Solution:** Before generation starts, show an estimated cost based on:
+- Number of scenes
+- Duration per scene
+- Generation mode (avatar vs prompt-only — different pricing)
+- Resolution
+
+Display in `StepGeneration.tsx` as a cost summary card: "Estimated cost: ~$X.XX for 5 scenes (3 avatar, 2 cinematic)." Requires knowing Hedra's per-generation pricing (store as config, update manually when pricing changes).
+
+**Key Files:**
+| File | Action |
+|------|--------|
+| `src/lib/video/cost-estimator.ts` | NEW — Calculate estimated cost from scene config |
+| `src/app/(dashboard)/content/video/components/StepGeneration.tsx` | MODIFY — Show cost estimate before "Generate" button |
+| `src/types/video-pipeline.ts` | MODIFY — Add cost tracking fields |
+
+---
+
+### Phase V4: Growth & Retention (P3 — Moat Builders)
+
+These features deliver on the "daily content" promise and build habits that prevent churn.
+
+#### V4A. Auto-Publish / Scheduling
+
+**Problem:** The pipeline ends at "Save to Library." For a product promising daily content, there's no "publish to YouTube at 9am tomorrow." Social media integration exists elsewhere but isn't connected to video output.
+
+**Solution:** After Post-Production, add a "Publish" step:
+- Platform picker (YouTube, TikTok, Instagram, LinkedIn, Twitter — depending on what integrations are live)
+- Schedule picker (now, or date/time)
+- Title, description, tags auto-filled from brief
+- Calls existing social posting APIs with the video URL
+
+**Key Files:**
+| File | Action |
+|------|--------|
+| `src/app/(dashboard)/content/video/components/StepPublish.tsx` | NEW — Publish/schedule step |
+| `src/app/api/video/publish/route.ts` | NEW — Orchestrate publishing to selected platforms |
+| `src/lib/stores/video-pipeline-store.ts` | MODIFY — Add publish step to pipeline |
+| `src/types/video-pipeline.ts` | MODIFY — Add `'publish'` to PipelineStep |
+
+---
+
+#### V4B. Batch Video Generation ("Content Calendar")
+
+**Problem:** The pipeline creates one video at a time. A customer wanting 7 videos for the week must run the pipeline 7 times manually. The "daily content" promise requires batch capability.
+
+**Solution:** "Content Calendar" mode:
+- User enters a week's worth of topics (or Jasper generates them from a theme)
+- System creates 7 storyboards in one operation
+- User reviews all 7, approves in batch
+- Generation runs sequentially (to manage API costs) but autonomously
+- Results land in library, ready for scheduled publishing
+
+This connects naturally to Jasper's campaign orchestration — a campaign could include 7 video deliverables auto-generated.
+
+**Key Files:**
+| File | Action |
+|------|--------|
+| `src/app/(dashboard)/content/video/calendar/page.tsx` | NEW — Content calendar view |
+| `src/lib/video/batch-generator.ts` | NEW — Queue and process multiple projects |
+| `src/lib/orchestrator/jasper-tools.ts` | MODIFY — Add `batch_produce_videos` tool |
+
+---
+
+### Phase V5: Codebase Cleanup (P3 — Hygiene)
+
+These don't affect users but reduce confusion, dead code, and technical debt.
+
+#### V5A. Delete Dead Step Components
+
+Remove 4 unused step components (~46KB of dead code):
+- `StepRequest.tsx` — superseded by StudioModePanel
+- `StepDecompose.tsx` — superseded by StepStoryboard
+- `StepPreProduction.tsx` — never wired into stepper
+- `StepApproval.tsx` — never wired into stepper
+
+Check for any imports before deleting. If none, remove entirely.
+
+#### V5B. Consolidate Studio Routes
+
+Current state:
+- `/content/studio` → redirects to `/content/image-generator`
+- `/content/image-generator` → renders `StudioModePanel` (same component used in video pipeline)
+
+Fix: Either remove the redirect chain and give image generation a proper dedicated page, or merge image generation into the video pipeline's creative controls (which is where `StudioModePanel` already lives). Don't have 3 routes pointing at the same component.
+
+#### V5C. Clean Up Legacy Render Pipeline
+
+`/api/video/generate` (legacy endpoint) creates a VideoJob but doesn't populate clips. All real generation goes through `/api/video/generate-scenes`. Either remove the legacy endpoint or redirect it to the current flow.
+
+---
+
+### Build Order (Recommended Sequence)
+
+```
+V1A  Clone Yourself Onboarding ──────────────────── Week 1-2
+V1B  Fix Video URL Permanence ───────────────────── Week 1 (parallel)
+V1C  Starter Templates (5) ─────────────────────── Week 2 (parallel)
+V5A  Delete Dead Step Components ────────────────── Week 2 (30 min)
+V5B  Consolidate Studio Routes ──────────────────── Week 2 (1 hour)
+V5C  Clean Up Legacy Render Pipeline ────────────── Week 2 (30 min)
+     ─── MILESTONE: First-time user can create a clone and make a video from a template ───
+V2B  Jasper list_avatars Tool ───────────────────── Week 3 (small)
+V2E  Assembly Progress Feedback ─────────────────── Week 3 (small)
+V2C  Simple/Advanced Mode Toggle ────────────────── Week 3
+V2A  Auto-Captions from Deepgram ────────────────── Week 3-4
+V2D  Background Music + Auto-Duck ───────────────── Week 4
+     ─── MILESTONE: Output quality matches competitor baseline ───
+V3A  Brand Kit ──────────────────────────────────── Week 5
+V3B  Wire Editor into Pipeline ──────────────────── Week 5 (parallel)
+V3C  Cost Estimation ────────────────────────────── Week 5 (small, parallel)
+     ─── MILESTONE: Professional-grade branded output ───
+V4A  Auto-Publish / Scheduling ──────────────────── Week 6
+V4B  Batch Video Generation ─────────────────────── Week 7-8
+     ─── MILESTONE: Daily content promise delivered ───
+```
+
+### Success Criteria (End State)
+
+- [ ] New user creates AI clone (face + voice) in under 2 minutes
+- [ ] First video generated from template in under 5 minutes total
+- [ ] All video URLs permanent (survive 365 days)
+- [ ] Auto-captions available in 3 styles
+- [ ] Background music with auto-ducking
+- [ ] Brand kit auto-applied to all output
+- [ ] Jasper can browse avatars and recommend characters conversationally
+- [ ] Simple mode hides complexity for new users; advanced mode available for power users
+- [ ] Editor integrated into pipeline (not a separate island)
+- [ ] Cost shown before generation
+- [ ] Publish to social platforms directly from pipeline
+- [ ] Batch generation for weekly content calendars
+- [ ] Zero dead code in video pipeline directory

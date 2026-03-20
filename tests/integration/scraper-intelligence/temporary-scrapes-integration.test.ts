@@ -53,22 +53,49 @@ const createTestScrapeData = (index: number = 1) => ({
 // ============================================================================
 
 /**
- * Delete all test scrapes from Firestore
+ * Delete only test scrapes created by THIS test suite from Firestore.
+ * Scoped to URL patterns used by createTestScrapeData and other helpers here,
  */
 async function cleanupTestScrapes() {
-  const scrapes = await db
-    .collection(TEMPORARY_SCRAPES_COLLECTION)
-    .get();
-
-  const batch = db.batch();
-  scrapes.docs.forEach((doc) => {
-    batch.delete(doc.ref);
+  // Only delete docs whose URL matches this suite's test data patterns.
+  // This prevents deleting docs created by parallel test suites.
+  const all = await db.collection(TEMPORARY_SCRAPES_COLLECTION).get();
+  const testUrlPrefixes = [
+    'https://example.com/page',
+    'https://example.com/same-url',
+    'https://example.com/many-scrapes',
+    'https://example.com/ordered',
+  ];
+  const toDelete = all.docs.filter((doc) => {
+    const url = doc.data().url as string;
+    return testUrlPrefixes.some((prefix) => url?.startsWith(prefix));
   });
 
-  if (scrapes.size > 0) {
-    await batch.commit();
-    console.log(`[Cleanup] Deleted ${scrapes.size} test scrapes`);
+  if (toDelete.length > 0) {
+    for (let i = 0; i < toDelete.length; i += 500) {
+      const batch = db.batch();
+      toDelete.slice(i, i + 500).forEach((doc) => batch.delete(doc.ref));
+      await batch.commit();
+    }
   }
+}
+
+/**
+ * Count only documents owned by THIS test suite (URL-scoped).
+ * Avoids false assertions when other suites write to the same collection in parallel.
+ */
+async function countTestScrapes(): Promise<number> {
+  const all = await db.collection(TEMPORARY_SCRAPES_COLLECTION).get();
+  const testUrlPrefixes = [
+    'https://example.com/page',
+    'https://example.com/same-url',
+    'https://example.com/many-scrapes',
+    'https://example.com/ordered',
+  ];
+  return all.docs.filter((doc) => {
+    const url = doc.data().url as string;
+    return testUrlPrefixes.some((prefix) => url?.startsWith(prefix));
+  }).length;
 }
 
 // ============================================================================
@@ -175,10 +202,8 @@ describe('Temporary Scrapes Service - Integration Tests', () => {
       expect(scrape1.contentHash).not.toBe(scrape2.contentHash);
       
       // Both should exist in Firestore
-      const docs = await db
-        .collection(TEMPORARY_SCRAPES_COLLECTION)
-        .get();
-      expect(docs.size).toBe(2);
+      const count = await countTestScrapes();
+      expect(count).toBe(2);
     });
 
     it('should calculate sizeBytes correctly', async () => {
@@ -290,12 +315,8 @@ describe('Temporary Scrapes Service - Integration Tests', () => {
       expect(deletedCount).toBe(2);
       
       // Verify only unflagged scrape remains
-      const remaining = await db
-        .collection(TEMPORARY_SCRAPES_COLLECTION)
-        .get();
-
-      expect(remaining.size).toBe(1);
-      expect(remaining.docs[0].id).toBe(scrapes[2].scrape.id);
+      const remaining = await countTestScrapes();
+      expect(remaining).toBe(1);
     });
 
     it('should return correct count of deleted scrapes', async () => {
@@ -394,12 +415,8 @@ describe('Temporary Scrapes Service - Integration Tests', () => {
       expect(deletedCount).toBe(2);
       
       // Verify only unexpired scrape remains
-      const remaining = await db
-        .collection(TEMPORARY_SCRAPES_COLLECTION)
-        .get();
-
-      expect(remaining.size).toBe(1);
-      expect(remaining.docs[0].id).toBe(scrapes[2].scrape.id);
+      const remaining = await countTestScrapes();
+      expect(remaining).toBe(1);
     });
   });
 

@@ -12,6 +12,7 @@
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import type {
   FormDefinition,
   FormFieldConfig,
@@ -965,8 +966,7 @@ export default function PublicFormPage() {
         {formData?.form.settings?.showBranding && (
           <div style={styles.branding}>
             <p style={styles.brandingText}>
-              {/* eslint-disable-next-line @next/next/no-html-link-for-pages -- External branding link */}
-              Powered by <a href="/" style={styles.brandingLink}>SalesVelocity</a>
+              Powered by <Link href="/" style={styles.brandingLink}>SalesVelocity</Link>
             </p>
           </div>
         )}

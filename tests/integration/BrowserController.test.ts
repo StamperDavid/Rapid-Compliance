@@ -5,6 +5,9 @@
 
 import { BrowserController, createBrowserController } from '@/lib/services/BrowserController';
 
+// Playwright browsers are memory-intensive; give extra breathing room in the full suite
+jest.setTimeout(120000);
+
 describe('BrowserController Integration Tests', () => {
   let controller: BrowserController;
 

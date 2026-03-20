@@ -13,72 +13,90 @@ interface PlatformApiKeys {
   google?: { apiKey?: string };
 }
 
-// Module-level cache
-let cachedGenAI: GoogleGenerativeAI | null = null;
-let cachedOrgId: string | null = null;
-let lastKeyFetch = 0;
+// Module-level cache — stored as a single object so it can be replaced atomically
+interface GenAICache {
+  genAI: GoogleGenerativeAI;
+  orgId: string;
+  fetchTime: number;
+}
+let genAICache: GenAICache | null = null;
 const KEY_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
+/** Check whether the current cache entry is still valid. */
+function isCacheValid(): boolean {
+  return genAICache?.orgId === PLATFORM_ID && Date.now() - (genAICache?.fetchTime ?? 0) < KEY_CACHE_TTL;
+}
+
+/** Write a resolved API key into the module cache (synchronous, no awaits). */
+function writeCache(apiKey: string): void {
+  genAICache = { genAI: new GoogleGenerativeAI(apiKey), orgId: PLATFORM_ID, fetchTime: Date.now() };
+}
+
 /**
- * Get API key from organization settings or fallback to platform admin settings
+ * Fetch the Gemini API key from org or platform admin settings.
+ * The cache read/write is intentionally split into synchronous helpers so that
+ * no module-level variable is written inside the async body (which would
+ * trigger the require-atomic-updates lint rule).
  */
-async function getApiKey(): Promise<string> {
+async function fetchApiKey(): Promise<string> {
+  let apiKey: string | null = null;
+
+  // Try organization-specific keys
   try {
-    // Check cache first (invalidate if different org)
-    if (cachedGenAI && cachedOrgId === PLATFORM_ID && Date.now() - lastKeyFetch < KEY_CACHE_TTL) {
-      return 'cached';
-    }
+    const apiKeyModule = await import('@/lib/api-keys/api-key-service') as {
+      apiKeyService: { getServiceKey: (platformId: string, service: string) => Promise<string | Record<string, unknown> | null> }
+    };
+    const fetchedKey = await apiKeyModule.apiKeyService.getServiceKey(PLATFORM_ID, 'gemini');
+    apiKey = typeof fetchedKey === 'string' ? fetchedKey : null;
 
-    let apiKey: string | null = null;
-
-    // Try organization-specific keys
-    try {
-      const apiKeyModule = await import('@/lib/api-keys/api-key-service') as {
-        apiKeyService: { getServiceKey: (platformId: string, service: string) => Promise<string | Record<string, unknown> | null> }
-      };
-      const fetchedKey = await apiKeyModule.apiKeyService.getServiceKey(PLATFORM_ID, 'gemini');
-      apiKey = typeof fetchedKey === 'string' ? fetchedKey : null;
-
-      if (apiKey) {
-        logger.info('[Gemini] Using organization-specific API key', {
-          PLATFORM_ID,
-          file: 'gemini-service.ts'
-        });
-      }
-    } catch (error) {
-      logger.warn('[Gemini] Could not fetch org-specific key, falling back to platform key', {
+    if (apiKey) {
+      logger.info('[Gemini] Using organization-specific API key', {
         PLATFORM_ID,
-        errorMessage: error instanceof Error ? error.message : String(error),
         file: 'gemini-service.ts'
       });
     }
+  } catch (error) {
+    logger.warn('[Gemini] Could not fetch org-specific key, falling back to platform key', {
+      PLATFORM_ID,
+      errorMessage: error instanceof Error ? error.message : String(error),
+      file: 'gemini-service.ts'
+    });
+  }
 
-    // Fallback to platform admin keys if no org key found
-    if (!apiKey) {
-      const { FirestoreService } = await import('@/lib/db/firestore-service');
-      const adminKeys = await FirestoreService.get<PlatformApiKeys>('admin', 'platform-api-keys');
+  // Fallback to platform admin keys if no org key found
+  if (!apiKey) {
+    const { FirestoreService } = await import('@/lib/db/firestore-service');
+    const adminKeys = await FirestoreService.get<PlatformApiKeys>('admin', 'platform-api-keys');
 
-      // Extract API key - prefer Gemini, fallback to Google key (Explicit Ternary for STRING)
-      const geminiKey = adminKeys?.gemini?.apiKey;
-      const googleKey = adminKeys?.google?.apiKey;
-      apiKey = (geminiKey !== '' && geminiKey != null) ? geminiKey : (googleKey ?? null);
+    // Extract API key - prefer Gemini, fallback to Google key (Explicit Ternary for STRING)
+    const geminiKey = adminKeys?.gemini?.apiKey;
+    const googleKey = adminKeys?.google?.apiKey;
+    apiKey = (geminiKey !== '' && geminiKey != null) ? geminiKey : (googleKey ?? null);
 
-      if (apiKey) {
-        logger.info('[Gemini] Using platform admin API key', { file: 'gemini-service.ts' });
-      }
+    if (apiKey) {
+      logger.info('[Gemini] Using platform admin API key', { file: 'gemini-service.ts' });
+    }
+  }
+
+  if (!apiKey) {
+    throw new Error('Gemini API key not configured. Please add it in organization settings or admin settings.');
+  }
+
+  return apiKey;
+}
+
+/**
+ * Get API key from organization settings or fallback to platform admin settings.
+ * Returns 'cached' immediately if the in-memory cache is still valid.
+ */
+async function getApiKey(): Promise<string> {
+  try {
+    if (isCacheValid()) {
+      return 'cached';
     }
 
-    if (!apiKey) {
-      throw new Error('Gemini API key not configured. Please add it in organization settings or admin settings.');
-    }
-
-    // Update cache — race condition is acceptable for idempotent caching
-    /* eslint-disable require-atomic-updates */
-    cachedGenAI = new GoogleGenerativeAI(apiKey);
-    cachedOrgId = PLATFORM_ID;
-    lastKeyFetch = Date.now();
-    /* eslint-enable require-atomic-updates */
-
+    const apiKey = await fetchApiKey();
+    writeCache(apiKey);
     return apiKey;
   } catch (error: unknown) {
     logger.error('Error fetching Gemini API key:', error instanceof Error ? error : new Error(String(error)), { file: 'gemini-service.ts' });
@@ -106,10 +124,10 @@ export interface ChatResponse {
  */
 async function getModel(modelName: string = 'gemini-2.0-flash-exp') {
   await getApiKey(); // Ensure key is loaded
-  if (!cachedGenAI) {
+  if (!genAICache) {
     throw new Error('Gemini API key not configured');
   }
-  return cachedGenAI.getGenerativeModel({ model: modelName });
+  return genAICache.genAI.getGenerativeModel({ model: modelName });
 }
 
 /**

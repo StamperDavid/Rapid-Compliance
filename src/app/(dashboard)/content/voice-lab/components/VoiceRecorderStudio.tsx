@@ -136,6 +136,8 @@ export function VoiceRecorderStudio() {
   const playAnimRef = useRef(0);
   const countdownTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const effectsPreviewRef = useRef<VoiceEffectsPreview>(new VoiceEffectsPreview());
+  const beginRecordingRef = useRef<((stream: MediaStream) => void) | null>(null);
+  const stopRecordingRef = useRef<(() => void) | null>(null);
 
   // ── Cleanup ─────────────────────────────────────────────────────────────
 
@@ -301,7 +303,7 @@ export function VoiceRecorderStudio() {
         count--;
         if (count <= 0) {
           if (countdownTimerRef.current) { clearInterval(countdownTimerRef.current); }
-          beginRecording(stream);
+          beginRecordingRef.current?.(stream);
         } else {
           setCountdownNum(count);
         }
@@ -309,7 +311,7 @@ export function VoiceRecorderStudio() {
     } catch {
       setMicError('Microphone access denied. Please allow microphone access in your browser settings.');
     }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   const beginRecording = useCallback((stream: MediaStream) => {
     chunksRef.current = [];
@@ -373,13 +375,18 @@ export function VoiceRecorderStudio() {
       elapsed++;
       setDuration(elapsed);
       if (elapsed >= MAX_DURATION_S) {
-        stopRecording();
+        stopRecordingRef.current?.();
       }
     }, 1000);
 
     // Start live waveform
     drawLiveWaveform();
-  }, [drawLiveWaveform]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [drawLiveWaveform]);
+
+  // Keep beginRecordingRef in sync so startCountdown can call it without a closure dep
+  useEffect(() => {
+    beginRecordingRef.current = beginRecording;
+  }, [beginRecording]);
 
   // ── Stop Recording ──────────────────────────────────────────────────────
 
@@ -390,6 +397,11 @@ export function VoiceRecorderStudio() {
     streamRef.current?.getTracks().forEach((t) => t.stop());
     setLevel(0);
   }, []);
+
+  // Keep stopRecordingRef in sync so beginRecording can call it without a closure dep
+  useEffect(() => {
+    stopRecordingRef.current = stopRecording;
+  }, [stopRecording]);
 
   // ── Playback with Effects ──────────────────────────────────────────────
 

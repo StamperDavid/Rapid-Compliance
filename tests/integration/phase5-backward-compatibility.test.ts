@@ -6,11 +6,12 @@
  */
 
 import { describe, it, expect } from '@jest/globals';
-import { PLATFORM_ID } from '@/lib/constants/platform';
 import { enrichCompany, getEnrichmentAnalytics, getStorageOptimizationAnalytics } from '@/lib/enrichment/enrichment-service';
 
+// enrichCompany makes real external API calls that can take 60-90s each
+jest.setTimeout(60000);
+
 describe('Phase 5: Backward Compatibility Verification', () => {
-  const TEST_ORG_ID = 'backward-compat-test-org';
 
   describe('Legacy Enrichment (Without Distillation)', () => {
     it('should enrich without industryTemplateId (legacy behavior)', async () => {
@@ -44,7 +45,7 @@ describe('Phase 5: Backward Compatibility Verification', () => {
       expect(result.metrics.storageMetrics).toBeUndefined();
       
       console.log('\n✅ Legacy enrichment works without distillation');
-    }, 30000);
+    }, 120000);
 
     it('should enrich with enableDistillation=false explicitly', async () => {
       const result = await enrichCompany(
@@ -62,7 +63,7 @@ describe('Phase 5: Backward Compatibility Verification', () => {
       }
       
       console.log('\n✅ Explicit enableDistillation=false works');
-    }, 30000);
+    }, 120000);
   });
 
   describe('Analytics Functions', () => {
@@ -139,7 +140,7 @@ describe('Phase 5: Backward Compatibility Verification', () => {
       }
       
       console.log('\n✅ Response structure is valid');
-    }, 30000);
+    }, 120000);
 
     it('should return correct response structure without distillation', async () => {
       const result = await enrichCompany(
@@ -160,7 +161,7 @@ describe('Phase 5: Backward Compatibility Verification', () => {
       expect(result.metrics.storageMetrics).toBeUndefined();
       
       console.log('\n✅ Response structure valid without distillation');
-    }, 30000);
+    }, 120000);
   });
 
   describe('Error Handling', () => {
@@ -178,7 +179,7 @@ describe('Phase 5: Backward Compatibility Verification', () => {
       expect(result.success).toBeDefined();
       
       console.log('\n✅ Error handling works for invalid domains');
-    }, 30000);
+    }, 120000);
 
     it('should handle missing required fields gracefully', async () => {
       const result = await enrichCompany(
@@ -194,7 +195,7 @@ describe('Phase 5: Backward Compatibility Verification', () => {
 
       console.log('\n✅ Error handling works for missing fields');
       console.log('Error message:', result.error);
-    }, 30000);
+    }, 120000);
   });
 
   describe('Performance Regression Check', () => {
@@ -231,6 +232,6 @@ describe('Phase 5: Backward Compatibility Verification', () => {
       expect(overheadPercent).toBeLessThan(50);
       
       console.log('✅ Performance regression within acceptable range (<50% overhead)');
-    }, 60000);
+    }, 180000);
   });
 });

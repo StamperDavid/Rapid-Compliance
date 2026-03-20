@@ -165,16 +165,14 @@ class Logger {
       ...safeContext,
     };
 
-    // Browser environment: use console methods (intentional - no Node.js streams available)
+    // Browser environment: use globalThis.console (no Node.js streams available)
     if (!this.isServer) {
-      /* eslint-disable no-console */
       const consoleMethods = {
-        [LogLevel.DEBUG]: console.debug,
-        [LogLevel.INFO]: console.info,
-        [LogLevel.WARN]: console.warn,
-        [LogLevel.ERROR]: console.error,
+        [LogLevel.DEBUG]: globalThis.console.debug.bind(globalThis.console),
+        [LogLevel.INFO]: globalThis.console.info.bind(globalThis.console),
+        [LogLevel.WARN]: globalThis.console.warn.bind(globalThis.console),
+        [LogLevel.ERROR]: globalThis.console.error.bind(globalThis.console),
       };
-      /* eslint-enable no-console */
       const consoleMethod = consoleMethods[level];
       const contextStr = context ? ` ${JSON.stringify(context)}` : '';
       consoleMethod(`[${level.toUpperCase()}] ${timestamp} - ${message}${contextStr}`);

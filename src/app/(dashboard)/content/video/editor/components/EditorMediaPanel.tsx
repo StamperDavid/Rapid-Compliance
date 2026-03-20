@@ -323,7 +323,7 @@ export function EditorMediaPanel({ dispatch, defaultTransition: _defaultTransiti
         void fetchAvatars();
       }
     },
-    [mediaType, audioFilter, projects.length, avatars.length], // eslint-disable-line react-hooks/exhaustive-deps
+    [mediaType, audioFilter, projects.length, avatars.length, fetchMedia, fetchProjects, fetchAvatars],
   );
 
   // ========================================================================

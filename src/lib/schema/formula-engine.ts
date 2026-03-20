@@ -6,6 +6,7 @@
 import type { SchemaField } from '@/types/schema';
 import type { EntityRecord } from '@/types/entity'
 import { logger } from '@/lib/logger/logger';
+import { evaluateExpression } from '@/lib/utils/expr-eval';
 
 export class FormulaEngine {
   /**
@@ -86,34 +87,20 @@ export class FormulaEngine {
   }
 
   /**
-   * Safe evaluation of formula
-   * Prevents arbitrary code execution
+   * Safe evaluation of formula using the expr-eval recursive-descent parser.
+   * Does not use `new Function` or `eval`.
    */
   private safeEval(formula: string, context: Record<string, unknown>): unknown {
-    // Create function with restricted scope
-    const keys = Object.keys(context);
-    const values = Object.values(context);
-
     // Add Math object for convenience
-    keys.push('Math');
-    values.push(Math);
+    const fullContext: Record<string, unknown> = { ...context, Math };
 
-    // Block dangerous patterns that could escape the formula sandbox
+    // Block dangerous identifiers that have no place in a field formula
     const dangerousPatterns = /\b(fetch|import|require|eval|Function|process|globalThis|window|document|__proto__|constructor)\b/;
     if (dangerousPatterns.test(formula)) {
       throw new Error('Formula contains disallowed keywords');
     }
 
-    try {
-      // Create function from formula - using Function is intentional for formula evaluation
-      // eslint-disable-next-line @typescript-eslint/no-implied-eval
-      const func = new Function(...keys, `"use strict"; return (${formula});`) as (...args: unknown[]) => unknown;
-
-      // Execute with context
-      return func(...values);
-    } catch (error) {
-      throw new Error(`Formula evaluation failed: ${error}`);
-    }
+    return evaluateExpression(formula, fullContext);
   }
 
   /**

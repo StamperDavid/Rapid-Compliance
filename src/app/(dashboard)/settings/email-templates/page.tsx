@@ -1,8 +1,7 @@
 'use client';
 
-/* eslint-disable @next/next/no-img-element -- Email template images use blob URLs from FileReader which don't work with next/image. */
-
 import React, { useState, useEffect, useCallback } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
 import FilterBuilder from '@/components/FilterBuilder';
@@ -587,7 +586,7 @@ Best regards,
                             {/* Preview */}
                             <div style={{ height: '200px', backgroundColor: 'var(--color-bg-main)', display: 'flex', alignItems: 'center', justifyContent: 'center', borderBottom: '1px solid var(--color-border-strong)' }}>
                               {template.preview ? (
-                                <img src={template.preview} alt={template.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                <Image src={template.preview} alt={template.name} width={300} height={200} unoptimized style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                               ) : (
                                 <div style={{ textAlign: 'center', color: 'var(--color-text-disabled)' }}>
                                   <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>📧</div>
@@ -1011,7 +1010,7 @@ Best regards,
                                 {block.type === 'hero' && (
                                   <div style={{ width: '100%', height: (block.content.height !== '' && block.content.height != null) ? block.content.height : '400px', backgroundColor: 'var(--color-border-light)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
                                     {block.content.imageUrl ? (
-                                      <img src={block.content.imageUrl} alt="Hero" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                      <Image src={block.content.imageUrl ?? ''} alt="Hero" width={600} height={400} unoptimized style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                     ) : (
                                       <div style={{ textAlign: 'center', color: 'var(--color-text-secondary)' }}>
                                         <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>🖼️</div>
@@ -1038,7 +1037,7 @@ Best regards,
                                 {block.type === 'image' && (
                                   <div style={{ padding: '10px' }}>
                                     {block.content.imageUrl ? (
-                                      <img src={block.content.imageUrl} alt={(block.content.alt !== '' && block.content.alt != null) ? block.content.alt : 'Image'} style={{ width: (block.content.width !== '' && block.content.width != null) ? block.content.width : '100%', height: 'auto', display: 'block' }} />
+                                      <Image src={block.content.imageUrl ?? ''} alt={(block.content.alt !== '' && block.content.alt != null) ? block.content.alt : 'Image'} width={600} height={400} unoptimized style={{ width: (block.content.width !== '' && block.content.width != null) ? block.content.width : '100%', height: 'auto', display: 'block' }} />
                                     ) : (
                                       <div style={{ backgroundColor: 'var(--color-border-light)', padding: '60px', textAlign: 'center', color: 'var(--color-text-secondary)' }}>
                                         <div style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>📷</div>
@@ -1181,7 +1180,7 @@ Best regards,
                                   </label>
                                   {selectedBlock.content.imageUrl ? (
                                     <div style={{ position: 'relative', marginBottom: '0.5rem' }}>
-                                      <img src={selectedBlock.content.imageUrl} alt="Preview" style={{ width: '100%', height: '120px', objectFit: 'cover', borderRadius: '6px' }} />
+                                      <Image src={selectedBlock.content.imageUrl ?? ''} alt="Preview" width={400} height={120} unoptimized style={{ width: '100%', height: '120px', objectFit: 'cover', borderRadius: '6px' }} />
                                       <button
                                         onClick={() => {
                                           const newBlocks = designerBlocks.map(b => 
@@ -1486,7 +1485,7 @@ Best regards,
                                   </label>
                                   {selectedBlock.content.imageUrl ? (
                                     <div style={{ position: 'relative', marginBottom: '0.5rem' }}>
-                                      <img src={selectedBlock.content.imageUrl} alt="Preview" style={{ width: '100%', height: 'auto', borderRadius: '6px' }} />
+                                      <Image src={selectedBlock.content.imageUrl ?? ''} alt="Preview" width={400} height={300} unoptimized style={{ width: '100%', height: 'auto', borderRadius: '6px' }} />
                                       <button
                                         onClick={() => {
                                           const newBlocks = designerBlocks.map(b => 
@@ -2525,10 +2524,13 @@ Best regards,
                       }}
                     >
                       <div style={{ aspectRatio: '1', overflow: 'hidden', backgroundColor: 'var(--color-bg-elevated)' }}>
-                        <img 
-                          src={asset.url} 
-                          alt={asset.name} 
-                          style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                        <Image
+                          src={asset.url}
+                          alt={asset.name}
+                          width={200}
+                          height={200}
+                          unoptimized
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                         />
                       </div>
                       <div style={{ padding: '0.75rem' }}>

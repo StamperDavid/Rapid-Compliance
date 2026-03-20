@@ -831,28 +831,59 @@ ${this.summarizeRecentConversations(customerMemory)}
     }
   }
   
-  private getActiveInstance(_instanceId: string): Promise<AgentInstance | null> {
-    // In production, check Redis first, then Firestore
-    // For now, just check Firestore
+  private async getActiveInstance(instanceId: string): Promise<AgentInstance | null> {
     try {
-      // Lookup by instanceId — in production, maintain a Redis index keyed by instanceId
-      // for O(1) retrieval without scanning the Firestore collection
-      return Promise.resolve(null);
+      const { getSubCollection } = await import('@/lib/firebase/collections');
+      const { adminDb } = await import('@/lib/firebase/admin');
+      if (adminDb) {
+        const activeInstancesPath = getSubCollection('activeInstances');
+        const doc = await adminDb
+          .collection(activeInstancesPath)
+          .doc(instanceId)
+          .get();
+
+        if (!doc.exists) {
+          return null;
+        }
+
+        return doc.data() as AgentInstance;
+      }
+
+      // Fallback to client SDK
+      const { FirestoreService } = await import('@/lib/db/firestore-service');
+      return await FirestoreService.get<AgentInstance>(
+        getSubCollection('activeInstances'),
+        instanceId
+      );
     } catch (error) {
       logger.error('Error getting active instance:', error instanceof Error ? error : new Error(String(error)), { file: 'instance-manager.ts' });
-      return Promise.resolve(null);
+      return null;
     }
   }
   
-  private removeActiveInstance(instanceId: string): Promise<void> {
+  private async removeActiveInstance(instanceId: string): Promise<void> {
     try {
-      // In production, remove from Redis and Firestore
-      // For now, just log
-      logger.info('[Instance Manager] Removing active instance', { instanceId, file: 'instance-manager.ts' });
-      return Promise.resolve();
+      const { getSubCollection } = await import('@/lib/firebase/collections');
+      const { adminDb } = await import('@/lib/firebase/admin');
+      if (adminDb) {
+        const activeInstancesPath = getSubCollection('activeInstances');
+        await adminDb
+          .collection(activeInstancesPath)
+          .doc(instanceId)
+          .delete();
+        logger.info('[Instance Manager] Removed active instance', { instanceId, file: 'instance-manager.ts' });
+        return;
+      }
+
+      // Fallback to client SDK
+      const { FirestoreService } = await import('@/lib/db/firestore-service');
+      await FirestoreService.delete(
+        getSubCollection('activeInstances'),
+        instanceId
+      );
+      logger.info('[Instance Manager] Removed active instance', { instanceId, file: 'instance-manager.ts' });
     } catch (error) {
       logger.error('Error removing active instance:', error instanceof Error ? error : new Error(String(error)), { file: 'instance-manager.ts' });
-      return Promise.resolve();
     }
   }
   

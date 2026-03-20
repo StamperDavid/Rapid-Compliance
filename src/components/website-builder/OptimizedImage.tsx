@@ -6,7 +6,8 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { generateSrcSet, getImageSizes } from '@/lib/performance/image-optimizer';
+import Image from 'next/image';
+import { getImageSizes } from '@/lib/performance/image-optimizer';
 
 interface OptimizedImageProps {
   src: string;
@@ -35,7 +36,7 @@ export function OptimizedImage({
   sizes,
   onLoad,
 }: OptimizedImageProps) {
-  const imgRef = useRef<HTMLImageElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [isLoaded, setIsLoaded] = useState(false);
   const [isVisible, setIsVisible] = useState(priority);
 
@@ -45,7 +46,7 @@ export function OptimizedImage({
       return;
     }
 
-    // Lazy loading with Intersection Observer
+    // Lazy loading with Intersection Observer on the container div
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
@@ -61,8 +62,8 @@ export function OptimizedImage({
       }
     );
 
-    if (imgRef.current) {
-      observer.observe(imgRef.current);
+    if (containerRef.current) {
+      observer.observe(containerRef.current);
     }
 
     return () => {
@@ -75,12 +76,12 @@ export function OptimizedImage({
     onLoad?.();
   };
 
-  // Generate responsive attributes
-  const srcSet = generateSrcSet(src);
+  // Generate responsive size hint
   const sizesAttr = sizes ? getImageSizes(sizes) : '100vw';
 
   return (
     <div
+      ref={containerRef}
       style={{
         position: 'relative',
         overflow: 'hidden',
@@ -116,27 +117,26 @@ export function OptimizedImage({
         </div>
       )}
 
-      {/* Actual image */}
-      {/* eslint-disable-next-line @next/next/no-img-element -- Custom lazy loading with srcSet/IntersectionObserver; next/image would duplicate this optimization */}
-      <img
-        ref={imgRef}
-        src={isVisible ? src : undefined}
-        srcSet={isVisible ? srcSet : undefined}
-        sizes={sizesAttr}
-        alt={alt}
-        width={width}
-        height={height}
-        loading={priority ? 'eager' : 'lazy'}
-        decoding="async"
-        onLoad={handleLoad}
-        style={{
-          width: '100%',
-          height: 'auto',
-          display: 'block',
-          opacity: isLoaded ? 1 : 0,
-          transition: 'opacity 0.3s ease-in-out',
-        }}
-      />
+      {/* Actual image — unoptimized because the image-optimizer generates its own srcSet */}
+      {isVisible && (
+        <Image
+          src={src}
+          alt={alt}
+          width={width ?? 0}
+          height={height ?? 0}
+          sizes={sizesAttr}
+          unoptimized
+          priority={priority}
+          onLoad={handleLoad}
+          style={{
+            width: '100%',
+            height: 'auto',
+            display: 'block',
+            opacity: isLoaded ? 1 : 0,
+            transition: 'opacity 0.3s ease-in-out',
+          }}
+        />
+      )}
 
       <style>{`
         @keyframes spin {

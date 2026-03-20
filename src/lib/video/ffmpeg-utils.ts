@@ -42,7 +42,7 @@ let downloadPromise: Promise<string> | null = null;
  */
 export async function ensureFfmpeg(): Promise<string> {
   // Try npm packages first (works on local dev)
-  const localPath = tryLocalFfmpeg();
+  const localPath = await tryLocalFfmpeg();
   if (localPath) { return localPath; }
 
   // On Vercel / Linux serverless — check /tmp cache
@@ -57,14 +57,14 @@ export async function ensureFfmpeg(): Promise<string> {
 }
 
 /**
- * Synchronous attempt to find ffmpeg via npm packages.
+ * Attempt to find ffmpeg via npm packages.
  * Returns the path if found, null otherwise.
  */
-function tryLocalFfmpeg(): string | null {
+async function tryLocalFfmpeg(): Promise<string | null> {
   // Try ffmpeg-static
   try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const staticPath = require('ffmpeg-static') as string;
+    const staticMod = await import('ffmpeg-static');
+    const staticPath = (staticMod.default ?? staticMod) as string;
     if (staticPath && existsSync(staticPath)) {
       logger.info('FFmpeg resolved via ffmpeg-static', { path: staticPath, file: 'ffmpeg-utils.ts' });
       return staticPath;
@@ -73,8 +73,8 @@ function tryLocalFfmpeg(): string | null {
 
   // Try @ffmpeg-installer/ffmpeg
   try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const installer = require('@ffmpeg-installer/ffmpeg') as { path: string };
+    const installerMod = await import('@ffmpeg-installer/ffmpeg');
+    const installer = (installerMod.default ?? installerMod) as { path: string };
     if (installer.path && existsSync(installer.path)) {
       logger.info('FFmpeg resolved via @ffmpeg-installer', { path: installer.path, file: 'ffmpeg-utils.ts' });
       return installer.path;
@@ -128,13 +128,13 @@ async function downloadFfmpegBinary(): Promise<string> {
  * Checks /tmp cache and local npm packages. Throws if not found.
  * Use ensureFfmpeg() for the async version that can download.
  */
-export function getFfmpegPath(): string {
+export async function getFfmpegPath(): Promise<string> {
   // Check /tmp cache first (set by ensureFfmpeg)
   if (existsSync(FFMPEG_TMP_PATH)) {
     return FFMPEG_TMP_PATH;
   }
 
-  const localPath = tryLocalFfmpeg();
+  const localPath = await tryLocalFfmpeg();
   if (localPath) { return localPath; }
 
   throw new Error(

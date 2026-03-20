@@ -1344,7 +1344,21 @@ export class FacebookAdsExpert extends BaseSpecialist {
       }
     }
 
-    return Promise.resolve(null);
+    // No match found — return a generic persona derived from the input string
+    this.log('WARN', `No persona match for "${persona}", generating generic persona`);
+    const genericPersona: AudiencePersona = {
+      name: persona,
+      description: `Target audience: ${persona}`,
+      painPoints: ['Needs a solution to their problem', 'Looking for a trusted provider'],
+      desires: ['Wants results', 'Seeks value for money'],
+      languagePatterns: ['I need help with...', 'Looking for...'],
+      objections: ['Is this worth the investment?', 'Will this work for me?'],
+      emotionalTriggers: ['Fear of missing out', 'Desire for improvement'],
+      demographics: {
+        ageRange: '25-55',
+      },
+    };
+    return Promise.resolve(genericPersona);
   }
 
   /**

@@ -785,27 +785,30 @@ export class TeamCoachingEngine {
     period: string,
     customRange?: { startDate: Date; endDate: Date }
   ): { startDate: Date; endDate: Date } {
+    const MS_PER_DAY = 24 * 60 * 60 * 1000;
     const endDate = new Date();
-    let startDate = new Date();
-    
+    let startDate: Date;
+
     if (period === 'custom' && customRange) {
       return customRange;
     }
-    
+
     switch (period) {
       case 'last_7_days':
-        startDate.setDate(endDate.getDate() - 7);
+        startDate = new Date(endDate.getTime() - 7 * MS_PER_DAY);
         break;
       case 'last_30_days':
-        startDate.setDate(endDate.getDate() - 30);
+        startDate = new Date(endDate.getTime() - 30 * MS_PER_DAY);
         break;
       case 'last_90_days':
-        startDate.setDate(endDate.getDate() - 90);
+        startDate = new Date(endDate.getTime() - 90 * MS_PER_DAY);
         break;
       case 'last_6_months':
+        startDate = new Date(endDate.getTime());
         startDate.setMonth(endDate.getMonth() - 6);
         break;
       case 'last_12_months':
+        startDate = new Date(endDate.getTime());
         startDate.setFullYear(endDate.getFullYear() - 1);
         break;
       case 'this_quarter': {
@@ -817,7 +820,7 @@ export class TeamCoachingEngine {
         startDate = new Date(endDate.getFullYear(), 0, 1);
         break;
       default:
-        startDate.setDate(endDate.getDate() - 30);
+        startDate = new Date(endDate.getTime() - 30 * MS_PER_DAY);
     }
     
     return { startDate, endDate };

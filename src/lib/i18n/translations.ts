@@ -663,8 +663,7 @@ export class I18n {
         value = undefined;
       }
       if (value === undefined) {
-        // eslint-disable-next-line no-template-curly-in-string -- Intentional template literal syntax in string for demonstration
-        logger.warn('Missing translation: ${key} for locale ${this.locale}', { file: 'translations.ts' });
+        logger.warn(`Missing translation: ${key} for locale ${this.locale}`, { file: 'translations.ts' });
         return key;
       }
     }

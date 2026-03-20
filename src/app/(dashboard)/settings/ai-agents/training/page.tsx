@@ -176,6 +176,7 @@ export default function AgentTrainingPage() {
 
   const chatEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const loadDemoDataRef = useRef<(() => void) | null>(null);
 
   // Unified AI provider caller - uses whatever API key is available
   const callAIProvider = useCallback(async (conversationHistory: ChatMessage[], systemPrompt: string): Promise<AIResponse> => {
@@ -233,7 +234,7 @@ export default function AgentTrainingPage() {
       const { isFirebaseConfigured } = await import('@/lib/firebase/config');
       if (!isFirebaseConfigured) {
         logger.warn('Firebase not configured, loading demo data', { file: 'page.tsx' });
-        loadDemoData();
+        loadDemoDataRef.current?.();
         setLoading(false);
         return;
       }
@@ -281,8 +282,7 @@ export default function AgentTrainingPage() {
     } finally {
       setLoading(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- loadDemoData is a stable useCallback defined later in the component; adding it to deps would cause a temporal dead zone error
-  }, [PLATFORM_ID]);
+  }, []);
 
   useEffect(() => {
     void loadTrainingData();
@@ -877,6 +877,11 @@ export default function AgentTrainingPage() {
 
     logger.info('✅ Demo data loaded for platform sales agent', { file: 'page.tsx' });
   }, []);
+
+  // Keep loadDemoDataRef in sync so loadTrainingData can call it without a forward-reference dep
+  useEffect(() => {
+    loadDemoDataRef.current = loadDemoData;
+  }, [loadDemoData]);
 
   const handleDeployGoldenMaster = async (gmId: string, version: string | number) => {
     const confirmed = await confirmDialog({

@@ -216,12 +216,23 @@ describe('Training Manager Integration Tests', () => {
         const initialPositiveCount = pattern1.positiveCount;
         const initialVersion = pattern1.version;
 
+        // The first 'correct' feedback flags the original scrape for deletion.
+        // Create a fresh scrape for the second submission so it is not affected
+        // by parallel test cleanup touching flagged documents.
+        const scrapeResult2 = await saveTemporaryScrape({
+          url: 'https://example.com',
+          rawHtml: '<html><body>Expanding team</body></html>',
+          cleanedContent: 'Expanding team',
+          metadata: {},
+        });
+        trackForCleanup('temporary_scrapes', scrapeResult2.scrape.id);
+
         // Submit second feedback with same pattern
         const feedback2 = await submitFeedback({
-            userId: testUserId,
+          userId: testUserId,
           feedbackType: 'correct',
           signalId: 'growth_signal',
-          sourceScrapeId: scrapeResult.scrape.id,
+          sourceScrapeId: scrapeResult2.scrape.id,
           sourceText: 'expanding team',
         });
 
@@ -256,7 +267,9 @@ describe('Training Manager Integration Tests', () => {
 
       const params = {
         userId: testUserId,
-        feedbackType: 'correct' as const,
+        // Use 'missing' so the scrape is NOT flagged for deletion and survives
+        // all 10 iterations even when the parallel temporary-scrapes suite is running
+        feedbackType: 'missing' as const,
         signalId: 'test_signal',
         sourceScrapeId: scrapeResult.scrape.id,
         sourceText: 'Test',

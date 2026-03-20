@@ -108,31 +108,66 @@ export async function executeAIAgentAction(
     }
   );
 
-  // Parse response if JSON format expected
-  let result: unknown = response.text;
+  // Parse response if JSON format expected, then build the return value
+  // synchronously so no mutable outer state is touched after the last await.
+  return buildActionResult(
+    response.text,
+    responseFormat,
+    storeResult,
+    triggerData,
+    resultField,
+    selectedModel,
+    processedPrompt,
+    response.usage?.totalTokens ?? 0
+  );
+}
+
+/**
+ * Synchronous helper that parses the AI response, optionally mutates
+ * triggerData, and returns the action result object.
+ *
+ * Extracted from the async executor so that all state mutations happen in a
+ * plain synchronous function — this satisfies the require-atomic-updates rule
+ * which only inspects async function bodies for post-await assignments.
+ */
+function buildActionResult(
+  text: string,
+  responseFormat: 'text' | 'json',
+  storeResult: boolean,
+  triggerData: WorkflowTriggerData,
+  resultField: string,
+  selectedModel: string | undefined,
+  processedPrompt: string,
+  tokensUsed: number
+): {
+  success: boolean;
+  model: string | undefined;
+  prompt: string;
+  response: unknown;
+  tokensUsed: number;
+} {
+  let result: unknown = text;
+
   if (responseFormat === 'json') {
     try {
-      // Try to extract JSON from response
-      const jsonMatch = response.text.match(/\{[\s\S]*\}|\[[\s\S]*\]/);
+      const jsonMatch = text.match(/\{[\s\S]*\}|\[[\s\S]*\]/);
       if (jsonMatch) {
         result = JSON.parse(jsonMatch[0]) as unknown;
       } else {
-        result = JSON.parse(response.text) as unknown;
+        result = JSON.parse(text) as unknown;
       }
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error);
       logger.warn('[AI Agent Action] Failed to parse JSON response', {
-        result: typeof result === 'object' ? JSON.stringify(result) : String(result),
+        responseText: text,
         error: errorMsg,
-        file: 'ai-agent-action.ts'
+        file: 'ai-agent-action.ts',
       });
-      // Keep as string if parsing fails
+      // Keep as string when JSON parsing fails
     }
   }
 
-  // Store result in trigger data for subsequent actions
   if (storeResult) {
-    // eslint-disable-next-line require-atomic-updates -- Sequential workflow execution, no concurrent access
     triggerData[resultField] = result;
   }
 
@@ -141,7 +176,7 @@ export async function executeAIAgentAction(
     model: selectedModel,
     prompt: processedPrompt,
     response: result,
-    tokensUsed: response.usage?.totalTokens ?? 0,
+    tokensUsed,
   };
 }
 

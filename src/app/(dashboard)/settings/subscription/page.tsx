@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
@@ -36,6 +36,7 @@ export default function SubscriptionPage() {
   const [loading, setLoading] = useState(true);
   const [billingToggle, setBillingToggle] = useState<'monthly' | 'annual'>('monthly');
   const [changingTier, setChangingTier] = useState<string | null>(null);
+  const hasHandledCheckoutRef = useRef(false);
 
   const loadSubscription = useCallback(async () => {
     try {
@@ -67,13 +68,15 @@ export default function SubscriptionPage() {
   const currentTier = subscription?.tier ?? 'free';
   const currentRank = TIER_RANK[currentTier] ?? 0;
 
-  // Handle return from Stripe Checkout
+  // Handle return from Stripe Checkout — runs once per mount via ref guard
   useEffect(() => {
+    if (hasHandledCheckoutRef.current) { return; }
     const checkout = searchParams.get('checkout');
     const sessionId = searchParams.get('session_id');
     const tier = searchParams.get('tier') as TierKey | null;
 
     if (checkout === 'success' && sessionId && tier) {
+      hasHandledCheckoutRef.current = true;
       const activateSubscription = async () => {
         setChangingTier(tier);
         try {
@@ -107,12 +110,11 @@ export default function SubscriptionPage() {
       };
       void activateSubscription();
     } else if (checkout === 'cancelled') {
+      hasHandledCheckoutRef.current = true;
       toast.error('Checkout was cancelled');
       window.history.replaceState({}, '', '/settings/subscription');
     }
-  // Run once on mount
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [searchParams, toast]);
 
   const handleChangePlan = async (targetTier: TierKey) => {
     if (targetTier === currentTier) { return; }
