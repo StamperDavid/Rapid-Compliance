@@ -10,6 +10,7 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { verifyAdminRequest, isAuthError } from '@/lib/api/admin-auth';
+import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { logger } from '@/lib/logger/logger';
 import { z } from 'zod';
 import { PromotionService } from '@/lib/promotions/promotion-service';
@@ -50,7 +51,11 @@ const DeletePromotionSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
-    // Verify admin authentication
+    const rateLimitResponse = await rateLimitMiddleware(request, '/api/admin/promotions');
+    if (rateLimitResponse) {
+      return rateLimitResponse;
+    }
+
     const authResult = await verifyAdminRequest(request);
     if (isAuthError(authResult)) {
       return NextResponse.json(
@@ -59,7 +64,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Parse and validate request body
     const body: unknown = await request.json();
     const validation = CreatePromotionSchema.safeParse(body);
 
@@ -144,7 +148,11 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    // Verify admin authentication
+    const rateLimitResponse = await rateLimitMiddleware(request, '/api/admin/promotions');
+    if (rateLimitResponse) {
+      return rateLimitResponse;
+    }
+
     const authResult = await verifyAdminRequest(request);
     if (isAuthError(authResult)) {
       return NextResponse.json(
@@ -207,7 +215,11 @@ export async function GET(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
-    // Verify admin authentication
+    const rateLimitResponse = await rateLimitMiddleware(request, '/api/admin/promotions');
+    if (rateLimitResponse) {
+      return rateLimitResponse;
+    }
+
     const authResult = await verifyAdminRequest(request);
     if (isAuthError(authResult)) {
       return NextResponse.json(
@@ -216,7 +228,6 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    // Parse and validate request body
     const body: unknown = await request.json();
     const validation = DeletePromotionSchema.safeParse(body);
 

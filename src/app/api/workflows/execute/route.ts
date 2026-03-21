@@ -17,7 +17,6 @@
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
-import type { Firestore } from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
 import { rateLimitMiddleware, RateLimitPresets } from '@/lib/middleware/rate-limiter';
 import { requireAuth } from '@/lib/auth/api-auth';
@@ -70,9 +69,7 @@ export async function POST(request: NextRequest) {
       dealId: validData.dealId,
     });
 
-    // Admin Firestore and Client Firestore share the same API at runtime
-    // but have different TypeScript type signatures. Cast through unknown for type compatibility.
-    const dal = new BaseAgentDAL(db as unknown as Firestore);
+    const dal = new BaseAgentDAL(db);
     const service = getWorkflowService(dal);
 
     const result = await service.executeWorkflow(

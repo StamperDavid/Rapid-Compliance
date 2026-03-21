@@ -217,6 +217,14 @@ export const WaitActionConfigSchema = z.object({
 );
 
 /**
+ * Custom action config schema — typed replacement for z.record(z.unknown())
+ */
+export const CustomActionConfigSchema = z.object({
+  handler: z.string().min(1, 'Custom action handler is required'),
+  params: z.record(z.string(), z.union([z.string(), z.number(), z.boolean(), z.null()])).optional(),
+});
+
+/**
  * Action config schema (discriminated union)
  */
 export const ActionConfigSchema = z.union([
@@ -226,7 +234,7 @@ export const ActionConfigSchema = z.union([
   NotificationActionConfigSchema,
   WebhookActionConfigSchema,
   WaitActionConfigSchema,
-  z.record(z.unknown()), // For custom actions
+  CustomActionConfigSchema,
 ]);
 
 /**
@@ -368,6 +376,7 @@ export type DealActionConfig = z.infer<typeof DealActionConfigSchema>;
 export type NotificationActionConfig = z.infer<typeof NotificationActionConfigSchema>;
 export type WebhookActionConfig = z.infer<typeof WebhookActionConfigSchema>;
 export type WaitActionConfig = z.infer<typeof WaitActionConfigSchema>;
+export type CustomActionConfig = z.infer<typeof CustomActionConfigSchema>;
 
 // ============================================================================
 // VALIDATION HELPERS

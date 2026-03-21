@@ -3,7 +3,7 @@
  * Allows admin to set custom claims for role-based access control
  *
  * POST /api/admin/set-claims
- * Body: { userId: string, role: 'admin' }
+ * Body: { userId: string, role: 'owner' | 'admin' | 'manager' | 'member' }
  *
  * Security:
  * - Requires admin authentication
@@ -30,15 +30,23 @@ export const dynamic = 'force-dynamic';
 // SCHEMAS & TYPE DEFINITIONS
 // ============================================================================
 
+const VALID_ROLES = ['owner', 'admin', 'manager', 'member'] as const;
+
 const SetClaimsSchema = z.object({
   userId: z.string().min(1),
-  role: z.literal('admin'),
+  role: z.enum(VALID_ROLES),
 });
 
 /**
  * Valid role types for the platform
  */
-type RoleType = 'admin';
+type RoleType = (typeof VALID_ROLES)[number];
+
+/**
+ * Roles that receive the Firebase `admin: true` custom claim
+ * (used by Firestore security rules for admin gating)
+ */
+const ADMIN_CLAIM_ROLES: ReadonlySet<string> = new Set(['owner', 'admin']);
 
 /**
  * Custom claims object structure
@@ -110,7 +118,7 @@ export async function POST(request: NextRequest) {
     const parsed = SetClaimsSchema.safeParse(rawBody);
     if (!parsed.success) {
       return createErrorResponse(
-        'Invalid request body. Required: userId (string), role (admin)',
+        `Invalid request body. Required: userId (string), role (${VALID_ROLES.join('|')})`,
         400
       );
     }
@@ -136,7 +144,7 @@ export async function POST(request: NextRequest) {
     }
 
     const claims: CustomClaims = {
-      admin: true,
+      admin: ADMIN_CLAIM_ROLES.has(body.role),
       role: body.role,
     };
 

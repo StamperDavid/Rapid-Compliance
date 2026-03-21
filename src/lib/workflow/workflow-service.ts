@@ -18,7 +18,7 @@
 
 import { logger } from '@/lib/logger/logger';
 import { Timestamp } from 'firebase-admin/firestore';
-import type { Firestore, UpdateData, DocumentData, QueryConstraint } from 'firebase/firestore';
+import type { UpdateData, DocumentData, QueryConstraint } from 'firebase/firestore';
 import { BaseAgentDAL } from '@/lib/dal/BaseAgentDAL';
 import { db } from '@/lib/firebase-admin';
 import { type WorkflowExecutionContext, type WorkflowExecutionResult } from './workflow-engine';
@@ -443,8 +443,7 @@ export async function createWorkflow(
   workflowData: CreateWorkflowInput,
   userId: string
 ): Promise<Workflow> {
-  // Cast admin Firestore to client Firestore type - they share same API at runtime
-  const dal = new BaseAgentDAL(db as unknown as Firestore);
+  const dal = new BaseAgentDAL(db);
   const service = getWorkflowService(dal);
 
   return service.createWorkflow(workflowData, userId);
@@ -456,8 +455,7 @@ export async function createWorkflow(
 export async function getWorkflows(
   filters?: Record<string, unknown>
 ): Promise<{ data: Workflow[]; hasMore: boolean }> {
-  // Cast admin Firestore to client Firestore type - they share same API at runtime
-  const dal = new BaseAgentDAL(db as unknown as Firestore);
+  const dal = new BaseAgentDAL(db);
   const service = getWorkflowService(dal);
 
   const result = await service.getWorkflows(filters as WorkflowFilterInput);
@@ -474,8 +472,7 @@ export async function getWorkflows(
 export async function getWorkflow(
   workflowId: string
 ): Promise<Workflow | null> {
-  // Cast admin Firestore to client Firestore type - they share same API at runtime
-  const dal = new BaseAgentDAL(db as unknown as Firestore);
+  const dal = new BaseAgentDAL(db);
   const service = getWorkflowService(dal);
 
   return service.getWorkflow(workflowId);
@@ -488,8 +485,7 @@ export async function updateWorkflow(
   workflowId: string,
   updates: UpdateWorkflowInput
 ): Promise<Workflow> {
-  // Cast admin Firestore to client Firestore type - they share same API at runtime
-  const dal = new BaseAgentDAL(db as unknown as Firestore);
+  const dal = new BaseAgentDAL(db);
   const service = getWorkflowService(dal);
 
   return service.updateWorkflow(workflowId, updates);
@@ -502,8 +498,7 @@ export async function setWorkflowStatus(
   workflowId: string,
   status: WorkflowStatus
 ): Promise<Workflow> {
-  // Cast admin Firestore to client Firestore type - they share same API at runtime
-  const dal = new BaseAgentDAL(db as unknown as Firestore);
+  const dal = new BaseAgentDAL(db);
   const service = getWorkflowService(dal);
 
   return service.setWorkflowStatus(workflowId, status);
@@ -515,8 +510,7 @@ export async function setWorkflowStatus(
 export async function deleteWorkflow(
   workflowId: string
 ): Promise<void> {
-  // Cast admin Firestore to client Firestore type - they share same API at runtime
-  const dal = new BaseAgentDAL(db as unknown as Firestore);
+  const dal = new BaseAgentDAL(db);
   const service = getWorkflowService(dal);
 
   return service.deleteWorkflow(workflowId);

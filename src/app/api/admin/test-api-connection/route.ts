@@ -1,7 +1,8 @@
-import type { NextRequest} from 'next/server';
+import type { NextRequest } from 'next/server';
 import { z } from 'zod';
 
 import { verifyAdminRequest, createErrorResponse, createSuccessResponse, isAuthError } from '@/lib/api/admin-auth';
+import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { apiKeyService } from '@/lib/api-keys/api-key-service';
 import { logger } from '@/lib/logger/logger';
 import { PLATFORM_ID } from '@/lib/constants/platform';
@@ -85,6 +86,11 @@ function isError(error: unknown): error is Error {
  * Returns success/error status from the provider
  */
 export async function POST(request: NextRequest) {
+  const rateLimitResponse = await rateLimitMiddleware(request, '/api/admin/test-api-connection');
+  if (rateLimitResponse) {
+    return rateLimitResponse;
+  }
+
   const authResult = await verifyAdminRequest(request);
 
   if (isAuthError(authResult)) {

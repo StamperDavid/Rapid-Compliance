@@ -6,6 +6,8 @@ import { z } from 'zod';
 import adminApp from '@/lib/firebase/admin';
 import { logger } from '@/lib/logger/logger';
 import { getWorkflow, updateWorkflow, deleteWorkflow, setWorkflowStatus } from '@/lib/workflows/workflow-service';
+import { UpdateWorkflowSchema } from '@/lib/workflow/validation';
+import type { Workflow } from '@/types/workflow';
 
 /**
  * MAJ-45: This workflow route uses Firebase Admin SDK auth (getAuth().verifyIdToken)
@@ -19,7 +21,7 @@ const paramsSchema = z.object({
 });
 
 const putBodySchema = z.object({
-  workflow: z.record(z.unknown()),
+  workflow: UpdateWorkflowSchema,
 });
 
 const patchBodySchema = z.object({
@@ -117,9 +119,13 @@ export async function PUT(
 
     const { workflow } = bodyResult.data;
 
+    // Zod validates the structure; type assertion bridges from Zod's inferred types
+    // to the Workflow domain model's discriminated unions
+    const updates = workflow as unknown as Partial<Omit<Workflow, 'id' | 'createdAt' | 'stats'>>;
+
     const updatedWorkflow = await updateWorkflow(
       workflowId,
-      workflow
+      updates
     );
 
     return NextResponse.json({ success: true, workflow: updatedWorkflow });
@@ -228,8 +234,7 @@ export async function DELETE(
     if (!existingWorkflow) {
       return NextResponse.json({ success: false, error: 'Workflow not found' }, { status: 404 });
     }
-    const workflowData = existingWorkflow as unknown as Record<string, unknown>;
-    if (workflowData.status === 'active') {
+    if (existingWorkflow.status === 'active') {
       return NextResponse.json(
         { success: false, error: 'Cannot delete an active workflow. Pause it first.' },
         { status: 409 }

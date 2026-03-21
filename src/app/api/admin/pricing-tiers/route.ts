@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { requireRole } from '@/lib/auth/api-auth';
+import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { logger } from '@/lib/logger/logger';
 
 export const dynamic = 'force-dynamic';
@@ -31,6 +32,11 @@ interface PricingDoc {
  */
 export async function GET(request: NextRequest) {
   try {
+    const rateLimitResponse = await rateLimitMiddleware(request, '/api/admin/pricing-tiers');
+    if (rateLimitResponse) {
+      return rateLimitResponse;
+    }
+
     const authResult = await requireRole(request, ['owner', 'admin']);
     if (authResult instanceof NextResponse) {
       return authResult;
@@ -60,6 +66,11 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
+    const rateLimitResponse = await rateLimitMiddleware(request, '/api/admin/pricing-tiers');
+    if (rateLimitResponse) {
+      return rateLimitResponse;
+    }
+
     const authResult = await requireRole(request, ['owner', 'admin']);
     if (authResult instanceof NextResponse) {
       return authResult;

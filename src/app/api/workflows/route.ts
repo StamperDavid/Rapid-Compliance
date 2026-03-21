@@ -7,25 +7,30 @@ import adminApp from '@/lib/firebase/admin';
 import { logger } from '@/lib/logger/logger';
 import { getWorkflows, createWorkflow, type WorkflowFilters } from '@/lib/workflows/workflow-service';
 import type { Workflow } from '@/types/workflow';
-
-const statusValues = ['draft', 'active', 'paused', 'archived'] as const;
+import {
+  WorkflowTriggerSchema,
+  WorkflowActionSchema,
+  WorkflowSettingsSchema,
+  TriggerConditionSchema,
+  WorkflowStatusSchema,
+} from '@/lib/workflow/validation';
 
 const getQuerySchema = z.object({
-  status: z.enum(statusValues).optional(),
+  status: WorkflowStatusSchema.optional(),
 });
 
 const postBodySchema = z.object({
   workflow: z.object({
-    name: z.string(),
+    name: z.string().min(1),
     description: z.string().optional(),
     icon: z.string().optional(),
     folder: z.string().optional(),
-    status: z.enum(statusValues),
-    trigger: z.record(z.unknown()),
-    conditions: z.array(z.record(z.unknown())).optional(),
+    status: WorkflowStatusSchema,
+    trigger: WorkflowTriggerSchema,
+    conditions: z.array(TriggerConditionSchema).optional(),
     conditionOperator: z.enum(['and', 'or']).optional(),
-    actions: z.array(z.record(z.unknown())),
-    settings: z.record(z.unknown()).optional(),
+    actions: z.array(WorkflowActionSchema).min(1).max(50),
+    settings: WorkflowSettingsSchema.optional(),
     permissions: z.object({
       canView: z.array(z.string()),
       canEdit: z.array(z.string()),
@@ -121,8 +126,10 @@ export async function POST(request: NextRequest) {
 
     const { workflow } = bodyResult.data;
 
-    // Build type-safe workflow input from validated Zod data
-    // Zod validates the structure but types are loose, so we cast through Partial for type safety
+    // Build workflow input from Zod-validated data.
+    // Type assertions bridge from the Zod validation layer (flat schema) to the
+    // domain model layer (discriminated unions in types/workflow.ts). The Zod schemas
+    // validate structure — the assertion converts from inferred Zod types to domain types.
     const workflowData: Omit<Workflow, 'id' | 'createdAt' | 'updatedAt' | 'createdBy' | 'version' | 'stats'> = {
       name: workflow.name,
       description: workflow.description,

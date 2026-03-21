@@ -9,6 +9,32 @@ import { errors } from '@/lib/middleware/error-handler';
 
 export const dynamic = 'force-dynamic';
 
+/**
+ * Allowed sender domains — emails can only be sent from these verified domains.
+ * This prevents authenticated users from spoofing arbitrary from addresses
+ * via our SendGrid account. Add new domains here after verifying in SendGrid.
+ */
+const ALLOWED_SENDER_DOMAINS: ReadonlySet<string> = new Set([
+  'salesvelocity.ai',
+  'rapidcompliance.us',
+]);
+
+/**
+ * Extract domain from an email address and check it against the allowlist.
+ * Returns null if valid, or an error message if blocked.
+ */
+function validateSenderDomain(fromEmail: string): string | null {
+  const atIndex = fromEmail.lastIndexOf('@');
+  if (atIndex === -1) {
+    return 'Invalid from email address';
+  }
+  const domain = fromEmail.slice(atIndex + 1).toLowerCase();
+  if (!ALLOWED_SENDER_DOMAINS.has(domain)) {
+    return `Sender domain "${domain}" is not a verified platform domain`;
+  }
+  return null;
+}
+
 interface ValidationError {
   path?: string[];
   message?: string;
@@ -62,6 +88,17 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
 
     const emailData = validation.data;
+
+    // Validate sender domain is org-owned (prevent spoofing via our SendGrid account)
+    if (typeof emailData.from === 'string') {
+      const domainError = validateSenderDomain(emailData.from);
+      if (domainError) {
+        return NextResponse.json(
+          { success: false, error: domainError },
+          { status: 403 }
+        );
+      }
+    }
 
     // Verify required email fields
     if (!emailData.to || !emailData.subject) {

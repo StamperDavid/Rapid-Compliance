@@ -6,6 +6,7 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { verifyAdminRequest, isAuthError } from '@/lib/api/admin-auth';
+import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { logger } from '@/lib/logger/logger';
 
 export const dynamic = 'force-dynamic';
@@ -17,6 +18,11 @@ const scraperRequestSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
+    const rateLimitResponse = await rateLimitMiddleware(request, '/api/admin/growth/scraper/start');
+    if (rateLimitResponse) {
+      return rateLimitResponse;
+    }
+
     const authResult = await verifyAdminRequest(request);
     if (isAuthError(authResult)) {
       return NextResponse.json({ error: authResult.error }, { status: authResult.status });

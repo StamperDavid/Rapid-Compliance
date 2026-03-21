@@ -30,6 +30,7 @@ import {
   getDocs,
   query
 } from 'firebase/firestore';
+import type { Firestore as AdminFirestore } from 'firebase-admin/firestore';
 import { logger } from '@/lib/logger/logger';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 
@@ -68,12 +69,19 @@ export interface WriteOptions {
 export class BaseAgentDAL {
   protected db: Firestore;
   private envPrefix: string;
-  
-  constructor(firestoreInstance: Firestore) {
+
+  /**
+   * Accepts both the client SDK Firestore and the Admin SDK Firestore.
+   * At runtime, the Admin SDK instance is structurally compatible with the
+   * client SDK's modular functions (collection, doc, getDoc, etc.).
+   * The internal `db` field is typed as client Firestore for compatibility
+   * with all downstream client SDK function calls.
+   */
+  constructor(firestoreInstance: Firestore | AdminFirestore) {
     if (!firestoreInstance) {
       throw new Error('BaseAgentDAL requires a valid Firestore instance');
     }
-    this.db = firestoreInstance;
+    this.db = firestoreInstance as Firestore;
     this.envPrefix = this.calculateEnvPrefix();
     
     logger.info('🏗️ BaseAgentDAL initialized', {

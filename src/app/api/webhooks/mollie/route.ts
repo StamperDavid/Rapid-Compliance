@@ -7,9 +7,11 @@
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
+import { createHmac } from 'crypto';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { apiKeyService } from '@/lib/api-keys/api-key-service';
+import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { getOrdersCollection } from '@/lib/firebase/collections';
@@ -32,6 +34,42 @@ interface MolliePayment {
 
 export async function POST(request: NextRequest) {
   try {
+    // Rate limit webhook endpoint to prevent abuse
+    const rateLimitResponse = await rateLimitMiddleware(request, '/api/webhooks/mollie');
+    if (rateLimitResponse) {
+      return rateLimitResponse;
+    }
+
+    // Fetch Mollie keys (needed for both signature verification and API calls)
+    const mollieKeys = await apiKeyService.getServiceKey(PLATFORM_ID, 'mollie') as {
+      apiKey?: string;
+      webhookSecret?: string;
+    } | null;
+
+    // Verify webhook signature if a webhook secret is configured
+    if (mollieKeys?.webhookSecret) {
+      const signature = request.headers.get('x-mollie-signature');
+      if (!signature) {
+        logger.warn('Mollie webhook missing signature header', {
+          route: '/api/webhooks/mollie',
+        });
+        return NextResponse.json({ error: 'Missing signature' }, { status: 401 });
+      }
+
+      // Clone the request to read the raw body for signature verification
+      const rawBody = await request.clone().text();
+      const expectedSignature = createHmac('sha256', mollieKeys.webhookSecret)
+        .update(rawBody)
+        .digest('hex');
+
+      if (signature !== expectedSignature) {
+        logger.warn('Mollie webhook signature mismatch', {
+          route: '/api/webhooks/mollie',
+        });
+        return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
+      }
+    }
+
     // Mollie sends form-encoded data
     const formData = await request.formData();
     const paymentId = formData.get('id');
@@ -42,9 +80,6 @@ export async function POST(request: NextRequest) {
     }
 
     const { id } = parseResult.data;
-
-    // Fetch payment details from Mollie API
-    const mollieKeys = await apiKeyService.getServiceKey(PLATFORM_ID, 'mollie') as { apiKey?: string } | null;
     if (!mollieKeys?.apiKey) {
       logger.error('Mollie webhook received but API key not configured', undefined, {
         route: '/api/webhooks/mollie',

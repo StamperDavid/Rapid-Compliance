@@ -6,7 +6,11 @@
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
-import { requireUserRole } from '@/lib/auth/server-auth';
+import {
+  verifyAdminRequest,
+  isAuthError,
+} from '@/lib/api/admin-auth';
+import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import {
   saveGlobalTemplate,
   deleteGlobalTemplate,
@@ -26,8 +30,18 @@ export const dynamic = 'force-dynamic';
  */
 export async function GET(request: NextRequest) {
   try {
-    // Require admin role
-    await requireUserRole(request, ['admin']);
+    const rateLimitResponse = await rateLimitMiddleware(request, '/api/admin/templates');
+    if (rateLimitResponse) {
+      return rateLimitResponse;
+    }
+
+    const authResult = await verifyAdminRequest(request);
+    if (isAuthError(authResult)) {
+      return NextResponse.json(
+        { success: false, error: authResult.error },
+        { status: authResult.status }
+      );
+    }
 
     const options = await getIndustryOptionsWithOverrides();
 
@@ -38,14 +52,6 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     logger.error('Error listing templates', error instanceof Error ? error : new Error(String(error)));
-
-    if (error instanceof Error && error.message === 'Insufficient permissions') {
-      return NextResponse.json(
-        { success: false, error: 'Admin access required' },
-        { status: 403 }
-      );
-    }
-
     return NextResponse.json(
       { success: false, error: 'Failed to list templates' },
       { status: 500 }
@@ -59,14 +65,24 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    // Require admin role
-    const user = await requireUserRole(request, ['admin']);
+    const rateLimitResponse = await rateLimitMiddleware(request, '/api/admin/templates');
+    if (rateLimitResponse) {
+      return rateLimitResponse;
+    }
+
+    const authResult = await verifyAdminRequest(request);
+    if (isAuthError(authResult)) {
+      return NextResponse.json(
+        { success: false, error: authResult.error },
+        { status: authResult.status }
+      );
+    }
 
     const body: unknown = await request.json();
 
     // Validate template structure
     const validation = validateTemplate(body);
-    
+
     if (!validation.success) {
       const errors = validation.errors ? getValidationErrors(validation.errors) : [];
       return NextResponse.json(
@@ -89,11 +105,11 @@ export async function POST(request: NextRequest) {
 
     // Save template to Firestore
     // validation.data is guaranteed to be IndustryTemplate due to successful validation
-    await saveGlobalTemplate(validation.data as IndustryTemplate, user.uid);
+    await saveGlobalTemplate(validation.data as IndustryTemplate, authResult.user.uid);
 
     logger.info('Template saved', {
       templateId: validation.data.id,
-      userId: user.uid,
+      userId: authResult.user.uid,
     });
 
     return NextResponse.json({
@@ -103,14 +119,6 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     logger.error('Error saving template', error instanceof Error ? error : new Error(String(error)));
-
-    if (error instanceof Error && error.message === 'Insufficient permissions') {
-      return NextResponse.json(
-        { success: false, error: 'Admin access required' },
-        { status: 403 }
-      );
-    }
-
     return NextResponse.json(
       { success: false, error: 'Failed to save template' },
       { status: 500 }
@@ -124,8 +132,18 @@ export async function POST(request: NextRequest) {
  */
 export async function DELETE(request: NextRequest) {
   try {
-    // Require admin role
-    const user = await requireUserRole(request, ['admin']);
+    const rateLimitResponse = await rateLimitMiddleware(request, '/api/admin/templates');
+    if (rateLimitResponse) {
+      return rateLimitResponse;
+    }
+
+    const authResult = await verifyAdminRequest(request);
+    if (isAuthError(authResult)) {
+      return NextResponse.json(
+        { success: false, error: authResult.error },
+        { status: authResult.status }
+      );
+    }
 
     const { searchParams } = new URL(request.url);
     const templateId = searchParams.get('id');
@@ -142,7 +160,7 @@ export async function DELETE(request: NextRequest) {
 
     logger.info('Template deleted (reverted to default)', {
       templateId,
-      userId: user.uid,
+      userId: authResult.user.uid,
     });
 
     return NextResponse.json({
@@ -152,14 +170,6 @@ export async function DELETE(request: NextRequest) {
     });
   } catch (error) {
     logger.error('Error deleting template', error instanceof Error ? error : new Error(String(error)));
-
-    if (error instanceof Error && error.message === 'Insufficient permissions') {
-      return NextResponse.json(
-        { success: false, error: 'Admin access required' },
-        { status: 403 }
-      );
-    }
-
     return NextResponse.json(
       { success: false, error: 'Failed to delete template' },
       { status: 500 }
