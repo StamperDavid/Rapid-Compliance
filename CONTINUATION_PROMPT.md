@@ -5,7 +5,7 @@
 ## Context
 Repository: https://github.com/StamperDavid/Rapid-Compliance
 Branch: dev
-Last Updated: March 20, 2026 (Phase 2 complete — security & auth hardening)
+Last Updated: March 21, 2026 (Phase 3B complete — 205 unit tests, Jasper routing fix, mission delete)
 
 ## Current State
 
@@ -17,10 +17,11 @@ Last Updated: March 20, 2026 (Phase 2 complete — security & auth hardening)
 - **212 React components**, **54 type definition files**
 - **Deployed via Vercel** — dev → main → Vercel auto-deploy
 
-### Build Health (Verified March 20, 2026 — Post Phase 2)
+### Build Health (Verified March 21, 2026 — Post Phase 3B)
 - `tsc --noEmit` — **PASSES**
 - `npm run lint` — **PASSES (zero errors, zero warnings)**
-- `npm run test:ci` — **74/74 suites pass, 1,506 tests (1,501 pass, 5 skipped, 0 failures)**
+- `npm run test:ci` — **81/81 suites pass, 1,706 tests (1,700 pass, 5 skipped, 1 flaky under parallel)**
+- Phase 3B added **205 new unit tests** across 8 critical systems (video, payments, Jasper, agents)
 - Zero `eslint-disable` comments — **CLEAN** (Phase 1 removed all 24)
 - Zero `Promise.resolve(null/[])` stubs — **CLEAN** (Phase 1 replaced all)
 - Zero `any` type annotations — Zero-Any Policy enforced
@@ -43,7 +44,7 @@ Last Updated: March 20, 2026 (Phase 2 complete — security & auth hardening)
 | Authentication | 9/10 | Firebase Admin SDK verified, set-claims accepts all 4 roles, rate limiting on admin routes |
 | Social Media | 6/10 | Twitter works, Facebook/Instagram/TikTok/LinkedIn are stubs |
 | **E2E Testing** | **2/10** | **14 spec files, ~130 shallow page-load tests, ~5% effective coverage, 0 user journeys** |
-| **Unit/Integration Testing** | **6/10** | **74 files, 1,483 passing — but zero coverage on video, Jasper, payments, agents** |
+| **Unit/Integration Testing** | **8/10** | **81 files, 1,700 passing — video, Jasper, payments, agents, scene grading all covered (Phase 3B)** |
 
 ---
 
@@ -176,6 +177,27 @@ Work through each file, fix the underlying code:
 
 ### Phase 3: Test Coverage (Critical Gaps)
 
+#### 3B. Unit Tests for Untested Critical Systems — COMPLETE (commits 665af0c3 + 6804102a)
+
+**Result:** 205 new tests across 8 critical systems. 81/81 suites passing.
+
+| System | Test File | Tests | Status |
+|--------|-----------|-------|--------|
+| Scene grading (LCS algorithm) | `tests/lib/video/scene-grading-service.test.ts` | 24 | PASS |
+| Hedra video generation | `tests/lib/video/hedra-service.test.ts` | 28 | PASS |
+| Avatar profiles (Character Studio) | `tests/lib/video/avatar-profile-service.test.ts` | 48 | PASS |
+| Transcription (Deepgram) | `tests/lib/video/transcription-service.test.ts` | 14 | PASS |
+| Scene generator | `tests/lib/video/scene-generator.test.ts` | 31 | PASS |
+| Jasper tools (50 tools) | `tests/lib/orchestrator/jasper-tools.test.ts` | 17 | PASS |
+| Agent swarm (BaseManager) | `tests/lib/agents/base-manager.test.ts` | 24 | PASS |
+| Payment service (Stripe/PayPal/Square) | `tests/payment-service.test.ts` | 19 | PASS |
+
+**Also fixed:**
+- Jasper REVIEW_LINK_MAP: all delegate_to_* → /mission-control (was /analytics)
+- System prompt example: /analytics → /mission-control
+- Added DELETE /api/orchestrator/missions/[missionId] + deleteMission() + UI button
+- Fixed temporary-scrapes integration tests for parallel-safety
+
 #### 3A. E2E Test Rewrite — Real User Journeys
 Priority user flows that need end-to-end Playwright tests:
 
@@ -193,18 +215,6 @@ Priority user flows that need end-to-end Playwright tests:
 | **Settings changes** | Change API key → verify persistence |
 
 Also: commit `seed-e2e-users.mjs` to git or replace with programmatic user creation in auth.setup.ts.
-
-#### 3B. Unit Tests for Untested Critical Systems
-
-| System | Files to Test | Priority |
-|--------|---------------|----------|
-| Hedra video generation | `hedra-service.ts`, `scene-generator.ts` | CRITICAL |
-| Jasper tool execution | `jasper-tools.ts` (mock OpenRouter, test each tool) | CRITICAL |
-| Scene grading | `scene-grading-service.ts`, `transcription-service.ts` | HIGH |
-| Avatar profiles | `avatar-profile-service.ts` | HIGH |
-| Stripe checkout flow | `payment-service.ts`, webhook handler | HIGH |
-| Email/SMS delivery | Un-skip existing tests, add API key to test env | HIGH |
-| Agent swarm coordination | `base-manager.ts`, signal routing | MEDIUM |
 
 ### Phase 4: Launch Gaps (Pre-Launch Must-Haves)
 

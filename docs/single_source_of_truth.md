@@ -1,7 +1,7 @@
 # SalesVelocity.ai - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** March 20, 2026 (Phase 2 security hardening — RBAC, webhooks, rate limiting, strict schemas)
+**Last Updated:** March 21, 2026 (Phase 3B — 205 unit tests, Jasper mission-control routing fix, delete mission API)
 **Branches:** `dev` (latest)
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Architecture:** Single-Tenant Penthouse Model (development strategy — multi-tenant SaaS product)
@@ -63,7 +63,7 @@
 |--------|-------|
 | **TypeScript Files** | 1,628 |
 | **Estimated Code Lines** | ~350,000+ |
-| **Test Files** | 95 (4 unit + 91 Playwright E2E) |
+| **Test Files** | 102 (81 unit/integration + 14 Playwright E2E + 7 helpers) |
 
 **Breakdown by Directory (TypeScript):**
 
@@ -211,7 +211,7 @@ Jasper orchestrates full marketing campaigns: research → strategy → produce 
 | Revenue & Commerce | **COMPLETE** — Stripe, Square, PayPal, Authorize.Net, 2Checkout, Mollie. Full e-commerce (products, cart, checkout, orders, inventory, coupons). Billing portal UI missing. |
 | Video System | **COMPLETE** — Hedra (sole engine), Kling 3.0 T2V, Character Studio, AI Video Director, scene grading, CapCut-style editor |
 | Social Media | **PARTIAL** — Twitter/X fully wired. LinkedIn messaging only. Facebook/Instagram/TikTok are stubs. |
-| Testing | **NEEDS WORK** — 91 Playwright E2E specs (good), but only 4 unit test files for 1,628 source files |
+| Testing | **IMPROVED** — 81 unit/integration suites (1,700 tests), 14 Playwright E2E specs. Critical systems covered: video, payments, Jasper, agents, scene grading. E2E user journeys still needed. |
 | API Validation | **COMPLETE** — Full sweep March 20 verified 173/175 routes have inline Zod schemas. 2 fixes applied (scene-preview/save, media POST). Coverage: ~99%. |
 | AI Creative Studio | **COMPLETE** — 250+ cinematic presets, 7 API routes, multi-provider (Hedra/Fal/Google/DALL-E/Kling), full UI at `/content/` |
 | Auth & Account Mgmt | **MOSTLY COMPLETE** — Login, signup, OAuth (Google/Microsoft), onboarding, RBAC all working. Missing: in-app password change, account deletion, MFA, email invites |
@@ -233,8 +233,9 @@ Jasper orchestrates full marketing campaigns: research → strategy → produce 
 | Website Builder | 9/10 | READY |
 | Analytics & Growth | 9/10 | READY |
 | UI Components | 8/10 | READY |
-| API Validation (Zod) | 4/10 | NEEDS WORK |
-| Testing | 3/10 | NEEDS WORK |
+| API Validation (Zod) | 9.5/10 | READY (99% coverage) |
+| Unit/Integration Testing | 8/10 | READY (81 suites, 1,700 tests) |
+| E2E Testing | 2/10 | NEEDS WORK |
 | Security | 8/10 | READY |
 | CI/CD & DevOps | 8.5/10 | READY |
 | Performance | 7/10 | NEEDS WORK |
@@ -245,7 +246,7 @@ Jasper orchestrates full marketing campaigns: research → strategy → produce 
 | Gap | Details |
 |-----|---------|
 | **Billing portal UI** | Subscription APIs exist but no user-facing pages (invoice history, payment methods, subscription management) |
-| **Unit test coverage ~0.2%** | 4 unit tests for 1,628 files. Service layer (Stripe, video, auth) completely untested |
+| ~~Unit test coverage ~0.2%~~ | **RESOLVED (Phase 3B)** — 81 test suites, 1,700 tests. Video, payments, Jasper, agents, scene grading all covered. |
 | ~~135+ API routes lack Zod validation~~ | **FALSE POSITIVE** — Full sweep of 175 POST/PUT/PATCH routes found 173 already validated with inline Zod schemas. 2 fixes applied. Actual coverage: ~99%. |
 
 #### High Priority (Pre-Launch)
