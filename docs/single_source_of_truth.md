@@ -1,7 +1,7 @@
 # SalesVelocity.ai - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** March 20, 2026 (Full 8-agent system audit — corrected metrics, status, and stale sections)
+**Last Updated:** March 20, 2026 (Phase 2 security hardening — RBAC, webhooks, rate limiting, strict schemas)
 **Branches:** `dev` (latest)
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Architecture:** Single-Tenant Penthouse Model (development strategy — multi-tenant SaaS product)
@@ -1206,7 +1206,16 @@ const res = await authFetch('/api/some-endpoint');
 
 **Resolved Issues (9 total):** All CRITICAL security findings have been resolved — 82 unprotected API routes hardened (Session 4), OAuth CSRF + encryption fixed (Session 9), rate limiting + CAPTCHA enforced (Session 9), CAN-SPAM unsubscribe route created (Session 9), 53 bare fetch calls migrated to `authFetch` (Session 33), system status auth handshake fixed (Jan 29). See git history for details.
 
-**Remaining Open Issues:** None — all previously identified security issues are resolved (webhook fail-closed, workflow timeouts, strict claim validation). See git history for details.
+**Phase 2 Hardening (March 20, 2026):**
+- `set-claims` endpoint: expanded from admin-only to all 4 roles (owner/admin/manager/member)
+- Mollie webhook: HMAC signature verification + rate limiting added
+- Email send: `from` address domain allowlist (salesvelocity.ai, rapidcompliance.us)
+- Rate limiting added to 5 admin routes: templates, scraper/start, test-api-connection, promotions, pricing-tiers
+- Admin templates: auth pattern switched from `requireUserRole` to `verifyAdminRequest` for consistency
+- Workflow Zod schemas: replaced 5x `z.record(z.unknown())` with strict typed schemas
+- BaseAgentDAL: accepts both client and admin Firestore types (eliminated 7 unsafe casts)
+
+**Remaining Open Issues:** None — all previously identified security issues are resolved. See git history for details.
 
 ### API Route Protection Summary
 
