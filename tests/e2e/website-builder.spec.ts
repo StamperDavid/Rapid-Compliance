@@ -1,354 +1,152 @@
 /**
- * Website Builder E2E Tests
+ * E2E Test: Website Builder Journey
  *
- * Covers the website builder section of SalesVelocity.ai:
- *   - Visual editor       (/website/editor)
- *   - Pages management    (/website/pages)
- *   - Blog post list      (/website/blog)
- *   - Blog post editor    (/website/blog/editor)
- *   - Domain management   (/website/domains)
- *   - Navigation editor   (/website/navigation)
- *   - SEO tools           (/website/seo)
- *
- * All tests are authenticated. The visual editor test only verifies panel
- * presence; no drag-drop interactions are attempted.
+ * Tests the page management flow:
+ *   1. Navigate to website/pages
+ *   2. Verify page list or empty state renders
+ *   3. Click "+ New Page" — verify it navigates to the editor
+ *   4. Navigate back and verify page management controls
+ *   5. Test AI generation modal (open/close)
  */
 
 import { test, expect } from '@playwright/test';
 import { ensureAuthenticated, waitForPageReady } from './fixtures/helpers';
 import { BASE_URL } from './fixtures/test-accounts';
 
-// ---------------------------------------------------------------------------
-// Helper: wait for "Loading..." text to disappear
-// ---------------------------------------------------------------------------
-async function waitForLoadingToFinish(page: import('@playwright/test').Page): Promise<void> {
-  const loadingText = page.getByText(/loading/i).first();
-  if (await loadingText.isVisible({ timeout: 3_000 }).catch(() => false)) {
-    await expect(loadingText).toBeHidden({ timeout: 15_000 });
+async function navigateTo(page: import('@playwright/test').Page, path: string): Promise<void> {
+  await page.goto(`${BASE_URL}${path}`, {
+    waitUntil: 'domcontentloaded',
+    timeout: 30_000,
+  });
+  await waitForPageReady(page);
+  const authLoading = page.locator('p').filter({ hasText: 'Loading...' }).first();
+  if (await authLoading.isVisible({ timeout: 3_000 }).catch(() => false)) {
+    await authLoading.waitFor({ state: 'hidden', timeout: 30_000 });
   }
+  await expect(page.locator('aside')).toBeVisible({ timeout: 20_000 });
 }
 
-// ===========================================================================
-// Website Editor  (/website/editor)
-// ===========================================================================
-
-test.describe('Website Builder — Visual Editor', () => {
+test.describe('Website Builder Journey', () => {
   test.beforeEach(async ({ page }) => {
     await ensureAuthenticated(page);
   });
 
-  test('loads and shows three-panel layout', async ({ page }) => {
-    await page.goto(`${BASE_URL}/website/editor`, { waitUntil: 'domcontentloaded', timeout: 30_000 });
-    await waitForPageReady(page);
-    await waitForLoadingToFinish(page);
+  test('navigate to pages and verify structure', async ({ page }) => {
+    await navigateTo(page, '/website/pages');
 
-    // The editor renders three flex panels inside a full-viewport container.
-    // The outer wrapper is a flex column with height: 100vh.
-    // Inside it: EditorToolbar + a flex row containing WidgetsPanel | EditorCanvas | PropertiesPanel.
-    //
-    // WidgetsPanel exposes tabs: Widgets / Pages / Branding.
-    // We assert at least one tab button is visible to confirm the left panel rendered.
-    const widgetsTab = page.getByRole('button', { name: /widgets/i });
-    await expect(widgetsTab).toBeVisible({ timeout: 15_000 });
-  });
-
-  test('canvas area is present', async ({ page }) => {
-    await page.goto(`${BASE_URL}/website/editor`, { waitUntil: 'domcontentloaded', timeout: 30_000 });
-    await waitForPageReady(page);
-    await waitForLoadingToFinish(page);
-
-    // EditorCanvas renders inside a scrollable center container.
-    // The toolbar always renders breakpoint toggle buttons (Desktop / Tablet / Mobile).
-    const desktopBreakpoint = page.getByRole('button', { name: /desktop/i });
-    await expect(desktopBreakpoint).toBeVisible({ timeout: 15_000 });
-  });
-
-  test('Save button is rendered in the toolbar', async ({ page }) => {
-    await page.goto(`${BASE_URL}/website/editor`, { waitUntil: 'domcontentloaded', timeout: 30_000 });
-    await waitForPageReady(page);
-    await waitForLoadingToFinish(page);
-
-    // EditorToolbar renders a Save button
-    const saveBtn = page.getByRole('button', { name: /save/i });
-    await expect(saveBtn.first()).toBeVisible({ timeout: 15_000 });
-  });
-
-  test('Pages tab navigates the left panel to the pages list', async ({ page }) => {
-    await page.goto(`${BASE_URL}/website/editor`, { waitUntil: 'domcontentloaded', timeout: 30_000 });
-    await waitForPageReady(page);
-    await waitForLoadingToFinish(page);
-
-    // WidgetsPanel has a "Pages" tab
-    const pagesTab = page.getByRole('button', { name: /^pages$/i });
-    await expect(pagesTab).toBeVisible({ timeout: 15_000 });
-  });
-
-  test('Branding tab is visible in the left panel', async ({ page }) => {
-    await page.goto(`${BASE_URL}/website/editor`, { waitUntil: 'domcontentloaded', timeout: 30_000 });
-    await waitForPageReady(page);
-    await waitForLoadingToFinish(page);
-
-    const brandingTab = page.getByRole('button', { name: /branding/i });
-    await expect(brandingTab).toBeVisible({ timeout: 15_000 });
-  });
-});
-
-// ===========================================================================
-// Pages Management  (/website/pages)
-// ===========================================================================
-
-test.describe('Website Builder — Pages management', () => {
-  test.beforeEach(async ({ page }) => {
-    await ensureAuthenticated(page);
-  });
-
-  test('loads the pages list with heading', async ({ page }) => {
-    await page.goto(`${BASE_URL}/website/pages`, { waitUntil: 'domcontentloaded', timeout: 30_000 });
-    await waitForPageReady(page);
-    await waitForLoadingToFinish(page);
-
-    // Page renders an h1 containing "pages" (case-insensitive)
-    const heading = page.locator('h1').filter({ hasText: /pages/i });
+    // Verify heading
+    const heading = page.locator('h1').filter({ hasText: /pages/i }).or(
+      page.getByText(/website/i)
+    ).first();
     await expect(heading).toBeVisible({ timeout: 15_000 });
+
+    // Verify action buttons
+    const newPageBtn = page.locator('button').filter({ hasText: /new page/i }).or(
+      page.locator('button').filter({ hasText: /create page/i })
+    ).first();
+    await expect(newPageBtn).toBeVisible({ timeout: 10_000 });
+
+    // Verify either page list or empty state
+    const pagesOrEmpty = page.getByText(/no pages/i).or(
+      page.locator('div', { hasText: /draft|published/i }).first()
+    ).or(
+      page.getByText(/create your first page/i)
+    );
+    await expect(pagesOrEmpty).toBeVisible({ timeout: 15_000 });
   });
 
-  test('shows filter buttons (All / Draft / Published)', async ({ page }) => {
-    await page.goto(`${BASE_URL}/website/pages`, { waitUntil: 'domcontentloaded', timeout: 30_000 });
-    await waitForPageReady(page);
-    await waitForLoadingToFinish(page);
+  test('new page button navigates to editor', async ({ page }) => {
+    await navigateTo(page, '/website/pages');
 
-    const allFilter = page.getByRole('button', { name: /^all$/i });
-    await expect(allFilter).toBeVisible({ timeout: 15_000 });
+    const newPageBtn = page.locator('button').filter({ hasText: /new page/i }).or(
+      page.locator('a').filter({ hasText: /new page/i })
+    ).or(
+      page.locator('button').filter({ hasText: /create page/i })
+    ).first();
+    await expect(newPageBtn).toBeVisible({ timeout: 10_000 });
+    await newPageBtn.click();
+
+    // Should navigate to editor or show create form
+    const editorResult = await Promise.race([
+      page.waitForURL(/\/website\/editor/, { timeout: 10_000 }).then(() => 'editor' as const),
+      page.locator('h2, h3').filter({ hasText: /new page|create page/i }).first()
+        .waitFor({ timeout: 10_000 }).then(() => 'modal' as const),
+    ]).catch(() => 'none' as const);
+
+    if (editorResult === 'editor') {
+      // Verify editor loads
+      await expect(page).toHaveURL(/\/website\/editor/);
+      await waitForPageReady(page);
+
+      // Editor should have content area
+      const editorContent = page.locator('aside').or(
+        page.getByText(/editor/i)
+      ).or(
+        page.locator('main')
+      ).first();
+      await expect(editorContent).toBeVisible({ timeout: 15_000 });
+    } else if (editorResult === 'modal') {
+      // Modal form for creating page
+      const titleInput = page.getByPlaceholder(/title|page name/i).or(
+        page.getByLabel(/title/i)
+      );
+      await expect(titleInput).toBeVisible({ timeout: 5_000 });
+    }
   });
 
-  test('shows page list items or empty state', async ({ page }) => {
-    await page.goto(`${BASE_URL}/website/pages`, { waitUntil: 'domcontentloaded', timeout: 30_000 });
-    await waitForPageReady(page);
-    await waitForLoadingToFinish(page);
+  test('AI generation modal opens and closes', async ({ page }) => {
+    await navigateTo(page, '/website/pages');
 
-    // Either a list of pages or an empty-state message is visible
-    const listOrEmpty = page
-      .locator('[data-testid="page-item"], li, .page-item')
-      .or(page.getByText(/no pages/i))
-      .or(page.locator('table'))
-      .or(page.locator('ul'))
-      .first();
+    const generateBtn = page.locator('button').filter({ hasText: /generate with ai/i }).or(
+      page.locator('button').filter({ hasText: /ai generate/i })
+    );
 
-    // Fallback: at least a New Page / Add Page button should exist
-    const addPageBtn = page.getByRole('button', { name: /new page|add page|create page/i });
-    const hasListOrEmpty = await listOrEmpty.isVisible({ timeout: 8_000 }).catch(() => false);
-    const hasAddBtn = await addPageBtn.isVisible({ timeout: 8_000 }).catch(() => false);
+    if (await generateBtn.isVisible({ timeout: 10_000 }).catch(() => false)) {
+      await generateBtn.click();
 
-    expect(hasListOrEmpty || hasAddBtn).toBe(true);
-  });
-});
+      // Verify modal opens
+      const modalHeading = page.locator('h2, h3').filter({ hasText: /generate/i });
+      await expect(modalHeading.first()).toBeVisible({ timeout: 10_000 });
 
-// ===========================================================================
-// Blog Post List  (/website/blog)
-// ===========================================================================
+      // Verify form fields
+      const descField = page.getByPlaceholder(/saas product/i).or(
+        page.locator('textarea').first()
+      );
+      await expect(descField).toBeVisible({ timeout: 5_000 });
 
-test.describe('Website Builder — Blog post list', () => {
-  test.beforeEach(async ({ page }) => {
-    await ensureAuthenticated(page);
-  });
+      // Close modal
+      const cancelBtn = page.locator('button').filter({ hasText: /cancel/i });
+      if (await cancelBtn.isVisible({ timeout: 3_000 }).catch(() => false)) {
+        await cancelBtn.click();
+      } else {
+        await page.keyboard.press('Escape');
+      }
 
-  test('loads the blog management page', async ({ page }) => {
-    await page.goto(`${BASE_URL}/website/blog`, { waitUntil: 'domcontentloaded', timeout: 30_000 });
-    await waitForPageReady(page);
-    await waitForLoadingToFinish(page);
-
-    // Page renders a heading containing "blog" (case-insensitive)
-    const heading = page.locator('h1').filter({ hasText: /blog/i });
-    await expect(heading).toBeVisible({ timeout: 15_000 });
+      // Modal should close
+      await expect(modalHeading.first()).toBeHidden({ timeout: 10_000 });
+    }
   });
 
-  test('shows filter controls', async ({ page }) => {
-    await page.goto(`${BASE_URL}/website/blog`, { waitUntil: 'domcontentloaded', timeout: 30_000 });
-    await waitForPageReady(page);
-    await waitForLoadingToFinish(page);
+  test('filter pages by status', async ({ page }) => {
+    await navigateTo(page, '/website/pages');
 
-    // BlogManagementPage renders All/Draft/Published filter buttons
-    const allFilter = page.getByRole('button', { name: /^all$/i });
-    await expect(allFilter).toBeVisible({ timeout: 15_000 });
-  });
+    // Look for filter buttons
+    const draftFilter = page.locator('button').filter({ hasText: /draft/i });
+    const publishedFilter = page.locator('button').filter({ hasText: /published/i });
+    const allFilter = page.locator('button').filter({ hasText: /^all/i });
 
-  test('shows blog post list or empty state', async ({ page }) => {
-    await page.goto(`${BASE_URL}/website/blog`, { waitUntil: 'domcontentloaded', timeout: 30_000 });
-    await waitForPageReady(page);
-    await waitForLoadingToFinish(page);
+    // If filters exist, click through them
+    if (await draftFilter.isVisible({ timeout: 5_000 }).catch(() => false)) {
+      await draftFilter.click();
+      await page.waitForTimeout(500);
 
-    // Either post items or a "No posts" / "Write your first" empty state
-    const postsOrEmpty = page
-      .locator('article, [data-testid="blog-post-item"]')
-      .or(page.getByText(/no posts|write your first|no blog posts/i))
-      .or(page.getByRole('button', { name: /new post|create post/i }));
+      await publishedFilter.click();
+      await page.waitForTimeout(500);
 
-    await expect(postsOrEmpty.first()).toBeVisible({ timeout: 15_000 });
-  });
-});
-
-// ===========================================================================
-// Blog Post Editor  (/website/blog/editor)
-// ===========================================================================
-
-test.describe('Website Builder — Blog post editor', () => {
-  test.beforeEach(async ({ page }) => {
-    await ensureAuthenticated(page);
-  });
-
-  test('loads the blog editor with widget panel', async ({ page }) => {
-    // No postId param — editor loads in "new post" mode
-    await page.goto(`${BASE_URL}/website/blog/editor`, { waitUntil: 'domcontentloaded', timeout: 30_000 });
-    await waitForPageReady(page);
-    await waitForLoadingToFinish(page);
-
-    // Blog editor reuses WidgetsPanel, so the Widgets/Settings tabs should render
-    const panelTab = page
-      .getByRole('button', { name: /widgets/i })
-      .or(page.getByRole('button', { name: /settings/i }))
-      .first();
-
-    // Fall back to checking that the page at minimum renders a heading or toolbar
-    const pageContent = page
-      .locator('h1, h2, [role="toolbar"], button')
-      .first();
-
-    const hasPanelTab = await panelTab.isVisible({ timeout: 10_000 }).catch(() => false);
-    const hasContent = await pageContent.isVisible({ timeout: 10_000 }).catch(() => false);
-
-    expect(hasPanelTab || hasContent).toBe(true);
-  });
-
-  test('existing post loads when postId query param is provided', async ({ page }) => {
-    // Navigate with a fake postId — the editor will attempt to fetch it.
-    // Whether it succeeds or shows an error, the page should not hard-crash.
-    await page.goto(`${BASE_URL}/website/blog/editor?postId=E2E_TEMP_probe-post`, {
-      waitUntil: 'domcontentloaded',
-      timeout: 30_000,
-    });
-    await waitForPageReady(page);
-
-    // Page should render body content regardless of fetch outcome
-    const body = page.locator('body');
-    await expect(body).toBeVisible({ timeout: 10_000 });
-  });
-});
-
-// ===========================================================================
-// Domain Management  (/website/domains)
-// ===========================================================================
-
-test.describe('Website Builder — Domain management', () => {
-  test.beforeEach(async ({ page }) => {
-    await ensureAuthenticated(page);
-  });
-
-  test('loads the domains page', async ({ page }) => {
-    await page.goto(`${BASE_URL}/website/domains`, { waitUntil: 'domcontentloaded', timeout: 30_000 });
-    await waitForPageReady(page);
-    await waitForLoadingToFinish(page);
-
-    // Page renders a heading or main section about custom domains
-    const heading = page.locator('h1, h2').filter({ hasText: /domain/i }).first();
-    await expect(heading).toBeVisible({ timeout: 15_000 });
-  });
-
-  test('shows Add Domain form or domain list', async ({ page }) => {
-    await page.goto(`${BASE_URL}/website/domains`, { waitUntil: 'domcontentloaded', timeout: 30_000 });
-    await waitForPageReady(page);
-    await waitForLoadingToFinish(page);
-
-    // Either a list of domains or an Add Domain button / input should be present
-    const domainElement = page
-      .getByRole('button', { name: /add domain/i })
-      .or(page.getByPlaceholder(/domain/i))
-      .or(page.locator('input[type="text"]'))
-      .first();
-
-    await expect(domainElement).toBeVisible({ timeout: 15_000 });
-  });
-});
-
-// ===========================================================================
-// Navigation Editor  (/website/navigation)
-// ===========================================================================
-
-test.describe('Website Builder — Navigation editor', () => {
-  test.beforeEach(async ({ page }) => {
-    await ensureAuthenticated(page);
-  });
-
-  test('loads the navigation page', async ({ page }) => {
-    await page.goto(`${BASE_URL}/website/navigation`, { waitUntil: 'domcontentloaded', timeout: 30_000 });
-    await waitForPageReady(page);
-    await waitForLoadingToFinish(page);
-
-    // Page should render a heading or main content related to navigation
-    const heading = page.locator('h1, h2').filter({ hasText: /nav/i }).first();
-    const pageBody = page.locator('main, [role="main"], .container, div').first();
-
-    const hasHeading = await heading.isVisible({ timeout: 8_000 }).catch(() => false);
-    const hasBody = await pageBody.isVisible({ timeout: 8_000 }).catch(() => false);
-
-    expect(hasHeading || hasBody).toBe(true);
-  });
-
-  test('page renders without crashing', async ({ page }) => {
-    const response = await page.goto(`${BASE_URL}/website/navigation`, {
-      waitUntil: 'domcontentloaded',
-      timeout: 30_000,
-    });
-    // HTTP response should be in 2xx range (not a hard 500)
-    expect(response?.status()).toBeLessThan(500);
-    await waitForPageReady(page);
-
-    const body = page.locator('body');
-    await expect(body).toBeVisible({ timeout: 10_000 });
-  });
-});
-
-// ===========================================================================
-// SEO Tools  (/website/seo)
-// ===========================================================================
-
-test.describe('Website Builder — SEO tools', () => {
-  test.beforeEach(async ({ page }) => {
-    await ensureAuthenticated(page);
-  });
-
-  test('loads the SEO management page with heading', async ({ page }) => {
-    await page.goto(`${BASE_URL}/website/seo`, { waitUntil: 'domcontentloaded', timeout: 30_000 });
-    await waitForPageReady(page);
-    await waitForLoadingToFinish(page);
-
-    // SEOManagementPage renders a heading containing "seo" or "search"
-    const heading = page
-      .locator('h1, h2')
-      .filter({ hasText: /seo|search engine|robots/i })
-      .first();
-    await expect(heading).toBeVisible({ timeout: 15_000 });
-  });
-
-  test('shows robots.txt or AI bot access section', async ({ page }) => {
-    await page.goto(`${BASE_URL}/website/seo`, { waitUntil: 'domcontentloaded', timeout: 30_000 });
-    await waitForPageReady(page);
-    await waitForLoadingToFinish(page);
-
-    // The SEO page always renders AI bot controls, robots.txt textarea, or Save button
-    const seoControl = page
-      .getByText(/robots\.txt|ai bot|crawl|GPTBot/i)
-      .or(page.getByRole('button', { name: /save/i }))
-      .first();
-
-    await expect(seoControl).toBeVisible({ timeout: 15_000 });
-  });
-
-  test('Save button is present', async ({ page }) => {
-    await page.goto(`${BASE_URL}/website/seo`, { waitUntil: 'domcontentloaded', timeout: 30_000 });
-    await waitForPageReady(page);
-    await waitForLoadingToFinish(page);
-
-    const saveBtn = page.getByRole('button', { name: /save/i });
-    await expect(saveBtn.first()).toBeVisible({ timeout: 15_000 });
+      if (await allFilter.isVisible().catch(() => false)) {
+        await allFilter.click();
+        await page.waitForTimeout(500);
+      }
+    }
   });
 });

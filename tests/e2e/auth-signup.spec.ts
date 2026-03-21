@@ -167,6 +167,88 @@ test.describe('Signup / Onboarding Flow', () => {
     });
   });
 
+  // ── Complete signup journey (all steps in one test) ─────────────────────
+
+  test.describe('Complete signup journey', () => {
+    test('fill industry → select niche → reach account creation form', async ({ page }) => {
+      await goToPage(page, '/onboarding/industry');
+
+      // Step 1: Fill required fields on Industry page
+      const nameInput = page.locator('input[placeholder="John Smith"]');
+      await expect(nameInput).toBeVisible({ timeout: 15_000 });
+      await nameInput.fill('E2E Journey User');
+
+      const emailInput = page.locator('input[type="email"]');
+      await emailInput.fill(`e2e-journey-${Date.now()}@example.com`);
+
+      // Open combobox and select first category
+      const comboboxTrigger = page.locator('button').filter({
+        hasText: /select your industry/i,
+      });
+      await comboboxTrigger.click();
+
+      const firstOption = page.locator('[class*="max-h"] button').first();
+      await expect(firstOption).toBeVisible({ timeout: 10_000 });
+      const categoryName = (await firstOption.locator('div').first().textContent())?.trim() ?? '';
+      await firstOption.click();
+
+      // Wait for dropdown to close
+      await expect(
+        page.locator('input[placeholder="Search categories..."]'),
+      ).toBeHidden({ timeout: 5_000 });
+
+      // Verify category is selected
+      await expect(
+        page.locator('button').filter({ hasText: categoryName }),
+      ).toBeVisible({ timeout: 5_000 });
+
+      // Click Continue
+      const continueBtn = page.locator('button').filter({ hasText: /^continue/i });
+      await expect(continueBtn).toBeEnabled({ timeout: 10_000 });
+      await continueBtn.click();
+
+      // Step 2: Handle niche page (if category has multiple templates)
+      await page.waitForURL(/\/onboarding\/(niche|account)/, {
+        waitUntil: 'commit',
+        timeout: 30_000,
+      });
+
+      if (page.url().includes('/onboarding/niche')) {
+        // Pick the first niche option
+        const nicheOption = page.locator('button[type="button"]').first();
+        await expect(nicheOption).toBeVisible({ timeout: 15_000 });
+        await nicheOption.click();
+
+        const nicheContinue = page.locator('button').filter({ hasText: /^continue/i });
+        await expect(nicheContinue).toBeEnabled({ timeout: 10_000 });
+        await nicheContinue.click();
+
+        await page.waitForURL(/\/onboarding\/account/, {
+          waitUntil: 'commit',
+          timeout: 30_000,
+        });
+      }
+
+      // Step 3: Verify account creation form has all required fields
+      await expect(page).toHaveURL(/\/onboarding\/account/);
+
+      const companyInput = page.locator('input[placeholder="Acme Inc."]');
+      await expect(companyInput).toBeVisible({ timeout: 15_000 });
+
+      const accountEmail = page.locator('input[type="email"]');
+      await expect(accountEmail).toBeVisible();
+
+      const passwordInputs = page.locator('input[type="password"]');
+      await expect(passwordInputs.first()).toBeVisible();
+
+      const submitBtn = page.locator('button[type="submit"]');
+      await expect(submitBtn).toBeVisible();
+      await expect(submitBtn).toContainText(/create account/i);
+
+      // Do NOT click submit — avoid creating a real Firebase account
+    });
+  });
+
   // ── Account creation step ────────────────────────────────────────────────
 
   test.describe('Account creation step (/onboarding/account)', () => {

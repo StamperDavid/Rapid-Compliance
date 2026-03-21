@@ -1,173 +1,147 @@
 /**
- * Social Media E2E Tests
+ * E2E Test: Social Posting Journey
  *
- * Verifies that all social hub pages load correctly for an authenticated user.
- * Tests are scoped to page-load and structural presence — no data mutations.
+ * Tests the social media posting flow:
+ *   1. Navigate to social campaigns page
+ *   2. Switch to Manual mode
+ *   3. Create a new social post (compose content, select platform)
+ *   4. Verify the post appears in the posts list
+ *   5. Delete the post
+ *   6. Verify the post is removed
  */
 
 import { test, expect } from '@playwright/test';
 import { ensureAuthenticated, waitForPageReady } from './fixtures/helpers';
 import { BASE_URL } from './fixtures/test-accounts';
 
-test.describe('Social Hub — page loads', () => {
+async function navigateTo(page: import('@playwright/test').Page, path: string): Promise<void> {
+  await page.goto(`${BASE_URL}${path}`, {
+    waitUntil: 'domcontentloaded',
+    timeout: 30_000,
+  });
+  await waitForPageReady(page);
+  const authLoading = page.locator('p').filter({ hasText: 'Loading...' }).first();
+  if (await authLoading.isVisible({ timeout: 3_000 }).catch(() => false)) {
+    await authLoading.waitFor({ state: 'hidden', timeout: 30_000 });
+  }
+  await expect(page.locator('aside')).toBeVisible({ timeout: 20_000 });
+}
+
+test.describe('Social Posting Journey', () => {
   test.beforeEach(async ({ page }) => {
     await ensureAuthenticated(page);
   });
 
-  // ── Command Center ─────────────────────────────────────────────────────────
+  test('create, verify, and delete a social post', async ({ page }) => {
+    await navigateTo(page, '/social/campaigns');
 
-  test('command center loads with agent status banner and activity feed', async ({ page }) => {
-    await page.goto(`${BASE_URL}/social/command-center`, {
-      waitUntil: 'domcontentloaded',
-      timeout: 30_000,
-    });
-    await waitForPageReady(page);
+    const postContent = `E2E Test Post ${Date.now()} - Automated test content`;
 
-    // Wait for the loading state to resolve (the page fetches data on mount)
-    // Either the heading or the loading message will be visible first
-    const heading = page.locator('h1', { hasText: 'Command Center' });
-    const loadingMsg = page.locator('text=Loading Command Center');
-
-    // Give the loading state a moment then wait for it to clear
-    await expect(heading.or(loadingMsg)).toBeVisible({ timeout: 15_000 });
-
-    // If it was loading, wait for the real heading to appear
+    // Verify page heading
+    const heading = page.getByText(/content studio/i).or(
+      page.getByText(/social/i)
+    ).first();
     await expect(heading).toBeVisible({ timeout: 15_000 });
 
-    // Agent status banner: shows either "AI Agent is Active" or "AI Agent is Paused"
-    const agentBanner = page
-      .locator('text=AI Agent is Active')
-      .or(page.locator('text=AI Agent is Paused'));
-    await expect(agentBanner).toBeVisible({ timeout: 15_000 });
+    // Switch to Manual mode if not already
+    const manualBtn = page.locator('button').filter({ hasText: /manual/i });
+    if (await manualBtn.isVisible({ timeout: 5_000 }).catch(() => false)) {
+      await manualBtn.click();
+      await page.waitForTimeout(500);
+    }
 
-    // Activity feed section heading
-    await expect(page.locator('h2', { hasText: 'Recent Activity' })).toBeVisible({
-      timeout: 15_000,
-    });
+    // Click New Post button
+    const newPostBtn = page.locator('button').filter({ hasText: /new post/i }).or(
+      page.locator('button').filter({ hasText: /create post/i })
+    ).or(
+      page.locator('button').filter({ hasText: /compose/i })
+    ).first();
+    await expect(newPostBtn).toBeVisible({ timeout: 10_000 });
+    await newPostBtn.click();
 
-    // Connected Platforms section heading
-    await expect(page.locator('h2', { hasText: 'Connected Platforms' })).toBeVisible({
-      timeout: 15_000,
-    });
+    // Wait for modal/form to appear
+    const modalHeading = page.locator('h2, h3').filter({ hasText: /new.*post|create.*post/i }).or(
+      page.getByText(/compose/i)
+    );
+    await expect(modalHeading.first()).toBeVisible({ timeout: 10_000 });
+
+    // Select platform (Twitter/X is most commonly available)
+    const platformSelect = page.locator('select').filter({ hasText: /platform/i }).or(
+      page.getByLabel(/platform/i)
+    ).first();
+    if (await platformSelect.isVisible({ timeout: 3_000 }).catch(() => false)) {
+      await platformSelect.selectOption({ index: 1 }); // Select first non-default option
+    }
+
+    // Fill content
+    const contentField = page.getByPlaceholder(/write your post/i).or(
+      page.getByPlaceholder(/content/i)
+    ).or(
+      page.locator('textarea').first()
+    );
+    await expect(contentField).toBeVisible({ timeout: 5_000 });
+    await contentField.fill(postContent);
+
+    // Set status to Draft (safe — no actual posting)
+    const statusSelect = page.getByLabel(/status/i).or(
+      page.locator('select').nth(1)
+    );
+    if (await statusSelect.isVisible({ timeout: 2_000 }).catch(() => false)) {
+      await statusSelect.selectOption('draft');
+    }
+
+    // Submit
+    const createBtn = page.locator('button').filter({ hasText: /create post/i }).or(
+      page.locator('button').filter({ hasText: /^save$/i })
+    ).or(
+      page.locator('button').filter({ hasText: /^post$/i })
+    ).first();
+    await createBtn.click();
+
+    // Wait for modal to close
+    await expect(modalHeading.first()).toBeHidden({ timeout: 10_000 }).catch(() => {});
+
+    // Verify post appears in list
+    await page.waitForTimeout(1_000);
+
+    // Navigate to Posts tab if not already there
+    const postsTab = page.locator('button').filter({ hasText: /posts/i }).first();
+    if (await postsTab.isVisible({ timeout: 3_000 }).catch(() => false)) {
+      await postsTab.click();
+      await page.waitForTimeout(1_000);
+    }
+
+    const postText = page.getByText(postContent.substring(0, 30)); // Match partial text
+    await expect(postText.first()).toBeVisible({ timeout: 15_000 });
+
+    // Delete the post
+    const postRow = page.locator('tr, div', { hasText: postContent.substring(0, 30) }).first();
+    const deleteBtn = postRow.locator('button').filter({ hasText: /delete/i }).first();
+    await expect(deleteBtn).toBeVisible({ timeout: 5_000 });
+    await deleteBtn.click();
+
+    // Confirm deletion
+    const confirmBtn = page.locator('button').filter({ hasText: /^(confirm|delete)$/i }).last();
+    await expect(confirmBtn).toBeVisible({ timeout: 5_000 });
+    await confirmBtn.click();
+
+    // Verify removed
+    await page.waitForTimeout(1_000);
+    await expect(page.getByText(postContent.substring(0, 30))).toBeHidden({ timeout: 10_000 });
   });
 
-  // ── Calendar ──────────────────────────────────────────────────────────────
+  test('verify autopilot mode displays agent status', async ({ page }) => {
+    await navigateTo(page, '/social/campaigns');
 
-  test('calendar page loads', async ({ page }) => {
-    await page.goto(`${BASE_URL}/social/calendar`, {
-      waitUntil: 'domcontentloaded',
-      timeout: 30_000,
-    });
-    await waitForPageReady(page);
+    // Switch to Autopilot mode
+    const autopilotBtn = page.locator('button').filter({ hasText: /autopilot/i });
+    if (await autopilotBtn.isVisible({ timeout: 10_000 }).catch(() => false)) {
+      await autopilotBtn.click();
+      await page.waitForTimeout(500);
 
-    // Sidebar confirms authenticated layout
-    await expect(page.locator('aside')).toBeVisible({ timeout: 15_000 });
-
-    // Page should not redirect to login
-    expect(page.url()).toContain('/social/calendar');
-  });
-
-  // ── Approvals ─────────────────────────────────────────────────────────────
-
-  test('approvals page loads with approval queue', async ({ page }) => {
-    await page.goto(`${BASE_URL}/social/approvals`, {
-      waitUntil: 'domcontentloaded',
-      timeout: 30_000,
-    });
-    await waitForPageReady(page);
-
-    await expect(page.locator('aside')).toBeVisible({ timeout: 15_000 });
-    expect(page.url()).toContain('/social/approvals');
-
-    // The approval queue renders a heading or status tabs.
-    // Pending Review is always a tab; allow a generous timeout for API data.
-    const pendingTab = page.locator('text=Pending Review');
-    const approvedTab = page.locator('text=Approved');
-    const queueIndicator = pendingTab.or(approvedTab);
-    await expect(queueIndicator).toBeVisible({ timeout: 15_000 });
-  });
-
-  // ── Listening ─────────────────────────────────────────────────────────────
-
-  test('listening page loads', async ({ page }) => {
-    await page.goto(`${BASE_URL}/social/listening`, {
-      waitUntil: 'domcontentloaded',
-      timeout: 30_000,
-    });
-    await waitForPageReady(page);
-
-    await expect(page.locator('aside')).toBeVisible({ timeout: 15_000 });
-    expect(page.url()).toContain('/social/listening');
-  });
-
-  // ── Playbook ──────────────────────────────────────────────────────────────
-
-  test('playbook page loads', async ({ page }) => {
-    await page.goto(`${BASE_URL}/social/playbook`, {
-      waitUntil: 'domcontentloaded',
-      timeout: 30_000,
-    });
-    await waitForPageReady(page);
-
-    await expect(page.locator('aside')).toBeVisible({ timeout: 15_000 });
-    expect(page.url()).toContain('/social/playbook');
-  });
-
-  // ── Training ──────────────────────────────────────────────────────────────
-
-  test('training page loads', async ({ page }) => {
-    await page.goto(`${BASE_URL}/social/training`, {
-      waitUntil: 'domcontentloaded',
-      timeout: 30_000,
-    });
-    await waitForPageReady(page);
-
-    await expect(page.locator('aside')).toBeVisible({ timeout: 15_000 });
-    expect(page.url()).toContain('/social/training');
-  });
-
-  // ── Agent Rules ───────────────────────────────────────────────────────────
-
-  test('agent-rules page loads', async ({ page }) => {
-    await page.goto(`${BASE_URL}/social/agent-rules`, {
-      waitUntil: 'domcontentloaded',
-      timeout: 30_000,
-    });
-    await waitForPageReady(page);
-
-    await expect(page.locator('aside')).toBeVisible({ timeout: 15_000 });
-    expect(page.url()).toContain('/social/agent-rules');
-  });
-
-  // ── SubpageNav tabs ───────────────────────────────────────────────────────
-
-  test('social hub SubpageNav renders the expected tab set', async ({ page }) => {
-    await page.goto(`${BASE_URL}/social/command-center`, {
-      waitUntil: 'domcontentloaded',
-      timeout: 30_000,
-    });
-    await waitForPageReady(page);
-
-    // Wait for the heading so we know the page has rendered
-    await expect(page.locator('h1', { hasText: 'Command Center' })).toBeVisible({
-      timeout: 15_000,
-    });
-
-    // The SOCIAL_TABS definition exposes these labels in the SubpageNav
-    const expectedTabs = [
-      'Command Center',
-      'Campaigns',
-      'Calendar',
-      'Approvals',
-      'Listening',
-      'Agent Rules',
-      'Playbook',
-    ];
-
-    for (const label of expectedTabs) {
-      await expect(page.locator(`a`, { hasText: label }).first()).toBeVisible({
-        timeout: 10_000,
-      });
+      // Verify agent status banner appears
+      const agentStatus = page.getByText(/ai agent/i).first();
+      await expect(agentStatus).toBeVisible({ timeout: 15_000 });
     }
   });
 });

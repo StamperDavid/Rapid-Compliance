@@ -9,7 +9,6 @@ import { db } from '@/lib/firebase-admin';
 import {
   submitFeedback,
   getTrainingData,
-  getAllTrainingData,
   deactivateTrainingData,
   activateTrainingData,
   getTrainingHistory,
@@ -52,6 +51,18 @@ describe('Training Manager Integration Tests', () => {
   // Helper to track created documents for cleanup
   function trackForCleanup(collection: string, id: string) {
     createdIds.push({ collection, id });
+  }
+
+  /** Track training_data docs by signalId for cleanup (parallel-safe — no global queries) */
+  async function trackTrainingDataBySignals(signalIds: string[]) {
+    for (const sig of signalIds) {
+      const snap = await db.collection('training_data')
+        .where('signalId', '==', sig)
+        .get();
+      snap.docs.forEach((doc) => {
+        trackForCleanup('training_data', doc.id);
+      });
+    }
   }
 
   // Cleanup after each test
@@ -333,10 +344,9 @@ describe('Training Manager Integration Tests', () => {
         'Testing deactivation'
       );
 
-      // Verify deactivated
-      const deactivatedData = await getAllTrainingData(false);
-      const deactivatedPattern = deactivatedData.find((td) => td.id === pattern.id);
-      expect(deactivatedPattern?.active).toBe(false);
+      // Verify deactivated — direct doc read (parallel-safe, no composite index needed)
+      const deactivatedDoc = await db.collection('training_data').doc(pattern.id).get();
+      expect(deactivatedDoc.data()?.active).toBe(false);
 
       // Should not appear in active-only query
       const activeData = await getTrainingData('test_signal', true);
@@ -416,10 +426,9 @@ describe('Training Manager Integration Tests', () => {
 
       await new Promise((resolve) => { setTimeout(resolve, 500); });
 
-      // Get current version
-      const currentData = await getAllTrainingData(false);
-      const currentPattern = currentData.find((td) => td.id === pattern.id);
-      expect(currentPattern?.version).toBeGreaterThan(initialVersion);
+      // Get current version — direct doc read (parallel-safe, no composite index needed)
+      const currentDoc = await db.collection('training_data').doc(pattern.id).get();
+      expect(currentDoc.data()?.version).toBeGreaterThan(initialVersion);
 
       // Rollback to version 2 (deactivated state — has history entry)
       const deactivatedVersion = initialVersion + 1;
@@ -432,9 +441,9 @@ describe('Training Manager Integration Tests', () => {
 
       await new Promise((resolve) => { setTimeout(resolve, 500); });
 
-      // Verify rollback
-      const rolledBackData = await getAllTrainingData(false);
-      const rolledBackPattern = rolledBackData.find((td) => td.id === pattern.id);
+      // Verify rollback — direct doc read (parallel-safe, no composite index needed)
+      const rolledBackDoc = await db.collection('training_data').doc(pattern.id).get();
+      const rolledBackPattern = rolledBackDoc.data();
 
       expect(rolledBackPattern).toBeDefined();
       // Rolled back to the deactivated version — should be inactive with same confidence
@@ -515,11 +524,8 @@ describe('Training Manager Integration Tests', () => {
       expect(analytics.activePatterns).toBeGreaterThan(0);
       expect(analytics.averageConfidence).toBeGreaterThan(0);
 
-      // Clean up training data
-      const allTraining = await getAllTrainingData(false);
-      allTraining.forEach((td) => {
-        trackForCleanup('training_data', td.id);
-      });
+      // Clean up training data — scope to signals used in THIS test only (parallel-safe)
+      await trackTrainingDataBySignals(['signal_1', 'signal_2', 'signal_3']);
     });
   });
 
@@ -563,12 +569,9 @@ describe('Training Manager Integration Tests', () => {
       expect(feedbacks.some((f) => f.feedbackType === 'correct')).toBe(true);
       expect(feedbacks.some((f) => f.feedbackType === 'incorrect')).toBe(true);
 
-      // Clean up training data
+      // Clean up training data — scope to signal used in THIS test only (parallel-safe)
       await new Promise((resolve) => { setTimeout(resolve, 1000); });
-      const allTraining = await getAllTrainingData(false);
-      allTraining.forEach((td) => {
-        trackForCleanup('training_data', td.id);
-      });
+      await trackTrainingDataBySignals(['query_signal']);
     });
 
     it('should retrieve unprocessed feedback', async () => {
@@ -599,12 +602,9 @@ describe('Training Manager Integration Tests', () => {
       // (It may or may not be processed yet depending on timing)
       expect(Array.isArray(unprocessed)).toBe(true);
 
-      // Clean up training data
+      // Clean up training data — scope to signal used in THIS test only (parallel-safe)
       await new Promise((resolve) => { setTimeout(resolve, 1000); });
-      const allTraining = await getAllTrainingData(false);
-      allTraining.forEach((td) => {
-        trackForCleanup('training_data', td.id);
-      });
+      await trackTrainingDataBySignals(['unprocessed_signal']);
     });
   });
 

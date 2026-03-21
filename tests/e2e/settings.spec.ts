@@ -131,6 +131,75 @@ test.describe('Settings — API Keys', () => {
 });
 
 // ===========================================================================
+// API Key Save/Verify Journey
+// ===========================================================================
+
+test.describe('Settings — API Key Save Journey', () => {
+  test.beforeEach(async ({ page }) => {
+    await ensureAuthenticated(page);
+  });
+
+  test('save an API key and verify it persists after reload', async ({ page }) => {
+    await page.goto(`${BASE_URL}/settings/api-keys`, {
+      waitUntil: 'domcontentloaded',
+      timeout: 30_000,
+    });
+    await waitForPageReady(page);
+    await waitForLoadingToFinish(page);
+
+    // Wait for page heading
+    const heading = page.locator('h1, h2').filter({ hasText: /api key/i }).first();
+    await expect(heading).toBeVisible({ timeout: 15_000 });
+
+    // Find the first API key input (password type for masking)
+    const keyInput = page.locator('input[type="password"]').first();
+    await expect(keyInput).toBeVisible({ timeout: 10_000 });
+
+    // Store original value to restore later
+    const originalValue = await keyInput.inputValue();
+
+    // Enter a test key
+    const testKey = `sk-test-e2e-${Date.now()}`;
+    await keyInput.clear();
+    await keyInput.fill(testKey);
+
+    // Click the Save button associated with this input
+    const saveBtn = page.locator('button').filter({ hasText: /^save$/i }).first();
+    await expect(saveBtn).toBeEnabled({ timeout: 5_000 });
+    await saveBtn.click();
+
+    // Wait for save confirmation
+    const savedConfirmation = page.getByText(/saved/i).first().or(
+      page.getByText(/success/i).first()
+    );
+    await expect(savedConfirmation).toBeVisible({ timeout: 10_000 });
+
+    // Reload and verify the key persists
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await waitForPageReady(page);
+    await waitForLoadingToFinish(page);
+
+    const reloadedInput = page.locator('input[type="password"]').first();
+    await expect(reloadedInput).toBeVisible({ timeout: 15_000 });
+
+    // The input should have a value (key was persisted to Firestore)
+    const persistedValue = await reloadedInput.inputValue();
+    expect(persistedValue.length).toBeGreaterThan(0);
+
+    // Restore: clear the key back to original state
+    await reloadedInput.clear();
+    if (originalValue) {
+      await reloadedInput.fill(originalValue);
+    }
+    const restoreBtn = page.locator('button').filter({ hasText: /^save$/i }).first();
+    if (await restoreBtn.isEnabled({ timeout: 3_000 }).catch(() => false)) {
+      await restoreBtn.click();
+      await savedConfirmation.waitFor({ timeout: 10_000 }).catch(() => {});
+    }
+  });
+});
+
+// ===========================================================================
 // Billing  (/settings/billing)
 // ===========================================================================
 
