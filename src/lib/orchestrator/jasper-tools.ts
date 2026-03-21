@@ -461,15 +461,17 @@ export interface AgentLog {
  * Jasper should ALWAYS include the reviewLink in his response to the user.
  */
 const REVIEW_LINK_MAP: Record<string, string> = {
-  delegate_to_builder: '/website',
-  delegate_to_sales: '/contacts',
-  delegate_to_marketing: '/email',
-  delegate_to_trust: '/analytics',
-  delegate_to_content: '/content/video',
-  delegate_to_architect: '/website',
-  delegate_to_outreach: '/leads',
-  delegate_to_intelligence: '/analytics',
-  delegate_to_commerce: '/products',
+  // Delegation tools → Mission Control (multi-step orchestrated workflows)
+  delegate_to_builder: '/mission-control',
+  delegate_to_sales: '/mission-control',
+  delegate_to_marketing: '/mission-control',
+  delegate_to_trust: '/mission-control',
+  delegate_to_content: '/mission-control',
+  delegate_to_architect: '/mission-control',
+  delegate_to_outreach: '/mission-control',
+  delegate_to_intelligence: '/mission-control',
+  delegate_to_commerce: '/mission-control',
+  // Single-artifact tools → their specific pages
   create_video: '/content/video',
   generate_video: '/content/video',
   save_blog_draft: '/website',

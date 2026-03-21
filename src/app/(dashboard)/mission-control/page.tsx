@@ -799,6 +799,36 @@ function MissionControlView({ deepLinkedMission }: { deepLinkedMission: string |
     }
   }, [selectedMissionId, cancelling, authFetch, fetchMissions]);
 
+  // ── Delete mission handler ──────────────────────────────────────────
+  const [deleting, setDeleting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  const handleDeleteRequest = useCallback(() => {
+    if (!selectedMissionId || deleting) { return; }
+    setShowDeleteConfirm(true);
+  }, [selectedMissionId, deleting]);
+
+  const handleDeleteConfirm = useCallback(async () => {
+    setShowDeleteConfirm(false);
+    if (!selectedMissionId || deleting) { return; }
+
+    setDeleting(true);
+    try {
+      const res = await authFetch(`/api/orchestrator/missions/${selectedMissionId}`, {
+        method: 'DELETE',
+      });
+      if (res.ok) {
+        setSelectedMissionId(null);
+        setSelectedStepId(null);
+        void fetchMissions();
+      }
+    } catch {
+      // Silent fail
+    } finally {
+      setDeleting(false);
+    }
+  }, [selectedMissionId, deleting, authFetch, fetchMissions]);
+
   // ── Find approval step if any ──────────────────────────────────────
   const approvalStep = selectedMission?.steps.find(
     (s) => s.status === 'AWAITING_APPROVAL'
@@ -808,6 +838,10 @@ function MissionControlView({ deepLinkedMission }: { deepLinkedMission: string |
   const isMissionActive = selectedMission?.status === 'IN_PROGRESS'
     || selectedMission?.status === 'AWAITING_APPROVAL'
     || selectedMission?.status === 'PENDING';
+
+  // Is mission terminal (deletable)?
+  const isMissionTerminal = selectedMission?.status === 'COMPLETED'
+    || selectedMission?.status === 'FAILED';
 
   return (
     <div style={{ padding: '1.25rem 1.5rem' }}>
@@ -945,6 +979,78 @@ function MissionControlView({ deepLinkedMission }: { deepLinkedMission: string |
                   }}
                 >
                   {cancelling ? 'Cancelling...' : 'Cancel Mission'}
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Delete bar when mission is terminal (completed/failed) */}
+          {selectedMission && isMissionTerminal && (
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'flex-end',
+              padding: '0.375rem 1rem',
+              borderBottom: '1px solid var(--color-border-light)',
+              backgroundColor: 'var(--color-bg-elevated)',
+              flexShrink: 0,
+            }}>
+              {showDeleteConfirm ? (
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>
+                    Permanently delete this mission?
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => void handleDeleteConfirm()}
+                    style={{
+                      padding: '0.25rem 0.5rem',
+                      fontSize: '0.75rem',
+                      fontWeight: 600,
+                      color: '#fff',
+                      backgroundColor: '#ef4444',
+                      border: 'none',
+                      borderRadius: '0.375rem',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Yes, Delete
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowDeleteConfirm(false)}
+                    style={{
+                      padding: '0.25rem 0.5rem',
+                      fontSize: '0.75rem',
+                      fontWeight: 600,
+                      color: 'var(--color-text-secondary)',
+                      backgroundColor: 'transparent',
+                      border: '1px solid var(--color-border-light)',
+                      borderRadius: '0.375rem',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    No
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleDeleteRequest}
+                  disabled={deleting}
+                  style={{
+                    padding: '0.25rem 0.75rem',
+                    fontSize: '0.75rem',
+                    fontWeight: 600,
+                    color: '#fff',
+                    backgroundColor: deleting ? '#9ca3af' : '#dc2626',
+                    border: 'none',
+                    borderRadius: '0.375rem',
+                    cursor: deleting ? 'not-allowed' : 'pointer',
+                    transition: 'background-color 0.15s',
+                  }}
+                >
+                  {deleting ? 'Deleting...' : 'Delete Mission'}
                 </button>
               )}
             </div>

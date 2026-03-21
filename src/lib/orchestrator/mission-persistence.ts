@@ -360,3 +360,36 @@ export async function cancelMission(missionId: string): Promise<boolean> {
     return false;
   }
 }
+
+/**
+ * Delete a mission permanently from Firestore.
+ * Used when the user decides they don't want the mission at all.
+ */
+export async function deleteMission(missionId: string): Promise<boolean> {
+  if (!adminDb) {
+    logger.warn('[MissionPersistence] Firestore not available — deleteMission skipped');
+    return false;
+  }
+
+  try {
+    const docRef = adminDb.collection(missionsCollectionPath()).doc(missionId);
+    const doc = await docRef.get();
+
+    if (!doc.exists) {
+      logger.warn('[MissionPersistence] Mission not found for delete', { missionId });
+      return false;
+    }
+
+    await docRef.delete();
+
+    logger.info('[MissionPersistence] Mission deleted', { missionId });
+    return true;
+  } catch (err) {
+    const errorMsg = err instanceof Error ? err.message : String(err);
+    logger.error('[MissionPersistence] Failed to delete mission', err instanceof Error ? err : undefined, {
+      missionId,
+      error: errorMsg,
+    });
+    return false;
+  }
+}

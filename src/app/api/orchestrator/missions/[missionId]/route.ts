@@ -1,16 +1,17 @@
 /**
- * Single Mission API — Fetch a specific mission by ID
+ * Single Mission API — Fetch or delete a specific mission by ID
  *
- * GET /api/orchestrator/missions/[missionId]
+ * GET    /api/orchestrator/missions/[missionId]  — Fetch mission details
+ * DELETE /api/orchestrator/missions/[missionId]  — Delete mission permanently
  *
- * Used by Mission Control for polling individual mission status.
+ * Used by Mission Control for polling individual mission status and discarding unwanted missions.
  * Authentication: Required (any authenticated user)
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
-import { getMission } from '@/lib/orchestrator/mission-persistence';
+import { getMission, deleteMission } from '@/lib/orchestrator/mission-persistence';
 
 export const dynamic = 'force-dynamic';
 
@@ -54,6 +55,48 @@ export async function GET(
     );
     return NextResponse.json(
       { success: false, error: 'Failed to fetch mission' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ missionId: string }> }
+) {
+  const authResult = await requireAuth(request);
+  if (authResult instanceof NextResponse) {
+    return authResult;
+  }
+
+  try {
+    const { missionId } = await params;
+
+    if (!missionId) {
+      return NextResponse.json(
+        { success: false, error: 'missionId is required' },
+        { status: 400 }
+      );
+    }
+
+    const deleted = await deleteMission(missionId);
+
+    if (!deleted) {
+      return NextResponse.json(
+        { success: false, error: 'Mission not found' },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error: unknown) {
+    logger.error(
+      'Mission delete failed',
+      error instanceof Error ? error : undefined,
+      { route: '/api/orchestrator/missions/[missionId]' }
+    );
+    return NextResponse.json(
+      { success: false, error: 'Failed to delete mission' },
       { status: 500 }
     );
   }
