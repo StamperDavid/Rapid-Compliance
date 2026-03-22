@@ -99,6 +99,7 @@ export type SceneStatus =
   | 'draft'
   | 'approved'
   | 'generating'
+  | 'persisting'
   | 'completed'
   | 'failed';
 

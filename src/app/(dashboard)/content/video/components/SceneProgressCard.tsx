@@ -31,13 +31,14 @@ export function SceneProgressCard({ sceneNumber, result, shotGroupLabel, onRetry
     draft: { icon: Loader2, color: 'text-zinc-400', bg: 'bg-zinc-800/50', label: 'Pending' },
     approved: { icon: Loader2, color: 'text-zinc-400', bg: 'bg-zinc-800/50', label: 'Queued' },
     generating: { icon: Loader2, color: 'text-amber-400', bg: 'bg-amber-500/10', label: 'Generating' },
+    persisting: { icon: Loader2, color: 'text-amber-400', bg: 'bg-amber-500/10', label: 'Saving' },
     completed: { icon: CheckCircle2, color: 'text-green-400', bg: 'bg-green-500/10', label: 'Complete' },
     failed: { icon: XCircle, color: 'text-red-400', bg: 'bg-red-500/10', label: 'Failed' },
   };
 
   const config = statusConfig[result.status];
   const Icon = config.icon;
-  const isAnimating = result.status === 'generating';
+  const isAnimating = result.status === 'generating' || result.status === 'persisting';
   const isComplete = result.status === 'completed' && result.videoUrl;
 
   const handleApprove = () => {

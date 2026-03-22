@@ -1323,6 +1323,26 @@ export const JASPER_TOOLS: ToolDefinition[] = [
     },
   },
 
+  {
+    type: 'function',
+    function: {
+      name: 'list_avatars',
+      description:
+        'List available avatar profiles (AI clones and stock characters). Call this when the user asks about available characters, wants to pick an avatar for video, or asks "who can star in my video?" Also use to check if user has a custom avatar before suggesting video creation.',
+      parameters: {
+        type: 'object',
+        properties: {
+          filter: {
+            type: 'string',
+            description: 'Filter by source: custom (user-created clones), hedra (stock characters), or all (default)',
+            enum: ['custom', 'hedra', 'all'],
+          },
+        },
+        required: [],
+      },
+    },
+  },
+
   // ═══════════════════════════════════════════════════════════════════════════
   // ANALYTICS & REPORTING TOOLS
   // ═══════════════════════════════════════════════════════════════════════════
@@ -4569,6 +4589,81 @@ Select cohesive settings that create a professional, unified visual language acr
           trackMissionStep(context, 'manage_media_library', 'FAILED', {
             summary: `manage_media_library: ${errMsg}`,
             durationMs: Date.now() - mediaStart,
+            toolResult: content,
+          });
+        }
+        break;
+      }
+
+      case 'list_avatars': {
+        const listAvatarsStart = Date.now();
+        try {
+          const { adminDb: avatarAdminDb } = await import('@/lib/firebase/admin');
+          if (!avatarAdminDb) {
+            content = JSON.stringify({ success: false, error: 'Database unavailable' });
+            break;
+          }
+
+          const avatarFilter = args.filter as string | undefined;
+          const avatarsCollection = `organizations/${PLATFORM_ID}/avatar_profiles`;
+
+          let avatarQuery: FirebaseFirestore.Query = avatarAdminDb.collection(avatarsCollection);
+          if (avatarFilter && avatarFilter !== 'all') {
+            avatarQuery = avatarAdminDb
+              .collection(avatarsCollection)
+              .where('source', '==', avatarFilter)
+              .orderBy('createdAt', 'desc');
+          } else {
+            avatarQuery = avatarAdminDb
+              .collection(avatarsCollection)
+              .orderBy('createdAt', 'desc');
+          }
+
+          const avatarSnapshot = await avatarQuery.limit(50).get();
+          const avatars = avatarSnapshot.docs.map((doc) => {
+            const data = doc.data() as Record<string, unknown>;
+            return {
+              id: doc.id,
+              name: (data.name as string) ?? 'Unnamed',
+              source: (data.source as string) ?? 'hedra',
+              role: (data.role as string) ?? 'presenter',
+              voiceId: (data.voiceId as string | null) ?? null,
+              voiceName: (data.voiceName as string | null) ?? null,
+              isDefault: data.isDefault === true,
+              isFavorite: data.isFavorite === true,
+              hasCustomVoice: Boolean(data.voiceId),
+            };
+          });
+
+          const customCount = avatars.filter((a) => a.source === 'custom').length;
+          const hasClone = customCount > 0;
+
+          content = JSON.stringify({
+            success: true,
+            avatars,
+            totalCount: avatars.length,
+            customCount,
+            hasClone,
+            characterStudioUrl: '/content/video/characters',
+            suggestion: hasClone
+              ? null
+              : "The user has no custom AI clone. When relevant, suggest: \"I noticed you haven't created your AI clone yet. Want to set that up? It takes 2 minutes — just upload a photo and record a voice sample in the Character Studio.\"",
+          });
+
+          trackMissionStep(context, 'list_avatars', 'COMPLETED', {
+            summary: `Avatar list: ${avatars.length} total, ${customCount} custom`,
+            durationMs: Date.now() - listAvatarsStart,
+            toolResult: content,
+          });
+        } catch (listAvatarsErr) {
+          const errMsg = listAvatarsErr instanceof Error ? listAvatarsErr.message : String(listAvatarsErr);
+          content = JSON.stringify({
+            success: false,
+            error: `Failed to list avatars: ${errMsg}`,
+          });
+          trackMissionStep(context, 'list_avatars', 'FAILED', {
+            summary: `list_avatars: ${errMsg}`,
+            durationMs: Date.now() - Date.now(),
             toolResult: content,
           });
         }

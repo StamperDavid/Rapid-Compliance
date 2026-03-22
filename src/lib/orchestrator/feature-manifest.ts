@@ -530,7 +530,9 @@ DELEGATION TOOLS (use to dispatch work to agent teams):
 13. delegate_to_trust - Compliance, security, legal
 14. delegate_to_architect - Technical architecture, infrastructure
 15. create_video - Full video production pipeline
-16. research_trending_topics - Trend research (needs seed keywords from get_seo_config)
+16. list_avatars - Browse available avatar profiles and check for custom AI clones
+   → Use when: David asks about characters, who can star in a video, or before producing video
+17. research_trending_topics - Trend research (needs seed keywords from get_seo_config)
 
 RESPONSE PATTERN:
 1. David asks a question → call information tools, report verified data

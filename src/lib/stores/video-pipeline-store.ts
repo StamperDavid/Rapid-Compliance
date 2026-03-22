@@ -24,6 +24,7 @@ import {
   type ColorGradePreset,
 } from '@/types/video-pipeline';
 import type { VideoAspectRatio, VideoResolution } from '@/types/video';
+import type { VideoTemplate } from '@/lib/video/templates';
 
 // ============================================================================
 // State Interface
@@ -93,6 +94,7 @@ export interface VideoPipelineState {
   advanceStep: () => void;
   reset: () => void;
   loadProject: (project: PipelineProject) => void;
+  loadTemplate: (template: VideoTemplate) => void;
 }
 
 // ============================================================================
@@ -314,6 +316,42 @@ export const useVideoPipelineStore = create<VideoPipelineState>()(
           generatedScenes: project.generatedScenes,
           finalVideoUrl: project.finalVideoUrl,
           transitionType: project.transitionType,
+        });
+      },
+
+      loadTemplate: (template) => {
+        const scenes: PipelineScene[] = template.scenes.map((scene, index) => ({
+          id: crypto.randomUUID(),
+          sceneNumber: index + 1,
+          title: scene.title,
+          scriptText: scene.scriptText,
+          visualDescription: scene.visualDescription,
+          duration: scene.duration,
+          screenshotUrl: null,
+          avatarId: null,
+          voiceId: null,
+          voiceProvider: null,
+          engine: null,
+          backgroundPrompt: null,
+          status: 'draft' as const,
+        }));
+
+        set({
+          projectId: null,
+          projectName: template.name,
+          currentStep: 'storyboard',
+          brief: {
+            ...get().brief,
+            description: template.brief.description,
+            targetAudience: template.brief.targetAudience,
+            tone: undefined,
+            duration: template.estimatedDuration,
+            aspectRatio: template.aspectRatio,
+          },
+          scenes,
+          generatedScenes: [],
+          finalVideoUrl: null,
+          decompositionPlan: null,
         });
       },
     }),

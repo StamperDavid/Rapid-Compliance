@@ -70,13 +70,19 @@ export async function POST(request: NextRequest) {
               });
             }
           } catch (persistError) {
-            // Persistence failed — return the Hedra URL as fallback.
-            // The proxy endpoint (/api/video/stream/) will handle re-resolution.
-            logger.warn('Scene video persistence failed, using Hedra URL as fallback', {
+            logger.error('Scene video persistence failed', persistError instanceof Error ? persistError : new Error(String(persistError)), {
               sceneId: scene.sceneId.slice(0, 8),
-              error: persistError instanceof Error ? persistError.message : String(persistError),
               file: 'poll-scenes/route.ts',
             });
+            return {
+              sceneId: scene.sceneId,
+              providerVideoId: scene.providerVideoId,
+              provider: scene.provider,
+              ...status,
+              status: 'failed' as const,
+              videoUrl: null,
+              error: 'Video generated but could not be saved — click Retry',
+            };
           }
         }
 

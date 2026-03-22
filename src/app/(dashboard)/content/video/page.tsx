@@ -6,7 +6,7 @@ import { useAuthFetch } from '@/hooks/useAuthFetch';
 import SubpageNav from '@/components/ui/SubpageNav';
 import { CONTENT_GENERATOR_TABS } from '@/lib/constants/subpage-nav';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, FolderOpen, Loader2, Clock, Film, X, Video } from 'lucide-react';
+import { Plus, FolderOpen, Loader2, Clock, Film, X, Video, LayoutTemplate } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { VideoPipelineStepper } from './components/VideoPipelineStepper';
 import { StudioModePanel } from './components/StudioModePanel';
@@ -14,8 +14,10 @@ import { StepStoryboard } from './components/StepStoryboard';
 import { StepGeneration } from './components/StepGeneration';
 import { StepAssembly } from './components/StepAssembly';
 import { StepPostProduction } from './components/StepPostProduction';
+import { TemplatePickerModal } from './components/TemplatePickerModal';
 import { useVideoPipelineStore } from '@/lib/stores/video-pipeline-store';
 import { PIPELINE_STEPS, type PipelineStep, type PipelineProject } from '@/types/video-pipeline';
+import type { VideoTemplate } from '@/lib/video/templates';
 
 // ─── Types ────────────────────────────────────────────────────────────
 
@@ -42,11 +44,13 @@ export default function VideoStudioPage() {
     setStep,
     reset,
     loadProject,
+    loadTemplate,
   } = useVideoPipelineStore();
 
   const searchParams = useSearchParams();
 
   const [showLoadModal, setShowLoadModal] = useState(false);
+  const [showTemplates, setShowTemplates] = useState(false);
   const [loadingProjects, setLoadingProjects] = useState(false);
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
   const [loadingProjectId, setLoadingProjectId] = useState<string | null>(null);
@@ -111,6 +115,14 @@ export default function VideoStudioPage() {
   const handleNewProject = useCallback(() => {
     reset();
   }, [reset]);
+
+  const handleTemplateSelect = useCallback(
+    (template: VideoTemplate) => {
+      loadTemplate(template);
+      setShowTemplates(false);
+    },
+    [loadTemplate],
+  );
 
   const handleOpenLoadModal = useCallback(async () => {
     setShowLoadModal(true);
@@ -225,6 +237,15 @@ export default function VideoStudioPage() {
             <Button
               variant="outline"
               size="sm"
+              onClick={() => setShowTemplates(true)}
+              className="gap-2 border-zinc-700"
+            >
+              <LayoutTemplate className="w-4 h-4" />
+              Templates
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
               className="gap-2 border-zinc-700"
               onClick={() => { void handleOpenLoadModal(); }}
             >
@@ -270,6 +291,13 @@ export default function VideoStudioPage() {
           </motion.div>
         </AnimatePresence>
       )}
+
+      {/* ── Template Picker Modal ─────────────────────────────── */}
+      <TemplatePickerModal
+        isOpen={showTemplates}
+        onClose={() => setShowTemplates(false)}
+        onSelect={handleTemplateSelect}
+      />
 
       {/* ── Load Project Modal ────────────────────────────────── */}
       {showLoadModal && (

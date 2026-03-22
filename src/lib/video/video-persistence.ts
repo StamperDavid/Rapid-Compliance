@@ -35,8 +35,8 @@ const inFlightPersistence = new Map<string, Promise<string>>();
  * Download a completed video from Hedra's CDN and upload to Firebase Storage.
  * Returns a long-lived signed URL (365 days).
  *
- * If Firebase Storage is unavailable, returns null (caller should fall back
- * to the proxy endpoint or raw Hedra URL).
+ * Throws if Firebase Storage is unavailable or if all upload retries are
+ * exhausted — callers must treat this as a hard failure, not a fallback.
  *
  * Deduplicates: if another call is already persisting the same generationId,
  * this call awaits the existing operation instead of starting a new one.
@@ -46,14 +46,10 @@ export async function persistVideoToStorage(
   hedraVideoUrl: string,
   projectId: string,
   sceneId: string,
-): Promise<string | null> {
-  // Firebase Storage not available — fall back gracefully
+): Promise<string> {
+  // Firebase Storage not available — hard failure, not a silent fallback
   if (!adminStorage) {
-    logger.warn('Video persistence skipped: Firebase Storage not initialized', {
-      generationId,
-      file: 'video-persistence.ts',
-    });
-    return null;
+    throw new Error('Video persistence failed: Firebase Storage is not initialized');
   }
 
   // Deduplicate: if already persisting this generation, await the existing operation
@@ -71,8 +67,7 @@ export async function persistVideoToStorage(
   inFlightPersistence.set(generationId, persistPromise);
 
   try {
-    const result = await persistPromise;
-    return result;
+    return await persistPromise;
   } finally {
     inFlightPersistence.delete(generationId);
   }
