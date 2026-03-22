@@ -1,7 +1,7 @@
 # SalesVelocity.ai - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** March 21, 2026 (Phase 3A — E2E test rewrite with real user journeys, parallel-safe integration fix)
+**Last Updated:** March 21, 2026 (V1A Clone Wizard + V2 table-stakes — captions, simple mode, music, assembly progress)
 **Branches:** `dev` (latest)
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Architecture:** Single-Tenant Penthouse Model (development strategy — multi-tenant SaaS product)
@@ -129,7 +129,7 @@ The Claude Code Governance Layer defines binding operational constraints for AI-
 > - Nav consolidation: 13 sections → 9 (Sessions 25-27)
 > - All 36 features across 8 sprints built to production-ready (Sessions 20-24)
 
-### Video System Architecture (Updated March 15, 2026)
+### Video System Architecture (Updated March 21, 2026)
 
 - **Hedra is the sole video engine.** Two generation modes:
   - **Prompt-only:** Kling O3 Standard T2V — generates speaking characters with native audio from text prompt. No portrait needed.
@@ -138,7 +138,13 @@ The Claude Code Governance Layer defines binding operational constraints for AI-
 - **87 models available** (58 video, 29 image). Key lip-sync models: Character 3 (auto duration), Omnia (8s), Avatar (10min), VEED Fabric (5min).
 - **69 voices** including ElevenLabs, MiniMax, and custom clones via `type: "voice_clone"`.
 - **Character Studio** stores client characters in Firestore (portraits, voices, metadata). Hedra's element API is read-only via API key — custom characters must live in our system.
-- **Prompt pipeline:** `hedra-prompt-agent.ts` and `hedra-prompt-translator.ts` updated March 15 — correct inline TTS field structure enforced, cinema-quality prompt generation for both avatar and T2V modes.
+- **Clone Wizard** (`src/components/video/CloneWizard.tsx`) — 5-step guided wizard for face+voice cloning. Webcam/upload for face, MediaRecorder/upload for voice, ElevenLabs voice clone, auto-link to avatar profile, auto-set as default. Accessible from AvatarPicker "Clone Yourself" CTA.
+- **Auto-Captions** (`src/lib/video/caption-service.ts`) — 3 styles (Bold Center, Bottom Bar, Karaoke) generated from Deepgram word-level timestamps. Toggle in Assembly step.
+- **Simple/Advanced Mode** — `SimpleStylePicker.tsx` (10 preset cards) vs full `CinematicControlsPanel` (97+ options). Mode persists in localStorage, defaults to simple.
+- **Background Music** (`src/lib/video/music-library.ts`) — 15 royalty-free tracks across 6 categories, volume slider, auto-duck toggle. Audio mixed via FFmpeg `sidechaincompress`.
+- **Assembly Progress** — Firestore-backed progress tracking with 4 phases (download → probe → stitch → upload), polled every 2s with animated progress bar.
+- **5 Starter Templates** — Weekly Sales Update, Product Demo, Testimonial, Social Ad, Company Announcement.
+- **Prompt pipeline:** `hedra-prompt-agent.ts` and `hedra-prompt-translator.ts` — correct inline TTS field structure enforced, cinema-quality prompt generation for both avatar and T2V modes.
 - **Core business value:** Clients clone themselves (face + voice) to automate daily video content. Cinema-quality enterprise ads at a fraction of traditional cost.
 
 ### AI Creative Studio (COMPLETE — March 16, 2026)
@@ -202,19 +208,19 @@ Jasper orchestrates full marketing campaigns: research → strategy → produce 
 | Single-tenant architecture | **COMPLETE** — Firebase kill-switch, PLATFORM_ID constant, workspace paths eradicated (53 files migrated) |
 | 4-role RBAC | **ENFORCED** — `requireAuth()`/`requireRole()` used 792 times across API routes, 47 permissions, sidebar filtering |
 | Agent hierarchy | **100% COMPLETE** — 52 agents (46 swarm + 6 standalone), all managers orchestrate all specialists |
-| Jasper delegation | **COMPLETE** — 50+ tools (13 delegate_to_*, 37+ utility incl. create_campaign, assemble_video, edit_video, manage_media_library). Mission Control SSE streaming + Campaign Review live |
+| Jasper delegation | **COMPLETE** — 51 tools (13 delegate_to_*, 38 utility incl. list_avatars, create_campaign, assemble_video, edit_video, manage_media_library). Mission Control SSE streaming + Campaign Review live |
 | Lead Research | **COMPLETE** — Unified 3-column page with AI chat, results panel, URL sources. 5 API routes, 8-tool AI subset |
 | Type safety | **CLEAN** — `tsc --noEmit` passes. Zero `any` type annotations (audit false positive: word "any" in comments miscounted). Zero `@ts-ignore`, zero `@ts-expect-error` |
 | Build pipeline | **CLEAN** — `npm run build` passes, `npm run lint` zero warnings, 24 eslint-disable (ratcheted) |
 | Dashboard UI | **184 pages** with 12-module feature toggle system |
 | Integrations | **30+ real integrations** verified with actual API calls |
-| Revenue & Commerce | **COMPLETE** — Stripe, Square, PayPal, Authorize.Net, 2Checkout, Mollie. Full e-commerce (products, cart, checkout, orders, inventory, coupons). Billing portal UI missing. |
-| Video System | **COMPLETE** — Hedra (sole engine), Kling 3.0 T2V, Character Studio, AI Video Director, scene grading, CapCut-style editor |
+| Revenue & Commerce | **COMPLETE** — Stripe, Square, PayPal, Authorize.Net, 2Checkout, Mollie. Full e-commerce (products, cart, checkout, orders, inventory, coupons). Billing portal via Stripe Customer Portal. |
+| Video System | **COMPLETE** — Hedra (sole engine), Clone Wizard, auto-captions, background music, simple/advanced mode, assembly progress, 5 templates, scene grading, CapCut-style editor |
 | Social Media | **PARTIAL** — Twitter/X fully wired. LinkedIn messaging only. Facebook/Instagram/TikTok are stubs. |
 | Testing | **IMPROVED** — 81 unit/integration suites (1,700 tests), 14 Playwright E2E specs. Critical systems covered: video, payments, Jasper, agents, scene grading. E2E user journeys still needed. |
 | API Validation | **COMPLETE** — Full sweep March 20 verified 173/175 routes have inline Zod schemas. 2 fixes applied (scene-preview/save, media POST). Coverage: ~99%. |
 | AI Creative Studio | **COMPLETE** — 250+ cinematic presets, 7 API routes, multi-provider (Hedra/Fal/Google/DALL-E/Kling), full UI at `/content/` |
-| Auth & Account Mgmt | **MOSTLY COMPLETE** — Login, signup, OAuth (Google/Microsoft), onboarding, RBAC all working. Missing: in-app password change, account deletion, MFA, email invites |
+| Auth & Account Mgmt | **COMPLETE** — Login, signup, OAuth (Google/Microsoft), onboarding, 4-role RBAC (47 permissions on 36+ routes), password change, GDPR account deletion, MFA/TOTP, email invites, billing portal |
 | CI/CD | **COMPLETE** — GitHub Actions (lint → type-check → test → build → deploy), pre-commit hooks, eslint-disable budget ratchet |
 | Error Monitoring | **COMPLETE** — Sentry with PII redaction, structured logging, slow request detection |
 | Security | **COMPLETE** — HSTS, CSP, rate limiting (6 presets), webhook signature verification, input sanitization |
@@ -223,11 +229,11 @@ Jasper orchestrates full marketing campaigns: research → strategy → produce 
 
 | Domain | Score | Status |
 |--------|-------|--------|
-| Authentication & RBAC | 9/10 | READY |
-| Payments & Commerce | 8.5/10 | READY (billing UI needed) |
+| Authentication & RBAC | 9.5/10 | READY — MFA/TOTP, GDPR deletion, email invites, billing portal |
+| Payments & Commerce | 9/10 | READY — Stripe billing portal integrated |
 | CRM & Sales | 9.5/10 | READY |
 | AI Orchestration (Jasper) | 9.5/10 | READY |
-| Video System | 9/10 | READY |
+| Video System | 9.5/10 | READY — Clone Wizard, auto-captions, background music, assembly progress, simple/advanced mode |
 | Email & SMS | 9/10 | READY |
 | Social Media | 6/10 | PARTIAL (Twitter only) |
 | Website Builder | 9/10 | READY |
