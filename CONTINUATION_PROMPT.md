@@ -305,36 +305,44 @@ The video pipeline engineering is solid — Hedra integration, dual-mode generat
 
 These items block the core value proposition. Without them, no user gets to the "holy shit that's me talking" moment fast enough.
 
-#### V1A. "Clone Yourself" Onboarding Flow
+#### V1A. "Clone Yourself" — In-Pipeline Wizard + Jasper Nudge
 
 **Problem:** Creating an AI clone requires navigating to Character Studio, understanding avatars, uploading reference images in the right format, configuring a voice separately, then navigating back to Video Studio. Too many steps, too much domain knowledge required.
 
-**Solution:** A single guided flow triggered on first login (or from a "Create Your AI Clone" CTA on the dashboard):
+**Solution:** A guided wizard accessible from the **video pipeline** (avatar picker / Character Studio), NOT from onboarding. Jasper contextually nudges users to clone themselves when they interact with video features but don't have a custom avatar — similar to how Jasper reminds about other setup tasks. Onboarding stays clean (industry → niche → account → dashboard).
 
-1. **Welcome screen** — "Let's create your AI clone in 2 minutes"
+**Clone Wizard (accessible from avatar picker + Character Studio):**
+1. **Welcome screen** — "Create your AI clone in 2 minutes"
 2. **Face capture** — Webcam snapshot OR file upload. Crop to portrait. Upload as Hedra asset → create avatar profile with `frontalImageUrl`
-3. **Voice capture** — Record 30-second script reading (browser MediaRecorder API) OR upload audio file. Submit to Hedra voice clone endpoint (`POST /generations { type: "voice_clone", voice_clone: { audio_id, name } }`)
+3. **Voice capture** — Record 30-second script reading (browser MediaRecorder API) OR upload audio file. Submit to Hedra voice clone endpoint
 4. **Processing screen** — Animated progress while voice clone processes (poll Hedra status)
 5. **Preview** — Show the user their avatar card with voice preview player. "This is your AI clone."
 6. **Set as default** — Auto-set this avatar as the user's default `avatarId` and `voiceId` on their profile
-7. **CTA** — "Make your first video" → navigates to `/content/video` with avatar pre-selected
+
+**Jasper Nudge:**
+- When user asks about video or opens video pipeline without a custom avatar, Jasper proactively suggests: "I noticed you haven't created your AI clone yet. Want to set that up? It takes 2 minutes and means your videos feature YOU."
+- Add to Jasper system prompt / feature manifest: awareness of default avatar state
+- Add `check_avatar_status` tool or check within existing `list_avatars` tool
 
 **Key Files to Create/Modify:**
 | File | Action |
 |------|--------|
-| `src/app/(dashboard)/onboarding/clone/page.tsx` | NEW — Clone Yourself wizard page |
-| `src/components/onboarding/CloneWizard.tsx` | NEW — Multi-step wizard component |
-| `src/app/api/video/voice-clone/route.ts` | NEW — Proxy to Hedra voice clone endpoint |
-| `src/lib/video/avatar-profile-service.ts` | MODIFY — Add `createFromOnboarding()` method |
-| `src/lib/video/hedra-service.ts` | MODIFY — Add `cloneVoice()` method (endpoint already documented) |
-| `src/app/(dashboard)/layout.tsx` or dashboard page | MODIFY — Add "Create Your AI Clone" CTA if no default avatar exists |
+| `src/components/video/CloneWizard.tsx` | NEW — Multi-step clone wizard (modal or inline) |
+| `src/app/api/video/voice-clone/route.ts` | MODIFY — Ensure Hedra voice clone support |
+| `src/lib/video/avatar-profile-service.ts` | MODIFY — Add `createFromCloneWizard()` method |
+| `src/lib/video/hedra-service.ts` | MODIFY — Add `cloneVoice()` method |
+| `src/app/(dashboard)/content/video/components/AvatarPicker.tsx` | MODIFY — Add "Create Your AI Clone" CTA |
+| `src/lib/orchestrator/jasper-tools.ts` | MODIFY — Add avatar status awareness |
+| `src/lib/orchestrator/jasper-thought-partner.ts` | MODIFY — Add clone nudge guidance |
 
 **Acceptance Criteria:**
-- [ ] User goes from zero to having a working avatar + cloned voice in under 2 minutes
+- [ ] Clone wizard accessible from avatar picker and Character Studio
+- [ ] User goes from zero to working avatar + cloned voice in under 2 minutes
 - [ ] Default avatar auto-selected in all future video projects
 - [ ] Flow works with webcam OR file upload (not everyone has a webcam)
 - [ ] Voice clone polling handles the full Hedra lifecycle
-- [ ] Skippable for users who want to use stock characters first
+- [ ] Jasper nudges users to clone when they engage video features without a custom avatar
+- [ ] Onboarding is NOT modified — no extra steps before dashboard
 
 ---
 
@@ -732,7 +740,7 @@ Fix: Either remove the redirect chain and give image generation a proper dedicat
 ### Build Order (Recommended Sequence)
 
 ```
-V1A  Clone Yourself Onboarding ──────────────────── Week 1-2
+V1A  Clone Yourself In-Pipeline Wizard + Jasper ─── Week 1-2
 V1B  Fix Video URL Permanence ───────────────────── Week 1 (parallel)
 V1C  Starter Templates (5) ─────────────────────── Week 2 (parallel)
 V5A  Delete Dead Step Components ────────────────── Week 2 (30 min)

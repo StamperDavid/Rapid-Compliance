@@ -4,7 +4,7 @@
  */
 
 import { FirestoreService } from '@/lib/db/firestore-service';
-import { where, orderBy, type Timestamp, type QueryConstraint, type QueryDocumentSnapshot } from 'firebase/firestore';
+import { where, orderBy, Timestamp, type QueryConstraint, type QueryDocumentSnapshot } from 'firebase/firestore';
 import { logger } from '@/lib/logger/logger';
 import type { Workflow } from '@/types/workflow';
 import { getSubCollection } from '@/lib/firebase/collections';
@@ -135,8 +135,8 @@ export async function createWorkflow(
         successfulRuns: 0,
         failedRuns: 0,
       },
-      createdAt: now as unknown as Timestamp,
-      updatedAt: now as unknown as Timestamp,
+      createdAt: Timestamp.fromDate(now),
+      updatedAt: Timestamp.fromDate(now),
       createdBy,
       version: 1,
     };

@@ -44,7 +44,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     windowMs: 60 * 60 * 1000,
   });
   if (rateLimitResponse) {
-    return rateLimitResponse as NextResponse;
+    return new NextResponse(rateLimitResponse.body, {
+      status: rateLimitResponse.status,
+      headers: rateLimitResponse.headers,
+    });
   }
 
   const authResult = await requireAuth(request);

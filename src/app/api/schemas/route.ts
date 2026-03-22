@@ -71,7 +71,6 @@ const PostSchemasSchema = z.object({
     permissions: SchemaPermissionsInputSchema.optional(),
     settings: SchemaSettingsInputSchema.optional(),
   }),
-  userId: z.string().optional(),
 });
 
 interface ProcessedSchemaField {
@@ -195,7 +194,8 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-    const { schema, userId } = parsedBody.data;
+    const { schema } = parsedBody.data;
+    const createdByUid = authResult.user.uid;
 
     const now = FieldValue.serverTimestamp();
     const schemaId: string = schema.id ?? buildSchemaId(schema.name);
@@ -250,7 +250,7 @@ export async function POST(request: NextRequest) {
       },
       createdAt: now,
       updatedAt: now,
-      createdBy: (userId !== '' && userId != null) ? userId : 'system',
+      createdBy: createdByUid,
       status: 'active',
       version: 1,
     };

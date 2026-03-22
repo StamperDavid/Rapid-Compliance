@@ -55,14 +55,20 @@ export async function POST(request: NextRequest) {
 
     // Resolve Stripe API key
     const stripeKeys = await apiKeyService.getServiceKey(PLATFORM_ID, 'stripe');
-    const keys = stripeKeys as { secretKey?: string } | null;
+    const secretKey =
+      stripeKeys !== null &&
+      typeof stripeKeys === 'object' &&
+      'secretKey' in stripeKeys &&
+      typeof stripeKeys.secretKey === 'string'
+        ? stripeKeys.secretKey
+        : null;
 
-    if (!keys?.secretKey) {
+    if (!secretKey) {
       return errors.badRequest('Stripe not configured. Please add Stripe API keys in settings.');
     }
 
     const Stripe = (await import('stripe')).default;
-    const stripe = new Stripe(keys.secretKey, { apiVersion: '2023-10-16' });
+    const stripe = new Stripe(secretKey, { apiVersion: '2023-10-16' });
 
     // Retrieve the Stripe subscription to obtain the customer ID
     const stripeSub = await stripe.subscriptions.retrieve(stripeSubscriptionId);

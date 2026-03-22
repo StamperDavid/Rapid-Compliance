@@ -60,6 +60,19 @@ function allowedInviteRoles(inviterRole: AccountRole): AccountRole[] {
 }
 
 // ============================================================================
+// HTML ESCAPING
+// ============================================================================
+
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+// ============================================================================
 // FIRESTORE PATHS
 // ============================================================================
 
@@ -77,7 +90,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     windowMs: 60 * 60 * 1000,
   });
   if (rateLimitResponse) {
-    return rateLimitResponse as NextResponse;
+    return new NextResponse(rateLimitResponse.body, {
+      status: rateLimitResponse.status,
+      headers: rateLimitResponse.headers,
+    });
   }
 
   // Only owner, admin, and manager can send invites
@@ -234,7 +250,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
             <td style="padding:32px 40px;">
               <h1 style="margin:0 0 12px;font-size:20px;font-weight:600;color:#ffffff;">You've been invited</h1>
               <p style="margin:0 0 8px;font-size:15px;line-height:1.6;color:#a0a0b8;">
-                ${user.email ? `<strong style="color:#ffffff;">${user.email}</strong> has invited you` : 'You have been invited'} to join the SalesVelocity.ai team as a <strong style="color:#ffffff;">${invitedRole}</strong>.
+                ${user.email ? `<strong style="color:#ffffff;">${escapeHtml(user.email)}</strong> has invited you` : 'You have been invited'} to join the SalesVelocity.ai team as a <strong style="color:#ffffff;">${escapeHtml(invitedRole)}</strong>.
               </p>
               <p style="margin:0 0 28px;font-size:14px;line-height:1.6;color:#6b6b8a;">
                 This invitation expires in 7 days.
