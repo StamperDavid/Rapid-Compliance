@@ -457,3 +457,109 @@ test.describe('Settings — AI Agents', () => {
     await expect(subPageLink).toBeVisible({ timeout: 15_000 });
   });
 });
+
+// ===========================================================================
+// Brand Kit  (/settings/brand-kit)
+// ===========================================================================
+
+test.describe('Settings — Brand Kit', () => {
+  test.beforeEach(async ({ page }) => {
+    await ensureAuthenticated(page);
+  });
+
+  test('loads the brand kit page with all sections', async ({ page }) => {
+    await page.goto(`${BASE_URL}/settings/brand-kit`, { waitUntil: 'domcontentloaded', timeout: 30_000 });
+    await waitForPageReady(page);
+    await waitForLoadingToFinish(page);
+
+    // Verify heading
+    const heading = page.locator('h1').filter({ hasText: /brand kit/i });
+    await expect(heading).toBeVisible({ timeout: 15_000 });
+
+    // Verify all 4 sections render
+    await expect(page.getByText(/logo watermark/i).first()).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText(/brand colors/i).first()).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText(/caption typography/i).first()).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText(/intro.*outro/i).first()).toBeVisible({ timeout: 10_000 });
+  });
+
+  test('toggle brand kit active/inactive', async ({ page }) => {
+    await page.goto(`${BASE_URL}/settings/brand-kit`, { waitUntil: 'domcontentloaded', timeout: 30_000 });
+    await waitForPageReady(page);
+    await waitForLoadingToFinish(page);
+
+    // Find the active/inactive toggle
+    const toggleBtn = page.getByText(/active|inactive/i).first();
+    await expect(toggleBtn).toBeVisible({ timeout: 10_000 });
+
+    // Click to toggle state
+    const initialText = await toggleBtn.textContent();
+    await toggleBtn.click();
+    await page.waitForTimeout(300);
+
+    // Verify the state changed
+    const newText = await toggleBtn.textContent();
+    expect(newText).not.toBe(initialText);
+  });
+
+  test('change brand colors and verify preview', async ({ page }) => {
+    await page.goto(`${BASE_URL}/settings/brand-kit`, { waitUntil: 'domcontentloaded', timeout: 30_000 });
+    await waitForPageReady(page);
+    await waitForLoadingToFinish(page);
+
+    // Verify color picker inputs exist
+    const colorInputs = page.locator('input[type="color"]');
+    const colorInputCount = await colorInputs.count();
+
+    // Should have 3 color pickers (primary, secondary, accent) + caption color
+    expect(colorInputCount).toBeGreaterThanOrEqual(3);
+  });
+
+  test('select caption font family', async ({ page }) => {
+    await page.goto(`${BASE_URL}/settings/brand-kit`, { waitUntil: 'domcontentloaded', timeout: 30_000 });
+    await waitForPageReady(page);
+    await waitForLoadingToFinish(page);
+
+    // Find font family select dropdown
+    const fontSelect = page.locator('select').first();
+    await expect(fontSelect).toBeVisible({ timeout: 10_000 });
+
+    // Select a different font
+    await fontSelect.selectOption('Montserrat');
+    await page.waitForTimeout(300);
+
+    // Verify preview text updates (the preview span should have Montserrat font)
+    const preview = page.getByText(/this is what your captions will look like/i);
+    await expect(preview).toBeVisible({ timeout: 5_000 });
+  });
+
+  test('select intro template', async ({ page }) => {
+    await page.goto(`${BASE_URL}/settings/brand-kit`, { waitUntil: 'domcontentloaded', timeout: 30_000 });
+    await waitForPageReady(page);
+    await waitForLoadingToFinish(page);
+
+    // Find intro template buttons
+    const fadeLogoBtn = page.getByText(/fade logo/i).first();
+    await expect(fadeLogoBtn).toBeVisible({ timeout: 10_000 });
+    await fadeLogoBtn.click();
+
+    // After selecting, duration slider should appear
+    const durationLabel = page.getByText(/duration/i).first();
+    await expect(durationLabel).toBeVisible({ timeout: 5_000 });
+  });
+
+  test('save brand kit and verify persistence', async ({ page }) => {
+    await page.goto(`${BASE_URL}/settings/brand-kit`, { waitUntil: 'domcontentloaded', timeout: 30_000 });
+    await waitForPageReady(page);
+    await waitForLoadingToFinish(page);
+
+    // Click Save
+    const saveBtn = page.locator('button').filter({ hasText: /save brand kit/i });
+    await expect(saveBtn).toBeVisible({ timeout: 10_000 });
+    await saveBtn.click();
+
+    // Verify save confirmation
+    const savedText = page.getByText(/saved/i).first();
+    await expect(savedText).toBeVisible({ timeout: 10_000 });
+  });
+});

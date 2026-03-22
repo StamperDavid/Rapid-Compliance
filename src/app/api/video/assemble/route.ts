@@ -24,9 +24,11 @@ import {
   buildSmartConcatArgs,
   runFfmpeg,
   getStoragePath,
+  addWatermark,
 } from '@/lib/video/ffmpeg-utils';
 import { getHedraVideoStatus } from '@/lib/video/hedra-service';
 import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getBrandKit } from '@/lib/video/brand-kit-service';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 300; // 5 minutes for Pro, 60s for Hobby
@@ -256,8 +258,49 @@ export async function POST(request: NextRequest) {
       file: 'api/video/assemble/route.ts',
     });
 
+    // ── Brand Kit: Logo Watermark ───────────────────────────────────────────
+    // Apply logo watermark if brand kit is enabled and has a logo configured.
+    // Downloads the logo, overlays it on the assembled video via FFmpeg.
+    let finalOutputPath = outputPath;
+
+    try {
+      const brandKit = await getBrandKit();
+      if (brandKit.enabled && brandKit.logo?.url) {
+        logger.info('Applying brand kit logo watermark', {
+          jobId,
+          position: brandKit.logo.position,
+          opacity: brandKit.logo.opacity,
+          scale: brandKit.logo.scale,
+          file: 'api/video/assemble/route.ts',
+        });
+
+        const logoPath = join(workDir, 'brand_logo.png');
+        await downloadVideo(brandKit.logo.url, logoPath);
+
+        const brandedPath = join(workDir, 'assembled_branded.mp4');
+        await addWatermark(
+          outputPath,
+          logoPath,
+          brandedPath,
+          brandKit.logo.position,
+          brandKit.logo.opacity,
+          brandKit.logo.scale,
+        );
+
+        finalOutputPath = brandedPath;
+        logger.info('Brand kit logo watermark applied', { jobId, file: 'api/video/assemble/route.ts' });
+      }
+    } catch (brandError) {
+      // Brand kit is non-critical — proceed without watermark if it fails
+      logger.warn('Brand kit watermark failed, proceeding without', {
+        jobId,
+        error: brandError instanceof Error ? brandError.message : 'Unknown',
+        file: 'api/video/assemble/route.ts',
+      });
+    }
+
     // Read the output file to verify it exists
-    const outputBuffer = await readFile(outputPath);
+    const outputBuffer = await readFile(finalOutputPath);
     if (outputBuffer.length === 0) {
       throw new Error('FFmpeg produced an empty output file');
     }
@@ -273,7 +316,7 @@ export async function POST(request: NextRequest) {
 
     const uploadStart = Date.now();
     const storagePath = getStoragePath(projectId, 'assembled');
-    const videoUrl = await uploadToStorage(outputPath, storagePath);
+    const videoUrl = await uploadToStorage(finalOutputPath, storagePath);
 
     logger.info('Assembled video uploaded to Storage', {
       jobId,

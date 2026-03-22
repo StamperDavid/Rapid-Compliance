@@ -1,6 +1,6 @@
 'use client';
 
-import { useReducer, useCallback, useEffect, useMemo, useRef } from 'react';
+import { useReducer, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import SubpageNav from '@/components/ui/SubpageNav';
@@ -15,6 +15,8 @@ import {
   Redo2,
   Trash2,
   Type,
+  ArrowLeft,
+  CheckCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -50,6 +52,9 @@ export default function VideoEditorPage() {
   const searchParams = useSearchParams();
   const [state, dispatch] = useReducer(editorReducer, initialEditorState);
   const hasLoadedParams = useRef(false);
+  const [sourceProjectId, setSourceProjectId] = useState<string | null>(null);
+  const [savingToProject, setSavingToProject] = useState(false);
+  const [savedToProject, setSavedToProject] = useState(false);
 
   // ── Auto-load from URL params (?project=xxx or ?clips=[...]) ────────────
   useEffect(() => {
@@ -61,6 +66,7 @@ export default function VideoEditorPage() {
 
     // Load clips from a video project
     if (projectId) {
+      setSourceProjectId(projectId);
       void (async () => {
         try {
           const response = await authFetch(`/api/video/project/${projectId}`);
@@ -296,6 +302,37 @@ export default function VideoEditorPage() {
   }, [assembledUrl, clips.length, audioTracks.length, textOverlays.length, authFetch]);
 
   // ========================================================================
+  // Save Back to Pipeline Project
+  // ========================================================================
+
+  const handleSaveToProject = useCallback(async () => {
+    if (!assembledUrl || !sourceProjectId) { return; }
+    setSavingToProject(true);
+    setSavedToProject(false);
+
+    try {
+      const response = await authFetch('/api/video/project/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          projectId: sourceProjectId,
+          finalVideoUrl: assembledUrl,
+          currentStep: 'post-production',
+          status: 'completed',
+        }),
+      });
+
+      if (response.ok) {
+        setSavedToProject(true);
+      }
+    } catch {
+      // Save failure — button returns to default state
+    } finally {
+      setSavingToProject(false);
+    }
+  }, [assembledUrl, sourceProjectId, authFetch]);
+
+  // ========================================================================
   // Keyboard Shortcuts
   // ========================================================================
 
@@ -397,6 +434,15 @@ export default function VideoEditorPage() {
           <p className="text-zinc-400 text-sm mt-1">
             Stitch clips, add audio &amp; text, and assemble videos — no pipeline required
           </p>
+          {sourceProjectId && (
+            <button
+              onClick={() => { window.history.back(); }}
+              className="flex items-center gap-1 text-xs text-amber-400 hover:text-amber-300 mt-1"
+            >
+              <ArrowLeft className="w-3 h-3" />
+              Back to Pipeline Project
+            </button>
+          )}
         </div>
         <div className="flex items-center gap-2">
           {/* Undo/Redo */}
@@ -478,6 +524,24 @@ export default function VideoEditorPage() {
                 {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                 {saved ? 'Saved' : 'Save to Library'}
               </Button>
+              {sourceProjectId && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className={`gap-2 ${savedToProject ? 'border-green-500 text-green-400' : ''}`}
+                  onClick={() => { void handleSaveToProject(); }}
+                  disabled={savingToProject || savedToProject}
+                >
+                  {savingToProject ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : savedToProject ? (
+                    <CheckCircle className="w-4 h-4 text-green-400" />
+                  ) : (
+                    <Save className="w-4 h-4" />
+                  )}
+                  {savingToProject ? 'Saving...' : savedToProject ? 'Saved to Project' : 'Save to Project'}
+                </Button>
+              )}
             </>
           )}
           <Button

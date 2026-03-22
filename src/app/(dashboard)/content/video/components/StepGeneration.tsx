@@ -3,13 +3,14 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { motion } from 'framer-motion';
-import { Zap, ArrowLeft, ArrowRight, Loader2, CheckCircle2, Clock, AlertTriangle, Play } from 'lucide-react';
+import { Zap, ArrowLeft, ArrowRight, Loader2, CheckCircle2, Clock, AlertTriangle, Play, DollarSign } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { SceneProgressCard } from './SceneProgressCard';
 import { useVideoPipelineStore } from '@/lib/stores/video-pipeline-store';
 import type { SceneGenerationResult } from '@/types/video-pipeline';
 import type { SceneAutoGrade } from '@/types/scene-grading';
+import { estimateGenerationCost, formatCostSummary } from '@/lib/video/cost-estimator';
 
 type GenerationPhase = 'submitting' | 'rendering' | 'complete';
 
@@ -708,15 +709,26 @@ export function StepGeneration() {
         </Button>
 
         <div className="flex items-center gap-3">
-          {/* Not started yet — show Start button */}
+          {/* Not started yet — show cost estimate + Start button */}
           {generatedScenes.length === 0 && !isGenerating && (
-            <Button
-              onClick={() => { void startGeneration(); }}
-              className="gap-2 bg-amber-600 hover:bg-amber-700 text-white"
-            >
-              <Play className="w-4 h-4" />
-              Start Generation ({scenes.length} scene{scenes.length !== 1 ? 's' : ''})
-            </Button>
+            <div className="flex items-center gap-4">
+              {(() => {
+                const costEstimate = estimateGenerationCost(scenes, avatarId);
+                return (
+                  <div className="flex items-center gap-2 px-3 py-1.5 bg-zinc-800/60 border border-zinc-700/50 rounded-lg text-xs text-zinc-300">
+                    <DollarSign className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Est. {formatCostSummary(costEstimate)}</span>
+                  </div>
+                );
+              })()}
+              <Button
+                onClick={() => { void startGeneration(); }}
+                className="gap-2 bg-amber-600 hover:bg-amber-700 text-white"
+              >
+                <Play className="w-4 h-4" />
+                Start Generation ({scenes.length} scene{scenes.length !== 1 ? 's' : ''})
+              </Button>
+            </div>
           )}
 
           {allComplete && completedCount > 0 && (

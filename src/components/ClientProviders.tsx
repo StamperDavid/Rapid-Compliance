@@ -1,6 +1,7 @@
 'use client';
 
 import type { ReactNode } from 'react';
+import { ThemeProvider } from 'next-themes';
 import { MotionConfig } from 'framer-motion';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './AuthProvider';
@@ -10,16 +11,18 @@ import { ConfirmProvider } from '@/hooks/useConfirm';
 
 export function ClientProviders({ children }: { children: ReactNode }) {
   return (
-    <AuthProvider>
-      <MotionConfig reducedMotion="user">
-        <ConfirmProvider>
-          <SkipToMain />
-          <NavigationProgress />
-          <Toaster position="top-right" />
-          {children}
-        </ConfirmProvider>
-      </MotionConfig>
-    </AuthProvider>
+    <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
+      <AuthProvider>
+        <MotionConfig reducedMotion="user">
+          <ConfirmProvider>
+            <SkipToMain />
+            <NavigationProgress />
+            <Toaster position="top-right" />
+            {children}
+          </ConfirmProvider>
+        </MotionConfig>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
 

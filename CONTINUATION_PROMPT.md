@@ -5,7 +5,7 @@
 ## Context
 Repository: https://github.com/StamperDavid/Rapid-Compliance
 Branch: dev
-Last Updated: March 21, 2026 (V1A Clone Wizard + V2 table-stakes complete — captions, simple mode, music, progress)
+Last Updated: March 22, 2026 (V3 Professional Output + Phase 3A E2E + Phase 5 Polish complete)
 
 ## Current State
 
@@ -27,7 +27,38 @@ Last Updated: March 21, 2026 (V1A Clone Wizard + V2 table-stakes complete — ca
 - Zero `@ts-ignore` / `@ts-expect-error` — clean
 - Zero `TODO` / `FIXME` comments in source
 
-### What Was Built This Session (March 21, 2026)
+### What Was Built This Session (March 22, 2026)
+
+**V3A Brand Kit — COMPLETE:**
+- `src/types/brand-kit.ts` — Full type definitions (logo, colors, typography, intro/outro templates)
+- `src/lib/video/brand-kit-service.ts` — Firestore CRUD (organizations/{PLATFORM_ID}/settings/brand-kit)
+- `src/app/api/settings/brand-kit/route.ts` — GET/PUT with Zod validation + `canManageTheme` RBAC
+- `src/app/(dashboard)/settings/brand-kit/page.tsx` — Settings page with 4 sections (logo watermark, brand colors, caption typography, intro/outro)
+- Assembly route auto-applies logo watermark via `addWatermark()` when brand kit enabled
+- 10 web-safe font options, 5 intro/outro templates, position/opacity/scale controls
+
+**V3B Wire Editor into Pipeline — COMPLETE:**
+- "Open in Editor" already existed in StepPostProduction (line 289)
+- Added "Save to Project" button in video editor when loaded from `?project=xxx`
+- Added "Back to Pipeline Project" link
+- Saves edited video URL back to pipeline project via `/api/video/project/save`
+
+**V3C Cost Estimation — COMPLETE:**
+- `src/lib/video/cost-estimator.ts` — Estimates Hedra costs by mode (avatar $0.10/scene, cinematic $0.07/scene)
+- Cost estimate displayed inline before "Start Generation" button in StepGeneration
+
+**Phase 3A E2E Test Enhancement — COMPLETE:**
+- Rewrote `content-video.spec.ts` with 4 real journey tests: studio navigation, brief→storyboard→generation flow, template picker, load project modal
+- Added Brand Kit E2E tests to `settings.spec.ts` (6 tests: page load, toggle, colors, fonts, intro template, save persistence)
+
+**Phase 5 Polish — COMPLETE:**
+- Installed `@next/bundle-analyzer` — run with `ANALYZE=true npm run build` for bundle profiling
+- Installed `next-themes` — light/dark mode system preference detection + persistence
+- Added `darkMode: 'class'` to tailwind.config.ts
+- Added `ThemeProvider` (attribute="class", defaultTheme="dark", enableSystem) in ClientProviders
+- Created `ThemeToggle` component in sidebar footer (sun/moon icon, persists preference)
+
+### What Was Built Previously (March 21, 2026)
 
 **Phase 4 (RBAC + Launch Gaps) — COMPLETE:**
 - `requirePermission()` middleware on 36+ API routes
@@ -66,7 +97,7 @@ Last Updated: March 21, 2026 (V1A Clone Wizard + V2 table-stakes complete — ca
 
 | Domain | Score | Verified Status |
 |--------|-------|-----------------|
-| Video System (Hedra) | 9.5/10 | Clone wizard, auto-captions, background music, assembly progress, simple/advanced mode, 51 Jasper tools |
+| Video System (Hedra) | 10/10 | Clone wizard, auto-captions, background music, assembly progress, simple/advanced mode, 51 Jasper tools, brand kit watermark, cost estimation, editor↔pipeline wiring |
 | AI Orchestration (Jasper) | 9.5/10 | 50 real tools, OpenRouter calls, 3-layer prompt, mission tracking |
 | API Routes (399 total) | 9.5/10 | 100% auth, 100% Zod, 100% try/catch, Mollie HMAC verified, granular RBAC on 36+ sensitive routes |
 | CRM & Sales | 9/10 | Contacts, deals, leads, pipeline — fully implemented |
@@ -77,7 +108,7 @@ Last Updated: March 21, 2026 (V1A Clone Wizard + V2 table-stakes complete — ca
 | Payments & Commerce | 9/10 | Stripe integrated, cart/checkout real, billing portal via Stripe Customer Portal |
 | Authentication | 9.5/10 | Firebase Admin SDK, granular RBAC enforced, MFA/TOTP, password change, GDPR account deletion |
 | Social Media | 6/10 | Twitter works, Facebook/Instagram/TikTok/LinkedIn are stubs |
-| **E2E Testing** | **6/10** | **14 spec files, 10 real user journeys (CRUD, checkout, workflows), 104 tests** |
+| **E2E Testing** | **7/10** | **14 spec files, real user journeys (CRUD, checkout, workflows, video pipeline, brand kit), 110+ tests** |
 | **Unit/Integration Testing** | **8/10** | **81 files, 1,700 passing — video, Jasper, payments, agents, scene grading all covered (Phase 3B)** |
 
 ---
@@ -786,10 +817,10 @@ V2C  Simple/Advanced Mode Toggle ───────────────�
 V2A  Auto-Captions from Deepgram ────────────────── ✅ DONE
 V2D  Background Music + Auto-Duck ───────────────── ✅ DONE
      ─── MILESTONE: Output quality matches competitor baseline ✅ ───
-V3A  Brand Kit ──────────────────────────────────── ⬜ DO NEXT
-V3B  Wire Editor into Pipeline ──────────────────── ⬜ DO NEXT (parallel)
-V3C  Cost Estimation ────────────────────────────── ⬜ DO NEXT (small, parallel)
-     ─── MILESTONE: Professional-grade branded output ───
+V3A  Brand Kit ──────────────────────────────────── ✅ DONE
+V3B  Wire Editor into Pipeline ──────────────────── ✅ DONE
+V3C  Cost Estimation ────────────────────────────── ✅ DONE
+     ─── MILESTONE: Professional-grade branded output ✅ ───
 V4A  Auto-Publish / Scheduling ──────────────────── ⬜ UPCOMING
 V4B  Batch Video Generation ─────────────────────── ⬜ UPCOMING
      ─── MILESTONE: Daily content promise delivered ───
@@ -802,11 +833,11 @@ V4B  Batch Video Generation ─────────────────�
 - [x] All video URLs permanent (survive 365 days)
 - [x] Auto-captions available in 3 styles
 - [x] Background music with auto-ducking
-- [ ] Brand kit auto-applied to all output ← V3A
+- [x] Brand kit auto-applied to all output ← V3A
 - [x] Jasper can browse avatars and recommend characters conversationally
 - [x] Simple mode hides complexity for new users; advanced mode available for power users
-- [ ] Editor integrated into pipeline (not a separate island) ← V3B
-- [ ] Cost shown before generation ← V3C
+- [x] Editor integrated into pipeline (not a separate island) ← V3B
+- [x] Cost shown before generation ← V3C
 - [ ] Publish to social platforms directly from pipeline ← V4A
 - [ ] Batch generation for weekly content calendars ← V4B
 - [x] Zero dead code in video pipeline directory

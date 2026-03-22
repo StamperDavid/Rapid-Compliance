@@ -14,6 +14,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useUnifiedAuth } from '@/hooks/useUnifiedAuth';
 import { useFeatureModules } from '@/hooks/useFeatureModules';
+import { ThemeToggle } from '@/components/ThemeToggle';
 import { useEntityConfig } from '@/hooks/useEntityConfig';
 import {
   type NavigationSection,
@@ -773,6 +774,7 @@ export default function AdminSidebar() {
               <HelpCircle className="w-4 h-4 flex-shrink-0" />
               {!isCollapsed && <span style={{ fontSize: '0.8125rem', fontWeight: 500 }}>Help</span>}
             </Link>
+            <ThemeToggle collapsed={isCollapsed} />
           </div>
           {!isCollapsed && (
             <div
