@@ -5,7 +5,7 @@
 ## Context
 Repository: https://github.com/StamperDavid/Rapid-Compliance
 Branch: dev
-Last Updated: March 21, 2026 (Phase 4 complete — RBAC enforcement + launch gaps: billing portal, password change, account deletion, MFA, email invites)
+Last Updated: March 21, 2026 (Phase 4 + Video V1 complete — RBAC, launch gaps, Jasper list_avatars, templates, URL permanence, dead code cleanup)
 
 ## Current State
 
@@ -301,9 +301,10 @@ The video pipeline engineering is solid — Hedra integration, dual-mode generat
 
 ---
 
-### Phase V1: First Video in 5 Minutes (P0 — Do First)
+### Phase V1: First Video in 5 Minutes (P0) — PARTIALLY COMPLETE (commit f4e296c0)
 
-These items block the core value proposition. Without them, no user gets to the "holy shit that's me talking" moment fast enough.
+**Done:** V1A Jasper avatar awareness (list_avatars tool + nudge prompt), V1B URL permanence fix, V1C 5 starter templates + picker modal, V5 dead code cleanup (-1,422 lines). V2B (list_avatars) pulled forward into V1A.
+**Remaining:** V1A Clone Wizard UI component (face capture + voice capture wizard accessible from avatar picker). The Jasper nudge and tool are wired, but the actual wizard UI for cloning hasn't been built yet.
 
 #### V1A. "Clone Yourself" — In-Pipeline Wizard + Jasper Nudge
 
