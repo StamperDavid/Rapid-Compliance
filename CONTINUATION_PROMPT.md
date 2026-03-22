@@ -17,17 +17,40 @@ Last Updated: March 22, 2026 (V3 Professional Output + Phase 3A E2E + Phase 5 Po
 - **212 React components**, **54 type definition files**
 - **Deployed via Vercel** — dev → main → Vercel auto-deploy
 
-### Build Health (Verified March 21, 2026 — Post V2)
+### Build Health (Verified March 22, 2026 — Post V3 + Phase 5)
 - `tsc --noEmit` — **PASSES**
 - `npm run lint` — **PASSES (zero errors, zero warnings)**
-- `npm run test:ci` — **81/81 suites pass, 1,706 tests (1,700 pass, 5 skipped, 0 flaky)**
+- `npm run test:ci` — **80/81 suites pass, 1,706 tests (1,701 pass, 5 skipped)** — 1 pre-existing failure (workflow-service Firestore Timestamp SDK mismatch)
 - Zero `eslint-disable` comments — **CLEAN**
 - Zero `Promise.resolve(null/[])` stubs — **CLEAN**
 - Zero `any` type annotations — Zero-Any Policy enforced
 - Zero `@ts-ignore` / `@ts-expect-error` — clean
 - Zero `TODO` / `FIXME` comments in source
 
-### What Was Built This Session (March 22, 2026)
+### What to Build Next
+
+**V4A Auto-Publish / Scheduling:**
+- Add a "Publish" step to the video pipeline (after Post-Production)
+- Platform picker (YouTube, TikTok, Instagram, LinkedIn, Twitter — whatever integrations are live)
+- Schedule picker (now, or date/time)
+- Title, description, tags auto-filled from brief
+- Calls existing social posting APIs with the video URL
+- Key files: new `StepPublish.tsx`, new `/api/video/publish/route.ts`, modify pipeline store + types to add `'publish'` step
+
+**V4B Batch Video Generation ("Content Calendar"):**
+- "Content Calendar" mode: enter a week's topics (or Jasper generates from a theme)
+- System creates 7 storyboards in one operation
+- User reviews all 7, approves in batch
+- Generation runs sequentially (manage API costs) but autonomously
+- Results land in library, ready for scheduled publishing
+- Key files: new `/content/video/calendar/page.tsx`, new `batch-generator.ts`, modify `jasper-tools.ts` (add `batch_produce_videos` tool)
+
+**Also remaining:**
+- E2E test depth for `ai-workforce.spec.ts` and `analytics-growth.spec.ts` (still shallow page-load checks)
+- React Query adoption (installed but not used anywhere)
+- Pre-existing test failure: `workflow-service.test.ts` — Firestore Timestamp SDK version mismatch
+
+### What Was Built Last Session (March 22, 2026)
 
 **V3A Brand Kit — COMPLETE:**
 - `src/types/brand-kit.ts` — Full type definitions (logo, colors, typography, intro/outro templates)
