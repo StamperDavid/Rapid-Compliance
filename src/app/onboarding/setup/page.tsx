@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * API Key Setup Page — Step 4 of 4
+ * API Key Setup Page — Step 5 of 5
  *
  * Requires an OpenRouter API key, validates it, saves it,
  * then fires processOnboarding() to build persona + base model.
@@ -203,8 +203,9 @@ export default function SetupPage() {
             )}
           </motion.div>
 
-          {/* Progress: 4/4 */}
+          {/* Progress: 5/5 */}
           <div className="flex items-center justify-center gap-2 mt-6">
+            <div className="w-10 h-1.5 rounded-full bg-indigo-500" />
             <div className="w-10 h-1.5 rounded-full bg-indigo-500" />
             <div className="w-10 h-1.5 rounded-full bg-indigo-500" />
             <div className="w-10 h-1.5 rounded-full bg-indigo-500" />

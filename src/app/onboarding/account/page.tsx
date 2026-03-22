@@ -1,11 +1,11 @@
 'use client';
 
 /**
- * Account Creation Page — Step 3 of 4
+ * Account Creation Page — Step 3 of 5
  *
  * Creates Firebase Auth user + Firestore profile.
  * Enriched with category/template/injection data from steps 1-2.
- * On success → /onboarding/setup (API key step).
+ * On success → /onboarding/features (Feature selection step).
  */
 
 import { useState, useEffect } from 'react';
@@ -177,10 +177,10 @@ export default function AccountCreationPage() {
         throw batchError;
       }
 
-      // Store account info and redirect to API key setup
+      // Store account info and redirect to feature selection
       setAccountInfo(formData.email, formData.companyName);
-      setStep('apikey');
-      router.push('/onboarding/setup');
+      setStep('features');
+      router.push('/onboarding/features');
     } catch (error: unknown) {
       if (error instanceof Error && 'code' in error) {
         const firebaseError = error as { code: string };
@@ -250,11 +250,12 @@ export default function AccountCreationPage() {
             </div>
           </motion.div>
 
-          {/* Progress: 3/4 */}
+          {/* Progress: 3/5 */}
           <div className="flex items-center justify-center gap-2 mt-6">
             <div className="w-10 h-1.5 rounded-full bg-indigo-500" />
             <div className="w-10 h-1.5 rounded-full bg-indigo-500" />
             <div className="w-10 h-1.5 rounded-full bg-indigo-500" />
+            <div className="w-10 h-1.5 rounded-full bg-white/10" />
             <div className="w-10 h-1.5 rounded-full bg-white/10" />
           </div>
         </div>

@@ -4,7 +4,7 @@
  * Manages temporary onboarding state before account creation.
  * Uses Zustand with localStorage persistence for cross-page state.
  *
- * Steps: industry → niche (conditional) → account → apikey → complete
+ * Steps: industry → niche (conditional) → account → features → apikey → complete
  */
 
 import { create } from 'zustand';
@@ -53,8 +53,8 @@ export interface SelectedTemplate {
 
 // ─── Onboarding state ───
 export interface OnboardingState {
-  // Step tracking — 4-step flow
-  currentStep: 'industry' | 'niche' | 'account' | 'apikey' | 'complete';
+  // Step tracking — 5-step flow
+  currentStep: 'industry' | 'niche' | 'account' | 'features' | 'apikey' | 'complete';
 
   // Legacy — derived from selectedCategory for backward compat
   /** @deprecated Read from selectedCategory instead */
