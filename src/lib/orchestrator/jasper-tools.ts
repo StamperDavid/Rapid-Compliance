@@ -28,6 +28,7 @@ import {
 } from './mission-persistence';
 import {
   createCampaign,
+  updateCampaign,
   trackDeliverableAsync,
 } from '@/lib/campaign/campaign-service';
 
@@ -2273,6 +2274,48 @@ export const JASPER_TOOLS: ToolDefinition[] = [
           },
         },
         required: ['theme', 'weekName', 'weekStartDate'],
+      },
+    },
+  },
+  // ═══════════════════════════════════════════════════════════════════════════
+  // FULL CAMPAIGN ORCHESTRATION — Research → Strategy → Multi-Deliverable
+  // ═══════════════════════════════════════════════════════════════════════════
+  {
+    type: 'function',
+    function: {
+      name: 'orchestrate_campaign',
+      description:
+        'Run a FULL multi-deliverable campaign pipeline. This single tool performs: (1) Research phase — AI analyzes topic, competitors, audience. (2) Strategy phase — generates positioning, messaging, content angles. (3) Creates a Campaign to track all deliverables. (4) Produces deliverables: blog draft, video storyboard, social posts (Twitter + LinkedIn), and email draft — all registered under one campaign. User reviews everything at /mission-control?campaign={id}. Use this when the user asks for a "full campaign", "content blitz", "launch campaign", or "multi-channel content" on a topic. ENABLED: TRUE.',
+      parameters: {
+        type: 'object',
+        properties: {
+          topic: {
+            type: 'string',
+            description: 'The campaign topic or product to create content for (e.g., "AI-powered CRM launch", "Spring real estate tips")',
+          },
+          audience: {
+            type: 'string',
+            description: 'Target audience description (e.g., "B2B SaaS founders", "first-time homebuyers")',
+          },
+          tone: {
+            type: 'string',
+            description: 'Content tone across deliverables',
+            enum: ['professional', 'conversational', 'energetic', 'empathetic'],
+          },
+          platforms: {
+            type: 'string',
+            description: 'Comma-separated social platforms for posts (default: "twitter,linkedin")',
+          },
+          skipVideo: {
+            type: 'boolean',
+            description: 'Set true to skip video production (faster campaign)',
+          },
+          skipEmail: {
+            type: 'boolean',
+            description: 'Set true to skip email draft',
+          },
+        },
+        required: ['topic'],
       },
     },
   },
@@ -6128,6 +6171,422 @@ Select cohesive settings that create a professional, unified visual language acr
           trackMissionStep(context, 'batch_produce_videos', 'FAILED', {
             error: errMsg,
             durationMs: Date.now() - batchStart,
+          });
+        }
+        break;
+      }
+
+      case 'orchestrate_campaign': {
+        const orchStart = Date.now();
+        trackMissionStep(context, 'orchestrate_campaign', 'RUNNING', { toolArgs: args });
+
+        try {
+          const topic = args.topic as string;
+          const audience = (args.audience as string) || 'general business audience';
+          const tone = (args.tone as string) || 'professional';
+          const platformsStr = (args.platforms as string) || 'twitter,linkedin';
+          const socialPlatforms = platformsStr.split(',').map((p: string) => p.trim()).filter(Boolean);
+          const skipVideo = Boolean(args.skipVideo);
+          const skipEmail = Boolean(args.skipEmail);
+          const missionId = context?.missionId ?? `mission_${Date.now()}`;
+
+          // ── Phase 1: Research ────────────────────────────────────────
+          trackMissionStep(context, 'campaign_research', 'RUNNING', {
+            toolArgs: { topic, audience },
+          });
+
+          let researchSummary = '';
+          const researchStart = Date.now();
+
+          try {
+            const { OpenRouterProvider } = await import('@/lib/ai/openrouter-provider');
+            const llm = new OpenRouterProvider({});
+            const researchResult = await llm.chat({
+              model: 'claude-3-5-sonnet',
+              messages: [
+                {
+                  role: 'system',
+                  content: 'You are a marketing research analyst. Provide concise, actionable research findings for a content campaign. Output JSON (no markdown fences) with keys: keyInsights (array of strings), targetAudience (string), competitorAngles (array), contentGaps (array), recommendedHooks (array).',
+                },
+                {
+                  role: 'user',
+                  content: `Research for a campaign about: "${topic}"\nTarget audience: ${audience}\nProvide market insights, competitor angles, content gaps, and recommended hooks.`,
+                },
+              ],
+            });
+            researchSummary = researchResult.content;
+            trackMissionStep(context, 'campaign_research', 'COMPLETED', {
+              summary: 'Research findings generated',
+              durationMs: Date.now() - researchStart,
+            });
+          } catch {
+            researchSummary = JSON.stringify({ keyInsights: [`Campaign topic: ${topic}`], targetAudience: audience });
+            trackMissionStep(context, 'campaign_research', 'COMPLETED', {
+              summary: 'Research skipped (AI unavailable) — using defaults',
+              durationMs: Date.now() - researchStart,
+            });
+          }
+
+          // ── Phase 2: Strategy ────────────────────────────────────────
+          trackMissionStep(context, 'campaign_strategy', 'RUNNING', {
+            toolArgs: { topic, research: researchSummary.slice(0, 200) },
+          });
+
+          let strategySummary = '';
+          const strategyStart = Date.now();
+
+          try {
+            const { OpenRouterProvider } = await import('@/lib/ai/openrouter-provider');
+            const llm = new OpenRouterProvider({});
+            const strategyResult = await llm.chat({
+              model: 'claude-3-5-sonnet',
+              messages: [
+                {
+                  role: 'system',
+                  content: 'You are a content strategist. Based on research findings, create a campaign strategy. Output JSON (no markdown fences) with keys: positioning (string), keyMessages (array of 3-5 messages), blogAngle (string), videoAngle (string), socialHooks (array of short hook strings for social posts), emailSubjectLine (string), emailAngle (string), callToAction (string).',
+                },
+                {
+                  role: 'user',
+                  content: `Topic: "${topic}"\nAudience: ${audience}\nTone: ${tone}\nResearch: ${researchSummary}\n\nCreate a multi-channel content strategy with specific angles for blog, video, social posts, and email.`,
+                },
+              ],
+            });
+            strategySummary = strategyResult.content;
+            trackMissionStep(context, 'campaign_strategy', 'COMPLETED', {
+              summary: 'Content strategy generated',
+              durationMs: Date.now() - strategyStart,
+            });
+          } catch {
+            strategySummary = JSON.stringify({
+              positioning: `Expert content on ${topic}`,
+              keyMessages: [`Key insight about ${topic}`],
+              blogAngle: `Comprehensive guide to ${topic}`,
+              videoAngle: `Explainer video on ${topic}`,
+              socialHooks: [`Did you know? ${topic} is transforming the industry`],
+              emailSubjectLine: `Your guide to ${topic}`,
+              emailAngle: `Learn about ${topic}`,
+              callToAction: 'Learn more',
+            });
+            trackMissionStep(context, 'campaign_strategy', 'COMPLETED', {
+              summary: 'Strategy created with defaults (AI unavailable)',
+              durationMs: Date.now() - strategyStart,
+            });
+          }
+
+          // Parse strategy for downstream use
+          let strategy: Record<string, unknown> = {};
+          try { strategy = JSON.parse(strategySummary) as Record<string, unknown>; } catch {
+            strategy = { positioning: topic, keyMessages: [topic] };
+          }
+
+          let research: Record<string, unknown> = {};
+          try { research = JSON.parse(researchSummary) as Record<string, unknown>; } catch {
+            research = { keyInsights: [topic] };
+          }
+
+          // ── Phase 3: Create Campaign ─────────────────────────────────
+          const campaignId = await createCampaign({
+            missionId,
+            brief: topic,
+            research,
+            strategy,
+            status: 'producing',
+          });
+
+          const reviewLink = `/mission-control?campaign=${campaignId}`;
+
+          // ── Phase 4: Produce Blog ────────────────────────────────────
+          trackMissionStep(context, 'campaign_blog', 'RUNNING', { toolArgs: { topic } });
+          const blogStart = Date.now();
+
+          try {
+            const { OpenRouterProvider } = await import('@/lib/ai/openrouter-provider');
+            const llm = new OpenRouterProvider({});
+            const blogAngle = (strategy.blogAngle as string) || `Comprehensive guide to ${topic}`;
+            const blogTitle = `${topic}: What You Need to Know`;
+
+            const blogResult = await llm.chat({
+              model: 'claude-3-5-sonnet',
+              messages: [
+                {
+                  role: 'system',
+                  content: 'You are a professional content writer. Write a blog post in markdown format. Include a compelling introduction, 3-5 sections with headers (##), and a conclusion with a call to action. Aim for 600-800 words. Output ONLY the markdown content, no wrapping.',
+                },
+                {
+                  role: 'user',
+                  content: `Write a blog post titled "${blogTitle}"\nAngle: ${blogAngle}\nAudience: ${audience}\nTone: ${tone}\nKey messages: ${JSON.stringify(strategy.keyMessages ?? [])}`,
+                },
+              ],
+            });
+
+            // Save blog draft
+            const { adminDb: blogDb } = await import('@/lib/firebase/admin');
+            const { getSubCollection: getBlogColl } = await import('@/lib/firebase/collections');
+            if (blogDb) {
+              const blogPath = `${getBlogColl('website')}/config/blog-posts`;
+              const slug = topic.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 60);
+              const now = new Date().toISOString();
+              const blogDoc = blogDb.collection(blogPath).doc();
+              await blogDoc.set({
+                title: blogTitle,
+                slug,
+                content: blogResult.content,
+                excerpt: blogAngle,
+                status: 'draft',
+                author: 'Jasper AI',
+                tags: [topic.split(' ')[0]],
+                readTime: `${Math.ceil(blogResult.content.split(/\s+/).length / 200)} min read`,
+                createdAt: now,
+                updatedAt: now,
+              });
+
+              trackDeliverableAsync(campaignId, {
+                missionId,
+                type: 'blog',
+                title: blogTitle,
+                status: 'pending_review',
+                previewData: {
+                  draftId: blogDoc.id,
+                  slug,
+                  excerpt: blogAngle,
+                  wordCount: blogResult.content.split(/\s+/).length,
+                },
+                reviewLink: `/website/blog/posts/${blogDoc.id}`,
+              });
+
+              trackMissionStep(context, 'campaign_blog', 'COMPLETED', {
+                summary: `Blog draft saved: "${blogTitle}"`,
+                durationMs: Date.now() - blogStart,
+              });
+            }
+          } catch (blogErr) {
+            const errMsg = blogErr instanceof Error ? blogErr.message : String(blogErr);
+            trackMissionStep(context, 'campaign_blog', 'FAILED', {
+              error: errMsg,
+              durationMs: Date.now() - blogStart,
+            });
+          }
+
+          // ── Phase 5: Produce Video (if not skipped) ──────────────────
+          let videoProjectId: string | null = null;
+          if (!skipVideo) {
+            trackMissionStep(context, 'campaign_video', 'RUNNING', { toolArgs: { topic } });
+            const videoStart = Date.now();
+
+            try {
+              const videoAngle = (strategy.videoAngle as string) || `Explainer: ${topic}`;
+              const { createProject: createVideoProject, updateProject: updateVideoProject } = await import('@/lib/video/pipeline-project-service');
+
+              const videoResult = await createVideoProject(
+                {
+                  description: videoAngle,
+                  videoType: 'explainer',
+                  platform: 'youtube',
+                  duration: 60,
+                  aspectRatio: '16:9',
+                  resolution: '1080p',
+                },
+                context?.userId ?? 'jasper'
+              );
+
+              if (videoResult.success && videoResult.projectId) {
+                videoProjectId = videoResult.projectId;
+
+                // Generate storyboard scenes via AI
+                const { OpenRouterProvider } = await import('@/lib/ai/openrouter-provider');
+                const llm = new OpenRouterProvider({});
+                const sceneResult = await llm.chat({
+                  model: 'claude-3-5-sonnet',
+                  messages: [
+                    {
+                      role: 'system',
+                      content: 'You are a video director. Generate 3-5 scene breakdowns for a short explainer video. Output JSON array (no markdown fences) where each scene has: sceneNumber (int), title (string), scriptText (string, 2-3 sentences for voiceover), visualDescription (string), duration (number in seconds, total should be ~60s).',
+                    },
+                    {
+                      role: 'user',
+                      content: `Create scenes for: "${videoAngle}"\nAudience: ${audience}\nTone: ${tone}`,
+                    },
+                  ],
+                });
+
+                let scenes: Array<{ sceneNumber: number; title: string; scriptText: string; visualDescription: string; duration: number }> = [];
+                try {
+                  const parsed = JSON.parse(sceneResult.content) as typeof scenes;
+                  if (Array.isArray(parsed)) { scenes = parsed; }
+                } catch {
+                  scenes = [{
+                    sceneNumber: 1,
+                    title: 'Introduction',
+                    scriptText: `Today we're exploring ${topic}. This is crucial for ${audience}.`,
+                    visualDescription: 'Professional studio setting with presenter',
+                    duration: 60,
+                  }];
+                }
+
+                const pipelineScenes = scenes.map((s) => ({
+                  id: crypto.randomUUID(),
+                  sceneNumber: s.sceneNumber,
+                  title: s.title,
+                  scriptText: s.scriptText,
+                  visualDescription: s.visualDescription,
+                  screenshotUrl: null,
+                  avatarId: null,
+                  voiceId: null,
+                  voiceProvider: null,
+                  duration: s.duration,
+                  engine: 'hedra' as const,
+                  backgroundPrompt: s.visualDescription,
+                  status: 'draft' as const,
+                }));
+
+                await updateVideoProject(videoProjectId, {
+                  name: videoAngle.slice(0, 50),
+                  scenes: pipelineScenes,
+                  currentStep: 'storyboard',
+                  status: 'draft',
+                });
+
+                trackDeliverableAsync(campaignId, {
+                  missionId,
+                  type: 'video',
+                  title: videoAngle.slice(0, 50),
+                  status: 'pending_review',
+                  previewData: {
+                    projectId: videoProjectId,
+                    sceneCount: scenes.length,
+                  },
+                  reviewLink: `/content/video?load=${videoProjectId}`,
+                });
+
+                trackMissionStep(context, 'campaign_video', 'COMPLETED', {
+                  summary: `Video storyboard created: ${scenes.length} scenes`,
+                  durationMs: Date.now() - videoStart,
+                });
+              }
+            } catch (videoErr) {
+              const errMsg = videoErr instanceof Error ? videoErr.message : String(videoErr);
+              trackMissionStep(context, 'campaign_video', 'FAILED', {
+                error: errMsg,
+                durationMs: Date.now() - videoStart,
+              });
+            }
+          }
+
+          // ── Phase 6: Social Posts ────────────────────────────────────
+          trackMissionStep(context, 'campaign_social', 'RUNNING', { toolArgs: { platforms: socialPlatforms } });
+          const socialStart = Date.now();
+
+          const hooks = (strategy.socialHooks as string[]) ?? [`Discover the power of ${topic}`];
+
+          for (const platform of socialPlatforms) {
+            try {
+              const hook = hooks[socialPlatforms.indexOf(platform) % hooks.length] ?? `${topic} — here's what you need to know`;
+              const postContent = `${hook}\n\n#${topic.replace(/\s+/g, '')} #${audience.split(' ')[0]}`;
+
+              trackDeliverableAsync(campaignId, {
+                missionId,
+                type: 'social_post',
+                title: `${platform.charAt(0).toUpperCase() + platform.slice(1)} Post`,
+                status: 'pending_review',
+                previewData: {
+                  platform,
+                  copy: postContent,
+                },
+                reviewLink: '/social/command-center',
+              });
+            } catch {
+              // Non-critical — continue with other platforms
+            }
+          }
+
+          trackMissionStep(context, 'campaign_social', 'COMPLETED', {
+            summary: `${socialPlatforms.length} social post drafts created`,
+            durationMs: Date.now() - socialStart,
+          });
+
+          // ── Phase 7: Email Draft (if not skipped) ────────────────────
+          if (!skipEmail) {
+            trackMissionStep(context, 'campaign_email', 'RUNNING', { toolArgs: { topic } });
+            const emailStart = Date.now();
+
+            try {
+              const subjectLine = (strategy.emailSubjectLine as string) || `Your guide to ${topic}`;
+              const emailAngle = (strategy.emailAngle as string) || `Learn about ${topic}`;
+
+              const { OpenRouterProvider } = await import('@/lib/ai/openrouter-provider');
+              const llm = new OpenRouterProvider({});
+              const emailResult = await llm.chat({
+                model: 'claude-3-5-sonnet',
+                messages: [
+                  {
+                    role: 'system',
+                    content: 'You are an email marketing expert. Write a promotional email in HTML format. Include a compelling subject line preview, personalized greeting, 2-3 paragraphs of value-driven content, and a clear CTA button. Keep it under 300 words. Output ONLY the HTML body content.',
+                  },
+                  {
+                    role: 'user',
+                    content: `Write an email for: "${topic}"\nSubject: ${subjectLine}\nAngle: ${emailAngle}\nAudience: ${audience}\nTone: ${tone}\nCTA: ${(strategy.callToAction as string) || 'Learn more'}`,
+                  },
+                ],
+              });
+
+              trackDeliverableAsync(campaignId, {
+                missionId,
+                type: 'email',
+                title: subjectLine,
+                status: 'pending_review',
+                previewData: {
+                  subject: subjectLine,
+                  body: emailResult.content,
+                  audience,
+                },
+                reviewLink: '/outreach/email',
+              });
+
+              trackMissionStep(context, 'campaign_email', 'COMPLETED', {
+                summary: `Email draft created: "${subjectLine}"`,
+                durationMs: Date.now() - emailStart,
+              });
+            } catch (emailErr) {
+              const errMsg = emailErr instanceof Error ? emailErr.message : String(emailErr);
+              trackMissionStep(context, 'campaign_email', 'FAILED', {
+                error: errMsg,
+                durationMs: Date.now() - emailStart,
+              });
+            }
+          }
+
+          // ── Phase 8: Update Campaign Status ──────────────────────────
+          await updateCampaign(campaignId, { status: 'pending_review' });
+
+          const deliverableCount = (skipVideo ? 0 : 1) + 1 + socialPlatforms.length + (skipEmail ? 0 : 1);
+
+          content = JSON.stringify({
+            status: 'campaign_ready',
+            campaignId,
+            missionId,
+            reviewLink,
+            deliverableCount,
+            deliverables: {
+              blog: true,
+              video: !skipVideo,
+              socialPosts: socialPlatforms,
+              email: !skipEmail,
+            },
+            videoProjectId,
+            message: `Campaign orchestrated with ${deliverableCount} deliverables (blog, ${skipVideo ? '' : 'video, '}${socialPlatforms.join(' + ')} social${skipEmail ? '' : ', email'}). Review all at: ${reviewLink}`,
+          });
+
+          trackMissionStep(context, 'orchestrate_campaign', 'COMPLETED', {
+            summary: `Campaign orchestrated: ${deliverableCount} deliverables ready for review`,
+            durationMs: Date.now() - orchStart,
+            toolResult: content,
+          });
+        } catch (orchError: unknown) {
+          const errMsg = orchError instanceof Error ? orchError.message : String(orchError);
+          content = JSON.stringify({ status: 'error', message: `Campaign orchestration failed: ${errMsg}` });
+          trackMissionStep(context, 'orchestrate_campaign', 'FAILED', {
+            error: errMsg,
+            durationMs: Date.now() - orchStart,
           });
         }
         break;

@@ -176,6 +176,22 @@ export default function VideoStudioPage() {
     }
   }, [searchParams, handleLoadProject, projectId]);
 
+  // Pre-fill brief from ?brief=...&batchWeekId=...&batchIndex=... (Content Calendar integration)
+  const setBrief = useVideoPipelineStore((s) => s.setBrief);
+  useEffect(() => {
+    const briefParam = searchParams.get('brief');
+    const batchWeekId = searchParams.get('batchWeekId');
+    const batchIndex = searchParams.get('batchIndex');
+    if (briefParam && !projectId) {
+      reset();
+      setBrief({ description: briefParam });
+      // Store batch link info in sessionStorage so save can link back
+      if (batchWeekId && batchIndex) {
+        sessionStorage.setItem('batch_link', JSON.stringify({ weekId: batchWeekId, index: Number(batchIndex) }));
+      }
+    }
+  }, [searchParams, projectId, reset, setBrief]);
+
   // NOTE: Focus handler removed — it was reloading the project from Firestore
   // on every tab focus, which clobbered in-session navigation state (currentStep,
   // generatedScenes). In a single-user workflow, the Zustand store + localStorage

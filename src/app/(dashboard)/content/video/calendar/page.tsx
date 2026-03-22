@@ -19,6 +19,7 @@ import {
   Trash2,
   Film,
   X,
+  Zap,
 } from 'lucide-react';
 import type {
   ContentCalendarWeek,
@@ -46,6 +47,7 @@ export default function ContentCalendarPage() {
   const [loaded, setLoaded] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [generatingWeekId, setGeneratingWeekId] = useState<string | null>(null);
 
   // Create modal state
   const [theme, setTheme] = useState('');
@@ -149,6 +151,26 @@ export default function ContentCalendarPage() {
     }
   };
 
+  const handleGenerateAll = async (weekId: string) => {
+    setGeneratingWeekId(weekId);
+    try {
+      const response = await authFetch('/api/video/calendar/generate-all', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ weekId }),
+      });
+      if (response.ok) {
+        // Reload weeks to get updated statuses
+        await loadWeeks();
+      }
+    } catch {
+      // Generation error — reload to show any partial progress
+      await loadWeeks();
+    } finally {
+      setGeneratingWeekId(null);
+    }
+  };
+
   const resetCreateForm = () => {
     setTheme('');
     setWeekName('');
@@ -156,9 +178,19 @@ export default function ContentCalendarPage() {
     setTopics(WEEKDAY_ORDER.map((d) => ({ day: d, topic: '' })));
   };
 
-  const handleOpenProject = (project: BatchProject) => {
+  const handleOpenProject = (project: BatchProject, week: ContentCalendarWeek) => {
     if (project.projectId) {
+      // Linked — open existing pipeline project
       router.push(`/content/video?load=${project.projectId}`);
+    } else {
+      // Unlinked — open pipeline with topic pre-filled as brief
+      const projectIndex = week.projects.findIndex((p) => p.id === project.id);
+      const params = new URLSearchParams({
+        brief: project.topic,
+        batchWeekId: week.id,
+        batchIndex: String(projectIndex),
+      });
+      router.push(`/content/video?${params.toString()}`);
     }
   };
 
@@ -259,6 +291,26 @@ export default function ContentCalendarPage() {
                       >
                         {week.status}
                       </span>
+                      {week.projects.some((p) => p.projectId && (p.status === 'approved' || p.status === 'storyboarded')) && (
+                        <Button
+                          size="sm"
+                          onClick={() => { void handleGenerateAll(week.id); }}
+                          disabled={generatingWeekId === week.id}
+                          className="gap-1.5 bg-green-700 hover:bg-green-600 text-white text-xs h-7"
+                        >
+                          {generatingWeekId === week.id ? (
+                            <>
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                              Generating...
+                            </>
+                          ) : (
+                            <>
+                              <Zap className="w-3 h-3" />
+                              Generate All
+                            </>
+                          )}
+                        </Button>
+                      )}
                       <Button
                         variant="ghost"
                         size="sm"
@@ -284,9 +336,8 @@ export default function ContentCalendarPage() {
                         return (
                           <button
                             key={project.id}
-                            onClick={() => handleOpenProject(project)}
-                            disabled={!project.projectId}
-                            className="text-left p-3 rounded-lg border border-zinc-800 hover:border-amber-500/30 transition-colors group disabled:opacity-60 disabled:cursor-default"
+                            onClick={() => handleOpenProject(project, week)}
+                            className="text-left p-3 rounded-lg border border-zinc-800 hover:border-amber-500/30 transition-colors group"
                           >
                             <div className="text-[10px] font-semibold text-zinc-500 uppercase mb-1">
                               {DAY_NAMES[project.dayOfWeek]}
@@ -296,7 +347,7 @@ export default function ContentCalendarPage() {
                             </p>
                             <div className={`flex items-center gap-1 text-[10px] ${statusInfo.color}`}>
                               <StatusIcon className={`w-3 h-3 ${project.status === 'generating' ? 'animate-spin' : ''}`} />
-                              {project.status}
+                              {project.projectId ? project.status : 'click to create'}
                             </div>
                           </button>
                         );

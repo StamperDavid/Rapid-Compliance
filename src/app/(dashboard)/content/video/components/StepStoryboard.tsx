@@ -632,11 +632,30 @@ export function StepStoryboard() {
     }
     setIsSaving(true);
     try {
+      // Read batch link from sessionStorage (set by Content Calendar integration)
+      let batchWeekId: string | undefined;
+      let batchIndex: number | undefined;
+      if (!projectId) {
+        try {
+          const raw = sessionStorage.getItem('batch_link');
+          if (raw) {
+            const parsed = JSON.parse(raw) as { weekId: string; index: number };
+            batchWeekId = parsed.weekId;
+            batchIndex = parsed.index;
+            sessionStorage.removeItem('batch_link');
+          }
+        } catch {
+          // Ignore parse errors
+        }
+      }
+
       await authFetch('/api/video/project/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           projectId: projectId ?? undefined,
+          batchWeekId,
+          batchIndex,
           name: projectName || brief.description.slice(0, 50) || 'Untitled Video',
           brief,
           currentStep: 'generation',

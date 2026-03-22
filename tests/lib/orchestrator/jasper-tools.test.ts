@@ -61,8 +61,8 @@ describe('Jasper Tools', () => {
   // --------------------------------------------------------------------------
 
   describe('JASPER_TOOLS definitions', () => {
-    it('should have 52 tool definitions', () => {
-      expect(JASPER_TOOLS.length).toBe(52);
+    it('should have 53 tool definitions', () => {
+      expect(JASPER_TOOLS.length).toBe(53);
     });
 
     it('should have unique tool names', () => {

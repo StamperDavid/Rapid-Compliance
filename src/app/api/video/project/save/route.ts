@@ -18,6 +18,9 @@ export const dynamic = 'force-dynamic';
 
 const SaveProjectSchema = z.object({
   projectId: z.string().optional(),
+  // Content Calendar batch linking (optional)
+  batchWeekId: z.string().optional(),
+  batchIndex: z.number().int().min(0).optional(),
   name: z.string().min(1, 'Project name required'),
   brief: z.object({
     description: z.string().min(1),
@@ -196,6 +199,30 @@ export async function POST(request: NextRequest) {
         projectId: newProjectId,
         error: updateResult.error,
       });
+    }
+
+    // Link back to Content Calendar batch project if batch info provided
+    if (data.batchWeekId && data.batchIndex !== undefined) {
+      try {
+        const { updateBatchProject } = await import('@/lib/video/batch-generator');
+        await updateBatchProject(data.batchWeekId, data.batchIndex, {
+          projectId: newProjectId,
+          status: 'storyboarded',
+        });
+        logger.info('Batch project linked to pipeline', {
+          file: 'api/video/project/save/route.ts',
+          weekId: data.batchWeekId,
+          batchIndex: data.batchIndex,
+          projectId: newProjectId,
+        });
+      } catch (batchError) {
+        logger.warn('Failed to link batch project', {
+          file: 'api/video/project/save/route.ts',
+          weekId: data.batchWeekId,
+          batchIndex: data.batchIndex,
+          error: batchError instanceof Error ? batchError.message : String(batchError),
+        });
+      }
     }
 
     return NextResponse.json({

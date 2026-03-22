@@ -5,13 +5,13 @@
 ## Context
 Repository: https://github.com/StamperDavid/Rapid-Compliance
 Branch: dev
-Last Updated: March 22, 2026 (V4A Auto-Publish + V4B Content Calendar + test fixes complete)
+Last Updated: March 22, 2026 (V4C Calendar→Pipeline + Batch Generation + Campaign Orchestration)
 
 ## Current State
 
 ### Architecture
 - **Single-tenant penthouse model** — org ID `rapid-compliance-root`, Firebase `rapid-compliance-65f87`
-- **52 AI agents** (46 swarm + 6 standalone) with hierarchical orchestration
+- **53 AI agents** (46 swarm + 7 standalone) with hierarchical orchestration
 - **4-role RBAC** (owner/admin/manager/member) with 47 permissions enforced on 36+ API routes, set-claims supports all 4 roles
 - **184 pages**, **393 API routes**, **1,628 TypeScript files**, **~350K+ lines**
 - **212 React components**, **54 type definition files**
@@ -31,12 +31,34 @@ Last Updated: March 22, 2026 (V4A Auto-Publish + V4B Content Calendar + test fix
 
 **Remaining work:**
 - React Query adoption (installed but not used anywhere)
-- Campaign Orchestration Pipeline — Jasper orchestrates full campaigns (research → strategy → blog + video + social + images + email → unified review → auto-publish)
-- Content Calendar → Pipeline integration — clicking a calendar topic opens the video pipeline with that topic pre-filled as a brief
-- Batch generation — sequential Hedra API calls across all approved calendar storyboards
 - YouTube/TikTok direct API uploads (currently creates social posts in Firestore; needs platform-specific upload endpoints)
 
-### What Was Built This Session (March 22, 2026)
+### What Was Built This Session (March 22, 2026 — V4C)
+
+**V4C-1 Content Calendar → Pipeline Integration — COMPLETE:**
+- Clicking a pending calendar topic navigates to `/content/video?brief=...&batchWeekId=...&batchIndex=...`
+- Video pipeline auto-fills brief from URL params, stores batch link in sessionStorage
+- On first save (StepStoryboard), batch project is linked via `batchWeekId`/`batchIndex` to new pipeline project
+- PATCH `/api/video/calendar` endpoint for updating batch project fields (status, projectId, videoUrl)
+- Calendar cards now show "click to create" for unlinked projects (no longer disabled)
+
+**V4C-2 Batch Generation — COMPLETE:**
+- POST `/api/video/calendar/generate-all` — sequentially generates all approved storyboards in a week
+- Loads each linked pipeline project, calls `generateAllScenes` via Hedra, updates both pipeline and batch project status
+- "Generate All" button on calendar week cards (green, only visible when approved projects exist)
+- Progress tracking: button shows spinner during generation, statuses update on completion
+
+**V4C-3 Campaign Orchestration Pipeline — COMPLETE:**
+- `orchestrate_campaign` Jasper tool (53rd tool) — full multi-deliverable campaign in one call
+- 8-phase flow: Research (AI) → Strategy (AI) → Create Campaign → Blog Draft (AI) → Video Storyboard (AI) → Social Posts → Email Draft (AI) → Status Update
+- Each deliverable registered under campaign via `trackDeliverableAsync` with proper `campaignId`
+- Campaign review at `/mission-control?campaign={id}` shows all deliverables with approve/reject
+- Dashboard links updated: `orchestrate_campaign`, `create_campaign`, `batch_produce_videos` mapped to routes
+- Step display names added for campaign phases (Research, Strategy, Blog Draft, Video Storyboard, Social Posts, Email Draft)
+- All AI calls use `{ model: 'claude-3-5-sonnet', messages: [...] }` format via OpenRouterProvider
+- Graceful fallback: if AI unavailable, uses default content and continues
+
+### What Was Built Previously (March 22, 2026 — V4A + V4B)
 
 **V4A Auto-Publish / Scheduling — COMPLETE:**
 - `src/app/(dashboard)/content/video/components/StepPublish.tsx` — 6th pipeline step with platform picker (Twitter, LinkedIn, YouTube, TikTok, Instagram, Facebook), schedule now/later, title/description/tags auto-filled from brief
@@ -48,7 +70,7 @@ Last Updated: March 22, 2026 (V4A Auto-Publish + V4B Content Calendar + test fix
 - `src/app/(dashboard)/content/video/calendar/page.tsx` — Content Calendar page with week-at-a-time topic planning, create week modal, theme auto-fill, 7-day grid view
 - `src/lib/video/batch-generator.ts` — Service: createCalendarWeek, listCalendarWeeks, updateBatchProject, deleteCalendarWeek, generateDefaultTopics
 - `src/app/api/video/calendar/route.ts` — GET/POST/DELETE with Zod validation
-- `batch_produce_videos` Jasper tool (52nd tool) — creates content calendar weeks from conversational input
+- `batch_produce_videos` Jasper tool — creates content calendar weeks from conversational input
 - Added "Calendar" tab to CONTENT_GENERATOR_TABS navigation
 
 **Bug Fixes:**
@@ -129,8 +151,8 @@ Last Updated: March 22, 2026 (V4A Auto-Publish + V4B Content Calendar + test fix
 
 | Domain | Score | Verified Status |
 |--------|-------|-----------------|
-| Video System (Hedra) | 10/10 | Clone wizard, auto-captions, background music, assembly progress, simple/advanced mode, 52 Jasper tools, brand kit watermark, cost estimation, editor↔pipeline wiring, auto-publish, content calendar |
-| AI Orchestration (Jasper) | 9.5/10 | 52 real tools, OpenRouter calls, 3-layer prompt, mission tracking |
+| Video System (Hedra) | 10/10 | Clone wizard, auto-captions, background music, assembly progress, simple/advanced mode, 53 Jasper tools, brand kit watermark, cost estimation, editor↔pipeline wiring, auto-publish, content calendar, batch generation, calendar→pipeline integration |
+| AI Orchestration (Jasper) | 10/10 | 53 real tools, OpenRouter calls, 3-layer prompt, mission tracking, full campaign orchestration (research→strategy→blog+video+social+email) |
 | API Routes (399 total) | 9.5/10 | 100% auth, 100% Zod, 100% try/catch, Mollie HMAC verified, granular RBAC on 36+ sensitive routes |
 | CRM & Sales | 9/10 | Contacts, deals, leads, pipeline — fully implemented |
 | Website Builder | 9/10 | Editor, pages, blog, domains, SEO, navigation — all real |
