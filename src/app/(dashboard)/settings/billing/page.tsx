@@ -37,6 +37,7 @@ export default function BillingPage() {
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
+  const [portalLoading, setPortalLoading] = useState(false);
   const [usage, setUsage] = useState<{ contacts: string; emails: string; aiCredits: string }>({
     contacts: '—', emails: '—', aiCredits: '—',
   });
@@ -82,6 +83,26 @@ export default function BillingPage() {
       void fetchUsage();
     }
   }, [user, loadSubscription, authFetch]);
+
+  const handleOpenPortal = async () => {
+    setPortalLoading(true);
+    try {
+      const res = await authFetch('/api/subscriptions/portal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      const data = (await res.json()) as { success: boolean; url?: string; error?: string };
+      if (data.success && data.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error(data.error ?? 'Failed to open billing portal');
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to open billing portal');
+      setPortalLoading(false);
+    }
+  };
 
   const handleCancel = async () => {
     if (!subscription) { return; }
@@ -343,6 +364,26 @@ export default function BillingPage() {
                 >
                   {tier === 'free' ? 'Upgrade Plan' : 'Change Plan'}
                 </Link>
+
+                {isActive && subscription?.stripeSubscriptionId && !isProvisioned && (
+                  <button
+                    onClick={() => void handleOpenPortal()}
+                    disabled={portalLoading}
+                    style={{
+                      padding: '0.5rem 1rem',
+                      backgroundColor: 'transparent',
+                      border: '1px solid var(--color-text-secondary)',
+                      color: 'var(--color-text-primary)',
+                      borderRadius: '0.375rem',
+                      cursor: portalLoading ? 'not-allowed' : 'pointer',
+                      fontSize: '0.875rem',
+                      fontWeight: 500,
+                      opacity: portalLoading ? 0.5 : 1,
+                    }}
+                  >
+                    {portalLoading ? 'Opening...' : 'Manage Billing'}
+                  </button>
+                )}
 
                 {isActive && tier !== 'free' && (
                   <button

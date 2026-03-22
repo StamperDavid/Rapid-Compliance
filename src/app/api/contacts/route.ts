@@ -2,7 +2,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getContacts, createContact, deleteContact } from '@/lib/crm/contact-service';
 import { logger } from '@/lib/logger/logger';
-import { requireAuth } from '@/lib/auth/api-auth';
+import { requireAuth, requireRole } from '@/lib/auth/api-auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -116,7 +116,7 @@ export async function DELETE(
   request: NextRequest
 ) {
   try {
-    const authResult = await requireAuth(request);
+    const authResult = await requireRole(request, ['owner', 'admin', 'manager']);
     if (authResult instanceof NextResponse) {
       return authResult;
     }

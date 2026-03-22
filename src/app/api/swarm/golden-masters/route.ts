@@ -12,7 +12,7 @@
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
-import { requireAuth } from '@/lib/auth/api-auth';
+import { requireAuth, requireRole } from '@/lib/auth/api-auth';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { logger } from '@/lib/logger/logger';
@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
     const rateLimitResponse = await rateLimitMiddleware(request, RATE_LIMIT_KEY);
     if (rateLimitResponse) { return rateLimitResponse; }
 
-    const authResult = await requireAuth(request);
+    const authResult = await requireRole(request, ['owner', 'admin']);
     if (authResult instanceof NextResponse) { return authResult; }
 
     const body = await request.json() as unknown;
@@ -122,7 +122,7 @@ export async function PUT(request: NextRequest) {
     const rateLimitResponse = await rateLimitMiddleware(request, RATE_LIMIT_KEY);
     if (rateLimitResponse) { return rateLimitResponse; }
 
-    const authResult = await requireAuth(request);
+    const authResult = await requireRole(request, ['owner', 'admin']);
     if (authResult instanceof NextResponse) { return authResult; }
 
     const body = await request.json() as unknown;

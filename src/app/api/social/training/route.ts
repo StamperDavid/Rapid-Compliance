@@ -8,7 +8,7 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { requireAuth } from '@/lib/auth/api-auth';
+import { requireRole } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
@@ -61,7 +61,7 @@ export async function GET(request: NextRequest) {
     const rateLimitResponse = await rateLimitMiddleware(request, '/api/social/training');
     if (rateLimitResponse) { return rateLimitResponse; }
 
-    const authResult = await requireAuth(request);
+    const authResult = await requireRole(request, ['owner', 'admin']);
     if (authResult instanceof NextResponse) { return authResult; }
 
     // Fetch settings, brand DNA, history, and knowledge in parallel
@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
     const rateLimitResponse = await rateLimitMiddleware(request, '/api/social/training');
     if (rateLimitResponse) { return rateLimitResponse; }
 
-    const authResult = await requireAuth(request);
+    const authResult = await requireRole(request, ['owner', 'admin']);
     if (authResult instanceof NextResponse) { return authResult; }
 
     const body: unknown = await request.json();
@@ -131,7 +131,7 @@ export async function PUT(request: NextRequest) {
     const rateLimitResponse = await rateLimitMiddleware(request, '/api/social/training');
     if (rateLimitResponse) { return rateLimitResponse; }
 
-    const authResult = await requireAuth(request);
+    const authResult = await requireRole(request, ['owner', 'admin']);
     if (authResult instanceof NextResponse) { return authResult; }
 
     const body: unknown = await request.json();

@@ -4,7 +4,7 @@
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
-import { requireAuth } from '@/lib/auth/api-auth';
+import { verifyAdminRequest, isAuthError, createErrorResponse } from '@/lib/api/admin-auth';
 import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
@@ -20,9 +20,9 @@ export async function GET(request: NextRequest) {
       return rateLimitResponse;
     }
 
-    const authResult = await requireAuth(request);
-    if (authResult instanceof NextResponse) {
-      return authResult;
+    const authResult = await verifyAdminRequest(request);
+    if (isAuthError(authResult)) {
+      return createErrorResponse(authResult.error, authResult.status);
     }
 
     // Count contacts

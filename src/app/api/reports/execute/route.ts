@@ -5,7 +5,7 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { requireAuth } from '@/lib/auth/api-auth';
+import { requireRole } from '@/lib/auth/api-auth';
 import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { getSubCollection, getLeadsCollection, getDealsCollection, getContactsCollection } from '@/lib/firebase/collections';
 import { logger } from '@/lib/logger/logger';
@@ -178,7 +178,7 @@ export async function POST(request: NextRequest) {
     const rateLimitResponse = await rateLimitMiddleware(request, '/api/reports/execute');
     if (rateLimitResponse) {return rateLimitResponse;}
 
-    const authResult = await requireAuth(request);
+    const authResult = await requireRole(request, ['owner', 'admin', 'manager']);
     if (authResult instanceof NextResponse) {
       return authResult;
     }

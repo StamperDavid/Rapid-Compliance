@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic';
 import { type NextRequest, NextResponse } from 'next/server';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import { getSubCollection } from '@/lib/firebase/collections';
-import { requireAuth } from '@/lib/auth/api-auth';
+import { verifyAdminRequest, isAuthError, createErrorResponse } from '@/lib/api/admin-auth';
 import { generateSiteSchemaReport } from '@/lib/seo/schema-markup-service';
 import { logger } from '@/lib/logger/logger';
 import type { Page, BlogPost, SiteConfig } from '@/types/website';
@@ -46,9 +46,9 @@ const AI_BOTS = [
 
 export async function GET(request: NextRequest) {
   try {
-    const authResult = await requireAuth(request);
-    if (authResult instanceof NextResponse) {
-      return authResult;
+    const authResult = await verifyAdminRequest(request);
+    if (isAuthError(authResult)) {
+      return createErrorResponse(authResult.error, authResult.status);
     }
 
     if (!adminDal) {

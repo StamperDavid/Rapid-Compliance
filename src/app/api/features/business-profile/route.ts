@@ -6,7 +6,7 @@
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
-import { requireAuth } from '@/lib/auth/api-auth';
+import { requireAuth, requireRole } from '@/lib/auth/api-auth';
 import { handleAPIError } from '@/lib/api/error-handler';
 import { logger } from '@/lib/logger/logger';
 import { getBusinessProfile, saveBusinessProfile } from '@/lib/services/feature-service';
@@ -39,7 +39,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
 
 export async function PUT(request: NextRequest): Promise<NextResponse> {
   try {
-    const authResult = await requireAuth(request);
+    const authResult = await requireRole(request, ['owner', 'admin']);
     if (authResult instanceof NextResponse) {
       return authResult;
     }

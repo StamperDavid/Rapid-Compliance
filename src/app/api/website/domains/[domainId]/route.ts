@@ -9,7 +9,7 @@ import { adminDal } from '@/lib/firebase/admin-dal';
 import { getSubCollection } from '@/lib/firebase/collections';
 import { getUserIdentifier } from '@/lib/server-auth';
 import { logger } from '@/lib/logger/logger';
-import { requireAuth } from '@/lib/auth/api-auth';
+import { requireRole } from '@/lib/auth/api-auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -22,7 +22,7 @@ export async function DELETE(
   context: { params: Promise<{ domainId: string }> }
 ) {
   try {
-    const authResult = await requireAuth(request);
+    const authResult = await requireRole(request, ['owner', 'admin']);
     if (authResult instanceof NextResponse) {
       return authResult;
     }

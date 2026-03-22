@@ -4,7 +4,7 @@ import { createDeal, deleteDeal } from '@/lib/crm/deal-service';
 import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { getDealsCollection } from '@/lib/firebase/collections';
 import { logger } from '@/lib/logger/logger';
-import { requireAuth } from '@/lib/auth/api-auth';
+import { requireAuth, requireRole } from '@/lib/auth/api-auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -126,7 +126,7 @@ export async function DELETE(
   request: NextRequest
 ) {
   try {
-    const authResult = await requireAuth(request);
+    const authResult = await requireRole(request, ['owner', 'admin', 'manager']);
     if (authResult instanceof NextResponse) {
       return authResult;
     }

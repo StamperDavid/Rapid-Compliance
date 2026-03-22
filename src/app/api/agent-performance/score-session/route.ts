@@ -15,6 +15,7 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
+import { requireAuth } from '@/lib/auth/api-auth';
 import { triggerAgentAnalysis } from '@/lib/training/production-monitor';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
@@ -33,6 +34,9 @@ const ScoreSessionSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
+    const authResult = await requireAuth(request);
+    if (authResult instanceof NextResponse) { return authResult; }
+
     const body = await request.json() as unknown;
     const parseResult = ScoreSessionSchema.safeParse(body);
 

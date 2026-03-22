@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic';
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { requireAuth } from '@/lib/auth/api-auth';
+import { requireRole } from '@/lib/auth/api-auth';
 import { migrateSite } from '@/lib/website-builder/site-migration-service';
 import { logger } from '@/lib/logger/logger';
 
@@ -25,7 +25,7 @@ const migrateBodySchema = z.object({
  */
 export async function POST(request: NextRequest) {
   try {
-    const authResult = await requireAuth(request);
+    const authResult = await requireRole(request, ['owner', 'admin']);
     if (authResult instanceof NextResponse) {
       return authResult;
     }

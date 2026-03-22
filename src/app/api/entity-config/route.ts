@@ -6,7 +6,7 @@
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
-import { requireAuth } from '@/lib/auth/api-auth';
+import { requireAuth, requireRole } from '@/lib/auth/api-auth';
 import { handleAPIError, errors } from '@/lib/api/error-handler';
 import { logger } from '@/lib/logger/logger';
 import { getEntityConfig, saveEntityConfig } from '@/lib/services/entity-config-service';
@@ -46,10 +46,11 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
  */
 export async function PUT(request: NextRequest): Promise<NextResponse> {
   try {
-    const authResult = await requireAuth(request);
+    const authResult = await requireRole(request, ['owner', 'admin']);
     if (authResult instanceof NextResponse) {
       return authResult;
     }
+    const { user } = authResult;
 
     const body: unknown = await request.json();
 
@@ -60,8 +61,7 @@ export async function PUT(request: NextRequest): Promise<NextResponse> {
       );
     }
 
-    const user = authResult as { user: { uid: string } };
-    const userId = user.user?.uid ?? 'unknown';
+    const userId = user.uid;
 
     const config: EntityConfig = {
       entities: parsed.data.entities,

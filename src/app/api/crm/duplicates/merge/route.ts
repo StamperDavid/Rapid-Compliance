@@ -6,8 +6,7 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { logger } from '@/lib/logger/logger';
-import { requireAuth } from '@/lib/auth/api-auth';
-import { getAuthToken } from '@/lib/auth/server-auth';
+import { requireRole } from '@/lib/auth/api-auth';
 import { getSubCollection } from '@/lib/firebase/collections';
 
 export const dynamic = 'force-dynamic';
@@ -21,17 +20,9 @@ const MergeRequestSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
-    const authResult = await requireAuth(request);
+    const authResult = await requireRole(request, ['owner', 'admin', 'manager']);
     if (authResult instanceof NextResponse) {
       return authResult;
-    }
-
-    const token = await getAuthToken(request);
-    if (!token) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      );
     }
 
     // Parse and validate request body

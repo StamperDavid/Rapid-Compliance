@@ -10,7 +10,7 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { requireAuth } from '@/lib/auth/api-auth';
+import { requireRole } from '@/lib/auth/api-auth';
 import { SystemHealthService } from '@/lib/orchestrator/system-health-service';
 import { logger } from '@/lib/logger/logger';
 
@@ -22,7 +22,7 @@ const specialistStatusRequestSchema = z.object({
 
 export async function GET(request: NextRequest) {
   try {
-    const authResult = await requireAuth(request);
+    const authResult = await requireRole(request, ['owner', 'admin']);
     if (authResult instanceof NextResponse) {return authResult;}
 
     const { searchParams } = new URL(request.url);
@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    const postAuthResult = await requireAuth(request);
+    const postAuthResult = await requireRole(request, ['owner', 'admin']);
     if (postAuthResult instanceof NextResponse) {return postAuthResult;}
 
     const rawBody: unknown = await request.json();

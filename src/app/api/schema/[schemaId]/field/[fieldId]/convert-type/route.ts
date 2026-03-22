@@ -4,7 +4,7 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { requireAuth } from '@/lib/auth/api-auth';
+import { requireRole } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import { FieldTypeConverterServer } from '@/lib/schema/server/field-type-converter-server';
@@ -40,7 +40,7 @@ export async function GET(
   context: { params: Promise<{ schemaId: string; fieldId: string }> }
 ) {
   try {
-    const authResult = await requireAuth(request);
+    const authResult = await requireRole(request, ['owner', 'admin']);
     if (authResult instanceof NextResponse) {
       return authResult;
     }
@@ -103,7 +103,7 @@ export async function POST(
   context: { params: Promise<{ schemaId: string; fieldId: string }> }
 ) {
   try {
-    const authResult = await requireAuth(request);
+    const authResult = await requireRole(request, ['owner', 'admin']);
     if (authResult instanceof NextResponse) {
       return authResult;
     }

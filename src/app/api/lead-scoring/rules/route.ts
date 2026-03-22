@@ -9,9 +9,8 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { getAuth } from 'firebase-admin/auth';
 import { type Timestamp, FieldValue } from 'firebase-admin/firestore';
-import adminApp from '@/lib/firebase/admin';
+import { requireAuth, requireRole } from '@/lib/auth/api-auth';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import { logger } from '@/lib/logger/logger';
 import { type ScoringRules, DEFAULT_SCORING_RULES } from '@/types/lead-scoring';
@@ -57,24 +56,8 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const authHeader = req.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
-    if (!adminApp) {
-      return NextResponse.json(
-        { success: false, error: 'Server configuration error' },
-        { status: 500 }
-      );
-    }
-
-    const token = authHeader.substring(7);
-    await getAuth(adminApp).verifyIdToken(token);
-
+    const authResult = await requireAuth(req);
+    if (authResult instanceof NextResponse) { return authResult; }
 
     // Get all scoring rules for organization
     const rulesRef = adminDal.getNestedCollection(
@@ -132,24 +115,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const authHeader = req.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
-    if (!adminApp) {
-      return NextResponse.json(
-        { success: false, error: 'Server configuration error' },
-        { status: 500 }
-      );
-    }
-
-    const token = authHeader.substring(7);
-    const decodedToken = await getAuth(adminApp).verifyIdToken(token);
-    const userId = decodedToken.uid;
+    const authResult = await requireRole(req, ['owner', 'admin']);
+    if (authResult instanceof NextResponse) { return authResult; }
+    const userId = authResult.user.uid;
 
     const body: unknown = await req.json();
     const validation = createRulesSchema.safeParse(body);
@@ -240,23 +208,8 @@ export async function PUT(req: NextRequest) {
       );
     }
 
-    const authHeader = req.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
-    if (!adminApp) {
-      return NextResponse.json(
-        { success: false, error: 'Server configuration error' },
-        { status: 500 }
-      );
-    }
-
-    const token = authHeader.substring(7);
-    await getAuth(adminApp).verifyIdToken(token);
+    const authResult = await requireRole(req, ['owner', 'admin']);
+    if (authResult instanceof NextResponse) { return authResult; }
 
     const body: unknown = await req.json();
     const validation = updateRulesSchema.safeParse(body);
@@ -330,23 +283,8 @@ export async function DELETE(req: NextRequest) {
       );
     }
 
-    const authHeader = req.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
-    if (!adminApp) {
-      return NextResponse.json(
-        { success: false, error: 'Server configuration error' },
-        { status: 500 }
-      );
-    }
-
-    const token = authHeader.substring(7);
-    await getAuth(adminApp).verifyIdToken(token);
+    const authResult = await requireRole(req, ['owner', 'admin']);
+    if (authResult instanceof NextResponse) { return authResult; }
 
     const { searchParams } = new URL(req.url);
     const rulesId = searchParams.get('rulesId');

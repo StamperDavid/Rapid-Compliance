@@ -5,7 +5,7 @@ import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { getSubCollection } from '@/lib/firebase/collections';
-import { requireAuth } from '@/lib/auth/api-auth';
+import { requireAuth, requirePermission } from '@/lib/auth/api-auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -148,7 +148,7 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    const authResult = await requireAuth(request);
+    const authResult = await requirePermission(request, 'canManageAIAgents');
     if (authResult instanceof NextResponse) {
       return authResult;
     }

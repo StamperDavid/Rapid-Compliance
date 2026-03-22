@@ -8,8 +8,7 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { getAuth } from 'firebase-admin/auth';
-import adminApp from '@/lib/firebase/admin';
+import { requireAuth } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
 import { calculateLeadScore, calculateLeadScoresBatch } from '@/lib/services/lead-scoring-engine';
 import type { LeadScoreRequest, BatchLeadScoreRequest, LeadScore } from '@/types/lead-scoring';
@@ -33,24 +32,9 @@ const leadScoringRequestSchema = z.object({
 export async function POST(req: NextRequest) {
   try {
     // Verify authentication
-    const authHeader = req.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
-    if (!adminApp) {
-      return NextResponse.json(
-        { success: false, error: 'Server configuration error' },
-        { status: 500 }
-      );
-    }
-
-    const token = authHeader.substring(7);
-    const decodedToken = await getAuth(adminApp).verifyIdToken(token);
-    const userId = decodedToken.uid;
+    const authResult = await requireAuth(req);
+    if (authResult instanceof NextResponse) { return authResult; }
+    const userId = authResult.user.uid;
 
     // Parse and validate request body
     const body: unknown = await req.json();

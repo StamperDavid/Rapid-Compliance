@@ -9,7 +9,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 import { FirestoreService } from '@/lib/db/firestore-service'
 import { logger } from '@/lib/logger/logger';
 import type { Auth } from 'firebase-admin/auth';
-import type { AccountRole } from '@/types/unified-rbac';
+import { type AccountRole, hasUnifiedPermission, type UnifiedPermissions } from '@/types/unified-rbac';
 
 // Firebase Admin SDK (optional - only if configured)
 let adminAuth: Auth | null = null;
@@ -265,6 +265,39 @@ export async function requireRole(
 
   // Check if user's role is in the allowed list
   if (!user.role || !allowedRoles.includes(user.role)) {
+    return NextResponse.json(
+      { success: false, error: 'Insufficient permissions' },
+      { status: 403 }
+    );
+  }
+
+  return { user };
+}
+
+/**
+ * Require a specific granular permission from UnifiedPermissions.
+ * Uses the 47-permission RBAC matrix to check access.
+ * Owner role always passes (master key).
+ */
+export async function requirePermission(
+  request: NextRequest,
+  permission: keyof UnifiedPermissions
+): Promise<{ user: AuthenticatedUser } | NextResponse> {
+  const authResult = await requireAuth(request);
+
+  if (authResult instanceof NextResponse) {
+    return authResult;
+  }
+
+  const { user } = authResult;
+
+  if (!hasUnifiedPermission(user.role, permission)) {
+    logger.warn('Permission denied', {
+      uid: user.uid,
+      role: user.role,
+      permission,
+      file: 'api-auth.ts',
+    });
     return NextResponse.json(
       { success: false, error: 'Insufficient permissions' },
       { status: 403 }

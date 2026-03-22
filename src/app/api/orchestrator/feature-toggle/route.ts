@@ -10,7 +10,7 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { requireAuth } from '@/lib/auth/api-auth';
+import { requireAuth, requireRole } from '@/lib/auth/api-auth';
 import { FeatureToggleService } from '@/lib/orchestrator/feature-toggle-service';
 import { logger } from '@/lib/logger/logger';
 
@@ -40,7 +40,7 @@ const toggleFeatureSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
-    const authResult = await requireAuth(request);
+    const authResult = await requireRole(request, ['owner', 'admin']);
     if (authResult instanceof NextResponse) {return authResult;}
 
     const rawBody: unknown = await request.json();

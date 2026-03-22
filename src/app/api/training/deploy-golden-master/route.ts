@@ -4,7 +4,7 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { requireAuth } from '@/lib/auth/api-auth';
+import { requireRole } from '@/lib/auth/api-auth';
 import { deployGoldenMaster } from '@/lib/training/golden-master-updater';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
@@ -22,11 +22,10 @@ export async function POST(request: NextRequest) {
     if (rateLimitResponse) {return rateLimitResponse;}
 
     // Authentication
-    const authResult = await requireAuth(request);
+    const authResult = await requireRole(request, ['owner', 'admin']);
     if (authResult instanceof NextResponse) {
       return authResult;
     }
-    const { user: _user } = authResult;
 
     // Parse and validate request
     const body: unknown = await request.json();

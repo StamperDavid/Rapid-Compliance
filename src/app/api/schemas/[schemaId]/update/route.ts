@@ -5,7 +5,7 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { requireAuth } from '@/lib/auth/api-auth';
+import { requirePermission } from '@/lib/auth/api-auth';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import { FieldValue } from 'firebase-admin/firestore';
 import { SchemaChangeDetector } from '@/lib/schema/schema-change-tracker';
@@ -29,7 +29,7 @@ export async function POST(
   context: { params: Promise<{ schemaId: string }> }
 ) {
   try {
-    const authResult = await requireAuth(request);
+    const authResult = await requirePermission(request, 'canEditSchemas');
     if (authResult instanceof NextResponse) {
       return authResult;
     }

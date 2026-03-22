@@ -2,7 +2,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { createLead, type Lead } from '@/lib/crm/lead-service';
 import { logger } from '@/lib/logger/logger';
-import { requireAuth } from '@/lib/auth/api-auth';
+import { requireRole } from '@/lib/auth/api-auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -170,7 +170,7 @@ function rawRowToInput(raw: Record<string, string>): CsvRowInput {
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
-    const authResult = await requireAuth(request);
+    const authResult = await requireRole(request, ['owner', 'admin', 'manager']);
     if (authResult instanceof NextResponse) {
       return authResult;
     }

@@ -4,7 +4,7 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { requireAuth } from '@/lib/auth/api-auth';
+import { requireRole } from '@/lib/auth/api-auth';
 import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { applyUpdateRequest } from '@/lib/training/golden-master-updater';
 import type { GoldenMasterUpdateRequest } from '@/types/training';
@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
     if (rateLimitResponse) {return rateLimitResponse;}
 
     // Authentication
-    const authResult = await requireAuth(request);
+    const authResult = await requireRole(request, ['owner', 'admin']);
     if (authResult instanceof NextResponse) {
       return authResult;
     }

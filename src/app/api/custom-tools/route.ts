@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { validateToolUrl, type CustomTool } from '@/types/custom-tools';
 import { getSubCollection } from '@/lib/firebase/collections';
-import { requireAuth } from '@/lib/auth/api-auth';
+import { requireRole } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
 
 export const dynamic = 'force-dynamic';
@@ -65,6 +65,11 @@ export async function GET(
   request: NextRequest
 ) {
   try {
+    const authResult = await requireRole(request, ['owner', 'admin']);
+    if (authResult instanceof NextResponse) {
+      return authResult;
+    }
+
     const { searchParams } = new URL(request.url);
     const toolId = searchParams.get('id');
 
@@ -111,7 +116,7 @@ export async function POST(
   request: NextRequest
 ) {
   try {
-    const authResult = await requireAuth(request);
+    const authResult = await requireRole(request, ['owner', 'admin']);
     if (authResult instanceof NextResponse) {
       return authResult;
     }
@@ -183,7 +188,7 @@ export async function PUT(
   request: NextRequest
 ) {
   try {
-    const authResult = await requireAuth(request);
+    const authResult = await requireRole(request, ['owner', 'admin']);
     if (authResult instanceof NextResponse) {
       return authResult;
     }
@@ -280,7 +285,7 @@ export async function DELETE(
   request: NextRequest
 ) {
   try {
-    const authResult = await requireAuth(request);
+    const authResult = await requireRole(request, ['owner', 'admin']);
     if (authResult instanceof NextResponse) {
       return authResult;
     }

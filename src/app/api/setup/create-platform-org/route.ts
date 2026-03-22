@@ -2,7 +2,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { COLLECTIONS, getSubCollection } from '@/lib/firebase/collections';
 import { logger } from '@/lib/logger/logger';
-import { requireAuth } from '@/lib/auth/api-auth';
+import { requireRole } from '@/lib/auth/api-auth';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { PLATFORM_ID } from '@/lib/constants/platform';
@@ -16,7 +16,7 @@ export const dynamic = 'force-dynamic';
 export async function POST(request: NextRequest) {
   try {
     // Authentication
-    const authResult = await requireAuth(request);
+    const authResult = await requireRole(request, ['owner']);
     if (authResult instanceof NextResponse) {
       return authResult;
     }

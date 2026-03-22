@@ -4,9 +4,9 @@
  */
 
 import type { NextRequest } from 'next/server';
-import { requireAuth, requireRole, type AuthenticatedUser } from '@/lib/auth/api-auth';
+import { requireAuth, requireRole, requirePermission, type AuthenticatedUser } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
-import { type AccountRole, isAdmin as isAdminRole } from '@/types/unified-rbac';
+import { type AccountRole, isAdmin as isAdminRole, type UnifiedPermissions } from '@/types/unified-rbac';
 
 /**
  * Get authenticated user token from request
@@ -80,4 +80,21 @@ export async function hasRole(request: NextRequest, role: string): Promise<boole
 export async function isAdmin(request: NextRequest): Promise<boolean> {
   const user = await getAuthToken(request);
   return isAdminRole(user?.role);
+}
+
+/**
+ * Require a specific granular permission from UnifiedPermissions.
+ * Throws if permission denied.
+ */
+export async function requireUserPermission(
+  request: NextRequest,
+  permission: keyof UnifiedPermissions
+): Promise<AuthenticatedUser> {
+  const result = await requirePermission(request, permission);
+
+  if ('status' in result) {
+    throw new Error('Insufficient permissions');
+  }
+
+  return result.user;
 }

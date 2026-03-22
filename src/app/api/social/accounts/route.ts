@@ -9,7 +9,7 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { requireAuth } from '@/lib/auth/api-auth';
+import { requireAuth, requireRole } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { SocialAccountService } from '@/lib/social/social-account-service';
@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
     const rateLimitResponse = await rateLimitMiddleware(request, '/api/social/accounts');
     if (rateLimitResponse) {return rateLimitResponse;}
 
-    const authResult = await requireAuth(request);
+    const authResult = await requireRole(request, ['owner', 'admin']);
     if (authResult instanceof NextResponse) {return authResult;}
 
     const body: unknown = await request.json();
@@ -127,7 +127,7 @@ export async function PUT(request: NextRequest) {
     const rateLimitResponse = await rateLimitMiddleware(request, '/api/social/accounts');
     if (rateLimitResponse) {return rateLimitResponse;}
 
-    const authResult = await requireAuth(request);
+    const authResult = await requireRole(request, ['owner', 'admin']);
     if (authResult instanceof NextResponse) {return authResult;}
 
     const { searchParams } = new URL(request.url);
@@ -176,7 +176,7 @@ export async function DELETE(request: NextRequest) {
     const rateLimitResponse = await rateLimitMiddleware(request, '/api/social/accounts');
     if (rateLimitResponse) {return rateLimitResponse;}
 
-    const authResult = await requireAuth(request);
+    const authResult = await requireRole(request, ['owner', 'admin']);
     if (authResult instanceof NextResponse) {return authResult;}
 
     const { searchParams } = new URL(request.url);

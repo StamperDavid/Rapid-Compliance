@@ -7,9 +7,8 @@
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
-import { getAuth } from 'firebase-admin/auth';
 import type { Timestamp } from 'firebase-admin/firestore';
-import adminApp from '@/lib/firebase/admin';
+import { requireAuth } from '@/lib/auth/api-auth';
 import { adminDal } from '@/lib/firebase/admin-dal';
 import { logger } from '@/lib/logger/logger';
 import type { LeadScoreAnalytics, StoredLeadScore, IntentSignalType } from '@/types/lead-scoring';
@@ -59,23 +58,8 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const authHeader = req.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
-    if (!adminApp) {
-      return NextResponse.json(
-        { success: false, error: 'Server configuration error' },
-        { status: 500 }
-      );
-    }
-
-    const token = authHeader.substring(7);
-    await getAuth(adminApp).verifyIdToken(token);
+    const authResult = await requireAuth(req);
+    if (authResult instanceof NextResponse) { return authResult; }
 
     const { searchParams } = new URL(req.url);
     const startDateParam = searchParams.get('startDate');

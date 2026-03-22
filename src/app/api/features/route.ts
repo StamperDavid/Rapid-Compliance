@@ -6,7 +6,7 @@
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
-import { requireAuth } from '@/lib/auth/api-auth';
+import { requireAuth, requirePermission } from '@/lib/auth/api-auth';
 import { handleAPIError, errors } from '@/lib/api/error-handler';
 import { logger } from '@/lib/logger/logger';
 import { getFeatureConfig, saveFeatureConfig } from '@/lib/services/feature-service';
@@ -46,7 +46,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
  */
 export async function PUT(request: NextRequest): Promise<NextResponse> {
   try {
-    const authResult = await requireAuth(request);
+    const authResult = await requirePermission(request, 'canManageFeatureFlags');
     if (authResult instanceof NextResponse) {
       return authResult;
     }
@@ -60,8 +60,7 @@ export async function PUT(request: NextRequest): Promise<NextResponse> {
       );
     }
 
-    const userId =
-      (authResult as { uid?: string }).uid ?? 'unknown';
+    const userId = authResult.user.uid;
 
     const config: FeatureConfig = {
       modules: parsed.data.modules,
