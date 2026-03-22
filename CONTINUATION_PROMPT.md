@@ -5,7 +5,7 @@
 ## Context
 Repository: https://github.com/StamperDavid/Rapid-Compliance
 Branch: dev
-Last Updated: March 21, 2026 (Phase 4 + Video V1 complete — RBAC, launch gaps, Jasper list_avatars, templates, URL permanence, dead code cleanup)
+Last Updated: March 21, 2026 (V1A Clone Wizard + V2 table-stakes complete — captions, simple mode, music, progress)
 
 ## Current State
 
@@ -301,10 +301,9 @@ The video pipeline engineering is solid — Hedra integration, dual-mode generat
 
 ---
 
-### Phase V1: First Video in 5 Minutes (P0) — PARTIALLY COMPLETE (commit f4e296c0)
+### Phase V1: First Video in 5 Minutes (P0) — COMPLETE (commit a91f1fe8)
 
-**Done:** V1A Jasper avatar awareness (list_avatars tool + nudge prompt), V1B URL permanence fix, V1C 5 starter templates + picker modal, V5 dead code cleanup (-1,422 lines). V2B (list_avatars) pulled forward into V1A.
-**Remaining:** V1A Clone Wizard UI component (face capture + voice capture wizard accessible from avatar picker). The Jasper nudge and tool are wired, but the actual wizard UI for cloning hasn't been built yet.
+**All done:** V1A Clone Wizard (face+voice capture, webcam/upload, MediaRecorder, ElevenLabs clone, auto-link, auto-default), V1A Jasper avatar awareness (list_avatars tool + nudge prompt), V1B URL permanence fix, V1C 5 starter templates + picker modal, V5 dead code cleanup (-1,422 lines). V2B (list_avatars) pulled forward into V1A.
 
 #### V1A. "Clone Yourself" — In-Pipeline Wizard + Jasper Nudge
 
@@ -412,11 +411,11 @@ Each template includes:
 
 ---
 
-### Phase V2: Table-Stakes Features (P1 — Do Next)
+### Phase V2: Table-Stakes Features (P1) — COMPLETE (commit a91f1fe8)
 
-These features are expected by anyone who has used any video tool in the last 2 years. Missing them makes the product feel incomplete.
+V2A (auto-captions), V2B (list_avatars — done in V1A), V2C (simple/advanced mode), V2D (background music), V2E (assembly progress) — all built and passing lint+types.
 
-#### V2A. Auto-Captions / Subtitles from Deepgram Data
+#### V2A. Auto-Captions / Subtitles from Deepgram Data — DONE
 
 **Problem:** Auto-captions are the #1 expected feature in short-form video. The system already has Deepgram transcription with word-level timestamps from auto-grading. The data exists — it's just not rendered as subtitles.
 
@@ -449,7 +448,7 @@ These features are expected by anyone who has used any video tool in the last 2 
 
 ---
 
-#### V2B. Jasper `list_avatars` Tool
+#### V2B. Jasper `list_avatars` Tool — DONE (pulled into V1A)
 
 **Problem:** Jasper can assign avatars to scenes but has no tool to list available avatars. When a user says "use my avatar" or "what characters do I have?", Jasper is blind. This breaks the conversational flow at the most critical moment.
 
@@ -483,7 +482,7 @@ These features are expected by anyone who has used any video tool in the last 2 
 
 ---
 
-#### V2C. Simple / Advanced Mode Toggle for Cinematic Controls
+#### V2C. Simple / Advanced Mode Toggle for Cinematic Controls — DONE
 
 **Problem:** `CinematicControlsPanel` has 6 sections with camera models, film stocks, aperture settings, focal lengths, composition rules (97 preset IDs across 7 dimensions). Incredible for power users, overwhelming for someone who just wants "make me a product video."
 
@@ -525,7 +524,7 @@ These features are expected by anyone who has used any video tool in the last 2 
 
 ---
 
-#### V2D. Background Music + Auto-Duck
+#### V2D. Background Music + Auto-Duck — DONE
 
 **Problem:** The pipeline generates video with speech but no background music. Output feels raw compared to competitors. The editor has `EditorAudioTrack` support, but it's disconnected from the pipeline. Even a simple "add background music" option would transform output quality.
 
@@ -563,7 +562,7 @@ These features are expected by anyone who has used any video tool in the last 2 
 
 ---
 
-#### V2E. Assembly Progress Feedback
+#### V2E. Assembly Progress Feedback — DONE
 
 **Problem:** FFmpeg assembly (downloading N scenes, probing durations, stitching with transitions, uploading) can take 30-60 seconds. The UI shows "Assembling..." with no progress bar, no percentage. User thinks it's frozen.
 
