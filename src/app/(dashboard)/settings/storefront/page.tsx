@@ -113,7 +113,10 @@ export default function StorefrontSettingsPage() {
         );
 
         if (configData) {
-          setConfig(configData as StorefrontConfig);
+          const loaded = configData as StorefrontConfig;
+          setConfig(loaded);
+          // Sync storefront enabled state → ecommerce feature module on load
+          updateModule('ecommerce', loaded.enabled);
         }
       } catch (error: unknown) {
         logger.error('Failed to load storefront config', error instanceof Error ? error : new Error(String(error)));
@@ -121,7 +124,7 @@ export default function StorefrontSettingsPage() {
     };
 
     void loadConfig();
-  }, [user]);
+  }, [user, updateModule]);
 
   const handleSave = async () => {
     if (!user) {return;}

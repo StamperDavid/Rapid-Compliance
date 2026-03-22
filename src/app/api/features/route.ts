@@ -56,6 +56,31 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       }
     }
 
+    // Reconcile: sync storefront enabled state into ecommerce module
+    if (config) {
+      try {
+        const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
+        const { PLATFORM_ID } = await import('@/lib/constants/platform');
+        const storefrontData = await AdminFirestoreService.get(
+          `organizations/${PLATFORM_ID}/storefrontConfig`,
+          'default'
+        ) as Record<string, unknown> | null;
+
+        if (storefrontData && typeof storefrontData.enabled === 'boolean') {
+          if (config.modules.ecommerce !== storefrontData.enabled) {
+            config.modules.ecommerce = storefrontData.enabled;
+            await saveFeatureConfig(config);
+            logger.info('Feature config reconciled with storefront', {
+              route: '/api/features',
+              ecommerce: storefrontData.enabled,
+            });
+          }
+        }
+      } catch {
+        // Non-critical reconciliation — don't block the response
+      }
+    }
+
     return NextResponse.json({
       success: true,
       config,

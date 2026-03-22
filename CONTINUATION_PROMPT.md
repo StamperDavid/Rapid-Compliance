@@ -35,6 +35,20 @@ Last Updated: March 22, 2026 (V4C Calendar→Pipeline + Batch Generation + Campa
 
 ### What Was Built This Session (March 22, 2026 — V4C)
 
+**V4D Feature Module Wiring — COMPLETE:**
+- Onboarding Step 4 of 5: explicit feature selection — client opts in per tool, everything defaults OFF
+- 12 features grouped by category (Sales & CRM, Marketing & Outreach, Commerce & Website, Productivity & Automation)
+- Clear client-facing language: "I need to manage leads" not "Enable CRM module"
+- All features fully configured behind the scenes via industry/niche — toggles control VISIBILITY only
+- Info banner explains: disabled = hidden, not removed. Enable later in Settings.
+- "Enable all features" shortcut link at top
+- Feature store `updateModule`/`updateAllModules` now auto-persist to Firestore via PUT /api/features
+- GET /api/features auto-creates FeatureConfig on first load from org's industry category
+- GET /api/features reconciles storefront enabled state into ecommerce module on every load
+- Storefront settings page syncs enabled toggle → ecommerce feature module on load AND save
+- Jasper system prompt injected with ACTIVE FEATURE MODULES block (enabled/disabled lists + rules)
+- Onboarding flow: Industry → Niche → Account → Features → API Setup (5 steps, progress bars updated)
+
 **V4C-1 Content Calendar → Pipeline Integration — COMPLETE:**
 - Clicking a pending calendar topic navigates to `/content/video?brief=...&batchWeekId=...&batchIndex=...`
 - Video pipeline auto-fills brief from URL params, stores batch link in sessionStorage
