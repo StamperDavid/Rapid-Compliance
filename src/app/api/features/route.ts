@@ -16,7 +16,9 @@ import type { FeatureConfig } from '@/types/feature-modules';
 export const dynamic = 'force-dynamic';
 
 /**
- * GET — Load feature config
+ * GET — Load feature config.
+ * If no config exists, auto-creates one from the org's industry category
+ * (or all-enabled default). This ensures first login gets a real config.
  */
 export async function GET(request: NextRequest): Promise<NextResponse> {
   try {
@@ -25,7 +27,34 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       return authResult;
     }
 
-    const config = await getFeatureConfig();
+    let config = await getFeatureConfig();
+
+    // Auto-create config on first load if none exists
+    if (!config) {
+      try {
+        const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
+        const { COLLECTIONS } = await import('@/lib/db/firestore-service');
+        const { PLATFORM_ID } = await import('@/lib/constants/platform');
+        const { getIndustryFeatureConfig } = await import('@/lib/constants/feature-modules');
+
+        // Read org's industry category
+        const orgData = await AdminFirestoreService.get(COLLECTIONS.ORGANIZATIONS, PLATFORM_ID) as Record<string, unknown> | null;
+        const industryCategory = typeof orgData?.industryCategory === 'string' ? orgData.industryCategory : '';
+
+        config = getIndustryFeatureConfig(industryCategory);
+        config.updatedBy = authResult.user.uid;
+        await saveFeatureConfig(config);
+        logger.info('Feature config auto-created on first load', {
+          route: '/api/features',
+          industryCategory: industryCategory || '(default)',
+        });
+      } catch (initError) {
+        logger.warn('Failed to auto-create feature config', {
+          route: '/api/features',
+          error: initError instanceof Error ? initError.message : String(initError),
+        });
+      }
+    }
 
     return NextResponse.json({
       success: true,

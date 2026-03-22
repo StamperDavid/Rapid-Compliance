@@ -6,6 +6,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
 import { useAuth } from '@/hooks/useAuth';
+import { useFeatureModules } from '@/hooks/useFeatureModules';
 import { logger } from '@/lib/logger/logger';
 
 interface StorefrontConfig {
@@ -92,6 +93,7 @@ const DEFAULT_CONFIG: StorefrontConfig = {
 export default function StorefrontSettingsPage() {
   const { user } = useAuth();
   const { theme: crmTheme } = useOrgTheme(); // Get CRM theme automatically
+  const { updateModule } = useFeatureModules();
   const [config, setConfig] = useState<StorefrontConfig>(DEFAULT_CONFIG);
   const [activeTab, setActiveTab] = useState<'setup' | 'widgets'>('setup'); // Removed 'theme' tab
   const [showPreview, setShowPreview] = useState(true);
@@ -136,6 +138,9 @@ export default function StorefrontSettingsPage() {
         },
         false
       );
+
+      // Sync storefront enabled state → ecommerce feature module
+      updateModule('ecommerce', config.enabled);
     } catch (error: unknown) {
       logger.error('Failed to save storefront config', error instanceof Error ? error : new Error(String(error)));
     } finally {

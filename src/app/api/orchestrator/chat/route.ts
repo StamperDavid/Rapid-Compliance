@@ -311,12 +311,27 @@ export async function POST(request: NextRequest) {
       suggestedTools: queryClassification.suggestedTools,
     });
 
+    // Load feature config for Jasper context awareness
+    let enabledModules: string[] | null = null;
+    try {
+      const { getFeatureConfig: loadFeatureConfig } = await import('@/lib/services/feature-service');
+      const featureConfig = await loadFeatureConfig();
+      if (featureConfig) {
+        enabledModules = Object.entries(featureConfig.modules)
+          .filter(([, enabled]) => enabled)
+          .map(([id]) => id);
+      }
+    } catch {
+      // Non-critical — Jasper will assume all features enabled
+    }
+
     // Build the enhanced system prompt with real-time context
     const enhancedSystemPrompt = buildEnhancedSystemPrompt(
       systemPrompt,
       context,
       adminStats,
-      merchantInfo
+      merchantInfo,
+      enabledModules
     );
 
     // For factual queries, inject verified state context
@@ -649,7 +664,8 @@ function buildEnhancedSystemPrompt(
   basePrompt: string,
   context: 'admin' | 'merchant',
   adminStats?: OrchestratorChatRequest['adminStats'],
-  merchantInfo?: OrchestratorChatRequest['merchantInfo']
+  merchantInfo?: OrchestratorChatRequest['merchantInfo'],
+  enabledModules?: string[] | null
 ): string {
   const timestamp = new Date().toISOString();
 
@@ -737,10 +753,49 @@ about their specific industry and business context.
 `;
   }
 
+  // Build feature awareness block
+  let featureBlock = '';
+  if (enabledModules && enabledModules.length > 0) {
+    const MODULE_LABELS: Record<string, string> = {
+      crm_pipeline: 'CRM & Pipeline',
+      sales_automation: 'Sales Automation',
+      email_outreach: 'Email & Campaigns',
+      social_media: 'Social Media',
+      ecommerce: 'E-Commerce & Storefront',
+      website_builder: 'Website Builder',
+      video_production: 'Video Production',
+      forms_surveys: 'Forms & Surveys',
+      proposals_docs: 'Proposals & Documents',
+      advanced_analytics: 'Advanced Analytics',
+      workflows: 'Workflows & Automation',
+      conversations: 'Conversations & Chat',
+    };
+
+    const ALL_MODULES = Object.keys(MODULE_LABELS);
+    const disabledModules = ALL_MODULES.filter((m) => !enabledModules.includes(m));
+
+    featureBlock = `
+═══════════════════════════════════════════════════════════════════════════════
+ACTIVE FEATURE MODULES (Client Configuration)
+═══════════════════════════════════════════════════════════════════════════════
+
+ENABLED: ${enabledModules.map((m) => MODULE_LABELS[m] ?? m).join(', ')}
+${disabledModules.length > 0 ? `DISABLED: ${disabledModules.map((m) => MODULE_LABELS[m] ?? m).join(', ')}` : ''}
+
+RULES:
+- Only suggest, promote, or delegate to ENABLED features
+- Do NOT mention, recommend, or push DISABLED features
+- If the user asks about a disabled feature, explain it can be enabled in Settings > Features
+- Tailor your advice and tool usage to the enabled feature set
+
+═══════════════════════════════════════════════════════════════════════════════
+`;
+  }
+
   return `${basePrompt}
 
 ${contextBlock}
-
+${featureBlock}
 ═══════════════════════════════════════════════════════════════════════════════
 ABSOLUTE RULES - VIOLATIONS ARE UNACCEPTABLE
 ═══════════════════════════════════════════════════════════════════════════════

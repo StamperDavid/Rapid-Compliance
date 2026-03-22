@@ -10,6 +10,7 @@ import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import { getSubCollection } from '@/lib/firebase/collections';
 import { buildEntityConfigForCategory } from '@/lib/constants/entity-config';
+import { getIndustryFeatureConfig } from '@/lib/constants/feature-modules';
 import type { EntityConfig } from '@/types/entity-config';
 
 export const dynamic = 'force-dynamic';
@@ -193,6 +194,23 @@ export async function POST(request: NextRequest) {
     logger.info('Entity config saved during onboarding', {
       categoryId,
       enabledCount: Object.values(entityToggles).filter(Boolean).length,
+      route: '/api/agent/process-onboarding',
+    });
+
+    // Save feature config based on selected industry category
+    const featureConfig = getIndustryFeatureConfig(categoryId);
+    featureConfig.updatedBy = user.uid;
+    await AdminFirestoreService.set(
+      getSubCollection('settings'),
+      'feature_config',
+      { ...featureConfig } as Record<string, unknown>,
+      false,
+    );
+    logger.info('Feature config saved during onboarding', {
+      categoryId,
+      enabledModules: Object.entries(featureConfig.modules)
+        .filter(([, v]) => v)
+        .map(([k]) => k),
       route: '/api/agent/process-onboarding',
     });
 

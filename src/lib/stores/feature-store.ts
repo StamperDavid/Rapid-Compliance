@@ -80,13 +80,16 @@ export const useFeatureStore = create<FeatureStoreState>((set, get) => ({
   updateModule: (id: FeatureModuleId, enabled: boolean) => {
     const { config } = get();
     const current = config ?? DEFAULT_FEATURE_CONFIG;
+    const updatedModules = { ...current.modules, [id]: enabled };
     set({
       config: {
         ...current,
-        modules: { ...current.modules, [id]: enabled },
+        modules: updatedModules,
         updatedAt: new Date().toISOString(),
       },
     });
+    // Persist to Firestore (fire-and-forget)
+    void persistModules(updatedModules);
   },
 
   updateAllModules: (modules: Record<FeatureModuleId, boolean>) => {
@@ -99,9 +102,33 @@ export const useFeatureStore = create<FeatureStoreState>((set, get) => ({
         updatedAt: new Date().toISOString(),
       },
     });
+    // Persist to Firestore (fire-and-forget)
+    void persistModules(modules);
   },
 
   setConfig: (config: FeatureConfig) => {
     set({ config, initialized: true });
   },
 }));
+
+/**
+ * Persist module toggles to Firestore via the features API.
+ * Fire-and-forget — failures are logged but don't block the UI.
+ */
+async function persistModules(modules: Record<FeatureModuleId, boolean>): Promise<void> {
+  try {
+    const user = getCurrentUser();
+    if (!user) { return; }
+    const token = await user.getIdToken();
+    await fetch('/api/features', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify({ modules }),
+    });
+  } catch {
+    // Non-critical — store is the source of truth for the current session
+  }
+}
