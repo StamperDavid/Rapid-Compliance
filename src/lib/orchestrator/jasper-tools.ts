@@ -367,6 +367,11 @@ export interface ToolParameter {
   description: string;
   enum?: string[];
   required?: boolean;
+  items?: {
+    type: string;
+    properties?: Record<string, ToolParameter>;
+    required?: string[];
+  };
 }
 
 export interface ToolDefinition {
@@ -474,6 +479,7 @@ const REVIEW_LINK_MAP: Record<string, string> = {
   // Single-artifact tools → their specific pages
   create_video: '/content/video',
   generate_video: '/content/video',
+  batch_produce_videos: '/content/video/calendar',
   save_blog_draft: '/website',
   research_trending_topics: '/seo',
   get_seo_config: '/seo',
@@ -2226,6 +2232,47 @@ export const JASPER_TOOLS: ToolDefinition[] = [
           },
         },
         required: ['brief', 'missionId'],
+      },
+    },
+  },
+  // ═══════════════════════════════════════════════════════════════════════════
+  // CONTENT CALENDAR — BATCH VIDEO TOOLS
+  // ═══════════════════════════════════════════════════════════════════════════
+  {
+    type: 'function',
+    function: {
+      name: 'batch_produce_videos',
+      description:
+        'Create a Content Calendar week with multiple video topics. Given a theme, generates 7 daily topics (Mon-Sun) and creates batch storyboards. User reviews all at once, then generation runs sequentially. Results land in the media library. Use when the user asks to "plan a week of content", "batch create videos", or "set up a content calendar". ENABLED: TRUE.',
+      parameters: {
+        type: 'object',
+        properties: {
+          theme: {
+            type: 'string',
+            description: 'The overarching theme for the week (e.g., "AI Sales Tips", "Real Estate Marketing").',
+          },
+          weekName: {
+            type: 'string',
+            description: 'A display name for this content week (e.g., "Product Launch Week").',
+          },
+          weekStartDate: {
+            type: 'string',
+            description: 'ISO date string for the Monday the week starts (e.g., "2026-03-30").',
+          },
+          topics: {
+            type: 'array',
+            description: 'Optional: override auto-generated topics. Array of { dayOfWeek (0-6), topic }.',
+            items: {
+              type: 'object',
+              properties: {
+                dayOfWeek: { type: 'number', description: '0=Sunday, 1=Monday, ... 6=Saturday' },
+                topic: { type: 'string', description: 'Topic for this day' },
+              },
+              required: ['dayOfWeek', 'topic'],
+            },
+          },
+        },
+        required: ['theme', 'weekName', 'weekStartDate'],
       },
     },
   },
@@ -6031,6 +6078,56 @@ Select cohesive settings that create a professional, unified visual language acr
           trackMissionStep(context, 'create_campaign', 'FAILED', {
             error: errMsg,
             durationMs: Date.now() - campaignStart,
+          });
+        }
+        break;
+      }
+
+      case 'batch_produce_videos': {
+        const batchStart = Date.now();
+        trackMissionStep(context, 'batch_produce_videos', 'RUNNING', { toolArgs: args });
+
+        try {
+          const { createCalendarWeek: createWeek, generateDefaultTopics } = await import('@/lib/video/batch-generator');
+
+          const theme = args.theme as string;
+          const weekName = args.weekName as string;
+          const weekStartDate = args.weekStartDate as string;
+          const customTopics = args.topics as Array<{ dayOfWeek: number; topic: string }> | undefined;
+
+          const topics = customTopics && customTopics.length > 0
+            ? customTopics.map((t) => ({ dayOfWeek: t.dayOfWeek, topic: t.topic }))
+            : generateDefaultTopics(theme);
+
+          const week = await createWeek({
+            name: weekName,
+            weekStartDate,
+            theme,
+            topics,
+            createdBy: context?.userId ?? 'jasper',
+          });
+
+          const reviewLink = '/content/video/calendar';
+
+          content = JSON.stringify({
+            status: 'created',
+            weekId: week.id,
+            projectCount: week.projects.length,
+            reviewLink,
+            message: `Content Calendar week "${weekName}" created with ${week.projects.length} daily topics. Review and approve all storyboards at: ${reviewLink}`,
+          });
+
+          trackMissionStep(context, 'batch_produce_videos', 'COMPLETED', {
+            summary: `Content Calendar week created: ${week.id} (${week.projects.length} topics)`,
+            durationMs: Date.now() - batchStart,
+            toolResult: content,
+          });
+        } catch (batchError: unknown) {
+          const errMsg = batchError instanceof Error ? batchError.message : String(batchError);
+          content = JSON.stringify({ status: 'error', message: `Batch video creation failed: ${errMsg}` });
+          trackMissionStep(context, 'batch_produce_videos', 'FAILED', {
+            error: errMsg,
+            durationMs: Date.now() - batchStart,
           });
         }
         break;

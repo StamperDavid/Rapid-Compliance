@@ -20,6 +20,7 @@ export type PipelineStep =
   | 'generation'
   | 'assembly'
   | 'post-production'
+  | 'publish'
   // Legacy steps — map to 'storyboard' in loadProject()
   | 'decompose'
   | 'pre-production'
@@ -32,6 +33,7 @@ export const PIPELINE_STEPS: readonly PipelineStep[] = [
   'generation',
   'assembly',
   'post-production',
+  'publish',
 ] as const;
 
 /** Maps legacy step names to their new equivalent */
@@ -48,6 +50,7 @@ export const PIPELINE_STEP_LABELS: Record<PipelineStep, string> = {
   'generation': 'Generate',
   'assembly': 'Assembly',
   'post-production': 'Post-Production',
+  'publish': 'Publish',
   // Legacy labels (not displayed but keeps TypeScript happy)
   'decompose': 'Storyboard',
   'pre-production': 'Storyboard',
@@ -354,4 +357,66 @@ export interface DecompositionPlan {
   avatarRecommendation: string | null;
   estimatedTotalDuration: number;
   generatedBy: 'ai' | 'template';
+}
+
+// ============================================================================
+// Publish Types
+// ============================================================================
+
+export type PublishPlatform = 'twitter' | 'linkedin' | 'facebook' | 'instagram' | 'youtube' | 'tiktok';
+
+export const PUBLISH_PLATFORM_LABELS: Record<PublishPlatform, string> = {
+  'twitter': 'Twitter / X',
+  'linkedin': 'LinkedIn',
+  'facebook': 'Facebook',
+  'instagram': 'Instagram',
+  'youtube': 'YouTube',
+  'tiktok': 'TikTok',
+} as const;
+
+export type PublishScheduleMode = 'now' | 'scheduled';
+
+export interface PublishConfig {
+  platforms: PublishPlatform[];
+  title: string;
+  description: string;
+  tags: string[];
+  scheduleMode: PublishScheduleMode;
+  scheduledAt: string | null; // ISO string for scheduled time
+}
+
+export type PublishStatus = 'draft' | 'publishing' | 'published' | 'failed' | 'scheduled';
+
+export interface PublishResult {
+  platform: PublishPlatform;
+  status: PublishStatus;
+  postId?: string;
+  postUrl?: string;
+  error?: string;
+  publishedAt?: string;
+}
+
+// ============================================================================
+// Batch / Content Calendar Types
+// ============================================================================
+
+export interface BatchProject {
+  id: string;
+  name: string;
+  topic: string;
+  dayOfWeek: number; // 0=Sunday, 1=Monday, ... 6=Saturday
+  projectId: string | null; // linked pipeline project ID
+  status: 'pending' | 'storyboarded' | 'approved' | 'generating' | 'completed' | 'failed';
+  videoUrl: string | null;
+}
+
+export interface ContentCalendarWeek {
+  id: string;
+  name: string;
+  weekStartDate: string; // ISO date string for week start (Monday)
+  theme: string;
+  projects: BatchProject[];
+  status: 'draft' | 'storyboarded' | 'approved' | 'generating' | 'completed';
+  createdAt: string;
+  createdBy: string;
 }

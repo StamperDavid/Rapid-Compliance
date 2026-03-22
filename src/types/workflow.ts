@@ -2,6 +2,12 @@ import type { Timestamp } from 'firebase/firestore';
 import type { EntityFilter } from './entity';
 
 /**
+ * Flexible timestamp type — accepts Firestore Timestamp, Date, or ISO string.
+ * Avoids SDK mismatch between client SDK and Admin SDK Timestamp classes.
+ */
+export type FlexTimestamp = Timestamp | Date | string;
+
+/**
  * Workflow
  * Automation workflows (like Zapier/Make)
  */
@@ -39,13 +45,13 @@ export interface Workflow {
     totalRuns: number;
     successfulRuns: number;
     failedRuns: number;
-    lastRunAt?: Timestamp;
+    lastRunAt?: FlexTimestamp;
     lastRunStatus?: 'success' | 'failed';
   };
-  
+
   // Metadata
-  createdAt: Timestamp;
-  updatedAt: Timestamp;
+  createdAt: FlexTimestamp;
+  updatedAt: FlexTimestamp;
   createdBy: string;
   
   // Status
@@ -552,8 +558,8 @@ export interface WorkflowExecution {
   
   // Execution
   status: 'pending' | 'running' | 'completed' | 'failed' | 'cancelled';
-  startedAt: Timestamp;
-  completedAt?: Timestamp;
+  startedAt: FlexTimestamp;
+  completedAt?: FlexTimestamp;
   duration?: number; // milliseconds
   
   // Actions executed
@@ -580,8 +586,8 @@ export interface ActionResult {
   actionName: string;
   
   status: 'pending' | 'running' | 'success' | 'failed' | 'skipped';
-  startedAt: Timestamp;
-  completedAt?: Timestamp;
+  startedAt: FlexTimestamp;
+  completedAt?: FlexTimestamp;
   duration?: number;
   
   // Output
@@ -624,7 +630,5 @@ export interface WorkflowTemplate {
   difficulty: 'beginner' | 'intermediate' | 'advanced';
   tags: string[];
   
-  createdAt: Timestamp;
+  createdAt: FlexTimestamp;
 }
-
-

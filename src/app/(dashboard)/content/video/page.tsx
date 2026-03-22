@@ -14,6 +14,7 @@ import { StepStoryboard } from './components/StepStoryboard';
 import { StepGeneration } from './components/StepGeneration';
 import { StepAssembly } from './components/StepAssembly';
 import { StepPostProduction } from './components/StepPostProduction';
+import { StepPublish } from './components/StepPublish';
 import { TemplatePickerModal } from './components/TemplatePickerModal';
 import { useVideoPipelineStore } from '@/lib/stores/video-pipeline-store';
 import { PIPELINE_STEPS, type PipelineStep, type PipelineProject } from '@/types/video-pipeline';
@@ -61,6 +62,7 @@ export default function VideoStudioPage() {
   const generatedScenes = useVideoPipelineStore((s) => s.generatedScenes);
   const brief = useVideoPipelineStore((s) => s.brief);
   const finalVideoUrl = useVideoPipelineStore((s) => s.finalVideoUrl);
+  const postProductionVideoUrl = useVideoPipelineStore((s) => s.postProductionVideoUrl);
 
   // Compute which steps are reachable based on actual store data
   const reachableSteps = useMemo(() => {
@@ -82,8 +84,11 @@ export default function VideoStudioPage() {
     if (finalVideoUrl) {
       reachable.push('post-production');
     }
+    if (postProductionVideoUrl || finalVideoUrl) {
+      reachable.push('publish');
+    }
     return reachable;
-  }, [brief, scenes, generatedScenes, finalVideoUrl]);
+  }, [brief, scenes, generatedScenes, finalVideoUrl, postProductionVideoUrl]);
 
   const completedSteps = useMemo(() => {
     // Steps before current are completed, plus all steps before any reachable step
@@ -194,6 +199,8 @@ export default function VideoStudioPage() {
         return <StepAssembly />;
       case 'post-production':
         return <StepPostProduction />;
+      case 'publish':
+        return <StepPublish />;
       default:
         return <StudioModePanel />;
     }

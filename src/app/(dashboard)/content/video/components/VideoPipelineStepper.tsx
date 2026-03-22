@@ -9,6 +9,7 @@ import {
   Zap,
   Puzzle,
   Wand2,
+  Send,
 } from 'lucide-react';
 import { PIPELINE_STEPS, PIPELINE_STEP_LABELS, type PipelineStep } from '@/types/video-pipeline';
 
@@ -18,6 +19,7 @@ const STEP_ICONS: Partial<Record<PipelineStep, React.ElementType>> = {
   'generation': Zap,
   'assembly': Puzzle,
   'post-production': Wand2,
+  'publish': Send,
 };
 
 interface VideoPipelineStepperProps {

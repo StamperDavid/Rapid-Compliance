@@ -166,6 +166,7 @@ export const DEALS_TABS: SubpageNavItem[] = [
 // ── Content Generator Hub (Video + Image + Editor + Library + Audio Lab) ─────
 export const CONTENT_GENERATOR_TABS: SubpageNavItem[] = [
   { label: 'Video', href: '/content/video' },
+  { label: 'Calendar', href: '/content/video/calendar' },
   { label: 'Image', href: '/content/image-generator' },
   { label: 'Editor', href: '/content/video/editor' },
   { label: 'Library', href: '/content/video/library' },

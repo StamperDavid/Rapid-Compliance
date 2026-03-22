@@ -22,6 +22,8 @@ import {
   type PipelineProject,
   type PostProductionConfig,
   type ColorGradePreset,
+  type PublishConfig,
+  type PublishResult,
 } from '@/types/video-pipeline';
 import type { VideoAspectRatio, VideoResolution } from '@/types/video';
 import type { VideoTemplate } from '@/lib/video/templates';
@@ -64,6 +66,11 @@ export interface VideoPipelineState {
   postProductionVideoUrl: string | null;
   isPostProcessing: boolean;
 
+  // Step 8: Publish config
+  publishConfig: PublishConfig;
+  publishResults: PublishResult[];
+  isPublishing: boolean;
+
   // Processing flags
   isGenerating: boolean;
   isAssembling: boolean;
@@ -90,6 +97,9 @@ export interface VideoPipelineState {
   setPostProductionConfig: (config: Partial<PostProductionConfig>) => void;
   setPostProductionVideoUrl: (url: string) => void;
   setIsPostProcessing: (val: boolean) => void;
+  setPublishConfig: (config: Partial<PublishConfig>) => void;
+  setPublishResults: (results: PublishResult[]) => void;
+  setIsPublishing: (val: boolean) => void;
   canAdvanceTo: (step: PipelineStep) => boolean;
   advanceStep: () => void;
   reset: () => void;
@@ -141,6 +151,16 @@ const initialState = {
   },
   postProductionVideoUrl: null,
   isPostProcessing: false,
+  publishConfig: {
+    platforms: [],
+    title: '',
+    description: '',
+    tags: [],
+    scheduleMode: 'now' as const,
+    scheduledAt: null,
+  },
+  publishResults: [],
+  isPublishing: false,
   isGenerating: false,
   isAssembling: false,
 };
@@ -252,6 +272,15 @@ export const useVideoPipelineStore = create<VideoPipelineState>()(
 
       setIsPostProcessing: (val) => set({ isPostProcessing: val }),
 
+      setPublishConfig: (config) =>
+        set({
+          publishConfig: { ...get().publishConfig, ...config },
+        }),
+
+      setPublishResults: (results) => set({ publishResults: results }),
+
+      setIsPublishing: (val) => set({ isPublishing: val }),
+
       canAdvanceTo: (step) => {
         const state = get();
         const normalized = normalizePipelineStep(step);
@@ -279,6 +308,10 @@ export const useVideoPipelineStore = create<VideoPipelineState>()(
 
           case 'post-production':
             return state.finalVideoUrl !== null;
+
+          case 'publish':
+            // Can publish once we have a final or post-produced video
+            return state.postProductionVideoUrl !== null || state.finalVideoUrl !== null;
 
           default:
             return false;
@@ -376,6 +409,8 @@ export const useVideoPipelineStore = create<VideoPipelineState>()(
         transitionType: state.transitionType,
         postProductionConfig: state.postProductionConfig,
         postProductionVideoUrl: state.postProductionVideoUrl,
+        publishConfig: state.publishConfig,
+        publishResults: state.publishResults,
       }),
     }
   )
@@ -391,4 +426,5 @@ const PIPELINE_STEPS: readonly PipelineStep[] = [
   'generation',
   'assembly',
   'post-production',
+  'publish',
 ] as const;
