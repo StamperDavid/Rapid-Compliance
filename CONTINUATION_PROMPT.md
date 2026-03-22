@@ -5,14 +5,14 @@
 ## Context
 Repository: https://github.com/StamperDavid/Rapid-Compliance
 Branch: dev
-Last Updated: March 21, 2026 (Phase 3A complete — E2E rewrite with real user journeys, parallel-safe integration fix)
+Last Updated: March 21, 2026 (Phase 4 complete — RBAC enforcement + launch gaps: billing portal, password change, account deletion, MFA, email invites)
 
 ## Current State
 
 ### Architecture
 - **Single-tenant penthouse model** — org ID `rapid-compliance-root`, Firebase `rapid-compliance-65f87`
 - **52 AI agents** (46 swarm + 6 standalone) with hierarchical orchestration
-- **4-role RBAC** (owner/admin/manager/member) with 47 permissions defined, set-claims supports all 4 roles
+- **4-role RBAC** (owner/admin/manager/member) with 47 permissions enforced on 36+ API routes, set-claims supports all 4 roles
 - **184 pages**, **393 API routes**, **1,628 TypeScript files**, **~350K+ lines**
 - **212 React components**, **54 type definition files**
 - **Deployed via Vercel** — dev → main → Vercel auto-deploy
@@ -35,14 +35,14 @@ Last Updated: March 21, 2026 (Phase 3A complete — E2E rewrite with real user j
 |--------|-------|-----------------|
 | Video System (Hedra) | 9.5/10 | Real API calls, scene grading, editor, avatars — cleanest code in codebase |
 | AI Orchestration (Jasper) | 9.5/10 | 50 real tools, OpenRouter calls, 3-layer prompt, mission tracking |
-| API Routes (393 total) | 9.5/10 | 100% auth, 100% Zod, 100% try/catch, Mollie HMAC verified, all admin routes rate-limited |
+| API Routes (399 total) | 9.5/10 | 100% auth, 100% Zod, 100% try/catch, Mollie HMAC verified, granular RBAC on 36+ sensitive routes |
 | CRM & Sales | 9/10 | Contacts, deals, leads, pipeline — fully implemented |
 | Website Builder | 9/10 | Editor, pages, blog, domains, SEO, navigation — all real |
 | Email & SMS | 8.5/10 | CAN-SPAM/TCPA compliant — delivery tests skipped (need API keys) |
 | Public Pages & Onboarding | 9/10 | 4-step onboarding, Stripe checkout, live AI demo — all working |
 | Analytics & Growth | 8.5/10 | Dashboard, pipeline, growth strategy — all real implementations |
-| Payments & Commerce | 8.5/10 | Stripe integrated, cart/checkout real — billing portal UI missing |
-| Authentication | 9/10 | Firebase Admin SDK verified, set-claims accepts all 4 roles, rate limiting on admin routes |
+| Payments & Commerce | 9/10 | Stripe integrated, cart/checkout real, billing portal via Stripe Customer Portal |
+| Authentication | 9.5/10 | Firebase Admin SDK, granular RBAC enforced, MFA/TOTP, password change, GDPR account deletion |
 | Social Media | 6/10 | Twitter works, Facebook/Instagram/TikTok/LinkedIn are stubs |
 | **E2E Testing** | **6/10** | **14 spec files, 10 real user journeys (CRUD, checkout, workflows), 104 tests** |
 | **Unit/Integration Testing** | **8/10** | **81 files, 1,700 passing — video, Jasper, payments, agents, scene grading all covered (Phase 3B)** |
@@ -89,15 +89,15 @@ Per CLAUDE.md zero-tolerance rule, these must be removed. Breakdown by type:
 
 **Verdict:** instance-manager.ts and facebook/specialist.ts are real violations. enrichment-service.ts and scraper-cache.ts are defensible patterns.
 
-#### 4. RBAC Enforcement Gap
+#### 4. RBAC Enforcement Gap — FIXED (Phase 4, commit 134ee9f7)
 
-47 granular permissions defined in `src/types/unified-rbac.ts` with role-to-permission mappings. But API routes use:
-- `requireAuth()` — any authenticated user (most routes)
-- `verifyAdminRequest()` — binary admin/not-admin check (admin routes)
-
-The `hasUnifiedPermission()` function exists but is barely called. Result: manager and member roles have effectively identical API access.
-
-Also: `POST /api/admin/set-claims` only accepts `z.literal('admin')` — can't set owner/manager/member via API.
+**Resolution:** Added `requirePermission()` middleware to `api-auth.ts`. Applied granular RBAC to 36+ API routes:
+- Owner-only: create-platform-org
+- Admin-only (owner/admin): API keys, webhooks, schemas, entity-config, feature flags, brand DNA, custom tools, golden masters, fine-tuning, A/B tests, swarm control, social training, website settings/domains/migrate, notifications
+- Manager+ (owner/admin/manager): bulk delete, lead import, merge duplicates, report execution, schema edit
+- Fixed 4 unprotected routes (score-session, lead-scoring CRUD)
+- Standardized /admin/ path routes to verifyAdminRequest
+- set-claims already accepts all 4 roles (fixed in Phase 2)
 
 #### 5. Six Failing Test Suites (18 tests)
 
@@ -217,16 +217,20 @@ Priority user flows that need end-to-end Playwright tests:
 
 Also: commit `seed-e2e-users.mjs` to git or replace with programmatic user creation in auth.setup.ts.
 
-### Phase 4: Launch Gaps (Pre-Launch Must-Haves)
+### Phase 4: Launch Gaps — COMPLETE (commit 134ee9f7)
 
-| Gap | Details | Effort |
-|-----|---------|--------|
-| **Billing portal UI** | Subscription APIs exist but no pages (view/manage subscription, invoices, payment methods) | Medium |
-| **Facebook/Instagram/TikTok** | Stubs only — blocked on Meta Developer Portal approval | Blocked |
-| **No in-app password change** | Only reset via email — need POST /api/user/password-change | Small |
-| **No account deletion** | GDPR concern — need self-service deletion flow | Medium |
-| **No MFA/2FA** | `mfaEnabled` field exists but no setup flow | Medium |
-| **No email-based user invites** | Invite modal exists in UI but no transactional email sent | Small |
+**Result:** All 5 deliverable gaps closed. Facebook/Instagram/TikTok remains blocked on Meta approval (external dependency).
+
+| Gap | Status | Implementation |
+|-----|--------|----------------|
+| **RBAC Enforcement** | DONE | `requirePermission()` middleware + 36+ routes gated by role |
+| **Billing portal UI** | DONE | POST /api/subscriptions/portal (Stripe Customer Portal session), "Manage Billing" button on billing page |
+| **In-app password change** | DONE | POST /api/user/password-change (Firebase REST verify + Admin SDK update, rate-limited 5/15min) |
+| **Account deletion (GDPR)** | DONE | POST /api/user/delete-account (password confirm, Firestore + Auth deletion, owner blocked) |
+| **MFA/2FA setup** | DONE | POST /api/user/mfa/setup (TOTP RFC 6238 — generate/verify/disable, Firestore-backed, 10min pending TTL) |
+| **Email invites** | DONE | POST /api/users/invite (role hierarchy enforcement, duplicate detection, email delivery via email-service) |
+| **Account settings page** | DONE | /settings/account (password change form + danger zone deletion UI) |
+| **Facebook/Instagram/TikTok** | BLOCKED | Meta Developer Portal approval required (external dependency) |
 
 ### Phase 5: Polish (Post-Launch)
 
