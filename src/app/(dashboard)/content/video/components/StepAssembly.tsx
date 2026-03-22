@@ -3,12 +3,13 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
-import { Puzzle, ArrowLeft, ArrowRight, Film, Loader2, Play, Save, CheckCircle2 } from 'lucide-react';
+import { Puzzle, ArrowLeft, ArrowRight, Film, Loader2, Play, Save, CheckCircle2, Captions, Music, Volume2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { VideoPlayer } from './VideoPlayer';
 import { useVideoPipelineStore } from '@/lib/stores/video-pipeline-store';
-import type { TransitionType } from '@/types/video-pipeline';
+import { CAPTION_STYLE_LABELS, type TransitionType, type CaptionStyle } from '@/types/video-pipeline';
+import { getMusicTracks, MUSIC_CATEGORY_LABELS, type MusicCategory, type MusicTrack } from '@/lib/video/music-library';
 
 const TRANSITIONS: { value: TransitionType; label: string }[] = [
   { value: 'cut', label: 'Cut (Instant)' },
@@ -47,6 +48,35 @@ export function StepAssembly() {
   const [saved, setSaved] = useState(false);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const autoSavedRef = useRef(false);
+
+  // Caption state
+  const [captionsEnabled, setCaptionsEnabled] = useState(false);
+  const [captionStyle, setCaptionStyle] = useState<CaptionStyle>('bold-center');
+
+  // Background music state
+  const [musicEnabled, setMusicEnabled] = useState(false);
+  const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null);
+  const [musicVolume, setMusicVolume] = useState(0.15);
+  const [autoDuck, setAutoDuck] = useState(true);
+  const [musicCategoryFilter, setMusicCategoryFilter] = useState<MusicCategory | 'all'>('all');
+  const musicTracks = useMemo(() => getMusicTracks(), []);
+  const filteredTracks = useMemo(() => {
+    if (musicCategoryFilter === 'all') { return musicTracks; }
+    return musicTracks.filter((t) => t.category === musicCategoryFilter);
+  }, [musicTracks, musicCategoryFilter]);
+  const selectedTrack = useMemo(
+    () => musicTracks.find((t) => t.id === selectedTrackId) ?? null,
+    [musicTracks, selectedTrackId],
+  );
+
+  // Assembly progress state
+  const [assemblyProgress, setAssemblyProgress] = useState<{
+    phase: string;
+    phaseLabel: string;
+    phaseIndex: number;
+    totalPhases: number;
+  } | null>(null);
+  const progressPollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const completedScenes = useMemo(
     () => generatedScenes.filter((s) => s.status === 'completed' && s.videoUrl),
@@ -151,6 +181,13 @@ export function StepAssembly() {
           projectId: projectId ?? 'local',
           providerVideoIds,
           transitionType,
+          captions: captionsEnabled ? { enabled: true, style: captionStyle } : undefined,
+          music: musicEnabled && selectedTrack ? {
+            trackId: selectedTrack.id,
+            storagePath: selectedTrack.storagePath,
+            volume: musicVolume,
+            duckingEnabled: autoDuck,
+          } : undefined,
         }),
       });
 
@@ -238,6 +275,51 @@ export function StepAssembly() {
     }
   }, [finalVideoUrl, saveProject]);
 
+  // Poll assembly progress while assembling
+  useEffect(() => {
+    if (!isAssembling) {
+      if (progressPollingRef.current) {
+        clearInterval(progressPollingRef.current);
+        progressPollingRef.current = null;
+      }
+      setAssemblyProgress(null);
+      return;
+    }
+
+    const pid = projectId ?? 'local';
+    const pollProgress = async () => {
+      try {
+        const res = await authFetch(`/api/video/assembly-status/${encodeURIComponent(pid)}`);
+        if (res.ok) {
+          const data = (await res.json()) as {
+            success: boolean;
+            progress: {
+              phase: string;
+              phaseLabel: string;
+              phaseIndex: number;
+              totalPhases: number;
+            } | null;
+          };
+          if (data.progress) {
+            setAssemblyProgress(data.progress);
+          }
+        }
+      } catch {
+        // Progress polling failures are non-fatal
+      }
+    };
+
+    // Start polling every 2 seconds
+    progressPollingRef.current = setInterval(() => { void pollProgress(); }, 2000);
+
+    return () => {
+      if (progressPollingRef.current) {
+        clearInterval(progressPollingRef.current);
+        progressPollingRef.current = null;
+      }
+    };
+  }, [isAssembling, projectId, authFetch]);
+
   // Use proxy URL for individual scene playback so expired Hedra CDN URLs are re-resolved.
   // finalVideoUrl (from Firebase Storage after assembly) is permanent and used as-is.
   const activeScene = completedScenes[activeSceneIndex];
@@ -284,6 +366,27 @@ export function StepAssembly() {
             </div>
           )}
 
+          {/* Assembly Progress */}
+          {isAssembling && assemblyProgress && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-amber-400 font-medium flex items-center gap-1.5">
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  {assemblyProgress.phaseLabel}
+                </span>
+                <span className="text-zinc-500">
+                  Step {assemblyProgress.phaseIndex + 1} of {assemblyProgress.totalPhases}
+                </span>
+              </div>
+              <div className="h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-amber-500 rounded-full transition-all duration-500"
+                  style={{ width: `${((assemblyProgress.phaseIndex + 1) / assemblyProgress.totalPhases) * 100}%` }}
+                />
+              </div>
+            </div>
+          )}
+
           {/* Scene Timeline Strip */}
           {completedScenes.length > 0 && !finalVideoUrl && (
             <div className="flex gap-2 overflow-x-auto pb-2">
@@ -323,6 +426,158 @@ export function StepAssembly() {
                   </button>
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* Captions Toggle */}
+          {!finalVideoUrl && completedScenes.length > 0 && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="flex items-center gap-2 text-sm font-medium text-zinc-300">
+                  <Captions className="w-4 h-4 text-amber-500" />
+                  Auto-Captions
+                </label>
+                <button
+                  onClick={() => setCaptionsEnabled(!captionsEnabled)}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    captionsEnabled ? 'bg-amber-500' : 'bg-zinc-700'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      captionsEnabled ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
+              {captionsEnabled && (
+                <div className="pl-6">
+                  <p className="text-xs text-zinc-500 mb-2">
+                    Captions are generated from Deepgram transcription data — no extra API cost.
+                  </p>
+                  <div className="flex gap-2">
+                    {(Object.keys(CAPTION_STYLE_LABELS) as CaptionStyle[]).map((style) => (
+                      <button
+                        key={style}
+                        onClick={() => setCaptionStyle(style)}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                          captionStyle === style
+                            ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                            : 'bg-zinc-800 text-zinc-400 border border-zinc-700 hover:border-zinc-600'
+                        }`}
+                      >
+                        {CAPTION_STYLE_LABELS[style]}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Background Music */}
+          {!finalVideoUrl && completedScenes.length > 0 && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="flex items-center gap-2 text-sm font-medium text-zinc-300">
+                  <Music className="w-4 h-4 text-amber-500" />
+                  Background Music
+                </label>
+                <button
+                  onClick={() => setMusicEnabled(!musicEnabled)}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    musicEnabled ? 'bg-amber-500' : 'bg-zinc-700'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      musicEnabled ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
+              {musicEnabled && (
+                <div className="pl-6 space-y-3">
+                  {/* Category filter */}
+                  <div className="flex flex-wrap gap-1.5">
+                    <button
+                      onClick={() => setMusicCategoryFilter('all')}
+                      className={`px-2 py-1 rounded text-[10px] font-medium transition-colors ${
+                        musicCategoryFilter === 'all'
+                          ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                          : 'bg-zinc-800 text-zinc-500 border border-zinc-700'
+                      }`}
+                    >
+                      All
+                    </button>
+                    {(Object.keys(MUSIC_CATEGORY_LABELS) as MusicCategory[]).map((cat) => (
+                      <button
+                        key={cat}
+                        onClick={() => setMusicCategoryFilter(cat)}
+                        className={`px-2 py-1 rounded text-[10px] font-medium transition-colors ${
+                          musicCategoryFilter === cat
+                            ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
+                            : 'bg-zinc-800 text-zinc-500 border border-zinc-700'
+                        }`}
+                      >
+                        {MUSIC_CATEGORY_LABELS[cat]}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Track list */}
+                  <div className="max-h-40 overflow-y-auto space-y-1">
+                    {filteredTracks.map((track: MusicTrack) => (
+                      <button
+                        key={track.id}
+                        onClick={() => setSelectedTrackId(track.id)}
+                        className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left transition-colors ${
+                          selectedTrackId === track.id
+                            ? 'bg-amber-500/10 border border-amber-500/30'
+                            : 'bg-zinc-800/50 border border-transparent hover:bg-zinc-800'
+                        }`}
+                      >
+                        <Music className="w-3 h-3 text-zinc-500 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-medium text-zinc-300 truncate">{track.name}</p>
+                          <p className="text-[10px] text-zinc-500 truncate">{track.description}</p>
+                        </div>
+                        <span className="text-[10px] text-zinc-600 flex-shrink-0">{track.bpm} BPM</span>
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Volume + duck controls */}
+                  {selectedTrack && (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-3">
+                        <Volume2 className="w-3.5 h-3.5 text-zinc-500 flex-shrink-0" />
+                        <input
+                          type="range"
+                          min={0}
+                          max={0.5}
+                          step={0.01}
+                          value={musicVolume}
+                          onChange={(e) => setMusicVolume(Number(e.target.value))}
+                          className="flex-1 h-1.5 bg-zinc-700 rounded-full appearance-none cursor-pointer accent-amber-500"
+                        />
+                        <span className="text-[10px] text-zinc-500 w-8 text-right tabular-nums">
+                          {Math.round(musicVolume * 100)}%
+                        </span>
+                      </div>
+                      <label className="flex items-center gap-2 text-xs text-zinc-400">
+                        <input
+                          type="checkbox"
+                          checked={autoDuck}
+                          onChange={(e) => setAutoDuck(e.target.checked)}
+                          className="rounded border-zinc-600 bg-zinc-800 text-amber-500 focus:ring-amber-500/50"
+                        />
+                        Auto-duck (lower music during speech)
+                      </label>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
@@ -370,7 +625,10 @@ export function StepAssembly() {
               className="gap-2 bg-amber-600 hover:bg-amber-700 text-white"
             >
               {isAssembling ? (
-                <><Loader2 className="w-4 h-4 animate-spin" /> Assembling...</>
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  {assemblyProgress ? assemblyProgress.phaseLabel : 'Assembling...'}
+                </>
               ) : (
                 <><Puzzle className="w-4 h-4" /> Assemble Video</>
               )}

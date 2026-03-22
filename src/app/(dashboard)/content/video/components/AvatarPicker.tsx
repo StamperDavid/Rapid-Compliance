@@ -3,10 +3,11 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { motion } from 'framer-motion';
-import { User, Loader2, AlertCircle, Search, Check, Mic, Sparkles, Trash2, Video, Crown, Library, Star, Theater } from 'lucide-react';
+import { User, Loader2, AlertCircle, Search, Check, Mic, Sparkles, Trash2, Video, Crown, Library, Star, Theater, Wand2 } from 'lucide-react';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import { HedraCharacterBrowser } from './HedraCharacterBrowser';
+import { CloneWizard } from '@/components/video/CloneWizard';
 
 // Avatar Profile shape returned by GET /api/video/avatar-profiles
 interface AvatarProfileItem {
@@ -240,6 +241,7 @@ export function AvatarPicker({ selectedAvatarId, onSelect, onProfileLoaded }: Av
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [isHedraBrowserOpen, setIsHedraBrowserOpen] = useState(false);
+  const [isCloneWizardOpen, setIsCloneWizardOpen] = useState(false);
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
   const [syncingHedra, setSyncingHedra] = useState(false);
   const hedraAutoSyncedRef = useRef(false);
@@ -308,6 +310,11 @@ export function AvatarPicker({ selectedAvatarId, onSelect, onProfileLoaded }: Av
       setIsLoading(false);
     }
   }, [authFetch]);
+
+  const handleCloneComplete = useCallback((avatarId: string, avatarName: string) => {
+    onSelect(avatarId, avatarName);
+    void fetchProfiles();
+  }, [onSelect, fetchProfiles]);
 
   useEffect(() => {
     void fetchProfiles();
@@ -391,16 +398,30 @@ export function AvatarPicker({ selectedAvatarId, onSelect, onProfileLoaded }: Av
         <div className="flex flex-col items-center justify-center py-12 gap-3">
           <AlertCircle className="w-8 h-8 text-zinc-500" />
           <p className="text-sm text-zinc-400">
-            {error ?? 'No avatar profiles yet. Upload a headshot or browse Hedra characters.'}
+            {error ?? 'No avatar profiles yet. Create your AI clone or browse Hedra characters.'}
           </p>
-          <button
-            onClick={() => setIsHedraBrowserOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white text-sm font-medium rounded-lg transition-colors"
-          >
-            <Library className="w-4 h-4" />
-            Browse Hedra Characters
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setIsCloneWizardOpen(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white text-sm font-medium rounded-lg transition-colors"
+            >
+              <Wand2 className="w-4 h-4" />
+              Create Your AI Clone
+            </button>
+            <button
+              onClick={() => setIsHedraBrowserOpen(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-zinc-800 border border-zinc-700 hover:border-zinc-500 text-zinc-300 text-sm font-medium rounded-lg transition-colors"
+            >
+              <Library className="w-4 h-4" />
+              Browse Hedra
+            </button>
+          </div>
         </div>
+        <CloneWizard
+          isOpen={isCloneWizardOpen}
+          onClose={() => setIsCloneWizardOpen(false)}
+          onComplete={handleCloneComplete}
+        />
         <HedraCharacterBrowser
           isOpen={isHedraBrowserOpen}
           onClose={() => setIsHedraBrowserOpen(false)}
@@ -441,6 +462,14 @@ export function AvatarPicker({ selectedAvatarId, onSelect, onProfileLoaded }: Av
             {favoritesCount}
           </button>
         )}
+        <button
+          onClick={() => setIsCloneWizardOpen(true)}
+          className="flex items-center gap-1.5 px-3 py-2 bg-amber-600 hover:bg-amber-500 text-white text-xs font-medium rounded-lg transition-colors whitespace-nowrap"
+          title="Create your AI clone with face and voice capture"
+        >
+          <Wand2 className="w-3.5 h-3.5" />
+          Clone Yourself
+        </button>
         <button
           onClick={() => setIsHedraBrowserOpen(true)}
           className="flex items-center gap-1.5 px-3 py-2 bg-zinc-800 border border-zinc-700 hover:border-amber-500/50 hover:bg-zinc-700 text-zinc-300 hover:text-amber-400 text-xs font-medium rounded-lg transition-colors whitespace-nowrap"
@@ -491,6 +520,11 @@ export function AvatarPicker({ selectedAvatarId, onSelect, onProfileLoaded }: Av
         </div>
       )}
 
+      <CloneWizard
+        isOpen={isCloneWizardOpen}
+        onClose={() => setIsCloneWizardOpen(false)}
+        onComplete={handleCloneComplete}
+      />
       <HedraCharacterBrowser
         isOpen={isHedraBrowserOpen}
         onClose={() => setIsHedraBrowserOpen(false)}

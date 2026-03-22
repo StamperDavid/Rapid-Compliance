@@ -1146,3 +1146,181 @@ export function getRecommendedPresets(context: {
 
   return config;
 }
+
+// ─── Simple Style Bundles ──────────────────────────────────────────
+//
+// Each bundle maps a single user-friendly style label to a complete
+// CinematicConfig. Used by SimpleStylePicker for the "simple mode"
+// experience — one click fills every cinematic field.
+
+export interface SimpleStyleBundle {
+  id: string;
+  name: string;
+  description: string;
+  emoji: string;
+  config: CinematicConfig;
+}
+
+const SIMPLE_STYLE_BUNDLES: SimpleStyleBundle[] = [
+  {
+    id: 'simple-photorealistic',
+    name: 'Photorealistic',
+    description: 'Clean, professional, true-to-life',
+    emoji: '📸',
+    config: {
+      artStyle: 'art-photorealistic',
+      shotType: 'shot-medium',
+      lighting: 'light-studio-three',
+      camera: 'cam-sony-venice',
+      focalLength: 'fl-50mm',
+      filmStock: 'film-kodak-portra-400',
+      composition: 'comp-rule-of-thirds',
+    },
+  },
+  {
+    id: 'simple-cinematic',
+    name: 'Cinematic',
+    description: 'Widescreen, film-look, dramatic lighting',
+    emoji: '🎬',
+    config: {
+      artStyle: 'art-photorealistic',
+      shotType: 'shot-wide',
+      lighting: 'light-golden-hour',
+      camera: 'cam-arri-alexa',
+      focalLength: 'fl-35mm',
+      lensType: 'lens-anamorphic',
+      filmStock: 'film-cinestill-800t',
+      composition: 'comp-leading-lines',
+      aspectRatio: '21:9',
+    },
+  },
+  {
+    id: 'simple-corporate',
+    name: 'Corporate Clean',
+    description: 'Professional, polished, business-ready',
+    emoji: '💼',
+    config: {
+      artStyle: 'art-photorealistic',
+      shotType: 'shot-medium-close',
+      lighting: 'light-studio-three',
+      camera: 'cam-canon-c500',
+      focalLength: 'fl-85mm',
+      filmStock: 'film-kodak-portra-400',
+      composition: 'comp-rule-of-thirds',
+      aspectRatio: '16:9',
+    },
+  },
+  {
+    id: 'simple-vibrant-pop',
+    name: 'Vibrant Pop',
+    description: 'Bold colors, high energy, social-first',
+    emoji: '🔥',
+    config: {
+      artStyle: 'art-photorealistic',
+      shotType: 'shot-medium',
+      lighting: 'light-neon',
+      camera: 'cam-iphone',
+      focalLength: 'fl-24mm',
+      filters: ['filter-bloom', 'filter-vibrant'],
+      composition: 'comp-center',
+      aspectRatio: '9:16',
+    },
+  },
+  {
+    id: 'simple-anime',
+    name: 'Anime',
+    description: 'Japanese animation style, cel-shaded',
+    emoji: '🎌',
+    config: {
+      artStyle: 'art-anime',
+      shotType: 'shot-medium',
+      lighting: 'light-golden-hour',
+      composition: 'comp-rule-of-thirds',
+    },
+  },
+  {
+    id: 'simple-pixar',
+    name: 'Pixar / 3D',
+    description: '3D animated characters, Pixar-quality',
+    emoji: '🧸',
+    config: {
+      artStyle: 'art-pixar',
+      shotType: 'shot-medium',
+      lighting: 'light-studio-three',
+      composition: 'comp-center',
+    },
+  },
+  {
+    id: 'simple-noir',
+    name: 'Film Noir',
+    description: 'High contrast, black & white, dramatic',
+    emoji: '🖤',
+    config: {
+      artStyle: 'art-noir',
+      shotType: 'shot-low-angle',
+      lighting: 'light-low-key',
+      camera: 'cam-35mm-film',
+      focalLength: 'fl-35mm',
+      filters: ['filter-grain', 'filter-vignette'],
+      composition: 'comp-diagonal',
+    },
+  },
+  {
+    id: 'simple-warm-portrait',
+    name: 'Warm Portrait',
+    description: 'Soft, golden, flattering — perfect for talking heads',
+    emoji: '🌅',
+    config: {
+      artStyle: 'art-photorealistic',
+      shotType: 'shot-medium-close',
+      lighting: 'light-golden-hour',
+      camera: 'cam-canon-5d',
+      focalLength: 'fl-85mm',
+      filmStock: 'film-kodak-portra-400',
+      lensType: 'lens-soft-focus',
+      filters: ['filter-bloom'],
+      composition: 'comp-rule-of-thirds',
+    },
+  },
+  {
+    id: 'simple-cyberpunk',
+    name: 'Cyberpunk',
+    description: 'Neon-lit, futuristic, chrome & glass',
+    emoji: '🌃',
+    config: {
+      artStyle: 'art-cyberpunk',
+      shotType: 'shot-medium',
+      lighting: 'light-neon',
+      camera: 'cam-red-v-raptor',
+      lensType: 'lens-anamorphic',
+      filters: ['filter-bloom', 'filter-chromatic'],
+      composition: 'comp-diagonal',
+    },
+  },
+  {
+    id: 'simple-documentary',
+    name: 'Documentary',
+    description: 'Natural, authentic, handheld feel',
+    emoji: '📹',
+    config: {
+      artStyle: 'art-photorealistic',
+      shotType: 'shot-medium',
+      lighting: 'light-natural-window',
+      camera: 'cam-sony-a7iii',
+      focalLength: 'fl-24mm',
+      filters: ['filter-grain'],
+      composition: 'comp-rule-of-thirds',
+      aspectRatio: '16:9',
+    },
+  },
+];
+
+/** Get the 10 simple style bundles for the quick-pick UI. */
+export function getSimpleStyleBundles(): SimpleStyleBundle[] {
+  return SIMPLE_STYLE_BUNDLES;
+}
+
+/** Find a simple style bundle by ID. */
+export function getSimpleStyleBundleById(id: string): SimpleStyleBundle | undefined {
+  return SIMPLE_STYLE_BUNDLES.find((b) => b.id === id);
+}

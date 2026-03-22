@@ -29,6 +29,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { VisualPresetPicker } from './VisualPresetPicker';
+import { SimpleStylePicker } from './SimpleStylePicker';
 import { getPresetById } from '@/lib/ai/cinematic-presets';
 import {
   ASPECT_RATIOS,
@@ -40,6 +41,8 @@ import {
 } from '@/types/creative-studio';
 
 // ─── Types ─────────────────────────────────────────────────────────
+
+type StudioMode = 'simple' | 'advanced';
 
 interface CinematicControlsPanelProps {
   config: CinematicConfig;
@@ -54,6 +57,10 @@ interface CinematicControlsPanelProps {
   onEnvironmentChange?: (value: string) => void;
   /** Custom content for Section 05 (Elements Tool) — replaces disabled placeholder */
   renderElements?: React.ReactNode;
+  /** Simple (preset cards) or Advanced (full controls). Defaults to reading from localStorage. */
+  studioMode?: StudioMode;
+  /** Called when the user toggles between simple and advanced mode */
+  onStudioModeChange?: (mode: StudioMode) => void;
 }
 
 // ─── Helpers ───────────────────────────────────────────────────────
@@ -157,6 +164,14 @@ function PresetSelector({ label, presetId, onOpen }: PresetSelectorProps) {
 
 // ─── Main Component ────────────────────────────────────────────────
 
+const STUDIO_MODE_KEY = 'sv-studio-mode';
+
+function getPersistedStudioMode(): StudioMode {
+  if (typeof window === 'undefined') { return 'simple'; }
+  const stored = localStorage.getItem(STUDIO_MODE_KEY);
+  return stored === 'advanced' ? 'advanced' : 'simple';
+}
+
 export function CinematicControlsPanel({
   config,
   onChange,
@@ -167,7 +182,21 @@ export function CinematicControlsPanel({
   environment,
   onEnvironmentChange,
   renderElements,
+  studioMode: controlledMode,
+  onStudioModeChange,
 }: CinematicControlsPanelProps) {
+  // Internal mode state (used when not controlled externally)
+  const [internalMode, setInternalMode] = useState<StudioMode>(getPersistedStudioMode);
+  const activeMode = controlledMode ?? internalMode;
+
+  const handleModeChange = useCallback((mode: StudioMode) => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(STUDIO_MODE_KEY, mode);
+    }
+    setInternalMode(mode);
+    onStudioModeChange?.(mode);
+  }, [onStudioModeChange]);
+
   // Section open/close state (for compact mode)
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
     '01': true,
@@ -269,8 +298,32 @@ export function CinematicControlsPanel({
   // Temperature slider value display
   const tempDisplay = config.temperature !== undefined ? config.temperature.toFixed(1) : '1.0';
 
+  // If in simple mode, render the SimpleStylePicker instead of the full panel
+  if (activeMode === 'simple') {
+    return (
+      <div className={cn('space-y-4', className)}>
+        <SimpleStylePicker
+          config={config}
+          onChange={onChange}
+          onSwitchToAdvanced={() => handleModeChange('advanced')}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className={cn('space-y-6', className)}>
+      {/* Mode toggle — switch back to simple */}
+      <div className="flex justify-end">
+        <button
+          type="button"
+          onClick={() => handleModeChange('simple')}
+          className="text-xs text-amber-400 hover:text-amber-300 hover:underline transition-colors"
+        >
+          Switch to Simple Mode
+        </button>
+      </div>
+
       {/* ─── 01. Subject & Framing ────────────────────────────────── */}
       <section>
         <SectionHeader

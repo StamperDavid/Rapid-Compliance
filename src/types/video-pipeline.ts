@@ -280,6 +280,30 @@ export type ColorGradePreset =
   | 'tech-modern'
   | 'none';
 
+// ============================================================================
+// Caption Types
+// ============================================================================
+
+export type CaptionStyle = 'bold-center' | 'bottom-bar' | 'karaoke';
+
+export const CAPTION_STYLE_LABELS: Record<CaptionStyle, string> = {
+  'bold-center': 'Bold Center (TikTok)',
+  'bottom-bar': 'Bottom Bar (YouTube)',
+  'karaoke': 'Karaoke (Word Highlight)',
+} as const;
+
+export interface CaptionConfig {
+  enabled: boolean;
+  style: CaptionStyle;
+  fontSize?: number;
+  fontColor?: string;
+  backgroundColor?: string;
+}
+
+// ============================================================================
+// Audio & Post-Production Types
+// ============================================================================
+
 export interface AudioMixConfig {
   backgroundMusicUrl?: string | null;
   musicVolume: number; // 0.0-1.0

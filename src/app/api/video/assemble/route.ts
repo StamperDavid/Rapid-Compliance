@@ -12,7 +12,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { logger } from '@/lib/logger/logger';
 import { requireAuth } from '@/lib/auth/api-auth';
-import { adminStorage } from '@/lib/firebase/admin';
+import { adminStorage, adminDb } from '@/lib/firebase/admin';
 import { readFile } from 'fs/promises';
 import { join } from 'path';
 import { randomUUID } from 'crypto';
@@ -26,6 +26,7 @@ import {
   getStoragePath,
 } from '@/lib/video/ffmpeg-utils';
 import { getHedraVideoStatus } from '@/lib/video/hedra-service';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 300; // 5 minutes for Pro, 60s for Hobby
@@ -49,6 +50,52 @@ const AssembleSchema = z.object({
   },
   { message: 'Either sceneUrls or providerVideoIds required' },
 );
+
+// ============================================================================
+// Progress Tracking
+// ============================================================================
+
+async function writeProgress(
+  projectId: string,
+  phase: string,
+  phaseLabel: string,
+  phaseIndex: number,
+  totalPhases: number,
+  extra?: Record<string, string>,
+): Promise<void> {
+  if (!adminDb) { return; }
+  try {
+    await adminDb
+      .collection('organizations')
+      .doc(PLATFORM_ID)
+      .collection('assembly_progress')
+      .doc(projectId)
+      .set({
+        phase,
+        phaseLabel,
+        phaseIndex,
+        totalPhases,
+        updatedAt: new Date().toISOString(),
+        ...extra,
+      });
+  } catch {
+    // Non-critical — don't fail assembly if progress write fails
+  }
+}
+
+async function clearProgress(projectId: string): Promise<void> {
+  if (!adminDb) { return; }
+  try {
+    await adminDb
+      .collection('organizations')
+      .doc(PLATFORM_ID)
+      .collection('assembly_progress')
+      .doc(projectId)
+      .delete();
+  } catch {
+    // Non-critical
+  }
+}
 
 const RESOLUTION_MAP: Record<string, { width: number; height: number }> = {
   '720p': { width: 1280, height: 720 },
@@ -144,6 +191,9 @@ export async function POST(request: NextRequest) {
     // Create temp working directory
     workDir = await createWorkDir('assemble');
 
+    // Write initial progress
+    await writeProgress(projectId, 'downloading', `Downloading scenes (0/${sceneUrls.length})`, 0, 4);
+
     // Download all scene videos in parallel
     const inputPaths: string[] = [];
     const downloadStart = Date.now();
@@ -169,6 +219,8 @@ export async function POST(request: NextRequest) {
       file: 'api/video/assemble/route.ts',
     });
 
+    await writeProgress(projectId, 'probing', 'Probing scene durations', 1, 4);
+
     // Build smart concat args with dynamic xfade offsets (probes actual clip durations)
     logger.info('Building FFmpeg args (probing clip durations)...', {
       jobId,
@@ -193,6 +245,8 @@ export async function POST(request: NextRequest) {
       file: 'api/video/assemble/route.ts',
     });
 
+    await writeProgress(projectId, 'stitching', 'Stitching video with transitions', 2, 4);
+
     const concatStart = Date.now();
     await runFfmpeg(ffmpegArgs);
 
@@ -207,6 +261,8 @@ export async function POST(request: NextRequest) {
     if (outputBuffer.length === 0) {
       throw new Error('FFmpeg produced an empty output file');
     }
+
+    await writeProgress(projectId, 'uploading', 'Uploading final video', 3, 4);
 
     // Upload to Firebase Storage
     logger.info('Uploading assembled video to Firebase Storage...', {
@@ -227,8 +283,9 @@ export async function POST(request: NextRequest) {
       file: 'api/video/assemble/route.ts',
     });
 
-    // Cleanup temp files (non-blocking)
+    // Cleanup temp files and progress doc (non-blocking)
     void cleanupWorkDir(workDir);
+    void clearProgress(projectId);
 
     return NextResponse.json({
       success: true,
