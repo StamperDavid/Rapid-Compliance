@@ -28,7 +28,7 @@ export default function SettingsPage() {
     const slug = MODULE_ID_TO_SLUG[mod.id];
     const href =
       mod.id === 'storefront'
-        ? '/settings/storefront'
+        ? '/website/store'
         : `/settings/module/${slug}`;
     return {
       icon: MODULE_EMOJI[mod.id],

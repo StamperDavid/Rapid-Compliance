@@ -476,12 +476,12 @@ export const UNIFIED_ROLE_PERMISSIONS: Record<AccountRole, UnifiedPermissions> =
  * Navigation section categories
  */
 export type NavigationCategory =
-  | 'home'
+  | 'dashboard'
   | 'crm'
   | 'outreach'
   | 'marketing'
+  | 'catalog'
   | 'ai_workforce'
-  | 'sales'
   | 'website'
   | 'analytics'
   | 'records'
@@ -540,6 +540,9 @@ export interface NavigationSection {
 
   /** Section icon color (hex) - used for colorful section header icons */
   iconColor?: string;
+
+  /** Render as a standalone nav link (no section header, no collapse) */
+  standalone?: boolean;
 }
 
 /**

@@ -12,6 +12,16 @@ export const DASHBOARD_TABS: SubpageNavItem[] = [
   { label: 'Dashboard', href: '/dashboard' },
   { label: 'Executive Briefing', href: '/executive-briefing' },
   { label: 'Workforce HQ', href: '/workforce' },
+  { label: 'Team', href: '/team/leaderboard' },
+];
+
+// ── Catalog (hub for products, services, orders, coupons, subscriptions) ─────
+export const CATALOG_TABS: SubpageNavItem[] = [
+  { label: 'Products', href: '/products' },
+  { label: 'Services', href: '/products/services' },
+  { label: 'Orders', href: '/orders' },
+  { label: 'Coupons', href: '/entities/coupons' },
+  { label: 'Subscriptions', href: '/entities/subscriptions' },
 ];
 
 // ── Social Hub (8 tabs — Analytics absorbed from standalone sidebar item) ────
@@ -46,6 +56,7 @@ export const WEBSITE_TABS: SubpageNavItem[] = [
   { label: 'Templates', href: '/website/templates' },
   { label: 'Blog', href: '/website/blog' },
   { label: 'SEO', href: '/website/seo' },
+  { label: 'Store', href: '/website/store' },
   { label: 'Navigation', href: '/website/navigation' },
   { label: 'Settings', href: '/website/settings' },
   { label: 'Audit Log', href: '/website/audit-log' },

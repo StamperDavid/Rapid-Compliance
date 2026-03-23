@@ -309,7 +309,7 @@ export const FEATURE_MODULES: FeatureModuleDefinition[] = [
     features: ['Online store pages', 'Product/service catalog browsing', 'Checkout & payment processing', 'Inventory tracking'],
     useCases: ['Online stores', 'Service booking pages', 'Digital product sales'],
     ifYouSkip: 'Customers can\'t browse and buy from your website. You can still manage your catalog, send invoices, and offer coupons without a storefront.',
-    sidebarItemIds: ['storefront'],
+    sidebarItemIds: [],
     requiredApiKeys: [
       {
         serviceId: 'stripe_secret',

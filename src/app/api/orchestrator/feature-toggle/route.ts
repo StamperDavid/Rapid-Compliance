@@ -24,7 +24,7 @@ const FEATURE_CATEGORIES = [
   'automation',
   'content_factory',
   'ai_workforce',
-  'sales',
+  'catalog',
   'analytics',
   'website',
   'settings',

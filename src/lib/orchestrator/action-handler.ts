@@ -111,13 +111,14 @@ const FEATURE_ALIASES: Record<string, string> = {
   'fine tuning': 'fine_tuning',
   'fine-tuning': 'fine_tuning',
 
-  // Sales & Storefront
+  // Catalog & Store
   'products': 'products',
   'catalog': 'products',
+  'services': 'services',
   'orders': 'orders',
   'storefront': 'storefront',
-  'ecommerce': 'sales',
-  'e-commerce': 'sales',
+  'ecommerce': 'catalog',
+  'e-commerce': 'catalog',
 
   // Website
   'pages': 'website_pages',
@@ -145,9 +146,10 @@ const CATEGORY_ALIASES: Record<string, FeatureCategory> = {
   'content factory': 'content_factory',
   'ai': 'ai_workforce',
   'ai workforce': 'ai_workforce',
-  'ecommerce': 'sales',
-  'e-commerce': 'sales',
-  'sales': 'sales',
+  'ecommerce': 'catalog',
+  'e-commerce': 'catalog',
+  'catalog': 'catalog',
+  'sales': 'catalog',
   'analytics': 'analytics',
   'website': 'website',
   'settings': 'settings',

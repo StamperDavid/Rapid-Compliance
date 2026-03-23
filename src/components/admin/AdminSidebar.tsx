@@ -47,11 +47,8 @@ import {
   X,
   ClipboardList,
   Package,
-  ShoppingCart,
-  Store,
   PieChart,
   HelpCircle,
-  Trophy,
   PenLine,
   Plug,
   Shield,
@@ -64,8 +61,6 @@ import {
   MailOpen,
   Receipt,
   CreditCard,
-  Tag,
-  Repeat,
   LayoutTemplate,
   BookOpen,
   Link2,
@@ -76,15 +71,15 @@ import {
 // ============================================================================
 
 const NAV_SECTIONS: NavigationSection[] = [
-  // ── Home (2 items) ──────────────────────────────────────────────────
+  // ── Dashboard (standalone — no section header) ─────────────────────
   {
-    id: 'home',
-    label: 'Home',
+    id: 'dashboard',
+    label: 'Dashboard',
     icon: LayoutDashboard,
     allowedRoles: ['owner', 'admin', 'manager', 'member'],
+    standalone: true,
     items: [
       { id: 'dashboard', label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, iconColor: 'var(--color-primary)' },
-      { id: 'team', label: 'Team', href: '/team/leaderboard', icon: Trophy, iconColor: 'var(--color-warning)' },
     ],
   },
   // ── CRM (5 items) ──────────────────────────────────────────────────
@@ -134,20 +129,18 @@ const NAV_SECTIONS: NavigationSection[] = [
       { id: 'workflows', label: 'Workflows', href: '/workflows', icon: Workflow, iconColor: 'var(--color-warning)', requiredPermission: 'canCreateWorkflows', featureModuleId: 'workflows' },
     ],
   },
-  // ── Sales (always visible — catalog, orders, coupons, subscriptions) ─
+  // ── Catalog (standalone — hub with tabs for products, services, orders, coupons, subscriptions) ─
   {
-    id: 'sales',
-    label: 'Sales',
-    icon: ShoppingCart,
+    id: 'catalog',
+    label: 'Catalog',
+    icon: Package,
     allowedRoles: ['owner', 'admin', 'manager', 'member'],
+    standalone: true,
     items: [
-      { id: 'products', label: 'Catalog', href: '/products', icon: Package, iconColor: 'var(--color-primary)', requiredPermission: 'canManageProducts' },
-      { id: 'orders', label: 'Orders', href: '/orders', icon: ShoppingCart, iconColor: 'var(--color-secondary)', requiredPermission: 'canProcessOrders' },
-      { id: 'coupons', label: 'Coupons', href: '/entities/coupons', icon: Tag, iconColor: 'var(--color-accent)' },
-      { id: 'subscriptions', label: 'Subscriptions', href: '/entities/subscriptions', icon: Repeat, iconColor: 'var(--color-cyan)' },
+      { id: 'catalog', label: 'Catalog', href: '/products', icon: Package, iconColor: 'var(--color-primary)', requiredPermission: 'canManageProducts' },
     ],
   },
-  // ── Website (includes Storefront — store is a section of your website) ─
+  // ── Website (storefront is now a page type within the builder, accessed via Store tab) ─
   {
     id: 'website',
     label: 'Website',
@@ -157,7 +150,6 @@ const NAV_SECTIONS: NavigationSection[] = [
       { id: 'website', label: 'Website', href: '/website/editor', icon: Globe, iconColor: 'var(--color-primary)', requiredPermission: 'canManageWebsite', featureModuleId: 'website_builder' },
       { id: 'pages', label: 'Pages', href: '/entities/pages', icon: LayoutTemplate, iconColor: 'var(--color-info)', featureModuleId: 'website_builder' },
       { id: 'blog-posts', label: 'Blog Posts', href: '/entities/blog_posts', icon: BookOpen, iconColor: 'var(--color-secondary)', featureModuleId: 'website_builder' },
-      { id: 'storefront', label: 'Storefront', href: '/settings/storefront', icon: Store, iconColor: 'var(--color-warning)', requiredPermission: 'canManageEcommerce', featureModuleId: 'storefront' },
       { id: 'domains', label: 'Domains', href: '/entities/domains', icon: Link2, iconColor: 'var(--color-cyan)', featureModuleId: 'website_builder' },
     ],
   },
@@ -261,15 +253,24 @@ export default function AdminSidebar() {
   const isActive = (href: string): boolean => {
     if (!pathname) { return false; }
 
-    // Dashboard — exact match
-    if (href === '/dashboard') { return pathname === '/dashboard'; }
-
-    // Team hub — leaderboard, tasks, performance, coaching, playbook
-    if (href === '/team/leaderboard') {
-      return pathname.startsWith('/team/') ||
+    // Dashboard hub — dashboard + all tab destinations (executive briefing, workforce, team)
+    if (href === '/dashboard') {
+      return pathname === '/dashboard' ||
+        pathname.startsWith('/executive-briefing') ||
+        pathname.startsWith('/workforce') ||
+        pathname.startsWith('/team/') ||
         pathname.startsWith('/performance') ||
         pathname.startsWith('/coaching') ||
         pathname === '/playbook';
+    }
+
+    // Catalog hub — products + all tab destinations (services, orders, coupons, subscriptions)
+    if (href === '/products') {
+      return pathname === '/products' ||
+        pathname.startsWith('/products/') ||
+        pathname.startsWith('/orders') ||
+        pathname.startsWith('/entities/coupons') ||
+        pathname.startsWith('/entities/subscriptions');
     }
 
     // Leads hub — leads list, intelligence, scoring, scraper
@@ -519,6 +520,66 @@ export default function AdminSidebar() {
             const activeItem = section.items.find((item: NavigationItem) => isActive(item.href));
             const hasActiveItem = !!activeItem;
             const isSectionCollapsed = collapsedSections[section.id] ?? !hasActiveItem;
+
+            // Standalone sections: render single item as a direct link (no header, no collapse)
+            if (section.standalone && section.items.length === 1) {
+              const item = section.items[0];
+              const Icon = item.icon;
+              const active = isActive(item.href);
+              return (
+                <div key={section.id} style={{ marginBottom: '0.25rem' }}>
+                  <Link
+                    href={item.href}
+                    aria-current={active ? 'page' : undefined}
+                    title={isCollapsed ? item.label : undefined}
+                    onClick={handleMobileClose}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.75rem',
+                      padding: isCollapsed ? '0.625rem 0' : '0.625rem 1.25rem',
+                      justifyContent: isCollapsed ? 'center' : 'flex-start',
+                      textDecoration: 'none',
+                      backgroundColor: active ? 'rgba(var(--color-primary-rgb), 0.08)' : 'transparent',
+                      borderLeft: active ? '3px solid var(--color-primary)' : '3px solid transparent',
+                      color: active ? 'var(--color-text-primary)' : 'var(--color-text-secondary)',
+                      transition: 'all 0.15s ease',
+                      marginTop: '0.5rem',
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!active) {
+                        e.currentTarget.style.backgroundColor = 'rgba(var(--color-primary-rgb), 0.04)';
+                        e.currentTarget.style.color = 'var(--color-text-primary)';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!active) {
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                        e.currentTarget.style.color = 'var(--color-text-secondary)';
+                      }
+                    }}
+                  >
+                    <Icon
+                      className="w-4 h-4 flex-shrink-0"
+                      style={{ color: active ? item.iconColor : 'var(--color-text-disabled)' }}
+                    />
+                    {!isCollapsed && (
+                      <span
+                        style={{
+                          fontSize: '0.8125rem',
+                          fontWeight: active ? 600 : 400,
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                        }}
+                      >
+                        {item.label}
+                      </span>
+                    )}
+                  </Link>
+                </div>
+              );
+            }
 
             return (
               <div key={section.id} style={{ marginBottom: '0.25rem' }}>

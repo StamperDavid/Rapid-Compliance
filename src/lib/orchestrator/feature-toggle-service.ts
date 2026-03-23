@@ -29,7 +29,7 @@ export type FeatureCategory =
   | 'automation'
   | 'content_factory'
   | 'ai_workforce'
-  | 'sales'
+  | 'catalog'
   | 'analytics'
   | 'website'
   | 'settings';
@@ -139,10 +139,11 @@ export function buildNavigationStructure(): NavSection[] {
       ],
     },
     {
-      id: 'sales',
-      title: 'Sales',
+      id: 'catalog',
+      title: 'Catalog',
       items: [
-        { id: 'products', href: '/products', icon: '📦', label: 'Catalog', featureId: 'products' },
+        { id: 'products', href: '/products', icon: '📦', label: 'Products', featureId: 'products' },
+        { id: 'services', href: '/products/services', icon: '🔧', label: 'Services', featureId: 'services' },
         { id: 'orders', href: '/orders', icon: '💰', label: 'Orders', featureId: 'orders' },
         { id: 'coupons', href: '/entities/coupons', icon: '🏷️', label: 'Coupons', featureId: 'coupons' },
         { id: 'subscriptions', href: '/entities/subscriptions', icon: '🔁', label: 'Subscriptions', featureId: 'subscriptions' },
