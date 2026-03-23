@@ -12,7 +12,7 @@ const featureModuleIds = [
   'sales_automation',
   'email_outreach',
   'social_media',
-  'ecommerce',
+  'storefront',
   'website_builder',
   'video_production',
   'forms_surveys',

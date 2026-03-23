@@ -38,9 +38,10 @@ export const SLUG_TO_MODULE_ID: Record<string, FeatureModuleId> = {
   'proposals-docs': 'proposals_docs',
   'advanced-analytics': 'advanced_analytics',
   'website-builder': 'website_builder',
+  'storefront': 'storefront',
 };
 
-/** Maps every module (including ecommerce) to its settings page slug */
+/** Maps every module to its settings page slug */
 export const MODULE_ID_TO_SLUG: Record<FeatureModuleId, string> = {
   crm_pipeline: 'crm-pipeline',
   conversations: 'conversations',
@@ -53,7 +54,7 @@ export const MODULE_ID_TO_SLUG: Record<FeatureModuleId, string> = {
   proposals_docs: 'proposals-docs',
   advanced_analytics: 'advanced-analytics',
   website_builder: 'website-builder',
-  ecommerce: 'storefront', // special — links to existing /settings/storefront
+  storefront: 'storefront', // links to /settings/storefront
 };
 
 /** Emoji icon per module, used on the settings hub cards */
@@ -69,7 +70,7 @@ export const MODULE_EMOJI: Record<FeatureModuleId, string> = {
   proposals_docs: '📄',
   advanced_analytics: '📈',
   website_builder: '🌐',
-  ecommerce: '🛒',
+  storefront: '🏪',
 };
 
 // =============================================================================

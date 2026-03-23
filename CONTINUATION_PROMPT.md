@@ -5,7 +5,7 @@
 ## Context
 Repository: https://github.com/StamperDavid/Rapid-Compliance
 Branch: dev
-Last Updated: March 22, 2026 (V4C Calendar→Pipeline + Batch Gen + Campaign Orchestration + V4D Feature Module Wiring)
+Last Updated: March 23, 2026 (V5 Commerce Restructure — Catalog/Storefront Split)
 
 ## Current State
 
@@ -30,13 +30,40 @@ Last Updated: March 22, 2026 (V4C Calendar→Pipeline + Batch Gen + Campaign Orc
 ### What to Build Next
 
 **Remaining work:**
-- Feature settings pages: every feature module needs its own settings page with an enable/disable toggle (like storefront has). Currently only ecommerce/storefront has one. Need: CRM, conversations, sales automation, email, social media, video, forms, workflows, proposals, analytics, website builder — 11 settings pages.
+- Feature settings pages: every feature module needs its own settings page with an enable/disable toggle (like storefront has). Need: CRM, conversations, sales automation, email, social media, video, forms, workflows, proposals, analytics, website builder — 11 settings pages.
 - Each settings page toggle must sync to the feature module config (controls sidebar nav visibility)
+- Catalog item `type` field: add `product | service | digital | subscription` to catalog items (data model exists, type field not yet enforced)
+- Storefront integration into Website Builder: long-term, storefront pages become page types within the website editor (Squarespace/Wix pattern)
 - React Query adoption (installed but not used anywhere)
 - YouTube/TikTok direct API uploads (currently creates social posts in Firestore; needs platform-specific upload endpoints)
 - E2E test coverage (~5%) — 10 critical user flows untested
 
-### What Was Built This Session (March 22, 2026 — V4C + V4D)
+### What Was Built This Session (March 23, 2026 — V5 Commerce Restructure)
+
+**V5 Commerce Restructure — Catalog/Storefront Split — COMPLETE:**
+
+**Architecture Decision:** The monolithic `ecommerce` feature module was split based on competitive analysis (Square, Stripe, Wix, Squarespace, Shopify, HubSpot, GoHighLevel, Kajabi). Every business has a catalog of things they sell (products OR services) — that's always-on. The storefront (browseable online shop) is optional and lives under the Website section since the store is a part of the website (following the Squarespace/Wix pattern).
+
+**What changed:**
+- `FeatureModuleId`: removed `'ecommerce'`, added `'storefront'` — 15 files updated across types, Zod schemas, constants, nav, API routes, orchestrator, onboarding, and settings
+- **Navigation restructured**: "Commerce" section → **"Sales"** section (always visible: Catalog, Orders, Coupons, Subscriptions — no feature gate)
+- **Storefront moved under Website section** — gated by `storefront` feature module (optional toggle)
+- **Products renamed to Catalog** in nav — reflects that businesses sell products AND/OR services
+- `NavigationCategory` type: `'commerce'` → `'sales'`
+- Storefront settings page syncs with `'storefront'` module (was `'ecommerce'`)
+- `/api/features` reconciliation updated to use `'storefront'` module
+- Onboarding Step 4: "Sell products/services online" moved from "Commerce & Website" to "Website & Storefront" group
+- Orchestrator action-handler, feature-toggle-service, chat route, system-health all updated
+- Industry defaults: `ecommerce_retail` and `hospitality_food` now enable `'storefront'` instead of `'ecommerce'`
+- Inventory removed as standalone nav item (becomes part of storefront/catalog management)
+
+**Key design principles:**
+1. **Unified Catalog** — every business sells something (products, services, digital goods, subscriptions). The catalog is always available.
+2. **Coupons/Subscriptions are pricing tools** — not storefront features. Always visible regardless of storefront toggle.
+3. **Storefront = optional website module** — the online store is a section of the website, not a standalone system. Builder Manager can call Commerce agents when building store pages.
+4. **Separate agents stay separate** — Builder Manager and Commerce Manager remain distinct agent teams, but Commerce agents are specialists the Builder Manager can invoke.
+
+### What Was Built Previously (March 22, 2026 — V4C + V4D)
 
 **V4D Feature Module Wiring — COMPLETE:**
 - Onboarding Step 4 of 5: explicit feature selection — client opts in per tool, everything defaults OFF

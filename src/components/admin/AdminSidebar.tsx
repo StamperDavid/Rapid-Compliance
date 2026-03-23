@@ -64,7 +64,6 @@ import {
   MailOpen,
   Receipt,
   CreditCard,
-  Warehouse,
   Tag,
   Repeat,
   LayoutTemplate,
@@ -135,22 +134,20 @@ const NAV_SECTIONS: NavigationSection[] = [
       { id: 'workflows', label: 'Workflows', href: '/workflows', icon: Workflow, iconColor: 'var(--color-warning)', requiredPermission: 'canCreateWorkflows', featureModuleId: 'workflows' },
     ],
   },
-  // ── Commerce (3 items, unchanged) ──────────────────────────────────
+  // ── Sales (always visible — catalog, orders, coupons, subscriptions) ─
   {
-    id: 'commerce',
-    label: 'Commerce',
+    id: 'sales',
+    label: 'Sales',
     icon: ShoppingCart,
     allowedRoles: ['owner', 'admin', 'manager', 'member'],
     items: [
-      { id: 'products', label: 'Products', href: '/products', icon: Package, iconColor: 'var(--color-primary)', requiredPermission: 'canManageProducts', featureModuleId: 'ecommerce' },
-      { id: 'orders', label: 'Orders', href: '/orders', icon: ShoppingCart, iconColor: 'var(--color-secondary)', requiredPermission: 'canProcessOrders', featureModuleId: 'ecommerce' },
-      { id: 'storefront', label: 'Storefront', href: '/settings/storefront', icon: Store, iconColor: 'var(--color-warning)', requiredPermission: 'canManageEcommerce', featureModuleId: 'ecommerce' },
-      { id: 'coupons', label: 'Coupons', href: '/entities/coupons', icon: Tag, iconColor: 'var(--color-accent)', featureModuleId: 'ecommerce' },
-      { id: 'subscriptions', label: 'Subscriptions', href: '/entities/subscriptions', icon: Repeat, iconColor: 'var(--color-cyan)', featureModuleId: 'ecommerce' },
-      { id: 'inventory', label: 'Inventory', href: '/entities/inventory', icon: Warehouse, iconColor: 'var(--color-secondary)', featureModuleId: 'ecommerce', entityId: 'inventory' },
+      { id: 'products', label: 'Catalog', href: '/products', icon: Package, iconColor: 'var(--color-primary)', requiredPermission: 'canManageProducts' },
+      { id: 'orders', label: 'Orders', href: '/orders', icon: ShoppingCart, iconColor: 'var(--color-secondary)', requiredPermission: 'canProcessOrders' },
+      { id: 'coupons', label: 'Coupons', href: '/entities/coupons', icon: Tag, iconColor: 'var(--color-accent)' },
+      { id: 'subscriptions', label: 'Subscriptions', href: '/entities/subscriptions', icon: Repeat, iconColor: 'var(--color-cyan)' },
     ],
   },
-  // ── Website (1 item — SEO absorbed as Website tab) ─────────────────
+  // ── Website (includes Storefront — store is a section of your website) ─
   {
     id: 'website',
     label: 'Website',
@@ -160,6 +157,7 @@ const NAV_SECTIONS: NavigationSection[] = [
       { id: 'website', label: 'Website', href: '/website/editor', icon: Globe, iconColor: 'var(--color-primary)', requiredPermission: 'canManageWebsite', featureModuleId: 'website_builder' },
       { id: 'pages', label: 'Pages', href: '/entities/pages', icon: LayoutTemplate, iconColor: 'var(--color-info)', featureModuleId: 'website_builder' },
       { id: 'blog-posts', label: 'Blog Posts', href: '/entities/blog_posts', icon: BookOpen, iconColor: 'var(--color-secondary)', featureModuleId: 'website_builder' },
+      { id: 'storefront', label: 'Storefront', href: '/settings/storefront', icon: Store, iconColor: 'var(--color-warning)', requiredPermission: 'canManageEcommerce', featureModuleId: 'storefront' },
       { id: 'domains', label: 'Domains', href: '/entities/domains', icon: Link2, iconColor: 'var(--color-cyan)', featureModuleId: 'website_builder' },
     ],
   },

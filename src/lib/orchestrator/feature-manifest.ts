@@ -482,7 +482,7 @@ REVIEW LINKS — Always provide a link so David can review the result:
 - Email campaigns → /email/campaigns
 - Social media → /social
 - Leads/CRM → /crm/contacts
-- E-commerce → /ecommerce/products
+- Catalog & Sales → /products
 - Website pages → /website/pages
 - Analytics → /analytics
 - Mission tracking → /mission-control

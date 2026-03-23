@@ -34,7 +34,7 @@ import {
   Share2,
   Video,
   FileText,
-  ShoppingCart,
+  Store,
   BarChart3,
   Globe,
 } from 'lucide-react';
@@ -105,20 +105,20 @@ const FEATURE_GROUPS: FeatureGroup[] = [
     ],
   },
   {
-    title: 'Commerce & Website',
-    subtitle: 'Sell online and build your web presence',
+    title: 'Website & Storefront',
+    subtitle: 'Build your web presence and sell online',
     features: [
-      {
-        id: 'ecommerce',
-        question: 'I will sell products or services through an online store',
-        description: 'Product catalog, checkout, order management, and payment processing',
-        icon: ShoppingCart,
-      },
       {
         id: 'website_builder',
         question: 'I want to build or manage a website from this platform',
         description: 'Page editor, blog, custom domains, SEO, and AI content generation',
         icon: Globe,
+      },
+      {
+        id: 'storefront',
+        question: 'I want an online store on my website where customers can browse and buy',
+        description: 'Browsable product/service catalog, checkout, and payment processing on your website',
+        icon: Store,
       },
     ],
   },
@@ -157,7 +157,7 @@ const FEATURE_GROUPS: FeatureGroup[] = [
 // All module IDs for building the full config
 const ALL_MODULE_IDS: FeatureModuleId[] = [
   'crm_pipeline', 'sales_automation', 'conversations', 'email_outreach',
-  'social_media', 'video_production', 'ecommerce', 'website_builder',
+  'social_media', 'video_production', 'storefront', 'website_builder',
   'workflows', 'forms_surveys', 'proposals_docs', 'advanced_analytics',
 ];
 
@@ -184,7 +184,14 @@ export default function FeatureSelectionPage() {
   }, [user, router]);
 
   const toggle = useCallback((id: FeatureModuleId) => {
-    setEnabled((prev) => ({ ...prev, [id]: !prev[id] }));
+    setEnabled((prev) => {
+      const next = { ...prev, [id]: !prev[id] };
+      // Cascade: disabling website_builder also disables storefront
+      if (id === 'website_builder' && !next.website_builder) {
+        next.storefront = false;
+      }
+      return next;
+    });
   }, []);
 
   const enableAll = useCallback(() => {
@@ -281,21 +288,26 @@ export default function FeatureSelectionPage() {
                 {group.features.map((feature) => {
                   const isOn = enabled[feature.id];
                   const Icon = feature.icon;
+                  // Storefront requires website_builder — disabled when parent is off
+                  const isDisabled = feature.id === 'storefront' && !enabled.website_builder;
 
                   return (
                     <button
                       key={feature.id}
-                      onClick={() => toggle(feature.id)}
+                      onClick={() => !isDisabled && toggle(feature.id)}
+                      disabled={isDisabled}
                       className={`w-full flex items-center gap-4 p-4 text-left transition-all ${
-                        isOn
-                          ? 'bg-indigo-500/[0.08]'
-                          : 'hover:bg-white/[0.02]'
+                        isDisabled
+                          ? 'opacity-40 cursor-not-allowed'
+                          : isOn
+                            ? 'bg-indigo-500/[0.08]'
+                            : 'hover:bg-white/[0.02]'
                       }`}
                     >
                       {/* Icon */}
                       <div
                         className={`flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center transition-colors ${
-                          isOn
+                          isOn && !isDisabled
                             ? 'bg-indigo-500/20 text-indigo-400'
                             : 'bg-white/5 text-gray-600'
                         }`}
@@ -305,23 +317,23 @@ export default function FeatureSelectionPage() {
 
                       {/* Text */}
                       <div className="flex-1 min-w-0">
-                        <p className={`text-sm font-medium transition-colors ${isOn ? 'text-white' : 'text-gray-300'}`}>
+                        <p className={`text-sm font-medium transition-colors ${isOn && !isDisabled ? 'text-white' : 'text-gray-300'}`}>
                           {feature.question}
                         </p>
                         <p className="text-xs text-gray-600 mt-0.5">
-                          {feature.description}
+                          {isDisabled ? 'Requires Website Builder to be enabled' : feature.description}
                         </p>
                       </div>
 
                       {/* Toggle */}
                       <div
                         className={`flex-shrink-0 w-11 h-6 rounded-full flex items-center px-0.5 transition-colors ${
-                          isOn ? 'bg-indigo-500' : 'bg-white/10'
+                          isOn && !isDisabled ? 'bg-indigo-500' : 'bg-white/10'
                         }`}
                       >
                         <div
                           className={`w-5 h-5 rounded-full transition-all flex items-center justify-center ${
-                            isOn
+                            isOn && !isDisabled
                               ? 'translate-x-5 bg-white'
                               : 'translate-x-0 bg-gray-600'
                           }`}

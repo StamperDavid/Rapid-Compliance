@@ -184,13 +184,13 @@ export const PLATFORM_FEATURES = {
     description: 'Landing pages and website',
     checkPath: 'tools.websiteBuilder',
   },
-  ECOMMERCE: {
-    id: 'ecommerce',
-    name: 'E-Commerce',
-    icon: '🛒',
+  STOREFRONT: {
+    id: 'storefront',
+    name: 'Online Storefront',
+    icon: '🏪',
     category: 'tool' as const,
-    description: 'Product catalog and orders',
-    checkPath: 'tools.ecommerce',
+    description: 'Online store, catalog browsing, and checkout',
+    checkPath: 'tools.storefront',
   },
 
   // Data
@@ -567,10 +567,10 @@ export class SystemHealthService {
         action: 'Build a landing page or website',
       },
       {
-        feature: PLATFORM_FEATURES.ECOMMERCE,
-        isActive: counts.productCount > 0, // E-commerce needs products
-        missing: 'Add products to your catalog',
-        action: 'Add your first product to enable e-commerce',
+        feature: PLATFORM_FEATURES.STOREFRONT,
+        isActive: counts.productCount > 0, // Storefront needs catalog items
+        missing: 'Add products or services to your catalog',
+        action: 'Add your first catalog item to enable your storefront',
       },
     ];
 

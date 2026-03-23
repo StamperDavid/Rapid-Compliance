@@ -152,7 +152,7 @@ export default function FeaturesPage() {
   // Auto-suggest features based on business answers
   const applySuggestions = useCallback(() => {
     const updated = { ...modules };
-    if (businessProfile.sellsOnline) { updated.ecommerce = true; }
+    if (businessProfile.sellsOnline) { updated.storefront = true; }
     if (businessProfile.usesEmail) { updated.email_outreach = true; }
     if (businessProfile.usesSocialMedia) { updated.social_media = true; }
     if (businessProfile.usesVideo) { updated.video_production = true; }

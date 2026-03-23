@@ -29,7 +29,7 @@ export type FeatureCategory =
   | 'automation'
   | 'content_factory'
   | 'ai_workforce'
-  | 'ecommerce'
+  | 'sales'
   | 'analytics'
   | 'website'
   | 'settings';
@@ -139,12 +139,13 @@ export function buildNavigationStructure(): NavSection[] {
       ],
     },
     {
-      id: 'ecommerce',
-      title: 'E-Commerce',
+      id: 'sales',
+      title: 'Sales',
       items: [
-        { id: 'products', href: '/products', icon: '📦', label: 'Products', featureId: 'products' },
-        { id: 'orders', href: '/analytics/ecommerce', icon: '💰', label: 'Orders', featureId: 'orders' },
-        { id: 'storefront', href: '/settings/storefront', icon: '🏪', label: 'Storefront', featureId: 'storefront' },
+        { id: 'products', href: '/products', icon: '📦', label: 'Catalog', featureId: 'products' },
+        { id: 'orders', href: '/orders', icon: '💰', label: 'Orders', featureId: 'orders' },
+        { id: 'coupons', href: '/entities/coupons', icon: '🏷️', label: 'Coupons', featureId: 'coupons' },
+        { id: 'subscriptions', href: '/entities/subscriptions', icon: '🔁', label: 'Subscriptions', featureId: 'subscriptions' },
       ],
     },
     {

@@ -68,7 +68,7 @@ export interface FeatureLimits {
   // Feature flags
   features: {
     crm: boolean;
-    ecommerce: boolean;
+    storefront: boolean;
     workflows: boolean;
     white_label: boolean;
     custom_domain: boolean;
@@ -329,7 +329,7 @@ export const DEFAULT_FEATURE_LIMITS: FeatureLimits = {
   linkedin_actions_per_month: 0,
   features: {
     crm: true,
-    ecommerce: false,
+    storefront: false,
     workflows: false,
     white_label: false,
     custom_domain: false,
@@ -371,7 +371,7 @@ export const DEFAULT_PRICING_TIERS: Omit<PlatformPricingPlan, 'created_at' | 'up
       linkedin_actions_per_month: 0,
       features: {
         crm: true,
-        ecommerce: true,
+        storefront: true,
         workflows: true,
         white_label: false,
         custom_domain: false,
@@ -409,7 +409,7 @@ export const DEFAULT_PRICING_TIERS: Omit<PlatformPricingPlan, 'created_at' | 'up
       linkedin_actions_per_month: 500,
       features: {
         crm: true,
-        ecommerce: true,
+        storefront: true,
         workflows: true,
         white_label: true,
         custom_domain: true,
@@ -447,7 +447,7 @@ export const DEFAULT_PRICING_TIERS: Omit<PlatformPricingPlan, 'created_at' | 'up
       linkedin_actions_per_month: 2000,
       features: {
         crm: true,
-        ecommerce: true,
+        storefront: true,
         workflows: true,
         white_label: true,
         custom_domain: true,
@@ -484,7 +484,7 @@ export const DEFAULT_PRICING_TIERS: Omit<PlatformPricingPlan, 'created_at' | 'up
       linkedin_actions_per_month: -1,
       features: {
         crm: true,
-        ecommerce: true,
+        storefront: true,
         workflows: true,
         white_label: true,
         custom_domain: true,

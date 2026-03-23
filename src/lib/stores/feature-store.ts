@@ -73,6 +73,8 @@ export const useFeatureStore = create<FeatureStoreState>((set, get) => ({
     if (!initialized) { return true; }
     // No config exists — existing user, show everything
     if (!config) { return true; }
+    // Storefront depends on website_builder — no website = no store
+    if (id === 'storefront' && !config.modules.website_builder) { return false; }
     // Config exists — respect the toggle
     return config.modules[id] ?? true;
   },
@@ -81,6 +83,10 @@ export const useFeatureStore = create<FeatureStoreState>((set, get) => ({
     const { config } = get();
     const current = config ?? DEFAULT_FEATURE_CONFIG;
     const updatedModules = { ...current.modules, [id]: enabled };
+    // Cascade: disabling website_builder also disables storefront
+    if (id === 'website_builder' && !enabled) {
+      updatedModules.storefront = false;
+    }
     set({
       config: {
         ...current,

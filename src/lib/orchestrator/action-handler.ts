@@ -11,7 +11,7 @@
  * Examples:
  * [ACTION:HIDE_FEATURE:email_sequences]
  * [ACTION:SHOW_FEATURE:email_sequences]
- * [ACTION:HIDE_CATEGORY:ecommerce]
+ * [ACTION:HIDE_CATEGORY:sales]
  * [ACTION:DEPLOY_SPECIALIST:lead_hunter]
  *
  * @module action-handler
@@ -111,12 +111,13 @@ const FEATURE_ALIASES: Record<string, string> = {
   'fine tuning': 'fine_tuning',
   'fine-tuning': 'fine_tuning',
 
-  // E-commerce
+  // Sales & Storefront
   'products': 'products',
+  'catalog': 'products',
   'orders': 'orders',
   'storefront': 'storefront',
-  'ecommerce': 'ecommerce',
-  'e-commerce': 'ecommerce',
+  'ecommerce': 'sales',
+  'e-commerce': 'sales',
 
   // Website
   'pages': 'website_pages',
@@ -144,8 +145,9 @@ const CATEGORY_ALIASES: Record<string, FeatureCategory> = {
   'content factory': 'content_factory',
   'ai': 'ai_workforce',
   'ai workforce': 'ai_workforce',
-  'ecommerce': 'ecommerce',
-  'e-commerce': 'ecommerce',
+  'ecommerce': 'sales',
+  'e-commerce': 'sales',
+  'sales': 'sales',
   'analytics': 'analytics',
   'website': 'website',
   'settings': 'settings',

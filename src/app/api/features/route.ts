@@ -56,7 +56,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       }
     }
 
-    // Reconcile: sync storefront enabled state into ecommerce module
+    // Reconcile: sync storefront enabled state into storefront feature module
     if (config) {
       try {
         const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
@@ -67,12 +67,12 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         ) as Record<string, unknown> | null;
 
         if (storefrontData && typeof storefrontData.enabled === 'boolean') {
-          if (config.modules.ecommerce !== storefrontData.enabled) {
-            config.modules.ecommerce = storefrontData.enabled;
+          if (config.modules.storefront !== storefrontData.enabled) {
+            config.modules.storefront = storefrontData.enabled;
             await saveFeatureConfig(config);
             logger.info('Feature config reconciled with storefront', {
               route: '/api/features',
-              ecommerce: storefrontData.enabled,
+              storefront: storefrontData.enabled,
             });
           }
         }
@@ -94,7 +94,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
           const validIds = new Set<string>([
             'crm_pipeline', 'conversations', 'sales_automation', 'email_outreach',
             'social_media', 'video_production', 'forms_surveys', 'workflows',
-            'proposals_docs', 'advanced_analytics', 'website_builder',
+            'proposals_docs', 'advanced_analytics', 'website_builder', 'storefront',
           ]);
 
           let changed = false;

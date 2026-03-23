@@ -31,7 +31,7 @@ export const ANALYTICS_TABS: SubpageNavItem[] = [
   { label: 'Overview', href: '/analytics' },
   { label: 'Revenue', href: '/analytics/revenue' },
   { label: 'CRM Analytics', href: '/analytics/sales' },
-  { label: 'E-Commerce', href: '/analytics/ecommerce' },
+  { label: 'Sales & Orders', href: '/analytics/ecommerce' },
   { label: 'Attribution', href: '/analytics/attribution' },
   { label: 'Workflows', href: '/analytics/workflows' },
   { label: 'Sequences', href: '/sequences/analytics' },

@@ -481,7 +481,7 @@ export type NavigationCategory =
   | 'outreach'
   | 'marketing'
   | 'ai_workforce'
-  | 'commerce'
+  | 'sales'
   | 'website'
   | 'analytics'
   | 'records'

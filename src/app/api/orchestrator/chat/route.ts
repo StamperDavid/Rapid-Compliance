@@ -761,7 +761,7 @@ about their specific industry and business context.
       sales_automation: 'Sales Automation',
       email_outreach: 'Email & Campaigns',
       social_media: 'Social Media',
-      ecommerce: 'E-Commerce & Storefront',
+      storefront: 'Online Storefront',
       website_builder: 'Website Builder',
       video_production: 'Video Production',
       forms_surveys: 'Forms & Surveys',

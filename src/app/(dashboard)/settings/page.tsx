@@ -22,12 +22,12 @@ export default function SettingsPage() {
 
   const primaryColor = theme?.colors?.primary?.main || 'var(--color-primary)';
 
-  // Build feature module cards — ecommerce links to /settings/storefront,
+  // Build feature module cards — storefront links to /settings/storefront,
   // all others link to /settings/module/{slug}
   const featureModuleCards = FEATURE_MODULES.map((mod) => {
     const slug = MODULE_ID_TO_SLUG[mod.id];
     const href =
-      mod.id === 'ecommerce'
+      mod.id === 'storefront'
         ? '/settings/storefront'
         : `/settings/module/${slug}`;
     return {
