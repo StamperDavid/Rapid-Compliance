@@ -5,7 +5,7 @@
 ## Context
 Repository: https://github.com/StamperDavid/Rapid-Compliance
 Branch: dev
-Last Updated: March 22, 2026 (V4C Calendar→Pipeline + Batch Generation + Campaign Orchestration)
+Last Updated: March 22, 2026 (V4C Calendar→Pipeline + Batch Gen + Campaign Orchestration + V4D Feature Module Wiring)
 
 ## Current State
 
@@ -30,10 +30,13 @@ Last Updated: March 22, 2026 (V4C Calendar→Pipeline + Batch Generation + Campa
 ### What to Build Next
 
 **Remaining work:**
+- Feature settings pages: every feature module needs its own settings page with an enable/disable toggle (like storefront has). Currently only ecommerce/storefront has one. Need: CRM, conversations, sales automation, email, social media, video, forms, workflows, proposals, analytics, website builder — 11 settings pages.
+- Each settings page toggle must sync to the feature module config (controls sidebar nav visibility)
 - React Query adoption (installed but not used anywhere)
 - YouTube/TikTok direct API uploads (currently creates social posts in Firestore; needs platform-specific upload endpoints)
+- E2E test coverage (~5%) — 10 critical user flows untested
 
-### What Was Built This Session (March 22, 2026 — V4C)
+### What Was Built This Session (March 22, 2026 — V4C + V4D)
 
 **V4D Feature Module Wiring — COMPLETE:**
 - Onboarding Step 4 of 5: explicit feature selection — client opts in per tool, everything defaults OFF
