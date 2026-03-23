@@ -54,6 +54,10 @@ import {
   Shield,
   Building2,
   TrendingUp,
+  // Catalog icons
+  ShoppingCart,
+  Tag,
+  Repeat,
   // Entity page icons
   ScrollText,
   CheckSquare,
@@ -129,15 +133,18 @@ const NAV_SECTIONS: NavigationSection[] = [
       { id: 'workflows', label: 'Workflows', href: '/workflows', icon: Workflow, iconColor: 'var(--color-warning)', requiredPermission: 'canCreateWorkflows', featureModuleId: 'workflows' },
     ],
   },
-  // ── Catalog (standalone — hub with tabs for products, services, orders, coupons, subscriptions) ─
+  // ── Catalog (products, services, orders, coupons, subscriptions) ────
   {
     id: 'catalog',
     label: 'Catalog',
     icon: Package,
     allowedRoles: ['owner', 'admin', 'manager', 'member'],
-    standalone: true,
     items: [
-      { id: 'catalog', label: 'Catalog', href: '/products', icon: Package, iconColor: 'var(--color-primary)', requiredPermission: 'canManageProducts' },
+      { id: 'products', label: 'Products', href: '/products', icon: Package, iconColor: 'var(--color-primary)', requiredPermission: 'canManageProducts' },
+      { id: 'services', label: 'Services', href: '/products/services', icon: Package, iconColor: 'var(--color-secondary)' },
+      { id: 'orders', label: 'Orders', href: '/orders', icon: ShoppingCart, iconColor: 'var(--color-warning)', requiredPermission: 'canProcessOrders' },
+      { id: 'coupons', label: 'Coupons', href: '/entities/coupons', icon: Tag, iconColor: 'var(--color-accent)' },
+      { id: 'subscriptions', label: 'Subscriptions', href: '/entities/subscriptions', icon: Repeat, iconColor: 'var(--color-cyan)' },
     ],
   },
   // ── Website (storefront is now a page type within the builder, accessed via Store tab) ─
