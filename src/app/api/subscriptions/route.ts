@@ -3,17 +3,23 @@
  * GET - Get current subscription
  * POST - Create subscription (with billing verification for paid tiers)
  * PUT - Update subscription (upgrade, downgrade, cancel, reactivate)
+ *
+ * Provider-agnostic: supports Stripe, Authorize.Net, PayPal, Square
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
-import { PLATFORM_ID } from '@/lib/constants/platform';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
-import { apiKeyService } from '@/lib/api-keys/api-key-service';
 import { getSubCollection } from '@/lib/firebase/collections';
+import {
+  verifyCheckoutSession,
+  cancelSubscription,
+  getSubscriptionProvider,
+  type SubscriptionProviderId,
+} from '@/lib/subscriptions/subscription-provider-service';
 import { z } from 'zod';
 
 export const dynamic = 'force-dynamic';
@@ -27,24 +33,27 @@ const TIER_RANK: Record<string, number> = {
   enterprise: 3,
 };
 
+const VALID_PROVIDERS = ['stripe', 'authorizenet', 'paypal', 'square'] as const;
+
 const createSubscriptionSchema = z.object({
   tier: z.enum(['free', 'starter', 'professional', 'enterprise']),
   billingPeriod: z.enum(['monthly', 'annual']).optional().default('monthly'),
+  checkoutSessionId: z.string().optional(),
+  paymentProvider: z.enum(VALID_PROVIDERS).optional(),
+  // Legacy field — still accepted for backward compatibility
   stripeSessionId: z.string().optional(),
   adminOverride: z.boolean().optional(),
   adminReason: z.string().optional(),
 }).refine(
   (data) => {
-    // Paid tiers require either stripeSessionId or adminOverride
     if (PAID_TIERS.includes(data.tier as typeof PAID_TIERS[number])) {
-      return Boolean(data.stripeSessionId) || Boolean(data.adminOverride);
+      return Boolean(data.checkoutSessionId) || Boolean(data.stripeSessionId) || Boolean(data.adminOverride);
     }
     return true;
   },
-  { message: 'Paid tiers require stripeSessionId or admin provisioning' }
+  { message: 'Paid tiers require checkoutSessionId or admin provisioning' }
 ).refine(
   (data) => {
-    // adminOverride requires a reason
     if (data.adminOverride) {
       return Boolean(data.adminReason?.trim());
     }
@@ -56,60 +65,12 @@ const createSubscriptionSchema = z.object({
 const updateSubscriptionSchema = z.object({
   tier: z.enum(['free', 'starter', 'professional', 'enterprise']).optional(),
   action: z.enum(['upgrade', 'downgrade', 'cancel', 'reactivate']).optional(),
+  checkoutSessionId: z.string().optional(),
+  paymentProvider: z.enum(VALID_PROVIDERS).optional(),
   stripeSessionId: z.string().optional(),
   adminOverride: z.boolean().optional(),
   adminReason: z.string().optional(),
 });
-
-/**
- * Verify a Stripe checkout session is complete and matches the user
- */
-async function verifyStripeCheckoutSession(
-  sessionId: string,
-  userEmail: string
-): Promise<{ valid: boolean; subscriptionId?: string; error?: string }> {
-  try {
-    const stripeKeys = await apiKeyService.getServiceKey(PLATFORM_ID, 'stripe');
-    const keys = stripeKeys as { secretKey?: string } | null;
-
-    if (!keys?.secretKey) {
-      return { valid: false, error: 'Stripe not configured' };
-    }
-
-    const Stripe = (await import('stripe')).default;
-    const stripe = new Stripe(keys.secretKey, { apiVersion: '2023-10-16' });
-
-    const session = await stripe.checkout.sessions.retrieve(sessionId);
-
-    // Session must be complete
-    if (session.status !== 'complete') {
-      return { valid: false, error: `Checkout session not complete (status: ${session.status})` };
-    }
-
-    // Payment must be paid or no_payment_required (100% promo code)
-    if (session.payment_status !== 'paid' && session.payment_status !== 'no_payment_required') {
-      return { valid: false, error: `Payment not confirmed (status: ${session.payment_status})` };
-    }
-
-    // Verify the session belongs to this user
-    const sessionEmail = session.customer_email ?? session.customer_details?.email;
-    const sessionRef = session.client_reference_id;
-    if (sessionEmail !== userEmail && sessionRef !== userEmail) {
-      return { valid: false, error: 'Session does not match authenticated user' };
-    }
-
-    // Extract subscription ID if present
-    const subscriptionId = typeof session.subscription === 'string'
-      ? session.subscription
-      : session.subscription?.id;
-
-    return { valid: true, subscriptionId: subscriptionId ?? undefined };
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown Stripe error';
-    logger.error('Stripe session verification failed', error instanceof Error ? error : new Error(message));
-    return { valid: false, error: `Stripe verification failed: ${message}` };
-  }
-}
 
 export async function GET(request: NextRequest) {
   try {
@@ -156,7 +117,11 @@ export async function POST(request: NextRequest) {
       return errors.badRequest(validation.error.errors[0]?.message ?? 'Invalid data');
     }
 
-    const { tier, billingPeriod, stripeSessionId, adminOverride, adminReason } = validation.data;
+    const { tier, billingPeriod, adminOverride, adminReason } = validation.data;
+    // Support both new field and legacy stripeSessionId
+    const sessionId = validation.data.checkoutSessionId ?? validation.data.stripeSessionId;
+    const provider: SubscriptionProviderId = validation.data.paymentProvider
+      ?? (validation.data.stripeSessionId ? 'stripe' : await getSubscriptionProvider());
     const isPaidTier = PAID_TIERS.includes(tier as typeof PAID_TIERS[number]);
     const user = authResult.user;
 
@@ -210,26 +175,27 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true, subscription }, { status: 201 });
     }
 
-    // ── Gate 3: Stripe-verified checkout — paid tiers ──
-    if (!stripeSessionId) {
-      return errors.badRequest('Paid tier requires a valid Stripe checkout session');
+    // ── Gate 3: Provider-verified checkout — paid tiers ──
+    if (!sessionId) {
+      return errors.badRequest('Paid tier requires a valid checkout session');
     }
 
     const userEmail = user.email;
     if (!userEmail) {
-      return errors.badRequest('User email is required for Stripe verification');
+      return errors.badRequest('User email is required for payment verification');
     }
 
-    const verification = await verifyStripeCheckoutSession(stripeSessionId, userEmail);
+    const verification = await verifyCheckoutSession(sessionId, userEmail, provider);
     if (!verification.valid) {
-      logger.warn('Stripe session verification failed', {
+      logger.warn('Checkout session verification failed', {
         route: '/api/subscriptions',
         userId: user.uid,
-        stripeSessionId,
+        sessionId,
+        provider,
         error: verification.error,
       });
       return NextResponse.json(
-        { success: false, error: verification.error ?? 'Stripe verification failed' },
+        { success: false, error: verification.error ?? 'Payment verification failed' },
         { status: 403 }
       );
     }
@@ -239,19 +205,26 @@ export async function POST(request: NextRequest) {
       tier,
       billingPeriod,
       status: 'active' as const,
-      stripeSessionId,
-      stripeSubscriptionId: verification.subscriptionId ?? null,
+      paymentProvider: provider,
+      checkoutSessionId: sessionId,
+      providerSubscriptionId: verification.subscriptionId ?? null,
+      // Legacy Stripe fields for backward compatibility
+      ...(provider === 'stripe' ? {
+        stripeSessionId: sessionId,
+        stripeSubscriptionId: verification.subscriptionId ?? null,
+      } : {}),
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
 
     await AdminFirestoreService.set(SUBSCRIPTIONS_PATH, user.uid, subscription);
 
-    logger.info('Subscription created via Stripe checkout', {
+    logger.info('Subscription created via checkout', {
       route: '/api/subscriptions',
       tier,
+      provider,
       userId: user.uid,
-      stripeSessionId,
+      sessionId,
     });
 
     return NextResponse.json({ success: true, subscription }, { status: 201 });
@@ -275,7 +248,8 @@ export async function PUT(request: NextRequest) {
       return errors.badRequest(validation.error.errors[0]?.message ?? 'Invalid data');
     }
 
-    const { tier, action, stripeSessionId, adminOverride, adminReason } = validation.data;
+    const { tier, action, adminOverride, adminReason } = validation.data;
+    const sessionId = validation.data.checkoutSessionId ?? validation.data.stripeSessionId;
     const user = authResult.user;
 
     const existing = await AdminFirestoreService.get(
@@ -287,34 +261,35 @@ export async function PUT(request: NextRequest) {
       return errors.notFound('No subscription found');
     }
 
+    // Determine provider from existing subscription or request
+    const provider: SubscriptionProviderId = validation.data.paymentProvider
+      ?? (existing.paymentProvider as SubscriptionProviderId | undefined)
+      ?? (existing.stripeSubscriptionId ? 'stripe' : await getSubscriptionProvider());
+
     const updates: Record<string, unknown> = {
       updatedAt: new Date().toISOString(),
     };
 
     if (action === 'cancel') {
-      // MAJ-8: Call Stripe API to cancel subscription at period end
-      const existingSubId = existing.stripeSubscriptionId;
-      if (typeof existingSubId === 'string' && existingSubId) {
-        try {
-          const stripeKeys = await apiKeyService.getServiceKey(PLATFORM_ID, 'stripe');
-          const keys = stripeKeys as { secretKey?: string } | null;
-          if (keys?.secretKey) {
-            const Stripe = (await import('stripe')).default;
-            const stripe = new Stripe(keys.secretKey, { apiVersion: '2023-10-16' });
-            await stripe.subscriptions.update(existingSubId, {
-              cancel_at_period_end: true,
-            });
+      // Cancel via the subscription's payment provider
+      const existingSubId = (existing.providerSubscriptionId ?? existing.stripeSubscriptionId) as string | undefined;
+      if (existingSubId) {
+        const cancelResult = await cancelSubscription(existingSubId, provider);
+        if (cancelResult.success) {
+          if (cancelResult.cancelAtPeriodEnd) {
             updates.cancelAtPeriodEnd = true;
-            logger.info('Stripe subscription set to cancel at period end', {
-              route: '/api/subscriptions',
-              stripeSubscriptionId: existingSubId,
-            });
           }
-        } catch (stripeError) {
-          logger.error('Failed to cancel Stripe subscription — local cancel will proceed',
-            stripeError instanceof Error ? stripeError : new Error(String(stripeError)), {
+          logger.info('Subscription cancelled via provider', {
+            route: '/api/subscriptions',
+            provider,
+            subscriptionId: existingSubId,
+          });
+        } else {
+          logger.error('Provider cancel failed — local cancel will proceed',
+            new Error(cancelResult.error ?? 'Unknown error'), {
               route: '/api/subscriptions',
-              stripeSubscriptionId: typeof existingSubId === 'string' ? existingSubId : 'unknown',
+              provider,
+              subscriptionId: existingSubId,
             });
         }
       }
@@ -332,7 +307,6 @@ export async function PUT(request: NextRequest) {
       const isUpgradeToPaid = newRank > currentRank && PAID_TIERS.includes(tier as typeof PAID_TIERS[number]);
 
       if (isUpgradeToPaid) {
-        // Admin override path
         if (adminOverride) {
           const isAdmin = user.role === 'owner' || user.role === 'admin';
           if (!isAdmin) {
@@ -353,23 +327,29 @@ export async function PUT(request: NextRequest) {
             userId: user.uid,
             reason: adminReason,
           });
-        } else if (stripeSessionId) {
-          // Stripe verification path
+        } else if (sessionId) {
           const userEmail = user.email;
           if (!userEmail) {
-            return errors.badRequest('User email required for Stripe verification');
+            return errors.badRequest('User email required for payment verification');
           }
-          const verification = await verifyStripeCheckoutSession(stripeSessionId, userEmail);
+          const upgradeProvider = validation.data.paymentProvider ?? provider;
+          const verification = await verifyCheckoutSession(sessionId, userEmail, upgradeProvider);
           if (!verification.valid) {
             return NextResponse.json(
-              { success: false, error: verification.error ?? 'Stripe verification failed' },
+              { success: false, error: verification.error ?? 'Payment verification failed' },
               { status: 403 }
             );
           }
-          updates.stripeSessionId = stripeSessionId;
-          updates.stripeSubscriptionId = verification.subscriptionId ?? null;
+          updates.paymentProvider = upgradeProvider;
+          updates.checkoutSessionId = sessionId;
+          updates.providerSubscriptionId = verification.subscriptionId ?? null;
+          // Legacy Stripe fields
+          if (upgradeProvider === 'stripe') {
+            updates.stripeSessionId = sessionId;
+            updates.stripeSubscriptionId = verification.subscriptionId ?? null;
+          }
         } else {
-          return errors.badRequest('Upgrading to a paid tier requires stripeSessionId or admin override');
+          return errors.badRequest('Upgrading to a paid tier requires checkoutSessionId or admin override');
         }
       }
 

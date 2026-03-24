@@ -5,7 +5,7 @@
 ## Context
 Repository: https://github.com/StamperDavid/Rapid-Compliance
 Branch: dev
-Last Updated: March 24, 2026 (Intelligence Discovery Hub Phase 7 — Approval Workflow + CRM Integration)
+Last Updated: March 24, 2026 (Subscription Provider Abstraction + Intelligence Discovery Hub Phase 7)
 
 ## Current State
 
@@ -39,14 +39,46 @@ Last Updated: March 24, 2026 (Intelligence Discovery Hub Phase 7 — Approval Wo
 - Field conflict resolution UI — show both values with confidence, let user pick
 
 **Other remaining work:**
-- Feature settings pages (11 modules need enable/disable toggle pages)
-- Storefront integration into Website Builder
-- Subscription provider abstraction — decouple subscription checkout/cancel/portal from Stripe-only to support Authorize.Net, Square, PayPal as subscription processors (user prefers Authorize.Net for fund safety)
 - React Query adoption
 - YouTube/TikTok direct API uploads
 - E2E test coverage expansion
 
-### What Was Built This Session (March 24, 2026 — Intelligence Discovery Hub Phase 7)
+**Already complete (verified March 24):**
+- ~~Feature settings pages~~ — Dynamic route `/settings/module/[slug]` handles all 11 modules
+- ~~Storefront integration~~ — `/website/store` tab integrated into Website Builder hub
+- ~~Subscription provider abstraction~~ — Provider-agnostic service supports Stripe, Authorize.Net, PayPal, Square
+
+### What Was Built This Session (March 24, 2026 — Subscription Provider Abstraction)
+
+**Subscription Provider Abstraction — Provider-Agnostic Billing — COMPLETE:**
+
+1. **`src/lib/subscriptions/subscription-provider-service.ts`** (850+ lines) — Full abstraction layer:
+   - **Types**: `SubscriptionCheckoutRequest/Result`, `SubscriptionVerifyResult`, `SubscriptionCancelResult`, `SubscriptionPortalResult`, `SubscriptionProviderId`
+   - **Dispatchers**: `createCheckoutSession()`, `verifyCheckoutSession()`, `cancelSubscription()`, `getPortalUrl()` — all route to provider-specific implementations
+   - **Config**: `getSubscriptionProvider()` reads from `settings/subscription_config` in Firestore, falls back to `'stripe'`
+   - **Stripe**: Full implementation — checkout sessions, session verification, cancel at period end, billing portal
+   - **Authorize.Net**: Accept Hosted payment page → ARB (Automated Recurring Billing), session tracking in Firestore `subscription_sessions` collection, ARBCancelSubscriptionRequest
+   - **PayPal**: Billing Plans API → Subscriptions API with approval redirect flow, subscription status verification, cancel with reason
+   - **Square**: Catalog subscription plan creation → payment link checkout, subscription cancellation
+
+2. **`POST /api/subscriptions/checkout`** — Refactored: accepts optional `provider` param, routes through `createCheckoutSession()`. Coupon validation preserved for Stripe. Returns `provider` in response for frontend tracking.
+
+3. **`POST/GET/PUT /api/subscriptions`** — Refactored: new `paymentProvider` and `checkoutSessionId` fields (backward-compatible with legacy `stripeSessionId`). Provider-agnostic verification and cancellation. Subscription doc now stores `paymentProvider`, `checkoutSessionId`, `providerSubscriptionId` alongside legacy Stripe fields.
+
+4. **`POST /api/subscriptions/portal`** — Refactored: reads provider from subscription doc, routes to Stripe portal / PayPal dashboard / settings page fallback.
+
+**Files created:** 1 (subscription-provider-service.ts)
+**Files modified:** 3 (checkout/route.ts, route.ts, portal/route.ts) + CONTINUATION_PROMPT.md
+**All passing:** `tsc --noEmit`, `eslint --max-warnings 0`, `next build`
+
+**Key design decisions:**
+- Backward compatible — existing Stripe subscriptions continue to work via legacy `stripeSessionId`/`stripeSubscriptionId` fields
+- Provider determined by: (1) request `provider` param, (2) stored `paymentProvider` on subscription, (3) platform `subscription_config` setting, (4) fallback to `'stripe'`
+- Authorize.Net uses hosted payment page (Accept Hosted) for PCI compliance — actual ARB subscription created via webhook after first payment
+- PayPal creates both a billing plan AND a subscription in one flow
+- Square creates catalog subscription plan + payment link
+
+### What Was Built Earlier This Session (March 24, 2026 — Intelligence Discovery Hub Phase 7)
 
 **Phase 7: Approval Workflow + CRM Integration — COMPLETE:**
 

@@ -1,19 +1,23 @@
 /**
  * POST /api/subscriptions/portal
- * Creates a Stripe Customer Portal session for subscription management.
- * The customer ID is resolved from the stored stripeSubscriptionId.
+ * Creates a billing portal session for subscription management.
+ *
+ * Provider-agnostic: routes to Stripe Customer Portal, PayPal dashboard,
+ * or falls back to local settings page for providers without hosted portals.
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireAuth } from '@/lib/auth/api-auth';
-import { apiKeyService } from '@/lib/api-keys/api-key-service';
-import { PLATFORM_ID } from '@/lib/constants/platform';
 import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { getSubCollection } from '@/lib/firebase/collections';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
+import {
+  getPortalUrl,
+  type SubscriptionProviderId,
+} from '@/lib/subscriptions/subscription-provider-service';
 
 export const dynamic = 'force-dynamic';
 
@@ -41,62 +45,42 @@ export async function POST(request: NextRequest) {
       return errors.badRequest(parseResult.error.errors[0]?.message ?? 'Invalid request body');
     }
 
-    // Retrieve the user's subscription document to find the Stripe subscription ID
     const subscription = await AdminFirestoreService.get(SUBSCRIPTIONS_PATH, authResult.user.uid);
 
-    const stripeSubscriptionId =
-      subscription && typeof subscription.stripeSubscriptionId === 'string' && subscription.stripeSubscriptionId
-        ? subscription.stripeSubscriptionId
-        : null;
+    // Determine provider and subscription ID from stored subscription
+    const provider = (subscription?.paymentProvider as SubscriptionProviderId | undefined) ??
+      (subscription?.stripeSubscriptionId ? 'stripe' : null);
+    const subscriptionId = (subscription?.providerSubscriptionId ?? subscription?.stripeSubscriptionId) as string | undefined;
 
-    if (!stripeSubscriptionId) {
-      return errors.notFound('No Stripe subscription found. Use the billing portal after completing a Stripe checkout.');
+    if (!provider || !subscriptionId) {
+      return errors.notFound('No active payment subscription found. Use the billing portal after completing checkout.');
     }
 
-    // Resolve Stripe API key
-    const stripeKeys = await apiKeyService.getServiceKey(PLATFORM_ID, 'stripe');
-    const secretKey =
-      stripeKeys !== null &&
-      typeof stripeKeys === 'object' &&
-      'secretKey' in stripeKeys &&
-      typeof stripeKeys.secretKey === 'string'
-        ? stripeKeys.secretKey
-        : null;
-
-    if (!secretKey) {
-      return errors.badRequest('Stripe not configured. Please add Stripe API keys in settings.');
-    }
-
-    const Stripe = (await import('stripe')).default;
-    const stripe = new Stripe(secretKey, { apiVersion: '2023-10-16' });
-
-    // Retrieve the Stripe subscription to obtain the customer ID
-    const stripeSub = await stripe.subscriptions.retrieve(stripeSubscriptionId);
-    const customerId =
-      typeof stripeSub.customer === 'string' ? stripeSub.customer : stripeSub.customer.id;
-
-    // Build return URL from request origin when the caller did not supply one
     const origin = request.headers.get('origin') ?? 'https://rapidcompliance.us';
     const returnUrl = parseResult.data.returnUrl ?? `${origin}/settings/billing`;
 
-    const session = await stripe.billingPortal.sessions.create({
-      customer: customerId,
-      return_url: returnUrl,
-    });
+    const result = await getPortalUrl(subscriptionId, returnUrl, provider);
+
+    if (!result.success) {
+      return errors.externalService(
+        provider,
+        new Error(result.error ?? 'Failed to create portal session')
+      );
+    }
 
     logger.info('Billing portal session created', {
       route: '/api/subscriptions/portal',
       userId: authResult.user.uid,
-      customerId,
+      provider,
     });
 
-    return NextResponse.json({ success: true, url: session.url });
+    return NextResponse.json({ success: true, url: result.url, provider });
   } catch (error: unknown) {
     logger.error(
       'Failed to create billing portal session',
       error instanceof Error ? error : new Error(String(error)),
       { route: '/api/subscriptions/portal' }
     );
-    return errors.externalService('Stripe', error instanceof Error ? error : new Error(String(error)));
+    return errors.internal('Failed to create billing portal session');
   }
 }

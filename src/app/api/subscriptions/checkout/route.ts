@@ -1,12 +1,13 @@
 /**
- * Create Stripe Checkout session for subscription upgrades
- * POST - Creates a Stripe Checkout session and returns the URL
+ * Create checkout session for subscription upgrades
+ * POST - Creates a provider-specific checkout session and returns the URL
+ *
+ * Supports: Stripe, Authorize.Net, PayPal, Square
+ * Provider is determined by platform subscription config (default: Stripe)
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/api-auth';
-import { apiKeyService } from '@/lib/api-keys/api-key-service';
-import { PLATFORM_ID } from '@/lib/constants/platform';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
@@ -14,6 +15,13 @@ import { getTier } from '@/lib/pricing/subscription-tiers';
 import { adminDb } from '@/lib/firebase/admin';
 import { COLLECTIONS } from '@/lib/firebase/collections';
 import type { PlatformCoupon } from '@/types/pricing';
+import {
+  createCheckoutSession,
+  getSubscriptionProvider,
+  type SubscriptionProviderId,
+} from '@/lib/subscriptions/subscription-provider-service';
+import { apiKeyService } from '@/lib/api-keys/api-key-service';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 import { z } from 'zod';
 
 export const dynamic = 'force-dynamic';
@@ -22,6 +30,7 @@ const checkoutSchema = z.object({
   tier: z.enum(['starter', 'professional', 'enterprise']),
   billingPeriod: z.enum(['monthly', 'annual']).default('monthly'),
   couponCode: z.string().optional(),
+  provider: z.enum(['stripe', 'authorizenet', 'paypal', 'square']).optional(),
 });
 
 export async function POST(request: NextRequest) {
@@ -42,34 +51,24 @@ export async function POST(request: NextRequest) {
       return errors.badRequest(parseResult.error.errors[0]?.message ?? 'Invalid checkout data');
     }
 
-    const { tier, billingPeriod, couponCode } = parseResult.data;
+    const { tier, billingPeriod, couponCode, provider } = parseResult.data;
     const tierConfig = getTier(tier);
 
     if (!tierConfig) {
       return errors.badRequest('Invalid subscription tier');
     }
 
-    const stripeKeys = await apiKeyService.getServiceKey(PLATFORM_ID, 'stripe') as { secretKey?: string } | null;
-    if (!stripeKeys?.secretKey) {
-      return errors.badRequest('Stripe not configured. Please add Stripe API keys in settings.');
-    }
-
-    const Stripe = (await import('stripe')).default;
-    const stripe = new Stripe(stripeKeys.secretKey, { apiVersion: '2023-10-16' });
-
-    const priceInCents = billingPeriod === 'annual' ? tierConfig.annualPriceCents : tierConfig.monthlyPriceCents;
-    const interval = billingPeriod === 'annual' ? 'year' as const : 'month' as const;
+    const resolvedProvider: SubscriptionProviderId = provider ?? await getSubscriptionProvider();
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
 
-    // Validate coupon if provided, before creating the Stripe session
+    // Validate and create Stripe coupon if applicable (Stripe-only feature)
     let stripeCouponId: string | undefined;
-    if (couponCode) {
+    if (couponCode && resolvedProvider === 'stripe') {
       if (!adminDb) {
         return errors.internal('Database not available for coupon validation');
       }
 
       const normalizedCode = couponCode.toUpperCase().trim();
-      // The coupon service uses billing cycle 'monthly' | 'yearly'; map 'annual' → 'yearly'
       const billingCycleForCoupon = billingPeriod === 'annual' ? 'yearly' : 'monthly';
 
       const couponsRef = adminDb.collection(COLLECTIONS.PLATFORM_COUPONS);
@@ -111,7 +110,6 @@ export async function POST(request: NextRequest) {
         return errors.badRequest(`This coupon is not valid for ${billingPeriod} billing`);
       }
 
-      // Free-forever coupons bypass Stripe entirely — they cannot be applied through a checkout session
       const isFreeForever = coupon.is_free_forever ||
         (coupon.discount_type === 'percentage' && coupon.value === 100);
       if (isFreeForever) {
@@ -120,16 +118,22 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // Create an ad-hoc Stripe coupon to apply to the session
-      const stripeCoupon = await stripe.coupons.create({
-        percent_off: coupon.discount_type === 'percentage' ? coupon.value : undefined,
-        amount_off: coupon.discount_type === 'fixed' ? Math.round(coupon.value * 100) : undefined,
-        currency: coupon.discount_type === 'fixed' ? 'usd' : undefined,
-        duration: 'once',
-        name: `Coupon: ${normalizedCode}`,
-      });
+      // Create ad-hoc Stripe coupon
+      const stripeKeys = await apiKeyService.getServiceKey(PLATFORM_ID, 'stripe') as { secretKey?: string } | null;
+      if (stripeKeys?.secretKey) {
+        const Stripe = (await import('stripe')).default;
+        const stripe = new Stripe(stripeKeys.secretKey, { apiVersion: '2023-10-16' });
 
-      stripeCouponId = stripeCoupon.id;
+        const stripeCoupon = await stripe.coupons.create({
+          percent_off: coupon.discount_type === 'percentage' ? coupon.value : undefined,
+          amount_off: coupon.discount_type === 'fixed' ? Math.round(coupon.value * 100) : undefined,
+          currency: coupon.discount_type === 'fixed' ? 'usd' : undefined,
+          duration: 'once',
+          name: `Coupon: ${normalizedCode}`,
+        });
+
+        stripeCouponId = stripeCoupon.id;
+      }
 
       logger.info('Platform coupon validated for subscription checkout', {
         route: '/api/subscriptions/checkout',
@@ -140,55 +144,43 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const session = await stripe.checkout.sessions.create({
-      mode: 'subscription',
-      line_items: [{
-        price_data: {
-          currency: 'usd',
-          product_data: {
-            name: `SalesVelocity.ai ${tierConfig.label} Plan`,
-            description: `${tierConfig.label} subscription — billed ${billingPeriod === 'annual' ? 'annually' : 'monthly'}`,
-          },
-          unit_amount: priceInCents,
-          recurring: { interval },
-        },
-        quantity: 1,
-      }],
-      ...(stripeCouponId !== undefined && { discounts: [{ coupon: stripeCouponId }] }),
-      success_url: `${appUrl}/settings/subscription?checkout=success&session_id={CHECKOUT_SESSION_ID}&tier=${tier}`,
-      cancel_url: `${appUrl}/settings/subscription?checkout=cancelled`,
-      customer_email: authResult.user.email ?? undefined,
-      client_reference_id: authResult.user.email ?? authResult.user.uid,
-      metadata: {
-        tier,
-        billingPeriod,
-        userId: authResult.user.uid,
-        ...(couponCode !== undefined && { couponCode: couponCode.toUpperCase().trim() }),
-      },
-    });
+    const result = await createCheckoutSession({
+      tier: tierConfig,
+      billingPeriod,
+      userId: authResult.user.uid,
+      userEmail: authResult.user.email ?? '',
+      couponCode: couponCode?.toUpperCase().trim(),
+      stripeCouponId,
+      appUrl,
+    }, resolvedProvider);
 
-    if (!session.url) {
-      return errors.internal('Failed to create Stripe checkout session');
+    if (!result.success) {
+      return errors.externalService(
+        resolvedProvider,
+        new Error(result.error ?? 'Checkout session creation failed')
+      );
     }
 
     logger.info('Subscription checkout session created', {
       route: '/api/subscriptions/checkout',
       tier,
       billingPeriod,
+      provider: resolvedProvider,
       userId: authResult.user.uid,
-      sessionId: session.id,
+      sessionId: result.sessionId,
       couponApplied: couponCode !== undefined,
     });
 
     return NextResponse.json({
       success: true,
-      url: session.url,
-      sessionId: session.id,
+      url: result.url,
+      sessionId: result.sessionId,
+      provider: result.provider,
     });
   } catch (error: unknown) {
     logger.error('Subscription checkout error', error instanceof Error ? error : new Error(String(error)), {
       route: '/api/subscriptions/checkout',
     });
-    return errors.externalService('Stripe', error instanceof Error ? error : new Error(String(error)));
+    return errors.internal('Subscription checkout failed');
   }
 }
