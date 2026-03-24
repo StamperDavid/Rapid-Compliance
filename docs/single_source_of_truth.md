@@ -1,7 +1,7 @@
 # SalesVelocity.ai - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** March 23, 2026 (Catalog item type enforcement, E2E test coverage expansion — 16 spec files)
+**Last Updated:** March 24, 2026 (Intelligence Discovery Hub Phase 7 — Approval Workflow + CRM Integration)
 **Branches:** `dev` (latest)
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Architecture:** Single-Tenant Penthouse Model (development strategy — multi-tenant SaaS product)
@@ -37,7 +37,7 @@
 | Metric | Count | Status |
 |--------|-------|--------|
 | Physical Routes (page.tsx) | 184 | Verified March 20, 2026 |
-| API Endpoints (route.ts) | 393 | Verified March 20, 2026 |
+| API Endpoints (route.ts) | 404 | Verified March 24, 2026 (+11 intelligence discovery) |
 | AI Agents | 52 | **52 FUNCTIONAL (46 swarm + 6 standalone)** |
 | RBAC Roles | 4 | owner / admin / manager / member |
 | TypeScript Files | 1,628 | Verified March 20, 2026 |
@@ -676,6 +676,16 @@ SalesVelocity.ai is a **multi-tenant SaaS product** currently running on the Pen
 - `/growth/strategy` — 3-tier strategy comparison (Aggressive/Competitive/Scrappy), approve/reject, budget config, cheaper alternatives
 - `/growth/ai-visibility` — AI search visibility score, query results, competitor presence, run check
 - `/growth/activity` — Timeline activity feed with type filtering and icon/color coding
+
+**Intelligence Discovery Hub (NEW March 24):**
+- `/intelligence/discovery` — 3-panel layout: Jasper chat (left), findings grid (center), operation log (right)
+- 9 Jasper discovery tools: list_discovery_sources, configure_source, start_operation, get_operation_status, get_findings_summary, convert_findings_to_leads, scrape_website, research_competitors, scan_tech_stack
+- Source templates: FMCSA, State Business Filings, SAM.gov
+- Multi-hop enrichment: Google → website → social → AI synthesis
+- Approval workflow: approve/reject/bulk-approve, auto-approve above confidence threshold
+- CRM integration: convert approved findings to leads (acquisitionMethod: 'intelligence_discovery'), CSV export
+- Scheduled monitoring: cron every 6h for active sources
+- 11 API routes under `/api/intelligence/discovery/`
 
 **AI Workforce:**
 - `/mission-control` (NEW Sprint 18 — 3-panel live delegation tracker: sidebar, timeline, step detail)
@@ -1496,6 +1506,31 @@ This script:
 **Components (13):** `LeadResearchPage`, `ResearchChatPanel`, `ChatMessageList`, `ChatMessage`, `ChatInput`, `IcpSummaryBadge`, `ResearchControls`, `ResultsPanel`, `ResultCard`, `ResultsBulkActionBar`, `UrlSourcesPanel`, `UrlSourceItem`, `IcpSettingsDrawer` — all in `src/components/lead-research/`.
 
 **Hook:** `src/hooks/useLeadResearch.ts` — centralized state for chat, ICP profiles, batches, results, URL sources, schedule, field selections, CSV export.
+
+#### Intelligence Discovery Hub (NEW March 24)
+
+| Endpoint | Method | Purpose | Status |
+|----------|--------|---------|--------|
+| `/api/intelligence/discovery/sources` | GET/POST | List sources + templates / Create source (from template or scratch) | FUNCTIONAL |
+| `/api/intelligence/discovery/sources/[sourceId]` | GET/PUT/DELETE | CRUD for individual source configuration | FUNCTIONAL |
+| `/api/intelligence/discovery/operations` | GET/POST | List operations / Create new scraping operation | FUNCTIONAL |
+| `/api/intelligence/discovery/operations/[operationId]` | GET | Get operation detail + stats | FUNCTIONAL |
+| `/api/intelligence/discovery/operations/[operationId]/findings` | GET | List findings for operation (paginated, filterable) | FUNCTIONAL |
+| `/api/intelligence/discovery/findings/[findingId]` | GET/PATCH | Get finding detail / Update approval status | FUNCTIONAL |
+| `/api/intelligence/discovery/findings/[findingId]/enrich` | POST | Trigger multi-hop enrichment (fire-and-forget async) | FUNCTIONAL |
+| `/api/intelligence/discovery/findings/convert` | POST | Bulk convert approved findings to CRM leads | FUNCTIONAL |
+| `/api/intelligence/discovery/findings/export` | GET | CSV export of findings (paginated, approval filter) | FUNCTIONAL |
+| `/api/intelligence/discovery/actions` | GET | Audit log of discovery actions | FUNCTIONAL |
+| `/api/intelligence/discovery/chat` | POST | AI chat with 9 discovery tools (Claude 3.5 Sonnet via OpenRouter) | FUNCTIONAL |
+| `/api/cron/discovery-source-monitor` | GET | Scheduled source monitoring every 6h | FUNCTIONAL |
+
+**Discovery Tools (9):** `list_discovery_sources`, `configure_source`, `start_operation`, `get_operation_status`, `get_findings_summary`, `convert_findings_to_leads`, `scrape_website`, `research_competitors`, `scan_tech_stack`. Defined in `src/lib/orchestrator/intelligence-discovery-tools.ts`.
+
+**Services:** `discovery-service.ts` (CRUD), `discovery-source-service.ts` (sources + templates), `approval-service.ts` (auto-approve, stats), `lead-converter.ts` (finding → lead mapping, CSV export), `multi-hop-enricher.ts` (enrichment orchestration), `confidence-merger.ts` (cross-source confidence scoring).
+
+**Components (8):** `DiscoveryHub`, `DiscoveryChatPanel`, `FindingsGrid`, `FindingRow`, `FindingsBulkActionBar`, `OperationLogPanel`, `ActionDetailDrawer`, `SourceConfigDrawer` — all in `src/components/intelligence-discovery/`.
+
+**Hook:** `src/hooks/useIntelligenceDiscovery.ts` — centralized state for sources, operations, findings, selection, approval, enrichment, conversion, CSV export, and chat.
 
 #### Website Migration Pipeline (NEW Sprint 21)
 
