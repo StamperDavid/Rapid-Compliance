@@ -4907,49 +4907,59 @@ Select cohesive settings that create a professional, unified visual language acr
         const builderStart = Date.now();
         trackMissionStep(context, 'delegate_to_builder', 'RUNNING', { toolArgs: args });
 
-        const { ArchitectManager } = await import('@/lib/agents/architect/manager');
-        const manager = new ArchitectManager();
-        await manager.initialize();
+        try {
+          const { ArchitectManager } = await import('@/lib/agents/architect/manager');
+          const manager = new ArchitectManager();
+          await manager.initialize();
 
-        // Build architect request from args
-        const architectPayload = {
-          niche: args.niche as string,
-          objective: args.objective as string | undefined,
-          audience: args.audience as string | undefined,
-          pageType: args.pageType as string | undefined,
-          includeDesign: args.includeDesign !== false,
-          includeFunnel: args.includeFunnel !== false,
-          includeCopy: args.includeCopy !== false,
-        };
+          // Build architect request from args
+          const architectPayload = {
+            niche: args.niche as string,
+            objective: args.objective as string | undefined,
+            audience: args.audience as string | undefined,
+            pageType: args.pageType as string | undefined,
+            includeDesign: args.includeDesign !== false,
+            includeFunnel: args.includeFunnel !== false,
+            includeCopy: args.includeCopy !== false,
+          };
 
-        const result = await manager.execute({
-          id: `architect_${Date.now()}`,
-          timestamp: new Date(),
-          from: 'JASPER',
-          to: 'ARCHITECT_MANAGER',
-          type: 'COMMAND',
-          priority: 'NORMAL',
-          payload: architectPayload,
-          requiresResponse: true,
-          traceId: `trace_${Date.now()}`,
-        });
+          const result = await manager.execute({
+            id: `architect_${Date.now()}`,
+            timestamp: new Date(),
+            from: 'JASPER',
+            to: 'ARCHITECT_MANAGER',
+            type: 'COMMAND',
+            priority: 'NORMAL',
+            payload: architectPayload,
+            requiresResponse: true,
+            traceId: `trace_${Date.now()}`,
+          });
 
-        const builderDuration = Date.now() - builderStart;
-        trackMissionStep(context, 'delegate_to_builder',
-          result.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED',
-          { summary: `Architect: ${result.status}`, durationMs: builderDuration, toolResult: JSON.stringify(result.data) }
-        );
+          const builderDuration = Date.now() - builderStart;
+          trackMissionStep(context, 'delegate_to_builder',
+            result.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED',
+            { summary: `Architect: ${result.status}`, durationMs: builderDuration, toolResult: JSON.stringify(result.data) }
+          );
 
-        content = JSON.stringify({
-          status: result.status,
-          data: result.data,
-          errors: result.errors,
-          manager: 'ARCHITECT_MANAGER',
-          reviewLink: getReviewLink('delegate_to_builder', context?.missionId),
-          delegatedTo: result.data && typeof result.data === 'object' && 'delegations' in result.data
-            ? (result.data as Record<string, unknown>).delegations
-            : 'See data for details',
-        });
+          content = JSON.stringify({
+            status: result.status,
+            data: result.data,
+            errors: result.errors,
+            manager: 'ARCHITECT_MANAGER',
+            reviewLink: getReviewLink('delegate_to_builder', context?.missionId),
+            delegatedTo: result.data && typeof result.data === 'object' && 'delegations' in result.data
+              ? (result.data as Record<string, unknown>).delegations
+              : 'See data for details',
+          });
+        } catch (builderError: unknown) {
+          const errorMsg = builderError instanceof Error ? builderError.message : 'Unknown error';
+          trackMissionStep(context, 'delegate_to_builder', 'FAILED', {
+            summary: `Builder: FAILED — ${errorMsg}`,
+            durationMs: Date.now() - builderStart,
+            error: errorMsg,
+          });
+          content = JSON.stringify({ error: errorMsg, manager: 'ARCHITECT_MANAGER' });
+        }
         break;
       }
 
@@ -4960,76 +4970,86 @@ Select cohesive settings that create a professional, unified visual language acr
         const salesStart = Date.now();
         trackMissionStep(context, 'delegate_to_sales', 'RUNNING', { toolArgs: args });
 
-        const { RevenueDirector } = await import('@/lib/agents/sales/revenue/manager');
-        const director = new RevenueDirector();
-        await director.initialize();
+        try {
+          const { RevenueDirector } = await import('@/lib/agents/sales/revenue/manager');
+          const director = new RevenueDirector();
+          await director.initialize();
 
-        // Parse optional JSON parameters
-        let leadData: Record<string, unknown> = {};
-        let scraperData: Record<string, unknown> | undefined;
-        let interactionHistory: Record<string, unknown> | undefined;
+          // Parse optional JSON parameters
+          let leadData: Record<string, unknown> = {};
+          let scraperData: Record<string, unknown> | undefined;
+          let interactionHistory: Record<string, unknown> | undefined;
 
-        if (args.leadData) {
-          try {
-            leadData = JSON.parse(args.leadData as string) as Record<string, unknown>;
-          } catch {
-            leadData = { raw: args.leadData };
+          if (args.leadData) {
+            try {
+              leadData = JSON.parse(args.leadData as string) as Record<string, unknown>;
+            } catch {
+              leadData = { raw: args.leadData };
+            }
           }
-        }
 
-        if (args.scraperData) {
-          try {
-            scraperData = JSON.parse(args.scraperData as string) as Record<string, unknown>;
-          } catch {
-            scraperData = undefined;
+          if (args.scraperData) {
+            try {
+              scraperData = JSON.parse(args.scraperData as string) as Record<string, unknown>;
+            } catch {
+              scraperData = undefined;
+            }
           }
-        }
 
-        if (args.interactionHistory) {
-          try {
-            interactionHistory = JSON.parse(args.interactionHistory as string) as Record<string, unknown>;
-          } catch {
-            interactionHistory = undefined;
+          if (args.interactionHistory) {
+            try {
+              interactionHistory = JSON.parse(args.interactionHistory as string) as Record<string, unknown>;
+            } catch {
+              interactionHistory = undefined;
+            }
           }
+
+          const salesPayload = {
+            action: args.action as string,
+            leadId: args.leadId as string | undefined,
+            leadData,
+            scraperData,
+            outreachChannel: args.outreachChannel as string | undefined,
+            interactionHistory,
+          };
+
+          const result = await director.execute({
+            id: `sales_${Date.now()}`,
+            timestamp: new Date(),
+            from: 'JASPER',
+            to: 'REVENUE_DIRECTOR',
+            type: 'COMMAND',
+            priority: 'NORMAL',
+            payload: salesPayload,
+            requiresResponse: true,
+            traceId: `trace_${Date.now()}`,
+          });
+
+          const salesDuration = Date.now() - salesStart;
+          trackMissionStep(context, 'delegate_to_sales',
+            result.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED',
+            { summary: `Sales: ${result.status}`, durationMs: salesDuration, toolResult: JSON.stringify(result.data) }
+          );
+
+          content = JSON.stringify({
+            status: result.status,
+            data: result.data,
+            errors: result.errors,
+            manager: 'REVENUE_DIRECTOR',
+            reviewLink: getReviewLink('delegate_to_sales', context?.missionId),
+            delegatedTo: result.data && typeof result.data === 'object' && 'delegations' in result.data
+              ? (result.data as Record<string, unknown>).delegations
+              : 'See data for details',
+          });
+        } catch (salesError: unknown) {
+          const errorMsg = salesError instanceof Error ? salesError.message : 'Unknown error';
+          trackMissionStep(context, 'delegate_to_sales', 'FAILED', {
+            summary: `Sales: FAILED — ${errorMsg}`,
+            durationMs: Date.now() - salesStart,
+            error: errorMsg,
+          });
+          content = JSON.stringify({ error: errorMsg, manager: 'REVENUE_DIRECTOR' });
         }
-
-        const salesPayload = {
-          action: args.action as string,
-          leadId: args.leadId as string | undefined,
-          leadData,
-          scraperData,
-          outreachChannel: args.outreachChannel as string | undefined,
-          interactionHistory,
-        };
-
-        const result = await director.execute({
-          id: `sales_${Date.now()}`,
-          timestamp: new Date(),
-          from: 'JASPER',
-          to: 'REVENUE_DIRECTOR',
-          type: 'COMMAND',
-          priority: 'NORMAL',
-          payload: salesPayload,
-          requiresResponse: true,
-          traceId: `trace_${Date.now()}`,
-        });
-
-        const salesDuration = Date.now() - salesStart;
-        trackMissionStep(context, 'delegate_to_sales',
-          result.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED',
-          { summary: `Sales: ${result.status}`, durationMs: salesDuration, toolResult: JSON.stringify(result.data) }
-        );
-
-        content = JSON.stringify({
-          status: result.status,
-          data: result.data,
-          errors: result.errors,
-          manager: 'REVENUE_DIRECTOR',
-          reviewLink: getReviewLink('delegate_to_sales', context?.missionId),
-          delegatedTo: result.data && typeof result.data === 'object' && 'delegations' in result.data
-            ? (result.data as Record<string, unknown>).delegations
-            : 'See data for details',
-        });
         break;
       }
 
@@ -5040,50 +5060,60 @@ Select cohesive settings that create a professional, unified visual language acr
         const marketingStart = Date.now();
         trackMissionStep(context, 'delegate_to_marketing', 'RUNNING', { toolArgs: args });
 
-        const { MarketingManager } = await import('@/lib/agents/marketing/manager');
-        const manager = new MarketingManager();
-        await manager.initialize();
+        try {
+          const { MarketingManager } = await import('@/lib/agents/marketing/manager');
+          const manager = new MarketingManager();
+          await manager.initialize();
 
-        // Build campaign goal from args
-        const campaignPayload = {
-          goal: args.goal as string,
-          platform: args.platform as string | undefined,
-          niche: args.niche as string | undefined,
-          audience: args.audience as string | undefined,
-          budget: args.budget as string | undefined,
-          contentType: args.contentType as string | undefined,
-          message: args.goal as string, // For platform detection
-          targetAudience: args.audience ? { demographics: args.audience as string } : undefined,
-        };
+          // Build campaign goal from args
+          const campaignPayload = {
+            goal: args.goal as string,
+            platform: args.platform as string | undefined,
+            niche: args.niche as string | undefined,
+            audience: args.audience as string | undefined,
+            budget: args.budget as string | undefined,
+            contentType: args.contentType as string | undefined,
+            message: args.goal as string, // For platform detection
+            targetAudience: args.audience ? { demographics: args.audience as string } : undefined,
+          };
 
-        const result = await manager.execute({
-          id: `marketing_${Date.now()}`,
-          timestamp: new Date(),
-          from: 'JASPER',
-          to: 'MARKETING_MANAGER',
-          type: 'COMMAND',
-          priority: 'NORMAL',
-          payload: campaignPayload,
-          requiresResponse: true,
-          traceId: `trace_${Date.now()}`,
-        });
+          const result = await manager.execute({
+            id: `marketing_${Date.now()}`,
+            timestamp: new Date(),
+            from: 'JASPER',
+            to: 'MARKETING_MANAGER',
+            type: 'COMMAND',
+            priority: 'NORMAL',
+            payload: campaignPayload,
+            requiresResponse: true,
+            traceId: `trace_${Date.now()}`,
+          });
 
-        const marketingDuration = Date.now() - marketingStart;
-        trackMissionStep(context, 'delegate_to_marketing',
-          result.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED',
-          { summary: `Marketing: ${result.status}`, durationMs: marketingDuration, toolResult: JSON.stringify(result.data) }
-        );
+          const marketingDuration = Date.now() - marketingStart;
+          trackMissionStep(context, 'delegate_to_marketing',
+            result.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED',
+            { summary: `Marketing: ${result.status}`, durationMs: marketingDuration, toolResult: JSON.stringify(result.data) }
+          );
 
-        content = JSON.stringify({
-          status: result.status,
-          data: result.data,
-          errors: result.errors,
-          manager: 'MARKETING_MANAGER',
-          reviewLink: getReviewLink('delegate_to_marketing', context?.missionId),
-          delegatedTo: result.data && typeof result.data === 'object' && 'platformStrategy' in result.data
-            ? (result.data as Record<string, unknown>).platformStrategy
-            : 'See data for details',
-        });
+          content = JSON.stringify({
+            status: result.status,
+            data: result.data,
+            errors: result.errors,
+            manager: 'MARKETING_MANAGER',
+            reviewLink: getReviewLink('delegate_to_marketing', context?.missionId),
+            delegatedTo: result.data && typeof result.data === 'object' && 'platformStrategy' in result.data
+              ? (result.data as Record<string, unknown>).platformStrategy
+              : 'See data for details',
+          });
+        } catch (marketingError: unknown) {
+          const errorMsg = marketingError instanceof Error ? marketingError.message : 'Unknown error';
+          trackMissionStep(context, 'delegate_to_marketing', 'FAILED', {
+            summary: `Marketing: FAILED — ${errorMsg}`,
+            durationMs: Date.now() - marketingStart,
+            error: errorMsg,
+          });
+          content = JSON.stringify({ error: errorMsg, manager: 'MARKETING_MANAGER' });
+        }
         break;
       }
 
@@ -5094,41 +5124,51 @@ Select cohesive settings that create a professional, unified visual language acr
         const trustStart = Date.now();
         trackMissionStep(context, 'delegate_to_trust', 'RUNNING', { toolArgs: args });
 
-        const { ReputationManager } = await import('@/lib/agents/trust/reputation/manager');
-        const trustManager = new ReputationManager();
-        await trustManager.initialize();
+        try {
+          const { ReputationManager } = await import('@/lib/agents/trust/reputation/manager');
+          const trustManager = new ReputationManager();
+          await trustManager.initialize();
 
-        const trustPayload = {
-          action: args.action as string,
-          target: args.target as string | undefined,
-          context: args.context as string | undefined,
-        };
+          const trustPayload = {
+            action: args.action as string,
+            target: args.target as string | undefined,
+            context: args.context as string | undefined,
+          };
 
-        const trustResult = await trustManager.execute({
-          id: `trust_${Date.now()}`,
-          timestamp: new Date(),
-          from: 'JASPER',
-          to: 'REPUTATION_MANAGER',
-          type: 'COMMAND',
-          priority: 'NORMAL',
-          payload: trustPayload,
-          requiresResponse: true,
-          traceId: `trace_${Date.now()}`,
-        });
+          const trustResult = await trustManager.execute({
+            id: `trust_${Date.now()}`,
+            timestamp: new Date(),
+            from: 'JASPER',
+            to: 'REPUTATION_MANAGER',
+            type: 'COMMAND',
+            priority: 'NORMAL',
+            payload: trustPayload,
+            requiresResponse: true,
+            traceId: `trace_${Date.now()}`,
+          });
 
-        const trustDuration = Date.now() - trustStart;
-        trackMissionStep(context, 'delegate_to_trust',
-          trustResult.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED',
-          { summary: `Trust: ${trustResult.status}`, durationMs: trustDuration, toolResult: JSON.stringify(trustResult.data) }
-        );
+          const trustDuration = Date.now() - trustStart;
+          trackMissionStep(context, 'delegate_to_trust',
+            trustResult.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED',
+            { summary: `Trust: ${trustResult.status}`, durationMs: trustDuration, toolResult: JSON.stringify(trustResult.data) }
+          );
 
-        content = JSON.stringify({
-          status: trustResult.status,
-          data: trustResult.data,
-          errors: trustResult.errors,
-          manager: 'REPUTATION_MANAGER',
-          reviewLink: getReviewLink('delegate_to_trust', context?.missionId),
-        });
+          content = JSON.stringify({
+            status: trustResult.status,
+            data: trustResult.data,
+            errors: trustResult.errors,
+            manager: 'REPUTATION_MANAGER',
+            reviewLink: getReviewLink('delegate_to_trust', context?.missionId),
+          });
+        } catch (trustError: unknown) {
+          const errorMsg = trustError instanceof Error ? trustError.message : 'Unknown error';
+          trackMissionStep(context, 'delegate_to_trust', 'FAILED', {
+            summary: `Trust: FAILED — ${errorMsg}`,
+            durationMs: Date.now() - trustStart,
+            error: errorMsg,
+          });
+          content = JSON.stringify({ error: errorMsg, manager: 'REPUTATION_MANAGER' });
+        }
         break;
       }
 
@@ -5139,51 +5179,61 @@ Select cohesive settings that create a professional, unified visual language acr
         const contentStart = Date.now();
         trackMissionStep(context, 'delegate_to_content', 'RUNNING', { toolArgs: args });
 
-        const { ContentManager } = await import('@/lib/agents/content/manager');
-        const contentMgr = new ContentManager();
-        await contentMgr.initialize();
+        try {
+          const { ContentManager } = await import('@/lib/agents/content/manager');
+          const contentMgr = new ContentManager();
+          await contentMgr.initialize();
 
-        const contentPayload = {
-          contentType: args.contentType as string | undefined,
-          topic: args.topic as string,
-          brandDnaContext: args.brandDnaContext as string | undefined,
-          seoKeywords: args.seoKeywords
-            ? (args.seoKeywords as string).split(',').map((k: string) => k.trim())
-            : undefined,
-          audience: args.audience as string | undefined,
-          format: args.format as string | undefined,
-          includeVideo: args.includeVideo === true,
-          scheduleDate: args.scheduleDate as string | undefined,
-        };
+          const contentPayload = {
+            contentType: args.contentType as string | undefined,
+            topic: args.topic as string,
+            brandDnaContext: args.brandDnaContext as string | undefined,
+            seoKeywords: args.seoKeywords
+              ? (args.seoKeywords as string).split(',').map((k: string) => k.trim())
+              : undefined,
+            audience: args.audience as string | undefined,
+            format: args.format as string | undefined,
+            includeVideo: args.includeVideo === true,
+            scheduleDate: args.scheduleDate as string | undefined,
+          };
 
-        const contentResult = await contentMgr.execute({
-          id: `content_${Date.now()}`,
-          timestamp: new Date(),
-          from: 'JASPER',
-          to: 'CONTENT_MANAGER',
-          type: 'COMMAND',
-          priority: 'NORMAL',
-          payload: contentPayload,
-          requiresResponse: true,
-          traceId: `trace_${Date.now()}`,
-        });
+          const contentResult = await contentMgr.execute({
+            id: `content_${Date.now()}`,
+            timestamp: new Date(),
+            from: 'JASPER',
+            to: 'CONTENT_MANAGER',
+            type: 'COMMAND',
+            priority: 'NORMAL',
+            payload: contentPayload,
+            requiresResponse: true,
+            traceId: `trace_${Date.now()}`,
+          });
 
-        const contentDuration = Date.now() - contentStart;
-        trackMissionStep(context, 'delegate_to_content',
-          contentResult.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED',
-          { summary: `Content: ${contentResult.status}`, durationMs: contentDuration, toolResult: JSON.stringify(contentResult.data) }
-        );
+          const contentDuration = Date.now() - contentStart;
+          trackMissionStep(context, 'delegate_to_content',
+            contentResult.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED',
+            { summary: `Content: ${contentResult.status}`, durationMs: contentDuration, toolResult: JSON.stringify(contentResult.data) }
+          );
 
-        content = JSON.stringify({
-          status: contentResult.status,
-          data: contentResult.data,
-          errors: contentResult.errors,
-          manager: 'CONTENT_MANAGER',
-          reviewLink: getReviewLink('delegate_to_content', context?.missionId),
-          delegatedTo: contentResult.data && typeof contentResult.data === 'object' && 'delegations' in contentResult.data
-            ? (contentResult.data as Record<string, unknown>).delegations
-            : 'See data for details',
-        });
+          content = JSON.stringify({
+            status: contentResult.status,
+            data: contentResult.data,
+            errors: contentResult.errors,
+            manager: 'CONTENT_MANAGER',
+            reviewLink: getReviewLink('delegate_to_content', context?.missionId),
+            delegatedTo: contentResult.data && typeof contentResult.data === 'object' && 'delegations' in contentResult.data
+              ? (contentResult.data as Record<string, unknown>).delegations
+              : 'See data for details',
+          });
+        } catch (contentDelegateError: unknown) {
+          const errorMsg = contentDelegateError instanceof Error ? contentDelegateError.message : 'Unknown error';
+          trackMissionStep(context, 'delegate_to_content', 'FAILED', {
+            summary: `Content: FAILED — ${errorMsg}`,
+            durationMs: Date.now() - contentStart,
+            error: errorMsg,
+          });
+          content = JSON.stringify({ error: errorMsg, manager: 'CONTENT_MANAGER' });
+        }
         break;
       }
 
@@ -5194,50 +5244,60 @@ Select cohesive settings that create a professional, unified visual language acr
         const architectStart = Date.now();
         trackMissionStep(context, 'delegate_to_architect', 'RUNNING', { toolArgs: args });
 
-        const { ArchitectManager } = await import('@/lib/agents/architect/manager');
-        const architectMgr = new ArchitectManager();
-        await architectMgr.initialize();
+        try {
+          const { ArchitectManager } = await import('@/lib/agents/architect/manager');
+          const architectMgr = new ArchitectManager();
+          await architectMgr.initialize();
 
-        const architectPayload = {
-          siteType: args.siteType as string | undefined,
-          industry: args.industry as string,
-          audience: args.audience as string | undefined,
-          funnelGoals: args.funnelGoals as string | undefined,
-          existingSiteUrl: args.existingSiteUrl as string | undefined,
-          competitorUrls: args.competitorUrls
-            ? (args.competitorUrls as string).split(',').map((u: string) => u.trim())
-            : undefined,
-          brandGuidelines: args.brandGuidelines as string | undefined,
-        };
+          const architectPayload = {
+            siteType: args.siteType as string | undefined,
+            industry: args.industry as string,
+            audience: args.audience as string | undefined,
+            funnelGoals: args.funnelGoals as string | undefined,
+            existingSiteUrl: args.existingSiteUrl as string | undefined,
+            competitorUrls: args.competitorUrls
+              ? (args.competitorUrls as string).split(',').map((u: string) => u.trim())
+              : undefined,
+            brandGuidelines: args.brandGuidelines as string | undefined,
+          };
 
-        const architectResult = await architectMgr.execute({
-          id: `architect_${Date.now()}`,
-          timestamp: new Date(),
-          from: 'JASPER',
-          to: 'ARCHITECT_MANAGER',
-          type: 'COMMAND',
-          priority: 'NORMAL',
-          payload: architectPayload,
-          requiresResponse: true,
-          traceId: `trace_${Date.now()}`,
-        });
+          const architectResult = await architectMgr.execute({
+            id: `architect_${Date.now()}`,
+            timestamp: new Date(),
+            from: 'JASPER',
+            to: 'ARCHITECT_MANAGER',
+            type: 'COMMAND',
+            priority: 'NORMAL',
+            payload: architectPayload,
+            requiresResponse: true,
+            traceId: `trace_${Date.now()}`,
+          });
 
-        const architectDuration = Date.now() - architectStart;
-        trackMissionStep(context, 'delegate_to_architect',
-          architectResult.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED',
-          { summary: `Architect: ${architectResult.status}`, durationMs: architectDuration, toolResult: JSON.stringify(architectResult.data) }
-        );
+          const architectDuration = Date.now() - architectStart;
+          trackMissionStep(context, 'delegate_to_architect',
+            architectResult.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED',
+            { summary: `Architect: ${architectResult.status}`, durationMs: architectDuration, toolResult: JSON.stringify(architectResult.data) }
+          );
 
-        content = JSON.stringify({
-          status: architectResult.status,
-          data: architectResult.data,
-          errors: architectResult.errors,
-          manager: 'ARCHITECT_MANAGER',
-          reviewLink: getReviewLink('delegate_to_architect', context?.missionId),
-          delegatedTo: architectResult.data && typeof architectResult.data === 'object' && 'delegations' in architectResult.data
-            ? (architectResult.data as Record<string, unknown>).delegations
-            : 'See data for details',
-        });
+          content = JSON.stringify({
+            status: architectResult.status,
+            data: architectResult.data,
+            errors: architectResult.errors,
+            manager: 'ARCHITECT_MANAGER',
+            reviewLink: getReviewLink('delegate_to_architect', context?.missionId),
+            delegatedTo: architectResult.data && typeof architectResult.data === 'object' && 'delegations' in architectResult.data
+              ? (architectResult.data as Record<string, unknown>).delegations
+              : 'See data for details',
+          });
+        } catch (architectError: unknown) {
+          const errorMsg = architectError instanceof Error ? architectError.message : 'Unknown error';
+          trackMissionStep(context, 'delegate_to_architect', 'FAILED', {
+            summary: `Architect: FAILED — ${errorMsg}`,
+            durationMs: Date.now() - architectStart,
+            error: errorMsg,
+          });
+          content = JSON.stringify({ error: errorMsg, manager: 'ARCHITECT_MANAGER' });
+        }
         break;
       }
 
@@ -5248,57 +5308,67 @@ Select cohesive settings that create a professional, unified visual language acr
         const outreachStart = Date.now();
         trackMissionStep(context, 'delegate_to_outreach', 'RUNNING', { toolArgs: args });
 
-        const { OutreachManager } = await import('@/lib/agents/outreach/manager');
-        const outreachMgr = new OutreachManager();
-        await outreachMgr.initialize();
+        try {
+          const { OutreachManager } = await import('@/lib/agents/outreach/manager');
+          const outreachMgr = new OutreachManager();
+          await outreachMgr.initialize();
 
-        let parsedLeadList: Record<string, unknown>[] | undefined;
-        if (args.leadList) {
-          try {
-            parsedLeadList = JSON.parse(args.leadList as string) as Record<string, unknown>[];
-          } catch {
-            parsedLeadList = undefined;
+          let parsedLeadList: Record<string, unknown>[] | undefined;
+          if (args.leadList) {
+            try {
+              parsedLeadList = JSON.parse(args.leadList as string) as Record<string, unknown>[];
+            } catch {
+              parsedLeadList = undefined;
+            }
           }
+
+          const outreachPayload = {
+            sequenceType: args.sequenceType as string | undefined,
+            channel: args.channel as string | undefined,
+            leadList: parsedLeadList,
+            message: args.message as string,
+            steps: args.steps as number | undefined,
+            delayBetweenSteps: args.delayBetweenSteps as string | undefined,
+            complianceNotes: args.complianceNotes as string | undefined,
+          };
+
+          const outreachResult = await outreachMgr.execute({
+            id: `outreach_${Date.now()}`,
+            timestamp: new Date(),
+            from: 'JASPER',
+            to: 'OUTREACH_MANAGER',
+            type: 'COMMAND',
+            priority: 'NORMAL',
+            payload: outreachPayload,
+            requiresResponse: true,
+            traceId: `trace_${Date.now()}`,
+          });
+
+          const outreachDuration = Date.now() - outreachStart;
+          trackMissionStep(context, 'delegate_to_outreach',
+            outreachResult.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED',
+            { summary: `Outreach: ${outreachResult.status}`, durationMs: outreachDuration, toolResult: JSON.stringify(outreachResult.data) }
+          );
+
+          content = JSON.stringify({
+            status: outreachResult.status,
+            data: outreachResult.data,
+            errors: outreachResult.errors,
+            manager: 'OUTREACH_MANAGER',
+            reviewLink: getReviewLink('delegate_to_outreach', context?.missionId),
+            delegatedTo: outreachResult.data && typeof outreachResult.data === 'object' && 'delegations' in outreachResult.data
+              ? (outreachResult.data as Record<string, unknown>).delegations
+              : 'See data for details',
+          });
+        } catch (outreachError: unknown) {
+          const errorMsg = outreachError instanceof Error ? outreachError.message : 'Unknown error';
+          trackMissionStep(context, 'delegate_to_outreach', 'FAILED', {
+            summary: `Outreach: FAILED — ${errorMsg}`,
+            durationMs: Date.now() - outreachStart,
+            error: errorMsg,
+          });
+          content = JSON.stringify({ error: errorMsg, manager: 'OUTREACH_MANAGER' });
         }
-
-        const outreachPayload = {
-          sequenceType: args.sequenceType as string | undefined,
-          channel: args.channel as string | undefined,
-          leadList: parsedLeadList,
-          message: args.message as string,
-          steps: args.steps as number | undefined,
-          delayBetweenSteps: args.delayBetweenSteps as string | undefined,
-          complianceNotes: args.complianceNotes as string | undefined,
-        };
-
-        const outreachResult = await outreachMgr.execute({
-          id: `outreach_${Date.now()}`,
-          timestamp: new Date(),
-          from: 'JASPER',
-          to: 'OUTREACH_MANAGER',
-          type: 'COMMAND',
-          priority: 'NORMAL',
-          payload: outreachPayload,
-          requiresResponse: true,
-          traceId: `trace_${Date.now()}`,
-        });
-
-        const outreachDuration = Date.now() - outreachStart;
-        trackMissionStep(context, 'delegate_to_outreach',
-          outreachResult.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED',
-          { summary: `Outreach: ${outreachResult.status}`, durationMs: outreachDuration, toolResult: JSON.stringify(outreachResult.data) }
-        );
-
-        content = JSON.stringify({
-          status: outreachResult.status,
-          data: outreachResult.data,
-          errors: outreachResult.errors,
-          manager: 'OUTREACH_MANAGER',
-          reviewLink: getReviewLink('delegate_to_outreach', context?.missionId),
-          delegatedTo: outreachResult.data && typeof outreachResult.data === 'object' && 'delegations' in outreachResult.data
-            ? (outreachResult.data as Record<string, unknown>).delegations
-            : 'See data for details',
-        });
         break;
       }
 
@@ -5309,51 +5379,61 @@ Select cohesive settings that create a professional, unified visual language acr
         const intelStart = Date.now();
         trackMissionStep(context, 'delegate_to_intelligence', 'RUNNING', { toolArgs: args });
 
-        const { IntelligenceManager } = await import('@/lib/agents/intelligence/manager');
-        const intelMgr = new IntelligenceManager();
-        await intelMgr.initialize();
+        try {
+          const { IntelligenceManager } = await import('@/lib/agents/intelligence/manager');
+          const intelMgr = new IntelligenceManager();
+          await intelMgr.initialize();
 
-        const intelPayload = {
-          researchType: args.researchType as string,
-          targets: args.targets
-            ? (args.targets as string).split(',').map((t: string) => t.trim())
-            : [],
-          industry: args.industry as string | undefined,
-          depth: args.depth as string | undefined,
-          focusAreas: args.focusAreas
-            ? (args.focusAreas as string).split(',').map((f: string) => f.trim())
-            : undefined,
-          timeframe: args.timeframe as string | undefined,
-        };
+          const intelPayload = {
+            researchType: args.researchType as string,
+            targets: args.targets
+              ? (args.targets as string).split(',').map((t: string) => t.trim())
+              : [],
+            industry: args.industry as string | undefined,
+            depth: args.depth as string | undefined,
+            focusAreas: args.focusAreas
+              ? (args.focusAreas as string).split(',').map((f: string) => f.trim())
+              : undefined,
+            timeframe: args.timeframe as string | undefined,
+          };
 
-        const intelResult = await intelMgr.execute({
-          id: `intelligence_${Date.now()}`,
-          timestamp: new Date(),
-          from: 'JASPER',
-          to: 'INTELLIGENCE_MANAGER',
-          type: 'COMMAND',
-          priority: 'NORMAL',
-          payload: intelPayload,
-          requiresResponse: true,
-          traceId: `trace_${Date.now()}`,
-        });
+          const intelResult = await intelMgr.execute({
+            id: `intelligence_${Date.now()}`,
+            timestamp: new Date(),
+            from: 'JASPER',
+            to: 'INTELLIGENCE_MANAGER',
+            type: 'COMMAND',
+            priority: 'NORMAL',
+            payload: intelPayload,
+            requiresResponse: true,
+            traceId: `trace_${Date.now()}`,
+          });
 
-        const intelDuration = Date.now() - intelStart;
-        trackMissionStep(context, 'delegate_to_intelligence',
-          intelResult.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED',
-          { summary: `Intelligence: ${intelResult.status}`, durationMs: intelDuration, toolResult: JSON.stringify(intelResult.data) }
-        );
+          const intelDuration = Date.now() - intelStart;
+          trackMissionStep(context, 'delegate_to_intelligence',
+            intelResult.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED',
+            { summary: `Intelligence: ${intelResult.status}`, durationMs: intelDuration, toolResult: JSON.stringify(intelResult.data) }
+          );
 
-        content = JSON.stringify({
-          status: intelResult.status,
-          data: intelResult.data,
-          errors: intelResult.errors,
-          manager: 'INTELLIGENCE_MANAGER',
-          reviewLink: getReviewLink('delegate_to_intelligence', context?.missionId),
-          delegatedTo: intelResult.data && typeof intelResult.data === 'object' && 'delegations' in intelResult.data
-            ? (intelResult.data as Record<string, unknown>).delegations
-            : 'See data for details',
-        });
+          content = JSON.stringify({
+            status: intelResult.status,
+            data: intelResult.data,
+            errors: intelResult.errors,
+            manager: 'INTELLIGENCE_MANAGER',
+            reviewLink: getReviewLink('delegate_to_intelligence', context?.missionId),
+            delegatedTo: intelResult.data && typeof intelResult.data === 'object' && 'delegations' in intelResult.data
+              ? (intelResult.data as Record<string, unknown>).delegations
+              : 'See data for details',
+          });
+        } catch (intelError: unknown) {
+          const errorMsg = intelError instanceof Error ? intelError.message : 'Unknown error';
+          trackMissionStep(context, 'delegate_to_intelligence', 'FAILED', {
+            summary: `Intelligence: FAILED — ${errorMsg}`,
+            durationMs: Date.now() - intelStart,
+            error: errorMsg,
+          });
+          content = JSON.stringify({ error: errorMsg, manager: 'INTELLIGENCE_MANAGER' });
+        }
         break;
       }
 
@@ -5364,63 +5444,73 @@ Select cohesive settings that create a professional, unified visual language acr
         const commerceStart = Date.now();
         trackMissionStep(context, 'delegate_to_commerce', 'RUNNING', { toolArgs: args });
 
-        const { CommerceManager } = await import('@/lib/agents/commerce/manager');
-        const commerceMgr = new CommerceManager();
-        await commerceMgr.initialize();
+        try {
+          const { CommerceManager } = await import('@/lib/agents/commerce/manager');
+          const commerceMgr = new CommerceManager();
+          await commerceMgr.initialize();
 
-        let parsedProductData: Record<string, unknown> | undefined;
-        let parsedPriceData: Record<string, unknown> | undefined;
-        let parsedPromotionData: Record<string, unknown> | undefined;
+          let parsedProductData: Record<string, unknown> | undefined;
+          let parsedPriceData: Record<string, unknown> | undefined;
+          let parsedPromotionData: Record<string, unknown> | undefined;
 
-        if (args.productData) {
-          try { parsedProductData = JSON.parse(args.productData as string) as Record<string, unknown>; }
-          catch { parsedProductData = undefined; }
+          if (args.productData) {
+            try { parsedProductData = JSON.parse(args.productData as string) as Record<string, unknown>; }
+            catch { parsedProductData = undefined; }
+          }
+          if (args.priceData) {
+            try { parsedPriceData = JSON.parse(args.priceData as string) as Record<string, unknown>; }
+            catch { parsedPriceData = undefined; }
+          }
+          if (args.promotionData) {
+            try { parsedPromotionData = JSON.parse(args.promotionData as string) as Record<string, unknown>; }
+            catch { parsedPromotionData = undefined; }
+          }
+
+          const commercePayload = {
+            actionType: args.actionType as string,
+            productData: parsedProductData,
+            priceData: parsedPriceData,
+            promotionData: parsedPromotionData,
+            analysisScope: args.analysisScope as string | undefined,
+          };
+
+          const commerceResult = await commerceMgr.execute({
+            id: `commerce_${Date.now()}`,
+            timestamp: new Date(),
+            from: 'JASPER',
+            to: 'COMMERCE_MANAGER',
+            type: 'COMMAND',
+            priority: 'NORMAL',
+            payload: commercePayload,
+            requiresResponse: true,
+            traceId: `trace_${Date.now()}`,
+          });
+
+          const commerceDuration = Date.now() - commerceStart;
+          trackMissionStep(context, 'delegate_to_commerce',
+            commerceResult.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED',
+            { summary: `Commerce: ${commerceResult.status}`, durationMs: commerceDuration, toolResult: JSON.stringify(commerceResult.data) }
+          );
+
+          content = JSON.stringify({
+            status: commerceResult.status,
+            data: commerceResult.data,
+            errors: commerceResult.errors,
+            manager: 'COMMERCE_MANAGER',
+            reviewLink: getReviewLink('delegate_to_commerce', context?.missionId),
+            delegatedTo: commerceResult.data && typeof commerceResult.data === 'object' && 'delegations' in commerceResult.data
+              ? (commerceResult.data as Record<string, unknown>).delegations
+              : 'See data for details',
+          });
+        } catch (commerceError: unknown) {
+          const errorMsg = commerceError instanceof Error ? commerceError.message : 'Unknown error';
+          trackMissionStep(context, 'delegate_to_commerce', 'FAILED', {
+            summary: `Commerce: FAILED — ${errorMsg}`,
+            durationMs: Date.now() - commerceStart,
+            error: errorMsg,
+          });
+          content = JSON.stringify({ error: errorMsg, manager: 'COMMERCE_MANAGER' });
         }
-        if (args.priceData) {
-          try { parsedPriceData = JSON.parse(args.priceData as string) as Record<string, unknown>; }
-          catch { parsedPriceData = undefined; }
-        }
-        if (args.promotionData) {
-          try { parsedPromotionData = JSON.parse(args.promotionData as string) as Record<string, unknown>; }
-          catch { parsedPromotionData = undefined; }
-        }
-
-        const commercePayload = {
-          actionType: args.actionType as string,
-          productData: parsedProductData,
-          priceData: parsedPriceData,
-          promotionData: parsedPromotionData,
-          analysisScope: args.analysisScope as string | undefined,
-        };
-
-        const commerceResult = await commerceMgr.execute({
-          id: `commerce_${Date.now()}`,
-          timestamp: new Date(),
-          from: 'JASPER',
-          to: 'COMMERCE_MANAGER',
-          type: 'COMMAND',
-          priority: 'NORMAL',
-          payload: commercePayload,
-          requiresResponse: true,
-          traceId: `trace_${Date.now()}`,
-        });
-
-        const commerceDuration = Date.now() - commerceStart;
-        trackMissionStep(context, 'delegate_to_commerce',
-          commerceResult.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED',
-          { summary: `Commerce: ${commerceResult.status}`, durationMs: commerceDuration, toolResult: JSON.stringify(commerceResult.data) }
-        );
-
-        content = JSON.stringify({
-          status: commerceResult.status,
-          data: commerceResult.data,
-          errors: commerceResult.errors,
-          manager: 'COMMERCE_MANAGER',
-          reviewLink: getReviewLink('delegate_to_commerce', context?.missionId),
-          delegatedTo: commerceResult.data && typeof commerceResult.data === 'object' && 'delegations' in commerceResult.data
-            ? (commerceResult.data as Record<string, unknown>).delegations
-            : 'See data for details',
-        });
         break;
       }
 

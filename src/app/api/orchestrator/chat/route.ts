@@ -26,7 +26,7 @@ import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { logger } from '@/lib/logger/logger';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { VoiceEngineFactory } from '@/lib/voice/tts/voice-engine-factory';
-import { JASPER_TOOLS, executeToolCalls, type ToolCallContext } from '@/lib/orchestrator/jasper-tools';
+import { JASPER_TOOLS, executeToolCalls, type ToolCallContext, type ToolResult } from '@/lib/orchestrator/jasper-tools';
 import { SystemStateService } from '@/lib/orchestrator/system-state-service';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import { getSubCollection } from '@/lib/firebase/collections';
@@ -362,6 +362,9 @@ export async function POST(request: NextRequest) {
 
     let finalResponse = '';
     const toolsExecuted: string[] = [];
+    // Accumulates all ToolResult objects across every iteration of the tool-calling loop.
+    // Used post-loop to derive mission status in-memory, avoiding a Firestore race condition.
+    const allToolResults: ToolResult[] = [];
     let lastReviewLink: string | undefined;
     let modelUsed = selectedModel;
 
@@ -456,6 +459,7 @@ export async function POST(request: NextRequest) {
         }
 
         const toolResults = await executeToolCalls(response.toolCalls, missionContext);
+        allToolResults.push(...toolResults);
         toolsExecuted.push(...response.toolCalls.map((tc: ToolCall) => tc.function.name));
 
         // Add assistant message with tool calls
@@ -525,10 +529,32 @@ export async function POST(request: NextRequest) {
 
     const responseTime = Date.now() - startTime;
 
-    // Finalize mission after all tools have executed
+    // Finalize mission — derive status from in-memory tool results (avoids Firestore race condition
+    // caused by fire-and-forget trackMissionStep writes that may not have landed yet).
     if (missionCreated) {
       try {
-        await finalizeMission(missionId, 'COMPLETED');
+        let missionStatus: 'COMPLETED' | 'FAILED' = 'COMPLETED';
+
+        if (allToolResults.length > 0) {
+          // A result is considered failed when its JSON content contains a top-level "error" key.
+          // This is the uniform contract used by every error path in executeToolCall, including
+          // the outer catch-all. Results without a parseable "error" key are treated as successful.
+          const allResultsFailed = allToolResults.every((r) => {
+            try {
+              const parsed = JSON.parse(r.content) as Record<string, unknown>;
+              return typeof parsed.error === 'string' && parsed.error.length > 0;
+            } catch {
+              // Non-JSON content is not an error signal — treat as success
+              return false;
+            }
+          });
+
+          if (allResultsFailed) {
+            missionStatus = 'FAILED';
+          }
+        }
+
+        await finalizeMission(missionId, missionStatus);
       } catch (err: unknown) {
         logger.warn('[Jasper] Mission finalization failed (non-blocking)', {
           error: err instanceof Error ? err.message : String(err),

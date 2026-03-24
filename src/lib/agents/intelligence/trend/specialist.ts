@@ -301,7 +301,7 @@ export class TrendScout extends BaseSpecialist {
           return await this.handleSignalScan(taskId, payload as SignalScanRequest);
 
         case 'analyze_trend':
-          return this.handleTrendAnalysis(taskId, payload as TrendAnalysisRequest);
+          return await this.handleTrendAnalysis(taskId, payload as TrendAnalysisRequest);
 
         case 'trigger_pivot':
           return await this.handlePivotTrigger(taskId, payload as PivotTriggerRequest);
@@ -379,6 +379,16 @@ export class TrendScout extends BaseSpecialist {
     const { industry, competitors, keywords, timeframe } = request;
     const minConfidence = request.minConfidence ?? 0.5;
 
+    // Seed existing market context from vault before scanning
+    const marketContext = await this.getMarketContextFromVault().catch((err: unknown) => {
+      this.log('WARN', `Could not read market vault context: ${err instanceof Error ? err.message : String(err)}`);
+      return { sentiments: [], signals: [] };
+    });
+
+    if (marketContext.signals.length > 0) {
+      this.log('INFO', `Vault context: ${marketContext.signals.length} pending signal(s), ${marketContext.sentiments.length} sentiment(s)`);
+    }
+
     this.log('INFO', `Scanning signals for industry: ${industry ?? 'all'}`);
 
     // Generate scan ID
@@ -424,151 +434,199 @@ export class TrendScout extends BaseSpecialist {
   private async detectSignals(
     industry: string | undefined,
     keywords: string[],
-    timeframe: string
+    _timeframe: string
   ): Promise<MarketSignal[]> {
-    await Promise.resolve();
     const signals: MarketSignal[] = [];
     const now = new Date();
 
-    // Simulate signal detection from various pattern sources
-    // In production, this would integrate with Scraper, news APIs, social listening, etc.
+    // Run all signal detection in parallel for speed
+    const [industrySignals, keywordSignals, newsSignals] = await Promise.all([
+      industry ? this.detectIndustrySignals(industry, now) : Promise.resolve([]),
+      keywords.length > 0 ? this.detectKeywordSignals(keywords, now) : Promise.resolve([]),
+      industry ? this.detectNewsSignals(industry, now) : Promise.resolve([]),
+    ]);
 
-    // Detect industry-specific trends
-    if (industry) {
-      const industrySignals = this.detectIndustrySignals(industry, now);
-      signals.push(...industrySignals);
-    }
+    signals.push(...industrySignals, ...keywordSignals, ...newsSignals);
 
-    // Detect keyword-based signals
-    if (keywords.length > 0) {
-      const keywordSignals = this.detectKeywordSignals(keywords, now);
-      signals.push(...keywordSignals);
-    }
+    // Share high-value signals to Memory Vault for cross-agent access
+    await this.shareSignalsToVault(signals).catch((err: unknown) => {
+      this.log('WARN', `Memory Vault share failed: ${err instanceof Error ? err.message : String(err)}`);
+    });
 
-    // Detect general market signals
-    const marketSignals = this.detectGeneralMarketSignals(timeframe, now);
-    signals.push(...marketSignals);
-
-    // Clean expired signals from cache
     this.cleanExpiredSignals();
-
     return signals;
   }
 
   /**
-   * Detect industry-specific signals
+   * Detect industry-specific signals via Serper SERP analysis.
+   * Searches for current trends/shifts in the industry and converts SERP
+   * features (People Also Ask, related searches) into market signals.
    */
-  private detectIndustrySignals(
+  private async detectIndustrySignals(
     industry: string,
     timestamp: Date
-  ): MarketSignal[] {
+  ): Promise<MarketSignal[]> {
     const signals: MarketSignal[] = [];
-    const industryLower = industry.toLowerCase();
 
-    // Industry pattern database - real implementation would use ML models
-    const industryPatterns: Record<string, Array<{ type: SignalType; title: string; description: string; urgency: SignalUrgency; confidence: number }>> = {
-      'saas': [
-        {
-          type: 'TREND_EMERGING',
-          title: 'AI Integration Acceleration',
-          description: 'SaaS companies increasingly integrating AI features as differentiators',
-          urgency: 'HIGH',
-          confidence: 0.88,
-        },
-        {
-          type: 'INDUSTRY_SHIFT',
-          title: 'Usage-Based Pricing Adoption',
-          description: 'Shift from subscription to consumption-based pricing models',
+    try {
+      const { getSerperSEOService } = await import('@/lib/integrations/seo/serper-seo-service');
+      const serper = getSerperSEOService();
+
+      // Search for current trends in this industry
+      const result = await serper.searchSERP(`${industry} trends 2026`, { num: 10 });
+
+      if (!result.success || !result.data) {
+        this.log('WARN', `Serper returned no data for industry "${industry}"`);
+        return signals;
+      }
+
+      const { organic, peopleAlsoAsk, relatedSearches } = result.data;
+
+      // Convert top organic results into signals
+      for (const item of organic.slice(0, 5)) {
+        const signalId = `sig-serp-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+        const signalType = this.classifySignalFromTitle(item.title, item.snippet);
+
+        signals.push({
+          id: signalId,
+          type: signalType,
+          title: item.title.slice(0, 120),
+          description: item.snippet.slice(0, 300),
+          source: `SERP Analysis: ${item.domain}`,
+          sourceUrl: item.link,
+          detectedAt: timestamp.toISOString(),
+          urgency: item.position <= 3 ? 'HIGH' : 'MEDIUM',
+          confidence: Math.max(0.5, 0.9 - (item.position * 0.05)),
+          dataPoints: [`SERP position: #${item.position}`, `Domain: ${item.domain}`, `Industry: ${industry}`],
+          affectedAgents: this.determineAffectedAgents(signalType),
+          recommendedActions: this.generateActionRecommendations(signalType, item.title),
+          expiresAt: new Date(timestamp.getTime() + this.getSignalTTL('MEDIUM')).toISOString(),
+        });
+      }
+
+      // Convert People Also Ask into opportunity signals
+      for (const paa of peopleAlsoAsk.slice(0, 3)) {
+        const signalId = `sig-paa-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+        signals.push({
+          id: signalId,
+          type: 'OPPORTUNITY',
+          title: `Market Question: ${paa.question.slice(0, 100)}`,
+          description: paa.snippet.slice(0, 300),
+          source: 'Google People Also Ask',
+          detectedAt: timestamp.toISOString(),
           urgency: 'MEDIUM',
           confidence: 0.75,
-        },
-      ],
-      'ecommerce': [
-        {
+          dataPoints: [`Question: ${paa.question}`, `Industry: ${industry}`],
+          affectedAgents: ['CONTENT_MANAGER', 'MARKETING_MANAGER', 'SEO_EXPERT'],
+          recommendedActions: [
+            `Create content that answers: "${paa.question}"`,
+            `Use this question in FAQ sections and blog posts`,
+            `Target this as a featured snippet opportunity`,
+          ],
+          expiresAt: new Date(timestamp.getTime() + this.getSignalTTL('MEDIUM')).toISOString(),
+        });
+      }
+
+      // Convert related searches into emerging trend signals
+      for (const related of relatedSearches.slice(0, 3)) {
+        const signalId = `sig-rel-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+        signals.push({
+          id: signalId,
           type: 'TREND_EMERGING',
-          title: 'Social Commerce Growth',
-          description: 'Direct purchasing through social media platforms accelerating',
-          urgency: 'HIGH',
-          confidence: 0.82,
-        },
-        {
-          type: 'OPPORTUNITY',
-          title: 'Same-Day Delivery Expectations',
-          description: 'Consumer expectations for delivery speed increasing',
-          urgency: 'MEDIUM',
-          confidence: 0.79,
-        },
-      ],
-      'healthcare': [
-        {
-          type: 'INDUSTRY_SHIFT',
-          title: 'Telehealth Normalization',
-          description: 'Virtual care becoming standard rather than alternative',
-          urgency: 'MEDIUM',
-          confidence: 0.91,
-        },
-        {
-          type: 'TREND_EMERGING',
-          title: 'Patient Data Portability',
-          description: 'Increasing demand for patient-controlled health records',
+          title: `Related Trend: ${related.slice(0, 100)}`,
+          description: `Google surfaces "${related}" as a related search for ${industry} trends, indicating growing market interest.`,
+          source: 'Google Related Searches',
+          detectedAt: timestamp.toISOString(),
           urgency: 'LOW',
-          confidence: 0.68,
-        },
-      ],
-      'marketing': [
-        {
-          type: 'TREND_DECLINING',
-          title: 'Third-Party Cookie Deprecation',
-          description: 'Privacy changes forcing shift to first-party data strategies',
-          urgency: 'CRITICAL',
-          confidence: 0.95,
-        },
-        {
-          type: 'TREND_EMERGING',
-          title: 'Short-Form Video Dominance',
-          description: 'TikTok-style content becoming primary marketing format',
-          urgency: 'HIGH',
-          confidence: 0.87,
-        },
-      ],
-    };
-
-    const patterns = industryPatterns[industryLower] ?? [];
-
-    for (const pattern of patterns) {
-      const signalId = `sig-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
-      const expiresAt = new Date(timestamp.getTime() + this.getSignalTTL(pattern.urgency));
-
-      signals.push({
-        id: signalId,
-        type: pattern.type,
-        title: pattern.title,
-        description: pattern.description,
-        source: `Industry Analysis: ${industry}`,
-        detectedAt: timestamp.toISOString(),
-        urgency: pattern.urgency,
-        confidence: pattern.confidence,
-        dataPoints: [`Industry vertical: ${industry}`, 'Pattern matching from market data'],
-        affectedAgents: this.determineAffectedAgents(pattern.type),
-        recommendedActions: this.generateActionRecommendations(pattern.type, pattern.title),
-        expiresAt: expiresAt.toISOString(),
-      });
+          confidence: 0.65,
+          dataPoints: [`Related search: ${related}`, `Parent query: ${industry} trends`],
+          affectedAgents: ['MARKETING_MANAGER', 'CONTENT_MANAGER'],
+          recommendedActions: [
+            `Research "${related}" for content opportunities`,
+            `Monitor search volume for "${related}" over next 30 days`,
+          ],
+          expiresAt: new Date(timestamp.getTime() + this.getSignalTTL('LOW')).toISOString(),
+        });
+      }
+    } catch (err: unknown) {
+      this.log('WARN', `Industry signal detection failed: ${err instanceof Error ? err.message : String(err)}`);
     }
 
     return signals;
   }
 
   /**
-   * Detect keyword-based signals
+   * Classify a signal type from SERP title/snippet content.
    */
-  private detectKeywordSignals(
-    keywords: string[],
+  private classifySignalFromTitle(title: string, snippet: string): SignalType {
+    const text = `${title} ${snippet}`.toLowerCase();
+    if (/declin|drop|fall|crash|end of|dying|obsolete/.test(text)) { return 'TREND_DECLINING'; }
+    if (/disrupt|shift|chang|transform|revolution|overhaul/.test(text)) { return 'INDUSTRY_SHIFT'; }
+    if (/threat|risk|danger|warn|concern|crisis/.test(text)) { return 'THREAT'; }
+    if (/opportunit|growth|boom|surge|rise|expand/.test(text)) { return 'OPPORTUNITY'; }
+    if (/compet|rival|versus|vs\b|market share/.test(text)) { return 'COMPETITOR_MOVE'; }
+    return 'TREND_EMERGING';
+  }
+
+  /**
+   * Detect signals from recent news articles about the industry via News API.
+   */
+  private async detectNewsSignals(
+    industry: string,
     timestamp: Date
-  ): MarketSignal[] {
+  ): Promise<MarketSignal[]> {
     const signals: MarketSignal[] = [];
 
-    // Keyword trend analysis - real implementation would use search volume APIs
-    const trendingKeywords = this.analyzeTrendingKeywords(keywords);
+    try {
+      const { getCompanyNews, analyzeNews } = await import('@/lib/outbound/apis/news-service');
+      const articles = await getCompanyNews(industry, 10);
+
+      if (articles.length === 0) { return signals; }
+
+      const analysis = analyzeNews(articles);
+
+      // Each article with a clear title becomes a signal
+      for (const article of articles.slice(0, 5)) {
+        const signalId = `sig-news-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+        const signalType = this.classifySignalFromTitle(article.title, article.summary ?? '');
+
+        signals.push({
+          id: signalId,
+          type: signalType,
+          title: article.title.slice(0, 120),
+          description: article.summary?.slice(0, 300) ?? article.title,
+          source: `News: ${article.source}`,
+          sourceUrl: article.url,
+          detectedAt: timestamp.toISOString(),
+          urgency: 'MEDIUM',
+          confidence: 0.7,
+          dataPoints: [
+            `Source: ${article.source}`,
+            `Published: ${article.publishedDate}`,
+            `Overall news sentiment: ${analysis.sentiment}`,
+          ],
+          affectedAgents: this.determineAffectedAgents(signalType),
+          recommendedActions: this.generateActionRecommendations(signalType, article.title),
+          expiresAt: new Date(timestamp.getTime() + this.getSignalTTL('MEDIUM')).toISOString(),
+        });
+      }
+    } catch (err: unknown) {
+      this.log('WARN', `News signal detection failed: ${err instanceof Error ? err.message : String(err)}`);
+    }
+
+    return signals;
+  }
+
+  /**
+   * Detect keyword-based signals using real search volume data.
+   */
+  private async detectKeywordSignals(
+    keywords: string[],
+    timestamp: Date
+  ): Promise<MarketSignal[]> {
+    const signals: MarketSignal[] = [];
+
+    const trendingKeywords = await this.analyzeTrendingKeywords(keywords);
 
     for (const { keyword, trendDirection, strength } of trendingKeywords) {
       const signalId = `sig-kw-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
@@ -596,83 +654,64 @@ export class TrendScout extends BaseSpecialist {
     return signals;
   }
 
-  /**
-   * Detect general market signals
-   */
-  private detectGeneralMarketSignals(
-    _timeframe: string,
-    timestamp: Date
-  ): MarketSignal[] {
-    const signals: MarketSignal[] = [];
-
-    // Economic indicators - real implementation would use economic data APIs
-    const economicSignals = this.analyzeEconomicIndicators();
-
-    for (const indicator of economicSignals) {
-      const signalId = `sig-econ-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
-
-      signals.push({
-        id: signalId,
-        type: indicator.isPositive ? 'OPPORTUNITY' : 'THREAT',
-        title: indicator.title,
-        description: indicator.description,
-        source: 'Economic Indicators',
-        detectedAt: timestamp.toISOString(),
-        urgency: indicator.urgency,
-        confidence: indicator.confidence,
-        dataPoints: indicator.dataPoints,
-        affectedAgents: ['REVENUE_DIRECTOR', 'PRICING_STRATEGIST', 'MARKETING_MANAGER'],
-        recommendedActions: indicator.recommendedActions,
-        expiresAt: new Date(timestamp.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-      });
-    }
-
-    return signals;
-  }
+  // detectGeneralMarketSignals removed — news signals are now gathered via
+  // detectNewsSignals() which is called in parallel from detectSignals().
 
   /**
-   * Analyze trending keywords
+   * Analyze trending keywords using DataForSEO for real search volume and competition data.
    */
-  private analyzeTrendingKeywords(
+  private async analyzeTrendingKeywords(
     keywords: string[]
-  ): Array<{ keyword: string; trendDirection: 'up' | 'down'; strength: number }> {
-    // Real data requires keyword trend API integration (e.g., Google Trends, SEMrush, Ahrefs)
-    return keywords.map(keyword => ({
-      keyword,
-      trendDirection: 'up' as const, // Real direction requires keyword trend API integration
-      strength: 0, // Real strength requires keyword trend API integration
-    }));
+  ): Promise<Array<{ keyword: string; trendDirection: 'up' | 'down'; strength: number }>> {
+    if (keywords.length === 0) { return []; }
+
+    try {
+      const { getDataForSEOService } = await import('@/lib/integrations/seo/dataforseo-service');
+      const seo = getDataForSEOService();
+
+      const result = await seo.getKeywordData(keywords.slice(0, 20));
+
+      if (!result.success || !result.data) {
+        this.log('WARN', 'DataForSEO keyword data unavailable, using fallback');
+        return keywords.map(kw => ({ keyword: kw, trendDirection: 'up' as const, strength: 0.3 }));
+      }
+
+      return result.data.map((kd) => {
+        // Derive direction from monthly trend data if available
+        const monthlySearches = (kd as unknown as Record<string, unknown>).monthlySearches as Array<{ month: string; searchVolume: number }> | undefined;
+        let direction: 'up' | 'down' = 'up';
+        let strength = 0.5;
+
+        if (monthlySearches && monthlySearches.length >= 3) {
+          const recent = monthlySearches.slice(-3).reduce((sum, m) => sum + m.searchVolume, 0) / 3;
+          const older = monthlySearches.slice(0, 3).reduce((sum, m) => sum + m.searchVolume, 0) / 3;
+
+          if (older > 0) {
+            const changeRatio = (recent - older) / older;
+            direction = changeRatio >= 0 ? 'up' : 'down';
+            strength = Math.min(1, Math.abs(changeRatio));
+          }
+        } else {
+          // Use search volume + competition as a proxy for strength
+          const volume = kd.searchVolume ?? 0;
+          const competition = kd.competition ?? 0;
+          strength = Math.min(1, (volume / 10000) * 0.5 + competition * 0.5);
+        }
+
+        return {
+          keyword: kd.keyword,
+          trendDirection: direction,
+          strength: Math.round(strength * 100) / 100,
+        };
+      });
+    } catch (err: unknown) {
+      this.log('WARN', `Keyword trend analysis failed: ${err instanceof Error ? err.message : String(err)}`);
+      return keywords.map(kw => ({ keyword: kw, trendDirection: 'up' as const, strength: 0.3 }));
+    }
   }
 
-  /**
-   * Analyze economic indicators
-   */
-  private analyzeEconomicIndicators(): Array<{
-    title: string;
-    description: string;
-    isPositive: boolean;
-    urgency: SignalUrgency;
-    confidence: number;
-    dataPoints: string[];
-    recommendedActions: string[];
-  }> {
-    // Simulated economic analysis - real implementation would use economic APIs
-    return [
-      {
-        title: 'B2B Tech Spending Outlook',
-        description: 'Enterprise software budgets projected to increase in next quarter',
-        isPositive: true,
-        urgency: 'MEDIUM',
-        confidence: 0.72,
-        dataPoints: ['Gartner forecast', 'CFO survey data', 'Historical spending patterns'],
-        recommendedActions: [
-          'Accelerate enterprise sales outreach',
-          'Prepare premium tier offerings',
-          'Increase sales team capacity',
-        ],
-      },
-    ];
-  }
+  // analyzeEconomicIndicators removed — real economic signals come from
+  // news + SERP analysis in detectIndustrySignals() and detectNewsSignals().
 
   // ==========================================================================
   // COMPETITOR TRACKING
@@ -686,6 +725,16 @@ export class TrendScout extends BaseSpecialist {
   ): Promise<CompetitorMovement[]> {
     const movements: CompetitorMovement[] = [];
 
+    // Seed competitor context from cross-agent vault insights
+    const vaultContext = await this.readCompetitorInsightsFromVault().catch((err: unknown) => {
+      this.log('WARN', `Could not read competitor vault context: ${err instanceof Error ? err.message : String(err)}`);
+      return { competitors: [], recentMoves: [] };
+    });
+
+    if (vaultContext.recentMoves.length > 0) {
+      this.log('INFO', `Vault seeded ${vaultContext.recentMoves.length} prior competitor move(s) for context`);
+    }
+
     for (const competitor of competitors) {
       const competitorMovements = await this.analyzeCompetitor(competitor);
       movements.push(...competitorMovements);
@@ -695,16 +744,139 @@ export class TrendScout extends BaseSpecialist {
   }
 
   /**
-   * Analyze individual competitor
+   * Analyze individual competitor using News API, LinkedIn hiring signals,
+   * and Crunchbase funding data to detect real competitive movements.
    */
   private async analyzeCompetitor(
-    _competitorName: string
+    competitorName: string
   ): Promise<CompetitorMovement[]> {
-    await Promise.resolve(); // Placeholder for async competitor analysis
+    const movements: CompetitorMovement[] = [];
+    const now = new Date().toISOString();
 
-    // Real data requires web scraping and news monitoring API integration
-    // No movements returned until a competitor monitoring API is integrated
-    return [];
+    // Run all competitor data sources in parallel
+    const [newsResult, hiringResult, fundingResult] = await Promise.allSettled([
+      this.getCompetitorNews(competitorName),
+      this.getCompetitorHiring(competitorName),
+      this.getCompetitorFunding(competitorName),
+    ]);
+
+    const competitorId = competitorName.toLowerCase().replace(/\s+/g, '-');
+
+    // News → MARKETING / POSITIONING / FEATURE moves
+    if (newsResult.status === 'fulfilled' && newsResult.value.length > 0) {
+      for (const article of newsResult.value.slice(0, 3)) {
+        const moveType = this.classifyCompetitorMove(article.title);
+        movements.push({
+          competitorId,
+          competitorName,
+          movementType: moveType,
+          description: article.title,
+          detectedAt: now,
+          sourceUrls: [article.url],
+          impactAssessment: 'MODERATE',
+          recommendedResponse: `Analyze ${competitorName}'s move: "${article.title.slice(0, 80)}"`,
+        });
+      }
+    }
+
+    // Hiring signals → EXPANSION moves
+    if (hiringResult.status === 'fulfilled' && hiringResult.value.isHiring) {
+      const hiring = hiringResult.value;
+      movements.push({
+        competitorId,
+        competitorName,
+        movementType: 'EXPANSION',
+        description: `${competitorName} is actively hiring (${hiring.hiringIntensity} intensity). Departments: ${hiring.departmentsHiring.join(', ')}`,
+        detectedAt: now,
+        sourceUrls: [],
+        impactAssessment: hiring.hiringIntensity === 'high' ? 'SIGNIFICANT' : 'MODERATE',
+        recommendedResponse: hiring.insights.join('; '),
+      });
+    }
+
+    // Funding → EXPANSION moves
+    if (fundingResult.status === 'fulfilled' && fundingResult.value) {
+      const funding = fundingResult.value;
+      movements.push({
+        competitorId,
+        competitorName,
+        movementType: 'EXPANSION',
+        description: `${competitorName} — ${funding.summary}`,
+        detectedAt: now,
+        sourceUrls: [],
+        impactAssessment: 'SIGNIFICANT',
+        recommendedResponse: `Monitor ${competitorName}'s post-funding strategy. Expect increased marketing spend and potential feature acceleration.`,
+      });
+    }
+
+    return movements;
+  }
+
+  /**
+   * Fetch recent news about a competitor.
+   */
+  private async getCompetitorNews(
+    competitorName: string
+  ): Promise<Array<{ title: string; url: string; source: string; publishedDate: string }>> {
+    try {
+      const { getCompanyNews } = await import('@/lib/outbound/apis/news-service');
+      return await getCompanyNews(competitorName, 5);
+    } catch (err: unknown) {
+      this.log('WARN', `getCompetitorNews failed for "${competitorName}": ${err instanceof Error ? err.message : String(err)}`);
+      return [];
+    }
+  }
+
+  /**
+   * Fetch LinkedIn hiring signals for a competitor.
+   */
+  private async getCompetitorHiring(
+    competitorName: string
+  ): Promise<{ isHiring: boolean; hiringIntensity: string; departmentsHiring: string[]; insights: string[] }> {
+    try {
+      const { getCompanyJobs, analyzeHiringSignals } = await import('@/lib/outbound/apis/linkedin-service');
+      const jobs = await getCompanyJobs(competitorName, 10);
+      return analyzeHiringSignals(jobs);
+    } catch {
+      return { isHiring: false, hiringIntensity: 'low', departmentsHiring: [], insights: [] };
+    }
+  }
+
+  /**
+   * Fetch Crunchbase funding data for a competitor.
+   */
+  private async getCompetitorFunding(
+    competitorName: string
+  ): Promise<{ summary: string } | null> {
+    try {
+      const { searchOrganization, formatFundingData } = await import('@/lib/outbound/apis/crunchbase-service');
+      const org = await searchOrganization(competitorName);
+      if (!org) { return null; }
+
+      const formatted = formatFundingData(org);
+      const parts: string[] = [];
+      if (formatted.totalFunding) { parts.push(`Total funding: ${formatted.totalFunding}`); }
+      if (formatted.lastRound) {
+        parts.push(`Last round: ${formatted.lastRound.roundType} (${formatted.lastRound.amount})`);
+      }
+      return parts.length > 0 ? { summary: parts.join('. ') } : null;
+    } catch (err: unknown) {
+      this.log('WARN', `getCompetitorFunding failed for "${competitorName}": ${err instanceof Error ? err.message : String(err)}`);
+      return null;
+    }
+  }
+
+  /**
+   * Classify a competitor movement type from a news headline.
+   */
+  private classifyCompetitorMove(title: string): CompetitorMovement['movementType'] {
+    const t = title.toLowerCase();
+    if (/pric|cost|discount|free tier|plan/.test(t)) { return 'PRICING'; }
+    if (/launch|releas|announc|new feature|updat|ship/.test(t)) { return 'FEATURE'; }
+    if (/campaign|ad|brand|market|promot/.test(t)) { return 'MARKETING'; }
+    if (/partner|acqui|merg|integrat|alliance/.test(t)) { return 'PARTNERSHIP'; }
+    if (/expand|hire|office|grow|fund|rais/.test(t)) { return 'EXPANSION'; }
+    return 'POSITIONING';
   }
 
   /**
@@ -732,10 +904,10 @@ export class TrendScout extends BaseSpecialist {
   /**
    * Handle trend analysis request
    */
-  private handleTrendAnalysis(
+  private async handleTrendAnalysis(
     taskId: string,
     request: TrendAnalysisRequest
-  ): AgentReport {
+  ): Promise<AgentReport> {
     const { trendKeyword, industry, timeHorizon } = request;
 
     this.log('INFO', `Analyzing trend: "${trendKeyword}"`);
@@ -743,21 +915,17 @@ export class TrendScout extends BaseSpecialist {
     const analysisId = `trend-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
     const horizon = timeHorizon ?? '3_MONTHS';
 
-    // Build trend forecast
-    const forecast = this.buildTrendForecast(trendKeyword, horizon);
+    // Run all analyses in parallel for speed
+    const [forecast, relatedTrends, historicalData, competitorPositioning] = await Promise.all([
+      this.buildTrendForecast(trendKeyword, horizon),
+      this.findRelatedTrends(trendKeyword, industry),
+      this.generateHistoricalData(trendKeyword),
+      request.includeCompetitorAnalysis
+        ? this.analyzeCompetitorTrendPositioning(trendKeyword)
+        : Promise.resolve(undefined),
+    ]);
 
-    // Find related trends
-    const relatedTrends = this.findRelatedTrends(trendKeyword, industry);
-
-    // Generate historical data (simulated)
-    const historicalData = this.generateHistoricalData(30);
-
-    // Competitor positioning if requested
-    const competitorPositioning = request.includeCompetitorAnalysis
-      ? this.analyzeCompetitorTrendPositioning(trendKeyword)
-      : undefined;
-
-    // Generate action plan
+    // Generate action plan from forecast
     const actionPlan = this.generateTrendActionPlan(forecast);
 
     const result: TrendAnalysisResult = {
@@ -770,83 +938,186 @@ export class TrendScout extends BaseSpecialist {
       actionPlan,
     };
 
+    // Share forecast to Memory Vault
+    await this.shareTrendForecastToVault(forecast).catch(() => { /* non-blocking */ });
+
     return this.createReport(taskId, 'COMPLETED', result);
   }
 
   /**
-   * Build trend forecast
+   * Build trend forecast using keyword data from DataForSEO and SERP analysis.
    */
-  private buildTrendForecast(
+  private async buildTrendForecast(
     trendKeyword: string,
     timeHorizon: TrendForecast['timeHorizon']
-  ): TrendForecast {
+  ): Promise<TrendForecast> {
     const trendId = `trend-${trendKeyword.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}`;
 
-    // Real data requires ML model or trend analysis API integration (e.g., Google Trends, SEMrush)
+    // Get keyword trend data
+    const trends = await this.analyzeTrendingKeywords([trendKeyword]);
+    const keywordTrend = trends[0];
+
+    // Derive forecast state from actual data
+    let currentState: TrendForecast['currentState'] = 'STABLE';
+    let projectedTrajectory: TrendForecast['projectedTrajectory'] = 'STEADY';
+    let confidence = 0.5;
+
+    if (keywordTrend && keywordTrend.strength > 0) {
+      confidence = Math.min(0.9, 0.4 + keywordTrend.strength);
+
+      if (keywordTrend.trendDirection === 'up') {
+        currentState = keywordTrend.strength > 0.5 ? 'GROWING' : 'NASCENT';
+        projectedTrajectory = keywordTrend.strength > 0.7 ? 'ACCELERATING' : 'STEADY';
+      } else {
+        currentState = 'DECLINING';
+        projectedTrajectory = keywordTrend.strength > 0.5 ? 'DECELERATING' : 'REVERSING';
+      }
+    }
+
+    // Get SERP data for additional context
+    const keyDrivers: string[] = [];
+    const potentialDisruptors: string[] = [];
+
+    try {
+      const { getSerperSEOService } = await import('@/lib/integrations/seo/serper-seo-service');
+      const serper = getSerperSEOService();
+      const serpResult = await serper.searchSERP(trendKeyword, { num: 5 });
+
+      if (serpResult.success && serpResult.data) {
+        for (const item of serpResult.data.organic.slice(0, 3)) {
+          keyDrivers.push(`${item.title} (${item.domain})`);
+        }
+        for (const paa of serpResult.data.peopleAlsoAsk.slice(0, 2)) {
+          potentialDisruptors.push(paa.question);
+        }
+      }
+    } catch {
+      // Serper unavailable — continue with keyword data only
+    }
+
     return {
       trendId,
       trendName: trendKeyword,
-      currentState: 'STABLE' as const, // Real state requires trend analysis API integration
-      projectedTrajectory: 'STEADY' as const, // Real trajectory requires trend analysis API integration
+      currentState,
+      projectedTrajectory,
       timeHorizon,
-      confidence: 0, // Real confidence requires trend analysis API integration
-      keyDrivers: [], // Real data requires trend analysis API integration
-      potentialDisruptors: [], // Real data requires trend analysis API integration
-      recommendations: [
-        `Real trend analysis for "${trendKeyword}" requires trend monitoring API integration`,
-      ],
+      confidence: Math.round(confidence * 100) / 100,
+      keyDrivers,
+      potentialDisruptors,
+      recommendations: this.generateTrendActionPlan({
+        trendId, trendName: trendKeyword, currentState, projectedTrajectory,
+        timeHorizon, confidence, keyDrivers, potentialDisruptors, recommendations: [],
+      }),
     };
   }
 
   /**
-   * Find related trends
+   * Find related trends using Serper's related searches feature.
    */
-  private findRelatedTrends(
+  private async findRelatedTrends(
     keyword: string,
     _industry?: string
-  ): Array<{ name: string; correlation: number }> {
-    // Simulated related trends - real implementation would use topic modeling
-    const baseTrends = [
-      { name: `${keyword} automation`, correlation: 0.85 },
-      { name: `${keyword} analytics`, correlation: 0.78 },
-      { name: `AI-powered ${keyword}`, correlation: 0.72 },
-      { name: `${keyword} best practices`, correlation: 0.68 },
-    ];
+  ): Promise<Array<{ name: string; correlation: number }>> {
+    try {
+      const { getSerperSEOService } = await import('@/lib/integrations/seo/serper-seo-service');
+      const serper = getSerperSEOService();
+      const result = await serper.searchSERP(keyword, { num: 5 });
 
-    return baseTrends;
+      if (result.success && result.data && result.data.relatedSearches.length > 0) {
+        return result.data.relatedSearches.slice(0, 8).map((rs, idx) => ({
+          name: rs,
+          correlation: Math.round((0.9 - idx * 0.08) * 100) / 100,
+        }));
+      }
+    } catch {
+      // Serper unavailable
+    }
+
+    // Fallback to derived keyword variants
+    return [
+      { name: `${keyword} automation`, correlation: 0.7 },
+      { name: `${keyword} analytics`, correlation: 0.65 },
+      { name: `AI-powered ${keyword}`, correlation: 0.6 },
+    ];
   }
 
   /**
-   * Generate historical data points
+   * Generate historical data from DataForSEO monthly search trends.
    */
-  private generateHistoricalData(days: number): Array<{ date: string; value: number }> {
-    // Real data requires trend monitoring API integration (e.g., Google Trends, SEMrush)
-    const data: Array<{ date: string; value: number }> = [];
+  private async generateHistoricalData(
+    keyword: string
+  ): Promise<Array<{ date: string; value: number }>> {
+    try {
+      const { getDataForSEOService } = await import('@/lib/integrations/seo/dataforseo-service');
+      const seo = getDataForSEOService();
+      const result = await seo.getKeywordData([keyword]);
 
-    for (let i = days; i >= 0; i--) {
-      const date = new Date();
-      date.setDate(date.getDate() - i);
+      if (result.success && result.data && result.data.length > 0) {
+        const kd = result.data[0] as unknown as Record<string, unknown>;
+        const monthly = kd.monthlySearches as Array<{ month: string; searchVolume: number }> | undefined;
 
-      data.push({
-        date: date.toISOString().split('T')[0],
-        value: 0, // Real data requires trend monitoring API integration
-      });
+        if (monthly && monthly.length > 0) {
+          return monthly.map((m) => ({
+            date: `${m.month}-01`,
+            value: m.searchVolume,
+          }));
+        }
+      }
+    } catch {
+      // DataForSEO unavailable
     }
 
+    // Fallback — empty data with dates
+    const data: Array<{ date: string; value: number }> = [];
+    for (let i = 12; i >= 0; i--) {
+      const d = new Date();
+      d.setMonth(d.getMonth() - i);
+      data.push({ date: d.toISOString().split('T')[0], value: 0 });
+    }
     return data;
   }
 
   /**
-   * Analyze competitor positioning around a trend
+   * Analyze competitor positioning around a trend via SERP presence.
    */
-  private analyzeCompetitorTrendPositioning(
-    _trendKeyword: string
-  ): Array<{ competitor: string; position: string }> {
-    return [
-      { competitor: 'Competitor A', position: 'Early adopter, heavy investment' },
-      { competitor: 'Competitor B', position: 'Watching and waiting' },
-      { competitor: 'Competitor C', position: 'Skeptical, no visible action' },
-    ];
+  private async analyzeCompetitorTrendPositioning(
+    trendKeyword: string
+  ): Promise<Array<{ competitor: string; position: string }>> {
+    try {
+      const { getSerperSEOService } = await import('@/lib/integrations/seo/serper-seo-service');
+      const serper = getSerperSEOService();
+      const result = await serper.searchSERP(trendKeyword, { num: 10 });
+
+      if (result.success && result.data) {
+        // Dedupe by domain and describe position based on SERP rank
+        const seen = new Set<string>();
+        const positions: Array<{ competitor: string; position: string }> = [];
+
+        for (const item of result.data.organic) {
+          if (seen.has(item.domain)) { continue; }
+          seen.add(item.domain);
+
+          const positionDesc = item.position <= 3
+            ? 'Dominant SERP presence — actively investing in this trend'
+            : item.position <= 7
+              ? 'Visible presence — engaging with this trend'
+              : 'Peripheral presence — monitoring but not leading';
+
+          positions.push({
+            competitor: item.domain,
+            position: `#${item.position}: ${positionDesc}`,
+          });
+
+          if (positions.length >= 5) { break; }
+        }
+
+        return positions;
+      }
+    } catch {
+      // Serper unavailable
+    }
+
+    return [];
   }
 
   /**
@@ -926,7 +1197,9 @@ export class TrendScout extends BaseSpecialist {
     // If not dry run, emit pivot signals to agents
     if (!dryRun) {
       this.log('INFO', `Emitting ${pivots.length} pivot signals`);
-      // In production, this would use the Signal Bus to notify agents
+      await this.broadcastPivotSignals(pivots).catch((err: unknown) => {
+        this.log('WARN', `Pivot signal broadcast failed: ${err instanceof Error ? err.message : String(err)}`);
+      });
     }
 
     return this.createReport(taskId, 'COMPLETED', {
@@ -1363,7 +1636,7 @@ export class TrendScout extends BaseSpecialist {
       // Only share HIGH and CRITICAL signals to avoid noise
       if (signal.urgency === 'CRITICAL' || signal.urgency === 'HIGH') {
         const affectedAgentsArray = signal.affectedAgents.includes('ALL')
-          ? signal.affectedAgents
+          ? ['MARKETING_MANAGER', 'CONTENT_MANAGER', 'REVENUE_DIRECTOR', 'OUTREACH_MANAGER']
           : signal.affectedAgents;
 
         const signalData: SignalData = {

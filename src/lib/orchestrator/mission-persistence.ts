@@ -393,3 +393,51 @@ export async function deleteMission(missionId: string): Promise<boolean> {
     return false;
   }
 }
+
+/**
+ * Bulk-delete all missions in terminal states (COMPLETED and/or FAILED).
+ * Returns the count of deleted missions.
+ */
+export async function bulkDeleteTerminalMissions(): Promise<number> {
+  if (!adminDb) {
+    logger.warn('[MissionPersistence] Firestore not available — bulkDelete skipped');
+    return 0;
+  }
+
+  try {
+    const collPath = missionsCollectionPath();
+    const snap = await adminDb
+      .collection(collPath)
+      .where('status', 'in', ['COMPLETED', 'FAILED'])
+      .get();
+
+    if (snap.empty) {
+      return 0;
+    }
+
+    // Firestore batch writes max 500 docs per batch
+    const BATCH_SIZE = 500;
+    let deleted = 0;
+
+    for (let i = 0; i < snap.docs.length; i += BATCH_SIZE) {
+      const batch = adminDb.batch();
+      const chunk = snap.docs.slice(i, i + BATCH_SIZE);
+
+      for (const doc of chunk) {
+        batch.delete(doc.ref);
+      }
+
+      await batch.commit();
+      deleted += chunk.length;
+    }
+
+    logger.info('[MissionPersistence] Bulk delete completed', { deleted });
+    return deleted;
+  } catch (err) {
+    const errorMsg = err instanceof Error ? err.message : String(err);
+    logger.error('[MissionPersistence] Bulk delete failed', err instanceof Error ? err : undefined, {
+      error: errorMsg,
+    });
+    return 0;
+  }
+}

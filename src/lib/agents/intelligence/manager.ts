@@ -402,7 +402,7 @@ export class IntelligenceManager extends BaseManager {
       this.log('INFO', `Processing intelligence request: ${intent}`);
 
       // Get specialists for this intent
-      const specialistIds = this.resolveSpecialistsForIntent(intent, message);
+      const specialistIds = this.resolveSpecialistsForIntent(intent, message, request);
 
       if (specialistIds.length === 0) {
         return this.createReport(
@@ -455,19 +455,100 @@ export class IntelligenceManager extends BaseManager {
   }
 
   /**
-   * Parse and normalize the request payload
+   * Parse and normalize the request payload.
+   *
+   * Handles BOTH the canonical IntelligenceRequest field names AND the
+   * Jasper tool-call field names (researchType, targets, industry, depth,
+   * focusAreas, timeframe) so the pipeline works regardless of which
+   * field naming convention the caller uses.
    */
   private parseRequest(message: AgentMessage): IntelligenceRequest {
     const payload = message.payload as Record<string, unknown> | null;
 
+    // ── Map Jasper's researchType → ResearchIntent ──────────────────────
+    const researchTypeMap: Record<string, ResearchIntent> = {
+      competitor_analysis: 'COMPETITOR_ANALYSIS',
+      market_research: 'FULL_MARKET_RESEARCH',
+      tech_landscape: 'TECH_DISCOVERY',
+      sentiment_analysis: 'BRAND_MONITORING',
+      trend_discovery: 'TREND_ANALYSIS',
+      comprehensive: 'FULL_MARKET_RESEARCH',
+    };
+
+    const rawResearchType = (payload?.researchType as string | undefined) ?? '';
+    const mappedIntent = researchTypeMap[rawResearchType] ?? undefined;
+
+    // ── Extract targets array (Jasper sends string[] but may send a string) ─
+    // Defensive normalisation: if payload sends a raw comma-separated string,
+    // split it so the rest of the pipeline always works with an array.
+    const rawTargets = payload?.targets;
+    const targets: string[] | undefined =
+      typeof rawTargets === 'string'
+        ? rawTargets.split(',').map(s => s.trim()).filter(Boolean)
+        : Array.isArray(rawTargets)
+          ? (rawTargets as string[])
+          : undefined;
+
+    /**
+     * Words that indicate an audience/demographic descriptor rather than a
+     * company or brand name.  A target containing any of these should be
+     * placed in keywords only — not promoted to brandName.
+     */
+    const AUDIENCE_WORDS = [
+      'business', 'owners', 'entrepreneurs', 'people', 'customers',
+      'users', 'audience', 'demographic', 'market', 'segment',
+      'professionals', 'clients', 'consumers', 'buyers', 'individuals',
+    ];
+
+    function looksLikeBrandName(target: string): boolean {
+      const lower = target.toLowerCase();
+      return !AUDIENCE_WORDS.some(word => lower.includes(word));
+    }
+
+    // Classify targets: URLs go to companyUrl, names go to brandName/niche
+    let companyUrl: string | undefined;
+    let brandName: string | undefined;
+    const keywordsFromTargets: string[] = [];
+
+    if (targets && targets.length > 0) {
+      for (const target of targets) {
+        if (/^https?:\/\//i.test(target) || /\.\w{2,}/.test(target)) {
+          // Looks like a URL or domain
+          companyUrl ??= target.startsWith('http') ? target : `https://${target}`;
+        } else {
+          // Always add to keywords for search context
+          keywordsFromTargets.push(target);
+          // Only promote to brandName if it doesn't look like an audience descriptor
+          if (looksLikeBrandName(target)) {
+            brandName ??= target;
+          }
+        }
+      }
+    }
+
+    // ── Merge with canonical field names (canonical takes precedence) ────
+    const niche = (payload?.niche as string)
+      ?? (payload?.industry as string)
+      ?? (keywordsFromTargets.length > 0 ? keywordsFromTargets.join(', ') : undefined);
+
+    const depth = (payload?.depth as string) ?? undefined;
+    const includeDeep = (payload?.includeDeepAnalysis as boolean)
+      ?? (depth === 'deep');
+
+    const focusAreas = payload?.focusAreas as string[] | undefined;
+    const existingKeywords = payload?.keywords as string[] | undefined;
+    const keywords = existingKeywords
+      ?? (keywordsFromTargets.length > 0 ? keywordsFromTargets : undefined)
+      ?? (focusAreas && focusAreas.length > 0 ? focusAreas : undefined);
+
     return {
-      intent: (payload?.intent as ResearchIntent) ?? undefined,
-      niche: (payload?.niche as string) ?? undefined,
+      intent: (payload?.intent as ResearchIntent) ?? mappedIntent ?? undefined,
+      niche,
       location: (payload?.location as string) ?? undefined,
-      companyUrl: (payload?.companyUrl as string) ?? (payload?.url as string) ?? undefined,
-      brandName: (payload?.brandName as string) ?? (payload?.brand as string) ?? undefined,
-      keywords: (payload?.keywords as string[]) ?? undefined,
-      includeDeepAnalysis: (payload?.includeDeepAnalysis as boolean) ?? false,
+      companyUrl: (payload?.companyUrl as string) ?? (payload?.url as string) ?? companyUrl ?? undefined,
+      brandName: (payload?.brandName as string) ?? (payload?.brand as string) ?? brandName ?? undefined,
+      keywords,
+      includeDeepAnalysis: includeDeep,
       limit: (payload?.limit as number) ?? 10,
     };
   }
@@ -520,20 +601,38 @@ export class IntelligenceManager extends BaseManager {
   }
 
   /**
-   * Resolve which specialists should handle this intent
+   * Resolve which specialists should handle this intent.
+   *
+   * `request` is required so that URL-dependent specialists
+   * (SCRAPER_SPECIALIST, TECHNOGRAPHIC_SCOUT) can be skipped when no
+   * companyUrl was provided — dispatching them without a URL wastes cycles
+   * and produces meaningless results.
    */
-  private resolveSpecialistsForIntent(intent: ResearchIntent, message: AgentMessage): string[] {
+  private resolveSpecialistsForIntent(
+    intent: ResearchIntent,
+    message: AgentMessage,
+    request: IntelligenceRequest,
+  ): string[] {
     if (intent === 'SINGLE_SPECIALIST') {
       // Use delegation rules to find the right specialist
       const delegationTarget = this.findDelegationTarget(message);
       return delegationTarget ? [delegationTarget] : [];
     }
 
+    // Specialists that require a URL to do meaningful work
+    const URL_REQUIRED_SPECIALISTS = new Set(['SCRAPER_SPECIALIST', 'TECHNOGRAPHIC_SCOUT']);
+
     // Get the specialist list for this intent
     const requiredSpecialists = INTENT_SPECIALISTS[intent] ?? [];
 
-    // Filter to only specialists that are registered and functional
     return requiredSpecialists.filter(id => {
+      // Drop URL-dependent specialists when no companyUrl is present
+      if (URL_REQUIRED_SPECIALISTS.has(id) && !request.companyUrl) {
+        this.log('INFO', `Skipping ${id}: no companyUrl provided`);
+        return false;
+      }
+
+      // Drop specialists that are not registered or not functional
       const specialist = this.specialists.get(id);
       return specialist?.isFunctional();
     });

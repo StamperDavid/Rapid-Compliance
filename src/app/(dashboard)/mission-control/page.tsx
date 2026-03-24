@@ -700,6 +700,8 @@ function MissionControlView({ deepLinkedMission }: { deepLinkedMission: string |
   const [selectedMissionId, setSelectedMissionId] = useState<string | null>(deepLinkedMission);
   const [selectedStepId, setSelectedStepId] = useState<string | null>(null);
   const [cancelling, setCancelling] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [clearingAll, setClearingAll] = useState(false);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // SSE stream for the selected mission
@@ -813,6 +815,7 @@ function MissionControlView({ deepLinkedMission }: { deepLinkedMission: string |
     if (!selectedMissionId || deleting) { return; }
 
     setDeleting(true);
+    setActionError(null);
     try {
       const res = await authFetch(`/api/orchestrator/missions/${selectedMissionId}`, {
         method: 'DELETE',
@@ -821,13 +824,46 @@ function MissionControlView({ deepLinkedMission }: { deepLinkedMission: string |
         setSelectedMissionId(null);
         setSelectedStepId(null);
         void fetchMissions();
+      } else {
+        const body = await res.json().catch(() => ({ error: `HTTP ${res.status}` })) as { error?: string };
+        setActionError(`Delete failed: ${body.error ?? res.statusText}`);
       }
-    } catch {
-      // Silent fail
+    } catch (err: unknown) {
+      setActionError(`Delete failed: ${err instanceof Error ? err.message : 'Network error'}`);
     } finally {
       setDeleting(false);
     }
   }, [selectedMissionId, deleting, authFetch, fetchMissions]);
+
+  // ── Clear all completed/failed missions ──────────────────────────────
+  const handleClearAll = useCallback(async () => {
+    if (clearingAll) { return; }
+
+    setClearingAll(true);
+    setActionError(null);
+    try {
+      const res = await authFetch('/api/orchestrator/missions', {
+        method: 'DELETE',
+      });
+      if (res.ok) {
+        const body = (await res.json()) as { data?: { deleted?: number } };
+        const count = body.data?.deleted ?? 0;
+        setShowDeleteConfirm(false);
+        if (count > 0) {
+          setSelectedMissionId(null);
+          setSelectedStepId(null);
+        }
+        void fetchMissions();
+      } else {
+        const body = await res.json().catch(() => ({ error: `HTTP ${res.status}` })) as { error?: string };
+        setActionError(`Clear failed: ${body.error ?? res.statusText}`);
+      }
+    } catch (err: unknown) {
+      setActionError(`Clear failed: ${err instanceof Error ? err.message : 'Network error'}`);
+    } finally {
+      setClearingAll(false);
+    }
+  }, [clearingAll, authFetch, fetchMissions]);
 
   // ── Find approval step if any ──────────────────────────────────────
   const approvalStep = selectedMission?.steps.find(
@@ -863,6 +899,38 @@ function MissionControlView({ deepLinkedMission }: { deepLinkedMission: string |
         {isStreaming && <LiveBadge />}
       </div>
 
+      {/* Error banner */}
+      {actionError && (
+        <div style={{
+          padding: '0.5rem 1rem',
+          marginBottom: '0.5rem',
+          backgroundColor: 'rgba(239, 68, 68, 0.1)',
+          border: '1px solid rgba(239, 68, 68, 0.3)',
+          borderRadius: '0.5rem',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          fontSize: '0.8125rem',
+          color: '#ef4444',
+        }}>
+          <span>{actionError}</span>
+          <button
+            type="button"
+            onClick={() => setActionError(null)}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#ef4444',
+              cursor: 'pointer',
+              fontSize: '1rem',
+              padding: '0 0.25rem',
+            }}
+          >
+            &times;
+          </button>
+        </div>
+      )}
+
       {/* 3-Panel Layout */}
       <div style={{
         display: 'flex',
@@ -883,14 +951,40 @@ function MissionControlView({ deepLinkedMission }: { deepLinkedMission: string |
           <div style={{
             padding: '0.75rem 1rem',
             borderBottom: '1px solid var(--color-border-light)',
-            fontSize: '0.6875rem',
-            fontWeight: 700,
-            textTransform: 'uppercase',
-            letterSpacing: '0.05em',
-            color: 'var(--color-text-disabled)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
             flexShrink: 0,
           }}>
-            Missions ({missions.length})
+            <span style={{
+              fontSize: '0.6875rem',
+              fontWeight: 700,
+              textTransform: 'uppercase',
+              letterSpacing: '0.05em',
+              color: 'var(--color-text-disabled)',
+            }}>
+              Missions ({missions.length})
+            </span>
+            {missions.some((m) => m.status === 'COMPLETED' || m.status === 'FAILED') && (
+              <button
+                type="button"
+                onClick={() => void handleClearAll()}
+                disabled={clearingAll}
+                style={{
+                  padding: '0.125rem 0.5rem',
+                  fontSize: '0.625rem',
+                  fontWeight: 600,
+                  color: clearingAll ? '#9ca3af' : '#ef4444',
+                  backgroundColor: 'transparent',
+                  border: '1px solid',
+                  borderColor: clearingAll ? '#d1d5db' : '#fca5a5',
+                  borderRadius: '0.375rem',
+                  cursor: clearingAll ? 'not-allowed' : 'pointer',
+                }}
+              >
+                {clearingAll ? 'Clearing...' : 'Clear All'}
+              </button>
+            )}
           </div>
           <div style={{ overflowY: 'auto', flex: 1 }}>
             <MissionSidebar

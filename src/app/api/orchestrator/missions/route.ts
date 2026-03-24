@@ -14,6 +14,7 @@ import { z } from 'zod';
 import {
   createMission,
   listMissions,
+  bulkDeleteTerminalMissions,
   type MissionStatus,
 } from '@/lib/orchestrator/mission-persistence';
 
@@ -138,6 +139,36 @@ export async function GET(request: NextRequest) {
     );
     return NextResponse.json(
       { success: false, error: 'Failed to list missions' },
+      { status: 500 }
+    );
+  }
+}
+
+// ============================================================================
+// DELETE — Bulk-delete all completed/failed missions
+// ============================================================================
+
+export async function DELETE(request: NextRequest) {
+  const authResult = await requireAuth(request);
+  if (authResult instanceof NextResponse) {
+    return authResult;
+  }
+
+  try {
+    const deleted = await bulkDeleteTerminalMissions();
+
+    return NextResponse.json({
+      success: true,
+      data: { deleted },
+    });
+  } catch (error: unknown) {
+    logger.error(
+      'Mission bulk delete failed',
+      error instanceof Error ? error : undefined,
+      { route: '/api/orchestrator/missions' }
+    );
+    return NextResponse.json(
+      { success: false, error: 'Failed to bulk delete missions' },
       { status: 500 }
     );
   }
