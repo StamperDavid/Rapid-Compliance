@@ -198,6 +198,12 @@ export const getGrowthStrategiesCollection = (): string => getSubCollection('gro
 export const getGrowthAiVisibilityCollection = (): string => getSubCollection('growthAiVisibility');
 export const getGrowthActivityLogCollection = (): string => getSubCollection('growthActivityLog');
 
+// ── Intelligence Discovery Hub ────────────────────────────────────────────
+export const getDiscoverySourcesCollection = (): string => getSubCollection('discovery_sources');
+export const getDiscoveryOperationsCollection = (): string => getSubCollection('discovery_operations');
+export const getDiscoveryFindingsCollection = (): string => getSubCollection('discovery_findings');
+export const getDiscoveryActionsCollection = (): string => getSubCollection('discovery_actions');
+
 /**
  * Helper for schema sub-collections
  * Usage: getSchemaSubCollection('schema456', 'fields')

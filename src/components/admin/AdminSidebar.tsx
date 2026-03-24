@@ -68,6 +68,7 @@ import {
   LayoutTemplate,
   BookOpen,
   Link2,
+  Radar,
 } from 'lucide-react';
 
 // ============================================================================
@@ -104,6 +105,7 @@ const NAV_SECTIONS: NavigationSection[] = [
       { id: 'tasks', label: 'Tasks', href: '/entities/tasks', icon: CheckSquare, iconColor: 'var(--color-warning)' },
       { id: 'activities', label: 'Activities', href: '/entities/activities', icon: Clock, iconColor: 'var(--color-secondary)', featureModuleId: 'crm_pipeline' },
       { id: 'proposals', label: 'Proposals', href: '/proposals', icon: FileText, iconColor: 'var(--color-secondary)', featureModuleId: 'proposals_docs' },
+      { id: 'intelligence-hub', label: 'Intelligence Hub', href: '/intelligence/discovery', icon: Radar, iconColor: 'var(--color-cyan)', requiredPermission: 'canManageLeads' },
     ],
   },
   // ── Outreach (4 items — Forms & Workflows moved to Marketing) ──────

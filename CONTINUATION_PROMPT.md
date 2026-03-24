@@ -5,7 +5,7 @@
 ## Context
 Repository: https://github.com/StamperDavid/Rapid-Compliance
 Branch: dev
-Last Updated: March 23, 2026 (V5 Commerce Restructure — Catalog/Storefront Split)
+Last Updated: March 24, 2026 (Intelligence Discovery Hub — Phases 1-4 Complete)
 
 ## Current State
 
@@ -27,18 +27,85 @@ Last Updated: March 23, 2026 (V5 Commerce Restructure — Catalog/Storefront Spl
 - Zero `@ts-ignore` / `@ts-expect-error` — clean
 - Zero `TODO` / `FIXME` comments in source
 
-### What to Build Next
+### What to Build Next — Intelligence Discovery Hub Phase 5
 
-**Remaining work:**
-- Feature settings pages: every feature module needs its own settings page with an enable/disable toggle (like storefront has). Need: CRM, conversations, sales automation, email, social media, video, forms, workflows, proposals, analytics, website builder — 11 settings pages.
-- Each settings page toggle must sync to the feature module config (controls sidebar nav visibility)
-- Catalog item `type` field: add `product | service | digital | subscription` to catalog items (data model exists, type field not yet enforced)
-- Storefront integration into Website Builder: long-term, storefront pages become page types within the website editor (Squarespace/Wix pattern)
-- React Query adoption (installed but not used anywhere)
-- YouTube/TikTok direct API uploads (currently creates social posts in Firestore; needs platform-specific upload endpoints)
-- E2E test coverage (~5%) — 10 critical user flows untested
+**Intelligence Discovery Hub** (`/intelligence/discovery`) — Phases 1-4 COMPLETE. A general-purpose data intelligence system that scrapes seed data from primary sources (FMCSA, state tax boards, SAM.gov) and enriches it across multiple secondary sources (Google, company websites, LinkedIn, Facebook) to find contact information.
 
-### What Was Built This Session (March 23, 2026 — V5 Commerce Restructure)
+**Phase 5: Operation Log + Audit Trail (Detail Drawer)**
+The right panel already shows action entries. Phase 5 adds:
+- `ActionDetailDrawer` — slide-over component that opens when clicking an action entry, showing: full URL scraped, target entity info, extracted data (JSON viewer or formatted table), raw vs extracted content size, confidence score, error details, link back to the finding row
+- Enhanced delta polling — `since` parameter already in the API, wire it to only fetch new actions
+- Operation progress bar in the header when a scrape is running
+- Loading skeletons for all panels during data fetch
+
+**Phase 6: Source Monitoring (Scheduled Recurring Scrapes)**
+- Cron endpoint (`/api/cron/discovery-source-monitor`) — runs every 6 hours, checks which sources are due
+- `SourceConfigDrawer` — UI drawer for configuring a source: URL pattern, extraction schema builder, schedule frequency/time, enrichment settings, test scrape button
+- Source template installation UI — one-click install of FMCSA/State Filings/SAM.gov templates
+- Vercel cron config addition to `vercel.json`
+
+**Phase 7: Approval Workflow + CRM Integration**
+- `approval-service.ts` — approve/reject/bulk-approve findings, auto-approve above confidence threshold
+- `lead-converter.ts` — convert approved findings into CRM Lead entities with `acquisitionMethod: 'intelligence_discovery'`
+- Bulk action bar enhancement — "Convert to Leads" button, CSV export
+- Jasper handoff — after conversion, suggest email campaign targeting new leads
+
+**Phase 8: Polish + Edge Cases**
+- Error resilience — retry failed hops, graceful degradation, dead letter queue
+- Performance — batch enrichment parallelization, Firestore batch writes, virtual scrolling for 1000+ findings
+- Duplicate detection via content hashing
+- CAPTCHA/blocking detection
+- Field conflict resolution UI — show both values with confidence, let user pick
+
+**Other remaining work:**
+- Feature settings pages (11 modules need enable/disable toggle pages)
+- Storefront integration into Website Builder
+- React Query adoption
+- YouTube/TikTok direct API uploads
+- E2E test coverage expansion
+
+### What Was Built This Session (March 24, 2026 — Intelligence Discovery Hub Phases 1-4)
+
+**Intelligence Discovery Hub — 4 Phases Complete:**
+
+**Phase 1 — Data Model + API Foundation:**
+- `src/types/intelligence-discovery.ts` — All types + Zod schemas: DiscoverySource, DiscoveryOperation, DiscoveryFinding, DiscoveryAction, ContactInfo, EnrichmentSourceResult, FieldDefinition
+- `src/lib/firebase/collections.ts` — Added 4 discovery collection helpers
+- `src/lib/intelligence/discovery-service.ts` — CRUD for operations, findings, actions (bulk approval, enrichment updates, audit logging)
+- `src/lib/intelligence/discovery-source-service.ts` — CRUD for sources + 3 templates (FMCSA, State Business Filings, SAM.gov) + createSourceFromTemplate()
+- 9 API routes under `src/app/api/intelligence/discovery/`
+
+**Phase 2 — UI Shell:**
+- `src/app/(dashboard)/intelligence/discovery/page.tsx` — Page route
+- `src/components/intelligence-discovery/DiscoveryHub.tsx` — 3-panel grid layout (320px chat | flexible findings | 300px log)
+- `src/components/intelligence-discovery/DiscoveryChatPanel.tsx` — Jasper chat with themed UI
+- `src/components/intelligence-discovery/FindingsGrid.tsx` — Operation picker, dual filters, findings list, bulk actions
+- `src/components/intelligence-discovery/FindingRow.tsx` — Entity row with contact indicators, confidence, enrichment badges
+- `src/components/intelligence-discovery/FindingsBulkActionBar.tsx` — Approve/reject/clear
+- `src/components/intelligence-discovery/OperationLogPanel.tsx` — Action feed with type icons, stats footer
+- `src/hooks/useIntelligenceDiscovery.ts` — Central hook (all state, API calls, 3s polling, selection, filters)
+- AdminSidebar: "Intelligence Hub" added under CRM with Radar icon
+
+**Phase 3 — Chat Integration:**
+- `src/lib/orchestrator/intelligence-discovery-tools.ts` — 8 tools (3 reused + 5 new: list_discovery_sources, configure_source, start_operation, get_operation_status, get_findings_summary)
+- `src/app/api/intelligence/discovery/chat/route.ts` — OpenRouter + Claude 3.5 Sonnet, 5-round tool calling, intelligence system prompt
+- Hook wired to real chat API with conversation history
+
+**Phase 4 — Multi-Hop Enrichment Pipeline:**
+- `src/lib/intelligence/source-adapters/index.ts` — SourceAdapter interface, EnrichmentContext, AdapterResult
+- `src/lib/intelligence/source-adapters/google-adapter.ts` — Google/Serper search for contact info
+- `src/lib/intelligence/source-adapters/website-adapter.ts` — Website scrape (smartScrape + AI extraction + regex)
+- `src/lib/intelligence/source-adapters/social-adapter.ts` — LinkedIn, Facebook, Google Business search
+- `src/lib/intelligence/contact-extractor.ts` — GPT-4o-mini contact-focused extraction with regex fallback
+- `src/lib/intelligence/confidence-merger.ts` — Cross-validates multi-source data, Bayesian confidence scoring
+- `src/lib/intelligence/multi-hop-enricher.ts` — Main orchestrator: Google→website→social→AI synthesis, rate-limited, each hop logged as DiscoveryAction
+- Enrich API route wired to real pipeline (fire-and-forget async)
+
+**All passing:** `tsc --noEmit`, `eslint`, `NODE_OPTIONS="--max-old-space-size=8192" npx next build`
+
+---
+
+### What Was Built Previously (March 23, 2026 — V5 Commerce Restructure)
 
 **V5 Commerce Restructure — Catalog/Storefront Split — COMPLETE:**
 
