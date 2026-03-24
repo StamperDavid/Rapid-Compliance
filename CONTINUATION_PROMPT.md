@@ -5,7 +5,7 @@
 ## Context
 Repository: https://github.com/StamperDavid/Rapid-Compliance
 Branch: dev
-Last Updated: March 24, 2026 (Intelligence Discovery Hub — Phases 1-5 Complete)
+Last Updated: March 24, 2026 (Intelligence Discovery Hub — Phases 1-6 Complete)
 
 ## Current State
 
@@ -27,15 +27,9 @@ Last Updated: March 24, 2026 (Intelligence Discovery Hub — Phases 1-5 Complete
 - Zero `@ts-ignore` / `@ts-expect-error` — clean
 - Zero `TODO` / `FIXME` comments in source
 
-### What to Build Next — Intelligence Discovery Hub Phase 6
+### What to Build Next — Intelligence Discovery Hub Phase 7
 
-**Intelligence Discovery Hub** (`/intelligence/discovery`) — Phases 1-5 COMPLETE. A general-purpose data intelligence system that scrapes seed data from primary sources (FMCSA, state tax boards, SAM.gov) and enriches it across multiple secondary sources (Google, company websites, LinkedIn, Facebook) to find contact information.
-
-**Phase 6: Source Monitoring (Scheduled Recurring Scrapes)**
-- Cron endpoint (`/api/cron/discovery-source-monitor`) — runs every 6 hours, checks which sources are due
-- `SourceConfigDrawer` — UI drawer for configuring a source: URL pattern, extraction schema builder, schedule frequency/time, enrichment settings, test scrape button
-- Source template installation UI — one-click install of FMCSA/State Filings/SAM.gov templates
-- Vercel cron config addition to `vercel.json`
+**Intelligence Discovery Hub** (`/intelligence/discovery`) — Phases 1-6 COMPLETE. A general-purpose data intelligence system that scrapes seed data from primary sources (FMCSA, state tax boards, SAM.gov) and enriches it across multiple secondary sources (Google, company websites, LinkedIn, Facebook) to find contact information.
 
 **Phase 7: Approval Workflow + CRM Integration**
 - `approval-service.ts` — approve/reject/bulk-approve findings, auto-approve above confidence threshold
@@ -57,9 +51,9 @@ Last Updated: March 24, 2026 (Intelligence Discovery Hub — Phases 1-5 Complete
 - YouTube/TikTok direct API uploads
 - E2E test coverage expansion
 
-### What Was Built This Session (March 24, 2026 — Intelligence Discovery Hub Phases 1-5)
+### What Was Built This Session (March 24, 2026 — Intelligence Discovery Hub Phases 1-6)
 
-**Intelligence Discovery Hub — 5 Phases Complete:**
+**Intelligence Discovery Hub — 6 Phases Complete:**
 
 **Phase 1 — Data Model + API Foundation:**
 - `src/types/intelligence-discovery.ts` — All types + Zod schemas: DiscoverySource, DiscoveryOperation, DiscoveryFinding, DiscoveryAction, ContactInfo, EnrichmentSourceResult, FieldDefinition
@@ -101,6 +95,14 @@ Last Updated: March 24, 2026 (Intelligence Discovery Hub — Phases 1-5 Complete
 - `DiscoveryHub.tsx` — Renders `ActionDetailDrawer`, passes `handleNavigateToFinding` callback that highlights finding row in center panel
 - `FindingsGrid.tsx` — Added thin cyan progress bar at top when operation is running (shows `enrichmentProgress`%), `FindingsLoadingSkeleton` with 5 shimmer rows, template install CTA empty state when no sources configured
 - `DiscoveryChatPanel.tsx` — Added `ChatSkeleton` loading state during initial data load (3 shimmer message bubbles)
+
+**Phase 6 — Source Monitoring (Scheduled Recurring Scrapes):**
+- `src/app/api/cron/discovery-source-monitor/route.ts` — Cron endpoint (every 6h): loads all active/schedule-enabled sources, filters due sources (nextRunAt <= now or null), creates queued operations, advances schedule (lastRunAt/nextRunAt). Per-source try/catch so one failure doesn't block others. Bearer token auth via CRON_SECRET.
+- `vercel.json` — Added `discovery-source-monitor` cron entry: `0 */6 * * *` (12th cron job)
+- `src/components/intelligence-discovery/SourceConfigDrawer.tsx` — 480px slide-over drawer for editing source configuration: Source Info (name/description), URL Configuration (base URL/pattern), Schedule (enabled toggle/frequency/time), Enrichment Settings (depth/max records/hints), Extraction Schema Builder (field cards with add/delete, inline new-field form), Test Scrape button
+- `useIntelligenceDiscovery.ts` — Added `updateSource` (PUT to sources API), `configSource`/`setConfigSource` state
+- `DiscoveryHub.tsx` — Renders SourceConfigDrawer, passes handleSaveSource + handleTestScrape callbacks
+- `FindingsGrid.tsx` — Added Settings gear icon next to each source in New Run dropdown for opening config drawer
 
 **All passing:** `tsc --noEmit`, `eslint`, `NODE_OPTIONS="--max-old-space-size=8192" npx next build`
 

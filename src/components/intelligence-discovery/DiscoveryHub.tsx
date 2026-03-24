@@ -14,21 +14,31 @@ import DiscoveryChatPanel from './DiscoveryChatPanel';
 import FindingsGrid from './FindingsGrid';
 import OperationLogPanel from './OperationLogPanel';
 import ActionDetailDrawer from './ActionDetailDrawer';
+import SourceConfigDrawer from './SourceConfigDrawer';
 
 export default function DiscoveryHub() {
   const discovery = useIntelligenceDiscovery();
 
-  const { findings, clearSelection, toggleFindingSelection } = discovery;
+  const { findings, clearSelection, toggleFindingSelection, updateSource, startOperation } = discovery;
 
   // Scroll to a finding row in the center panel by toggling its selection
   const handleNavigateToFinding = useCallback((findingId: string) => {
-    // If finding exists in current list, select it to highlight it
     const found = findings.some((f) => f.id === findingId);
     if (found) {
       clearSelection();
       toggleFindingSelection(findingId);
     }
   }, [findings, clearSelection, toggleFindingSelection]);
+
+  // Save source configuration from the drawer — spread to Record for the hook's generic API
+  const handleSaveSource = useCallback(async (sourceId: string, updates: object) => {
+    await updateSource(sourceId, updates as Record<string, unknown>);
+  }, [updateSource]);
+
+  // Test scrape — start an operation for the source
+  const handleTestScrape = useCallback(async (sourceId: string) => {
+    await startOperation(sourceId);
+  }, [startOperation]);
 
   return (
     <div className="h-[calc(100vh-7rem)] grid grid-cols-[320px_1fr_300px]">
@@ -68,6 +78,7 @@ export default function DiscoveryHub() {
         onBulkReject={discovery.bulkReject}
         templates={discovery.templates}
         onInstallTemplate={discovery.createSourceFromTemplate}
+        onConfigureSource={discovery.setConfigSource}
       />
 
       {/* Right — Operation Log */}
@@ -83,6 +94,14 @@ export default function DiscoveryHub() {
         action={discovery.selectedAction}
         onClose={() => discovery.setSelectedAction(null)}
         onNavigateToFinding={handleNavigateToFinding}
+      />
+
+      {/* Source Config Drawer */}
+      <SourceConfigDrawer
+        source={discovery.configSource}
+        onClose={() => discovery.setConfigSource(null)}
+        onSave={handleSaveSource}
+        onTestScrape={handleTestScrape}
       />
     </div>
   );

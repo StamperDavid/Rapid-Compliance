@@ -45,6 +45,9 @@ export interface UseIntelligenceDiscoveryReturn {
   sourcesLoading: boolean;
   createSourceFromTemplate: (templateId: string) => Promise<void>;
   deleteSource: (sourceId: string) => Promise<void>;
+  updateSource: (sourceId: string, updates: Record<string, unknown>) => Promise<void>;
+  configSource: DiscoverySource | null;
+  setConfigSource: (source: DiscoverySource | null) => void;
 
   // Operations
   operations: DiscoveryOperation[];
@@ -103,6 +106,7 @@ export function useIntelligenceDiscovery(): UseIntelligenceDiscoveryReturn {
   const [sources, setSources] = useState<DiscoverySource[]>([]);
   const [templates, setTemplates] = useState<SourceTemplate[]>([]);
   const [sourcesLoading, setSourcesLoading] = useState(true);
+  const [configSource, setConfigSource] = useState<DiscoverySource | null>(null);
 
   // ── Operations ────────────────────────────────────────────────────────
   const [operations, setOperations] = useState<DiscoveryOperation[]>([]);
@@ -260,6 +264,17 @@ export function useIntelligenceDiscovery(): UseIntelligenceDiscoveryReturn {
 
   const deleteSourceFn = useCallback(async (sourceId: string) => {
     const res = await authFetch(`${API_BASE}/sources/${sourceId}`, { method: 'DELETE' });
+    if (res.ok) {
+      await loadSources();
+    }
+  }, [authFetch, loadSources]);
+
+  const updateSourceFn = useCallback(async (sourceId: string, updates: Record<string, unknown>) => {
+    const res = await authFetch(`${API_BASE}/sources/${sourceId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updates),
+    });
     if (res.ok) {
       await loadSources();
     }
@@ -455,6 +470,9 @@ export function useIntelligenceDiscovery(): UseIntelligenceDiscoveryReturn {
     sourcesLoading,
     createSourceFromTemplate,
     deleteSource: deleteSourceFn,
+    updateSource: updateSourceFn,
+    configSource,
+    setConfigSource,
 
     operations,
     activeOperation,

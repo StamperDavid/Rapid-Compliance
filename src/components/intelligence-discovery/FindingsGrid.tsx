@@ -17,6 +17,7 @@ import {
   Square,
   Radar,
   Download,
+  Settings,
 } from 'lucide-react';
 import type {
   DiscoveryOperation,
@@ -75,6 +76,9 @@ interface FindingsGridProps {
   // Templates (empty state CTA)
   templates: SourceTemplate[];
   onInstallTemplate: (templateId: string) => Promise<void>;
+
+  // Source config
+  onConfigureSource: (source: DiscoverySource) => void;
 }
 
 function SkeletonBar({ className }: { className?: string }) {
@@ -151,6 +155,7 @@ export default function FindingsGrid({
   onBulkReject,
   templates,
   onInstallTemplate,
+  onConfigureSource,
 }: FindingsGridProps) {
   const [showOpPicker, setShowOpPicker] = useState(false);
   const [showSourcePicker, setShowSourcePicker] = useState(false);
@@ -249,19 +254,34 @@ export default function FindingsGrid({
             {showSourcePicker && (
               <div className="absolute right-0 top-full mt-1 w-64 bg-[var(--color-bg-elevated)] border border-[var(--color-border-light)] rounded-lg shadow-xl z-20 max-h-48 overflow-y-auto">
                 {sources.map((src) => (
-                  <button
+                  <div
                     key={src.id}
-                    onClick={() => {
-                      setShowSourcePicker(false);
-                      void onStartOperation(src.id);
-                    }}
-                    className="w-full text-left px-3 py-2 text-sm text-[var(--color-text-primary)] hover:bg-[var(--color-bg-main)] transition-colors"
+                    className="flex items-center hover:bg-[var(--color-bg-main)] transition-colors"
                   >
-                    <div className="font-medium">{src.name}</div>
-                    <div className="text-[10px] text-[var(--color-text-disabled)] truncate">
-                      {src.description}
-                    </div>
-                  </button>
+                    <button
+                      onClick={() => {
+                        setShowSourcePicker(false);
+                        void onStartOperation(src.id);
+                      }}
+                      className="flex-1 text-left px-3 py-2 text-sm text-[var(--color-text-primary)]"
+                    >
+                      <div className="font-medium">{src.name}</div>
+                      <div className="text-[10px] text-[var(--color-text-disabled)] truncate">
+                        {src.description}
+                      </div>
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowSourcePicker(false);
+                        onConfigureSource(src);
+                      }}
+                      className="px-2 py-2 text-[var(--color-text-disabled)] hover:text-[var(--color-cyan)] transition-colors"
+                      title="Configure source"
+                    >
+                      <Settings className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 ))}
               </div>
             )}
