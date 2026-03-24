@@ -79,6 +79,12 @@ interface FindingsGridProps {
 
   // Source config
   onConfigureSource: (source: DiscoverySource) => void;
+
+  // Conversion + Export
+  onConvertToLeads: () => Promise<void>;
+  onExportCSV: () => void;
+  converting?: boolean;
+  exporting?: boolean;
 }
 
 function SkeletonBar({ className }: { className?: string }) {
@@ -156,6 +162,10 @@ export default function FindingsGrid({
   templates,
   onInstallTemplate,
   onConfigureSource,
+  onConvertToLeads,
+  onExportCSV,
+  converting,
+  exporting,
 }: FindingsGridProps) {
   const [showOpPicker, setShowOpPicker] = useState(false);
   const [showSourcePicker, setShowSourcePicker] = useState(false);
@@ -441,6 +451,11 @@ export default function FindingsGrid({
         onBulkApprove={() => { void onBulkApprove(); }}
         onBulkReject={() => { void onBulkReject(); }}
         onClearSelection={onClearSelection}
+        onConvertToLeads={() => { void onConvertToLeads(); }}
+        onExportCSV={onExportCSV}
+        converting={converting}
+        exporting={exporting}
+        hasApprovedSelected={findings.some((f) => selectedIds.has(f.id) && f.approvalStatus === 'approved')}
       />
     </div>
   );

@@ -81,6 +81,12 @@ export interface UseIntelligenceDiscoveryReturn {
   // Enrichment
   enrichFinding: (id: string) => Promise<void>;
 
+  // Conversion + Export
+  convertToLeads: () => Promise<void>;
+  exportCSV: () => void;
+  converting: boolean;
+  exporting: boolean;
+
   // Actions (audit log)
   actions: DiscoveryAction[];
   actionsLoading: boolean;
@@ -131,6 +137,10 @@ export function useIntelligenceDiscovery(): UseIntelligenceDiscoveryReturn {
   // ── Chat ──────────────────────────────────────────────────────────────
   const [chatMessages, setChatMessages] = useState<DiscoveryChatMessage[]>([]);
   const [chatLoading, setChatLoading] = useState(false);
+
+  // ── Conversion + Export ─────────────────────────────────────────────
+  const [converting, setConverting] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   // ── Polling ref ───────────────────────────────────────────────────────
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -376,6 +386,75 @@ export function useIntelligenceDiscovery(): UseIntelligenceDiscoveryReturn {
   }, [authFetch]);
 
   // ====================================================================
+  // CONVERSION + EXPORT
+  // ====================================================================
+
+  const convertToLeads = useCallback(async () => {
+    const approvedIds = Array.from(selectedFindingIds).filter((id) => {
+      const finding = findings.find((f) => f.id === id);
+      return finding?.approvalStatus === 'approved';
+    });
+
+    if (approvedIds.length === 0) { return; }
+
+    setConverting(true);
+    try {
+      const res = await authFetch(`${API_BASE}/findings/convert`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ findingIds: approvedIds }),
+      });
+
+      if (res.ok) {
+        const data = await res.json() as {
+          converted: number;
+          results: Array<{ findingId: string; leadId: string | null; success: boolean }>;
+        };
+
+        // Update local findings to reflect converted status
+        setFindings((prev) =>
+          prev.map((f) => {
+            const result = data.results.find((r) => r.findingId === f.id);
+            if (result?.success) {
+              return { ...f, approvalStatus: 'converted' as const, leadId: result.leadId };
+            }
+            return f;
+          })
+        );
+
+        setSelectedFindingIds(new Set());
+      }
+    } finally {
+      setConverting(false);
+    }
+  }, [authFetch, selectedFindingIds, findings]);
+
+  const exportCSV = useCallback(() => {
+    if (!activeOperation) { return; }
+
+    setExporting(true);
+
+    const params = new URLSearchParams({ operationId: activeOperation.id });
+    if (approvalFilter !== 'all') { params.set('approvalStatus', approvalFilter); }
+
+    void authFetch(`${API_BASE}/findings/export?${params}`)
+      .then(async (res) => {
+        if (res.ok) {
+          const blob = await res.blob();
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `discovery-findings-${activeOperation.id.slice(0, 8)}.csv`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        }
+      })
+      .finally(() => { setExporting(false); });
+  }, [authFetch, activeOperation, approvalFilter]);
+
+  // ====================================================================
   // CHAT — wired to /api/intelligence/discovery/chat
   // ====================================================================
 
@@ -500,6 +579,11 @@ export function useIntelligenceDiscovery(): UseIntelligenceDiscoveryReturn {
     bulkReject,
 
     enrichFinding,
+
+    convertToLeads,
+    exportCSV,
+    converting,
+    exporting,
 
     actions,
     actionsLoading,

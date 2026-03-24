@@ -27,7 +27,7 @@ const leadDataSchema = z.object({
   notes: z.string().optional(),
   customFields: z.record(z.unknown()).optional(),
   enrichmentData: z.record(z.unknown()).optional(),
-  acquisitionMethod: z.enum(['scraped', 'imported', 'manual', 'form', 'referral', 'api']).optional(),
+  acquisitionMethod: z.enum(['scraped', 'imported', 'manual', 'form', 'referral', 'api', 'intelligence_discovery']).optional(),
   icpScore: z.number().min(0).max(100).optional(),
   icpProfileId: z.string().optional(),
   campaignId: z.string().optional(),

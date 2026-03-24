@@ -26,6 +26,12 @@ import {
   createSourceFromTemplate,
   getSourceTemplates,
 } from '@/lib/intelligence/discovery-source-service';
+import {
+  getApprovedFindings,
+} from '@/lib/intelligence/approval-service';
+import {
+  bulkConvertFindings,
+} from '@/lib/intelligence/lead-converter';
 import { logger } from '@/lib/logger/logger';
 
 // ── Reused tools from Jasper ────────────────────────────────────────────────
@@ -140,6 +146,30 @@ const getFindingsSummaryTool: ToolDefinition = {
   },
 };
 
+const convertFindingsToLeadsTool: ToolDefinition = {
+  type: 'function',
+  function: {
+    name: 'convert_findings_to_leads',
+    description:
+      'Convert approved discovery findings into CRM leads. Provide either specific findingIds or an operationId to convert all approved findings in that operation. Returns conversion results with lead IDs.',
+    parameters: {
+      type: 'object',
+      properties: {
+        operationId: {
+          type: 'string',
+          description: 'Operation ID — converts all approved findings in this operation',
+        },
+        findingIds: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Specific finding IDs to convert (must be approved)',
+        },
+      },
+      required: [],
+    },
+  },
+};
+
 // ── Build tool array ────────────────────────────────────────────────────────
 
 function buildDiscoveryTools(): ToolDefinition[] {
@@ -153,6 +183,7 @@ function buildDiscoveryTools(): ToolDefinition[] {
     startOperationTool,
     getOperationStatusTool,
     getFindingsSummaryTool,
+    convertFindingsToLeadsTool,
   ];
 }
 
@@ -338,6 +369,58 @@ export async function executeDiscoveryToolCalls(
         } catch (err: unknown) {
           logger.error('get_findings_summary failed', err instanceof Error ? err : new Error(String(err)));
           content = JSON.stringify({ status: 'error', message: 'Failed to get findings summary' });
+        }
+        results.push({ tool_call_id: tc.id, role: 'tool', content });
+        break;
+      }
+
+      case 'convert_findings_to_leads': {
+        try {
+          const userId = context?.userId ?? 'system';
+          let targetIds: string[];
+
+          if (args.findingIds && Array.isArray(args.findingIds)) {
+            targetIds = args.findingIds as string[];
+          } else if (args.operationId) {
+            const approved = await getApprovedFindings(args.operationId as string);
+            targetIds = approved.map((f) => f.id);
+          } else {
+            content = JSON.stringify({
+              status: 'error',
+              message: 'Provide operationId or findingIds to convert',
+            });
+            results.push({ tool_call_id: tc.id, role: 'tool', content });
+            break;
+          }
+
+          if (targetIds.length === 0) {
+            content = JSON.stringify({
+              status: 'error',
+              message: 'No approved findings available to convert',
+            });
+          } else {
+            const conversionResult = await bulkConvertFindings(targetIds, userId);
+            content = JSON.stringify({
+              status: 'success',
+              converted: conversionResult.converted,
+              failed: conversionResult.failed,
+              results: conversionResult.results.map((r) => ({
+                findingId: r.findingId,
+                leadId: r.leadId,
+                success: r.success,
+                error: r.error,
+              })),
+              message: `Converted ${conversionResult.converted} findings to CRM leads.${
+                conversionResult.failed > 0
+                  ? ` ${conversionResult.failed} failed.`
+                  : ''
+              } Leads are now available in the CRM for outreach.`,
+              reviewLink: '/crm/leads',
+            });
+          }
+        } catch (err: unknown) {
+          logger.error('convert_findings_to_leads failed', err instanceof Error ? err : new Error(String(err)));
+          content = JSON.stringify({ status: 'error', message: 'Failed to convert findings to leads' });
         }
         results.push({ tool_call_id: tc.id, role: 'tool', content });
         break;

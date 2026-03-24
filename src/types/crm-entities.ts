@@ -361,7 +361,8 @@ export type LeadAcquisitionMethod =
   | 'manual'
   | 'form'
   | 'referral'
-  | 'api';
+  | 'api'
+  | 'intelligence_discovery';
 
 /**
  * Lead status in the qualification process

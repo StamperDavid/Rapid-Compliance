@@ -5,13 +5,18 @@
 'use client';
 
 import React from 'react';
-import { ThumbsUp, ThumbsDown, X } from 'lucide-react';
+import { ThumbsUp, ThumbsDown, X, UserPlus, FileDown, Loader2 } from 'lucide-react';
 
 interface FindingsBulkActionBarProps {
   selectedCount: number;
   onBulkApprove: () => void;
   onBulkReject: () => void;
   onClearSelection: () => void;
+  onConvertToLeads: () => void;
+  onExportCSV: () => void;
+  converting?: boolean;
+  exporting?: boolean;
+  hasApprovedSelected?: boolean;
 }
 
 export default function FindingsBulkActionBar({
@@ -19,6 +24,11 @@ export default function FindingsBulkActionBar({
   onBulkApprove,
   onBulkReject,
   onClearSelection,
+  onConvertToLeads,
+  onExportCSV,
+  converting = false,
+  exporting = false,
+  hasApprovedSelected = false,
 }: FindingsBulkActionBarProps) {
   if (selectedCount === 0) { return null; }
 
@@ -29,6 +39,30 @@ export default function FindingsBulkActionBar({
       </span>
 
       <div className="flex gap-2 ml-auto">
+        {hasApprovedSelected && (
+          <button
+            onClick={onConvertToLeads}
+            disabled={converting}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-[var(--color-cyan)]/10 text-[var(--color-cyan)] hover:bg-[var(--color-cyan)]/20 disabled:opacity-50 transition-colors"
+          >
+            {converting
+              ? <Loader2 className="w-3 h-3 animate-spin" />
+              : <UserPlus className="w-3 h-3" />
+            }
+            Convert to Leads
+          </button>
+        )}
+        <button
+          onClick={onExportCSV}
+          disabled={exporting}
+          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-[var(--color-bg-elevated)] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] disabled:opacity-50 transition-colors"
+        >
+          {exporting
+            ? <Loader2 className="w-3 h-3 animate-spin" />
+            : <FileDown className="w-3 h-3" />
+          }
+          Export CSV
+        </button>
         <button
           onClick={onBulkApprove}
           className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-[var(--color-success)]/10 text-[var(--color-success)] hover:bg-[var(--color-success)]/20 transition-colors"

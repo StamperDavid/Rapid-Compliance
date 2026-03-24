@@ -19,7 +19,7 @@ import SourceConfigDrawer from './SourceConfigDrawer';
 export default function DiscoveryHub() {
   const discovery = useIntelligenceDiscovery();
 
-  const { findings, clearSelection, toggleFindingSelection, updateSource, startOperation } = discovery;
+  const { findings, clearSelection, toggleFindingSelection, updateSource, startOperation, convertToLeads, exportCSV, converting, exporting } = discovery;
 
   // Scroll to a finding row in the center panel by toggling its selection
   const handleNavigateToFinding = useCallback((findingId: string) => {
@@ -79,6 +79,10 @@ export default function DiscoveryHub() {
         templates={discovery.templates}
         onInstallTemplate={discovery.createSourceFromTemplate}
         onConfigureSource={discovery.setConfigSource}
+        onConvertToLeads={convertToLeads}
+        onExportCSV={exportCSV}
+        converting={converting}
+        exporting={exporting}
       />
 
       {/* Right — Operation Log */}

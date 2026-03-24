@@ -5,7 +5,7 @@
 ## Context
 Repository: https://github.com/StamperDavid/Rapid-Compliance
 Branch: dev
-Last Updated: March 24, 2026 (Payment System Fixes + Intelligence Discovery Hub Phases 1-6)
+Last Updated: March 24, 2026 (Intelligence Discovery Hub Phase 7 — Approval Workflow + CRM Integration)
 
 ## Current State
 
@@ -27,15 +27,9 @@ Last Updated: March 24, 2026 (Payment System Fixes + Intelligence Discovery Hub 
 - Zero `@ts-ignore` / `@ts-expect-error` — clean
 - Zero `TODO` / `FIXME` comments in source
 
-### What to Build Next — Intelligence Discovery Hub Phase 7
+### What to Build Next — Intelligence Discovery Hub Phase 8
 
-**Intelligence Discovery Hub** (`/intelligence/discovery`) — Phases 1-6 COMPLETE. A general-purpose data intelligence system that scrapes seed data from primary sources (FMCSA, state tax boards, SAM.gov) and enriches it across multiple secondary sources (Google, company websites, LinkedIn, Facebook) to find contact information.
-
-**Phase 7: Approval Workflow + CRM Integration**
-- `approval-service.ts` — approve/reject/bulk-approve findings, auto-approve above confidence threshold
-- `lead-converter.ts` — convert approved findings into CRM Lead entities with `acquisitionMethod: 'intelligence_discovery'`
-- Bulk action bar enhancement — "Convert to Leads" button, CSV export
-- Jasper handoff — after conversion, suggest email campaign targeting new leads
+**Intelligence Discovery Hub** (`/intelligence/discovery`) — Phases 1-7 COMPLETE. A general-purpose data intelligence system that scrapes seed data from primary sources (FMCSA, state tax boards, SAM.gov) and enriches it across multiple secondary sources (Google, company websites, LinkedIn, Facebook) to find contact information, approve findings, and convert them to CRM leads.
 
 **Phase 8: Polish + Edge Cases**
 - Error resilience — retry failed hops, graceful degradation, dead letter queue
@@ -52,7 +46,23 @@ Last Updated: March 24, 2026 (Payment System Fixes + Intelligence Discovery Hub 
 - YouTube/TikTok direct API uploads
 - E2E test coverage expansion
 
-### What Was Built This Session (March 24, 2026 — Payment System Fixes)
+### What Was Built This Session (March 24, 2026 — Intelligence Discovery Hub Phase 7)
+
+**Phase 7: Approval Workflow + CRM Integration — COMPLETE:**
+
+1. **`approval-service.ts`** — Auto-approve findings above confidence threshold (default 80%), approval stats calculation (pending/approved/rejected/converted/avgConfidence), `approveAboveConfidence()` for batch approval by confidence level, `getApprovedFindings()` and `getApprovedFindingsByIds()` for conversion pipeline
+2. **`lead-converter.ts`** — Maps DiscoveryFinding → CRM Lead: extracts person name (tries 6+ seed data field names), email/phone/company from enriched data, builds EnrichmentData from discovery sources (website, LinkedIn, Twitter, address parsing, industry). Sets `acquisitionMethod: 'intelligence_discovery'`, initial lead score = confidence × 0.7. Bulk conversion with per-finding error handling. CSV export (`findingsToCSV`) with 13 columns + proper escaping.
+3. **POST `/api/intelligence/discovery/findings/convert`** — Bulk convert endpoint. Accepts `findingIds[]` or `operationId` (converts all approved in that operation). Returns conversion results with lead IDs.
+4. **GET `/api/intelligence/discovery/findings/export`** — CSV export endpoint. Paginates through all findings, optional `approvalStatus` filter. Returns CSV file with Content-Disposition header.
+5. **UI: Bulk Action Bar Enhanced** — "Convert to Leads" button (cyan, UserPlus icon, only visible when approved findings are selected, loading state), "Export CSV" button (FileDown icon, loading state). Both wired through `useIntelligenceDiscovery` hook → API calls.
+6. **Jasper `convert_findings_to_leads` tool** (9th discovery tool) — Converts approved findings by operationId or specific findingIds. Returns conversion count + lead IDs + review link to `/crm/leads`. System prompt updated with conversion guidance + email campaign handoff suggestion.
+7. **`LeadAcquisitionMethod` type** — Added `'intelligence_discovery'` to union type + Zod schema in `/api/leads` route.
+
+**Files created:** 4 new files (approval-service.ts, lead-converter.ts, findings/convert/route.ts, findings/export/route.ts)
+**Files modified:** 7 files (crm-entities.ts, leads/route.ts, FindingsBulkActionBar.tsx, FindingsGrid.tsx, DiscoveryHub.tsx, useIntelligenceDiscovery.ts, intelligence-discovery-tools.ts, chat/route.ts)
+**All passing:** `tsc --noEmit`, `eslint --max-warnings 0`, `next build`
+
+### What Was Built Previously (March 24, 2026 — Payment System Fixes)
 
 **Payment System — 6 Critical Fixes (commit b828c779):**
 
