@@ -81,6 +81,8 @@ export interface UseIntelligenceDiscoveryReturn {
   // Actions (audit log)
   actions: DiscoveryAction[];
   actionsLoading: boolean;
+  selectedAction: DiscoveryAction | null;
+  setSelectedAction: (action: DiscoveryAction | null) => void;
 
   // Chat
   chatMessages: DiscoveryChatMessage[];
@@ -120,6 +122,7 @@ export function useIntelligenceDiscovery(): UseIntelligenceDiscoveryReturn {
   // ── Actions ───────────────────────────────────────────────────────────
   const [actions, setActions] = useState<DiscoveryAction[]>([]);
   const [actionsLoading, setActionsLoading] = useState(false);
+  const [selectedAction, setSelectedAction] = useState<DiscoveryAction | null>(null);
 
   // ── Chat ──────────────────────────────────────────────────────────────
   const [chatMessages, setChatMessages] = useState<DiscoveryChatMessage[]>([]);
@@ -482,6 +485,8 @@ export function useIntelligenceDiscovery(): UseIntelligenceDiscoveryReturn {
 
     actions,
     actionsLoading,
+    selectedAction,
+    setSelectedAction,
 
     chatMessages,
     chatLoading,

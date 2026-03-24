@@ -15,6 +15,8 @@ import {
   Filter,
   CheckSquare,
   Square,
+  Radar,
+  Download,
 } from 'lucide-react';
 import type {
   DiscoveryOperation,
@@ -25,6 +27,13 @@ import type {
 } from '@/types/intelligence-discovery';
 import FindingRow from './FindingRow';
 import FindingsBulkActionBar from './FindingsBulkActionBar';
+
+interface SourceTemplate {
+  id: string;
+  name: string;
+  description: string;
+  sourceType: string;
+}
 
 interface FindingsGridProps {
   // Sources
@@ -62,6 +71,41 @@ interface FindingsGridProps {
   onEnrich: (id: string) => Promise<void>;
   onBulkApprove: () => Promise<void>;
   onBulkReject: () => Promise<void>;
+
+  // Templates (empty state CTA)
+  templates: SourceTemplate[];
+  onInstallTemplate: (templateId: string) => Promise<void>;
+}
+
+function SkeletonBar({ className }: { className?: string }) {
+  return (
+    <div className={`bg-[var(--color-bg-elevated)] rounded animate-pulse ${className ?? ''}`} />
+  );
+}
+
+function FindingsLoadingSkeleton() {
+  return (
+    <div className="p-4 space-y-4">
+      {Array.from({ length: 5 }).map((_, i) => (
+        <div key={i} className="flex items-start gap-3 px-4 py-3 border-b border-[var(--color-border-light)]">
+          <SkeletonBar className="w-4 h-4 rounded mt-1 flex-shrink-0" />
+          <div className="flex-1 space-y-2">
+            <SkeletonBar className="h-4 w-2/3" />
+            <SkeletonBar className="h-3 w-1/2" />
+            <div className="flex gap-3 mt-2">
+              <SkeletonBar className="h-3 w-20" />
+              <SkeletonBar className="h-3 w-24" />
+              <SkeletonBar className="h-3 w-16" />
+            </div>
+          </div>
+          <div className="flex flex-col items-end gap-2 flex-shrink-0">
+            <SkeletonBar className="h-5 w-10" />
+            <SkeletonBar className="h-4 w-16" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 const ENRICHMENT_FILTERS: Array<{ value: EnrichmentStatus | 'all'; label: string }> = [
@@ -105,14 +149,38 @@ export default function FindingsGrid({
   onEnrich,
   onBulkApprove,
   onBulkReject,
+  templates,
+  onInstallTemplate,
 }: FindingsGridProps) {
   const [showOpPicker, setShowOpPicker] = useState(false);
   const [showSourcePicker, setShowSourcePicker] = useState(false);
+  const [installingTemplate, setInstallingTemplate] = useState<string | null>(null);
 
   const allSelected = findings.length > 0 && selectedIds.size === findings.length;
+  const isRunning = activeOperation?.status === 'running' || activeOperation?.status === 'queued';
+  const enrichmentProgress = activeOperation?.stats.enrichmentProgress ?? 0;
+
+  const handleInstallTemplate = async (templateId: string) => {
+    setInstallingTemplate(templateId);
+    try {
+      await onInstallTemplate(templateId);
+    } finally {
+      setInstallingTemplate(null);
+    }
+  };
 
   return (
     <div className="flex flex-col h-full bg-[var(--color-bg-main)]">
+      {/* ── Progress Bar (visible when operation is running) ────────────── */}
+      {isRunning && (
+        <div className="h-1 bg-[var(--color-bg-elevated)] flex-shrink-0">
+          <div
+            className="h-full bg-[var(--color-cyan)] transition-all duration-500 ease-out"
+            style={{ width: `${Math.max(enrichmentProgress, 2)}%` }}
+          />
+        </div>
+      )}
+
       {/* ── Header ──────────────────────────────────────────────────────── */}
       <div className="p-4 border-b border-[var(--color-border-light)] space-y-3">
         {/* Top row: Operation picker + New operation button */}
@@ -258,7 +326,44 @@ export default function FindingsGrid({
 
       {/* ── Findings list ───────────────────────────────────────────────── */}
       <div className="flex-1 overflow-y-auto">
-        {!activeOperation && (
+        {!activeOperation && sources.length === 0 && !sourcesLoading && (
+          <div className="flex flex-col items-center justify-center h-full text-center px-8">
+            <div className="w-14 h-14 rounded-2xl bg-[var(--color-cyan)]/10 flex items-center justify-center mb-4">
+              <Radar className="w-7 h-7 text-[var(--color-cyan)]" />
+            </div>
+            <p className="text-sm font-medium text-[var(--color-text-primary)] mb-1">
+              No intelligence sources configured
+            </p>
+            <p className="text-xs text-[var(--color-text-disabled)] mb-5 max-w-xs">
+              Install a pre-built template to start discovering and enriching business data.
+            </p>
+            <div className="space-y-2 w-full max-w-xs">
+              {templates.map((tpl) => (
+                <button
+                  key={tpl.id}
+                  onClick={() => { void handleInstallTemplate(tpl.id); }}
+                  disabled={installingTemplate !== null}
+                  className="w-full flex items-center gap-3 px-4 py-3 bg-[var(--color-bg-elevated)] border border-[var(--color-border-light)] rounded-lg hover:border-[var(--color-cyan)] transition-colors text-left disabled:opacity-50"
+                >
+                  <Download className="w-4 h-4 text-[var(--color-cyan)] flex-shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-medium text-[var(--color-text-primary)]">
+                      {tpl.name}
+                    </p>
+                    <p className="text-[10px] text-[var(--color-text-disabled)] truncate">
+                      {tpl.description}
+                    </p>
+                  </div>
+                  {installingTemplate === tpl.id && (
+                    <Loader2 className="w-3.5 h-3.5 text-[var(--color-cyan)] animate-spin flex-shrink-0" />
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {!activeOperation && (sources.length > 0 || sourcesLoading) && (
           <div className="flex flex-col items-center justify-center h-full text-center px-8">
             <Database className="w-10 h-10 text-[var(--color-text-disabled)] mb-3" />
             <p className="text-sm text-[var(--color-text-secondary)] mb-1">
@@ -271,9 +376,7 @@ export default function FindingsGrid({
         )}
 
         {activeOperation && findingsLoading && findings.length === 0 && (
-          <div className="flex items-center justify-center p-12">
-            <Loader2 className="w-6 h-6 text-[var(--color-cyan)] animate-spin" />
-          </div>
+          <FindingsLoadingSkeleton />
         )}
 
         {activeOperation && !findingsLoading && findings.length === 0 && (

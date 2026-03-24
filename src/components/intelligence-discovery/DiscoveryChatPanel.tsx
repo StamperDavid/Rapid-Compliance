@@ -15,12 +15,42 @@ interface DiscoveryChatPanelProps {
   messages: DiscoveryChatMessage[];
   loading: boolean;
   onSendMessage: (text: string) => Promise<void>;
+  initialLoading?: boolean;
+}
+
+function ChatSkeleton() {
+  return (
+    <div className="p-4 space-y-4">
+      {/* Assistant message skeleton */}
+      <div className="flex gap-2">
+        <div className="w-6 h-6 rounded-full bg-[var(--color-bg-elevated)] animate-pulse flex-shrink-0" />
+        <div className="space-y-2 flex-1">
+          <div className="h-8 w-4/5 bg-[var(--color-bg-elevated)] rounded-lg animate-pulse" />
+          <div className="h-6 w-3/5 bg-[var(--color-bg-elevated)] rounded-lg animate-pulse" />
+        </div>
+      </div>
+      {/* User message skeleton */}
+      <div className="flex gap-2 justify-end">
+        <div className="h-8 w-2/3 bg-[var(--color-bg-elevated)] rounded-lg animate-pulse" />
+        <div className="w-6 h-6 rounded-full bg-[var(--color-bg-elevated)] animate-pulse flex-shrink-0" />
+      </div>
+      {/* Another assistant skeleton */}
+      <div className="flex gap-2">
+        <div className="w-6 h-6 rounded-full bg-[var(--color-bg-elevated)] animate-pulse flex-shrink-0" />
+        <div className="space-y-2 flex-1">
+          <div className="h-10 w-full bg-[var(--color-bg-elevated)] rounded-lg animate-pulse" />
+          <div className="h-6 w-2/5 bg-[var(--color-bg-elevated)] rounded-lg animate-pulse" />
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default function DiscoveryChatPanel({
   messages,
   loading,
   onSendMessage,
+  initialLoading,
 }: DiscoveryChatPanelProps) {
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -58,7 +88,9 @@ export default function DiscoveryChatPanel({
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.length === 0 && (
+        {initialLoading && messages.length === 0 && <ChatSkeleton />}
+
+        {!initialLoading && messages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full text-center px-4">
             <div className="w-12 h-12 rounded-full bg-[var(--color-cyan)]/10 flex items-center justify-center mb-3">
               <Bot className="w-6 h-6 text-[var(--color-cyan)]" />

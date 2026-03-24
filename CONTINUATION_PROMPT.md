@@ -5,7 +5,7 @@
 ## Context
 Repository: https://github.com/StamperDavid/Rapid-Compliance
 Branch: dev
-Last Updated: March 24, 2026 (Intelligence Discovery Hub — Phases 1-4 Complete)
+Last Updated: March 24, 2026 (Intelligence Discovery Hub — Phases 1-5 Complete)
 
 ## Current State
 
@@ -27,16 +27,9 @@ Last Updated: March 24, 2026 (Intelligence Discovery Hub — Phases 1-4 Complete
 - Zero `@ts-ignore` / `@ts-expect-error` — clean
 - Zero `TODO` / `FIXME` comments in source
 
-### What to Build Next — Intelligence Discovery Hub Phase 5
+### What to Build Next — Intelligence Discovery Hub Phase 6
 
-**Intelligence Discovery Hub** (`/intelligence/discovery`) — Phases 1-4 COMPLETE. A general-purpose data intelligence system that scrapes seed data from primary sources (FMCSA, state tax boards, SAM.gov) and enriches it across multiple secondary sources (Google, company websites, LinkedIn, Facebook) to find contact information.
-
-**Phase 5: Operation Log + Audit Trail (Detail Drawer)**
-The right panel already shows action entries. Phase 5 adds:
-- `ActionDetailDrawer` — slide-over component that opens when clicking an action entry, showing: full URL scraped, target entity info, extracted data (JSON viewer or formatted table), raw vs extracted content size, confidence score, error details, link back to the finding row
-- Enhanced delta polling — `since` parameter already in the API, wire it to only fetch new actions
-- Operation progress bar in the header when a scrape is running
-- Loading skeletons for all panels during data fetch
+**Intelligence Discovery Hub** (`/intelligence/discovery`) — Phases 1-5 COMPLETE. A general-purpose data intelligence system that scrapes seed data from primary sources (FMCSA, state tax boards, SAM.gov) and enriches it across multiple secondary sources (Google, company websites, LinkedIn, Facebook) to find contact information.
 
 **Phase 6: Source Monitoring (Scheduled Recurring Scrapes)**
 - Cron endpoint (`/api/cron/discovery-source-monitor`) — runs every 6 hours, checks which sources are due
@@ -64,9 +57,9 @@ The right panel already shows action entries. Phase 5 adds:
 - YouTube/TikTok direct API uploads
 - E2E test coverage expansion
 
-### What Was Built This Session (March 24, 2026 — Intelligence Discovery Hub Phases 1-4)
+### What Was Built This Session (March 24, 2026 — Intelligence Discovery Hub Phases 1-5)
 
-**Intelligence Discovery Hub — 4 Phases Complete:**
+**Intelligence Discovery Hub — 5 Phases Complete:**
 
 **Phase 1 — Data Model + API Foundation:**
 - `src/types/intelligence-discovery.ts` — All types + Zod schemas: DiscoverySource, DiscoveryOperation, DiscoveryFinding, DiscoveryAction, ContactInfo, EnrichmentSourceResult, FieldDefinition
@@ -100,6 +93,14 @@ The right panel already shows action entries. Phase 5 adds:
 - `src/lib/intelligence/confidence-merger.ts` — Cross-validates multi-source data, Bayesian confidence scoring
 - `src/lib/intelligence/multi-hop-enricher.ts` — Main orchestrator: Google→website→social→AI synthesis, rate-limited, each hop logged as DiscoveryAction
 - Enrich API route wired to real pipeline (fire-and-forget async)
+
+**Phase 5 — Operation Log + Audit Trail:**
+- `src/components/intelligence-discovery/ActionDetailDrawer.tsx` — Slide-over drawer showing full action details: source/target URLs, extracted data as formatted table, raw vs extracted content size with extraction ratio, confidence bar, error details, link to related finding, timing info, action IDs
+- `OperationLogPanel.tsx` — Wired onClick on each action entry to open the drawer; added `ActionSkeleton` loading state with 6 shimmer rows
+- `useIntelligenceDiscovery.ts` — Added `selectedAction` state + `setSelectedAction` setter to hook return
+- `DiscoveryHub.tsx` — Renders `ActionDetailDrawer`, passes `handleNavigateToFinding` callback that highlights finding row in center panel
+- `FindingsGrid.tsx` — Added thin cyan progress bar at top when operation is running (shows `enrichmentProgress`%), `FindingsLoadingSkeleton` with 5 shimmer rows, template install CTA empty state when no sources configured
+- `DiscoveryChatPanel.tsx` — Added `ChatSkeleton` loading state during initial data load (3 shimmer message bubbles)
 
 **All passing:** `tsc --noEmit`, `eslint`, `NODE_OPTIONS="--max-old-space-size=8192" npx next build`
 

@@ -25,6 +25,7 @@ interface OperationLogPanelProps {
   actions: DiscoveryAction[];
   loading: boolean;
   activeOperation: DiscoveryOperation | null;
+  onSelectAction: (action: DiscoveryAction) => void;
 }
 
 const ACTION_ICONS: Record<ActionType, React.ElementType> = {
@@ -72,10 +73,34 @@ function formatTime(iso: string): string {
   }
 }
 
+function ActionSkeleton() {
+  return (
+    <div className="divide-y divide-[var(--color-border-light)]">
+      {Array.from({ length: 6 }).map((_, i) => (
+        <div key={i} className="px-4 py-3">
+          <div className="flex items-start gap-2">
+            <div className="w-6 h-6 rounded bg-[var(--color-bg-elevated)] animate-pulse flex-shrink-0" />
+            <div className="flex-1 space-y-1.5">
+              <div className="flex items-center gap-1.5">
+                <div className="h-3 w-12 bg-[var(--color-bg-elevated)] rounded animate-pulse" />
+                <div className="h-3 w-3 bg-[var(--color-bg-elevated)] rounded-full animate-pulse" />
+                <div className="h-3 w-8 bg-[var(--color-bg-elevated)] rounded animate-pulse ml-auto" />
+              </div>
+              <div className="h-3 w-full bg-[var(--color-bg-elevated)] rounded animate-pulse" />
+              <div className="h-2.5 w-14 bg-[var(--color-bg-elevated)] rounded animate-pulse" />
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function OperationLogPanel({
   actions,
   loading,
   activeOperation,
+  onSelectAction,
 }: OperationLogPanelProps) {
   return (
     <div className="flex flex-col h-full border-l border-[var(--color-border-light)] bg-[var(--color-bg-paper)]">
@@ -118,9 +143,7 @@ export default function OperationLogPanel({
         )}
 
         {loading && actions.length === 0 && (
-          <div className="flex items-center justify-center p-8">
-            <Loader2 className="w-5 h-5 text-[var(--color-text-disabled)] animate-spin" />
-          </div>
+          <ActionSkeleton />
         )}
 
         <div className="divide-y divide-[var(--color-border-light)]">
@@ -131,8 +154,9 @@ export default function OperationLogPanel({
             return (
               <button
                 key={action.id}
+                onClick={() => onSelectAction(action)}
                 className="w-full text-left px-4 py-3 hover:bg-[var(--color-bg-elevated)] transition-colors group"
-                title="Click for details (Phase 5)"
+                title="Click for action details"
               >
                 <div className="flex items-start gap-2">
                   <div
