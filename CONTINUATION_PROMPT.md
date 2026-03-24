@@ -5,7 +5,7 @@
 ## Context
 Repository: https://github.com/StamperDavid/Rapid-Compliance
 Branch: dev
-Last Updated: March 24, 2026 (Intelligence Discovery Hub — Phases 1-6 Complete)
+Last Updated: March 24, 2026 (Payment System Fixes + Intelligence Discovery Hub Phases 1-6)
 
 ## Current State
 
@@ -47,11 +47,31 @@ Last Updated: March 24, 2026 (Intelligence Discovery Hub — Phases 1-6 Complete
 **Other remaining work:**
 - Feature settings pages (11 modules need enable/disable toggle pages)
 - Storefront integration into Website Builder
+- Subscription provider abstraction — decouple subscription checkout/cancel/portal from Stripe-only to support Authorize.Net, Square, PayPal as subscription processors (user prefers Authorize.Net for fund safety)
 - React Query adoption
 - YouTube/TikTok direct API uploads
 - E2E test coverage expansion
 
-### What Was Built This Session (March 24, 2026 — Intelligence Discovery Hub Phases 1-6)
+### What Was Built This Session (March 24, 2026 — Payment System Fixes)
+
+**Payment System — 6 Critical Fixes (commit b828c779):**
+
+1. **Storefront → ecommerce/config bridge** — Storefront settings page now writes payment provider config to `getSubCollection('ecommerce')/config` (where `processPayment()` actually reads from). Added "Set as Default Provider" radio button UI. Previously the storefront toggles saved to `storefrontConfig/default` which was completely disconnected from the payment dispatcher.
+
+2. **2Checkout HMAC-MD5 auth fix** — Was sending raw secret key as the hash in `X-Avangate-Authentication` header. Now properly computes `HMAC-MD5(contentLength + merchantCode + dateString, secretKey)` per 2Checkout spec.
+
+3. **Mollie redirect flow fix** — Mollie is redirect-based but checkout was treating the response as "paid" immediately. Now: orders created as `pending_payment`, customer redirected to Mollie checkout page, webhook at `/api/webhooks/mollie/route.ts` (already existed) confirms payment and updates order to `processing`/`captured`. Added `pending` and `redirectUrl` fields to `PaymentResult` interface.
+
+4. **Coupons wired to subscription checkout** — `POST /api/subscriptions/checkout` now accepts optional `couponCode`. Validates against platform coupons in Firestore (status, date range, usage limits, plan eligibility, billing cycle), creates ad-hoc Stripe coupon, applies via `discounts` param on Stripe Checkout session.
+
+5. **Inventory decrement** — Already implemented in `checkout-service.ts` (lines 324-355). Reads `config.inventory.trackInventory` and decrements stock via configured `inventoryField`. No code change needed.
+
+6. **TaxJar automated tax** — Real API integration in `tax-service.ts`. Calls TaxJar `/v2/taxes` endpoint, returns jurisdiction-level breakdown (state/county/city/special district). Graceful fallback to manual tax rates on any error. Added `'taxjar'` to `APIServiceName` union in `types/api-keys.ts`.
+
+**Files changed:** 8 files, 364 insertions, 9 deletions
+**Payment provider selection note:** User wants Authorize.Net as primary (funds go direct to bank, no intermediary withholding). Stripe fund-withholding is a known concern. Phase 4 (subscription provider abstraction away from Stripe-only) is planned but not yet built.
+
+### What Was Built Previously (March 24, 2026 — Intelligence Discovery Hub Phases 1-6)
 
 **Intelligence Discovery Hub — 6 Phases Complete:**
 
