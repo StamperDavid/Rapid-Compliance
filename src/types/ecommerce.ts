@@ -834,6 +834,13 @@ export interface Order {
 
   // Tags
   tags?: string[];
+
+  /**
+   * Present only for redirect-based payment providers (e.g. Mollie).
+   * The frontend must redirect the customer to this URL to complete payment.
+   * Not persisted to Firestore — populated transiently on the processCheckout response.
+   */
+  redirectUrl?: string;
 }
 
 export interface CustomerInfo {

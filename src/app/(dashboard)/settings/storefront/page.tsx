@@ -42,6 +42,7 @@ interface StorefrontConfig {
     authorizenetEnabled: boolean;
     twocheckoutEnabled: boolean;
     mollieEnabled: boolean;
+    defaultProvider: string;
     autoCreateOrder: boolean;
     autoCreateInvoice: boolean;
     autoRecordPayment: boolean;
@@ -82,6 +83,7 @@ const DEFAULT_CONFIG: StorefrontConfig = {
     authorizenetEnabled: false,
     twocheckoutEnabled: false,
     mollieEnabled: false,
+    defaultProvider: 'stripe',
     autoCreateOrder: true,
     autoCreateInvoice: true,
     autoRecordPayment: true,
@@ -114,6 +116,13 @@ export default function StorefrontSettingsPage() {
 
         if (configData) {
           const loaded = configData as StorefrontConfig;
+          // Back-fill defaultProvider for records saved before this field existed
+          if (!loaded.paymentProcessing?.defaultProvider) {
+            loaded.paymentProcessing = {
+              ...loaded.paymentProcessing,
+              defaultProvider: 'stripe',
+            };
+          }
           setConfig(loaded);
           // Sync storefront enabled state → storefront feature module on load
           updateModule('storefront', loaded.enabled);
@@ -140,6 +149,34 @@ export default function StorefrontSettingsPage() {
           updatedAt: new Date().toISOString(),
         },
         false
+      );
+
+      // Sync payment provider toggles → ecommerce/config (where processPayment() reads from)
+      const providerMap: Array<{ key: keyof typeof config.paymentProcessing; id: string }> = [
+        { key: 'stripeEnabled', id: 'stripe' },
+        { key: 'paypalEnabled', id: 'paypal' },
+        { key: 'squareEnabled', id: 'square' },
+        { key: 'authorizenetEnabled', id: 'authorizenet' },
+        { key: 'twocheckoutEnabled', id: '2checkout' },
+        { key: 'mollieEnabled', id: 'mollie' },
+      ];
+      const providers = providerMap
+        .filter(({ key }) => Boolean(config.paymentProcessing[key]))
+        .map(({ id }) => ({
+          provider: id,
+          enabled: true,
+          isDefault: id === config.paymentProcessing.defaultProvider,
+        }));
+
+      const { getSubCollection } = await import('@/lib/firebase/collections');
+      await FirestoreService.set(
+        getSubCollection('ecommerce'),
+        'config',
+        {
+          payments: { providers },
+          updatedAt: new Date().toISOString(),
+        },
+        true
       );
 
       // Sync storefront enabled state → storefront feature module
@@ -506,6 +543,54 @@ export default function StorefrontSettingsPage() {
                         <span style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginLeft: 'auto' }}>Popular in Europe</span>
                       </label>
                     </div>
+
+                    {/* Default Provider Selection */}
+                    {(config.paymentProcessing.stripeEnabled || config.paymentProcessing.paypalEnabled || config.paymentProcessing.squareEnabled || config.paymentProcessing.authorizenetEnabled || config.paymentProcessing.twocheckoutEnabled || config.paymentProcessing.mollieEnabled) && (
+                      <div style={{ marginTop: '1rem', padding: '1rem', backgroundColor: 'var(--color-bg-paper)', borderRadius: '0.5rem', border: '1px solid var(--color-border-light)' }}>
+                        <div style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--color-text-primary)', marginBottom: '0.75rem' }}>Default Payment Provider</div>
+                        <p style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginBottom: '0.75rem' }}>
+                          Select which payment gateway processes checkout payments
+                        </p>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                          {config.paymentProcessing.stripeEnabled && (
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                              <input type="radio" name="defaultProvider" checked={config.paymentProcessing.defaultProvider === 'stripe'} onChange={() => updateConfig(['paymentProcessing', 'defaultProvider'], 'stripe')} />
+                              <span style={{ fontSize: '0.875rem', color: 'var(--color-text-primary)' }}>Stripe</span>
+                            </label>
+                          )}
+                          {config.paymentProcessing.paypalEnabled && (
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                              <input type="radio" name="defaultProvider" checked={config.paymentProcessing.defaultProvider === 'paypal'} onChange={() => updateConfig(['paymentProcessing', 'defaultProvider'], 'paypal')} />
+                              <span style={{ fontSize: '0.875rem', color: 'var(--color-text-primary)' }}>PayPal</span>
+                            </label>
+                          )}
+                          {config.paymentProcessing.squareEnabled && (
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                              <input type="radio" name="defaultProvider" checked={config.paymentProcessing.defaultProvider === 'square'} onChange={() => updateConfig(['paymentProcessing', 'defaultProvider'], 'square')} />
+                              <span style={{ fontSize: '0.875rem', color: 'var(--color-text-primary)' }}>Square</span>
+                            </label>
+                          )}
+                          {config.paymentProcessing.authorizenetEnabled && (
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                              <input type="radio" name="defaultProvider" checked={config.paymentProcessing.defaultProvider === 'authorizenet'} onChange={() => updateConfig(['paymentProcessing', 'defaultProvider'], 'authorizenet')} />
+                              <span style={{ fontSize: '0.875rem', color: 'var(--color-text-primary)' }}>Authorize.Net</span>
+                            </label>
+                          )}
+                          {config.paymentProcessing.twocheckoutEnabled && (
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                              <input type="radio" name="defaultProvider" checked={config.paymentProcessing.defaultProvider === '2checkout'} onChange={() => updateConfig(['paymentProcessing', 'defaultProvider'], '2checkout')} />
+                              <span style={{ fontSize: '0.875rem', color: 'var(--color-text-primary)' }}>2Checkout</span>
+                            </label>
+                          )}
+                          {config.paymentProcessing.mollieEnabled && (
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                              <input type="radio" name="defaultProvider" checked={config.paymentProcessing.defaultProvider === 'mollie'} onChange={() => updateConfig(['paymentProcessing', 'defaultProvider'], 'mollie')} />
+                              <span style={{ fontSize: '0.875rem', color: 'var(--color-text-primary)' }}>Mollie</span>
+                            </label>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* CRM Auto-Sync */}

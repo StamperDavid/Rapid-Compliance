@@ -6,7 +6,7 @@
 import { FirestoreService } from '@/lib/db/firestore-service';
 import { getOrCreateCart, clearCart } from './cart-service';
 import { getOrdersCollection, getSubCollection } from '@/lib/firebase/collections';
-import type { Cart, Order, Address, OrderPayment, OrderShipping } from '@/types/ecommerce';
+import type { Cart, Order, Address, OrderPayment, OrderShipping, OrderStatus, PaymentStatus } from '@/types/ecommerce';
 import { Timestamp } from 'firebase/firestore';
 import { processPayment } from './payment-service';
 import { calculateShipping } from './shipping-service';
@@ -29,6 +29,10 @@ interface TaxInfo {
 
 interface PaymentResultInfo {
   success: boolean;
+  /** true for redirect-based providers (Mollie) */
+  pending?: boolean;
+  /** Hosted payment page URL for redirect-based providers */
+  redirectUrl?: string;
   transactionId?: string;
   provider?: string;
   cardLast4?: string;
@@ -111,6 +115,23 @@ export async function processCheckout(checkoutData: CheckoutData): Promise<Order
     throw new Error(`Payment failed: ${paymentResult.error}`);
   }
 
+  // Redirect-based providers (Mollie): the customer has NOT paid yet.
+  // Create the order in 'pending' state, skip inventory/cart/workflows until
+  // the Mollie webhook confirms payment, and return the checkout URL so the
+  // frontend can redirect the customer.
+  if (paymentResult.pending === true && paymentResult.redirectUrl) {
+    const pendingOrder = await createOrder(
+      cart,
+      checkoutData,
+      shipping,
+      tax,
+      paymentResult,
+      'pending',
+      'pending'
+    );
+    return { ...pendingOrder, redirectUrl: paymentResult.redirectUrl };
+  }
+
   // Create order
   const order = await createOrder(cart, checkoutData, shipping, tax, paymentResult);
 
@@ -160,13 +181,19 @@ async function validateCart(cart: Cart): Promise<void> {
 
 /**
  * Create order
+ * @param initialOrderStatus - Overrides the default 'processing' status.
+ *   Pass 'pending' for redirect-based providers (Mollie) where payment is not yet confirmed.
+ * @param initialPaymentStatus - Overrides the default 'captured' status.
+ *   Pass 'pending' for redirect-based providers (Mollie).
  */
 async function createOrder(
   cart: Cart,
   checkoutData: CheckoutData,
   shipping: ShippingInfo,
   tax: TaxInfo,
-  paymentResult: PaymentResultInfo
+  paymentResult: PaymentResultInfo,
+  initialOrderStatus: OrderStatus = 'processing',
+  initialPaymentStatus: PaymentStatus = 'captured'
 ): Promise<Order> {
   const orderId = `order_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   const orderNumber = generateOrderNumber();
@@ -192,15 +219,16 @@ async function createOrder(
   }));
 
   // Build payment info
+  // For redirect-based providers (Mollie) capturedAt is omitted — the webhook sets it later.
   const payment: OrderPayment = {
     method: checkoutData.paymentMethod as OrderPayment["method"],
     provider: paymentResult.provider ?? '',
     transactionId: paymentResult.transactionId,
-    status: 'captured',
+    status: initialPaymentStatus,
     cardLast4: paymentResult.cardLast4,
     cardBrand: paymentResult.cardBrand,
     processedAt: Timestamp.now(),
-    capturedAt: Timestamp.now(),
+    ...(initialPaymentStatus === 'captured' && { capturedAt: Timestamp.now() }),
     amountCharged: cart.total,
     amountRefunded: 0,
     processingFee: paymentResult.processingFee,
@@ -239,9 +267,9 @@ async function createOrder(
     payment,
     ...(paymentResult.transactionId && { paymentIntentId: paymentResult.transactionId }),
     shippingInfo: orderShipping,
-    status: 'processing',
+    status: initialOrderStatus,
     fulfillmentStatus: 'unfulfilled',
-    paymentStatus: 'captured',
+    paymentStatus: initialPaymentStatus,
     customerNotes: checkoutData.notes,
     createdAt: Timestamp.now(),
     updatedAt: Timestamp.now(),

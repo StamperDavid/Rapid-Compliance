@@ -89,6 +89,10 @@ export interface PaymentRequest {
 
 export interface PaymentResult {
   success: boolean;
+  /** true for redirect-based providers (Mollie) where the customer must complete payment externally */
+  pending?: boolean;
+  /** URL to redirect the customer to complete payment (Mollie checkout page) */
+  redirectUrl?: string;
   transactionId?: string;
   provider?: string;
   cardLast4?: string;

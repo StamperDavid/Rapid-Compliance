@@ -281,6 +281,7 @@ export type APIServiceName =
   | 'authorizenet'
   | '2checkout'
   | 'mollie'
+  | 'taxjar'    // TaxJar — automated US sales tax calculation
   | 'sendgrid'
   | 'resend'
   | 'integrations'

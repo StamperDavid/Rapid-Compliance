@@ -3,6 +3,7 @@
  * Support for multiple payment processors to give users maximum flexibility
  */
 
+import { createHmac } from 'crypto';
 import { apiKeyService } from '@/lib/api-keys/api-key-service';
 import type { PaymentRequest, PaymentResult } from './payment-service'
 import { logger } from '@/lib/logger/logger';
@@ -58,6 +59,12 @@ interface TwoCheckoutResponse {
 // Mollie Response Interface
 interface MolliePaymentResponse {
   id?: string;
+  /** Mollie HAL links — _links.checkout.href is the hosted payment page URL */
+  _links?: {
+    checkout?: {
+      href?: string;
+    };
+  };
   [key: string]: unknown;
 }
 
@@ -248,13 +255,20 @@ export async function process2CheckoutPayment(
       },
     };
     
+    const dateString = new Date().toUTCString();
+    const bodyString = JSON.stringify(orderData);
+    const contentLength = Buffer.byteLength(bodyString);
+    const stringToHash = `${contentLength}${merchantCode}${dateString}`;
+    const hash = createHmac('md5', secretKey).update(stringToHash).digest('hex');
+
     const response = await fetch(endpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-Avangate-Authentication': `code="${merchantCode}" date="${new Date().toUTCString()}" hash="${secretKey}"`,
+        'X-Avangate-Authentication': `code="${merchantCode}" date="${dateString}" hash="${hash}"`,
+        'Content-Length': String(contentLength),
       },
-      body: JSON.stringify(orderData),
+      body: bodyString,
     });
 
     if (!response.ok) {
@@ -365,8 +379,13 @@ export async function processMolliePayment(
     const payment = await response.json() as MolliePaymentResponse;
 
     if (payment.id) {
+      // Mollie is redirect-based: the customer has NOT paid yet.
+      // pending: true signals the checkout service to create the order in
+      // 'pending_payment' state and return the redirectUrl to the frontend.
       return {
         success: true,
+        pending: true,
+        redirectUrl: payment._links?.checkout?.href,
         transactionId: payment.id,
         provider: 'mollie',
         processingFee: calculateMollieFee(request.amount),
