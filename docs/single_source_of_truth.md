@@ -1,7 +1,7 @@
 # SalesVelocity.ai - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** March 22, 2026 (V3 Professional Output + Phase 5 Polish — brand kit, editor wiring, cost estimation, light mode, bundle analyzer)
+**Last Updated:** March 23, 2026 (Catalog item type enforcement, E2E test coverage expansion — 16 spec files)
 **Branches:** `dev` (latest)
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Architecture:** Single-Tenant Penthouse Model (development strategy — multi-tenant SaaS product)
@@ -63,7 +63,7 @@
 |--------|-------|
 | **TypeScript Files** | 1,628 |
 | **Estimated Code Lines** | ~350,000+ |
-| **Test Files** | 102 (81 unit/integration + 14 Playwright E2E + 7 helpers) |
+| **Test Files** | 104 (81 unit/integration + 16 Playwright E2E + 7 helpers) |
 
 **Breakdown by Directory (TypeScript):**
 
@@ -214,10 +214,10 @@ Jasper orchestrates full marketing campaigns: research → strategy → produce 
 | Build pipeline | **CLEAN** — `npm run build` passes, `npm run lint` zero warnings, 24 eslint-disable (ratcheted) |
 | Dashboard UI | **184 pages** with 12-module feature toggle system |
 | Integrations | **30+ real integrations** verified with actual API calls |
-| Revenue & Commerce | **COMPLETE** — Stripe, Square, PayPal, Authorize.Net, 2Checkout, Mollie. Full e-commerce (products, cart, checkout, orders, inventory, coupons). Billing portal via Stripe Customer Portal. |
+| Revenue & Commerce | **COMPLETE** — Stripe, Square, PayPal, Authorize.Net, 2Checkout, Mollie. Full e-commerce with catalog type enforcement (product/service/digital/subscription), cart, checkout, orders, inventory, coupons. Billing portal via Stripe Customer Portal. Catalog split: always-on catalog + optional storefront under Website. |
 | Video System | **COMPLETE** — Hedra (sole engine), Clone Wizard, auto-captions, background music, simple/advanced mode, assembly progress, 5 templates, scene grading, CapCut-style editor |
 | Social Media | **PARTIAL** — Twitter/X fully wired. LinkedIn messaging only. Facebook/Instagram/TikTok are stubs. |
-| Testing | **IMPROVED** — 81 unit/integration suites (1,700 tests), 14 Playwright E2E specs. Critical systems covered: video, payments, Jasper, agents, scene grading. E2E user journeys still needed. |
+| Testing | **IMPROVED** — 81 unit/integration suites (1,700 tests), 16 Playwright E2E specs (150+ tests). All major user journeys covered: CRUD, checkout, video pipeline, workflows, settings, catalog types. |
 | API Validation | **COMPLETE** — Full sweep March 20 verified 173/175 routes have inline Zod schemas. 2 fixes applied (scene-preview/save, media POST). Coverage: ~99%. |
 | AI Creative Studio | **COMPLETE** — 250+ cinematic presets, 7 API routes, multi-provider (Hedra/Fal/Google/DALL-E/Kling), full UI at `/content/` |
 | Auth & Account Mgmt | **COMPLETE** — Login, signup, OAuth (Google/Microsoft), onboarding, 4-role RBAC (47 permissions on 36+ routes), password change, GDPR account deletion, MFA/TOTP, email invites, billing portal |
@@ -241,7 +241,7 @@ Jasper orchestrates full marketing campaigns: research → strategy → produce 
 | UI Components | 8/10 | READY |
 | API Validation (Zod) | 9.5/10 | READY (99% coverage) |
 | Unit/Integration Testing | 8/10 | READY (81 suites, 1,700 tests) |
-| E2E Testing | 6/10 | 14 spec files, 10 real user journeys (CRUD, checkout, workflows), 104 tests |
+| E2E Testing | 7.5/10 | 16 spec files, 150+ tests — full CRUD journeys, checkout, video pipeline, workflows, settings persistence, catalog types, feature module toggles |
 | Security | 8/10 | READY |
 | CI/CD & DevOps | 8.5/10 | READY |
 | Performance | 7/10 | NEEDS WORK |
