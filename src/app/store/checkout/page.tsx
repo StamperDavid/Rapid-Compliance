@@ -3,13 +3,12 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
-import { useStripe, useElements, PaymentElement } from '@stripe/react-stripe-js';
 import { getOrCreateCart } from '@/lib/ecommerce/cart-service';
 import { useTheme } from '@/contexts/ThemeContext';
 import { logger } from '@/lib/logger/logger';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import { auth } from '@/lib/firebase/config';
-import StripeProvider from '@/components/StripeProvider';
+import CheckoutPaymentFactory from '@/components/checkout/CheckoutPaymentFactory';
 
 interface CartItem {
   id: string;
@@ -31,183 +30,14 @@ interface Cart {
 
 type CheckoutStep = 'info' | 'payment';
 
-// ─── Payment Form (mounted inside StripeProvider) ─────────────────────────────
-
-interface PaymentFormProps {
-  cart: Cart;
-  formData: {
-    email: string;
-    name: string;
-    address: string;
-    city: string;
-    state: string;
-    zip: string;
-    country: string;
-  };
-  onBack: () => void;
-}
-
-function PaymentForm({ cart, formData, onBack }: PaymentFormProps) {
-  const stripe = useStripe();
-  const elements = useElements();
-  const router = useRouter();
-  const { theme } = useTheme();
-  const [processing, setProcessing] = useState(false);
-  const [paymentReady, setPaymentReady] = useState(false);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!stripe || !elements) {
-      return;
-    }
-
-    try {
-      setProcessing(true);
-
-      const { error, paymentIntent } = await stripe.confirmPayment({
-        elements,
-        confirmParams: {
-          payment_method_data: {
-            billing_details: {
-              name: formData.name,
-              email: formData.email,
-              address: {
-                line1: formData.address,
-                city: formData.city,
-                state: formData.state,
-                postal_code: formData.zip,
-                country: formData.country,
-              },
-            },
-          },
-          return_url: `${window.location.origin}/store/checkout/success`,
-        },
-        redirect: 'if_required',
-      });
-
-      if (error) {
-        toast.error(error.message ?? 'Payment failed. Please try again.');
-        return;
-      }
-
-      if (paymentIntent?.status === 'succeeded') {
-        // Complete the order server-side
-        const token = await auth?.currentUser?.getIdToken();
-        const completeRes = await fetch('/api/checkout/complete', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-          body: JSON.stringify({
-            paymentIntentId: paymentIntent.id,
-            orderData: {
-              customerEmail: formData.email,
-              customerName: formData.name,
-              shippingAddress: {
-                address1: formData.address,
-                city: formData.city,
-                state: formData.state,
-                zip: formData.zip,
-                country: formData.country,
-              },
-            },
-          }),
-        });
-
-        const completeData = await completeRes.json() as {
-          success: boolean;
-          orderId?: string;
-          error?: string;
-        };
-
-        if (completeData.success && completeData.orderId) {
-          localStorage.removeItem('cartSessionId');
-          router.push(
-            `/store/checkout/success?orderId=${completeData.orderId}&payment_intent=${paymentIntent.id}`
-          );
-        } else {
-          // Payment succeeded but order creation failed — redirect anyway
-          localStorage.removeItem('cartSessionId');
-          router.push(
-            `/store/checkout/success?payment_intent=${paymentIntent.id}&redirect_status=succeeded`
-          );
-        }
-      }
-    } catch (error) {
-      logger.error('Payment error:', error instanceof Error ? error : new Error(String(error)), {
-        file: 'checkout/page.tsx',
-      });
-      toast.error('An unexpected error occurred. Please try again.');
-    } finally {
-      setProcessing(false);
-    }
-  };
-
-  return (
-    <form onSubmit={(e) => void handleSubmit(e)}>
-      <div
-        style={{
-          backgroundColor: theme.colors.background.paper,
-          border: `1px solid ${theme.colors.border.main}`,
-          borderRadius: '0.75rem',
-          padding: '2rem',
-          marginBottom: '1.5rem',
-        }}
-      >
-        <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '1.5rem' }}>
-          Payment
-        </h2>
-        <PaymentElement
-          onReady={() => setPaymentReady(true)}
-          options={{
-            layout: 'tabs',
-          }}
-        />
-      </div>
-
-      <div style={{ display: 'flex', gap: '1rem' }}>
-        <button
-          type="button"
-          onClick={onBack}
-          style={{
-            flex: 1,
-            padding: '1rem',
-            backgroundColor: 'transparent',
-            color: theme.colors.text.primary,
-            border: `1px solid ${theme.colors.border.main}`,
-            borderRadius: '0.5rem',
-            cursor: 'pointer',
-            fontSize: '1rem',
-            fontWeight: '500',
-          }}
-        >
-          Back
-        </button>
-        <button
-          type="submit"
-          disabled={processing || !stripe || !paymentReady}
-          style={{
-            flex: 2,
-            padding: '1rem',
-            backgroundColor:
-              processing || !stripe || !paymentReady
-                ? theme.colors.border.strong
-                : theme.colors.primary.main,
-            color: theme.colors.primary.contrast,
-            border: 'none',
-            borderRadius: '0.5rem',
-            cursor: processing || !stripe || !paymentReady ? 'not-allowed' : 'pointer',
-            fontSize: '1.125rem',
-            fontWeight: '600',
-          }}
-        >
-          {processing ? 'Processing...' : `Pay $${cart.total.toFixed(2)}`}
-        </button>
-      </div>
-    </form>
-  );
+/** Response shape from /api/checkout/initiate */
+interface InitiateResponse {
+  success: boolean;
+  provider?: string;
+  clientSecret?: string;
+  redirectUrl?: string;
+  sessionId?: string;
+  error?: string;
 }
 
 // ─── Main Checkout Page ───────────────────────────────────────────────────────
@@ -219,8 +49,13 @@ export default function CheckoutPage() {
   const [cart, setCart] = useState<Cart | null>(null);
   const [loading, setLoading] = useState(true);
   const [step, setStep] = useState<CheckoutStep>('info');
-  const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [creatingIntent, setCreatingIntent] = useState(false);
+
+  // Provider-agnostic payment state
+  const [paymentProvider, setPaymentProvider] = useState<string | null>(null);
+  const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [redirectUrl, setRedirectUrl] = useState<string | null>(null);
+  const [sessionId, setSessionId] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     email: '',
@@ -234,13 +69,13 @@ export default function CheckoutPage() {
 
   const loadCart = useCallback(async () => {
     try {
-      const sessionId = localStorage.getItem('cartSessionId');
-      if (!sessionId) {
+      const cartSessionId = localStorage.getItem('cartSessionId');
+      if (!cartSessionId) {
         router.push('/store/cart');
         return;
       }
 
-      const cartData = await getOrCreateCart(sessionId, PLATFORM_ID);
+      const cartData = await getOrCreateCart(cartSessionId, PLATFORM_ID);
       if (!cartData.items || cartData.items.length === 0) {
         router.push('/store/cart');
         return;
@@ -251,7 +86,7 @@ export default function CheckoutPage() {
       logger.error(
         'Error loading cart:',
         error instanceof Error ? error : new Error(String(error)),
-        { file: 'checkout/page.tsx' }
+        { file: 'checkout/page.tsx' },
       );
     } finally {
       setLoading(false);
@@ -272,7 +107,7 @@ export default function CheckoutPage() {
       setCreatingIntent(true);
 
       const token = await auth?.currentUser?.getIdToken();
-      const response = await fetch('/api/checkout/create-payment-intent', {
+      const response = await fetch('/api/checkout/initiate', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -288,23 +123,22 @@ export default function CheckoutPage() {
         }),
       });
 
-      const data = await response.json() as {
-        success: boolean;
-        clientSecret?: string;
-        error?: string;
-      };
+      const data = (await response.json()) as InitiateResponse;
 
-      if (data.success && data.clientSecret) {
-        setClientSecret(data.clientSecret);
+      if (data.success && data.provider) {
+        setPaymentProvider(data.provider);
+        setClientSecret(data.clientSecret ?? null);
+        setRedirectUrl(data.redirectUrl ?? null);
+        setSessionId(data.sessionId ?? null);
         setStep('payment');
       } else {
         toast.error(data.error ?? 'Failed to initialize payment. Please try again.');
       }
     } catch (error) {
       logger.error(
-        'Payment intent creation error:',
+        'Checkout initiation error:',
         error instanceof Error ? error : new Error(String(error)),
-        { file: 'checkout/page.tsx' }
+        { file: 'checkout/page.tsx' },
       );
       toast.error('Failed to initialize payment. Please try again.');
     } finally {
@@ -531,14 +365,16 @@ export default function CheckoutPage() {
               </form>
             )}
 
-            {step === 'payment' && clientSecret && (
-              <StripeProvider clientSecret={clientSecret}>
-                <PaymentForm
-                  cart={cart}
-                  formData={formData}
-                  onBack={() => setStep('info')}
-                />
-              </StripeProvider>
+            {step === 'payment' && paymentProvider && (
+              <CheckoutPaymentFactory
+                provider={paymentProvider}
+                cart={cart}
+                formData={formData}
+                clientSecret={clientSecret ?? undefined}
+                redirectUrl={redirectUrl ?? undefined}
+                sessionId={sessionId ?? undefined}
+                onBack={() => setStep('info')}
+              />
             )}
           </div>
 
@@ -646,7 +482,7 @@ export default function CheckoutPage() {
                   <rect x="5" y="11" width="14" height="10" rx="2" stroke="currentColor" strokeWidth="2" />
                   <path d="M8 11V7a4 4 0 1 1 8 0v4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
                 </svg>
-                Payments are securely processed by Stripe
+                Payments are securely processed
               </div>
             </div>
           </div>

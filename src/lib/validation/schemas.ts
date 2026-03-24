@@ -141,7 +141,12 @@ export const campaignCreateSchema = z.object({
  * Checkout complete schema
  */
 export const checkoutCompleteSchema = z.object({
+  provider: z.enum([
+    'stripe', 'paypal', 'square', 'authorizenet', '2checkout', 'mollie',
+    'paddle', 'adyen', 'chargebee', 'hyperswitch',
+  ]).default('stripe'),
   paymentIntentId: z.string().min(1),
+  sessionId: z.string().optional(),
   orderData: z.record(z.string(), z.unknown()).optional(),
 });
 
