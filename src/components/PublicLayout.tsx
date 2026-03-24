@@ -29,13 +29,14 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
     {
       id: 'welcome',
       role: 'assistant',
-      content: "Hi there! 👋 I'm your AI sales assistant. How can I help you today? I can answer questions about our platform, help you understand pricing, or guide you through getting started.",
+      content: "Hi there! I'm Alex, your AI assistant for SalesVelocity.ai. Ask me anything about our platform, pricing, or how to get started!",
       timestamp: new Date(),
     }
   ]);
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const customerIdRef = useRef(`visitor_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -65,7 +66,7 @@ export default function PublicLayout({ children }: PublicLayoutProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: userMessage.content,
-          customerId: `visitor_${Date.now()}`,
+          customerId: customerIdRef.current,
         }),
       });
 
