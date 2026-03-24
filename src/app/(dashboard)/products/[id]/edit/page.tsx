@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { getProduct, updateProduct, type Product } from '@/lib/ecommerce/product-service';
+import { getProduct, updateProduct, CATALOG_ITEM_TYPES, CATALOG_TYPE_LABELS, type Product } from '@/lib/ecommerce/product-service';
 import { logger } from '@/lib/logger/logger';
 import { useToast } from '@/hooks/useToast';
 
@@ -40,6 +40,7 @@ export default function EditProductPage() {
       setSaving(true);
       await updateProduct(productId, {
         name: product.name,
+        type: product.type,
         description: product.description,
         price: product.price,
         sku: product.sku,
@@ -83,12 +84,36 @@ export default function EditProductPage() {
   return (
     <div className="p-8">
       <div className="max-w-2xl mx-auto">
-        <h1 className="text-3xl font-bold mb-6 text-[var(--color-text-primary)]">Edit Product</h1>
+        <h1 className="text-3xl font-bold mb-6 text-[var(--color-text-primary)]">
+          Edit {CATALOG_TYPE_LABELS[product.type ?? 'product']}
+        </h1>
         <form onSubmit={(e) => { void handleSubmit(e); }}>
           <div className="bg-surface-paper rounded-lg p-6 mb-4">
             <div className="space-y-4">
+              {/* Item Type Selector */}
               <div>
-                <label className="block text-sm font-medium mb-2 text-[var(--color-text-secondary)]">Product Name *</label>
+                <label className="block text-sm font-medium mb-2 text-[var(--color-text-secondary)]">Item Type *</label>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {CATALOG_ITEM_TYPES.map((t) => (
+                    <button
+                      key={t}
+                      type="button"
+                      onClick={() => setProduct({ ...product, type: t })}
+                      className="px-3 py-2 rounded-lg text-sm font-medium border transition-colors"
+                      style={{
+                        borderColor: (product.type ?? 'product') === t ? 'var(--color-primary)' : 'var(--color-border-light)',
+                        backgroundColor: (product.type ?? 'product') === t ? 'color-mix(in srgb, var(--color-primary) 15%, transparent)' : 'var(--color-bg-elevated)',
+                        color: (product.type ?? 'product') === t ? 'var(--color-primary)' : 'var(--color-text-secondary)',
+                      }}
+                    >
+                      {CATALOG_TYPE_LABELS[t]}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2 text-[var(--color-text-secondary)]">Name *</label>
                 <input
                   type="text"
                   value={product.name}

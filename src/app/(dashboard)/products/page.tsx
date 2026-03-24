@@ -8,7 +8,7 @@
 
 import { useEffect, useCallback, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { getProducts, deleteProduct } from '@/lib/ecommerce/product-service';
+import { getProducts, deleteProduct, CATALOG_TYPE_LABELS } from '@/lib/ecommerce/product-service';
 import { usePagination } from '@/hooks/usePagination'
 import { logger } from '@/lib/logger/logger';
 import { useToast } from '@/hooks/useToast';
@@ -94,6 +94,7 @@ export default function ProductManagementPage() {
             <thead className="bg-surface-elevated">
               <tr>
                 <th className="text-left p-4 text-[var(--color-text-primary)]">Product</th>
+                <th className="text-left p-4 text-[var(--color-text-primary)]">Type</th>
                 <th className="text-left p-4 text-[var(--color-text-primary)]">SKU</th>
                 <th className="text-left p-4 text-[var(--color-text-primary)]">Price</th>
                 <th className="text-left p-4 text-[var(--color-text-primary)]">Stock</th>
@@ -106,6 +107,17 @@ export default function ProductManagementPage() {
                   <td className="p-4">
                     <div className="font-medium text-[var(--color-text-primary)]">{product.name}</div>
                     <div className="text-sm text-[var(--color-text-secondary)]">{product.category}</div>
+                  </td>
+                  <td className="p-4">
+                    <span
+                      className="px-2 py-1 rounded text-xs font-medium"
+                      style={{
+                        backgroundColor: 'color-mix(in srgb, var(--color-primary) 12%, transparent)',
+                        color: 'var(--color-primary)',
+                      }}
+                    >
+                      {CATALOG_TYPE_LABELS[product.type ?? 'product'] ?? 'Product'}
+                    </span>
                   </td>
                   <td className="p-4 text-[var(--color-text-secondary)]">{product.sku}</td>
                   <td className="p-4 text-[var(--color-text-primary)]">${product.price?.toFixed(2)}</td>

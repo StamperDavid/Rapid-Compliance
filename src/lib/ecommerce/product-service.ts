@@ -8,10 +8,23 @@ import { where, orderBy, type QueryConstraint, type QueryDocumentSnapshot } from
 import { logger } from '@/lib/logger/logger';
 import { getSubCollection } from '@/lib/firebase/collections';
 
+/** Catalog item types — enforced on creation and edits */
+export const CATALOG_ITEM_TYPES = ['product', 'service', 'digital', 'subscription'] as const;
+export type CatalogItemType = (typeof CATALOG_ITEM_TYPES)[number];
+
+export const CATALOG_TYPE_LABELS: Record<CatalogItemType, string> = {
+  product: 'Physical Product',
+  service: 'Service',
+  digital: 'Digital Product',
+  subscription: 'Subscription',
+};
+
 export interface Product {
   id: string;
   name: string;
   description?: string;
+  /** Catalog item type — defaults to 'product' for legacy items without a type */
+  type?: CatalogItemType;
   sku?: string;
   price: number;
   compareAtPrice?: number;
@@ -43,6 +56,7 @@ export interface ProductVariant {
 }
 
 export interface ProductFilters {
+  type?: CatalogItemType;
   category?: string;
   inStock?: boolean;
   minPrice?: number;
@@ -72,6 +86,9 @@ export async function getProducts(
     const constraints: QueryConstraint[] = [];
 
     // Apply filters
+    if (filters?.type) {
+      constraints.push(where('type', '==', filters.type));
+    }
     if (filters?.category) {
       constraints.push(where('category', '==', filters.category));
     }
@@ -159,13 +176,16 @@ export async function createProduct(
     const productId = `product-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     const now = new Date();
 
+    const itemType = data.type ?? 'product';
+
     const product: Product = {
       ...data,
       id: productId,
-      currency:(data.currency !== '' && data.currency != null) ? data.currency : 'USD',
+      type: itemType,
+      currency: (data.currency !== '' && data.currency != null) ? data.currency : 'USD',
       inStock: data.inStock ?? true,
       trackInventory: data.trackInventory ?? false,
-      isDigital: data.isDigital ?? false,
+      isDigital: itemType === 'digital' ? true : (data.isDigital ?? false),
       tags: data.tags ?? [],
       images: data.images ?? [],
       createdAt: now,
@@ -182,6 +202,7 @@ export async function createProduct(
     logger.info('Product created', {
       productId,
       name: product.name,
+      type: product.type,
       price: product.price,
     });
 

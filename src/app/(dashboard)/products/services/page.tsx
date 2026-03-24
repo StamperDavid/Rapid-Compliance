@@ -24,7 +24,7 @@ export default function ServicesCatalogPage() {
   const fetchServices = useCallback(
     async (lastDoc?: QueryDocumentSnapshot) => {
       return getProducts(
-        { category: 'service' },
+        { type: 'service' },
         { pageSize: 50, lastDoc }
       );
     },
