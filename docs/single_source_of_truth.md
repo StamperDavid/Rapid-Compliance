@@ -230,7 +230,7 @@ Jasper orchestrates full marketing campaigns: research → strategy → produce 
 | Domain | Score | Status |
 |--------|-------|--------|
 | Authentication & RBAC | 9.5/10 | READY — MFA/TOTP, GDPR deletion, email invites, billing portal |
-| Payments & Commerce | 9.5/10 | READY — 8 providers live (Stripe, PayPal, Square, Authorize.Net, 2Checkout, Mollie, Paddle, Adyen). Provider-agnostic checkout + subscription billing. Paddle = MoR, Adyen = Interchange++. 2 more planned: Chargebee (billing layer), Hyperswitch (orchestration) |
+| Payments & Commerce | 9.5/10 | READY — 9 providers live (Stripe, PayPal, Square, Authorize.Net, 2Checkout, Mollie, Paddle, Adyen, Chargebee). Provider-agnostic checkout + subscription billing. Paddle = MoR, Adyen = Interchange++, Chargebee = subscription billing layer. 1 more planned: Hyperswitch (orchestration) |
 | CRM & Sales | 9.5/10 | READY |
 | AI Orchestration (Jasper) | 9.5/10 | READY |
 | Video System | 9.5/10 | READY — Clone Wizard, auto-captions, background music, assembly progress, simple/advanced mode |

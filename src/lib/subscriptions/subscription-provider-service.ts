@@ -25,7 +25,8 @@ export type SubscriptionProviderId =
   | 'authorizenet'
   | 'paypal'
   | 'square'
-  | 'paddle';
+  | 'paddle'
+  | 'chargebee';
 
 export interface SubscriptionCheckoutRequest {
   tier: SubscriptionTier;
@@ -102,7 +103,7 @@ export async function getSubscriptionProvider(): Promise<SubscriptionProviderId>
 }
 
 function isValidProvider(p: string): p is SubscriptionProviderId {
-  return ['stripe', 'authorizenet', 'paypal', 'square', 'paddle'].includes(p);
+  return ['stripe', 'authorizenet', 'paypal', 'square', 'paddle', 'chargebee'].includes(p);
 }
 
 // ============================================================================
@@ -130,6 +131,10 @@ export async function createCheckoutSession(
       return createSquareCheckout(request);
     case 'paddle':
       return createPaddleCheckout(request);
+    case 'chargebee': {
+      const { createChargebeeCheckout } = await import('./chargebee-provider');
+      return createChargebeeCheckout(request);
+    }
     default:
       return { success: false, provider: resolvedProvider, error: `Unsupported provider: ${resolvedProvider}` };
   }
@@ -160,6 +165,10 @@ export async function verifyCheckoutSession(
       return verifySquareSession(sessionId, userEmail);
     case 'paddle':
       return verifyPaddleSession(sessionId, userEmail);
+    case 'chargebee': {
+      const { verifyChargebeeSession } = await import('./chargebee-provider');
+      return verifyChargebeeSession(sessionId, userEmail);
+    }
     default:
       return { valid: false, error: `Unsupported provider: ${resolvedProvider}` };
   }
@@ -189,6 +198,10 @@ export async function cancelSubscription(
       return cancelSquareSubscription(subscriptionId);
     case 'paddle':
       return cancelPaddleSubscription(subscriptionId);
+    case 'chargebee': {
+      const { cancelChargebeeSubscription } = await import('./chargebee-provider');
+      return cancelChargebeeSubscription(subscriptionId);
+    }
     default:
       return { success: false, error: `Unsupported provider: ${resolvedProvider}` };
   }
@@ -221,6 +234,10 @@ export async function getPortalUrl(
       return { success: true, url: returnUrl };
     case 'paddle':
       return getPaddlePortalUrl(subscriptionId);
+    case 'chargebee': {
+      const { getChargebeePortalUrl } = await import('./chargebee-provider');
+      return getChargebeePortalUrl(subscriptionId);
+    }
     default:
       return { success: false, error: `Unsupported provider: ${resolvedProvider}` };
   }

@@ -505,5 +505,13 @@ export const PAYMENT_PROVIDERS = [
     logo: '🟢',
     countries: 'Global (150+ currencies)',
   },
+  {
+    id: 'chargebee',
+    name: 'Chargebee',
+    description: 'Subscription billing layer — manages recurring billing on top of your processor',
+    fee: '0.75% above free tier',
+    logo: '🔄',
+    countries: 'Global',
+  },
 ];
 

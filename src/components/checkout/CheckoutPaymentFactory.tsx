@@ -25,6 +25,11 @@ const AdyenCheckoutForm = dynamic(
   { ssr: false },
 );
 
+const ChargebeeCheckoutForm = dynamic(
+  () => import('@/components/checkout/ChargebeeCheckoutForm'),
+  { ssr: false },
+);
+
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 interface CartShape {
@@ -99,6 +104,18 @@ export default function CheckoutPaymentFactory({
       <PaddleCheckoutForm
         cart={cart}
         formData={formData}
+        sessionId={sessionId}
+        onBack={onBack}
+      />
+    );
+  }
+
+  // Chargebee — hosted page modal (subscription billing only)
+  if (provider === 'chargebee') {
+    return (
+      <ChargebeeCheckoutForm
+        cart={cart}
+        redirectUrl={redirectUrl}
         sessionId={sessionId}
         onBack={onBack}
       />

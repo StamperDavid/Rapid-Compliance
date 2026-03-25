@@ -44,6 +44,7 @@ interface StorefrontConfig {
     mollieEnabled: boolean;
     paddleEnabled: boolean;
     adyenEnabled: boolean;
+    chargebeeEnabled: boolean;
     defaultProvider: string;
     autoCreateOrder: boolean;
     autoCreateInvoice: boolean;
@@ -87,6 +88,7 @@ const DEFAULT_CONFIG: StorefrontConfig = {
     mollieEnabled: false,
     paddleEnabled: false,
     adyenEnabled: false,
+    chargebeeEnabled: false,
     defaultProvider: 'stripe',
     autoCreateOrder: true,
     autoCreateInvoice: true,
@@ -569,6 +571,21 @@ export default function StorefrontSettingsPage() {
                         />
                         <span style={{ fontSize: '0.875rem', color: 'var(--color-text-primary)' }}>🟢 Adyen</span>
                         <span style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginLeft: 'auto' }}>Enterprise processor — Interchange++ pricing</span>
+                      </label>
+
+                      <div style={{ borderTop: '1px solid var(--color-border-light)', marginTop: '0.75rem', paddingTop: '0.75rem' }}>
+                        <div style={{ fontSize: '0.75rem', fontWeight: '600', color: 'var(--color-text-secondary)', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Subscription Billing</div>
+                      </div>
+
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer' }}>
+                        <input
+                          type="checkbox"
+                          checked={config.paymentProcessing.chargebeeEnabled}
+                          onChange={(e) => updateConfig(['paymentProcessing', 'chargebeeEnabled'], e.target.checked)}
+                          style={{ width: '1.25rem', height: '1.25rem' }}
+                        />
+                        <span style={{ fontSize: '0.875rem', color: 'var(--color-text-primary)' }}>🔄 Chargebee</span>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginLeft: 'auto' }}>Subscription billing — manages recurring charges via your processor</span>
                       </label>
                     </div>
 

@@ -5,7 +5,7 @@
 ## Context
 Repository: https://github.com/StamperDavid/Rapid-Compliance
 Branch: dev
-Last Updated: March 24, 2026 (Payment Gateway Phases 0-2 complete: Dynamic Checkout + Paddle + Adyen)
+Last Updated: March 24, 2026 (Payment Gateway Phases 0-3 complete: Dynamic Checkout + Paddle + Adyen + Chargebee)
 
 ## Current State
 
@@ -57,13 +57,14 @@ Last Updated: March 24, 2026 (Payment Gateway Phases 0-2 complete: Dynamic Check
 - Added to payment-service (processPayment + refundPayment), PAYMENT_PROVIDERS, APIServiceName, checkout initiate/complete, CheckoutPaymentFactory, storefront settings
 - NO subscription support by design — pair with Chargebee for recurring billing
 
-**Phase 3: Chargebee (Billing Layer)**
-- NPM: `chargebee` (server), Chargebee.js via CDN (client)
-- `chargebee-provider.ts` — all 4 subscription functions (checkout, verify, cancel, portal)
-- `ChargebeeCheckoutForm.tsx` — hosted page modal
-- `src/app/api/webhooks/chargebee/route.ts` — shared secret verification
-- Subscriptions ONLY — does not process one-time payments
-- Sits on top of Stripe/Adyen/etc. for actual charge execution
+**Phase 3: Chargebee (Billing Layer) — COMPLETE (March 24, 2026)**
+- NPM: `chargebee` installed + Chargebee.js via CDN
+- `chargebee-provider.ts` — createChargebeeCheckout(), verifyChargebeeSession(), cancelChargebeeSubscription(), getChargebeePortalUrl()
+- `ChargebeeCheckoutForm.tsx` — Chargebee.js hosted page modal via cbInstance.openCheckout()
+- `src/app/api/webhooks/chargebee/route.ts` — Basic Auth verification, subscription/payment/invoice events, idempotency via `chargebee_events` collection
+- Added to subscription-provider-service all 4 dispatchers (lazy imports)
+- Added to PAYMENT_PROVIDERS, APIServiceName, storefront settings (separate "Subscription Billing" subsection)
+- Subscriptions ONLY by design — does not process one-time payments
 
 **Phase 4: Hyperswitch (Payment Orchestration)**
 - NPM: `@juspay-tech/hyperswitch-node`, `@juspay-tech/hyper-js`, `@juspay-tech/react-hyper-js`
