@@ -324,9 +324,28 @@ export interface DiscoveryFinding {
   approvedAt: string | null;
   rejectionNotes: string | null;
   leadId: string | null;
+  /** SHA-256 hash of normalized key seed fields for duplicate detection */
+  contentHash?: string;
+  /** If this finding is a duplicate, the ID of the original finding */
+  duplicateOf?: string | null;
+  /** Per-field source conflicts for resolution UI */
+  fieldConflicts?: Record<string, FieldConflict[]>;
   createdAt: string;
   updatedAt: string;
 }
+
+/** Represents conflicting values for a single field from different sources */
+export interface FieldConflict {
+  value: string;
+  source: string;
+  confidence: number;
+}
+
+export const FieldConflictSchema = z.object({
+  value: z.string(),
+  source: z.string(),
+  confidence: z.number(),
+});
 
 export const DiscoveryFindingSchema = z.object({
   id: z.string().min(1),
@@ -343,6 +362,9 @@ export const DiscoveryFindingSchema = z.object({
   approvedAt: z.string().nullable(),
   rejectionNotes: z.string().nullable(),
   leadId: z.string().nullable(),
+  contentHash: z.string().optional(),
+  duplicateOf: z.string().nullable().optional(),
+  fieldConflicts: z.record(z.string(), z.array(FieldConflictSchema)).optional(),
   createdAt: z.string(),
   updatedAt: z.string(),
 });

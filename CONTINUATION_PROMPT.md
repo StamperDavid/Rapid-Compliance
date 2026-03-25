@@ -80,13 +80,15 @@ Last Updated: March 24, 2026 (Payment Gateway Expansion ALL 5 PHASES COMPLETE: 1
 
 ### What to Build NOW — In Order
 
-**1. Intelligence Discovery Hub Phase 8 — Polish + Edge Cases**
-- Hub at `/intelligence/discovery` — Phases 1-7 COMPLETE
-- Error resilience — retry failed hops, graceful degradation, dead letter queue
-- Performance — batch enrichment parallelization, Firestore batch writes, virtual scrolling for 1000+ findings
-- Duplicate detection via content hashing
-- CAPTCHA/blocking detection
-- Field conflict resolution UI — show both values with confidence, let user pick
+**1. Intelligence Discovery Hub Phase 8 — Polish + Edge Cases — COMPLETE (March 24, 2026)**
+- Retry logic with exponential backoff (3 retries, jittered delay) on all adapter hops
+- Batch parallelization — Google search + social search run in parallel via Promise.allSettled
+- Duplicate detection — SHA-256 content hashing on normalized seed data, Firestore duplicate check
+- CAPTCHA/blocking detection — Cloudflare challenge, reCAPTCHA, hCaptcha, bot detection patterns
+- Virtual scrolling — lightweight windowed rendering for 1000+ findings (skips for <100 items)
+- Field conflict resolution — per-field conflict extraction (phone, email, website), duplicate/conflict indicators in FindingRow UI
+- New file: `dedup-conflicts.ts` — generateContentHash(), checkDuplicate(), extractFieldConflicts()
+- New types: `FieldConflict`, `contentHash`, `duplicateOf`, `fieldConflicts` on DiscoveryFinding
 
 **2. Social Media Platform Expansion**
 - Expand beyond big 6 (Twitter/X, Facebook, Instagram, LinkedIn, TikTok, YouTube)

@@ -262,18 +262,35 @@ export async function updateFindingEnrichment(
   enrichmentSources: EnrichmentSourceResult[],
   confidenceScores: Record<string, number>,
   overallConfidence: number,
-  enrichmentStatus: EnrichmentStatus
+  enrichmentStatus: EnrichmentStatus,
+  extras?: {
+    contentHash?: string;
+    duplicateOf?: string | null;
+    fieldConflicts?: Record<string, Array<{ value: string; source: string; confidence: number }>>;
+  },
 ): Promise<void> {
   const db = ensureDb();
 
-  await db.collection(getDiscoveryFindingsCollection()).doc(findingId).update({
+  const updateData: Record<string, unknown> = {
     enrichedData,
     enrichmentSources,
     confidenceScores,
     overallConfidence,
     enrichmentStatus,
     updatedAt: new Date().toISOString(),
-  });
+  };
+
+  if (extras?.contentHash) {
+    updateData.contentHash = extras.contentHash;
+  }
+  if (extras?.duplicateOf !== undefined) {
+    updateData.duplicateOf = extras.duplicateOf;
+  }
+  if (extras?.fieldConflicts) {
+    updateData.fieldConflicts = extras.fieldConflicts;
+  }
+
+  await db.collection(getDiscoveryFindingsCollection()).doc(findingId).update(updateData);
 
   logger.debug(`${LOG_PREFIX} Finding enrichment updated`, {
     findingId,

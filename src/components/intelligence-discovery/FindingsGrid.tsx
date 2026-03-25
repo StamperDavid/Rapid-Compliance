@@ -6,7 +6,7 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useMemo, useCallback } from 'react';
 import {
   ChevronDown,
   Play,
@@ -133,6 +133,106 @@ const APPROVAL_FILTERS: Array<{ value: ApprovalStatus | 'all'; label: string }> 
   { value: 'approved', label: 'Approved' },
   { value: 'rejected', label: 'Rejected' },
 ];
+
+// ── Virtualized Findings List — renders only visible rows ─────────────────
+
+const ROW_HEIGHT = 72; // approximate height of each FindingRow in px
+const OVERSCAN = 5; // extra rows to render above/below viewport
+
+function VirtualizedFindings({
+  findings,
+  selectedIds,
+  onToggleSelect,
+  onApprove,
+  onReject,
+  onEnrich,
+}: {
+  findings: DiscoveryFinding[];
+  selectedIds: Set<string>;
+  onToggleSelect: (id: string) => void;
+  onApprove: (id: string) => Promise<void>;
+  onReject: (id: string) => Promise<void>;
+  onEnrich: (id: string) => Promise<void>;
+}) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [scrollTop, setScrollTop] = useState(0);
+
+  const handleScroll = useCallback(() => {
+    if (containerRef.current) {
+      setScrollTop(containerRef.current.scrollTop);
+    }
+  }, []);
+
+  const { visibleItems, totalHeight, offsetY } = useMemo(() => {
+    // For small lists (<100), skip virtualization overhead
+    if (findings.length < 100) {
+      return {
+        visibleItems: findings.map((f, i) => ({ finding: f, index: i })),
+        totalHeight: findings.length * ROW_HEIGHT,
+        offsetY: 0,
+      };
+    }
+
+    const containerHeight = containerRef.current?.clientHeight ?? 600;
+    const startIndex = Math.max(0, Math.floor(scrollTop / ROW_HEIGHT) - OVERSCAN);
+    const endIndex = Math.min(
+      findings.length,
+      Math.ceil((scrollTop + containerHeight) / ROW_HEIGHT) + OVERSCAN,
+    );
+
+    return {
+      visibleItems: findings.slice(startIndex, endIndex).map((f, i) => ({
+        finding: f,
+        index: startIndex + i,
+      })),
+      totalHeight: findings.length * ROW_HEIGHT,
+      offsetY: startIndex * ROW_HEIGHT,
+    };
+  }, [findings, scrollTop]);
+
+  // For small lists, render directly without virtualization wrapper
+  if (findings.length < 100) {
+    return (
+      <>
+        {findings.map((finding) => (
+          <FindingRow
+            key={finding.id}
+            finding={finding}
+            isSelected={selectedIds.has(finding.id)}
+            onToggleSelect={() => onToggleSelect(finding.id)}
+            onApprove={() => { void onApprove(finding.id); }}
+            onReject={() => { void onReject(finding.id); }}
+            onEnrich={() => { void onEnrich(finding.id); }}
+          />
+        ))}
+      </>
+    );
+  }
+
+  return (
+    <div
+      ref={containerRef}
+      onScroll={handleScroll}
+      style={{ height: '100%', overflow: 'auto' }}
+    >
+      <div style={{ height: totalHeight, position: 'relative' }}>
+        <div style={{ transform: `translateY(${offsetY}px)` }}>
+          {visibleItems.map(({ finding }) => (
+            <FindingRow
+              key={finding.id}
+              finding={finding}
+              isSelected={selectedIds.has(finding.id)}
+              onToggleSelect={() => onToggleSelect(finding.id)}
+              onApprove={() => { void onApprove(finding.id); }}
+              onReject={() => { void onReject(finding.id); }}
+              onEnrich={() => { void onEnrich(finding.id); }}
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function FindingsGrid({
   sources,
@@ -420,17 +520,14 @@ export default function FindingsGrid({
           </div>
         )}
 
-        {findings.map((finding) => (
-          <FindingRow
-            key={finding.id}
-            finding={finding}
-            isSelected={selectedIds.has(finding.id)}
-            onToggleSelect={() => onToggleSelect(finding.id)}
-            onApprove={() => { void onApprove(finding.id); }}
-            onReject={() => { void onReject(finding.id); }}
-            onEnrich={() => { void onEnrich(finding.id); }}
-          />
-        ))}
+        <VirtualizedFindings
+          findings={findings}
+          selectedIds={selectedIds}
+          onToggleSelect={onToggleSelect}
+          onApprove={onApprove}
+          onReject={onReject}
+          onEnrich={onEnrich}
+        />
 
         {findingsHasMore && (
           <div className="p-4 text-center">

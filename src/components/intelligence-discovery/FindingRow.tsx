@@ -19,6 +19,8 @@ import {
   Share2,
   ThumbsUp,
   ThumbsDown,
+  Copy,
+  GitBranch,
 } from 'lucide-react';
 import type { DiscoveryFinding, EnrichmentStatus, ApprovalStatus } from '@/types/intelligence-discovery';
 
@@ -81,6 +83,9 @@ export default function FindingRow({
   const hasEmail = finding.enrichedData.emails.length > 0;
   const hasSocial = Object.keys(finding.enrichedData.socialMedia).length > 0;
   const hasWebsite = finding.enrichedData.website !== null;
+  const isDuplicate = Boolean(finding.duplicateOf);
+  const hasConflicts = finding.fieldConflicts && Object.keys(finding.fieldConflicts).length > 0;
+  const conflictCount = hasConflicts ? Object.keys(finding.fieldConflicts ?? {}).length : 0;
 
   return (
     <div
@@ -144,6 +149,18 @@ export default function FindingRow({
               <span className="flex items-center gap-1 text-xs text-[var(--color-primary)]">
                 <Share2 className="w-3 h-3" />
                 Social
+              </span>
+            )}
+            {isDuplicate && (
+              <span className="flex items-center gap-1 text-xs text-[var(--color-warning)]" title={`Duplicate of ${finding.duplicateOf}`}>
+                <Copy className="w-3 h-3" />
+                Duplicate
+              </span>
+            )}
+            {hasConflicts && (
+              <span className="flex items-center gap-1 text-xs text-[var(--color-warning)]" title={`${conflictCount} field conflict${conflictCount > 1 ? 's' : ''} — click to resolve`}>
+                <GitBranch className="w-3 h-3" />
+                {conflictCount} conflict{conflictCount > 1 ? 's' : ''}
               </span>
             )}
           </div>

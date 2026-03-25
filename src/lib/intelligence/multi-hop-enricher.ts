@@ -36,6 +36,7 @@ import { SocialAdapter } from './source-adapters/social-adapter';
 
 import type { DiscoveryFinding, EnrichmentStatus } from '@/types/intelligence-discovery';
 import { createEmptyAdapterResult, type EnrichmentContext, type AdapterResult } from './source-adapters/index';
+import { generateContentHash, checkDuplicate, extractFieldConflicts } from './dedup-conflicts';
 
 // ============================================================================
 // CONFIG
@@ -46,6 +47,85 @@ const rateLimiter = createDomainRateLimiter({
   windowMs: 60000,
   minDelayMs: 1000,
 });
+
+const RETRY_CONFIG = {
+  maxRetries: 3,
+  baseDelayMs: 1000,
+  maxDelayMs: 10000,
+};
+
+// ============================================================================
+// RETRY WITH EXPONENTIAL BACKOFF
+// ============================================================================
+
+async function withRetry<T>(
+  fn: () => Promise<T>,
+  label: string,
+  maxRetries = RETRY_CONFIG.maxRetries,
+): Promise<T> {
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (err: unknown) {
+      lastError = err instanceof Error ? err : new Error(String(err));
+
+      if (attempt < maxRetries) {
+        const delay = Math.min(
+          RETRY_CONFIG.baseDelayMs * Math.pow(2, attempt) + Math.random() * 500,
+          RETRY_CONFIG.maxDelayMs,
+        );
+        logger.warn(`[MultiHopEnricher] ${label} failed (attempt ${attempt + 1}/${maxRetries + 1}), retrying in ${Math.round(delay)}ms`, {
+          error: lastError.message,
+        });
+        await new Promise<void>((resolve) => { setTimeout(resolve, delay); });
+      }
+    }
+  }
+
+  throw lastError ?? new Error(`${label} failed after ${maxRetries + 1} attempts`);
+}
+
+// ============================================================================
+// CAPTCHA / BLOCKING DETECTION
+// ============================================================================
+
+const CAPTCHA_INDICATORS = [
+  'captcha', 'recaptcha', 'hcaptcha', 'challenge-platform',
+  'cf-browser-verification', 'cloudflare', 'just a moment',
+  'checking your browser', 'ray id', 'attention required',
+  'access denied', 'forbidden', '403 forbidden',
+  'bot detection', 'are you a robot', 'verify you are human',
+];
+
+function detectBlocking(content: string): { blocked: boolean; reason?: string } {
+  const lower = content.toLowerCase();
+
+  // Very short responses are suspicious
+  if (content.length < 200 && content.length > 0) {
+    for (const indicator of CAPTCHA_INDICATORS) {
+      if (lower.includes(indicator)) {
+        return { blocked: true, reason: `Blocked: detected "${indicator}" in response` };
+      }
+    }
+  }
+
+  // Check regardless of length for strong indicators
+  if (lower.includes('cf-browser-verification') || lower.includes('challenge-platform')) {
+    return { blocked: true, reason: 'Cloudflare challenge detected' };
+  }
+  if (lower.includes('recaptcha') && lower.includes('g-recaptcha')) {
+    return { blocked: true, reason: 'reCAPTCHA detected' };
+  }
+  if (lower.includes('hcaptcha') && lower.includes('h-captcha')) {
+    return { blocked: true, reason: 'hCaptcha detected' };
+  }
+
+  return { blocked: false };
+}
+
+export { detectBlocking };
 
 // ============================================================================
 // MAIN ENTRY POINT
@@ -67,10 +147,22 @@ export async function enrichFinding(
   const ownerName = seed.owner_name ?? seed.officer_name ?? seed.poc_name ?? '';
   const seedPhone = seed.phone ?? null;
 
+  // Generate content hash for duplicate detection
+  const contentHash = generateContentHash(seed);
+  const duplicateOf = await checkDuplicate(contentHash, finding.id);
+  if (duplicateOf) {
+    logger.info('[MultiHopEnricher] Duplicate detected, marking finding', {
+      findingId: finding.id,
+      duplicateOf,
+    });
+  }
+
   logger.info('[MultiHopEnricher] Starting enrichment', {
     findingId: finding.id,
     entityName,
     depth,
+    contentHash,
+    isDuplicate: duplicateOf !== null,
   });
 
   const context: EnrichmentContext = {
@@ -85,14 +177,14 @@ export async function enrichFinding(
 
   const adapterResults: AdapterResult[] = [];
 
-  // ── Hop 1: Google Search ──────────────────────────────────────────────
+  // ── Hop 1: Google Search (with retry) ─────────────────────────────────
   const googleResult = await runHop(
     finding,
     'google_search',
-    async () => {
+    () => withRetry(async () => {
       const adapter = new GoogleAdapter();
       return adapter.search(entityName, context);
-    }
+    }, 'google_search'),
   );
   adapterResults.push(googleResult);
 
@@ -107,56 +199,86 @@ export async function enrichFinding(
     context.existingEmail = googleResult.contacts.emails[0];
   }
 
-  // ── Hop 2: Website Scrape (if website found) ─────────────────────────
+  // ── Hops 2+3: Website Scrape + Social Search (parallelized) ──────────
+  // Website depends on Google (needs URL), but Social is independent.
+  // For standard/deep, run them in parallel.
+  const parallelHops: Array<Promise<{ name: string; result: AdapterResult }>> = [];
+
   if (context.existingWebsite) {
-    try {
-      const domain = new URL(context.existingWebsite).hostname;
-      await rateLimiter.waitForSlot(domain);
-    } catch {
-      // Invalid URL or rate limit — continue anyway
-    }
-
-    const websiteResult = await runHop(
-      finding,
-      'website_scrape',
-      async () => {
-        const adapter = new WebsiteAdapter();
-        return adapter.search(entityName, context);
+    parallelHops.push((async () => {
+      try {
+        const domain = new URL(context.existingWebsite ?? '').hostname;
+        await rateLimiter.waitForSlot(domain);
+      } catch {
+        // Invalid URL or rate limit — continue anyway
       }
-    );
-    adapterResults.push(websiteResult);
 
-    // Update context with website findings
-    if (websiteResult.contacts.emails.length > 0 && !context.existingEmail) {
-      context.existingEmail = websiteResult.contacts.emails[0];
-    }
+      const result = await runHop(
+        finding,
+        'website_scrape',
+        () => withRetry(async () => {
+          const adapter = new WebsiteAdapter();
+          return adapter.search(entityName, context);
+        }, 'website_scrape'),
+      );
+      return { name: 'website_scrape', result };
+    })());
   }
 
-  // ── Hop 3: Social Search (standard + deep depth) ─────────────────────
   if (depth === 'standard' || depth === 'deep') {
-    const socialResult = await runHop(
-      finding,
-      'social_search',
-      async () => {
-        const adapter = new SocialAdapter();
-        return adapter.search(entityName, context);
-      }
-    );
-    adapterResults.push(socialResult);
+    parallelHops.push((async () => {
+      const result = await runHop(
+        finding,
+        'social_search',
+        () => withRetry(async () => {
+          const adapter = new SocialAdapter();
+          return adapter.search(entityName, context);
+        }, 'social_search'),
+      );
+      return { name: 'social_search', result };
+    })());
   }
 
-  // ── Hop 4: AI Re-Analysis (deep depth) ───────────────────────────────
+  // Wait for parallel hops to settle
+  const parallelResults = await Promise.allSettled(parallelHops);
+  for (const settled of parallelResults) {
+    if (settled.status === 'fulfilled') {
+      adapterResults.push(settled.value.result);
+
+      // Update context from website scrape results
+      if (settled.value.name === 'website_scrape') {
+        if (settled.value.result.contacts.emails.length > 0 && !context.existingEmail) {
+          context.existingEmail = settled.value.result.contacts.emails[0];
+        }
+      }
+    }
+  }
+
+  // ── Hop 4: AI Re-Analysis (deep depth, with retry) ────────────────────
   if (depth === 'deep' && context.existingWebsite) {
     const websiteUrl = context.existingWebsite;
     const aiResult = await runHop(
       finding,
       'ai_reanalysis',
-      async () => {
+      () => withRetry(async () => {
         const result = createEmptyAdapterResult('ai_reanalysis');
         const start = Date.now();
 
         try {
           const content = await smartScrape(websiteUrl);
+
+          // Check for CAPTCHA/blocking before processing
+          const blockCheck = detectBlocking(content.cleanedText);
+          if (blockCheck.blocked) {
+            logger.warn('[MultiHopEnricher] Blocking detected during AI re-analysis', {
+              reason: blockCheck.reason,
+              url: websiteUrl,
+            });
+            result.status = 'failed';
+            result.durationMs = Date.now() - start;
+            return result;
+          }
+
           const contacts = await extractContactInfo(content, entityName);
 
           result.contacts = contacts;
@@ -182,7 +304,7 @@ export async function enrichFinding(
 
         result.durationMs = Date.now() - start;
         return result;
-      }
+      }, 'ai_reanalysis', 1), // Only 1 retry for AI (expensive)
     );
     adapterResults.push(aiResult);
   }
@@ -203,14 +325,27 @@ export async function enrichFinding(
     enrichmentStatus = 'failed';
   }
 
-  // Save enrichment results
+  // Extract field conflicts for resolution UI
+  const enrichedFinding: DiscoveryFinding = {
+    ...finding,
+    enrichedData: merged.contactInfo,
+    enrichmentSources: merged.enrichmentSources,
+  };
+  const fieldConflicts = extractFieldConflicts(merged.enrichmentSources, enrichedFinding);
+
+  // Save enrichment results (including hash, duplicate marker, and conflicts)
   await updateFindingEnrichment(
     finding.id,
     merged.contactInfo,
     merged.enrichmentSources,
     merged.confidenceScores,
     merged.overallConfidence,
-    enrichmentStatus
+    enrichmentStatus,
+    {
+      contentHash,
+      duplicateOf: duplicateOf ?? null,
+      fieldConflicts: Object.keys(fieldConflicts).length > 0 ? fieldConflicts : undefined,
+    },
   );
 
   // Update operation stats
