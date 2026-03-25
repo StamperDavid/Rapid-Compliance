@@ -78,23 +78,26 @@ Last Updated: March 24, 2026 (Payment Gateway Expansion ALL 5 PHASES COMPLETE: 1
 
 **Totals:** 17 new files, ~15 modified files across all phases. Each phase: tsc + lint + build verification.
 
-### What to Build After — Intelligence Discovery Hub Phase 8
+### What to Build NOW — In Order
 
-**Intelligence Discovery Hub** (`/intelligence/discovery`) — Phases 1-7 COMPLETE.
-
-**Phase 8: Polish + Edge Cases**
+**1. Intelligence Discovery Hub Phase 8 — Polish + Edge Cases**
+- Hub at `/intelligence/discovery` — Phases 1-7 COMPLETE
 - Error resilience — retry failed hops, graceful degradation, dead letter queue
 - Performance — batch enrichment parallelization, Firestore batch writes, virtual scrolling for 1000+ findings
 - Duplicate detection via content hashing
 - CAPTCHA/blocking detection
 - Field conflict resolution UI — show both values with confidence, let user pick
 
-### What to Build After — Social Media Platform Expansion
-
-**Expand beyond big 6** (Twitter/X, Facebook, Instagram, LinkedIn, TikTok, YouTube):
+**2. Social Media Platform Expansion**
+- Expand beyond big 6 (Twitter/X, Facebook, Instagram, LinkedIn, TikTok, YouTube)
 - **Tier 1:** Truth Social, Threads, Google Business Profile, Bluesky, Telegram, Reddit, Pinterest, WhatsApp Business
 - **Tier 2:** Rumble, Nextdoor, Alignable, Skool, Discord, Beehiiv
 - Target: SMB owners and entrepreneurs wherever they are, including conservative/alternative platforms
+
+**3. Other Remaining Work**
+- React Query adoption
+- YouTube/TikTok direct API uploads
+- E2E test coverage expansion
 
 **Other remaining work:**
 - React Query adoption
