@@ -230,6 +230,50 @@ async function verifyPaddle(transactionId: string): Promise<VerificationResult> 
   };
 }
 
+async function verifyAdyen(sessionId: string): Promise<VerificationResult> {
+  const keys = (await apiKeyService.getServiceKey(PLATFORM_ID, 'adyen')) as {
+    apiKey?: string;
+    merchantAccount?: string;
+    mode?: string;
+    liveUrlPrefix?: string;
+  } | null;
+
+  if (!keys?.apiKey || !keys.merchantAccount) {
+    return { verified: false, error: 'Adyen not configured' };
+  }
+
+  const baseUrl = keys.mode === 'live' && keys.liveUrlPrefix
+    ? `https://${keys.liveUrlPrefix}-checkout-live.adyenpayments.com/checkout/v71`
+    : 'https://checkout-test.adyen.com/v71';
+
+  // Retrieve the session to check its status
+  const response = await fetch(`${baseUrl}/sessions/${sessionId}`, {
+    headers: { 'X-API-Key': keys.apiKey },
+  });
+
+  const data = (await response.json()) as {
+    id?: string;
+    status?: string;
+    amount?: { value?: number; currency?: string };
+    shopperEmail?: string;
+  };
+
+  if (!response.ok) {
+    return { verified: false, error: 'Failed to retrieve Adyen session' };
+  }
+
+  // Adyen session status: "completed" means payment was authorized
+  if (data.status !== 'completed') {
+    return { verified: false, error: `Adyen session status: ${data.status ?? 'unknown'}` };
+  }
+
+  return {
+    verified: true,
+    amount: data.amount?.value,
+    currency: data.amount?.currency?.toLowerCase(),
+  };
+}
+
 const VERIFIER_MAP: Record<string, ProviderVerifier> = {
   stripe: verifyStripe,
   paypal: verifyPayPal,
@@ -238,6 +282,7 @@ const VERIFIER_MAP: Record<string, ProviderVerifier> = {
   authorizenet: verifyAuthorizeNet,
   '2checkout': verify2Checkout,
   paddle: verifyPaddle,
+  adyen: verifyAdyen,
 };
 
 // ─── Route handler ───────────────────────────────────────────────────────────

@@ -20,6 +20,11 @@ const PaddleCheckoutForm = dynamic(
   { ssr: false },
 );
 
+const AdyenCheckoutForm = dynamic(
+  () => import('@/components/checkout/AdyenCheckoutForm'),
+  { ssr: false },
+);
+
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 interface CartShape {
@@ -69,6 +74,19 @@ export default function CheckoutPaymentFactory({
       <StripeCheckoutForm
         cart={cart}
         formData={formData}
+        clientSecret={clientSecret}
+        onBack={onBack}
+      />
+    );
+  }
+
+  // Adyen — Drop-in component
+  if (provider === 'adyen') {
+    return (
+      <AdyenCheckoutForm
+        cart={cart}
+        formData={formData}
+        sessionId={sessionId}
         clientSecret={clientSecret}
         onBack={onBack}
       />

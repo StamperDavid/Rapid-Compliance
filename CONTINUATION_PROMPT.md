@@ -5,7 +5,7 @@
 ## Context
 Repository: https://github.com/StamperDavid/Rapid-Compliance
 Branch: dev
-Last Updated: March 24, 2026 (Payment Gateway Phase 0 + Phase 1 Paddle complete)
+Last Updated: March 24, 2026 (Payment Gateway Phases 0-2 complete: Dynamic Checkout + Paddle + Adyen)
 
 ## Current State
 
@@ -49,12 +49,13 @@ Last Updated: March 24, 2026 (Payment Gateway Phase 0 + Phase 1 Paddle complete)
 - Added to `CheckoutPaymentFactory`, `/api/checkout/initiate`, `/api/checkout/complete`
 - Added `'paddle'` to `APIServiceName` union
 
-**Phase 2: Adyen (Direct Processor, Interchange++)**
-- NPM: `@adyen/api-library`, `@adyen/adyen-web`
-- `adyen-provider.ts` — `processAdyenPayment()`, `calculateAdyenFee()` (~1.05%)
-- `AdyenCheckoutForm.tsx` — Adyen Drop-in component (cards, Apple Pay, Google Pay, iDEAL, 250+ methods)
-- `src/app/api/webhooks/adyen/route.ts` — HMAC-SHA256, must respond `[accepted]`
-- NO subscription support (Adyen has no sub engine) — pair with Chargebee for recurring
+**Phase 2: Adyen (Direct Processor, Interchange++) — COMPLETE (March 24, 2026)**
+- NPM: `@adyen/api-library`, `@adyen/adyen-web` v6 installed
+- `adyen-provider.ts` — `processAdyenPayment()`, `refundAdyenPayment()`, `createAdyenSession()`, `calculateAdyenFee()` (~1.05%)
+- `AdyenCheckoutForm.tsx` — Adyen Drop-in component (v6 named exports, 250+ payment methods, auto 3DS)
+- `src/app/api/webhooks/adyen/route.ts` — HMAC-SHA256 per-item verification, batch notifications, responds `[accepted]`, idempotency via `adyen_events` collection
+- Added to payment-service (processPayment + refundPayment), PAYMENT_PROVIDERS, APIServiceName, checkout initiate/complete, CheckoutPaymentFactory, storefront settings
+- NO subscription support by design — pair with Chargebee for recurring billing
 
 **Phase 3: Chargebee (Billing Layer)**
 - NPM: `chargebee` (server), Chargebee.js via CDN (client)

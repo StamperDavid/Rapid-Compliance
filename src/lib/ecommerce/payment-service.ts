@@ -162,6 +162,11 @@ export async function processPayment(request: PaymentRequest): Promise<PaymentRe
       return processPaddlePayment(request, defaultProvider);
     }
 
+    case 'adyen': {
+      const { processAdyenPayment } = await import('./adyen-provider');
+      return processAdyenPayment(request, defaultProvider);
+    }
+
     default:
       return {
         success: false,
@@ -555,6 +560,11 @@ export async function refundPayment(
     case 'paddle': {
       const { refundPaddlePayment } = await import('./paddle-provider');
       return refundPaddlePayment(transactionId, amount);
+    }
+
+    case 'adyen': {
+      const { refundAdyenPayment } = await import('./adyen-provider');
+      return refundAdyenPayment(transactionId, amount);
     }
 
     case 'paypal':

@@ -363,6 +363,28 @@ async function initiatePaddle(
   };
 }
 
+async function initiateAdyen(
+  amount: number,
+  currency: string,
+  metadata: Record<string, string>,
+): Promise<InitiateResult> {
+  const { createAdyenSession } = await import('@/lib/ecommerce/adyen-provider');
+  const returnUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? ''}/store/checkout/success?provider=adyen`;
+
+  const result = await createAdyenSession(amount, currency, returnUrl, metadata);
+
+  if ('error' in result) {
+    throw new Error(result.error);
+  }
+
+  return {
+    provider: 'adyen',
+    sessionId: result.sessionId,
+    // clientSecret carries the sessionData needed for Drop-in initialization
+    clientSecret: result.sessionData,
+  };
+}
+
 // ─── Provider dispatcher ─────────────────────────────────────────────────────
 
 type ProviderInitiator = (
@@ -379,6 +401,7 @@ const PROVIDER_MAP: Record<string, ProviderInitiator> = {
   '2checkout': initiate2Checkout,
   mollie: initiateMollie,
   paddle: initiatePaddle,
+  adyen: initiateAdyen,
 };
 
 // ─── Route handler ───────────────────────────────────────────────────────────

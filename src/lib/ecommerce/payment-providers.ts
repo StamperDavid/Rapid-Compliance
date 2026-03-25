@@ -497,5 +497,13 @@ export const PAYMENT_PROVIDERS = [
     logo: '🏓',
     countries: 'Global',
   },
+  {
+    id: 'adyen',
+    name: 'Adyen',
+    description: 'Enterprise processor — Interchange++ pricing, 250+ payment methods',
+    fee: '~1.05% (Interchange++)',
+    logo: '🟢',
+    countries: 'Global (150+ currencies)',
+  },
 ];
 

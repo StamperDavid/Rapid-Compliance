@@ -282,6 +282,7 @@ export type APIServiceName =
   | '2checkout'
   | 'mollie'
   | 'paddle'    // Paddle — Merchant of Record (tax, VAT, invoicing)
+  | 'adyen'     // Adyen — Enterprise direct processor (Interchange++)
   | 'taxjar'    // TaxJar — automated US sales tax calculation
   | 'sendgrid'
   | 'resend'
