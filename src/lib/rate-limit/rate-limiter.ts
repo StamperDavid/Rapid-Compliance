@@ -26,7 +26,6 @@ const endpointLimits: Record<string, RateLimitConfig> = {
   '/api/email/campaigns': { maxRequests: 30, windowMs: 60 * 1000 },
 
   // Payment endpoints (fraud prevention)
-  '/api/checkout/create-payment-intent': { maxRequests: 30, windowMs: 60 * 1000 },
   '/api/checkout/create-session': { maxRequests: 30, windowMs: 60 * 1000 },
   '/api/billing/subscribe': { maxRequests: 20, windowMs: 60 * 1000 },
   '/api/billing/webhook': { maxRequests: 500, windowMs: 60 * 1000 }, // Higher for Stripe webhooks

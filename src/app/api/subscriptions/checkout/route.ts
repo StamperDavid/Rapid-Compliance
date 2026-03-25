@@ -2,7 +2,7 @@
  * Create checkout session for subscription upgrades
  * POST - Creates a provider-specific checkout session and returns the URL
  *
- * Supports: Stripe, Authorize.Net, PayPal, Square
+ * Supports: Stripe, Authorize.Net, PayPal, Square, Paddle, Chargebee
  * Provider is determined by platform subscription config (default: Stripe)
  */
 
@@ -30,7 +30,7 @@ const checkoutSchema = z.object({
   tier: z.enum(['starter', 'professional', 'enterprise']),
   billingPeriod: z.enum(['monthly', 'annual']).default('monthly'),
   couponCode: z.string().optional(),
-  provider: z.enum(['stripe', 'authorizenet', 'paypal', 'square']).optional(),
+  provider: z.enum(['stripe', 'authorizenet', 'paypal', 'square', 'paddle', 'chargebee']).optional(),
 });
 
 export async function POST(request: NextRequest) {

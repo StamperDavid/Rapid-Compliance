@@ -4,7 +4,9 @@ import { apiKeyService } from '@/lib/api-keys/api-key-service';
 import { logger } from '@/lib/logger/logger';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
-import { getSubCollection } from '@/lib/firebase/collections';
+import { getSubCollection, getOrdersCollection } from '@/lib/firebase/collections';
+
+const ORDERS_PATH = getOrdersCollection();
 
 export const dynamic = 'force-dynamic';
 
@@ -63,30 +65,55 @@ function verifyHyperswitchSignature(
 
 // ─── Event Handlers ──────────────────────────────────────────────────────────
 
-function handlePaymentSucceeded(data: HyperswitchEventData): void {
+async function handlePaymentSucceeded(data: HyperswitchEventData): Promise<void> {
   logger.info('Hyperswitch payment succeeded', {
     route: '/api/webhooks/hyperswitch',
     paymentId: data.payment_id,
     amount: data.amount,
     currency: data.currency,
   });
+
+  if (data.payment_id) {
+    await updateOrderByTransactionId(data.payment_id, {
+      status: 'processing',
+      paymentStatus: 'captured',
+      'payment.hyperswitchStatus': 'succeeded',
+    });
+  }
 }
 
-function handlePaymentFailed(data: HyperswitchEventData): void {
+async function handlePaymentFailed(data: HyperswitchEventData): Promise<void> {
   logger.warn('Hyperswitch payment failed', {
     route: '/api/webhooks/hyperswitch',
     paymentId: data.payment_id,
     error: data.error_message,
   });
+
+  if (data.payment_id) {
+    await updateOrderByTransactionId(data.payment_id, {
+      status: 'cancelled',
+      paymentStatus: 'failed',
+      'payment.hyperswitchStatus': 'failed',
+      'payment.errorMessage': data.error_message ?? null,
+    });
+  }
 }
 
-function handleRefundSucceeded(data: HyperswitchEventData): void {
+async function handleRefundSucceeded(data: HyperswitchEventData): Promise<void> {
   logger.info('Hyperswitch refund succeeded', {
     route: '/api/webhooks/hyperswitch',
     refundId: data.refund_id,
     paymentId: data.payment_id,
     amount: data.amount,
   });
+
+  if (data.payment_id) {
+    await updateOrderByTransactionId(data.payment_id, {
+      paymentStatus: 'refunded',
+      'payment.hyperswitchStatus': 'refunded',
+      'payment.refundId': data.refund_id ?? null,
+    });
+  }
 }
 
 function handleRefundFailed(data: HyperswitchEventData): void {
@@ -96,6 +123,36 @@ function handleRefundFailed(data: HyperswitchEventData): void {
     paymentId: data.payment_id,
     error: data.error_message,
   });
+}
+
+/**
+ * Find and update an order by its payment.transactionId (Hyperswitch payment_id).
+ */
+async function updateOrderByTransactionId(
+  transactionId: string,
+  updates: Record<string, unknown>,
+): Promise<void> {
+  try {
+    const snapshot = await AdminFirestoreService.collection(ORDERS_PATH)
+      .where('payment.transactionId', '==', transactionId)
+      .limit(1)
+      .get();
+
+    if (snapshot.empty) {
+      return;
+    }
+
+    const orderId = snapshot.docs[0].id;
+    await AdminFirestoreService.update(ORDERS_PATH, orderId, {
+      ...updates,
+      updatedAt: new Date().toISOString(),
+    });
+  } catch (error) {
+    logger.error('Failed to update order from Hyperswitch webhook', error instanceof Error ? error : new Error(String(error)), {
+      route: '/api/webhooks/hyperswitch',
+      transactionId,
+    });
+  }
 }
 
 // ─── Route Handler ───────────────────────────────────────────────────────────
@@ -144,13 +201,13 @@ export async function POST(request: NextRequest) {
     // Route to handler
     switch (event.event_type) {
       case 'payment_succeeded':
-        handlePaymentSucceeded(eventData);
+        await handlePaymentSucceeded(eventData);
         break;
       case 'payment_failed':
-        handlePaymentFailed(eventData);
+        await handlePaymentFailed(eventData);
         break;
       case 'refund_succeeded':
-        handleRefundSucceeded(eventData);
+        await handleRefundSucceeded(eventData);
         break;
       case 'refund_failed':
         handleRefundFailed(eventData);

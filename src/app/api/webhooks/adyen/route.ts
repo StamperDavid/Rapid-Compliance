@@ -4,7 +4,9 @@ import { apiKeyService } from '@/lib/api-keys/api-key-service';
 import { logger } from '@/lib/logger/logger';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
-import { getSubCollection } from '@/lib/firebase/collections';
+import { getSubCollection, getOrdersCollection } from '@/lib/firebase/collections';
+
+const ORDERS_PATH = getOrdersCollection();
 
 export const dynamic = 'force-dynamic';
 
@@ -85,9 +87,9 @@ function verifyAdyenHmac(
 
 // ─── Event Handlers ──────────────────────────────────────────────────────────
 
-function handleAuthorisation(
+async function handleAuthorisation(
   item: AdyenNotificationItem['NotificationRequestItem'],
-): void {
+): Promise<void> {
   const success = item.success === 'true';
   logger.info(`Adyen AUTHORISATION ${success ? 'succeeded' : 'failed'}`, {
     route: '/api/webhooks/adyen',
@@ -96,22 +98,48 @@ function handleAuthorisation(
     amount: item.amount?.value,
     currency: item.amount?.currency,
   });
+
+  // Update order status based on authorisation result
+  const transactionId = item.pspReference;
+  if (success) {
+    await updateOrderByTransactionId(transactionId, {
+      status: 'processing',
+      paymentStatus: 'authorized',
+      'payment.adyenStatus': 'AUTHORISED',
+      'payment.adyenPspReference': item.pspReference,
+    });
+  } else {
+    await updateOrderByTransactionId(transactionId, {
+      status: 'cancelled',
+      paymentStatus: 'failed',
+      'payment.adyenStatus': 'REFUSED',
+      'payment.adyenReason': item.reason ?? null,
+    });
+  }
 }
 
-function handleCapture(
+async function handleCapture(
   item: AdyenNotificationItem['NotificationRequestItem'],
-): void {
+): Promise<void> {
   logger.info('Adyen CAPTURE received', {
     route: '/api/webhooks/adyen',
     pspReference: item.pspReference,
     originalReference: item.originalReference,
     amount: item.amount?.value,
   });
+
+  // CAPTURE uses originalReference as the original payment's pspReference
+  const transactionId = item.originalReference ?? item.pspReference;
+  await updateOrderByTransactionId(transactionId, {
+    status: 'processing',
+    paymentStatus: 'captured',
+    'payment.adyenStatus': 'CAPTURED',
+  });
 }
 
-function handleRefund(
+async function handleRefund(
   item: AdyenNotificationItem['NotificationRequestItem'],
-): void {
+): Promise<void> {
   const success = item.success === 'true';
   logger.info(`Adyen REFUND ${success ? 'succeeded' : 'failed'}`, {
     route: '/api/webhooks/adyen',
@@ -120,16 +148,61 @@ function handleRefund(
     amount: item.amount?.value,
     reason: item.reason,
   });
+
+  if (success && item.originalReference) {
+    await updateOrderByTransactionId(item.originalReference, {
+      paymentStatus: 'refunded',
+      'payment.adyenStatus': 'REFUNDED',
+      'payment.refundReference': item.pspReference,
+    });
+  }
 }
 
-function handleCancellation(
+async function handleCancellation(
   item: AdyenNotificationItem['NotificationRequestItem'],
-): void {
+): Promise<void> {
   logger.info('Adyen CANCELLATION received', {
     route: '/api/webhooks/adyen',
     pspReference: item.pspReference,
     originalReference: item.originalReference,
   });
+
+  const transactionId = item.originalReference ?? item.pspReference;
+  await updateOrderByTransactionId(transactionId, {
+    status: 'cancelled',
+    paymentStatus: 'cancelled',
+    'payment.adyenStatus': 'CANCELLED',
+  });
+}
+
+/**
+ * Find and update an order by its payment.transactionId (Adyen pspReference).
+ */
+async function updateOrderByTransactionId(
+  transactionId: string,
+  updates: Record<string, unknown>,
+): Promise<void> {
+  try {
+    const snapshot = await AdminFirestoreService.collection(ORDERS_PATH)
+      .where('payment.transactionId', '==', transactionId)
+      .limit(1)
+      .get();
+
+    if (snapshot.empty) {
+      return;
+    }
+
+    const orderId = snapshot.docs[0].id;
+    await AdminFirestoreService.update(ORDERS_PATH, orderId, {
+      ...updates,
+      updatedAt: new Date().toISOString(),
+    });
+  } catch (error) {
+    logger.error('Failed to update order from Adyen webhook', error instanceof Error ? error : new Error(String(error)), {
+      route: '/api/webhooks/adyen',
+      transactionId,
+    });
+  }
 }
 
 // ─── Route Handler ───────────────────────────────────────────────────────────
@@ -185,17 +258,17 @@ export async function POST(request: NextRequest) {
       // Route to handler
       switch (item.eventCode) {
         case 'AUTHORISATION':
-          handleAuthorisation(item);
+          await handleAuthorisation(item);
           break;
         case 'CAPTURE':
-          handleCapture(item);
+          await handleCapture(item);
           break;
         case 'REFUND':
         case 'REFUND_FAILED':
-          handleRefund(item);
+          await handleRefund(item);
           break;
         case 'CANCELLATION':
-          handleCancellation(item);
+          await handleCancellation(item);
           break;
         default:
           logger.debug(`Adyen event not handled: ${item.eventCode}`, {

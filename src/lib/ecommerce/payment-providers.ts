@@ -186,14 +186,6 @@ function calculateAuthorizeNetFee(amount: number): number {
 }
 
 /**
- * Process Braintree payment (PayPal-owned)
- * NOTE: Disabled - requires 'braintree' package installation
- * To enable: npm install braintree
- */
-// Braintree removed - not needed for production
-
-
-/**
  * Process 2Checkout payment (now Verifone)
  */
 export async function process2CheckoutPayment(
@@ -313,14 +305,6 @@ function calculate2CheckoutFee(amount: number): number {
 }
 
 /**
- * Process Razorpay payment (popular in India)
- * NOTE: Disabled - requires 'razorpay' package installation
- * To enable: npm install razorpay
- */
-// Razorpay removed - not needed for production
-
-
-/**
  * Process Mollie payment (popular in Europe)
  */
 export async function processMolliePayment(
@@ -414,11 +398,6 @@ function calculateMollieFee(amount: number): number {
   // Mollie: 1.8% + €0.25 (varies by payment method)
   // Using approximate USD conversion
   return amount * 0.018 + 0.28;
-}
-
-// Simple Razorpay fee helper for tests
-export function calculateRazorpayFee(amount: number): number {
-  return amount * 0.02;
 }
 
 /**

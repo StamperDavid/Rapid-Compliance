@@ -1,11 +1,11 @@
 /**
- * Create Stripe checkout session
+ * Create checkout session via the configured payment provider.
+ * Stripe uses hosted Checkout Sessions; other providers use the payment-service dispatcher.
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
-import Stripe from 'stripe';
 import { z } from 'zod';
 import { apiKeyService } from '@/lib/api-keys/api-key-service';
 import { PLATFORM_ID } from '@/lib/constants/platform';
@@ -14,6 +14,7 @@ import { getCartsCollection, getOrdersCollection, getSubCollection } from '@/lib
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
+import { processPayment } from '@/lib/ecommerce/payment-service';
 
 export const dynamic = 'force-dynamic';
 
@@ -54,6 +55,18 @@ interface Cart {
   discountType?: 'percentage' | 'fixed';
 }
 
+interface PaymentProvider {
+  provider: string;
+  isDefault: boolean;
+  enabled: boolean;
+}
+
+interface EcommercePaymentConfig {
+  payments?: {
+    providers?: PaymentProvider[];
+  };
+}
+
 
 export async function POST(request: NextRequest) {
   try {
@@ -74,15 +87,7 @@ export async function POST(request: NextRequest) {
     }
     const { customerInfo, shippingAddress, billingAddress, shippingMethodId } = parseResult.data;
 
-    // MAJ-3: Standardized Stripe key retrieval via apiKeyService
-    const stripeKeys = await apiKeyService.getServiceKey(PLATFORM_ID, 'stripe') as { secretKey?: string } | null;
-    if (!stripeKeys?.secretKey) {
-      return errors.badRequest('Stripe not configured. Please add Stripe API keys in settings.');
-    }
-
-    const stripe = new Stripe(stripeKeys.secretKey, { apiVersion: '2023-10-16' });
-
-    // Get cart (path must match cart-service.ts)
+    // Get cart
     const cart = await AdminFirestoreService.get(
       getCartsCollection(),
       authResult.user.uid
@@ -92,7 +97,7 @@ export async function POST(request: NextRequest) {
       return errors.badRequest('Cart is empty');
     }
 
-    // MAJ-6: Validate stock for items with product IDs
+    // Validate stock for items with product IDs
     const ecomConfig = await getEcommerceConfig();
     const productSchema = ecomConfig?.productSchema ?? 'products';
     for (const item of cart.items) {
@@ -109,7 +114,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // MAJ-4: Calculate discount if cart has one applied
+    // Calculate discount if cart has one applied
     let discountCents = 0;
     if (cart.discountAmount && cart.discountAmount > 0) {
       const subtotal = cart.items.reduce((sum, i) => sum + i.price * i.quantity, 0);
@@ -120,61 +125,50 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Generate order ID upfront so it can be embedded in Stripe session metadata
     const orderId = `order_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 
-    // Build Stripe line items — cart prices are stored in cents (integer)
-    const lineItems = cart.items.map((item: CartItem) => ({
-      price_data: {
-        currency: 'usd',
-        product_data: {
-          name: item.name,
-          description: item.description,
-          images: item.image ? [item.image] : [],
-        },
-        unit_amount: Math.round(item.price), // cents — no dollar conversion
-      },
-      quantity: item.quantity,
-    }));
+    // Determine configured payment provider
+    const ecommerceFullConfig = await AdminFirestoreService.get(
+      getSubCollection('ecommerce'),
+      'config'
+    ) as EcommercePaymentConfig | null;
 
-    // Create ad-hoc Stripe coupon if discount is applied
-    const discounts: Array<{ coupon: string }> = [];
-    if (discountCents > 0) {
-      const coupon = await stripe.coupons.create({
-        amount_off: discountCents,
-        currency: 'usd',
-        duration: 'once',
-        name: cart.discountCode ?? 'Discount',
-      });
-      discounts.push({ coupon: coupon.id });
+    const defaultProvider = ecommerceFullConfig?.payments?.providers?.find(
+      (p) => p.isDefault && p.enabled
+    );
+    const provider = defaultProvider?.provider ?? 'stripe';
+
+    if (provider === 'stripe') {
+      return await handleStripeCheckout(
+        cart, customerInfo, shippingAddress, billingAddress,
+        shippingMethodId, orderId, discountCents, authResult.user.uid,
+      );
     }
 
-    // Create Stripe checkout session FIRST — only create order if this succeeds
-    const session = await stripe.checkout.sessions.create({
-      payment_method_types: ['card'],
-      line_items: lineItems,
-      ...(discounts.length > 0 ? { discounts } : {}),
-      mode: 'payment',
-      success_url: `${process.env.NEXT_PUBLIC_APP_URL}/store/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/store/checkout/cancelled`,
-      customer_email: customerInfo.email,
-      metadata: {
-        orderId,
-        userId: authResult.user.uid,
-        cartId: authResult.user.uid, // Cart ID is the user ID
-        customer: JSON.stringify({
-          email: customerInfo.email,
-          firstName: customerInfo.firstName ?? '',
-          lastName: customerInfo.lastName ?? '',
-          phone: customerInfo.phone ?? '',
-        }),
-        shippingAddress: shippingAddress ? JSON.stringify(shippingAddress) : JSON.stringify({}),
-        billingAddress: billingAddress ? JSON.stringify(billingAddress) : JSON.stringify({}),
-        shippingMethodId: shippingMethodId ?? '',
+    // Non-Stripe: use the payment-service dispatcher
+    const totalCents = cart.items.reduce((sum, i) => sum + i.price * i.quantity, 0);
+    const totalDollars = (totalCents - discountCents) / 100;
+
+    const paymentResult = await processPayment({
+      amount: totalDollars,
+      currency: 'usd',
+      paymentMethod: 'card',
+      customer: {
+        email: customerInfo.email,
+        firstName: customerInfo.firstName ?? '',
+        lastName: customerInfo.lastName ?? '',
+        phone: customerInfo.phone,
       },
+      metadata: { orderId, userId: authResult.user.uid },
     });
 
-    // Create pending order AFTER Stripe session succeeds (no ghost orders on Stripe failure)
+    if (!paymentResult.success) {
+      return errors.internal(paymentResult.error ?? 'Payment provider checkout failed');
+    }
+
+    const sessionId = paymentResult.transactionId ?? `${provider}_${Date.now()}`;
+
+    // Create pending order
     await AdminFirestoreService.set(
       getOrdersCollection(),
       orderId,
@@ -186,7 +180,13 @@ export async function POST(request: NextRequest) {
         shippingAddress: shippingAddress ?? null,
         billingAddress: billingAddress ?? null,
         shippingMethodId: shippingMethodId ?? null,
-        stripeSessionId: session.id,
+        paymentProvider: provider,
+        providerSessionId: sessionId,
+        payment: {
+          provider,
+          transactionId: paymentResult.transactionId ?? null,
+          status: paymentResult.pending ? 'pending' : 'processing',
+        },
         status: 'pending',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -195,10 +195,108 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      sessionId: session.id,
+      sessionId,
+      provider,
+      redirectUrl: paymentResult.redirectUrl ?? null,
     });
   } catch (error: unknown) {
     logger.error('Checkout session creation error', error instanceof Error ? error : new Error(String(error)), { route: '/api/ecommerce/checkout/create-session' });
-    return errors.externalService('Stripe', error instanceof Error ? error : new Error(String(error)));
+    return errors.internal('Checkout session creation failed');
   }
+}
+
+/**
+ * Stripe-specific checkout session creation (hosted Checkout Sessions with line items + discounts).
+ */
+async function handleStripeCheckout(
+  cart: Cart,
+  customerInfo: { email: string; firstName?: string; lastName?: string; phone?: string },
+  shippingAddress: Record<string, string | undefined> | undefined,
+  billingAddress: Record<string, string | undefined> | undefined,
+  shippingMethodId: string | undefined,
+  orderId: string,
+  discountCents: number,
+  userId: string,
+): Promise<NextResponse> {
+  const stripeKeys = await apiKeyService.getServiceKey(PLATFORM_ID, 'stripe') as { secretKey?: string } | null;
+  if (!stripeKeys?.secretKey) {
+    return errors.badRequest('Stripe not configured. Please add Stripe API keys in settings.');
+  }
+
+  const Stripe = (await import('stripe')).default;
+  const stripe = new Stripe(stripeKeys.secretKey, { apiVersion: '2023-10-16' });
+
+  const cartItems = cart.items ?? [];
+  const lineItems = cartItems.map((item: CartItem) => ({
+    price_data: {
+      currency: 'usd',
+      product_data: {
+        name: item.name,
+        description: item.description,
+        images: item.image ? [item.image] : [],
+      },
+      unit_amount: Math.round(item.price),
+    },
+    quantity: item.quantity,
+  }));
+
+  const discounts: Array<{ coupon: string }> = [];
+  if (discountCents > 0) {
+    const coupon = await stripe.coupons.create({
+      amount_off: discountCents,
+      currency: 'usd',
+      duration: 'once',
+      name: cart.discountCode ?? 'Discount',
+    });
+    discounts.push({ coupon: coupon.id });
+  }
+
+  const session = await stripe.checkout.sessions.create({
+    payment_method_types: ['card'],
+    line_items: lineItems,
+    ...(discounts.length > 0 ? { discounts } : {}),
+    mode: 'payment',
+    success_url: `${process.env.NEXT_PUBLIC_APP_URL}/store/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/store/checkout/cancelled`,
+    customer_email: customerInfo.email,
+    metadata: {
+      orderId,
+      userId,
+      cartId: userId,
+      customer: JSON.stringify({
+        email: customerInfo.email,
+        firstName: customerInfo.firstName ?? '',
+        lastName: customerInfo.lastName ?? '',
+        phone: customerInfo.phone ?? '',
+      }),
+      shippingAddress: shippingAddress ? JSON.stringify(shippingAddress) : JSON.stringify({}),
+      billingAddress: billingAddress ? JSON.stringify(billingAddress) : JSON.stringify({}),
+      shippingMethodId: shippingMethodId ?? '',
+    },
+  });
+
+  await AdminFirestoreService.set(
+    getOrdersCollection(),
+    orderId,
+    {
+      id: orderId,
+      userId,
+      items: cart.items,
+      customerInfo,
+      shippingAddress: shippingAddress ?? null,
+      billingAddress: billingAddress ?? null,
+      shippingMethodId: shippingMethodId ?? null,
+      paymentProvider: 'stripe',
+      providerSessionId: session.id,
+      status: 'pending',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }
+  );
+
+  return NextResponse.json({
+    success: true,
+    sessionId: session.id,
+    provider: 'stripe',
+  });
 }

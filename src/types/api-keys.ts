@@ -281,6 +281,8 @@ export type APIServiceName =
   | 'authorizenet'
   | '2checkout'
   | 'mollie'
+  | 'razorpay'  // Razorpay — popular in India (2% flat rate)
+  | 'braintree' // Braintree — PayPal-owned global processor
   | 'paddle'    // Paddle — Merchant of Record (tax, VAT, invoicing)
   | 'adyen'     // Adyen — Enterprise direct processor (Interchange++)
   | 'chargebee'    // Chargebee — SaaS subscription billing layer

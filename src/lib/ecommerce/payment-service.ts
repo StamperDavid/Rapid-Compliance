@@ -172,6 +172,16 @@ export async function processPayment(request: PaymentRequest): Promise<PaymentRe
       return processHyperswitchPayment(request, defaultProvider);
     }
 
+    case 'razorpay': {
+      const { processRazorpayPayment } = await import('./razorpay-provider');
+      return processRazorpayPayment(request, defaultProvider);
+    }
+
+    case 'braintree': {
+      const { processBraintreePayment } = await import('./braintree-provider');
+      return processBraintreePayment(request, defaultProvider);
+    }
+
     default:
       return {
         success: false,
@@ -522,14 +532,6 @@ export function calculatePayPalFee(amount: number): number {
 }
 
 /**
- * Calculate Razorpay processing fee (approximate)
- */
-export function calculateRazorpayFee(amount: number): number {
-  // Razorpay: ~2% + small fixed; use 2% baseline
-  return amount * 0.02;
-}
-
-/**
  * Refund payment
  */
 export async function refundPayment(
@@ -575,6 +577,16 @@ export async function refundPayment(
     case 'hyperswitch': {
       const { refundHyperswitchPayment } = await import('./hyperswitch-provider');
       return refundHyperswitchPayment(transactionId, amount);
+    }
+
+    case 'razorpay': {
+      const { refundRazorpayPayment } = await import('./razorpay-provider');
+      return refundRazorpayPayment(transactionId, amount);
+    }
+
+    case 'braintree': {
+      const { refundBraintreePayment } = await import('./braintree-provider');
+      return refundBraintreePayment(transactionId, amount);
     }
 
     case 'paypal':

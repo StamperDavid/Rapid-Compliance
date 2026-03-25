@@ -12,7 +12,8 @@ import {
   refundPayment,
   type PaymentRequest,
 } from '@/lib/ecommerce/payment-service';
-import { calculateRazorpayFee, PAYMENT_PROVIDERS } from '@/lib/ecommerce/payment-providers';
+import { PAYMENT_PROVIDERS } from '@/lib/ecommerce/payment-providers';
+import { calculateRazorpayFee } from '@/lib/ecommerce/razorpay-provider';
 
 // ============================================================================
 // Mocks

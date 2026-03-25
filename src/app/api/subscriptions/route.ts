@@ -4,7 +4,7 @@
  * POST - Create subscription (with billing verification for paid tiers)
  * PUT - Update subscription (upgrade, downgrade, cancel, reactivate)
  *
- * Provider-agnostic: supports Stripe, Authorize.Net, PayPal, Square
+ * Provider-agnostic: supports Stripe, Authorize.Net, PayPal, Square, Paddle, Chargebee
  */
 
 import { type NextRequest, NextResponse } from 'next/server';
@@ -33,7 +33,7 @@ const TIER_RANK: Record<string, number> = {
   enterprise: 3,
 };
 
-const VALID_PROVIDERS = ['stripe', 'authorizenet', 'paypal', 'square'] as const;
+const VALID_PROVIDERS = ['stripe', 'authorizenet', 'paypal', 'square', 'paddle', 'chargebee'] as const;
 
 const createSubscriptionSchema = z.object({
   tier: z.enum(['free', 'starter', 'professional', 'enterprise']),
