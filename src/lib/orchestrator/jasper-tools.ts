@@ -798,7 +798,7 @@ export const JASPER_TOOLS: ToolDefinition[] = [
     function: {
       name: 'update_pricing',
       description:
-        'Update platform pricing for a specific tier. Handles Stripe price updates. ENABLED: TRUE.',
+        'Update platform pricing for a specific tier. Updates pricing in the configured payment provider. ENABLED: TRUE.',
       parameters: {
         type: 'object',
         properties: {
