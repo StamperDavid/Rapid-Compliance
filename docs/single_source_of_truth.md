@@ -1,7 +1,7 @@
 # SalesVelocity.ai - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** March 24, 2026 (Payment Gateway 10 providers, Discovery Hub Phase 8, Social Media 14 platforms)
+**Last Updated:** March 25, 2026 (Stub Eradication complete — 4 voice providers, VOICE_AI_SPECIALIST agent, catalog sync, Vertex AI, workflow triggers, form templates)
 **Branches:** `dev` (latest)
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Architecture:** Single-Tenant Penthouse Model (development strategy — multi-tenant SaaS product)
@@ -37,8 +37,8 @@
 | Metric | Count | Status |
 |--------|-------|--------|
 | Physical Routes (page.tsx) | 184 | Verified March 20, 2026 |
-| API Endpoints (route.ts) | 404 | Verified March 24, 2026 (+11 intelligence discovery) |
-| AI Agents | 58 | **58 FUNCTIONAL (46 swarm + 6 standalone + 6 Claude Code QA agents)** |
+| API Endpoints (route.ts) | 407 | Verified March 25, 2026 (+3 cron/templates routes) |
+| AI Agents | 59 | **59 FUNCTIONAL (46 swarm + 7 standalone + 6 Claude Code QA agents)** |
 | RBAC Roles | 4 | owner / admin / manager / member |
 | TypeScript Files | 1,628 | Verified March 20, 2026 |
 | Type Definition Files (src/types/) | 55 | 831+ interfaces/types across all files |
