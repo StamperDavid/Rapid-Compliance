@@ -513,5 +513,13 @@ export const PAYMENT_PROVIDERS = [
     logo: '🔄',
     countries: 'Global',
   },
+  {
+    id: 'hyperswitch',
+    name: 'Hyperswitch',
+    description: 'Payment orchestration — routes payments through connected processors with smart failover',
+    fee: 'Free (open-source)',
+    logo: '🔀',
+    countries: 'Global',
+  },
 ];
 

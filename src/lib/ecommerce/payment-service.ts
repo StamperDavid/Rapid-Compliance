@@ -167,6 +167,11 @@ export async function processPayment(request: PaymentRequest): Promise<PaymentRe
       return processAdyenPayment(request, defaultProvider);
     }
 
+    case 'hyperswitch': {
+      const { processHyperswitchPayment } = await import('./hyperswitch-provider');
+      return processHyperswitchPayment(request, defaultProvider);
+    }
+
     default:
       return {
         success: false,
@@ -565,6 +570,11 @@ export async function refundPayment(
     case 'adyen': {
       const { refundAdyenPayment } = await import('./adyen-provider');
       return refundAdyenPayment(transactionId, amount);
+    }
+
+    case 'hyperswitch': {
+      const { refundHyperswitchPayment } = await import('./hyperswitch-provider');
+      return refundHyperswitchPayment(transactionId, amount);
     }
 
     case 'paypal':

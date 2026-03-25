@@ -283,8 +283,9 @@ export type APIServiceName =
   | 'mollie'
   | 'paddle'    // Paddle — Merchant of Record (tax, VAT, invoicing)
   | 'adyen'     // Adyen — Enterprise direct processor (Interchange++)
-  | 'chargebee' // Chargebee — SaaS subscription billing layer
-  | 'taxjar'    // TaxJar — automated US sales tax calculation
+  | 'chargebee'    // Chargebee — SaaS subscription billing layer
+  | 'hyperswitch'  // Hyperswitch — open-source payment orchestration
+  | 'taxjar'       // TaxJar — automated US sales tax calculation
   | 'sendgrid'
   | 'resend'
   | 'integrations'

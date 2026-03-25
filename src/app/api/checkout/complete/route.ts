@@ -274,6 +274,45 @@ async function verifyAdyen(sessionId: string): Promise<VerificationResult> {
   };
 }
 
+async function verifyHyperswitch(paymentId: string): Promise<VerificationResult> {
+  const keys = (await apiKeyService.getServiceKey(PLATFORM_ID, 'hyperswitch')) as {
+    apiKey?: string;
+    baseUrl?: string;
+  } | null;
+
+  if (!keys?.apiKey) {
+    return { verified: false, error: 'Hyperswitch not configured' };
+  }
+
+  const baseUrl = keys.baseUrl ?? 'https://sandbox.hyperswitch.io';
+
+  const response = await fetch(`${baseUrl}/payments/${paymentId}`, {
+    headers: { 'api-key': keys.apiKey },
+  });
+
+  const data = (await response.json()) as {
+    status?: string;
+    amount?: number;
+    currency?: string;
+    metadata?: Record<string, string>;
+  };
+
+  if (!response.ok) {
+    return { verified: false, error: 'Failed to retrieve Hyperswitch payment' };
+  }
+
+  if (data.status !== 'succeeded' && data.status !== 'processing') {
+    return { verified: false, error: `Hyperswitch payment status: ${data.status ?? 'unknown'}` };
+  }
+
+  return {
+    verified: true,
+    amount: data.amount,
+    currency: data.currency?.toLowerCase(),
+    metadata: data.metadata,
+  };
+}
+
 const VERIFIER_MAP: Record<string, ProviderVerifier> = {
   stripe: verifyStripe,
   paypal: verifyPayPal,
@@ -283,6 +322,7 @@ const VERIFIER_MAP: Record<string, ProviderVerifier> = {
   '2checkout': verify2Checkout,
   paddle: verifyPaddle,
   adyen: verifyAdyen,
+  hyperswitch: verifyHyperswitch,
 };
 
 // ─── Route handler ───────────────────────────────────────────────────────────

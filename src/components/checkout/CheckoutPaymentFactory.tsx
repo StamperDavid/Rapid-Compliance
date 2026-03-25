@@ -30,6 +30,11 @@ const ChargebeeCheckoutForm = dynamic(
   { ssr: false },
 );
 
+const HyperswitchCheckoutForm = dynamic(
+  () => import('@/components/checkout/HyperswitchCheckoutForm'),
+  { ssr: false },
+);
+
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 interface CartShape {
@@ -104,6 +109,19 @@ export default function CheckoutPaymentFactory({
       <PaddleCheckoutForm
         cart={cart}
         formData={formData}
+        sessionId={sessionId}
+        onBack={onBack}
+      />
+    );
+  }
+
+  // Hyperswitch — UnifiedCheckout (Stripe-compatible)
+  if (provider === 'hyperswitch' && clientSecret) {
+    return (
+      <HyperswitchCheckoutForm
+        cart={cart}
+        formData={formData}
+        clientSecret={clientSecret}
         sessionId={sessionId}
         onBack={onBack}
       />

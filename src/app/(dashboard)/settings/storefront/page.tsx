@@ -45,6 +45,7 @@ interface StorefrontConfig {
     paddleEnabled: boolean;
     adyenEnabled: boolean;
     chargebeeEnabled: boolean;
+    hyperswitchEnabled: boolean;
     defaultProvider: string;
     autoCreateOrder: boolean;
     autoCreateInvoice: boolean;
@@ -89,6 +90,7 @@ const DEFAULT_CONFIG: StorefrontConfig = {
     paddleEnabled: false,
     adyenEnabled: false,
     chargebeeEnabled: false,
+    hyperswitchEnabled: false,
     defaultProvider: 'stripe',
     autoCreateOrder: true,
     autoCreateInvoice: true,
@@ -167,6 +169,7 @@ export default function StorefrontSettingsPage() {
         { key: 'mollieEnabled', id: 'mollie' },
         { key: 'paddleEnabled', id: 'paddle' },
         { key: 'adyenEnabled', id: 'adyen' },
+        { key: 'hyperswitchEnabled', id: 'hyperswitch' },
       ];
       const providers = providerMap
         .filter(({ key }) => Boolean(config.paymentProcessing[key]))
@@ -587,10 +590,25 @@ export default function StorefrontSettingsPage() {
                         <span style={{ fontSize: '0.875rem', color: 'var(--color-text-primary)' }}>🔄 Chargebee</span>
                         <span style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginLeft: 'auto' }}>Subscription billing — manages recurring charges via your processor</span>
                       </label>
+
+                      <div style={{ borderTop: '1px solid var(--color-border-light)', marginTop: '0.75rem', paddingTop: '0.75rem' }}>
+                        <div style={{ fontSize: '0.75rem', fontWeight: '600', color: 'var(--color-text-secondary)', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Payment Orchestration</div>
+                      </div>
+
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer' }}>
+                        <input
+                          type="checkbox"
+                          checked={config.paymentProcessing.hyperswitchEnabled}
+                          onChange={(e) => updateConfig(['paymentProcessing', 'hyperswitchEnabled'], e.target.checked)}
+                          style={{ width: '1.25rem', height: '1.25rem' }}
+                        />
+                        <span style={{ fontSize: '0.875rem', color: 'var(--color-text-primary)' }}>🔀 Hyperswitch</span>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginLeft: 'auto' }}>Routes payments through connected processors with smart failover</span>
+                      </label>
                     </div>
 
                     {/* Default Provider Selection */}
-                    {(config.paymentProcessing.stripeEnabled || config.paymentProcessing.paypalEnabled || config.paymentProcessing.squareEnabled || config.paymentProcessing.authorizenetEnabled || config.paymentProcessing.twocheckoutEnabled || config.paymentProcessing.mollieEnabled || config.paymentProcessing.paddleEnabled || config.paymentProcessing.adyenEnabled) && (
+                    {(config.paymentProcessing.stripeEnabled || config.paymentProcessing.paypalEnabled || config.paymentProcessing.squareEnabled || config.paymentProcessing.authorizenetEnabled || config.paymentProcessing.twocheckoutEnabled || config.paymentProcessing.mollieEnabled || config.paymentProcessing.paddleEnabled || config.paymentProcessing.adyenEnabled || config.paymentProcessing.hyperswitchEnabled) && (
                       <div style={{ marginTop: '1rem', padding: '1rem', backgroundColor: 'var(--color-bg-paper)', borderRadius: '0.5rem', border: '1px solid var(--color-border-light)' }}>
                         <div style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--color-text-primary)', marginBottom: '0.75rem' }}>Default Payment Provider</div>
                         <p style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginBottom: '0.75rem' }}>
@@ -643,6 +661,12 @@ export default function StorefrontSettingsPage() {
                             <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
                               <input type="radio" name="defaultProvider" checked={config.paymentProcessing.defaultProvider === 'adyen'} onChange={() => updateConfig(['paymentProcessing', 'defaultProvider'], 'adyen')} />
                               <span style={{ fontSize: '0.875rem', color: 'var(--color-text-primary)' }}>Adyen</span>
+                            </label>
+                          )}
+                          {config.paymentProcessing.hyperswitchEnabled && (
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                              <input type="radio" name="defaultProvider" checked={config.paymentProcessing.defaultProvider === 'hyperswitch'} onChange={() => updateConfig(['paymentProcessing', 'defaultProvider'], 'hyperswitch')} />
+                              <span style={{ fontSize: '0.875rem', color: 'var(--color-text-primary)' }}>Hyperswitch</span>
                             </label>
                           )}
                         </div>

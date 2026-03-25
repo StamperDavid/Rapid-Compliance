@@ -385,6 +385,27 @@ async function initiateAdyen(
   };
 }
 
+async function initiateHyperswitch(
+  amount: number,
+  currency: string,
+  metadata: Record<string, string>,
+): Promise<InitiateResult> {
+  const { createHyperswitchPaymentIntent } = await import('@/lib/ecommerce/hyperswitch-provider');
+  const returnUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? ''}/store/checkout/success?provider=hyperswitch`;
+
+  const result = await createHyperswitchPaymentIntent(amount, currency, returnUrl, metadata);
+
+  if ('error' in result) {
+    throw new Error(result.error);
+  }
+
+  return {
+    provider: 'hyperswitch',
+    clientSecret: result.clientSecret,
+    sessionId: result.paymentId,
+  };
+}
+
 // ─── Provider dispatcher ─────────────────────────────────────────────────────
 
 type ProviderInitiator = (
@@ -402,6 +423,7 @@ const PROVIDER_MAP: Record<string, ProviderInitiator> = {
   mollie: initiateMollie,
   paddle: initiatePaddle,
   adyen: initiateAdyen,
+  hyperswitch: initiateHyperswitch,
 };
 
 // ─── Route handler ───────────────────────────────────────────────────────────
