@@ -489,5 +489,13 @@ export const PAYMENT_PROVIDERS = [
     logo: '💠',
     countries: 'Global',
   },
+  {
+    id: 'paddle',
+    name: 'Paddle',
+    description: 'Merchant of Record — handles taxes, invoicing, compliance',
+    fee: '5% + $0.50',
+    logo: '🏓',
+    countries: 'Global',
+  },
 ];
 

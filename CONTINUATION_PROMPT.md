@@ -5,7 +5,7 @@
 ## Context
 Repository: https://github.com/StamperDavid/Rapid-Compliance
 Branch: dev
-Last Updated: March 24, 2026 (Subscription Provider Abstraction + Intelligence Discovery Hub Phase 7)
+Last Updated: March 24, 2026 (Payment Gateway Phase 0 + Phase 1 Paddle complete)
 
 ## Current State
 
@@ -27,9 +27,58 @@ Last Updated: March 24, 2026 (Subscription Provider Abstraction + Intelligence D
 - Zero `@ts-ignore` / `@ts-expect-error` — clean
 - Zero `TODO` / `FIXME` comments in source
 
-### What to Build Next — Intelligence Discovery Hub Phase 8
+### What to Build Next — Payment Gateway Expansion (5 Phases)
 
-**Intelligence Discovery Hub** (`/intelligence/discovery`) — Phases 1-7 COMPLETE. A general-purpose data intelligence system that scrapes seed data from primary sources (FMCSA, state tax boards, SAM.gov) and enriches it across multiple secondary sources (Google, company websites, LinkedIn, Facebook) to find contact information, approve findings, and convert them to CRM leads.
+**Motivation:** Stripe has a history of withholding client funds for months, devastating for SMBs. Multi-provider support is survival insurance — clients need to switch payment processors same-day if one freezes their funds. Plan also adds social media platform expansion (Truth Social, Threads, Bluesky, Telegram, etc.).
+
+**Phase 0: Dynamic Checkout Refactor — COMPLETE (March 24, 2026)**
+- `POST /api/checkout/initiate` — provider-agnostic, dispatches to 6 providers
+- `GET /api/checkout/provider-config` — returns default provider + client key
+- `CheckoutPaymentFactory` — next/dynamic code-split per provider
+- `StripeCheckoutForm`, `RedirectCheckoutForm` extracted as standalone components
+- `PaymentProvider.provider` union expanded with paddle, adyen, chargebee, hyperswitch, mollie, 2checkout
+- `/api/checkout/complete` — multi-provider verification
+
+**Phase 1: Paddle (Merchant of Record) — COMPLETE (March 24, 2026)**
+- NPM: `@paddle/paddle-node-sdk`, `@paddle/paddle-js` installed
+- `paddle-provider.ts` — `processPaddlePayment()`, `refundPaddlePayment()`, `calculatePaddleFee()` (5% + $0.50)
+- `PaddleCheckoutForm.tsx` — Paddle.js overlay checkout with completion callback
+- `src/app/api/webhooks/paddle/route.ts` — HMAC-SHA256 signature verification, idempotency via `paddle_events` collection
+- Added to `subscription-provider-service.ts` — all 4 dispatchers (checkout, verify, cancel, portal)
+- Added to storefront settings UI (checkbox + radio + providerMap)
+- Added to `CheckoutPaymentFactory`, `/api/checkout/initiate`, `/api/checkout/complete`
+- Added `'paddle'` to `APIServiceName` union
+
+**Phase 2: Adyen (Direct Processor, Interchange++)**
+- NPM: `@adyen/api-library`, `@adyen/adyen-web`
+- `adyen-provider.ts` — `processAdyenPayment()`, `calculateAdyenFee()` (~1.05%)
+- `AdyenCheckoutForm.tsx` — Adyen Drop-in component (cards, Apple Pay, Google Pay, iDEAL, 250+ methods)
+- `src/app/api/webhooks/adyen/route.ts` — HMAC-SHA256, must respond `[accepted]`
+- NO subscription support (Adyen has no sub engine) — pair with Chargebee for recurring
+
+**Phase 3: Chargebee (Billing Layer)**
+- NPM: `chargebee` (server), Chargebee.js via CDN (client)
+- `chargebee-provider.ts` — all 4 subscription functions (checkout, verify, cancel, portal)
+- `ChargebeeCheckoutForm.tsx` — hosted page modal
+- `src/app/api/webhooks/chargebee/route.ts` — shared secret verification
+- Subscriptions ONLY — does not process one-time payments
+- Sits on top of Stripe/Adyen/etc. for actual charge execution
+
+**Phase 4: Hyperswitch (Payment Orchestration)**
+- NPM: `@juspay-tech/hyperswitch-node`, `@juspay-tech/hyper-js`, `@juspay-tech/react-hyper-js`
+- `hyperswitch-provider.ts` — Stripe-compatible PaymentIntent API
+- `HyperswitchCheckoutForm.tsx` — UnifiedCheckout (Stripe-like)
+- `src/app/api/webhooks/hyperswitch/route.ts` — HMAC-SHA512
+- E-commerce only — routes payments to cheapest/most reliable processor via rules engine
+- Open-source (Apache 2.0), self-hosted or cloud
+
+**Cross-cutting:** Expand `APIServiceName` in types/api-keys.ts, add webhook verification functions, add Firestore event subcollections.
+
+**Totals:** 17 new files, ~15 modified files across all phases. Each phase: tsc + lint + build verification.
+
+### What to Build After — Intelligence Discovery Hub Phase 8
+
+**Intelligence Discovery Hub** (`/intelligence/discovery`) — Phases 1-7 COMPLETE.
 
 **Phase 8: Polish + Edge Cases**
 - Error resilience — retry failed hops, graceful degradation, dead letter queue
@@ -37,6 +86,13 @@ Last Updated: March 24, 2026 (Subscription Provider Abstraction + Intelligence D
 - Duplicate detection via content hashing
 - CAPTCHA/blocking detection
 - Field conflict resolution UI — show both values with confidence, let user pick
+
+### What to Build After — Social Media Platform Expansion
+
+**Expand beyond big 6** (Twitter/X, Facebook, Instagram, LinkedIn, TikTok, YouTube):
+- **Tier 1:** Truth Social, Threads, Google Business Profile, Bluesky, Telegram, Reddit, Pinterest, WhatsApp Business
+- **Tier 2:** Rumble, Nextdoor, Alignable, Skool, Discord, Beehiiv
+- Target: SMB owners and entrepreneurs wherever they are, including conservative/alternative platforms
 
 **Other remaining work:**
 - React Query adoption
@@ -335,7 +391,7 @@ Last Updated: March 24, 2026 (Subscription Provider Abstraction + Intelligence D
 | Email & SMS | 8.5/10 | CAN-SPAM/TCPA compliant — delivery tests skipped (need API keys) |
 | Public Pages & Onboarding | 9/10 | 4-step onboarding, Stripe checkout, live AI demo — all working |
 | Analytics & Growth | 8.5/10 | Dashboard, pipeline, growth strategy — all real implementations |
-| Payments & Commerce | 9/10 | Stripe integrated, cart/checkout real, billing portal via Stripe Customer Portal |
+| Payments & Commerce | 9/10 | 6 providers live (Stripe, PayPal, Square, Authorize.Net, 2Checkout, Mollie), provider-agnostic subscription billing. Checkout page Stripe-only (dynamic refactor planned). 4 new providers planned: Paddle (MoR), Adyen (Interchange++), Chargebee (billing layer), Hyperswitch (orchestration) |
 | Authentication | 9.5/10 | Firebase Admin SDK, granular RBAC enforced, MFA/TOTP, password change, GDPR account deletion |
 | Social Media | 6/10 | Twitter works, Facebook/Instagram/TikTok/LinkedIn are stubs |
 | **E2E Testing** | **7/10** | **14 spec files, real user journeys (CRUD, checkout, workflows, video pipeline, brand kit), 110+ tests** |

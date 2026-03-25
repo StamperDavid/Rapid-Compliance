@@ -15,6 +15,11 @@ const RedirectCheckoutForm = dynamic(
   { ssr: false },
 );
 
+const PaddleCheckoutForm = dynamic(
+  () => import('@/components/checkout/PaddleCheckoutForm'),
+  { ssr: false },
+);
+
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 interface CartShape {
@@ -53,7 +58,7 @@ export default function CheckoutPaymentFactory({
   formData,
   clientSecret,
   redirectUrl,
-  sessionId: _sessionId,
+  sessionId,
   onBack,
 }: CheckoutPaymentFactoryProps) {
   const { theme } = useTheme();
@@ -65,6 +70,18 @@ export default function CheckoutPaymentFactory({
         cart={cart}
         formData={formData}
         clientSecret={clientSecret}
+        onBack={onBack}
+      />
+    );
+  }
+
+  // Paddle — overlay checkout
+  if (provider === 'paddle') {
+    return (
+      <PaddleCheckoutForm
+        cart={cart}
+        formData={formData}
+        sessionId={sessionId}
         onBack={onBack}
       />
     );

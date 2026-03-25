@@ -1,7 +1,7 @@
 # SalesVelocity.ai - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** March 24, 2026 (Intelligence Discovery Hub Phase 7 — Approval Workflow + CRM Integration)
+**Last Updated:** March 24, 2026 (Payment Gateway Expansion Plan — Paddle, Adyen, Chargebee, Hyperswitch)
 **Branches:** `dev` (latest)
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Architecture:** Single-Tenant Penthouse Model (development strategy — multi-tenant SaaS product)
@@ -214,7 +214,7 @@ Jasper orchestrates full marketing campaigns: research → strategy → produce 
 | Build pipeline | **CLEAN** — `npm run build` passes, `npm run lint` zero warnings, 24 eslint-disable (ratcheted) |
 | Dashboard UI | **184 pages** with 12-module feature toggle system |
 | Integrations | **30+ real integrations** verified with actual API calls |
-| Revenue & Commerce | **COMPLETE** — Stripe, Square, PayPal, Authorize.Net, 2Checkout, Mollie. Full e-commerce with catalog type enforcement (product/service/digital/subscription), cart, checkout, orders, inventory, coupons. Billing portal via Stripe Customer Portal. Catalog split: always-on catalog + optional storefront under Website. |
+| Revenue & Commerce | **COMPLETE** — 6 live payment providers (Stripe, Square, PayPal, Authorize.Net, 2Checkout, Mollie) with provider-agnostic dispatcher. Full e-commerce with catalog type enforcement (product/service/digital/subscription), cart, checkout, orders, inventory, coupons. Billing portal via Stripe Customer Portal. Catalog split: always-on catalog + optional storefront under Website. **PLANNED:** 4 additional providers (Paddle MoR, Adyen Interchange++, Chargebee billing layer, Hyperswitch orchestration) — checkout page refactor to dynamic provider selection required first. |
 | Video System | **COMPLETE** — Hedra (sole engine), Clone Wizard, auto-captions, background music, simple/advanced mode, assembly progress, 5 templates, scene grading, CapCut-style editor |
 | Social Media | **PARTIAL** — Twitter/X fully wired. LinkedIn messaging only. Facebook/Instagram/TikTok are stubs. |
 | Testing | **IMPROVED** — 81 unit/integration suites (1,700 tests), 16 Playwright E2E specs (150+ tests). All major user journeys covered: CRUD, checkout, video pipeline, workflows, settings, catalog types. |
@@ -230,7 +230,7 @@ Jasper orchestrates full marketing campaigns: research → strategy → produce 
 | Domain | Score | Status |
 |--------|-------|--------|
 | Authentication & RBAC | 9.5/10 | READY — MFA/TOTP, GDPR deletion, email invites, billing portal |
-| Payments & Commerce | 9/10 | READY — Stripe billing portal integrated |
+| Payments & Commerce | 9.5/10 | READY — 7 providers live (Stripe, PayPal, Square, Authorize.Net, 2Checkout, Mollie, Paddle). Provider-agnostic checkout + subscription billing. Paddle = Merchant of Record (tax/VAT/compliance). 3 more planned: Adyen, Chargebee, Hyperswitch |
 | CRM & Sales | 9.5/10 | READY |
 | AI Orchestration (Jasper) | 9.5/10 | READY |
 | Video System | 9.5/10 | READY — Clone Wizard, auto-captions, background music, assembly progress, simple/advanced mode |
@@ -266,6 +266,8 @@ Jasper orchestrates full marketing campaigns: research → strategy → produce 
 | **No email-based user invites** | Modal exists, no transactional email sent |
 | **LinkedIn** | Messaging only, no full posting |
 | **QuickBooks** | OAuth framework only, payment execution incomplete |
+| **Checkout page Stripe-only** | Store checkout hardcoded to Stripe PaymentElement — must be refactored to dynamic provider selection for 10-provider support |
+| **Paddle/Adyen/Chargebee/Hyperswitch** | 4 new payment providers planned — reduces single-provider dependency risk (Stripe fund-withholding concern) |
 
 #### Medium Priority (Post-Launch OK)
 | Gap | Details |
@@ -1826,6 +1828,15 @@ All 64 API routes that were using the client-side `FirestoreService` have been m
 | **Facebook** | **NOT BUILT** | No code exists. Requires Meta Developer sandbox + app review. |
 | **Instagram** | **NOT BUILT** | No code exists. Requires Meta Developer sandbox + app review. |
 | **Stripe** | **REAL** | Full API — `checkout.sessions.create()`, `products.create()`, `prices.create()`, `paymentLinks.create()`, PaymentElement checkout (3DS), payment intents, webhook `payment_intent.succeeded`. Production-ready. |
+| **PayPal** | **REAL** | Orders API v2, Billing Plans + Subscriptions API, payouts API v1, OAuth token exchange. Full subscription lifecycle (create plan, create subscription, verify, cancel). |
+| **Square** | **REAL** | SDK — `payments.create()`, `customers.create()`. Catalog-based subscription plans + payment links. Full subscription lifecycle. |
+| **Authorize.Net** | **REAL** | Accept Hosted payment page, ARB (Automated Recurring Billing), `authCaptureTransaction`. Full subscription lifecycle via hosted page + Firestore session tracking. |
+| **2Checkout (Verifone)** | **REAL** | REST API v6.0 — `EES_TOKEN_PAYMENT`, HMAC-MD5 authentication, 3DS redirect support. Single transactions. |
+| **Mollie** | **REAL** | Payments API v2 — redirect-based hosted checkout, webhook with HMAC-SHA256 signature verification. European payment methods (iDEAL, SEPA, Bancontact). |
+| **Paddle** | **PLANNED** | Merchant of Record — handles tax/VAT/compliance globally. Paddle.js overlay checkout. Built-in subscriptions. 5% + $0.50. |
+| **Adyen** | **PLANNED** | Direct processor, Interchange++ pricing (~0.95-1.15%). Drop-in component, 250+ payment methods. No built-in subscriptions. |
+| **Chargebee** | **PLANNED** | Billing layer — sits on top of Stripe/Adyen/etc. for subscription management. Hosted page checkout. Gold standard for SaaS billing. |
+| **Hyperswitch** | **PLANNED** | Open-source payment orchestration — routes payments to cheapest/most reliable processor. Stripe-compatible API. Smart failover. |
 | **Email (SendGrid)** | **REAL** | Primary provider. `@sendgrid/mail` SDK, tracking pixels, click tracking. |
 | **Email (Resend)** | **STUB** | Type definitions exist but no implementation file |
 | **Email (SMTP)** | **REAL** | Nodemailer — real SMTP transport (fixed Mar 10) |
@@ -1847,7 +1858,6 @@ All 64 API routes that were using the client-side `FirestoreService` have been m
 | **Email (Outlook)** | **REAL** | Microsoft Graph — list, send, calendar events, free/busy |
 | **Slack** | **REAL** | `@slack/web-api` — channels, messages, files, users |
 | **Microsoft Teams** | **REAL** | Microsoft Graph — teams, channels, messages, meetings |
-| **PayPal** | **REAL** | Orders API v2, payouts API v1, OAuth token exchange |
 | **Shopify** | **REAL** | Admin API 2024-01 — inventory, cart, products |
 | **HubSpot** | **REAL** | CRM v3 API — contact sync |
 | **Salesforce** | **REAL** | REST API v58.0 — lead creation |

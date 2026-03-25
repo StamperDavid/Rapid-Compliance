@@ -304,6 +304,65 @@ async function initiateMollie(
   };
 }
 
+async function initiatePaddle(
+  amount: number,
+  currency: string,
+  metadata: Record<string, string>,
+): Promise<InitiateResult> {
+  const keys = (await apiKeyService.getServiceKey(PLATFORM_ID, 'paddle')) as { apiKey?: string; mode?: string } | null;
+  if (!keys?.apiKey) {
+    throw new Error('Paddle not configured. Please add Paddle API key in settings.');
+  }
+
+  const baseUrl = keys.mode === 'production'
+    ? 'https://api.paddle.com'
+    : 'https://sandbox-api.paddle.com';
+
+  const response = await fetch(`${baseUrl}/transactions`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${keys.apiKey}`,
+    },
+    body: JSON.stringify({
+      items: [{
+        price: {
+          description: 'SalesVelocity.ai Checkout',
+          name: 'Checkout Payment',
+          unit_price: {
+            amount: String(Math.round(amount * 100)),
+            currency_code: currency.toUpperCase(),
+          },
+          quantity: { minimum: 1, maximum: 1 },
+        },
+        quantity: 1,
+      }],
+      checkout: {
+        url: `${process.env.NEXT_PUBLIC_APP_URL ?? ''}/store/checkout/success`,
+      },
+      customer: {
+        email: metadata.customerEmail ?? metadata.userId ?? '',
+      },
+    }),
+  });
+
+  const data = (await response.json()) as {
+    data?: { id?: string; checkout?: { url?: string } };
+    error?: { detail?: string };
+  };
+
+  if (!response.ok || !data.data?.id) {
+    throw new Error(data.error?.detail ?? 'Failed to create Paddle transaction');
+  }
+
+  return {
+    provider: 'paddle',
+    sessionId: data.data.id,
+    // Paddle overlay uses sessionId, but also provide checkout URL for fallback
+    redirectUrl: data.data.checkout?.url,
+  };
+}
+
 // ─── Provider dispatcher ─────────────────────────────────────────────────────
 
 type ProviderInitiator = (
@@ -319,6 +378,7 @@ const PROVIDER_MAP: Record<string, ProviderInitiator> = {
   authorizenet: initiateAuthorizeNet,
   '2checkout': initiate2Checkout,
   mollie: initiateMollie,
+  paddle: initiatePaddle,
 };
 
 // ─── Route handler ───────────────────────────────────────────────────────────

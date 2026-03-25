@@ -24,7 +24,8 @@ export type SubscriptionProviderId =
   | 'stripe'
   | 'authorizenet'
   | 'paypal'
-  | 'square';
+  | 'square'
+  | 'paddle';
 
 export interface SubscriptionCheckoutRequest {
   tier: SubscriptionTier;
@@ -101,7 +102,7 @@ export async function getSubscriptionProvider(): Promise<SubscriptionProviderId>
 }
 
 function isValidProvider(p: string): p is SubscriptionProviderId {
-  return ['stripe', 'authorizenet', 'paypal', 'square'].includes(p);
+  return ['stripe', 'authorizenet', 'paypal', 'square', 'paddle'].includes(p);
 }
 
 // ============================================================================
@@ -127,6 +128,8 @@ export async function createCheckoutSession(
       return createPayPalCheckout(request);
     case 'square':
       return createSquareCheckout(request);
+    case 'paddle':
+      return createPaddleCheckout(request);
     default:
       return { success: false, provider: resolvedProvider, error: `Unsupported provider: ${resolvedProvider}` };
   }
@@ -155,6 +158,8 @@ export async function verifyCheckoutSession(
       return verifyPayPalSession(sessionId, userEmail);
     case 'square':
       return verifySquareSession(sessionId, userEmail);
+    case 'paddle':
+      return verifyPaddleSession(sessionId, userEmail);
     default:
       return { valid: false, error: `Unsupported provider: ${resolvedProvider}` };
   }
@@ -182,6 +187,8 @@ export async function cancelSubscription(
       return cancelPayPalSubscription(subscriptionId);
     case 'square':
       return cancelSquareSubscription(subscriptionId);
+    case 'paddle':
+      return cancelPaddleSubscription(subscriptionId);
     default:
       return { success: false, error: `Unsupported provider: ${resolvedProvider}` };
   }
@@ -212,6 +219,8 @@ export async function getPortalUrl(
     case 'square':
       // Square has no hosted portal — return settings page
       return { success: true, url: returnUrl };
+    case 'paddle':
+      return getPaddlePortalUrl(subscriptionId);
     default:
       return { success: false, error: `Unsupported provider: ${resolvedProvider}` };
   }
@@ -945,6 +954,211 @@ async function cancelSquareSubscription(subscriptionId: string): Promise<Subscri
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     logger.error(`${LOG_PREFIX} Square cancel failed`, err instanceof Error ? err : new Error(msg));
+    return { success: false, error: msg };
+  }
+}
+
+// ============================================================================
+// PADDLE IMPLEMENTATION
+// ============================================================================
+
+interface PaddleKeys {
+  apiKey?: string;
+  mode?: string;
+}
+
+interface PaddleConfig {
+  apiKey: string;
+  baseUrl: string;
+}
+
+async function getPaddleSubscriptionConfig(): Promise<PaddleConfig | null> {
+  const keys = await apiKeyService.getServiceKey(PLATFORM_ID, 'paddle') as PaddleKeys | null;
+  if (!keys?.apiKey) { return null; }
+  const baseUrl = keys.mode === 'production'
+    ? 'https://api.paddle.com'
+    : 'https://sandbox-api.paddle.com';
+  return { apiKey: keys.apiKey, baseUrl };
+}
+
+async function createPaddleCheckout(req: SubscriptionCheckoutRequest): Promise<SubscriptionCheckoutResult> {
+  try {
+    const config = await getPaddleSubscriptionConfig();
+    if (!config) {
+      return { success: false, provider: 'paddle', error: 'Paddle not configured' };
+    }
+
+    const priceInCents = req.billingPeriod === 'annual'
+      ? req.tier.annualPriceCents
+      : req.tier.monthlyPriceCents;
+    const interval = req.billingPeriod === 'annual' ? 'year' : 'month';
+
+    // Create a Paddle transaction with subscription billing
+    const res = await fetch(`${config.baseUrl}/transactions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${config.apiKey}`,
+      },
+      body: JSON.stringify({
+        items: [{
+          price: {
+            description: `SalesVelocity.ai ${req.tier.label} Plan`,
+            name: `${req.tier.label} — ${req.billingPeriod}`,
+            unit_price: {
+              amount: String(priceInCents),
+              currency_code: 'USD',
+            },
+            billing_cycle: {
+              interval,
+              frequency: 1,
+            },
+          },
+          quantity: 1,
+        }],
+        customer: {
+          email: req.userEmail,
+        },
+        checkout: {
+          url: `${req.appUrl}/settings/subscription?checkout=success&provider=paddle&tier=${req.tier.key}`,
+        },
+        custom_data: {
+          tier: req.tier.key,
+          billingPeriod: req.billingPeriod,
+          userId: req.userId,
+          ...(req.couponCode ? { couponCode: req.couponCode } : {}),
+        },
+      }),
+    });
+
+    const data = await res.json() as {
+      data?: {
+        id?: string;
+        checkout?: { url?: string };
+      };
+      error?: { detail?: string };
+    };
+
+    if (!res.ok || !data.data?.id) {
+      const errorMsg = data.error?.detail ?? 'Failed to create Paddle checkout';
+      return { success: false, provider: 'paddle', error: errorMsg };
+    }
+
+    return {
+      success: true,
+      url: data.data.checkout?.url ?? undefined,
+      sessionId: data.data.id,
+      provider: 'paddle',
+    };
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    logger.error(`${LOG_PREFIX} Paddle checkout failed`, err instanceof Error ? err : new Error(msg));
+    return { success: false, provider: 'paddle', error: msg };
+  }
+}
+
+async function verifyPaddleSession(sessionId: string, _userEmail: string): Promise<SubscriptionVerifyResult> {
+  try {
+    const config = await getPaddleSubscriptionConfig();
+    if (!config) { return { valid: false, error: 'Paddle not configured' }; }
+
+    const res = await fetch(`${config.baseUrl}/transactions/${sessionId}`, {
+      headers: { Authorization: `Bearer ${config.apiKey}` },
+    });
+
+    const data = await res.json() as {
+      data?: {
+        status?: string;
+        subscription_id?: string;
+        custom_data?: Record<string, string>;
+        details?: {
+          totals?: { total?: string };
+        };
+      };
+    };
+
+    if (!res.ok || !data.data) {
+      return { valid: false, error: 'Failed to retrieve Paddle transaction' };
+    }
+
+    const status = data.data.status;
+    if (status !== 'completed' && status !== 'billed') {
+      return { valid: false, error: `Paddle transaction not complete (status: ${status ?? 'unknown'})` };
+    }
+
+    return {
+      valid: true,
+      subscriptionId: data.data.subscription_id,
+    };
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    logger.error(`${LOG_PREFIX} Paddle verify failed`, err instanceof Error ? err : new Error(msg));
+    return { valid: false, error: msg };
+  }
+}
+
+async function cancelPaddleSubscription(subscriptionId: string): Promise<SubscriptionCancelResult> {
+  try {
+    const config = await getPaddleSubscriptionConfig();
+    if (!config) { return { success: false, error: 'Paddle not configured' }; }
+
+    const res = await fetch(`${config.baseUrl}/subscriptions/${subscriptionId}/cancel`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${config.apiKey}`,
+      },
+      body: JSON.stringify({
+        effective_from: 'next_billing_period',
+      }),
+    });
+
+    if (!res.ok) {
+      const errorData = await res.json() as { error?: { detail?: string } };
+      return { success: false, error: errorData.error?.detail ?? 'Failed to cancel Paddle subscription' };
+    }
+
+    return { success: true, cancelAtPeriodEnd: true };
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    logger.error(`${LOG_PREFIX} Paddle cancel failed`, err instanceof Error ? err : new Error(msg));
+    return { success: false, error: msg };
+  }
+}
+
+async function getPaddlePortalUrl(subscriptionId: string): Promise<SubscriptionPortalResult> {
+  try {
+    const config = await getPaddleSubscriptionConfig();
+    if (!config) { return { success: false, error: 'Paddle not configured' }; }
+
+    // Paddle's customer portal is accessed via the update payment method URL
+    const res = await fetch(
+      `${config.baseUrl}/subscriptions/${subscriptionId}/update-payment-method-transaction`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${config.apiKey}`,
+        },
+      },
+    );
+
+    const data = await res.json() as {
+      data?: {
+        checkout?: { url?: string };
+      };
+      error?: { detail?: string };
+    };
+
+    if (!res.ok || !data.data?.checkout?.url) {
+      // Fallback to settings page
+      return { success: true, url: '/settings/subscription' };
+    }
+
+    return { success: true, url: data.data.checkout.url };
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    logger.error(`${LOG_PREFIX} Paddle portal URL failed`, err instanceof Error ? err : new Error(msg));
     return { success: false, error: msg };
   }
 }

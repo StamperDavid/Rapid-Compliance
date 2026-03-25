@@ -61,6 +61,8 @@
     "@hookform/resolvers": "^3.3.3",
     "@microsoft/microsoft-graph-client": "^3.0.7",
     "@next/bundle-analyzer": "^16.2.1",
+    "@paddle/paddle-js": "^1.6.2",
+    "@paddle/paddle-node-sdk": "^3.6.0",
     "@sendgrid/mail": "^8.1.6",
     "@sentry/nextjs": "^10.27.0",
     "@slack/web-api": "^7.13.0",

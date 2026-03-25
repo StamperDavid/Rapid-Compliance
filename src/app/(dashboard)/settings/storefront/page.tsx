@@ -42,6 +42,7 @@ interface StorefrontConfig {
     authorizenetEnabled: boolean;
     twocheckoutEnabled: boolean;
     mollieEnabled: boolean;
+    paddleEnabled: boolean;
     defaultProvider: string;
     autoCreateOrder: boolean;
     autoCreateInvoice: boolean;
@@ -83,6 +84,7 @@ const DEFAULT_CONFIG: StorefrontConfig = {
     authorizenetEnabled: false,
     twocheckoutEnabled: false,
     mollieEnabled: false,
+    paddleEnabled: false,
     defaultProvider: 'stripe',
     autoCreateOrder: true,
     autoCreateInvoice: true,
@@ -159,6 +161,7 @@ export default function StorefrontSettingsPage() {
         { key: 'authorizenetEnabled', id: 'authorizenet' },
         { key: 'twocheckoutEnabled', id: '2checkout' },
         { key: 'mollieEnabled', id: 'mollie' },
+        { key: 'paddleEnabled', id: 'paddle' },
       ];
       const providers = providerMap
         .filter(({ key }) => Boolean(config.paymentProcessing[key]))
@@ -542,10 +545,21 @@ export default function StorefrontSettingsPage() {
                         <span style={{ fontSize: '0.875rem', color: 'var(--color-text-primary)' }}>🇪🇺 Mollie</span>
                         <span style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginLeft: 'auto' }}>Popular in Europe</span>
                       </label>
+
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer' }}>
+                        <input
+                          type="checkbox"
+                          checked={config.paymentProcessing.paddleEnabled}
+                          onChange={(e) => updateConfig(['paymentProcessing', 'paddleEnabled'], e.target.checked)}
+                          style={{ width: '1.25rem', height: '1.25rem' }}
+                        />
+                        <span style={{ fontSize: '0.875rem', color: 'var(--color-text-primary)' }}>🏓 Paddle</span>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginLeft: 'auto' }}>Merchant of Record — handles taxes, invoicing, compliance</span>
+                      </label>
                     </div>
 
                     {/* Default Provider Selection */}
-                    {(config.paymentProcessing.stripeEnabled || config.paymentProcessing.paypalEnabled || config.paymentProcessing.squareEnabled || config.paymentProcessing.authorizenetEnabled || config.paymentProcessing.twocheckoutEnabled || config.paymentProcessing.mollieEnabled) && (
+                    {(config.paymentProcessing.stripeEnabled || config.paymentProcessing.paypalEnabled || config.paymentProcessing.squareEnabled || config.paymentProcessing.authorizenetEnabled || config.paymentProcessing.twocheckoutEnabled || config.paymentProcessing.mollieEnabled || config.paymentProcessing.paddleEnabled) && (
                       <div style={{ marginTop: '1rem', padding: '1rem', backgroundColor: 'var(--color-bg-paper)', borderRadius: '0.5rem', border: '1px solid var(--color-border-light)' }}>
                         <div style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--color-text-primary)', marginBottom: '0.75rem' }}>Default Payment Provider</div>
                         <p style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginBottom: '0.75rem' }}>
@@ -586,6 +600,12 @@ export default function StorefrontSettingsPage() {
                             <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
                               <input type="radio" name="defaultProvider" checked={config.paymentProcessing.defaultProvider === 'mollie'} onChange={() => updateConfig(['paymentProcessing', 'defaultProvider'], 'mollie')} />
                               <span style={{ fontSize: '0.875rem', color: 'var(--color-text-primary)' }}>Mollie</span>
+                            </label>
+                          )}
+                          {config.paymentProcessing.paddleEnabled && (
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                              <input type="radio" name="defaultProvider" checked={config.paymentProcessing.defaultProvider === 'paddle'} onChange={() => updateConfig(['paymentProcessing', 'defaultProvider'], 'paddle')} />
+                              <span style={{ fontSize: '0.875rem', color: 'var(--color-text-primary)' }}>Paddle</span>
                             </label>
                           )}
                         </div>

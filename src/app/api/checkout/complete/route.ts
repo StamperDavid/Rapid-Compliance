@@ -190,6 +190,46 @@ function verify2Checkout(_referenceId: string): Promise<VerificationResult> {
 
 type ProviderVerifier = (paymentId: string) => Promise<VerificationResult>;
 
+async function verifyPaddle(transactionId: string): Promise<VerificationResult> {
+  const keys = (await apiKeyService.getServiceKey(PLATFORM_ID, 'paddle')) as { apiKey?: string; mode?: string } | null;
+  if (!keys?.apiKey) {
+    return { verified: false, error: 'Paddle not configured' };
+  }
+
+  const baseUrl = keys.mode === 'production'
+    ? 'https://api.paddle.com'
+    : 'https://sandbox-api.paddle.com';
+
+  const response = await fetch(`${baseUrl}/transactions/${transactionId}`, {
+    headers: { Authorization: `Bearer ${keys.apiKey}` },
+  });
+
+  const data = (await response.json()) as {
+    data?: {
+      status?: string;
+      details?: { totals?: { total?: string; currency_code?: string } };
+      custom_data?: Record<string, string>;
+    };
+  };
+
+  if (!response.ok || !data.data) {
+    return { verified: false, error: 'Failed to retrieve Paddle transaction' };
+  }
+
+  const status = data.data.status;
+  if (status !== 'completed' && status !== 'billed') {
+    return { verified: false, error: `Paddle transaction status: ${status ?? 'unknown'}` };
+  }
+
+  const total = data.data.details?.totals?.total;
+  return {
+    verified: true,
+    amount: total ? parseInt(total, 10) : undefined,
+    currency: data.data.details?.totals?.currency_code?.toLowerCase(),
+    metadata: data.data.custom_data,
+  };
+}
+
 const VERIFIER_MAP: Record<string, ProviderVerifier> = {
   stripe: verifyStripe,
   paypal: verifyPayPal,
@@ -197,6 +237,7 @@ const VERIFIER_MAP: Record<string, ProviderVerifier> = {
   mollie: verifyMollie,
   authorizenet: verifyAuthorizeNet,
   '2checkout': verify2Checkout,
+  paddle: verifyPaddle,
 };
 
 // ─── Route handler ───────────────────────────────────────────────────────────

@@ -157,6 +157,11 @@ export async function processPayment(request: PaymentRequest): Promise<PaymentRe
       return processMolliePayment(request, defaultProvider);
     }
 
+    case 'paddle': {
+      const { processPaddlePayment } = await import('./paddle-provider');
+      return processPaddlePayment(request, defaultProvider);
+    }
+
     default:
       return {
         success: false,
@@ -546,6 +551,11 @@ export async function refundPayment(
   switch (provider) {
     case 'stripe':
       return refundStripePayment(transactionId, amount);
+
+    case 'paddle': {
+      const { refundPaddlePayment } = await import('./paddle-provider');
+      return refundPaddlePayment(transactionId, amount);
+    }
 
     case 'paypal':
     case 'square':
