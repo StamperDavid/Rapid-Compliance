@@ -38,7 +38,7 @@
 |--------|-------|--------|
 | Physical Routes (page.tsx) | 184 | Verified March 20, 2026 |
 | API Endpoints (route.ts) | 404 | Verified March 24, 2026 (+11 intelligence discovery) |
-| AI Agents | 52 | **52 FUNCTIONAL (46 swarm + 6 standalone)** |
+| AI Agents | 58 | **58 FUNCTIONAL (46 swarm + 6 standalone + 6 Claude Code QA agents)** |
 | RBAC Roles | 4 | owner / admin / manager / member |
 | TypeScript Files | 1,628 | Verified March 20, 2026 |
 | Type Definition Files (src/types/) | 55 | 831+ interfaces/types across all files |
@@ -207,8 +207,8 @@ Jasper orchestrates full marketing campaigns: research → strategy → produce 
 |------|--------|
 | Single-tenant architecture | **COMPLETE** — Firebase kill-switch, PLATFORM_ID constant, workspace paths eradicated (53 files migrated) |
 | 4-role RBAC | **ENFORCED** — `requireAuth()`/`requireRole()` used 792 times across API routes, 47 permissions, sidebar filtering |
-| Agent hierarchy | **100% COMPLETE** — 52 agents (46 swarm + 6 standalone), all managers orchestrate all specialists |
-| Jasper delegation | **COMPLETE** — 51 tools (13 delegate_to_*, 38 utility incl. list_avatars, create_campaign, assemble_video, edit_video, manage_media_library). Mission Control SSE streaming + Campaign Review live |
+| Agent hierarchy | **100% COMPLETE** — 58 agents (46 swarm + 6 standalone + 6 Claude Code QA), all managers orchestrate all specialists |
+| Jasper delegation | **COMPLETE** — 53 tools (9 delegate_to_*, 44 utility incl. list_avatars, create_campaign, assemble_video, edit_video, manage_media_library). Mission Control SSE streaming + Campaign Review live |
 | Lead Research | **COMPLETE** — Unified 3-column page with AI chat, results panel, URL sources. 5 API routes, 8-tool AI subset |
 | Type safety | **CLEAN** — `tsc --noEmit` passes. Zero `any` type annotations (audit false positive: word "any" in comments miscounted). Zero `@ts-ignore`, zero `@ts-expect-error` |
 | Build pipeline | **CLEAN** — `npm run build` passes, `npm run lint` zero warnings, 24 eslint-disable (ratcheted) |
@@ -393,7 +393,7 @@ All roadmaps fully complete. Details in git history and `docs/archive/`.
 
 ### Rule 2: Unified AI Workforce Registry
 
-**The 52 AI Agents are managed through a single global registry (src/lib/agents/agent-registry.ts), not per-user.**
+**The 58 AI Agents are managed through a single global registry (src/lib/agents/agent-registry.ts) + .claude/agents/ prompts, not per-user.**
 
 | Aspect | Detail |
 |--------|--------|
@@ -421,7 +421,7 @@ Standalone: JASPER, VOICE_AGENT_HANDLER,
            AUTONOMOUS_POSTING_AGENT, CHAT_SESSION_SERVICE
 ```
 
-**Total: 46 Swarm (1 + 9 + 36) + 6 Standalone = 52 Agents**
+**Total: 46 Swarm (1 + 9 + 36) + 6 Standalone + 6 Claude Code QA = 58 Agents**
 
 **Governance:** Agents are deployed, trained, and configured at the **platform level**. The `AgentInstanceManager` (`src/lib/agent/instance-manager.ts`) creates ephemeral session instances from Golden Masters — these are temporary runtime objects, not persistent per-user registries.
 
@@ -2028,7 +2028,7 @@ The build pipeline now enforces **mandatory TypeScript type-checking** as a non-
 - **One organization:** `rapid-compliance-root` is the only org in the system (Rule 1)
 - All Firestore data scoped to `organizations/rapid-compliance-root/` or flat root collections (Rule 5)
 - Feature visibility configurable at the platform level
-- All 52 AI agents operate under the single org identity (Rule 2)
+- All 58 AI agents operate under the single org identity (Rule 2)
 - `DEFAULT_ORG_ID` constant used by all service classes — no dynamic org resolution
 - All service classes use `PLATFORM_ID` constant directly — no dynamic org parameters
 
