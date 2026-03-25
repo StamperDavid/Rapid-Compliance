@@ -69,6 +69,7 @@ import {
   BookOpen,
   Link2,
   Radar,
+  Rocket,
 } from 'lucide-react';
 
 // ============================================================================
@@ -129,6 +130,7 @@ const NAV_SECTIONS: NavigationSection[] = [
     icon: Megaphone,
     allowedRoles: ['owner', 'admin', 'manager'],
     items: [
+      { id: 'campaigns', label: 'Campaigns', href: '/campaigns', icon: Rocket, iconColor: 'var(--color-accent)' },
       { id: 'social-hub', label: 'Social Hub', href: '/social/command-center', icon: Activity, iconColor: 'var(--color-success)', requiredPermission: 'canManageSocialMedia', featureModuleId: 'social_media' },
       { id: 'video', label: 'Content Generator', href: '/content/video', icon: Video, iconColor: 'var(--color-primary)', requiredPermission: 'canManageSocialMedia', featureModuleId: 'video_production' },
       { id: 'forms', label: 'Forms', href: '/forms', icon: ClipboardList, iconColor: 'var(--color-success)', featureModuleId: 'forms_surveys' },
