@@ -313,8 +313,16 @@ export type APIServiceName =
   | 'clay'        // Clay.com Enrichment & Waterfall API
   | 'newsapi'
   | 'rapidapi'
-  | 'twitter'      // Twitter/X API v2
-  | 'linkedin'     // LinkedIn API
+  | 'twitter'          // Twitter/X API v2
+  | 'linkedin'         // LinkedIn API
+  | 'bluesky'          // Bluesky — AT Protocol
+  | 'threads'          // Threads — Meta Threads API
+  | 'truth_social'     // Truth Social — Mastodon-compatible API
+  | 'telegram'         // Telegram Bot API
+  | 'reddit'           // Reddit API (OAuth 2.0)
+  | 'pinterest'        // Pinterest API v5
+  | 'whatsapp_business' // WhatsApp Business Cloud API
+  | 'google_business'  // Google Business Profile API
   | 'elevenlabs'   // ElevenLabs Voice AI
   | 'unrealSpeech' // Unreal Speech TTS
   | 'serper'        // Serper.dev Google Search API

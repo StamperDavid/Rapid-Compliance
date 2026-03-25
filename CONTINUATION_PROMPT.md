@@ -90,11 +90,16 @@ Last Updated: March 24, 2026 (Payment Gateway Expansion ALL 5 PHASES COMPLETE: 1
 - New file: `dedup-conflicts.ts` — generateContentHash(), checkDuplicate(), extractFieldConflicts()
 - New types: `FieldConflict`, `contentHash`, `duplicateOf`, `fieldConflicts` on DiscoveryFinding
 
-**2. Social Media Platform Expansion**
-- Expand beyond big 6 (Twitter/X, Facebook, Instagram, LinkedIn, TikTok, YouTube)
-- **Tier 1:** Truth Social, Threads, Google Business Profile, Bluesky, Telegram, Reddit, Pinterest, WhatsApp Business
-- **Tier 2:** Rumble, Nextdoor, Alignable, Skool, Discord, Beehiiv
-- Target: SMB owners and entrepreneurs wherever they are, including conservative/alternative platforms
+**2. Social Media Platform Expansion — COMPLETE (March 24, 2026)**
+- Expanded SocialPlatform type from 2 → 14 platforms (SOCIAL_PLATFORMS const array)
+- **Big 6:** Twitter, LinkedIn, Facebook, Instagram, YouTube, TikTok
+- **Tier 1 (8 NEW):** Bluesky (AT Protocol), Threads (Meta API), Truth Social (Mastodon-compatible), Telegram (Bot API), Reddit (OAuth 2.0), Pinterest (API v5), WhatsApp Business (Cloud API), Google Business Profile
+- 8 new service adapters in src/lib/integrations/ — each with class + factory functions + typed API calls
+- All 16 API route Zod schemas updated to use shared SOCIAL_PLATFORMS constant
+- Media constraints added for all 8 new platforms in media-service.ts
+- 8 new APIServiceName entries for API key storage
+- OAuth routes accept all platforms (new platforms return helpful "add manually" message)
+- **Tier 2 planned:** Rumble, Nextdoor, Alignable, Skool, Discord, Beehiiv
 
 **3. Other Remaining Work**
 - React Query adoption

@@ -13,7 +13,7 @@ import { requireAuth } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { createPostingAgent } from '@/lib/social/autonomous-posting-agent';
-import type { SocialPlatform } from '@/types/social';
+import { SOCIAL_PLATFORMS, type SocialPlatform } from '@/types/social';
 import { z } from 'zod';
 
 export const dynamic = 'force-dynamic';
@@ -21,7 +21,7 @@ export const dynamic = 'force-dynamic';
 // Request validation schemas
 const addToQueueSchema = z.object({
   content: z.string().min(1, 'Content is required').max(3000, 'Content exceeds maximum length (3000 characters)'),
-  platforms: z.array(z.enum(['twitter', 'linkedin'])).min(1, 'At least one platform is required'),
+  platforms: z.array(z.enum(SOCIAL_PLATFORMS)).min(1, 'At least one platform is required'),
   mediaUrls: z.array(z.string().url()).optional(),
   hashtags: z.array(z.string()).optional(),
   preferredTimeSlot: z.enum(['morning', 'afternoon', 'evening']).optional(),
@@ -29,7 +29,7 @@ const addToQueueSchema = z.object({
 });
 
 const getQueueSchema = z.object({
-  platform: z.enum(['twitter', 'linkedin']).optional(),
+  platform: z.enum(SOCIAL_PLATFORMS).optional(),
 });
 
 const processQueueSchema = z.object({
@@ -116,7 +116,7 @@ export async function POST(request: NextRequest) {
     // Add to queue
     const result = await agent.addToQueue(
       data.content,
-      data.platforms as SocialPlatform[],
+      data.platforms,
       {
         mediaUrls: data.mediaUrls,
         hashtags: data.hashtags,
@@ -351,7 +351,7 @@ export async function PUT(request: NextRequest) {
     // Post immediately
     const result = await agent.postNow(
       data.content,
-      data.platforms as SocialPlatform[],
+      data.platforms,
       {
         mediaUrls: data.mediaUrls,
         hashtags: data.hashtags,

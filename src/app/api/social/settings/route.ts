@@ -11,6 +11,7 @@ import { requireAuth } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { AgentConfigService } from '@/lib/social/agent-config-service';
+import { SOCIAL_PLATFORMS } from '@/types/social';
 
 export const dynamic = 'force-dynamic';
 
@@ -25,7 +26,7 @@ const updateSettingsSchema = z.object({
     dayOfWeek: z.number().min(0).max(6),
     hour: z.number().min(0).max(23),
     minute: z.number().min(0).max(59),
-    platforms: z.array(z.enum(['twitter', 'linkedin'])),
+    platforms: z.array(z.enum(SOCIAL_PLATFORMS)),
   })).optional(),
   pauseOnWeekends: z.boolean().optional(),
   autoApprovalEnabled: z.boolean().optional(),

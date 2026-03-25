@@ -11,6 +11,7 @@ import { requireAuth } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { ListeningService } from '@/lib/social/listening-service';
+import { SOCIAL_PLATFORMS } from '@/types/social';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,7 +21,7 @@ const updateConfigSchema = z.object({
   trackedCompetitors: z.array(z.string()).optional(),
   sentimentAlertThreshold: z.number().min(0).max(100).optional(),
   pollingIntervalMinutes: z.number().min(5).max(1440).optional(),
-  enabledPlatforms: z.array(z.enum(['twitter', 'linkedin'])).optional(),
+  enabledPlatforms: z.array(z.enum(SOCIAL_PLATFORMS)).optional(),
 });
 
 export async function GET(request: NextRequest) {

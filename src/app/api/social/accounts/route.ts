@@ -13,7 +13,7 @@ import { requireAuth, requireRole } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { SocialAccountService } from '@/lib/social/social-account-service';
-import type { SocialPlatform } from '@/types/social';
+import { SOCIAL_PLATFORMS, type SocialPlatform } from '@/types/social';
 
 export const dynamic = 'force-dynamic';
 
@@ -34,7 +34,7 @@ const linkedInCredentialsSchema = z.object({
 });
 
 const addAccountSchema = z.object({
-  platform: z.enum(['twitter', 'linkedin']),
+  platform: z.enum(SOCIAL_PLATFORMS),
   accountName: z.string().min(1, 'Account name is required'),
   handle: z.string().min(1, 'Handle is required'),
   profileImageUrl: z.string().url().optional(),

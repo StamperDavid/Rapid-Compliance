@@ -235,7 +235,7 @@ Jasper orchestrates full marketing campaigns: research → strategy → produce 
 | AI Orchestration (Jasper) | 9.5/10 | READY |
 | Video System | 9.5/10 | READY — Clone Wizard, auto-captions, background music, assembly progress, simple/advanced mode |
 | Email & SMS | 9/10 | READY |
-| Social Media | 6/10 | PARTIAL (Twitter only) |
+| Social Media | 8/10 | EXPANDED — 14 platforms supported (Twitter production-ready, 13 more with service adapters). Bluesky, Threads, Truth Social, Telegram, Reddit, Pinterest, WhatsApp Business, Google Business Profile added. Tier 2 planned. |
 | Website Builder | 9/10 | READY |
 | Analytics & Growth | 9/10 | READY |
 | UI Components | 8/10 | READY |

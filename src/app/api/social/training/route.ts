@@ -14,6 +14,7 @@ import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { COLLECTIONS, getSubCollection } from '@/lib/firebase/collections';
 import { PLATFORM_ID } from '@/lib/constants/platform';
+import { SOCIAL_PLATFORMS } from '@/types/social';
 
 export const dynamic = 'force-dynamic';
 
@@ -35,7 +36,7 @@ interface BrandDNA {
 
 const saveHistorySchema = z.object({
   id: z.string().min(1),
-  platform: z.enum(['twitter', 'linkedin', 'instagram']),
+  platform: z.enum(SOCIAL_PLATFORMS),
   content: z.string().min(1),
   topic: z.string(),
   hashtags: z.array(z.string()).optional(),

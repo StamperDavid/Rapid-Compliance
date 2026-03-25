@@ -12,7 +12,7 @@ import { requireAuth } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { createPostingAgent } from '@/lib/social/autonomous-posting-agent';
-import type { SocialPlatform } from '@/types/social';
+import { SOCIAL_PLATFORMS, type SocialPlatform } from '@/types/social';
 import { z } from 'zod';
 
 export const dynamic = 'force-dynamic';
@@ -20,7 +20,7 @@ export const dynamic = 'force-dynamic';
 // Request validation schemas
 const schedulePostSchema = z.object({
   content: z.string().min(1, 'Content is required').max(3000, 'Content exceeds maximum length (3000 characters)'),
-  platforms: z.array(z.enum(['twitter', 'linkedin'])).min(1, 'At least one platform is required'),
+  platforms: z.array(z.enum(SOCIAL_PLATFORMS)).min(1, 'At least one platform is required'),
   scheduledAt: z.string().datetime('Invalid datetime format'),
   mediaUrls: z.array(z.string().url()).optional(),
   hashtags: z.array(z.string()).optional(),
@@ -28,7 +28,7 @@ const schedulePostSchema = z.object({
 });
 
 const getScheduledSchema = z.object({
-  platform: z.enum(['twitter', 'linkedin']).optional(),
+  platform: z.enum(SOCIAL_PLATFORMS).optional(),
 });
 
 const cancelPostSchema = z.object({
@@ -118,7 +118,7 @@ export async function POST(request: NextRequest) {
     // Schedule the post
     const result = await agent.schedulePost(
       data.content,
-      data.platforms as SocialPlatform[],
+      data.platforms,
       scheduledAt,
       {
         mediaUrls: data.mediaUrls,

@@ -13,6 +13,7 @@ import { requireAuth } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
 import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { getSocialPostsCollection } from '@/lib/firebase/collections';
+import { SOCIAL_PLATFORMS } from '@/types/social';
 
 export const dynamic = 'force-dynamic';
 
@@ -39,7 +40,7 @@ interface SocialPostDoc {
 const postsPath = getSocialPostsCollection();
 
 const createPostSchema = z.object({
-  platform: z.enum(['twitter', 'linkedin', 'facebook', 'instagram']),
+  platform: z.enum(SOCIAL_PLATFORMS),
   content: z.string().min(1, 'Content is required'),
   status: z.enum(['draft', 'scheduled', 'published']).optional().default('draft'),
   scheduledFor: z.string().optional(),
@@ -54,7 +55,7 @@ const updatePostSchema = z.object({
   scheduledFor: z.string().optional(),
   hashtags: z.array(z.string()).optional(),
   mediaUrls: z.array(z.string()).optional(),
-  platform: z.enum(['twitter', 'linkedin', 'facebook', 'instagram']).optional(),
+  platform: z.enum(SOCIAL_PLATFORMS).optional(),
 });
 
 export async function GET(request: NextRequest) {

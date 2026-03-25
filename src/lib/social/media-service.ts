@@ -43,6 +43,54 @@ const PLATFORM_CONSTRAINTS: Record<string, PlatformConstraints> = {
     allowedImageTypes: ['image/jpeg', 'image/png', 'image/gif'],
     allowedVideoTypes: ['video/mp4'],
   },
+  bluesky: {
+    maxImageSizeBytes: 1 * 1024 * 1024,        // 1MB
+    maxVideoSizeBytes: 50 * 1024 * 1024,       // 50MB
+    allowedImageTypes: ['image/jpeg', 'image/png'],
+    allowedVideoTypes: ['video/mp4'],
+  },
+  threads: {
+    maxImageSizeBytes: 8 * 1024 * 1024,        // 8MB (same as Instagram)
+    maxVideoSizeBytes: 100 * 1024 * 1024,      // 100MB
+    allowedImageTypes: ['image/jpeg', 'image/png'],
+    allowedVideoTypes: ['video/mp4'],
+  },
+  truth_social: {
+    maxImageSizeBytes: 8 * 1024 * 1024,        // 8MB (Mastodon default)
+    maxVideoSizeBytes: 40 * 1024 * 1024,       // 40MB
+    allowedImageTypes: ['image/jpeg', 'image/png', 'image/gif'],
+    allowedVideoTypes: ['video/mp4'],
+  },
+  telegram: {
+    maxImageSizeBytes: 10 * 1024 * 1024,       // 10MB
+    maxVideoSizeBytes: 50 * 1024 * 1024,       // 50MB
+    allowedImageTypes: ['image/jpeg', 'image/png', 'image/gif'],
+    allowedVideoTypes: ['video/mp4'],
+  },
+  reddit: {
+    maxImageSizeBytes: 20 * 1024 * 1024,       // 20MB
+    maxVideoSizeBytes: 1024 * 1024 * 1024,     // 1GB
+    allowedImageTypes: ['image/jpeg', 'image/png', 'image/gif'],
+    allowedVideoTypes: ['video/mp4'],
+  },
+  pinterest: {
+    maxImageSizeBytes: 20 * 1024 * 1024,       // 20MB
+    maxVideoSizeBytes: 2 * 1024 * 1024 * 1024, // 2GB
+    allowedImageTypes: ['image/jpeg', 'image/png'],
+    allowedVideoTypes: ['video/mp4'],
+  },
+  whatsapp_business: {
+    maxImageSizeBytes: 5 * 1024 * 1024,        // 5MB
+    maxVideoSizeBytes: 16 * 1024 * 1024,       // 16MB
+    allowedImageTypes: ['image/jpeg', 'image/png'],
+    allowedVideoTypes: ['video/mp4', 'video/3gpp'],
+  },
+  google_business: {
+    maxImageSizeBytes: 5 * 1024 * 1024,        // 5MB
+    maxVideoSizeBytes: 75 * 1024 * 1024,       // 75MB
+    allowedImageTypes: ['image/jpeg', 'image/png'],
+    allowedVideoTypes: ['video/mp4'],
+  },
 };
 
 // General fallback max (50MB as per plan)

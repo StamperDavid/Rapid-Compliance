@@ -12,14 +12,14 @@ import { requireAuth } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { ApprovalService } from '@/lib/social/approval-service';
-import type { ApprovalStatus, SocialPlatform } from '@/types/social';
+import { SOCIAL_PLATFORMS, type ApprovalStatus, type SocialPlatform } from '@/types/social';
 
 export const dynamic = 'force-dynamic';
 
 const createApprovalSchema = z.object({
   postId: z.string().min(1),
   content: z.string().min(1),
-  platform: z.enum(['twitter', 'linkedin']),
+  platform: z.enum(SOCIAL_PLATFORMS),
   accountId: z.string().optional(),
   flagReason: z.string().min(1),
   flaggedBy: z.enum(['autonomous-agent', 'manual']).optional().default('manual'),

@@ -61,10 +61,9 @@ export async function GET(
       case 'linkedin':
         authUrl = await generateLinkedInAuthUrl(userId);
         break;
-      default: {
-        const _exhaustive: never = validProvider;
-        return errors.badRequest(`Unsupported provider: ${String(_exhaustive)}`);
-      }
+      default:
+        // Platforms without OAuth flow yet — return helpful error
+        return errors.badRequest(`OAuth not yet configured for ${validProvider}. Please add credentials manually via Settings > Integrations.`);
     }
 
     return NextResponse.redirect(authUrl);

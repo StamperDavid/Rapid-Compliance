@@ -126,12 +126,10 @@ export async function GET(
         return NextResponse.redirect(`${settingsUrl}?success=linkedin&category=social`);
       }
 
-      default: {
-        const _exhaustive: never = validProvider;
+      default:
         return NextResponse.redirect(
-          `${settingsUrl}?error=unsupported_provider&provider=${String(_exhaustive)}`
+          `${settingsUrl}?error=oauth_not_supported&provider=${validProvider}`
         );
-      }
     }
   } catch (error) {
     logger.error(

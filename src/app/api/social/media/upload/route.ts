@@ -10,12 +10,12 @@ import { requireAuth } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { SocialMediaService } from '@/lib/social/media-service';
-import type { SocialPlatform } from '@/types/social';
+import { SOCIAL_PLATFORMS, type SocialPlatform } from '@/types/social';
 
 export const dynamic = 'force-dynamic';
 
 // FormData fields (strings) are validated individually via Zod
-const SocialPlatformEnum = z.enum(['twitter', 'linkedin']);
+const SocialPlatformEnum = z.enum(SOCIAL_PLATFORMS);
 
 export async function POST(request: NextRequest) {
   try {

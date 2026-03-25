@@ -15,6 +15,7 @@ import { rateLimitMiddleware } from '@/lib/middleware/rate-limiter';
 import { logger } from '@/lib/logger/logger';
 import { z } from 'zod';
 import { SocialPostService } from '@/lib/social/social-post-service';
+import { SOCIAL_PLATFORMS } from '@/types/social';
 
 export const dynamic = 'force-dynamic';
 
@@ -30,7 +31,7 @@ interface LinkedInResponse {
 
 // Request validation schema
 const postSchema = z.object({
-  platform: z.enum(['twitter', 'linkedin']),
+  platform: z.enum(SOCIAL_PLATFORMS),
   content: z.string().min(1, 'Content is required'),
   scheduledAt: z.string().datetime().optional(),
   mediaUrls: z.array(z.string().url()).optional(),

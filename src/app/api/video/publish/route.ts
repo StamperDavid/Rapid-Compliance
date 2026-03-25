@@ -12,6 +12,7 @@ import { logger } from '@/lib/logger/logger';
 import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { getSocialPostsCollection } from '@/lib/firebase/collections';
 import type { PublishResult, PublishPlatform } from '@/types/video-pipeline';
+import { SOCIAL_PLATFORMS } from '@/types/social';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,7 +20,7 @@ const publishSchema = z.object({
   projectId: z.string().min(1),
   videoUrl: z.string().url('Invalid video URL'),
   platforms: z
-    .array(z.enum(['twitter', 'linkedin', 'facebook', 'instagram', 'youtube', 'tiktok']))
+    .array(z.enum(SOCIAL_PLATFORMS))
     .min(1, 'Select at least one platform'),
   title: z.string().max(200).optional().default(''),
   description: z.string().max(2000).optional().default(''),

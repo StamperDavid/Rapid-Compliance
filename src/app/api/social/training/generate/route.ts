@@ -13,6 +13,7 @@ import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { COLLECTIONS, getSubCollection } from '@/lib/firebase/collections';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import type { ModelName } from '@/types/ai-models';
+import { SOCIAL_PLATFORMS } from '@/types/social';
 
 export const dynamic = 'force-dynamic';
 
@@ -26,7 +27,7 @@ const PLATFORM_LIMITS: Record<string, number> = {
 };
 
 const generateSchema = z.object({
-  platform: z.enum(['twitter', 'linkedin', 'instagram']),
+  platform: z.enum(SOCIAL_PLATFORMS),
   topic: z.string().min(1, 'Topic is required'),
   saveToHistory: z.boolean().optional().default(false),
 });

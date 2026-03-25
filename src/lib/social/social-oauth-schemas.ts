@@ -4,8 +4,9 @@
  */
 
 import { z } from 'zod';
+import { SOCIAL_PLATFORMS } from '@/types/social';
 
-export const socialProviderSchema = z.enum(['twitter', 'linkedin']);
+export const socialProviderSchema = z.enum(SOCIAL_PLATFORMS);
 
 export const oauthCallbackQuerySchema = z.object({
   code: z.string().min(1, 'Authorization code is required'),

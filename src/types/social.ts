@@ -207,7 +207,19 @@ export interface LinkedInPostResponse {
 // Common Social Media Types
 // =============================================================================
 
-export type SocialPlatform = 'twitter' | 'linkedin';
+/**
+ * All supported social media platforms.
+ * Big 6 + Tier 1 expansion (8 additional) + Tier 2 planned.
+ */
+export const SOCIAL_PLATFORMS = [
+  // Big 6 (original)
+  'twitter', 'linkedin', 'facebook', 'instagram', 'youtube', 'tiktok',
+  // Tier 1 expansion
+  'bluesky', 'threads', 'truth_social', 'telegram',
+  'reddit', 'pinterest', 'whatsapp_business', 'google_business',
+] as const;
+
+export type SocialPlatform = (typeof SOCIAL_PLATFORMS)[number];
 
 export type PostStatus =
   | 'draft'
