@@ -325,13 +325,22 @@ export async function POST(request: NextRequest) {
       // Non-critical — Jasper will assume all features enabled
     }
 
+    // Load API key configuration status so Jasper knows what's ready
+    let configContext = '';
+    try {
+      configContext = await getConfigurationContext();
+    } catch {
+      // Non-critical — Jasper will discover missing keys via tool errors
+    }
+
     // Build the enhanced system prompt with real-time context
     const enhancedSystemPrompt = buildEnhancedSystemPrompt(
       systemPrompt,
       context,
       adminStats,
       merchantInfo,
-      enabledModules
+      enabledModules,
+      configContext
     );
 
     // For factual queries, inject verified state context
@@ -684,6 +693,113 @@ export async function POST(request: NextRequest) {
 }
 
 /**
+ * Feature-to-API-key mapping.
+ * Maps each user-facing capability to the API key(s) it requires.
+ * Jasper uses this to know what's ready vs what needs setup.
+ */
+interface ServiceCheck {
+  label: string;
+  capability: string;
+}
+
+const SERVICE_CAPABILITY_MAP: Record<string, ServiceCheck> = {
+  openrouter:   { label: 'OpenRouter (AI models)',         capability: 'AI chat, content generation, analysis' },
+  openai:       { label: 'OpenAI',                         capability: 'GPT models, vision analysis' },
+  anthropic:    { label: 'Anthropic Claude',               capability: 'Claude models' },
+  gemini:       { label: 'Google Gemini',                  capability: 'Gemini models, multimodal' },
+  stripe:       { label: 'Stripe',                         capability: 'Payment processing, subscriptions' },
+  paypal:       { label: 'PayPal',                         capability: 'PayPal checkout' },
+  square:       { label: 'Square',                         capability: 'Square payments' },
+  sendgrid:     { label: 'SendGrid',                       capability: 'Email campaigns, transactional email' },
+  resend:       { label: 'Resend',                         capability: 'Email delivery' },
+  twilio:       { label: 'Twilio',                         capability: 'Voice calls, SMS messaging' },
+  telnyx:       { label: 'Telnyx',                         capability: 'Voice calls, SMS (cost-effective)' },
+  bandwidth:    { label: 'Bandwidth',                      capability: 'Voice calls, SMS' },
+  vonage:       { label: 'Vonage',                         capability: 'Voice calls, SMS' },
+  hedra:        { label: 'Hedra',                          capability: 'AI avatar video generation' },
+  kling:        { label: 'Kling',                          capability: 'Cinematic video generation' },
+  fal:          { label: 'Fal.ai',                         capability: 'Image generation (Flux, SDXL)' },
+  'google-ai-studio': { label: 'Google AI Studio (Imagen)', capability: 'Photorealistic image generation' },
+  elevenlabs:   { label: 'ElevenLabs',                     capability: 'Voice AI, text-to-speech' },
+  deepgram:     { label: 'Deepgram',                       capability: 'Speech-to-text transcription' },
+  apollo:       { label: 'Apollo.io',                      capability: 'Lead enrichment, prospect data' },
+  clearbit:     { label: 'Clearbit',                       capability: 'Company enrichment data' },
+  serper:       { label: 'Serper',                         capability: 'SEO research, Google search data' },
+  dataforseo:   { label: 'DataForSEO',                     capability: 'Keyword rankings, SERP data' },
+  twitter:      { label: 'Twitter/X',                      capability: 'Social posting, analytics' },
+  linkedin:     { label: 'LinkedIn',                       capability: 'Social posting, networking' },
+  slack:        { label: 'Slack',                          capability: 'Team notifications' },
+  googleCloud:  { label: 'Google Cloud',                   capability: 'AI fine-tuning, cloud storage' },
+  minimax:      { label: 'MiniMax',                        capability: 'AI music generation' },
+  shopify:      { label: 'Shopify',                        capability: 'E-commerce catalog sync' },
+  woocommerce:  { label: 'WooCommerce',                    capability: 'E-commerce catalog sync' },
+};
+
+/**
+ * Check which API keys are configured and build a context block for Jasper.
+ * This gives Jasper proactive awareness of what tools will work vs what needs
+ * setup, so he can guide users instead of failing reactively.
+ */
+async function getConfigurationContext(): Promise<string> {
+  const { apiKeyService } = await import('@/lib/api-keys/api-key-service');
+
+  const configured: string[] = [];
+  const notConfigured: string[] = [];
+
+  for (const [service, info] of Object.entries(SERVICE_CAPABILITY_MAP)) {
+    try {
+      const isReady = await apiKeyService.isServiceConfigured(service as Parameters<typeof apiKeyService.isServiceConfigured>[0]);
+      if (isReady) {
+        configured.push(`- ${info.label}: ✓ READY (${info.capability})`);
+      } else {
+        notConfigured.push(`- ${info.label}: ✗ NOT SET UP → needed for: ${info.capability}`);
+      }
+    } catch {
+      // Skip services that error during check
+    }
+  }
+
+  // Don't inject if nothing to report
+  if (configured.length === 0 && notConfigured.length === 0) {
+    return '';
+  }
+
+  let block = `
+═══════════════════════════════════════════════════════════════════════════════
+API & INTEGRATION CONFIGURATION STATUS (Live from Firestore)
+═══════════════════════════════════════════════════════════════════════════════
+
+`;
+
+  if (configured.length > 0) {
+    block += `READY TO USE (${configured.length} services):
+${configured.join('\n')}
+
+`;
+  }
+
+  if (notConfigured.length > 0) {
+    block += `NOT YET CONFIGURED (${notConfigured.length} services):
+${notConfigured.join('\n')}
+
+`;
+  }
+
+  block += `RULES FOR CONFIGURATION AWARENESS:
+- Before delegating work that needs an unconfigured service, tell the user what's needed
+- Offer to walk them through setup: "That needs [Service] — want me to guide you through setting it up?"
+- Direct them to Settings > API Keys with the specific provider name
+- Do NOT repeatedly remind about services the user isn't trying to use
+- If a feature works fine without a specific key (e.g., AI works via OpenRouter), don't nag about OpenAI/Anthropic
+- When ALL required services for a task are ready, proceed immediately without mentioning configuration
+
+═══════════════════════════════════════════════════════════════════════════════
+`;
+
+  return block;
+}
+
+/**
  * Build enhanced system prompt with real-time context
  */
 function buildEnhancedSystemPrompt(
@@ -691,7 +807,8 @@ function buildEnhancedSystemPrompt(
   context: 'admin' | 'merchant',
   adminStats?: OrchestratorChatRequest['adminStats'],
   merchantInfo?: OrchestratorChatRequest['merchantInfo'],
-  enabledModules?: string[] | null
+  enabledModules?: string[] | null,
+  configurationContext?: string
 ): string {
   const timestamp = new Date().toISOString();
 
@@ -822,6 +939,7 @@ RULES:
 
 ${contextBlock}
 ${featureBlock}
+${configurationContext ?? ''}
 ═══════════════════════════════════════════════════════════════════════════════
 ABSOLUTE RULES - VIOLATIONS ARE UNACCEPTABLE
 ═══════════════════════════════════════════════════════════════════════════════

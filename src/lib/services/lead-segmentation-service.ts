@@ -199,11 +199,29 @@ export async function applySegmentationActions(
         break;
 
       case 'trigger_workflow':
-        // Future: fire workflow event
-        logger.info('Workflow trigger action (not yet implemented)', {
-          leadId,
-          workflowId: action.config.workflowId,
-        });
+        if (action.config.workflowId) {
+          try {
+            const { handleEntityChange } = await import('@/lib/workflows/triggers/firestore-trigger');
+            await handleEntityChange(
+              'leads',
+              'updated',
+              leadId,
+              { leadId, segmentAction: 'trigger_workflow', workflowId: action.config.workflowId },
+              0
+            );
+            logger.info('Workflow triggered from segmentation action', {
+              leadId,
+              workflowId: action.config.workflowId,
+              file: 'lead-segmentation-service.ts',
+            });
+          } catch (error) {
+            logger.error('Failed to trigger workflow from segmentation', error instanceof Error ? error : new Error(String(error)), {
+              leadId,
+              workflowId: action.config.workflowId,
+              file: 'lead-segmentation-service.ts',
+            });
+          }
+        }
         break;
     }
   }
