@@ -64,52 +64,26 @@ function isCreateFormResponse(data: unknown): data is CreateFormResponse {
 }
 
 // ============================================================================
-// MOCK TEMPLATES
+// ICON MAP — Maps Firestore template iconName to Lucide components
 // ============================================================================
 
-const FORM_TEMPLATES: FormTemplate[] = [
-  {
-    id: 'blank',
-    name: 'Blank Form',
-    description: 'Start from scratch with a blank form',
-    category: 'Basic',
-    icon: <FileText className="w-6 h-6" />,
-  },
-  {
-    id: 'contact',
-    name: 'Contact Form',
-    description: 'Simple contact form with name, email, and message',
-    category: 'Basic',
-    icon: <Mail className="w-6 h-6" />,
-  },
-  {
-    id: 'lead-capture',
-    name: 'Lead Capture',
-    description: 'Capture leads with company and qualification fields',
-    category: 'Sales',
-    icon: <Target className="w-6 h-6" />,
-  },
-  {
-    id: 'survey',
-    name: 'Customer Survey',
-    description: 'Multi-step survey with rating and feedback',
-    category: 'Feedback',
-    icon: <BarChart3 className="w-6 h-6" />,
-  },
-  {
-    id: 'registration',
-    name: 'Event Registration',
-    description: 'Event signup with attendee details',
-    category: 'Events',
-    icon: <Calendar className="w-6 h-6" />,
-  },
-  {
-    id: 'application',
-    name: 'Job Application',
-    description: 'Application form with file uploads',
-    category: 'HR',
-    icon: <Briefcase className="w-6 h-6" />,
-  },
+const ICON_MAP: Record<string, React.ReactNode> = {
+  FileText: <FileText className="w-6 h-6" />,
+  Mail: <Mail className="w-6 h-6" />,
+  Target: <Target className="w-6 h-6" />,
+  BarChart3: <BarChart3 className="w-6 h-6" />,
+  Calendar: <Calendar className="w-6 h-6" />,
+  Briefcase: <Briefcase className="w-6 h-6" />,
+};
+
+/** Fallback templates shown while loading from Firestore */
+const FALLBACK_TEMPLATES: FormTemplate[] = [
+  { id: 'blank', name: 'Blank Form', description: 'Start from scratch with a blank form', category: 'Basic', icon: ICON_MAP.FileText },
+  { id: 'contact', name: 'Contact Form', description: 'Simple contact form with name, email, and message', category: 'Basic', icon: ICON_MAP.Mail },
+  { id: 'lead-capture', name: 'Lead Capture', description: 'Capture leads with company and qualification fields', category: 'Sales', icon: ICON_MAP.Target },
+  { id: 'survey', name: 'Customer Survey', description: 'Multi-step survey with rating and feedback', category: 'Feedback', icon: ICON_MAP.BarChart3 },
+  { id: 'registration', name: 'Event Registration', description: 'Event signup with attendee details', category: 'Events', icon: ICON_MAP.Calendar },
+  { id: 'application', name: 'Job Application', description: 'Application form with file uploads', category: 'HR', icon: ICON_MAP.Briefcase },
 ];
 
 // ============================================================================
@@ -189,6 +163,7 @@ export default function FormsPage() {
   const [selectedTemplate, setSelectedTemplate] = useState('blank');
   const [creating, setCreating] = useState(false);
   const [view, setView] = useState<'cards' | 'table'>('cards');
+  const [formTemplates, setFormTemplates] = useState<FormTemplate[]>(FALLBACK_TEMPLATES);
 
   // Fetch forms
   const fetchForms = useCallback(async () => {
@@ -215,6 +190,30 @@ export default function FormsPage() {
   useEffect(() => {
     void fetchForms();
   }, [fetchForms]);
+
+  // Load form templates from Firestore
+  useEffect(() => {
+    async function loadTemplates() {
+      try {
+        const res = await authFetch('/api/forms/templates');
+        if (res.ok) {
+          const data = await res.json() as { templates: Array<{ id: string; name: string; description: string; category: string; iconName?: string }> };
+          if (data.templates?.length > 0) {
+            setFormTemplates(data.templates.map(t => ({
+              id: t.id,
+              name: t.name,
+              description: t.description,
+              category: t.category,
+              icon: ICON_MAP[t.iconName ?? 'FileText'] ?? ICON_MAP.FileText,
+            })));
+          }
+        }
+      } catch {
+        // Fallback templates already set
+      }
+    }
+    void loadTemplates();
+  }, [authFetch]);
 
   const {
     deleteIds,
@@ -719,7 +718,7 @@ export default function FormsPage() {
                       Choose a Template
                     </label>
                     <div className="grid grid-cols-2 gap-3">
-                      {FORM_TEMPLATES.map((template) => (
+                      {formTemplates.map((template) => (
                         <motion.div
                           key={template.id}
                           whileHover={{ scale: 1.02 }}

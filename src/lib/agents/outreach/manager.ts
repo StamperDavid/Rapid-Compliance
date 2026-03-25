@@ -26,6 +26,7 @@ import { BaseManager } from '../base-manager';
 import type { AgentMessage, AgentReport, ManagerConfig, Signal } from '../types';
 import { getEmailSpecialist } from './email/specialist';
 import { getSmsSpecialist } from './sms/specialist';
+import { getVoiceAiSpecialist } from './voice/specialist';
 import {
   getMemoryVault,
   shareInsight,
@@ -492,8 +493,7 @@ export class OutreachManager extends BaseManager {
     const specialistFactories = [
       { name: 'EMAIL_SPECIALIST', factory: getEmailSpecialist },
       { name: 'SMS_SPECIALIST', factory: getSmsSpecialist },
-      // VOICE_AI_SPECIALIST will be added when implemented
-      // { name: 'VOICE_AI_SPECIALIST', factory: getVoiceAiSpecialist },
+      { name: 'VOICE_AI_SPECIALIST', factory: getVoiceAiSpecialist },
     ];
 
     for (const { name, factory } of specialistFactories) {
@@ -934,13 +934,27 @@ export class OutreachManager extends BaseManager {
           break;
 
         case 'VOICE':
-          // Voice not yet implemented
-          return {
-            success: false,
-            channel,
-            status: 'BLOCKED',
-            blockReason: 'VOICE_AI_SPECIALIST not yet implemented',
+          specialistId = 'VOICE_AI_SPECIALIST';
+          if (!lead.phone) {
+            return {
+              success: false,
+              channel,
+              status: 'BLOCKED',
+              blockReason: 'No phone number for lead',
+            };
+          }
+          payload = {
+            action: 'make_call',
+            to: lead.phone,
+            record: true,
+            machineDetection: true,
+            metadata: {
+              leadId: lead.leadId,
+              sentiment: content.sentiment,
+              message: content.message,
+            },
           };
+          break;
 
         default:
           return {

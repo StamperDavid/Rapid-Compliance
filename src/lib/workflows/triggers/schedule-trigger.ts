@@ -37,10 +37,14 @@ export async function registerScheduleTrigger(
   );
 
   logger.info(`[Schedule Trigger] Registered schedule config for workflow ${workflow.id}`, { file: 'schedule-trigger.ts' });
-  logger.warn(
-    `[Schedule Trigger] Schedule for workflow ${workflow.id} is registered in Firestore config only — ` +
-    'Cloud Functions / Cloud Scheduler deployment is not yet implemented. The schedule will not execute ' +
-    'automatically until a Cloud Scheduler job is deployed to call executeScheduledWorkflows().',
+
+  // Ensure the cron polling endpoint knows about this schedule.
+  // The internal cron route `/api/cron/workflow-scheduler` polls
+  // executeScheduledWorkflows() on a 1-minute interval. Registering
+  // the trigger in Firestore (done above) is sufficient — the cron
+  // route will pick it up on its next tick.
+  logger.info(
+    `[Schedule Trigger] Workflow ${workflow.id} will execute via the /api/cron/workflow-scheduler polling route`,
     { file: 'schedule-trigger.ts', workflowId: workflow.id }
   );
 }

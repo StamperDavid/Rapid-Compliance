@@ -336,6 +336,8 @@ export type APIServiceName =
   | 'fal'           // Fal.ai — Flux, SDXL, Stable Diffusion image generation
   | 'google-ai-studio'  // Google AI Studio (Imagen 3) — photorealistic image generation
   | 'kling'         // Kling 3.0 — cinematic video + image generation
-  | 'deepgram';     // Deepgram — speech-to-text transcription
+  | 'deepgram'      // Deepgram — speech-to-text transcription
+  | 'shopify'       // Shopify Admin REST API
+  | 'woocommerce';  // WooCommerce REST API
 
 

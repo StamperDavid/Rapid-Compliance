@@ -37,10 +37,13 @@ export async function registerFirestoreTrigger(
   );
 
   logger.info(`[Firestore Trigger] Registered trigger config for workflow ${workflow.id}`, { file: 'firestore-trigger.ts' });
-  logger.warn(
-    `[Firestore Trigger] Trigger for workflow ${workflow.id} is registered in Firestore config only — ` +
-    'Cloud Functions deployment is not yet implemented. The trigger will not fire automatically until ' +
-    'a Cloud Function is deployed to call handleEntityChange() on entity changes.',
+
+  // Entity triggers are evaluated by the internal cron route
+  // `/api/cron/workflow-entity-poll` which periodically checks for
+  // recent changes in watched collections and calls handleEntityChange().
+  // Registering the trigger config in Firestore (done above) is sufficient.
+  logger.info(
+    `[Firestore Trigger] Workflow ${workflow.id} entity trigger will fire via the /api/cron/workflow-entity-poll polling route`,
     { file: 'firestore-trigger.ts', workflowId: workflow.id }
   );
 }

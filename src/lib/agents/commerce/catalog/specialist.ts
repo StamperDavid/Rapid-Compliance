@@ -20,6 +20,9 @@ import { BaseSpecialist } from '../../base-specialist';
 import type { AgentMessage, AgentReport, SpecialistConfig, Signal } from '../../types';
 import { logger } from '@/lib/logger/logger';
 import { getSubCollection } from '@/lib/firebase/collections';
+import { FirestoreService } from '@/lib/db/firestore-service';
+import { apiKeyService } from '@/lib/api-keys/api-key-service';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 // ============================================================================
 // CONFIGURATION
@@ -176,6 +179,7 @@ interface GetCatalogSummaryPayload {
 interface SyncCatalogPayload {
   action: 'sync_catalog';
   source: 'stripe' | 'shopify' | 'woocommerce' | 'manual';
+  products?: Array<Omit<Product, 'id' | 'createdAt' | 'updatedAt'>>;
 }
 
 type CatalogPayload =
@@ -635,14 +639,378 @@ export class CatalogManagerSpecialist extends BaseSpecialist {
   /**
    * Sync catalog from external source
    */
-  private handleSyncCatalog(payload: SyncCatalogPayload): Promise<CatalogResult> {
-    this.log('WARN', `Catalog sync requested from "${payload.source}" but no sync integration is implemented`);
-    return Promise.resolve({
-      success: false,
-      action: 'sync_catalog',
-      syncedCount: 0,
-      error: `Catalog sync for "${payload.source}" is not yet implemented. Supported integrations coming soon.`,
-    });
+  private async handleSyncCatalog(payload: SyncCatalogPayload): Promise<CatalogResult> {
+    this.log('INFO', `Catalog sync started from source: ${payload.source}`);
+
+    try {
+      switch (payload.source) {
+        case 'stripe':
+          return await this.syncFromStripe();
+        case 'shopify':
+          return await this.syncFromShopify();
+        case 'woocommerce':
+          return await this.syncFromWooCommerce();
+        case 'manual':
+          return await this.syncManual(payload.products ?? []);
+        default:
+          return {
+            success: false,
+            action: 'sync_catalog',
+            syncedCount: 0,
+            error: `Unknown sync source: ${payload.source}`,
+          };
+      }
+    } catch (error) {
+      const err = error instanceof Error ? error : new Error(String(error));
+      this.log('ERROR', `Catalog sync failed: ${err.message}`);
+      return {
+        success: false,
+        action: 'sync_catalog',
+        syncedCount: 0,
+        error: `Catalog sync failed: ${err.message}`,
+      };
+    }
+  }
+
+  /**
+   * Sync products from Stripe Products API
+   */
+  private async syncFromStripe(): Promise<CatalogResult> {
+    const keys = await apiKeyService.getServiceKey(PLATFORM_ID, 'stripe') as Record<string, string> | null;
+    if (!keys?.secretKey && !keys?.secret_key) {
+      return { success: false, action: 'sync_catalog', syncedCount: 0, error: 'Stripe API key not configured. Add it in Settings > API Keys.' };
+    }
+
+    const secretKey = keys.secretKey ?? keys.secret_key;
+    const productsCollection = getSubCollection('products');
+    let syncedCount = 0;
+    let hasMore = true;
+    let startingAfter: string | undefined;
+
+    while (hasMore) {
+      const params = new URLSearchParams({ limit: '100', active: 'true' });
+      if (startingAfter) { params.set('starting_after', startingAfter); }
+
+      const response = await fetch(`https://api.stripe.com/v1/products?${params}`, {
+        headers: { 'Authorization': `Bearer ${secretKey}` },
+      });
+
+      if (!response.ok) {
+        const errBody = await response.text();
+        throw new Error(`Stripe API error: ${errBody}`);
+      }
+
+      interface StripeProduct {
+        id: string;
+        name: string;
+        description: string | null;
+        active: boolean;
+        images: string[];
+        metadata: Record<string, string>;
+        default_price?: string | { unit_amount?: number; currency?: string } | null;
+        created: number;
+        updated: number;
+      }
+
+      const data = await response.json() as { data: StripeProduct[]; has_more: boolean };
+
+      for (const sp of data.data) {
+        const product: Product = {
+          id: `stripe_${sp.id}`,
+          name: sp.name,
+          description: sp.description ?? undefined,
+          price: 0,
+          currency: 'USD',
+          status: sp.active ? 'active' : 'archived',
+          type: 'physical',
+          images: sp.images,
+          metadata: { stripeId: sp.id, ...sp.metadata },
+          categories: sp.metadata?.category ? [sp.metadata.category] : [],
+          createdAt: new Date(sp.created * 1000).toISOString(),
+          updatedAt: new Date(sp.updated * 1000).toISOString(),
+        };
+
+        // Resolve price if default_price is an expanded object
+        if (sp.default_price && typeof sp.default_price === 'object' && sp.default_price.unit_amount) {
+          product.price = sp.default_price.unit_amount / 100;
+          product.currency = (sp.default_price.currency ?? 'USD').toUpperCase();
+        }
+
+        await FirestoreService.set(productsCollection, product.id, product, false);
+        syncedCount++;
+      }
+
+      hasMore = data.has_more;
+      if (data.data.length > 0) {
+        startingAfter = data.data[data.data.length - 1].id;
+      }
+    }
+
+    this.log('INFO', `Stripe sync complete: ${syncedCount} products synced`);
+    return { success: true, action: 'sync_catalog', syncedCount };
+  }
+
+  /**
+   * Sync products from Shopify REST API
+   */
+  private async syncFromShopify(): Promise<CatalogResult> {
+    const keys = await apiKeyService.getServiceKey(PLATFORM_ID, 'shopify') as Record<string, string> | null;
+    if (!keys?.accessToken && !keys?.access_token) {
+      return { success: false, action: 'sync_catalog', syncedCount: 0, error: 'Shopify API key not configured. Add it in Settings > API Keys.' };
+    }
+    if (!keys?.shopDomain && !keys?.shop_domain) {
+      return { success: false, action: 'sync_catalog', syncedCount: 0, error: 'Shopify shop domain not configured. Add shopDomain in Settings > API Keys.' };
+    }
+
+    const accessToken = keys.accessToken ?? keys.access_token;
+    const shopDomain = keys.shopDomain ?? keys.shop_domain;
+    const productsCollection = getSubCollection('products');
+    let syncedCount = 0;
+    let pageInfo: string | null = null;
+    let hasNext = true;
+
+    while (hasNext) {
+      const params = new URLSearchParams({ limit: '250' });
+      if (pageInfo) { params.set('page_info', pageInfo); }
+
+      const response = await fetch(
+        `https://${shopDomain}/admin/api/2024-01/products.json?${params}`,
+        {
+          headers: {
+            'X-Shopify-Access-Token': accessToken,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+
+      if (!response.ok) {
+        const errBody = await response.text();
+        throw new Error(`Shopify API error: ${errBody}`);
+      }
+
+      interface ShopifyVariant {
+        id: number;
+        title: string;
+        sku: string;
+        price: string;
+        compare_at_price: string | null;
+        inventory_quantity: number;
+        weight: number;
+        image_id: number | null;
+      }
+
+      interface ShopifyImage {
+        id: number;
+        src: string;
+      }
+
+      interface ShopifyProduct {
+        id: number;
+        title: string;
+        body_html: string;
+        status: string;
+        product_type: string;
+        tags: string;
+        variants: ShopifyVariant[];
+        images: ShopifyImage[];
+        created_at: string;
+        updated_at: string;
+      }
+
+      const data = await response.json() as { products: ShopifyProduct[] };
+
+      for (const sp of data.products) {
+        const firstVariant = sp.variants[0];
+        const product: Product = {
+          id: `shopify_${sp.id}`,
+          name: sp.title,
+          description: sp.body_html?.replace(/<[^>]*>/g, '') ?? undefined,
+          sku: firstVariant?.sku ?? undefined,
+          price: parseFloat(firstVariant?.price ?? '0'),
+          compareAtPrice: firstVariant?.compare_at_price ? parseFloat(firstVariant.compare_at_price) : undefined,
+          currency: 'USD',
+          status: sp.status === 'active' ? 'active' : sp.status === 'archived' ? 'archived' : 'draft',
+          type: 'physical',
+          variants: sp.variants.map((v) => ({
+            id: `shopify_v_${v.id}`,
+            sku: v.sku,
+            name: v.title,
+            options: {},
+            price: parseFloat(v.price),
+            compareAtPrice: v.compare_at_price ? parseFloat(v.compare_at_price) : undefined,
+            inventory: v.inventory_quantity,
+            weight: v.weight,
+          })),
+          images: sp.images.map((img) => img.src),
+          tags: sp.tags ? sp.tags.split(', ') : [],
+          categories: sp.product_type ? [sp.product_type] : [],
+          inventory: firstVariant ? {
+            tracked: true,
+            quantity: firstVariant.inventory_quantity,
+          } : undefined,
+          metadata: { shopifyId: String(sp.id) },
+          createdAt: sp.created_at,
+          updatedAt: sp.updated_at,
+        };
+
+        await FirestoreService.set(productsCollection, product.id, product, false);
+        syncedCount++;
+      }
+
+      // Pagination via Link header
+      const linkHeader = response.headers.get('Link');
+      if (linkHeader?.includes('rel="next"')) {
+        const match = linkHeader.match(/page_info=([^>&]*)/);
+        pageInfo = match ? match[1] : null;
+        hasNext = pageInfo !== null;
+      } else {
+        hasNext = false;
+      }
+    }
+
+    this.log('INFO', `Shopify sync complete: ${syncedCount} products synced`);
+    return { success: true, action: 'sync_catalog', syncedCount };
+  }
+
+  /**
+   * Sync products from WooCommerce REST API
+   */
+  private async syncFromWooCommerce(): Promise<CatalogResult> {
+    const keys = await apiKeyService.getServiceKey(PLATFORM_ID, 'woocommerce') as Record<string, string> | null;
+    if (!keys?.consumerKey && !keys?.consumer_key) {
+      return { success: false, action: 'sync_catalog', syncedCount: 0, error: 'WooCommerce API key not configured. Add it in Settings > API Keys.' };
+    }
+    if (!keys?.siteUrl && !keys?.site_url) {
+      return { success: false, action: 'sync_catalog', syncedCount: 0, error: 'WooCommerce site URL not configured. Add siteUrl in Settings > API Keys.' };
+    }
+
+    const consumerKey = keys.consumerKey ?? keys.consumer_key;
+    const consumerSecret = keys.consumerSecret ?? keys.consumer_secret ?? '';
+    const siteUrl = keys.siteUrl ?? keys.site_url;
+    const productsCollection = getSubCollection('products');
+    let syncedCount = 0;
+    let page = 1;
+    let hasMore = true;
+
+    while (hasMore) {
+      const params = new URLSearchParams({
+        consumer_key: consumerKey,
+        consumer_secret: consumerSecret,
+        per_page: '100',
+        page: String(page),
+      });
+
+      const response = await fetch(`${siteUrl}/wp-json/wc/v3/products?${params}`);
+
+      if (!response.ok) {
+        const errBody = await response.text();
+        throw new Error(`WooCommerce API error: ${errBody}`);
+      }
+
+      interface WooImage {
+        id: number;
+        src: string;
+      }
+
+      interface WooCategory {
+        id: number;
+        name: string;
+      }
+
+      interface WooProduct {
+        id: number;
+        name: string;
+        description: string;
+        short_description: string;
+        sku: string;
+        price: string;
+        regular_price: string;
+        sale_price: string;
+        status: string;
+        type: string;
+        categories: WooCategory[];
+        tags: Array<{ name: string }>;
+        images: WooImage[];
+        stock_quantity: number | null;
+        manage_stock: boolean;
+        date_created: string;
+        date_modified: string;
+      }
+
+      const products = await response.json() as WooProduct[];
+
+      if (products.length === 0) {
+        hasMore = false;
+        break;
+      }
+
+      for (const wp of products) {
+        const product: Product = {
+          id: `woo_${wp.id}`,
+          name: wp.name,
+          description: wp.description?.replace(/<[^>]*>/g, '') ?? undefined,
+          shortDescription: wp.short_description?.replace(/<[^>]*>/g, '') ?? undefined,
+          sku: wp.sku ?? undefined,
+          price: parseFloat(wp.price || wp.regular_price || '0'),
+          compareAtPrice: wp.sale_price ? parseFloat(wp.regular_price) : undefined,
+          currency: 'USD',
+          status: wp.status === 'publish' ? 'active' : wp.status === 'draft' ? 'draft' : 'archived',
+          type: wp.type === 'virtual' ? 'digital' : 'physical',
+          images: wp.images.map((img) => img.src),
+          categories: wp.categories.map((c) => c.name),
+          tags: wp.tags.map((t) => t.name),
+          inventory: wp.manage_stock ? {
+            tracked: true,
+            quantity: wp.stock_quantity ?? 0,
+          } : undefined,
+          metadata: { woocommerceId: String(wp.id) },
+          createdAt: wp.date_created,
+          updatedAt: wp.date_modified,
+        };
+
+        await FirestoreService.set(productsCollection, product.id, product, false);
+        syncedCount++;
+      }
+
+      // WooCommerce uses X-WP-TotalPages header
+      const totalPages = parseInt(response.headers.get('X-WP-TotalPages') ?? '1');
+      hasMore = page < totalPages;
+      page++;
+    }
+
+    this.log('INFO', `WooCommerce sync complete: ${syncedCount} products synced`);
+    return { success: true, action: 'sync_catalog', syncedCount };
+  }
+
+  /**
+   * Manual catalog sync — bulk-write products from payload
+   */
+  private async syncManual(
+    products: Array<Omit<Product, 'id' | 'createdAt' | 'updatedAt'>>
+  ): Promise<CatalogResult> {
+    if (products.length === 0) {
+      return { success: false, action: 'sync_catalog', syncedCount: 0, error: 'No products provided for manual sync' };
+    }
+
+    const productsCollection = getSubCollection('products');
+    let syncedCount = 0;
+    const now = new Date().toISOString();
+
+    for (const p of products) {
+      const id = `manual_${Date.now()}_${syncedCount}`;
+      const product: Product = {
+        ...p,
+        id,
+        createdAt: now,
+        updatedAt: now,
+      };
+
+      await FirestoreService.set(productsCollection, id, product, false);
+      syncedCount++;
+    }
+
+    this.log('INFO', `Manual sync complete: ${syncedCount} products synced`);
+    return { success: true, action: 'sync_catalog', syncedCount };
   }
 
   /**

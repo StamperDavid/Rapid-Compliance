@@ -213,13 +213,13 @@ export class VoiceProviderFactory {
       }
 
       case 'bandwidth': {
-        // Placeholder for future implementation
-        throw new Error('Bandwidth provider not yet implemented');
+        const { BandwidthProvider } = await import('./providers/bandwidth-provider');
+        return new BandwidthProvider(config);
       }
 
       case 'vonage': {
-        // Placeholder for future implementation
-        throw new Error('Vonage provider not yet implemented');
+        const { VonageProvider } = await import('./providers/vonage-provider');
+        return new VonageProvider(config);
       }
 
       default:
