@@ -14,6 +14,7 @@ import { UpdateCampaignSchema } from '@/types/campaign';
 import {
   getCampaign,
   updateCampaign,
+  deleteCampaign,
   listDeliverables,
 } from '@/lib/campaign/campaign-service';
 
@@ -122,6 +123,53 @@ export async function PATCH(
     );
     return NextResponse.json(
       { success: false, error: 'Failed to update campaign' },
+      { status: 500 }
+    );
+  }
+}
+
+// ============================================================================
+// DELETE — Delete campaign and all deliverables
+// ============================================================================
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ campaignId: string }> }
+) {
+  const authResult = await requireAuth(request);
+  if (authResult instanceof NextResponse) {
+    return authResult;
+  }
+
+  try {
+    const { campaignId } = await params;
+
+    if (!campaignId) {
+      return NextResponse.json(
+        { success: false, error: 'campaignId is required' },
+        { status: 400 }
+      );
+    }
+
+    const campaign = await getCampaign(campaignId);
+    if (!campaign) {
+      return NextResponse.json(
+        { success: false, error: 'Campaign not found' },
+        { status: 404 }
+      );
+    }
+
+    await deleteCampaign(campaignId);
+
+    return NextResponse.json({ success: true });
+  } catch (error: unknown) {
+    logger.error(
+      'Campaign deletion failed',
+      error instanceof Error ? error : undefined,
+      { route: '/api/campaigns/[campaignId]' }
+    );
+    return NextResponse.json(
+      { success: false, error: 'Failed to delete campaign' },
       { status: 500 }
     );
   }

@@ -12,6 +12,8 @@ import { processPayment } from './payment-service';
 import { calculateShipping } from './shipping-service';
 import { calculateTax } from './tax-service';
 import { getEcommerceConfig } from './types';
+import { generateInvoice } from './invoice-generator';
+import { logger } from '@/lib/logger/logger';
 
 interface ShippingInfo {
   cost: number;
@@ -146,6 +148,14 @@ export async function processCheckout(checkoutData: CheckoutData): Promise<Order
 
   // Send confirmation email
   await sendOrderConfirmation(order);
+
+  // Generate invoice PDF (fire-and-forget — don't block checkout)
+  generateOrderInvoice(order).catch(err => {
+    logger.warn('Post-checkout invoice generation failed (non-blocking)', {
+      orderId: order.id,
+      error: err instanceof Error ? err.message : String(err),
+    });
+  });
 
   return order;
 }
@@ -504,4 +514,23 @@ async function sendOrderConfirmation(order: Order): Promise<void> {
   });
 }
 
+/**
+ * Generate invoice PDF and store URL on the order document.
+ * Called fire-and-forget after checkout — failures are logged but don't block.
+ */
+async function generateOrderInvoice(order: Order): Promise<void> {
+  const result = await generateInvoice(order);
 
+  if (result.success && result.invoiceUrl) {
+    const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
+    await AdminFirestoreService.update(
+      getOrdersCollection(),
+      order.id,
+      {
+        invoiceUrl: result.invoiceUrl,
+        invoiceNumber: result.invoiceNumber,
+        invoiceGeneratedAt: new Date().toISOString(),
+      }
+    );
+  }
+}

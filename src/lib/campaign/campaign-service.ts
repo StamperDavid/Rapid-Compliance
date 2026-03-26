@@ -38,6 +38,38 @@ function deliverablesPath(campaignId: string): string {
 }
 
 // ============================================================================
+// DELETE
+// ============================================================================
+
+/**
+ * Delete a campaign and all its deliverables.
+ * Firestore does not cascade-delete subcollections, so deliverables
+ * must be deleted individually before the parent campaign doc.
+ */
+export async function deleteCampaign(campaignId: string): Promise<void> {
+  if (!adminDb) {
+    throw new Error('Admin database not initialized');
+  }
+
+  // 1. Delete all deliverable docs in the subcollection
+  const deliverablesRef = adminDb.collection(deliverablesPath(campaignId));
+  const deliverableSnap = await deliverablesRef.get();
+
+  if (!deliverableSnap.empty) {
+    const batch = adminDb.batch();
+    for (const doc of deliverableSnap.docs) {
+      batch.delete(doc.ref);
+    }
+    await batch.commit();
+    logger.info('Deleted campaign deliverables', { campaignId, count: deliverableSnap.size });
+  }
+
+  // 2. Delete the campaign document itself
+  await adminDb.collection(campaignsPath()).doc(campaignId).delete();
+  logger.info('Deleted campaign', { campaignId });
+}
+
+// ============================================================================
 // CAMPAIGN CRUD
 // ============================================================================
 

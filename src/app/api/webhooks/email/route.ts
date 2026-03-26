@@ -12,6 +12,9 @@ import {
 } from '@/lib/outbound/sequence-scheduler';
 import { parseSendGridWebhook } from '@/lib/email/sendgrid-service';
 import { logger } from '@/lib/logger/logger';
+import { adminDb } from '@/lib/firebase/admin';
+import { getSubCollection } from '@/lib/firebase/collections';
+import { FieldValue } from 'firebase-admin/firestore';
 import { errors } from '@/lib/middleware/error-handler';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { verifySendGridSignature } from '@/lib/security/webhook-verification';
@@ -33,6 +36,7 @@ const SendGridEventSchema = z.object({
   status: z.string().optional(),
   enrollmentId: z.string().optional(),
   stepId: z.string().optional(),
+  emailCampaignId: z.string().optional(),
 }).passthrough();
 
 const SendGridWebhookPayloadSchema = z.array(SendGridEventSchema);
@@ -66,6 +70,7 @@ interface EmailWebhookEvent {
   status?: string;
   enrollmentId?: string;
   stepId?: string;
+  emailCampaignId?: string;
 }
 
 /**
@@ -120,6 +125,7 @@ function toEmailWebhookEvent(raw: Record<string, unknown>): EmailWebhookEvent {
     status: raw.status ? String(raw.status) : undefined,
     enrollmentId: raw.enrollmentId ? String(raw.enrollmentId) : undefined,
     stepId: raw.stepId ? String(raw.stepId) : undefined,
+    emailCampaignId: raw.emailCampaignId ? String(raw.emailCampaignId) : undefined,
   };
 }
 
@@ -228,20 +234,26 @@ export async function POST(request: NextRequest) {
 async function processEvent(event: EmailWebhookEvent): Promise<void> {
   logger.debug('Processing email event', { route: '/api/webhooks/email', eventType: event.event, email: event.email });
 
-  // Extract metadata from custom args
+  // Update email campaign stats if this event belongs to a campaign
+  if (event.emailCampaignId) {
+    await updateEmailCampaignStats(event.emailCampaignId, event.event);
+  }
+
+  // Process sequence enrollment events (requires enrollmentId + stepId)
   const enrollmentId = event.enrollmentId;
   const stepId = event.stepId;
 
   if (!enrollmentId || !stepId) {
-    logger.warn('Event missing metadata', { route: '/api/webhooks/email', eventType: event.event });
+    // Not a sequence email — campaign stats already handled above
+    if (!event.emailCampaignId) {
+      logger.debug('Event missing both sequence and campaign metadata', { route: '/api/webhooks/email', eventType: event.event });
+    }
     return;
   }
 
-  // Handle different event types
   switch (event.event) {
     case 'delivered':
       logger.info('Email delivered', { route: '/api/webhooks/email', email: event.email });
-      // Track delivery status if needed for analytics
       break;
 
     case 'open':
@@ -279,5 +291,46 @@ async function processEvent(event: EmailWebhookEvent): Promise<void> {
 
     default:
       logger.debug('Unhandled event type', { route: '/api/webhooks/email', eventType: event.event });
+  }
+}
+
+/**
+ * Increment email campaign stat counters on the emailCampaigns document.
+ * Fire-and-forget — uses FieldValue.increment for atomic updates.
+ */
+async function updateEmailCampaignStats(
+  campaignId: string,
+  eventType: string
+): Promise<void> {
+  const statsField = getStatsFieldForEvent(eventType);
+  if (!statsField) { return; }
+
+  try {
+    if (!adminDb) { return; }
+    const campaignsCol = getSubCollection('emailCampaigns');
+    await adminDb.collection(campaignsCol).doc(campaignId).update({
+      [statsField]: FieldValue.increment(1),
+      statsUpdatedAt: new Date().toISOString(),
+    });
+  } catch (error) {
+    // Fire-and-forget — log but don't fail the webhook
+    logger.warn('Failed to update email campaign stats', {
+      route: '/api/webhooks/email',
+      campaignId,
+      eventType,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
+function getStatsFieldForEvent(eventType: string): string | null {
+  switch (eventType) {
+    case 'delivered': return 'deliveredCount';
+    case 'open': return 'openedCount';
+    case 'click': return 'clickedCount';
+    case 'bounce':
+    case 'dropped': return 'bouncedCount';
+    case 'unsubscribe': return 'unsubscribedCount';
+    default: return null;
   }
 }
