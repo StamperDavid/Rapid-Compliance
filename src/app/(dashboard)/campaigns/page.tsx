@@ -29,6 +29,12 @@ import {
   Loader2,
   BarChart3,
   ArrowRight,
+  Target,
+  Calendar,
+  BookOpen,
+  Megaphone,
+  Sparkles,
+  ChevronRight,
 } from 'lucide-react';
 import type { Campaign, CampaignStatus, CampaignDeliverable } from '@/types/campaign';
 
@@ -38,6 +44,16 @@ import type { Campaign, CampaignStatus, CampaignDeliverable } from '@/types/camp
 
 interface CampaignWithDeliverables extends Campaign {
   deliverableItems?: CampaignDeliverable[];
+}
+
+interface CampaignTemplate {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  iconName: string;
+  deliverableTypes: string[];
+  exampleTopics: string[];
 }
 
 interface CampaignsApiResponse {
@@ -54,6 +70,21 @@ interface CampaignDetailResponse {
 }
 
 type StatusFilter = 'all' | CampaignStatus;
+
+// ============================================================================
+// TEMPLATE ICON MAP
+// ============================================================================
+
+const TEMPLATE_ICON_MAP: Record<string, React.ReactNode> = {
+  Rocket: <Rocket className="w-5 h-5" />,
+  FileText: <FileText className="w-5 h-5" />,
+  Target: <Target className="w-5 h-5" />,
+  Video: <Video className="w-5 h-5" />,
+  Calendar: <Calendar className="w-5 h-5" />,
+  BookOpen: <BookOpen className="w-5 h-5" />,
+  Megaphone: <Megaphone className="w-5 h-5" />,
+  Mail: <Mail className="w-5 h-5" />,
+};
 
 // ============================================================================
 // STATUS CONFIG
@@ -123,6 +154,8 @@ export default function CampaignsPage() {
   const authFetch = useAuthFetch();
 
   const [campaigns, setCampaigns] = useState<CampaignWithDeliverables[]>([]);
+  const [templates, setTemplates] = useState<CampaignTemplate[]>([]);
+  const [showTemplates, setShowTemplates] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
@@ -193,6 +226,24 @@ export default function CampaignsPage() {
     void fetchCampaigns();
   }, [fetchCampaigns]);
 
+  // Load campaign templates
+  useEffect(() => {
+    async function loadTemplates() {
+      try {
+        const res = await authFetch('/api/campaigns/templates');
+        if (res.ok) {
+          const data = await res.json() as { templates?: CampaignTemplate[] };
+          if (data.templates?.length) {
+            setTemplates(data.templates);
+          }
+        }
+      } catch {
+        // Templates are optional — page works without them
+      }
+    }
+    void loadTemplates();
+  }, [authFetch]);
+
   // Computed stats
   const stats = useMemo(() => {
     const total = campaigns.length;
@@ -233,13 +284,69 @@ export default function CampaignsPage() {
         <motion.button
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
-          onClick={() => router.push('/mission-control')}
+          onClick={() => setShowTemplates(prev => !prev)}
           className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-primary to-secondary text-white rounded-xl font-medium shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 transition-shadow"
         >
-          <Plus className="w-5 h-5" />
-          New Campaign
+          {showTemplates ? <ChevronRight className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
+          {showTemplates ? 'Close' : 'New Campaign'}
         </motion.button>
       </motion.div>
+
+      {/* Campaign Templates */}
+      <AnimatePresence>
+        {showTemplates && templates.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="mb-8 overflow-hidden"
+          >
+            <div className="flex items-center gap-2 mb-4">
+              <Sparkles className="w-5 h-5 text-primary" />
+              <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">Choose a Template</h2>
+              <span className="text-sm text-[var(--color-text-secondary)]">or ask Jasper to create a custom campaign</span>
+            </div>
+            <div className="grid grid-cols-4 gap-3">
+              {templates.map((template, i) => (
+                <motion.div
+                  key={template.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.04 }}
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => {
+                    const topic = template.exampleTopics[0] ?? template.name;
+                    router.push(`/mission-control?prompt=${encodeURIComponent(`Create a ${template.name.toLowerCase()} campaign about: ${topic}`)}`);
+                  }}
+                  className="bg-surface-paper border border-border-light rounded-xl p-4 cursor-pointer hover:border-primary/40 hover:shadow-md transition-all group"
+                >
+                  <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-primary/15 to-secondary/15 flex items-center justify-center mb-3 text-primary group-hover:from-primary/25 group-hover:to-secondary/25 transition-colors">
+                    {TEMPLATE_ICON_MAP[template.iconName] ?? <Rocket className="w-5 h-5" />}
+                  </div>
+                  <div className="text-sm font-semibold text-[var(--color-text-primary)] mb-1">{template.name}</div>
+                  <div className="text-xs text-[var(--color-text-secondary)] line-clamp-2 mb-3">{template.description}</div>
+                  <div className="flex gap-1">
+                    {template.deliverableTypes.slice(0, 4).map(type => (
+                      <span key={type} className="px-1.5 py-0.5 text-[10px] rounded bg-surface-elevated text-[var(--color-text-disabled)] border border-border-light">
+                        {type.replace('_', ' ')}
+                      </span>
+                    ))}
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+            <div className="mt-3 text-center">
+              <button
+                onClick={() => router.push('/mission-control')}
+                className="text-sm text-primary hover:underline"
+              >
+                Or start a custom campaign with Jasper
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Stats Row */}
       <div className="grid grid-cols-4 gap-4 mb-8">
