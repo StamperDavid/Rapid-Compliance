@@ -700,39 +700,41 @@ export async function POST(request: NextRequest) {
 interface ServiceCheck {
   label: string;
   capability: string;
+  /** Short setup instructions Jasper can relay to the user when the key is missing */
+  setupGuide?: string;
 }
 
 const SERVICE_CAPABILITY_MAP: Record<string, ServiceCheck> = {
-  openrouter:   { label: 'OpenRouter (AI models)',         capability: 'AI chat, content generation, analysis' },
-  openai:       { label: 'OpenAI',                         capability: 'GPT models, vision analysis' },
-  anthropic:    { label: 'Anthropic Claude',               capability: 'Claude models' },
-  gemini:       { label: 'Google Gemini',                  capability: 'Gemini models, multimodal' },
-  stripe:       { label: 'Stripe',                         capability: 'Payment processing, subscriptions' },
-  paypal:       { label: 'PayPal',                         capability: 'PayPal checkout' },
-  square:       { label: 'Square',                         capability: 'Square payments' },
-  sendgrid:     { label: 'SendGrid',                       capability: 'Email campaigns, transactional email' },
-  resend:       { label: 'Resend',                         capability: 'Email delivery' },
-  twilio:       { label: 'Twilio',                         capability: 'Voice calls, SMS messaging' },
-  telnyx:       { label: 'Telnyx',                         capability: 'Voice calls, SMS (cost-effective)' },
-  bandwidth:    { label: 'Bandwidth',                      capability: 'Voice calls, SMS' },
-  vonage:       { label: 'Vonage',                         capability: 'Voice calls, SMS' },
-  hedra:        { label: 'Hedra',                          capability: 'AI avatar video generation' },
-  kling:        { label: 'Kling',                          capability: 'Cinematic video generation' },
-  fal:          { label: 'Fal.ai',                         capability: 'Image generation (Flux, SDXL)' },
-  'google-ai-studio': { label: 'Google AI Studio (Imagen)', capability: 'Photorealistic image generation' },
-  elevenlabs:   { label: 'ElevenLabs',                     capability: 'Voice AI, text-to-speech' },
-  deepgram:     { label: 'Deepgram',                       capability: 'Speech-to-text transcription' },
-  apollo:       { label: 'Apollo.io',                      capability: 'Lead enrichment, prospect data' },
-  clearbit:     { label: 'Clearbit',                       capability: 'Company enrichment data' },
-  serper:       { label: 'Serper',                         capability: 'SEO research, Google search data' },
-  dataforseo:   { label: 'DataForSEO',                     capability: 'Keyword rankings, SERP data' },
-  twitter:      { label: 'Twitter/X',                      capability: 'Social posting, analytics' },
-  linkedin:     { label: 'LinkedIn',                       capability: 'Social posting, networking' },
-  slack:        { label: 'Slack',                          capability: 'Team notifications' },
-  googleCloud:  { label: 'Google Cloud',                   capability: 'AI fine-tuning, cloud storage' },
-  minimax:      { label: 'MiniMax',                        capability: 'AI music generation' },
-  shopify:      { label: 'Shopify',                        capability: 'E-commerce catalog sync' },
-  woocommerce:  { label: 'WooCommerce',                    capability: 'E-commerce catalog sync' },
+  openrouter:   { label: 'OpenRouter (AI models)',         capability: 'AI chat, content generation, analysis', setupGuide: 'Go to openrouter.ai/keys, create an account, generate an API key, and paste it in Settings > API Keys under "OpenRouter".' },
+  openai:       { label: 'OpenAI',                         capability: 'GPT models, vision analysis', setupGuide: 'Go to platform.openai.com/api-keys, sign in, click "Create new secret key", copy it, and paste in Settings > API Keys under "OpenAI".' },
+  anthropic:    { label: 'Anthropic Claude',               capability: 'Claude models', setupGuide: 'Go to console.anthropic.com/settings/keys, create a key, and paste it in Settings > API Keys under "Anthropic".' },
+  gemini:       { label: 'Google Gemini',                  capability: 'Gemini models, multimodal', setupGuide: 'Go to aistudio.google.com/apikey, create a Gemini API key, and paste it in Settings > API Keys under "Gemini".' },
+  stripe:       { label: 'Stripe',                         capability: 'Payment processing, subscriptions', setupGuide: 'Go to dashboard.stripe.com/apikeys. Copy both the Publishable key (pk_) and Secret key (sk_) and paste them in Settings > API Keys under "Stripe".' },
+  paypal:       { label: 'PayPal',                         capability: 'PayPal checkout', setupGuide: 'Go to developer.paypal.com/dashboard/applications, create a REST API app, and copy the Client ID into Settings > API Keys under "PayPal".' },
+  square:       { label: 'Square',                         capability: 'Square payments', setupGuide: 'Go to developer.squareup.com, create an application, copy the Access Token, and paste it in Settings > API Keys under "Square".' },
+  sendgrid:     { label: 'SendGrid',                       capability: 'Email campaigns, transactional email', setupGuide: 'Go to app.sendgrid.com/settings/api_keys, click "Create API Key", select "Full Access", copy the key, and paste it in Settings > API Keys under "SendGrid".' },
+  resend:       { label: 'Resend',                         capability: 'Email delivery', setupGuide: 'Go to resend.com/api-keys, generate a key, and paste it in Settings > API Keys under "Resend".' },
+  twilio:       { label: 'Twilio',                         capability: 'Voice calls, SMS messaging', setupGuide: 'Go to console.twilio.com. Copy your Account SID and Auth Token from the dashboard, buy a phone number, and add all three in Settings > API Keys under "Twilio".' },
+  telnyx:       { label: 'Telnyx',                         capability: 'Voice calls, SMS (cost-effective)', setupGuide: 'Go to portal.telnyx.com, create an API key under Auth, buy a number, and add them in Settings > API Keys under "Telnyx".' },
+  bandwidth:    { label: 'Bandwidth',                      capability: 'Voice calls, SMS', setupGuide: 'Go to app.bandwidth.com, get your Account ID and API credentials, and add them in Settings > API Keys under "Bandwidth".' },
+  vonage:       { label: 'Vonage',                         capability: 'Voice calls, SMS', setupGuide: 'Go to dashboard.nexmo.com, copy your API Key and Secret, and paste them in Settings > API Keys under "Vonage".' },
+  hedra:        { label: 'Hedra',                          capability: 'AI avatar video generation', setupGuide: 'Go to hedra.com/api-profile, sign up, generate an API key, and paste it in Settings > API Keys under "Hedra".' },
+  kling:        { label: 'Kling',                          capability: 'Cinematic video generation', setupGuide: 'Go to klingai.com, get your Access Key and Secret Key from your account settings, and add them in Settings > API Keys under "Kling".' },
+  fal:          { label: 'Fal.ai',                         capability: 'Image generation (Flux, SDXL)', setupGuide: 'Go to fal.ai/dashboard/keys, create an API key, and paste it in Settings > API Keys under "Fal.ai".' },
+  'google-ai-studio': { label: 'Google AI Studio (Imagen)', capability: 'Photorealistic image generation', setupGuide: 'Go to aistudio.google.com/apikey, create a key with Imagen access, and add it in Settings > API Keys under "Google AI Studio".' },
+  elevenlabs:   { label: 'ElevenLabs',                     capability: 'Voice AI, text-to-speech', setupGuide: 'Go to elevenlabs.io/app/settings/api-keys, generate a key, and paste it in Settings > API Keys under "ElevenLabs".' },
+  deepgram:     { label: 'Deepgram',                       capability: 'Speech-to-text transcription', setupGuide: 'Go to console.deepgram.com, create a project, generate an API key, and paste it in Settings > API Keys under "Deepgram".' },
+  apollo:       { label: 'Apollo.io',                      capability: 'Lead enrichment, prospect data', setupGuide: 'Go to app.apollo.io/settings/integrations/api, copy your API key, and paste it in Settings > API Keys under "Apollo".' },
+  clearbit:     { label: 'Clearbit',                       capability: 'Company enrichment data', setupGuide: 'Go to dashboard.clearbit.com/api, copy your API key, and add it in Settings > API Keys under "Clearbit".' },
+  serper:       { label: 'Serper',                         capability: 'SEO research, Google search data', setupGuide: 'Go to serper.dev/api-key, sign up, copy your key, and paste it in Settings > API Keys under "Serper".' },
+  dataforseo:   { label: 'DataForSEO',                     capability: 'Keyword rankings, SERP data', setupGuide: 'Go to app.dataforseo.com/api-dashboard, copy your login and password, and add them in Settings > API Keys under "DataForSEO".' },
+  twitter:      { label: 'Twitter/X',                      capability: 'Social posting, analytics', setupGuide: 'Go to developer.x.com, create a project/app, get your API Key, Secret, and Bearer Token, and add them in Settings > API Keys under "Twitter/X".' },
+  linkedin:     { label: 'LinkedIn',                       capability: 'Social posting, networking', setupGuide: 'Go to linkedin.com/developers, create an app, get your Client ID and Secret, and add them in Settings > API Keys under "LinkedIn".' },
+  slack:        { label: 'Slack',                          capability: 'Team notifications', setupGuide: 'Go to api.slack.com/apps, create an app, add an Incoming Webhook, copy the URL, and paste it in Settings > API Keys under "Slack".' },
+  googleCloud:  { label: 'Google Cloud',                   capability: 'AI fine-tuning, cloud storage', setupGuide: 'Go to console.cloud.google.com. Create a project, enable Vertex AI + Cloud Storage APIs, create a service account, download the JSON key, and add the project ID + key in Settings > API Keys under "Google Cloud".' },
+  minimax:      { label: 'MiniMax',                        capability: 'AI music generation', setupGuide: 'Go to minimaxi.com, sign up, get your API key from account settings, and paste it in Settings > API Keys under "MiniMax".' },
+  shopify:      { label: 'Shopify',                        capability: 'E-commerce catalog sync', setupGuide: 'In your Shopify admin, go to Settings > Apps > Develop apps, create a custom app with product read permissions, copy the Access Token, and add it with your shop domain in Settings > API Keys under "Shopify".' },
+  woocommerce:  { label: 'WooCommerce',                    capability: 'E-commerce catalog sync', setupGuide: 'In your WordPress admin, go to WooCommerce > Settings > Advanced > REST API, create a key with Read access, and add the Consumer Key, Secret, and site URL in Settings > API Keys under "WooCommerce".' },
 };
 
 /**
@@ -752,7 +754,8 @@ async function getConfigurationContext(): Promise<string> {
       if (isReady) {
         configured.push(`- ${info.label}: ✓ READY (${info.capability})`);
       } else {
-        notConfigured.push(`- ${info.label}: ✗ NOT SET UP → needed for: ${info.capability}`);
+        const guide = info.setupGuide ? `\n    Setup: ${info.setupGuide}` : '';
+        notConfigured.push(`- ${info.label}: ✗ NOT SET UP → needed for: ${info.capability}${guide}`);
       }
     } catch {
       // Skip services that error during check
@@ -787,11 +790,13 @@ ${notConfigured.join('\n')}
 
   block += `RULES FOR CONFIGURATION AWARENESS:
 - Before delegating work that needs an unconfigured service, tell the user what's needed
-- Offer to walk them through setup: "That needs [Service] — want me to guide you through setting it up?"
-- Direct them to Settings > API Keys with the specific provider name
+- Use the "Setup:" instructions above to walk the user through it step-by-step right in the conversation
+- Example: "Email campaigns need SendGrid. Here's how to set it up: Go to app.sendgrid.com/settings/api_keys, click 'Create API Key'..."
+- After giving steps, add: "Once you've pasted the key in [Settings > API Keys](/settings/api-keys), I'll take it from there."
 - Do NOT repeatedly remind about services the user isn't trying to use
 - If a feature works fine without a specific key (e.g., AI works via OpenRouter), don't nag about OpenAI/Anthropic
 - When ALL required services for a task are ready, proceed immediately without mentioning configuration
+- Keep setup guidance concise — 2-3 sentences max. Link to Settings > API Keys for the detailed page.
 
 ═══════════════════════════════════════════════════════════════════════════════
 `;
