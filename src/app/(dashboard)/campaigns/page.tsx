@@ -249,8 +249,32 @@ export default function CampaignsPage() {
     const total = campaigns.length;
     const pendingReview = campaigns.filter(c => c.status === 'pending_review').length;
     const published = campaigns.filter(c => c.status === 'published').length;
-    const totalDeliverables = campaigns.reduce((sum, c) => sum + (c.deliverableItems?.length ?? c.deliverables.length), 0);
-    return { total, pendingReview, published, totalDeliverables };
+    const inProduction = campaigns.filter(c => c.status === 'producing' || c.status === 'researching' || c.status === 'strategizing').length;
+
+    const allDeliverables = campaigns.flatMap(c => c.deliverableItems ?? []);
+    const totalDeliverables = allDeliverables.length || campaigns.reduce((sum, c) => sum + c.deliverables.length, 0);
+    const approvedDeliverables = allDeliverables.filter(d => d.status === 'approved' || d.status === 'published').length;
+    const approvalRate = totalDeliverables > 0 ? Math.round((approvedDeliverables / totalDeliverables) * 100) : 0;
+
+    // Content breakdown by type
+    const byType = allDeliverables.reduce<Record<string, number>>((acc, d) => {
+      acc[d.type] = (acc[d.type] ?? 0) + 1;
+      return acc;
+    }, {});
+
+    // Average time to publish (for published campaigns)
+    const publishedCampaigns = campaigns.filter(c => c.status === 'published');
+    let avgDaysToPublish = 0;
+    if (publishedCampaigns.length > 0) {
+      const totalDays = publishedCampaigns.reduce((sum, c) => {
+        const created = new Date(c.createdAt).getTime();
+        const updated = new Date(c.updatedAt).getTime();
+        return sum + (updated - created) / (1000 * 60 * 60 * 24);
+      }, 0);
+      avgDaysToPublish = Math.round((totalDays / publishedCampaigns.length) * 10) / 10;
+    }
+
+    return { total, pendingReview, published, inProduction, totalDeliverables, approvedDeliverables, approvalRate, byType, avgDaysToPublish };
   }, [campaigns]);
 
   // Filter tabs
@@ -349,12 +373,14 @@ export default function CampaignsPage() {
       </AnimatePresence>
 
       {/* Stats Row */}
-      <div className="grid grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-6 gap-4 mb-8">
         {[
           { label: 'Total Campaigns', value: stats.total, icon: <Rocket className="w-5 h-5 text-primary" /> },
+          { label: 'In Production', value: stats.inProduction, icon: <Loader2 className="w-5 h-5 text-amber-400" /> },
           { label: 'Pending Review', value: stats.pendingReview, icon: <Clock className="w-5 h-5 text-orange-400" /> },
           { label: 'Published', value: stats.published, icon: <CheckCircle2 className="w-5 h-5 text-emerald-400" /> },
-          { label: 'Total Deliverables', value: stats.totalDeliverables, icon: <BarChart3 className="w-5 h-5 text-blue-400" /> },
+          { label: 'Approval Rate', value: `${stats.approvalRate}%`, icon: <BarChart3 className="w-5 h-5 text-blue-400" /> },
+          { label: 'Avg. Days to Publish', value: stats.avgDaysToPublish || '—', icon: <Calendar className="w-5 h-5 text-purple-400" /> },
         ].map((stat, i) => (
           <motion.div
             key={stat.label}
@@ -363,7 +389,7 @@ export default function CampaignsPage() {
             transition={{ delay: i * 0.05 }}
             className="bg-surface-paper border border-border-light rounded-xl p-4 flex items-center gap-4"
           >
-            <div className="w-10 h-10 rounded-lg bg-surface-elevated flex items-center justify-center">
+            <div className="w-10 h-10 rounded-lg bg-surface-elevated flex items-center justify-center shrink-0">
               {stat.icon}
             </div>
             <div>
@@ -373,6 +399,31 @@ export default function CampaignsPage() {
           </motion.div>
         ))}
       </div>
+
+      {/* Content Breakdown by Type */}
+      {Object.keys(stats.byType).length > 0 && (
+        <div className="bg-surface-paper border border-border-light rounded-xl p-4 mb-8">
+          <h3 className="text-sm font-semibold text-[var(--color-text-secondary)] mb-3">Content Breakdown</h3>
+          <div className="flex gap-6">
+            {Object.entries(stats.byType).map(([type, count]) => {
+              const pct = stats.totalDeliverables > 0 ? Math.round((count / stats.totalDeliverables) * 100) : 0;
+              return (
+                <div key={type} className="flex items-center gap-2">
+                  <span className="text-[var(--color-text-disabled)]">
+                    {DELIVERABLE_ICONS[type] ?? <FileText className="w-3.5 h-3.5" />}
+                  </span>
+                  <span className="text-sm text-[var(--color-text-primary)] font-medium capitalize">
+                    {type.replace('_', ' ')}
+                  </span>
+                  <span className="text-xs text-[var(--color-text-disabled)]">
+                    {count} ({pct}%)
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Filter Tabs */}
       <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
