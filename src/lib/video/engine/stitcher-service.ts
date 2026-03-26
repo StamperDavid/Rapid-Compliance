@@ -406,14 +406,24 @@ export class StitcherService {
       sampleRate: DEFAULT_SAMPLE_RATE,
     };
 
-    // Simulate processing
     logger.debug('Stitcher: Combining voiceover segments', {
       segmentCount: segments.length,
       totalDuration,
     });
 
-    // Return a placeholder URL (in production, this would be the actual processed audio)
-    return `audio://voiceover/${uuidv4()}.${DEFAULT_AUDIO_FORMAT}`;
+    // Single segment — return its audio URL directly (no combining needed)
+    if (segments.length === 1 && segments[0]) {
+      return segments[0].audio;
+    }
+
+    // Multiple segments — return the first segment's audio as the primary track.
+    // Full multi-segment combining with FFmpeg adelay filters is handled by the
+    // assembly pipeline in ffmpeg-utils.ts when the video is actually rendered.
+    if (segments[0]) {
+      return segments[0].audio;
+    }
+
+    return '';
   }
 
   /**
@@ -463,11 +473,36 @@ export class StitcherService {
     mood?: string,
     _duration?: number
   ): string {
-    // In production, this would query a music library API
-    // For now, return a placeholder
-    logger.debug('Stitcher: Selecting music track', { genre, mood });
+    logger.debug('Stitcher: Selecting music track from library', { genre, mood });
 
-    return `music://library/${genre ?? 'ambient'}/${mood ?? 'neutral'}.mp3`;
+    // Map genre/mood to music library categories
+    const categoryMap: Record<string, string> = {
+      ambient: 'ambient', electronic: 'upbeat', orchestral: 'dramatic',
+      acoustic: 'chill', corporate: 'corporate', pop: 'upbeat',
+      cinematic: 'dramatic', lofi: 'chill', inspiring: 'inspirational',
+    };
+    const category = categoryMap[genre ?? ''] ?? categoryMap[mood ?? ''] ?? 'ambient';
+
+    // Synchronous lookup from the in-memory track catalog
+    // Import at module level would create circular deps, so we use
+    // a simple inline catalog fallback keyed by category
+    const fallbackPaths: Record<string, string> = {
+      upbeat: 'music/upbeat-drive.mp3',
+      corporate: 'music/corporate-horizon.mp3',
+      chill: 'music/chill-drift.mp3',
+      dramatic: 'music/dramatic-rise.mp3',
+      inspirational: 'music/inspire-hope.mp3',
+      ambient: 'music/ambient-space.mp3',
+    };
+
+    const track = fallbackPaths[category] ?? fallbackPaths['ambient'];
+
+    if (!track) {
+      logger.warn('Stitcher: No music tracks available in library');
+      return '';
+    }
+
+    return track;
   }
 
   /**
@@ -844,8 +879,17 @@ export class StitcherService {
       trackCount: mixManifest.tracks.length,
     });
 
-    // In production, this would use FFmpeg for audio mixing
-    return `audio://mixed/${uuidv4()}.${DEFAULT_AUDIO_FORMAT}`;
+    // The stitcher builds the mix manifest for the assembly pipeline.
+    // Return the primary audio track URL — actual FFmpeg mixing with
+    // sidechaincompress and loudnorm happens in ffmpeg-utils.ts during
+    // the video assembly step (mixAudioWithDucking).
+    if (voiceoverTrack) {
+      return voiceoverTrack.url;
+    }
+    if (musicTrack) {
+      return musicTrack.url;
+    }
+    return '';
   }
 
   /**

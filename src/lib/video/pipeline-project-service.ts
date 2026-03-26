@@ -268,9 +268,43 @@ export async function deleteProject(projectId: string): Promise<boolean> {
       return false;
     }
 
+    // 1. Delete orphaned scene preview images
+    const previewsCol = `organizations/${PLATFORM_ID}/scene_previews`;
+    const previewSnap = await adminDb.collection(previewsCol)
+      .where('projectId', '==', projectId)
+      .get();
+
+    if (!previewSnap.empty) {
+      const batch = adminDb.batch();
+      for (const doc of previewSnap.docs) {
+        batch.delete(doc.ref);
+      }
+      await batch.commit();
+      logger.info('Deleted scene previews for project', { projectId, count: previewSnap.size });
+    }
+
+    // 2. Delete video files from Firebase Storage (best-effort)
+    try {
+      const { admin } = await import('@/lib/firebase-admin');
+      const bucket = admin.storage().bucket();
+      const prefix = `organizations/${PLATFORM_ID}/videos/${projectId}/`;
+      const [files] = await bucket.getFiles({ prefix });
+      if (files.length > 0) {
+        await Promise.all(files.map(file => file.delete().catch(() => null)));
+        logger.info('Deleted video storage files for project', { projectId, count: files.length });
+      }
+    } catch (storageErr) {
+      // Storage cleanup is best-effort — don't fail the entire delete
+      logger.warn('Failed to clean up storage files for project', {
+        projectId,
+        error: storageErr instanceof Error ? storageErr.message : String(storageErr),
+      });
+    }
+
+    // 3. Delete the project document itself
     await adminDb.collection(COLLECTION_PATH).doc(projectId).delete();
 
-    logger.info('Pipeline project deleted', {
+    logger.info('Pipeline project deleted (with cascade)', {
       projectId,
       file: 'pipeline-project-service.ts',
     });

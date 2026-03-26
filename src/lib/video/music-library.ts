@@ -191,3 +191,47 @@ export function getMusicTracksByCategory(category: MusicCategory): MusicTrack[] 
 export function getMusicTrackById(id: string): MusicTrack | undefined {
   return MUSIC_TRACKS.find((t) => t.id === id);
 }
+
+/**
+ * Resolve a music track's storagePath to a signed download URL.
+ * Returns null if the file doesn't exist in Firebase Storage.
+ */
+export async function getMusicTrackUrl(storagePath: string): Promise<string | null> {
+  try {
+    const { admin } = await import('@/lib/firebase-admin');
+    const bucket = admin.storage().bucket();
+    const file = bucket.file(storagePath);
+
+    const [exists] = await file.exists();
+    if (!exists) {
+      return null;
+    }
+
+    const [signedUrl] = await file.getSignedUrl({
+      action: 'read',
+      expires: Date.now() + 60 * 60 * 1000, // 1 hour
+    });
+    return signedUrl;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Check which tracks have actual audio files uploaded in Firebase Storage.
+ * Returns track IDs that are available for use.
+ */
+export async function getAvailableMusicTrackIds(): Promise<string[]> {
+  try {
+    const { admin } = await import('@/lib/firebase-admin');
+    const bucket = admin.storage().bucket();
+    const [files] = await bucket.getFiles({ prefix: 'music/' });
+    const uploadedPaths = new Set(files.map(f => f.name));
+
+    return MUSIC_TRACKS
+      .filter(track => uploadedPaths.has(track.storagePath))
+      .map(track => track.id);
+  } catch {
+    return [];
+  }
+}

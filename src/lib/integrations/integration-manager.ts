@@ -163,6 +163,10 @@ async function refreshZoomToken(refreshToken: string): Promise<{ accessToken: st
   const clientId = process.env.ZOOM_CLIENT_ID;
   const clientSecret = process.env.ZOOM_CLIENT_SECRET;
 
+  if (!clientId || !clientSecret) {
+    throw new Error('Zoom token refresh failed: ZOOM_CLIENT_ID and ZOOM_CLIENT_SECRET must be set');
+  }
+
   const response = await fetch('https://zoom.us/oauth/token', {
     method: 'POST',
     headers: {
@@ -194,6 +198,10 @@ async function refreshZoomToken(refreshToken: string): Promise<{ accessToken: st
 async function refreshQuickBooksToken(refreshToken: string): Promise<{ accessToken: string; refreshToken: string; expiresIn: number }> {
   const clientId = process.env.QUICKBOOKS_CLIENT_ID;
   const clientSecret = process.env.QUICKBOOKS_CLIENT_SECRET;
+
+  if (!clientId || !clientSecret) {
+    throw new Error('QuickBooks token refresh failed: QUICKBOOKS_CLIENT_ID and QUICKBOOKS_CLIENT_SECRET must be set');
+  }
 
   const response = await fetch('https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer', {
     method: 'POST',
