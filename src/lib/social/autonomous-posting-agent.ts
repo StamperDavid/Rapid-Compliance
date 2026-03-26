@@ -13,6 +13,14 @@
 import { logger } from '@/lib/logger/logger';
 import { FirestoreService } from '@/lib/db/firestore-service';
 import { createTwitterService, createTwitterServiceForAccount, type TwitterService } from '@/lib/integrations/twitter-service';
+import { createBlueskyService } from '@/lib/integrations/bluesky-service';
+import { createThreadsService } from '@/lib/integrations/threads-service';
+import { createTruthSocialService } from '@/lib/integrations/truth-social-service';
+import { createTelegramService } from '@/lib/integrations/telegram-service';
+import { createRedditService } from '@/lib/integrations/reddit-service';
+import { createPinterestService } from '@/lib/integrations/pinterest-service';
+import { createWhatsAppBusinessService } from '@/lib/integrations/whatsapp-business-service';
+import { createGoogleBusinessService } from '@/lib/integrations/google-business-service';
 import type { QueryConstraint } from 'firebase/firestore';
 import type {
   SocialPlatform,
@@ -857,12 +865,99 @@ export class AutonomousPostingAgent {
         case 'linkedin':
           return await this.postToLinkedIn(postId, content, mediaUrls);
 
+        case 'bluesky': {
+          const blueskyService = await createBlueskyService();
+          if (!blueskyService) {
+            return { success: false, platform, postId, error: 'Bluesky service not configured — add credentials in Settings > API Keys' };
+          }
+          const blueskyResult = await blueskyService.postRecord({ text: content });
+          return { success: blueskyResult.success, platform, postId, platformPostId: blueskyResult.uri, error: blueskyResult.error };
+        }
+
+        case 'threads': {
+          const threadsService = await createThreadsService();
+          if (!threadsService) {
+            return { success: false, platform, postId, error: 'Threads service not configured — add credentials in Settings > API Keys' };
+          }
+          const threadsResult = await threadsService.publishPost({
+            text: content,
+            mediaType: mediaUrls?.[0] ? 'IMAGE' : 'TEXT',
+            imageUrl: mediaUrls?.[0],
+          });
+          return { success: threadsResult.success, platform, postId, platformPostId: threadsResult.postId, error: threadsResult.error };
+        }
+
+        case 'truth_social': {
+          const truthService = await createTruthSocialService();
+          if (!truthService) {
+            return { success: false, platform, postId, error: 'Truth Social service not configured — add credentials in Settings > API Keys' };
+          }
+          const truthResult = await truthService.postStatus({ status: content });
+          return { success: truthResult.success, platform, postId, platformPostId: truthResult.postId, error: truthResult.error };
+        }
+
+        case 'telegram': {
+          const telegramService = await createTelegramService();
+          if (!telegramService) {
+            return { success: false, platform, postId, error: 'Telegram service not configured — add bot token and chat ID in Settings > API Keys' };
+          }
+          const telegramResult = await telegramService.sendMessage({ text: content });
+          return { success: telegramResult.success, platform, postId, platformPostId: telegramResult.messageId?.toString(), error: telegramResult.error };
+        }
+
+        case 'reddit': {
+          const redditService = await createRedditService();
+          if (!redditService) {
+            return { success: false, platform, postId, error: 'Reddit service not configured — add credentials in Settings > API Keys' };
+          }
+          // Reddit requires subreddit + title — extract from content or use defaults
+          const lines = content.split('\n').filter(Boolean);
+          const title = lines[0]?.substring(0, 300) ?? 'New post';
+          const body = lines.slice(1).join('\n') || content;
+          const redditResult = await redditService.submitPost({ subreddit: 'u_me', title, text: body, kind: 'self' });
+          return { success: redditResult.success, platform, postId, platformPostId: redditResult.postId, error: redditResult.error };
+        }
+
+        case 'pinterest': {
+          if (!mediaUrls?.[0]) {
+            return { success: false, platform, postId, error: 'Pinterest requires an image — no media URL provided' };
+          }
+          const pinterestService = await createPinterestService();
+          if (!pinterestService) {
+            return { success: false, platform, postId, error: 'Pinterest service not configured — add credentials in Settings > API Keys' };
+          }
+          const pinterestResult = await pinterestService.createPin({ title: content.substring(0, 100), description: content, imageUrl: mediaUrls[0] });
+          return { success: pinterestResult.success, platform, postId, platformPostId: pinterestResult.pinId, error: pinterestResult.error };
+        }
+
+        case 'whatsapp_business': {
+          const whatsappService = await createWhatsAppBusinessService();
+          if (!whatsappService) {
+            return { success: false, platform, postId, error: 'WhatsApp Business service not configured — add credentials in Settings > API Keys' };
+          }
+          // WhatsApp is not broadcast — needs a recipient. Use default from config if available.
+          const whatsappResult = await whatsappService.sendTextMessage({ to: '', text: content });
+          if (!whatsappResult.success && whatsappResult.error?.includes('recipient')) {
+            return { success: false, platform, postId, error: 'WhatsApp requires a recipient phone number — configure default in Settings > API Keys' };
+          }
+          return { success: whatsappResult.success, platform, postId, platformPostId: whatsappResult.messageId, error: whatsappResult.error };
+        }
+
+        case 'google_business': {
+          const gbpService = await createGoogleBusinessService();
+          if (!gbpService) {
+            return { success: false, platform, postId, error: 'Google Business Profile not configured — add credentials in Settings > API Keys' };
+          }
+          const gbpResult = await gbpService.createLocalPost({ summary: content, mediaUrl: mediaUrls?.[0] });
+          return { success: gbpResult.success, platform, postId, platformPostId: gbpResult.postName, error: gbpResult.error };
+        }
+
         default:
           return {
             success: false,
             platform,
             postId,
-            error: `Unsupported platform: ${platform}`,
+            error: `Unsupported platform: ${platform}. Supported: twitter, linkedin, bluesky, threads, truth_social, telegram, reddit, pinterest, whatsapp, google_business`,
           };
       }
     } catch (error) {

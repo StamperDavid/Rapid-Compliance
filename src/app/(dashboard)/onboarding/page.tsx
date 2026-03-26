@@ -324,6 +324,44 @@ export default function OnboardingWizard() {
     }
   };
 
+  // Auto-save progress to Firestore whenever the step changes
+  const formDataRef = React.useRef(formData);
+  formDataRef.current = formData;
+  const authFetchRef = React.useRef(authFetch);
+  authFetchRef.current = authFetch;
+  const lastSavedStep = React.useRef(0);
+
+  useEffect(() => {
+    // Skip the initial mount (step 1 on first render)
+    if (currentStep === lastSavedStep.current || currentStep === 1) {
+      lastSavedStep.current = currentStep;
+      return;
+    }
+    lastSavedStep.current = currentStep;
+
+    const saveProgress = async () => {
+      try {
+        const data = formDataRef.current;
+        // Strip File objects — they can't be serialized to Firestore
+        const serializable: Record<string, unknown> = {};
+        for (const [key, value] of Object.entries(data)) {
+          if (key === 'uploadedDocs' || key === 'uploadedSalesMaterials') { continue; }
+          if (value !== undefined && value !== null && value !== '') {
+            serializable[key] = value;
+          }
+        }
+        await authFetchRef.current('/api/onboarding/progress', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ currentStep, formData: serializable }),
+        });
+      } catch {
+        // Silent failure — auto-save is best-effort, don't interrupt the user
+      }
+    };
+    void saveProgress();
+  }, [currentStep]);
+
   // Load existing onboarding data from Firestore to pre-fill fields
   const [dataLoaded, setDataLoaded] = useState(false);
   const [prefillDismissed, setPrefillDismissed] = useState(false);

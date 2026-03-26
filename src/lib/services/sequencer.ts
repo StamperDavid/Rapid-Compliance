@@ -812,16 +812,6 @@ async function executeEmailAction(
     ? subjectVal
     : 'Following up';
   
-  // In test mode, just log the action without actually sending
-  if (process.env.NODE_ENV === 'test' || process.env.JEST_WORKER_ID) {
-    logger.info('[TEST MODE] Mock email send', {
-      to: leadData.email,
-      subject,
-      leadId: enrollment.leadId,
-    });
-    return;
-  }
-  
   const result = await sendEmail({
     to: leadData.email,
     subject: subject,
@@ -862,15 +852,6 @@ async function executeLinkedInAction(
     throw new Error('Lead has no LinkedIn URL or email');
   }
 
-  // In test mode, just log the action without actually sending
-  if (process.env.NODE_ENV === 'test' || process.env.JEST_WORKER_ID) {
-    logger.info('[TEST MODE] Mock LinkedIn message send', {
-      to: linkedInIdentifier,
-      leadId: enrollment.leadId,
-    });
-    return;
-  }
-
   // Note: LinkedIn requires access token - this would need to be configured per organization
   const accessToken = (step.data?.linkedInAccessToken as string | undefined) ?? '';
   
@@ -903,15 +884,6 @@ async function executeSMSAction(
 ): Promise<void> {
   if (!leadData.phone) {
     throw new Error('Lead has no phone number');
-  }
-  
-  // In test mode, just log the action without actually sending
-  if (process.env.NODE_ENV === 'test' || process.env.JEST_WORKER_ID) {
-    logger.info('[TEST MODE] Mock SMS send', {
-      to: leadData.phone,
-      leadId: enrollment.leadId,
-    });
-    return;
   }
   
   const result = await sendSMS({
@@ -950,15 +922,6 @@ async function executePhoneAction(
     throw new Error('Lead has no phone number');
   }
 
-  // In test mode, just log the action without actually making a call
-  if (process.env.NODE_ENV === 'test' || process.env.JEST_WORKER_ID) {
-    logger.info('[TEST MODE] Mock phone call', {
-      to: leadData.phone,
-      leadId: enrollment.leadId,
-    });
-    return;
-  }
-
   // Use the organization's AI agent for the call
   const agentId = (step.data?.agentId as string | undefined) ?? 'default';
   
@@ -992,15 +955,6 @@ async function executeChannelAction(step: SequenceStep, enrollment: SequenceEnro
   const leadData = await getLeadData(enrollment.leadId);
   
   if (!leadData) {
-    // In test mode, create mock lead data
-    if (process.env.NODE_ENV === 'test' || process.env.JEST_WORKER_ID) {
-      logger.info('[TEST MODE] Using mock lead data for channel execution', {
-        leadId: enrollment.leadId,
-        channel: step.channel,
-      });
-      // Mock successful execution in test mode
-      return;
-    }
     throw new Error(`Lead not found: ${enrollment.leadId}`);
   }
 
