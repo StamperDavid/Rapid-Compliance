@@ -5,7 +5,7 @@
 ## Context
 Repository: https://github.com/StamperDavid/Rapid-Compliance
 Branch: dev
-Last Updated: March 25, 2026 (Stub Eradication COMPLETE — all 8 issues resolved)
+Last Updated: March 25, 2026 (Stub Eradication + Jasper Config Awareness + Campaigns Dashboard)
 
 ## Current State
 
@@ -13,7 +13,7 @@ Last Updated: March 25, 2026 (Stub Eradication COMPLETE — all 8 issues resolve
 - **Single-tenant penthouse model** — org ID `rapid-compliance-root`, Firebase `rapid-compliance-65f87`
 - **59 AI agents** (46 swarm + 7 standalone + 1 voice + 5 QA) with hierarchical orchestration
 - **4-role RBAC** (owner/admin/manager/member) with 47 permissions enforced on 36+ API routes
-- **184 pages**, **406+ API routes**, **1,634 TypeScript files**, **~350K+ lines**
+- **185 pages**, **410+ API routes**, **1,638 TypeScript files**, **~354K+ lines**
 - **212 React components**, **55 type definition files**
 - **Deployed via Vercel** — dev → main → Vercel auto-deploy
 
@@ -59,6 +59,30 @@ All 8 issues fully implemented and verified:
 
 ---
 
+## Jasper Intelligence Layer — COMPLETE (March 25, 2026)
+
+- **Configuration awareness**: Jasper receives live API key status (30+ services) at conversation start
+- **Inline setup guidance**: Each unconfigured service includes step-by-step instructions Jasper can relay
+- **Feature-aware onboarding**: Setup banner checks keys relevant to ENABLED features, not just OpenRouter
+- **Last stub eliminated**: `trigger_workflow` in lead-segmentation-service now fires real workflow triggers
+
+## Campaign Orchestration Dashboard — COMPLETE (March 25, 2026)
+
+- **`/campaigns` page**: List view with status filters, deliverable progress bars, click-through to review
+- **Sidebar link**: Rocket icon under Marketing section
+- **8 campaign templates**: Product Launch, Blog Series, Lead Gen, Video-First, Holiday, Educational, Brand Awareness, Email Nurture
+- **Template picker**: Collapsible grid on campaigns page, routes to Mission Control with pre-filled prompt
+- **Analytics**: 6-stat row (total, in production, pending, published, approval rate, avg days to publish) + content breakdown by type
+- **API routes**: `/api/campaigns/templates` with Firestore auto-seeding
+
+---
+
 ## What to Build Next
 
-(Session ended — add next priorities here)
+Candidates (prioritize based on business need):
+
+1. **Push dev → main for deployment** — 8 commits ready, all verified
+2. **Campaign scheduling** — "Publish Thursday at 9am" instead of immediate auto-publish on approval
+3. **E2E tests for new features** — Playwright coverage for campaigns, voice, catalog sync
+4. **AI Creative Studio** — Full prompt builder for image/video generation (RenderZero-inspired, plan in prior sessions)
+5. **Multi-tenant re-enablement planning** — Begin designing org isolation for the SaaS product launch
