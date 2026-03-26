@@ -1,11 +1,11 @@
 # SalesVelocity.ai - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** March 25, 2026 (Stub Eradication complete — 4 voice providers, VOICE_AI_SPECIALIST agent, catalog sync, Vertex AI, workflow triggers, form templates)
+**Last Updated:** March 26, 2026 (Full 12-agent system audit — honest launch-readiness assessment with code-verified scores)
 **Branches:** `dev` (latest)
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Architecture:** Single-Tenant Penthouse Model (development strategy — multi-tenant SaaS product)
-**Audit Method:** Multi-agent parallel scan with verification + Deep-dive forensic analysis + Playwright Visual Trace Audit
+**Audit Method:** 12 parallel code-reading agents (March 26, 2026) covering social media, Jasper orchestration, Mission Control, stubs, API routes, website builder, email/newsletters, CRM, payments, voice/video, auth/RBAC/onboarding, workflows/forms/SEO
 
 ---
 
@@ -36,11 +36,11 @@
 
 | Metric | Count | Status |
 |--------|-------|--------|
-| Physical Routes (page.tsx) | 184 | Verified March 20, 2026 |
-| API Endpoints (route.ts) | 407 | Verified March 25, 2026 (+3 cron/templates routes) |
+| Physical Routes (page.tsx) | 185 | Verified March 26, 2026 |
+| API Endpoints (route.ts) | 429+ | Verified March 26, 2026 |
 | AI Agents | 59 | **59 FUNCTIONAL (46 swarm + 7 standalone + 6 Claude Code QA agents)** |
 | RBAC Roles | 4 | owner / admin / manager / member |
-| TypeScript Files | 1,628 | Verified March 20, 2026 |
+| TypeScript Files | ~1,638 | Verified March 26, 2026 |
 | Type Definition Files (src/types/) | 55 | 831+ interfaces/types across all files |
 | UI Components (src/components/) | 212+ | Production-grade React components |
 | Firestore Collections | 80+ | Active |
@@ -55,7 +55,7 @@
 - **Authentication:** Firebase Auth with custom claims
 - **AI Gateway:** OpenRouter (100+ models)
 - **Voice:** VoiceEngineFactory (ElevenLabs, Unreal Speech)
-- **Payments:** Stripe
+- **Payments:** Stripe (primary, fully wired) + 11 additional providers (Paddle, Adyen, Chargebee, Hyperswitch, PayPal, Square, Authorize.Net, 2Checkout, Mollie, Razorpay, Braintree)
 
 ### Codebase Scale (March 20, 2026)
 
@@ -195,90 +195,100 @@ Jasper orchestrates full marketing campaigns: research → strategy → produce 
 
 ---
 
-## Current Status (March 20, 2026)
+## Current Status (March 26, 2026 — Full Code Audit)
 
-### Production Readiness: ~85%
+### Production Readiness: ~80% (Honest Assessment — March 26, 2026)
 
-**What's ready:** Core business logic, payments (6 providers), video (Hedra/Kling), AI orchestration (50+ Jasper tools), CRM, e-commerce, email/SMS, website builder, analytics, and growth are all complete with real implementations.
+**What's ready:** Jasper orchestration (46 tools, 9 delegation routes, all real), Mission Control (SSE streaming, review links, approval gates), CRM (lead scoring, enrichment, deal pipeline), website builder (35+ widgets, AI generation, migration), workflows, forms, coaching, RBAC (95% route coverage), payments via Stripe (full lifecycle).
 
-**What's not ready:** Billing portal UI (APIs exist, no user-facing pages), unit test coverage (~0.2%), social media beyond Twitter (FB/IG/TikTok are stubs), and API input validation gaps (only ~14 of 393 routes have Zod schemas).
+**What's NOT ready:** Social media beyond Twitter (only 1 of 14 platforms actually posts), onboarding (no mid-flight save — data loss risk), invoice generation (missing entirely), email unsubscribe page (404), sequencer test-mode bypass (silently skips sending), 8 payment provider webhooks are stubs, billing settings page is a stub.
 
 | Area | Status |
 |------|--------|
-| Single-tenant architecture | **COMPLETE** — Firebase kill-switch, PLATFORM_ID constant, workspace paths eradicated (53 files migrated) |
-| 4-role RBAC | **ENFORCED** — `requireAuth()`/`requireRole()` used 792 times across API routes, 47 permissions, sidebar filtering |
-| Agent hierarchy | **100% COMPLETE** — 58 agents (46 swarm + 6 standalone + 6 Claude Code QA), all managers orchestrate all specialists |
-| Jasper delegation | **COMPLETE** — 53 tools (9 delegate_to_*, 44 utility incl. list_avatars, create_campaign, assemble_video, edit_video, manage_media_library). Mission Control SSE streaming + Campaign Review live |
-| Lead Research | **COMPLETE** — Unified 3-column page with AI chat, results panel, URL sources. 5 API routes, 8-tool AI subset |
-| Type safety | **CLEAN** — `tsc --noEmit` passes. Zero `any` type annotations (audit false positive: word "any" in comments miscounted). Zero `@ts-ignore`, zero `@ts-expect-error` |
-| Build pipeline | **CLEAN** — `npm run build` passes, `npm run lint` zero warnings, 24 eslint-disable (ratcheted) |
-| Dashboard UI | **184 pages** with 12-module feature toggle system |
-| Integrations | **30+ real integrations** verified with actual API calls |
-| Revenue & Commerce | **COMPLETE** — 6 live payment providers (Stripe, Square, PayPal, Authorize.Net, 2Checkout, Mollie) with provider-agnostic dispatcher. Full e-commerce with catalog type enforcement (product/service/digital/subscription), cart, checkout, orders, inventory, coupons. Billing portal via Stripe Customer Portal. Catalog split: always-on catalog + optional storefront under Website. **PLANNED:** 4 additional providers (Paddle MoR, Adyen Interchange++, Chargebee billing layer, Hyperswitch orchestration) — checkout page refactor to dynamic provider selection required first. |
-| Video System | **COMPLETE** — Hedra (sole engine), Clone Wizard, auto-captions, background music, simple/advanced mode, assembly progress, 5 templates, scene grading, CapCut-style editor |
-| Social Media | **PARTIAL** — Twitter/X fully wired. LinkedIn messaging only. Facebook/Instagram/TikTok are stubs. |
-| Testing | **IMPROVED** — 81 unit/integration suites (1,700 tests), 16 Playwright E2E specs (150+ tests). All major user journeys covered: CRUD, checkout, video pipeline, workflows, settings, catalog types. |
-| API Validation | **COMPLETE** — Full sweep March 20 verified 173/175 routes have inline Zod schemas. 2 fixes applied (scene-preview/save, media POST). Coverage: ~99%. |
-| AI Creative Studio | **COMPLETE** — 250+ cinematic presets, 7 API routes, multi-provider (Hedra/Fal/Google/DALL-E/Kling), full UI at `/content/` |
-| Auth & Account Mgmt | **COMPLETE** — Login, signup, OAuth (Google/Microsoft), onboarding, 4-role RBAC (47 permissions on 36+ routes), password change, GDPR account deletion, MFA/TOTP, email invites, billing portal |
-| CI/CD | **COMPLETE** — GitHub Actions (lint → type-check → test → build → deploy), pre-commit hooks, eslint-disable budget ratchet |
-| Error Monitoring | **COMPLETE** — Sentry with PII redaction, structured logging, slow request detection |
-| Security | **COMPLETE** — HSTS, CSP, rate limiting (6 presets), webhook signature verification, input sanitization |
+| Single-tenant architecture | **COMPLETE** — Firebase kill-switch, PLATFORM_ID constant, workspace paths eradicated |
+| 4-role RBAC | **ENFORCED** — 95% of 429 routes protected, 47 permissions, sidebar filtering |
+| Agent hierarchy | **100% COMPLETE** — 59 agents, all managers orchestrate all specialists |
+| Jasper delegation | **COMPLETE** — 46 tools (9 delegate_to_*, 37 utility). All tool handlers execute real services. 2 minor stubs (`generate_content`, `draft_outreach_email`) redirect to specialized endpoints. Mission Control SSE streaming + Campaign Review live |
+| CRM & Sales | **COMPLETE** — Lead scoring (0-100 BANT), proprietary enrichment (500x cheaper than Clearbit), 6-stage deal pipeline with signal bus, smart sequencer with score-based timing |
+| Type safety | **CLEAN** — `tsc --noEmit` passes. Zero `any`, zero `@ts-ignore`, zero `@ts-expect-error` |
+| Build pipeline | **CLEAN** — `npm run build` passes, `npm run lint` zero warnings |
+| Dashboard UI | **185 pages** with 12-module feature toggle system |
+| Revenue & Commerce | **MOSTLY COMPLETE** — Stripe fully wired (1270-line webhook handler, subscriptions, checkout). 11 additional providers have checkout + payment processing but only Stripe/Paddle/Chargebee have real webhook handlers. **MISSING:** Invoice generation (PDF + email), 8 webhook handler stubs. Coupon system comprehensive (platform + merchant + AI authorization). Tier enforcement active (4 tiers with limits). |
+| Video System | **80% READY** — Hedra API real and working. Scene generation (prompt + avatar modes), FFmpeg assembly, project persistence, batch generation. **GAPS:** Music library URLs are placeholders, audio mixing returns placeholder in stitcher-service, batch topic suggestions hardcoded. |
+| Voice AI | **85% READY** — 4 telephony providers (Vonage, Bandwidth confirmed; Twilio/Telnyx class files unverified). AI conversation agent with BANT qualification, TTS (ElevenLabs + Unreal Speech), TCPA compliance. |
+| Social Media | **40% READY** — Twitter/X fully wired (OAuth, posting, scheduling, multi-account). 8 platforms have API service files but are NOT wired into `postToPlatform()`. 4 platforms (Facebook, Instagram, YouTube, TikTok) have ZERO implementation. |
+| Email & Newsletters | **85% READY** — SendGrid + Resend + SMTP sending works. Open/click tracking, CAN-SPAM footer. **GAPS:** Campaign stats don't auto-update from webhooks, unsubscribe page doesn't exist (generated URLs 404), click redirect endpoint incomplete. |
+| Website Builder | **85% READY** — 35+ widgets, drag-drop editor, AI page generation, site cloning/migration, public rendering, SEO controls, blog. **GAPS:** Scheduled publishing cron missing, image upload mechanism, form widgets lack submission handlers. |
+| Onboarding | **60% READY** — 24-step wizard works end-to-end. **CRITICAL GAP:** No mid-flight saves. Browser close = all data lost. No step validation, no progress bar, no resume. |
+| Workflows | **90% READY** — 12 action types, condition evaluation, timeout protection, cron scheduling. No visual builder (config-based). |
+| Forms | **90% READY** — Full CRUD, submission handling, CRM lead creation, reCAPTCHA, honeypot. No visual builder. |
+| SEO | **75% READY** — Serper + DataForSEO APIs wired. robots.txt, llms.txt, sitemap generation. **GAPS:** Keyword research UI, rank tracking dashboard, site audit runner, content optimization suggestions. |
+| Settings | **70% READY** — API keys fully functional. Integrations mostly functional. **GAPS:** Billing page stub, team management incomplete (no invite email flow), brand kit persistence unclear. |
+| Testing | **IMPROVED** — 81 unit/integration suites, 16 Playwright E2E specs |
+| Security | **COMPLETE** — HSTS, CSP, rate limiting, webhook signature verification, input sanitization |
 
-### Domain Readiness Scorecard (March 20, 2026 — Full Audit)
+### Domain Readiness Scorecard (March 26, 2026 — Code-Verified Audit)
 
 | Domain | Score | Status |
 |--------|-------|--------|
-| Authentication & RBAC | 9.5/10 | READY — MFA/TOTP, GDPR deletion, email invites, billing portal |
-| Payments & Commerce | 10/10 | READY — **10 providers live** (Stripe, PayPal, Square, Authorize.Net, 2Checkout, Mollie, Paddle, Adyen, Chargebee, Hyperswitch). Provider-agnostic checkout + subscription billing. Paddle = MoR, Adyen = Interchange++, Chargebee = billing layer, Hyperswitch = orchestration. All phases complete. |
-| CRM & Sales | 9.5/10 | READY |
-| AI Orchestration (Jasper) | 9.5/10 | READY |
-| Video System | 9.5/10 | READY — Clone Wizard, auto-captions, background music, assembly progress, simple/advanced mode |
-| Email & SMS | 9/10 | READY |
-| Social Media | 8/10 | EXPANDED — 14 platforms supported (Twitter production-ready, 13 more with service adapters). Bluesky, Threads, Truth Social, Telegram, Reddit, Pinterest, WhatsApp Business, Google Business Profile added. Tier 2 planned. |
-| Website Builder | 9/10 | READY |
-| Analytics & Growth | 9/10 | READY |
-| UI Components | 8/10 | READY |
+| Authentication & RBAC | 9.5/10 | READY — 95% route coverage, 47 permissions, custom claims with Firestore fallback |
+| Jasper Orchestrator | 9.5/10 | READY — 46 tools, 9 delegation routes, fire-and-forget mission tracking, model fallback chain |
+| Mission Control | 9/10 | READY — SSE streaming, 3-panel layout, deep-linking, approval gates. No output editing (read-only). |
+| CRM & Sales | 9/10 | READY — Lead scoring, proprietary enrichment, deal pipeline, smart sequencer. Firestore indexes need manual setup. |
+| Website Builder | 8.5/10 | READY — 35+ widgets, AI generation, migration, public rendering. Needs scheduled publish cron. |
+| Workflows & Automation | 9/10 | READY — 12 action types, conditions, cron scheduling, timeout protection. No visual builder. |
+| Forms | 9/10 | READY — Full CRUD, submissions, CRM integration, reCAPTCHA, honeypot. No visual builder. |
+| Coaching & Performance | 8.5/10 | READY — AI-powered insights via OpenRouter, real Firestore data, team analytics. |
+| Payments & Commerce | 8/10 | MOSTLY READY — Stripe fully wired. 11 additional providers have checkout but 8 have webhook stubs. **Missing: Invoice generation.** Coupon system, tier enforcement, e-commerce checkout all working. |
+| Email & SMS | 8/10 | MOSTLY READY — SendGrid/Resend/SMTP working, open/click tracking, CAN-SPAM footer. **Missing: Unsubscribe page, campaign stat aggregation from webhooks.** |
+| Video System | 8/10 | MOSTLY READY — Hedra API real, scene generation, FFmpeg assembly. **Gaps: Music library placeholder URLs, audio mixing stub.** |
+| Voice AI | 8/10 | MOSTLY READY — 4 providers, AI agent, TTS. Twilio/Telnyx class files unverified. |
+| SEO | 7.5/10 | PARTIAL — Serper + DataForSEO wired. robots.txt/llms.txt/sitemap. Missing keyword UI and rank tracking. |
+| Settings | 7/10 | PARTIAL — API keys work. Billing page stub. Team management incomplete. |
+| Onboarding | 6/10 | NOT READY — 24-step wizard works but no mid-flight saves. Data loss risk. |
+| Social Media | 4/10 | NOT READY — Only Twitter/X posts. 8 platforms have services but aren't wired to dispatcher. 4 platforms (FB/IG/YT/TikTok) have zero code. |
+| Security | 8/10 | READY — HSTS, CSP, rate limiting, webhook verification, input sanitization |
 | API Validation (Zod) | 9.5/10 | READY (99% coverage) |
-| Unit/Integration Testing | 8/10 | READY (81 suites, 1,700 tests) |
-| E2E Testing | 7.5/10 | 16 spec files, 150+ tests — full CRUD journeys, checkout, video pipeline, workflows, settings persistence, catalog types, feature module toggles |
-| Security | 8/10 | READY |
-| CI/CD & DevOps | 8.5/10 | READY |
-| Performance | 7/10 | NEEDS WORK |
+| Testing | 8/10 | READY (81 suites, 1,700 tests, 16 E2E specs) |
 
-### Launch Gaps (March 20, 2026 — Full Audit)
+### Launch Gaps (March 26, 2026 — Code-Verified Audit)
 
-#### Critical (Must Fix)
-| Gap | Details |
-|-----|---------|
-| **Billing portal UI** | Subscription APIs exist but no user-facing pages (invoice history, payment methods, subscription management) |
-| ~~Unit test coverage ~0.2%~~ | **RESOLVED (Phase 3B)** — 81 test suites, 1,700 tests. Video, payments, Jasper, agents, scene grading all covered. |
-| ~~135+ API routes lack Zod validation~~ | **FALSE POSITIVE** — Full sweep of 175 POST/PUT/PATCH routes found 173 already validated with inline Zod schemas. 2 fixes applied. Actual coverage: ~99%. |
+#### Critical (Must Fix Before Launch)
+| Gap | Details | Effort |
+|-----|---------|--------|
+| **Social media posting broken** | `postToPlatform()` only routes Twitter. 8 platforms have API services but aren't wired. 4 platforms (FB/IG/YT/TikTok) have zero code. | 3-4 days (wire 8 existing) |
+| **Onboarding data loss** | 24-step wizard only saves on final submit. Browser close = all data lost. No step validation or progress bar. | 1-2 days |
+| **Sequencer test-mode bypass** | `sequencer.ts` lines 816-1001 check `NODE_ENV === 'test'` and skip real sending. Silent production failure if env vars leak. | Half day |
+| **Invoice generation missing** | E-commerce processes payments but generates no invoices. Legal requirement for B2B. | 2-3 days |
+| **Email unsubscribe page 404** | CAN-SPAM footer generates URLs to `/unsubscribe` which doesn't exist. Legal compliance issue. | 1 day |
+| **Campaign stats stale** | SendGrid webhooks fire but aggregated campaign stats (open rate, click rate) never recalculate. | 1 day |
 
 #### High Priority (Pre-Launch)
-| Gap | Details |
-|-----|---------|
-| **Facebook/Instagram/TikTok** | Stubs only — blocked on Meta Developer Portal |
-| **No usage metering/credits** | Can't do usage-based billing |
-| **No in-app password change** | Only Firebase-initiated reset via email |
-| **No account deletion** | GDPR compliance concern |
-| **No MFA/2FA** | `mfaEnabled` field exists but no setup flow |
-| **No email-based user invites** | Modal exists, no transactional email sent |
-| **LinkedIn** | Messaging only, no full posting |
-| **QuickBooks** | OAuth framework only, payment execution incomplete |
-| **Checkout page Stripe-only** | Store checkout hardcoded to Stripe PaymentElement — must be refactored to dynamic provider selection for 10-provider support |
-| **Paddle/Adyen/Chargebee/Hyperswitch** | 4 new payment providers planned — reduces single-provider dependency risk (Stripe fund-withholding concern) |
+| Gap | Details | Effort |
+|-----|---------|--------|
+| **Env var validation in token refresh** | `integration-manager.ts` builds `undefined:undefined` auth headers when env vars missing | Half day |
+| **Video music library placeholders** | 200+ tracks defined but URLs point to non-existent Firebase Storage paths | 1 day |
+| **Audio mixing stub** | `stitcher-service.ts` lines 415, 467 return placeholder instead of processed audio | 1 day |
+| **Campaign DELETE missing** | Users can create campaigns but can't delete them | Half day |
+| **Video cascade delete** | Deleting a project doesn't clean up orphaned scene records in Firestore | Half day |
+| **8 webhook handler stubs** | Square, PayPal, AuthNet, 2Checkout, Mollie, Adyen, Hyperswitch, Razorpay, Braintree have stub webhook handlers | 2-3 days |
+| **Billing settings page** | `/settings/billing` exists but is a stub — no subscription management UI | 1-2 days |
+| **Team management** | No email invite flow, no role reassignment UI | 2 days |
+| **Paddle subscription API** | Can create via checkout but can't cancel/manage subscriptions via API | 1 day |
 
 #### Medium Priority (Post-Launch OK)
 | Gap | Details |
 |-----|---------|
-| **Rate limiting in-memory** | Won't scale multi-instance — wire Redis (REDIS_URL in env) |
-| **npm audit non-blocking in CI** | Security failures don't stop deploys |
-| **No bundle size tracking** | 4.4 GB .next build, no regression alerts |
-| **Missing UI components** | Popover, Combobox, Breadcrumb — standard SaaS patterns |
-| **Data fetching ad-hoc** | Direct fetch() — React Query installed but not adopted at component level |
-| **No Firestore indexes documented** | Composite indexes needed for sorted queries at scale |
-| **Seed scripts lack validation** | No Zod, no idempotency, part-based dependency chain |
+| **Facebook/Instagram/YouTube/TikTok** | Zero implementation — requires Meta Developer Portal, Google API, TikTok API setup |
+| **Visual workflow builder** | Workflows work via config but no drag-drop canvas |
+| **Visual form builder** | Forms work via config but no drag-drop editor |
+| **SEO keyword research UI** | DataForSEO integration exists but no keyword entry/tracking dashboard |
+| **SEO rank tracking** | No daily position tracking visualization |
+| **Rate limiting in-memory** | Won't scale multi-instance — wire Redis |
+| **Firestore composite indexes** | Need manual setup via console for sorted queries at scale |
+| **MFA enforcement** | `mfaEnabled` field exists but no setup flow |
+| **Dashboard data caching** | Each load hits Firestore — add 5-min TTL cache |
+| **Multi-tenant re-enablement** | Design org isolation for SaaS product launch |
 
 ### Open Items — Legacy Punch List (Pre-March 20)
 
@@ -333,19 +343,48 @@ Jasper orchestrates full marketing campaigns: research → strategy → produce 
 | 29 | Admin DAL `verifyAccess()` is a no-op | ✅ FIXED Mar 10 — dead code removed |
 | 30 | SMTP was a stub — now real via nodemailer | ✅ FIXED Mar 10 — only SMTP was a stub; now real via nodemailer. Square, Vonage, Resend, and Calendly were already real implementations. |
 
-### Active Roadmap
+### Active Roadmap (March 26, 2026)
 
-| Priority | Focus | Status |
-|----------|-------|--------|
-| **Tier 1 punch list** | 8/9 fixed, 1 known (voice blocked on Twilio) | ✅ DONE |
-| **Tier 2 gaps** | All 9 items resolved | ✅ DONE |
-| **Tier 4 debt** | Search, SMTP, dead code, Zod, tests — all resolved or documented | ✅ DONE |
-| **Video Phase 2** | Character Studio — source badges, role/style, dual TTS, Hedra browser | ✅ DONE |
-| **Video Phase 3** | AI Video Director — produce_video, assemble_video, brand memory, review UI | ✅ DONE |
-| **Video Phase 4** | Video Editor (CapCut-style timeline), Media Library, edit_video + manage_media_library Jasper tools | ✅ DONE |
-| **Facebook/Instagram** | Implement when Meta Developer Portal approval obtained | BLOCKED |
-| **LinkedIn official** | Replace RapidAPI wrapper when Marketing Developer Platform approved | BLOCKED |
-| **Stripe go-live** | Switch from test to live keys when bank account setup complete | BLOCKED |
+**Week 1 Priority (Launch Blockers):**
+
+| Priority | Focus | Status | Effort |
+|----------|-------|--------|--------|
+| **Wire 8 social platforms** | Connect existing API services to `postToPlatform()` dispatcher | TODO | 3-4 days |
+| **Onboarding auto-save** | Add per-step Firestore persistence + progress bar + resume | TODO | 1-2 days |
+| **Unsubscribe page + click redirect** | Create `/unsubscribe` route, fix click tracking redirect | TODO | 1 day |
+| **Remove sequencer test guards** | Replace NODE_ENV checks with explicit SKIP_OUTREACH flag | TODO | Half day |
+
+**Week 2 Priority (Pre-Launch):**
+
+| Priority | Focus | Status | Effort |
+|----------|-------|--------|--------|
+| **Invoice generation** | PDF gen + email + `/api/orders/{orderId}/invoice` endpoint | TODO | 2-3 days |
+| **Campaign stats from webhooks** | Aggregate tracking events into campaign analytics | TODO | 1 day |
+| **Campaign DELETE endpoint** | Complete CRUD for campaigns | TODO | Half day |
+| **Music library or remove** | Populate real URLs or remove feature from UI | TODO | 1 day |
+| **Billing settings page** | Wire subscription management UI | TODO | 1 day |
+
+**Completed (Archived):**
+
+| Focus | Date |
+|-------|------|
+| Stub Eradication (8 issues) | March 25 |
+| Jasper Config Awareness + Inline Setup | March 25 |
+| Campaign Dashboard + Templates | March 25 |
+| Payment System (12 providers) | March 25 |
+| AI Creative Studio | March 16 |
+| Campaign Orchestration (Layers 1-4) | March 15 |
+| Video System (Phases 1-4) | March 10 |
+| Tier 1-4 Punch List | March 9-10 |
+
+**Blocked (External Dependencies):**
+
+| Focus | Blocker |
+|-------|---------|
+| Facebook/Instagram | Meta Developer Portal approval |
+| LinkedIn official posting | Marketing Developer Platform approval |
+| YouTube/TikTok | API credential setup |
+| Stripe go-live | Bank account setup for production keys |
 
 ### Completed Sprints (All)
 
@@ -902,7 +941,7 @@ These agents operate independently of the L1/L2/L3 swarm hierarchy:
 | AI Chat Sales Agent | Customer-Facing Sales Agent | `src/lib/agents/sales-chat/specialist.ts` | FUNCTIONAL | Customer-facing AI sales agent for website chat widget and Facebook Messenger. Sells SalesVelocity.ai as a **multi-tenant SaaS subscription**. Uses its own Golden Master separate from Jasper. Setup: `scripts/setup-sales-agent-golden-master.js`. Routes: `/api/chat/public`, `/api/chat/facebook`. |
 | Growth Strategist | Chief Growth Officer | `src/lib/agents/growth-strategist/specialist.ts` | FUNCTIONAL | Cross-domain business intelligence agent. Aggregates data from all analytics sources (revenue, SEO, social, email, pipeline). Produces strategic directives for domain managers. Briefings accessible through Jasper. Data aggregator: `src/lib/agents/growth-strategist/data-aggregator.ts`. |
 | Voice Agent Handler | Voice AI Agent | `src/lib/voice/voice-agent-handler.ts` | FUNCTIONAL | Hybrid AI/human voice agent with two modes: **Prospector** (lead qualification) and **Closer** (deal closing with warm transfer). API routes: `src/app/api/voice/ai-agent/` |
-| Autonomous Posting Agent | Social Media Automation | `src/lib/social/autonomous-posting-agent.ts` | FUNCTIONAL | Manages autonomous content posting across LinkedIn and Twitter/X with scheduling, queueing, and analytics tracking. |
+| Autonomous Posting Agent | Social Media Automation | `src/lib/social/autonomous-posting-agent.ts` | PARTIAL | `postToPlatform()` only routes to Twitter. 8 platforms have API services but are NOT wired into this dispatcher (Bluesky, Threads, Truth Social, Telegram, Reddit, Pinterest, WhatsApp, Google Business). 4 platforms have zero code (Facebook, Instagram, YouTube, TikTok). |
 | Chat Session Service | Agent Infrastructure | `src/lib/agent/chat-session-service.ts` | FUNCTIONAL | Manages real-time AI chat sessions and agent instance lifecycle. `AgentInstanceManager` (`src/lib/agent/instance-manager.ts`) handles ephemeral agent instances spawned from Golden Masters. Supports `agentType` parameter for Golden Master selection. |
 
 ### Agent File Locations
@@ -1340,7 +1379,7 @@ This script:
 
 ## Tooling Inventory
 
-### API Routes (393 Total — Verified March 20, 2026)
+### API Routes (429+ Total — Verified March 26, 2026)
 
 | Category | Count | Path Pattern | Status |
 |----------|-------|--------------|--------|
