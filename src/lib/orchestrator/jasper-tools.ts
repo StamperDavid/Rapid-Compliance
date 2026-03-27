@@ -5596,7 +5596,7 @@ Select cohesive settings that create a professional, unified visual language acr
 
           // Track as campaign deliverable if campaignId is available
           const blogCampaignId = (args.campaignId as string) || context?.campaignId;
-          const blogEditorLink = `/website/blog/posts/${postId}`;
+          const blogEditorLink = `/website/blog/editor?postId=${postId}`;
           if (blogCampaignId) {
             trackDeliverableAsync(blogCampaignId, {
               missionId: context?.missionId ?? `mission_${Date.now()}`,
@@ -6441,7 +6441,7 @@ Select cohesive settings that create a professional, unified visual language acr
                   excerpt: blogAngle,
                   wordCount: blogResult.content.split(/\s+/).length,
                 },
-                reviewLink: `/website/blog/posts/${blogDoc.id}`,
+                reviewLink: `/website/blog/editor?postId=${blogDoc.id}`,
               });
 
               trackMissionStep(context, 'campaign_blog', 'COMPLETED', {
