@@ -458,13 +458,19 @@ export async function POST(request: NextRequest) {
       while (iterationCount < maxIterations) {
         iterationCount++;
 
+        // Force tool use on the first iteration for action/research queries.
+        // This prevents Jasper from answering factual questions from training data
+        // instead of delegating to agent teams. Conversational queries stay on 'auto'.
+        const shouldForceTools = iterationCount === 1 && queryClassification.queryType === 'action';
+        const iterationToolChoice = shouldForceTools ? ('required' as const) : ('auto' as const);
+
         const { result: response, model } = await chatWithFallback<ChatCompletionResponse>(
           modelsToTry,
           (m) => provider.chatWithTools({
             model: m as unknown as Parameters<typeof provider.chatWithTools>[0]['model'],
             messages: currentMessages,
             tools: JASPER_TOOLS,
-            toolChoice: 'auto',
+            toolChoice: iterationToolChoice,
             temperature: 0.7,
             maxTokens: 4096,
           }),

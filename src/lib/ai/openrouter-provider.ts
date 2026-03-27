@@ -235,7 +235,7 @@ export class OpenRouterProvider {
     model: ModelName;
     messages: ChatMessage[];
     tools?: ToolDefinition[];
-    toolChoice?: 'auto' | 'none' | { type: 'function'; function: { name: string } };
+    toolChoice?: 'auto' | 'none' | 'required' | { type: 'function'; function: { name: string } };
     temperature?: number;
     maxTokens?: number;
     topP?: number;
@@ -253,7 +253,7 @@ export class OpenRouterProvider {
       max_tokens: number;
       top_p: number;
       tools?: ToolDefinition[];
-      tool_choice?: 'auto' | 'none' | { type: 'function'; function: { name: string } };
+      tool_choice?: 'auto' | 'none' | 'required' | { type: 'function'; function: { name: string } };
     } = {
       model: openrouterModel,
       messages: params.messages,
