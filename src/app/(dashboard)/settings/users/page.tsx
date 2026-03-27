@@ -9,22 +9,9 @@ import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
-import { usePagination } from '@/hooks/usePagination';
 import { ROLE_PERMISSIONS, type RolePermissions, type UserRole } from '@/types/permissions';
-import { STANDARD_SCHEMAS } from '@/lib/schema/standard-schemas';
-import { orderBy as firestoreOrderBy, type QueryConstraint, type QueryDocumentSnapshot, type DocumentData } from 'firebase/firestore';
 import { auth } from '@/lib/firebase/config';
-
-interface FirestoreUser {
-  email?: string;
-  displayName?: string;
-  role?: UserRole;
-  title?: string;
-  department?: string;
-  status?: 'active' | 'invited' | 'suspended' | 'removed';
-  createdAt?: { seconds: number } | string;
-  customPermissions?: Partial<RolePermissions>;
-}
+import { logger } from '@/lib/logger/logger';
 
 interface TeamMember {
   id: string;
@@ -45,7 +32,6 @@ export default function TeamMembersPage() {
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
-  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [inviteRole, setInviteRole] = useState<UserRole>('member');
   const [editingMember, setEditingMember] = useState<TeamMember | null>(null);
   const [activePermissionTab, setActivePermissionTab] = useState<'preset' | 'custom'>('preset');
@@ -53,67 +39,58 @@ export default function TeamMembersPage() {
   const [notification, setNotification] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [confirmRemove, setConfirmRemove] = useState<TeamMember | null>(null);
   const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Fetch function with pagination
-  const fetchUsers = useCallback(async (lastDoc?: QueryDocumentSnapshot<DocumentData, DocumentData>) => {
-    const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+  // Fetch users via admin API route (uses adminDb server-side)
+  const fetchUsers = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const token = await auth?.currentUser?.getIdToken();
+      const res = await fetch('/api/admin/users?limit=100', {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
 
-    const constraints: QueryConstraint[] = [
-      firestoreOrderBy('createdAt', 'desc')
-    ];
-
-    return FirestoreService.getAllPaginated(
-      COLLECTIONS.USERS,
-      constraints,
-      50,
-      lastDoc
-    );
-  }, []);
-
-  const {
-    data: users,
-    loading,
-    error,
-    hasMore,
-    loadMore,
-    refresh
-  } = usePagination({ fetchFn: fetchUsers });
-
-  // Convert Firestore users to TeamMember format
-  useEffect(() => {
-    const members: TeamMember[] = (users ?? []).map((u: FirestoreUser, index: number) => {
-      const emailUsername = u.email?.split('@')[0];
-      const userName = u.displayName ?? (emailUsername ?? 'Unknown');
-      const createdAt = u.createdAt;
-      let joinedDate = 'Unknown';
-      if (createdAt) {
-        if (typeof createdAt === 'object' && 'seconds' in createdAt) {
-          joinedDate = new Date(createdAt.seconds * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-        } else if (typeof createdAt === 'string') {
-          joinedDate = new Date(createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-        }
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({ error: `HTTP ${res.status}` })) as { error?: string };
+        throw new Error(body.error ?? `Failed to load users (${res.status})`);
       }
-      return {
-        id: String(index + 1),
-        firestoreId: (u as Record<string, unknown>).id as string ?? String(index),
-        name: userName,
-        email: u.email ?? '',
-        role: u.role ?? 'member',
-        title: u.title ?? '',
-        department: u.department ?? '',
-        status: u.status ?? 'active',
-        joinedDate,
-        customPermissions: u.customPermissions,
-      };
-    });
 
-    setTeamMembers(members);
-  }, [users]);
+      const body = await res.json() as { data?: { users?: Array<{ id: string; email: string; name: string; role: string; createdAt: string | null }> } };
+      const rawUsers = body.data?.users ?? [];
+
+      const members: TeamMember[] = rawUsers.map((u, index: number) => {
+        const joinedDate = u.createdAt
+          ? new Date(u.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+          : 'Unknown';
+        return {
+          id: String(index + 1),
+          firestoreId: u.id,
+          name: u.name || u.email?.split('@')[0] || 'Unknown',
+          email: u.email ?? '',
+          role: (u.role as UserRole) ?? 'member',
+          title: '',
+          department: '',
+          status: 'active' as const,
+          joinedDate,
+        };
+      });
+
+      setTeamMembers(members);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to load users';
+      setError(msg);
+      logger.error('[TeamMembers] Failed to fetch users', err instanceof Error ? err : new Error(msg));
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   // Initial load
   useEffect(() => {
-    void refresh();
-  }, [refresh]);
+    void fetchUsers();
+  }, [fetchUsers]);
 
   const primaryColor = theme?.colors?.primary?.main || 'var(--color-primary)';
 
@@ -368,7 +345,7 @@ export default function TeamMembersPage() {
       setShowInviteModal(false);
       setInviteEmail('');
       setInviteRole('member');
-      void refresh();
+      void fetchUsers();
     } catch (err) {
       setNotification({ message: err instanceof Error ? err.message : 'Failed to send invite', type: 'error' });
     } finally {
@@ -381,63 +358,9 @@ export default function TeamMembersPage() {
   // ============================================================================
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: 'var(--color-bg-main)' }}>
-      <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
-        {/* Left Sidebar */}
-        <div style={{
-          width: sidebarOpen ? '260px' : '70px',
-          backgroundColor: 'var(--color-bg-main)',
-          borderRight: '1px solid var(--color-bg-elevated)',
-          transition: 'width 0.3s',
-          display: 'flex',
-          flexDirection: 'column'
-        }}>
-          <nav style={{ flex: 1, padding: '1rem 0', overflowY: 'auto' }}>
-            <Link
-              href="/leads"
-              style={{
-                width: '100%', padding: '0.875rem 1.25rem', display: 'flex', alignItems: 'center', gap: '0.75rem',
-                backgroundColor: 'transparent', color: 'var(--color-text-secondary)', borderLeft: '3px solid transparent',
-                fontSize: '0.875rem', fontWeight: '400', textDecoration: 'none'
-              }}
-            >
-              <span style={{ fontSize: '1.25rem' }}>🏠</span>
-              {sidebarOpen && <span>Back to CRM</span>}
-            </Link>
-
-            {Object.entries(STANDARD_SCHEMAS).map(([key, schema]) => (
-              <Link
-                key={key}
-                href={`/entities/${key}`}
-                style={{
-                  width: '100%', padding: '0.875rem 1.25rem', display: 'flex', alignItems: 'center', gap: '0.75rem',
-                  backgroundColor: 'transparent', color: 'var(--color-text-secondary)', borderLeft: '3px solid transparent',
-                  fontSize: '0.875rem', fontWeight: '400', textDecoration: 'none'
-                }}
-              >
-                <span style={{ fontSize: '1.25rem' }}>{schema.icon}</span>
-                {sidebarOpen && <span>{schema.pluralName}</span>}
-              </Link>
-            ))}
-          </nav>
-
-          <div style={{ padding: '1rem', borderTop: '1px solid var(--color-bg-elevated)' }}>
-            <button
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              style={{
-                width: '100%', padding: '0.5rem', backgroundColor: 'var(--color-bg-elevated)',
-                color: 'var(--color-text-secondary)', border: 'none', borderRadius: '0.375rem',
-                cursor: 'pointer', fontSize: '0.875rem'
-              }}
-            >
-              {sidebarOpen ? '← Collapse' : '→'}
-            </button>
-          </div>
-        </div>
-
-        {/* Main Content */}
-        <div style={{ flex: 1, padding: '2rem', overflowY: 'auto' }}>
-          <div>
+    <div style={{ minHeight: '100vh', backgroundColor: 'var(--color-bg-main)' }}>
+      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '2rem' }}>
+        <div>
             {/* Header */}
             <div style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
               <div>
@@ -565,29 +488,14 @@ export default function TeamMembersPage() {
                 </tbody>
               </table>
 
-              {/* Pagination */}
-              {(hasMore || loading) && (
-                <div style={{ marginTop: '1.5rem', textAlign: 'center' }}>
-                  <button
-                    onClick={() => void loadMore()}
-                    disabled={loading || !hasMore}
-                    style={{
-                      padding: '0.75rem 1.5rem',
-                      backgroundColor: loading || !hasMore ? 'var(--color-bg-elevated)' : 'var(--color-border-strong)',
-                      color: loading || !hasMore ? 'var(--color-text-disabled)' : 'var(--color-text-primary)',
-                      border: 'none', borderRadius: '0.5rem',
-                      cursor: loading || !hasMore ? 'not-allowed' : 'pointer',
-                      fontSize: '0.875rem', fontWeight: '500'
-                    }}
-                  >
-                    {loading ? 'Loading...' : hasMore ? `Load More (Showing ${teamMembers.length})` : 'All loaded'}
-                  </button>
+              {loading && teamMembers.length === 0 && (
+                <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--color-text-disabled)' }}>
+                  Loading users...
                 </div>
               )}
             </div>
           </div>
         </div>
-      </div>
 
       {/* Invite Modal */}
       {showInviteModal && (
