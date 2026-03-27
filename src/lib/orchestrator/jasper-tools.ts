@@ -1584,7 +1584,7 @@ export const JASPER_TOOLS: ToolDefinition[] = [
     function: {
       name: 'research_competitors',
       description:
-        'Find top 10 competitors in a specific niche and location, ranked by SEO presence. Delegates to the Competitor Researcher. ENABLED: TRUE.',
+        'DEPRECATED — DO NOT USE THIS TOOL. Use delegate_to_intelligence with researchType "competitor_analysis" instead. That creates a trackable mission for the user to review.',
       parameters: {
         type: 'object',
         properties: {
