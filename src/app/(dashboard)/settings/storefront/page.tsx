@@ -103,7 +103,8 @@ const DEFAULT_CONFIG: StorefrontConfig = {
 export default function StorefrontSettingsPage() {
   const { user } = useAuth();
   const { theme: crmTheme } = useOrgTheme(); // Get CRM theme automatically
-  const { updateModule } = useFeatureModules();
+  const { isModuleEnabled } = useFeatureModules();
+  const storefrontEnabled = isModuleEnabled('storefront');
   const [config, setConfig] = useState<StorefrontConfig>(DEFAULT_CONFIG);
   const [activeTab, setActiveTab] = useState<'setup' | 'widgets'>('setup'); // Removed 'theme' tab
   const [showPreview, setShowPreview] = useState(true);
@@ -132,8 +133,6 @@ export default function StorefrontSettingsPage() {
             };
           }
           setConfig(loaded);
-          // Sync storefront enabled state → storefront feature module on load
-          updateModule('storefront', loaded.enabled);
         }
       } catch (error: unknown) {
         logger.error('Failed to load storefront config', error instanceof Error ? error : new Error(String(error)));
@@ -141,7 +140,7 @@ export default function StorefrontSettingsPage() {
     };
 
     void loadConfig();
-  }, [user, updateModule]);
+  }, [user]);
 
   const handleSave = async () => {
     if (!user) {return;}
@@ -190,8 +189,6 @@ export default function StorefrontSettingsPage() {
         true
       );
 
-      // Sync storefront enabled state → storefront feature module
-      updateModule('storefront', config.enabled);
     } catch (error: unknown) {
       logger.error('Failed to save storefront config', error instanceof Error ? error : new Error(String(error)));
     } finally {
@@ -260,17 +257,6 @@ export default function StorefrontSettingsPage() {
               </p>
             </div>
             <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem 1.25rem', backgroundColor: config.enabled ? 'var(--color-success-dark)' : 'var(--color-bg-paper)', border: '1px solid', borderColor: config.enabled ? 'var(--color-success)' : 'var(--color-border-strong)', borderRadius: '0.5rem', cursor: 'pointer' }}>
-                <input 
-                  type="checkbox" 
-                  checked={config.enabled}
-                  onChange={(e) => updateConfig(['enabled'], e.target.checked)}
-                  style={{ width: '1.25rem', height: '1.25rem' }}
-                />
-                <span style={{ fontSize: '0.875rem', fontWeight: '600', color: config.enabled ? 'var(--color-success-light)' : 'var(--color-text-secondary)' }}>
-                  {config.enabled ? '🟢 Store Enabled' : '⚪ Store Disabled'}
-                </span>
-              </label>
               <button
                 onClick={() => { void handleSave(); }}
                 disabled={isSaving}
@@ -788,20 +774,20 @@ export default function StorefrontSettingsPage() {
           {/* Widgets Tab */}
           {activeTab === 'widgets' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-              {!config.enabled && (
+              {!storefrontEnabled && (
                 <div style={{ backgroundColor: 'var(--color-error-dark)', border: '1px solid var(--color-error-dark)', borderRadius: '0.75rem', padding: '1.5rem', display: 'flex', alignItems: 'start', gap: '1rem' }}>
                   <span style={{ fontSize: '1.5rem' }}>⚠️</span>
                   <div>
                     <h4 style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--color-error-light)', marginBottom: '0.5rem' }}>Store Not Enabled</h4>
                     <p style={{ fontSize: '0.875rem', color: 'var(--color-error-light)' }}>
-                      Enable your storefront using the toggle above to generate embed codes.
+                      Enable your storefront in <a href="/settings/features" style={{ color: 'var(--color-error-light)', fontWeight: 600, textDecoration: 'underline' }}>Settings &gt; Features</a> to generate embed codes.
                     </p>
                   </div>
                 </div>
               )}
 
               {/* WordPress Shortcode */}
-              <div style={{ backgroundColor: 'var(--color-bg-main)', border: '1px solid var(--color-border-light)', borderRadius: '0.75rem', padding: '1.5rem', opacity: config.enabled ? 1 : 0.5 }}>
+              <div style={{ backgroundColor: 'var(--color-bg-main)', border: '1px solid var(--color-border-light)', borderRadius: '0.75rem', padding: '1.5rem', opacity: storefrontEnabled ? 1 : 0.5 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                     <span style={{ fontSize: '1.5rem' }}>🔌</span>
@@ -809,8 +795,8 @@ export default function StorefrontSettingsPage() {
                   </div>
                   <button
                     onClick={() => copyCode(embedCodes.wordpress, 'wordpress')}
-                    disabled={!config.enabled}
-                    style={{ padding: '0.5rem 1rem', backgroundColor: copiedCode === 'wordpress' ? 'var(--color-success-dark)' : 'var(--color-bg-paper)', color: copiedCode === 'wordpress' ? 'var(--color-success-light)' : 'var(--color-text-primary)', border: '1px solid var(--color-border-strong)', borderRadius: '0.375rem', fontSize: '0.75rem', fontWeight: '600', cursor: config.enabled ? 'pointer' : 'not-allowed' }}
+                    disabled={!storefrontEnabled}
+                    style={{ padding: '0.5rem 1rem', backgroundColor: copiedCode === 'wordpress' ? 'var(--color-success-dark)' : 'var(--color-bg-paper)', color: copiedCode === 'wordpress' ? 'var(--color-success-light)' : 'var(--color-text-primary)', border: '1px solid var(--color-border-strong)', borderRadius: '0.375rem', fontSize: '0.75rem', fontWeight: '600', cursor: storefrontEnabled ? 'pointer' : 'not-allowed' }}
                   >
                     {copiedCode === 'wordpress' ? '✓ Copied!' : '📋 Copy'}
                   </button>
@@ -821,7 +807,7 @@ export default function StorefrontSettingsPage() {
               </div>
 
               {/* HTML/JavaScript */}
-              <div style={{ backgroundColor: 'var(--color-bg-main)', border: '1px solid var(--color-border-light)', borderRadius: '0.75rem', padding: '1.5rem', opacity: config.enabled ? 1 : 0.5 }}>
+              <div style={{ backgroundColor: 'var(--color-bg-main)', border: '1px solid var(--color-border-light)', borderRadius: '0.75rem', padding: '1.5rem', opacity: storefrontEnabled ? 1 : 0.5 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                     <span style={{ fontSize: '1.5rem' }}>🌐</span>
@@ -829,8 +815,8 @@ export default function StorefrontSettingsPage() {
                   </div>
                   <button
                     onClick={() => copyCode(embedCodes.html, 'html')}
-                    disabled={!config.enabled}
-                    style={{ padding: '0.5rem 1rem', backgroundColor: copiedCode === 'html' ? 'var(--color-success-dark)' : 'var(--color-bg-paper)', color: copiedCode === 'html' ? 'var(--color-success-light)' : 'var(--color-text-primary)', border: '1px solid var(--color-border-strong)', borderRadius: '0.375rem', fontSize: '0.75rem', fontWeight: '600', cursor: config.enabled ? 'pointer' : 'not-allowed' }}
+                    disabled={!storefrontEnabled}
+                    style={{ padding: '0.5rem 1rem', backgroundColor: copiedCode === 'html' ? 'var(--color-success-dark)' : 'var(--color-bg-paper)', color: copiedCode === 'html' ? 'var(--color-success-light)' : 'var(--color-text-primary)', border: '1px solid var(--color-border-strong)', borderRadius: '0.375rem', fontSize: '0.75rem', fontWeight: '600', cursor: storefrontEnabled ? 'pointer' : 'not-allowed' }}
                   >
                     {copiedCode === 'html' ? '✓ Copied!' : '📋 Copy'}
                   </button>
@@ -841,7 +827,7 @@ export default function StorefrontSettingsPage() {
               </div>
 
               {/* React Component */}
-              <div style={{ backgroundColor: 'var(--color-bg-main)', border: '1px solid var(--color-border-light)', borderRadius: '0.75rem', padding: '1.5rem', opacity: config.enabled ? 1 : 0.5 }}>
+              <div style={{ backgroundColor: 'var(--color-bg-main)', border: '1px solid var(--color-border-light)', borderRadius: '0.75rem', padding: '1.5rem', opacity: storefrontEnabled ? 1 : 0.5 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                     <span style={{ fontSize: '1.5rem' }}>⚛️</span>
@@ -849,8 +835,8 @@ export default function StorefrontSettingsPage() {
                   </div>
                   <button
                     onClick={() => copyCode(embedCodes.react, 'react')}
-                    disabled={!config.enabled}
-                    style={{ padding: '0.5rem 1rem', backgroundColor: copiedCode === 'react' ? 'var(--color-success-dark)' : 'var(--color-bg-paper)', color: copiedCode === 'react' ? 'var(--color-success-light)' : 'var(--color-text-primary)', border: '1px solid var(--color-border-strong)', borderRadius: '0.375rem', fontSize: '0.75rem', fontWeight: '600', cursor: config.enabled ? 'pointer' : 'not-allowed' }}
+                    disabled={!storefrontEnabled}
+                    style={{ padding: '0.5rem 1rem', backgroundColor: copiedCode === 'react' ? 'var(--color-success-dark)' : 'var(--color-bg-paper)', color: copiedCode === 'react' ? 'var(--color-success-light)' : 'var(--color-text-primary)', border: '1px solid var(--color-border-strong)', borderRadius: '0.375rem', fontSize: '0.75rem', fontWeight: '600', cursor: storefrontEnabled ? 'pointer' : 'not-allowed' }}
                   >
                     {copiedCode === 'react' ? '✓ Copied!' : '📋 Copy'}
                   </button>
@@ -861,7 +847,7 @@ export default function StorefrontSettingsPage() {
               </div>
 
               {/* iframe */}
-              <div style={{ backgroundColor: 'var(--color-bg-main)', border: '1px solid var(--color-border-light)', borderRadius: '0.75rem', padding: '1.5rem', opacity: config.enabled ? 1 : 0.5 }}>
+              <div style={{ backgroundColor: 'var(--color-bg-main)', border: '1px solid var(--color-border-light)', borderRadius: '0.75rem', padding: '1.5rem', opacity: storefrontEnabled ? 1 : 0.5 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                     <span style={{ fontSize: '1.5rem' }}>🖼️</span>
@@ -869,8 +855,8 @@ export default function StorefrontSettingsPage() {
                   </div>
                   <button
                     onClick={() => copyCode(embedCodes.iframe, 'iframe')}
-                    disabled={!config.enabled}
-                    style={{ padding: '0.5rem 1rem', backgroundColor: copiedCode === 'iframe' ? 'var(--color-success-dark)' : 'var(--color-bg-paper)', color: copiedCode === 'iframe' ? 'var(--color-success-light)' : 'var(--color-text-primary)', border: '1px solid var(--color-border-strong)', borderRadius: '0.375rem', fontSize: '0.75rem', fontWeight: '600', cursor: config.enabled ? 'pointer' : 'not-allowed' }}
+                    disabled={!storefrontEnabled}
+                    style={{ padding: '0.5rem 1rem', backgroundColor: copiedCode === 'iframe' ? 'var(--color-success-dark)' : 'var(--color-bg-paper)', color: copiedCode === 'iframe' ? 'var(--color-success-light)' : 'var(--color-text-primary)', border: '1px solid var(--color-border-strong)', borderRadius: '0.375rem', fontSize: '0.75rem', fontWeight: '600', cursor: storefrontEnabled ? 'pointer' : 'not-allowed' }}
                   >
                     {copiedCode === 'iframe' ? '✓ Copied!' : '📋 Copy'}
                   </button>

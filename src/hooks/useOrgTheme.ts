@@ -102,16 +102,31 @@ export function useOrgTheme() {
 
     const root = document.documentElement;
 
-    // Apply color variables
-    root.style.setProperty('--color-primary', theme.colors.primary.main);
+    // Convert hex color to RGB triplet string (e.g. "#6366f1" → "99, 102, 241")
+    const hexToRgbString = (hex: string): string | null => {
+      const match = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+      if (!match) { return null; }
+      return `${parseInt(match[1], 16)}, ${parseInt(match[2], 16)}, ${parseInt(match[3], 16)}`;
+    };
+
+    // Set a color variable and its -rgb companion
+    const setColor = (name: string, value: string) => {
+      root.style.setProperty(name, value);
+      const rgb = hexToRgbString(value);
+      if (rgb) { root.style.setProperty(`${name}-rgb`, rgb); }
+    };
+
+    // Apply color variables (with auto-generated RGB companions)
+    setColor('--color-primary', theme.colors.primary.main);
     root.style.setProperty('--color-primary-light', theme.colors.primary.light);
     root.style.setProperty('--color-primary-dark', theme.colors.primary.dark);
-    root.style.setProperty('--color-secondary', theme.colors.secondary.main);
-    root.style.setProperty('--color-accent', theme.colors.accent.main);
-    root.style.setProperty('--color-success', theme.colors.success.main);
-    root.style.setProperty('--color-error', theme.colors.error.main);
-    root.style.setProperty('--color-warning', theme.colors.warning.main);
-    root.style.setProperty('--color-info', theme.colors.info.main);
+    root.style.setProperty('--color-primary-contrast', theme.colors.primary.contrast);
+    setColor('--color-secondary', theme.colors.secondary.main);
+    setColor('--color-accent', theme.colors.accent.main);
+    setColor('--color-success', theme.colors.success.main);
+    setColor('--color-error', theme.colors.error.main);
+    setColor('--color-warning', theme.colors.warning.main);
+    setColor('--color-info', theme.colors.info.main);
 
     // Background colors
     root.style.setProperty('--color-bg-main', theme.colors.background.main);
@@ -121,7 +136,7 @@ export function useOrgTheme() {
     // Text colors
     root.style.setProperty('--color-text-primary', theme.colors.text.primary);
     root.style.setProperty('--color-text-secondary', theme.colors.text.secondary);
-    root.style.setProperty('--color-text-disabled', theme.colors.text.disabled);
+    setColor('--color-text-disabled', theme.colors.text.disabled);
 
     // Border colors
     root.style.setProperty('--color-border-main', theme.colors.border.main);

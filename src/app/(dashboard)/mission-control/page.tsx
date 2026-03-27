@@ -131,6 +131,433 @@ function LiveBadge() {
 // ============================================================================
 
 // ============================================================================
+// INTELLIGENCE BRIEF RENDERER
+// ============================================================================
+
+function IntelligenceBriefRenderer({
+  data,
+  sectionLabel,
+  contentBox,
+}: {
+  data: Record<string, unknown>;
+  sectionLabel: React.CSSProperties;
+  contentBox: React.CSSProperties;
+}) {
+  const [showRaw, setShowRaw] = useState(false);
+
+  if (showRaw) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={sectionLabel}>Intelligence Brief (Raw)</div>
+          <button
+            type="button"
+            onClick={() => setShowRaw(false)}
+            style={{
+              background: 'none', border: '1px solid var(--color-border-light)',
+              borderRadius: '0.375rem', padding: '0.25rem 0.625rem',
+              fontSize: '0.6875rem', fontWeight: 600, cursor: 'pointer',
+              color: 'var(--color-text-secondary)', font: 'inherit',
+            }}
+          >
+            Formatted View
+          </button>
+        </div>
+        <div style={{
+          ...contentBox,
+          fontFamily: 'monospace', fontSize: '0.6875rem',
+          whiteSpace: 'pre-wrap', wordBreak: 'break-word', maxHeight: '500px',
+        }}>
+          {JSON.stringify(data, null, 2)}
+        </div>
+      </div>
+    );
+  }
+
+  const synthesis = data.synthesis as Record<string, unknown> | null;
+  const competitors = (data.competitorAnalysis as Record<string, unknown>)
+    ?.competitors as Array<Record<string, unknown>> | undefined;
+  const marketInsights = (data.competitorAnalysis as Record<string, unknown>)
+    ?.marketInsights as Record<string, unknown> | undefined;
+  const trendSignals = (data.trendAnalysis as Record<string, unknown>)
+    ?.signals as Array<Record<string, unknown>> | undefined;
+  const execution = data.execution as Record<string, unknown> | null;
+  const errors = data.errors as string[] | undefined;
+  const request = data.request as Record<string, unknown> | null;
+
+  const pillStyle = (color: string, bg: string): React.CSSProperties => ({
+    display: 'inline-block', fontSize: '0.625rem', fontWeight: 700,
+    padding: '0.125rem 0.5rem', borderRadius: '9999px',
+    color, backgroundColor: bg, letterSpacing: '0.02em',
+  });
+
+  const cardStyle: React.CSSProperties = {
+    padding: '0.625rem 0.75rem', backgroundColor: 'var(--color-bg-elevated)',
+    borderRadius: '0.5rem', border: '1px solid var(--color-border-light)',
+  };
+
+  const urgencyColor = (u: string) => {
+    switch (u) {
+      case 'HIGH': return { color: '#dc2626', bg: 'rgba(220,38,38,0.1)' };
+      case 'MEDIUM': return { color: '#d97706', bg: 'rgba(217,119,6,0.1)' };
+      default: return { color: '#6b7280', bg: 'rgba(107,114,128,0.1)' };
+    }
+  };
+
+  const signalTypeIcon = (t: string) => {
+    switch (t) {
+      case 'TREND_EMERGING': return '\u2197';    // ↗
+      case 'TREND_DECLINING': return '\u2198';    // ↘
+      case 'INDUSTRY_SHIFT': return '\u21C4';     // ⇄
+      case 'OPPORTUNITY': return '\u2605';        // ★
+      default: return '\u2022';                   // •
+    }
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+      {/* Header with toggle */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <div style={sectionLabel}>Intelligence Brief</div>
+          {synthesis?.overallConfidence != null && (
+            <span style={pillStyle(
+              Number(synthesis.overallConfidence) >= 0.7 ? '#059669' : '#d97706',
+              Number(synthesis.overallConfidence) >= 0.7 ? 'rgba(5,150,105,0.1)' : 'rgba(217,119,6,0.1)',
+            )}>
+              {Math.round(Number(synthesis.overallConfidence) * 100)}% confidence
+            </span>
+          )}
+        </div>
+        <button
+          type="button"
+          onClick={() => setShowRaw(true)}
+          style={{
+            background: 'none', border: '1px solid var(--color-border-light)',
+            borderRadius: '0.375rem', padding: '0.25rem 0.625rem',
+            fontSize: '0.6875rem', fontWeight: 600, cursor: 'pointer',
+            color: 'var(--color-text-secondary)', font: 'inherit',
+          }}
+        >
+          Raw JSON
+        </button>
+      </div>
+
+      {/* Research context */}
+      {request ? (
+        <div style={{
+          ...cardStyle, display: 'flex', flexWrap: 'wrap', gap: '0.5rem',
+          alignItems: 'center', fontSize: '0.75rem',
+        }}>
+          <span style={{ fontWeight: 600, color: 'var(--color-text-secondary)' }}>
+            {String(request.intent ?? '').replace(/_/g, ' ')}
+          </span>
+          {request.niche ? (
+            <span style={pillStyle('#7c3aed', 'rgba(124,58,237,0.1)')}>
+              {String(request.niche)}
+            </span>
+          ) : null}
+          {request.brandName ? (
+            <span style={{ color: 'var(--color-text-disabled)' }}>
+              for &quot;{String(request.brandName)}&quot;
+            </span>
+          ) : null}
+          {Array.isArray(request.keywords) && request.keywords.length > 0 && (
+            <span style={{ color: 'var(--color-text-disabled)' }}>
+              &middot; {(request.keywords as string[]).join(', ')}
+            </span>
+          )}
+        </div>
+      ) : null}
+
+      {/* Execution status bar */}
+      {execution ? (
+        <div style={{
+          display: 'flex', gap: '0.75rem', fontSize: '0.6875rem',
+          color: 'var(--color-text-secondary)',
+        }}>
+          <span>
+            <span style={{ fontWeight: 700, color: '#059669' }}>
+              {String(execution.successfulSpecialists)}
+            </span> / {String(execution.totalSpecialists)} specialists succeeded
+          </span>
+          {Number(execution.failedSpecialists) > 0 && (
+            <span style={{ color: '#dc2626' }}>
+              {String(execution.failedSpecialists)} failed
+            </span>
+          )}
+          {execution.totalExecutionTimeMs != null && (
+            <span>
+              {(Number(execution.totalExecutionTimeMs) / 1000).toFixed(1)}s
+            </span>
+          )}
+        </div>
+      ) : null}
+
+      {/* Executive Summary */}
+      {synthesis?.executiveSummary ? (
+        <div>
+          <div style={sectionLabel}>Executive Summary</div>
+          <div style={{ ...contentBox, fontWeight: 500, lineHeight: 1.7 }}>
+            {String(synthesis.executiveSummary)}
+          </div>
+        </div>
+      ) : null}
+
+      {/* Key Findings */}
+      {Array.isArray(synthesis?.keyFindings) && (synthesis.keyFindings as string[]).length > 0 ? (
+        <div>
+          <div style={sectionLabel}>Key Findings</div>
+          <div style={{ ...contentBox, display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
+            {(synthesis.keyFindings as string[]).map((finding, i) => (
+              <div key={i} style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}>
+                <span style={{
+                  width: 20, height: 20, borderRadius: '50%', flexShrink: 0,
+                  backgroundColor: 'rgba(59,130,246,0.12)', color: '#3b82f6',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: '0.625rem', fontWeight: 700,
+                }}>
+                  {i + 1}
+                </span>
+                <span>{finding}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      {/* Opportunities & Threats side by side */}
+      {(Array.isArray(synthesis?.opportunities) || Array.isArray(synthesis?.threats)) ? (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+          {Array.isArray(synthesis?.opportunities) && (synthesis.opportunities as string[]).length > 0 ? (
+            <div>
+              <div style={sectionLabel}>Opportunities</div>
+              <div style={{ ...contentBox, display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
+                {(synthesis.opportunities as string[]).map((opp, i) => (
+                  <div key={i} style={{
+                    padding: '0.375rem 0.625rem', borderRadius: '0.375rem',
+                    backgroundColor: 'rgba(5,150,105,0.06)',
+                    borderLeft: '3px solid #059669', fontSize: '0.8125rem',
+                  }}>
+                    {opp}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
+          {Array.isArray(synthesis?.threats) && (synthesis.threats as string[]).length > 0 ? (
+            <div>
+              <div style={sectionLabel}>Threats</div>
+              <div style={{ ...contentBox, display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
+                {(synthesis.threats as string[]).map((threat, i) => (
+                  <div key={i} style={{
+                    padding: '0.375rem 0.625rem', borderRadius: '0.375rem',
+                    backgroundColor: 'rgba(220,38,38,0.06)',
+                    borderLeft: '3px solid #dc2626', fontSize: '0.8125rem',
+                  }}>
+                    {threat}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
+      {/* Competitor Analysis */}
+      {competitors && competitors.length > 0 && (
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.375rem' }}>
+            <div style={sectionLabel}>Competitor Analysis</div>
+            <span style={pillStyle('#3b82f6', 'rgba(59,130,246,0.1)')}>
+              {competitors.length} found
+            </span>
+            {marketInsights?.avgDomainAuthority != null && (
+              <span style={{ fontSize: '0.625rem', color: 'var(--color-text-disabled)' }}>
+                Avg DA: {String(marketInsights.avgDomainAuthority)}
+              </span>
+            )}
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            {competitors.map((comp, i) => {
+              const seo = comp.seoMetrics as Record<string, unknown> | undefined;
+              const pos = comp.positioning as Record<string, unknown> | undefined;
+              const strengths = comp.strengths as string[] | undefined;
+              const weaknesses = comp.weaknesses as string[] | undefined;
+              return (
+                <div key={i} style={cardStyle}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.375rem' }}>
+                    <div>
+                      <div style={{ fontWeight: 600, fontSize: '0.875rem' }}>
+                        #{String(comp.rank)} {String(comp.name)}
+                      </div>
+                      <div style={{ fontSize: '0.6875rem', color: 'var(--color-text-disabled)' }}>
+                        {String(comp.domain)}
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.375rem' }}>
+                      {seo?.domainAuthority != null ? (
+                        <span style={pillStyle('#7c3aed', 'rgba(124,58,237,0.1)')}>
+                          DA {String(seo.domainAuthority)}
+                        </span>
+                      ) : null}
+                      {seo?.estimatedTraffic ? (
+                        <span style={pillStyle(
+                          seo.estimatedTraffic === 'high' ? '#059669' : '#d97706',
+                          seo.estimatedTraffic === 'high' ? 'rgba(5,150,105,0.1)' : 'rgba(217,119,6,0.1)',
+                        )}>
+                          {String(seo.estimatedTraffic)} traffic
+                        </span>
+                      ) : null}
+                    </div>
+                  </div>
+                  {pos?.targetAudience ? (
+                    <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginBottom: '0.25rem' }}>
+                      Target: {String(pos.targetAudience)}
+                      {pos.pricePoint && pos.pricePoint !== 'unknown' ? ` \u00B7 ${String(pos.pricePoint)}` : null}
+                    </div>
+                  ) : null}
+                  {pos?.tagline ? (
+                    <div style={{ fontSize: '0.75rem', fontStyle: 'italic', color: 'var(--color-text-secondary)', marginBottom: '0.375rem' }}>
+                      &ldquo;{String(pos.tagline)}&rdquo;
+                    </div>
+                  ) : null}
+                  <div style={{ display: 'flex', gap: '1rem', fontSize: '0.6875rem' }}>
+                    {strengths && strengths.length > 0 && (
+                      <div style={{ flex: 1 }}>
+                        <span style={{ fontWeight: 600, color: '#059669' }}>Strengths: </span>
+                        {strengths.join(', ')}
+                      </div>
+                    )}
+                    {weaknesses && weaknesses.length > 0 && (
+                      <div style={{ flex: 1 }}>
+                        <span style={{ fontWeight: 600, color: '#dc2626' }}>Gaps: </span>
+                        {weaknesses.join(', ')}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          {/* Market Insights */}
+          {marketInsights?.recommendations && Array.isArray(marketInsights.recommendations) ? (
+            <div style={{ marginTop: '0.5rem', ...cardStyle, borderLeft: '3px solid #3b82f6' }}>
+              <div style={{ fontSize: '0.6875rem', fontWeight: 700, color: '#3b82f6', marginBottom: '0.25rem' }}>
+                Market Recommendations
+              </div>
+              {(marketInsights.recommendations as string[]).map((rec, i) => (
+                <div key={i} style={{ fontSize: '0.8125rem', marginBottom: '0.125rem' }}>
+                  {rec}
+                </div>
+              ))}
+            </div>
+          ) : null}
+        </div>
+      )}
+
+      {/* Trend Signals */}
+      {trendSignals && trendSignals.length > 0 && (
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.375rem' }}>
+            <div style={sectionLabel}>Trend Signals</div>
+            <span style={pillStyle('#3b82f6', 'rgba(59,130,246,0.1)')}>
+              {trendSignals.length} detected
+            </span>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            {trendSignals.map((sig, i) => {
+              const uc = urgencyColor(String(sig.urgency ?? 'LOW'));
+              return (
+                <div key={i} style={cardStyle}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.25rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+                      <span style={{ fontSize: '0.875rem' }}>
+                        {signalTypeIcon(String(sig.type))}
+                      </span>
+                      <span style={{ fontWeight: 600, fontSize: '0.8125rem' }}>
+                        {String(sig.title ?? '')}
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.375rem', flexShrink: 0 }}>
+                      <span style={pillStyle(uc.color, uc.bg)}>
+                        {String(sig.urgency)}
+                      </span>
+                      <span style={pillStyle('#6b7280', 'rgba(107,114,128,0.1)')}>
+                        {String(sig.type ?? '').replace(/_/g, ' ')}
+                      </span>
+                    </div>
+                  </div>
+                  {sig.description ? (
+                    <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', lineHeight: 1.5 }}>
+                      {String(sig.description)}
+                    </div>
+                  ) : null}
+                  {sig.source ? (
+                    <div style={{ fontSize: '0.625rem', color: 'var(--color-text-disabled)', marginTop: '0.25rem' }}>
+                      Source: {String(sig.source)}
+                    </div>
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Recommended Actions */}
+      {Array.isArray(synthesis?.recommendedActions) && (synthesis.recommendedActions as string[]).length > 0 && (
+        <div>
+          <div style={sectionLabel}>Recommended Actions</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+            {(synthesis.recommendedActions as string[]).map((action, i) => (
+              <div key={i} style={{
+                ...cardStyle, display: 'flex', alignItems: 'center', gap: '0.5rem',
+                padding: '0.5rem 0.75rem',
+              }}>
+                <span style={{
+                  width: 6, height: 6, borderRadius: '50%',
+                  backgroundColor: 'var(--color-primary)', flexShrink: 0,
+                }} />
+                <span style={{ fontSize: '0.8125rem' }}>{action}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Errors */}
+      {errors && errors.length > 0 && (
+        <div>
+          <div style={sectionLabel}>Errors</div>
+          <div style={{
+            ...contentBox, backgroundColor: 'rgba(220,38,38,0.05)',
+            border: '1px solid rgba(220,38,38,0.15)',
+          }}>
+            {errors.map((err, i) => (
+              <div key={i} style={{ fontSize: '0.75rem', color: '#dc2626', marginBottom: '0.25rem' }}>
+                {err}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Timestamp footer */}
+      {(data.requestedAt || data.completedAt) ? (
+        <div style={{
+          fontSize: '0.625rem', color: 'var(--color-text-disabled)',
+          display: 'flex', gap: '1rem',
+        }}>
+          {data.requestedAt ? <span>Requested: {new Date(String(data.requestedAt)).toLocaleString()}</span> : null}
+          {data.completedAt ? <span>Completed: {new Date(String(data.completedAt)).toLocaleString()}</span> : null}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+// ============================================================================
 // DETAIL PANEL OUTPUT RENDERER
 // ============================================================================
 
@@ -170,7 +597,9 @@ function DetailOutputRenderer({ toolResult }: { toolResult: string }) {
     );
   }
 
-  const outputType = (parsed.type as string) ?? (parsed.status === 'draft' ? 'draft' : null);
+  const outputType = (parsed.type as string)
+    ?? (parsed.status === 'draft' ? 'draft' : null)
+    ?? (parsed.briefId && (parsed.synthesis || parsed.competitorAnalysis) ? 'intelligence-brief' : null);
 
   switch (outputType) {
     case 'research': {
@@ -428,6 +857,9 @@ function DetailOutputRenderer({ toolResult }: { toolResult: string }) {
         </div>
       );
     }
+
+    case 'intelligence-brief':
+      return <IntelligenceBriefRenderer data={parsed} sectionLabel={sectionLabel} contentBox={contentBox} />;
 
     default:
       return (

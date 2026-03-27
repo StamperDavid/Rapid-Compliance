@@ -22,13 +22,13 @@ export default function SettingsPage() {
 
   const primaryColor = theme?.colors?.primary?.main || 'var(--color-primary)';
 
-  // Build feature module cards — storefront links to /settings/storefront,
+  // Build feature module cards — storefront links to its dedicated config page,
   // all others link to /settings/module/{slug}
   const featureModuleCards = FEATURE_MODULES.map((mod) => {
     const slug = MODULE_ID_TO_SLUG[mod.id];
     const href =
       mod.id === 'storefront'
-        ? '/website/store'
+        ? '/settings/storefront'
         : `/settings/module/${slug}`;
     return {
       icon: MODULE_EMOJI[mod.id],
@@ -54,7 +54,6 @@ export default function SettingsPage() {
     {
       title: 'E-Commerce',
       items: [
-        { icon: '🛒', label: 'Online Storefront', description: 'Enable store, choose products/services/both, customize theme, generate embed codes', href: `/settings/storefront`, permission: canManageOrganization },
         { icon: '🏷️', label: 'Promotions & Coupons', description: 'Create discount codes, manage AI-authorized offers, and track coupon performance', href: `/settings/promotions`, permission: canManageOrganization },
       ]
     },

@@ -138,11 +138,11 @@ function formatFinalDuration(mission: Mission): string {
 
 function MissionStatusBadge({ status }: { status: Mission['status'] }) {
   const configs: Record<Mission['status'], { label: string; color: string; bg: string }> = {
-    PENDING: { label: 'Queued', color: 'var(--color-text-secondary)', bg: 'rgba(158,158,158,0.15)' },
-    IN_PROGRESS: { label: 'In Progress', color: 'var(--color-success)', bg: 'rgba(76,175,80,0.15)' },
-    AWAITING_APPROVAL: { label: 'Needs Approval', color: 'var(--color-warning)', bg: 'rgba(255,152,0,0.15)' },
-    COMPLETED: { label: 'Completed', color: 'var(--color-primary)', bg: 'rgba(99,102,241,0.15)' },
-    FAILED: { label: 'Failed', color: 'var(--color-error)', bg: 'rgba(244,67,54,0.15)' },
+    PENDING: { label: 'Queued', color: 'var(--color-text-secondary)', bg: 'rgba(var(--color-text-disabled-rgb), 0.15)' },
+    IN_PROGRESS: { label: 'In Progress', color: 'var(--color-success)', bg: 'rgba(var(--color-success-rgb), 0.15)' },
+    AWAITING_APPROVAL: { label: 'Needs Approval', color: 'var(--color-warning)', bg: 'rgba(var(--color-warning-rgb), 0.15)' },
+    COMPLETED: { label: 'Completed', color: 'var(--color-primary)', bg: 'rgba(var(--color-primary-rgb), 0.15)' },
+    FAILED: { label: 'Failed', color: 'var(--color-error)', bg: 'rgba(var(--color-error-rgb), 0.15)' },
   };
 
   const cfg = configs[status];
@@ -175,7 +175,7 @@ function StepProgressBar({ status }: { status: MissionStepStatus }) {
     <div style={{
       width: '100%',
       height: 4,
-      backgroundColor: 'rgba(var(--color-text-disabled-rgb, 158,158,158), 0.2)',
+      backgroundColor: 'rgba(var(--color-text-disabled-rgb), 0.2)',
       borderRadius: 2,
       overflow: 'hidden',
       position: 'relative',
@@ -255,8 +255,8 @@ function StepOutputPreview({ output }: { output: ParsedStepOutput }) {
           {insights.slice(0, 3).map((insight, i) => (
             <span key={i} style={{
               ...chipStyle,
-              color: '#7c3aed',
-              backgroundColor: 'rgba(124,58,237,0.1)',
+              color: 'var(--color-secondary)',
+              backgroundColor: 'rgba(var(--color-secondary-rgb), 0.1)',
             }}>
               {insight.length > 50 ? `${insight.slice(0, 50)}...` : insight}
             </span>
@@ -291,8 +291,8 @@ function StepOutputPreview({ output }: { output: ParsedStepOutput }) {
               {messages.slice(0, 3).map((msg, i) => (
                 <span key={i} style={{
                   ...chipStyle,
-                  color: '#0ea5e9',
-                  backgroundColor: 'rgba(14,165,233,0.1)',
+                  color: 'var(--color-info)',
+                  backgroundColor: 'rgba(var(--color-info-rgb), 0.1)',
                 }}>
                   {msg.length > 40 ? `${msg.slice(0, 40)}...` : msg}
                 </span>
@@ -356,8 +356,8 @@ function StepOutputPreview({ output }: { output: ParsedStepOutput }) {
           {sceneCount !== undefined && (
             <span style={{
               ...chipStyle,
-              color: '#059669',
-              backgroundColor: 'rgba(5,150,105,0.1)',
+              color: 'var(--color-success)',
+              backgroundColor: 'rgba(var(--color-success-rgb), 0.1)',
             }}>
               {sceneCount} scene{sceneCount !== 1 ? 's' : ''}
             </span>
@@ -365,7 +365,7 @@ function StepOutputPreview({ output }: { output: ParsedStepOutput }) {
           <span style={{
             ...chipStyle,
             color: 'var(--color-primary)',
-            backgroundColor: 'rgba(var(--color-primary-rgb, 99,102,241), 0.1)',
+            backgroundColor: 'rgba(var(--color-primary-rgb), 0.1)',
           }}>
             Ready for review
           </span>
@@ -381,8 +381,8 @@ function StepOutputPreview({ output }: { output: ParsedStepOutput }) {
           {style && (
             <span style={{
               ...chipStyle,
-              color: '#e11d48',
-              backgroundColor: 'rgba(225,29,72,0.1)',
+              color: 'var(--color-accent)',
+              backgroundColor: 'rgba(var(--color-accent-rgb), 0.1)',
             }}>
               {style}
             </span>
@@ -454,16 +454,15 @@ function StepCard({
       style={{
         padding: '0.875rem 1rem',
         borderRadius: '0.625rem',
-        border: `1px solid ${isSelected ? 'var(--color-primary)' : 'var(--color-border-light)'}`,
+        border: `1px solid ${(isSelected || isActive) ? 'var(--color-primary)' : 'var(--color-border-light)'}`,
         backgroundColor: isSelected
-          ? 'rgba(var(--color-primary-rgb, 99,102,241), 0.04)'
+          ? 'rgba(var(--color-primary-rgb), 0.04)'
           : 'var(--color-bg-paper)',
         cursor: 'pointer',
         transition: 'all 0.15s ease',
         animation: 'step-fade-in 0.3s ease forwards',
         ...(isActive ? {
-          borderColor: 'var(--color-primary)',
-          boxShadow: '0 0 0 1px rgba(var(--color-primary-rgb, 99,102,241), 0.15)',
+          boxShadow: '0 0 0 1px rgba(var(--color-primary-rgb), 0.15)',
         } : {}),
       }}
     >
@@ -487,7 +486,7 @@ function StepCard({
           opacity: step.status === 'PENDING' ? 0.5 : 1,
         }}>
           <span style={{
-            color: '#fff',
+            color: 'var(--color-primary-contrast)',
             fontSize: '0.6875rem',
             fontWeight: 700,
             lineHeight: 1,
@@ -582,7 +581,7 @@ function StepCard({
           lineHeight: 1.4,
           marginTop: '0.375rem',
           padding: '0.375rem 0.5rem',
-          backgroundColor: 'rgba(244,67,54,0.08)',
+          backgroundColor: 'rgba(var(--color-error-rgb), 0.08)',
           borderRadius: '0.375rem',
         }}>
           {step.error}
@@ -879,7 +878,7 @@ function ExpandedOutputRenderer({ raw, parsed }: { raw: string; parsed: ParsedSt
                   padding: '0.375rem 0.75rem',
                   borderRadius: '0.375rem',
                   backgroundColor: 'var(--color-primary)',
-                  color: '#fff',
+                  color: 'var(--color-primary-contrast)',
                   fontSize: '0.6875rem',
                   fontWeight: 600,
                   textDecoration: 'none',
@@ -1022,7 +1021,7 @@ export default function MissionTimeline({ mission, onStepSelect, selectedStepId 
           <div style={{
             width: '100%',
             height: 6,
-            backgroundColor: 'rgba(var(--color-text-disabled-rgb, 158,158,158), 0.2)',
+            backgroundColor: 'rgba(var(--color-text-disabled-rgb), 0.2)',
             borderRadius: 3,
             overflow: 'hidden',
           }}>
