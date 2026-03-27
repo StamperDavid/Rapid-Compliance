@@ -11,7 +11,7 @@
 
 import React, { useState, useCallback, useMemo } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useUnifiedAuth } from '@/hooks/useUnifiedAuth';
 import { useFeatureModules } from '@/hooks/useFeatureModules';
 import { ThemeToggle } from '@/components/ThemeToggle';
@@ -54,6 +54,7 @@ import {
   Shield,
   Building2,
   TrendingUp,
+  LogOut,
   // Catalog icons
   ShoppingCart,
   Tag,
@@ -207,6 +208,7 @@ const SIDEBAR_COLLAPSED_WIDTH = 64;
 
 export default function AdminSidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   const { user } = useUnifiedAuth();
   const { isModuleEnabled } = useFeatureModules();
   const { isEntityEnabled } = useEntityConfig();
@@ -399,7 +401,11 @@ export default function AdminSidebar() {
           }}
         >
           {!isCollapsed ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <Link
+              href="/settings/account"
+              style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', textDecoration: 'none', cursor: 'pointer' }}
+              title="Account settings"
+            >
               <div
                 style={{
                   width: 36,
@@ -415,7 +421,9 @@ export default function AdminSidebar() {
                   flexShrink: 0,
                 }}
               >
-                RC
+                {user?.displayName
+                  ? user.displayName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+                  : (user?.email?.[0] ?? 'U').toUpperCase()}
               </div>
               <div style={{ minWidth: 0 }}>
                 <div
@@ -428,7 +436,7 @@ export default function AdminSidebar() {
                     textOverflow: 'ellipsis',
                   }}
                 >
-                  SalesVelocity.ai
+                  {user?.displayName ?? user?.email?.split('@')[0] ?? 'User'}
                 </div>
                 <div
                   style={{
@@ -439,12 +447,14 @@ export default function AdminSidebar() {
                     letterSpacing: '0.05em',
                   }}
                 >
-                  Command Center
+                  {user?.role ?? 'member'}
                 </div>
               </div>
-            </div>
+            </Link>
           ) : (
-            <div
+            <Link
+              href="/settings/account"
+              title={user?.displayName ?? user?.email ?? 'Account'}
               style={{
                 width: 36,
                 height: 36,
@@ -457,10 +467,13 @@ export default function AdminSidebar() {
                 color: 'var(--color-text-primary)',
                 fontSize: '0.875rem',
                 margin: '0 auto',
+                textDecoration: 'none',
               }}
             >
-              RC
-            </div>
+              {user?.displayName
+                ? user.displayName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+                : (user?.email?.[0] ?? 'U').toUpperCase()}
+            </Link>
           )}
 
           {/* Collapse Toggle (desktop) */}
@@ -845,6 +858,42 @@ export default function AdminSidebar() {
               {!isCollapsed && <span style={{ fontSize: '0.8125rem', fontWeight: 500 }}>Help</span>}
             </Link>
             <ThemeToggle collapsed={isCollapsed} />
+            <button
+              type="button"
+              title="Sign out"
+              onClick={() => {
+                void (async () => {
+                  const { signOutUser } = await import('@/lib/auth/auth-service');
+                  await signOutUser();
+                  router.push('/login');
+                })();
+              }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                padding: '0.5rem 0.5rem',
+                borderRadius: '0.375rem',
+                border: 'none',
+                background: 'transparent',
+                color: 'var(--color-text-secondary)',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+                fontSize: '0.8125rem',
+                fontWeight: 500,
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = 'rgba(var(--color-error-rgb, 239, 68, 68), 0.1)';
+                e.currentTarget.style.color = 'var(--color-error-light)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+                e.currentTarget.style.color = 'var(--color-text-secondary)';
+              }}
+            >
+              <LogOut className="w-4 h-4 flex-shrink-0" />
+              {!isCollapsed && <span>Sign Out</span>}
+            </button>
           </div>
           {!isCollapsed && (
             <div
