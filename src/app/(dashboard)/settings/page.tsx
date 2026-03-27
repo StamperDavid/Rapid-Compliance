@@ -46,6 +46,7 @@ export default function SettingsPage() {
         { icon: '🏢', label: 'Organization Profile', description: 'Company name, address, phone, website, industry, and social media', href: `/settings/organization`, permission: canManageOrganization },
         { icon: '🔑', label: 'API Keys', description: 'Configure Firebase, AI, payment, and email services', href: `/settings/api-keys`, permission: canManageAPIKeys },
         { icon: '💳', label: 'Billing & Plans', description: 'Manage subscription, usage, and billing', href: `/settings/billing`, permission: canManageBilling },
+        { icon: '🎛️', label: 'Feature Toggles', description: 'Enable or disable platform modules for your organization', href: `/settings/features`, permission: canManageOrganization },
       ]
     },
     {
