@@ -57,8 +57,8 @@ export default function TeamMembersPage() {
         throw new Error(body.error ?? `Failed to load users (${res.status})`);
       }
 
-      const body = await res.json() as { data?: { users?: Array<{ id: string; email: string; name: string; role: string; createdAt: string | null }> } };
-      const rawUsers = body.data?.users ?? [];
+      const body = await res.json() as { users?: Array<{ id: string; email: string; name: string; role: string; createdAt: string | null }> };
+      const rawUsers = body.users ?? [];
 
       const members: TeamMember[] = rawUsers.map((u, index: number) => {
         const joinedDate = u.createdAt
