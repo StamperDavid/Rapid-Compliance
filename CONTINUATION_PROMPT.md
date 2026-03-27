@@ -5,7 +5,7 @@
 ## Context
 Repository: https://github.com/StamperDavid/Rapid-Compliance
 Branch: dev
-Last Updated: March 26, 2026 (Post-audit sprint — 13 items resolved in 4 commits)
+Last Updated: March 27, 2026 (SEO UI, invite accept, music upload — 4 pre-launch items resolved)
 
 ## Current State
 
@@ -16,21 +16,21 @@ Last Updated: March 26, 2026 (Post-audit sprint — 13 items resolved in 4 commi
 - **185 pages**, **429+ API routes**, **~1,638 TypeScript files**, **~354K+ lines**
 - **Deployed via Vercel** — dev → main → Vercel auto-deploy
 
-### Build Health (Verified March 26, 2026)
+### Build Health (Verified March 27, 2026)
 - `tsc --noEmit` — **PASSES**
 - `npm run lint` — **PASSES (zero errors, zero warnings)**
 - Zero `eslint-disable` comments, zero `any` types, zero `@ts-ignore`
 
 ---
 
-## System-Wide Scorecard (March 26, 2026 — Post-Sprint)
+## System-Wide Scorecard (March 27, 2026)
 
 | System | Score | Launch Ready | Notes |
 |--------|-------|-------------|-------|
 | Jasper Orchestrator | 95% | YES | 46 tools, 9 delegation routes, all real |
 | Mission Control | 90% | YES | SSE streaming, review links, approval gates |
 | Website Builder | 85% | YES | 35+ widgets, AI gen, migration |
-| Video Pipeline | 85% | YES | Music library has URL resolver, audio mixing wired |
+| Video Pipeline | 90% | YES | Music library has upload admin + URL resolver, audio mixing wired |
 | Voice AI | 85% | ALMOST | Twilio/Telnyx provider files unverified |
 | CRM / Contacts / Deals | 90% | YES | Lead scoring, enrichment, deal pipeline |
 | Email / Newsletters | 90% | YES | Campaign stats now auto-update from webhooks |
@@ -38,11 +38,11 @@ Last Updated: March 26, 2026 (Post-audit sprint — 13 items resolved in 4 commi
 | Payments / E-Commerce | 90% | YES | Invoice generation live, all 12 webhooks real |
 | Workflows / Automation | 90% | YES | 12 action types, cron scheduling |
 | Forms | 90% | YES | Full CRUD, CRM integration |
-| SEO | 75% | ALMOST | Keyword research UI and rank tracking missing |
+| SEO | 90% | YES | Keyword research UI, rank tracking charts, suggestions engine |
 | Coaching / Performance | 85% | YES | AI-powered with real data |
 | Auth / RBAC | 95% | YES | Role changes now propagate to Firebase claims |
-| Onboarding | 80% | YES | Auto-save on every step, resume on reload |
-| Settings | 85% | YES | Billing page functional, team invites wired |
+| Onboarding | 85% | YES | Auto-save, resume on reload, invite accept flow |
+| Settings | 90% | YES | Billing, team invites, music library upload admin |
 
 ---
 
@@ -78,18 +78,47 @@ Last Updated: March 26, 2026 (Post-audit sprint — 13 items resolved in 4 commi
 
 ---
 
+## Resolved This Session (March 27, 2026)
+
+### SEO Keyword Research UI
+- [x] Added `getKeywordSuggestions()` method to DataForSEO service (keyword_suggestions/live endpoint)
+- [x] New `DataForSEOKeywordSuggestion` type in SEO types
+- [x] `POST /api/growth/keywords/research` — takes seed keyword, returns suggestions + seed metrics
+- [x] Keywords page now has 3 tabs: Tracker, Research, Rank History
+- [x] Research tab: search box → seed keyword overview + monthly volume chart + sortable suggestions table
+- [x] One-click "Track" button adds suggestions directly to keyword tracker
+
+### SEO Rank Tracking Dashboard
+- [x] Rank History tab with keyword selector (pick up to 8 keywords)
+- [x] Recharts LineChart showing position over time (Y-axis reversed — #1 at top)
+- [x] Summary cards: tracked count, avg position, improved/declined counts
+- [x] Date-merged history data from each keyword's `rankingHistory` array
+
+### Invite Accept Page
+- [x] `GET /api/users/invite/[inviteId]` — public endpoint to validate invite token
+- [x] `POST /api/users/invite/[inviteId]` — accept invite (atomic: mark accepted + create user profile + add to org + set Firebase Auth custom claims)
+- [x] `/signup?invite=xxx` now shows invite acceptance UI (validates token, pre-fills email, shows role badge)
+- [x] Email match enforcement (new account email must match invite email)
+- [x] Rollback on failure (deletes Firebase Auth user if Firestore write fails)
+- [x] Error states: expired, already used, not found — with fallback links
+
+### Music Library Upload Admin
+- [x] `GET /api/admin/music/status` — returns which of 15 tracks are uploaded vs missing
+- [x] `POST /api/admin/music/upload` — accepts FormData file upload, validates track ID, stores in Firebase Storage
+- [x] `/settings/music-library` page — status dashboard, per-track upload buttons, royalty-free source links
+- [x] Supports replace (re-upload over existing), validates file type + size (20MB max)
+
+---
+
 ## What Still Needs Work
 
-### Pre-Launch (Medium Priority)
-| Item | Effort | Notes |
-|------|--------|-------|
-| Facebook/Instagram social implementations | 2-3 days | Requires Meta Developer Portal approval |
-| YouTube social implementation | 1-2 days | Requires Google API setup |
-| TikTok social implementation | 1-2 days | Requires TikTok API setup |
-| SEO keyword research UI | 2 days | DataForSEO API already wired |
-| SEO rank tracking dashboard | 1-2 days | Service layer exists |
-| Invite accept page | 1 day | `/signup` ignores `?invite=` token |
-| Upload real music tracks to Firebase Storage | Half day | Paths defined, files not uploaded |
+### Pre-Launch (Blocked on External Setup)
+| Item | Effort | Blocker |
+|------|--------|---------|
+| Facebook/Instagram social posting | 2-3 days | Requires Meta Developer Portal approval |
+| YouTube social posting | 1-2 days | Requires Google API project setup |
+| TikTok social posting | 1-2 days | Requires TikTok API setup |
+| Upload actual music MP3s | 1 hour | Need owner to source royalty-free tracks and upload via `/settings/music-library` |
 
 ### Post-Launch Fast Follow
 - Visual workflow builder (drag-drop canvas)
@@ -103,6 +132,7 @@ Last Updated: March 26, 2026 (Post-audit sprint — 13 items resolved in 4 commi
 
 ## Completed Work (All Sessions Archived)
 
+- **Pre-Launch Items** (March 27) — SEO keyword research + rank tracking + invite accept + music upload admin
 - **Post-Audit Sprint** (March 26) — 13 items resolved across 4 commits
 - **Stub Eradication** (March 25) — 8 issues, voice providers, catalog sync, workflows, forms
 - **Jasper Intelligence Layer** (March 25) — Config awareness, inline setup guidance

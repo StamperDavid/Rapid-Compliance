@@ -14,6 +14,7 @@
 import type {
   SEOServiceResult,
   DataForSEOKeywordData,
+  DataForSEOKeywordSuggestion,
   DataForSEOSerpResult,
   DataForSEODomainMetrics,
   DataForSEORankedKeyword,
@@ -310,6 +311,59 @@ class DataForSEOService {
         searchVolume: m.search_volume,
       })),
     }));
+
+    return { success: true, data: mapped, error: null, source: result.source, cached: result.cached };
+  }
+
+  // -----------------------------------------------------------
+  // Public — keyword suggestions (related keywords from seed)
+  // -----------------------------------------------------------
+
+  async getKeywordSuggestions(
+    seedKeyword: string,
+    locationCode: number = 2840,
+    languageCode: string = 'en',
+    limit: number = 50
+  ): Promise<SEOServiceResult<DataForSEOKeywordSuggestion[]>> {
+    const cacheKey = `kwsug|${seedKeyword}|${locationCode}|${limit}`;
+
+    interface DFSKeywordSuggestionItem {
+      keyword_data: {
+        keyword: string;
+        search_volume: number;
+        cpc: number;
+        competition: number;
+        competition_level: string;
+      };
+    }
+
+    const result = await this.post<DFSKeywordSuggestionItem[]>(
+      'dataforseo_labs/google/keyword_suggestions/live',
+      [{
+        keyword: seedKeyword,
+        location_code: locationCode,
+        language_code: languageCode,
+        limit,
+        include_seed_keyword: true,
+      }],
+      TTL_KEYWORD,
+      cacheKey
+    );
+
+    if (!result.success || !result.data) {
+      return { success: false, data: null, error: result.error, source: result.source, cached: result.cached };
+    }
+
+    const items = result.data as unknown as DFSKeywordSuggestionItem[];
+    const mapped: DataForSEOKeywordSuggestion[] = items
+      .filter(item => item.keyword_data?.keyword)
+      .map(item => ({
+        keyword: item.keyword_data.keyword,
+        searchVolume: item.keyword_data.search_volume ?? 0,
+        cpc: item.keyword_data.cpc ?? 0,
+        competition: item.keyword_data.competition ?? 0,
+        competitionLevel: (item.keyword_data.competition_level ?? 'LOW').toUpperCase() as DataForSEOKeywordSuggestion['competitionLevel'],
+      }));
 
     return { success: true, data: mapped, error: null, source: result.source, cached: result.cached };
   }

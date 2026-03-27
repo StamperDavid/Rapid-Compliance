@@ -5,19 +5,26 @@ import { useAuth } from '@/hooks/useAuth';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
 import { useToast } from '@/hooks/useToast';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
+import { SOCIAL_PLATFORMS, type SocialPlatform } from '@/types/social';
+import { PLATFORM_META } from '@/lib/social/platform-config';
 
 // Minimal type definitions for this component
+interface PlatformPreference {
+  maxLength?: number;
+  style?: string;
+  format?: string;
+  tone?: string;
+  captionStyle?: string;
+  hashtagCount?: number;
+}
+
 interface SocialTrainingSettings {
   emojiUsage: 'none' | 'light' | 'heavy';
   ctaStyle: 'soft' | 'direct' | 'question';
   contentThemes: string[];
   hashtagStrategy: string;
   postingPersonality: string;
-  platformPreferences?: {
-    twitter?: { maxLength: number; style: string };
-    linkedin?: { format: string; tone: string };
-    instagram?: { captionStyle: string; hashtagCount: number };
-  };
+  platformPreferences?: Partial<Record<SocialPlatform, PlatformPreference>>;
 }
 
 interface BrandDNA {
@@ -33,13 +40,12 @@ interface BrandDNA {
 }
 
 type TabType = 'settings' | 'generate' | 'history' | 'knowledge';
-type PlatformType = 'twitter' | 'linkedin' | 'instagram';
 type EmojiUsage = 'none' | 'light' | 'heavy';
 type CTAStyle = 'soft' | 'direct' | 'question';
 
 interface GeneratedPost {
   id: string;
-  platform: PlatformType;
+  platform: SocialPlatform;
   content: string;
   hashtags: string[];
   characterCount: number;
@@ -49,7 +55,7 @@ interface GeneratedPost {
 
 interface HistoryItem {
   id: string;
-  platform: PlatformType;
+  platform: SocialPlatform;
   content: string;
   topic: string;
   generatedAt: string;
@@ -64,17 +70,9 @@ interface KnowledgeItem {
   uploadedAt: string;
 }
 
-const PLATFORM_LIMITS: Record<PlatformType, number> = {
-  twitter: 280,
-  linkedin: 3000,
-  instagram: 2200,
-};
-
-const PLATFORM_ICONS: Record<PlatformType, string> = {
-  twitter: 'X',
-  linkedin: 'in',
-  instagram: 'IG',
-};
+const PLATFORM_CHAR_LIMITS: Record<SocialPlatform, number> = Object.fromEntries(
+  SOCIAL_PLATFORMS.map((p) => [p, PLATFORM_META[p].charLimit])
+) as Record<SocialPlatform, number>;
 
 const CONTENT_THEME_OPTIONS = [
   'Industry News', 'Product Updates', 'Behind the Scenes', 'Customer Stories',
@@ -92,7 +90,7 @@ export default function SocialMediaTrainingPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>('settings');
-  const [activePlatformTab, setActivePlatformTab] = useState<PlatformType>('twitter');
+  const [activePlatformTab, setActivePlatformTab] = useState<SocialPlatform>('twitter');
 
   // Settings State
   const [emojiUsage, setEmojiUsage] = useState<EmojiUsage>('light');
@@ -116,7 +114,7 @@ export default function SocialMediaTrainingPage() {
   });
 
   // Generate Test State
-  const [generatePlatform, setGeneratePlatform] = useState<PlatformType>('twitter');
+  const [generatePlatform, setGeneratePlatform] = useState<SocialPlatform>('twitter');
   const [generateTopic, setGenerateTopic] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedPost, setGeneratedPost] = useState<GeneratedPost | null>(null);
@@ -161,13 +159,16 @@ export default function SocialMediaTrainingPage() {
         setPostingPersonality(data.settings.postingPersonality || '');
 
         if (data.settings.platformPreferences?.twitter) {
-          setTwitterSettings(data.settings.platformPreferences.twitter);
+          const tw = data.settings.platformPreferences.twitter as Record<string, unknown>;
+          setTwitterSettings({ maxLength: (tw.maxLength as number) ?? 280, style: (tw.style as string) ?? 'conversational' });
         }
         if (data.settings.platformPreferences?.linkedin) {
-          setLinkedinSettings(data.settings.platformPreferences.linkedin);
+          const li = data.settings.platformPreferences.linkedin as Record<string, unknown>;
+          setLinkedinSettings({ format: (li.format as string) ?? 'professional', tone: (li.tone as string) ?? 'thought-leader' });
         }
         if (data.settings.platformPreferences?.instagram) {
-          setInstagramSettings(data.settings.platformPreferences.instagram);
+          const ig = data.settings.platformPreferences.instagram as Record<string, unknown>;
+          setInstagramSettings({ captionStyle: (ig.captionStyle as string) ?? 'storytelling', hashtagCount: (ig.hashtagCount as number) ?? 15 });
         }
       }
 
@@ -877,7 +878,7 @@ export default function SocialMediaTrainingPage() {
                     borderBottom: '1px solid var(--color-border-light)',
                     paddingBottom: '0.5rem',
                   }}>
-                    {(['twitter', 'linkedin', 'instagram'] as PlatformType[]).map(platform => (
+                    {SOCIAL_PLATFORMS.map(platform => (
                       <button
                         key={platform}
                         onClick={() => setActivePlatformTab(platform)}
@@ -906,9 +907,9 @@ export default function SocialMediaTrainingPage() {
                           fontSize: '0.625rem',
                           fontWeight: 'bold',
                         }}>
-                          {PLATFORM_ICONS[platform]}
+                          {PLATFORM_META[platform].icon}
                         </span>
-                        {platform.charAt(0).toUpperCase() + platform.slice(1)}
+                        {PLATFORM_META[platform].label}
                       </button>
                     ))}
                   </div>
@@ -1172,7 +1173,7 @@ export default function SocialMediaTrainingPage() {
                   </label>
                   <select
                     value={generatePlatform}
-                    onChange={(e) => setGeneratePlatform(e.target.value as PlatformType)}
+                    onChange={(e) => setGeneratePlatform(e.target.value as SocialPlatform)}
                     style={{
                       width: '100%',
                       padding: '0.75rem',
@@ -1256,11 +1257,11 @@ export default function SocialMediaTrainingPage() {
                       </span>
                       <span style={{
                         fontSize: '0.75rem',
-                        color: generatedPost.characterCount > PLATFORM_LIMITS[generatedPost.platform]
+                        color: generatedPost.characterCount > PLATFORM_CHAR_LIMITS[generatedPost.platform]
                           ? 'var(--color-error)'
                           : 'var(--color-success)',
                       }}>
-                        {generatedPost.characterCount} / {PLATFORM_LIMITS[generatedPost.platform]}
+                        {generatedPost.characterCount} / {PLATFORM_CHAR_LIMITS[generatedPost.platform]}
                       </span>
                     </div>
                     <p style={{
@@ -1347,7 +1348,7 @@ export default function SocialMediaTrainingPage() {
                     Platform
                   </label>
                   <div style={{ display: 'flex', gap: '0.75rem' }}>
-                    {(['twitter', 'linkedin', 'instagram'] as PlatformType[]).map(platform => (
+                    {SOCIAL_PLATFORMS.map(platform => (
                       <button
                         key={platform}
                         onClick={() => setGeneratePlatform(platform)}
@@ -1380,13 +1381,13 @@ export default function SocialMediaTrainingPage() {
                           fontSize: '0.75rem',
                           fontWeight: 'bold',
                         }}>
-                          {PLATFORM_ICONS[platform]}
+                          {PLATFORM_META[platform].icon}
                         </span>
                         <span style={{ fontSize: '0.875rem', textTransform: 'capitalize' }}>
                           {platform}
                         </span>
                         <span style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)' }}>
-                          {PLATFORM_LIMITS[platform]} chars
+                          {PLATFORM_CHAR_LIMITS[platform]} chars
                         </span>
                       </button>
                     ))}
@@ -1508,7 +1509,7 @@ export default function SocialMediaTrainingPage() {
                           fontWeight: 'bold',
                           color: 'var(--color-text-primary)',
                         }}>
-                          {PLATFORM_ICONS[generatePlatform]}
+                          {PLATFORM_META[generatePlatform].icon}
                         </div>
                         <div>
                           <p style={{ fontWeight: '600', color: 'var(--color-text-primary)', fontSize: '0.875rem' }}>
@@ -1548,14 +1549,14 @@ export default function SocialMediaTrainingPage() {
                         <p style={{
                           fontSize: '1.25rem',
                           fontWeight: 'bold',
-                          color: generatedPost.characterCount > PLATFORM_LIMITS[generatedPost.platform]
+                          color: generatedPost.characterCount > PLATFORM_CHAR_LIMITS[generatedPost.platform]
                             ? 'var(--color-error)'
                             : 'var(--color-success)',
                         }}>
                           {generatedPost.characterCount}
                         </p>
                         <p style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)' }}>
-                          / {PLATFORM_LIMITS[generatedPost.platform]}
+                          / {PLATFORM_CHAR_LIMITS[generatedPost.platform]}
                         </p>
                       </div>
                       <div style={{

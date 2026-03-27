@@ -143,6 +143,14 @@ export interface DataForSEOOnPageResult {
   checks: Record<string, boolean>;
 }
 
+export interface DataForSEOKeywordSuggestion {
+  keyword: string;
+  searchVolume: number;
+  cpc: number;
+  competition: number;
+  competitionLevel: 'LOW' | 'MEDIUM' | 'HIGH';
+}
+
 // ============================================================================
 // SERPER
 // ============================================================================
