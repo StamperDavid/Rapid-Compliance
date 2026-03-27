@@ -458,10 +458,11 @@ export async function POST(request: NextRequest) {
       while (iterationCount < maxIterations) {
         iterationCount++;
 
-        // Force tool use on the first iteration for action/research queries.
-        // This prevents Jasper from answering factual questions from training data
-        // instead of delegating to agent teams. Conversational queries stay on 'auto'.
-        const shouldForceTools = iterationCount === 1 && queryClassification.queryType === 'action';
+        // Force tool use on the first iteration for ALL non-conversational queries.
+        // Jasper must ALWAYS delegate — he never answers from training data.
+        // Only pure conversational queries (greetings, yes/no, thanks) skip this.
+        const isConversational = queryClassification.queryType === 'conversational';
+        const shouldForceTools = iterationCount === 1 && !isConversational;
         const iterationToolChoice = shouldForceTools ? ('required' as const) : ('auto' as const);
 
         const { result: response, model } = await chatWithFallback<ChatCompletionResponse>(
