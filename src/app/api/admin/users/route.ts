@@ -126,23 +126,36 @@ function timestampToISOString(timestamp: unknown): string | null {
     return null;
   }
 
-  if (!hasToDateMethod(timestamp)) {
-    return null;
-  }
-
-  try {
-    const date = timestamp.toDate();
-    if (!(date instanceof Date) || isNaN(date.getTime())) {
+  // Handle Firestore Timestamp objects
+  if (hasToDateMethod(timestamp)) {
+    try {
+      const date = timestamp.toDate();
+      if (!(date instanceof Date) || isNaN(date.getTime())) {
+        return null;
+      }
+      return date.toISOString();
+    } catch (error: unknown) {
+      logger.warn('Failed to convert timestamp', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        route: '/api/admin/users'
+      });
       return null;
     }
-    return date.toISOString();
-  } catch (error: unknown) {
-    logger.warn('Failed to convert timestamp', {
-      error: error instanceof Error ? error.message : 'Unknown error',
-      route: '/api/admin/users'
-    });
-    return null;
   }
+
+  // Handle plain ISO strings
+  if (typeof timestamp === 'string') {
+    const date = new Date(timestamp);
+    return isNaN(date.getTime()) ? null : date.toISOString();
+  }
+
+  // Handle Firestore admin Timestamp serialized as { _seconds, _nanoseconds }
+  const ts = timestamp as Record<string, unknown>;
+  if (typeof ts._seconds === 'number') {
+    return new Date(ts._seconds * 1000).toISOString();
+  }
+
+  return null;
 }
 
 /**
@@ -195,30 +208,44 @@ export async function GET(request: NextRequest) {
     const pageSize = Math.min(parseInt((limitParam !== '' && limitParam != null) ? limitParam : '50'), 100);
     const startAfter = searchParams.get('startAfter'); // ISO timestamp
 
-    // Build query using Admin DAL
+    // Fetch ALL users without orderBy to avoid Firestore mixed-type issues
+    // (some docs have Timestamp createdAt, others have string — Firestore
+    // orderBy separates them into type-buckets, which can silently exclude docs).
+    // We sort client-side after filtering out system/agent users.
     const usersSnapshot = await adminDal.safeQuery('USERS', (ref) => {
-      let query = ref.orderBy('createdAt', 'desc');
-
-      // Add cursor if provided
-      if (startAfter) {
-        const cursorDate = new Date(startAfter);
-        query = query.startAfter(cursorDate);
-      }
-
-      // Fetch one extra to check if there are more results
-      return query.limit(pageSize + 1);
+      return ref.limit(500);
     });
-    
-    const hasMore = usersSnapshot.docs.length > pageSize;
-    const docs = hasMore ? usersSnapshot.docs.slice(0, pageSize) : usersSnapshot.docs;
 
-    // Transform Firestore documents to validated UserData objects
-    const users: readonly UserData[] = docs.map(doc => {
+    // Filter out system agent users (not real team members)
+    const humanDocs = usersSnapshot.docs.filter((doc) => {
+      const id = doc.id;
+      const data = doc.data() as FirestoreUserData;
+      // Exclude agent service accounts and demo data
+      const isAgent = id.startsWith('agent_') || (data.email ?? '').includes('@ai-agent.');
+      return !isAgent;
+    });
+
+    // Transform and sort by createdAt descending (handles mixed timestamp types)
+    const allUsers: UserData[] = humanDocs.map((doc) => {
       const data = doc.data() as FirestoreUserData;
       return transformFirestoreUser(doc.id, data);
     });
 
-    // Get cursor for next page (last user's createdAt)
+    allUsers.sort((a, b) => {
+      const aDate = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const bDate = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return bDate - aDate;
+    });
+
+    // Apply pagination
+    const startIndex = startAfter
+      ? allUsers.findIndex((u) => u.createdAt === startAfter) + 1
+      : 0;
+    const paged = allUsers.slice(startIndex, startIndex + pageSize);
+    const hasMore = startIndex + pageSize < allUsers.length;
+    const users: readonly UserData[] = paged;
+
+    // Get cursor for next page
     const lastUser = users.length > 0 ? users[users.length - 1] : null;
     const nextCursor = hasMore && lastUser ? lastUser.createdAt : null;
     
