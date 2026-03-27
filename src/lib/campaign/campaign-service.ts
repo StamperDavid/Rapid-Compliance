@@ -217,18 +217,18 @@ export async function addDeliverable(
     type: input.type,
     title: input.title,
     status: input.status ?? 'pending_review',
-    previewData: input.previewData,
-    reviewLink: input.reviewLink,
-    feedback: input.feedback,
+    previewData: input.previewData ?? {},
+    reviewLink: input.reviewLink ?? '',
+    ...(input.feedback !== undefined ? { feedback: input.feedback } : {}),
     createdAt: now,
     updatedAt: now,
   };
 
-  // Write deliverable doc
+  // Write deliverable doc — use merge to handle any remaining undefined gracefully
   await adminDb
     .collection(deliverablesPath(campaignId))
     .doc(deliverableId)
-    .set(deliverable);
+    .set(deliverable, { merge: true });
 
   // Append to parent campaign's deliverables array
   const { FieldValue } = await import('firebase-admin/firestore');
