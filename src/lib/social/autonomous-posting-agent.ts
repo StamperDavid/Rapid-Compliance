@@ -1,6 +1,6 @@
 /**
  * Autonomous Posting Agent
- * Manages automated content posting across LinkedIn and Twitter/X
+ * Manages automated content posting across all 14 supported social platforms
  *
  * Features:
  * - Pulls content from existing Content Factory
@@ -8,11 +8,21 @@
  * - Supports immediate posting or scheduled queue
  * - Logs all posts to Firestore for analytics
  * - Social Media Growth Engine Phase 4: Multi-action support + compliance guardrails
+ *
+ * Supported platforms:
+ *   Big 6: Twitter/X, LinkedIn, Facebook, Instagram, YouTube, TikTok
+ *   Tier 1: Bluesky, Threads, Truth Social, Telegram, Reddit, Pinterest,
+ *           WhatsApp Business, Google Business
  */
 
 import { logger } from '@/lib/logger/logger';
 import { FirestoreService } from '@/lib/db/firestore-service';
 import { createTwitterService, createTwitterServiceForAccount, type TwitterService } from '@/lib/integrations/twitter-service';
+import { createLinkedInService } from '@/lib/integrations/linkedin-service';
+import { createFacebookService } from '@/lib/integrations/facebook-service';
+import { createInstagramService } from '@/lib/integrations/instagram-service';
+import { createYouTubeService } from '@/lib/integrations/youtube-service';
+import { createTikTokService } from '@/lib/integrations/tiktok-service';
 import { createBlueskyService } from '@/lib/integrations/bluesky-service';
 import { createThreadsService } from '@/lib/integrations/threads-service';
 import { createTruthSocialService } from '@/lib/integrations/truth-social-service';
@@ -862,8 +872,61 @@ export class AutonomousPostingAgent {
         case 'twitter':
           return await this.postToTwitter(postId, content, mediaUrls, accountId);
 
-        case 'linkedin':
-          return await this.postToLinkedIn(postId, content, mediaUrls);
+        case 'linkedin': {
+          const linkedInService = await createLinkedInService();
+          if (!linkedInService) {
+            return { success: false, platform, postId, error: 'LinkedIn service not configured — add credentials in Settings > API Keys' };
+          }
+          const linkedInContent = this.appendUtmToLinks(content, 'linkedin', postId);
+          const linkedInResult = await linkedInService.publishPost({ text: linkedInContent });
+          return { success: linkedInResult.success, platform, postId, platformPostId: linkedInResult.postId, error: linkedInResult.error };
+        }
+
+        case 'facebook': {
+          const facebookService = await createFacebookService();
+          if (!facebookService) {
+            return { success: false, platform, postId, error: 'Facebook service not configured — add Page credentials in Settings > API Keys' };
+          }
+          const fbResult = await facebookService.publishPost({ message: content, imageUrl: mediaUrls?.[0] });
+          return { success: fbResult.success, platform, postId, platformPostId: fbResult.postId, error: fbResult.error };
+        }
+
+        case 'instagram': {
+          const instagramService = await createInstagramService();
+          if (!instagramService) {
+            return { success: false, platform, postId, error: 'Instagram service not configured — add credentials in Settings > API Keys' };
+          }
+          if (!mediaUrls?.[0]) {
+            return { success: false, platform, postId, error: 'Instagram requires an image or video — no media URL provided' };
+          }
+          const igResult = await instagramService.publishPost({ caption: content, imageUrl: mediaUrls[0] });
+          return { success: igResult.success, platform, postId, platformPostId: igResult.postId, error: igResult.error };
+        }
+
+        case 'youtube': {
+          const youtubeService = await createYouTubeService();
+          if (!youtubeService) {
+            return { success: false, platform, postId, error: 'YouTube service not configured — add OAuth credentials in Settings > API Keys' };
+          }
+          const ytResult = await youtubeService.createCommunityPost({ text: content, imageUrl: mediaUrls?.[0] });
+          return { success: ytResult.success, platform, postId, platformPostId: ytResult.postId, error: ytResult.error };
+        }
+
+        case 'tiktok': {
+          const tiktokService = await createTikTokService();
+          if (!tiktokService) {
+            return { success: false, platform, postId, error: 'TikTok service not configured — add OAuth credentials in Settings > API Keys' };
+          }
+          if (mediaUrls?.[0]?.includes('.mp4') || mediaUrls?.[0]?.includes('video')) {
+            const ttResult = await tiktokService.publishVideo({ title: content, videoUrl: mediaUrls[0] });
+            return { success: ttResult.success, platform, postId, platformPostId: ttResult.publishId, error: ttResult.error };
+          }
+          if (mediaUrls?.length) {
+            const ttPhotoResult = await tiktokService.publishPhoto({ title: content, imageUrls: mediaUrls });
+            return { success: ttPhotoResult.success, platform, postId, platformPostId: ttPhotoResult.publishId, error: ttPhotoResult.error };
+          }
+          return { success: false, platform, postId, error: 'TikTok requires a video or image — no media URL provided' };
+        }
 
         case 'bluesky': {
           const blueskyService = await createBlueskyService();
@@ -957,7 +1020,7 @@ export class AutonomousPostingAgent {
             success: false,
             platform,
             postId,
-            error: `Unsupported platform: ${platform}. Supported: twitter, linkedin, bluesky, threads, truth_social, telegram, reddit, pinterest, whatsapp, google_business`,
+            error: `Unsupported platform: ${platform}. Supported: all 14 SOCIAL_PLATFORMS`,
           };
       }
     } catch (error) {
@@ -1063,91 +1126,6 @@ export class AutonomousPostingAgent {
         return url;
       }
     });
-  }
-
-  /**
-   * Post to LinkedIn
-   * Note: LinkedIn's official API is restricted; using RapidAPI or manual fallback
-   */
-  private async postToLinkedIn(
-    postId: string,
-    content: string,
-    _mediaUrls?: string[]
-  ): Promise<PostingResult> {
-    // LinkedIn posting typically requires posting as a status update
-    // Since we're using RapidAPI for messaging, we'll adapt for posting
-    // For now, create a manual task or use RapidAPI if available
-
-    // Attribution: Auto-append UTM parameters to URLs
-    const linkedInContent = this.appendUtmToLinks(content, 'linkedin', postId);
-
-    try {
-      // Get organization's API keys to check for RapidAPI and LinkedIn config
-      const { apiKeyService } = await import('@/lib/api-keys/api-key-service');
-      const apiKeys = await apiKeyService.getKeys();
-
-      // Check for RapidAPI key in org config first, then fallback to env
-      const rapidApiKey = apiKeys?.enrichment?.rapidApiKey ?? process.env.RAPIDAPI_KEY;
-
-      // Check if LinkedIn is configured (social.linkedin or integrations.linkedin)
-      const linkedInConfig = apiKeys?.social?.linkedin ?? apiKeys?.integrations?.googleWorkspace;
-
-      if (rapidApiKey) {
-        // Use RapidAPI for LinkedIn posting
-        const response = await fetch('https://linkedin-api.p.rapidapi.com/create-post', {
-          method: 'POST',
-          headers: {
-            'X-RapidAPI-Key': rapidApiKey,
-            'X-RapidAPI-Host': 'linkedin-api.p.rapidapi.com',
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            text: linkedInContent,
-            visibility: 'PUBLIC',
-          }),
-        });
-
-        if (response.ok) {
-          const data = await response.json() as { postId?: string; id?: string };
-          return {
-            success: true,
-            platform: 'linkedin',
-            postId,
-            platformPostId: data.postId ?? data.id,
-            publishedAt: new Date(),
-          };
-        }
-
-        const errorText = await response.text();
-        logger.warn('AutonomousPostingAgent: LinkedIn API error', {
-          status: response.status,
-          error: errorText,
-        });
-      }
-
-      // Log if LinkedIn is not configured
-      if (!linkedInConfig && !rapidApiKey) {
-        logger.info('AutonomousPostingAgent: LinkedIn not configured, creating manual task');
-      }
-
-      // Fallback: Create manual task for LinkedIn posting
-      await this.createManualPostTask('linkedin', linkedInContent);
-
-      return {
-        success: false,
-        platform: 'linkedin',
-        postId,
-        error: 'LinkedIn API not configured. Post queued as manual task.',
-      };
-    } catch (error) {
-      logger.error('AutonomousPostingAgent: LinkedIn posting error', error as Error);
-      return {
-        success: false,
-        platform: 'linkedin',
-        postId,
-        error: error instanceof Error ? error.message : 'Unknown error',
-      };
-    }
   }
 
   /**

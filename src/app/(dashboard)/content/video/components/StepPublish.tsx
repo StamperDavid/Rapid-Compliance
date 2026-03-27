@@ -24,34 +24,8 @@ import {
   type PublishResult,
   type PublishScheduleMode,
 } from '@/types/video-pipeline';
-
-// Platform icons mapped to simple emoji/text fallbacks
-const PLATFORM_ICONS: Record<PublishPlatform, string> = {
-  twitter: '𝕏',
-  linkedin: 'in',
-  facebook: 'f',
-  instagram: '📷',
-  youtube: '▶',
-  tiktok: '♪',
-};
-
-const PLATFORM_COLORS: Record<PublishPlatform, string> = {
-  twitter: 'border-zinc-500 bg-zinc-900 text-white',
-  linkedin: 'border-blue-600 bg-blue-950 text-blue-400',
-  facebook: 'border-blue-500 bg-blue-950 text-blue-400',
-  instagram: 'border-pink-500 bg-pink-950 text-pink-400',
-  youtube: 'border-red-500 bg-red-950 text-red-400',
-  tiktok: 'border-cyan-400 bg-cyan-950 text-cyan-400',
-};
-
-const PLATFORM_SELECTED: Record<PublishPlatform, string> = {
-  twitter: 'border-zinc-400 bg-zinc-800 ring-2 ring-zinc-500',
-  linkedin: 'border-blue-500 bg-blue-900 ring-2 ring-blue-500',
-  facebook: 'border-blue-400 bg-blue-900 ring-2 ring-blue-400',
-  instagram: 'border-pink-400 bg-pink-900 ring-2 ring-pink-400',
-  youtube: 'border-red-400 bg-red-900 ring-2 ring-red-400',
-  tiktok: 'border-cyan-300 bg-cyan-900 ring-2 ring-cyan-300',
-};
+import { SOCIAL_PLATFORMS } from '@/types/social';
+import { PLATFORM_META } from '@/lib/social/platform-config';
 
 export function StepPublish() {
   const authFetch = useAuthFetch();
@@ -87,7 +61,7 @@ export function StepPublish() {
   }, [brief, projectName, publishConfig.title, setPublishConfig]);
 
   const videoUrl = postProductionVideoUrl ?? finalVideoUrl;
-  const allPlatforms: PublishPlatform[] = ['twitter', 'linkedin', 'youtube', 'tiktok', 'instagram', 'facebook'];
+  const allPlatforms: PublishPlatform[] = [...SOCIAL_PLATFORMS];
 
   const togglePlatform = (platform: PublishPlatform) => {
     const current = publishConfig.platforms;
@@ -218,11 +192,11 @@ export function StepPublish() {
                       onClick={() => togglePlatform(platform)}
                       className={`flex flex-col items-center gap-1.5 p-3 rounded-lg border transition-all ${
                         selected
-                          ? PLATFORM_SELECTED[platform]
-                          : `${PLATFORM_COLORS[platform]} hover:brightness-125`
+                          ? PLATFORM_META[platform].tailwindSelected
+                          : `${PLATFORM_META[platform].tailwind} hover:brightness-125`
                       }`}
                     >
-                      <span className="text-lg font-bold">{PLATFORM_ICONS[platform]}</span>
+                      <span className="text-lg font-bold">{PLATFORM_META[platform].icon}</span>
                       <span className="text-[10px] font-medium">{PUBLISH_PLATFORM_LABELS[platform]}</span>
                     </button>
                   );
@@ -379,7 +353,7 @@ export function StepPublish() {
                       className="flex items-center justify-between p-2 rounded-lg bg-zinc-800/50"
                     >
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-bold">{PLATFORM_ICONS[result.platform]}</span>
+                        <span className="text-sm font-bold">{PLATFORM_META[result.platform].icon}</span>
                         <span className="text-sm text-zinc-300">
                           {PUBLISH_PLATFORM_LABELS[result.platform]}
                         </span>

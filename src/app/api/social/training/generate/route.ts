@@ -14,17 +14,16 @@ import { COLLECTIONS, getSubCollection } from '@/lib/firebase/collections';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import type { ModelName } from '@/types/ai-models';
 import { SOCIAL_PLATFORMS } from '@/types/social';
+import { PLATFORM_META } from '@/lib/social/platform-config';
 
 export const dynamic = 'force-dynamic';
 
 const TRAINING_COLLECTION = getSubCollection('toolTraining');
 const HISTORY_COLLECTION = getSubCollection('socialGenerationHistory');
 
-const PLATFORM_LIMITS: Record<string, number> = {
-  twitter: 280,
-  linkedin: 3000,
-  instagram: 2200,
-};
+const PLATFORM_LIMITS: Record<string, number> = Object.fromEntries(
+  SOCIAL_PLATFORMS.map((p) => [p, PLATFORM_META[p].charLimit])
+);
 
 const generateSchema = z.object({
   platform: z.enum(SOCIAL_PLATFORMS),

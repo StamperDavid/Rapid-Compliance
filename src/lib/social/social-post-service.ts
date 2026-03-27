@@ -18,7 +18,8 @@ import { v4 as uuidv4 } from 'uuid';
 // TYPES
 // =============================================================================
 
-export type SocialPlatform = 'twitter' | 'linkedin';
+export type { SocialPlatform } from '@/types/social';
+import type { SocialPlatform } from '@/types/social';
 export type ScheduledPostStatus = 'scheduled' | 'publishing' | 'published' | 'failed' | 'cancelled';
 
 export interface ScheduledSocialPost {

@@ -11,6 +11,8 @@ import dynamic from 'next/dynamic';
 import type { CalendarEvent } from '@/components/social/CalendarEventCard';
 import { logger } from '@/lib/logger/logger';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
+import { SOCIAL_PLATFORMS } from '@/types/social';
+import { PLATFORM_META } from '@/lib/social/platform-config';
 
 // Dynamic import to avoid SSR issues with react-big-calendar
 const SocialCalendar = dynamic(() => import('@/components/social/SocialCalendar'), {
@@ -104,12 +106,9 @@ export default function ContentCalendarPage() {
 
   const closeModal = useCallback(() => setSelectedEvent(null), []);
 
-  const PLATFORM_COLORS: Record<string, string> = {
-    twitter: '#000',
-    linkedin: '#0A66C2',
-    facebook: '#1877F2',
-    instagram: '#E1306C',
-  };
+  const PLATFORM_COLORS: Record<string, string> = Object.fromEntries(
+    SOCIAL_PLATFORMS.map((p) => [p, PLATFORM_META[p].color])
+  );
 
   const STATUS_LABELS: Record<string, { label: string; color: string }> = {
     published: { label: 'Published', color: '#4CAF50' },

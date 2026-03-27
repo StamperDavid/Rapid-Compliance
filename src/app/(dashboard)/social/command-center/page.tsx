@@ -12,6 +12,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { logger } from '@/lib/logger/logger';
+import { SOCIAL_PLATFORMS } from '@/types/social';
+import { PLATFORM_META } from '@/lib/social/platform-config';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -91,10 +93,9 @@ const ALL_MANAGER_IDS = Object.keys(MANAGER_DISPLAY_NAMES);
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
-const PLATFORM_COLORS: Record<string, string> = {
-  twitter: '#000000',
-  linkedin: '#0A66C2',
-};
+const PLATFORM_COLORS: Record<string, string> = Object.fromEntries(
+  SOCIAL_PLATFORMS.map((p) => [p, PLATFORM_META[p].color])
+);
 
 const EVENT_TYPE_CONFIG: Record<string, { color: string; label: string; icon: string }> = {
   published: { color: '#4CAF50', label: 'Published', icon: '✓' },

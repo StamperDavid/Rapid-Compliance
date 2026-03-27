@@ -8,6 +8,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { logger } from '@/lib/logger/logger';
+import { SOCIAL_PLATFORMS } from '@/types/social';
+import { PLATFORM_META } from '@/lib/social/platform-config';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -93,10 +95,9 @@ interface PlatformStats {
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
-const PLATFORM_COLORS: Record<string, string> = {
-  twitter: '#000000',
-  linkedin: '#0A66C2',
-};
+const PLATFORM_COLORS: Record<string, string> = Object.fromEntries(
+  SOCIAL_PLATFORMS.map((p) => [p, PLATFORM_META[p].color])
+);
 
 // ─── Main Component ──────────────────────────────────────────────────────────
 
@@ -107,7 +108,7 @@ export default function AnalyticsPage() {
   const [engagementData, setEngagementData] = useState<PostWithEngagement[]>([]);
   const [aggregateEngagement, setAggregateEngagement] = useState<AggregateEngagement | null>(null);
   const [loading, setLoading] = useState(true);
-  const [platformFilter, setPlatformFilter] = useState<'all' | 'twitter' | 'linkedin'>('all');
+  const [platformFilter, setPlatformFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<'date' | 'platform'>('date');
 
   const fetchData = useCallback(async () => {
@@ -171,7 +172,7 @@ export default function AnalyticsPage() {
   const maxCount = Math.max(...postsPerDay.map((d) => d.count), 1);
 
   // Platform breakdown
-  const platformBreakdown: PlatformStats[] = ['twitter', 'linkedin'].map((platform) => {
+  const platformBreakdown: PlatformStats[] = SOCIAL_PLATFORMS.map((platform) => {
     const platformActivity = activity.filter((e) => e.platform === platform);
     return {
       platform,
@@ -309,7 +310,7 @@ export default function AnalyticsPage() {
 
       {/* Platform Filter Tabs */}
       <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem' }}>
-        {(['all', 'twitter', 'linkedin'] as const).map((platform) => (
+        {(['all', ...SOCIAL_PLATFORMS] as const).map((platform) => (
           <button
             key={platform}
             type="button"

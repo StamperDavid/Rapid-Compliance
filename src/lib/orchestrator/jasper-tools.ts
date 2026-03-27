@@ -925,7 +925,7 @@ export const JASPER_TOOLS: ToolDefinition[] = [
           platform: {
             type: 'string',
             description: 'Target platform for social content',
-            enum: ['linkedin', 'twitter', 'facebook', 'instagram', 'tiktok', 'youtube'],
+            enum: ['twitter', 'linkedin', 'facebook', 'instagram', 'youtube', 'tiktok', 'bluesky', 'threads', 'truth_social', 'telegram', 'reddit', 'pinterest', 'whatsapp_business', 'google_business'],
           },
           topic: {
             type: 'string',
@@ -2171,7 +2171,7 @@ export const JASPER_TOOLS: ToolDefinition[] = [
           platform: {
             type: 'string',
             description: 'Target social media platform',
-            enum: ['twitter', 'linkedin'],
+            enum: ['twitter', 'linkedin', 'facebook', 'instagram', 'youtube', 'tiktok', 'bluesky', 'threads', 'truth_social', 'telegram', 'reddit', 'pinterest', 'whatsapp_business', 'google_business'],
           },
           content: {
             type: 'string',

@@ -14,16 +14,15 @@ import CalendarEventCard, { type CalendarEvent } from './CalendarEventCard';
 import CalendarToolbar from './CalendarToolbar';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import '@/styles/social-calendar.css';
+import { SOCIAL_PLATFORMS } from '@/types/social';
+import { PLATFORM_META } from '@/lib/social/platform-config';
 
 const locales = { 'en-US': enUS };
 const localizer = dateFnsLocalizer({ format, parse, startOfWeek, getDay, locales });
 
-const PLATFORM_EVENT_COLORS: Record<string, { bg: string; text: string }> = {
-  twitter: { bg: '#1a1a1a', text: '#ffffff' },
-  linkedin: { bg: '#0A66C2', text: '#ffffff' },
-  facebook: { bg: '#1877F2', text: '#ffffff' },
-  instagram: { bg: '#E1306C', text: '#ffffff' },
-};
+const PLATFORM_EVENT_COLORS: Record<string, { bg: string; text: string }> = Object.fromEntries(
+  SOCIAL_PLATFORMS.map((p) => [p, { bg: PLATFORM_META[p].color, text: '#ffffff' }])
+);
 
 interface SocialCalendarProps {
   events: CalendarEvent[];

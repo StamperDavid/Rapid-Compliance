@@ -363,21 +363,24 @@ export interface DecompositionPlan {
 // Publish Types
 // ============================================================================
 
-export type PublishPlatform = 'twitter' | 'linkedin' | 'facebook' | 'instagram' | 'youtube' | 'tiktok';
+/**
+ * PublishPlatform is now an alias for SocialPlatform — all 14 platforms are supported.
+ */
+export type { SocialPlatform as PublishPlatform } from '@/types/social';
+import { SOCIAL_PLATFORMS, type SocialPlatform } from '@/types/social';
+import { PLATFORM_META } from '@/lib/social/platform-config';
 
-export const PUBLISH_PLATFORM_LABELS: Record<PublishPlatform, string> = {
-  'twitter': 'Twitter / X',
-  'linkedin': 'LinkedIn',
-  'facebook': 'Facebook',
-  'instagram': 'Instagram',
-  'youtube': 'YouTube',
-  'tiktok': 'TikTok',
-} as const;
+/**
+ * Build labels dynamically from the central platform config.
+ */
+export const PUBLISH_PLATFORM_LABELS: Record<SocialPlatform, string> = Object.fromEntries(
+  SOCIAL_PLATFORMS.map((p) => [p, PLATFORM_META[p].label])
+) as Record<SocialPlatform, string>;
 
 export type PublishScheduleMode = 'now' | 'scheduled';
 
 export interface PublishConfig {
-  platforms: PublishPlatform[];
+  platforms: SocialPlatform[];
   title: string;
   description: string;
   tags: string[];
@@ -388,7 +391,7 @@ export interface PublishConfig {
 export type PublishStatus = 'draft' | 'publishing' | 'published' | 'failed' | 'scheduled';
 
 export interface PublishResult {
-  platform: PublishPlatform;
+  platform: SocialPlatform;
   status: PublishStatus;
   postId?: string;
   postUrl?: string;

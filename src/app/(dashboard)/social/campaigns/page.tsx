@@ -4,6 +4,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { useToast } from '@/hooks/useToast';
+import { SOCIAL_PLATFORMS, type SocialPlatform } from '@/types/social';
+import { PLATFORM_META } from '@/lib/social/platform-config';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -16,7 +18,7 @@ interface SocialPostEngagement {
 
 interface SocialPost {
   id: string;
-  platform: 'linkedin' | 'twitter' | 'facebook' | 'instagram';
+  platform: SocialPlatform;
   content: string;
   status: 'draft' | 'scheduled' | 'published' | 'failed';
   scheduledFor?: string;
@@ -84,16 +86,11 @@ interface ScheduleResponse {
 
 type StudioMode = 'autopilot' | 'manual';
 
-type Platform = 'twitter' | 'linkedin' | 'facebook' | 'instagram';
+const PLATFORMS: SocialPlatform[] = [...SOCIAL_PLATFORMS];
 
-const PLATFORMS: Platform[] = ['twitter', 'linkedin', 'facebook', 'instagram'];
-
-const PLATFORM_BADGE_COLORS: Record<string, string> = {
-  twitter: '#000000',
-  linkedin: '#0A66C2',
-  facebook: '#1877F2',
-  instagram: '#E4405F',
-};
+const PLATFORM_BADGE_COLORS: Record<string, string> = Object.fromEntries(
+  SOCIAL_PLATFORMS.map((p) => [p, PLATFORM_META[p].color])
+);
 
 export default function SocialMediaCampaignsPage() {
   const { user } = useAuth();
@@ -139,7 +136,7 @@ export default function SocialMediaCampaignsPage() {
   const [activeTab, setActiveTab] = useState<'posts' | 'analytics' | 'settings'>('posts');
   const [posts, setPosts] = useState<SocialPost[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filterPlatform, setFilterPlatform] = useState<'all' | Platform>('all');
+  const [filterPlatform, setFilterPlatform] = useState<'all' | SocialPlatform>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
 
   // Modal state
@@ -154,7 +151,7 @@ export default function SocialMediaCampaignsPage() {
   const [accountsLoading, setAccountsLoading] = useState(false);
 
   // Form state
-  const [formPlatform, setFormPlatform] = useState<Platform>('linkedin');
+  const [formPlatform, setFormPlatform] = useState<SocialPlatform>('linkedin');
   const [formContent, setFormContent] = useState('');
   const [formStatus, setFormStatus] = useState<'draft' | 'scheduled'>('draft');
   const [formScheduledFor, setFormScheduledFor] = useState('');
@@ -301,13 +298,8 @@ export default function SocialMediaCampaignsPage() {
   };
 
   const getPlatformIcon = (platform: string) => {
-    switch (platform) {
-      case 'linkedin': return '💼';
-      case 'twitter': return '🐦';
-      case 'facebook': return '👤';
-      case 'instagram': return '📷';
-      default: return '🌐';
-    }
+    const meta = PLATFORM_META[platform as SocialPlatform];
+    return meta?.emoji ?? '🌐';
   };
 
   const getStatusStyle = (status: string) => {
@@ -602,7 +594,7 @@ export default function SocialMediaCampaignsPage() {
               >
                 <option value="all">All Platforms</option>
                 {PLATFORMS.map((p) => (
-                  <option key={p} value={p}>{getPlatformIcon(p)} {p}</option>
+                  <option key={p} value={p}>{getPlatformIcon(p)} {PLATFORM_META[p]?.label ?? p}</option>
                 ))}
               </select>
               <select
@@ -833,11 +825,11 @@ export default function SocialMediaCampaignsPage() {
                 <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1">Platform</label>
                 <select
                   value={formPlatform}
-                  onChange={(e) => setFormPlatform(e.target.value as Platform)}
+                  onChange={(e) => setFormPlatform(e.target.value as SocialPlatform)}
                   className="w-full px-3 py-2 bg-surface-elevated border border-border-light rounded-lg text-[var(--color-text-primary)] text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 >
                   {PLATFORMS.map((p) => (
-                    <option key={p} value={p}>{getPlatformIcon(p)} {p}</option>
+                    <option key={p} value={p}>{getPlatformIcon(p)} {PLATFORM_META[p]?.label ?? p}</option>
                   ))}
                 </select>
               </div>

@@ -317,6 +317,10 @@ export type APIServiceName =
   | 'rapidapi'
   | 'twitter'          // Twitter/X API v2
   | 'linkedin'         // LinkedIn API
+  | 'facebook'         // Facebook Graph API (Page posting)
+  | 'instagram'        // Instagram Graph API (Business/Creator posting)
+  | 'youtube'          // YouTube Data API v3
+  | 'tiktok'           // TikTok Content Posting API
   | 'bluesky'          // Bluesky — AT Protocol
   | 'threads'          // Threads — Meta Threads API
   | 'truth_social'     // Truth Social — Mastodon-compatible API

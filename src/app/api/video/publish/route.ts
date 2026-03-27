@@ -11,7 +11,7 @@ import { requireAuth } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
 import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { getSocialPostsCollection } from '@/lib/firebase/collections';
-import type { PublishResult, PublishPlatform } from '@/types/video-pipeline';
+import type { PublishResult } from '@/types/video-pipeline';
 import { SOCIAL_PLATFORMS } from '@/types/social';
 
 export const dynamic = 'force-dynamic';
@@ -112,7 +112,7 @@ export async function POST(request: NextRequest) {
         await AdminFirestoreService.set(postsCollection, postId, postDoc);
 
         results.push({
-          platform: platform as PublishPlatform,
+          platform,
           status: postStatus === 'scheduled' ? 'scheduled' : 'published',
           postId,
           publishedAt: postStatus === 'published' ? now : undefined,
@@ -131,7 +131,7 @@ export async function POST(request: NextRequest) {
           { platform, projectId }
         );
         results.push({
-          platform: platform as PublishPlatform,
+          platform,
           status: 'failed',
           error: `Failed to create post on ${platform}`,
         });

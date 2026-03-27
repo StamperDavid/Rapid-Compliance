@@ -13,6 +13,8 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
+import { SOCIAL_PLATFORMS } from '@/types/social';
+import { PLATFORM_META } from '@/lib/social/platform-config';
 
 // ---------------------------------------------------------------------------
 // Local types mirroring server-side shapes (avoids importing server modules)
@@ -177,12 +179,9 @@ const TABS: { key: TabKey; label: string }[] = [
   { key: 'performance', label: 'Performance' },
 ];
 
-const PLATFORM_COLORS: Record<string, string> = {
-  twitter: '#000000',
-  linkedin: '#0A66C2',
-  facebook: '#1877F2',
-  instagram: '#E1306C',
-};
+const PLATFORM_COLORS: Record<string, string> = Object.fromEntries(
+  SOCIAL_PLATFORMS.map((p) => [p, PLATFORM_META[p].color])
+);
 
 const UPDATE_STATUS_COLORS: Record<string, { bg: string; text: string; label: string }> = {
   pending_review: { bg: 'rgba(255,193,7,0.15)', text: '#FFC107', label: 'Pending Review' },

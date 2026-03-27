@@ -8,7 +8,8 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
-import type { ApprovalItem, ApprovalStatus } from '@/types/social';
+import { SOCIAL_PLATFORMS, type ApprovalItem, type ApprovalStatus } from '@/types/social';
+import { PLATFORM_META } from '@/lib/social/platform-config';
 import { logger } from '@/lib/logger/logger';
 
 type FilterTab = 'all' | ApprovalStatus;
@@ -28,10 +29,9 @@ const STATUS_COLORS: Record<ApprovalStatus, { bg: string; text: string; label: s
   revision_requested: { bg: 'rgba(255,152,0,0.15)', text: '#FF9800', label: 'Revision Needed' },
 };
 
-const PLATFORM_COLORS: Record<string, string> = {
-  twitter: '#000000',
-  linkedin: '#0A66C2',
-};
+const PLATFORM_COLORS: Record<string, string> = Object.fromEntries(
+  SOCIAL_PLATFORMS.map((p) => [p, PLATFORM_META[p].color])
+);
 
 /**
  * Highlight the flagged phrase within content.

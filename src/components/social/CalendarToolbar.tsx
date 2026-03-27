@@ -9,6 +9,8 @@
 import React from 'react';
 import type { ToolbarProps, View } from 'react-big-calendar';
 import type { CalendarEvent } from './CalendarEventCard';
+import { SOCIAL_PLATFORMS } from '@/types/social';
+import { PLATFORM_META } from '@/lib/social/platform-config';
 
 const VIEW_OPTIONS: { key: View; label: string }[] = [
   { key: 'month', label: 'Month' },
@@ -96,8 +98,9 @@ export default function CalendarToolbar(props: CalendarToolbarProps) {
           style={selectStyle}
         >
           <option value="all">All Platforms</option>
-          <option value="twitter">Twitter</option>
-          <option value="linkedin">LinkedIn</option>
+          {SOCIAL_PLATFORMS.map((p) => (
+            <option key={p} value={p}>{PLATFORM_META[p].label}</option>
+          ))}
         </select>
         <select
           value={statusFilter}

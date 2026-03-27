@@ -50,11 +50,17 @@ const saveSettingsSchema = z.object({
   contentThemes: z.array(z.string()),
   hashtagStrategy: z.string(),
   postingPersonality: z.string(),
-  platformPreferences: z.object({
-    twitter: z.object({ maxLength: z.number(), style: z.string() }).optional(),
-    linkedin: z.object({ format: z.string(), tone: z.string() }).optional(),
-    instagram: z.object({ captionStyle: z.string(), hashtagCount: z.number() }).optional(),
-  }).optional(),
+  platformPreferences: z.record(
+    z.string(),
+    z.object({
+      maxLength: z.number().optional(),
+      style: z.string().optional(),
+      format: z.string().optional(),
+      tone: z.string().optional(),
+      captionStyle: z.string().optional(),
+      hashtagCount: z.number().optional(),
+    })
+  ).optional(),
 });
 
 export async function GET(request: NextRequest) {
