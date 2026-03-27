@@ -141,8 +141,33 @@ function isModelNotFoundError(error: Error): boolean {
 }
 
 /**
- * Try a chat request with model fallback on 404 errors
+ * Check if an error is a network-level failure (DNS, timeout, connection refused)
+ * as opposed to an HTTP error from OpenRouter.
  */
+function isNetworkError(error: Error): boolean {
+  const msg = error.message.toLowerCase();
+  return (
+    msg.includes('fetch failed') ||
+    msg.includes('econnrefused') ||
+    msg.includes('econnreset') ||
+    msg.includes('etimedout') ||
+    msg.includes('enotfound') ||
+    msg.includes('socket hang up') ||
+    msg.includes('network')
+  );
+}
+
+/**
+ * Try a chat request with model fallback on 404 errors and retry on network failures.
+ *
+ * Retry strategy:
+ * - Network errors (fetch failed, timeout, DNS): retry up to MAX_RETRIES times with delay
+ * - 404 (model not found): try next model in the fallback chain
+ * - All other HTTP errors: throw immediately (no retry)
+ */
+const MAX_RETRIES = 2;
+const RETRY_DELAY_MS = 2000;
+
 async function chatWithFallback<T>(
   modelsToTry: string[],
   chatFn: (model: string) => Promise<T>,
@@ -151,33 +176,47 @@ async function chatWithFallback<T>(
   let lastError: Error | null = null;
 
   for (const model of modelsToTry) {
-    try {
-      const result = await chatFn(model);
-      return { result, model };
-    } catch (error: unknown) {
-      const err = error as Error;
-      const parsed = parseOpenRouterError(err);
+    for (let attempt = 1; attempt <= MAX_RETRIES + 1; attempt++) {
+      try {
+        const result = await chatFn(model);
+        return { result, model };
+      } catch (error: unknown) {
+        const err = error as Error;
+        const parsed = parseOpenRouterError(err);
 
-      // Log the specific OpenRouter error for debugging
-      logger.warn(`[Jasper] OpenRouter error for model ${model}`, {
-        context,
-        statusCode: parsed?.statusCode,
-        errorBody: parsed?.errorBody?.slice(0, 500),
-        rawMessage: err?.message,
-      });
-
-      // If 404 (model not found), try next model
-      if (isModelNotFoundError(err)) {
-        logger.warn(`[Jasper] Model ${model} returned 404, trying next fallback`, {
-          model,
-          fallbacksRemaining: modelsToTry.indexOf(model) < modelsToTry.length - 1,
+        // Log the specific error for debugging
+        logger.warn(`[Jasper] OpenRouter error for model ${model}`, {
+          context,
+          attempt,
+          statusCode: parsed?.statusCode,
+          errorBody: parsed?.errorBody?.slice(0, 500),
+          rawMessage: err?.message,
         });
-        lastError = err;
-        continue;
-      }
 
-      // For other errors, throw immediately
-      throw error;
+        // Network errors: retry with delay
+        if (isNetworkError(err) && attempt <= MAX_RETRIES) {
+          logger.info(`[Jasper] Network error on attempt ${attempt}/${MAX_RETRIES + 1}, retrying in ${RETRY_DELAY_MS}ms...`, {
+            model,
+            context,
+            error: err.message,
+          });
+          await new Promise<void>((resolve) => { setTimeout(resolve, RETRY_DELAY_MS); });
+          continue;
+        }
+
+        // If 404 (model not found), break inner retry loop and try next model
+        if (isModelNotFoundError(err)) {
+          logger.warn(`[Jasper] Model ${model} returned 404, trying next fallback`, {
+            model,
+            fallbacksRemaining: modelsToTry.indexOf(model) < modelsToTry.length - 1,
+          });
+          lastError = err;
+          break;
+        }
+
+        // For other errors (including exhausted retries), throw immediately
+        throw error;
+      }
     }
   }
 
@@ -210,6 +249,8 @@ const orchestratorChatSchema = z.object({
   voiceEnabled: z.boolean().optional(),
   voiceId: z.string().optional(),
   ttsEngine: z.enum(['elevenlabs', 'unreal']).optional(),
+  /** Client-generated idempotency key. Retries with the same requestId reuse the same missionId. */
+  requestId: z.string().optional(),
 });
 
 type OrchestratorChatRequest = z.infer<typeof orchestratorChatSchema>;
@@ -292,6 +333,7 @@ export async function POST(request: NextRequest) {
       voiceEnabled,
       voiceId,
       ttsEngine,
+      requestId,
     } = parsedBody.data;
 
     // Determine model to use
@@ -377,8 +419,12 @@ export async function POST(request: NextRequest) {
     let lastReviewLink: string | undefined;
     let modelUsed = selectedModel;
 
-    // Mission tracking — generate ID for potential delegation tracking
-    const missionId = `mission_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    // Mission tracking — derive missionId from client requestId when available.
+    // This ensures retries with the same requestId reuse the same missionId,
+    // preventing duplicate missions in Firestore (set() overwrites same doc).
+    const missionId = requestId
+      ? `mission_${requestId}`
+      : `mission_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
     const conversationId = `jasper_${context}`;
     const missionContext: ToolCallContext = { conversationId, missionId, userPrompt: message, userId: user.uid };
     let missionCreated = false;

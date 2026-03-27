@@ -460,6 +460,10 @@ export function OrchestratorBase({ config }: { config: OrchestratorConfig }) {
         content: msg.content,
       }));
 
+      // Generate a stable requestId for this user action.
+      // Retries reuse the same ID so the server won't create duplicate missions.
+      const requestId = `req_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+
       // Call the live OpenRouter API via our orchestrator endpoint
       const response = await fetch('/api/orchestrator/chat', {
         method: 'POST',
@@ -479,6 +483,7 @@ export function OrchestratorBase({ config }: { config: OrchestratorConfig }) {
           voiceEnabled: voiceSettings.enabled,
           voiceId: voiceSettings.voiceId,
           ttsEngine: voiceSettings.ttsEngine,
+          requestId,
         }),
       });
 
