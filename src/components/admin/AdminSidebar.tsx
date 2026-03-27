@@ -436,18 +436,17 @@ export default function AdminSidebar() {
                     textOverflow: 'ellipsis',
                   }}
                 >
-                  {user?.displayName ?? user?.email?.split('@')[0] ?? 'User'}
+                  SalesVelocity.ai
                 </div>
                 <div
                   style={{
                     fontSize: '0.6875rem',
                     color: 'var(--color-primary)',
                     fontWeight: 600,
-                    textTransform: 'uppercase',
                     letterSpacing: '0.05em',
                   }}
                 >
-                  {user?.role ?? 'member'}
+                  {user?.displayName ?? user?.email?.split('@')[0] ?? 'User'}
                 </div>
               </div>
             </Link>
