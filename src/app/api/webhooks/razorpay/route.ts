@@ -178,6 +178,14 @@ export async function POST(request: NextRequest) {
 
       case 'refund.created':
       case 'refund.processed': {
+        if (refundEntity?.payment_id) {
+          await updateOrderByTransactionId(refundEntity.payment_id, {
+            paymentStatus: 'refunded',
+            'payment.razorpayRefundId': refundEntity.id ?? null,
+            'payment.razorpayRefundStatus': refundEntity.status ?? null,
+            'payment.amountRefunded': refundEntity.amount ? Number(refundEntity.amount) / 100 : 0,
+          });
+        }
         logger.info(`Razorpay ${event.event}`, {
           route: '/api/webhooks/razorpay',
           refundId: refundEntity?.id,

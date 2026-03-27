@@ -40,7 +40,7 @@ interface TeamMember {
 }
 
 export default function TeamMembersPage() {
-  const { user: currentUser } = useAuth();
+  useAuth(); // Ensure user is authenticated
   const { theme } = useOrgTheme();
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -344,32 +344,24 @@ export default function TeamMembersPage() {
     try {
       setSaving(true);
       const headers = await getAuthHeaders();
-      const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
 
-      // Create a pending user record in Firestore
-      const inviteId = `invite-${Date.now()}`;
-      await FirestoreService.set(COLLECTIONS.USERS, inviteId, {
-        id: inviteId,
-        email: inviteEmail,
-        role: inviteRole,
-        status: 'invited',
-        invitedBy: currentUser?.id ?? 'unknown',
-        createdAt: new Date(),
-      }, false);
+      // Use the proper invite API route which handles:
+      // - Role hierarchy enforcement (managers can only invite members)
+      // - Duplicate detection
+      // - Tokenized invite link with 7-day expiry
+      // - Branded HTML invite email
+      const response = await fetch('/api/users/invite', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          email: inviteEmail,
+          role: inviteRole,
+        }),
+      });
 
-      // Send invite email via API
-      try {
-        await fetch('/api/email/send', {
-          method: 'POST',
-          headers,
-          body: JSON.stringify({
-            to: inviteEmail,
-            subject: 'You\'ve been invited to SalesVelocity.ai',
-            body: `You've been invited to join the team as a ${inviteRole}. Sign up at ${window.location.origin}/signup`,
-          }),
-        });
-      } catch {
-        // Email sending is best-effort
+      if (!response.ok) {
+        const errorData = await response.json() as { error?: string };
+        throw new Error(errorData.error ?? 'Failed to send invitation');
       }
 
       setNotification({ message: `Invitation sent to ${inviteEmail}`, type: 'success' });

@@ -310,6 +310,31 @@ export async function PATCH(request: NextRequest) {
       userId: authResult.user.uid,
     });
 
+    // Propagate role change to Firebase Auth custom claims so the JWT
+    // reflects the new role immediately (not just after re-login)
+    if (body.role !== undefined) {
+      try {
+        const adminAuth = getAuth();
+        const isAdminRole = body.role === 'owner' || body.role === 'admin';
+        await adminAuth.setCustomUserClaims(body.userId, {
+          role: body.role,
+          admin: isAdminRole,
+        });
+        logger.info('Firebase claims updated for role change', {
+          route: '/api/admin/users',
+          userId: body.userId,
+          newRole: body.role,
+        });
+      } catch (claimsErr) {
+        // Log but don't fail the response — Firestore is the source of truth
+        logger.warn('Failed to update Firebase claims after role change', {
+          route: '/api/admin/users',
+          userId: body.userId,
+          error: claimsErr instanceof Error ? claimsErr.message : String(claimsErr),
+        });
+      }
+    }
+
     logger.info('Admin updated user', {
       route: '/api/admin/users',
       admin: authResult.user.email,
