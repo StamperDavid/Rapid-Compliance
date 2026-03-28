@@ -1158,19 +1158,21 @@ function MissionControlView({ deepLinkedMission }: { deepLinkedMission: string |
       const data = (await res.json()) as MissionListResponse;
       if (data.success && data.data) {
         // Live tab: show active missions + recently completed (last 10 minutes)
+        // Always include deep-linked mission so review links work
         const tenMinAgo = Date.now() - 10 * 60 * 1000;
         const liveMissions = data.data.missions.filter((m) => {
           const isActive = m.status === 'IN_PROGRESS' || m.status === 'AWAITING_APPROVAL' || m.status === 'PENDING';
           const isRecentlyCompleted = (m.status === 'COMPLETED' || m.status === 'FAILED') &&
             m.completedAt && new Date(m.completedAt).getTime() > tenMinAgo;
-          return isActive || isRecentlyCompleted;
+          const isDeepLinked = deepLinkedMission != null && m.missionId === deepLinkedMission;
+          return Boolean(isActive) || Boolean(isRecentlyCompleted) || isDeepLinked;
         });
         setMissions(liveMissions);
       }
     } catch {
       // Silent fail on polling
     }
-  }, [authFetch]);
+  }, [authFetch, deepLinkedMission]);
 
   // ── Initial load ────────────────────────────────────────────────────
   useEffect(() => {

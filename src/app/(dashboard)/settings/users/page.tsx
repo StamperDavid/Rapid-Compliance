@@ -57,8 +57,12 @@ export default function TeamMembersPage() {
         throw new Error(body.error ?? `Failed to load users (${res.status})`);
       }
 
-      const body = await res.json() as { users?: Array<{ id: string; email: string; name: string; role: string; createdAt: string | null }> };
+      const body = await res.json() as {
+        users?: Array<{ id: string; email: string; name: string; role: string; createdAt: string | null }>;
+        pendingInvites?: Array<{ id: string; email: string; role: string; status: string; createdAt: string | null }>;
+      };
       const rawUsers = body.users ?? [];
+      const rawInvites = body.pendingInvites ?? [];
 
       const members: TeamMember[] = rawUsers.map((u, index: number) => {
         const joinedDate = u.createdAt
@@ -77,7 +81,20 @@ export default function TeamMembersPage() {
         };
       });
 
-      setTeamMembers(members);
+      // Add pending invites to the list so they're visible
+      const inviteMembers: TeamMember[] = rawInvites.map((inv, index: number) => ({
+        id: `invite-${index}`,
+        firestoreId: inv.id,
+        name: inv.email.split('@')[0],
+        email: inv.email,
+        role: (inv.role as UserRole) ?? 'member',
+        title: '',
+        department: '',
+        status: 'invited' as const,
+        joinedDate: 'Pending',
+      }));
+
+      setTeamMembers([...members, ...inviteMembers]);
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Failed to load users';
       setError(msg);
@@ -200,20 +217,33 @@ export default function TeamMembersPage() {
     try {
       setSaving(true);
       const headers = await getAuthHeaders();
-      const response = await fetch(`/api/admin/users?userId=${encodeURIComponent(member.firestoreId)}`, {
-        method: 'DELETE',
-        headers,
-      });
 
-      if (!response.ok) {
-        const errorData = await response.json() as { error?: string };
-        throw new Error(errorData.error ?? 'Failed to remove user');
+      if (member.status === 'invited') {
+        // Cancel a pending invite ��� delete from invites collection
+        const response = await fetch(`/api/users/invite?inviteId=${encodeURIComponent(member.firestoreId)}`, {
+          method: 'DELETE',
+          headers,
+        });
+        if (!response.ok) {
+          const errorData = await response.json() as { error?: string };
+          throw new Error(errorData.error ?? 'Failed to cancel invitation');
+        }
+      } else {
+        // Remove an actual user
+        const response = await fetch(`/api/admin/users?userId=${encodeURIComponent(member.firestoreId)}`, {
+          method: 'DELETE',
+          headers,
+        });
+        if (!response.ok) {
+          const errorData = await response.json() as { error?: string };
+          throw new Error(errorData.error ?? 'Failed to remove user');
+        }
       }
 
       // Remove from local state
       setTeamMembers(prev => prev.filter(m => m.firestoreId !== member.firestoreId));
       setConfirmRemove(null);
-      setNotification({ message: `${member.name} has been removed`, type: 'success' });
+      setNotification({ message: member.status === 'invited' ? `Invitation to ${member.email} cancelled` : `${member.name} has been removed`, type: 'success' });
     } catch (err) {
       setNotification({ message: err instanceof Error ? err.message : 'Failed to remove user', type: 'error' });
     } finally {

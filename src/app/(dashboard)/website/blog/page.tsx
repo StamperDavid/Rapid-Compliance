@@ -396,10 +396,10 @@ export default function BlogManagementPage() {
                     <span>By {(post.authorName !== '' && post.authorName != null) ? post.authorName : 'Unknown'}</span>
                     <span>•</span>
                     <span>{new Date(post.createdAt).toLocaleDateString()}</span>
-                    {post.categories.length > 0 && (
+                    {(post.categories ?? []).length > 0 && (
                       <>
                         <span>•</span>
-                        <span>{post.categories.join(', ')}</span>
+                        <span>{(post.categories ?? []).join(', ')}</span>
                       </>
                     )}
                     {post.readTime && (

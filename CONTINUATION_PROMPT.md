@@ -37,8 +37,8 @@ Walk through every feature and function of the platform end-to-end. Find and fix
 
 | Phase | System | Tests | Pass | Fail | Observations | Status |
 |-------|--------|-------|------|------|-------------|--------|
-| 0 | Foundation & Auth | 12 | — | — | — | NOT STARTED |
-| 1 | Jasper & Mission Control | 18 | — | — | — | NOT STARTED |
+| 0 | Foundation & Auth | 11 | 10 | 0 | 1 skipped (signup — multi-tenant) | COMPLETE |
+| 1 | Jasper & Mission Control | 18 | — | — | — | IN PROGRESS |
 | 2 | CRM & Sales Pipeline | 22 | — | — | — | NOT STARTED |
 | 3 | Email & Communications | 16 | — | — | — | NOT STARTED |
 | 4 | Social Media | 14 | — | — | — | NOT STARTED |
@@ -64,18 +64,18 @@ Walk through every feature and function of the platform end-to-end. Find and fix
 
 | # | Test | Steps | Expected | Result | Notes |
 |---|------|-------|----------|--------|-------|
-| 0.1 | App loads | Navigate to `localhost:3000` | Landing page renders, no console errors | | |
-| 0.2 | Login flow | Click Login → enter credentials → submit | Redirects to dashboard, user context loaded | | |
-| 0.3 | Dashboard loads | After login, dashboard page renders | Shows widgets, stats, no blank panels | | |
-| 0.4 | Sidebar navigation | Click each top-level nav item | All 9 sections expand/navigate correctly | | |
-| 0.5 | Owner permissions | As owner, visit `/settings/users` | Full access, can manage all users | | |
-| 0.6 | RBAC — restricted page | As member role, visit `/settings/api-keys` | Access denied or appropriate gating | | |
-| 0.7 | Logout flow | Click logout | Redirected to login, session cleared | | |
-| 0.8 | Signup flow | Visit `/signup`, create new account | Account created, onboarding starts | | |
-| 0.9 | Forgot password | Visit `/forgot-password`, enter email | Reset email sent (or appropriate message) | | |
-| 0.10 | Session persistence | Login, close tab, reopen `localhost:3000` | Still logged in (token not expired) | | |
-| 0.11 | API auth enforcement | Open DevTools → hit `/api/orchestrator/chat` without auth | Returns 401, not 500 | | |
-| 0.12 | Feature toggle system | Visit `/settings/features` → toggle a module off | Module disappears from sidebar | | |
+| 0.1 | App loads | Navigate to `localhost:3000` | Landing page renders, no console errors | PASS | Dev passcode gate shows first (by design), then landing page loads |
+| 0.2 | Login flow | Click Login → enter credentials → submit | Redirects to dashboard, user context loaded | PASS | Slow on cold compile (~15s), works after cache warm |
+| 0.3 | Dashboard loads | After login, dashboard page renders | Shows widgets, stats, no blank panels | PASS | KPIs render. Recent Activity blank (fresh env, expected). Commerce/Analytics are nav-link cards by design. **Jasper Setup Assistant fixed:** wrong Firestore path for API keys + broken persona/knowledge base links |
+| 0.4 | Sidebar navigation | Click each top-level nav item | All 9 sections expand/navigate correctly | PASS | |
+| 0.5 | Owner permissions | As owner, visit `/settings/users` | Full access, can manage all users | PASS | **4 bugs fixed:** (1) GET didn't filter soft-deleted users. (2) Pending invites not shown in list. (3) Deleting an invite hit wrong endpoint (404). (4) SendGrid sender identity unverified — recreated and verified `dstamper@salesvelocity.ai` via API. Invite emails now sending. |
+| 0.6 | RBAC — restricted page | As member role, visit `/settings/api-keys` | Access denied or appropriate gating | PASS | Tested with admin account — System nav section hidden for non-owner roles. RBAC sidebar gating confirmed working. |
+| 0.7 | Logout flow | Click logout | Redirected to login, session cleared | PASS | |
+| 0.8 | Signup flow | Visit `/signup`, create new account | Account created, onboarding starts | SKIP | Standalone signup not applicable in single-tenant mode. Invite flow is the correct user-add path. Revisit when multi-tenant is re-enabled. |
+| 0.9 | Forgot password | Visit `/forgot-password`, enter email | Reset email sent (or appropriate message) | PASS | Firebase Auth sends reset email. Lands in spam (from noreply@rapid-compliance-65f87.firebaseapp.com). |
+| 0.10 | Session persistence | Login, close tab, reopen `localhost:3000` | Still logged in (token not expired) | PASS | Session persists — `/dashboard` loads logged in after closing/reopening tab. |
+| 0.11 | API auth enforcement | Open DevTools → hit `/api/orchestrator/chat` without auth | Returns 401, not 500 | PASS | POST returns 401 as expected. GET returns 200 (no GET handler — harmless). |
+| ~~0.12~~ | ~~Feature toggle system~~ | REMOVED | N/A | N/A | Feature toggles replaced with nav restructure — no longer applicable. |
 
 ---
 
@@ -85,13 +85,13 @@ Walk through every feature and function of the platform end-to-end. Find and fix
 
 | # | Test | Steps | Expected | Result | Notes |
 |---|------|-------|----------|--------|-------|
-| 1.1 | Jasper opens | Click Jasper chat icon | Chat panel opens, welcome message shows | | |
-| 1.2 | Simple conversation | Type "Hello, what can you do?" | Jasper responds with capabilities, no tool calls | | |
-| 1.3 | Tool invocation | "Show me my recent leads" | Jasper calls CRM tool, returns real data | | |
-| 1.4 | Delegation | "Create a blog post about AI in sales" | Jasper delegates to content team, mission created | | |
-| 1.5 | Mission appears | After 1.4, navigate to `/mission-control` | One mission visible with correct title | | |
-| 1.6 | No duplicate missions | Check mission list after 1.4 | Exactly ONE mission, not two or more | | |
-| 1.7 | Mission steps | Click on the mission from 1.4 | Steps visible (RUNNING → COMPLETED), correct tool names | | |
+| 1.1 | Jasper opens | Click Jasper chat icon | Chat panel opens, welcome message shows | PASS | |
+| 1.2 | Simple conversation | Type "Hello, what can you do?" | Jasper responds with capabilities, no tool calls | PASS | Clean capabilities overview, no tool calls. |
+| 1.3 | Tool invocation | "Show me my recent leads" | Jasper calls CRM tool, returns real data | PASS | Tools called: score_leads, get_system_state, enrich_lead. Empty results (fresh env). Response should say "no leads found" more explicitly — prompt tuning item. |
+| 1.4 | Delegation | "Create a blog post about AI in sales" | Jasper delegates to content team, mission created | PARTIAL | Blog saved via `save_blog_draft` (works). **Bugs fixed:** (1) Blog editor crash — `section.columns` guard. (2) Review link → Mission Control. (3) `delegate_to_content` label → "Content" not "Video Studio". (4) Review page rendered raw JSON → now shows readable specialist report. **Known issue:** `delegate_to_content` agent broken — copywriter expects `method` but manager sends `action`, 6/7 specialists fail. Jasper prompt updated to use `save_blog_draft` directly for blog posts. Content agent contract mismatch needs dedicated fix. |
+| 1.5 | Mission appears | After 1.4, navigate to `/mission-control` | One mission visible with correct title | PASS | Shows in History tab. Live tab filters out completed missions >10min — fixed deep-link to always include targeted mission. |
+| 1.6 | No duplicate missions | Check mission list after 1.4 | Exactly ONE mission, not two or more | PASS | 3 missions in history, no duplicates. |
+| 1.7 | Mission steps | Click on the mission from 1.4 | Steps visible (RUNNING → COMPLETED), correct tool names | PASS | 2 steps shown: Content + Save Blog Draft, both COMPLETED with progress bar. |
 | 1.8 | Mission SSE streaming | Watch mission while Jasper works | Status updates in real-time without refresh | | |
 | 1.9 | Review link | After delegation completes, check Jasper's response | Contains clickable review link to the output page | | |
 | 1.10 | Mission cancel | Create a mission, then click Cancel | Mission status changes to FAILED, "Cancelled by user" | | |

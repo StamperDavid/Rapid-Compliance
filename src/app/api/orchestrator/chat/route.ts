@@ -438,6 +438,8 @@ export async function POST(request: NextRequest) {
       'scan_leads', 'enrich_lead', 'draft_outreach_email',
       'voice_agent', 'social_post', 'research_competitors',
       'orchestrate_campaign', 'create_campaign',
+      'save_blog_draft', 'research_trending_topics', 'batch_produce_videos',
+      'scrape_website', 'scan_tech_stack', 'migrate_website',
     ];
 
     // Build model fallback chain: selected model + fallback models

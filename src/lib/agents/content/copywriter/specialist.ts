@@ -369,7 +369,29 @@ export interface AdCopyRequest {
   variants?: number; // Number of ad variants (default 3)
 }
 
-export type CopywriterRequest = HeadlineRequest | ProductDescriptionRequest | EmailCopyRequest | AdCopyRequest;
+export interface PageCopyRequest {
+  method?: 'generate_page_copy';
+  action?: 'generate_page_copy';
+  pageId: string;
+  pageName: string;
+  pagePurpose?: string;
+  sections?: Array<{ id: string; name: string; purpose?: string }>;
+  seoKeywords?: string[];
+  titleTemplate?: string;
+  descriptionTemplate?: string;
+  toneOfVoice?: string;
+  keyPhrases?: string[];
+  avoidPhrases?: string[];
+}
+
+export interface PageCopyResult {
+  headlines: { h1: string; h2: string[]; h3: string[] };
+  sections: Array<{ sectionId: string; heading: string; content: string; cta?: string }>;
+  metadata: { title: string; description: string; keywords: string[]; ogTitle: string; ogDescription: string };
+  visuals: unknown[];
+}
+
+export type CopywriterRequest = HeadlineRequest | ProductDescriptionRequest | EmailCopyRequest | AdCopyRequest | PageCopyRequest;
 
 export interface Headline {
   text: string;
@@ -477,32 +499,29 @@ export class Copywriter extends BaseSpecialist {
     try {
       const payload = message.payload as CopywriterRequest;
 
-      if (!payload?.method) {
-        return this.createReport(taskId, 'FAILED', null, ['No method specified in payload']);
+      // Support both 'method' and 'action' fields (content manager uses 'action')
+      const method = (payload as unknown as Record<string, unknown>).method ?? (payload as unknown as Record<string, unknown>).action;
+
+      if (!method || typeof method !== 'string') {
+        return this.createReport(taskId, 'FAILED', null, ['No method or action specified in payload']);
       }
 
-      this.log('INFO', `Executing Copywriter method: ${payload.method}`);
+      this.log('INFO', `Executing Copywriter method: ${method}`);
 
-      let result: HeadlineResult | ProductDescriptionResult | EmailCopyResult | AdCopyResult;
-
-      switch (payload.method) {
+      switch (method) {
         case 'headline_generation':
-          result = this.generateHeadlines(payload);
-          break;
+          return this.createReport(taskId, 'COMPLETED', this.generateHeadlines(payload as HeadlineRequest));
         case 'product_description':
-          result = this.generateProductDescription(payload);
-          break;
+          return this.createReport(taskId, 'COMPLETED', this.generateProductDescription(payload as ProductDescriptionRequest));
         case 'email_copy':
-          result = this.generateEmailCopy(payload);
-          break;
+          return this.createReport(taskId, 'COMPLETED', this.generateEmailCopy(payload as EmailCopyRequest));
         case 'ad_copy':
-          result = this.generateAdCopy(payload);
-          break;
+          return this.createReport(taskId, 'COMPLETED', this.generateAdCopy(payload as AdCopyRequest));
+        case 'generate_page_copy':
+          return this.createReport(taskId, 'COMPLETED', this.generatePageCopy(payload as PageCopyRequest));
         default:
-          return this.createReport(taskId, 'FAILED', null, ['Unknown method']);
+          return this.createReport(taskId, 'FAILED', null, [`Unknown method: ${method}`]);
       }
-
-      return this.createReport(taskId, 'COMPLETED', result);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       this.log('ERROR', `Copywriter execution failed: ${errorMessage}`);
@@ -547,6 +566,106 @@ export class Copywriter extends BaseSpecialist {
   // ==========================================================================
   // CORE COPYWRITING LOGIC
   // ==========================================================================
+
+  /**
+   * Generate page copy for a website page (called by Content Manager)
+   */
+  generatePageCopy(request: PageCopyRequest): PageCopyResult {
+    const pageName = request.pageName ?? 'Page';
+    const purpose = request.pagePurpose ?? `Main ${pageName} page`;
+    const tone = request.toneOfVoice ?? 'professional';
+    const keywords = request.seoKeywords ?? [];
+    const sections = request.sections ?? [
+      { id: 'hero', name: 'Hero', purpose: 'Primary value proposition' },
+      { id: 'features', name: 'Features', purpose: 'Key benefits and features' },
+      { id: 'cta', name: 'CTA', purpose: 'Call to action' },
+    ];
+
+    const keywordPhrase = keywords.length > 0 ? ` focused on ${keywords.slice(0, 3).join(', ')}` : '';
+
+    // Generate section content
+    const generatedSections = sections.map((section) => {
+      const sectionPurpose = section.purpose ?? section.name;
+      return {
+        sectionId: section.id,
+        heading: this.generateSectionHeading(section.name, pageName, tone),
+        content: this.generateSectionContent(sectionPurpose, pageName, purpose, tone, keywords),
+        cta: section.id === 'cta' || section.name.toLowerCase().includes('cta')
+          ? this.generatePageCTA(pageName, tone)
+          : undefined,
+      };
+    });
+
+    // Generate headlines
+    const h2s = generatedSections.slice(0, 4).map((s) => s.heading);
+
+    return {
+      headlines: {
+        h1: `${pageName}${keywordPhrase ? ` — ${keywords[0] ?? ''}` : ''}`,
+        h2: h2s,
+        h3: [],
+      },
+      sections: generatedSections,
+      metadata: {
+        title: request.titleTemplate ?? `${pageName} | SalesVelocity.ai`,
+        description: request.descriptionTemplate ?? `${purpose}. Discover how we can help you grow.`,
+        keywords,
+        ogTitle: `${pageName} | SalesVelocity.ai`,
+        ogDescription: `${purpose}. Discover how we can help you grow.`,
+      },
+      visuals: [],
+    };
+  }
+
+  /**
+   * Generate a section heading based on tone
+   */
+  private generateSectionHeading(sectionName: string, pageName: string, tone: string): string {
+    const toneHeadings: Record<string, (name: string, page: string) => string> = {
+      professional: (name) => `${name.charAt(0).toUpperCase()}${name.slice(1)}`,
+      casual: (name) => `Here's What Makes Our ${name} Special`,
+      enthusiastic: (name) => `Discover Amazing ${name}!`,
+      luxury: (name) => `Experience Premium ${name}`,
+      educational: (name) => `Understanding Our ${name}`,
+    };
+    const generator = toneHeadings[tone] ?? toneHeadings.professional;
+    return generator(sectionName, pageName);
+  }
+
+  /**
+   * Generate section body content
+   */
+  private generateSectionContent(
+    sectionPurpose: string,
+    pageName: string,
+    pageGoal: string,
+    tone: string,
+    keywords: string[],
+  ): string {
+    const keywordMention = keywords.length > 0 ? ` Our expertise in ${keywords[0]} sets us apart.` : '';
+    const toneContent: Record<string, string> = {
+      professional: `We deliver exceptional ${sectionPurpose.toLowerCase()} designed to help your business thrive.${keywordMention} Our ${pageName.toLowerCase()} showcases our commitment to ${pageGoal.toLowerCase()}.`,
+      casual: `We're all about great ${sectionPurpose.toLowerCase()}.${keywordMention} Check out what makes our ${pageName.toLowerCase()} so special — we think you'll love it.`,
+      enthusiastic: `Get ready for incredible ${sectionPurpose.toLowerCase()}!${keywordMention} Our ${pageName.toLowerCase()} is built to inspire and drive results.`,
+      luxury: `Experience the finest in ${sectionPurpose.toLowerCase()}.${keywordMention} Our ${pageName.toLowerCase()} reflects our dedication to excellence.`,
+      educational: `Learn about our approach to ${sectionPurpose.toLowerCase()}.${keywordMention} This ${pageName.toLowerCase()} explains our methodology and results.`,
+    };
+    return toneContent[tone] ?? toneContent.professional;
+  }
+
+  /**
+   * Generate a call-to-action
+   */
+  private generatePageCTA(pageName: string, tone: string): string {
+    const ctas: Record<string, string> = {
+      professional: `Get started with ${pageName} today`,
+      casual: `Ready to dive in? Let's go!`,
+      enthusiastic: `Start your journey now!`,
+      luxury: `Experience the difference`,
+      educational: `Learn more about our process`,
+    };
+    return ctas[tone] ?? ctas.professional;
+  }
 
   /**
    * Generate compelling headlines using proven frameworks

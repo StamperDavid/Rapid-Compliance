@@ -517,7 +517,8 @@ function detectOutputType(data: ParsedOutput, toolName?: string): string {
   // Video draft
   if (data.status === 'draft') { return 'draft'; }
 
-  // Tool name hints
+  // Tool name hints — delegation tools that return agent metadata
+  if (toolName?.startsWith('delegate_to_')) { return 'delegation_result'; }
   if (toolName?.includes('blog') || toolName?.includes('save_blog')) { return 'blog_draft'; }
   if (toolName?.includes('intelligence')) { return 'intelligence'; }
   if (toolName?.includes('social')) { return 'social_post'; }
@@ -662,6 +663,49 @@ function DelegationResultReview({ data }: { data: ParsedOutput }) {
   const reviewLink = data.reviewLink as string | undefined;
   const campaignId = data.campaignId as string | undefined;
 
+  // Build a readable summary from agent metadata when no message exists
+  const summaryParts: string[] = [];
+  if (!message) {
+    // Delegation execution summary
+    const execution = data.execution as { totalSpecialists?: number; successfulSpecialists?: number; failedSpecialists?: number } | undefined;
+    if (execution) {
+      summaryParts.push(`${execution.successfulSpecialists ?? 0} of ${execution.totalSpecialists ?? 0} specialists completed successfully`);
+    }
+
+    // Show delegation results
+    const delegations = data.delegations as Array<{ specialist?: string; brief?: string; status?: string }> | undefined;
+    if (Array.isArray(delegations) && delegations.length > 0) {
+      summaryParts.push('');
+      summaryParts.push('Agent Activity:');
+      for (const d of delegations) {
+        const name = (d.specialist ?? 'Unknown').replace(/_/g, ' ');
+        const icon = d.status === 'COMPLETED' ? '✓' : '✗';
+        summaryParts.push(`  ${icon} ${name} — ${d.status ?? 'unknown'}`);
+        if (d.brief) { summaryParts.push(`    ${d.brief}`); }
+      }
+    }
+
+    // Detected intent
+    if (typeof data.detectedIntent === 'string') {
+      summaryParts.push('');
+      summaryParts.push(`Intent: ${data.detectedIntent.replace(/_/g, ' ')}`);
+    }
+
+    // Validation
+    const validation = data.validation as { passed?: boolean; seoScore?: number; toneConsistency?: number } | undefined;
+    if (validation) {
+      summaryParts.push('');
+      summaryParts.push(`Validation: ${validation.passed ? 'Passed' : 'Failed'} · SEO: ${validation.seoScore ?? '-'}% · Tone: ${validation.toneConsistency ?? '-'}%`);
+    }
+
+    // Confidence
+    if (typeof data.confidence === 'number') {
+      summaryParts.push(`Confidence: ${Math.round(data.confidence * 100)}%`);
+    }
+  }
+
+  const displayMessage = message ?? (summaryParts.length > 0 ? summaryParts.join('\n') : 'Delegation completed successfully.');
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
       {status && (
@@ -675,11 +719,9 @@ function DelegationResultReview({ data }: { data: ParsedOutput }) {
           </span>
         </div>
       )}
-      {message && (
-        <div style={{ padding: '1.25rem', backgroundColor: 'var(--color-bg-elevated)', borderRadius: '0.625rem', fontSize: '0.875rem', color: 'var(--color-text-primary)', lineHeight: 1.6 }}>
-          {message}
-        </div>
-      )}
+      <div style={{ padding: '1.25rem', backgroundColor: 'var(--color-bg-elevated)', borderRadius: '0.625rem', fontSize: '0.875rem', color: 'var(--color-text-primary)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
+        {displayMessage}
+      </div>
       {reviewLink && (
         <a href={reviewLink} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', padding: '0.625rem 1.25rem', backgroundColor: 'var(--color-primary)', color: '#fff', borderRadius: '0.375rem', textDecoration: 'none', fontSize: '0.875rem', fontWeight: 600, width: 'fit-content' }}>
           Review Output

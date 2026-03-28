@@ -96,6 +96,8 @@ export async function GET(request: NextRequest) {
       const post: BlogPost = {
         ...data,
         id: doc.id,
+        categories: data.categories ?? [],
+        tags: data.tags ?? [],
       };
 
       // Filter by category if specified

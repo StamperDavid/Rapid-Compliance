@@ -511,11 +511,12 @@ export class CalendarCoordinator extends BaseSpecialist {
     try {
       const payload = message.payload as CalendarRequest;
 
-      if (!payload?.method) {
-        return this.createReport(taskId, 'FAILED', null, ['No method specified in payload']);
+      const method: string | undefined = payload?.method ?? (payload as unknown as Record<string, unknown>)?.action as string | undefined;
+      if (!method) {
+        return this.createReport(taskId, 'FAILED', null, ['No method or action specified in payload']);
       }
 
-      this.log('INFO', `Executing Calendar Coordinator method: ${payload.method}`);
+      this.log('INFO', `Executing Calendar Coordinator method: ${method}`);
 
       let result:
         | CalendarPlanningResult
@@ -523,21 +524,17 @@ export class CalendarCoordinator extends BaseSpecialist {
         | CrossPlatformSyncResult
         | PerformanceTrackingResult;
 
-      switch (payload.method) {
-        case 'calendar_planning':
-          result = this.planCalendar(payload);
-          break;
-        case 'optimal_timing':
-          result = this.recommendOptimalTiming(payload);
-          break;
-        case 'cross_platform_sync':
-          result = this.coordinateCrossPlatform(payload);
-          break;
-        case 'performance_tracking':
-          result = this.analyzePerformance(payload);
-          break;
-        default:
-          return this.createReport(taskId, 'FAILED', null, ['Unknown method']);
+      // Use if/else to support both canonical method names and action aliases from content manager
+      if (method === 'calendar_planning' || method === 'plan_calendar') {
+        result = this.planCalendar(payload as CalendarPlanningRequest);
+      } else if (method === 'optimal_timing') {
+        result = this.recommendOptimalTiming(payload as OptimalTimingRequest);
+      } else if (method === 'cross_platform_sync' || method === 'schedule_social_posts' || method === 'schedule_case_study_distribution') {
+        result = this.coordinateCrossPlatform(payload as CrossPlatformSyncRequest);
+      } else if (method === 'performance_tracking') {
+        result = this.analyzePerformance(payload as PerformanceTrackingRequest);
+      } else {
+        return this.createReport(taskId, 'FAILED', null, [`Unknown method: ${method}`]);
       }
 
       return this.createReport(taskId, 'COMPLETED', result);

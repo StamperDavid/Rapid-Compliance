@@ -13,7 +13,7 @@ const TOOL_ROUTE_MAP: Record<string, { route: string; label: string }> = {
   delegate_to_revenue_director: { route: '/contacts', label: 'Contacts' },
   delegate_to_marketing: { route: '/email/campaigns', label: 'Email Campaigns' },
   delegate_to_marketing_manager: { route: '/email/campaigns', label: 'Email Campaigns' },
-  delegate_to_content: { route: '/content/video', label: 'Video Studio' },
+  delegate_to_content: { route: '/website/blog', label: 'Content' },
   delegate_to_outreach: { route: '/leads', label: 'Lead Scanner' },
   delegate_to_intelligence: { route: '/analytics', label: 'Analytics' },
   delegate_to_trust: { route: '/analytics', label: 'Analytics' },
@@ -32,7 +32,7 @@ const TOOL_ROUTE_MAP: Record<string, { route: string; label: string }> = {
   // Other tools
   social_post: { route: '/social/command-center', label: 'Social Command Center' },
   voice_agent: { route: '/calls', label: 'Voice Calls' },
-  save_blog_draft: { route: '/website', label: 'Website' },
+  save_blog_draft: { route: '/website/blog', label: 'Blog' },
   research_trending_topics: { route: '/seo', label: 'SEO' },
   get_seo_config: { route: '/seo', label: 'SEO' },
   migrate_website: { route: '/website', label: 'Website' },

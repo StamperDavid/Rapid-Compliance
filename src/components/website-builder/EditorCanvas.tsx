@@ -242,7 +242,7 @@ function SectionRenderer({
         display: 'flex',
         gap: '1rem',
       }}>
-        {section.columns.map((column, colIndex) => (
+        {(section.columns ?? []).map((column, colIndex) => (
           <div
             key={column.id}
             onDragOver={(e) => {

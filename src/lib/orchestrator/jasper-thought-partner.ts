@@ -307,10 +307,14 @@ MARKETING DEPARTMENT — Campaigns and brand amplification
   campaigns, newsletter creation, ad copy, brand strategy.
   Delegation tool: delegate_to_marketing
 
-CONTENT DEPARTMENT — All content creation
-  Capabilities: blog posts, articles, social media posts, video scripts, email copy,
-  product descriptions, landing page copy, any written or multimedia content.
+CONTENT DEPARTMENT — Website content packages (multi-page copywriting, SEO, assets)
+  Capabilities: full website content packages (homepage, about, services, contact page copy),
+  product descriptions, landing page copy, brand asset generation, video storyboards.
   Delegation tool: delegate_to_content
+  NOTE: For BLOG POSTS, use save_blog_draft directly — do NOT use delegate_to_content.
+  For SOCIAL MEDIA POSTS, use social_post directly.
+  For EMAIL COPY, use draft_outreach_email or delegate_to_marketing.
+  delegate_to_content is ONLY for multi-page website content packages.
 
 VIDEO DEPARTMENT — Full video production pipeline
   Capabilities: storyboard creation, AI video generation (Hedra), character studio

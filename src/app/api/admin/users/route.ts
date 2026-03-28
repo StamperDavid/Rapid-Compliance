@@ -33,6 +33,7 @@ interface FirestoreUserData {
   readonly name?: string;
   readonly displayName?: string;
   readonly role?: string;
+  readonly status?: string;
   readonly createdAt?: FirestoreTimestamp | Timestamp;
   readonly updatedAt?: FirestoreTimestamp | Timestamp;
   readonly lastLoginAt?: FirestoreTimestamp | Timestamp;
@@ -77,6 +78,7 @@ interface ValidatedUpdateFields {
  */
 interface GetUsersResponse {
   readonly users: readonly UserData[];
+  readonly pendingInvites?: readonly { id: string; email: string; role: string; status: string; createdAt: string | null }[];
   readonly pagination: {
     readonly count: number;
     readonly hasMore: boolean;
@@ -216,13 +218,15 @@ export async function GET(request: NextRequest) {
       return ref.limit(500);
     });
 
-    // Filter out system agent users (not real team members)
+    // Filter out system agent users and removed users (not real team members)
     const humanDocs = usersSnapshot.docs.filter((doc) => {
       const id = doc.id;
       const data = doc.data() as FirestoreUserData;
       // Exclude agent service accounts and demo data
       const isAgent = id.startsWith('agent_') || (data.email ?? '').includes('@ai-agent.');
-      return !isAgent;
+      // Exclude soft-deleted users
+      const isRemoved = data.status === 'removed';
+      return !isAgent && !isRemoved;
     });
 
     // Transform and sort by createdAt descending (handles mixed timestamp types)
@@ -248,16 +252,43 @@ export async function GET(request: NextRequest) {
     // Get cursor for next page
     const lastUser = users.length > 0 ? users[users.length - 1] : null;
     const nextCursor = hasMore && lastUser ? lastUser.createdAt : null;
-    
+
+    // Fetch pending invites so the UI can show them
+    let pendingInvites: Array<{ id: string; email: string; role: string; status: string; createdAt: string | null }> = [];
+    try {
+      const { PLATFORM_ID } = await import('@/lib/constants/platform');
+      const { adminDb } = await import('@/lib/firebase/admin');
+      if (adminDb) {
+        const invitesSnap = await adminDb
+          .collection(`organizations/${PLATFORM_ID}/invites`)
+          .where('status', '==', 'pending')
+          .get();
+        pendingInvites = invitesSnap.docs.map((doc) => {
+          const d = doc.data();
+          return {
+            id: doc.id,
+            email: typeof d.email === 'string' ? d.email : '',
+            role: typeof d.role === 'string' ? d.role : 'member',
+            status: 'invited',
+            createdAt: typeof d.expiresAt === 'string' ? d.expiresAt : null,
+          };
+        });
+      }
+    } catch {
+      logger.info('Could not fetch pending invites', { route: '/api/admin/users' });
+    }
+
     logger.info('Admin fetched users', {
       route: '/api/admin/users',
       admin: authResult.user.email,
       count: users.length,
+      pendingInvites: pendingInvites.length,
       hasMore
     });
 
     const response: GetUsersResponse = {
       users,
+      pendingInvites,
       pagination: {
         count: users.length,
         hasMore,

@@ -392,8 +392,9 @@ export class AssetGenerator extends BaseSpecialist {
     try {
       const payload = message.payload as AssetGenerationRequest;
 
-      if (!payload?.method) {
-        return this.createReport(taskId, 'FAILED', null, ['No method specified in payload']);
+      const method = payload?.method ?? (payload as unknown as Record<string, unknown>)?.action as string | undefined;
+      if (!method) {
+        return this.createReport(taskId, 'FAILED', null, ['No method or action specified in payload']);
       }
 
       if (!payload.brandName) {
@@ -404,7 +405,7 @@ export class AssetGenerator extends BaseSpecialist {
 
       let result: AssetGenerationResult;
 
-      switch (payload.method) {
+      switch (method) {
         case 'generate_logo':
           result = await this.generateLogo(payload);
           break;

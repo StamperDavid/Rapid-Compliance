@@ -1950,11 +1950,11 @@ export const JASPER_TOOLS: ToolDefinition[] = [
           },
           categories: {
             type: 'string',
-            description: 'Comma-separated categories (e.g., "AI, Marketing, Trends")',
+            description: 'REQUIRED: Comma-separated categories relevant to the post content (e.g., "AI & Technology, Small Business, Sales"). Always provide at least 1-3 categories.',
           },
           tags: {
             type: 'string',
-            description: 'Comma-separated tags (e.g., "automation, sales, 2026-trends")',
+            description: 'REQUIRED: Comma-separated tags for discoverability (e.g., "artificial-intelligence, automation, small-business, 2026-trends"). Always provide 3-6 tags.',
           },
           seoTitle: {
             type: 'string',
@@ -1981,7 +1981,7 @@ export const JASPER_TOOLS: ToolDefinition[] = [
             description: 'Optional: Campaign ID to register this blog post as a campaign deliverable. Get this from create_campaign.',
           },
         },
-        required: ['title', 'content'],
+        required: ['title', 'content', 'excerpt', 'categories', 'tags'],
       },
     },
   },
@@ -5548,12 +5548,48 @@ Select cohesive settings that create a professional, unified visual language acr
             },
           ];
 
-          const categories = args.categories
+          // Parse categories/tags from args, or auto-generate from title + content
+          let categories = args.categories
             ? (args.categories as string).split(',').map((c: string) => c.trim())
             : [];
-          const tags = args.tags
+          let tags = args.tags
             ? (args.tags as string).split(',').map((t: string) => t.trim())
             : [];
+
+          // Auto-generate if Jasper didn't provide them
+          if (categories.length === 0) {
+            const titleLower = (args.title as string).toLowerCase();
+            const contentLower = (args.content as string).toLowerCase();
+            const combined = `${titleLower} ${contentLower}`;
+            const categoryMap: Record<string, string[]> = {
+              'AI & Technology': ['artificial intelligence', 'machine learning', 'ai ', 'automation', 'technology', 'tech'],
+              'Sales': ['sales', 'revenue', 'pipeline', 'closing', 'prospecting', 'leads', 'deals'],
+              'Marketing': ['marketing', 'campaign', 'brand', 'advertising', 'seo', 'content marketing'],
+              'Small Business': ['small business', 'smb', 'entrepreneur', 'startup', 'small companies'],
+              'Growth': ['growth', 'scaling', 'expansion', 'strategy'],
+              'E-Commerce': ['ecommerce', 'e-commerce', 'online store', 'checkout', 'shopping'],
+              'Social Media': ['social media', 'facebook', 'instagram', 'linkedin', 'twitter', 'tiktok'],
+              'Email Marketing': ['email', 'newsletter', 'inbox', 'outreach'],
+              'Video': ['video', 'youtube', 'streaming', 'production'],
+              'Customer Success': ['customer', 'retention', 'churn', 'support', 'satisfaction'],
+            };
+            for (const [cat, keywords] of Object.entries(categoryMap)) {
+              if (keywords.some(k => combined.includes(k))) {
+                categories.push(cat);
+              }
+            }
+            if (categories.length === 0) { categories = ['General']; }
+          }
+
+          if (tags.length === 0) {
+            // Extract key terms from title as tags
+            const titleWords = (args.title as string)
+              .toLowerCase()
+              .replace(/[^a-z0-9\s-]/g, '')
+              .split(/\s+/)
+              .filter(w => w.length > 3 && !['about', 'that', 'this', 'with', 'from', 'their', 'have', 'been', 'your', 'they', 'will', 'more', 'when', 'what', 'which', 'into', 'how'].includes(w));
+            tags = [...new Set(titleWords)].slice(0, 6);
+          }
           const seoKeywords = args.seoKeywords
             ? (args.seoKeywords as string).split(',').map((k: string) => k.trim())
             : [];
@@ -5614,6 +5650,10 @@ Select cohesive settings that create a professional, unified visual language acr
             });
           }
 
+          const missionReviewPath = context?.missionId
+            ? `/mission-control?mission=${context.missionId}`
+            : blogEditorLink;
+
           content = JSON.stringify({
             status: 'SAVED',
             draftId: postId,
@@ -5624,10 +5664,10 @@ Select cohesive settings that create a professional, unified visual language acr
             editorLink: blogEditorLink,
             reviewLink: blogCampaignId
               ? `/mission-control?campaign=${blogCampaignId}`
-              : blogEditorLink,
+              : missionReviewPath,
             message: blogCampaignId
               ? `Blog draft "${args.title}" saved. Review all deliverables at /mission-control?campaign=${blogCampaignId}`
-              : `Blog draft "${args.title}" saved successfully. Edit it at ${blogEditorLink}`,
+              : `Blog draft "${args.title}" saved successfully. Review the mission at ${missionReviewPath}`,
           });
         } catch (blogError: unknown) {
           const blogDuration = Date.now() - blogStart;

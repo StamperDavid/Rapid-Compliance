@@ -150,6 +150,8 @@ export async function GET(request: NextRequest) {
     const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
 
     // Check all setup milestones in parallel
+    const { PLATFORM_ID } = await import('@/lib/constants/platform');
+
     const [
       onboardingDoc,
       personaDoc,
@@ -162,7 +164,7 @@ export async function GET(request: NextRequest) {
       AdminFirestoreService.get(getSubCollection('agentPersona'), 'current').catch(() => null),
       AdminFirestoreService.get(getSubCollection('knowledgeBase'), 'current').catch(() => null),
       AdminFirestoreService.getAll(getSubCollection('baseModels')).catch(() => []),
-      AdminFirestoreService.get(getSubCollection('settings'), 'api-keys').catch(() => null),
+      AdminFirestoreService.get(getSubCollection('apiKeys'), PLATFORM_ID).catch(() => null),
       AdminFirestoreService.get(getSubCollection('settings'), 'feature_config').catch(() => null),
     ]);
 
@@ -207,7 +209,7 @@ export async function GET(request: NextRequest) {
         label: 'AI agent persona created',
         description: 'Your AI agent\'s personality, tone, and greeting are configured',
         completed: personaDoc != null,
-        actionUrl: '/settings/ai-agents',
+        actionUrl: '/settings/ai-agents/persona',
         priority: 3,
       },
       {
@@ -215,7 +217,7 @@ export async function GET(request: NextRequest) {
         label: 'Knowledge base built',
         description: 'FAQs, product info, and business details loaded for AI responses',
         completed: knowledgeBaseDoc != null,
-        actionUrl: '/settings/ai-agents',
+        actionUrl: '/settings/ai-agents/business-setup',
         priority: 4,
       },
       {

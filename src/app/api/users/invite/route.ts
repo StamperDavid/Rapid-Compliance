@@ -334,3 +334,51 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     { status: 201 }
   );
 }
+
+// ============================================================================
+// DELETE — Cancel a pending invitation
+// ============================================================================
+
+export async function DELETE(request: NextRequest): Promise<NextResponse> {
+  const authResult = await requireRole(request, ['owner', 'admin', 'manager']);
+  if (authResult instanceof NextResponse) {
+    return authResult;
+  }
+
+  if (!adminDb) {
+    return NextResponse.json(
+      { success: false, error: 'Database service unavailable' },
+      { status: 503 }
+    );
+  }
+
+  const { searchParams } = new URL(request.url);
+  const inviteId = searchParams.get('inviteId');
+
+  if (!inviteId) {
+    return NextResponse.json(
+      { success: false, error: 'inviteId query parameter is required' },
+      { status: 400 }
+    );
+  }
+
+  const inviteRef = adminDb.collection(invitesPath).doc(inviteId);
+  const inviteDoc = await inviteRef.get();
+
+  if (!inviteDoc.exists) {
+    return NextResponse.json(
+      { success: false, error: 'Invitation not found' },
+      { status: 404 }
+    );
+  }
+
+  await inviteRef.delete();
+
+  logger.info('Invite cancelled', {
+    inviteId,
+    cancelledBy: authResult.user.uid,
+    route: '/api/users/invite',
+  });
+
+  return NextResponse.json({ success: true, message: 'Invitation cancelled' });
+}
