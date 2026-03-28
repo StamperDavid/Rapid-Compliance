@@ -62,14 +62,18 @@ export default function MissionHistoryPage() {
 
       const data = (await res.json()) as MissionListResponse;
       if (data.success && data.data) {
-        const { missions: fetchedMissions, hasMore: fetchedHasMore } = data.data;
+        // History tab: only show completed and failed missions
+        const terminalMissions = data.data.missions.filter(
+          (m) => m.status === 'COMPLETED' || m.status === 'FAILED'
+        );
+        const fetchedHasMore = data.data.hasMore;
         if (startAfter) {
-          setMissions((prev) => [...prev, ...fetchedMissions]);
+          setMissions((prev) => [...prev, ...terminalMissions]);
         } else {
-          setMissions(fetchedMissions);
+          setMissions(terminalMissions);
         }
         setHasMore(fetchedHasMore);
-        const last = fetchedMissions[fetchedMissions.length - 1];
+        const last = terminalMissions[terminalMissions.length - 1];
         setCursor(last?.missionId);
       }
     } catch {

@@ -488,6 +488,237 @@ function DraftReview({ data }: { data: ParsedOutput }) {
   );
 }
 
+// ============================================================================
+// SMART TYPE DETECTION
+// ============================================================================
+
+function detectOutputType(data: ParsedOutput, toolName?: string): string {
+  // Explicit type field
+  if (typeof data.type === 'string' && data.type !== '') { return data.type; }
+
+  // Blog draft — has draftId + slug + title
+  if ('draftId' in data && 'slug' in data) { return 'blog_draft'; }
+
+  // Intelligence brief — has competitorAnalysis or synthesis
+  if ('competitorAnalysis' in data || 'synthesis' in data || 'briefId' in data) { return 'intelligence'; }
+
+  // Social post result — has platform + postContent or posts
+  if ('platform' in data && ('postContent' in data || 'posts' in data)) { return 'social_post'; }
+
+  // Campaign orchestration — has campaignId + deliverableCount
+  if ('campaignId' in data && 'deliverableCount' in data) { return 'campaign_result'; }
+
+  // Lead scan — has leads array
+  if (Array.isArray(data.leads) || 'leadCount' in data) { return 'lead_scan'; }
+
+  // Generic delegation — has status + message
+  if ('status' in data && 'message' in data) { return 'delegation_result'; }
+
+  // Video draft
+  if (data.status === 'draft') { return 'draft'; }
+
+  // Tool name hints
+  if (toolName?.includes('blog') || toolName?.includes('save_blog')) { return 'blog_draft'; }
+  if (toolName?.includes('intelligence')) { return 'intelligence'; }
+  if (toolName?.includes('social')) { return 'social_post'; }
+  if (toolName?.includes('campaign')) { return 'campaign_result'; }
+
+  return 'unknown';
+}
+
+// ============================================================================
+// BLOG DRAFT RENDERER
+// ============================================================================
+
+function BlogDraftReview({ data }: { data: ParsedOutput }) {
+  const title = (data.title as string) ?? (data.draftId as string) ?? 'Untitled';
+  const slug = data.slug as string | undefined;
+  const draftId = data.draftId as string | undefined;
+  const content = data.content as string | undefined;
+  const excerpt = data.excerpt as string | undefined;
+  const wordCount = data.wordCount as number | undefined;
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+      <section style={{ padding: '1.25rem', backgroundColor: 'var(--color-bg-elevated)', borderRadius: '0.625rem' }}>
+        <h3 style={{ fontSize: '1.125rem', fontWeight: 700, color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>{title}</h3>
+        {slug && <div style={{ fontSize: '0.8125rem', color: 'var(--color-text-disabled)', marginBottom: '0.5rem' }}>/{slug}</div>}
+        {excerpt && <p style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', lineHeight: 1.6, margin: 0 }}>{excerpt}</p>}
+        {wordCount && <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginTop: '0.5rem' }}>{wordCount} words</div>}
+      </section>
+      {content && (
+        <section>
+          <SectionLabel>Content Preview</SectionLabel>
+          <div style={{ padding: '1.25rem', backgroundColor: 'var(--color-bg-elevated)', borderRadius: '0.625rem', fontSize: '0.875rem', color: 'var(--color-text-primary)', lineHeight: 1.8, whiteSpace: 'pre-wrap', maxHeight: '400px', overflowY: 'auto' }}>
+            {content}
+          </div>
+        </section>
+      )}
+      {draftId && (
+        <a href={`/website/blog/editor?postId=${draftId}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', padding: '0.625rem 1.25rem', backgroundColor: 'var(--color-primary)', color: '#fff', borderRadius: '0.375rem', textDecoration: 'none', fontSize: '0.875rem', fontWeight: 600, width: 'fit-content' }}>
+          Open in Editor
+        </a>
+      )}
+    </div>
+  );
+}
+
+// ============================================================================
+// INTELLIGENCE REPORT RENDERER
+// ============================================================================
+
+function IntelligenceReview({ data }: { data: ParsedOutput }) {
+  const synthesis = data.synthesis as Record<string, unknown> | undefined;
+  const competitors = (data.competitorAnalysis as Record<string, unknown>)?.competitors as Array<Record<string, unknown>> | undefined;
+  const execution = data.execution as Record<string, unknown> | undefined;
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+      {/* Executive Summary */}
+      {typeof synthesis?.executiveSummary === 'string' && (
+        <section>
+          <SectionLabel>Executive Summary</SectionLabel>
+          <div style={{ padding: '1.25rem', backgroundColor: 'var(--color-bg-elevated)', borderRadius: '0.625rem', fontSize: '0.875rem', color: 'var(--color-text-primary)', lineHeight: 1.6 }}>
+            {String(synthesis.executiveSummary)}
+          </div>
+        </section>
+      )}
+
+      {/* Key Findings */}
+      {Array.isArray(synthesis?.keyFindings) && (synthesis.keyFindings as string[]).length > 0 && (
+        <section>
+          <SectionLabel>Key Findings</SectionLabel>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            {(synthesis.keyFindings as string[]).map((finding, i) => (
+              <div key={i} style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start', padding: '0.75rem 1rem', backgroundColor: 'var(--color-bg-elevated)', borderRadius: '0.5rem', border: '1px solid var(--color-border-light)' }}>
+                <div style={{ width: 24, height: 24, borderRadius: '50%', backgroundColor: 'rgba(59,130,246,0.15)', color: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.6875rem', fontWeight: 700, flexShrink: 0 }}>{i + 1}</div>
+                <div style={{ fontSize: '0.875rem', color: 'var(--color-text-primary)', lineHeight: 1.5 }}>{finding}</div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Competitors */}
+      {competitors && competitors.length > 0 && (
+        <section>
+          <SectionLabel>Competitors ({competitors.length})</SectionLabel>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            {competitors.map((comp, i) => (
+              <div key={i} style={{ padding: '1rem', backgroundColor: 'var(--color-bg-elevated)', borderRadius: '0.5rem', border: '1px solid var(--color-border-light)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                  <div style={{ fontSize: '0.9375rem', fontWeight: 600, color: 'var(--color-text-primary)' }}>#{Number(comp.rank) || (i + 1)} {String(comp.name ?? 'Unknown')}</div>
+                  {typeof comp.domain === 'string' && <span style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)' }}>{comp.domain}</span>}
+                </div>
+                {typeof comp.url === 'string' && <a href={comp.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.8125rem', color: 'var(--color-primary)', textDecoration: 'none' }}>{comp.url}</a>}
+                {Array.isArray(comp.strengths) && (comp.strengths as string[]).length > 0 && (
+                  <div style={{ marginTop: '0.5rem', display: 'flex', flexWrap: 'wrap', gap: '0.375rem' }}>
+                    {(comp.strengths as string[]).map((s, j) => (
+                      <span key={j} style={{ fontSize: '0.6875rem', padding: '0.125rem 0.5rem', backgroundColor: 'rgba(34,197,94,0.1)', color: '#22c55e', borderRadius: '9999px' }}>{s}</span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* Recommended Actions */}
+      {Array.isArray(synthesis?.recommendedActions) && (synthesis.recommendedActions as string[]).length > 0 && (
+        <section>
+          <SectionLabel>Recommended Actions</SectionLabel>
+          <ul style={{ margin: 0, paddingLeft: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
+            {(synthesis.recommendedActions as string[]).map((action, i) => (
+              <li key={i} style={{ fontSize: '0.875rem', color: 'var(--color-text-primary)', lineHeight: 1.5 }}>{action}</li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {/* Execution Stats */}
+      {execution && (
+        <section>
+          <SectionLabel>Execution</SectionLabel>
+          <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+            {execution.totalSpecialists != null && <StatCard label="Specialists" value={String(execution.totalSpecialists)} />}
+            {execution.successfulSpecialists != null && <StatCard label="Successful" value={String(execution.successfulSpecialists)} color="var(--color-success)" />}
+            {execution.failedSpecialists != null && Number(execution.failedSpecialists) > 0 && <StatCard label="Failed" value={String(execution.failedSpecialists)} color="var(--color-error)" />}
+            {execution.totalExecutionTimeMs != null && <StatCard label="Duration" value={`${(Number(execution.totalExecutionTimeMs) / 1000).toFixed(1)}s`} />}
+          </div>
+        </section>
+      )}
+    </div>
+  );
+}
+
+// ============================================================================
+// DELEGATION RESULT RENDERER (generic status + message)
+// ============================================================================
+
+function DelegationResultReview({ data }: { data: ParsedOutput }) {
+  const status = data.status as string | undefined;
+  const message = data.message as string | undefined;
+  const reviewLink = data.reviewLink as string | undefined;
+  const campaignId = data.campaignId as string | undefined;
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+      {status && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <span style={{
+            display: 'inline-block', padding: '0.25rem 0.75rem', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase',
+            backgroundColor: status === 'success' ? 'rgba(34,197,94,0.15)' : status === 'error' ? 'rgba(239,68,68,0.15)' : 'rgba(99,102,241,0.15)',
+            color: status === 'success' ? '#22c55e' : status === 'error' ? '#ef4444' : '#6366f1',
+          }}>
+            {status}
+          </span>
+        </div>
+      )}
+      {message && (
+        <div style={{ padding: '1.25rem', backgroundColor: 'var(--color-bg-elevated)', borderRadius: '0.625rem', fontSize: '0.875rem', color: 'var(--color-text-primary)', lineHeight: 1.6 }}>
+          {message}
+        </div>
+      )}
+      {reviewLink && (
+        <a href={reviewLink} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', padding: '0.625rem 1.25rem', backgroundColor: 'var(--color-primary)', color: '#fff', borderRadius: '0.375rem', textDecoration: 'none', fontSize: '0.875rem', fontWeight: 600, width: 'fit-content' }}>
+          Review Output
+        </a>
+      )}
+      {campaignId && !reviewLink && (
+        <a href={`/mission-control?campaign=${campaignId}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', padding: '0.625rem 1.25rem', backgroundColor: 'var(--color-primary)', color: '#fff', borderRadius: '0.375rem', textDecoration: 'none', fontSize: '0.875rem', fontWeight: 600, width: 'fit-content' }}>
+          View Campaign
+        </a>
+      )}
+    </div>
+  );
+}
+
+// ============================================================================
+// SHARED COMPONENTS
+// ============================================================================
+
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <h3 style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--color-text-disabled)', marginBottom: '0.5rem' }}>
+      {children}
+    </h3>
+  );
+}
+
+function StatCard({ label, value, color }: { label: string; value: string; color?: string }) {
+  return (
+    <div style={{ padding: '0.75rem 1rem', backgroundColor: 'var(--color-bg-elevated)', borderRadius: '0.5rem', border: '1px solid var(--color-border-light)', minWidth: '80px' }}>
+      <div style={{ fontSize: '0.6875rem', color: 'var(--color-text-disabled)', textTransform: 'uppercase', letterSpacing: '0.03em', marginBottom: '0.25rem' }}>{label}</div>
+      <div style={{ fontSize: '1.125rem', fontWeight: 700, color: color ?? 'var(--color-text-primary)' }}>{value}</div>
+    </div>
+  );
+}
+
+// ============================================================================
+// FALLBACK
+// ============================================================================
+
 function FallbackReview({ raw }: { raw: string }) {
   return (
     <div style={{
@@ -578,9 +809,7 @@ function StepReviewContent({ missionId, stepId }: { missionId: string; stepId: s
     }
   }
 
-  const outputType = parsed?.type as string
-    ?? (parsed?.status === 'draft' ? 'draft' : null)
-    ?? 'unknown';
+  const outputType = parsed ? detectOutputType(parsed, step.toolName) : 'unknown';
 
   const statusColor = step.status === 'COMPLETED' ? 'var(--color-success)'
     : step.status === 'FAILED' ? 'var(--color-error)'
@@ -679,6 +908,9 @@ function StepReviewContent({ missionId, stepId }: { missionId: string; stepId: s
           {outputType === 'cinematic' && <CinematicReview data={parsed} />}
           {outputType === 'thumbnails' && <ThumbnailsReview data={parsed} />}
           {outputType === 'draft' && <DraftReview data={parsed} />}
+          {outputType === 'blog_draft' && <BlogDraftReview data={parsed} />}
+          {outputType === 'intelligence' && <IntelligenceReview data={parsed} />}
+          {(outputType === 'delegation_result' || outputType === 'campaign_result' || outputType === 'social_post' || outputType === 'lead_scan') && <DelegationResultReview data={parsed} />}
           {outputType === 'unknown' && <FallbackReview raw={step.toolResult ?? ''} />}
         </>
       ) : step.toolResult ? (

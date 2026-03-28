@@ -986,30 +986,6 @@ function MessageBubble({ message }: { message: ChatMessage }) {
         <div className="text-sm leading-relaxed">
           {renderMarkdown(message.content)}
         </div>
-        {(message.metadata?.reviewLink ?? message.metadata?.missionId) && (
-          <a
-            href={message.metadata.reviewLink ?? `/dashboard`}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '0.375rem',
-              marginTop: '0.5rem',
-              padding: '0.25rem 0.75rem',
-              borderRadius: '9999px',
-              backgroundColor: 'rgba(var(--color-primary-rgb), 0.15)',
-              color: 'var(--color-primary)',
-              fontSize: '0.6875rem',
-              fontWeight: 600,
-              textDecoration: 'none',
-              transition: 'background-color 0.15s ease',
-            }}
-          >
-            <Sparkles style={{ width: 12, height: 12 }} />
-            Review / Approve
-          </a>
-        )}
       </div>
     </motion.div>
   );
