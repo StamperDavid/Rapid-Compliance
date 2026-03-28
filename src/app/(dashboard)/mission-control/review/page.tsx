@@ -511,6 +511,12 @@ function detectOutputType(data: ParsedOutput, toolName?: string): string {
   // Lead scan — has leads array
   if (Array.isArray(data.leads) || 'leadCount' in data) { return 'lead_scan'; }
 
+  // Trending research — has seedTopics array
+  if (Array.isArray(data.seedTopics) && data.seedTopics.length > 0 && typeof data.seedTopics[0] === 'object') { return 'trending_research'; }
+
+  // SEO config — has seo object with keywords
+  if ('seo' in data && typeof data.seo === 'object' && data.source === 'firestore') { return 'seo_config'; }
+
   // Generic delegation — has status + message
   if ('status' in data && 'message' in data) { return 'delegation_result'; }
 
@@ -519,6 +525,8 @@ function detectOutputType(data: ParsedOutput, toolName?: string): string {
 
   // Tool name hints — delegation tools that return agent metadata
   if (toolName?.startsWith('delegate_to_')) { return 'delegation_result'; }
+  if (toolName === 'research_trending_topics') { return 'trending_research'; }
+  if (toolName === 'get_seo_config') { return 'seo_config'; }
   if (toolName?.includes('blog') || toolName?.includes('save_blog')) { return 'blog_draft'; }
   if (toolName?.includes('intelligence')) { return 'intelligence'; }
   if (toolName?.includes('social')) { return 'social_post'; }
@@ -740,6 +748,134 @@ function DelegationResultReview({ data }: { data: ParsedOutput }) {
 // SHARED COMPONENTS
 // ============================================================================
 
+// ============================================================================
+// TRENDING RESEARCH RENDERER
+// ============================================================================
+
+function TrendingResearchReview({ data }: { data: ParsedOutput }) {
+  const seedTopics = data.seedTopics as Array<{
+    keyword: string;
+    relatedQueries: string[];
+    searchVolume?: number;
+    competition?: string;
+    topResults: Array<{ title: string; link: string; snippet: string }>;
+  }> | undefined;
+  const relatedTrending = data.relatedTrending as string[] | undefined;
+  const totalFound = data.totalResultsFound as number | undefined;
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+      {totalFound != null && (
+        <div style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>
+          {seedTopics?.length ?? 0} seed topics researched, {relatedTrending?.length ?? 0} related trends discovered
+        </div>
+      )}
+
+      {seedTopics?.map((topic, i) => (
+        <div key={i} style={{ padding: '1.25rem', backgroundColor: 'var(--color-bg-elevated)', borderRadius: '0.625rem', border: '1px solid var(--color-border-light)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+            <h4 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--color-text-primary)', margin: 0 }}>{topic.keyword}</h4>
+            <div style={{ display: 'flex', gap: '0.75rem', fontSize: '0.75rem' }}>
+              {topic.searchVolume != null && <span style={{ color: 'var(--color-info)' }}>Vol: {topic.searchVolume.toLocaleString()}</span>}
+              {topic.competition && <span style={{ color: topic.competition === 'HIGH' ? 'var(--color-error)' : topic.competition === 'MEDIUM' ? 'var(--color-warning)' : 'var(--color-success)' }}>Competition: {topic.competition}</span>}
+            </div>
+          </div>
+
+          {topic.topResults.length > 0 && (
+            <>
+              <div style={{ fontSize: '0.6875rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--color-text-disabled)', marginBottom: '0.5rem' }}>Top Results</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                {topic.topResults.map((result, j) => (
+                  <div key={j} style={{ padding: '0.5rem 0.75rem', backgroundColor: 'var(--color-bg-paper)', borderRadius: '0.375rem' }}>
+                    <a href={result.link} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--color-primary)', textDecoration: 'none' }}>{result.title}</a>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginTop: '0.25rem' }}>{result.link}</div>
+                    <p style={{ fontSize: '0.8125rem', color: 'var(--color-text-secondary)', margin: '0.25rem 0 0', lineHeight: 1.5 }}>{result.snippet}</p>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
+          {topic.relatedQueries.length > 0 && (
+            <>
+              <div style={{ fontSize: '0.6875rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--color-text-disabled)', marginBottom: '0.375rem' }}>Related Queries</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem' }}>
+                {topic.relatedQueries.map((q, k) => (
+                  <span key={k} style={{ padding: '0.25rem 0.625rem', backgroundColor: 'var(--color-bg-paper)', borderRadius: '9999px', fontSize: '0.75rem', color: 'var(--color-text-secondary)', border: '1px solid var(--color-border-light)' }}>{q}</span>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+      ))}
+
+      {relatedTrending && relatedTrending.length > 0 && (
+        <div>
+          <div style={{ fontSize: '0.6875rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--color-text-disabled)', marginBottom: '0.5rem' }}>All Related Trending Topics</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem' }}>
+            {relatedTrending.map((topic, i) => (
+              <span key={i} style={{ padding: '0.25rem 0.625rem', backgroundColor: 'rgba(99,102,241,0.1)', borderRadius: '9999px', fontSize: '0.75rem', color: 'var(--color-primary)', border: '1px solid rgba(99,102,241,0.2)' }}>{topic}</span>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================================================
+// SEO CONFIG RENDERER
+// ============================================================================
+
+function SEOConfigReview({ data }: { data: ParsedOutput }) {
+  const seo = data.seo as { title?: string; description?: string; keywords?: string[]; robotsIndex?: boolean; robotsFollow?: boolean; ogImage?: string; aiBotAccess?: unknown } | undefined;
+  const source = data.source as string | undefined;
+  const message = data.message as string | undefined;
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+      {source && (
+        <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)' }}>
+          Source: {source === 'firestore' ? 'Platform settings' : 'Defaults'}
+        </div>
+      )}
+
+      {seo && (
+        <div style={{ padding: '1.25rem', backgroundColor: 'var(--color-bg-elevated)', borderRadius: '0.625rem' }}>
+          {seo.title && (
+            <div style={{ marginBottom: '0.75rem' }}>
+              <div style={{ fontSize: '0.6875rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--color-text-disabled)', marginBottom: '0.25rem' }}>Page Title</div>
+              <div style={{ fontSize: '0.9375rem', fontWeight: 600, color: 'var(--color-text-primary)' }}>{seo.title}</div>
+            </div>
+          )}
+          {seo.description && (
+            <div style={{ marginBottom: '0.75rem' }}>
+              <div style={{ fontSize: '0.6875rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--color-text-disabled)', marginBottom: '0.25rem' }}>Meta Description</div>
+              <div style={{ fontSize: '0.8125rem', color: 'var(--color-text-secondary)', lineHeight: 1.5 }}>{seo.description}</div>
+            </div>
+          )}
+          {seo.keywords && seo.keywords.length > 0 && (
+            <div>
+              <div style={{ fontSize: '0.6875rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--color-text-disabled)', marginBottom: '0.375rem' }}>Keywords ({seo.keywords.length})</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem' }}>
+                {seo.keywords.map((kw, i) => (
+                  <span key={i} style={{ padding: '0.25rem 0.625rem', backgroundColor: 'var(--color-bg-paper)', borderRadius: '9999px', fontSize: '0.75rem', color: 'var(--color-text-secondary)', border: '1px solid var(--color-border-light)' }}>{kw}</span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {message && (
+        <div style={{ padding: '0.875rem 1rem', backgroundColor: 'var(--color-bg-paper)', borderRadius: '0.5rem', fontSize: '0.8125rem', color: 'var(--color-text-secondary)', lineHeight: 1.6 }}>
+          {message}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
     <h3 style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--color-text-disabled)', marginBottom: '0.5rem' }}>
@@ -946,6 +1082,8 @@ function StepReviewContent({ missionId, stepId }: { missionId: string; stepId: s
       {parsed ? (
         <>
           {outputType === 'research' && <ResearchReview data={parsed} />}
+          {outputType === 'trending_research' && <TrendingResearchReview data={parsed} />}
+          {outputType === 'seo_config' && <SEOConfigReview data={parsed} />}
           {outputType === 'strategy' && <StrategyReview data={parsed} />}
           {outputType === 'cinematic' && <CinematicReview data={parsed} />}
           {outputType === 'thumbnails' && <ThumbnailsReview data={parsed} />}

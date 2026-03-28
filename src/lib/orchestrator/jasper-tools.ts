@@ -5627,7 +5627,19 @@ Select cohesive settings that create a professional, unified visual language acr
           trackMissionStep(context, 'save_blog_draft', 'COMPLETED', {
             summary: `Blog draft saved: ${postId}`,
             durationMs: blogDuration,
-            toolResult: JSON.stringify({ draftId: postId, slug, title: args.title }),
+            toolResult: JSON.stringify({
+              draftId: postId,
+              slug,
+              title: args.title,
+              excerpt: blogPost.excerpt,
+              categories: blogPost.categories,
+              tags: blogPost.tags,
+              readTime: blogPost.readTime,
+              wordCount: (args.content as string).split(/\s+/).length,
+              content: args.content,
+              status: 'draft',
+              editorLink: `/website/blog/editor?postId=${postId}`,
+            }),
           });
 
           // Track as campaign deliverable if campaignId is available
@@ -5780,7 +5792,7 @@ Select cohesive settings that create a professional, unified visual language acr
           trackMissionStep(context, 'get_seo_config', 'COMPLETED', {
             summary: `SEO config loaded: ${keywordCount} keywords`,
             durationMs: seoDuration,
-            toolResult: JSON.stringify({ keywordCount, title: seo.title }),
+            toolResult: JSON.stringify(response),
           });
 
           content = JSON.stringify(response);
@@ -5874,7 +5886,12 @@ Select cohesive settings that create a professional, unified visual language acr
           trackMissionStep(context, 'research_trending_topics', 'COMPLETED', {
             summary: `Found ${trendingTopics.length} seed topics, ${allRelated.length} related trends`,
             durationMs: trendDuration,
-            toolResult: JSON.stringify({ seedTopics: trendingTopics.length, relatedTrending: allRelated.length }),
+            toolResult: JSON.stringify({
+              seedTopics: trendingTopics,
+              relatedTrending: allRelated,
+              totalResultsFound: trendingTopics.length + allRelated.length,
+              timeframe: (args.timeframe as string | undefined) ?? 'current',
+            }),
           });
 
           content = JSON.stringify({

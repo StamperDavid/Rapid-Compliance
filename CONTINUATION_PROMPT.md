@@ -79,9 +79,31 @@ Walk through every feature and function of the platform end-to-end. Find and fix
 
 ---
 
+## BLOCKER: Foundation Data Setup (Must Complete Before Phase 1 Continues)
+
+**Problem:** Jasper's agents produce garbage output because brand context, company profile, and persona are empty. Testing delegation quality with empty inputs is pointless — every failure looks like a code bug but is actually missing data.
+
+**Status:** Partially complete. SEO keywords and knowledge base have some data. Brand, persona, and company profile are blank.
+
+| # | Data Area | Page URL | Status | What to Fill In |
+|---|-----------|----------|--------|-----------------|
+| F.1 | Company Profile | `/settings/organization` | EMPTY | Company name, description, address, website, social links |
+| F.2 | AI Persona | `/settings/ai-agents/persona` | EMPTY | Jasper's tone, personality, greeting, communication style |
+| F.3 | Brand Settings | `/settings/ai-agents/business-setup` | EMPTY | Target audience, unique value prop, key phrases, avoid phrases, brand colors |
+| F.4 | Onboarding — Company Details | `/onboarding/industry` | PARTIAL | Company name is blank, industry is "saas" but description & target audience are empty |
+| F.5 | Knowledge Base | `/settings/ai-agents` | PARTIAL | Only 2 FAQs, no company info, no product details |
+| F.6 | Website SEO | `/website/seo` | DONE | 25 keywords, title, and description configured |
+| F.7 | Feature Modules | `/settings/features` | DONE | Configured |
+| F.8 | API Keys | `/settings/api-keys` | DONE | OpenRouter, SendGrid, and others configured |
+
+**Instructions:** Walk through F.1–F.5 in order, filling in real SalesVelocity.ai data. This is the brand DNA that every agent reads before producing content. Once complete, re-test Phase 1 delegation tests (1.3–1.18) and the output quality should be dramatically different.
+
+---
+
 ## Phase 1: Jasper Orchestrator & Mission Control (18 tests)
 
 **Goal:** Jasper responds, calls tools, creates missions, and Mission Control displays them correctly.
+**PAUSED:** Complete Foundation Data Setup (above) before continuing tests 1.3+.
 
 | # | Test | Steps | Expected | Result | Notes |
 |---|------|-------|----------|--------|-------|

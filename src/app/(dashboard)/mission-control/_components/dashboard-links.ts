@@ -33,8 +33,8 @@ const TOOL_ROUTE_MAP: Record<string, { route: string; label: string }> = {
   social_post: { route: '/social/command-center', label: 'Social Command Center' },
   voice_agent: { route: '/calls', label: 'Voice Calls' },
   save_blog_draft: { route: '/website/blog', label: 'Blog' },
-  research_trending_topics: { route: '/seo', label: 'SEO' },
-  get_seo_config: { route: '/seo', label: 'SEO' },
+  research_trending_topics: { route: '/growth/keywords', label: 'Keywords & Research' },
+  get_seo_config: { route: '/website/seo', label: 'SEO Settings' },
   migrate_website: { route: '/website', label: 'Website' },
   // Campaign tools
   create_campaign: { route: '/mission-control', label: 'Mission Control' },
