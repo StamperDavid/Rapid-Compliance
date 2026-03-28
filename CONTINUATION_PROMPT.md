@@ -79,24 +79,76 @@ Walk through every feature and function of the platform end-to-end. Find and fix
 
 ---
 
-## BLOCKER: Foundation Data Setup (Must Complete Before Phase 1 Continues)
+## BLOCKER: Full Platform Setup (Must Complete Before Phase 1 Continues)
 
-**Problem:** Jasper's agents produce garbage output because brand context, company profile, and persona are empty. Testing delegation quality with empty inputs is pointless — every failure looks like a code bug but is actually missing data.
+**Problem:** Jasper's agents produce garbage output because brand context, company profile, persona, and many integration accounts are empty or unconfigured. Testing with empty inputs is pointless — every failure looks like a code bug but is actually missing data. We need EVERYTHING filled out before resuming QA.
 
-**Status:** Partially complete. SEO keywords and knowledge base have some data. Brand, persona, and company profile are blank.
+**Status:** ~40% configured. Core AI and some integrations work, but brand identity, social accounts, payment testing, and several API keys are missing.
+
+### Section A: Brand & Identity (Agents read this before producing ANY content)
 
 | # | Data Area | Page URL | Status | What to Fill In |
 |---|-----------|----------|--------|-----------------|
-| F.1 | Company Profile | `/settings/organization` | EMPTY | Company name, description, address, website, social links |
-| F.2 | AI Persona | `/settings/ai-agents/persona` | EMPTY | Jasper's tone, personality, greeting, communication style |
-| F.3 | Brand Settings | `/settings/ai-agents/business-setup` | EMPTY | Target audience, unique value prop, key phrases, avoid phrases, brand colors |
-| F.4 | Onboarding — Company Details | `/onboarding/industry` | PARTIAL | Company name is blank, industry is "saas" but description & target audience are empty |
-| F.5 | Knowledge Base | `/settings/ai-agents` | PARTIAL | Only 2 FAQs, no company info, no product details |
-| F.6 | Website SEO | `/website/seo` | DONE | 25 keywords, title, and description configured |
-| F.7 | Feature Modules | `/settings/features` | DONE | Configured |
-| F.8 | API Keys | `/settings/api-keys` | DONE | OpenRouter, SendGrid, and others configured |
+| A.1 | Company Profile | `/settings/organization` | EMPTY | Company name, description, address, website, social media links |
+| A.2 | AI Persona | `/settings/ai-agents/persona` | EMPTY | Jasper's tone, personality, greeting, communication style |
+| A.3 | Brand Settings | `/settings/ai-agents/business-setup` | EMPTY | Target audience, unique value prop, key phrases, avoid phrases, brand colors |
+| A.4 | Onboarding Details | `/onboarding/industry` | PARTIAL | Company name BLANK, description BLANK, target audience BLANK. Industry = "saas" |
+| A.5 | Knowledge Base | `/settings/ai-agents` | PARTIAL | Only 2 FAQs. Needs: product descriptions, pricing info, competitive advantages, common objections |
+| A.6 | Website SEO | `/website/seo` | DONE | 25 keywords, title, description configured |
 
-**Instructions:** Walk through F.1–F.5 in order, filling in real SalesVelocity.ai data. This is the brand DNA that every agent reads before producing content. Once complete, re-test Phase 1 delegation tests (1.3–1.18) and the output quality should be dramatically different.
+### Section B: API Keys & Providers
+
+| # | Service | Page URL | Status | Notes |
+|---|---------|----------|--------|-------|
+| B.1 | OpenRouter (primary AI) | `/settings/api-keys` | DONE | All AI models via one key |
+| B.2 | SendGrid (email) | `/settings/api-keys` | DONE | Sender verified: dstamper@salesvelocity.ai |
+| B.3 | Stripe (payments) | `/settings/api-keys` | KEYS SET but .env EMPTY | Keys in Firestore but `STRIPE_SECRET_KEY` and `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` in .env.local are blank — need both for checkout |
+| B.4 | Twilio (SMS/Voice) | `/settings/api-keys` | PARTIAL | Account SID + Auth Token set. **Phone number MISSING** — need a Twilio number for calls/SMS |
+| B.5 | ElevenLabs (TTS) | `/settings/api-keys` | DONE | Voice synthesis ready |
+| B.6 | Hedra (video) | `/settings/api-keys` | DONE | Video generation ready |
+| B.7 | Deepgram (transcription) | `/settings/api-keys` | DONE | Speech-to-text ready |
+| B.8 | Serper (search/research) | `/settings/api-keys` | DONE | Jasper research tool ready |
+| B.9 | DataForSEO | `/settings/api-keys` | PARTIAL | Login set, **password MISSING** |
+| B.10 | Google PageSpeed | `/settings/api-keys` | DONE | |
+| B.11 | Apollo (enrichment) | `/settings/api-keys` | DONE | Lead enrichment ready |
+| B.12 | Fal.ai (image generation) | `/settings/api-keys` | MISSING | Needed for image generator, AI studio |
+| B.13 | MiniMax (audio/music) | `/settings/api-keys` | MISSING | Needed for background music in videos |
+| B.14 | Clearbit (enrichment) | `/settings/api-keys` | MISSING | Optional — lead enrichment |
+| B.15 | NewsAPI | `/settings/api-keys` | MISSING | Optional — trending news for content |
+
+### Section C: Social Media Accounts (Need OAuth connections for posting)
+
+| # | Platform | Connection Method | Status | Notes |
+|---|----------|-------------------|--------|-------|
+| C.1 | Twitter/X | API keys in Firestore | KEYS SET | Need to test actual posting |
+| C.2 | LinkedIn | OAuth flow | NOT CONNECTED | Need LinkedIn app + OAuth |
+| C.3 | Facebook/Instagram | OAuth flow | NOT CONNECTED | Need Meta Business app + OAuth |
+| C.4 | Bluesky | API key (AT Protocol) | NOT CONNECTED | Need Bluesky app password |
+| C.5 | Google Business | OAuth flow | NOT CONNECTED | Optional |
+
+### Section D: Payment & E-Commerce Testing
+
+| # | Item | Status | Notes |
+|---|------|--------|-------|
+| D.1 | Stripe .env keys | EMPTY | Copy from Firestore or Stripe dashboard to .env.local |
+| D.2 | Stripe test mode | NOT TESTED | Need test-mode keys for checkout flow QA |
+| D.3 | Stripe webhook | NOT CONFIGURED | Need `stripe listen --forward-to localhost:3000/api/webhooks/stripe` for local testing |
+| D.4 | Test products | EXIST | Products collection has data |
+
+### Section E: Feature Config & Modules
+
+| # | Item | Status | Notes |
+|---|------|--------|-------|
+| E.1 | Feature modules | DONE | Configured |
+| E.2 | Base AI models | DONE | Training data exists |
+| E.3 | Email templates | DONE | Templates exist |
+
+**Instructions:**
+1. Start with **Section A** — this is the brand DNA that every agent reads. Fill in ALL fields with real SalesVelocity.ai data.
+2. Then **Section B** — fill in missing API keys. Priority: Fal.ai (B.12), DataForSEO password (B.9), Twilio phone number (B.4), Stripe .env (B.3/D.1).
+3. Then **Section C** — connect at least Twitter and one other platform for social media testing.
+4. Then **Section D** — set up Stripe for payment testing.
+5. Once all sections are green, resume Phase 1 testing at test 1.3.
 
 ---
 
