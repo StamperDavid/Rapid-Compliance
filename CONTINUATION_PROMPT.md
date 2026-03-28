@@ -143,12 +143,22 @@ Walk through every feature and function of the platform end-to-end. Find and fix
 | E.2 | Base AI models | DONE | Training data exists |
 | E.3 | Email templates | DONE | Templates exist |
 
+### Known Bugs to Fix Before Resuming QA
+
+| Bug | Root Cause | Fix Required |
+|-----|-----------|--------------|
+| Blog editor shows empty content | `save_blog_draft` stores `{type: 'rich-text', content: {markdown: '...'}}` but blog editor expects widget-based PageSection format | Either teach editor to render markdown sections, or convert markdown → editor widget format in `save_blog_draft` |
+| Jasper still calls `delegate_to_content` for blog requests | Prompt updated but model still routes blog requests to content pipeline | Strengthen routing — blog = `save_blog_draft` only, never `delegate_to_content` |
+| Content agent copywriter produces placeholder text | `generatePageCopy` outputs template strings like `[Content for hero section]`, not real AI-generated copy | Needs real AI call via OpenRouter for actual copy generation |
+| Content agent detects FULL_PACKAGE for single blog | Content manager always interprets requests as full website packages | Need intent detection that recognizes single-content requests vs website builds |
+
 **Instructions:**
 1. Start with **Section A** — this is the brand DNA that every agent reads. Fill in ALL fields with real SalesVelocity.ai data.
 2. Then **Section B** — fill in missing API keys. Priority: Fal.ai (B.12), DataForSEO password (B.9), Twilio phone number (B.4), Stripe .env (B.3/D.1).
 3. Then **Section C** — connect at least Twitter and one other platform for social media testing.
 4. Then **Section D** — set up Stripe for payment testing.
-5. Once all sections are green, resume Phase 1 testing at test 1.3.
+5. Fix the **Known Bugs** listed above.
+6. Once all sections are green and bugs are fixed, resume Phase 1 testing at test 1.3.
 
 ---
 
