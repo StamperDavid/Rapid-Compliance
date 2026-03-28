@@ -6566,12 +6566,41 @@ Select cohesive settings that create a professional, unified visual language acr
           trackMissionStep(context, 'campaign_social', 'RUNNING', { toolArgs: { platforms: socialPlatforms } });
           const socialStart = Date.now();
 
-          const hooks = (strategy.socialHooks as string[]) ?? [`Discover the power of ${topic}`];
+          const keyMessages = (strategy.keyMessages as string[]) ?? [];
+          const hooks = (strategy.socialHooks as string[]) ?? [];
 
           for (const platform of socialPlatforms) {
             try {
-              const hook = hooks[socialPlatforms.indexOf(platform) % hooks.length] ?? `${topic} — here's what you need to know`;
-              const postContent = `${hook}\n\n#${topic.replace(/\s+/g, '')} #${audience.split(' ')[0]}`;
+              // Generate a real, platform-appropriate social post via AI
+              const { OpenRouterProvider: SocialLLM } = await import('@/lib/ai/openrouter-provider');
+              const socialLlm = new SocialLLM({});
+              const socialResult = await socialLlm.chat({
+                model: 'claude-3-5-sonnet',
+                messages: [
+                  {
+                    role: 'system',
+                    content: `You are an expert social media copywriter. Write a single ${platform} post.
+
+RULES:
+- Write the FULL post text, not just a headline
+- ${platform === 'twitter' ? 'Keep under 280 characters. Be punchy and direct.' : ''}
+- ${platform === 'linkedin' ? 'Write 3-5 paragraphs. Professional but engaging. Use line breaks for readability.' : ''}
+- ${platform === 'tiktok' ? 'Write a compelling caption (2-3 sentences) that hooks viewers. Add relevant trending hashtags.' : ''}
+- ${platform === 'facebook' ? 'Write 2-3 paragraphs. Conversational and shareable.' : ''}
+- ${platform === 'instagram' ? 'Write an engaging caption with emoji. Add relevant hashtags at the end.' : ''}
+- Add 3-5 relevant hashtags as individual words (like #AI #Sales #LeadScoring), NEVER concatenate words into one hashtag
+- Make it compelling, specific, and actionable
+- Reference real benefits and statistics from the research when possible
+- Output ONLY the post text, nothing else`,
+                  },
+                  {
+                    role: 'user',
+                    content: `Topic: ${topic}\nAudience: ${audience}\nTone: ${tone}\nKey messages: ${JSON.stringify(keyMessages.slice(0, 3))}\nHooks to consider: ${JSON.stringify(hooks.slice(0, 3))}`,
+                  },
+                ],
+              });
+
+              const postContent = socialResult.content.trim();
 
               trackDeliverableAsync(campaignId, {
                 missionId,
@@ -6629,7 +6658,7 @@ Select cohesive settings that create a professional, unified visual language acr
                   body: emailResult.content,
                   audience,
                 },
-                reviewLink: '/outreach/email',
+                reviewLink: '/email/campaigns',
               });
 
               trackMissionStep(context, 'campaign_email', 'COMPLETED', {

@@ -677,19 +677,23 @@ function StepCard({
                 Input
               </div>
               <div style={{
-                padding: '0.5rem',
+                padding: '0.5rem 0.75rem',
                 backgroundColor: 'var(--color-bg-elevated)',
                 borderRadius: '0.375rem',
                 fontSize: '0.6875rem',
-                fontFamily: 'monospace',
                 color: 'var(--color-text-primary)',
-                lineHeight: 1.5,
-                whiteSpace: 'pre-wrap',
-                wordBreak: 'break-word',
+                lineHeight: 1.6,
                 maxHeight: '160px',
                 overflowY: 'auto',
               }}>
-                {JSON.stringify(step.toolArgs, null, 2)}
+                {Object.entries(step.toolArgs ?? {}).map(([key, value]) => (
+                  <div key={key} style={{ display: 'flex', gap: '0.5rem', paddingBottom: '0.25rem' }}>
+                    <span style={{ color: 'var(--color-text-disabled)', fontWeight: 600, minWidth: '80px', flexShrink: 0 }}>{key}:</span>
+                    <span style={{ color: 'var(--color-text-primary)', wordBreak: 'break-word' }}>
+                      {typeof value === 'string' ? (value.length > 200 ? `${value.slice(0, 200)}...` : value) : JSON.stringify(value)}
+                    </span>
+                  </div>
+                ))}
               </div>
             </div>
           )}
