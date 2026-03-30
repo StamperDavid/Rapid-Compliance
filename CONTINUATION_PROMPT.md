@@ -153,11 +153,11 @@ Walk through every feature and function of the platform end-to-end. Find and fix
 | Jasper still calls `delegate_to_content` for blog requests | Prompt updated but model still routes blog requests to content pipeline | Strengthen routing — blog = `save_blog_draft` only, never `delegate_to_content` |
 | Content agent copywriter produces placeholder text | `generatePageCopy` outputs template strings like `[Content for hero section]`, not real AI-generated copy | Needs real AI call via OpenRouter for actual copy generation |
 | Content agent detects FULL_PACKAGE for single blog | Content manager always interprets requests as full website packages | Need intent detection that recognizes single-content requests vs website builds |
-| `/api/version` exposes deployment info without auth | No auth check on endpoint | Add `requireRole(['admin'])` or delete endpoint |
-| `/api/recovery/track/[merchantId]` wide open | No auth, no Zod validation, no rate limiting, uses type assertion | Add auth + Zod + rate limiting, or delete if unused |
-| `/api/identity` POST missing role check | Uses `requireAuth` but any authenticated user can overwrite workforce identity | Change to `requireRole(['owner', 'admin'])` |
-| Jasper `activeStepIds` Map memory leak | `activeStepIds` Map in jasper-tools.ts grows unbounded, no eviction | Add TTL-based cleanup or max-size eviction |
-| Cron endpoints use simple string comparison for auth | `authHeader !== \`Bearer ${cronSecret}\`` vulnerable to timing attacks | Use `crypto.timingSafeEqual()` with HMAC-SHA256 |
+| ~~`/api/version` exposes deployment info without auth~~ | ~~No auth check on endpoint~~ | FIXED — `requireRole(['owner','admin'])` added (3667c0a7) |
+| ~~`/api/recovery/track/[merchantId]` wide open~~ | ~~No auth, no Zod validation, no rate limiting~~ | FIXED — Zod + rate limiting added, auth N/A (public tracking endpoint) (3667c0a7) |
+| ~~`/api/identity` POST missing role check~~ | ~~Uses `requireAuth` but any user can overwrite identity~~ | FIXED — `requireRole(['owner','admin'])` added (3667c0a7) |
+| ~~Jasper `activeStepIds` Map memory leak~~ | ~~Map grows unbounded, no eviction~~ | FIXED — TTL-based eviction (30min) added (3667c0a7) |
+| ~~Cron endpoints use simple string comparison for auth~~ | ~~Vulnerable to timing attacks~~ | FIXED — `verifyCronAuth()` with timing-safe XOR, all 12 routes updated (3667c0a7) |
 | No cascading deletes for subcollections | Deleting forms, schemas, video projects, chat sessions, pages orphans child subcollections | Implement `deleteWithSubcollections()` utility |
 
 **Instructions:**
