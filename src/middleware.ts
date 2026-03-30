@@ -9,15 +9,17 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
 /**
- * Build the Content-Security-Policy header value with a per-request nonce.
- * 'strict-dynamic' allows scripts loaded by nonce-bearing scripts (needed for
- * Next.js chunk loading). style-src keeps 'unsafe-inline' (required by Tailwind
- * and inline style attributes — no practical nonce path for CSS-in-JS).
+ * Build the Content-Security-Policy header value.
+ *
+ * script-src uses 'unsafe-inline' because Next.js 14 App Router injects inline
+ * bootstrap scripts for hydration that cannot receive a nonce attribute.
+ * Nonce-based CSP for script-src requires Next.js 15+ native support.
+ * All other directives are hardened (connect-src allowlist, frame-ancestors none).
  */
-function buildCspHeader(nonce: string): string {
+function buildCspHeader(): string {
   const directives = [
     "default-src 'self'",
-    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'`,
+    "script-src 'self' 'unsafe-inline'",
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: https:",
     "font-src 'self' data:",
@@ -28,21 +30,13 @@ function buildCspHeader(nonce: string): string {
 }
 
 /**
- * Apply CSP + nonce headers to a NextResponse.next() response.
- * The x-nonce header lets layout.tsx read the nonce via headers().
+ * Apply CSP headers to a NextResponse.next() response.
  */
-function withCspHeaders(nonce: string): NextResponse {
-  const csp = buildCspHeader(nonce);
+function withCspHeaders(): NextResponse {
+  const csp = buildCspHeader();
 
-  const requestHeaders = new Headers();
-  requestHeaders.set('x-nonce', nonce);
-
-  const response = NextResponse.next({
-    request: { headers: requestHeaders },
-  });
-
+  const response = NextResponse.next();
   response.headers.set('Content-Security-Policy', csp);
-  response.headers.set('x-nonce', nonce);
 
   return response;
 }
@@ -62,9 +56,6 @@ export function middleware(request: NextRequest) {
   ) {
     return NextResponse.next();
   }
-
-  // Generate a per-request nonce for CSP (base64-encoded random UUID)
-  const nonce = Buffer.from(crypto.randomUUID()).toString('base64');
 
   // ============================================================================
   // ROLE-BASED SEGMENT ROUTING
@@ -110,7 +101,7 @@ export function middleware(request: NextRequest) {
 
   // Allow remaining /admin/* routes through (e.g., /admin-login)
   if (pathname.startsWith('/admin')) {
-    return withCspHeaders(nonce);
+    return withCspHeaders();
   }
 
   // Redirect legacy /workspace/platform-admin/* to /admin/*
@@ -162,7 +153,7 @@ export function middleware(request: NextRequest) {
   }
 
   // Allow all other routes through — with CSP nonce
-  return withCspHeaders(nonce);
+  return withCspHeaders();
 }
 
 /**
