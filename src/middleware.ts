@@ -19,7 +19,9 @@ import { NextResponse, type NextRequest } from 'next/server';
 function buildCspHeader(): string {
   const directives = [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline'",
+    process.env.NODE_ENV === 'development'
+      ? "script-src 'self' 'unsafe-inline' 'unsafe-eval'"
+      : "script-src 'self' 'unsafe-inline'",
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: https:",
     "font-src 'self' data:",
