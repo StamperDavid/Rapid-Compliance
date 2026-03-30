@@ -5454,27 +5454,93 @@ Select cohesive settings that create a professional, unified visual language acr
           });
 
           const intelDuration = Date.now() - intelStart;
-          // Normalize IntelligenceBrief to the shape MissionTimeline expects
+          // Extract FULL detail from IntelligenceBrief — not just the template synthesis
           const intelData = intelResult.data as Record<string, unknown> | null;
           const synthesis = (intelData && typeof intelData === 'object' && 'synthesis' in intelData)
             ? intelData.synthesis as Record<string, unknown>
             : null;
+
+          // Extract actual competitor details (names, positioning, strengths, weaknesses)
+          const compAnalysis = intelData?.competitorAnalysis as Record<string, unknown> | null;
+          const rawCompetitors = Array.isArray(compAnalysis?.competitors) ? compAnalysis.competitors as Array<Record<string, unknown>> : [];
+          const competitorDetails = rawCompetitors.map((c) => ({
+            competitor: (c.name as string) || (c.domain as string) || 'Unknown',
+            angle: [
+              c.positioning ? `Positioning: ${c.positioning}` : '',
+              Array.isArray(c.strengths) && c.strengths.length > 0 ? `Strengths: ${(c.strengths as string[]).join(', ')}` : '',
+              Array.isArray(c.weaknesses) && c.weaknesses.length > 0 ? `Weaknesses: ${(c.weaknesses as string[]).join(', ')}` : '',
+            ].filter(Boolean).join('. ') || 'Identified via search',
+          }));
+
+          // Extract trend signals
+          const trendAnalysis = intelData?.trendAnalysis as Record<string, unknown> | null;
+          const rawSignals = Array.isArray(trendAnalysis?.signals) ? trendAnalysis.signals as Array<Record<string, unknown>> : [];
+          const trendInsights = rawSignals.map((s) =>
+            `${(s.title as string) || (s.description as string) || 'Market signal'} (${(s.type as string) || 'signal'}, confidence: ${s.confidence ?? 'N/A'})`
+          );
+
+          // Extract market insights as content gaps
+          const marketInsights = compAnalysis?.marketInsights as Record<string, unknown> | null;
+          const contentGaps = Array.isArray(marketInsights?.gaps) ? marketInsights.gaps as string[] : [];
+
+          // Build rich areas-researched breakdown
+          const areasResearched: Array<{ area: string; findings: string }> = [];
+          if (competitorDetails.length > 0) {
+            areasResearched.push({
+              area: 'Competitor Landscape',
+              findings: competitorDetails.map(c => `• ${c.competitor}: ${c.angle}`).join('\n'),
+            });
+          }
+          if (trendInsights.length > 0) {
+            areasResearched.push({
+              area: 'Market Trends & Signals',
+              findings: trendInsights.map(t => `• ${t}`).join('\n'),
+            });
+          }
+          if (contentGaps.length > 0) {
+            areasResearched.push({
+              area: 'Market Gaps & Opportunities',
+              findings: contentGaps.map(g => `• ${g}`).join('\n'),
+            });
+          }
+          const intelExec = intelData?.execution as Record<string, unknown> | null;
+          if (intelExec) {
+            areasResearched.push({
+              area: 'Execution Summary',
+              findings: `${intelExec.totalSpecialists ?? 0} specialists deployed, ${intelExec.successfulSpecialists ?? 0} succeeded, ${intelExec.failedSpecialists ?? 0} failed. Total time: ${Math.round(((intelExec.totalExecutionTimeMs as number) ?? 0) / 1000)}s`,
+            });
+          }
+
           const intelFindings = (synthesis?.executiveSummary as string) || `Intelligence: ${intelResult.status}`;
           const intelInsights = Array.isArray(synthesis?.keyFindings) ? synthesis.keyFindings as string[] : [];
+
+          // Merge template keyFindings with actual trend insights for richer detail
+          const allInsights = [...intelInsights, ...trendInsights.slice(0, 5)];
+
           trackMissionStep(context, 'delegate_to_intelligence',
             intelResult.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED',
             {
-              summary: intelInsights.length > 0
-                ? `Intelligence: ${intelInsights[0].slice(0, 80)}`
-                : `Intelligence: ${intelResult.status}`,
+              summary: competitorDetails.length > 0
+                ? `Intelligence: ${competitorDetails.length} competitors analyzed (${competitorDetails.slice(0, 3).map(c => c.competitor).join(', ')})`
+                : intelInsights.length > 0
+                  ? `Intelligence: ${intelInsights[0].slice(0, 80)}`
+                  : `Intelligence: ${intelResult.status}`,
               durationMs: intelDuration,
               toolResult: JSON.stringify({
                 type: 'research',
+                methodology: `Intelligence gathering via ${intelExec?.totalSpecialists ?? 'multiple'} specialist agents: CompetitorResearcher (SERP analysis + web scraping), TrendScout (market signal detection), and synthesis. Research targets: ${intelPayload.targets?.join(', ') || intelPayload.researchType || 'general'}.`,
+                areasResearched,
                 findings: intelFindings,
-                keyInsights: intelInsights,
-                opportunities: Array.isArray(synthesis?.opportunities) ? synthesis.opportunities : [],
-                threats: Array.isArray(synthesis?.threats) ? synthesis.threats : [],
-                recommendedActions: Array.isArray(synthesis?.recommendedActions) ? synthesis.recommendedActions : [],
+                keyInsights: allInsights,
+                competitorAngles: competitorDetails,
+                contentGaps,
+                sources: [
+                  'Google SERP analysis (Serper API)',
+                  'Website scraping & content analysis',
+                  rawCompetitors.length > 0 ? `${rawCompetitors.length} competitor profiles` : '',
+                  rawSignals.length > 0 ? `${rawSignals.length} market signals detected` : '',
+                  'Domain authority metrics',
+                ].filter(Boolean),
               }),
             }
           );
