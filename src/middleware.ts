@@ -2,9 +2,50 @@
  * Next.js Edge Middleware
  * Penthouse model routing - all public site traffic goes to PLATFORM_ID
  * SIMPLIFIED: Removed subdomain and custom domain routing for penthouse deployment
+ *
+ * Security: Generates a per-request CSP nonce to replace 'unsafe-inline' on script-src.
  */
 
 import { NextResponse, type NextRequest } from 'next/server';
+
+/**
+ * Build the Content-Security-Policy header value with a per-request nonce.
+ * 'strict-dynamic' allows scripts loaded by nonce-bearing scripts (needed for
+ * Next.js chunk loading). style-src keeps 'unsafe-inline' (required by Tailwind
+ * and inline style attributes — no practical nonce path for CSS-in-JS).
+ */
+function buildCspHeader(nonce: string): string {
+  const directives = [
+    "default-src 'self'",
+    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'`,
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' data: https:",
+    "font-src 'self' data:",
+    "connect-src 'self' https://api.stripe.com https://api.openai.com https://openrouter.ai https://*.firebaseio.com https://*.googleapis.com wss://*.firebaseio.com",
+    "frame-ancestors 'none'",
+  ];
+  return directives.join('; ');
+}
+
+/**
+ * Apply CSP + nonce headers to a NextResponse.next() response.
+ * The x-nonce header lets layout.tsx read the nonce via headers().
+ */
+function withCspHeaders(nonce: string): NextResponse {
+  const csp = buildCspHeader(nonce);
+
+  const requestHeaders = new Headers();
+  requestHeaders.set('x-nonce', nonce);
+
+  const response = NextResponse.next({
+    request: { headers: requestHeaders },
+  });
+
+  response.headers.set('Content-Security-Policy', csp);
+  response.headers.set('x-nonce', nonce);
+
+  return response;
+}
 
 /**
  * Main middleware function
@@ -21,6 +62,9 @@ export function middleware(request: NextRequest) {
   ) {
     return NextResponse.next();
   }
+
+  // Generate a per-request nonce for CSP (base64-encoded random UUID)
+  const nonce = Buffer.from(crypto.randomUUID()).toString('base64');
 
   // ============================================================================
   // ROLE-BASED SEGMENT ROUTING
@@ -66,7 +110,7 @@ export function middleware(request: NextRequest) {
 
   // Allow remaining /admin/* routes through (e.g., /admin-login)
   if (pathname.startsWith('/admin')) {
-    return NextResponse.next();
+    return withCspHeaders(nonce);
   }
 
   // Redirect legacy /workspace/platform-admin/* to /admin/*
@@ -117,8 +161,8 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(newUrl, 308);
   }
 
-  // Allow all other routes through
-  return NextResponse.next();
+  // Allow all other routes through — with CSP nonce
+  return withCspHeaders(nonce);
 }
 
 /**

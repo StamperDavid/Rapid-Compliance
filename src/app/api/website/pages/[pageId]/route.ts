@@ -11,6 +11,7 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { getUserIdentifier } from '@/lib/server-auth';
 import { logger } from '@/lib/logger/logger';
 import { requireAuth } from '@/lib/auth/api-auth';
+import { deleteWithSubcollections } from '@/lib/firebase/cascading-delete';
 
 export const dynamic = 'force-dynamic';
 
@@ -190,7 +191,13 @@ export async function DELETE(
       );
     }
 
-    await pageRef.delete();
+    // Cascade-delete: removes versions subcollection, then the page document
+    const pageDocPath = pageRef.path;
+    const { deletedSubDocs } = await deleteWithSubcollections(pageDocPath, [
+      'versions',
+    ]);
+
+    logger.info('Page cascade-deleted', { pageId: params.pageId, deletedSubDocs });
 
     return NextResponse.json({
       success: true,

@@ -261,9 +261,15 @@ export function validateJWTFormat(token: string): boolean {
 }
 
 /**
- * Security headers for responses
+ * Security headers for responses.
+ * CSP uses nonce-based script-src when a nonce is provided.
+ * Page-level CSP is set by Edge Middleware; this is for non-middleware contexts.
  */
-export function getSecurityHeaders(): Record<string, string> {
+export function getSecurityHeaders(nonce?: string): Record<string, string> {
+  const scriptSrc = nonce
+    ? `'self' 'nonce-${nonce}' 'strict-dynamic'`
+    : "'self' 'strict-dynamic'";
+
   return {
     'X-DNS-Prefetch-Control': 'on',
     'Strict-Transport-Security': 'max-age=63072000; includeSubDomains; preload',
@@ -272,7 +278,7 @@ export function getSecurityHeaders(): Record<string, string> {
     'X-XSS-Protection': '1; mode=block',
     'Referrer-Policy': 'origin-when-cross-origin',
     'Permissions-Policy': 'camera=(), microphone=(self), geolocation=()',
-    'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://api.stripe.com https://api.openai.com https://openrouter.ai https://*.firebaseio.com https://*.googleapis.com; img-src 'self' data: https:; font-src 'self' data:; frame-ancestors 'none'",
+    'Content-Security-Policy': `default-src 'self'; script-src ${scriptSrc}; style-src 'self' 'unsafe-inline'; connect-src 'self' https://api.stripe.com https://api.openai.com https://openrouter.ai https://*.firebaseio.com https://*.googleapis.com wss://*.firebaseio.com; img-src 'self' data: https:; font-src 'self' data:; frame-ancestors 'none'`,
   };
 }
 

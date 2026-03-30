@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
+import { headers } from 'next/headers';
 import './globals.css';
 import { ClientProviders } from '@/components/ClientProviders';
 
@@ -15,9 +16,12 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const headersList = headers();
+  const nonce = headersList.get('x-nonce') ?? undefined;
+
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={inter.className}>
+      <body className={inter.className} nonce={nonce}>
         <ClientProviders>
           {children}
         </ClientProviders>

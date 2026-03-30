@@ -198,8 +198,9 @@ export function getMusicTrackById(id: string): MusicTrack | undefined {
  */
 export async function getMusicTrackUrl(storagePath: string): Promise<string | null> {
   try {
-    const { admin } = await import('@/lib/firebase-admin');
-    const bucket = admin.storage().bucket();
+    const { adminStorage } = await import('@/lib/firebase/admin');
+    if (!adminStorage) { return null; }
+    const bucket = adminStorage.bucket();
     const file = bucket.file(storagePath);
 
     const [exists] = await file.exists();
@@ -223,8 +224,9 @@ export async function getMusicTrackUrl(storagePath: string): Promise<string | nu
  */
 export async function getAvailableMusicTrackIds(): Promise<string[]> {
   try {
-    const { admin } = await import('@/lib/firebase-admin');
-    const bucket = admin.storage().bucket();
+    const { adminStorage } = await import('@/lib/firebase/admin');
+    if (!adminStorage) { return []; }
+    const bucket = adminStorage.bucket();
     const [files] = await bucket.getFiles({ prefix: 'music/' });
     const uploadedPaths = new Set(files.map(f => f.name));
 

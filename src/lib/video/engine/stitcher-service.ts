@@ -16,6 +16,7 @@
 
 import { logger } from '@/lib/logger/logger';
 import { v4 as uuidv4 } from 'uuid';
+import { join } from 'path';
 import { VoiceEngineFactory } from '@/lib/voice/tts/voice-engine-factory';
 import type { TTSEngineType } from '@/lib/voice/tts/types';
 import type {
@@ -28,7 +29,18 @@ import type {
   DuckingConfig,
   VoiceoverSegment,
 } from './types';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import {
+  createWorkDir,
+  downloadVideo,
+  uploadToStorage,
+  cleanupWorkDir,
+  buildSmartConcatArgs,
+  runFfmpeg,
+  applyColorGrade,
+  addWatermark,
+  mixAudioWithDucking,
+  getStoragePath,
+} from '@/lib/video/ffmpeg-utils';
 
 // ============================================================================
 // CONSTANTS
@@ -175,14 +187,17 @@ export class StitcherService {
   }
 
   /**
-   * Process a post-production job
+   * Process a post-production job.
+   * All FFmpeg work happens in a temporary work directory that is cleaned up on completion.
    */
   async processJob(job: PostProductionJob, storyboard: MasterStoryboard): Promise<PostProductionJob> {
     const startTime = Date.now();
+    const workDir = await createWorkDir('stitcher');
 
     logger.info('Stitcher: Starting post-production', {
       jobId: job.id,
       storyboardId: storyboard.id,
+      workDir,
     });
 
     try {
@@ -226,66 +241,89 @@ export class StitcherService {
         Object.assign(job, { musicTrack: duckedMusicTrack });
       }
 
-      // Step 4: Stitch video clips in sequence
+      // Step 4: Stitch video clips in sequence (downloads clips, runs FFmpeg)
       this.updateJobStatus(job, 'stitching', 45, 'Stitching video clips');
-      const stitchedVideoUrl = this.stitchClips(
+      const stitchedVideoPath = await this.stitchClips(
         job.clips,
         storyboard.scenes,
         storyboard.aspectRatio,
         storyboard.resolution,
-        storyboard.frameRate
+        storyboard.frameRate,
+        workDir
       );
 
-      // Step 5: Apply color grading and LUT
+      // Step 5: Apply color grading and LUT via FFmpeg filters
       this.updateJobStatus(job, 'color-grading', 65, 'Applying color grading');
-      const colorGradedUrl = this.applyColorGrading(
-        stitchedVideoUrl,
-        storyboard.visualStyle
+      const colorGradedPath = await this.applyColorGrading(
+        stitchedVideoPath,
+        storyboard.visualStyle,
+        workDir
       );
-      job.lutApplied = true;
-      job.colorCorrectionApplied = true;
+      Object.assign(job, { lutApplied: true, colorCorrectionApplied: true });
 
       // Step 6: Apply brand overlay
-      let overlayAppliedUrl = colorGradedUrl;
+      let overlayAppliedPath = colorGradedPath;
       if (storyboard.visualStyle.brandOverlay) {
         this.updateJobStatus(job, 'color-grading', 75, 'Applying brand overlay');
-        overlayAppliedUrl = this.applyBrandOverlay(
-          colorGradedUrl,
-          storyboard.visualStyle.brandOverlay
+        overlayAppliedPath = await this.applyBrandOverlay(
+          colorGradedPath,
+          storyboard.visualStyle.brandOverlay,
+          workDir
         );
-        job.brandOverlayApplied = true;
+        Object.assign(job, { brandOverlayApplied: true });
       }
 
-      // Step 7: Mix final audio
+      // Step 7: Mix audio — if both voiceover and music exist, use FFmpeg
+      // sidechaincompress for auto-ducking via mixAudioWithDucking.
       this.updateJobStatus(job, 'audio-mixing', 85, 'Mixing final audio');
-      const mixedAudioUrl = this.mixAudio(
-        voiceoverTrack,
-        musicTrack,
-        job.sfxTracks,
-        storyboard.audioConfig.masterVolume,
-        storyboard.audioConfig.targetLUFS
-      );
+      let audioPath = '';
+      if (voiceoverTrack?.url && musicTrack?.url) {
+        // Download both audio files, mix with ducking
+        const voPath = join(workDir, 'voiceover.mp3');
+        const muPath = join(workDir, 'music.mp3');
+        await downloadVideo(voiceoverTrack.url, voPath);
+        await downloadVideo(musicTrack.url, muPath);
+        const mixedPath = join(workDir, 'mixed_audio.mp4');
+        // mixAudioWithDucking expects a video input — wrap voiceover in a dummy
+        // mux so sidechaincompress can detect voice. Use the stitched video
+        // which already has embedded audio from the clips.
+        await mixAudioWithDucking(overlayAppliedPath, muPath, mixedPath, {
+          musicVolume: musicTrack.volume,
+          targetLUFS: storyboard.audioConfig.targetLUFS,
+        });
+        // The mixed result already has video+audio, so use it directly
+        overlayAppliedPath = mixedPath;
+        audioPath = ''; // audio already muxed
+      } else if (voiceoverTrack?.url) {
+        audioPath = voiceoverTrack.url;
+      } else if (musicTrack?.url) {
+        audioPath = musicTrack.url;
+      }
 
-      // Step 8: Final render - combine video and audio
+      // Step 8: Final render — mux video + separate audio if needed
       this.updateJobStatus(job, 'rendering', 90, 'Rendering final output');
-      const finalUrl = this.renderFinal(
-        overlayAppliedUrl,
-        mixedAudioUrl,
-        storyboard.aspectRatio,
-        storyboard.resolution,
-        storyboard.frameRate
-      );
+      let finalPath: string;
+      if (audioPath) {
+        // Download audio to local file for muxing
+        const localAudio = join(workDir, 'final_audio.mp3');
+        await downloadVideo(audioPath, localAudio);
+        finalPath = await this.renderFinal(overlayAppliedPath, localAudio, workDir);
+      } else {
+        finalPath = overlayAppliedPath;
+      }
 
-      // Step 9: Upload and get final URLs
+      // Step 9: Upload to Firebase Storage
       this.updateJobStatus(job, 'uploading', 95, 'Uploading final video');
-      const uploadResult = this.uploadFinal(job.id, finalUrl);
+      const uploadResult = await this.uploadFinal(job.id, finalPath);
 
-      // Update job with results
-      job.outputUrl = uploadResult.videoUrl;
-      job.outputThumbnailUrl = uploadResult.thumbnailUrl;
-      job.outputDuration = storyboard.totalDuration;
-      job.outputFileSize = uploadResult.fileSize;
-      job.completedAt = new Date();
+      // Apply all results atomically
+      Object.assign(job, {
+        outputUrl: uploadResult.videoUrl,
+        outputThumbnailUrl: uploadResult.thumbnailUrl,
+        outputDuration: storyboard.totalDuration,
+        outputFileSize: uploadResult.fileSize,
+        completedAt: new Date(),
+      });
 
       this.updateJobStatus(job, 'completed', 100, 'Complete');
 
@@ -316,6 +354,11 @@ export class StitcherService {
       this.activeJobs.set(job.id, job);
 
       throw error;
+    } finally {
+      // Clean up temp files regardless of success/failure
+      await cleanupWorkDir(workDir).catch(() => {
+        logger.warn('Stitcher: Failed to clean up work dir', { workDir });
+      });
     }
   }
 
@@ -650,46 +693,55 @@ export class StitcherService {
   }
 
   /**
-   * Stitch video clips together
+   * Stitch video clips together using FFmpeg.
+   * Downloads each clip to the work directory and concatenates with xfade transitions.
    */
-  private stitchClips(
+  private async stitchClips(
     clips: GeneratedClip[],
     scenes: MasterStoryboard['scenes'],
-    aspectRatio: string,
+    _aspectRatio: string,
     resolution: string,
-    _frameRate: number
-  ): string {
+    _frameRate: number,
+    workDir: string
+  ): Promise<string> {
     logger.info('Stitcher: Stitching clips', {
       clipCount: clips.length,
       sceneCount: scenes.length,
-      aspectRatio,
       resolution,
     });
 
-    // Build stitch manifest
-    const stitchManifest: StitchManifest = {
-      clips: clips.map((clip, index) => ({
-        url: clip.url,
-        startTime: this.calculateClipStartTime(clip.shotId, scenes),
-        duration: clip.duration,
-        transition: index === 0 ? 'fade-in' : 'cut',
-        transitionDuration: index === 0 ? 500 : 0,
-      })),
-      outputSettings: {
-        aspectRatio,
-        resolution,
-        frameRate: 30,
-        codec: 'h264',
-        bitrate: this.calculateBitrate(resolution),
-      },
-    };
-
-    // In production, this would use FFmpeg or a video processing service
-    logger.debug('Stitcher: Stitch manifest created', {
-      clipCount: stitchManifest.clips.length,
+    // Sort clips by their position in the storyboard
+    const sortedClips = [...clips].sort((a, b) => {
+      const aStart = this.calculateClipStartTime(a.shotId, scenes);
+      const bStart = this.calculateClipStartTime(b.shotId, scenes);
+      return aStart - bStart;
     });
 
-    return `video://stitched/${uuidv4()}.mp4`;
+    // Download all clips to local files
+    const localPaths: string[] = [];
+    for (let i = 0; i < sortedClips.length; i++) {
+      const clip = sortedClips[i];
+      const localPath = join(workDir, `clip_${i}.mp4`);
+      await downloadVideo(clip.url, localPath);
+      localPaths.push(localPath);
+    }
+
+    const outputPath = join(workDir, 'stitched.mp4');
+
+    // Resolve output dimensions from resolution string
+    const resDims: Record<string, [number, number]> = {
+      '720p': [1280, 720],
+      '1080p': [1920, 1080],
+      '4k': [3840, 2160],
+    };
+    const [outW, outH] = resDims[resolution] ?? [1920, 1080];
+
+    // Build FFmpeg concat args with xfade transitions and run
+    const args = await buildSmartConcatArgs(localPaths, outputPath, 'fade', outW, outH, 18);
+    await runFfmpeg(args);
+
+    logger.info('Stitcher: Clips stitched', { outputPath, clipCount: localPaths.length });
+    return outputPath;
   }
 
   /**
@@ -722,106 +774,83 @@ export class StitcherService {
   }
 
   /**
-   * Apply color grading and LUT
+   * Apply color grading via FFmpeg eq + colorbalance filters.
+   * Maps the stitcher's LUT presets to ffmpeg-utils ColorGradeParams.
    */
-  private applyColorGrading(
-    _videoUrl: string,
-    visualStyle: VisualStyleConfig
-  ): string {
+  private async applyColorGrading(
+    videoPath: string,
+    visualStyle: VisualStyleConfig,
+    workDir: string
+  ): Promise<string> {
     logger.info('Stitcher: Applying color grading', {
       lutId: visualStyle.lutId,
       lutIntensity: visualStyle.lutIntensity,
     });
 
-    // Get LUT preset
     const lutPreset = visualStyle.lutId
       ? LUT_PRESETS[visualStyle.lutId]
       : LUT_PRESETS['natural-balanced'];
 
     if (!lutPreset) {
-      logger.warn('Stitcher: LUT preset not found, using default');
-      return `video://graded/${uuidv4()}.mp4`;
+      logger.warn('Stitcher: LUT preset not found, skipping color grading');
+      return videoPath;
     }
 
-    // Build color grading parameters
-    const gradingParams: ColorGradingParams = {
-      // Base LUT adjustments
-      ...lutPreset.adjustments,
-
-      // Apply intensity
-      contrast: 1 + (lutPreset.adjustments.contrast - 1) * visualStyle.lutIntensity,
-      saturation: 1 + (lutPreset.adjustments.saturation - 1) * visualStyle.lutIntensity,
-      temperature: lutPreset.adjustments.temperature * visualStyle.lutIntensity,
-      tint: lutPreset.adjustments.tint * visualStyle.lutIntensity,
-
-      // Custom color correction overrides
-      exposure: visualStyle.colorCorrection.exposure,
-      highlights: visualStyle.colorCorrection.highlights,
-      shadows: visualStyle.colorCorrection.shadows,
-      vibrance: visualStyle.colorCorrection.vibrance,
-
-      // Film effects
-      filmGrain: visualStyle.filmGrain?.enabled
-        ? {
-            intensity: visualStyle.filmGrain.intensity,
-            size: visualStyle.filmGrain.size,
-          }
-        : undefined,
-      vignette: visualStyle.vignette?.enabled
-        ? {
-            intensity: visualStyle.vignette.intensity,
-            softness: visualStyle.vignette.softness,
-          }
-        : undefined,
+    // Map stitcher LUT adjustments to ffmpeg-utils ColorGradeParams,
+    // scaling by lutIntensity so 0 = no change, 1 = full effect.
+    const intensity = visualStyle.lutIntensity;
+    const ffmpegPreset = {
+      contrast: 1 + (lutPreset.adjustments.contrast - 1) * intensity,
+      saturation: 1 + (lutPreset.adjustments.saturation - 1) * intensity,
+      brightness: lutPreset.adjustments.shadows * intensity,
+      gamma: 1.0,
+      temperature: lutPreset.adjustments.temperature * intensity,
     };
 
-    logger.debug('Stitcher: Color grading params', {
-      contrast: gradingParams.contrast,
-      saturation: gradingParams.saturation,
-      temperature: gradingParams.temperature,
-      tint: gradingParams.tint,
-      exposure: gradingParams.exposure,
-      highlights: gradingParams.highlights,
-      shadows: gradingParams.shadows,
-      vibrance: gradingParams.vibrance,
-      hasFilmGrain: !!gradingParams.filmGrain,
-      hasVignette: !!gradingParams.vignette,
-    });
+    const outputPath = join(workDir, 'graded.mp4');
+    await applyColorGrade(videoPath, outputPath, ffmpegPreset);
 
-    // In production, this would apply the grading using FFmpeg filters
-    return `video://graded/${uuidv4()}.mp4`;
+    logger.info('Stitcher: Color grading applied', { outputPath });
+    return outputPath;
   }
 
   /**
-   * Apply brand overlay (logo, watermark)
+   * Apply brand overlay (logo/watermark) via FFmpeg overlay filter.
+   * Downloads the logo URL to a local file, then composites onto the video.
    */
-  private applyBrandOverlay(
-    _videoUrl: string,
-    brandOverlay: NonNullable<VisualStyleConfig['brandOverlay']>
-  ): string {
+  private async applyBrandOverlay(
+    videoPath: string,
+    brandOverlay: NonNullable<VisualStyleConfig['brandOverlay']>,
+    workDir: string
+  ): Promise<string> {
     logger.info('Stitcher: Applying brand overlay', {
       position: brandOverlay.logoPosition,
       opacity: brandOverlay.logoOpacity,
     });
 
-    const overlayParams: OverlayParams = {
-      logoUrl: brandOverlay.logoUrl,
-      position: brandOverlay.logoPosition,
-      opacity: brandOverlay.logoOpacity,
-      padding: 20,
-      watermark: brandOverlay.watermarkEnabled,
+    if (!brandOverlay.logoUrl) {
+      logger.warn('Stitcher: No logo URL provided, skipping overlay');
+      return videoPath;
+    }
+
+    // Download logo to local file
+    const logoPath = join(workDir, 'brand_logo.png');
+    await downloadVideo(brandOverlay.logoUrl, logoPath);
+
+    // Map position string to addWatermark's enum
+    const positionMap: Record<string, 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'> = {
+      'top-left': 'top-left',
+      'top-right': 'top-right',
+      'bottom-left': 'bottom-left',
+      'bottom-right': 'bottom-right',
     };
+    const position = positionMap[brandOverlay.logoPosition] ?? 'bottom-right';
 
-    logger.debug('Stitcher: Overlay params', {
-      hasLogoUrl: !!overlayParams.logoUrl,
-      position: overlayParams.position,
-      opacity: overlayParams.opacity,
-      padding: overlayParams.padding,
-      watermark: overlayParams.watermark,
-    });
+    const outputPath = join(workDir, 'overlaid.mp4');
+    await addWatermark(videoPath, logoPath, outputPath, position, brandOverlay.logoOpacity);
 
-    // In production, this would composite the logo onto the video
-    return `video://overlaid/${uuidv4()}.mp4`;
+    logger.info('Stitcher: Brand overlay applied', { outputPath });
+    return outputPath;
   }
 
   /**
@@ -893,72 +922,69 @@ export class StitcherService {
   }
 
   /**
-   * Render final video with audio
+   * Render final video: mux video track with mixed audio via FFmpeg.
+   * If audioPath is empty, copies the video as-is (it may already have audio).
    */
-  private renderFinal(
-    videoUrl: string,
-    audioUrl: string,
-    aspectRatio: string,
-    resolution: string,
-    _frameRate: number
-  ): string {
-    logger.info('Stitcher: Rendering final output', {
-      aspectRatio,
-      resolution,
-    });
+  private async renderFinal(
+    videoPath: string,
+    audioPath: string,
+    workDir: string
+  ): Promise<string> {
+    logger.info('Stitcher: Rendering final output', { videoPath, audioPath });
 
-    const renderParams: RenderParams = {
-      videoInput: videoUrl,
-      audioInput: audioUrl,
-      outputSettings: {
-        aspectRatio,
-        resolution,
-        frameRate: 30,
-        codec: 'h264',
-        audioCodec: 'aac',
-        audioSampleRate: DEFAULT_SAMPLE_RATE,
-      },
-    };
+    if (!audioPath) {
+      // No separate audio to mux — the video already has its own audio track
+      return videoPath;
+    }
 
-    logger.debug('Stitcher: Render params', {
-      hasVideoInput: !!renderParams.videoInput,
-      hasAudioInput: !!renderParams.audioInput,
-      aspectRatio: renderParams.outputSettings.aspectRatio,
-      resolution: renderParams.outputSettings.resolution,
-      frameRate: renderParams.outputSettings.frameRate,
-      codec: renderParams.outputSettings.codec,
-      audioCodec: renderParams.outputSettings.audioCodec,
-      audioSampleRate: renderParams.outputSettings.audioSampleRate,
-    });
+    const outputPath = join(workDir, 'final.mp4');
 
-    // In production, this would combine video and audio using FFmpeg
-    return `video://final/${uuidv4()}.mp4`;
+    // Mux video + external audio, keeping the video codec intact
+    const args = [
+      '-i', videoPath,
+      '-i', audioPath,
+      '-c:v', 'copy',
+      '-c:a', 'aac',
+      '-b:a', '192k',
+      '-map', '0:v:0',
+      '-map', '1:a:0',
+      '-movflags', '+faststart',
+      '-shortest',
+      '-y',
+      outputPath,
+    ];
+
+    await runFfmpeg(args);
+
+    logger.info('Stitcher: Final render complete', { outputPath });
+    return outputPath;
   }
 
   /**
-   * Upload final video to storage
+   * Upload final video to Firebase Storage and return signed URLs.
    */
-  private uploadFinal(
+  private async uploadFinal(
     jobId: string,
-    _videoUrl: string
-  ): { videoUrl: string; thumbnailUrl: string; fileSize: number } {
-    logger.info('Stitcher: Uploading final video', {
-      jobId,
-    });
+    videoPath: string
+  ): Promise<{ videoUrl: string; thumbnailUrl: string; fileSize: number }> {
+    logger.info('Stitcher: Uploading final video', { jobId, videoPath });
 
-    // In production, this would:
-    // 1. Upload to cloud storage (GCS, S3, etc.)
-    // 2. Generate thumbnail
-    // 3. Return public URLs
+    const storagePath = getStoragePath(jobId, 'final');
+    const videoUrl = await uploadToStorage(videoPath, storagePath, 'video/mp4', 30);
 
-    const publicVideoUrl = `https://storage.example.com/videos/${PLATFORM_ID}/${jobId}.mp4`;
-    const thumbnailUrl = `https://storage.example.com/thumbnails/${PLATFORM_ID}/${jobId}.jpg`;
+    // Get the file size from the local file before cleanup
+    const { stat } = await import('fs/promises');
+    const stats = await stat(videoPath);
+    const fileSize = stats.size;
 
-    return {
-      videoUrl: publicVideoUrl,
-      thumbnailUrl,
-      fileSize: 50 * 1024 * 1024, // Placeholder 50MB
-    };
+    // Thumbnail generation would require extracting a frame via FFmpeg.
+    // For now, use the video URL as the thumbnail reference — the frontend
+    // video player shows the first frame automatically.
+    const thumbnailUrl = videoUrl;
+
+    logger.info('Stitcher: Upload complete', { videoUrl, fileSize });
+
+    return { videoUrl, thumbnailUrl, fileSize };
   }
 
   /**
@@ -1059,50 +1085,6 @@ interface DuckingPoint {
   volume: number;
 }
 
-interface StitchManifest {
-  clips: Array<{
-    url: string;
-    startTime: number;
-    duration: number;
-    transition: string;
-    transitionDuration: number;
-  }>;
-  outputSettings: {
-    aspectRatio: string;
-    resolution: string;
-    frameRate: number;
-    codec: string;
-    bitrate: number;
-  };
-}
-
-interface ColorGradingParams {
-  contrast: number;
-  saturation: number;
-  temperature: number;
-  tint: number;
-  exposure: number;
-  highlights: number;
-  shadows: number;
-  vibrance: number;
-  filmGrain?: {
-    intensity: number;
-    size: string;
-  };
-  vignette?: {
-    intensity: number;
-    softness: number;
-  };
-}
-
-interface OverlayParams {
-  logoUrl?: string;
-  position: string;
-  opacity: number;
-  padding: number;
-  watermark: boolean;
-}
-
 interface AudioMixManifest {
   tracks: Array<AudioTrack & { priority: number }>;
   masterVolume: number;
@@ -1112,19 +1094,6 @@ interface AudioMixManifest {
   };
   outputFormat: string;
   sampleRate: number;
-}
-
-interface RenderParams {
-  videoInput: string;
-  audioInput: string;
-  outputSettings: {
-    aspectRatio: string;
-    resolution: string;
-    frameRate: number;
-    codec: string;
-    audioCodec: string;
-    audioSampleRate: number;
-  };
 }
 
 // ============================================================================

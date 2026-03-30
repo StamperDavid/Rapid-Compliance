@@ -1,11 +1,12 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/api-auth';
-import { getForm, updateForm, deleteForm } from '@/lib/forms/form-service';
+import { getForm, updateForm } from '@/lib/forms/form-service';
 import { adminDb } from '@/lib/firebase/admin';
 import type { FormFieldConfig, FormDefinition } from '@/lib/forms/types';
 import { z } from 'zod';
 import { logger } from '@/lib/logger/logger';
 import { getFormsCollection } from '@/lib/firebase/collections';
+import { deleteWithSubcollections } from '@/lib/firebase/cascading-delete';
 
 export const dynamic = 'force-dynamic';
 
@@ -170,7 +171,16 @@ export async function DELETE(
       );
     }
 
-    await deleteForm(formId);
+    // Cascade-delete: removes fields, analytics, and views subcollections,
+    // then the parent form document. Uses Admin SDK (not client SDK).
+    const formDocPath = `${getFormsCollection()}/${formId}`;
+    const { deletedSubDocs } = await deleteWithSubcollections(formDocPath, [
+      'fields',
+      'analytics',
+      'views',
+    ]);
+
+    logger.info('Form cascade-deleted', { formId, deletedSubDocs });
 
     return NextResponse.json({ success: true });
   } catch (error: unknown) {

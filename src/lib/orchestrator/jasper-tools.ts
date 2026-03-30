@@ -6309,7 +6309,7 @@ Select cohesive settings that create a professional, unified visual language acr
 
           const topics = customTopics && customTopics.length > 0
             ? customTopics.map((t) => ({ dayOfWeek: t.dayOfWeek, topic: t.topic }))
-            : generateDefaultTopics(theme);
+            : await generateDefaultTopics(theme);
 
           const week = await createWeek({
             name: weekName,

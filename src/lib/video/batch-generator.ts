@@ -159,12 +159,49 @@ export async function deleteCalendarWeek(weekId: string): Promise<void> {
 }
 
 /**
- * Generate AI topic suggestions from a theme.
+ * Generate AI topic suggestions from a theme via OpenRouter.
  * Returns 7 topics (one per day, Mon-Sun).
+ * Falls back to structured defaults if the AI call fails.
  */
-export function generateDefaultTopics(theme: string): BatchTopicInput[] {
-  // Return placeholder topics that the user can customize.
-  // In a full implementation, these would come from an AI call.
+export async function generateDefaultTopics(theme: string): Promise<BatchTopicInput[]> {
+  try {
+    const { OpenRouterProvider } = await import('@/lib/ai/openrouter-provider');
+    const provider = new OpenRouterProvider({});
+    const response = await provider.chat({
+      model: 'anthropic/claude-3.5-sonnet' as import('@/types/ai-models').ModelName,
+      messages: [
+        {
+          role: 'system',
+          content: 'You are a social media content strategist. Generate exactly 7 short video topic titles for a week of content. Return ONLY a JSON array of 7 strings, one per day (Monday through Sunday). Each title should be 5-12 words, engaging, and directly related to the theme. No numbering, no extra text.',
+        },
+        {
+          role: 'user',
+          content: `Theme: "${theme}". Generate 7 daily video topics for this theme.`,
+        },
+      ],
+      temperature: 0.8,
+      maxTokens: 512,
+    });
+
+    const parsed: unknown = JSON.parse(response.content);
+    if (Array.isArray(parsed) && parsed.length === 7 && parsed.every((t): t is string => typeof t === 'string')) {
+      const dayMap = [1, 2, 3, 4, 5, 6, 0]; // Mon-Sun → dayOfWeek
+      return parsed.map((topic, i) => ({
+        dayOfWeek: dayMap[i],
+        topic,
+        videoType: 'social-ad' as VideoType,
+        platform: 'tiktok' as TargetPlatform,
+      }));
+    }
+
+    logger.warn('AI topic generation returned unexpected format, using fallback', { parsed: String(parsed) });
+  } catch (err) {
+    logger.warn('AI topic generation failed, using fallback', {
+      error: err instanceof Error ? err.message : String(err),
+    });
+  }
+
+  // Structured fallback — always returns valid topics
   const dayTopics = [
     { day: 1, suffix: 'Introduction & Overview' },
     { day: 2, suffix: 'Key Benefits & Features' },
