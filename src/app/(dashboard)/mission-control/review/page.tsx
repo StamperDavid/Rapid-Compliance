@@ -16,6 +16,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
 import Image from 'next/image';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import type { Mission } from '@/lib/orchestrator/mission-persistence';
@@ -731,14 +732,14 @@ function DelegationResultReview({ data }: { data: ParsedOutput }) {
         {displayMessage}
       </div>
       {reviewLink && (
-        <a href={reviewLink} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', padding: '0.625rem 1.25rem', backgroundColor: 'var(--color-primary)', color: '#fff', borderRadius: '0.375rem', textDecoration: 'none', fontSize: '0.875rem', fontWeight: 600, width: 'fit-content' }}>
+        <Link href={reviewLink} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', padding: '0.625rem 1.25rem', backgroundColor: 'var(--color-primary)', color: '#fff', borderRadius: '0.375rem', textDecoration: 'none', fontSize: '0.875rem', fontWeight: 600, width: 'fit-content' }}>
           Review Output
-        </a>
+        </Link>
       )}
       {campaignId && !reviewLink && (
-        <a href={`/mission-control?campaign=${campaignId}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', padding: '0.625rem 1.25rem', backgroundColor: 'var(--color-primary)', color: '#fff', borderRadius: '0.375rem', textDecoration: 'none', fontSize: '0.875rem', fontWeight: 600, width: 'fit-content' }}>
+        <Link href={`/mission-control?campaign=${campaignId}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', padding: '0.625rem 1.25rem', backgroundColor: 'var(--color-primary)', color: '#fff', borderRadius: '0.375rem', textDecoration: 'none', fontSize: '0.875rem', fontWeight: 600, width: 'fit-content' }}>
           View Campaign
-        </a>
+        </Link>
       )}
     </div>
   );
@@ -1125,7 +1126,7 @@ export default function StepReviewPage() {
         color: 'var(--color-text-disabled)', fontSize: '0.875rem',
       }}>
         Missing mission or step ID. Go back to{' '}
-        <a href="/mission-control" style={{ color: 'var(--color-primary)' }}>Mission Control</a>.
+        <Link href="/mission-control" style={{ color: 'var(--color-primary)' }}>Mission Control</Link>.
       </div>
     );
   }

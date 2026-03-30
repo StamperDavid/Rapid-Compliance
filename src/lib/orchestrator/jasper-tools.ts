@@ -5446,9 +5446,29 @@ Select cohesive settings that create a professional, unified visual language acr
           });
 
           const intelDuration = Date.now() - intelStart;
+          // Normalize IntelligenceBrief to the shape MissionTimeline expects
+          const intelData = intelResult.data as Record<string, unknown> | null;
+          const synthesis = (intelData && typeof intelData === 'object' && 'synthesis' in intelData)
+            ? intelData.synthesis as Record<string, unknown>
+            : null;
+          const intelFindings = (synthesis?.executiveSummary as string) || `Intelligence: ${intelResult.status}`;
+          const intelInsights = Array.isArray(synthesis?.keyFindings) ? synthesis.keyFindings as string[] : [];
           trackMissionStep(context, 'delegate_to_intelligence',
             intelResult.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED',
-            { summary: `Intelligence: ${intelResult.status}`, durationMs: intelDuration, toolResult: JSON.stringify(intelResult.data) }
+            {
+              summary: intelInsights.length > 0
+                ? `Intelligence: ${intelInsights[0].slice(0, 80)}`
+                : `Intelligence: ${intelResult.status}`,
+              durationMs: intelDuration,
+              toolResult: JSON.stringify({
+                type: 'research',
+                findings: intelFindings,
+                keyInsights: intelInsights,
+                opportunities: Array.isArray(synthesis?.opportunities) ? synthesis.opportunities : [],
+                threats: Array.isArray(synthesis?.threats) ? synthesis.threats : [],
+                recommendedActions: Array.isArray(synthesis?.recommendedActions) ? synthesis.recommendedActions : [],
+              }),
+            }
           );
 
           content = JSON.stringify({
@@ -5586,7 +5606,7 @@ Select cohesive settings that create a professional, unified visual language acr
                     {
                       id: `widget_${Date.now()}`,
                       type: 'text',
-                      content: {
+                      data: {
                         text: args.content as string,
                         format: 'markdown',
                       },
@@ -6413,9 +6433,23 @@ Select cohesive settings that create a professional, unified visual language acr
               ],
             });
             researchSummary = researchResult.content;
+            // Parse research for rich Mission Control rendering
+            let parsedResearch: Record<string, unknown> = {};
+            try { parsedResearch = JSON.parse(researchSummary) as Record<string, unknown>; } catch { parsedResearch = {}; }
+            const researchInsights = Array.isArray(parsedResearch.keyInsights) ? parsedResearch.keyInsights as string[] : [];
             trackMissionStep(context, 'campaign_research', 'COMPLETED', {
-              summary: 'Research findings generated',
+              summary: researchInsights.length > 0
+                ? `Research: ${researchInsights[0].slice(0, 80)}${researchInsights.length > 1 ? ` (+${researchInsights.length - 1} more)` : ''}`
+                : 'Research findings generated',
               durationMs: Date.now() - researchStart,
+              toolResult: JSON.stringify({
+                type: 'research',
+                findings: (parsedResearch.targetAudience as string) || `Research on "${topic}" for ${audience}`,
+                keyInsights: researchInsights,
+                competitorAngles: parsedResearch.competitorAngles ?? [],
+                contentGaps: parsedResearch.contentGaps ?? [],
+                recommendedHooks: parsedResearch.recommendedHooks ?? [],
+              }),
             });
           } catch {
             researchSummary = JSON.stringify({ keyInsights: [`Campaign topic: ${topic}`], targetAudience: audience });
@@ -6450,9 +6484,26 @@ Select cohesive settings that create a professional, unified visual language acr
               ],
             });
             strategySummary = strategyResult.content;
+            // Parse strategy for rich Mission Control rendering
+            let parsedStrategy: Record<string, unknown> = {};
+            try { parsedStrategy = JSON.parse(strategySummary) as Record<string, unknown>; } catch { parsedStrategy = {}; }
             trackMissionStep(context, 'campaign_strategy', 'COMPLETED', {
-              summary: 'Content strategy generated',
+              summary: (parsedStrategy.positioning as string)
+                ? `Strategy: ${(parsedStrategy.positioning as string).slice(0, 80)}`
+                : 'Content strategy generated',
               durationMs: Date.now() - strategyStart,
+              toolResult: JSON.stringify({
+                type: 'strategy',
+                narrativeAngle: (parsedStrategy.positioning as string) || (parsedStrategy.blogAngle as string) || topic,
+                targetAudience: audience,
+                keyMessages: Array.isArray(parsedStrategy.keyMessages) ? parsedStrategy.keyMessages : [],
+                tone,
+                callToAction: (parsedStrategy.callToAction as string) || '',
+                blogAngle: (parsedStrategy.blogAngle as string) || '',
+                videoAngle: (parsedStrategy.videoAngle as string) || '',
+                emailSubjectLine: (parsedStrategy.emailSubjectLine as string) || '',
+                socialHooks: Array.isArray(parsedStrategy.socialHooks) ? parsedStrategy.socialHooks : [],
+              }),
             });
           } catch {
             strategySummary = JSON.stringify({
@@ -6525,10 +6576,35 @@ Select cohesive settings that create a professional, unified visual language acr
               const slug = topic.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 60);
               const now = new Date().toISOString();
               const blogDoc = blogDb.collection(blogPath).doc();
+              // Build PageSection array — EditorCanvas requires this format
+              const blogContentSections = [
+                {
+                  id: `section_${Date.now()}`,
+                  type: 'section',
+                  columns: [
+                    {
+                      id: `col_${Date.now()}`,
+                      width: 100,
+                      widgets: [
+                        {
+                          id: `widget_${Date.now()}`,
+                          type: 'text',
+                          data: {
+                            text: blogResult.content,
+                            format: 'markdown',
+                          },
+                        },
+                      ],
+                    },
+                  ],
+                  styling: {},
+                  order: 0,
+                },
+              ];
               await blogDoc.set({
                 title: blogTitle,
                 slug,
-                content: blogResult.content,
+                content: blogContentSections,
                 excerpt: blogAngle,
                 status: 'draft',
                 author: 'Jasper AI',
@@ -6555,6 +6631,16 @@ Select cohesive settings that create a professional, unified visual language acr
               trackMissionStep(context, 'campaign_blog', 'COMPLETED', {
                 summary: `Blog draft saved: "${blogTitle}"`,
                 durationMs: Date.now() - blogStart,
+                toolResult: JSON.stringify({
+                  type: 'draft',
+                  status: 'draft',
+                  draftId: blogDoc.id,
+                  title: blogTitle,
+                  slug,
+                  excerpt: blogAngle,
+                  wordCount: blogResult.content.split(/\s+/).length,
+                  reviewLink: `/website/blog/editor?postId=${blogDoc.id}`,
+                }),
               });
             }
           } catch (blogErr) {
@@ -6719,7 +6805,7 @@ RULES:
                   platform,
                   copy: postContent,
                 },
-                reviewLink: '/social/command-center',
+                reviewLink: reviewLink,
               });
             } catch {
               // Non-critical — continue with other platforms
@@ -6766,7 +6852,7 @@ RULES:
                   body: emailResult.content,
                   audience,
                 },
-                reviewLink: '/email/campaigns',
+                reviewLink: reviewLink,
               });
 
               trackMissionStep(context, 'campaign_email', 'COMPLETED', {

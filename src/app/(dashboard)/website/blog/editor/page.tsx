@@ -59,7 +59,12 @@ export default function BlogPostEditorPage() {
       if (!response.ok) {throw new Error('Failed to load post');}
 
       const data = await response.json() as { post: BlogPost };
-      setPost(data.post);
+      const loaded = data.post;
+      // Defensive: ensure content is always an array (Jasper-saved posts may have malformed data)
+      if (!Array.isArray(loaded.content)) {
+        loaded.content = [];
+      }
+      setPost(loaded);
       setTags(data.post.tags ?? []);
     } catch (error) {
       logger.error('[Blog Editor] Load error', error instanceof Error ? error : new Error(String(error)));
