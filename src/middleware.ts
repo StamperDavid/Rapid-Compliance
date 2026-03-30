@@ -3,45 +3,11 @@
  * Penthouse model routing - all public site traffic goes to PLATFORM_ID
  * SIMPLIFIED: Removed subdomain and custom domain routing for penthouse deployment
  *
- * Security: Generates a per-request CSP nonce to replace 'unsafe-inline' on script-src.
+ * CSP Note: Content-Security-Policy is applied via next.config.js static headers,
+ * NOT here. Middleware-based CSP interferes with Next.js 14 chunk loading in dev.
  */
 
 import { NextResponse, type NextRequest } from 'next/server';
-
-/**
- * Build the Content-Security-Policy header value.
- *
- * script-src uses 'unsafe-inline' because Next.js 14 App Router injects inline
- * bootstrap scripts for hydration that cannot receive a nonce attribute.
- * Nonce-based CSP for script-src requires Next.js 15+ native support.
- * All other directives are hardened (connect-src allowlist, frame-ancestors none).
- */
-function buildCspHeader(): string {
-  const directives = [
-    "default-src 'self'",
-    process.env.NODE_ENV === 'development'
-      ? "script-src 'self' 'unsafe-inline' 'unsafe-eval'"
-      : "script-src 'self' 'unsafe-inline'",
-    "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' data: https:",
-    "font-src 'self' data:",
-    "connect-src 'self' https://api.stripe.com https://api.openai.com https://openrouter.ai https://*.firebaseio.com https://*.googleapis.com wss://*.firebaseio.com",
-    "frame-ancestors 'none'",
-  ];
-  return directives.join('; ');
-}
-
-/**
- * Apply CSP headers to a NextResponse.next() response.
- */
-function withCspHeaders(): NextResponse {
-  const csp = buildCspHeader();
-
-  const response = NextResponse.next();
-  response.headers.set('Content-Security-Policy', csp);
-
-  return response;
-}
 
 /**
  * Main middleware function
@@ -103,7 +69,7 @@ export function middleware(request: NextRequest) {
 
   // Allow remaining /admin/* routes through (e.g., /admin-login)
   if (pathname.startsWith('/admin')) {
-    return withCspHeaders();
+    return NextResponse.next();
   }
 
   // Redirect legacy /workspace/platform-admin/* to /admin/*
@@ -154,8 +120,8 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(newUrl, 308);
   }
 
-  // Allow all other routes through — with CSP nonce
-  return withCspHeaders();
+  // Allow all other routes through
+  return NextResponse.next();
 }
 
 /**
