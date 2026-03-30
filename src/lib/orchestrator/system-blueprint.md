@@ -301,7 +301,7 @@ OAuth integrations with major business platforms.
 
 ## Technology Stack
 
-- **Framework:** Next.js 15 (App Router)
+- **Framework:** Next.js 14.2.33 (App Router)
 - **Hosting:** Vercel (serverless, auto-deploy from main branch)
 - **Database:** Firebase Firestore (Admin SDK for server, client SDK for frontend)
 - **Authentication:** Firebase Auth with custom claims (admin/user RBAC)

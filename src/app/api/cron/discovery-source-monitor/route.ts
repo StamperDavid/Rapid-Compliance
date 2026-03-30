@@ -12,6 +12,7 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger/logger';
+import { verifyCronAuth } from '@/lib/auth/api-auth';
 import { listSources, updateSourceSchedule } from '@/lib/intelligence/discovery-source-service';
 import { createOperation } from '@/lib/intelligence/discovery-service';
 import { type ScheduleFrequency } from '@/types/intelligence-discovery';
@@ -68,30 +69,8 @@ function computeNextRunAt(frequency: ScheduleFrequency, from: Date): string {
  */
 export async function GET(request: NextRequest) {
   try {
-    const authHeader = request.headers.get('authorization');
-    const cronSecret = process.env.CRON_SECRET;
-
-    // Fail closed: require CRON_SECRET to be configured
-    if (!cronSecret) {
-      logger.error(
-        'CRON_SECRET not configured - rejecting request',
-        new Error('Missing CRON_SECRET'),
-        { route: '/api/cron/discovery-source-monitor' }
-      );
-      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
-    }
-
-    if (!authHeader || authHeader !== `Bearer ${cronSecret}`) {
-      logger.error(
-        'Unauthorized cron access attempt',
-        new Error('Invalid cron secret'),
-        {
-          route: '/api/cron/discovery-source-monitor',
-          method: 'GET',
-        }
-      );
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const authError = verifyCronAuth(request, '/api/cron/discovery-source-monitor');
+    if (authError) { return authError; }
 
     logger.info('Starting discovery source monitor', {
       route: '/api/cron/discovery-source-monitor',

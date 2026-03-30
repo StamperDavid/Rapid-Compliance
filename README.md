@@ -21,7 +21,7 @@ AI-powered sales platform with a 52-agent autonomous swarm (46 swarm + 6 standal
 
 | Layer | Technology |
 |-------|-----------|
-| **Framework** | Next.js 15 (App Router), React 18.2.0 |
+| **Framework** | Next.js 14.2 (App Router), React 18.2.0 |
 | **Language** | TypeScript (Strict Mode, Zero `any` Policy) |
 | **Database** | Firebase Firestore (real-time) |
 | **Authentication** | Firebase Auth + Custom Claims (4-role RBAC) |
@@ -51,7 +51,7 @@ The `src/app/api/` directory is a **Hardened Zone** with enforced type safety:
 
 - **Zero `any` Policy** — All 226 API routes use strict TypeScript
 - **Zod Validation** — All inputs validated with schemas
-- **Async Params** — Next.js 15 compliant `await params` pattern
+- **Async Params** — Next.js 14.2 compliant `await params` pattern
 - **Service Layer** — Business logic delegated to typed services
 
 See [ENGINEERING_STANDARDS.md](./ENGINEERING_STANDARDS.md) for complete coding standards.

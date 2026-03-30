@@ -80,6 +80,9 @@ const endpointLimits: Record<string, RateLimitConfig> = {
   '/api/email/track': { maxRequests: 1000, windowMs: 60 * 1000 },
   '/api/email/track/link': { maxRequests: 500, windowMs: 60 * 1000 },
 
+  // Recovery tracking (public redirect — rate-limit to prevent merchantId enumeration)
+  '/api/recovery/track': { maxRequests: 30, windowMs: 60 * 1000 },
+
   // Social media endpoints (moderate limits - external API rate limits apply)
   '/api/social/twitter/post': { maxRequests: 50, windowMs: 60 * 1000 }, // Twitter has strict limits
   '/api/social/schedule': { maxRequests: 100, windowMs: 60 * 1000 },

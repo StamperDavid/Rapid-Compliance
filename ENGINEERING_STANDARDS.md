@@ -70,14 +70,14 @@ export async function POST(request: Request) {
 
 ---
 
-## 3. Next.js 15 Async Params
+## 3. Next.js 14 Async Params
 
 **Rule:** All route parameters and search params must be awaited.
 
 ### Required Pattern
 
 ```typescript
-// CORRECT: Await params in Next.js 15
+// CORRECT: Await params in Next.js 14
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }

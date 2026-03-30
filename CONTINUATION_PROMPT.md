@@ -5,7 +5,7 @@
 ## Context
 Repository: https://github.com/StamperDavid/Rapid-Compliance
 Branch: dev
-Last Updated: March 27, 2026
+Last Updated: March 30, 2026
 **Status: MANUAL QA IN PROGRESS — Pre-launch validation**
 
 ## Mission
@@ -29,7 +29,8 @@ Walk through every feature and function of the platform end-to-end. Find and fix
 - **59 AI agents** (46 swarm + 7 standalone + 6 QA)
 - **16 operational systems**
 - **4-role RBAC** (owner/admin/manager/member, 47 permissions)
-- **Single-tenant penthouse** → will convert to multi-tenant after QA
+- **Single-tenant penthouse** (development phase) → will convert to multi-tenant after QA
+- **Framework:** Next.js 14.2.33 (App Router), React 18.2.0, TypeScript 5.9.3
 
 ---
 
@@ -54,7 +55,8 @@ Walk through every feature and function of the platform end-to-end. Find and fix
 | 14 | Team, Coaching & Performance | 10 | — | — | — | NOT STARTED |
 | 15 | Public Pages & Onboarding | 14 | — | — | — | NOT STARTED |
 | 16 | Cross-System Integration | 10 | — | — | — | NOT STARTED |
-| **TOTAL** | | **236** | **—** | **—** | **—** | |
+| S | Security & Infrastructure | 8 | — | — | — | NOT STARTED |
+| **TOTAL** | | **244** | **—** | **—** | **—** | |
 
 ---
 
@@ -151,6 +153,12 @@ Walk through every feature and function of the platform end-to-end. Find and fix
 | Jasper still calls `delegate_to_content` for blog requests | Prompt updated but model still routes blog requests to content pipeline | Strengthen routing — blog = `save_blog_draft` only, never `delegate_to_content` |
 | Content agent copywriter produces placeholder text | `generatePageCopy` outputs template strings like `[Content for hero section]`, not real AI-generated copy | Needs real AI call via OpenRouter for actual copy generation |
 | Content agent detects FULL_PACKAGE for single blog | Content manager always interprets requests as full website packages | Need intent detection that recognizes single-content requests vs website builds |
+| `/api/version` exposes deployment info without auth | No auth check on endpoint | Add `requireRole(['admin'])` or delete endpoint |
+| `/api/recovery/track/[merchantId]` wide open | No auth, no Zod validation, no rate limiting, uses type assertion | Add auth + Zod + rate limiting, or delete if unused |
+| `/api/identity` POST missing role check | Uses `requireAuth` but any authenticated user can overwrite workforce identity | Change to `requireRole(['owner', 'admin'])` |
+| Jasper `activeStepIds` Map memory leak | `activeStepIds` Map in jasper-tools.ts grows unbounded, no eviction | Add TTL-based cleanup or max-size eviction |
+| Cron endpoints use simple string comparison for auth | `authHeader !== \`Bearer ${cronSecret}\`` vulnerable to timing attacks | Use `crypto.timingSafeEqual()` with HMAC-SHA256 |
+| No cascading deletes for subcollections | Deleting forms, schemas, video projects, chat sessions, pages orphans child subcollections | Implement `deleteWithSubcollections()` utility |
 
 **Instructions:**
 1. Start with **Section A** — this is the brand DNA that every agent reads. Fill in ALL fields with real SalesVelocity.ai data.
@@ -543,6 +551,37 @@ Walk through every feature and function of the platform end-to-end. Find and fix
 
 ---
 
+## Phase S: Security & Infrastructure (8 tests)
+
+**Goal:** Verify endpoints are protected, signatures validated, data cleanup works, headers correct. These are invisible to browser QA — must be tested via DevTools or curl.
+
+| # | Test | Steps | Expected | Result | Notes |
+|---|------|-------|----------|--------|-------|
+| S.1 | Unprotected `/api/version` | `curl localhost:3000/api/version` (no auth header) | Returns 401, not deployment info | | Currently WIDE OPEN — leaks git commit, branch, Vercel URL |
+| S.2 | Unprotected `/api/recovery/track` | `curl localhost:3000/api/recovery/track/anything` (no auth) | Returns 401 | | Currently WIDE OPEN — no auth, no validation, no rate limit |
+| S.3 | Identity role escalation | As `member` role, POST to `/api/identity` | Returns 403 (requires owner/admin) | | Currently any authenticated user can overwrite workforce identity |
+| S.4 | Webhook signature forgery | Send POST to `/api/webhooks/stripe` with invalid signature | Returns 400, not processed | | Stripe is verified — check PayPal, Razorpay, Gmail too |
+| S.5 | CSP header check | Open DevTools → Network → check response headers | `script-src` uses nonce, not `unsafe-inline` | | Currently has `unsafe-inline` — XSS risk |
+| S.6 | Cascading delete — forms | Delete a form → check Firestore for orphaned `fields/`, `submissions/` subcollections | Subcollections deleted with parent | | Currently orphans subcollections |
+| S.7 | Cascading delete — schemas | Delete a schema → check Firestore for orphaned `fields/` subcollection | Subcollection deleted with parent | | Currently orphans subcollections |
+| S.8 | Cron auth timing safety | Inspect cron endpoint auth code | Uses `crypto.timingSafeEqual()`, not string `!==` | | Currently uses simple string comparison |
+
+---
+
+## Post-QA: Multi-Tenant Readiness (Before Conversion)
+
+Before re-enabling multi-tenancy, these must be completed:
+
+| # | Task | Status |
+|---|------|--------|
+| MT.1 | Audit all hardcoded `PLATFORM_ID` / `organizations/${PLATFORM_ID}` paths (50+ found in code review) | NOT STARTED |
+| MT.2 | Migrate all hardcoded paths to use `collections.ts` helpers (`getSubCollection()`, `getPlatformSubCollection()`) | NOT STARTED |
+| MT.3 | Update Firestore security rules for tenant isolation | NOT STARTED |
+| MT.4 | Re-add org-switching / tenant context to auth layer | NOT STARTED |
+| MT.5 | Test tenant data isolation end-to-end | NOT STARTED |
+
+---
+
 ## Bug Tracker
 
 | Bug # | Phase | Test # | Description | Severity | Status | Fix Commit |
@@ -563,10 +602,11 @@ Walk through every feature and function of the platform end-to-end. Find and fix
 
 | Milestone | Status | Date |
 |-----------|--------|------|
-| All 236 tests pass | NOT STARTED | — |
-| All critical bugs fixed | NOT STARTED | — |
+| All 244 tests pass (including Phase S security) | NOT STARTED | — |
+| All critical/high bugs fixed (see Known Bugs) | NOT STARTED | — |
+| Security hardening complete (Phase S green) | NOT STARTED | — |
 | Design improvements implemented | NOT STARTED | — |
-| Multi-tenant conversion planning | NOT STARTED | — |
+| Multi-tenant readiness checklist (MT.1-MT.5) | NOT STARTED | — |
 | Multi-tenant implementation | NOT STARTED | — |
 | Production deployment to salesvelocity.ai | NOT STARTED | — |
 | Launch | NOT STARTED | — |

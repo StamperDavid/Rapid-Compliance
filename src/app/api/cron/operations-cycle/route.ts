@@ -16,6 +16,7 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger/logger';
+import { verifyCronAuth } from '@/lib/auth/api-auth';
 import { getSignalBus } from '@/lib/orchestrator/signal-bus';
 import { AGENT_IDS } from '@/lib/agents';
 import { getMemoryVault } from '@/lib/agents/shared/memory-vault';
@@ -441,24 +442,8 @@ async function executeCycle(cycleType: CycleType): Promise<{
 export async function GET(request: NextRequest) {
   try {
     // Verify this is a legitimate cron request
-    const authHeader = request.headers.get('authorization');
-    const cronSecret = process.env.CRON_SECRET;
-
-    // Fail closed: require CRON_SECRET
-    if (!cronSecret) {
-      logger.error('CRON_SECRET not configured - rejecting request', new Error('Missing CRON_SECRET'), {
-        route: '/api/cron/operations-cycle',
-      });
-      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
-    }
-
-    if (!authHeader || authHeader !== `Bearer ${cronSecret}`) {
-      logger.error('Unauthorized cron access attempt', new Error('Invalid cron secret'), {
-        route: '/api/cron/operations-cycle',
-        method: 'GET',
-      });
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const authError = verifyCronAuth(request, '/api/cron/operations-cycle');
+    if (authError) { return authError; }
 
     // Get cycle type from query params (default to operational)
     const { searchParams } = new URL(request.url);

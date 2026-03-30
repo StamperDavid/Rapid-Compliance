@@ -7,6 +7,7 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger/logger';
+import { verifyCronAuth } from '@/lib/auth/api-auth';
 import { getKeywordTrackerService } from '@/lib/growth/keyword-tracker';
 
 export const dynamic = 'force-dynamic';
@@ -14,22 +15,8 @@ export const maxDuration = 300;
 
 export async function GET(request: NextRequest) {
   try {
-    const authHeader = request.headers.get('authorization');
-    const cronSecret = process.env.CRON_SECRET;
-
-    if (!cronSecret) {
-      logger.error('CRON_SECRET not configured', new Error('Missing CRON_SECRET'), {
-        route: '/api/cron/growth-keyword-tracker',
-      });
-      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
-    }
-
-    if (!authHeader || authHeader !== `Bearer ${cronSecret}`) {
-      logger.error('Unauthorized cron access attempt', new Error('Invalid cron secret'), {
-        route: '/api/cron/growth-keyword-tracker',
-      });
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const authError = verifyCronAuth(request, '/api/cron/growth-keyword-tracker');
+    if (authError) { return authError; }
 
     logger.info('Starting daily keyword ranking check', {
       route: '/api/cron/growth-keyword-tracker',

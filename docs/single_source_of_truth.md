@@ -49,7 +49,7 @@
 
 ### Technology Stack
 
-- **Framework:** Next.js 15 (App Router)
+- **Framework:** Next.js 14.2.33 (App Router)
 - **Hosting:** Vercel (Status: **DEPLOYED** — dev → main → Vercel auto-deploy)
 - **Database:** Firebase Firestore (single-tenant: `rapid-compliance-65f87`)
 - **Authentication:** Firebase Auth with custom claims

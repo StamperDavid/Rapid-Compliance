@@ -199,3 +199,64 @@ export async function requirePermission(
 
   return { user };
 }
+
+/**
+ * Verify cron endpoint authentication using timing-safe comparison.
+ * Returns null on success, or a NextResponse error on failure.
+ *
+ * Usage in cron routes:
+ *   const authError = verifyCronAuth(request, '/api/cron/my-job');
+ *   if (authError) return authError;
+ */
+export function verifyCronAuth(
+  request: NextRequest,
+  routeName: string
+): NextResponse | null {
+  const authHeader = request.headers.get('authorization');
+  const cronSecret = process.env.CRON_SECRET;
+
+  if (!cronSecret) {
+    logger.error('CRON_SECRET not configured - rejecting request', new Error('Missing CRON_SECRET'), {
+      route: routeName,
+    });
+    return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
+  }
+
+  if (!authHeader) {
+    logger.error('Unauthorized cron access attempt — no auth header', new Error('Missing authorization'), {
+      route: routeName,
+      method: 'GET',
+    });
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const expected = `Bearer ${cronSecret}`;
+
+  // Timing-safe comparison to prevent timing attacks
+  if (authHeader.length !== expected.length) {
+    logger.error('Unauthorized cron access attempt', new Error('Invalid cron secret'), {
+      route: routeName,
+      method: 'GET',
+    });
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const encoder = new TextEncoder();
+  const a = encoder.encode(authHeader);
+  const b = encoder.encode(expected);
+
+  let mismatch = 0;
+  for (let i = 0; i < a.length; i++) {
+    mismatch |= a[i] ^ b[i];
+  }
+
+  if (mismatch !== 0) {
+    logger.error('Unauthorized cron access attempt', new Error('Invalid cron secret'), {
+      route: routeName,
+      method: 'GET',
+    });
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  return null;
+}

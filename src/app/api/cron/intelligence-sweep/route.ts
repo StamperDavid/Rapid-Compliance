@@ -13,6 +13,7 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { logger } from '@/lib/logger/logger';
+import { verifyCronAuth } from '@/lib/auth/api-auth';
 import { getIntelligenceManager } from '@/lib/agents/intelligence/manager';
 
 export const dynamic = 'force-dynamic';
@@ -58,24 +59,8 @@ interface IntelligenceSweepResponse {
 export async function GET(request: NextRequest) {
   try {
     // Verify this is a legitimate cron request
-    const authHeader = request.headers.get('authorization');
-    const cronSecret = process.env.CRON_SECRET;
-
-    // Fail closed: require CRON_SECRET
-    if (!cronSecret) {
-      logger.error('CRON_SECRET not configured - rejecting request', new Error('Missing CRON_SECRET'), {
-        route: '/api/cron/intelligence-sweep',
-      });
-      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
-    }
-
-    if (!authHeader || authHeader !== `Bearer ${cronSecret}`) {
-      logger.error('Unauthorized cron access attempt', new Error('Invalid cron secret'), {
-        route: '/api/cron/intelligence-sweep',
-        method: 'GET',
-      });
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const authError = verifyCronAuth(request, '/api/cron/intelligence-sweep');
+    if (authError) { return authError; }
 
     // Parse and validate query parameters
     const { searchParams } = new URL(request.url);

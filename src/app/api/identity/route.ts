@@ -5,7 +5,7 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { logger } from '@/lib/logger/logger';
 import { z } from 'zod';
 import { PLATFORM_ID } from '@/lib/constants/platform';
-import { requireAuth } from '@/lib/auth/api-auth';
+import { requireAuth, requireRole } from '@/lib/auth/api-auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -111,7 +111,7 @@ export async function POST(
   req: NextRequest
 ) {
   try {
-    const authResult = await requireAuth(req);
+    const authResult = await requireRole(req, ['owner', 'admin']);
     if (authResult instanceof NextResponse) {
       return authResult;
     }

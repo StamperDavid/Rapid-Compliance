@@ -2,21 +2,27 @@
 
 > **Scope:** All Claude Code sessions in this project
 > **Branch:** dev
-> **Last Updated:** February 6, 2026
+> **Last Updated:** March 30, 2026
 
 ---
 
 ## System Identity
 
-**This is a Single-Tenant system.** The platform identity is **SalesVelocity.ai**.
+**SalesVelocity.ai** is a **multi-tenant SaaS product** currently running in single-tenant mode for development.
 
-- **Architecture:** Penthouse Model (single company, NOT a SaaS/multi-tenant platform)
+- **Architecture:** Penthouse Model (single-tenant development phase — multi-tenant re-enablement planned after QA)
 - **Organization ID:** `rapid-compliance-root` (defined in `src/lib/constants/platform.ts`)
 - **Firebase Project:** `rapid-compliance-65f87`
-- **Domain:** SalesVelocity.ai
-- **Clients** purchase services and products — they do NOT receive SaaS tenants
+- **Domain:** SalesVelocity.ai (hosted at `rapidcompliance.us` until domain migration)
+- **Clients** purchase their own deployment of the platform — this is SaaS, not a service agency
 
-All code, routes, agents, and database paths operate under this single identity. There is no org-switching, no tenant isolation, and no multi-org logic. Any remnant of multi-tenant patterns should be treated as legacy debt and removed.
+The platform currently operates under a single identity for development simplicity. Multi-tenancy was removed ("Scorched Earth") to stabilize the codebase and will be re-enabled after QA completes.
+
+**Critical rules for the multi-tenant transition:**
+- **Do NOT hardcode `PLATFORM_ID`** in new code — use helpers from `src/lib/firebase/collections.ts` (`getSubCollection()`, `getPlatformSubCollection()`)
+- **Design all new features for multi-tenancy** even while running single-tenant
+- **Do NOT remove tenant-aware patterns** if they still exist — they will be needed again
+- External API `tenantId` fields (Xero, Microsoft Azure AD) are third-party concepts and must NOT be touched
 
 ---
 
@@ -43,7 +49,7 @@ Claude must adhere to:
 - **ENGINEERING_STANDARDS.md** - All API and service layer patterns
 - **Zero-Any Policy** - No `any` types in TypeScript
 - **Zod Validation** - All API inputs validated with Zod schemas
-- **Next.js 15 Async Params** - Always await route params
+- **Next.js 14 Async Params** - Always await route params
 - **Service Layer Architecture** - Business logic in services, not routes
 - **Error Handling Standards** - Proper try/catch with logging
 - **Authentication Patterns** - All protected routes verify auth
@@ -110,7 +116,7 @@ At the end of each session, Claude must:
 
 <detailed changes>
 
-Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
+Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
 ```
 
 Types: `feat`, `fix`, `refactor`, `test`, `docs`, `chore`

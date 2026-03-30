@@ -47,8 +47,25 @@ export interface ToolCallContext {
 /**
  * Maps `${missionId}:${toolName}` → stepId so COMPLETED/FAILED updates
  * can find the step that was created during the RUNNING call.
+ *
+ * Entries are deleted on COMPLETED/FAILED. As a safety net against leaks
+ * from orphaned RUNNING steps (e.g., tool crash/timeout), we store creation
+ * timestamps and evict entries older than 30 minutes.
  */
 const activeStepIds = new Map<string, string>();
+const activeStepTimestamps = new Map<string, number>();
+const STEP_TTL_MS = 30 * 60 * 1000; // 30 minutes
+
+/** Evict orphaned step entries older than STEP_TTL_MS */
+function evictStaleSteps(): void {
+  const now = Date.now();
+  for (const [key, ts] of activeStepTimestamps) {
+    if (now - ts > STEP_TTL_MS) {
+      activeStepIds.delete(key);
+      activeStepTimestamps.delete(key);
+    }
+  }
+}
 
 /**
  * Fire-and-forget mission step tracking. Never throws, never blocks Jasper.
@@ -72,9 +89,13 @@ function trackMissionStep(
 
   const mapKey = `${context.missionId}:${toolName}`;
 
+  // Periodically evict orphaned steps to prevent memory leaks
+  evictStaleSteps();
+
   if (status === 'RUNNING') {
     const stepId = `step_${toolName}_${Date.now()}`;
     activeStepIds.set(mapKey, stepId);
+    activeStepTimestamps.set(mapKey, Date.now());
 
     void addMissionStep(context.missionId, {
       stepId,
@@ -92,6 +113,7 @@ function trackMissionStep(
   } else {
     const stepId = activeStepIds.get(mapKey) ?? `step_${toolName}_${Date.now()}`;
     activeStepIds.delete(mapKey);
+    activeStepTimestamps.delete(mapKey);
 
     void updateMissionStep(context.missionId, stepId, {
       status,

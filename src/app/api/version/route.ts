@@ -1,11 +1,18 @@
-import { NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
+import { requireRole } from '@/lib/auth/api-auth';
 
 export const dynamic = 'force-dynamic';
 
 /**
- * Version endpoint — hit /api/version in the browser to see which build is live.
+ * Version endpoint — returns build metadata for the currently deployed revision.
+ * Restricted to owner and admin roles to prevent reconnaissance by unauthenticated callers.
  */
-export function GET() {
+export async function GET(request: NextRequest) {
+  const authResult = await requireRole(request, ['owner', 'admin']);
+  if (authResult instanceof NextResponse) {
+    return authResult;
+  }
+
   return NextResponse.json({
     commit: process.env.VERCEL_GIT_COMMIT_SHA ?? 'local',
     commitShort: (process.env.VERCEL_GIT_COMMIT_SHA ?? 'local').slice(0, 8),

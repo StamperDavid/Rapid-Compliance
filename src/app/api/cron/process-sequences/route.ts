@@ -14,6 +14,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { processSequences } from '@/lib/outbound/sequence-scheduler';
 import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
+import { verifyCronAuth } from '@/lib/auth/api-auth';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 
 export async function GET(request: NextRequest) {
@@ -25,20 +26,8 @@ export async function GET(request: NextRequest) {
 
   try {
     // Verify cron secret
-    const authHeader = request.headers.get('authorization');
-    const cronSecret = process.env.CRON_SECRET;
-
-    // Fail closed: require CRON_SECRET
-    if (!cronSecret) {
-      logger.error('CRON_SECRET not configured - rejecting request', new Error('Missing CRON_SECRET'), {
-        route: '/api/cron/process-sequences',
-      });
-      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
-    }
-
-    if (authHeader !== `Bearer ${cronSecret}`) {
-      return errors.unauthorized();
-    }
+    const authError = verifyCronAuth(request, '/api/cron/process-sequences');
+    if (authError) { return authError; }
 
     logger.info('Processing sequences (cron)', { route: '/api/cron/process-sequences' });
 

@@ -9,6 +9,7 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger/logger';
+import { verifyCronAuth } from '@/lib/auth/api-auth';
 import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { ListeningService } from '@/lib/social/listening-service';
 
@@ -19,24 +20,8 @@ export async function GET(request: NextRequest) {
     const rateLimitResponse = await rateLimitMiddleware(request, '/api/cron/social-listening-collector');
     if (rateLimitResponse) {return rateLimitResponse;}
 
-    // Fail-closed cron auth — matches all other cron routes
-    const authHeader = request.headers.get('authorization');
-    const cronSecret = process.env.CRON_SECRET;
-    if (!cronSecret) {
-      logger.error('CRON_SECRET not configured — rejecting request', undefined, {
-        route: '/api/cron/social-listening-collector',
-      });
-      return NextResponse.json(
-        { success: false, error: 'Server configuration error' },
-        { status: 500 }
-      );
-    }
-    if (authHeader !== `Bearer ${cronSecret}`) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
+    const authError = verifyCronAuth(request, '/api/cron/social-listening-collector');
+    if (authError) { return authError; }
 
     logger.info('Cron: Social listening collector starting');
 

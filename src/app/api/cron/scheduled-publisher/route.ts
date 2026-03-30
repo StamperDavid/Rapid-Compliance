@@ -7,6 +7,7 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { runScheduledPublisher } from '@/lib/scheduled-publisher';
 import { logger } from '@/lib/logger/logger';
+import { verifyCronAuth } from '@/lib/auth/api-auth';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60; // 60 seconds max execution
@@ -18,24 +19,8 @@ export const maxDuration = 60; // 60 seconds max execution
 export async function GET(request: NextRequest) {
   try {
     // Verify this is a legitimate cron request
-    const authHeader = request.headers.get('authorization');
-    const cronSecret = process.env.CRON_SECRET;
-
-    // Fail closed: require CRON_SECRET
-    if (!cronSecret) {
-      logger.error('CRON_SECRET not configured - rejecting request', new Error('Missing CRON_SECRET'), {
-        route: '/api/cron/scheduled-publisher',
-      });
-      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
-    }
-
-    if (!authHeader || authHeader !== `Bearer ${cronSecret}`) {
-      logger.error('Unauthorized cron access attempt', new Error('Invalid cron secret'), {
-        route: '/api/cron/scheduled-publisher',
-        method: 'GET'
-      });
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const authError = verifyCronAuth(request, '/api/cron/scheduled-publisher');
+    if (authError) { return authError; }
 
     logger.info('Starting scheduled publisher', {
       route: '/api/cron/scheduled-publisher',
