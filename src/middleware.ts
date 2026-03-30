@@ -2,9 +2,6 @@
  * Next.js Edge Middleware
  * Penthouse model routing - all public site traffic goes to PLATFORM_ID
  * SIMPLIFIED: Removed subdomain and custom domain routing for penthouse deployment
- *
- * CSP Note: Content-Security-Policy is applied via next.config.js static headers,
- * NOT here. Middleware-based CSP interferes with Next.js 14 chunk loading in dev.
  */
 
 import { NextResponse, type NextRequest } from 'next/server';
