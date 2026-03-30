@@ -1954,7 +1954,7 @@ export const JASPER_TOOLS: ToolDefinition[] = [
     function: {
       name: 'save_blog_draft',
       description:
-        'Save generated content as a blog post draft in the website blog system. Returns the draft ID and a link to the blog editor for review. Use this after generating content to bridge the gap between AI-generated content and the blog publishing pipeline. ENABLED: TRUE.',
+        'Create and save a blog post draft. Use this DIRECTLY when the user asks for a blog post, article, or written content — do NOT use delegate_to_content for blog requests. Write the full blog content yourself in markdown, then save it with this tool. Returns the draft ID and a review link to /website/blog. ENABLED: TRUE.',
       parameters: {
         type: 'object',
         properties: {
@@ -2016,7 +2016,7 @@ export const JASPER_TOOLS: ToolDefinition[] = [
     function: {
       name: 'get_seo_config',
       description:
-        'Read the platform SEO configuration including keywords, meta title, meta description, OG image, robots settings, and AI bot access rules. Use this BEFORE researching trends — the SEO keywords define the platform demographic and content strategy. Chain: get_seo_config → research_trending_topics → delegate_to_content. ENABLED: TRUE.',
+        'Read the platform SEO configuration including keywords, meta title, meta description, OG image, robots settings, and AI bot access rules. Use this BEFORE researching trends — the SEO keywords define the platform demographic and content strategy. Chain for blogs: get_seo_config → research_trending_topics → save_blog_draft. Chain for other content: get_seo_config → research_trending_topics → delegate_to_content. ENABLED: TRUE.',
       parameters: {
         type: 'object',
         properties: {
@@ -5206,8 +5206,22 @@ Select cohesive settings that create a professional, unified visual language acr
           const contentMgr = new ContentManager();
           await contentMgr.initialize();
 
+          // Map the tool's contentType string to the ContentRequest contentTypes array.
+          // The content manager's detectContentIntent() reads contentTypes (plural, array)
+          // with vocabulary: 'copy' | 'visuals' | 'video' | 'social'.
+          const contentTypeMap: Record<string, string> = {
+            blog_post: 'copy',
+            email_campaign: 'copy',
+            video_script: 'video',
+            social_media: 'social',
+            landing_page: 'copy',
+            website_copy: 'copy',
+          };
+          const rawType = args.contentType as string | undefined;
+          const mappedType = rawType ? contentTypeMap[rawType] : undefined;
+
           const contentPayload = {
-            contentType: args.contentType as string | undefined,
+            contentTypes: mappedType ? [mappedType] : undefined,
             topic: args.topic as string,
             brandDnaContext: args.brandDnaContext as string | undefined,
             seoKeywords: args.seoKeywords
@@ -5558,14 +5572,29 @@ Select cohesive settings that create a professional, unified visual language acr
             .replace(/[^a-z0-9]+/g, '-')
             .replace(/^-|-$/g, '');
 
-          // Convert markdown content to a single rich-text PageSection
+          // Convert markdown content to a valid PageSection with a text widget.
+          // The blog editor requires type: 'section' with columns/widgets — NOT 'rich-text'.
           const contentSections = [
             {
               id: `section_${Date.now()}`,
-              type: 'rich-text',
-              content: {
-                markdown: args.content as string,
-              },
+              type: 'section',
+              columns: [
+                {
+                  id: `col_${Date.now()}`,
+                  width: 100,
+                  widgets: [
+                    {
+                      id: `widget_${Date.now()}`,
+                      type: 'text',
+                      content: {
+                        text: args.content as string,
+                        format: 'markdown',
+                      },
+                    },
+                  ],
+                },
+              ],
+              styling: {},
               order: 0,
             },
           ];
@@ -5629,9 +5658,9 @@ Select cohesive settings that create a professional, unified visual language acr
             authorName: (args.authorName as string) || 'Jasper AI',
             authorAvatar: '',
             seo: {
-              title: (args.seoTitle as string) || (args.title as string),
-              description: (args.seoDescription as string) || (args.excerpt as string) || '',
-              keywords: seoKeywords,
+              metaTitle: (args.seoTitle as string) || (args.title as string),
+              metaDescription: (args.seoDescription as string) || (args.excerpt as string) || '',
+              metaKeywords: seoKeywords,
             },
             status: 'draft' as const,
             featured: false,

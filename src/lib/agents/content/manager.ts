@@ -1006,7 +1006,11 @@ export class ContentManager extends BaseManager {
                 pageId: page.id,
                 pageName: page.name,
                 pagePurpose: page.purpose,
-                sections: page.sections,
+                sections: page.sections.map((s: string) => ({
+                  id: s,
+                  name: this.formatPageName(s),
+                  purpose: `${this.formatPageName(s)} section content`,
+                })),
                 seoKeywords: pageSEO.keywordFocus ?? [],
                 titleTemplate: pageSEO.titleTemplate,
                 descriptionTemplate: pageSEO.descriptionTemplate,

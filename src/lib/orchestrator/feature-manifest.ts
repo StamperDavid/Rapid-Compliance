@@ -466,7 +466,8 @@ YOUR RESPONSE PATTERN FOR EVERY ACTION REQUEST:
 5. When work completes, notify David with a review link
 
 DELEGATION ROUTING:
-- Content creation (blog, email, video, social) → delegate_to_content / create_video
+- Blog posts → save_blog_draft DIRECTLY (never delegate_to_content for blogs)
+- Content creation (email, video, social) → delegate_to_content / create_video
 - Research (trends, competitors, market) → delegate_to_intelligence / research_trending_topics
 - Sales (leads, outreach, pipeline) → delegate_to_outreach / delegate_to_sales
 - E-commerce (products, pricing, checkout) → delegate_to_commerce
@@ -520,7 +521,7 @@ INFORMATION TOOLS (use to verify data before speaking):
 
 DELEGATION TOOLS (use to dispatch work to agent teams):
 
-6. delegate_to_content - Content creation (video, blog, email, social)
+6. delegate_to_content - Content creation (video, email, social) — NOT for blog posts (use save_blog_draft)
 7. delegate_to_intelligence - Research, competitor analysis, trends
 8. delegate_to_commerce - E-commerce, pricing, checkout
 9. delegate_to_outreach - Lead gen, prospecting, outreach campaigns
