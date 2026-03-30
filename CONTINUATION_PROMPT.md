@@ -85,17 +85,17 @@ Walk through every feature and function of the platform end-to-end. Find and fix
 
 **Problem:** Jasper's agents produce garbage output because brand context, company profile, persona, and many integration accounts are empty or unconfigured. Testing with empty inputs is pointless — every failure looks like a code bug but is actually missing data. We need EVERYTHING filled out before resuming QA.
 
-**Status:** ~40% configured. Core AI and some integrations work, but brand identity, social accounts, payment testing, and several API keys are missing.
+**Status:** ~65% configured. Brand DNA complete (Section A). Core AI and most integrations work. Social accounts, payment testing, and some API keys still missing.
 
 ### Section A: Brand & Identity (Agents read this before producing ANY content)
 
 | # | Data Area | Page URL | Status | What to Fill In |
 |---|-----------|----------|--------|-----------------|
-| A.1 | Company Profile | `/settings/organization` | EMPTY | Company name, description, address, website, social media links |
-| A.2 | AI Persona | `/settings/ai-agents/persona` | EMPTY | Jasper's tone, personality, greeting, communication style |
-| A.3 | Brand Settings | `/settings/ai-agents/business-setup` | EMPTY | Target audience, unique value prop, key phrases, avoid phrases, brand colors |
-| A.4 | Onboarding Details | `/onboarding/industry` | PARTIAL | Company name BLANK, description BLANK, target audience BLANK. Industry = "saas" |
-| A.5 | Knowledge Base | `/settings/ai-agents` | PARTIAL | Only 2 FAQs. Needs: product descriptions, pricing info, competitive advantages, common objections |
+| A.1 | Company Profile | `/settings/organization` | DONE | SalesVelocity.ai, 3423 N. Maplestone Ave Meridian ID 83646, support@salesvelocity.ai, SaaS, 1-10 |
+| A.2 | AI Persona | `/settings/ai-agents/persona` | DONE | Jasper — friendly, proactive, high empathy, balanced response style, "AI business partner with 59 specialists" |
+| A.3 | Brand Settings | `/settings/ai-agents/business-setup` | DONE | Full business DNA: UVP ("we give you a team, not tools"), competitive positioning vs GoHighLevel/Vendasta/agencies, objection handling, discovery frameworks, closing techniques |
+| A.4 | Onboarding Details | `/onboarding/industry` | DONE | Replaced demo "Acme" data with real SalesVelocity.ai identity (isDemo: false). Full sales flow, agent rules, sentiment handling |
+| A.5 | Knowledge Base | `/settings/ai-agents` | DONE | 15 real FAQs covering product, pricing, features, competitors, security, onboarding, support |
 | A.6 | Website SEO | `/website/seo` | DONE | 25 keywords, title, description configured |
 
 ### Section B: API Keys & Providers
@@ -149,23 +149,24 @@ Walk through every feature and function of the platform end-to-end. Find and fix
 
 | Bug | Root Cause | Fix Required |
 |-----|-----------|--------------|
-| Blog editor shows empty content | `save_blog_draft` stores `{type: 'rich-text', content: {markdown: '...'}}` but blog editor expects widget-based PageSection format | Either teach editor to render markdown sections, or convert markdown → editor widget format in `save_blog_draft` |
-| Jasper still calls `delegate_to_content` for blog requests | Prompt updated but model still routes blog requests to content pipeline | Strengthen routing — blog = `save_blog_draft` only, never `delegate_to_content` |
-| Content agent copywriter produces placeholder text | `generatePageCopy` outputs template strings like `[Content for hero section]`, not real AI-generated copy | Needs real AI call via OpenRouter for actual copy generation |
-| Content agent detects FULL_PACKAGE for single blog | Content manager always interprets requests as full website packages | Need intent detection that recognizes single-content requests vs website builds |
+| ~~Blog editor shows empty content~~ | ~~`save_blog_draft` stored `{type: 'rich-text'}` but editor expects `{type: 'section'}` with columns/widgets~~ | FIXED — save_blog_draft now writes valid PageSection format, SEO keys fixed to metaTitle/metaDescription/metaKeywords (a586271b) |
+| ~~Jasper routes blog to delegate_to_content~~ | ~~Feature manifest and tool descriptions pointed blog → delegate_to_content~~ | FIXED — Removed 'blog' from delegate_to_content routing, save_blog_draft is primary blog tool (a586271b) |
+| ~~Content agent copywriter placeholder text~~ | ~~Manager passed sections as string[] but copywriter expects {id, name, purpose}[]~~ | FIXED — Added .map() to convert sections to object format (a586271b) |
+| ~~Content agent FULL_PACKAGE for single blog~~ | ~~contentType (singular string) vs contentTypes (plural array) with mismatched vocabulary~~ | FIXED — Added translation map: blog_post→copy, video_script→video, social_media→social (a586271b) |
 | ~~`/api/version` exposes deployment info without auth~~ | ~~No auth check on endpoint~~ | FIXED — `requireRole(['owner','admin'])` added (3667c0a7) |
 | ~~`/api/recovery/track/[merchantId]` wide open~~ | ~~No auth, no Zod validation, no rate limiting~~ | FIXED — Zod + rate limiting added, auth N/A (public tracking endpoint) (3667c0a7) |
 | ~~`/api/identity` POST missing role check~~ | ~~Uses `requireAuth` but any user can overwrite identity~~ | FIXED — `requireRole(['owner','admin'])` added (3667c0a7) |
 | ~~Jasper `activeStepIds` Map memory leak~~ | ~~Map grows unbounded, no eviction~~ | FIXED — TTL-based eviction (30min) added (3667c0a7) |
 | ~~Cron endpoints use simple string comparison for auth~~ | ~~Vulnerable to timing attacks~~ | FIXED — `verifyCronAuth()` with timing-safe XOR, all 12 routes updated (3667c0a7) |
-| No cascading deletes for subcollections | Deleting forms, schemas, video projects, chat sessions, pages orphans child subcollections | Implement `deleteWithSubcollections()` utility |
+| ~~No cascading deletes for subcollections~~ | ~~Deleting forms/pages orphaned child subcollections~~ | FIXED — `deleteWithSubcollections()` utility created, wired into forms DELETE (fields/analytics/views) and pages DELETE (versions) (65d5f299) |
 
 **Instructions:**
-1. Start with **Section A** — this is the brand DNA that every agent reads. Fill in ALL fields with real SalesVelocity.ai data.
-2. Then **Section B** — fill in missing API keys. Priority: Fal.ai (B.12), DataForSEO password (B.9), Twilio phone number (B.4), Stripe .env (B.3/D.1).
-3. Then **Section C** — connect at least Twitter and one other platform for social media testing.
-4. Then **Section D** — set up Stripe for payment testing.
-5. Fix the **Known Bugs** listed above.
+1. ~~Section A~~ — COMPLETE (March 30, 2026). All brand DNA populated in Firestore.
+2. ~~Known Bugs~~ — ALL FIXED (March 30, 2026). Blog editor, routing, copywriter, FULL_PACKAGE, cascading deletes.
+3. **Section B** — fill in missing API keys as needed per phase. Priority: Fal.ai (B.12), DataForSEO password (B.9), Twilio phone number (B.4), Stripe .env (B.3/D.1).
+4. **Section C** — connect at least Twitter and one other platform for social media testing (Phase 4).
+5. **Section D** — set up Stripe for payment testing (Phase 8).
+6. **CSP** — Deferred to post-launch. Next.js 14 incompatible with nonce-based CSP. Revisit after Next.js 15+ upgrade.
 6. Once all sections are green and bugs are fixed, resume Phase 1 testing at test 1.3.
 
 ---
