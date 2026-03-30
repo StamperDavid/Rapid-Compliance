@@ -60,9 +60,25 @@ export default function BlogPostEditorPage() {
 
       const data = await response.json() as { post: BlogPost };
       const loaded = data.post;
-      // Defensive: ensure content is always an array (Jasper-saved posts may have malformed data)
+      // Defensive: ensure content is always a PageSection array
+      // Jasper's orchestrate_campaign previously saved content as a raw markdown string
       if (!Array.isArray(loaded.content)) {
-        loaded.content = [];
+        const rawContent = typeof loaded.content === 'string' ? loaded.content : '';
+        loaded.content = rawContent ? [
+          {
+            id: `section_${Date.now()}`,
+            type: 'section' as const,
+            columns: [{
+              id: `col_${Date.now()}`,
+              width: 100,
+              widgets: [{
+                id: `widget_${Date.now()}`,
+                type: 'text' as const,
+                data: { text: rawContent, format: 'markdown' },
+              }],
+            }],
+          },
+        ] : [];
       }
       setPost(loaded);
       setTags(data.post.tags ?? []);

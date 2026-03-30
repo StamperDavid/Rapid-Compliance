@@ -209,7 +209,22 @@ function DeliverableCard({
           <div>Image deliverable</div>
         )}
         {deliverable.type === 'email' && (
-          <div>Email deliverable</div>
+          <>
+            {previewData.subject && (
+              <div style={{ fontSize: '0.75rem', fontWeight: 600, marginBottom: '0.25rem' }}>
+                Subject: {previewData.subject as string}
+              </div>
+            )}
+            {previewData.body && (
+              <div style={{ whiteSpace: 'pre-wrap', maxHeight: '6rem', overflow: 'hidden' }}>
+                {(previewData.body as string).replace(/<[^>]*>/g, '').slice(0, 300)}
+                {(previewData.body as string).length > 300 ? '...' : ''}
+              </div>
+            )}
+            {!previewData.subject && !previewData.body && (
+              <div>Email deliverable</div>
+            )}
+          </>
         )}
         {(deliverable.type === 'research' || deliverable.type === 'strategy') && (
           <div>{getTypeLabel(deliverable.type)} deliverable</div>
