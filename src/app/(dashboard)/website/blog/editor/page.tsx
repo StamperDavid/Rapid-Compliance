@@ -74,7 +74,7 @@ export default function BlogPostEditorPage() {
               widgets: [{
                 id: `widget_${Date.now()}`,
                 type: 'text' as const,
-                data: { text: rawContent, format: 'markdown' },
+                data: { content: rawContent },
               }],
             }],
           },

@@ -8,6 +8,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import type { CampaignDeliverable, Campaign, DeliverableStatus } from '@/types/campaign';
 
@@ -251,18 +252,20 @@ function DeliverableCard({
         )}
       </div>
 
-      {/* Review link */}
-      <a
-        href={deliverable.reviewLink}
-        style={{
-          fontSize: '0.75rem',
-          color: 'var(--color-primary)',
-          textDecoration: 'none',
-          fontWeight: 500,
-        }}
-      >
-        Open in editor &rarr;
-      </a>
+      {/* Review link — only for deliverables with actual editor pages */}
+      {(deliverable.type === 'blog' || deliverable.type === 'video') && deliverable.reviewLink && (
+        <Link
+          href={deliverable.reviewLink}
+          style={{
+            fontSize: '0.75rem',
+            color: 'var(--color-primary)',
+            textDecoration: 'none',
+            fontWeight: 500,
+          }}
+        >
+          Open in editor &rarr;
+        </Link>
+      )}
 
       {/* Feedback display */}
       {deliverable.feedback && (

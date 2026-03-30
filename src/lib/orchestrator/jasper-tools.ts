@@ -5681,8 +5681,7 @@ Select cohesive settings that create a professional, unified visual language acr
                       id: `widget_${Date.now()}`,
                       type: 'text',
                       data: {
-                        text: args.content as string,
-                        format: 'markdown',
+                        content: args.content as string,
                       },
                     },
                   ],
@@ -6679,8 +6678,7 @@ Output JSON (no markdown fences) with these keys:
                           id: `widget_${Date.now()}`,
                           type: 'text',
                           data: {
-                            text: blogResult.content,
-                            format: 'markdown',
+                            content: blogResult.content,
                           },
                         },
                       ],

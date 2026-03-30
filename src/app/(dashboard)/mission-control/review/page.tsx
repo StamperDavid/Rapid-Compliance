@@ -37,84 +37,78 @@ interface ParsedOutput {
 // ============================================================================
 
 function ResearchReview({ data }: { data: ParsedOutput }) {
-  const topic = data.topic as string | undefined;
+  const methodology = data.methodology as string | undefined;
+  const areasResearched = data.areasResearched as Array<{ area: string; findings: string }> | undefined;
   const findings = data.findings as string | undefined;
   const insights = data.keyInsights as string[] | undefined;
+  const competitorAngles = data.competitorAngles as Array<{ competitor: string; angle: string } | string> | undefined;
+  const contentGaps = data.contentGaps as string[] | undefined;
+  const sources = data.sources as string[] | undefined;
+
+  const sectionHeaderStyle: React.CSSProperties = {
+    fontSize: '0.75rem',
+    fontWeight: 700,
+    textTransform: 'uppercase',
+    letterSpacing: '0.05em',
+    color: 'var(--color-text-disabled)',
+    marginBottom: '0.5rem',
+  };
+
+  const cardStyle = {
+    padding: '1rem',
+    backgroundColor: 'var(--color-bg-elevated)',
+    borderRadius: '0.625rem',
+    fontSize: '0.875rem',
+    color: 'var(--color-text-primary)',
+    lineHeight: 1.7,
+  };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-      {topic && (
+      {methodology && (
         <section>
-          <h3 style={{
-            fontSize: '0.75rem',
-            fontWeight: 700,
-            textTransform: 'uppercase',
-            letterSpacing: '0.05em',
-            color: 'var(--color-text-disabled)',
-            marginBottom: '0.5rem',
-          }}>
-            Research Topic
-          </h3>
-          <div style={{
-            padding: '1rem',
-            backgroundColor: 'var(--color-bg-elevated)',
-            borderRadius: '0.625rem',
-            fontSize: '1rem',
-            fontWeight: 600,
-            color: 'var(--color-text-primary)',
-          }}>
-            {topic}
+          <h3 style={sectionHeaderStyle}>Research Methodology</h3>
+          <div style={{ ...cardStyle, fontStyle: 'italic', whiteSpace: 'pre-wrap' }}>
+            {methodology}
+          </div>
+        </section>
+      )}
+
+      {areasResearched && areasResearched.length > 0 && (
+        <section>
+          <h3 style={sectionHeaderStyle}>Areas Researched ({areasResearched.length})</h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            {areasResearched.map((area, i) => (
+              <div key={i} style={{ ...cardStyle, border: '1px solid var(--color-border-light)' }}>
+                <div style={{ fontWeight: 700, fontSize: '0.9375rem', marginBottom: '0.5rem', color: 'var(--color-secondary)' }}>
+                  {area.area}
+                </div>
+                <div style={{ whiteSpace: 'pre-wrap' }}>{area.findings}</div>
+              </div>
+            ))}
           </div>
         </section>
       )}
 
       {insights && insights.length > 0 && (
         <section>
-          <h3 style={{
-            fontSize: '0.75rem',
-            fontWeight: 700,
-            textTransform: 'uppercase',
-            letterSpacing: '0.05em',
-            color: 'var(--color-text-disabled)',
-            marginBottom: '0.5rem',
-          }}>
-            Key Insights ({insights.length})
-          </h3>
-          <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '0.5rem',
-          }}>
+          <h3 style={sectionHeaderStyle}>Key Insights ({insights.length})</h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
             {insights.map((insight, i) => (
               <div key={i} style={{
-                display: 'flex',
-                gap: '0.75rem',
-                alignItems: 'flex-start',
-                padding: '0.875rem 1rem',
-                backgroundColor: 'var(--color-bg-elevated)',
-                borderRadius: '0.5rem',
-                border: '1px solid var(--color-border-light)',
+                display: 'flex', gap: '0.75rem', alignItems: 'flex-start',
+                padding: '0.875rem 1rem', backgroundColor: 'var(--color-bg-elevated)',
+                borderRadius: '0.5rem', border: '1px solid var(--color-border-light)',
               }}>
                 <div style={{
-                  width: 28,
-                  height: 28,
-                  borderRadius: '50%',
-                  backgroundColor: 'rgba(124,58,237,0.15)',
-                  color: '#7c3aed',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '0.75rem',
-                  fontWeight: 700,
-                  flexShrink: 0,
+                  width: 28, height: 28, borderRadius: '50%',
+                  backgroundColor: 'rgba(124,58,237,0.15)', color: '#7c3aed',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: '0.75rem', fontWeight: 700, flexShrink: 0,
                 }}>
                   {i + 1}
                 </div>
-                <div style={{
-                  fontSize: '0.875rem',
-                  color: 'var(--color-text-primary)',
-                  lineHeight: 1.6,
-                }}>
+                <div style={{ fontSize: '0.875rem', color: 'var(--color-text-primary)', lineHeight: 1.6 }}>
                   {insight}
                 </div>
               </div>
@@ -123,28 +117,57 @@ function ResearchReview({ data }: { data: ParsedOutput }) {
         </section>
       )}
 
+      {competitorAngles && competitorAngles.length > 0 && (
+        <section>
+          <h3 style={sectionHeaderStyle}>Competitor Landscape ({competitorAngles.length})</h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            {competitorAngles.map((c, i) => (
+              <div key={i} style={{ ...cardStyle, border: '1px solid var(--color-border-light)' }}>
+                {typeof c === 'string' ? c : (
+                  <>
+                    <div style={{ fontWeight: 700, marginBottom: '0.25rem' }}>{c.competitor}</div>
+                    <div style={{ color: 'var(--color-text-secondary)' }}>{c.angle}</div>
+                  </>
+                )}
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {contentGaps && contentGaps.length > 0 && (
+        <section>
+          <h3 style={sectionHeaderStyle}>Content Gaps &amp; Opportunities</h3>
+          <ul style={{ ...cardStyle, margin: 0, paddingLeft: '1.25rem' }}>
+            {contentGaps.map((gap, i) => (
+              <li key={i} style={{ marginBottom: '0.375rem' }}>{gap}</li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       {findings && (
         <section>
-          <h3 style={{
-            fontSize: '0.75rem',
-            fontWeight: 700,
-            textTransform: 'uppercase',
-            letterSpacing: '0.05em',
-            color: 'var(--color-text-disabled)',
-            marginBottom: '0.5rem',
-          }}>
-            Full Research Findings
-          </h3>
-          <div style={{
-            padding: '1.25rem',
-            backgroundColor: 'var(--color-bg-elevated)',
-            borderRadius: '0.625rem',
-            fontSize: '0.875rem',
-            color: 'var(--color-text-primary)',
-            lineHeight: 1.8,
-            whiteSpace: 'pre-wrap',
-          }}>
-            {findings}
+          <h3 style={sectionHeaderStyle}>Target Audience</h3>
+          <div style={{ ...cardStyle, whiteSpace: 'pre-wrap' }}>{findings}</div>
+        </section>
+      )}
+
+      {sources && sources.length > 0 && (
+        <section>
+          <h3 style={sectionHeaderStyle}>Sources &amp; Data</h3>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem' }}>
+            {sources.map((src, i) => (
+              <span key={i} style={{
+                display: 'inline-block', fontSize: '0.75rem', fontWeight: 500,
+                padding: '0.25rem 0.625rem', borderRadius: '9999px',
+                backgroundColor: 'var(--color-bg-elevated)',
+                border: '1px solid var(--color-border-light)',
+                color: 'var(--color-text-secondary)',
+              }}>
+                {src}
+              </span>
+            ))}
           </div>
         </section>
       )}
