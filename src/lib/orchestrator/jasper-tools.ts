@@ -2307,7 +2307,7 @@ export const JASPER_TOOLS: ToolDefinition[] = [
     function: {
       name: 'orchestrate_campaign',
       description:
-        'Run a FULL multi-deliverable campaign pipeline. This single tool performs: (1) Research phase — AI analyzes topic, competitors, audience. (2) Strategy phase — generates positioning, messaging, content angles. (3) Creates a Campaign to track all deliverables. (4) Produces deliverables: blog draft, video storyboard, social posts (Twitter + LinkedIn), and email draft — all registered under one campaign. User reviews everything at /mission-control?campaign={id}. Use this when the user asks for a "full campaign", "content blitz", "launch campaign", or "multi-channel content" on a topic. ENABLED: TRUE.',
+        'Run a FULL multi-deliverable campaign pipeline. This single tool performs: (1) Research phase — AI analyzes topic, competitors, audience with full methodology documentation. (2) Strategy phase — generates positioning, messaging, content angles. (3) Creates a Campaign to track all deliverables. (4) Produces deliverables: blog draft, video storyboard, social posts, email sequence, and landing page — all registered under one campaign. User reviews everything at /mission-control?campaign={id}. Use this when the user asks for a "full campaign", "content blitz", "launch campaign", or "multi-channel content" on a topic. ENABLED: TRUE.',
       parameters: {
         type: 'object',
         properties: {
@@ -2328,6 +2328,10 @@ export const JASPER_TOOLS: ToolDefinition[] = [
             type: 'string',
             description: 'Comma-separated social platforms for posts (default: "twitter,linkedin")',
           },
+          emailCount: {
+            type: 'number',
+            description: 'Number of emails to generate in the sequence (default: 1). Set to 3 for a 3-email drip sequence, etc.',
+          },
           skipVideo: {
             type: 'boolean',
             description: 'Set true to skip video production (faster campaign)',
@@ -2335,6 +2339,10 @@ export const JASPER_TOOLS: ToolDefinition[] = [
           skipEmail: {
             type: 'boolean',
             description: 'Set true to skip email draft',
+          },
+          skipLandingPage: {
+            type: 'boolean',
+            description: 'Set true to skip landing page generation',
           },
         },
         required: ['topic'],
@@ -6406,6 +6414,8 @@ Select cohesive settings that create a professional, unified visual language acr
           const socialPlatforms = platformsStr.split(',').map((p: string) => p.trim()).filter(Boolean);
           const skipVideo = Boolean(args.skipVideo);
           const skipEmail = Boolean(args.skipEmail);
+          const skipLandingPage = Boolean(args.skipLandingPage);
+          const emailCount = Math.min(Math.max(Number(args.emailCount) || 1, 1), 5);
           const missionId = context?.missionId ?? `mission_${Date.now()}`;
 
           // ── Phase 1: Research ────────────────────────────────────────
@@ -6424,11 +6434,21 @@ Select cohesive settings that create a professional, unified visual language acr
               messages: [
                 {
                   role: 'system',
-                  content: 'You are a marketing research analyst. Provide concise, actionable research findings for a content campaign. Output JSON (no markdown fences) with keys: keyInsights (array of strings), targetAudience (string), competitorAngles (array), contentGaps (array), recommendedHooks (array).',
+                  content: `You are a marketing research analyst. Conduct thorough research for a content campaign and document your full methodology.
+
+Output JSON (no markdown fences) with these keys:
+- methodology (string): Describe what research approach you took — what areas you analyzed, what frameworks you applied, and what data sources inform your conclusions
+- areasResearched (array of objects with keys "area" and "findings"): Each area you investigated (e.g. "Market Trends", "Competitor Landscape", "Audience Behavior", "Content Gap Analysis", "Industry Statistics") with detailed findings for that area
+- keyInsights (array of strings): The 5-8 most actionable insights, each 1-2 sentences with specific data points or percentages where possible
+- targetAudience (string): Detailed audience profile including demographics, pain points, buying triggers
+- competitorAngles (array of objects with keys "competitor" and "angle"): What specific competitors or competitor types are doing and their positioning
+- contentGaps (array of strings): Specific content opportunities that competitors are missing
+- recommendedHooks (array of strings): Attention-grabbing hooks backed by the research findings
+- sources (array of strings): The types of data, reports, and industry knowledge that inform these findings (e.g. "B2B SaaS industry benchmarks", "Social media engagement studies", "Content marketing ROI data")`,
                 },
                 {
                   role: 'user',
-                  content: `Research for a campaign about: "${topic}"\nTarget audience: ${audience}\nProvide market insights, competitor angles, content gaps, and recommended hooks.`,
+                  content: `Research for a campaign about: "${topic}"\nTarget audience: ${audience}\n\nConduct a thorough analysis covering: market trends, competitor landscape, audience behavior, content gaps, and industry benchmarks. Be specific with data points and percentages. Document your full methodology so stakeholders can review what was researched and why.`,
                 },
               ],
             });
@@ -6444,11 +6464,14 @@ Select cohesive settings that create a professional, unified visual language acr
               durationMs: Date.now() - researchStart,
               toolResult: JSON.stringify({
                 type: 'research',
+                methodology: (parsedResearch.methodology as string) || `Market analysis for "${topic}" targeting ${audience}`,
+                areasResearched: Array.isArray(parsedResearch.areasResearched) ? parsedResearch.areasResearched : [],
                 findings: (parsedResearch.targetAudience as string) || `Research on "${topic}" for ${audience}`,
                 keyInsights: researchInsights,
-                competitorAngles: parsedResearch.competitorAngles ?? [],
-                contentGaps: parsedResearch.contentGaps ?? [],
-                recommendedHooks: parsedResearch.recommendedHooks ?? [],
+                competitorAngles: Array.isArray(parsedResearch.competitorAngles) ? parsedResearch.competitorAngles : [],
+                contentGaps: Array.isArray(parsedResearch.contentGaps) ? parsedResearch.contentGaps : [],
+                recommendedHooks: Array.isArray(parsedResearch.recommendedHooks) ? parsedResearch.recommendedHooks : [],
+                sources: Array.isArray(parsedResearch.sources) ? parsedResearch.sources : [],
               }),
             });
           } catch {
@@ -6817,47 +6840,81 @@ RULES:
             durationMs: Date.now() - socialStart,
           });
 
-          // ── Phase 7: Email Draft (if not skipped) ────────────────────
+          // ── Phase 7: Email Sequence (if not skipped) ─────────────────
+          let emailsCreated = 0;
           if (!skipEmail) {
-            trackMissionStep(context, 'campaign_email', 'RUNNING', { toolArgs: { topic } });
+            trackMissionStep(context, 'campaign_email', 'RUNNING', {
+              toolArgs: { topic, emailCount },
+            });
             const emailStart = Date.now();
 
             try {
-              const subjectLine = (strategy.emailSubjectLine as string) || `Your guide to ${topic}`;
-              const emailAngle = (strategy.emailAngle as string) || `Learn about ${topic}`;
-
               const { OpenRouterProvider } = await import('@/lib/ai/openrouter-provider');
               const llm = new OpenRouterProvider({});
-              const emailResult = await llm.chat({
-                model: 'claude-3-5-sonnet',
-                messages: [
-                  {
-                    role: 'system',
-                    content: 'You are an email marketing expert. Write a promotional email in HTML format. Include a compelling subject line preview, personalized greeting, 2-3 paragraphs of value-driven content, and a clear CTA button. Keep it under 300 words. Output ONLY the HTML body content.',
-                  },
-                  {
-                    role: 'user',
-                    content: `Write an email for: "${topic}"\nSubject: ${subjectLine}\nAngle: ${emailAngle}\nAudience: ${audience}\nTone: ${tone}\nCTA: ${(strategy.callToAction as string) || 'Learn more'}`,
-                  },
-                ],
-              });
+              const baseSubject = (strategy.emailSubjectLine as string) || `Your guide to ${topic}`;
+              const emailAngle = (strategy.emailAngle as string) || `Learn about ${topic}`;
 
-              trackDeliverableAsync(campaignId, {
-                missionId,
-                type: 'email',
-                title: subjectLine,
-                status: 'pending_review',
-                previewData: {
-                  subject: subjectLine,
-                  body: emailResult.content,
-                  audience,
-                },
-                reviewLink: reviewLink,
-              });
+              // Define sequence positions for multi-email drips
+              const sequencePositions = [
+                { position: 'introduction', goal: 'Introduce the topic and provide immediate value. Hook the reader with a compelling insight.', subjectHint: baseSubject },
+                { position: 'deep-dive', goal: 'Go deeper on a specific angle. Share a case study, data point, or success story. Build credibility.', subjectHint: `Re: ${topic} — The data speaks for itself` },
+                { position: 'urgency/CTA', goal: 'Create urgency. Present a limited-time offer, deadline, or exclusive. Drive the final conversion.', subjectHint: `Last chance: ${topic}` },
+                { position: 'social-proof', goal: 'Share testimonials, results, or social proof. Overcome objections.', subjectHint: `See what others say about ${topic}` },
+                { position: 'follow-up', goal: 'Gentle follow-up for non-responders. Different angle, remove friction.', subjectHint: `Quick question about ${topic}` },
+              ];
+
+              for (let i = 0; i < emailCount; i++) {
+                const pos = sequencePositions[i] ?? sequencePositions[0];
+                const isSequence = emailCount > 1;
+                const emailNum = i + 1;
+
+                const emailResult = await llm.chat({
+                  model: 'claude-3-5-sonnet',
+                  messages: [
+                    {
+                      role: 'system',
+                      content: `You are an email marketing expert. Write a promotional email in HTML format.${isSequence ? ` This is email ${emailNum} of ${emailCount} in a drip sequence. Position: ${pos.position}. Goal: ${pos.goal}` : ''} Include a compelling subject line preview, personalized greeting, 2-3 paragraphs of value-driven content, and a clear CTA button. Keep it under 300 words. Output ONLY the HTML body content.`,
+                    },
+                    {
+                      role: 'user',
+                      content: `Write${isSequence ? ` email ${emailNum}/${emailCount} (${pos.position})` : ' an email'} for: "${topic}"\nSubject: ${pos.subjectHint}\nAngle: ${emailAngle}\nAudience: ${audience}\nTone: ${tone}\nCTA: ${(strategy.callToAction as string) || 'Learn more'}`,
+                    },
+                  ],
+                });
+
+                const subjectLine = isSequence
+                  ? `[${emailNum}/${emailCount}] ${pos.subjectHint}`
+                  : baseSubject;
+
+                trackDeliverableAsync(campaignId, {
+                  missionId,
+                  type: 'email',
+                  title: subjectLine,
+                  status: 'pending_review',
+                  previewData: {
+                    subject: subjectLine,
+                    body: emailResult.content,
+                    audience,
+                    sequencePosition: isSequence ? emailNum : undefined,
+                    sequenceTotal: isSequence ? emailCount : undefined,
+                  },
+                  reviewLink: reviewLink,
+                });
+                emailsCreated++;
+              }
 
               trackMissionStep(context, 'campaign_email', 'COMPLETED', {
-                summary: `Email draft created: "${subjectLine}"`,
+                summary: emailCount > 1
+                  ? `${emailCount}-email sequence created`
+                  : `Email draft created: "${baseSubject}"`,
                 durationMs: Date.now() - emailStart,
+                toolResult: JSON.stringify({
+                  type: 'draft',
+                  status: 'draft',
+                  emailCount,
+                  isSequence: emailCount > 1,
+                  titles: sequencePositions.slice(0, emailCount).map(p => p.subjectHint),
+                }),
               });
             } catch (emailErr) {
               const errMsg = emailErr instanceof Error ? emailErr.message : String(emailErr);
@@ -6868,10 +6925,97 @@ RULES:
             }
           }
 
-          // ── Phase 8: Update Campaign Status ──────────────────────────
+          // ── Phase 8: Landing Page (if not skipped) ───────────────────
+          let landingPageCreated = false;
+          if (!skipLandingPage) {
+            trackMissionStep(context, 'campaign_landing_page', 'RUNNING', { toolArgs: { topic } });
+            const lpStart = Date.now();
+
+            try {
+              const { OpenRouterProvider } = await import('@/lib/ai/openrouter-provider');
+              const llm = new OpenRouterProvider({});
+              const lpResult = await llm.chat({
+                model: 'claude-3-5-sonnet',
+                messages: [
+                  {
+                    role: 'system',
+                    content: `You are a landing page copywriter and conversion expert. Create a complete landing page outline.
+
+Output JSON (no markdown fences) with keys:
+- headline (string): The H1 hero headline — compelling, benefit-driven, under 12 words
+- subheadline (string): Supporting text under the headline — 1-2 sentences expanding on the value prop
+- heroCtaText (string): The primary CTA button text (e.g., "Start Free Trial", "Get Your Audit")
+- painPoints (array of objects with "title" and "description"): 3 customer pain points this solves
+- benefits (array of objects with "title", "description", and "icon"): 4-6 key benefits with suggested icon names
+- socialProof (object with "headline" and "items" array of strings): Testimonial section — headline + 3 proof points
+- howItWorks (array of objects with "step", "title", "description"): 3-4 step process
+- faq (array of objects with "question" and "answer"): 4-6 common questions
+- finalCta (object with "headline", "subtext", "buttonText"): Bottom CTA section
+- seoTitle (string): Page title for SEO
+- seoDescription (string): Meta description`,
+                  },
+                  {
+                    role: 'user',
+                    content: `Create a high-converting landing page for: "${topic}"\nAudience: ${audience}\nTone: ${tone}\nKey messages: ${JSON.stringify((strategy.keyMessages as string[]) ?? [])}\nCTA: ${(strategy.callToAction as string) || 'Learn more'}`,
+                  },
+                ],
+              });
+
+              let lpData: Record<string, unknown> = {};
+              try { lpData = JSON.parse(lpResult.content) as Record<string, unknown>; } catch { lpData = { headline: topic }; }
+
+              trackDeliverableAsync(campaignId, {
+                missionId,
+                type: 'landing_page',
+                title: (lpData.headline as string) || `Landing Page: ${topic}`,
+                status: 'pending_review',
+                previewData: {
+                  headline: lpData.headline,
+                  subheadline: lpData.subheadline,
+                  heroCtaText: lpData.heroCtaText,
+                  benefitCount: Array.isArray(lpData.benefits) ? lpData.benefits.length : 0,
+                  faqCount: Array.isArray(lpData.faq) ? lpData.faq.length : 0,
+                  seoTitle: lpData.seoTitle,
+                  fullStructure: lpData,
+                },
+                reviewLink: reviewLink,
+              });
+
+              landingPageCreated = true;
+              trackMissionStep(context, 'campaign_landing_page', 'COMPLETED', {
+                summary: `Landing page outline: "${(lpData.headline as string) || topic}"`,
+                durationMs: Date.now() - lpStart,
+                toolResult: JSON.stringify({
+                  type: 'strategy',
+                  narrativeAngle: (lpData.headline as string) || topic,
+                  targetAudience: audience,
+                  keyMessages: [
+                    (lpData.subheadline as string) || '',
+                    ...(Array.isArray(lpData.benefits) ? (lpData.benefits as Array<Record<string, string>>).map(b => b.title) : []),
+                  ].filter(Boolean),
+                  tone,
+                  callToAction: (lpData.heroCtaText as string) || '',
+                }),
+              });
+            } catch (lpErr) {
+              const errMsg = lpErr instanceof Error ? lpErr.message : String(lpErr);
+              trackMissionStep(context, 'campaign_landing_page', 'FAILED', {
+                error: errMsg,
+                durationMs: Date.now() - lpStart,
+              });
+            }
+          }
+
+          // ── Phase 9: Update Campaign Status ──────────────────────────
           await updateCampaign(campaignId, { status: 'pending_review' });
 
-          const deliverableCount = (skipVideo ? 0 : 1) + 1 + socialPlatforms.length + (skipEmail ? 0 : 1);
+          const deliverableCount = (skipVideo ? 0 : 1) + 1 + socialPlatforms.length + emailsCreated + (landingPageCreated ? 1 : 0);
+
+          const deliverableParts = ['blog'];
+          if (!skipVideo) {deliverableParts.push('video');}
+          if (socialPlatforms.length > 0) {deliverableParts.push(`${socialPlatforms.join(' + ')} social`);}
+          if (emailsCreated > 0) {deliverableParts.push(emailsCreated > 1 ? `${emailsCreated}-email sequence` : 'email');}
+          if (landingPageCreated) {deliverableParts.push('landing page');}
 
           content = JSON.stringify({
             status: 'campaign_ready',
@@ -6883,10 +7027,11 @@ RULES:
               blog: true,
               video: !skipVideo,
               socialPosts: socialPlatforms,
-              email: !skipEmail,
+              emailCount: emailsCreated,
+              landingPage: landingPageCreated,
             },
             videoProjectId,
-            message: `Campaign orchestrated with ${deliverableCount} deliverables (blog, ${skipVideo ? '' : 'video, '}${socialPlatforms.join(' + ')} social${skipEmail ? '' : ', email'}). Review all at: ${reviewLink}`,
+            message: `Campaign orchestrated with ${deliverableCount} deliverables (${deliverableParts.join(', ')}). Review all at: ${reviewLink}`,
           });
 
           trackMissionStep(context, 'orchestrate_campaign', 'COMPLETED', {

@@ -25,6 +25,7 @@ export const DELIVERABLE_TYPES = [
   'email',
   'research',
   'strategy',
+  'landing_page',
 ] as const;
 
 export type DeliverableType = (typeof DELIVERABLE_TYPES)[number];

@@ -74,6 +74,7 @@ function getTypeLabel(type: string): string {
     case 'email': return 'Email';
     case 'research': return 'Research';
     case 'strategy': return 'Strategy';
+    case 'landing_page': return 'Landing Page';
     default: return type;
   }
 }
@@ -223,6 +224,25 @@ function DeliverableCard({
             )}
             {!previewData.subject && !previewData.body && (
               <div>Email deliverable</div>
+            )}
+          </>
+        )}
+        {deliverable.type === 'landing_page' && (
+          <>
+            {previewData.headline && (
+              <div style={{ fontSize: '0.8125rem', fontWeight: 700, marginBottom: '0.25rem' }}>
+                {previewData.headline as string}
+              </div>
+            )}
+            {previewData.subheadline && (
+              <div style={{ marginBottom: '0.25rem' }}>
+                {previewData.subheadline as string}
+              </div>
+            )}
+            {previewData.benefitCount && (
+              <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)' }}>
+                {previewData.benefitCount as number} benefits &middot; {previewData.faqCount as number} FAQs &middot; CTA: &quot;{previewData.heroCtaText as string}&quot;
+              </div>
             )}
           </>
         )}

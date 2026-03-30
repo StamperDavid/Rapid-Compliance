@@ -744,24 +744,92 @@ function ExpandedOutputRenderer({ raw, parsed }: { raw: string; parsed: ParsedSt
 
   switch (parsed.type) {
     case 'research': {
+      const methodology = parsed.data.methodology as string | undefined;
+      const areasResearched = parsed.data.areasResearched as Array<{ area: string; findings: string }> | undefined;
       const findings = parsed.data.findings as string | undefined;
       const insights = parsed.data.keyInsights as string[] | undefined;
+      const competitorAngles = parsed.data.competitorAngles as Array<{ competitor: string; angle: string } | string> | undefined;
+      const contentGaps = parsed.data.contentGaps as string[] | undefined;
+      const sources = parsed.data.sources as string[] | undefined;
       return (
         <div>
-          <div style={labelStyle}>Research Findings</div>
+          {methodology && (
+            <div style={{ marginBottom: '0.75rem' }}>
+              <div style={labelStyle}>Research Methodology</div>
+              <div style={{ ...containerStyle, whiteSpace: 'pre-wrap', fontStyle: 'italic' }}>
+                {methodology}
+              </div>
+            </div>
+          )}
+          {areasResearched && areasResearched.length > 0 && (
+            <div style={{ marginBottom: '0.75rem' }}>
+              <div style={labelStyle}>Areas Researched</div>
+              {areasResearched.map((area, i) => (
+                <div key={i} style={{ ...containerStyle, marginBottom: '0.375rem' }}>
+                  <div style={{ fontWeight: 600, fontSize: '0.8125rem', marginBottom: '0.25rem', color: 'var(--color-secondary)' }}>
+                    {area.area}
+                  </div>
+                  <div style={{ whiteSpace: 'pre-wrap' }}>{area.findings}</div>
+                </div>
+              ))}
+            </div>
+          )}
           {findings && (
-            <div style={{ ...containerStyle, whiteSpace: 'pre-wrap' }}>
-              {findings}
+            <div style={{ marginBottom: '0.75rem' }}>
+              <div style={labelStyle}>Target Audience</div>
+              <div style={{ ...containerStyle, whiteSpace: 'pre-wrap' }}>
+                {findings}
+              </div>
             </div>
           )}
           {insights && insights.length > 0 && (
-            <div style={{ marginTop: '0.5rem' }}>
+            <div style={{ marginBottom: '0.75rem' }}>
               <div style={labelStyle}>Key Insights</div>
               <ul style={{ ...containerStyle, margin: 0, paddingLeft: '1.25rem' }}>
                 {insights.map((insight, i) => (
                   <li key={i} style={{ marginBottom: '0.25rem' }}>{insight}</li>
                 ))}
               </ul>
+            </div>
+          )}
+          {competitorAngles && competitorAngles.length > 0 && (
+            <div style={{ marginBottom: '0.75rem' }}>
+              <div style={labelStyle}>Competitor Landscape</div>
+              <ul style={{ ...containerStyle, margin: 0, paddingLeft: '1.25rem' }}>
+                {competitorAngles.map((c, i) => (
+                  <li key={i} style={{ marginBottom: '0.25rem' }}>
+                    {typeof c === 'string' ? c : <><strong>{c.competitor}:</strong> {c.angle}</>}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {contentGaps && contentGaps.length > 0 && (
+            <div style={{ marginBottom: '0.75rem' }}>
+              <div style={labelStyle}>Content Gaps & Opportunities</div>
+              <ul style={{ ...containerStyle, margin: 0, paddingLeft: '1.25rem' }}>
+                {contentGaps.map((gap, i) => (
+                  <li key={i} style={{ marginBottom: '0.25rem' }}>{gap}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {sources && sources.length > 0 && (
+            <div>
+              <div style={labelStyle}>Sources & Data</div>
+              <div style={{ ...containerStyle, display: 'flex', flexWrap: 'wrap', gap: '0.25rem' }}>
+                {sources.map((src, i) => (
+                  <span key={i} style={{
+                    display: 'inline-block', fontSize: '0.6875rem', fontWeight: 500,
+                    padding: '0.125rem 0.5rem', borderRadius: '9999px',
+                    color: 'var(--color-text-secondary)',
+                    backgroundColor: 'rgba(var(--color-text-secondary-rgb, 128, 128, 128), 0.1)',
+                    border: '1px solid rgba(var(--color-text-secondary-rgb, 128, 128, 128), 0.2)',
+                  }}>
+                    {src}
+                  </span>
+                ))}
+              </div>
             </div>
           )}
         </div>
