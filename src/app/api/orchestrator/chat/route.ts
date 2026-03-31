@@ -88,14 +88,15 @@ interface StructuredError {
 // ============================================================================
 
 // Model configuration — HARDCODED, not overridable by env vars.
-// Claude 3.5 Sonnet is the ONLY reliable model for 45+ tool calling via OpenRouter.
-// Gemini 1.5 Pro was tested extensively and IGNORES tools, causing hallucinations.
+// Claude Sonnet 4 is the current reliable model for tool calling via OpenRouter.
+// Gemini was tested extensively and IGNORES tools, causing hallucinations.
 // DO NOT change this without verifying tool calling works end-to-end.
-const DEFAULT_MODEL = 'anthropic/claude-3.5-sonnet';
+const DEFAULT_MODEL = 'anthropic/claude-sonnet-4';
 
 // Fallback models — Claude models ONLY. Gemini does not reliably call tools.
 const FALLBACK_MODELS = [
-  'anthropic/claude-3-haiku',
+  'anthropic/claude-3.5-sonnet',
+  'anthropic/claude-3.7-sonnet',
 ];
 
 // Available models for the orchestrator (not exported - use GET endpoint to fetch)

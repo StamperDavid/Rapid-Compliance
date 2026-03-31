@@ -323,8 +323,9 @@ export class OpenRouterProvider {
       'claude-3-opus': 'anthropic/claude-3-opus',
       'claude-3-sonnet': 'anthropic/claude-3-sonnet',
       'claude-3-haiku': 'anthropic/claude-3-haiku',
-      'claude-3.5-sonnet': 'anthropic/claude-3.5-sonnet',
-      'claude-3-5-sonnet': 'anthropic/claude-3.5-sonnet',
+      'claude-3.5-sonnet': 'anthropic/claude-sonnet-4',
+      'claude-3-5-sonnet': 'anthropic/claude-sonnet-4',
+      'claude-sonnet-4': 'anthropic/claude-sonnet-4',
 
       // Google models
       'gemini-pro': 'google/gemini-pro',
