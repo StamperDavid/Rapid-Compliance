@@ -851,7 +851,7 @@ export const JASPER_TOOLS: ToolDefinition[] = [
     function: {
       name: 'scan_leads',
       description:
-        'Search for companies matching specified criteria using Apollo.io organization search. Returns company name, domain, industry, employee count, revenue, funding, tech stack, and location. ENABLED: TRUE.',
+        'Search for companies matching specified criteria using Apollo.io organization search. Returns company name, domain, industry, employee count, revenue, funding, tech stack, and location. By default, saves results to CRM as new leads (set saveToCrm to "false" for preview-only). ENABLED: TRUE.',
       parameters: {
         type: 'object',
         properties: {
@@ -875,6 +875,11 @@ export const JASPER_TOOLS: ToolDefinition[] = [
           limit: {
             type: 'string',
             description: 'Maximum companies to return (default: 25, max: 100)',
+          },
+          saveToCrm: {
+            type: 'string',
+            description: 'Save results to CRM as new leads. Default: "true". Set to "false" for preview-only.',
+            enum: ['true', 'false'],
           },
         },
         required: ['industry'],
@@ -3424,12 +3429,66 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
             technologies: org.technologies?.slice(0, 10) ?? [],
           }));
 
+          // Persist to CRM leads collection unless explicitly disabled
+          const shouldSave = String(args.saveToCrm ?? 'true') !== 'false';
+          const savedLeadIds: string[] = [];
+
+          if (shouldSave && companies.length > 0) {
+            const leadsCollection = getSubCollection('leads');
+            const batchId = `apollo-scan-${Date.now()}`;
+            const now = new Date().toISOString();
+
+            for (const company of companies) {
+              const leadId = `lead-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+              const leadDoc = {
+                firstName: company.name,
+                lastName: '',
+                name: company.name,
+                email: company.domain ? `info@${company.domain.replace(/^https?:\/\//, '').replace(/^www\./, '').split('/')[0]}` : '',
+                phone: '',
+                company: company.name,
+                title: '',
+                status: 'new',
+                source: 'apollo',
+                acquisitionMethod: 'intelligence_discovery',
+                discoveryBatchId: batchId,
+                tags: [company.industry, 'apollo-scan'].filter(Boolean) as string[],
+                score: 0,
+                enrichmentData: {
+                  domain: company.domain,
+                  industry: company.industry,
+                  employees: company.employees,
+                  revenue: company.revenue,
+                  location: company.location,
+                  linkedin: company.linkedin,
+                  twitter: company.twitter,
+                  description: company.description,
+                  foundedYear: company.foundedYear,
+                  totalFunding: company.totalFunding,
+                  latestFundingStage: company.latestFundingStage,
+                  technologies: company.technologies,
+                },
+                createdAt: now,
+                updatedAt: now,
+              };
+
+              try {
+                await AdminFirestoreService.set(leadsCollection, leadId, leadDoc);
+                savedLeadIds.push(leadId);
+              } catch (saveErr) {
+                logger.warn(`[scan_leads] Failed to save lead for ${company.name}: ${saveErr instanceof Error ? saveErr.message : String(saveErr)}`);
+              }
+            }
+          }
+
           content = JSON.stringify({
             status: 'completed',
             source: 'apollo',
             totalResults: result.data.pagination.total_entries,
             returned: companies.length,
             creditsUsed: 0,
+            savedToCrm: shouldSave,
+            savedCount: savedLeadIds.length,
             companies,
           });
         } catch (err) {

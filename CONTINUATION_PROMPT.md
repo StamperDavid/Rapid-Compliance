@@ -189,11 +189,15 @@ Walk through every feature and function of the platform end-to-end. Find and fix
 7. **Email review link FIXED** — Email step `toolResult` now includes `reviewLink`. (jasper-tools.ts)
 8. **Blog editor black screen FIXED** — Widget type changed from `'text'` to `'html'`. Uses `SafeHtml` component for proper rendering. (jasper-tools.ts)
 
+### Orchestration Fixes Applied (March 31, 2026)
+
+9. **Zero narration ENFORCED** — Rewrote VOICE examples, DELEGATION WORKFLOW, DELEGATION EXAMPLES, and EXAMPLE INTERACTIONS to all show post-result narration only. Removed all pre-tool "I've put the team on it" patterns. Made ZERO NARRATION the "HIGHEST PRIORITY RULE" with explicit prohibition on ANY text before tool calls. (jasper-thought-partner.ts)
+10. **Campaign vs standalone tools CLARIFIED** — Added explicit block: "orchestrate_campaign ONLY handles CONTENT CREATION." Listed 7 tools that must be called separately (scrape_website, scan_leads, enrich_lead, score_leads, draft_outreach_email, get_seo_config, research_competitors). Added "TWO CAMPAIGN MODES" section distinguishing orchestrate_campaign (automated) from create_campaign + individual tools (manual). (jasper-thought-partner.ts)
+11. **scan_leads now saves to CRM** — Added `saveToCrm` parameter (default: "true"). When enabled, writes each company as a lead to `organizations/{PLATFORM_ID}/leads` via AdminFirestoreService. Sets `acquisitionMethod: 'intelligence_discovery'`, `source: 'apollo'`, stores full org data in `enrichmentData`. Returns `savedToCrm: true, savedCount: N` in response. (jasper-tools.ts)
+
 ### Outstanding Orchestration Issues (Pick Up Here)
 
-1. **Jasper still narrates before acting** — Despite prompt changes, he restates the request and says "I'll now create..." before calling tools. The VOICE section examples and DELEGATION WORKFLOW section explicitly encourage narration ("Tell David: I've put the team on it"). These contradict the new zero-narration rule. May need to rewrite those sections.
-2. **Standalone tools not firing alongside campaign** — `scrape_website`, `scan_leads`, `enrich_lead`, `score_leads`, `draft_outreach_email` are still not being called. Jasper collapses everything into `orchestrate_campaign`. The prompt fix was added but hasn't been tested with the new iteration limit.
-3. **Leads not saved to CRM** — Even when `scan_leads` fires, results aren't persisted to the leads collection. Need to verify the tool actually writes to Firestore.
+All three previous blockers (narration, tool routing, lead persistence) have been fixed. Need to validate with the test prompt below.
 4. **Test prompt for validation:**
 
 ```
