@@ -452,20 +452,159 @@ export async function POST(request: NextRequest) {
       fallbacks: modelsToTry.slice(1),
     });
 
+    // ═══════════════════════════════════════════════════════════════════════
+    // INTENT DETECTION & PHASED EXECUTION PLANNER
+    // ═══════════════════════════════════════════════════════════════════════
+    //
+    // When a user sends a complex multi-part request, the model tends to call
+    // orchestrate_campaign first (the biggest tool) and then bail — skipping
+    // research, leads, and outreach. This planner:
+    // 1. Detects required tools from user keywords
+    // 2. Assigns them to dependency-ordered phases
+    // 3. Injects an execution plan into the prompt
+    // 4. Nudges the model when it tries to stop before completing all phases
+    //
+    // Phase order ensures research data feeds into campaign content.
+    // ═══════════════════════════════════════════════════════════════════════
+
+    const INTENT_TOOL_MAP: Array<{ patterns: RegExp; tools: string[] }> = [
+      { patterns: /scrap(e|ing)|analyz(e|ing)\s+(their|the|this)\s+(site|website|page)|\.com|\.io|\.org|\.net/i, tools: ['scrape_website'] },
+      { patterns: /leads?|prospects?|find\s+(me\s+)?(companies|businesses)|scan\s+for/i, tools: ['scan_leads'] },
+      { patterns: /enrich/i, tools: ['enrich_lead'] },
+      { patterns: /score\s+(them|leads?|the)/i, tools: ['score_leads'] },
+      { patterns: /outreach|cold\s+email|personalized\s+email|draft.*(email|outreach)\s+(to|for)/i, tools: ['draft_outreach_email'] },
+      { patterns: /seo|search\s+engine|keywords?\s+(config|setup|align)/i, tools: ['get_seo_config'] },
+      { patterns: /campaign|blog.*video.*social|multi.?channel|content\s+blitz|everything/i, tools: ['orchestrate_campaign'] },
+      { patterns: /trending|trends?\s+(in|for|about)/i, tools: ['research_trending_topics'] },
+      { patterns: /competitor(s|'s)?|competitive\s+intel/i, tools: ['research_competitors'] },
+    ];
+
+    // Dependency-ordered phases: earlier phases feed data to later phases
+    const PHASE_ORDER: Record<string, number> = {
+      // Phase 1: Research & Discovery (no dependencies, run first)
+      scrape_website: 1,
+      research_trending_topics: 1,
+      research_competitors: 1,
+      scan_leads: 1,
+      get_seo_config: 1,
+      scan_tech_stack: 1,
+      // Phase 2: Analysis (depends on Phase 1 lead data)
+      enrich_lead: 2,
+      score_leads: 2,
+      // Phase 3: Content Creation (depends on Phase 1+2 research data)
+      orchestrate_campaign: 3,
+      create_campaign: 3,
+      save_blog_draft: 3,
+      produce_video: 3,
+      social_post: 3,
+      // Phase 4: Outreach (depends on Phase 2 scored leads)
+      draft_outreach_email: 4,
+    };
+
+    const requiredTools = new Set<string>();
+    for (const { patterns, tools } of INTENT_TOOL_MAP) {
+      if (patterns.test(message)) {
+        for (const t of tools) { requiredTools.add(t); }
+      }
+    }
+
+    // Count URL-like patterns to detect multiple scrape targets
+    const urlMatches = message.match(/\b\w+\.(com|io|org|net|co)\b/gi) ?? [];
+    const expectedScrapeCount = urlMatches.length;
+
+    // Build phased execution plan
+    const phasedPlan = new Map<number, string[]>();
+    for (const tool of requiredTools) {
+      const phase = PHASE_ORDER[tool] ?? 1;
+      const existing = phasedPlan.get(phase) ?? [];
+      existing.push(tool);
+      phasedPlan.set(phase, existing);
+    }
+
+    // Generate human-readable execution plan for the prompt
+    const isComplexRequest = requiredTools.size >= 3;
+    let executionPlanPrompt = '';
+
+    if (isComplexRequest) {
+      const phaseDescriptions: string[] = [];
+      const sortedPhases = [...phasedPlan.entries()].sort(([a], [b]) => a - b);
+      const phaseLabels: Record<number, string> = {
+        1: 'Research & Discovery (call these FIRST)',
+        2: 'Analysis (call AFTER Phase 1 results return)',
+        3: 'Content Creation (call AFTER Phase 1+2 — incorporates research data)',
+        4: 'Outreach (call AFTER Phase 2 — needs scored lead data)',
+      };
+
+      for (const [phase, tools] of sortedPhases) {
+        const label = phaseLabels[phase] ?? `Phase ${phase}`;
+        const toolList = tools.map(t => {
+          if (t === 'scrape_website' && expectedScrapeCount > 1) {
+            return `scrape_website (${expectedScrapeCount} URLs — one call per URL)`;
+          }
+          return t;
+        }).join(', ');
+        phaseDescriptions.push(`Phase ${phase} — ${label}: ${toolList}`);
+      }
+
+      executionPlanPrompt = `
+═══════════════════════════════════════════════════════════════════════════════
+MANDATORY EXECUTION PLAN — Follow this EXACT order for this request
+═══════════════════════════════════════════════════════════════════════════════
+
+${phaseDescriptions.join('\n')}
+
+RULES:
+- Complete ALL tools in a phase before moving to the next phase.
+- Phase 1 tools can run in parallel (call them all in one response).
+- DO NOT call orchestrate_campaign until Phase 1 research tools have returned.
+  orchestrate_campaign's internal research phase will use data already gathered.
+- DO NOT call draft_outreach_email until scan_leads + score_leads have returned.
+- DO NOT skip ANY phase. Every tool listed above MUST be called.
+- DO NOT respond with text until ALL phases are complete.
+═══════════════════════════════════════════════════════════════════════════════`;
+    }
+
+    logger.info('[Jasper] Intent detection', {
+      requiredTools: [...requiredTools],
+      expectedScrapeCount,
+      isComplexRequest,
+      phases: JSON.stringify(Object.fromEntries(phasedPlan)),
+    });
+
+    let pendingToolReminders = 0;
+    const MAX_REMINDERS = 4; // One per phase
+
     if (useTools) {
       // TOOL-CALLING LOOP: Allows Jasper to query data before responding
       const currentMessages = [...messages];
+
+      // Inject execution plan into the conversation so the model follows phase order
+      if (executionPlanPrompt) {
+        // Append to the system message (first message) if it exists
+        const systemMsg = currentMessages.find(m => m.role === 'system');
+        if (systemMsg && typeof systemMsg.content === 'string') {
+          systemMsg.content = `${systemMsg.content}\n\n${executionPlanPrompt}`;
+        } else {
+          // Add as a system message at the start
+          currentMessages.unshift({ role: 'system', content: executionPlanPrompt });
+        }
+        logger.info('[Jasper] Execution plan injected into system prompt');
+      }
+
       let iterationCount = 0;
       const maxIterations = 30; // Allow complex multi-tool requests — campaigns can chain many tools
 
       while (iterationCount < maxIterations) {
         iterationCount++;
 
-        // Force tool use on the first iteration for ALL non-conversational queries.
+        // Force tool use on first iteration and after phase nudges.
         // Jasper must ALWAYS delegate — he never answers from training data.
         // Only pure conversational queries (greetings, yes/no, thanks) skip this.
         const isConversational = queryClassification.queryType === 'conversational';
-        const shouldForceTools = iterationCount === 1 && !isConversational;
+        // Check if the last message is a phase nudge (SYSTEM: Phase X is NOT complete)
+        const lastMsg = currentMessages[currentMessages.length - 1];
+        const wasNudged = typeof lastMsg?.content === 'string' && lastMsg.content.startsWith('SYSTEM: Phase');
+        const shouldForceTools = (iterationCount === 1 && !isConversational) || wasNudged;
         const iterationToolChoice = shouldForceTools ? ('required' as const) : ('auto' as const);
 
         const { result: response, model } = await chatWithFallback<ChatCompletionResponse>(
@@ -482,13 +621,73 @@ export async function POST(request: NextRequest) {
         );
         modelUsed = model;
 
-        // If no tool calls, we have the final response
+        // If no tool calls, check if required tools are still pending (phase-aware)
         if (!response.toolCalls || response.toolCalls.length === 0) {
-          logger.info('[Jasper] No tool calls in iteration — returning text response', {
+          const firedToolSet = new Set(toolsExecuted);
+          const scrapeCount = toolsExecuted.filter(t => t === 'scrape_website').length;
+
+          // Find the earliest incomplete phase
+          let currentPhase = 0;
+          const pendingByPhase: string[] = [];
+
+          for (const [phase, tools] of [...phasedPlan.entries()].sort(([a], [b]) => a - b)) {
+            const phaseIncomplete: string[] = [];
+            for (const tool of tools) {
+              if (tool === 'scrape_website') {
+                if (scrapeCount < expectedScrapeCount) {
+                  phaseIncomplete.push(`scrape_website (${expectedScrapeCount - scrapeCount} URLs remaining)`);
+                }
+              } else if (!firedToolSet.has(tool)) {
+                phaseIncomplete.push(tool);
+              }
+            }
+            if (phaseIncomplete.length > 0 && currentPhase === 0) {
+              currentPhase = phase;
+              pendingByPhase.push(...phaseIncomplete);
+            }
+          }
+
+          if (pendingByPhase.length > 0 && pendingToolReminders < MAX_REMINDERS) {
+            pendingToolReminders++;
+            const phaseLabels: Record<number, string> = {
+              1: 'Research & Discovery',
+              2: 'Analysis',
+              3: 'Content Creation',
+              4: 'Outreach',
+            };
+            const phaseLabel = phaseLabels[currentPhase] ?? `Phase ${currentPhase}`;
+
+            logger.info('[Jasper] Phase incomplete — nudging model', {
+              phase: currentPhase,
+              phaseLabel,
+              pendingTools: pendingByPhase,
+              reminder: pendingToolReminders,
+              iteration: iterationCount,
+            });
+
+            // Save assistant text, then inject phase-specific nudge
+            currentMessages.push({
+              role: 'assistant',
+              content: response.content || '',
+            });
+            currentMessages.push({
+              role: 'user',
+              content: `SYSTEM: Phase ${currentPhase} (${phaseLabel}) is NOT complete. You must call these tools before moving on: ${pendingByPhase.join(', ')}. The user explicitly requested these. Call them NOW.`,
+            });
+
+            // Continue the main loop — next iteration will force tool use
+            // because shouldForceTools is false but we override below
+            continue;
+          }
+
+          // All phases complete or max reminders reached — return text response
+          logger.info('[Jasper] Returning text response', {
             iteration: iterationCount,
             model: modelUsed,
             finishReason: response.finishReason,
             responsePreview: response.content.slice(0, 200),
+            pendingToolsRemaining: pendingByPhase,
+            totalToolsExecuted: toolsExecuted.length,
           });
           finalResponse = response.content;
           break;
