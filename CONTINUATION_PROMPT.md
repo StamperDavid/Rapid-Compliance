@@ -174,7 +174,47 @@ Walk through every feature and function of the platform end-to-end. Find and fix
 ## Phase 1: Jasper Orchestrator & Mission Control (18 tests)
 
 **Goal:** Jasper responds, calls tools, creates missions, and Mission Control displays them correctly.
-**PAUSED:** Complete Foundation Data Setup (above) before continuing tests 1.3+.
+**STATUS:** Orchestration testing in progress. Campaign pipeline works (8 steps green). Fixing tool coverage and execution reliability.
+
+### Orchestration Fixes Applied (March 30, 2026)
+
+**Commits:** 5155f074, 104d3211, 368bf01e
+
+1. **Config awareness hedging FIXED** — Removed "RULES FOR CONFIGURATION AWARENESS" that told Jasper to warn before calling tools. Config status is now informational only. (route.ts)
+2. **Zero narration rule ADDED** — Jasper must call tools in first response, never repeat user's request, never describe plan before acting. (jasper-thought-partner.ts)
+3. **Multi-part request handling ADDED** — Each numbered item in user's message = separate tool call. `orchestrate_campaign` only handles content (blog/video/social/email/landing). Scraping, leads, enrichment, outreach are separate tools. (jasper-thought-partner.ts)
+4. **maxIterations increased to 30** — Was 3, causing complex requests to exhaust iterations before generating text → "I encountered an issue" fallback. (route.ts)
+5. **Fallback message FIXED** — Instead of fake error, now shows which tools ran + Mission Control link. (route.ts)
+6. **Video/Social review links FIXED** — Mission steps now include `toolResult` with `reviewLink`. Added fallback entries to `TOOL_ROUTE_MAP`. (jasper-tools.ts, dashboard-links.ts)
+7. **Email review link FIXED** — Email step `toolResult` now includes `reviewLink`. (jasper-tools.ts)
+8. **Blog editor black screen FIXED** — Widget type changed from `'text'` to `'html'`. Uses `SafeHtml` component for proper rendering. (jasper-tools.ts)
+
+### Outstanding Orchestration Issues (Pick Up Here)
+
+1. **Jasper still narrates before acting** — Despite prompt changes, he restates the request and says "I'll now create..." before calling tools. The VOICE section examples and DELEGATION WORKFLOW section explicitly encourage narration ("Tell David: I've put the team on it"). These contradict the new zero-narration rule. May need to rewrite those sections.
+2. **Standalone tools not firing alongside campaign** — `scrape_website`, `scan_leads`, `enrich_lead`, `score_leads`, `draft_outreach_email` are still not being called. Jasper collapses everything into `orchestrate_campaign`. The prompt fix was added but hasn't been tested with the new iteration limit.
+3. **Leads not saved to CRM** — Even when `scan_leads` fires, results aren't persisted to the leads collection. Need to verify the tool actually writes to Firestore.
+4. **Test prompt for validation:**
+
+```
+I want you to run a complete end-to-end campaign. Here's what I need:
+
+1. Research: Scrape gohighlevel.com, vendasta.com, and hubspot.com — analyze their positioning, pricing, and weaknesses. Research trending topics in AI-powered sales tools for 2026.
+
+2. Leads: Scan for 10 high-value leads — SaaS operations directors and VP Sales at mid-market companies who are currently using one of those competitors. Enrich and score them.
+
+3. Full Campaign: Launch a complete multi-channel campaign on "AI Sales Acceleration for Q3" targeting B2B SaaS founders struggling with summer sales slumps. I need EVERYTHING — blog post, 3-email drip sequence, social posts for Twitter and LinkedIn, a landing page, and a video storyboard. Professional tone.
+
+4. Outreach: Draft a personalized cold outreach email to the top-scored lead from the scan.
+
+5. SEO: Pull our current SEO config so I can see if it aligns with the campaign keywords.
+
+Go all out — use every tool you have.
+```
+
+**Expected tool calls (15+):** scrape_website x3, research_trending_topics, scan_leads, enrich_lead, score_leads, orchestrate_campaign (→ research, strategy, blog, video, social, email, landing page), draft_outreach_email, get_seo_config
+
+**Success criteria:** All tools fire in one prompt, no hedging, no narration before execution, all steps green in Mission Control with review links.
 
 | # | Test | Steps | Expected | Result | Notes |
 |---|------|-------|----------|--------|-------|
