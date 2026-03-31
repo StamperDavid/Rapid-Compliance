@@ -5107,8 +5107,20 @@ Select cohesive settings that create a professional, unified visual language acr
             }
           }
 
+          // Map tool-definition action names → RevenueDirector SCREAMING_SNAKE_CASE actions
+          const salesActionMap: Record<string, string> = {
+            qualify_lead: 'CHECK_READINESS',
+            generate_outreach: 'AUTO_TRANSITION_TO_OUTREACH',
+            evaluate_nudge: 'EVALUATE_TRANSITION',
+            analyze_pipeline: 'PROGRESS_PIPELINE',
+            check_transition: 'EVALUATE_TRANSITION',
+            // Pass through if already in the right format
+          };
+          const rawAction = (args.action as string) || 'CHECK_READINESS';
+          const mappedAction = salesActionMap[rawAction] ?? rawAction.toUpperCase().replace(/-/g, '_');
+
           const salesPayload = {
-            action: args.action as string,
+            action: mappedAction,
             leadId: args.leadId as string | undefined,
             leadData,
             scraperData,
@@ -5439,7 +5451,9 @@ Select cohesive settings that create a professional, unified visual language acr
             }
           }
 
-          const outreachPayload = {
+          // Extract first lead from leadList for the lead profile that OutreachManager expects
+          const firstLead = parsedLeadList?.[0];
+          const outreachPayload: Record<string, unknown> = {
             sequenceType: args.sequenceType as string | undefined,
             channel: args.channel as string | undefined,
             leadList: parsedLeadList,
@@ -5447,6 +5461,15 @@ Select cohesive settings that create a professional, unified visual language acr
             steps: args.steps as number | undefined,
             delayBetweenSteps: args.delayBetweenSteps as string | undefined,
             complianceNotes: args.complianceNotes as string | undefined,
+            // OutreachManager.extractLeadProfile() expects these top-level fields
+            ...(firstLead ? {
+              lead: firstLead,
+              email: firstLead.email ?? firstLead.Email,
+              phone: firstLead.phone ?? firstLead.Phone,
+              leadId: firstLead.id ?? firstLead.leadId,
+              name: firstLead.name ?? firstLead.firstName,
+              company: firstLead.company ?? firstLead.companyName,
+            } : {}),
           };
 
           const outreachResult = await outreachMgr.execute({
@@ -6036,7 +6059,15 @@ Select cohesive settings that create a professional, unified visual language acr
           const { getSerperSEOService } = await import('@/lib/integrations/seo/serper-seo-service');
           const { getDataForSEOService } = await import('@/lib/integrations/seo/dataforseo-service');
 
-          const rawKeywords = (args.keywords as string).split(',').map((k: string) => k.trim());
+          if (!args.keywords || typeof args.keywords !== 'string') {
+            content = JSON.stringify({ status: 'error', message: 'keywords parameter is required (comma-separated list of seed topics)' });
+            trackMissionStep(context, 'research_trending_topics', 'FAILED', {
+              error: 'Missing required keywords parameter',
+              durationMs: Date.now() - trendStart,
+            });
+            break;
+          }
+          const rawKeywords = args.keywords.split(',').map((k: string) => k.trim());
           const industry = typeof args.industry === 'string' ? args.industry.trim() : '';
           const maxResults = (args.maxResults as number) || 10;
           const includeVolume = args.includeSearchVolume !== false;

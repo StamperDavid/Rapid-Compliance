@@ -489,38 +489,38 @@ export async function POST(request: NextRequest) {
     // Phase order ensures research data feeds into campaign content.
     // ═══════════════════════════════════════════════════════════════════════
 
+    // Intent map uses COMMANDER-LEVEL tools (delegation + queries), not specialist tools
     const INTENT_TOOL_MAP: Array<{ patterns: RegExp; tools: string[] }> = [
-      { patterns: /scrap(e|ing)|analyz(e|ing)\s+(their|the|this)\s+(site|website|page)|\.com|\.io|\.org|\.net/i, tools: ['scrape_website'] },
+      { patterns: /scrap(e|ing)|analyz(e|ing)\s+(their|the|this)\s+(site|website|page)|\.com|\.io|\.org|\.net/i, tools: ['delegate_to_intelligence'] },
       { patterns: /leads?|prospects?|find\s+(me\s+)?(companies|businesses)|scan\s+for/i, tools: ['scan_leads'] },
       { patterns: /enrich/i, tools: ['enrich_lead'] },
       { patterns: /score\s+(them|leads?|the)/i, tools: ['score_leads'] },
-      { patterns: /outreach|cold\s+email|personalized\s+email|draft.*(email|outreach)\s+(to|for)/i, tools: ['draft_outreach_email'] },
+      { patterns: /outreach|cold\s+email|personalized\s+email|draft.*(email|outreach)\s+(to|for)/i, tools: ['delegate_to_outreach'] },
       { patterns: /seo|search\s+engine|keywords?\s+(config|setup|align)/i, tools: ['get_seo_config'] },
-      { patterns: /campaign|blog.*video.*social|multi.?channel|content\s+blitz|everything/i, tools: ['orchestrate_campaign'] },
-      { patterns: /trending|trends?\s+(in|for|about)/i, tools: ['research_trending_topics'] },
-      { patterns: /competitor(s|'s)?|competitive\s+intel/i, tools: ['research_competitors'] },
+      { patterns: /campaign|blog.*video.*social|multi.?channel|content\s+blitz|everything/i, tools: ['delegate_to_content'] },
+      { patterns: /trending|trends?\s+(in|for|about)/i, tools: ['delegate_to_intelligence'] },
+      { patterns: /competitor(s|'s)?|competitive\s+intel/i, tools: ['delegate_to_intelligence'] },
+      { patterns: /social\s*(media|post)|post\s+(on|to)\s+(twitter|linkedin|facebook)/i, tools: ['delegate_to_marketing'] },
+      { patterns: /email\s*(campaign|sequence|drip|blast)/i, tools: ['delegate_to_marketing'] },
+      { patterns: /video|storyboard/i, tools: ['delegate_to_content'] },
+      { patterns: /blog|article|landing\s*page/i, tools: ['delegate_to_content'] },
     ];
 
-    // Dependency-ordered phases: earlier phases feed data to later phases
+    // Dependency-ordered phases using commander-level tools
     const PHASE_ORDER: Record<string, number> = {
       // Phase 1: Research & Discovery (no dependencies, run first)
-      scrape_website: 1,
-      research_trending_topics: 1,
-      research_competitors: 1,
+      delegate_to_intelligence: 1,
       scan_leads: 1,
       get_seo_config: 1,
-      scan_tech_stack: 1,
       // Phase 2: Analysis (depends on Phase 1 lead data)
       enrich_lead: 2,
       score_leads: 2,
-      // Phase 3: Content Creation (depends on Phase 1+2 research data)
-      orchestrate_campaign: 3,
+      // Phase 3: Content Creation (depends on Phase 1+2 — reads MemoryVault)
+      delegate_to_content: 3,
+      delegate_to_marketing: 3,
       create_campaign: 3,
-      save_blog_draft: 3,
-      produce_video: 3,
-      social_post: 3,
       // Phase 4: Outreach (depends on Phase 2 scored leads)
-      draft_outreach_email: 4,
+      delegate_to_outreach: 4,
     };
 
     const requiredTools = new Set<string>();
