@@ -456,7 +456,7 @@ export async function POST(request: NextRequest) {
       // TOOL-CALLING LOOP: Allows Jasper to query data before responding
       const currentMessages = [...messages];
       let iterationCount = 0;
-      const maxIterations = 3; // Prevent infinite loops
+      const maxIterations = 30; // Allow complex multi-tool requests — campaigns can chain many tools
 
       while (iterationCount < maxIterations) {
         iterationCount++;
@@ -572,9 +572,13 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      // Fallback if somehow no response was set
+      // Fallback if somehow no response was set — summarize what tools ran
       if (!finalResponse) {
-        finalResponse = 'I encountered an issue retrieving the data. Please try again.';
+        if (toolsExecuted.length > 0) {
+          finalResponse = `Done — executed ${toolsExecuted.length} tools (${toolsExecuted.join(', ')}). ${lastReviewLink ? `Review results here: ${lastReviewLink}` : 'Check Mission Control for details.'}`;
+        } else {
+          finalResponse = 'Something went wrong — no tools were called. Try rephrasing your request.';
+        }
       }
     } else {
       // Standard chat without tools for conversational queries
