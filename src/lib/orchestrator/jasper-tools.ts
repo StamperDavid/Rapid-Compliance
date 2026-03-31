@@ -36,7 +36,8 @@ import {
 // TIMEOUT UTILITY — Prevents hung LLM calls from spinning forever
 // ============================================================================
 
-const CAMPAIGN_STEP_TIMEOUT_MS = 90_000; // 90 seconds per sub-step
+const CAMPAIGN_STEP_TIMEOUT_MS = 90_000; // 90 seconds per campaign sub-step
+const MANAGER_TIMEOUT_MS = 120_000; // 120 seconds per manager delegation
 
 function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
   let timer: ReturnType<typeof setTimeout>;
@@ -2639,7 +2640,7 @@ async function routeThroughMarketing(
   };
 
   const goal = (params.topic as string) ?? (params.goal as string) ?? action.replace(/_/g, ' ');
-  const result = await manager.execute({
+  const result = await withTimeout(manager.execute({
     id: `specialist_${platform}_${Date.now()}`,
     timestamp: new Date(),
     from: 'JASPER',
@@ -2656,7 +2657,7 @@ async function routeThroughMarketing(
     },
     requiresResponse: true,
     traceId: `trace_${Date.now()}`,
-  });
+  }), MANAGER_TIMEOUT_MS, 'Marketing Manager (social)');
 
   return { status: result.status, data: result.data, errors: result.errors };
 }
@@ -2876,7 +2877,7 @@ async function routeNewsletter(
       const { OutreachManager } = await import('@/lib/agents/outreach/manager');
       const outreachMgr = new OutreachManager();
       await outreachMgr.initialize();
-      const result = await outreachMgr.execute({
+      const result = await withTimeout(outreachMgr.execute({
         id: `newsletter_ops_${Date.now()}`,
         timestamp: new Date(),
         from: 'JASPER',
@@ -2890,7 +2891,7 @@ async function routeNewsletter(
         },
         requiresResponse: true,
         traceId: `trace_${Date.now()}`,
-      });
+      }), MANAGER_TIMEOUT_MS, 'Outreach Manager (newsletter)');
       return { status: result.status, data: result.data };
     }
     default:
@@ -5026,7 +5027,7 @@ Select cohesive settings that create a professional, unified visual language acr
             includeCopy: args.includeCopy !== false,
           };
 
-          const result = await manager.execute({
+          const result = await withTimeout(manager.execute({
             id: `architect_${Date.now()}`,
             timestamp: new Date(),
             from: 'JASPER',
@@ -5036,7 +5037,7 @@ Select cohesive settings that create a professional, unified visual language acr
             payload: architectPayload,
             requiresResponse: true,
             traceId: `trace_${Date.now()}`,
-          });
+          }), MANAGER_TIMEOUT_MS, 'Architect Manager');
 
           const builderDuration = Date.now() - builderStart;
           trackMissionStep(context, 'delegate_to_builder',
@@ -5128,7 +5129,7 @@ Select cohesive settings that create a professional, unified visual language acr
             interactionHistory,
           };
 
-          const result = await director.execute({
+          const result = await withTimeout(director.execute({
             id: `sales_${Date.now()}`,
             timestamp: new Date(),
             from: 'JASPER',
@@ -5138,7 +5139,7 @@ Select cohesive settings that create a professional, unified visual language acr
             payload: salesPayload,
             requiresResponse: true,
             traceId: `trace_${Date.now()}`,
-          });
+          }), MANAGER_TIMEOUT_MS, 'Revenue Director');
 
           const salesDuration = Date.now() - salesStart;
           trackMissionStep(context, 'delegate_to_sales',
@@ -5192,7 +5193,7 @@ Select cohesive settings that create a professional, unified visual language acr
             targetAudience: args.audience ? { demographics: args.audience as string } : undefined,
           };
 
-          const result = await manager.execute({
+          const result = await withTimeout(manager.execute({
             id: `marketing_${Date.now()}`,
             timestamp: new Date(),
             from: 'JASPER',
@@ -5202,7 +5203,7 @@ Select cohesive settings that create a professional, unified visual language acr
             payload: campaignPayload,
             requiresResponse: true,
             traceId: `trace_${Date.now()}`,
-          });
+          }), MANAGER_TIMEOUT_MS, 'Marketing Manager');
 
           const marketingDuration = Date.now() - marketingStart;
           trackMissionStep(context, 'delegate_to_marketing',
@@ -5250,7 +5251,7 @@ Select cohesive settings that create a professional, unified visual language acr
             context: args.context as string | undefined,
           };
 
-          const trustResult = await trustManager.execute({
+          const trustResult = await withTimeout(trustManager.execute({
             id: `trust_${Date.now()}`,
             timestamp: new Date(),
             from: 'JASPER',
@@ -5260,7 +5261,7 @@ Select cohesive settings that create a professional, unified visual language acr
             payload: trustPayload,
             requiresResponse: true,
             traceId: `trace_${Date.now()}`,
-          });
+          }), MANAGER_TIMEOUT_MS, 'Reputation Manager');
 
           const trustDuration = Date.now() - trustStart;
           trackMissionStep(context, 'delegate_to_trust',
@@ -5326,7 +5327,7 @@ Select cohesive settings that create a professional, unified visual language acr
             scheduleDate: args.scheduleDate as string | undefined,
           };
 
-          const contentResult = await contentMgr.execute({
+          const contentResult = await withTimeout(contentMgr.execute({
             id: `content_${Date.now()}`,
             timestamp: new Date(),
             from: 'JASPER',
@@ -5336,7 +5337,7 @@ Select cohesive settings that create a professional, unified visual language acr
             payload: contentPayload,
             requiresResponse: true,
             traceId: `trace_${Date.now()}`,
-          });
+          }), MANAGER_TIMEOUT_MS, 'Content Manager');
 
           const contentDuration = Date.now() - contentStart;
           trackMissionStep(context, 'delegate_to_content',
@@ -5472,7 +5473,7 @@ Select cohesive settings that create a professional, unified visual language acr
             } : {}),
           };
 
-          const outreachResult = await outreachMgr.execute({
+          const outreachResult = await withTimeout(outreachMgr.execute({
             id: `outreach_${Date.now()}`,
             timestamp: new Date(),
             from: 'JASPER',
@@ -5482,7 +5483,7 @@ Select cohesive settings that create a professional, unified visual language acr
             payload: outreachPayload,
             requiresResponse: true,
             traceId: `trace_${Date.now()}`,
-          });
+          }), MANAGER_TIMEOUT_MS, 'Outreach Manager');
 
           const outreachDuration = Date.now() - outreachStart;
           trackMissionStep(context, 'delegate_to_outreach',
@@ -5537,7 +5538,7 @@ Select cohesive settings that create a professional, unified visual language acr
             timeframe: args.timeframe as string | undefined,
           };
 
-          const intelResult = await intelMgr.execute({
+          const intelResult = await withTimeout(intelMgr.execute({
             id: `intelligence_${Date.now()}`,
             timestamp: new Date(),
             from: 'JASPER',
@@ -5547,7 +5548,7 @@ Select cohesive settings that create a professional, unified visual language acr
             payload: intelPayload,
             requiresResponse: true,
             traceId: `trace_${Date.now()}`,
-          });
+          }), MANAGER_TIMEOUT_MS, 'Intelligence Manager');
 
           const intelDuration = Date.now() - intelStart;
           // Extract FULL detail from IntelligenceBrief — not just the template synthesis
@@ -5700,7 +5701,7 @@ Select cohesive settings that create a professional, unified visual language acr
             analysisScope: args.analysisScope as string | undefined,
           };
 
-          const commerceResult = await commerceMgr.execute({
+          const commerceResult = await withTimeout(commerceMgr.execute({
             id: `commerce_${Date.now()}`,
             timestamp: new Date(),
             from: 'JASPER',
@@ -5710,7 +5711,7 @@ Select cohesive settings that create a professional, unified visual language acr
             payload: commercePayload,
             requiresResponse: true,
             traceId: `trace_${Date.now()}`,
-          });
+          }), MANAGER_TIMEOUT_MS, 'Commerce Manager');
 
           const commerceDuration = Date.now() - commerceStart;
           trackMissionStep(context, 'delegate_to_commerce',
