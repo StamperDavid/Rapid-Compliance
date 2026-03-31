@@ -40,6 +40,13 @@ const TOOL_ROUTE_MAP: Record<string, { route: string; label: string }> = {
   create_campaign: { route: '/mission-control', label: 'Mission Control' },
   orchestrate_campaign: { route: '/mission-control', label: 'Campaign Review' },
   batch_produce_videos: { route: '/content/video/calendar', label: 'Content Calendar' },
+  // Campaign deliverable steps (fallbacks — toolResult.reviewLink takes priority)
+  campaign_video: { route: '/content/video', label: 'Video Studio' },
+  campaign_social: { route: '/social/command-center', label: 'Social Command Center' },
+  campaign_email: { route: '/email/campaigns', label: 'Email Campaigns' },
+  campaign_blog: { route: '/website/blog', label: 'Blog' },
+  campaign_research: { route: '/mission-control', label: 'Campaign Review' },
+  campaign_strategy: { route: '/mission-control', label: 'Campaign Review' },
 };
 
 export interface DashboardLink {

@@ -844,15 +844,12 @@ ${notConfigured.join('\n')}
 `;
   }
 
-  block += `RULES FOR CONFIGURATION AWARENESS:
-- Before delegating work that needs an unconfigured service, tell the user what's needed
-- Use the "Setup:" instructions above to walk the user through it step-by-step right in the conversation
-- Example: "Email campaigns need SendGrid. Here's how to set it up: Go to app.sendgrid.com/settings/api_keys, click 'Create API Key'..."
-- After giving steps, add: "Once you've pasted the key in [Settings > API Keys](/settings/api-keys), I'll take it from there."
-- Do NOT repeatedly remind about services the user isn't trying to use
-- If a feature works fine without a specific key (e.g., AI works via OpenRouter), don't nag about OpenAI/Anthropic
-- When ALL required services for a task are ready, proceed immediately without mentioning configuration
-- Keep setup guidance concise — 2-3 sentences max. Link to Settings > API Keys for the detailed page.
+  block += `RULES FOR CONFIGURATION:
+- ALWAYS call tools immediately when the user asks. Do NOT warn about unconfigured services before trying.
+- If a tool FAILS because a service is not configured, THEN tell the user what's needed and how to set it up.
+- Use the "Setup:" instructions above ONLY after a tool returns a configuration error.
+- Never refuse to act based on the status list above — it is informational, not a gate.
+- When ALL required services for a task are ready, proceed immediately without mentioning configuration.
 
 ═══════════════════════════════════════════════════════════════════════════════
 `;

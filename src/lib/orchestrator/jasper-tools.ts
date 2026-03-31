@@ -5679,9 +5679,9 @@ Select cohesive settings that create a professional, unified visual language acr
                   widgets: [
                     {
                       id: `widget_${Date.now()}`,
-                      type: 'text',
+                      type: 'html',
                       data: {
-                        content: args.content as string,
+                        html: args.content as string,
                       },
                     },
                   ],
@@ -6676,9 +6676,9 @@ Output JSON (no markdown fences) with these keys:
                       widgets: [
                         {
                           id: `widget_${Date.now()}`,
-                          type: 'text',
+                          type: 'html',
                           data: {
-                            content: blogResult.content,
+                            html: blogResult.content,
                           },
                         },
                       ],
@@ -6832,6 +6832,13 @@ Output JSON (no markdown fences) with these keys:
                 trackMissionStep(context, 'campaign_video', 'COMPLETED', {
                   summary: `Video storyboard created: ${scenes.length} scenes`,
                   durationMs: Date.now() - videoStart,
+                  toolResult: JSON.stringify({
+                    type: 'cinematic',
+                    projectId: videoProjectId,
+                    sceneCount: scenes.length,
+                    scenes: scenes.map(s => ({ title: s.title, duration: s.duration })),
+                    reviewLink: `/content/video?load=${videoProjectId}`,
+                  }),
                 });
               }
             } catch (videoErr) {
@@ -6902,6 +6909,13 @@ RULES:
           trackMissionStep(context, 'campaign_social', 'COMPLETED', {
             summary: `${socialPlatforms.length} social post drafts created`,
             durationMs: Date.now() - socialStart,
+            toolResult: JSON.stringify({
+              type: 'draft',
+              status: 'draft',
+              platforms: socialPlatforms,
+              postCount: socialPlatforms.length,
+              reviewLink: reviewLink,
+            }),
           });
 
           // ── Phase 7: Email Sequence (if not skipped) ─────────────────
@@ -6978,6 +6992,7 @@ RULES:
                   emailCount,
                   isSequence: emailCount > 1,
                   titles: sequencePositions.slice(0, emailCount).map(p => p.subjectHint),
+                  reviewLink: reviewLink,
                 }),
               });
             } catch (emailErr) {
