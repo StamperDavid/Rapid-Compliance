@@ -33,6 +33,20 @@ import {
 } from '@/lib/campaign/campaign-service';
 
 // ============================================================================
+// TIMEOUT UTILITY — Prevents hung LLM calls from spinning forever
+// ============================================================================
+
+const CAMPAIGN_STEP_TIMEOUT_MS = 90_000; // 90 seconds per sub-step
+
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  let timer: ReturnType<typeof setTimeout>;
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`${label} timed out after ${ms / 1000}s`)), ms);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
+// ============================================================================
 // MISSION TRACKING CONTEXT
 // ============================================================================
 
@@ -2312,7 +2326,7 @@ export const JASPER_TOOLS: ToolDefinition[] = [
     function: {
       name: 'orchestrate_campaign',
       description:
-        'Run a FULL multi-deliverable campaign pipeline. This single tool performs: (1) Research phase — AI analyzes topic, competitors, audience with full methodology documentation. (2) Strategy phase — generates positioning, messaging, content angles. (3) Creates a Campaign to track all deliverables. (4) Produces deliverables: blog draft, video storyboard, social posts, email sequence, and landing page — all registered under one campaign. User reviews everything at /mission-control?campaign={id}. Use this when the user asks for a "full campaign", "content blitz", "launch campaign", or "multi-channel content" on a topic. ENABLED: TRUE.',
+        'Run a CONTENT-ONLY campaign pipeline. Creates: blog draft, video storyboard, social posts, email sequence, and landing page — all under one campaign. Includes internal research/strategy phases for content angles only. User reviews at /mission-control?campaign={id}. Use for "full campaign", "content blitz", or "multi-channel content". IMPORTANT: This tool does NOT scrape websites, scan leads, enrich leads, score leads, or draft outreach emails. Those are SEPARATE tools (scrape_website, scan_leads, enrich_lead, score_leads, draft_outreach_email) that must be called alongside this tool, not instead of it. ENABLED: TRUE.',
       parameters: {
         type: 'object',
         properties: {
@@ -6553,7 +6567,7 @@ Select cohesive settings that create a professional, unified visual language acr
           try {
             const { OpenRouterProvider } = await import('@/lib/ai/openrouter-provider');
             const llm = new OpenRouterProvider({});
-            const researchResult = await llm.chat({
+            const researchResult = await withTimeout(llm.chat({
               model: 'claude-3-5-sonnet',
               messages: [
                 {
@@ -6575,7 +6589,7 @@ Output JSON (no markdown fences) with these keys:
                   content: `Research for a campaign about: "${topic}"\nTarget audience: ${audience}\n\nConduct a thorough analysis covering: market trends, competitor landscape, audience behavior, content gaps, and industry benchmarks. Be specific with data points and percentages. Document your full methodology so stakeholders can review what was researched and why.`,
                 },
               ],
-            });
+            }), CAMPAIGN_STEP_TIMEOUT_MS, 'Campaign research');
             researchSummary = researchResult.content;
             // Parse research for rich Mission Control rendering
             let parsedResearch: Record<string, unknown> = {};
@@ -6617,7 +6631,7 @@ Output JSON (no markdown fences) with these keys:
           try {
             const { OpenRouterProvider } = await import('@/lib/ai/openrouter-provider');
             const llm = new OpenRouterProvider({});
-            const strategyResult = await llm.chat({
+            const strategyResult = await withTimeout(llm.chat({
               model: 'claude-3-5-sonnet',
               messages: [
                 {
@@ -6629,7 +6643,7 @@ Output JSON (no markdown fences) with these keys:
                   content: `Topic: "${topic}"\nAudience: ${audience}\nTone: ${tone}\nResearch: ${researchSummary}\n\nCreate a multi-channel content strategy with specific angles for blog, video, social posts, and email.`,
                 },
               ],
-            });
+            }), CAMPAIGN_STEP_TIMEOUT_MS, 'Campaign strategy');
             strategySummary = strategyResult.content;
             // Parse strategy for rich Mission Control rendering
             let parsedStrategy: Record<string, unknown> = {};
@@ -6701,7 +6715,7 @@ Output JSON (no markdown fences) with these keys:
             const blogAngle = (strategy.blogAngle as string) || `Comprehensive guide to ${topic}`;
             const blogTitle = `${topic}: What You Need to Know`;
 
-            const blogResult = await llm.chat({
+            const blogResult = await withTimeout(llm.chat({
               model: 'claude-3-5-sonnet',
               messages: [
                 {
@@ -6713,7 +6727,7 @@ Output JSON (no markdown fences) with these keys:
                   content: `Write a blog post titled "${blogTitle}"\nAngle: ${blogAngle}\nAudience: ${audience}\nTone: ${tone}\nKey messages: ${JSON.stringify(strategy.keyMessages ?? [])}`,
                 },
               ],
-            });
+            }), CAMPAIGN_STEP_TIMEOUT_MS, 'Blog draft');
 
             // Save blog draft
             const { adminDb: blogDb } = await import('@/lib/firebase/admin');
@@ -6825,7 +6839,7 @@ Output JSON (no markdown fences) with these keys:
                 // Generate storyboard scenes via AI
                 const { OpenRouterProvider } = await import('@/lib/ai/openrouter-provider');
                 const llm = new OpenRouterProvider({});
-                const sceneResult = await llm.chat({
+                const sceneResult = await withTimeout(llm.chat({
                   model: 'claude-3-5-sonnet',
                   messages: [
                     {
@@ -6837,7 +6851,7 @@ Output JSON (no markdown fences) with these keys:
                       content: `Create scenes for: "${videoAngle}"\nAudience: ${audience}\nTone: ${tone}`,
                     },
                   ],
-                });
+                }), CAMPAIGN_STEP_TIMEOUT_MS, 'Video storyboard');
 
                 let scenes: Array<{ sceneNumber: number; title: string; scriptText: string; visualDescription: string; duration: number }> = [];
                 try {
@@ -6921,7 +6935,7 @@ Output JSON (no markdown fences) with these keys:
               // Generate a real, platform-appropriate social post via AI
               const { OpenRouterProvider: SocialLLM } = await import('@/lib/ai/openrouter-provider');
               const socialLlm = new SocialLLM({});
-              const socialResult = await socialLlm.chat({
+              const socialResult = await withTimeout(socialLlm.chat({
                 model: 'claude-3-5-sonnet',
                 messages: [
                   {
@@ -6945,7 +6959,7 @@ RULES:
                     content: `Topic: ${topic}\nAudience: ${audience}\nTone: ${tone}\nKey messages: ${JSON.stringify(keyMessages.slice(0, 3))}\nHooks to consider: ${JSON.stringify(hooks.slice(0, 3))}`,
                   },
                 ],
-              });
+              }), CAMPAIGN_STEP_TIMEOUT_MS, `Social post (${platform})`);
 
               const postContent = socialResult.content.trim();
 
@@ -7005,7 +7019,7 @@ RULES:
                 const isSequence = emailCount > 1;
                 const emailNum = i + 1;
 
-                const emailResult = await llm.chat({
+                const emailResult = await withTimeout(llm.chat({
                   model: 'claude-3-5-sonnet',
                   messages: [
                     {
@@ -7017,7 +7031,7 @@ RULES:
                       content: `Write${isSequence ? ` email ${emailNum}/${emailCount} (${pos.position})` : ' an email'} for: "${topic}"\nSubject: ${pos.subjectHint}\nAngle: ${emailAngle}\nAudience: ${audience}\nTone: ${tone}\nCTA: ${(strategy.callToAction as string) || 'Learn more'}`,
                     },
                   ],
-                });
+                }), CAMPAIGN_STEP_TIMEOUT_MS, `Email ${emailNum}/${emailCount}`);
 
                 const subjectLine = isSequence
                   ? `[${emailNum}/${emailCount}] ${pos.subjectHint}`
@@ -7072,7 +7086,7 @@ RULES:
             try {
               const { OpenRouterProvider } = await import('@/lib/ai/openrouter-provider');
               const llm = new OpenRouterProvider({});
-              const lpResult = await llm.chat({
+              const lpResult = await withTimeout(llm.chat({
                 model: 'claude-3-5-sonnet',
                 messages: [
                   {
@@ -7097,7 +7111,7 @@ Output JSON (no markdown fences) with keys:
                     content: `Create a high-converting landing page for: "${topic}"\nAudience: ${audience}\nTone: ${tone}\nKey messages: ${JSON.stringify((strategy.keyMessages as string[]) ?? [])}\nCTA: ${(strategy.callToAction as string) || 'Learn more'}`,
                   },
                 ],
-              });
+              }), CAMPAIGN_STEP_TIMEOUT_MS, 'Landing page');
 
               let lpData: Record<string, unknown> = {};
               try { lpData = JSON.parse(lpResult.content) as Record<string, unknown>; } catch { lpData = { headline: topic }; }

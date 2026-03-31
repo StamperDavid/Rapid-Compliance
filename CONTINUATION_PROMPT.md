@@ -220,6 +220,26 @@ Go all out — use every tool you have.
 
 **Success criteria:** All tools fire in one prompt, no hedging, no narration before execution, all steps green in Mission Control with review links.
 
+### Full Orchestration Test Suite
+
+**File:** [`docs/orchestration-test-suite.md`](docs/orchestration-test-suite.md)
+
+The test prompt above (A.1) is just the first of **60+ test prompts** across 9 categories. The full suite must pass before Phase 1 orchestration can be marked COMPLETE:
+
+| Category | What It Tests | Prompts | Target |
+|----------|--------------|---------|--------|
+| A — Power User | Numbered, explicit multi-tool requests | 3 | 100% |
+| B — Casual User | Natural language, no structure | 8 | 90%+ |
+| C — Busy Executive | Terse one-liners | 10 | 90%+ |
+| D — Compound | Multiple tasks without numbering | 8 | 85%+ |
+| E — Ambiguous | Vague/minimal input | 5 | 75%+ |
+| F — Industry Jargon | ABM, nurture, drip, TOFU, MQL, pipeline | 8 | 85%+ |
+| G — Error Paths | Missing keys, bad URLs, cancel | 7 | 90%+ |
+| H — Follow-Up | Contextual requests referencing prior results | 5 | 80%+ |
+| I — Conversational | No tools expected (greetings, thanks) | 5 | 100% |
+
+**Workflow:** Test A.1 first (the power-user prompt). If it fails, fix before proceeding. Then work through B→I categories. Log results in the test suite file's "Test Run Log" table.
+
 | # | Test | Steps | Expected | Result | Notes |
 |---|------|-------|----------|--------|-------|
 | 1.1 | Jasper opens | Click Jasper chat icon | Chat panel opens, welcome message shows | PASS | |
