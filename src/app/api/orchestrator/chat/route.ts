@@ -521,48 +521,8 @@ export async function POST(request: NextRequest) {
       phasedPlan.set(phase, existing);
     }
 
-    // Generate human-readable execution plan for the prompt
+    // Complex request = 3+ required tools detected from user message
     const isComplexRequest = requiredTools.size >= 3;
-    let executionPlanPrompt = '';
-
-    if (isComplexRequest) {
-      const phaseDescriptions: string[] = [];
-      const sortedPhases = [...phasedPlan.entries()].sort(([a], [b]) => a - b);
-      const phaseLabels: Record<number, string> = {
-        1: 'Research & Discovery (call these FIRST)',
-        2: 'Analysis (call AFTER Phase 1 results return)',
-        3: 'Content Creation (call AFTER Phase 1+2 — incorporates research data)',
-        4: 'Outreach (call AFTER Phase 2 — needs scored lead data)',
-      };
-
-      for (const [phase, tools] of sortedPhases) {
-        const label = phaseLabels[phase] ?? `Phase ${phase}`;
-        const toolList = tools.map(t => {
-          if (t === 'scrape_website' && expectedScrapeCount > 1) {
-            return `scrape_website (${expectedScrapeCount} URLs — one call per URL)`;
-          }
-          return t;
-        }).join(', ');
-        phaseDescriptions.push(`Phase ${phase} — ${label}: ${toolList}`);
-      }
-
-      executionPlanPrompt = `
-═══════════════════════════════════════════════════════════════════════════════
-MANDATORY EXECUTION PLAN — Follow this EXACT order for this request
-═══════════════════════════════════════════════════════════════════════════════
-
-${phaseDescriptions.join('\n')}
-
-RULES:
-- Complete ALL tools in a phase before moving to the next phase.
-- Phase 1 tools can run in parallel (call them all in one response).
-- DO NOT call orchestrate_campaign until Phase 1 research tools have returned.
-  orchestrate_campaign's internal research phase will use data already gathered.
-- DO NOT call draft_outreach_email until scan_leads + score_leads have returned.
-- DO NOT skip ANY phase. Every tool listed above MUST be called.
-- DO NOT respond with text until ALL phases are complete.
-═══════════════════════════════════════════════════════════════════════════════`;
-    }
 
     logger.info('[Jasper] Intent detection', {
       requiredTools: [...requiredTools],
@@ -575,33 +535,115 @@ RULES:
     const MAX_REMINDERS = 4; // One per phase
 
     if (useTools) {
-      // TOOL-CALLING LOOP: Allows Jasper to query data before responding
+      // ═════════════════════════════════════════════════════════════════════
+      // DELEGATION MODEL: Jasper = Commander, delegates to Department Managers
+      //
+      // For complex requests (3+ tools detected), Jasper ONLY sees:
+      //   - Manager delegation tools (delegate_to_X)
+      //   - Simple query tools (get_X, list_X)
+      //   - Lead tools (no manager for these yet)
+      //
+      // This prevents Jasper from calling specialist tools directly
+      // (scrape_website, save_blog_draft, social_post, etc.) and forces
+      // him to delegate to managers who coordinate specialists internally.
+      //
+      // For simple requests, Jasper keeps full tool access.
+      // ═════════════════════════════════════════════════════════════════════
+
+      // Commander-level tools: delegation + queries + admin + lead management
+      const COMMANDER_TOOL_NAMES = new Set([
+        // Department delegation (managers handle specialist coordination)
+        'delegate_to_intelligence',   // Research, scraping, competitor analysis, trends
+        'delegate_to_content',        // Blog, video, landing page copy, assets
+        'delegate_to_marketing',      // Social posts, email campaigns, SEO, ads
+        'delegate_to_sales',          // Lead qualification, pipeline, deal closing
+        'delegate_to_outreach',       // Email/SMS/voice outreach sequences
+        'delegate_to_builder',        // Website building
+        'delegate_to_architect',      // Site architecture
+        'delegate_to_trust',          // Reputation management
+        'delegate_to_commerce',       // E-commerce, payments
+        'delegate_to_agent',          // Generic agent delegation
+        // Simple data queries (no delegation needed)
+        'query_docs', 'get_platform_stats', 'get_system_state',
+        'get_analytics', 'generate_report', 'get_seo_config',
+        'list_avatars', 'get_video_status', 'list_users',
+        'list_organizations', 'get_organization', 'get_pricing_tiers',
+        'recall_conversation_history',
+        // Lead management (no manager for these yet — keep accessible)
+        'scan_leads', 'enrich_lead', 'score_leads',
+        // Campaign container (lightweight — just creates tracking record)
+        'create_campaign',
+        // Admin CRUD
+        'update_organization', 'provision_organization',
+        'create_coupon', 'update_coupon_status', 'update_pricing',
+        'update_user_role', 'inspect_agent_logs',
+      ]);
+
+      const COMMANDER_TOOLS = JASPER_TOOLS.filter(
+        t => COMMANDER_TOOL_NAMES.has(t.function.name)
+      );
+
+      // Use commander tools for complex requests, full tools for simple ones
+      const activeTools = isComplexRequest ? COMMANDER_TOOLS : JASPER_TOOLS;
+
+      logger.info('[Jasper] Tool set selected', {
+        mode: isComplexRequest ? 'commander (delegation only)' : 'full',
+        toolCount: activeTools.length,
+        totalAvailable: JASPER_TOOLS.length,
+      });
+
       const currentMessages = [...messages];
 
-      // Inject execution plan into the conversation so the model follows phase order
-      if (executionPlanPrompt) {
-        // Append to the system message (first message) if it exists
+      // For complex requests, inject delegation instructions
+      if (isComplexRequest) {
+        const delegationPrompt = `
+═══════════════════════════════════════════════════════════════════════════════
+COMMANDER MODE — DELEGATE TO DEPARTMENT MANAGERS
+═══════════════════════════════════════════════════════════════════════════════
+
+This is a complex multi-part request. You are a COMMANDER. You delegate to
+department managers — you do NOT do specialist work yourself.
+
+DELEGATION ORDER (follow this sequence):
+1. delegate_to_intelligence — for ALL research, scraping, competitor analysis,
+   trend discovery. Pass target URLs and topics in the "targets" parameter.
+   This manager coordinates scrapers, researchers, and analysts internally.
+   WAIT for intelligence results before proceeding to content.
+
+2. scan_leads + score_leads — for lead generation and scoring.
+   Can run in parallel with intelligence.
+
+3. delegate_to_content — for blog posts, video storyboards, landing page copy.
+   delegate_to_marketing — for social media posts, email campaigns.
+   These managers automatically read intelligence findings from the data vault.
+   Call them AFTER intelligence completes so they have research data.
+
+4. delegate_to_outreach — for personalized outreach emails/sequences.
+   Call AFTER leads are scored so it knows who to target.
+
+RULES:
+- Call delegate_to_intelligence FIRST for any research/scraping work.
+- WAIT for intelligence results before calling content/marketing managers.
+- Each manager coordinates their own specialists — you do NOT micromanage.
+- Provide a Mission Control link after delegating all departments.
+═══════════════════════════════════════════════════════════════════════════════`;
+
         const systemMsg = currentMessages.find(m => m.role === 'system');
         if (systemMsg && typeof systemMsg.content === 'string') {
-          systemMsg.content = `${systemMsg.content}\n\n${executionPlanPrompt}`;
+          systemMsg.content = `${systemMsg.content}\n\n${delegationPrompt}`;
         } else {
-          // Add as a system message at the start
-          currentMessages.unshift({ role: 'system', content: executionPlanPrompt });
+          currentMessages.unshift({ role: 'system', content: delegationPrompt });
         }
-        logger.info('[Jasper] Execution plan injected into system prompt');
       }
 
       let iterationCount = 0;
-      const maxIterations = 30; // Allow complex multi-tool requests — campaigns can chain many tools
+      const maxIterations = 30;
 
       while (iterationCount < maxIterations) {
         iterationCount++;
 
         // Force tool use on first iteration and after phase nudges.
-        // Jasper must ALWAYS delegate — he never answers from training data.
-        // Only pure conversational queries (greetings, yes/no, thanks) skip this.
         const isConversational = queryClassification.queryType === 'conversational';
-        // Check if the last message is a phase nudge (SYSTEM: Phase X is NOT complete)
         const lastMsg = currentMessages[currentMessages.length - 1];
         const wasNudged = typeof lastMsg?.content === 'string' && lastMsg.content.startsWith('SYSTEM: Phase');
         const shouldForceTools = (iterationCount === 1 && !isConversational) || wasNudged;
@@ -612,7 +654,7 @@ RULES:
           (m) => provider.chatWithTools({
             model: m as unknown as Parameters<typeof provider.chatWithTools>[0]['model'],
             messages: currentMessages,
-            tools: JASPER_TOOLS,
+            tools: activeTools,
             toolChoice: iterationToolChoice,
             temperature: 0.7,
             maxTokens: 4096,
