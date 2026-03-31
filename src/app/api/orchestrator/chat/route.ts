@@ -158,6 +158,16 @@ function isNetworkError(error: Error): boolean {
 }
 
 /**
+ * Check if error is a transient server error (502/503/429) — retry after delay.
+ * These are OpenRouter outages or rate limits, not permanent failures.
+ */
+function isTransientError(error: Error): boolean {
+  const parsed = parseOpenRouterError(error);
+  if (!parsed) { return false; }
+  return parsed.statusCode === 502 || parsed.statusCode === 503 || parsed.statusCode === 429;
+}
+
+/**
  * Try a chat request with model fallback on 404 errors and retry on network failures.
  *
  * Retry strategy:
@@ -167,6 +177,7 @@ function isNetworkError(error: Error): boolean {
  */
 const MAX_RETRIES = 2;
 const RETRY_DELAY_MS = 2000;
+const TRANSIENT_RETRY_DELAY_MS = 5000; // Longer delay for 502/503/429
 
 async function chatWithFallback<T>(
   modelsToTry: string[],
@@ -201,6 +212,17 @@ async function chatWithFallback<T>(
             error: err.message,
           });
           await new Promise<void>((resolve) => { setTimeout(resolve, RETRY_DELAY_MS); });
+          continue;
+        }
+
+        // Transient server errors (502/503/429): retry with longer delay
+        if (isTransientError(err) && attempt <= MAX_RETRIES) {
+          logger.info(`[Jasper] Transient error (${parsed?.statusCode}) on attempt ${attempt}/${MAX_RETRIES + 1}, retrying in ${TRANSIENT_RETRY_DELAY_MS}ms...`, {
+            model,
+            context,
+            error: err.message,
+          });
+          await new Promise<void>((resolve) => { setTimeout(resolve, TRANSIENT_RETRY_DELAY_MS); });
           continue;
         }
 
