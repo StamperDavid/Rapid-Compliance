@@ -167,8 +167,9 @@ const DEFAULT_VOICE_IDS = {
 // Only models with reliable tool calling (45+ tools) are listed here.
 // Gemini models were removed — they ignore tools via OpenRouter.
 const AVAILABLE_MODELS = {
-  'anthropic/claude-3.5-sonnet': 'Claude 3.5 Sonnet (Recommended)',
-  'anthropic/claude-3-haiku': 'Claude 3 Haiku (Fast)',
+  'anthropic/claude-sonnet-4': 'Claude Sonnet 4 (Recommended)',
+  'anthropic/claude-3.7-sonnet': 'Claude 3.7 Sonnet',
+  'anthropic/claude-3.5-sonnet': 'Claude 3.5 Sonnet',
   'openai/gpt-4-turbo': 'GPT-4 Turbo',
 };
 
@@ -373,7 +374,7 @@ export function OrchestratorBase({ config }: { config: OrchestratorConfig }) {
     ttsEngine: config.voiceSettings?.ttsEngine ?? 'elevenlabs',
     liveMode: config.voiceSettings?.liveMode ?? false,
   });
-  const [selectedModel, setSelectedModel] = useState(config.modelId ?? 'anthropic/claude-3.5-sonnet');
+  const [selectedModel, setSelectedModel] = useState(config.modelId ?? 'anthropic/claude-sonnet-4');
 
   // Audio playback hook
   const { playAudio, stopAudio, isPlaying } = useAudioPlayback();
