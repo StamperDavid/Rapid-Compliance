@@ -148,11 +148,18 @@ function trackMissionStep(
       activeStepIds.set(mapKey, stack);
     }
 
-    void updateMissionStep(context.missionId, stepId, {
-      status,
-      completedAt: new Date().toISOString(),
-      ...extras,
-    }).catch((err: unknown) => {
+    // Small delay to let the RUNNING write land in Firestore before updating.
+    // addMissionStep is fire-and-forget — without this delay, the update
+    // can arrive before the step exists, causing "Step not found" silently.
+    void (async () => {
+      await new Promise<void>(r => { setTimeout(r, 500); });
+      const mid = context.missionId ?? '';
+      await updateMissionStep(mid, stepId, {
+        status,
+        completedAt: new Date().toISOString(),
+        ...extras,
+      });
+    })().catch((err: unknown) => {
       logger.warn('[MissionTrack] Failed to update step', {
         missionId: context.missionId,
         error: err instanceof Error ? err.message : String(err),
@@ -3396,6 +3403,8 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
       // LEAD GENERATION & CRM TOOLS
       // ═══════════════════════════════════════════════════════════════════════
       case 'scan_leads': {
+        trackMissionStep(context, 'scan_leads', 'RUNNING', { toolArgs: args });
+        const scanLeadsStart = Date.now();
         try {
           const { apolloService } = await import('@/lib/integrations/apollo/apollo-service');
           const configured = await apolloService.isConfigured();
@@ -3524,16 +3533,26 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
             savedCount: savedLeadIds.length,
             companies,
           });
+          trackMissionStep(context, 'scan_leads', 'COMPLETED', {
+            summary: `Scanned ${companies.length} companies (${savedLeadIds.length} saved to CRM)`,
+            durationMs: Date.now() - scanLeadsStart,
+          });
         } catch (err) {
           content = JSON.stringify({
             status: 'error',
             message: err instanceof Error ? err.message : 'Lead scan failed',
+          });
+          trackMissionStep(context, 'scan_leads', 'FAILED', {
+            error: err instanceof Error ? err.message : 'Lead scan failed',
+            durationMs: Date.now() - scanLeadsStart,
           });
         }
         break;
       }
 
       case 'enrich_lead': {
+        trackMissionStep(context, 'enrich_lead', 'RUNNING', { toolArgs: args });
+        const enrichStart = Date.now();
         try {
           const { apolloService, toEnrichmentData } = await import('@/lib/integrations/apollo/apollo-service');
           const configured = await apolloService.isConfigured();
@@ -3613,16 +3632,26 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
             creditsUsed: totalCredits,
             enrichedFields,
           });
+          trackMissionStep(context, 'enrich_lead', 'COMPLETED', {
+            summary: `Lead ${leadId} enriched (${Object.keys(enrichedFields).length} fields)`,
+            durationMs: Date.now() - enrichStart,
+          });
         } catch (err) {
           content = JSON.stringify({
             status: 'error',
             message: err instanceof Error ? err.message : 'Enrichment failed',
+          });
+          trackMissionStep(context, 'enrich_lead', 'FAILED', {
+            error: err instanceof Error ? err.message : 'Enrichment failed',
+            durationMs: Date.now() - enrichStart,
           });
         }
         break;
       }
 
       case 'score_leads': {
+        trackMissionStep(context, 'score_leads', 'RUNNING', { toolArgs: args });
+        const scoreStart = Date.now();
         try {
           const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
           const { getSubCollection } = await import('@/lib/firebase/collections');
@@ -3713,10 +3742,18 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
             averageScore,
             topLeads,
           });
+          trackMissionStep(context, 'score_leads', 'COMPLETED', {
+            summary: `Scored ${scored.length} leads (avg: ${averageScore})`,
+            durationMs: Date.now() - scoreStart,
+          });
         } catch (err) {
           content = JSON.stringify({
             status: 'error',
             message: err instanceof Error ? err.message : 'Lead scoring failed',
+          });
+          trackMissionStep(context, 'score_leads', 'FAILED', {
+            error: err instanceof Error ? err.message : 'Lead scoring failed',
+            durationMs: Date.now() - scoreStart,
           });
         }
         break;
