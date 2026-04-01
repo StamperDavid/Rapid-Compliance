@@ -60,14 +60,12 @@ export interface ToolCallContext {
 }
 
 /**
- * Maps `${missionId}:${toolName}` → stepId so COMPLETED/FAILED updates
- * can find the step that was created during the RUNNING call.
- *
- * Entries are deleted on COMPLETED/FAILED. As a safety net against leaks
- * from orphaned RUNNING steps (e.g., tool crash/timeout), we store creation
- * timestamps and evict entries older than 30 minutes.
+ * Maps `${missionId}:${toolName}` → stepId STACK so the same tool called
+ * multiple times (e.g., delegate_to_content x2) doesn't overwrite entries.
+ * Uses a stack (array) so the most recent RUNNING step is matched to the
+ * next COMPLETED/FAILED call (LIFO order).
  */
-const activeStepIds = new Map<string, string>();
+const activeStepIds = new Map<string, string[]>();
 const activeStepTimestamps = new Map<string, number>();
 const STEP_TTL_MS = 30 * 60 * 1000; // 30 minutes
 
@@ -83,11 +81,17 @@ function evictStaleSteps(): void {
 }
 
 /**
- * Fire-and-forget mission step tracking. Never throws, never blocks Jasper.
+ * Mission step tracking. Awaits the RUNNING write to prevent race conditions
+ * where COMPLETED fires before RUNNING has landed in Firestore.
  *
- * When status='RUNNING', creates a new step and stores the stepId.
+ * When status='RUNNING', creates a new step, stores stepId, returns the stepId.
  * When status='COMPLETED'/'FAILED'/etc., looks up the stored stepId to update.
+ *
+ * Uses a unique callId (not just toolName) to handle the same tool being called
+ * multiple times in one mission (e.g., delegate_to_content called twice).
  */
+let stepCallCounter = 0;
+
 function trackMissionStep(
   context: ToolCallContext | undefined,
   toolName: string,
@@ -98,18 +102,26 @@ function trackMissionStep(
     error?: string;
     toolArgs?: Record<string, unknown>;
     toolResult?: string;
+    callId?: string; // Unique ID per tool invocation — pass the same callId for RUNNING and COMPLETED
   }
 ): void {
   if (!context?.missionId) { return; }
 
-  const mapKey = `${context.missionId}:${toolName}`;
+  // Use callId if provided, otherwise fall back to toolName (backwards compat)
+  const mapKey = extras?.callId
+    ? `${context.missionId}:${extras.callId}`
+    : `${context.missionId}:${toolName}`;
 
   // Periodically evict orphaned steps to prevent memory leaks
   evictStaleSteps();
 
   if (status === 'RUNNING') {
-    const stepId = `step_${toolName}_${Date.now()}`;
-    activeStepIds.set(mapKey, stepId);
+    stepCallCounter++;
+    const stepId = `step_${toolName}_${Date.now()}_${stepCallCounter}`;
+    // Push to stack — supports same tool called multiple times
+    const stack = activeStepIds.get(mapKey) ?? [];
+    stack.push(stepId);
+    activeStepIds.set(mapKey, stack);
     activeStepTimestamps.set(mapKey, Date.now());
 
     void addMissionStep(context.missionId, {
@@ -126,9 +138,15 @@ function trackMissionStep(
       });
     });
   } else {
-    const stepId = activeStepIds.get(mapKey) ?? `step_${toolName}_${Date.now()}`;
-    activeStepIds.delete(mapKey);
-    activeStepTimestamps.delete(mapKey);
+    // Pop from stack — matches COMPLETED to the oldest RUNNING step (FIFO)
+    const stack = activeStepIds.get(mapKey) ?? [];
+    const stepId = stack.shift() ?? `step_${toolName}_${Date.now()}`;
+    if (stack.length === 0) {
+      activeStepIds.delete(mapKey);
+      activeStepTimestamps.delete(mapKey);
+    } else {
+      activeStepIds.set(mapKey, stack);
+    }
 
     void updateMissionStep(context.missionId, stepId, {
       status,
