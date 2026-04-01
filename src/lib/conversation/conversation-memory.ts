@@ -24,6 +24,12 @@
 
 import { logger } from '@/lib/logger/logger';
 import { getSubCollection } from '@/lib/firebase/collections';
+import { adminDb } from '@/lib/firebase/admin';
+
+function getDb() {
+  if (!adminDb) {throw new Error('Firebase Admin not initialized');}
+  return adminDb;
+}
 
 // ============================================================================
 // TYPES
@@ -196,68 +202,57 @@ class ConversationMemoryService {
    */
   private async getVoiceInteractions(query: InteractionQuery): Promise<CustomerInteraction[]> {
     try {
-      const { FirestoreService } = await import('@/lib/db/firestore-service');
-      const { where, orderBy, limit: limitFn } = await import('firebase/firestore');
-      const { getSubCollection } = await import('@/lib/firebase/collections');
-
       const interactions: CustomerInteraction[] = [];
 
-      // Query conversations collection for voice records
-      const constraints = [];
-      constraints.push(where('channel', '==', 'voice'));
+      // Query conversations collection for voice records via adminDb
+      let voiceQuery = getDb().collection(getSubCollection('conversations'))
+        .where('channel', '==', 'voice');
 
       if (query.phone) {
-        constraints.push(where('customerPhone', '==', query.phone));
+        voiceQuery = voiceQuery.where('customerPhone', '==', query.phone);
       }
 
-      constraints.push(orderBy('createdAt', 'desc'));
-      constraints.push(limitFn(query.limit ?? 50));
+      const voiceSnap = await voiceQuery
+        .orderBy('createdAt', 'desc')
+        .limit(query.limit ?? 50)
+        .get();
 
-      const voiceConversations = await FirestoreService.getAll<Record<string, unknown>>(
-        getSubCollection('conversations'),
-        constraints
-      );
-
-      for (const conv of voiceConversations) {
+      for (const doc of voiceSnap.docs) {
+        const conv = doc.data();
         interactions.push({
-          id: conv['id'] as string,
+          id: doc.id,
           channel: 'voice',
-          timestamp: (conv['createdAt'] as string) ?? '',
-          endedAt: conv['endedAt'] as string | undefined,
-          durationSeconds: conv['duration'] as number | undefined,
-          customerPhone: conv['customerPhone'] as string | undefined,
-          customerName: conv['customerName'] as string | undefined,
-          customerEmail: conv['customerEmail'] as string | undefined,
-          leadId: conv['leadId'] as string | undefined,
-          transcript: conv['transcript'] as string | undefined,
-          summary: conv['title'] as string | undefined,
-          sentiment: conv['sentiment'] as CustomerInteraction['sentiment'],
-          qualificationScore: conv['qualificationScore'] as number | undefined,
-          objectionCount: conv['objectionCount'] as number | undefined,
-          buyingSignals: conv['buyingSignals'] as string[] | undefined,
-          outcome: conv['status'] as string | undefined,
-          messageCount: conv['turnCount'] as number | undefined,
+          timestamp: (conv.createdAt as string) ?? '',
+          endedAt: conv.endedAt as string | undefined,
+          durationSeconds: conv.duration as number | undefined,
+          customerPhone: conv.customerPhone as string | undefined,
+          customerName: conv.customerName as string | undefined,
+          customerEmail: conv.customerEmail as string | undefined,
+          leadId: conv.leadId as string | undefined,
+          transcript: conv.transcript as string | undefined,
+          summary: conv.title as string | undefined,
+          sentiment: conv.sentiment as CustomerInteraction['sentiment'],
+          qualificationScore: conv.qualificationScore as number | undefined,
+          objectionCount: conv.objectionCount as number | undefined,
+          buyingSignals: conv.buyingSignals as string[] | undefined,
+          outcome: conv.status as string | undefined,
+          messageCount: conv.turnCount as number | undefined,
           sourceCollection: 'conversations',
-          sourceId: conv['id'] as string,
+          sourceId: doc.id,
         });
       }
 
       // Also query callContexts for legacy/transfer records
       if (query.phone) {
-        const callConstraints = [
-          where('customerPhone', '==', query.phone),
-          orderBy('updatedAt', 'desc'),
-          limitFn(query.limit ?? 20),
-        ];
+        const callSnap = await getDb().collection(getSubCollection('callContexts'))
+          .where('customerPhone', '==', query.phone)
+          .orderBy('updatedAt', 'desc')
+          .limit(query.limit ?? 20)
+          .get();
 
-        const callContexts = await FirestoreService.getAll<Record<string, unknown>>(
-          getSubCollection('callContexts'),
-          callConstraints
-        );
-
-        for (const ctx of callContexts) {
-          const callId = ctx['callId'] as string;
-          // Skip if already captured via conversations collection
+        for (const doc of callSnap.docs) {
+          const ctx = doc.data();
+          const callId = ctx.callId as string;
           if (interactions.some(i => i.id === `voice-${callId}`)) {
             continue;
           }
@@ -265,17 +260,17 @@ class ConversationMemoryService {
           interactions.push({
             id: `callctx-${callId}`,
             channel: 'voice',
-            timestamp: (ctx['createdAt'] as string) ?? (ctx['updatedAt'] as string) ?? '',
-            endedAt: ctx['endedAt'] as string | undefined,
-            durationSeconds: ctx['callDuration'] as number | undefined,
-            customerPhone: ctx['customerPhone'] as string | undefined,
-            customerName: ctx['customerName'] as string | undefined,
-            sentiment: ctx['sentiment'] as CustomerInteraction['sentiment'],
-            qualificationScore: ctx['qualificationScore'] as number | undefined,
-            objectionCount: ctx['objectionCount'] as number | undefined,
-            buyingSignals: ctx['buyingSignals'] as string[] | undefined,
-            outcome: ctx['state'] as string | undefined,
-            messageCount: ctx['totalTurns'] as number | undefined,
+            timestamp: (ctx.createdAt as string) ?? (ctx.updatedAt as string) ?? '',
+            endedAt: ctx.endedAt as string | undefined,
+            durationSeconds: ctx.callDuration as number | undefined,
+            customerPhone: ctx.customerPhone as string | undefined,
+            customerName: ctx.customerName as string | undefined,
+            sentiment: ctx.sentiment as CustomerInteraction['sentiment'],
+            qualificationScore: ctx.qualificationScore as number | undefined,
+            objectionCount: ctx.objectionCount as number | undefined,
+            buyingSignals: ctx.buyingSignals as string[] | undefined,
+            outcome: ctx.state as string | undefined,
+            messageCount: ctx.totalTurns as number | undefined,
             sourceCollection: 'callContexts',
             sourceId: callId,
           });
@@ -294,48 +289,43 @@ class ConversationMemoryService {
    */
   private async getChatInteractions(query: InteractionQuery): Promise<CustomerInteraction[]> {
     try {
-      const { FirestoreService } = await import('@/lib/db/firestore-service');
-      const { where, orderBy, limit: limitFn } = await import('firebase/firestore');
-
-      const constraints = [];
+      const collectionPath = getSubCollection('chatSessions');
+      let chatQuery: FirebaseFirestore.Query = getDb().collection(collectionPath);
 
       if (query.email) {
-        constraints.push(where('customerEmail', '==', query.email));
+        chatQuery = chatQuery.where('customerEmail', '==', query.email);
       } else if (query.customerId) {
-        constraints.push(where('customerId', '==', query.customerId));
+        chatQuery = chatQuery.where('customerId', '==', query.customerId);
       } else if (query.phone) {
-        // Chat sessions don't have phone — skip if phone-only query
+        return [];
+      } else {
         return [];
       }
 
-      if (constraints.length === 0) {
-        return [];
-      } // Need at least one identifier
+      const snap = await chatQuery
+        .orderBy('startedAt', 'desc')
+        .limit(query.limit ?? 50)
+        .get();
 
-      constraints.push(orderBy('startedAt', 'desc'));
-      constraints.push(limitFn(query.limit ?? 50));
-
-      const sessions = await FirestoreService.getAll<Record<string, unknown>>(
-        getSubCollection('chatSessions'),
-        constraints
-      );
-
-      return sessions.map(session => ({
-        id: `chat-${session['id'] as string}`,
-        channel: 'chat' as ConversationChannel,
-        timestamp: (session['startedAt'] as string) ?? '',
-        endedAt: session['completedAt'] as string | undefined,
-        customerEmail: session['customerEmail'] as string | undefined,
-        customerName: session['customerName'] as string | undefined,
-        customerId: session['customerId'] as string | undefined,
-        summary: session['lastMessage'] as string | undefined,
-        messageCount: session['messageCount'] as number | undefined,
-        lastMessage: session['lastMessage'] as string | undefined,
-        sentiment: this.mapChatSentiment(session['sentiment'] as string),
-        outcome: session['status'] as string | undefined,
-        sourceCollection: 'chatSessions',
-        sourceId: session['id'] as string,
-      }));
+      return snap.docs.map(doc => {
+        const session = doc.data();
+        return {
+          id: `chat-${doc.id}`,
+          channel: 'chat' as ConversationChannel,
+          timestamp: (session.startedAt as string) ?? '',
+          endedAt: session.completedAt as string | undefined,
+          customerEmail: session.customerEmail as string | undefined,
+          customerName: session.customerName as string | undefined,
+          customerId: session.customerId as string | undefined,
+          summary: session.lastMessage as string | undefined,
+          messageCount: session.messageCount as number | undefined,
+          lastMessage: session.lastMessage as string | undefined,
+          sentiment: this.mapChatSentiment(session.sentiment as string),
+          outcome: session.status as string | undefined,
+          sourceCollection: 'chatSessions',
+          sourceId: doc.id,
+        };
+      });
     } catch (error) {
       logger.error('[ConversationMemory] Chat query failed:', error instanceof Error ? error : new Error(String(error)), { file: 'conversation-memory.ts' });
       return [];
@@ -347,35 +337,30 @@ class ConversationMemoryService {
    */
   private async getSmsInteractions(query: InteractionQuery): Promise<CustomerInteraction[]> {
     try {
-      const { FirestoreService } = await import('@/lib/db/firestore-service');
-      const { where, orderBy, limit: limitFn } = await import('firebase/firestore');
-
       if (!query.phone) {
         return [];
-      } // SMS requires phone number
+      }
 
-      const constraints = [
-        where('to', '==', query.phone),
-        orderBy('sentAt', 'desc'),
-        limitFn(query.limit ?? 50),
-      ];
+      const snap = await getDb().collection(getSubCollection('smsMessages'))
+        .where('to', '==', query.phone)
+        .orderBy('sentAt', 'desc')
+        .limit(query.limit ?? 50)
+        .get();
 
-      const messages = await FirestoreService.getAll<Record<string, unknown>>(
-        getSubCollection('smsMessages'),
-        constraints
-      );
-
-      return messages.map(msg => ({
-        id: `sms-${msg['messageId'] as string}`,
-        channel: 'sms' as ConversationChannel,
-        timestamp: (msg['sentAt'] as string) ?? '',
-        customerPhone: msg['to'] as string | undefined,
-        lastMessage: msg['message'] as string | undefined,
-        summary: msg['message'] as string | undefined,
-        outcome: msg['status'] as string | undefined,
-        sourceCollection: 'smsMessages',
-        sourceId: msg['messageId'] as string,
-      }));
+      return snap.docs.map(doc => {
+        const msg = doc.data();
+        return {
+          id: `sms-${msg.messageId as string}`,
+          channel: 'sms' as ConversationChannel,
+          timestamp: (msg.sentAt as string) ?? '',
+          customerPhone: msg.to as string | undefined,
+          lastMessage: msg.message as string | undefined,
+          summary: msg.message as string | undefined,
+          outcome: msg.status as string | undefined,
+          sourceCollection: 'smsMessages',
+          sourceId: msg.messageId as string,
+        };
+      });
     } catch (error) {
       logger.error('[ConversationMemory] SMS query failed:', error instanceof Error ? error : new Error(String(error)), { file: 'conversation-memory.ts' });
       return [];
@@ -396,25 +381,17 @@ class ConversationMemoryService {
     }
 
     try {
-      const { FirestoreService } = await import('@/lib/db/firestore-service');
-      const { getSubCollection } = await import('@/lib/firebase/collections');
+      const analysesPath = getSubCollection('conversationAnalyses');
 
-      // Batch get analyses (Firestore allows up to 10 in 'in' queries)
-      const batchSize = 10;
-      for (let i = 0; i < sourceIds.length; i += batchSize) {
-        const batch = sourceIds.slice(i, i + batchSize);
-        for (const id of batch) {
-          try {
-            const analysis = await FirestoreService.get(
-              getSubCollection('conversationAnalyses'),
-              id
-            );
-            if (analysis) {
-              analysisMap.set(id, analysis as Record<string, unknown>);
-            }
-          } catch {
-            // Skip missing analyses
+      // Batch get analyses
+      for (const id of sourceIds) {
+        try {
+          const doc = await getDb().collection(analysesPath).doc(id).get();
+          if (doc.exists) {
+            analysisMap.set(id, doc.data() as Record<string, unknown>);
           }
+        } catch {
+          // Skip missing analyses
         }
       }
     } catch (error) {

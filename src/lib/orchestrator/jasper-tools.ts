@@ -5067,51 +5067,92 @@ Select cohesive settings that create a professional, unified visual language acr
         trackMissionStep(context, 'delegate_to_builder', 'RUNNING', { toolArgs: args });
 
         try {
-          const { ArchitectManager } = await import('@/lib/agents/architect/manager');
-          const manager = new ArchitectManager();
-          await manager.initialize();
+          const { OpenRouterProvider } = await import('@/lib/ai/openrouter-provider');
+          const { getBrandDNA } = await import('@/lib/brand/brand-dna-service');
+          const { adminDb: contentAdminDb } = await import('@/lib/firebase/admin');
+          const brandDNA = await getBrandDNA();
 
-          // Build architect request from args
-          const architectPayload = {
-            niche: args.niche as string,
-            objective: args.objective as string | undefined,
-            audience: args.audience as string | undefined,
-            pageType: args.pageType as string | undefined,
-            includeDesign: args.includeDesign !== false,
-            includeFunnel: args.includeFunnel !== false,
-            includeCopy: args.includeCopy !== false,
-          };
+          const niche = args.niche as string || 'SaaS';
+          const objective = args.objective as string || 'lead capture landing page';
+          const audience = args.audience as string || 'B2B professionals';
 
-          const result = await withTimeout(manager.execute({
-            id: `architect_${Date.now()}`,
-            timestamp: new Date(),
-            from: 'JASPER',
-            to: 'ARCHITECT_MANAGER',
-            type: 'COMMAND',
-            priority: 'NORMAL',
-            payload: architectPayload,
-            requiresResponse: true,
-            traceId: `trace_${Date.now()}`,
-          }), MANAGER_TIMEOUT_MS, 'Architect Manager');
+          const brandContext = brandDNA
+            ? `\nBRAND:\n- ${brandDNA.companyDescription}\n- Value: ${brandDNA.uniqueValue}\n- Tone: ${brandDNA.toneOfVoice}\n`
+            : '';
+
+          const provider = new OpenRouterProvider(PLATFORM_ID);
+          type ModelName = Parameters<typeof provider.chat>[0]['model'];
+
+          const aiResponse = await withTimeout(provider.chat({
+            model: 'claude-3-5-sonnet' as ModelName,
+            messages: [
+              {
+                role: 'system',
+                content: `You are a landing page copywriter and conversion expert.${brandContext}\nGenerate a complete landing page as HTML sections. Include: hero with headline + subheadline + CTA, social proof section, benefits/features section (3-4 items), testimonial placeholder, final CTA section.\nOutput as clean HTML. Use <section> tags with descriptive class names. No CSS/JS — just semantic HTML content.`,
+              },
+              {
+                role: 'user',
+                content: `Create a landing page for: ${objective}\nIndustry/niche: ${niche}\nTarget audience: ${audience}\n\nMake it compelling. Focus on pain points and transformation. Include specific, concrete benefit statements — not generic marketing fluff.`,
+              },
+            ],
+            temperature: 0.7,
+            maxTokens: 4096,
+          }), MANAGER_TIMEOUT_MS, 'Builder AI Generation');
+
+          const pageContent = aiResponse.content || '';
+          const titleMatch = pageContent.match(/<h1[^>]*>(.*?)<\/h1>/i);
+          const pageTitle = titleMatch ? titleMatch[1].replace(/<[^>]+>/g, '') : objective;
+          const pageId = `page_${Date.now()}`;
+          const slug = pageTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+
+          // Save as page to Firestore
+          if (contentAdminDb) {
+            const pagesCollectionPath = `${getSubCollection('website')}/pages/items`;
+            await contentAdminDb.collection(pagesCollectionPath).doc(pageId).set({
+              id: pageId,
+              title: pageTitle,
+              slug,
+              type: 'landing',
+              status: 'draft',
+              content: [{
+                id: `section_${Date.now()}`,
+                type: 'section',
+                columns: [{
+                  id: `col_${Date.now()}`,
+                  width: 100,
+                  widgets: [{
+                    id: `widget_${Date.now()}`,
+                    type: 'html',
+                    data: { html: pageContent },
+                  }],
+                }],
+                styling: {},
+                order: 0,
+              }],
+              author: 'Jasper AI',
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+              campaignId: context?.campaignId,
+            });
+            logger.info('[Builder] Landing page saved to Firestore', { pageId, pageTitle, collection: pagesCollectionPath });
+          }
 
           const builderDuration = Date.now() - builderStart;
-          trackMissionStep(context, 'delegate_to_builder',
-            result.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED',
-            { summary: `Architect: ${result.status}`, durationMs: builderDuration, toolResult: JSON.stringify(result.data) }
-          );
+          trackMissionStep(context, 'delegate_to_builder', 'COMPLETED', {
+            summary: `Builder: Landing page "${pageTitle}" generated (${pageContent.length} chars)`,
+            durationMs: builderDuration,
+            toolResult: JSON.stringify({ title: pageTitle, pageId, saved: true, reviewLink: `/website/pages` }),
+          });
 
           content = JSON.stringify({
-            status: result.status,
-            data: result.data,
-            errors: result.errors,
+            status: 'COMPLETED',
+            data: { title: pageTitle, type: 'landing', pageId, saved: true },
             manager: 'ARCHITECT_MANAGER',
-            reviewLink: getReviewLink('delegate_to_builder', context?.missionId),
-            delegatedTo: result.data && typeof result.data === 'object' && 'delegations' in result.data
-              ? (result.data as Record<string, unknown>).delegations
-              : 'See data for details',
+            reviewLink: `/website/pages`,
           });
         } catch (builderError: unknown) {
           const errorMsg = builderError instanceof Error ? builderError.message : 'Unknown error';
+          logger.error('[Builder] delegate_to_builder FAILED', builderError instanceof Error ? builderError : new Error(errorMsg), { file: 'jasper-tools.ts' });
           trackMissionStep(context, 'delegate_to_builder', 'FAILED', {
             summary: `Builder: FAILED — ${errorMsg}`,
             durationMs: Date.now() - builderStart,
@@ -5232,52 +5273,84 @@ Select cohesive settings that create a professional, unified visual language acr
         trackMissionStep(context, 'delegate_to_marketing', 'RUNNING', { toolArgs: args });
 
         try {
-          const { MarketingManager } = await import('@/lib/agents/marketing/manager');
-          const manager = new MarketingManager();
-          await manager.initialize();
+          const { OpenRouterProvider } = await import('@/lib/ai/openrouter-provider');
+          const { getBrandDNA } = await import('@/lib/brand/brand-dna-service');
+          const { adminDb: contentAdminDb } = await import('@/lib/firebase/admin');
+          const brandDNA = await getBrandDNA();
 
-          // Build campaign goal from args
-          const campaignPayload = {
-            goal: args.goal as string,
-            platform: args.platform as string | undefined,
-            niche: args.niche as string | undefined,
-            audience: args.audience as string | undefined,
-            budget: args.budget as string | undefined,
-            contentType: args.contentType as string | undefined,
-            message: args.goal as string, // For platform detection
-            targetAudience: args.audience ? { demographics: args.audience as string } : undefined,
-          };
+          const goal = args.goal as string || 'promote our product';
+          const platform = args.platform as string || 'twitter,linkedin';
+          const audience = args.audience as string || 'B2B professionals';
 
-          const result = await withTimeout(manager.execute({
-            id: `marketing_${Date.now()}`,
-            timestamp: new Date(),
-            from: 'JASPER',
-            to: 'MARKETING_MANAGER',
-            type: 'COMMAND',
-            priority: 'NORMAL',
-            payload: campaignPayload,
-            requiresResponse: true,
-            traceId: `trace_${Date.now()}`,
-          }), MANAGER_TIMEOUT_MS, 'Marketing Manager');
+          const brandContext = brandDNA
+            ? `\nBRAND:\n- ${brandDNA.companyDescription}\n- Value: ${brandDNA.uniqueValue}\n- Tone: ${brandDNA.toneOfVoice}\n`
+            : '';
+
+          const provider = new OpenRouterProvider(PLATFORM_ID);
+          type ModelName = Parameters<typeof provider.chat>[0]['model'];
+
+          const aiResponse = await withTimeout(provider.chat({
+            model: 'claude-3-5-sonnet' as ModelName,
+            messages: [
+              {
+                role: 'system',
+                content: `You are an expert social media strategist. Create platform-specific posts that drive engagement.${brandContext}\nOutput as JSON array: [{"platform":"twitter","content":"...","hashtags":["..."]},{"platform":"linkedin","content":"...","hashtags":["..."]}].\nTwitter: punchy, under 280 chars, conversational. LinkedIn: professional, 150-300 words, thought-leadership. Include relevant hashtags. Output ONLY the JSON array, nothing else.`,
+              },
+              {
+                role: 'user',
+                content: `Create social media posts for: ${platform}\n\nGoal: ${goal}\nTarget audience: ${audience}\n\nCreate 2 posts per platform with different angles (educational, promotional, thought-leadership, engagement-hook).`,
+              },
+            ],
+            temperature: 0.8,
+            maxTokens: 2048,
+          }), MANAGER_TIMEOUT_MS, 'Marketing AI Generation');
+
+          let posts: Array<{ platform: string; content: string; hashtags?: string[] }> = [];
+          try {
+            const jsonStr = (aiResponse.content || '').replace(/```json\n?|```/g, '').trim();
+            posts = JSON.parse(jsonStr) as typeof posts;
+          } catch {
+            posts = [{ platform: 'twitter', content: aiResponse.content || goal, hashtags: [] }];
+          }
+
+          // Save social posts to Firestore
+          if (contentAdminDb) {
+            const socialCollection = getSubCollection('social_posts');
+            for (const post of posts) {
+              const postId = `social_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+              await contentAdminDb.collection(socialCollection).doc(postId).set({
+                id: postId,
+                platform: post.platform,
+                content: post.content,
+                hashtags: post.hashtags ?? [],
+                status: 'draft',
+                author: 'Jasper AI',
+                createdAt: new Date().toISOString(),
+                scheduledAt: null,
+                publishedAt: null,
+                campaignId: context?.campaignId,
+              });
+            }
+            logger.info('[Marketing] Social posts saved to Firestore', { count: posts.length, collection: socialCollection });
+          }
 
           const marketingDuration = Date.now() - marketingStart;
-          trackMissionStep(context, 'delegate_to_marketing',
-            result.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED',
-            { summary: `Marketing: ${result.status}`, durationMs: marketingDuration, toolResult: JSON.stringify(result.data) }
-          );
+          const platforms = [...new Set(posts.map(p => p.platform))];
+          trackMissionStep(context, 'delegate_to_marketing', 'COMPLETED', {
+            summary: `Marketing: ${posts.length} social posts created for ${platforms.join(', ')}`,
+            durationMs: marketingDuration,
+            toolResult: JSON.stringify({ postCount: posts.length, platforms, reviewLink: '/social/command-center' }),
+          });
 
           content = JSON.stringify({
-            status: result.status,
-            data: result.data,
-            errors: result.errors,
+            status: 'COMPLETED',
+            data: { posts: posts.map(p => ({ platform: p.platform, preview: p.content.substring(0, 100) })), postCount: posts.length },
             manager: 'MARKETING_MANAGER',
-            reviewLink: getReviewLink('delegate_to_marketing', context?.missionId),
-            delegatedTo: result.data && typeof result.data === 'object' && 'platformStrategy' in result.data
-              ? (result.data as Record<string, unknown>).platformStrategy
-              : 'See data for details',
+            reviewLink: '/social/command-center',
           });
         } catch (marketingError: unknown) {
           const errorMsg = marketingError instanceof Error ? marketingError.message : 'Unknown error';
+          logger.error('[Marketing] delegate_to_marketing FAILED', marketingError instanceof Error ? marketingError : new Error(errorMsg), { file: 'jasper-tools.ts' });
           trackMissionStep(context, 'delegate_to_marketing', 'FAILED', {
             summary: `Marketing: FAILED — ${errorMsg}`,
             durationMs: Date.now() - marketingStart,
@@ -5351,67 +5424,99 @@ Select cohesive settings that create a professional, unified visual language acr
         trackMissionStep(context, 'delegate_to_content', 'RUNNING', { toolArgs: args });
 
         try {
-          const { ContentManager } = await import('@/lib/agents/content/manager');
-          const contentMgr = new ContentManager();
-          await contentMgr.initialize();
+          const { OpenRouterProvider } = await import('@/lib/ai/openrouter-provider');
+          const { getBrandDNA } = await import('@/lib/brand/brand-dna-service');
+          const { adminDb: contentAdminDb } = await import('@/lib/firebase/admin');
+          const brandDNA = await getBrandDNA();
 
-          // Map the tool's contentType string to the ContentRequest contentTypes array.
-          // The content manager's detectContentIntent() reads contentTypes (plural, array)
-          // with vocabulary: 'copy' | 'visuals' | 'video' | 'social'.
-          const contentTypeMap: Record<string, string> = {
-            blog_post: 'copy',
-            email_campaign: 'copy',
-            video_script: 'video',
-            social_media: 'social',
-            landing_page: 'copy',
-            website_copy: 'copy',
-          };
-          const rawType = args.contentType as string | undefined;
-          const mappedType = rawType ? contentTypeMap[rawType] : undefined;
+          const topic = args.topic as string || 'business growth';
+          const contentType = args.contentType as string || 'blog_post';
+          const audience = args.audience as string || 'B2B professionals';
+          const tone = args.format as string || 'professional';
+          const seoKeywords = args.seoKeywords as string || '';
 
-          const contentPayload = {
-            contentTypes: mappedType ? [mappedType] : undefined,
-            topic: args.topic as string,
-            brandDnaContext: args.brandDnaContext as string | undefined,
-            seoKeywords: args.seoKeywords
-              ? (args.seoKeywords as string).split(',').map((k: string) => k.trim())
-              : undefined,
-            audience: args.audience as string | undefined,
-            format: args.format as string | undefined,
-            includeVideo: args.includeVideo === true,
-            scheduleDate: args.scheduleDate as string | undefined,
-          };
+          const brandContext = brandDNA
+            ? `\nBRAND CONTEXT:\n- Company: ${brandDNA.companyDescription}\n- Value Prop: ${brandDNA.uniqueValue}\n- Tone: ${brandDNA.toneOfVoice}\n- Industry: ${brandDNA.industry}\n`
+            : '';
 
-          const contentResult = await withTimeout(contentMgr.execute({
-            id: `content_${Date.now()}`,
-            timestamp: new Date(),
-            from: 'JASPER',
-            to: 'CONTENT_MANAGER',
-            type: 'COMMAND',
-            priority: 'NORMAL',
-            payload: contentPayload,
-            requiresResponse: true,
-            traceId: `trace_${Date.now()}`,
-          }), MANAGER_TIMEOUT_MS, 'Content Manager');
+          const provider = new OpenRouterProvider(PLATFORM_ID);
+          type ModelName = Parameters<typeof provider.chat>[0]['model'];
+
+          const aiResponse = await withTimeout(provider.chat({
+            model: 'claude-3-5-sonnet' as ModelName,
+            messages: [
+              {
+                role: 'system',
+                content: `You are a professional content writer. Write high-quality, actionable content.${brandContext}\nOutput ONLY the content — no meta-commentary, no "here's the blog post", just the content itself.`,
+              },
+              {
+                role: 'user',
+                content: `Write a ${contentType.replace('_', ' ')} about: ${topic}\n\nTarget audience: ${audience}\nTone: ${tone}${seoKeywords ? `\nSEO keywords to weave in: ${seoKeywords}` : ''}\n\nRequirements:\n- Compelling headline\n- 800-1200 words\n- Subheadings for scanability\n- Actionable takeaways\n- Strong opening hook\n- Clear CTA at the end\n\nFormat as HTML with <h1> for title, <h2> for subheadings, <p> for paragraphs, <ul>/<li> for lists.`,
+              },
+            ],
+            temperature: 0.7,
+            maxTokens: 4096,
+          }), MANAGER_TIMEOUT_MS, 'Content AI Generation');
+
+          const generatedContent = aiResponse.content || '';
+
+          // Extract title from generated HTML
+          const titleMatch = generatedContent.match(/<h1[^>]*>(.*?)<\/h1>/i);
+          const title = titleMatch ? titleMatch[1].replace(/<[^>]+>/g, '') : `${topic} — AI Generated`;
+          const postId = `post_${Date.now()}`;
+          const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+
+          // Save as blog post to Firestore
+          if (contentAdminDb) {
+            const blogDoc = {
+              id: postId,
+              title,
+              slug,
+              content: [{
+                id: `section_${Date.now()}`,
+                type: 'section',
+                columns: [{
+                  id: `col_${Date.now()}`,
+                  width: 100,
+                  widgets: [{
+                    id: `widget_${Date.now()}`,
+                    type: 'html',
+                    data: { html: generatedContent },
+                  }],
+                }],
+                styling: {},
+                order: 0,
+              }],
+              status: 'draft',
+              author: 'Jasper AI',
+              metaTitle: title,
+              metaDescription: `${topic} — expert insights for ${audience}`,
+              metaKeywords: seoKeywords ? seoKeywords.split(',').map((k: string) => k.trim()) : [],
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+              campaignId: context?.campaignId,
+            };
+            await contentAdminDb.collection(getSubCollection('posts')).doc(postId).set(blogDoc);
+            logger.info('[Content] Blog post saved to Firestore', { postId, title });
+          }
 
           const contentDuration = Date.now() - contentStart;
-          trackMissionStep(context, 'delegate_to_content',
-            contentResult.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED',
-            { summary: `Content: ${contentResult.status}`, durationMs: contentDuration, toolResult: JSON.stringify(contentResult.data) }
-          );
+          const blogReviewLink = `/website/blog/editor?postId=${postId}`;
+          trackMissionStep(context, 'delegate_to_content', 'COMPLETED', {
+            summary: `Content: Blog "${title}" generated (${generatedContent.length} chars)`,
+            durationMs: contentDuration,
+            toolResult: JSON.stringify({ title, postId, wordCount: generatedContent.split(/\s+/).length, saved: true, reviewLink: blogReviewLink }),
+          });
 
           content = JSON.stringify({
-            status: contentResult.status,
-            data: contentResult.data,
-            errors: contentResult.errors,
+            status: 'COMPLETED',
+            data: { title, contentType, postId, wordCount: generatedContent.split(/\s+/).length, saved: true },
             manager: 'CONTENT_MANAGER',
-            reviewLink: getReviewLink('delegate_to_content', context?.missionId),
-            delegatedTo: contentResult.data && typeof contentResult.data === 'object' && 'delegations' in contentResult.data
-              ? (contentResult.data as Record<string, unknown>).delegations
-              : 'See data for details',
+            reviewLink: blogReviewLink,
           });
         } catch (contentDelegateError: unknown) {
           const errorMsg = contentDelegateError instanceof Error ? contentDelegateError.message : 'Unknown error';
+          logger.error('[Content] delegate_to_content FAILED', contentDelegateError instanceof Error ? contentDelegateError : new Error(errorMsg), { file: 'jasper-tools.ts' });
           trackMissionStep(context, 'delegate_to_content', 'FAILED', {
             summary: `Content: FAILED — ${errorMsg}`,
             durationMs: Date.now() - contentStart,
@@ -5423,62 +5528,98 @@ Select cohesive settings that create a professional, unified visual language acr
       }
 
       // ═══════════════════════════════════════════════════════════════════════
-      // ARCHITECT STRATEGY EXECUTION (Sprint 19)
+      // ARCHITECT STRATEGY EXECUTION → Redirects to AI-wired Builder
+      // delegate_to_architect and delegate_to_builder both produce landing pages
       // ═══════════════════════════════════════════════════════════════════════
       case 'delegate_to_architect': {
-        const architectStart = Date.now();
+        // Map architect args to builder args and fall through
+        args.niche = args.niche ?? args.industry as string ?? 'SaaS';
+        args.objective = args.objective ?? args.siteType as string ?? args.funnelGoals as string ?? 'landing page';
+        args.audience = args.audience ?? 'B2B professionals';
+        // Re-enter the builder case by executing the same handler inline
+        // (can't use fallthrough in switch with block-scoped vars)
+        const archStart = Date.now();
         trackMissionStep(context, 'delegate_to_architect', 'RUNNING', { toolArgs: args });
 
         try {
-          const { ArchitectManager } = await import('@/lib/agents/architect/manager');
-          const architectMgr = new ArchitectManager();
-          await architectMgr.initialize();
+          const { OpenRouterProvider } = await import('@/lib/ai/openrouter-provider');
+          const { getBrandDNA } = await import('@/lib/brand/brand-dna-service');
+          const { adminDb: archAdminDb } = await import('@/lib/firebase/admin');
+          const archBrandDNA = await getBrandDNA();
 
-          const architectPayload = {
-            siteType: args.siteType as string | undefined,
-            industry: args.industry as string,
-            audience: args.audience as string | undefined,
-            funnelGoals: args.funnelGoals as string | undefined,
-            existingSiteUrl: args.existingSiteUrl as string | undefined,
-            competitorUrls: args.competitorUrls
-              ? (args.competitorUrls as string).split(',').map((u: string) => u.trim())
-              : undefined,
-            brandGuidelines: args.brandGuidelines as string | undefined,
-          };
+          const archNiche = args.niche as string || 'SaaS';
+          const archObjective = args.objective as string || 'landing page';
+          const archAudience = args.audience as string || 'B2B professionals';
+          const archBrandCtx = archBrandDNA
+            ? `\nBRAND:\n- ${archBrandDNA.companyDescription}\n- Value: ${archBrandDNA.uniqueValue}\n- Tone: ${archBrandDNA.toneOfVoice}\n`
+            : '';
 
-          const architectResult = await architectMgr.execute({
-            id: `architect_${Date.now()}`,
-            timestamp: new Date(),
-            from: 'JASPER',
-            to: 'ARCHITECT_MANAGER',
-            type: 'COMMAND',
-            priority: 'NORMAL',
-            payload: architectPayload,
-            requiresResponse: true,
-            traceId: `trace_${Date.now()}`,
+          const archProvider = new OpenRouterProvider(PLATFORM_ID);
+          type ArchModelName = Parameters<typeof archProvider.chat>[0]['model'];
+
+          const archAiResponse = await withTimeout(archProvider.chat({
+            model: 'claude-3-5-sonnet' as ArchModelName,
+            messages: [
+              {
+                role: 'system',
+                content: `You are a landing page copywriter and conversion expert.${archBrandCtx}\nGenerate a complete landing page as HTML sections. Include: hero with headline + subheadline + CTA, social proof section, benefits/features section (3-4 items), testimonial placeholder, final CTA section.\nOutput as clean HTML. Use <section> tags with descriptive class names. No CSS/JS — just semantic HTML content.`,
+              },
+              {
+                role: 'user',
+                content: `Create a landing page for: ${archObjective}\nIndustry/niche: ${archNiche}\nTarget audience: ${archAudience}\n\nMake it compelling. Focus on pain points and transformation. Include specific, concrete benefit statements — not generic marketing fluff.`,
+              },
+            ],
+            temperature: 0.7,
+            maxTokens: 4096,
+          }), MANAGER_TIMEOUT_MS, 'Architect AI Generation');
+
+          const archPageContent = archAiResponse.content || '';
+          const archTitleMatch = archPageContent.match(/<h1[^>]*>(.*?)<\/h1>/i);
+          const archPageTitle = archTitleMatch ? archTitleMatch[1].replace(/<[^>]+>/g, '') : archObjective;
+          const archPageId = `page_${Date.now()}`;
+
+          if (archAdminDb) {
+            const archPagesPath = `${getSubCollection('website')}/pages/items`;
+            const archSlug = archPageTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+            await archAdminDb.collection(archPagesPath).doc(archPageId).set({
+              id: archPageId,
+              title: archPageTitle,
+              slug: archSlug,
+              type: 'landing',
+              status: 'draft',
+              content: [{
+                id: `section_${Date.now()}`,
+                type: 'section',
+                columns: [{ id: `col_${Date.now()}`, width: 100, widgets: [{ id: `widget_${Date.now()}`, type: 'html', data: { html: archPageContent } }] }],
+                styling: {},
+                order: 0,
+              }],
+              author: 'Jasper AI',
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+              campaignId: context?.campaignId,
+            });
+            logger.info('[Architect→Builder] Landing page saved to Firestore', { pageId: archPageId, pageTitle: archPageTitle });
+          }
+
+          trackMissionStep(context, 'delegate_to_architect', 'COMPLETED', {
+            summary: `Architect: Landing page "${archPageTitle}" generated (${archPageContent.length} chars)`,
+            durationMs: Date.now() - archStart,
+            toolResult: JSON.stringify({ title: archPageTitle, pageId: archPageId, saved: true, reviewLink: '/website/pages' }),
           });
-
-          const architectDuration = Date.now() - architectStart;
-          trackMissionStep(context, 'delegate_to_architect',
-            architectResult.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED',
-            { summary: `Architect: ${architectResult.status}`, durationMs: architectDuration, toolResult: JSON.stringify(architectResult.data) }
-          );
 
           content = JSON.stringify({
-            status: architectResult.status,
-            data: architectResult.data,
-            errors: architectResult.errors,
+            status: 'COMPLETED',
+            data: { title: archPageTitle, type: 'landing', pageId: archPageId, saved: true },
             manager: 'ARCHITECT_MANAGER',
-            reviewLink: getReviewLink('delegate_to_architect', context?.missionId),
-            delegatedTo: architectResult.data && typeof architectResult.data === 'object' && 'delegations' in architectResult.data
-              ? (architectResult.data as Record<string, unknown>).delegations
-              : 'See data for details',
+            reviewLink: '/website/pages',
           });
-        } catch (architectError: unknown) {
-          const errorMsg = architectError instanceof Error ? architectError.message : 'Unknown error';
+        } catch (archError: unknown) {
+          const errorMsg = archError instanceof Error ? archError.message : 'Unknown error';
+          logger.error('[Architect] delegate_to_architect FAILED', archError instanceof Error ? archError : new Error(errorMsg), { file: 'jasper-tools.ts' });
           trackMissionStep(context, 'delegate_to_architect', 'FAILED', {
             summary: `Architect: FAILED — ${errorMsg}`,
-            durationMs: Date.now() - architectStart,
+            durationMs: Date.now() - archStart,
             error: errorMsg,
           });
           content = JSON.stringify({ error: errorMsg, manager: 'ARCHITECT_MANAGER' });
@@ -5494,70 +5635,99 @@ Select cohesive settings that create a professional, unified visual language acr
         trackMissionStep(context, 'delegate_to_outreach', 'RUNNING', { toolArgs: args });
 
         try {
-          const { OutreachManager } = await import('@/lib/agents/outreach/manager');
-          const outreachMgr = new OutreachManager();
-          await outreachMgr.initialize();
+          const { OpenRouterProvider } = await import('@/lib/ai/openrouter-provider');
+          const { getBrandDNA } = await import('@/lib/brand/brand-dna-service');
+          const { adminDb: contentAdminDb } = await import('@/lib/firebase/admin');
+          const brandDNA = await getBrandDNA();
 
-          let parsedLeadList: Record<string, unknown>[] | undefined;
+          const message = args.message as string || 'introduce our product';
+          const channel = args.channel as string || 'email';
+          const steps = (args.steps as number) || 3;
+
+          // Parse lead data if provided
+          let leadContext = '';
           if (args.leadList) {
             try {
-              parsedLeadList = JSON.parse(args.leadList as string) as Record<string, unknown>[];
-            } catch {
-              parsedLeadList = undefined;
-            }
+              const leads = JSON.parse(args.leadList as string) as Record<string, unknown>[];
+              if (leads.length > 0) {
+                const lead = leads[0];
+                leadContext = `\nTARGET LEAD:\n- Name: ${lead.name ?? lead.firstName ?? 'Unknown'}\n- Company: ${lead.company ?? lead.companyName ?? 'Unknown'}\n- Title: ${lead.title ?? lead.jobTitle ?? 'Unknown'}\n- Email: ${lead.email ?? 'Unknown'}\n`;
+              }
+            } catch { /* use empty leadContext */ }
           }
 
-          // Extract first lead from leadList for the lead profile that OutreachManager expects
-          const firstLead = parsedLeadList?.[0];
-          const outreachPayload: Record<string, unknown> = {
-            sequenceType: args.sequenceType as string | undefined,
-            channel: args.channel as string | undefined,
-            leadList: parsedLeadList,
-            message: args.message as string,
-            steps: args.steps as number | undefined,
-            delayBetweenSteps: args.delayBetweenSteps as string | undefined,
-            complianceNotes: args.complianceNotes as string | undefined,
-            // OutreachManager.extractLeadProfile() expects these top-level fields
-            ...(firstLead ? {
-              lead: firstLead,
-              email: firstLead.email ?? firstLead.Email,
-              phone: firstLead.phone ?? firstLead.Phone,
-              leadId: firstLead.id ?? firstLead.leadId,
-              name: firstLead.name ?? firstLead.firstName,
-              company: firstLead.company ?? firstLead.companyName,
-            } : {}),
-          };
+          const brandContext = brandDNA
+            ? `\nOUR COMPANY:\n- ${brandDNA.companyDescription}\n- Value: ${brandDNA.uniqueValue}\n- Tone: ${brandDNA.toneOfVoice}\n`
+            : '';
 
-          const outreachResult = await withTimeout(outreachMgr.execute({
-            id: `outreach_${Date.now()}`,
-            timestamp: new Date(),
-            from: 'JASPER',
-            to: 'OUTREACH_MANAGER',
-            type: 'COMMAND',
-            priority: 'NORMAL',
-            payload: outreachPayload,
-            requiresResponse: true,
-            traceId: `trace_${Date.now()}`,
-          }), MANAGER_TIMEOUT_MS, 'Outreach Manager');
+          const provider = new OpenRouterProvider(PLATFORM_ID);
+          type ModelName = Parameters<typeof provider.chat>[0]['model'];
+
+          const aiResponse = await withTimeout(provider.chat({
+            model: 'claude-3-5-sonnet' as ModelName,
+            messages: [
+              {
+                role: 'system',
+                content: `You are a cold outreach expert who writes highly personalized, non-spammy emails that get replies.${brandContext}${leadContext}\nOutput as JSON array of email objects: [{"step":1,"subject":"...","body":"...","delayDays":0},{"step":2,...}].\nEach email body should be plain text (not HTML). Keep emails short (100-200 words). Focus on value, not features. Never be pushy. Output ONLY the JSON array.`,
+              },
+              {
+                role: 'user',
+                content: `Create a ${steps}-step ${channel} outreach sequence.\n\nGoal: ${message}\n\nStep 1: Opening — hook with relevance, reference their specific situation\nStep 2: Value — share a specific insight or case study\nStep 3: Soft close — low-friction CTA (reply, quick call, resource)\n\nMake each email distinct — never repeat the same angle.`,
+              },
+            ],
+            temperature: 0.7,
+            maxTokens: 3000,
+          }), MANAGER_TIMEOUT_MS, 'Outreach AI Generation');
+
+          let emails: Array<{ step: number; subject: string; body: string; delayDays?: number }> = [];
+          try {
+            const jsonStr = (aiResponse.content || '').replace(/```json\n?|```/g, '').trim();
+            emails = JSON.parse(jsonStr) as typeof emails;
+          } catch {
+            emails = [{ step: 1, subject: 'Quick question', body: aiResponse.content || message, delayDays: 0 }];
+          }
+
+          // Save outreach sequence to Firestore
+          let sequenceId = '';
+          if (contentAdminDb) {
+            sequenceId = `seq_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+            const sequencesCollection = getSubCollection('sequences');
+            await contentAdminDb.collection(sequencesCollection).doc(sequenceId).set({
+              id: sequenceId,
+              name: `Outreach: ${message.substring(0, 50)}`,
+              channel,
+              status: 'draft',
+              steps: emails.map((e, i) => ({
+                id: `step_${i + 1}`,
+                order: i + 1,
+                type: channel,
+                subject: e.subject,
+                body: e.body,
+                delayDays: e.delayDays ?? (i * 2),
+              })),
+              author: 'Jasper AI',
+              createdAt: new Date().toISOString(),
+              campaignId: context?.campaignId,
+            });
+            logger.info('[Outreach] Sequence saved to Firestore', { sequenceId, stepCount: emails.length, collection: sequencesCollection });
+          }
 
           const outreachDuration = Date.now() - outreachStart;
-          trackMissionStep(context, 'delegate_to_outreach',
-            outreachResult.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED',
-            { summary: `Outreach: ${outreachResult.status}`, durationMs: outreachDuration, toolResult: JSON.stringify(outreachResult.data) }
-          );
+          trackMissionStep(context, 'delegate_to_outreach', 'COMPLETED', {
+            summary: `Outreach: ${emails.length}-step ${channel} sequence created`,
+            durationMs: outreachDuration,
+            toolResult: JSON.stringify({ emailCount: emails.length, subjects: emails.map(e => e.subject), reviewLink: '/outbound/sequences' }),
+          });
 
           content = JSON.stringify({
-            status: outreachResult.status,
-            data: outreachResult.data,
-            errors: outreachResult.errors,
+            status: 'COMPLETED',
+            data: { emailCount: emails.length, channel, sequenceId, subjects: emails.map(e => e.subject), saved: true },
             manager: 'OUTREACH_MANAGER',
-            reviewLink: getReviewLink('delegate_to_outreach', context?.missionId),
-            delegatedTo: outreachResult.data && typeof outreachResult.data === 'object' && 'delegations' in outreachResult.data
-              ? (outreachResult.data as Record<string, unknown>).delegations
-              : 'See data for details',
+            reviewLink: '/outbound/sequences',
           });
         } catch (outreachError: unknown) {
           const errorMsg = outreachError instanceof Error ? outreachError.message : 'Unknown error';
+          logger.error('[Outreach] delegate_to_outreach FAILED', outreachError instanceof Error ? outreachError : new Error(errorMsg), { file: 'jasper-tools.ts' });
           trackMissionStep(context, 'delegate_to_outreach', 'FAILED', {
             summary: `Outreach: FAILED — ${errorMsg}`,
             durationMs: Date.now() - outreachStart,

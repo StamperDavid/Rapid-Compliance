@@ -290,21 +290,20 @@ export async function deleteLead(
   leadId: string
 ): Promise<void> {
   try {
+    const { adminDb } = await import('@/lib/firebase/admin');
+    if (!adminDb) {throw new Error('Firebase Admin not initialized');}
+
     // Check for linked deals before deleting (referential integrity)
-    const linkedDeals = await FirestoreService.getAll(
-      getSubCollection('deals'),
-      [where('leadId', '==', leadId)]
-    );
-    if (linkedDeals.length > 0) {
+    const linkedDeals = await adminDb.collection(getSubCollection('deals'))
+      .where('leadId', '==', leadId)
+      .get();
+    if (!linkedDeals.empty) {
       throw new Error(
-        `Cannot delete lead: ${linkedDeals.length} deal(s) are linked to this lead. Remove or reassign them first.`
+        `Cannot delete lead: ${linkedDeals.size} deal(s) are linked to this lead. Remove or reassign them first.`
       );
     }
 
-    await FirestoreService.delete(
-      getSubCollection('leads'),
-      leadId
-    );
+    await adminDb.collection(getSubCollection('leads')).doc(leadId).delete();
 
     logger.info('Lead deleted', { leadId });
   } catch (error) {

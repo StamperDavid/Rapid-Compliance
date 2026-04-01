@@ -5,9 +5,15 @@
 
 import { logger } from '@/lib/logger/logger';
 import { PLATFORM_ID } from '@/lib/constants/platform';
-import { getSubCollection } from '@/lib/firebase/collections';
+import { COLLECTIONS, getSubCollection } from '@/lib/firebase/collections';
+import { adminDb } from '@/lib/firebase/admin';
 
 const FILE = 'brand-dna-service.ts';
+
+function getDb() {
+  if (!adminDb) {throw new Error('Firebase Admin not initialized');}
+  return adminDb;
+}
 
 // Type definitions for Brand DNA and tool training
 export interface BrandDNA {
@@ -62,10 +68,14 @@ export interface SEOTrainingSettings {
  */
 export async function getBrandDNA(): Promise<BrandDNA | null> {
   try {
-    const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
+    const doc = await getDb().collection(COLLECTIONS.ORGANIZATIONS).doc(PLATFORM_ID).get();
 
-    const org = await FirestoreService.get(COLLECTIONS.ORGANIZATIONS, PLATFORM_ID);
+    if (!doc.exists) {
+      logger.info('[BrandDNA] No org document found', { file: FILE });
+      return null;
+    }
 
+    const org = doc.data();
     if (!org?.brandDNA) {
       logger.info('[BrandDNA] No brand DNA found for org', { file: FILE });
       return null;
@@ -87,16 +97,15 @@ export async function updateBrandDNA(
   userId: string
 ): Promise<boolean> {
   try {
-    const { FirestoreService, COLLECTIONS } = await import('@/lib/db/firestore-service');
-    const { serverTimestamp } = await import('firebase/firestore');
+    const { FieldValue } = await import('firebase-admin/firestore');
 
     const updatedBrandDNA = {
       ...brandDNA,
-      updatedAt: serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
       updatedBy: userId,
     };
 
-    await FirestoreService.update(COLLECTIONS.ORGANIZATIONS, PLATFORM_ID, {
+    await getDb().collection(COLLECTIONS.ORGANIZATIONS).doc(PLATFORM_ID).update({
       brandDNA: updatedBrandDNA,
     });
 
@@ -119,8 +128,6 @@ export async function updateBrandDNA(
  */
 export async function syncBrandDNA(): Promise<void> {
   try {
-    const { FirestoreService } = await import('@/lib/db/firestore-service');
-
     const brandDNA = await getBrandDNA();
 
     if (!brandDNA) {
@@ -129,15 +136,14 @@ export async function syncBrandDNA(): Promise<void> {
     }
 
     const tools: Array<'voice' | 'social' | 'seo'> = ['voice', 'social', 'seo'];
+    const toolPath = getSubCollection('toolTraining');
 
     for (const toolType of tools) {
-      const toolPath = getSubCollection('toolTraining');
-      const toolDoc = await FirestoreService.get(toolPath, toolType);
+      const toolDoc = await getDb().collection(toolPath).doc(toolType).get();
 
       // Only sync if tool inherits from brand DNA (not overridden)
-      if (toolDoc && toolDoc.inheritFromBrandDNA !== false) {
-        // Update the inherited brand DNA values in the tool context
-        await FirestoreService.update(toolPath, toolType, {
+      if (toolDoc.exists && toolDoc.data()?.inheritFromBrandDNA !== false) {
+        await getDb().collection(toolPath).doc(toolType).update({
           inheritedBrandDNA: brandDNA,
           lastSyncedAt: new Date().toISOString(),
         });
@@ -160,17 +166,15 @@ export async function getToolTrainingContext(
   toolType: 'voice' | 'social' | 'seo'
 ): Promise<ToolTrainingContext | null> {
   try {
-    const { FirestoreService } = await import('@/lib/db/firestore-service');
-
     const toolPath = getSubCollection('toolTraining');
-    const toolDoc = await FirestoreService.get(toolPath, toolType);
+    const doc = await getDb().collection(toolPath).doc(toolType).get();
 
-    if (!toolDoc) {
+    if (!doc.exists) {
       return null;
     }
 
     // Cast to ToolTrainingContext for type safety
-    const typedToolDoc = toolDoc as ToolTrainingContext;
+    const typedToolDoc = doc.data() as ToolTrainingContext;
 
     // If tool inherits from brand DNA, merge the values
     if (typedToolDoc.inheritFromBrandDNA !== false) {

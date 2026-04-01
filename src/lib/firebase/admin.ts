@@ -100,6 +100,11 @@ function initializeAdmin() {
       });
     }
 
+    // Configure Firestore to silently strip undefined values instead of throwing.
+    // Must be called before any other Firestore method.
+    const db = admin.firestore(adminApp);
+    db.settings({ ignoreUndefinedProperties: true });
+
     logger.info('[Auth] Firebase Admin Handshake Successful - Jasper is Online.', { file: 'admin.ts' });
     logger.info('🔥 Firebase Admin initialized', { file: 'admin.ts' });
     return adminApp;
