@@ -42,6 +42,10 @@ function getSessionCollectionForType(agentType: AgentDomain): string {
       return getSubCollection('blogPosts');
     case 'video':
       return getSubCollection('trainingSessions');
+    case 'orchestrator':
+      return getSubCollection('missions');
+    case 'sales_chat':
+      return getSubCollection('chatSessions');
   }
 }
 

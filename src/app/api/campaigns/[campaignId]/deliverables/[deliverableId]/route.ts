@@ -9,14 +9,29 @@
 import { type NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { logger } from '@/lib/logger/logger';
-import { UpdateDeliverableSchema } from '@/types/campaign';
+import { UpdateDeliverableSchema, type DeliverableType } from '@/types/campaign';
 import {
   getCampaign,
   getDeliverable,
   updateDeliverable,
 } from '@/lib/campaign/campaign-service';
+import { autoFlagForTraining } from '@/lib/training/auto-flag-service';
+import type { AgentDomain } from '@/types/training';
 
 export const dynamic = 'force-dynamic';
+
+/**
+ * Map deliverable types to the agent domain that produced them.
+ * Rejected deliverables flag the PRODUCING agent's Golden Master for training.
+ */
+const DELIVERABLE_TO_AGENT_DOMAIN: Partial<Record<DeliverableType, AgentDomain>> = {
+  blog: 'seo',
+  video: 'video',
+  social_post: 'social',
+  email: 'email',
+  image: 'video',
+  landing_page: 'seo',
+};
 
 // ============================================================================
 // PATCH — Update deliverable status (approve/reject/feedback)
@@ -73,6 +88,25 @@ export async function PATCH(
       parsed.data,
       authResult.user.uid
     );
+
+    // Route rejected/revision deliverables to the producing agent's training pipeline
+    const newStatus = parsed.data.status;
+    if (newStatus === 'rejected' || newStatus === 'revision_requested') {
+      const agentDomain = DELIVERABLE_TO_AGENT_DOMAIN[deliverable.type];
+      if (agentDomain) {
+        const score = newStatus === 'rejected' ? 20 : 40; // rejected=1 star, revision=2 stars
+        const issues = parsed.data.feedback
+          ? [parsed.data.feedback]
+          : [`Deliverable ${newStatus}: ${deliverable.title}`];
+        autoFlagForTraining(deliverableId, agentDomain, score, issues).catch((flagErr) => {
+          logger.warn('Failed to flag deliverable for training', {
+            deliverableId,
+            agentDomain,
+            error: flagErr instanceof Error ? flagErr.message : String(flagErr),
+          });
+        });
+      }
+    }
 
     return NextResponse.json({ success: true });
   } catch (error: unknown) {

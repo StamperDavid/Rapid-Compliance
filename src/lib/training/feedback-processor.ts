@@ -87,6 +87,16 @@ Areas to evaluate: keyword density, heading hierarchy, meta descriptions, conten
 Focus on: user intent adherence (correct character, scene count, topic), character consistency across scenes, visual description quality for Hedra video generation, narration as voiceover (NOT character speech), scene structure and pacing.
 Areas to evaluate: character descriptions, scene count accuracy, narration handling, visual prompting, Hedra optimization, user prompt fidelity.`;
     }
+    case 'orchestrator': {
+      return `You are an expert AI orchestration analyst evaluating a training session for Jasper, a strategic AI business partner who delegates tasks to specialized agent teams.
+Focus on: delegation accuracy (did Jasper route to the correct team?), prompt adherence (did Jasper follow the user's instructions faithfully?), tool efficiency (were the right tools called without redundancy?), context awareness (did Jasper use prior context correctly?), response quality (natural, direct, no hedging).
+Areas to evaluate: delegation routing, multi-tool coordination, mission structuring, error handling transparency, follow-up context retention, natural language quality.`;
+    }
+    case 'sales_chat': {
+      return `You are an expert SaaS sales analyst evaluating a training session for Alex, a sales and onboarding chat agent for the SalesVelocity.ai platform.
+Focus on: product knowledge accuracy (features, pricing, capabilities), lead qualification (BANT), objection handling (price, trust, competitors), trial guidance effectiveness, approachable non-pushy tone, and onboarding support quality.
+Areas to evaluate: platform feature accuracy, pricing explanation clarity, competitor differentiation, trial signup guidance, post-signup onboarding help, tone and approachability.`;
+    }
     case 'chat':
     default: {
       return `You are an expert AI trainer analyzing a training session for a sales/support AI agent.
@@ -115,6 +125,12 @@ function getDomainAreas(agentType: AgentDomain): string {
     }
     case 'video': {
       return 'e.g., "character_consistency", "scene_count", "narration_handling", "visual_description", "user_intent", "hedra_optimization"';
+    }
+    case 'orchestrator': {
+      return 'e.g., "delegation_routing", "tool_selection", "prompt_adherence", "mission_structure", "error_handling", "context_retention"';
+    }
+    case 'sales_chat': {
+      return 'e.g., "product_accuracy", "pricing_clarity", "competitor_handling", "trial_guidance", "onboarding_support", "tone"';
     }
     case 'chat':
     default: {

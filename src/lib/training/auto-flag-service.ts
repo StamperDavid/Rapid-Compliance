@@ -151,6 +151,8 @@ async function markSessionFlagged(
     social: 'socialPosts',
     seo: 'blogPosts',
     video: 'trainingSessions',
+    orchestrator: 'missions',
+    sales_chat: 'chatSessions',
   };
 
   const collectionPath = getSubCollection(collectionMap[agentType]);

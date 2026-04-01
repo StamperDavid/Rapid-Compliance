@@ -357,18 +357,19 @@ export async function deployGoldenMaster(
   }
 
   // Get all Golden Masters for this org
-  const allGMs = await FirestoreService.getAll(
+  const allGMs = await FirestoreService.getAll<GoldenMaster & FirestoreDocument>(
     getSubCollection('goldenMasters'),
     []
   );
 
-  // Deactivate all other versions
+  // Deactivate other versions of the SAME agent type only
+  // (deploying a Jasper GM must not deactivate the chat agent's GM)
+  const newGMAgentType = newGM.agentType;
   for (const gm of allGMs) {
-    const gmDoc = gm as FirestoreDocument;
-    if (gmDoc.id !== goldenMasterId && gmDoc.isActive) {
+    if (gm.id !== goldenMasterId && gm.isActive && gm.agentType === newGMAgentType) {
       await FirestoreService.set(
         getSubCollection('goldenMasters'),
-        gmDoc.id,
+        gm.id,
         {
           ...gm,
           isActive: false,

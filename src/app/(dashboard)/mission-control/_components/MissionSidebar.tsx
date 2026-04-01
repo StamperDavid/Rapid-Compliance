@@ -174,7 +174,7 @@ export default function MissionSidebar({ missions, selectedMissionId, onSelect }
               </span>
             </div>
 
-            {/* Row 2: Status badge with optional pulse dot */}
+            {/* Row 2: Status badge with optional pulse dot + graded indicator */}
             <div style={{
               display: 'flex',
               alignItems: 'center',
@@ -200,6 +200,20 @@ export default function MissionSidebar({ missions, selectedMissionId, onSelect }
               }}>
                 {config.label}
               </span>
+              {mission.graded && (
+                <span
+                  title="Graded"
+                  style={{
+                    fontSize: '0.625rem',
+                    fontWeight: 700,
+                    color: '#f59e0b',
+                    letterSpacing: '0.02em',
+                    flexShrink: 0,
+                  }}
+                >
+                  &#9733;
+                </span>
+              )}
             </div>
 
             {/* Row 3: Progress bar + step count */}

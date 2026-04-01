@@ -59,6 +59,8 @@ export interface Mission {
   completedAt?: string;
   approvalRequired?: boolean;
   approvalId?: string;
+  /** True once the user has submitted at least one grade for this mission */
+  graded?: boolean;
 }
 
 export interface ListMissionsOptions {

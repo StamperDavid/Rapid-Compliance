@@ -99,6 +99,29 @@ interface AIResponse {
   content?: string;
 }
 
+/** Human-readable display labels for each AgentDomain value. */
+const AGENT_TYPE_LABELS: Record<AgentDomain, string> = {
+  chat: 'Chat',
+  voice: 'Voice',
+  email: 'Email',
+  social: 'Social',
+  seo: 'SEO',
+  video: 'Video',
+  orchestrator: 'Jasper (Orchestrator)',
+  sales_chat: 'Alex (Sales Chat)',
+};
+
+/** Ordered list of agent domains shown in the Training Center selector. */
+const SELECTABLE_AGENT_DOMAINS: AgentDomain[] = [
+  'chat',
+  'voice',
+  'email',
+  'social',
+  'seo',
+  'sales_chat',
+  'orchestrator',
+];
+
 export default function AgentTrainingPage() {
   const { user } = useAuth();
   const toast = useToast();
@@ -1075,7 +1098,7 @@ export default function AgentTrainingPage() {
           {/* Agent Type Selector (customer mode) */}
           {viewMode === 'customer' && (
           <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
-            {(['chat', 'voice', 'email', 'social', 'seo'] as const).map(type => (
+            {SELECTABLE_AGENT_DOMAINS.map(type => (
               <button
                 key={type}
                 onClick={() => setSelectedAgentType(type)}
@@ -1088,10 +1111,9 @@ export default function AgentTrainingPage() {
                   fontSize: '0.8125rem',
                   fontWeight: selectedAgentType === type ? '600' : '400',
                   cursor: 'pointer',
-                  textTransform: 'capitalize',
                 }}
               >
-                {type}
+                {AGENT_TYPE_LABELS[type]}
               </button>
             ))}
           </div>

@@ -171,6 +171,82 @@ Walk through every feature and function of the platform end-to-end. Find and fix
 
 ---
 
+## Golden Master & Agent Learning System (April 1, 2026)
+
+**Goal:** Every AI agent learns from graded performance. Jasper gets a Golden Master. Mission Control gets optional grading. Alex becomes a proper trainable agent. Missions become reusable and schedulable.
+
+**STATUS:** WS1-WS3 COMPLETE. WS4-WS8 IN PROGRESS.
+
+### Architecture
+
+Every agent has two layers:
+- **Golden Master** — versioned, deployable snapshot of agent config + learned corrections from training/grading
+- **Ephemeral Spawn** — fresh instance created from the GM for each task, dies after completion
+
+Three training vectors:
+1. **Chat-based training (Training Center)** — direct conversation with Jasper/Alex to shape behavior proactively
+2. **Performance-based grading (Mission Control)** — grade Jasper's orchestration decisions after missions complete. Grades feed into Jasper's orchestrator GM.
+3. **Output-based grading (Deliverable Reviews)** — grade individual deliverables (blog, video, social, email). Each grade feeds into the GM of the agent that PRODUCED it, NOT Jasper's. This is how each specialist agent improves.
+
+Grading is ALWAYS optional. No grade = assumed 100% (satisfactory). The system only reacts to explicitly submitted grades.
+
+### Mission Scheduling
+
+Completed missions can be saved as reusable templates. The user sets:
+- **Frequency:** daily, weekly, custom interval, or for a set period
+- **Parameters:** which parts to re-run with fresh data (e.g., new leads each day)
+- Auto-runs without user intervention. Results appear in Mission Control for optional review.
+
+### Workstream Status
+
+| WS | Description | Status |
+|----|-------------|--------|
+| WS1 | Foundation — AgentDomain types, Zod schema, deploy scoping bug fix, training configs | COMPLETE |
+| WS2 | Jasper Golden Master — factory, loader with 60s cache, chat route integration, learned corrections injection | COMPLETE |
+| WS3 | Mission Control grading — MissionGrade types, grade service, API endpoint, StarRating/MissionGradeCard/StepGradeWidget UI | COMPLETE |
+| WS4 | Alex agent — sales_chat domain, GM factory, public chat wiring, Training Center UI | IN PROGRESS |
+| WS5 | Training injection — learned corrections from grading into agent prompts | IN PROGRESS |
+| WS6 | Grade routing — deliverable reviews route to the producing agent's GM (not Jasper's) | TODO |
+| WS7 | Mission scheduling — save, set frequency, auto-rerun | TODO |
+| WS8 | Integration into Mission Control page.tsx — wire grading components into the 3-panel layout | TODO |
+
+### Key Files Changed
+
+**WS1 (Foundation):**
+- `src/types/training.ts` — Added `'orchestrator' | 'sales_chat'` to AgentDomain
+- `src/lib/training/agent-training-validation.ts` — Fixed Zod schema drift, added new domains
+- `src/lib/training/agent-type-configs.ts` — Added ORCHESTRATOR_CONFIG and SALES_CHAT_CONFIG
+- `src/lib/training/golden-master-updater.ts` — Fixed deploy to scope by agentType (was deactivating ALL GMs)
+- `src/lib/agent/golden-master-builder.ts` — Same deploy scoping fix
+- `src/lib/training/production-monitor.ts` — Added orchestrator/sales_chat collection mappings
+- `src/lib/training/auto-flag-service.ts` — Added orchestrator/sales_chat to collectionMap
+- `src/lib/training/feedback-processor.ts` — Added orchestrator/sales_chat analysis preambles
+- `src/lib/training/golden-master-factory.ts` — Added orchestrator/sales_chat persona and behavior configs
+
+**WS2 (Jasper GM):**
+- `src/lib/orchestrator/jasper-golden-master.ts` — NEW: GM loader with 60s cache + learned corrections builder
+- `src/app/api/orchestrator/chat/route.ts` — Loads Jasper GM, uses as base prompt, injects corrections
+
+**WS3 (Grading):**
+- `src/types/mission-grades.ts` — NEW: MissionGrade interface, starToScore utility
+- `src/lib/orchestrator/mission-grade-service.ts` — NEW: submitGrade, getGradesForMission, deleteGrade
+- `src/app/api/orchestrator/missions/[missionId]/grade/route.ts` — NEW: POST + GET endpoints
+- `src/lib/orchestrator/mission-persistence.ts` — Added `graded?: boolean` to Mission interface
+- `src/app/(dashboard)/mission-control/_components/StarRating.tsx` — NEW: Interactive 5-star component
+- `src/app/(dashboard)/mission-control/_components/MissionGradeCard.tsx` — NEW: Overall mission grade card
+- `src/app/(dashboard)/mission-control/_components/StepGradeWidget.tsx` — NEW: Per-step inline grade widget
+
+### Pick Up Here
+
+1. Finish WS4 (Alex agent wiring)
+2. Wire grading components into Mission Control `page.tsx`
+3. Implement grade routing for deliverable reviews (WS6)
+4. Build mission scheduling (WS7)
+5. Type-check and build verification
+6. Commit and push
+
+---
+
 ## Phase 1: Jasper Orchestrator & Mission Control (18 tests)
 
 **Goal:** Jasper responds, calls tools, creates missions, and Mission Control displays them correctly.

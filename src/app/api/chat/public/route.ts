@@ -104,12 +104,12 @@ async function handlePublicChat(request: NextRequest) {
       );
     }
 
-    // Get or spawn agent instance — use the SALES_CHAT Golden Master
+    // Get or spawn agent instance — use the sales_chat Golden Master
     const instanceManager = new AgentInstanceManager();
 
     let instance;
     try {
-      instance = await instanceManager.spawnInstance(customerId, 'SALES_CHAT');
+      instance = await instanceManager.spawnInstance(customerId, 'sales_chat');
     } catch (error: unknown) {
       // If no Golden Master exists, provide a helpful response
       if (error instanceof Error && error.message.includes('Golden Master')) {

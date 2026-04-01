@@ -15,7 +15,7 @@ import { z } from 'zod';
 // ENUMS & PRIMITIVES
 // ============================================================================
 
-export const AgentDomainSchema = z.enum(['chat', 'social', 'email', 'voice', 'seo']);
+export const AgentDomainSchema = z.enum(['chat', 'social', 'email', 'voice', 'seo', 'video', 'orchestrator', 'sales_chat']);
 
 export const AgentTypeWithSwarmSchema = z.union([
   z.literal('swarm_specialist'),

@@ -195,6 +195,8 @@ function getAgentDisplayName(agentType: AgentDomain): string {
     social: 'Social Media Agent',
     seo: 'SEO Content Agent',
     video: 'Video Screenwriter Agent',
+    orchestrator: 'Jasper (Orchestrator)',
+    sales_chat: 'Alex (Sales Chat)',
   };
   return names[agentType];
 }
@@ -207,6 +209,8 @@ function getDefaultFlagThreshold(agentType: AgentDomain): number {
     social: 60,
     seo: 55,
     video: 60,
+    orchestrator: 60,
+    sales_chat: 65,
   };
   return thresholds[agentType];
 }
@@ -219,6 +223,8 @@ function getDefaultExcellentThreshold(agentType: AgentDomain): number {
     social: 85,
     seo: 85,
     video: 85,
+    orchestrator: 88,
+    sales_chat: 90,
   };
   return thresholds[agentType];
 }

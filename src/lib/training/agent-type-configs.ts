@@ -183,6 +183,64 @@ const VIDEO_CONFIG: AgentTypeTrainingConfig = {
 };
 
 // ============================================================================
+// ORCHESTRATOR AGENT — Jasper (strategic delegation & mission orchestration)
+// ============================================================================
+
+const ORCHESTRATOR_CONFIG: AgentTypeTrainingConfig = {
+  agentType: 'orchestrator',
+  scoringCriteria: [
+    { id: 'orch_delegation_accuracy', label: 'Delegation Accuracy', description: 'Routed to the correct agent team for the task — no misrouted delegations', weight: 0.22 },
+    { id: 'orch_prompt_adherence', label: 'Prompt Adherence', description: 'Followed the user prompt faithfully — correct scope, no missed items, no extras', weight: 0.20 },
+    { id: 'orch_tool_efficiency', label: 'Tool Efficiency', description: 'Called the right tools without redundancy or unnecessary steps', weight: 0.18 },
+    { id: 'orch_context_awareness', label: 'Context Awareness', description: 'Used prior conversation context and system state appropriately', weight: 0.16 },
+    { id: 'orch_response_quality', label: 'Response Quality', description: 'Natural, direct communication — no hedging, no menus, no robotic patterns', weight: 0.12 },
+    { id: 'orch_error_transparency', label: 'Error Transparency', description: 'Reported errors accurately without masking failures or inventing results', weight: 0.12 },
+  ],
+  scenarioTypes: [
+    { id: 'orch_multi_tool', label: 'Complex Multi-Tool', description: 'User requests multiple distinct tasks in one prompt', examples: ['Research competitors, scan leads, and create a blog post', 'Scrape 3 websites and launch a full campaign'] },
+    { id: 'orch_brainstorm', label: 'Conversational Brainstorm', description: 'User wants to think through strategy, not execute tools', examples: ['What should our Q3 marketing focus be?', 'Help me think through our pricing'] },
+    { id: 'orch_error_recovery', label: 'Error Recovery', description: 'Tool fails or returns unexpected results — how does Jasper handle it', examples: ['API key missing', 'Lead scan returns zero results'] },
+    { id: 'orch_status_query', label: 'Status Query', description: 'User asks about system state or recent activity', examples: ['Show me my recent leads', 'What campaigns are running?'] },
+    { id: 'orch_delegation_routing', label: 'Delegation Routing', description: 'Ambiguous request that could go to multiple agent teams', examples: ['Help me with content', 'I need to reach out to prospects'] },
+    { id: 'orch_follow_up', label: 'Follow-Up Request', description: 'User references prior conversation context', examples: ['Now do the same for LinkedIn', 'Enrich the top 3 from that scan'] },
+  ],
+  performanceThresholds: {
+    flagForTrainingBelow: 60,
+    excellentAbove: 90,
+    minSamplesForTrend: 5,
+  },
+};
+
+// ============================================================================
+// SALES CHAT AGENT — Alex (platform sales & onboarding)
+// ============================================================================
+
+const SALES_CHAT_CONFIG: AgentTypeTrainingConfig = {
+  agentType: 'sales_chat',
+  scoringCriteria: [
+    { id: 'sales_product_accuracy', label: 'Product Accuracy', description: 'Correctness of platform feature, pricing, and capability information', weight: 0.22 },
+    { id: 'sales_qualification', label: 'Lead Qualification', description: 'Effectiveness at identifying prospect needs and fit (BANT)', weight: 0.18 },
+    { id: 'sales_objection_handling', label: 'Objection Handling', description: 'Handling price, trust, complexity, and competitor objections', weight: 0.18 },
+    { id: 'sales_trial_guidance', label: 'Trial Guidance', description: 'Effectiveness at guiding prospects toward free trial signup', weight: 0.16 },
+    { id: 'sales_tone', label: 'Tone & Approachability', description: 'Approachable, non-pushy, solution-focused voice', weight: 0.14 },
+    { id: 'sales_onboarding_support', label: 'Onboarding Support', description: 'Helping new users through post-signup setup and questions', weight: 0.12 },
+  ],
+  scenarioTypes: [
+    { id: 'sales_cold_inquiry', label: 'Cold Inquiry', description: 'First-time visitor asking what the platform is', examples: ['What is SalesVelocity?', 'How does this work?'] },
+    { id: 'sales_pricing_question', label: 'Pricing Question', description: 'Prospect asking about pricing tiers and plans', examples: ['How much does it cost?', 'What plan do I need for a team of 5?'] },
+    { id: 'sales_competitor_compare', label: 'Competitor Comparison', description: 'Prospect comparing against GoHighLevel, Vendasta, HubSpot, etc.', examples: ['Why should I pick you over GoHighLevel?', 'How are you different from HubSpot?'] },
+    { id: 'sales_trial_ready', label: 'Trial Ready', description: 'Prospect ready to start a free trial', examples: ['How do I get started?', 'Can I try it for free?'] },
+    { id: 'sales_onboarding_help', label: 'Onboarding Help', description: 'New user questions during initial setup', examples: ['How do I connect my email?', 'Where do I set up my AI agents?'] },
+    { id: 'sales_feature_deep_dive', label: 'Feature Deep Dive', description: 'Prospect wants detailed info on a specific capability', examples: ['Tell me about the AI video feature', 'How does the lead scoring work?'] },
+  ],
+  performanceThresholds: {
+    flagForTrainingBelow: 60,
+    excellentAbove: 88,
+    minSamplesForTrend: 5,
+  },
+};
+
+// ============================================================================
 // REGISTRY
 // ============================================================================
 
@@ -197,6 +255,8 @@ export const AGENT_TYPE_CONFIGS: Record<AgentDomain, AgentTypeTrainingConfig> = 
   social: SOCIAL_CONFIG,
   seo: SEO_CONFIG,
   video: VIDEO_CONFIG,
+  orchestrator: ORCHESTRATOR_CONFIG,
+  sales_chat: SALES_CHAT_CONFIG,
 };
 
 /**

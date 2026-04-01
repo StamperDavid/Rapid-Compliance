@@ -163,7 +163,7 @@ async function handleFacebookMessage(senderId: string, text: string): Promise<vo
 
   let instance;
   try {
-    instance = await instanceManager.spawnInstance(`fb_${senderId}`, 'SALES_CHAT');
+    instance = await instanceManager.spawnInstance(`fb_${senderId}`, 'sales_chat');
   } catch (error: unknown) {
     if (error instanceof Error && error.message.includes('Golden Master')) {
       await sendFacebookMessage(

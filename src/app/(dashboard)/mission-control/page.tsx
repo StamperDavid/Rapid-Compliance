@@ -21,6 +21,8 @@ import MissionTimeline from './_components/MissionTimeline';
 import ApprovalCard from './_components/ApprovalCard';
 import AgentAvatar from './_components/AgentAvatar';
 import CampaignReview from './_components/CampaignReview';
+import MissionGradeCard from './_components/MissionGradeCard';
+import StepGradeWidget from './_components/StepGradeWidget';
 import { getDashboardLink, getStepReviewLink, formatToolName } from './_components/dashboard-links';
 import type { Mission, MissionStep } from '@/lib/orchestrator/mission-persistence';
 
@@ -31,6 +33,22 @@ import type { Mission, MissionStep } from '@/lib/orchestrator/mission-persistenc
 interface MissionListResponse {
   success: boolean;
   data?: { missions: Mission[]; hasMore: boolean };
+}
+
+interface GradeEntry {
+  score: number;
+  explanation?: string;
+}
+
+interface GradeApiGrade {
+  stepId?: string;
+  score: number;
+  explanation?: string;
+}
+
+interface GradeApiResponse {
+  success: boolean;
+  data?: { grades: GradeApiGrade[] };
 }
 
 // ============================================================================
@@ -880,12 +898,14 @@ function StepDetailPanel({
   approvalId,
   onApprovalDecision,
   missionId,
+  stepGrades,
 }: {
   step: MissionStep | null;
   approvalStep: MissionStep | null;
   approvalId: string | undefined;
   onApprovalDecision: () => void;
   missionId: string | undefined;
+  stepGrades: Record<string, GradeEntry>;
 }) {
   // If the selected step is the approval step, show the approval card prominently
   const showingApproval = approvalStep && (!step || step.stepId === approvalStep.stepId);
@@ -1083,6 +1103,31 @@ function StepDetailPanel({
             <DetailOutputRenderer toolResult={displayStep.toolResult} />
           )}
 
+          {/* Step grade widget — shown for completed steps */}
+          {displayStep.status === 'COMPLETED' && missionId && (
+            <div style={{
+              marginTop: '0.75rem',
+              paddingTop: '0.75rem',
+              borderTop: '1px solid var(--color-border-light)',
+            }}>
+              <div style={{
+                fontSize: '0.6875rem',
+                fontWeight: 700,
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em',
+                color: 'var(--color-text-disabled)',
+                marginBottom: '0.375rem',
+              }}>
+                Rate this step
+              </div>
+              <StepGradeWidget
+                missionId={missionId}
+                stepId={displayStep.stepId}
+                existingGrade={stepGrades[displayStep.stepId]}
+              />
+            </div>
+          )}
+
           {/* Collapsible input */}
           {displayStep.toolArgs && Object.keys(displayStep.toolArgs).length > 0 && (
             <CollapsibleSection title="Input (Tool Args)">
@@ -1136,6 +1181,9 @@ function MissionControlView({ deepLinkedMission }: { deepLinkedMission: string |
   const [clearingAll, setClearingAll] = useState(false);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // Grade state: keyed by stepId for per-step grades; undefined key holds overall mission grade
+  const [missionGrades, setMissionGrades] = useState<Record<string, GradeEntry>>({});
+
   // SSE stream for the selected mission
   const { mission: streamedMission, isStreaming } = useMissionStream(selectedMissionId);
 
@@ -1185,6 +1233,42 @@ function MissionControlView({ deepLinkedMission }: { deepLinkedMission: string |
       setSelectedMissionId(deepLinkedMission);
     }
   }, [deepLinkedMission, selectedMissionId]);
+
+  // ── Fetch grades when a terminal mission is selected ─────────────────
+  const selectedMissionIdForGrades = selectedMission?.missionId;
+  const selectedMissionStatus = selectedMission?.status;
+
+  useEffect(() => {
+    if (
+      !selectedMissionIdForGrades ||
+      (selectedMissionStatus !== 'COMPLETED' && selectedMissionStatus !== 'FAILED')
+    ) {
+      setMissionGrades({});
+      return;
+    }
+
+    void (async () => {
+      try {
+        const res = await authFetch(`/api/orchestrator/missions/${selectedMissionIdForGrades}/grade`);
+        if (!res.ok) { return; }
+        const body = (await res.json()) as GradeApiResponse;
+        if (!body.success || !body.data) { return; }
+
+        const gradeMap: Record<string, GradeEntry> = {};
+        for (const g of body.data.grades) {
+          // Overall mission grade stored under the sentinel key 'overall'
+          const key = g.stepId ?? 'overall';
+          // Keep the most recent grade per key (API returns newest-first)
+          if (!(key in gradeMap)) {
+            gradeMap[key] = { score: g.score, explanation: g.explanation };
+          }
+        }
+        setMissionGrades(gradeMap);
+      } catch {
+        // Silent fail — grades are non-critical UI
+      }
+    })();
+  }, [selectedMissionIdForGrades, selectedMissionStatus, authFetch]);
 
   // ── Adaptive polling for sidebar list only ──────────────────────────
   useEffect(() => {
@@ -1595,11 +1679,21 @@ function MissionControlView({ deepLinkedMission }: { deepLinkedMission: string |
           {/* Plan content */}
           <div style={{ flex: 1, overflowY: 'auto' }}>
             {selectedMission ? (
-              <MissionTimeline
-                mission={selectedMission}
-                onStepSelect={handleStepSelect}
-                selectedStepId={selectedStepId}
-              />
+              <div>
+                <MissionTimeline
+                  mission={selectedMission}
+                  onStepSelect={handleStepSelect}
+                  selectedStepId={selectedStepId}
+                />
+                {(selectedMission.status === 'COMPLETED' || selectedMission.status === 'FAILED') && (
+                  <div style={{ padding: '0 1rem 1rem' }}>
+                    <MissionGradeCard
+                      missionId={selectedMission.missionId}
+                      existingGrade={missionGrades['overall']}
+                    />
+                  </div>
+                )}
+              </div>
             ) : (
               <div style={{
                 flex: 1,
@@ -1664,6 +1758,7 @@ function MissionControlView({ deepLinkedMission }: { deepLinkedMission: string |
                 void fetchMissions();
               }}
               missionId={selectedMission.missionId}
+              stepGrades={missionGrades}
             />
           ) : (
             <div style={{

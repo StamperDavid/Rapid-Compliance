@@ -279,10 +279,13 @@ export async function deployGoldenMaster(goldenMasterId: string): Promise<void> 
   // Use batch to update all GMs atomically
   const batch = writeBatch(db);
   
-  // Deactivate all Golden Masters
+  // Deactivate only Golden Masters of the SAME agent type
+  // (deploying one agent's GM must not deactivate a different agent's GM)
   for (const gm of allGMs) {
-    const gmRef = doc(db, `${getSubCollection('goldenMasters')}/${gm.id}`);
-    batch.update(gmRef, { isActive: false });
+    if (gm.agentType === gmToActivate.agentType) {
+      const gmRef = doc(db, `${getSubCollection('goldenMasters')}/${gm.id}`);
+      batch.update(gmRef, { isActive: false });
+    }
   }
 
   // Activate the selected one
