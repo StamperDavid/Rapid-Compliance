@@ -33,6 +33,7 @@ import { getSubCollection } from '@/lib/firebase/collections';
 import { createMission, finalizeMission } from '@/lib/orchestrator/mission-persistence';
 import { getAgentCount, getDomainCount } from '@/lib/agents/agent-registry';
 import { getActiveJasperGoldenMaster } from '@/lib/orchestrator/jasper-golden-master';
+import { expandIntent } from '@/lib/orchestrator/intent-expander';
 
 // ============================================================================
 // Type Definitions
@@ -503,77 +504,76 @@ export async function POST(request: NextRequest) {
     // INTENT DETECTION & PHASED EXECUTION PLANNER
     // ═══════════════════════════════════════════════════════════════════════
     //
-    // When a user sends a complex multi-part request, the model tends to call
-    // orchestrate_campaign first (the biggest tool) and then bail — skipping
-    // research, leads, and outreach. This planner:
-    // 1. Detects required tools from user keywords
-    // 2. Assigns them to dependency-ordered phases
-    // 3. Injects an execution plan into the prompt
-    // 4. Nudges the model when it tries to stop before completing all phases
+    // Two-layer system:
+    // 1. LLM Intent Expander (primary) — Claude Haiku understands the user's
+    //    business goal and maps it to the correct tools. Handles vague inputs
+    //    like "help me beat my competitors" that regex can't parse.
+    // 2. Regex keyword matching (fallback + merge) — catches obvious keywords
+    //    instantly. Results are merged with the LLM expander output.
     //
+    // The union of both layers ensures maximum tool coverage.
     // Phase order ensures research data feeds into campaign content.
     // ═══════════════════════════════════════════════════════════════════════
 
-    // Intent map uses COMMANDER-LEVEL tools (delegation + queries), not specialist tools
-    // Order matters: more specific patterns first to avoid false matches
+    // ── Layer 1: LLM Intent Expander (runs for non-conversational queries) ──
+    const expandedIntent = queryClassification.queryType !== 'conversational'
+      ? await expandIntent(message)
+      : null;
+
+    // ── Layer 2: Regex keyword matching (fast deterministic fallback) ──
     const INTENT_TOOL_MAP: Array<{ patterns: RegExp; tools: string[] }> = [
-      // Explicit URL scraping — user says "scrape" = direct page fetch, not just research
       { patterns: /scrap(e|ing)\b/i, tools: ['scrape_website'] },
-      // Research & analysis (competitor intel, market research, trend analysis)
       { patterns: /analyz(e|ing)\s+(their|the|this)\s+(site|website|page|positioning|pricing)/i, tools: ['delegate_to_intelligence'] },
       { patterns: /trending|trends?\s+(in|for|about)/i, tools: ['delegate_to_intelligence'] },
       { patterns: /competitor(s|'s)?|competitive\s+(intel|analysis|research)/i, tools: ['delegate_to_intelligence'] },
       { patterns: /research\b/i, tools: ['delegate_to_intelligence'] },
-      // Leads
       { patterns: /leads?|prospects?|find\s+(me\s+)?(companies|businesses)|scan\s+for/i, tools: ['scan_leads'] },
       { patterns: /enrich/i, tools: ['enrich_lead'] },
       { patterns: /score\s+(them|leads?|the)/i, tools: ['score_leads'] },
-      // Outreach — cold email, personalized email, email sequences/drips
       { patterns: /outreach|cold\s+email|personalized\s+email|draft.*(email|outreach)\s+(to|for)/i, tools: ['delegate_to_outreach'] },
       { patterns: /email\s*(campaign|sequence|drip|blast|series)/i, tools: ['delegate_to_outreach'] },
-      // SEO
       { patterns: /seo|search\s+engine|keywords?\s+(config|setup|align)/i, tools: ['get_seo_config'] },
-      // Video — produce_video handles storyboard creation (NOT delegate_to_content)
       { patterns: /video|storyboard/i, tools: ['produce_video'] },
-      // Social media
       { patterns: /social\s*(media|post)|post\s+(on|to)\s+(twitter|linkedin|facebook)/i, tools: ['delegate_to_marketing'] },
-      // Content — blog, articles, landing pages
       { patterns: /blog|article/i, tools: ['delegate_to_content'] },
       { patterns: /landing\s*page/i, tools: ['delegate_to_builder'] },
-      // Multi-channel campaign (everything at once)
       { patterns: /campaign|multi.?channel|content\s+blitz|everything/i, tools: ['delegate_to_content', 'delegate_to_marketing', 'produce_video'] },
     ];
 
-    // Dependency-ordered phases using commander-level tools
+    const regexTools = new Set<string>();
+    for (const { patterns, tools } of INTENT_TOOL_MAP) {
+      if (patterns.test(message)) {
+        for (const t of tools) { regexTools.add(t); }
+      }
+    }
+
+    // ── Merge: union of LLM expander + regex results ──
+    const requiredTools = new Set<string>([
+      ...regexTools,
+      ...(expandedIntent?.tools ?? []),
+    ]);
+
+    // Dependency-ordered phases
     const PHASE_ORDER: Record<string, number> = {
-      // Phase 1: Research & Discovery (no dependencies, run first)
       scrape_website: 1,
       delegate_to_intelligence: 1,
       scan_leads: 1,
       get_seo_config: 1,
-      // Phase 2: Analysis (depends on Phase 1 lead data)
+      research_trending_topics: 1,
       enrich_lead: 2,
       score_leads: 2,
-      // Phase 3: Content Creation (depends on Phase 1+2 — reads MemoryVault)
       delegate_to_content: 3,
       delegate_to_marketing: 3,
       produce_video: 3,
       delegate_to_builder: 3,
       create_campaign: 3,
-      // Phase 4: Outreach (depends on Phase 2 scored leads)
       delegate_to_outreach: 4,
     };
 
-    const requiredTools = new Set<string>();
-    for (const { patterns, tools } of INTENT_TOOL_MAP) {
-      if (patterns.test(message)) {
-        for (const t of tools) { requiredTools.add(t); }
-      }
-    }
-
-    // Count URL-like patterns to detect multiple scrape targets
+    // Count URL-like patterns + LLM-detected scrape URLs
     const urlMatches = message.match(/\b\w+\.(com|io|org|net|co)\b/gi) ?? [];
-    const expectedScrapeCount = urlMatches.length;
+    const llmScrapeUrls = expandedIntent?.scrapeUrls ?? [];
+    const expectedScrapeCount = Math.max(urlMatches.length, llmScrapeUrls.length);
 
     // Build phased execution plan
     const phasedPlan = new Map<number, string[]>();
@@ -584,11 +584,14 @@ export async function POST(request: NextRequest) {
       phasedPlan.set(phase, existing);
     }
 
-    // Complex request = 3+ required tools detected from user message
-    const isComplexRequest = requiredTools.size >= 3;
+    const isComplexRequest = requiredTools.size >= 3 || (expandedIntent?.isComplex ?? false);
 
-    logger.info('[Jasper] Intent detection', {
-      requiredTools: [...requiredTools],
+    logger.info('[Jasper] Intent detection (LLM + regex merged)', {
+      expanderUsed: Boolean(expandedIntent),
+      expanderTools: expandedIntent?.tools ?? [],
+      expanderReasoning: expandedIntent?.reasoning,
+      regexTools: [...regexTools],
+      mergedTools: [...requiredTools],
       expectedScrapeCount,
       isComplexRequest,
       phases: JSON.stringify(Object.fromEntries(phasedPlan)),
