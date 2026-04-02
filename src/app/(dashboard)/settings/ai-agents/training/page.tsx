@@ -102,6 +102,7 @@ interface AIResponse {
 /** Human-readable display labels for each AgentDomain value. */
 const AGENT_TYPE_LABELS: Record<AgentDomain, string> = {
   chat: 'Chat',
+  content: 'Content',
   voice: 'Voice',
   email: 'Email',
   social: 'Social',
@@ -114,6 +115,7 @@ const AGENT_TYPE_LABELS: Record<AgentDomain, string> = {
 /** Ordered list of agent domains shown in the Training Center selector. */
 const SELECTABLE_AGENT_DOMAINS: AgentDomain[] = [
   'chat',
+  'content',
   'voice',
   'email',
   'social',

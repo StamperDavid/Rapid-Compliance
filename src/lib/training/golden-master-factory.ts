@@ -67,6 +67,17 @@ function getDefaultPersonaForType(agentType: AgentDomain): AgentPersona {
           'Craft compelling subject lines and CTAs',
         ],
       };
+    case 'content':
+      return {
+        ...base,
+        name: 'Content Creator Agent',
+        tone: 'clear, authoritative, and brand-aligned',
+        objectives: [
+          'Produce blog posts, landing page copy, and website content packages that reflect the client\'s brand voice',
+          'Write product descriptions and case studies that are accurate, compelling, and conversion-focused',
+          'Structure content for readability with logical headings, clear CTAs, and appropriate length',
+        ],
+      };
     case 'social':
       return {
         ...base,
@@ -149,6 +160,14 @@ function getDefaultBehaviorConfig(agentType: AgentDomain): BehaviorConfig {
         responseLength: 'balanced',
         proactiveLevel: 6,
         idleTimeoutMinutes: 30,
+      };
+    case 'content':
+      return {
+        closingAggressiveness: 1,
+        questionFrequency: 0,
+        responseLength: 'detailed',
+        proactiveLevel: 4,
+        idleTimeoutMinutes: 120,
       };
     case 'voice':
       return {

@@ -146,6 +146,7 @@ async function markSessionFlagged(
   // Determine which collection the session lives in
   const collectionMap: Record<AgentDomain, string> = {
     chat: 'chatSessions',
+    content: 'contentPosts',
     voice: 'calls',
     email: 'emailCampaigns',
     social: 'socialPosts',

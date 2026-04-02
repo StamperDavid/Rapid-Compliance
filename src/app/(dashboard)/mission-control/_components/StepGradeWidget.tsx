@@ -10,6 +10,7 @@
 
 import { useState } from 'react';
 import StarRating from './StarRating';
+import { PromptRevisionPopup } from '@/components/training/PromptRevisionPopup';
 
 interface StepGradeWidgetProps {
   missionId: string;
@@ -18,6 +19,14 @@ interface StepGradeWidgetProps {
 }
 
 type SubmitState = 'idle' | 'submitting' | 'error';
+
+interface RevisionData {
+  beforeSection: string;
+  afterSection: string;
+  clarifyingQuestion?: string;
+  changeDescription: string;
+  fullRevisedPrompt: string;
+}
 
 export default function StepGradeWidget({
   missionId,
@@ -29,8 +38,10 @@ export default function StepGradeWidget({
   const [showReason, setShowReason] = useState<boolean>(false);
   const [submitted, setSubmitted] = useState<boolean>(!!existingGrade);
   const [submitState, setSubmitState] = useState<SubmitState>('idle');
+  const [revisionData, setRevisionData] = useState<RevisionData | null>(null);
+  const [isApplying, setIsApplying] = useState<boolean>(false);
 
-  async function handleSubmit(submittedScore: number) {
+  async function handleSubmit(submittedScore: number, withRevision: boolean) {
     if (submittedScore === 0) { return; }
 
     setSubmitState('submitting');
@@ -67,18 +78,64 @@ export default function StepGradeWidget({
       setSubmitted(true);
       setShowReason(false);
       setSubmitState('idle');
+
+      // Non-blocking: propose a prompt revision when the user provided an explanation
+      // via the "Why?" textarea (withRevision=true) and explanation is non-empty.
+      const trimmedExplanation = explanation.trim();
+      if (withRevision && trimmedExplanation) {
+        try {
+          const revRes = await fetch('/api/training/propose-prompt-revision', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              agentType: 'orchestrator',
+              correction: trimmedExplanation,
+              context: `Mission step grading — user gave ${submittedScore} stars`,
+            }),
+          });
+          const revJson: unknown = await revRes.json();
+          const revData = revJson as { success: boolean; data?: RevisionData };
+          if (revData.success && revData.data) {
+            setRevisionData(revData.data);
+          }
+        } catch {
+          // Non-critical — grade already succeeded
+        }
+      }
     } catch {
       setSubmitState('error');
     }
   }
 
+  async function handleApproveRevision(fullRevisedPrompt: string, changeDescription: string) {
+    setIsApplying(true);
+    try {
+      await fetch('/api/training/apply-prompt-revision', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          agentType: 'orchestrator',
+          revisedPromptSection: revisionData?.afterSection ?? '',
+          fullRevisedPrompt,
+          changeDescription,
+        }),
+      });
+    } catch {
+      // Non-critical
+    } finally {
+      setIsApplying(false);
+      setRevisionData(null);
+    }
+  }
+
   function handleStarChange(newScore: number) {
     setScore(newScore);
-    // Auto-submit immediately on star selection; the "Why?" flow can add context
-    void handleSubmit(newScore);
+    // Auto-submit immediately on star selection without revision — no explanation yet.
+    void handleSubmit(newScore, false);
   }
 
   return (
+    <>
     <div
       style={{
         display: 'flex',
@@ -168,7 +225,7 @@ export default function StepGradeWidget({
             <button
               type="button"
               disabled={submitState === 'submitting'}
-              onClick={() => void handleSubmit(score)}
+              onClick={() => void handleSubmit(score, true)}
               style={{
                 padding: '0.25rem 0.625rem',
                 fontSize: '0.6875rem',
@@ -207,5 +264,23 @@ export default function StepGradeWidget({
         </div>
       )}
     </div>
+    {revisionData !== null && (
+      <PromptRevisionPopup
+        isOpen
+        onClose={() => setRevisionData(null)}
+        onApprove={(fullRevisedPrompt, changeDescription) => {
+          void handleApproveRevision(fullRevisedPrompt, changeDescription);
+        }}
+        onReject={() => setRevisionData(null)}
+        agentType="orchestrator"
+        beforeSection={revisionData.beforeSection}
+        afterSection={revisionData.afterSection}
+        clarifyingQuestion={revisionData.clarifyingQuestion}
+        changeDescription={revisionData.changeDescription}
+        fullRevisedPrompt={revisionData.fullRevisedPrompt}
+        isApplying={isApplying}
+      />
+    )}
+    </>
   );
 }

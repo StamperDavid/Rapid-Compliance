@@ -10,7 +10,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
-import type { CampaignDeliverable, Campaign, DeliverableStatus } from '@/types/campaign';
+import type { CampaignDeliverable, Campaign, DeliverableStatus, DeliverableType } from '@/types/campaign';
+import { PromptRevisionPopup } from '@/components/training/PromptRevisionPopup';
+import type { AgentDomain } from '@/types/training';
 
 // ============================================================================
 // TYPES
@@ -24,6 +26,27 @@ interface CampaignResponse {
 interface CampaignReviewProps {
   campaignId: string;
 }
+
+interface RevisionData {
+  beforeSection: string;
+  afterSection: string;
+  clarifyingQuestion?: string;
+  changeDescription: string;
+  fullRevisedPrompt: string;
+}
+
+// ============================================================================
+// DELIVERABLE TYPE → AGENT DOMAIN MAPPING
+// ============================================================================
+
+const DELIVERABLE_TO_AGENT_DOMAIN: Partial<Record<DeliverableType, AgentDomain>> = {
+  blog: 'content',
+  video: 'video',
+  social_post: 'social',
+  email: 'email',
+  image: 'video',
+  landing_page: 'seo',
+};
 
 // ============================================================================
 // STATUS HELPERS
@@ -90,7 +113,7 @@ function DeliverableCard({
   isUpdating,
 }: {
   deliverable: CampaignDeliverable;
-  onAction: (deliverableId: string, status: DeliverableStatus, feedback?: string) => void;
+  onAction: (deliverableId: string, deliverableType: DeliverableType, status: DeliverableStatus, feedback?: string) => void;
   isUpdating: boolean;
 }) {
   const [feedbackText, setFeedbackText] = useState('');
@@ -287,7 +310,7 @@ function DeliverableCard({
           <button
             type="button"
             disabled={isUpdating}
-            onClick={() => onAction(deliverable.id, 'approved')}
+            onClick={() => onAction(deliverable.id, deliverable.type, 'approved')}
             style={{
               padding: '0.375rem 0.75rem',
               fontSize: '0.75rem',
@@ -304,7 +327,7 @@ function DeliverableCard({
           <button
             type="button"
             disabled={isUpdating}
-            onClick={() => onAction(deliverable.id, 'rejected')}
+            onClick={() => onAction(deliverable.id, deliverable.type, 'rejected')}
             style={{
               padding: '0.375rem 0.75rem',
               fontSize: '0.75rem',
@@ -361,7 +384,7 @@ function DeliverableCard({
             type="button"
             disabled={isUpdating || !feedbackText.trim()}
             onClick={() => {
-              onAction(deliverable.id, 'revision_requested', feedbackText.trim());
+              onAction(deliverable.id, deliverable.type, 'revision_requested', feedbackText.trim());
               setFeedbackText('');
               setShowFeedback(false);
             }}
@@ -394,6 +417,9 @@ export default function CampaignReview({ campaignId }: CampaignReviewProps) {
   const [deliverables, setDeliverables] = useState<CampaignDeliverable[]>([]);
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [revisionData, setRevisionData] = useState<RevisionData | null>(null);
+  const [revisionAgentType, setRevisionAgentType] = useState<AgentDomain>('content');
+  const [isApplying, setIsApplying] = useState<boolean>(false);
 
   const fetchCampaign = useCallback(async () => {
     try {
@@ -432,6 +458,7 @@ export default function CampaignReview({ campaignId }: CampaignReviewProps) {
 
   const handleAction = useCallback(async (
     deliverableId: string,
+    deliverableType: DeliverableType,
     status: DeliverableStatus,
     feedback?: string
   ) => {
@@ -451,6 +478,35 @@ export default function CampaignReview({ campaignId }: CampaignReviewProps) {
 
       if (res.ok) {
         void fetchCampaign();
+
+        // Non-blocking: propose a prompt revision when the deliverable is rejected or
+        // revision_requested WITH feedback text.
+        const trimmedFeedback = feedback?.trim();
+        if ((status === 'rejected' || status === 'revision_requested') && trimmedFeedback) {
+          const agentDomain = DELIVERABLE_TO_AGENT_DOMAIN[deliverableType];
+          if (agentDomain) {
+            const statusLabel = status === 'rejected' ? 'rejected' : 'revision requested';
+            try {
+              const revRes = await fetch('/api/training/propose-prompt-revision', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  agentType: agentDomain,
+                  correction: trimmedFeedback,
+                  context: `Campaign deliverable ${statusLabel} — ${deliverableType}`,
+                }),
+              });
+              const revJson: unknown = await revRes.json();
+              const revData = revJson as { success: boolean; data?: RevisionData };
+              if (revData.success && revData.data) {
+                setRevisionAgentType(agentDomain);
+                setRevisionData(revData.data);
+              }
+            } catch {
+              // Non-critical — rejection already succeeded
+            }
+          }
+        }
       }
     } catch {
       // Silent fail
@@ -459,13 +515,37 @@ export default function CampaignReview({ campaignId }: CampaignReviewProps) {
     }
   }, [authFetch, campaignId, fetchCampaign]);
 
-  const handleApproveAll = useCallback(async () => {
-    const pendingIds = deliverables
-      .filter((d) => d.status === 'pending_review' || d.status === 'revision_requested')
-      .map((d) => d.id);
+  const handleApproveRevision = useCallback(async (
+    fullRevisedPrompt: string,
+    changeDescription: string
+  ) => {
+    setIsApplying(true);
+    try {
+      await fetch('/api/training/apply-prompt-revision', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          agentType: revisionAgentType,
+          revisedPromptSection: revisionData?.afterSection ?? '',
+          fullRevisedPrompt,
+          changeDescription,
+        }),
+      });
+    } catch {
+      // Non-critical
+    } finally {
+      setIsApplying(false);
+      setRevisionData(null);
+    }
+  }, [revisionAgentType, revisionData]);
 
-    for (const id of pendingIds) {
-      await handleAction(id, 'approved');
+  const handleApproveAll = useCallback(async () => {
+    const pending = deliverables.filter(
+      (d) => d.status === 'pending_review' || d.status === 'revision_requested'
+    );
+
+    for (const d of pending) {
+      await handleAction(d.id, d.type, 'approved');
     }
   }, [deliverables, handleAction]);
 
@@ -611,7 +691,7 @@ export default function CampaignReview({ campaignId }: CampaignReviewProps) {
             <DeliverableCard
               key={d.id}
               deliverable={d}
-              onAction={(id, status, feedback) => void handleAction(id, status, feedback)}
+              onAction={(id, type, status, feedback) => void handleAction(id, type, status, feedback)}
               isUpdating={updatingId === d.id}
             />
           ))}
@@ -625,6 +705,24 @@ export default function CampaignReview({ campaignId }: CampaignReviewProps) {
         }}>
           No deliverables yet. Jasper is still working on the campaign.
         </div>
+      )}
+
+      {revisionData !== null && (
+        <PromptRevisionPopup
+          isOpen
+          onClose={() => setRevisionData(null)}
+          onApprove={(fullRevisedPrompt, changeDescription) => {
+            void handleApproveRevision(fullRevisedPrompt, changeDescription);
+          }}
+          onReject={() => setRevisionData(null)}
+          agentType={revisionAgentType}
+          beforeSection={revisionData.beforeSection}
+          afterSection={revisionData.afterSection}
+          clarifyingQuestion={revisionData.clarifyingQuestion}
+          changeDescription={revisionData.changeDescription}
+          fullRevisedPrompt={revisionData.fullRevisedPrompt}
+          isApplying={isApplying}
+        />
       )}
     </div>
   );

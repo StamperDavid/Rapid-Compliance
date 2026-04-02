@@ -190,6 +190,7 @@ function generateAgentId(agentType: AgentDomain): string {
 function getAgentDisplayName(agentType: AgentDomain): string {
   const names: Record<AgentDomain, string> = {
     chat: 'Sales Chat Agent',
+    content: 'Content Creator Agent',
     voice: 'Voice Agent',
     email: 'Email Agent',
     social: 'Social Media Agent',
@@ -204,6 +205,7 @@ function getAgentDisplayName(agentType: AgentDomain): string {
 function getDefaultFlagThreshold(agentType: AgentDomain): number {
   const thresholds: Record<AgentDomain, number> = {
     chat: 65,
+    content: 60,
     voice: 60,
     email: 60,
     social: 60,
@@ -218,6 +220,7 @@ function getDefaultFlagThreshold(agentType: AgentDomain): number {
 function getDefaultExcellentThreshold(agentType: AgentDomain): number {
   const thresholds: Record<AgentDomain, number> = {
     chat: 90,
+    content: 85,
     voice: 88,
     email: 85,
     social: 85,

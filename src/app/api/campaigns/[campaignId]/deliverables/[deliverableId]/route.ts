@@ -25,7 +25,7 @@ export const dynamic = 'force-dynamic';
  * Rejected deliverables flag the PRODUCING agent's Golden Master for training.
  */
 const DELIVERABLE_TO_AGENT_DOMAIN: Partial<Record<DeliverableType, AgentDomain>> = {
-  blog: 'seo',
+  blog: 'content',
   video: 'video',
   social_post: 'social',
   email: 'email',

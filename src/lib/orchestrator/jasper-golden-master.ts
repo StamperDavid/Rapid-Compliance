@@ -136,39 +136,3 @@ export function invalidateJasperGMCache(): void {
   gmCache.data = null;
   gmCache.timestamp = 0;
 }
-
-/**
- * Build the learned corrections block for prompt injection.
- * Returns empty string if no corrections exist.
- */
-export function buildLearnedCorrectionsBlock(gm: JasperGoldenMasterData): string {
-  const corrections = gm.knowledgeBase?.corrections;
-  const preferences = gm.knowledgeBase?.preferences;
-
-  if ((!corrections || corrections.length === 0) && (!preferences || preferences.length === 0)) {
-    return '';
-  }
-
-  const lines: string[] = [
-    '',
-    '═══════════════════════════════════════════════════════════════════════════════',
-    'LEARNED CORRECTIONS (from training & performance grading)',
-    '═══════════════════════════════════════════════════════════════════════════════',
-  ];
-
-  if (corrections && corrections.length > 0) {
-    for (const c of corrections) {
-      lines.push(`- ${c}`);
-    }
-  }
-
-  if (preferences && preferences.length > 0) {
-    lines.push('');
-    lines.push('OWNER PREFERENCES:');
-    for (const p of preferences) {
-      lines.push(`- ${p}`);
-    }
-  }
-
-  return lines.join('\n');
-}

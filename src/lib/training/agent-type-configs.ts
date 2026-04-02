@@ -127,6 +127,34 @@ const SOCIAL_CONFIG: AgentTypeTrainingConfig = {
 };
 
 // ============================================================================
+// CONTENT AGENT — Blog posts, website packages, landing pages, product copy
+// ============================================================================
+
+const CONTENT_CONFIG: AgentTypeTrainingConfig = {
+  agentType: 'content',
+  scoringCriteria: [
+    { id: 'content_brand_voice', label: 'Brand Voice Consistency', description: 'Adherence to configured brand voice across all content types — tone, style, and personality', weight: 0.22 },
+    { id: 'content_clarity', label: 'Clarity & Readability', description: 'Content is clear, scannable, and easy to read at the appropriate level for the target audience', weight: 0.2 },
+    { id: 'content_value_delivery', label: 'Value Delivery', description: 'Content genuinely solves the reader\'s problem or answers their question — no filler or padding', weight: 0.18 },
+    { id: 'content_cta', label: 'CTA Effectiveness', description: 'Calls to action are appropriate, well-placed, and drive the desired next action', weight: 0.14 },
+    { id: 'content_structure', label: 'Structure Quality', description: 'Logical flow with proper headings, sections, and visual hierarchy appropriate to the content type', weight: 0.14 },
+    { id: 'content_accuracy', label: 'Factual Accuracy', description: 'All claims, statistics, and product details are accurate and verifiable', weight: 0.12 },
+  ],
+  scenarioTypes: [
+    { id: 'content_blog_post', label: 'Blog Post', description: 'Long-form editorial content for a company blog or publication', examples: ['Thought leadership article on industry trend', 'How-to guide for target audience', 'Listicle of best practices'] },
+    { id: 'content_landing_page', label: 'Landing Page Copy', description: 'Conversion-focused copy for a product or campaign landing page', examples: ['Hero section + feature benefits + CTA', 'Campaign-specific squeeze page', 'Free trial sign-up page'] },
+    { id: 'content_website_package', label: 'Website Content Package', description: 'Full set of copy for core website pages (Home, About, Services, Contact)', examples: ['SaaS product website', 'Professional services firm site', 'E-commerce brand pages'] },
+    { id: 'content_product_description', label: 'Product Description', description: 'Compelling product or service descriptions for listings, catalogs, or feature pages', examples: ['SaaS feature description', 'Physical product listing copy', 'Service tier description'] },
+    { id: 'content_case_study', label: 'Case Study', description: 'Customer success story structured as problem, solution, and measurable results', examples: ['B2B enterprise case study', 'Before/after ROI story', 'Customer journey narrative'] },
+  ],
+  performanceThresholds: {
+    flagForTrainingBelow: 60,
+    excellentAbove: 85,
+    minSamplesForTrend: 5,
+  },
+};
+
+// ============================================================================
 // SEO AGENT — Content optimization for search engines
 // ============================================================================
 
@@ -250,6 +278,7 @@ const SALES_CHAT_CONFIG: AgentTypeTrainingConfig = {
  */
 export const AGENT_TYPE_CONFIGS: Record<AgentDomain, AgentTypeTrainingConfig> = {
   chat: CHAT_CONFIG,
+  content: CONTENT_CONFIG,
   voice: VOICE_CONFIG,
   email: EMAIL_CONFIG,
   social: SOCIAL_CONFIG,

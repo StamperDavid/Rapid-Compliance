@@ -32,6 +32,8 @@ function getSessionCollectionForType(agentType: AgentDomain): string {
   switch (agentType) {
     case 'chat':
       return getSubCollection('chatSessions');
+    case 'content':
+      return getSubCollection('contentPosts');
     case 'voice':
       return getSubCollection('calls');
     case 'email':
@@ -184,6 +186,15 @@ function extractScoreFromSession(sessionData: Record<string, unknown>, agentType
       if (typeof sessionData.seoScore === 'number') { return sessionData.seoScore; }
       break;
     }
+    case 'content': {
+      if (typeof sessionData.contentScore === 'number') { return sessionData.contentScore; }
+      if (typeof sessionData.qualityScore === 'number') { return sessionData.qualityScore; }
+      break;
+    }
+    case 'video':
+    case 'orchestrator':
+    case 'sales_chat':
+      break;
   }
 
   // Default: 0 means "not scored" (won't trigger flagging)

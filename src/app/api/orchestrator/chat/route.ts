@@ -32,7 +32,7 @@ import { PLATFORM_ID } from '@/lib/constants/platform';
 import { getSubCollection } from '@/lib/firebase/collections';
 import { createMission, finalizeMission } from '@/lib/orchestrator/mission-persistence';
 import { getAgentCount, getDomainCount } from '@/lib/agents/agent-registry';
-import { getActiveJasperGoldenMaster, buildLearnedCorrectionsBlock } from '@/lib/orchestrator/jasper-golden-master';
+import { getActiveJasperGoldenMaster } from '@/lib/orchestrator/jasper-golden-master';
 
 // ============================================================================
 // Type Definitions
@@ -423,7 +423,7 @@ export async function POST(request: NextRequest) {
 
     // Convert conversation history to provider format with tool support
     const messages: ChatMessage[] = [
-      { role: 'system', content: enhancedSystemPrompt + stateContext + (jasperGM ? buildLearnedCorrectionsBlock(jasperGM) : '') },
+      { role: 'system', content: enhancedSystemPrompt + stateContext },
       ...conversationHistory.map((msg) => ({
         role: msg.role,
         content: msg.content,

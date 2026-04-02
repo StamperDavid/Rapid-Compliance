@@ -11,6 +11,7 @@
 
 import { useState } from 'react';
 import StarRating from './StarRating';
+import { PromptRevisionPopup } from '@/components/training/PromptRevisionPopup';
 
 interface MissionGradeCardProps {
   missionId: string;
@@ -18,6 +19,14 @@ interface MissionGradeCardProps {
 }
 
 type SubmitState = 'idle' | 'submitting' | 'error';
+
+interface RevisionData {
+  beforeSection: string;
+  afterSection: string;
+  clarifyingQuestion?: string;
+  changeDescription: string;
+  fullRevisedPrompt: string;
+}
 
 export default function MissionGradeCard({ missionId, existingGrade }: MissionGradeCardProps) {
   const [expanded, setExpanded] = useState<boolean>(false);
@@ -27,6 +36,9 @@ export default function MissionGradeCard({ missionId, existingGrade }: MissionGr
   const [submitted, setSubmitted] = useState<boolean>(!!existingGrade);
   const [submitState, setSubmitState] = useState<SubmitState>('idle');
   const [errorMsg, setErrorMsg] = useState<string>('');
+  const [revisionData, setRevisionData] = useState<RevisionData | null>(null);
+  const [isProposing, setIsProposing] = useState<boolean>(false);
+  const [isApplying, setIsApplying] = useState<boolean>(false);
 
   async function handleSubmit() {
     if (score === 0) { return; }
@@ -69,101 +81,174 @@ export default function MissionGradeCard({ missionId, existingGrade }: MissionGr
       setEditing(false);
       setExpanded(false);
       setSubmitState('idle');
+
+      // Non-blocking: propose a prompt revision when the user provided an explanation.
+      const trimmedExplanation = explanation.trim();
+      if (trimmedExplanation) {
+        setIsProposing(true);
+        try {
+          const revRes = await fetch('/api/training/propose-prompt-revision', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              agentType: 'orchestrator',
+              correction: trimmedExplanation,
+              context: `Mission grading — user gave ${score} stars`,
+            }),
+          });
+          const revJson: unknown = await revRes.json();
+          const revData = revJson as { success: boolean; data?: RevisionData };
+          if (revData.success && revData.data) {
+            setRevisionData(revData.data);
+          }
+        } catch {
+          // Non-critical — grade already succeeded
+        } finally {
+          setIsProposing(false);
+        }
+      }
     } catch {
       setErrorMsg('Network error. Please try again.');
       setSubmitState('error');
     }
   }
 
+  async function handleApproveRevision(fullRevisedPrompt: string, changeDescription: string) {
+    setIsApplying(true);
+    try {
+      await fetch('/api/training/apply-prompt-revision', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          agentType: 'orchestrator',
+          revisedPromptSection: revisionData?.afterSection ?? '',
+          fullRevisedPrompt,
+          changeDescription,
+        }),
+      });
+    } catch {
+      // Non-critical
+    } finally {
+      setIsApplying(false);
+      setRevisionData(null);
+    }
+  }
+
+  // Shared popup rendered on every branch — portal-style overlay outside all card states
+  const revisionPopup = revisionData !== null ? (
+    <PromptRevisionPopup
+      isOpen
+      onClose={() => setRevisionData(null)}
+      onApprove={(fullRevisedPrompt, changeDescription) => {
+        void handleApproveRevision(fullRevisedPrompt, changeDescription);
+      }}
+      onReject={() => setRevisionData(null)}
+      agentType="orchestrator"
+      beforeSection={revisionData.beforeSection}
+      afterSection={revisionData.afterSection}
+      clarifyingQuestion={revisionData.clarifyingQuestion}
+      changeDescription={revisionData.changeDescription}
+      fullRevisedPrompt={revisionData.fullRevisedPrompt}
+      isApplying={isApplying}
+    />
+  ) : null;
+
   // Read-only display when already graded and not editing
   if (submitted && !editing) {
     return (
-      <div
-        style={{
-          marginTop: '1.25rem',
-          padding: '0.75rem 1rem',
-          borderRadius: '0.5rem',
-          border: '1px solid var(--color-border-light)',
-          background: 'rgba(var(--color-primary-rgb, 99,102,241), 0.04)',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.75rem',
-        }}
-      >
-        <span
+      <>
+        <div
           style={{
-            fontSize: '0.75rem',
-            color: 'var(--color-text-secondary)',
-            fontWeight: 500,
+            marginTop: '1.25rem',
+            padding: '0.75rem 1rem',
+            borderRadius: '0.5rem',
+            border: '1px solid var(--color-border-light)',
+            background: 'rgba(var(--color-primary-rgb, 99,102,241), 0.04)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.75rem',
           }}
         >
-          Your rating
-        </span>
-
-        <StarRating value={score} onChange={() => undefined} readonly />
-
-        {explanation && (
           <span
             style={{
-              fontSize: '0.6875rem',
+              fontSize: '0.75rem',
               color: 'var(--color-text-secondary)',
-              fontStyle: 'italic',
-              flex: 1,
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
+              fontWeight: 500,
             }}
           >
-            {explanation}
+            Your rating
           </span>
-        )}
 
-        <button
-          type="button"
-          onClick={() => setEditing(true)}
-          style={{
-            background: 'none',
-            border: 'none',
-            padding: '0.25rem 0.5rem',
-            fontSize: '0.6875rem',
-            color: 'var(--color-primary)',
-            cursor: 'pointer',
-            flexShrink: 0,
-          }}
-        >
-          Edit
-        </button>
-      </div>
+          <StarRating value={score} onChange={() => undefined} readonly />
+
+          {explanation && (
+            <span
+              style={{
+                fontSize: '0.6875rem',
+                color: 'var(--color-text-secondary)',
+                fontStyle: 'italic',
+                flex: 1,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {explanation}
+            </span>
+          )}
+
+          <button
+            type="button"
+            onClick={() => setEditing(true)}
+            style={{
+              background: 'none',
+              border: 'none',
+              padding: '0.25rem 0.5rem',
+              fontSize: '0.6875rem',
+              color: 'var(--color-primary)',
+              cursor: 'pointer',
+              flexShrink: 0,
+            }}
+          >
+            Edit
+          </button>
+        </div>
+        {revisionPopup}
+      </>
     );
   }
 
   // Collapsed prompt
   if (!expanded && !editing) {
     return (
-      <div style={{ marginTop: '1.25rem' }}>
-        <button
-          type="button"
-          onClick={() => setExpanded(true)}
-          style={{
-            background: 'none',
-            border: 'none',
-            padding: 0,
-            fontSize: '0.75rem',
-            color: 'var(--color-text-secondary)',
-            cursor: 'pointer',
-            textDecoration: 'underline',
-            textDecorationStyle: 'dotted',
-            textUnderlineOffset: '3px',
-          }}
-        >
-          Rate this mission
-        </button>
-      </div>
+      <>
+        <div style={{ marginTop: '1.25rem' }}>
+          <button
+            type="button"
+            onClick={() => setExpanded(true)}
+            style={{
+              background: 'none',
+              border: 'none',
+              padding: 0,
+              fontSize: '0.75rem',
+              color: 'var(--color-text-secondary)',
+              cursor: 'pointer',
+              textDecoration: 'underline',
+              textDecorationStyle: 'dotted',
+              textUnderlineOffset: '3px',
+            }}
+          >
+            Rate this mission
+          </button>
+        </div>
+        {revisionPopup}
+      </>
     );
   }
 
   // Expanded form
   return (
+    <>
     <div
       style={{
         marginTop: '1.25rem',
@@ -277,8 +362,10 @@ export default function MissionGradeCard({ missionId, existingGrade }: MissionGr
           transition: 'background 0.15s ease',
         }}
       >
-        {submitState === 'submitting' ? 'Submitting…' : 'Submit'}
+        {submitState === 'submitting' ? 'Submitting…' : isProposing ? 'Proposing revision…' : 'Submit'}
       </button>
     </div>
+    {revisionPopup}
+    </>
   );
 }
