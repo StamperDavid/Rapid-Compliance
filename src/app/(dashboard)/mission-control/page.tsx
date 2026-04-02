@@ -23,6 +23,7 @@ import AgentAvatar from './_components/AgentAvatar';
 import CampaignReview from './_components/CampaignReview';
 import MissionGradeCard from './_components/MissionGradeCard';
 import StepGradeWidget from './_components/StepGradeWidget';
+import ScheduleMissionDialog from './_components/ScheduleMissionDialog';
 import { getDashboardLink, getStepReviewLink, formatToolName } from './_components/dashboard-links';
 import type { Mission, MissionStep } from '@/lib/orchestrator/mission-persistence';
 
@@ -1302,6 +1303,7 @@ function MissionControlView({ deepLinkedMission }: { deepLinkedMission: string |
 
   // ── Cancel mission handler ──────────────────────────────────────────
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [showScheduleDialog, setShowScheduleDialog] = useState(false);
 
   const handleCancelRequest = useCallback(() => {
     if (!selectedMissionId || cancelling) { return; }
@@ -1692,6 +1694,42 @@ function MissionControlView({ deepLinkedMission }: { deepLinkedMission: string |
                       existingGrade={missionGrades['overall']}
                     />
                   </div>
+                )}
+                {selectedMission.status === 'COMPLETED' && (
+                  <div style={{ padding: '0 1rem 1rem' }}>
+                    <button
+                      type="button"
+                      onClick={() => setShowScheduleDialog(true)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        backgroundColor: '#2563eb',
+                        color: '#fff',
+                        border: 'none',
+                        borderRadius: '0.375rem',
+                        padding: '0.5rem 1rem',
+                        fontSize: '0.8125rem',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        font: 'inherit',
+                        transition: 'background-color 0.15s ease',
+                      }}
+                      onMouseOver={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#1d4ed8'; }}
+                      onMouseOut={(e) => { (e.currentTarget as HTMLButtonElement).style.backgroundColor = '#2563eb'; }}
+                    >
+                      &#128197; Schedule this mission
+                    </button>
+                  </div>
+                )}
+                {showScheduleDialog && selectedMission && (
+                  <ScheduleMissionDialog
+                    missionId={selectedMission.missionId}
+                    missionTitle={selectedMission.title}
+                    missionPrompt={selectedMission.userPrompt}
+                    onClose={() => setShowScheduleDialog(false)}
+                    onScheduled={() => setShowScheduleDialog(false)}
+                  />
                 )}
               </div>
             ) : (
