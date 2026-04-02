@@ -279,7 +279,33 @@ export default function EntityTablePage() {
       onConfirm: () => {
         void (async () => {
           try {
-            await deleteRecord(id);
+            // Use API route for entity types that have server-side delete endpoints
+            // (admin SDK bypasses Firestore security rules that block client SDK deletes)
+            //
+            // leads: batch endpoint expects { ids: [...] }
+            // contacts/deals: per-item endpoint at /api/{entity}/{id}
+            if (entityName === 'leads') {
+              const resp = await authFetch('/api/leads', {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ids: [id] }),
+              });
+              if (!resp.ok) {
+                const errData = await resp.json().catch(() => ({})) as Record<string, unknown>;
+                throw new Error((errData.error as string) || `Delete failed (${resp.status})`);
+              }
+            } else if (entityName === 'contacts' || entityName === 'deals') {
+              const resp = await authFetch(`/api/${entityName}/${id}`, {
+                method: 'DELETE',
+              });
+              if (!resp.ok) {
+                const errData = await resp.json().catch(() => ({})) as Record<string, unknown>;
+                throw new Error((errData.error as string) || `Delete failed (${resp.status})`);
+              }
+            } else {
+              // Fallback to client SDK for entity types without API routes
+              await deleteRecord(id);
+            }
             setConfirmDialog(null);
             setNotification({ message: 'Record deleted successfully', type: 'success' });
           } catch (err: unknown) {

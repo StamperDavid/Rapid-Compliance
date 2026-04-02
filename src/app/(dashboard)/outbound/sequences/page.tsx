@@ -19,6 +19,7 @@ export default function EmailSequencesPage() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'sequences' | 'enrollments'>('sequences');
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
   // Load sequences from Firestore
   useEffect(() => {
@@ -129,6 +130,23 @@ export default function EmailSequencesPage() {
     } catch (error) {
       logger.error('Error activating sequence:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
       toast.error('Failed to activate sequence');
+    }
+  };
+
+  const confirmDeleteSequence = async () => {
+    if (!deleteTarget) { return; }
+    try {
+      await FirestoreService.delete(
+        `${COLLECTIONS.ORGANIZATIONS}/${PLATFORM_ID}/sequences`,
+        deleteTarget
+      );
+      setSequences(sequences.filter(s => s.id !== deleteTarget));
+      toast.success('Sequence deleted');
+    } catch (error) {
+      logger.error('Error deleting sequence:', error instanceof Error ? error : new Error(String(error)), { file: 'page.tsx' });
+      toast.error('Failed to delete sequence');
+    } finally {
+      setDeleteTarget(null);
     }
   };
 
@@ -397,6 +415,21 @@ export default function EmailSequencesPage() {
                       >
                         Edit
                       </button>
+                      <button
+                        onClick={() => setDeleteTarget(seq.id)}
+                        style={{
+                          padding: '0.75rem',
+                          backgroundColor: 'transparent',
+                          color: 'var(--color-error)',
+                          border: '1px solid var(--color-error)',
+                          borderRadius: '0.5rem',
+                          cursor: 'pointer',
+                          fontSize: '0.875rem',
+                          fontWeight: '600',
+                        }}
+                      >
+                        Delete
+                      </button>
                     </div>
                   </div>
                 ))
@@ -483,6 +516,20 @@ export default function EmailSequencesPage() {
           onClose={() => setShowCreateModal(false)}
           onCreate={(name, desc) => void handleCreateSequence(name, desc)}
         />
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      {deleteTarget && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0, 0, 0, 0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}>
+          <div style={{ backgroundColor: 'var(--color-bg-elevated)', borderRadius: '1rem', border: '1px solid var(--color-border-strong)', padding: '2rem', maxWidth: '28rem', width: '100%', textAlign: 'center' }}>
+            <h3 style={{ color: 'var(--color-text-primary)', fontSize: '1.25rem', fontWeight: '600', marginBottom: '0.75rem' }}>Delete Sequence?</h3>
+            <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem', marginBottom: '1.5rem' }}>This cannot be undone. All steps and analytics for this sequence will be permanently removed.</p>
+            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
+              <button onClick={() => setDeleteTarget(null)} style={{ padding: '0.75rem 1.5rem', backgroundColor: 'var(--color-bg-main)', color: 'var(--color-text-primary)', border: '1px solid var(--color-border-strong)', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: '600' }}>Cancel</button>
+              <button onClick={() => void confirmDeleteSequence()} style={{ padding: '0.75rem 1.5rem', backgroundColor: 'var(--color-error)', color: '#fff', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: '600' }}>Delete</button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
