@@ -515,25 +515,39 @@ export async function POST(request: NextRequest) {
     // ═══════════════════════════════════════════════════════════════════════
 
     // Intent map uses COMMANDER-LEVEL tools (delegation + queries), not specialist tools
+    // Order matters: more specific patterns first to avoid false matches
     const INTENT_TOOL_MAP: Array<{ patterns: RegExp; tools: string[] }> = [
-      { patterns: /scrap(e|ing)|analyz(e|ing)\s+(their|the|this)\s+(site|website|page)|\.com|\.io|\.org|\.net/i, tools: ['delegate_to_intelligence'] },
+      // Explicit URL scraping — user says "scrape" = direct page fetch, not just research
+      { patterns: /scrap(e|ing)\b/i, tools: ['scrape_website'] },
+      // Research & analysis (competitor intel, market research, trend analysis)
+      { patterns: /analyz(e|ing)\s+(their|the|this)\s+(site|website|page|positioning|pricing)/i, tools: ['delegate_to_intelligence'] },
+      { patterns: /trending|trends?\s+(in|for|about)/i, tools: ['delegate_to_intelligence'] },
+      { patterns: /competitor(s|'s)?|competitive\s+(intel|analysis|research)/i, tools: ['delegate_to_intelligence'] },
+      { patterns: /research\b/i, tools: ['delegate_to_intelligence'] },
+      // Leads
       { patterns: /leads?|prospects?|find\s+(me\s+)?(companies|businesses)|scan\s+for/i, tools: ['scan_leads'] },
       { patterns: /enrich/i, tools: ['enrich_lead'] },
       { patterns: /score\s+(them|leads?|the)/i, tools: ['score_leads'] },
+      // Outreach — cold email, personalized email, email sequences/drips
       { patterns: /outreach|cold\s+email|personalized\s+email|draft.*(email|outreach)\s+(to|for)/i, tools: ['delegate_to_outreach'] },
+      { patterns: /email\s*(campaign|sequence|drip|blast|series)/i, tools: ['delegate_to_outreach'] },
+      // SEO
       { patterns: /seo|search\s+engine|keywords?\s+(config|setup|align)/i, tools: ['get_seo_config'] },
-      { patterns: /campaign|blog.*video.*social|multi.?channel|content\s+blitz|everything/i, tools: ['delegate_to_content'] },
-      { patterns: /trending|trends?\s+(in|for|about)/i, tools: ['delegate_to_intelligence'] },
-      { patterns: /competitor(s|'s)?|competitive\s+intel/i, tools: ['delegate_to_intelligence'] },
+      // Video — produce_video handles storyboard creation (NOT delegate_to_content)
+      { patterns: /video|storyboard/i, tools: ['produce_video'] },
+      // Social media
       { patterns: /social\s*(media|post)|post\s+(on|to)\s+(twitter|linkedin|facebook)/i, tools: ['delegate_to_marketing'] },
-      { patterns: /email\s*(campaign|sequence|drip|blast)/i, tools: ['delegate_to_marketing'] },
-      { patterns: /video|storyboard/i, tools: ['delegate_to_content'] },
-      { patterns: /blog|article|landing\s*page/i, tools: ['delegate_to_content'] },
+      // Content — blog, articles, landing pages
+      { patterns: /blog|article/i, tools: ['delegate_to_content'] },
+      { patterns: /landing\s*page/i, tools: ['delegate_to_builder'] },
+      // Multi-channel campaign (everything at once)
+      { patterns: /campaign|multi.?channel|content\s+blitz|everything/i, tools: ['delegate_to_content', 'delegate_to_marketing', 'produce_video'] },
     ];
 
     // Dependency-ordered phases using commander-level tools
     const PHASE_ORDER: Record<string, number> = {
       // Phase 1: Research & Discovery (no dependencies, run first)
+      scrape_website: 1,
       delegate_to_intelligence: 1,
       scan_leads: 1,
       get_seo_config: 1,
@@ -543,6 +557,8 @@ export async function POST(request: NextRequest) {
       // Phase 3: Content Creation (depends on Phase 1+2 — reads MemoryVault)
       delegate_to_content: 3,
       delegate_to_marketing: 3,
+      produce_video: 3,
+      delegate_to_builder: 3,
       create_campaign: 3,
       // Phase 4: Outreach (depends on Phase 2 scored leads)
       delegate_to_outreach: 4,
@@ -600,16 +616,19 @@ export async function POST(request: NextRequest) {
       // Commander-level tools: delegation + queries + admin + lead management
       const COMMANDER_TOOL_NAMES = new Set([
         // Department delegation (managers handle specialist coordination)
-        'delegate_to_intelligence',   // Research, scraping, competitor analysis, trends
-        'delegate_to_content',        // Blog, video, landing page copy, assets
-        'delegate_to_marketing',      // Social posts, email campaigns, SEO, ads
+        'delegate_to_intelligence',   // Research, competitor analysis, trends
+        'delegate_to_content',        // Blog, landing page copy, assets
+        'delegate_to_marketing',      // Social posts, SEO, ads
         'delegate_to_sales',          // Lead qualification, pipeline, deal closing
-        'delegate_to_outreach',       // Email/SMS/voice outreach sequences
-        'delegate_to_builder',        // Website building
+        'delegate_to_outreach',       // Email/SMS/voice outreach sequences, email campaigns/drips
+        'delegate_to_builder',        // Website building, landing pages
         'delegate_to_architect',      // Site architecture
         'delegate_to_trust',          // Reputation management
         'delegate_to_commerce',       // E-commerce, payments
         'delegate_to_agent',          // Generic agent delegation
+        // Direct-access tools (simple enough to not need a manager)
+        'scrape_website',             // Direct URL fetch + parse (user says "scrape X")
+        'produce_video',              // Video storyboard creation (AI Video Director)
         // Simple data queries (no delegation needed)
         'query_docs', 'get_platform_stats', 'get_system_state',
         'get_analytics', 'generate_report', 'get_seo_config',
@@ -942,6 +961,39 @@ CRITICAL RULES:
         logger.warn('[Jasper] Mission finalization failed (non-blocking)', {
           error: err instanceof Error ? err.message : String(err),
         });
+      }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // POST-LOOP ENFORCEMENT: Failure acknowledgment + Mission Control link
+    //
+    // The LLM may narrate success even when tools failed (hallucination).
+    // Code-level enforcement: scan results for errors and append a truthful
+    // summary that the LLM cannot override.
+    // ═══════════════════════════════════════════════════════════════════════
+    if (toolsExecuted.length > 0) {
+      // Identify failed tools from results
+      const failedTools: string[] = [];
+      for (let i = 0; i < allToolResults.length; i++) {
+        try {
+          const parsed = JSON.parse(allToolResults[i].content) as Record<string, unknown>;
+          if (typeof parsed.error === 'string' && parsed.error.length > 0) {
+            failedTools.push(`${toolsExecuted[i]}: ${parsed.error}`);
+          }
+        } catch {
+          // Non-JSON — not an error
+        }
+      }
+
+      // Append failure notice if any tools errored
+      if (failedTools.length > 0) {
+        finalResponse += `\n\n---\n**⚠ ${failedTools.length} task(s) did not complete:**\n${failedTools.map(f => `- ${f}`).join('\n')}\n\nYou can retry these individually or ask me to try again.`;
+        logger.warn('[Jasper] Appended failure notice to response', { failedTools });
+      }
+
+      // Always append Mission Control link when a mission was created
+      if (missionCreated) {
+        finalResponse += `\n\n📋 **[View full mission details in Mission Control](/mission-control)**`;
       }
     }
 

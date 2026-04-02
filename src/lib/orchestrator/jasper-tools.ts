@@ -5452,6 +5452,23 @@ Select cohesive settings that create a professional, unified visual language acr
 
           const topic = args.topic as string || 'business growth';
           const contentType = args.contentType as string || 'blog_post';
+
+          // Safety redirect: email content types should be handled by outreach, not content
+          const emailTypes = ['email_campaign', 'email_sequence', 'email', 'drip', 'email_drip'];
+          if (emailTypes.includes(contentType.toLowerCase())) {
+            logger.info('[Content] Redirecting email contentType to outreach handler', { contentType, topic });
+            content = JSON.stringify({
+              status: 'REDIRECTED',
+              error: `Email content (${contentType}) should use delegate_to_outreach, not delegate_to_content. Please call delegate_to_outreach instead.`,
+              suggestion: 'Use delegate_to_outreach with message and channel parameters for email sequences.',
+            });
+            trackMissionStep(context, 'delegate_to_content', 'FAILED', {
+              summary: `Content: Redirected — email contentType "${contentType}" should use delegate_to_outreach`,
+              durationMs: Date.now() - contentStart,
+            });
+            break;
+          }
+
           const audience = args.audience as string || 'B2B professionals';
           const tone = args.format as string || 'professional';
           const seoKeywords = args.seoKeywords as string || '';
