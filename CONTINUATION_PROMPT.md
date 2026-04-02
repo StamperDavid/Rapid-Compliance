@@ -173,77 +173,144 @@ Walk through every feature and function of the platform end-to-end. Find and fix
 
 ## Golden Master & Agent Learning System (April 1, 2026)
 
-**Goal:** Every AI agent learns from graded performance. Jasper gets a Golden Master. Mission Control gets optional grading. Alex becomes a proper trainable agent. Missions become reusable and schedulable.
+**Goal:** Every AI agent learns from graded performance through direct prompt editing. Corrections from grading and training rewrite the agent's actual system prompt — no layering, no appendix blocks.
 
-**STATUS:** WS1-WS3 COMPLETE. WS4-WS8 IN PROGRESS.
+**STATUS:** Phase 1 (infrastructure) COMPLETE. Phase 2 (Prompt Engineer Agent + learning loop) is NEXT.
 
-### Architecture
+### Core Architecture
 
 Every agent has two layers:
-- **Golden Master** — versioned, deployable snapshot of agent config + learned corrections from training/grading
-- **Ephemeral Spawn** — fresh instance created from the GM for each task, dies after completion
+- **Golden Master (GM)** — versioned, deployable snapshot of the agent's system prompt + persona + behavior config. The prompt IS the training. When corrections are made, the prompt itself is edited to incorporate them.
+- **Ephemeral Spawn** — fresh instance created from the active GM for each task. Dies after completion. No state carries between spawns.
 
-Three training vectors:
-1. **Chat-based training (Training Center)** — direct conversation with Jasper/Alex to shape behavior proactively
-2. **Performance-based grading (Mission Control)** — grade Jasper's orchestration decisions after missions complete. Grades feed into Jasper's orchestrator GM.
-3. **Output-based grading (Deliverable Reviews)** — grade individual deliverables (blog, video, social, email). Each grade feeds into the GM of the agent that PRODUCED it, NOT Jasper's. This is how each specialist agent improves.
+**Critical rule: No feedback from the owner = no changes to the GM.** The system ONLY modifies prompts when the owner explicitly provides a correction. Ungraded output is assumed satisfactory.
 
-Grading is ALWAYS optional. No grade = assumed 100% (satisfactory). The system only reacts to explicitly submitted grades.
+### Three Training Entry Points
+
+All three entry points trigger the same mechanism — the Prompt Engineer Agent proposes a prompt edit, the owner approves or rejects it.
+
+1. **Mission Control grading** — owner grades Jasper's orchestration (1-5 stars + explanation). The explanation triggers a prompt revision proposal for Jasper's GM.
+2. **Deliverable review** — owner rejects or requests revision on a deliverable (blog, video, social post, email) with feedback. The feedback triggers a prompt revision proposal for the PRODUCING agent's GM (not Jasper's).
+3. **Training Center chat** — owner trains an agent via direct conversation. Corrections identified in the chat trigger prompt revision proposals for that agent's GM.
+
+### Prompt Engineer Agent
+
+A dedicated specialist agent responsible for editing other agents' system prompts. This agent:
+
+- **Model:** Claude Opus via OpenRouter (best reasoning for instruction editing, low-frequency so cost is negligible)
+- **Input:** The agent's current system prompt + the owner's correction/feedback
+- **Process:**
+  1. Reads the full current prompt
+  2. Identifies the affected section
+  3. Rewrites ONLY that section to incorporate the correction
+  4. If the correction conflicts with existing instructions, asks the owner for clarification via chat before proposing
+  5. Presents a before/after diff for approval
+- **Output:** A proposed revised prompt section, shown in the Prompt Revision Popup
+
+### Prompt Revision Popup (3-panel UI)
+
+Triggered whenever the owner submits a grade with explanation, rejects a deliverable with feedback, or when a Training Center chat produces a correction.
+
+| Panel | Content |
+|-------|---------|
+| **Left: Current** | The affected section of the current prompt, highlighted |
+| **Right: Proposed** | The revised section with changes highlighted (diff-style) |
+| **Bottom: Chat** | Conversation with the Prompt Engineer Agent — it can ask clarifying questions, the owner can refine the proposal |
+
+**Actions:**
+- **Approve** — saves new GM version, deploys immediately, invalidates cache
+- **Reject** — discards proposal, current GM stays unchanged
+- **Edit Manually** — owner tweaks the proposed text before approving
+
+### GM Version Control
+
+Every approved prompt edit creates a new versioned GM snapshot. The Training Center provides a version management UI:
+
+- **Version list** — v1, v2, v3... with timestamps and what triggered each change (e.g., "Grade correction: always enrich leads before outreach")
+- **Diff view** — select any two versions to see exactly what changed between them
+- **Rollback** — one-click revert to any previous version (deploys that version, deactivates current)
+- **Active indicator** — which version is currently deployed for each agent
+
+This is the safety net. If a prompt edit makes an agent worse, the owner pulls up version history, sees the change, and rolls back.
+
+### Agents That Need GMs
+
+Every agent that produces output the owner reviews needs its own GM with the full correction flow:
+
+| Agent | Domain | What They Produce | Review Surface |
+|-------|--------|-------------------|----------------|
+| Jasper | `orchestrator` | Mission orchestration decisions | Mission Control grading |
+| Content/Copywriter | `content` | Blog posts, landing page copy | Campaign deliverable review |
+| Video Agent | `video` | Storyboards, video scripts | Campaign deliverable review |
+| Social Agent | `social` | Social media posts | Campaign deliverable review |
+| Email Agent | `email` | Email sequences, outreach | Campaign deliverable review |
+| Alex | `sales_chat` | Sales conversations, onboarding | Training Center chat |
+
+Swarm specialists that work behind the scenes (scrapers, enrichment, scoring) do NOT need this — their managers handle quality internally.
+
+### Deliverable → Agent Routing
+
+When a deliverable is rejected or revised, the feedback routes to the correct agent's GM:
+
+| Deliverable Type | Producing Agent Domain |
+|-----------------|----------------------|
+| `blog` | `content` |
+| `video` | `video` |
+| `social_post` | `social` |
+| `email` | `email` |
+| `image` | `video` |
+| `landing_page` | `content` |
+| `research` | (no GM — swarm internal) |
+| `strategy` | (no GM — swarm internal) |
 
 ### Mission Scheduling
 
 Completed missions can be saved as reusable templates. The user sets:
-- **Frequency:** daily, weekly, custom interval, or for a set period
-- **Parameters:** which parts to re-run with fresh data (e.g., new leads each day)
-- Auto-runs without user intervention. Results appear in Mission Control for optional review.
+- **Frequency:** daily, weekly, biweekly, monthly, or custom interval
+- **Optional end date** or run indefinitely
+- Auto-runs via cron without user intervention. Results appear in Mission Control for optional review.
 
-### Workstream Status
+### What Was Built (Phase 1 — April 1, 2026)
 
-| WS | Description | Status |
-|----|-------------|--------|
-| WS1 | Foundation — AgentDomain types, Zod schema, deploy scoping bug fix, training configs | COMPLETE |
-| WS2 | Jasper Golden Master — factory, loader with 60s cache, chat route integration, learned corrections injection | COMPLETE |
-| WS3 | Mission Control grading — MissionGrade types, grade service, API endpoint, StarRating/MissionGradeCard/StepGradeWidget UI | COMPLETE |
-| WS4 | Alex agent — sales_chat domain, GM factory, public chat wiring, Training Center UI | IN PROGRESS |
-| WS5 | Training injection — learned corrections from grading into agent prompts | IN PROGRESS |
-| WS6 | Grade routing — deliverable reviews route to the producing agent's GM (not Jasper's) | TODO |
-| WS7 | Mission scheduling — save, set frequency, auto-rerun | TODO |
-| WS8 | Integration into Mission Control page.tsx — wire grading components into the 3-panel layout | TODO |
+| Item | Status | Notes |
+|------|--------|-------|
+| `AgentDomain` types: `orchestrator`, `sales_chat` | DONE | `src/types/training.ts` |
+| Zod schema drift fixed (added `video`, `orchestrator`, `sales_chat`) | DONE | `agent-training-validation.ts` |
+| Deploy scoping bug fixed (was deactivating ALL GMs) | DONE | `golden-master-updater.ts`, `golden-master-builder.ts` |
+| Training configs for orchestrator + sales_chat | DONE | `agent-type-configs.ts` |
+| Jasper GM loader with 60s cache | DONE | `jasper-golden-master.ts` |
+| Chat route loads Jasper GM | DONE | `orchestrator/chat/route.ts` |
+| Mission grading types + service + API | DONE | `mission-grades.ts`, `mission-grade-service.ts` |
+| StarRating / MissionGradeCard / StepGradeWidget | DONE | `mission-control/_components/` |
+| Grading wired into Mission Control page | DONE | `page.tsx` — center panel + right panel + sidebar badge |
+| Mission scheduling types + service + API + cron | DONE | `mission-schedule.ts`, `mission-schedule-service.ts` |
+| ScheduleMissionDialog wired into Mission Control | DONE | `page.tsx` — button on completed missions |
+| GM seed script | DONE | `scripts/seed-golden-masters.js` — both GMs live in Firestore |
+| Deliverable rejection routes to producing agent | DONE | `deliverables/[deliverableId]/route.ts` — auto-flags |
+| Training Center UI updated with new agent types | DONE | Orchestrator + Sales Chat tabs |
+| Seed API endpoints (owner-only, idempotent) | DONE | `seed-orchestrator-gm`, `seed-sales-chat-gm` |
 
-### Key Files Changed
+### What Needs To Be Built (Phase 2 — Prompt Engineer + Learning Loop)
 
-**WS1 (Foundation):**
-- `src/types/training.ts` — Added `'orchestrator' | 'sales_chat'` to AgentDomain
-- `src/lib/training/agent-training-validation.ts` — Fixed Zod schema drift, added new domains
-- `src/lib/training/agent-type-configs.ts` — Added ORCHESTRATOR_CONFIG and SALES_CHAT_CONFIG
-- `src/lib/training/golden-master-updater.ts` — Fixed deploy to scope by agentType (was deactivating ALL GMs)
-- `src/lib/agent/golden-master-builder.ts` — Same deploy scoping fix
-- `src/lib/training/production-monitor.ts` — Added orchestrator/sales_chat collection mappings
-- `src/lib/training/auto-flag-service.ts` — Added orchestrator/sales_chat to collectionMap
-- `src/lib/training/feedback-processor.ts` — Added orchestrator/sales_chat analysis preambles
-- `src/lib/training/golden-master-factory.ts` — Added orchestrator/sales_chat persona and behavior configs
+**IMPORTANT: The `buildLearnedCorrectionsBlock` approach (appending corrections to the prompt) must be REMOVED. It was an interim shortcut. The correct architecture is direct prompt editing via the Prompt Engineer Agent with owner approval.**
 
-**WS2 (Jasper GM):**
-- `src/lib/orchestrator/jasper-golden-master.ts` — NEW: GM loader with 60s cache + learned corrections builder
-- `src/app/api/orchestrator/chat/route.ts` — Loads Jasper GM, uses as base prompt, injects corrections
-
-**WS3 (Grading):**
-- `src/types/mission-grades.ts` — NEW: MissionGrade interface, starToScore utility
-- `src/lib/orchestrator/mission-grade-service.ts` — NEW: submitGrade, getGradesForMission, deleteGrade
-- `src/app/api/orchestrator/missions/[missionId]/grade/route.ts` — NEW: POST + GET endpoints
-- `src/lib/orchestrator/mission-persistence.ts` — Added `graded?: boolean` to Mission interface
-- `src/app/(dashboard)/mission-control/_components/StarRating.tsx` — NEW: Interactive 5-star component
-- `src/app/(dashboard)/mission-control/_components/MissionGradeCard.tsx` — NEW: Overall mission grade card
-- `src/app/(dashboard)/mission-control/_components/StepGradeWidget.tsx` — NEW: Per-step inline grade widget
+| Item | Priority | Description |
+|------|----------|-------------|
+| Prompt Engineer Agent | P0 | New specialist on Claude Opus — reads current prompt + correction, proposes section-targeted rewrite, can ask clarifying questions |
+| Prompt Revision Popup UI | P0 | 3-panel component (current / proposed / chat) with Approve/Reject/Edit buttons |
+| Grade → Popup trigger | P0 | When grade explanation is submitted in Mission Control, trigger popup instead of auto-flagging |
+| Deliverable reject → Popup trigger | P0 | When deliverable is rejected with feedback, trigger popup for producing agent's GM |
+| Training Center → Popup trigger | P1 | When chat training produces a correction, trigger popup |
+| GM Version Control UI | P1 | Version list + diff view + rollback in Training Center |
+| Fix deliverable routing map | P1 | `blog` → `content` (not `seo`), verify all mappings |
+| Remove `buildLearnedCorrectionsBlock` | P1 | Remove the layering approach from chat route — replaced by direct prompt editing |
+| Jasper GM systemPrompt | P0 | GM currently has empty systemPrompt — needs the full compiled prompt so Jasper actually spawns from it |
+| Content agent GM | P1 | Seed GM for content/copywriter agent |
+| Ensure all reviewable agents have GMs | P2 | video, social, email agents need seeded GMs |
 
 ### Pick Up Here
 
-1. Finish WS4 (Alex agent wiring)
-2. Wire grading components into Mission Control `page.tsx`
-3. Implement grade routing for deliverable reviews (WS6)
-4. Build mission scheduling (WS7)
-5. Type-check and build verification
-6. Commit and push
+Start with Phase 2 implementation. The continuation prompt below has the full context.
 
 ---
 

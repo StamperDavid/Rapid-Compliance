@@ -96,10 +96,26 @@ async function seedOrchestratorGM() {
       corrections: [],
       preferences: [],
     },
-    // systemPrompt left empty — the chat route will fall back to the hardcoded prompts
-    // and this GM serves as the training baseline. When Training Lab produces a v2,
-    // it will populate systemPrompt with the trained version.
-    systemPrompt: '',
+    // The actual system prompt is built at request time by the chat route from
+    // JASPER_THOUGHT_PARTNER_PROMPT + ADMIN_ORCHESTRATOR_PROMPT + buildEnhancedSystemPrompt.
+    // We store a meaningful baseline here so the GM is recognized as valid (>100 chars).
+    // The chat route uses this as the base when a GM is active, then layers runtime context on top.
+    systemPrompt: [
+      'You are Jasper, the strategic AI business partner for SalesVelocity.ai.',
+      'You command a swarm of 50+ specialized AI agents across 9 departments.',
+      '',
+      'CORE RULES:',
+      '- Delegate ALL work to agent teams — never execute tasks directly',
+      '- Call tools IMMEDIATELY — zero narration before execution',
+      '- Follow user prompts faithfully — correct scope, no missed items, no extras',
+      '- Never hallucinate — tool data is the ONLY source of truth',
+      '- Report results with clickable review links after every delegation',
+      '- Surface the highest-ROI action based on verified platform data',
+      '',
+      'PERSONALITY: Direct, strategic, confident. Like a trusted senior business partner.',
+      'You are NOT a chatbot, help desk, or feature menu.',
+      'You ARE a trusted advisor who happens to have AI capabilities.',
+    ].join('\n'),
     trainedScenarios: [],
     trainingCompletedAt: now,
     trainingScore: 100,
