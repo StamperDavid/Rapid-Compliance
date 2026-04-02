@@ -75,16 +75,31 @@ export class ChatSessionService {
   static async getActiveSessions(
     limitCount: number = 50
   ): Promise<ChatSession[]> {
-    const sessions = await FirestoreService.getAll<ChatSession>(
-      getSubCollection('chatSessions'),
-      [
-        where('status', 'in', ['active', 'needs_help']),
-        orderBy('lastMessageAt', 'desc'),
-        firestoreLimit(limitCount),
-      ]
-    );
+    try {
+      return await FirestoreService.getAll<ChatSession>(
+        getSubCollection('chatSessions'),
+        [
+          where('status', 'in', ['active', 'needs_help']),
+          orderBy('lastMessageAt', 'desc'),
+          firestoreLimit(limitCount),
+        ]
+      );
+    } catch (err: unknown) {
+      const isIndexError = err instanceof Error && err.message.includes('requires an index');
+      if (!isIndexError) { throw err; }
 
-    return sessions;
+      logger.warn('[ChatSession] Composite index unavailable — falling back to simple query', {
+        file: 'chat-session-service.ts',
+      });
+      const allSessions = await FirestoreService.getAll<ChatSession>(
+        getSubCollection('chatSessions'),
+        [firestoreLimit(limitCount * 2)]
+      );
+      return allSessions
+        .filter(s => s.status === 'active' || s.status === 'needs_help')
+        .sort((a, b) => (b.lastMessageAt ?? '').localeCompare(a.lastMessageAt ?? ''))
+        .slice(0, limitCount);
+    }
   }
 
   /**
@@ -101,12 +116,28 @@ export class ChatSessionService {
       ...(filters ?? []),
     ];
 
-    const sessions = await FirestoreService.getAll<ChatSession>(
-      getSubCollection('chatSessions'),
-      constraints
-    );
+    try {
+      return await FirestoreService.getAll<ChatSession>(
+        getSubCollection('chatSessions'),
+        constraints
+      );
+    } catch (err: unknown) {
+      // Fallback: if composite index is missing, use simpler query and sort in memory
+      const isIndexError = err instanceof Error && err.message.includes('requires an index');
+      if (!isIndexError) { throw err; }
 
-    return sessions;
+      logger.warn('[ChatSession] Composite index unavailable — falling back to simple query', {
+        file: 'chat-session-service.ts',
+      });
+      const allSessions = await FirestoreService.getAll<ChatSession>(
+        getSubCollection('chatSessions'),
+        [firestoreLimit(limitCount * 2)]
+      );
+      return allSessions
+        .filter(s => s.status === 'completed' || s.status === 'abandoned')
+        .sort((a, b) => (b.completedAt ?? '').localeCompare(a.completedAt ?? ''))
+        .slice(0, limitCount);
+    }
   }
 
   /**
