@@ -73,8 +73,16 @@ const gmCache = {
 export async function getActiveJasperGoldenMaster(): Promise<JasperGoldenMasterData | null> {
   // Return cached if still fresh
   if (gmCache.data !== null && (Date.now() - gmCache.timestamp) < CACHE_TTL_MS) {
+    logger.info('[Jasper GM] Cache HIT — using cached GM', {
+      file: FILE,
+      gmId: gmCache.data.id,
+      version: gmCache.data.version,
+      promptLength: gmCache.data.systemPrompt.length,
+      cacheAgeMs: Date.now() - gmCache.timestamp,
+    });
     return gmCache.data;
   }
+  logger.info('[Jasper GM] Cache MISS — querying Firestore', { file: FILE });
 
   if (!adminDb) {
     logger.warn('[Jasper GM] Admin DB not initialized, falling back to ad-hoc prompt', { file: FILE });
@@ -112,10 +120,14 @@ export async function getActiveJasperGoldenMaster(): Promise<JasperGoldenMasterD
 
     Object.assign(gmCache, { data: loaded, timestamp: Date.now() });
 
-    logger.info('[Jasper GM] Loaded active Golden Master', {
+    logger.info('[Jasper GM] Loaded active Golden Master from Firestore', {
       file: FILE,
       gmId: doc.id,
       version: raw.version,
+      promptLength: loaded.systemPrompt.length,
+      hasPersona: Boolean(raw.agentPersona),
+      hasBehaviorConfig: Boolean(raw.behaviorConfig),
+      hasKnowledgeBase: Boolean(raw.knowledgeBase),
     });
 
     return loaded;

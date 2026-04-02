@@ -401,9 +401,16 @@ export async function POST(request: NextRequest) {
 
     // Load Jasper's Golden Master if available — otherwise fall back to frontend prompt
     const jasperGM = await getActiveJasperGoldenMaster();
-    const basePrompt = (jasperGM?.systemPrompt && jasperGM.systemPrompt.length > 100)
-      ? jasperGM.systemPrompt
-      : systemPrompt;
+    const gmPrompt = jasperGM?.systemPrompt;
+    const useGMPrompt = typeof gmPrompt === 'string' && gmPrompt.length > 100;
+    const basePrompt = useGMPrompt ? gmPrompt : systemPrompt;
+
+    logger.info('[RequestTrace] Prompt source resolved', {
+      source: useGMPrompt ? 'GOLDEN_MASTER' : 'AD_HOC_FRONTEND',
+      gmId: jasperGM?.id,
+      gmVersion: jasperGM?.version,
+      promptLength: basePrompt.length,
+    });
 
     // Build the enhanced system prompt with real-time context
     const enhancedSystemPrompt = buildEnhancedSystemPrompt(
@@ -435,6 +442,16 @@ export async function POST(request: NextRequest) {
     const provider = new OpenRouterProvider(PLATFORM_ID);
 
     const startTime = Date.now();
+    const traceId = `req_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+
+    logger.info(`[RequestTrace] ═══════════════════════════════════════════`, {
+      traceId,
+      event: 'REQUEST_START',
+      uid: user.uid,
+      model: selectedModel,
+      messagePreview: message.slice(0, 200),
+      queryType: queryClassification.queryType,
+    });
 
     // Determine if we should enable tool calling
     // ALWAYS enable tools for admin context - Jasper needs full platform access
@@ -772,9 +789,12 @@ CRITICAL RULES:
         }
 
         // Execute the tool calls
-        logger.info('[Jasper] Executing tool calls', {
-          tools: response.toolCalls.map((tc: ToolCall) => tc.function.name),
+        const iterationStartMs = Date.now();
+        logger.info(`[RequestTrace] ── Iteration ${iterationCount}: executing ${response.toolCalls.length} tool(s)`, {
+          traceId,
           iteration: iterationCount,
+          tools: response.toolCalls.map((tc: ToolCall) => tc.function.name),
+          toolChoice: iterationToolChoice,
         });
 
         // Create mission BEFORE tools execute so steps can write to it
@@ -829,6 +849,23 @@ CRITICAL RULES:
             // Not JSON or no reviewLink — skip
           }
         }
+
+        // Log iteration summary
+        const iterDurationMs = Date.now() - iterationStartMs;
+        const iterToolNames = response.toolCalls.map((tc: ToolCall) => tc.function.name);
+        const iterResultStatuses = toolResults.map(r => {
+          try {
+            const p = JSON.parse(r.content) as Record<string, unknown>;
+            return (typeof p.error === 'string' && p.error.length > 0) ? 'ERROR' : 'OK';
+          } catch { return 'OK'; }
+        });
+        logger.info(`[RequestTrace] ── Iteration ${iterationCount} complete: ${iterDurationMs}ms`, {
+          traceId,
+          iteration: iterationCount,
+          durationMs: iterDurationMs,
+          toolResults: iterToolNames.map((name, i) => `${name}:${iterResultStatuses[i]}`),
+          totalToolsExecutedSoFar: toolsExecuted.length,
+        });
 
         // If this was the last iteration, force a response
         if (iterationCount >= maxIterations) {
@@ -909,17 +946,18 @@ CRITICAL RULES:
     }
 
     // Log the interaction for analytics
-    logger.info('[Jasper] Chat completed via OpenRouter', {
-      context,
-      requestedModel: selectedModel,
-      actualModel: modelUsed,
+    logger.info(`[RequestTrace] ═══════════════════════════════════════════`, {
+      traceId,
+      event: 'REQUEST_COMPLETE',
+      totalDurationMs: responseTime,
+      model: modelUsed,
       modelFallbackOccurred: modelUsed !== selectedModel,
-      messageLength: message.length,
-      responseLength: finalResponse.length,
-      responseTime,
-      toolsUsed: useTools,
-      toolsExecuted: toolsExecuted.length > 0 ? toolsExecuted : undefined,
       queryType: queryClassification.queryType,
+      toolsExecutedCount: toolsExecuted.length,
+      toolsExecuted: toolsExecuted.length > 0 ? toolsExecuted : undefined,
+      missionId: missionCreated ? missionId : undefined,
+      reviewLink: lastReviewLink,
+      responsePreview: finalResponse.slice(0, 200),
     });
 
     // Optionally persist to Firestore for long-term memory

@@ -3237,6 +3237,7 @@ export async function executeGetSystemState(): Promise<SystemState> {
  */
 export async function executeToolCall(toolCall: ToolCall, context?: ToolCallContext): Promise<ToolResult> {
   const { name, arguments: argsString } = toolCall.function;
+  const toolStartMs = Date.now();
   let args: Record<string, unknown> = {};
 
   try {
@@ -3244,6 +3245,12 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
   } catch {
     args = {};
   }
+
+  logger.info(`[ToolTrace] ▶ STARTING: ${name}`, {
+    tool: name,
+    argsPreview: argsString.slice(0, 300),
+    missionId: context?.missionId,
+  });
 
   let content: string;
 
@@ -5289,6 +5296,13 @@ Select cohesive settings that create a professional, unified visual language acr
           const provider = new OpenRouterProvider(PLATFORM_ID);
           type ModelName = Parameters<typeof provider.chat>[0]['model'];
 
+          const llmCallStart = Date.now();
+          logger.info('[LLMTrace] ▶ delegate_to_marketing: calling OpenRouter', {
+            model: 'claude-3-5-sonnet',
+            promptChars: goal.length + platform.length + audience.length,
+            goal, platform, audience,
+          });
+
           const aiResponse = await withTimeout(provider.chat({
             model: 'claude-3-5-sonnet' as ModelName,
             messages: [
@@ -5304,6 +5318,13 @@ Select cohesive settings that create a professional, unified visual language acr
             temperature: 0.8,
             maxTokens: 2048,
           }), MANAGER_TIMEOUT_MS, 'Marketing AI Generation');
+
+          logger.info('[LLMTrace] ✓ delegate_to_marketing: OpenRouter responded', {
+            model: 'claude-3-5-sonnet',
+            durationMs: Date.now() - llmCallStart,
+            responseChars: (aiResponse.content || '').length,
+            responsePreview: (aiResponse.content || '').slice(0, 200),
+          });
 
           let posts: Array<{ platform: string; content: string; hashtags?: string[] }> = [];
           try {
@@ -5442,6 +5463,12 @@ Select cohesive settings that create a professional, unified visual language acr
           const provider = new OpenRouterProvider(PLATFORM_ID);
           type ModelName = Parameters<typeof provider.chat>[0]['model'];
 
+          const llmCallStart = Date.now();
+          logger.info('[LLMTrace] ▶ delegate_to_content: calling OpenRouter', {
+            model: 'claude-3-5-sonnet',
+            topic, contentType, audience, tone,
+          });
+
           const aiResponse = await withTimeout(provider.chat({
             model: 'claude-3-5-sonnet' as ModelName,
             messages: [
@@ -5457,6 +5484,13 @@ Select cohesive settings that create a professional, unified visual language acr
             temperature: 0.7,
             maxTokens: 4096,
           }), MANAGER_TIMEOUT_MS, 'Content AI Generation');
+
+          logger.info('[LLMTrace] ✓ delegate_to_content: OpenRouter responded', {
+            model: 'claude-3-5-sonnet',
+            durationMs: Date.now() - llmCallStart,
+            responseChars: (aiResponse.content || '').length,
+            responsePreview: (aiResponse.content || '').slice(0, 200),
+          });
 
           const generatedContent = aiResponse.content || '';
 
@@ -5557,6 +5591,12 @@ Select cohesive settings that create a professional, unified visual language acr
           const archProvider = new OpenRouterProvider(PLATFORM_ID);
           type ArchModelName = Parameters<typeof archProvider.chat>[0]['model'];
 
+          const llmCallStart = Date.now();
+          logger.info('[LLMTrace] ▶ delegate_to_architect: calling OpenRouter', {
+            model: 'claude-3-5-sonnet',
+            niche: archNiche, objective: archObjective, audience: archAudience,
+          });
+
           const archAiResponse = await withTimeout(archProvider.chat({
             model: 'claude-3-5-sonnet' as ArchModelName,
             messages: [
@@ -5572,6 +5612,12 @@ Select cohesive settings that create a professional, unified visual language acr
             temperature: 0.7,
             maxTokens: 4096,
           }), MANAGER_TIMEOUT_MS, 'Architect AI Generation');
+
+          logger.info('[LLMTrace] ✓ delegate_to_architect: OpenRouter responded', {
+            model: 'claude-3-5-sonnet',
+            durationMs: Date.now() - llmCallStart,
+            responseChars: (archAiResponse.content || '').length,
+          });
 
           const archPageContent = archAiResponse.content || '';
           const archTitleMatch = archPageContent.match(/<h1[^>]*>(.*?)<\/h1>/i);
@@ -5663,6 +5709,14 @@ Select cohesive settings that create a professional, unified visual language acr
           const provider = new OpenRouterProvider(PLATFORM_ID);
           type ModelName = Parameters<typeof provider.chat>[0]['model'];
 
+          const llmCallStart = Date.now();
+          logger.info('[LLMTrace] ▶ delegate_to_outreach: calling OpenRouter', {
+            model: 'claude-3-5-sonnet',
+            channel, steps,
+            messagePreview: (args.message as string || '').slice(0, 100),
+            hasLeadData: Boolean(args.leadList),
+          });
+
           const aiResponse = await withTimeout(provider.chat({
             model: 'claude-3-5-sonnet' as ModelName,
             messages: [
@@ -5678,6 +5732,13 @@ Select cohesive settings that create a professional, unified visual language acr
             temperature: 0.7,
             maxTokens: 3000,
           }), MANAGER_TIMEOUT_MS, 'Outreach AI Generation');
+
+          logger.info('[LLMTrace] ✓ delegate_to_outreach: OpenRouter responded', {
+            model: 'claude-3-5-sonnet',
+            durationMs: Date.now() - llmCallStart,
+            responseChars: (aiResponse.content || '').length,
+            responsePreview: (aiResponse.content || '').slice(0, 200),
+          });
 
           let emails: Array<{ step: number; subject: string; body: string; delayDays?: number }> = [];
           try {
@@ -5747,8 +5808,13 @@ Select cohesive settings that create a professional, unified visual language acr
 
         try {
           const { IntelligenceManager } = await import('@/lib/agents/intelligence/manager');
+          logger.info('[LLMTrace] ▶ delegate_to_intelligence: instantiating IntelligenceManager', {
+            researchType: args.researchType as string,
+            targets: args.targets as string,
+          });
           const intelMgr = new IntelligenceManager();
           await intelMgr.initialize();
+          logger.info('[LLMTrace] ✓ IntelligenceManager initialized');
 
           const intelPayload = {
             researchType: args.researchType as string,
@@ -5763,6 +5829,7 @@ Select cohesive settings that create a professional, unified visual language acr
             timeframe: args.timeframe as string | undefined,
           };
 
+          const mgrCallStart = Date.now();
           const intelResult = await withTimeout(intelMgr.execute({
             id: `intelligence_${Date.now()}`,
             timestamp: new Date(),
@@ -5774,6 +5841,13 @@ Select cohesive settings that create a professional, unified visual language acr
             requiresResponse: true,
             traceId: `trace_${Date.now()}`,
           }), MANAGER_TIMEOUT_MS, 'Intelligence Manager');
+
+          logger.info('[LLMTrace] ✓ delegate_to_intelligence: IntelligenceManager.execute() returned', {
+            durationMs: Date.now() - mgrCallStart,
+            status: intelResult.status,
+            hasData: Boolean(intelResult.data),
+            dataKeys: intelResult.data ? Object.keys(intelResult.data as Record<string, unknown>) : [],
+          });
 
           const intelDuration = Date.now() - intelStart;
           // Extract FULL detail from IntelligenceBrief — not just the template synthesis
@@ -7468,7 +7542,34 @@ Output JSON (no markdown fences) with keys:
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     content = JSON.stringify({ error: errorMessage || 'Tool execution failed' });
+    logger.error(`[ToolTrace] ✗ FAILED: ${name}`, error instanceof Error ? error : new Error(errorMessage), {
+      tool: name,
+      durationMs: Date.now() - toolStartMs,
+      missionId: context?.missionId,
+    });
   }
+
+  const toolDurationMs = Date.now() - toolStartMs;
+
+  // Determine if result signals an error
+  let resultStatus: 'SUCCESS' | 'ERROR' = 'SUCCESS';
+  try {
+    const parsed = JSON.parse(content) as Record<string, unknown>;
+    if (typeof parsed.error === 'string' && parsed.error.length > 0) {
+      resultStatus = 'ERROR';
+    }
+  } catch {
+    // Non-JSON content — treat as success
+  }
+
+  const statusIcon = resultStatus === 'SUCCESS' ? '✓' : '⚠';
+  logger.info(`[ToolTrace] ${statusIcon} COMPLETED: ${name} (${toolDurationMs}ms) [${resultStatus}]`, {
+    tool: name,
+    durationMs: toolDurationMs,
+    resultStatus,
+    resultPreview: content.slice(0, 400),
+    missionId: context?.missionId,
+  });
 
   return {
     tool_call_id: toolCall.id,
@@ -7481,5 +7582,20 @@ Output JSON (no markdown fences) with keys:
  * Process multiple tool calls in parallel.
  */
 export async function executeToolCalls(toolCalls: ToolCall[], context?: ToolCallContext): Promise<ToolResult[]> {
-  return Promise.all(toolCalls.map((tc) => executeToolCall(tc, context)));
+  const batchStart = Date.now();
+  const toolNames = toolCalls.map(tc => tc.function.name);
+  logger.info(`[ToolTrace] ═══ Executing ${toolCalls.length} tools in parallel: [${toolNames.join(', ')}]`, {
+    toolCount: toolCalls.length,
+    tools: toolNames,
+  });
+
+  const results = await Promise.all(toolCalls.map((tc) => executeToolCall(tc, context)));
+
+  logger.info(`[ToolTrace] ═══ Batch complete: ${toolCalls.length} tools in ${Date.now() - batchStart}ms`, {
+    toolCount: toolCalls.length,
+    totalDurationMs: Date.now() - batchStart,
+    tools: toolNames,
+  });
+
+  return results;
 }
