@@ -536,9 +536,10 @@ You MAY call read-only tools like get_system_state or query_docs to inform your 
       ? await expandIntent(message)
       : null;
 
-    // ── LLM advisory override: the expander understands intent regardless of
-    //    spelling, phrasing, or mixed signals. If it says advisory, trust it. ──
+    // ── LLM intent override: the expander understands intent regardless of
+    //    spelling, phrasing, or mixed signals. It can promote or demote queryType. ──
     if (expandedIntent?.isAdvisory && queryClassification.queryType !== 'advisory') {
+      // Expander says advisory — override to advisory (e.g., typo missed by regex)
       logger.info('[Jasper] Intent Expander overriding queryType to advisory', {
         previousType: queryClassification.queryType,
         expanderReasoning: expandedIntent.reasoning,
@@ -564,6 +565,16 @@ You MAY call read-only tools like get_system_state or query_docs to inform your 
       if (messages.length > 0 && messages[0].role === 'system') {
         messages[0].content += lateAdvisoryContext;
       }
+    } else if (expandedIntent && !expandedIntent.isAdvisory && expandedIntent.tools.length > 0 && queryClassification.queryType === 'advisory') {
+      // Expander says action with specific tools — override advisory default back
+      // to action. This handles the safe default (advisory) being correctly promoted
+      // when the expander detects a real action request (e.g., "write me a blog post").
+      logger.info('[Jasper] Intent Expander overriding advisory default to action', {
+        previousType: queryClassification.queryType,
+        expanderTools: expandedIntent.tools,
+        expanderReasoning: expandedIntent.reasoning,
+      });
+      queryClassification.queryType = 'action';
     }
 
     // ── Layer 2: Regex keyword matching (fast deterministic fallback) ──

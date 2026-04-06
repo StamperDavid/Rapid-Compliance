@@ -196,12 +196,15 @@ export function classifyQuery(query: string): QueryClassification {
     };
   }
 
-  // Default: action query (may or may not need state)
+  // Default: treat as advisory (safe fallback).
+  // If the user truly wants action, the Intent Expander will detect it and
+  // the expander override will reclassify. Defaulting to 'action' is dangerous
+  // because informational statements ("our target is X") would trigger execution.
   return {
-    requiresStateReflection: false,
-    queryType: 'action',
-    suggestedTools: [],
-    reason: 'Action query - state reflection optional',
+    requiresStateReflection: true,
+    queryType: 'advisory',
+    suggestedTools: ['get_system_state'],
+    reason: 'Unclassified query - defaulting to advisory for safety. Intent Expander will override if action is detected.',
   };
 }
 
