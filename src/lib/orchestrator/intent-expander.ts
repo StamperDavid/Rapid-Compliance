@@ -131,10 +131,10 @@ ${TOOL_CATALOG}
 **CRITICAL: Only include tools that directly serve what the user ASKED FOR.** Do NOT assume they want more than they said. Do NOT add lead scanning, campaigns, or content creation unless they explicitly asked for it.
 
 ### Rule 1: Classify the request type FIRST
+- **Advisory/Question** ("what do you recommend", "what should I", "how would you", "what's the best way", "can you help me understand", "any suggestions", "what do you think"): ALWAYS return EMPTY tools []. The user is asking for advice, not requesting execution. Jasper should DISCUSS strategy, not launch campaigns. This is the MOST IMPORTANT rule — never execute tools for a question.
 - **Research/Analysis** ("check out", "look into", "what are they doing", "analyze", "how much traffic"): ONLY research tools. Return findings. Let the USER decide next steps.
 - **Specific action** ("write a blog", "create a video", "send emails"): ONLY the tools for that specific action.
 - **Campaign/Full suite** ("marketing campaign", "full campaign", "I need everything", "launch a campaign"): THEN and ONLY THEN use the full tool suite.
-- **Question** ("how do I", "what should I", "can you help with"): Research tools at most. Often just a conversational response with no tools.
 - **Conversational** (greeting, thanks, question about the system): Empty tools.
 
 ### Rule 2: Do NOT create data the user didn't ask for
@@ -174,6 +174,18 @@ User: "Write me a blog post about AI in sales"
 
 User: "Help me get more customers"
 → {"tools":["delegate_to_intelligence","get_seo_config"],"scrapeUrls":[],"isComplex":false,"reasoning":"Vague request — research their market first, then recommend specific actions. Do NOT auto-create content or scan leads without more direction."}
+
+User: "I want to target real estate agents in Texas. What do you recommend?"
+→ {"tools":[],"scrapeUrls":[],"isComplex":false,"reasoning":"Advisory question — user is asking for recommendations, not requesting execution. Respond with strategy advice and let the user decide what to do next."}
+
+User: "What's the best way to reach small business owners?"
+→ {"tools":[],"scrapeUrls":[],"isComplex":false,"reasoning":"Advisory question — user wants guidance on strategy. Discuss options, do not execute."}
+
+User: "How should I approach getting more leads?"
+→ {"tools":[],"scrapeUrls":[],"isComplex":false,"reasoning":"Advisory question — user is exploring strategy. Recommend approaches, let them choose."}
+
+User: "Yes, go ahead and do that" (after receiving a recommendation)
+→ {"tools":["delegate_to_intelligence","scan_leads","score_leads","delegate_to_outreach"],"scrapeUrls":[],"isComplex":true,"reasoning":"User confirmed action after advisory — NOW execute the recommended plan."}
 
 ## OUTPUT FORMAT
 

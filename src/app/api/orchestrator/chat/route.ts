@@ -423,15 +423,31 @@ export async function POST(request: NextRequest) {
       configContext
     );
 
-    // For factual queries, inject verified state context
+    // For factual/strategic/advisory queries, inject verified state context
     let stateContext = '';
     if (queryClassification.requiresStateReflection) {
       stateContext = await SystemStateService.generateStateContext();
     }
 
+    // For advisory queries, inject guidance to have a conversation instead of executing
+    let advisoryContext = '';
+    if (queryClassification.queryType === 'advisory') {
+      advisoryContext = `
+
+IMPORTANT — ADVISORY MODE:
+The user is asking for your advice, recommendations, or opinion. They are NOT asking you to execute anything.
+DO NOT call any tools that create data (scan_leads, delegate_to_outreach, delegate_to_marketing, delegate_to_content, etc.).
+Instead, have a strategic conversation:
+1. Explain your recommended approach and WHY it makes sense for their situation
+2. Outline the specific steps you WOULD take if they approve
+3. Ask if they want you to proceed with execution
+Only execute tools if the user explicitly says to go ahead (e.g., "yes do it", "go ahead", "let's do that", "execute that plan").
+You MAY call read-only tools like get_system_state or query_docs to inform your recommendation.`;
+    }
+
     // Convert conversation history to provider format with tool support
     const messages: ChatMessage[] = [
-      { role: 'system', content: enhancedSystemPrompt + stateContext },
+      { role: 'system', content: enhancedSystemPrompt + stateContext + advisoryContext },
       ...conversationHistory.map((msg) => ({
         role: msg.role,
         content: msg.content,
@@ -718,10 +734,11 @@ CRITICAL RULES:
         iterationCount++;
 
         // Force tool use on first iteration and after phase nudges.
-        const isConversational = queryClassification.queryType === 'conversational';
+        // Advisory and conversational queries should NEVER force tools — the user is asking a question.
+        const isNonActionQuery = queryClassification.queryType === 'conversational' || queryClassification.queryType === 'advisory';
         const lastMsg = currentMessages[currentMessages.length - 1];
         const wasNudged = typeof lastMsg?.content === 'string' && lastMsg.content.startsWith('SYSTEM: Phase');
-        const shouldForceTools = (iterationCount === 1 && !isConversational) || wasNudged;
+        const shouldForceTools = (iterationCount === 1 && !isNonActionQuery) || wasNudged;
         const iterationToolChoice = shouldForceTools ? ('required' as const) : ('auto' as const);
 
         const { result: response, model } = await chatWithFallback<ChatCompletionResponse>(

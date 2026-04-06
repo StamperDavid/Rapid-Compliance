@@ -50,7 +50,7 @@ export interface StateValidation {
 
 export interface QueryClassification {
   requiresStateReflection: boolean;
-  queryType: 'factual' | 'strategic' | 'conversational' | 'action';
+  queryType: 'factual' | 'strategic' | 'advisory' | 'conversational' | 'action';
   suggestedTools: string[];
   reason: string;
 }
@@ -80,17 +80,36 @@ const FACTUAL_PATTERNS = [
 ];
 
 /**
- * Patterns that suggest strategic/action queries.
- * These also benefit from state context.
+ * Advisory patterns — the user is ASKING A QUESTION, not requesting action.
+ * Jasper should respond conversationally with recommendations, NOT execute tools.
+ * State context is loaded so Jasper can give informed advice.
  */
-const STRATEGIC_PATTERNS = [
+const ADVISORY_PATTERNS = [
+  /what.*(recommend|suggest|think|advise)/i,
+  /what (should|would|could) (we|i|you)/i,
+  /how (should|would|could) (we|i|you)/i,
   /where (do|should) (we|i) start/i,
   /what.*priority/i,
-  /what.*recommend/i,
-  /what.*next/i,
+  /what.*focus/i,
+  /what.*best (way|approach|strategy)/i,
+  /any (ideas|suggestions|thoughts)/i,
+  /help me (understand|figure out|think through|plan)/i,
+  /can you (explain|help me understand|walk me through)/i,
+];
+
+/**
+ * Strategic patterns — the user wants to TAKE ACTION.
+ * These benefit from state context and DO trigger tool execution.
+ */
+const STRATEGIC_PATTERNS = [
   /launch/i,
   /get started/i,
-  /what.*focus/i,
+  /let'?s (do|go|start|build|create|run)/i,
+  /go ahead/i,
+  /execute/i,
+  /run (the|a|this)/i,
+  /do it/i,
+  /make it happen/i,
 ];
 
 /**
@@ -147,7 +166,17 @@ export function classifyQuery(query: string): QueryClassification {
     };
   }
 
-  // Check strategic patterns
+  // Check advisory patterns BEFORE strategic — questions get conversation, not execution
+  if (ADVISORY_PATTERNS.some((p) => p.test(queryLower))) {
+    return {
+      requiresStateReflection: true,
+      queryType: 'advisory',
+      suggestedTools: ['get_system_state', 'get_platform_stats'],
+      reason: 'Advisory query - user is asking for guidance, NOT requesting action. Respond with recommendations, do NOT execute tools.',
+    };
+  }
+
+  // Check strategic patterns — user wants to take action
   if (STRATEGIC_PATTERNS.some((p) => p.test(queryLower))) {
     return {
       requiresStateReflection: true,

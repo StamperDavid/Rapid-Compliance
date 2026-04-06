@@ -151,6 +151,10 @@ export async function addMissionStep(missionId: string, step: MissionStep): Prom
 
 /**
  * Update a specific step in-place within a mission document.
+ *
+ * Uses a Firestore transaction to prevent the read-modify-write race
+ * condition that occurs when multiple tools complete in parallel and
+ * all try to update different steps in the same embedded array.
  */
 export async function updateMissionStep(
   missionId: string,
@@ -162,42 +166,63 @@ export async function updateMissionStep(
     return;
   }
 
-  try {
-    const docRef = adminDb.collection(missionsCollectionPath()).doc(missionId);
-    const doc = await docRef.get();
+  const MAX_RETRIES = 3;
 
-    if (!doc.exists) {
-      logger.warn('[MissionPersistence] Mission not found for step update', { missionId, stepId });
-      return;
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      const docRef = adminDb.collection(missionsCollectionPath()).doc(missionId);
+
+      await adminDb.runTransaction(async (transaction) => {
+        const doc = await transaction.get(docRef);
+
+        if (!doc.exists) {
+          logger.warn('[MissionPersistence] Mission not found for step update', { missionId, stepId });
+          return;
+        }
+
+        const mission = doc.data() as Mission;
+        const stepIndex = mission.steps.findIndex((s) => s.stepId === stepId);
+
+        if (stepIndex === -1) {
+          logger.warn('[MissionPersistence] Step not found in mission', { missionId, stepId });
+          return;
+        }
+
+        mission.steps[stepIndex] = { ...mission.steps[stepIndex], ...updates };
+
+        transaction.update(docRef, {
+          steps: mission.steps,
+          updatedAt: new Date().toISOString(),
+        });
+      });
+
+      logger.debug('[MissionPersistence] Step updated', {
+        missionId,
+        stepId,
+        newStatus: updates.status,
+      });
+      return; // Success — exit retry loop
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+
+      // Firestore transactions auto-retry contention, but if the transaction
+      // itself fails (e.g. too much contention), we retry at this level too
+      if (attempt < MAX_RETRIES && errorMsg.includes('ABORTED')) {
+        logger.warn('[MissionPersistence] Step update contention, retrying', {
+          missionId,
+          stepId,
+          attempt,
+        });
+        continue;
+      }
+
+      logger.error('[MissionPersistence] Failed to update step', error instanceof Error ? error : undefined, {
+        missionId,
+        stepId,
+        attempt,
+        error: errorMsg,
+      });
     }
-
-    const mission = doc.data() as Mission;
-    const stepIndex = mission.steps.findIndex((s) => s.stepId === stepId);
-
-    if (stepIndex === -1) {
-      logger.warn('[MissionPersistence] Step not found in mission', { missionId, stepId });
-      return;
-    }
-
-    mission.steps[stepIndex] = { ...mission.steps[stepIndex], ...updates };
-
-    await docRef.update({
-      steps: mission.steps,
-      updatedAt: new Date().toISOString(),
-    });
-
-    logger.debug('[MissionPersistence] Step updated', {
-      missionId,
-      stepId,
-      newStatus: updates.status,
-    });
-  } catch (error) {
-    const errorMsg = error instanceof Error ? error.message : String(error);
-    logger.error('[MissionPersistence] Failed to update step', error instanceof Error ? error : undefined, {
-      missionId,
-      stepId,
-      error: errorMsg,
-    });
   }
 }
 
@@ -326,29 +351,32 @@ export async function cancelMission(missionId: string): Promise<boolean> {
 
   try {
     const docRef = adminDb.collection(missionsCollectionPath()).doc(missionId);
-    const doc = await docRef.get();
 
-    if (!doc.exists) {
-      logger.warn('[MissionPersistence] Mission not found for cancel', { missionId });
-      return false;
-    }
+    await adminDb.runTransaction(async (transaction) => {
+      const doc = await transaction.get(docRef);
 
-    const mission = doc.data() as Mission;
-    const now = new Date().toISOString();
+      if (!doc.exists) {
+        logger.warn('[MissionPersistence] Mission not found for cancel', { missionId });
+        return;
+      }
 
-    // Mark any RUNNING steps as FAILED
-    const updatedSteps = mission.steps.map((step) =>
-      step.status === 'RUNNING'
-        ? { ...step, status: 'FAILED' as MissionStepStatus, completedAt: now, error: 'Mission cancelled' }
-        : step
-    );
+      const mission = doc.data() as Mission;
+      const now = new Date().toISOString();
 
-    await docRef.update({
-      status: 'FAILED',
-      error: 'Cancelled by user',
-      completedAt: now,
-      updatedAt: now,
-      steps: updatedSteps,
+      // Mark any RUNNING steps as FAILED
+      const updatedSteps = mission.steps.map((step) =>
+        step.status === 'RUNNING'
+          ? { ...step, status: 'FAILED' as MissionStepStatus, completedAt: now, error: 'Mission cancelled' }
+          : step
+      );
+
+      transaction.update(docRef, {
+        status: 'FAILED',
+        error: 'Cancelled by user',
+        completedAt: now,
+        updatedAt: now,
+        steps: updatedSteps,
+      });
     });
 
     logger.info('[MissionPersistence] Mission cancelled', { missionId });
