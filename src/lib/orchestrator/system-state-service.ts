@@ -95,6 +95,16 @@ const ADVISORY_PATTERNS = [
   /any (ideas|suggestions|thoughts)/i,
   /help me (understand|figure out|think through|plan)/i,
   /can you (explain|help me understand|walk me through)/i,
+  // Trailing question cues — standalone "thoughts?", "ideas?", etc. at end of message
+  /[—–\-,]\s*(thoughts|ideas|suggestions|opinions|advice|input)\s*\??\s*$/i,
+  /\b(thoughts|ideas|suggestions)\s*\?\s*$/i,
+  /\bwhat do you think\s*\??\s*$/i,
+  /\bwhat would you (do|say|suggest)\s*\??\s*$/i,
+  /\bsound good\s*\??\s*$/i,
+  /\bmake sense\s*\??\s*$/i,
+  // Contemplative phrasing — user is exploring, not commanding
+  /^(i'?m\s+)?(thinking about|considering|wondering about|mulling over|toying with|exploring)\b/i,
+  /^(i'?m\s+)?curious about/i,
 ];
 
 /**
