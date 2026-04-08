@@ -8,6 +8,7 @@ import { auth } from '@/lib/firebase/config';
 import { logger } from '@/lib/logger/logger';
 import SubpageNav from '@/components/ui/SubpageNav';
 import { DASHBOARD_TABS } from '@/lib/constants/subpage-nav';
+import { PageTitle } from '@/components/ui/typography';
 
 // ============================================================================
 // TYPES
@@ -172,7 +173,7 @@ export default function ExecutiveBriefingPage() {
 
   if (loading) {
     return (
-      <div style={{ padding: '2rem' }}>
+      <div className="p-8">
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '2rem' }}>
             <div style={{ width: '48px', height: '48px', borderRadius: '50%', backgroundColor: 'var(--color-bg-paper)', animation: 'pulse 2s infinite' }} />
@@ -181,9 +182,9 @@ export default function ExecutiveBriefingPage() {
               <div style={{ width: '180px', height: '16px', backgroundColor: 'var(--color-bg-main)', borderRadius: '0.25rem' }} />
             </div>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {[1, 2, 3, 4].map(i => (
-              <div key={i} style={{ height: '120px', backgroundColor: 'var(--color-bg-paper)', borderRadius: '1rem', border: '1px solid var(--color-border-strong)' }} />
+              <div key={i} className="h-[120px] bg-card rounded-2xl border border-border-strong" />
             ))}
           </div>
         </div>
@@ -192,16 +193,14 @@ export default function ExecutiveBriefingPage() {
   }
 
   return (
-    <div style={{ padding: '2rem' }}>
+    <div className="p-8 space-y-6">
       <div>
         <SubpageNav items={DASHBOARD_TABS} />
         {/* Header */}
         <div style={{ marginBottom: '2rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
-              <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--color-text-primary)', margin: 0 }}>
-                Executive Briefing
-              </h1>
+              <PageTitle>Executive Briefing</PageTitle>
               <p style={{ color: 'var(--color-text-disabled)', marginTop: '0.5rem', fontSize: '0.875rem' }}>
                 {briefing
                   ? `Generated ${new Date(briefing.generatedAt).toLocaleString()}`
@@ -252,7 +251,7 @@ export default function ExecutiveBriefingPage() {
             </section>
 
             {/* Metrics Grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-4">
               <MetricCard label="Op Cycles" value={briefing.metrics.totalOperationalCycles} color="var(--color-primary)" />
               <MetricCard label="Actions Executed" value={briefing.metrics.totalActionsExecuted} color="var(--color-secondary)" />
               <MetricCard label="Success Rate" value={`${Math.round(briefing.metrics.successRate * 100)}%`} color="var(--color-success)" />
@@ -263,7 +262,7 @@ export default function ExecutiveBriefingPage() {
             </div>
 
             {/* Main Content Grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1.5rem', marginBottom: '1.5rem' }} className="lg:grid-cols-2">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Highlights */}
               <section style={{ backgroundColor: 'var(--color-bg-paper)', border: '1px solid var(--color-border-strong)', borderRadius: '1rem', padding: '1.5rem' }}>
                 <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '1rem' }}>Highlights</h2>

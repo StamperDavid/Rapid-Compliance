@@ -13,6 +13,7 @@ import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { motion, AnimatePresence } from 'framer-motion';
+import { PageTitle, SectionDescription } from '@/components/ui/typography';
 import {
   Rocket,
   Plus,
@@ -287,22 +288,20 @@ export default function CampaignsPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-surface-main p-8">
+    <div className="p-8 space-y-6">
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex items-center justify-between mb-8"
+        className="flex items-center justify-between"
       >
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center shadow-lg shadow-primary/25">
             <Rocket className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold text-[var(--color-text-primary)]">Campaigns</h1>
-            <p className="text-[var(--color-text-secondary)] text-sm mt-1">
-              Multi-channel content campaigns orchestrated by Jasper
-            </p>
+            <PageTitle>Campaigns</PageTitle>
+            <SectionDescription className="mt-1">Multi-channel content campaigns orchestrated by Jasper</SectionDescription>
           </div>
         </div>
         <motion.button
@@ -327,8 +326,8 @@ export default function CampaignsPage() {
           >
             <div className="flex items-center gap-2 mb-4">
               <Sparkles className="w-5 h-5 text-primary" />
-              <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">Choose a Template</h2>
-              <span className="text-sm text-[var(--color-text-secondary)]">or ask Jasper to create a custom campaign</span>
+              <h2 className="text-lg font-semibold text-foreground">Choose a Template</h2>
+              <span className="text-sm text-muted-foreground">or ask Jasper to create a custom campaign</span>
             </div>
             <div className="grid grid-cols-4 gap-3">
               {templates.map((template, i) => (
@@ -348,11 +347,11 @@ export default function CampaignsPage() {
                   <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-primary/15 to-secondary/15 flex items-center justify-center mb-3 text-primary group-hover:from-primary/25 group-hover:to-secondary/25 transition-colors">
                     {TEMPLATE_ICON_MAP[template.iconName] ?? <Rocket className="w-5 h-5" />}
                   </div>
-                  <div className="text-sm font-semibold text-[var(--color-text-primary)] mb-1">{template.name}</div>
-                  <div className="text-xs text-[var(--color-text-secondary)] line-clamp-2 mb-3">{template.description}</div>
+                  <div className="text-sm font-semibold text-foreground mb-1">{template.name}</div>
+                  <div className="text-xs text-muted-foreground line-clamp-2 mb-3">{template.description}</div>
                   <div className="flex gap-1">
                     {template.deliverableTypes.slice(0, 4).map(type => (
-                      <span key={type} className="px-1.5 py-0.5 text-[10px] rounded bg-surface-elevated text-[var(--color-text-disabled)] border border-border-light">
+                      <span key={type} className="px-1.5 py-0.5 text-[10px] rounded bg-surface-elevated text-muted-foreground border border-border-light">
                         {type.replace('_', ' ')}
                       </span>
                     ))}
@@ -393,8 +392,8 @@ export default function CampaignsPage() {
               {stat.icon}
             </div>
             <div>
-              <div className="text-2xl font-bold text-[var(--color-text-primary)]">{stat.value}</div>
-              <div className="text-xs text-[var(--color-text-secondary)]">{stat.label}</div>
+              <div className="text-2xl font-bold text-foreground">{stat.value}</div>
+              <div className="text-xs text-muted-foreground">{stat.label}</div>
             </div>
           </motion.div>
         ))}
@@ -403,19 +402,19 @@ export default function CampaignsPage() {
       {/* Content Breakdown by Type */}
       {Object.keys(stats.byType).length > 0 && (
         <div className="bg-surface-paper border border-border-light rounded-xl p-4 mb-8">
-          <h3 className="text-sm font-semibold text-[var(--color-text-secondary)] mb-3">Content Breakdown</h3>
+          <h3 className="text-sm font-semibold text-muted-foreground mb-3">Content Breakdown</h3>
           <div className="flex gap-6">
             {Object.entries(stats.byType).map(([type, count]) => {
               const pct = stats.totalDeliverables > 0 ? Math.round((count / stats.totalDeliverables) * 100) : 0;
               return (
                 <div key={type} className="flex items-center gap-2">
-                  <span className="text-[var(--color-text-disabled)]">
+                  <span className="text-muted-foreground">
                     {DELIVERABLE_ICONS[type] ?? <FileText className="w-3.5 h-3.5" />}
                   </span>
-                  <span className="text-sm text-[var(--color-text-primary)] font-medium capitalize">
+                  <span className="text-sm text-foreground font-medium capitalize">
                     {type.replace('_', ' ')}
                   </span>
-                  <span className="text-xs text-[var(--color-text-disabled)]">
+                  <span className="text-xs text-muted-foreground">
                     {count} ({pct}%)
                   </span>
                 </div>
@@ -435,13 +434,13 @@ export default function CampaignsPage() {
               px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all
               ${statusFilter === tab.value
                 ? 'bg-primary text-white shadow-md shadow-primary/25'
-                : 'bg-surface-paper text-[var(--color-text-secondary)] hover:bg-surface-elevated border border-border-light'
+                : 'bg-surface-paper text-muted-foreground hover:bg-surface-elevated border border-border-light'
               }
             `}
           >
             {tab.label}
             {tab.count !== undefined && (
-              <span className={`ml-1.5 text-xs ${statusFilter === tab.value ? 'text-white/70' : 'text-[var(--color-text-disabled)]'}`}>
+              <span className={`ml-1.5 text-xs ${statusFilter === tab.value ? 'text-white/70' : 'text-muted-foreground'}`}>
                 {tab.count}
               </span>
             )}
@@ -478,8 +477,8 @@ export default function CampaignsPage() {
           <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center mx-auto mb-6">
             <Rocket className="w-10 h-10 text-primary" />
           </div>
-          <h3 className="text-xl font-semibold text-[var(--color-text-primary)] mb-2">No campaigns yet</h3>
-          <p className="text-[var(--color-text-secondary)] mb-6 max-w-md mx-auto">
+          <h3 className="text-xl font-semibold text-foreground mb-2">No campaigns yet</h3>
+          <p className="text-muted-foreground mb-6 max-w-md mx-auto">
             Ask Jasper to orchestrate a campaign and he&apos;ll research, strategize, and produce blog posts, videos, social content, and emails all at once.
           </p>
           <motion.button
@@ -525,7 +524,7 @@ export default function CampaignsPage() {
                 >
                   {/* Row 1: Title + Status */}
                   <div className="flex items-start justify-between mb-3">
-                    <h3 className="text-lg font-semibold text-[var(--color-text-primary)] group-hover:text-primary transition-colors line-clamp-1 flex-1 mr-4">
+                    <h3 className="text-lg font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-1 flex-1 mr-4">
                       {truncate(campaign.brief, 80)}
                     </h3>
                     <span className={`
@@ -538,14 +537,14 @@ export default function CampaignsPage() {
 
                   {/* Row 2: Date + Deliverable Type Tags */}
                   <div className="flex items-center justify-between mb-4">
-                    <span className="text-xs text-[var(--color-text-disabled)]">
+                    <span className="text-xs text-muted-foreground">
                       Created {formatDate(campaign.createdAt)}
                     </span>
                     <div className="flex gap-1.5">
                       {Object.entries(typeGroups).map(([type, count]) => (
                         <span
                           key={type}
-                          className="flex items-center gap-1 px-2 py-0.5 text-xs rounded bg-surface-elevated text-[var(--color-text-secondary)] border border-border-light"
+                          className="flex items-center gap-1 px-2 py-0.5 text-xs rounded bg-surface-elevated text-muted-foreground border border-border-light"
                         >
                           {DELIVERABLE_ICONS[type] ?? <FileText className="w-3.5 h-3.5" />}
                           {count}
@@ -569,9 +568,9 @@ export default function CampaignsPage() {
                       {pending > 0 && (
                         <span className="text-orange-400 font-medium">{pending} pending</span>
                       )}
-                      <span className="text-[var(--color-text-disabled)]">{total} total</span>
+                      <span className="text-muted-foreground">{total} total</span>
                     </div>
-                    <ArrowRight className="w-4 h-4 text-[var(--color-text-disabled)] group-hover:text-primary transition-colors shrink-0" />
+                    <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors shrink-0" />
                   </div>
                 </motion.div>
               );
@@ -593,7 +592,7 @@ export default function CampaignsPage() {
               }
             }}
             disabled={loadingMore}
-            className="flex items-center gap-2 px-6 py-2.5 bg-surface-paper border border-border-light rounded-xl text-sm font-medium text-[var(--color-text-secondary)] hover:bg-surface-elevated transition-colors"
+            className="flex items-center gap-2 px-6 py-2.5 bg-surface-paper border border-border-light rounded-xl text-sm font-medium text-muted-foreground hover:bg-surface-elevated transition-colors"
           >
             {loadingMore ? (
               <>

@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { PageTitle } from '@/components/ui/typography';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { abTestFormSchema, type ABTestFormValues } from '@/lib/validation/ab-test-form-schema';
@@ -128,13 +129,13 @@ export default function NewABTestPage() {
   const totalWeight = variants.reduce((sum, v) => sum + v.trafficWeight, 0);
 
   return (
-    <div className="p-8">
+    <div className="p-8 space-y-6">
       <div className="max-w-3xl mx-auto">
-        <h1 className="text-3xl font-bold mb-6 text-[var(--color-text-primary)]">Create A/B Test</h1>
+        <PageTitle className="mb-6">Create A/B Test</PageTitle>
         <Form form={form} onSubmit={onSubmit}>
           {/* Basic Info */}
           <div className="bg-surface-paper rounded-lg p-6 mb-4">
-            <h2 className="text-lg font-semibold mb-4 text-[var(--color-text-primary)]">Test Details</h2>
+            <h2 className="text-lg font-semibold mb-4 text-foreground">Test Details</h2>
             <div className="space-y-4">
               <FormField control={form.control} name="name" render={({ field }) => (
                 <FormItem>
@@ -143,7 +144,7 @@ export default function NewABTestPage() {
                     <input
                       {...field}
                       placeholder="e.g., Homepage CTA Color Test"
-                      className="w-full px-4 py-2 bg-surface-elevated border border-border-light rounded-lg focus:border-primary focus:outline-none text-[var(--color-text-primary)]"
+                      className="w-full px-4 py-2 bg-surface-elevated border border-border-light rounded-lg focus:border-primary focus:outline-none text-foreground"
                     />
                   </FormControl>
                   <FormMessage />
@@ -157,7 +158,7 @@ export default function NewABTestPage() {
                       {...field}
                       rows={2}
                       placeholder="What hypothesis are you testing?"
-                      className="w-full px-4 py-2 bg-surface-elevated border border-border-light rounded-lg focus:border-primary focus:outline-none text-[var(--color-text-primary)]"
+                      className="w-full px-4 py-2 bg-surface-elevated border border-border-light rounded-lg focus:border-primary focus:outline-none text-foreground"
                     />
                   </FormControl>
                   <FormMessage />
@@ -175,7 +176,7 @@ export default function NewABTestPage() {
                           const testType = e.target.value as keyof typeof DEFAULT_METRICS;
                           form.setValue('targetMetric', DEFAULT_METRICS[testType]);
                         }}
-                        className="w-full px-4 py-2 bg-surface-elevated border border-border-light rounded-lg focus:border-primary focus:outline-none text-[var(--color-text-primary)]"
+                        className="w-full px-4 py-2 bg-surface-elevated border border-border-light rounded-lg focus:border-primary focus:outline-none text-foreground"
                       >
                         {TEST_TYPE_OPTIONS.map((opt) => (
                           <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -192,7 +193,7 @@ export default function NewABTestPage() {
                       <input
                         {...field}
                         placeholder="e.g., click_through"
-                        className="w-full px-4 py-2 bg-surface-elevated border border-border-light rounded-lg focus:border-primary focus:outline-none text-[var(--color-text-primary)]"
+                        className="w-full px-4 py-2 bg-surface-elevated border border-border-light rounded-lg focus:border-primary focus:outline-none text-foreground"
                       />
                     </FormControl>
                     <FormMessage />
@@ -211,7 +212,7 @@ export default function NewABTestPage() {
                       className="w-full accent-primary"
                     />
                   </FormControl>
-                  <p className="text-xs text-[var(--color-text-secondary)]">Percentage of total users who will be included in this test</p>
+                  <p className="text-xs text-muted-foreground">Percentage of total users who will be included in this test</p>
                 </FormItem>
               )} />
             </div>
@@ -220,7 +221,7 @@ export default function NewABTestPage() {
           {/* Variants */}
           <div className="bg-surface-paper rounded-lg p-6 mb-4">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">Variants</h2>
+              <h2 className="text-lg font-semibold text-foreground">Variants</h2>
               <div className="flex gap-2">
                 <button
                   type="button"
@@ -247,32 +248,32 @@ export default function NewABTestPage() {
                     <div className="flex-1 space-y-3">
                       <div className="flex gap-3">
                         <div className="flex-1">
-                          <label className="block text-xs font-medium mb-1 text-[var(--color-text-secondary)]">Name *</label>
+                          <label className="block text-xs font-medium mb-1 text-muted-foreground">Name *</label>
                           <input
                             value={variant.name}
                             onChange={(e) => updateVariant(idx, 'name', e.target.value)}
-                            className="w-full px-3 py-1.5 text-sm bg-surface-paper border border-border-light rounded focus:border-primary focus:outline-none text-[var(--color-text-primary)]"
+                            className="w-full px-3 py-1.5 text-sm bg-surface-paper border border-border-light rounded focus:border-primary focus:outline-none text-foreground"
                           />
                         </div>
                         <div className="w-28">
-                          <label className="block text-xs font-medium mb-1 text-[var(--color-text-secondary)]">Weight %</label>
+                          <label className="block text-xs font-medium mb-1 text-muted-foreground">Weight %</label>
                           <input
                             type="number"
                             min={0}
                             max={100}
                             value={variant.trafficWeight}
                             onChange={(e) => updateVariant(idx, 'trafficWeight', parseInt(e.target.value) || 0)}
-                            className="w-full px-3 py-1.5 text-sm bg-surface-paper border border-border-light rounded focus:border-primary focus:outline-none text-[var(--color-text-primary)]"
+                            className="w-full px-3 py-1.5 text-sm bg-surface-paper border border-border-light rounded focus:border-primary focus:outline-none text-foreground"
                           />
                         </div>
                       </div>
                       <div>
-                        <label className="block text-xs font-medium mb-1 text-[var(--color-text-secondary)]">Description</label>
+                        <label className="block text-xs font-medium mb-1 text-muted-foreground">Description</label>
                         <input
                           value={variant.description}
                           onChange={(e) => updateVariant(idx, 'description', e.target.value)}
                           placeholder="What makes this variant different?"
-                          className="w-full px-3 py-1.5 text-sm bg-surface-paper border border-border-light rounded focus:border-primary focus:outline-none text-[var(--color-text-primary)]"
+                          className="w-full px-3 py-1.5 text-sm bg-surface-paper border border-border-light rounded focus:border-primary focus:outline-none text-foreground"
                         />
                       </div>
                     </div>
@@ -280,7 +281,7 @@ export default function NewABTestPage() {
                       <button
                         type="button"
                         onClick={() => removeVariant(idx)}
-                        className="mt-5 p-1.5 text-[var(--color-text-secondary)] hover:text-error rounded"
+                        className="mt-5 p-1.5 text-muted-foreground hover:text-error rounded"
                         title="Remove variant"
                       >
                         &times;
@@ -301,7 +302,7 @@ export default function NewABTestPage() {
             <button
               type="button"
               onClick={() => router.back()}
-              className="px-6 py-3 bg-surface-elevated rounded-lg hover:bg-surface-elevated text-[var(--color-text-primary)]"
+              className="px-6 py-3 bg-surface-elevated rounded-lg hover:bg-surface-elevated text-foreground"
             >
               Cancel
             </button>

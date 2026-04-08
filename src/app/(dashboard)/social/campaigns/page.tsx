@@ -6,6 +6,7 @@ import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { useToast } from '@/hooks/useToast';
 import { SOCIAL_PLATFORMS, type SocialPlatform } from '@/types/social';
 import { PLATFORM_META } from '@/lib/social/platform-config';
+import { PageTitle, SectionDescription } from '@/components/ui/typography';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -308,7 +309,7 @@ export default function SocialMediaCampaignsPage() {
       case 'scheduled': return 'bg-primary/20 text-primary border-primary/30';
       case 'draft': return 'bg-warning/20 text-warning border-warning/30';
       case 'failed': return 'bg-error/20 text-error border-error/30';
-      default: return 'bg-surface-elevated text-[var(--color-text-disabled)] border-border-light';
+      default: return 'bg-surface-elevated text-muted-foreground border-border-light';
     }
   };
 
@@ -322,17 +323,13 @@ export default function SocialMediaCampaignsPage() {
   );
 
   return (
-    <div className="min-h-screen bg-surface-main p-8">
+    <div className="p-8 space-y-6">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
-        <div className="flex justify-between items-start mb-6">
+        <div className="flex justify-between items-start">
           <div>
-            <h1 className="text-3xl font-bold text-[var(--color-text-primary)] flex items-center gap-3">
-              Content Studio
-            </h1>
-            <p className="text-[var(--color-text-secondary)] text-sm mt-1">
-              AI-powered content creation with manual override
-            </p>
+            <PageTitle>Content Studio</PageTitle>
+            <SectionDescription className="mt-1">AI-powered content creation with manual override</SectionDescription>
           </div>
           <div className="flex items-center gap-3">
             {studioMode === 'manual' && (
@@ -354,7 +351,7 @@ export default function SocialMediaCampaignsPage() {
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
               studioMode === 'autopilot'
                 ? 'bg-primary text-white shadow-sm'
-                : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'
+                : 'text-muted-foreground hover:text-foreground'
             }`}
           >
             Autopilot
@@ -365,7 +362,7 @@ export default function SocialMediaCampaignsPage() {
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
               studioMode === 'manual'
                 ? 'bg-primary text-white shadow-sm'
-                : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'
+                : 'text-muted-foreground hover:text-foreground'
             }`}
           >
             Manual
@@ -390,10 +387,10 @@ export default function SocialMediaCampaignsPage() {
                     style={{ boxShadow: agentStatus.agentEnabled ? '0 0 8px rgba(76,175,80,0.4)' : '0 0 8px rgba(244,67,54,0.4)' }}
                   />
                   <div>
-                    <div className="text-sm font-semibold text-[var(--color-text-primary)]">
+                    <div className="text-sm font-semibold text-foreground">
                       {agentStatus.agentEnabled ? 'AI Agent is driving' : 'AI Agent is paused'}
                     </div>
-                    <div className="text-xs text-[var(--color-text-secondary)]">
+                    <div className="text-xs text-muted-foreground">
                       {agentStatus.todayPublished} posted today &middot; {agentStatus.queueDepth} in queue &middot; {agentStatus.scheduledCount} scheduled
                       {agentStatus.nextPostTime && (
                         <> &middot; Next post {new Date(agentStatus.nextPostTime) > new Date() ? `in ${Math.round((new Date(agentStatus.nextPostTime).getTime() - Date.now()) / 60000)} min` : 'overdue'}</>
@@ -405,13 +402,13 @@ export default function SocialMediaCampaignsPage() {
             )}
 
             {autopilotLoading ? (
-              <div className="text-center py-12 text-[var(--color-text-secondary)]">Loading AI drafts...</div>
+              <div className="text-center py-12 text-muted-foreground">Loading AI drafts...</div>
             ) : (
               <>
                 {/* Queued Posts */}
                 {queuedPosts.length > 0 && (
                   <div className="mb-6">
-                    <h2 className="text-sm font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider mb-3">
+                    <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">
                       Queue ({queuedPosts.length} posts)
                     </h2>
                     <div className="space-y-2">
@@ -426,10 +423,10 @@ export default function SocialMediaCampaignsPage() {
                                 {item.platform}
                               </span>
                               <div className="min-w-0">
-                                <p className="text-sm text-[var(--color-text-primary)] leading-relaxed">
+                                <p className="text-sm text-foreground leading-relaxed">
                                   {item.content}
                                 </p>
-                                <div className="text-xs text-[var(--color-text-disabled)] mt-1">
+                                <div className="text-xs text-muted-foreground mt-1">
                                   Queue position: #{item.queuePosition}
                                 </div>
                               </div>
@@ -447,7 +444,7 @@ export default function SocialMediaCampaignsPage() {
                 {/* Scheduled Posts */}
                 {scheduledPosts2.length > 0 && (
                   <div className="mb-6">
-                    <h2 className="text-sm font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider mb-3">
+                    <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">
                       Scheduled ({scheduledPosts2.length} posts)
                     </h2>
                     <div className="space-y-2">
@@ -462,10 +459,10 @@ export default function SocialMediaCampaignsPage() {
                                 {item.platform}
                               </span>
                               <div className="min-w-0">
-                                <p className="text-sm text-[var(--color-text-primary)] leading-relaxed">
+                                <p className="text-sm text-foreground leading-relaxed">
                                   {item.content}
                                 </p>
-                                <div className="text-xs text-[var(--color-text-disabled)] mt-1">
+                                <div className="text-xs text-muted-foreground mt-1">
                                   Scheduled for {new Date(item.scheduledAt).toLocaleString()}
                                 </div>
                               </div>
@@ -483,7 +480,7 @@ export default function SocialMediaCampaignsPage() {
                 {/* Recently Published */}
                 {agentStatus?.recentPublished && agentStatus.recentPublished.length > 0 && (
                   <div className="mb-6">
-                    <h2 className="text-sm font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider mb-3">
+                    <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">
                       Recently Published
                     </h2>
                     <div className="space-y-2">
@@ -498,10 +495,10 @@ export default function SocialMediaCampaignsPage() {
                                 {item.platform}
                               </span>
                               <div className="min-w-0">
-                                <p className="text-sm text-[var(--color-text-primary)] leading-relaxed">
+                                <p className="text-sm text-foreground leading-relaxed">
                                   {item.content}
                                 </p>
-                                <div className="text-xs text-[var(--color-text-disabled)] mt-1">
+                                <div className="text-xs text-muted-foreground mt-1">
                                   Published {new Date(item.publishedAt).toLocaleString()}
                                 </div>
                               </div>
@@ -519,10 +516,10 @@ export default function SocialMediaCampaignsPage() {
                 {/* Empty state */}
                 {queuedPosts.length === 0 && scheduledPosts2.length === 0 && (
                   <div className="rounded-2xl bg-surface-paper border border-border-light p-12 text-center">
-                    <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-2">
+                    <h3 className="text-lg font-semibold text-foreground mb-2">
                       No AI Drafts Yet
                     </h3>
-                    <p className="text-[var(--color-text-secondary)] text-sm mb-4">
+                    <p className="text-muted-foreground text-sm mb-4">
                       The AI agent will generate content and queue it here. You can review, edit, and approve before it goes live.
                     </p>
                     <button
@@ -553,9 +550,9 @@ export default function SocialMediaCampaignsPage() {
             <div key={i} className="bg-surface-paper border border-border-light rounded-2xl p-4">
               <div className="flex items-center gap-2 mb-1">
                 <span className="text-lg">{stat.icon}</span>
-                <span className="text-xs text-[var(--color-text-secondary)]">{stat.label}</span>
+                <span className="text-xs text-muted-foreground">{stat.label}</span>
               </div>
-              <div className="text-xl font-bold text-[var(--color-text-primary)]">{stat.value}</div>
+              <div className="text-xl font-bold text-foreground">{stat.value}</div>
             </div>
           ))}
         </div>
@@ -573,7 +570,7 @@ export default function SocialMediaCampaignsPage() {
               className={`px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-2 transition-all ${
                 activeTab === tab.id
                   ? 'bg-primary/10 text-primary border border-primary/30'
-                  : 'bg-surface-paper text-[var(--color-text-secondary)] border border-border-light hover:bg-surface-elevated'
+                  : 'bg-surface-paper text-muted-foreground border border-border-light hover:bg-surface-elevated'
               }`}
             >
               <span>{tab.icon}</span>
@@ -590,7 +587,7 @@ export default function SocialMediaCampaignsPage() {
               <select
                 value={filterPlatform}
                 onChange={(e) => setFilterPlatform(e.target.value as typeof filterPlatform)}
-                className="px-3 py-2 bg-surface-paper border border-border-light rounded-xl text-[var(--color-text-primary)] text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                className="px-3 py-2 bg-surface-paper border border-border-light rounded-xl text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               >
                 <option value="all">All Platforms</option>
                 {PLATFORMS.map((p) => (
@@ -600,7 +597,7 @@ export default function SocialMediaCampaignsPage() {
               <select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
-                className="px-3 py-2 bg-surface-paper border border-border-light rounded-xl text-[var(--color-text-primary)] text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                className="px-3 py-2 bg-surface-paper border border-border-light rounded-xl text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               >
                 <option value="all">All Statuses</option>
                 <option value="draft">Draft</option>
@@ -610,12 +607,12 @@ export default function SocialMediaCampaignsPage() {
             </div>
 
             {loading ? (
-              <div className="text-center py-12 text-[var(--color-text-secondary)]">Loading posts...</div>
+              <div className="text-center py-12 text-muted-foreground">Loading posts...</div>
             ) : posts.length === 0 ? (
               <div className="rounded-2xl bg-surface-paper border border-border-light p-12 text-center">
                 <div className="text-4xl mb-3">📱</div>
-                <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-2">No Social Posts Yet</h3>
-                <p className="text-[var(--color-text-secondary)] text-sm mb-4">
+                <h3 className="text-lg font-semibold text-foreground mb-2">No Social Posts Yet</h3>
+                <p className="text-muted-foreground text-sm mb-4">
                   Create your first social media post to get started.
                 </p>
                 <button
@@ -639,12 +636,12 @@ export default function SocialMediaCampaignsPage() {
                           {post.status}
                         </span>
                         {post.scheduledFor && (
-                          <span className="text-xs text-[var(--color-text-secondary)]">
+                          <span className="text-xs text-muted-foreground">
                             Scheduled: {new Date(post.scheduledFor).toLocaleString()}
                           </span>
                         )}
                         {post.publishedAt && (
-                          <span className="text-xs text-[var(--color-text-secondary)]">
+                          <span className="text-xs text-muted-foreground">
                             Published: {new Date(post.publishedAt).toLocaleString()}
                           </span>
                         )}
@@ -666,7 +663,7 @@ export default function SocialMediaCampaignsPage() {
                             </button>
                             <button
                               onClick={() => setDeleteConfirm(null)}
-                              className="px-2 py-1 text-[10px] text-[var(--color-text-secondary)]"
+                              className="px-2 py-1 text-[10px] text-muted-foreground"
                             >
                               Cancel
                             </button>
@@ -682,7 +679,7 @@ export default function SocialMediaCampaignsPage() {
                       </div>
                     </div>
 
-                    <p className="text-sm text-[var(--color-text-primary)] leading-relaxed mb-2">
+                    <p className="text-sm text-foreground leading-relaxed mb-2">
                       {post.content}
                     </p>
 
@@ -697,20 +694,20 @@ export default function SocialMediaCampaignsPage() {
                     {post.engagement && (
                       <div className="flex gap-4 mt-3 px-3 py-2 bg-surface-elevated rounded-xl">
                         <div>
-                          <span className="text-[10px] text-[var(--color-text-disabled)]">Likes</span>
-                          <div className="text-sm font-semibold text-[var(--color-text-primary)]">{post.engagement.likes}</div>
+                          <span className="text-[10px] text-muted-foreground">Likes</span>
+                          <div className="text-sm font-semibold text-foreground">{post.engagement.likes}</div>
                         </div>
                         <div>
-                          <span className="text-[10px] text-[var(--color-text-disabled)]">Comments</span>
-                          <div className="text-sm font-semibold text-[var(--color-text-primary)]">{post.engagement.comments}</div>
+                          <span className="text-[10px] text-muted-foreground">Comments</span>
+                          <div className="text-sm font-semibold text-foreground">{post.engagement.comments}</div>
                         </div>
                         <div>
-                          <span className="text-[10px] text-[var(--color-text-disabled)]">Shares</span>
-                          <div className="text-sm font-semibold text-[var(--color-text-primary)]">{post.engagement.shares}</div>
+                          <span className="text-[10px] text-muted-foreground">Shares</span>
+                          <div className="text-sm font-semibold text-foreground">{post.engagement.shares}</div>
                         </div>
                         <div>
-                          <span className="text-[10px] text-[var(--color-text-disabled)]">Views</span>
-                          <div className="text-sm font-semibold text-[var(--color-text-primary)]">{post.engagement.views.toLocaleString()}</div>
+                          <span className="text-[10px] text-muted-foreground">Views</span>
+                          <div className="text-sm font-semibold text-foreground">{post.engagement.views.toLocaleString()}</div>
                         </div>
                       </div>
                     )}
@@ -725,8 +722,8 @@ export default function SocialMediaCampaignsPage() {
         {activeTab === 'analytics' && (
           <div className="rounded-2xl bg-surface-paper border border-border-light p-8 text-center">
             <div className="text-4xl mb-3">📈</div>
-            <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-2">Social Analytics</h3>
-            <p className="text-[var(--color-text-secondary)] text-sm mb-6">
+            <h3 className="text-lg font-semibold text-foreground mb-2">Social Analytics</h3>
+            <p className="text-muted-foreground text-sm mb-6">
               Engagement metrics from your published posts
             </p>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-2xl mx-auto">
@@ -737,8 +734,8 @@ export default function SocialMediaCampaignsPage() {
                 { label: 'Total Shares', value: posts.reduce((s, p) => s + (p.engagement?.shares ?? 0), 0) },
               ].map((stat, i) => (
                 <div key={i} className="p-3 bg-surface-elevated rounded-xl">
-                  <div className="text-xs text-[var(--color-text-disabled)] mb-1">{stat.label}</div>
-                  <div className="text-lg font-bold text-[var(--color-text-primary)]">
+                  <div className="text-xs text-muted-foreground mb-1">{stat.label}</div>
+                  <div className="text-lg font-bold text-foreground">
                     {stat.value > 999 ? `${(stat.value / 1000).toFixed(1)}K` : stat.value}
                   </div>
                 </div>
@@ -750,12 +747,12 @@ export default function SocialMediaCampaignsPage() {
         {/* Settings Tab (Manual Mode) */}
         {activeTab === 'settings' && (
           <div className="rounded-2xl bg-surface-paper border border-border-light p-6">
-            <h3 className="text-base font-semibold text-[var(--color-text-primary)] mb-4">Connected Accounts</h3>
+            <h3 className="text-base font-semibold text-foreground mb-4">Connected Accounts</h3>
             {accountsLoading ? (
-              <div className="text-center py-6 text-[var(--color-text-secondary)] text-sm">Loading accounts...</div>
+              <div className="text-center py-6 text-muted-foreground text-sm">Loading accounts...</div>
             ) : connectedAccounts.length === 0 ? (
               <div className="text-center py-6">
-                <p className="text-[var(--color-text-secondary)] text-sm mb-3">No social accounts connected yet.</p>
+                <p className="text-muted-foreground text-sm mb-3">No social accounts connected yet.</p>
                 <a
                   href="/settings/integrations?category=social"
                   className="px-4 py-2 bg-primary/10 text-primary border border-primary/20 rounded-lg text-xs font-medium hover:bg-primary/20 transition-all inline-block"
@@ -777,13 +774,13 @@ export default function SocialMediaCampaignsPage() {
                       <div className="flex items-center gap-3">
                         <span className="text-xl">{icon}</span>
                         <div>
-                          <div className="text-sm font-medium text-[var(--color-text-primary)]">
+                          <div className="text-sm font-medium text-foreground">
                             {account.accountName}
                             {account.isDefault && (
-                              <span className="ml-2 text-[10px] text-[var(--color-text-disabled)] font-normal uppercase">Default</span>
+                              <span className="ml-2 text-[10px] text-muted-foreground font-normal uppercase">Default</span>
                             )}
                           </div>
-                          <div className="text-xs text-[var(--color-text-secondary)]">@{account.handle}</div>
+                          <div className="text-xs text-muted-foreground">@{account.handle}</div>
                         </div>
                       </div>
                       <span className={`px-2 py-1 rounded-full text-[10px] font-semibold ${
@@ -816,17 +813,17 @@ export default function SocialMediaCampaignsPage() {
       {showModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-surface-paper border border-border-light rounded-2xl p-6 w-full max-w-lg">
-            <h2 className="text-xl font-bold text-[var(--color-text-primary)] mb-4">
+            <h2 className="text-xl font-bold text-foreground mb-4">
               {editingPost ? 'Edit Post' : 'New Social Post'}
             </h2>
 
             <div className="space-y-4 mb-6">
               <div>
-                <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1">Platform</label>
+                <label className="block text-sm font-medium text-foreground mb-1">Platform</label>
                 <select
                   value={formPlatform}
                   onChange={(e) => setFormPlatform(e.target.value as SocialPlatform)}
-                  className="w-full px-3 py-2 bg-surface-elevated border border-border-light rounded-lg text-[var(--color-text-primary)] text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="w-full px-3 py-2 bg-surface-elevated border border-border-light rounded-lg text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 >
                   {PLATFORMS.map((p) => (
                     <option key={p} value={p}>{getPlatformIcon(p)} {PLATFORM_META[p]?.label ?? p}</option>
@@ -834,25 +831,25 @@ export default function SocialMediaCampaignsPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1">Content</label>
+                <label className="block text-sm font-medium text-foreground mb-1">Content</label>
                 <textarea
                   placeholder="Write your post content..."
                   value={formContent}
                   onChange={(e) => setFormContent(e.target.value)}
                   rows={4}
-                  className="w-full px-3 py-2 bg-surface-elevated border border-border-light rounded-lg text-[var(--color-text-primary)] text-sm focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+                  className="w-full px-3 py-2 bg-surface-elevated border border-border-light rounded-lg text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary resize-none"
                 />
-                <div className="text-right text-[10px] text-[var(--color-text-disabled)] mt-1">
+                <div className="text-right text-[10px] text-muted-foreground mt-1">
                   {formContent.length} characters
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1">Status</label>
+                  <label className="block text-sm font-medium text-foreground mb-1">Status</label>
                   <select
                     value={formStatus}
                     onChange={(e) => setFormStatus(e.target.value as typeof formStatus)}
-                    className="w-full px-3 py-2 bg-surface-elevated border border-border-light rounded-lg text-[var(--color-text-primary)] text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                    className="w-full px-3 py-2 bg-surface-elevated border border-border-light rounded-lg text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                   >
                     <option value="draft">Draft</option>
                     <option value="scheduled">Scheduled</option>
@@ -860,12 +857,12 @@ export default function SocialMediaCampaignsPage() {
                 </div>
                 {formStatus === 'scheduled' && (
                   <div>
-                    <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1">Schedule For</label>
+                    <label className="block text-sm font-medium text-foreground mb-1">Schedule For</label>
                     <input
                       type="datetime-local"
                       value={formScheduledFor}
                       onChange={(e) => setFormScheduledFor(e.target.value)}
-                      className="w-full px-3 py-2 bg-surface-elevated border border-border-light rounded-lg text-[var(--color-text-primary)] text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                      className="w-full px-3 py-2 bg-surface-elevated border border-border-light rounded-lg text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                     />
                   </div>
                 )}
@@ -875,7 +872,7 @@ export default function SocialMediaCampaignsPage() {
             <div className="flex justify-end gap-2">
               <button
                 onClick={() => { setShowModal(false); resetForm(); }}
-                className="px-4 py-2 text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-all"
+                className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground transition-all"
               >
                 Cancel
               </button>

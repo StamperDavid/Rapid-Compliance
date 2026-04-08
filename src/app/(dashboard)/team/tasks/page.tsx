@@ -5,6 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { useToast } from '@/hooks/useToast';
 import type { TeamTask } from '@/lib/team/collaboration';
+import { PageTitle } from '@/components/ui/typography';
 
 interface TaskResponse {
   success: boolean;
@@ -174,7 +175,7 @@ export default function TasksPage() {
       urgent: 'bg-error/20 text-error border-error/30',
       high: 'bg-warning/20 text-warning border-warning/30',
       normal: 'bg-primary/20 text-primary border-primary/30',
-      low: 'bg-surface-elevated text-[var(--color-text-disabled)] border-border-light',
+      low: 'bg-surface-elevated text-muted-foreground border-border-light',
     };
     return colors[priority] ?? colors.normal;
   };
@@ -191,9 +192,9 @@ export default function TasksPage() {
   };
 
   return (
-    <div className="min-h-screen bg-surface-main p-8">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-[var(--color-text-primary)]">My Tasks</h1>
+    <div className="p-8 space-y-6">
+      <div className="flex justify-between items-center">
+        <PageTitle>My Tasks</PageTitle>
         <button
           onClick={openCreateModal}
           className="px-4 py-2 bg-primary text-white font-semibold rounded-xl hover:bg-primary-light transition-all text-sm"
@@ -202,7 +203,7 @@ export default function TasksPage() {
         </button>
       </div>
 
-      <div className="flex gap-2 mb-6">
+      <div className="flex gap-2">
         {(['all', 'todo', 'in_progress', 'completed'] as const).map((status) => (
           <button
             key={status}
@@ -210,7 +211,7 @@ export default function TasksPage() {
             className={`px-4 py-2 rounded-xl capitalize text-sm font-medium transition-all ${
               filter === status
                 ? 'bg-primary text-white'
-                : 'bg-surface-paper text-[var(--color-text-secondary)] hover:bg-surface-elevated border border-border-light'
+                : 'bg-surface-paper text-muted-foreground hover:bg-surface-elevated border border-border-light'
             }`}
           >
             {getStatusLabel(status)}
@@ -219,14 +220,14 @@ export default function TasksPage() {
       </div>
 
       {loading ? (
-        <div className="text-center py-12 text-[var(--color-text-secondary)]">Loading tasks...</div>
+        <div className="text-center py-12 text-muted-foreground">Loading tasks...</div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {Object.entries(tasksByStatus).map(([status, statusTasks]) => (
             <div key={status} className="bg-surface-paper rounded-2xl p-4 border border-border-light">
-              <h3 className="font-bold mb-4 capitalize flex items-center justify-between text-[var(--color-text-primary)]">
+              <h3 className="font-bold mb-4 capitalize flex items-center justify-between text-foreground">
                 <span>{getStatusLabel(status)}</span>
-                <span className="text-xs text-[var(--color-text-secondary)] bg-surface-elevated px-2 py-0.5 rounded-full">
+                <span className="text-xs text-muted-foreground bg-surface-elevated px-2 py-0.5 rounded-full">
                   {statusTasks.length}
                 </span>
               </h3>
@@ -325,7 +326,7 @@ export default function TasksPage() {
                   </div>
                 ))}
                 {statusTasks.length === 0 && (
-                  <div className="text-center text-[var(--color-text-disabled)] text-xs py-8">
+                  <div className="text-center text-muted-foreground text-xs py-8">
                     No tasks
                   </div>
                 )}
@@ -339,38 +340,38 @@ export default function TasksPage() {
       {showModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-surface-paper border border-border-light rounded-2xl p-6 w-full max-w-md">
-            <h2 className="text-xl font-bold text-[var(--color-text-primary)] mb-4">
+            <h2 className="text-xl font-bold text-foreground mb-4">
               {editingTask ? 'Edit Task' : 'New Task'}
             </h2>
 
             <div className="space-y-4 mb-6">
               <div>
-                <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1">Title</label>
+                <label className="block text-sm font-medium text-foreground mb-1">Title</label>
                 <input
                   type="text"
                   placeholder="Task title"
                   value={formTitle}
                   onChange={(e) => setFormTitle(e.target.value)}
-                  className="w-full px-3 py-2 bg-surface-elevated border border-border-light rounded-lg text-[var(--color-text-primary)] text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="w-full px-3 py-2 bg-surface-elevated border border-border-light rounded-lg text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1">Description</label>
+                <label className="block text-sm font-medium text-foreground mb-1">Description</label>
                 <textarea
                   placeholder="Optional description"
                   value={formDescription}
                   onChange={(e) => setFormDescription(e.target.value)}
                   rows={3}
-                  className="w-full px-3 py-2 bg-surface-elevated border border-border-light rounded-lg text-[var(--color-text-primary)] text-sm focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+                  className="w-full px-3 py-2 bg-surface-elevated border border-border-light rounded-lg text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary resize-none"
                 />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1">Priority</label>
+                  <label className="block text-sm font-medium text-foreground mb-1">Priority</label>
                   <select
                     value={formPriority}
                     onChange={(e) => setFormPriority(e.target.value as TeamTask['priority'])}
-                    className="w-full px-3 py-2 bg-surface-elevated border border-border-light rounded-lg text-[var(--color-text-primary)] text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                    className="w-full px-3 py-2 bg-surface-elevated border border-border-light rounded-lg text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                   >
                     {PRIORITIES.map((p) => (
                       <option key={p} value={p} className="capitalize">{p}</option>
@@ -378,22 +379,22 @@ export default function TasksPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1">Due Date</label>
+                  <label className="block text-sm font-medium text-foreground mb-1">Due Date</label>
                   <input
                     type="date"
                     value={formDueDate}
                     onChange={(e) => setFormDueDate(e.target.value)}
-                    className="w-full px-3 py-2 bg-surface-elevated border border-border-light rounded-lg text-[var(--color-text-primary)] text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                    className="w-full px-3 py-2 bg-surface-elevated border border-border-light rounded-lg text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                   />
                 </div>
               </div>
               {editingTask && (
                 <div>
-                  <label className="block text-sm font-medium text-[var(--color-text-primary)] mb-1">Status</label>
+                  <label className="block text-sm font-medium text-foreground mb-1">Status</label>
                   <select
                     defaultValue={editingTask.status}
                     onChange={(e) => void handleStatusChange(editingTask.id, e.target.value as TeamTask['status'])}
-                    className="w-full px-3 py-2 bg-surface-elevated border border-border-light rounded-lg text-[var(--color-text-primary)] text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                    className="w-full px-3 py-2 bg-surface-elevated border border-border-light rounded-lg text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                   >
                     {STATUSES.map((s) => (
                       <option key={s} value={s} className="capitalize">{getStatusLabel(s)}</option>
@@ -406,7 +407,7 @@ export default function TasksPage() {
             <div className="flex justify-end gap-2">
               <button
                 onClick={() => { setShowModal(false); resetForm(); }}
-                className="px-4 py-2 text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-all"
+                className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground transition-all"
               >
                 Cancel
               </button>

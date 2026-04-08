@@ -421,7 +421,7 @@ export default function VideoEditorPage() {
   // ========================================================================
 
   return (
-    <div className="min-h-screen p-6 space-y-4">
+    <div className="p-8 space-y-6">
       <SubpageNav items={CONTENT_GENERATOR_TABS} />
 
       {/* Header */}

@@ -14,7 +14,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useUnifiedAuth } from '@/hooks/useUnifiedAuth';
 import { useFeatureModules } from '@/hooks/useFeatureModules';
-import { ThemeToggle } from '@/components/ThemeToggle';
+// ThemeToggle removed — light mode CSS not yet implemented
 import { useEntityConfig } from '@/hooks/useEntityConfig';
 import {
   type NavigationSection,
@@ -26,10 +26,6 @@ import {
   Users,
   Handshake,
   MessageSquare,
-  Send,
-  ListOrdered,
-  FileText,
-  Mail,
   Megaphone,
   FlaskConical,
   Video,
@@ -50,26 +46,15 @@ import {
   PieChart,
   HelpCircle,
   PenLine,
-  Plug,
   Shield,
   Building2,
   TrendingUp,
   LogOut,
-  // Catalog icons
-  ShoppingCart,
   Tag,
   Repeat,
-  // Entity page icons
-  ScrollText,
-  CheckSquare,
-  Clock,
-  MailOpen,
-  Receipt,
-  CreditCard,
   LayoutTemplate,
   BookOpen,
   Link2,
-  Radar,
   Rocket,
 } from 'lucide-react';
 
@@ -89,7 +74,9 @@ const NAV_SECTIONS: NavigationSection[] = [
       { id: 'dashboard', label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, iconColor: 'var(--color-primary)' },
     ],
   },
-  // ── CRM (5 items) ──────────────────────────────────────────────────
+  // ── CRM (7 items) ─────────────────────────────────────────────────
+  // Leads tabs: List, Research, Lead Scoring, Proposals/Quotes
+  // Deals tabs: Pipeline, Orders, Invoices, Payments, Tasks
   {
     id: 'crm',
     label: 'CRM',
@@ -101,30 +88,12 @@ const NAV_SECTIONS: NavigationSection[] = [
       { id: 'companies', label: 'Companies', href: '/entities/companies', icon: Building2, iconColor: 'var(--color-secondary)', requiredPermission: 'canViewLeads', featureModuleId: 'crm_pipeline' },
       { id: 'deals', label: 'Deals', href: '/deals', icon: Handshake, iconColor: 'var(--color-warning)', requiredPermission: 'canViewDeals', featureModuleId: 'crm_pipeline' },
       { id: 'conversations', label: 'Conversations', href: '/conversations', icon: MessageSquare, iconColor: 'var(--color-success)', requiredPermission: 'canCreateRecords', featureModuleId: 'conversations' },
-      { id: 'quotes', label: 'Quotes', href: '/entities/quotes', icon: ScrollText, iconColor: 'var(--color-info)', featureModuleId: 'crm_pipeline', entityId: 'quotes' },
-      { id: 'invoices', label: 'Invoices', href: '/entities/invoices', icon: Receipt, iconColor: 'var(--color-info)', featureModuleId: 'crm_pipeline', entityId: 'invoices' },
-      { id: 'payments', label: 'Payments', href: '/entities/payments', icon: CreditCard, iconColor: 'var(--color-success)', featureModuleId: 'crm_pipeline', entityId: 'payments' },
-      { id: 'tasks', label: 'Tasks', href: '/entities/tasks', icon: CheckSquare, iconColor: 'var(--color-warning)' },
-      { id: 'activities', label: 'Activities', href: '/entities/activities', icon: Clock, iconColor: 'var(--color-secondary)', featureModuleId: 'crm_pipeline' },
-      { id: 'proposals', label: 'Proposals', href: '/proposals', icon: FileText, iconColor: 'var(--color-secondary)', featureModuleId: 'proposals_docs' },
-      { id: 'intelligence-hub', label: 'Intelligence Hub', href: '/intelligence/discovery', icon: Radar, iconColor: 'var(--color-cyan)', requiredPermission: 'canManageLeads' },
+      { id: 'products-services', label: 'Products & Services', href: '/products', icon: Package, iconColor: 'var(--color-primary)', requiredPermission: 'canManageProducts' },
+      { id: 'subscriptions', label: 'Subscriptions', href: '/subscriptions', icon: Repeat, iconColor: 'var(--color-cyan)' },
     ],
   },
-  // ── Outreach (4 items — Forms & Workflows moved to Marketing) ──────
-  {
-    id: 'outreach',
-    label: 'Outreach',
-    icon: Send,
-    allowedRoles: ['owner', 'admin', 'manager'],
-    items: [
-      { id: 'sequences', label: 'Sequences', href: '/outbound/sequences', icon: ListOrdered, iconColor: 'var(--color-secondary)', requiredPermission: 'canManageLeads', featureModuleId: 'email_outreach' },
-      { id: 'email-campaigns', label: 'Campaigns', href: '/email/campaigns', icon: Mail, iconColor: 'var(--color-cyan)', requiredPermission: 'canManageEmailCampaigns', featureModuleId: 'email_outreach' },
-      { id: 'email-studio', label: 'Email Studio', href: '/email-writer', icon: PenLine, iconColor: 'var(--color-primary)', requiredPermission: 'canManageEmailCampaigns', featureModuleId: 'email_outreach' },
-      { id: 'calls', label: 'Calls', href: '/calls', icon: PhoneCall, iconColor: 'var(--color-error)', requiredPermission: 'canAccessVoiceAgents', featureModuleId: 'email_outreach' },
-      { id: 'email-templates', label: 'Email Templates', href: '/entities/email_templates', icon: MailOpen, iconColor: 'var(--color-info)', featureModuleId: 'email_outreach' },
-    ],
-  },
-  // ── Marketing (5 items — renamed from Content) ─────────────────────
+  // ── Marketing (8 items — absorbed Outreach + Coupons) ─────────────
+  // Email Studio tabs: Compose, Sequences, Templates
   {
     id: 'marketing',
     label: 'Marketing',
@@ -134,25 +103,14 @@ const NAV_SECTIONS: NavigationSection[] = [
       { id: 'campaigns', label: 'Campaigns', href: '/campaigns', icon: Rocket, iconColor: 'var(--color-accent)' },
       { id: 'social-hub', label: 'Social Hub', href: '/social/command-center', icon: Activity, iconColor: 'var(--color-success)', requiredPermission: 'canManageSocialMedia', featureModuleId: 'social_media' },
       { id: 'video', label: 'Content Generator', href: '/content/video', icon: Video, iconColor: 'var(--color-primary)', requiredPermission: 'canManageSocialMedia', featureModuleId: 'video_production' },
+      { id: 'email-studio', label: 'Email Studio', href: '/email-writer', icon: PenLine, iconColor: 'var(--color-primary)', requiredPermission: 'canManageEmailCampaigns', featureModuleId: 'email_outreach' },
+      { id: 'calls', label: 'Calls', href: '/calls', icon: PhoneCall, iconColor: 'var(--color-error)', requiredPermission: 'canAccessVoiceAgents', featureModuleId: 'email_outreach' },
       { id: 'forms', label: 'Forms', href: '/forms', icon: ClipboardList, iconColor: 'var(--color-success)', featureModuleId: 'forms_surveys' },
       { id: 'workflows', label: 'Workflows', href: '/workflows', icon: Workflow, iconColor: 'var(--color-warning)', requiredPermission: 'canCreateWorkflows', featureModuleId: 'workflows' },
+      { id: 'coupons', label: 'Coupons', href: '/coupons', icon: Tag, iconColor: 'var(--color-accent)' },
     ],
   },
-  // ── Catalog (products, services, orders, coupons, subscriptions) ────
-  {
-    id: 'catalog',
-    label: 'Catalog',
-    icon: Package,
-    allowedRoles: ['owner', 'admin', 'manager', 'member'],
-    items: [
-      { id: 'products', label: 'Products', href: '/products', icon: Package, iconColor: 'var(--color-primary)', requiredPermission: 'canManageProducts' },
-      { id: 'services', label: 'Services', href: '/products/services', icon: Package, iconColor: 'var(--color-secondary)' },
-      { id: 'orders', label: 'Orders', href: '/orders', icon: ShoppingCart, iconColor: 'var(--color-warning)', requiredPermission: 'canProcessOrders' },
-      { id: 'coupons', label: 'Coupons', href: '/entities/coupons', icon: Tag, iconColor: 'var(--color-accent)' },
-      { id: 'subscriptions', label: 'Subscriptions', href: '/entities/subscriptions', icon: Repeat, iconColor: 'var(--color-cyan)' },
-    ],
-  },
-  // ── Website (storefront is now a page type within the builder, accessed via Store tab) ─
+  // ── Website ────────────────────────────────────────────────────────
   {
     id: 'website',
     label: 'Website',
@@ -160,22 +118,23 @@ const NAV_SECTIONS: NavigationSection[] = [
     allowedRoles: ['owner', 'admin', 'manager'],
     items: [
       { id: 'website', label: 'Website', href: '/website/editor', icon: Globe, iconColor: 'var(--color-primary)', requiredPermission: 'canManageWebsite', featureModuleId: 'website_builder' },
-      { id: 'pages', label: 'Pages', href: '/entities/pages', icon: LayoutTemplate, iconColor: 'var(--color-info)', featureModuleId: 'website_builder' },
-      { id: 'blog-posts', label: 'Blog Posts', href: '/entities/blog_posts', icon: BookOpen, iconColor: 'var(--color-secondary)', featureModuleId: 'website_builder' },
-      { id: 'domains', label: 'Domains', href: '/entities/domains', icon: Link2, iconColor: 'var(--color-cyan)', featureModuleId: 'website_builder' },
+      { id: 'pages', label: 'Pages', href: '/website/pages', icon: LayoutTemplate, iconColor: 'var(--color-info)', featureModuleId: 'website_builder' },
+      { id: 'blog-posts', label: 'Blog Posts', href: '/website/blog', icon: BookOpen, iconColor: 'var(--color-secondary)', featureModuleId: 'website_builder' },
+      { id: 'domains', label: 'Domains', href: '/website/domains', icon: Link2, iconColor: 'var(--color-cyan)', featureModuleId: 'website_builder' },
     ],
   },
-  // ── AI Workforce (1 hub item — 5 items collapsed) ─────────────────
+  // ── AI Workforce (standalone — no section header) ──────────────────
   {
     id: 'ai_workforce',
     label: 'AI Workforce',
     icon: Bot,
     allowedRoles: ['owner', 'admin', 'manager'],
+    standalone: true,
     items: [
       { id: 'ai-workforce', label: 'AI Workforce', href: '/workforce', icon: Bot, iconColor: 'var(--color-cyan)', requiredPermission: 'canDeployAIAgents' },
     ],
   },
-  // ── Analytics & Growth (3 items — Growth collapsed to 1 hub) ───────
+  // ── Analytics & Growth ─────────────────────────────────────────────
   {
     id: 'analytics',
     label: 'Analytics & Growth',
@@ -187,12 +146,13 @@ const NAV_SECTIONS: NavigationSection[] = [
       { id: 'ab-testing', label: 'A/B Testing', href: '/ab-tests', icon: FlaskConical, iconColor: 'var(--color-success)', featureModuleId: 'advanced_analytics' },
     ],
   },
-  // ── System (1 hub item — owner only) ───────────────────────────────
+  // ── System (standalone — owner only) ───────────────────────────────
   {
     id: 'system',
     label: 'System',
     icon: Shield,
     allowedRoles: ['owner'],
+    standalone: true,
     items: [
       { id: 'system', label: 'System', href: '/system', icon: Shield, iconColor: 'var(--color-primary)' },
     ],
@@ -277,13 +237,10 @@ export default function AdminSidebar() {
         pathname === '/playbook';
     }
 
-    // Catalog hub — products + all tab destinations (services, orders, coupons, subscriptions)
+    // Products & Services hub — products + services
     if (href === '/products') {
       return pathname === '/products' ||
-        pathname.startsWith('/products/') ||
-        pathname.startsWith('/orders') ||
-        pathname.startsWith('/entities/coupons') ||
-        pathname.startsWith('/entities/subscriptions');
+        pathname.startsWith('/products/');
     }
 
     // Leads hub — leads list, intelligence, scoring, scraper
@@ -306,12 +263,15 @@ export default function AdminSidebar() {
       return pathname.startsWith('/deals') || pathname.startsWith('/risk');
     }
 
-    // Email Studio — email writer + nurture + email builder + templates
+    // Email Studio — email writer + nurture + email builder + templates + sequences + email campaigns
     if (href === '/email-writer') {
       return pathname.startsWith('/email-writer') ||
         pathname.startsWith('/nurture') ||
         pathname.startsWith('/marketing/email-builder') ||
-        pathname === '/templates';
+        pathname === '/templates' ||
+        pathname.startsWith('/outbound/sequences') ||
+        pathname.startsWith('/email/campaigns') ||
+        pathname.startsWith('/entities/email_templates');
     }
 
     // Social Hub — all /social/* (analytics now absorbed as tab)
@@ -762,38 +722,6 @@ export default function AdminSidebar() {
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: isCollapsed ? '0' : '0.25rem', justifyContent: isCollapsed ? 'center' : 'flex-start', flexWrap: 'wrap' }}>
             <Link
-              href="/settings/integrations"
-              title="Integrations"
-              onClick={handleMobileClose}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                padding: '0.5rem 0.5rem',
-                borderRadius: '0.375rem',
-                textDecoration: 'none',
-                color: pathname?.startsWith('/settings/integrations') ? 'var(--color-primary)' : 'var(--color-text-secondary)',
-                backgroundColor: pathname?.startsWith('/settings/integrations') ? 'rgba(var(--color-primary-rgb), 0.08)' : 'transparent',
-                transition: 'all 0.15s ease',
-                flex: isCollapsed ? 'none' : 1,
-              }}
-              onMouseEnter={(e) => {
-                if (!pathname?.startsWith('/settings/integrations')) {
-                  e.currentTarget.style.backgroundColor = 'rgba(var(--color-primary-rgb), 0.04)';
-                  e.currentTarget.style.color = 'var(--color-text-primary)';
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!pathname?.startsWith('/settings/integrations')) {
-                  e.currentTarget.style.backgroundColor = 'transparent';
-                  e.currentTarget.style.color = 'var(--color-text-secondary)';
-                }
-              }}
-            >
-              <Plug className="w-4 h-4 flex-shrink-0" />
-              {!isCollapsed && <span style={{ fontSize: '0.8125rem', fontWeight: 500 }}>Integrations</span>}
-            </Link>
-            <Link
               href="/settings"
               title="Settings"
               onClick={handleMobileClose}
@@ -856,7 +784,6 @@ export default function AdminSidebar() {
               <HelpCircle className="w-4 h-4 flex-shrink-0" />
               {!isCollapsed && <span style={{ fontSize: '0.8125rem', fontWeight: 500 }}>Help</span>}
             </Link>
-            <ThemeToggle collapsed={isCollapsed} />
             <button
               type="button"
               title="Sign out"

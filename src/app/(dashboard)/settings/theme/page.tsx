@@ -312,7 +312,7 @@ export default function ThemeEditorPage() {
   );
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: '#000000' }}>
+    <div style={{ backgroundColor: '#000000' }}>
       {/* Header */}
       <div style={{ backgroundColor: '#0a0a0a', borderBottom: '1px solid #1a1a1a' }} className="sticky top-0 z-50">
         <div className="px-4 sm:px-6 lg:px-8 py-4">
@@ -377,9 +377,9 @@ export default function ThemeEditorPage() {
       )}
 
       <div className="px-4 sm:px-6 lg:px-8 py-8">
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '2rem' }}>
+        <div className="grid grid-cols-12 gap-8">
           {/* Sidebar Navigation */}
-          <div style={{ gridColumn: 'span 2', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+          <div style={{ gridColumn: 'span 2' }} className="flex flex-col gap-1">
             {[
               { id: 'colors', label: 'Colors', icon: '🎨' },
               { id: 'typography', label: 'Typography', icon: '📝' },
@@ -421,7 +421,7 @@ export default function ThemeEditorPage() {
                   {/* Theme Presets */}
                   <div style={{ marginBottom: '2rem' }}>
                     <h3 style={{ fontSize: '0.875rem', fontWeight: '600', color: '#ccc', marginBottom: '0.75rem' }}>Quick Start Presets</h3>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.75rem' }}>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                       {THEME_PRESETS.map((preset) => (
                         <button
                           key={preset.name}
@@ -486,19 +486,19 @@ export default function ThemeEditorPage() {
                   {/* Brand Colors */}
                   {activeColorGroup === 'brand' && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <ColorPicker label="Primary" value={theme.colors.primary.main} onChange={(v) => updateColor(['colors', 'primary', 'main'], v)} />
                         <ColorPicker label="Primary Light" value={theme.colors.primary.light} onChange={(v) => updateColor(['colors', 'primary', 'light'], v)} />
                         <ColorPicker label="Primary Dark" value={theme.colors.primary.dark} onChange={(v) => updateColor(['colors', 'primary', 'dark'], v)} />
                         <ColorPicker label="Contrast" value={theme.colors.primary.contrast} onChange={(v) => updateColor(['colors', 'primary', 'contrast'], v)} />
                       </div>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <ColorPicker label="Secondary" value={theme.colors.secondary.main} onChange={(v) => updateColor(['colors', 'secondary', 'main'], v)} />
                         <ColorPicker label="Secondary Light" value={theme.colors.secondary.light} onChange={(v) => updateColor(['colors', 'secondary', 'light'], v)} />
                         <ColorPicker label="Secondary Dark" value={theme.colors.secondary.dark} onChange={(v) => updateColor(['colors', 'secondary', 'dark'], v)} />
                         <ColorPicker label="Contrast" value={theme.colors.secondary.contrast} onChange={(v) => updateColor(['colors', 'secondary', 'contrast'], v)} />
                       </div>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <ColorPicker label="Accent" value={theme.colors.accent.main} onChange={(v) => updateColor(['colors', 'accent', 'main'], v)} />
                         <ColorPicker label="Accent Light" value={theme.colors.accent.light} onChange={(v) => updateColor(['colors', 'accent', 'light'], v)} />
                         <ColorPicker label="Accent Dark" value={theme.colors.accent.dark} onChange={(v) => updateColor(['colors', 'accent', 'dark'], v)} />
@@ -576,7 +576,7 @@ export default function ThemeEditorPage() {
 
                     <div>
                       <h3 style={{ fontSize: '0.875rem', fontWeight: '600', color: '#ccc', marginBottom: '0.75rem' }}>Font Sizes</h3>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         {Object.entries(theme.typography.fontSize).map(([size, value]) => (
                           <div key={size}>
                             <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#999', marginBottom: '0.5rem', textTransform: 'capitalize' }}>{size}</label>
@@ -609,7 +609,7 @@ export default function ThemeEditorPage() {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                     <div>
                       <h3 style={{ fontSize: '0.875rem', fontWeight: '600', color: '#ccc', marginBottom: '0.75rem' }}>Border Radius</h3>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         {Object.entries(theme.layout.borderRadius).map(([size, value]) => (
                           <div key={size}>
                             <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: '#999', marginBottom: '0.5rem', textTransform: 'capitalize' }}>{size}</label>

@@ -2,6 +2,7 @@
 
 import React, { useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { PageTitle, SectionDescription } from '@/components/ui/typography';
 import { useAuth } from '@/hooks/useAuth'
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { logger } from '@/lib/logger/logger';
@@ -55,7 +56,7 @@ function TextInputField({ label, field, placeholder, required, formData, updateF
 
   return (
     <div>
-      <label style={{ display: 'block', color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+      <label className="block text-foreground text-sm font-semibold mb-2">
         {label} {required && '*'}
       </label>
       <input
@@ -63,15 +64,7 @@ function TextInputField({ label, field, placeholder, required, formData, updateF
         value={stringValue}
         onChange={(e) => updateField(field, e.target.value)}
         placeholder={placeholder}
-        style={{
-          width: '100%',
-          padding: '0.75rem',
-          backgroundColor: 'var(--color-bg-main)',
-          border: '1px solid var(--color-border-strong)',
-          borderRadius: '0.5rem',
-          color: 'var(--color-text-primary)',
-          fontSize: '1rem'
-        }}
+        className="w-full p-3 bg-background border border-border-strong rounded-lg text-foreground text-base"
       />
     </div>
   );
@@ -83,7 +76,7 @@ function TextAreaField({ label, field, placeholder, rows = 4, helper, required, 
 
   return (
     <div>
-      <label style={{ display: 'block', color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+      <label className="block text-foreground text-sm font-semibold mb-2">
         {label} {required && '*'}
       </label>
       <textarea
@@ -91,22 +84,12 @@ function TextAreaField({ label, field, placeholder, rows = 4, helper, required, 
         onChange={(e) => updateField(field, e.target.value)}
         placeholder={placeholder}
         rows={rows}
-        style={{
-          width: '100%',
-          padding: '0.75rem',
-          backgroundColor: 'var(--color-bg-main)',
-          border: '1px solid var(--color-border-strong)',
-          borderRadius: '0.5rem',
-          color: 'var(--color-text-primary)',
-          fontSize: '1rem',
-          resize: 'vertical',
-          fontFamily: 'inherit'
-        }}
+        className="w-full p-3 bg-background border border-border-strong rounded-lg text-foreground text-base font-[inherit] resize-y"
       />
       {helper && (
-        <div style={{ color: 'var(--color-text-disabled)', fontSize: '0.75rem', marginTop: '0.5rem' }}>
+        <p className="text-muted-foreground text-xs mt-2">
           {helper}
-        </div>
+        </p>
       )}
     </div>
   );
@@ -650,52 +633,25 @@ export default function OnboardingWizard() {
   const primaryColor = 'var(--color-primary)';
 
   return (
-    <div style={{ 
-      minHeight: '100vh', 
-      backgroundColor: 'var(--color-bg-main)', 
-      display: 'flex', 
-      alignItems: 'center', 
-      justifyContent: 'center',
-      padding: '2rem'
-    }}>
+    <div className="flex items-center justify-center p-8">
       <div style={{ maxWidth: '900px', width: '100%' }}>
         {/* Header */}
-        <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
-          <h1 style={{ fontSize: '2.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
+        <div className="text-center mb-12">
+          <PageTitle className="text-4xl mb-2">
             Build Your AI Sales Team
-          </h1>
-          <p style={{ color: 'var(--color-text-disabled)', fontSize: '1rem' }}>
+          </PageTitle>
+          <SectionDescription className="text-base">
             The more detail you provide, the smarter your agent will be
-          </p>
+          </SectionDescription>
         </div>
 
         {/* Pre-fill notice */}
         {dataLoaded && !prefillDismissed && (
-          <div style={{
-            padding: '0.75rem 1rem',
-            marginBottom: '1.5rem',
-            borderRadius: '0.5rem',
-            backgroundColor: 'rgba(99, 102, 241, 0.1)',
-            border: '1px solid rgba(99, 102, 241, 0.2)',
-            color: 'var(--color-text-secondary)',
-            fontSize: '0.875rem',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-          }}>
+          <div className="flex items-center justify-between px-4 py-3 mb-6 rounded-lg bg-[rgba(99,102,241,0.1)] border border-[rgba(99,102,241,0.2)] text-muted-foreground text-sm">
             <span>Some fields have been pre-filled from your initial setup. Review and update as needed.</span>
             <button
               onClick={() => setPrefillDismissed(true)}
-              style={{
-                background: 'none',
-                border: 'none',
-                color: 'var(--color-text-disabled)',
-                cursor: 'pointer',
-                padding: '0.25rem',
-                marginLeft: '0.75rem',
-                fontSize: '1.125rem',
-                lineHeight: 1,
-              }}
+              className="bg-transparent border-0 text-muted-foreground cursor-pointer p-1 ml-3 text-lg leading-none"
               aria-label="Dismiss"
             >
               &times;
@@ -704,19 +660,14 @@ export default function OnboardingWizard() {
         )}
 
         {/* Progress Bar */}
-        <div style={{ marginBottom: '3rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
-            <span style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem' }}>Step {currentStep} of {totalSteps}</span>
-            <span style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem' }}>{Math.round((currentStep / totalSteps) * 100)}% Complete</span>
+        <div className="mb-12">
+          <div className="flex justify-between mb-4">
+            <span className="text-muted-foreground text-sm">Step {currentStep} of {totalSteps}</span>
+            <span className="text-muted-foreground text-sm">{Math.round((currentStep / totalSteps) * 100)}% Complete</span>
           </div>
-          <div style={{ 
-            height: '8px', 
-            backgroundColor: 'var(--color-bg-paper)', 
-            borderRadius: '9999px',
-            overflow: 'hidden'
-          }}>
-            <div style={{ 
-              height: '100%', 
+          <div className="h-2 bg-card rounded-full overflow-hidden">
+            <div style={{
+              height: '100%',
               width: `${(currentStep / totalSteps) * 100}%`,
               backgroundColor: primaryColor,
               transition: 'width 0.3s'
@@ -725,22 +676,15 @@ export default function OnboardingWizard() {
         </div>
 
         {/* Step Content */}
-        <div style={{ 
-          backgroundColor: 'var(--color-bg-paper)', 
-          border: '1px solid var(--color-border-strong)', 
-          borderRadius: '1rem', 
-          padding: '3rem',
-          marginBottom: '2rem',
-          minHeight: '500px'
-        }}>
+        <div className="bg-card border border-border-strong rounded-2xl p-12 mb-8" style={{ minHeight: '500px' }}>
           {/* Step 1: Business Basics */}
           {currentStep === 1 && (
             <div>
               <div style={{ marginBottom: '2rem' }}>
-                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
+                <div className="text-2xl font-bold text-foreground mb-2">
                   Tell us about your business
                 </div>
-                <div style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>
+                <div className="text-muted-foreground text-sm">
                   Basic information to get started
                 </div>
               </div>
@@ -763,30 +707,20 @@ export default function OnboardingWizard() {
                 {/* Website URL - First field to enter */}
                 <div>
                   <TextInputField label="Website URL" field="website" placeholder="https://yourwebsite.com" formData={formData} updateField={updateField} />
-                  <div style={{ color: 'var(--color-text-disabled)', fontSize: '0.75rem', marginTop: '0.5rem', marginBottom: '0.5rem' }}>
+                  <p className="text-muted-foreground text-xs mt-2 mb-2">
                     We&apos;ll automatically analyze your website to learn about your company, products, and services
-                  </div>
-                  
+                  </p>
+
                   {/* Auto-fill Button */}
                   {formData.website && !prefillResult && (
                     <button
                       onClick={() => void handlePrefill()}
                       disabled={isPrefilling}
                       style={{
-                        marginTop: '0.75rem',
-                        padding: '0.75rem 1.5rem',
-                        backgroundColor: 'var(--color-primary)',
-                        color: 'var(--color-text-primary)',
-                        border: 'none',
-                        borderRadius: '0.5rem',
-                        fontSize: '0.875rem',
-                        fontWeight: '600',
                         cursor: isPrefilling ? 'not-allowed' : 'pointer',
                         opacity: isPrefilling ? 0.6 : 1,
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.5rem',
                       }}
+                      className="mt-3 px-6 py-3 bg-primary text-foreground border-0 rounded-lg text-sm font-semibold flex items-center gap-2"
                     >
                       <span>🪄</span>
                       <span>{isPrefilling ? 'Analyzing...' : 'Auto-fill from website'}</span>
@@ -825,21 +759,13 @@ export default function OnboardingWizard() {
                         isRejected={rejectedFields.has('industry')}
                       >
                       <div>
-                        <label style={{ display: 'block', color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+                        <label className="block text-foreground text-sm font-semibold mb-2">
                           Industry *
                         </label>
                         <select
                           value={formData.industry}
                           onChange={(e) => updateField('industry', e.target.value)}
-                          style={{
-                            width: '100%',
-                            padding: '0.75rem',
-                            backgroundColor: 'var(--color-bg-main)',
-                            border: '1px solid var(--color-border-strong)',
-                            borderRadius: '0.5rem',
-                            color: 'var(--color-text-primary)',
-                            fontSize: '1rem'
-                          }}
+                          className="w-full p-3 bg-background border border-border-strong rounded-lg text-foreground text-base"
                         >
                           <option value="">Select your industry...</option>
                           {ONBOARDING_CATEGORIES.map((cat) => (
@@ -853,21 +779,13 @@ export default function OnboardingWizard() {
                   })()}
                   {!getFieldConfidence('industry') && (
                     <div>
-                      <label style={{ display: 'block', color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+                      <label className="block text-foreground text-sm font-semibold mb-2">
                         Industry *
                       </label>
                       <select
                         value={formData.industry}
                         onChange={(e) => updateField('industry', e.target.value)}
-                        style={{
-                          width: '100%',
-                          padding: '0.75rem',
-                          backgroundColor: 'var(--color-bg-main)',
-                          border: '1px solid var(--color-border-strong)',
-                          borderRadius: '0.5rem',
-                          color: 'var(--color-text-primary)',
-                          fontSize: '1rem'
-                        }}
+                        className="w-full p-3 bg-background border border-border-strong rounded-lg text-foreground text-base"
                       >
                         <option value="">Select your industry...</option>
                         {ONBOARDING_CATEGORIES.map((cat) => (
@@ -880,19 +798,19 @@ export default function OnboardingWizard() {
                 </div>
 
                 <TextInputField label="FAQ Page URL (optional)" field="faqPageUrl" placeholder="https://yourwebsite.com/faq" formData={formData} updateField={updateField} />
-                <div style={{ color: 'var(--color-text-disabled)', fontSize: '0.75rem', marginTop: '-1rem', marginBottom: '0.5rem' }}>
+                <p className="text-muted-foreground text-xs -mt-4 mb-2">
                   Help your agent learn common questions and answers
-                </div>
+                </p>
 
                 <div>
-                  <label style={{ display: 'block', color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+                  <label className="block text-foreground text-sm font-semibold mb-2">
                     Social Media URLs (optional)
                   </label>
-                  <div style={{ color: 'var(--color-text-disabled)', fontSize: '0.75rem', marginBottom: '0.5rem' }}>
+                  <p className="text-muted-foreground text-xs mb-2">
                     Help your agent understand your brand voice and customer interactions
-                  </div>
+                  </p>
                   {formData.socialMediaUrls.map((url, index) => (
-                    <div key={index} style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                    <div key={index} className="flex gap-2 mb-2">
                       <input
                         type="url"
                         value={url}
@@ -902,15 +820,7 @@ export default function OnboardingWizard() {
                           updateField('socialMediaUrls', updated);
                         }}
                         placeholder="https://facebook.com/yourpage or https://instagram.com/yourpage"
-                        style={{
-                          flex: 1,
-                          padding: '0.75rem',
-                          backgroundColor: 'var(--color-bg-main)',
-                          border: '1px solid var(--color-border-strong)',
-                          borderRadius: '0.5rem',
-                          color: 'var(--color-text-primary)',
-                          fontSize: '0.875rem'
-                        }}
+                        className="flex-1 p-3 bg-background border border-border-strong rounded-lg text-foreground text-sm"
                       />
                       <button
                         type="button"
@@ -918,16 +828,7 @@ export default function OnboardingWizard() {
                           const updated = formData.socialMediaUrls.filter((_, i) => i !== index);
                           updateField('socialMediaUrls', updated);
                         }}
-                        style={{
-                          padding: '0.75rem 1rem',
-                          backgroundColor: 'var(--color-error-dark)',
-                          color: 'var(--color-error-light)',
-                          border: 'none',
-                          borderRadius: '0.5rem',
-                          cursor: 'pointer',
-                          fontSize: '0.875rem',
-                          fontWeight: '600'
-                        }}
+                        className="px-4 py-3 bg-error-dark text-error-light border-0 rounded-lg cursor-pointer text-sm font-semibold"
                       >
                         Remove
                       </button>
@@ -936,37 +837,20 @@ export default function OnboardingWizard() {
                   <button
                     type="button"
                     onClick={() => updateField('socialMediaUrls', [...formData.socialMediaUrls, ''])}
-                    style={{
-                      padding: '0.5rem 1rem',
-                      backgroundColor: 'var(--color-bg-elevated)',
-                      color: primaryColor,
-                      border: '1px solid var(--color-border-strong)',
-                      borderRadius: '0.5rem',
-                      cursor: 'pointer',
-                      fontSize: '0.875rem',
-                      fontWeight: '600'
-                    }}
+                    className="px-4 py-2 bg-surface-elevated border border-border-strong rounded-lg cursor-pointer text-sm font-semibold text-primary"
                   >
                     + Add Social Media URL
                   </button>
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+                  <label className="block text-foreground text-sm font-semibold mb-2">
                     Company Size *
                   </label>
                   <select
                     value={formData.companySize}
                     onChange={(e) => updateField('companySize', e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      backgroundColor: 'var(--color-bg-main)',
-                      border: '1px solid var(--color-border-strong)',
-                      borderRadius: '0.5rem',
-                      color: 'var(--color-text-primary)',
-                      fontSize: '1rem'
-                    }}
+                    className="w-full p-3 bg-background border border-border-strong rounded-lg text-foreground text-base"
                   >
                     <option value="">Select...</option>
                     <option value="solo">Just me</option>
@@ -983,10 +867,10 @@ export default function OnboardingWizard() {
           {currentStep === 2 && (
             <div>
               <div style={{ marginBottom: '2rem' }}>
-                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
+                <div className="text-2xl font-bold text-foreground mb-2">
                   What makes your business unique?
                 </div>
-                <div style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>
+                <div className="text-muted-foreground text-sm">
                   These answers will shape how your agent sells
                 </div>
               </div>
@@ -1032,31 +916,23 @@ export default function OnboardingWizard() {
           {currentStep === 3 && (
             <div>
               <div style={{ marginBottom: '2rem' }}>
-                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
+                <div className="text-2xl font-bold text-foreground mb-2">
                   What do you sell?
                 </div>
-                <div style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>
+                <div className="text-muted-foreground text-sm">
                   Overview of your offerings and target customers
                 </div>
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                 <div>
-                  <label style={{ display: 'block', color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+                  <label className="block text-foreground text-sm font-semibold mb-2">
                     What do you primarily sell? *
                   </label>
                   <select
                     value={formData.primaryOffering}
                     onChange={(e) => updateField('primaryOffering', e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      backgroundColor: 'var(--color-bg-main)',
-                      border: '1px solid var(--color-border-strong)',
-                      borderRadius: '0.5rem',
-                      color: 'var(--color-text-primary)',
-                      fontSize: '1rem'
-                    }}
+                    className="w-full p-3 bg-background border border-border-strong rounded-lg text-foreground text-base"
                   >
                     <option value="">Select...</option>
                     <option value="physical">Physical Products</option>
@@ -1069,21 +945,13 @@ export default function OnboardingWizard() {
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+                  <label className="block text-foreground text-sm font-semibold mb-2">
                     Typical price range *
                   </label>
                   <select
                     value={formData.priceRange}
                     onChange={(e) => updateField('priceRange', e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      backgroundColor: 'var(--color-bg-main)',
-                      border: '1px solid var(--color-border-strong)',
-                      borderRadius: '0.5rem',
-                      color: 'var(--color-text-primary)',
-                      fontSize: '1rem'
-                    }}
+                    className="w-full p-3 bg-background border border-border-strong rounded-lg text-foreground text-base"
                   >
                     <option value="">Select...</option>
                     <option value="under50">Under $50</option>
@@ -1120,10 +988,10 @@ export default function OnboardingWizard() {
           {currentStep === 4 && (
             <div>
               <div style={{ marginBottom: '2rem' }}>
-                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
+                <div className="text-2xl font-bold text-foreground mb-2">
                   Product/Service Details
                 </div>
-                <div style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>
+                <div className="text-muted-foreground text-sm">
                   Help your agent understand what you offer in detail
                 </div>
               </div>
@@ -1169,31 +1037,23 @@ export default function OnboardingWizard() {
           {currentStep === 5 && (
             <div>
               <div style={{ marginBottom: '2rem' }}>
-                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
+                <div className="text-2xl font-bold text-foreground mb-2">
                   Pricing & Sales Strategy
                 </div>
-                <div style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>
+                <div className="text-muted-foreground text-sm">
                   How your agent should handle pricing and discounts
                 </div>
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                 <div>
-                  <label style={{ display: 'block', color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+                  <label className="block text-foreground text-sm font-semibold mb-2">
                     Pricing strategy *
                   </label>
                   <select
                     value={formData.pricingStrategy}
                     onChange={(e) => updateField('pricingStrategy', e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      backgroundColor: 'var(--color-bg-main)',
-                      border: '1px solid var(--color-border-strong)',
-                      borderRadius: '0.5rem',
-                      color: 'var(--color-text-primary)',
-                      fontSize: '1rem'
-                    }}
+                    className="w-full p-3 bg-background border border-border-strong rounded-lg text-foreground text-base"
                   >
                     <option value="">Select...</option>
                     <option value="fixed">Fixed pricing - no negotiation</option>
@@ -1244,10 +1104,10 @@ export default function OnboardingWizard() {
           {currentStep === 6 && (
             <div>
               <div style={{ marginBottom: '2rem' }}>
-                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
+                <div className="text-2xl font-bold text-foreground mb-2">
                   Operations & Fulfillment
                 </div>
-                <div style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>
+                <div className="text-muted-foreground text-sm">
                   Delivery, coverage, and capacity details
                 </div>
               </div>
@@ -1294,10 +1154,10 @@ export default function OnboardingWizard() {
           {currentStep === 7 && (
             <div>
               <div style={{ marginBottom: '2rem' }}>
-                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
+                <div className="text-2xl font-bold text-foreground mb-2">
                   Policies & Guarantees
                 </div>
-                <div style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>
+                <div className="text-muted-foreground text-sm">
                   Returns, warranties, and customer protections
                 </div>
               </div>
@@ -1343,31 +1203,23 @@ export default function OnboardingWizard() {
           {currentStep === 8 && (
             <div>
               <div style={{ marginBottom: '2rem' }}>
-                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
+                <div className="text-2xl font-bold text-foreground mb-2">
                   What should your agent accomplish?
                 </div>
-                <div style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>
+                <div className="text-muted-foreground text-sm">
                   Define success for your AI agent
                 </div>
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                 <div>
-                  <label style={{ display: 'block', color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+                  <label className="block text-foreground text-sm font-semibold mb-2">
                     Primary Objective *
                   </label>
                   <select
                     value={formData.primaryObjective}
                     onChange={(e) => updateField('primaryObjective', e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      backgroundColor: 'var(--color-bg-main)',
-                      border: '1px solid var(--color-border-strong)',
-                      borderRadius: '0.5rem',
-                      color: 'var(--color-text-primary)',
-                      fontSize: '1rem'
-                    }}
+                    className="w-full p-3 bg-background border border-border-strong rounded-lg text-foreground text-base"
                   >
                     <option value="sales">Close Sales (e-commerce, direct sales)</option>
                     <option value="leads">Generate Qualified Leads</option>
@@ -1378,7 +1230,7 @@ export default function OnboardingWizard() {
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: '600', marginBottom: '1rem' }}>
+                  <label className="block text-foreground text-sm font-semibold mb-4">
                     Secondary Objectives (check all that apply)
                   </label>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
@@ -1405,7 +1257,7 @@ export default function OnboardingWizard() {
                           }}
                           style={{ width: '20px', height: '20px' }}
                         />
-                        <span style={{ color: 'var(--color-text-primary)', fontSize: '0.875rem' }}>{obj.label}</span>
+                        <span className="text-foreground text-sm">{obj.label}</span>
                       </label>
                     ))}
                   </div>
@@ -1435,10 +1287,10 @@ export default function OnboardingWizard() {
           {currentStep === 9 && (
             <div>
               <div style={{ marginBottom: '2rem' }}>
-                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
+                <div className="text-2xl font-bold text-foreground mb-2">
                   Your Sales Process
                 </div>
-                <div style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>
+                <div className="text-muted-foreground text-sm">
                   Teach your agent how you sell
                 </div>
               </div>
@@ -1486,10 +1338,10 @@ export default function OnboardingWizard() {
           {currentStep === 10 && (
             <div>
               <div style={{ marginBottom: '2rem' }}>
-                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
+                <div className="text-2xl font-bold text-foreground mb-2">
                   Objection Handling
                 </div>
-                <div style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>
+                <div className="text-muted-foreground text-sm">
                   Teach your agent how to overcome common objections
                 </div>
               </div>
@@ -1536,10 +1388,10 @@ export default function OnboardingWizard() {
           {currentStep === 11 && (
             <div>
               <div style={{ marginBottom: '2rem' }}>
-                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
+                <div className="text-2xl font-bold text-foreground mb-2">
                   Customer Service & Support
                 </div>
-                <div style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>
+                <div className="text-muted-foreground text-sm">
                   How your agent should handle support issues
                 </div>
               </div>
@@ -1586,10 +1438,10 @@ export default function OnboardingWizard() {
           {currentStep === 12 && (
             <div>
               <div style={{ marginBottom: '2rem' }}>
-                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
+                <div className="text-2xl font-bold text-foreground mb-2">
                   Your AI Assistant Identity
                 </div>
-                <div style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>
+                <div className="text-muted-foreground text-sm">
                   Name and personalize your AI business partner
                 </div>
               </div>
@@ -1627,26 +1479,18 @@ export default function OnboardingWizard() {
                   field="ownerName"
                   placeholder="e.g., John, Sarah, David..."
                 />
-                <div style={{ color: 'var(--color-text-disabled)', fontSize: '0.75rem', marginTop: '-1rem' }}>
+                <div className="text-muted-foreground text-xs -mt-4">
                   Your AI assistant will greet you by name: &quot;Hello [Your Name], I am [Assistant Name]...&quot;
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+                  <label className="block text-foreground text-sm font-semibold mb-2">
                     Tone *
                   </label>
                   <select
                     value={formData.tone}
                     onChange={(e) => updateField('tone', e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      backgroundColor: 'var(--color-bg-main)',
-                      border: '1px solid var(--color-border-strong)',
-                      borderRadius: '0.5rem',
-                      color: 'var(--color-text-primary)',
-                      fontSize: '1rem'
-                    }}
+                    className="w-full p-3 bg-background border border-border-strong rounded-lg text-foreground text-base"
                   >
                     <option value="professional">Professional & Polished</option>
                     <option value="friendly">Friendly & Conversational</option>
@@ -1681,17 +1525,17 @@ export default function OnboardingWizard() {
           {currentStep === 13 && (
             <div>
               <div style={{ marginBottom: '2rem' }}>
-                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
+                <div className="text-2xl font-bold text-foreground mb-2">
                   Behavioral Controls
                 </div>
-                <div style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>
+                <div className="text-muted-foreground text-sm">
                   Fine-tune how your agent behaves
                 </div>
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
                 <div>
-                  <label style={{ display: 'block', color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.75rem' }}>
+                  <label className="block text-foreground text-sm font-semibold mb-3">
                     Closing Aggressiveness: {formData.closingAggressiveness}/10
                   </label>
                   <input
@@ -1702,7 +1546,7 @@ export default function OnboardingWizard() {
                     onChange={(e) => updateField('closingAggressiveness', parseInt(e.target.value))}
                     style={{ width: '100%' }}
                   />
-                  <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--color-text-disabled)', fontSize: '0.75rem', marginTop: '0.5rem' }}>
+                  <div className="flex justify-between text-muted-foreground text-xs mt-2">
                     <span>Passive (1-3): Helpful, doesn&apos;t push</span>
                     <span>Balanced (4-7): Guides to purchase</span>
                     <span>Aggressive (8-10): Always closing</span>
@@ -1710,7 +1554,7 @@ export default function OnboardingWizard() {
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.75rem' }}>
+                  <label className="block text-foreground text-sm font-semibold mb-3">
                     Question Frequency: Ask {formData.questionFrequency} questions before recommending
                   </label>
                   <input
@@ -1721,7 +1565,7 @@ export default function OnboardingWizard() {
                     onChange={(e) => updateField('questionFrequency', parseInt(e.target.value))}
                     style={{ width: '100%' }}
                   />
-                  <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--color-text-disabled)', fontSize: '0.75rem', marginTop: '0.5rem' }}>
+                  <div className="flex justify-between text-muted-foreground text-xs mt-2">
                     <span>Quick (1-2): Fast recommendations</span>
                     <span>Balanced (3-4): Standard discovery</span>
                     <span>Thorough (5-7): Deep understanding</span>
@@ -1729,21 +1573,13 @@ export default function OnboardingWizard() {
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+                  <label className="block text-foreground text-sm font-semibold mb-2">
                     Response Length Preference
                   </label>
                   <select
                     value={formData.responseLength}
                     onChange={(e) => updateField('responseLength', e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      backgroundColor: 'var(--color-bg-main)',
-                      border: '1px solid var(--color-border-strong)',
-                      borderRadius: '0.5rem',
-                      color: 'var(--color-text-primary)',
-                      fontSize: '1rem'
-                    }}
+                    className="w-full p-3 bg-background border border-border-strong rounded-lg text-foreground text-base"
                   >
                     <option value="concise">Concise (1-2 sentences, quick responses)</option>
                     <option value="balanced">Balanced (3-4 sentences, detailed but brief)</option>
@@ -1752,7 +1588,7 @@ export default function OnboardingWizard() {
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.75rem' }}>
+                  <label className="block text-foreground text-sm font-semibold mb-3">
                     Proactive vs Reactive: {formData.proactiveLevel}/10
                   </label>
                   <input
@@ -1763,7 +1599,7 @@ export default function OnboardingWizard() {
                     onChange={(e) => updateField('proactiveLevel', parseInt(e.target.value))}
                     style={{ width: '100%' }}
                   />
-                  <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--color-text-disabled)', fontSize: '0.75rem', marginTop: '0.5rem' }}>
+                  <div className="flex justify-between text-muted-foreground text-xs mt-2">
                     <span>Reactive (1-3): Only answers questions</span>
                     <span>Balanced (4-7): Suggests & answers</span>
                     <span>Proactive (8-10): Volunteers info</span>
@@ -1777,17 +1613,17 @@ export default function OnboardingWizard() {
           {currentStep === 14 && (
             <div>
               <div style={{ marginBottom: '2rem' }}>
-                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
+                <div className="text-2xl font-bold text-foreground mb-2">
                   Upload Your Knowledge Base
                 </div>
-                <div style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>
+                <div className="text-muted-foreground text-sm">
                   The more you provide, the smarter your agent
                 </div>
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
                 <div>
-                  <label style={{ display: 'block', color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+                  <label className="block text-foreground text-sm font-semibold mb-2">
                     Upload Documents
                   </label>
                   <div style={{
@@ -1799,95 +1635,61 @@ export default function OnboardingWizard() {
                     cursor: 'pointer'
                   }}>
                     <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>📄</div>
-                    <div style={{ color: 'var(--color-text-primary)', fontSize: '1rem', marginBottom: '0.5rem', fontWeight: '600' }}>
+                    <div className="text-foreground text-base mb-2 font-semibold">
                       Drag & drop files or click to browse
                     </div>
-                    <div style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem', marginBottom: '1rem' }}>
+                    <div className="text-muted-foreground text-sm mb-4">
                       PDFs, Excel, Word, images - Product catalogs, price lists, manuals, policies
                     </div>
-                    <button style={{
-                      padding: '0.75rem 1.5rem',
-                      backgroundColor: primaryColor,
-                      color: 'var(--color-text-primary)',
-                      border: 'none',
-                      borderRadius: '0.5rem',
-                      cursor: 'pointer',
-                      fontSize: '0.875rem',
-                      fontWeight: '600'
-                    }}>
+                    <button
+                      style={{ backgroundColor: primaryColor }}
+                      className="px-6 py-3 text-foreground border-0 rounded-lg cursor-pointer text-sm font-semibold"
+                    >
                       Choose Files
                     </button>
                   </div>
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+                  <label className="block text-foreground text-sm font-semibold mb-2">
                     Website URLs (we&apos;ll extract the content)
                   </label>
                   <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
                     <input
                       type="url"
                       placeholder="https://yoursite.com/products"
-                      style={{
-                        flex: 1,
-                        padding: '0.75rem',
-                        backgroundColor: 'var(--color-bg-main)',
-                        border: '1px solid var(--color-border-strong)',
-                        borderRadius: '0.5rem',
-                        color: 'var(--color-text-primary)',
-                        fontSize: '1rem'
-                      }}
+                      className="flex-1 p-3 bg-background border border-border-strong rounded-lg text-foreground text-base"
                     />
-                    <button style={{
-                      padding: '0.75rem 1.5rem',
-                      backgroundColor: 'var(--color-bg-elevated)',
-                      color: primaryColor,
-                      border: '1px solid var(--color-border-strong)',
-                      borderRadius: '0.5rem',
-                      cursor: 'pointer',
-                      fontSize: '0.875rem',
-                      fontWeight: '600'
-                    }}>
+                    <button
+                      style={{ color: primaryColor }}
+                      className="px-6 py-3 bg-surface-elevated border border-border-strong rounded-lg cursor-pointer text-sm font-semibold"
+                    >
                       + Add
                     </button>
                   </div>
-                  <div style={{ color: 'var(--color-text-disabled)', fontSize: '0.75rem' }}>
+                  <div className="text-muted-foreground text-xs">
                     We&apos;ll analyze these pages for products, pricing, FAQs, and policies
                   </div>
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+                  <label className="block text-foreground text-sm font-semibold mb-2">
                     Competitor Websites (optional - for competitive intelligence)
                   </label>
                   <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
                     <input
                       type="url"
                       placeholder="https://competitor.com"
-                      style={{
-                        flex: 1,
-                        padding: '0.75rem',
-                        backgroundColor: 'var(--color-bg-main)',
-                        border: '1px solid var(--color-border-strong)',
-                        borderRadius: '0.5rem',
-                        color: 'var(--color-text-primary)',
-                        fontSize: '1rem'
-                      }}
+                      className="flex-1 p-3 bg-background border border-border-strong rounded-lg text-foreground text-base"
                     />
-                    <button style={{
-                      padding: '0.75rem 1.5rem',
-                      backgroundColor: 'var(--color-bg-elevated)',
-                      color: primaryColor,
-                      border: '1px solid var(--color-border-strong)',
-                      borderRadius: '0.5rem',
-                      cursor: 'pointer',
-                      fontSize: '0.875rem',
-                      fontWeight: '600'
-                    }}>
+                    <button
+                      style={{ color: primaryColor }}
+                      className="px-6 py-3 bg-surface-elevated border border-border-strong rounded-lg cursor-pointer text-sm font-semibold"
+                    >
                       + Add
                     </button>
                   </div>
-                  <div style={{ color: 'var(--color-text-disabled)', fontSize: '0.75rem' }}>
+                  <div className="text-muted-foreground text-xs">
                     Your agent will learn how you compare to competitors
                   </div>
                 </div>
@@ -1907,10 +1709,10 @@ export default function OnboardingWizard() {
           {currentStep === 15 && (
             <div>
               <div style={{ marginBottom: '2rem' }}>
-                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
+                <div className="text-2xl font-bold text-foreground mb-2">
                   Compliance & Legal
                 </div>
-                <div style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>
+                <div className="text-muted-foreground text-sm">
                   Important disclosures and restrictions
                 </div>
               </div>
@@ -1933,10 +1735,10 @@ export default function OnboardingWizard() {
                       style={{ width: '20px', height: '20px' }}
                     />
                     <div>
-                      <div style={{ color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: '600' }}>
+                      <div className="text-foreground text-sm font-semibold">
                         Enable Privacy & Data Protection Compliance (GDPR/CCPA)
                       </div>
-                      <div style={{ color: 'var(--color-text-disabled)', fontSize: '0.75rem', marginTop: '0.25rem' }}>
+                      <div className="text-muted-foreground text-xs mt-1">
                         Includes data collection notices and opt-out options
                       </div>
                     </div>
@@ -1970,7 +1772,7 @@ export default function OnboardingWizard() {
                   <div style={{ color: 'var(--color-warning)', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
                     ⚠️ Important: Review Before Launch
                   </div>
-                  <div style={{ color: 'var(--color-text-primary)', fontSize: '0.875rem' }}>
+                  <div className="text-foreground text-sm">
                     You&apos;ll have a chance to train and test your agent before it goes live. Make sure all information is accurate and compliant with your industry regulations.
                   </div>
                 </div>
@@ -1982,10 +1784,10 @@ export default function OnboardingWizard() {
           {currentStep === 16 && (
             <div>
               <div style={{ marginBottom: '2rem' }}>
-                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
+                <div className="text-2xl font-bold text-foreground mb-2">
                   Advanced Configuration (Optional)
                 </div>
-                <div style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>
+                <div className="text-muted-foreground text-sm">
                   For power users who want more control
                 </div>
               </div>
@@ -1998,14 +1800,14 @@ export default function OnboardingWizard() {
                   border: '1px solid var(--color-border-light)',
                   borderRadius: '0.5rem',
                 }}>
-                  <div style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem' }}>
+                  <p className="text-muted-foreground text-sm">
                     Industry template is automatically selected based on your industry choice in Step 1. Your AI agent will be pre-configured with industry-specific strategies, tone, and conversion tactics.
-                  </div>
+                  </p>
                 </div>
 
                 {/* Custom Function Definitions */}
                 <div>
-                  <label style={{ display: 'block', color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.75rem' }}>
+                  <label className="block text-foreground text-sm font-semibold mb-3">
                     Custom Function Definitions
                   </label>
                   <div style={{
@@ -2014,7 +1816,7 @@ export default function OnboardingWizard() {
                     borderRadius: '0.75rem',
                     padding: '1.5rem'
                   }}>
-                    <div style={{ color: 'var(--color-text-primary)', fontSize: '0.875rem', marginBottom: '1rem' }}>
+                    <div className="text-foreground text-sm mb-4">
                       Define custom actions your agent can perform (e.g., check inventory, calculate shipping, verify credit)
                     </div>
                     <button style={{
@@ -2030,7 +1832,7 @@ export default function OnboardingWizard() {
                       + Add Custom Function
                     </button>
                     {formData.customFunctions.length > 0 && (
-                      <div style={{ marginTop: '1rem', color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>
+                      <div className="mt-4 text-muted-foreground text-sm">
                         {formData.customFunctions.length} custom function(s) defined
                       </div>
                     )}
@@ -2039,7 +1841,7 @@ export default function OnboardingWizard() {
 
                 {/* Advanced Behavioral Controls */}
                 <div>
-                  <label style={{ display: 'block', color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.75rem' }}>
+                  <label className="block text-foreground text-sm font-semibold mb-3">
                     Advanced Behavioral Controls
                   </label>
                   
@@ -2053,7 +1855,7 @@ export default function OnboardingWizard() {
                     />
 
                     <div>
-                      <label style={{ display: 'block', color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+                      <label className="block text-foreground text-sm font-semibold mb-2">
                         Strict Response Length Limit (characters)
                       </label>
                       <input
@@ -2061,19 +1863,11 @@ export default function OnboardingWizard() {
                         value={formData.responseLengthLimit || ''}
                         onChange={(e) => updateField('responseLengthLimit', parseInt(e.target.value) || 0)}
                         placeholder="0 = no limit"
-                        style={{
-                          width: '100%',
-                          padding: '0.75rem',
-                          backgroundColor: 'var(--color-bg-main)',
-                          border: '1px solid var(--color-border-strong)',
-                          borderRadius: '0.5rem',
-                          color: 'var(--color-text-primary)',
-                          fontSize: '1rem'
-                        }}
+                        className="w-full p-3 bg-background border border-border-strong rounded-lg text-foreground text-base"
                       />
-                      <div style={{ color: 'var(--color-text-disabled)', fontSize: '0.75rem', marginTop: '0.5rem' }}>
+                      <p className="text-muted-foreground text-xs mt-2">
                         Force responses to be under this character count (useful for SMS/chat widgets)
-                      </div>
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -2088,10 +1882,10 @@ export default function OnboardingWizard() {
                       style={{ width: '20px', height: '20px' }}
                     />
                     <div>
-                      <div style={{ color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: '600' }}>
+                      <div className="text-foreground text-sm font-semibold">
                         Enable Enhanced Privacy & Compliance Mode
                       </div>
-                      <div style={{ color: 'var(--color-text-disabled)', fontSize: '0.75rem', marginTop: '0.25rem' }}>
+                      <div className="text-muted-foreground text-xs mt-1">
                         GDPR, CCPA, SOC 2 compliance with data collection notices and opt-outs
                       </div>
                     </div>
@@ -2100,7 +1894,7 @@ export default function OnboardingWizard() {
 
                 {/* Knowledge Priority */}
                 <div>
-                  <label style={{ display: 'block', color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.75rem' }}>
+                  <label className="block text-foreground text-sm font-semibold mb-3">
                     Knowledge Source Priority
                   </label>
                   <div style={{
@@ -2109,10 +1903,10 @@ export default function OnboardingWizard() {
                     borderRadius: '0.75rem',
                     padding: '1.5rem'
                   }}>
-                    <div style={{ color: 'var(--color-text-primary)', fontSize: '0.875rem', marginBottom: '1rem' }}>
+                    <div className="text-foreground text-sm mb-4">
                       Set priority levels for different knowledge sources when answering questions
                     </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', color: 'var(--color-text-secondary)', fontSize: '0.875rem' }}>
+                    <div className="flex flex-col gap-3 text-muted-foreground text-sm">
                       <div>1. Product Catalog (always highest priority)</div>
                       <div>2. Official Documentation (uploaded PDFs)</div>
                       <div>3. Website Content (scraped URLs)</div>
@@ -2134,7 +1928,7 @@ export default function OnboardingWizard() {
                   <div style={{ color: primaryColor, fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
                     💡 Most Users Skip This Step
                   </div>
-                  <div style={{ color: 'var(--color-text-primary)', fontSize: '0.875rem' }}>
+                  <div className="text-foreground text-sm">
                     The configurations from Steps 1-15 are sufficient for 95% of users. You can always come back and configure advanced settings later from the Agent Persona page.
                   </div>
                 </div>
@@ -2146,34 +1940,26 @@ export default function OnboardingWizard() {
           {currentStep === 17 && (
             <div>
               <div style={{ marginBottom: '2rem' }}>
-                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
+                <div className="text-2xl font-bold text-foreground mb-2">
                   Idle Timeout Settings
                 </div>
-                <div style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>
+                <div className="text-muted-foreground text-sm">
                   Organization-wide setting for all agents
                 </div>
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
                 <div>
-                  <label style={{ display: 'block', color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+                  <label className="block text-foreground text-sm font-semibold mb-2">
                     Idle Timeout (Minutes)
                   </label>
                   <input
                     type="number"
                     value={formData.idleTimeoutMinutes}
                     onChange={(e) => updateField('idleTimeoutMinutes', parseInt(e.target.value) || 30)}
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      backgroundColor: 'var(--color-bg-main)',
-                      border: '1px solid var(--color-border-strong)',
-                      borderRadius: '0.5rem',
-                      color: 'var(--color-text-primary)',
-                      fontSize: '1rem'
-                    }}
+                    className="w-full p-3 bg-background border border-border-strong rounded-lg text-foreground text-base"
                   />
-                  <div style={{ color: 'var(--color-text-disabled)', fontSize: '0.75rem', marginTop: '0.5rem' }}>
+                  <div className="text-muted-foreground text-xs mt-2">
                     How long to wait before ending an inactive conversation (default: 30 minutes)
                   </div>
                 </div>
@@ -2185,10 +1971,10 @@ export default function OnboardingWizard() {
           {currentStep === 18 && (
             <div>
               <div style={{ marginBottom: '2rem' }}>
-                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
+                <div className="text-2xl font-bold text-foreground mb-2">
                   🛡️ Objection Handling Strategies
                 </div>
-                <div style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>
+                <div className="text-muted-foreground text-sm">
                   Define how your agent should handle common objections
                 </div>
               </div>
@@ -2241,10 +2027,10 @@ export default function OnboardingWizard() {
           {currentStep === 19 && (
             <div>
               <div style={{ marginBottom: '2rem' }}>
-                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
+                <div className="text-2xl font-bold text-foreground mb-2">
                   🤝 Customer Sentiment Handling
                 </div>
-                <div style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>
+                <div className="text-muted-foreground text-sm">
                   Define how your agent should adapt to different customer emotions
                 </div>
               </div>
@@ -2297,10 +2083,10 @@ export default function OnboardingWizard() {
           {currentStep === 20 && (
             <div>
               <div style={{ marginBottom: '2rem' }}>
-                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
+                <div className="text-2xl font-bold text-foreground mb-2">
                   ❓ Discovery Question Frameworks
                 </div>
-                <div style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>
+                <div className="text-muted-foreground text-sm">
                   Define the strategic questions your agent should ask to understand customer needs
                 </div>
               </div>
@@ -2353,10 +2139,10 @@ export default function OnboardingWizard() {
           {currentStep === 21 && (
             <div>
               <div style={{ marginBottom: '2rem' }}>
-                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
+                <div className="text-2xl font-bold text-foreground mb-2">
                   🎯 Closing Techniques
                 </div>
-                <div style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>
+                <div className="text-muted-foreground text-sm">
                   Define when and how your agent should move toward closing the sale
                 </div>
               </div>
@@ -2401,10 +2187,10 @@ export default function OnboardingWizard() {
           {currentStep === 22 && (
             <div>
               <div style={{ marginBottom: '2rem' }}>
-                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
+                <div className="text-2xl font-bold text-foreground mb-2">
                   ⚖️ Agent Rules & Restrictions
                 </div>
-                <div style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>
+                <div className="text-muted-foreground text-sm">
                   Define clear behavioral boundaries for your agent
                 </div>
               </div>
@@ -2449,10 +2235,10 @@ export default function OnboardingWizard() {
           {currentStep === 23 && (
             <div>
               <div style={{ marginBottom: '2rem' }}>
-                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
+                <div className="text-2xl font-bold text-foreground mb-2">
                   📊 Training Metrics Selection
                 </div>
-                <div style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>
+                <div className="text-muted-foreground text-sm">
                   Choose 5-6 metrics you want to focus on when training your agent
                 </div>
               </div>
@@ -2467,7 +2253,7 @@ export default function OnboardingWizard() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
                 {/* Core Sales Skills */}
                 <div>
-                  <div style={{ fontSize: '1rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '1rem' }}>
+                  <div className="text-base font-bold text-foreground mb-4">
                     Core Sales Skills
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
@@ -2506,7 +2292,7 @@ export default function OnboardingWizard() {
                           style={{ width: '18px', height: '18px', cursor: 'pointer' }}
                         />
                         <span style={{ fontSize: '1.25rem' }}>{metric.icon}</span>
-                        <span style={{ color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: '500' }}>{metric.label}</span>
+                        <span className="text-foreground text-sm font-medium">{metric.label}</span>
                       </label>
                     ))}
                   </div>
@@ -2514,7 +2300,7 @@ export default function OnboardingWizard() {
 
                 {/* Advanced Techniques */}
                 <div>
-                  <div style={{ fontSize: '1rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '1rem' }}>
+                  <div className="text-base font-bold text-foreground mb-4">
                     Advanced Techniques
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
@@ -2553,7 +2339,7 @@ export default function OnboardingWizard() {
                           style={{ width: '18px', height: '18px', cursor: 'pointer' }}
                         />
                         <span style={{ fontSize: '1.25rem' }}>{metric.icon}</span>
-                        <span style={{ color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: '500' }}>{metric.label}</span>
+                        <span className="text-foreground text-sm font-medium">{metric.label}</span>
                       </label>
                     ))}
                   </div>
@@ -2561,7 +2347,7 @@ export default function OnboardingWizard() {
 
                 {/* Customer Management */}
                 <div>
-                  <div style={{ fontSize: '1rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '1rem' }}>
+                  <div className="text-base font-bold text-foreground mb-4">
                     Customer Management
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
@@ -2600,7 +2386,7 @@ export default function OnboardingWizard() {
                           style={{ width: '18px', height: '18px', cursor: 'pointer' }}
                         />
                         <span style={{ fontSize: '1.25rem' }}>{metric.icon}</span>
-                        <span style={{ color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: '500' }}>{metric.label}</span>
+                        <span className="text-foreground text-sm font-medium">{metric.label}</span>
                       </label>
                     ))}
                   </div>
@@ -2608,7 +2394,7 @@ export default function OnboardingWizard() {
 
                 {/* Strategic */}
                 <div>
-                  <div style={{ fontSize: '1rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '1rem' }}>
+                  <div className="text-base font-bold text-foreground mb-4">
                     Strategic
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
@@ -2643,7 +2429,7 @@ export default function OnboardingWizard() {
                           style={{ width: '18px', height: '18px', cursor: 'pointer' }}
                         />
                         <span style={{ fontSize: '1.25rem' }}>{metric.icon}</span>
-                        <span style={{ color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: '500' }}>{metric.label}</span>
+                        <span className="text-foreground text-sm font-medium">{metric.label}</span>
                       </label>
                     ))}
                   </div>
@@ -2675,10 +2461,10 @@ export default function OnboardingWizard() {
           {currentStep === 24 && (
             <div>
               <div style={{ marginBottom: '2rem' }}>
-                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
+                <div className="text-2xl font-bold text-foreground mb-2">
                   📚 Sales Materials Upload (Optional)
                 </div>
-                <div style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>
+                <div className="text-muted-foreground text-sm">
                   Upload sales training books, playbooks, or methodologies for AI to extract techniques
                 </div>
               </div>
@@ -2704,7 +2490,7 @@ export default function OnboardingWizard() {
 
                 {/* File Upload Area */}
                 <div>
-                  <label style={{ display: 'block', color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.75rem' }}>
+                  <label className="block text-foreground text-sm font-semibold mb-3">
                     Upload Sales Materials (PDF, DOCX)
                   </label>
                   <div style={{
@@ -2728,10 +2514,10 @@ export default function OnboardingWizard() {
                     />
                     <label htmlFor="sales-materials-upload" style={{ cursor: 'pointer' }}>
                       <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📤</div>
-                      <div style={{ color: 'var(--color-text-primary)', fontWeight: '600', marginBottom: '0.5rem' }}>
+                      <div className="text-foreground font-semibold mb-2">
                         Click to upload or drag and drop
                       </div>
-                      <div style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>
+                      <div className="text-muted-foreground text-sm">
                         PDF, DOC, DOCX up to 50MB each
                       </div>
                     </label>
@@ -2740,7 +2526,7 @@ export default function OnboardingWizard() {
                   {/* Uploaded Files List */}
                   {formData.uploadedSalesMaterials.length > 0 && (
                     <div style={{ marginTop: '1rem' }}>
-                      <div style={{ color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+                      <div className="text-foreground text-sm font-semibold mb-2">
                         Uploaded Files ({formData.uploadedSalesMaterials.length})
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
@@ -2760,10 +2546,10 @@ export default function OnboardingWizard() {
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                               <span style={{ fontSize: '1.5rem' }}>📄</span>
                               <div>
-                                <div style={{ color: 'var(--color-text-primary)', fontSize: '0.875rem', fontWeight: '500' }}>
+                                <div className="text-foreground text-sm font-medium">
                                   {file.name}
                                 </div>
-                                <div style={{ color: 'var(--color-text-disabled)', fontSize: '0.75rem' }}>
+                                <div className="text-muted-foreground text-xs">
                                   {(file.size / 1024 / 1024).toFixed(2)} MB
                                 </div>
                               </div>
@@ -2792,9 +2578,9 @@ export default function OnboardingWizard() {
 
                 {/* Skip Option */}
                 <div style={{ padding: '1rem', backgroundColor: 'var(--color-warning-dark)', border: '1px solid var(--color-warning-dark)', borderRadius: '0.5rem', textAlign: 'center' }}>
-                  <div style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem' }}>
+                  <p className="text-muted-foreground text-sm">
                     Don&apos;t have materials to upload? No problem! Your agent will still work great with the information you&apos;ve already provided. You can always add materials later.
-                  </div>
+                  </p>
                 </div>
               </div>
             </div>
@@ -2802,68 +2588,44 @@ export default function OnboardingWizard() {
         </div>
 
         {/* Navigation Buttons */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div className="flex justify-between items-center">
           <button
             onClick={prevStep}
             disabled={currentStep === 1}
             style={{
-              padding: '0.75rem 1.5rem',
               backgroundColor: currentStep === 1 ? 'var(--color-bg-paper)' : 'var(--color-bg-elevated)',
               color: currentStep === 1 ? 'var(--color-text-disabled)' : 'var(--color-text-primary)',
-              border: '1px solid var(--color-border-strong)',
-              borderRadius: '0.5rem',
               cursor: currentStep === 1 ? 'not-allowed' : 'pointer',
-              fontSize: '0.875rem',
-              fontWeight: '600'
             }}
+            className="px-6 py-3 border border-border-strong rounded-lg text-sm font-semibold"
           >
             ← Previous
           </button>
 
-          <div style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>
+          <p className="text-muted-foreground text-sm">
             Step {currentStep} of {totalSteps}
-          </div>
+          </p>
 
           {currentStep < totalSteps ? (
             <button
               onClick={nextStep}
-              style={{
-                padding: '0.75rem 2rem',
-                backgroundColor: primaryColor,
-                color: 'var(--color-text-primary)',
-                border: 'none',
-                borderRadius: '0.5rem',
-                cursor: 'pointer',
-                fontSize: '0.875rem',
-                fontWeight: '600'
-              }}
+              style={{ backgroundColor: primaryColor }}
+              className="px-8 py-3 text-foreground border-0 rounded-lg cursor-pointer text-sm font-semibold"
             >
               Continue →
             </button>
           ) : (
             <>
               {isAnalyzing ? (
-                <div style={{
-                  padding: '2rem',
-                  backgroundColor: 'var(--color-bg-paper)',
-                  border: '1px solid var(--color-border-strong)',
-                  borderRadius: '0.75rem',
-                  textAlign: 'center'
-                }}>
-                  <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🔍</div>
-                  <div style={{ fontSize: '1.125rem', fontWeight: '600', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
+                <div className="p-8 bg-card border border-border-strong rounded-xl text-center">
+                  <div className="text-5xl mb-4">🔍</div>
+                  <p className="text-lg font-semibold text-foreground mb-2">
                     Analyzing Your Company...
-                  </div>
-                  <div style={{ fontSize: '0.875rem', color: 'var(--color-text-disabled)', marginBottom: '1.5rem' }}>
+                  </p>
+                  <p className="text-sm text-muted-foreground mb-6">
                     {analysisProgress || 'Processing...'}
-                  </div>
-                  <div style={{
-                    width: '100%',
-                    height: '4px',
-                    backgroundColor: 'var(--color-border-strong)',
-                    borderRadius: '2px',
-                    overflow: 'hidden'
-                  }}>
+                  </p>
+                  <div className="w-full h-1 bg-border-strong rounded-full overflow-hidden">
                     <div style={{
                       width: '100%',
                       height: '100%',
@@ -2871,36 +2633,28 @@ export default function OnboardingWizard() {
                       animation: 'pulse 2s ease-in-out infinite'
                     }} />
                   </div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginTop: '1rem' }}>
+                  <p className="text-xs text-muted-foreground mt-4">
                     This may take a few minutes. Your agent is learning about your company, products, and services...
-                  </div>
+                  </p>
                 </div>
               ) : (
                 <button
                   onClick={() => void completeOnboarding()}
                   style={{
-                    padding: '1rem 2.5rem',
                     background: `linear-gradient(135deg, ${primaryColor}, var(--color-secondary))`,
-                    color: 'var(--color-text-primary)',
-                    border: 'none',
-                    borderRadius: '0.5rem',
-                    cursor: 'pointer',
-                    fontSize: '0.875rem',
-                    fontWeight: '700',
-                    textTransform: 'uppercase',
-                letterSpacing: '0.05em',
-                boxShadow: `0 10px 40px ${primaryColor}33`
-              }}
-            >
-              🚀 Start Training Your AI Agent
-            </button>
-          )}
+                    boxShadow: `0 10px 40px ${primaryColor}33`
+                  }}
+                  className="px-10 py-4 text-foreground border-0 rounded-lg cursor-pointer text-sm font-bold uppercase tracking-wide"
+                >
+                  🚀 Start Training Your AI Agent
+                </button>
+              )}
             </>
           )}
         </div>
 
         {/* Progress Indicator Dots */}
-        <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', marginTop: '2rem' }}>
+        <div className="flex justify-center gap-2 mt-8">
           {Array.from({ length: totalSteps }).map((_, i) => (
             <div
               key={i}

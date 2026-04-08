@@ -230,17 +230,17 @@ export default function BattlecardsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--color-bg-main)]">
+    <div className="p-8 space-y-6">
       <SubpageNav items={ANALYTICS_TABS} />
       {/* Header */}
-      <div className="bg-gradient-to-r from-primary to-secondary border-b border-border-light">
+      <div className="bg-gradient-to-r from-primary to-secondary border-b border-border-light rounded-xl">
         <div className="px-6 py-8">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-[var(--color-text-primary)] mb-2">
+              <h1 className="text-3xl font-bold text-foreground mb-2">
                 🎯 Competitor Research
               </h1>
-              <p className="text-[var(--color-text-secondary)]">
+              <p className="text-muted-foreground">
                 AI-powered competitive intelligence for winning more deals
               </p>
             </div>
@@ -250,7 +250,7 @@ export default function BattlecardsPage() {
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                   view === 'discovery'
                     ? 'bg-primary text-white'
-                    : 'bg-surface-elevated text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'
+                    : 'bg-surface-elevated text-muted-foreground hover:text-foreground'
                 }`}
               >
                 Discover Competitor
@@ -261,7 +261,7 @@ export default function BattlecardsPage() {
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                     view === 'battlecard'
                       ? 'bg-primary text-white'
-                      : 'bg-surface-elevated text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'
+                      : 'bg-surface-elevated text-muted-foreground hover:text-foreground'
                   }`}
                 >
                   View Battlecard
@@ -276,7 +276,7 @@ export default function BattlecardsPage() {
       <div className="px-6 py-8">
         {/* Error Message */}
         {error && (
-          <div className="mb-6 border border-error/30 rounded-lg p-4" style={{ backgroundColor: 'rgba(var(--color-error-rgb), 0.1)' }}>
+          <div className="mb-6 border border-error/30 rounded-lg p-4 bg-error/10">
             <div className="flex items-center">
               <svg className="w-5 h-5 text-error mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -291,7 +291,7 @@ export default function BattlecardsPage() {
           <div className="space-y-6">
             {/* Discovery Form */}
             <div className="bg-surface-paper border border-border-light rounded-lg p-6">
-              <h2 className="text-xl font-bold text-[var(--color-text-primary)] mb-4 flex items-center">
+              <h2 className="text-xl font-bold text-foreground mb-4 flex items-center">
                 <svg className="w-6 h-6 mr-2 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
@@ -299,7 +299,7 @@ export default function BattlecardsPage() {
               </h2>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">
+                  <label className="block text-sm font-medium text-muted-foreground mb-2">
                     Competitor Domain
                   </label>
                   <input
@@ -312,10 +312,10 @@ export default function BattlecardsPage() {
                       }
                     }}
                     placeholder="competitor.com"
-                    className="w-full px-4 py-2 bg-surface-elevated border border-border-light rounded-lg text-[var(--color-text-primary)] placeholder-[var(--color-text-disabled)] focus:outline-none focus:ring-2 focus:ring-primary"
+                    className="w-full px-4 py-2 bg-surface-elevated border border-border-light rounded-lg text-foreground placeholder-[var(--color-text-disabled)] focus:outline-none focus:ring-2 focus:ring-primary"
                     disabled={isLoading}
                   />
-                  <p className="text-xs text-[var(--color-text-disabled)] mt-1">
+                  <p className="text-xs text-muted-foreground mt-1">
                     Enter competitor&apos;s website domain (e.g., salesforce.com, hubspot.com)
                   </p>
                 </div>
@@ -351,7 +351,7 @@ export default function BattlecardsPage() {
 
                 {/* Generate Battlecard */}
                 <div className="bg-surface-paper border border-border-light rounded-lg p-6">
-                  <h2 className="text-xl font-bold text-[var(--color-text-primary)] mb-4 flex items-center">
+                  <h2 className="text-xl font-bold text-foreground mb-4 flex items-center">
                     <svg className="w-6 h-6 mr-2 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
                     </svg>
@@ -359,7 +359,7 @@ export default function BattlecardsPage() {
                   </h2>
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">
+                      <label className="block text-sm font-medium text-muted-foreground mb-2">
                         Your Product Name
                       </label>
                       <input
@@ -367,7 +367,7 @@ export default function BattlecardsPage() {
                         value={ourProduct}
                         onChange={(e) => setOurProduct(e.target.value)}
                         placeholder="SalesVelocity"
-                        className="w-full px-4 py-2 bg-surface-elevated border border-border-light rounded-lg text-[var(--color-text-primary)] placeholder-[var(--color-text-disabled)] focus:outline-none focus:ring-2 focus:ring-primary"
+                        className="w-full px-4 py-2 bg-surface-elevated border border-border-light rounded-lg text-foreground placeholder-[var(--color-text-disabled)] focus:outline-none focus:ring-2 focus:ring-primary"
                         disabled={isLoading}
                       />
                     </div>
@@ -401,7 +401,7 @@ export default function BattlecardsPage() {
             {/* Previously Researched Competitors */}
             {!competitorProfile && !isLoading && savedProfiles.length > 0 && (
               <div className="bg-surface-paper border border-border-light rounded-lg p-6">
-                <h2 className="text-xl font-bold text-[var(--color-text-primary)] mb-4">
+                <h2 className="text-xl font-bold text-foreground mb-4">
                   Previously Researched Competitors
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -414,12 +414,12 @@ export default function BattlecardsPage() {
                       }}
                       className="text-left p-4 rounded-lg bg-surface-elevated border border-border-light hover:border-primary/50 transition-all"
                     >
-                      <p className="font-semibold text-[var(--color-text-primary)]">{item.profile.companyName || item.domain}</p>
-                      <p className="text-sm text-[var(--color-text-secondary)]">{item.domain}</p>
+                      <p className="font-semibold text-foreground">{item.profile.companyName || item.domain}</p>
+                      <p className="text-sm text-muted-foreground">{item.domain}</p>
                       {item.profile.industry && (
-                        <p className="text-xs text-[var(--color-text-disabled)] mt-1">{item.profile.industry}</p>
+                        <p className="text-xs text-muted-foreground mt-1">{item.profile.industry}</p>
                       )}
-                      <p className="text-xs text-[var(--color-text-disabled)] mt-2">
+                      <p className="text-xs text-muted-foreground mt-2">
                         Researched {new Date(item.savedAt).toLocaleDateString()}
                       </p>
                     </button>
@@ -431,7 +431,7 @@ export default function BattlecardsPage() {
             {/* Saved Battlecards */}
             {!competitorProfile && !isLoading && savedBattlecards.length > 0 && (
               <div className="bg-surface-paper border border-border-light rounded-lg p-6">
-                <h2 className="text-xl font-bold text-[var(--color-text-primary)] mb-4">
+                <h2 className="text-xl font-bold text-foreground mb-4">
                   Saved Battlecards
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -444,9 +444,9 @@ export default function BattlecardsPage() {
                       }}
                       className="text-left p-4 rounded-lg bg-surface-elevated border border-border-light hover:border-primary/50 transition-all"
                     >
-                      <p className="font-semibold text-[var(--color-text-primary)]">{item.battlecard.competitorName}</p>
-                      <p className="text-sm text-[var(--color-text-secondary)]">{item.domain}</p>
-                      <p className="text-xs text-[var(--color-text-disabled)] mt-2">
+                      <p className="font-semibold text-foreground">{item.battlecard.competitorName}</p>
+                      <p className="text-sm text-muted-foreground">{item.domain}</p>
+                      <p className="text-xs text-muted-foreground mt-2">
                         Generated {new Date(item.savedAt).toLocaleDateString()}
                       </p>
                     </button>
@@ -458,13 +458,13 @@ export default function BattlecardsPage() {
             {/* Empty State */}
             {!competitorProfile && !isLoading && savedProfiles.length === 0 && (
               <div className="bg-surface-paper border-2 border-dashed border-border-light rounded-lg p-12 text-center">
-                <svg className="w-16 h-16 mx-auto text-[var(--color-text-disabled)] mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-16 h-16 mx-auto text-muted-foreground mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
-                <h3 className="text-lg font-semibold text-[var(--color-text-secondary)] mb-2">
+                <h3 className="text-lg font-semibold text-muted-foreground mb-2">
                   No Competitor Discovered Yet
                 </h3>
-                <p className="text-[var(--color-text-disabled)] text-sm max-w-md mx-auto">
+                <p className="text-muted-foreground text-sm max-w-md mx-auto">
                   Enter a competitor&apos;s domain above to start gathering competitive intelligence.
                   Our AI will scrape their website, analyze their offering, and identify strengths & weaknesses.
                 </p>

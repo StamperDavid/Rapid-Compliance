@@ -42,7 +42,58 @@ Claude is **NOT ALLOWED** to modify, disable, bypass, or weaken any of the follo
 
 If code fails linting or type-checking, **fix the underlying code**, not the rules.
 
-### 2. Best Practices Only
+### 2. Design System Compliance (UI/UX)
+
+**All new and modified UI code MUST use the design system.** This is a hard rule, not a suggestion.
+
+#### Page Structure
+- **Every dashboard page** must use `<div className="p-8 space-y-6">` as its outermost wrapper
+- **Exception:** Full-height layouts (chat panels, editors) that require `h-full` or `flex` layouts
+- **Never** use `min-h-screen` or `bg-surface-main` on page wrappers (the layout handles this)
+
+#### Typography — Use Components, Not Raw Tags
+| Element | Component | Import from |
+|---------|-----------|------------|
+| Page title (h1) | `<PageTitle>` | `@/components/ui/typography` |
+| Section heading (h2) | `<SectionTitle>` | `@/components/ui/typography` |
+| Subsection (h3) | `<SubsectionTitle>` | `@/components/ui/typography` |
+| Card heading (h4) | `<CardTitle>` | `@/components/ui/typography` |
+| Subtitle / help text | `<SectionDescription>` | `@/components/ui/typography` |
+| Small label | `<Caption>` | `@/components/ui/typography` |
+
+**Never** write `<h1 className="text-3xl font-bold ...">` — use `<PageTitle>` instead.
+
+#### Color Tokens — Use Tailwind Classes, Not CSS Variables
+| Instead of | Use |
+|-----------|-----|
+| `text-[var(--color-text-primary)]` | `text-foreground` |
+| `text-[var(--color-text-secondary)]` | `text-muted-foreground` |
+| `text-[var(--color-text-disabled)]` | `text-muted-foreground` |
+| `bg-[var(--color-bg-paper)]` | `bg-card` |
+| `bg-[var(--color-bg-elevated)]` | `bg-surface-elevated` |
+| `bg-[var(--color-bg-main)]` | `bg-background` |
+| `text-[var(--color-primary)]` | `text-primary` |
+| `border-[var(--color-border-light)]` | `border-border-light` |
+
+**Never** use `style={{ color: 'var(--color-...)' }}` when a Tailwind class exists.
+
+#### Layout — Responsive Grids, Not Inline Styles
+- **Never** use `style={{ gridTemplateColumns: '...' }}` — use Tailwind responsive grid classes
+- **Always** include mobile breakpoints: `grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4`
+- **Exception:** Dynamic computed values that can't be expressed as static classes
+
+#### Components — Use the Library
+- **Buttons:** Import `Button` from `@/components/ui/button` — never create raw `<button className="px-4 py-2 ...">` elements
+- **Cards:** Use `bg-card border border-border-strong rounded-2xl p-6` or `Card` from `@/components/ui/card`
+- **Inputs:** Import `Input` from `@/components/ui/input`
+- **Dialogs:** Import from `@/components/ui/dialog`
+
+#### Inline Styles — Minimize
+- **Prefer Tailwind classes** over `style={{}}` props in all cases
+- **Only use inline `style`** for truly dynamic values computed at runtime (e.g., `style={{ width: `${percent}%` }}`)
+- **Never** hardcode hex colors, rgb values, or px font sizes in `style` attributes
+
+### 3. Best Practices Only
 
 Claude must adhere to:
 
@@ -60,7 +111,7 @@ Do not introduce:
 - Unnecessary abstractions
 - Features beyond what was requested
 
-### 3. Effective Sub-Agent Usage
+### 4. Effective Sub-Agent Usage
 
 Claude must use sub-agents proactively for efficiency:
 
@@ -102,7 +153,7 @@ Claude must use sub-agents proactively for efficiency:
 
 ## End-of-Session Requirements
 
-### 4. Commit to GitHub Dev Branch
+### 5. Commit to GitHub Dev Branch
 
 At the end of each session, Claude must:
 
@@ -121,7 +172,7 @@ Co-Authored-By: Claude Opus 4.6 (1M context) <noreply@anthropic.com>
 
 Types: `feat`, `fix`, `refactor`, `test`, `docs`, `chore`
 
-### 4b. Sync Active Worktrees
+### 5b. Sync Active Worktrees
 
 After pushing to `dev`, Claude must also merge `dev` into any active worktree branches that are running a local dev server (e.g., `rapid-dev` at `D:\rapid-dev`). This ensures `localhost:3000` reflects the latest changes immediately.
 
@@ -133,7 +184,7 @@ git merge origin/dev --no-edit
 
 If the merge has conflicts, resolve them before proceeding. Always clear the `.next` cache after merging (`rm -rf .next`) so the dev server picks up the new code.
 
-### 5. Update Single Source of Truth
+### 6. Update Single Source of Truth
 
 At the end of each session where architecture, routes, agents, or significant functionality changed, Claude must update:
 

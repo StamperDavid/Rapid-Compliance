@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/useToast';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { getTierConfig } from '@/lib/pricing/subscription-tiers';
+import { PageTitle } from '@/components/ui/typography';
 
 interface Subscription {
   userId: string;
@@ -159,118 +160,71 @@ export default function BillingPage() {
   const isProvisioned = subscription?.provisionedBy === 'admin';
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: 'var(--color-bg-main)', color: 'var(--color-text-primary)' }}>
+    <div className="p-8 space-y-6 text-foreground">
       {/* Header */}
-      <div style={{
-        padding: '1.5rem 2rem',
-        borderBottom: '1px solid var(--color-bg-elevated)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <Link href="/settings" style={{ color: 'var(--color-text-secondary)', textDecoration: 'none', fontSize: '0.875rem' }}>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Link href="/settings" className="text-muted-foreground no-underline text-sm">
             Settings
           </Link>
-          <span style={{ color: 'var(--color-text-muted)' }}>/</span>
-          <h1 style={{ fontSize: '1.25rem', fontWeight: 600, margin: 0 }}>Billing & Plans</h1>
+          <span className="text-muted-foreground">/</span>
+          <PageTitle as="h1" className="text-xl font-semibold m-0">Billing &amp; Plans</PageTitle>
         </div>
         <Link
           href="/settings/subscription"
-          style={{
-            padding: '0.5rem 1rem',
-            backgroundColor: 'var(--color-primary)',
-            color: '#fff',
-            borderRadius: '0.375rem',
-            textDecoration: 'none',
-            fontSize: '0.875rem',
-            fontWeight: 500,
-          }}
+          className="px-4 py-2 bg-primary text-white rounded no-underline text-sm font-medium"
         >
           Compare Plans
         </Link>
       </div>
 
-      <div style={{ maxWidth: '900px', margin: '0 auto', padding: '2rem' }}>
+      <div className="max-w-4xl">
         {loading ? (
-          <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--color-text-secondary)' }}>
+          <div className="text-center py-12 text-muted-foreground">
             Loading billing information...
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          <div className="flex flex-col gap-6">
             {/* Current Plan Card */}
-            <div style={{
-              backgroundColor: 'var(--color-bg-card)',
-              border: '1px solid var(--color-bg-elevated)',
-              borderRadius: '0.75rem',
-              padding: '1.5rem',
-            }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <div className="bg-card border border-border rounded-xl p-6">
+              <div className="flex justify-between items-start">
                 <div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>
+                  <div className="text-xs text-muted-foreground uppercase tracking-wide mb-2">
                     Current Plan
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
-                    <span style={{ fontSize: '1.5rem', fontWeight: 700 }}>{tierConfig.label}</span>
-                    <span style={{
-                      padding: '0.125rem 0.5rem',
-                      borderRadius: '9999px',
-                      fontSize: '0.75rem',
-                      fontWeight: 600,
-                      backgroundColor: isActive ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
-                      color: isActive ? 'var(--color-success)' : 'var(--color-error)',
-                    }}>
+                  <div className="flex items-center gap-3 mb-2">
+                    <span className="text-2xl font-bold">{tierConfig.label}</span>
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${isActive ? 'bg-green-500/15 text-[var(--color-success)]' : 'bg-red-500/15 text-[var(--color-error)]'}`}>
                       {isActive ? 'Active' : 'Cancelled'}
                     </span>
                     {isProvisioned && (
-                      <span style={{
-                        padding: '0.125rem 0.5rem',
-                        borderRadius: '9999px',
-                        fontSize: '0.75rem',
-                        fontWeight: 600,
-                        backgroundColor: 'rgba(139, 92, 246, 0.15)',
-                        color: '#a78bfa',
-                      }}>
+                      <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-violet-500/15 text-violet-400">
                         Admin Provisioned
                       </span>
                     )}
                   </div>
                   {tier !== 'free' && (
-                    <div style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem' }}>
+                    <div className="text-muted-foreground text-sm">
                       ${price}/{billingPeriod === 'annual' ? 'year' : 'month'}
                       {billingPeriod === 'annual' && (
-                        <span style={{ color: 'var(--color-success)', marginLeft: '0.5rem' }}>
+                        <span className="text-[var(--color-success)] ml-2">
                           Save ${(tierConfig.monthlyPrice * 12) - tierConfig.annualPrice}/year
                         </span>
                       )}
                     </div>
                   )}
                 </div>
-                <div style={{
-                  width: '48px',
-                  height: '48px',
-                  borderRadius: '0.75rem',
-                  backgroundColor: tierConfig.badge,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '1.5rem',
-                }}>
+                <div
+                  className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl"
+                  style={{ backgroundColor: tierConfig.badge }}
+                >
                   {tier === 'free' ? '🆓' : tier === 'starter' ? '🚀' : tier === 'professional' ? '⭐' : '👑'}
                 </div>
               </div>
 
               {/* Cancellation Warning */}
               {isCancelled && (
-                <div style={{
-                  marginTop: '1rem',
-                  padding: '0.75rem 1rem',
-                  backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                  border: '1px solid rgba(239, 68, 68, 0.2)',
-                  borderRadius: '0.5rem',
-                  fontSize: '0.875rem',
-                  color: 'var(--color-error)',
-                }}>
+                <div className="mt-4 px-4 py-3 bg-red-500/10 border border-red-500/20 rounded-lg text-sm text-[var(--color-error)]">
                   Your subscription was cancelled{subscription?.cancelledAt ? ` on ${new Date(subscription.cancelledAt).toLocaleDateString()}` : ''}.
                   {subscription?.cancelAtPeriodEnd && ' Access continues until the end of the billing period.'}
                 </div>
@@ -278,15 +232,7 @@ export default function BillingPage() {
 
               {/* Tier Change History */}
               {subscription?.previousTier && subscription.tierChangedAt && (
-                <div style={{
-                  marginTop: '1rem',
-                  padding: '0.75rem 1rem',
-                  backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                  border: '1px solid rgba(59, 130, 246, 0.2)',
-                  borderRadius: '0.5rem',
-                  fontSize: '0.875rem',
-                  color: 'var(--color-info)',
-                }}>
+                <div className="mt-4 px-4 py-3 bg-blue-500/10 border border-blue-500/20 rounded-lg text-sm text-[var(--color-info)]">
                   Changed from {getTierConfig(subscription.previousTier).label} on{' '}
                   {new Date(subscription.tierChangedAt).toLocaleDateString()}
                 </div>
@@ -294,45 +240,30 @@ export default function BillingPage() {
             </div>
 
             {/* Billing Details */}
-            <div style={{
-              backgroundColor: 'var(--color-bg-card)',
-              border: '1px solid var(--color-bg-elevated)',
-              borderRadius: '0.75rem',
-              padding: '1.5rem',
-            }}>
-              <h3 style={{ fontSize: '1rem', fontWeight: 600, margin: '0 0 1rem 0' }}>
-                Billing Details
-              </h3>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <div className="bg-card border border-border rounded-xl p-6">
+              <h3 className="text-base font-semibold mb-4">Billing Details</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginBottom: '0.25rem' }}>
-                    Billing Period
-                  </div>
-                  <div style={{ fontSize: '0.875rem', fontWeight: 500 }}>
+                  <div className="text-xs text-muted-foreground mb-1">Billing Period</div>
+                  <div className="text-sm font-medium">
                     {billingPeriod === 'annual' ? 'Annual' : 'Monthly'}
                   </div>
                 </div>
                 <div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginBottom: '0.25rem' }}>
-                    Status
-                  </div>
-                  <div style={{ fontSize: '0.875rem', fontWeight: 500, color: isActive ? 'var(--color-success)' : 'var(--color-error)' }}>
+                  <div className="text-xs text-muted-foreground mb-1">Status</div>
+                  <div className={`text-sm font-medium ${isActive ? 'text-[var(--color-success)]' : 'text-[var(--color-error)]'}`}>
                     {isActive ? 'Active' : 'Cancelled'}
                   </div>
                 </div>
                 <div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginBottom: '0.25rem' }}>
-                    Member Since
-                  </div>
-                  <div style={{ fontSize: '0.875rem', fontWeight: 500 }}>
+                  <div className="text-xs text-muted-foreground mb-1">Member Since</div>
+                  <div className="text-sm font-medium">
                     {subscription?.createdAt ? new Date(subscription.createdAt).toLocaleDateString() : '—'}
                   </div>
                 </div>
                 <div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginBottom: '0.25rem' }}>
-                    Payment Method
-                  </div>
-                  <div style={{ fontSize: '0.875rem', fontWeight: 500 }}>
+                  <div className="text-xs text-muted-foreground mb-1">Payment Method</div>
+                  <div className="text-sm font-medium">
                     {subscription?.stripeSubscriptionId ? 'Stripe' : isProvisioned ? 'Admin Provisioned' : 'None'}
                   </div>
                 </div>
@@ -340,27 +271,12 @@ export default function BillingPage() {
             </div>
 
             {/* Actions */}
-            <div style={{
-              backgroundColor: 'var(--color-bg-card)',
-              border: '1px solid var(--color-bg-elevated)',
-              borderRadius: '0.75rem',
-              padding: '1.5rem',
-            }}>
-              <h3 style={{ fontSize: '1rem', fontWeight: 600, margin: '0 0 1rem 0' }}>
-                Manage Subscription
-              </h3>
-              <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+            <div className="bg-card border border-border rounded-xl p-6">
+              <h3 className="text-base font-semibold mb-4">Manage Subscription</h3>
+              <div className="flex gap-3 flex-wrap">
                 <Link
                   href="/settings/subscription"
-                  style={{
-                    padding: '0.5rem 1rem',
-                    backgroundColor: 'var(--color-primary)',
-                    color: '#fff',
-                    borderRadius: '0.375rem',
-                    textDecoration: 'none',
-                    fontSize: '0.875rem',
-                    fontWeight: 500,
-                  }}
+                  className="px-4 py-2 bg-primary text-white rounded no-underline text-sm font-medium"
                 >
                   {tier === 'free' ? 'Upgrade Plan' : 'Change Plan'}
                 </Link>
@@ -369,17 +285,7 @@ export default function BillingPage() {
                   <button
                     onClick={() => void handleOpenPortal()}
                     disabled={portalLoading}
-                    style={{
-                      padding: '0.5rem 1rem',
-                      backgroundColor: 'transparent',
-                      border: '1px solid var(--color-text-secondary)',
-                      color: 'var(--color-text-primary)',
-                      borderRadius: '0.375rem',
-                      cursor: portalLoading ? 'not-allowed' : 'pointer',
-                      fontSize: '0.875rem',
-                      fontWeight: 500,
-                      opacity: portalLoading ? 0.5 : 1,
-                    }}
+                    className={`px-4 py-2 bg-transparent border border-muted-foreground text-foreground rounded text-sm font-medium ${portalLoading ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
                   >
                     {portalLoading ? 'Opening...' : 'Manage Billing'}
                   </button>
@@ -389,17 +295,7 @@ export default function BillingPage() {
                   <button
                     onClick={() => void handleCancel()}
                     disabled={actionLoading}
-                    style={{
-                      padding: '0.5rem 1rem',
-                      backgroundColor: 'transparent',
-                      border: '1px solid var(--color-error)',
-                      color: 'var(--color-error)',
-                      borderRadius: '0.375rem',
-                      cursor: actionLoading ? 'not-allowed' : 'pointer',
-                      fontSize: '0.875rem',
-                      fontWeight: 500,
-                      opacity: actionLoading ? 0.5 : 1,
-                    }}
+                    className={`px-4 py-2 bg-transparent border border-[var(--color-error)] text-[var(--color-error)] rounded text-sm font-medium ${actionLoading ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
                   >
                     {actionLoading ? 'Processing...' : 'Cancel Subscription'}
                   </button>
@@ -409,17 +305,7 @@ export default function BillingPage() {
                   <button
                     onClick={() => void handleReactivate()}
                     disabled={actionLoading}
-                    style={{
-                      padding: '0.5rem 1rem',
-                      backgroundColor: 'var(--color-success)',
-                      border: 'none',
-                      color: '#fff',
-                      borderRadius: '0.375rem',
-                      cursor: actionLoading ? 'not-allowed' : 'pointer',
-                      fontSize: '0.875rem',
-                      fontWeight: 500,
-                      opacity: actionLoading ? 0.5 : 1,
-                    }}
+                    className={`px-4 py-2 bg-[var(--color-success)] border-none text-white rounded text-sm font-medium ${actionLoading ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
                   >
                     {actionLoading ? 'Processing...' : 'Reactivate Subscription'}
                   </button>
@@ -427,35 +313,19 @@ export default function BillingPage() {
               </div>
             </div>
 
-            {/* Usage Summary (placeholder for future metrics) */}
-            <div style={{
-              backgroundColor: 'var(--color-bg-card)',
-              border: '1px solid var(--color-bg-elevated)',
-              borderRadius: '0.75rem',
-              padding: '1.5rem',
-            }}>
-              <h3 style={{ fontSize: '1rem', fontWeight: 600, margin: '0 0 1rem 0' }}>
-                Usage This Period
-              </h3>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
+            {/* Usage Summary */}
+            <div className="bg-card border border-border rounded-xl p-6">
+              <h3 className="text-base font-semibold mb-4">Usage This Period</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {[
                   { label: 'Contacts', value: usage.contacts, limit: tier === 'free' ? '100' : 'Unlimited' },
                   { label: 'Emails Sent', value: usage.emails, limit: tier === 'free' ? '500/mo' : tier === 'starter' ? '5,000/mo' : 'Unlimited' },
                   { label: 'AI Credits', value: usage.aiCredits, limit: tier === 'free' ? '50/mo' : tier === 'starter' ? '500/mo' : tier === 'professional' ? '5,000/mo' : 'Unlimited' },
                 ].map((metric) => (
-                  <div key={metric.label} style={{
-                    padding: '1rem',
-                    backgroundColor: 'var(--color-bg-main)',
-                    borderRadius: '0.5rem',
-                    textAlign: 'center',
-                  }}>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginBottom: '0.25rem' }}>
-                      {metric.label}
-                    </div>
-                    <div style={{ fontSize: '1.25rem', fontWeight: 700 }}>{metric.value}</div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginTop: '0.25rem' }}>
-                      Limit: {metric.limit}
-                    </div>
+                  <div key={metric.label} className="p-4 bg-background rounded-lg text-center">
+                    <div className="text-xs text-muted-foreground mb-1">{metric.label}</div>
+                    <div className="text-xl font-bold">{metric.value}</div>
+                    <div className="text-xs text-muted-foreground mt-1">Limit: {metric.limit}</div>
                   </div>
                 ))}
               </div>

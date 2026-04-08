@@ -6,7 +6,8 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import SubpageNav from '@/components/ui/SubpageNav';
 import { AI_WORKFORCE_TABS } from '@/lib/constants/subpage-nav';
 import { useAuth } from '@/hooks/useAuth';
-import { useOrgTheme } from '@/hooks/useOrgTheme'
+import { useOrgTheme } from '@/hooks/useOrgTheme';
+import { PageTitle, SectionDescription } from '@/components/ui/typography';
 import { logger } from '@/lib/logger/logger';
 import { useToast } from '@/hooks/useToast';
 import { useConfirm, usePrompt } from '@/hooks/useConfirm';
@@ -1059,17 +1060,15 @@ export default function AgentTrainingPage() {
   ];
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: 0, height: '100%' }}>
+    <div className="flex flex-col min-h-0 h-full">
       <SubpageNav items={AI_WORKFORCE_TABS} />
       {/* Header */}
-      <div style={{ padding: '2rem', borderBottom: '1px solid var(--color-border-light)' }}>
+      <div className="p-8 border-b border-border">
         <div>
-          <h1 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '0.5rem', color: 'var(--color-text-primary)' }}>
-            🎓 AI Agent Training Center
-          </h1>
-          <p style={{ color: 'var(--color-text-secondary)', marginBottom: '1rem' }}>
+          <PageTitle>🎓 AI Agent Training Center</PageTitle>
+          <SectionDescription className="mt-1 mb-4">
             Monitor performance, review coaching insights, approve improvements, and train your AI agents
-          </p>
+          </SectionDescription>
           <SubpageNav items={trainingHubItems} />
 
           {/* View Mode Toggle */}

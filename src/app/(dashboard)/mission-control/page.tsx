@@ -25,6 +25,7 @@ import MissionGradeCard from './_components/MissionGradeCard';
 import StepGradeWidget from './_components/StepGradeWidget';
 import ScheduleMissionDialog from './_components/ScheduleMissionDialog';
 import { getDashboardLink, getStepReviewLink, formatToolName } from './_components/dashboard-links';
+import { PageTitle } from '@/components/ui/typography';
 import type { Mission, MissionStep } from '@/lib/orchestrator/mission-persistence';
 
 // ============================================================================
@@ -1408,22 +1409,10 @@ function MissionControlView({ deepLinkedMission }: { deepLinkedMission: string |
     || selectedMission?.status === 'FAILED';
 
   return (
-    <div style={{ padding: '1.25rem 1.5rem' }}>
+    <div className="p-5">
       {/* Header with title + streaming indicator */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '0.75rem',
-        marginBottom: '0.875rem',
-      }}>
-        <h1 style={{
-          fontSize: '1.375rem',
-          fontWeight: 700,
-          color: 'var(--color-text-primary)',
-          margin: 0,
-        }}>
-          Mission Control
-        </h1>
+      <div className="flex items-center gap-3 mb-3.5">
+        <PageTitle className="text-2xl">Mission Control</PageTitle>
         {isStreaming && <LiveBadge />}
       </div>
 

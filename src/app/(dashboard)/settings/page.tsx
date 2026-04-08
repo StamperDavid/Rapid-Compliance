@@ -7,6 +7,7 @@ import { useOrgTheme } from '@/hooks/useOrgTheme';
 import { Sliders } from 'lucide-react';
 import { FEATURE_MODULES } from '@/lib/constants/feature-modules';
 import { MODULE_ID_TO_SLUG, MODULE_EMOJI } from '@/lib/constants/module-settings';
+import { PageTitle, SectionDescription } from '@/components/ui/typography';
 
 export default function SettingsPage() {
   const { user } = useAuth();
@@ -121,128 +122,92 @@ export default function SettingsPage() {
   ];
 
   return (
-    <div style={{ padding: '2rem', overflowY: 'auto' }}>
+    <div className="p-8 space-y-6 overflow-y-auto">
+      {/* Header */}
       <div>
-        {/* Header */}
-        <div style={{ marginBottom: '2rem' }}>
-          <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>Settings</h1>
-          <p style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>
-            Manage your organization, users, integrations, and platform configuration
-          </p>
-        </div>
+        <PageTitle>Settings</PageTitle>
+        <SectionDescription className="mt-1">
+          Manage your organization, users, integrations, and platform configuration
+        </SectionDescription>
+      </div>
 
-        {/* Organization Info Card */}
-        <div style={{ backgroundColor: 'var(--color-bg-elevated)', border: '1px solid var(--color-border-light)', borderRadius: '1rem', padding: '1.5rem', marginBottom: '2rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <div style={{ width: '60px', height: '60px', borderRadius: '0.75rem', backgroundColor: primaryColor, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem' }}>
-              🏢
-            </div>
-            <div style={{ flex: 1 }}>
-              <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.25rem' }}>Your Organization</h2>
-              <p style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>
-                {user?.email} • {user?.role && <span style={{ textTransform: 'capitalize', color: primaryColor, fontWeight: '600' }}>{user.role}</span>}
-              </p>
-            </div>
+      {/* Organization Info Card */}
+      <div className="bg-surface-elevated border border-border rounded-xl p-6">
+        <div className="flex items-center gap-4">
+          <div
+            className="w-15 h-15 rounded-xl flex items-center justify-center text-3xl flex-shrink-0"
+            style={{ width: '60px', height: '60px', backgroundColor: primaryColor }}
+          >
+            🏢
+          </div>
+          <div className="flex-1">
+            <h2 className="text-2xl font-bold text-foreground mb-1">Your Organization</h2>
+            <p className="text-muted-foreground text-sm">
+              {user?.email} • {user?.role && <span className="capitalize font-semibold" style={{ color: primaryColor }}>{user.role}</span>}
+            </p>
           </div>
         </div>
-
-        {/* Features & Modules Card (admin/owner only) */}
-        {(user?.role === 'admin' || user?.role === 'owner') && (
-          <Link
-            href="/settings/features"
-            style={{
-              display: 'flex',
-              gap: '1rem',
-              padding: '1.5rem',
-              backgroundColor: 'var(--color-bg-elevated)',
-              border: '2px solid var(--color-primary)',
-              borderRadius: '0.75rem',
-              textDecoration: 'none',
-              transition: 'all 0.2s',
-              cursor: 'pointer',
-              marginBottom: '2rem',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = 'translateY(-2px)';
-              e.currentTarget.style.boxShadow = '0 4px 12px rgba(var(--color-primary-rgb), 0.2)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow = 'none';
-            }}
-          >
-            <div style={{
-              width: '60px',
-              height: '60px',
-              borderRadius: '0.75rem',
-              background: 'var(--gradient-brand, var(--color-primary))',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
-            }}>
-              <Sliders className="w-7 h-7" style={{ color: 'white' }} />
-            </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: '1.125rem', fontWeight: '700', color: 'var(--color-text-primary)', marginBottom: '0.25rem' }}>
-                Features & Modules
-              </div>
-              <div style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', lineHeight: '1.4' }}>
-                Choose which features to enable, set up your API keys, and configure your workspace.
-              </div>
-            </div>
-            <div style={{ color: 'var(--color-primary)', fontSize: '1.25rem', display: 'flex', alignItems: 'center' }}>→</div>
-          </Link>
-        )}
-
-        {/* Settings Sections */}
-        {settingsSections.map((section, sectionIdx) => {
-          const visibleItems = section.items.filter(item => item.permission);
-          if (visibleItems.length === 0) {return null;}
-
-          return (
-            <div key={sectionIdx} style={{ marginBottom: '2rem' }}>
-              <h3 style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--color-text-disabled)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '1rem' }}>
-                {section.title}
-              </h3>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '1rem' }}>
-                {visibleItems.map((item, itemIdx) => (
-                  <Link
-                    key={itemIdx}
-                    href={item.href}
-                    style={{
-                      display: 'flex',
-                      gap: '1rem',
-                      padding: '1.5rem',
-                      backgroundColor: 'var(--color-bg-elevated)',
-                      border: '1px solid var(--color-border-light)',
-                      borderRadius: '0.75rem',
-                      textDecoration: 'none',
-                      transition: 'all 0.2s',
-                      cursor: 'pointer'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.borderColor = primaryColor;
-                      e.currentTarget.style.transform = 'translateY(-2px)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.borderColor = 'var(--color-border-light)';
-                      e.currentTarget.style.transform = 'translateY(0)';
-                    }}
-                  >
-                    <div style={{ fontSize: '2.5rem' }}>{item.icon}</div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--color-text-primary)', marginBottom: '0.25rem' }}>{item.label}</div>
-                      <div style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', lineHeight: '1.4' }}>{item.description}</div>
-                    </div>
-                    <div style={{ color: 'var(--color-text-disabled)', fontSize: '1.25rem' }}>→</div>
-                  </Link>
-                ))}
-              </div>
-            </div>
-          );
-        })}
       </div>
+
+      {/* Features & Modules Card (admin/owner only) */}
+      {(user?.role === 'admin' || user?.role === 'owner') && (
+        <Link
+          href="/settings/features"
+          className="flex gap-4 p-6 bg-surface-elevated border-2 border-primary rounded-xl no-underline transition-all duration-200 hover:-translate-y-0.5 block"
+        >
+          <div
+            className="w-15 h-15 rounded-xl flex items-center justify-center flex-shrink-0"
+            style={{ width: '60px', height: '60px', background: 'var(--gradient-brand, var(--color-primary))' }}
+          >
+            <Sliders className="w-7 h-7 text-white" />
+          </div>
+          <div className="flex-1">
+            <div className="text-lg font-bold text-foreground mb-1">
+              Features &amp; Modules
+            </div>
+            <div className="text-sm text-muted-foreground leading-snug">
+              Choose which features to enable, set up your API keys, and configure your workspace.
+            </div>
+          </div>
+          <div className="text-primary text-xl flex items-center">→</div>
+        </Link>
+      )}
+
+      {/* Settings Sections */}
+      {settingsSections.map((section, sectionIdx) => {
+        const visibleItems = section.items.filter(item => item.permission);
+        if (visibleItems.length === 0) {return null;}
+
+        return (
+          <div key={sectionIdx}>
+            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-4">
+              {section.title}
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {visibleItems.map((item, itemIdx) => (
+                <Link
+                  key={itemIdx}
+                  href={item.href}
+                  className="flex gap-4 p-6 bg-surface-elevated border border-border rounded-xl no-underline transition-all duration-200 hover:-translate-y-0.5"
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = primaryColor;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = '';
+                  }}
+                >
+                  <div className="text-4xl">{item.icon}</div>
+                  <div className="flex-1">
+                    <div className="text-base font-semibold text-foreground mb-1">{item.label}</div>
+                    <div className="text-sm text-muted-foreground leading-snug">{item.description}</div>
+                  </div>
+                  <div className="text-muted-foreground text-xl">→</div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }

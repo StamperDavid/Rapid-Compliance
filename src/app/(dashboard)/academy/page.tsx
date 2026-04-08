@@ -7,6 +7,7 @@ import { collection, getDocs, query, orderBy, Timestamp } from 'firebase/firesto
 import { db } from '@/lib/firebase/config';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import { logger } from '@/lib/logger/logger';
+import { PageTitle, SectionDescription } from '@/components/ui/typography';
 
 interface Tutorial {
   id: string;
@@ -83,35 +84,26 @@ export default function AcademyPage() {
     : tutorials.filter((t) => t.category === activeCategory);
 
   return (
-    <div style={{ padding: '2rem', maxWidth: 1200, margin: '0 auto' }}>
+    <div className="p-8 space-y-6">
       {/* Header */}
-      <div style={{ marginBottom: '2rem' }}>
-        <h1 style={{ fontSize: '1.75rem', fontWeight: 700, marginBottom: '0.5rem' }}>
-          Academy
-        </h1>
-        <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.95rem' }}>
+      <div>
+        <PageTitle className="mb-1">Academy</PageTitle>
+        <SectionDescription>
           Learn how to use SalesVelocity.ai with step-by-step tutorials and courses.
-        </p>
+        </SectionDescription>
       </div>
 
       {/* Category Tabs */}
-      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '2rem', flexWrap: 'wrap' }}>
+      <div className="flex gap-2 flex-wrap">
         {CATEGORIES.map((cat) => (
           <button
             key={cat.id}
             onClick={() => setActiveCategory(cat.id)}
-            style={{
-              padding: '0.5rem 1rem',
-              borderRadius: '0.5rem',
-              border: '1px solid',
-              borderColor: activeCategory === cat.id ? 'var(--color-primary)' : 'var(--color-border)',
-              background: activeCategory === cat.id ? 'var(--color-primary)' : 'transparent',
-              color: activeCategory === cat.id ? '#fff' : 'var(--color-text)',
-              cursor: 'pointer',
-              fontSize: '0.85rem',
-              fontWeight: 500,
-              transition: 'all 0.2s',
-            }}
+            className={`px-4 py-2 rounded-lg border text-sm font-medium transition-all cursor-pointer ${
+              activeCategory === cat.id
+                ? 'bg-primary border-primary text-white'
+                : 'bg-transparent border-border text-foreground'
+            }`}
           >
             {cat.label}
           </button>
@@ -120,98 +112,56 @@ export default function AcademyPage() {
 
       {/* Video Player */}
       {selectedTutorial && (
-        <div style={{
-          marginBottom: '2rem',
-          background: 'var(--color-bg-secondary)',
-          borderRadius: '0.75rem',
-          overflow: 'hidden',
-          border: '1px solid var(--color-border)',
-        }}>
-          <div style={{
-            aspectRatio: '16/9',
-            background: '#000',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}>
+        <div className="bg-card border border-border rounded-xl overflow-hidden">
+          <div className="aspect-video bg-black flex items-center justify-center">
             {selectedTutorial.videoUrl ? (
               <video
                 src={selectedTutorial.videoUrl}
                 controls
                 autoPlay
-                style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                className="w-full h-full object-contain"
               />
             ) : (
-              <p style={{ color: '#888' }}>Video coming soon</p>
+              <p className="text-muted-foreground">Video coming soon</p>
             )}
           </div>
-          <div style={{ padding: '1.25rem' }}>
-            <h2 style={{ fontSize: '1.25rem', fontWeight: 600, marginBottom: '0.5rem' }}>
+          <div className="p-5">
+            <h2 className="text-xl font-semibold text-foreground mb-2">
               {selectedTutorial.title}
             </h2>
-            <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.9rem' }}>
-              {selectedTutorial.description}
-            </p>
+            <SectionDescription>{selectedTutorial.description}</SectionDescription>
           </div>
         </div>
       )}
 
       {/* Tutorial Grid */}
       {loading ? (
-        <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--color-text-secondary)' }}>
+        <div className="text-center p-12 text-muted-foreground">
           Loading tutorials...
         </div>
       ) : filteredTutorials.length === 0 ? (
-        <div style={{
-          textAlign: 'center',
-          padding: '4rem 2rem',
-          background: 'var(--color-bg-secondary)',
-          borderRadius: '0.75rem',
-          border: '1px solid var(--color-border)',
-        }}>
-          <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>🎓</div>
-          <h3 style={{ fontSize: '1.15rem', fontWeight: 600, marginBottom: '0.5rem' }}>
+        <div className="text-center p-16 bg-card border border-border rounded-xl">
+          <div className="text-5xl mb-4">🎓</div>
+          <h3 className="text-lg font-semibold text-foreground mb-2">
             {activeCategory === 'all' ? 'No tutorials yet' : `No ${CATEGORIES.find(c => c.id === activeCategory)?.label ?? ''} tutorials yet`}
           </h3>
-          <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.9rem' }}>
+          <SectionDescription>
             Tutorial content is being created. Check back soon or ask Jasper to create a tutorial video.
-          </p>
+          </SectionDescription>
         </div>
       ) : (
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-          gap: '1.25rem',
-        }}>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {filteredTutorials.map((tutorial) => (
             <button
               key={tutorial.id}
               onClick={() => setSelectedTutorial(tutorial)}
-              style={{
-                textAlign: 'left',
-                background: selectedTutorial?.id === tutorial.id
-                  ? 'var(--color-bg-tertiary)'
-                  : 'var(--color-bg-secondary)',
-                borderRadius: '0.75rem',
-                border: '1px solid',
-                borderColor: selectedTutorial?.id === tutorial.id
-                  ? 'var(--color-primary)'
-                  : 'var(--color-border)',
-                overflow: 'hidden',
-                cursor: 'pointer',
-                transition: 'all 0.2s',
-                padding: 0,
-                width: '100%',
-              }}
+              className={`text-left rounded-xl border overflow-hidden cursor-pointer transition-all p-0 w-full ${
+                selectedTutorial?.id === tutorial.id
+                  ? 'bg-surface-elevated border-primary'
+                  : 'bg-card border-border'
+              }`}
             >
-              <div style={{
-                aspectRatio: '16/9',
-                background: '#1a1a2e',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                position: 'relative',
-              }}>
+              <div className="aspect-video bg-[#1a1a2e] flex items-center justify-center relative">
                 {tutorial.thumbnailUrl ? (
                   <Image
                     src={tutorial.thumbnailUrl}
@@ -220,35 +170,27 @@ export default function AcademyPage() {
                     style={{ objectFit: 'cover' }}
                   />
                 ) : (
-                  <span style={{ fontSize: '2.5rem' }}>🎬</span>
+                  <span className="text-4xl">🎬</span>
                 )}
                 {tutorial.duration > 0 && (
-                  <span style={{
-                    position: 'absolute',
-                    bottom: 8,
-                    right: 8,
-                    background: 'rgba(0,0,0,0.8)',
-                    color: '#fff',
-                    padding: '2px 6px',
-                    borderRadius: '4px',
-                    fontSize: '0.75rem',
-                  }}>
+                  <span className="absolute bottom-2 right-2 bg-black/80 text-white px-1.5 py-0.5 rounded text-xs">
                     {formatDuration(tutorial.duration)}
                   </span>
                 )}
               </div>
-              <div style={{ padding: '0.75rem 1rem' }}>
-                <h3 style={{ fontSize: '0.95rem', fontWeight: 600, marginBottom: '0.25rem' }}>
+              <div className="px-4 py-3">
+                <h3 className="text-sm font-semibold text-foreground mb-1">
                   {tutorial.title}
                 </h3>
-                <p style={{
-                  color: 'var(--color-text-secondary)',
-                  fontSize: '0.8rem',
-                  display: '-webkit-box',
-                  WebkitLineClamp: 2,
-                  WebkitBoxOrient: 'vertical',
-                  overflow: 'hidden',
-                }}>
+                <p
+                  className="text-muted-foreground text-xs line-clamp-2"
+                  style={{
+                    display: '-webkit-box',
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: 'vertical',
+                    overflow: 'hidden',
+                  }}
+                >
                   {tutorial.description}
                 </p>
               </div>

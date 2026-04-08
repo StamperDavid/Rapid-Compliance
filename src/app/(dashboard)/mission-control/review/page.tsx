@@ -22,6 +22,7 @@ import { useAuthFetch } from '@/hooks/useAuthFetch';
 import type { Mission } from '@/lib/orchestrator/mission-persistence';
 import { formatToolName } from '../_components/dashboard-links';
 import AgentAvatar from '../_components/AgentAvatar';
+import { PageTitle } from '@/components/ui/typography';
 
 // ============================================================================
 // TYPES
@@ -978,7 +979,7 @@ function StepReviewContent({ missionId, stepId }: { missionId: string; stepId: s
 
   if (loading) {
     return (
-      <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--color-text-disabled)' }}>
+      <div className="p-12 text-center text-muted-foreground">
         Loading step details...
       </div>
     );
@@ -986,7 +987,7 @@ function StepReviewContent({ missionId, stepId }: { missionId: string; stepId: s
 
   if (error || !mission) {
     return (
-      <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--color-error)' }}>
+      <div className="p-12 text-center text-error">
         {error ?? 'Mission not found'}
       </div>
     );
@@ -995,7 +996,7 @@ function StepReviewContent({ missionId, stepId }: { missionId: string; stepId: s
   const step = mission.steps.find((s) => s.stepId === stepId);
   if (!step) {
     return (
-      <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--color-error)' }}>
+      <div className="p-12 text-center text-error">
         Step not found in this mission
       </div>
     );
@@ -1019,35 +1020,25 @@ function StepReviewContent({ missionId, stepId }: { missionId: string; stepId: s
     : 'var(--color-text-disabled)';
 
   return (
-    <div style={{ maxWidth: 900, margin: '0 auto', padding: '1.5rem' }}>
+    <div className="max-w-4xl mx-auto p-6">
       {/* Back link */}
       <button
         type="button"
         onClick={() => router.push(`/mission-control?mission=${missionId}`)}
-        style={{
-          background: 'none', border: 'none', cursor: 'pointer',
-          fontSize: '0.8125rem', color: 'var(--color-primary)',
-          padding: 0, marginBottom: '1.25rem', display: 'flex',
-          alignItems: 'center', gap: '0.375rem', font: 'inherit',
-        }}
+        className="flex items-center gap-1.5 text-sm text-primary cursor-pointer bg-transparent border-none p-0 mb-5"
+        style={{ font: 'inherit' }}
       >
         &larr; Back to Mission Control
       </button>
 
       {/* Header */}
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: '0.75rem',
-        marginBottom: '0.5rem',
-      }}>
+      <div className="flex items-center gap-3 mb-2">
         <AgentAvatar delegatedTo={step.delegatedTo} size={36} />
         <div>
-          <h1 style={{
-            fontSize: '1.25rem', fontWeight: 700,
-            color: 'var(--color-text-primary)', margin: 0,
-          }}>
+          <PageTitle className="text-xl">
             {formatToolName(step.toolName)}
-          </h1>
-          <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>
+          </PageTitle>
+          <div className="text-xs text-muted-foreground">
             {step.delegatedTo.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
           </div>
         </div>
@@ -1144,12 +1135,9 @@ export default function StepReviewPage() {
 
   if (!missionId || !stepId) {
     return (
-      <div style={{
-        padding: '3rem', textAlign: 'center',
-        color: 'var(--color-text-disabled)', fontSize: '0.875rem',
-      }}>
+      <div className="p-12 text-center text-muted-foreground text-sm">
         Missing mission or step ID. Go back to{' '}
-        <Link href="/mission-control" style={{ color: 'var(--color-primary)' }}>Mission Control</Link>.
+        <Link href="/mission-control" className="text-primary">Mission Control</Link>.
       </div>
     );
   }

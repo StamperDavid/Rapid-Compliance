@@ -13,6 +13,7 @@ import { Mail, Plus, Send, Eye, Trash2, Calendar, TrendingUp } from 'lucide-reac
 import { getCampaigns, deleteCampaign, type EmailCampaign } from '@/lib/email/campaign-service';
 import { usePagination } from '@/hooks/usePagination';
 import { logger } from '@/lib/logger/logger';
+import { PageTitle, SectionDescription } from '@/components/ui/typography';
 import type { QueryDocumentSnapshot } from 'firebase/firestore';
 
 export default function EmailCampaignsPage() {
@@ -79,7 +80,7 @@ export default function EmailCampaignsPage() {
       draft: {
         gradient: 'bg-surface-elevated',
         border: 'border-[var(--color-border-strong)]',
-        text: 'text-[var(--color-text-secondary)]',
+        text: 'text-muted-foreground',
         icon: Mail
       }
     };
@@ -96,20 +97,20 @@ export default function EmailCampaignsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-surface-main p-8">
+    <div className="p-8 space-y-6">
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex items-center justify-between mb-8"
+        className="flex items-center justify-between"
       >
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center shadow-lg shadow-primary/25">
             <Mail className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold text-[var(--color-text-primary)]">Email Campaigns</h1>
-            <p className="text-[var(--color-text-secondary)] text-sm mt-1">Create and manage your email marketing campaigns</p>
+            <PageTitle>Email Campaigns</PageTitle>
+            <SectionDescription className="mt-1">Create and manage your email marketing campaigns</SectionDescription>
           </div>
         </div>
         <motion.button
@@ -128,8 +129,7 @@ export default function EmailCampaignsPage() {
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className={`mb-6 p-3 rounded-lg text-sm ${notification.type === 'success' ? 'text-success border border-success/20' : 'text-error border border-error/20'}`}
-          style={{ backgroundColor: notification.type === 'success' ? 'rgba(var(--color-success-rgb), 0.1)' : 'rgba(var(--color-error-rgb), 0.1)' }}
+          className={`p-3 rounded-lg text-sm ${notification.type === 'success' ? 'text-success border border-success/20 bg-success/10' : 'text-error border border-error/20 bg-error/10'}`}
         >
           <div className="flex items-center justify-between">
             <span>{notification.message}</span>
@@ -143,8 +143,7 @@ export default function EmailCampaignsPage() {
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="mb-6 p-4 backdrop-blur-xl border border-error/30 rounded-xl text-error"
-          style={{ backgroundColor: 'rgba(var(--color-error-rgb), 0.2)' }}
+          className="p-4 backdrop-blur-xl border border-error/30 rounded-xl text-error bg-error/20"
         >
           {error}
         </motion.div>
@@ -160,8 +159,8 @@ export default function EmailCampaignsPage() {
           <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary/20 to-secondary/20 border border-primary/30 flex items-center justify-center mx-auto mb-6">
             <Mail className="w-10 h-10 text-primary" />
           </div>
-          <h3 className="text-xl font-semibold text-[var(--color-text-primary)] mb-2">No campaigns yet</h3>
-          <p className="text-[var(--color-text-secondary)] mb-6">Create your first email campaign to get started!</p>
+          <h3 className="text-xl font-semibold text-foreground mb-2">No campaigns yet</h3>
+          <p className="text-muted-foreground mb-6">Create your first email campaign to get started!</p>
           <motion.button
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
@@ -193,32 +192,32 @@ export default function EmailCampaignsPage() {
                         <Mail className="w-5 h-5 text-primary" />
                       </div>
                       <div className="flex-1">
-                        <h3 className="text-xl font-semibold text-[var(--color-text-primary)]">{campaign.name}</h3>
+                        <h3 className="text-xl font-semibold text-foreground">{campaign.name}</h3>
                       </div>
                       {getStatusBadge(campaign.status)}
                     </div>
 
                     {/* Subject */}
-                    <p className="text-[var(--color-text-secondary)] mb-4 ml-13">{campaign.subject}</p>
+                    <p className="text-muted-foreground mb-4 ml-13">{campaign.subject}</p>
 
                     {/* Stats */}
                     {campaign.stats && (
                       <div className="flex items-center gap-6 text-sm ml-13">
                         <div className="flex items-center gap-2">
-                          <Send className="w-4 h-4 text-[var(--color-text-disabled)]" />
-                          <span className="text-[var(--color-text-secondary)]">Sent:</span>
-                          <span className="text-[var(--color-text-primary)] font-semibold">{campaign.stats.sent || 0}</span>
+                          <Send className="w-4 h-4 text-muted-foreground" />
+                          <span className="text-muted-foreground">Sent:</span>
+                          <span className="text-foreground font-semibold">{campaign.stats.sent || 0}</span>
                         </div>
                         <div className="flex items-center gap-2">
-                          <Eye className="w-4 h-4 text-[var(--color-text-disabled)]" />
-                          <span className="text-[var(--color-text-secondary)]">Opened:</span>
-                          <span className="text-[var(--color-text-primary)] font-semibold">{campaign.stats.opened || 0}</span>
+                          <Eye className="w-4 h-4 text-muted-foreground" />
+                          <span className="text-muted-foreground">Opened:</span>
+                          <span className="text-foreground font-semibold">{campaign.stats.opened || 0}</span>
                           <span className="text-success text-xs">({campaign.stats.openRate || 0}%)</span>
                         </div>
                         <div className="flex items-center gap-2">
-                          <TrendingUp className="w-4 h-4 text-[var(--color-text-disabled)]" />
-                          <span className="text-[var(--color-text-secondary)]">Clicked:</span>
-                          <span className="text-[var(--color-text-primary)] font-semibold">{campaign.stats.clicked || 0}</span>
+                          <TrendingUp className="w-4 h-4 text-muted-foreground" />
+                          <span className="text-muted-foreground">Clicked:</span>
+                          <span className="text-foreground font-semibold">{campaign.stats.clicked || 0}</span>
                         </div>
                       </div>
                     )}
@@ -262,7 +261,7 @@ export default function EmailCampaignsPage() {
                 whileTap={{ scale: 0.98 }}
                 onClick={() => void loadMore()}
                 disabled={loading || !hasMore}
-                className="px-8 py-3 bg-surface-paper backdrop-blur-xl border border-border-light text-[var(--color-text-primary)] rounded-xl hover:border-border-strong disabled:opacity-50 disabled:cursor-not-allowed transition-all font-semibold"
+                className="px-8 py-3 bg-surface-paper backdrop-blur-xl border border-border-light text-foreground rounded-xl hover:border-border-strong disabled:opacity-50 disabled:cursor-not-allowed transition-all font-semibold"
               >
                 {loading ? 'Loading...' : hasMore ? `Load More (Showing ${campaigns.length})` : 'All loaded'}
               </motion.button>
@@ -275,9 +274,9 @@ export default function EmailCampaignsPage() {
       {confirmDialog && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="bg-surface-paper rounded-xl p-6 max-w-md mx-4 border border-border-light shadow-xl">
-            <p className="text-[var(--color-text-primary)] mb-4">{confirmDialog.message}</p>
+            <p className="text-foreground mb-4">{confirmDialog.message}</p>
             <div className="flex justify-end gap-3">
-              <button onClick={() => setConfirmDialog(null)} className="px-4 py-2 rounded-lg text-[var(--color-text-secondary)] hover:bg-surface-elevated">Cancel</button>
+              <button onClick={() => setConfirmDialog(null)} className="px-4 py-2 rounded-lg text-muted-foreground hover:bg-surface-elevated">Cancel</button>
               <button onClick={confirmDialog.onConfirm} className="px-4 py-2 rounded-lg bg-error text-white hover:bg-error/80">Confirm</button>
             </div>
           </div>

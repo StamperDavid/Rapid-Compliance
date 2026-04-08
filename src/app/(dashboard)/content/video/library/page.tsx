@@ -383,7 +383,7 @@ export default function MediaLibraryPage() {
   // ========================================================================
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="p-8 space-y-6">
       <SubpageNav items={CONTENT_GENERATOR_TABS} />
 
       {/* Header */}

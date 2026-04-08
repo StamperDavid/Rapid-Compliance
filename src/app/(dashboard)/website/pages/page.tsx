@@ -303,292 +303,140 @@ export default function PagesManagementPage() {
 
   if (loading) {
     return (
-      <div style={{ padding: '2rem', fontFamily: 'system-ui' }}>
-        <div>Loading pages...</div>
+      <div className="p-8">
+        <div className="text-muted-foreground">Loading pages...</div>
       </div>
     );
   }
 
   return (
-    <div style={{ fontFamily: 'system-ui', minHeight: '100vh', background: 'var(--color-bg-elevated)' }}>
-
-      <div style={{ padding: '2rem' }}>
-        {/* Header */}
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: '2rem',
-        }}>
-          <div>
-            <h1 style={{ fontSize: '2rem', margin: '0 0 0.5rem', color: 'var(--color-text-primary)' }}>
-              Pages
-            </h1>
-            <p style={{ margin: 0, color: 'var(--color-text-disabled)' }}>
-              Manage your website pages
-            </p>
-          </div>
-
-          <div style={{ display: 'flex', gap: '0.75rem' }}>
-            <button
-              onClick={() => setShowCloneModal(true)}
-              style={{
-                padding: '0.75rem 1.5rem',
-                background: 'linear-gradient(135deg, #0ea5e9, #2563eb)',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                fontSize: '1rem',
-                fontWeight: '600',
-              }}
-            >
-              Clone Website
-            </button>
-            <button
-              onClick={() => setShowAIModal(true)}
-              style={{
-                padding: '0.75rem 1.5rem',
-                background: 'linear-gradient(135deg, #8b5cf6, #6366f1)',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                fontSize: '1rem',
-                fontWeight: '600',
-              }}
-            >
-              Generate with AI
-            </button>
-            <button
-              onClick={createNewPage}
-              style={{
-                padding: '0.75rem 1.5rem',
-                background: 'var(--color-info)',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                fontSize: '1rem',
-                fontWeight: '600',
-              }}
-            >
-              + New Page
-            </button>
-          </div>
+    <div className="p-8 space-y-6">
+      {/* Header */}
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground mb-1">Pages</h1>
+          <p className="text-muted-foreground">Manage your website pages</p>
         </div>
 
-        {/* Filters */}
-        <div style={{
-          display: 'flex',
-          gap: '0.5rem',
-          marginBottom: '1.5rem',
-        }}>
+        <div className="flex gap-3">
           <button
-            onClick={() => setFilter('all')}
-            style={{
-              padding: '0.5rem 1rem',
-              background: filter === 'all' ? 'var(--color-info)' : 'var(--color-bg-paper)',
-              color: filter === 'all' ? 'white' : 'var(--color-text-disabled)',
-              border: '1px solid var(--color-border-light)',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontSize: '0.875rem',
-            }}
+            onClick={() => setShowCloneModal(true)}
+            className="px-6 py-3 bg-gradient-to-br from-sky-500 to-blue-600 text-white rounded font-semibold cursor-pointer border-none text-base"
           >
-            All ({pages.length})
+            Clone Website
           </button>
           <button
-            onClick={() => setFilter('draft')}
-            style={{
-              padding: '0.5rem 1rem',
-              background: filter === 'draft' ? 'var(--color-info)' : 'var(--color-bg-paper)',
-              color: filter === 'draft' ? 'white' : 'var(--color-text-disabled)',
-              border: '1px solid var(--color-border-light)',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontSize: '0.875rem',
-            }}
+            onClick={() => setShowAIModal(true)}
+            className="px-6 py-3 bg-gradient-to-br from-violet-500 to-indigo-500 text-white rounded font-semibold cursor-pointer border-none text-base"
           >
-            Drafts
+            Generate with AI
           </button>
           <button
-            onClick={() => setFilter('published')}
-            style={{
-              padding: '0.5rem 1rem',
-              background: filter === 'published' ? 'var(--color-info)' : 'var(--color-bg-paper)',
-              color: filter === 'published' ? 'white' : 'var(--color-text-disabled)',
-              border: '1px solid var(--color-border-light)',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontSize: '0.875rem',
-            }}
+            onClick={createNewPage}
+            className="px-6 py-3 bg-info text-white rounded font-semibold cursor-pointer border-none text-base"
           >
-            Published
+            + New Page
           </button>
         </div>
+      </div>
 
-        {/* Pages List */}
-        {pages.length === 0 ? (
-          <div style={{
-            background: 'var(--color-bg-paper)',
-            borderRadius: '8px',
-            padding: '4rem 2rem',
-            textAlign: 'center',
-          }}>
-            <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📄</div>
-            <h3 style={{ fontSize: '1.25rem', margin: '0 0 0.5rem', color: 'var(--color-text-disabled)' }}>
-              No pages yet
-            </h3>
-            <p style={{ margin: '0 0 1.5rem', color: 'var(--color-text-secondary)' }}>
-              Create your first page to get started
-            </p>
-            <button
-              onClick={createNewPage}
-              style={{
-                padding: '0.75rem 1.5rem',
-                background: 'var(--color-info)',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                fontSize: '1rem',
-                fontWeight: '500',
-              }}
+      {/* Filters */}
+      <div className="flex gap-2">
+        <button
+          onClick={() => setFilter('all')}
+          className={`px-4 py-2 rounded border text-sm cursor-pointer ${filter === 'all' ? 'bg-info text-white border-info' : 'bg-card text-muted-foreground border-border'}`}
+        >
+          All ({pages.length})
+        </button>
+        <button
+          onClick={() => setFilter('draft')}
+          className={`px-4 py-2 rounded border text-sm cursor-pointer ${filter === 'draft' ? 'bg-info text-white border-info' : 'bg-card text-muted-foreground border-border'}`}
+        >
+          Drafts
+        </button>
+        <button
+          onClick={() => setFilter('published')}
+          className={`px-4 py-2 rounded border text-sm cursor-pointer ${filter === 'published' ? 'bg-info text-white border-info' : 'bg-card text-muted-foreground border-border'}`}
+        >
+          Published
+        </button>
+      </div>
+
+      {/* Pages List */}
+      {pages.length === 0 ? (
+        <div className="bg-card rounded-lg px-8 py-16 text-center">
+          <div className="text-5xl mb-4">📄</div>
+          <h3 className="text-xl font-medium text-muted-foreground mb-1">No pages yet</h3>
+          <p className="text-muted-foreground mb-6">Create your first page to get started</p>
+          <button
+            onClick={createNewPage}
+            className="px-6 py-3 bg-info text-white rounded cursor-pointer border-none text-base font-medium"
+          >
+            Create Page
+          </button>
+        </div>
+      ) : (
+        <div className="grid gap-4">
+          {pages.map((page) => (
+            <div
+              key={page.id}
+              className="bg-card rounded-lg p-6 flex justify-between items-center shadow-sm"
             >
-              Create Page
-            </button>
-          </div>
-        ) : (
-          <div style={{
-            display: 'grid',
-            gap: '1rem',
-          }}>
-            {pages.map((page) => (
-              <div
-                key={page.id}
-                style={{
-                  background: 'var(--color-bg-paper)',
-                  borderRadius: '8px',
-                  padding: '1.5rem',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-                }}
-              >
-                <div style={{ flex: 1 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
-                    <h3 style={{ margin: 0, fontSize: '1.125rem', color: 'var(--color-text-primary)' }}>
-                      {page.title}
-                    </h3>
-                    <span style={{
-                      padding: '0.25rem 0.5rem',
-                      background: page.status === 'published' ? 'var(--color-success)' : 'var(--color-warning)',
-                      color: page.status === 'published' ? 'white' : 'var(--color-text-primary)',
-                      borderRadius: '4px',
-                      fontSize: '0.75rem',
-                      fontWeight: '600',
-                      textTransform: 'uppercase',
-                    }}>
-                      {page.status}
-                    </span>
-                  </div>
-                  <div style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>
-                    /{page.slug}
-                  </div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginTop: '0.5rem' }}>
-                    Last updated: {new Date(page.updatedAt).toLocaleDateString()}
-                  </div>
+              <div className="flex-1">
+                <div className="flex items-center gap-3 mb-1">
+                  <h3 className="text-lg font-medium text-foreground m-0">{page.title}</h3>
+                  <span className={`px-2 py-0.5 rounded text-xs font-semibold uppercase ${page.status === 'published' ? 'bg-success text-white' : 'bg-warning text-foreground'}`}>
+                    {page.status}
+                  </span>
                 </div>
-
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                  <button
-                    onClick={() => editPage(page.id)}
-                    style={{
-                      padding: '0.5rem 1rem',
-                      background: 'var(--color-info)',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '4px',
-                      cursor: 'pointer',
-                      fontSize: '0.875rem',
-                    }}
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => void duplicatePage(page)}
-                    style={{
-                      padding: '0.5rem 1rem',
-                      background: 'var(--color-text-secondary)',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '4px',
-                      cursor: 'pointer',
-                      fontSize: '0.875rem',
-                    }}
-                  >
-                    Duplicate
-                  </button>
-                  <button
-                    onClick={() => deletePage(page.id)}
-                    style={{
-                      padding: '0.5rem 1rem',
-                      background: 'var(--color-error)',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '4px',
-                      cursor: 'pointer',
-                      fontSize: '0.875rem',
-                    }}
-                  >
-                    Delete
-                  </button>
+                <div className="text-sm text-muted-foreground">/{page.slug}</div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  Last updated: {new Date(page.updatedAt).toLocaleDateString()}
                 </div>
               </div>
-            ))}
-          </div>
-        )}
-      </div>
+
+              <div className="flex gap-2">
+                <button
+                  onClick={() => editPage(page.id)}
+                  className="px-4 py-2 bg-info text-white rounded cursor-pointer border-none text-sm"
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={() => void duplicatePage(page)}
+                  className="px-4 py-2 bg-muted text-white rounded cursor-pointer border-none text-sm"
+                >
+                  Duplicate
+                </button>
+                <button
+                  onClick={() => deletePage(page.id)}
+                  className="px-4 py-2 bg-destructive text-white rounded cursor-pointer border-none text-sm"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* AI Generation Modal */}
       {showAIModal && (
         <div
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'rgba(0, 0, 0, 0.5)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-          }}
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-[1000]"
           onClick={() => !aiGenerating && setShowAIModal(false)}
         >
           <div
-            style={{
-              background: 'var(--color-bg-paper)',
-              borderRadius: '12px',
-              padding: '2rem',
-              width: '100%',
-              maxWidth: '540px',
-              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
-            }}
+            className="bg-card rounded-xl p-8 w-full max-w-lg shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 style={{ margin: '0 0 0.5rem', fontSize: '1.5rem', color: 'var(--color-text-primary)' }}>
-              Generate Page with AI
-            </h2>
-            <p style={{ margin: '0 0 1.5rem', color: 'var(--color-text-secondary)', fontSize: '0.875rem' }}>
+            <h2 className="text-2xl font-bold text-foreground mb-1">Generate Page with AI</h2>
+            <p className="text-sm text-muted-foreground mb-6">
               Describe the page you want and AI will generate the layout and content.
             </p>
 
-            <div style={{ marginBottom: '1rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', fontSize: '0.875rem', color: 'var(--color-text-primary)' }}>
+            <div className="mb-4">
+              <label className="block mb-1.5 font-semibold text-sm text-foreground">
                 Page Description
               </label>
               <textarea
@@ -597,40 +445,19 @@ export default function PagesManagementPage() {
                 placeholder="e.g., A landing page for a SaaS product with hero section, features grid, pricing table, testimonials, and a call-to-action"
                 rows={4}
                 disabled={aiGenerating}
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  border: '1px solid var(--color-border-light)',
-                  borderRadius: '6px',
-                  fontSize: '0.875rem',
-                  resize: 'vertical',
-                  fontFamily: 'inherit',
-                  background: 'var(--color-bg-elevated)',
-                  color: 'var(--color-text-primary)',
-                  boxSizing: 'border-box',
-                }}
+                className="w-full px-3 py-2 border border-border rounded-md text-sm resize-y font-inherit bg-surface-elevated text-foreground box-border"
               />
             </div>
 
-            <div style={{ marginBottom: '1.5rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', fontSize: '0.875rem', color: 'var(--color-text-primary)' }}>
+            <div className="mb-6">
+              <label className="block mb-1.5 font-semibold text-sm text-foreground">
                 Page Type (optional)
               </label>
               <select
                 value={aiPageType}
                 onChange={(e) => setAiPageType(e.target.value)}
                 disabled={aiGenerating}
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  border: '1px solid var(--color-border-light)',
-                  borderRadius: '6px',
-                  fontSize: '0.875rem',
-                  fontFamily: 'inherit',
-                  background: 'var(--color-bg-elevated)',
-                  color: 'var(--color-text-primary)',
-                  boxSizing: 'border-box',
-                }}
+                className="w-full px-3 py-2 border border-border rounded-md text-sm bg-surface-elevated text-foreground box-border"
               >
                 <option value="">Auto-detect</option>
                 <option value="landing">Landing Page</option>
@@ -642,38 +469,18 @@ export default function PagesManagementPage() {
               </select>
             </div>
 
-            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+            <div className="flex gap-3 justify-end">
               <button
                 onClick={() => { setShowAIModal(false); setAiPrompt(''); setAiPageType(''); }}
                 disabled={aiGenerating}
-                style={{
-                  padding: '0.75rem 1.5rem',
-                  background: 'transparent',
-                  color: 'var(--color-text-secondary)',
-                  border: '1px solid var(--color-border-light)',
-                  borderRadius: '6px',
-                  cursor: aiGenerating ? 'not-allowed' : 'pointer',
-                  fontSize: '0.875rem',
-                  fontWeight: '500',
-                }}
+                className="px-6 py-3 bg-transparent text-muted-foreground border border-border rounded-md cursor-pointer disabled:cursor-not-allowed text-sm font-medium"
               >
                 Cancel
               </button>
               <button
                 onClick={() => void generateWithAI()}
                 disabled={aiGenerating || !aiPrompt.trim()}
-                style={{
-                  padding: '0.75rem 1.5rem',
-                  background: aiGenerating || !aiPrompt.trim()
-                    ? 'var(--color-text-disabled)'
-                    : 'linear-gradient(135deg, #8b5cf6, #6366f1)',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '6px',
-                  cursor: aiGenerating || !aiPrompt.trim() ? 'not-allowed' : 'pointer',
-                  fontSize: '0.875rem',
-                  fontWeight: '600',
-                }}
+                className="px-6 py-3 bg-gradient-to-br from-violet-500 to-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white border-none rounded-md cursor-pointer text-sm font-semibold"
               >
                 {aiGenerating ? 'Generating...' : 'Generate Page'}
               </button>
@@ -685,66 +492,48 @@ export default function PagesManagementPage() {
       {/* Clone Website Modal */}
       {showCloneModal && (
         <div
-          style={{
-            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-            background: 'rgba(0, 0, 0, 0.5)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            zIndex: 1000,
-          }}
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-[1000]"
           onClick={() => cloneStatus !== 'cloning' && resetCloneModal()}
         >
           <div
-            style={{
-              background: 'var(--color-bg-paper)',
-              borderRadius: '12px', padding: '2rem',
-              width: '100%', maxWidth: '540px',
-              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
-            }}
+            className="bg-card rounded-xl p-8 w-full max-w-lg shadow-2xl"
             onClick={e => e.stopPropagation()}
           >
-            <h2 style={{ margin: '0 0 0.5rem', fontSize: '1.5rem', color: 'var(--color-text-primary)' }}>
-              Clone Website
-            </h2>
-            <p style={{ margin: '0 0 1.5rem', color: 'var(--color-text-secondary)', fontSize: '0.875rem' }}>
+            <h2 className="text-2xl font-bold text-foreground mb-1">Clone Website</h2>
+            <p className="text-sm text-muted-foreground mb-6">
               Import pages from an existing website into your website builder.
             </p>
 
             {cloneStatus === 'cloning' && (
-              <div style={{ textAlign: 'center', padding: '2rem 0' }}>
-                <div style={{ fontSize: '2rem', marginBottom: '1rem', animation: 'spin 1s linear infinite' }}>&#9881;</div>
-                <p style={{ color: 'var(--color-text-secondary)', margin: 0 }}>Cloning in progress... This may take a minute.</p>
+              <div className="text-center py-8">
+                <div className="text-3xl mb-4 animate-spin inline-block">&#9881;</div>
+                <p className="text-muted-foreground m-0">Cloning in progress... This may take a minute.</p>
               </div>
             )}
 
             {cloneStatus === 'success' && cloneResult && (
               <div>
-                <div style={{
-                  background: 'var(--color-bg-elevated)', borderRadius: '8px',
-                  padding: '1.25rem', marginBottom: '1.5rem',
-                  border: '1px solid var(--color-border-light)',
-                }}>
-                  <p style={{ margin: '0 0 0.5rem', fontWeight: '600', color: 'var(--color-text-primary)' }}>
-                    Clone complete
-                  </p>
-                  <p style={{ margin: '0 0 0.25rem', fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>
+                <div className="bg-surface-elevated rounded-lg p-5 mb-6 border border-border">
+                  <p className="font-semibold text-foreground mb-1">Clone complete</p>
+                  <p className="text-sm text-muted-foreground mb-0.5">
                     Pages cloned: {cloneResult.successCount} / {cloneResult.totalPages}
                   </p>
                   {cloneResult.brand?.name && (
-                    <p style={{ margin: '0 0 0.25rem', fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>
+                    <p className="text-sm text-muted-foreground mb-0.5">
                       Brand extracted: {cloneResult.brand.name}
                     </p>
                   )}
                   {cloneResult.failedCount > 0 && (
-                    <p style={{ margin: '0.25rem 0 0', fontSize: '0.875rem', color: 'var(--color-warning)' }}>
+                    <p className="text-sm text-warning mt-1">
                       {cloneResult.failedCount} page(s) could not be cloned.
                     </p>
                   )}
                 </div>
-                <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
-                  <button onClick={resetCloneModal} style={{ padding: '0.75rem 1.5rem', background: 'transparent', color: 'var(--color-text-secondary)', border: '1px solid var(--color-border-light)', borderRadius: '6px', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '500' }}>
+                <div className="flex gap-3 justify-end">
+                  <button onClick={resetCloneModal} className="px-6 py-3 bg-transparent text-muted-foreground border border-border rounded-md cursor-pointer text-sm font-medium">
                     Close
                   </button>
-                  <button onClick={() => { resetCloneModal(); void loadPages(); }} style={{ padding: '0.75rem 1.5rem', background: 'linear-gradient(135deg, #0ea5e9, #2563eb)', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600' }}>
+                  <button onClick={() => { resetCloneModal(); void loadPages(); }} className="px-6 py-3 bg-gradient-to-br from-sky-500 to-blue-600 text-white border-none rounded-md cursor-pointer text-sm font-semibold">
                     View Pages
                   </button>
                 </div>
@@ -753,40 +542,40 @@ export default function PagesManagementPage() {
 
             {(cloneStatus === 'idle' || cloneStatus === 'error') && (
               <div>
-                <div style={{ marginBottom: '1rem' }}>
-                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', fontSize: '0.875rem', color: 'var(--color-text-primary)' }}>
+                <div className="mb-4">
+                  <label className="block mb-1.5 font-semibold text-sm text-foreground">
                     Source URL
                   </label>
                   <input
                     type="url" value={cloneSourceUrl} onChange={e => setCloneSourceUrl(e.target.value)}
                     placeholder="https://example.com"
-                    style={{ width: '100%', padding: '0.75rem', border: '1px solid var(--color-border-light)', borderRadius: '6px', fontSize: '0.875rem', fontFamily: 'inherit', background: 'var(--color-bg-elevated)', color: 'var(--color-text-primary)', boxSizing: 'border-box' }}
+                    className="w-full px-3 py-2 border border-border rounded-md text-sm bg-surface-elevated text-foreground box-border"
                   />
                 </div>
-                <div style={{ marginBottom: '1rem' }}>
-                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', fontSize: '0.875rem', color: 'var(--color-text-primary)' }}>
+                <div className="mb-4">
+                  <label className="block mb-1.5 font-semibold text-sm text-foreground">
                     Max pages (1-20)
                   </label>
                   <input
                     type="number" min={1} max={20} value={cloneMaxPages}
                     onChange={e => setCloneMaxPages(Math.min(20, Math.max(1, Number(e.target.value))))}
-                    style={{ width: '100%', padding: '0.75rem', border: '1px solid var(--color-border-light)', borderRadius: '6px', fontSize: '0.875rem', fontFamily: 'inherit', background: 'var(--color-bg-elevated)', color: 'var(--color-text-primary)', boxSizing: 'border-box' }}
+                    className="w-full px-3 py-2 border border-border rounded-md text-sm bg-surface-elevated text-foreground box-border"
                   />
                 </div>
-                <div style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <input id="clone-include-images" type="checkbox" checked={cloneIncludeImages} onChange={e => setCloneIncludeImages(e.target.checked)} style={{ width: '1rem', height: '1rem', cursor: 'pointer' }} />
-                  <label htmlFor="clone-include-images" style={{ fontSize: '0.875rem', color: 'var(--color-text-primary)', cursor: 'pointer' }}>Include images</label>
+                <div className="mb-6 flex items-center gap-2">
+                  <input id="clone-include-images" type="checkbox" checked={cloneIncludeImages} onChange={e => setCloneIncludeImages(e.target.checked)} className="w-4 h-4 cursor-pointer" />
+                  <label htmlFor="clone-include-images" className="text-sm text-foreground cursor-pointer">Include images</label>
                 </div>
                 {cloneStatus === 'error' && cloneError && (
-                  <p style={{ margin: '0 0 1rem', fontSize: '0.875rem', color: 'var(--color-error)' }}>{cloneError}</p>
+                  <p className="text-sm text-destructive mb-4">{cloneError}</p>
                 )}
-                <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
-                  <button onClick={resetCloneModal} style={{ padding: '0.75rem 1.5rem', background: 'transparent', color: 'var(--color-text-secondary)', border: '1px solid var(--color-border-light)', borderRadius: '6px', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '500' }}>
+                <div className="flex gap-3 justify-end">
+                  <button onClick={resetCloneModal} className="px-6 py-3 bg-transparent text-muted-foreground border border-border rounded-md cursor-pointer text-sm font-medium">
                     Cancel
                   </button>
                   <button
                     onClick={() => void cloneWebsite()} disabled={!cloneSourceUrl.trim()}
-                    style={{ padding: '0.75rem 1.5rem', background: cloneSourceUrl.trim() ? 'linear-gradient(135deg, #0ea5e9, #2563eb)' : 'var(--color-text-disabled)', color: 'white', border: 'none', borderRadius: '6px', cursor: cloneSourceUrl.trim() ? 'pointer' : 'not-allowed', fontSize: '0.875rem', fontWeight: '600' }}
+                    className="px-6 py-3 bg-gradient-to-br from-sky-500 to-blue-600 disabled:opacity-50 disabled:cursor-not-allowed text-white border-none rounded-md cursor-pointer text-sm font-semibold"
                   >
                     Start Cloning
                   </button>

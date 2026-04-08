@@ -14,6 +14,7 @@ import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { logger } from '@/lib/logger/logger';
 import { SOCIAL_PLATFORMS } from '@/types/social';
 import { PLATFORM_META } from '@/lib/social/platform-config';
+import { PageTitle, SectionDescription } from '@/components/ui/typography';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -125,7 +126,7 @@ function VelocityGauge({ label, current, max }: { label: string; current: number
   else if (percentage >= 50) { color = '#FF9800'; }
 
   return (
-    <div style={{ textAlign: 'center' }}>
+    <div className="text-center">
       <svg width="88" height="88" viewBox="0 0 88 88">
         <circle
           cx="44" cy="44" r={radius}
@@ -151,9 +152,7 @@ function VelocityGauge({ label, current, max }: { label: string; current: number
           / {max}
         </text>
       </svg>
-      <div style={{ fontSize: '0.6875rem', color: 'var(--color-text-secondary)', marginTop: '0.25rem' }}>
-        {label}
-      </div>
+      <div className="text-xs text-muted-foreground mt-1">{label}</div>
     </div>
   );
 }
@@ -296,8 +295,8 @@ export default function CommandCenterPage() {
 
   if (loading) {
     return (
-      <div style={{ padding: '2rem', maxWidth: 1200, margin: '0 auto' }}>
-        <div style={{ textAlign: 'center', padding: '4rem', color: 'var(--color-text-secondary)' }}>
+      <div className="p-8 max-w-6xl mx-auto">
+        <div className="text-center py-16 text-muted-foreground">
           Loading Command Center...
         </div>
       </div>
@@ -306,8 +305,8 @@ export default function CommandCenterPage() {
 
   if (!status) {
     return (
-      <div style={{ padding: '2rem', maxWidth: 1200, margin: '0 auto' }}>
-        <div style={{ textAlign: 'center', padding: '4rem', color: 'var(--color-text-secondary)' }}>
+      <div className="p-8 max-w-6xl mx-auto">
+        <div className="text-center py-16 text-muted-foreground">
           Failed to load agent status. Please try again.
         </div>
       </div>
@@ -315,47 +314,27 @@ export default function CommandCenterPage() {
   }
 
   return (
-    <div style={{ padding: '2rem', maxWidth: 1200, margin: '0 auto' }}>
+    <div className="p-8 space-y-6 max-w-6xl mx-auto">
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
+      <div className="flex items-center justify-between">
         <div>
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--color-text-primary)', marginBottom: '0.25rem' }}>
-            Command Center
-          </h1>
-          <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.8125rem' }}>
-            Social media agent status and controls
-          </p>
+          <PageTitle>Command Center</PageTitle>
+          <SectionDescription className="mt-1">Social media agent status and controls</SectionDescription>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+        <div className="flex items-center gap-3">
           <Link
             href="/settings/integrations?category=social"
-            style={{
-              padding: '0.375rem 0.75rem',
-              borderRadius: '0.375rem',
-              border: '1px solid var(--color-border-light)',
-              backgroundColor: 'var(--color-bg-paper)',
-              color: 'var(--color-text-secondary)',
-              fontSize: '0.75rem',
-              textDecoration: 'none',
-            }}
+            className="px-3 py-1.5 rounded-md border border-border-light bg-card text-muted-foreground text-xs no-underline hover:bg-surface-elevated transition-colors"
           >
             Manage Accounts
           </Link>
-          <span style={{ fontSize: '0.6875rem', color: 'var(--color-text-disabled)' }}>
+          <span className="text-xs text-muted-foreground">
             Updated {formatTime(lastRefresh.toISOString())}
           </span>
           <button
             type="button"
             onClick={() => { void fetchData(); }}
-            style={{
-              padding: '0.375rem 0.75rem',
-              borderRadius: '0.375rem',
-              border: '1px solid var(--color-border-light)',
-              backgroundColor: 'var(--color-bg-paper)',
-              color: 'var(--color-text-secondary)',
-              cursor: 'pointer',
-              fontSize: '0.75rem',
-            }}
+            className="px-3 py-1.5 rounded-md border border-border-light bg-card text-muted-foreground cursor-pointer text-xs hover:bg-surface-elevated transition-colors"
           >
             Refresh
           </button>
@@ -364,32 +343,25 @@ export default function CommandCenterPage() {
 
       {/* ── Kill Switch + Agent Status Banner ──────────────────────────── */}
       <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '1.25rem 1.5rem',
-          backgroundColor: status.agentEnabled ? 'rgba(76,175,80,0.08)' : 'rgba(244,67,54,0.08)',
-          border: `1px solid ${status.agentEnabled ? 'rgba(76,175,80,0.3)' : 'rgba(244,67,54,0.3)'}`,
-          borderRadius: '0.75rem',
-          marginBottom: '1.5rem',
-        }}
+        className={`flex items-center justify-between px-6 py-5 rounded-xl border ${
+          status.agentEnabled
+            ? 'bg-[rgba(76,175,80,0.08)] border-[rgba(76,175,80,0.3)]'
+            : 'bg-[rgba(244,67,54,0.08)] border-[rgba(244,67,54,0.3)]'
+        }`}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+        <div className="flex items-center gap-4">
           <div
+            className="w-3 h-3 rounded-full shrink-0"
             style={{
-              width: 12,
-              height: 12,
-              borderRadius: '50%',
               backgroundColor: status.agentEnabled ? '#4CAF50' : '#F44336',
               boxShadow: status.agentEnabled ? '0 0 8px rgba(76,175,80,0.5)' : '0 0 8px rgba(244,67,54,0.5)',
             }}
           />
           <div>
-            <div style={{ fontWeight: 600, color: 'var(--color-text-primary)', fontSize: '0.9375rem' }}>
+            <div className="font-semibold text-foreground text-[0.9375rem]">
               {status.agentEnabled ? 'AI Agent is Active' : 'AI Agent is Paused'}
             </div>
-            <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginTop: '0.125rem' }}>
+            <div className="text-xs text-muted-foreground mt-0.5">
               {status.agentEnabled
                 ? `${status.queueDepth} posts queued, ${status.scheduledCount} scheduled${status.nextPostTime ? `, next post ${formatNextPost(status.nextPostTime)}` : ''}`
                 : 'All automated posting is paused. Manual posting still works.'}
@@ -400,18 +372,8 @@ export default function CommandCenterPage() {
           type="button"
           onClick={() => { void handleToggleAgent(); }}
           disabled={toggling}
-          style={{
-            padding: '0.625rem 1.5rem',
-            borderRadius: '0.5rem',
-            border: 'none',
-            cursor: toggling ? 'wait' : 'pointer',
-            fontSize: '0.8125rem',
-            fontWeight: 600,
-            backgroundColor: status.agentEnabled ? '#F44336' : '#4CAF50',
-            color: '#fff',
-            opacity: toggling ? 0.6 : 1,
-            transition: 'opacity 0.2s',
-          }}
+          className={`px-6 py-2.5 rounded-lg text-sm font-semibold text-white transition-opacity ${toggling ? 'opacity-60 cursor-wait' : 'cursor-pointer'}`}
+          style={{ backgroundColor: status.agentEnabled ? '#F44336' : '#4CAF50' }}
         >
           {toggling
             ? (status.agentEnabled ? 'Pausing...' : 'Activating...')
@@ -422,20 +384,16 @@ export default function CommandCenterPage() {
       {/* ── Swarm Control — Global Kill Switch + Manager Toggles ──────── */}
       {swarmControl && (
         <div
-          style={{
-            padding: '1.25rem 1.5rem',
-            backgroundColor: swarmControl.globalPause ? 'rgba(244,67,54,0.05)' : 'var(--color-bg-paper)',
-            border: `1px solid ${swarmControl.globalPause ? 'rgba(244,67,54,0.3)' : 'var(--color-border-light)'}`,
-            borderRadius: '0.75rem',
-            marginBottom: '1.5rem',
-          }}
+          className={`px-6 py-5 rounded-xl border ${
+            swarmControl.globalPause
+              ? 'bg-[rgba(244,67,54,0.05)] border-[rgba(244,67,54,0.3)]'
+              : 'bg-card border-border-light'
+          }`}
         >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+          <div className="flex items-center justify-between mb-4">
             <div>
-              <h2 style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: '0.25rem' }}>
-                Swarm Control
-              </h2>
-              <p style={{ fontSize: '0.6875rem', color: 'var(--color-text-secondary)' }}>
+              <h2 className="text-sm font-semibold text-foreground mb-1">Swarm Control</h2>
+              <p className="text-xs text-muted-foreground">
                 {swarmControl.globalPause
                   ? 'ALL agent activity is frozen. Events and signals are queued.'
                   : 'All systems operational. Toggle individual managers below.'}
@@ -445,20 +403,8 @@ export default function CommandCenterPage() {
               type="button"
               onClick={() => { void handleToggleSwarm(); }}
               disabled={swarmToggling}
-              style={{
-                padding: '0.5rem 1.25rem',
-                borderRadius: '0.5rem',
-                border: 'none',
-                cursor: swarmToggling ? 'wait' : 'pointer',
-                fontSize: '0.75rem',
-                fontWeight: 700,
-                textTransform: 'uppercase',
-                letterSpacing: '0.05em',
-                backgroundColor: swarmControl.globalPause ? '#4CAF50' : '#F44336',
-                color: '#fff',
-                opacity: swarmToggling ? 0.6 : 1,
-                transition: 'opacity 0.2s',
-              }}
+              className={`px-5 py-2 rounded-lg text-xs font-bold uppercase tracking-wider text-white transition-opacity ${swarmToggling ? 'opacity-60 cursor-wait' : 'cursor-pointer'}`}
+              style={{ backgroundColor: swarmControl.globalPause ? '#4CAF50' : '#F44336' }}
             >
               {swarmToggling
                 ? (swarmControl.globalPause ? 'Resuming...' : 'Pausing...')
@@ -467,7 +413,7 @@ export default function CommandCenterPage() {
           </div>
 
           {/* Manager Toggles Grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem' }}>
+          <div className="grid grid-cols-3 gap-2">
             {ALL_MANAGER_IDS.map((managerId) => {
               const isPaused = swarmControl.globalPause || swarmControl.pausedManagers.includes(managerId);
               const isThisToggling = managerToggling === managerId;
@@ -479,31 +425,20 @@ export default function CommandCenterPage() {
                   type="button"
                   onClick={() => { void handleToggleManager(managerId); }}
                   disabled={swarmControl.globalPause || isThisToggling}
+                  className={`flex items-center justify-between px-3 py-2 rounded-md text-xs font-medium text-foreground transition-all ${
+                    swarmControl.globalPause || isThisToggling ? 'cursor-not-allowed' : 'cursor-pointer'
+                  } ${
+                    swarmControl.globalPause ? 'opacity-50' : isThisToggling ? 'opacity-60' : 'opacity-100'
+                  }`}
                   style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '0.5rem 0.75rem',
-                    borderRadius: '0.375rem',
                     border: `1px solid ${isPaused ? 'rgba(244,67,54,0.3)' : 'rgba(76,175,80,0.3)'}`,
                     backgroundColor: isPaused ? 'rgba(244,67,54,0.06)' : 'rgba(76,175,80,0.06)',
-                    cursor: swarmControl.globalPause || isThisToggling ? 'not-allowed' : 'pointer',
-                    opacity: swarmControl.globalPause ? 0.5 : (isThisToggling ? 0.6 : 1),
-                    transition: 'opacity 0.2s, background-color 0.2s',
-                    fontSize: '0.75rem',
-                    fontWeight: 500,
-                    color: 'var(--color-text-primary)',
                   }}
                 >
                   <span>{displayName}</span>
                   <span
-                    style={{
-                      width: 8,
-                      height: 8,
-                      borderRadius: '50%',
-                      backgroundColor: isPaused ? '#F44336' : '#4CAF50',
-                      flexShrink: 0,
-                    }}
+                    className="w-2 h-2 rounded-full shrink-0"
+                    style={{ backgroundColor: isPaused ? '#F44336' : '#4CAF50' }}
                   />
                 </button>
               );
@@ -511,7 +446,7 @@ export default function CommandCenterPage() {
           </div>
 
           {swarmControl.pausedManagers.length > 0 && !swarmControl.globalPause && (
-            <div style={{ marginTop: '0.75rem', fontSize: '0.6875rem', color: '#FF9800' }}>
+            <div className="mt-3 text-xs" style={{ color: '#FF9800' }}>
               {swarmControl.pausedManagers.length} manager{swarmControl.pausedManagers.length > 1 ? 's' : ''} individually paused
             </div>
           )}
@@ -519,7 +454,7 @@ export default function CommandCenterPage() {
       )}
 
       {/* ── Stats Row ──────────────────────────────────────────────────── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '1rem', marginBottom: '1.5rem' }}>
+      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
         {[
           { label: 'Published Today', value: status.todayPublished, color: '#4CAF50' },
           { label: 'In Queue', value: status.queueDepth, color: '#9C27B0' },
@@ -529,38 +464,20 @@ export default function CommandCenterPage() {
         ].map((stat) => (
           <div
             key={stat.label}
-            style={{
-              padding: '1rem',
-              backgroundColor: 'var(--color-bg-paper)',
-              borderRadius: '0.5rem',
-              border: '1px solid var(--color-border-light)',
-            }}
+            className="p-4 bg-card rounded-lg border border-border-light"
           >
-            <div style={{ fontSize: '0.6875rem', color: 'var(--color-text-secondary)', marginBottom: '0.25rem' }}>
-              {stat.label}
-            </div>
-            <div style={{ fontSize: '1.5rem', fontWeight: 700, color: stat.color }}>
-              {stat.value}
-            </div>
+            <div className="text-xs text-muted-foreground mb-1">{stat.label}</div>
+            <div className="text-2xl font-bold" style={{ color: stat.color }}>{stat.value}</div>
           </div>
         ))}
       </div>
 
       {/* ── Two-Column Layout: Velocity Gauges + Platform Status ───────── */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Velocity Gauges */}
-        <div
-          style={{
-            padding: '1.25rem',
-            backgroundColor: 'var(--color-bg-paper)',
-            borderRadius: '0.75rem',
-            border: '1px solid var(--color-border-light)',
-          }}
-        >
-          <h2 style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: '1rem' }}>
-            Velocity Limits (per hour)
-          </h2>
-          <div style={{ display: 'flex', justifyContent: 'space-around' }}>
+        <div className="p-5 bg-card rounded-xl border border-border-light">
+          <h2 className="text-sm font-semibold text-foreground mb-4">Velocity Limits (per hour)</h2>
+          <div className="flex justify-around">
             <VelocityGauge
               label="Posts / Day"
               current={status.velocityUsage.postsToday}
@@ -585,81 +502,46 @@ export default function CommandCenterPage() {
         </div>
 
         {/* Platform Connections */}
-        <div
-          style={{
-            padding: '1.25rem',
-            backgroundColor: 'var(--color-bg-paper)',
-            borderRadius: '0.75rem',
-            border: '1px solid var(--color-border-light)',
-          }}
-        >
-          <h2 style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: '1rem' }}>
-            Connected Platforms
-          </h2>
+        <div className="p-5 bg-card rounded-xl border border-border-light">
+          <h2 className="text-sm font-semibold text-foreground mb-4">Connected Platforms</h2>
           {status.platformStatus.length === 0 ? (
-            <div style={{ padding: '1.5rem', textAlign: 'center', color: 'var(--color-text-disabled)', fontSize: '0.8125rem' }}>
+            <div className="py-6 text-center text-muted-foreground text-sm">
               No accounts connected.{' '}
               <Link
                 href="/settings/integrations?category=social"
-                style={{ color: 'var(--color-primary)', textDecoration: 'underline' }}
+                className="text-primary underline"
               >
                 Add accounts in Settings
               </Link>
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <div className="flex flex-col gap-2">
               {status.platformStatus.map((p, i) => {
                 const statusColors = CONNECTION_STATUS_COLORS[p.status] ?? CONNECTION_STATUS_COLORS.disconnected;
                 return (
                   <div
                     key={`${p.platform}-${p.handle}-${i}`}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      padding: '0.75rem',
-                      borderRadius: '0.5rem',
-                      border: '1px solid var(--color-border-light)',
-                    }}
+                    className="flex items-center justify-between p-3 rounded-lg border border-border-light"
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <div className="flex items-center gap-3">
                       <span
-                        style={{
-                          padding: '0.2rem 0.5rem',
-                          borderRadius: '0.25rem',
-                          fontSize: '0.625rem',
-                          fontWeight: 600,
-                          color: '#fff',
-                          backgroundColor: PLATFORM_COLORS[p.platform] ?? '#666',
-                          textTransform: 'uppercase',
-                        }}
+                        className="px-1.5 py-0.5 rounded text-[10px] font-semibold text-white uppercase"
+                        style={{ backgroundColor: PLATFORM_COLORS[p.platform] ?? '#666' }}
                       >
                         {p.platform}
                       </span>
                       <div>
-                        <div style={{ fontSize: '0.8125rem', fontWeight: 500, color: 'var(--color-text-primary)' }}>
-                          {p.accountName}
-                        </div>
-                        <div style={{ fontSize: '0.6875rem', color: 'var(--color-text-disabled)' }}>
-                          @{p.handle}
-                        </div>
+                        <div className="text-sm font-medium text-foreground">{p.accountName}</div>
+                        <div className="text-xs text-muted-foreground">@{p.handle}</div>
                       </div>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <div className="flex items-center gap-2">
                       {p.isDefault && (
-                        <span style={{ fontSize: '0.625rem', color: 'var(--color-text-disabled)', fontWeight: 500 }}>
-                          DEFAULT
-                        </span>
+                        <span className="text-[10px] text-muted-foreground font-medium">DEFAULT</span>
                       )}
                       <span
-                        style={{
-                          padding: '0.2rem 0.5rem',
-                          borderRadius: '1rem',
-                          fontSize: '0.625rem',
-                          fontWeight: 600,
-                          backgroundColor: statusColors.bg,
-                          color: statusColors.text,
-                        }}
+                        className="px-2 py-0.5 rounded-full text-[10px] font-semibold"
+                        style={{ backgroundColor: statusColors.bg, color: statusColors.text }}
                       >
                         {p.status}
                       </span>
@@ -673,100 +555,54 @@ export default function CommandCenterPage() {
       </div>
 
       {/* ── Activity Feed ──────────────────────────────────────────────── */}
-      <div
-        style={{
-          padding: '1.25rem',
-          backgroundColor: 'var(--color-bg-paper)',
-          borderRadius: '0.75rem',
-          border: '1px solid var(--color-border-light)',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-          <h2 style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--color-text-primary)' }}>
-            Recent Activity
-          </h2>
-          <span style={{ fontSize: '0.6875rem', color: 'var(--color-text-disabled)' }}>
-            {activity.length} events
-          </span>
+      <div className="p-5 bg-card rounded-xl border border-border-light">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-sm font-semibold text-foreground">Recent Activity</h2>
+          <span className="text-xs text-muted-foreground">{activity.length} events</span>
         </div>
 
         {activity.length === 0 ? (
-          <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--color-text-disabled)', fontSize: '0.8125rem' }}>
+          <div className="py-8 text-center text-muted-foreground text-sm">
             No activity yet. The agent will log actions here as it operates.
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
+          <div className="flex flex-col gap-1.5">
             {activity.map((event) => {
               const config = EVENT_TYPE_CONFIG[event.type] ?? EVENT_TYPE_CONFIG.cancelled;
               return (
                 <div
                   key={event.id}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'flex-start',
-                    gap: '0.75rem',
-                    padding: '0.625rem 0.75rem',
-                    borderRadius: '0.375rem',
-                    border: '1px solid var(--color-border-light)',
-                    fontSize: '0.8125rem',
-                  }}
+                  className="flex items-start gap-3 px-3 py-2.5 rounded-md border border-border-light text-sm"
                 >
                   {/* Event type icon */}
                   <span
-                    style={{
-                      width: 24,
-                      height: 24,
-                      borderRadius: '50%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '0.75rem',
-                      fontWeight: 700,
-                      backgroundColor: `${config.color}20`,
-                      color: config.color,
-                      flexShrink: 0,
-                    }}
+                    className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
+                    style={{ backgroundColor: `${config.color}20`, color: config.color }}
                   >
                     {config.icon}
                   </span>
 
                   {/* Content */}
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.125rem' }}>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-0.5">
                       <span
-                        style={{
-                          padding: '0.125rem 0.375rem',
-                          borderRadius: '0.25rem',
-                          fontSize: '0.5625rem',
-                          fontWeight: 600,
-                          color: '#fff',
-                          backgroundColor: PLATFORM_COLORS[event.platform] ?? '#666',
-                          textTransform: 'uppercase',
-                        }}
+                        className="px-1.5 py-0.5 rounded text-[9px] font-semibold text-white uppercase"
+                        style={{ backgroundColor: PLATFORM_COLORS[event.platform] ?? '#666' }}
                       >
                         {event.platform}
                       </span>
-                      <span style={{ fontSize: '0.6875rem', fontWeight: 500, color: config.color }}>
+                      <span className="text-xs font-medium" style={{ color: config.color }}>
                         {config.label}
                       </span>
                     </div>
-                    <div style={{
-                      color: 'var(--color-text-primary)',
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                    }}>
-                      {event.content}
-                    </div>
+                    <div className="text-foreground truncate">{event.content}</div>
                     {event.reason && (
-                      <div style={{ fontSize: '0.6875rem', color: 'var(--color-text-disabled)', marginTop: '0.125rem' }}>
-                        Reason: {event.reason}
-                      </div>
+                      <div className="text-xs text-muted-foreground mt-0.5">Reason: {event.reason}</div>
                     )}
                   </div>
 
                   {/* Timestamp */}
-                  <span style={{ fontSize: '0.6875rem', color: 'var(--color-text-disabled)', flexShrink: 0, whiteSpace: 'nowrap' }}>
+                  <span className="text-xs text-muted-foreground shrink-0 whitespace-nowrap">
                     {formatTime(event.timestamp)}
                   </span>
                 </div>
@@ -777,31 +613,21 @@ export default function CommandCenterPage() {
       </div>
 
       {/* ── Quick Settings Summary ─────────────────────────────────────── */}
-      <div
-        style={{
-          display: 'flex',
-          gap: '1rem',
-          marginTop: '1.5rem',
-          padding: '1rem',
-          backgroundColor: 'var(--color-bg-paper)',
-          borderRadius: '0.75rem',
-          border: '1px solid var(--color-border-light)',
-          fontSize: '0.75rem',
-          color: 'var(--color-text-secondary)',
-        }}
-      >
+      <div className="flex gap-4 p-4 bg-card rounded-xl border border-border-light text-xs text-muted-foreground">
         <span>
-          Auto-Approval: <strong style={{ color: status.autoApprovalEnabled ? '#4CAF50' : '#FF9800' }}>
+          Auto-Approval:{' '}
+          <strong style={{ color: status.autoApprovalEnabled ? '#4CAF50' : '#FF9800' }}>
             {status.autoApprovalEnabled ? 'ON' : 'OFF'}
           </strong>
         </span>
-        <span style={{ color: 'var(--color-border-light)' }}>|</span>
+        <span className="text-border-light">|</span>
         <span>
-          Weekend Pause: <strong style={{ color: status.pauseOnWeekends ? '#4CAF50' : 'var(--color-text-disabled)' }}>
+          Weekend Pause:{' '}
+          <strong style={{ color: status.pauseOnWeekends ? '#4CAF50' : undefined }} className={!status.pauseOnWeekends ? 'text-muted-foreground' : ''}>
             {status.pauseOnWeekends ? 'ON' : 'OFF'}
           </strong>
         </span>
-        <span style={{ color: 'var(--color-border-light)' }}>|</span>
+        <span className="text-border-light">|</span>
         <span>
           Daily Limit: <strong>{status.velocityUsage.maxDailyPosts} posts/day</strong>
         </span>

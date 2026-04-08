@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { useToast } from '@/hooks/useToast';
+import { PageTitle, SectionDescription } from '@/components/ui/typography';
 
 interface OrderCustomer {
   firstName: string;
@@ -75,17 +76,17 @@ interface MutationResponse {
 const STATUS_COLORS: Record<OrderStatus, string> = {
   pending: 'bg-warning/20 text-warning border-warning/30',
   processing: 'bg-primary/20 text-primary border-primary/30',
-  on_hold: 'bg-surface-elevated text-[var(--color-text-secondary)] border-border-light',
+  on_hold: 'bg-surface-elevated text-muted-foreground border-border-light',
   completed: 'bg-success/20 text-success border-success/30',
   cancelled: 'bg-error/20 text-error border-error/30',
-  refunded: 'bg-surface-elevated text-[var(--color-text-disabled)] border-border-light',
+  refunded: 'bg-surface-elevated text-muted-foreground border-border-light',
 };
 
 const FULFILLMENT_COLORS: Record<FulfillmentStatus, string> = {
   unfulfilled: 'bg-warning/10 text-warning',
   partially_fulfilled: 'bg-primary/10 text-primary',
   fulfilled: 'bg-success/10 text-success',
-  on_hold: 'bg-surface-elevated text-[var(--color-text-disabled)]',
+  on_hold: 'bg-surface-elevated text-muted-foreground',
   cancelled: 'bg-error/10 text-error',
 };
 
@@ -245,24 +246,23 @@ export default function OrdersPage() {
   const getStatusLabel = (status: string) => status.replace('_', ' ');
 
   return (
-    <div className="min-h-screen bg-surface-main p-8">
-      <div className="max-w-7xl mx-auto">
+    <div className="p-8 space-y-6">
         {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-[var(--color-text-primary)]">Orders</h1>
-            <p className="text-[var(--color-text-secondary)] text-sm">
+            <PageTitle>Orders</PageTitle>
+            <SectionDescription>
               Manage and track customer orders
-            </p>
+            </SectionDescription>
           </div>
           <div className="flex items-center gap-3">
-            <span className="text-sm text-[var(--color-text-secondary)]">
+            <span className="text-sm text-muted-foreground">
               {orders.length} total order{orders.length !== 1 ? 's' : ''}
             </span>
             <button
               onClick={exportToCSV}
               disabled={orders.length === 0}
-              className="px-3 py-1.5 text-xs font-medium bg-surface-paper border border-border-light rounded-lg hover:bg-surface-elevated disabled:opacity-50 disabled:cursor-not-allowed text-[var(--color-text-primary)]"
+              className="px-3 py-1.5 text-xs font-medium bg-surface-paper border border-border-light rounded-lg hover:bg-surface-elevated disabled:opacity-50 disabled:cursor-not-allowed text-foreground"
             >
               Export CSV
             </button>
@@ -270,18 +270,18 @@ export default function OrdersPage() {
         </div>
 
         {/* Filters */}
-        <div className="flex flex-col md:flex-row gap-3 mb-6">
+        <div className="flex flex-col md:flex-row gap-3">
           <input
             type="text"
             placeholder="Search by order #, customer name, or email..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="flex-1 px-4 py-2.5 bg-surface-paper border border-border-light rounded-xl text-[var(--color-text-primary)] text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+            className="flex-1 px-4 py-2.5 bg-surface-paper border border-border-light rounded-xl text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary"
           />
           <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value as typeof filterStatus)}
-            className="px-4 py-2.5 bg-surface-paper border border-border-light rounded-xl text-[var(--color-text-primary)] text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+            className="px-4 py-2.5 bg-surface-paper border border-border-light rounded-xl text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary"
           >
             <option value="all">All Statuses</option>
             {ORDER_STATUSES.map((s) => (
@@ -292,12 +292,12 @@ export default function OrdersPage() {
 
         {/* Orders Table */}
         {loading ? (
-          <div className="text-center py-12 text-[var(--color-text-secondary)]">Loading orders...</div>
+          <div className="text-center py-12 text-muted-foreground">Loading orders...</div>
         ) : filteredOrders.length === 0 ? (
           <div className="rounded-2xl bg-surface-paper border border-border-light p-12 text-center">
             <div className="text-4xl mb-3">📦</div>
-            <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-2">No Orders Found</h3>
-            <p className="text-[var(--color-text-secondary)] text-sm">
+            <h3 className="text-lg font-semibold text-foreground mb-2">No Orders Found</h3>
+            <p className="text-muted-foreground text-sm">
               {searchQuery || filterStatus !== 'all'
                 ? 'Try adjusting your filters.'
                 : 'Orders will appear here when customers make purchases.'}
@@ -309,14 +309,14 @@ export default function OrdersPage() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-border-light">
-                    <th className="text-left px-5 py-3 text-xs font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider">Order</th>
-                    <th className="text-left px-5 py-3 text-xs font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider">Customer</th>
-                    <th className="text-left px-5 py-3 text-xs font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider">Status</th>
-                    <th className="text-left px-5 py-3 text-xs font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider">Fulfillment</th>
-                    <th className="text-right px-5 py-3 text-xs font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider">Total</th>
-                    <th className="text-left px-5 py-3 text-xs font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider">Source</th>
-                    <th className="text-left px-5 py-3 text-xs font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider">Date</th>
-                    <th className="text-right px-5 py-3 text-xs font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider">Actions</th>
+                    <th className="text-left px-5 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Order</th>
+                    <th className="text-left px-5 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Customer</th>
+                    <th className="text-left px-5 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status</th>
+                    <th className="text-left px-5 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Fulfillment</th>
+                    <th className="text-right px-5 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Total</th>
+                    <th className="text-left px-5 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Source</th>
+                    <th className="text-left px-5 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Date</th>
+                    <th className="text-right px-5 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border-light">
@@ -330,10 +330,10 @@ export default function OrdersPage() {
                         <span className="text-sm font-semibold text-primary">{order.orderNumber}</span>
                       </td>
                       <td className="px-5 py-4">
-                        <div className="text-sm font-medium text-[var(--color-text-primary)]">
+                        <div className="text-sm font-medium text-foreground">
                           {order.customer.firstName} {order.customer.lastName}
                         </div>
-                        <div className="text-xs text-[var(--color-text-secondary)]">{order.customerEmail}</div>
+                        <div className="text-xs text-muted-foreground">{order.customerEmail}</div>
                       </td>
                       <td className="px-5 py-4">
                         <span className={`inline-block px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${STATUS_COLORS[order.status]}`}>
@@ -346,7 +346,7 @@ export default function OrdersPage() {
                         </span>
                       </td>
                       <td className="px-5 py-4 text-right">
-                        <span className="text-sm font-bold text-[var(--color-text-primary)]">{formatCurrency(order.total)}</span>
+                        <span className="text-sm font-bold text-foreground">{formatCurrency(order.total)}</span>
                       </td>
                       <td className="px-5 py-4">
                         {(() => {
@@ -356,12 +356,12 @@ export default function OrdersPage() {
                               {src}
                             </span>
                           ) : (
-                            <span className="text-xs text-[var(--color-text-disabled)]">-</span>
+                            <span className="text-xs text-muted-foreground">-</span>
                           );
                         })()}
                       </td>
                       <td className="px-5 py-4">
-                        <span className="text-xs text-[var(--color-text-secondary)]">{formatDate(order.createdAt)}</span>
+                        <span className="text-xs text-muted-foreground">{formatDate(order.createdAt)}</span>
                       </td>
                       <td className="px-5 py-4 text-right">
                         <button
@@ -378,7 +378,6 @@ export default function OrdersPage() {
             </div>
           </div>
         )}
-      </div>
 
       {/* Order Detail Drawer */}
       {selectedOrder && (
@@ -391,12 +390,12 @@ export default function OrdersPage() {
             {/* Drawer Header */}
             <div className="sticky top-0 bg-surface-paper z-10 px-6 py-4 border-b border-border-light flex items-center justify-between">
               <div>
-                <h2 className="text-lg font-bold text-[var(--color-text-primary)]">{selectedOrder.orderNumber}</h2>
-                <p className="text-xs text-[var(--color-text-secondary)]">{formatDate(selectedOrder.createdAt)}</p>
+                <h2 className="text-lg font-bold text-foreground">{selectedOrder.orderNumber}</h2>
+                <p className="text-xs text-muted-foreground">{formatDate(selectedOrder.createdAt)}</p>
               </div>
               <button
                 onClick={() => setSelectedOrder(null)}
-                className="p-2 hover:bg-surface-elevated rounded-lg text-[var(--color-text-secondary)]"
+                className="p-2 hover:bg-surface-elevated rounded-lg text-muted-foreground"
               >
                 ✕
               </button>
@@ -405,7 +404,7 @@ export default function OrdersPage() {
             <div className="p-6 space-y-6">
               {/* Status Management */}
               <div>
-                <h3 className="text-sm font-semibold text-[var(--color-text-primary)] mb-2">Order Status</h3>
+                <h3 className="text-sm font-semibold text-foreground mb-2">Order Status</h3>
                 <div className="flex flex-wrap gap-1.5">
                   {ORDER_STATUSES.map((s) => (
                     <button
@@ -414,7 +413,7 @@ export default function OrdersPage() {
                       className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider border transition-all ${
                         selectedOrder.status === s
                           ? STATUS_COLORS[s]
-                          : 'bg-surface-elevated text-[var(--color-text-disabled)] border-border-light hover:bg-surface-main'
+                          : 'bg-surface-elevated text-muted-foreground border-border-light hover:bg-surface-main'
                       }`}
                     >
                       {getStatusLabel(s)}
@@ -425,7 +424,7 @@ export default function OrdersPage() {
 
               {/* Fulfillment Status */}
               <div>
-                <h3 className="text-sm font-semibold text-[var(--color-text-primary)] mb-2">Fulfillment Status</h3>
+                <h3 className="text-sm font-semibold text-foreground mb-2">Fulfillment Status</h3>
                 <div className="flex flex-wrap gap-1.5">
                   {FULFILLMENT_STATUSES.map((s) => (
                     <button
@@ -434,7 +433,7 @@ export default function OrdersPage() {
                       className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider border transition-all ${
                         selectedOrder.fulfillmentStatus === s
                           ? `${FULFILLMENT_COLORS[s]} border-current`
-                          : 'bg-surface-elevated text-[var(--color-text-disabled)] border-border-light hover:bg-surface-main'
+                          : 'bg-surface-elevated text-muted-foreground border-border-light hover:bg-surface-main'
                       }`}
                     >
                       {getStatusLabel(s)}
@@ -445,34 +444,34 @@ export default function OrdersPage() {
 
               {/* Customer Info */}
               <div>
-                <h3 className="text-sm font-semibold text-[var(--color-text-primary)] mb-2">Customer</h3>
+                <h3 className="text-sm font-semibold text-foreground mb-2">Customer</h3>
                 <div className="bg-surface-elevated rounded-xl p-3 text-sm">
-                  <div className="font-medium text-[var(--color-text-primary)]">
+                  <div className="font-medium text-foreground">
                     {selectedOrder.customer.firstName} {selectedOrder.customer.lastName}
                   </div>
-                  <div className="text-[var(--color-text-secondary)] text-xs">{selectedOrder.customerEmail}</div>
+                  <div className="text-muted-foreground text-xs">{selectedOrder.customerEmail}</div>
                   {selectedOrder.customer.phone && (
-                    <div className="text-[var(--color-text-secondary)] text-xs">{selectedOrder.customer.phone}</div>
+                    <div className="text-muted-foreground text-xs">{selectedOrder.customer.phone}</div>
                   )}
                 </div>
               </div>
 
               {/* Order Items */}
               <div>
-                <h3 className="text-sm font-semibold text-[var(--color-text-primary)] mb-2">
+                <h3 className="text-sm font-semibold text-foreground mb-2">
                   Items ({selectedOrder.items.length})
                 </h3>
                 <div className="space-y-2">
                   {selectedOrder.items.map((item) => (
                     <div key={item.id} className="bg-surface-elevated rounded-xl p-3 flex items-center gap-3">
                       <div className="flex-1 min-w-0">
-                        <div className="text-sm font-medium text-[var(--color-text-primary)] truncate">{item.productName}</div>
-                        <div className="text-xs text-[var(--color-text-secondary)]">
+                        <div className="text-sm font-medium text-foreground truncate">{item.productName}</div>
+                        <div className="text-xs text-muted-foreground">
                           {formatCurrency(item.price)} x {item.quantity}
                           {item.sku && <span className="ml-2">SKU: {item.sku}</span>}
                         </div>
                       </div>
-                      <div className="text-sm font-bold text-[var(--color-text-primary)]">{formatCurrency(item.total)}</div>
+                      <div className="text-sm font-bold text-foreground">{formatCurrency(item.total)}</div>
                     </div>
                   ))}
                 </div>
@@ -480,9 +479,9 @@ export default function OrdersPage() {
 
               {/* Order Summary */}
               <div>
-                <h3 className="text-sm font-semibold text-[var(--color-text-primary)] mb-2">Summary</h3>
+                <h3 className="text-sm font-semibold text-foreground mb-2">Summary</h3>
                 <div className="bg-surface-elevated rounded-xl p-3 space-y-1.5 text-sm">
-                  <div className="flex justify-between text-[var(--color-text-secondary)]">
+                  <div className="flex justify-between text-muted-foreground">
                     <span>Subtotal</span>
                     <span>{formatCurrency(selectedOrder.subtotal)}</span>
                   </div>
@@ -492,15 +491,15 @@ export default function OrdersPage() {
                       <span>-{formatCurrency(selectedOrder.discount)}</span>
                     </div>
                   )}
-                  <div className="flex justify-between text-[var(--color-text-secondary)]">
+                  <div className="flex justify-between text-muted-foreground">
                     <span>Shipping</span>
                     <span>{formatCurrency(selectedOrder.shipping)}</span>
                   </div>
-                  <div className="flex justify-between text-[var(--color-text-secondary)]">
+                  <div className="flex justify-between text-muted-foreground">
                     <span>Tax</span>
                     <span>{formatCurrency(selectedOrder.tax)}</span>
                   </div>
-                  <div className="flex justify-between font-bold text-[var(--color-text-primary)] pt-2 border-t border-border-light">
+                  <div className="flex justify-between font-bold text-foreground pt-2 border-t border-border-light">
                     <span>Total</span>
                     <span>{formatCurrency(selectedOrder.total)}</span>
                   </div>
@@ -510,11 +509,11 @@ export default function OrdersPage() {
               {/* Shipping Info */}
               {selectedOrder.shippingInfo && (
                 <div>
-                  <h3 className="text-sm font-semibold text-[var(--color-text-primary)] mb-2">Shipping</h3>
+                  <h3 className="text-sm font-semibold text-foreground mb-2">Shipping</h3>
                   <div className="bg-surface-elevated rounded-xl p-3 text-sm space-y-1">
-                    <div className="text-[var(--color-text-primary)]">{selectedOrder.shippingInfo.method}</div>
+                    <div className="text-foreground">{selectedOrder.shippingInfo.method}</div>
                     {selectedOrder.shippingInfo.carrier && (
-                      <div className="text-xs text-[var(--color-text-secondary)]">Carrier: {selectedOrder.shippingInfo.carrier}</div>
+                      <div className="text-xs text-muted-foreground">Carrier: {selectedOrder.shippingInfo.carrier}</div>
                     )}
                     {selectedOrder.shippingInfo.trackingNumber && (
                       <div className="text-xs text-primary">Tracking: {selectedOrder.shippingInfo.trackingNumber}</div>
@@ -526,18 +525,18 @@ export default function OrdersPage() {
               {/* Notes */}
               {(selectedOrder.customerNotes ?? selectedOrder.internalNotes) && (
                 <div>
-                  <h3 className="text-sm font-semibold text-[var(--color-text-primary)] mb-2">Notes</h3>
+                  <h3 className="text-sm font-semibold text-foreground mb-2">Notes</h3>
                   <div className="space-y-2">
                     {selectedOrder.customerNotes && (
                       <div className="bg-surface-elevated rounded-xl p-3">
-                        <div className="text-[10px] font-bold text-[var(--color-text-disabled)] uppercase mb-1">Customer Note</div>
-                        <div className="text-sm text-[var(--color-text-secondary)]">{selectedOrder.customerNotes}</div>
+                        <div className="text-[10px] font-bold text-muted-foreground uppercase mb-1">Customer Note</div>
+                        <div className="text-sm text-muted-foreground">{selectedOrder.customerNotes}</div>
                       </div>
                     )}
                     {selectedOrder.internalNotes && (
                       <div className="bg-surface-elevated rounded-xl p-3">
-                        <div className="text-[10px] font-bold text-[var(--color-text-disabled)] uppercase mb-1">Internal Note</div>
-                        <div className="text-sm text-[var(--color-text-secondary)]">{selectedOrder.internalNotes}</div>
+                        <div className="text-[10px] font-bold text-muted-foreground uppercase mb-1">Internal Note</div>
+                        <div className="text-sm text-muted-foreground">{selectedOrder.internalNotes}</div>
                       </div>
                     )}
                   </div>
@@ -547,10 +546,10 @@ export default function OrdersPage() {
               {/* Tags */}
               {selectedOrder.tags && selectedOrder.tags.length > 0 && (
                 <div>
-                  <h3 className="text-sm font-semibold text-[var(--color-text-primary)] mb-2">Tags</h3>
+                  <h3 className="text-sm font-semibold text-foreground mb-2">Tags</h3>
                   <div className="flex flex-wrap gap-1.5">
                     {selectedOrder.tags.map((tag) => (
-                      <span key={tag} className="px-2 py-0.5 bg-surface-elevated border border-border-light rounded text-xs text-[var(--color-text-secondary)]">
+                      <span key={tag} className="px-2 py-0.5 bg-surface-elevated border border-border-light rounded text-xs text-muted-foreground">
                         {tag}
                       </span>
                     ))}
@@ -559,7 +558,7 @@ export default function OrdersPage() {
               )}
 
               {/* Source */}
-              <div className="text-[10px] text-[var(--color-text-disabled)] pt-2 border-t border-border-light">
+              <div className="text-[10px] text-muted-foreground pt-2 border-t border-border-light">
                 Source: {selectedOrder.source} &middot; ID: {selectedOrder.id}
               </div>
             </div>

@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
 import { logger } from '@/lib/logger/logger';
 import { useToast } from '@/hooks/useToast';
+import { PageTitle, SectionDescription } from '@/components/ui/typography';
 
 /** Get Authorization header with Firebase ID token */
 async function getAuthHeaders(): Promise<Record<string, string>> {
@@ -747,21 +748,22 @@ export default function APIKeysPage() {
   const [_newCustomKey, _setNewCustomKey] = useState({name: '', key: ''});
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: 'var(--color-bg-main)' }}>
-      <div style={{ flex: 1, padding: '2rem', overflowY: 'auto' }}>
-        <div>
-          {/* Header */}
-          <div style={{ marginBottom: '2rem' }}>
-            <Link href={`/settings`} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', color: primaryColor, fontSize: '0.875rem', fontWeight: '500', textDecoration: 'none', marginBottom: '1.5rem' }}>
-              ← Back to Settings
-            </Link>
-            <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
-              API Keys Setup
-            </h1>
-            <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem' }}>
-              Connect external services to enable features. Add keys here instead of messing with .env files.
-            </p>
-          </div>
+    <div className="p-8 space-y-6 overflow-y-auto">
+      <div>
+        {/* Header */}
+        <div className="mb-8">
+          <Link
+            href="/settings"
+            className="inline-flex items-center gap-2 text-sm font-medium no-underline mb-6"
+            style={{ color: primaryColor }}
+          >
+            ← Back to Settings
+          </Link>
+          <PageTitle>API Keys Setup</PageTitle>
+          <SectionDescription className="mt-1">
+            Connect external services to enable features. Add keys here instead of messing with .env files.
+          </SectionDescription>
+        </div>
 
           {/* OpenRouter Recommendation Banner */}
           <div style={{ backgroundColor: 'var(--color-success-dark)', border: '2px solid var(--color-success)', borderRadius: '1rem', padding: '1.5rem', marginBottom: '2rem' }}>
@@ -971,7 +973,6 @@ export default function APIKeysPage() {
             ))}
           </div>
         </div>
-      </div>
     </div>
   );
 }

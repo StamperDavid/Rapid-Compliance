@@ -9,6 +9,7 @@ import { logger } from '@/lib/logger/logger';
 import SubpageNav from '@/components/ui/SubpageNav';
 import { DASHBOARD_TABS } from '@/lib/constants/subpage-nav';
 import { JasperTaskReminder } from '@/components/dashboard/JasperTaskReminder';
+import { PageTitle, SectionDescription } from '@/components/ui/typography';
 import {
   Target,
   Briefcase,
@@ -203,7 +204,7 @@ export default function WorkspaceDashboardPage() {
         };
         setPipeline(Object.entries(stageMap).map(([stage, data]) => ({
           stage, count: data.count, value: data.value,
-          color: stageColors[stage] || 'var(--color-primary)',
+          color: stageColors[stage] ?? 'var(--color-primary)',
         })));
 
         // Fetch conversations with details
@@ -354,24 +355,20 @@ export default function WorkspaceDashboardPage() {
   const val = (v: number | string) => loading ? '—' : v;
 
   return (
-    <div style={{ padding: '2rem' }}>
+    <div className="p-8 space-y-6">
       {/* Header */}
-      <div style={{ marginBottom: '1.5rem' }}>
-        <h1 style={{ fontSize: '2rem', fontWeight: '700', color: 'var(--color-text-primary)', margin: 0 }}>
-          Dashboard
-        </h1>
-        <p style={{ color: 'var(--color-text-disabled)', marginTop: '0.5rem', fontSize: '0.875rem' }}>
+      <div>
+        <PageTitle>Dashboard</PageTitle>
+        <SectionDescription className="mt-1">
           Platform overview — everything at a glance.
-        </p>
+        </SectionDescription>
       </div>
 
-      {/* Jasper setup task reminder — shows pending onboarding/config tasks */}
       <JasperTaskReminder />
-
       <SubpageNav items={DASHBOARD_TABS} />
 
       {/* Row 1: KPI Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: '0.75rem', marginBottom: '1.5rem' }}>
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
         <KPICard label="Pipeline" value={val(`$${stats.pipelineValue.toLocaleString()}`)} icon={<DollarSign size={16} />} color="var(--color-success)" href="/deals" />
         <KPICard label="Active Deals" value={val(stats.activeDeals)} icon={<Briefcase size={16} />} color="var(--color-primary)" href="/deals" />
         <KPICard label="Leads" value={val(stats.totalLeads)} icon={<Target size={16} />} color="var(--color-info)" href="/leads" />
@@ -381,44 +378,44 @@ export default function WorkspaceDashboardPage() {
       </div>
 
       {/* Row 2: Conversations Monitor + Agent Health */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
-        {/* Conversations Monitor */}
-        <Link href="/conversations" style={{ textDecoration: 'none' }}>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Link href="/conversations" className="no-underline">
           <SectionCard>
             <SectionHeader title="Conversations" icon={<MessageSquare size={16} />} />
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.75rem', marginTop: '1rem' }}>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
               <MiniStat label="Active" value={val(convoStats.active)} color="var(--color-success)" />
               <MiniStat label="Recent (24h)" value={val(convoStats.recent)} color="var(--color-info)" />
               <MiniStat label="Total" value={val(convoStats.total)} color="var(--color-text-secondary)" />
               <MiniStat label="Conversion" value={val(`${convoConversionRate}%`)} color="var(--color-warning)" />
             </div>
-            <div style={{ marginTop: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--color-text-disabled)', fontSize: '0.75rem' }}>
+            <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground">
               <span>Monitor and manage conversations</span>
               <ArrowRight size={12} />
             </div>
           </SectionCard>
         </Link>
 
-        {/* AI Workforce Health */}
-        <Link href="/workforce" style={{ textDecoration: 'none' }}>
+        <Link href="/workforce" className="no-underline">
           <SectionCard>
             <SectionHeader title="AI Workforce" icon={<Bot size={16} />} />
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem', marginTop: '1rem' }}>
+            <div className="grid grid-cols-3 gap-3 mt-4">
               <MiniStat label="Functional" value={val(agentHealth.functional)} color="var(--color-success)" />
               <MiniStat label="Executing" value={val(agentHealth.executing)} color="var(--color-primary)" />
               <MiniStat label="Total" value={val(agentHealth.total)} color="var(--color-text-secondary)" />
             </div>
-            <div style={{ marginTop: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <span style={{
-                  width: '8px', height: '8px', borderRadius: '50%',
-                  backgroundColor: agentHealth.health === 'HEALTHY' ? 'var(--color-success)' : agentHealth.health === 'DEGRADED' ? 'var(--color-warning)' : 'var(--color-text-disabled)',
-                }} />
-                <span style={{ color: 'var(--color-text-disabled)', fontSize: '0.75rem' }}>
+            <div className="mt-4 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span
+                  className="w-2 h-2 rounded-full shrink-0"
+                  style={{
+                    backgroundColor: agentHealth.health === 'HEALTHY' ? 'var(--color-success)' : agentHealth.health === 'DEGRADED' ? 'var(--color-warning)' : 'var(--color-text-disabled)',
+                  }}
+                />
+                <span className="text-xs text-muted-foreground">
                   {agentHealth.health !== 'UNKNOWN' ? agentHealth.health : 'Awaiting data'}
                 </span>
               </div>
-              <span style={{ color: 'var(--color-text-disabled)', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+              <span className="text-xs text-muted-foreground flex items-center gap-1">
                 Command Center <ArrowRight size={12} />
               </span>
             </div>
@@ -427,9 +424,8 @@ export default function WorkspaceDashboardPage() {
       </div>
 
       {/* Row 3: Pipeline + Marketing + Content */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
-        {/* Sales Pipeline */}
-        <Link href="/deals" style={{ textDecoration: 'none' }}>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <Link href="/deals" className="no-underline">
           <SectionCard>
             <SectionHeader title="Sales Pipeline" icon={<TrendingUp size={16} />} />
             {loading ? (
@@ -437,19 +433,21 @@ export default function WorkspaceDashboardPage() {
             ) : pipeline.length === 0 ? (
               <EmptyState text="No deals yet" />
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.75rem' }}>
+              <div className="flex flex-col gap-2 mt-3">
                 {pipeline.slice(0, 4).map((stage, idx) => (
                   <div key={idx}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
-                      <span style={{ fontSize: '0.75rem', fontWeight: '500', color: 'var(--color-text-primary)' }}>{stage.stage}</span>
-                      <span style={{ fontSize: '0.7rem', color: 'var(--color-text-disabled)' }}>{stage.count} · ${stage.value.toLocaleString()}</span>
+                    <div className="flex justify-between mb-1">
+                      <span className="text-xs font-medium text-foreground">{stage.stage}</span>
+                      <span className="text-[0.7rem] text-muted-foreground">{stage.count} · ${stage.value.toLocaleString()}</span>
                     </div>
-                    <div style={{ height: '4px', borderRadius: '2px', backgroundColor: 'var(--color-bg-main)', overflow: 'hidden' }}>
-                      <div style={{
-                        height: '100%',
-                        width: `${Math.min((stage.count / Math.max(...pipeline.map(p => p.count), 1)) * 100, 100)}%`,
-                        backgroundColor: stage.color, transition: 'width 0.3s',
-                      }} />
+                    <div className="h-1 rounded-full bg-surface-main overflow-hidden">
+                      <div
+                        className="h-full transition-[width] duration-300"
+                        style={{
+                          width: `${Math.min((stage.count / Math.max(...pipeline.map(p => p.count), 1)) * 100, 100)}%`,
+                          backgroundColor: stage.color,
+                        }}
+                      />
                     </div>
                   </div>
                 ))}
@@ -459,10 +457,9 @@ export default function WorkspaceDashboardPage() {
           </SectionCard>
         </Link>
 
-        {/* Marketing & Outreach */}
         <SectionCard>
           <SectionHeader title="Marketing & Outreach" icon={<Share2 size={16} />} />
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.75rem' }}>
+          <div className="flex flex-col gap-3 mt-3">
             <NavRow icon={<Mail size={14} />} label="Email Campaigns" href="/email/campaigns" />
             <NavRow icon={<Send size={14} />} label="Sequences" href="/outbound/sequences" />
             <NavRow icon={<Share2 size={14} />} label="Social Hub" href="/social/command-center" />
@@ -471,10 +468,9 @@ export default function WorkspaceDashboardPage() {
           <SectionFooter text="View outreach" />
         </SectionCard>
 
-        {/* Content & Website */}
         <SectionCard>
           <SectionHeader title="Content & Website" icon={<Globe size={16} />} />
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.75rem' }}>
+          <div className="flex flex-col gap-3 mt-3">
             <NavRow icon={<Globe size={14} />} label="Website Editor" href="/website/editor" />
             <NavRow icon={<BarChart3 size={14} />} label="SEO" href="/website/seo" />
             <NavRow icon={<FileText size={14} />} label="Proposals" href="/proposals" />
@@ -485,8 +481,7 @@ export default function WorkspaceDashboardPage() {
       </div>
 
       {/* Row 4: Activity Feed + Tasks */}
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
-        {/* Recent Activity */}
+      <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-4">
         <SectionCard>
           <SectionHeader title="Recent Activity" icon={<BarChart3 size={16} />} />
           {loading ? (
@@ -494,31 +489,26 @@ export default function WorkspaceDashboardPage() {
           ) : recentActivity.length === 0 ? (
             <EmptyState text="No recent activity" />
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.75rem' }}>
+            <div className="flex flex-col gap-2 mt-3">
               {recentActivity.map((activity) => (
-                <div key={activity.id} style={{
-                  display: 'flex', alignItems: 'center', gap: '0.75rem',
-                  padding: '0.625rem 0.75rem',
-                  backgroundColor: 'var(--color-bg-main)',
-                  border: '1px solid var(--color-bg-elevated)',
-                  borderRadius: '0.5rem',
-                }}>
-                  <span style={{
-                    width: '6px', height: '6px', borderRadius: '50%', flexShrink: 0,
-                    backgroundColor: activity.type === 'deal' ? 'var(--color-success)' : activity.type === 'lead' ? 'var(--color-info)' : 'var(--color-primary)',
-                  }} />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <span style={{ fontSize: '0.8rem', fontWeight: '500', color: 'var(--color-text-primary)' }}>{activity.action}</span>
-                    <span style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)', marginLeft: '0.5rem' }}>{activity.detail}</span>
+                <div key={activity.id} className="flex items-center gap-3 px-3 py-2.5 bg-surface-main border border-surface-elevated rounded-md">
+                  <span
+                    className="w-1.5 h-1.5 rounded-full shrink-0"
+                    style={{
+                      backgroundColor: activity.type === 'deal' ? 'var(--color-success)' : activity.type === 'lead' ? 'var(--color-info)' : 'var(--color-primary)',
+                    }}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <span className="text-[0.8rem] font-medium text-foreground">{activity.action}</span>
+                    <span className="text-[0.8rem] text-muted-foreground ml-2">{activity.detail}</span>
                   </div>
-                  <span style={{ fontSize: '0.7rem', color: 'var(--color-text-disabled)', flexShrink: 0 }}>{activity.time}</span>
+                  <span className="text-[0.7rem] text-muted-foreground shrink-0">{activity.time}</span>
                 </div>
               ))}
             </div>
           )}
         </SectionCard>
 
-        {/* Tasks */}
         <SectionCard>
           <SectionHeader title="Tasks" icon={<CheckSquare size={16} />} />
           {loading ? (
@@ -526,57 +516,53 @@ export default function WorkspaceDashboardPage() {
           ) : tasks.length === 0 ? (
             <EmptyState text="No pending tasks" />
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.75rem' }}>
+            <div className="flex flex-col gap-2 mt-3">
               {tasks.map((task) => (
-                <div key={task.id} style={{
-                  display: 'flex', alignItems: 'center', gap: '0.5rem',
-                  padding: '0.5rem 0.75rem',
-                  backgroundColor: 'var(--color-bg-main)',
-                  border: '1px solid var(--color-bg-elevated)',
-                  borderRadius: '0.375rem',
-                }}>
-                  <span style={{
-                    width: '6px', height: '6px', borderRadius: '50%', flexShrink: 0,
-                    backgroundColor: task.priority === 'Urgent' ? 'var(--color-error)' : task.priority === 'High' ? 'var(--color-warning)' : 'var(--color-border-main)',
-                  }} />
-                  <span style={{ flex: 1, fontSize: '0.8rem', color: 'var(--color-text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{task.title}</span>
-                  <span style={{ fontSize: '0.65rem', color: 'var(--color-text-disabled)', flexShrink: 0 }}>{task.dueDate}</span>
+                <div key={task.id} className="flex items-center gap-2 px-3 py-2 bg-surface-main border border-surface-elevated rounded-md">
+                  <span
+                    className="w-1.5 h-1.5 rounded-full shrink-0"
+                    style={{
+                      backgroundColor: task.priority === 'Urgent' ? 'var(--color-error)' : task.priority === 'High' ? 'var(--color-warning)' : 'var(--color-border-main)',
+                    }}
+                  />
+                  <span className="flex-1 text-[0.8rem] text-foreground overflow-hidden text-ellipsis whitespace-nowrap">{task.title}</span>
+                  <span className="text-[0.65rem] text-muted-foreground shrink-0">{task.dueDate}</span>
                 </div>
               ))}
             </div>
           )}
-          <Link href="/team/tasks" style={{ display: 'block', marginTop: '0.75rem', textAlign: 'center', color: 'var(--color-text-disabled)', fontSize: '0.75rem', textDecoration: 'none' }}>
-            View all tasks <ArrowRight size={10} style={{ verticalAlign: 'middle' }} />
+          <Link href="/team/tasks" className="block mt-3 text-center text-xs text-muted-foreground no-underline hover:text-foreground transition-colors">
+            View all tasks <ArrowRight size={10} className="inline align-middle" />
           </Link>
         </SectionCard>
       </div>
 
       {/* Row 5: Commerce + Analytics Strip */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-        <Link href="/orders" style={{ textDecoration: 'none' }}>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Link href="/orders" className="no-underline">
           <SectionCard compact>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <ShoppingCart size={16} style={{ color: 'var(--color-warning)' }} />
-                <span style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--color-text-primary)' }}>Commerce</span>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <ShoppingCart size={16} className="text-warning" />
+                <span className="text-sm font-semibold text-foreground">Commerce</span>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-                <span style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)' }}>Products · Orders · Storefront</span>
-                <ArrowRight size={14} style={{ color: 'var(--color-text-disabled)' }} />
+              <div className="flex items-center gap-6">
+                <span className="text-xs text-muted-foreground hidden sm:inline">Products · Orders · Storefront</span>
+                <ArrowRight size={14} className="text-muted-foreground" />
               </div>
             </div>
           </SectionCard>
         </Link>
-        <Link href="/analytics" style={{ textDecoration: 'none' }}>
+        <Link href="/analytics" className="no-underline">
           <SectionCard compact>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <Percent size={16} style={{ color: 'var(--color-info)' }} />
-                <span style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--color-text-primary)' }}>Analytics</span>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Percent size={16} className="text-info" />
+                <span className="text-sm font-semibold text-foreground">Analytics</span>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-                <span style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)' }}>Revenue · CRM · Attribution · SEO</span>
-                <ArrowRight size={14} style={{ color: 'var(--color-text-disabled)' }} />
+              <div className="flex items-center gap-6">
+                <span className="text-xs text-muted-foreground hidden sm:inline">Revenue · CRM · Attribution · SEO</span>
+                <ArrowRight size={14} className="text-muted-foreground" />
               </div>
             </div>
           </SectionCard>
@@ -594,24 +580,20 @@ function KPICard({ label, value, icon, color, href, subtitle }: {
   label: string; value: string | number; icon: React.ReactNode; color: string; href: string; subtitle?: string;
 }) {
   return (
-    <Link href={href} style={{ textDecoration: 'none' }}>
-      <div style={{
-        backgroundColor: 'var(--color-bg-paper)',
-        border: '1px solid var(--color-border-strong)',
-        borderLeft: `3px solid ${color}`,
-        borderRadius: '0.75rem',
-        padding: '1rem',
-        transition: 'border-color 0.2s',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+    <Link href={href} className="no-underline">
+      <div
+        className="bg-card border border-border-strong rounded-xl p-4 transition-colors hover:border-primary/50"
+        style={{ borderLeftWidth: '3px', borderLeftColor: color }}
+      >
+        <div className="flex items-center gap-2 mb-2">
           <span style={{ color }}>{icon}</span>
-          <span style={{ fontSize: '0.7rem', color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</span>
+          <span className="text-[0.7rem] text-muted-foreground uppercase tracking-wider">{label}</span>
         </div>
-        <p style={{ fontSize: '1.375rem', fontWeight: '700', color: 'var(--color-text-primary)', margin: 0 }}>
+        <p className="text-xl font-bold text-foreground m-0">
           {value}
         </p>
         {subtitle && (
-          <p style={{ fontSize: '0.65rem', color: 'var(--color-text-disabled)', margin: '0.25rem 0 0 0' }}>{subtitle}</p>
+          <p className="text-[0.65rem] text-muted-foreground mt-1 m-0">{subtitle}</p>
         )}
       </div>
     </Link>
@@ -620,12 +602,7 @@ function KPICard({ label, value, icon, color, href, subtitle }: {
 
 function SectionCard({ children, compact }: { children: React.ReactNode; compact?: boolean }) {
   return (
-    <div style={{
-      backgroundColor: 'var(--color-bg-paper)',
-      border: '1px solid var(--color-border-strong)',
-      borderRadius: '1rem',
-      padding: compact ? '1rem 1.25rem' : '1.25rem 1.5rem',
-    }}>
+    <div className={`bg-card border border-border-strong rounded-2xl ${compact ? 'px-5 py-4' : 'p-6'}`}>
       {children}
     </div>
   );
@@ -633,16 +610,16 @@ function SectionCard({ children, compact }: { children: React.ReactNode; compact
 
 function SectionHeader({ title, icon }: { title: string; icon: React.ReactNode }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-      <span style={{ color: 'var(--color-text-disabled)' }}>{icon}</span>
-      <h2 style={{ fontSize: '0.95rem', fontWeight: '600', color: 'var(--color-text-primary)', margin: 0 }}>{title}</h2>
+    <div className="flex items-center gap-2">
+      <span className="text-muted-foreground">{icon}</span>
+      <h2 className="text-[0.95rem] font-semibold text-foreground m-0">{title}</h2>
     </div>
   );
 }
 
 function SectionFooter({ text }: { text: string }) {
   return (
-    <div style={{ marginTop: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem', color: 'var(--color-text-disabled)', fontSize: '0.75rem' }}>
+    <div className="mt-3 flex items-center gap-1 text-xs text-muted-foreground">
       {text} <ArrowRight size={10} />
     </div>
   );
@@ -651,33 +628,29 @@ function SectionFooter({ text }: { text: string }) {
 function MiniStat({ label, value, color }: { label: string; value: string | number; color: string }) {
   return (
     <div>
-      <p style={{ fontSize: '0.65rem', color: 'var(--color-text-disabled)', margin: '0 0 0.25rem 0', textTransform: 'uppercase', letterSpacing: '0.03em' }}>{label}</p>
-      <p style={{ fontSize: '1.125rem', fontWeight: '700', color, margin: 0 }}>{value}</p>
+      <p className="text-[0.65rem] text-muted-foreground mb-1 uppercase tracking-wide">{label}</p>
+      <p className="text-lg font-bold m-0" style={{ color }}>{value}</p>
     </div>
   );
 }
 
 function NavRow({ icon, label, href }: { icon: React.ReactNode; label: string; href: string }) {
   return (
-    <Link href={href} onClick={(e) => e.stopPropagation()} style={{
-      display: 'flex', alignItems: 'center', gap: '0.625rem',
-      padding: '0.5rem 0.625rem',
-      backgroundColor: 'var(--color-bg-main)',
-      border: '1px solid var(--color-bg-elevated)',
-      borderRadius: '0.375rem',
-      textDecoration: 'none',
-      transition: 'background-color 0.15s',
-    }}>
-      <span style={{ color: 'var(--color-text-disabled)' }}>{icon}</span>
-      <span style={{ fontSize: '0.8rem', color: 'var(--color-text-primary)' }}>{label}</span>
-      <ArrowRight size={10} style={{ marginLeft: 'auto', color: 'var(--color-text-disabled)' }} />
+    <Link
+      href={href}
+      onClick={(e) => e.stopPropagation()}
+      className="flex items-center gap-2.5 px-2.5 py-2 bg-surface-main border border-surface-elevated rounded-md no-underline transition-colors hover:bg-surface-elevated"
+    >
+      <span className="text-muted-foreground">{icon}</span>
+      <span className="text-[0.8rem] text-foreground">{label}</span>
+      <ArrowRight size={10} className="ml-auto text-muted-foreground" />
     </Link>
   );
 }
 
 function LoadingPlaceholder() {
   return (
-    <div style={{ padding: '1.5rem', textAlign: 'center', color: 'var(--color-text-disabled)', fontSize: '0.8rem' }}>
+    <div className="py-6 text-center text-[0.8rem] text-muted-foreground">
       Loading...
     </div>
   );
@@ -685,7 +658,7 @@ function LoadingPlaceholder() {
 
 function EmptyState({ text }: { text: string }) {
   return (
-    <div style={{ padding: '1.5rem', textAlign: 'center', color: 'var(--color-text-disabled)', fontSize: '0.8rem' }}>
+    <div className="py-6 text-center text-[0.8rem] text-muted-foreground">
       {text}
     </div>
   );

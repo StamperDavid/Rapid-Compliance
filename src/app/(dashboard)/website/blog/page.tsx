@@ -145,377 +145,190 @@ export default function BlogManagementPage() {
 
   if (loading) {
     return (
-      <div style={{ padding: '2rem', fontFamily: 'system-ui' }}>
-        <div>Loading blog posts...</div>
+      <div className="p-8">
+        <div className="text-muted-foreground">Loading blog posts...</div>
       </div>
     );
   }
 
   return (
-    <div style={{ fontFamily: 'system-ui', minHeight: '100vh', background: 'var(--color-bg-elevated)' }}>
-      <div style={{ padding: '2rem' }}>
-        {/* Header */}
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: '2rem',
-        }}>
-          <div>
-            <h1 style={{ fontSize: '2rem', margin: '0 0 0.5rem', color: 'var(--color-text-primary)' }}>
-              Blog Posts
-            </h1>
-            <p style={{ margin: 0, color: 'var(--color-text-disabled)' }}>
-              Create and manage your blog content
-            </p>
-          </div>
-
-          <div style={{ display: 'flex', gap: '0.75rem' }}>
-            <button
-              onClick={manageCategories}
-              style={{
-                padding: '0.75rem 1.5rem',
-                background: 'var(--color-text-secondary)',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                fontSize: '1rem',
-                fontWeight: '500',
-              }}
-            >
-              📁 Categories
-            </button>
-            <button
-              onClick={createNewPost}
-              style={{
-                padding: '0.75rem 1.5rem',
-                background: 'var(--color-info)',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                fontSize: '1rem',
-                fontWeight: '600',
-              }}
-            >
-              + New Post
-            </button>
-          </div>
+    <div className="p-8 space-y-6">
+      {/* Header */}
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground mb-1">Blog Posts</h1>
+          <p className="text-muted-foreground">Create and manage your blog content</p>
         </div>
 
-        {/* Filters */}
-        <div style={{
-          display: 'flex',
-          gap: '1rem',
-          marginBottom: '2rem',
-          flexWrap: 'wrap',
-        }}>
-          {/* Status Filters */}
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
-            <button
-              onClick={() => setFilter('all')}
-              style={{
-                padding: '0.5rem 1rem',
-                background: filter === 'all' ? 'var(--color-info)' : 'var(--color-bg-paper)',
-                color: filter === 'all' ? 'white' : 'var(--color-text-disabled)',
-                border: '1px solid var(--color-border-light)',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                fontSize: '0.875rem',
-              }}
-            >
-              All ({posts.length})
-            </button>
-            <button
-              onClick={() => setFilter('draft')}
-              style={{
-                padding: '0.5rem 1rem',
-                background: filter === 'draft' ? 'var(--color-info)' : 'var(--color-bg-paper)',
-                color: filter === 'draft' ? 'white' : 'var(--color-text-disabled)',
-                border: '1px solid var(--color-border-light)',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                fontSize: '0.875rem',
-              }}
-            >
-              Drafts
-            </button>
-            <button
-              onClick={() => setFilter('published')}
-              style={{
-                padding: '0.5rem 1rem',
-                background: filter === 'published' ? 'var(--color-info)' : 'var(--color-bg-paper)',
-                color: filter === 'published' ? 'white' : 'var(--color-text-disabled)',
-                border: '1px solid var(--color-border-light)',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                fontSize: '0.875rem',
-              }}
-            >
-              Published
-            </button>
-          </div>
+        <div className="flex gap-3">
+          <button
+            onClick={manageCategories}
+            className="px-6 py-3 bg-muted text-white rounded cursor-pointer border-none text-base font-medium"
+          >
+            Categories
+          </button>
+          <button
+            onClick={createNewPost}
+            className="px-6 py-3 bg-info text-white rounded cursor-pointer border-none text-base font-semibold"
+          >
+            + New Post
+          </button>
+        </div>
+      </div>
 
-          {/* Category Filter */}
-          {categories.length > 0 && (
-            <select
-              value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
-              style={{
-                padding: '0.5rem 1rem',
-                border: '1px solid var(--color-border-light)',
-                borderRadius: '4px',
-                fontSize: '0.875rem',
-                cursor: 'pointer',
-              }}
-            >
-              <option value="all">All Categories</option>
-              {categories.map((cat) => (
-                <option key={cat} value={cat}>
-                  {cat}
-                </option>
-              ))}
-            </select>
-          )}
+      {/* Filters */}
+      <div className="flex gap-4 flex-wrap">
+        {/* Status Filters */}
+        <div className="flex gap-2">
+          <button
+            onClick={() => setFilter('all')}
+            className={`px-4 py-2 rounded border text-sm cursor-pointer ${filter === 'all' ? 'bg-info text-white border-info' : 'bg-card text-muted-foreground border-border'}`}
+          >
+            All ({posts.length})
+          </button>
+          <button
+            onClick={() => setFilter('draft')}
+            className={`px-4 py-2 rounded border text-sm cursor-pointer ${filter === 'draft' ? 'bg-info text-white border-info' : 'bg-card text-muted-foreground border-border'}`}
+          >
+            Drafts
+          </button>
+          <button
+            onClick={() => setFilter('published')}
+            className={`px-4 py-2 rounded border text-sm cursor-pointer ${filter === 'published' ? 'bg-info text-white border-info' : 'bg-card text-muted-foreground border-border'}`}
+          >
+            Published
+          </button>
         </div>
 
-        {/* Posts List */}
-        {posts.length === 0 ? (
-          <div style={{
-            background: 'var(--color-bg-paper)',
-            borderRadius: '8px',
-            padding: '4rem 2rem',
-            textAlign: 'center',
-          }}>
-            <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📝</div>
-            <h3 style={{ fontSize: '1.25rem', margin: '0 0 0.5rem', color: 'var(--color-text-disabled)' }}>
-              No blog posts yet
-            </h3>
-            <p style={{ margin: '0 0 1.5rem', color: 'var(--color-text-secondary)' }}>
-              Create your first blog post to get started
-            </p>
-            <button
-              onClick={createNewPost}
-              style={{
-                padding: '0.75rem 1.5rem',
-                background: 'var(--color-info)',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                fontSize: '1rem',
-                fontWeight: '500',
-              }}
-            >
-              Create Post
-            </button>
-          </div>
-        ) : (
-          <div style={{
-            display: 'grid',
-            gap: '1rem',
-          }}>
-            {posts.map((post) => (
-              <div
-                key={post.id}
-                style={{
-                  background: 'var(--color-bg-paper)',
-                  borderRadius: '8px',
-                  padding: '1.5rem',
-                  display: 'flex',
-                  gap: '1.5rem',
-                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-                }}
-              >
-                {/* Featured Image */}
-                {post.featuredImage && (
-                  <div style={{
-                    width: '200px',
-                    height: '150px',
-                    flexShrink: 0,
-                    borderRadius: '4px',
-                    overflow: 'hidden',
-                    position: 'relative',
-                  }}>
-                    <Image
-                      src={post.featuredImage}
-                      alt={post.title}
-                      fill
-                      style={{
-                        objectFit: 'cover',
-                      }}
-                    />
-                  </div>
-                )}
-
-                {/* Content */}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', marginBottom: '0.5rem' }}>
-                    <h3 style={{ margin: 0, fontSize: '1.25rem', color: 'var(--color-text-primary)', flex: 1 }}>
-                      {post.title}
-                    </h3>
-                    <div style={{ display: 'flex', gap: '0.5rem', flexShrink: 0 }}>
-                      <span style={{
-                        padding: '0.25rem 0.5rem',
-                        background: post.status === 'published' ? 'var(--color-success)' : 'var(--color-warning)',
-                        color: post.status === 'published' ? 'white' : 'var(--color-bg-main)',
-                        borderRadius: '4px',
-                        fontSize: '0.75rem',
-                        fontWeight: '600',
-                        textTransform: 'uppercase',
-                      }}>
-                        {post.status}
-                      </span>
-                      {post.featured && (
-                        <span style={{
-                          padding: '0.25rem 0.5rem',
-                          background: 'var(--color-warning)',
-                          color: 'white',
-                          borderRadius: '4px',
-                          fontSize: '0.75rem',
-                          fontWeight: '600',
-                          textTransform: 'uppercase',
-                        }}>
-                          ⭐ FEATURED
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  <p style={{
-                    fontSize: '0.875rem',
-                    color: 'var(--color-text-secondary)',
-                    margin: '0 0 0.75rem',
-                    lineHeight: '1.5',
-                  }}>
-                    {post.excerpt}
-                  </p>
-
-                  <div style={{ display: 'flex', gap: '1rem', fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginBottom: '1rem' }}>
-                    <span>By {(post.authorName !== '' && post.authorName != null) ? post.authorName : 'Unknown'}</span>
-                    <span>•</span>
-                    <span>{new Date(post.createdAt).toLocaleDateString()}</span>
-                    {(post.categories ?? []).length > 0 && (
-                      <>
-                        <span>•</span>
-                        <span>{(post.categories ?? []).join(', ')}</span>
-                      </>
-                    )}
-                    {post.readTime && (
-                      <>
-                        <span>•</span>
-                        <span>{post.readTime} min read</span>
-                      </>
-                    )}
-                  </div>
-
-                  <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    <button
-                      onClick={() => editPost(post.id)}
-                      style={{
-                        padding: '0.5rem 1rem',
-                        background: 'var(--color-info)',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        fontSize: '0.875rem',
-                      }}
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => void toggleFeatured(post)}
-                      style={{
-                        padding: '0.5rem 1rem',
-                        background: post.featured ? 'var(--color-text-secondary)' : 'var(--color-warning)',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        fontSize: '0.875rem',
-                      }}
-                    >
-                      {post.featured ? 'Unfeature' : 'Feature'}
-                    </button>
-                    <button
-                      onClick={() => handleDeleteClick(post.id)}
-                      style={{
-                        padding: '0.5rem 1rem',
-                        background: 'var(--color-error)',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        fontSize: '0.875rem',
-                      }}
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </div>
-              </div>
+        {/* Category Filter */}
+        {categories.length > 0 && (
+          <select
+            value={categoryFilter}
+            onChange={(e) => setCategoryFilter(e.target.value)}
+            className="px-4 py-2 border border-border rounded text-sm cursor-pointer bg-card text-foreground"
+          >
+            <option value="all">All Categories</option>
+            {categories.map((cat) => (
+              <option key={cat} value={cat}>
+                {cat}
+              </option>
             ))}
-          </div>
+          </select>
         )}
       </div>
 
+      {/* Posts List */}
+      {posts.length === 0 ? (
+        <div className="bg-card rounded-lg px-8 py-16 text-center">
+          <div className="text-5xl mb-4">📝</div>
+          <h3 className="text-xl font-medium text-muted-foreground mb-1">No blog posts yet</h3>
+          <p className="text-muted-foreground mb-6">Create your first blog post to get started</p>
+          <button
+            onClick={createNewPost}
+            className="px-6 py-3 bg-info text-white rounded cursor-pointer border-none text-base font-medium"
+          >
+            Create Post
+          </button>
+        </div>
+      ) : (
+        <div className="grid gap-4">
+          {posts.map((post) => (
+            <div
+              key={post.id}
+              className="bg-card rounded-lg p-6 flex gap-6 shadow-sm"
+            >
+              {/* Featured Image */}
+              {post.featuredImage && (
+                <div className="w-[200px] h-[150px] flex-shrink-0 rounded overflow-hidden relative">
+                  <Image
+                    src={post.featuredImage}
+                    alt={post.title}
+                    fill
+                    className="object-cover"
+                  />
+                </div>
+              )}
+
+              {/* Content */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-start gap-3 mb-1">
+                  <h3 className="text-xl font-medium text-foreground flex-1 m-0">{post.title}</h3>
+                  <div className="flex gap-2 flex-shrink-0">
+                    <span className={`px-2 py-0.5 rounded text-xs font-semibold uppercase ${post.status === 'published' ? 'bg-success text-white' : 'bg-warning text-foreground'}`}>
+                      {post.status}
+                    </span>
+                    {post.featured && (
+                      <span className="px-2 py-0.5 bg-warning text-white rounded text-xs font-semibold uppercase">
+                        FEATURED
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <p className="text-sm text-muted-foreground mb-3 leading-relaxed">{post.excerpt}</p>
+
+                <div className="flex gap-4 text-xs text-muted-foreground mb-4">
+                  <span>By {(post.authorName !== '' && post.authorName != null) ? post.authorName : 'Unknown'}</span>
+                  <span>•</span>
+                  <span>{new Date(post.createdAt).toLocaleDateString()}</span>
+                  {(post.categories ?? []).length > 0 && (
+                    <>
+                      <span>•</span>
+                      <span>{(post.categories ?? []).join(', ')}</span>
+                    </>
+                  )}
+                  {post.readTime && (
+                    <>
+                      <span>•</span>
+                      <span>{post.readTime} min read</span>
+                    </>
+                  )}
+                </div>
+
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => editPost(post.id)}
+                    className="px-4 py-2 bg-info text-white rounded cursor-pointer border-none text-sm"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => void toggleFeatured(post)}
+                    className={`px-4 py-2 text-white rounded cursor-pointer border-none text-sm ${post.featured ? 'bg-muted' : 'bg-warning'}`}
+                  >
+                    {post.featured ? 'Unfeature' : 'Feature'}
+                  </button>
+                  <button
+                    onClick={() => handleDeleteClick(post.id)}
+                    className="px-4 py-2 bg-destructive text-white rounded cursor-pointer border-none text-sm"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Delete Confirmation Modal */}
       {deleteConfirm && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0, 0, 0, 0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000,
-        }}>
-          <div style={{
-            background: 'var(--color-bg-paper)',
-            borderRadius: '8px',
-            padding: '2rem',
-            maxWidth: '400px',
-            width: '90%',
-            boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-          }}>
-            <h3 style={{ margin: '0 0 1rem', fontSize: '1.25rem', color: 'var(--color-text-primary)' }}>
-              Delete Post
-            </h3>
-            <p style={{ margin: '0 0 1.5rem', color: 'var(--color-text-secondary)' }}>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[1000]">
+          <div className="bg-card rounded-lg p-8 max-w-sm w-[90%] shadow-md">
+            <h3 className="text-xl font-semibold text-foreground mb-4">Delete Post</h3>
+            <p className="text-muted-foreground mb-6">
               Are you sure you want to delete this post? This action cannot be undone.
             </p>
-            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+            <div className="flex gap-3 justify-end">
               <button
                 onClick={cancelDelete}
-                style={{
-                  padding: '0.5rem 1rem',
-                  background: 'var(--color-text-secondary)',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: 'pointer',
-                  fontSize: '0.875rem',
-                }}
+                className="px-4 py-2 bg-muted text-white rounded cursor-pointer border-none text-sm"
               >
                 Cancel
               </button>
               <button
                 onClick={confirmDelete}
-                style={{
-                  padding: '0.5rem 1rem',
-                  background: 'var(--color-error)',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
-                  cursor: 'pointer',
-                  fontSize: '0.875rem',
-                  fontWeight: '600',
-                }}
+                className="px-4 py-2 bg-destructive text-white rounded cursor-pointer border-none text-sm font-semibold"
               >
                 Delete
               </button>

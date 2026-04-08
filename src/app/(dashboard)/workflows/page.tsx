@@ -21,6 +21,7 @@ import {
   AlertCircle,
   FileText
 } from 'lucide-react';
+import { PageTitle, SectionDescription } from '@/components/ui/typography';
 import { getWorkflows, setWorkflowStatus, deleteWorkflow } from '@/lib/workflows/workflow-service';
 import { usePagination } from '@/hooks/usePagination';
 import { logger } from '@/lib/logger/logger';
@@ -131,10 +132,9 @@ export default function WorkflowsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-surface-main p-8">
+    <div className="p-8 space-y-6">
       {/* Header */}
       <motion.div
-        className="mb-8"
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
@@ -145,8 +145,8 @@ export default function WorkflowsPage() {
               <WorkflowIcon className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-[var(--color-text-primary)]">Workflows</h1>
-              <p className="text-sm text-[var(--color-text-secondary)] mt-1">Automate your sales processes</p>
+              <PageTitle>Workflows</PageTitle>
+              <SectionDescription className="mt-1">Automate your sales processes</SectionDescription>
             </div>
           </div>
           <motion.button
@@ -201,8 +201,8 @@ export default function WorkflowsPage() {
           <div className="w-20 h-20 mx-auto mb-6 rounded-2xl flex items-center justify-center border border-border-strong" style={{ background: 'linear-gradient(135deg, rgba(var(--color-primary-rgb), 0.2), rgba(var(--color-secondary-rgb), 0.2))' }}>
             <WorkflowIcon className="w-10 h-10 text-primary" />
           </div>
-          <h3 className="text-xl font-semibold text-[var(--color-text-primary)] mb-2">No workflows yet</h3>
-          <p className="text-[var(--color-text-secondary)] mb-6">Create your first automation to get started</p>
+          <h3 className="text-xl font-semibold text-foreground mb-2">No workflows yet</h3>
+          <p className="text-muted-foreground mb-6">Create your first automation to get started</p>
           <motion.button
             onClick={() => router.push(`/workflows/builder`)}
             className="px-8 py-3 bg-gradient-to-r from-primary to-secondary hover:from-primary-light hover:to-secondary-light text-white font-semibold rounded-xl shadow-lg shadow-primary/25 inline-flex items-center gap-2 transition-all duration-300"
@@ -237,7 +237,7 @@ export default function WorkflowsPage() {
                       <div className="w-10 h-10 rounded-lg flex items-center justify-center border border-border-strong" style={{ background: 'linear-gradient(135deg, rgba(var(--color-primary-rgb), 0.2), rgba(var(--color-secondary-rgb), 0.2))' }}>
                         <WorkflowIcon className="w-5 h-5 text-primary" />
                       </div>
-                      <h3 className="text-xl font-semibold text-[var(--color-text-primary)] group-hover:text-primary transition-colors">
+                      <h3 className="text-xl font-semibold text-foreground group-hover:text-primary transition-colors">
                         {workflow.name}
                       </h3>
                       {getStatusBadge(workflow.status)}
@@ -245,11 +245,11 @@ export default function WorkflowsPage() {
 
                     {/* Description */}
                     {workflow.description && (
-                      <p className="text-[var(--color-text-secondary)] mb-4 ml-13">{workflow.description}</p>
+                      <p className="text-muted-foreground mb-4 ml-13">{workflow.description}</p>
                     )}
 
                     {/* Metadata */}
-                    <div className="flex items-center gap-6 text-sm text-[var(--color-text-secondary)] ml-13">
+                    <div className="flex items-center gap-6 text-sm text-muted-foreground ml-13">
                       <div className="flex items-center gap-2">
                         <Zap className="w-4 h-4" />
                         <span>Trigger: {workflow.trigger?.type ?? 'manual'}</span>
@@ -346,7 +346,7 @@ export default function WorkflowsPage() {
               <motion.button
                 onClick={() => void loadMore()}
                 disabled={loading || !hasMore}
-                className="px-8 py-3 bg-surface-paper backdrop-blur-xl border border-border-light text-[var(--color-text-primary)] rounded-xl hover:border-border-strong disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300"
+                className="px-8 py-3 bg-surface-paper backdrop-blur-xl border border-border-light text-foreground rounded-xl hover:border-border-strong disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
               >
@@ -370,9 +370,9 @@ export default function WorkflowsPage() {
       {confirmDialog && (
         <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
           <div className="bg-surface-paper rounded-xl p-6 max-w-md mx-4 border border-border-light shadow-xl">
-            <p className="text-[var(--color-text-primary)] mb-4">{confirmDialog.message}</p>
+            <p className="text-foreground mb-4">{confirmDialog.message}</p>
             <div className="flex justify-end gap-3">
-              <button onClick={() => setConfirmDialog(null)} className="px-4 py-2 rounded-lg text-[var(--color-text-secondary)] hover:bg-surface-elevated">Cancel</button>
+              <button onClick={() => setConfirmDialog(null)} className="px-4 py-2 rounded-lg text-muted-foreground hover:bg-surface-elevated">Cancel</button>
               <button onClick={confirmDialog.onConfirm} className="px-4 py-2 rounded-lg text-white" style={{ backgroundColor: 'var(--color-error)' }}>Confirm</button>
             </div>
           </div>

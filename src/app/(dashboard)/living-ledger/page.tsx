@@ -1,9 +1,9 @@
 /**
  * Living Ledger Dashboard
- * 
+ *
  * CRM dashboard with AI-powered deal health monitoring and next best actions.
  * Real-time intelligence via Signal Bus integration.
- * 
+ *
  * Features:
  * - Deal health scores with visual indicators
  * - AI-powered next best action recommendations
@@ -24,6 +24,7 @@ import { useToast } from '@/hooks/useToast';
 import { logger } from '@/lib/logger/logger';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import { getDealsCollection } from '@/lib/firebase/collections';
+import { PageTitle, SectionDescription } from '@/components/ui/typography';
 import type { Deal } from '@/lib/crm/deal-service';
 import type { DealHealthScore } from '@/lib/crm/deal-health';
 import type { ActionRecommendations } from '@/lib/crm/next-best-action-engine';
@@ -198,171 +199,82 @@ export default function LivingLedgerPage() {
 
   if (loading) {
     return (
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          minHeight: '100vh',
-          backgroundColor: 'var(--color-bg-main)',
-        }}
-      >
-        <div style={{ color: 'var(--color-text-primary)' }}>Loading Living Ledger...</div>
+      <div className="flex items-center justify-center py-16">
+        <div className="text-foreground">Loading Living Ledger...</div>
       </div>
     );
   }
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: 'var(--color-bg-main)', padding: '2rem' }}>
+    <div className="p-8 space-y-6">
       {/* Header */}
-      <div style={{ marginBottom: '2rem' }}>
-        <h1
-          style={{
-            fontSize: '2rem',
-            fontWeight: '800',
-            color: 'var(--color-text-primary)',
-            margin: 0,
-            marginBottom: '0.5rem',
-          }}
-        >
-          🧠 CRM Living Ledger
-        </h1>
-        <p style={{ fontSize: '1rem', color: 'var(--color-text-secondary)', margin: 0 }}>
+      <div>
+        <PageTitle className="mb-1">CRM Living Ledger</PageTitle>
+        <SectionDescription>
           AI-powered deal intelligence with real-time health monitoring and next best actions
-        </p>
+        </SectionDescription>
       </div>
 
       {/* Controls */}
-      <div
-        style={{
-          display: 'flex',
-          gap: '1rem',
-          marginBottom: '2rem',
-          padding: '1rem',
-          backgroundColor: 'var(--color-bg-main)',
-          borderRadius: '0.75rem',
-          border: '1px solid var(--color-border-light)',
-        }}
-      >
+      <div className="flex gap-4 p-4 bg-card border border-border-light rounded-xl items-center">
         <button
           onClick={() => void handleStartMonitoring()}
           disabled={monitoringEnabled}
+          className="px-6 py-3 border-none rounded-lg font-semibold text-sm text-foreground cursor-pointer transition-opacity disabled:opacity-60 disabled:cursor-not-allowed"
           style={{
-            padding: '0.75rem 1.5rem',
             backgroundColor: monitoringEnabled ? 'var(--color-success-dark)' : 'var(--color-primary)',
-            color: 'var(--color-text-primary)',
-            border: 'none',
-            borderRadius: '0.5rem',
-            cursor: monitoringEnabled ? 'not-allowed' : 'pointer',
-            fontWeight: '600',
-            fontSize: '0.875rem',
-            opacity: monitoringEnabled ? 0.6 : 1,
           }}
         >
-          {monitoringEnabled ? '✓ Monitoring Active' : '▶️ Start Real-Time Monitoring'}
+          {monitoringEnabled ? '✓ Monitoring Active' : '▶ Start Real-Time Monitoring'}
         </button>
 
         <button
           onClick={() => void handleHealthCheck()}
-          style={{
-            padding: '0.75rem 1.5rem',
-            backgroundColor: 'var(--color-bg-paper)',
-            color: 'var(--color-text-primary)',
-            border: '1px solid var(--color-border-strong)',
-            borderRadius: '0.5rem',
-            cursor: 'pointer',
-            fontWeight: '600',
-            fontSize: '0.875rem',
-          }}
+          className="px-6 py-3 bg-card border border-border-strong rounded-lg cursor-pointer font-semibold text-sm text-foreground"
         >
-          🏥 Run Health Check
+          Run Health Check
         </button>
 
         {healthCheckSummary != null && (
-          <div
-            style={{
-              flex: 1,
-              display: 'flex',
-              gap: '1.5rem',
-              alignItems: 'center',
-              paddingLeft: '1.5rem',
-              borderLeft: '1px solid var(--color-border-strong)',
-            }}
-          >
+          <div className="flex-1 flex gap-6 items-center pl-6 border-l border-border-strong">
             <div>
-              <div style={{ fontSize: '0.625rem', color: 'var(--color-text-disabled)' }}>TOTAL DEALS</div>
-              <div style={{ fontSize: '1.25rem', fontWeight: '700', color: 'var(--color-text-primary)' }}>
-                {healthCheckSummary.total}
-              </div>
+              <div className="text-xs text-muted-foreground uppercase">Total Deals</div>
+              <div className="text-xl font-bold text-foreground">{healthCheckSummary.total}</div>
             </div>
             <div>
-              <div style={{ fontSize: '0.625rem', color: 'var(--color-text-disabled)' }}>HEALTHY</div>
-              <div style={{ fontSize: '1.25rem', fontWeight: '700', color: 'var(--color-success)' }}>
-                {healthCheckSummary.healthy}
-              </div>
+              <div className="text-xs text-muted-foreground uppercase">Healthy</div>
+              <div className="text-xl font-bold text-success">{healthCheckSummary.healthy}</div>
             </div>
             <div>
-              <div style={{ fontSize: '0.625rem', color: 'var(--color-text-disabled)' }}>AT RISK</div>
-              <div style={{ fontSize: '1.25rem', fontWeight: '700', color: 'var(--color-warning)' }}>
-                {healthCheckSummary.atRisk}
-              </div>
+              <div className="text-xs text-muted-foreground uppercase">At Risk</div>
+              <div className="text-xl font-bold" style={{ color: 'var(--color-warning)' }}>{healthCheckSummary.atRisk}</div>
             </div>
             <div>
-              <div style={{ fontSize: '0.625rem', color: 'var(--color-text-disabled)' }}>CRITICAL</div>
-              <div style={{ fontSize: '1.25rem', fontWeight: '700', color: 'var(--color-error)' }}>
-                {healthCheckSummary.critical}
-              </div>
+              <div className="text-xs text-muted-foreground uppercase">Critical</div>
+              <div className="text-xl font-bold text-error">{healthCheckSummary.critical}</div>
             </div>
           </div>
         )}
       </div>
 
       {/* Main Layout */}
-      <div style={{ display: 'grid', gridTemplateColumns: '300px 1fr', gap: '2rem' }}>
+      <div className="grid gap-8" style={{ gridTemplateColumns: '300px 1fr' }}>
         {/* Deals List */}
         <div>
-          <h3
-            style={{
-              fontSize: '0.875rem',
-              fontWeight: '700',
-              color: 'var(--color-text-primary)',
-              marginBottom: '1rem',
-              textTransform: 'uppercase',
-              letterSpacing: '0.05em',
-            }}
-          >
+          <h3 className="text-sm font-bold text-foreground mb-4 uppercase tracking-wider">
             Active Deals ({deals.length})
           </h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          <div className="flex flex-col gap-3">
             {deals.length === 0 ? (
-              <div
-                style={{
-                  padding: '2rem',
-                  backgroundColor: 'var(--color-bg-main)',
-                  border: '1px solid var(--color-border-light)',
-                  borderRadius: '0.5rem',
-                  textAlign: 'center',
-                }}
-              >
-                <div style={{ fontSize: '2rem', marginBottom: '0.75rem' }}>📊</div>
-                <div style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--color-text-primary)', marginBottom: '0.25rem' }}>
-                  No deals yet
-                </div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginBottom: '1rem' }}>
+              <div className="p-8 bg-card border border-border-light rounded-lg text-center">
+                <div className="text-3xl mb-3">📊</div>
+                <div className="text-sm font-semibold text-foreground mb-1">No deals yet</div>
+                <div className="text-xs text-muted-foreground mb-4">
                   Add deals from the CRM to track health scores and get AI recommendations.
                 </div>
                 <Link
                   href="/deals"
-                  style={{
-                    display: 'inline-block',
-                    padding: '0.5rem 1rem',
-                    backgroundColor: 'var(--color-primary)',
-                    color: 'var(--color-text-primary)',
-                    borderRadius: '0.375rem',
-                    fontSize: '0.75rem',
-                    fontWeight: '600',
-                    textDecoration: 'none',
-                  }}
+                  className="inline-block px-4 py-2 bg-primary text-foreground rounded text-xs font-semibold no-underline"
                 >
                   Go to Deals
                 </Link>
@@ -371,45 +283,23 @@ export default function LivingLedgerPage() {
               <div
                 key={deal.id}
                 onClick={() => setSelectedDealId(deal.id)}
-                style={{
-                  padding: '1rem',
-                  backgroundColor: selectedDealId === deal.id ? 'var(--color-bg-paper)' : 'var(--color-bg-main)',
-                  border: `1px solid ${selectedDealId === deal.id ? 'var(--color-primary)' : 'var(--color-bg-paper)'}`,
-                  borderRadius: '0.5rem',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s',
-                }}
-                onMouseEnter={(e) => {
-                  if (selectedDealId !== deal.id) {
-                    e.currentTarget.style.backgroundColor = 'var(--color-bg-main)';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  if (selectedDealId !== deal.id) {
-                    e.currentTarget.style.backgroundColor = 'var(--color-bg-main)';
-                  }
-                }}
+                className={`p-4 rounded-lg border cursor-pointer transition-all ${
+                  selectedDealId === deal.id
+                    ? 'bg-card border-primary'
+                    : 'bg-card border-card hover:bg-card'
+                }`}
               >
-                <div style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--color-text-primary)', marginBottom: '0.25rem' }}>
+                <div className="text-sm font-semibold text-foreground mb-1">
                   {deal.companyName}
                 </div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginBottom: '0.5rem' }}>
+                <div className="text-xs text-muted-foreground mb-2">
                   {deal.name}
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: '0.875rem', fontWeight: '700', color: 'var(--color-success)' }}>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-bold text-success">
                     ${(deal.value / 1000).toFixed(0)}k
                   </span>
-                  <span
-                    style={{
-                      padding: '0.125rem 0.5rem',
-                      backgroundColor: 'var(--color-bg-paper)',
-                      color: 'var(--color-primary)',
-                      borderRadius: '9999px',
-                      fontSize: '0.625rem',
-                      fontWeight: '600',
-                    }}
-                  >
+                  <span className="px-2 py-0.5 bg-card text-primary rounded-full text-xs font-semibold">
                     {deal.stage}
                   </span>
                 </div>
@@ -423,31 +313,23 @@ export default function LivingLedgerPage() {
           {selectedDeal ? (
             <div>
               {/* Deal Header */}
-              <div
-                style={{
-                  padding: '1.5rem',
-                  backgroundColor: 'var(--color-bg-main)',
-                  borderRadius: '0.75rem',
-                  border: '1px solid var(--color-border-light)',
-                  marginBottom: '2rem',
-                }}
-              >
-                <h2 style={{ fontSize: '1.5rem', fontWeight: '800', color: 'var(--color-text-primary)', margin: 0, marginBottom: '0.5rem' }}>
+              <div className="p-6 bg-card border border-border-light rounded-xl mb-8">
+                <h2 className="text-2xl font-black text-foreground mb-2">
                   {selectedDeal.name}
                 </h2>
-                <div style={{ display: 'flex', gap: '2rem', fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>
+                <div className="flex gap-8 text-sm text-muted-foreground">
                   <div>
-                    Value: <span style={{ color: 'var(--color-success)', fontWeight: '700' }}>${selectedDeal.value.toLocaleString()}</span>
+                    Value: <span className="text-success font-bold">${selectedDeal.value.toLocaleString()}</span>
                   </div>
                   <div>
-                    Stage: <span style={{ color: 'var(--color-primary)', fontWeight: '600' }}>{selectedDeal.stage}</span>
+                    Stage: <span className="text-primary font-semibold">{selectedDeal.stage}</span>
                   </div>
                   <div>
-                    Probability: <span style={{ color: 'var(--color-text-primary)', fontWeight: '600' }}>{selectedDeal.probability}%</span>
+                    Probability: <span className="text-foreground font-semibold">{selectedDeal.probability}%</span>
                   </div>
                   <div>
                     Close Date:{' '}
-                    <span style={{ color: 'var(--color-text-primary)', fontWeight: '600' }}>
+                    <span className="text-foreground font-semibold">
                       {selectedDeal.expectedCloseDate != null && selectedDeal.expectedCloseDate instanceof Date
                         ? selectedDeal.expectedCloseDate.toLocaleDateString()
                         : 'N/A'}
@@ -457,22 +339,13 @@ export default function LivingLedgerPage() {
               </div>
 
               {/* Health & Actions Grid */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 {/* Health Score */}
                 <div>
                   {selectedHealth ? (
                     <DealHealthCard health={selectedHealth} dealName={selectedDeal.companyName} />
                   ) : (
-                    <div
-                      style={{
-                        padding: '2rem',
-                        backgroundColor: 'var(--color-bg-main)',
-                        borderRadius: '0.75rem',
-                        border: '1px solid var(--color-border-light)',
-                        textAlign: 'center',
-                        color: 'var(--color-text-disabled)',
-                      }}
-                    >
+                    <div className="p-8 bg-card border border-border-light rounded-xl text-center text-muted-foreground">
                       Loading health score...
                     </div>
                   )}
@@ -489,16 +362,7 @@ export default function LivingLedgerPage() {
                       }}
                     />
                   ) : (
-                    <div
-                      style={{
-                        padding: '2rem',
-                        backgroundColor: 'var(--color-bg-main)',
-                        borderRadius: '0.75rem',
-                        border: '1px solid var(--color-border-light)',
-                        textAlign: 'center',
-                        color: 'var(--color-text-disabled)',
-                      }}
-                    >
+                    <div className="p-8 bg-card border border-border-light rounded-xl text-center text-muted-foreground">
                       Loading recommendations...
                     </div>
                   )}
@@ -506,16 +370,7 @@ export default function LivingLedgerPage() {
               </div>
             </div>
           ) : (
-            <div
-              style={{
-                padding: '4rem',
-                backgroundColor: 'var(--color-bg-main)',
-                borderRadius: '0.75rem',
-                border: '1px solid var(--color-border-light)',
-                textAlign: 'center',
-                color: 'var(--color-text-disabled)',
-              }}
-            >
+            <div className="p-16 bg-card border border-border-light rounded-xl text-center text-muted-foreground">
               Select a deal to view details
             </div>
           )}

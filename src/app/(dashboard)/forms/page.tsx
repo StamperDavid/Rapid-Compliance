@@ -15,6 +15,7 @@ import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import Link from 'next/link';
+import { PageTitle, SectionDescription } from '@/components/ui/typography';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useOptimisticDelete } from '@/hooks/useOptimisticDelete';
 import { DataTable, type ColumnDef, type BulkAction } from '@/components/ui/data-table';
@@ -130,7 +131,7 @@ const getStatusBadgeClasses = (status: FormStatus) => {
     case 'archived':
       return 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/30';
     default:
-      return 'text-[var(--color-text-secondary)] border border-[var(--color-border-light)]';
+      return 'text-muted-foreground border border-[var(--color-border-light)]';
   }
 };
 
@@ -276,9 +277,9 @@ export default function FormsPage() {
       accessor: (form) => form.name,
       render: (form) => (
         <div>
-          <span className="font-medium text-[var(--color-text-primary)]">{form.name}</span>
+          <span className="font-medium text-foreground">{form.name}</span>
           {form.description && (
-            <p className="text-xs text-[var(--color-text-disabled)] mt-0.5 line-clamp-1">{form.description}</p>
+            <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{form.description}</p>
           )}
         </div>
       ),
@@ -298,7 +299,7 @@ export default function FormsPage() {
       header: 'Submissions',
       accessor: (form) => form.submissionCount || 0,
       render: (form) => (
-        <span className="text-[var(--color-text-secondary)] font-medium">{form.submissionCount || 0}</span>
+        <span className="text-muted-foreground font-medium">{form.submissionCount || 0}</span>
       ),
     },
     {
@@ -306,7 +307,7 @@ export default function FormsPage() {
       header: 'Views',
       accessor: (form) => form.viewCount || 0,
       render: (form) => (
-        <span className="text-[var(--color-text-secondary)] font-medium">{form.viewCount || 0}</span>
+        <span className="text-muted-foreground font-medium">{form.viewCount || 0}</span>
       ),
     },
     {
@@ -318,7 +319,7 @@ export default function FormsPage() {
           ? Math.round((form.submissionCount / form.viewCount) * 100)
           : 0;
         return (
-          <span className={`font-medium ${rate > 0 ? 'text-success' : 'text-[var(--color-text-disabled)]'}`}>
+          <span className={`font-medium ${rate > 0 ? 'text-success' : 'text-muted-foreground'}`}>
             {rate}%
           </span>
         );
@@ -335,7 +336,7 @@ export default function FormsPage() {
         return date.toISOString();
       },
       render: (form) => (
-        <span className="text-[var(--color-text-disabled)] text-sm">{formatDate(form.updatedAt)}</span>
+        <span className="text-muted-foreground text-sm">{formatDate(form.updatedAt)}</span>
       ),
     },
     {
@@ -347,7 +348,7 @@ export default function FormsPage() {
         <div className="flex gap-2">
           <button
             onClick={() => router.push(`/forms/${form.id}/edit`)}
-            className="p-2 text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-surface-elevated rounded-lg transition-all"
+            className="p-2 text-muted-foreground hover:text-foreground hover:bg-surface-elevated rounded-lg transition-all"
             title="Edit form"
           >
             <Pencil className="w-4 h-4" />
@@ -357,7 +358,7 @@ export default function FormsPage() {
               href={`/forms/${form.id}`}
               target="_blank"
               onClick={(e) => e.stopPropagation()}
-              className="p-2 text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-surface-elevated rounded-lg transition-all"
+              className="p-2 text-muted-foreground hover:text-foreground hover:bg-surface-elevated rounded-lg transition-all"
               title="View form"
             >
               <Eye className="w-4 h-4" />
@@ -379,23 +380,21 @@ export default function FormsPage() {
   ], [handleBulkDelete]);
 
   return (
-    <div className="min-h-screen bg-surface-main p-8">
+    <div className="p-8 space-y-6">
       <div>
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex justify-between items-start mb-8"
+          className="flex justify-between items-start"
         >
           <div className="flex items-start gap-4">
             <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center flex-shrink-0">
               <FileText className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-[var(--color-text-primary)] mb-2">Forms</h1>
-              <p className="text-sm text-[var(--color-text-secondary)]">
-                Create and manage forms to capture leads and collect data
-              </p>
+              <PageTitle className="mb-2">Forms</PageTitle>
+              <SectionDescription>Create and manage forms to capture leads and collect data</SectionDescription>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -407,7 +406,7 @@ export default function FormsPage() {
                 className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                   view === 'cards'
                     ? 'bg-gradient-to-r from-primary to-secondary text-white shadow-lg shadow-primary/25'
-                    : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-surface-elevated'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-surface-elevated'
                 }`}
               >
                 <LayoutGrid className="w-4 h-4" />
@@ -419,7 +418,7 @@ export default function FormsPage() {
                 className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                   view === 'table'
                     ? 'bg-gradient-to-r from-primary to-secondary text-white shadow-lg shadow-primary/25'
-                    : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-surface-elevated'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-surface-elevated'
                 }`}
               >
                 <List className="w-4 h-4" />
@@ -457,7 +456,7 @@ export default function FormsPage() {
                 ${
                   activeFilter === filter
                     ? 'bg-gradient-to-r from-primary to-secondary text-white shadow-lg shadow-primary/25'
-                    : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-surface-elevated'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-surface-elevated'
                 }
               `}
             >
@@ -476,8 +475,7 @@ export default function FormsPage() {
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="mb-6 p-4 border rounded-xl text-error text-sm border-error/30"
-              style={{ backgroundColor: 'rgba(var(--color-error-rgb), 0.1)' }}
+              className="mb-6 p-4 border rounded-xl text-error text-sm border-error/30 bg-error/10"
             >
               {error}
             </motion.div>
@@ -493,7 +491,7 @@ export default function FormsPage() {
           >
             {loading ? (
               <div className="rounded-2xl bg-surface-paper backdrop-blur-xl border border-border-light p-12 text-center">
-                <p className="text-[var(--color-text-secondary)]">Loading forms...</p>
+                <p className="text-muted-foreground">Loading forms...</p>
               </div>
             ) : (
               <DataTable
@@ -509,7 +507,7 @@ export default function FormsPage() {
                 enableCsvExport
                 csvFilename="forms"
                 emptyMessage={activeFilter === 'all' ? 'No forms yet' : `No ${activeFilter} forms`}
-                emptyIcon={<FileText className="w-8 h-8 text-[var(--color-text-disabled)]" />}
+                emptyIcon={<FileText className="w-8 h-8 text-muted-foreground" />}
                 accentColor="violet"
               />
             )}
@@ -535,10 +533,10 @@ export default function FormsPage() {
                 <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center mx-auto mb-6 opacity-50">
                   <FileText className="w-8 h-8 text-white" />
                 </div>
-                <h3 className="text-xl font-semibold text-[var(--color-text-primary)] mb-2">
+                <h3 className="text-xl font-semibold text-foreground mb-2">
                   {activeFilter === 'all' ? 'No forms yet' : `No ${activeFilter} forms`}
                 </h3>
-                <p className="text-sm text-[var(--color-text-secondary)] mb-6">
+                <p className="text-sm text-muted-foreground mb-6">
                   {activeFilter === 'all'
                     ? 'Create your first form to start capturing leads and collecting data.'
                     : `You don't have any ${activeFilter} forms.`}
@@ -582,10 +580,10 @@ export default function FormsPage() {
                           <FileText className="w-5 h-5 text-white" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <h3 className="text-base font-semibold text-[var(--color-text-primary)] truncate group-hover:text-primary transition-colors">
+                          <h3 className="text-base font-semibold text-foreground truncate group-hover:text-primary transition-colors">
                             {form.name}
                           </h3>
-                          <p className="text-xs text-[var(--color-text-secondary)] mt-1 line-clamp-2">
+                          <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
                             {form.description ?? 'No description'}
                           </p>
                         </div>
@@ -596,27 +594,27 @@ export default function FormsPage() {
                     <div className="p-5">
                       <div className="grid grid-cols-3 gap-4">
                         <div className="text-center">
-                          <div className="flex items-center justify-center gap-1 text-xl font-semibold text-[var(--color-text-primary)] mb-1">
+                          <div className="flex items-center justify-center gap-1 text-xl font-semibold text-foreground mb-1">
                             <Users className="w-4 h-4 text-primary" />
                             {form.submissionCount || 0}
                           </div>
-                          <div className="text-xs text-[var(--color-text-secondary)]">Submissions</div>
+                          <div className="text-xs text-muted-foreground">Submissions</div>
                         </div>
                         <div className="text-center">
-                          <div className="flex items-center justify-center gap-1 text-xl font-semibold text-[var(--color-text-primary)] mb-1">
+                          <div className="flex items-center justify-center gap-1 text-xl font-semibold text-foreground mb-1">
                             <Eye className="w-4 h-4 text-secondary" />
                             {form.viewCount || 0}
                           </div>
-                          <div className="text-xs text-[var(--color-text-secondary)]">Views</div>
+                          <div className="text-xs text-muted-foreground">Views</div>
                         </div>
                         <div className="text-center">
-                          <div className="flex items-center justify-center gap-1 text-xl font-semibold text-[var(--color-text-primary)] mb-1">
+                          <div className="flex items-center justify-center gap-1 text-xl font-semibold text-foreground mb-1">
                             <TrendingUp className="w-4 h-4 text-success" />
                             {form.viewCount > 0
                               ? `${Math.round((form.submissionCount / form.viewCount) * 100)}%`
                               : '0%'}
                           </div>
-                          <div className="text-xs text-[var(--color-text-secondary)]">Conversion</div>
+                          <div className="text-xs text-muted-foreground">Conversion</div>
                         </div>
                       </div>
                     </div>
@@ -627,7 +625,7 @@ export default function FormsPage() {
                         <span className={`px-3 py-1 text-xs font-semibold rounded-full ${getStatusBadgeClasses(form.status)}`}>
                           {form.status.charAt(0).toUpperCase() + form.status.slice(1)}
                         </span>
-                        <span className="text-xs text-[var(--color-text-disabled)]">
+                        <span className="text-xs text-muted-foreground">
                           {formatDate(form.updatedAt)}
                         </span>
                       </div>
@@ -635,7 +633,7 @@ export default function FormsPage() {
                         <Link
                           href={`/forms/${form.id}/edit`}
                           onClick={(e) => e.stopPropagation()}
-                          className="p-2 text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-surface-elevated rounded-lg transition-all"
+                          className="p-2 text-muted-foreground hover:text-foreground hover:bg-surface-elevated rounded-lg transition-all"
                           title="Edit form"
                         >
                           <Pencil className="w-4 h-4" />
@@ -645,7 +643,7 @@ export default function FormsPage() {
                             href={`/forms/${form.id}`}
                             target="_blank"
                             onClick={(e) => e.stopPropagation()}
-                            className="p-2 text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-surface-elevated rounded-lg transition-all"
+                            className="p-2 text-muted-foreground hover:text-foreground hover:bg-surface-elevated rounded-lg transition-all"
                             title="View form"
                           >
                             <Eye className="w-4 h-4" />
@@ -683,13 +681,13 @@ export default function FormsPage() {
                     <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
                       <Plus className="w-5 h-5 text-white" />
                     </div>
-                    <h2 className="text-xl font-semibold text-[var(--color-text-primary)]">Create New Form</h2>
+                    <h2 className="text-xl font-semibold text-foreground">Create New Form</h2>
                   </div>
                   <motion.button
                     whileHover={{ scale: 1.1, rotate: 90 }}
                     whileTap={{ scale: 0.9 }}
                     onClick={() => setShowCreateModal(false)}
-                    className="p-2 text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-surface-elevated rounded-lg transition-all"
+                    className="p-2 text-muted-foreground hover:text-foreground hover:bg-surface-elevated rounded-lg transition-all"
                   >
                     <X className="w-5 h-5" />
                   </motion.button>
@@ -699,7 +697,7 @@ export default function FormsPage() {
                 <div className="p-6 space-y-6">
                   {/* Form Name */}
                   <div>
-                    <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">
+                    <label className="block text-sm font-medium text-muted-foreground mb-2">
                       Form Name
                     </label>
                     <input
@@ -708,13 +706,13 @@ export default function FormsPage() {
                       onChange={(e) => setNewFormName(e.target.value)}
                       placeholder="Enter form name..."
                       autoFocus
-                      className="w-full px-4 py-3 text-sm bg-surface-elevated backdrop-blur-xl border border-border-light rounded-xl text-[var(--color-text-primary)] placeholder-[var(--color-text-disabled)] focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
+                      className="w-full px-4 py-3 text-sm bg-surface-elevated backdrop-blur-xl border border-border-light rounded-xl text-foreground placeholder-[var(--color-text-disabled)] focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
                     />
                   </div>
 
                   {/* Template Selection */}
                   <div>
-                    <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-3">
+                    <label className="block text-sm font-medium text-muted-foreground mb-3">
                       Choose a Template
                     </label>
                     <div className="grid grid-cols-2 gap-3">
@@ -738,15 +736,15 @@ export default function FormsPage() {
                             ${
                               selectedTemplate === template.id
                                 ? 'bg-gradient-to-br from-primary to-secondary text-white'
-                                : 'bg-surface-elevated text-[var(--color-text-secondary)]'
+                                : 'bg-surface-elevated text-muted-foreground'
                             }
                           `}>
                             {template.icon}
                           </div>
-                          <div className="text-sm font-semibold text-[var(--color-text-primary)] mb-1">
+                          <div className="text-sm font-semibold text-foreground mb-1">
                             {template.name}
                           </div>
-                          <div className="text-xs text-[var(--color-text-secondary)] line-clamp-2">
+                          <div className="text-xs text-muted-foreground line-clamp-2">
                             {template.description}
                           </div>
                         </motion.div>
@@ -761,7 +759,7 @@ export default function FormsPage() {
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     onClick={() => setShowCreateModal(false)}
-                    className="px-6 py-2.5 text-sm font-medium text-[var(--color-text-secondary)] bg-surface-elevated hover:bg-surface-elevated border border-border-light rounded-xl transition-all"
+                    className="px-6 py-2.5 text-sm font-medium text-muted-foreground bg-surface-elevated hover:bg-surface-elevated border border-border-light rounded-xl transition-all"
                   >
                     Cancel
                   </motion.button>

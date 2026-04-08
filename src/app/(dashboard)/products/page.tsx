@@ -9,6 +9,7 @@
 import { useEffect, useCallback, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getProducts, deleteProduct, CATALOG_TYPE_LABELS } from '@/lib/ecommerce/product-service';
+import { PageTitle } from '@/components/ui/typography';
 import { usePagination } from '@/hooks/usePagination'
 import { logger } from '@/lib/logger/logger';
 import { useToast } from '@/hooks/useToast';
@@ -69,22 +70,22 @@ export default function ProductManagementPage() {
   };
 
   return (
-    <div className="p-8">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-[var(--color-text-primary)]">Products</h1>
+    <div className="p-8 space-y-6">
+      <div className="flex justify-between items-center">
+        <PageTitle>Products</PageTitle>
         <button onClick={() => router.push(`/products/new`)} className="px-4 py-2 bg-primary text-white rounded-lg hover:from-primary-light hover:to-secondary-light">
           + Add Product
         </button>
       </div>
 
       {error && (
-        <div className="mb-4 p-4 border rounded-lg text-error" style={{ backgroundColor: 'color-mix(in srgb, var(--color-error) 10%, transparent)', borderColor: 'var(--color-error)' }}>
+        <div className="mb-4 p-4 border border-error/30 rounded-lg text-error bg-error/10">
           {error}
         </div>
       )}
 
       {products.length === 0 && !loading ? (
-        <div className="text-center py-12 text-[var(--color-text-secondary)]">
+        <div className="text-center py-12 text-muted-foreground">
           <p>No products yet. Click &quot;Add Product&quot; to create your first product.</p>
         </div>
       ) : (
@@ -93,36 +94,30 @@ export default function ProductManagementPage() {
             <table className="w-full">
             <thead className="bg-surface-elevated">
               <tr>
-                <th className="text-left p-4 text-[var(--color-text-primary)]">Product</th>
-                <th className="text-left p-4 text-[var(--color-text-primary)]">Type</th>
-                <th className="text-left p-4 text-[var(--color-text-primary)]">SKU</th>
-                <th className="text-left p-4 text-[var(--color-text-primary)]">Price</th>
-                <th className="text-left p-4 text-[var(--color-text-primary)]">Stock</th>
-                <th className="text-left p-4 text-[var(--color-text-primary)]">Actions</th>
+                <th className="text-left p-4 text-foreground">Product</th>
+                <th className="text-left p-4 text-foreground">Type</th>
+                <th className="text-left p-4 text-foreground">SKU</th>
+                <th className="text-left p-4 text-foreground">Price</th>
+                <th className="text-left p-4 text-foreground">Stock</th>
+                <th className="text-left p-4 text-foreground">Actions</th>
               </tr>
             </thead>
             <tbody>
               {products.map(product => (
                 <tr key={product.id} className="border-t border-border-light hover:bg-surface-elevated">
                   <td className="p-4">
-                    <div className="font-medium text-[var(--color-text-primary)]">{product.name}</div>
-                    <div className="text-sm text-[var(--color-text-secondary)]">{product.category}</div>
+                    <div className="font-medium text-foreground">{product.name}</div>
+                    <div className="text-sm text-muted-foreground">{product.category}</div>
                   </td>
                   <td className="p-4">
-                    <span
-                      className="px-2 py-1 rounded text-xs font-medium"
-                      style={{
-                        backgroundColor: 'color-mix(in srgb, var(--color-primary) 12%, transparent)',
-                        color: 'var(--color-primary)',
-                      }}
-                    >
+                    <span className="px-2 py-1 rounded text-xs font-medium bg-primary/10 text-primary">
                       {CATALOG_TYPE_LABELS[product.type ?? 'product'] ?? 'Product'}
                     </span>
                   </td>
-                  <td className="p-4 text-[var(--color-text-secondary)]">{product.sku}</td>
-                  <td className="p-4 text-[var(--color-text-primary)]">${product.price?.toFixed(2)}</td>
+                  <td className="p-4 text-muted-foreground">{product.sku}</td>
+                  <td className="p-4 text-foreground">${product.price?.toFixed(2)}</td>
                   <td className="p-4">
-                    <span className={`px-2 py-1 rounded text-xs ${product.inStock ? 'text-success' : 'text-error'}`} style={{ backgroundColor: product.inStock ? 'color-mix(in srgb, var(--color-success) 15%, transparent)' : 'color-mix(in srgb, var(--color-error) 15%, transparent)' }}>
+                    <span className={`px-2 py-1 rounded text-xs ${product.inStock ? 'bg-success/15 text-success' : 'bg-error/15 text-error'}`}>
                       {product.inStock ? 'In Stock' : 'Out of Stock'}
                     </span>
                   </td>
@@ -142,7 +137,7 @@ export default function ProductManagementPage() {
               <button
                 onClick={() => void loadMore()}
                 disabled={loading || !hasMore}
-                className="px-6 py-2 bg-surface-elevated text-[var(--color-text-primary)] rounded-lg hover:bg-surface-elevated disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-6 py-2 bg-surface-elevated text-foreground rounded-lg hover:bg-surface-elevated disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? 'Loading...' : hasMore ? `Load More (Showing ${products.length})` : 'All loaded'}
               </button>
@@ -153,12 +148,12 @@ export default function ProductManagementPage() {
 
       {/* Delete Confirmation Modal */}
       {deletingId && (
-        <div className="fixed inset-0 bg-surface-paper flex items-center justify-center z-50">
-          <div className="bg-surface-paper border border-border-light rounded-lg p-6 max-w-md">
-            <h2 className="text-xl font-bold mb-4 text-[var(--color-text-primary)]">Delete Product</h2>
-            <p className="text-[var(--color-text-secondary)] mb-6">Are you sure you want to delete this product? This action cannot be undone.</p>
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+          <div className="bg-card border border-border-light rounded-lg p-6 max-w-md">
+            <h2 className="text-xl font-bold mb-4 text-foreground">Delete Product</h2>
+            <p className="text-muted-foreground mb-6">Are you sure you want to delete this product? This action cannot be undone.</p>
             <div className="flex gap-3 justify-end">
-              <button onClick={cancelDelete} className="px-4 py-2 bg-surface-elevated rounded-lg hover:bg-surface-elevated text-[var(--color-text-primary)]">
+              <button onClick={cancelDelete} className="px-4 py-2 bg-surface-elevated rounded-lg hover:bg-surface-elevated text-foreground">
                 Cancel
               </button>
               <button onClick={confirmDelete} className="px-4 py-2 bg-error text-white rounded-lg hover:bg-error">

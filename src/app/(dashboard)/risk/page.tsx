@@ -17,6 +17,7 @@ import { useToast } from '@/hooks/useToast';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import SubpageNav from '@/components/ui/SubpageNav';
 import { DEALS_TABS } from '@/lib/constants/subpage-nav';
+import { PageTitle, SectionDescription } from '@/components/ui/typography';
 import { RiskOverviewCard } from '@/components/risk/RiskOverviewCard';
 import { RiskFactorsCard } from '@/components/risk/RiskFactorsCard';
 import { InterventionsCard } from '@/components/risk/InterventionsCard';
@@ -216,43 +217,35 @@ export default function RiskDashboardPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--color-bg-main)]">
+    <div className="p-8 space-y-6">
       <SubpageNav items={DEALS_TABS} />
       {/* Header */}
-      <header className="bg-[var(--color-bg-paper)] border-b border-[var(--color-border-main)]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-[var(--color-text-primary)]">
-                Deal Risk Predictor
-              </h1>
-              <p className="mt-2 text-sm text-[var(--color-text-secondary)]">
-                AI-powered slippage prediction and intervention recommendations
-              </p>
-            </div>
-            <div className="flex items-center space-x-3">
-              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium text-[var(--color-text-primary)]">
-                🤖 Powered by GPT-4o
-              </span>
-              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium text-[var(--color-text-primary)]">
-                ✓ Production Ready
-              </span>
-            </div>
-          </div>
+      <div className="flex items-center justify-between">
+        <div>
+          <PageTitle className="mb-1">Deal Risk Predictor</PageTitle>
+          <SectionDescription>AI-powered slippage prediction and intervention recommendations</SectionDescription>
         </div>
-      </header>
+        <div className="flex items-center space-x-3">
+          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium text-foreground">
+            🤖 Powered by GPT-4o
+          </span>
+          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium text-foreground">
+            ✓ Production Ready
+          </span>
+        </div>
+      </div>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div>
         {/* Input Form */}
-        <div className="bg-[var(--color-bg-paper)] rounded-lg shadow-sm p-6 mb-8">
-          <h2 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">
+        <div className="bg-card rounded-lg shadow-sm p-6 mb-8">
+          <h2 className="text-lg font-semibold text-foreground mb-4">
             Analyze Deal Risk
           </h2>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label htmlFor="dealId" className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">
+              <label htmlFor="dealId" className="block text-sm font-medium text-muted-foreground mb-2">
                 Deal ID
               </label>
               <input
@@ -261,7 +254,7 @@ export default function RiskDashboardPage() {
                 value={dealId}
                 onChange={(e) => setDealId(e.target.value)}
                 placeholder="Enter deal ID"
-                className="w-full px-4 py-2 border border-[var(--color-border-main)] rounded-lg focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent"
+                className="w-full px-4 py-2 border border-border-main rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
               />
             </div>
 
@@ -269,7 +262,7 @@ export default function RiskDashboardPage() {
               <button
                 onClick={() => { void fetchRiskPrediction(); }}
                 disabled={loading || !dealId}
-                className="w-full bg-[var(--color-primary)] hover:bg-[var(--color-primary-dark)] disabled:bg-[var(--color-border-main)] disabled:cursor-not-allowed text-[var(--color-text-primary)] font-medium py-2 px-6 rounded-lg transition-colors"
+                className="w-full bg-primary hover:bg-primary-dark disabled:bg-border-main disabled:cursor-not-allowed text-foreground font-medium py-2 px-6 rounded-lg transition-colors"
               >
                 {loading ? (
                   <span className="flex items-center justify-center">
@@ -289,11 +282,11 @@ export default function RiskDashboardPage() {
           <div className="mt-4 flex items-center justify-between">
             <button
               onClick={loadDemoData}
-              className="text-sm text-[var(--color-primary)] hover:text-[var(--color-primary-dark)] font-medium"
+              className="text-sm text-primary hover:text-primary-dark font-medium"
             >
               Load Demo Data
             </button>
-            <p className="text-xs text-[var(--color-text-disabled)]">
+            <p className="text-xs text-muted-foreground">
               Rate limit: 5 requests per minute
             </p>
           </div>
@@ -351,31 +344,31 @@ export default function RiskDashboardPage() {
 
         {/* Active Interventions */}
         {activeInterventions.length > 0 && (
-          <div className="mt-6 bg-[var(--color-bg-paper)] rounded-lg shadow-sm p-6">
-            <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">
+          <div className="mt-6 bg-card rounded-lg shadow-sm p-6">
+            <h3 className="text-lg font-semibold text-foreground mb-4">
               Active Interventions
             </h3>
             <div className="space-y-3">
               {activeInterventions.map((ai) => (
                 <div
                   key={ai.interventionId}
-                  className="flex items-center justify-between p-3 bg-[var(--color-bg-primary)] rounded-lg border border-[var(--color-border-main)]"
+                  className="flex items-center justify-between p-3 bg-card rounded-lg border border-border-main"
                 >
                   <div className="flex items-center gap-3">
                     <span
                       className={`inline-block w-2 h-2 rounded-full ${
                         ai.status === 'active'
-                          ? 'bg-[var(--color-primary)] animate-pulse'
+                          ? 'bg-primary animate-pulse'
                           : ai.status === 'completed'
-                            ? 'bg-[var(--color-success)]'
-                            : 'bg-[var(--color-text-disabled)]'
+                            ? 'bg-success'
+                            : 'bg-muted-foreground'
                       }`}
                     />
                     <div>
-                      <span className="text-sm font-medium text-[var(--color-text-primary)]">
+                      <span className="text-sm font-medium text-foreground">
                         {ai.title}
                       </span>
-                      <span className="ml-2 text-xs text-[var(--color-text-disabled)]">
+                      <span className="ml-2 text-xs text-muted-foreground">
                         {ai.status.toUpperCase()}
                       </span>
                     </div>
@@ -384,13 +377,13 @@ export default function RiskDashboardPage() {
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => handleUpdateIntervention(ai.interventionId, 'completed')}
-                        className="px-3 py-1 text-xs font-medium bg-[var(--color-success)] text-white rounded hover:opacity-90 transition-opacity"
+                        className="px-3 py-1 text-xs font-medium bg-success text-white rounded hover:opacity-90 transition-opacity"
                       >
                         Complete
                       </button>
                       <button
                         onClick={() => handleUpdateIntervention(ai.interventionId, 'dismissed')}
-                        className="px-3 py-1 text-xs font-medium bg-[var(--color-text-disabled)] text-white rounded hover:opacity-90 transition-opacity"
+                        className="px-3 py-1 text-xs font-medium bg-muted text-white rounded hover:opacity-90 transition-opacity"
                       >
                         Dismiss
                       </button>
@@ -406,13 +399,13 @@ export default function RiskDashboardPage() {
         {!prediction && !loading && !error && (
           <div className="text-center py-12">
             <div className="text-6xl mb-4">🎯</div>
-            <h3 className="text-lg font-medium text-[var(--color-text-primary)] mb-2">
+            <h3 className="text-lg font-medium text-foreground mb-2">
               No Risk Analysis Yet
             </h3>
-            <p className="text-sm text-[var(--color-text-secondary)] mb-6">
+            <p className="text-sm text-muted-foreground mb-6">
               Enter a deal ID and organization ID above to get started
             </p>
-            <div className="flex items-center justify-center space-x-8 text-sm text-[var(--color-text-disabled)]">
+            <div className="flex items-center justify-center space-x-8 text-sm text-muted-foreground">
               <div className="flex items-center">
                 <span className="text-2xl mr-2">⏰</span>
                 <span>Real-time analysis</span>
@@ -431,37 +424,37 @@ export default function RiskDashboardPage() {
 
         {/* Metadata Footer */}
         {prediction && !loading && (
-          <div className="mt-8 bg-[var(--color-bg-paper)] rounded-lg shadow-sm p-6">
-            <h3 className="text-sm font-semibold text-[var(--color-text-primary)] mb-4">Prediction Metadata</h3>
+          <div className="mt-8 bg-card rounded-lg shadow-sm p-6">
+            <h3 className="text-sm font-semibold text-foreground mb-4">Prediction Metadata</h3>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
               <div>
-                <span className="text-[var(--color-text-disabled)]">Model Version:</span>
-                <span className="ml-2 font-medium text-[var(--color-text-primary)]">
+                <span className="text-muted-foreground">Model Version:</span>
+                <span className="ml-2 font-medium text-foreground">
                   {prediction.metadata.modelVersion}
                 </span>
               </div>
               <div>
-                <span className="text-[var(--color-text-disabled)]">AI Model:</span>
-                <span className="ml-2 font-medium text-[var(--color-text-primary)]">
+                <span className="text-muted-foreground">AI Model:</span>
+                <span className="ml-2 font-medium text-foreground">
                   {prediction.metadata.aiModel}
                 </span>
               </div>
               <div>
-                <span className="text-[var(--color-text-disabled)]">Factors Analyzed:</span>
-                <span className="ml-2 font-medium text-[var(--color-text-primary)]">
+                <span className="text-muted-foreground">Factors Analyzed:</span>
+                <span className="ml-2 font-medium text-foreground">
                   {prediction.metadata.factorsConsidered}
                 </span>
               </div>
               <div>
-                <span className="text-[var(--color-text-disabled)]">Calculation Time:</span>
-                <span className="ml-2 font-medium text-[var(--color-text-primary)]">
+                <span className="text-muted-foreground">Calculation Time:</span>
+                <span className="ml-2 font-medium text-foreground">
                   {(prediction.metadata.calculationDuration / 1000).toFixed(2)}s
                 </span>
               </div>
             </div>
           </div>
         )}
-      </main>
+      </div>
     </div>
   );
 }

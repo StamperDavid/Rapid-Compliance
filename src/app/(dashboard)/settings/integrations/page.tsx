@@ -24,6 +24,7 @@ import type { ConnectedIntegration } from '@/types/integrations';
 import { logger } from '@/lib/logger/logger';
 import toast from 'react-hot-toast';
 import { useSearchParams } from 'next/navigation';
+import { PageTitle, SectionDescription } from '@/components/ui/typography';
 
 export default function IntegrationsPage() {
   const { user } = useAuth();
@@ -80,7 +81,6 @@ export default function IntegrationsPage() {
 
   const primaryColor = theme?.colors?.primary?.main || 'var(--color-primary)';
   const textColor = theme?.colors?.text?.primary || 'var(--color-text-primary)';
-  const bgPaper = theme?.colors?.background?.paper || 'var(--color-bg-paper)';
   const borderColor = theme?.colors?.border?.main || 'var(--color-border-strong)';
 
   const handleConnect = async (integrationId: string, integration: Partial<ConnectedIntegration>) => {
@@ -231,132 +231,105 @@ export default function IntegrationsPage() {
   const connectedCount = Object.values(integrations).filter(i => i?.status === 'active').length;
 
   return (
-    <div style={{ padding: '2rem' }}>
+    <div className="p-8 space-y-6">
+      {/* Header */}
       <div>
-            {/* Header */}
-            <div style={{ marginBottom: '2rem' }}>
-              <Link 
-                href={`/settings`} 
-                style={{ 
-                  display: 'inline-flex', 
-                  alignItems: 'center', 
-                  gap: '0.5rem', 
-                  color: primaryColor, 
-                  fontSize: '0.875rem', 
-                  fontWeight: '500', 
-                  textDecoration: 'none', 
-                  marginBottom: '1.5rem' 
-                }}
-              >
-                ← Back to Settings
-              </Link>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: textColor, marginBottom: '0.5rem' }}>
-                    Integrations
-                  </h1>
-                  <p style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>
-                    Connect your favorite apps and services
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Summary Stats */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
-              <div style={{ backgroundColor: bgPaper, border: `1px solid ${borderColor}`, borderRadius: '0.75rem', padding: '1.5rem' }}>
-                <div style={{ fontSize: '0.875rem', color: 'var(--color-text-disabled)', marginBottom: '0.5rem' }}>Connected</div>
-                <div style={{ fontSize: '2rem', fontWeight: 'bold', color: primaryColor }}>{connectedCount}</div>
-              </div>
-              <div style={{ backgroundColor: bgPaper, border: `1px solid ${borderColor}`, borderRadius: '0.75rem', padding: '1.5rem' }}>
-                <div style={{ fontSize: '0.875rem', color: 'var(--color-text-disabled)', marginBottom: '0.5rem' }}>Available</div>
-                <div style={{ fontSize: '2rem', fontWeight: 'bold', color: textColor }}>
-                  {integrationCategories.reduce((sum, cat) => sum + cat.integrations.length, 0)}
-                </div>
-              </div>
-            </div>
-
-            {/* Category Filter */}
-            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '2rem', flexWrap: 'wrap' }}>
-              <button
-                onClick={() => setActiveCategory(null)}
-                style={{
-                  padding: '0.5rem 1rem',
-                  backgroundColor: activeCategory === null ? primaryColor : 'transparent',
-                  border: `1px solid ${activeCategory === null ? primaryColor : borderColor}`,
-                  borderRadius: '0.375rem',
-                  color: activeCategory === null ? 'var(--color-text-primary)' : textColor,
-                  fontSize: '0.875rem',
-                  cursor: 'pointer'
-                }}
-              >
-                All
-              </button>
-              {integrationCategories.map((category) => (
-                <button
-                  key={category.id}
-                  onClick={() => setActiveCategory(category.id)}
-                  style={{
-                    padding: '0.5rem 1rem',
-                    backgroundColor: activeCategory === category.id ? primaryColor : 'transparent',
-                    border: `1px solid ${activeCategory === category.id ? primaryColor : borderColor}`,
-                    borderRadius: '0.375rem',
-                    color: activeCategory === category.id ? 'var(--color-text-primary)' : textColor,
-                    fontSize: '0.875rem',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem'
-                  }}
-                >
-                  <span>{category.icon}</span>
-                  <span>{category.name}</span>
-                </button>
-              ))}
-            </div>
-
-            {/* Integrations by Category */}
-            {integrationCategories
-              .filter(cat => !activeCategory || cat.id === activeCategory)
-              .map((category) => (
-                <div key={category.id} style={{ marginBottom: '3rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem' }}>
-                    <span style={{ fontSize: '1.5rem' }}>{category.icon}</span>
-                    <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: textColor }}>
-                      {category.name}
-                    </h2>
-                  </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(400px, 1fr))', gap: '1.5rem' }}>
-                    {category.integrations.map(({ id, component: Component }) => {
-                      const IntegrationComponent = Component as React.ComponentType<{
-                        integration: ConnectedIntegration | null;
-                        onConnect: (integration: Partial<ConnectedIntegration>) => void;
-                        onDisconnect: () => void;
-                        onUpdate: (updates: Record<string, unknown>) => void;
-                      }>;
-                      return (
-                        <IntegrationComponent
-                          key={id}
-                          integration={integrations[id] ?? null}
-                          onConnect={(integration) => { void handleConnect(id, integration); }}
-                          onDisconnect={() => { void handleDisconnect(id); }}
-                          onUpdate={(updates) => {
-                            if (id === 'quickbooks' || id === 'xero') {
-                              const current = integrations[id];
-                              const currentSync = current?.settings ?? {};
-                              void handleUpdate(id, { settings: { ...currentSync, syncSettings: { ...(currentSync.syncSettings as Record<string, unknown> | undefined), ...updates } } });
-                            } else {
-                              const current = integrations[id];
-                              void handleUpdate(id, { settings: { ...current?.settings, ...updates } });
-                            }
-                          }}
-                        />
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
+        <Link
+          href="/settings"
+          className="inline-flex items-center gap-2 text-sm font-medium no-underline mb-6"
+          style={{ color: primaryColor }}
+        >
+          ← Back to Settings
+        </Link>
+        <PageTitle>Integrations</PageTitle>
+        <SectionDescription className="mt-1">
+          Connect your favorite apps and services
+        </SectionDescription>
       </div>
+
+      {/* Summary Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="bg-card border border-border rounded-xl p-6">
+          <div className="text-sm text-muted-foreground mb-2">Connected</div>
+          <div className="text-3xl font-bold" style={{ color: primaryColor }}>{connectedCount}</div>
+        </div>
+        <div className="bg-card border border-border rounded-xl p-6">
+          <div className="text-sm text-muted-foreground mb-2">Available</div>
+          <div className="text-3xl font-bold text-foreground">
+            {integrationCategories.reduce((sum, cat) => sum + cat.integrations.length, 0)}
+          </div>
+        </div>
+      </div>
+
+      {/* Category Filter */}
+      <div className="flex gap-2 flex-wrap">
+        <button
+          onClick={() => setActiveCategory(null)}
+          className="px-4 py-2 rounded text-sm cursor-pointer"
+          style={{
+            backgroundColor: activeCategory === null ? primaryColor : 'transparent',
+            border: `1px solid ${activeCategory === null ? primaryColor : borderColor}`,
+            color: activeCategory === null ? 'var(--color-text-primary)' : textColor,
+          }}
+        >
+          All
+        </button>
+        {integrationCategories.map((category) => (
+          <button
+            key={category.id}
+            onClick={() => setActiveCategory(category.id)}
+            className="px-4 py-2 rounded text-sm cursor-pointer inline-flex items-center gap-2"
+            style={{
+              backgroundColor: activeCategory === category.id ? primaryColor : 'transparent',
+              border: `1px solid ${activeCategory === category.id ? primaryColor : borderColor}`,
+              color: activeCategory === category.id ? 'var(--color-text-primary)' : textColor,
+            }}
+          >
+            <span>{category.icon}</span>
+            <span>{category.name}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* Integrations by Category */}
+      {integrationCategories
+        .filter(cat => !activeCategory || cat.id === activeCategory)
+        .map((category) => (
+          <div key={category.id} className="space-y-6">
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">{category.icon}</span>
+              <h2 className="text-2xl font-bold text-foreground">{category.name}</h2>
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {category.integrations.map(({ id, component: Component }) => {
+                const IntegrationComponent = Component as React.ComponentType<{
+                  integration: ConnectedIntegration | null;
+                  onConnect: (integration: Partial<ConnectedIntegration>) => void;
+                  onDisconnect: () => void;
+                  onUpdate: (updates: Record<string, unknown>) => void;
+                }>;
+                return (
+                  <IntegrationComponent
+                    key={id}
+                    integration={integrations[id] ?? null}
+                    onConnect={(integration) => { void handleConnect(id, integration); }}
+                    onDisconnect={() => { void handleDisconnect(id); }}
+                    onUpdate={(updates) => {
+                      if (id === 'quickbooks' || id === 'xero') {
+                        const current = integrations[id];
+                        const currentSync = current?.settings ?? {};
+                        void handleUpdate(id, { settings: { ...currentSync, syncSettings: { ...(currentSync.syncSettings as Record<string, unknown> | undefined), ...updates } } });
+                      } else {
+                        const current = integrations[id];
+                        void handleUpdate(id, { settings: { ...current?.settings, ...updates } });
+                      }
+                    }}
+                  />
+                );
+              })}
+            </div>
+          </div>
+        ))}
     </div>
   );
 }
