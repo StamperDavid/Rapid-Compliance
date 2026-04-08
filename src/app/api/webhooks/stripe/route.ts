@@ -15,6 +15,8 @@ import { rateLimitMiddleware } from '@/lib/rate-limit/rate-limiter';
 import { verifyStripeSignature } from '@/lib/security/webhook-verification';
 import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { getSubCollection, getOrdersCollection } from '@/lib/firebase/collections';
+import { apiKeyService } from '@/lib/api-keys/api-key-service';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 /**
  * Lenient Zod schema for a Stripe webhook event.
@@ -82,7 +84,11 @@ export async function POST(request: NextRequest) {
 
     // Get Stripe signature header
     const signatureHeader = request.headers.get('stripe-signature');
-    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+
+    // Load webhook secret from Firestore (multi-tenant compatible)
+    const stripeKeys = (await apiKeyService.getServiceKey(PLATFORM_ID, 'stripe')) as
+      { webhookSecret?: string } | null;
+    const webhookSecret = stripeKeys?.webhookSecret ?? null;
 
     // Fail closed: require webhook secret in production
     if (!webhookSecret) {

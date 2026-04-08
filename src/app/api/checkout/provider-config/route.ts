@@ -5,6 +5,8 @@ import { logger } from '@/lib/logger/logger';
 import { errors } from '@/lib/middleware/error-handler';
 import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { getSubCollection } from '@/lib/firebase/collections';
+import { apiKeyService } from '@/lib/api-keys/api-key-service';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,10 +23,27 @@ interface EcommerceConfig {
   };
 }
 
-/** Providers whose client-side SDK needs a publishable key */
-const CLIENT_KEY_ENV_MAP: Record<string, string | undefined> = {
-  stripe: process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY,
-};
+/** Shape of Stripe keys from apiKeyService */
+interface StripeKeysShape {
+  publicKey?: string;
+  secretKey?: string;
+  webhookSecret?: string;
+}
+
+/**
+ * Resolve the client-facing publishable key for a payment provider.
+ * All keys come from Firestore via apiKeyService — no env vars.
+ */
+async function getClientKey(providerName: string): Promise<string | null> {
+  switch (providerName) {
+    case 'stripe': {
+      const keys = (await apiKeyService.getServiceKey(PLATFORM_ID, 'stripe')) as StripeKeysShape | null;
+      return keys?.publicKey ?? null;
+    }
+    default:
+      return null;
+  }
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -44,20 +63,18 @@ export async function GET(request: NextRequest) {
       'config',
     );
 
-    if (!configDoc) {
-      return NextResponse.json(
-        { success: true, provider: 'stripe', clientKey: CLIENT_KEY_ENV_MAP.stripe ?? null },
-        { status: 200 },
+    let providerName = 'stripe';
+    if (configDoc) {
+      const config = configDoc as unknown as EcommerceConfig;
+      const defaultProvider = config.payments?.providers?.find(
+        (p) => p.isDefault && p.enabled,
       );
+      if (defaultProvider) {
+        providerName = defaultProvider.provider;
+      }
     }
 
-    const config = configDoc as unknown as EcommerceConfig;
-    const defaultProvider = config.payments?.providers?.find(
-      (p) => p.isDefault && p.enabled,
-    );
-
-    const providerName = defaultProvider?.provider ?? 'stripe';
-    const clientKey = CLIENT_KEY_ENV_MAP[providerName] ?? null;
+    const clientKey = await getClientKey(providerName);
 
     return NextResponse.json({
       success: true,

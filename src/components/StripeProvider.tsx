@@ -1,12 +1,26 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import { Elements } from '@stripe/react-stripe-js';
-import { loadStripe, type StripeElementsOptions } from '@stripe/stripe-js';
+import { loadStripe, type Stripe, type StripeElementsOptions } from '@stripe/stripe-js';
 import { useTheme } from '@/contexts/ThemeContext';
+import { auth } from '@/lib/firebase/config';
 
-const stripeKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
-const stripePromise = stripeKey ? loadStripe(stripeKey) : null;
+/**
+ * Module-level cache for the Stripe instance.
+ * loadStripe() should only be called once per publishable key.
+ */
+let cachedStripePromise: Promise<Stripe | null> | null = null;
+let cachedPublishableKey: string | null = null;
+
+function getStripePromise(publishableKey: string): Promise<Stripe | null> {
+  if (cachedStripePromise && cachedPublishableKey === publishableKey) {
+    return cachedStripePromise;
+  }
+  cachedPublishableKey = publishableKey;
+  cachedStripePromise = loadStripe(publishableKey);
+  return cachedStripePromise;
+}
 
 interface StripeProviderProps {
   clientSecret: string;
@@ -15,6 +29,44 @@ interface StripeProviderProps {
 
 export default function StripeProvider({ clientSecret, children }: StripeProviderProps) {
   const { theme } = useTheme();
+  const [publishableKey, setPublishableKey] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const fetchedRef = useRef(false);
+
+  useEffect(() => {
+    if (fetchedRef.current) {return;}
+    fetchedRef.current = true;
+
+    async function fetchKey() {
+      try {
+        const token = await auth?.currentUser?.getIdToken();
+        const res = await fetch('/api/checkout/provider-config', {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+
+        if (!res.ok) {
+          setError('Failed to load payment configuration.');
+          return;
+        }
+
+        const data = (await res.json()) as { success: boolean; clientKey?: string };
+        if (data.success && data.clientKey) {
+          setPublishableKey(data.clientKey);
+        } else {
+          setError('Stripe is not configured. Please add your Stripe publishable key in Settings > API Keys.');
+        }
+      } catch {
+        setError('Failed to load payment configuration.');
+      }
+    }
+
+    void fetchKey();
+  }, []);
+
+  const stripePromise = useMemo(
+    () => (publishableKey ? getStripePromise(publishableKey) : null),
+    [publishableKey],
+  );
 
   const options: StripeElementsOptions = useMemo(() => ({
     clientSecret,
@@ -58,7 +110,7 @@ export default function StripeProvider({ clientSecret, children }: StripeProvide
     },
   }), [clientSecret, theme]);
 
-  if (!stripePromise) {
+  if (error) {
     return (
       <div style={{
         padding: '1.5rem',
@@ -68,7 +120,23 @@ export default function StripeProvider({ clientSecret, children }: StripeProvide
         color: theme.colors.error.light ?? theme.colors.text.primary,
         fontSize: '0.875rem',
       }}>
-        Stripe is not configured. Please add your publishable key to environment variables.
+        {error}
+      </div>
+    );
+  }
+
+  if (!stripePromise) {
+    return (
+      <div style={{
+        padding: '1.5rem',
+        backgroundColor: theme.colors.background.paper,
+        border: `1px solid ${theme.colors.border.main}`,
+        borderRadius: '0.75rem',
+        color: theme.colors.text.secondary,
+        fontSize: '0.875rem',
+        textAlign: 'center',
+      }}>
+        Loading payment form...
       </div>
     );
   }

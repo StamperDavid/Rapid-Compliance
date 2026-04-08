@@ -409,22 +409,28 @@ class VoiceAgentHandler {
     // Create Stripe payment intent if amount > 0 and Stripe is configured
     const amount = context?.customerInfo.budget ?? 0;
     let clientSecret: string | undefined;
-    if (amount > 0 && process.env.STRIPE_SECRET_KEY) {
+    if (amount > 0) {
       try {
-        const Stripe = (await import('stripe')).default;
-        const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-          apiVersion: '2023-10-16',
-        });
-        const paymentIntent = await stripe.paymentIntents.create({
-          amount: Math.round(amount), // already in cents
-          currency: 'usd',
-          description: 'Product/Service Purchase — Voice AI',
-          metadata: {
-            callId,
-            customerId: context?.customerInfo.phone ?? callId,
-          },
-        });
-        clientSecret = paymentIntent.client_secret ?? undefined;
+        const { apiKeyService } = await import('@/lib/api-keys/api-key-service');
+        const { PLATFORM_ID } = await import('@/lib/constants/platform');
+        const stripeKeys = (await apiKeyService.getServiceKey(PLATFORM_ID, 'stripe')) as
+          { secretKey?: string } | null;
+        if (stripeKeys?.secretKey) {
+          const Stripe = (await import('stripe')).default;
+          const stripe = new Stripe(stripeKeys.secretKey, {
+            apiVersion: '2023-10-16',
+          });
+          const paymentIntent = await stripe.paymentIntents.create({
+            amount: Math.round(amount), // already in cents
+            currency: 'usd',
+            description: 'Product/Service Purchase — Voice AI',
+            metadata: {
+              callId,
+              customerId: context?.customerInfo.phone ?? callId,
+            },
+          });
+          clientSecret = paymentIntent.client_secret ?? undefined;
+        }
       } catch (stripeErr) {
         logger.error('Stripe payment intent creation failed during voice call', stripeErr instanceof Error ? stripeErr : new Error(String(stripeErr)), { callId });
       }

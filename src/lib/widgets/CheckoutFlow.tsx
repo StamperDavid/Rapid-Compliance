@@ -1,14 +1,16 @@
 /**
  * Checkout Flow Widget
  * Multi-step checkout with Stripe integration
+ * Stripe publishable key loaded at runtime from Firestore (multi-tenant compatible)
  */
 
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { loadStripe } from '@stripe/stripe-js'
+import { loadStripe, type Stripe } from '@stripe/stripe-js';
 import { logger } from '@/lib/logger/logger';
 import { useToast } from '@/hooks/useToast';
+import { auth } from '@/lib/firebase/config';
 import type { CartItem } from './ShoppingCart';
 
 // Cart interface for proper typing
@@ -17,8 +19,21 @@ interface Cart {
   total: number;
 }
 
-const stripeKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
-const stripePromise = stripeKey ? loadStripe(stripeKey) : null;
+/**
+ * Module-level cache for the Stripe instance.
+ * Avoids re-calling loadStripe on every render.
+ */
+let cachedStripePromise: Promise<Stripe | null> | null = null;
+let cachedKey: string | null = null;
+
+function getStripePromise(publishableKey: string): Promise<Stripe | null> {
+  if (cachedStripePromise && cachedKey === publishableKey) {
+    return cachedStripePromise;
+  }
+  cachedKey = publishableKey;
+  cachedStripePromise = loadStripe(publishableKey);
+  return cachedStripePromise;
+}
 
 export interface CheckoutFlowProps {
   onComplete?: (orderId: string) => void;
@@ -33,8 +48,9 @@ export function CheckoutFlow({ onComplete: _onComplete, theme }: CheckoutFlowPro
   const [step, setStep] = useState<'info' | 'payment' | 'complete'>('info');
   const [cart, setCart] = useState<Cart | null>(null);
   const [loading, setLoading] = useState(false);
+  const [stripePublishableKey, setStripePublishableKey] = useState<string | null>(null);
   const { error: showErrorToast } = useToast();
-  
+
   const [customerInfo, setCustomerInfo] = useState({
     email: '',
     name: '',
@@ -50,6 +66,27 @@ export function CheckoutFlow({ onComplete: _onComplete, theme }: CheckoutFlowPro
   const themeFontFamily = theme?.fontFamily;
   const primaryColor = (themePrimaryColor !== '' && themePrimaryColor != null) ? themePrimaryColor : '#6366f1';
   const fontFamily = (themeFontFamily !== '' && themeFontFamily != null) ? themeFontFamily : 'system-ui, sans-serif';
+
+  // Fetch Stripe publishable key from API on mount
+  useEffect(() => {
+    async function fetchStripeConfig() {
+      try {
+        const token = await auth?.currentUser?.getIdToken();
+        const res = await fetch('/api/checkout/provider-config', {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        if (res.ok) {
+          const data = (await res.json()) as { success: boolean; clientKey?: string };
+          if (data.success && data.clientKey) {
+            setStripePublishableKey(data.clientKey);
+          }
+        }
+      } catch {
+        logger.warn('Failed to fetch Stripe config for CheckoutFlow', { file: 'CheckoutFlow.tsx' });
+      }
+    }
+    void fetchStripeConfig();
+  }, []);
 
   const loadCart = useCallback(async () => {
     try {
@@ -73,6 +110,11 @@ export function CheckoutFlow({ onComplete: _onComplete, theme }: CheckoutFlowPro
   };
 
   const handlePayment = async () => {
+    if (!stripePublishableKey) {
+      showErrorToast('Payment is not configured. Please add Stripe keys in Settings > API Keys.');
+      return;
+    }
+
     setLoading(true);
     try {
       // Create Stripe checkout session
@@ -88,7 +130,7 @@ export function CheckoutFlow({ onComplete: _onComplete, theme }: CheckoutFlowPro
       const { sessionId } = data;
 
       // Redirect to Stripe
-      const stripe = await stripePromise;
+      const stripe = await getStripePromise(stripePublishableKey);
       if (stripe && sessionId) {
         const result = await stripe.redirectToCheckout({ sessionId });
         if (result.error) {
@@ -149,7 +191,7 @@ export function CheckoutFlow({ onComplete: _onComplete, theme }: CheckoutFlowPro
           </div>
           <span style={{ fontSize: '0.875rem', fontWeight: '600' }}>Information</span>
         </div>
-        
+
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <div style={{
             width: '2rem',
@@ -176,7 +218,7 @@ export function CheckoutFlow({ onComplete: _onComplete, theme }: CheckoutFlowPro
               <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1.5rem' }}>
                 Contact Information
               </h2>
-              
+
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 <input
                   type="email"
@@ -186,7 +228,7 @@ export function CheckoutFlow({ onComplete: _onComplete, theme }: CheckoutFlowPro
                   placeholder="Email"
                   style={{ padding: '0.75rem', border: '1px solid #e5e7eb', borderRadius: '0.5rem' }}
                 />
-                
+
                 <input
                   type="text"
                   required
@@ -195,7 +237,7 @@ export function CheckoutFlow({ onComplete: _onComplete, theme }: CheckoutFlowPro
                   placeholder="Full Name"
                   style={{ padding: '0.75rem', border: '1px solid #e5e7eb', borderRadius: '0.5rem' }}
                 />
-                
+
                 <input
                   type="tel"
                   value={customerInfo.phone}
@@ -280,7 +322,7 @@ export function CheckoutFlow({ onComplete: _onComplete, theme }: CheckoutFlowPro
               <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1.5rem' }}>
                 Payment
               </h2>
-              
+
               <div style={{ padding: '2rem', backgroundColor: '#f9fafb', borderRadius: '0.5rem', marginBottom: '1.5rem' }}>
                 <p style={{ marginBottom: '1rem', color: '#6b7280' }}>
                   You&apos;ll be redirected to Stripe to complete your payment securely.
@@ -309,17 +351,17 @@ export function CheckoutFlow({ onComplete: _onComplete, theme }: CheckoutFlowPro
                 </button>
                 <button
                   onClick={() => { void handlePayment(); }}
-                  disabled={loading}
+                  disabled={loading || !stripePublishableKey}
                   style={{
                     flex: 2,
                     padding: '1rem',
-                    backgroundColor: loading ? '#9ca3af' : primaryColor,
+                    backgroundColor: (loading || !stripePublishableKey) ? '#9ca3af' : primaryColor,
                     color: '#fff',
                     border: 'none',
                     borderRadius: '0.5rem',
                     fontSize: '1rem',
                     fontWeight: '600',
-                    cursor: loading ? 'not-allowed' : 'pointer',
+                    cursor: (loading || !stripePublishableKey) ? 'not-allowed' : 'pointer',
                   }}
                 >
                   {loading ? 'Processing...' : `Pay ${formatPrice(getTotal())}`}
@@ -355,25 +397,3 @@ export function CheckoutFlow({ onComplete: _onComplete, theme }: CheckoutFlowPro
     </div>
   );
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

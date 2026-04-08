@@ -45,8 +45,8 @@ export async function getAPIKey(
       sendgrid: process.env.SENDGRID_API_KEY,
       google_client_id: process.env.GOOGLE_CLIENT_ID,
       google_client_secret: process.env.GOOGLE_CLIENT_SECRET,
-      stripe_publishable: process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY,
-      stripe_secret: process.env.STRIPE_SECRET_KEY,
+      stripe_publishable: undefined, // Loaded from Firestore via apiKeyService (multi-tenant)
+      stripe_secret: undefined, // Loaded from Firestore via apiKeyService (multi-tenant)
     };
 
     return envMap[service] ?? null;
@@ -58,8 +58,8 @@ export async function getAPIKey(
       sendgrid: process.env.SENDGRID_API_KEY,
       google_client_id: process.env.GOOGLE_CLIENT_ID,
       google_client_secret: process.env.GOOGLE_CLIENT_SECRET,
-      stripe_publishable: process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY,
-      stripe_secret: process.env.STRIPE_SECRET_KEY,
+      stripe_publishable: undefined, // Loaded from Firestore via apiKeyService (multi-tenant)
+      stripe_secret: undefined, // Loaded from Firestore via apiKeyService (multi-tenant)
     };
     return envMap[service] ?? null;
   }
