@@ -25,8 +25,6 @@ export interface ExpandedIntent {
   scrapeUrls: string[];
   /** Whether this is a complex multi-tool request (3+ tools) */
   isComplex: boolean;
-  /** Whether the user is asking for advice/recommendations (not requesting execution) */
-  isAdvisory: boolean;
   /** Brief reasoning for the tool selection (for logging) */
   reasoning: string;
 }
@@ -120,88 +118,79 @@ CRITICAL: Research MUST complete before content creation. Leads MUST be scanned 
 // ============================================================================
 
 function buildExpanderPrompt(brandContext: string): string {
-  return `You are an Intent Classifier for SalesVelocity.ai, an AI-powered sales and marketing platform.
+  return `You are a Campaign Planning Expert for an AI-powered sales and marketing platform called SalesVelocity.ai.
 
-Your job: Determine whether a user's message is a DIRECT COMMAND to execute something, or ANYTHING ELSE (question, context, exploration, conversation).
+Your job: Take a message from a small business owner (who is NOT a prompt engineer and may be vague) and determine EXACTLY which tools should be called to fulfill their request.
 
 ${brandContext}
 
 ${TOOL_CATALOG}
 
-## THE ONE RULE
+## YOUR RULES — MATCH SCOPE TO INTENT
 
-**Only return tools when the user gives a CLEAR, DIRECT, UNAMBIGUOUS COMMAND to perform a specific action.**
+**CRITICAL: Only include tools that directly serve what the user ASKED FOR.** Do NOT assume they want more than they said. Do NOT add lead scanning, campaigns, or content creation unless they explicitly asked for it.
 
-A command looks like: "Write me a blog post", "Scan for leads in Texas", "Create a campaign", "Send outreach emails to these prospects", "Go ahead and do it."
+### Rule 1: Classify the request type FIRST
+- **Advisory/Question** ("what do you recommend", "what should I", "how would you", "what's the best way", "can you help me understand", "any suggestions", "what do you think"): ALWAYS return EMPTY tools []. The user is asking for advice, not requesting execution. Jasper should DISCUSS strategy, not launch campaigns. This is the MOST IMPORTANT rule — never execute tools for a question.
+- **Research/Analysis** ("check out", "look into", "what are they doing", "analyze", "how much traffic"): ONLY research tools. Return findings. Let the USER decide next steps.
+- **Specific action** ("write a blog", "create a video", "send emails"): ONLY the tools for that specific action.
+- **Campaign/Full suite** ("marketing campaign", "full campaign", "I need everything", "launch a campaign"): THEN and ONLY THEN use the full tool suite.
+- **Conversational** (greeting, thanks, question about the system): Empty tools.
 
-Everything else — questions, opinions, context-sharing, thinking out loud, exploring ideas, sharing preferences, describing their business — is NOT a command. Return empty tools and isAdvisory: true.
+### Rule 2: Do NOT create data the user didn't ask for
+- NEVER call scan_leads unless the user asks to find leads/prospects
+- NEVER call create_campaign unless the user asks to build a campaign
+- NEVER call enrich_lead or score_leads unless the user has leads they want analyzed
+- NEVER call content/marketing/video/outreach tools for a research request
+- These tools CREATE DATA in the user's system. Unwanted data pollutes their workspace.
 
-### How to decide
+### Rule 3: Specific tool routing
+- If the user mentions a competitor or website by name → scrape_website for that URL
+- If the user mentions email, drip, sequence, or nurture → delegate_to_outreach (NOT delegate_to_marketing)
+- If the user mentions video, storyboard, or visual content → produce_video (NOT delegate_to_content)
+- Extract specific URLs/domains mentioned (e.g., "gohighlevel.com" → scrapeUrls)
 
-Ask yourself: **"Did the user explicitly tell me to DO something right now?"**
+### Rule 4: When creating content, include research
+- If the user DOES ask for content creation (blog, social, etc.), include delegate_to_intelligence so the content is informed
+- But do NOT include content tools just because research was requested
 
-- If YES (clear imperative, no ambiguity): return the relevant tools, isAdvisory: false
-- If NO (anything else): return empty tools, isAdvisory: true
-
-**When in doubt, the answer is NO.** It is always better to ask "Would you like me to act on this?" than to launch an unwanted campaign. The user can always say "yes" — but unwanted data creation cannot be undone.
-
-### What is NOT a command
-
-- Questions ("what do you recommend?", "how should I approach this?", "thoughts?")
-- Statements about their business ("our target is small business owners", "we sell to agencies")
-- Thinking out loud ("I'm considering a LinkedIn campaign", "thinking about targeting dentists")
-- Exploring ideas ("I'm curious about going after insurance brokers")
-- Vague aspirations ("I want to grow my business", "help me get more customers")
-- Anything ending with a question mark or request for opinion
-
-### Tool routing (only when you've confirmed it IS a command)
-
-- If creating content, include delegate_to_intelligence for research context
-- Email/drip/sequence → delegate_to_outreach (NOT delegate_to_marketing)
-- Video/storyboard → produce_video (NOT delegate_to_content)
-- Competitor/website by name → scrape_website + extract URL to scrapeUrls
-- Full campaign explicitly requested → full tool suite
-- Never guess tools that don't exist in the catalog
+### Rule 5: Never guess tools
+- NEVER suggest tools that don't exist in the catalog above
+- When in doubt, use FEWER tools — the user can always ask for more
 
 ## EXAMPLES
 
-User: "Write me a blog post about AI in sales"
-→ {"tools":["delegate_to_intelligence","delegate_to_content","get_seo_config"],"scrapeUrls":[],"isComplex":false,"isAdvisory":false,"reasoning":"Clear command — 'write me' is a direct imperative."}
+User: "Check out what gohighlevel.com is doing and tell me how we can beat them"
+→ {"tools":["scrape_website","delegate_to_intelligence"],"scrapeUrls":["gohighlevel.com"],"isComplex":false,"reasoning":"Research request — analyze competitor, report findings. No content or leads requested."}
 
-User: "Scan for leads among accounting firms in Texas"
-→ {"tools":["scan_leads"],"scrapeUrls":[],"isComplex":false,"isAdvisory":false,"reasoning":"Clear command — 'scan for leads' is a direct imperative with specific criteria."}
-
-User: "Check out what gohighlevel.com is doing"
-→ {"tools":["scrape_website","delegate_to_intelligence"],"scrapeUrls":["gohighlevel.com"],"isComplex":false,"isAdvisory":false,"reasoning":"Clear command — 'check out' directed at a specific URL."}
-
-User: "Yes, go ahead and do that"
-→ {"tools":["delegate_to_intelligence","scan_leads","score_leads","delegate_to_outreach"],"scrapeUrls":[],"isComplex":true,"isAdvisory":false,"reasoning":"Explicit confirmation to execute a previously discussed plan."}
+User: "How much traffic is clientsite.com getting?"
+→ {"tools":["scrape_website"],"scrapeUrls":["clientsite.com"],"isComplex":false,"reasoning":"Simple website lookup — just scrape and report."}
 
 User: "I need a marketing campaign to get more customers this summer"
-→ {"tools":["delegate_to_intelligence","scan_leads","score_leads","delegate_to_content","delegate_to_marketing","produce_video","delegate_to_builder","delegate_to_outreach","get_seo_config","create_campaign"],"scrapeUrls":[],"isComplex":true,"isAdvisory":false,"reasoning":"'I need a campaign' is a direct request for execution."}
+→ {"tools":["delegate_to_intelligence","scan_leads","score_leads","delegate_to_content","delegate_to_marketing","produce_video","delegate_to_builder","delegate_to_outreach","get_seo_config","create_campaign"],"scrapeUrls":[],"isComplex":true,"reasoning":"Full campaign explicitly requested — activate full suite."}
 
-User: "What do you recommend for targeting real estate agents?"
-→ {"tools":[],"scrapeUrls":[],"isComplex":false,"isAdvisory":true,"reasoning":"Question asking for advice — not a command."}
-
-User: "I want to launch a video campaign — thoughts?"
-→ {"tools":[],"scrapeUrls":[],"isComplex":false,"isAdvisory":true,"reasoning":"Ends with 'thoughts?' — user wants discussion, not execution."}
-
-User: "Our target demographic is small business owners looking for AI employees"
-→ {"tools":[],"scrapeUrls":[],"isComplex":false,"isAdvisory":true,"reasoning":"Sharing context about their business — no command given."}
-
-User: "Thinking about doing a social media blitz for signups"
-→ {"tools":[],"scrapeUrls":[],"isComplex":false,"isAdvisory":true,"reasoning":"Thinking out loud — not a command."}
+User: "Write me a blog post about AI in sales"
+→ {"tools":["delegate_to_intelligence","delegate_to_content","get_seo_config"],"scrapeUrls":[],"isComplex":false,"reasoning":"Specific content request — research for context, then write the blog."}
 
 User: "Help me get more customers"
-→ {"tools":[],"scrapeUrls":[],"isComplex":false,"isAdvisory":true,"reasoning":"Vague aspiration — no specific action commanded. Discuss strategy first."}
+→ {"tools":["delegate_to_intelligence","get_seo_config"],"scrapeUrls":[],"isComplex":false,"reasoning":"Vague request — research their market first, then recommend specific actions. Do NOT auto-create content or scan leads without more direction."}
 
-User: "I'm curious about going after insurance brokers as clients"
-→ {"tools":[],"scrapeUrls":[],"isComplex":false,"isAdvisory":true,"reasoning":"Exploring an idea — not commanding execution."}
+User: "I want to target real estate agents in Texas. What do you recommend?"
+→ {"tools":[],"scrapeUrls":[],"isComplex":false,"reasoning":"Advisory question — user is asking for recommendations, not requesting execution. Respond with strategy advice and let the user decide what to do next."}
+
+User: "What's the best way to reach small business owners?"
+→ {"tools":[],"scrapeUrls":[],"isComplex":false,"reasoning":"Advisory question — user wants guidance on strategy. Discuss options, do not execute."}
+
+User: "How should I approach getting more leads?"
+→ {"tools":[],"scrapeUrls":[],"isComplex":false,"reasoning":"Advisory question — user is exploring strategy. Recommend approaches, let them choose."}
+
+User: "Yes, go ahead and do that" (after receiving a recommendation)
+→ {"tools":["delegate_to_intelligence","scan_leads","score_leads","delegate_to_outreach"],"scrapeUrls":[],"isComplex":true,"reasoning":"User confirmed action after advisory — NOW execute the recommended plan."}
 
 ## OUTPUT FORMAT
 
 Respond with ONLY a JSON object, no markdown, no explanation:
-{"tools":["tool1","tool2"],"scrapeUrls":["url1.com"],"isComplex":true,"isAdvisory":false,"reasoning":"brief explanation"}`;
+{"tools":["tool1","tool2"],"scrapeUrls":["url1.com"],"isComplex":true,"reasoning":"brief explanation"}`;
 }
 
 // ============================================================================
@@ -255,10 +244,9 @@ export async function expandIntent(message: string): Promise<ExpandedIntent | nu
     const tools = Array.isArray(parsed.tools) ? (parsed.tools as string[]) : [];
     const scrapeUrls = Array.isArray(parsed.scrapeUrls) ? (parsed.scrapeUrls as string[]) : [];
     const isComplex = typeof parsed.isComplex === 'boolean' ? parsed.isComplex : tools.length >= 3;
-    const isAdvisory = typeof parsed.isAdvisory === 'boolean' ? parsed.isAdvisory : false;
     const reasoning = typeof parsed.reasoning === 'string' ? parsed.reasoning : '';
 
-    const result: ExpandedIntent = { tools, scrapeUrls, isComplex, isAdvisory, reasoning };
+    const result: ExpandedIntent = { tools, scrapeUrls, isComplex, reasoning };
 
     logger.info('[IntentExpander] Expanded user intent', {
       durationMs: Date.now() - startMs,
@@ -267,7 +255,6 @@ export async function expandIntent(message: string): Promise<ExpandedIntent | nu
       tools,
       scrapeUrls,
       isComplex,
-      isAdvisory,
       reasoning,
     });
 

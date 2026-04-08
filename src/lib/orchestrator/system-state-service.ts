@@ -95,16 +95,6 @@ const ADVISORY_PATTERNS = [
   /any (ideas|suggestions|thoughts)/i,
   /help me (understand|figure out|think through|plan)/i,
   /can you (explain|help me understand|walk me through)/i,
-  // Trailing question cues — standalone "thoughts?", "ideas?", etc. at end of message
-  /[—–\-,]\s*(thoughts|ideas|suggestions|opinions|advice|input)\s*\??\s*$/i,
-  /\b(thoughts|ideas|suggestions)\s*\?\s*$/i,
-  /\bwhat do you think\s*\??\s*$/i,
-  /\bwhat would you (do|say|suggest)\s*\??\s*$/i,
-  /\bsound good\s*\??\s*$/i,
-  /\bmake sense\s*\??\s*$/i,
-  // Contemplative phrasing — user is exploring, not commanding
-  /^(i'?m\s+)?(thinking about|considering|wondering about|mulling over|toying with|exploring)\b/i,
-  /^(i'?m\s+)?curious about/i,
 ];
 
 /**
@@ -196,15 +186,12 @@ export function classifyQuery(query: string): QueryClassification {
     };
   }
 
-  // Default: treat as advisory (safe fallback).
-  // If the user truly wants action, the Intent Expander will detect it and
-  // the expander override will reclassify. Defaulting to 'action' is dangerous
-  // because informational statements ("our target is X") would trigger execution.
+  // Default: action query (may or may not need state)
   return {
-    requiresStateReflection: true,
-    queryType: 'advisory',
-    suggestedTools: ['get_system_state'],
-    reason: 'Unclassified query - defaulting to advisory for safety. Intent Expander will override if action is detected.',
+    requiresStateReflection: false,
+    queryType: 'action',
+    suggestedTools: [],
+    reason: 'Action query - state reflection optional',
   };
 }
 

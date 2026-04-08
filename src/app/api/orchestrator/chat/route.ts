@@ -536,47 +536,6 @@ You MAY call read-only tools like get_system_state or query_docs to inform your 
       ? await expandIntent(message)
       : null;
 
-    // ── LLM intent override: the expander understands intent regardless of
-    //    spelling, phrasing, or mixed signals. It can promote or demote queryType. ──
-    if (expandedIntent?.isAdvisory && queryClassification.queryType !== 'advisory') {
-      // Expander says advisory — override to advisory (e.g., typo missed by regex)
-      logger.info('[Jasper] Intent Expander overriding queryType to advisory', {
-        previousType: queryClassification.queryType,
-        expanderReasoning: expandedIntent.reasoning,
-      });
-      queryClassification.queryType = 'advisory';
-      queryClassification.requiresStateReflection = true;
-
-      // Late-inject advisory context into the system prompt since the original
-      // advisory check (above) ran before the expander had a chance to classify.
-      const lateAdvisoryContext = `
-
-IMPORTANT — ADVISORY MODE:
-The user is asking for your advice, recommendations, or opinion. They are NOT asking you to execute anything.
-DO NOT call any tools that create data (scan_leads, delegate_to_outreach, delegate_to_marketing, delegate_to_content, etc.).
-Instead, have a strategic conversation:
-1. Explain your recommended approach and WHY it makes sense for their situation
-2. Outline the specific steps you WOULD take if they approve
-3. Ask if they want you to proceed with execution
-Only execute tools if the user explicitly says to go ahead (e.g., "yes do it", "go ahead", "let's do that", "execute that plan").
-You MAY call read-only tools like get_system_state or query_docs to inform your recommendation.`;
-
-      // Append to the system message (first message in the array)
-      if (messages.length > 0 && messages[0].role === 'system') {
-        messages[0].content += lateAdvisoryContext;
-      }
-    } else if (expandedIntent && !expandedIntent.isAdvisory && expandedIntent.tools.length > 0 && queryClassification.queryType === 'advisory') {
-      // Expander says action with specific tools — override advisory default back
-      // to action. This handles the safe default (advisory) being correctly promoted
-      // when the expander detects a real action request (e.g., "write me a blog post").
-      logger.info('[Jasper] Intent Expander overriding advisory default to action', {
-        previousType: queryClassification.queryType,
-        expanderTools: expandedIntent.tools,
-        expanderReasoning: expandedIntent.reasoning,
-      });
-      queryClassification.queryType = 'action';
-    }
-
     // ── Layer 2: Regex keyword matching (fast deterministic fallback) ──
     const INTENT_TOOL_MAP: Array<{ patterns: RegExp; tools: string[] }> = [
       { patterns: /scrap(e|ing)\b/i, tools: ['scrape_website'] },
@@ -597,16 +556,10 @@ You MAY call read-only tools like get_system_state or query_docs to inform your 
       { patterns: /campaign|multi.?channel|content\s+blitz|everything/i, tools: ['delegate_to_content', 'delegate_to_marketing', 'produce_video'] },
     ];
 
-    // Skip regex matching for advisory queries — the Intent Expander already
-    // returns empty tools for questions/recommendations. Regex keywords like
-    // "leads" or "campaign" in an advisory question would add unwanted tools
-    // that the nudging system then forces the model to execute.
     const regexTools = new Set<string>();
-    if (queryClassification.queryType !== 'advisory') {
-      for (const { patterns, tools } of INTENT_TOOL_MAP) {
-        if (patterns.test(message)) {
-          for (const t of tools) { regexTools.add(t); }
-        }
+    for (const { patterns, tools } of INTENT_TOOL_MAP) {
+      if (patterns.test(message)) {
+        for (const t of tools) { regexTools.add(t); }
       }
     }
 
@@ -652,9 +605,7 @@ You MAY call read-only tools like get_system_state or query_docs to inform your 
     logger.info('[Jasper] Intent detection (LLM + regex merged)', {
       expanderUsed: Boolean(expandedIntent),
       expanderTools: expandedIntent?.tools ?? [],
-      expanderIsAdvisory: expandedIntent?.isAdvisory ?? false,
       expanderReasoning: expandedIntent?.reasoning,
-      finalQueryType: queryClassification.queryType,
       regexTools: [...regexTools],
       mergedTools: [...requiredTools],
       expectedScrapeCount,
@@ -787,7 +738,7 @@ CRITICAL RULES:
         const isNonActionQuery = queryClassification.queryType === 'conversational' || queryClassification.queryType === 'advisory';
         const lastMsg = currentMessages[currentMessages.length - 1];
         const wasNudged = typeof lastMsg?.content === 'string' && lastMsg.content.startsWith('SYSTEM: Phase');
-        const shouldForceTools = (iterationCount === 1 && !isNonActionQuery) || (wasNudged && !isNonActionQuery);
+        const shouldForceTools = (iterationCount === 1 && !isNonActionQuery) || wasNudged;
         const iterationToolChoice = shouldForceTools ? ('required' as const) : ('auto' as const);
 
         const { result: response, model } = await chatWithFallback<ChatCompletionResponse>(
@@ -830,7 +781,7 @@ CRITICAL RULES:
             }
           }
 
-          if (pendingByPhase.length > 0 && pendingToolReminders < MAX_REMINDERS && !isNonActionQuery) {
+          if (pendingByPhase.length > 0 && pendingToolReminders < MAX_REMINDERS) {
             pendingToolReminders++;
             const phaseLabels: Record<number, string> = {
               1: 'Research & Discovery',
