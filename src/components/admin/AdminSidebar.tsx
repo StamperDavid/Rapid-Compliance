@@ -258,9 +258,9 @@ export default function AdminSidebar() {
     // Companies
     if (href === '/companies') { return pathname.startsWith('/companies'); }
 
-    // Deals hub — deals list + risk
+    // Deals hub — deals list + risk + living ledger
     if (href === '/deals') {
-      return pathname.startsWith('/deals') || pathname.startsWith('/risk');
+      return pathname.startsWith('/deals') || pathname.startsWith('/risk') || pathname.startsWith('/living-ledger');
     }
 
     // Email Studio — email writer + nurture + email builder + templates + sequences + email campaigns

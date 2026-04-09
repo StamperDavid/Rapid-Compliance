@@ -170,7 +170,7 @@ export const LEADS_TABS: SubpageNavItem[] = [
   { label: 'Scoring', href: '/lead-scoring' },
 ];
 
-// ── Deals Hub (All Deals + Orders + Invoices + Payments + Tasks + Risk) ─────
+// ── Deals Hub (Pipeline + Revenue + Risk + Health) ─────────────────────────
 export const DEALS_TABS: SubpageNavItem[] = [
   { label: 'All Deals', href: '/deals' },
   { label: 'Orders', href: '/deals/orders' },
@@ -178,6 +178,7 @@ export const DEALS_TABS: SubpageNavItem[] = [
   { label: 'Payments', href: '/deals/payments' },
   { label: 'Tasks', href: '/deals/tasks' },
   { label: 'Risk', href: '/risk' },
+  { label: 'Living Ledger', href: '/living-ledger' },
 ];
 
 // ── Content Generator Hub (Video + Image + Editor + Library + Audio Lab) ─────
