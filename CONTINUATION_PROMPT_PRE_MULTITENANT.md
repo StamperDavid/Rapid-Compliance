@@ -56,28 +56,31 @@ Last Updated: April 8, 2026
 
 ## REMAINING WORK — Prioritized
 
-### Phase 2: Build Companies & Email Templates (type + service + API + page)
-**Companies** needs:
-- Proper `Company` type in `src/types/` (currently minimal in duplicate-detection.ts)
-- `company-service.ts` with CRUD
-- `/api/crm/companies/` routes (GET list, POST create, GET by ID, PUT, DELETE)
-- Dedicated `/companies` page (currently served by generic entity page)
-- Contact roll-up, deal association, lifetime value display
+### Phase 2: Build Companies & Email Templates — COMPLETED (April 9, 2026)
+- `src/types/company.ts` — Full Company type with address, size, status
+- `src/lib/crm/company-service.ts` — CRUD + search + company rollup (contact/deal counts, LTV)
+- `src/app/api/crm/companies/` — GET/POST list + GET/PUT/DELETE by ID
+- `src/app/(dashboard)/companies/page.tsx` — Dedicated page with DataTable, create modal, bulk delete
+- `src/types/email-template.ts` — Unified `UserEmailTemplate` type (reconciled 3 conflicting shapes)
+- `src/lib/email/email-template-service.ts` — CRUD + renderTemplate() for variable substitution
+- `src/app/api/email-templates/` — Full CRUD API
+- Sidebar updated: Companies → `/companies` (was `/entities/companies`)
 
-**Email Templates** needs:
-- User-editable `EmailTemplate` type (distinct from static sales templates and ecommerce inline templates)
-- `getEmailTemplatesCollection()` in collections.ts
-- CRUD service
-- `/api/email-templates/` routes
-- Page with template editor, variable support, preview
-- NOTE: Three conflicting EmailTemplate shapes exist — reconcile into one
+### Phase 3: Build Quotes/Invoices/Payments — COMPLETED (April 9, 2026)
+Revenue flow: **Deal → Quote → Invoice → Payment** (each entity links to the previous)
+- `src/types/quote.ts` — Quote with QuoteLineItem, QuoteLineItemInput, status lifecycle
+- `src/types/invoice.ts` — CRM Invoice (separate from ecommerce), reuses QuoteLineItem
+- `src/types/payment.ts` — CRM Payment records with method tracking
+- `src/lib/crm/quote-service.ts` — CRUD, totals calculation, quote-to-invoice conversion
+- `src/lib/crm/invoice-service.ts` — CRUD, payment recording, status auto-update
+- `src/lib/crm/payment-service.ts` — CRUD, auto-updates linked invoice
+- API routes for all three: `/api/crm/quotes/`, `/api/crm/invoices/`, `/api/crm/payments/`
+- Special: `POST /api/crm/quotes/[quoteId]/convert` — converts accepted quote to invoice
 
-### Phase 3: Build Quotes/Invoices/Payments with Cross-Entity Linking
-**Quotes** — ZERO infrastructure exists. Needs type, service, collection, full API. Links to deals, contacts, line items from Products & Services.
-**Invoices (standalone CRM)** — Ecommerce invoice generator exists (PDF for orders). CRM invoice entity needs separate type/service/API linking to quotes, deals, contacts.
-**Payments (standalone CRM)** — Ecommerce payment processing exists. CRM payment records linking to invoices, deals, contacts need to be built.
-
-The revenue flow: Deal → Quote → Invoice → Payment. Each step must link to the previous.
+**Tab wiring completed:**
+- Leads hub: All Leads | **Proposals / Quotes** | Intelligence Hub | Scoring
+- Deals hub: All Deals | **Orders** | **Invoices** | **Payments** | **Tasks** | Risk
+- Dashboard hub: Dashboard | **Activities** | Executive Briefing | Workforce HQ | Team
 
 ### Phase 4: Wire Orphaned Pages
 | Page | What It Is | Where to Wire |
