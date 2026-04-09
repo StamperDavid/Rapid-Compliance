@@ -25,6 +25,8 @@ import { logger } from '@/lib/logger/logger';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import { getDealsCollection } from '@/lib/firebase/collections';
 import { PageTitle, SectionDescription } from '@/components/ui/typography';
+import SubpageNav from '@/components/ui/SubpageNav';
+import { DEALS_TABS } from '@/lib/constants/subpage-nav';
 import type { Deal } from '@/lib/crm/deal-service';
 import type { DealHealthScore } from '@/lib/crm/deal-health';
 import type { ActionRecommendations } from '@/lib/crm/next-best-action-engine';
@@ -207,6 +209,7 @@ export default function LivingLedgerPage() {
 
   return (
     <div className="p-8 space-y-6">
+      <SubpageNav items={DEALS_TABS} />
       {/* Header */}
       <div>
         <PageTitle className="mb-1">CRM Living Ledger</PageTitle>

@@ -46,8 +46,9 @@ export default function SettingsPage() {
       items: [
         { icon: '🏢', label: 'Organization Profile', description: 'Company name, address, phone, website, industry, and social media', href: `/settings/organization`, permission: canManageOrganization },
         { icon: '🔑', label: 'API Keys', description: 'Configure Firebase, AI, payment, and email services', href: `/settings/api-keys`, permission: canManageAPIKeys },
-        { icon: '💳', label: 'Billing & Plans', description: 'Manage subscription, usage, and billing', href: `/settings/billing`, permission: canManageBilling },
+        { icon: '💳', label: 'Billing & Plans', description: 'Manage subscription, usage, billing, and outbound feature limits', href: `/settings/billing`, permission: canManageBilling },
         { icon: '🎛️', label: 'Feature Toggles', description: 'Enable or disable platform modules for your organization', href: `/settings/features`, permission: canManageOrganization },
+        { icon: '📅', label: 'Meeting Scheduler', description: 'Configure automated meeting booking with round-robin assignment and Zoom integration', href: `/settings/meeting-scheduler`, permission: canManageOrganization },
       ]
     },
     {
@@ -57,7 +58,7 @@ export default function SettingsPage() {
     {
       title: 'E-Commerce',
       items: [
-        { icon: '🏷️', label: 'Promotions & Coupons', description: 'Create discount codes, manage AI-authorized offers, and track coupon performance', href: `/settings/promotions`, permission: canManageOrganization },
+        { icon: '🏷️', label: 'Promotions & Coupons', description: 'Create discount codes, manage AI-authorized offers, and track coupon performance', href: `/coupons`, permission: canManageOrganization },
       ]
     },
     {
@@ -72,6 +73,8 @@ export default function SettingsPage() {
       items: [
         { icon: '🎨', label: 'CRM Theme & Branding', description: 'White-label your CRM platform with custom colors and logo', href: `/settings/theme`, permission: canManageTheme },
         { icon: '🧬', label: 'Brand DNA', description: 'Define your brand identity for AI-powered email, social, and content generation', href: `/settings/brand-dna`, permission: canManageTheme },
+        { icon: '🎬', label: 'Brand Kit', description: 'Logo watermark, brand colors, caption typography, and intro/outro for video', href: `/settings/brand-kit`, permission: canManageTheme },
+        { icon: '🎵', label: 'Music Library', description: 'Upload and manage royalty-free background music tracks for video production', href: `/settings/music-library`, permission: canManageOrganization },
       ]
     },
     {
@@ -86,7 +89,6 @@ export default function SettingsPage() {
       items: [
         { icon: '🛡️', label: 'Compliance Reports', description: 'Run audits, view compliance scores, and track regulatory adherence', href: `/compliance-reports`, permission: canManageOrganization },
         { icon: '📜', label: 'Audit Log', description: 'View system-wide audit trail of all user and system actions', href: `/website/audit-log`, permission: canManageOrganization },
-        { icon: '👤', label: 'Impersonate User', description: 'Admin tool to impersonate users for debugging and support', href: `/system/impersonate`, permission: canManageOrganization },
         { icon: '🔀', label: 'Lead Routing', description: 'Configure automatic lead assignment rules and round-robin routing', href: `/settings/lead-routing`, permission: canAssignRecords },
       ]
     },
@@ -100,23 +102,9 @@ export default function SettingsPage() {
       ]
     },
     {
-      title: 'Analytics & Reporting',
-      items: [
-        { icon: '📈', label: 'Analytics Dashboard', description: 'Revenue reports, pipeline analysis, forecasting, and win/loss', href: `/analytics`, permission: canManageOrganization },
-      ]
-    },
-    {
-      title: 'Outbound Sales',
-      items: [
-        { icon: '🚀', label: 'Subscription & Features', description: 'Manage plan, outbound features, and usage limits', href: `/settings/subscription`, permission: canManageBilling },
-      ]
-    },
-    {
       title: 'Advanced',
       items: [
         { icon: '📋', label: 'Schema Editor', description: 'Create and manage custom entities and fields', href: `/schemas`, permission: canManageOrganization },
-        { icon: '⚙️', label: 'Workflows', description: 'Automation rules and workflow configuration', href: `/settings/workflows`, permission: canManageOrganization },
-        { icon: '🤖', label: 'AI Agents', description: 'Configure and train AI assistants', href: `/settings/ai-agents`, permission: canManageOrganization },
       ]
     }
   ];

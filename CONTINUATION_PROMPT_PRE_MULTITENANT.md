@@ -82,14 +82,22 @@ Revenue flow: **Deal → Quote → Invoice → Payment** (each entity links to t
 - Deals hub: All Deals | **Orders** | **Invoices** | **Payments** | **Tasks** | Risk
 - Dashboard hub: Dashboard | **Activities** | Executive Briefing | Workforce HQ | Team
 
-### Phase 4: Wire Orphaned Pages
-| Page | What It Is | Where to Wire |
-|------|-----------|---------------|
-| `/living-ledger` | AI-powered deal health monitoring + next best actions | Need to understand purpose better — read the code first |
-| `/settings/brand-kit` | Brand asset management (logo, colors, fonts for video/content) | Add card to Settings hub |
-| `/settings/meeting-scheduler` | Meeting booking config (demo calls, discovery calls) | Add card to Settings hub |
-| `/settings/music-library` | Music library for video production | Tab in Content Generator |
-| `/tools/[toolId]` | Custom tool viewer (iframe wrapper for 3rd party apps) | Wire from /settings/custom-tools |
+### Phase 4: Wire Orphaned Pages + Settings Cleanup — COMPLETED (April 9, 2026)
+| Page | Wired To |
+|------|----------|
+| `/living-ledger` | Added as "Living Ledger" tab on Deals hub + SubpageNav added to page |
+| `/settings/brand-kit` | Added card to Settings > Customization section |
+| `/settings/meeting-scheduler` | Added card to Settings > Core Configuration section |
+| `/settings/music-library` | Added card to Settings > Customization section (admin-only backend) |
+| `/tools/[toolId]` | Already wired — Settings > Integrations > Custom Tools links to `/settings/custom-tools` |
+
+**Settings cleanup (approved plan executed):**
+- Removed "Analytics & Reporting" section (was just a nav shortcut to /analytics)
+- Merged "Outbound Sales" subscription into Billing card description
+- Removed "Advanced → Workflows" and "Advanced → AI Agents" (accessible via sidebar)
+- Updated Promotions link to `/coupons` (where the page actually lives)
+- Removed Impersonate from Compliance (already at `/system/impersonate` via System page)
+- Result: **8 settings sections** (down from 11)
 
 ### Phase 5: Light Mode
 - Build light-mode CSS variable overrides in globals.css (`:root.light { ... }`)
