@@ -108,12 +108,12 @@ Revenue flow: **Deal → Quote → Invoice → Payment** (each entity links to t
 - Light text: #0f172a (primary), #64748b (secondary), #94a3b8 (disabled)
 - Light borders: #e2e8f0 (main), #cbd5e1 (light), #94a3b8 (strong)
 
-### Phase 6: Fix Ecommerce Disconnects
-- Two checkout flows create orders with different shapes — unify
-- Coupon input missing from storefront checkout UI
-- Storefront checkout uses client SDK (will fail with Firestore security rules)
-- Missing webhook handlers: Chargebee, Square, Hyperswitch, Braintree
-- Razorpay and Braintree not in checkout initiate/complete maps
+### Phase 6: Fix Ecommerce Disconnects — COMPLETED (April 9, 2026)
+1. **checkout-service.ts switched from client SDK to AdminFirestoreService** — all 6 `FirestoreService.*` calls replaced with `AdminFirestoreService.*` (server-side Admin SDK). Fixed `shipping` field collision bug (was overwriting numeric cost with shipping info object — now correctly uses `shippingInfo` key).
+2. **Order shapes unified** — `/api/checkout/complete` now creates canonical orders with `orderNumber`, `customer` (firstName/lastName/email), full `OrderItem[]` with productId/sku/variants, `fulfillmentStatus`, `subtotal`/`tax`/`shipping`/`discount`/`total` line items, `shippingInfo`, and `payment` with `OrderPayment` shape. Shared `checkout-types.ts` with `buildOrderData()` helper used by all 4 payment forms (Stripe, Adyen, Hyperswitch, Paddle).
+3. **Razorpay and Braintree added to checkout maps** — both providers added to `PROVIDER_MAP` (initiate), `VERIFIER_MAP` (complete), and `checkoutCompleteSchema` validation enum. `razorpay` also added to `PaymentProvider` type union.
+4. **Discount code input added to storefront checkout** — coupon input field in order summary with apply/remove via `/api/ecommerce/cart/discount` API. Shows applied codes as removable tags and discount line item when active.
+5. **Webhook handlers already existed** — Chargebee, Square, Hyperswitch, Braintree, and Razorpay all had full implementations.
 
 ### Phase 7: Kill 36 `any` Types in API Routes
 - 36 occurrences across 28 API route files need proper typing

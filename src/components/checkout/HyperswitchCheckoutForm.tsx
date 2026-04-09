@@ -6,24 +6,11 @@ import toast from 'react-hot-toast';
 import { useTheme } from '@/contexts/ThemeContext';
 import { logger } from '@/lib/logger/logger';
 import { auth } from '@/lib/firebase/config';
-
-interface CartShape {
-  total: number;
-}
-
-interface FormDataShape {
-  email: string;
-  name: string;
-  address: string;
-  city: string;
-  state: string;
-  zip: string;
-  country: string;
-}
+import { buildOrderData, type CheckoutCart, type CheckoutFormData } from './checkout-types';
 
 interface HyperswitchCheckoutFormProps {
-  cart: CartShape;
-  formData: FormDataShape;
+  cart: CheckoutCart;
+  formData: CheckoutFormData;
   /** Hyperswitch client_secret for UnifiedCheckout */
   clientSecret?: string;
   sessionId?: string;
@@ -56,10 +43,7 @@ export default function HyperswitchCheckoutForm({
         body: JSON.stringify({
           provider: 'hyperswitch',
           paymentIntentId: paymentId,
-          orderData: {
-            customerEmail: formData.email,
-            customerName: formData.name,
-          },
+          orderData: buildOrderData(cart, formData),
         }),
       });
 
@@ -83,7 +67,7 @@ export default function HyperswitchCheckoutForm({
     } finally {
       setProcessing(false);
     }
-  }, [formData, router]);
+  }, [cart, formData, router]);
 
   useEffect(() => {
     // Load Hyperswitch SDK from CDN

@@ -371,7 +371,7 @@ export type PaymentMethodType =
   | 'buy_now_pay_later'; // Afterpay, Klarna, etc.
 
 export interface PaymentProvider {
-  provider: 'stripe' | 'square' | 'paypal' | 'authorize_net' | 'braintree' | 'custom'
+  provider: 'stripe' | 'square' | 'paypal' | 'authorize_net' | 'braintree' | 'razorpay' | 'custom'
     | 'paddle' | 'adyen' | 'chargebee' | 'hyperswitch' | 'mollie' | '2checkout';
   
   // Credentials (stored in Secret Manager)

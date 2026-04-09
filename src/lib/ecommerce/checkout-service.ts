@@ -3,7 +3,7 @@
  * Handles checkout process and order creation
  */
 
-import { FirestoreService } from '@/lib/db/firestore-service';
+import { AdminFirestoreService } from '@/lib/db/admin-firestore-service';
 import { getOrCreateCart, clearCart } from './cart-service';
 import { getOrdersCollection, getSubCollection } from '@/lib/firebase/collections';
 import type { Cart, Order, Address, OrderPayment, OrderShipping, OrderStatus, PaymentStatus } from '@/types/ecommerce';
@@ -287,7 +287,7 @@ async function createOrder(
   };
 
   // Save order to canonical path (matches webhook handler + order listing API)
-  await FirestoreService.set(
+  await AdminFirestoreService.set(
     getOrdersCollection(),
     orderId,
     {
@@ -302,7 +302,7 @@ async function createOrder(
         processedAt: order.payment.processedAt?.toDate().toISOString(),
         capturedAt: order.payment.capturedAt?.toDate().toISOString(),
       },
-      shipping: {
+      shippingInfo: {
         ...orderShipping,
         estimatedDelivery: orderShipping.estimatedDelivery?.toDate().toISOString(),
       },
@@ -337,7 +337,7 @@ async function getProduct(productId: string): Promise<Record<string, unknown> | 
     throw new Error('E-commerce not configured');
   }
 
-  const product = await FirestoreService.get(
+  const product = await AdminFirestoreService.get(
     getSubCollection(config.productSchema),
     productId
   );
@@ -373,14 +373,15 @@ async function updateInventory(items: Array<{ productId: string; quantity: numbe
   }
 
   for (const item of items) {
-    const product = await FirestoreService.get(
+    const product = await AdminFirestoreService.get(
       getSubCollection(productSchema),
       item.productId
     );
 
     if (product?.[inventoryField] !== undefined) {
-      const newStock = Math.max(0, product[inventoryField] - item.quantity);
-      await FirestoreService.set(
+      const currentStock = typeof product[inventoryField] === 'number' ? product[inventoryField] : 0;
+      const newStock = Math.max(0, currentStock - item.quantity);
+      await AdminFirestoreService.set(
         getSubCollection(productSchema),
         item.productId,
         {
@@ -407,7 +408,7 @@ async function createCustomerEntity(customer: { firstName: string; lastName: str
 
   // Check if customer already exists
   const { where } = await import('firebase/firestore');
-  const existing = await FirestoreService.getAll(
+  const existing = await AdminFirestoreService.getAll(
     getSubCollection(customerSchema),
     [where('email', '==', customer.email)]
   );
@@ -418,7 +419,7 @@ async function createCustomerEntity(customer: { firstName: string; lastName: str
 
   // Create customer
   const customerId = `contact_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-  await FirestoreService.set(
+  await AdminFirestoreService.set(
     getSubCollection(customerSchema),
     customerId,
     {
@@ -447,7 +448,7 @@ async function createOrderEntity(order: Order): Promise<void> {
     ? config.integration.orderSchema
     : 'orders';
 
-  await FirestoreService.set(
+  await AdminFirestoreService.set(
     getSubCollection(orderSchema),
     order.id,
     {
@@ -522,7 +523,6 @@ async function generateOrderInvoice(order: Order): Promise<void> {
   const result = await generateInvoice(order);
 
   if (result.success && result.invoiceUrl) {
-    const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
     await AdminFirestoreService.update(
       getOrdersCollection(),
       order.id,

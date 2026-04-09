@@ -12,6 +12,23 @@ import { getOrdersCollection } from '@/lib/firebase/collections';
 
 export const dynamic = 'force-dynamic';
 
+// ─── Type coercion helpers ──────────────────────────────────────────────────
+
+function asString(v: unknown): string | undefined {
+  return typeof v === 'string' ? v : undefined;
+}
+
+function asNumber(v: unknown): number | undefined {
+  if (typeof v === 'number' && !Number.isNaN(v)) {
+    return v;
+  }
+  return undefined;
+}
+
+function isObject(v: unknown): v is Record<string, unknown> {
+  return typeof v === 'object' && v !== null && !Array.isArray(v);
+}
+
 // ─── Provider key shapes ─────────────────────────────────────────────────────
 
 interface StripeKeys { secretKey?: string }
@@ -313,6 +330,108 @@ async function verifyHyperswitch(paymentId: string): Promise<VerificationResult>
   };
 }
 
+async function verifyRazorpay(paymentId: string): Promise<VerificationResult> {
+  const keys = (await apiKeyService.getServiceKey(PLATFORM_ID, 'razorpay')) as { keyId?: string; keySecret?: string } | null;
+  if (!keys?.keyId || !keys?.keySecret) {
+    return { verified: false, error: 'Razorpay not configured' };
+  }
+
+  const authHeader = `Basic ${Buffer.from(`${keys.keyId}:${keys.keySecret}`).toString('base64')}`;
+  const response = await fetch(`https://api.razorpay.com/v1/payments/${paymentId}`, {
+    headers: { Authorization: authHeader },
+  });
+
+  const data = (await response.json()) as {
+    id?: string;
+    status?: string;
+    amount?: number;
+    currency?: string;
+  };
+
+  if (!response.ok || (data.status !== 'captured' && data.status !== 'authorized')) {
+    return { verified: false, error: `Razorpay payment status: ${data.status ?? 'unknown'}` };
+  }
+
+  return {
+    verified: true,
+    amount: data.amount,
+    currency: data.currency?.toLowerCase(),
+  };
+}
+
+async function verifyBraintree(transactionId: string): Promise<VerificationResult> {
+  const keys = (await apiKeyService.getServiceKey(PLATFORM_ID, 'braintree')) as {
+    merchantId?: string;
+    publicKey?: string;
+    privateKey?: string;
+    mode?: string;
+  } | null;
+
+  if (!keys?.publicKey || !keys?.privateKey) {
+    return { verified: false, error: 'Braintree not configured' };
+  }
+
+  const graphqlUrl = keys.mode === 'production'
+    ? 'https://payments.braintree-api.com/graphql'
+    : 'https://payments.sandbox.braintree-api.com/graphql';
+  const authHeader = `Basic ${Buffer.from(`${keys.publicKey}:${keys.privateKey}`).toString('base64')}`;
+
+  const query = `
+    query SearchTransaction($input: TransactionSearchInput!) {
+      search { transactions(input: $input) { edges { node { id status amount { value currencyIsoCode } } } } }
+    }
+  `;
+
+  const response = await fetch(graphqlUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: authHeader,
+      'Braintree-Version': '2024-08-01',
+    },
+    body: JSON.stringify({
+      query,
+      variables: { input: { id: { is: transactionId } } },
+    }),
+  });
+
+  if (!response.ok) {
+    return { verified: false, error: 'Failed to verify Braintree transaction' };
+  }
+
+  const result = (await response.json()) as {
+    data?: {
+      search?: {
+        transactions?: {
+          edges?: Array<{
+            node?: {
+              id?: string;
+              status?: string;
+              amount?: { value?: string; currencyIsoCode?: string };
+            };
+          }>;
+        };
+      };
+    };
+  };
+
+  const txn = result.data?.search?.transactions?.edges?.[0]?.node;
+  if (!txn?.id) {
+    return { verified: false, error: 'Braintree transaction not found' };
+  }
+
+  const validStatuses = ['SETTLED', 'SETTLING', 'SUBMITTED_FOR_SETTLEMENT', 'AUTHORIZED'];
+  if (!validStatuses.includes(txn.status ?? '')) {
+    return { verified: false, error: `Braintree transaction status: ${txn.status ?? 'unknown'}` };
+  }
+
+  return {
+    verified: true,
+    amount: txn.amount?.value ? Math.round(parseFloat(txn.amount.value) * 100) : undefined,
+    currency: txn.amount?.currencyIsoCode?.toLowerCase(),
+  };
+}
+
 const VERIFIER_MAP: Record<string, ProviderVerifier> = {
   stripe: verifyStripe,
   paypal: verifyPayPal,
@@ -323,6 +442,8 @@ const VERIFIER_MAP: Record<string, ProviderVerifier> = {
   paddle: verifyPaddle,
   adyen: verifyAdyen,
   hyperswitch: verifyHyperswitch,
+  razorpay: verifyRazorpay,
+  braintree: verifyBraintree,
 };
 
 // ─── Route handler ───────────────────────────────────────────────────────────
@@ -363,7 +484,7 @@ export async function POST(request: NextRequest) {
       return errors.validation('Validation failed', { errors: errorDetails });
     }
 
-    const { paymentIntentId } = validation.data;
+    const { paymentIntentId, orderData } = validation.data;
     const provider = validation.data.provider ?? 'stripe';
 
     // Dispatch to correct verifier
@@ -381,41 +502,97 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create order record
+    // Create canonical order record matching the Order type from types/ecommerce.ts
     const orderId = `order_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
     const now = new Date().toISOString();
     const verifiedMeta = verification.metadata ?? {};
+    const od = orderData ?? {};
 
-    const attributionSource = verifiedMeta.attributionSource ?? verifiedMeta.utm_source ?? undefined;
+    // Extract customer info from orderData or metadata
+    const customerEmail = asString(od.customerEmail) ?? verifiedMeta.customerEmail ?? user.email ?? '';
+    const customerFirstName = asString(od.customerFirstName) ?? '';
+    const customerLastName = asString(od.customerLastName) ?? '';
 
-    const orderRecord = {
-      id: orderId,
-      userId: user.uid,
-      items: [{
-        name: verifiedMeta.description ?? 'Payment',
+    // Extract items from orderData, or build a single-item fallback
+    const rawItems = Array.isArray(od.items) ? od.items as Record<string, unknown>[] : [];
+    const orderItems = rawItems.length > 0
+      ? rawItems.map((item, idx) => ({
+        id: `oi_${Date.now()}_${idx}_${Math.random().toString(36).substring(2, 9)}`,
+        productId: asString(item.productId) ?? '',
+        productName: asString(item.productName) ?? asString(item.name) ?? 'Item',
+        sku: asString(item.sku),
+        variantId: asString(item.variantId),
+        price: asNumber(item.price) ?? 0,
+        quantity: asNumber(item.quantity) ?? 1,
+        subtotal: asNumber(item.subtotal) ?? (asNumber(item.price) ?? 0) * (asNumber(item.quantity) ?? 1),
+        tax: 0,
+        discount: 0,
+        total: asNumber(item.subtotal) ?? (asNumber(item.price) ?? 0) * (asNumber(item.quantity) ?? 1),
+        fulfillmentStatus: 'unfulfilled',
+        quantityFulfilled: 0,
+        image: asString(item.image),
+        refunded: false,
+      }))
+      : [{
+        id: `oi_${Date.now()}_0_${Math.random().toString(36).substring(2, 9)}`,
+        productId: '',
+        productName: verifiedMeta.description ?? 'Payment',
         price: verification.amount ?? 0,
         quantity: 1,
-      }],
-      customerInfo: {
-        email: verifiedMeta.customerEmail ?? user.email ?? '',
+        subtotal: verification.amount ?? 0,
+        tax: 0,
+        discount: 0,
+        total: verification.amount ?? 0,
+        fulfillmentStatus: 'unfulfilled',
+        quantityFulfilled: 0,
+        refunded: false,
+      }];
+
+    const orderNumber = `ORD-${Date.now()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+    const subtotal = asNumber(od.subtotal) ?? orderItems.reduce((sum, i) => sum + i.subtotal, 0);
+    const tax = asNumber(od.tax) ?? 0;
+    const shippingCost = asNumber(od.shipping) ?? 0;
+    const discount = asNumber(od.discount) ?? 0;
+    const total = asNumber(od.total) ?? (subtotal - discount + tax + shippingCost);
+    const attributionSource = verifiedMeta.attributionSource ?? verifiedMeta.utm_source ?? undefined;
+
+    const orderRecord: Record<string, unknown> = {
+      id: orderId,
+      orderNumber,
+      userId: user.uid,
+      customerEmail,
+      customer: {
+        firstName: customerFirstName,
+        lastName: customerLastName,
+        email: customerEmail,
       },
-      shippingAddress: null,
-      billingAddress: null,
-      shippingMethodId: null,
-      // Payment tracking — provider-agnostic
-      paymentProvider: provider,
-      paymentTransactionId: paymentIntentId,
-      stripePaymentIntentId: provider === 'stripe' ? paymentIntentId : null,
-      stripeSessionId: null,
-      status: 'processing',
-      paymentStatus: 'captured',
+      items: orderItems,
+      billingAddress: isObject(od.billingAddress) ? od.billingAddress : null,
+      shippingAddress: isObject(od.shippingAddress) ? od.shippingAddress : null,
+      subtotal,
+      tax,
+      shipping: shippingCost,
+      discount,
+      total,
       payment: {
+        method: 'credit_card',
         provider,
         transactionId: paymentIntentId,
-        amount: verification.amount ?? 0,
-        currency: verification.currency ?? 'usd',
+        status: 'captured',
+        amountCharged: total,
+        amountRefunded: 0,
+        processedAt: now,
+        capturedAt: now,
       },
-      // Attribution
+      paymentIntentId,
+      shippingInfo: {
+        method: 'standard',
+        methodId: 'default',
+        cost: shippingCost,
+      },
+      status: 'processing',
+      fulfillmentStatus: 'unfulfilled',
+      paymentStatus: 'captured',
       source: attributionSource ?? 'web',
       dealId: verifiedMeta.dealId ?? null,
       leadId: verifiedMeta.leadId ?? null,
@@ -437,15 +614,17 @@ export async function POST(request: NextRequest) {
     logger.info('Order created from checkout completion', {
       route: '/api/checkout/complete',
       orderId,
+      orderNumber,
       provider,
       paymentIntentId,
-      amount: verification.amount,
+      amount: total,
     });
 
     return NextResponse.json({
       success: true,
       paymentIntentId,
       orderId,
+      orderNumber,
       status: 'completed',
     });
   } catch (error) {

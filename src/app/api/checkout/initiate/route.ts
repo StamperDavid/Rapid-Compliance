@@ -406,6 +406,52 @@ async function initiateHyperswitch(
   };
 }
 
+async function initiateRazorpay(
+  amount: number,
+  currency: string,
+  metadata: Record<string, string>,
+): Promise<InitiateResult> {
+  const { processRazorpayPayment } = await import('@/lib/ecommerce/razorpay-provider');
+  const result = await processRazorpayPayment(
+    {
+      amount,
+      currency,
+      paymentMethod: 'credit_card',
+      customer: { email: metadata.customerEmail ?? '', firstName: '', lastName: '' },
+      metadata,
+    },
+    null,
+  );
+
+  if (!result.success) {
+    throw new Error(result.error ?? 'Razorpay initiation failed');
+  }
+
+  return {
+    provider: 'razorpay',
+    sessionId: result.transactionId,
+  };
+}
+
+async function initiateBraintree(
+  _amount: number,
+  _currency: string,
+  _metadata: Record<string, string>,
+): Promise<InitiateResult> {
+  const { createBraintreeClientToken } = await import('@/lib/ecommerce/braintree-provider');
+  const result = await createBraintreeClientToken();
+
+  if ('error' in result) {
+    throw new Error(result.error);
+  }
+
+  return {
+    provider: 'braintree',
+    clientSecret: result.clientToken,
+    sessionId: `braintree_${Date.now()}`,
+  };
+}
+
 // ─── Provider dispatcher ─────────────────────────────────────────────────────
 
 type ProviderInitiator = (
@@ -424,6 +470,8 @@ const PROVIDER_MAP: Record<string, ProviderInitiator> = {
   paddle: initiatePaddle,
   adyen: initiateAdyen,
   hyperswitch: initiateHyperswitch,
+  razorpay: initiateRazorpay,
+  braintree: initiateBraintree,
 };
 
 // ─── Route handler ───────────────────────────────────────────────────────────

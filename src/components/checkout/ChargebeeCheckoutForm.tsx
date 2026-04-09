@@ -6,12 +6,10 @@ import toast from 'react-hot-toast';
 import { useTheme } from '@/contexts/ThemeContext';
 import { logger } from '@/lib/logger/logger';
 
-interface CartShape {
-  total: number;
-}
+import type { CheckoutCart } from './checkout-types';
 
 interface ChargebeeCheckoutFormProps {
-  cart: CartShape;
+  cart: CheckoutCart;
   /** Chargebee hosted page URL from /api/checkout/initiate or subscription checkout */
   redirectUrl?: string;
   sessionId?: string;

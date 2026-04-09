@@ -6,24 +6,11 @@ import toast from 'react-hot-toast';
 import { useTheme } from '@/contexts/ThemeContext';
 import { logger } from '@/lib/logger/logger';
 import { auth } from '@/lib/firebase/config';
-
-interface CartShape {
-  total: number;
-}
-
-interface FormDataShape {
-  email: string;
-  name: string;
-  address: string;
-  city: string;
-  state: string;
-  zip: string;
-  country: string;
-}
+import { buildOrderData, type CheckoutCart, type CheckoutFormData } from './checkout-types';
 
 interface AdyenCheckoutFormProps {
-  cart: CartShape;
-  formData: FormDataShape;
+  cart: CheckoutCart;
+  formData: CheckoutFormData;
   /** Adyen session ID from /api/checkout/initiate */
   sessionId?: string;
   /** Adyen sessionData for Drop-in initialization */
@@ -62,10 +49,7 @@ export default function AdyenCheckoutForm({
         body: JSON.stringify({
           provider: 'adyen',
           paymentIntentId: transactionRef,
-          orderData: {
-            customerEmail: formData.email,
-            customerName: formData.name,
-          },
+          orderData: buildOrderData(cart, formData),
         }),
       });
 
@@ -87,7 +71,7 @@ export default function AdyenCheckoutForm({
       });
       toast.error('Order processing failed. Please contact support.');
     }
-  }, [formData, router]);
+  }, [cart, formData, router]);
 
   useEffect(() => {
     if (!sessionId || !clientSecret || !dropinContainerRef.current || mounted) {

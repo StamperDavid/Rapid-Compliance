@@ -37,24 +37,12 @@ const HyperswitchCheckoutForm = dynamic(
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-interface CartShape {
-  total: number;
-}
-
-interface FormDataShape {
-  email: string;
-  name: string;
-  address: string;
-  city: string;
-  state: string;
-  zip: string;
-  country: string;
-}
+import type { CheckoutCart, CheckoutFormData } from './checkout-types';
 
 interface CheckoutPaymentFactoryProps {
   provider: string;
-  cart: CartShape;
-  formData: FormDataShape;
+  cart: CheckoutCart;
+  formData: CheckoutFormData;
   clientSecret?: string;
   redirectUrl?: string;
   sessionId?: string;

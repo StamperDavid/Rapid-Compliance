@@ -17,6 +17,9 @@ interface CartItem {
   price: number;
   quantity: number;
   subtotal: number;
+  sku?: string;
+  variantId?: string;
+  image?: string;
 }
 
 interface Cart {
@@ -25,6 +28,7 @@ interface Cart {
   subtotal: number;
   tax: number;
   shipping: number;
+  discount: number;
   total: number;
 }
 
@@ -67,6 +71,11 @@ export default function CheckoutPage() {
     country: 'US',
   });
 
+  // Discount code state
+  const [discountCode, setDiscountCode] = useState('');
+  const [applyingDiscount, setApplyingDiscount] = useState(false);
+  const [appliedCodes, setAppliedCodes] = useState<string[]>([]);
+
   const loadCart = useCallback(async () => {
     try {
       const cartSessionId = localStorage.getItem('cartSessionId');
@@ -96,6 +105,57 @@ export default function CheckoutPage() {
   useEffect(() => {
     void loadCart();
   }, [loadCart]);
+
+  const handleApplyDiscount = async () => {
+    if (!discountCode.trim()) {
+      return;
+    }
+    try {
+      setApplyingDiscount(true);
+      const token = await auth?.currentUser?.getIdToken();
+      const res = await fetch('/api/ecommerce/cart/discount', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ code: discountCode.trim() }),
+      });
+      const data = (await res.json()) as { success: boolean; cart?: Cart; error?: string };
+      if (data.success && data.cart) {
+        setCart(data.cart);
+        setAppliedCodes((prev) => [...prev, discountCode.trim().toUpperCase()]);
+        setDiscountCode('');
+        toast.success('Discount applied!');
+      } else {
+        toast.error(data.error ?? 'Invalid discount code');
+      }
+    } catch {
+      toast.error('Failed to apply discount code');
+    } finally {
+      setApplyingDiscount(false);
+    }
+  };
+
+  const handleRemoveDiscount = async (code: string) => {
+    try {
+      const token = await auth?.currentUser?.getIdToken();
+      const res = await fetch(`/api/ecommerce/cart/discount?code=${encodeURIComponent(code)}`, {
+        method: 'DELETE',
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      });
+      const data = (await res.json()) as { success: boolean; cart?: Cart; error?: string };
+      if (data.success && data.cart) {
+        setCart(data.cart);
+        setAppliedCodes((prev) => prev.filter((c) => c !== code));
+        toast.success('Discount removed');
+      }
+    } catch {
+      toast.error('Failed to remove discount');
+    }
+  };
 
   const handleContinueToPayment = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -441,15 +501,114 @@ export default function CheckoutPage() {
                   style={{
                     display: 'flex',
                     justifyContent: 'space-between',
-                    marginBottom: '1rem',
-                    paddingBottom: '1rem',
-                    borderBottom: `1px solid ${theme.colors.border.light}`,
+                    marginBottom: '0.5rem',
                     color: theme.colors.text.secondary,
                   }}
                 >
                   <span>Shipping</span>
                   <span>${cart.shipping.toFixed(2)}</span>
                 </div>
+                {cart.discount > 0 && (
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      marginBottom: '0.5rem',
+                      color: theme.colors.success?.main ?? '#22c55e',
+                    }}
+                  >
+                    <span>Discount</span>
+                    <span>-${cart.discount.toFixed(2)}</span>
+                  </div>
+                )}
+
+                {/* Applied discount codes */}
+                {appliedCodes.length > 0 && (
+                  <div style={{ marginBottom: '0.5rem' }}>
+                    {appliedCodes.map((code) => (
+                      <div
+                        key={code}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.25rem',
+                          padding: '0.125rem 0.5rem',
+                          backgroundColor: theme.colors.background.elevated,
+                          borderRadius: '0.25rem',
+                          fontSize: '0.75rem',
+                          color: theme.colors.text.secondary,
+                          marginRight: '0.25rem',
+                          marginBottom: '0.25rem',
+                        }}
+                      >
+                        {code}
+                        <button
+                          type="button"
+                          onClick={() => void handleRemoveDiscount(code)}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            cursor: 'pointer',
+                            color: theme.colors.text.secondary,
+                            fontSize: '0.875rem',
+                            lineHeight: 1,
+                            padding: '0 0.125rem',
+                          }}
+                          aria-label={`Remove discount ${code}`}
+                        >
+                          &times;
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Discount code input */}
+                <div
+                  style={{
+                    display: 'flex',
+                    gap: '0.5rem',
+                    marginBottom: '1rem',
+                    paddingBottom: '1rem',
+                    borderBottom: `1px solid ${theme.colors.border.light}`,
+                  }}
+                >
+                  <input
+                    type="text"
+                    placeholder="Discount code"
+                    value={discountCode}
+                    onChange={(e) => setDiscountCode(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); void handleApplyDiscount(); } }}
+                    style={{
+                      flex: 1,
+                      padding: '0.5rem 0.75rem',
+                      backgroundColor: theme.colors.background.elevated,
+                      color: theme.colors.text.primary,
+                      border: `1px solid ${theme.colors.border.light}`,
+                      borderRadius: '0.375rem',
+                      fontSize: '0.875rem',
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => void handleApplyDiscount()}
+                    disabled={applyingDiscount || !discountCode.trim()}
+                    style={{
+                      padding: '0.5rem 1rem',
+                      backgroundColor: 'transparent',
+                      color: theme.colors.primary.main,
+                      border: `1px solid ${theme.colors.primary.main}`,
+                      borderRadius: '0.375rem',
+                      cursor: applyingDiscount || !discountCode.trim() ? 'not-allowed' : 'pointer',
+                      fontSize: '0.875rem',
+                      fontWeight: '500',
+                      opacity: applyingDiscount || !discountCode.trim() ? 0.5 : 1,
+                    }}
+                  >
+                    {applyingDiscount ? '...' : 'Apply'}
+                  </button>
+                </div>
+
                 <div
                   style={{
                     display: 'flex',
