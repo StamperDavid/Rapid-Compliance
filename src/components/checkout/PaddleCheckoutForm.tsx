@@ -6,24 +6,11 @@ import toast from 'react-hot-toast';
 import { useTheme } from '@/contexts/ThemeContext';
 import { logger } from '@/lib/logger/logger';
 import { auth } from '@/lib/firebase/config';
-
-interface CartShape {
-  total: number;
-}
-
-interface FormDataShape {
-  email: string;
-  name: string;
-  address: string;
-  city: string;
-  state: string;
-  zip: string;
-  country: string;
-}
+import { buildOrderData, type CheckoutCart, type CheckoutFormData } from './checkout-types';
 
 interface PaddleCheckoutFormProps {
-  cart: CartShape;
-  formData: FormDataShape;
+  cart: CheckoutCart;
+  formData: CheckoutFormData;
   sessionId?: string;
   onBack: () => void;
 }
@@ -99,10 +86,7 @@ export default function PaddleCheckoutForm({
         body: JSON.stringify({
           provider: 'paddle',
           paymentIntentId: transactionId,
-          orderData: {
-            customerEmail: formData.email,
-            customerName: formData.name,
-          },
+          orderData: buildOrderData(cart, formData),
         }),
       });
 
@@ -124,7 +108,7 @@ export default function PaddleCheckoutForm({
       });
       toast.error('Order processing failed. Please contact support.');
     }
-  }, [formData, router]);
+  }, [cart, formData, router]);
 
   useEffect(() => {
     // Load Paddle.js from CDN

@@ -8,24 +8,11 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { logger } from '@/lib/logger/logger';
 import { auth } from '@/lib/firebase/config';
 import StripeProvider from '@/components/StripeProvider';
-
-interface CartShape {
-  total: number;
-}
-
-interface FormDataShape {
-  email: string;
-  name: string;
-  address: string;
-  city: string;
-  state: string;
-  zip: string;
-  country: string;
-}
+import { buildOrderData, type CheckoutCart, type CheckoutFormData } from './checkout-types';
 
 interface StripeCheckoutFormProps {
-  cart: CartShape;
-  formData: FormDataShape;
+  cart: CheckoutCart;
+  formData: CheckoutFormData;
   clientSecret: string;
   onBack: () => void;
 }
@@ -33,8 +20,8 @@ interface StripeCheckoutFormProps {
 // ─── Inner form (mounted inside StripeProvider/Elements) ─────────────────────
 
 interface InnerFormProps {
-  cart: CartShape;
-  formData: FormDataShape;
+  cart: CheckoutCart;
+  formData: CheckoutFormData;
   onBack: () => void;
 }
 
@@ -93,17 +80,7 @@ function StripePaymentForm({ cart, formData, onBack }: InnerFormProps) {
           body: JSON.stringify({
             provider: 'stripe',
             paymentIntentId: paymentIntent.id,
-            orderData: {
-              customerEmail: formData.email,
-              customerName: formData.name,
-              shippingAddress: {
-                address1: formData.address,
-                city: formData.city,
-                state: formData.state,
-                zip: formData.zip,
-                country: formData.country,
-              },
-            },
+            orderData: buildOrderData(cart, formData),
           }),
         });
 
