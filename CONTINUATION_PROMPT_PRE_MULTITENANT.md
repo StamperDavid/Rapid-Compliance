@@ -99,10 +99,14 @@ Revenue flow: **Deal → Quote → Invoice → Payment** (each entity links to t
 - Removed Impersonate from Compliance (already at `/system/impersonate` via System page)
 - Result: **8 settings sections** (down from 11)
 
-### Phase 5: Light Mode
-- Build light-mode CSS variable overrides in globals.css (`:root.light { ... }`)
-- Re-enable ThemeToggle in sidebar footer
-- Test all 161+ pages in light mode
+### Phase 5: Light Mode — COMPLETED (April 9, 2026)
+- `html.light` CSS block in globals.css overrides 30+ variables (backgrounds, text, borders, component tokens, sidebar, admin scope)
+- ThemeToggle re-enabled in sidebar footer (between Help and Sign Out)
+- Uses `next-themes` class-based switching (`darkMode: 'class'` in Tailwind)
+- Brand colors (primary, secondary, accent, semantic) stay consistent across modes
+- Light backgrounds: #f8fafc (main), #ffffff (paper/card), #f1f5f9 (elevated/muted)
+- Light text: #0f172a (primary), #64748b (secondary), #94a3b8 (disabled)
+- Light borders: #e2e8f0 (main), #cbd5e1 (light), #94a3b8 (strong)
 
 ### Phase 6: Fix Ecommerce Disconnects
 - Two checkout flows create orders with different shapes — unify

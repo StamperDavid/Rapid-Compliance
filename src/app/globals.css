@@ -221,6 +221,76 @@
   --ring: var(--admin-color-primary);
 }
 
+/* ========================================================================
+ * LIGHT MODE OVERRIDES
+ * next-themes adds class="light" to <html> when light mode is active.
+ * Only theme-sensitive tokens are overridden; brand colors (primary,
+ * secondary, accent, semantic) stay the same across both modes.
+ * ======================================================================== */
+html.light {
+  /* Backgrounds — invert from black/dark to white/light */
+  --color-bg-main: #f8fafc;
+  --color-bg-paper: #ffffff;
+  --color-bg-elevated: #f1f5f9;
+
+  /* Text — invert from white/gray to dark */
+  --color-text-primary: #0f172a;
+  --color-text-secondary: #64748b;
+  --color-text-disabled: #94a3b8;
+
+  /* Borders — lighter in light mode */
+  --color-border-main: #e2e8f0;
+  --color-border-light: #cbd5e1;
+  --color-border-strong: #94a3b8;
+  --color-border: var(--color-border-light);
+
+  /* Component tokens (shadcn-compatible) */
+  --background: var(--color-bg-main);
+  --foreground: var(--color-text-primary);
+  --card: var(--color-bg-paper);
+  --card-foreground: var(--color-text-primary);
+  --popover: var(--color-bg-paper);
+  --popover-foreground: var(--color-text-primary);
+  --primary-foreground: #ffffff;
+  --secondary-foreground: #ffffff;
+  --muted: var(--color-bg-elevated);
+  --muted-foreground: var(--color-text-secondary);
+  --accent-foreground: #ffffff;
+  --destructive: var(--color-error);
+  --destructive-foreground: #ffffff;
+  --input: var(--color-border-light);
+  --ring: var(--color-primary);
+
+  /* Legacy surface mappings */
+  --color-surface: var(--color-bg-paper);
+  --color-surface-elevated: var(--color-bg-elevated);
+  --color-surface-hover: var(--color-bg-elevated);
+  --color-surface-active: rgba(99, 102, 241, 0.12);
+  --color-primary-surface: rgba(99, 102, 241, 0.08);
+
+  /* RGB values for rgba() usage in light mode (unchanged brand) */
+  --color-text-disabled-rgb: 148, 163, 184;
+
+  /* Sidebar */
+  --sidebar-bg: var(--color-bg-paper);
+  --sidebar-border: var(--color-border-main);
+  --sidebar-item-hover: var(--color-bg-elevated);
+  --sidebar-item-active: var(--color-primary);
+}
+
+/* Admin theme scope in light mode — override admin vars too */
+html.light .admin-theme-scope {
+  --admin-color-bg-main: #f8fafc;
+  --admin-color-bg-paper: #ffffff;
+  --admin-color-bg-elevated: #f1f5f9;
+  --admin-color-text-primary: #0f172a;
+  --admin-color-text-secondary: #64748b;
+  --admin-color-text-disabled: #94a3b8;
+  --admin-color-border-main: #e2e8f0;
+  --admin-color-border-light: #cbd5e1;
+  --admin-color-border-strong: #94a3b8;
+}
+
 * {
   margin: 0;
   padding: 0;
