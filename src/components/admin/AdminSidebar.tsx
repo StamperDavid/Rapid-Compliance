@@ -85,7 +85,7 @@ const NAV_SECTIONS: NavigationSection[] = [
     items: [
       { id: 'leads', label: 'Leads', href: '/leads', icon: Users, iconColor: 'var(--color-primary)', requiredPermission: 'canViewLeads', featureModuleId: 'crm_pipeline' },
       { id: 'contacts', label: 'Contacts', href: '/contacts', icon: Users, iconColor: 'var(--color-info)', requiredPermission: 'canViewLeads', featureModuleId: 'crm_pipeline' },
-      { id: 'companies', label: 'Companies', href: '/entities/companies', icon: Building2, iconColor: 'var(--color-secondary)', requiredPermission: 'canViewLeads', featureModuleId: 'crm_pipeline' },
+      { id: 'companies', label: 'Companies', href: '/companies', icon: Building2, iconColor: 'var(--color-secondary)', requiredPermission: 'canViewLeads', featureModuleId: 'crm_pipeline' },
       { id: 'deals', label: 'Deals', href: '/deals', icon: Handshake, iconColor: 'var(--color-warning)', requiredPermission: 'canViewDeals', featureModuleId: 'crm_pipeline' },
       { id: 'conversations', label: 'Conversations', href: '/conversations', icon: MessageSquare, iconColor: 'var(--color-success)', requiredPermission: 'canCreateRecords', featureModuleId: 'conversations' },
       { id: 'products-services', label: 'Products & Services', href: '/products', icon: Package, iconColor: 'var(--color-primary)', requiredPermission: 'canManageProducts' },
@@ -256,7 +256,7 @@ export default function AdminSidebar() {
     if (href === '/contacts') { return pathname.startsWith('/contacts'); }
 
     // Companies
-    if (href === '/entities/companies') { return pathname.startsWith('/entities/companies'); }
+    if (href === '/companies') { return pathname.startsWith('/companies'); }
 
     // Deals hub — deals list + risk
     if (href === '/deals') {
