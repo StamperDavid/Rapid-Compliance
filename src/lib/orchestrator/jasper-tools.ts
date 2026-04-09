@@ -4781,7 +4781,7 @@ Select cohesive settings that create a professional, unified visual language acr
             throw new Error('Database not available');
           }
 
-          const mediaCollection = `organizations/${PLATFORM_ID}/media`;
+          const mediaCollection = getSubCollection('media');
 
           if (action === 'list' || action === 'search') {
             let query: FirebaseFirestore.Query = mediaAdminDb.collection(mediaCollection);
@@ -4861,7 +4861,7 @@ Select cohesive settings that create a professional, unified visual language acr
           }
 
           const avatarFilter = args.filter as string | undefined;
-          const avatarsCollection = `organizations/${PLATFORM_ID}/avatar_profiles`;
+          const avatarsCollection = getSubCollection('avatar_profiles');
 
           let avatarQuery: FirebaseFirestore.Query = avatarAdminDb.collection(avatarsCollection);
           if (avatarFilter && avatarFilter !== 'all') {

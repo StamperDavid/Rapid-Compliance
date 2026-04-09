@@ -7,7 +7,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { adminDb } from '@/lib/firebase/admin';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 import { logger } from '@/lib/logger/logger';
 
 export const dynamic = 'force-dynamic';
@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
     }
 
     const docRef = adminDb
-      .collection(`organizations/${PLATFORM_ID}/custom_avatars`)
+      .collection(getSubCollection('custom_avatars'))
       .doc(avatarId);
 
     const doc = await docRef.get();

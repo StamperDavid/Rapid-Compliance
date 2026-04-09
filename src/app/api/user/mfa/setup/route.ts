@@ -19,7 +19,7 @@ import { z } from 'zod';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { adminDb } from '@/lib/firebase/admin';
 import { logger } from '@/lib/logger/logger';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 import { rateLimitMiddleware } from '@/lib/middleware/rate-limiter';
 import { FieldValue } from 'firebase-admin/firestore';
 
@@ -151,10 +151,10 @@ function verifyTOTP(secretBase32: string, code: string, windowSteps = 1): boolea
 // ============================================================================
 
 /** Pending (unverified) secrets — TTL-controlled documents. */
-const mfaPendingPath = `organizations/${PLATFORM_ID}/mfaPending`;
+const mfaPendingPath = getSubCollection('mfaPending');
 
 /** Verified MFA secrets live under the user profile collection. */
-const usersPath = `organizations/${PLATFORM_ID}/users`;
+const usersPath = getSubCollection('users');
 
 // 10-minute TTL for pending secrets
 const PENDING_TTL_MS = 10 * 60 * 1000;

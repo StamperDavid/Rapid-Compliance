@@ -19,7 +19,7 @@
 import { adminDb } from '@/lib/firebase/admin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { logger } from '@/lib/logger/logger';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 
 // ============================================================================
 // Types
@@ -73,7 +73,7 @@ interface FirestorePreferenceDoc {
 // Constants
 // ============================================================================
 
-const COLLECTION_PATH = `organizations/${PLATFORM_ID}/video_brand_preferences`;
+const COLLECTION_PATH = getSubCollection('video_brand_preferences');
 
 /** Maximum preferences to return in queries (prevent unbounded reads) */
 const MAX_PREFERENCES = 50;

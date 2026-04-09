@@ -14,7 +14,7 @@
 
 import { adminDb } from '@/lib/firebase/admin';
 import { logger } from '@/lib/logger/logger';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 
 export interface SearchResult {
   id: string;
@@ -70,7 +70,7 @@ export async function searchWorkspace(
 
     // Get all schemas to know what entities exist
     const schemasSnap = await adminDb
-      .collection(`organizations/${PLATFORM_ID}/schemas`)
+      .collection(getSubCollection('schemas'))
       .get();
 
     const schemas = schemasSnap.docs.map(doc => ({
@@ -108,7 +108,7 @@ async function searchEntityType(
   searchTerm: string,
   limit: number
 ): Promise<SearchResult[]> {
-  const collectionPath = `organizations/${PLATFORM_ID}/records/${schema.id}`;
+  const collectionPath = `${getSubCollection('records')}/${schema.id}`;
   const results: SearchResult[] = [];
 
   try {

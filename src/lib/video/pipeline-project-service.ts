@@ -10,6 +10,7 @@
 import { adminDb } from '@/lib/firebase/admin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { logger } from '@/lib/logger/logger';
+import { getSubCollection } from '@/lib/firebase/collections';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import type {
   PipelineBrief,
@@ -50,7 +51,7 @@ interface FirestorePipelineDoc {
 // Constants
 // ============================================================================
 
-const COLLECTION_PATH = `organizations/${PLATFORM_ID}/video_pipeline_projects`;
+const COLLECTION_PATH = getSubCollection('video_pipeline_projects');
 
 // ============================================================================
 // Helper Functions
@@ -269,7 +270,7 @@ export async function deleteProject(projectId: string): Promise<boolean> {
     }
 
     // 1. Delete orphaned scene preview images
-    const previewsCol = `organizations/${PLATFORM_ID}/scene_previews`;
+    const previewsCol = getSubCollection('scene_previews');
     const previewSnap = await adminDb.collection(previewsCol)
       .where('projectId', '==', projectId)
       .get();

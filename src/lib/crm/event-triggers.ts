@@ -5,11 +5,9 @@
 
 import { logger } from '@/lib/logger/logger';
 import { adminDb } from '@/lib/firebase/admin';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 import type { Workflow } from '@/types/workflow';
 import type { RelatedEntityType } from '@/types/activity';
-
-const platformPath = `organizations/${PLATFORM_ID}`;
 
 export type CRMEventType = 
   | 'lead_created'
@@ -190,7 +188,7 @@ async function getApplicableWorkflows(event: CRMEvent): Promise<WorkflowTriggerR
 
     // Query active workflows with matching trigger type via admin SDK
     const snapshot = await adminDb
-      .collection(`${platformPath}/workflows`)
+      .collection(getSubCollection('workflows'))
       .where('status', '==', 'active')
       .where('trigger.type', '==', triggerType)
       .get();
@@ -341,7 +339,7 @@ async function executeTriggeredWorkflow(
     }
 
     const workflowSnap = await adminDb
-      .collection(`${platformPath}/workflows`)
+      .collection(getSubCollection('workflows'))
       .doc(rule.workflowId)
       .get();
 

@@ -20,7 +20,7 @@ import { requireRole } from '@/lib/auth/api-auth';
 import { adminDb } from '@/lib/firebase/admin';
 import { sendEmail } from '@/lib/email/email-service';
 import { logger } from '@/lib/logger/logger';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 import { rateLimitMiddleware } from '@/lib/middleware/rate-limiter';
 import { FieldValue } from 'firebase-admin/firestore';
 import type { AccountRole } from '@/types/unified-rbac';
@@ -76,8 +76,8 @@ function escapeHtml(str: string): string {
 // FIRESTORE PATHS
 // ============================================================================
 
-const invitesPath = `organizations/${PLATFORM_ID}/invites`;
-const usersPath = `organizations/${PLATFORM_ID}/users`;
+const invitesPath = getSubCollection('invites');
+const usersPath = getSubCollection('users');
 
 // ============================================================================
 // HANDLER

@@ -6,10 +6,10 @@
 
 import crypto from 'crypto';
 import { FirestoreService } from '@/lib/db/firestore-service';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 import { logger } from '@/lib/logger/logger';
 
-const OAUTH_STATES_PATH = `organizations/${PLATFORM_ID}/oauthStates`;
+const OAUTH_STATES_PATH = getSubCollection('oauthStates');
 const STATE_TTL_MS = 10 * 60 * 1000; // 10 minutes
 
 interface StoredOAuthState {

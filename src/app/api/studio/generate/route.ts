@@ -17,14 +17,13 @@ import { buildPromptFromPresets } from '@/lib/ai/cinematic-presets';
 import { adminDb } from '@/lib/firebase/admin';
 import { getSubCollection } from '@/lib/firebase/collections';
 import { persistUrlToStorage, studioImagePath } from '@/lib/firebase/storage-utils';
-import { PLATFORM_ID } from '@/lib/constants/platform';
 import { logger } from '@/lib/logger/logger';
 import { ZodError } from 'zod';
 
 export const dynamic = 'force-dynamic';
 
 const GENERATIONS_COLLECTION = getSubCollection('studio-generations');
-const MEDIA_COLLECTION = `organizations/${PLATFORM_ID}/media`;
+const MEDIA_COLLECTION = getSubCollection('media');
 
 export async function POST(request: NextRequest) {
   try {

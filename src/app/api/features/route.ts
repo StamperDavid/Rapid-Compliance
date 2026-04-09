@@ -60,9 +60,9 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     if (config) {
       try {
         const { AdminFirestoreService } = await import('@/lib/db/admin-firestore-service');
-        const { PLATFORM_ID } = await import('@/lib/constants/platform');
+        const { getSubCollection } = await import('@/lib/firebase/collections');
         const storefrontData = await AdminFirestoreService.get(
-          `organizations/${PLATFORM_ID}/storefrontConfig`,
+          getSubCollection('storefrontConfig'),
           'default'
         ) as Record<string, unknown> | null;
 

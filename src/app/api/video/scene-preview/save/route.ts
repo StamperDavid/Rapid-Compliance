@@ -13,12 +13,12 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { adminDb } from '@/lib/firebase/admin';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 import { logger } from '@/lib/logger/logger';
 
 export const dynamic = 'force-dynamic';
 
-const PREVIEW_COLLECTION = `organizations/${PLATFORM_ID}/scene_previews`;
+const PREVIEW_COLLECTION = getSubCollection('scene_previews');
 
 const SaveSchema = z.object({
   sceneId: z.string().min(1),

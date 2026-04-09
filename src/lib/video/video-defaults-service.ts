@@ -5,7 +5,7 @@
  */
 
 import { adminDb } from '@/lib/firebase/admin';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 import { logger } from '@/lib/logger/logger';
 
 export interface VideoDefaults {
@@ -18,7 +18,7 @@ export interface VideoDefaults {
   updatedBy: string | null;
 }
 
-const DEFAULTS_DOC_PATH = `organizations/${PLATFORM_ID}/settings/video-defaults`;
+const DEFAULTS_DOC_PATH = `${getSubCollection('settings')}/video-defaults`;
 
 const EMPTY_DEFAULTS: VideoDefaults = {
   avatarId: null,

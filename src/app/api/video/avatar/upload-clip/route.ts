@@ -13,7 +13,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger/logger';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { adminDb } from '@/lib/firebase/admin';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 
 export const dynamic = 'force-dynamic';
 
@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
     const clipId = `clip-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
 
     await adminDb
-      .collection(`organizations/${PLATFORM_ID}/avatar_clips`)
+      .collection(getSubCollection('avatar_clips'))
       .doc(clipId)
       .set({
         base64: base64Data,

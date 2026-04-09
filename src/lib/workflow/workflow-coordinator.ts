@@ -33,6 +33,7 @@ import { adminDb } from '@/lib/firebase/admin';
 import type { SalesSignal, SignalType } from '@/lib/orchestration/types';
 import { WorkflowEngine, type WorkflowExecutionContext } from './workflow-engine';
 import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 import type {
   Workflow,
   WorkflowExecution,
@@ -547,7 +548,7 @@ export class WorkflowCoordinator {
       startOfDay.setHours(0, 0, 0, 0);
 
       const executionsRef = adminDb
-        .collection(`organizations/${PLATFORM_ID}/workflowExecutions`)
+        .collection(getSubCollection('workflowExecutions'))
         .where('workflowId', '==', workflow.id)
         .where('startedAt', '>=', Timestamp.fromDate(startOfDay));
       const snapshot = await executionsRef.count().get();

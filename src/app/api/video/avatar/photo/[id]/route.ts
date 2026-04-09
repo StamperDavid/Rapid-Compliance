@@ -9,7 +9,7 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebase/admin';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 
 export const dynamic = 'force-dynamic';
 
@@ -25,7 +25,7 @@ export async function GET(
 
   try {
     const doc = await adminDb
-      .collection(`organizations/${PLATFORM_ID}/avatar_photos`)
+      .collection(getSubCollection('avatar_photos'))
       .doc(id)
       .get();
 

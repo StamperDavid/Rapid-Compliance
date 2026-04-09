@@ -10,12 +10,12 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { adminDb } from '@/lib/firebase/admin';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 import { logger } from '@/lib/logger/logger';
 
 export const dynamic = 'force-dynamic';
 
-const COLLECTION_PATH = `organizations/${PLATFORM_ID}/voice_collections`;
+const COLLECTION_PATH = getSubCollection('voice_collections');
 
 const CreateCollectionSchema = z.object({
   name: z.string().min(1).max(100),

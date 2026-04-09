@@ -9,7 +9,7 @@
 import { NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebase/admin';
 import { logger } from '@/lib/logger/logger';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 
 export const dynamic = 'force-dynamic';
 
@@ -234,7 +234,7 @@ export async function GET() {
       return NextResponse.json({ templates: DEFAULT_TEMPLATES });
     }
 
-    const collectionPath = `organizations/${PLATFORM_ID}/campaignTemplates`;
+    const collectionPath = getSubCollection('campaignTemplates');
     const snapshot = await adminDb.collection(collectionPath).orderBy('name').get();
 
     if (snapshot.empty) {

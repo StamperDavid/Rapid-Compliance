@@ -19,7 +19,7 @@
 import { adminDb } from '@/lib/firebase/admin';
 import { FieldValue } from 'firebase-admin/firestore';
 import { logger } from '@/lib/logger/logger';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 import crypto from 'crypto';
 
 // ============================================================================
@@ -163,7 +163,7 @@ interface FirestoreAvatarProfileDoc {
 // Constants
 // ============================================================================
 
-const COLLECTION_PATH = `organizations/${PLATFORM_ID}/avatar_profiles`;
+const COLLECTION_PATH = getSubCollection('avatar_profiles');
 const MAX_ADDITIONAL_IMAGES = 4;
 
 // ============================================================================

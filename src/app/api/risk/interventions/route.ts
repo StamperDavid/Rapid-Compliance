@@ -13,7 +13,7 @@ import { z } from 'zod';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { errors } from '@/lib/middleware/error-handler';
 import { logger } from '@/lib/logger/logger';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 
 // ---------------------------------------------------------------------------
 // Firestore helper — lazy import to keep module lightweight
@@ -48,7 +48,7 @@ const UpdateInterventionSchema = z.object({
 // ---------------------------------------------------------------------------
 
 function interventionsCol(dealId: string) {
-  return `organizations/${PLATFORM_ID}/deals/${dealId}/interventions`;
+  return `${getSubCollection('deals')}/${dealId}/interventions`;
 }
 
 // ---------------------------------------------------------------------------

@@ -16,6 +16,7 @@ import { logger } from '@/lib/logger/logger';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { apiKeyService } from '@/lib/api-keys/api-key-service';
 import { adminDb } from '@/lib/firebase/admin';
+import { getSubCollection } from '@/lib/firebase/collections';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 
 export const dynamic = 'force-dynamic';
@@ -152,7 +153,7 @@ export async function POST(request: NextRequest) {
     // Check cache first (only for default sample text, not custom)
     if (!customText && adminDb) {
       const cacheDoc = await adminDb
-        .collection(`organizations/${PLATFORM_ID}/voice_previews`)
+        .collection(getSubCollection('voice_previews'))
         .doc(voiceId)
         .get();
 
@@ -189,7 +190,7 @@ export async function POST(request: NextRequest) {
     // Cache in Firestore for future requests (only for default sample text)
     if (!customText && adminDb) {
       await adminDb
-        .collection(`organizations/${PLATFORM_ID}/voice_previews`)
+        .collection(getSubCollection('voice_previews'))
         .doc(voiceId)
         .set({
           base64: result.base64,

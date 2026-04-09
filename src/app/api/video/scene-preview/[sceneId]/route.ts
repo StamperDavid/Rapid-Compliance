@@ -5,12 +5,12 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebase/admin';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 import { logger } from '@/lib/logger/logger';
 
 export const dynamic = 'force-dynamic';
 
-const COLLECTION = `organizations/${PLATFORM_ID}/scene_previews`;
+const COLLECTION = getSubCollection('scene_previews');
 
 interface PreviewDocument {
   base64?: string;

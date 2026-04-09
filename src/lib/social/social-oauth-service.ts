@@ -8,10 +8,10 @@ import crypto from 'crypto';
 import { logger } from '@/lib/logger/logger';
 import { encryptToken } from '@/lib/security/token-encryption';
 import { FirestoreService } from '@/lib/db/firestore-service';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 import type { SocialOAuthState, SocialOAuthTokenResult } from '@/types/social';
 
-const OAUTH_STATES_PATH = `organizations/${PLATFORM_ID}/socialOAuthStates`;
+const OAUTH_STATES_PATH = getSubCollection('socialOAuthStates');
 const STATE_TTL_MS = 10 * 60 * 1000; // 10 minutes
 
 // ─── PKCE Helpers ─────────────────────────────────────────────────────────────

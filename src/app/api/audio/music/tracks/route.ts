@@ -9,7 +9,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { adminDb } from '@/lib/firebase/admin';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 import { logger } from '@/lib/logger/logger';
 
 export const dynamic = 'force-dynamic';
@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
     const cursor = searchParams.get('cursor');
     const search = searchParams.get('search')?.toLowerCase();
 
-    const collectionRef = adminDb.collection(`organizations/${PLATFORM_ID}/generated_music`);
+    const collectionRef = adminDb.collection(getSubCollection('generated_music'));
 
     // Build query with available filters
     // Firestore composite index constraints: we can only orderBy + filter on indexed fields
@@ -168,7 +168,7 @@ export async function PATCH(request: NextRequest) {
     const { trackId, ...updates } = parsed.data;
 
     const docRef = adminDb
-      .collection(`organizations/${PLATFORM_ID}/generated_music`)
+      .collection(getSubCollection('generated_music'))
       .doc(trackId);
 
     const doc = await docRef.get();
@@ -217,7 +217,7 @@ export async function DELETE(request: NextRequest) {
     const { trackId } = parsed.data;
 
     const docRef = adminDb
-      .collection(`organizations/${PLATFORM_ID}/generated_music`)
+      .collection(getSubCollection('generated_music'))
       .doc(trackId);
 
     const doc = await docRef.get();
