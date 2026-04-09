@@ -6,10 +6,10 @@
  */
 
 import { adminDb } from '@/lib/firebase/admin';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 import { DEFAULT_BRAND_KIT, type BrandKit } from '@/types/brand-kit';
 
-const BRAND_KIT_DOC_PATH = `organizations/${PLATFORM_ID}/settings/brand-kit`;
+const BRAND_KIT_DOC_PATH = `${getSubCollection('settings')}/brand-kit`;
 
 /**
  * Get the brand kit configuration. Returns default if none exists.

@@ -13,7 +13,6 @@
 import { adminDb } from '@/lib/firebase/admin';
 import { getSubCollection } from '@/lib/firebase/collections';
 import { logger } from '@/lib/logger/logger';
-import { PLATFORM_ID } from '@/lib/constants/platform';
 import type {
   Campaign,
   CampaignStatus,
@@ -583,7 +582,7 @@ async function publishVideoToMediaLibrary(deliverable: CampaignDeliverable): Pro
   }
 
   try {
-    const mediaCollection = `organizations/${PLATFORM_ID}/media`;
+    const mediaCollection = getSubCollection('media');
     const now = new Date();
     await adminDb.collection(mediaCollection).doc().set({
       type: 'video',
@@ -626,7 +625,7 @@ async function publishImageToMediaLibrary(deliverable: CampaignDeliverable): Pro
   }
 
   try {
-    const mediaCollection = `organizations/${PLATFORM_ID}/media`;
+    const mediaCollection = getSubCollection('media');
     const now = new Date();
     await adminDb.collection(mediaCollection).doc().set({
       type: 'image',

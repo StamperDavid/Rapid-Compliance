@@ -159,10 +159,11 @@ async function fetchHedraVoices(): Promise<VideoVoice[]> {
 async function fetchCustomVoices(): Promise<VideoVoice[]> {
   try {
     const { adminDb } = await import('@/lib/firebase/admin');
+    const { getSubCollection } = await import('@/lib/firebase/collections');
     if (!adminDb) { return []; }
 
     const snapshot = await adminDb
-      .collection(`organizations/${PLATFORM_ID}/custom_voices`)
+      .collection(getSubCollection('custom_voices'))
       .orderBy('createdAt', 'desc')
       .limit(20)
       .get();

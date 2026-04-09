@@ -8,7 +8,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { logger } from '@/lib/logger/logger';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { adminDb } from '@/lib/firebase/admin';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 import { z } from 'zod';
 import type { MediaType, MediaCategory, MediaItem } from '@/types/media-library';
 
@@ -28,7 +28,7 @@ const MediaJsonBodySchema = z.object({
   metadata: z.record(z.string()).optional(),
 });
 
-const COLLECTION = `organizations/${PLATFORM_ID}/media`;
+const COLLECTION = getSubCollection('media');
 
 // ============================================================================
 // Firestore document shape

@@ -13,7 +13,7 @@
  */
 
 import { adminDb } from '@/lib/firebase/admin';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 import { logger } from '@/lib/logger/logger';
 import type { SagaStatus } from '@/lib/agents/orchestrator/manager';
 
@@ -101,14 +101,14 @@ export interface PersistedEventLog {
  * Get the Firestore collection path for saga state
  */
 function sagaCollectionPath(): string {
-  return `organizations/${PLATFORM_ID}/sagaState`;
+  return getSubCollection('sagaState');
 }
 
 /**
  * Get the Firestore collection path for event logs
  */
 function eventLogCollectionPath(): string {
-  return `organizations/${PLATFORM_ID}/eventLog`;
+  return getSubCollection('eventLog');
 }
 
 /**

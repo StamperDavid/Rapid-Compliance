@@ -8,11 +8,11 @@ import { z } from 'zod';
 import { logger } from '@/lib/logger/logger';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { adminDb } from '@/lib/firebase/admin';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 
 export const dynamic = 'force-dynamic';
 
-const COLLECTION_PATH = `organizations/${PLATFORM_ID}/voice_favorites`;
+const COLLECTION_PATH = getSubCollection('voice_favorites');
 
 const ToggleFavoriteSchema = z.object({
   voiceId: z.string().min(1),

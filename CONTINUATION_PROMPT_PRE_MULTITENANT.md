@@ -115,11 +115,15 @@ Revenue flow: **Deal → Quote → Invoice → Payment** (each entity links to t
 4. **Discount code input added to storefront checkout** — coupon input field in order summary with apply/remove via `/api/ecommerce/cart/discount` API. Shows applied codes as removable tags and discount line item when active.
 5. **Webhook handlers already existed** — Chargebee, Square, Hyperswitch, Braintree, and Razorpay all had full implementations.
 
-### Phase 7: Kill 36 `any` Types in API Routes
-- 36 occurrences across 28 API route files need proper typing
+### Phase 7: Kill `any` Types in API Routes — COMPLETED (April 9, 2026)
+- All `any` types in API routes were already eliminated in prior sessions. Zero instances found via grep.
 
-### Phase 8: Fix 82 Inline Firestore Paths
-- 82 files build collection paths with template literals instead of using `getSubCollection()` helpers
+### Phase 8: Fix Inline Firestore Paths — COMPLETED (April 9, 2026)
+- 67 inline `organizations/${PLATFORM_ID}/xxx` paths across 48 files replaced with `getSubCollection('xxx')` from `src/lib/firebase/collections.ts`
+- 4 remaining are Firebase Storage paths (not Firestore) — correctly excluded
+- Settings doc paths use `${getSubCollection('settings')}/doc-name` pattern
+- Nested sub-collection paths use `${getSubCollection('parent')}/${id}/child` pattern
+- All files import `getSubCollection` from `@/lib/firebase/collections`
 
 ### Phase 9: Multi-Tenant Conversion
 1. `getSubCollection(orgId, sub)` refactor — add orgId param, update 1,224 call sites

@@ -256,11 +256,11 @@ export async function GET(request: NextRequest) {
     // Fetch pending invites so the UI can show them
     let pendingInvites: Array<{ id: string; email: string; role: string; status: string; createdAt: string | null }> = [];
     try {
-      const { PLATFORM_ID } = await import('@/lib/constants/platform');
       const { adminDb } = await import('@/lib/firebase/admin');
+      const { getSubCollection } = await import('@/lib/firebase/collections');
       if (adminDb) {
         const invitesSnap = await adminDb
-          .collection(`organizations/${PLATFORM_ID}/invites`)
+          .collection(getSubCollection('invites'))
           .where('status', '==', 'pending')
           .get();
         pendingInvites = invitesSnap.docs.map((doc) => {

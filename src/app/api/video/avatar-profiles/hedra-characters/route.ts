@@ -11,8 +11,9 @@ import { z } from 'zod';
 import { logger } from '@/lib/logger/logger';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { apiKeyService } from '@/lib/api-keys/api-key-service';
-import { PLATFORM_ID } from '@/lib/constants/platform';
 import { adminDb } from '@/lib/firebase/admin';
+import { getSubCollection } from '@/lib/firebase/collections';
+import { PLATFORM_ID } from '@/lib/constants/platform';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,7 +22,7 @@ export const dynamic = 'force-dynamic';
 // ============================================================================
 
 const HEDRA_BASE_URL = 'https://api.hedra.com/web-app';
-const COLLECTION_PATH = `organizations/${PLATFORM_ID}/avatar_profiles`;
+const COLLECTION_PATH = getSubCollection('avatar_profiles');
 const PAGE_LIMIT = 100;
 
 // ============================================================================

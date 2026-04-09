@@ -11,6 +11,7 @@ import { z } from 'zod';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { apiKeyService } from '@/lib/api-keys/api-key-service';
 import { adminDb } from '@/lib/firebase/admin';
+import { getSubCollection } from '@/lib/firebase/collections';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import { logger } from '@/lib/logger/logger';
 import { randomUUID } from 'crypto';
@@ -212,7 +213,7 @@ export async function POST(request: NextRequest) {
     // Save to Firestore with extended metadata
     if (adminDb) {
       await adminDb
-        .collection(`organizations/${PLATFORM_ID}/generated_music`)
+        .collection(getSubCollection('generated_music'))
         .doc(trackId)
         .set({
           title,

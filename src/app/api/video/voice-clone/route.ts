@@ -17,6 +17,7 @@ import { logger } from '@/lib/logger/logger';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { apiKeyService } from '@/lib/api-keys/api-key-service';
 import { adminDb } from '@/lib/firebase/admin';
+import { getSubCollection } from '@/lib/firebase/collections';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 
 export const dynamic = 'force-dynamic';
@@ -132,7 +133,7 @@ export async function POST(request: NextRequest) {
     // Store reference in Firestore for tracking
     if (adminDb) {
       await adminDb
-        .collection(`organizations/${PLATFORM_ID}/custom_voices`)
+        .collection(getSubCollection('custom_voices'))
         .doc(data.voice_id)
         .set({
           voiceId: data.voice_id,

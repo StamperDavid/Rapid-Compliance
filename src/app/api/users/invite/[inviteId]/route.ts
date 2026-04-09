@@ -17,6 +17,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { logger } from '@/lib/logger/logger';
+import { getSubCollection } from '@/lib/firebase/collections';
 import { PLATFORM_ID } from '@/lib/constants/platform';
 import { FieldValue } from 'firebase-admin/firestore';
 import type { AccountRole } from '@/types/unified-rbac';
@@ -24,7 +25,7 @@ import type { AccountRole } from '@/types/unified-rbac';
 export const dynamic = 'force-dynamic';
 
 const ROUTE = '/api/users/invite/[inviteId]';
-const invitesCol = `organizations/${PLATFORM_ID}/invites`;
+const invitesCol = getSubCollection('invites');
 
 // ============================================================================
 // GET — Public invite validation

@@ -11,12 +11,12 @@ import { z } from 'zod';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { adminDb } from '@/lib/firebase/admin';
 import { persistUrlToStorage, studioImagePath, isPersistedUrl } from '@/lib/firebase/storage-utils';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 import { logger } from '@/lib/logger/logger';
 
 export const dynamic = 'force-dynamic';
 
-const MEDIA_COLLECTION = `organizations/${PLATFORM_ID}/media`;
+const MEDIA_COLLECTION = getSubCollection('media');
 
 const PersistSchema = z.object({
   url: z.string().url(),

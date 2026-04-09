@@ -6,12 +6,9 @@
 
 import { SequenceEngine } from './sequence-engine';
 import { adminDb } from '@/lib/firebase/admin';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 import type { ProspectEnrollment } from '@/types/outbound-sequence'
 import { logger } from '@/lib/logger/logger';
-
-// Base Firestore collection path for platform sub-collections
-const platformPath = `organizations/${PLATFORM_ID}`;
 
 /**
  * Process all due sequence steps
@@ -69,7 +66,7 @@ async function getActiveEnrollments(): Promise<ProspectEnrollment[]> {
     }
 
     const snapshot = await adminDb
-      .collection(`${platformPath}/enrollments`)
+      .collection(getSubCollection('enrollments'))
       .where('status', '==', 'active')
       .get();
 
@@ -104,7 +101,7 @@ export async function handleEmailBounce(
 
   // Get enrollment
   const docSnap = await adminDb
-    .collection(`${platformPath}/enrollments`)
+    .collection(getSubCollection('enrollments'))
     .doc(enrollmentId)
     .get();
 
@@ -152,7 +149,7 @@ export async function handleEmailReply(
 
   // Get enrollment
   const enrollmentSnap = await adminDb
-    .collection(`${platformPath}/enrollments`)
+    .collection(getSubCollection('enrollments'))
     .doc(enrollmentId)
     .get();
 
@@ -174,7 +171,7 @@ export async function handleEmailReply(
 
   // Get sequence
   const sequenceSnap = await adminDb
-    .collection(`${platformPath}/sequences`)
+    .collection(getSubCollection('sequences'))
     .doc(enrollment.sequenceId)
     .get();
 
@@ -193,7 +190,7 @@ export async function handleEmailReply(
   enrollment.updatedAt = new Date().toISOString();
 
   await adminDb
-    .collection(`${platformPath}/enrollments`)
+    .collection(getSubCollection('enrollments'))
     .doc(enrollmentId)
     .set(enrollment);
 }
@@ -211,7 +208,7 @@ export async function handleEmailOpen(
   }
 
   const docSnap = await adminDb
-    .collection(`${platformPath}/enrollments`)
+    .collection(getSubCollection('enrollments'))
     .doc(enrollmentId)
     .get();
 
@@ -227,7 +224,7 @@ export async function handleEmailOpen(
     action.updatedAt = new Date().toISOString();
 
     await adminDb
-      .collection(`${platformPath}/enrollments`)
+      .collection(getSubCollection('enrollments'))
       .doc(enrollmentId)
       .set(enrollment);
   }
@@ -246,7 +243,7 @@ export async function handleEmailClick(
   }
 
   const docSnap = await adminDb
-    .collection(`${platformPath}/enrollments`)
+    .collection(getSubCollection('enrollments'))
     .doc(enrollmentId)
     .get();
 
@@ -261,7 +258,7 @@ export async function handleEmailClick(
     action.updatedAt = new Date().toISOString();
 
     await adminDb
-      .collection(`${platformPath}/enrollments`)
+      .collection(getSubCollection('enrollments'))
       .doc(enrollmentId)
       .set(enrollment);
   }

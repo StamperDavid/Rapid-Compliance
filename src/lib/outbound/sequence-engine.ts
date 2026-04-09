@@ -907,7 +907,7 @@ export class SequenceEngine {
       return;
     }
 
-    const enrollmentPath = `organizations/${PLATFORM_ID}/enrollments`;
+    const enrollmentPath = getSubCollection('enrollments');
     const scheduledAt = enrollment.nextStepAt ?? this.calculateNextStepTime(step);
 
     await adminDb

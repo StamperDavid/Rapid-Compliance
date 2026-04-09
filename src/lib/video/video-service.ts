@@ -10,6 +10,7 @@ import { FieldValue } from 'firebase-admin/firestore';
 import { logger } from '@/lib/logger/logger';
 import { apiKeyService } from '@/lib/api-keys/api-key-service';
 import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 import type {
   VideoGenerationRequest,
   VideoGenerationResponse,
@@ -61,7 +62,7 @@ export async function logVideoInterest(
       return;
     }
 
-    await adminDb.collection(`organizations/${PLATFORM_ID}/analytics_events`).add({
+    await adminDb.collection(getSubCollection('analytics_events')).add({
       event: 'video_feature_interest',
       feature,
       userId: userId ?? null,
@@ -115,7 +116,7 @@ export async function joinVideoWaitlist(
       createdAt: new Date(),
     };
 
-    const docRef = await adminDb.collection(`organizations/${PLATFORM_ID}/video_waitlist`).add({
+    const docRef = await adminDb.collection(getSubCollection('video_waitlist')).add({
       ...entry,
       createdAt: FieldValue.serverTimestamp(),
     });
@@ -154,7 +155,7 @@ export async function deleteCustomAvatar(avatarId: string): Promise<void> {
   }
 
   const docRef = adminDb
-    .collection(`organizations/${PLATFORM_ID}/custom_avatars`)
+    .collection(getSubCollection('custom_avatars'))
     .doc(avatarId);
 
   const doc = await docRef.get();
@@ -185,7 +186,7 @@ export async function listVideoTemplates(
       return { templates: [] };
     }
 
-    let q: FirebaseFirestore.Query = adminDb.collection(`organizations/${PLATFORM_ID}/video_templates`);
+    let q: FirebaseFirestore.Query = adminDb.collection(getSubCollection('video_templates'));
     if (category) {
       q = q.where('category', '==', category);
     }
@@ -228,7 +229,7 @@ export async function createVideoTemplate(
       return { success: false, error: 'Database not available' };
     }
 
-    const docRef = await adminDb.collection(`organizations/${PLATFORM_ID}/video_templates`).add({
+    const docRef = await adminDb.collection(getSubCollection('video_templates')).add({
       ...template,
       createdAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
@@ -266,7 +267,7 @@ export async function listVideoProjects(
       return { projects: [] };
     }
 
-    let q: FirebaseFirestore.Query = adminDb.collection(`organizations/${PLATFORM_ID}/video_projects`);
+    let q: FirebaseFirestore.Query = adminDb.collection(getSubCollection('video_projects'));
     if (userId) {
       q = q.where('userId', '==', userId);
     }
@@ -309,7 +310,7 @@ export async function createVideoProject(
       return { success: false, error: 'Database not available' };
     }
 
-    const docRef = await adminDb.collection(`organizations/${PLATFORM_ID}/video_projects`).add({
+    const docRef = await adminDb.collection(getSubCollection('video_projects')).add({
       ...project,
       videos: [],
       createdAt: FieldValue.serverTimestamp(),

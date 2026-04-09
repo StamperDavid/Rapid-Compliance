@@ -8,7 +8,7 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireAuth } from '@/lib/auth/api-auth';
 import { adminDb } from '@/lib/firebase/admin';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 import { logger } from '@/lib/logger/logger';
 
 export const dynamic = 'force-dynamic';
@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
     }
 
     const docRef = await adminDb
-      .collection(`organizations/${PLATFORM_ID}/voice_recordings`)
+      .collection(getSubCollection('voice_recordings'))
       .add({
         name: parsed.data.name,
         base64: parsed.data.base64,
@@ -85,7 +85,7 @@ export async function GET(request: NextRequest) {
     }
 
     const snapshot = await adminDb
-      .collection(`organizations/${PLATFORM_ID}/voice_recordings`)
+      .collection(getSubCollection('voice_recordings'))
       .orderBy('createdAt', 'desc')
       .limit(50)
       .get();

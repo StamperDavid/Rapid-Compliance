@@ -16,7 +16,7 @@
  */
 
 import { adminDb } from '@/lib/firebase/admin';
-import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getSubCollection } from '@/lib/firebase/collections';
 import { logger } from '@/lib/logger/logger';
 
 // ============================================================================
@@ -86,7 +86,7 @@ function invalidateCache(): void {
 // ============================================================================
 
 function swarmControlDocPath(): string {
-  return `organizations/${PLATFORM_ID}/settings/swarm_control`;
+  return `${getSubCollection('settings')}/swarm_control`;
 }
 
 // ============================================================================
