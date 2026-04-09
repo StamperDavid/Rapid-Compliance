@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/useToast';
 import { FirestoreService, COLLECTIONS } from '@/lib/db/firestore-service';
 import type { OutboundSequence, ProspectEnrollment } from '@/types/outbound-sequence'
 import { logger } from '@/lib/logger/logger';
+import { PageTitle } from '@/components/ui/typography';
 
 export default function EmailSequencesPage() {
   const { user } = useAuth();
@@ -168,89 +169,56 @@ export default function EmailSequencesPage() {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: 'var(--color-bg-main)' }}>
-      <div style={{ flex: 1, padding: '2rem', overflowY: 'auto' }}>
-        <div>
-          {/* Header */}
-          <div style={{ marginBottom: '2rem' }}>
-            <Link href={`/outbound`} style={{ color: 'var(--color-primary)', fontSize: '0.875rem', fontWeight: '500', textDecoration: 'none' }}>
-              ← Back to Outbound
-            </Link>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '1rem' }}>
-              <div>
-                <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
-                  Email Sequences
-                </h1>
-                <p style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>
-                  {loading ? 'Loading...' : `${sequences.length} sequences • ${enrollments.filter(e => e.status === 'active').length} active enrollments`}
-                </p>
-              </div>
-              <div style={{ display: 'flex', gap: '1rem' }}>
-                <Link
-                  href={`/sequences/analytics`}
-                  style={{
-                    padding: '0.75rem 1.5rem',
-                    backgroundColor: 'var(--color-bg-elevated)',
-                    color: 'var(--color-text-primary)',
-                    border: '1px solid var(--color-border-strong)',
-                    borderRadius: '0.5rem',
-                    cursor: 'pointer',
-                    fontSize: '0.875rem',
-                    fontWeight: '600',
-                    textDecoration: 'none',
-                    display: 'inline-block',
-                  }}
-                >
-                  📊 View Analytics
-                </Link>
-                <button
-                  onClick={() => setShowCreateModal(true)}
-                  style={{
-                    padding: '0.75rem 1.5rem',
-                    backgroundColor: 'var(--color-primary)',
-                    color: 'var(--color-text-primary)',
-                    border: 'none',
-                    borderRadius: '0.5rem',
-                    cursor: 'pointer',
-                    fontSize: '0.875rem',
-                    fontWeight: '600',
-                  }}
-                >
-                  + Create Sequence
-                </button>
-              </div>
+    <div className="p-8 space-y-6">
+      <div>
+        {/* Header */}
+        <div className="mb-8">
+          <Link href="/outbound" className="text-primary text-sm font-medium no-underline hover:underline">
+            ← Back to Outbound
+          </Link>
+          <div className="flex items-center justify-between mt-4">
+            <div>
+              <PageTitle>Email Sequences</PageTitle>
+              <p className="text-muted-foreground text-sm mt-1">
+                {loading ? 'Loading...' : `${sequences.length} sequences • ${enrollments.filter(e => e.status === 'active').length} active enrollments`}
+              </p>
+            </div>
+            <div className="flex gap-4">
+              <Link
+                href="/sequences/analytics"
+                className="px-6 py-3 bg-surface-elevated text-foreground border border-border-strong rounded-lg text-sm font-semibold no-underline hover:bg-card transition-colors"
+              >
+                View Analytics
+              </Link>
+              <button
+                onClick={() => setShowCreateModal(true)}
+                className="px-6 py-3 bg-primary text-foreground border-none rounded-lg cursor-pointer text-sm font-semibold hover:bg-primary-light transition-colors"
+              >
+                + Create Sequence
+              </button>
             </div>
           </div>
+        </div>
 
           {/* Tabs */}
-          <div style={{ display: 'flex', gap: '1rem', borderBottom: '1px solid var(--color-border-strong)', marginBottom: '2rem' }}>
+          <div className="flex gap-4 border-b border-border-strong mb-8">
             <button
               onClick={() => setActiveTab('sequences')}
-              style={{
-                padding: '1rem 1.5rem',
-                backgroundColor: 'transparent',
-                color: activeTab === 'sequences' ? 'var(--color-primary)' : 'var(--color-text-secondary)',
-                border: 'none',
-                borderBottom: `3px solid ${activeTab === 'sequences' ? 'var(--color-primary)' : 'transparent'}`,
-                cursor: 'pointer',
-                fontSize: '0.875rem',
-                fontWeight: '600',
-              }}
+              className={`px-6 py-4 bg-transparent border-none cursor-pointer text-sm font-semibold transition-colors ${
+                activeTab === 'sequences'
+                  ? 'text-primary border-b-[3px] border-primary -mb-px'
+                  : 'text-muted-foreground border-b-[3px] border-transparent'
+              }`}
             >
               Sequences
             </button>
             <button
               onClick={() => setActiveTab('enrollments')}
-              style={{
-                padding: '1rem 1.5rem',
-                backgroundColor: 'transparent',
-                color: activeTab === 'enrollments' ? 'var(--color-primary)' : 'var(--color-text-secondary)',
-                border: 'none',
-                borderBottom: `3px solid ${activeTab === 'enrollments' ? 'var(--color-primary)' : 'transparent'}`,
-                cursor: 'pointer',
-                fontSize: '0.875rem',
-                fontWeight: '600',
-              }}
+              className={`px-6 py-4 bg-transparent border-none cursor-pointer text-sm font-semibold transition-colors ${
+                activeTab === 'enrollments'
+                  ? 'text-primary border-b-[3px] border-primary -mb-px'
+                  : 'text-muted-foreground border-b-[3px] border-transparent'
+              }`}
             >
               Enrollments ({enrollments.filter(e => e.status === 'active').length})
             </button>
@@ -258,31 +226,22 @@ export default function EmailSequencesPage() {
 
           {/* Loading State */}
           {loading && (
-            <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--color-text-disabled)' }}>
-              <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>⏳</div>
+            <div className="text-center py-12 text-muted-foreground">
+              <div className="text-3xl mb-4">⏳</div>
               <p>Loading sequences...</p>
             </div>
           )}
 
           {/* Sequences Tab */}
           {!loading && activeTab === 'sequences' && (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '1.5rem' }}>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {sequences.length === 0 ? (
-                <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '3rem', backgroundColor: 'var(--color-bg-main)', borderRadius: '1rem', border: '1px solid var(--color-border-strong)' }}>
-                  <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📧</div>
-                  <p style={{ color: 'var(--color-text-disabled)', marginBottom: '1.5rem' }}>No sequences yet. Create your first email sequence.</p>
+                <div className="col-span-full text-center py-12 bg-surface-main rounded-2xl border border-border-strong">
+                  <div className="text-5xl mb-4">📧</div>
+                  <p className="text-muted-foreground mb-6">No sequences yet. Create your first email sequence.</p>
                   <button
                     onClick={() => setShowCreateModal(true)}
-                    style={{
-                      padding: '0.75rem 1.5rem',
-                      backgroundColor: 'var(--color-primary)',
-                      color: 'var(--color-text-primary)',
-                      border: 'none',
-                      borderRadius: '0.5rem',
-                      cursor: 'pointer',
-                      fontSize: '0.875rem',
-                      fontWeight: '600',
-                    }}
+                    className="px-6 py-3 bg-primary text-foreground border-none rounded-lg cursor-pointer text-sm font-semibold hover:bg-primary-light transition-colors"
                   >
                     Create First Sequence
                   </button>
@@ -291,50 +250,37 @@ export default function EmailSequencesPage() {
                 sequences.map((seq) => (
                   <div
                     key={seq.id}
-                    style={{
-                      backgroundColor: 'var(--color-bg-main)',
-                      border: '1px solid var(--color-border-strong)',
-                      borderRadius: '1rem',
-                      padding: '1.5rem',
-                      position: 'relative',
-                    }}
+                    className="bg-surface-main border border-border-strong rounded-2xl p-6 relative"
                   >
                     {/* Status Badge */}
-                    <div style={{
-                      position: 'absolute',
-                      top: '1rem',
-                      right: '1rem',
-                      padding: '0.25rem 0.75rem',
-                      backgroundColor: seq.status === 'active' ? 'var(--color-success-dark)' : seq.status === 'paused' ? 'var(--color-warning-dark)' : 'var(--color-border-strong)',
-                      color: seq.status === 'active' ? 'var(--color-success-light)' : seq.status === 'paused' ? 'var(--color-warning-light)' : 'var(--color-text-secondary)',
-                      borderRadius: '0.25rem',
-                      fontSize: '0.75rem',
-                      fontWeight: '700',
-                      textTransform: 'uppercase',
-                    }}>
+                    <div className={`absolute top-4 right-4 px-3 py-1 rounded text-xs font-bold uppercase ${
+                      seq.status === 'active'
+                        ? 'bg-[var(--color-success-dark)] text-[var(--color-success-light)]'
+                        : seq.status === 'paused'
+                          ? 'bg-[var(--color-warning-dark)] text-[var(--color-warning-light)]'
+                          : 'bg-border-strong text-muted-foreground'
+                    }`}>
                       {seq.status}
                     </div>
 
-                    <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem', paddingRight: '5rem' }}>
-                      {seq.name}
-                    </h3>
-                    <p style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem', marginBottom: '1.5rem' }}>
+                    <h3 className="text-xl font-bold text-foreground mb-2 pr-20">{seq.name}</h3>
+                    <p className="text-muted-foreground text-sm mb-6">
                       {(seq.description !== '' && seq.description != null) ? seq.description : 'No description'}
                     </p>
 
                     {/* Stats */}
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginBottom: '1.5rem' }}>
+                    <div className="grid grid-cols-3 gap-4 mb-6">
                       <div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)' }}>Steps</div>
-                        <div style={{ fontSize: '1.25rem', color: 'var(--color-text-primary)', fontWeight: '600' }}>{seq.steps.length}</div>
+                        <div className="text-xs text-muted-foreground">Steps</div>
+                        <div className="text-xl text-foreground font-semibold">{seq.steps.length}</div>
                       </div>
                       <div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)' }}>Enrolled</div>
-                        <div style={{ fontSize: '1.25rem', color: 'var(--color-text-primary)', fontWeight: '600' }}>{seq.analytics?.totalEnrolled ?? 0}</div>
+                        <div className="text-xs text-muted-foreground">Enrolled</div>
+                        <div className="text-xl text-foreground font-semibold">{seq.analytics?.totalEnrolled ?? 0}</div>
                       </div>
                       <div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)' }}>Reply Rate</div>
-                        <div style={{ fontSize: '1.25rem', color: 'var(--color-text-primary)', fontWeight: '600' }}>
+                        <div className="text-xs text-muted-foreground">Reply Rate</div>
+                        <div className="text-xl text-foreground font-semibold">
                           {seq.analytics?.totalSent && seq.analytics.totalSent > 0
                             ? `${Math.round((seq.analytics.totalReplied / seq.analytics.totalSent) * 100)}%`
                             : '0%'
@@ -344,21 +290,11 @@ export default function EmailSequencesPage() {
                     </div>
 
                     {/* Actions */}
-                    <div style={{ display: 'flex', gap: '0.75rem' }}>
+                    <div className="flex gap-3">
                       {seq.status === 'draft' && (
                         <button
                           onClick={() => void handleActivateSequence(seq.id)}
-                          style={{
-                            flex: 1,
-                            padding: '0.75rem',
-                            backgroundColor: 'var(--color-primary)',
-                            color: 'var(--color-text-primary)',
-                            border: 'none',
-                            borderRadius: '0.5rem',
-                            cursor: 'pointer',
-                            fontSize: '0.875rem',
-                            fontWeight: '600',
-                          }}
+                          className="flex-1 py-3 bg-primary text-foreground border-none rounded-lg cursor-pointer text-sm font-semibold hover:bg-primary-light transition-colors"
                         >
                           Activate
                         </button>
@@ -366,17 +302,7 @@ export default function EmailSequencesPage() {
                       {seq.status === 'active' && (
                         <button
                           onClick={() => void handlePauseSequence(seq.id)}
-                          style={{
-                            flex: 1,
-                            padding: '0.75rem',
-                            backgroundColor: 'var(--color-warning-dark)',
-                            color: 'var(--color-warning-light)',
-                            border: '1px solid var(--color-warning-light)',
-                            borderRadius: '0.5rem',
-                            cursor: 'pointer',
-                            fontSize: '0.875rem',
-                            fontWeight: '600',
-                          }}
+                          className="flex-1 py-3 bg-[var(--color-warning-dark)] text-[var(--color-warning-light)] border border-[var(--color-warning-light)] rounded-lg cursor-pointer text-sm font-semibold"
                         >
                           Pause
                         </button>
@@ -384,49 +310,20 @@ export default function EmailSequencesPage() {
                       {seq.status === 'paused' && (
                         <button
                           onClick={() => void handleActivateSequence(seq.id)}
-                          style={{
-                            flex: 1,
-                            padding: '0.75rem',
-                            backgroundColor: 'var(--color-primary)',
-                            color: 'var(--color-text-primary)',
-                            border: 'none',
-                            borderRadius: '0.5rem',
-                            cursor: 'pointer',
-                            fontSize: '0.875rem',
-                            fontWeight: '600',
-                          }}
+                          className="flex-1 py-3 bg-primary text-foreground border-none rounded-lg cursor-pointer text-sm font-semibold hover:bg-primary-light transition-colors"
                         >
                           Resume
                         </button>
                       )}
                       <button
                         onClick={() => {/* Edit functionality - currently unused */}}
-                        style={{
-                          flex: 1,
-                          padding: '0.75rem',
-                          backgroundColor: 'var(--color-bg-elevated)',
-                          color: 'var(--color-text-primary)',
-                          border: '1px solid var(--color-border-strong)',
-                          borderRadius: '0.5rem',
-                          cursor: 'pointer',
-                          fontSize: '0.875rem',
-                          fontWeight: '600',
-                        }}
+                        className="flex-1 py-3 bg-surface-elevated text-foreground border border-border-strong rounded-lg cursor-pointer text-sm font-semibold hover:bg-card transition-colors"
                       >
                         Edit
                       </button>
                       <button
                         onClick={() => setDeleteTarget(seq.id)}
-                        style={{
-                          padding: '0.75rem',
-                          backgroundColor: 'transparent',
-                          color: 'var(--color-error)',
-                          border: '1px solid var(--color-error)',
-                          borderRadius: '0.5rem',
-                          cursor: 'pointer',
-                          fontSize: '0.875rem',
-                          fontWeight: '600',
-                        }}
+                        className="py-3 px-4 bg-transparent text-error border border-error rounded-lg cursor-pointer text-sm font-semibold hover:bg-error/10 transition-colors"
                       >
                         Delete
                       </button>
@@ -439,31 +336,21 @@ export default function EmailSequencesPage() {
 
           {/* Enrollments Tab */}
           {!loading && activeTab === 'enrollments' && (
-            <div style={{ backgroundColor: 'var(--color-bg-main)', border: '1px solid var(--color-border-strong)', borderRadius: '1rem', overflow: 'hidden' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead style={{ backgroundColor: 'var(--color-bg-main)' }}>
+            <div className="bg-surface-main border border-border-strong rounded-2xl overflow-hidden">
+              <table className="w-full border-collapse">
+                <thead className="bg-surface-main">
                   <tr>
-                    <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: '600', color: 'var(--color-text-secondary)', textTransform: 'uppercase' }}>
-                      Prospect
-                    </th>
-                    <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: '600', color: 'var(--color-text-secondary)', textTransform: 'uppercase' }}>
-                      Sequence
-                    </th>
-                    <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: '600', color: 'var(--color-text-secondary)', textTransform: 'uppercase' }}>
-                      Status
-                    </th>
-                    <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: '600', color: 'var(--color-text-secondary)', textTransform: 'uppercase' }}>
-                      Step
-                    </th>
-                    <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: '600', color: 'var(--color-text-secondary)', textTransform: 'uppercase' }}>
-                      Next Action
-                    </th>
+                    <th className="p-4 text-left text-xs font-semibold text-muted-foreground uppercase">Prospect</th>
+                    <th className="p-4 text-left text-xs font-semibold text-muted-foreground uppercase">Sequence</th>
+                    <th className="p-4 text-left text-xs font-semibold text-muted-foreground uppercase">Status</th>
+                    <th className="p-4 text-left text-xs font-semibold text-muted-foreground uppercase">Step</th>
+                    <th className="p-4 text-left text-xs font-semibold text-muted-foreground uppercase">Next Action</th>
                   </tr>
                 </thead>
                 <tbody>
                   {enrollments.length === 0 ? (
                     <tr>
-                      <td colSpan={5} style={{ padding: '3rem', textAlign: 'center', color: 'var(--color-text-disabled)' }}>
+                      <td colSpan={5} className="p-12 text-center text-muted-foreground">
                         No enrollments yet. Activate a sequence and enroll prospects.
                       </td>
                     </tr>
@@ -471,30 +358,25 @@ export default function EmailSequencesPage() {
                     enrollments.map((enrollment) => {
                       const sequence = sequences.find(s => s.id === enrollment.sequenceId);
                       return (
-                        <tr key={enrollment.id} style={{ borderBottom: '1px solid var(--color-border-light)' }}>
-                          <td style={{ padding: '1rem', color: 'var(--color-text-primary)' }}>
-                            {enrollment.prospectId}
-                          </td>
-                          <td style={{ padding: '1rem', color: 'var(--color-text-primary)' }}>
+                        <tr key={enrollment.id} className="border-b border-border-light">
+                          <td className="p-4 text-foreground">{enrollment.prospectId}</td>
+                          <td className="p-4 text-foreground">
                             {(() => { const v = sequence?.name; return (v !== '' && v != null) ? v : 'Unknown'; })()}
                           </td>
-                          <td style={{ padding: '1rem' }}>
-                            <span style={{
-                              padding: '0.25rem 0.5rem',
-                              backgroundColor: enrollment.status === 'active' ? 'var(--color-success-dark)' : 'var(--color-border-strong)',
-                              color: enrollment.status === 'active' ? 'var(--color-success-light)' : 'var(--color-text-secondary)',
-                              borderRadius: '0.25rem',
-                              fontSize: '0.75rem',
-                              fontWeight: '600',
-                            }}>
+                          <td className="p-4">
+                            <span className={`px-2 py-0.5 rounded text-xs font-semibold ${
+                              enrollment.status === 'active'
+                                ? 'bg-[var(--color-success-dark)] text-[var(--color-success-light)]'
+                                : 'bg-border-strong text-muted-foreground'
+                            }`}>
                               {enrollment.status}
                             </span>
                           </td>
-                          <td style={{ padding: '1rem', color: 'var(--color-text-primary)' }}>
+                          <td className="p-4 text-foreground">
                             {enrollment.currentStep + 1} / {sequence?.steps.length ?? 0}
                           </td>
-                          <td style={{ padding: '1rem', color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>
-                            {enrollment.nextStepAt 
+                          <td className="p-4 text-muted-foreground text-sm">
+                            {enrollment.nextStepAt
                               ? new Date(enrollment.nextStepAt).toLocaleString()
                               : 'Completed'
                             }
@@ -508,7 +390,6 @@ export default function EmailSequencesPage() {
             </div>
           )}
         </div>
-      </div>
 
       {/* Create Sequence Modal */}
       {showCreateModal && (
@@ -520,13 +401,23 @@ export default function EmailSequencesPage() {
 
       {/* Delete Confirmation Dialog */}
       {deleteTarget && (
-        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0, 0, 0, 0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}>
-          <div style={{ backgroundColor: 'var(--color-bg-elevated)', borderRadius: '1rem', border: '1px solid var(--color-border-strong)', padding: '2rem', maxWidth: '28rem', width: '100%', textAlign: 'center' }}>
-            <h3 style={{ color: 'var(--color-text-primary)', fontSize: '1.25rem', fontWeight: '600', marginBottom: '0.75rem' }}>Delete Sequence?</h3>
-            <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem', marginBottom: '1.5rem' }}>This cannot be undone. All steps and analytics for this sequence will be permanently removed.</p>
-            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
-              <button onClick={() => setDeleteTarget(null)} style={{ padding: '0.75rem 1.5rem', backgroundColor: 'var(--color-bg-main)', color: 'var(--color-text-primary)', border: '1px solid var(--color-border-strong)', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: '600' }}>Cancel</button>
-              <button onClick={() => void confirmDeleteSequence()} style={{ padding: '0.75rem 1.5rem', backgroundColor: 'var(--color-error)', color: '#fff', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontWeight: '600' }}>Delete</button>
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+          <div className="bg-surface-elevated rounded-2xl border border-border-strong p-8 max-w-[28rem] w-full text-center">
+            <h3 className="text-foreground text-xl font-semibold mb-3">Delete Sequence?</h3>
+            <p className="text-muted-foreground text-sm mb-6">This cannot be undone. All steps and analytics for this sequence will be permanently removed.</p>
+            <div className="flex gap-3 justify-center">
+              <button
+                onClick={() => setDeleteTarget(null)}
+                className="px-6 py-3 bg-surface-main text-foreground border border-border-strong rounded-lg cursor-pointer font-semibold hover:bg-card transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => void confirmDeleteSequence()}
+                className="px-6 py-3 bg-error text-white border-none rounded-lg cursor-pointer font-semibold hover:bg-error/80 transition-colors"
+              >
+                Delete
+              </button>
             </div>
           </div>
         </div>
@@ -549,20 +440,18 @@ function CreateSequenceModal({ onClose, onCreate }: { onClose: () => void; onCre
   };
 
   return (
-    <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0, 0, 0, 0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', zIndex: 50 }}>
-      <div className="bg-surface-elevated" style={{ borderRadius: '1rem', border: '1px solid var(--color-border-light)', maxWidth: '40rem', width: '100%' }}>
-        <div className="border-b border-border-light" style={{ padding: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <h2 className="text-[var(--color-text-primary)]" style={{ fontSize: '1.5rem', fontWeight: 'bold', margin: 0 }}>
-            Create Email Sequence
-          </h2>
-          <button onClick={onClose} className="text-[var(--color-text-disabled)]" style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.5rem' }}>
+    <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
+      <div className="bg-surface-elevated rounded-2xl border border-border-light max-w-[40rem] w-full">
+        <div className="border-b border-border-light px-6 py-5 flex items-center justify-between">
+          <h2 className="text-foreground text-2xl font-bold m-0">Create Email Sequence</h2>
+          <button onClick={onClose} className="text-muted-foreground bg-transparent border-none cursor-pointer text-2xl hover:text-foreground transition-colors">
             ✕
           </button>
         </div>
 
-        <div style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        <div className="p-6 flex flex-col gap-4">
           <div>
-            <label className="text-[var(--color-text-secondary)]" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.5rem' }}>
+            <label className="block text-muted-foreground text-sm font-medium mb-2">
               Sequence Name *
             </label>
             <input
@@ -570,13 +459,12 @@ function CreateSequenceModal({ onClose, onCreate }: { onClose: () => void; onCre
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g., Cold Outreach - Tech Startups"
-              className="bg-surface-paper border-border-light text-[var(--color-text-primary)]"
-              style={{ width: '100%', padding: '0.75rem', border: '1px solid', borderRadius: '0.5rem', fontSize: '0.875rem' }}
+              className="w-full px-3 py-3 bg-surface-paper border border-border-light text-foreground rounded-lg text-sm"
             />
           </div>
 
           <div>
-            <label className="text-[var(--color-text-secondary)]" style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.5rem' }}>
+            <label className="block text-muted-foreground text-sm font-medium mb-2">
               Description
             </label>
             <textarea
@@ -584,23 +472,20 @@ function CreateSequenceModal({ onClose, onCreate }: { onClose: () => void; onCre
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Describe the purpose of this sequence..."
               rows={3}
-              className="bg-surface-paper border-border-light text-[var(--color-text-primary)]"
-              style={{ width: '100%', padding: '0.75rem', border: '1px solid', borderRadius: '0.5rem', fontSize: '0.875rem', resize: 'vertical' }}
+              className="w-full px-3 py-3 bg-surface-paper border border-border-light text-foreground rounded-lg text-sm resize-y"
             />
           </div>
 
-          <div className="border-t border-border-light" style={{ display: 'flex', gap: '0.75rem', paddingTop: '1rem' }}>
+          <div className="border-t border-border-light flex gap-3 pt-4">
             <button
               onClick={onClose}
-              className="bg-surface-paper border-border-light text-[var(--color-text-secondary)]"
-              style={{ flex: 1, padding: '0.75rem', border: '1px solid', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600' }}
+              className="flex-1 py-3 bg-surface-paper border border-border-light text-muted-foreground rounded-lg cursor-pointer text-sm font-semibold hover:bg-card transition-colors"
             >
               Cancel
             </button>
             <button
               onClick={handleSubmit}
-              className="bg-primary"
-              style={{ flex: 1, padding: '0.75rem', color: 'var(--color-text-primary)', border: 'none', borderRadius: '0.5rem', cursor: 'pointer', fontSize: '0.875rem', fontWeight: '600' }}
+              className="flex-1 py-3 bg-primary text-foreground border-none rounded-lg cursor-pointer text-sm font-semibold hover:bg-primary-light transition-colors"
             >
               Create Sequence
             </button>

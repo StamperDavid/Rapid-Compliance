@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
+import { PageTitle, SectionDescription } from '@/components/ui/typography';
 import { useRecords } from '@/hooks/useRecords';
 import { STANDARD_SCHEMAS, PICKLIST_VALUES } from '@/lib/schema/standard-schemas'
 import { logger } from '@/lib/logger/logger';
@@ -517,43 +518,34 @@ export default function EntityTablePage() {
     };
 
     return (
-      <div style={{ minHeight: '100vh', backgroundColor: 'var(--color-bg-main)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ maxWidth: '28rem', textAlign: 'center', padding: '3rem 2rem' }}>
-          <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>{entityMeta?.icon ?? entityIcon}</div>
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
+      <div className="flex items-center justify-center p-8">
+        <div className="max-w-sm text-center py-12 px-8">
+          <div className="text-5xl mb-4">{entityMeta?.icon ?? entityIcon}</div>
+          <PageTitle className="text-2xl mb-2">
             {entityMeta?.pluralLabel ?? entityDisplayName}
-          </h1>
-          <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem', marginBottom: '0.25rem' }}>
+          </PageTitle>
+          <SectionDescription className="mb-1">
             This entity is not currently enabled for your workspace.
-          </p>
+          </SectionDescription>
           {entityMeta?.description && (
-            <p style={{ color: 'var(--color-text-disabled)', fontSize: '0.8125rem', marginBottom: '1.5rem' }}>
+            <p className="text-muted-foreground text-sm mb-6">
               {entityMeta.description}
             </p>
           )}
           {isAdmin ? (
             <button
               onClick={() => void handleEnable()}
-              style={{
-                padding: '0.75rem 2rem',
-                backgroundColor: 'var(--color-primary)',
-                color: 'white',
-                borderRadius: '0.5rem',
-                border: 'none',
-                cursor: 'pointer',
-                fontSize: '0.875rem',
-                fontWeight: 600,
-              }}
+              className="px-8 py-3 bg-primary text-white rounded-lg text-sm font-semibold cursor-pointer border-0"
             >
               Enable {entityMeta?.pluralLabel ?? entityDisplayName}
             </button>
           ) : (
-            <p style={{ color: 'var(--color-text-disabled)', fontSize: '0.8125rem' }}>
+            <p className="text-muted-foreground text-sm">
               Contact your admin to enable this entity.
             </p>
           )}
-          <div style={{ marginTop: '1.5rem' }}>
-            <Link href="/dashboard" style={{ color: 'var(--color-primary)', fontSize: '0.875rem', textDecoration: 'none' }}>
+          <div className="mt-6">
+            <Link href="/dashboard" className="text-primary text-sm no-underline">
               ← Back to Dashboard
             </Link>
           </div>
@@ -563,13 +555,13 @@ export default function EntityTablePage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: 'var(--color-bg-main)' }}>
+    <div className="p-8 space-y-6">
       {/* Leads hub tabs */}
       {entityName === 'leads' && <SubpageNav items={LEADS_TABS} />}
 
       {/* Header */}
-      <div style={{ backgroundColor: 'var(--color-bg-main)', borderBottom: '1px solid var(--color-border-light)' }}>
-        <div style={{ padding: '1rem 2rem' }}>
+      <div className="border-b border-border-light">
+        <div className="pb-4">
           {/* Notification */}
           {notification && (
             <div style={{ marginBottom: '1rem', padding: '0.75rem 1rem', backgroundColor: notification.type === 'success' ? 'var(--color-success-dark)' : 'var(--color-error-dark)', border: `1px solid ${notification.type === 'success' ? 'var(--color-success)' : 'var(--color-error)'}`, borderRadius: '0.5rem', color: notification.type === 'success' ? 'var(--color-success-light)' : 'var(--color-error-light)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -581,14 +573,14 @@ export default function EntityTablePage() {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
               <div>
-                <h1 style={{ fontSize: '1.75rem', fontWeight: 'bold', color: 'var(--color-text-primary)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <PageTitle className="flex items-center gap-2">
                   <span>{entityIcon}</span>
                   {entityDisplayName}
-                </h1>
-                <p style={{ fontSize: '0.875rem', color: 'var(--color-text-disabled)', marginTop: '0.25rem' }}>
+                </PageTitle>
+                <SectionDescription className="mt-1">
                   {loading ? 'Loading...' : `${filteredRecords.length} records`}
                   {(searchTerm || activeFilterCount > 0) && ` (filtered from ${records.length})`}
-                </p>
+                </SectionDescription>
               </div>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
@@ -706,7 +698,7 @@ export default function EntityTablePage() {
         </div>
       )}
 
-      <div style={{ padding: '0 2rem 2rem' }}>
+      <div>
         {/* Loading State */}
         {loading && (
           <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--color-text-disabled)' }}>

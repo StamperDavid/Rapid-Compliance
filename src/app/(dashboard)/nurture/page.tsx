@@ -4,6 +4,7 @@ import { useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import SubpageNav from '@/components/ui/SubpageNav';
+import { PageTitle, SectionDescription } from '@/components/ui/typography';
 import { EMAIL_STUDIO_TABS } from '@/lib/constants/subpage-nav';
 import {
   Heart,
@@ -45,21 +46,21 @@ export default function NurtureCampaignsPage() {
   }, [refresh]);
 
   return (
-    <div className="min-h-screen bg-surface-main p-8">
+    <div className="p-8 space-y-6">
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="flex justify-between items-center mb-8"
+        className="flex justify-between items-center"
       >
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center shadow-lg shadow-primary/25">
             <Heart className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold text-[var(--color-text-primary)]">Lead Nurture Campaigns</h1>
-            <p className="text-[var(--color-text-secondary)] text-sm mt-1">Automate your lead engagement sequences</p>
+            <PageTitle>Lead Nurture Campaigns</PageTitle>
+            <SectionDescription className="mt-1">Automate your lead engagement sequences</SectionDescription>
           </div>
         </div>
         <motion.button
@@ -81,8 +82,7 @@ export default function NurtureCampaignsPage() {
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-6 p-4 backdrop-blur-xl border rounded-xl flex items-start gap-3"
-          style={{ backgroundColor: 'rgba(var(--color-error-rgb), 0.1)', borderColor: 'rgba(var(--color-error-rgb), 0.3)' }}
+          className="p-4 bg-error/10 border border-error/30 backdrop-blur-xl rounded-xl flex items-start gap-3"
         >
           <AlertCircle className="w-5 h-5 text-error flex-shrink-0 mt-0.5" />
           <p className="text-error">{error}</p>
@@ -100,8 +100,8 @@ export default function NurtureCampaignsPage() {
           <div className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center border border-primary/30">
             <Heart className="w-10 h-10 text-primary" />
           </div>
-          <h3 className="text-xl font-semibold text-[var(--color-text-primary)] mb-2">No Nurture Campaigns Yet</h3>
-          <p className="text-[var(--color-text-secondary)] mb-8 max-w-md mx-auto">
+          <h3 className="text-xl font-semibold text-foreground mb-2">No Nurture Campaigns Yet</h3>
+          <p className="text-muted-foreground mb-8 max-w-md mx-auto">
             Create your first automated nurture sequence to engage and convert your leads over time.
           </p>
           <motion.button
@@ -131,14 +131,14 @@ export default function NurtureCampaignsPage() {
                   <div className="flex-1">
                     {/* Campaign Header */}
                     <div className="flex items-center gap-3 mb-3">
-                      <h3 className="text-xl font-semibold text-[var(--color-text-primary)]">{campaign.name}</h3>
+                      <h3 className="text-xl font-semibold text-foreground">{campaign.name}</h3>
                       <span
                         className={`px-3 py-1 rounded-lg text-xs font-semibold ${
                           campaign.status === 'active'
                             ? 'bg-gradient-to-r from-emerald-500/20 to-green-500/20 text-emerald-300 border border-emerald-500/30'
                             : campaign.status === 'paused'
                             ? 'bg-gradient-to-r from-amber-500/20 to-orange-500/20 text-amber-300 border border-amber-500/30'
-                            : 'bg-surface-elevated text-[var(--color-text-secondary)] border border-[var(--color-border-strong)]'
+                            : 'bg-surface-elevated text-muted-foreground border border-border-strong'
                         }`}
                       >
                         {campaign.status}
@@ -146,26 +146,26 @@ export default function NurtureCampaignsPage() {
                     </div>
 
                     {/* Description */}
-                    <p className="text-[var(--color-text-secondary)] mb-4 leading-relaxed">{campaign.description}</p>
+                    <p className="text-muted-foreground mb-4 leading-relaxed">{campaign.description}</p>
 
                     {/* Stats */}
                     <div className="flex flex-wrap gap-6 text-sm">
-                      <div className="flex items-center gap-2 text-[var(--color-text-secondary)]">
+                      <div className="flex items-center gap-2 text-muted-foreground">
                         <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center border border-primary/20">
                           <Layers className="w-4 h-4 text-primary" />
                         </div>
                         <div>
-                          <span className="font-semibold text-[var(--color-text-primary)]">{campaign.steps?.length || 0}</span>
-                          <span className="text-[var(--color-text-secondary)] ml-1">steps</span>
+                          <span className="font-semibold text-foreground">{campaign.steps?.length || 0}</span>
+                          <span className="text-muted-foreground ml-1">steps</span>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2 text-[var(--color-text-secondary)]">
+                      <div className="flex items-center gap-2 text-muted-foreground">
                         <div className="w-8 h-8 rounded-lg bg-secondary/10 flex items-center justify-center border border-secondary/20">
                           <Users className="w-4 h-4 text-secondary" />
                         </div>
                         <div>
-                          <span className="font-semibold text-[var(--color-text-primary)]">{campaign.enrolled ?? 0}</span>
-                          <span className="text-[var(--color-text-secondary)] ml-1">leads enrolled</span>
+                          <span className="font-semibold text-foreground">{campaign.enrolled ?? 0}</span>
+                          <span className="text-muted-foreground ml-1">leads enrolled</span>
                         </div>
                       </div>
                     </div>
@@ -186,7 +186,7 @@ export default function NurtureCampaignsPage() {
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
                       onClick={() => router.push(`/nurture/${campaign.id}/stats`)}
-                      className="px-4 py-2 bg-surface-elevated hover:bg-surface-elevated border border-border-light text-[var(--color-text-primary)] font-semibold rounded-xl flex items-center gap-2 transition-all duration-200"
+                      className="px-4 py-2 bg-surface-elevated hover:bg-surface-elevated border border-border-light text-foreground font-semibold rounded-xl flex items-center gap-2 transition-all duration-200"
                     >
                       <BarChart3 className="w-4 h-4" />
                       Stats
@@ -209,11 +209,11 @@ export default function NurtureCampaignsPage() {
                 whileTap={{ scale: loading || !hasMore ? 1 : 0.98 }}
                 onClick={() => void loadMore()}
                 disabled={loading || !hasMore}
-                className="px-8 py-3 bg-surface-elevated hover:bg-surface-elevated border border-border-light text-[var(--color-text-primary)] font-semibold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center gap-2"
+                className="px-8 py-3 bg-surface-elevated hover:bg-surface-elevated border border-border-light text-foreground font-semibold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center gap-2"
               >
                 {loading ? (
                   <>
-                    <div className="w-5 h-5 border-2 border-[var(--color-text-secondary)] border-t-[var(--color-text-primary)] rounded-full animate-spin" />
+                    <div className="w-5 h-5 border-2 border-muted-foreground border-t-foreground rounded-full animate-spin" />
                     Loading...
                   </>
                 ) : hasMore ? (

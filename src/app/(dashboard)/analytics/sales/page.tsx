@@ -5,6 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
 import { logger } from '@/lib/logger/logger';
+import { PageTitle, SectionDescription } from '@/components/ui/typography';
 import type { StageMetrics, PipelineInsight } from '@/lib/crm/sales-velocity';
 
 /**
@@ -137,9 +138,11 @@ export default function CRMAnalyticsPage() {
   const isLoading = tab === 'velocity' ? salesLoading : pipelineLoading;
 
   return (
-    <div className="p-8">
-      <h1 className="text-3xl font-bold mb-2">CRM Analytics</h1>
-      <p className="text-[var(--color-text-secondary)] text-sm mb-6">Sales velocity, pipeline health, and conversion metrics</p>
+    <div className="p-8 space-y-6">
+      <div>
+        <PageTitle className="mb-2">CRM Analytics</PageTitle>
+        <SectionDescription>Sales velocity, pipeline health, and conversion metrics</SectionDescription>
+      </div>
 
       {/* Tab Switcher */}
       <div className="flex gap-2 mb-8">
@@ -153,7 +156,7 @@ export default function CRMAnalyticsPage() {
             className={`px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${
               tab === key
                 ? 'bg-gradient-to-r from-primary to-secondary text-white shadow-lg shadow-primary/25'
-                : 'bg-surface-elevated border border-border-light text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'
+                : 'bg-surface-elevated border border-border-light text-muted-foreground hover:text-foreground'
             }`}
           >
             {label}
@@ -183,25 +186,25 @@ export default function CRMAnalyticsPage() {
               {/* Key Metrics */}
               <div className="grid grid-cols-4 gap-6 mb-8">
                 <div className="bg-surface-paper rounded-lg p-6">
-                  <div className="text-sm text-[var(--color-text-secondary)] mb-2">Sales Velocity</div>
+                  <div className="text-sm text-muted-foreground mb-2">Sales Velocity</div>
                   <div className="text-3xl font-bold text-success">{formatCurrency(salesMetrics.velocity)}/day</div>
-                  <div className="text-xs text-[var(--color-text-disabled)] mt-2">
+                  <div className="text-xs text-muted-foreground mt-2">
                     30d: {formatCurrency(salesMetrics.trends.velocity30Days)}/day
                   </div>
                 </div>
                 <div className="bg-surface-paper rounded-lg p-6">
-                  <div className="text-sm text-[var(--color-text-secondary)] mb-2">Win Rate</div>
+                  <div className="text-sm text-muted-foreground mb-2">Win Rate</div>
                   <div className="text-3xl font-bold">{salesMetrics.winRate.toFixed(1)}%</div>
-                  <div className="text-xs text-[var(--color-text-disabled)] mt-2">
+                  <div className="text-xs text-muted-foreground mt-2">
                     30d: {salesMetrics.trends.winRate30Days.toFixed(1)}%
                   </div>
                 </div>
                 <div className="bg-surface-paper rounded-lg p-6">
-                  <div className="text-sm text-[var(--color-text-secondary)] mb-2">Avg Deal Size</div>
+                  <div className="text-sm text-muted-foreground mb-2">Avg Deal Size</div>
                   <div className="text-3xl font-bold">{formatCurrency(salesMetrics.avgDealSize)}</div>
                 </div>
                 <div className="bg-surface-paper rounded-lg p-6">
-                  <div className="text-sm text-[var(--color-text-secondary)] mb-2">Avg Sales Cycle</div>
+                  <div className="text-sm text-muted-foreground mb-2">Avg Sales Cycle</div>
                   <div className="text-3xl font-bold">{salesMetrics.avgSalesCycle} days</div>
                 </div>
               </div>
@@ -258,7 +261,7 @@ export default function CRMAnalyticsPage() {
                   <div className="text-4xl font-bold text-success mb-2">
                     {formatCurrency(salesMetrics.forecastedRevenue)}
                   </div>
-                  <div className="text-sm text-[var(--color-text-secondary)]">
+                  <div className="text-sm text-muted-foreground">
                     Confidence: {salesMetrics.confidenceLevel}%
                   </div>
                   <div className="mt-4 w-full bg-surface-elevated rounded-full h-3">
@@ -270,7 +273,7 @@ export default function CRMAnalyticsPage() {
                   <div className="space-y-3">
                     <div>
                       <div className="flex justify-between text-sm mb-1">
-                        <span className="text-[var(--color-text-secondary)]">Last 30 Days</span>
+                        <span className="text-muted-foreground">Last 30 Days</span>
                         <span className="font-medium">{formatCurrency(salesMetrics.trends.velocity30Days)}/day</span>
                       </div>
                       <div className="w-full bg-surface-elevated rounded-full h-2">
@@ -282,11 +285,11 @@ export default function CRMAnalyticsPage() {
                     </div>
                     <div>
                       <div className="flex justify-between text-sm mb-1">
-                        <span className="text-[var(--color-text-secondary)]">Last 90 Days</span>
+                        <span className="text-muted-foreground">Last 90 Days</span>
                         <span className="font-medium">{formatCurrency(salesMetrics.trends.velocity90Days)}/day</span>
                       </div>
                       <div className="w-full bg-surface-elevated rounded-full h-2">
-                        <div className="bg-success h-2 rounded-full" style={{ width: '100%' }} />
+                        <div className="bg-success h-2 rounded-full w-full" />
                       </div>
                     </div>
                   </div>
@@ -351,13 +354,13 @@ export default function CRMAnalyticsPage() {
                   {Object.entries(salesMetrics.conversionRates).map(([transition, rate]) => (
                     <div key={transition}>
                       <div className="flex justify-between text-sm mb-2">
-                        <span className="text-[var(--color-text-secondary)] capitalize">{transition.replace('->', ' → ').replace(/_/g, ' ')}</span>
+                        <span className="text-muted-foreground capitalize">{transition.replace('->', ' → ').replace(/_/g, ' ')}</span>
                         <span className="font-medium">{rate.toFixed(1)}%</span>
                       </div>
                       <div className="w-full bg-surface-elevated rounded-full h-3">
                         <div
                           className={`h-3 rounded-full ${
-                            rate >= 60 ? 'bg-success' : rate >= 40 ? 'bg-[var(--color-warning)]' : 'bg-error'
+                            rate >= 60 ? 'bg-success' : rate >= 40 ? 'bg-warning' : 'bg-error'
                           }`}
                           style={{ width: `${rate}%` }}
                         />
@@ -375,28 +378,28 @@ export default function CRMAnalyticsPage() {
         /* ── Pipeline Tab ────────────────────────────────────────────── */
         <>
           {/* Overview Cards */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
-            <div style={{ backgroundColor: 'var(--color-bg-paper)', border: '1px solid var(--color-border-light)', borderRadius: '1rem', padding: '1.5rem' }}>
-              <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginBottom: '0.5rem', textTransform: 'uppercase' }}>Total Pipeline Value</div>
-              <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div className="bg-card border border-border-light rounded-2xl p-6">
+              <div className="text-xs text-muted-foreground mb-2 uppercase">Total Pipeline Value</div>
+              <div className="text-4xl font-bold text-foreground">
                 {pipelineData?.totalValue ? formatCurrency(pipelineData.totalValue) : '$0'}
               </div>
             </div>
-            <div style={{ backgroundColor: 'var(--color-bg-paper)', border: '1px solid var(--color-border-light)', borderRadius: '1rem', padding: '1.5rem' }}>
-              <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginBottom: '0.5rem', textTransform: 'uppercase' }}>Deals in Pipeline</div>
-              <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>
+            <div className="bg-card border border-border-light rounded-2xl p-6">
+              <div className="text-xs text-muted-foreground mb-2 uppercase">Deals in Pipeline</div>
+              <div className="text-4xl font-bold text-foreground">
                 {pipelineData?.dealsCount ?? 0}
               </div>
             </div>
-            <div style={{ backgroundColor: 'var(--color-bg-paper)', border: '1px solid var(--color-border-light)', borderRadius: '1rem', padding: '1.5rem' }}>
-              <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginBottom: '0.5rem', textTransform: 'uppercase' }}>Win Rate</div>
-              <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>
+            <div className="bg-card border border-border-light rounded-2xl p-6">
+              <div className="text-xs text-muted-foreground mb-2 uppercase">Win Rate</div>
+              <div className="text-4xl font-bold text-foreground">
                 {pipelineData?.winRate ? formatPercent(pipelineData.winRate) : '0%'}
               </div>
             </div>
-            <div style={{ backgroundColor: 'var(--color-bg-paper)', border: '1px solid var(--color-border-light)', borderRadius: '1rem', padding: '1.5rem' }}>
-              <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginBottom: '0.5rem', textTransform: 'uppercase' }}>Avg Deal Size</div>
-              <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>
+            <div className="bg-card border border-border-light rounded-2xl p-6">
+              <div className="text-xs text-muted-foreground mb-2 uppercase">Avg Deal Size</div>
+              <div className="text-4xl font-bold text-foreground">
                 {pipelineData?.avgDealSize ? formatCurrency(pipelineData.avgDealSize) : '$0'}
               </div>
             </div>
@@ -404,26 +407,27 @@ export default function CRMAnalyticsPage() {
 
           {/* Pipeline by Stage */}
           {pipelineData?.byStage && pipelineData.byStage.length > 0 && (
-            <div style={{ backgroundColor: 'var(--color-bg-paper)', border: '1px solid var(--color-border-light)', borderRadius: '1rem', padding: '2rem', marginBottom: '1.5rem' }}>
-              <h2 style={{ fontSize: '1.25rem', fontWeight: '600', color: 'var(--color-text-primary)', marginBottom: '1.5rem' }}>
+            <div className="bg-card border border-border-light rounded-2xl p-8 mb-6">
+              <h2 className="text-xl font-semibold text-foreground mb-6">
                 Pipeline by Stage
               </h2>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div className="flex flex-col gap-4">
                 {pipelineData.byStage.map((stage: PipelineStage, index: number) => (
                   <div key={index}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                      <span style={{ fontSize: '0.875rem', color: 'var(--color-text-primary)' }}>{stage.stage}</span>
-                      <span style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>
+                    <div className="flex justify-between mb-2">
+                      <span className="text-sm text-foreground">{stage.stage}</span>
+                      <span className="text-sm text-muted-foreground">
                         {formatCurrency(stage.value)} ({stage.count} deals)
                       </span>
                     </div>
-                    <div style={{ height: '8px', backgroundColor: 'var(--color-bg-main)', borderRadius: '4px', overflow: 'hidden' }}>
-                      <div style={{
-                        width: `${pipelineData.totalValue > 0 ? (stage.value / pipelineData.totalValue) * 100 : 0}%`,
-                        height: '100%',
-                        backgroundColor: primaryColor,
-                        transition: 'width 0.3s',
-                      }} />
+                    <div className="h-2 bg-surface-elevated rounded-full overflow-hidden">
+                      <div
+                        className="h-full rounded-full transition-all duration-300"
+                        style={{
+                          width: `${pipelineData.totalValue > 0 ? (stage.value / pipelineData.totalValue) * 100 : 0}%`,
+                          backgroundColor: primaryColor,
+                        }}
+                      />
                     </div>
                   </div>
                 ))}
@@ -432,7 +436,7 @@ export default function CRMAnalyticsPage() {
           )}
 
           {!pipelineData && !pipelineLoading && (
-            <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--color-text-secondary)' }}>
+            <div className="p-12 text-center text-muted-foreground">
               No pipeline data available
             </div>
           )}

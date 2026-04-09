@@ -10,6 +10,7 @@ import type { SubpageNavItem } from '@/components/ui/SubpageNav';
 // ── Dashboard ───────────────────────────────────────────────────────────────
 export const DASHBOARD_TABS: SubpageNavItem[] = [
   { label: 'Dashboard', href: '/dashboard' },
+  { label: 'Activities', href: '/dashboard/activities' },
   { label: 'Executive Briefing', href: '/executive-briefing' },
   { label: 'Workforce HQ', href: '/workforce' },
   { label: 'Team', href: '/team/leaderboard' },
@@ -161,16 +162,21 @@ export const SYSTEM_TABS: SubpageNavItem[] = [
   { label: 'Schemas', href: '/schemas' },
 ];
 
-// ── Leads Hub (All Leads + Lead Research + Scoring) ─────────────────────────
+// ── Leads Hub (All Leads + Proposals/Quotes + Lead Research + Scoring) ──────
 export const LEADS_TABS: SubpageNavItem[] = [
   { label: 'All Leads', href: '/entities/leads' },
-  { label: 'Lead Research', href: '/leads/research' },
+  { label: 'Proposals / Quotes', href: '/leads/proposals' },
+  { label: 'Intelligence Hub', href: '/leads/research' },
   { label: 'Scoring', href: '/lead-scoring' },
 ];
 
-// ── Deals Hub (All Deals + Risk) ───────────────────────────────────────────
+// ── Deals Hub (All Deals + Orders + Invoices + Payments + Tasks + Risk) ─────
 export const DEALS_TABS: SubpageNavItem[] = [
   { label: 'All Deals', href: '/deals' },
+  { label: 'Orders', href: '/deals/orders' },
+  { label: 'Invoices', href: '/deals/invoices' },
+  { label: 'Payments', href: '/deals/payments' },
+  { label: 'Tasks', href: '/deals/tasks' },
   { label: 'Risk', href: '/risk' },
 ];
 

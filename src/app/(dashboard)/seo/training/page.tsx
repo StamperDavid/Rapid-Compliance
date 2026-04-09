@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/useToast';
 import { logger } from '@/lib/logger/logger';
 import type { ModelName } from '@/types/ai-models';
 import SubpageNav from '@/components/ui/SubpageNav';
+import { PageTitle, SectionDescription } from '@/components/ui/typography';
 
 // Minimal type definitions for this component
 interface SEOTrainingSettings {
@@ -568,23 +569,21 @@ export default function SEOTrainingPage() {
   // Loading State
   if (loading) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '400px' }}>
-        <p style={{ color: COLORS.muted }}>Loading SEO Training Lab...</p>
+      <div className="flex items-center justify-center py-24">
+        <p className="text-muted-foreground">Loading SEO Training Lab...</p>
       </div>
     );
   }
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: COLORS.bg, color: COLORS.text }}>
+    <div className="p-8 space-y-6">
       {/* Header Section */}
-      <div style={{ padding: '2rem', borderBottom: `1px solid ${COLORS.border}` }}>
+      <div className="pb-8 border-b border-border">
         <div>
-          <h1 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>
-            SEO Content AI Training Lab
-          </h1>
-          <p style={{ color: COLORS.muted, marginBottom: '1.5rem' }}>
+          <PageTitle className="mb-2">SEO Content AI Training Lab</PageTitle>
+          <SectionDescription className="mb-6">
             Configure AI settings for SEO-optimized content generation, test your setup, and refine your content strategy
-          </p>
+          </SectionDescription>
           <SubpageNav items={[
             { label: 'Training Center', href: '/settings/ai-agents/training' },
             { label: 'Persona', href: '/settings/ai-agents/persona' },
@@ -612,8 +611,8 @@ export default function SEOTrainingPage() {
       </div>
 
       {/* Tab Navigation */}
-      <div style={{ borderBottom: `1px solid ${COLORS.border}`, backgroundColor: COLORS.card }}>
-        <div style={{ padding: '0 2rem', display: 'flex', gap: '2rem' }}>
+      <div className="border-b border-border bg-card">
+        <div className="px-8 flex gap-8">
           {(['settings', 'generate', 'history', 'knowledge'] as const).map(tab => (
             <button
               key={tab}
@@ -636,7 +635,7 @@ export default function SEOTrainingPage() {
       </div>
 
       {/* Main Content */}
-      <div style={{ padding: '2rem' }}>
+      <div className="py-8">
         <div>
 
           {/* Settings Tab */}

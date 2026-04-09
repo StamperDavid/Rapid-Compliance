@@ -13,12 +13,13 @@ import { logger } from '@/lib/logger/logger';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { SOCIAL_PLATFORMS } from '@/types/social';
 import { PLATFORM_META } from '@/lib/social/platform-config';
+import { PageTitle, SectionDescription } from '@/components/ui/typography';
 
 // Dynamic import to avoid SSR issues with react-big-calendar
 const SocialCalendar = dynamic(() => import('@/components/social/SocialCalendar'), {
   ssr: false,
   loading: () => (
-    <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--color-text-secondary)' }}>
+    <div className="py-12 text-center text-muted-foreground">
       Loading calendar...
     </div>
   ),
@@ -119,16 +120,14 @@ export default function ContentCalendarPage() {
   };
 
   return (
-    <div style={{ padding: '2rem', maxWidth: 1400, margin: '0 auto' }}>
-      <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
-        Content Calendar
-      </h1>
-      <p style={{ color: 'var(--color-text-secondary)', marginBottom: '1.5rem', fontSize: '0.875rem' }}>
-        All scheduled, published, and draft posts across platforms
-      </p>
+    <div className="p-8 space-y-6 max-w-[1400px] mx-auto">
+      <div>
+        <PageTitle>Content Calendar</PageTitle>
+        <SectionDescription className="mt-1">All scheduled, published, and draft posts across platforms</SectionDescription>
+      </div>
 
       {loading ? (
-        <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--color-text-secondary)' }}>
+        <div className="py-12 text-center text-muted-foreground">
           Loading calendar events...
         </div>
       ) : (
@@ -147,68 +146,36 @@ export default function ContentCalendarPage() {
       {/* Event Detail Modal */}
       {selectedEvent && (
         <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 100,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            backgroundColor: 'rgba(0,0,0,0.5)',
-          }}
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50"
           onClick={closeModal}
         >
           <div
-            style={{
-              backgroundColor: 'var(--color-bg-elevated)',
-              borderRadius: '0.75rem',
-              border: '1px solid var(--color-border-light)',
-              padding: '1.5rem',
-              maxWidth: 500,
-              width: '90%',
-              maxHeight: '80vh',
-              overflow: 'auto',
-            }}
+            className="bg-surface-elevated rounded-xl border border-border-light p-6 max-w-[500px] w-[90%] max-h-[80vh] overflow-auto"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
-              <span style={{
-                padding: '0.25rem 0.5rem',
-                borderRadius: '0.25rem',
-                fontSize: '0.6875rem',
-                fontWeight: 600,
-                color: '#fff',
-                backgroundColor: PLATFORM_COLORS[selectedEvent.platform] ?? '#666',
-                textTransform: 'uppercase',
-              }}>
+            <div className="flex items-center gap-3 mb-4">
+              <span
+                className="px-2 py-0.5 rounded text-xs font-semibold text-white uppercase"
+                style={{ backgroundColor: PLATFORM_COLORS[selectedEvent.platform] ?? '#666' }}
+              >
                 {selectedEvent.platform}
               </span>
-              <span style={{
-                padding: '0.25rem 0.5rem',
-                borderRadius: '1rem',
-                fontSize: '0.6875rem',
-                fontWeight: 600,
-                color: STATUS_LABELS[selectedEvent.status]?.color ?? '#9E9E9E',
-                backgroundColor: 'var(--color-bg-paper)',
-              }}>
+              <span
+                className="px-2 py-0.5 rounded-full text-xs font-semibold bg-card"
+                style={{ color: STATUS_LABELS[selectedEvent.status]?.color ?? '#9E9E9E' }}
+              >
                 {STATUS_LABELS[selectedEvent.status]?.label ?? selectedEvent.status}
               </span>
             </div>
 
             {/* Content */}
-            <div style={{
-              fontSize: '0.875rem',
-              color: 'var(--color-text-primary)',
-              whiteSpace: 'pre-wrap',
-              marginBottom: '1rem',
-              lineHeight: 1.6,
-            }}>
+            <div className="text-sm text-foreground whitespace-pre-wrap mb-4 leading-relaxed">
               {selectedEvent.content}
             </div>
 
             {/* Metadata */}
-            <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginBottom: '1rem' }}>
+            <div className="text-xs text-muted-foreground mb-4">
               <div>Date: {selectedEvent.start.toLocaleString()}</div>
               {selectedEvent.mediaUrls && selectedEvent.mediaUrls.length > 0 && (
                 <div>Media: {selectedEvent.mediaUrls.length} file(s)</div>
@@ -219,15 +186,7 @@ export default function ContentCalendarPage() {
             <button
               type="button"
               onClick={closeModal}
-              style={{
-                padding: '0.5rem 1rem',
-                borderRadius: '0.375rem',
-                border: '1px solid var(--color-border-light)',
-                backgroundColor: 'var(--color-bg-paper)',
-                color: 'var(--color-text-secondary)',
-                fontSize: '0.8125rem',
-                cursor: 'pointer',
-              }}
+              className="px-4 py-2 rounded-md border border-border-light bg-card text-muted-foreground text-sm cursor-pointer hover:bg-surface-elevated transition-colors"
             >
               Close
             </button>

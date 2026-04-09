@@ -559,7 +559,7 @@ export default function PageEditorPage() {
 
   if (loading) {
     return (
-      <div style={{ padding: '2rem', fontFamily: 'Inter, system-ui, sans-serif', background: '#000', color: '#fff', height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div className="p-8 bg-black text-white h-screen flex items-center justify-center">
         <div>Loading editor...</div>
       </div>
     );
@@ -567,20 +567,14 @@ export default function PageEditorPage() {
 
   if (!page) {
     return (
-      <div style={{ padding: '2rem', fontFamily: 'Inter, system-ui, sans-serif', background: '#000', color: '#fff', height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div className="p-8 bg-black text-white h-screen flex items-center justify-center">
         <div>Failed to load page</div>
       </div>
     );
   }
 
   return (
-    <div style={{
-      fontFamily: 'Inter, system-ui, sans-serif',
-      height: '100vh',
-      display: 'flex',
-      flexDirection: 'column',
-      overflow: 'hidden',
-    }}>
+    <div className="h-screen flex flex-col overflow-hidden font-sans">
       {/* Editor Toolbar */}
       <EditorToolbar
         page={page}
@@ -606,11 +600,7 @@ export default function PageEditorPage() {
       />
 
       {/* Three-Panel Layout */}
-      <div style={{
-        display: 'flex',
-        flex: 1,
-        overflow: 'hidden',
-      }}>
+      <div className="flex flex-1 overflow-hidden">
         {/* Left Panel: Widgets / Pages / Branding */}
         <WidgetsPanel
           onAddWidget={(widget) => {
@@ -659,31 +649,22 @@ export default function PageEditorPage() {
 
       {/* Notification */}
       {notification && (
-        <div style={{ position: 'fixed', top: '1rem', right: '1rem', zIndex: 9999, maxWidth: '400px' }}>
-          <div style={{
-            padding: '0.75rem 1rem',
-            borderRadius: '0.5rem',
-            fontSize: '0.875rem',
-            boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.3)',
-            background: notification.type === 'success' ? '#10b981' : '#ef4444',
-            color: 'white',
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span>{notification.message}</span>
-              <button onClick={() => setNotification(null)} style={{ marginLeft: '0.5rem', color: 'white', opacity: 0.8, background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.25rem' }}>&times;</button>
-            </div>
+        <div className="fixed top-4 right-4 z-[9999] max-w-sm">
+          <div className={`px-4 py-3 rounded-lg text-sm shadow-lg text-white flex items-center justify-between gap-2 ${notification.type === 'success' ? 'bg-emerald-500' : 'bg-red-500'}`}>
+            <span>{notification.message}</span>
+            <button onClick={() => setNotification(null)} className="opacity-80 hover:opacity-100 cursor-pointer bg-transparent border-none text-white text-xl leading-none">&times;</button>
           </div>
         </div>
       )}
 
       {/* Confirmation Dialog */}
       {confirmDialog && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0, 0, 0, 0.7)' }}>
-          <div style={{ backgroundColor: '#1a1a2e', borderRadius: '12px', padding: '1.5rem', maxWidth: '400px', margin: '1rem', boxShadow: '0 10px 25px rgba(0, 0, 0, 0.5)', border: '1px solid rgba(255,255,255,0.1)' }}>
-            <p style={{ color: '#ffffff', marginBottom: '1rem', fontSize: '1rem' }}>{confirmDialog.message}</p>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
-              <button onClick={() => setConfirmDialog(null)} style={{ padding: '0.5rem 1rem', borderRadius: '8px', color: 'rgba(255,255,255,0.6)', background: 'rgba(255,255,255,0.1)', border: 'none', cursor: 'pointer' }}>Cancel</button>
-              <button onClick={confirmDialog.onConfirm} style={{ padding: '0.5rem 1rem', borderRadius: '8px', backgroundColor: '#ef4444', color: 'white', border: 'none', cursor: 'pointer' }}>Confirm</button>
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70">
+          <div className="bg-[#1a1a2e] rounded-xl p-6 max-w-sm mx-4 shadow-2xl border border-white/10">
+            <p className="text-white mb-4 text-base">{confirmDialog.message}</p>
+            <div className="flex justify-end gap-3">
+              <button onClick={() => setConfirmDialog(null)} className="px-4 py-2 rounded-lg text-white/60 bg-white/10 border-none cursor-pointer">Cancel</button>
+              <button onClick={confirmDialog.onConfirm} className="px-4 py-2 rounded-lg bg-red-500 text-white border-none cursor-pointer">Confirm</button>
             </div>
           </div>
         </div>

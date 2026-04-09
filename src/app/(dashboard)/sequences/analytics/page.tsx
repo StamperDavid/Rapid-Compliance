@@ -17,6 +17,7 @@ import { PLATFORM_ID } from '@/lib/constants/platform';
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { PageTitle, SectionDescription } from '@/components/ui/typography';
 import SubpageNav from '@/components/ui/SubpageNav';
 import { ANALYTICS_TABS } from '@/lib/constants/subpage-nav';
 import { useAuth } from '@/hooks/useAuth';
@@ -232,9 +233,9 @@ export default function SequenceAnalyticsPage() {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', backgroundColor: 'var(--color-bg-main)' }}>
-        <div style={{ textAlign: 'center', color: 'var(--color-text-secondary)' }}>
-          <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>📊</div>
+      <div className="flex items-center justify-center p-8">
+        <div className="text-center text-muted-foreground">
+          <div className="text-4xl mb-4">📊</div>
           <p>Loading analytics...</p>
         </div>
       </div>
@@ -243,8 +244,8 @@ export default function SequenceAnalyticsPage() {
 
   if (!summary) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', backgroundColor: 'var(--color-bg-main)' }}>
-        <div style={{ textAlign: 'center', color: 'var(--color-text-secondary)' }}>
+      <div className="flex items-center justify-center p-8">
+        <div className="text-center text-muted-foreground">
           <p>No analytics data available</p>
         </div>
       </div>
@@ -252,104 +253,56 @@ export default function SequenceAnalyticsPage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: 'var(--color-bg-main)', padding: '2rem' }}>
+    <div className="p-8 space-y-6">
       <div>
         {/* Header */}
         <div style={{ marginBottom: '2rem' }}>
           <SubpageNav items={ANALYTICS_TABS} />
-          <Link href={`/outbound/sequences`} style={{ color: 'var(--color-primary)', fontSize: '0.875rem', fontWeight: '500', textDecoration: 'none' }}>
+          <Link href={`/outbound/sequences`} className="text-primary text-sm font-medium no-underline">
             ← Back to Sequences
           </Link>
           <div style={{ marginTop: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>
-              <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
+              <PageTitle className="mb-2">
                 📊 Sequence Analytics
-              </h1>
-              <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem' }}>
+              </PageTitle>
+              <SectionDescription>
                 Performance insights across all omni-channel sequences
-              </p>
+              </SectionDescription>
             </div>
             
             {/* Export Buttons */}
-            <div style={{ display: 'flex', gap: '0.75rem' }}>
+            <div className="flex gap-3">
               {activeView === 'overview' && summary && (
                 <>
                   <button
                     onClick={() => exportSummaryToCSV(summary, dateRange)}
-                    style={{
-                      padding: '0.75rem 1.25rem',
-                      backgroundColor: 'var(--color-bg-paper)',
-                      color: 'var(--color-text-primary)',
-                      border: '1px solid var(--color-border-light)',
-                      borderRadius: '0.5rem',
-                      cursor: 'pointer',
-                      fontSize: '0.875rem',
-                      fontWeight: '600',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                    }}
+                    className="px-5 py-3 bg-card text-foreground border border-border-light rounded-lg cursor-pointer text-sm font-semibold flex items-center gap-2"
                   >
                     📥 Export Summary
                   </button>
                   <button
                     onClick={() => exportSequencePerformanceToCSV(sequences)}
-                    style={{
-                      padding: '0.75rem 1.25rem',
-                      backgroundColor: 'var(--color-bg-paper)',
-                      color: 'var(--color-text-primary)',
-                      border: '1px solid var(--color-border-light)',
-                      borderRadius: '0.5rem',
-                      cursor: 'pointer',
-                      fontSize: '0.875rem',
-                      fontWeight: '600',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                    }}
+                    className="px-5 py-3 bg-card text-foreground border border-border-light rounded-lg cursor-pointer text-sm font-semibold flex items-center gap-2"
                   >
                     📊 Export All Sequences
                   </button>
                 </>
               )}
-              
+
               {activeView === 'sequences' && (
                 <button
                   onClick={() => exportSequencePerformanceToCSV(sequences)}
-                  style={{
-                    padding: '0.75rem 1.25rem',
-                    backgroundColor: 'var(--color-bg-elevated)',
-                    color: 'var(--color-text-primary)',
-                    border: '1px solid var(--color-border-light)',
-                    borderRadius: '0.5rem',
-                    cursor: 'pointer',
-                    fontSize: '0.875rem',
-                    fontWeight: '600',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem',
-                  }}
+                  className="px-5 py-3 bg-surface-elevated text-foreground border border-border-light rounded-lg cursor-pointer text-sm font-semibold flex items-center gap-2"
                 >
                   📥 Export Sequences
                 </button>
               )}
-              
+
               {activeView === 'channels' && summary && (
                 <button
                   onClick={() => exportChannelPerformanceToCSV(summary.channelPerformance)}
-                  style={{
-                    padding: '0.75rem 1.25rem',
-                    backgroundColor: 'var(--color-bg-elevated)',
-                    color: 'var(--color-text-primary)',
-                    border: '1px solid var(--color-border-light)',
-                    borderRadius: '0.5rem',
-                    cursor: 'pointer',
-                    fontSize: '0.875rem',
-                    fontWeight: '600',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem',
-                  }}
+                  className="px-5 py-3 bg-surface-elevated text-foreground border border-border-light rounded-lg cursor-pointer text-sm font-semibold flex items-center gap-2"
                 >
                   📥 Export Channels
                 </button>

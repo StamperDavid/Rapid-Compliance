@@ -25,6 +25,7 @@ import { PLATFORM_ID } from '@/lib/constants/platform';
 import { logger } from '@/lib/logger/logger';
 import SubpageNav from '@/components/ui/SubpageNav';
 import { TEAM_TABS } from '@/lib/constants/subpage-nav';
+import { PageTitle, SectionDescription } from '@/components/ui/typography';
 import type {
   Playbook,
   PlaybookAdoptionMetrics,
@@ -192,16 +193,8 @@ export default function PlaybookDashboardPage() {
   
   if (loading) {
     return (
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          minHeight: '100vh',
-          backgroundColor: 'var(--color-bg-main)',
-        }}
-      >
-        <div style={{ textAlign: 'center' }}>
+      <div className="flex items-center justify-center p-8">
+        <div className="text-center">
           <div
             style={{
               width: 48,
@@ -213,7 +206,7 @@ export default function PlaybookDashboardPage() {
               margin: '0 auto 1rem',
             }}
           />
-          <p style={{ color: 'var(--color-text-secondary)' }}>Loading playbooks...</p>
+          <p className="text-muted-foreground">Loading playbooks...</p>
         </div>
         <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
@@ -222,30 +215,13 @@ export default function PlaybookDashboardPage() {
 
   if (error) {
     return (
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          minHeight: '100vh',
-          backgroundColor: 'var(--color-bg-main)',
-        }}
-      >
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ color: 'var(--color-error)', fontSize: '1.25rem', marginBottom: '0.5rem' }}>Error</div>
-          <p style={{ color: 'var(--color-text-secondary)' }}>{error}</p>
+      <div className="flex items-center justify-center p-8">
+        <div className="text-center">
+          <div className="text-error text-xl mb-2">Error</div>
+          <p className="text-muted-foreground">{error}</p>
           <button
             onClick={() => void loadData()}
-            style={{
-              marginTop: '1rem',
-              padding: '0.5rem 1rem',
-              backgroundColor: 'var(--color-primary)',
-              color: 'var(--color-text-primary)',
-              border: 'none',
-              borderRadius: '0.5rem',
-              cursor: 'pointer',
-              fontWeight: 600,
-            }}
+            className="mt-4 px-4 py-2 bg-primary text-foreground border-none rounded-lg cursor-pointer font-semibold"
           >
             Retry
           </button>
@@ -255,98 +231,46 @@ export default function PlaybookDashboardPage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: 'var(--color-bg-main)', padding: '1.5rem' }}>
+    <div className="p-8 space-y-6">
       <SubpageNav items={TEAM_TABS} />
       {/* Header */}
-      <div style={{ marginBottom: '2rem' }}>
-        <h1 style={{ fontSize: '1.875rem', fontWeight: 700, color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
-          Playbook Builder
-        </h1>
-        <p style={{ color: 'var(--color-text-secondary)' }}>
+      <div>
+        <PageTitle>Playbook Builder</PageTitle>
+        <SectionDescription className="mt-1">
           Extract winning patterns from top performers and create reusable playbooks
-        </p>
+        </SectionDescription>
       </div>
 
       {/* Action Buttons */}
-      <div style={{ marginBottom: '1.5rem', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-        <button
-          style={{
-            padding: '0.5rem 1rem',
-            backgroundColor: 'var(--color-primary)',
-            color: 'var(--color-text-primary)',
-            border: 'none',
-            borderRadius: '0.5rem',
-            fontWeight: 500,
-            cursor: 'pointer',
-          }}
-        >
+      <div className="flex flex-wrap gap-4">
+        <button className="px-4 py-2 bg-primary text-foreground border-none rounded-lg font-medium cursor-pointer">
           + Generate New Playbook
         </button>
-        <button
-          style={{
-            padding: '0.5rem 1rem',
-            backgroundColor: 'var(--color-bg-paper)',
-            border: '1px solid var(--color-border-light)',
-            color: 'var(--color-text-primary)',
-            borderRadius: '0.5rem',
-            fontWeight: 500,
-            cursor: 'pointer',
-          }}
-        >
+        <button className="px-4 py-2 bg-card border border-border-light text-foreground rounded-lg font-medium cursor-pointer">
           Extract Patterns
         </button>
-        <button
-          style={{
-            padding: '0.5rem 1rem',
-            backgroundColor: 'var(--color-bg-paper)',
-            border: '1px solid var(--color-border-light)',
-            color: 'var(--color-text-primary)',
-            borderRadius: '0.5rem',
-            fontWeight: 500,
-            cursor: 'pointer',
-          }}
-        >
+        <button className="px-4 py-2 bg-card border border-border-light text-foreground rounded-lg font-medium cursor-pointer">
           View Analytics
         </button>
       </div>
 
       {/* Empty State */}
       {playbooks.length === 0 ? (
-        <div
-          style={{
-            textAlign: 'center',
-            padding: '4rem 2rem',
-            backgroundColor: 'var(--color-bg-paper)',
-            borderRadius: '1rem',
-            border: '1px solid var(--color-border-main)',
-          }}
-        >
-          <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>📚</div>
-          <h2 style={{ fontSize: '1.5rem', fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
-            No Playbooks Yet
-          </h2>
-          <p style={{ color: 'var(--color-text-secondary)', marginBottom: '1.5rem' }}>
+        <div className="text-center py-16 px-8 bg-card rounded-2xl border border-border">
+          <div className="text-6xl mb-4">📚</div>
+          <h2 className="text-2xl font-semibold text-foreground mb-2">No Playbooks Yet</h2>
+          <p className="text-muted-foreground mb-6">
             Get started by generating your first playbook from conversation intelligence data,
             or add playbooks directly to your Firestore collection.
           </p>
-          <button
-            style={{
-              padding: '0.75rem 1.5rem',
-              backgroundColor: 'var(--color-primary)',
-              color: 'var(--color-text-primary)',
-              border: 'none',
-              borderRadius: '0.5rem',
-              fontWeight: 500,
-              cursor: 'pointer',
-            }}
-          >
+          <button className="px-6 py-3 bg-primary text-foreground border-none rounded-lg font-medium cursor-pointer">
             Generate Your First Playbook
           </button>
         </div>
       ) : (
         <>
           {/* Main Content */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '1.5rem' }}>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Left Column - Playbooks List */}
             <div>
               <PlaybooksCard playbooks={playbooks} onSelectPlaybook={handleSelectPlaybook} />
@@ -356,16 +280,7 @@ export default function PlaybookDashboardPage() {
             <div>
               {selectedPlaybook && adoptionMetrics && <AdoptionMetricsCard metrics={adoptionMetrics} />}
               {selectedPlaybook && !adoptionMetrics && (
-                <div
-                  style={{
-                    padding: '2rem',
-                    backgroundColor: 'var(--color-bg-paper)',
-                    borderRadius: '0.75rem',
-                    border: '1px solid var(--color-border-main)',
-                    textAlign: 'center',
-                    color: 'var(--color-text-secondary)',
-                  }}
-                >
+                <div className="p-8 bg-card rounded-xl border border-border text-center text-muted-foreground">
                   No adoption metrics available for this playbook yet.
                 </div>
               )}
@@ -374,7 +289,7 @@ export default function PlaybookDashboardPage() {
 
           {/* Bottom Row - Patterns and Talk Tracks */}
           {selectedPlaybook && (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '1.5rem', marginTop: '1.5rem' }}>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <PatternsCard patterns={selectedPlaybook.patterns} />
               <TalkTracksCard talkTracks={selectedPlaybook.talkTracks} />
             </div>

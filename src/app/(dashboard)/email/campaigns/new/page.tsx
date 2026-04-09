@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
+import { PageTitle } from '@/components/ui/typography';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { campaignFormSchema, type CampaignFormValues } from '@/lib/validation/campaign-form-schema';
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
@@ -41,7 +42,7 @@ export default function NewCampaignPage() {
   return (
     <div className="p-8">
       <div className="max-w-3xl mx-auto">
-        <h1 className="text-3xl font-bold mb-6">Create Email Campaign</h1>
+        <PageTitle className="mb-6">Create Email Campaign</PageTitle>
         <Form form={form} onSubmit={onSubmit} className="space-y-6">
           <div className="bg-surface-paper rounded-lg p-6">
             <div className="space-y-4">

@@ -855,21 +855,21 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
   // Loading state
   if (loading) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4rem', backgroundColor: 'var(--color-bg-main)', minHeight: '100vh' }}>
-        <p style={{ color: 'var(--color-text-secondary)' }}>Loading Voice AI Training Lab...</p>
+      <div className="flex items-center justify-center p-16 min-h-screen">
+        <p className="text-muted-foreground">Loading Voice AI Training Lab...</p>
       </div>
     );
   }
 
   return (
-    <div style={{ backgroundColor: 'var(--color-bg-main)', minHeight: '100vh', color: 'var(--color-text-primary)' }}>
+    <div className="text-foreground">
       {/* Header */}
-      <div style={{ padding: '2rem', borderBottom: '1px solid var(--color-border-light)' }}>
+      <div className="p-8 border-b border-border-light">
         <div>
-          <h1 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>
+          <h1 className="text-3xl font-bold mb-2">
             Voice AI Training Lab
           </h1>
-          <p style={{ color: 'var(--color-text-secondary)', marginBottom: '1.5rem' }}>
+          <p className="text-muted-foreground mb-6">
             Configure and train your Voice AI agent for phone conversations
           </p>
           <SubpageNav items={[
@@ -884,8 +884,8 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
       </div>
 
       {/* Tabs */}
-      <div style={{ borderBottom: '1px solid var(--color-border-light)', backgroundColor: 'var(--color-bg-main)' }}>
-        <div style={{ padding: '0 2rem', display: 'flex', gap: '2rem' }}>
+      <div className="border-b border-border-light">
+        <div className="px-8 flex gap-8">
           {([
             { id: 'settings' as const, label: 'Settings' },
             { id: 'test-calls' as const, label: 'Test Calls' },
@@ -913,27 +913,27 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
       </div>
 
       {/* Content */}
-      <div style={{ padding: '2rem' }}>
+      <div className="p-8">
         <div>
 
           {/* Settings Tab */}
           {activeTab === 'settings' && (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 400px', gap: '2rem' }}>
+            <div className="grid grid-cols-1 lg:grid-cols-[1fr_400px] gap-8">
               {/* Left: Settings Form */}
               <div>
                 {/* Voice Engine Selection */}
-                <div style={{ padding: '1.5rem', backgroundColor: 'var(--color-bg-main)', border: '1px solid var(--color-border-light)', borderRadius: '0.75rem', marginBottom: '1.5rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '1rem' }}>
+                <div className="p-6 border border-border-light rounded-xl mb-6">
+                  <div className="flex justify-between items-start mb-4">
                     <div>
-                      <h3 style={{ fontSize: '1.125rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>Voice Engine</h3>
-                      <p style={{ fontSize: '0.875rem', color: 'var(--color-text-disabled)' }}>
+                      <h3 className="text-lg font-bold mb-2">Voice Engine</h3>
+                      <p className="text-sm text-muted-foreground">
                         Choose the text-to-speech provider for your AI agent&apos;s voice
                       </p>
                     </div>
                   </div>
 
                   {/* Engine Cards */}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginBottom: '1.5rem' }}>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                     {(Object.keys(TTS_PROVIDER_INFO) as TTSEngineType[]).map((engine) => {
                       const info = TTS_PROVIDER_INFO[engine];
                       const isSelected = ttsEngine === engine;
@@ -991,12 +991,12 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
 
                   {/* API Key Mode (for Unreal and ElevenLabs) */}
                   {(ttsEngine === 'unreal' || ttsEngine === 'elevenlabs') && (
-                    <div style={{ padding: '1rem', backgroundColor: 'var(--color-bg-paper)', borderRadius: '0.5rem', marginBottom: '1rem' }}>
-                      <div style={{ marginBottom: '1rem' }}>
-                        <label style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--color-text-secondary)', marginBottom: '0.5rem', display: 'block' }}>
+                    <div className="p-4 bg-surface-paper rounded-lg mb-4">
+                      <div className="mb-4">
+                        <label className="block text-sm font-semibold text-muted-foreground mb-2">
                           API Key Mode
                         </label>
-                        <div style={{ display: 'flex', gap: '0.75rem' }}>
+                        <div className="flex gap-3">
                           <button
                             onClick={() => setTtsKeyMode('platform')}
                             style={{
@@ -1012,7 +1012,7 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                             }}
                           >
                             Use Platform Keys
-                            <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginTop: '0.25rem' }}>
+                            <div className="text-xs text-muted-foreground mt-1">
                               We bill you at usage rates
                             </div>
                           </button>
@@ -1031,7 +1031,7 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                             }}
                           >
                             Use My Own Key
-                            <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginTop: '0.25rem' }}>
+                            <div className="text-xs text-muted-foreground mt-1">
                               Pay directly to provider
                             </div>
                           </button>
@@ -1041,10 +1041,10 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                       {/* User API Key Input */}
                       {ttsKeyMode === 'user' && (
                         <div>
-                          <label style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--color-text-secondary)', marginBottom: '0.5rem', display: 'block' }}>
+                          <label className="block text-sm font-semibold text-muted-foreground mb-2">
                             Your {TTS_PROVIDER_INFO[ttsEngine].name} API Key
                           </label>
-                          <div style={{ display: 'flex', gap: '0.5rem' }}>
+                          <div className="flex gap-2">
                             <input
                               type="password"
                               value={ttsUserApiKey}
@@ -1066,23 +1066,13 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                             <button
                               onClick={() => void handleValidateApiKey()}
                               disabled={validatingKey || !ttsUserApiKey.trim()}
-                              style={{
-                                padding: '0.75rem 1rem',
-                                backgroundColor: validatingKey ? 'var(--color-border-strong)' : 'var(--color-border-strong)',
-                                border: 'none',
-                                borderRadius: '0.5rem',
-                                color: 'var(--color-text-primary)',
-                                cursor: validatingKey || !ttsUserApiKey.trim() ? 'not-allowed' : 'pointer',
-                                fontSize: '0.875rem',
-                                fontWeight: '600',
-                                whiteSpace: 'nowrap',
-                              }}
+                              className="px-4 py-3 bg-border-strong border-none rounded-lg text-foreground cursor-pointer text-sm font-semibold whitespace-nowrap disabled:cursor-not-allowed"
                             >
                               {validatingKey ? 'Validating...' : 'Validate'}
                             </button>
                           </div>
                           {apiKeyValid !== null && (
-                            <div style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: apiKeyValid ? 'var(--color-success)' : 'var(--color-error)' }}>
+                            <div className={`mt-2 text-xs ${apiKeyValid ? 'text-success' : 'text-error'}`}>
                               {apiKeyValid ? 'API key is valid' : 'Invalid API key'}
                             </div>
                           )}
@@ -1092,23 +1082,15 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                   )}
 
                   {/* Voice Selection */}
-                  <div style={{ marginBottom: '1rem' }}>
-                    <label style={{ fontSize: '0.875rem', fontWeight: '600', color: 'var(--color-text-secondary)', marginBottom: '0.5rem', display: 'block' }}>
+                  <div className="mb-4">
+                    <label className="block text-sm font-semibold text-muted-foreground mb-2">
                       Select Voice
                     </label>
                     <select
                       value={selectedVoiceId}
                       onChange={(e) => setSelectedVoiceId(e.target.value)}
                       disabled={loadingVoices}
-                      style={{
-                        width: '100%',
-                        padding: '0.75rem',
-                        backgroundColor: 'var(--color-bg-paper)',
-                        border: '1px solid var(--color-border-strong)',
-                        borderRadius: '0.5rem',
-                        color: 'var(--color-text-primary)',
-                        fontSize: '0.875rem',
-                      }}
+                      className="w-full px-3 py-3 bg-surface-paper border border-border-strong rounded-lg text-foreground text-sm"
                     >
                       {loadingVoices ? (
                         <option>Loading voices...</option>
@@ -1121,7 +1103,7 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                       )}
                     </select>
                     {ttsVoices.find(v => v.id === selectedVoiceId)?.description && (
-                      <p style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginTop: '0.5rem' }}>
+                      <p className="text-xs text-muted-foreground mt-2">
                         {ttsVoices.find(v => v.id === selectedVoiceId)?.description}
                       </p>
                     )}
@@ -1131,38 +1113,17 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                   <button
                     onClick={() => void handleTestVoice()}
                     disabled={testingVoice || !selectedVoiceId}
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      backgroundColor: testingVoice ? 'var(--color-border-strong)' : 'var(--color-success)',
-                      color: 'var(--color-text-primary)',
-                      border: 'none',
-                      borderRadius: '0.5rem',
-                      cursor: testingVoice || !selectedVoiceId ? 'not-allowed' : 'pointer',
-                      fontSize: '0.875rem',
-                      fontWeight: '600',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '0.5rem',
-                    }}
+                    className={`w-full py-3 border-none rounded-lg text-foreground text-sm font-semibold flex items-center justify-center gap-2 ${testingVoice || !selectedVoiceId ? 'bg-border-strong cursor-not-allowed' : 'bg-success cursor-pointer'}`}
                   >
                     {testingVoice ? 'Generating...' : 'Test Voice'}
                   </button>
 
                   {/* Provider Features */}
-                  <div style={{ marginTop: '1rem', padding: '0.75rem', backgroundColor: 'var(--color-bg-paper)', borderRadius: '0.5rem' }}>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginBottom: '0.5rem' }}>Features:</div>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                  <div className="mt-4 p-3 bg-surface-paper rounded-lg">
+                    <div className="text-xs text-muted-foreground mb-2">Features:</div>
+                    <div className="flex flex-wrap gap-2">
                       {TTS_PROVIDER_INFO[ttsEngine].features.slice(0, 4).map((feature, i) => (
-                        <span key={i} style={{
-                          padding: '0.25rem 0.5rem',
-                          backgroundColor: 'var(--color-bg-main)',
-                          border: '1px solid var(--color-border-strong)',
-                          borderRadius: '0.25rem',
-                          fontSize: '0.625rem',
-                          color: 'var(--color-text-secondary)',
-                        }}>
+                        <span key={i} className="px-2 py-1 bg-surface-main border border-border-strong rounded text-[0.625rem] text-muted-foreground">
                           {feature}
                         </span>
                       ))}
@@ -1171,10 +1132,10 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                 </div>
 
                 {/* Brand DNA Inheritance */}
-                <div style={{ padding: '1.5rem', backgroundColor: 'var(--color-bg-main)', border: '1px solid var(--color-border-light)', borderRadius: '0.75rem', marginBottom: '1.5rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '1rem' }}>
+                <div className="p-6 border border-border-light rounded-xl mb-6">
+                  <div className="flex justify-between items-start mb-4">
                     <div>
-                      <h3 style={{ fontSize: '1.125rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>Brand DNA</h3>
+                      <h3 className="text-lg font-bold mb-2">Brand DNA</h3>
                       <span style={{
                         display: 'inline-block',
                         padding: '0.25rem 0.75rem',
@@ -1223,12 +1184,12 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                 </div>
 
                 {/* Voice Settings */}
-                <div style={{ padding: '1.5rem', backgroundColor: 'var(--color-bg-main)', border: '1px solid var(--color-border-light)', borderRadius: '0.75rem', marginBottom: '1.5rem' }}>
-                  <h3 style={{ fontSize: '1.125rem', fontWeight: 'bold', marginBottom: '1.5rem' }}>Voice-Specific Settings</h3>
+                <div className="p-6 border border-border-light rounded-xl mb-6">
+                  <h3 className="text-lg font-bold mb-6">Voice-Specific Settings</h3>
 
                   {/* Greeting Script */}
-                  <div style={{ marginBottom: '1.5rem' }}>
-                    <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: '600', color: 'var(--color-text-secondary)' }}>
+                  <div className="mb-6">
+                    <label className="block mb-2 text-sm font-semibold text-muted-foreground">
                       Greeting Script
                     </label>
                     <textarea
@@ -1236,23 +1197,13 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                       onChange={(e) => setVoiceSettings(prev => ({ ...prev, greetingScript: e.target.value }))}
                       placeholder="Hi there! Thank you for calling. My name is Alex, how can I assist you today?"
                       rows={3}
-                      style={{
-                        width: '100%',
-                        padding: '0.75rem',
-                        backgroundColor: 'var(--color-bg-paper)',
-                        border: '1px solid var(--color-border-strong)',
-                        borderRadius: '0.5rem',
-                        color: 'var(--color-text-primary)',
-                        fontSize: '0.875rem',
-                        fontFamily: 'inherit',
-                        resize: 'vertical',
-                      }}
+                      className="w-full px-3 py-3 bg-surface-paper border border-border-strong rounded-lg text-foreground text-sm font-inherit resize-y"
                     />
                   </div>
 
                   {/* Tone of Voice */}
-                  <div style={{ marginBottom: '1.5rem' }}>
-                    <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: '600', color: 'var(--color-text-secondary)' }}>
+                  <div className="mb-6">
+                    <label className="block mb-2 text-sm font-semibold text-muted-foreground">
                       Tone of Voice
                     </label>
                     <select
@@ -1263,15 +1214,7 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                           setVoiceSettings(prev => ({ ...prev, toneOfVoice: value }));
                         }
                       }}
-                      style={{
-                        width: '100%',
-                        padding: '0.75rem',
-                        backgroundColor: 'var(--color-bg-paper)',
-                        border: '1px solid var(--color-border-strong)',
-                        borderRadius: '0.5rem',
-                        color: 'var(--color-text-primary)',
-                        fontSize: '0.875rem',
-                      }}
+                      className="w-full px-3 py-3 bg-surface-paper border border-border-strong rounded-lg text-foreground text-sm"
                     >
                       <option value="warm">Warm - Friendly and approachable</option>
                       <option value="direct">Direct - Clear and to the point</option>
@@ -1280,8 +1223,8 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                   </div>
 
                   {/* Call Hand-off Instructions */}
-                  <div style={{ marginBottom: '1.5rem' }}>
-                    <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: '600', color: 'var(--color-text-secondary)' }}>
+                  <div className="mb-6">
+                    <label className="block mb-2 text-sm font-semibold text-muted-foreground">
                       Call Hand-off Instructions
                     </label>
                     <textarea
@@ -1289,93 +1232,56 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                       onChange={(e) => setVoiceSettings(prev => ({ ...prev, callHandoffInstructions: e.target.value }))}
                       placeholder="If the caller requests to speak with a manager, transfer to extension 100..."
                       rows={3}
-                      style={{
-                        width: '100%',
-                        padding: '0.75rem',
-                        backgroundColor: 'var(--color-bg-paper)',
-                        border: '1px solid var(--color-border-strong)',
-                        borderRadius: '0.5rem',
-                        color: 'var(--color-text-primary)',
-                        fontSize: '0.875rem',
-                        fontFamily: 'inherit',
-                        resize: 'vertical',
-                      }}
+                      className="w-full px-3 py-3 bg-surface-paper border border-border-strong rounded-lg text-foreground text-sm font-inherit resize-y"
                     />
                   </div>
                 </div>
 
                 {/* Objection Response Templates */}
-                <div style={{ padding: '1.5rem', backgroundColor: 'var(--color-bg-main)', border: '1px solid var(--color-border-light)', borderRadius: '0.75rem', marginBottom: '1.5rem' }}>
-                  <h3 style={{ fontSize: '1.125rem', fontWeight: 'bold', marginBottom: '1rem' }}>Objection Response Templates</h3>
-                  <p style={{ fontSize: '0.875rem', color: 'var(--color-text-disabled)', marginBottom: '1.5rem' }}>
+                <div className="p-6 border border-border-light rounded-xl mb-6">
+                  <h3 className="text-lg font-bold mb-4">Objection Response Templates</h3>
+                  <p className="text-sm text-muted-foreground mb-6">
                     Define pre-written responses for common objections. The AI will use these when matching objections are detected.
                   </p>
 
                   {/* Existing templates */}
-                  <div style={{ marginBottom: '1.5rem' }}>
+                  <div className="mb-6">
                     {objectionTemplates.map((template, index) => (
-                      <div key={index} style={{ padding: '1rem', backgroundColor: 'var(--color-bg-paper)', borderRadius: '0.5rem', marginBottom: '0.75rem', border: '1px solid var(--color-border-strong)' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '0.5rem' }}>
-                          <span style={{ fontWeight: '600', color: primaryColor, fontSize: '0.875rem' }}>&quot;{template.key}&quot;</span>
+                      <div key={index} className="p-4 bg-surface-paper rounded-lg mb-3 border border-border-strong">
+                        <div className="flex justify-between items-start mb-2">
+                          <span className="font-semibold text-sm" style={{ color: primaryColor }}>&quot;{template.key}&quot;</span>
                           <button
                             onClick={() => handleRemoveObjection(template.key)}
-                            style={{ background: 'none', border: 'none', color: 'var(--color-error)', cursor: 'pointer', fontSize: '0.875rem' }}
+                            className="bg-transparent border-none text-error cursor-pointer text-sm"
                           >
                             Remove
                           </button>
                         </div>
-                        <p style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', lineHeight: '1.5' }}>{template.response}</p>
+                        <p className="text-sm text-muted-foreground leading-relaxed">{template.response}</p>
                       </div>
                     ))}
                   </div>
 
                   {/* Add new template */}
-                  <div style={{ padding: '1rem', backgroundColor: 'var(--color-bg-paper)', borderRadius: '0.5rem', border: '1px dashed var(--color-border-strong)' }}>
+                  <div className="p-4 bg-surface-paper rounded-lg border border-dashed border-border-strong">
                     <input
                       type="text"
                       value={newObjectionKey}
                       onChange={(e) => setNewObjectionKey(e.target.value)}
                       placeholder="Objection (e.g., 'too expensive')"
-                      style={{
-                        width: '100%',
-                        padding: '0.5rem',
-                        backgroundColor: 'var(--color-bg-main)',
-                        border: '1px solid var(--color-border-strong)',
-                        borderRadius: '0.25rem',
-                        color: 'var(--color-text-primary)',
-                        fontSize: '0.875rem',
-                        marginBottom: '0.75rem',
-                      }}
+                      className="w-full px-2 py-2 bg-surface-main border border-border-strong rounded text-foreground text-sm mb-3"
                     />
                     <textarea
                       value={newObjectionResponse}
                       onChange={(e) => setNewObjectionResponse(e.target.value)}
                       placeholder="Response template..."
                       rows={2}
-                      style={{
-                        width: '100%',
-                        padding: '0.5rem',
-                        backgroundColor: 'var(--color-bg-main)',
-                        border: '1px solid var(--color-border-strong)',
-                        borderRadius: '0.25rem',
-                        color: 'var(--color-text-primary)',
-                        fontSize: '0.875rem',
-                        fontFamily: 'inherit',
-                        marginBottom: '0.75rem',
-                      }}
+                      className="w-full px-2 py-2 bg-surface-main border border-border-strong rounded text-foreground text-sm font-inherit mb-3"
                     />
                     <button
                       onClick={handleAddObjection}
-                      style={{
-                        padding: '0.5rem 1rem',
-                        backgroundColor: primaryColor,
-                        color: 'var(--color-text-primary)',
-                        border: 'none',
-                        borderRadius: '0.25rem',
-                        cursor: 'pointer',
-                        fontSize: '0.875rem',
-                        fontWeight: '600',
-                      }}
+                      style={{ backgroundColor: primaryColor }}
+                      className="px-4 py-2 text-white border-none rounded cursor-pointer text-sm font-semibold"
                     >
                       + Add Objection Template
                     </button>
@@ -1383,19 +1289,19 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                 </div>
 
                 {/* Qualification Criteria */}
-                <div style={{ padding: '1.5rem', backgroundColor: 'var(--color-bg-main)', border: '1px solid var(--color-border-light)', borderRadius: '0.75rem', marginBottom: '1.5rem' }}>
-                  <h3 style={{ fontSize: '1.125rem', fontWeight: 'bold', marginBottom: '1rem' }}>Qualification Criteria</h3>
-                  <p style={{ fontSize: '0.875rem', color: 'var(--color-text-disabled)', marginBottom: '1rem' }}>
+                <div className="p-6 border border-border-light rounded-xl mb-6">
+                  <h3 className="text-lg font-bold mb-4">Qualification Criteria</h3>
+                  <p className="text-sm text-muted-foreground mb-4">
                     Criteria the AI should use to qualify callers during conversations.
                   </p>
 
-                  <div style={{ marginBottom: '1rem' }}>
+                  <div className="mb-4">
                     {(voiceSettings.qualificationCriteria ?? []).map((criteria, index) => (
-                      <div key={index} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem', padding: '0.5rem 0.75rem', backgroundColor: 'var(--color-bg-paper)', borderRadius: '0.25rem' }}>
-                        <span style={{ flex: 1, fontSize: '0.875rem' }}>{criteria}</span>
+                      <div key={index} className="flex items-center gap-2 mb-2 px-3 py-2 bg-surface-paper rounded">
+                        <span className="flex-1 text-sm">{criteria}</span>
                         <button
                           onClick={() => handleRemoveCriteria(index)}
-                          style={{ background: 'none', border: 'none', color: 'var(--color-error)', cursor: 'pointer', fontSize: '0.75rem' }}
+                          className="bg-transparent border-none text-error cursor-pointer text-xs"
                         >
                           X
                         </button>
@@ -1403,7 +1309,7 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                     ))}
                   </div>
 
-                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <div className="flex gap-2">
                     <input
                       type="text"
                       value={newCriteria}
@@ -1414,27 +1320,11 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                           handleAddCriteria();
                         }
                       }}
-                      style={{
-                        flex: 1,
-                        padding: '0.5rem',
-                        backgroundColor: 'var(--color-bg-paper)',
-                        border: '1px solid var(--color-border-strong)',
-                        borderRadius: '0.25rem',
-                        color: 'var(--color-text-primary)',
-                        fontSize: '0.875rem',
-                      }}
+                      className="flex-1 px-2 py-2 bg-surface-paper border border-border-strong rounded text-foreground text-sm"
                     />
                     <button
                       onClick={handleAddCriteria}
-                      style={{
-                        padding: '0.5rem 1rem',
-                        backgroundColor: 'var(--color-border-strong)',
-                        color: 'var(--color-text-primary)',
-                        border: 'none',
-                        borderRadius: '0.25rem',
-                        cursor: 'pointer',
-                        fontSize: '0.875rem',
-                      }}
+                      className="px-4 py-2 bg-border-strong text-foreground border-none rounded cursor-pointer text-sm"
                     >
                       Add
                     </button>
@@ -1462,58 +1352,44 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
               </div>
 
               {/* Right: Testing Sandbox */}
-              <div style={{ position: 'sticky', top: '2rem', height: 'fit-content' }}>
-                <div style={{ padding: '1.5rem', backgroundColor: 'var(--color-bg-main)', border: '1px solid var(--color-border-light)', borderRadius: '0.75rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                    <h3 style={{ fontSize: '1.125rem', fontWeight: 'bold' }}>Testing Sandbox</h3>
+              <div className="sticky top-8 h-fit">
+                <div className="p-6 border border-border-light rounded-xl">
+                  <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-lg font-bold">Testing Sandbox</h3>
                     {isCallActive && (
-                      <span style={{ fontSize: '0.875rem', color: 'var(--color-success)', fontWeight: '600' }}>
+                      <span className="text-sm text-success font-semibold">
                         {formatDuration(callDuration)}
                       </span>
                     )}
                   </div>
 
                   {/* Phone UI */}
-                  <div style={{
-                    backgroundColor: 'var(--color-bg-paper)',
-                    borderRadius: '1rem',
-                    padding: '1rem',
-                    border: '2px solid var(--color-border-strong)',
-                    minHeight: '400px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                  }}>
+                  <div className="bg-surface-paper rounded-2xl p-4 border-2 border-border-strong min-h-[400px] flex flex-col">
                     {/* Call Header */}
-                    <div style={{ textAlign: 'center', padding: '0.5rem', borderBottom: '1px solid var(--color-border-strong)', marginBottom: '1rem' }}>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)' }}>
+                    <div className="text-center py-2 border-b border-border-strong mb-4">
+                      <div className="text-xs text-muted-foreground">
                         {isCallActive ? 'Call in Progress' : 'Ready to Test'}
                       </div>
-                      <div style={{ fontSize: '1rem', fontWeight: '600', color: isCallActive ? 'var(--color-success)' : 'var(--color-text-secondary)' }}>
+                      <div className={`text-base font-semibold ${isCallActive ? 'text-success' : 'text-muted-foreground'}`}>
                         {isCallActive ? 'Connected' : 'No Active Call'}
                       </div>
                     </div>
 
                     {/* Messages */}
-                    <div style={{ flex: 1, overflowY: 'auto', marginBottom: '1rem', minHeight: '250px' }}>
+                    <div className="flex-1 overflow-y-auto mb-4 min-h-[250px]">
                       {callMessages.map((msg) => (
                         <div
                           key={msg.id}
-                          style={{
-                            marginBottom: '0.75rem',
-                            display: 'flex',
-                            justifyContent: msg.role === 'caller' ? 'flex-end' : 'flex-start',
-                          }}
+                          className={`mb-3 flex ${msg.role === 'caller' ? 'justify-end' : 'justify-start'}`}
                         >
-                          <div style={{
-                            maxWidth: '85%',
-                            padding: '0.75rem',
-                            borderRadius: msg.role === 'caller' ? '0.75rem 0.75rem 0 0.75rem' : '0.75rem 0.75rem 0.75rem 0',
-                            backgroundColor: msg.role === 'caller' ? primaryColor : 'var(--color-border-strong)',
-                            color: 'var(--color-text-primary)',
-                            fontSize: '0.875rem',
-                            lineHeight: '1.4',
-                          }}>
-                            <div style={{ fontSize: '0.625rem', color: 'rgba(var(--color-text-primary-rgb), 0.6)', marginBottom: '0.25rem' }}>
+                          <div
+                            className="max-w-[85%] px-3 py-3 text-sm leading-snug text-foreground"
+                            style={{
+                              borderRadius: msg.role === 'caller' ? '0.75rem 0.75rem 0 0.75rem' : '0.75rem 0.75rem 0.75rem 0',
+                              backgroundColor: msg.role === 'caller' ? primaryColor : 'var(--color-border-strong)',
+                            }}
+                          >
+                            <div className="text-[0.625rem] opacity-60 mb-1">
                               {msg.role === 'caller' ? 'Caller' : 'AI Agent'}
                             </div>
                             {msg.content}
@@ -1522,8 +1398,8 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                       ))}
 
                       {isAgentTyping && (
-                        <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: '0.75rem' }}>
-                          <div style={{ padding: '0.75rem', backgroundColor: 'var(--color-border-strong)', borderRadius: '0.75rem', color: 'var(--color-text-secondary)', fontSize: '0.875rem' }}>
+                        <div className="flex justify-start mb-3">
+                          <div className="px-3 py-3 bg-border-strong rounded-xl text-muted-foreground text-sm">
                             Agent is typing...
                           </div>
                         </div>
@@ -1535,27 +1411,13 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                     {!isCallActive ? (
                       <button
                         onClick={handleStartCall}
-                        style={{
-                          width: '100%',
-                          padding: '1rem',
-                          backgroundColor: 'var(--color-success)',
-                          color: 'var(--color-text-primary)',
-                          border: 'none',
-                          borderRadius: '0.5rem',
-                          cursor: 'pointer',
-                          fontSize: '1rem',
-                          fontWeight: '600',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: '0.5rem',
-                        }}
+                        className="w-full py-4 bg-success text-foreground border-none rounded-lg cursor-pointer text-base font-semibold flex items-center justify-center gap-2"
                       >
                         Incoming Call - Answer
                       </button>
                     ) : (
                       <div>
-                        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                        <div className="flex gap-2 mb-3">
                           <input
                             type="text"
                             value={callerInput}
@@ -1566,15 +1428,7 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                               }
                             }}
                             placeholder="Speak as caller..."
-                            style={{
-                              flex: 1,
-                              padding: '0.75rem',
-                              backgroundColor: 'var(--color-bg-main)',
-                              border: '1px solid var(--color-border-strong)',
-                              borderRadius: '0.5rem',
-                              color: 'var(--color-text-primary)',
-                              fontSize: '0.875rem',
-                            }}
+                            className="flex-1 px-3 py-3 bg-surface-main border border-border-strong rounded-lg text-foreground text-sm"
                           />
                           <button
                             onClick={() => void handleSendCallerMessage()}
@@ -1595,17 +1449,7 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                         </div>
                         <button
                           onClick={() => void handleEndCall()}
-                          style={{
-                            width: '100%',
-                            padding: '0.75rem',
-                            backgroundColor: 'var(--color-error)',
-                            color: 'var(--color-text-primary)',
-                            border: 'none',
-                            borderRadius: '0.5rem',
-                            cursor: 'pointer',
-                            fontSize: '0.875rem',
-                            fontWeight: '600',
-                          }}
+                          className="w-full py-3 bg-error text-foreground border-none rounded-lg cursor-pointer text-sm font-semibold"
                         >
                           End Call
                         </button>
@@ -1613,7 +1457,7 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                     )}
                   </div>
 
-                  <p style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginTop: '1rem', textAlign: 'center' }}>
+                  <p className="text-xs text-muted-foreground mt-4 text-center">
                     Test your voice AI settings with a simulated phone conversation
                   </p>
                 </div>
@@ -1623,19 +1467,19 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
 
           {/* Test Calls Tab */}
           {activeTab === 'test-calls' && (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 500px', gap: '2rem' }}>
+            <div className="grid grid-cols-1 lg:grid-cols-[1fr_500px] gap-8">
               {/* Left: Instructions */}
               <div>
-                <div style={{ padding: '1.5rem', backgroundColor: 'var(--color-bg-main)', border: '1px solid var(--color-border-light)', borderRadius: '0.75rem', marginBottom: '1.5rem' }}>
-                  <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '1rem' }}>Test Your Voice AI</h3>
-                  <p style={{ color: 'var(--color-text-secondary)', marginBottom: '1.5rem', lineHeight: '1.6' }}>
+                <div className="p-6 border border-border-light rounded-xl mb-6">
+                  <h3 className="text-xl font-bold mb-4">Test Your Voice AI</h3>
+                  <p className="text-muted-foreground mb-6 leading-relaxed">
                     Use the testing sandbox on the right to simulate phone conversations with your Voice AI agent.
                     The agent will respond based on your configured settings, objection templates, and brand DNA.
                   </p>
 
-                  <div style={{ padding: '1rem', backgroundColor: 'var(--color-bg-paper)', borderRadius: '0.5rem', marginBottom: '1rem' }}>
-                    <h4 style={{ fontWeight: '600', marginBottom: '0.5rem' }}>Testing Tips:</h4>
-                    <ul style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem', marginLeft: '1.5rem', lineHeight: '1.8' }}>
+                  <div className="p-4 bg-surface-paper rounded-lg mb-4">
+                    <h4 className="font-semibold mb-2">Testing Tips:</h4>
+                    <ul className="text-muted-foreground text-sm ml-6 leading-loose">
                       <li>Try common objections to see if templates are triggered correctly</li>
                       <li>Test qualification questions to see how the AI gathers information</li>
                       <li>Ask about pricing, features, and competitors</li>
@@ -1643,47 +1487,46 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                     </ul>
                   </div>
 
-                  <div style={{ padding: '1rem', backgroundColor: 'var(--color-bg-paper)', borderRadius: '0.5rem' }}>
-                    <h4 style={{ fontWeight: '600', marginBottom: '0.5rem' }}>Current Configuration:</h4>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.75rem', marginTop: '0.75rem' }}>
+                  <div className="p-4 bg-surface-paper rounded-lg">
+                    <h4 className="font-semibold mb-2">Current Configuration:</h4>
+                    <div className="grid grid-cols-2 gap-3 mt-3">
                       <div>
-                        <span style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)' }}>Tone:</span>
-                        <span style={{ marginLeft: '0.5rem', fontSize: '0.875rem', textTransform: 'capitalize' }}>{voiceSettings.toneOfVoice}</span>
+                        <span className="text-xs text-muted-foreground">Tone:</span>
+                        <span className="ml-2 text-sm capitalize">{voiceSettings.toneOfVoice}</span>
                       </div>
                       <div>
-                        <span style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)' }}>Objection Templates:</span>
-                        <span style={{ marginLeft: '0.5rem', fontSize: '0.875rem' }}>{objectionTemplates.length}</span>
+                        <span className="text-xs text-muted-foreground">Objection Templates:</span>
+                        <span className="ml-2 text-sm">{objectionTemplates.length}</span>
                       </div>
                       <div>
-                        <span style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)' }}>Qualification Criteria:</span>
-                        <span style={{ marginLeft: '0.5rem', fontSize: '0.875rem' }}>{(voiceSettings.qualificationCriteria ?? []).length}</span>
+                        <span className="text-xs text-muted-foreground">Qualification Criteria:</span>
+                        <span className="ml-2 text-sm">{(voiceSettings.qualificationCriteria ?? []).length}</span>
                       </div>
                       <div>
-                        <span style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)' }}>Brand DNA:</span>
-                        <span style={{ marginLeft: '0.5rem', fontSize: '0.875rem' }}>{overrideForVoice ? 'Custom' : 'Inherited'}</span>
+                        <span className="text-xs text-muted-foreground">Brand DNA:</span>
+                        <span className="ml-2 text-sm">{overrideForVoice ? 'Custom' : 'Inherited'}</span>
                       </div>
                     </div>
                   </div>
                 </div>
 
                 {/* Recent Test Calls */}
-                <div style={{ padding: '1.5rem', backgroundColor: 'var(--color-bg-main)', border: '1px solid var(--color-border-light)', borderRadius: '0.75rem' }}>
-                  <h3 style={{ fontSize: '1.125rem', fontWeight: 'bold', marginBottom: '1rem' }}>Recent Test Calls</h3>
+                <div className="p-6 border border-border-light rounded-xl">
+                  <h3 className="text-lg font-bold mb-4">Recent Test Calls</h3>
                   {callHistory.slice(0, 5).map((call) => (
-                    <div key={call.id} style={{ padding: '0.75rem', backgroundColor: 'var(--color-bg-paper)', borderRadius: '0.5rem', marginBottom: '0.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div key={call.id} className="px-3 py-3 bg-surface-paper rounded-lg mb-2 flex justify-between items-center">
                       <div>
-                        <div style={{ fontSize: '0.875rem', fontWeight: '600' }}>{call.summary}</div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)' }}>{new Date(call.timestamp).toLocaleString()}</div>
+                        <div className="text-sm font-semibold">{call.summary}</div>
+                        <div className="text-xs text-muted-foreground">{new Date(call.timestamp).toLocaleString()}</div>
                       </div>
-                      <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontSize: '0.875rem', fontWeight: '600' }}>{call.duration}</div>
-                        <div style={{
-                          fontSize: '0.625rem',
-                          padding: '0.125rem 0.5rem',
-                          borderRadius: '9999px',
-                          backgroundColor: call.status === 'completed' ? 'rgba(var(--color-success-rgb), 0.2)' : call.status === 'transferred' ? 'rgba(var(--color-warning-rgb), 0.2)' : 'rgba(var(--color-error-rgb), 0.2)',
-                          color: call.status === 'completed' ? 'var(--color-success)' : call.status === 'transferred' ? 'var(--color-warning)' : 'var(--color-error)',
-                        }}>
+                      <div className="text-right">
+                        <div className="text-sm font-semibold">{call.duration}</div>
+                        <div
+                          className="text-[0.625rem] px-2 py-0.5 rounded-full"
+                          style={{
+                            backgroundColor: call.status === 'completed' ? 'rgba(var(--color-success-rgb), 0.2)' : call.status === 'transferred' ? 'rgba(var(--color-warning-rgb), 0.2)' : 'rgba(var(--color-error-rgb), 0.2)',
+                            color: call.status === 'completed' ? 'var(--color-success)' : call.status === 'transferred' ? 'var(--color-warning)' : 'var(--color-error)',
+                          }}>
                           {call.status}
                         </div>
                       </div>
@@ -1693,55 +1536,41 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
               </div>
 
               {/* Right: Large Testing Sandbox */}
-              <div style={{ position: 'sticky', top: '2rem', height: 'fit-content' }}>
-                <div style={{ padding: '1.5rem', backgroundColor: 'var(--color-bg-main)', border: '1px solid var(--color-border-light)', borderRadius: '0.75rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                    <h3 style={{ fontSize: '1.125rem', fontWeight: 'bold' }}>Phone Simulation</h3>
+              <div className="sticky top-8 h-fit">
+                <div className="p-6 border border-border-light rounded-xl">
+                  <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-lg font-bold">Phone Simulation</h3>
                     {isCallActive && (
-                      <span style={{ fontSize: '0.875rem', color: 'var(--color-success)', fontWeight: '600' }}>
+                      <span className="text-sm text-success font-semibold">
                         {formatDuration(callDuration)}
                       </span>
                     )}
                   </div>
 
-                  <div style={{
-                    backgroundColor: 'var(--color-bg-paper)',
-                    borderRadius: '1rem',
-                    padding: '1rem',
-                    border: '2px solid var(--color-border-strong)',
-                    minHeight: '500px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                  }}>
-                    <div style={{ textAlign: 'center', padding: '0.5rem', borderBottom: '1px solid var(--color-border-strong)', marginBottom: '1rem' }}>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)' }}>
+                  <div className="bg-surface-paper rounded-2xl p-4 border-2 border-border-strong min-h-[500px] flex flex-col">
+                    <div className="text-center py-2 border-b border-border-strong mb-4">
+                      <div className="text-xs text-muted-foreground">
                         {isCallActive ? 'Call in Progress' : 'Ready to Test'}
                       </div>
-                      <div style={{ fontSize: '1rem', fontWeight: '600', color: isCallActive ? 'var(--color-success)' : 'var(--color-text-secondary)' }}>
+                      <div className={`text-base font-semibold ${isCallActive ? 'text-success' : 'text-muted-foreground'}`}>
                         {isCallActive ? 'Connected' : 'No Active Call'}
                       </div>
                     </div>
 
-                    <div style={{ flex: 1, overflowY: 'auto', marginBottom: '1rem', minHeight: '350px' }}>
+                    <div className="flex-1 overflow-y-auto mb-4 min-h-[350px]">
                       {callMessages.map((msg) => (
                         <div
                           key={msg.id}
-                          style={{
-                            marginBottom: '0.75rem',
-                            display: 'flex',
-                            justifyContent: msg.role === 'caller' ? 'flex-end' : 'flex-start',
-                          }}
+                          className={`mb-3 flex ${msg.role === 'caller' ? 'justify-end' : 'justify-start'}`}
                         >
-                          <div style={{
-                            maxWidth: '85%',
-                            padding: '0.75rem',
-                            borderRadius: msg.role === 'caller' ? '0.75rem 0.75rem 0 0.75rem' : '0.75rem 0.75rem 0.75rem 0',
-                            backgroundColor: msg.role === 'caller' ? primaryColor : 'var(--color-border-strong)',
-                            color: 'var(--color-text-primary)',
-                            fontSize: '0.875rem',
-                            lineHeight: '1.4',
-                          }}>
-                            <div style={{ fontSize: '0.625rem', color: 'rgba(var(--color-text-primary-rgb), 0.6)', marginBottom: '0.25rem' }}>
+                          <div
+                            className="max-w-[85%] px-3 py-3 text-sm leading-snug text-foreground"
+                            style={{
+                              borderRadius: msg.role === 'caller' ? '0.75rem 0.75rem 0 0.75rem' : '0.75rem 0.75rem 0.75rem 0',
+                              backgroundColor: msg.role === 'caller' ? primaryColor : 'var(--color-border-strong)',
+                            }}
+                          >
+                            <div className="text-[0.625rem] opacity-60 mb-1">
                               {msg.role === 'caller' ? 'Caller' : 'AI Agent'}
                             </div>
                             {msg.content}
@@ -1750,8 +1579,8 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                       ))}
 
                       {isAgentTyping && (
-                        <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: '0.75rem' }}>
-                          <div style={{ padding: '0.75rem', backgroundColor: 'var(--color-border-strong)', borderRadius: '0.75rem', color: 'var(--color-text-secondary)', fontSize: '0.875rem' }}>
+                        <div className="flex justify-start mb-3">
+                          <div className="px-3 py-3 bg-border-strong rounded-xl text-muted-foreground text-sm">
                             Agent is typing...
                           </div>
                         </div>
@@ -1762,23 +1591,13 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                     {!isCallActive ? (
                       <button
                         onClick={handleStartCall}
-                        style={{
-                          width: '100%',
-                          padding: '1rem',
-                          backgroundColor: 'var(--color-success)',
-                          color: 'var(--color-text-primary)',
-                          border: 'none',
-                          borderRadius: '0.5rem',
-                          cursor: 'pointer',
-                          fontSize: '1rem',
-                          fontWeight: '600',
-                        }}
+                        className="w-full py-4 bg-success text-foreground border-none rounded-lg cursor-pointer text-base font-semibold"
                       >
                         Incoming Call - Answer
                       </button>
                     ) : (
                       <div>
-                        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                        <div className="flex gap-2 mb-3">
                           <input
                             type="text"
                             value={callerInput}
@@ -1789,15 +1608,7 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                               }
                             }}
                             placeholder="Speak as caller..."
-                            style={{
-                              flex: 1,
-                              padding: '0.75rem',
-                              backgroundColor: 'var(--color-bg-main)',
-                              border: '1px solid var(--color-border-strong)',
-                              borderRadius: '0.5rem',
-                              color: 'var(--color-text-primary)',
-                              fontSize: '0.875rem',
-                            }}
+                            className="flex-1 px-3 py-3 bg-surface-main border border-border-strong rounded-lg text-foreground text-sm"
                           />
                           <button
                             onClick={() => void handleSendCallerMessage()}
@@ -1818,17 +1629,7 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                         </div>
                         <button
                           onClick={() => void handleEndCall()}
-                          style={{
-                            width: '100%',
-                            padding: '0.75rem',
-                            backgroundColor: 'var(--color-error)',
-                            color: 'var(--color-text-primary)',
-                            border: 'none',
-                            borderRadius: '0.5rem',
-                            cursor: 'pointer',
-                            fontSize: '0.875rem',
-                            fontWeight: '600',
-                          }}
+                          className="w-full py-3 bg-error text-foreground border-none rounded-lg cursor-pointer text-sm font-semibold"
                         >
                           End Call
                         </button>
@@ -1843,35 +1644,34 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
           {/* History Tab */}
           {activeTab === 'history' && (
             <div>
-              <div style={{ marginBottom: '1.5rem' }}>
-                <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>Call History</h2>
-                <p style={{ color: 'var(--color-text-secondary)' }}>Review past test calls and their outcomes</p>
+              <div className="mb-6">
+                <h2 className="text-2xl font-bold mb-2">Call History</h2>
+                <p className="text-muted-foreground">Review past test calls and their outcomes</p>
               </div>
 
               {callHistory.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '4rem', backgroundColor: 'var(--color-bg-main)', border: '1px solid var(--color-border-light)', borderRadius: '0.75rem' }}>
-                  <p style={{ color: 'var(--color-text-disabled)', marginBottom: '1rem' }}>No call history yet.</p>
-                  <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem' }}>Start a test call in the Testing Sandbox to see history here.</p>
+                <div className="text-center p-16 border border-border-light rounded-xl">
+                  <p className="text-muted-foreground mb-4">No call history yet.</p>
+                  <p className="text-muted-foreground text-sm">Start a test call in the Testing Sandbox to see history here.</p>
                 </div>
               ) : (
-                <div style={{ display: 'grid', gap: '1rem' }}>
+                <div className="grid gap-4">
                   {callHistory.map((call) => (
-                    <div key={call.id} style={{ padding: '1.5rem', backgroundColor: 'var(--color-bg-main)', border: '1px solid var(--color-border-light)', borderRadius: '0.75rem' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '1rem' }}>
+                    <div key={call.id} className="p-6 border border-border-light rounded-xl">
+                      <div className="flex justify-between items-start mb-4">
                         <div>
-                          <h3 style={{ fontSize: '1.125rem', fontWeight: 'bold', marginBottom: '0.25rem' }}>{call.summary}</h3>
-                          <p style={{ fontSize: '0.875rem', color: 'var(--color-text-disabled)' }}>{new Date(call.timestamp).toLocaleString()}</p>
+                          <h3 className="text-lg font-bold mb-1">{call.summary}</h3>
+                          <p className="text-sm text-muted-foreground">{new Date(call.timestamp).toLocaleString()}</p>
                         </div>
-                        <div style={{ textAlign: 'right' }}>
-                          <div style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '0.25rem' }}>{call.duration}</div>
-                          <span style={{
-                            padding: '0.25rem 0.75rem',
-                            borderRadius: '9999px',
-                            fontSize: '0.75rem',
-                            fontWeight: '600',
-                            backgroundColor: call.status === 'completed' ? 'rgba(var(--color-success-rgb), 0.2)' : call.status === 'transferred' ? 'rgba(var(--color-warning-rgb), 0.2)' : 'rgba(var(--color-error-rgb), 0.2)',
-                            color: call.status === 'completed' ? 'var(--color-success)' : call.status === 'transferred' ? 'var(--color-warning)' : 'var(--color-error)',
-                          }}>
+                        <div className="text-right">
+                          <div className="text-xl font-bold mb-1">{call.duration}</div>
+                          <span
+                            className="px-3 py-1 rounded-full text-xs font-semibold"
+                            style={{
+                              backgroundColor: call.status === 'completed' ? 'rgba(var(--color-success-rgb), 0.2)' : call.status === 'transferred' ? 'rgba(var(--color-warning-rgb), 0.2)' : 'rgba(var(--color-error-rgb), 0.2)',
+                              color: call.status === 'completed' ? 'var(--color-success)' : call.status === 'transferred' ? 'var(--color-warning)' : 'var(--color-error)',
+                            }}
+                          >
                             {call.status}
                           </span>
                         </div>
@@ -1886,31 +1686,24 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
           {/* Knowledge Tab */}
           {activeTab === 'knowledge' && (
             <div>
-              <div style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
+              <div className="mb-6 flex justify-between items-start">
                 <div>
-                  <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>Knowledge Base</h2>
-                  <p style={{ color: 'var(--color-text-secondary)' }}>Add scripts, FAQs, and product information for your Voice AI to reference</p>
+                  <h2 className="text-2xl font-bold mb-2">Knowledge Base</h2>
+                  <p className="text-muted-foreground">Add scripts, FAQs, and product information for your Voice AI to reference</p>
                 </div>
               </div>
 
               {/* Add Knowledge Form */}
-              <div style={{ padding: '1.5rem', backgroundColor: 'var(--color-bg-main)', border: '1px solid var(--color-border-light)', borderRadius: '0.75rem', marginBottom: '1.5rem' }}>
-                <h3 style={{ fontSize: '1.125rem', fontWeight: 'bold', marginBottom: '1rem' }}>Add Knowledge Item</h3>
+              <div className="p-6 border border-border-light rounded-xl mb-6">
+                <h3 className="text-lg font-bold mb-4">Add Knowledge Item</h3>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 200px', gap: '1rem', marginBottom: '1rem' }}>
+                <div className="grid grid-cols-1 md:grid-cols-[1fr_200px] gap-4 mb-4">
                   <input
                     type="text"
                     value={newKnowledgeTitle}
                     onChange={(e) => setNewKnowledgeTitle(e.target.value)}
                     placeholder="Title (e.g., 'Pricing Information')"
-                    style={{
-                      padding: '0.75rem',
-                      backgroundColor: 'var(--color-bg-paper)',
-                      border: '1px solid var(--color-border-strong)',
-                      borderRadius: '0.5rem',
-                      color: 'var(--color-text-primary)',
-                      fontSize: '0.875rem',
-                    }}
+                    className="px-3 py-3 bg-surface-paper border border-border-strong rounded-lg text-foreground text-sm"
                   />
                   <select
                     value={newKnowledgeType}
@@ -1920,14 +1713,7 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                         setNewKnowledgeType(value);
                       }
                     }}
-                    style={{
-                      padding: '0.75rem',
-                      backgroundColor: 'var(--color-bg-paper)',
-                      border: '1px solid var(--color-border-strong)',
-                      borderRadius: '0.5rem',
-                      color: 'var(--color-text-primary)',
-                      fontSize: '0.875rem',
-                    }}
+                    className="px-3 py-3 bg-surface-paper border border-border-strong rounded-lg text-foreground text-sm"
                   >
                     <option value="faq">FAQ</option>
                     <option value="script">Script</option>
@@ -1941,18 +1727,7 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
                   onChange={(e) => setNewKnowledgeContent(e.target.value)}
                   placeholder="Enter the knowledge content..."
                   rows={4}
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    backgroundColor: 'var(--color-bg-paper)',
-                    border: '1px solid var(--color-border-strong)',
-                    borderRadius: '0.5rem',
-                    color: 'var(--color-text-primary)',
-                    fontSize: '0.875rem',
-                    fontFamily: 'inherit',
-                    marginBottom: '1rem',
-                    resize: 'vertical',
-                  }}
+                  className="w-full px-3 py-3 bg-surface-paper border border-border-strong rounded-lg text-foreground text-sm font-inherit mb-4 resize-y"
                 />
 
                 <button
@@ -1974,47 +1749,33 @@ Respond naturally as if you are on an actual phone call. Keep responses brief an
               </div>
 
               {/* Knowledge Items List */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '1rem' }}>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {knowledgeItems.length === 0 ? (
-                  <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '3rem', backgroundColor: 'var(--color-bg-main)', border: '1px solid var(--color-border-light)', borderRadius: '0.75rem' }}>
-                    <p style={{ color: 'var(--color-text-disabled)', marginBottom: '0.5rem' }}>No knowledge items yet.</p>
-                    <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem' }}>Add scripts, FAQs, and product information above.</p>
+                  <div className="col-span-full text-center p-12 border border-border-light rounded-xl">
+                    <p className="text-muted-foreground mb-2">No knowledge items yet.</p>
+                    <p className="text-muted-foreground text-sm">Add scripts, FAQs, and product information above.</p>
                   </div>
                 ) : (
                   knowledgeItems.map((item) => (
-                    <div key={item.id} style={{ padding: '1.5rem', backgroundColor: 'var(--color-bg-main)', border: '1px solid var(--color-border-light)', borderRadius: '0.75rem' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '0.75rem' }}>
+                    <div key={item.id} className="p-6 border border-border-light rounded-xl">
+                      <div className="flex justify-between items-start mb-3">
                         <div>
-                          <h4 style={{ fontSize: '1rem', fontWeight: 'bold', marginBottom: '0.25rem' }}>{item.title}</h4>
-                          <span style={{
-                            padding: '0.125rem 0.5rem',
-                            backgroundColor: 'var(--color-bg-paper)',
-                            border: '1px solid var(--color-border-strong)',
-                            borderRadius: '0.25rem',
-                            fontSize: '0.625rem',
-                            textTransform: 'uppercase',
-                            color: 'var(--color-text-secondary)',
-                          }}>
+                          <h4 className="text-base font-bold mb-1">{item.title}</h4>
+                          <span className="px-2 py-0.5 bg-surface-paper border border-border-strong rounded text-[0.625rem] uppercase text-muted-foreground">
                             {item.type}
                           </span>
                         </div>
                         <button
                           onClick={() => void handleRemoveKnowledge(item.id)}
-                          style={{
-                            background: 'none',
-                            border: 'none',
-                            color: 'var(--color-error)',
-                            cursor: 'pointer',
-                            fontSize: '0.75rem',
-                          }}
+                          className="bg-transparent border-none text-error cursor-pointer text-xs"
                         >
                           Remove
                         </button>
                       </div>
-                      <p style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', lineHeight: '1.5' }}>
+                      <p className="text-sm text-muted-foreground leading-relaxed">
                         {item.content.length > 200 ? `${item.content.substring(0, 200)}...` : item.content}
                       </p>
-                      <p style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginTop: '0.75rem' }}>
+                      <p className="text-xs text-muted-foreground mt-3">
                         Added: {new Date(item.uploadedAt).toLocaleDateString()}
                       </p>
                     </div>

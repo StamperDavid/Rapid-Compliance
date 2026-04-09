@@ -12,6 +12,7 @@ import {
 import SubpageNav from '@/components/ui/SubpageNav';
 import { AI_WORKFORCE_TABS } from '@/lib/constants/subpage-nav';
 import { Tooltip } from '@/components/ui/tooltip';
+import { PageTitle } from '@/components/ui/typography';
 import {
   getAgentCount,
   getOrchestratorCount,
@@ -408,12 +409,7 @@ const HierarchySection = memo(function HierarchySection({
 
       {/* Section Content */}
       {isExpanded && (
-        <div style={{
-          padding: '0 1rem 1rem',
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
-          gap: '0.75rem',
-        }}>
+        <div className="px-4 pb-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {agents.map(agent => (
             <AgentCard
               key={agent.id}
@@ -523,15 +519,8 @@ export default function WorkforceCommandCenterPage() {
   // Loading state
   if (loading) {
     return (
-      <div style={{
-        minHeight: '100vh',
-        padding: '2rem',
-        background: 'linear-gradient(135deg, var(--color-bg-main) 0%, var(--color-bg-paper) 50%, var(--color-bg-main) 100%)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}>
-        <div style={{ textAlign: 'center' }}>
+      <div className="flex items-center justify-center p-8">
+        <div className="text-center">
           <div style={{
             width: '48px',
             height: '48px',
@@ -541,7 +530,7 @@ export default function WorkforceCommandCenterPage() {
             animation: 'spin 1s linear infinite',
             margin: '0 auto 1rem',
           }} />
-          <p style={{ color: 'var(--color-text-disabled)' }}>Loading swarm telemetry...</p>
+          <p className="text-muted-foreground">Loading swarm telemetry...</p>
         </div>
         <style>{`
           @keyframes spin {
@@ -559,14 +548,7 @@ export default function WorkforceCommandCenterPage() {
   // Error state
   if (error && agents.length === 0) {
     return (
-      <div style={{
-        minHeight: '100vh',
-        padding: '2rem',
-        background: 'linear-gradient(135deg, var(--color-bg-main) 0%, var(--color-bg-paper) 50%, var(--color-bg-main) 100%)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}>
+      <div className="flex items-center justify-center p-8">
         <div style={{
           textAlign: 'center',
           padding: '2rem',
@@ -602,11 +584,7 @@ export default function WorkforceCommandCenterPage() {
   }
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      padding: '2rem',
-      background: 'linear-gradient(135deg, var(--color-bg-main) 0%, var(--color-bg-paper) 50%, var(--color-bg-main) 100%)',
-    }}>
+    <div className="p-8 space-y-6">
       <style>{`
         @keyframes spin {
           to { transform: rotate(360deg); }
@@ -620,24 +598,9 @@ export default function WorkforceCommandCenterPage() {
       <div>
         <SubpageNav items={AI_WORKFORCE_TABS} />
         {/* Header */}
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'flex-start',
-          marginBottom: '2rem',
-          flexWrap: 'wrap',
-          gap: '1rem',
-        }}>
+        <div className="flex justify-between items-start flex-wrap gap-4">
           <div>
-            <h1 style={{
-              fontSize: '2rem',
-              fontWeight: '700',
-              color: 'var(--color-text-primary)',
-              marginBottom: '0.5rem',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.75rem',
-            }}>
+            <PageTitle className="flex items-center gap-3">
               <span>🎛️</span> Workforce Command Center
               {overallHealth && (
                 <span style={{
@@ -662,22 +625,16 @@ export default function WorkforceCommandCenterPage() {
                   {overallHealth}
                 </span>
               )}
-            </h1>
-            <p style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>
+            </PageTitle>
+            <p className="text-sm text-muted-foreground">
               Live telemetry from the {getAgentCount()}-agent AI workforce • Last updated: {lastUpdated?.toLocaleTimeString() ?? 'Never'}
             </p>
           </div>
 
           {/* Controls */}
-          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+          <div className="flex gap-3 items-center">
             {/* View Toggle */}
-            <div style={{
-              display: 'flex',
-              backgroundColor: 'var(--color-bg-paper)',
-              borderRadius: '0.5rem',
-              border: '1px solid var(--color-border-strong)',
-              overflow: 'hidden',
-            }}>
+            <div className="flex bg-card rounded-lg border border-border-strong overflow-hidden">
               <button
                 onClick={() => setViewMode('hierarchy')}
                 style={{
@@ -765,12 +722,7 @@ export default function WorkforceCommandCenterPage() {
         </div>
 
         {/* Stats Row */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(5, 1fr)',
-          gap: '1rem',
-          marginBottom: '2rem',
-        }}>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
           {[
             { label: 'Total Agents', value: agents.length.toString(), color: 'var(--color-primary)', icon: '🤖' },
             { label: 'Functional', value: `${activeCount}/${agents.length}`, color: 'var(--color-success)', icon: '✅' },
@@ -870,11 +822,7 @@ export default function WorkforceCommandCenterPage() {
           </div>
         ) : (
           // Grid View
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
-            gap: '1rem',
-          }}>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredAgents.map((agent) => (
               <AgentCard
                 key={agent.id}

@@ -27,6 +27,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { logger } from '@/lib/logger/logger';
 import Link from 'next/link';
+import { PageTitle } from '@/components/ui/typography';
 
 type CoachingViewMode = 'human' | 'ai';
 
@@ -183,31 +184,31 @@ export default function CoachingDashboardPage() {
    */
   if (loading && !performance) {
     return (
-      <div className="min-h-screen bg-[var(--color-bg-main)] p-6">
-        <div className="max-w-7xl mx-auto">
+      <div className="p-6">
+        <div>
           {/* Header Skeleton */}
           <div className="mb-8 animate-pulse">
-            <div className="h-8 bg-[var(--color-border-main)] rounded w-1/3 mb-2"></div>
-            <div className="h-4 bg-[var(--color-border-main)] rounded w-1/2"></div>
+            <div className="h-8 bg-border rounded w-1/3 mb-2"></div>
+            <div className="h-4 bg-border rounded w-1/2"></div>
           </div>
 
           {/* Cards Skeleton */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-            <div className="bg-[var(--color-bg-paper)] rounded-lg shadow-sm p-6 animate-pulse">
-              <div className="h-6 bg-[var(--color-border-main)] rounded w-1/2 mb-4"></div>
-              <div className="h-40 bg-[var(--color-border-main)] rounded"></div>
+            <div className="bg-card rounded-lg shadow-sm p-6 animate-pulse">
+              <div className="h-6 bg-border rounded w-1/2 mb-4"></div>
+              <div className="h-40 bg-border rounded"></div>
             </div>
-            <div className="lg:col-span-2 bg-[var(--color-bg-paper)] rounded-lg shadow-sm p-6 animate-pulse">
-              <div className="h-6 bg-[var(--color-border-main)] rounded w-1/2 mb-4"></div>
-              <div className="h-40 bg-[var(--color-border-main)] rounded"></div>
+            <div className="lg:col-span-2 bg-card rounded-lg shadow-sm p-6 animate-pulse">
+              <div className="h-6 bg-border rounded w-1/2 mb-4"></div>
+              <div className="h-40 bg-border rounded"></div>
             </div>
           </div>
 
           <div className="space-y-6">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="bg-[var(--color-bg-paper)] rounded-lg shadow-sm p-6 animate-pulse">
-                <div className="h-6 bg-[var(--color-border-main)] rounded w-1/4 mb-4"></div>
-                <div className="h-32 bg-[var(--color-border-main)] rounded"></div>
+              <div key={i} className="bg-card rounded-lg shadow-sm p-6 animate-pulse">
+                <div className="h-6 bg-border rounded w-1/4 mb-4"></div>
+                <div className="h-32 bg-border rounded"></div>
               </div>
             ))}
           </div>
@@ -221,15 +222,15 @@ export default function CoachingDashboardPage() {
    */
   if (error && !performance) {
     return (
-      <div className="min-h-screen bg-[var(--color-bg-main)] flex items-center justify-center p-6">
-        <div className="bg-[var(--color-bg-paper)] rounded-lg shadow-sm p-8 max-w-md w-full">
+      <div className="flex items-center justify-center p-6">
+        <div className="bg-card rounded-lg shadow-sm p-8 max-w-md w-full">
           <div className="text-center">
             <div className="text-red-500 text-5xl mb-4">⚠️</div>
-            <h2 className="text-xl font-semibold text-[var(--color-text-primary)] mb-2">Failed to Load Coaching Insights</h2>
-            <p className="text-[var(--color-text-secondary)] mb-6">{error}</p>
+            <h2 className="text-xl font-semibold text-foreground mb-2">Failed to Load Coaching Insights</h2>
+            <p className="text-muted-foreground mb-6">{error}</p>
             <button
               onClick={() => void fetchCoachingInsights()}
-              className="px-6 py-2 bg-[var(--color-primary)] text-[var(--color-text-primary)] rounded-lg hover:bg-[var(--color-primary-dark)] transition"
+              className="px-6 py-2 bg-[var(--color-primary)] text-foreground rounded-lg hover:bg-[var(--color-primary-dark)] transition"
             >
               Try Again
             </button>
@@ -244,24 +245,22 @@ export default function CoachingDashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--color-bg-main)]">
+    <div className="p-8 space-y-6">
       {/* Header */}
-      <div className="bg-[var(--color-bg-paper)] border-b border-[var(--color-border-main)] sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">Coaching & Insights</h1>
-              <p className="text-sm text-[var(--color-text-disabled)] mt-1">
-                AI-powered performance analysis and personalized recommendations
-              </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <PageTitle>Coaching &amp; Insights</PageTitle>
+          <p className="text-sm text-muted-foreground mt-1">
+            AI-powered performance analysis and personalized recommendations
+          </p>
               {/* Human / AI Agent Toggle */}
-              <div className="flex gap-1 mt-2 bg-[var(--color-bg-main)] rounded-lg p-0.5 w-fit">
+              <div className="flex gap-1 mt-2 bg-surface-main rounded-lg p-0.5 w-fit">
                 <button
                   onClick={() => setViewMode('human')}
                   className={`px-3 py-1 text-xs font-medium rounded-md transition ${
                     viewMode === 'human'
-                      ? 'bg-[var(--color-bg-paper)] text-[var(--color-text-primary)] shadow-sm'
-                      : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'
+                      ? 'bg-card text-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground'
                   }`}
                 >
                   Human Reps
@@ -270,8 +269,8 @@ export default function CoachingDashboardPage() {
                   onClick={() => setViewMode('ai')}
                   className={`px-3 py-1 text-xs font-medium rounded-md transition ${
                     viewMode === 'ai'
-                      ? 'bg-[var(--color-bg-paper)] text-[var(--color-text-primary)] shadow-sm'
-                      : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'
+                      ? 'bg-card text-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground'
                   }`}
                 >
                   AI Agents
@@ -284,7 +283,7 @@ export default function CoachingDashboardPage() {
               <select
                 value={period}
                 onChange={(e) => setPeriod(e.target.value as TimePeriod)}
-                className="px-4 py-2 border border-[var(--color-border-main)] rounded-lg text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
+                className="px-4 py-2 border border-border rounded-lg text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                 disabled={refreshing}
               >
                 {TIME_PERIODS.map((p) => (
@@ -298,7 +297,7 @@ export default function CoachingDashboardPage() {
               <select
                 value={selectedModel}
                 onChange={(e) => handleModelChange(e.target.value)}
-                className="px-4 py-2 border border-[var(--color-border-main)] rounded-lg text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
+                className="px-4 py-2 border border-border rounded-lg text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:border-[var(--color-primary)]"
                 disabled={refreshing}
               >
                 {Object.entries(COACHING_MODELS).map(([id, info]) => (
@@ -312,7 +311,7 @@ export default function CoachingDashboardPage() {
               <button
                 onClick={handleRefresh}
                 disabled={refreshing}
-                className="px-4 py-2 bg-[var(--color-primary)] text-[var(--color-text-primary)] rounded-lg hover:bg-[var(--color-primary-dark)] transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                className="px-4 py-2 bg-[var(--color-primary)] text-foreground rounded-lg hover:bg-[var(--color-primary-dark)] transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
                 {refreshing ? (
                   <>
@@ -358,8 +357,6 @@ export default function CoachingDashboardPage() {
                 )}
               </button>
             </div>
-          </div>
-        </div>
       </div>
 
       {/* AI Agents View */}
@@ -369,7 +366,7 @@ export default function CoachingDashboardPage() {
 
       {/* Human Rep Main Content */}
       {viewMode === 'human' && (
-      <div className="max-w-7xl mx-auto p-6">
+      <div>
         {/* Top Row: Performance Score + Skills */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
           <PerformanceScoreCard performance={performance} loading={refreshing} />
@@ -380,17 +377,17 @@ export default function CoachingDashboardPage() {
 
         {/* Performance Summary */}
         {insights.performanceSummary && (
-          <div className="bg-[var(--color-bg-paper)] rounded-lg shadow-sm p-6 mb-6">
-            <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-3">Performance Summary</h3>
-            <p className="text-[var(--color-text-secondary)] mb-4">{insights.performanceSummary.assessment}</p>
+          <div className="bg-card rounded-lg shadow-sm p-6 mb-6">
+            <h3 className="text-lg font-semibold text-foreground mb-3">Performance Summary</h3>
+            <p className="text-muted-foreground mb-4">{insights.performanceSummary.assessment}</p>
 
             <div className="flex items-center gap-6">
               <div className="flex items-center gap-2">
-                <span className="text-sm text-[var(--color-text-secondary)]">Trend:</span>
+                <span className="text-sm text-muted-foreground">Trend:</span>
                 <span className={`text-sm font-medium ${
                   insights.performanceSummary.trend === 'improving' ? 'text-[var(--color-success)]' :
                   insights.performanceSummary.trend === 'declining' ? 'text-[var(--color-error)]' :
-                  'text-[var(--color-text-secondary)]'
+                  'text-muted-foreground'
                 }`}>
                   {insights.performanceSummary.trend === 'improving' && '↗ '}
                   {insights.performanceSummary.trend === 'declining' && '↘ '}
@@ -400,10 +397,10 @@ export default function CoachingDashboardPage() {
               </div>
 
               <div className="flex items-center gap-2">
-                <span className="text-sm text-[var(--color-text-secondary)]">Focus Areas:</span>
+                <span className="text-sm text-muted-foreground">Focus Areas:</span>
                 <div className="flex flex-wrap gap-2">
                   {insights.performanceSummary.focusAreas.map((area, idx) => (
-                    <span key={idx} className="text-xs bg-[var(--color-primary)] text-[var(--color-text-primary)] px-2 py-1 rounded" style={{ opacity: 0.7 }}>
+                    <span key={idx} className="text-xs bg-primary/70 text-foreground px-2 py-1 rounded">
                       {area}
                     </span>
                   ))}
@@ -434,24 +431,24 @@ export default function CoachingDashboardPage() {
 
         {/* Opportunities */}
         {insights.opportunities.length > 0 && (
-          <div className="bg-[var(--color-bg-paper)] rounded-lg shadow-sm p-6 mb-6">
-            <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">Improvement Opportunities</h3>
+          <div className="bg-card rounded-lg shadow-sm p-6 mb-6">
+            <h3 className="text-lg font-semibold text-foreground mb-4">Improvement Opportunities</h3>
             <div className="space-y-3">
               {insights.opportunities.map((opp, idx) => (
-                <div key={idx} className="border border-[var(--color-border-light)] rounded-lg p-4">
+                <div key={idx} className="border border-border-light rounded-lg p-4">
                   <div className="flex items-start justify-between mb-2">
-                    <h4 className="text-sm font-semibold text-[var(--color-text-primary)]">{opp.title}</h4>
+                    <h4 className="text-sm font-semibold text-foreground">{opp.title}</h4>
                     <span className={`text-xs font-medium px-2 py-1 rounded ${
-                      opp.priority === 'critical' ? 'text-[var(--color-text-primary)]' :
-                      opp.priority === 'high' ? 'text-[var(--color-text-primary)]' :
-                      opp.priority === 'medium' ? 'text-[var(--color-text-primary)]' :
-                      'text-[var(--color-text-primary)]'
+                      opp.priority === 'critical' ? 'text-foreground' :
+                      opp.priority === 'high' ? 'text-foreground' :
+                      opp.priority === 'medium' ? 'text-foreground' :
+                      'text-foreground'
                     }`}>
                       {opp.priority.toUpperCase()}
                     </span>
                   </div>
-                  <p className="text-sm text-[var(--color-text-secondary)] mb-3">{opp.description}</p>
-                  <div className="flex items-center gap-4 text-xs text-[var(--color-text-secondary)]">
+                  <p className="text-sm text-muted-foreground mb-3">{opp.description}</p>
+                  <div className="flex items-center gap-4 text-xs text-muted-foreground">
                     <span>Difficulty: {opp.difficulty}</span>
                     <span>•</span>
                     <span>Impact: {opp.timeToImpact.replace('_', ' ')}</span>
@@ -464,27 +461,27 @@ export default function CoachingDashboardPage() {
 
         {/* Risks */}
         {insights.risks.length > 0 && (
-          <div className="bg-[var(--color-bg-paper)] rounded-lg shadow-sm p-6 mb-6">
-            <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">Performance Risks</h3>
+          <div className="bg-card rounded-lg shadow-sm p-6 mb-6">
+            <h3 className="text-lg font-semibold text-foreground mb-4">Performance Risks</h3>
             <div className="space-y-3">
               {insights.risks.map((risk, idx) => (
-                <div key={idx} className="border border-[var(--color-border-light)] rounded-lg p-4">
+                <div key={idx} className="border border-border-light rounded-lg p-4">
                   <div className="flex items-start justify-between mb-2">
-                    <h4 className="text-sm font-semibold text-[var(--color-text-primary)]">{risk.title}</h4>
+                    <h4 className="text-sm font-semibold text-foreground">{risk.title}</h4>
                     <div className="flex items-center gap-2">
                       <span className={`text-xs font-medium px-2 py-1 rounded ${
-                        risk.severity === 'critical' ? 'text-[var(--color-text-primary)]' :
-                        risk.severity === 'high' ? 'text-[var(--color-text-primary)]' :
-                        'text-[var(--color-text-primary)]'
+                        risk.severity === 'critical' ? 'text-foreground' :
+                        risk.severity === 'high' ? 'text-foreground' :
+                        'text-foreground'
                       }`}>
                         {risk.severity.toUpperCase()}
                       </span>
-                      <span className="text-xs text-[var(--color-text-secondary)]">
+                      <span className="text-xs text-muted-foreground">
                         {risk.likelihood.replace('_', ' ')}
                       </span>
                     </div>
                   </div>
-                  <p className="text-sm text-[var(--color-text-secondary)]">{risk.description}</p>
+                  <p className="text-sm text-muted-foreground">{risk.description}</p>
                 </div>
               ))}
             </div>
@@ -492,8 +489,8 @@ export default function CoachingDashboardPage() {
         )}
 
         {/* Footer */}
-        <div className="mt-8 pt-6 border-t border-[var(--color-border-main)]">
-          <div className="flex items-center justify-between text-sm text-[var(--color-text-disabled)]">
+        <div className="mt-8 pt-6 border-t border-border">
+          <div className="flex items-center justify-between text-sm text-muted-foreground">
             <div>
               Last updated: {new Date().toLocaleString('en-US', {
                 month: 'short',
@@ -505,7 +502,7 @@ export default function CoachingDashboardPage() {
             </div>
             <div className="flex items-center gap-2">
               <span>AI Confidence:</span>
-              <span className="font-semibold text-[var(--color-text-primary)]">
+              <span className="font-semibold text-foreground">
                 {(insights.confidenceScore * 100).toFixed(0)}%
               </span>
             </div>
@@ -549,7 +546,7 @@ function AIAgentsCoachingView({ authFetch }: { authFetch: (url: string, options?
 
   if (loading) {
     return (
-      <div className="max-w-7xl mx-auto p-6">
+      <div className="p-6">
         <div className="flex items-center justify-center h-40">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--color-primary)]" />
         </div>
@@ -558,22 +555,22 @@ function AIAgentsCoachingView({ authFetch }: { authFetch: (url: string, options?
   }
 
   return (
-    <div className="max-w-7xl mx-auto p-6 space-y-6">
+    <div className="space-y-6">
       {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-[var(--color-bg-paper)] rounded-lg shadow-sm p-4">
-          <p className="text-sm text-[var(--color-text-secondary)]">AI Agent Profiles</p>
-          <p className="text-2xl font-bold text-[var(--color-text-primary)] mt-1">{agentCount}</p>
+        <div className="bg-card rounded-lg shadow-sm p-4">
+          <p className="text-sm text-muted-foreground">AI Agent Profiles</p>
+          <p className="text-2xl font-bold text-foreground mt-1">{agentCount}</p>
         </div>
-        <div className="bg-[var(--color-bg-paper)] rounded-lg shadow-sm p-4">
-          <p className="text-sm text-[var(--color-text-secondary)]">Flagged Sessions</p>
-          <p className="text-2xl font-bold text-[var(--color-text-primary)] mt-1">{flaggedCount}</p>
+        <div className="bg-card rounded-lg shadow-sm p-4">
+          <p className="text-sm text-muted-foreground">Flagged Sessions</p>
+          <p className="text-2xl font-bold text-foreground mt-1">{flaggedCount}</p>
           {flaggedCount > 0 && (
             <p className="text-xs text-[var(--color-warning)] mt-1">Needs review</p>
           )}
         </div>
-        <div className="bg-[var(--color-bg-paper)] rounded-lg shadow-sm p-4">
-          <p className="text-sm text-[var(--color-text-secondary)]">Quick Links</p>
+        <div className="bg-card rounded-lg shadow-sm p-4">
+          <p className="text-sm text-muted-foreground">Quick Links</p>
           <div className="flex flex-col gap-1 mt-2">
             <Link href="/workforce/performance" className="text-xs text-[var(--color-primary)] hover:underline">Swarm Performance</Link>
           </div>
@@ -581,11 +578,11 @@ function AIAgentsCoachingView({ authFetch }: { authFetch: (url: string, options?
       </div>
 
       {/* CTA: Open Training Center */}
-      <div className="bg-[var(--color-bg-paper)] rounded-lg shadow-sm p-8 text-center">
-        <h2 className="text-xl font-semibold text-[var(--color-text-primary)] mb-2">
+      <div className="bg-card rounded-lg shadow-sm p-8 text-center">
+        <h2 className="text-xl font-semibold text-foreground mb-2">
           AI Agent Training Center
         </h2>
-        <p className="text-sm text-[var(--color-text-secondary)] mb-4 max-w-md mx-auto">
+        <p className="text-sm text-muted-foreground mb-4 max-w-md mx-auto">
           View performance insights, review coaching recommendations, approve improvement requests, and train your agents — all in one place.
         </p>
         <Link

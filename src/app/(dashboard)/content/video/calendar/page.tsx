@@ -204,7 +204,7 @@ export default function ContentCalendarPage() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-950">
+    <div className="bg-zinc-950">
       {/* Navigation */}
       <div className="sticky top-0 z-40 border-b border-zinc-800 bg-zinc-950/95 backdrop-blur-sm">
         <div className="px-6 pt-4 pb-0">

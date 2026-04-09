@@ -187,6 +187,13 @@ export const getCustomToolsCollection = (): string => getSubCollection('customTo
 export const getGlobalTemplatesSubCollection = (): string => getSubCollection('globalTemplates');
 export const getPagesCollection = (): string => getSubCollection('pages');
 
+// ── CRM Extended (Companies, Quotes, Invoices, Payments) ────────────────────
+export const getCompaniesCollection = (): string => getSubCollection('companies');
+export const getQuotesCollection = (): string => getSubCollection('quotes');
+export const getInvoicesCollection = (): string => getSubCollection('invoices');
+export const getPaymentsCollection = (): string => getSubCollection('payments');
+export const getEmailTemplatesCollection = (): string => getSubCollection('emailTemplates');
+
 // ── Campaign Orchestration ──────────────────────────────────────────────────
 export const getCampaignsCollection = (): string => getSubCollection('campaigns');
 

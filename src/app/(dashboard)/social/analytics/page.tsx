@@ -10,6 +10,7 @@ import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { logger } from '@/lib/logger/logger';
 import { SOCIAL_PLATFORMS } from '@/types/social';
 import { PLATFORM_META } from '@/lib/social/platform-config';
+import { PageTitle, SectionDescription } from '@/components/ui/typography';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -212,8 +213,8 @@ export default function AnalyticsPage() {
 
   if (loading) {
     return (
-      <div style={{ padding: '2rem', maxWidth: 1200, margin: '0 auto' }}>
-        <div style={{ textAlign: 'center', padding: '4rem', color: 'var(--color-text-secondary)' }}>
+      <div className="p-8 max-w-6xl mx-auto">
+        <div className="text-center py-16 text-muted-foreground">
           Loading Analytics...
         </div>
       </div>
@@ -223,109 +224,57 @@ export default function AnalyticsPage() {
   // ─── Render ──────────────────────────────────────────────────────────────
 
   return (
-    <div style={{ padding: '2rem', maxWidth: 1200, margin: '0 auto' }}>
+    <div className="p-8 space-y-6 max-w-6xl mx-auto">
       {/* Header */}
-      <div style={{ marginBottom: '1.5rem' }}>
-        <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--color-text-primary)', marginBottom: '0.25rem' }}>
-          Analytics Dashboard
-        </h1>
-        <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.8125rem' }}>
-          Unified social media metrics and performance tracking
-        </p>
+      <div>
+        <PageTitle>Analytics Dashboard</PageTitle>
+        <SectionDescription className="mt-1">Unified social media metrics and performance tracking</SectionDescription>
       </div>
 
       {/* Summary Stats Row */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', marginBottom: '1.5rem' }}>
-        <div
-          style={{
-            padding: '1rem',
-            backgroundColor: 'var(--color-bg-paper)',
-            borderRadius: '0.5rem',
-            border: '1px solid var(--color-border-light)',
-          }}
-        >
-          <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginBottom: '0.25rem' }}>
-            Total Published
-          </div>
-          <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--color-text-primary)' }}>
-            {totalPublished}
-          </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="p-4 bg-card rounded-lg border border-border-light">
+          <div className="text-xs text-muted-foreground mb-1">Total Published</div>
+          <div className="text-2xl font-bold text-foreground">{totalPublished}</div>
         </div>
 
-        <div
-          style={{
-            padding: '1rem',
-            backgroundColor: 'var(--color-bg-paper)',
-            borderRadius: '0.5rem',
-            border: '1px solid var(--color-border-light)',
-          }}
-        >
-          <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginBottom: '0.25rem' }}>
-            Published Today
-          </div>
-          <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#4CAF50' }}>
-            {status?.todayPublished ?? 0}
-          </div>
+        <div className="p-4 bg-card rounded-lg border border-border-light">
+          <div className="text-xs text-muted-foreground mb-1">Published Today</div>
+          <div className="text-2xl font-bold" style={{ color: '#4CAF50' }}>{status?.todayPublished ?? 0}</div>
         </div>
 
-        <div
-          style={{
-            padding: '1rem',
-            backgroundColor: 'var(--color-bg-paper)',
-            borderRadius: '0.5rem',
-            border: '1px solid var(--color-border-light)',
-          }}
-        >
-          <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginBottom: '0.25rem' }}>
-            Engagement Rate
-          </div>
-          <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#FF9800' }}>
+        <div className="p-4 bg-card rounded-lg border border-border-light">
+          <div className="text-xs text-muted-foreground mb-1">Engagement Rate</div>
+          <div className="text-2xl font-bold" style={{ color: '#FF9800' }}>
             {aggregateEngagement && aggregateEngagement.postsWithMetrics > 0
               ? `${aggregateEngagement.engagementRate}%`
               : '--'}
           </div>
           {aggregateEngagement && aggregateEngagement.postsWithMetrics > 0 && (
-            <div style={{ fontSize: '0.625rem', color: 'var(--color-text-disabled)', marginTop: '0.125rem' }}>
+            <div className="text-[10px] text-muted-foreground mt-0.5">
               {aggregateEngagement.postsWithMetrics} posts tracked
             </div>
           )}
         </div>
 
-        <div
-          style={{
-            padding: '1rem',
-            backgroundColor: 'var(--color-bg-paper)',
-            borderRadius: '0.5rem',
-            border: '1px solid var(--color-border-light)',
-          }}
-        >
-          <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginBottom: '0.25rem' }}>
-            Queue Depth
-          </div>
-          <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#9C27B0' }}>
-            {status?.queueDepth ?? 0}
-          </div>
+        <div className="p-4 bg-card rounded-lg border border-border-light">
+          <div className="text-xs text-muted-foreground mb-1">Queue Depth</div>
+          <div className="text-2xl font-bold" style={{ color: '#9C27B0' }}>{status?.queueDepth ?? 0}</div>
         </div>
       </div>
 
       {/* Platform Filter Tabs */}
-      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem' }}>
+      <div className="flex flex-wrap gap-2">
         {(['all', ...SOCIAL_PLATFORMS] as const).map((platform) => (
           <button
             key={platform}
             type="button"
             onClick={() => setPlatformFilter(platform)}
-            style={{
-              padding: '0.5rem 1rem',
-              borderRadius: '0.375rem',
-              border: '1px solid var(--color-border-light)',
-              backgroundColor: platformFilter === platform ? 'var(--color-primary)' : 'var(--color-bg-paper)',
-              color: platformFilter === platform ? '#fff' : 'var(--color-text-secondary)',
-              cursor: 'pointer',
-              fontSize: '0.8125rem',
-              fontWeight: 500,
-              textTransform: 'capitalize',
-            }}
+            className={`px-4 py-2 rounded-md border border-border-light text-sm font-medium capitalize transition-colors cursor-pointer ${
+              platformFilter === platform
+                ? 'bg-primary text-white'
+                : 'bg-card text-muted-foreground hover:bg-surface-elevated'
+            }`}
           >
             {platform}
           </button>
@@ -333,18 +282,8 @@ export default function AnalyticsPage() {
       </div>
 
       {/* Publishing Activity Chart */}
-      <div
-        style={{
-          padding: '1.25rem',
-          backgroundColor: 'var(--color-bg-paper)',
-          borderRadius: '0.75rem',
-          border: '1px solid var(--color-border-light)',
-          marginBottom: '1.5rem',
-        }}
-      >
-        <h2 style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: '1rem' }}>
-          Publishing Activity (Last 7 Days)
-        </h2>
+      <div className="p-5 bg-card rounded-xl border border-border-light">
+        <h2 className="text-sm font-semibold text-foreground mb-4">Publishing Activity (Last 7 Days)</h2>
 
         <svg width="100%" height="200" style={{ overflow: 'visible' }}>
           {/* Y-axis guide lines */}
@@ -406,48 +345,26 @@ export default function AnalyticsPage() {
       </div>
 
       {/* Post Performance Table */}
-      <div
-        style={{
-          padding: '1.25rem',
-          backgroundColor: 'var(--color-bg-paper)',
-          borderRadius: '0.75rem',
-          border: '1px solid var(--color-border-light)',
-          marginBottom: '1.5rem',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-          <h2 style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--color-text-primary)' }}>
-            Post Performance
-          </h2>
-          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>Sort by:</span>
+      <div className="p-5 bg-card rounded-xl border border-border-light">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-sm font-semibold text-foreground">Post Performance</h2>
+          <div className="flex gap-2 items-center">
+            <span className="text-xs text-muted-foreground">Sort by:</span>
             <button
               type="button"
               onClick={() => setSortBy('date')}
-              style={{
-                padding: '0.25rem 0.5rem',
-                borderRadius: '0.25rem',
-                border: '1px solid var(--color-border-light)',
-                backgroundColor: sortBy === 'date' ? 'var(--color-primary)' : 'transparent',
-                color: sortBy === 'date' ? '#fff' : 'var(--color-text-secondary)',
-                cursor: 'pointer',
-                fontSize: '0.75rem',
-              }}
+              className={`px-2 py-1 rounded text-xs border border-border-light cursor-pointer transition-colors ${
+                sortBy === 'date' ? 'bg-primary text-white' : 'bg-transparent text-muted-foreground hover:bg-surface-elevated'
+              }`}
             >
               Date
             </button>
             <button
               type="button"
               onClick={() => setSortBy('platform')}
-              style={{
-                padding: '0.25rem 0.5rem',
-                borderRadius: '0.25rem',
-                border: '1px solid var(--color-border-light)',
-                backgroundColor: sortBy === 'platform' ? 'var(--color-primary)' : 'transparent',
-                color: sortBy === 'platform' ? '#fff' : 'var(--color-text-secondary)',
-                cursor: 'pointer',
-                fontSize: '0.75rem',
-              }}
+              className={`px-2 py-1 rounded text-xs border border-border-light cursor-pointer transition-colors ${
+                sortBy === 'platform' ? 'bg-primary text-white' : 'bg-transparent text-muted-foreground hover:bg-surface-elevated'
+              }`}
             >
               Platform
             </button>
@@ -455,155 +372,47 @@ export default function AnalyticsPage() {
         </div>
 
         {sortedPublished.length === 0 ? (
-          <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--color-text-disabled)', fontSize: '0.8125rem' }}>
-            No published posts yet
-          </div>
+          <div className="py-8 text-center text-muted-foreground text-sm">No published posts yet</div>
         ) : (
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse">
               <thead>
-                <tr style={{ borderBottom: '1px solid var(--color-border-light)' }}>
-                  <th style={{
-                    padding: '0.75rem',
-                    textAlign: 'left',
-                    fontSize: '0.75rem',
-                    fontWeight: 600,
-                    color: 'var(--color-text-secondary)',
-                  }}>
-                    Platform
-                  </th>
-                  <th style={{
-                    padding: '0.75rem',
-                    textAlign: 'left',
-                    fontSize: '0.75rem',
-                    fontWeight: 600,
-                    color: 'var(--color-text-secondary)',
-                  }}>
-                    Content
-                  </th>
-                  <th style={{
-                    padding: '0.75rem',
-                    textAlign: 'left',
-                    fontSize: '0.75rem',
-                    fontWeight: 600,
-                    color: 'var(--color-text-secondary)',
-                  }}>
-                    Published At
-                  </th>
-                  <th style={{
-                    padding: '0.75rem',
-                    textAlign: 'right',
-                    fontSize: '0.75rem',
-                    fontWeight: 600,
-                    color: 'var(--color-text-secondary)',
-                  }}>
-                    Likes
-                  </th>
-                  <th style={{
-                    padding: '0.75rem',
-                    textAlign: 'right',
-                    fontSize: '0.75rem',
-                    fontWeight: 600,
-                    color: 'var(--color-text-secondary)',
-                  }}>
-                    Comments
-                  </th>
-                  <th style={{
-                    padding: '0.75rem',
-                    textAlign: 'right',
-                    fontSize: '0.75rem',
-                    fontWeight: 600,
-                    color: 'var(--color-text-secondary)',
-                  }}>
-                    Shares
-                  </th>
-                  <th style={{
-                    padding: '0.75rem',
-                    textAlign: 'left',
-                    fontSize: '0.75rem',
-                    fontWeight: 600,
-                    color: 'var(--color-text-secondary)',
-                  }}>
-                    Status
-                  </th>
+                <tr className="border-b border-border-light">
+                  <th className="p-3 text-left text-xs font-semibold text-muted-foreground">Platform</th>
+                  <th className="p-3 text-left text-xs font-semibold text-muted-foreground">Content</th>
+                  <th className="p-3 text-left text-xs font-semibold text-muted-foreground">Published At</th>
+                  <th className="p-3 text-right text-xs font-semibold text-muted-foreground">Likes</th>
+                  <th className="p-3 text-right text-xs font-semibold text-muted-foreground">Comments</th>
+                  <th className="p-3 text-right text-xs font-semibold text-muted-foreground">Shares</th>
+                  <th className="p-3 text-left text-xs font-semibold text-muted-foreground">Status</th>
                 </tr>
               </thead>
               <tbody>
                 {sortedPublished.map((post) => {
                   const eng = engagementData.find((e) => e.id === post.id);
                   return (
-                    <tr key={post.id} style={{ borderBottom: '1px solid var(--color-border-light)' }}>
-                      <td style={{ padding: '0.75rem' }}>
+                    <tr key={post.id} className="border-b border-border-light">
+                      <td className="p-3">
                         <span
-                          style={{
-                            padding: '0.2rem 0.5rem',
-                            borderRadius: '0.25rem',
-                            fontSize: '0.625rem',
-                            fontWeight: 600,
-                            color: '#fff',
-                            backgroundColor: PLATFORM_COLORS[post.platform] ?? '#666',
-                            textTransform: 'uppercase',
-                          }}
+                          className="px-1.5 py-0.5 rounded text-[10px] font-semibold text-white uppercase"
+                          style={{ backgroundColor: PLATFORM_COLORS[post.platform] ?? '#666' }}
                         >
                           {post.platform}
                         </span>
                       </td>
-                      <td style={{
-                        padding: '0.75rem',
-                        fontSize: '0.8125rem',
-                        color: 'var(--color-text-primary)',
-                        maxWidth: '300px',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                      }}>
-                        {post.content}
-                      </td>
-                      <td style={{
-                        padding: '0.75rem',
-                        fontSize: '0.75rem',
-                        color: 'var(--color-text-secondary)',
-                      }}>
-                        {formatDateTime(post.timestamp)}
-                      </td>
-                      <td style={{
-                        padding: '0.75rem',
-                        fontSize: '0.8125rem',
-                        fontWeight: 600,
-                        color: '#E91E63',
-                        textAlign: 'right',
-                      }}>
+                      <td className="p-3 text-sm text-foreground max-w-[300px] truncate">{post.content}</td>
+                      <td className="p-3 text-xs text-muted-foreground">{formatDateTime(post.timestamp)}</td>
+                      <td className="p-3 text-sm font-semibold text-right" style={{ color: '#E91E63' }}>
                         {eng?.metrics.likes ?? '--'}
                       </td>
-                      <td style={{
-                        padding: '0.75rem',
-                        fontSize: '0.8125rem',
-                        fontWeight: 600,
-                        color: '#2196F3',
-                        textAlign: 'right',
-                      }}>
+                      <td className="p-3 text-sm font-semibold text-right" style={{ color: '#2196F3' }}>
                         {eng?.metrics.comments ?? '--'}
                       </td>
-                      <td style={{
-                        padding: '0.75rem',
-                        fontSize: '0.8125rem',
-                        fontWeight: 600,
-                        color: '#4CAF50',
-                        textAlign: 'right',
-                      }}>
+                      <td className="p-3 text-sm font-semibold text-right" style={{ color: '#4CAF50' }}>
                         {eng?.metrics.shares ?? '--'}
                       </td>
-                      <td style={{ padding: '0.75rem' }}>
-                        <span
-                          style={{
-                            padding: '0.25rem 0.5rem',
-                            borderRadius: '1rem',
-                            fontSize: '0.625rem',
-                            fontWeight: 600,
-                            backgroundColor: 'rgba(76,175,80,0.15)',
-                            color: '#4CAF50',
-                          }}
-                        >
+                      <td className="p-3">
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[rgba(76,175,80,0.15)] text-[#4CAF50]">
                           Published
                         </span>
                       </td>
@@ -617,54 +426,31 @@ export default function AnalyticsPage() {
       </div>
 
       {/* Platform Breakdown */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {platformBreakdown.map((stats) => (
-          <div
-            key={stats.platform}
-            style={{
-              padding: '1.25rem',
-              backgroundColor: 'var(--color-bg-paper)',
-              borderRadius: '0.75rem',
-              border: '1px solid var(--color-border-light)',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+          <div key={stats.platform} className="p-5 bg-card rounded-xl border border-border-light">
+            <div className="flex items-center gap-2 mb-4">
               <span
-                style={{
-                  padding: '0.25rem 0.5rem',
-                  borderRadius: '0.25rem',
-                  fontSize: '0.6875rem',
-                  fontWeight: 600,
-                  color: '#fff',
-                  backgroundColor: PLATFORM_COLORS[stats.platform] ?? '#666',
-                  textTransform: 'uppercase',
-                }}
+                className="px-2 py-0.5 rounded text-xs font-semibold text-white uppercase"
+                style={{ backgroundColor: PLATFORM_COLORS[stats.platform] ?? '#666' }}
               >
                 {stats.platform}
               </span>
-              <h2 style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--color-text-primary)' }}>
-                Stats
-              </h2>
+              <h2 className="text-sm font-semibold text-foreground">Stats</h2>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '0.8125rem', color: 'var(--color-text-secondary)' }}>Published</span>
-                <span style={{ fontSize: '1rem', fontWeight: 700, color: '#4CAF50' }}>
-                  {stats.published}
-                </span>
+            <div className="flex flex-col gap-3">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">Published</span>
+                <span className="text-base font-bold" style={{ color: '#4CAF50' }}>{stats.published}</span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '0.8125rem', color: 'var(--color-text-secondary)' }}>Scheduled</span>
-                <span style={{ fontSize: '1rem', fontWeight: 700, color: '#2196F3' }}>
-                  {stats.scheduled}
-                </span>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">Scheduled</span>
+                <span className="text-base font-bold" style={{ color: '#2196F3' }}>{stats.scheduled}</span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '0.8125rem', color: 'var(--color-text-secondary)' }}>Failed</span>
-                <span style={{ fontSize: '1rem', fontWeight: 700, color: '#F44336' }}>
-                  {stats.failed}
-                </span>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">Failed</span>
+                <span className="text-base font-bold" style={{ color: '#F44336' }}>{stats.failed}</span>
               </div>
             </div>
           </div>

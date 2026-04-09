@@ -177,8 +177,8 @@ Sitemap: https://yoursite.com/sitemap.xml`;
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[var(--color-bg-main)] flex items-center justify-center">
-        <div className="flex items-center gap-3 text-[var(--color-text-secondary)]">
+      <div className="p-8 flex items-center justify-center">
+        <div className="flex items-center gap-3 text-muted-foreground">
           <Loader2 className="w-6 h-6 animate-spin" />
           <span>Loading SEO settings...</span>
         </div>
@@ -188,16 +188,15 @@ Sitemap: https://yoursite.com/sitemap.xml`;
 
   if (!settings) {
     return (
-      <div className="min-h-screen bg-[var(--color-bg-main)] flex items-center justify-center">
-        <div className="text-[var(--color-text-secondary)]">Failed to load SEO settings</div>
+      <div className="p-8 flex items-center justify-center">
+        <div className="text-muted-foreground">Failed to load SEO settings</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[var(--color-bg-main)] p-8">
-      <div>
-        {/* Header */}
+    <div className="p-8 space-y-6">
+      {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -205,11 +204,11 @@ Sitemap: https://yoursite.com/sitemap.xml`;
         >
           <div className="flex items-center gap-3 mb-2">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
-              <Search className="w-5 h-5 text-[var(--color-text-primary)]" />
+              <Search className="w-5 h-5 text-foreground" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-[var(--color-text-primary)]">SEO & Analytics</h1>
-              <p className="text-[var(--color-text-secondary)]">Manage site-wide SEO settings and analytics integrations</p>
+              <h1 className="text-3xl font-bold text-foreground">SEO & Analytics</h1>
+              <p className="text-muted-foreground">Manage site-wide SEO settings and analytics integrations</p>
             </div>
           </div>
         </motion.div>
@@ -223,13 +222,13 @@ Sitemap: https://yoursite.com/sitemap.xml`;
         >
           <div className="flex items-center gap-3 mb-6">
             <Globe className="w-5 h-5 text-primary" />
-            <h2 className="text-xl font-semibold text-[var(--color-text-primary)]">Site-wide SEO</h2>
+            <h2 className="text-xl font-semibold text-foreground">Site-wide SEO</h2>
           </div>
 
           <div className="space-y-5">
             {/* Site Title */}
             <div>
-              <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">
+              <label className="block text-sm font-medium text-muted-foreground mb-2">
                 Site Title
               </label>
               <input
@@ -237,9 +236,9 @@ Sitemap: https://yoursite.com/sitemap.xml`;
                 value={settings.seo?.title ?? ''}
                 onChange={(e) => updateSEO('title', e.target.value)}
                 placeholder="Your Site Title"
-                className="w-full px-4 py-3 bg-surface-elevated border border-border-light rounded-xl text-[var(--color-text-primary)] placeholder-[var(--color-text-disabled)] focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all"
+                className="w-full px-4 py-3 bg-surface-elevated border border-border-light rounded-xl text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all"
               />
-              <p className="mt-1.5 text-xs text-[var(--color-text-disabled)] flex items-center gap-1">
+              <p className="mt-1.5 text-xs text-muted-foreground flex items-center gap-1">
                 <Info className="w-3 h-3" />
                 Recommended: 50-60 characters
               </p>
@@ -247,7 +246,7 @@ Sitemap: https://yoursite.com/sitemap.xml`;
 
             {/* Site Description */}
             <div>
-              <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">
+              <label className="block text-sm font-medium text-muted-foreground mb-2">
                 Site Description
               </label>
               <textarea
@@ -255,9 +254,9 @@ Sitemap: https://yoursite.com/sitemap.xml`;
                 onChange={(e) => updateSEO('description', e.target.value)}
                 placeholder="Describe your site..."
                 rows={3}
-                className="w-full px-4 py-3 bg-surface-elevated border border-border-light rounded-xl text-[var(--color-text-primary)] placeholder-[var(--color-text-disabled)] focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all resize-none"
+                className="w-full px-4 py-3 bg-surface-elevated border border-border-light rounded-xl text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all resize-none"
               />
-              <p className="mt-1.5 text-xs text-[var(--color-text-disabled)] flex items-center gap-1">
+              <p className="mt-1.5 text-xs text-muted-foreground flex items-center gap-1">
                 <Info className="w-3 h-3" />
                 Recommended: 150-160 characters
               </p>
@@ -265,7 +264,7 @@ Sitemap: https://yoursite.com/sitemap.xml`;
 
             {/* Keywords */}
             <div>
-              <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">
+              <label className="block text-sm font-medium text-muted-foreground mb-2">
                 Keywords (comma-separated)
               </label>
               <input
@@ -273,15 +272,15 @@ Sitemap: https://yoursite.com/sitemap.xml`;
                 value={settings.seo?.keywords?.join(', ') ?? ''}
                 onChange={(e) => updateSEO('keywords', e.target.value.split(',').map(k => k.trim()))}
                 placeholder="keyword1, keyword2, keyword3"
-                className="w-full px-4 py-3 bg-surface-elevated border border-border-light rounded-xl text-[var(--color-text-primary)] placeholder-[var(--color-text-disabled)] focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all"
+                className="w-full px-4 py-3 bg-surface-elevated border border-border-light rounded-xl text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all"
               />
             </div>
 
             {/* OG Image */}
             <div>
-              <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2 flex items-center gap-2">
+              <label className="block text-sm font-medium text-muted-foreground mb-2 flex items-center gap-2">
                 {/* Image is a lucide-react icon component, not an img tag */}
-                <Image className="w-4 h-4 text-[var(--color-text-secondary)]" aria-label="Image icon" />
+                <Image className="w-4 h-4 text-muted-foreground" aria-label="Image icon" />
                 Default OG Image URL
               </label>
               <input
@@ -289,9 +288,9 @@ Sitemap: https://yoursite.com/sitemap.xml`;
                 value={settings.seo?.ogImage ?? ''}
                 onChange={(e) => updateSEO('ogImage', e.target.value)}
                 placeholder="https://yoursite.com/og-image.jpg"
-                className="w-full px-4 py-3 bg-surface-elevated border border-border-light rounded-xl text-[var(--color-text-primary)] placeholder-[var(--color-text-disabled)] focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all"
+                className="w-full px-4 py-3 bg-surface-elevated border border-border-light rounded-xl text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all"
               />
-              <p className="mt-1.5 text-xs text-[var(--color-text-disabled)] flex items-center gap-1">
+              <p className="mt-1.5 text-xs text-muted-foreground flex items-center gap-1">
                 <Info className="w-3 h-3" />
                 Recommended: 1200x630px for social sharing
               </p>
@@ -299,8 +298,8 @@ Sitemap: https://yoursite.com/sitemap.xml`;
 
             {/* Favicon */}
             <div>
-              <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2 flex items-center gap-2">
-                <Link2 className="w-4 h-4 text-[var(--color-text-secondary)]" />
+              <label className="block text-sm font-medium text-muted-foreground mb-2 flex items-center gap-2">
+                <Link2 className="w-4 h-4 text-muted-foreground" />
                 Favicon URL
               </label>
               <input
@@ -308,7 +307,7 @@ Sitemap: https://yoursite.com/sitemap.xml`;
                 value={settings.seo?.favicon ?? ''}
                 onChange={(e) => updateSEO('favicon', e.target.value)}
                 placeholder="https://yoursite.com/favicon.ico"
-                className="w-full px-4 py-3 bg-surface-elevated border border-border-light rounded-xl text-[var(--color-text-primary)] placeholder-[var(--color-text-disabled)] focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all"
+                className="w-full px-4 py-3 bg-surface-elevated border border-border-light rounded-xl text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all"
               />
             </div>
 
@@ -324,11 +323,11 @@ Sitemap: https://yoursite.com/sitemap.xml`;
                   />
                   <div className="w-5 h-5 rounded border border-border-light bg-surface-elevated peer-checked:bg-indigo-500 peer-checked:border-indigo-500 transition-all flex items-center justify-center">
                     {settings.seo?.robotsIndex !== false && (
-                      <CheckCircle className="w-3.5 h-3.5 text-[var(--color-text-primary)]" />
+                      <CheckCircle className="w-3.5 h-3.5 text-foreground" />
                     )}
                   </div>
                 </div>
-                <span className="text-sm text-[var(--color-text-secondary)] group-hover:text-[var(--color-text-primary)] transition-colors">
+                <span className="text-sm text-muted-foreground group-hover:text-foreground transition-colors">
                   Allow Search Engines to Index
                 </span>
               </label>
@@ -343,11 +342,11 @@ Sitemap: https://yoursite.com/sitemap.xml`;
                   />
                   <div className="w-5 h-5 rounded border border-border-light bg-surface-elevated peer-checked:bg-indigo-500 peer-checked:border-indigo-500 transition-all flex items-center justify-center">
                     {settings.seo?.robotsFollow !== false && (
-                      <CheckCircle className="w-3.5 h-3.5 text-[var(--color-text-primary)]" />
+                      <CheckCircle className="w-3.5 h-3.5 text-foreground" />
                     )}
                   </div>
                 </div>
-                <span className="text-sm text-[var(--color-text-secondary)] group-hover:text-[var(--color-text-primary)] transition-colors">
+                <span className="text-sm text-muted-foreground group-hover:text-foreground transition-colors">
                   Allow Search Engines to Follow Links
                 </span>
               </label>
@@ -364,9 +363,9 @@ Sitemap: https://yoursite.com/sitemap.xml`;
         >
           <div className="flex items-center gap-3 mb-2">
             <Shield className="w-5 h-5 text-amber-400" />
-            <h2 className="text-xl font-semibold text-[var(--color-text-primary)]">AI Bot Access Control</h2>
+            <h2 className="text-xl font-semibold text-foreground">AI Bot Access Control</h2>
           </div>
-          <p className="text-sm text-[var(--color-text-secondary)] mb-6">
+          <p className="text-sm text-muted-foreground mb-6">
             Control which AI crawlers can access your site content for training and search indexing. Blocked bots will receive a Disallow directive in robots.txt.
           </p>
 
@@ -388,10 +387,10 @@ Sitemap: https://yoursite.com/sitemap.xml`;
                     isAllowed ? 'bg-emerald-400' : 'bg-red-400'
                   }`} />
                   <div className="min-w-0">
-                    <div className="text-sm font-medium text-[var(--color-text-primary)] truncate">
+                    <div className="text-sm font-medium text-foreground truncate">
                       {bot.label}
                     </div>
-                    <div className="text-xs text-[var(--color-text-disabled)] truncate">
+                    <div className="text-xs text-muted-foreground truncate">
                       {bot.description}
                     </div>
                   </div>
@@ -415,13 +414,13 @@ Sitemap: https://yoursite.com/sitemap.xml`;
         >
           <div className="flex items-center gap-3 mb-6">
             <BarChart3 className="w-5 h-5 text-secondary" />
-            <h2 className="text-xl font-semibold text-[var(--color-text-primary)]">Analytics & Tracking</h2>
+            <h2 className="text-xl font-semibold text-foreground">Analytics & Tracking</h2>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             {/* Google Analytics */}
             <div>
-              <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">
+              <label className="block text-sm font-medium text-muted-foreground mb-2">
                 Google Analytics ID (GA4)
               </label>
               <input
@@ -429,13 +428,13 @@ Sitemap: https://yoursite.com/sitemap.xml`;
                 value={settings.analytics?.googleAnalyticsId ?? ''}
                 onChange={(e) => updateAnalytics('googleAnalyticsId', e.target.value)}
                 placeholder="G-XXXXXXXXXX"
-                className="w-full px-4 py-3 bg-surface-elevated border border-border-light rounded-xl text-[var(--color-text-primary)] placeholder-[var(--color-text-disabled)] focus:outline-none focus:ring-2 focus:ring-secondary/50 focus:border-secondary/50 transition-all font-mono text-sm"
+                className="w-full px-4 py-3 bg-surface-elevated border border-border-light rounded-xl text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-secondary/50 focus:border-secondary/50 transition-all font-mono text-sm"
               />
             </div>
 
             {/* GTM */}
             <div>
-              <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">
+              <label className="block text-sm font-medium text-muted-foreground mb-2">
                 Google Tag Manager ID
               </label>
               <input
@@ -443,13 +442,13 @@ Sitemap: https://yoursite.com/sitemap.xml`;
                 value={settings.analytics?.googleTagManagerId ?? ''}
                 onChange={(e) => updateAnalytics('googleTagManagerId', e.target.value)}
                 placeholder="GTM-XXXXXX"
-                className="w-full px-4 py-3 bg-surface-elevated border border-border-light rounded-xl text-[var(--color-text-primary)] placeholder-[var(--color-text-disabled)] focus:outline-none focus:ring-2 focus:ring-secondary/50 focus:border-secondary/50 transition-all font-mono text-sm"
+                className="w-full px-4 py-3 bg-surface-elevated border border-border-light rounded-xl text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-secondary/50 focus:border-secondary/50 transition-all font-mono text-sm"
               />
             </div>
 
             {/* Facebook Pixel */}
             <div>
-              <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">
+              <label className="block text-sm font-medium text-muted-foreground mb-2">
                 Facebook Pixel ID
               </label>
               <input
@@ -457,13 +456,13 @@ Sitemap: https://yoursite.com/sitemap.xml`;
                 value={settings.analytics?.facebookPixelId ?? ''}
                 onChange={(e) => updateAnalytics('facebookPixelId', e.target.value)}
                 placeholder="XXXXXXXXXXXXXXX"
-                className="w-full px-4 py-3 bg-surface-elevated border border-border-light rounded-xl text-[var(--color-text-primary)] placeholder-[var(--color-text-disabled)] focus:outline-none focus:ring-2 focus:ring-secondary/50 focus:border-secondary/50 transition-all font-mono text-sm"
+                className="w-full px-4 py-3 bg-surface-elevated border border-border-light rounded-xl text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-secondary/50 focus:border-secondary/50 transition-all font-mono text-sm"
               />
             </div>
 
             {/* Hotjar */}
             <div>
-              <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">
+              <label className="block text-sm font-medium text-muted-foreground mb-2">
                 Hotjar Site ID
               </label>
               <input
@@ -471,7 +470,7 @@ Sitemap: https://yoursite.com/sitemap.xml`;
                 value={settings.analytics?.hotjarId ?? ''}
                 onChange={(e) => updateAnalytics('hotjarId', e.target.value)}
                 placeholder="XXXXXXX"
-                className="w-full px-4 py-3 bg-surface-elevated border border-border-light rounded-xl text-[var(--color-text-primary)] placeholder-[var(--color-text-disabled)] focus:outline-none focus:ring-2 focus:ring-secondary/50 focus:border-secondary/50 transition-all font-mono text-sm"
+                className="w-full px-4 py-3 bg-surface-elevated border border-border-light rounded-xl text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-secondary/50 focus:border-secondary/50 transition-all font-mono text-sm"
               />
             </div>
           </div>
@@ -486,7 +485,7 @@ Sitemap: https://yoursite.com/sitemap.xml`;
         >
           <div className="flex items-center gap-3 mb-6">
             <Bot className="w-5 h-5 text-success" />
-            <h2 className="text-xl font-semibold text-[var(--color-text-primary)]">Robots.txt</h2>
+            <h2 className="text-xl font-semibold text-foreground">Robots.txt</h2>
           </div>
 
           <div>
@@ -494,9 +493,9 @@ Sitemap: https://yoursite.com/sitemap.xml`;
               value={robotsTxt}
               onChange={(e) => setRobotsTxt(e.target.value)}
               rows={8}
-              className="w-full px-4 py-3 bg-surface-elevated border border-border-light rounded-xl text-success placeholder-[var(--color-text-disabled)] focus:outline-none focus:ring-2 focus:ring-success/50 focus:border-success/50 transition-all font-mono text-sm resize-none"
+              className="w-full px-4 py-3 bg-surface-elevated border border-border-light rounded-xl text-success placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-success/50 focus:border-success/50 transition-all font-mono text-sm resize-none"
             />
-            <p className="mt-2 text-xs text-[var(--color-text-disabled)]">
+            <p className="mt-2 text-xs text-muted-foreground">
               Custom robots.txt overrides auto-generated directives. Leave empty to use auto-generated rules with AI bot controls above.
             </p>
           </div>
@@ -511,9 +510,9 @@ Sitemap: https://yoursite.com/sitemap.xml`;
         >
           <div className="flex items-center gap-3 mb-2">
             <Sparkles className="w-5 h-5 text-violet-400" />
-            <h2 className="text-xl font-semibold text-[var(--color-text-primary)]">llms.txt</h2>
+            <h2 className="text-xl font-semibold text-foreground">llms.txt</h2>
           </div>
-          <p className="text-sm text-[var(--color-text-secondary)] mb-4">
+          <p className="text-sm text-muted-foreground mb-4">
             An AI-readable description of your site for LLM crawlers and AI search engines. Leave empty to auto-generate from your site data.
           </p>
 
@@ -523,9 +522,9 @@ Sitemap: https://yoursite.com/sitemap.xml`;
               onChange={(e) => setLlmsTxt(e.target.value)}
               rows={10}
               placeholder="Leave empty to auto-generate from your published pages, blog posts, and SEO settings..."
-              className="w-full px-4 py-3 bg-surface-elevated border border-border-light rounded-xl text-violet-300 placeholder-[var(--color-text-disabled)] focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-violet-500/50 transition-all font-mono text-sm resize-none"
+              className="w-full px-4 py-3 bg-surface-elevated border border-border-light rounded-xl text-violet-300 placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-violet-500/50 focus:border-violet-500/50 transition-all font-mono text-sm resize-none"
             />
-            <p className="mt-2 text-xs text-[var(--color-text-disabled)]">
+            <p className="mt-2 text-xs text-muted-foreground">
               Served at /llms.txt — helps AI models understand your site content and structure.
             </p>
           </div>
@@ -540,10 +539,10 @@ Sitemap: https://yoursite.com/sitemap.xml`;
         >
           <div className="flex items-center gap-3 mb-4">
             <FileText className="w-5 h-5 text-blue-400" />
-            <h2 className="text-xl font-semibold text-[var(--color-text-primary)]">Sitemap</h2>
+            <h2 className="text-xl font-semibold text-foreground">Sitemap</h2>
           </div>
 
-          <p className="text-[var(--color-text-secondary)] mb-4">
+          <p className="text-muted-foreground mb-4">
             Your sitemap is automatically generated and includes all published pages.
           </p>
 
@@ -566,7 +565,7 @@ Sitemap: https://yoursite.com/sitemap.xml`;
           <button
             onClick={() => void saveSettings()}
             disabled={saving}
-            className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 disabled:opacity-50 disabled:cursor-not-allowed text-[var(--color-text-primary)] font-semibold rounded-xl transition-all shadow-lg shadow-indigo-500/25"
+            className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 disabled:opacity-50 disabled:cursor-not-allowed text-foreground font-semibold rounded-xl transition-all shadow-lg shadow-indigo-500/25"
           >
             {saving ? (
               <>
@@ -586,7 +585,7 @@ Sitemap: https://yoursite.com/sitemap.xml`;
             )}
           </button>
         </motion.div>
-      </div>
     </div>
   );
 }
+

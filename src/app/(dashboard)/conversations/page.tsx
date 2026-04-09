@@ -21,6 +21,7 @@ import {
 import { useAuth } from '@/hooks/useAuth';
 import { ChatSessionService, type ChatSession, type ChatMessage } from '@/lib/agent/chat-session-service';
 import { logger } from '@/lib/logger/logger';
+import { PageTitle, SectionDescription } from '@/components/ui/typography';
 
 // Extended interface for UI-specific features
 interface ExtendedChatSession extends ChatSession {
@@ -187,8 +188,8 @@ export default function ConversationsPage() {
             <MessageSquare className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold text-[var(--color-text-primary)]">Live Conversations</h1>
-            <p className="text-sm text-[var(--color-text-secondary)]">Monitor active customer sessions and review past conversations</p>
+            <PageTitle>Live Conversations</PageTitle>
+            <SectionDescription>Monitor active customer sessions and review past conversations</SectionDescription>
           </div>
         </div>
       </motion.div>
@@ -206,7 +207,7 @@ export default function ConversationsPage() {
               <div className="w-3 h-3 bg-success rounded-full animate-pulse" />
               <div className="absolute inset-0 w-3 h-3 bg-success rounded-full animate-ping opacity-75" />
             </div>
-            <span className="text-sm font-semibold text-[var(--color-text-primary)]">
+            <span className="text-sm font-semibold text-foreground">
               {liveConversations.filter(c => c.status === 'active').length} Active
             </span>
           </div>
@@ -215,11 +216,11 @@ export default function ConversationsPage() {
               <div className="w-3 h-3 bg-error rounded-full animate-pulse" />
               <div className="absolute inset-0 w-3 h-3 bg-error rounded-full animate-ping opacity-75" />
             </div>
-            <span className="text-sm font-semibold text-[var(--color-text-primary)]">
+            <span className="text-sm font-semibold text-foreground">
               {needsAttentionCount} Need Attention
             </span>
           </div>
-          <div className="ml-auto flex items-center gap-2 text-sm text-[var(--color-text-disabled)]">
+          <div className="ml-auto flex items-center gap-2 text-sm text-muted-foreground">
             <RefreshCw className="w-4 h-4 animate-spin" />
             Real-time updates
           </div>
@@ -245,8 +246,8 @@ export default function ConversationsPage() {
             }}
             className="relative px-6 py-4 flex items-center gap-2 text-sm font-semibold transition-all"
           >
-            <tab.icon className={`w-4 h-4 ${activeTab === tab.id ? 'text-primary' : 'text-[var(--color-text-disabled)]'}`} />
-            <span className={activeTab === tab.id ? 'text-primary' : 'text-[var(--color-text-disabled)]'}>
+            <tab.icon className={`w-4 h-4 ${activeTab === tab.id ? 'text-primary' : 'text-muted-foreground'}`} />
+            <span className={activeTab === tab.id ? 'text-primary' : 'text-muted-foreground'}>
               {tab.label}
             </span>
             {tab.badge > 0 && (
@@ -274,7 +275,7 @@ export default function ConversationsPage() {
             className="flex flex-col items-center justify-center py-16"
           >
             <RefreshCw className="w-12 h-12 text-primary animate-spin mb-4" />
-            <p className="text-[var(--color-text-secondary)]">Loading conversations...</p>
+            <p className="text-muted-foreground">Loading conversations...</p>
           </motion.div>
         ) : error ? (
           <motion.div
@@ -306,8 +307,8 @@ export default function ConversationsPage() {
                       <div className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center">
                         <MessageSquare className="w-10 h-10 text-primary" />
                       </div>
-                      <h3 className="text-xl font-bold text-[var(--color-text-primary)] mb-2">No active conversations</h3>
-                      <p className="text-sm text-[var(--color-text-secondary)]">Conversations will appear here when customers start chatting with your AI agent</p>
+                      <h3 className="text-xl font-bold text-foreground mb-2">No active conversations</h3>
+                      <p className="text-sm text-muted-foreground">Conversations will appear here when customers start chatting with your AI agent</p>
                     </motion.div>
                   ) : (
                     <div className={`grid gap-6 ${selectedConversation ? 'grid-cols-[400px_1fr]' : 'grid-cols-1'}`}>
@@ -354,11 +355,11 @@ export default function ConversationsPage() {
                               <div className="mb-4">
                                 <div className="flex items-center gap-2 mb-1">
                                   <User className="w-4 h-4 text-primary" />
-                                  <h3 className="text-[var(--color-text-primary)] font-semibold">
+                                  <h3 className="text-foreground font-semibold">
                                     {conv.customerName || 'Anonymous Customer'}
                                   </h3>
                                 </div>
-                                <div className="flex items-center gap-2 text-xs text-[var(--color-text-secondary)]">
+                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
                                   <Clock className="w-3 h-3" />
                                   {conv.customerEmail || conv.customerId} • Started {formatTimeAgo(conv.startedAt)}
                                 </div>
@@ -367,7 +368,7 @@ export default function ConversationsPage() {
                               {/* Last Message */}
                               {conv.lastMessage && (
                                 <div className="bg-surface-paper border border-border-light rounded-xl p-3 mb-4">
-                                  <p className="text-sm text-[var(--color-text-primary)] line-clamp-2 italic">
+                                  <p className="text-sm text-foreground line-clamp-2 italic">
                                     &ldquo;{conv.lastMessage}&rdquo;
                                   </p>
                                 </div>
@@ -376,11 +377,11 @@ export default function ConversationsPage() {
                               {/* Stats */}
                               <div className="flex gap-4 mb-4">
                                 <div className="flex-1 bg-surface-paper rounded-xl p-3 border border-border-light">
-                                  <div className="text-xs text-[var(--color-text-secondary)] mb-1">Messages</div>
-                                  <div className="text-lg font-bold text-[var(--color-text-primary)]">{conv.messageCount}</div>
+                                  <div className="text-xs text-muted-foreground mb-1">Messages</div>
+                                  <div className="text-lg font-bold text-foreground">{conv.messageCount}</div>
                                 </div>
                                 <div className="flex-1 bg-surface-paper rounded-xl p-3 border border-border-light">
-                                  <div className="text-xs text-[var(--color-text-secondary)] mb-1">Sentiment</div>
+                                  <div className="text-xs text-muted-foreground mb-1">Sentiment</div>
                                   <div className={`text-xs font-bold ${
                                     conv.sentiment === 'positive' ? 'text-success' :
                                     conv.sentiment === 'frustrated' ? 'text-error' :
@@ -425,10 +426,10 @@ export default function ConversationsPage() {
                             {/* Detail Header */}
                             <div className="flex items-center justify-between p-6 border-b border-border-light">
                               <div>
-                                <h3 className="text-xl font-bold text-[var(--color-text-primary)] mb-1">
+                                <h3 className="text-xl font-bold text-foreground mb-1">
                                   {liveConversations.find(c => c.id === selectedConversation)?.customerName ?? 'Anonymous'}
                                 </h3>
-                                <div className="flex items-center gap-2 text-sm text-[var(--color-text-secondary)]">
+                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
                                   <Mail className="w-4 h-4" />
                                   {liveConversations.find(c => c.id === selectedConversation)?.customerEmail ?? 'No email provided'}
                                 </div>
@@ -437,14 +438,14 @@ export default function ConversationsPage() {
                                 onClick={() => setSelectedConversation(null)}
                                 className="p-2 rounded-xl bg-surface-paper hover:bg-surface-main border border-border-light transition-all"
                               >
-                                <X className="w-5 h-5 text-[var(--color-text-primary)]" />
+                                <X className="w-5 h-5 text-foreground" />
                               </button>
                             </div>
 
                             {/* Messages */}
                             <div className="flex-1 p-6 overflow-y-auto space-y-4">
                               {selectedMessages.length === 0 ? (
-                                <div className="flex flex-col items-center justify-center h-full text-[var(--color-text-secondary)]">
+                                <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
                                   <MessageSquare className="w-12 h-12 mb-4 opacity-40" />
                                   <p>No messages yet</p>
                                 </div>
@@ -461,10 +462,10 @@ export default function ConversationsPage() {
                                       className={`max-w-[75%] rounded-2xl px-4 py-3 ${
                                         msg.role === 'user'
                                           ? 'bg-gradient-to-r from-primary to-secondary text-white'
-                                          : 'bg-surface-paper border border-border-light text-[var(--color-text-primary)]'
+                                          : 'bg-surface-paper border border-border-light text-foreground'
                                       }`}
                                     >
-                                      <div className={`text-xs mb-1 ${msg.role === 'user' ? 'text-white/80' : 'text-[var(--color-text-secondary)]'}`}>
+                                      <div className={`text-xs mb-1 ${msg.role === 'user' ? 'text-white/80' : 'text-muted-foreground'}`}>
                                         {msg.role === 'user' ? 'Customer' : msg.role === 'assistant' ? 'AI Agent' : msg.role === 'agent' ? 'Human Agent' : 'System'} • {new Date(msg.timestamp).toLocaleTimeString()}
                                       </div>
                                       <div className="text-sm">{msg.content}</div>
@@ -512,8 +513,8 @@ export default function ConversationsPage() {
                       <div className="w-20 h-20 mx-auto mb-6 rounded-2xl bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center">
                         <Clock className="w-10 h-10 text-primary" />
                       </div>
-                      <h3 className="text-xl font-bold text-[var(--color-text-primary)] mb-2">No conversation history</h3>
-                      <p className="text-sm text-[var(--color-text-secondary)]">Completed conversations will appear here</p>
+                      <h3 className="text-xl font-bold text-foreground mb-2">No conversation history</h3>
+                      <p className="text-sm text-muted-foreground">Completed conversations will appear here</p>
                     </motion.div>
                   ) : (
                     <div className="space-y-4">
@@ -549,11 +550,11 @@ export default function ConversationsPage() {
                                 </div>
                                 <div className="flex items-center gap-2 mb-1">
                                   <User className="w-4 h-4 text-primary" />
-                                  <h3 className="text-[var(--color-text-primary)] font-semibold">
+                                  <h3 className="text-foreground font-semibold">
                                     {conv.customerName ?? 'Anonymous'}
                                   </h3>
                                 </div>
-                                <div className="flex items-center gap-2 text-xs text-[var(--color-text-secondary)]">
+                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
                                   <Clock className="w-3 h-3" />
                                   {conv.completedAt ? new Date(conv.completedAt).toLocaleString() : 'Unknown'}
                                 </div>
@@ -561,13 +562,13 @@ export default function ConversationsPage() {
 
                               {/* Messages */}
                               <div className="bg-surface-paper rounded-xl p-3 border border-border-light">
-                                <div className="text-xs text-[var(--color-text-secondary)] mb-1">Messages</div>
-                                <div className="text-lg font-bold text-[var(--color-text-primary)]">{conv.messageCount}</div>
+                                <div className="text-xs text-muted-foreground mb-1">Messages</div>
+                                <div className="text-lg font-bold text-foreground">{conv.messageCount}</div>
                               </div>
 
                               {/* Status */}
                               <div className="bg-surface-paper rounded-xl p-3 border border-border-light">
-                                <div className="text-xs text-[var(--color-text-secondary)] mb-1">Status</div>
+                                <div className="text-xs text-muted-foreground mb-1">Status</div>
                                 <div className={`text-xs font-bold ${
                                   conv.status === 'completed' ? 'text-success' : 'text-warning'
                                 }`}>
@@ -577,7 +578,7 @@ export default function ConversationsPage() {
 
                               {/* Sentiment */}
                               <div className="bg-surface-paper rounded-xl p-3 border border-border-light">
-                                <div className="text-xs text-[var(--color-text-secondary)] mb-1">Sentiment</div>
+                                <div className="text-xs text-muted-foreground mb-1">Sentiment</div>
                                 <div className={`text-xs font-bold ${
                                   conv.sentiment === 'positive' ? 'text-success' :
                                   conv.sentiment === 'frustrated' ? 'text-error' :
@@ -594,7 +595,7 @@ export default function ConversationsPage() {
                                     setSelectedConversation(conv.id);
                                     void ChatSessionService.getSessionMessages(conv.id).then(setSelectedMessages);
                                   }}
-                                  className="flex-1 px-3 py-2 bg-surface-paper hover:bg-surface-main text-[var(--color-text-primary)] border border-border-light rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-1"
+                                  className="flex-1 px-3 py-2 bg-surface-paper hover:bg-surface-main text-foreground border border-border-light rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-1"
                                 >
                                   <Eye className="w-3 h-3" />
                                   View

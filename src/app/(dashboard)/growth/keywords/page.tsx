@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
+import { PageTitle } from '@/components/ui/typography';
 import {
   Plus,
   RefreshCw,
@@ -248,26 +249,21 @@ export default function KeywordsPage() {
   ];
 
   return (
-    <div style={{ padding: '1.5rem', maxWidth: 1400 }}>
+    <div className="p-8 space-y-6" style={{ maxWidth: 1400 }}>
       {/* Header with tabs */}
-      <div style={{ marginBottom: '1.5rem' }}>
-        <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--color-text-primary)', margin: '0 0 1rem' }}>
-          Keywords
-        </h1>
-        <div style={{ display: 'flex', gap: '0.25rem', borderBottom: '1px solid var(--color-border-light)' }}>
+      <div>
+        <PageTitle className="mb-4">Keywords</PageTitle>
+        <div className="flex gap-1 border-b border-border-light">
           {tabs.map((tab) => (
             <button
               key={tab.id}
               type="button"
               onClick={() => setActiveTab(tab.id)}
-              style={{
-                display: 'flex', alignItems: 'center', gap: '0.5rem',
-                padding: '0.625rem 1rem', border: 'none', cursor: 'pointer',
-                fontSize: '0.8125rem', fontWeight: 600, background: 'none',
-                color: activeTab === tab.id ? 'var(--color-primary)' : 'var(--color-text-secondary)',
-                borderBottom: activeTab === tab.id ? '2px solid var(--color-primary)' : '2px solid transparent',
-                marginBottom: '-1px', transition: 'all 0.15s',
-              }}
+              className={`flex items-center gap-2 px-4 py-2.5 border-none cursor-pointer text-[0.8125rem] font-semibold bg-transparent transition-all duration-150 -mb-px ${
+                activeTab === tab.id
+                  ? 'text-primary border-b-2 border-primary'
+                  : 'text-muted-foreground border-b-2 border-transparent'
+              }`}
             >
               {tab.icon} {tab.label}
             </button>
@@ -280,28 +276,28 @@ export default function KeywordsPage() {
       {/* ============================================================ */}
       {activeTab === 'tracker' && (
         <>
-          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', justifyContent: 'flex-end' }}>
-            <button type="button" onClick={() => { setShowBulkForm(!showBulkForm); setShowAddForm(false); }} style={btnSecondary}>
+          <div className="flex gap-2 justify-end">
+            <button type="button" onClick={() => { setShowBulkForm(!showBulkForm); setShowAddForm(false); }} className="flex items-center gap-2 px-4 py-2 rounded-lg border border-border-light bg-surface-elevated text-muted-foreground cursor-pointer text-[0.8125rem]">
               <Upload className="w-3.5 h-3.5" /> Bulk Add
             </button>
-            <button type="button" onClick={() => { setShowAddForm(!showAddForm); setShowBulkForm(false); }} style={btnPrimary}>
+            <button type="button" onClick={() => { setShowAddForm(!showAddForm); setShowBulkForm(false); }} className="flex items-center gap-2 px-4 py-2 rounded-lg border-none bg-primary text-white cursor-pointer text-[0.8125rem] font-semibold whitespace-nowrap">
               <Plus className="w-3.5 h-3.5" /> Add Keyword
             </button>
           </div>
 
           {showAddForm && (
-            <div style={formBox}>
-              <h3 style={formTitle}>Add Keyword</h3>
-              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr auto', gap: '0.75rem', alignItems: 'end' }}>
+            <div className="bg-card border border-border-light rounded-xl p-5 mb-6">
+              <h3 className="text-base font-semibold text-foreground mb-4">Add Keyword</h3>
+              <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr_auto] gap-3 items-end">
                 <div>
-                  <label style={labelStyle}>Keyword</label>
-                  <input value={addKeyword} onChange={(e) => setAddKeyword(e.target.value)} placeholder="e.g. sales automation software" style={inputStyle} />
+                  <label className="block text-xs font-semibold text-muted-foreground mb-1">Keyword</label>
+                  <input value={addKeyword} onChange={(e) => setAddKeyword(e.target.value)} placeholder="e.g. sales automation software" className="w-full px-3 py-2 rounded-lg border border-border-light bg-surface-main text-foreground text-sm outline-none" />
                 </div>
                 <div>
-                  <label style={labelStyle}>Tags (comma-separated)</label>
-                  <input value={addTags} onChange={(e) => setAddTags(e.target.value)} placeholder="e.g. seo, primary" style={inputStyle} />
+                  <label className="block text-xs font-semibold text-muted-foreground mb-1">Tags (comma-separated)</label>
+                  <input value={addTags} onChange={(e) => setAddTags(e.target.value)} placeholder="e.g. seo, primary" className="w-full px-3 py-2 rounded-lg border border-border-light bg-surface-main text-foreground text-sm outline-none" />
                 </div>
-                <button type="button" onClick={() => { void handleAdd(); }} disabled={adding} style={{ ...btnPrimary, opacity: adding ? 0.6 : 1 }}>
+                <button type="button" onClick={() => { void handleAdd(); }} disabled={adding} className="flex items-center gap-2 px-4 py-2 rounded-lg border-none bg-primary text-white cursor-pointer text-[0.8125rem] font-semibold whitespace-nowrap disabled:opacity-60">
                   {adding ? 'Adding...' : 'Add'}
                 </button>
               </div>
@@ -309,85 +305,87 @@ export default function KeywordsPage() {
           )}
 
           {showBulkForm && (
-            <div style={formBox}>
-              <h3 style={formTitle}>Bulk Add Keywords</h3>
-              <p style={{ fontSize: '0.8125rem', color: 'var(--color-text-secondary)', margin: '0 0 0.5rem' }}>Enter one keyword per line (max 50)</p>
-              <textarea value={bulkText} onChange={(e) => setBulkText(e.target.value)} rows={6} placeholder="sales automation software&#10;crm with ai&#10;marketing automation tools" style={{ ...inputStyle, resize: 'vertical', fontFamily: 'inherit' }} />
-              <button type="button" onClick={() => { void handleBulkAdd(); }} disabled={adding} style={{ ...btnPrimary, marginTop: '0.5rem', opacity: adding ? 0.6 : 1 }}>
+            <div className="bg-card border border-border-light rounded-xl p-5 mb-6">
+              <h3 className="text-base font-semibold text-foreground mb-4">Bulk Add Keywords</h3>
+              <p className="text-[0.8125rem] text-muted-foreground mb-2">Enter one keyword per line (max 50)</p>
+              <textarea value={bulkText} onChange={(e) => setBulkText(e.target.value)} rows={6} placeholder="sales automation software&#10;crm with ai&#10;marketing automation tools" className="w-full px-3 py-2 rounded-lg border border-border-light bg-surface-main text-foreground text-sm outline-none resize-y font-inherit" />
+              <button type="button" onClick={() => { void handleBulkAdd(); }} disabled={adding} className="mt-2 flex items-center gap-2 px-4 py-2 rounded-lg border-none bg-primary text-white cursor-pointer text-[0.8125rem] font-semibold whitespace-nowrap disabled:opacity-60">
                 {adding ? 'Adding...' : `Add ${bulkText.split('\n').filter((l) => l.trim()).length} Keywords`}
               </button>
             </div>
           )}
 
           {loading ? (
-            <div style={{ color: 'var(--color-text-secondary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <div className="flex items-center gap-2 text-muted-foreground">
               <RefreshCw className="w-4 h-4 animate-spin" /> Loading keywords...
             </div>
           ) : keywords.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--color-text-secondary)' }}>
-              <Target className="w-12 h-12 mx-auto" style={{ color: 'var(--color-border-light)', marginBottom: '1rem' }} />
-              <p style={{ fontSize: '1rem', fontWeight: 600 }}>No keywords tracked yet</p>
-              <p style={{ fontSize: '0.875rem' }}>Add keywords or use the Research tab to discover high-value keywords.</p>
+            <div className="text-center py-12 text-muted-foreground">
+              <Target className="w-12 h-12 mx-auto mb-4 text-border-light" />
+              <p className="text-base font-semibold">No keywords tracked yet</p>
+              <p className="text-sm">Add keywords or use the Research tab to discover high-value keywords.</p>
             </div>
           ) : (
-            <div style={{ backgroundColor: 'var(--color-bg-paper)', borderRadius: '0.75rem', border: '1px solid var(--color-border-light)', overflow: 'hidden' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8125rem' }}>
+            <div className="bg-card border border-border-light rounded-xl overflow-hidden">
+              <table className="w-full border-collapse text-[0.8125rem]">
                 <thead>
-                  <tr style={{ borderBottom: '1px solid var(--color-border-light)', backgroundColor: 'var(--color-bg-elevated)' }}>
-                    <th style={thStyle}>Keyword</th>
-                    <th style={{ ...thStyle, textAlign: 'center' }}>Position</th>
-                    <th style={{ ...thStyle, textAlign: 'center' }}>Change</th>
-                    <th style={{ ...thStyle, textAlign: 'right' }}>Volume</th>
-                    <th style={{ ...thStyle, textAlign: 'right' }}>CPC</th>
-                    <th style={{ ...thStyle, textAlign: 'center' }}>Difficulty</th>
-                    <th style={{ ...thStyle, textAlign: 'center' }}>Competitors</th>
-                    <th style={{ ...thStyle, textAlign: 'right' }}>Actions</th>
+                  <tr className="border-b border-border-light bg-surface-elevated">
+                    <th className="px-4 py-3 text-left text-[0.6875rem] font-bold uppercase tracking-wide text-muted-foreground">Keyword</th>
+                    <th className="px-4 py-3 text-center text-[0.6875rem] font-bold uppercase tracking-wide text-muted-foreground">Position</th>
+                    <th className="px-4 py-3 text-center text-[0.6875rem] font-bold uppercase tracking-wide text-muted-foreground">Change</th>
+                    <th className="px-4 py-3 text-right text-[0.6875rem] font-bold uppercase tracking-wide text-muted-foreground">Volume</th>
+                    <th className="px-4 py-3 text-right text-[0.6875rem] font-bold uppercase tracking-wide text-muted-foreground">CPC</th>
+                    <th className="px-4 py-3 text-center text-[0.6875rem] font-bold uppercase tracking-wide text-muted-foreground">Difficulty</th>
+                    <th className="px-4 py-3 text-center text-[0.6875rem] font-bold uppercase tracking-wide text-muted-foreground">Competitors</th>
+                    <th className="px-4 py-3 text-right text-[0.6875rem] font-bold uppercase tracking-wide text-muted-foreground">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {keywords.map((kw) => {
                     const change = kw.positionChange;
                     return (
-                      <tr key={kw.id} style={{ borderBottom: '1px solid var(--color-border-light)' }}>
-                        <td style={tdStyle}>
-                          <div style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>{kw.keyword}</div>
+                      <tr key={kw.id} className="border-b border-border-light">
+                        <td className="px-4 py-3">
+                          <div className="font-semibold text-foreground">{kw.keyword}</div>
                           {kw.tags.length > 0 && (
-                            <div style={{ display: 'flex', gap: '0.25rem', marginTop: '0.25rem' }}>
-                              {kw.tags.map((t) => <span key={t} style={tagStyle}>{t}</span>)}
+                            <div className="flex gap-1 mt-1">
+                              {kw.tags.map((t) => (
+                                <span key={t} className="px-1.5 py-0.5 rounded text-[0.625rem] font-semibold bg-primary/8 text-primary">{t}</span>
+                              ))}
                             </div>
                           )}
                         </td>
-                        <td style={{ ...tdStyle, textAlign: 'center' }}>
-                          <span style={{ fontWeight: 700, fontSize: '0.9375rem', color: kw.currentPosition ? 'var(--color-text-primary)' : 'var(--color-text-disabled)' }}>
+                        <td className="px-4 py-3 text-center">
+                          <span className={`font-bold text-[0.9375rem] ${kw.currentPosition ? 'text-foreground' : 'text-muted-foreground'}`}>
                             {kw.currentPosition ? `#${kw.currentPosition}` : '\u2014'}
                           </span>
                         </td>
-                        <td style={{ ...tdStyle, textAlign: 'center' }}>
+                        <td className="px-4 py-3 text-center">
                           {change !== null && change !== 0 ? (
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.125rem', fontWeight: 700, color: change > 0 ? 'var(--color-success)' : 'var(--color-error)' }}>
+                            <span className={`inline-flex items-center gap-0.5 font-bold ${change > 0 ? 'text-success' : 'text-error'}`}>
                               {change > 0 ? <ArrowUpRight className="w-3.5 h-3.5" /> : <ArrowDownRight className="w-3.5 h-3.5" />}
                               {Math.abs(change)}
                             </span>
                           ) : (
-                            <Minus className="w-3.5 h-3.5" style={{ color: 'var(--color-text-disabled)' }} />
+                            <Minus className="w-3.5 h-3.5 text-muted-foreground" />
                           )}
                         </td>
-                        <td style={{ ...tdStyle, textAlign: 'right', color: 'var(--color-text-secondary)' }}>{kw.searchVolume.toLocaleString()}</td>
-                        <td style={{ ...tdStyle, textAlign: 'right', color: 'var(--color-text-secondary)' }}>${kw.cpc.toFixed(2)}</td>
-                        <td style={{ ...tdStyle, textAlign: 'center' }}>
+                        <td className="px-4 py-3 text-right text-muted-foreground">{kw.searchVolume.toLocaleString()}</td>
+                        <td className="px-4 py-3 text-right text-muted-foreground">${kw.cpc.toFixed(2)}</td>
+                        <td className="px-4 py-3 text-center">
                           <span style={{ padding: '0.125rem 0.5rem', borderRadius: '9999px', fontSize: '0.6875rem', fontWeight: 600, backgroundColor: difficultyBg(kw.difficulty), color: difficultyColor(kw.difficulty) }}>
                             {kw.difficulty}
                           </span>
                         </td>
-                        <td style={{ ...tdStyle, textAlign: 'center' }}>
+                        <td className="px-4 py-3 text-center">
                           {kw.competitorPositions.filter((cp) => cp.position !== null).length}/{kw.competitorPositions.length}
                         </td>
-                        <td style={{ ...tdStyle, textAlign: 'right' }}>
-                          <div style={{ display: 'flex', gap: '0.25rem', justifyContent: 'flex-end' }}>
-                            <button type="button" onClick={() => { void handleCheckRanking(kw.id); }} title="Check ranking now" style={iconBtn}>
+                        <td className="px-4 py-3 text-right">
+                          <div className="flex gap-1 justify-end">
+                            <button type="button" onClick={() => { void handleCheckRanking(kw.id); }} title="Check ranking now" className="flex items-center justify-center w-7 h-7 rounded-md border border-border-light bg-transparent text-muted-foreground cursor-pointer hover:bg-surface-elevated">
                               <RefreshCw className="w-3.5 h-3.5" />
                             </button>
-                            <button type="button" onClick={() => { void handleRemove(kw.id); }} title="Remove" style={{ ...iconBtn, color: 'var(--color-error)' }}>
+                            <button type="button" onClick={() => { void handleRemove(kw.id); }} title="Remove" className="flex items-center justify-center w-7 h-7 rounded-md border border-border-light bg-transparent text-error cursor-pointer hover:bg-surface-elevated">
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
                           </div>
@@ -408,22 +406,22 @@ export default function KeywordsPage() {
       {activeTab === 'research' && (
         <>
           {/* Search box */}
-          <div style={formBox}>
-            <h3 style={formTitle}>Discover Keywords</h3>
-            <p style={{ fontSize: '0.8125rem', color: 'var(--color-text-secondary)', margin: '0 0 0.75rem' }}>
+          <div className="bg-card border border-border-light rounded-xl p-5 mb-6">
+            <h3 className="text-base font-semibold text-foreground mb-4">Discover Keywords</h3>
+            <p className="text-[0.8125rem] text-muted-foreground mb-3">
               Enter a seed keyword to discover related keywords with search volume, CPC, and competition data.
             </p>
-            <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'end' }}>
-              <div style={{ flex: 1 }}>
+            <div className="flex gap-3 items-end">
+              <div className="flex-1">
                 <input
                   value={researchQuery}
                   onChange={(e) => setResearchQuery(e.target.value)}
                   onKeyDown={(e) => { if (e.key === 'Enter') { void handleResearch(); } }}
                   placeholder="e.g. sales automation, CRM software, marketing tools..."
-                  style={inputStyle}
+                  className="w-full px-3 py-2 rounded-lg border border-border-light bg-surface-main text-foreground text-sm outline-none"
                 />
               </div>
-              <button type="button" onClick={() => { void handleResearch(); }} disabled={researching || !researchQuery.trim()} style={{ ...btnPrimary, opacity: researching ? 0.6 : 1 }}>
+              <button type="button" onClick={() => { void handleResearch(); }} disabled={researching || !researchQuery.trim()} className="flex items-center gap-2 px-4 py-2 rounded-lg border-none bg-primary text-white cursor-pointer text-[0.8125rem] font-semibold whitespace-nowrap disabled:opacity-60">
                 {researching ? (
                   <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Researching...</>
                 ) : (
@@ -435,21 +433,21 @@ export default function KeywordsPage() {
 
           {/* Seed keyword overview */}
           {seedKeyword && (
-            <div style={{ ...formBox, display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', marginBottom: '1rem' }}>
+            <div className="bg-card border border-border-light rounded-xl p-5 mb-4 grid grid-cols-2 md:grid-cols-4 gap-4">
               <div>
-                <p style={{ fontSize: '0.6875rem', fontWeight: 700, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>Seed Keyword</p>
-                <p style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--color-text-primary)', margin: '0.25rem 0 0' }}>{seedKeyword.keyword}</p>
+                <p className="text-[0.6875rem] font-bold text-muted-foreground uppercase tracking-wide m-0">Seed Keyword</p>
+                <p className="text-base font-bold text-foreground mt-1">{seedKeyword.keyword}</p>
               </div>
               <div>
-                <p style={{ fontSize: '0.6875rem', fontWeight: 700, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>Monthly Volume</p>
-                <p style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--color-text-primary)', margin: '0.25rem 0 0' }}>{seedKeyword.searchVolume.toLocaleString()}</p>
+                <p className="text-[0.6875rem] font-bold text-muted-foreground uppercase tracking-wide m-0">Monthly Volume</p>
+                <p className="text-xl font-bold text-foreground mt-1">{seedKeyword.searchVolume.toLocaleString()}</p>
               </div>
               <div>
-                <p style={{ fontSize: '0.6875rem', fontWeight: 700, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>CPC</p>
-                <p style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--color-text-primary)', margin: '0.25rem 0 0' }}>${seedKeyword.cpc.toFixed(2)}</p>
+                <p className="text-[0.6875rem] font-bold text-muted-foreground uppercase tracking-wide m-0">CPC</p>
+                <p className="text-xl font-bold text-foreground mt-1">${seedKeyword.cpc.toFixed(2)}</p>
               </div>
               <div>
-                <p style={{ fontSize: '0.6875rem', fontWeight: 700, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>Competition</p>
+                <p className="text-[0.6875rem] font-bold text-muted-foreground uppercase tracking-wide m-0">Competition</p>
                 <span style={{ display: 'inline-block', marginTop: '0.375rem', padding: '0.125rem 0.5rem', borderRadius: '9999px', fontSize: '0.75rem', fontWeight: 600, backgroundColor: difficultyBg(seedKeyword.competitionLevel), color: difficultyColor(seedKeyword.competitionLevel) }}>
                   {seedKeyword.competitionLevel}
                 </span>
@@ -459,8 +457,8 @@ export default function KeywordsPage() {
 
           {/* Search volume trend (monthly) */}
           {seedKeyword && seedKeyword.monthlySearches.length > 0 && (
-            <div style={{ ...formBox, marginBottom: '1rem' }}>
-              <h3 style={{ ...formTitle, marginBottom: '0.75rem' }}>Search Volume Trend</h3>
+            <div className="bg-card border border-border-light rounded-xl p-5 mb-4">
+              <h3 className="text-base font-semibold text-foreground mb-3">Search Volume Trend</h3>
               <div style={{ height: 200 }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={seedKeyword.monthlySearches}>
@@ -477,49 +475,49 @@ export default function KeywordsPage() {
 
           {/* Suggestions table */}
           {sortedSuggestions.length > 0 && (
-            <div style={{ backgroundColor: 'var(--color-bg-paper)', borderRadius: '0.75rem', border: '1px solid var(--color-border-light)', overflow: 'hidden' }}>
-              <div style={{ padding: '0.75rem 1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--color-border-light)' }}>
-                <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--color-text-primary)' }}>
+            <div className="bg-card border border-border-light rounded-xl overflow-hidden">
+              <div className="px-4 py-3 flex items-center justify-between border-b border-border-light">
+                <span className="text-[0.8125rem] font-semibold text-foreground">
                   {sortedSuggestions.length} Related Keywords
                 </span>
-                <div style={{ display: 'flex', gap: '0.25rem' }}>
+                <div className="flex gap-1">
                   {(['volume', 'cpc', 'competition'] as const).map((s) => (
-                    <button key={s} type="button" onClick={() => setSortBy(s)} style={{ ...btnSecondary, padding: '0.25rem 0.5rem', fontSize: '0.6875rem', backgroundColor: sortBy === s ? 'var(--color-primary)' : undefined, color: sortBy === s ? '#fff' : undefined, border: sortBy === s ? 'none' : undefined }}>
+                    <button key={s} type="button" onClick={() => setSortBy(s)} className={`flex items-center gap-2 px-2 py-1 rounded-lg border text-[0.6875rem] cursor-pointer ${sortBy === s ? 'bg-primary text-white border-none' : 'border-border-light bg-surface-elevated text-muted-foreground'}`}>
                       {s === 'volume' ? 'Volume' : s === 'cpc' ? 'CPC' : 'Easiest'}
                     </button>
                   ))}
                 </div>
               </div>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8125rem' }}>
+              <table className="w-full border-collapse text-[0.8125rem]">
                 <thead>
-                  <tr style={{ borderBottom: '1px solid var(--color-border-light)', backgroundColor: 'var(--color-bg-elevated)' }}>
-                    <th style={thStyle}>Keyword</th>
-                    <th style={{ ...thStyle, textAlign: 'right' }}>Volume</th>
-                    <th style={{ ...thStyle, textAlign: 'right' }}>CPC</th>
-                    <th style={{ ...thStyle, textAlign: 'center' }}>Competition</th>
-                    <th style={{ ...thStyle, textAlign: 'right', width: 80 }}>Action</th>
+                  <tr className="border-b border-border-light bg-surface-elevated">
+                    <th className="px-4 py-3 text-left text-[0.6875rem] font-bold uppercase tracking-wide text-muted-foreground">Keyword</th>
+                    <th className="px-4 py-3 text-right text-[0.6875rem] font-bold uppercase tracking-wide text-muted-foreground">Volume</th>
+                    <th className="px-4 py-3 text-right text-[0.6875rem] font-bold uppercase tracking-wide text-muted-foreground">CPC</th>
+                    <th className="px-4 py-3 text-center text-[0.6875rem] font-bold uppercase tracking-wide text-muted-foreground">Competition</th>
+                    <th className="px-4 py-3 text-right text-[0.6875rem] font-bold uppercase tracking-wide text-muted-foreground w-20">Action</th>
                   </tr>
                 </thead>
                 <tbody>
                   {sortedSuggestions.map((s) => {
                     const isTracked = alreadyTracked.has(s.keyword.toLowerCase()) || addedFromResearch.has(s.keyword.toLowerCase());
                     return (
-                      <tr key={s.keyword} style={{ borderBottom: '1px solid var(--color-border-light)' }}>
-                        <td style={{ ...tdStyle, fontWeight: 600, color: 'var(--color-text-primary)' }}>{s.keyword}</td>
-                        <td style={{ ...tdStyle, textAlign: 'right', color: 'var(--color-text-secondary)' }}>{s.searchVolume.toLocaleString()}</td>
-                        <td style={{ ...tdStyle, textAlign: 'right', color: 'var(--color-text-secondary)' }}>${s.cpc.toFixed(2)}</td>
-                        <td style={{ ...tdStyle, textAlign: 'center' }}>
+                      <tr key={s.keyword} className="border-b border-border-light">
+                        <td className="px-4 py-3 font-semibold text-foreground">{s.keyword}</td>
+                        <td className="px-4 py-3 text-right text-muted-foreground">{s.searchVolume.toLocaleString()}</td>
+                        <td className="px-4 py-3 text-right text-muted-foreground">${s.cpc.toFixed(2)}</td>
+                        <td className="px-4 py-3 text-center">
                           <span style={{ padding: '0.125rem 0.5rem', borderRadius: '9999px', fontSize: '0.6875rem', fontWeight: 600, backgroundColor: difficultyBg(s.competitionLevel), color: difficultyColor(s.competitionLevel) }}>
                             {s.competitionLevel}
                           </span>
                         </td>
-                        <td style={{ ...tdStyle, textAlign: 'right' }}>
+                        <td className="px-4 py-3 text-right">
                           {isTracked ? (
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.6875rem', color: 'var(--color-success)', fontWeight: 600 }}>
+                            <span className="inline-flex items-center gap-1 text-[0.6875rem] text-success font-semibold">
                               <Check className="w-3 h-3" /> Tracked
                             </span>
                           ) : (
-                            <button type="button" onClick={() => { void handleAddFromResearch(s.keyword); }} style={{ ...iconBtn, width: 'auto', padding: '0.25rem 0.5rem', gap: '0.25rem', display: 'inline-flex', fontSize: '0.6875rem' }} title="Add to tracker">
+                            <button type="button" onClick={() => { void handleAddFromResearch(s.keyword); }} title="Add to tracker" className="inline-flex items-center gap-1 px-2 py-1 rounded-md border border-border-light bg-transparent text-muted-foreground cursor-pointer text-[0.6875rem] hover:bg-surface-elevated">
                               <PlusCircle className="w-3 h-3" /> Track
                             </button>
                           )}
@@ -534,10 +532,10 @@ export default function KeywordsPage() {
 
           {/* Empty state */}
           {!researching && !seedKeyword && suggestions.length === 0 && (
-            <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--color-text-secondary)' }}>
-              <Search className="w-12 h-12 mx-auto" style={{ color: 'var(--color-border-light)', marginBottom: '1rem' }} />
-              <p style={{ fontSize: '1rem', fontWeight: 600 }}>Discover high-value keywords</p>
-              <p style={{ fontSize: '0.875rem' }}>Enter a seed keyword above to get volume, CPC, and competition data for related terms.</p>
+            <div className="text-center py-12 text-muted-foreground">
+              <Search className="w-12 h-12 mx-auto mb-4 text-border-light" />
+              <p className="text-base font-semibold">Discover high-value keywords</p>
+              <p className="text-sm">Enter a seed keyword above to get volume, CPC, and competition data for related terms.</p>
             </div>
           )}
         </>
@@ -549,17 +547,17 @@ export default function KeywordsPage() {
       {activeTab === 'rankings' && (
         <>
           {trackedKeywords.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--color-text-secondary)' }}>
-              <BarChart3 className="w-12 h-12 mx-auto" style={{ color: 'var(--color-border-light)', marginBottom: '1rem' }} />
-              <p style={{ fontSize: '1rem', fontWeight: 600 }}>No ranking data yet</p>
-              <p style={{ fontSize: '0.875rem' }}>Add keywords and check their rankings to see position history charts.</p>
+            <div className="text-center py-12 text-muted-foreground">
+              <BarChart3 className="w-12 h-12 mx-auto mb-4 text-border-light" />
+              <p className="text-base font-semibold">No ranking data yet</p>
+              <p className="text-sm">Add keywords and check their rankings to see position history charts.</p>
             </div>
           ) : (
             <>
               {/* Keyword selector */}
-              <div style={formBox}>
-                <h3 style={formTitle}>Select Keywords to Chart (max 8)</h3>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+              <div className="bg-card border border-border-light rounded-xl p-5 mb-6">
+                <h3 className="text-base font-semibold text-foreground mb-4">Select Keywords to Chart (max 8)</h3>
+                <div className="flex flex-wrap gap-2">
                   {trackedKeywords.map((kw) => {
                     const isSelected = selectedKeywordIds.has(kw.id);
                     return (
@@ -567,17 +565,14 @@ export default function KeywordsPage() {
                         key={kw.id}
                         type="button"
                         onClick={() => toggleKeywordSelection(kw.id)}
-                        style={{
-                          padding: '0.375rem 0.75rem', borderRadius: '9999px',
-                          fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer',
-                          border: isSelected ? 'none' : '1px solid var(--color-border-light)',
-                          backgroundColor: isSelected ? 'var(--color-primary)' : 'var(--color-bg-elevated)',
-                          color: isSelected ? '#fff' : 'var(--color-text-secondary)',
-                          transition: 'all 0.15s',
-                        }}
+                        className={`px-3 py-1.5 rounded-full text-xs font-semibold cursor-pointer transition-all duration-150 ${
+                          isSelected
+                            ? 'bg-primary text-white border-none'
+                            : 'border border-border-light bg-surface-elevated text-muted-foreground'
+                        }`}
                       >
                         {kw.keyword}
-                        {kw.currentPosition && <span style={{ opacity: 0.7, marginLeft: '0.375rem' }}>#{kw.currentPosition}</span>}
+                        {kw.currentPosition && <span className="opacity-70 ml-1.5">#{kw.currentPosition}</span>}
                       </button>
                     );
                   })}
@@ -586,7 +581,7 @@ export default function KeywordsPage() {
 
               {/* Summary cards */}
               {keywords.length > 0 && (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', marginBottom: '1rem' }}>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
                   <SummaryCard label="Tracked Keywords" value={keywords.length} />
                   <SummaryCard label="Avg. Position" value={avgPosition(keywords)} />
                   <SummaryCard label="Improved" value={keywords.filter((k) => (k.positionChange ?? 0) > 0).length} color="var(--color-success)" />
@@ -596,9 +591,9 @@ export default function KeywordsPage() {
 
               {/* Chart */}
               {selectedKeywordIds.size > 0 && chartData.length > 0 ? (
-                <div style={{ ...formBox, padding: '1.25rem' }}>
-                  <h3 style={{ ...formTitle, marginBottom: '0.75rem' }}>Position Over Time</h3>
-                  <p style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', margin: '0 0 1rem' }}>
+                <div className="bg-card border border-border-light rounded-xl p-5">
+                  <h3 className="text-base font-semibold text-foreground mb-3">Position Over Time</h3>
+                  <p className="text-xs text-muted-foreground mb-4">
                     Lower position number = better ranking. #1 is the top.
                   </p>
                   <div style={{ height: 350 }}>
@@ -627,11 +622,11 @@ export default function KeywordsPage() {
                   </div>
                 </div>
               ) : selectedKeywordIds.size > 0 ? (
-                <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--color-text-secondary)' }}>
+                <div className="text-center py-8 text-muted-foreground">
                   <p>No ranking history data for the selected keywords yet.</p>
                 </div>
               ) : (
-                <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--color-text-secondary)' }}>
+                <div className="text-center py-8 text-muted-foreground">
                   <p>Select keywords above to view their position history chart.</p>
                 </div>
               )}
@@ -649,9 +644,9 @@ export default function KeywordsPage() {
 
 function SummaryCard({ label, value, color }: { label: string; value: number | string; color?: string }) {
   return (
-    <div style={{ backgroundColor: 'var(--color-bg-paper)', borderRadius: '0.75rem', border: '1px solid var(--color-border-light)', padding: '1rem' }}>
-      <p style={{ fontSize: '0.6875rem', fontWeight: 700, color: 'var(--color-text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>{label}</p>
-      <p style={{ fontSize: '1.5rem', fontWeight: 700, color: color ?? 'var(--color-text-primary)', margin: '0.25rem 0 0' }}>{value}</p>
+    <div className="bg-card border border-border-light rounded-xl p-4">
+      <p className="text-[0.6875rem] font-bold text-muted-foreground uppercase tracking-wide m-0">{label}</p>
+      <p className="text-2xl font-bold mt-1" style={{ color: color ?? undefined }}>{value}</p>
     </div>
   );
 }
@@ -679,62 +674,3 @@ function difficultyColor(level: string): string {
   }
 }
 
-// ============================================================================
-// SHARED STYLES
-// ============================================================================
-
-const inputStyle: React.CSSProperties = {
-  width: '100%', padding: '0.5rem 0.75rem', borderRadius: '0.5rem',
-  border: '1px solid var(--color-border-light)', backgroundColor: 'var(--color-bg-default)',
-  color: 'var(--color-text-primary)', fontSize: '0.875rem', outline: 'none',
-};
-
-const btnPrimary: React.CSSProperties = {
-  display: 'flex', alignItems: 'center', gap: '0.5rem',
-  padding: '0.5rem 1rem', borderRadius: '0.5rem', border: 'none',
-  backgroundColor: 'var(--color-primary)', color: '#fff',
-  cursor: 'pointer', fontSize: '0.8125rem', fontWeight: 600, whiteSpace: 'nowrap',
-};
-
-const btnSecondary: React.CSSProperties = {
-  display: 'flex', alignItems: 'center', gap: '0.5rem',
-  padding: '0.5rem 1rem', borderRadius: '0.5rem',
-  border: '1px solid var(--color-border-light)', backgroundColor: 'var(--color-bg-elevated)',
-  color: 'var(--color-text-secondary)', cursor: 'pointer', fontSize: '0.8125rem',
-};
-
-const formBox: React.CSSProperties = {
-  backgroundColor: 'var(--color-bg-paper)', borderRadius: '0.75rem',
-  border: '1px solid var(--color-border-light)', padding: '1.25rem', marginBottom: '1.5rem',
-};
-
-const formTitle: React.CSSProperties = {
-  fontSize: '1rem', fontWeight: 600, margin: '0 0 1rem', color: 'var(--color-text-primary)',
-};
-
-const labelStyle: React.CSSProperties = {
-  fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-text-secondary)', display: 'block', marginBottom: '0.25rem',
-};
-
-const thStyle: React.CSSProperties = {
-  padding: '0.75rem 1rem', textAlign: 'left', fontSize: '0.6875rem', fontWeight: 700,
-  textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--color-text-secondary)',
-};
-
-const tdStyle: React.CSSProperties = {
-  padding: '0.75rem 1rem',
-};
-
-const tagStyle: React.CSSProperties = {
-  padding: '0.125rem 0.375rem', borderRadius: '0.25rem',
-  fontSize: '0.625rem', fontWeight: 600,
-  backgroundColor: 'rgba(var(--color-primary-rgb), 0.08)',
-  color: 'var(--color-primary)',
-};
-
-const iconBtn: React.CSSProperties = {
-  display: 'flex', alignItems: 'center', justifyContent: 'center',
-  width: 28, height: 28, borderRadius: '0.375rem',
-  border: '1px solid var(--color-border-light)', backgroundColor: 'transparent',
-  color: 'var(--color-text-secondary)', cursor: 'pointer',
-};

@@ -79,72 +79,44 @@ export default function ProposalsPage() {
   };
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: 'var(--color-bg-main)', color: 'var(--color-text-primary)' }}>
+    <div className="p-8 space-y-6 text-foreground">
       {/* Header */}
-      <div style={{
-        padding: '1.5rem 2rem',
-        borderBottom: '1px solid var(--color-bg-elevated)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-      }}>
+      <div className="flex items-center justify-between pb-6 border-b border-border">
         <div>
-          <h1 style={{ fontSize: '1.25rem', fontWeight: 600, margin: 0 }}>Proposals & Documents</h1>
-          <p style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', margin: '0.25rem 0 0 0' }}>
+          <h1 className="text-3xl font-bold text-foreground">Proposals &amp; Documents</h1>
+          <p className="text-sm text-muted-foreground mt-1">
             Create and manage proposal templates, quotes, contracts, and invoices
           </p>
         </div>
         <Link
           href="/proposals/builder"
-          style={{
-            padding: '0.5rem 1.25rem',
-            backgroundColor: 'var(--color-primary)',
-            color: '#fff',
-            borderRadius: '0.375rem',
-            textDecoration: 'none',
-            fontSize: '0.875rem',
-            fontWeight: 500,
-          }}
+          className="px-5 py-2 bg-primary text-white rounded-md no-underline text-sm font-medium"
         >
           + New Template
         </Link>
       </div>
 
-      <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '2rem' }}>
+      <div className="max-w-4xl mx-auto">
         {loading ? (
-          <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--color-text-secondary)' }}>
+          <div className="text-center py-12 text-muted-foreground">
             Loading templates...
           </div>
         ) : templates.length === 0 ? (
-          <div style={{
-            textAlign: 'center',
-            padding: '4rem 2rem',
-            backgroundColor: 'var(--color-bg-card)',
-            border: '2px dashed var(--color-bg-elevated)',
-            borderRadius: '0.75rem',
-          }}>
-            <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📋</div>
-            <h2 style={{ fontSize: '1.25rem', fontWeight: 600, marginBottom: '0.5rem' }}>No Templates Yet</h2>
-            <p style={{ color: 'var(--color-text-secondary)', marginBottom: '1.5rem', fontSize: '0.875rem' }}>
+          <div className="text-center px-8 py-16 bg-card border-2 border-dashed border-border rounded-xl">
+            <div className="text-5xl mb-4">📋</div>
+            <h2 className="text-xl font-semibold mb-1">No Templates Yet</h2>
+            <p className="text-muted-foreground mb-6 text-sm">
               Create your first proposal, quote, contract, or invoice template
             </p>
             <Link
               href="/proposals/builder"
-              style={{
-                padding: '0.625rem 1.5rem',
-                backgroundColor: 'var(--color-primary)',
-                color: '#fff',
-                borderRadius: '0.375rem',
-                textDecoration: 'none',
-                fontSize: '0.875rem',
-                fontWeight: 500,
-              }}
+              className="px-6 py-2.5 bg-primary text-white rounded-md no-underline text-sm font-medium"
             >
               Create Your First Template
             </Link>
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+          <div className="flex flex-col gap-3">
             {templates.map((tmpl) => {
               const typeConfig = TYPE_CONFIG[tmpl.type] ?? TYPE_CONFIG.proposal;
               const isDeleting = deletingId === tmpl.id;
@@ -152,66 +124,39 @@ export default function ProposalsPage() {
               return (
                 <div
                   key={tmpl.id}
-                  style={{
-                    backgroundColor: 'var(--color-bg-card)',
-                    border: '1px solid var(--color-bg-elevated)',
-                    borderRadius: '0.75rem',
-                    padding: '1.25rem 1.5rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                  }}
+                  className="bg-card border border-border rounded-xl px-6 py-5 flex items-center justify-between"
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flex: 1 }}>
-                    <div style={{
-                      width: '40px',
-                      height: '40px',
-                      borderRadius: '0.5rem',
-                      backgroundColor: `${typeConfig.color}20`,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '1.25rem',
-                    }}>
+                  <div className="flex items-center gap-4 flex-1">
+                    <div
+                      className="w-10 h-10 rounded-lg flex items-center justify-center text-xl flex-shrink-0"
+                      style={{ backgroundColor: `${typeConfig.color}20` }}
+                    >
                       {typeConfig.icon}
                     </div>
                     <div>
-                      <div style={{ fontWeight: 600, fontSize: '0.9375rem' }}>{tmpl.name}</div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: '0.25rem' }}>
-                        <span style={{
-                          padding: '0.125rem 0.5rem',
-                          borderRadius: '9999px',
-                          fontSize: '0.7rem',
-                          fontWeight: 600,
-                          backgroundColor: `${typeConfig.color}20`,
-                          color: typeConfig.color,
-                        }}>
+                      <div className="font-semibold text-[0.9375rem]">{tmpl.name}</div>
+                      <div className="flex items-center gap-3 mt-1">
+                        <span
+                          className="px-2 py-0.5 rounded-full text-[0.7rem] font-semibold"
+                          style={{ backgroundColor: `${typeConfig.color}20`, color: typeConfig.color }}
+                        >
                           {typeConfig.label}
                         </span>
-                        <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
+                        <span className="text-xs text-muted-foreground">
                           {tmpl.sections.length} section{tmpl.sections.length !== 1 ? 's' : ''}
                         </span>
-                        <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
+                        <span className="text-xs text-muted-foreground">
                           Created {formatDate(tmpl.createdAt)}
                         </span>
                       </div>
                     </div>
                   </div>
 
-                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <div className="flex gap-2">
                     <button
                       onClick={() => void handleDelete(tmpl.id)}
                       disabled={isDeleting}
-                      style={{
-                        padding: '0.375rem 0.75rem',
-                        backgroundColor: 'transparent',
-                        border: '1px solid var(--color-bg-elevated)',
-                        color: 'var(--color-error)',
-                        borderRadius: '0.375rem',
-                        cursor: isDeleting ? 'not-allowed' : 'pointer',
-                        fontSize: '0.8125rem',
-                        opacity: isDeleting ? 0.5 : 1,
-                      }}
+                      className="px-3 py-1.5 bg-transparent border border-border text-destructive rounded-md disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer text-[0.8125rem]"
                     >
                       {isDeleting ? '...' : 'Delete'}
                     </button>

@@ -6,6 +6,7 @@ import { useOrgTheme } from '@/hooks/useOrgTheme';
 import { useAuth } from '@/hooks/useAuth';
 import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { logger } from '@/lib/logger/logger';;
+import { PageTitle, SectionDescription } from '@/components/ui/typography';
 
 interface TopProduct {
   name: string;
@@ -79,93 +80,84 @@ export default function EcommerceAnalyticsPage() {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', backgroundColor: 'var(--color-bg-main)' }}>
-      <div style={{ flex: 1, padding: '2rem', overflowY: 'auto' }}>
-        <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
-          <div style={{ marginBottom: '2rem' }}>
-            <Link href={`/analytics`} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', color: primaryColor, fontSize: '0.875rem', fontWeight: '500', textDecoration: 'none', marginBottom: '1.5rem' }}>
-              ← Back to Analytics
-            </Link>
-            <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
-              E-Commerce Analytics
-            </h1>
-            <p style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem' }}>
-              Track orders, revenue, conversion rates, and product performance
-            </p>
+    <div className="p-8 space-y-6">
+      <div className="mb-8">
+        <Link
+          href="/analytics"
+          className="inline-flex items-center gap-2 text-sm font-medium no-underline mb-6"
+          style={{ color: primaryColor }}
+        >
+          ← Back to Analytics
+        </Link>
+        <PageTitle className="mb-1">E-Commerce Analytics</PageTitle>
+        <SectionDescription>Track orders, revenue, conversion rates, and product performance</SectionDescription>
+      </div>
+
+      {loading ? (
+        <div className="p-12 text-center text-muted-foreground">Loading analytics...</div>
+      ) : (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div className="bg-card border border-border-light rounded-2xl p-6">
+              <div className="text-xs text-muted-foreground mb-2 uppercase">Total Orders</div>
+              <div className="text-4xl font-bold text-foreground">
+                {analytics?.totalOrders ?? 0}
+              </div>
+            </div>
+
+            <div className="bg-card border border-border-light rounded-2xl p-6">
+              <div className="text-xs text-muted-foreground mb-2 uppercase">Total Revenue</div>
+              <div className="text-4xl font-bold text-foreground">
+                {analytics?.totalRevenue ? formatCurrency(analytics.totalRevenue) : '$0'}
+              </div>
+            </div>
+
+            <div className="bg-card border border-border-light rounded-2xl p-6">
+              <div className="text-xs text-muted-foreground mb-2 uppercase">Avg Order Value</div>
+              <div className="text-4xl font-bold text-foreground">
+                {analytics?.avgOrderValue ? formatCurrency(analytics.avgOrderValue) : '$0'}
+              </div>
+            </div>
+
+            <div className="bg-card border border-border-light rounded-2xl p-6">
+              <div className="text-xs text-muted-foreground mb-2 uppercase">Conversion Rate</div>
+              <div className="text-4xl font-bold text-foreground">
+                {analytics?.conversionRate ? formatPercent(analytics.conversionRate) : '0%'}
+              </div>
+            </div>
           </div>
 
-          {loading ? (
-            <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--color-text-secondary)' }}>Loading analytics...</div>
-          ) : (
-            <>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
-                <div style={{ backgroundColor: 'var(--color-bg-paper)', border: '1px solid var(--color-border-light)', borderRadius: '1rem', padding: '1.5rem' }}>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginBottom: '0.5rem', textTransform: 'uppercase' }}>Total Orders</div>
-                  <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>
-                    {analytics?.totalOrders ?? 0}
-                  </div>
-                </div>
-
-                <div style={{ backgroundColor: 'var(--color-bg-paper)', border: '1px solid var(--color-border-light)', borderRadius: '1rem', padding: '1.5rem' }}>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginBottom: '0.5rem', textTransform: 'uppercase' }}>Total Revenue</div>
-                  <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>
-                    {analytics?.totalRevenue ? formatCurrency(analytics.totalRevenue) : '$0'}
-                  </div>
-                </div>
-
-                <div style={{ backgroundColor: 'var(--color-bg-paper)', border: '1px solid var(--color-border-light)', borderRadius: '1rem', padding: '1.5rem' }}>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginBottom: '0.5rem', textTransform: 'uppercase' }}>Avg Order Value</div>
-                  <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>
-                    {analytics?.avgOrderValue ? formatCurrency(analytics.avgOrderValue) : '$0'}
-                  </div>
-                </div>
-
-                <div style={{ backgroundColor: 'var(--color-bg-paper)', border: '1px solid var(--color-border-light)', borderRadius: '1rem', padding: '1.5rem' }}>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginBottom: '0.5rem', textTransform: 'uppercase' }}>Conversion Rate</div>
-                  <div style={{ fontSize: '2.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)' }}>
-                    {analytics?.conversionRate ? formatPercent(analytics.conversionRate) : '0%'}
-                  </div>
-                </div>
+          {analytics?.topProducts && analytics.topProducts.length > 0 && (
+            <div className="bg-card border border-border-light rounded-2xl p-8">
+              <h2 className="text-xl font-semibold text-foreground mb-6">
+                Top Products
+              </h2>
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="border-b border-border-light">
+                      <th className="p-3 text-left text-xs text-muted-foreground uppercase">Product</th>
+                      <th className="p-3 text-right text-xs text-muted-foreground uppercase">Units Sold</th>
+                      <th className="p-3 text-right text-xs text-muted-foreground uppercase">Revenue</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {analytics.topProducts.map((product: TopProduct, index: number) => (
+                      <tr key={index} className="border-b border-border-light">
+                        <td className="p-3 text-sm text-foreground">{product.name}</td>
+                        <td className="p-3 text-right text-sm text-muted-foreground">{product.unitsSold}</td>
+                        <td className="p-3 text-right text-sm font-semibold text-foreground">
+                          {formatCurrency(product.revenue)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
-
-              {analytics?.topProducts && analytics.topProducts.length > 0 && (
-                <div style={{ backgroundColor: 'var(--color-bg-paper)', border: '1px solid var(--color-border-light)', borderRadius: '1rem', padding: '2rem' }}>
-                  <h2 style={{ fontSize: '1.25rem', fontWeight: '600', color: 'var(--color-text-primary)', marginBottom: '1.5rem' }}>
-                    Top Products
-                  </h2>
-                  <div style={{ overflowX: 'auto' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                      <thead>
-                        <tr style={{ borderBottom: '1px solid var(--color-border-light)' }}>
-                          <th style={{ padding: '0.75rem', textAlign: 'left', fontSize: '0.75rem', color: 'var(--color-text-secondary)', textTransform: 'uppercase' }}>Product</th>
-                          <th style={{ padding: '0.75rem', textAlign: 'right', fontSize: '0.75rem', color: 'var(--color-text-secondary)', textTransform: 'uppercase' }}>Units Sold</th>
-                          <th style={{ padding: '0.75rem', textAlign: 'right', fontSize: '0.75rem', color: 'var(--color-text-secondary)', textTransform: 'uppercase' }}>Revenue</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {analytics.topProducts.map((product: TopProduct, index: number) => (
-                          <tr key={index} style={{ borderBottom: '1px solid var(--color-border-light)' }}>
-                            <td style={{ padding: '0.75rem', fontSize: '0.875rem', color: 'var(--color-text-primary)' }}>{product.name}</td>
-                            <td style={{ padding: '0.75rem', textAlign: 'right', fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>{product.unitsSold}</td>
-                            <td style={{ padding: '0.75rem', textAlign: 'right', fontSize: '0.875rem', color: 'var(--color-text-primary)', fontWeight: '600' }}>
-                              {formatCurrency(product.revenue)}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
-            </>
+            </div>
           )}
-        </div>
-      </div>
+        </>
+      )}
     </div>
   );
 }
-
-
-
-
-

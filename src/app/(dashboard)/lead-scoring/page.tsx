@@ -13,6 +13,7 @@ import { LeadScoreCard } from '@/components/lead-scoring/LeadScoreCard';
 import type { StoredLeadScore, LeadScoreAnalytics, ScoringRules } from '@/types/lead-scoring';
 import SubpageNav from '@/components/ui/SubpageNav';
 import { LEADS_TABS } from '@/lib/constants/subpage-nav';
+import { PageTitle } from '@/components/ui/typography';
 import {
   Target,
   Flame,
@@ -229,17 +230,17 @@ export default function LeadScoringDashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-surface-main flex items-center justify-center">
+      <div className="flex items-center justify-center p-8">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="w-10 h-10 animate-spin text-primary" />
-          <p className="text-[var(--color-text-secondary)]">Loading lead scores...</p>
+          <p className="text-muted-foreground">Loading lead scores...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-surface-main p-8">
+    <div className="p-8 space-y-6">
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
@@ -251,8 +252,8 @@ export default function LeadScoringDashboard() {
             <Target className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold text-[var(--color-text-primary)]">Lead Scoring Dashboard</h1>
-            <p className="text-[var(--color-text-secondary)] text-sm">
+            <PageTitle>Lead Scoring Dashboard</PageTitle>
+            <p className="text-muted-foreground text-sm">
               AI-powered lead quality scores based on discovery data
             </p>
           </div>
@@ -261,7 +262,7 @@ export default function LeadScoringDashboard() {
         <div className="flex items-center gap-3">
           <button
             onClick={() => void loadData()}
-            className="inline-flex items-center gap-2 px-4 py-2.5 bg-surface-elevated border border-border-light hover:bg-surface-elevated text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] rounded-xl transition-all"
+            className="inline-flex items-center gap-2 px-4 py-2.5 bg-surface-elevated border border-border-light hover:bg-surface-elevated text-muted-foreground hover:text-foreground rounded-xl transition-all"
           >
             <RefreshCw className="w-4 h-4" />
             Refresh
@@ -291,13 +292,13 @@ export default function LeadScoringDashboard() {
           <div className="rounded-2xl bg-surface-paper backdrop-blur-xl border border-border-light p-6">
             <div className="flex items-center gap-2 mb-4">
               <Award className="w-5 h-5 text-primary" />
-              <h3 className="text-sm font-semibold text-[var(--color-text-secondary)]">Grade Distribution</h3>
+              <h3 className="text-sm font-semibold text-muted-foreground">Grade Distribution</h3>
             </div>
             <div className="space-y-3">
               {Object.entries(analytics.distribution).map(([grade, count]) => (
                 <div key={grade} className="flex justify-between items-center">
-                  <span className="text-sm text-[var(--color-text-secondary)]">Grade {grade.replace('grade', '')}</span>
-                  <span className="px-2.5 py-1 rounded-lg text-sm font-semibold bg-surface-elevated text-[var(--color-text-primary)]">
+                  <span className="text-sm text-muted-foreground">Grade {grade.replace('grade', '')}</span>
+                  <span className="px-2.5 py-1 rounded-lg text-sm font-semibold bg-surface-elevated text-foreground">
                     {count}
                   </span>
                 </div>
@@ -309,11 +310,11 @@ export default function LeadScoringDashboard() {
           <div className="rounded-2xl bg-surface-paper backdrop-blur-xl border border-border-light p-6">
             <div className="flex items-center gap-2 mb-4">
               <Zap className="w-5 h-5 text-primary" />
-              <h3 className="text-sm font-semibold text-[var(--color-text-secondary)]">Priority Breakdown</h3>
+              <h3 className="text-sm font-semibold text-muted-foreground">Priority Breakdown</h3>
             </div>
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <span className="inline-flex items-center gap-2 text-sm text-[var(--color-text-secondary)]">
+                <span className="inline-flex items-center gap-2 text-sm text-muted-foreground">
                   <Flame className="w-4 h-4 text-error" />
                   Hot Leads
                 </span>
@@ -322,7 +323,7 @@ export default function LeadScoringDashboard() {
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="inline-flex items-center gap-2 text-sm text-[var(--color-text-secondary)]">
+                <span className="inline-flex items-center gap-2 text-sm text-muted-foreground">
                   <Sun className="w-4 h-4 text-warning" />
                   Warm Leads
                 </span>
@@ -331,7 +332,7 @@ export default function LeadScoringDashboard() {
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="inline-flex items-center gap-2 text-sm text-[var(--color-text-secondary)]">
+                <span className="inline-flex items-center gap-2 text-sm text-muted-foreground">
                   <Snowflake className="w-4 h-4 text-primary" />
                   Cold Leads
                 </span>
@@ -346,29 +347,29 @@ export default function LeadScoringDashboard() {
           <div className="rounded-2xl bg-surface-paper backdrop-blur-xl border border-border-light p-6">
             <div className="flex items-center gap-2 mb-4">
               <BarChart3 className="w-5 h-5 text-primary" />
-              <h3 className="text-sm font-semibold text-[var(--color-text-secondary)]">Average Scores</h3>
+              <h3 className="text-sm font-semibold text-muted-foreground">Average Scores</h3>
             </div>
             <div className="space-y-3">
               <div className="flex justify-between items-center">
-                <span className="text-sm text-[var(--color-text-secondary)]">Total</span>
-                <span className="text-lg font-bold text-[var(--color-text-primary)]">{analytics.averageScores.total}/100</span>
+                <span className="text-sm text-muted-foreground">Total</span>
+                <span className="text-lg font-bold text-foreground">{analytics.averageScores.total}/100</span>
               </div>
               <div className="space-y-2 pt-2 border-t border-border-light">
                 <div className="flex justify-between items-center text-xs">
-                  <span className="text-[var(--color-text-disabled)]">Company Fit</span>
-                  <span className="text-[var(--color-text-secondary)]">{analytics.averageScores.companyFit}/40</span>
+                  <span className="text-muted-foreground">Company Fit</span>
+                  <span className="text-muted-foreground">{analytics.averageScores.companyFit}/40</span>
                 </div>
                 <div className="flex justify-between items-center text-xs">
-                  <span className="text-[var(--color-text-disabled)]">Person Fit</span>
-                  <span className="text-[var(--color-text-secondary)]">{analytics.averageScores.personFit}/30</span>
+                  <span className="text-muted-foreground">Person Fit</span>
+                  <span className="text-muted-foreground">{analytics.averageScores.personFit}/30</span>
                 </div>
                 <div className="flex justify-between items-center text-xs">
-                  <span className="text-[var(--color-text-disabled)]">Intent Signals</span>
-                  <span className="text-[var(--color-text-secondary)]">{analytics.averageScores.intentSignals}/20</span>
+                  <span className="text-muted-foreground">Intent Signals</span>
+                  <span className="text-muted-foreground">{analytics.averageScores.intentSignals}/20</span>
                 </div>
                 <div className="flex justify-between items-center text-xs">
-                  <span className="text-[var(--color-text-disabled)]">Engagement</span>
-                  <span className="text-[var(--color-text-secondary)]">{analytics.averageScores.engagement}/10</span>
+                  <span className="text-muted-foreground">Engagement</span>
+                  <span className="text-muted-foreground">{analytics.averageScores.engagement}/10</span>
                 </div>
               </div>
             </div>
@@ -378,12 +379,12 @@ export default function LeadScoringDashboard() {
           <div className="rounded-2xl bg-surface-paper backdrop-blur-xl border border-border-light p-6">
             <div className="flex items-center gap-2 mb-4">
               <Activity className="w-5 h-5 text-primary" />
-              <h3 className="text-sm font-semibold text-[var(--color-text-secondary)]">Top Intent Signals</h3>
+              <h3 className="text-sm font-semibold text-muted-foreground">Top Intent Signals</h3>
             </div>
             <div className="space-y-2">
               {analytics.topSignals.slice(0, 5).map((signal) => (
                 <div key={signal.type} className="flex justify-between items-center text-sm">
-                  <span className="text-[var(--color-text-secondary)] capitalize">
+                  <span className="text-muted-foreground capitalize">
                     {signal.type.replace(/_/g, ' ')}
                   </span>
                   <span className="px-2 py-0.5 rounded-lg text-xs font-semibold bg-warning/20 border border-warning/30 text-warning">
@@ -406,11 +407,11 @@ export default function LeadScoringDashboard() {
         <div className="flex flex-wrap gap-6 items-end">
           {/* Priority Filter */}
           <div>
-            <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">Priority</label>
+            <label className="block text-sm font-medium text-muted-foreground mb-2">Priority</label>
             <select
               value={filterPriority}
               onChange={(e) => setFilterPriority(e.target.value as typeof filterPriority)}
-              className="px-4 py-2.5 bg-surface-elevated border border-border-light rounded-xl text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all"
+              className="px-4 py-2.5 bg-surface-elevated border border-border-light rounded-xl text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all"
             >
               <option value="all">All Priorities</option>
               <option value="hot">Hot</option>
@@ -421,11 +422,11 @@ export default function LeadScoringDashboard() {
 
           {/* Grade Filter */}
           <div>
-            <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">Grade</label>
+            <label className="block text-sm font-medium text-muted-foreground mb-2">Grade</label>
             <select
               value={filterGrade}
               onChange={(e) => setFilterGrade(e.target.value as typeof filterGrade)}
-              className="px-4 py-2.5 bg-surface-elevated border border-border-light rounded-xl text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all"
+              className="px-4 py-2.5 bg-surface-elevated border border-border-light rounded-xl text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all"
             >
               <option value="all">All Grades</option>
               <option value="A">A (90-100)</option>
@@ -438,11 +439,11 @@ export default function LeadScoringDashboard() {
 
           {/* Sort By */}
           <div>
-            <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">Sort By</label>
+            <label className="block text-sm font-medium text-muted-foreground mb-2">Sort By</label>
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
-              className="px-4 py-2.5 bg-surface-elevated border border-border-light rounded-xl text-[var(--color-text-primary)] focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all"
+              className="px-4 py-2.5 bg-surface-elevated border border-border-light rounded-xl text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all"
             >
               <option value="score">Highest Score</option>
               <option value="date">Most Recent</option>
@@ -461,11 +462,11 @@ export default function LeadScoringDashboard() {
         >
           <div className="flex flex-col items-center gap-4">
             <div className="w-16 h-16 rounded-full bg-surface-elevated flex items-center justify-center">
-              <Target className="w-8 h-8 text-[var(--color-text-disabled)]" />
+              <Target className="w-8 h-8 text-muted-foreground" />
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-2">No Lead Scores Yet</h3>
-              <p className="text-[var(--color-text-secondary)] mb-6">
+              <h3 className="text-lg font-semibold text-foreground mb-2">No Lead Scores Yet</h3>
+              <p className="text-muted-foreground mb-6">
                 Start scoring leads to see their quality and prioritize your outreach.
               </p>
             </div>
@@ -507,7 +508,7 @@ export default function LeadScoringDashboard() {
             <div className="flex items-center justify-between p-6 border-b border-border-light">
               <div className="flex items-center gap-3">
                 <Settings className="w-5 h-5 text-primary" />
-                <h2 className="text-xl font-bold text-[var(--color-text-primary)]">Scoring Rules</h2>
+                <h2 className="text-xl font-bold text-foreground">Scoring Rules</h2>
               </div>
               <div className="flex items-center gap-2">
                 <button
@@ -521,7 +522,7 @@ export default function LeadScoringDashboard() {
                   onClick={() => setShowRulesPanel(false)}
                   className="p-2 hover:bg-surface-elevated rounded-lg transition-all"
                 >
-                  <X className="w-5 h-5 text-[var(--color-text-secondary)]" />
+                  <X className="w-5 h-5 text-muted-foreground" />
                 </button>
               </div>
             </div>
@@ -531,26 +532,26 @@ export default function LeadScoringDashboard() {
               {/* Create Rule Form */}
               {showCreateRule && (
                 <div className="mb-6 p-4 rounded-xl bg-surface-elevated border border-border-light">
-                  <h3 className="text-sm font-semibold text-[var(--color-text-primary)] mb-3">Create New Rule Set</h3>
+                  <h3 className="text-sm font-semibold text-foreground mb-3">Create New Rule Set</h3>
                   <div className="space-y-3">
                     <input
                       type="text"
                       placeholder="Rule set name (e.g., Enterprise Scoring)"
                       value={newRuleName}
                       onChange={(e) => setNewRuleName(e.target.value)}
-                      className="w-full px-3 py-2 bg-surface-main border border-border-light rounded-lg text-[var(--color-text-primary)] text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                      className="w-full px-3 py-2 bg-surface-main border border-border-light rounded-lg text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                     />
                     <input
                       type="text"
                       placeholder="Description (optional)"
                       value={newRuleDescription}
                       onChange={(e) => setNewRuleDescription(e.target.value)}
-                      className="w-full px-3 py-2 bg-surface-main border border-border-light rounded-lg text-[var(--color-text-primary)] text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                      className="w-full px-3 py-2 bg-surface-main border border-border-light rounded-lg text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                     />
                     <div className="flex gap-2 justify-end">
                       <button
                         onClick={() => setShowCreateRule(false)}
-                        className="px-3 py-1.5 text-sm text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-all"
+                        className="px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground transition-all"
                       >
                         Cancel
                       </button>
@@ -572,9 +573,9 @@ export default function LeadScoringDashboard() {
                 </div>
               ) : rules.length === 0 ? (
                 <div className="text-center py-12">
-                  <Target className="w-10 h-10 text-[var(--color-text-disabled)] mx-auto mb-3" />
-                  <p className="text-[var(--color-text-secondary)] text-sm mb-1">No scoring rules configured yet.</p>
-                  <p className="text-[var(--color-text-disabled)] text-xs">Create your first rule set to start scoring leads.</p>
+                  <Target className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
+                  <p className="text-muted-foreground text-sm mb-1">No scoring rules configured yet.</p>
+                  <p className="text-muted-foreground text-xs">Create your first rule set to start scoring leads.</p>
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -586,7 +587,7 @@ export default function LeadScoringDashboard() {
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1">
-                            <h3 className="text-sm font-semibold text-[var(--color-text-primary)] truncate">{rule.name}</h3>
+                            <h3 className="text-sm font-semibold text-foreground truncate">{rule.name}</h3>
                             {rule.isActive && (
                               <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-success/20 text-success border border-success/30 uppercase tracking-wider">
                                 Active
@@ -594,9 +595,9 @@ export default function LeadScoringDashboard() {
                             )}
                           </div>
                           {rule.description && (
-                            <p className="text-xs text-[var(--color-text-secondary)] mb-2">{rule.description}</p>
+                            <p className="text-xs text-muted-foreground mb-2">{rule.description}</p>
                           )}
-                          <div className="flex flex-wrap gap-3 text-[10px] text-[var(--color-text-disabled)]">
+                          <div className="flex flex-wrap gap-3 text-[10px] text-muted-foreground">
                             <span>Industries: {rule.companyRules.industries.preferred.join(', ') || 'Any'}</span>
                             <span>Titles: {rule.personRules.titles.preferred.join(', ') || 'Any'}</span>
                             <span>Size: {rule.companyRules.size.preferred.join(', ') || 'Any'}</span>
@@ -611,7 +612,7 @@ export default function LeadScoringDashboard() {
                             {rule.isActive ? (
                               <ToggleRight className="w-5 h-5 text-success" />
                             ) : (
-                              <ToggleLeft className="w-5 h-5 text-[var(--color-text-disabled)]" />
+                              <ToggleLeft className="w-5 h-5 text-muted-foreground" />
                             )}
                           </button>
                           {deleteConfirm === rule.id ? (
@@ -624,7 +625,7 @@ export default function LeadScoringDashboard() {
                               </button>
                               <button
                                 onClick={() => setDeleteConfirm(null)}
-                                className="px-2 py-1 text-[10px] text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
+                                className="px-2 py-1 text-[10px] text-muted-foreground hover:text-foreground"
                               >
                                 Cancel
                               </button>
@@ -635,7 +636,7 @@ export default function LeadScoringDashboard() {
                               className="p-1.5 hover:bg-error/10 rounded-lg transition-all"
                               title="Delete"
                             >
-                              <Trash2 className="w-4 h-4 text-[var(--color-text-disabled)] hover:text-error" />
+                              <Trash2 className="w-4 h-4 text-muted-foreground hover:text-error" />
                             </button>
                           )}
                         </div>
@@ -648,7 +649,7 @@ export default function LeadScoringDashboard() {
 
             {/* Modal Footer */}
             <div className="p-4 border-t border-border-light bg-surface-elevated/50">
-              <p className="text-[10px] text-[var(--color-text-disabled)] text-center">
+              <p className="text-[10px] text-muted-foreground text-center">
                 Only one rule set can be active at a time. New rule sets use default scoring weights.
               </p>
             </div>

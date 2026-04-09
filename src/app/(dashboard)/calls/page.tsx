@@ -2,6 +2,7 @@
 
 import { useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import { PageTitle, SectionDescription } from '@/components/ui/typography';
 import { motion } from 'framer-motion';
 import { Phone, Plus, Play, Clock, Calendar, User, PhoneCall, Download } from 'lucide-react';
 import { FirestoreService } from '@/lib/db/firestore-service';
@@ -97,21 +98,21 @@ export default function CallLogPage() {
   };
 
   return (
-    <div className="min-h-screen bg-surface-main p-8">
+    <div className="p-8 space-y-6">
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="flex justify-between items-center mb-8"
+        className="flex justify-between items-center"
       >
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center shadow-lg shadow-primary/25">
             <Phone className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold text-[var(--color-text-primary)]">Call Log</h1>
-            <p className="text-[var(--color-text-secondary)] text-sm mt-1">View and manage your call history</p>
+            <PageTitle>Call Log</PageTitle>
+            <SectionDescription className="mt-1">View and manage your call history</SectionDescription>
           </div>
         </div>
 
@@ -131,11 +132,10 @@ export default function CallLogPage() {
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-6 p-4 border border-red-500/30 rounded-xl text-error backdrop-blur-xl"
-          style={{ backgroundColor: 'rgba(var(--color-error-rgb), 0.1)' }}
+          className="p-4 border border-error/30 rounded-xl text-error bg-error/10 backdrop-blur-xl"
         >
           <p className="flex items-center gap-2">
-            <span className="text-red-500">⚠</span>
+            <span className="text-error">⚠</span>
             {error}
           </p>
         </motion.div>
@@ -152,8 +152,8 @@ export default function CallLogPage() {
           <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-green-500/20 to-emerald-500/20 flex items-center justify-center mx-auto mb-4">
             <PhoneCall className="w-10 h-10 text-green-400" />
           </div>
-          <h3 className="text-xl font-semibold text-[var(--color-text-primary)] mb-2">No calls yet</h3>
-          <p className="text-[var(--color-text-secondary)]">Start making calls to see your log here.</p>
+          <h3 className="text-xl font-semibold text-foreground mb-2">No calls yet</h3>
+          <p className="text-muted-foreground">Start making calls to see your log here.</p>
         </motion.div>
       ) : (
         <motion.div
@@ -167,34 +167,34 @@ export default function CallLogPage() {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-border-light">
-                  <th className="text-left p-4 text-[var(--color-text-secondary)] font-semibold text-sm uppercase tracking-wider">
+                  <th className="text-left p-4 text-muted-foreground font-semibold text-sm uppercase tracking-wider">
                     <div className="flex items-center gap-2">
                       <User className="w-4 h-4" />
                       Contact
                     </div>
                   </th>
-                  <th className="text-left p-4 text-[var(--color-text-secondary)] font-semibold text-sm uppercase tracking-wider">
+                  <th className="text-left p-4 text-muted-foreground font-semibold text-sm uppercase tracking-wider">
                     <div className="flex items-center gap-2">
                       <Phone className="w-4 h-4" />
                       Number
                     </div>
                   </th>
-                  <th className="text-left p-4 text-[var(--color-text-secondary)] font-semibold text-sm uppercase tracking-wider">
+                  <th className="text-left p-4 text-muted-foreground font-semibold text-sm uppercase tracking-wider">
                     <div className="flex items-center gap-2">
                       <Clock className="w-4 h-4" />
                       Duration
                     </div>
                   </th>
-                  <th className="text-left p-4 text-[var(--color-text-secondary)] font-semibold text-sm uppercase tracking-wider">
+                  <th className="text-left p-4 text-muted-foreground font-semibold text-sm uppercase tracking-wider">
                     Status
                   </th>
-                  <th className="text-left p-4 text-[var(--color-text-secondary)] font-semibold text-sm uppercase tracking-wider">
+                  <th className="text-left p-4 text-muted-foreground font-semibold text-sm uppercase tracking-wider">
                     <div className="flex items-center gap-2">
                       <Calendar className="w-4 h-4" />
                       Date
                     </div>
                   </th>
-                  <th className="text-left p-4 text-[var(--color-text-secondary)] font-semibold text-sm uppercase tracking-wider">
+                  <th className="text-left p-4 text-muted-foreground font-semibold text-sm uppercase tracking-wider">
                     Recording
                   </th>
                 </tr>
@@ -209,17 +209,17 @@ export default function CallLogPage() {
                     className="border-b border-border-light hover:bg-surface-elevated transition-colors duration-200"
                   >
                     <td className="p-4">
-                      <span className="font-medium text-[var(--color-text-primary)]">
+                      <span className="font-medium text-foreground">
                         {call.contactName ?? 'Unknown'}
                       </span>
                     </td>
                     <td className="p-4">
-                      <span className="text-[var(--color-text-secondary)] font-mono text-sm">
+                      <span className="text-muted-foreground font-mono text-sm">
                         {call.phoneNumber ?? '-'}
                       </span>
                     </td>
                     <td className="p-4">
-                      <span className="text-[var(--color-text-secondary)] font-mono text-sm">
+                      <span className="text-muted-foreground font-mono text-sm">
                         {formatDuration(call.duration)}
                       </span>
                     </td>
@@ -229,7 +229,7 @@ export default function CallLogPage() {
                       </span>
                     </td>
                     <td className="p-4">
-                      <span className="text-[var(--color-text-secondary)] text-sm">
+                      <span className="text-muted-foreground text-sm">
                         {formatDate(call.createdAt)}
                       </span>
                     </td>
@@ -247,7 +247,7 @@ export default function CallLogPage() {
                           Listen
                         </motion.a>
                       ) : (
-                        <span className="text-[var(--color-text-disabled)] text-sm">-</span>
+                        <span className="text-muted-foreground text-sm">-</span>
                       )}
                     </td>
                   </motion.tr>
@@ -264,7 +264,7 @@ export default function CallLogPage() {
                 whileTap={{ scale: 0.98 }}
                 onClick={() => { void loadMore(); }}
                 disabled={loading || !hasMore}
-                className="px-6 py-3 bg-surface-elevated hover:bg-surface-elevated border border-border-light text-[var(--color-text-primary)] rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 font-medium"
+                className="px-6 py-3 bg-surface-elevated hover:bg-surface-elevated border border-border-light text-foreground rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 font-medium"
               >
                 {loading ? (
                   <span className="flex items-center gap-2">

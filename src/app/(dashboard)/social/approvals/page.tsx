@@ -11,6 +11,7 @@ import { useAuthFetch } from '@/hooks/useAuthFetch';
 import { SOCIAL_PLATFORMS, type ApprovalItem, type ApprovalStatus } from '@/types/social';
 import { PLATFORM_META } from '@/lib/social/platform-config';
 import { logger } from '@/lib/logger/logger';
+import { PageTitle, SectionDescription } from '@/components/ui/typography';
 
 type FilterTab = 'all' | ApprovalStatus;
 
@@ -241,55 +242,40 @@ export default function ApprovalQueuePage() {
   ];
 
   return (
-    <div style={{ padding: '2rem', maxWidth: 1200, margin: '0 auto' }}>
-      <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
-        Approval Queue
-      </h1>
-      <p style={{ color: 'var(--color-text-secondary)', marginBottom: '1.5rem', fontSize: '0.875rem' }}>
-        Review flagged content before it goes live — edit drafts to train the AI
-      </p>
+    <div className="p-8 space-y-6 max-w-6xl mx-auto">
+      <div>
+        <PageTitle>Approval Queue</PageTitle>
+        <SectionDescription className="mt-1">Review flagged content before it goes live — edit drafts to train the AI</SectionDescription>
+      </div>
 
       {/* Stats Bar */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', marginBottom: '1.5rem' }}>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
           { label: 'Pending', value: counts.pending_review, color: '#FFC107' },
           { label: 'Approved', value: counts.approved, color: '#4CAF50' },
           { label: 'Rejected', value: counts.rejected, color: '#F44336' },
           { label: 'Revision Needed', value: counts.revision_requested, color: '#FF9800' },
         ].map((stat) => (
-          <div
-            key={stat.label}
-            style={{
-              padding: '1rem',
-              backgroundColor: 'var(--color-bg-paper)',
-              borderRadius: '0.5rem',
-              border: '1px solid var(--color-border-light)',
-            }}
-          >
-            <div style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginBottom: '0.25rem' }}>{stat.label}</div>
-            <div style={{ fontSize: '1.5rem', fontWeight: 700, color: stat.color }}>{stat.value}</div>
+          <div key={stat.label} className="p-4 bg-card rounded-lg border border-border-light">
+            <div className="text-xs text-muted-foreground mb-1">{stat.label}</div>
+            <div className="text-2xl font-bold" style={{ color: stat.color }}>{stat.value}</div>
           </div>
         ))}
       </div>
 
       {/* Filter Tabs + Bulk Actions */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', borderBottom: '1px solid var(--color-border-light)', paddingBottom: '0.5rem' }}>
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
+      <div className="flex items-center justify-between border-b border-border-light pb-2">
+        <div className="flex gap-2">
           {tabs.map((tab) => (
             <button
               key={tab.key}
               type="button"
               onClick={() => { setActiveTab(tab.key); setSelectedIds(new Set()); }}
-              style={{
-                padding: '0.5rem 1rem',
-                borderRadius: '0.375rem',
-                border: 'none',
-                cursor: 'pointer',
-                fontSize: '0.8125rem',
-                fontWeight: activeTab === tab.key ? 600 : 400,
-                backgroundColor: activeTab === tab.key ? 'var(--color-primary)' : 'transparent',
-                color: activeTab === tab.key ? '#fff' : 'var(--color-text-secondary)',
-              }}
+              className={`px-4 py-2 rounded-md text-sm cursor-pointer transition-colors ${
+                activeTab === tab.key
+                  ? 'bg-primary text-white font-semibold'
+                  : 'bg-transparent text-muted-foreground font-normal hover:bg-surface-elevated'
+              }`}
             >
               {tab.label} ({tab.count})
             </button>
@@ -298,25 +284,14 @@ export default function ApprovalQueuePage() {
 
         {/* Bulk action buttons */}
         {selectedIds.size > 0 && (
-          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.75rem', color: 'var(--color-text-secondary)' }}>
-              {selectedIds.size} selected
-            </span>
+          <div className="flex gap-2 items-center">
+            <span className="text-xs text-muted-foreground">{selectedIds.size} selected</span>
             <button
               type="button"
               disabled={bulkLoading}
               onClick={() => { void handleBulkApprove(); }}
-              style={{
-                padding: '0.375rem 0.75rem',
-                borderRadius: '0.375rem',
-                border: 'none',
-                cursor: 'pointer',
-                fontSize: '0.75rem',
-                fontWeight: 600,
-                backgroundColor: '#4CAF50',
-                color: '#fff',
-                opacity: bulkLoading ? 0.5 : 1,
-              }}
+              className={`px-3 py-1.5 rounded-md text-xs font-semibold text-white cursor-pointer transition-opacity ${bulkLoading ? 'opacity-50' : ''}`}
+              style={{ backgroundColor: '#4CAF50' }}
             >
               Approve All
             </button>
@@ -324,17 +299,8 @@ export default function ApprovalQueuePage() {
               type="button"
               disabled={bulkLoading}
               onClick={() => { void handleBulkReject(); }}
-              style={{
-                padding: '0.375rem 0.75rem',
-                borderRadius: '0.375rem',
-                border: 'none',
-                cursor: 'pointer',
-                fontSize: '0.75rem',
-                fontWeight: 600,
-                backgroundColor: '#F44336',
-                color: '#fff',
-                opacity: bulkLoading ? 0.5 : 1,
-              }}
+              className={`px-3 py-1.5 rounded-md text-xs font-semibold text-white cursor-pointer transition-opacity ${bulkLoading ? 'opacity-50' : ''}`}
+              style={{ backgroundColor: '#F44336' }}
             >
               Reject All
             </button>
@@ -344,35 +310,25 @@ export default function ApprovalQueuePage() {
 
       {/* Approvals List */}
       {loading ? (
-        <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--color-text-secondary)' }}>Loading...</div>
+        <div className="text-center py-12 text-muted-foreground">Loading...</div>
       ) : approvals.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--color-text-secondary)' }}>
-          No items in queue
-        </div>
+        <div className="text-center py-12 text-muted-foreground">No items in queue</div>
       ) : (
         <>
           {/* Select All Header (for pending items) */}
           {pendingCount > 0 && (
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              padding: '0.5rem 1rem',
-              marginBottom: '0.5rem',
-              fontSize: '0.75rem',
-              color: 'var(--color-text-secondary)',
-            }}>
+            <div className="flex items-center gap-2 px-4 py-2 mb-2 text-xs text-muted-foreground">
               <input
                 type="checkbox"
                 checked={allPendingSelected}
                 onChange={toggleSelectAll}
-                style={{ cursor: 'pointer', width: 16, height: 16 }}
+                className="cursor-pointer w-4 h-4"
               />
               <span>Select all pending ({pendingCount})</span>
             </div>
           )}
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          <div className="flex flex-col gap-2">
             {approvals.map((item) => {
               const statusInfo = STATUS_COLORS[item.status];
               const isExpanded = expandedId === item.id;
@@ -382,23 +338,10 @@ export default function ApprovalQueuePage() {
               return (
                 <div
                   key={item.id}
-                  style={{
-                    backgroundColor: 'var(--color-bg-paper)',
-                    borderRadius: '0.5rem',
-                    border: isSelected ? '1px solid var(--color-primary)' : '1px solid var(--color-border-light)',
-                    overflow: 'hidden',
-                  }}
+                  className={`bg-card rounded-lg overflow-hidden border ${isSelected ? 'border-primary' : 'border-border-light'}`}
                 >
                   {/* Row */}
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.75rem',
-                      padding: '0.75rem 1rem',
-                      cursor: 'pointer',
-                    }}
-                  >
+                  <div className="flex items-center gap-3 px-4 py-3 cursor-pointer">
                     {/* Checkbox */}
                     {isPending && (
                       <input
@@ -406,60 +349,33 @@ export default function ApprovalQueuePage() {
                         checked={isSelected}
                         onChange={() => toggleSelect(item.id)}
                         onClick={(e) => e.stopPropagation()}
-                        style={{ cursor: 'pointer', width: 16, height: 16, flexShrink: 0 }}
+                        className="cursor-pointer w-4 h-4 shrink-0"
                       />
                     )}
-                    {!isPending && <div style={{ width: 16, flexShrink: 0 }} />}
+                    {!isPending && <div className="w-4 shrink-0" />}
 
                     {/* Clickable area */}
                     <div
-                      style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1, minWidth: 0 }}
+                      className="flex items-center gap-3 flex-1 min-w-0"
                       onClick={() => setExpandedId(isExpanded ? null : item.id)}
                     >
                       {/* Platform badge */}
                       <span
-                        style={{
-                          padding: '0.2rem 0.5rem',
-                          borderRadius: '0.25rem',
-                          fontSize: '0.625rem',
-                          fontWeight: 600,
-                          color: '#fff',
-                          backgroundColor: PLATFORM_COLORS[item.platform] ?? '#666',
-                          textTransform: 'uppercase',
-                          flexShrink: 0,
-                        }}
+                        className="px-1.5 py-0.5 rounded text-[10px] font-semibold text-white uppercase shrink-0"
+                        style={{ backgroundColor: PLATFORM_COLORS[item.platform] ?? '#666' }}
                       >
                         {item.platform}
                       </span>
 
                       {/* Content preview */}
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{
-                          fontSize: '0.8125rem',
-                          color: 'var(--color-text-primary)',
-                          whiteSpace: 'nowrap',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                        }}>
-                          {item.content}
-                        </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm text-foreground truncate">{item.content}</div>
                       </div>
 
                       {/* "Why" badge */}
                       <span
-                        style={{
-                          padding: '0.2rem 0.5rem',
-                          borderRadius: '0.25rem',
-                          fontSize: '0.5625rem',
-                          fontWeight: 600,
-                          backgroundColor: 'rgba(255,152,0,0.12)',
-                          color: '#FF9800',
-                          flexShrink: 0,
-                          maxWidth: 180,
-                          whiteSpace: 'nowrap',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                        }}
+                        className="px-1.5 py-0.5 rounded text-[9px] font-semibold shrink-0 max-w-[180px] truncate"
+                        style={{ backgroundColor: 'rgba(255,152,0,0.12)', color: '#FF9800' }}
                         title={item.flagReason}
                       >
                         WHY: {item.flagReason}
@@ -467,21 +383,14 @@ export default function ApprovalQueuePage() {
 
                       {/* Status badge */}
                       <span
-                        style={{
-                          padding: '0.2rem 0.5rem',
-                          borderRadius: '1rem',
-                          fontSize: '0.625rem',
-                          fontWeight: 600,
-                          backgroundColor: statusInfo.bg,
-                          color: statusInfo.text,
-                          flexShrink: 0,
-                        }}
+                        className="px-1.5 py-0.5 rounded-full text-[10px] font-semibold shrink-0"
+                        style={{ backgroundColor: statusInfo.bg, color: statusInfo.text }}
                       >
                         {statusInfo.label}
                       </span>
 
                       {/* Timestamp */}
-                      <span style={{ fontSize: '0.6875rem', color: 'var(--color-text-disabled)', flexShrink: 0 }}>
+                      <span className="text-xs text-muted-foreground shrink-0">
                         {new Date(item.flaggedAt).toLocaleDateString()}
                       </span>
                     </div>
@@ -489,15 +398,15 @@ export default function ApprovalQueuePage() {
 
                   {/* Expanded Details */}
                   {isExpanded && (
-                    <div style={{ padding: '0 1rem 1rem', borderTop: '1px solid var(--color-border-light)' }}>
+                    <div className="px-4 pb-4 border-t border-border-light">
                       {/* Editable content (correction capture) */}
-                      <div style={{ padding: '0.75rem 0' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.375rem' }}>
-                          <span style={{ fontSize: '0.6875rem', fontWeight: 600, color: 'var(--color-text-secondary)' }}>
+                      <div className="py-3">
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="text-xs font-semibold text-muted-foreground">
                             Content {isPending ? '(editable — corrections train the AI)' : ''}
                           </span>
                           {editingContent[item.id] && editingContent[item.id] !== item.content && (
-                            <span style={{ fontSize: '0.625rem', color: '#FF9800', fontWeight: 600 }}>
+                            <span className="text-[10px] font-semibold" style={{ color: '#FF9800' }}>
                               Modified — correction will be captured
                             </span>
                           )}
@@ -507,58 +416,34 @@ export default function ApprovalQueuePage() {
                             value={editingContent[item.id] ?? item.content}
                             onChange={(e) => setEditingContent((prev) => ({ ...prev, [item.id]: e.target.value }))}
                             rows={4}
-                            style={{
-                              width: '100%',
-                              padding: '0.625rem',
-                              borderRadius: '0.375rem',
-                              border: '1px solid var(--color-border-light)',
-                              backgroundColor: 'var(--color-bg-main)',
-                              color: 'var(--color-text-primary)',
-                              fontSize: '0.8125rem',
-                              fontFamily: 'inherit',
-                              resize: 'vertical',
-                              lineHeight: 1.5,
-                            }}
+                            className="w-full px-2.5 py-2 rounded-md border border-border-light bg-surface-main text-foreground text-sm font-[inherit] resize-y leading-relaxed"
                           />
                         ) : (
-                          <div style={{ fontSize: '0.875rem', color: 'var(--color-text-primary)', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>
+                          <div className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">
                             {highlightFlagReason(item.content, item.flagReason)}
                           </div>
                         )}
                       </div>
 
                       {/* Flag reason detail */}
-                      <div style={{
-                        padding: '0.5rem 0.75rem',
-                        marginBottom: '0.75rem',
-                        backgroundColor: 'rgba(255,152,0,0.06)',
-                        border: '1px solid rgba(255,152,0,0.15)',
-                        borderRadius: '0.375rem',
-                        fontSize: '0.75rem',
-                        color: '#FF9800',
-                      }}>
+                      <div
+                        className="px-3 py-2 mb-3 rounded-md text-xs border"
+                        style={{ backgroundColor: 'rgba(255,152,0,0.06)', borderColor: 'rgba(255,152,0,0.15)', color: '#FF9800' }}
+                      >
                         <strong>Flagged:</strong> {item.flagReason}
                         {item.flaggedBy === 'autonomous-agent' && (
-                          <span style={{ marginLeft: '0.5rem', color: 'var(--color-text-disabled)' }}>(by AI agent)</span>
+                          <span className="ml-2 text-muted-foreground">(by AI agent)</span>
                         )}
                       </div>
 
                       {/* Comments thread */}
                       {item.comments.length > 0 && (
-                        <div style={{ marginBottom: '0.75rem' }}>
-                          <div style={{ fontSize: '0.6875rem', fontWeight: 600, color: 'var(--color-text-secondary)', marginBottom: '0.375rem' }}>
-                            Comments
-                          </div>
+                        <div className="mb-3">
+                          <div className="text-xs font-semibold text-muted-foreground mb-1.5">Comments</div>
                           {item.comments.map((comment) => (
-                            <div key={comment.id} style={{
-                              padding: '0.5rem',
-                              marginBottom: '0.25rem',
-                              backgroundColor: 'var(--color-bg-main)',
-                              borderRadius: '0.25rem',
-                              fontSize: '0.8125rem',
-                            }}>
-                              <span style={{ fontWeight: 600, color: 'var(--color-text-primary)' }}>{comment.authorName}: </span>
-                              <span style={{ color: 'var(--color-text-secondary)' }}>{comment.text}</span>
+                            <div key={comment.id} className="p-2 mb-1 bg-surface-main rounded text-sm">
+                              <span className="font-semibold text-foreground">{comment.authorName}: </span>
+                              <span className="text-muted-foreground">{comment.text}</span>
                             </div>
                           ))}
                         </div>
@@ -567,40 +452,23 @@ export default function ApprovalQueuePage() {
                       {/* Comment input + action buttons */}
                       {isPending && (
                         <>
-                          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                          <div className="flex gap-2 mb-3">
                             <input
                               type="text"
                               value={expandedId === item.id ? commentText : ''}
                               onChange={(e) => setCommentText(e.target.value)}
                               placeholder="Add a comment (optional)..."
-                              style={{
-                                flex: 1,
-                                padding: '0.5rem 0.75rem',
-                                borderRadius: '0.375rem',
-                                border: '1px solid var(--color-border-light)',
-                                backgroundColor: 'var(--color-bg-main)',
-                                color: 'var(--color-text-primary)',
-                                fontSize: '0.8125rem',
-                              }}
+                              className="flex-1 px-3 py-2 rounded-md border border-border-light bg-surface-main text-foreground text-sm"
                             />
                           </div>
 
-                          <div style={{ display: 'flex', gap: '0.5rem' }}>
+                          <div className="flex gap-2">
                             <button
                               type="button"
                               disabled={actionLoading === item.id}
                               onClick={() => { void handleAction(item.id, 'approved'); }}
-                              style={{
-                                padding: '0.5rem 1rem',
-                                borderRadius: '0.375rem',
-                                border: 'none',
-                                cursor: 'pointer',
-                                fontSize: '0.8125rem',
-                                fontWeight: 600,
-                                backgroundColor: '#4CAF50',
-                                color: '#fff',
-                                opacity: actionLoading === item.id ? 0.5 : 1,
-                              }}
+                              className={`px-4 py-2 rounded-md text-sm font-semibold text-white cursor-pointer transition-opacity ${actionLoading === item.id ? 'opacity-50' : ''}`}
+                              style={{ backgroundColor: '#4CAF50' }}
                             >
                               {editingContent[item.id] && editingContent[item.id] !== item.content ? 'Approve with Edits' : 'Approve'}
                             </button>
@@ -608,17 +476,8 @@ export default function ApprovalQueuePage() {
                               type="button"
                               disabled={actionLoading === item.id}
                               onClick={() => { void handleAction(item.id, 'rejected'); }}
-                              style={{
-                                padding: '0.5rem 1rem',
-                                borderRadius: '0.375rem',
-                                border: 'none',
-                                cursor: 'pointer',
-                                fontSize: '0.8125rem',
-                                fontWeight: 600,
-                                backgroundColor: '#F44336',
-                                color: '#fff',
-                                opacity: actionLoading === item.id ? 0.5 : 1,
-                              }}
+                              className={`px-4 py-2 rounded-md text-sm font-semibold text-white cursor-pointer transition-opacity ${actionLoading === item.id ? 'opacity-50' : ''}`}
+                              style={{ backgroundColor: '#F44336' }}
                             >
                               Reject
                             </button>
@@ -626,17 +485,8 @@ export default function ApprovalQueuePage() {
                               type="button"
                               disabled={actionLoading === item.id}
                               onClick={() => { void handleAction(item.id, 'revision_requested'); }}
-                              style={{
-                                padding: '0.5rem 1rem',
-                                borderRadius: '0.375rem',
-                                border: 'none',
-                                cursor: 'pointer',
-                                fontSize: '0.8125rem',
-                                fontWeight: 600,
-                                backgroundColor: '#FF9800',
-                                color: '#fff',
-                                opacity: actionLoading === item.id ? 0.5 : 1,
-                              }}
+                              className={`px-4 py-2 rounded-md text-sm font-semibold text-white cursor-pointer transition-opacity ${actionLoading === item.id ? 'opacity-50' : ''}`}
+                              style={{ backgroundColor: '#FF9800' }}
                             >
                               Request Revision
                             </button>

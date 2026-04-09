@@ -4,6 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
 import { useOrgTheme } from '@/hooks/useOrgTheme';
+import { PageTitle, SectionDescription } from '@/components/ui/typography';
 
 export default function AIAgentsPage() {
   const { user: _user } = useAuth();
@@ -46,104 +47,72 @@ export default function AIAgentsPage() {
   ];
 
   return (
-        <div style={{ padding: '2rem', overflowY: 'auto' }}>
-          <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-            <div style={{ marginBottom: '2rem' }}>
-              <Link href={`/settings`} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', color: primaryColor, fontSize: '0.875rem', fontWeight: '500', textDecoration: 'none', marginBottom: '1.5rem' }}>
-                ← Back to Settings
-              </Link>
-              <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem', marginTop: '1rem' }}>AI Agent</h1>
-              <p style={{ color: 'var(--color-text-disabled)', fontSize: '0.875rem' }}>Manage your Sales & Customer Service AI Agent</p>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(450px, 1fr))', gap: '2rem' }}>
-              {agentOptions.map((option) => (
-                <Link 
-                  key={option.title}
-                  href={option.href}
-                  style={{ 
-                    backgroundColor: 'var(--color-bg-paper)', 
-                    border: '1px solid var(--color-border-strong)', 
-                    borderRadius: '1rem', 
-                    padding: '2rem',
-                    textDecoration: 'none',
-                    display: 'block',
-                    transition: 'all 0.2s',
-                    cursor: 'pointer'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = primaryColor;
-                    e.currentTarget.style.transform = 'translateY(-4px)';
-                    e.currentTarget.style.boxShadow = `0 10px 40px rgba(var(--color-primary-rgb), 0.2)`;
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = 'var(--color-border-strong)';
-                    e.currentTarget.style.transform = 'translateY(0)';
-                    e.currentTarget.style.boxShadow = 'none';
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'start', gap: '1.5rem', marginBottom: '1.5rem' }}>
-                    <div style={{ 
-                      width: '64px', 
-                      height: '64px', 
-                      borderRadius: '1rem', 
-                      background: `linear-gradient(135deg, ${primaryColor}, ${primaryColor}dd)`,
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      justifyContent: 'center', 
-                      fontSize: '2rem',
-                      flexShrink: 0
-                    }}>
-                      {option.icon}
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <h3 style={{ fontSize: '1.5rem', fontWeight: 'bold', color: 'var(--color-text-primary)', marginBottom: '0.5rem' }}>
-                        {option.title}
-                      </h3>
-                      <p style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)', lineHeight: '1.5' }}>
-                        {option.description}
-                      </p>
-                    </div>
-                  </div>
-                  
-                  <div style={{ 
-                    display: 'grid', 
-                    gridTemplateColumns: '1fr 1fr', 
-                    gap: '1rem', 
-                    padding: '1.25rem', 
-                    backgroundColor: 'var(--color-bg-main)', 
-                    borderRadius: '0.75rem',
-                    border: '1px solid var(--color-bg-elevated)'
-                  }}>
-                    {option.stats.map((stat) => (
-                      <div key={stat.label}>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--color-text-disabled)', marginBottom: '0.25rem' }}>
-                          {stat.label}
-                        </div>
-                        <div style={{ fontSize: '1.125rem', fontWeight: '600', color: 'var(--color-text-primary)' }}>
-                          {stat.value}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div style={{ 
-                    marginTop: '1.5rem',
-                    padding: '0.75rem',
-                    backgroundColor: 'var(--color-bg-elevated)',
-                    borderRadius: '0.5rem',
-                    textAlign: 'center',
-                    color: primaryColor,
-                    fontSize: '0.875rem',
-                    fontWeight: '600'
-                  }}>
-                    Manage →
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </div>
+    <div className="p-8 space-y-6 overflow-y-auto">
+      <div className="max-w-6xl">
+        <div className="mb-8">
+          <Link
+            href="/settings"
+            className="inline-flex items-center gap-2 text-sm font-medium no-underline mb-6"
+            style={{ color: primaryColor }}
+          >
+            ← Back to Settings
+          </Link>
+          <PageTitle className="mt-4">AI Agent</PageTitle>
+          <SectionDescription className="mt-1">Manage your Sales &amp; Customer Service AI Agent</SectionDescription>
         </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          {agentOptions.map((option) => (
+            <Link
+              key={option.title}
+              href={option.href}
+              className="bg-card border border-border rounded-2xl p-8 no-underline block transition-all duration-200 hover:-translate-y-1"
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = primaryColor;
+                e.currentTarget.style.boxShadow = `0 10px 40px rgba(var(--color-primary-rgb), 0.2)`;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = '';
+                e.currentTarget.style.boxShadow = 'none';
+              }}
+            >
+              <div className="flex items-start gap-6 mb-6">
+                <div
+                  className="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl flex-shrink-0"
+                  style={{ background: `linear-gradient(135deg, ${primaryColor}, ${primaryColor}dd)` }}
+                >
+                  {option.icon}
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-2xl font-bold text-foreground mb-2">
+                    {option.title}
+                  </h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    {option.description}
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 p-5 bg-background rounded-xl border border-border">
+                {option.stats.map((stat) => (
+                  <div key={stat.label}>
+                    <div className="text-xs text-muted-foreground mb-1">{stat.label}</div>
+                    <div className="text-lg font-semibold text-foreground">{stat.value}</div>
+                  </div>
+                ))}
+              </div>
+
+              <div
+                className="mt-6 py-3 bg-surface-elevated rounded-lg text-center text-sm font-semibold"
+                style={{ color: primaryColor }}
+              >
+                Manage →
+              </div>
+            </Link>
+          ))}
+        </div>
+      </div>
+    </div>
   );
 }
 

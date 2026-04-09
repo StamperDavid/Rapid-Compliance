@@ -4,6 +4,7 @@ import React, { useEffect, useState, useCallback } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import SubpageNav from "@/components/ui/SubpageNav";
 import { SYSTEM_TABS } from "@/lib/constants/subpage-nav";
+import { PageTitle, SectionDescription } from "@/components/ui/typography";
 import {
   Activity,
   Users,
@@ -62,11 +63,11 @@ export default function SystemPage(): React.ReactElement {
   if (!user?.role || user.role !== 'admin') {
     return (
       <div className="text-center py-12">
-        <AlertTriangle className="w-16 h-16 mx-auto mb-4 text-[var(--color-error)]" />
-        <h2 className="text-xl font-bold text-[var(--color-text-primary)] mb-2">
+        <AlertTriangle className="w-16 h-16 mx-auto mb-4 text-error" />
+        <h2 className="text-xl font-bold text-foreground mb-2">
           Access Denied
         </h2>
-        <p className="text-[var(--color-text-secondary)]">
+        <p className="text-muted-foreground">
           This page is only accessible to administrators.
         </p>
       </div>
@@ -80,28 +81,24 @@ export default function SystemPage(): React.ReactElement {
   const healthPercent = totalServices > 0 ? Math.round((healthyCount / totalServices) * 100) : 0;
 
   const statusIcon = health?.status === 'healthy'
-    ? <CheckCircle className="w-5 h-5 text-[var(--color-success)]" />
+    ? <CheckCircle className="w-5 h-5 text-success" />
     : health?.status === 'degraded'
-      ? <AlertCircle className="w-5 h-5 text-[var(--color-warning)]" />
-      : <XCircle className="w-5 h-5 text-[var(--color-error)]" />;
+      ? <AlertCircle className="w-5 h-5 text-warning" />
+      : <XCircle className="w-5 h-5 text-error" />;
 
   return (
-    <div className="space-y-6">
+    <div className="p-8 space-y-6">
       <SubpageNav items={SYSTEM_TABS} />
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">
-            System Administration
-          </h1>
-          <p className="text-[var(--color-text-secondary)] mt-1">
-            Platform health and administration tools
-          </p>
+          <PageTitle className="mb-1">System Administration</PageTitle>
+          <SectionDescription>Platform health and administration tools</SectionDescription>
         </div>
         <button
           onClick={() => void fetchHealth()}
           disabled={healthLoading}
-          className="flex items-center gap-2 px-3 py-2 text-sm rounded-lg border border-[var(--color-border-light)] hover:bg-[var(--color-bg-elevated)] transition-colors disabled:opacity-50"
+          className="flex items-center gap-2 px-3 py-2 text-sm rounded-lg border border-border-light hover:bg-surface-elevated transition-colors disabled:opacity-50"
         >
           <RefreshCw className={`w-4 h-4 ${healthLoading ? 'animate-spin' : ''}`} />
           Refresh
@@ -110,53 +107,53 @@ export default function SystemPage(): React.ReactElement {
 
       {/* System Health Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-[var(--color-bg-elevated)] rounded-lg border border-[var(--color-border-light)] p-4">
+        <div className="bg-surface-elevated rounded-lg border border-border-light p-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-[var(--color-success)]/10 flex items-center justify-center">
-              {healthLoading ? <Activity className="w-5 h-5 text-[var(--color-text-disabled)] animate-pulse" /> : statusIcon}
+            <div className="w-10 h-10 rounded-lg bg-success/10 flex items-center justify-center">
+              {healthLoading ? <Activity className="w-5 h-5 text-muted-foreground animate-pulse" /> : statusIcon}
             </div>
             <div>
-              <p className="text-sm text-[var(--color-text-secondary)]">System Health</p>
-              <p className="text-2xl font-bold text-[var(--color-text-primary)]">
+              <p className="text-sm text-muted-foreground">System Health</p>
+              <p className="text-2xl font-bold text-foreground">
                 {healthLoading ? '...' : `${healthPercent}%`}
               </p>
             </div>
           </div>
         </div>
-        <div className="bg-[var(--color-bg-elevated)] rounded-lg border border-[var(--color-border-light)] p-4">
+        <div className="bg-surface-elevated rounded-lg border border-border-light p-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-[var(--color-primary)]/10 flex items-center justify-center">
-              <Zap className="w-5 h-5 text-[var(--color-primary)]" />
+            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+              <Zap className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <p className="text-sm text-[var(--color-text-secondary)]">Services</p>
-              <p className="text-2xl font-bold text-[var(--color-text-primary)]">
+              <p className="text-sm text-muted-foreground">Services</p>
+              <p className="text-2xl font-bold text-foreground">
                 {healthLoading ? '...' : `${healthyCount}/${totalServices}`}
               </p>
             </div>
           </div>
         </div>
-        <div className="bg-[var(--color-bg-elevated)] rounded-lg border border-[var(--color-border-light)] p-4">
+        <div className="bg-surface-elevated rounded-lg border border-border-light p-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-[var(--color-info)]/10 flex items-center justify-center">
-              <Activity className="w-5 h-5 text-[var(--color-info)]" />
+            <div className="w-10 h-10 rounded-lg bg-info/10 flex items-center justify-center">
+              <Activity className="w-5 h-5 text-info" />
             </div>
             <div>
-              <p className="text-sm text-[var(--color-text-secondary)]">Status</p>
-              <p className="text-2xl font-bold text-[var(--color-text-primary)] capitalize">
+              <p className="text-sm text-muted-foreground">Status</p>
+              <p className="text-2xl font-bold text-foreground capitalize">
                 {healthLoading ? '...' : (health?.status ?? 'unknown')}
               </p>
             </div>
           </div>
         </div>
-        <div className="bg-[var(--color-bg-elevated)] rounded-lg border border-[var(--color-border-light)] p-4">
+        <div className="bg-surface-elevated rounded-lg border border-border-light p-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-[var(--color-warning)]/10 flex items-center justify-center">
-              <Users className="w-5 h-5 text-[var(--color-warning)]" />
+            <div className="w-10 h-10 rounded-lg bg-warning/10 flex items-center justify-center">
+              <Users className="w-5 h-5 text-warning" />
             </div>
             <div>
-              <p className="text-sm text-[var(--color-text-secondary)]">Role</p>
-              <p className="text-2xl font-bold text-[var(--color-text-primary)] capitalize">
+              <p className="text-sm text-muted-foreground">Role</p>
+              <p className="text-2xl font-bold text-foreground capitalize">
                 {user?.role ?? 'unknown'}
               </p>
             </div>
@@ -167,37 +164,37 @@ export default function SystemPage(): React.ReactElement {
       {/* Service Health Details */}
       {health && (
         <div>
-          <h2 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">
+          <h2 className="text-xl font-semibold text-foreground mb-4">
             Service Health
           </h2>
-          <div className="bg-[var(--color-bg-elevated)] rounded-lg border border-[var(--color-border-light)] overflow-hidden">
-            <div className="divide-y divide-[var(--color-border-light)]">
+          <div className="bg-surface-elevated rounded-lg border border-border-light overflow-hidden">
+            <div className="divide-y divide-border-light">
               {Object.entries(health.services).map(([name, svc]) => (
                 <div key={name} className="flex items-center justify-between px-4 py-3">
                   <div className="flex items-center gap-3">
                     {svc.status === 'healthy' ? (
-                      <CheckCircle className="w-4 h-4 text-[var(--color-success)]" />
+                      <CheckCircle className="w-4 h-4 text-success" />
                     ) : svc.status === 'degraded' ? (
-                      <AlertCircle className="w-4 h-4 text-[var(--color-warning)]" />
+                      <AlertCircle className="w-4 h-4 text-warning" />
                     ) : (
-                      <XCircle className="w-4 h-4 text-[var(--color-error)]" />
+                      <XCircle className="w-4 h-4 text-error" />
                     )}
-                    <span className="text-sm font-medium text-[var(--color-text-primary)] capitalize">
+                    <span className="text-sm font-medium text-foreground capitalize">
                       {name.replace(/_/g, ' ')}
                     </span>
                   </div>
                   <div className="flex items-center gap-4">
                     {svc.latencyMs != null && (
-                      <span className="text-xs text-[var(--color-text-secondary)]">
+                      <span className="text-xs text-muted-foreground">
                         {svc.latencyMs}ms
                       </span>
                     )}
                     <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
                       svc.status === 'healthy'
-                        ? 'bg-[var(--color-success)]/10 text-[var(--color-success)]'
+                        ? 'bg-success/10 text-success'
                         : svc.status === 'degraded'
-                          ? 'bg-[var(--color-warning)]/10 text-[var(--color-warning)]'
-                          : 'bg-[var(--color-error)]/10 text-[var(--color-error)]'
+                          ? 'bg-warning/10 text-warning'
+                          : 'bg-error/10 text-error'
                     }`}>
                       {svc.status}
                     </span>
@@ -207,7 +204,7 @@ export default function SystemPage(): React.ReactElement {
             </div>
           </div>
           {lastRefreshed && (
-            <p className="text-xs text-[var(--color-text-disabled)] mt-2">
+            <p className="text-xs text-muted-foreground mt-2">
               Last refreshed: {lastRefreshed.toLocaleTimeString()}
             </p>
           )}
@@ -216,7 +213,7 @@ export default function SystemPage(): React.ReactElement {
 
       {/* System Tools */}
       <div>
-        <h2 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">
+        <h2 className="text-lg font-semibold text-foreground mb-4">
           Administration Tools
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -279,16 +276,16 @@ function SystemToolCard({
   return (
     <a
       href={href}
-      className="flex items-start gap-4 p-4 bg-[var(--color-bg-elevated)] rounded-lg border border-[var(--color-border-light)] hover:border-[var(--color-primary)] transition-colors cursor-pointer"
+      className="flex items-start gap-4 p-4 bg-surface-elevated rounded-lg border border-border-light hover:border-primary transition-colors cursor-pointer"
     >
-      <div className="w-12 h-12 rounded-lg bg-[var(--color-primary)]/10 flex items-center justify-center flex-shrink-0 text-[var(--color-primary)]">
+      <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0 text-primary">
         {icon}
       </div>
       <div className="flex-1">
-        <h3 className="font-semibold text-[var(--color-text-primary)] mb-1">
+        <h3 className="font-semibold text-foreground mb-1">
           {title}
         </h3>
-        <p className="text-sm text-[var(--color-text-secondary)]">{description}</p>
+        <p className="text-sm text-muted-foreground">{description}</p>
       </div>
     </a>
   );

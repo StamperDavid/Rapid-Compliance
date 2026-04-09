@@ -24,6 +24,7 @@ import {
   Target,
   Trash2,
 } from 'lucide-react';
+import { PageTitle, SectionDescription } from '@/components/ui/typography';
 
 const DEAL_STAGES = ['prospecting', 'qualification', 'proposal', 'negotiation', 'closed_won', 'closed_lost'];
 
@@ -153,13 +154,13 @@ export default function DealsPage() {
       key: 'name',
       header: 'Deal',
       accessor: (deal) => deal.name,
-      render: (deal) => <span className="font-medium text-[var(--color-text-primary)]">{deal.name}</span>,
+      render: (deal) => <span className="font-medium text-foreground">{deal.name}</span>,
     },
     {
       key: 'company',
       header: 'Company',
       accessor: (deal) => getCompanyName(deal),
-      render: (deal) => <span className="text-[var(--color-text-secondary)]">{getCompanyName(deal)}</span>,
+      render: (deal) => <span className="text-muted-foreground">{getCompanyName(deal)}</span>,
     },
     {
       key: 'value',
@@ -190,7 +191,7 @@ export default function DealsPage() {
               style={{ width: `${deal.probability ?? 0}%` }}
             />
           </div>
-          <span className="text-[var(--color-text-secondary)] text-sm">{deal.probability ?? 0}%</span>
+          <span className="text-muted-foreground text-sm">{deal.probability ?? 0}%</span>
         </div>
       ),
     },
@@ -204,7 +205,7 @@ export default function DealsPage() {
           <span className="px-2 py-0.5 rounded-lg text-xs font-medium bg-primary/10 border border-primary/20 text-primary capitalize">
             {src}
           </span>
-        ) : <span className="text-[var(--color-text-disabled)] text-xs">-</span>;
+        ) : <span className="text-muted-foreground text-xs">-</span>;
       },
     },
     {
@@ -215,7 +216,7 @@ export default function DealsPage() {
       render: (deal) => (
         <button
           onClick={() => router.push(`/deals/${deal.id}`)}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-surface-elevated hover:bg-surface-elevated border border-border-light hover:border-primary text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] rounded-lg transition-all text-sm"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-surface-elevated hover:bg-surface-elevated border border-border-light hover:border-primary text-muted-foreground hover:text-foreground rounded-lg transition-all text-sm"
         >
           <Eye className="w-4 h-4" />
           View
@@ -236,8 +237,8 @@ export default function DealsPage() {
 
   if (loading && deals.length === 0) {
     return (
-      <div className="min-h-screen bg-surface-main flex items-center justify-center">
-        <div className="flex items-center gap-3 text-[var(--color-text-secondary)]">
+      <div className="bg-surface-main flex items-center justify-center py-24">
+        <div className="flex items-center gap-3 text-muted-foreground">
           <Loader2 className="w-6 h-6 animate-spin" />
           <span>Loading deals...</span>
         </div>
@@ -246,7 +247,7 @@ export default function DealsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-surface-main p-8">
+    <div className="p-8 space-y-6">
       <SubpageNav items={DEALS_TABS} />
       {/* Header */}
       <motion.div
@@ -259,8 +260,8 @@ export default function DealsPage() {
             <Briefcase className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold text-[var(--color-text-primary)]">Deals Pipeline</h1>
-            <p className="text-[var(--color-text-secondary)] text-sm">{deals.length} deals &bull; ${totalPipelineValue.toLocaleString()} total value</p>
+            <PageTitle>Deals Pipeline</PageTitle>
+            <SectionDescription>{deals.length} deals &bull; ${totalPipelineValue.toLocaleString()} total value</SectionDescription>
           </div>
         </div>
 
@@ -272,7 +273,7 @@ export default function DealsPage() {
               className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                 view === 'pipeline'
                   ? 'bg-gradient-to-r from-primary to-secondary text-white shadow-lg shadow-primary/25'
-                  : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-surface-elevated'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-surface-elevated'
               }`}
             >
               <LayoutGrid className="w-4 h-4" />
@@ -283,7 +284,7 @@ export default function DealsPage() {
               className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                 view === 'list'
                   ? 'bg-gradient-to-r from-primary to-secondary text-white shadow-lg shadow-primary/25'
-                  : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] hover:bg-surface-elevated'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-surface-elevated'
               }`}
             >
               <List className="w-4 h-4" />
@@ -340,9 +341,9 @@ export default function DealsPage() {
                   <div className="p-4 border-b border-border-light" style={colors.bgStyle}>
                     <div className="flex items-center gap-2 mb-1">
                       <span className="text-lg">{colors.icon}</span>
-                      <h3 className="font-semibold text-[var(--color-text-primary)] text-sm capitalize">{stage.replace('_', ' ')}</h3>
+                      <h3 className="font-semibold text-foreground text-sm capitalize">{stage.replace('_', ' ')}</h3>
                     </div>
-                    <div className="flex items-center gap-2 text-xs text-[var(--color-text-secondary)]">
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
                       <span>{stageDeals.length} deals</span>
                       <span>&bull;</span>
                       <span className="text-primary font-medium">${stageValue.toLocaleString()}</span>
@@ -352,7 +353,7 @@ export default function DealsPage() {
                   {/* Deal Cards */}
                   <div className="p-3 space-y-2 max-h-96 overflow-y-auto">
                     {stageDeals.length === 0 ? (
-                      <div className="text-center py-6 text-[var(--color-text-disabled)] text-sm">
+                      <div className="text-center py-6 text-muted-foreground text-sm">
                         No deals
                       </div>
                     ) : (
@@ -365,13 +366,13 @@ export default function DealsPage() {
                           onClick={() => router.push(`/deals/${deal.id}`)}
                           className="bg-surface-elevated hover:bg-surface-elevated border border-border-light hover:border-primary rounded-xl p-3 cursor-pointer transition-all group"
                         >
-                          <div className="font-medium text-[var(--color-text-primary)] text-sm mb-1 group-hover:text-primary-light transition-colors">
+                          <div className="font-medium text-foreground text-sm mb-1 group-hover:text-primary-light transition-colors">
                             {deal.name}
                           </div>
-                          <div className="text-xs text-[var(--color-text-disabled)] mb-2">{getCompanyName(deal)}</div>
+                          <div className="text-xs text-muted-foreground mb-2">{getCompanyName(deal)}</div>
                           <div className="flex items-center justify-between">
                             <span className="text-sm font-semibold text-primary">${(deal.value ?? 0).toLocaleString()}</span>
-                            <span className="text-xs text-[var(--color-text-disabled)]">{deal.probability ?? 0}%</span>
+                            <span className="text-xs text-muted-foreground">{deal.probability ?? 0}%</span>
                           </div>
                         </motion.div>
                       ))
@@ -388,7 +389,7 @@ export default function DealsPage() {
               <button
                 onClick={() => void loadMore()}
                 disabled={loading || !hasMore}
-                className="inline-flex items-center gap-2 px-6 py-2.5 bg-surface-elevated hover:bg-surface-elevated border border-border-light text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="inline-flex items-center gap-2 px-6 py-2.5 bg-surface-elevated hover:bg-surface-elevated border border-border-light text-muted-foreground hover:text-foreground rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? (
                   <>
@@ -431,7 +432,7 @@ export default function DealsPage() {
             onLoadMore={() => void loadMore()}
             itemCountLabel={`${deals.length} shown`}
             emptyMessage="No deals found"
-            emptyIcon={<Target className="w-8 h-8 text-[var(--color-text-disabled)]" />}
+            emptyIcon={<Target className="w-8 h-8 text-muted-foreground" />}
             accentColor="emerald"
           />
         </motion.div>

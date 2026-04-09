@@ -24,6 +24,7 @@ import {
   type BrandKit,
   type LogoPosition,
 } from '@/types/brand-kit';
+import { PageTitle, SectionDescription } from '@/components/ui/typography';
 
 // ── Logo Position Labels ────────────────────────────────────────────────────
 
@@ -113,24 +114,24 @@ export default function BrandKitPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="flex items-center justify-center p-16">
         <Loader2 className="w-8 h-8 animate-spin text-amber-500" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen p-6 space-y-6 max-w-4xl mx-auto">
+    <div className="p-8 space-y-6 max-w-4xl mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white flex items-center gap-3">
+          <PageTitle className="flex items-center gap-3">
             <Palette className="w-7 h-7 text-amber-500" />
             Brand Kit
-          </h1>
-          <p className="text-zinc-400 text-sm mt-1">
+          </PageTitle>
+          <SectionDescription className="mt-1">
             Configure your visual identity — applied automatically to all video output
-          </p>
+          </SectionDescription>
         </div>
         <div className="flex items-center gap-3">
           {/* Enable/Disable Toggle */}
