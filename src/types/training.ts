@@ -442,10 +442,11 @@ export interface SpecialistImprovementRequest {
  * Created when an improvement request is applied. Supports deploy/rollback.
  */
 export interface SpecialistGoldenMaster {
-  id: string;                                      // "sgm_{specialistId}_v{version}"
+  id: string;                                      // "sgm_{specialistId}_v{version}" or "sgm_{specialistId}_{industryKey}_v{version}"
   specialistId: string;                            // "SCRAPER_SPECIALIST"
   specialistName: string;
   version: number;                                 // 1, 2, 3...
+  industryKey?: string;                            // "saas_sales_ops", "real_estate", etc. — optional for back-compat with pre-rebuild specialists
   config: Record<string, unknown>;                 // Full config snapshot
   systemPromptSnapshot?: string;                   // Prompt if overridden
   sourceImprovementRequestId: string | null;       // null for v1 (seed)

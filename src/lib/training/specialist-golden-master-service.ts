@@ -287,6 +287,67 @@ export async function getActiveSpecialistGM(
 }
 
 // ============================================================================
+// INDUSTRY-SCOPED GM LOADER (rebuild specialists)
+// ============================================================================
+
+const GM_CACHE_TTL_MS = 60_000;
+
+interface GMCacheEntry {
+  data: SpecialistGoldenMaster;
+  timestamp: number;
+}
+
+const industryGMCache = new Map<string, GMCacheEntry>();
+
+function gmCacheKey(specialistId: string, industryKey: string): string {
+  return `${specialistId}:${industryKey}`;
+}
+
+/**
+ * Get the currently active Golden Master for a specialist scoped to a specific
+ * industry template. Used by rebuilt specialists that load their prompt from
+ * Firestore at runtime. 60-second in-memory cache keyed by `${specialistId}:${industryKey}`.
+ */
+export async function getActiveSpecialistGMByIndustry(
+  specialistId: string,
+  industryKey: string
+): Promise<SpecialistGoldenMaster | null> {
+  const cacheKey = gmCacheKey(specialistId, industryKey);
+  const cached = industryGMCache.get(cacheKey);
+
+  if (cached && (Date.now() - cached.timestamp) < GM_CACHE_TTL_MS) {
+    return cached.data;
+  }
+
+  if (!adminDb) { return null; }
+
+  const collection = adminDb.collection(getGMCollectionPath());
+  const snapshot = await collection
+    .where('specialistId', '==', specialistId)
+    .where('industryKey', '==', industryKey)
+    .where('isActive', '==', true)
+    .limit(1)
+    .get();
+
+  if (snapshot.empty) {
+    industryGMCache.delete(cacheKey);
+    return null;
+  }
+
+  const data = snapshot.docs[0].data() as SpecialistGoldenMaster;
+  industryGMCache.set(cacheKey, { data, timestamp: Date.now() });
+  return data;
+}
+
+/**
+ * Invalidate the industry-scoped GM cache for a given specialist+industry pair.
+ * Called after a new GM version is deployed so the next request reloads.
+ */
+export function invalidateIndustryGMCache(specialistId: string, industryKey: string): void {
+  industryGMCache.delete(gmCacheKey(specialistId, industryKey));
+}
+
+// ============================================================================
 // INTERNAL HELPERS
 // ============================================================================
 
