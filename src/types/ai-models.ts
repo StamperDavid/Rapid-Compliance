@@ -14,12 +14,6 @@ export type ModelName =
   | 'claude-3-opus'
   | 'claude-3-sonnet'
   | 'claude-3-haiku'
-  // DEPRECATED compat alias. OpenRouter no longer serves 3.5 Sonnet
-  // directly; the OpenRouterProvider alias table points this to
-  // anthropic/claude-sonnet-4.6 and logs a warning on every use. Remove
-  // once the remaining 25+ references in the codebase have been swept to
-  // an explicit Claude 4 name.
-  | 'claude-3-5-sonnet'
   // Anthropic Claude 4 (current generation — use explicitly in new code)
   | 'claude-sonnet-4'
   | 'claude-sonnet-4.5'
@@ -337,24 +331,6 @@ export const MODEL_CAPABILITIES: Record<ModelName, ModelCapabilities> = {
     costPerOutputToken: 0.00006,
     bestFor: ['Complex reasoning', 'Analysis', 'Problem solving'],
     releaseDate: '2023-03-14',
-    isDeprecated: false,
-  },
-  'claude-3-5-sonnet': {
-    provider: 'anthropic',
-    name: 'claude-3-5-sonnet',
-    displayName: 'Claude 3.5 Sonnet',
-    maxTokens: 4096,
-    contextWindow: 200000,
-    supportsFunctionCalling: true,
-    supportsVision: true,
-    supportsStreaming: true,
-    supportsFineTuning: false,
-    averageResponseTime: 2500,
-    qualityScore: 96,
-    costPerInputToken: 0.000003,
-    costPerOutputToken: 0.000015,
-    bestFor: ['Analysis', 'Writing', 'Reasoning', 'Coding'],
-    releaseDate: '2024-06-20',
     isDeprecated: false,
   },
   'claude-3-opus': {

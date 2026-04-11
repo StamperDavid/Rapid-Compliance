@@ -322,13 +322,6 @@ export class OpenRouterProvider {
       'claude-sonnet-4': 'anthropic/claude-sonnet-4',
       'claude-sonnet-4.5': 'anthropic/claude-sonnet-4.5',
       'claude-sonnet-4.6': 'anthropic/claude-sonnet-4.6',
-      // Compat alias for the 25+ legacy references to 'claude-3-5-sonnet'.
-      // OpenRouter no longer serves claude-3.5-sonnet; this alias routes to
-      // the latest Sonnet (4.6) and logs a warning on every hit so the
-      // remaining references surface in logs. Remove this row once the
-      // codebase sweep replaces the remaining 'claude-3-5-sonnet' references
-      // with explicit 'claude-sonnet-4.6' usage.
-      'claude-3-5-sonnet': 'anthropic/claude-sonnet-4.6',
       'claude-opus-4': 'anthropic/claude-opus-4',
       'claude-opus-4.1': 'anthropic/claude-opus-4.1',
       'claude-opus-4.5': 'anthropic/claude-opus-4.5',
@@ -348,15 +341,6 @@ export class OpenRouterProvider {
     // Return mapped name or use as-is if not in map
     if (typeof model === 'string' && model.startsWith('openrouter/')) {
       return model.replace('openrouter/', '');
-    }
-    // Warn when the deprecated compat alias is used so legacy references
-    // surface in logs. Remove this warning (and the alias) when the
-    // codebase sweep eliminates the remaining 'claude-3-5-sonnet' refs.
-    if (model === 'claude-3-5-sonnet') {
-      logger.warn(
-        '[OpenRouter] Deprecated alias claude-3-5-sonnet used — routing to anthropic/claude-sonnet-4.6. Replace call site with explicit claude-sonnet-4.6.',
-        { file: 'openrouter-provider.ts' },
-      );
     }
     return modelMap[model] ?? model;
   }

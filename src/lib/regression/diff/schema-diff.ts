@@ -217,9 +217,15 @@ export function diffSingleShotSignatures(
     const c = candidateInvariants.get(id);
     if (!b || !c) {continue;} // invariant set mismatch is a definition-time problem, not a diff
     if (b.passed !== c.passed) {
+      // Candidate pass + baseline fail → WARN (baseline suspected broken).
+      // Candidate fail + baseline pass → defaults to FAIL, but invariants
+      // can declare severityOnFail='WARN' to downgrade to review-only.
+      const severity: DiffVerdict = c.passed
+        ? 'WARN'
+        : (c.severityOnFail ?? 'FAIL');
       entries.push({
         diffClass: 'INVARIANT_DELTA',
-        severity: c.passed ? 'WARN' : 'FAIL',
+        severity,
         path: `invariants.${id}`,
         baselineValue: b.passed,
         candidateValue: c.passed,
@@ -227,7 +233,7 @@ export function diffSingleShotSignatures(
           ? `Invariant "${id}" now passes on candidate (was failing on baseline — check if baseline was recorded on a broken run)`
           : `Invariant "${id}" failed on candidate: ${c.message ?? 'no detail'}`,
       });
-      verdict = worseVerdict(verdict, c.passed ? 'WARN' : 'FAIL');
+      verdict = worseVerdict(verdict, severity);
     }
   }
 

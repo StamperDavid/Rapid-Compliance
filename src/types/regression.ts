@@ -159,6 +159,14 @@ export interface InvariantResult {
   description: string;                // human-readable rule text
   passed: boolean;
   message?: string;                   // failure detail if passed === false
+  /**
+   * Severity to assign when this invariant transitions from passing on
+   * baseline to failing on candidate. Defaults to 'FAIL'. Set to 'WARN' for
+   * content-level invariants that the owner wants flagged for review rather
+   * than hard-blocking an upgrade (e.g., personalization echoes on the
+   * Video Specialist).
+   */
+  severityOnFail?: 'WARN' | 'FAIL';
 }
 
 export type TerminalState =
