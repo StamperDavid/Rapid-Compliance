@@ -122,6 +122,14 @@ const PageCopyResultSchema = z.object({
     ogDescription: z.string().min(1),
   }),
   visuals: z.array(z.unknown()),
+}).superRefine((data, ctx) => {
+  if (data.headlines.h2.length !== data.sections.length) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['headlines', 'h2'],
+      message: `headlines.h2.length (${data.headlines.h2.length}) must equal sections.length (${data.sections.length}). The LLM must return one H2 per section in the same order, even when the first section is a hero whose H2 duplicates headlines.h1.`,
+    });
+  }
 });
 
 export type PageCopyResult = z.infer<typeof PageCopyResultSchema>;
@@ -273,8 +281,8 @@ function buildPageCopyUserPrompt(req: PageCopyRequest): string {
     '',
     '{',
     '  "headlines": {',
-    '    "h1": "6-12 word primary headline for this page",',
-    '    "h2": ["one H2 per section above, in the same order, 3-8 words each"],',
+    '    "h1": "6-12 word page-level headline (separate from section headings)",',
+    `    "h2": ["exactly ${sections.length} strings — ONE H2 per section in the same order as the sections list below. Each h2[i] MUST equal sections[i].heading. Even if sections[0] is a hero whose visible heading matches headlines.h1, you still produce an h2 entry for it and copy the same text there."],`,
     '    "h3": []',
     '  },',
     '  "sections": [',
@@ -282,7 +290,7 @@ function buildPageCopyUserPrompt(req: PageCopyRequest): string {
     '      "sectionId": "matches the id from the sections list above",',
     '      "heading": "the H2 for this section (same as headlines.h2[i])",',
     '      "content": "40-120 words of body copy for this section",',
-    '      "cta": "OPTIONAL — include only on CTA sections, specific verb + outcome"',
+    '      "cta": "OPTIONAL — include only on CTA-purpose sections, specific verb + outcome"',
     '    }',
     '  ],',
     '  "metadata": {',
@@ -296,9 +304,10 @@ function buildPageCopyUserPrompt(req: PageCopyRequest): string {
     '}',
     '',
     'Rules you MUST follow:',
-    `- The sections array must have exactly ${sections.length} items, in the same order as the list above.`,
+    `- sections.length MUST equal ${sections.length}, in the same order as the list above.`,
+    `- headlines.h2.length MUST equal ${sections.length} (one H2 per section, same order).`,
+    '- For each i: headlines.h2[i] MUST equal sections[i].heading verbatim.',
     '- Each section.sectionId must match exactly one id from the list above.',
-    '- headlines.h2.length must equal sections.length.',
     '- Do not use any phrase from the avoid list in the Brand DNA injection.',
     '- Do not fabricate statistics, percentages, testimonials, or client names.',
   ].filter((line) => line !== '').join('\n');
@@ -373,8 +382,8 @@ function buildProposalUserPrompt(req: ProposalRequest): string {
     'Produce a personalized proposal body. Respond with ONLY a valid JSON object, no markdown fences, no preamble, no explanation. The JSON must match this exact schema:',
     '',
     '{',
-    `  "proposalId": "proposal_${req.leadId}_<current-unix-timestamp>",`,
-    `  "leadId": "${req.leadId}",`,
+    '  "proposalId": "IGNORED — server overwrites this. Return any placeholder string.",',
+    '  "leadId": "IGNORED — server overwrites this. Return any placeholder string.",',
     '  "openingHook": "2-3 sentence opening that references the prospect\'s specific situation and signals you did your homework",',
     '  "sections": [',
     '    {',
@@ -383,11 +392,12 @@ function buildProposalUserPrompt(req: ProposalRequest): string {
     '    }',
     '  ],',
     '  "closingCta": "a specific, low-friction next step — book a specific meeting length, review a specific artifact, etc.",',
-    '  "generatedAt": "<ISO 8601 timestamp>"',
+    '  "generatedAt": "IGNORED — server overwrites this. Return any placeholder string."',
     '}',
     '',
     'Rules you MUST follow:',
     '- Produce 3 to 5 sections. Each section maps to a distinct pain point or requested info item.',
+    '- Do not waste effort on proposalId, leadId, or generatedAt — the server replaces whatever you return for those fields. Just return non-empty placeholder strings so the JSON parses.',
     '- Do not fabricate statistics, percentages, testimonials, or client names.',
     '- Do not use any phrase from the avoid list in the Brand DNA injection.',
     '- The openingHook must reference at least one concrete detail from the prospect context (company name, industry, pain point, or tech stack).',
@@ -411,19 +421,14 @@ async function executeProposal(
     );
   }
 
-  // Normalize: patch missing proposalId/generatedAt using runtime values so the model
-  // doesn't have to guess the exact timestamp format we want.
+  // Server-side overwrite of identity/time fields — the LLM is not trusted to
+  // generate accurate timestamps or our internal ID format. Any value the model
+  // returned for proposalId, leadId, or generatedAt is discarded.
   if (typeof parsed === 'object' && parsed !== null) {
     const obj = parsed as Record<string, unknown>;
-    if (typeof obj.proposalId !== 'string' || obj.proposalId.length === 0) {
-      obj.proposalId = `proposal_${req.leadId}_${Date.now()}`;
-    }
-    if (typeof obj.generatedAt !== 'string' || obj.generatedAt.length === 0) {
-      obj.generatedAt = new Date().toISOString();
-    }
-    if (typeof obj.leadId !== 'string' || obj.leadId.length === 0) {
-      obj.leadId = req.leadId;
-    }
+    obj.proposalId = `proposal_${req.leadId}_${Date.now()}`;
+    obj.leadId = req.leadId;
+    obj.generatedAt = new Date().toISOString();
   }
 
   const result = ProposalResultSchema.safeParse(parsed);
