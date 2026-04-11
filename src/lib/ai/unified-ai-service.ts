@@ -287,7 +287,8 @@ export function estimateCost(model: string, promptTokens: number, completionToke
     'gpt-4': { input: 0.03, output: 0.06 },
     'gpt-4-turbo': { input: 0.01, output: 0.03 },
     'gpt-3.5-turbo': { input: 0.0005, output: 0.0015 },
-    'claude-3.5-sonnet': { input: 0.003, output: 0.015 },
+    'claude-sonnet-4.6': { input: 0.003, output: 0.015 },
+    'claude-opus-4.6': { input: 0.015, output: 0.075 },
     'claude-3-opus': { input: 0.015, output: 0.075 },
   };
   
@@ -353,13 +354,21 @@ export function getModelInfo(model: string): ModelInfo {
       cost: '$0.0005/1K tokens',
       description: 'Fast and affordable for simple conversations.',
     },
-    'claude-3.5-sonnet': {
-      name: 'Claude 3.5 Sonnet',
+    'claude-sonnet-4.6': {
+      name: 'Claude Sonnet 4.6',
       provider: 'anthropic',
       speed: 4,
       quality: 5,
       cost: '$0.003/1K tokens',
-      description: 'Latest from Anthropic. Excellent for creative and nuanced responses.',
+      description: 'Latest Sonnet from Anthropic. Excellent for creative and nuanced responses.',
+    },
+    'claude-opus-4.6': {
+      name: 'Claude Opus 4.6',
+      provider: 'anthropic',
+      speed: 3,
+      quality: 5,
+      cost: '$0.015/1K tokens',
+      description: 'Flagship Opus from Anthropic. Best reasoning for complex orchestration.',
     },
     'claude-3-opus': {
       name: 'Claude 3 Opus',

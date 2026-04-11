@@ -638,7 +638,7 @@ Respond with ONLY a JSON object with these exact fields:
 
       const provider = new OpenRouterProvider(PLATFORM_ID);
       const response = await provider.chat({
-        model: 'claude-3-5-sonnet',
+        model: 'claude-sonnet-4.6',
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt },

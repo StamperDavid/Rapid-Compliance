@@ -728,7 +728,7 @@ export default function VoiceAITrainingLabPage() {
           { role: 'user' as const, content: callerMessage },
         ];
 
-        const modelName: ModelName = 'openrouter/anthropic/claude-3.5-sonnet' as const;
+        const modelName: ModelName = 'openrouter/anthropic/claude-sonnet-4.6' as const;
         const response = await provider.chat({
           model: modelName,
           messages,

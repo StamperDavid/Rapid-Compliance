@@ -5,8 +5,8 @@
 ## Context
 Repository: https://github.com/StamperDavid/Rapid-Compliance
 Branch: dev
-Last Updated: April 10, 2026 (Specialist Rebuild priority added — all other work on hold)
-**Status: AGENT SPECIALIST REBUILD IN PROGRESS — all QA and multi-tenant work on hold**
+Last Updated: April 11, 2026 (Task #23.5 Model Regression Harness complete; Copywriter locked to `claude-sonnet-4.6`; OpenRouter alias table honest; silent Haiku fallback removed; 23-file model-string sweep complete)
+**Status: AGENT SPECIALIST REBUILD IN PROGRESS — Copywriter (Task #23) proven real and upgraded; Task #24 (Video Specialist) is next**
 
 ## Mission
 
@@ -76,6 +76,70 @@ Each handler kept the outward shape of delegation: Mission Control steps flipped
 **4. As each department's specialists are rebuilt, rewire its Jasper delegation tool to route through the real manager → real specialists.** `delegate_to_content` comes back online when the Content department is done. `delegate_to_marketing` when Marketing is done. `produce_video` requires the Video Specialist. `orchestrate_campaign` requires all content and marketing specialists (since it spans both) and is the last Jasper tool to come back online.
 
 **5. Rebuild ContentManager dead code cleanup.** Delete `processIncomingBriefs()`, `processProductionQueue()`, and the 7 orphaned `handleXxxxBrief` methods in `src/lib/agents/content/manager.ts` (~500 lines). Per CLAUDE.md's no-half-finished-implementations rule. These methods are unreachable (not called from anywhere) and send action values to specialists that specialists don't implement.
+
+### Progress Log
+
+| Task | Status | Commit | Notes |
+|---|---|---|---|
+| #20 — Remove 7 Jasper delegation bypasses from `jasper-tools.ts` | DONE | `50d34728` | All 7 tools now return honest NOT_WIRED FAILED responses |
+| #21 — Delete ContentManager production-queue dead code | DONE | `3703eca8` | 786 lines removed |
+| #23 — Rebuild Copywriter as real LLM specialist | DONE | `4b4f5d8e`, `c350dbd3`, `08041a31` | Firestore GM, Brand DNA injection, Zod validation, pirate reality test harness |
+| #23.5 — Model Regression Harness + alias-table honesty | DONE (April 11, 2026) | this session | See detail below |
+| #24 — Rebuild Video Specialist | NEXT | — | Task proposal packet not yet produced — do this first in the next session |
+| #25 — Rebuild Calendar Coordinator | BLOCKED on #24 | — | |
+| #26 — Rebuild Asset Generator (copy portions) | BLOCKED on #25 | — | |
+
+### Task #23.5 detail — Model Regression Harness (April 11, 2026)
+
+**Problem discovered during Copywriter proof-of-life review:** the Copywriter's Firestore GM declared `claude-3-5-sonnet`, but `src/lib/ai/openrouter-provider.ts` contained a silent alias that rewrote `claude-3-5-sonnet` → `anthropic/claude-sonnet-4` on the wire. Server logs showed the real wire id (`claude-4-sonnet-20250522`) but the discrepancy had been hiding in plain sight. Owner recalled that a model regression / parity test system was supposed to exist for exactly this class of silent-swap protection. An Explore sub-agent confirmed it did NOT exist in code — the system was planned and never built.
+
+**Delivered:**
+
+1. **Regression harness** — a full guardrail for model upgrades. Built under `src/lib/regression/` and `scripts/regression-*.ts`:
+   - **Two modes.** `TOOL_CALLING` captures full multi-step orchestration signatures (step count, tool names, argument key shapes, terminal state) for agents like Jasper — answers "will a 13-step orchestration still be 13 steps after a model upgrade?" `SINGLE_SHOT` captures structural JSON shape + schema validity + per-case invariants for leaf specialists like Copywriter.
+   - **Honest model ids.** The harness uses its own minimal OpenRouter client (`src/lib/regression/capture/openrouter-direct.ts`) that bypasses `mapModelName` entirely — it sends exactly the model id it was told to test, not what the alias table happens to rewrite it to. If production later grows an alias, the harness still sees ground truth.
+   - **Non-determinism detection.** Each case runs N=3 times per model at temperature 0. Candidate non-determinism is itself a FAIL — you should not upgrade to a model that varies on identical input.
+   - **Shape tolerances.** Cases can declare spec-allowed variance (e.g. "proposal spec allows 3-5 sections") so in-range length deltas are WARN, not FAIL. Out-of-range is still FAIL.
+   - **Baselines stored under honest model ids** keyed in Firestore by exact OpenRouter id — never an alias. The harness refuses to overwrite existing baselines without `--overwrite-baseline`.
+   - **Forensic run records.** Every run stores full request/response bodies + per-step durations in `organizations/{orgId}/regressionRuns/{runId}` so past runs can be re-inspected without rerunning.
+   - **Seed corpus (Copywriter, 3 cases)** — home page 4 sections, long landing 6 sections, proposal for industrial SaaS lead. All seeded via `scripts/regression-seed-cases.ts`.
+   - **CLI entry points:** `regression-seed-cases.ts`, `regression-record-baseline.ts`, `regression-run.ts`, `regression-inspect.ts`.
+
+2. **First live regression run** — `anthropic/claude-sonnet-4` (current wire) vs `anthropic/claude-sonnet-4.6` (candidate) on the Copywriter corpus. Result: 2 PASS (home page, long landing), 1 WARN (proposal, 4→5 sections, inside spec tolerance). **Sonnet 4.6 is a proven safe upgrade for the Copywriter.** Full run record at `regressionRuns/regrun_copywriter_1775934972699_5ae661`.
+
+3. **OpenRouter alias table made honest** (`src/lib/ai/openrouter-provider.ts`):
+   - Every internal name now maps to the OpenRouter id it actually names. `claude-sonnet-4`, `claude-sonnet-4.5`, `claude-sonnet-4.6`, `claude-opus-4`, `claude-opus-4.1`, `claude-opus-4.5`, `claude-opus-4.6`, `claude-haiku-4.5` all have honest 1:1 rows.
+   - `claude-3-5-sonnet` is kept as a **deprecated compat alias** pointing to `claude-sonnet-4.6` with a runtime `logger.warn` on every hit. Remove once production logs confirm the warning never fires.
+   - **Silent Haiku fallback removed.** The old 404→Haiku fallback at lines 139/150-166 is gone. Models that 404 now fail honestly with no substitute. This was itself a silent model-swap bug — a request for Sonnet that 404'd would have been answered by Haiku with no visibility anywhere.
+
+4. **Copywriter upgraded to `claude-sonnet-4.6`:**
+   - `src/lib/agents/content/copywriter/specialist.ts` — header comment + default model constant
+   - `src/app/api/training/seed-copywriter-gm/route.ts` — MODEL constant
+   - `scripts/seed-copywriter-gm.js` — seed doc's `config.model`
+   - **Live Firestore GM patched in place** via `scripts/_patch-copywriter-gm-model.js` — updated only `config.model`, preserved systemPrompt, temperature, maxTokens, and all other fields. GM is now on `claude-sonnet-4.6` with no compat-shim warnings.
+
+5. **Claude 4 family added to `src/types/ai-models.ts`** — ModelName union and MODEL_CAPABILITIES database both now include full capability entries for Sonnet 4/4.5/4.6, Opus 4/4.1/4.5/4.6, and Haiku 4.5 with pricing, context windows, and quality scores sourced from OpenRouter's `/models` endpoint on April 11, 2026.
+
+6. **23-file model-string sweep** — every production reference to `claude-3-5-sonnet` or `claude-3.5-sonnet` replaced with explicit Claude 4 names:
+   - **Orchestrators → `claude-opus-4.6`** (5 files): `src/app/api/orchestrator/chat/route.ts`, `src/components/orchestrator/OrchestratorBase.tsx`, `src/app/api/intelligence/discovery/chat/route.ts`, `src/app/api/leads/research/chat/route.ts`, `src/app/api/agent/chat/route.ts`
+   - **Leaf specialists → `claude-sonnet-4.6`** (14 files): voice/seo/settings training pages, facebook/public chat, video batch generator, social training, video script generation, hedra prompt agent, growth strategist, coaching models
+   - **Infrastructure defaults → `claude-sonnet-4.6`** (3 files): `api/version/route.ts`, `api/setup/create-platform-org/route.ts`, `types/engine-runtime.ts`
+   - **AI service / fallback chains → Added Claude 4 primary, demoted 3.5** (2 files): `src/lib/ai/unified-ai-service.ts`, `src/lib/ai/model-fallback-service.ts`
+   - **Skipped**: `src/lib/ai/provider-factory.ts:91` (the match is inside a code comment, not a string literal)
+
+**Verification:** `npx tsc --noEmit` clean, `npx eslint` clean on all 23 swept files + regression harness, `npm run build` exits 0.
+
+**Model tier policy locked in** (use for all future specialist rebuilds until regression harness says otherwise):
+
+| Tier | Model | Assigned agents |
+|---|---|---|
+| Opus (orchestration + reasoning) | `claude-opus-4.6` | Jasper, Prompt Engineer (future), any multi-step tool-calling agent |
+| Sonnet (leaf specialists + content) | `claude-sonnet-4.6` | Copywriter (proven), Video Specialist, Calendar Coordinator, Asset Generator, SEO Expert, LinkedIn/TikTok/Twitter/FB, Email/SMS/Voice AI, Growth Strategist, etc. |
+| Haiku (not currently used) | `claude-haiku-4.5` | Reserved for speed-critical / low-stakes paths only. Rejected for content work due to tone fidelity concerns. |
+
+**Known tech debt from this session:**
+- **Compat alias `claude-3-5-sonnet` → `claude-sonnet-4.6`** remains in `src/lib/ai/openrouter-provider.ts` as a safety net with runtime warning log. Remove in a follow-up session after confirming production logs show zero warning hits.
+- **Regression harness only has Copywriter cases so far.** Jasper cases and Video Specialist cases must be seeded as part of Task #24 and subsequent rebuilds. Each specialist becomes "done" only when it has a seeded regression case corpus + a recorded baseline on `claude-sonnet-4.6` (or `claude-opus-4.6` for orchestrators).
 
 ### Successor Workstream: Phase 2 GM Learning Loop — starts ONLY after ALL specialists are rebuilt
 

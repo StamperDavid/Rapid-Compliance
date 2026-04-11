@@ -143,7 +143,7 @@ Identify which scenes share the same character, build canonical character descri
   try {
     const provider = new OpenRouterProvider(PLATFORM_ID);
     const response = await provider.chat({
-      model: 'claude-3-5-sonnet',
+      model: 'claude-sonnet-4.6',
       messages: [
         { role: 'system', content: HEDRA_PROMPT_AGENT_SYSTEM },
         { role: 'user', content: userPrompt },

@@ -155,7 +155,7 @@ async function handlePublicChat(request: NextRequest) {
       'default'
     ) as AgentConfigData | null;
 
-    const selectedModel = (agentConfig?.selectedModel ?? 'openrouter/anthropic/claude-3.5-sonnet') as ModelName;
+    const selectedModel = (agentConfig?.selectedModel ?? 'openrouter/anthropic/claude-sonnet-4.6') as ModelName;
     const modelConfig = agentConfig?.modelConfig ?? {
       temperature: 0.7,
       maxTokens: 2048,

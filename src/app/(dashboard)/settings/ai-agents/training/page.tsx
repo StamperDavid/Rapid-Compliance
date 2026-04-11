@@ -227,7 +227,7 @@ export default function AgentTrainingPage() {
         ];
 
         const response = await provider.chat({
-          model: 'claude-3-5-sonnet',
+          model: 'claude-sonnet-4.6',
           messages,
           temperature: 0.7,
         });

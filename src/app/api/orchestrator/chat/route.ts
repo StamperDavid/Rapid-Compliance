@@ -97,14 +97,14 @@ const DEFAULT_MODEL = 'anthropic/claude-sonnet-4';
 
 // Fallback models — Claude models ONLY. Gemini does not reliably call tools.
 const FALLBACK_MODELS = [
-  'anthropic/claude-3.5-sonnet',
-  'anthropic/claude-3.7-sonnet',
+  'anthropic/claude-opus-4.6',
+  'anthropic/claude-sonnet-4.6',
 ];
 
 // Available models for the orchestrator (not exported - use GET endpoint to fetch)
 const AVAILABLE_MODELS = {
   // Recommended: Best tool-calling reliability with large tool sets
-  'anthropic/claude-3.5-sonnet': { name: 'Claude 3.5 Sonnet', latency: 'medium', quality: 'ultra', recommended: true },
+  'anthropic/claude-opus-4.6': { name: 'Claude Opus 4.6', latency: 'medium', quality: 'ultra', recommended: true },
   'anthropic/claude-3-haiku': { name: 'Claude 3 Haiku', latency: 'low', quality: 'high' },
 
   // Google models (fast but less reliable tool calling through OpenRouter)

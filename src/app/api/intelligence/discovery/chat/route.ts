@@ -20,7 +20,7 @@ import {
 
 export const dynamic = 'force-dynamic';
 
-const MODEL = 'anthropic/claude-3.5-sonnet' as unknown as ModelName;
+const MODEL = 'anthropic/claude-opus-4.6' as unknown as ModelName;
 const MAX_TOOL_ROUNDS = 5;
 
 const requestSchema = z.object({

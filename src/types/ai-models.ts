@@ -10,11 +10,25 @@ export type ModelName =
   | 'gpt-4-turbo'
   | 'gpt-4'
   | 'gpt-3.5-turbo'
-  // Anthropic
-  | 'claude-3-5-sonnet'
+  // Anthropic Claude 3
   | 'claude-3-opus'
   | 'claude-3-sonnet'
   | 'claude-3-haiku'
+  // DEPRECATED compat alias. OpenRouter no longer serves 3.5 Sonnet
+  // directly; the OpenRouterProvider alias table points this to
+  // anthropic/claude-sonnet-4.6 and logs a warning on every use. Remove
+  // once the remaining 25+ references in the codebase have been swept to
+  // an explicit Claude 4 name.
+  | 'claude-3-5-sonnet'
+  // Anthropic Claude 4 (current generation — use explicitly in new code)
+  | 'claude-sonnet-4'
+  | 'claude-sonnet-4.5'
+  | 'claude-sonnet-4.6'
+  | 'claude-opus-4'
+  | 'claude-opus-4.1'
+  | 'claude-opus-4.5'
+  | 'claude-opus-4.6'
+  | 'claude-haiku-4.5'
   // Google
   | 'gemini-1.5-pro'
   | 'gemini-1.5-flash'
@@ -395,6 +409,156 @@ export const MODEL_CAPABILITIES: Record<ModelName, ModelCapabilities> = {
     costPerOutputToken: 0.00000125,
     bestFor: ['Speed', 'Low cost', 'Simple tasks'],
     releaseDate: '2024-03-04',
+    isDeprecated: false,
+  },
+  // ==========================================================================
+  // Anthropic Claude 4 family — current generation (April 2026).
+  // Pricing and context from OpenRouter /models as of 2026-04-11. Update
+  // when upstream changes; the regression harness will catch any behavioral
+  // drift from such an update.
+  // ==========================================================================
+  'claude-sonnet-4': {
+    provider: 'anthropic',
+    name: 'claude-sonnet-4',
+    displayName: 'Claude Sonnet 4',
+    maxTokens: 8192,
+    contextWindow: 1000000,
+    supportsFunctionCalling: true,
+    supportsVision: true,
+    supportsStreaming: true,
+    supportsFineTuning: false,
+    averageResponseTime: 2500,
+    qualityScore: 96,
+    costPerInputToken: 0.000003,
+    costPerOutputToken: 0.000015,
+    bestFor: ['Analysis', 'Writing', 'Reasoning', 'Coding'],
+    releaseDate: '2025-05-22',
+    isDeprecated: false,
+  },
+  'claude-sonnet-4.5': {
+    provider: 'anthropic',
+    name: 'claude-sonnet-4.5',
+    displayName: 'Claude Sonnet 4.5',
+    maxTokens: 8192,
+    contextWindow: 1000000,
+    supportsFunctionCalling: true,
+    supportsVision: true,
+    supportsStreaming: true,
+    supportsFineTuning: false,
+    averageResponseTime: 2500,
+    qualityScore: 97,
+    costPerInputToken: 0.000003,
+    costPerOutputToken: 0.000015,
+    bestFor: ['Analysis', 'Writing', 'Reasoning', 'Coding'],
+    releaseDate: '2025-09',
+    isDeprecated: false,
+  },
+  'claude-sonnet-4.6': {
+    provider: 'anthropic',
+    name: 'claude-sonnet-4.6',
+    displayName: 'Claude Sonnet 4.6',
+    maxTokens: 8192,
+    contextWindow: 1000000,
+    supportsFunctionCalling: true,
+    supportsVision: true,
+    supportsStreaming: true,
+    supportsFineTuning: false,
+    averageResponseTime: 2500,
+    qualityScore: 98,
+    costPerInputToken: 0.000003,
+    costPerOutputToken: 0.000015,
+    bestFor: ['Analysis', 'Writing', 'Reasoning', 'Coding', 'Leaf specialist work'],
+    releaseDate: '2026-01',
+    isDeprecated: false,
+  },
+  'claude-opus-4': {
+    provider: 'anthropic',
+    name: 'claude-opus-4',
+    displayName: 'Claude Opus 4',
+    maxTokens: 8192,
+    contextWindow: 200000,
+    supportsFunctionCalling: true,
+    supportsVision: true,
+    supportsStreaming: true,
+    supportsFineTuning: false,
+    averageResponseTime: 3500,
+    qualityScore: 98,
+    costPerInputToken: 0.000015,
+    costPerOutputToken: 0.000075,
+    bestFor: ['Complex reasoning', 'Tool orchestration', 'Critical decisions'],
+    releaseDate: '2025-05',
+    isDeprecated: true,
+  },
+  'claude-opus-4.1': {
+    provider: 'anthropic',
+    name: 'claude-opus-4.1',
+    displayName: 'Claude Opus 4.1',
+    maxTokens: 8192,
+    contextWindow: 200000,
+    supportsFunctionCalling: true,
+    supportsVision: true,
+    supportsStreaming: true,
+    supportsFineTuning: false,
+    averageResponseTime: 3500,
+    qualityScore: 98,
+    costPerInputToken: 0.000015,
+    costPerOutputToken: 0.000075,
+    bestFor: ['Complex reasoning', 'Tool orchestration'],
+    releaseDate: '2025-07',
+    isDeprecated: true,
+  },
+  'claude-opus-4.5': {
+    provider: 'anthropic',
+    name: 'claude-opus-4.5',
+    displayName: 'Claude Opus 4.5',
+    maxTokens: 8192,
+    contextWindow: 200000,
+    supportsFunctionCalling: true,
+    supportsVision: true,
+    supportsStreaming: true,
+    supportsFineTuning: false,
+    averageResponseTime: 3500,
+    qualityScore: 99,
+    costPerInputToken: 0.000005,
+    costPerOutputToken: 0.000025,
+    bestFor: ['Complex reasoning', 'Tool orchestration'],
+    releaseDate: '2025-11',
+    isDeprecated: false,
+  },
+  'claude-opus-4.6': {
+    provider: 'anthropic',
+    name: 'claude-opus-4.6',
+    displayName: 'Claude Opus 4.6',
+    maxTokens: 8192,
+    contextWindow: 1000000,
+    supportsFunctionCalling: true,
+    supportsVision: true,
+    supportsStreaming: true,
+    supportsFineTuning: false,
+    averageResponseTime: 3500,
+    qualityScore: 99,
+    costPerInputToken: 0.000005,
+    costPerOutputToken: 0.000025,
+    bestFor: ['Complex reasoning', 'Tool orchestration', 'Jasper', 'Prompt Engineer'],
+    releaseDate: '2026-01',
+    isDeprecated: false,
+  },
+  'claude-haiku-4.5': {
+    provider: 'anthropic',
+    name: 'claude-haiku-4.5',
+    displayName: 'Claude Haiku 4.5',
+    maxTokens: 8192,
+    contextWindow: 200000,
+    supportsFunctionCalling: true,
+    supportsVision: true,
+    supportsStreaming: true,
+    supportsFineTuning: false,
+    averageResponseTime: 900,
+    qualityScore: 89,
+    costPerInputToken: 0.000001,
+    costPerOutputToken: 0.000005,
+    bestFor: ['Speed', 'Low cost', 'Simple tasks'],
+    releaseDate: '2025-10',
     isDeprecated: false,
   },
   'gemini-1.5-pro': {

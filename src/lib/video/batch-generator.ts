@@ -168,7 +168,7 @@ export async function generateDefaultTopics(theme: string): Promise<BatchTopicIn
     const { OpenRouterProvider } = await import('@/lib/ai/openrouter-provider');
     const provider = new OpenRouterProvider({});
     const response = await provider.chat({
-      model: 'anthropic/claude-3.5-sonnet' as import('@/types/ai-models').ModelName,
+      model: 'anthropic/claude-sonnet-4.6' as import('@/types/ai-models').ModelName,
       messages: [
         {
           role: 'system',

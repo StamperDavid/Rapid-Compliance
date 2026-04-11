@@ -32,14 +32,17 @@ export interface FallbackResponse extends UnifiedChatResponse {
  */
 export const FALLBACK_CHAINS: Record<string, string[]> = {
   // OpenAI fallbacks
-  'gpt-4': ['gpt-4-turbo', 'gpt-3.5-turbo', 'claude-3.5-sonnet', 'gemini-2.0-flash-exp'],
-  'gpt-4-turbo': ['gpt-3.5-turbo', 'claude-3.5-sonnet', 'gemini-2.0-flash-exp'],
-  'gpt-3.5-turbo': ['claude-3.5-sonnet', 'gemini-2.0-flash-exp'],
-  
-  // Anthropic fallbacks
-  'claude-3.5-sonnet': ['claude-3-sonnet', 'gpt-4-turbo', 'gemini-2.0-flash-exp'],
-  'claude-3-opus': ['claude-3.5-sonnet', 'gpt-4', 'gemini-2.0-flash-exp'],
-  'claude-3-sonnet': ['claude-3.5-sonnet', 'gemini-2.0-flash-exp'],
+  'gpt-4': ['gpt-4-turbo', 'gpt-3.5-turbo', 'claude-sonnet-4.6', 'gemini-2.0-flash-exp'],
+  'gpt-4-turbo': ['gpt-3.5-turbo', 'claude-sonnet-4.6', 'gemini-2.0-flash-exp'],
+  'gpt-3.5-turbo': ['claude-sonnet-4.6', 'gemini-2.0-flash-exp'],
+
+  // Anthropic Claude 4 fallbacks
+  'claude-opus-4.6': ['claude-sonnet-4.6', 'gpt-4', 'gemini-2.0-flash-exp'],
+  'claude-sonnet-4.6': ['claude-3-sonnet', 'gpt-4-turbo', 'gemini-2.0-flash-exp'],
+
+  // Anthropic Claude 3 fallbacks (legacy)
+  'claude-3-opus': ['claude-opus-4.6', 'gpt-4', 'gemini-2.0-flash-exp'],
+  'claude-3-sonnet': ['claude-sonnet-4.6', 'gemini-2.0-flash-exp'],
   'claude-3-haiku': ['gemini-2.0-flash-exp', 'gpt-3.5-turbo', 'gemini-2.0-flash-exp'],
   
   // Gemini fallbacks (shouldn't need these, but just in case)
@@ -147,7 +150,8 @@ export async function getAvailableModels(): Promise<string[]> {
     'gpt-4',
     'gpt-4-turbo',
     'gpt-3.5-turbo',
-    'claude-3.5-sonnet',
+    'claude-opus-4.6',
+    'claude-sonnet-4.6',
     'claude-3-opus',
     'claude-3-sonnet',
     'claude-3-haiku',
