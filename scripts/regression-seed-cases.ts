@@ -130,6 +130,116 @@ const COPYWRITER_CASES: Omit<RegressionCase, 'createdAt' | 'updatedAt' | 'baseli
 ];
 
 // ---------------------------------------------------------------------------
+// Video Specialist cases
+// ---------------------------------------------------------------------------
+
+const VIDEO_SPECIALIST_CASES: Omit<RegressionCase, 'createdAt' | 'updatedAt' | 'baselines'>[] = [
+  {
+    caseId: 'video_specialist_youtube_documentary_75s',
+    agentId: 'VIDEO_SPECIALIST',
+    name: 'YouTube documentary explainer (75s, canonical)',
+    description:
+      'The canonical script_to_storyboard case. Exercises the master-format platform rules, the duration-sum invariant, the sequential sceneNumber invariant, and the avoid-phrases guard. Mirrors what ContentManager.generateVideoContent sends at runtime.',
+    mode: 'SINGLE_SHOT',
+    active: true,
+    tags: ['script_to_storyboard', 'youtube', 'documentary', 'baseline'],
+    createdBy: 'seed-script',
+    shapeTolerances: [
+      {
+        path: '$.scenes.length',
+        kind: 'arrayLength',
+        min: 4,
+        max: 10,
+        reason: 'YouTube 60-150s videos run 4-10 scenes per the master-format platform discipline in the GM.',
+      },
+    ],
+    inputPayload: {
+      action: 'script_to_storyboard',
+      industryKey: 'saas_sales_ops',
+      input: {
+        script: 'Introducing SalesVelocity.ai — an AI agent swarm that runs your revenue engine end-to-end. Every department, always on, coordinated through one brain. Replace the patchwork stack your team built over the last decade.',
+        brief: 'Cold-introduction explainer for B2B SaaS founders and revenue leaders',
+        platform: 'youtube',
+        style: 'documentary',
+        targetDuration: 75,
+        targetAudience: 'B2B SaaS founders and revenue operations leaders',
+        callToAction: 'Book a 15-minute pipeline review',
+      },
+    },
+    notes: 'Baseline case — any delta here is a red flag for upgrades across the whole Video Specialist surface.',
+  },
+  {
+    caseId: 'video_specialist_tiktok_energetic_30s',
+    agentId: 'VIDEO_SPECIALIST',
+    name: 'TikTok energetic hook (30s, short form stress)',
+    description:
+      'Stress-tests platform discipline (hook in 3s) and style discipline (shorter scenes, handheld/dolly camera) at a different duration and platform than Case 1. Catches regressions where a new model stops respecting platform cues.',
+    mode: 'SINGLE_SHOT',
+    active: true,
+    tags: ['script_to_storyboard', 'tiktok', 'energetic', 'short_form', 'stress'],
+    createdBy: 'seed-script',
+    shapeTolerances: [
+      {
+        path: '$.scenes.length',
+        kind: 'arrayLength',
+        min: 4,
+        max: 8,
+        reason: 'TikTok 15-45s videos run 4-8 short scenes per the platform discipline.',
+      },
+    ],
+    inputPayload: {
+      action: 'script_to_storyboard',
+      industryKey: 'saas_sales_ops',
+      input: {
+        script: '',
+        brief: 'Short vertical hook video explaining in 30 seconds why your revenue stack is actually slowing you down and what replacing it with an AI agent swarm looks like',
+        platform: 'tiktok',
+        style: 'energetic',
+        targetDuration: 30,
+        targetAudience: 'Early-stage founders scrolling TikTok',
+        callToAction: 'Comment "swarm" to see the demo',
+      },
+    },
+    notes: 'Catches regressions where a new model stops respecting short-form platform cues — slower cuts, missing hook in first scene, etc.',
+  },
+  {
+    caseId: 'video_specialist_linkedin_talking_head_60s_personalized',
+    agentId: 'VIDEO_SPECIALIST',
+    name: 'LinkedIn personalized outbound (60s, personalization stress)',
+    description:
+      'Personalization stress case matching generatePersonalizedVideo live dispatch. The opening scene must echo the prospect company and contact name — the personalization_echo invariant flags drift as WARN (review-only) rather than FAIL so David can review and decide.',
+    mode: 'SINGLE_SHOT',
+    active: true,
+    tags: ['script_to_storyboard', 'linkedin', 'talking_head', 'personalization', 'stress'],
+    createdBy: 'seed-script',
+    shapeTolerances: [
+      {
+        path: '$.scenes.length',
+        kind: 'arrayLength',
+        min: 3,
+        max: 8,
+        reason: 'LinkedIn 30-90s videos run 3-8 scenes per the platform discipline.',
+      },
+    ],
+    inputPayload: {
+      action: 'script_to_storyboard',
+      industryKey: 'saas_sales_ops',
+      input: {
+        script: 'Hi Dana, I saw Acme Robotics is running Salesforce plus Outreach.io plus Gong and your SDR team is hitting 32% of quota. That stack is the problem — not the quota. Here is what changes when you replace it with a coordinated agent swarm.',
+        brief: 'Personalized 1:1 outbound video for Dana Ruiz, VP of Revenue at Acme Robotics. Reference the company name, the contact name, their tech stack, and the SDR quota miss in the opening scene.',
+        platform: 'linkedin',
+        style: 'talking_head',
+        targetDuration: 60,
+        targetAudience: 'Dana Ruiz, VP of Revenue at Acme Robotics (industrial SaaS, 180 employees)',
+        callToAction: "Book a 20-minute deep-dive on Acme's Salesforce → agent-swarm migration path",
+        tone: 'confident, direct, executive peer-to-peer',
+      },
+    },
+    notes: 'Personalization regressions surface via the personalization_echo invariant (scene[0].scriptText must contain "acme" or "dana"). That invariant is configured WARN-only in the executor so drift is flagged for owner review, not hard-blocking.',
+  },
+];
+
+// ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
 
@@ -159,6 +269,7 @@ function parseArgs(): CliArgs {
 
 const AGENT_CASE_BANK: Record<string, Omit<RegressionCase, 'createdAt' | 'updatedAt' | 'baselines'>[]> = {
   COPYWRITER: COPYWRITER_CASES,
+  VIDEO_SPECIALIST: VIDEO_SPECIALIST_CASES,
 };
 
 async function main(): Promise<void> {

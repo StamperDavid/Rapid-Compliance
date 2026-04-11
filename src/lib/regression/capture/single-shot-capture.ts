@@ -30,6 +30,15 @@ export interface InvariantCheck {
   id: string;
   description: string;
   check: (parsed: unknown) => { passed: boolean; message?: string };
+  /**
+   * Severity to assign when this invariant transitions from passing on
+   * baseline to failing on candidate. Defaults to 'FAIL'. Set to 'WARN' for
+   * content-level invariants that should be flagged for review rather than
+   * hard-blocking an upgrade (e.g., personalization echoes on the Video
+   * Specialist). Propagated into the InvariantResult so the diff engine
+   * can honor it without re-importing the case definition.
+   */
+  severityOnFail?: 'WARN' | 'FAIL';
 }
 
 export interface SingleShotCaptureInput {
@@ -193,6 +202,7 @@ export async function captureSingleShot(
           description: invariant.description,
           passed: result.passed,
           message: result.message,
+          severityOnFail: invariant.severityOnFail,
         });
       } catch (err) {
         invariants.push({
@@ -200,6 +210,7 @@ export async function captureSingleShot(
           description: invariant.description,
           passed: false,
           message: `invariant threw: ${err instanceof Error ? err.message : String(err)}`,
+          severityOnFail: invariant.severityOnFail,
         });
       }
     }

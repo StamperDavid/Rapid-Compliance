@@ -17,11 +17,13 @@
  */
 
 import { copywriterExecutor } from '../src/lib/regression/executors/copywriter-executor';
+import { videoSpecialistExecutor } from '../src/lib/regression/executors/video-specialist-executor';
 import { runRegression, type CaseExecutor } from '../src/lib/regression/runner';
 import type { CaseDiff, DiffEntry, RegressionRun } from '../src/types/regression';
 
 const EXECUTOR_REGISTRY: Record<string, CaseExecutor> = {
   COPYWRITER: copywriterExecutor,
+  VIDEO_SPECIALIST: videoSpecialistExecutor,
 };
 
 interface CliArgs {
