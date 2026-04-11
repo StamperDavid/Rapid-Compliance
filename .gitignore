@@ -100,3 +100,9 @@ nul
 .playwright-mcp/
 scripts/update-openrouter-key.js
 scripts/api-keys.local.json
+
+# Throwaway probe scripts — underscore prefix is the "ephemeral diagnostic"
+# convention. Any `scripts/_*` file is a one-off investigation that should not
+# pollute the repo. If a probe turns out to be worth keeping, rename it
+# without the underscore prefix.
+scripts/_*
