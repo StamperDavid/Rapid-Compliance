@@ -5,12 +5,14 @@
 ## Context
 Repository: https://github.com/StamperDavid/Rapid-Compliance
 Branch: dev
-Last Updated: March 30, 2026
-**Status: MANUAL QA IN PROGRESS — Pre-launch validation**
+Last Updated: April 10, 2026 (Specialist Rebuild priority added — all other work on hold)
+**Status: AGENT SPECIALIST REBUILD IN PROGRESS — all QA and multi-tenant work on hold**
 
 ## Mission
 
 Walk through every feature and function of the platform end-to-end. Find and fix bugs. Identify design improvements. Validate launch readiness. Then convert back to multi-tenant and launch.
+
+**CURRENT REALITY (April 10, 2026):** The mission above cannot proceed because the "agent swarm" that Jasper delegates to is not real. See the Current Priority section below. All manual QA and multi-tenant work is on hold until the specialist rebuild is complete.
 
 ## How This Works
 
@@ -22,40 +24,127 @@ Walk through every feature and function of the platform end-to-end. Find and fix
 
 ---
 
+## 🚨 CURRENT PRIORITY: Agent Specialist Rebuild (BLOCKS ALL OTHER WORK)
+
+**Discovered April 10, 2026.** The agent swarm Jasper was supposed to delegate to is not real. Auditing `src/lib/agents/` revealed that only 3 files in the entire tree import any LLM infrastructure:
+
+1. `src/lib/agents/growth-strategist/specialist.ts` — uses OpenRouter
+2. `src/lib/agents/builder/assets/specialist.ts` — uses image generation (Fal.ai)
+3. `src/lib/agents/shared/specialist-improvement-generator.ts` — OpenRouter support code for the Prompt Engineer (not a content producer)
+
+**Every other specialist — Copywriter, Video Specialist, Calendar Coordinator, Asset Generator (copy portions), SEO Expert, LinkedIn Expert, TikTok Expert, Twitter/X Expert, Facebook Ads Expert, Email Specialist, SMS Specialist, Voice AI Specialist, Funnel Engineer, UX/UI Architect, Copy Specialist, Funnel Pathologist — is a hand-coded template engine with no AI in it.** Example: the Copywriter's `generatePageCopy` method is a `switch` on tone that picks from 5 pre-written sentence patterns. The "SEO-injected copy with Brand DNA validation" described in the Content Manager's header is enforcement code checking for `avoidPhrases` — but the "copy" it validates is template output with nothing generated.
+
+**How this was hidden:** Seven tools in `src/lib/orchestrator/jasper-tools.ts` silently bypassed the manager/specialist chain and called `OpenRouterProvider` directly:
+- `delegate_to_content` (line 5443)
+- `delegate_to_marketing` (line 5278)
+- `delegate_to_builder` (line 5072)
+- `delegate_to_architect` (line 5585)
+- `delegate_to_outreach` (line 5696)
+- `produce_video` (line 4023) — 6-step "agent pipeline" with fake agent attribution
+- `orchestrate_campaign` (line 6891) — flagship multi-phase campaign tool, all phases bypass managers
+
+Each handler kept the outward shape of delegation: Mission Control steps flipped to COMPLETED, response JSON included `manager: 'CONTENT_MANAGER'`, review links got attached. None of it was real. Server logs showing "delegation successful" reflected direct LLM calls wearing agent costumes, not specialist execution.
+
+**The correctly-wired delegation tools** (for reference, not fixes): `delegate_to_sales` (RevenueDirector), `delegate_to_trust` (ReputationManager), `delegate_to_intelligence` (IntelligenceManager), `delegate_to_commerce` (CommerceManager). These four actually instantiate their manager and call `manager.execute()`.
+
+### What must happen — and nothing before it
+
+**1. Remove all 7 bypasses from `jasper-tools.ts`.** Immediately, before any specialist work. Jasper must honestly report "not yet wired — specialist rebuild in progress" for departments whose specialists aren't rebuilt. No fake completions. No silent LLM calls. No "just in case" hidden paths. OUT MEANS OUT.
+
+**2. Rebuild specialists one at a time, fully.** Each specialist becomes a real AI agent — no stubs, no template fallbacks, no shortcuts. When a specialist is "done," it means:
+- Real LLM backend (Claude via OpenRouter; model chosen per specialist's reasoning needs and cost profile)
+- System prompt stored in Firestore as a Golden Master, structured for multi-tenancy from day one: `goldenMasters/{specialistType}/{industryTemplate}/v{n}`
+- The initial GM (v1) is the `saas_sales_ops` industry template — SalesVelocity.ai's own vertical
+- Additional industry templates (real_estate, legal, healthcare, ecommerce, etc.) added later as new template rows; same specialist code, different data
+- Loader parameterized by industry key on day one, so multi-tenant conversion is a data migration, not a code rewrite
+- Brand DNA injected at runtime (toneOfVoice, keyPhrases, avoidPhrases, companyDescription, uniqueValue, industry)
+- Real input contract (what the manager sends it) and output contract (what it returns to the manager), both with concrete example payloads
+- Proof-of-life test harness (admin endpoint or CLI script) that shows: Firestore doc loaded with version + timestamp, full resolved system prompt, full OpenRouter request body, full OpenRouter response body, final AgentReport, plus a "compare two GM versions" mode that runs the same input against v1 and v2 and displays the two outputs side by side
+- Owner review gate before Firestore seeding: proposed prompt, preferences, model choice, input/output contract with example, proof-of-life surface — owner reviews, edits if needed, approves, then seeding happens
+- If the LLM call fails, the specialist fails honestly and returns a real FAILED report — no template fallback
+
+**3. Build order (one at a time, in sequence):**
+
+| # | Department | Specialists |
+|---|---|---|
+| 1 | Content | Copywriter → Video Specialist → Calendar Coordinator → Asset Generator (copy portions) |
+| 2 | Marketing | SEO Expert → LinkedIn Expert → TikTok Expert → Twitter/X Expert → Facebook Ads Expert → Growth Analyst |
+| 3 | Builder | UX/UI Architect → Funnel Engineer → Asset Generator (image portions — already uses Fal.ai, needs GM wrapper) |
+| 4 | Architect | Copy Specialist → UX/UI Specialist → Funnel Pathologist |
+| 5 | Outreach | Email Specialist → SMS Specialist → Voice AI Specialist |
+
+**4. As each department's specialists are rebuilt, rewire its Jasper delegation tool to route through the real manager → real specialists.** `delegate_to_content` comes back online when the Content department is done. `delegate_to_marketing` when Marketing is done. `produce_video` requires the Video Specialist. `orchestrate_campaign` requires all content and marketing specialists (since it spans both) and is the last Jasper tool to come back online.
+
+**5. Rebuild ContentManager dead code cleanup.** Delete `processIncomingBriefs()`, `processProductionQueue()`, and the 7 orphaned `handleXxxxBrief` methods in `src/lib/agents/content/manager.ts` (~500 lines). Per CLAUDE.md's no-half-finished-implementations rule. These methods are unreachable (not called from anywhere) and send action values to specialists that specialists don't implement.
+
+### Successor Workstream: Phase 2 GM Learning Loop — starts ONLY after ALL specialists are rebuilt
+
+The GM learning loop builds the automated feedback flow that takes owner grades/rejections and turns them into prompt edits on the specialists' GMs. **This cannot start until the specialists are real**, because you can't build a prompt editor for prompts that don't exist yet.
+
+When specialist rebuild is complete, build:
+
+- **Prompt Engineer Agent** — a specialist on Claude Opus. Reads a target specialist's current GM + owner's correction/feedback. Identifies the affected section of the prompt. Proposes a section-targeted rewrite that preserves unrelated sections. Can ask clarifying questions before proposing. Model: Claude Opus via OpenRouter (best reasoning for instruction editing; low-frequency so cost is negligible).
+- **Prompt Revision Popup UI** — 3-panel component: **Left** (current prompt section highlighted), **Right** (proposed rewrite with diff-style highlights), **Bottom** (chat with Prompt Engineer to refine). Actions: Approve (saves new GM version, deploys immediately, invalidates cache), Reject (discards proposal), Edit Manually (owner tweaks text before approving).
+- **Grade → Popup trigger** — when owner submits a star grade + explanation in Mission Control, the popup fires with a proposed GM edit for the graded agent.
+- **Deliverable reject → Popup trigger** — when owner rejects a deliverable (blog, video, social post, email) with feedback, the popup fires for the producing specialist's GM.
+- **Training Center chat → Popup trigger** — when a Training Center conversation produces a correction, the popup fires for the agent being trained.
+- **GM Version Control UI** in the Training Center — version list (v1, v2, v3…) with timestamps and change triggers, diff view between any two versions, one-click rollback to any previous version, active-version indicator.
+- **Remove `buildLearnedCorrectionsBlock`** — the layering-corrections approach in `src/app/api/orchestrator/chat/route.ts` is the interim shortcut. Delete it. All learning goes through direct GM edits via the Prompt Engineer Agent.
+- **Fix deliverable routing map** — verify `blog → content`, `video → video`, `social_post → social`, `email → email`, `image → video`, `landing_page → content` mappings are correct end-to-end.
+
+**Critical rule:** The learning loop is strictly owner-triggered. No feedback from owner = no changes to any GM. The system only modifies prompts when the owner explicitly provides a correction. Ungraded output is assumed satisfactory.
+
+### What resumes AFTER specialist rebuild + Phase 2 GM learning loop
+
+- Phase 1 Jasper QA (tests 1.8–1.18 + the A.1 power-user validation prompt)
+- Phases 2–16 of manual QA (CRM, Email, Social, Website, Video, Voice, Payments, Workflows, Forms, SEO, Analytics, Settings, Team, Public Pages, Cross-System)
+- Multi-tenant conversion (the pre-multitenant doc's Phase 9 work — `getSubCollection(orgId, sub)` refactor, AuthUser.orgId, apiKeyService cache keying, OAuth state params, Jasper org identity injection)
+- Launch prep, dogfooding as tenant #1, beta customer onboarding
+
+### Why this order is non-negotiable
+
+- **Specialists before learning loop** because you can't edit prompts that don't exist. Build the prompts first.
+- **Specialist rebuild before QA** because every QA test in Phases 1–16 that depends on agent output would fail or pass for the wrong reason against the current template swarm. Testing a fake system is worse than not testing — it produces false confidence and the bugs found would be phantom.
+- **Specialist rebuild before multi-tenant conversion** because the multi-tenant `getSubCollection(orgId)` refactor cascades through services whose behavior depends on agent output. Rebuild the foundation before pouring the second floor.
+
+---
+
 ## Architecture Snapshot
 
 - **162 pages** (143 dashboard + 18 public + 1 auth)
 - **429+ API routes**
-- **59 AI agents** (46 swarm + 7 standalone + 6 QA)
+- **~4 real AI agents** (Jasper + growth-strategist specialist + builder/assets image gen + specialist-improvement-generator). **The other ~55 "agents" are hand-coded template engines awaiting rebuild. See Current Priority above.**
 - **16 operational systems**
 - **4-role RBAC** (owner/admin/manager/member, 47 permissions)
-- **Single-tenant penthouse** (development phase) → will convert to multi-tenant after QA
+- **Single-tenant penthouse** (development phase) → will convert to multi-tenant after QA and specialist rebuild
 - **Framework:** Next.js 14.2.33 (App Router), React 18.2.0, TypeScript 5.9.3
 
 ---
 
 ## Phase Tracker
 
+**ALL QA PHASES ON HOLD** pending Agent Specialist Rebuild + Phase 2 GM Learning Loop. See Current Priority section above. Do not resume any phase below until the specialist rebuild and learning loop are complete.
+
 | Phase | System | Tests | Pass | Fail | Observations | Status |
 |-------|--------|-------|------|------|-------------|--------|
 | 0 | Foundation & Auth | 11 | 10 | 0 | 1 skipped (signup — multi-tenant) | COMPLETE |
-| 1 | Jasper & Mission Control | 18 | — | — | — | IN PROGRESS |
-| 2 | CRM & Sales Pipeline | 22 | — | — | — | NOT STARTED |
-| 3 | Email & Communications | 16 | — | — | — | NOT STARTED |
-| 4 | Social Media | 14 | — | — | — | NOT STARTED |
-| 5 | Website Builder & Blog | 18 | — | — | — | NOT STARTED |
-| 6 | Video & Creative Studio | 20 | — | — | — | NOT STARTED |
-| 7 | Voice AI & Calls | 10 | — | — | — | NOT STARTED |
-| 8 | Payments & E-Commerce | 18 | — | — | — | NOT STARTED |
-| 9 | Workflows & Automation | 12 | — | — | — | NOT STARTED |
-| 10 | Forms & Data Capture | 10 | — | — | — | NOT STARTED |
-| 11 | SEO & Growth | 14 | — | — | — | NOT STARTED |
-| 12 | Analytics & Reporting | 12 | — | — | — | NOT STARTED |
-| 13 | Settings & Configuration | 16 | — | — | — | NOT STARTED |
-| 14 | Team, Coaching & Performance | 10 | — | — | — | NOT STARTED |
-| 15 | Public Pages & Onboarding | 14 | — | — | — | NOT STARTED |
-| 16 | Cross-System Integration | 10 | — | — | — | NOT STARTED |
-| S | Security & Infrastructure | 8 | — | — | — | NOT STARTED |
+| 1 | Jasper & Mission Control | 18 | 7 | 0 | 1.4 partial (content contract — resolved by rebuild); 1.8–1.18 deferred | HOLD — awaiting rebuild |
+| 2 | CRM & Sales Pipeline | 22 | — | — | — | HOLD — awaiting rebuild |
+| 3 | Email & Communications | 16 | — | — | — | HOLD — awaiting rebuild |
+| 4 | Social Media | 14 | — | — | — | HOLD — awaiting rebuild |
+| 5 | Website Builder & Blog | 18 | — | — | — | HOLD — awaiting rebuild |
+| 6 | Video & Creative Studio | 20 | — | — | — | HOLD — awaiting rebuild |
+| 7 | Voice AI & Calls | 10 | — | — | — | HOLD — awaiting rebuild |
+| 8 | Payments & E-Commerce | 18 | — | — | — | HOLD — awaiting rebuild |
+| 9 | Workflows & Automation | 12 | — | — | — | HOLD — awaiting rebuild |
+| 10 | Forms & Data Capture | 10 | — | — | — | HOLD — awaiting rebuild |
+| 11 | SEO & Growth | 14 | — | — | — | HOLD — awaiting rebuild |
+| 12 | Analytics & Reporting | 12 | — | — | — | HOLD — awaiting rebuild |
+| 13 | Settings & Configuration | 16 | — | — | — | HOLD — awaiting rebuild |
+| 14 | Team, Coaching & Performance | 10 | — | — | — | HOLD — awaiting rebuild |
+| 15 | Public Pages & Onboarding | 14 | — | — | — | HOLD — awaiting rebuild |
+| 16 | Cross-System Integration | 10 | — | — | — | HOLD — awaiting rebuild |
+| S | Security & Infrastructure | 8 | — | — | — | HOLD — awaiting rebuild |
 | **TOTAL** | | **244** | **—** | **—** | **—** | |
 
 ---
@@ -310,7 +399,7 @@ Completed missions can be saved as reusable templates. The user sets:
 
 ### Pick Up Here
 
-Start with Phase 2 implementation. The continuation prompt below has the full context.
+**OUT OF DATE — see Current Priority section at the top of this file.** The Phase 2 GM learning loop is now a successor workstream that does not start until every specialist in every department has been rebuilt as a real AI agent. Reason: the learning loop edits prompts, but until the specialist rebuild ships, there are no real prompts to edit — the "specialists" are hand-coded template engines. Build the prompts first, build the editor second. Full context in the Current Priority section.
 
 ---
 
