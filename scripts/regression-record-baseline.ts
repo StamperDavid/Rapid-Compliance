@@ -16,6 +16,7 @@
 
 import { copywriterExecutor } from '../src/lib/regression/executors/copywriter-executor';
 import { videoSpecialistExecutor } from '../src/lib/regression/executors/video-specialist-executor';
+import { calendarCoordinatorExecutor } from '../src/lib/regression/executors/calendar-coordinator-executor';
 import {
   listActiveCasesForAgent,
   recordBaseline,
@@ -27,6 +28,7 @@ import type { CaseExecutor } from '../src/lib/regression/runner';
 const EXECUTOR_REGISTRY: Record<string, CaseExecutor> = {
   COPYWRITER: copywriterExecutor,
   VIDEO_SPECIALIST: videoSpecialistExecutor,
+  CALENDAR_COORDINATOR: calendarCoordinatorExecutor,
 };
 
 interface CliArgs {

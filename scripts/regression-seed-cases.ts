@@ -240,6 +240,120 @@ const VIDEO_SPECIALIST_CASES: Omit<RegressionCase, 'createdAt' | 'updatedAt' | '
 ];
 
 // ---------------------------------------------------------------------------
+// Calendar Coordinator cases
+// ---------------------------------------------------------------------------
+
+const CALENDAR_COORDINATOR_CASES: Omit<RegressionCase, 'createdAt' | 'updatedAt' | 'baselines'>[] = [
+  {
+    caseId: 'calendar_coordinator_canonical_1month',
+    agentId: 'CALENDAR_COORDINATOR',
+    name: 'Canonical 4-page 3-platform 1-month schedule',
+    description:
+      'The canonical case. Mirrors what ContentManager.generateContentCalendar sends at runtime (AI-determined date mode via duration string). Tests schedule shape, content-id fidelity, platform fidelity, frequency-recommendation generation, and platform-balance WARN review.',
+    mode: 'SINGLE_SHOT',
+    active: true,
+    tags: ['plan_calendar', 'canonical', 'baseline', 'ai_determined_dates'],
+    createdBy: 'seed-script',
+    shapeTolerances: [
+      {
+        path: '$.schedule.length',
+        kind: 'arrayLength',
+        min: 12,
+        max: 80,
+        reason: '4 content items × 3 platforms × varying posts-per-item-per-duration. Wide range of valid schedule sizes inside the spec.',
+      },
+    ],
+    inputPayload: {
+      action: 'plan_calendar',
+      industryKey: 'saas_sales_ops',
+      input: {
+        contentItems: [
+          { id: 'home', type: 'page_launch', title: 'Home Page' },
+          { id: 'features', type: 'page_launch', title: 'Features Landing' },
+          { id: 'pricing', type: 'page_launch', title: 'Pricing' },
+          { id: 'about', type: 'page_launch', title: 'About Us' },
+        ],
+        platforms: ['twitter', 'linkedin', 'facebook'],
+        duration: '1 month',
+        timezone: 'America/New_York',
+      },
+    },
+    notes: 'Baseline case — any delta here is a red flag for upgrades across the whole Calendar Coordinator surface.',
+  },
+  {
+    caseId: 'calendar_coordinator_multiplatform_stress',
+    agentId: 'CALENDAR_COORDINATOR',
+    name: '4-platform 1-month multi-platform stress',
+    description:
+      'Stress case. 3 content items across 4 platforms (twitter/linkedin/instagram/tiktok) over 1 month. Tests multi-platform cadence variety beyond the canonical 3-platform case while staying within Sonnet 4.6 deterministic range. Larger stress inputs (6+ platforms × 3+ months) produced non-deterministic output at temperature 0 during the Task #25 baseline run, which broke the regression diff contract — scope-bounded here so the sanity run is stable.',
+    mode: 'SINGLE_SHOT',
+    active: true,
+    tags: ['plan_calendar', 'stress', 'multi_platform', 'ai_determined_dates'],
+    createdBy: 'seed-script',
+    shapeTolerances: [
+      {
+        path: '$.schedule.length',
+        kind: 'arrayLength',
+        min: 18,
+        max: 60,
+        reason: '3 content items × 4 platforms × 1 month yields ~22-43 valid entries per the target-size heuristic; widen to 18-60 to cover creative variance.',
+      },
+    ],
+    inputPayload: {
+      action: 'plan_calendar',
+      industryKey: 'saas_sales_ops',
+      input: {
+        contentItems: [
+          { id: 'home', type: 'page_launch', title: 'Home Page' },
+          { id: 'features', type: 'page_launch', title: 'Features Landing' },
+          { id: 'pricing', type: 'page_launch', title: 'Pricing' },
+        ],
+        platforms: ['twitter', 'linkedin', 'instagram', 'tiktok'],
+        duration: '1 month',
+        timezone: 'America/New_York',
+      },
+    },
+    notes: 'Stress-tests cadence across 4 platforms with diverse cadence norms (twitter high-cadence, linkedin low-cadence, instagram + tiktok visual). A new model that ignores TikTok entirely or piles all posts on Twitter fails here. Scope bounded below the non-determinism threshold for claude-sonnet-4.6.',
+  },
+  {
+    caseId: 'calendar_coordinator_unusual_content_ids_fidelity',
+    agentId: 'CALENDAR_COORDINATOR',
+    name: 'Unusual content IDs fidelity stress (explicit date mode)',
+    description:
+      'Content-id fidelity stress case. 3 content items with unusual, easy-to-mangle ids (study_acme_2026Q1, whitepaper_industrial_iot, webinar_series_kickoff). Uses EXPLICIT date mode (startDate + endDate) to exercise the dual-mode input path. Invariants catch regressions where a new model mangles, abbreviates, or hallucinates ids.',
+    mode: 'SINGLE_SHOT',
+    active: true,
+    tags: ['plan_calendar', 'content_fidelity', 'stress', 'explicit_dates'],
+    createdBy: 'seed-script',
+    shapeTolerances: [
+      {
+        path: '$.schedule.length',
+        kind: 'arrayLength',
+        min: 6,
+        max: 40,
+        reason: '3 content items × 2 platforms × 1 month explicit range yields 6-40 valid entries.',
+      },
+    ],
+    inputPayload: {
+      action: 'plan_calendar',
+      industryKey: 'saas_sales_ops',
+      input: {
+        contentItems: [
+          { id: 'study_acme_2026Q1', type: 'case_study', title: 'Acme Robotics Q1 2026 Win' },
+          { id: 'whitepaper_industrial_iot', type: 'whitepaper', title: 'Industrial IoT Revenue Automation' },
+          { id: 'webinar_series_kickoff', type: 'webinar', title: 'Revenue Swarm Webinar Kickoff' },
+        ],
+        platforms: ['linkedin', 'twitter'],
+        startDate: '2026-04-13',
+        endDate: '2026-05-13',
+        timezone: 'America/New_York',
+      },
+    },
+    notes: 'Fidelity regressions show up as everyContentIdEchoed or noHallucinatedContentIds failures if the model mangles the unusual ids. Also exercises the EXPLICIT date mode path (no duration string).',
+  },
+];
+
+// ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
 
@@ -270,6 +384,7 @@ function parseArgs(): CliArgs {
 const AGENT_CASE_BANK: Record<string, Omit<RegressionCase, 'createdAt' | 'updatedAt' | 'baselines'>[]> = {
   COPYWRITER: COPYWRITER_CASES,
   VIDEO_SPECIALIST: VIDEO_SPECIALIST_CASES,
+  CALENDAR_COORDINATOR: CALENDAR_COORDINATOR_CASES,
 };
 
 async function main(): Promise<void> {
