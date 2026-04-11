@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
     branch: process.env.VERCEL_GIT_COMMIT_REF ?? 'unknown',
     message: process.env.VERCEL_GIT_COMMIT_MESSAGE ?? 'unknown',
     deployedAt: process.env.VERCEL_URL ?? 'localhost',
-    jasperModel: 'anthropic/claude-3.5-sonnet',
+    jasperModel: 'anthropic/claude-sonnet-4.6',
     buildTime: new Date().toISOString(),
   });
 }

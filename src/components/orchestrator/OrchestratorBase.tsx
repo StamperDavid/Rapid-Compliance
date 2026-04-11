@@ -169,7 +169,7 @@ const DEFAULT_VOICE_IDS = {
 const AVAILABLE_MODELS = {
   'anthropic/claude-sonnet-4': 'Claude Sonnet 4 (Recommended)',
   'anthropic/claude-3.7-sonnet': 'Claude 3.7 Sonnet',
-  'anthropic/claude-3.5-sonnet': 'Claude 3.5 Sonnet',
+  'anthropic/claude-opus-4.6': 'Claude Opus 4.6',
   'openai/gpt-4-turbo': 'GPT-4 Turbo',
 };
 

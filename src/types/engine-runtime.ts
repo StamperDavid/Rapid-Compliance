@@ -188,7 +188,7 @@ export function calculateLLMCost(
       input: 0.03,
       output: 0.06,
     },
-    'claude-3.5-sonnet': {
+    'claude-sonnet-4.6': {
       input: 0.003,
       output: 0.015,
     },

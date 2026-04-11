@@ -2,7 +2,9 @@
  * Copywriter Specialist — REAL AI AGENT (Task #23 rebuild, April 11 2026)
  *
  * Loads its Golden Master from Firestore at runtime, injects Brand DNA, and
- * calls OpenRouter (Claude 3.5 Sonnet) to produce marketing copy. No template
+ * calls OpenRouter (Claude Sonnet 4.6 by default — locked in after the
+ * regression harness proved Sonnet 4 → Sonnet 4.6 was a safe upgrade on
+ * the seeded Copywriter case corpus) to produce marketing copy. No template
  * fallbacks. If the GM is missing, Brand DNA is missing, OpenRouter fails,
  * JSON won't parse, or Zod validation fails, the specialist returns a real
  * FAILED AgentReport with the honest reason.
@@ -177,7 +179,9 @@ async function loadGMAndBrandDNA(industryKey: string): Promise<LlmCallContext> {
 
   const gm: CopywriterGMConfig = {
     systemPrompt,
-    model: config.model ?? 'claude-3-5-sonnet',
+    // Default to Sonnet 4.6 (proved safe by the regression harness on
+    // April 11 2026). The GM can override this per-industry if needed.
+    model: config.model ?? 'claude-sonnet-4.6',
     temperature: config.temperature ?? 0.7,
     maxTokens: config.maxTokens ?? 4096,
     supportedActions: config.supportedActions ?? [...SUPPORTED_ACTIONS],

@@ -132,12 +132,16 @@ export class OpenRouterProvider {
   }
 
   /**
-   * Chat completion using OpenRouter
-   * Works with ANY model: GPT-4, Claude, Gemini, Llama, etc.
+   * Chat completion using OpenRouter.
+   *
+   * Honest failure on 404. An earlier version of this method silently fell
+   * back to claude-3-haiku when the requested model returned 404 — which
+   * meant a specialist that asked for Sonnet 4.6 would get Haiku answering
+   * instead with no visibility anywhere. That is exactly the class of
+   * silent model-swap the regression harness was built to detect. No
+   * fallback here. If the requested model is unavailable, the caller sees
+   * the real 404.
    */
-  // Fallback model if primary fails with 404
-  private static readonly FALLBACK_MODEL = 'anthropic/claude-3-haiku';
-
   async chat(params: {
     model: ModelName;
     messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>;
@@ -146,26 +150,7 @@ export class OpenRouterProvider {
     topP?: number;
   }) {
     const openrouterModel = this.mapModelName(params.model);
-
-    // Try primary model first, then fallback if 404
-    const modelsToTry = [openrouterModel, OpenRouterProvider.FALLBACK_MODEL];
-
-    for (const model of modelsToTry) {
-      try {
-        const result = await this.makeRequest(model, params);
-        return result;
-      } catch (error: unknown) {
-        // If 404 (model not found), try fallback
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        if (errorMessage.includes('404') && model !== OpenRouterProvider.FALLBACK_MODEL) {
-          logger.info(`[OpenRouter] Model ${model} returned 404, trying fallback: ${OpenRouterProvider.FALLBACK_MODEL}`, { file: 'openrouter-provider.ts' });
-          continue;
-        }
-        throw error;
-      }
-    }
-
-    throw new Error('All models failed');
+    return this.makeRequest(openrouterModel, params);
   }
 
   private async makeRequest(
@@ -309,7 +294,15 @@ export class OpenRouterProvider {
   }
 
   /**
-   * Map our internal model names to OpenRouter model identifiers
+   * Map our internal model names to OpenRouter model identifiers.
+   *
+   * HONESTY RULE: every internal name must map to the OpenRouter id it
+   * actually names. Never staple one version onto another's label (e.g.
+   * never map 'claude-3.5-sonnet' to 'anthropic/claude-sonnet-4'). A prior
+   * version of this table did exactly that and the regression harness
+   * would have no chance of detecting a silent upgrade if it saw a
+   * mismatched alias answering as the declared model. If a model is sunset
+   * upstream, remove its row here — do not repoint it to a different model.
    */
   private mapModelName(model: ModelName): string {
     const modelMap: Record<string, string> = {
@@ -319,13 +312,28 @@ export class OpenRouterProvider {
       'gpt-4-turbo-preview': 'openai/gpt-4-turbo-preview',
       'gpt-3.5-turbo': 'openai/gpt-3.5-turbo',
 
-      // Anthropic models
+      // Anthropic models — each internal name maps to the OpenRouter id it
+      // actually names. Latest Claude 4 generation is 4.6 across Sonnet
+      // and Opus. Use claude-sonnet-4.6 for leaf specialists and
+      // claude-opus-4.6 for orchestrators (Jasper, Prompt Engineer).
       'claude-3-opus': 'anthropic/claude-3-opus',
       'claude-3-sonnet': 'anthropic/claude-3-sonnet',
       'claude-3-haiku': 'anthropic/claude-3-haiku',
-      'claude-3.5-sonnet': 'anthropic/claude-sonnet-4',
-      'claude-3-5-sonnet': 'anthropic/claude-sonnet-4',
       'claude-sonnet-4': 'anthropic/claude-sonnet-4',
+      'claude-sonnet-4.5': 'anthropic/claude-sonnet-4.5',
+      'claude-sonnet-4.6': 'anthropic/claude-sonnet-4.6',
+      // Compat alias for the 25+ legacy references to 'claude-3-5-sonnet'.
+      // OpenRouter no longer serves claude-3.5-sonnet; this alias routes to
+      // the latest Sonnet (4.6) and logs a warning on every hit so the
+      // remaining references surface in logs. Remove this row once the
+      // codebase sweep replaces the remaining 'claude-3-5-sonnet' references
+      // with explicit 'claude-sonnet-4.6' usage.
+      'claude-3-5-sonnet': 'anthropic/claude-sonnet-4.6',
+      'claude-opus-4': 'anthropic/claude-opus-4',
+      'claude-opus-4.1': 'anthropic/claude-opus-4.1',
+      'claude-opus-4.5': 'anthropic/claude-opus-4.5',
+      'claude-opus-4.6': 'anthropic/claude-opus-4.6',
+      'claude-haiku-4.5': 'anthropic/claude-haiku-4.5',
 
       // Google models
       'gemini-pro': 'google/gemini-pro',
@@ -340,6 +348,15 @@ export class OpenRouterProvider {
     // Return mapped name or use as-is if not in map
     if (typeof model === 'string' && model.startsWith('openrouter/')) {
       return model.replace('openrouter/', '');
+    }
+    // Warn when the deprecated compat alias is used so legacy references
+    // surface in logs. Remove this warning (and the alias) when the
+    // codebase sweep eliminates the remaining 'claude-3-5-sonnet' refs.
+    if (model === 'claude-3-5-sonnet') {
+      logger.warn(
+        '[OpenRouter] Deprecated alias claude-3-5-sonnet used — routing to anthropic/claude-sonnet-4.6. Replace call site with explicit claude-sonnet-4.6.',
+        { file: 'openrouter-provider.ts' },
+      );
     }
     return modelMap[model] ?? model;
   }

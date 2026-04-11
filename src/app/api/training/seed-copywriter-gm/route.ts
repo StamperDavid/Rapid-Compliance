@@ -28,7 +28,7 @@ export const dynamic = 'force-dynamic';
 const SPECIALIST_ID = 'COPYWRITER';
 const INDUSTRY_KEY = 'saas_sales_ops';
 const GM_ID = `sgm_copywriter_${INDUSTRY_KEY}_v1`;
-const MODEL = 'claude-3-5-sonnet';
+const MODEL = 'claude-sonnet-4.6';
 const TEMPERATURE = 0.7;
 const MAX_TOKENS = 4096;
 

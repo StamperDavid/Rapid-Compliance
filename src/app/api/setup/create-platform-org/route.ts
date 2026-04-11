@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
       getSubCollection('agentConfig'),
       'default',
       {
-        selectedModel: 'openrouter/anthropic/claude-3.5-sonnet',
+        selectedModel: 'openrouter/anthropic/claude-sonnet-4.6',
         modelConfig: {
           temperature: 0.7,
           maxTokens: 800,

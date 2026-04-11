@@ -559,7 +559,7 @@ async function generateAIScripts(
   let response: { content: string };
   try {
     response = await provider.chat({
-      model: 'claude-3-5-sonnet',
+      model: 'claude-sonnet-4.6',
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt },
@@ -570,7 +570,7 @@ async function generateAIScripts(
   } catch (aiError) {
     logger.error('OpenRouter API call failed for script generation',
       aiError instanceof Error ? aiError : new Error(String(aiError)),
-      { file: 'script-generation-service.ts', model: 'claude-3-5-sonnet' },
+      { file: 'script-generation-service.ts', model: 'claude-sonnet-4.6' },
     );
     return null;
   }

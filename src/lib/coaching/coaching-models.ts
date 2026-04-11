@@ -25,8 +25,8 @@ export interface CoachingModelInfo {
 }
 
 export const COACHING_MODELS: Record<string, CoachingModelInfo> = {
-  'anthropic/claude-3.5-sonnet': {
-    name: 'Claude 3.5 Sonnet',
+  'anthropic/claude-sonnet-4.6': {
+    name: 'Claude Sonnet 4.6',
     provider: 'Anthropic',
     quality: 'ultra',
     costTier: 'standard',
@@ -63,7 +63,7 @@ export const COACHING_MODELS: Record<string, CoachingModelInfo> = {
 } as const;
 
 /** Default model when no preference is set */
-export const DEFAULT_COACHING_MODEL = 'anthropic/claude-3.5-sonnet';
+export const DEFAULT_COACHING_MODEL = 'anthropic/claude-sonnet-4.6';
 
 /** Valid model IDs (for runtime validation) */
 export const VALID_COACHING_MODEL_IDS = Object.keys(COACHING_MODELS);

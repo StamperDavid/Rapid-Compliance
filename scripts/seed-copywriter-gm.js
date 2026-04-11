@@ -134,7 +134,7 @@ async function main() {
     industryKey: INDUSTRY_KEY,
     config: {
       systemPrompt: SYSTEM_PROMPT,
-      model: 'claude-3-5-sonnet',
+      model: 'claude-sonnet-4.6',
       temperature: 0.7,
       maxTokens: 4096,
       supportedActions: ['generate_page_copy', 'generate_proposal'],
