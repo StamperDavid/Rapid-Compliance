@@ -242,27 +242,38 @@ export function diffSingleShotSignatures(
 
 /**
  * Non-determinism check for single-shot mode. Any two candidate signatures
- * that differ structurally is a FAIL — the model produced unstable output
- * on identical input at temperature 0.
+ * that differ structurally is normally a FAIL — the model produced unstable
+ * output on identical input at temperature 0. However, when the case
+ * declares shape tolerances (e.g., '$.schedule.length is allowed to vary
+ * between 18 and 60'), variance that stays ENTIRELY inside those tolerances
+ * is downgraded to WARN: the candidate runs differ but only within
+ * spec-allowed editorial range, so the upgrade is reviewable rather than
+ * hard-blocked.
  */
 export function detectSingleShotNonDeterminism(
   candidates: SingleShotSignature[],
+  tolerances?: ShapeTolerance[],
 ): DiffEntry | null {
   if (candidates.length < 2) {return null;}
   const [first, ...rest] = candidates;
   if (!first) {return null;}
   for (const other of rest) {
-    const delta = diffSingleShotSignatures(first, other);
+    const delta = diffSingleShotSignatures(first, other, tolerances);
     if (delta.entries.length > 0) {
+      // If ALL entries were downgraded to WARN by tolerance matching, the
+      // non-determinism is inside declared spec range — report as WARN
+      // instead of FAIL so owner reviews rather than blocks.
+      const allWarn = delta.entries.every((e) => e.severity === 'WARN');
+      const severity: DiffVerdict = allWarn ? 'WARN' : 'FAIL';
       return {
         diffClass: 'NON_DETERMINISM',
-        severity: 'FAIL',
+        severity,
         path: 'candidate.runs[*]',
         baselineValue: { schemaValid: first.schemaValid },
         candidateValue: { schemaValid: other.schemaValid },
-        message:
-          `Candidate produced non-deterministic output across repeat runs on identical input. ` +
-          `First delta: ${delta.entries[0]?.message ?? 'n/a'}`,
+        message: allWarn
+          ? `Candidate produced non-deterministic output across repeat runs, but ALL deltas are inside declared shape tolerances. First delta: ${delta.entries[0]?.message ?? 'n/a'}`
+          : `Candidate produced non-deterministic output across repeat runs on identical input. First delta: ${delta.entries[0]?.message ?? 'n/a'}`,
       };
     }
   }

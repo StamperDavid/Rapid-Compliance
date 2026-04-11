@@ -1430,6 +1430,7 @@ export class ContentManager extends BaseManager {
           })),
           platforms: targetPlatforms.length > 0 ? targetPlatforms : ['twitter', 'linkedin', 'facebook'],
           duration: '1 month',
+          timezone: 'America/New_York',
         },
         timestamp: new Date(),
         priority: 'LOW',
@@ -1450,27 +1451,39 @@ export class ContentManager extends BaseManager {
 
       specialistOutputs.calendar = report.data;
 
-      if (report.status === 'COMPLETED' && report.data) {
-        const calendarData = report.data as {
-          schedule?: Array<{
-            contentId: string;
-            platform: string;
-            suggestedDate: string;
-            suggestedTime: string;
-            rationale: string;
-          }>;
-        };
-
-        return {
-          schedule: calendarData.schedule ?? [],
-          frequencyRecommendation: {
-            twitter: '3-5 posts daily',
-            linkedin: '1 post daily',
-            instagram: '1-2 posts daily',
-            facebook: '1 post daily',
-          },
-        };
+      if (report.status !== 'COMPLETED' || report.data === null || typeof report.data !== 'object') {
+        return null;
       }
+
+      // Defensive unwrap: the rebuilt Calendar Coordinator (Task #25) returns
+      // { schedule: ScheduleEntry[], frequencyRecommendation: Record<string, string> }
+      // matching the ContentCalendar interface exactly. Verify shape at the
+      // boundary so malformed specialist output fails closed (null) rather than
+      // propagating half-built objects downstream.
+      const calendarData = report.data as {
+        schedule?: unknown;
+        frequencyRecommendation?: unknown;
+      };
+
+      if (!Array.isArray(calendarData.schedule)) {
+        this.log('WARN', 'Calendar Coordinator returned non-array schedule, treating as failure');
+        return null;
+      }
+      if (
+        calendarData.frequencyRecommendation === null ||
+        typeof calendarData.frequencyRecommendation !== 'object'
+      ) {
+        this.log(
+          'WARN',
+          'Calendar Coordinator returned missing/non-object frequencyRecommendation, treating as failure'
+        );
+        return null;
+      }
+
+      return {
+        schedule: calendarData.schedule as ContentCalendar['schedule'],
+        frequencyRecommendation: calendarData.frequencyRecommendation as ContentCalendar['frequencyRecommendation'],
+      };
     } catch (error) {
       this.log('WARN', `Calendar generation failed: ${error instanceof Error ? error.message : String(error)}`);
     }

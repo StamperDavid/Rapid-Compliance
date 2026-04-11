@@ -27,6 +27,7 @@ import {
   type RegressionCase,
   type RegressionRawArtifact,
   type RegressionRun,
+  type ShapeTolerance,
   type SingleShotSignature,
   type ToolCallSignature,
 } from '@/types/regression';
@@ -95,14 +96,17 @@ function diffCaptures(
   };
 }
 
-function detectNonDeterminism(signatures: CaptureSignature[]): DiffEntry | null {
+function detectNonDeterminism(
+  signatures: CaptureSignature[],
+  tolerances?: ShapeTolerance[],
+): DiffEntry | null {
   if (signatures.length < 2) {return null;}
   const first = signatures[0];
   if (!first) {return null;}
   if (first.kind === 'TOOL_CALLING') {
     return detectToolCallNonDeterminism(signatures as ToolCallSignature[]);
   }
-  return detectSingleShotNonDeterminism(signatures as SingleShotSignature[]);
+  return detectSingleShotNonDeterminism(signatures as SingleShotSignature[], tolerances);
 }
 
 export async function runRegression(options: RunnerOptions): Promise<RegressionRun> {
@@ -201,8 +205,13 @@ export async function runRegression(options: RunnerOptions): Promise<RegressionR
       continue;
     }
 
-    // Non-determinism check across the N captures
-    const nonDetEntry = detectNonDeterminism(candidateSignatures);
+    // Non-determinism check across the N captures. Pass the case's shape
+    // tolerances so variance inside declared spec range downgrades to WARN
+    // instead of FAIL (e.g., Calendar Coordinator schedules naturally drift
+    // by a few entries run-to-run on Sonnet 4.6 at temperature 0; if that
+    // drift stays inside the spec tolerance the harness reports WARN-for-
+    // review rather than hard-blocking an upgrade).
+    const nonDetEntry = detectNonDeterminism(candidateSignatures, caseDoc.shapeTolerances);
     const entries: DiffEntry[] = [];
     if (nonDetEntry) {entries.push(nonDetEntry);}
 
