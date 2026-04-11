@@ -6,7 +6,7 @@
 Repository: https://github.com/StamperDavid/Rapid-Compliance
 Branch: dev
 Last Updated: April 11, 2026 (Task #23.5 Model Regression Harness complete; Copywriter locked to `claude-sonnet-4.6`; OpenRouter alias table honest; silent Haiku fallback removed; 23-file model-string sweep complete)
-**Status: AGENT SPECIALIST REBUILD IN PROGRESS — Copywriter (Task #23) proven real and upgraded; Task #24 (Video Specialist) is next**
+**Status: AGENT SPECIALIST REBUILD IN PROGRESS — Copywriter (Task #23) and Video Specialist (Task #24) proven real; Task #25 (Calendar Coordinator) is next**
 
 ## Mission
 
@@ -84,9 +84,9 @@ Each handler kept the outward shape of delegation: Mission Control steps flipped
 | #20 — Remove 7 Jasper delegation bypasses from `jasper-tools.ts` | DONE | `50d34728` | All 7 tools now return honest NOT_WIRED FAILED responses |
 | #21 — Delete ContentManager production-queue dead code | DONE | `3703eca8` | 786 lines removed |
 | #23 — Rebuild Copywriter as real LLM specialist | DONE | `4b4f5d8e`, `c350dbd3`, `08041a31` | Firestore GM, Brand DNA injection, Zod validation, pirate reality test harness |
-| #23.5 — Model Regression Harness + alias-table honesty | DONE (April 11, 2026) | this session | See detail below |
-| #24 — Rebuild Video Specialist | NEXT | — | Task proposal packet not yet produced — do this first in the next session |
-| #25 — Rebuild Calendar Coordinator | BLOCKED on #24 | — | |
+| #23.5 — Model Regression Harness + alias-table honesty | DONE (April 11, 2026) | `2e8510c6` | See detail below |
+| #24 — Rebuild Video Specialist | DONE (April 11, 2026) | `e4e7f564` | Real Sonnet 4.6 specialist, single live action `script_to_storyboard`, master-format discipline, WARN-with-review personalization invariant, regression baseline + sanity run all-PASS. Detail below. |
+| #25 — Rebuild Calendar Coordinator | NEXT | — | Same pattern as Video Specialist rebuild. Proposal packet first, then execute. |
 | #26 — Rebuild Asset Generator (copy portions) | BLOCKED on #25 | — | |
 
 ### Task #23.5 detail — Model Regression Harness (April 11, 2026)
@@ -138,8 +138,55 @@ Each handler kept the outward shape of delegation: Mission Control steps flipped
 | Haiku (not currently used) | `claude-haiku-4.5` | Reserved for speed-critical / low-stakes paths only. Rejected for content work due to tone fidelity concerns. |
 
 **Known tech debt from this session:**
-- **Compat alias `claude-3-5-sonnet` → `claude-sonnet-4.6`** remains in `src/lib/ai/openrouter-provider.ts` as a safety net with runtime warning log. Remove in a follow-up session after confirming production logs show zero warning hits.
-- **Regression harness only has Copywriter cases so far.** Jasper cases and Video Specialist cases must be seeded as part of Task #24 and subsequent rebuilds. Each specialist becomes "done" only when it has a seeded regression case corpus + a recorded baseline on `claude-sonnet-4.6` (or `claude-opus-4.6` for orchestrators).
+- ~~Compat alias `claude-3-5-sonnet` → `claude-sonnet-4.6` in `src/lib/ai/openrouter-provider.ts`~~ — **REMOVED in Task #24** (April 11, 2026, commit `e4e7f564`). ModelName union entry, MODEL_CAPABILITIES row, runtime warn log, and alias mapping all gone. Zero residual `claude-3-5-sonnet` string-literal references in `src/` (the only match is a code comment in `provider-factory.ts:91`, out of scope).
+- ~~Regression harness only has Copywriter cases so far.~~ — **Video Specialist cases added in Task #24.** Jasper cases still pending. Each specialist becomes "done" only when it has a seeded regression case corpus + a recorded baseline on `claude-sonnet-4.6` (or `claude-opus-4.6` for orchestrators).
+
+### Task #24 detail — Rebuild Video Specialist (April 11, 2026)
+
+**Commit:** `e4e7f564` on `dev` (14 files changed, 1,501 insertions, 2,137 deletions — net −636 LOC).
+
+**Problem:** The old `src/lib/agents/content/video/specialist.ts` was a 2,191-line template engine with 9 action branches. Only ONE action (`script_to_storyboard`) had a live caller in the codebase — the other 8 (audio_cues, scene_breakdown, thumbnail_strategy, video_seo, broll_suggestions, create_video_project, render_scenes, assemble_scenes) were dead surface pretending to be a video studio. The specialist imported zero LLM providers. All output was hand-coded switch statements on tone/style.
+
+**Delivered:**
+
+1. **Rebuilt `src/lib/agents/content/video/specialist.ts`** as a real LLM specialist matching the Copywriter (Task #23) structure exactly. Loads Firestore GM at runtime via `getActiveSpecialistGMByIndustry('VIDEO_SPECIALIST', 'saas_sales_ops')`, injects Brand DNA, calls OpenRouter with `claude-sonnet-4.6` / temperature 0.7 / maxTokens 6000, validates output against a Zod `StoryboardResultSchema` with superRefine invariants (duration sum matches target, sceneCount equals scenes.length, sceneNumber strictly sequential 1-indexed). Exports `__internal` block for the harness + executor. Class name `VideoSpecialist` preserved for manager compatibility. Single supported action: `script_to_storyboard`. 8 dead branches dropped — if a future caller needs another action, it gets added then with its own GM update and regression cases.
+
+2. **Golden Master seeded** as `sgm_video_specialist_saas_sales_ops_v1` in `organizations/rapid-compliance-root/specialistGoldenMasters`. System prompt (6,650 chars) includes a dedicated "YouTube is the master format" section teaching the model to frame 16:9 masters center-safe for 9:16 crops and write scene-level scriptText that survives time-compression into TikTok/Reels cuts. Platform discipline + style discipline sections cover youtube/tiktok/instagram_reels/shorts/linkedin/generic × talking_head/documentary/energetic/cinematic.
+
+3. **New seeder script** `scripts/seed-video-specialist-gm.js` — Firebase Admin SDK direct write, idempotent with `--force`, deactivates prior active docs before seeding new.
+
+4. **New proof-of-life harness** `scripts/test-video-specialist.ts` — 7-step trace (GM load → Brand DNA → resolved system prompt → user prompt → specialist execute → Zod validation → parsed data dump). CLI flag `--case=youtube_documentary|tiktok_energetic|personalized`. First run produced a 7-scene 75s YouTube documentary storyboard on Sonnet 4.6. Production notes explicitly referenced YouTube→TikTok downcycling for a 29-second short (scenes 1, 3, 7) — proof the master-format discipline in the GM reached the model.
+
+5. **New pirate reality test** `scripts/verify-video-specialist-is-real.js` — matches the Copywriter pattern but with try/finally restore (fixes a bug in the Copywriter version where a harness crash could leave the GM in pirate state). Temporarily swaps the GM systemPrompt with pirate instructions that mandate pirate dialect across every string field (scene titles, scriptText, visualDescription, backgroundPrompt, productionNotes) and lock an exact 5×12=60 scene layout. Restores original prompt in finally regardless of subprocess exit. Verified output: "Arrr, me hearties, three separate tools be three separate crews... hold of gold doubloons", "The Cursed Treasure o' Three Tools", "Hornswoggled by the Landlubbers", while still echoing the personalization inputs ("Dana", "Acme Robotics", "Salesforce", "Outreach", "Gong", "180-strong crew"). Prompt restored clean on exit.
+
+6. **New regression executor** `src/lib/regression/executors/video-specialist-executor.ts` — mirrors `copywriter-executor.ts`. Uses `__internal.buildResolvedSystemPrompt` + `__internal.buildScriptToStoryboardUserPrompt` + `__internal.StoryboardResultSchema` so the harness runs the same prompt-building code the production specialist runs. MAX_TOKENS=6000. Three invariant factories: `sceneCountWithinRange(min, max)`, `firstSceneHookNonempty()`, and `personalizationEcho(requiredTokens)`. Per-case invariant dispatch switches on `caseDoc.caseId`.
+
+7. **WARN-with-review severity override** — new optional field `severityOnFail?: 'WARN' | 'FAIL'` threaded through `InvariantCheck` → `InvariantResult` → `schema-diff.ts`. Default is FAIL (preserving prior behavior). Content-level invariants that the owner wants flagged for review rather than hard-blocking can set `severityOnFail: 'WARN'`. `personalizationEcho` is the first user of the WARN path — if a future model drops the lead's name from the opening scene, the regression run flags it for owner review instead of failing the upgrade outright. Backwards compatible: baselines without the field default to FAIL behavior on the diff side.
+
+8. **3 seeded regression cases** in `scripts/regression-seed-cases.ts`:
+   - `video_specialist_youtube_documentary_75s` — canonical baseline. 75s YouTube documentary. Shape tolerance: scenes.length 4-10. Invariants: sceneCountWithinRange(4, 10), firstSceneHookNonempty().
+   - `video_specialist_tiktok_energetic_30s` — short-form stress. 30s TikTok. Shape tolerance: scenes.length 4-8. Invariants: sceneCountWithinRange(4, 8), firstSceneHookNonempty().
+   - `video_specialist_linkedin_talking_head_60s_personalized` — personalization stress mirroring `generatePersonalizedVideo`. 60s LinkedIn, includes Dana Ruiz / Acme Robotics / Salesforce+Outreach+Gong tech stack / 32% quota miss in the source script. Shape tolerance: scenes.length 3-8. Invariants: sceneCountWithinRange(3, 8), firstSceneHookNonempty(), **personalizationEcho(['acme', 'dana']) with severityOnFail='WARN'**.
+
+9. **CLI executor registration** — `VIDEO_SPECIALIST: videoSpecialistExecutor` added to `EXECUTOR_REGISTRY` in both `scripts/regression-run.ts` and `scripts/regression-record-baseline.ts`.
+
+10. **ContentManager dispatch payload updates** (`src/lib/agents/content/manager.ts`): purely additive fields added to both `generateVideoContent` (line 1326+) and `generatePersonalizedVideo` (line 1749+) dispatches. New fields: `brief`, `targetDuration`, `targetAudience`, `callToAction`. Hardcoded `platform: 'youtube'` (for `generateVideoContent`) and `platform: 'generic' / style: 'talking_head'` (for `generatePersonalizedVideo`) preserved as intentional master-format choices.
+
+11. **Compat alias cleanup (Task #23.5 tech debt closure)** — removed `'claude-3-5-sonnet': 'anthropic/claude-sonnet-4.6'` alias row and the runtime `logger.warn` block from `src/lib/ai/openrouter-provider.ts`; removed `'claude-3-5-sonnet'` from the `ModelName` union and `MODEL_CAPABILITIES` in `src/types/ai-models.ts`. Zero residual string-literal references in `src/` now (only a code comment in `provider-factory.ts:91` remains, out of scope).
+
+**Verification:**
+- `npx tsc --noEmit`: clean
+- `npx eslint` on 12 touched TS files: clean
+- `npm run build` (with `NODE_OPTIONS="--max-old-space-size=8192"`): success
+- **Proof-of-life harness**: 7-scene 75s YouTube documentary, Zod-valid, production notes explicitly referenced "For YouTube-to-TikTok downcycle: Scenes 1, 3, and 7 form a self-contained 29-second short. Each of those scenes' scriptText is written to stand alone as a complete beat without requiring the surrounding context." — direct proof the GM discipline reached the model.
+- **Pirate reality test**: full pirate output across every string field ("Arrr, me hearties, hold of gold doubloons", "Hornswoggled by the Landlubbers", "walk the plank", "quarterdeck captain") WHILE still echoing "Dana", "Acme Robotics", "Salesforce", "Outreach", "Gong", "180-strong crew" — personalization survives under a hostile system prompt. GM restored cleanly on exit.
+- **Regression seed**: 3 cases written to `organizations/rapid-compliance-root/regressionCases`.
+- **Baseline recording** on `anthropic/claude-sonnet-4.6`: 3/3 cases OK, all schemaValid=true, terminal=FINAL_RESPONSE. Durations ~30-41s per case.
+- **Regression sanity run** (candidate=baseline, same model): **3 PASS, 0 WARN, 0 FAIL** across 3 runs per case (non-determinism check). Run record stored at `regressionRuns/regrun_video_specialist_1775941225120_374d1d`.
+
+**Model tier policy unchanged** — leaf specialists remain on `claude-sonnet-4.6`, orchestrators on `claude-opus-4.6`, Haiku reserved for speed-critical low-stakes paths.
+
+**Build order reminder:** Copywriter ✓ → Video Specialist ✓ → **Calendar Coordinator (Task #25, next)** → Asset Generator (copy portions) → Content department done → rewire `delegate_to_content` in `jasper-tools.ts` → Marketing department → Builder → Architect → Outreach → `produce_video` + `orchestrate_campaign` rewired → Phase 2 GM learning loop → multi-tenant conversion → QA phases 1-16 → launch.
 
 ### Successor Workstream: Phase 2 GM Learning Loop — starts ONLY after ALL specialists are rebuilt
 
