@@ -1,7 +1,7 @@
 # SalesVelocity.ai - Single Source of Truth
 
 **Generated:** January 26, 2026
-**Last Updated:** March 28, 2026 (Full accuracy audit — 40+ stale claims corrected against actual code)
+**Last Updated:** April 11, 2026 (Task #24 — Video Specialist rebuilt as real LLM specialist on Sonnet 4.6; regression harness gains per-invariant severity override; compat alias `claude-3-5-sonnet` removed)
 **Branches:** `dev` (latest)
 **Status:** AUTHORITATIVE - All architectural decisions MUST reference this document
 **Architecture:** Single-Tenant Penthouse Model (development strategy — multi-tenant SaaS product)
@@ -909,9 +909,9 @@ No open route issues. All previously identified stub pages and duplicate destina
 
 | Agent ID | Class Name | Capabilities | Status |
 |----------|------------|--------------|--------|
-| COPYWRITER | Copywriter | Marketing copy | FUNCTIONAL |
-| CALENDAR_COORDINATOR | CalendarCoordinator | Content scheduling | FUNCTIONAL |
-| VIDEO_SPECIALIST | VideoSpecialist | Video scripts | FUNCTIONAL |
+| COPYWRITER | Copywriter | Marketing copy (real LLM, Sonnet 4.6, Firestore GM) | FUNCTIONAL — Task #23 rebuild |
+| CALENDAR_COORDINATOR | CalendarCoordinator | Content scheduling | STUB — Task #25 rebuild pending |
+| VIDEO_SPECIALIST | VideoSpecialist | Shot-by-shot storyboards (real LLM, Sonnet 4.6, Firestore GM, single action `script_to_storyboard`) | FUNCTIONAL — Task #24 rebuild |
 
 #### Sales Domain (5)
 
