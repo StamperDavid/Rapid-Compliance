@@ -509,6 +509,100 @@ const ASSET_GENERATOR_CASES: Omit<RegressionCase, 'createdAt' | 'updatedAt' | 'b
 ];
 
 // ---------------------------------------------------------------------------
+// SEO Expert cases
+// ---------------------------------------------------------------------------
+
+const SEO_EXPERT_CASES: Omit<RegressionCase, 'createdAt' | 'updatedAt' | 'baselines'>[] = [
+  {
+    caseId: 'seo_expert_keyword_research_saas',
+    agentId: 'SEO_EXPERT',
+    name: 'SaaS keyword research (AI sales automation seed)',
+    description:
+      'The canonical keyword_research case. Exercises keyword count range, search intent enum validation, duplicate detection, seed-echo fidelity, and priority ordering (first 3 keywords should be achievable difficulty). Mirrors what MarketingManager.getSEOKeywordGuidance sends at runtime for the default SaaS vertical.',
+    mode: 'SINGLE_SHOT',
+    active: true,
+    tags: ['keyword_research', 'saas', 'canonical', 'baseline'],
+    createdBy: 'seed-script',
+    shapeTolerances: [
+      {
+        path: '$.keywords.length',
+        kind: 'arrayLength',
+        min: 10,
+        max: 20,
+        reason: 'targetCount=15, but LLMs may return 10-20 inside the schema range. Any count inside the range is valid.',
+      },
+    ],
+    inputPayload: {
+      action: 'keyword_research',
+      seed: 'AI sales automation',
+      industry: 'saas_sales_ops',
+      targetCount: 15,
+    },
+    notes: 'Baseline case — any delta here is a red flag for upgrades across the whole SEO Expert keyword_research surface.',
+  },
+  {
+    caseId: 'seo_expert_keyword_research_realestate',
+    agentId: 'SEO_EXPERT',
+    name: 'Real estate keyword research (luxury marketing seed)',
+    description:
+      'Industry-switching stress case. Exercises keyword_research with a different seed and industry to catch regressions where the LLM ignores the industry context or fails to adapt vocabulary. Same structural invariants as the SaaS case but with different count range and seed echo.',
+    mode: 'SINGLE_SHOT',
+    active: true,
+    tags: ['keyword_research', 'real_estate', 'industry_switch', 'stress'],
+    createdBy: 'seed-script',
+    shapeTolerances: [
+      {
+        path: '$.keywords.length',
+        kind: 'arrayLength',
+        min: 8,
+        max: 18,
+        reason: 'targetCount=12, but LLMs may return 8-18 inside the schema range. Any count inside the range is valid.',
+      },
+    ],
+    inputPayload: {
+      action: 'keyword_research',
+      seed: 'luxury real estate marketing',
+      industry: 'real_estate',
+      targetCount: 12,
+    },
+    notes: 'Industry-switching regressions surface if the LLM returns generic SaaS keywords instead of real-estate-specific terms.',
+  },
+  {
+    caseId: 'seo_expert_domain_analysis_rapidcompliance',
+    agentId: 'SEO_EXPERT',
+    name: 'Domain analysis for rapidcompliance.us',
+    description:
+      'The canonical domain_analysis case. Exercises summary presence and length, recommendation count range, technical health score validation (0-100), content gap presence, and domain-echo fidelity in the summary. Tests the full domain assessment output contract.',
+    mode: 'SINGLE_SHOT',
+    active: true,
+    tags: ['domain_analysis', 'canonical', 'baseline'],
+    createdBy: 'seed-script',
+    shapeTolerances: [
+      {
+        path: '$.recommendations.length',
+        kind: 'arrayLength',
+        min: 3,
+        max: 10,
+        reason: 'Schema allows 3-10 recommendations. Any count inside the range is valid.',
+      },
+      {
+        path: '$.contentGaps.length',
+        kind: 'arrayLength',
+        min: 1,
+        max: 15,
+        reason: 'Schema allows 1-15 content gaps. Any count inside the range is valid.',
+      },
+    ],
+    inputPayload: {
+      action: 'domain_analysis',
+      domain: 'rapidcompliance.us',
+      keywordLimit: 20,
+    },
+    notes: 'Baseline case — any delta here is a red flag for upgrades across the whole SEO Expert domain_analysis surface.',
+  },
+];
+
+// ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
 
@@ -541,6 +635,7 @@ const AGENT_CASE_BANK: Record<string, Omit<RegressionCase, 'createdAt' | 'update
   VIDEO_SPECIALIST: VIDEO_SPECIALIST_CASES,
   CALENDAR_COORDINATOR: CALENDAR_COORDINATOR_CASES,
   ASSET_GENERATOR: ASSET_GENERATOR_CASES,
+  SEO_EXPERT: SEO_EXPERT_CASES,
 };
 
 async function main(): Promise<void> {
