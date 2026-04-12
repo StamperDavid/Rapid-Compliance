@@ -621,6 +621,118 @@ const LINKEDIN_EXPERT_CASES: Omit<RegressionCase, 'createdAt' | 'updatedAt' | 'b
 ];
 
 // ---------------------------------------------------------------------------
+// TikTok Expert cases
+// ---------------------------------------------------------------------------
+
+const TIKTOK_EXPERT_CASES: Omit<RegressionCase, 'createdAt' | 'updatedAt' | 'baselines'>[] = [
+  {
+    caseId: 'tiktok_expert_saas_viral_hook',
+    agentId: 'TIKTOK_EXPERT',
+    name: 'SaaS viral hook video (AI sales automation)',
+    description:
+      'The canonical generate_content case for TikTok Expert. Exercises hook presence/quality, caption presence, hashtag count range, content strategy depth, cliche detection (WARN), and topic-echo fidelity (WARN). Mirrors what MarketingManager sends at runtime for a B2B SaaS viral video.',
+    mode: 'SINGLE_SHOT',
+    active: true,
+    tags: ['generate_content', 'saas', 'viral', 'canonical', 'baseline'],
+    createdBy: 'seed-script',
+    shapeTolerances: [
+      {
+        path: '$.hashtags.length',
+        kind: 'arrayLength',
+        min: 3,
+        max: 15,
+        reason: 'Schema allows 3-15 hashtags. Any count inside the range is a valid editorial choice.',
+      },
+      {
+        path: '$.hooks.alternatives.length',
+        kind: 'arrayLength',
+        min: 2,
+        max: 4,
+        reason: 'Schema allows 2-4 alternative hooks. Any count inside the range is valid.',
+      },
+    ],
+    inputPayload: {
+      action: 'generate_content',
+      topic: 'Why AI sales automation agents will replace your entire SDR team by 2027',
+      contentType: 'short_video',
+      targetAudience: 'B2B SaaS founders and sales leaders',
+      tone: 'bold and provocative',
+    },
+    notes: 'Baseline case — any delta here is a red flag for upgrades across the whole TikTok Expert surface.',
+  },
+  {
+    caseId: 'tiktok_expert_realestate_tutorial',
+    agentId: 'TIKTOK_EXPERT',
+    name: 'Real estate tutorial video (luxury staging)',
+    description:
+      'Industry-switching stress case. Exercises generate_content with a real-estate audience and authoritative tone to catch regressions where the LLM ignores industry context. Same structural invariants as the SaaS case with different topic-echo seed.',
+    mode: 'SINGLE_SHOT',
+    active: true,
+    tags: ['generate_content', 'real_estate', 'tutorial', 'industry_switch', 'stress'],
+    createdBy: 'seed-script',
+    shapeTolerances: [
+      {
+        path: '$.hashtags.length',
+        kind: 'arrayLength',
+        min: 3,
+        max: 15,
+        reason: 'Schema allows 3-15 hashtags. Any count inside the range is a valid editorial choice.',
+      },
+      {
+        path: '$.hooks.alternatives.length',
+        kind: 'arrayLength',
+        min: 2,
+        max: 4,
+        reason: 'Schema allows 2-4 alternative hooks. Any count inside the range is valid.',
+      },
+    ],
+    inputPayload: {
+      action: 'generate_content',
+      topic: '5 open house staging tricks that sell luxury homes in 48 hours',
+      contentType: 'tutorial',
+      targetAudience: 'Real estate agents and luxury realtors',
+      tone: 'authoritative and energetic',
+    },
+    notes: 'Industry-switching regressions surface if the LLM returns generic SaaS content instead of real-estate-specific language.',
+  },
+  {
+    caseId: 'tiktok_expert_trend_ecommerce',
+    agentId: 'TIKTOK_EXPERT',
+    name: 'Trend-format video for ecommerce (dropshipping)',
+    description:
+      'Content-type stress case. Exercises generate_content with contentType=trend and a conversational tone targeting ecommerce entrepreneurs. Tests whether the LLM adapts to a trend-based format while still satisfying the structural schema. Same invariant shape as canonical cases.',
+    mode: 'SINGLE_SHOT',
+    active: true,
+    tags: ['generate_content', 'trend', 'ecommerce', 'content_type_stress', 'stress'],
+    createdBy: 'seed-script',
+    shapeTolerances: [
+      {
+        path: '$.hashtags.length',
+        kind: 'arrayLength',
+        min: 3,
+        max: 15,
+        reason: 'Schema allows 3-15 hashtags. Any count inside the range is a valid editorial choice.',
+      },
+      {
+        path: '$.hooks.alternatives.length',
+        kind: 'arrayLength',
+        min: 2,
+        max: 4,
+        reason: 'Schema allows 2-4 alternative hooks. Any count inside the range is valid.',
+      },
+    ],
+    inputPayload: {
+      action: 'generate_content',
+      topic: 'The product research method that found me 3 winning dropshipping products this week',
+      contentType: 'trend',
+      targetAudience: 'Ecommerce entrepreneurs and dropshippers',
+      tone: 'conversational and hype',
+    },
+    notes: 'Content-type regressions surface if the model ignores the trend format or produces content indistinguishable from a standard video.',
+  },
+];
+
+// ---------------------------------------------------------------------------
 // SEO Expert cases
 // ---------------------------------------------------------------------------
 
@@ -749,6 +861,7 @@ const AGENT_CASE_BANK: Record<string, Omit<RegressionCase, 'createdAt' | 'update
   ASSET_GENERATOR: ASSET_GENERATOR_CASES,
   SEO_EXPERT: SEO_EXPERT_CASES,
   LINKEDIN_EXPERT: LINKEDIN_EXPERT_CASES,
+  TIKTOK_EXPERT: TIKTOK_EXPERT_CASES,
 };
 
 async function main(): Promise<void> {

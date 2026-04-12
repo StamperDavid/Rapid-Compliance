@@ -20,6 +20,7 @@ import { calendarCoordinatorExecutor } from '../src/lib/regression/executors/cal
 import { assetGeneratorExecutor } from '../src/lib/regression/executors/asset-generator-executor';
 import { seoExpertExecutor } from '../src/lib/regression/executors/seo-expert-executor';
 import { linkedinExpertExecutor } from '../src/lib/regression/executors/linkedin-expert-executor';
+import { tiktokExpertExecutor } from '../src/lib/regression/executors/tiktok-expert-executor';
 import {
   listActiveCasesForAgent,
   recordBaseline,
@@ -35,6 +36,7 @@ const EXECUTOR_REGISTRY: Record<string, CaseExecutor> = {
   ASSET_GENERATOR: assetGeneratorExecutor,
   SEO_EXPERT: seoExpertExecutor,
   LINKEDIN_EXPERT: linkedinExpertExecutor,
+  TIKTOK_EXPERT: tiktokExpertExecutor,
 };
 
 interface CliArgs {
