@@ -1,374 +1,688 @@
 /**
- * Asset Generator Specialist
- * STATUS: FUNCTIONAL
+ * Asset Generator — REAL AI AGENT (Task #26 rebuild, April 11 2026)
  *
- * Generates brand assets including logos, banners, social media graphics, and favicons.
- * Uses AI image generation APIs (Replicate/DALL-E/Midjourney) with proper brand styling.
+ * Replaces the pre-rebuild 974-line template engine. The specialist is now
+ * a Creative Director: the LLM produces a full plan of DALL-E prompts for
+ * every slot in the brand asset package (logo variations, favicon, heroes
+ * per page, social graphics per platform, banners), and the code then
+ * executes each prompt against DALL-E to attach real image URLs. LLM =
+ * brains, DALL-E = pixels. No template fallbacks anywhere.
  *
- * CAPABILITIES:
- * - Logo generation (multiple styles and variations)
- * - Banner/header graphics for websites
- * - Social media graphics (Twitter, LinkedIn, Instagram, Facebook)
- * - Favicon generation (multiple sizes)
- * - Brand asset packages (complete sets)
- * - Custom dimensions and formats
+ * Supported actions (live code paths only):
+ *   - generate_asset_package  (BuilderManager — the only caller)
+ *
+ * If the GM is missing, Brand DNA is missing, OpenRouter fails, JSON won't
+ * parse, Zod validation fails, or the most important image call (logo
+ * primary) can't be generated, the specialist returns a real FAILED
+ * AgentReport with the honest reason.
  */
 
+import { z } from 'zod';
 import { BaseSpecialist } from '../../base-specialist';
 import type { AgentMessage, AgentReport, SpecialistConfig, Signal } from '../../types';
-import { generateImage, mapDimensionsToSize, type ImageQuality, type ImageStyle } from '@/lib/ai/image-generation-service';
+import { OpenRouterProvider } from '@/lib/ai/openrouter-provider';
+import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getActiveSpecialistGMByIndustry } from '@/lib/training/specialist-golden-master-service';
+import { getBrandDNA, type BrandDNA } from '@/lib/brand/brand-dna-service';
+import type { ModelName } from '@/types/ai-models';
 import { logger } from '@/lib/logger/logger';
-
-// ============================================================================
-// SYSTEM PROMPT - The brain of this specialist
-// ============================================================================
-
-const SYSTEM_PROMPT = `You are the Asset Generator, a specialist in AI-powered brand asset creation.
-
-## YOUR ROLE
-You generate professional brand assets using AI image generation APIs. You understand:
-1. Brand identity and visual consistency
-2. Design principles (typography, color theory, composition)
-3. Platform-specific requirements (dimensions, formats, file sizes)
-4. Logo design best practices (simplicity, scalability, memorability)
-5. Social media asset specifications
-6. Favicon optimization and multi-size requirements
-7. Prompt engineering for consistent AI image generation
-
-## INPUT FORMAT
-You receive requests for:
-- generate_logo: Create brand logos in various styles
-- generate_banner: Create website headers and banners
-- generate_social_graphic: Create platform-specific social media graphics
-- generate_favicon: Create favicon sets in multiple sizes
-- generate_asset_package: Create complete brand asset packages
-
-Each request includes:
-- assetType: The type of asset to generate
-- brandName: The company/product name
-- brandColors: Primary and secondary brand colors
-- brandStyle: Design aesthetic (modern, minimalist, playful, professional, bold, elegant)
-- industry: Business vertical or niche
-- tagline: Optional brand tagline or message
-- dimensions: Custom dimensions if needed
-- format: Output format (png, jpg, svg, webp)
-
-## OUTPUT FORMAT - generate_logo
-\`\`\`json
-{
-  "assetType": "logo",
-  "brandName": "Company Name",
-  "variations": [
-    {
-      "name": "primary",
-      "style": "full-color horizontal",
-      "prompt": "Detailed AI image generation prompt",
-      "url": "https://generated-asset-url.com/logo-primary.png",
-      "dimensions": { "width": 1200, "height": 400 },
-      "format": "png",
-      "useCase": "Website header, presentations"
-    },
-    {
-      "name": "icon",
-      "style": "symbol only",
-      "prompt": "Detailed AI image generation prompt",
-      "url": "https://generated-asset-url.com/logo-icon.png",
-      "dimensions": { "width": 512, "height": 512 },
-      "format": "png",
-      "useCase": "Social media profile, app icon"
-    }
-  ],
-  "brandGuidelines": {
-    "primaryColors": ["#HEX1", "#HEX2"],
-    "usage": "Guidelines for logo usage and spacing",
-    "doNot": ["Things to avoid when using the logo"]
-  },
-  "confidence": 0.0-1.0
-}
-\`\`\`
-
-## OUTPUT FORMAT - generate_banner
-\`\`\`json
-{
-  "assetType": "banner",
-  "purpose": "Website header | Email header | LinkedIn banner",
-  "url": "https://generated-asset-url.com/banner.png",
-  "prompt": "Detailed AI image generation prompt",
-  "dimensions": { "width": 1920, "height": 400 },
-  "format": "png",
-  "designNotes": "Composition and element placement details",
-  "confidence": 0.0-1.0
-}
-\`\`\`
-
-## OUTPUT FORMAT - generate_social_graphic
-\`\`\`json
-{
-  "assetType": "social_graphic",
-  "platform": "twitter | linkedin | instagram | facebook",
-  "variations": [
-    {
-      "type": "post",
-      "url": "https://generated-asset-url.com/social-post.png",
-      "prompt": "Detailed AI image generation prompt",
-      "dimensions": { "width": 1200, "height": 675 },
-      "format": "png"
-    },
-    {
-      "type": "story",
-      "url": "https://generated-asset-url.com/social-story.png",
-      "prompt": "Detailed AI image generation prompt",
-      "dimensions": { "width": 1080, "height": 1920 },
-      "format": "png"
-    }
-  ],
-  "confidence": 0.0-1.0
-}
-\`\`\`
-
-## AI IMAGE GENERATION BEST PRACTICES
-1. **Prompt Structure**: [subject], [style], [color palette], [composition], [quality modifiers]
-2. **Consistency**: Use specific style references (e.g., "flat design", "gradient mesh", "geometric")
-3. **Brand Alignment**: Include brand colors and industry context in prompts
-4. **Quality Modifiers**: "professional", "clean", "high-resolution", "vector-style"
-5. **Negative Prompts**: Specify what to avoid (text, clutter, realistic photos for logos)
-6. **Aspect Ratios**: Maintain proper ratios for each asset type
-7. **Simplicity**: Logos should work at small sizes - favor simple, bold designs
-
-## LOGO DESIGN PRINCIPLES
-1. **Simplicity**: Easy to recognize and reproduce
-2. **Memorability**: Distinctive and unique
-3. **Scalability**: Works from favicon to billboard
-4. **Relevance**: Connects to brand/industry
-5. **Timelessness**: Avoid trendy elements that date quickly
-6. **Versatility**: Works in color and monochrome
-
-## PLATFORM SPECIFICATIONS
-### Social Media:
-- Twitter Post: 1200x675px
-- Twitter Header: 1500x500px
-- LinkedIn Post: 1200x627px
-- LinkedIn Cover: 1584x396px
-- Instagram Post: 1080x1080px
-- Instagram Story: 1080x1920px
-- Facebook Post: 1200x630px
-- Facebook Cover: 820x312px
-
-### Logos:
-- Horizontal: 1200x400px
-- Square/Icon: 512x512px, 1024x1024px
-- Vertical: 400x800px
-
-### Favicons:
-- 16x16px, 32x32px, 48x48px, 64x64px, 128x128px, 256x256px, 512x512px
-
-## RULES
-1. ALWAYS generate prompts optimized for AI image generation
-2. NEVER include text in logo prompts (AI struggles with text)
-3. Consider brand industry when selecting design elements
-4. Provide multiple variations for flexibility
-5. Include usage guidelines and best practices
-6. Maintain brand consistency across all assets
-7. Optimize dimensions for target platform
-
-## INTEGRATION
-You receive requests from:
-- Builder Manager (website asset needs)
-- Marketing teams (social media graphics)
-- Sales teams (presentation assets)
-- Product teams (app icons and branding)
-
-Your output feeds into:
-- Website builders (logos, favicons, banners)
-- Social media campaigns (platform-specific graphics)
-- Marketing materials (brand asset packages)
-- Design systems (brand guidelines)`;
+import {
+  generateImage,
+  mapDimensionsToSize,
+  type ImageQuality,
+  type ImageStyle,
+} from '@/lib/ai/image-generation-service';
 
 // ============================================================================
 // CONFIGURATION
 // ============================================================================
 
+const FILE = 'builder/assets/specialist.ts';
+const SPECIALIST_ID = 'ASSET_GENERATOR';
+const DEFAULT_INDUSTRY_KEY = 'saas_sales_ops';
+const SUPPORTED_ACTIONS = ['generate_asset_package'] as const;
+type SupportedAction = (typeof SUPPORTED_ACTIONS)[number];
+
+interface AssetGeneratorGMConfig {
+  systemPrompt: string;
+  model: ModelName;
+  temperature: number;
+  maxTokens: number;
+  supportedActions: string[];
+}
+
 const CONFIG: SpecialistConfig = {
   identity: {
-    id: 'ASSET_GENERATOR',
+    id: SPECIALIST_ID,
     name: 'Asset Generator',
     role: 'specialist',
     status: 'FUNCTIONAL',
-    reportsTo: 'BUILDER_MANAGER',
-    capabilities: [
-      'image_generation',
-      'logo_creation',
-      'banner_design',
-      'brand_asset_management',
-      'social_media_graphics',
-      'favicon_generation',
-    ],
+    reportsTo: 'CONTENT_MANAGER',
+    capabilities: ['generate_asset_package'],
   },
-  systemPrompt: SYSTEM_PROMPT,
-  tools: [
-    'generate_logo',
-    'generate_banner',
-    'generate_social_graphic',
-    'generate_favicon',
-    'generate_asset_package',
-  ],
+  systemPrompt: '',
+  tools: ['generate_asset_package'],
   outputSchema: {
     type: 'object',
     properties: {
-      assetType: { type: 'string' },
+      logo: { type: 'object' },
+      favicons: { type: 'object' },
+      heroes: { type: 'object' },
+      socialGraphics: { type: 'object' },
+      banners: { type: 'object' },
       variations: { type: 'array' },
-      url: { type: 'string' },
-      confidence: { type: 'number' },
     },
   },
-  maxTokens: 4096,
-  temperature: 0.6,
+  maxTokens: 6000,
+  temperature: 0.7,
 };
 
 // ============================================================================
-// TYPE DEFINITIONS
+// INPUT CONTRACT
 // ============================================================================
 
-export type AssetType = 'logo' | 'banner' | 'social_graphic' | 'favicon' | 'asset_package';
-export type BrandStyle = 'modern' | 'minimalist' | 'playful' | 'professional' | 'bold' | 'elegant' | 'tech' | 'organic';
-export type OutputFormat = 'png' | 'jpg' | 'svg' | 'webp';
-export type SocialPlatform = 'twitter' | 'linkedin' | 'instagram' | 'facebook';
-
-export interface AssetGenerationRequest {
-  method: 'generate_logo' | 'generate_banner' | 'generate_social_graphic' | 'generate_favicon' | 'generate_asset_package';
-  assetType: AssetType;
-  brandName: string;
-  brandColors?: {
-    primary: string;
-    secondary?: string;
-    accent?: string;
-  };
-  brandStyle?: BrandStyle;
-  industry?: string;
-  tagline?: string;
-  dimensions?: {
-    width: number;
-    height: number;
-  };
-  format?: OutputFormat;
-  platform?: SocialPlatform;
-  customPrompt?: string;
+export interface NormalizedBrandColors {
+  primary: string;
+  secondary?: string;
+  accent?: string;
 }
 
-export interface AssetDimensions {
-  width: number;
-  height: number;
-}
-
-export interface GeneratedAsset {
+export interface GenerateAssetPackagePage {
+  id: string;
   name: string;
-  style: string;
-  prompt: string;
-  url: string;
-  dimensions: AssetDimensions;
-  format: OutputFormat;
-  useCase: string;
 }
 
-export interface LogoGenerationResult {
-  assetType: 'logo';
+export interface GenerateAssetPackageRequest {
+  action: 'generate_asset_package';
   brandName: string;
-  variations: GeneratedAsset[];
-  brandGuidelines: {
-    primaryColors: string[];
-    usage: string;
-    doNot: string[];
-  };
-  confidence: number;
+  brandStyle: string;
+  industry: string;
+  brandColors?: NormalizedBrandColors | string[];
+  pages?: GenerateAssetPackagePage[];
+  tagline?: string;
+  companyDescription?: string;
 }
 
-export interface BannerGenerationResult {
-  assetType: 'banner';
-  purpose: string;
+const BrandColorsObjectSchema = z.object({
+  primary: z.string().min(1),
+  secondary: z.string().min(1).optional(),
+  accent: z.string().min(1).optional(),
+});
+
+const GenerateAssetPackageRequestSchema = z.object({
+  action: z.literal('generate_asset_package'),
+  brandName: z.string().min(1),
+  brandStyle: z.string().min(1),
+  industry: z.string().min(1),
+  brandColors: z.union([BrandColorsObjectSchema, z.array(z.string().min(1))]).optional(),
+  pages: z.array(z.object({
+    id: z.string().min(1),
+    name: z.string().min(1),
+  })).optional(),
+  tagline: z.string().min(1).optional(),
+  companyDescription: z.string().min(1).optional(),
+});
+
+function normalizeBrandColors(
+  raw: NormalizedBrandColors | string[] | undefined,
+): NormalizedBrandColors {
+  if (!raw) {
+    return { primary: '#1E40AF' };
+  }
+  if (Array.isArray(raw)) {
+    const primary = raw[0] ?? '#1E40AF';
+    const normalized: NormalizedBrandColors = { primary };
+    if (raw[1]) {
+      normalized.secondary = raw[1];
+    }
+    if (raw[2]) {
+      normalized.accent = raw[2];
+    }
+    return normalized;
+  }
+  return raw;
+}
+
+// ============================================================================
+// OUTPUT CONTRACT (Zod schema — enforced on every LLM response)
+// ============================================================================
+
+const AssetDimensionsSchema = z.object({
+  width: z.number().int().positive(),
+  height: z.number().int().positive(),
+});
+
+const LogoVariationSchema = z.object({
+  name: z.enum(['primary', 'icon', 'monochrome']),
+  layout: z.enum(['horizontal', 'vertical', 'icon']),
+  prompt: z.string().min(80).max(1200),
+  dimensions: AssetDimensionsSchema,
+  altText: z.string().min(10).max(200),
+  rationale: z.string().min(20).max(200),
+});
+
+const HeroVariationSchema = z.object({
+  name: z.string().min(1),
+  pageId: z.string().min(1),
+  prompt: z.string().min(80).max(1200),
+  dimensions: AssetDimensionsSchema,
+  altText: z.string().min(10).max(200),
+  rationale: z.string().min(20).max(200),
+});
+
+const SocialGraphicVariationSchema = z.object({
+  name: z.string().min(1),
+  platform: z.enum(['twitter', 'linkedin', 'instagram', 'facebook']),
+  type: z.enum(['post', 'header', 'cover', 'story']),
+  prompt: z.string().min(80).max(1200),
+  dimensions: AssetDimensionsSchema,
+  altText: z.string().min(10).max(200),
+  rationale: z.string().min(20).max(200),
+});
+
+const BannerVariationSchema = z.object({
+  name: z.string().min(1),
+  prompt: z.string().min(80).max(1200),
+  dimensions: AssetDimensionsSchema,
+  altText: z.string().min(10).max(200),
+  rationale: z.string().min(20).max(200),
+});
+
+const AssetPackagePlanSchema = z.object({
+  logo: z.object({
+    strategy: z.string().min(20).max(1500),
+    variations: z.array(LogoVariationSchema).length(3),
+  }),
+  favicons: z.object({
+    strategy: z.string().min(20).max(1500),
+    prompt: z.string().min(80).max(1200),
+    dimensions: AssetDimensionsSchema,
+    altText: z.string().min(10).max(200),
+  }),
+  heroes: z.object({
+    strategy: z.string().min(20).max(1500),
+    variations: z.array(HeroVariationSchema).min(1),
+  }),
+  socialGraphics: z.object({
+    strategy: z.string().min(20).max(1500),
+    variations: z.array(SocialGraphicVariationSchema).min(3),
+  }),
+  banners: z.object({
+    strategy: z.string().min(20).max(1500),
+    variations: z.array(BannerVariationSchema).min(1),
+  }),
+}).superRefine((data, ctx) => {
+  const logoNames = new Set(data.logo.variations.map((v) => v.name));
+  for (const required of ['primary', 'icon', 'monochrome'] as const) {
+    if (!logoNames.has(required)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['logo', 'variations'],
+        message: `logo.variations missing required name '${required}'`,
+      });
+    }
+  }
+  const sections: Array<[string, Array<{ name: string }>]> = [
+    ['logo', data.logo.variations],
+    ['heroes', data.heroes.variations],
+    ['socialGraphics', data.socialGraphics.variations],
+    ['banners', data.banners.variations],
+  ];
+  for (const [sectionName, variations] of sections) {
+    const seen = new Set<string>();
+    for (let i = 0; i < variations.length; i++) {
+      const v = variations[i];
+      if (!v) {
+        continue;
+      }
+      if (seen.has(v.name)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: [sectionName, 'variations', i, 'name'],
+          message: `Duplicate name '${v.name}' in ${sectionName}.variations`,
+        });
+      }
+      seen.add(v.name);
+    }
+  }
+});
+
+export type AssetDimensions = z.infer<typeof AssetDimensionsSchema>;
+export type LogoVariation = z.infer<typeof LogoVariationSchema>;
+export type HeroVariation = z.infer<typeof HeroVariationSchema>;
+export type SocialGraphicVariation = z.infer<typeof SocialGraphicVariationSchema>;
+export type BannerVariation = z.infer<typeof BannerVariationSchema>;
+export type AssetPackagePlan = z.infer<typeof AssetPackagePlanSchema>;
+
+// ============================================================================
+// FINAL RESULT SHAPES (what execute() returns to the manager)
+// ============================================================================
+
+export interface LogoVariationWithUrl extends LogoVariation {
   url: string;
-  prompt: string;
-  dimensions: AssetDimensions;
-  format: OutputFormat;
-  designNotes: string;
-  confidence: number;
 }
 
-export interface SocialGraphicVariation {
-  type: string;
+export interface HeroVariationWithUrl extends HeroVariation {
   url: string;
-  prompt: string;
-  dimensions: AssetDimensions;
-  format: OutputFormat;
 }
 
-export interface SocialGraphicResult {
-  assetType: 'social_graphic';
-  platform: SocialPlatform;
-  variations: SocialGraphicVariation[];
-  confidence: number;
+export interface SocialGraphicVariationWithUrl extends SocialGraphicVariation {
+  url: string;
 }
 
-export interface FaviconVariation {
-  size: string;
+export interface BannerVariationWithUrl extends BannerVariation {
+  url: string;
+}
+
+export interface FlatVariationEntry {
+  name: string;
   url: string;
   dimensions: AssetDimensions;
-  format: OutputFormat;
-}
-
-export interface FaviconResult {
-  assetType: 'favicon';
-  variations: FaviconVariation[];
-  icopUrl: string;
-  confidence: number;
+  altText: string;
 }
 
 export interface AssetPackageResult {
-  assetType: 'asset_package';
-  logo: LogoGenerationResult;
-  favicons: FaviconResult;
-  socialGraphics: Record<SocialPlatform, SocialGraphicResult>;
-  banners: BannerGenerationResult[];
+  logo: {
+    strategy: string;
+    variations: LogoVariationWithUrl[];
+  };
+  favicons: {
+    strategy: string;
+    prompt: string;
+    dimensions: AssetDimensions;
+    altText: string;
+    icopUrl: string;
+    sizes: Record<string, unknown>;
+  };
+  heroes: {
+    strategy: string;
+    variations: HeroVariationWithUrl[];
+  };
+  socialGraphics: {
+    strategy: string;
+    variations: SocialGraphicVariationWithUrl[];
+  };
+  banners: {
+    strategy: string;
+    variations: BannerVariationWithUrl[];
+  };
+  variations: FlatVariationEntry[];
   confidence: number;
 }
 
-export type AssetGenerationResult =
-  | LogoGenerationResult
-  | BannerGenerationResult
-  | SocialGraphicResult
-  | FaviconResult
-  | AssetPackageResult;
-
 // ============================================================================
-// PLATFORM SPECIFICATIONS
+// LLM INVOCATION CORE
 // ============================================================================
 
-const SOCIAL_MEDIA_SPECS: Record<SocialPlatform, Record<string, AssetDimensions>> = {
-  twitter: {
-    post: { width: 1200, height: 675 },
-    header: { width: 1500, height: 500 },
-    profile: { width: 400, height: 400 },
-  },
-  linkedin: {
-    post: { width: 1200, height: 627 },
-    cover: { width: 1584, height: 396 },
-    profile: { width: 400, height: 400 },
-  },
-  instagram: {
-    post: { width: 1080, height: 1080 },
-    story: { width: 1080, height: 1920 },
-    profile: { width: 320, height: 320 },
-  },
-  facebook: {
-    post: { width: 1200, height: 630 },
-    cover: { width: 820, height: 312 },
-    profile: { width: 180, height: 180 },
-  },
-};
+interface LlmCallContext {
+  gm: AssetGeneratorGMConfig;
+  brandDNA: BrandDNA;
+  resolvedSystemPrompt: string;
+}
 
-const FAVICON_SIZES = [16, 32, 48, 64, 128, 256, 512];
+async function loadGMAndBrandDNA(industryKey: string): Promise<LlmCallContext> {
+  const gmRecord = await getActiveSpecialistGMByIndustry(SPECIALIST_ID, industryKey);
+  if (!gmRecord) {
+    throw new Error(
+      `Asset Generator GM not found for industryKey=${industryKey}. ` +
+      `Run node scripts/seed-asset-generator-gm.js to seed.`,
+    );
+  }
+
+  const config = gmRecord.config as Partial<AssetGeneratorGMConfig>;
+  const systemPrompt = config.systemPrompt ?? gmRecord.systemPromptSnapshot;
+  if (!systemPrompt || systemPrompt.length < 100) {
+    throw new Error(
+      `Asset Generator GM ${gmRecord.id} has no usable systemPrompt (length=${systemPrompt?.length ?? 0}).`,
+    );
+  }
+
+  const gm: AssetGeneratorGMConfig = {
+    systemPrompt,
+    model: config.model ?? 'claude-sonnet-4.6',
+    temperature: config.temperature ?? 0.7,
+    maxTokens: config.maxTokens ?? 6000,
+    supportedActions: config.supportedActions ?? [...SUPPORTED_ACTIONS],
+  };
+
+  const brandDNA = await getBrandDNA();
+  if (!brandDNA) {
+    throw new Error(
+      'Brand DNA not configured. Asset Generator refuses to plan asset packages without brand identity. ' +
+      'Visit /settings/ai-agents/business-setup.',
+    );
+  }
+
+  const resolvedSystemPrompt = buildResolvedSystemPrompt(gm.systemPrompt, brandDNA);
+  return { gm, brandDNA, resolvedSystemPrompt };
+}
+
+function buildResolvedSystemPrompt(baseSystemPrompt: string, brandDNA: BrandDNA): string {
+  const keyPhrases = brandDNA.keyPhrases?.length > 0 ? brandDNA.keyPhrases.join(', ') : '(none configured)';
+  const avoidPhrases = brandDNA.avoidPhrases?.length > 0 ? brandDNA.avoidPhrases.join(', ') : '(none configured)';
+  const competitors = brandDNA.competitors?.length > 0 ? brandDNA.competitors.join(', ') : '(none configured)';
+
+  const brandBlock = [
+    '',
+    '## Brand DNA (runtime injection — do not confuse with system prompt)',
+    '',
+    `Company: ${brandDNA.companyDescription}`,
+    `Unique value: ${brandDNA.uniqueValue}`,
+    `Target audience: ${brandDNA.targetAudience}`,
+    `Tone of voice: ${brandDNA.toneOfVoice}`,
+    `Communication style: ${brandDNA.communicationStyle}`,
+    `Industry: ${brandDNA.industry}`,
+    `Key phrases to weave in naturally: ${keyPhrases}`,
+    `Phrases you are forbidden from using: ${avoidPhrases}`,
+    `Competitors (never name them unless specifically asked): ${competitors}`,
+  ].join('\n');
+
+  return `${baseSystemPrompt}\n${brandBlock}`;
+}
+
+function stripJsonFences(raw: string): string {
+  return raw
+    .replace(/^[\s\S]*?```(?:json)?\s*\n?/i, (match) => (match.includes('```') ? '' : match))
+    .replace(/\n?\s*```[\s\S]*$/i, '')
+    .trim();
+}
+
+async function callOpenRouter(
+  ctx: LlmCallContext,
+  userPrompt: string,
+): Promise<string> {
+  const provider = new OpenRouterProvider(PLATFORM_ID);
+  const response = await provider.chat({
+    model: ctx.gm.model,
+    messages: [
+      { role: 'system', content: ctx.resolvedSystemPrompt },
+      { role: 'user', content: userPrompt },
+    ],
+    temperature: ctx.gm.temperature,
+    maxTokens: ctx.gm.maxTokens,
+  });
+
+  const rawContent = response.content ?? '';
+  if (rawContent.trim().length === 0) {
+    throw new Error('OpenRouter returned empty response');
+  }
+  return rawContent;
+}
 
 // ============================================================================
-// IMPLEMENTATION
+// ACTION: generate_asset_package
+// ============================================================================
+
+function buildGenerateAssetPackageUserPrompt(req: GenerateAssetPackageRequest): string {
+  const colors = normalizeBrandColors(req.brandColors);
+  const colorBlock = [
+    `  primary: ${colors.primary}`,
+    colors.secondary ? `  secondary: ${colors.secondary}` : '  secondary: (none)',
+    colors.accent ? `  accent: ${colors.accent}` : '  accent: (none)',
+  ].join('\n');
+
+  const pagesProvided = Array.isArray(req.pages) && req.pages.length > 0;
+  const pagesBlock = pagesProvided
+    ? (req.pages ?? []).map((p) => `  - id=${p.id} | name="${p.name}"`).join('\n')
+    : '  (none provided — produce exactly ONE hero with pageId="default")';
+
+  const taglineLine = req.tagline ? `Tagline: ${req.tagline}` : 'Tagline: (none)';
+  const descriptionLine = req.companyDescription
+    ? `Company description: ${req.companyDescription}`
+    : 'Company description: (none)';
+
+  return [
+    'ACTION: generate_asset_package',
+    '',
+    `Brand name: ${req.brandName}`,
+    `Brand style: ${req.brandStyle}`,
+    `Industry: ${req.industry}`,
+    'Brand colors:',
+    colorBlock,
+    '',
+    'Target pages (one hero per page is required):',
+    pagesBlock,
+    '',
+    taglineLine,
+    descriptionLine,
+    '',
+    'Produce a complete brand asset package PLAN. You do NOT generate images yourself —',
+    'you produce the DALL-E-ready prompts for every slot, and downstream code will execute them.',
+    '',
+    'Respond with ONLY a valid JSON object, no markdown fences, no preamble, no explanation.',
+    'The JSON must match this exact schema:',
+    '',
+    '{',
+    '  "logo": {',
+    '    "strategy": "<20-1500 chars describing the overall logo direction>",',
+    '    "variations": [',
+    '      { "name": "primary",    "layout": "horizontal", "prompt": "...", "dimensions": {"width":1024,"height":1024}, "altText": "...", "rationale": "..." },',
+    '      { "name": "icon",       "layout": "icon",       "prompt": "...", "dimensions": {"width":1024,"height":1024}, "altText": "...", "rationale": "..." },',
+    '      { "name": "monochrome", "layout": "horizontal", "prompt": "...", "dimensions": {"width":1024,"height":1024}, "altText": "...", "rationale": "..." }',
+    '    ]',
+    '  },',
+    '  "favicons": {',
+    '    "strategy": "<20-1500 chars>",',
+    '    "prompt": "<80-1200 chars, DALL-E-ready favicon prompt>",',
+    '    "dimensions": {"width":512,"height":512},',
+    '    "altText": "<10-200 chars>"',
+    '  },',
+    '  "heroes": {',
+    '    "strategy": "<20-1500 chars>",',
+    '    "variations": [',
+    '      { "name": "<unique>", "pageId": "<exact input id or \\"default\\">", "prompt": "...", "dimensions": {"width":1920,"height":1080}, "altText": "...", "rationale": "..." }',
+    '    ]',
+    '  },',
+    '  "socialGraphics": {',
+    '    "strategy": "<20-1500 chars>",',
+    '    "variations": [',
+    '      { "name": "<unique>", "platform": "twitter|linkedin|instagram|facebook", "type": "post|header|cover|story", "prompt": "...", "dimensions": {...}, "altText": "...", "rationale": "..." }',
+    '    ]',
+    '  },',
+    '  "banners": {',
+    '    "strategy": "<20-1500 chars>",',
+    '    "variations": [',
+    '      { "name": "<unique>", "prompt": "...", "dimensions": {"width":1920,"height":400}, "altText": "...", "rationale": "..." }',
+    '    ]',
+    '  }',
+    '}',
+    '',
+    'Hard rules you MUST follow:',
+    '- logo.variations MUST contain EXACTLY 3 entries named "primary" (horizontal layout), "icon" (icon layout), and "monochrome" (horizontal layout). No more, no less.',
+    '- favicons is a SINGLE plan (not a variations array). Use dimensions 512x512.',
+    `- heroes.variations MUST contain one entry per target page listed above (${pagesProvided ? `${(req.pages ?? []).length} page(s)` : 'exactly one entry with pageId="default" since no pages were provided'}). Dimensions 1920x1080 per hero.`,
+    '- socialGraphics.variations MUST contain at least ONE entry for EACH of the four platforms: twitter (1200x675), linkedin (1200x627), instagram (1080x1080), facebook (1200x630). Minimum 4 entries, more if multiple post types make sense.',
+    '- banners.variations MUST contain at least one entry. Default dimensions 1920x400.',
+    '- Every prompt MUST be 80-1200 characters, DALL-E-ready, and reference the brand name, brand style, color palette, and industry context directly so the image actually reflects this brand.',
+    '- Every altText MUST be 10-200 characters and describe what the finished image will visually show (for screen readers).',
+    '- Every rationale MUST be 20-200 characters and explain why this specific variation fits this specific brand and asset slot — not generic filler.',
+    '- Every variation "name" MUST be unique within its own section (no duplicate names in logo, heroes, socialGraphics, or banners).',
+    '- Do NOT use any phrase from the Brand DNA avoid list in any prompt, altText, strategy, or rationale field.',
+    '- Do NOT fabricate statistics, awards, percentages, or engagement numbers.',
+    '- Output ONLY the JSON object. No prose outside it. No markdown fences.',
+  ].join('\n');
+}
+
+function pickLogoQuality(name: LogoVariation['name']): ImageQuality {
+  return name === 'primary' ? 'hd' : 'standard';
+}
+
+async function safeGenerateImageUrl(
+  prompt: string,
+  dimensions: AssetDimensions,
+  quality: ImageQuality,
+  style: ImageStyle,
+  label: string,
+  failedSlots: string[],
+): Promise<string> {
+  try {
+    const size = mapDimensionsToSize(dimensions.width, dimensions.height);
+    const result = await generateImage(prompt, { size, quality, style });
+    return result.url;
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logger.error(
+      `[AssetGenerator] Image generation failed for slot=${label}`,
+      error instanceof Error ? error : new Error(errorMessage),
+      { file: FILE },
+    );
+    failedSlots.push(`${label}: ${errorMessage}`);
+    return '';
+  }
+}
+
+async function executeGenerateAssetPackage(
+  req: GenerateAssetPackageRequest,
+  ctx: LlmCallContext,
+): Promise<AssetPackageResult> {
+  const userPrompt = buildGenerateAssetPackageUserPrompt(req);
+  const rawContent = await callOpenRouter(ctx, userPrompt);
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(stripJsonFences(rawContent));
+  } catch {
+    throw new Error(
+      `Asset Generator output was not valid JSON: ${rawContent.slice(0, 200)}`,
+    );
+  }
+
+  const validation = AssetPackagePlanSchema.safeParse(parsed);
+  if (!validation.success) {
+    const issueSummary = validation.error.issues
+      .map((issue) => `${issue.path.join('.')}: ${issue.message}`)
+      .join('; ');
+    throw new Error(`Asset Generator output did not match expected schema: ${issueSummary}`);
+  }
+  const plan = validation.data;
+
+  const failedSlots: string[] = [];
+
+  const logoWithUrls: LogoVariationWithUrl[] = [];
+  for (const variation of plan.logo.variations) {
+    const url = await safeGenerateImageUrl(
+      variation.prompt,
+      variation.dimensions,
+      pickLogoQuality(variation.name),
+      'natural',
+      `logo.${variation.name}`,
+      failedSlots,
+    );
+    logoWithUrls.push({ ...variation, url });
+  }
+
+  const faviconUrl = await safeGenerateImageUrl(
+    plan.favicons.prompt,
+    plan.favicons.dimensions,
+    'hd',
+    'natural',
+    'favicon',
+    failedSlots,
+  );
+
+  const heroesWithUrls: HeroVariationWithUrl[] = [];
+  for (const variation of plan.heroes.variations) {
+    const url = await safeGenerateImageUrl(
+      variation.prompt,
+      variation.dimensions,
+      'standard',
+      'vivid',
+      `hero.${variation.name}`,
+      failedSlots,
+    );
+    heroesWithUrls.push({ ...variation, url });
+  }
+
+  const socialWithUrls: SocialGraphicVariationWithUrl[] = [];
+  for (const variation of plan.socialGraphics.variations) {
+    const url = await safeGenerateImageUrl(
+      variation.prompt,
+      variation.dimensions,
+      'standard',
+      'vivid',
+      `social.${variation.platform}.${variation.name}`,
+      failedSlots,
+    );
+    socialWithUrls.push({ ...variation, url });
+  }
+
+  const bannersWithUrls: BannerVariationWithUrl[] = [];
+  for (const variation of plan.banners.variations) {
+    const url = await safeGenerateImageUrl(
+      variation.prompt,
+      variation.dimensions,
+      'standard',
+      'vivid',
+      `banner.${variation.name}`,
+      failedSlots,
+    );
+    bannersWithUrls.push({ ...variation, url });
+  }
+
+  const primaryLogo = logoWithUrls.find((v) => v.name === 'primary');
+  if (!primaryLogo || primaryLogo.url.length === 0) {
+    throw new Error(
+      `Asset Generator: logo primary image generation failed — the most important asset is missing. ` +
+      `Failed slots: ${failedSlots.join(' | ')}`,
+    );
+  }
+
+  const flatVariations: FlatVariationEntry[] = [
+    ...heroesWithUrls.map((v) => ({ name: v.name, url: v.url, dimensions: v.dimensions, altText: v.altText })),
+    ...logoWithUrls.map((v) => ({ name: v.name, url: v.url, dimensions: v.dimensions, altText: v.altText })),
+    ...socialWithUrls.map((v) => ({ name: v.name, url: v.url, dimensions: v.dimensions, altText: v.altText })),
+    ...bannersWithUrls.map((v) => ({ name: v.name, url: v.url, dimensions: v.dimensions, altText: v.altText })),
+  ];
+
+  const totalSlots =
+    logoWithUrls.length +
+    1 +
+    heroesWithUrls.length +
+    socialWithUrls.length +
+    bannersWithUrls.length;
+  const confidence = failedSlots.length === 0
+    ? 0.9
+    : Math.max(0.5, 0.9 - (failedSlots.length / totalSlots) * 0.4);
+
+  if (failedSlots.length > 0) {
+    logger.warn(
+      `[AssetGenerator] Completed with ${failedSlots.length}/${totalSlots} failed image slots`,
+      { file: FILE, failedSlots },
+    );
+  }
+
+  return {
+    logo: {
+      strategy: plan.logo.strategy,
+      variations: logoWithUrls,
+    },
+    favicons: {
+      strategy: plan.favicons.strategy,
+      prompt: plan.favicons.prompt,
+      dimensions: plan.favicons.dimensions,
+      altText: plan.favicons.altText,
+      icopUrl: faviconUrl,
+      sizes: {},
+    },
+    heroes: {
+      strategy: plan.heroes.strategy,
+      variations: heroesWithUrls,
+    },
+    socialGraphics: {
+      strategy: plan.socialGraphics.strategy,
+      variations: socialWithUrls,
+    },
+    banners: {
+      strategy: plan.banners.strategy,
+      variations: bannersWithUrls,
+    },
+    variations: flatVariations,
+    confidence,
+  };
+}
+
+// ============================================================================
+// ASSET GENERATOR CLASS
 // ============================================================================
 
 export class AssetGenerator extends BaseSpecialist {
@@ -379,592 +693,84 @@ export class AssetGenerator extends BaseSpecialist {
   async initialize(): Promise<void> {
     await Promise.resolve();
     this.isInitialized = true;
-    this.log('INFO', 'Asset Generator initialized with AI image generation capabilities');
+    this.log('INFO', 'Asset Generator initialized (LLM-backed, Golden Master loaded at runtime)');
   }
 
-  /**
-   * Main execution entry point
-   */
   async execute(message: AgentMessage): Promise<AgentReport> {
-    await Promise.resolve();
     const taskId = message.id;
 
     try {
-      const payload = message.payload as AssetGenerationRequest;
-
-      const method = payload?.method ?? (payload as unknown as Record<string, unknown>)?.action as string | undefined;
-      if (!method) {
-        return this.createReport(taskId, 'FAILED', null, ['No method or action specified in payload']);
+      const payload = message.payload as Record<string, unknown> | null;
+      if (payload === null || typeof payload !== 'object') {
+        return this.createReport(taskId, 'FAILED', null, ['Asset Generator: payload must be an object']);
       }
 
-      if (!payload.brandName) {
-        return this.createReport(taskId, 'FAILED', null, ['Brand name is required']);
+      const rawAction = payload.action ?? payload.method;
+      if (typeof rawAction !== 'string') {
+        return this.createReport(taskId, 'FAILED', null, ['Asset Generator: no action or method specified in payload']);
       }
 
-      this.log('INFO', `Generating ${payload.assetType} assets for: ${payload.brandName}`);
+      if (!(SUPPORTED_ACTIONS as readonly string[]).includes(rawAction)) {
+        return this.createReport(taskId, 'FAILED', null, [
+          `Asset Generator does not support action '${rawAction}'. Supported: ${SUPPORTED_ACTIONS.join(', ')}`,
+        ]);
+      }
+      const action = rawAction as SupportedAction;
 
-      let result: AssetGenerationResult;
+      logger.info(`[AssetGenerator] Executing action=${action} taskId=${taskId}`, { file: FILE });
 
-      switch (method) {
-        case 'generate_logo':
-          result = await this.generateLogo(payload);
-          break;
-        case 'generate_banner':
-          result = await this.generateBanner(payload);
-          break;
-        case 'generate_social_graphic':
-          result = await this.generateSocialGraphic(payload);
-          break;
-        case 'generate_favicon':
-          result = await this.generateFavicon(payload);
-          break;
-        case 'generate_asset_package':
-          result = await this.generateAssetPackage(payload);
-          break;
-        default:
-          return this.createReport(taskId, 'FAILED', null, ['Unknown method']);
+      const inputValidation = GenerateAssetPackageRequestSchema.safeParse({
+        ...payload,
+        action,
+      });
+      if (!inputValidation.success) {
+        const issueSummary = inputValidation.error.issues
+          .map((issue) => `${issue.path.join('.')}: ${issue.message}`)
+          .join('; ');
+        return this.createReport(taskId, 'FAILED', null, [
+          `Asset Generator generate_asset_package: invalid input payload: ${issueSummary}`,
+        ]);
       }
 
-      return this.createReport(taskId, 'COMPLETED', result);
+      const ctx = await loadGMAndBrandDNA(DEFAULT_INDUSTRY_KEY);
+
+      const data = await executeGenerateAssetPackage(inputValidation.data, ctx);
+      return this.createReport(taskId, 'COMPLETED', data);
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      this.log('ERROR', `Asset generation failed: ${errorMessage}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.error('[AssetGenerator] Execution failed', error instanceof Error ? error : new Error(errorMessage), { file: FILE });
       return this.createReport(taskId, 'FAILED', null, [errorMessage]);
     }
   }
 
-  /**
-   * Handle signals from the Signal Bus
-   */
   async handleSignal(signal: Signal): Promise<AgentReport> {
     const taskId = signal.id;
-
     if (signal.payload.type === 'COMMAND') {
       return this.execute(signal.payload);
     }
-
     return this.createReport(taskId, 'COMPLETED', { acknowledged: true });
   }
 
-  /**
-   * Generate a report for the manager
-   */
   generateReport(taskId: string, data: unknown): AgentReport {
     return this.createReport(taskId, 'COMPLETED', data);
   }
 
-  /**
-   * Self-assessment - this agent has REAL logic
-   */
   hasRealLogic(): boolean {
     return true;
   }
 
-  /**
-   * Lines of code assessment
-   */
   getFunctionalLOC(): { functional: number; boilerplate: number } {
-    return { functional: 750, boilerplate: 50 };
-  }
-
-  // ==========================================================================
-  // CORE ASSET GENERATION LOGIC
-  // ==========================================================================
-
-  /**
-   * Generate logo variations
-   */
-  async generateLogo(request: AssetGenerationRequest): Promise<LogoGenerationResult> {
-    const {
-      brandName,
-      brandColors,
-      brandStyle = 'modern',
-      industry = 'technology',
-      tagline,
-    } = request;
-
-    this.log('INFO', `Generating logo for ${brandName} in ${brandStyle} style`);
-
-    const variations: GeneratedAsset[] = [];
-
-    // Primary horizontal logo
-    const primaryPrompt = this.buildLogoPrompt(
-      brandName,
-      brandStyle,
-      industry,
-      brandColors,
-      'horizontal',
-      tagline
-    );
-    variations.push({
-      name: 'primary',
-      style: 'full-color horizontal',
-      prompt: primaryPrompt,
-      url: await this.generateImageUrl(primaryPrompt, 'logo-primary', brandName, 'png', { width: 1200, height: 400 }),
-      dimensions: { width: 1200, height: 400 },
-      format: 'png',
-      useCase: 'Website header, presentations, email signatures',
-    });
-
-    // Icon/symbol only
-    const iconPrompt = this.buildLogoPrompt(
-      brandName,
-      brandStyle,
-      industry,
-      brandColors,
-      'icon',
-      undefined
-    );
-    variations.push({
-      name: 'icon',
-      style: 'symbol only, square format',
-      prompt: iconPrompt,
-      url: await this.generateImageUrl(iconPrompt, 'logo-icon', brandName, 'png', { width: 512, height: 512 }),
-      dimensions: { width: 512, height: 512 },
-      format: 'png',
-      useCase: 'Social media profile, app icon, favicon base',
-    });
-
-    // Monochrome version
-    const monoPrompt = this.buildLogoPrompt(
-      brandName,
-      brandStyle,
-      industry,
-      { primary: '#000000' },
-      'horizontal',
-      tagline
-    );
-    variations.push({
-      name: 'monochrome',
-      style: 'black and white',
-      prompt: monoPrompt,
-      url: await this.generateImageUrl(monoPrompt, 'logo-mono', brandName, 'png', { width: 1200, height: 400 }),
-      dimensions: { width: 1200, height: 400 },
-      format: 'png',
-      useCase: 'Print, fax, single-color applications',
-    });
-
-    // Vertical version
-    const verticalPrompt = this.buildLogoPrompt(
-      brandName,
-      brandStyle,
-      industry,
-      brandColors,
-      'vertical',
-      tagline
-    );
-    variations.push({
-      name: 'vertical',
-      style: 'stacked vertical layout',
-      prompt: verticalPrompt,
-      url: await this.generateImageUrl(verticalPrompt, 'logo-vertical', brandName, 'png', { width: 400, height: 800 }),
-      dimensions: { width: 400, height: 800 },
-      format: 'png',
-      useCase: 'Narrow spaces, mobile apps, vertical banners',
-    });
-
-    const brandGuidelines = {
-      primaryColors: [
-        brandColors?.primary ?? '#2563eb',
-        brandColors?.secondary ?? '#1e40af',
-      ],
-      usage: `Maintain clear space of at least 20% of logo height around all sides. Minimum size: 120px width for horizontal, 64px for icon. Always use on contrasting backgrounds.`,
-      doNot: [
-        'Do not stretch or distort the logo',
-        'Do not change the color scheme without approval',
-        'Do not add effects (shadows, gradients, etc.)',
-        'Do not place on busy backgrounds',
-        'Do not recreate or modify the logo',
-      ],
-    };
-
-    return {
-      assetType: 'logo',
-      brandName,
-      variations,
-      brandGuidelines,
-      confidence: 0.92,
-    };
-  }
-
-  /**
-   * Generate banner/header graphics
-   */
-  async generateBanner(request: AssetGenerationRequest): Promise<BannerGenerationResult> {
-    const {
-      brandName,
-      brandColors,
-      brandStyle = 'modern',
-      industry = 'technology',
-      tagline,
-      dimensions = { width: 1920, height: 400 },
-      format = 'png',
-    } = request;
-
-    this.log('INFO', `Generating banner for ${brandName}`);
-
-    const prompt = this.buildBannerPrompt(
-      brandName,
-      brandStyle,
-      industry,
-      brandColors,
-      tagline,
-      dimensions
-    );
-
-    const purpose = tagline
-      ? 'Website header with tagline'
-      : 'Website header background';
-
-    const designNotes = `Banner features ${brandStyle} design aesthetic with ${industry} industry elements. Composition balanced for text overlay. Color scheme: ${brandColors?.primary ?? 'brand colors'}. Optimized for ${dimensions.width}x${dimensions.height}px display.`;
-
-    return {
-      assetType: 'banner',
-      purpose,
-      url: await this.generateImageUrl(prompt, 'banner', brandName, format, dimensions),
-      prompt,
-      dimensions,
-      format,
-      designNotes,
-      confidence: 0.88,
-    };
-  }
-
-  /**
-   * Generate social media graphics
-   */
-  async generateSocialGraphic(request: AssetGenerationRequest): Promise<SocialGraphicResult> {
-    const {
-      brandName,
-      brandColors,
-      brandStyle = 'modern',
-      industry = 'technology',
-      platform = 'twitter',
-      format = 'png',
-    } = request;
-
-    this.log('INFO', `Generating ${platform} graphics for ${brandName}`);
-
-    const platformSpecs = SOCIAL_MEDIA_SPECS[platform];
-    const variations: SocialGraphicVariation[] = [];
-
-    // Generate post graphic
-    if (platformSpecs.post) {
-      const postPrompt = this.buildSocialGraphicPrompt(
-        brandName,
-        brandStyle,
-        industry,
-        platform,
-        'post',
-        platformSpecs.post,
-        brandColors
-      );
-
-      variations.push({
-        type: 'post',
-        url: await this.generateImageUrl(postPrompt, `${platform}-post`, brandName, format, platformSpecs.post),
-        prompt: postPrompt,
-        dimensions: platformSpecs.post,
-        format,
-      });
-    }
-
-    // Generate header/cover graphic
-    const headerKey = platform === 'twitter' ? 'header' : platform === 'linkedin' ? 'cover' : 'cover';
-    if (platformSpecs[headerKey]) {
-      const headerPrompt = this.buildSocialGraphicPrompt(
-        brandName,
-        brandStyle,
-        industry,
-        platform,
-        headerKey,
-        platformSpecs[headerKey],
-        brandColors
-      );
-
-      variations.push({
-        type: headerKey,
-        url: await this.generateImageUrl(headerPrompt, `${platform}-${headerKey}`, brandName, format, platformSpecs[headerKey]),
-        prompt: headerPrompt,
-        dimensions: platformSpecs[headerKey],
-        format,
-      });
-    }
-
-    // Generate story graphic for Instagram
-    if (platform === 'instagram' && platformSpecs.story) {
-      const storyPrompt = this.buildSocialGraphicPrompt(
-        brandName,
-        brandStyle,
-        industry,
-        platform,
-        'story',
-        platformSpecs.story,
-        brandColors
-      );
-
-      variations.push({
-        type: 'story',
-        url: await this.generateImageUrl(storyPrompt, `${platform}-story`, brandName, format, platformSpecs.story),
-        prompt: storyPrompt,
-        dimensions: platformSpecs.story,
-        format,
-      });
-    }
-
-    return {
-      assetType: 'social_graphic',
-      platform,
-      variations,
-      confidence: 0.90,
-    };
-  }
-
-  /**
-   * Generate favicon sets
-   */
-  async generateFavicon(request: AssetGenerationRequest): Promise<FaviconResult> {
-    const {
-      brandName,
-      brandColors,
-      brandStyle = 'modern',
-      industry = 'technology',
-    } = request;
-
-    this.log('INFO', `Generating favicon set for ${brandName}`);
-
-    const basePrompt = this.buildLogoPrompt(
-      brandName,
-      brandStyle,
-      industry,
-      brandColors,
-      'icon',
-      undefined
-    );
-
-    // Generate one base icon image — all favicon sizes derive from it
-    const baseUrl = await this.generateImageUrl(basePrompt, 'favicon-base', brandName, 'png', { width: 512, height: 512 });
-
-    const variations: FaviconVariation[] = FAVICON_SIZES.map(size => ({
-      size: `${size}x${size}`,
-      url: baseUrl,
-      dimensions: { width: size, height: size },
-      format: 'png' as OutputFormat,
-    }));
-
-    return {
-      assetType: 'favicon',
-      variations,
-      icopUrl: baseUrl,
-      confidence: 0.93,
-    };
-  }
-
-  /**
-   * Generate complete asset package
-   */
-  async generateAssetPackage(request: AssetGenerationRequest): Promise<AssetPackageResult> {
-    this.log('INFO', `Generating complete asset package for ${request.brandName}`);
-
-    const logo = await this.generateLogo(request);
-    const favicons = await this.generateFavicon(request);
-
-    // Generate social graphics for all platforms
-    const socialGraphics: Record<SocialPlatform, SocialGraphicResult> = {
-      twitter: await this.generateSocialGraphic({ ...request, platform: 'twitter' }),
-      linkedin: await this.generateSocialGraphic({ ...request, platform: 'linkedin' }),
-      instagram: await this.generateSocialGraphic({ ...request, platform: 'instagram' }),
-      facebook: await this.generateSocialGraphic({ ...request, platform: 'facebook' }),
-    };
-
-    // Generate banners
-    const banners: BannerGenerationResult[] = [
-      await this.generateBanner({ ...request, dimensions: { width: 1920, height: 400 } }),
-      await this.generateBanner({ ...request, dimensions: { width: 1200, height: 300 } }),
-    ];
-
-    return {
-      assetType: 'asset_package',
-      logo,
-      favicons,
-      socialGraphics,
-      banners,
-      confidence: 0.91,
-    };
-  }
-
-  // ==========================================================================
-  // PROMPT ENGINEERING HELPERS
-  // ==========================================================================
-
-  /**
-   * Build optimized logo generation prompt
-   */
-  private buildLogoPrompt(
-    brandName: string,
-    style: BrandStyle,
-    industry: string,
-    brandColors?: { primary: string; secondary?: string; accent?: string },
-    layout: 'horizontal' | 'vertical' | 'icon' = 'horizontal',
-    tagline?: string
-  ): string {
-    const styleDescriptors: Record<BrandStyle, string> = {
-      modern: 'clean, contemporary, sleek geometric shapes',
-      minimalist: 'ultra-simple, minimal elements, negative space',
-      playful: 'vibrant, friendly, organic shapes, approachable',
-      professional: 'sophisticated, authoritative, balanced composition',
-      bold: 'strong, impactful, high contrast, commanding presence',
-      elegant: 'refined, graceful, subtle details, timeless',
-      tech: 'futuristic, digital, abstract geometric forms, innovation',
-      organic: 'natural, flowing, hand-crafted feel, authentic',
-    };
-
-    const industryElements: Record<string, string> = {
-      technology: 'circuit patterns, abstract data visualization, innovation symbols',
-      healthcare: 'wellness symbols, care elements, trust indicators',
-      finance: 'stability symbols, growth arrows, security elements',
-      education: 'knowledge symbols, growth elements, clarity indicators',
-      retail: 'shopping elements, friendly approachability, value symbols',
-      food: 'appetizing colors, organic shapes, freshness indicators',
-      consulting: 'expertise symbols, partnership elements, solution indicators',
-      creative: 'artistic elements, imagination symbols, originality indicators',
-    };
-
-    const layoutDescriptor = {
-      horizontal: 'horizontal layout, wide format, balanced left-to-right composition',
-      vertical: 'vertical stacked layout, tall format, centered composition',
-      icon: 'square format, centered symbol, works at small sizes, highly recognizable',
-    };
-
-    const colorScheme = brandColors?.primary
-      ? `color palette: primary ${brandColors.primary}${brandColors.secondary ? `, secondary ${brandColors.secondary}` : ''}${brandColors.accent ? `, accent ${brandColors.accent}` : ''}`
-      : 'vibrant professional color scheme';
-
-    const taglineText = tagline && layout !== 'icon'
-      ? `, subtle tagline integration: "${tagline}"`
-      : '';
-
-    const negativePrompts = 'no text, no letters, no words, no photographs, no realistic images, no clutter, no complex details';
-
-    return `Professional ${layout} logo design for "${brandName}", ${styleDescriptors[style]}, ${industryElements[industry] ?? 'industry-appropriate elements'}, ${colorScheme}, ${layoutDescriptor[layout]}${taglineText}, flat design, vector-style, high-resolution, clean and scalable, modern brand identity. ${negativePrompts}`;
-  }
-
-  /**
-   * Build optimized banner generation prompt
-   */
-  private buildBannerPrompt(
-    brandName: string,
-    style: BrandStyle,
-    industry: string,
-    brandColors?: { primary: string; secondary?: string; accent?: string },
-    tagline?: string,
-    dimensions: AssetDimensions = { width: 1920, height: 400 }
-  ): string {
-    const aspectRatio = dimensions.width / dimensions.height;
-    const orientation = aspectRatio > 3 ? 'ultra-wide' : aspectRatio > 2 ? 'wide' : 'standard';
-
-    const styleDescriptors: Record<BrandStyle, string> = {
-      modern: 'clean gradients, geometric overlays, contemporary aesthetic',
-      minimalist: 'simple background, lots of negative space, subtle elements',
-      playful: 'vibrant colors, dynamic shapes, energetic composition',
-      professional: 'sophisticated gradient, subtle patterns, polished look',
-      bold: 'high contrast, strong visual impact, dramatic composition',
-      elegant: 'refined color transitions, subtle textures, graceful flow',
-      tech: 'digital grid, abstract data visualization, futuristic elements',
-      organic: 'natural textures, flowing shapes, authentic feel',
-    };
-
-    const colorScheme = brandColors?.primary
-      ? `dominant color ${brandColors.primary}${brandColors.secondary ? ` transitioning to ${brandColors.secondary}` : ''}`
-      : 'professional brand color scheme';
-
-    const taglineText = tagline
-      ? `, designed to complement text overlay: "${tagline}"`
-      : ', optimized for text overlay';
-
-    return `Professional ${orientation} website banner for "${brandName}", ${styleDescriptors[style]}, ${industry} industry aesthetic, ${colorScheme}, ${dimensions.width}x${dimensions.height}px dimensions${taglineText}, non-intrusive background, leaves space for content, high-resolution, web-optimized, modern design, no text, no logos embedded, pure background design`;
-  }
-
-  /**
-   * Build optimized social media graphic prompt
-   */
-  private buildSocialGraphicPrompt(
-    brandName: string,
-    style: BrandStyle,
-    industry: string,
-    platform: SocialPlatform,
-    type: string,
-    dimensions: AssetDimensions,
-    brandColors?: { primary: string; secondary?: string; accent?: string }
-  ): string {
-    const platformContext: Record<SocialPlatform, string> = {
-      twitter: 'engaging, shareable, clean design optimized for Twitter feed',
-      linkedin: 'professional, authoritative, polished aesthetic for LinkedIn',
-      instagram: 'visually striking, aesthetic focus, Instagram-optimized colors',
-      facebook: 'friendly, approachable, broad appeal for Facebook audience',
-    };
-
-    const typeContext: Record<string, string> = {
-      post: 'designed for social media post, balanced composition',
-      header: 'wide banner format, optimized for profile header',
-      cover: 'cover photo format, brand showcase design',
-      story: 'vertical story format, mobile-first design',
-    };
-
-    const styleDescriptor = style === 'modern' ? 'contemporary gradient design'
-      : style === 'minimalist' ? 'clean minimal background'
-      : style === 'bold' ? 'high-impact visual elements'
-      : `${style} aesthetic`;
-
-    const colorScheme = brandColors?.primary ?? '#2563eb';
-
-    return `Professional ${type} graphic for "${brandName}" on ${platform}, ${platformContext[platform]}, ${typeContext[type]}, ${styleDescriptor}, primary color ${colorScheme}, ${industry} industry relevance, ${dimensions.width}x${dimensions.height}px, optimized for ${platform}, text-overlay friendly, high engagement design, no embedded text, modern brand identity`;
-  }
-
-  /**
-   * Generate an image using DALL-E 3.
-   * Returns empty string if generation fails (no fake placeholder URLs).
-   */
-  private async generateImageUrl(
-    prompt: string,
-    assetName: string,
-    _brandName: string,
-    _format: string,
-    dimensions?: AssetDimensions
-  ): Promise<string> {
-    try {
-      const size = dimensions
-        ? mapDimensionsToSize(dimensions.width, dimensions.height)
-        : '1024x1024';
-
-      // Use HD quality for logos, standard for others
-      const quality: ImageQuality = assetName.startsWith('logo') ? 'hd' : 'standard';
-      const style: ImageStyle = assetName.startsWith('logo') ? 'natural' : 'vivid';
-
-      const result = await generateImage(prompt, { size, quality, style });
-      return result.url;
-    } catch (error) {
-      logger.warn('Image generation failed — OPENAI_API_KEY may not be configured', {
-        assetName,
-        error: error instanceof Error ? error.message : String(error),
-        file: 'specialist.ts',
-      });
-      return ''; // No fake URL — caller should check for empty string
-    }
+    return { functional: 500, boilerplate: 60 };
   }
 }
 
 // ============================================================================
-// FACTORY FUNCTION
+// FACTORY / SINGLETON
 // ============================================================================
 
 export function createAssetGenerator(): AssetGenerator {
   return new AssetGenerator();
 }
-
-// ============================================================================
-// SINGLETON INSTANCE
-// ============================================================================
 
 let instance: AssetGenerator | null = null;
 
@@ -972,3 +778,24 @@ export function getAssetGenerator(): AssetGenerator {
   instance ??= createAssetGenerator();
   return instance;
 }
+
+// ============================================================================
+// INTERNAL TEST HELPERS (exported for proof-of-life harness + regression executor)
+// ============================================================================
+
+export const __internal = {
+  SPECIALIST_ID,
+  DEFAULT_INDUSTRY_KEY,
+  SUPPORTED_ACTIONS,
+  loadGMAndBrandDNA,
+  buildResolvedSystemPrompt,
+  buildGenerateAssetPackageUserPrompt,
+  stripJsonFences,
+  normalizeBrandColors,
+  GenerateAssetPackageRequestSchema,
+  AssetPackagePlanSchema,
+  LogoVariationSchema,
+  HeroVariationSchema,
+  SocialGraphicVariationSchema,
+  BannerVariationSchema,
+};

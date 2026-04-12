@@ -354,6 +354,161 @@ const CALENDAR_COORDINATOR_CASES: Omit<RegressionCase, 'createdAt' | 'updatedAt'
 ];
 
 // ---------------------------------------------------------------------------
+// Asset Generator cases
+// ---------------------------------------------------------------------------
+
+const ASSET_GENERATOR_CASES: Omit<RegressionCase, 'createdAt' | 'updatedAt' | 'baselines'>[] = [
+  {
+    caseId: 'asset_generator_canonical_saas_package',
+    agentId: 'ASSET_GENERATOR',
+    name: 'Canonical 3-page SaaS brand asset package',
+    description:
+      'The canonical case. Mirrors what BuilderManager.buildAssetPackage sends at runtime (brandName + brandStyle + industry + brandColors + pages + tagline + companyDescription). Tests logo variations, prompt length, hero/page coverage, 4-platform social graphic coverage, and brand-name fidelity in strategy fields. Harness validates the LLM PLAN output (AssetPackagePlanSchema) — DALL-E image generation is NOT called by the regression executor.',
+    mode: 'SINGLE_SHOT',
+    active: true,
+    tags: ['generate_asset_package', 'canonical', 'baseline', 'saas'],
+    createdBy: 'seed-script',
+    shapeTolerances: [
+      {
+        path: '$.heroes.variations.length',
+        kind: 'arrayLength',
+        min: 2,
+        max: 5,
+        reason: '3 pages requested — LLMs may decide 2 or 4 heroes is appropriate inside the creative spec. Any count inside the range is valid.',
+      },
+      {
+        path: '$.socialGraphics.variations.length',
+        kind: 'arrayLength',
+        min: 4,
+        max: 8,
+        reason: '4 platforms × 1-2 post types per platform. Any count inside the range is a valid editorial choice.',
+      },
+      {
+        path: '$.banners.variations.length',
+        kind: 'arrayLength',
+        min: 1,
+        max: 4,
+        reason: 'Banner count is discretionary — 1-4 banners is inside the creative spec.',
+      },
+    ],
+    inputPayload: {
+      action: 'generate_asset_package',
+      input: {
+        brandName: 'SalesVelocity.ai',
+        brandStyle: 'modern',
+        industry: 'saas_sales_ops',
+        brandColors: { primary: '#1E40AF', secondary: '#10B981', accent: '#F59E0B' },
+        pages: [
+          { id: 'home', name: 'Home' },
+          { id: 'features', name: 'Features' },
+          { id: 'pricing', name: 'Pricing' },
+        ],
+        tagline: 'Outbound sales, automated.',
+        companyDescription: 'AI-powered sales operations platform for B2B teams.',
+      },
+    },
+    notes: 'Baseline case — any delta here is a red flag for upgrades across the whole Asset Generator surface.',
+  },
+  {
+    caseId: 'asset_generator_minimalist_finance_package',
+    agentId: 'ASSET_GENERATOR',
+    name: 'Minimalist finance brand (industry vocabulary stress)',
+    description:
+      'Industry-tuning stress case. Minimalist finance brand with restrained 2-color palette and 2 pages. Tests whether the LLM tunes its strategy vocabulary to the industry (trust/stability/confidence/wealth/private/advisory) — flagged as WARN via industryAppropriateLanguage so drift is reviewed rather than hard-blocking. Also catches regressions where the brand name is dropped from strategy fields.',
+    mode: 'SINGLE_SHOT',
+    active: true,
+    tags: ['generate_asset_package', 'finance', 'industry_fidelity', 'minimalist', 'stress'],
+    createdBy: 'seed-script',
+    shapeTolerances: [
+      {
+        path: '$.heroes.variations.length',
+        kind: 'arrayLength',
+        min: 2,
+        max: 4,
+        reason: '2 pages requested — LLMs may add a 3rd or 4th hero inside the creative spec.',
+      },
+      {
+        path: '$.socialGraphics.variations.length',
+        kind: 'arrayLength',
+        min: 4,
+        max: 8,
+        reason: '4 platforms × 1-2 post types per platform. Any count inside the range is valid.',
+      },
+      {
+        path: '$.banners.variations.length',
+        kind: 'arrayLength',
+        min: 1,
+        max: 3,
+        reason: 'Minimalist style — 1-3 banners is inside the creative spec.',
+      },
+    ],
+    inputPayload: {
+      action: 'generate_asset_package',
+      input: {
+        brandName: 'Meridian Capital',
+        brandStyle: 'minimalist',
+        industry: 'finance',
+        brandColors: { primary: '#0F172A', secondary: '#94A3B8' },
+        pages: [
+          { id: 'home', name: 'Home' },
+          { id: 'wealth', name: 'Wealth Management' },
+        ],
+        tagline: 'Quiet confidence.',
+        companyDescription: 'Private wealth advisory for high-net-worth individuals.',
+      },
+    },
+    notes: 'Industry-vocabulary regressions surface via industry_appropriate_language (WARN-only). Any missing finance keyword (trust/stability/confidence/wealth/private/advisory) below the 50% threshold is flagged for owner review, not a hard-block.',
+  },
+  {
+    caseId: 'asset_generator_playful_consumer_no_pages',
+    agentId: 'ASSET_GENERATOR',
+    name: 'Playful consumer brand with no pages (default-hero stress)',
+    description:
+      'Default-hero stress case. Playful DTC consumer brand with empty pages array — the prompt explicitly instructs the LLM to emit exactly one hero with pageId="default" when no pages are provided. heroes_count_between_1_and_1 catches regressions where a new model fabricates extra heroes or drops the default.',
+    mode: 'SINGLE_SHOT',
+    active: true,
+    tags: ['generate_asset_package', 'consumer', 'no_pages', 'playful', 'stress'],
+    createdBy: 'seed-script',
+    shapeTolerances: [
+      {
+        path: '$.heroes.variations.length',
+        kind: 'arrayLength',
+        min: 1,
+        max: 1,
+        reason: 'No pages provided — exactly one default hero per the specialist user prompt contract.',
+      },
+      {
+        path: '$.socialGraphics.variations.length',
+        kind: 'arrayLength',
+        min: 4,
+        max: 8,
+        reason: '4 platforms × 1-2 post types per platform. Any count inside the range is valid.',
+      },
+      {
+        path: '$.banners.variations.length',
+        kind: 'arrayLength',
+        min: 1,
+        max: 3,
+        reason: 'Banner count is discretionary — 1-3 banners is inside the creative spec.',
+      },
+    ],
+    inputPayload: {
+      action: 'generate_asset_package',
+      input: {
+        brandName: 'Bloomberry',
+        brandStyle: 'playful',
+        industry: 'consumer_retail',
+        brandColors: { primary: '#EC4899', secondary: '#FB923C', accent: '#FACC15' },
+        pages: [],
+        tagline: 'Snacks that smile back.',
+        companyDescription: 'DTC better-for-you snack brand.',
+      },
+    },
+    notes: 'Catches regressions where the model fabricates extra heroes when pages=[] or drops the default hero entirely. Also exercises the playful/vibrant 3-color palette which needs different strategy language than the SaaS or finance cases.',
+  },
+];
+
+// ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
 
@@ -385,6 +540,7 @@ const AGENT_CASE_BANK: Record<string, Omit<RegressionCase, 'createdAt' | 'update
   COPYWRITER: COPYWRITER_CASES,
   VIDEO_SPECIALIST: VIDEO_SPECIALIST_CASES,
   CALENDAR_COORDINATOR: CALENDAR_COORDINATOR_CASES,
+  ASSET_GENERATOR: ASSET_GENERATOR_CASES,
 };
 
 async function main(): Promise<void> {
