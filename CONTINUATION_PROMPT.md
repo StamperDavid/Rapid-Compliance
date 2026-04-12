@@ -89,6 +89,159 @@ Each handler kept the outward shape of delegation: Mission Control steps flipped
 | #25 — Rebuild Calendar Coordinator | DONE (April 11, 2026) | `90dcf8d3` | Real Sonnet 4.6 specialist, single live action `plan_calendar`, dual date mode (explicit range OR AI-determined duration), manager shape-mismatch bug fixed, regression harness gains tolerance-aware non-determinism check. Detail below. |
 | #26 — Rebuild Asset Generator (copy portions) | NEXT | — | Content department's final specialist. Same pattern — proposal packet first, then execute. After this, Content dept is done and `delegate_to_content` in jasper-tools.ts gets rewired. |
 
+### Agent Swarm Rebuild Tracker — Ground Truth Audit (updated April 11, 2026)
+
+**MAINTENANCE RULE:** This table is the single source of truth for the rebuild. It MUST be updated at the end of every rebuild session. When a specialist flips from TEMPLATE to REAL, change its row + update the counts at the top. Do NOT trust `AGENT_REGISTRY.json`'s `status: FUNCTIONAL` flag — that file has been lying for months. Verify against code.
+
+**Audit methodology:** Read every file in `src/lib/agents/`. Classify by actual behavior — does the file import `OpenRouterProvider` (or a real AI service like DALL-E) and call it? REAL. Is it a switch statement over lookup tables with no AI calls? TEMPLATE. Is it a dispatcher/router/session manager? INFRA. Was it a manager pretending to delegate while secretly calling LLMs directly? MANAGER_WITH_BYPASS (all removed in Task #20).
+
+**Current totals (as of April 11, 2026, commit `ea7f7da8`):**
+
+| Category | Count | Notes |
+|---|---|---|
+| **REAL — confirmed AI agents** | **6** | Jasper (orchestrator chat route), Copywriter, Video Specialist, Calendar Coordinator, Growth Strategist, Asset Generator (image portions only — copy portions are still template) |
+| **TEMPLATE — needs rebuild** | **32** | Hand-coded switch/lookup engines with zero LLM calls. Every one is a lie that pretends to be AI. |
+| **INFRA — routing/plumbing, not AI candidates** | **14** | Managers (9), jasper-tools dispatcher, voice-agent-handler, autonomous-posting-agent, chat-session-service, voice-ai-specialist |
+| **NOT_WIRED — Jasper tools intentionally disabled per Task #20** | **7** | `produce_video`, `delegate_to_builder`, `delegate_to_marketing`, `delegate_to_content`, `delegate_to_architect`, `delegate_to_outreach`, `orchestrate_campaign` — each returns honest `NOT_WIRED` FAILED response until its underlying specialists are rebuilt |
+| **TOTAL agents** | **52 registry + 1 code drift = 53** | Registry says 52, actual code has `VOICE_AI_SPECIALIST` at `outreach/voice/specialist.ts` that's not in the registry |
+
+**Progress: 6 REAL / 38 total candidates (REAL + TEMPLATE) = 16% done.** 32 specialists remaining to rebuild (plus Asset Generator copy portions for a full Content department close-out).
+
+#### Full agent inventory (audited against source code)
+
+**Orchestrator layer (2):**
+
+| ID | File | LOC | Verdict | Evidence |
+|---|---|---|---|---|
+| JASPER (chat route) | `src/app/api/orchestrator/chat/route.ts` | 1574 | ✅ REAL | Imports `OpenRouterProvider` line 20, instantiates line 459, calls `provider.chatWithTools()` lines 795 + 962, default model `anthropic/claude-sonnet-4` line 96 |
+| JASPER_TOOLS dispatcher | `src/lib/orchestrator/jasper-tools.ts` | 5875 | 🔧 INFRA | Tool dispatch switch. Zero `new OpenRouterProvider(` occurrences. 7 NOT_WIRED responses per Task #20. |
+
+**Managers (10 — 9 registry + MASTER_ORCHESTRATOR):**
+
+| ID | File | LOC | Verdict | Notes |
+|---|---|---|---|---|
+| MASTER_ORCHESTRATOR | `src/lib/agents/orchestrator/manager.ts` | 1849 | 🔧 INFRA | Dispatcher only |
+| INTELLIGENCE_MANAGER | `src/lib/agents/intelligence/manager.ts` | 1775 | 🔧 INFRA | Routes to 5 intelligence template specialists |
+| MARKETING_MANAGER | `src/lib/agents/marketing/manager.ts` | 2526 | 🔧 INFRA | NOT_WIRED via `delegate_to_marketing` |
+| BUILDER_MANAGER | `src/lib/agents/builder/manager.ts` | 1843 | 🔧 INFRA | NOT_WIRED via `delegate_to_builder` |
+| ARCHITECT_MANAGER | `src/lib/agents/architect/manager.ts` | 2252 | 🔧 INFRA | NOT_WIRED via `delegate_to_architect` |
+| COMMERCE_MANAGER | `src/lib/agents/commerce/manager.ts` | 1470 | 🔧 INFRA | Live delegation but all downstream specialists are TEMPLATE |
+| OUTREACH_MANAGER | `src/lib/agents/outreach/manager.ts` | 2238 | 🔧 INFRA | NOT_WIRED via `delegate_to_outreach` |
+| CONTENT_MANAGER | `src/lib/agents/content/manager.ts` | 1913 | 🔧 INFRA | NOT_WIRED via `delegate_to_content`. Registers 4 factories at lines 520-525 (3 content specialists + ASSET_GENERATOR imported from builder) |
+| REVENUE_DIRECTOR (sales) | `src/lib/agents/sales/revenue/manager.ts` | 2804 | 🔧 INFRA | Live delegation but all 5 downstream specialists are TEMPLATE |
+| REPUTATION_MANAGER (trust) | `src/lib/agents/trust/reputation/manager.ts` | 2608 | 🔧 INFRA | Live delegation but all 4 downstream specialists are TEMPLATE |
+
+**Content department (4 specialists):**
+
+| ID | File | LOC | Verdict | Task |
+|---|---|---|---|---|
+| COPYWRITER | `src/lib/agents/content/copywriter/specialist.ts` | 570 | ✅ REAL | **Task #23 — DONE** |
+| VIDEO_SPECIALIST | `src/lib/agents/content/video/specialist.ts` | 532 | ✅ REAL | **Task #24 — DONE** |
+| CALENDAR_COORDINATOR | `src/lib/agents/content/calendar/specialist.ts` | 522 | ✅ REAL | **Task #25 — DONE** |
+| ASSET_GENERATOR | `src/lib/agents/builder/assets/specialist.ts` | 974 | 🟡 HALF-REAL | Calls DALL-E 3 via `generateImage` at line 944 (image pixels are real); prompt construction is template. **Task #26 rebuilds the prompt/copy portions** |
+
+**Marketing department (6 specialists — ALL TEMPLATE):**
+
+| ID | File | LOC | Verdict | Task |
+|---|---|---|---|---|
+| SEO_EXPERT | `src/lib/agents/marketing/seo/specialist.ts` | 1798 | ❌ TEMPLATE | Task #27 (after Content close-out) |
+| LINKEDIN_EXPERT | `src/lib/agents/marketing/linkedin/specialist.ts` | 2155 | ❌ TEMPLATE | Task #28 |
+| TIKTOK_EXPERT | `src/lib/agents/marketing/tiktok/specialist.ts` | 1642 | ❌ TEMPLATE | Task #29 |
+| TWITTER_EXPERT | `src/lib/agents/marketing/twitter/specialist.ts` | 1892 | ❌ TEMPLATE | Task #30 |
+| FACEBOOK_EXPERT | `src/lib/agents/marketing/facebook/specialist.ts` | 2132 | ❌ TEMPLATE | Task #31 |
+| GROWTH_ANALYST | `src/lib/agents/marketing/growth-analyst/specialist.ts` | 836 | ❌ TEMPLATE | Task #32 |
+
+**Builder department (4 specialists):**
+
+| ID | File | LOC | Verdict | Task |
+|---|---|---|---|---|
+| UX_UI_ARCHITECT | `src/lib/agents/builder/ux-ui/specialist.ts` | 1389 | ❌ TEMPLATE | Task #33 |
+| FUNNEL_ENGINEER | `src/lib/agents/builder/funnel/specialist.ts` | 1448 | ❌ TEMPLATE | Task #34 |
+| ASSET_GENERATOR | *(shared with Content — see above)* | — | 🟡 HALF-REAL | Copy portions = Task #26 |
+| WORKFLOW_OPTIMIZER | `src/lib/agents/builder/workflow/specialist.ts` | 1719 | ❌ TEMPLATE | Task #35 |
+
+**Architect department (3 specialists — ALL TEMPLATE):**
+
+| ID | File | LOC | Verdict | Task |
+|---|---|---|---|---|
+| COPY_SPECIALIST | `src/lib/agents/architect/copy/specialist.ts` | 1515 | ❌ TEMPLATE | Task #36 |
+| UX_UI_SPECIALIST | `src/lib/agents/architect/ux-ui/specialist.ts` | 1878 | ❌ TEMPLATE | Task #37 |
+| FUNNEL_PATHOLOGIST | `src/lib/agents/architect/funnel/specialist.ts` | 1706 | ❌ TEMPLATE | Task #38 |
+
+**Outreach department (3 specialists — 2 TEMPLATE + 1 INFRA):**
+
+| ID | File | LOC | Verdict | Task |
+|---|---|---|---|---|
+| EMAIL_SPECIALIST | `src/lib/agents/outreach/email/specialist.ts` | 1198 | ❌ TEMPLATE | Task #39 |
+| SMS_SPECIALIST | `src/lib/agents/outreach/sms/specialist.ts` | 507 | ❌ TEMPLATE | Task #40 |
+| VOICE_AI_SPECIALIST | `src/lib/agents/outreach/voice/specialist.ts` | 545 | 🔧 INFRA | Telephony wrapper over Twilio/Telnyx/Bandwidth/Vonage. Not an LLM candidate — real voice AI lives in `src/lib/voice/voice-agent-handler.ts` which is also currently non-LLM. Out of the specialist rebuild track. |
+
+**Intelligence department (5 specialists — ALL TEMPLATE):**
+
+| ID | File | LOC | Verdict | Task |
+|---|---|---|---|---|
+| SCRAPER_SPECIALIST | `src/lib/agents/intelligence/scraper/specialist.ts` | 695 | ❌ TEMPLATE | Task #41 |
+| COMPETITOR_RESEARCHER | `src/lib/agents/intelligence/competitor/specialist.ts` | 954 | ❌ TEMPLATE | Task #42 |
+| TECHNOGRAPHIC_SCOUT | `src/lib/agents/intelligence/technographic/specialist.ts` | 1136 | ❌ TEMPLATE | Task #43 |
+| SENTIMENT_ANALYST | `src/lib/agents/intelligence/sentiment/specialist.ts` | 828 | ❌ TEMPLATE | Task #44 |
+| TREND_SCOUT | `src/lib/agents/intelligence/trend/specialist.ts` | 1808 | ❌ TEMPLATE | Task #45 |
+
+**Sales department (5 specialists — ALL TEMPLATE):**
+
+| ID | File | LOC | Verdict | Task |
+|---|---|---|---|---|
+| LEAD_QUALIFIER | `src/lib/agents/sales/qualifier/specialist.ts` | 1836 | ❌ TEMPLATE | Task #46 |
+| OUTREACH_SPECIALIST (sales) | `src/lib/agents/sales/outreach/specialist.ts` | 2005 | ❌ TEMPLATE | Task #47 |
+| MERCHANDISER | `src/lib/agents/sales/merchandiser/specialist.ts` | 1585 | ❌ TEMPLATE | Task #48 |
+| DEAL_CLOSER | `src/lib/agents/sales/deal-closer/specialist.ts` | 1289 | ❌ TEMPLATE | Task #49 |
+| OBJ_HANDLER | `src/lib/agents/sales/objection-handler/specialist.ts` | 1471 | ❌ TEMPLATE | Task #50 |
+
+**Trust/Reputation department (4 specialists — ALL TEMPLATE):**
+
+| ID | File | LOC | Verdict | Task |
+|---|---|---|---|---|
+| REVIEW_SPECIALIST | `src/lib/agents/trust/review/specialist.ts` | 1263 | ❌ TEMPLATE | Task #51 |
+| GMB_SPECIALIST | `src/lib/agents/trust/gmb/specialist.ts` | 2644 | ❌ TEMPLATE | Task #52 |
+| REV_MGR | `src/lib/agents/trust/review-manager/specialist.ts` | 1400 | ❌ TEMPLATE | Task #53 |
+| CASE_STUDY | `src/lib/agents/trust/case-study/specialist.ts` | 1289 | ❌ TEMPLATE | Task #54 |
+
+**Commerce department (4 specialists — ALL TEMPLATE):**
+
+| ID | File | LOC | Verdict | Task |
+|---|---|---|---|---|
+| PAYMENT_SPECIALIST | `src/lib/agents/commerce/payment/specialist.ts` | 869 | ❌ TEMPLATE | Task #55 — note: Stripe integration is code-only; LLM rebuild may be narrow |
+| CATALOG_MANAGER | `src/lib/agents/commerce/catalog/specialist.ts` | 1115 | ❌ TEMPLATE | Task #56 |
+| PRICING_STRATEGIST | `src/lib/agents/commerce/pricing/specialist.ts` | 573 | ❌ TEMPLATE | Task #57 |
+| INVENTORY_MANAGER | `src/lib/agents/commerce/inventory/specialist.ts` | 1125 | ❌ TEMPLATE | Task #58 |
+
+**Standalone agents (6):**
+
+| ID | File | LOC | Verdict | Task |
+|---|---|---|---|---|
+| JASPER | `src/app/api/orchestrator/chat/route.ts` + `src/lib/orchestrator/jasper-tools.ts` | 7449 combined | ✅ REAL | DONE — Task #20 removed the 7 bypasses; Jasper itself is a real tool-calling agent on Claude Sonnet 4 |
+| GROWTH_STRATEGIST | `src/lib/agents/growth-strategist/specialist.ts` | 944 | ✅ REAL | Imports OpenRouterProvider line 33, calls `provider.chat()` line 640. Already wired before the rebuild effort started. |
+| **AI_CHAT_SALES_AGENT (Alex)** | `src/lib/agents/sales-chat/specialist.ts` | 501 | ❌ **TEMPLATE** | **Task #59 — CRITICAL.** This is customer-facing (website chat widget + Facebook Messenger). It has a hand-coded `SYSTEM_PROMPT` and dispatches to internal methods via switch but never sends anything to an LLM. **Customers currently interact with a template engine pretending to be an AI sales agent.** Highest-priority rebuild after the Content department is done — this is the one real external risk. |
+| VOICE_AGENT_HANDLER | `src/lib/voice/voice-agent-handler.ts` | 1005 | 🔧 INFRA | Telephony plumbing. Dispatches to `VoiceProviderFactory` and `aiConversationService` but has no direct LLM imports. If `aiConversationService` is also non-LLM, the voice agent is also a template — separate audit needed. |
+| AUTONOMOUS_POSTING_AGENT | `src/lib/social/autonomous-posting-agent.ts` | 1795 | 🔧 INFRA | Scheduler/queue. Posts pre-generated content to 14 social platforms. Not an AI agent — it's the automation belt that moves content from queue to social APIs. |
+| CHAT_SESSION_SERVICE | `src/lib/agent/chat-session-service.ts` | 510 | 🔧 INFRA | Session management + instance lifecycle. Not an AI agent. |
+
+#### Critical findings from this audit
+
+1. **Task #20 cleanup is proven clean.** Zero `new OpenRouterProvider(` occurrences in `jasper-tools.ts`. All 7 disabled tools return structured `NOT_WIRED` responses.
+2. **The 4 LIVE department delegations (sales, trust, intelligence, commerce) are still a lie-in-waiting.** They successfully route Jasper → Manager → Specialist but every terminal specialist under those 4 departments is a TEMPLATE. Jasper currently receives hand-built lookup-table output and presents it as AI analysis from those departments. Either rebuild their specialists OR mark those 4 delegation tools as NOT_WIRED until they are.
+3. **The AI Chat Sales Agent (Alex) is the highest external risk.** It's customer-facing — runs on the website chat widget and Facebook Messenger — and has a fully-written `SYSTEM_PROMPT` that never reaches an LLM. Customers interact with a template. Should be rebuilt before Marketing department per business risk ranking, even though it's out of the current build order.
+4. **`AGENT_REGISTRY.json` needs corrections**: `VOICE_AI_SPECIALIST` missing from `OUTREACH_MANAGER.specialists` list; `CONTENT_MANAGER.specialists` lists 3 but code registers 4 (includes ASSET_GENERATOR factory). These are doc-drift bugs, not code bugs.
+5. **Build order re-verification**: the original CONTINUATION_PROMPT.md build order listed 19 specialists. The real count of specialists that need rebuilding is **32 TEMPLATE + 1 HALF-REAL (Asset Generator copy portions) + 1 customer-facing template (Alex)** = **34 total rebuilds** remaining.
+
+#### How to maintain this tracker
+
+When rebuilding a specialist:
+1. At the END of the session (after commit), update the row for that specialist: change Verdict from ❌ TEMPLATE to ✅ REAL, change Task from `Task #NN` to `Task #NN — DONE`.
+2. Update the "REAL" count at the top. Update the "TEMPLATE" count.
+3. Add a one-line entry to the Progress Log table at the top of this file with the commit SHA.
+4. Add a detailed section describing what was rebuilt, what changed, and verification results (see Task #24 and Task #25 detail sections as templates).
+5. If the rebuilt specialist's department is now fully complete, the corresponding `delegate_to_*` Jasper tool should be rewired from NOT_WIRED to live delegation — that's its own commit.
+
 ### Task #23.5 detail — Model Regression Harness (April 11, 2026)
 
 **Problem discovered during Copywriter proof-of-life review:** the Copywriter's Firestore GM declared `claude-3-5-sonnet`, but `src/lib/ai/openrouter-provider.ts` contained a silent alias that rewrote `claude-3-5-sonnet` → `anthropic/claude-sonnet-4` on the wire. Server logs showed the real wire id (`claude-4-sonnet-20250522`) but the discrepancy had been hiding in plain sight. Owner recalled that a model regression / parity test system was supposed to exist for exactly this class of silent-swap protection. An Explore sub-agent confirmed it did NOT exist in code — the system was planned and never built.
