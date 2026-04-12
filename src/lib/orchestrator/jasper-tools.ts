@@ -4486,99 +4486,17 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
       case 'delegate_to_sales': {
         const salesStart = Date.now();
         trackMissionStep(context, 'delegate_to_sales', 'RUNNING', { toolArgs: args });
-
-        try {
-          const { RevenueDirector } = await import('@/lib/agents/sales/revenue/manager');
-          const director = new RevenueDirector();
-          await director.initialize();
-
-          // Parse optional JSON parameters
-          let leadData: Record<string, unknown> = {};
-          let scraperData: Record<string, unknown> | undefined;
-          let interactionHistory: Record<string, unknown> | undefined;
-
-          if (args.leadData) {
-            try {
-              leadData = JSON.parse(args.leadData as string) as Record<string, unknown>;
-            } catch {
-              leadData = { raw: args.leadData };
-            }
-          }
-
-          if (args.scraperData) {
-            try {
-              scraperData = JSON.parse(args.scraperData as string) as Record<string, unknown>;
-            } catch {
-              scraperData = undefined;
-            }
-          }
-
-          if (args.interactionHistory) {
-            try {
-              interactionHistory = JSON.parse(args.interactionHistory as string) as Record<string, unknown>;
-            } catch {
-              interactionHistory = undefined;
-            }
-          }
-
-          // Map tool-definition action names → RevenueDirector SCREAMING_SNAKE_CASE actions
-          const salesActionMap: Record<string, string> = {
-            qualify_lead: 'CHECK_READINESS',
-            generate_outreach: 'AUTO_TRANSITION_TO_OUTREACH',
-            evaluate_nudge: 'EVALUATE_TRANSITION',
-            analyze_pipeline: 'PROGRESS_PIPELINE',
-            check_transition: 'EVALUATE_TRANSITION',
-            // Pass through if already in the right format
-          };
-          const rawAction = (args.action as string) || 'CHECK_READINESS';
-          const mappedAction = salesActionMap[rawAction] ?? rawAction.toUpperCase().replace(/-/g, '_');
-
-          const salesPayload = {
-            action: mappedAction,
-            leadId: args.leadId as string | undefined,
-            leadData,
-            scraperData,
-            outreachChannel: args.outreachChannel as string | undefined,
-            interactionHistory,
-          };
-
-          const result = await withTimeout(director.execute({
-            id: `sales_${Date.now()}`,
-            timestamp: new Date(),
-            from: 'JASPER',
-            to: 'REVENUE_DIRECTOR',
-            type: 'COMMAND',
-            priority: 'NORMAL',
-            payload: salesPayload,
-            requiresResponse: true,
-            traceId: `trace_${Date.now()}`,
-          }), MANAGER_TIMEOUT_MS, 'Revenue Director');
-
-          const salesDuration = Date.now() - salesStart;
-          trackMissionStep(context, 'delegate_to_sales',
-            result.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED',
-            { summary: `Sales: ${result.status}`, durationMs: salesDuration, toolResult: JSON.stringify(result.data) }
-          );
-
-          content = JSON.stringify({
-            status: result.status,
-            data: result.data,
-            errors: result.errors,
-            manager: 'REVENUE_DIRECTOR',
-            reviewLink: getReviewLink('delegate_to_sales', context?.missionId),
-            delegatedTo: result.data && typeof result.data === 'object' && 'delegations' in result.data
-              ? (result.data as Record<string, unknown>).delegations
-              : 'See data for details',
-          });
-        } catch (salesError: unknown) {
-          const errorMsg = salesError instanceof Error ? salesError.message : 'Unknown error';
-          trackMissionStep(context, 'delegate_to_sales', 'FAILED', {
-            summary: `Sales: FAILED — ${errorMsg}`,
-            durationMs: Date.now() - salesStart,
-            error: errorMsg,
-          });
-          content = JSON.stringify({ error: errorMsg, manager: 'REVENUE_DIRECTOR' });
-        }
+        const notWiredSummary = 'Sales department: not yet wired — specialist rebuild in progress';
+        trackMissionStep(context, 'delegate_to_sales', 'FAILED', {
+          summary: notWiredSummary,
+          durationMs: Date.now() - salesStart,
+          error: notWiredSummary,
+        });
+        content = JSON.stringify({
+          status: 'NOT_WIRED',
+          error: 'Sales department delegation is currently disabled because its specialists (Lead Qualifier, Outreach Specialist, Merchandiser, Deal Closer, Objection Handler) are still template engines with zero LLM calls. The Revenue Director manager routes correctly but terminates at hand-coded lookup tables, not real AI — presenting that output as department analysis would be a lie. This tool returns online when these 5 specialists are rebuilt as real AI agents. See CONTINUATION_PROMPT.md Current Priority section.',
+          manager: 'REVENUE_DIRECTOR',
+        });
         break;
       }
 
@@ -4608,52 +4526,17 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
       case 'delegate_to_trust': {
         const trustStart = Date.now();
         trackMissionStep(context, 'delegate_to_trust', 'RUNNING', { toolArgs: args });
-
-        try {
-          const { ReputationManager } = await import('@/lib/agents/trust/reputation/manager');
-          const trustManager = new ReputationManager();
-          await trustManager.initialize();
-
-          const trustPayload = {
-            action: args.action as string,
-            target: args.target as string | undefined,
-            context: args.context as string | undefined,
-          };
-
-          const trustResult = await withTimeout(trustManager.execute({
-            id: `trust_${Date.now()}`,
-            timestamp: new Date(),
-            from: 'JASPER',
-            to: 'REPUTATION_MANAGER',
-            type: 'COMMAND',
-            priority: 'NORMAL',
-            payload: trustPayload,
-            requiresResponse: true,
-            traceId: `trace_${Date.now()}`,
-          }), MANAGER_TIMEOUT_MS, 'Reputation Manager');
-
-          const trustDuration = Date.now() - trustStart;
-          trackMissionStep(context, 'delegate_to_trust',
-            trustResult.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED',
-            { summary: `Trust: ${trustResult.status}`, durationMs: trustDuration, toolResult: JSON.stringify(trustResult.data) }
-          );
-
-          content = JSON.stringify({
-            status: trustResult.status,
-            data: trustResult.data,
-            errors: trustResult.errors,
-            manager: 'REPUTATION_MANAGER',
-            reviewLink: getReviewLink('delegate_to_trust', context?.missionId),
-          });
-        } catch (trustError: unknown) {
-          const errorMsg = trustError instanceof Error ? trustError.message : 'Unknown error';
-          trackMissionStep(context, 'delegate_to_trust', 'FAILED', {
-            summary: `Trust: FAILED — ${errorMsg}`,
-            durationMs: Date.now() - trustStart,
-            error: errorMsg,
-          });
-          content = JSON.stringify({ error: errorMsg, manager: 'REPUTATION_MANAGER' });
-        }
+        const notWiredSummary = 'Trust & Reputation department: not yet wired — specialist rebuild in progress';
+        trackMissionStep(context, 'delegate_to_trust', 'FAILED', {
+          summary: notWiredSummary,
+          durationMs: Date.now() - trustStart,
+          error: notWiredSummary,
+        });
+        content = JSON.stringify({
+          status: 'NOT_WIRED',
+          error: 'Trust & Reputation department delegation is currently disabled because its specialists (Review Specialist, GMB Specialist, Review Manager, Case Study Specialist) are still template engines with zero LLM calls. The Reputation Manager routes correctly but terminates at hand-coded lookup tables, not real AI — presenting that output as department analysis would be a lie. This tool returns online when these 4 specialists are rebuilt as real AI agents. See CONTINUATION_PROMPT.md Current Priority section.',
+          manager: 'REPUTATION_MANAGER',
+        });
         break;
       }
 
@@ -4724,161 +4607,17 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
       case 'delegate_to_intelligence': {
         const intelStart = Date.now();
         trackMissionStep(context, 'delegate_to_intelligence', 'RUNNING', { toolArgs: args });
-
-        try {
-          const { IntelligenceManager } = await import('@/lib/agents/intelligence/manager');
-          logger.info('[LLMTrace] ▶ delegate_to_intelligence: instantiating IntelligenceManager', {
-            researchType: args.researchType as string,
-            targets: args.targets as string,
-          });
-          const intelMgr = new IntelligenceManager();
-          await intelMgr.initialize();
-          logger.info('[LLMTrace] ✓ IntelligenceManager initialized');
-
-          const intelPayload = {
-            researchType: args.researchType as string,
-            targets: args.targets
-              ? (args.targets as string).split(',').map((t: string) => t.trim())
-              : [],
-            industry: args.industry as string | undefined,
-            depth: args.depth as string | undefined,
-            focusAreas: args.focusAreas
-              ? (args.focusAreas as string).split(',').map((f: string) => f.trim())
-              : undefined,
-            timeframe: args.timeframe as string | undefined,
-          };
-
-          const mgrCallStart = Date.now();
-          const intelResult = await withTimeout(intelMgr.execute({
-            id: `intelligence_${Date.now()}`,
-            timestamp: new Date(),
-            from: 'JASPER',
-            to: 'INTELLIGENCE_MANAGER',
-            type: 'COMMAND',
-            priority: 'NORMAL',
-            payload: intelPayload,
-            requiresResponse: true,
-            traceId: `trace_${Date.now()}`,
-          }), MANAGER_TIMEOUT_MS, 'Intelligence Manager');
-
-          logger.info('[LLMTrace] ✓ delegate_to_intelligence: IntelligenceManager.execute() returned', {
-            durationMs: Date.now() - mgrCallStart,
-            status: intelResult.status,
-            hasData: Boolean(intelResult.data),
-            dataKeys: intelResult.data ? Object.keys(intelResult.data as Record<string, unknown>) : [],
-          });
-
-          const intelDuration = Date.now() - intelStart;
-          // Extract FULL detail from IntelligenceBrief — not just the template synthesis
-          const intelData = intelResult.data as Record<string, unknown> | null;
-          const synthesis = (intelData && typeof intelData === 'object' && 'synthesis' in intelData)
-            ? intelData.synthesis as Record<string, unknown>
-            : null;
-
-          // Extract actual competitor details (names, positioning, strengths, weaknesses)
-          const compAnalysis = intelData?.competitorAnalysis as Record<string, unknown> | null;
-          const rawCompetitors = Array.isArray(compAnalysis?.competitors) ? compAnalysis.competitors as Array<Record<string, unknown>> : [];
-          const competitorDetails = rawCompetitors.map((c) => ({
-            competitor: (c.name as string) || (c.domain as string) || 'Unknown',
-            angle: [
-              c.positioning ? `Positioning: ${c.positioning}` : '',
-              Array.isArray(c.strengths) && c.strengths.length > 0 ? `Strengths: ${(c.strengths as string[]).join(', ')}` : '',
-              Array.isArray(c.weaknesses) && c.weaknesses.length > 0 ? `Weaknesses: ${(c.weaknesses as string[]).join(', ')}` : '',
-            ].filter(Boolean).join('. ') || 'Identified via search',
-          }));
-
-          // Extract trend signals
-          const trendAnalysis = intelData?.trendAnalysis as Record<string, unknown> | null;
-          const rawSignals = Array.isArray(trendAnalysis?.signals) ? trendAnalysis.signals as Array<Record<string, unknown>> : [];
-          const trendInsights = rawSignals.map((s) =>
-            `${(s.title as string) || (s.description as string) || 'Market signal'} (${(s.type as string) || 'signal'}, confidence: ${s.confidence ?? 'N/A'})`
-          );
-
-          // Extract market insights as content gaps
-          const marketInsights = compAnalysis?.marketInsights as Record<string, unknown> | null;
-          const contentGaps = Array.isArray(marketInsights?.gaps) ? marketInsights.gaps as string[] : [];
-
-          // Build rich areas-researched breakdown
-          const areasResearched: Array<{ area: string; findings: string }> = [];
-          if (competitorDetails.length > 0) {
-            areasResearched.push({
-              area: 'Competitor Landscape',
-              findings: competitorDetails.map(c => `• ${c.competitor}: ${c.angle}`).join('\n'),
-            });
-          }
-          if (trendInsights.length > 0) {
-            areasResearched.push({
-              area: 'Market Trends & Signals',
-              findings: trendInsights.map(t => `• ${t}`).join('\n'),
-            });
-          }
-          if (contentGaps.length > 0) {
-            areasResearched.push({
-              area: 'Market Gaps & Opportunities',
-              findings: contentGaps.map(g => `• ${g}`).join('\n'),
-            });
-          }
-          const intelExec = intelData?.execution as Record<string, unknown> | null;
-          if (intelExec) {
-            areasResearched.push({
-              area: 'Execution Summary',
-              findings: `${intelExec.totalSpecialists ?? 0} specialists deployed, ${intelExec.successfulSpecialists ?? 0} succeeded, ${intelExec.failedSpecialists ?? 0} failed. Total time: ${Math.round(((intelExec.totalExecutionTimeMs as number) ?? 0) / 1000)}s`,
-            });
-          }
-
-          const intelFindings = (synthesis?.executiveSummary as string) || `Intelligence: ${intelResult.status}`;
-          const intelInsights = Array.isArray(synthesis?.keyFindings) ? synthesis.keyFindings as string[] : [];
-
-          // Merge template keyFindings with actual trend insights for richer detail
-          const allInsights = [...intelInsights, ...trendInsights.slice(0, 5)];
-
-          trackMissionStep(context, 'delegate_to_intelligence',
-            intelResult.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED',
-            {
-              summary: competitorDetails.length > 0
-                ? `Intelligence: ${competitorDetails.length} competitors analyzed (${competitorDetails.slice(0, 3).map(c => c.competitor).join(', ')})`
-                : intelInsights.length > 0
-                  ? `Intelligence: ${intelInsights[0].slice(0, 80)}`
-                  : `Intelligence: ${intelResult.status}`,
-              durationMs: intelDuration,
-              toolResult: JSON.stringify({
-                type: 'research',
-                methodology: `Intelligence gathering via ${intelExec?.totalSpecialists ?? 'multiple'} specialist agents: CompetitorResearcher (SERP analysis + web scraping), TrendScout (market signal detection), and synthesis. Research targets: ${intelPayload.targets?.join(', ') || intelPayload.researchType || 'general'}.`,
-                areasResearched,
-                findings: intelFindings,
-                keyInsights: allInsights,
-                competitorAngles: competitorDetails,
-                contentGaps,
-                sources: [
-                  'Google SERP analysis (Serper API)',
-                  'Website scraping & content analysis',
-                  rawCompetitors.length > 0 ? `${rawCompetitors.length} competitor profiles` : '',
-                  rawSignals.length > 0 ? `${rawSignals.length} market signals detected` : '',
-                  'Domain authority metrics',
-                ].filter(Boolean),
-              }),
-            }
-          );
-
-          content = JSON.stringify({
-            status: intelResult.status,
-            data: intelResult.data,
-            errors: intelResult.errors,
-            manager: 'INTELLIGENCE_MANAGER',
-            reviewLink: getReviewLink('delegate_to_intelligence', context?.missionId),
-            delegatedTo: intelResult.data && typeof intelResult.data === 'object' && 'delegations' in intelResult.data
-              ? (intelResult.data as Record<string, unknown>).delegations
-              : 'See data for details',
-          });
-        } catch (intelError: unknown) {
-          const errorMsg = intelError instanceof Error ? intelError.message : 'Unknown error';
-          trackMissionStep(context, 'delegate_to_intelligence', 'FAILED', {
-            summary: `Intelligence: FAILED — ${errorMsg}`,
-            durationMs: Date.now() - intelStart,
-            error: errorMsg,
-          });
-          content = JSON.stringify({ error: errorMsg, manager: 'INTELLIGENCE_MANAGER' });
-        }
+        const notWiredSummary = 'Intelligence department: not yet wired — specialist rebuild in progress';
+        trackMissionStep(context, 'delegate_to_intelligence', 'FAILED', {
+          summary: notWiredSummary,
+          durationMs: Date.now() - intelStart,
+          error: notWiredSummary,
+        });
+        content = JSON.stringify({
+          status: 'NOT_WIRED',
+          error: 'Intelligence department delegation is currently disabled because its specialists (Scraper Specialist, Competitor Researcher, Technographic Scout, Sentiment Analyst, Trend Scout) are still template engines with zero LLM calls. The Intelligence Manager routes correctly but terminates at hand-coded lookup tables, not real AI — presenting that output as research findings would be a lie. This tool returns online when these 5 specialists are rebuilt as real AI agents. See CONTINUATION_PROMPT.md Current Priority section.',
+          manager: 'INTELLIGENCE_MANAGER',
+        });
         break;
       }
 
@@ -4888,74 +4627,17 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
       case 'delegate_to_commerce': {
         const commerceStart = Date.now();
         trackMissionStep(context, 'delegate_to_commerce', 'RUNNING', { toolArgs: args });
-
-        try {
-          const { CommerceManager } = await import('@/lib/agents/commerce/manager');
-          const commerceMgr = new CommerceManager();
-          await commerceMgr.initialize();
-
-          let parsedProductData: Record<string, unknown> | undefined;
-          let parsedPriceData: Record<string, unknown> | undefined;
-          let parsedPromotionData: Record<string, unknown> | undefined;
-
-          if (args.productData) {
-            try { parsedProductData = JSON.parse(args.productData as string) as Record<string, unknown>; }
-            catch { parsedProductData = undefined; }
-          }
-          if (args.priceData) {
-            try { parsedPriceData = JSON.parse(args.priceData as string) as Record<string, unknown>; }
-            catch { parsedPriceData = undefined; }
-          }
-          if (args.promotionData) {
-            try { parsedPromotionData = JSON.parse(args.promotionData as string) as Record<string, unknown>; }
-            catch { parsedPromotionData = undefined; }
-          }
-
-          const commercePayload = {
-            actionType: args.actionType as string,
-            productData: parsedProductData,
-            priceData: parsedPriceData,
-            promotionData: parsedPromotionData,
-            analysisScope: args.analysisScope as string | undefined,
-          };
-
-          const commerceResult = await withTimeout(commerceMgr.execute({
-            id: `commerce_${Date.now()}`,
-            timestamp: new Date(),
-            from: 'JASPER',
-            to: 'COMMERCE_MANAGER',
-            type: 'COMMAND',
-            priority: 'NORMAL',
-            payload: commercePayload,
-            requiresResponse: true,
-            traceId: `trace_${Date.now()}`,
-          }), MANAGER_TIMEOUT_MS, 'Commerce Manager');
-
-          const commerceDuration = Date.now() - commerceStart;
-          trackMissionStep(context, 'delegate_to_commerce',
-            commerceResult.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED',
-            { summary: `Commerce: ${commerceResult.status}`, durationMs: commerceDuration, toolResult: JSON.stringify(commerceResult.data) }
-          );
-
-          content = JSON.stringify({
-            status: commerceResult.status,
-            data: commerceResult.data,
-            errors: commerceResult.errors,
-            manager: 'COMMERCE_MANAGER',
-            reviewLink: getReviewLink('delegate_to_commerce', context?.missionId),
-            delegatedTo: commerceResult.data && typeof commerceResult.data === 'object' && 'delegations' in commerceResult.data
-              ? (commerceResult.data as Record<string, unknown>).delegations
-              : 'See data for details',
-          });
-        } catch (commerceError: unknown) {
-          const errorMsg = commerceError instanceof Error ? commerceError.message : 'Unknown error';
-          trackMissionStep(context, 'delegate_to_commerce', 'FAILED', {
-            summary: `Commerce: FAILED — ${errorMsg}`,
-            durationMs: Date.now() - commerceStart,
-            error: errorMsg,
-          });
-          content = JSON.stringify({ error: errorMsg, manager: 'COMMERCE_MANAGER' });
-        }
+        const notWiredSummary = 'Commerce department: not yet wired — specialist rebuild in progress';
+        trackMissionStep(context, 'delegate_to_commerce', 'FAILED', {
+          summary: notWiredSummary,
+          durationMs: Date.now() - commerceStart,
+          error: notWiredSummary,
+        });
+        content = JSON.stringify({
+          status: 'NOT_WIRED',
+          error: 'Commerce department delegation is currently disabled because its specialists (Payment Specialist, Catalog Manager, Pricing Strategist, Inventory Manager) are still template engines with zero LLM calls. The Commerce Manager routes correctly but terminates at hand-coded lookup tables, not real AI — presenting that output as department analysis would be a lie. This tool returns online when these 4 specialists are rebuilt as real AI agents. See CONTINUATION_PROMPT.md Current Priority section.',
+          manager: 'COMMERCE_MANAGER',
+        });
         break;
       }
 
