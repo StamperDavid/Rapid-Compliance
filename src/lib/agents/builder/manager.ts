@@ -1023,8 +1023,12 @@ export class BuilderManager extends BaseManager {
     }
 
     // Extract design system from UX_UI result
+    // Task #35 (April 12 2026): UX/UI Architect rebuilt as real LLM specialist.
+    // Its report.data is now the DesignSystemResult object directly (no `.data` wrapper),
+    // with shape { tokens, componentGuidelines, designPrinciples, accessibilityStrategy, rationale }.
+    // Single dereference. The prior double-dereference was left over from the template output shape.
     const uxResult = specialistResults.find(r => r.specialistId === 'UX_UI_ARCHITECT');
-    const designSystem: Record<string, unknown> = (uxResult?.data as Record<string, unknown>)?.data as Record<string, unknown> ?? {};
+    const designSystem: Record<string, unknown> = (uxResult?.data as Record<string, unknown>) ?? {};
 
     // Extract funnel optimization from FUNNEL_ENGINEER result
     const funnelResult = specialistResults.find(r => r.specialistId === 'FUNNEL_ENGINEER');
@@ -1078,12 +1082,15 @@ export class BuilderManager extends BaseManager {
       {
         id: 'UX_UI_ARCHITECT',
         message: this.createSpecialistMessage(taskId, 'UX_UI_ARCHITECT', {
-          type: 'design_system',
+          // Task #35 (April 12 2026): rebuilt UX/UI Architect uses `action` as the job
+          // discriminator (consistent with every other rebuilt specialist), not `type`.
+          action: 'generate_design_system',
           context: `Generate design system for ${blueprint.brandContext.industry} site`,
           requirements: {
             brandColors: [], // Would come from Brand DNA
             targetAudience: blueprint.brandContext.targetAudience,
             accessibilityLevel: 'AA',
+            industryHint: blueprint.brandContext.industry,
           },
         }),
       },

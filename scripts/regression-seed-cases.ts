@@ -1042,6 +1042,106 @@ const GROWTH_ANALYST_CASES: Omit<RegressionCase, 'createdAt' | 'updatedAt' | 'ba
 ];
 
 // ---------------------------------------------------------------------------
+// UX/UI Architect cases
+// ---------------------------------------------------------------------------
+
+const UX_UI_ARCHITECT_CASES: Omit<RegressionCase, 'createdAt' | 'updatedAt' | 'baselines'>[] = [
+  {
+    caseId: 'ux_ui_architect_saas_b2b',
+    agentId: 'UX_UI_ARCHITECT',
+    name: 'B2B SaaS design system (dashboard + marketing)',
+    description:
+      'Canonical design system case. Exercises token shape (colors, typography scale, spacing, radius, shadows, breakpoints), component count range, design principles count, WCAG citation, and context echo in rationale.',
+    mode: 'SINGLE_SHOT',
+    active: true,
+    tags: ['generate_design_system', 'saas', 'canonical', 'baseline'],
+    createdBy: 'seed-script',
+    shapeTolerances: [
+      { path: '$.componentGuidelines.length', kind: 'arrayLength', min: 4, max: 8, reason: 'Schema allows 4-8 components.' },
+      { path: '$.designPrinciples.length', kind: 'arrayLength', min: 3, max: 6, reason: 'Schema allows 3-6 principles.' },
+      { path: '$.tokens.typography.scale.length', kind: 'arrayLength', min: 6, max: 9, reason: 'Schema allows 6-9 typography steps.' },
+      { path: '$.tokens.colors.neutral.length', kind: 'arrayLength', min: 5, max: 10, reason: 'Schema allows 5-10 neutral steps.' },
+      { path: '$.tokens.spacing.scale.length', kind: 'arrayLength', min: 6, max: 10, reason: 'Schema allows 6-10 spacing steps.' },
+    ],
+    inputPayload: {
+      action: 'generate_design_system',
+      context:
+        'B2B SaaS sales velocity platform — clean, data-dense dashboard UI, trust-building marketing site, converts enterprise buyers',
+      requirements: {
+        targetAudience: 'B2B SaaS founders and revenue operators scaling from $1M to $10M ARR',
+        accessibilityLevel: 'AA',
+        industryHint: 'saas_sales_ops',
+        styleDirection: 'modern, confident, precise — not playful, not corporate',
+        priorityComponents: ['Button', 'Input', 'Card', 'Table', 'Modal'],
+      },
+    },
+    notes: 'Baseline case — any delta here flags upgrades across the whole UX/UI Architect surface.',
+  },
+  {
+    caseId: 'ux_ui_architect_realestate_luxury',
+    agentId: 'UX_UI_ARCHITECT',
+    name: 'Luxury real estate design system (editorial)',
+    description:
+      'Industry-switching stress case. Tests whether the LLM adapts design language from SaaS to editorial real estate — different color mood, different type hierarchy, different component emphasis.',
+    mode: 'SINGLE_SHOT',
+    active: true,
+    tags: ['generate_design_system', 'real_estate', 'industry_switch', 'stress'],
+    createdBy: 'seed-script',
+    shapeTolerances: [
+      { path: '$.componentGuidelines.length', kind: 'arrayLength', min: 4, max: 8, reason: 'Schema allows 4-8 components.' },
+      { path: '$.designPrinciples.length', kind: 'arrayLength', min: 3, max: 6, reason: 'Schema allows 3-6 principles.' },
+      { path: '$.tokens.typography.scale.length', kind: 'arrayLength', min: 6, max: 9, reason: 'Schema allows 6-9 typography steps.' },
+      { path: '$.tokens.colors.neutral.length', kind: 'arrayLength', min: 5, max: 10, reason: 'Schema allows 5-10 neutral steps.' },
+      { path: '$.tokens.spacing.scale.length', kind: 'arrayLength', min: 6, max: 10, reason: 'Schema allows 6-10 spacing steps.' },
+    ],
+    inputPayload: {
+      action: 'generate_design_system',
+      context:
+        'Luxury real estate brokerage website — editorial photography, generous whitespace, slow reveal animations, high-end buyer experience',
+      requirements: {
+        targetAudience: 'Affluent buyers and sellers shopping $2M-$20M properties',
+        accessibilityLevel: 'AA',
+        industryHint: 'real_estate',
+        styleDirection: 'editorial, understated, timeless — never loud or trendy',
+        priorityComponents: ['Button', 'Input', 'Card', 'Gallery', 'Nav'],
+      },
+    },
+    notes: 'Industry-switching regressions surface if the LLM returns SaaS-style tokens instead of editorial real-estate design.',
+  },
+  {
+    caseId: 'ux_ui_architect_ecommerce_dtc',
+    agentId: 'UX_UI_ARCHITECT',
+    name: 'DTC ecommerce design system (mobile-first, bold)',
+    description:
+      'Tone-and-style stress case. Tests whether the LLM produces a bold, high-energy design system instead of defaulting to a conservative SaaS look.',
+    mode: 'SINGLE_SHOT',
+    active: true,
+    tags: ['generate_design_system', 'ecommerce', 'style_stress', 'stress'],
+    createdBy: 'seed-script',
+    shapeTolerances: [
+      { path: '$.componentGuidelines.length', kind: 'arrayLength', min: 4, max: 8, reason: 'Schema allows 4-8 components.' },
+      { path: '$.designPrinciples.length', kind: 'arrayLength', min: 3, max: 6, reason: 'Schema allows 3-6 principles.' },
+      { path: '$.tokens.typography.scale.length', kind: 'arrayLength', min: 6, max: 9, reason: 'Schema allows 6-9 typography steps.' },
+      { path: '$.tokens.colors.neutral.length', kind: 'arrayLength', min: 5, max: 10, reason: 'Schema allows 5-10 neutral steps.' },
+      { path: '$.tokens.spacing.scale.length', kind: 'arrayLength', min: 6, max: 10, reason: 'Schema allows 6-10 spacing steps.' },
+    ],
+    inputPayload: {
+      action: 'generate_design_system',
+      context:
+        'DTC ecommerce brand — high-velocity product pages, fast checkout, mobile-first, bold photography and confident CTAs',
+      requirements: {
+        targetAudience: 'Millennial and Gen-Z shoppers on mobile, repeat purchasers of lifestyle goods',
+        accessibilityLevel: 'AA',
+        industryHint: 'ecommerce_dtc',
+        styleDirection: 'bold, energetic, playful but premium',
+        priorityComponents: ['Button', 'Input', 'Card', 'ProductCard', 'Badge'],
+      },
+    },
+    notes: 'Style-stress regressions surface if the model produces conservative SaaS tokens instead of bold mobile-first ecommerce design.',
+  },
+];
+
+// ---------------------------------------------------------------------------
 // SEO Expert cases
 // ---------------------------------------------------------------------------
 
@@ -1174,6 +1274,7 @@ const AGENT_CASE_BANK: Record<string, Omit<RegressionCase, 'createdAt' | 'update
   TWITTER_X_EXPERT: TWITTER_X_EXPERT_CASES,
   FACEBOOK_ADS_EXPERT: FACEBOOK_ADS_EXPERT_CASES,
   GROWTH_ANALYST: GROWTH_ANALYST_CASES,
+  UX_UI_ARCHITECT: UX_UI_ARCHITECT_CASES,
 };
 
 async function main(): Promise<void> {
