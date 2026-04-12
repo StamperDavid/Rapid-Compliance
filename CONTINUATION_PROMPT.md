@@ -92,7 +92,10 @@ Each handler kept the outward shape of delegation: Mission Control steps flipped
 | #27 — Rewire delegate_to_content + fix broken video tools | DONE (April 12, 2026) | `2ae4bbf7` | delegate_to_content rewired to live ContentManager call. create_video remapped to script_to_storyboard. generate_video + assemble_video NOT_WIRED (Hedra/FFmpeg pipeline, not LLM). |
 | #28 — Rebuild SEO Expert | DONE (April 12, 2026) | `040eeb45` | Real Sonnet 4.6 specialist. 2 live actions: keyword_research + domain_analysis. 6 dead actions dropped. Pirate test PASSED. Regression 3P/0W/0F. Marketing dept 1/6. |
 | #29 — Rebuild LinkedIn Expert | DONE (April 12, 2026) | `1a474dc4` | Real Sonnet 4.6 specialist. Single live action: generate_content. 17 dead actions dropped. maxTokens 10000 (carousel needs room). Pirate test PASSED. Marketing dept 2/6. |
-| #30 — Rebuild TikTok Expert | NEXT | — | Marketing dept specialist #3. Same pattern. |
+| #30 — Rebuild TikTok Expert | DONE (April 12, 2026) | `083912b9` | Real Sonnet 4.6 specialist. Single live action: generate_content (video script + hooks + caption + hashtags + sound strategy + pacing). 12 dead actions dropped. Pirate test PASSED. Regression 3P/0W/0F. Marketing dept 3/6. |
+| #31 — Rebuild Twitter/X Expert | DONE (April 12, 2026) | `60b8fb36` | Real Sonnet 4.6 specialist. Single live action: generate_content (thread 3-15 tweets, strict 280-char limit + standalone tweet + hooks + ratio risk). 12 dead actions dropped. Pirate test PASSED. Marketing dept 4/6. |
+| #32 — Rebuild Facebook Ads Expert | DONE (April 12, 2026) | `d6a23891` | Real Sonnet 4.6 specialist. Single live action: generate_content (ad creative with primary + 2-4 variations, targeting, budget, placement). 9 dead actions dropped. Pirate test PASSED. Regression 1P/2W/0F. Marketing dept 5/6. |
+| #33 — Rebuild Growth Analyst | NEXT | — | Marketing dept specialist #6 (final). Same pattern. |
 
 ### Agent Swarm Rebuild Tracker — Ground Truth Audit (updated April 12, 2026)
 
@@ -100,17 +103,17 @@ Each handler kept the outward shape of delegation: Mission Control steps flipped
 
 **Audit methodology:** Read every file in `src/lib/agents/`. Classify by actual behavior — does the file import `OpenRouterProvider` (or a real AI service like DALL-E) and call it? REAL. Is it a switch statement over lookup tables with no AI calls? TEMPLATE. Is it a dispatcher/router/session manager? INFRA. Was it a manager pretending to delegate while secretly calling LLMs directly? MANAGER_WITH_BYPASS (all removed in Task #20).
 
-**Current totals (as of April 12, 2026, commit `7c5d93f3`):**
+**Current totals (as of April 12, 2026, commit `d6a23891`):**
 
 | Category | Count | Notes |
 |---|---|---|
-| **REAL — confirmed AI agents** | **9** | Jasper (orchestrator chat route), Copywriter, Video Specialist, Calendar Coordinator, Asset Generator, Growth Strategist, **SEO Expert**, **LinkedIn Expert** |
-| **TEMPLATE — needs rebuild** | **29** | Hand-coded switch/lookup engines with zero LLM calls. Every one is a lie that pretends to be AI. |
+| **REAL — confirmed AI agents** | **12** | Jasper (orchestrator chat route), Copywriter, Video Specialist, Calendar Coordinator, Asset Generator, Growth Strategist, SEO Expert, LinkedIn Expert, **TikTok Expert**, **Twitter/X Expert**, **Facebook Ads Expert** |
+| **TEMPLATE — needs rebuild** | **26** | Hand-coded switch/lookup engines with zero LLM calls. Every one is a lie that pretends to be AI. |
 | **INFRA — routing/plumbing, not AI candidates** | **14** | Managers (9), jasper-tools dispatcher, voice-agent-handler, autonomous-posting-agent, chat-session-service, voice-ai-specialist |
 | **NOT_WIRED — Jasper tools intentionally disabled** | **11** | Original 7 from Task #20 (`produce_video`, `delegate_to_builder`, `delegate_to_marketing`, `delegate_to_content`, `delegate_to_architect`, `delegate_to_outreach`, `orchestrate_campaign`) + 4 from Task #26b (`delegate_to_sales`, `delegate_to_trust`, `delegate_to_intelligence`, `delegate_to_commerce`) |
 | **TOTAL agents** | **52 registry + 1 code drift = 53** | Registry says 52, actual code has `VOICE_AI_SPECIALIST` at `outreach/voice/specialist.ts` that's not in the registry |
 
-**Progress: 9 REAL / 38 total candidates (REAL + TEMPLATE) = 24% done.** Content department COMPLETE (4/4 REAL, `delegate_to_content` live). Marketing department 2/6 (SEO Expert + LinkedIn Expert done). Next: TikTok Expert (#30).
+**Progress: 12 REAL / 38 total candidates (REAL + TEMPLATE) = 32% done.** Content department COMPLETE (4/4 REAL, `delegate_to_content` live). Marketing department 5/6 (SEO, LinkedIn, TikTok, Twitter/X, Facebook Ads done — Growth Analyst remaining). Next: Growth Analyst (#33).
 
 #### Full agent inventory (audited against source code)
 
@@ -151,10 +154,10 @@ Each handler kept the outward shape of delegation: Mission Control steps flipped
 |---|---|---|---|---|
 | SEO_EXPERT | `src/lib/agents/marketing/seo/specialist.ts` | 536 | ✅ REAL | **Task #28 — DONE.** 2 actions: keyword_research + domain_analysis. GM `sgm_seo_expert_saas_sales_ops_v1`. Regression 3P/0W/0F. |
 | LINKEDIN_EXPERT | `src/lib/agents/marketing/linkedin/specialist.ts` | 472 | ✅ REAL | **Task #29 — DONE.** Single action: generate_content. GM `sgm_linkedin_expert_saas_sales_ops_v1`. maxTokens 10000 for carousel. |
-| TIKTOK_EXPERT | `src/lib/agents/marketing/tiktok/specialist.ts` | 1642 | ❌ TEMPLATE | Task #29 |
-| TWITTER_EXPERT | `src/lib/agents/marketing/twitter/specialist.ts` | 1892 | ❌ TEMPLATE | Task #30 |
-| FACEBOOK_EXPERT | `src/lib/agents/marketing/facebook/specialist.ts` | 2132 | ❌ TEMPLATE | Task #31 |
-| GROWTH_ANALYST | `src/lib/agents/marketing/growth-analyst/specialist.ts` | 836 | ❌ TEMPLATE | Task #32 |
+| TIKTOK_EXPERT | `src/lib/agents/marketing/tiktok/specialist.ts` | 470 | ✅ REAL | **Task #30 — DONE.** Single action: generate_content. GM `sgm_tiktok_expert_saas_sales_ops_v1`. Regression 3P/0W/0F. |
+| TWITTER_X_EXPERT | `src/lib/agents/marketing/twitter/specialist.ts` | 460 | ✅ REAL | **Task #31 — DONE.** Single action: generate_content. GM `sgm_twitter_x_expert_saas_sales_ops_v1`. Thread format with 280-char tweet limit. |
+| FACEBOOK_ADS_EXPERT | `src/lib/agents/marketing/facebook/specialist.ts` | 430 | ✅ REAL | **Task #32 — DONE.** Single action: generate_content. GM `sgm_facebook_ads_expert_saas_sales_ops_v1`. Primary + variations. Regression 1P/2W/0F. |
+| GROWTH_ANALYST | `src/lib/agents/marketing/growth-analyst/specialist.ts` | 836 | ❌ TEMPLATE | Task #33 |
 
 **Builder department (4 specialists):**
 
