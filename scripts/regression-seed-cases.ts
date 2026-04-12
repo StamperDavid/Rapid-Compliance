@@ -866,6 +866,97 @@ const TWITTER_X_EXPERT_CASES: Omit<RegressionCase, 'createdAt' | 'updatedAt' | '
 ];
 
 // ---------------------------------------------------------------------------
+// Facebook Ads Expert cases
+// ---------------------------------------------------------------------------
+
+const FACEBOOK_ADS_EXPERT_CASES: Omit<RegressionCase, 'createdAt' | 'updatedAt' | 'baselines'>[] = [
+  {
+    caseId: 'facebook_ads_saas_lead_gen',
+    agentId: 'FACEBOOK_ADS_EXPERT',
+    name: 'SaaS lead gen ad (AI sales automation)',
+    description:
+      'The canonical generate_content case for Facebook Ads Expert. Exercises headline presence, variation count, CTA validation, content strategy depth, and topic-echo fidelity.',
+    mode: 'SINGLE_SHOT',
+    active: true,
+    tags: ['generate_content', 'saas', 'lead_ad', 'canonical', 'baseline'],
+    createdBy: 'seed-script',
+    shapeTolerances: [
+      {
+        path: '$.adCreative.variations.length',
+        kind: 'arrayLength',
+        min: 2,
+        max: 4,
+        reason: 'Schema allows 2-4 variations. Any count inside the range is valid.',
+      },
+    ],
+    inputPayload: {
+      action: 'generate_content',
+      topic: 'AI-powered sales automation SaaS platform that replaces your entire tool stack',
+      contentType: 'lead_ad',
+      targetAudience: 'B2B SaaS founders, VPs of Sales, Revenue leaders',
+      tone: 'professional and conversion-focused',
+    },
+    notes: 'Baseline case — any delta here is a red flag for upgrades across the whole Facebook Ads Expert surface.',
+  },
+  {
+    caseId: 'facebook_ads_realestate_retargeting',
+    agentId: 'FACEBOOK_ADS_EXPERT',
+    name: 'Real estate retargeting ad (luxury home listing)',
+    description:
+      'Industry-switching stress case. Tests whether the LLM adapts to real estate context with retargeting creative for warm audiences.',
+    mode: 'SINGLE_SHOT',
+    active: true,
+    tags: ['generate_content', 'real_estate', 'retargeting', 'industry_switch', 'stress'],
+    createdBy: 'seed-script',
+    shapeTolerances: [
+      {
+        path: '$.adCreative.variations.length',
+        kind: 'arrayLength',
+        min: 2,
+        max: 4,
+        reason: 'Schema allows 2-4 variations.',
+      },
+    ],
+    inputPayload: {
+      action: 'generate_content',
+      topic: 'Luxury home listing with virtual tour and open house follow-up for interested buyers',
+      contentType: 'retargeting',
+      targetAudience: 'Home buyers who visited listing pages in last 30 days',
+      tone: 'aspirational and urgent',
+    },
+    notes: 'Industry-switching regressions surface if the LLM returns SaaS ad copy instead of real estate.',
+  },
+  {
+    caseId: 'facebook_ads_ecommerce_carousel',
+    agentId: 'FACEBOOK_ADS_EXPERT',
+    name: 'Ecommerce carousel ad (summer fashion sale)',
+    description:
+      'Content-type stress case with carousel format targeting fashion consumers. Tests ad format adaptation.',
+    mode: 'SINGLE_SHOT',
+    active: true,
+    tags: ['generate_content', 'ecommerce', 'carousel', 'content_type_stress', 'stress'],
+    createdBy: 'seed-script',
+    shapeTolerances: [
+      {
+        path: '$.adCreative.variations.length',
+        kind: 'arrayLength',
+        min: 2,
+        max: 4,
+        reason: 'Schema allows 2-4 variations.',
+      },
+    ],
+    inputPayload: {
+      action: 'generate_content',
+      topic: 'Summer fashion collection launch with 30% discount for early access email subscribers',
+      contentType: 'carousel',
+      targetAudience: 'Women 25-45 interested in fashion and online shopping',
+      tone: 'trendy and exclusive',
+    },
+    notes: 'Content-type regressions surface if the model ignores carousel format.',
+  },
+];
+
+// ---------------------------------------------------------------------------
 // SEO Expert cases
 // ---------------------------------------------------------------------------
 
@@ -996,6 +1087,7 @@ const AGENT_CASE_BANK: Record<string, Omit<RegressionCase, 'createdAt' | 'update
   LINKEDIN_EXPERT: LINKEDIN_EXPERT_CASES,
   TIKTOK_EXPERT: TIKTOK_EXPERT_CASES,
   TWITTER_X_EXPERT: TWITTER_X_EXPERT_CASES,
+  FACEBOOK_ADS_EXPERT: FACEBOOK_ADS_EXPERT_CASES,
 };
 
 async function main(): Promise<void> {
