@@ -733,6 +733,139 @@ const TIKTOK_EXPERT_CASES: Omit<RegressionCase, 'createdAt' | 'updatedAt' | 'bas
 ];
 
 // ---------------------------------------------------------------------------
+// Twitter/X Expert cases
+// ---------------------------------------------------------------------------
+
+const TWITTER_X_EXPERT_CASES: Omit<RegressionCase, 'createdAt' | 'updatedAt' | 'baselines'>[] = [
+  {
+    caseId: 'twitter_expert_saas_thread',
+    agentId: 'TWITTER_X_EXPERT',
+    name: 'SaaS thought leadership thread (AI agent swarms)',
+    description:
+      'The canonical generate_content case for Twitter/X Expert. Exercises hook presence/quality, tweet character limits (280), thread minimum length, standalone tweet presence, content strategy depth, cliche detection (WARN), and topic-echo fidelity (WARN).',
+    mode: 'SINGLE_SHOT',
+    active: true,
+    tags: ['generate_content', 'saas', 'thread', 'canonical', 'baseline'],
+    createdBy: 'seed-script',
+    shapeTolerances: [
+      {
+        path: '$.thread.length',
+        kind: 'arrayLength',
+        min: 3,
+        max: 15,
+        reason: 'Schema allows 3-15 tweets. Any count inside the range is a valid editorial choice.',
+      },
+      {
+        path: '$.hooks.alternatives.length',
+        kind: 'arrayLength',
+        min: 2,
+        max: 4,
+        reason: 'Schema allows 2-4 alternative hooks. Any count inside the range is valid.',
+      },
+      {
+        path: '$.hashtags.length',
+        kind: 'arrayLength',
+        min: 0,
+        max: 5,
+        reason: 'Schema allows 0-5 hashtags. Twitter culture uses fewer hashtags. Zero is valid.',
+      },
+    ],
+    inputPayload: {
+      action: 'generate_content',
+      topic: 'Why AI agent swarms will replace your entire SaaS tool stack by 2027',
+      contentType: 'thread',
+      targetAudience: 'B2B SaaS founders and CTOs',
+      tone: 'sharp and opinionated',
+    },
+    notes: 'Baseline case — any delta here is a red flag for upgrades across the whole Twitter/X Expert surface.',
+  },
+  {
+    caseId: 'twitter_expert_realestate_hot_take',
+    agentId: 'TWITTER_X_EXPERT',
+    name: 'Real estate hot take (open houses are dead)',
+    description:
+      'Industry-switching + hot_take content-type stress case. Exercises whether the LLM adapts to real estate context with a provocative tone, while keeping all tweets under 280 chars.',
+    mode: 'SINGLE_SHOT',
+    active: true,
+    tags: ['generate_content', 'real_estate', 'hot_take', 'industry_switch', 'stress'],
+    createdBy: 'seed-script',
+    shapeTolerances: [
+      {
+        path: '$.thread.length',
+        kind: 'arrayLength',
+        min: 3,
+        max: 15,
+        reason: 'Schema allows 3-15 tweets.',
+      },
+      {
+        path: '$.hooks.alternatives.length',
+        kind: 'arrayLength',
+        min: 2,
+        max: 4,
+        reason: 'Schema allows 2-4 alternative hooks.',
+      },
+      {
+        path: '$.hashtags.length',
+        kind: 'arrayLength',
+        min: 0,
+        max: 5,
+        reason: 'Schema allows 0-5 hashtags.',
+      },
+    ],
+    inputPayload: {
+      action: 'generate_content',
+      topic: 'Open houses are dead — here is what smart real estate agents do instead with virtual tours and AI',
+      contentType: 'hot_take',
+      targetAudience: 'Real estate agents and brokers',
+      tone: 'provocative',
+    },
+    notes: 'Industry-switching regressions surface if the LLM returns SaaS content instead of real-estate language.',
+  },
+  {
+    caseId: 'twitter_expert_educational_ecommerce',
+    agentId: 'TWITTER_X_EXPERT',
+    name: 'Educational thread for ecommerce (checkout optimization)',
+    description:
+      'Content-type stress case with educational format and data-driven tone targeting ecommerce founders. Tests whether the LLM produces a bookmark-worthy educational thread while respecting character limits.',
+    mode: 'SINGLE_SHOT',
+    active: true,
+    tags: ['generate_content', 'educational', 'ecommerce', 'content_type_stress', 'stress'],
+    createdBy: 'seed-script',
+    shapeTolerances: [
+      {
+        path: '$.thread.length',
+        kind: 'arrayLength',
+        min: 3,
+        max: 15,
+        reason: 'Schema allows 3-15 tweets.',
+      },
+      {
+        path: '$.hooks.alternatives.length',
+        kind: 'arrayLength',
+        min: 2,
+        max: 4,
+        reason: 'Schema allows 2-4 alternative hooks.',
+      },
+      {
+        path: '$.hashtags.length',
+        kind: 'arrayLength',
+        min: 0,
+        max: 5,
+        reason: 'Schema allows 0-5 hashtags.',
+      },
+    ],
+    inputPayload: {
+      action: 'generate_content',
+      topic: '7 checkout page tweaks that recovered $2M in abandoned ecommerce carts — real conversion data',
+      contentType: 'educational',
+      targetAudience: 'Ecommerce founders and DTC brands',
+      tone: 'data-driven and direct',
+    },
+    notes: 'Content-type regressions surface if the model ignores the educational format or produces generic content.',
+  },
+];
+
+// ---------------------------------------------------------------------------
 // SEO Expert cases
 // ---------------------------------------------------------------------------
 
@@ -862,6 +995,7 @@ const AGENT_CASE_BANK: Record<string, Omit<RegressionCase, 'createdAt' | 'update
   SEO_EXPERT: SEO_EXPERT_CASES,
   LINKEDIN_EXPERT: LINKEDIN_EXPERT_CASES,
   TIKTOK_EXPERT: TIKTOK_EXPERT_CASES,
+  TWITTER_X_EXPERT: TWITTER_X_EXPERT_CASES,
 };
 
 async function main(): Promise<void> {

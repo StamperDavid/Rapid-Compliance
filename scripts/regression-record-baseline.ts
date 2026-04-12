@@ -21,6 +21,7 @@ import { assetGeneratorExecutor } from '../src/lib/regression/executors/asset-ge
 import { seoExpertExecutor } from '../src/lib/regression/executors/seo-expert-executor';
 import { linkedinExpertExecutor } from '../src/lib/regression/executors/linkedin-expert-executor';
 import { tiktokExpertExecutor } from '../src/lib/regression/executors/tiktok-expert-executor';
+import { twitterExpertExecutor } from '../src/lib/regression/executors/twitter-expert-executor';
 import {
   listActiveCasesForAgent,
   recordBaseline,
@@ -37,6 +38,7 @@ const EXECUTOR_REGISTRY: Record<string, CaseExecutor> = {
   SEO_EXPERT: seoExpertExecutor,
   LINKEDIN_EXPERT: linkedinExpertExecutor,
   TIKTOK_EXPERT: tiktokExpertExecutor,
+  TWITTER_X_EXPERT: twitterExpertExecutor,
 };
 
 interface CliArgs {
