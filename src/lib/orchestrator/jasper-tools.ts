@@ -3876,106 +3876,71 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
         const videoStart = Date.now();
         trackMissionStep(context, 'create_video', 'RUNNING', { toolArgs: args });
 
-        const { getVideoSpecialist } = await import('@/lib/agents/content/video/specialist');
-        const specialist = getVideoSpecialist();
-        await specialist.initialize();
+        try {
+          const { getVideoSpecialist } = await import('@/lib/agents/content/video/specialist');
+          const specialist = getVideoSpecialist();
+          await specialist.initialize();
 
-        const result = await specialist.execute({
-          id: `create_video_${Date.now()}`,
-          timestamp: new Date(),
-          from: 'JASPER',
-          to: 'VIDEO_SPECIALIST',
-          type: 'COMMAND',
-          priority: 'NORMAL',
-          payload: {
-            action: 'create_video_project' as const,
-            description: args.description as string,
-            title: args.title as string | undefined,
-            videoType: args.videoType as 'tutorial' | 'explainer' | 'product-demo' | 'sales-pitch' | 'testimonial' | 'social-ad' | undefined,
-            platform: args.platform as 'youtube' | 'tiktok' | 'instagram' | 'linkedin' | 'website' | undefined,
-            duration: args.duration ? Number(args.duration) : undefined,
-            aspectRatio: args.aspectRatio as '16:9' | '9:16' | '1:1' | undefined,
-            userId: context?.userId,
-            vibe: args.vibe as string | undefined,
-          },
-          requiresResponse: true,
-          traceId: `trace_create_video_${Date.now()}`,
-        });
+          const platform = (args.platform as string) ?? 'youtube';
+          const style = (args.vibe as string) ?? (args.videoType as string) ?? 'documentary';
+          const duration = args.duration ? Number(args.duration) : 60;
+          const description = args.description as string;
+          const title = (args.title as string) ?? description.slice(0, 80);
 
-        const resultData = result.data as Record<string, unknown> | null;
-        content = JSON.stringify({ ...resultData, specialist: 'VIDEO_SPECIALIST' });
+          const result = await specialist.execute({
+            id: `create_video_${Date.now()}`,
+            timestamp: new Date(),
+            from: 'JASPER',
+            to: 'VIDEO_SPECIALIST',
+            type: 'COMMAND',
+            priority: 'NORMAL',
+            payload: {
+              action: 'script_to_storyboard' as const,
+              script: description,
+              brief: title,
+              platform,
+              style,
+              targetDuration: duration,
+              targetAudience: (args.audience as string) ?? undefined,
+              callToAction: (args.callToAction as string) ?? undefined,
+            },
+            requiresResponse: true,
+            traceId: `trace_create_video_${Date.now()}`,
+          });
 
-        trackMissionStep(context, 'create_video', result.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED', {
-          summary: `VIDEO_SPECIALIST: ${(resultData?.message as string) ?? result.status}`,
-          durationMs: Date.now() - videoStart,
-          toolResult: content,
-        });
+          const resultData = result.data as Record<string, unknown> | null;
+          content = JSON.stringify({ ...resultData, specialist: 'VIDEO_SPECIALIST' });
+
+          trackMissionStep(context, 'create_video', result.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED', {
+            summary: `VIDEO_SPECIALIST: ${(resultData?.message as string) ?? result.status}`,
+            durationMs: Date.now() - videoStart,
+            toolResult: content,
+          });
+        } catch (videoError: unknown) {
+          const errorMsg = videoError instanceof Error ? videoError.message : 'Unknown error';
+          trackMissionStep(context, 'create_video', 'FAILED', {
+            summary: `VIDEO_SPECIALIST: FAILED — ${errorMsg}`,
+            durationMs: Date.now() - videoStart,
+            error: errorMsg,
+          });
+          content = JSON.stringify({ error: errorMsg, specialist: 'VIDEO_SPECIALIST' });
+        }
         break;
       }
 
       case 'generate_video': {
         const genStart = Date.now();
         trackMissionStep(context, 'generate_video', 'RUNNING', { toolArgs: args });
-
-        // ── APPROVAL GATE: Refuse to render unless the project has been explicitly approved ──
-        // This prevents Jasper from auto-chaining create → generate without user review.
-        const genProjectId = args.projectId as string;
-        if (genProjectId) {
-          try {
-            const { getProject } = await import('@/lib/video/pipeline-project-service');
-            const genProject = await getProject(genProjectId);
-            if (genProject && genProject.status !== 'approved') {
-              content = JSON.stringify({
-                status: 'blocked',
-                message: `Cannot generate video — project "${genProject.name}" has not been approved yet (current status: ${genProject.status}). The user must review the storyboard in the Video Studio and click Approve before generation can start. Send them the review link: /content/video?load=${genProjectId}`,
-                reviewLink: `/content/video?load=${genProjectId}`,
-                specialist: 'VIDEO_SPECIALIST',
-              });
-              trackMissionStep(context, 'generate_video', 'FAILED', {
-                summary: `VIDEO_SPECIALIST: Blocked — project not approved (status: ${genProject.status})`,
-                durationMs: Date.now() - genStart,
-                toolResult: content,
-              });
-              break;
-            }
-          } catch {
-            // If we can't check the project, proceed but log the issue
-          }
-        }
-
-        // Only use avatar/voice if explicitly provided — never auto-inject defaults.
-        // When no avatar is selected, Hedra runs in prompt-only mode (text descriptions only).
-        const genAvatarId = args.avatarId as string | undefined;
-        const genVoiceId = args.voiceId as string | undefined;
-
-        const { getVideoSpecialist: getVideoSpec } = await import('@/lib/agents/content/video/specialist');
-        const videoSpec = getVideoSpec();
-        await videoSpec.initialize();
-
-        const genResult = await videoSpec.execute({
-          id: `generate_video_${Date.now()}`,
-          timestamp: new Date(),
-          from: 'JASPER',
-          to: 'VIDEO_SPECIALIST',
-          type: 'COMMAND',
-          priority: 'NORMAL',
-          payload: {
-            action: 'render_scenes' as const,
-            projectId: genProjectId,
-            avatarId: genAvatarId,
-            voiceId: genVoiceId,
-          },
-          requiresResponse: true,
-          traceId: `trace_generate_video_${Date.now()}`,
-        });
-
-        const genResultData = genResult.data as Record<string, unknown> | null;
-        content = JSON.stringify({ ...genResultData, specialist: 'VIDEO_SPECIALIST' });
-
-        trackMissionStep(context, 'generate_video', genResult.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED', {
-          summary: `VIDEO_SPECIALIST: ${(genResultData?.message as string) ?? genResult.status}`,
+        const genNotWired = 'Video rendering (generate_video) needs direct Hedra pipeline wiring — this is infrastructure work, not LLM creative work. The Video Specialist handles storyboard creation (script_to_storyboard); scene rendering is a separate pipeline service. Use create_video for storyboards.';
+        trackMissionStep(context, 'generate_video', 'FAILED', {
+          summary: genNotWired,
           durationMs: Date.now() - genStart,
-          toolResult: content,
+          error: genNotWired,
+        });
+        content = JSON.stringify({
+          status: 'NOT_WIRED',
+          error: genNotWired,
+          specialist: 'VIDEO_SPECIALIST',
         });
         break;
       }
@@ -4037,86 +4002,18 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
 
       case 'assemble_video': {
         const assembleStart = Date.now();
-        try {
-          // ── APPROVAL GATE: Refuse to assemble unless scenes were generated with approval ──
-          const assembleProjectId = args.projectId as string | undefined;
-          if (assembleProjectId) {
-            const { getProject: getAssembleProject } = await import('@/lib/video/pipeline-project-service');
-            const asmProject = await getAssembleProject(assembleProjectId);
-            if (asmProject && !asmProject.generatedScenes?.some((s: { status: string }) => s.status === 'completed')) {
-              content = JSON.stringify({
-                status: 'blocked',
-                message: `Cannot assemble video — project "${asmProject.name}" has no completed scenes. The user must review and approve the storyboard, then generate scenes in the Video Studio first.`,
-                reviewLink: `/content/video?load=${assembleProjectId}`,
-                specialist: 'VIDEO_SPECIALIST',
-              });
-              trackMissionStep(context, 'assemble_video', 'FAILED', {
-                summary: 'VIDEO_SPECIALIST: Blocked — no completed scenes to assemble',
-                durationMs: Date.now() - assembleStart,
-                toolResult: content,
-              });
-              break;
-            }
-          }
-
-          // Parse sceneUrls if provided as JSON string
-          let parsedSceneUrls: string[] | undefined;
-          if (typeof args.sceneUrls === 'string' && args.sceneUrls.trim().startsWith('[')) {
-            try {
-              parsedSceneUrls = JSON.parse(args.sceneUrls) as string[];
-            } catch {
-              // Invalid JSON — specialist will load from project instead
-            }
-          }
-
-          // Delegate to Video Specialist
-          const { getVideoSpecialist: getAssembleSpec } = await import('@/lib/agents/content/video/specialist');
-          const assembleSpec = getAssembleSpec();
-          await assembleSpec.initialize();
-
-          const assembleResult = await assembleSpec.execute({
-            id: `assemble_video_${Date.now()}`,
-            timestamp: new Date(),
-            from: 'JASPER',
-            to: 'VIDEO_SPECIALIST',
-            type: 'COMMAND',
-            priority: 'HIGH',
-            payload: {
-              action: 'assemble_scenes' as const,
-              projectId: (args.projectId as string) ?? undefined,
-              sceneUrls: parsedSceneUrls,
-              transitionType: (args.transitionType as 'cut' | 'fade' | 'dissolve') ?? 'fade',
-              outputResolution: (args.outputResolution as '720p' | '1080p' | '4k') ?? '1080p',
-            },
-            requiresResponse: true,
-            traceId: `trace_assemble_video_${Date.now()}`,
-          });
-
-          const assembleData = assembleResult.data as Record<string, unknown> | null;
-
-          content = JSON.stringify({
-            ...assembleData,
-            specialist: 'VIDEO_SPECIALIST',
-          });
-
-          trackMissionStep(context, 'assemble_video', assembleResult.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED', {
-            summary: `VIDEO_SPECIALIST: ${(assembleData?.message as string) ?? assembleResult.status}`,
-            durationMs: Date.now() - assembleStart,
-            toolResult: content,
-          });
-        } catch (assembleErr) {
-          const errMsg = assembleErr instanceof Error ? assembleErr.message : String(assembleErr);
-          content = JSON.stringify({
-            status: 'error',
-            message: `Video assembly failed: ${errMsg}`,
-            specialist: 'VIDEO_SPECIALIST',
-          });
-          trackMissionStep(context, 'assemble_video', 'FAILED', {
-            summary: `VIDEO_SPECIALIST: ${errMsg}`,
-            durationMs: Date.now() - assembleStart,
-            toolResult: content,
-          });
-        }
+        trackMissionStep(context, 'assemble_video', 'RUNNING', { toolArgs: args });
+        const assembleNotWired = 'Video assembly (assemble_video) needs direct FFmpeg/pipeline wiring — this is infrastructure work, not LLM creative work. The Video Specialist handles storyboard creation (script_to_storyboard); scene assembly is a separate pipeline service. Use create_video for storyboards.';
+        trackMissionStep(context, 'assemble_video', 'FAILED', {
+          summary: assembleNotWired,
+          durationMs: Date.now() - assembleStart,
+          error: assembleNotWired,
+        });
+        content = JSON.stringify({
+          status: 'NOT_WIRED',
+          error: assembleNotWired,
+          specialist: 'VIDEO_SPECIALIST',
+        });
         break;
       }
 
@@ -4546,17 +4443,59 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
       case 'delegate_to_content': {
         const contentStart = Date.now();
         trackMissionStep(context, 'delegate_to_content', 'RUNNING', { toolArgs: args });
-        const notWiredSummary = 'Content department: not yet wired — specialist rebuild in progress';
-        trackMissionStep(context, 'delegate_to_content', 'FAILED', {
-          summary: notWiredSummary,
-          durationMs: Date.now() - contentStart,
-          error: notWiredSummary,
-        });
-        content = JSON.stringify({
-          status: 'NOT_WIRED',
-          error: 'Content department specialist rebuild is in progress. This tool will return online when the Copywriter, Video Specialist, Calendar Coordinator, and Asset Generator have been rebuilt as real AI agents. See CONTINUATION_PROMPT.md Current Priority section.',
-          manager: 'CONTENT_MANAGER',
-        });
+
+        try {
+          const { ContentManager } = await import('@/lib/agents/content/manager');
+          const contentMgr = new ContentManager();
+          await contentMgr.initialize();
+
+          const contentPayload: Record<string, unknown> = {
+            contentType: args.contentType as string | undefined,
+            topic: args.topic as string,
+            audience: args.audience as string | undefined,
+            format: args.format as string | undefined,
+            includeVideo: args.includeVideo === true || args.includeVideo === 'true',
+            scheduleDate: args.scheduleDate as string | undefined,
+          };
+
+          if (args.seoKeywords && typeof args.seoKeywords === 'string') {
+            contentPayload.seoKeywords = args.seoKeywords.split(',').map((k: string) => k.trim());
+          }
+
+          const contentResult = await withTimeout(contentMgr.execute({
+            id: `content_${Date.now()}`,
+            timestamp: new Date(),
+            from: 'JASPER',
+            to: 'CONTENT_MANAGER',
+            type: 'COMMAND',
+            priority: 'NORMAL',
+            payload: contentPayload,
+            requiresResponse: true,
+            traceId: `trace_${Date.now()}`,
+          }), MANAGER_TIMEOUT_MS, 'Content Manager');
+
+          const contentDuration = Date.now() - contentStart;
+          trackMissionStep(context, 'delegate_to_content',
+            contentResult.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED',
+            { summary: `Content: ${contentResult.status}`, durationMs: contentDuration, toolResult: JSON.stringify(contentResult.data) }
+          );
+
+          content = JSON.stringify({
+            status: contentResult.status,
+            data: contentResult.data,
+            errors: contentResult.errors,
+            manager: 'CONTENT_MANAGER',
+            reviewLink: getReviewLink('delegate_to_content', context?.missionId),
+          });
+        } catch (contentError: unknown) {
+          const errorMsg = contentError instanceof Error ? contentError.message : 'Unknown error';
+          trackMissionStep(context, 'delegate_to_content', 'FAILED', {
+            summary: `Content: FAILED — ${errorMsg}`,
+            durationMs: Date.now() - contentStart,
+            error: errorMsg,
+          });
+          content = JSON.stringify({ error: errorMsg, manager: 'CONTENT_MANAGER' });
+        }
         break;
       }
 
