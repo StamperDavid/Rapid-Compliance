@@ -24,6 +24,7 @@ import { tiktokExpertExecutor } from '../src/lib/regression/executors/tiktok-exp
 import { twitterExpertExecutor } from '../src/lib/regression/executors/twitter-expert-executor';
 import { facebookAdsExpertExecutor } from '../src/lib/regression/executors/facebook-ads-expert-executor';
 import { growthAnalystExecutor } from '../src/lib/regression/executors/growth-analyst-executor';
+import { uxUiArchitectExecutor } from '../src/lib/regression/executors/ux-ui-architect-executor';
 import {
   listActiveCasesForAgent,
   recordBaseline,
@@ -43,6 +44,7 @@ const EXECUTOR_REGISTRY: Record<string, CaseExecutor> = {
   TWITTER_X_EXPERT: twitterExpertExecutor,
   FACEBOOK_ADS_EXPERT: facebookAdsExpertExecutor,
   GROWTH_ANALYST: growthAnalystExecutor,
+  UX_UI_ARCHITECT: uxUiArchitectExecutor,
 };
 
 interface CliArgs {

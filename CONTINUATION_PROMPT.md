@@ -97,6 +97,7 @@ Each handler kept the outward shape of delegation: Mission Control steps flipped
 | #32 — Rebuild Facebook Ads Expert | DONE (April 12, 2026) | `d6a23891` | Real Sonnet 4.6 specialist. Single live action: generate_content (ad creative with primary + 2-4 variations, targeting, budget, placement). 9 dead actions dropped. Pirate test PASSED. Regression 1P/2W/0F. Marketing dept 5/6. |
 | #33 — Rebuild Growth Analyst | DONE (April 12, 2026) | `99930b30` | Real Sonnet 4.6 specialist. Single live action: generate_content (growth analysis with experiments, prioritized actions, KPI targets). 7 dead actions dropped. Pirate test PASSED. Marketing dept 6/6 COMPLETE. |
 | #34 — Rewire delegate_to_marketing to live | DONE (April 12, 2026) | `62e513ec` | MarketingManager delegation now live. Jasper can reach all 6 marketing specialists through the front door. Same pattern as delegate_to_content (Task #27). |
+| #35 — Rebuild UX/UI Architect | DONE (April 12, 2026) | `<pending>` | Real Sonnet 4.6 specialist. Single live action: `generate_design_system`. 3 dead actions dropped (user_flows, accessibility_audit, component_design). Full design-system output (tokens, componentGuidelines, designPrinciples, accessibilityStrategy, rationale). Pirate test PASSED (SaaS vs luxury real estate diverge visibly in color mood, type weight, component emphasis, and design principles). BuilderManager dispatch wiring updated (action discriminator + single-deref result extraction). Builder dept 1/3. |
 
 ### Agent Swarm Rebuild Tracker — Ground Truth Audit (updated April 12, 2026)
 
@@ -104,18 +105,18 @@ Each handler kept the outward shape of delegation: Mission Control steps flipped
 
 **Audit methodology:** Read every file in `src/lib/agents/`. Classify by actual behavior — does the file import `OpenRouterProvider` (or a real AI service like DALL-E) and call it? REAL. Is it a switch statement over lookup tables with no AI calls? TEMPLATE. Is it a dispatcher/router/session manager? INFRA. Was it a manager pretending to delegate while secretly calling LLMs directly? MANAGER_WITH_BYPASS (all removed in Task #20).
 
-**Current totals (as of April 12, 2026, commit `62e513ec`):**
+**Current totals (as of April 12, 2026, after Task #35):**
 
 | Category | Count | Notes |
 |---|---|---|
-| **REAL — confirmed AI agents** | **13** | Jasper, Copywriter, Video Specialist, Calendar Coordinator, Asset Generator, Growth Strategist, SEO Expert, LinkedIn Expert, TikTok Expert, Twitter/X Expert, Facebook Ads Expert, **Growth Analyst** |
-| **TEMPLATE — needs rebuild** | **25** | Hand-coded switch/lookup engines with zero LLM calls. |
+| **REAL — confirmed AI agents** | **14** | Jasper, Copywriter, Video Specialist, Calendar Coordinator, Asset Generator, Growth Strategist, SEO Expert, LinkedIn Expert, TikTok Expert, Twitter/X Expert, Facebook Ads Expert, Growth Analyst, **UX/UI Architect** |
+| **TEMPLATE — needs rebuild** | **24** | Hand-coded switch/lookup engines with zero LLM calls. |
 | **INFRA — routing/plumbing, not AI candidates** | **14** | Managers (9), jasper-tools dispatcher, voice-agent-handler, autonomous-posting-agent, chat-session-service, voice-ai-specialist |
 | **NOT_WIRED — Jasper tools intentionally disabled** | **9** | `produce_video`, `delegate_to_builder`, `delegate_to_architect`, `delegate_to_outreach`, `orchestrate_campaign`, `delegate_to_sales`, `delegate_to_trust`, `delegate_to_intelligence`, `delegate_to_commerce` |
 | **LIVE delegations** | **2** | `delegate_to_content` (Task #27), `delegate_to_marketing` (Task #34) |
 | **TOTAL agents** | **52 registry + 1 code drift = 53** | Registry says 52, actual code has `VOICE_AI_SPECIALIST` at `outreach/voice/specialist.ts` that's not in the registry |
 
-**Progress: 13 REAL / 38 total candidates (REAL + TEMPLATE) = 34% done.** Content department COMPLETE (4/4 REAL, `delegate_to_content` live). Marketing department COMPLETE (6/6 REAL, `delegate_to_marketing` live). Next: Builder department — UX/UI Architect (#35), Funnel Engineer (#36), Workflow Optimizer (#37).
+**Progress: 14 REAL / 38 total candidates (REAL + TEMPLATE) = 37% done.** Content department COMPLETE (4/4 REAL, `delegate_to_content` live). Marketing department COMPLETE (6/6 REAL, `delegate_to_marketing` live). Builder department 1/3 (UX/UI Architect done). Next: Funnel Engineer (#36), Workflow Optimizer (#37), then rewire `delegate_to_builder`.
 
 #### Full agent inventory (audited against source code)
 
@@ -165,10 +166,10 @@ Each handler kept the outward shape of delegation: Mission Control steps flipped
 
 | ID | File | LOC | Verdict | Task |
 |---|---|---|---|---|
-| UX_UI_ARCHITECT | `src/lib/agents/builder/ux-ui/specialist.ts` | 1389 | ❌ TEMPLATE | Task #33 |
-| FUNNEL_ENGINEER | `src/lib/agents/builder/funnel/specialist.ts` | 1448 | ❌ TEMPLATE | Task #34 |
-| ASSET_GENERATOR | *(shared with Content — see above)* | — | 🟡 HALF-REAL | Copy portions = Task #26 |
-| WORKFLOW_OPTIMIZER | `src/lib/agents/builder/workflow/specialist.ts` | 1719 | ❌ TEMPLATE | Task #35 |
+| UX_UI_ARCHITECT | `src/lib/agents/builder/ux-ui/specialist.ts` | 524 | ✅ REAL | **Task #35 — DONE.** Single action: `generate_design_system`. GM `sgm_ux_ui_architect_saas_sales_ops_v1`. Output: tokens (colors, typography, spacing, radius, shadows, breakpoints) + componentGuidelines (4–8) + designPrinciples (3–6) + accessibilityStrategy + rationale. BuilderManager dispatch rewired (`action` discriminator + single-deref result). |
+| FUNNEL_ENGINEER | `src/lib/agents/builder/funnel/specialist.ts` | 1448 | ❌ TEMPLATE | Task #36 |
+| ASSET_GENERATOR | *(shared with Content — see above)* | — | ✅ REAL | Copy portions = Task #26 DONE |
+| WORKFLOW_OPTIMIZER | `src/lib/agents/builder/workflow/specialist.ts` | 1719 | ❌ TEMPLATE | Task #37 |
 
 **Architect department (3 specialists — ALL TEMPLATE):**
 
@@ -433,6 +434,63 @@ When rebuilding a specialist:
 - **Pirate reality test not yet run** — requires DALL-E billing to be active (the specialist FAILs before pirate markers can propagate to stdout). Will pass once billing is resolved; the regression harness already proves the LLM layer is real.
 
 **Content department status: 4/4 REAL.** Copywriter ✓, Video Specialist ✓, Calendar Coordinator ✓, Asset Generator ✓. Next: rewire `delegate_to_content` from NOT_WIRED to live delegation + fix `create_video`/`generate_video`/`assemble_scenes` tools calling deleted Video Specialist actions (Task #27). Then Marketing department begins.
+
+### Task #35 detail — Rebuild UX/UI Architect (April 12, 2026)
+
+**Problem:** `src/lib/agents/builder/ux-ui/specialist.ts` (1389 LOC) was a pure template engine with zero LLM imports. It exposed 4 actions (`design_system`, `user_flows`, `accessibility_audit`, `component_design`) dispatched via `processDesignRequest()` that returned hand-coded `Promise.resolve({...})` objects — every color, every WCAG issue, every component variant was a literal in the switch statement. Only **one** action (`design_system`) was ever called from production code: `BuilderManager.executeSpecialistsParallel()` (builder/manager.ts:1079). The other three branches were dead weight. The manager then read results via a mystery double-dereference `(uxResult?.data as Record<string, unknown>)?.data` — a leftover from the template's `DesignOutput` wrapper shape.
+
+**Delivered:**
+
+1. **Rebuilt `src/lib/agents/builder/ux-ui/specialist.ts`** (524 LOC) as a real Sonnet 4.6 specialist. Exact LinkedIn/Growth Analyst pattern: `OpenRouterProvider` + `getActiveSpecialistGMByIndustry` + `getBrandDNA` + Zod input/output contracts + `__internal` export for harness wiring. Single live action: `generate_design_system` (verb+noun form — standardized with every other rebuilt specialist). Three dead actions dropped.
+
+2. **Output schema (`DesignSystemResultSchema`)** — a complete design system that downstream code can actually use:
+   - `tokens.colors`: primary/secondary/accent each with `{hex, usage}`; 5–10 neutral steps; full semantic set (success/warning/error/info) — every hex validated against `/^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/`
+   - `tokens.typography`: `fontFamilies` (sans + display + mono, **all required** after v2 refactor — see below), 6–9 scale steps each with name/sizePx/lineHeight/weight
+   - `tokens.spacing` (grid string + 6–10 integer px scale), `radius`, `shadows`, `breakpoints`
+   - `componentGuidelines`: 4–8 components each with name + purpose + **prose** `variantsDescription` + **prose** `statesCoveredDescription` + accessibilityNotes
+   - `designPrinciples` (3–6 actionable directives), `accessibilityStrategy` (100–5000 chars, must cite WCAG level + HOW enforced), `rationale` (150–6000 chars, must reference brand + audience)
+
+3. **Top-level `tokens` wrapper preserved** so `BuilderManager.assemblePage()` (line 1224) can still read `designSystem.tokens` without a second breaking change when `delegate_to_builder` comes back online (Task #38).
+
+4. **BuilderManager wiring updates** (two targeted edits, minimum-scope):
+   - Line 1080–1088: dispatch payload changed from `{ type: 'design_system', ... }` to `{ action: 'generate_design_system', ... }` + `industryHint` added. Matches the `action|method` discriminator every other rebuilt specialist expects.
+   - Line 1027: double-deref `(uxResult?.data)?.data` collapsed to single-deref `(uxResult?.data)`. The prior double-deref was silently returning `{}` from the template's `DesignOutput` wrapper.
+
+5. **Golden Master seeded** as `sgm_ux_ui_architect_saas_sales_ops_v1` (7,583 chars). Covers brand-first philosophy, token discipline, component guideline discipline, accessibility strategy requirements, rationale specificity, and explicit instructions that `variantsDescription` + `statesCoveredDescription` are prose strings and all three `fontFamilies` fields are required.
+
+6. **Schema v2 — the regression-stability refactor.** First sanity regression ran 3/3 FAIL:
+   - Nested-array-length deltas across runs (`componentGuidelines[i].variants.length` jittering 3↔4↔5). The regression harness uses exact path matching for tolerances, not wildcards — enumerating 48 tolerance rules per case would have been ugly and fragile.
+   - `variants` strings exceeding the 120-char cap (LLM writing rich descriptions like "primary — filled #1A1A18 background, white text; for the single most important action on screen").
+   - `fontFamilies.mono` sometimes omitted (it was `.optional()`), producing object-key deltas.
+
+   **Fix (Option G):** collapsed `variants: string[]` + `statesCovered: string[]` into single `variantsDescription: string` + `statesCoveredDescription: string` prose fields (max 1500 / 1000 chars). Made all three `fontFamilies` required. Result: sanity run flipped to **1 PASS, 2 WARN, 0 FAIL** with the only remaining delta being spacing.scale.length flipping between 9 and 10 — both inside the declared `[6..10]` tolerance so the harness correctly downgrades to WARN. The prose fields produce richer output than the array form (the LLM writes things like "primary (solid #1A56DB background, white text, 500 weight label for 'Start Free Trial'), secondary (outline border, transparent background, for supporting actions), ghost (text-only tertiary links)" — more useful than `["primary", "secondary", "ghost"]`).
+
+7. **Scripts:**
+   - `scripts/seed-ux-ui-architect-gm.js` — Firebase Admin SDK seeder, same CommonJS shape as the other seed scripts
+   - `scripts/test-ux-ui-architect.ts` — proof-of-life harness with 3 canned cases (`saas_b2b`, `realestate_luxury`, `ecommerce_dtc`). Prints the full design system: color palette with usage, typography scale with size/lineHeight/weight, spacing grid + scale, all breakpoints, component guidelines with purpose + variants + states, design principles, accessibility strategy excerpt, rationale excerpt.
+   - `src/lib/regression/executors/ux-ui-architect-executor.ts` — 6 invariants: `semanticColorsComplete` (FAIL — success/warning/error/info must all be present), `componentCountWithinRange` (FAIL, 4–8), `typographyScaleWithinRange` (FAIL, 6–9), `designPrinciplesCountWithinRange` (FAIL, 3–6), `coreComponentsPresent` (FAIL — Button/Input/Card must appear by name, case-insensitive substring match), `accessibilityStrategyHasWcag` (FAIL — must reference WCAG and explicit level), `contextEchoedInRationale` (**WARN** — distinctive brief words should echo in rationale).
+
+8. **Pirate reality test** — the proof that this is a real LLM, not a template. Same specialist, two contexts:
+
+   | Field | SaaS B2B | Luxury Real Estate |
+   |---|---|---|
+   | Primary color | `#1A56DB` (data-tool blue) | `#1A1A18` (warm near-black) |
+   | Accent | `#00C9A7` (teal — AI swarm indicator) | `#B8A98A` (antique gold — "one per viewport") |
+   | Neutral palette | 10 slate gray steps | 8 warm taupe steps |
+   | Type weights | 400/500/600/700/800 progressive | Heavy 300 for display (editorial light) |
+   | Component focus | Button/Input/Card/Table/Modal/Badge/Toast (7) | Button/Input/Card/Gallery/Nav (5) |
+   | Principle #1 | "Data density is a feature, not a flaw" | "Photography leads, interface follows" |
+   | Animation principle | "AI swarm states communicate progress explicitly" | "Animations reveal, never perform" |
+
+   Both rationales explicitly name the target audience and tie color/typography choices to brand mood. No template could produce this divergence.
+
+9. **3 seeded regression cases** (`ux_ui_architect_saas_b2b` canonical baseline, `ux_ui_architect_realestate_luxury` industry switch, `ux_ui_architect_ecommerce_dtc` style stress) with array-length tolerances declared for `$.componentGuidelines.length [4..8]`, `$.designPrinciples.length [3..6]`, `$.tokens.typography.scale.length [6..9]`, `$.tokens.colors.neutral.length [5..10]`, `$.tokens.spacing.scale.length [6..10]`.
+
+10. **Baseline recorded** on `anthropic/claude-sonnet-4.6`: 3/3 schemaValid=true, terminal=FINAL_RESPONSE, average ~125s per case.
+
+11. **Regression sanity run result:** **1 PASS (realestate_luxury), 2 WARN (saas_b2b, ecommerce_dtc), 0 FAIL.** All WARN entries are tolerance-aware non-determinism on `$.tokens.spacing.scale.length` flipping between 9 and 10. Run record: `regressionRuns/regrun_ux_ui_architect_1776025957425_6dee85`.
+
+**Builder department status: 1/3 REAL.** UX/UI Architect ✓, Funnel Engineer ❌, Workflow Optimizer ❌, Asset Generator ✓ (shared with Content). Next: Funnel Engineer (Task #36), Workflow Optimizer (Task #37). When 3/3, rewire `delegate_to_builder` from NOT_WIRED to live (Task #38).
 
 ### Successor Workstream: Phase 2 GM Learning Loop — starts ONLY after ALL specialists are rebuilt
 
