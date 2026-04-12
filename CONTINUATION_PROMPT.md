@@ -95,7 +95,8 @@ Each handler kept the outward shape of delegation: Mission Control steps flipped
 | #30 — Rebuild TikTok Expert | DONE (April 12, 2026) | `083912b9` | Real Sonnet 4.6 specialist. Single live action: generate_content (video script + hooks + caption + hashtags + sound strategy + pacing). 12 dead actions dropped. Pirate test PASSED. Regression 3P/0W/0F. Marketing dept 3/6. |
 | #31 — Rebuild Twitter/X Expert | DONE (April 12, 2026) | `60b8fb36` | Real Sonnet 4.6 specialist. Single live action: generate_content (thread 3-15 tweets, strict 280-char limit + standalone tweet + hooks + ratio risk). 12 dead actions dropped. Pirate test PASSED. Marketing dept 4/6. |
 | #32 — Rebuild Facebook Ads Expert | DONE (April 12, 2026) | `d6a23891` | Real Sonnet 4.6 specialist. Single live action: generate_content (ad creative with primary + 2-4 variations, targeting, budget, placement). 9 dead actions dropped. Pirate test PASSED. Regression 1P/2W/0F. Marketing dept 5/6. |
-| #33 — Rebuild Growth Analyst | NEXT | — | Marketing dept specialist #6 (final). Same pattern. |
+| #33 — Rebuild Growth Analyst | DONE (April 12, 2026) | `99930b30` | Real Sonnet 4.6 specialist. Single live action: generate_content (growth analysis with experiments, prioritized actions, KPI targets). 7 dead actions dropped. Pirate test PASSED. Marketing dept 6/6 COMPLETE. |
+| #34 — Rewire delegate_to_marketing to live | DONE (April 12, 2026) | `62e513ec` | MarketingManager delegation now live. Jasper can reach all 6 marketing specialists through the front door. Same pattern as delegate_to_content (Task #27). |
 
 ### Agent Swarm Rebuild Tracker — Ground Truth Audit (updated April 12, 2026)
 
@@ -103,17 +104,18 @@ Each handler kept the outward shape of delegation: Mission Control steps flipped
 
 **Audit methodology:** Read every file in `src/lib/agents/`. Classify by actual behavior — does the file import `OpenRouterProvider` (or a real AI service like DALL-E) and call it? REAL. Is it a switch statement over lookup tables with no AI calls? TEMPLATE. Is it a dispatcher/router/session manager? INFRA. Was it a manager pretending to delegate while secretly calling LLMs directly? MANAGER_WITH_BYPASS (all removed in Task #20).
 
-**Current totals (as of April 12, 2026, commit `d6a23891`):**
+**Current totals (as of April 12, 2026, commit `62e513ec`):**
 
 | Category | Count | Notes |
 |---|---|---|
-| **REAL — confirmed AI agents** | **12** | Jasper (orchestrator chat route), Copywriter, Video Specialist, Calendar Coordinator, Asset Generator, Growth Strategist, SEO Expert, LinkedIn Expert, **TikTok Expert**, **Twitter/X Expert**, **Facebook Ads Expert** |
-| **TEMPLATE — needs rebuild** | **26** | Hand-coded switch/lookup engines with zero LLM calls. Every one is a lie that pretends to be AI. |
+| **REAL — confirmed AI agents** | **13** | Jasper, Copywriter, Video Specialist, Calendar Coordinator, Asset Generator, Growth Strategist, SEO Expert, LinkedIn Expert, TikTok Expert, Twitter/X Expert, Facebook Ads Expert, **Growth Analyst** |
+| **TEMPLATE — needs rebuild** | **25** | Hand-coded switch/lookup engines with zero LLM calls. |
 | **INFRA — routing/plumbing, not AI candidates** | **14** | Managers (9), jasper-tools dispatcher, voice-agent-handler, autonomous-posting-agent, chat-session-service, voice-ai-specialist |
-| **NOT_WIRED — Jasper tools intentionally disabled** | **11** | Original 7 from Task #20 (`produce_video`, `delegate_to_builder`, `delegate_to_marketing`, `delegate_to_content`, `delegate_to_architect`, `delegate_to_outreach`, `orchestrate_campaign`) + 4 from Task #26b (`delegate_to_sales`, `delegate_to_trust`, `delegate_to_intelligence`, `delegate_to_commerce`) |
+| **NOT_WIRED — Jasper tools intentionally disabled** | **9** | `produce_video`, `delegate_to_builder`, `delegate_to_architect`, `delegate_to_outreach`, `orchestrate_campaign`, `delegate_to_sales`, `delegate_to_trust`, `delegate_to_intelligence`, `delegate_to_commerce` |
+| **LIVE delegations** | **2** | `delegate_to_content` (Task #27), `delegate_to_marketing` (Task #34) |
 | **TOTAL agents** | **52 registry + 1 code drift = 53** | Registry says 52, actual code has `VOICE_AI_SPECIALIST` at `outreach/voice/specialist.ts` that's not in the registry |
 
-**Progress: 12 REAL / 38 total candidates (REAL + TEMPLATE) = 32% done.** Content department COMPLETE (4/4 REAL, `delegate_to_content` live). Marketing department 5/6 (SEO, LinkedIn, TikTok, Twitter/X, Facebook Ads done — Growth Analyst remaining). Next: Growth Analyst (#33).
+**Progress: 13 REAL / 38 total candidates (REAL + TEMPLATE) = 34% done.** Content department COMPLETE (4/4 REAL, `delegate_to_content` live). Marketing department COMPLETE (6/6 REAL, `delegate_to_marketing` live). Next: Builder department — UX/UI Architect (#35), Funnel Engineer (#36), Workflow Optimizer (#37).
 
 #### Full agent inventory (audited against source code)
 
@@ -130,12 +132,12 @@ Each handler kept the outward shape of delegation: Mission Control steps flipped
 |---|---|---|---|---|
 | MASTER_ORCHESTRATOR | `src/lib/agents/orchestrator/manager.ts` | 1849 | 🔧 INFRA | Dispatcher only |
 | INTELLIGENCE_MANAGER | `src/lib/agents/intelligence/manager.ts` | 1775 | 🔧 INFRA | Routes to 5 intelligence template specialists |
-| MARKETING_MANAGER | `src/lib/agents/marketing/manager.ts` | 2526 | 🔧 INFRA | NOT_WIRED via `delegate_to_marketing` |
+| MARKETING_MANAGER | `src/lib/agents/marketing/manager.ts` | 2526 | 🔧 INFRA | **LIVE via `delegate_to_marketing` (Task #34)** — routes to 6 real specialists |
 | BUILDER_MANAGER | `src/lib/agents/builder/manager.ts` | 1843 | 🔧 INFRA | NOT_WIRED via `delegate_to_builder` |
 | ARCHITECT_MANAGER | `src/lib/agents/architect/manager.ts` | 2252 | 🔧 INFRA | NOT_WIRED via `delegate_to_architect` |
 | COMMERCE_MANAGER | `src/lib/agents/commerce/manager.ts` | 1470 | 🔧 INFRA | Live delegation but all downstream specialists are TEMPLATE |
 | OUTREACH_MANAGER | `src/lib/agents/outreach/manager.ts` | 2238 | 🔧 INFRA | NOT_WIRED via `delegate_to_outreach` |
-| CONTENT_MANAGER | `src/lib/agents/content/manager.ts` | 1913 | 🔧 INFRA | NOT_WIRED via `delegate_to_content`. Registers 4 factories at lines 520-525 (3 content specialists + ASSET_GENERATOR imported from builder) |
+| CONTENT_MANAGER | `src/lib/agents/content/manager.ts` | 1913 | 🔧 INFRA | **LIVE via `delegate_to_content` (Task #27)** — routes to 4 real specialists |
 | REVENUE_DIRECTOR (sales) | `src/lib/agents/sales/revenue/manager.ts` | 2804 | 🔧 INFRA | Live delegation but all 5 downstream specialists are TEMPLATE |
 | REPUTATION_MANAGER (trust) | `src/lib/agents/trust/reputation/manager.ts` | 2608 | 🔧 INFRA | Live delegation but all 4 downstream specialists are TEMPLATE |
 
@@ -157,7 +159,7 @@ Each handler kept the outward shape of delegation: Mission Control steps flipped
 | TIKTOK_EXPERT | `src/lib/agents/marketing/tiktok/specialist.ts` | 470 | ✅ REAL | **Task #30 — DONE.** Single action: generate_content. GM `sgm_tiktok_expert_saas_sales_ops_v1`. Regression 3P/0W/0F. |
 | TWITTER_X_EXPERT | `src/lib/agents/marketing/twitter/specialist.ts` | 460 | ✅ REAL | **Task #31 — DONE.** Single action: generate_content. GM `sgm_twitter_x_expert_saas_sales_ops_v1`. Thread format with 280-char tweet limit. |
 | FACEBOOK_ADS_EXPERT | `src/lib/agents/marketing/facebook/specialist.ts` | 430 | ✅ REAL | **Task #32 — DONE.** Single action: generate_content. GM `sgm_facebook_ads_expert_saas_sales_ops_v1`. Primary + variations. Regression 1P/2W/0F. |
-| GROWTH_ANALYST | `src/lib/agents/marketing/growth-analyst/specialist.ts` | 836 | ❌ TEMPLATE | Task #33 |
+| GROWTH_ANALYST | `src/lib/agents/marketing/growth-analyst/specialist.ts` | 420 | ✅ REAL | **Task #33 — DONE.** Single action: generate_content (growth analysis). GM `sgm_growth_analyst_saas_sales_ops_v1`. Marketing dept 6/6 COMPLETE. |
 
 **Builder department (4 specialists):**
 
