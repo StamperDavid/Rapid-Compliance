@@ -1,362 +1,403 @@
 /**
- * SEO Expert Specialist
- * STATUS: FUNCTIONAL
+ * SEO Expert — REAL AI AGENT (Task #28 rebuild, April 11 2026)
  *
- * Provides SEO analysis, keyword research, on-page optimization suggestions,
- * and SERP tracking capabilities.
+ * Loads its Golden Master from Firestore at runtime, injects Brand DNA, and
+ * calls OpenRouter (Claude Sonnet 4.6) to produce keyword research strategies
+ * and domain SEO analyses. No template fallbacks. If the GM is missing, Brand
+ * DNA is missing, OpenRouter fails, JSON won't parse, or Zod validation fails,
+ * the specialist returns a real FAILED AgentReport with the honest reason.
  *
- * CAPABILITIES:
- * - Keyword research and difficulty analysis
- * - On-page SEO audit
- * - Content optimization suggestions
- * - Meta tag analysis and generation
- * - Internal linking recommendations
- * - Structured data validation
- * - Competitor SERP analysis
- * - Domain traffic & authority analysis
+ * Supported actions (live code paths only):
+ *   - keyword_research  (MarketingManager.getSEOKeywordGuidance — default path)
+ *   - domain_analysis   (MarketingManager.getSEOKeywordGuidance — domain path)
+ *
+ * The pre-rebuild template engine supported 8 actions. Six of them had no live
+ * caller in the MarketingManager — they were dead surface. Per CLAUDE.md's
+ * no-stubs and no-features-beyond-what-was-requested rules, the dead branches
+ * are not rebuilt.
  */
 
+import { z } from 'zod';
 import { BaseSpecialist } from '../../base-specialist';
 import type { AgentMessage, AgentReport, SpecialistConfig, Signal } from '../../types';
-import { getPageSpeedService } from '@/lib/integrations/seo/pagespeed-service';
-import { getSerperSEOService } from '@/lib/integrations/seo/serper-seo-service';
-import { getDataForSEOService } from '@/lib/integrations/seo/dataforseo-service';
-import { getGSCService } from '@/lib/integrations/seo/gsc-service';
-
-// ============================================================================
-// SYSTEM PROMPT
-// ============================================================================
-
-const SYSTEM_PROMPT = `You are the SEO Expert, a specialist in search engine optimization.
-
-## YOUR ROLE
-You analyze websites and content for SEO performance and provide actionable recommendations.
-Your expertise covers:
-1. Keyword research and targeting strategy
-2. On-page optimization (title tags, meta descriptions, headers, content)
-3. Technical SEO (site speed, mobile-friendliness, indexability)
-4. Content optimization for search intent
-5. Internal and external linking strategies
-6. Structured data implementation
-
-## OUTPUT FORMAT
-Always return structured JSON with clear, actionable recommendations.
-
-## RULES
-1. Prioritize user experience alongside SEO - never recommend keyword stuffing
-2. Focus on search intent, not just keyword density
-3. Provide specific, actionable recommendations with examples
-4. Consider mobile-first indexing in all recommendations
-5. Balance optimization with readability`;
+import { OpenRouterProvider } from '@/lib/ai/openrouter-provider';
+import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getActiveSpecialistGMByIndustry } from '@/lib/training/specialist-golden-master-service';
+import { getBrandDNA, type BrandDNA } from '@/lib/brand/brand-dna-service';
+import type { ModelName } from '@/types/ai-models';
+import { logger } from '@/lib/logger/logger';
 
 // ============================================================================
 // CONFIGURATION
 // ============================================================================
 
+const FILE = 'marketing/seo/specialist.ts';
+const SPECIALIST_ID = 'SEO_EXPERT';
+const DEFAULT_INDUSTRY_KEY = 'saas_sales_ops';
+const SUPPORTED_ACTIONS = ['keyword_research', 'domain_analysis'] as const;
+type SupportedAction = (typeof SUPPORTED_ACTIONS)[number];
+
+interface SEOExpertGMConfig {
+  systemPrompt: string;
+  model: ModelName;
+  temperature: number;
+  maxTokens: number;
+  supportedActions: string[];
+}
+
 const CONFIG: SpecialistConfig = {
   identity: {
-    id: 'SEO_EXPERT',
+    id: SPECIALIST_ID,
     name: 'SEO Expert',
     role: 'specialist',
     status: 'FUNCTIONAL',
     reportsTo: 'MARKETING_MANAGER',
-    capabilities: [
-      'keyword_research',
-      'on_page_optimization',
-      'meta_tag_analysis',
-      'content_audit',
-      'serp_analysis',
-      'structured_data',
-      'internal_linking',
-      'domain_analysis',
-    ],
+    capabilities: ['keyword_research', 'domain_analysis'],
   },
-  systemPrompt: SYSTEM_PROMPT,
-  tools: ['analyze_page', 'research_keywords', 'audit_meta', 'suggest_improvements', 'analyze_domain'],
+  systemPrompt: '',
+  tools: ['keyword_research', 'domain_analysis'],
   outputSchema: {
     type: 'object',
     properties: {
-      score: { type: 'number' },
-      issues: { type: 'array' },
-      recommendations: { type: 'array' },
       keywords: { type: 'array' },
+      strategy: { type: 'string' },
     },
   },
-  maxTokens: 4096,
-  temperature: 0.3,
+  maxTokens: 6000,
+  temperature: 0.7,
 };
 
 // ============================================================================
-// TYPE DEFINITIONS
+// INPUT CONTRACTS
 // ============================================================================
 
-interface KeywordResearchPayload {
-  action: 'keyword_research';
-  seed: string;
-  industry?: string;
-  targetCount?: number;
-}
+const KeywordResearchRequestSchema = z.object({
+  action: z.literal('keyword_research'),
+  seed: z.string().min(1),
+  industry: z.string().min(1),
+  targetCount: z.number().int().positive().optional(),
+});
 
-interface PageAuditPayload {
-  action: 'page_audit';
-  url?: string;
-  html?: string;
-  title?: string;
-  content?: string;
-  targetKeyword?: string;
-}
+const DomainAnalysisRequestSchema = z.object({
+  action: z.literal('domain_analysis'),
+  domain: z.string().min(1),
+  keywordLimit: z.number().int().positive().optional(),
+});
 
-interface MetaAnalysisPayload {
-  action: 'meta_analysis';
-  title?: string;
-  description?: string;
-  keywords?: string[];
-  url?: string;
-}
-
-interface ContentOptimizationPayload {
-  action: 'content_optimization';
-  content: string;
-  targetKeyword: string;
-  contentType?: 'blog' | 'product' | 'landing' | 'service';
-}
-
-interface CrawlAnalysisPayload {
-  action: 'crawl_analysis';
-  siteUrl: string;
-  pages?: string[];
-  checkSSL?: boolean;
-  checkSpeed?: boolean;
-  checkMeta?: boolean;
-  checkIndexing?: boolean;
-}
-
-interface KeywordGapPayload {
-  action: 'keyword_gap';
-  industry: string;
-  currentKeywords: string[];
-  competitorDomains?: string[];
-  targetMarket?: string;
-}
-
-interface ThirtyDayStrategyPayload {
-  action: '30_day_strategy';
-  industry: string;
-  currentRankings?: Array<{ keyword: string; position: number }>;
-  businessGoals: string[];
-}
-
-interface DomainAnalysisPayload {
-  action: 'domain_analysis';
-  domain: string;
-  keywordLimit?: number;
-}
-
-type SEOPayload =
-  | KeywordResearchPayload
-  | PageAuditPayload
-  | MetaAnalysisPayload
-  | ContentOptimizationPayload
-  | CrawlAnalysisPayload
-  | KeywordGapPayload
-  | ThirtyDayStrategyPayload
-  | DomainAnalysisPayload;
-
-interface KeywordResult {
-  keyword: string;
-  difficulty: 'low' | 'medium' | 'high';
-  searchIntent: 'informational' | 'navigational' | 'transactional' | 'commercial';
-  suggestedUsage: string;
-  relatedTerms: string[];
-}
-
-interface SEOIssue {
-  type: 'critical' | 'warning' | 'suggestion';
-  category: string;
-  message: string;
-  element?: string;
-  recommendation: string;
-}
-
-interface SEOAuditResult {
-  score: number;
-  issues: SEOIssue[];
-  strengths: string[];
-  recommendations: string[];
-  metaAnalysis: {
-    title: { value: string | null; score: number; issues: string[] };
-    description: { value: string | null; score: number; issues: string[] };
-    h1: { value: string | null; score: number; issues: string[] };
-  };
-  contentAnalysis: {
-    wordCount: number;
-    keywordDensity: number;
-    readabilityScore: number;
-    headingStructure: string[];
-  };
-}
+type KeywordResearchRequest = z.infer<typeof KeywordResearchRequestSchema>;
+type DomainAnalysisRequest = z.infer<typeof DomainAnalysisRequestSchema>;
 
 // ============================================================================
-// CRAWL ANALYSIS & KEYWORD GAP RESULT TYPES
+// OUTPUT CONTRACTS (Zod schemas — enforced on every LLM response)
 // ============================================================================
 
-interface CrawlHealthReport {
-  siteUrl: string;
-  crawlDate: string;
-  overallScore: number;
-  ssl: {
-    status: 'valid' | 'invalid' | 'expiring' | 'missing';
-    expiryDate?: string;
-    issues: string[];
-    score: number;
-  };
-  speed: {
-    score: number;
-    loadTime: number;
-    ttfb: number;
-    issues: string[];
-    recommendations: string[];
-  };
-  meta: {
-    score: number;
-    pagesAnalyzed: number;
-    missingTitles: number;
-    missingDescriptions: number;
-    duplicateTitles: string[];
-    issues: string[];
-  };
-  indexing: {
-    score: number;
-    indexedPages: number;
-    blockedPages: string[];
-    orphanPages: string[];
-    canonicalIssues: string[];
-  };
-  mobileReadiness: {
-    score: number;
-    isResponsive: boolean;
-    viewportConfigured: boolean;
-    issues: string[];
-  };
-  technicalFixList: Array<{
-    priority: 'critical' | 'high' | 'medium' | 'low';
-    category: string;
-    issue: string;
-    recommendation: string;
-    estimatedImpact: string;
-  }>;
+const KeywordResearchResultSchema = z.object({
+  keywords: z.array(z.object({
+    keyword: z.string().min(1),
+    difficulty: z.enum(['low', 'medium', 'high']),
+    searchIntent: z.enum(['informational', 'navigational', 'transactional', 'commercial']),
+    estimatedVolume: z.enum(['low', 'medium', 'high', 'very_high']),
+    contentRecommendation: z.string().min(20).max(300),
+  })).min(5).max(30),
+  strategy: z.string().min(50).max(2000),
+}).superRefine((data, ctx) => {
+  const seen = new Set<string>();
+  for (let i = 0; i < data.keywords.length; i++) {
+    const kw = data.keywords[i];
+    if (!kw) { continue; }
+    const lower = kw.keyword.toLowerCase();
+    if (seen.has(lower)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['keywords', i, 'keyword'],
+        message: `Duplicate keyword: ${kw.keyword}`,
+      });
+    }
+    seen.add(lower);
+  }
+});
+
+const DomainAnalysisResultSchema = z.object({
+  summary: z.string().min(50).max(3000),
+  technicalHealth: z.object({
+    score: z.number().min(0).max(100),
+    issues: z.array(z.string().min(10).max(300)).min(1).max(10),
+    strengths: z.array(z.string().min(10).max(300)).max(10),
+  }),
+  contentGaps: z.array(z.object({
+    topic: z.string().min(1),
+    opportunity: z.string().min(20).max(300),
+    priority: z.enum(['high', 'medium', 'low']),
+  })).min(1).max(15),
+  recommendations: z.array(z.object({
+    action: z.string().min(10).max(500),
+    impact: z.enum(['high', 'medium', 'low']),
+    effort: z.enum(['low', 'medium', 'high']),
+    timeframe: z.string().min(5).max(200),
+  })).min(3).max(10),
+  competitivePosition: z.string().min(30).max(3000),
+});
+
+export type KeywordResearchResult = z.infer<typeof KeywordResearchResultSchema>;
+export type DomainAnalysisResult = z.infer<typeof DomainAnalysisResultSchema>;
+
+// ============================================================================
+// LLM INVOCATION CORE
+// ============================================================================
+
+interface LlmCallContext {
+  gm: SEOExpertGMConfig;
+  brandDNA: BrandDNA;
+  resolvedSystemPrompt: string;
 }
 
-interface KeywordGapResult {
-  industry: string;
-  analysisDate: string;
-  currentKeywords: {
-    keyword: string;
-    estimatedPosition: number;
-    searchVolume: string;
-    difficulty: string;
-  }[];
-  gapKeywords: {
-    keyword: string;
-    opportunity: 'high' | 'medium' | 'low';
-    searchVolume: string;
-    difficulty: string;
-    competitorRanking: string;
-    recommendation: string;
-  }[];
-  quickWins: string[];
-  longTermTargets: string[];
-  contentGaps: Array<{
-    topic: string;
-    suggestedTitle: string;
-    targetKeywords: string[];
-    estimatedTraffic: string;
-  }>;
+async function loadGMAndBrandDNA(industryKey: string): Promise<LlmCallContext> {
+  const gmRecord = await getActiveSpecialistGMByIndustry(SPECIALIST_ID, industryKey);
+  if (!gmRecord) {
+    throw new Error(
+      `SEO Expert GM not found for industryKey=${industryKey}. ` +
+      `Run the SEO Expert GM seed script to seed.`,
+    );
+  }
+
+  const config = gmRecord.config as Partial<SEOExpertGMConfig>;
+  const systemPrompt = config.systemPrompt ?? gmRecord.systemPromptSnapshot;
+  if (!systemPrompt || systemPrompt.length < 100) {
+    throw new Error(
+      `SEO Expert GM ${gmRecord.id} has no usable systemPrompt (length=${systemPrompt?.length ?? 0}).`,
+    );
+  }
+
+  const gm: SEOExpertGMConfig = {
+    systemPrompt,
+    model: config.model ?? 'claude-sonnet-4.6',
+    temperature: config.temperature ?? 0.7,
+    maxTokens: config.maxTokens ?? 6000,
+    supportedActions: config.supportedActions ?? [...SUPPORTED_ACTIONS],
+  };
+
+  const brandDNA = await getBrandDNA();
+  if (!brandDNA) {
+    throw new Error(
+      'Brand DNA not configured. SEO Expert refuses to analyze without brand identity. ' +
+      'Visit /settings/ai-agents/business-setup.',
+    );
+  }
+
+  const resolvedSystemPrompt = buildResolvedSystemPrompt(gm.systemPrompt, brandDNA);
+  return { gm, brandDNA, resolvedSystemPrompt };
 }
 
-interface ThirtyDayStrategy {
-  industry: string;
-  generatedDate: string;
-  weeks: Array<{
-    weekNumber: number;
-    theme: string;
-    tasks: Array<{
-      day: number;
-      taskType: 'technical' | 'content' | 'outreach' | 'analysis';
-      task: string;
-      targetKeywords?: string[];
-      expectedOutcome: string;
-      effort: 'low' | 'medium' | 'high';
-    }>;
-    keyMetrics: string[];
-  }>;
-  priorityKeywords: Array<{
-    keyword: string;
-    currentPosition: number | null;
-    targetPosition: number;
-    strategy: string;
-  }>;
-  expectedResults: {
-    trafficIncrease: string;
-    rankingImprovements: string;
-    technicalScore: string;
-  };
+function buildResolvedSystemPrompt(baseSystemPrompt: string, brandDNA: BrandDNA): string {
+  const keyPhrases = brandDNA.keyPhrases?.length > 0 ? brandDNA.keyPhrases.join(', ') : '(none configured)';
+  const avoidPhrases = brandDNA.avoidPhrases?.length > 0 ? brandDNA.avoidPhrases.join(', ') : '(none configured)';
+  const competitors = brandDNA.competitors?.length > 0 ? brandDNA.competitors.join(', ') : '(none configured)';
+
+  const brandBlock = [
+    '',
+    '## Brand DNA (runtime injection — do not confuse with system prompt)',
+    '',
+    `Company: ${brandDNA.companyDescription}`,
+    `Unique value: ${brandDNA.uniqueValue}`,
+    `Target audience: ${brandDNA.targetAudience}`,
+    `Tone of voice: ${brandDNA.toneOfVoice}`,
+    `Communication style: ${brandDNA.communicationStyle}`,
+    `Industry: ${brandDNA.industry}`,
+    `Key phrases to weave in naturally: ${keyPhrases}`,
+    `Phrases you are forbidden from using: ${avoidPhrases}`,
+    `Competitors (never name them unless specifically asked): ${competitors}`,
+  ].join('\n');
+
+  return `${baseSystemPrompt}\n${brandBlock}`;
 }
 
-interface DomainAnalysisResult {
-  domain: string;
-  analysisDate: string;
-  metrics: {
-    organicTraffic: number;
-    organicKeywords: number;
-    domainRank: number;
-  };
-  backlinkProfile: {
-    totalBacklinks: number;
-    totalReferringDomains: number;
-    dofollow: number;
-    nofollow: number;
-    anchorLinks: number;
-    imageLinks: number;
-    redirectLinks: number;
-    brokenBacklinks: number;
-    referringIPs: number;
-    referringSubnets: number;
-  };
-  referringDomains: Array<{
-    domain: string;
-    rank: number;
-    backlinks: number;
-    dofollow: number;
-    nofollow: number;
-    firstSeen: string | null;
-  }>;
-  topKeywords: Array<{
-    keyword: string;
-    position: number;
-    url: string;
-    searchVolume: number;
-    estimatedTraffic: number;
-    cpc: number;
-  }>;
-  topPages: Array<{
-    url: string;
-    keywords: number;
-    traffic: number;
-  }>;
-  competitors: Array<{
-    domain: string;
-    avgPosition: number;
-    intersections: number;
-    relevance: number;
-    organicTraffic: number;
-    organicKeywords: number;
-  }>;
-  summary: string;
+function stripJsonFences(raw: string): string {
+  return raw
+    .replace(/^[\s\S]*?```(?:json)?\s*\n?/i, (match) => (match.includes('```') ? '' : match))
+    .replace(/\n?\s*```[\s\S]*$/i, '')
+    .trim();
+}
+
+async function callOpenRouter(
+  ctx: LlmCallContext,
+  userPrompt: string,
+): Promise<string> {
+  const provider = new OpenRouterProvider(PLATFORM_ID);
+  const response = await provider.chat({
+    model: ctx.gm.model,
+    messages: [
+      { role: 'system', content: ctx.resolvedSystemPrompt },
+      { role: 'user', content: userPrompt },
+    ],
+    temperature: ctx.gm.temperature,
+    maxTokens: ctx.gm.maxTokens,
+  });
+
+  const rawContent = response.content ?? '';
+  if (rawContent.trim().length === 0) {
+    throw new Error('OpenRouter returned empty response');
+  }
+  return rawContent;
 }
 
 // ============================================================================
-// IMPLEMENTATION
+// ACTION: keyword_research
+// ============================================================================
+
+function buildKeywordResearchUserPrompt(req: KeywordResearchRequest, targetCount: number): string {
+  return [
+    'ACTION: keyword_research',
+    '',
+    `Seed keyword/topic: ${req.seed}`,
+    `Industry vertical: ${req.industry}`,
+    `Target keyword count: ${targetCount}`,
+    '',
+    'Produce a ranked list of target keywords with a strategy summary. Respond with ONLY a valid JSON object, no markdown fences, no preamble, no explanation. The JSON must match this exact schema:',
+    '',
+    '{',
+    '  "keywords": [',
+    '    {',
+    '      "keyword": "exact keyword phrase",',
+    '      "difficulty": "low | medium | high",',
+    '      "searchIntent": "informational | navigational | transactional | commercial",',
+    '      "estimatedVolume": "low | medium | high | very_high",',
+    '      "contentRecommendation": "Specific content piece recommendation with a concrete angle (20-300 chars)"',
+    '    }',
+    '  ],',
+    '  "strategy": "Overall keyword strategy tying the keywords together into a coherent content plan (50-2000 chars)"',
+    '}',
+    '',
+    'Hard rules you MUST follow:',
+    `- Return exactly ${targetCount} keywords (minimum 5, maximum 30).`,
+    '- ORDER keywords from highest strategic priority (broad, high-volume terms the brand should anchor on) to lowest (long-tail niche terms for supporting content). The first 3 keywords will be used as primary targets, keywords 4-8 as secondary, and the rest as long-tail opportunities. This ordering drives the entire content strategy downstream — do not randomize.',
+    '- Every keyword must be unique (case-insensitive). No duplicates.',
+    '- difficulty: "low" = achievable within 3 months for a new domain, "medium" = 3-6 months with consistent content, "high" = 6+ months requiring backlink authority.',
+    '- searchIntent: "informational" = seeking knowledge, "navigational" = seeking a specific site, "transactional" = ready to buy, "commercial" = comparing options.',
+    '- estimatedVolume: "low" = <1K monthly, "medium" = 1K-10K, "high" = 10K-100K, "very_high" = 100K+. Base on industry and keyword specificity.',
+    '- contentRecommendation: Suggest a SPECIFIC content piece with a concrete angle — not "write a blog post about X" but "Write a 2,000-word comparison guide: \'[Brand] vs [competitor] for [use case]\' targeting commercial intent."',
+    '- Make every recommendation specific to THIS brand and THIS industry from the Brand DNA — not generic SEO advice.',
+    '- Do NOT fabricate specific traffic numbers, exact search volumes, or precise ranking positions.',
+    '- Do NOT name competitors unless the Brand DNA explicitly lists them.',
+    '- Do NOT use any phrase from the Brand DNA avoidPhrases list.',
+    '- Output ONLY the JSON object. No prose outside it. No markdown fences.',
+  ].join('\n');
+}
+
+async function executeKeywordResearch(
+  req: KeywordResearchRequest,
+  ctx: LlmCallContext,
+): Promise<KeywordResearchResult> {
+  const targetCount = req.targetCount ?? 15;
+  const userPrompt = buildKeywordResearchUserPrompt(req, targetCount);
+  const rawContent = await callOpenRouter(ctx, userPrompt);
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(stripJsonFences(rawContent));
+  } catch {
+    throw new Error(
+      `SEO Expert keyword_research output was not valid JSON: ${rawContent.slice(0, 200)}`,
+    );
+  }
+
+  const result = KeywordResearchResultSchema.safeParse(parsed);
+  if (!result.success) {
+    const issueSummary = result.error.issues
+      .map((issue) => `${issue.path.join('.')}: ${issue.message}`)
+      .join('; ');
+    throw new Error(`SEO Expert keyword_research output did not match expected schema: ${issueSummary}`);
+  }
+
+  return result.data;
+}
+
+// ============================================================================
+// ACTION: domain_analysis
+// ============================================================================
+
+function buildDomainAnalysisUserPrompt(req: DomainAnalysisRequest): string {
+  const keywordLimit = req.keywordLimit ?? 20;
+
+  return [
+    'ACTION: domain_analysis',
+    '',
+    `Domain URL: ${req.domain}`,
+    `Keyword limit for content gap analysis: ${keywordLimit}`,
+    '',
+    'Produce a comprehensive SEO health assessment. Respond with ONLY a valid JSON object, no markdown fences, no preamble, no explanation. The JSON must match this exact schema:',
+    '',
+    '{',
+    '  "summary": "Overall assessment (50-3000 chars). Start with [ACTION REQUIRED] if there are critical issues needing immediate attention.",',
+    '  "technicalHealth": {',
+    '    "score": 0-100,',
+    '    "issues": ["Issue description (10-300 chars each)", "..."],',
+    '    "strengths": ["Strength description (10-300 chars each)", "..."]',
+    '  },',
+    '  "contentGaps": [',
+    '    {',
+    '      "topic": "Topic the domain should rank for",',
+    '      "opportunity": "Why this matters for the brand (20-300 chars)",',
+    '      "priority": "high | medium | low"',
+    '    }',
+    '  ],',
+    '  "recommendations": [',
+    '    {',
+    '      "action": "Specific actionable recommendation (10-500 chars)",',
+    '      "impact": "high | medium | low",',
+    '      "effort": "low | medium | high",',
+    '      "timeframe": "Estimated timeframe (5-200 chars)"',
+    '    }',
+    '  ],',
+    '  "competitivePosition": "Where this domain stands in its industry (30-1000 chars)"',
+    '}',
+    '',
+    'Hard rules you MUST follow:',
+    '- summary: Start with "[ACTION REQUIRED]" ONLY if there are critical issues (broken SSL, no indexing, severe mobile issues, thin content on key pages). Otherwise start with a clean descriptive assessment. The downstream system reads this prefix to determine alert severity.',
+    '- technicalHealth.score: Rate 0-100 based on SSL, mobile responsiveness, page speed, crawlability, structured data, canonical tags, sitemap, robots.txt. Deduct proportionally for each issue.',
+    '- technicalHealth.issues: At least 1, at most 10. Each 10-300 characters.',
+    '- technicalHealth.strengths: At most 10. Each 10-300 characters. Can be empty array if no strengths found.',
+    '- contentGaps: 1-15 topics the domain SHOULD rank for based on its industry but currently does not. Each opportunity must explain why it matters for THIS brand specifically.',
+    `- contentGaps: Limit to ${keywordLimit} most important keyword-related gaps.`,
+    '- recommendations: 3-10 specific, actionable items. Not "improve your SEO" but "Add FAQ schema markup to the pricing page to capture featured snippets for \'[product] pricing\' queries."',
+    '- recommendations: Each must include realistic impact, effort, and timeframe estimates.',
+    '- competitivePosition: Assess challenger/leader/invisible status. Identify strongest SEO asset and biggest vulnerability.',
+    '- Make every assessment specific to THIS domain and THIS industry from the Brand DNA — not generic SEO advice.',
+    '- Do NOT fabricate specific traffic numbers, exact DA/DR scores, or precise ranking positions.',
+    '- Do NOT name competitors unless the Brand DNA explicitly lists them.',
+    '- Do NOT use any phrase from the Brand DNA avoidPhrases list.',
+    '- Output ONLY the JSON object. No prose outside it. No markdown fences.',
+  ].join('\n');
+}
+
+async function executeDomainAnalysis(
+  req: DomainAnalysisRequest,
+  ctx: LlmCallContext,
+): Promise<DomainAnalysisResult> {
+  const userPrompt = buildDomainAnalysisUserPrompt(req);
+  const rawContent = await callOpenRouter(ctx, userPrompt);
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(stripJsonFences(rawContent));
+  } catch {
+    throw new Error(
+      `SEO Expert domain_analysis output was not valid JSON: ${rawContent.slice(0, 200)}`,
+    );
+  }
+
+  const result = DomainAnalysisResultSchema.safeParse(parsed);
+  if (!result.success) {
+    const issueSummary = result.error.issues
+      .map((issue) => `${issue.path.join('.')}: ${issue.message}`)
+      .join('; ');
+    throw new Error(`SEO Expert domain_analysis output did not match expected schema: ${issueSummary}`);
+  }
+
+  return result.data;
+}
+
+// ============================================================================
+// SEO EXPERT CLASS
 // ============================================================================
 
 export class SEOExpert extends BaseSpecialist {
@@ -367,1406 +408,84 @@ export class SEOExpert extends BaseSpecialist {
   async initialize(): Promise<void> {
     await Promise.resolve();
     this.isInitialized = true;
-    this.log('INFO', 'SEO Expert initialized');
+    this.log('INFO', 'SEO Expert initialized (LLM-backed, Golden Master loaded at runtime)');
   }
 
-  /**
-   * Main execution entry point
-   */
   async execute(message: AgentMessage): Promise<AgentReport> {
     const taskId = message.id;
-    await Promise.resolve(); // Required by BaseSpecialist async interface
 
     try {
-      const payload = message.payload as SEOPayload;
-
-      if (!payload || typeof payload !== 'object' || !('action' in payload)) {
-        return this.createReport(taskId, 'FAILED', null, ['Invalid payload: action is required']);
+      const payload = message.payload as Record<string, unknown> | null;
+      if (payload === null || typeof payload !== 'object') {
+        return this.createReport(taskId, 'FAILED', null, ['SEO Expert: payload must be an object']);
       }
 
-      let result: unknown;
+      const rawAction = payload.action ?? payload.method;
+      if (typeof rawAction !== 'string') {
+        return this.createReport(taskId, 'FAILED', null, ['SEO Expert: no action or method specified in payload']);
+      }
 
-      switch (payload.action) {
-        case 'keyword_research':
-          result = await this.handleKeywordResearch(payload);
-          break;
+      if (!(SUPPORTED_ACTIONS as readonly string[]).includes(rawAction)) {
+        return this.createReport(taskId, 'FAILED', null, [
+          `SEO Expert does not support action '${rawAction}'. Supported: ${SUPPORTED_ACTIONS.join(', ')}`,
+        ]);
+      }
+      const action = rawAction as SupportedAction;
 
-        case 'page_audit':
-          result = this.handlePageAudit(payload);
-          break;
+      logger.info(`[SEOExpert] Executing action=${action} taskId=${taskId}`, { file: FILE });
 
-        case 'meta_analysis':
-          result = this.handleMetaAnalysis(payload);
-          break;
+      const ctx = await loadGMAndBrandDNA(DEFAULT_INDUSTRY_KEY);
 
-        case 'content_optimization':
-          result = this.handleContentOptimization(payload);
-          break;
-
-        case 'crawl_analysis':
-          result = await this.handleCrawlAnalysis(payload);
-          break;
-
-        case 'keyword_gap':
-          result = await this.handleKeywordGap(payload);
-          break;
-
-        case '30_day_strategy':
-          result = this.handleThirtyDayStrategy(payload);
-          break;
-
-        case 'domain_analysis':
-          try {
-            result = await this.handleDomainAnalysis(payload);
-          } catch (domainError) {
-            const domainMsg = domainError instanceof Error ? domainError.message : String(domainError);
-            const failedDomain = 'domain' in payload ? String(payload.domain) : 'unknown';
-            this.log('ERROR', `Domain analysis failed for ${failedDomain}: ${domainMsg}`);
-            return this.createReport(taskId, 'FAILED', null, [`Domain analysis error: ${domainMsg}`]);
+      switch (action) {
+        case 'keyword_research': {
+          const inputValidation = KeywordResearchRequestSchema.safeParse({
+            ...payload,
+            action,
+          });
+          if (!inputValidation.success) {
+            const issueSummary = inputValidation.error.issues
+              .map((issue) => `${issue.path.join('.')}: ${issue.message}`)
+              .join('; ');
+            return this.createReport(taskId, 'FAILED', null, [
+              `SEO Expert keyword_research: invalid input payload: ${issueSummary}`,
+            ]);
           }
-          break;
 
-        default:
-          return this.createReport(taskId, 'FAILED', null, [`Unknown action: ${(payload as { action: string }).action}`]);
+          const data = await executeKeywordResearch(inputValidation.data, ctx);
+          return this.createReport(taskId, 'COMPLETED', data);
+        }
+
+        case 'domain_analysis': {
+          const inputValidation = DomainAnalysisRequestSchema.safeParse({
+            ...payload,
+            action,
+          });
+          if (!inputValidation.success) {
+            const issueSummary = inputValidation.error.issues
+              .map((issue) => `${issue.path.join('.')}: ${issue.message}`)
+              .join('; ');
+            return this.createReport(taskId, 'FAILED', null, [
+              `SEO Expert domain_analysis: invalid input payload: ${issueSummary}`,
+            ]);
+          }
+
+          const data = await executeDomainAnalysis(inputValidation.data, ctx);
+          return this.createReport(taskId, 'COMPLETED', data);
+        }
       }
-
-      return this.createReport(taskId, 'COMPLETED', result);
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      this.log('ERROR', `SEO analysis failed: ${errorMessage}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.error('[SEOExpert] Execution failed', error instanceof Error ? error : new Error(errorMessage), { file: FILE });
       return this.createReport(taskId, 'FAILED', null, [errorMessage]);
     }
   }
 
-  /**
-   * Handle keyword research
-   */
-  private async handleKeywordResearch(payload: KeywordResearchPayload): Promise<{ keywords: KeywordResult[] }> {
-    const { seed, industry, targetCount = 10 } = payload;
-
-    this.log('INFO', `Researching keywords for seed: ${seed}`);
-
-    // Generate keyword variations and related terms
-    const keywords: KeywordResult[] = [];
-
-    // Primary keyword
-    keywords.push({
-      keyword: seed,
-      difficulty: await this.estimateDifficulty(seed),
-      searchIntent: this.detectSearchIntent(seed),
-      suggestedUsage: 'Primary target keyword for main content',
-      relatedTerms: this.generateRelatedTerms(seed),
-    });
-
-    // Long-tail variations
-    const longTailPrefixes = ['how to', 'best', 'top', 'guide to', 'what is'];
-    const longTailSuffixes = ['tips', 'guide', 'examples', 'tools', 'software', 'services'];
-
-    for (const prefix of longTailPrefixes) {
-      if (keywords.length >= targetCount) {
-        break;
-      }
-      const keyword = `${prefix} ${seed}`;
-      keywords.push({
-        keyword,
-        difficulty: 'low',
-        searchIntent: 'informational',
-        suggestedUsage: 'Blog post or guide content',
-        relatedTerms: this.generateRelatedTerms(keyword),
-      });
-    }
-
-    for (const suffix of longTailSuffixes) {
-      if (keywords.length >= targetCount) {
-        break;
-      }
-      const keyword = `${seed} ${suffix}`;
-      keywords.push({
-        keyword,
-        difficulty: 'medium',
-        searchIntent: 'commercial',
-        suggestedUsage: 'Comparison or listicle content',
-        relatedTerms: this.generateRelatedTerms(keyword),
-      });
-    }
-
-    // Industry-specific variations
-    if (industry) {
-      keywords.push({
-        keyword: `${seed} for ${industry}`,
-        difficulty: 'low',
-        searchIntent: 'commercial',
-        suggestedUsage: `Industry-specific landing page for ${industry}`,
-        relatedTerms: [`${industry} ${seed}`, `${seed} ${industry} solutions`],
-      });
-    }
-
-    return { keywords: keywords.slice(0, targetCount) };
-  }
-
-  /**
-   * Handle page SEO audit
-   */
-  private handlePageAudit(payload: PageAuditPayload): SEOAuditResult {
-    const { html, title, content, targetKeyword } = payload;
-    const issues: SEOIssue[] = [];
-    const strengths: string[] = [];
-    const recommendations: string[] = [];
-
-    let score = 100;
-
-    // Title analysis
-    const titleAnalysis = this.analyzeTitle(title, targetKeyword);
-    if (titleAnalysis.issues.length > 0) {
-      issues.push(...titleAnalysis.issues.map(msg => ({
-        type: 'warning' as const,
-        category: 'Title Tag',
-        message: msg,
-        element: 'title',
-        recommendation: this.getTitleRecommendation(msg),
-      })));
-      score -= titleAnalysis.issues.length * 5;
-    } else {
-      strengths.push('Title tag is well-optimized');
-    }
-
-    // Meta description analysis
-    const descAnalysis = this.analyzeMetaDescription(html);
-    if (descAnalysis.issues.length > 0) {
-      issues.push(...descAnalysis.issues.map(msg => ({
-        type: 'warning' as const,
-        category: 'Meta Description',
-        message: msg,
-        element: 'meta[name="description"]',
-        recommendation: 'Write a compelling meta description between 150-160 characters',
-      })));
-      score -= descAnalysis.issues.length * 5;
-    }
-
-    // H1 analysis
-    const h1Analysis = this.analyzeH1(html, targetKeyword);
-    if (h1Analysis.issues.length > 0) {
-      issues.push(...h1Analysis.issues.map(msg => ({
-        type: h1Analysis.score < 50 ? 'critical' as const : 'warning' as const,
-        category: 'H1 Tag',
-        message: msg,
-        element: 'h1',
-        recommendation: 'Include target keyword in H1 and ensure only one H1 exists',
-      })));
-      score -= h1Analysis.issues.length * 8;
-    } else {
-      strengths.push('H1 tag is properly configured');
-    }
-
-    // Content analysis
-    const wordCount = content?.split(/\s+/).length ?? 0;
-    const keywordDensity = targetKeyword && content
-      ? (content.toLowerCase().split(targetKeyword.toLowerCase()).length - 1) / (wordCount / 100)
-      : 0;
-
-    if (wordCount < 300) {
-      issues.push({
-        type: 'critical',
-        category: 'Content',
-        message: `Content is too thin (${wordCount} words)`,
-        recommendation: 'Aim for at least 300 words, ideally 1000+ for comprehensive coverage',
-      });
-      score -= 15;
-    } else if (wordCount >= 1000) {
-      strengths.push(`Comprehensive content (${wordCount} words)`);
-    }
-
-    if (keywordDensity > 3) {
-      issues.push({
-        type: 'warning',
-        category: 'Keyword Usage',
-        message: 'Keyword density is too high (possible keyword stuffing)',
-        recommendation: 'Reduce keyword repetition and use natural language',
-      });
-      score -= 10;
-    } else if (keywordDensity < 0.5 && targetKeyword) {
-      issues.push({
-        type: 'suggestion',
-        category: 'Keyword Usage',
-        message: 'Target keyword could be used more frequently',
-        recommendation: 'Include target keyword naturally 2-3 times per 100 words',
-      });
-    }
-
-    // Generate recommendations
-    if (score < 70) {
-      recommendations.push('Focus on fixing critical issues before addressing warnings');
-    }
-    if (!targetKeyword) {
-      recommendations.push('Define a target keyword for more specific optimization advice');
-    }
-    recommendations.push('Ensure all images have descriptive alt text');
-    recommendations.push('Add internal links to related content on your site');
-    recommendations.push('Consider adding structured data for rich snippets');
-
-    return {
-      score: Math.max(0, score),
-      issues,
-      strengths,
-      recommendations,
-      metaAnalysis: {
-        title: { value: title ?? null, score: titleAnalysis.score, issues: titleAnalysis.issues },
-        description: { value: descAnalysis.value, score: descAnalysis.score, issues: descAnalysis.issues },
-        h1: { value: h1Analysis.value, score: h1Analysis.score, issues: h1Analysis.issues },
-      },
-      contentAnalysis: {
-        wordCount,
-        keywordDensity: Math.round(keywordDensity * 100) / 100,
-        readabilityScore: this.calculateReadabilityScore(content ?? ''),
-        headingStructure: this.extractHeadingStructure(html ?? ''),
-      },
-    };
-  }
-
-  /**
-   * Handle meta tag analysis
-   */
-  private handleMetaAnalysis(payload: MetaAnalysisPayload): {
-    title: { current: string | null; score: number; suggestions: string[] };
-    description: { current: string | null; score: number; suggestions: string[] };
-    recommendations: string[];
-  } {
-    const { title, description, keywords, url } = payload;
-
-    const titleSuggestions: string[] = [];
-    const descSuggestions: string[] = [];
-    const recommendations: string[] = [];
-
-    let titleScore = 100;
-    let descScore = 100;
-
-    // Title analysis
-    if (!title) {
-      titleScore = 0;
-      titleSuggestions.push('Missing title tag - this is critical for SEO');
-    } else {
-      if (title.length < 30) {
-        titleScore -= 20;
-        titleSuggestions.push('Title is too short. Aim for 50-60 characters');
-      } else if (title.length > 60) {
-        titleScore -= 15;
-        titleSuggestions.push('Title may be truncated in search results (>60 chars)');
-      }
-      if (keywords?.length && !keywords.some(kw => title.toLowerCase().includes(kw.toLowerCase()))) {
-        titleScore -= 25;
-        titleSuggestions.push('Consider including your target keyword in the title');
-      }
-    }
-
-    // Description analysis
-    if (!description) {
-      descScore = 0;
-      descSuggestions.push('Missing meta description - add one to improve CTR');
-    } else {
-      if (description.length < 120) {
-        descScore -= 20;
-        descSuggestions.push('Description is short. Aim for 150-160 characters');
-      } else if (description.length > 160) {
-        descScore -= 10;
-        descSuggestions.push('Description may be truncated (>160 chars)');
-      }
-      if (!description.includes('call to action') && !description.match(/learn|discover|get|find|try/i)) {
-        descSuggestions.push('Consider adding a call-to-action to improve click-through rate');
-      }
-    }
-
-    // Generate title suggestion
-    if (keywords?.length) {
-      const primaryKeyword = keywords[0];
-      recommendations.push(`Suggested title format: "${primaryKeyword} - ${keywords[1] ?? 'Your Brand'} | Brand Name"`);
-    }
-
-    if (url) {
-      recommendations.push('Ensure URL is clean and includes target keyword if possible');
-    }
-
-    return {
-      title: { current: title ?? null, score: titleScore, suggestions: titleSuggestions },
-      description: { current: description ?? null, score: descScore, suggestions: descSuggestions },
-      recommendations,
-    };
-  }
-
-  /**
-   * Handle content optimization
-   */
-  private handleContentOptimization(payload: ContentOptimizationPayload): {
-    optimizedSuggestions: string[];
-    keywordPlacements: { location: string; suggestion: string }[];
-    structureRecommendations: string[];
-    score: number;
-  } {
-    const { content, targetKeyword, contentType = 'blog' } = payload;
-
-    const suggestions: string[] = [];
-    const keywordPlacements: { location: string; suggestion: string }[] = [];
-    const structureRecommendations: string[] = [];
-    let score = 70;
-
-    const lowerContent = content.toLowerCase();
-    const lowerKeyword = targetKeyword.toLowerCase();
-    const keywordCount = (lowerContent.match(new RegExp(lowerKeyword, 'g')) ?? []).length;
-    const wordCount = content.split(/\s+/).length;
-
-    // Check keyword in first 100 words
-    const first100Words = content.split(/\s+/).slice(0, 100).join(' ').toLowerCase();
-    if (!first100Words.includes(lowerKeyword)) {
-      keywordPlacements.push({
-        location: 'Introduction',
-        suggestion: `Include "${targetKeyword}" in the first 100 words`,
-      });
-    } else {
-      score += 5;
-    }
-
-    // Check keyword density
-    const density = (keywordCount / wordCount) * 100;
-    if (density < 0.5) {
-      suggestions.push(`Increase keyword usage. Current density: ${density.toFixed(2)}%`);
-    } else if (density > 2.5) {
-      suggestions.push(`Reduce keyword repetition. Current density: ${density.toFixed(2)}%`);
-      score -= 10;
-    } else {
-      score += 10;
-    }
-
-    // Content type specific recommendations
-    switch (contentType) {
-      case 'blog':
-        if (wordCount < 1500) {
-          structureRecommendations.push('Consider expanding to 1500+ words for comprehensive coverage');
-        }
-        structureRecommendations.push('Include a table of contents for posts over 2000 words');
-        structureRecommendations.push('Add relevant internal and external links');
-        break;
-
-      case 'product':
-        structureRecommendations.push('Include product specifications in a scannable format');
-        structureRecommendations.push('Add customer reviews section for social proof');
-        keywordPlacements.push({
-          location: 'Product Title',
-          suggestion: `Ensure "${targetKeyword}" appears in the product name`,
-        });
-        break;
-
-      case 'landing':
-        structureRecommendations.push('Keep content focused with clear value proposition');
-        structureRecommendations.push('Include trust signals (testimonials, certifications)');
-        structureRecommendations.push('Add a prominent call-to-action above the fold');
-        break;
-
-      case 'service':
-        structureRecommendations.push('Highlight benefits over features');
-        structureRecommendations.push('Include pricing or "get a quote" CTA');
-        structureRecommendations.push('Add case studies or success stories');
-        break;
-    }
-
-    // General suggestions
-    suggestions.push('Use LSI (related) keywords naturally throughout the content');
-    suggestions.push('Break up long paragraphs (max 3-4 sentences each)');
-    suggestions.push('Add subheadings (H2, H3) every 300 words');
-
-    keywordPlacements.push(
-      { location: 'URL Slug', suggestion: `Include "${targetKeyword.toLowerCase().replace(/\s+/g, '-')}"` },
-      { location: 'H1 Heading', suggestion: `Primary heading should contain "${targetKeyword}"` },
-      { location: 'H2 Subheadings', suggestion: 'Use keyword variations in at least one H2' },
-      { location: 'Image Alt Text', suggestion: `Describe images using "${targetKeyword}" when relevant` }
-    );
-
-    return {
-      optimizedSuggestions: suggestions,
-      keywordPlacements,
-      structureRecommendations,
-      score: Math.min(100, score),
-    };
-  }
-
-  // ==========================================================================
-  // DOMAIN ANALYSIS ENGINE
-  // ==========================================================================
-
-  /**
-   * Comprehensive domain intelligence: traffic, backlink profile, referring
-   * domains, top keywords with traffic attribution, top pages, organic
-   * competitors, and a human-readable executive summary.
-   *
-   * Fires 5 DataForSEO API calls concurrently:
-   *   1. domain_rank          — traffic estimate, keyword count, domain rank
-   *   2. ranked_keywords      — which keywords drive traffic + to which pages
-   *   3. backlinks/summary    — full backlink profile breakdown
-   *   4. referring_domains    — the actual sites linking to them (sorted by rank)
-   *   5. competitors_domain   — who competes for the same keywords
-   */
-  private async handleDomainAnalysis(payload: DomainAnalysisPayload): Promise<DomainAnalysisResult> {
-    const { domain, keywordLimit = 20 } = payload;
-
-    // --- Validate domain parameter ---
-    if (!domain || domain.trim() === '') {
-      this.log('ERROR', 'domain_analysis called with empty or missing domain');
-      return {
-        domain: '',
-        analysisDate: new Date().toISOString(),
-        metrics: { organicTraffic: 0, organicKeywords: 0, domainRank: 0 },
-        backlinkProfile: { totalBacklinks: 0, totalReferringDomains: 0, dofollow: 0, nofollow: 0, anchorLinks: 0, imageLinks: 0, redirectLinks: 0, brokenBacklinks: 0, referringIPs: 0, referringSubnets: 0 },
-        referringDomains: [],
-        topKeywords: [],
-        topPages: [],
-        competitors: [],
-        summary: '[ERROR] No domain provided. Please include a domain name (e.g., "example.com") in your request.',
-      };
-    }
-
-    const cleanDomain = domain.replace(/^https?:\/\//, '').replace(/\/+$/, '');
-
-    this.log('INFO', `Running comprehensive domain analysis for ${cleanDomain}`);
-
-    const seo = getDataForSEOService();
-
-    // --- Pre-flight credential check ---
-    // Run one lightweight call to detect missing credentials early
-    const preflight = await seo.getDomainMetrics(cleanDomain);
-    if (!preflight.success && preflight.error?.includes('not configured')) {
-      this.log('WARN', `DataForSEO credentials not configured — domain analysis for ${cleanDomain} will return empty data`);
-      return {
-        domain: cleanDomain,
-        analysisDate: new Date().toISOString(),
-        metrics: { organicTraffic: 0, organicKeywords: 0, domainRank: 0 },
-        backlinkProfile: { totalBacklinks: 0, totalReferringDomains: 0, dofollow: 0, nofollow: 0, anchorLinks: 0, imageLinks: 0, redirectLinks: 0, brokenBacklinks: 0, referringIPs: 0, referringSubnets: 0 },
-        referringDomains: [],
-        topKeywords: [],
-        topPages: [],
-        competitors: [],
-        summary: `[ACTION REQUIRED] DataForSEO API keys are not configured. Go to Settings → API Keys and add your DataForSEO login and password to enable domain analysis for ${cleanDomain}.`,
-      };
-    }
-
-    // Fire remaining 4 API calls concurrently (metrics already fetched above)
-    const [keywordsRes, backlinkSumRes, referringRes, competitorsRes] = await Promise.all([
-      seo.getRankedKeywords(cleanDomain, keywordLimit),
-      seo.getBacklinksSummary(cleanDomain),
-      seo.getReferringDomains(cleanDomain, 20),
-      seo.getCompetitors(cleanDomain, 10),
-    ]);
-
-    // Reuse the preflight result as metricsRes
-    const metricsRes = preflight;
-
-    // --- Metrics ---
-    const m = metricsRes.success && metricsRes.data ? metricsRes.data : null;
-    const metrics = {
-      organicTraffic: m?.organicTraffic ?? 0,
-      organicKeywords: m?.organicKeywords ?? 0,
-      domainRank: m?.domainRank ?? 0,
-    };
-
-    // --- Backlink Profile ---
-    const bl = backlinkSumRes.success && backlinkSumRes.data ? backlinkSumRes.data : null;
-    const backlinkProfile = {
-      totalBacklinks: bl?.totalBacklinks ?? m?.backlinks ?? 0,
-      totalReferringDomains: bl?.totalReferringDomains ?? m?.referringDomains ?? 0,
-      dofollow: bl?.dofollow ?? 0,
-      nofollow: bl?.nofollow ?? 0,
-      anchorLinks: bl?.anchorLinks ?? 0,
-      imageLinks: bl?.imageLinks ?? 0,
-      redirectLinks: bl?.redirectLinks ?? 0,
-      brokenBacklinks: bl?.brokenBacklinks ?? 0,
-      referringIPs: bl?.referringIPs ?? 0,
-      referringSubnets: bl?.referringSubnets ?? 0,
-    };
-
-    // --- Referring Domains (who links to them) ---
-    const referringDomains = referringRes.success && referringRes.data
-      ? referringRes.data.map(rd => ({
-          domain: rd.domain,
-          rank: rd.rank,
-          backlinks: rd.backlinks,
-          dofollow: rd.dofollow,
-          nofollow: rd.nofollow,
-          firstSeen: rd.firstSeen,
-        }))
-      : [];
-
-    // --- Top Keywords ---
-    const topKeywords = keywordsRes.success && keywordsRes.data
-      ? keywordsRes.data.map(kw => ({
-          keyword: kw.keyword,
-          position: kw.position,
-          url: kw.url,
-          searchVolume: kw.searchVolume,
-          estimatedTraffic: kw.traffic,
-          cpc: kw.cpc,
-        }))
-      : [];
-
-    // --- Top Pages (aggregate keywords by URL) ---
-    const pageMap = new Map<string, { url: string; keywords: number; traffic: number }>();
-    for (const kw of topKeywords) {
-      const existing = pageMap.get(kw.url);
-      if (existing) {
-        existing.keywords += 1;
-        existing.traffic += kw.estimatedTraffic;
-      } else {
-        pageMap.set(kw.url, { url: kw.url, keywords: 1, traffic: kw.estimatedTraffic });
-      }
-    }
-    const topPages = Array.from(pageMap.values())
-      .sort((a, b) => b.traffic - a.traffic)
-      .slice(0, 10);
-
-    // --- Competitors ---
-    const competitors = competitorsRes.success && competitorsRes.data
-      ? competitorsRes.data.map(c => ({
-          domain: c.domain,
-          avgPosition: c.avgPosition,
-          intersections: c.intersections,
-          relevance: c.competitorRelevance,
-          organicTraffic: c.organicTraffic,
-          organicKeywords: c.organicKeywords,
-        }))
-      : [];
-
-    // --- Executive Summary ---
-    const kwStr = topKeywords.length > 0
-      ? topKeywords.slice(0, 3).map(k => `"${k.keyword}" (#${k.position})`).join(', ')
-      : 'no keyword data';
-
-    const refStr = referringDomains.length > 0
-      ? referringDomains.slice(0, 3).map(r => `${r.domain} (rank ${r.rank}, ${r.backlinks} links)`).join(', ')
-      : 'no referring domain data';
-
-    const compStr = competitors.length > 0
-      ? competitors.slice(0, 3).map(c => `${c.domain} (${c.intersections} shared keywords)`).join(', ')
-      : 'no competitor data';
-
-    const warn = !metricsRes.success ? ' [Configure DataForSEO API keys for real data]' : '';
-
-    const summary =
-      `${cleanDomain} — Domain Rank ${metrics.domainRank}/100. ` +
-      `Estimated ${metrics.organicTraffic.toLocaleString()} organic visits/month from ${metrics.organicKeywords.toLocaleString()} keywords. ` +
-      `Backlink profile: ${backlinkProfile.totalBacklinks.toLocaleString()} total backlinks ` +
-      `(${backlinkProfile.dofollow.toLocaleString()} dofollow, ${backlinkProfile.nofollow.toLocaleString()} nofollow) ` +
-      `from ${backlinkProfile.totalReferringDomains.toLocaleString()} referring domains across ${backlinkProfile.referringIPs.toLocaleString()} IPs. ` +
-      `${backlinkProfile.brokenBacklinks > 0 ? `${backlinkProfile.brokenBacklinks.toLocaleString()} broken backlinks detected. ` : ''}` +
-      `Top traffic keywords: ${kwStr}. ` +
-      `Top referring sites: ${refStr}. ` +
-      `Top organic competitors: ${compStr}.${warn}`;
-
-    return {
-      domain: cleanDomain,
-      analysisDate: new Date().toISOString(),
-      metrics,
-      backlinkProfile,
-      referringDomains,
-      topKeywords,
-      topPages,
-      competitors,
-      summary,
-    };
-  }
-
-  // ==========================================================================
-  // HELPER METHODS
-  // ==========================================================================
-
-  private async estimateDifficulty(keyword: string): Promise<'low' | 'medium' | 'high'> {
-    try {
-      const result = await getDataForSEOService().getKeywordData([keyword]);
-      if (result.success && result.data && result.data.length > 0) {
-        const level = result.data[0].competitionLevel;
-        if (level === 'LOW') {
-          return 'low';
-        }
-        if (level === 'HIGH') {
-          return 'high';
-        }
-        return 'medium';
-      }
-    } catch { /* fall through to heuristic */ }
-
-    // Heuristic fallback
-    const wordCount = keyword.split(/\s+/).length;
-    if (wordCount >= 4) {
-      return 'low';
-    }
-    if (wordCount >= 2) {
-      return 'medium';
-    }
-    return 'high';
-  }
-
-  private detectSearchIntent(keyword: string): 'informational' | 'navigational' | 'transactional' | 'commercial' {
-    const lower = keyword.toLowerCase();
-    if (lower.match(/how|what|why|when|who|guide|tutorial|tips/)) {
-      return 'informational';
-    }
-    if (lower.match(/buy|price|cheap|deal|discount|order|purchase/)) {
-      return 'transactional';
-    }
-    if (lower.match(/best|top|review|compare|vs|alternative/)) {
-      return 'commercial';
-    }
-    return 'navigational';
-  }
-
-  private generateRelatedTerms(keyword: string): string[] {
-    const words = keyword.toLowerCase().split(/\s+/);
-    const related: string[] = [];
-
-    // Add plurals/singulars
-    words.forEach(word => {
-      if (word.endsWith('s')) {
-        related.push(word.slice(0, -1));
-      } else {
-        related.push(`${word  }s`);
-      }
-    });
-
-    // Add common modifiers
-    related.push(`${keyword} online`);
-    related.push(`${keyword} near me`);
-    related.push(`free ${keyword}`);
-
-    return related.slice(0, 5);
-  }
-
-  private analyzeTitle(title: string | undefined, targetKeyword?: string): { score: number; issues: string[] } {
-    const issues: string[] = [];
-    let score = 100;
-
-    if (!title) {
-      return { score: 0, issues: ['Missing title tag'] };
-    }
-
-    if (title.length < 30) {
-      issues.push('Title is too short (< 30 characters)');
-      score -= 20;
-    } else if (title.length > 60) {
-      issues.push('Title may be truncated in SERPs (> 60 characters)');
-      score -= 10;
-    }
-
-    if (targetKeyword && !title.toLowerCase().includes(targetKeyword.toLowerCase())) {
-      issues.push('Target keyword not found in title');
-      score -= 25;
-    }
-
-    return { score, issues };
-  }
-
-  private analyzeMetaDescription(html: string | undefined): { value: string | null; score: number; issues: string[] } {
-    if (!html) {
-      return { value: null, score: 0, issues: ['No HTML provided for analysis'] };
-    }
-
-    const match = html.match(/<meta[^>]+name=["']description["'][^>]+content=["']([^"']+)["']/i);
-    const description = match ? match[1] : null;
-    const issues: string[] = [];
-    let score = 100;
-
-    if (!description) {
-      return { value: null, score: 0, issues: ['Missing meta description'] };
-    }
-
-    if (description.length < 120) {
-      issues.push('Meta description is too short');
-      score -= 20;
-    } else if (description.length > 160) {
-      issues.push('Meta description may be truncated');
-      score -= 10;
-    }
-
-    return { value: description, score, issues };
-  }
-
-  private analyzeH1(html: string | undefined, targetKeyword?: string): { value: string | null; score: number; issues: string[] } {
-    if (!html) {
-      return { value: null, score: 0, issues: ['No HTML provided'] };
-    }
-
-    const h1Matches = html.match(/<h1[^>]*>([^<]+)<\/h1>/gi);
-    const issues: string[] = [];
-    let score = 100;
-
-    if (!h1Matches || h1Matches.length === 0) {
-      return { value: null, score: 0, issues: ['Missing H1 tag'] };
-    }
-
-    if (h1Matches.length > 1) {
-      issues.push(`Multiple H1 tags found (${h1Matches.length})`);
-      score -= 15;
-    }
-
-    const h1Content = h1Matches[0].replace(/<[^>]+>/g, '');
-
-    if (targetKeyword && !h1Content.toLowerCase().includes(targetKeyword.toLowerCase())) {
-      issues.push('Target keyword not in H1');
-      score -= 20;
-    }
-
-    return { value: h1Content, score, issues };
-  }
-
-  private calculateReadabilityScore(content: string): number {
-    if (!content) {
-      return 0;
-    }
-
-    const sentences = content.split(/[.!?]+/).filter(s => s.trim().length > 0);
-    const words = content.split(/\s+/).filter(w => w.length > 0);
-
-    if (sentences.length === 0 || words.length === 0) {
-      return 0;
-    }
-
-    const avgWordsPerSentence = words.length / sentences.length;
-    const avgSyllablesPerWord = words.reduce((sum, word) => sum + this.countSyllables(word), 0) / words.length;
-
-    // Flesch Reading Ease approximation
-    const score = 206.835 - (1.015 * avgWordsPerSentence) - (84.6 * avgSyllablesPerWord);
-    return Math.max(0, Math.min(100, Math.round(score)));
-  }
-
-  private countSyllables(word: string): number {
-    word = word.toLowerCase();
-    if (word.length <= 3) {
-      return 1;
-    }
-    const matches = word.match(/[aeiouy]+/g);
-    return matches ? matches.length : 1;
-  }
-
-  private extractHeadingStructure(html: string): string[] {
-    const headings: string[] = [];
-    const matches = html.matchAll(/<(h[1-6])[^>]*>([^<]+)<\/\1>/gi);
-
-    for (const match of matches) {
-      headings.push(`${match[1].toUpperCase()}: ${match[2].trim()}`);
-    }
-
-    return headings.slice(0, 10);
-  }
-
-  private getTitleRecommendation(issue: string): string {
-    if (issue.includes('short')) {
-      return 'Expand title to 50-60 characters with relevant keywords';
-    }
-    if (issue.includes('truncated')) {
-      return 'Shorten title to under 60 characters, keeping keywords at the beginning';
-    }
-    if (issue.includes('keyword')) {
-      return 'Include your primary target keyword near the beginning of the title';
-    }
-    return 'Review and optimize your title tag';
-  }
-
-  // ==========================================================================
-  // CRAWL ANALYSIS ENGINE
-  // ==========================================================================
-
-  /**
-   * Site crawl with technical health report.
-   * Calls real APIs (PageSpeed, DataForSEO, GSC) when configured,
-   * with graceful fallback to zero-data defaults.
-   */
-  private async handleCrawlAnalysis(payload: CrawlAnalysisPayload): Promise<CrawlHealthReport> {
-    const { siteUrl } = payload;
-
-    this.log('INFO', `Running crawl analysis for ${siteUrl}`);
-
-    // Run analyses concurrently — each one falls back internally
-    const [ssl, speed, meta, indexing, mobileReadiness] = await Promise.all([
-      Promise.resolve(this.analyzeSSL(siteUrl)),
-      this.analyzeSpeed(siteUrl),
-      this.analyzeSiteMeta(siteUrl),
-      this.analyzeIndexing(siteUrl),
-      this.analyzeMobileReadiness(siteUrl),
-    ]);
-
-    // Calculate overall score
-    const overallScore = Math.round(
-      (ssl.score + speed.score + meta.score + indexing.score + mobileReadiness.score) / 5
-    );
-
-    // Generate prioritized fix list
-    const technicalFixList = this.generateTechnicalFixList(ssl, speed, meta, indexing, mobileReadiness);
-
-    return {
-      siteUrl,
-      crawlDate: new Date().toISOString(),
-      overallScore,
-      ssl,
-      speed,
-      meta,
-      indexing,
-      mobileReadiness,
-      technicalFixList,
-    };
-  }
-
-  private analyzeSSL(siteUrl: string): CrawlHealthReport['ssl'] {
-    // Simulated SSL analysis
-    const hasHTTPS = siteUrl.startsWith('https://');
-
-    if (!hasHTTPS) {
-      return {
-        status: 'missing',
-        issues: ['Site is not using HTTPS', 'No SSL certificate detected'],
-        score: 0,
-      };
-    }
-
-    // Simulate valid SSL with future expiry
-    const expiryDate = new Date();
-    expiryDate.setMonth(expiryDate.getMonth() + 8);
-
-    return {
-      status: 'valid',
-      expiryDate: expiryDate.toISOString(),
-      issues: [],
-      score: 100,
-    };
-  }
-
-  private async analyzeSpeed(siteUrl: string): Promise<CrawlHealthReport['speed']> {
-    try {
-      const result = await getPageSpeedService().analyze(siteUrl, 'desktop');
-      if (result.success && result.data) {
-        const d = result.data;
-        const issues: string[] = [];
-        if (d.performanceScore < 50) { issues.push('Performance score is critically low'); }
-        if (d.coreWebVitals.lcp > 4000) { issues.push(`LCP is slow (${(d.coreWebVitals.lcp / 1000).toFixed(1)}s)`); }
-        if (d.coreWebVitals.cls > 0.25) { issues.push(`CLS is high (${d.coreWebVitals.cls.toFixed(2)})`); }
-        if (d.coreWebVitals.tbt > 600) { issues.push('Total Blocking Time exceeds 600ms'); }
-        return {
-          score: d.performanceScore,
-          loadTime: d.loadTime,
-          ttfb: d.coreWebVitals.ttfb / 1000,
-          issues,
-          recommendations: d.recommendations.slice(0, 5),
-        };
-      }
-    } catch { /* fall through to default */ }
-
-    return {
-      score: 0,
-      loadTime: 0,
-      ttfb: 0,
-      issues: [],
-      recommendations: ['Configure GOOGLE_PAGESPEED_API_KEY for real speed analysis'],
-    };
-  }
-
-  private async analyzeSiteMeta(siteUrl: string): Promise<CrawlHealthReport['meta']> {
-    try {
-      const result = await getDataForSEOService().analyzeOnPage(siteUrl);
-      if (result.success && result.data) {
-        const d = result.data;
-        const issues: string[] = [];
-        let score = 100;
-        const missingTitles = d.title ? 0 : 1;
-        const missingDescriptions = d.description ? 0 : 1;
-        if (missingTitles > 0) { issues.push('Missing title tag'); score -= 30; }
-        if (missingDescriptions > 0) { issues.push('Missing meta description'); score -= 20; }
-        if (d.imagesWithoutAlt > 0) { issues.push(`${d.imagesWithoutAlt} images without alt text`); score -= 10; }
-        return {
-          score: Math.max(0, score),
-          pagesAnalyzed: 1,
-          missingTitles,
-          missingDescriptions,
-          duplicateTitles: [],
-          issues,
-        };
-      }
-    } catch { /* fall through to default */ }
-
-    return {
-      score: 0,
-      pagesAnalyzed: 0,
-      missingTitles: 0,
-      missingDescriptions: 0,
-      duplicateTitles: [],
-      issues: ['Configure DATAFORSEO_LOGIN/PASSWORD for real meta analysis'],
-    };
-  }
-
-  private async analyzeIndexing(siteUrl: string): Promise<CrawlHealthReport['indexing']> {
-    try {
-      const result = await getGSCService().getIndexingStatus(siteUrl);
-      if (result.success && result.data) {
-        const d = result.data;
-        const issues: string[] = [];
-        let score = 100;
-        if (d.totalPages > 0 && d.indexedPages < d.totalPages * 0.8) {
-          issues.push(`Only ${d.indexedPages}/${d.totalPages} pages indexed`);
-          score -= 30;
-        }
-        if (d.crawlErrors > 0) {
-          issues.push(`${d.crawlErrors} crawl errors detected`);
-          score -= Math.min(40, d.crawlErrors * 5);
-        }
-        return {
-          score: Math.max(0, score),
-          indexedPages: d.indexedPages,
-          blockedPages: [],
-          orphanPages: [],
-          canonicalIssues: issues,
-        };
-      }
-    } catch { /* fall through to default */ }
-
-    return {
-      score: 0,
-      indexedPages: 0,
-      blockedPages: [],
-      orphanPages: [],
-      canonicalIssues: [],
-    };
-  }
-
-  private async analyzeMobileReadiness(siteUrl: string): Promise<CrawlHealthReport['mobileReadiness']> {
-    try {
-      const result = await getPageSpeedService().analyze(siteUrl, 'mobile');
-      if (result.success && result.data) {
-        const d = result.data;
-        const issues: string[] = [];
-        if (d.performanceScore < 50) { issues.push('Mobile performance score is low'); }
-        if (d.seoScore < 80) { issues.push('Mobile SEO score needs improvement'); }
-        if (d.coreWebVitals.lcp > 4000) { issues.push('Slow mobile LCP — optimize largest image or text block'); }
-        // Score 70+ on PageSpeed mobile typically indicates responsive + viewport configured
-        const isResponsive = d.seoScore >= 70;
-        const viewportConfigured = d.seoScore >= 50;
-        return {
-          score: d.performanceScore,
-          isResponsive,
-          viewportConfigured,
-          issues,
-        };
-      }
-    } catch { /* fall through to default */ }
-
-    return {
-      score: 0,
-      isResponsive: false,
-      viewportConfigured: false,
-      issues: ['Configure GOOGLE_PAGESPEED_API_KEY for real mobile analysis'],
-    };
-  }
-
-  private generateTechnicalFixList(
-    ssl: CrawlHealthReport['ssl'],
-    speed: CrawlHealthReport['speed'],
-    meta: CrawlHealthReport['meta'],
-    indexing: CrawlHealthReport['indexing'],
-    mobile: CrawlHealthReport['mobileReadiness']
-  ): CrawlHealthReport['technicalFixList'] {
-    const fixList: CrawlHealthReport['technicalFixList'] = [];
-
-    // SSL issues
-    if (ssl.status !== 'valid') {
-      fixList.push({
-        priority: 'critical',
-        category: 'Security',
-        issue: ssl.status === 'missing' ? 'No SSL certificate' : `SSL ${ssl.status}`,
-        recommendation: 'Install and configure a valid SSL certificate',
-        estimatedImpact: 'High - affects rankings and user trust',
-      });
-    }
-
-    // Speed issues
-    if (speed.score < 70) {
-      fixList.push({
-        priority: 'high',
-        category: 'Performance',
-        issue: `Slow page load (${speed.loadTime}s)`,
-        recommendation: speed.recommendations[0] || 'Optimize page speed',
-        estimatedImpact: 'High - affects user experience and Core Web Vitals',
-      });
-    }
-
-    // Meta issues
-    if (meta.missingTitles > 0) {
-      fixList.push({
-        priority: 'high',
-        category: 'On-Page SEO',
-        issue: `${meta.missingTitles} pages missing title tags`,
-        recommendation: 'Add unique, keyword-optimized title tags to all pages',
-        estimatedImpact: 'High - title tags are a primary ranking factor',
-      });
-    }
-
-    if (meta.missingDescriptions > 0) {
-      fixList.push({
-        priority: 'medium',
-        category: 'On-Page SEO',
-        issue: `${meta.missingDescriptions} pages missing meta descriptions`,
-        recommendation: 'Add compelling meta descriptions with target keywords',
-        estimatedImpact: 'Medium - affects click-through rates',
-      });
-    }
-
-    // Indexing issues
-    if (indexing.orphanPages.length > 0) {
-      fixList.push({
-        priority: 'medium',
-        category: 'Site Structure',
-        issue: `${indexing.orphanPages.length} orphan pages detected`,
-        recommendation: 'Add internal links to orphan pages or remove them',
-        estimatedImpact: 'Medium - affects crawl efficiency',
-      });
-    }
-
-    if (indexing.canonicalIssues.length > 0) {
-      fixList.push({
-        priority: 'high',
-        category: 'Technical SEO',
-        issue: 'Canonical tag issues detected',
-        recommendation: 'Fix canonical tags to prevent duplicate content',
-        estimatedImpact: 'High - prevents ranking dilution',
-      });
-    }
-
-    // Mobile issues
-    if (!mobile.isResponsive) {
-      fixList.push({
-        priority: 'critical',
-        category: 'Mobile',
-        issue: 'Site not mobile-responsive',
-        recommendation: 'Implement responsive design or mobile-first approach',
-        estimatedImpact: 'Critical - mobile-first indexing is standard',
-      });
-    }
-
-    // Sort by priority
-    const priorityOrder = { critical: 0, high: 1, medium: 2, low: 3 };
-    fixList.sort((a, b) => priorityOrder[a.priority] - priorityOrder[b.priority]);
-
-    return fixList;
-  }
-
-  // ==========================================================================
-  // KEYWORD GAP ANALYSIS ENGINE
-  // ==========================================================================
-
-  /**
-   * Analyze keyword gaps compared to market trends.
-   * Uses Serper for position checks and DataForSEO for volume/difficulty
-   * when configured, with graceful fallback to heuristics.
-   */
-  private async handleKeywordGap(payload: KeywordGapPayload): Promise<KeywordGapResult> {
-    const { industry, currentKeywords, competitorDomains } = payload;
-
-    this.log('INFO', `Running keyword gap analysis for ${industry}`);
-
-    // Analyze current keywords — try real APIs first
-    const currentAnalysis = await Promise.all(
-      currentKeywords.map(async (kw) => ({
-        keyword: kw,
-        estimatedPosition: await this.estimateKeywordPosition(kw, competitorDomains?.[0]),
-        searchVolume: await this.estimateSearchVolume(kw),
-        difficulty: await this.estimateDifficulty(kw),
-      }))
-    );
-
-    // Generate gap keywords based on industry
-    const gapKeywords = await this.generateGapKeywords(industry, currentKeywords);
-
-    // Identify quick wins (low difficulty, good opportunity)
-    const quickWins = gapKeywords
-      .filter(kw => kw.difficulty === 'low' && kw.opportunity === 'high')
-      .map(kw => kw.keyword)
-      .slice(0, 5);
-
-    // Identify long-term targets
-    const longTermTargets = gapKeywords
-      .filter(kw => kw.difficulty === 'high' && kw.searchVolume === 'High')
-      .map(kw => kw.keyword)
-      .slice(0, 5);
-
-    // Generate content gap recommendations
-    const contentGaps = this.generateContentGaps(industry, gapKeywords);
-
-    return {
-      industry,
-      analysisDate: new Date().toISOString(),
-      currentKeywords: currentAnalysis,
-      gapKeywords,
-      quickWins,
-      longTermTargets,
-      contentGaps,
-    };
-  }
-
-  private async estimateKeywordPosition(keyword: string, targetDomain?: string): Promise<number> {
-    if (targetDomain) {
-      try {
-        const result = await getSerperSEOService().checkKeywordPosition(keyword, targetDomain);
-        if (result.success && result.data !== null) {
-          return result.data;
-        }
-      } catch { /* fall through to default */ }
-    }
-    return 0;
-  }
-
-  private async estimateSearchVolume(keyword: string): Promise<string> {
-    try {
-      const result = await getDataForSEOService().getKeywordData([keyword]);
-      if (result.success && result.data && result.data.length > 0) {
-        const vol = result.data[0].searchVolume;
-        if (vol >= 10000) {
-          return 'High';
-        }
-        if (vol >= 1000) {
-          return 'Medium';
-        }
-        if (vol > 0) {
-          return 'Low';
-        }
-      }
-    } catch { /* fall through to heuristic */ }
-
-    // Heuristic fallback
-    const wordCount = keyword.split(/\s+/).length;
-    if (wordCount <= 1) {
-      return 'High';
-    }
-    if (wordCount <= 3) {
-      return 'Medium';
-    }
-    return 'Low';
-  }
-
-  private async generateGapKeywords(
-    industry: string,
-    currentKeywords: string[]
-  ): Promise<KeywordGapResult['gapKeywords']> {
-    const industryKeywordMap: Record<string, string[]> = {
-      technology: [
-        'best software tools', 'automation solutions', 'digital transformation',
-        'cloud migration', 'AI integration', 'data analytics', 'cybersecurity solutions',
-        'tech stack optimization', 'API integration', 'workflow automation',
-      ],
-      healthcare: [
-        'healthcare technology', 'patient management', 'medical billing software',
-        'telehealth solutions', 'HIPAA compliance', 'healthcare analytics',
-        'patient engagement', 'medical practice management', 'health records',
-      ],
-      finance: [
-        'fintech solutions', 'financial planning', 'investment management',
-        'accounting automation', 'payment processing', 'financial compliance',
-        'wealth management', 'banking solutions', 'credit management',
-      ],
-      ecommerce: [
-        'ecommerce platform', 'online store optimization', 'shopping cart',
-        'payment gateway', 'inventory management', 'order fulfillment',
-        'customer retention', 'product recommendations', 'checkout optimization',
-      ],
-      saas: [
-        'saas platform', 'subscription management', 'customer success',
-        'user onboarding', 'product analytics', 'feature adoption',
-        'churn reduction', 'upselling strategies', 'saas metrics',
-      ],
-    };
-
-    const industryKeywords = industryKeywordMap[industry.toLowerCase()] ||
-      industryKeywordMap.technology;
-
-    const currentLower = currentKeywords.map(k => k.toLowerCase());
-    const gapCandidates = industryKeywords.filter(kw => !currentLower.includes(kw.toLowerCase()));
-
-    // Try to fetch real keyword data in a single batch call
-    const realDataMap = new Map<string, { volume: string; difficulty: 'low' | 'medium' | 'high' }>();
-    try {
-      const result = await getDataForSEOService().getKeywordData(gapCandidates);
-      if (result.success && result.data) {
-        for (const item of result.data) {
-          const vol = item.searchVolume >= 10000 ? 'High' : item.searchVolume >= 1000 ? 'Medium' : 'Low';
-          const diff = item.competitionLevel === 'LOW' ? 'low' as const
-            : item.competitionLevel === 'HIGH' ? 'high' as const
-            : 'medium' as const;
-          realDataMap.set(item.keyword.toLowerCase(), { volume: vol, difficulty: diff });
-        }
-      }
-    } catch { /* use heuristic fallback for all */ }
-
-    return gapCandidates.map(keyword => {
-      const real = realDataMap.get(keyword.toLowerCase());
-      const wordCount = keyword.split(/\s+/).length;
-      const difficulty = real?.difficulty ?? (wordCount >= 4 ? 'low' : wordCount >= 2 ? 'medium' : 'high');
-      const volume = real?.volume ?? (wordCount <= 1 ? 'High' : wordCount <= 3 ? 'Medium' : 'Low');
-
-      let opportunity: 'high' | 'medium' | 'low' = 'medium';
-      if (difficulty === 'low' && volume !== 'Low') { opportunity = 'high'; }
-      if (difficulty === 'high' && volume === 'Low') { opportunity = 'low'; }
-
-      return {
-        keyword,
-        opportunity,
-        searchVolume: volume,
-        difficulty,
-        competitorRanking: real ? 'Data from DataForSEO' : 'Unknown — configure DataForSEO for real data',
-        recommendation: this.getKeywordRecommendation(opportunity, difficulty),
-      };
-    });
-  }
-
-  private getKeywordRecommendation(opportunity: string, difficulty: string): string {
-    if (opportunity === 'high' && difficulty === 'low') {
-      return 'Create dedicated landing page and blog content immediately';
-    }
-    if (opportunity === 'high') {
-      return 'Build comprehensive content cluster around this topic';
-    }
-    if (difficulty === 'high') {
-      return 'Long-term target - build authority through related content first';
-    }
-    return 'Include in content strategy for supporting pages';
-  }
-
-  private generateContentGaps(
-    industry: string,
-    gapKeywords: KeywordGapResult['gapKeywords']
-  ): KeywordGapResult['contentGaps'] {
-    const highOpportunity = gapKeywords.filter(kw => kw.opportunity === 'high').slice(0, 4);
-
-    return highOpportunity.map(kw => ({
-      topic: kw.keyword,
-      suggestedTitle: this.generateContentTitle(kw.keyword, industry),
-      targetKeywords: [kw.keyword, `${kw.keyword} guide`, `best ${kw.keyword}`],
-      estimatedTraffic: kw.searchVolume === 'High' ? '1,000-5,000/mo' :
-        kw.searchVolume === 'Medium' ? '200-1,000/mo' : '50-200/mo',
-    }));
-  }
-
-  private generateContentTitle(keyword: string, industry: string): string {
-    // Use a deterministic title format rather than random selection
-    return `The Complete Guide to ${keyword} for ${industry}`;
-  }
-
-  // ==========================================================================
-  // 30-DAY KEYWORD STRATEGY GENERATOR
-  // ==========================================================================
-
-  /**
-   * Generate a comprehensive 30-day SEO strategy
-   */
-  private handleThirtyDayStrategy(payload: ThirtyDayStrategyPayload): ThirtyDayStrategy {
-    const { industry, currentRankings, businessGoals } = payload;
-
-    this.log('INFO', `Generating 30-day strategy for ${industry}`);
-
-    const weeks: ThirtyDayStrategy['weeks'] = [];
-
-    // Week 1: Technical Foundation
-    weeks.push({
-      weekNumber: 1,
-      theme: 'Technical Foundation',
-      tasks: [
-        { day: 1, taskType: 'technical', task: 'Run comprehensive site crawl and audit', expectedOutcome: 'Identify all technical issues', effort: 'medium' },
-        { day: 2, taskType: 'technical', task: 'Fix critical SSL and speed issues', expectedOutcome: 'Improved Core Web Vitals', effort: 'high' },
-        { day: 3, taskType: 'technical', task: 'Optimize meta titles and descriptions', targetKeywords: [industry], expectedOutcome: 'Better SERP presence', effort: 'medium' },
-        { day: 4, taskType: 'analysis', task: 'Keyword gap analysis vs competitors', expectedOutcome: 'Keyword opportunity list', effort: 'medium' },
-        { day: 5, taskType: 'technical', task: 'Fix indexing and canonical issues', expectedOutcome: 'Clean site structure', effort: 'medium' },
-      ],
-      keyMetrics: ['Core Web Vitals score', 'Indexed pages count', 'Technical SEO score'],
-    });
-
-    // Week 2: Content Foundation
-    weeks.push({
-      weekNumber: 2,
-      theme: 'Content Optimization',
-      tasks: [
-        { day: 8, taskType: 'content', task: 'Audit existing content for optimization opportunities', expectedOutcome: 'Content improvement roadmap', effort: 'medium' },
-        { day: 9, taskType: 'content', task: 'Update top 5 pages with target keywords', targetKeywords: currentRankings?.slice(0, 5).map(r => r.keyword) ?? [], expectedOutcome: 'Improved on-page SEO', effort: 'high' },
-        { day: 10, taskType: 'content', task: 'Create cornerstone content piece', targetKeywords: [industry, `${industry} guide`], expectedOutcome: 'Authority content published', effort: 'high' },
-        { day: 11, taskType: 'content', task: 'Internal linking optimization', expectedOutcome: 'Better link equity distribution', effort: 'medium' },
-        { day: 12, taskType: 'analysis', task: 'Competitor content analysis', expectedOutcome: 'Content gap insights', effort: 'low' },
-      ],
-      keyMetrics: ['Content quality scores', 'Keyword rankings', 'Organic traffic'],
-    });
-
-    // Week 3: Authority Building
-    weeks.push({
-      weekNumber: 3,
-      theme: 'Authority Building',
-      tasks: [
-        { day: 15, taskType: 'outreach', task: 'Identify link building opportunities', expectedOutcome: 'Prospect list of 50+ sites', effort: 'medium' },
-        { day: 16, taskType: 'content', task: 'Create linkable asset (guide/tool/study)', targetKeywords: businessGoals, expectedOutcome: 'High-value content for links', effort: 'high' },
-        { day: 17, taskType: 'outreach', task: 'Guest post outreach campaign', expectedOutcome: '5-10 outreach emails sent', effort: 'medium' },
-        { day: 18, taskType: 'content', task: 'Publish supporting blog content', targetKeywords: [`${industry} tips`, `${industry} best practices`], expectedOutcome: 'Content cluster expansion', effort: 'medium' },
-        { day: 19, taskType: 'analysis', task: 'Monitor and report on progress', expectedOutcome: 'Week 3 performance report', effort: 'low' },
-      ],
-      keyMetrics: ['Referring domains', 'Domain authority', 'Backlink quality'],
-    });
-
-    // Week 4: Optimization & Scale
-    weeks.push({
-      weekNumber: 4,
-      theme: 'Optimization & Scale',
-      tasks: [
-        { day: 22, taskType: 'analysis', task: 'Review ranking changes and adjust strategy', expectedOutcome: 'Data-driven optimizations', effort: 'medium' },
-        { day: 23, taskType: 'content', task: 'Update underperforming content', expectedOutcome: 'Refreshed content with better targeting', effort: 'medium' },
-        { day: 24, taskType: 'technical', task: 'Schema markup implementation', expectedOutcome: 'Rich snippets eligibility', effort: 'medium' },
-        { day: 25, taskType: 'content', task: 'Create content for quick-win keywords', targetKeywords: ['how to', 'best', 'guide'], expectedOutcome: 'Targeting low-competition terms', effort: 'high' },
-        { day: 26, taskType: 'analysis', task: 'Comprehensive 30-day report and next steps', expectedOutcome: 'Full performance analysis', effort: 'medium' },
-      ],
-      keyMetrics: ['Overall organic traffic', 'Keyword position changes', 'Conversion rate'],
-    });
-
-    // Build priority keywords
-    const priorityKeywords: ThirtyDayStrategy['priorityKeywords'] = (currentRankings ?? [])
-      .slice(0, 5)
-      .map(r => ({
-        keyword: r.keyword,
-        currentPosition: r.position,
-        targetPosition: Math.max(1, r.position - 10),
-        strategy: r.position > 20 ? 'Create new optimized content' : r.position > 10 ? 'Optimize existing page + build links' : 'Maintain and protect position',
-      }));
-
-    // Add new keyword targets
-    priorityKeywords.push({
-      keyword: `${industry} solutions`,
-      currentPosition: null,
-      targetPosition: 15,
-      strategy: 'Create comprehensive landing page',
-    });
-
-    return {
-      industry,
-      generatedDate: new Date().toISOString(),
-      weeks,
-      priorityKeywords,
-      expectedResults: {
-        trafficIncrease: '20-40% increase in organic traffic',
-        rankingImprovements: 'Average position improvement of 5-10 spots',
-        technicalScore: 'Technical SEO score improvement to 90+',
-      },
-    };
-  }
-
-  /**
-   * Handle signals from the Signal Bus
-   */
   async handleSignal(signal: Signal): Promise<AgentReport> {
-    const message: AgentMessage = {
-      id: signal.id,
-      timestamp: signal.createdAt,
-      from: signal.origin,
-      to: this.identity.id,
-      type: 'COMMAND',
-      priority: 'NORMAL',
-      payload: signal.payload.payload,
-      requiresResponse: true,
-      traceId: signal.id,
-    };
-
-    return this.execute(message);
+    const taskId = signal.id;
+    if (signal.payload.type === 'COMMAND') {
+      return this.execute(signal.payload);
+    }
+    return this.createReport(taskId, 'COMPLETED', { acknowledged: true });
   }
 
   generateReport(taskId: string, data: unknown): AgentReport {
@@ -1778,12 +497,12 @@ export class SEOExpert extends BaseSpecialist {
   }
 
   getFunctionalLOC(): { functional: number; boilerplate: number } {
-    return { functional: 450, boilerplate: 50 };
+    return { functional: 440, boilerplate: 60 };
   }
 }
 
 // ============================================================================
-// EXPORTS
+// FACTORY / SINGLETON
 // ============================================================================
 
 export function createSEOExpert(): SEOExpert {
@@ -1796,3 +515,22 @@ export function getSEOExpert(): SEOExpert {
   instance ??= createSEOExpert();
   return instance;
 }
+
+// ============================================================================
+// INTERNAL TEST HELPERS (exported for proof-of-life harness + regression executor)
+// ============================================================================
+
+export const __internal = {
+  SPECIALIST_ID,
+  DEFAULT_INDUSTRY_KEY,
+  SUPPORTED_ACTIONS,
+  loadGMAndBrandDNA,
+  buildResolvedSystemPrompt,
+  buildKeywordResearchUserPrompt,
+  buildDomainAnalysisUserPrompt,
+  stripJsonFences,
+  KeywordResearchRequestSchema,
+  KeywordResearchResultSchema,
+  DomainAnalysisRequestSchema,
+  DomainAnalysisResultSchema,
+};

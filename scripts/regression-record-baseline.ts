@@ -18,6 +18,7 @@ import { copywriterExecutor } from '../src/lib/regression/executors/copywriter-e
 import { videoSpecialistExecutor } from '../src/lib/regression/executors/video-specialist-executor';
 import { calendarCoordinatorExecutor } from '../src/lib/regression/executors/calendar-coordinator-executor';
 import { assetGeneratorExecutor } from '../src/lib/regression/executors/asset-generator-executor';
+import { seoExpertExecutor } from '../src/lib/regression/executors/seo-expert-executor';
 import {
   listActiveCasesForAgent,
   recordBaseline,
@@ -31,6 +32,7 @@ const EXECUTOR_REGISTRY: Record<string, CaseExecutor> = {
   VIDEO_SPECIALIST: videoSpecialistExecutor,
   CALENDAR_COORDINATOR: calendarCoordinatorExecutor,
   ASSET_GENERATOR: assetGeneratorExecutor,
+  SEO_EXPERT: seoExpertExecutor,
 };
 
 interface CliArgs {
