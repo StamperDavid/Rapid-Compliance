@@ -4403,17 +4403,55 @@ export async function executeToolCall(toolCall: ToolCall, context?: ToolCallCont
       case 'delegate_to_marketing': {
         const marketingStart = Date.now();
         trackMissionStep(context, 'delegate_to_marketing', 'RUNNING', { toolArgs: args });
-        const notWiredSummary = 'Marketing department: not yet wired — specialist rebuild in progress';
-        trackMissionStep(context, 'delegate_to_marketing', 'FAILED', {
-          summary: notWiredSummary,
-          durationMs: Date.now() - marketingStart,
-          error: notWiredSummary,
-        });
-        content = JSON.stringify({
-          status: 'NOT_WIRED',
-          error: 'Marketing department specialist rebuild is in progress. This tool will return online when the SEO Expert, LinkedIn Expert, TikTok Expert, Twitter/X Expert, Facebook Ads Expert, and Growth Analyst have been rebuilt as real AI agents. See CONTINUATION_PROMPT.md Current Priority section.',
-          manager: 'MARKETING_MANAGER',
-        });
+
+        try {
+          const { MarketingManager } = await import('@/lib/agents/marketing/manager');
+          const marketingMgr = new MarketingManager();
+          await marketingMgr.initialize();
+
+          const marketingPayload: Record<string, unknown> = {
+            goal: args.goal as string,
+            platform: args.platform as string | undefined,
+            niche: args.niche as string | undefined,
+            audience: args.audience as string | undefined,
+            budget: args.budget as string | undefined,
+            contentType: args.contentType as string | undefined,
+          };
+
+          const marketingResult = await withTimeout(marketingMgr.execute({
+            id: `marketing_${Date.now()}`,
+            timestamp: new Date(),
+            from: 'JASPER',
+            to: 'MARKETING_MANAGER',
+            type: 'COMMAND',
+            priority: 'NORMAL',
+            payload: marketingPayload,
+            requiresResponse: true,
+            traceId: `trace_${Date.now()}`,
+          }), MANAGER_TIMEOUT_MS, 'Marketing Manager');
+
+          const marketingDuration = Date.now() - marketingStart;
+          trackMissionStep(context, 'delegate_to_marketing',
+            marketingResult.status === 'COMPLETED' ? 'COMPLETED' : 'FAILED',
+            { summary: `Marketing: ${marketingResult.status}`, durationMs: marketingDuration, toolResult: JSON.stringify(marketingResult.data) }
+          );
+
+          content = JSON.stringify({
+            status: marketingResult.status,
+            data: marketingResult.data,
+            errors: marketingResult.errors,
+            manager: 'MARKETING_MANAGER',
+            reviewLink: getReviewLink('delegate_to_marketing', context?.missionId),
+          });
+        } catch (marketingError: unknown) {
+          const errorMsg = marketingError instanceof Error ? marketingError.message : 'Unknown error';
+          trackMissionStep(context, 'delegate_to_marketing', 'FAILED', {
+            summary: `Marketing: FAILED — ${errorMsg}`,
+            durationMs: Date.now() - marketingStart,
+            error: errorMsg,
+          });
+          content = JSON.stringify({ error: errorMsg, manager: 'MARKETING_MANAGER' });
+        }
         break;
       }
 
