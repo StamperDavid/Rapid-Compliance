@@ -197,10 +197,10 @@ const DesignTokensSchema = z.object({
 // ghost") but the output is regression-stable.
 const ComponentGuidelineSchema = z.object({
   name: z.string().min(2).max(60),
-  purpose: z.string().min(10).max(800),
-  variantsDescription: z.string().min(10).max(1500),
-  statesCoveredDescription: z.string().min(10).max(1000),
-  accessibilityNotes: z.string().min(20).max(1500),
+  purpose: z.string().min(10).max(1200),
+  variantsDescription: z.string().min(10).max(2500),
+  statesCoveredDescription: z.string().min(10).max(2500),
+  accessibilityNotes: z.string().min(20).max(2000),
 });
 
 const DesignSystemResultSchema = z.object({
