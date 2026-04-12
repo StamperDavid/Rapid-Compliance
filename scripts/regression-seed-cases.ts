@@ -957,6 +957,91 @@ const FACEBOOK_ADS_EXPERT_CASES: Omit<RegressionCase, 'createdAt' | 'updatedAt' 
 ];
 
 // ---------------------------------------------------------------------------
+// Growth Analyst cases
+// ---------------------------------------------------------------------------
+
+const GROWTH_ANALYST_CASES: Omit<RegressionCase, 'createdAt' | 'updatedAt' | 'baselines'>[] = [
+  {
+    caseId: 'growth_analyst_saas_acquisition',
+    agentId: 'GROWTH_ANALYST',
+    name: 'SaaS customer acquisition growth analysis',
+    description:
+      'Canonical growth analysis case. Exercises experiment count, prioritized actions, KPI targets, strategy depth, and topic-echo fidelity.',
+    mode: 'SINGLE_SHOT',
+    active: true,
+    tags: ['generate_content', 'saas', 'acquisition', 'canonical', 'baseline'],
+    createdBy: 'seed-script',
+    shapeTolerances: [
+      { path: '$.experiments.length', kind: 'arrayLength', min: 3, max: 7, reason: 'Schema allows 3-7 experiments.' },
+      { path: '$.prioritizedActions.length', kind: 'arrayLength', min: 3, max: 7, reason: 'Schema allows 3-7 actions.' },
+      { path: '$.kpiTargets.length', kind: 'arrayLength', min: 3, max: 8, reason: 'Schema allows 3-8 KPI targets.' },
+      { path: '$.analysis.opportunities.length', kind: 'arrayLength', min: 3, max: 8, reason: 'Schema allows 3-8 opportunities.' },
+    ],
+    inputPayload: {
+      action: 'generate_content',
+      topic: 'Customer acquisition strategy for B2B SaaS — improving trial-to-paid conversion and reducing CAC',
+      contentType: 'growth_analysis',
+      targetAudience: 'B2B SaaS founders scaling from $1M to $10M ARR',
+      tone: 'analytical and direct',
+      campaignGoal: 'Double trial-to-paid conversion rate within 90 days',
+    },
+    notes: 'Baseline case — any delta here flags upgrades across the whole Growth Analyst surface.',
+  },
+  {
+    caseId: 'growth_analyst_realestate_leads',
+    agentId: 'GROWTH_ANALYST',
+    name: 'Real estate lead generation growth analysis',
+    description:
+      'Industry-switching stress case. Tests whether the LLM adapts growth analysis to real estate context.',
+    mode: 'SINGLE_SHOT',
+    active: true,
+    tags: ['generate_content', 'real_estate', 'lead_gen', 'industry_switch', 'stress'],
+    createdBy: 'seed-script',
+    shapeTolerances: [
+      { path: '$.experiments.length', kind: 'arrayLength', min: 3, max: 7, reason: 'Schema allows 3-7 experiments.' },
+      { path: '$.prioritizedActions.length', kind: 'arrayLength', min: 3, max: 7, reason: 'Schema allows 3-7 actions.' },
+      { path: '$.kpiTargets.length', kind: 'arrayLength', min: 3, max: 8, reason: 'Schema allows 3-8 KPI targets.' },
+      { path: '$.analysis.opportunities.length', kind: 'arrayLength', min: 3, max: 8, reason: 'Schema allows 3-8 opportunities.' },
+    ],
+    inputPayload: {
+      action: 'generate_content',
+      topic: 'Lead generation strategy for luxury real estate market — increasing qualified buyer pipeline',
+      contentType: 'growth_analysis',
+      targetAudience: 'Luxury real estate agents and brokerages',
+      tone: 'strategic and data-driven',
+      campaignGoal: 'Generate 50 qualified luxury buyer leads per month',
+    },
+    notes: 'Industry-switching regressions surface if the LLM returns SaaS growth advice instead of real estate.',
+  },
+  {
+    caseId: 'growth_analyst_ecommerce_retention',
+    agentId: 'GROWTH_ANALYST',
+    name: 'Ecommerce customer retention growth analysis',
+    description:
+      'Content-type stress case with retention focus instead of acquisition. Tests whether the LLM produces retention-specific experiments and KPIs.',
+    mode: 'SINGLE_SHOT',
+    active: true,
+    tags: ['generate_content', 'ecommerce', 'retention', 'content_type_stress', 'stress'],
+    createdBy: 'seed-script',
+    shapeTolerances: [
+      { path: '$.experiments.length', kind: 'arrayLength', min: 3, max: 7, reason: 'Schema allows 3-7 experiments.' },
+      { path: '$.prioritizedActions.length', kind: 'arrayLength', min: 3, max: 7, reason: 'Schema allows 3-7 actions.' },
+      { path: '$.kpiTargets.length', kind: 'arrayLength', min: 3, max: 8, reason: 'Schema allows 3-8 KPI targets.' },
+      { path: '$.analysis.opportunities.length', kind: 'arrayLength', min: 3, max: 8, reason: 'Schema allows 3-8 opportunities.' },
+    ],
+    inputPayload: {
+      action: 'generate_content',
+      topic: 'Customer retention strategy for DTC ecommerce — reducing churn and increasing repeat purchase rate',
+      contentType: 'growth_analysis',
+      targetAudience: 'DTC ecommerce founders doing $500K-$5M annual revenue',
+      tone: 'practical and results-focused',
+      campaignGoal: 'Increase repeat purchase rate from 20% to 35% in 6 months',
+    },
+    notes: 'Content-type regressions surface if the model produces acquisition-focused analysis instead of retention.',
+  },
+];
+
+// ---------------------------------------------------------------------------
 // SEO Expert cases
 // ---------------------------------------------------------------------------
 
@@ -1088,6 +1173,7 @@ const AGENT_CASE_BANK: Record<string, Omit<RegressionCase, 'createdAt' | 'update
   TIKTOK_EXPERT: TIKTOK_EXPERT_CASES,
   TWITTER_X_EXPERT: TWITTER_X_EXPERT_CASES,
   FACEBOOK_ADS_EXPERT: FACEBOOK_ADS_EXPERT_CASES,
+  GROWTH_ANALYST: GROWTH_ANALYST_CASES,
 };
 
 async function main(): Promise<void> {

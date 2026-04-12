@@ -25,6 +25,7 @@ import { linkedinExpertExecutor } from '../src/lib/regression/executors/linkedin
 import { tiktokExpertExecutor } from '../src/lib/regression/executors/tiktok-expert-executor';
 import { twitterExpertExecutor } from '../src/lib/regression/executors/twitter-expert-executor';
 import { facebookAdsExpertExecutor } from '../src/lib/regression/executors/facebook-ads-expert-executor';
+import { growthAnalystExecutor } from '../src/lib/regression/executors/growth-analyst-executor';
 import { runRegression, type CaseExecutor } from '../src/lib/regression/runner';
 import type { CaseDiff, DiffEntry, RegressionRun } from '../src/types/regression';
 
@@ -38,6 +39,7 @@ const EXECUTOR_REGISTRY: Record<string, CaseExecutor> = {
   TIKTOK_EXPERT: tiktokExpertExecutor,
   TWITTER_X_EXPERT: twitterExpertExecutor,
   FACEBOOK_ADS_EXPERT: facebookAdsExpertExecutor,
+  GROWTH_ANALYST: growthAnalystExecutor,
 };
 
 interface CliArgs {
