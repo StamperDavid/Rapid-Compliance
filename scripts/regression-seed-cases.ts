@@ -509,6 +509,118 @@ const ASSET_GENERATOR_CASES: Omit<RegressionCase, 'createdAt' | 'updatedAt' | 'b
 ];
 
 // ---------------------------------------------------------------------------
+// LinkedIn Expert cases
+// ---------------------------------------------------------------------------
+
+const LINKEDIN_EXPERT_CASES: Omit<RegressionCase, 'createdAt' | 'updatedAt' | 'baselines'>[] = [
+  {
+    caseId: 'linkedin_expert_saas_thought_leadership',
+    agentId: 'LINKEDIN_EXPERT',
+    name: 'SaaS thought leadership post (AI agent swarms)',
+    description:
+      'The canonical generate_content case for LinkedIn Expert. Exercises hook presence/quality, hashtag count range, alternative-angles count, content strategy depth, cliche detection (WARN), and topic-echo fidelity (WARN). Mirrors what MarketingManager.delegateToLinkedIn sends at runtime for a B2B SaaS thought-leadership post.',
+    mode: 'SINGLE_SHOT',
+    active: true,
+    tags: ['generate_content', 'saas', 'thought_leadership', 'canonical', 'baseline'],
+    createdBy: 'seed-script',
+    shapeTolerances: [
+      {
+        path: '$.post.hashtags.length',
+        kind: 'arrayLength',
+        min: 3,
+        max: 10,
+        reason: 'Schema allows 3-10 hashtags. Any count inside the range is a valid editorial choice.',
+      },
+      {
+        path: '$.alternativeAngles.length',
+        kind: 'arrayLength',
+        min: 2,
+        max: 5,
+        reason: 'Schema allows 2-5 alternative angles. Any count inside the range is valid.',
+      },
+    ],
+    inputPayload: {
+      action: 'generate_content',
+      topic: 'Why AI agent swarms will replace fragmented SaaS stacks by 2027',
+      contentType: 'post',
+      targetAudience: 'B2B SaaS founders and CTOs',
+      tone: 'professional yet bold',
+    },
+    notes: 'Baseline case — any delta here is a red flag for upgrades across the whole LinkedIn Expert surface.',
+  },
+  {
+    caseId: 'linkedin_expert_realestate_lead_gen',
+    agentId: 'LINKEDIN_EXPERT',
+    name: 'Real estate lead gen post (luxury open house)',
+    description:
+      'Industry-switching stress case. Exercises generate_content with a real-estate audience and authoritative tone to catch regressions where the LLM ignores industry context. Same structural invariants as the SaaS case with different topic-echo seed.',
+    mode: 'SINGLE_SHOT',
+    active: true,
+    tags: ['generate_content', 'real_estate', 'lead_gen', 'industry_switch', 'stress'],
+    createdBy: 'seed-script',
+    shapeTolerances: [
+      {
+        path: '$.post.hashtags.length',
+        kind: 'arrayLength',
+        min: 3,
+        max: 10,
+        reason: 'Schema allows 3-10 hashtags. Any count inside the range is a valid editorial choice.',
+      },
+      {
+        path: '$.alternativeAngles.length',
+        kind: 'arrayLength',
+        min: 2,
+        max: 5,
+        reason: 'Schema allows 2-5 alternative angles. Any count inside the range is valid.',
+      },
+    ],
+    inputPayload: {
+      action: 'generate_content',
+      topic: '3 open house strategies that luxury agents use to close above asking price',
+      contentType: 'post',
+      targetAudience: 'Real estate agents',
+      tone: 'authoritative',
+    },
+    notes: 'Industry-switching regressions surface if the LLM returns generic SaaS content instead of real-estate-specific language.',
+  },
+  {
+    caseId: 'linkedin_expert_carousel_agency',
+    agentId: 'LINKEDIN_EXPERT',
+    name: 'Carousel post for agency onboarding (content-type stress)',
+    description:
+      'Content-type stress case. Exercises generate_content with contentType=carousel and a conversational tone targeting agency owners. Tests whether the LLM adapts its output to a carousel format context while still satisfying the structural schema. Same invariant shape as canonical cases.',
+    mode: 'SINGLE_SHOT',
+    active: true,
+    tags: ['generate_content', 'carousel', 'agency', 'content_type_stress', 'stress'],
+    createdBy: 'seed-script',
+    shapeTolerances: [
+      {
+        path: '$.post.hashtags.length',
+        kind: 'arrayLength',
+        min: 3,
+        max: 10,
+        reason: 'Schema allows 3-10 hashtags. Any count inside the range is a valid editorial choice.',
+      },
+      {
+        path: '$.alternativeAngles.length',
+        kind: 'arrayLength',
+        min: 2,
+        max: 5,
+        reason: 'Schema allows 2-5 alternative angles. Any count inside the range is valid.',
+      },
+    ],
+    inputPayload: {
+      action: 'generate_content',
+      topic: 'The 5-step client onboarding process that reduced our agency churn by 60%',
+      contentType: 'carousel',
+      targetAudience: 'Marketing agency owners',
+      tone: 'conversational',
+    },
+    notes: 'Content-type regressions surface if the model ignores the carousel format or produces content indistinguishable from a standard post.',
+  },
+];
+
+// ---------------------------------------------------------------------------
 // SEO Expert cases
 // ---------------------------------------------------------------------------
 
@@ -636,6 +748,7 @@ const AGENT_CASE_BANK: Record<string, Omit<RegressionCase, 'createdAt' | 'update
   CALENDAR_COORDINATOR: CALENDAR_COORDINATOR_CASES,
   ASSET_GENERATOR: ASSET_GENERATOR_CASES,
   SEO_EXPERT: SEO_EXPERT_CASES,
+  LINKEDIN_EXPERT: LINKEDIN_EXPERT_CASES,
 };
 
 async function main(): Promise<void> {
