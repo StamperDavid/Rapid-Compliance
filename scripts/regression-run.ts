@@ -24,6 +24,7 @@ import { seoExpertExecutor } from '../src/lib/regression/executors/seo-expert-ex
 import { linkedinExpertExecutor } from '../src/lib/regression/executors/linkedin-expert-executor';
 import { tiktokExpertExecutor } from '../src/lib/regression/executors/tiktok-expert-executor';
 import { twitterExpertExecutor } from '../src/lib/regression/executors/twitter-expert-executor';
+import { facebookAdsExpertExecutor } from '../src/lib/regression/executors/facebook-ads-expert-executor';
 import { runRegression, type CaseExecutor } from '../src/lib/regression/runner';
 import type { CaseDiff, DiffEntry, RegressionRun } from '../src/types/regression';
 
@@ -36,6 +37,7 @@ const EXECUTOR_REGISTRY: Record<string, CaseExecutor> = {
   LINKEDIN_EXPERT: linkedinExpertExecutor,
   TIKTOK_EXPERT: tiktokExpertExecutor,
   TWITTER_X_EXPERT: twitterExpertExecutor,
+  FACEBOOK_ADS_EXPERT: facebookAdsExpertExecutor,
 };
 
 interface CliArgs {
