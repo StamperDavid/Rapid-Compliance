@@ -89,7 +89,10 @@ Each handler kept the outward shape of delegation: Mission Control steps flipped
 | #25 — Rebuild Calendar Coordinator | DONE (April 11, 2026) | `90dcf8d3` | Real Sonnet 4.6 specialist, single live action `plan_calendar`, dual date mode (explicit range OR AI-determined duration), manager shape-mismatch bug fixed, regression harness gains tolerance-aware non-determinism check. Detail below. |
 | #26 — Rebuild Asset Generator (copy portions) | DONE (April 12, 2026) | `7c5d93f3` | Real Sonnet 4.6 Creative Director specialist. LLM produces structured DALL-E prompt plan, code renders pixels. 3 regression cases, baseline + sanity run 2P/1W/0F. DALL-E pixel layer blocked on OpenAI billing (not code). Content dept 4/4 done. Detail below. |
 | #26b — Force 4 live-but-lying delegations to NOT_WIRED | DONE (April 12, 2026) | `c4a84d8c` | delegate_to_sales/trust/intelligence/commerce all routed to TEMPLATE specialists. Now return honest NOT_WIRED. −318 LOC. |
-| #27 — Rewire delegate_to_content + fix broken video tools | NEXT | — | Content dept is 4/4 REAL. Bring delegate_to_content back online, fix create_video/generate_video/assemble calling deleted Video Specialist actions. Then Marketing dept begins. |
+| #27 — Rewire delegate_to_content + fix broken video tools | DONE (April 12, 2026) | `2ae4bbf7` | delegate_to_content rewired to live ContentManager call. create_video remapped to script_to_storyboard. generate_video + assemble_video NOT_WIRED (Hedra/FFmpeg pipeline, not LLM). |
+| #28 — Rebuild SEO Expert | DONE (April 12, 2026) | `040eeb45` | Real Sonnet 4.6 specialist. 2 live actions: keyword_research + domain_analysis. 6 dead actions dropped. Pirate test PASSED. Regression 3P/0W/0F. Marketing dept 1/6. |
+| #29 — Rebuild LinkedIn Expert | DONE (April 12, 2026) | `1a474dc4` | Real Sonnet 4.6 specialist. Single live action: generate_content. 17 dead actions dropped. maxTokens 10000 (carousel needs room). Pirate test PASSED. Marketing dept 2/6. |
+| #30 — Rebuild TikTok Expert | NEXT | — | Marketing dept specialist #3. Same pattern. |
 
 ### Agent Swarm Rebuild Tracker — Ground Truth Audit (updated April 12, 2026)
 
@@ -101,13 +104,13 @@ Each handler kept the outward shape of delegation: Mission Control steps flipped
 
 | Category | Count | Notes |
 |---|---|---|
-| **REAL — confirmed AI agents** | **7** | Jasper (orchestrator chat route), Copywriter, Video Specialist, Calendar Coordinator, **Asset Generator (FULL — LLM plan + DALL-E pixels)**, Growth Strategist |
-| **TEMPLATE — needs rebuild** | **31** | Hand-coded switch/lookup engines with zero LLM calls. Every one is a lie that pretends to be AI. |
+| **REAL — confirmed AI agents** | **9** | Jasper (orchestrator chat route), Copywriter, Video Specialist, Calendar Coordinator, Asset Generator, Growth Strategist, **SEO Expert**, **LinkedIn Expert** |
+| **TEMPLATE — needs rebuild** | **29** | Hand-coded switch/lookup engines with zero LLM calls. Every one is a lie that pretends to be AI. |
 | **INFRA — routing/plumbing, not AI candidates** | **14** | Managers (9), jasper-tools dispatcher, voice-agent-handler, autonomous-posting-agent, chat-session-service, voice-ai-specialist |
 | **NOT_WIRED — Jasper tools intentionally disabled** | **11** | Original 7 from Task #20 (`produce_video`, `delegate_to_builder`, `delegate_to_marketing`, `delegate_to_content`, `delegate_to_architect`, `delegate_to_outreach`, `orchestrate_campaign`) + 4 from Task #26b (`delegate_to_sales`, `delegate_to_trust`, `delegate_to_intelligence`, `delegate_to_commerce`) |
 | **TOTAL agents** | **52 registry + 1 code drift = 53** | Registry says 52, actual code has `VOICE_AI_SPECIALIST` at `outreach/voice/specialist.ts` that's not in the registry |
 
-**Progress: 7 REAL / 38 total candidates (REAL + TEMPLATE) = 18% done.** Content department is COMPLETE (4/4 REAL). 31 TEMPLATE specialists remaining. Next: rewire `delegate_to_content` to live delegation, then Marketing department begins.
+**Progress: 9 REAL / 38 total candidates (REAL + TEMPLATE) = 24% done.** Content department COMPLETE (4/4 REAL, `delegate_to_content` live). Marketing department 2/6 (SEO Expert + LinkedIn Expert done). Next: TikTok Expert (#30).
 
 #### Full agent inventory (audited against source code)
 
@@ -146,8 +149,8 @@ Each handler kept the outward shape of delegation: Mission Control steps flipped
 
 | ID | File | LOC | Verdict | Task |
 |---|---|---|---|---|
-| SEO_EXPERT | `src/lib/agents/marketing/seo/specialist.ts` | 1798 | ❌ TEMPLATE | Task #27 (after Content close-out) |
-| LINKEDIN_EXPERT | `src/lib/agents/marketing/linkedin/specialist.ts` | 2155 | ❌ TEMPLATE | Task #28 |
+| SEO_EXPERT | `src/lib/agents/marketing/seo/specialist.ts` | 536 | ✅ REAL | **Task #28 — DONE.** 2 actions: keyword_research + domain_analysis. GM `sgm_seo_expert_saas_sales_ops_v1`. Regression 3P/0W/0F. |
+| LINKEDIN_EXPERT | `src/lib/agents/marketing/linkedin/specialist.ts` | 472 | ✅ REAL | **Task #29 — DONE.** Single action: generate_content. GM `sgm_linkedin_expert_saas_sales_ops_v1`. maxTokens 10000 for carousel. |
 | TIKTOK_EXPERT | `src/lib/agents/marketing/tiktok/specialist.ts` | 1642 | ❌ TEMPLATE | Task #29 |
 | TWITTER_EXPERT | `src/lib/agents/marketing/twitter/specialist.ts` | 1892 | ❌ TEMPLATE | Task #30 |
 | FACEBOOK_EXPERT | `src/lib/agents/marketing/facebook/specialist.ts` | 2132 | ❌ TEMPLATE | Task #31 |
