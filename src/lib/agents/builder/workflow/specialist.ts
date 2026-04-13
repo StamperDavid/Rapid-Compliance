@@ -1,406 +1,376 @@
 /**
- * Workflow Optimizer Specialist
- * STATUS: FUNCTIONAL
+ * Workflow Optimizer — REAL AI AGENT (Task #37 rebuild, April 12 2026)
  *
- * Multi-agent chain optimization specialist that orchestrates complex workflows
- * across the agent swarm. Implements the "Chain of Action" pattern for
- * coordinated multi-agent execution.
+ * Loads its Golden Master from Firestore at runtime, injects Brand DNA, and
+ * calls OpenRouter (Claude Sonnet 4.6) to compose a multi-agent workflow
+ * blueprint: ordered nodes (agent + action + purpose + inputs/outputs +
+ * duration + retry), execution pattern, parallelization analysis, critical
+ * path description, total duration estimate, risk mitigation, success
+ * criteria, and a written rationale grounded in the brand and goal.
  *
- * CAPABILITIES:
- * - Multi-agent chain composition and optimization
- * - Workflow dependency analysis and resolution
- * - Parallel execution path identification
- * - Bottleneck detection and remediation
- * - Chain performance analytics
- * - Failure recovery and retry orchestration
+ * Supported actions (live code paths only):
+ *   - compose_workflow
+ *
+ * The pre-rebuild template engine supported 6 actions (compose_workflow,
+ * optimize_chain, execute_workflow, analyze_performance, list_workflows,
+ * get_workflow). None of the six had a live caller in the codebase. The
+ * rebuild keeps only the creative LLM-appropriate action (compose_workflow).
+ * The other five were orchestration/CRUD primitives that require a workflow
+ * execution engine and durable storage that do not exist at the specialist
+ * layer. Per CLAUDE.md's no-stubs rule, they are not rebuilt — if a future
+ * feature needs them, they belong in a workflow service, not in an LLM
+ * specialist.
+ *
+ * Output shape: `{ workflowSummary, nodes[3..12], executionPattern,
+ * parallelizationNotes, criticalPathDescription, estimatedTotalDurationSeconds,
+ * riskMitigation[2..5], successCriteria, rationale }`. Prose fields for
+ * inputsDescription, outputsDescription, dependsOnDescription on each node
+ * (regression-stable — no nested arrays to jitter across repeated runs).
  */
 
+import { z } from 'zod';
 import { BaseSpecialist } from '../../base-specialist';
 import type { AgentMessage, AgentReport, SpecialistConfig, Signal } from '../../types';
-import { logger as _logger } from '@/lib/logger/logger';
-import {
-  getMemoryVault,
-  shareInsight,
-  broadcastSignal,
-  checkPendingSignals,
-} from '../../shared/memory-vault';
-
-// ============================================================================
-// SYSTEM PROMPT - The brain of this specialist
-// ============================================================================
-
-const SYSTEM_PROMPT = `You are the Workflow Optimizer Specialist, an expert in multi-agent orchestration and chain optimization.
-
-## YOUR ROLE
-You are the master choreographer of the agent swarm. You design, optimize, and execute complex workflows that require multiple agents working in coordination. Your primary pattern is the "Chain of Action" - sequential and parallel agent execution for maximum efficiency.
-
-## CORE CONCEPTS
-
-### Chain of Action
-A Chain of Action is a directed graph of agent executions where:
-- **Nodes** = Agent tasks (scrape, analyze, create, review, etc.)
-- **Edges** = Data/control flow dependencies
-- **Weights** = Estimated execution time and resource cost
-
-### Workflow Patterns
-1. **Sequential**: A → B → C (each depends on previous)
-2. **Parallel**: A, B, C all execute simultaneously
-3. **Fan-out**: A → [B, C, D] (one triggers many)
-4. **Fan-in**: [A, B, C] → D (many feed into one)
-5. **Conditional**: A → if(X) ? B : C (branching logic)
-
-## CAPABILITIES
-
-### 1. Workflow Composition
-Build optimized workflows from high-level goals:
-- Analyze the goal to identify required agents
-- Determine dependencies between agent tasks
-- Identify parallelization opportunities
-- Estimate total execution time
-
-### 2. Chain Optimization
-Improve existing workflows:
-- Detect bottlenecks (slow sequential paths)
-- Identify unnecessary dependencies
-- Suggest parallel alternatives
-- Cache reusable intermediate results
-
-### 3. Execution Orchestration
-Coordinate multi-agent execution:
-- Manage execution order
-- Handle data passing between agents
-- Monitor progress and health
-- Implement retry logic for failures
-
-### 4. Performance Analytics
-Track and report on workflow performance:
-- Execution time per agent
-- Bottleneck identification
-- Success/failure rates
-- Resource utilization
-
-## OUTPUT FORMAT
-
-For workflow composition:
-\`\`\`json
-{
-  "workflowId": "wf-uuid",
-  "name": "Descriptive workflow name",
-  "goal": "What this workflow achieves",
-  "nodes": [
-    {
-      "id": "node-1",
-      "agentId": "SCRAPER_SPECIALIST",
-      "action": "scrape_url",
-      "inputs": {},
-      "dependsOn": [],
-      "estimatedDuration": 5000,
-      "retryPolicy": { "maxRetries": 3, "backoff": "exponential" }
-    }
-  ],
-  "edges": [
-    { "from": "node-1", "to": "node-2", "dataMapping": {} }
-  ],
-  "parallelGroups": [["node-2", "node-3"]],
-  "estimatedTotalDuration": 15000,
-  "criticalPath": ["node-1", "node-4", "node-5"]
-}
-\`\`\`
-
-## RULES
-1. Always identify the critical path (longest sequential dependency chain)
-2. Maximize parallelization without breaking dependencies
-3. Include retry policies for unreliable operations
-4. Provide clear data mappings between nodes
-5. Consider resource constraints (API limits, memory, etc.)`;
+import { OpenRouterProvider } from '@/lib/ai/openrouter-provider';
+import { PLATFORM_ID } from '@/lib/constants/platform';
+import { getActiveSpecialistGMByIndustry } from '@/lib/training/specialist-golden-master-service';
+import { getBrandDNA, type BrandDNA } from '@/lib/brand/brand-dna-service';
+import type { ModelName } from '@/types/ai-models';
+import { logger } from '@/lib/logger/logger';
 
 // ============================================================================
 // CONFIGURATION
 // ============================================================================
 
+const FILE = 'builder/workflow/specialist.ts';
+const SPECIALIST_ID = 'WORKFLOW_OPTIMIZER';
+const DEFAULT_INDUSTRY_KEY = 'saas_sales_ops';
+const SUPPORTED_ACTIONS = ['compose_workflow'] as const;
+type SupportedAction = (typeof SUPPORTED_ACTIONS)[number];
+
+interface WorkflowOptimizerGMConfig {
+  systemPrompt: string;
+  model: ModelName;
+  temperature: number;
+  maxTokens: number;
+  supportedActions: string[];
+}
+
 const CONFIG: SpecialistConfig = {
   identity: {
-    id: 'WORKFLOW_OPTIMIZER',
+    id: SPECIALIST_ID,
     name: 'Workflow Optimizer',
     role: 'specialist',
     status: 'FUNCTIONAL',
     reportsTo: 'BUILDER_MANAGER',
-    capabilities: [
-      'workflow_composition',
-      'chain_optimization',
-      'dependency_analysis',
-      'parallel_execution',
-      'bottleneck_detection',
-      'failure_recovery',
-      'performance_analytics',
-    ],
+    capabilities: ['compose_workflow'],
   },
-  systemPrompt: SYSTEM_PROMPT,
-  tools: ['compose_workflow', 'optimize_chain', 'execute_workflow', 'analyze_performance'],
+  systemPrompt: '',
+  tools: ['compose_workflow'],
   outputSchema: {
     type: 'object',
     properties: {
-      workflowId: { type: 'string' },
+      workflowSummary: { type: 'object' },
       nodes: { type: 'array' },
-      edges: { type: 'array' },
-      analytics: { type: 'object' },
+      executionPattern: { type: 'string' },
+      parallelizationNotes: { type: 'string' },
+      criticalPathDescription: { type: 'string' },
+      estimatedTotalDurationSeconds: { type: 'number' },
+      riskMitigation: { type: 'array' },
+      successCriteria: { type: 'string' },
+      rationale: { type: 'string' },
     },
-    required: ['workflowId'],
   },
-  maxTokens: 8192,
-  temperature: 0.3, // Low temperature for precise orchestration
+  maxTokens: 10000,
+  temperature: 0.6,
 };
 
 // ============================================================================
-// TYPE DEFINITIONS
+// INPUT CONTRACT
 // ============================================================================
 
-export type WorkflowStatus =
-  | 'DRAFT'
-  | 'VALIDATED'
-  | 'QUEUED'
-  | 'RUNNING'
-  | 'PAUSED'
-  | 'COMPLETED'
-  | 'FAILED'
-  | 'CANCELLED';
-
-export type NodeStatus =
-  | 'PENDING'
-  | 'READY'
-  | 'RUNNING'
-  | 'COMPLETED'
-  | 'FAILED'
-  | 'SKIPPED';
-
-export interface RetryPolicy {
-  maxRetries: number;
-  backoff: 'none' | 'linear' | 'exponential';
-  initialDelayMs: number;
-  maxDelayMs: number;
-}
-
-export interface WorkflowNode {
-  id: string;
-  agentId: string;
-  action: string;
-  inputs: Record<string, unknown>;
-  dependsOn: string[];
-  estimatedDurationMs: number;
-  retryPolicy: RetryPolicy;
-  timeout?: number;
-  condition?: {
-    expression: string;
-    skipOnFalse: boolean;
-  };
-  metadata?: Record<string, unknown>;
-}
-
-export interface WorkflowEdge {
-  from: string;
-  to: string;
-  dataMapping: Record<string, string>; // target.input -> source.output
-  condition?: string;
-}
-
-export interface Workflow {
-  id: string;
-  name: string;
-  description: string;
-  goal: string;
-  nodes: WorkflowNode[];
-  edges: WorkflowEdge[];
-  parallelGroups: string[][];
-  criticalPath: string[];
-  estimatedTotalDurationMs: number;
-  status: WorkflowStatus;
-  createdAt: string;
-  updatedAt: string;
-  version: number;
-}
-
-export interface NodeExecutionResult {
-  nodeId: string;
-  status: NodeStatus;
-  startedAt: string;
-  completedAt?: string;
-  durationMs?: number;
-  output?: unknown;
-  error?: string;
-  retryCount: number;
-}
-
-export interface WorkflowExecutionResult {
-  workflowId: string;
-  executionId: string;
-  status: WorkflowStatus;
-  startedAt: string;
-  completedAt?: string;
-  totalDurationMs?: number;
-  nodeResults: NodeExecutionResult[];
-  finalOutput?: unknown;
-  errors: string[];
-}
-
-export interface WorkflowAnalytics {
-  workflowId: string;
-  executionCount: number;
-  avgDurationMs: number;
-  successRate: number;
-  bottlenecks: Array<{
-    nodeId: string;
-    avgDurationMs: number;
-    percentOfTotal: number;
-  }>;
-  parallelizationEfficiency: number;
-  recommendations: string[];
+interface ComposeWorkflowConstraintsInput {
+  maxDurationSeconds?: number;
+  requiredAgents?: string[];
+  excludedAgents?: string[];
+  priority?: 'low' | 'medium' | 'high' | 'critical';
+  maxParallelism?: number;
 }
 
 export interface ComposeWorkflowRequest {
+  action: 'compose_workflow';
   goal: string;
-  constraints?: {
-    maxDurationMs?: number;
-    requiredAgents?: string[];
-    excludedAgents?: string[];
-    priority?: 'SPEED' | 'QUALITY' | 'BALANCED';
+  context?: string;
+  constraints?: ComposeWorkflowConstraintsInput;
+  availableAgents?: string[];
+}
+
+const ComposeWorkflowRequestSchema = z.object({
+  action: z.literal('compose_workflow'),
+  goal: z.string().min(1),
+  context: z.string().optional(),
+  constraints: z
+    .object({
+      maxDurationSeconds: z.number().int().positive().optional(),
+      requiredAgents: z.array(z.string()).optional(),
+      excludedAgents: z.array(z.string()).optional(),
+      priority: z.enum(['low', 'medium', 'high', 'critical']).optional(),
+      maxParallelism: z.number().int().min(1).max(20).optional(),
+    })
+    .optional(),
+  availableAgents: z.array(z.string()).optional(),
+});
+
+// ============================================================================
+// OUTPUT CONTRACT (Zod schema — enforced on every LLM response)
+// ============================================================================
+
+const WorkflowSummarySchema = z.object({
+  name: z.string().min(2).max(200),
+  goal: z.string().min(10).max(800),
+  primaryObjective: z.string().min(20).max(1500),
+});
+
+const WorkflowNodeSchema = z.object({
+  id: z.string().min(1).max(60),
+  agentId: z.string().min(2).max(120),
+  action: z.string().min(2).max(120),
+  purpose: z.string().min(10).max(800),
+  inputsDescription: z.string().min(10).max(1500),
+  outputsDescription: z.string().min(10).max(1500),
+  estimatedDurationSeconds: z.number().int().min(5).max(3600),
+  dependsOnDescription: z.string().min(4).max(800),
+  retryStrategy: z.enum(['none', 'linear', 'exponential']),
+});
+
+const ComposeWorkflowResultSchema = z.object({
+  workflowSummary: WorkflowSummarySchema,
+  nodes: z.array(WorkflowNodeSchema).min(3).max(12),
+  executionPattern: z.enum(['sequential', 'parallel', 'fan_out', 'fan_in', 'conditional', 'hybrid']),
+  parallelizationNotes: z.string().min(50).max(3000),
+  criticalPathDescription: z.string().min(50).max(3000),
+  estimatedTotalDurationSeconds: z.number().int().min(5).max(86400),
+  riskMitigation: z.array(z.string().min(15).max(800)).min(2).max(5),
+  successCriteria: z.string().min(50).max(2500),
+  rationale: z.string().min(150).max(6000),
+});
+
+export type ComposeWorkflowResult = z.infer<typeof ComposeWorkflowResultSchema>;
+
+// ============================================================================
+// LLM INVOCATION CORE
+// ============================================================================
+
+interface LlmCallContext {
+  gm: WorkflowOptimizerGMConfig;
+  brandDNA: BrandDNA;
+  resolvedSystemPrompt: string;
+}
+
+async function loadGMAndBrandDNA(industryKey: string): Promise<LlmCallContext> {
+  const gmRecord = await getActiveSpecialistGMByIndustry(SPECIALIST_ID, industryKey);
+  if (!gmRecord) {
+    throw new Error(
+      `Workflow Optimizer GM not found for industryKey=${industryKey}. ` +
+      `Run node scripts/seed-workflow-optimizer-gm.js to seed.`,
+    );
+  }
+
+  const config = gmRecord.config as Partial<WorkflowOptimizerGMConfig>;
+  const systemPrompt = config.systemPrompt ?? gmRecord.systemPromptSnapshot;
+  if (!systemPrompt || systemPrompt.length < 100) {
+    throw new Error(
+      `Workflow Optimizer GM ${gmRecord.id} has no usable systemPrompt (length=${systemPrompt?.length ?? 0}).`,
+    );
+  }
+
+  const gm: WorkflowOptimizerGMConfig = {
+    systemPrompt,
+    model: config.model ?? 'claude-sonnet-4.6',
+    temperature: config.temperature ?? 0.6,
+    maxTokens: config.maxTokens ?? 10000,
+    supportedActions: config.supportedActions ?? [...SUPPORTED_ACTIONS],
   };
-  inputs?: Record<string, unknown>;
+
+  const brandDNA = await getBrandDNA();
+  if (!brandDNA) {
+    throw new Error(
+      'Brand DNA not configured. Workflow Optimizer refuses to compose a workflow without brand identity. ' +
+      'Visit /settings/ai-agents/business-setup.',
+    );
+  }
+
+  const resolvedSystemPrompt = buildResolvedSystemPrompt(gm.systemPrompt, brandDNA);
+  return { gm, brandDNA, resolvedSystemPrompt };
 }
 
-export interface OptimizeChainRequest {
-  workflowId: string;
-  optimizationGoal: 'SPEED' | 'RELIABILITY' | 'COST' | 'BALANCED';
-  constraints?: {
-    maxParallelNodes?: number;
-    preserveOrder?: string[];
-  };
+function buildResolvedSystemPrompt(baseSystemPrompt: string, brandDNA: BrandDNA): string {
+  const keyPhrases = brandDNA.keyPhrases?.length > 0 ? brandDNA.keyPhrases.join(', ') : '(none configured)';
+  const avoidPhrases = brandDNA.avoidPhrases?.length > 0 ? brandDNA.avoidPhrases.join(', ') : '(none configured)';
+  const competitors = brandDNA.competitors?.length > 0 ? brandDNA.competitors.join(', ') : '(none configured)';
+
+  const brandBlock = [
+    '',
+    '## Brand DNA (runtime injection — do not confuse with system prompt)',
+    '',
+    `Company: ${brandDNA.companyDescription}`,
+    `Unique value: ${brandDNA.uniqueValue}`,
+    `Target audience: ${brandDNA.targetAudience}`,
+    `Tone of voice: ${brandDNA.toneOfVoice}`,
+    `Communication style: ${brandDNA.communicationStyle}`,
+    `Industry: ${brandDNA.industry}`,
+    `Key phrases to weave in naturally: ${keyPhrases}`,
+    `Phrases you are forbidden from using: ${avoidPhrases}`,
+    `Competitors (never name them unless specifically asked): ${competitors}`,
+  ].join('\n');
+
+  return `${baseSystemPrompt}\n${brandBlock}`;
 }
 
-export interface ExecuteWorkflowRequest {
-  workflowId: string;
-  inputs?: Record<string, unknown>;
-  dryRun?: boolean;
-  async?: boolean;
+function stripJsonFences(raw: string): string {
+  return raw
+    .replace(/^[\s\S]*?```(?:json)?\s*\n?/i, (match) => (match.includes('```') ? '' : match))
+    .replace(/\n?\s*```[\s\S]*$/i, '')
+    .trim();
 }
 
-export interface AnalyzePerformanceRequest {
-  workflowId: string;
-  executionIds?: string[];
-  timeRange?: { start: string; end: string };
-}
+async function callOpenRouter(ctx: LlmCallContext, userPrompt: string): Promise<string> {
+  const provider = new OpenRouterProvider(PLATFORM_ID);
+  const response = await provider.chat({
+    model: ctx.gm.model,
+    messages: [
+      { role: 'system', content: ctx.resolvedSystemPrompt },
+      { role: 'user', content: userPrompt },
+    ],
+    temperature: ctx.gm.temperature,
+    maxTokens: ctx.gm.maxTokens,
+  });
 
-type WorkflowPayload =
-  | ComposeWorkflowRequest
-  | OptimizeChainRequest
-  | ExecuteWorkflowRequest
-  | AnalyzePerformanceRequest;
+  const rawContent = response.content ?? '';
+  if (rawContent.trim().length === 0) {
+    throw new Error('OpenRouter returned empty response');
+  }
+  return rawContent;
+}
 
 // ============================================================================
-// AGENT CATALOG - Available agents and their capabilities
+// ACTION: compose_workflow
 // ============================================================================
 
-interface AgentCapability {
-  agentId: string;
-  name: string;
-  actions: string[];
-  avgDurationMs: number;
-  reliabilityScore: number;
-  inputs: string[];
-  outputs: string[];
+function buildComposeWorkflowUserPrompt(req: ComposeWorkflowRequest): string {
+  const sections: string[] = [
+    'ACTION: compose_workflow',
+    '',
+    `Goal: ${req.goal}`,
+  ];
+
+  if (req.context) {
+    sections.push('');
+    sections.push(`Additional context: ${req.context}`);
+  }
+
+  const c = req.constraints;
+  if (c) {
+    sections.push('');
+    sections.push('Constraints from caller:');
+    if (typeof c.maxDurationSeconds === 'number') {
+      sections.push(`  Max total duration: ${c.maxDurationSeconds}s`);
+    }
+    if (c.requiredAgents && c.requiredAgents.length > 0) {
+      sections.push(`  Required agents (must include): ${c.requiredAgents.join(', ')}`);
+    }
+    if (c.excludedAgents && c.excludedAgents.length > 0) {
+      sections.push(`  Excluded agents (must NOT use): ${c.excludedAgents.join(', ')}`);
+    }
+    if (c.priority) {sections.push(`  Priority: ${c.priority}`);}
+    if (typeof c.maxParallelism === 'number') {
+      sections.push(`  Max parallel nodes at any moment: ${c.maxParallelism}`);
+    }
+  }
+
+  if (req.availableAgents && req.availableAgents.length > 0) {
+    sections.push('');
+    sections.push(`Available agents (must pick from this list): ${req.availableAgents.join(', ')}`);
+  }
+
+  sections.push('');
+  sections.push(
+    'Compose a multi-agent workflow that achieves the goal. Respond with ONLY a valid JSON object, no markdown fences. The JSON must match this exact schema:',
+  );
+  sections.push('');
+  sections.push('{');
+  sections.push('  "workflowSummary": {');
+  sections.push('    "name": "<short workflow name, 2-200 chars>",');
+  sections.push('    "goal": "<echo the goal from input, 10-800 chars>",');
+  sections.push('    "primaryObjective": "<one-sentence to one-paragraph statement of the core outcome this workflow produces, 20-1500 chars>"');
+  sections.push('  },');
+  sections.push('  "nodes": [');
+  sections.push('    {');
+  sections.push('      "id": "<short identifier, e.g. n1, n2, scrape_leads>",');
+  sections.push('      "agentId": "<which agent runs this node — e.g. SEO_EXPERT, COPYWRITER, VIDEO_SPECIALIST, GROWTH_ANALYST>",');
+  sections.push('      "action": "<action string on that agent, e.g. keyword_research, generate_content>",');
+  sections.push('      "purpose": "<what this node accomplishes, 10-800 chars>",');
+  sections.push("      \"inputsDescription\": \"<PROSE string describing what inputs this node consumes — both static inputs from the caller AND outputs mapped from prior nodes. Not a JSON array, a single string. Example: 'Consumes the target_industry string from workflow inputs plus the keyword_list array produced by node n1 (SEO_EXPERT.keyword_research).'>\",");
+  sections.push("      \"outputsDescription\": \"<PROSE string describing what this node produces — data shape, file format, downstream consumers. Not a JSON array. Example: 'Produces a structured ContentBrief object with title_variants, meta_description_variants, and cta_variants arrays. Consumed by n3 (COPYWRITER.generate_content).'>\",");
+  sections.push('      "estimatedDurationSeconds": <integer 5-3600>,');
+  sections.push("      \"dependsOnDescription\": \"<PROSE string describing prerequisite nodes and why. Example: 'Runs after n1 (keyword research) and n2 (competitor scan) both complete — this node fuses their outputs into a unified brief.'>\",");
+  sections.push('      "retryStrategy": "<none|linear|exponential>"');
+  sections.push('    }');
+  sections.push('    // 3-12 nodes total');
+  sections.push('  ],');
+  sections.push('  "executionPattern": "<sequential|parallel|fan_out|fan_in|conditional|hybrid>",');
+  sections.push('  "parallelizationNotes": "<prose 50-3000 chars describing which nodes run in parallel vs serial, the reasoning behind the parallelization choices, and any concurrency limits>",');
+  sections.push('  "criticalPathDescription": "<prose 50-3000 chars describing the longest dependency chain — the sequence of nodes that determines the minimum total duration>",');
+  sections.push('  "estimatedTotalDurationSeconds": <integer 5-86400>,');
+  sections.push("  \"riskMitigation\": [\"<2-5 risk + mitigation statements, each 15-800 chars. Example: 'Risk: SEO_EXPERT.keyword_research returns empty on obscure verticals. Mitigation: if keywords.length < 3 after first call, retry with broader seed term and add Google Trends fallback.'>\"],");
+  sections.push('  "successCriteria": "<prose 50-2500 chars describing how we know this workflow succeeded — the observable outcomes, quality signals, and acceptance tests>",');
+  sections.push('  "rationale": "<prose 150-6000 chars — why this specific workflow composition for this goal and brand. Tie node choices to agent capabilities, parallelization choices to the time budget, retry strategies to known agent reliability, and success criteria to the brand quality bar>"');
+  sections.push('}');
+  sections.push('');
+  sections.push('Hard rules you MUST follow:');
+  sections.push('- nodes MUST have 3-12 entries. Every node needs a unique `id`.');
+  sections.push('- inputsDescription, outputsDescription, and dependsOnDescription are PROSE strings — not JSON arrays. Describe dependencies, inputs, and outputs in flowing sentences a human reader would actually read.');
+  sections.push('- estimatedDurationSeconds per node must be realistic (5-3600). Sum of critical-path durations should match estimatedTotalDurationSeconds.');
+  sections.push('- Use real agent IDs from the SalesVelocity.ai swarm when possible: SEO_EXPERT, LINKEDIN_EXPERT, TIKTOK_EXPERT, TWITTER_X_EXPERT, FACEBOOK_ADS_EXPERT, GROWTH_ANALYST, COPYWRITER, VIDEO_SPECIALIST, CALENDAR_COORDINATOR, ASSET_GENERATOR, UX_UI_ARCHITECT, FUNNEL_ENGINEER. If a required capability does not map to any existing agent, name the capability you would need (e.g. "TRANSLATION_SPECIALIST") and note in rationale that this agent does not yet exist.');
+  sections.push('- riskMitigation MUST have 2-5 entries. Each is a specific risk paired with a concrete mitigation — not generic "things might fail, watch carefully." Be specific about WHICH node or edge is at risk and HOW to handle it.');
+  sections.push('- parallelizationNotes and criticalPathDescription must reference specific node ids (n1, n2, etc.) not vague phrases like "the content nodes."');
+  sections.push('- If the brand avoidPhrases list bans a word, do not use it in any string field.');
+  sections.push('- The rationale MUST explicitly reference the brand and the goal — do NOT output a generic workflow that could fit any goal.');
+  sections.push('- Output ONLY the JSON object. No prose outside it. No markdown fences.');
+
+  return sections.join('\n');
 }
 
-const AGENT_CATALOG: AgentCapability[] = [
-  {
-    agentId: 'SCRAPER_SPECIALIST',
-    name: 'Scraper Specialist',
-    actions: ['scrape_url', 'scrape_about', 'scrape_careers'],
-    avgDurationMs: 5000,
-    reliabilityScore: 0.92,
-    inputs: ['url'],
-    outputs: ['keyFindings', 'contactInfo', 'businessSignals', 'techSignals'],
-  },
-  {
-    agentId: 'COMPETITOR_RESEARCHER',
-    name: 'Competitor Researcher',
-    actions: ['analyze_competitor', 'compare_competitors', 'market_position'],
-    avgDurationMs: 8000,
-    reliabilityScore: 0.88,
-    inputs: ['competitorUrl', 'industry'],
-    outputs: ['analysis', 'strengths', 'weaknesses', 'opportunities'],
-  },
-  {
-    agentId: 'SENTIMENT_ANALYST',
-    name: 'Sentiment Analyst',
-    actions: ['analyze_sentiment', 'track_mentions', 'brand_perception'],
-    avgDurationMs: 4000,
-    reliabilityScore: 0.90,
-    inputs: ['text', 'source'],
-    outputs: ['sentiment', 'score', 'topics', 'emotions'],
-  },
-  {
-    agentId: 'SEO_EXPERT',
-    name: 'SEO Expert',
-    actions: ['audit_site', 'keyword_research', 'content_optimization'],
-    avgDurationMs: 10000,
-    reliabilityScore: 0.85,
-    inputs: ['url', 'keywords'],
-    outputs: ['seoScore', 'issues', 'recommendations', 'keywordGaps'],
-  },
-  {
-    agentId: 'COPYWRITER',
-    name: 'Copywriter',
-    actions: ['write_copy', 'rewrite', 'headline_generation'],
-    avgDurationMs: 6000,
-    reliabilityScore: 0.94,
-    inputs: ['brief', 'tone', 'audience'],
-    outputs: ['copy', 'headlines', 'variations'],
-  },
-  {
-    agentId: 'EMAIL_SPECIALIST',
-    name: 'Email Specialist',
-    actions: ['compose_email', 'create_sequence', 'optimize_delivery'],
-    avgDurationMs: 4000,
-    reliabilityScore: 0.91,
-    inputs: ['recipient', 'purpose', 'context'],
-    outputs: ['email', 'sequence', 'sendTime'],
-  },
-  {
-    agentId: 'LINKEDIN_EXPERT',
-    name: 'LinkedIn Expert',
-    actions: ['compose_message', 'optimize_profile', 'engagement_strategy'],
-    avgDurationMs: 5000,
-    reliabilityScore: 0.89,
-    inputs: ['profile', 'goal', 'audience'],
-    outputs: ['message', 'strategy', 'schedule'],
-  },
-  {
-    agentId: 'TREND_SCOUT',
-    name: 'Trend Scout',
-    actions: ['scan_signals', 'analyze_trend', 'trigger_pivot'],
-    avgDurationMs: 7000,
-    reliabilityScore: 0.86,
-    inputs: ['industry', 'keywords', 'competitors'],
-    outputs: ['signals', 'forecasts', 'pivotRecommendations'],
-  },
-  {
-    agentId: 'VIDEO_SPECIALIST',
-    name: 'Video Specialist',
-    actions: ['script_to_storyboard', 'generate_audio_cues', 'scene_breakdown'],
-    avgDurationMs: 8000,
-    reliabilityScore: 0.87,
-    inputs: ['script', 'platform', 'duration'],
-    outputs: ['storyboard', 'audioCues', 'scenes'],
-  },
-];
+async function executeComposeWorkflow(
+  req: ComposeWorkflowRequest,
+  ctx: LlmCallContext,
+): Promise<ComposeWorkflowResult> {
+  const userPrompt = buildComposeWorkflowUserPrompt(req);
+  const rawContent = await callOpenRouter(ctx, userPrompt);
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(stripJsonFences(rawContent));
+  } catch {
+    throw new Error(`Workflow Optimizer output was not valid JSON: ${rawContent.slice(0, 200)}`);
+  }
+
+  const result = ComposeWorkflowResultSchema.safeParse(parsed);
+  if (!result.success) {
+    const issueSummary = result.error.issues
+      .map((issue) => `${issue.path.join('.')}: ${issue.message}`)
+      .join('; ');
+    throw new Error(`Workflow Optimizer output did not match expected schema: ${issueSummary}`);
+  }
+
+  return result.data;
+}
 
 // ============================================================================
-// IMPLEMENTATION
+// WORKFLOW OPTIMIZER CLASS
 // ============================================================================
 
 export class WorkflowOptimizer extends BaseSpecialist {
-  private workflows: Map<string, Workflow> = new Map();
-  private executionResults: Map<string, WorkflowExecutionResult[]> = new Map();
-
   constructor() {
     super(CONFIG);
   }
@@ -408,1308 +378,84 @@ export class WorkflowOptimizer extends BaseSpecialist {
   async initialize(): Promise<void> {
     await Promise.resolve();
     this.isInitialized = true;
-    this.log('INFO', 'Workflow Optimizer initialized - Chain of Action ready');
+    this.log('INFO', 'Workflow Optimizer initialized (LLM-backed, Golden Master loaded at runtime)');
   }
 
-  /**
-   * Main execution entry point
-   */
   async execute(message: AgentMessage): Promise<AgentReport> {
     const taskId = message.id;
 
     try {
-      const payload = message.payload as WorkflowPayload;
-      const payloadWithAction = message.payload as { action?: string };
-      const action = payloadWithAction.action ?? 'compose_workflow';
-
-      this.log('INFO', `Executing action: ${action}`);
-
-      switch (action) {
-        case 'compose_workflow':
-          return this.handleComposeWorkflow(taskId, payload as ComposeWorkflowRequest);
-
-        case 'optimize_chain':
-          return this.handleOptimizeChain(taskId, payload as OptimizeChainRequest);
-
-        case 'execute_workflow':
-          return await this.handleExecuteWorkflow(taskId, payload as ExecuteWorkflowRequest);
-
-        case 'analyze_performance':
-          return this.handleAnalyzePerformance(taskId, payload as AnalyzePerformanceRequest);
-
-        case 'list_workflows':
-          return this.handleListWorkflows(taskId);
-
-        case 'get_workflow':
-          return this.handleGetWorkflow(taskId, (payload as OptimizeChainRequest).workflowId);
-
-        default:
-          return this.createReport(taskId, 'FAILED', null, [`Unknown action: ${action}`]);
+      const payload = message.payload as Record<string, unknown> | null;
+      if (payload === null || typeof payload !== 'object') {
+        return this.createReport(taskId, 'FAILED', null, ['Workflow Optimizer: payload must be an object']);
       }
+
+      const rawAction = payload.action ?? payload.method;
+      if (typeof rawAction !== 'string') {
+        return this.createReport(taskId, 'FAILED', null, ['Workflow Optimizer: no action or method specified in payload']);
+      }
+
+      if (!(SUPPORTED_ACTIONS as readonly string[]).includes(rawAction)) {
+        return this.createReport(taskId, 'FAILED', null, [
+          `Workflow Optimizer does not support action '${rawAction}'. Supported: ${SUPPORTED_ACTIONS.join(', ')}`,
+        ]);
+      }
+      const action = rawAction as SupportedAction;
+
+      logger.info(`[WorkflowOptimizer] Executing action=${action} taskId=${taskId}`, { file: FILE });
+
+      const inputValidation = ComposeWorkflowRequestSchema.safeParse({ ...payload, action });
+      if (!inputValidation.success) {
+        const issueSummary = inputValidation.error.issues
+          .map((issue) => `${issue.path.join('.')}: ${issue.message}`)
+          .join('; ');
+        return this.createReport(taskId, 'FAILED', null, [
+          `Workflow Optimizer compose_workflow: invalid input payload: ${issueSummary}`,
+        ]);
+      }
+
+      const ctx = await loadGMAndBrandDNA(DEFAULT_INDUSTRY_KEY);
+      const data = await executeComposeWorkflow(inputValidation.data, ctx);
+      return this.createReport(taskId, 'COMPLETED', data);
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      this.log('ERROR', `Execution failed: ${errorMessage}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.error(
+        '[WorkflowOptimizer] Execution failed',
+        error instanceof Error ? error : new Error(errorMessage),
+        { file: FILE },
+      );
       return this.createReport(taskId, 'FAILED', null, [errorMessage]);
     }
   }
 
-  /**
-   * Handle signals from the Signal Bus
-   */
   async handleSignal(signal: Signal): Promise<AgentReport> {
     const taskId = signal.id;
-    const signalPayload = signal.payload as { type?: string; workflowId?: string; inputs?: Record<string, unknown> };
-
-    if (signalPayload.type === 'WORKFLOW_TRIGGER') {
-      const result = await this.handleExecuteWorkflow(taskId, {
-        workflowId: signalPayload.workflowId ?? '',
-        inputs: signalPayload.inputs,
-      });
-      return result;
+    if (signal.payload.type === 'COMMAND') {
+      return this.execute(signal.payload);
     }
-
     return this.createReport(taskId, 'COMPLETED', { acknowledged: true });
   }
 
-  /**
-   * Generate a report for the manager
-   */
   generateReport(taskId: string, data: unknown): AgentReport {
     return this.createReport(taskId, 'COMPLETED', data);
   }
 
-  /**
-   * Self-assessment - this agent has REAL logic
-   */
   hasRealLogic(): boolean {
     return true;
   }
 
-  /**
-   * Lines of code assessment
-   */
   getFunctionalLOC(): { functional: number; boilerplate: number } {
-    return { functional: 700, boilerplate: 80 };
-  }
-
-  // ==========================================================================
-  // WORKFLOW COMPOSITION
-  // ==========================================================================
-
-  /**
-   * Handle workflow composition request
-   */
-  private handleComposeWorkflow(
-    taskId: string,
-    request: ComposeWorkflowRequest
-  ): AgentReport {
-    const { goal, constraints, inputs } = request;
-
-    this.log('INFO', `Composing workflow for goal: "${goal}"`);
-
-    // Analyze goal to determine required agents
-    const requiredAgents = this.analyzeGoalRequirements(goal, constraints);
-
-    // Build workflow nodes
-    const nodes = this.buildWorkflowNodes(requiredAgents, inputs ?? {}, constraints);
-
-    // Determine dependencies and edges
-    const { edges, parallelGroups } = this.buildDependencyGraph(nodes);
-
-    // Calculate critical path
-    const criticalPath = this.calculateCriticalPath(nodes, edges);
-
-    // Estimate total duration
-    const estimatedTotalDurationMs = this.estimateTotalDuration(nodes, criticalPath);
-
-    // Create workflow
-    const workflowId = `wf-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
-
-    const workflow: Workflow = {
-      id: workflowId,
-      name: this.generateWorkflowName(goal),
-      description: `Auto-composed workflow to achieve: ${goal}`,
-      goal,
-      nodes,
-      edges,
-      parallelGroups,
-      criticalPath,
-      estimatedTotalDurationMs,
-      status: 'VALIDATED',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      version: 1,
-    };
-
-    // Store workflow
-    this.workflows.set(workflowId, workflow);
-
-    return this.createReport(taskId, 'COMPLETED', {
-      workflow,
-      summary: {
-        nodeCount: nodes.length,
-        parallelGroupCount: parallelGroups.length,
-        criticalPathLength: criticalPath.length,
-        estimatedDurationMs: estimatedTotalDurationMs,
-        estimatedDurationFormatted: this.formatDuration(estimatedTotalDurationMs),
-      },
-    });
-  }
-
-  /**
-   * Analyze goal to determine required agents
-   */
-  private analyzeGoalRequirements(
-    goal: string,
-    constraints?: ComposeWorkflowRequest['constraints']
-  ): AgentCapability[] {
-    const goalLower = goal.toLowerCase();
-    const requiredAgents: AgentCapability[] = [];
-    const requiredIds = constraints?.requiredAgents ?? [];
-    const excludedIds = constraints?.excludedAgents ?? [];
-
-    // Goal keyword to agent mapping
-    const goalAgentMapping: Record<string, string[]> = {
-      'scrape': ['SCRAPER_SPECIALIST'],
-      'research': ['SCRAPER_SPECIALIST', 'COMPETITOR_RESEARCHER'],
-      'competitor': ['COMPETITOR_RESEARCHER', 'TREND_SCOUT'],
-      'sentiment': ['SENTIMENT_ANALYST'],
-      'seo': ['SEO_EXPERT', 'SCRAPER_SPECIALIST'],
-      'content': ['COPYWRITER', 'SEO_EXPERT'],
-      'email': ['EMAIL_SPECIALIST', 'COPYWRITER'],
-      'outreach': ['EMAIL_SPECIALIST', 'LINKEDIN_EXPERT'],
-      'linkedin': ['LINKEDIN_EXPERT'],
-      'trend': ['TREND_SCOUT'],
-      'market': ['TREND_SCOUT', 'COMPETITOR_RESEARCHER'],
-      'video': ['VIDEO_SPECIALIST', 'COPYWRITER'],
-      'lead': ['SCRAPER_SPECIALIST', 'EMAIL_SPECIALIST', 'LINKEDIN_EXPERT'],
-    };
-
-    // Find matching agents based on goal keywords
-    const matchedAgentIds = new Set<string>();
-
-    for (const [keyword, agentIds] of Object.entries(goalAgentMapping)) {
-      if (goalLower.includes(keyword)) {
-        agentIds.forEach(id => matchedAgentIds.add(id));
-      }
-    }
-
-    // Add required agents
-    requiredIds.forEach(id => matchedAgentIds.add(id));
-
-    // Remove excluded agents
-    excludedIds.forEach(id => matchedAgentIds.delete(id));
-
-    // If no matches, default to basic research workflow
-    if (matchedAgentIds.size === 0) {
-      matchedAgentIds.add('SCRAPER_SPECIALIST');
-      matchedAgentIds.add('COPYWRITER');
-    }
-
-    // Build agent list from catalog
-    for (const agentId of matchedAgentIds) {
-      const agent = AGENT_CATALOG.find(a => a.agentId === agentId);
-      if (agent) {
-        requiredAgents.push(agent);
-      }
-    }
-
-    return requiredAgents;
-  }
-
-  /**
-   * Build workflow nodes from required agents
-   */
-  private buildWorkflowNodes(
-    agents: AgentCapability[],
-    inputs: Record<string, unknown>,
-    constraints?: ComposeWorkflowRequest['constraints']
-  ): WorkflowNode[] {
-    const nodes: WorkflowNode[] = [];
-    const priority = constraints?.priority ?? 'BALANCED';
-
-    for (let i = 0; i < agents.length; i++) {
-      const agent = agents[i];
-      const nodeId = `node-${i + 1}-${agent.agentId.toLowerCase()}`;
-
-      // Select primary action for this agent
-      const action = agent.actions[0];
-
-      // Build node inputs from workflow inputs and previous outputs
-      const nodeInputs: Record<string, unknown> = {};
-      for (const input of agent.inputs) {
-        if (inputs[input] !== undefined) {
-          nodeInputs[input] = inputs[input];
-        }
-      }
-
-      // Configure retry policy based on priority
-      const retryPolicy = this.buildRetryPolicy(agent.reliabilityScore, priority);
-
-      nodes.push({
-        id: nodeId,
-        agentId: agent.agentId,
-        action,
-        inputs: nodeInputs,
-        dependsOn: [], // Will be filled by dependency analysis
-        estimatedDurationMs: agent.avgDurationMs,
-        retryPolicy,
-        timeout: agent.avgDurationMs * 3, // 3x average as timeout
-      });
-    }
-
-    return nodes;
-  }
-
-  /**
-   * Build retry policy based on agent reliability and priority
-   */
-  private buildRetryPolicy(
-    reliabilityScore: number,
-    priority: 'SPEED' | 'QUALITY' | 'BALANCED'
-  ): RetryPolicy {
-    const baseRetries = reliabilityScore > 0.9 ? 2 : reliabilityScore > 0.8 ? 3 : 4;
-
-    switch (priority) {
-      case 'SPEED':
-        return {
-          maxRetries: Math.max(1, baseRetries - 1),
-          backoff: 'none',
-          initialDelayMs: 100,
-          maxDelayMs: 1000,
-        };
-      case 'QUALITY':
-        return {
-          maxRetries: baseRetries + 1,
-          backoff: 'exponential',
-          initialDelayMs: 1000,
-          maxDelayMs: 30000,
-        };
-      case 'BALANCED':
-      default:
-        return {
-          maxRetries: baseRetries,
-          backoff: 'exponential',
-          initialDelayMs: 500,
-          maxDelayMs: 10000,
-        };
-    }
-  }
-
-  /**
-   * Build dependency graph (edges and parallel groups)
-   */
-  private buildDependencyGraph(
-    nodes: WorkflowNode[]
-  ): { edges: WorkflowEdge[]; parallelGroups: string[][] } {
-    const edges: WorkflowEdge[] = [];
-    const parallelGroups: string[][] = [];
-
-    // Analyze data flow to determine dependencies
-    const nodeOutputs = new Map<string, Set<string>>();
-    const nodeInputNeeds = new Map<string, Set<string>>();
-
-    // Map each node's outputs and input needs
-    for (const node of nodes) {
-      const agent = AGENT_CATALOG.find(a => a.agentId === node.agentId);
-      if (agent) {
-        nodeOutputs.set(node.id, new Set(agent.outputs));
-        const neededInputs = new Set<string>();
-        for (const input of agent.inputs) {
-          if (node.inputs[input] === undefined) {
-            neededInputs.add(input);
-          }
-        }
-        nodeInputNeeds.set(node.id, neededInputs);
-      }
-    }
-
-    // Build edges based on data dependencies
-    for (const node of nodes) {
-      const needs = nodeInputNeeds.get(node.id) ?? new Set();
-
-      for (const [otherId, outputs] of nodeOutputs) {
-        if (otherId === node.id) {continue;}
-
-        // Check if other node provides any needed inputs
-        const providedInputs = new Set([...needs].filter(n => outputs.has(n)));
-
-        if (providedInputs.size > 0) {
-          // Create edge
-          const dataMapping: Record<string, string> = {};
-          for (const input of providedInputs) {
-            dataMapping[input] = input; // Direct mapping
-          }
-
-          edges.push({
-            from: otherId,
-            to: node.id,
-            dataMapping,
-          });
-
-          // Update dependencies
-          node.dependsOn.push(otherId);
-        }
-      }
-    }
-
-    // Identify parallel groups (nodes with no dependencies on each other)
-    const processed = new Set<string>();
-    const remainingNodes = [...nodes];
-
-    while (remainingNodes.length > 0) {
-      const currentGroup: string[] = [];
-
-      for (const node of remainingNodes) {
-        // Check if all dependencies are processed
-        const canExecute = node.dependsOn.every(dep => processed.has(dep));
-
-        if (canExecute) {
-          currentGroup.push(node.id);
-        }
-      }
-
-      if (currentGroup.length === 0) {
-        // Circular dependency or error - break to prevent infinite loop
-        break;
-      }
-
-      // Mark group nodes as processed
-      for (const nodeId of currentGroup) {
-        processed.add(nodeId);
-        const idx = remainingNodes.findIndex(n => n.id === nodeId);
-        if (idx !== -1) {
-          remainingNodes.splice(idx, 1);
-        }
-      }
-
-      if (currentGroup.length > 1) {
-        parallelGroups.push(currentGroup);
-      }
-    }
-
-    return { edges, parallelGroups };
-  }
-
-  /**
-   * Calculate critical path through workflow
-   */
-  private calculateCriticalPath(nodes: WorkflowNode[], edges: WorkflowEdge[]): string[] {
-    // Build adjacency list
-    const adjList = new Map<string, string[]>();
-    const inDegree = new Map<string, number>();
-
-    for (const node of nodes) {
-      adjList.set(node.id, []);
-      inDegree.set(node.id, 0);
-    }
-
-    for (const edge of edges) {
-      adjList.get(edge.from)?.push(edge.to);
-      inDegree.set(edge.to, (inDegree.get(edge.to) ?? 0) + 1);
-    }
-
-    // Calculate longest path using dynamic programming
-    const longestPath = new Map<string, number>();
-    const predecessor = new Map<string, string | null>();
-    const nodeMap = new Map(nodes.map(n => [n.id, n]));
-
-    // Topological sort with DP
-    const queue: string[] = [];
-    for (const [nodeId, degree] of inDegree) {
-      if (degree === 0) {
-        queue.push(nodeId);
-        const node = nodeMap.get(nodeId);
-        longestPath.set(nodeId, node?.estimatedDurationMs ?? 0);
-        predecessor.set(nodeId, null);
-      }
-    }
-
-    while (queue.length > 0) {
-      const current = queue.shift();
-      if (!current) {break;}
-      const currentDist = longestPath.get(current) ?? 0;
-
-      for (const neighbor of adjList.get(current) ?? []) {
-        const neighborNode = nodeMap.get(neighbor);
-        const newDist = currentDist + (neighborNode?.estimatedDurationMs ?? 0);
-
-        if (newDist > (longestPath.get(neighbor) ?? 0)) {
-          longestPath.set(neighbor, newDist);
-          predecessor.set(neighbor, current);
-        }
-
-        inDegree.set(neighbor, (inDegree.get(neighbor) ?? 1) - 1);
-        if (inDegree.get(neighbor) === 0) {
-          queue.push(neighbor);
-        }
-      }
-    }
-
-    // Find endpoint with longest path
-    let maxDist = 0;
-    let endNode: string | null = null;
-
-    for (const [nodeId, dist] of longestPath) {
-      if (dist > maxDist) {
-        maxDist = dist;
-        endNode = nodeId;
-      }
-    }
-
-    // Reconstruct path
-    const path: string[] = [];
-    let current = endNode;
-
-    while (current !== null) {
-      path.unshift(current);
-      current = predecessor.get(current) ?? null;
-    }
-
-    return path;
-  }
-
-  /**
-   * Estimate total workflow duration
-   */
-  private estimateTotalDuration(nodes: WorkflowNode[], criticalPath: string[]): number {
-    const nodeMap = new Map(nodes.map(n => [n.id, n]));
-
-    let total = 0;
-    for (const nodeId of criticalPath) {
-      const node = nodeMap.get(nodeId);
-      if (node) {
-        total += node.estimatedDurationMs;
-      }
-    }
-
-    return total;
-  }
-
-  // ==========================================================================
-  // CHAIN OPTIMIZATION
-  // ==========================================================================
-
-  /**
-   * Handle chain optimization request
-   */
-  private handleOptimizeChain(
-    taskId: string,
-    request: OptimizeChainRequest
-  ): AgentReport {
-    const { workflowId, optimizationGoal, constraints } = request;
-
-    const workflow = this.workflows.get(workflowId);
-    if (!workflow) {
-      return this.createReport(taskId, 'FAILED', null, [`Workflow ${workflowId} not found`]);
-    }
-
-    this.log('INFO', `Optimizing workflow ${workflowId} for ${optimizationGoal}`);
-
-    const optimizations: string[] = [];
-    let optimizedWorkflow = { ...workflow };
-
-    switch (optimizationGoal) {
-      case 'SPEED':
-        optimizedWorkflow = this.optimizeForSpeed(workflow, constraints);
-        optimizations.push('Increased parallelization where possible');
-        optimizations.push('Reduced retry attempts');
-        optimizations.push('Shortened timeouts');
-        break;
-
-      case 'RELIABILITY':
-        optimizedWorkflow = this.optimizeForReliability(workflow);
-        optimizations.push('Increased retry attempts');
-        optimizations.push('Added exponential backoff');
-        optimizations.push('Extended timeouts');
-        break;
-
-      case 'COST':
-        optimizedWorkflow = this.optimizeForCost(workflow);
-        optimizations.push('Consolidated similar agent calls');
-        optimizations.push('Removed redundant nodes');
-        optimizations.push('Cached intermediate results');
-        break;
-
-      case 'BALANCED':
-      default:
-        optimizedWorkflow = this.optimizeBalanced(workflow);
-        optimizations.push('Balanced retry policies');
-        optimizations.push('Moderate parallelization');
-        optimizations.push('Standard timeouts');
-        break;
-    }
-
-    // Update workflow version
-    optimizedWorkflow.version += 1;
-    optimizedWorkflow.updatedAt = new Date().toISOString();
-
-    // Store optimized workflow
-    this.workflows.set(workflowId, optimizedWorkflow);
-
-    // Analyze bottlenecks
-    const bottlenecks = this.identifyBottlenecks(optimizedWorkflow);
-
-    return this.createReport(taskId, 'COMPLETED', {
-      workflow: optimizedWorkflow,
-      optimizations,
-      bottlenecks,
-      improvement: {
-        originalDurationMs: workflow.estimatedTotalDurationMs,
-        optimizedDurationMs: optimizedWorkflow.estimatedTotalDurationMs,
-        percentImprovement: Math.round(
-          ((workflow.estimatedTotalDurationMs - optimizedWorkflow.estimatedTotalDurationMs) /
-            workflow.estimatedTotalDurationMs) *
-            100
-        ),
-      },
-    });
-  }
-
-  /**
-   * Optimize workflow for speed
-   */
-  private optimizeForSpeed(
-    workflow: Workflow,
-    constraints?: OptimizeChainRequest['constraints']
-  ): Workflow {
-    const optimized = { ...workflow };
-    const _maxParallel = constraints?.maxParallelNodes ?? 5;
-
-    // Reduce retry policies
-    optimized.nodes = workflow.nodes.map(node => ({
-      ...node,
-      retryPolicy: {
-        ...node.retryPolicy,
-        maxRetries: Math.min(node.retryPolicy.maxRetries, 2),
-        backoff: 'none' as const,
-      },
-      timeout: node.timeout ? Math.round(node.timeout * 0.7) : undefined,
-    }));
-
-    // Recalculate with speed-optimized assumptions
-    optimized.estimatedTotalDurationMs = Math.round(
-      workflow.estimatedTotalDurationMs * 0.8
-    );
-
-    return optimized;
-  }
-
-  /**
-   * Optimize workflow for reliability
-   */
-  private optimizeForReliability(workflow: Workflow): Workflow {
-    const optimized = { ...workflow };
-
-    // Increase retry policies
-    optimized.nodes = workflow.nodes.map(node => ({
-      ...node,
-      retryPolicy: {
-        maxRetries: Math.max(node.retryPolicy.maxRetries, 4),
-        backoff: 'exponential' as const,
-        initialDelayMs: 1000,
-        maxDelayMs: 30000,
-      },
-      timeout: node.timeout ? Math.round(node.timeout * 1.5) : undefined,
-    }));
-
-    // Account for potential retries in duration estimate
-    optimized.estimatedTotalDurationMs = Math.round(
-      workflow.estimatedTotalDurationMs * 1.3
-    );
-
-    return optimized;
-  }
-
-  /**
-   * Optimize workflow for cost
-   */
-  private optimizeForCost(workflow: Workflow): Workflow {
-    const optimized = { ...workflow };
-
-    // Remove any duplicate agent calls (simplified)
-    const seenAgents = new Set<string>();
-    const consolidatedNodes: WorkflowNode[] = [];
-
-    for (const node of workflow.nodes) {
-      const key = `${node.agentId}-${node.action}`;
-      if (!seenAgents.has(key)) {
-        seenAgents.add(key);
-        consolidatedNodes.push(node);
-      }
-    }
-
-    optimized.nodes = consolidatedNodes;
-
-    // Rebuild edges for consolidated nodes
-    const { edges, parallelGroups } = this.buildDependencyGraph(consolidatedNodes);
-    optimized.edges = edges;
-    optimized.parallelGroups = parallelGroups;
-
-    // Recalculate critical path
-    optimized.criticalPath = this.calculateCriticalPath(consolidatedNodes, edges);
-    optimized.estimatedTotalDurationMs = this.estimateTotalDuration(
-      consolidatedNodes,
-      optimized.criticalPath
-    );
-
-    return optimized;
-  }
-
-  /**
-   * Balanced optimization
-   */
-  private optimizeBalanced(workflow: Workflow): Workflow {
-    const optimized = { ...workflow };
-
-    // Apply moderate optimizations
-    optimized.nodes = workflow.nodes.map(node => ({
-      ...node,
-      retryPolicy: {
-        maxRetries: 3,
-        backoff: 'exponential' as const,
-        initialDelayMs: 500,
-        maxDelayMs: 10000,
-      },
-    }));
-
-    return optimized;
-  }
-
-  /**
-   * Identify bottlenecks in workflow
-   */
-  private identifyBottlenecks(
-    workflow: Workflow
-  ): Array<{ nodeId: string; issue: string; recommendation: string }> {
-    const bottlenecks: Array<{ nodeId: string; issue: string; recommendation: string }> = [];
-    const avgDuration =
-      workflow.nodes.reduce((sum, n) => sum + n.estimatedDurationMs, 0) /
-      workflow.nodes.length;
-
-    for (const node of workflow.nodes) {
-      // Nodes taking significantly longer than average
-      if (node.estimatedDurationMs > avgDuration * 2) {
-        bottlenecks.push({
-          nodeId: node.id,
-          issue: 'Node duration significantly above average',
-          recommendation: 'Consider parallelizing this operation or caching results',
-        });
-      }
-
-      // Nodes with many dependencies
-      if (node.dependsOn.length > 3) {
-        bottlenecks.push({
-          nodeId: node.id,
-          issue: 'High dependency count creating serialization',
-          recommendation: 'Review if all dependencies are truly necessary',
-        });
-      }
-
-      // Nodes with low reliability
-      const agent = AGENT_CATALOG.find(a => a.agentId === node.agentId);
-      if (agent && agent.reliabilityScore < 0.85) {
-        bottlenecks.push({
-          nodeId: node.id,
-          issue: 'Low reliability agent may cause retries',
-          recommendation: 'Increase retry policy or add fallback agent',
-        });
-      }
-    }
-
-    return bottlenecks;
-  }
-
-  // ==========================================================================
-  // WORKFLOW EXECUTION
-  // ==========================================================================
-
-  /**
-   * Handle workflow execution request
-   */
-  private async handleExecuteWorkflow(
-    taskId: string,
-    request: ExecuteWorkflowRequest
-  ): Promise<AgentReport> {
-    const { workflowId, inputs, dryRun } = request;
-
-    const workflow = this.workflows.get(workflowId);
-    if (!workflow) {
-      return this.createReport(taskId, 'FAILED', null, [`Workflow ${workflowId} not found`]);
-    }
-
-    this.log('INFO', `${dryRun ? '[DRY RUN] ' : ''}Executing workflow ${workflowId}`);
-
-    const executionId = `exec-${workflowId}-${Date.now()}`;
-    const startedAt = new Date().toISOString();
-
-    // Apply input overrides
-    if (inputs) {
-      for (const node of workflow.nodes) {
-        for (const [key, value] of Object.entries(inputs)) {
-          if (node.inputs[key] !== undefined || Object.keys(node.inputs).length === 0) {
-            node.inputs[key] = value;
-          }
-        }
-      }
-    }
-
-    // Execute workflow nodes (dry run simulates, real run dispatches to agents)
-    let nodeResults: NodeExecutionResult[];
-    if (dryRun) {
-      nodeResults = this.simulateDryRun(workflow);
-    } else {
-      nodeResults = await this.executeWorkflowNodes(workflow);
-    }
-
-    const completedAt = new Date().toISOString();
-    const totalDurationMs = new Date(completedAt).getTime() - new Date(startedAt).getTime();
-
-    // Determine overall status
-    const failedNodes = nodeResults.filter(r => r.status === 'FAILED');
-    const status: WorkflowStatus = failedNodes.length > 0 ? 'FAILED' : 'COMPLETED';
-
-    const result: WorkflowExecutionResult = {
-      workflowId,
-      executionId,
-      status,
-      startedAt,
-      completedAt,
-      totalDurationMs,
-      nodeResults,
-      finalOutput: nodeResults[nodeResults.length - 1]?.output,
-      errors: failedNodes.map(n => n.error ?? 'Unknown error'),
-    };
-
-    // Store execution result
-    const existingResults = this.executionResults.get(workflowId) ?? [];
-    existingResults.push(result);
-    this.executionResults.set(workflowId, existingResults);
-
-    return this.createReport(taskId, status === 'COMPLETED' ? 'COMPLETED' : 'FAILED', result);
-  }
-
-  /**
-   * Execute workflow nodes by dispatching to real agents via signal bus
-   */
-  private async executeWorkflowNodes(
-    workflow: Workflow
-  ): Promise<NodeExecutionResult[]> {
-    const results: NodeExecutionResult[] = [];
-    const completed = new Set<string>();
-    const nodeOutputs = new Map<string, unknown>();
-
-    // Process nodes in dependency order
-    const remaining = [...workflow.nodes];
-
-    while (remaining.length > 0) {
-      const ready = remaining.filter(node =>
-        node.dependsOn.every(dep => completed.has(dep))
-      );
-
-      if (ready.length === 0) {
-        // Log remaining nodes as blocked
-        for (const node of remaining) {
-          results.push({
-            nodeId: node.id,
-            status: 'FAILED',
-            startedAt: new Date().toISOString(),
-            error: `Blocked: unresolved dependencies [${node.dependsOn.filter(d => !completed.has(d)).join(', ')}]`,
-            retryCount: 0,
-          });
-        }
-        break;
-      }
-
-      // Execute ready nodes in parallel
-      const nodePromises = ready.map(async (node) => {
-        const startedAt = new Date().toISOString();
-
-        try {
-          // Build inputs from dependency outputs (data mapping from edges)
-          const resolvedInputs = { ...node.inputs };
-          for (const edge of workflow.edges) {
-            if (edge.to === node.id && nodeOutputs.has(edge.from)) {
-              const sourceOutput = nodeOutputs.get(edge.from) as Record<string, unknown>;
-              for (const [targetKey, sourceKey] of Object.entries(edge.dataMapping)) {
-                if (sourceOutput && typeof sourceOutput === 'object') {
-                  resolvedInputs[targetKey] = sourceOutput[sourceKey];
-                }
-              }
-            }
-          }
-
-          // Dispatch to the target agent via signal bus
-          await broadcastSignal(
-            this.identity.id,
-            `workflow.execute.${node.agentId.toLowerCase()}.${node.action}`,
-            'HIGH',
-            {
-              workflowId: workflow.id,
-              nodeId: node.id,
-              action: node.action,
-              inputs: resolvedInputs,
-              dispatchedAt: startedAt,
-            },
-            [node.agentId]
-          );
-
-          // Record dispatch in MemoryVault for audit trail
-          await shareInsight(
-            this.identity.id,
-            'PERFORMANCE',
-            `Workflow node dispatched: ${node.agentId}.${node.action}`,
-            `Node ${node.id} in workflow ${workflow.id} dispatched to ${node.agentId} for action ${node.action}`,
-            {
-              confidence: 100,
-              sources: [workflow.id],
-              relatedAgents: [node.agentId],
-              actions: [`execute:${node.action}`],
-            }
-          );
-
-          const completedAt = new Date().toISOString();
-          const durationMs = new Date(completedAt).getTime() - new Date(startedAt).getTime();
-
-          const output = { dispatched: true, agentId: node.agentId, action: node.action };
-          nodeOutputs.set(node.id, output);
-
-          return {
-            nodeId: node.id,
-            status: 'COMPLETED' as NodeStatus,
-            startedAt,
-            completedAt,
-            durationMs,
-            output,
-            retryCount: 0,
-          };
-        } catch (error) {
-          const errorMsg = error instanceof Error ? error.message : String(error);
-          this.log('ERROR', `Node ${node.id} (${node.agentId}) dispatch failed: ${errorMsg}`);
-
-          return {
-            nodeId: node.id,
-            status: 'FAILED' as NodeStatus,
-            startedAt,
-            completedAt: new Date().toISOString(),
-            durationMs: 0,
-            error: errorMsg,
-            retryCount: 0,
-          };
-        }
-      });
-
-      const nodeResults = await Promise.all(nodePromises);
-
-      for (const result of nodeResults) {
-        results.push(result);
-        if (result.status === 'COMPLETED') {
-          completed.add(result.nodeId);
-        }
-        // Remove from remaining
-        const idx = remaining.findIndex(n => n.id === result.nodeId);
-        if (idx !== -1) {
-          remaining.splice(idx, 1);
-        }
-      }
-    }
-
-    return results;
-  }
-
-  /**
-   * Dry-run simulation: validates workflow structure without dispatching
-   */
-  private simulateDryRun(
-    workflow: Workflow
-  ): NodeExecutionResult[] {
-    const results: NodeExecutionResult[] = [];
-    const completed = new Set<string>();
-    const remaining = [...workflow.nodes];
-
-    while (remaining.length > 0) {
-      const ready = remaining.filter(node =>
-        node.dependsOn.every(dep => completed.has(dep))
-      );
-
-      if (ready.length === 0) {
-        break;
-      }
-
-      for (const node of ready) {
-        const agent = AGENT_CATALOG.find(a => a.agentId === node.agentId);
-
-        results.push({
-          nodeId: node.id,
-          status: agent ? 'COMPLETED' : 'FAILED',
-          startedAt: new Date().toISOString(),
-          completedAt: new Date().toISOString(),
-          durationMs: 0,
-          output: agent
-            ? { dryRun: true, agentId: node.agentId, agentFound: true }
-            : undefined,
-          error: agent ? undefined : `Agent ${node.agentId} not found in catalog`,
-          retryCount: 0,
-        });
-
-        completed.add(node.id);
-        const idx = remaining.findIndex(n => n.id === node.id);
-        if (idx !== -1) {
-          remaining.splice(idx, 1);
-        }
-      }
-    }
-
-    return results;
-  }
-
-  // ==========================================================================
-  // PERFORMANCE ANALYTICS
-  // ==========================================================================
-
-  /**
-   * Handle performance analysis request
-   */
-  private handleAnalyzePerformance(
-    taskId: string,
-    request: AnalyzePerformanceRequest
-  ): AgentReport {
-    const { workflowId } = request;
-
-    const workflow = this.workflows.get(workflowId);
-    if (!workflow) {
-      return this.createReport(taskId, 'FAILED', null, [`Workflow ${workflowId} not found`]);
-    }
-
-    const executions = this.executionResults.get(workflowId) ?? [];
-
-    if (executions.length === 0) {
-      return this.createReport(taskId, 'COMPLETED', {
-        workflowId,
-        message: 'No execution history available',
-        analytics: null,
-      });
-    }
-
-    // Calculate analytics
-    const executionCount = executions.length;
-    const successfulExecutions = executions.filter(e => e.status === 'COMPLETED');
-    const successRate = successfulExecutions.length / executionCount;
-
-    const avgDurationMs =
-      successfulExecutions.reduce((sum, e) => sum + (e.totalDurationMs ?? 0), 0) /
-      successfulExecutions.length;
-
-    // Analyze bottlenecks from execution data
-    const nodePerformance = new Map<string, { totalMs: number; count: number }>();
-
-    for (const execution of successfulExecutions) {
-      for (const nodeResult of execution.nodeResults) {
-        const existing = nodePerformance.get(nodeResult.nodeId) ?? { totalMs: 0, count: 0 };
-        nodePerformance.set(nodeResult.nodeId, {
-          totalMs: existing.totalMs + (nodeResult.durationMs ?? 0),
-          count: existing.count + 1,
-        });
-      }
-    }
-
-    const bottlenecks = Array.from(nodePerformance.entries())
-      .map(([nodeId, perf]) => ({
-        nodeId,
-        avgDurationMs: perf.totalMs / perf.count,
-        percentOfTotal: (perf.totalMs / perf.count / avgDurationMs) * 100,
-      }))
-      .sort((a, b) => b.avgDurationMs - a.avgDurationMs)
-      .slice(0, 5);
-
-    // Calculate parallelization efficiency
-    const sequentialDuration = workflow.nodes.reduce(
-      (sum, n) => sum + n.estimatedDurationMs,
-      0
-    );
-    const parallelizationEfficiency = 1 - avgDurationMs / sequentialDuration;
-
-    // Generate recommendations
-    const recommendations = this.generatePerformanceRecommendations(
-      bottlenecks,
-      successRate,
-      parallelizationEfficiency
-    );
-
-    const analytics: WorkflowAnalytics = {
-      workflowId,
-      executionCount,
-      avgDurationMs,
-      successRate,
-      bottlenecks,
-      parallelizationEfficiency,
-      recommendations,
-    };
-
-    return this.createReport(taskId, 'COMPLETED', {
-      analytics,
-    });
-  }
-
-  /**
-   * Generate performance recommendations
-   */
-  private generatePerformanceRecommendations(
-    bottlenecks: WorkflowAnalytics['bottlenecks'],
-    successRate: number,
-    parallelizationEfficiency: number
-  ): string[] {
-    const recommendations: string[] = [];
-
-    if (successRate < 0.95) {
-      recommendations.push(
-        `Success rate (${Math.round(successRate * 100)}%) is below target. Consider increasing retry policies.`
-      );
-    }
-
-    if (parallelizationEfficiency < 0.3) {
-      recommendations.push(
-        'Low parallelization efficiency. Review dependencies to enable more parallel execution.'
-      );
-    }
-
-    if (bottlenecks.length > 0 && bottlenecks[0].percentOfTotal > 40) {
-      recommendations.push(
-        `Node ${bottlenecks[0].nodeId} accounts for ${Math.round(bottlenecks[0].percentOfTotal)}% of execution time. Consider optimizing or parallelizing.`
-      );
-    }
-
-    if (recommendations.length === 0) {
-      recommendations.push('Workflow is performing within acceptable parameters.');
-    }
-
-    return recommendations;
-  }
-
-  // ==========================================================================
-  // HELPER METHODS
-  // ==========================================================================
-
-  /**
-   * Handle list workflows request
-   */
-  private handleListWorkflows(taskId: string): AgentReport {
-    const allWorkflows = Array.from(this.workflows.values());
-
-    return this.createReport(taskId, 'COMPLETED', {
-      workflows: allWorkflows.map(w => ({
-        id: w.id,
-        name: w.name,
-        status: w.status,
-        nodeCount: w.nodes.length,
-        estimatedDurationMs: w.estimatedTotalDurationMs,
-        createdAt: w.createdAt,
-      })),
-      count: allWorkflows.length,
-    });
-  }
-
-  /**
-   * Handle get workflow request
-   */
-  private handleGetWorkflow(taskId: string, workflowId: string): AgentReport {
-    const workflow = this.workflows.get(workflowId);
-
-    if (!workflow) {
-      return this.createReport(taskId, 'FAILED', null, [`Workflow ${workflowId} not found`]);
-    }
-
-    return this.createReport(taskId, 'COMPLETED', { workflow });
-  }
-
-  /**
-   * Generate workflow name from goal
-   */
-  private generateWorkflowName(goal: string): string {
-    const words = goal.split(' ').slice(0, 5);
-    return `${words.map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ') 
-      } Workflow`;
-  }
-
-  /**
-   * Format duration for display
-   */
-  private formatDuration(ms: number): string {
-    if (ms < 1000) {
-      return `${ms}ms`;
-    } else if (ms < 60000) {
-      return `${(ms / 1000).toFixed(1)}s`;
-    } else {
-      return `${(ms / 60000).toFixed(1)}m`;
-    }
-  }
-
-  // ==========================================================================
-  // SHARED MEMORY INTEGRATION
-  // ==========================================================================
-
-  /**
-   * Share workflow composition to the memory vault
-   */
-  private async shareWorkflowToVault(workflow: Workflow): Promise<void> {
-    await Promise.resolve();
-    const vault = getMemoryVault();
-
-    // Write workflow state to vault
-    vault.write(
-      'WORKFLOW',
-      `workflow_${workflow.id}`,
-      {
-        workflowId: workflow.id,
-        name: workflow.name,
-        goal: workflow.goal,
-        status: workflow.status,
-        nodeCount: workflow.nodes.length,
-        agentIds: workflow.nodes.map(n => n.agentId),
-        estimatedDurationMs: workflow.estimatedTotalDurationMs,
-        criticalPath: workflow.criticalPath,
-      },
-      this.identity.id,
-      { tags: ['workflow', workflow.status.toLowerCase()] }
-    );
-
-    // Share insight about the workflow composition
-    await shareInsight(
-      this.identity.id,
-      'CONTENT',
-      `Workflow Composed: ${workflow.name}`,
-      `Created workflow with ${workflow.nodes.length} nodes across ${new Set(workflow.nodes.map(n => n.agentId)).size} agents. ` +
-      `Estimated duration: ${this.formatDuration(workflow.estimatedTotalDurationMs)}. ` +
-      `Parallelization groups: ${workflow.parallelGroups.length}.`,
-      {
-        confidence: 90,
-        relatedAgents: workflow.nodes.map(n => n.agentId),
-        tags: ['workflow', 'orchestration'],
-      }
-    );
-  }
-
-  /**
-   * Broadcast workflow execution status to relevant agents
-   */
-  private async broadcastWorkflowStatus(
-    workflow: Workflow,
-    executionResult: WorkflowExecutionResult
-  ): Promise<void> {
-    const urgency = executionResult.status === 'FAILED' ? 'HIGH' : 'LOW';
-
-    await broadcastSignal(
-      this.identity.id,
-      executionResult.status === 'COMPLETED' ? 'WORKFLOW_COMPLETED' : 'WORKFLOW_FAILED',
-      urgency,
-      {
-        workflowId: workflow.id,
-        workflowName: workflow.name,
-        executionId: executionResult.executionId,
-        status: executionResult.status,
-        totalDurationMs: executionResult.totalDurationMs,
-        successfulNodes: executionResult.nodeResults.filter(n => n.status === 'COMPLETED').length,
-        failedNodes: executionResult.nodeResults.filter(n => n.status === 'FAILED').length,
-        errors: executionResult.errors,
-      },
-      workflow.nodes.map(n => n.agentId)
-    );
-  }
-
-  /**
-   * Check for pending signals that might affect workflow execution
-   */
-  private async checkWorkflowSignals(): Promise<{ shouldPause: boolean; reasons: string[] }> {
-    const signals = await checkPendingSignals(this.identity.id);
-
-    const shouldPause = signals.some(
-      s => s.value.urgency === 'CRITICAL' &&
-           (s.value.signalType === 'PIVOT_RECOMMENDED' ||
-            s.value.signalType === 'SYSTEM_OVERLOAD')
-    );
-
-    const reasons = signals
-      .filter(s => s.value.urgency === 'CRITICAL' || s.value.urgency === 'HIGH')
-      .map(s => `${s.value.signalType}: ${String(s.value.payload.title ?? s.key)}`);
-
-    return { shouldPause, reasons };
-  }
-
-  /**
-   * Share workflow analytics to the vault for performance tracking
-   */
-  private async shareWorkflowAnalyticsToVault(analytics: WorkflowAnalytics): Promise<void> {
-    await Promise.resolve();
-    const vault = getMemoryVault();
-
-    vault.write(
-      'PERFORMANCE',
-      `workflow_analytics_${analytics.workflowId}`,
-      {
-        workflowId: analytics.workflowId,
-        executionCount: analytics.executionCount,
-        avgDurationMs: analytics.avgDurationMs,
-        successRate: analytics.successRate,
-        bottlenecks: analytics.bottlenecks,
-        parallelizationEfficiency: analytics.parallelizationEfficiency,
-        lastUpdated: new Date().toISOString(),
-      },
-      this.identity.id,
-      { tags: ['analytics', 'performance', 'workflow'] }
-    );
-
-    // Share performance insight
-    await shareInsight(
-      this.identity.id,
-      'PERFORMANCE',
-      `Workflow Performance: ${analytics.workflowId}`,
-      `${analytics.executionCount} executions with ${Math.round(analytics.successRate * 100)}% success rate. ` +
-      `Avg duration: ${this.formatDuration(analytics.avgDurationMs)}. ` +
-      `Parallelization efficiency: ${Math.round(analytics.parallelizationEfficiency * 100)}%.`,
-      {
-        confidence: 95,
-        relatedAgents: ['BUILDER_MANAGER'],
-        actions: analytics.recommendations,
-        tags: ['performance', 'metrics'],
-      }
-    );
-  }
-
-  /**
-   * Read agent availability from the vault before composing workflows
-   */
-  private async getAgentStatusFromVault(
-    agentIds: string[]
-  ): Promise<Map<string, { available: boolean; load: number }>> {
-    await Promise.resolve();
-    const vault = getMemoryVault();
-    const statusMap = new Map<string, { available: boolean; load: number }>();
-
-    for (const agentId of agentIds) {
-      const entry = await vault.read<{ available: boolean; load: number }>(
-        'CONTEXT',
-        `agent_status_${agentId}`,
-        this.identity.id
-      );
-
-      statusMap.set(agentId, entry?.value ?? { available: true, load: 0 });
-    }
-
-    return statusMap;
+    return { functional: 420, boilerplate: 60 };
   }
 }
 
 // ============================================================================
-// FACTORY FUNCTION
+// FACTORY / SINGLETON
 // ============================================================================
 
 export function createWorkflowOptimizer(): WorkflowOptimizer {
   return new WorkflowOptimizer();
 }
-
-// ============================================================================
-// SINGLETON INSTANCE
-// ============================================================================
 
 let instance: WorkflowOptimizer | null = null;
 
@@ -1717,3 +463,19 @@ export function getWorkflowOptimizer(): WorkflowOptimizer {
   instance ??= createWorkflowOptimizer();
   return instance;
 }
+
+// ============================================================================
+// INTERNAL TEST HELPERS
+// ============================================================================
+
+export const __internal = {
+  SPECIALIST_ID,
+  DEFAULT_INDUSTRY_KEY,
+  SUPPORTED_ACTIONS,
+  loadGMAndBrandDNA,
+  buildResolvedSystemPrompt,
+  buildComposeWorkflowUserPrompt,
+  stripJsonFences,
+  ComposeWorkflowRequestSchema,
+  ComposeWorkflowResultSchema,
+};

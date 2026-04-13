@@ -26,6 +26,7 @@ import { facebookAdsExpertExecutor } from '../src/lib/regression/executors/faceb
 import { growthAnalystExecutor } from '../src/lib/regression/executors/growth-analyst-executor';
 import { uxUiArchitectExecutor } from '../src/lib/regression/executors/ux-ui-architect-executor';
 import { funnelEngineerExecutor } from '../src/lib/regression/executors/funnel-engineer-executor';
+import { workflowOptimizerExecutor } from '../src/lib/regression/executors/workflow-optimizer-executor';
 import {
   listActiveCasesForAgent,
   recordBaseline,
@@ -47,6 +48,7 @@ const EXECUTOR_REGISTRY: Record<string, CaseExecutor> = {
   GROWTH_ANALYST: growthAnalystExecutor,
   UX_UI_ARCHITECT: uxUiArchitectExecutor,
   FUNNEL_ENGINEER: funnelEngineerExecutor,
+  WORKFLOW_OPTIMIZER: workflowOptimizerExecutor,
 };
 
 interface CliArgs {

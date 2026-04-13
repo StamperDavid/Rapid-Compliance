@@ -1142,6 +1142,93 @@ const UX_UI_ARCHITECT_CASES: Omit<RegressionCase, 'createdAt' | 'updatedAt' | 'b
 ];
 
 // ---------------------------------------------------------------------------
+// Workflow Optimizer cases
+// ---------------------------------------------------------------------------
+
+const WORKFLOW_OPTIMIZER_CASES: Omit<RegressionCase, 'createdAt' | 'updatedAt' | 'baselines'>[] = [
+  {
+    caseId: 'workflow_optimizer_saas_content_engine',
+    agentId: 'WORKFLOW_OPTIMIZER',
+    name: 'SaaS weekly content engine (canonical)',
+    description:
+      'Canonical workflow composition case. Exercises node count range, prose input/output/depends fields, unique node ids, total duration sanity, and critical-path reference-by-id.',
+    mode: 'SINGLE_SHOT',
+    active: true,
+    tags: ['compose_workflow', 'saas', 'content', 'canonical', 'baseline'],
+    createdBy: 'seed-script',
+    shapeTolerances: [
+      { path: '$.nodes.length', kind: 'arrayLength', min: 3, max: 12, reason: 'Schema allows 3-12 nodes.' },
+      { path: '$.riskMitigation.length', kind: 'arrayLength', min: 2, max: 5, reason: 'Schema allows 2-5 risks.' },
+    ],
+    inputPayload: {
+      action: 'compose_workflow',
+      goal:
+        'Produce one full weekly content package for a B2B SaaS sales velocity platform targeting founders and revenue operators: one SEO-optimized blog post, one LinkedIn thought-leadership post, one short-form TikTok video script, and three social image assets — all coordinated around a single weekly theme and ready for the calendar.',
+      context: 'Weekly content cadence. Theme selection should lean on trending industry topics and existing brand DNA. All outputs must share a unified hook and call-to-action.',
+      constraints: {
+        maxDurationSeconds: 1800,
+        priority: 'high',
+        maxParallelism: 4,
+      },
+    },
+    notes: 'Baseline case — any delta here flags upgrades across the whole Workflow Optimizer surface.',
+  },
+  {
+    caseId: 'workflow_optimizer_realestate_lead_engine',
+    agentId: 'WORKFLOW_OPTIMIZER',
+    name: 'Luxury real estate weekly lead engine',
+    description:
+      'Industry-switching stress case with editorial tone. Tests whether the LLM adapts agent choices and parallelization to a long-sales-cycle luxury market.',
+    mode: 'SINGLE_SHOT',
+    active: true,
+    tags: ['compose_workflow', 'real_estate', 'lead_gen', 'industry_switch', 'stress'],
+    createdBy: 'seed-script',
+    shapeTolerances: [
+      { path: '$.nodes.length', kind: 'arrayLength', min: 3, max: 12, reason: 'Schema allows 3-12 nodes.' },
+      { path: '$.riskMitigation.length', kind: 'arrayLength', min: 2, max: 5, reason: 'Schema allows 2-5 risks.' },
+    ],
+    inputPayload: {
+      action: 'compose_workflow',
+      goal:
+        'Build a weekly luxury real estate lead generation engine: research one neighborhood market trend, produce one editorial blog post, one LinkedIn post targeting wealth managers, two Instagram-ready property images, and a follow-up email nurture cadence for the leads captured.',
+      context: 'Long sales cycle market. Editorial tone. Brand restraint is important — no loud or trendy visuals.',
+      constraints: {
+        maxDurationSeconds: 2400,
+        priority: 'medium',
+      },
+    },
+    notes: 'Industry-switching regressions surface if the LLM returns a SaaS-style content engine instead of a luxury editorial lead engine.',
+  },
+  {
+    caseId: 'workflow_optimizer_ecommerce_product_launch',
+    agentId: 'WORKFLOW_OPTIMIZER',
+    name: 'DTC ecommerce product launch (critical, multi-channel)',
+    description:
+      'Complexity-stress case. Tests whether the LLM scales up the workflow to the larger scope (8-12 nodes), uses critical priority appropriately, and maintains sane critical path + parallelization.',
+    mode: 'SINGLE_SHOT',
+    active: true,
+    tags: ['compose_workflow', 'ecommerce', 'product_launch', 'complexity_stress', 'stress'],
+    createdBy: 'seed-script',
+    shapeTolerances: [
+      { path: '$.nodes.length', kind: 'arrayLength', min: 3, max: 12, reason: 'Schema allows 3-12 nodes.' },
+      { path: '$.riskMitigation.length', kind: 'arrayLength', min: 2, max: 5, reason: 'Schema allows 2-5 risks.' },
+    ],
+    inputPayload: {
+      action: 'compose_workflow',
+      goal:
+        'Launch a new DTC lifestyle product across all channels in one week: build the product landing page, compose Facebook ad creative (primary + 3 variants), produce one TikTok video script with hook variations, generate five product lifestyle images, schedule everything across the content calendar, and set up a welcome email sequence for first-time buyers.',
+      context: 'Fast-velocity DTC brand. Mobile-first. Emphasis on repeat-purchase funnel setup, not one-time sales.',
+      constraints: {
+        maxDurationSeconds: 3600,
+        priority: 'critical',
+        maxParallelism: 6,
+      },
+    },
+    notes: 'Complexity-stress regressions surface if the LLM returns a minimal 3-node workflow for a clearly multi-channel launch.',
+  },
+];
+
+// ---------------------------------------------------------------------------
 // Funnel Engineer cases
 // ---------------------------------------------------------------------------
 
@@ -1373,6 +1460,7 @@ const AGENT_CASE_BANK: Record<string, Omit<RegressionCase, 'createdAt' | 'update
   GROWTH_ANALYST: GROWTH_ANALYST_CASES,
   UX_UI_ARCHITECT: UX_UI_ARCHITECT_CASES,
   FUNNEL_ENGINEER: FUNNEL_ENGINEER_CASES,
+  WORKFLOW_OPTIMIZER: WORKFLOW_OPTIMIZER_CASES,
 };
 
 async function main(): Promise<void> {
