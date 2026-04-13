@@ -1396,6 +1396,82 @@ const UX_UI_SPECIALIST_CASES: Omit<RegressionCase, 'createdAt' | 'updatedAt' | '
 ];
 
 // ---------------------------------------------------------------------------
+// SMS Specialist cases (Outreach-department content generator, Task #44)
+// ---------------------------------------------------------------------------
+
+const SMS_SPECIALIST_CASES: Omit<RegressionCase, 'createdAt' | 'updatedAt' | 'baselines'>[] = [
+  {
+    caseId: 'sms_specialist_saas_flash_offer',
+    agentId: 'SMS_SPECIALIST',
+    name: 'SaaS annual upgrade flash offer (canonical)',
+    description:
+      'Canonical compose_sms case. Exercises smsPurpose slug validation against live Firestore taxonomy, segmentStrategy enum, primaryMessage + complianceFooter combined length against runtime sms-settings maxCharCap, personalization variable detection.',
+    mode: 'SINGLE_SHOT',
+    active: true,
+    tags: ['compose_sms', 'saas', 'flash_offer', 'canonical', 'baseline'],
+    createdBy: 'seed-script',
+    shapeTolerances: [],
+    inputPayload: {
+      action: 'compose_sms',
+      campaignName: 'Q2 2026 — SalesVelocity Annual Upgrade Flash Sale',
+      targetAudience:
+        'Existing SalesVelocity.ai monthly-plan customers who have been active for 60+ days and have hit their trial limit on at least one outbound sequence. They know the product and use it weekly.',
+      goal: 'Drive upgrade from monthly to annual plan with a limited-time discount',
+      suggestedPurposeSlug: 'flash_offer',
+      brief:
+        'Write a flash-offer SMS to existing monthly-plan customers inviting them to upgrade to annual and save 20 percent. Offer window: 48 hours. This audience already knows the product, so skip the pitch — just deliver the offer and the expiry. CTA should be a short landing page link (svai.link/annual-20). Customers expect us to be professional and concise, not cute or hype-heavy. Brand pillars: team-not-tools, results-before-retainer, no contracts ever.',
+    },
+    notes: 'Baseline case — any delta here flags upgrades across the whole SMS Specialist surface.',
+  },
+  {
+    caseId: 'sms_specialist_realestate_appointment_reminder',
+    agentId: 'SMS_SPECIALIST',
+    name: 'Luxury real estate private viewing reminder (industry switch + transactional)',
+    description:
+      'Industry-switching case. Tests whether the LLM picks appointment_reminder purpose, adapts tone to restrained editorial luxury, and uses merge variables for the transactional payload.',
+    mode: 'SINGLE_SHOT',
+    active: true,
+    tags: ['compose_sms', 'real_estate', 'luxury', 'appointment_reminder', 'transactional', 'industry_switch', 'stress'],
+    createdBy: 'seed-script',
+    shapeTolerances: [],
+    inputPayload: {
+      action: 'compose_sms',
+      campaignName: 'Aspen Q2 Private Viewing Confirmations',
+      targetAudience:
+        'Luxury real estate prospects with scheduled private property viewings in the next 24 hours. They booked through a broker conversation and expect a professional, restrained communication style consistent with the brokerage brand.',
+      goal: 'Confirm the upcoming appointment and give a low-friction reschedule option',
+      suggestedPurposeSlug: 'appointment_reminder',
+      brief:
+        'Write an appointment reminder SMS for a luxury real estate brokerage (Aspen, Naples, Hamptons). The recipient has a private viewing scheduled tomorrow at {{appointment_time}} at {{property_address}} with broker {{broker_name}}. Include the property address and time. Offer a reschedule option via reply ("Reply 1 to confirm, 2 to reschedule"). Tone is restrained editorial — these are wealth-managed buyers who expect discretion, not emoji-heavy consumer SMS. Keep it short and dignified.',
+    },
+    notes: 'Transactional case — confirms the LLM handles reply-keyword CTAs instead of links, and picks a dignified tone for high-net-worth audience.',
+  },
+  {
+    caseId: 'sms_specialist_ecommerce_shipping_update',
+    agentId: 'SMS_SPECIALIST',
+    name: 'DTC sleep supplement shipping update (transactional)',
+    description:
+      'Transactional complexity case. Tests whether the LLM picks shipping_update purpose, renders multiple merge variables cleanly, and keeps the message tight for mobile viewing.',
+    mode: 'SINGLE_SHOT',
+    active: true,
+    tags: ['compose_sms', 'ecommerce', 'dtc', 'shipping_update', 'transactional', 'stress'],
+    createdBy: 'seed-script',
+    shapeTolerances: [],
+    inputPayload: {
+      action: 'compose_sms',
+      campaignName: 'Sleep Supplement Launch — Order Shipped Notification',
+      targetAudience:
+        'Customers who just purchased the magnesium-glycinate sleep supplement during the launch window and whose order has been picked up by the carrier. They are mobile-first, expect fast delivery, and have a strong preference for tracking information delivered proactively.',
+      goal: 'Inform the customer that their order has shipped and give them a tracking link',
+      suggestedPurposeSlug: 'shipping_update',
+      brief:
+        'Write a shipping update SMS for a DTC sleep-supplement brand. The recipient just had their order shipped and needs the tracking link. The body should name the product ({{product_name}}), mention the carrier ({{carrier_name}}) and expected delivery window ({{delivery_window}}), and include a shortened tracking link (svai.link/track/{{order_id}}). This is a transactional message so TCPA compliance is lighter, but still include STOP keyword footer. Voice is warm and specific — the brand has a real founder face (chronic-insomnia survivor) and that personality should come through without burning characters.',
+    },
+    notes: 'Multi-variable transactional — checks that merge variables count against the character budget correctly.',
+  },
+];
+
+// ---------------------------------------------------------------------------
 // Email Specialist cases (Outreach-department content generator, Task #43)
 // ---------------------------------------------------------------------------
 
@@ -1827,6 +1903,7 @@ const AGENT_CASE_BANK: Record<string, Omit<RegressionCase, 'createdAt' | 'update
   UX_UI_SPECIALIST: UX_UI_SPECIALIST_CASES,
   FUNNEL_PATHOLOGIST: FUNNEL_PATHOLOGIST_CASES,
   EMAIL_SPECIALIST: EMAIL_SPECIALIST_CASES,
+  SMS_SPECIALIST: SMS_SPECIALIST_CASES,
 };
 
 async function main(): Promise<void> {
