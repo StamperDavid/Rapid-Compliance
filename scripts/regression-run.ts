@@ -27,6 +27,7 @@ import { twitterExpertExecutor } from '../src/lib/regression/executors/twitter-e
 import { facebookAdsExpertExecutor } from '../src/lib/regression/executors/facebook-ads-expert-executor';
 import { growthAnalystExecutor } from '../src/lib/regression/executors/growth-analyst-executor';
 import { uxUiArchitectExecutor } from '../src/lib/regression/executors/ux-ui-architect-executor';
+import { funnelEngineerExecutor } from '../src/lib/regression/executors/funnel-engineer-executor';
 import { runRegression, type CaseExecutor } from '../src/lib/regression/runner';
 import type { CaseDiff, DiffEntry, RegressionRun } from '../src/types/regression';
 
@@ -42,6 +43,7 @@ const EXECUTOR_REGISTRY: Record<string, CaseExecutor> = {
   FACEBOOK_ADS_EXPERT: facebookAdsExpertExecutor,
   GROWTH_ANALYST: growthAnalystExecutor,
   UX_UI_ARCHITECT: uxUiArchitectExecutor,
+  FUNNEL_ENGINEER: funnelEngineerExecutor,
 };
 
 interface CliArgs {

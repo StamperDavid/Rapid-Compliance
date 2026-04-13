@@ -1142,6 +1142,103 @@ const UX_UI_ARCHITECT_CASES: Omit<RegressionCase, 'createdAt' | 'updatedAt' | 'b
 ];
 
 // ---------------------------------------------------------------------------
+// Funnel Engineer cases
+// ---------------------------------------------------------------------------
+
+const FUNNEL_ENGINEER_CASES: Omit<RegressionCase, 'createdAt' | 'updatedAt' | 'baselines'>[] = [
+  {
+    caseId: 'funnel_engineer_saas_b2b',
+    agentId: 'FUNNEL_ENGINEER',
+    name: 'B2B SaaS free-trial funnel (canonical)',
+    description:
+      'Canonical funnel design case. Exercises stage count, tactics/KPI prose fields, realistic conversion percentages, A/B test count, bottleneck risks, and rationale price-point reference.',
+    mode: 'SINGLE_SHOT',
+    active: true,
+    tags: ['design_funnel', 'saas', 'free_trial', 'canonical', 'baseline'],
+    createdBy: 'seed-script',
+    shapeTolerances: [
+      { path: '$.stages.length', kind: 'arrayLength', min: 3, max: 7, reason: 'Schema allows 3-7 stages.' },
+      { path: '$.abTestRoadmap.length', kind: 'arrayLength', min: 3, max: 6, reason: 'Schema allows 3-6 tests.' },
+      { path: '$.keyBottleneckRisks.length', kind: 'arrayLength', min: 2, max: 5, reason: 'Schema allows 2-5 risks.' },
+    ],
+    inputPayload: {
+      action: 'design_funnel',
+      context:
+        'B2B SaaS sales velocity platform targeting B2B SaaS founders and revenue operators scaling $1M-$10M ARR. Primary goal: drive qualified free trial signups that convert to paid within 30 days.',
+      requirements: {
+        funnelType: 'free_trial',
+        businessModel: 'saas_sales_ops',
+        targetAudience: 'B2B SaaS founders and revenue operators scaling from $1M to $10M ARR',
+        pricePoint: 'mid',
+        productName: 'SalesVelocity.ai',
+        trafficSource: 'LinkedIn paid + organic content + SEO',
+      },
+    },
+    notes: 'Baseline case — any delta here flags upgrades across the whole Funnel Engineer surface.',
+  },
+  {
+    caseId: 'funnel_engineer_realestate_luxury',
+    agentId: 'FUNNEL_ENGINEER',
+    name: 'Luxury real estate high-ticket funnel',
+    description:
+      'Industry-switching stress case with long sales cycle. Tests whether the LLM adapts funnel shape, stage count, and KPIs to high-ticket consultation vs SaaS free trial.',
+    mode: 'SINGLE_SHOT',
+    active: true,
+    tags: ['design_funnel', 'real_estate', 'high_ticket', 'industry_switch', 'stress'],
+    createdBy: 'seed-script',
+    shapeTolerances: [
+      { path: '$.stages.length', kind: 'arrayLength', min: 3, max: 7, reason: 'Schema allows 3-7 stages.' },
+      { path: '$.abTestRoadmap.length', kind: 'arrayLength', min: 3, max: 6, reason: 'Schema allows 3-6 tests.' },
+      { path: '$.keyBottleneckRisks.length', kind: 'arrayLength', min: 2, max: 5, reason: 'Schema allows 2-5 risks.' },
+    ],
+    inputPayload: {
+      action: 'design_funnel',
+      context:
+        'Luxury real estate brokerage funnel for high-ticket property transactions. Sales cycle is 6-18 months. Primary goal: move qualified affluent buyers from awareness through in-person property viewings.',
+      requirements: {
+        funnelType: 'high_ticket_consultation',
+        businessModel: 'real_estate_luxury',
+        targetAudience: 'Affluent buyers shopping $2M-$20M properties',
+        pricePoint: 'high',
+        productName: 'Legacy Estates Brokerage',
+        trafficSource: 'Editorial content + Google Ads + broker referrals',
+      },
+    },
+    notes: 'Industry-switching regressions surface if the LLM returns a SaaS-style trial funnel instead of a high-ticket consultation journey.',
+  },
+  {
+    caseId: 'funnel_engineer_ecommerce_dtc',
+    agentId: 'FUNNEL_ENGINEER',
+    name: 'DTC ecommerce repeat-purchase funnel',
+    description:
+      'Business-model stress case with focus on retention instead of acquisition. Tests whether the LLM produces retention-weighted stages and KPIs.',
+    mode: 'SINGLE_SHOT',
+    active: true,
+    tags: ['design_funnel', 'ecommerce', 'dtc', 'retention', 'stress'],
+    createdBy: 'seed-script',
+    shapeTolerances: [
+      { path: '$.stages.length', kind: 'arrayLength', min: 3, max: 7, reason: 'Schema allows 3-7 stages.' },
+      { path: '$.abTestRoadmap.length', kind: 'arrayLength', min: 3, max: 6, reason: 'Schema allows 3-6 tests.' },
+      { path: '$.keyBottleneckRisks.length', kind: 'arrayLength', min: 2, max: 5, reason: 'Schema allows 2-5 risks.' },
+    ],
+    inputPayload: {
+      action: 'design_funnel',
+      context:
+        'DTC ecommerce brand for premium lifestyle goods. Fast-velocity mobile-first purchase flow with emphasis on repeat purchase and subscription conversion.',
+      requirements: {
+        funnelType: 'dtc_repeat_purchase',
+        businessModel: 'ecommerce_dtc',
+        targetAudience: 'Millennial and Gen-Z shoppers on mobile, repeat purchasers of lifestyle goods',
+        pricePoint: 'low',
+        productName: 'North Point Goods',
+        trafficSource: 'TikTok + Meta paid social + influencer partnerships',
+      },
+    },
+    notes: 'Business-model regressions surface if the model produces B2B SaaS-style stages instead of DTC repeat-purchase stages.',
+  },
+];
+
+// ---------------------------------------------------------------------------
 // SEO Expert cases
 // ---------------------------------------------------------------------------
 
@@ -1275,6 +1372,7 @@ const AGENT_CASE_BANK: Record<string, Omit<RegressionCase, 'createdAt' | 'update
   FACEBOOK_ADS_EXPERT: FACEBOOK_ADS_EXPERT_CASES,
   GROWTH_ANALYST: GROWTH_ANALYST_CASES,
   UX_UI_ARCHITECT: UX_UI_ARCHITECT_CASES,
+  FUNNEL_ENGINEER: FUNNEL_ENGINEER_CASES,
 };
 
 async function main(): Promise<void> {
