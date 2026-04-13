@@ -98,6 +98,7 @@ Each handler kept the outward shape of delegation: Mission Control steps flipped
 | #33 — Rebuild Growth Analyst | DONE (April 12, 2026) | `99930b30` | Real Sonnet 4.6 specialist. Single live action: generate_content (growth analysis with experiments, prioritized actions, KPI targets). 7 dead actions dropped. Pirate test PASSED. Marketing dept 6/6 COMPLETE. |
 | #34 — Rewire delegate_to_marketing to live | DONE (April 12, 2026) | `62e513ec` | MarketingManager delegation now live. Jasper can reach all 6 marketing specialists through the front door. Same pattern as delegate_to_content (Task #27). |
 | #35 — Rebuild UX/UI Architect | DONE (April 12, 2026) | `af2e5f08` | Real Sonnet 4.6 specialist. Single live action: `generate_design_system`. 3 dead actions dropped (user_flows, accessibility_audit, component_design). Full design-system output (tokens, componentGuidelines, designPrinciples, accessibilityStrategy, rationale). Pirate GM-swap test PASSED (every field comes back with "arrr", "shiver me timbers", "hoist the mainsail" — proving Firestore GM is actually sent to LLM). BuilderManager dispatch wiring updated (action discriminator + single-deref result extraction). Regression sanity 1P/2W/0F. Builder dept 1/3. |
+| #36 — Rebuild Funnel Engineer | DONE (April 12, 2026) | `<pending>` | Real Sonnet 4.6 specialist. Single live action: `design_funnel`. 3 dead actions dropped (landing_page_structure, lead_capture_sequence, conversion_optimization). Full funnel output (funnelSummary, stages[3..7] with prose tactics+KPI+optimization, expectedOverallConversionPct, estimatedCpa, keyBottleneckRisks, abTestRoadmap, recommendations, rationale). Pirate GM-swap test PASSED ("Arrr, me hearties!", "ye scallywags", "hoist the mainsail", "plunder" in every prose field; numeric + enum fields preserved; Zod PASS; GM restored). BuilderManager dispatch wiring updated (action discriminator + input moved under `requirements`). Regression sanity 1P/2W/0F after schema widening for `funnelType`/`businessModel` caps. Builder dept 2/3. |
 
 ### Agent Swarm Rebuild Tracker — Ground Truth Audit (updated April 12, 2026)
 
@@ -105,18 +106,18 @@ Each handler kept the outward shape of delegation: Mission Control steps flipped
 
 **Audit methodology:** Read every file in `src/lib/agents/`. Classify by actual behavior — does the file import `OpenRouterProvider` (or a real AI service like DALL-E) and call it? REAL. Is it a switch statement over lookup tables with no AI calls? TEMPLATE. Is it a dispatcher/router/session manager? INFRA. Was it a manager pretending to delegate while secretly calling LLMs directly? MANAGER_WITH_BYPASS (all removed in Task #20).
 
-**Current totals (as of April 12, 2026, after Task #35):**
+**Current totals (as of April 12, 2026, after Task #36):**
 
 | Category | Count | Notes |
 |---|---|---|
-| **REAL — confirmed AI agents** | **14** | Jasper, Copywriter, Video Specialist, Calendar Coordinator, Asset Generator, Growth Strategist, SEO Expert, LinkedIn Expert, TikTok Expert, Twitter/X Expert, Facebook Ads Expert, Growth Analyst, **UX/UI Architect** |
-| **TEMPLATE — needs rebuild** | **24** | Hand-coded switch/lookup engines with zero LLM calls. |
+| **REAL — confirmed AI agents** | **15** | Jasper, Copywriter, Video Specialist, Calendar Coordinator, Asset Generator, Growth Strategist, SEO Expert, LinkedIn Expert, TikTok Expert, Twitter/X Expert, Facebook Ads Expert, Growth Analyst, UX/UI Architect, **Funnel Engineer** |
+| **TEMPLATE — needs rebuild** | **23** | Hand-coded switch/lookup engines with zero LLM calls. |
 | **INFRA — routing/plumbing, not AI candidates** | **14** | Managers (9), jasper-tools dispatcher, voice-agent-handler, autonomous-posting-agent, chat-session-service, voice-ai-specialist |
 | **NOT_WIRED — Jasper tools intentionally disabled** | **9** | `produce_video`, `delegate_to_builder`, `delegate_to_architect`, `delegate_to_outreach`, `orchestrate_campaign`, `delegate_to_sales`, `delegate_to_trust`, `delegate_to_intelligence`, `delegate_to_commerce` |
 | **LIVE delegations** | **2** | `delegate_to_content` (Task #27), `delegate_to_marketing` (Task #34) |
 | **TOTAL agents** | **52 registry + 1 code drift = 53** | Registry says 52, actual code has `VOICE_AI_SPECIALIST` at `outreach/voice/specialist.ts` that's not in the registry |
 
-**Progress: 14 REAL / 38 total candidates (REAL + TEMPLATE) = 37% done.** Content department COMPLETE (4/4 REAL, `delegate_to_content` live). Marketing department COMPLETE (6/6 REAL, `delegate_to_marketing` live). Builder department 1/3 (UX/UI Architect done). Next: Funnel Engineer (#36), Workflow Optimizer (#37), then rewire `delegate_to_builder`.
+**Progress: 15 REAL / 38 total candidates (REAL + TEMPLATE) = 39% done.** Content department COMPLETE (4/4 REAL, `delegate_to_content` live). Marketing department COMPLETE (6/6 REAL, `delegate_to_marketing` live). Builder department 2/3 (UX/UI Architect ✓, Funnel Engineer ✓). Next: Workflow Optimizer (#37), then rewire `delegate_to_builder`.
 
 #### Full agent inventory (audited against source code)
 
@@ -167,7 +168,7 @@ Each handler kept the outward shape of delegation: Mission Control steps flipped
 | ID | File | LOC | Verdict | Task |
 |---|---|---|---|---|
 | UX_UI_ARCHITECT | `src/lib/agents/builder/ux-ui/specialist.ts` | 524 | ✅ REAL | **Task #35 — DONE.** Single action: `generate_design_system`. GM `sgm_ux_ui_architect_saas_sales_ops_v1`. Output: tokens (colors, typography, spacing, radius, shadows, breakpoints) + componentGuidelines (4–8) + designPrinciples (3–6) + accessibilityStrategy + rationale. BuilderManager dispatch rewired (`action` discriminator + single-deref result). |
-| FUNNEL_ENGINEER | `src/lib/agents/builder/funnel/specialist.ts` | 1448 | ❌ TEMPLATE | Task #36 |
+| FUNNEL_ENGINEER | `src/lib/agents/builder/funnel/specialist.ts` | 482 | ✅ REAL | **Task #36 — DONE.** Single action: `design_funnel`. GM `sgm_funnel_engineer_saas_sales_ops_v1`. Output: funnelSummary + stages[3..7] (with prose tactics/kpi/optimization) + keyBottleneckRisks + abTestRoadmap[3..6] + recommendations + rationale. Pirate GM-swap PASSED. BuilderManager dispatch rewired. |
 | ASSET_GENERATOR | *(shared with Content — see above)* | — | ✅ REAL | Copy portions = Task #26 DONE |
 | WORKFLOW_OPTIMIZER | `src/lib/agents/builder/workflow/specialist.ts` | 1719 | ❌ TEMPLATE | Task #37 |
 
@@ -479,6 +480,48 @@ When rebuilding a specialist:
 11. **Regression sanity run result:** **1 PASS (realestate_luxury), 2 WARN (saas_b2b, ecommerce_dtc), 0 FAIL.** All WARN entries are tolerance-aware non-determinism on `$.tokens.spacing.scale.length` flipping between 9 and 10. Run record: `regressionRuns/regrun_ux_ui_architect_1776025957425_6dee85`.
 
 **Builder department status: 1/3 REAL.** UX/UI Architect ✓, Funnel Engineer ❌, Workflow Optimizer ❌, Asset Generator ✓ (shared with Content). Next: Funnel Engineer (Task #36), Workflow Optimizer (Task #37). When 3/3, rewire `delegate_to_builder` from NOT_WIRED to live (Task #38).
+
+### Task #36 detail — Rebuild Funnel Engineer (April 12, 2026)
+
+**Problem:** `src/lib/agents/builder/funnel/specialist.ts` (1449 LOC) was a pure algorithmic template. Zero LLM imports. Four hand-coded branches dispatched on \`payload.method\`: \`funnel_design\`, \`landing_page_structure\`, \`lead_capture_sequence\`, \`conversion_optimization\`. Every output was fabricated from lookup tables. SYSTEM_PROMPT existed (~180 lines) but was never sent to any LLM. Only one branch (\`funnel_design\`) was ever called from production — the other three were dead. Downstream consumption: BuilderManager extracts \`funnelResult.data\` and passes it to \`assemblePage()\` as parameter \`_funnelOptimization\` with a leading underscore — **never actually read by any field**. The funnel output was silently discarded. (This is pre-delegate_to_builder wiring state; by Task #38 this assembly path will actually consume the output.)
+
+**Delivered:**
+
+1. **Rebuilt \`src/lib/agents/builder/funnel/specialist.ts\`** (482 LOC) as a real Sonnet 4.6 specialist. Exact LinkedIn/Growth Analyst/UX-UI pattern: OpenRouterProvider + Zod input/output + getActiveSpecialistGMByIndustry + getBrandDNA + \`__internal\` export. Single live action: \`design_funnel\` (verb+noun form, standardized discriminator). Three dead branches dropped. Preserved class name \`FunnelEngineer\`, factory \`getFunnelEngineer()\`, \`createFunnelEngineer()\` (imported by agent-factory.ts:144, agent-registry.ts:232, manager.ts:599).
+
+2. **Output schema (\`FunnelDesignResultSchema\`)** — regression-stable by design:
+   - \`funnelSummary\`: \`{ funnelType, businessModel, primaryObjective }\` (top-level scalar fields)
+   - \`stages\`: 3–7 entries, each with \`name\`, \`purpose\`, **prose** \`tacticsDescription\`, **prose** \`kpiDescription\`, \`estimatedConversionPct\` (0.1–100), \`bottleneckRisk\` enum, **prose** \`optimizationNotes\`
+   - \`expectedOverallConversionPct\`: 0.1–60 (percentage, not decimal fraction — the invariant checks this)
+   - \`estimatedCpa\`: prose string with range and reasoning
+   - \`keyBottleneckRisks\`: 2–5 short specific statements
+   - \`abTestRoadmap\`: 3–6 tests with \`testName\`, \`hypothesis\` (\"if X then Y because Z\"), \`successMetric\`, \`priority\` enum
+   - \`recommendations\` (prose, 100–6000 chars)
+   - \`rationale\` (prose, 150–6000 chars, must reference brand and audience)
+
+   All prose fields (not arrays of strings) — carries the Task #35 lesson that nested-array jitter is what fails sanity runs. Tolerance declarations on \`$.stages.length [3..7]\`, \`$.abTestRoadmap.length [3..6]\`, \`$.keyBottleneckRisks.length [2..5]\`.
+
+3. **BuilderManager dispatch rewired** (manager.ts:1097-1114): \`method: 'funnel_design'\` → \`action: 'design_funnel'\`, input fields moved under \`requirements: {...}\` to match the new Zod schema. Single surgical edit; result extraction on line 1035 was already a clean single-deref and needed no change.
+
+4. **Golden Master seeded** as \`sgm_funnel_engineer_saas_sales_ops_v1\` (6471 chars, claude-sonnet-4.6, temp 0.6, maxTokens 10000). The prompt's philosophy section emphasizes honest conversion numbers (trial-to-paid 15% not 60%), stage count following sales cycle length, tactics specific enough to execute tomorrow, KPIs using tools the operator actually has, and A/B tests prioritized by expected impact not novelty.
+
+5. **Scripts:**
+   - \`scripts/seed-funnel-engineer-gm.js\` — Firebase Admin SDK seeder, same CommonJS shape as prior seed scripts
+   - \`scripts/test-funnel-engineer.ts\` — proof-of-life harness, 3 canned cases (\`saas_b2b\`, \`realestate_luxury\`, \`ecommerce_dtc\`)
+   - \`scripts/verify-funnel-engineer-is-real.js\` — pirate GM-swap verify script
+   - \`src/lib/regression/executors/funnel-engineer-executor.ts\` — 7 invariants: \`stagesCountWithinRange\` (FAIL 3–7), \`abTestCountWithinRange\` (FAIL 3–6), \`keyBottleneckRisksCountWithinRange\` (FAIL 2–5), \`overallConversionWithinRange\` (FAIL 0.1–60%), \`tacticsAndKpiPresent\` (FAIL every stage), \`rationaleMentionsPricePoint\` (FAIL), \`contextEchoedInRationale\` (**WARN**)
+
+6. **Pirate GM-swap test** — \`scripts/verify-funnel-engineer-is-real.js\` — the proof that the Firestore GM is actually loaded. Read current GM (6471 chars), back up, overwrite systemPrompt with pirate-speak, run proof-of-life subprocess, restore in finally. Result: **every prose field came back in pirate dialect while remaining structurally valid**. primaryObjective: *\"Arrr, me hearties! This here funnel exists to lure in B2B SaaS founders...\"*. Stage purposes: *\"Arrr, this stage hoists the mainsail...\"*, *\"Shiver me timbers, this stage be where curious landlubbers...\"*, *\"Blimey, this be the moment of truth...\"*. estimatedCpa: *\"Arrr, the estimated cost-per-acquisition for a paying customer be in the range of $280-$420...\"*. Key risks, A/B tests, recommendations, rationale — all pirate. Checklist words present: Arrr, me hearties, ye scallywags, doubloon, treasure, hoist the mainsail, shiver me timbers, blimey, landlubber, plunder. Zod PASS preserved (5 stages, 6 tests, 5 risks, numeric percentages, all enums valid). GM restored cleanly. Conclusive proof the specialist loads its prompt from the owner-editable Firestore GM at runtime.
+
+7. **3 seeded regression cases** (\`funnel_engineer_saas_b2b\` canonical, \`funnel_engineer_realestate_luxury\` industry switch, \`funnel_engineer_ecommerce_dtc\` business-model stress) with tolerance declarations on all three array-length fields.
+
+8. **Baseline recorded** on \`anthropic/claude-sonnet-4.6\`: 3/3 schemaValid=true, terminal=FINAL_RESPONSE, average ~178s per case.
+
+9. **Schema widening v2** — first sanity run surfaced a real bug: on 2 of 3 luxury real estate runs the LLM produced a \`funnelSummary.funnelType\` string longer than the original 120-char cap (writing verbose labels like \"High-Ticket Consultative Sales Funnel for Luxury Real Estate (6-18 Month Relationship-Based Cycle)\"). Used \`scripts/_inspect-run-raw.js\` to query the stored candidate signatures in Firestore and pinpoint the exact Zod error. Widened \`funnelType\` 120→400, \`businessModel\` 120→400, \`primaryObjective\` 800→1500. Also widened \`estimatedCpa\` 400→2000, \`keyBottleneckRisks\` items 400→800, \`recommendations\` 4000→6000, \`rationale\` 4500→6000 defensively after the initial proof-of-life hit an \`estimatedCpa\` cap.
+
+10. **Regression sanity run v2 result:** **1 PASS (realestate_luxury), 2 WARN (saas_b2b, ecommerce_dtc), 0 FAIL.** All WARN entries are tolerance-aware non-determinism on \`$.stages.length\` flipping 5↔6 (both inside \`[3..7]\` tolerance). Run record: \`regressionRuns/regrun_funnel_engineer_1776036034985_0b04f9\`.
+
+**Builder department status: 2/3 REAL.** UX/UI Architect ✓, Funnel Engineer ✓, Workflow Optimizer ❌, Asset Generator ✓ (shared with Content). Next: Workflow Optimizer (Task #37). When 3/3, rewire \`delegate_to_builder\` from NOT_WIRED to live (Task #38).
 
 ### Successor Workstream: Phase 2 GM Learning Loop — starts ONLY after ALL specialists are rebuilt
 

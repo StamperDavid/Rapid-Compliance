@@ -1097,11 +1097,17 @@ export class BuilderManager extends BaseManager {
       {
         id: 'FUNNEL_ENGINEER',
         message: this.createSpecialistMessage(taskId, 'FUNNEL_ENGINEER', {
-          method: 'funnel_design',
-          funnelType: this.mapFunnelType(blueprint.funnelFlow.type),
-          businessModel: blueprint.brandContext.industry,
-          targetAudience: blueprint.brandContext.targetAudience,
-          pricePoint: 'mid',
+          // Task #36 (April 12 2026): rebuilt Funnel Engineer uses `action` as the job
+          // discriminator (consistent with every other rebuilt specialist), not `method`.
+          // Input fields moved under `requirements` to match the new Zod schema.
+          action: 'design_funnel',
+          context: `Design a conversion funnel for a ${blueprint.brandContext.industry} business targeting ${blueprint.brandContext.targetAudience}`,
+          requirements: {
+            funnelType: this.mapFunnelType(blueprint.funnelFlow.type),
+            businessModel: blueprint.brandContext.industry,
+            targetAudience: blueprint.brandContext.targetAudience,
+            pricePoint: 'mid',
+          },
         }),
       },
       {
