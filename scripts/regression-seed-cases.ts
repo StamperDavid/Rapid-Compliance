@@ -1314,6 +1314,88 @@ const COPY_SPECIALIST_CASES: Omit<RegressionCase, 'createdAt' | 'updatedAt' | 'b
 ];
 
 // ---------------------------------------------------------------------------
+// UX/UI Specialist cases (Architect-layer strategic design picker, Task #40)
+// ---------------------------------------------------------------------------
+
+const UX_UI_SPECIALIST_CASES: Omit<RegressionCase, 'createdAt' | 'updatedAt' | 'baselines'>[] = [
+  {
+    caseId: 'ux_ui_specialist_saas_sales_ops_landing',
+    agentId: 'UX_UI_SPECIALIST',
+    name: 'SaaS sales-ops cold-traffic landing (canonical)',
+    description:
+      'Canonical strategic design direction case. Exercises colorPsychology + typographyStyle short labels, design principles count range, key design decisions count range, prose direction fields, and rationale brief-echo.',
+    mode: 'SINGLE_SHOT',
+    active: true,
+    tags: ['design_page', 'saas', 'landing', 'canonical', 'baseline'],
+    createdBy: 'seed-script',
+    shapeTolerances: [
+      { path: '$.designPrinciples.length', kind: 'arrayLength', min: 3, max: 6, reason: 'Schema allows 3-6 principles.' },
+      { path: '$.keyDesignDecisions.length', kind: 'arrayLength', min: 2, max: 5, reason: 'Schema allows 2-5 decisions.' },
+    ],
+    inputPayload: {
+      action: 'design_page',
+      pageType: 'landing',
+      industry: 'B2B SaaS — sales velocity platform',
+      toneOfVoice: 'confident and direct, peer-to-peer founder voice — never corporate marketing speak',
+      funnelType: 'lead_generation',
+      sections: ['hero', 'social_proof', 'problem', 'solution', 'features', 'pricing', 'testimonials', 'faq', 'cta_footer'],
+      brief: 'Design the cold-traffic landing page for SalesVelocity.ai targeting founders running their own outbound today. Visitors arrive from a LinkedIn ad about "stop sending more cold emails." We sell a complete sales velocity platform that pairs every client with real human specialists running their outbound, content, and pipeline — not a self-serve dashboard. Pricing is month-to-month with a 30-day results guarantee. The page must convert problem-aware visitors who have been burned by cold-outreach agencies. Mobile traffic is roughly 40% of LinkedIn ad traffic. Brand visual restraint is important — the audience associates loud color and emoji-heavy design with consumer apps, and they are evaluating an enterprise-credible operations partner.',
+    },
+    notes: 'Baseline case — any delta here flags upgrades across the whole UX/UI Specialist surface.',
+  },
+  {
+    caseId: 'ux_ui_specialist_realestate_luxury_homepage',
+    agentId: 'UX_UI_SPECIALIST',
+    name: 'Luxury real estate brokerage homepage (industry switch + editorial)',
+    description:
+      'Industry-switching stress case. Tests whether the LLM adapts color palette + typography + layout direction to a long-cycle editorial luxury market with restraint as the brand pillar.',
+    mode: 'SINGLE_SHOT',
+    active: true,
+    tags: ['design_page', 'real_estate', 'luxury', 'editorial', 'industry_switch', 'stress'],
+    createdBy: 'seed-script',
+    shapeTolerances: [
+      { path: '$.designPrinciples.length', kind: 'arrayLength', min: 3, max: 6, reason: 'Schema allows 3-6 principles.' },
+      { path: '$.keyDesignDecisions.length', kind: 'arrayLength', min: 2, max: 5, reason: 'Schema allows 2-5 decisions.' },
+    ],
+    inputPayload: {
+      action: 'design_page',
+      pageType: 'homepage',
+      industry: 'Luxury residential real estate',
+      toneOfVoice: 'restrained editorial — confident without being loud, sophisticated without being stuffy. Think Wall Street Journal feature article, not yacht-broker pitch deck.',
+      funnelType: 'lead_capture_long_cycle',
+      sections: ['editorial_hero', 'market_intelligence_lead_magnet', 'curated_listings', 'broker_credentials', 'client_stories', 'contact_footer'],
+      brief: 'Design the homepage for a luxury real estate brokerage operating in three markets (Aspen, Naples, Hamptons) representing a small curated portfolio of $5M-$50M residential properties. The page must establish editorial credibility with wealth-managed individuals, family offices, and corporate executives evaluating properties on 6-18 month sale cycles. The lead magnet is a quarterly market intelligence report. Visitors are skeptical of glossy real estate sites and read boldness as cheap. Desktop traffic dominates — these visitors research from desks, not phones, and the page needs editorial print-heritage gravitas. Visual restraint is the entire brand position.',
+    },
+    notes: 'Industry-switching regressions surface if the LLM returns a SaaS-style trust-blue palette and modern sans-serif when the brief clearly calls for editorial neutrals and serif gravitas.',
+  },
+  {
+    caseId: 'ux_ui_specialist_ecommerce_dtc_launch_landing',
+    agentId: 'UX_UI_SPECIALIST',
+    name: 'DTC sleep supplement launch landing (mobile-first)',
+    description:
+      'Complexity-stress case. Tests whether the LLM scales design strategy to a fast-velocity mobile-first DTC launch with founder-led personality and aggressive conversion focus.',
+    mode: 'SINGLE_SHOT',
+    active: true,
+    tags: ['design_page', 'ecommerce', 'dtc', 'product_launch', 'mobile_first', 'stress'],
+    createdBy: 'seed-script',
+    shapeTolerances: [
+      { path: '$.designPrinciples.length', kind: 'arrayLength', min: 3, max: 6, reason: 'Schema allows 3-6 principles.' },
+      { path: '$.keyDesignDecisions.length', kind: 'arrayLength', min: 2, max: 5, reason: 'Schema allows 2-5 decisions.' },
+    ],
+    inputPayload: {
+      action: 'design_page',
+      pageType: 'product_launch',
+      industry: 'DTC lifestyle products — wellness and home',
+      toneOfVoice: 'energetic and confident with a founder-led voice. Specific product details, real founder face, no marketing-speak. The brand is small enough to be authentic, large enough to ship reliably.',
+      funnelType: 'paid_traffic_to_purchase',
+      sections: ['hero_with_product', 'founder_video', 'ingredient_breakdown', 'reviews', 'lab_test_proof', 'pricing_offer', 'guarantee', 'faq', 'mobile_sticky_cta'],
+      brief: 'Design the launch landing page for a new DTC sleep-supplement product (a melatonin-free magnesium-glycinate complex with L-theanine). The page must convert cold paid traffic from TikTok and Instagram in under 90 seconds on mobile. Mobile traffic is 90% of total. The offer is launch pricing ($39 down from $49) for the first 1,000 orders, free shipping over $35, and a 60-day money-back guarantee. The audience is millennial and Gen Z, mobile-first, fast-decision, but skeptical of dropshipping fronts. They check reviews, founder stories, and shipping policy before tapping buy. The brand has a real founder face (a chronic-insomnia survivor) and third-party batch testing — both must be visually prominent.',
+    },
+    notes: 'Complexity-stress regressions surface if the LLM returns a desk-bound enterprise design strategy when the brief clearly calls for mobile-first DTC velocity.',
+  },
+];
+
+// ---------------------------------------------------------------------------
 // Funnel Engineer cases
 // ---------------------------------------------------------------------------
 
@@ -1547,6 +1629,7 @@ const AGENT_CASE_BANK: Record<string, Omit<RegressionCase, 'createdAt' | 'update
   FUNNEL_ENGINEER: FUNNEL_ENGINEER_CASES,
   WORKFLOW_OPTIMIZER: WORKFLOW_OPTIMIZER_CASES,
   COPY_SPECIALIST: COPY_SPECIALIST_CASES,
+  UX_UI_SPECIALIST: UX_UI_SPECIALIST_CASES,
 };
 
 async function main(): Promise<void> {
