@@ -1396,6 +1396,87 @@ const UX_UI_SPECIALIST_CASES: Omit<RegressionCase, 'createdAt' | 'updatedAt' | '
 ];
 
 // ---------------------------------------------------------------------------
+// Email Specialist cases (Outreach-department content generator, Task #43)
+// ---------------------------------------------------------------------------
+
+const EMAIL_SPECIALIST_CASES: Omit<RegressionCase, 'createdAt' | 'updatedAt' | 'baselines'>[] = [
+  {
+    caseId: 'email_specialist_saas_cold_intro',
+    agentId: 'EMAIL_SPECIALIST',
+    name: 'SaaS cold LinkedIn outbound cold-intro (canonical)',
+    description:
+      'Canonical compose_email case. Exercises emailPurpose slug validation against live Firestore taxonomy, subject line length, plain-text body, single CTA, PS line, personalization variable detection, and brief echo in rationale.',
+    mode: 'SINGLE_SHOT',
+    active: true,
+    tags: ['compose_email', 'saas', 'cold_intro', 'canonical', 'baseline'],
+    createdBy: 'seed-script',
+    shapeTolerances: [],
+    inputPayload: {
+      action: 'compose_email',
+      campaignName: 'Q2 2026 — Cold LinkedIn Outbound Hook',
+      targetAudience:
+        'B2B SaaS founders and revenue operators scaling from $1M to $10M ARR who are currently running their own outbound and frustrated with cold-outreach agencies that over-promise and under-deliver',
+      goal: 'Earn a reply or a 15-minute discovery call from a problem-aware founder',
+      suggestedPurposeSlug: 'cold_intro',
+      brief:
+        'Write the first-touch cold email for SalesVelocity.ai targeting founders running their own outbound today. The recipient has connected with our LinkedIn outreach and seen a post about "stop sending more cold emails." We sell a complete sales velocity platform that pairs every client with real human specialists running their outbound, content, and pipeline — not a self-serve dashboard. Pricing is month-to-month with a 30-day results guarantee. The recipient has been burned by cold-outreach agencies before. We need to establish we are NOT another agency in the first two sentences. The CTA should be a low-commitment ask: a 15-minute call or a reply with the single biggest outbound blocker they are facing. Brand pillars to weave in: team-not-tools, results-before-retainer, no contracts ever.',
+    },
+    notes: 'Baseline case — any delta here flags upgrades across the whole Email Specialist surface.',
+  },
+  {
+    caseId: 'email_specialist_realestate_luxury_nurture',
+    agentId: 'EMAIL_SPECIALIST',
+    name: 'Luxury real estate quarterly nurture step 2 (industry switch + sequence)',
+    description:
+      'Industry-switching case with explicit sequence step metadata. Tests whether the LLM adapts tone to a long-cycle editorial luxury audience mid-nurture and picks the nurture purpose slug.',
+    mode: 'SINGLE_SHOT',
+    active: true,
+    tags: ['compose_email', 'real_estate', 'luxury', 'nurture', 'sequence', 'industry_switch', 'stress'],
+    createdBy: 'seed-script',
+    shapeTolerances: [],
+    inputPayload: {
+      action: 'compose_email',
+      campaignName: 'Q1 2026 — Quarterly Market Intelligence Nurture — Aspen Segment',
+      targetAudience:
+        'Wealth-managed individuals, family office principals, and corporate executives who opted into the quarterly market intelligence report 60-90 days ago and have not yet engaged with a broker. They are evaluating $5M-$50M residential properties on 6-18 month sale cycles and are skeptical of glossy real estate outreach.',
+      goal: 'Keep editorial authority warm and surface a specific recent listing or market movement that is relevant to the subscriber without asking for a broker conversation yet',
+      suggestedPurposeSlug: 'nurture',
+      sequenceStep: {
+        stepNumber: 2,
+        totalSteps: 6,
+        priorInteractions: 'Subscribed 60 days ago. Opened the first quarterly report email (stage 1) but did not click through to any listing.',
+      },
+      brief:
+        'Write the second-touch nurture email for a luxury real estate brokerage operating in Aspen, Naples, and the Hamptons. The recipient opted into the quarterly market intelligence report and opened the first delivery but did not click any listings. Do not ask for a broker conversation in this email — it is too early in the 6-18 month sale cycle and that ask will burn trust. Instead, surface one specific market movement (a luxury inventory shift in Aspen) with editorial framing and invite the reader to reply with any property preferences they are tracking. The tone is restrained editorial — Wall Street Journal feature article voice, not yacht-broker pitch. Visual restraint is the entire brand position. Brand pillars: market intelligence first, the curated few not the listing flood, discretion is the product.',
+    },
+    notes: 'Industry-switching regressions surface if the LLM produces a SaaS-style aggressive CTA instead of an editorial nurture tone.',
+  },
+  {
+    caseId: 'email_specialist_ecommerce_dtc_reengagement',
+    agentId: 'EMAIL_SPECIALIST',
+    name: 'DTC sleep supplement dormant subscriber reactivation',
+    description:
+      'Complexity-stress case. Tests whether the LLM picks the reengagement purpose, writes a single-offer win-back, includes a clean unsubscribe path, and avoids manufactured urgency.',
+    mode: 'SINGLE_SHOT',
+    active: true,
+    tags: ['compose_email', 'ecommerce', 'dtc', 'reengagement', 'stress'],
+    createdBy: 'seed-script',
+    shapeTolerances: [],
+    inputPayload: {
+      action: 'compose_email',
+      campaignName: 'Q2 2026 — Sleep Supplement Dormant Subscriber Reactivation',
+      targetAudience:
+        'Mobile-first millennial and Gen Z subscribers who purchased the magnesium-glycinate sleep formula once 90-180 days ago and have not repurchased. They are skeptical of DTC subscription trap patterns and will unsubscribe immediately if the email reads as manipulative.',
+      goal: 'Win back dormant subscribers with a single specific incentive and a clean easy-out — reactivate genuine buyers, cleanly lose the rest',
+      suggestedPurposeSlug: 'reengagement',
+      brief:
+        'Write a re-engagement email for a DTC sleep-supplement brand targeting subscribers who purchased once 90-180 days ago and have not reordered. The audience is mobile-first millennial and Gen Z, fast-decision, skeptical of dropshipping and subscription-trap patterns. The brand has a real founder face (a chronic-insomnia survivor) and third-party batch testing — both should be invoked as trust signals. The offer is a single specific incentive: 25 percent off the next order of any product in the catalog, no coupon code required, expires in 7 days. Do NOT ask for feedback or a survey — the recipient has already bought and does not owe the brand an explanation. Do not manufacture false urgency. Include a clean easy-out (reply UNSUBSCRIBE to stop) because dormant subscribers who do not want to reactivate are a deliverability liability and should be removed cleanly.',
+    },
+    notes: 'Complexity-stress case — checks that LLM obeys "no fake urgency" rule and includes explicit unsubscribe path.',
+  },
+];
+
+// ---------------------------------------------------------------------------
 // Funnel Pathologist cases (Architect-layer strategic funnel diagnosis, Task #41)
 // ---------------------------------------------------------------------------
 
@@ -1745,6 +1826,7 @@ const AGENT_CASE_BANK: Record<string, Omit<RegressionCase, 'createdAt' | 'update
   COPY_SPECIALIST: COPY_SPECIALIST_CASES,
   UX_UI_SPECIALIST: UX_UI_SPECIALIST_CASES,
   FUNNEL_PATHOLOGIST: FUNNEL_PATHOLOGIST_CASES,
+  EMAIL_SPECIALIST: EMAIL_SPECIALIST_CASES,
 };
 
 async function main(): Promise<void> {
